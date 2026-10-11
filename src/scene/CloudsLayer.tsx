@@ -22,13 +22,13 @@ import { samplePath } from '../flyover/path'
 import { geoidUndulation } from '../geo/geoid'
 import { useAppStore } from '../state/store'
 import {
+  EXPORT_SAMPLES,
   cloudCoversAt,
   cloudDrift,
   filmWind,
   sceneCloudsFrom,
   seaOfClouds,
   weatherOffsetFor,
-  type CloudQuality,
 } from '../weather/sceneClouds'
 import { sceneConditionsAt } from '../weather/sceneWeather'
 import type { MarkerTrack } from './AtmosphereLayer'
@@ -58,12 +58,6 @@ const STILL_MARCH = { maxIterationCount: 200, minStepSize: 100, shadowIterationC
 const SHADOW_MAX_FAR_M = 5e4
 /** Period of the shape noise of three-clouds (`shapeRepeat` 0.0003 per metre). */
 const DEFAULT_SHAPE_PERIOD_M = 1 / 0.0003
-/**
- * Noise slices averaged per exported frame. Each slice is one noisy march per pixel; with 2 / 4 / 6 the exported
- * frames kept a visible grain on the dense sea of clouds (measured, see ARCHITECTURE.md).
- */
-const EXPORT_SAMPLES: Record<CloudQuality, number> = { low: 16, medium: 24, high: 32 }
-
 const HISTORY_FETCH = 'vec4 historyColor = texture(colorHistoryBuffer, prevUv);'
 const RESOLVED = '  #endif // TEMPORAL_UPSCALE\n'
 

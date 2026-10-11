@@ -90,6 +90,25 @@ export function keyFocus(target: EventTarget | null): KeyFocus {
   return 'other'
 }
 
+const SPACE_CONTROLS = 'input, button, a[href], [role="slider"], [role="tab"], [role="radio"], [role="switch"]'
+
+/**
+ * Space plays / pauses unless it belongs to the focused element: a text field, a list, or a control the keyboard moved
+ * the focus to (focus-visible). A button or slider only focused by a click does not keep Space for itself, which would
+ * otherwise press the last button clicked instead of playing.
+ */
+export function spacePlays(target: EventTarget | null, focusVisible = (el: Element) => el.matches(':focus-visible')): boolean {
+  if (!(target instanceof HTMLElement)) return true
+  if (keyFocus(target) === 'text' || target.closest('textarea, [role="listbox"], [role="menu"]')) return false
+  const control = target.closest(SPACE_CONTROLS)
+  if (!control) return true
+  try {
+    return !focusVisible(control)
+  } catch {
+    return false
+  }
+}
+
 /**
  * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer,
  * F fit the view, G the safe zones, [ fold the panel and ? the help (whatever the modifiers that type them: AltGr, Shift), Escape close,

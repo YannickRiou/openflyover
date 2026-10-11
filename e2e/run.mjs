@@ -274,10 +274,53 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'poids-de-rendu',
+    title: 'Poids de rendu : pictogramme sur la ligne des nuages (nom accessible), point sur les onglets Météo et Objectif',
+    async run({ page }) {
+      await exposeStores(page)
+      const set = (key, patch) =>
+        page.evaluate((k, p) => {
+          const { settings, setSetting } = window.__e2e.appStore.getState()
+          setSetting(k, { ...settings[k], ...p })
+        }, key, patch)
+      const dot = (tab) => page.evaluate((t) => !!document.querySelector(`#tab-${t} .rail__weight`), tab)
+      try {
+        // clouds « Fine »: three bars, « lourd », and the dot on « Météo »
+        await set('clouds', { mode: 'meteo', quality: 'high' })
+        await page.click('#tab-meteo')
+        await page.waitForSelector('#tab-panel-meteo .setting-row__label .render-weight--3', { timeout: STEP_MS })
+        const name = await page.$eval('#tab-panel-meteo .setting-row__label .render-weight .visually-hidden', (el) => el.textContent)
+        assert(name === 'Poids de rendu : lourd', `nom accessible du pictogramme : ${name}`)
+        await until(page, () => !!document.querySelector('#tab-meteo .rail__weight'))
+        // « Aucun »: no pictogram, no dot
+        await set('clouds', { mode: 'aucun' })
+        await until(page, () => !document.querySelector('#tab-panel-meteo .render-weight') && !document.querySelector('#tab-meteo .rail__weight'))
+        // « Moyenne » with the motion blur: the dot moves to « Objectif »
+        await set('clouds', { mode: 'meteo', quality: 'medium' })
+        assert(!(await dot('meteo')) && !(await dot('objectif')), 'point sur un onglet avec les réglages par défaut')
+        await set('lens', { shutter: 0.5 })
+        await until(page, () => !!document.querySelector('#tab-objectif .rail__weight'))
+        assert(!(await dot('meteo')), 'point sur Météo avec des nuages « Moyenne »')
+      } finally {
+        await set('clouds', { mode: 'meteo', quality: 'medium' })
+        await set('lens', { shutter: 0 })
+      }
+    },
+  },
+  {
     id: 'image-cle',
     title: 'Image clé : la vue orbitée gardée telle quelle, retrouvée exactement par « précédente / suivante », Alt+← / Alt+→ et son losange',
     async run({ page }) {
       await exposeScene(page)
+      await blur(page)
+      // Space plays / pauses (the logic for a clicked button or a slider is unit-tested: headless Chromium reports
+      // focus-visible after a click, unlike a browser used with a mouse)
+      const playing = () => page.evaluate(() => window.__e2e.appStore.getState().playback.playing)
+      await page.keyboard.press(' ')
+      await until(page, () => window.__e2e.appStore.getState().playback.playing === true)
+      await page.keyboard.press(' ')
+      await until(page, () => window.__e2e.appStore.getState().playback.playing === false)
+      assert((await playing()) === false, 'Espace : la lecture ne se met pas en pause')
       await blur(page)
       // 20 s into the film, paused
       await page.keyboard.press('Home')
@@ -554,6 +597,10 @@ const SCENARIOS = [
       const head = readFileSync(video.path).subarray(0, 12)
       assert(head.includes('ftyp') || head.readUInt32BE(0) === 0x1a45dfa3, 'le fichier vidéo n\'est ni un MP4 ni un WebM')
       log(`    vidéo : ${film.result.fileName}, ${film.result.codec}, ${video.size} octets, ${film.result.incompleteFrames} image(s) incomplète(s)`)
+      // the render history recorded it, with its real duration
+      const recorded = await page.evaluate(async () => (await import('/src/export/historyStore.ts')).useExportHistory.getState().entries[0])
+      assert(recorded?.name === 'e2e-film' && recorded.outcome === 'done', `historique : ${JSON.stringify(recorded)}`)
+      assert(recorded.wallMs > 0 && recorded.frames === 20 && recorded.width === 320, `historique : durée ou images : ${JSON.stringify(recorded)}`)
 
       // the still image: from the export drawer (still open), at its smallest size
       await page.evaluate(() => {
@@ -570,6 +617,69 @@ const SCENARIOS = [
       const png = await waitForDownload('.png', since)
       assert(readFileSync(png.path).subarray(1, 4).toString() === 'PNG', "le fichier image n'est pas un PNG")
       log(`    image : ${still.result.fileName}, ${png.size} octets, ${still.result.incompleteFrames} image(s) incomplète(s)`)
+    },
+  },
+  {
+    id: 'historique',
+    title: 'Historique des rendus : liste, détail, réutilisation annulable, suppression, vidage',
+    async run({ page }) {
+      await until(page, () => !!document.querySelector('[role="group"][aria-label="Plans"]'))
+      await exposeStores(page)
+      if (!(await page.$('#export-dock:not([hidden])'))) await page.click('button.topbar__export')
+      // « Vidéo » mode: the history is the last child of the panel shown (the batch panel has its own, hidden)
+      const H = '#export-dock section:not([hidden]) .export-history'
+      await page.waitForSelector(H, { timeout: STEP_MS })
+      // two renders as the recorder writes them: an old one with other settings, a failed one
+      const before = await page.evaluate(async () => {
+        const [history, store] = await Promise.all([import('/src/export/history.ts'), import('/src/export/historyStore.ts')])
+        const { settings } = window.__e2e.appStore.getState()
+        const timings = { rendered: 300, renderMs: 50_000, waitMs: 30_000, encodeMs: 10_000, timeouts: 0 }
+        const request = { width: 1920, height: 1080, fps: 60, quality: 'max' }
+        const other = { ...settings, shadows: !settings.shadows, camera: { ...settings.camera, style: 'top' }, lens: { ...settings.lens, shutter: 0.5 } }
+        store.useExportHistory.getState().clear()
+        const base = { timings, encoder: 'webcodecs', frames: 450, encoded: 450, wallMs: 92_400, result: { codec: 'mp4/avc', sizeBytes: 12_000_000 } }
+        store.useExportHistory.getState().add(history.entryOf({ ...base, request: { ...request, baseName: 'Film A' }, outcome: 'done', settings: other, at: Date.now() - 60_000 }))
+        store.useExportHistory.getState().add(
+          history.entryOf({ ...base, request: { ...request, baseName: 'Film B' }, outcome: 'error', error: 'WebGL perdu', result: null, encoded: 12, settings, at: Date.now() }),
+        )
+        return { fps: settings.video.fps, quality: settings.video.quality, style: settings.camera.style }
+      })
+      if (!(await page.$eval(H, (d) => d.open))) await page.click(`${H} > summary`)
+      await page.waitForSelector(`${H} .history__item`, { visible: true })
+      const names = await page.$$eval(`${H} .history__name`, (els) => els.map((e) => e.textContent))
+      assert(names.join() === 'Film B,Film A', `ordre de l’historique : ${names.join()}`)
+      const meta = await page.$eval(`${H} .history__item:last-child .history__meta`, (e) => e.textContent)
+      assert(meta.includes('réussi') && meta.includes('1:32') && meta.includes('0,3\u00a0s\u00a0/\u00a0image'), `ligne de l’historique : ${meta}`)
+      assert((await page.$eval(`${H} .history__item:first-child .history__meta`, (e) => e.textContent)).includes('échoué : WebGL perdu'), 'erreur absente de la ligne')
+      // detail of the old render, then its settings put back as one step
+      await page.click(`${H} .history__item:last-child .history__head`)
+      await page.waitForSelector(`${H} .history__item:last-child .history__rows`, { visible: true })
+      assert((await page.$eval(`${H} .history__item:last-child .setting-row__body`, (e) => e.textContent)).includes('Vue du dessus'), 'détail : style de caméra absent')
+      await page.click(`${H} .history__item:last-child .setting-row__body button.btn`)
+      const reused = await page.evaluate(() => {
+        const { settings } = window.__e2e.appStore.getState()
+        return { fps: settings.video.fps, quality: settings.video.quality, style: settings.camera.style, shutter: settings.lens.shutter }
+      })
+      assert(reused.fps === 60 && reused.quality === 'max' && reused.style === 'top' && reused.shutter === 0.5, `réglages réutilisés : ${JSON.stringify(reused)}`)
+      await clickButton(page, 'Annuler')
+      const undone = await page.evaluate(() => {
+        const { settings } = window.__e2e.appStore.getState()
+        return { fps: settings.video.fps, quality: settings.video.quality, style: settings.camera.style }
+      })
+      assert(JSON.stringify(undone) === JSON.stringify(before), `annulation d’un coup : ${JSON.stringify(undone)} au lieu de ${JSON.stringify(before)}`)
+      // delete one, then clear (confirmed)
+      await page.click(`${H} .history__item:first-child .history__head`)
+      await page.click(`${H} .history__item:first-child .setting-row__body .project__row .btn:last-child`)
+      await until(page, () => document.querySelectorAll('#export-dock section:not([hidden]) .history__item').length === 1)
+      // inside the section: a toast has its own « Annuler »
+      const inHistory = async (text) => (await page.waitForSelector(`${H} button::-p-text(${text})`, { visible: true })).click()
+      await inHistory('Vider l’historique')
+      await inHistory('Annuler')
+      assert((await page.$$(`${H} .history__item`)).length === 1, 'l’historique est vidé sans confirmation')
+      await inHistory('Vider l’historique')
+      await inHistory('Vider définitivement')
+      await until(page, () => document.querySelectorAll('#export-dock section:not([hidden]) .history__item').length === 0 && !!document.querySelector('#export-dock section:not([hidden]) .export-history .field__hint'))
+      assert(await page.evaluate(() => localStorage.getItem('openflyover.exportHistory.v1') === null), 'le stockage n’est pas vidé')
     },
   },
   {
