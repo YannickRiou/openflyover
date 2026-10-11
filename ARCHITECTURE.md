@@ -272,8 +272,8 @@ ink, 7.3:1).
 
 - **Top bar** (`TopBar.tsx`): logo, project name editable in place (`projectName` in the store, empty = name of the
   first track, `effectiveProjectName`) and "Modifié / Enregistré" (modified / saved) status (`savedProject`: settings, tracks and name at the
-  last save or the last open, compared by reference, `isProjectDirty`; no automatic
-  save), undo / redo, "Ouvrir" (open; a single picker: `.json` → project, anything else → track import,
+  last save or the last open, compared by reference, `isProjectDirty`; a project with a track is saved
+  automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open; a single picker: `.json` → project, anything else → track import,
   `routeOpenedFiles`; opening a project clears the history), "Enregistrer" (save); in the center the **output format** ("Libre" (free),
   16:9, 9:16, 1:1, 4:5, 21:9); on the right "?" (shortcuts) and "Exporter" (export), the only primary button of the shell, which opens
   the export drawer and becomes "42 % · Annuler" (cancel) during an export.
@@ -1219,7 +1219,15 @@ ink, 7.3:1).
   data URL (`isProjectThumbnail`: an image data URL of 80,000 characters at most, otherwise dropped on save and on
   read). No picture (hidden page, no frame within 2 s, tainted canvas): the entry keeps its last one; entries from
   before have none and show an empty frame in the list. `useLibraryStore { entries,
-  currentId }`: "Garder dans Mes projets" (keep in my projects) creates the entry of the open project; then **automatic save**
+  currentId }`: **a project is always kept** (`autosaveWrites`): the first autosave of a project with a track and no
+  entry creates it (imported tracks, the sample on opening, a project opened from a file); no entry while it has no
+  track; "Garder dans Mes projets" (keep in my projects) is left for a project whose entry was deleted while open (it
+  then gets no new one by itself until another project is opened) and goes through the same queue (never two entries).
+  The id of the open entry is remembered in `getPlatform().storage` (`openflyover.lastProject.v1`,
+  `rememberOpenEntry`); at start-up `reopenLastProject` (once, from `App`, after `runCliRenderIfAsked` said no batch
+  render was asked on the desktop) opens it with « Projet … rouvert », unless a track or project came first (Android
+  share target, a quick click); an entry gone is forgotten and the app starts on the home screen. iOS discards a
+  background tab and reloads it on return: this is what brings the work back. Then **automatic save**
   (`installLibraryAutosave`, installed by `App`) 3 s after the last change to the settings, the tracks or the name
   (`createAutosave`: restarted on each change, retried later during an export or a batch render, never two
   writes at once, a single toast per series of failures); each write marks the project as saved ("Enregistré"
