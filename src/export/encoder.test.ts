@@ -180,8 +180,15 @@ beforeEach(() => {
 describe('videoBitrate', () => {
   it('scales with pixels, frame rate and quality', () => {
     expect(videoBitrate(1280, 720, 30, 'high', 'avc')).toBeLessThan(videoBitrate(1920, 1080, 30, 'high', 'avc'))
-    expect(videoBitrate(1920, 1080, 60, 'high', 'avc')).toBe(2 * videoBitrate(1920, 1080, 30, 'high', 'avc'))
+    // a higher frame rate costs more, but less than proportionally
+    expect(videoBitrate(1920, 1080, 60, 'high', 'avc')).toBeGreaterThan(videoBitrate(1920, 1080, 30, 'high', 'avc'))
+    expect(videoBitrate(1920, 1080, 60, 'high', 'avc')).toBeLessThan(2 * videoBitrate(1920, 1080, 30, 'high', 'avc'))
     expect(videoBitrate(1920, 1080, 30, 'standard', 'avc')).toBeLessThan(videoBitrate(1920, 1080, 30, 'max', 'avc'))
+  })
+
+  it('gives a sharp flyover enough: about 14 Mbit/s at 1080p24 « élevée »', () => {
+    expect(videoBitrate(1920, 1080, 24, 'high', 'avc')).toBeCloseTo(13.9e6, -5)
+    expect(videoBitrate(1920, 1080, 24, 'standard', 'avc')).toBeGreaterThan(7e6)
   })
 
   it('asks less of the more efficient codecs', () => {
