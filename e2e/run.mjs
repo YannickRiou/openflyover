@@ -313,6 +313,15 @@ const SCENARIOS = [
     async run({ page }) {
       await exposeScene(page)
       await blur(page)
+      // Space plays / pauses (the logic for a clicked button or a slider is unit-tested: headless Chromium reports
+      // focus-visible after a click, unlike a browser used with a mouse)
+      const playing = () => page.evaluate(() => window.__e2e.appStore.getState().playback.playing)
+      await page.keyboard.press(' ')
+      await until(page, () => window.__e2e.appStore.getState().playback.playing === true)
+      await page.keyboard.press(' ')
+      await until(page, () => window.__e2e.appStore.getState().playback.playing === false)
+      assert((await playing()) === false, 'Espace : la lecture ne se met pas en pause')
+      await blur(page)
       // 20 s into the film, paused
       await page.keyboard.press('Home')
       await page.keyboard.down('Shift')

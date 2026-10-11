@@ -513,7 +513,16 @@ ink, 7.3:1).
   50° · tanh(0.8 · T / 50°), T = sum of turn angles weighted by a tent over ±2w, continuous and calm), `orbit` (6°/s
   around the marker from the start heading), `top` (≥ 70°, distance × 2.5, north or heading up), `cinematic` (distance × 1.6,
   pitch / 2, lateral sweep ±35° with a 40 s period). All keep 80 m above the ground and a clear line of sight
-  (13 samples); the tests check continuity in progress.
+  (25 samples); the tests check continuity in progress.
+  **Marker kept visible**: the aim is the marker (the time smoothing only averages the progress), so it never leaves the
+  frame (`markerVisible.test.ts`: at most 0.15 of the half-frame from its centre over every preset, with stops and speed
+  portions); what hides it is the relief. The sight line is therefore checked down to 100 m short of the aim (the part
+  `lineOfSightClearance` leaves out, which fades the marker out) and tapers to 20 m of clearance (the fade band)
+  instead of 0, with the share of the line left capped at 1/20 so the camera does not ride each bump near the aim. A
+  rise a few hundred metres before the marker now lifts the camera instead of hiding the marker: on steep, twisty
+  synthetic tracks the frames where the marker is behind the relief drop from 3.5–7% to under 1% over the 12 presets
+  (« Cinéma »: 4–25% to 0, « Montgolfière »: 19–28% to 0–8%), frames that were well visible barely move. Keyframes
+  (`keyView`) are untouched.
   **Steady heights** (no frame-to-frame state, so preview and export stay identical): the heights are read from
   terrain samples that stay put while the marker moves, so the camera follows the relief without riding each bump
   or a sight-line sample (whose height counts up to 10× near the marker). Ground radius / cell r = w / 4, at most
@@ -527,7 +536,7 @@ ink, 7.3:1).
   aim) read the grid ground: bilinear between the terrain at the corners of a fixed r grid of the local frame (exact
   on a plane, cliffs softened over a cell); the floor is eased in (smooth maximum over 80 m, at most 20 m above),
   then the camera is kept `MIN_TERRAIN_CLEARANCE_M` (40 m) above the actual terrain below it (a bump narrower than a
-  cell). About 80 terrain samples per frame. On ±15 m bumps 30 m wide, the frame-to-frame height change drops from
+  cell). About 130 terrain samples per frame. On ±15 m bumps 30 m wide, the frame-to-frame height change drops from
   3–35 m to 0.16 m on flat ground, the change of vertical speed from 1–70 m to under 2.5 m on hills.
   **Smoothing in film time** (`src/flyover/timeSmoothing.ts`, applied by `computeFilmView`; still no frame-to-frame
   state): the aim point follows the marker's progress averaged over « Lissage de la visée » `aimSmoothingS` (0 by
@@ -1589,8 +1598,8 @@ it, know at what time you will pass each point, where the sun will be and what t
 - The WebGL image is composited in the same task as the render onto an `OffscreenCanvas` (sky gradient, image, then overlay
   `DrawOverlay(ctx, { progress, time }, w, h)` after loading its fonts, `time` = `overlayTime(clock, progress,
   frame time)`; still image: current playback time), then encoded by mediabunny (WebCodecs): MP4 H.264,
-  otherwise MP4 HEVC, WebM VP9, WebM VP8, the first one accepted by `VideoEncoder.isConfigSupported`; bitrate = pixels × fps × 0.06 /
-  0.10 / 0.16 bit depending on quality, corrected per codec, bounded to 1–80 Mbit/s; keyframe every 2 s.
+  otherwise MP4 HEVC, WebM VP9, WebM VP8, the first one accepted by `VideoEncoder.isConfigSupported`; bitrate = pixels × 24 × (fps / 24)^0.7 × 0.16 /
+  0.28 / 0.44 bit depending on quality (1080p24 « élevée »: 13.9 Mbit/s), corrected per codec, bounded to 1–80 Mbit/s; keyframe every 2 s.
 - **Direct write to disk** when `capabilities.canStreamToDisk` (desktop, or a browser with `showSaveFilePicker`:
   Chrome, Edge): the "Exporter la vidéo" click first asks where to save (`chooseVideoDestination`, called before any
   `await` because the browser picker requires a user gesture; dialog closed = no export; picker
