@@ -5,6 +5,13 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Export and preview: fewer visible tile swaps** (an iPhone export of a track near a border showed, while zooming
+  and moving, large parts of the terrain changing colour from one image to the next, white patches coming and going, and
+  the detail of whole bands jumping): the white tile IGN answers outside France from z13 is no longer drawn (the coarser
+  tile's picture is, so the terrain keeps its colours instead of turning white and flipping back when the level of detail
+  changes); on a phone or tablet the level of detail that holds the tile cap changes in steps of ×1.1 instead of ×1.25 (a
+  flip between two levels redrew a third of the view, now a few tiles; a computer has no such cap).
+
 - **Export: every image shows its final terrain** (reports of coarse terrain for one image, then fine, and of pale tiles that
   turn to terrain colour seconds later, including when the tiles were already cached): the export now waits, up to 45 s per
   image instead of 5, for the tiles it draws, their imagery and the retries of failed ones (after 0.75 s, not 5 s, and a

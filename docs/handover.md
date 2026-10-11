@@ -197,7 +197,7 @@ features included), `npm run build`,
 - **Hard tile cap through adaptive LOD** (11 October 2026, branch `adaptive-lod`; five iPhone 12 reports: killed during
   the « descente » with 147 → 224 tiles, and at image 27 with the camera low from the start, ~94 tiles pending): the
   selection of a low portrait view itself exceeded the cap. Now, with a finite `maxResidentTiles`, `solveLodLevel`
-  (`engine.ts`) raises the error target by ×1.25 steps until `countSelection` (`quadtree.ts`) fits (preview: hysteresis;
+  (`engine.ts`) raises the error target by ×1.1 steps until `countSelection` (`quadtree.ts`) fits (preview: hysteresis;
   export: solved per update from the view), `enforceCap` counts loading tiles and makes room before the loads,
   `maxTileLoads` 6 phone / 12 tablet, `stats.lodFactor` exposed for the diagnostic. Computer: bit-identical selections
   (checked against master's engine). Not measured on a device: `docs/tests-gpu.md` (iPhone item).

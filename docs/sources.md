@@ -147,8 +147,10 @@ All sources respond with a CORS header for the origin `http://127.0.0.1:5173`: *
 - **Border strip (review)**: inside the box but outside France, the server does not always answer 404: Courmayeur, Champex,
   Geneva and Basel receive at z13–z17 an **HTTP 200 `image/jpeg` of 1,651 B, entirely white** (md5 `cb33c7de`, identical everywhere),
   then 404 from z17–z19; Zermatt, Milan and Lugano receive 404 from z13. Basel still has a real tile at z13 (9,873 B) but white from z14 to z17.
-  `imagery.ts` cannot tell this white tile from a real tile: a cross-border track rendered with IGN will have white
-  (not gray) areas outside France. The French border tiles (Annecy, Menton, Mulhouse, Ouessant, Dunkerque, Bastia, Bonifacio) are real.
+  `imagery.ts` used to draw this white tile as a real one (white areas outside France, flipping to the z12 mosaic's colours
+  and back with the level of detail in an export); it now recognises a plain white sub-tile of a source with a `coverage` and
+  draws the coarser tile's picture instead (`isBlank`). Real tiles are still the better choice where they exist: swisstopo for a
+  cross-border track. The French border tiles (Annecy, Menton, Mulhouse, Ouessant, Dunkerque, Bastia, Bonifacio) are real.
 - CORS: `access-control-allow-origin: *` (+ `allow-credentials: true`). `Fees: none`, `AccessConstraints` → terms of use `https://cartes.gouv.fr/cgu`.
   BD ORTHO is distributed under the Etalab Open Licence 2.0 (IGN data open since 2021); credit "© IGN".
 
@@ -366,7 +368,8 @@ Visual check (headless Chromium, sample track Les Houches → Les Contamines): `
 6. **IGN outside metropolitan France**: the overseas territories (DROM-COM) are not covered by the single `coverage` box; multi-box coverage would require a change to `TileSourceBase` (frozen types).
 7. **The IGN box over-approximates France**: `sourceCovers(ign, …)` returns `true` for Courmayeur, Champex, Geneva, Basel or Zermatt, whereas
    the server returns a white tile (200) or a 404 there. Consequence for `store.ts` (`pickRegionalImagery`, which prefers IGN as soon as the track
-   is inside its box): a cross-border track (full Tour du Mont-Blanc, Genevois, Swiss Jura, Basel) will be rendered with white areas.
+   is inside its box): a cross-border track (full Tour du Mont-Blanc, Genevois, Swiss Jura, Basel) was rendered with white areas; the white
+   tile is now replaced by the coarser z12 picture (blurry, not white) in `imagery.ts`, a 404 is still a gray patch.
    Recommendation: when the track is inside the IGN box **and** inside the swisstopo box, prefer swisstopo (real tiles everywhere, less detailed)
    or Esri (uniform) over IGN, unless the track is entirely west of ~5.9° E or north of ~47.6° N (so surely in France);
    or let the user switch manually.
