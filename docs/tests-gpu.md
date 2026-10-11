@@ -29,6 +29,9 @@ reproduce it next to the box.
 - [ ] Cancel during the export, or close the "Save" dialog: no file left behind, view and interface restored.
 - [ ] Firefox: in-memory export, warning above an estimated 1.5 GB, download.
 - [ ] Clouds enabled ("Météo" (weather) or "Manuel 50 %" (manual 50%) setting): export cost, same frames from one export to the next.
+- [ ] Clouds computed once per image: export the same short film with clouds (« Moyenne ») and « Objectif » › shutter on,
+      before / after the « clouds once » change: identical frames (compare a few PNG frames pixel by pixel), shorter total
+      time and `[export]` "rendu" time, the gain growing with the number of renders per image (tiles loading).
 - [ ] Long fast track (540 km raid), volumetric sea of clouds and « Objectif » › shutter on, 1080p: export time per frame and
       `[export]` line against the version before « no rendering while waiting for tiles » (~1 s per frame on a GTX 1060);
       GPU load (Task Manager) drops while the `[export]` "attente des tuiles" grows instead of staying at 100 %; frames

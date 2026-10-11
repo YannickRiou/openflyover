@@ -38,8 +38,10 @@ import { createExportEncoder } from './nativeEncoder'
 import { buildFrameSchedule, buildFrameTimes } from './schedule'
 import {
   EMPTY_TIMINGS,
+  exportHasClouds,
   exportRenderScale,
   flushDrapes,
+  setSkipClouds,
   useExportStore,
   videoFileName,
   type ExportRequest,
@@ -247,14 +249,19 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   }
 
   let clock = 0
-  const advance = () => {
+  const advance = (final: boolean) => {
     const t0 = performance.now()
     const app = useAppStore.getState()
     if (app.playback.playing) app.setPlaying(false)
     applyVideoSize()
     clock += 1 / fps
     if (overview) placeOverview()
-    deps.get().advance(clock)
+    setSkipClouds(!final)
+    try {
+      deps.get().advance(clock)
+    } finally {
+      setSkipClouds(false)
+    }
     timings.renderMs += performance.now() - t0
   }
 
@@ -318,6 +325,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     let frameTimeS = saved.timeS
     const frameDeps = {
       advance,
+      separateFinal: exportHasClouds,
       // what TerrainLayer does in a render (the only data requested per view), for the camera of the last render
       updateTiles: () => {
         const camera = deps.get().camera as PerspectiveCamera
