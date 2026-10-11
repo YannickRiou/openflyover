@@ -57,7 +57,7 @@ describe('web app manifest', () => {
     for (const icon of manifest.icons) expect(PUBLIC_FILES).toContain(icon.src)
   })
 
-  it.each(['https://yannickriou.github.io/gpx2movie/', 'https://flyover.example.org/'])('stays under the base %s', (base) => {
+  it.each(['https://yannickriou.github.io/openflyover/', 'https://flyover.example.org/'])('stays under the base %s', (base) => {
     const at = (url: string) => new URL(url, `${base}manifest.webmanifest`).href
     expect(at(manifest.start_url)).toBe(base)
     expect(at(manifest.scope)).toBe(base)

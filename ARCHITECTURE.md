@@ -2231,7 +2231,7 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
 - **Manifest** (`public/manifest.webmanifest`): « OpenFlyover », `display: standalone`, theme `#1b2832` (top bar ink),
   background `#f6f3ec` (paper), icons rendered from `public/favicon.svg` (`icons/`: 192 and 512 px, a 512 px maskable
   one with a full-bleed background and the drawing at 72 %, a 180 px `apple-touch-icon`). Every URL is relative
-  (`start_url`, `scope`, `id`: `./`), so the same file works under `/gpx2movie/` and at a root (tested,
+  (`start_url`, `scope`, `id`: `./`), so the same file works under `/openflyover/` and at a root (tested,
   `webApp.test.ts`). `index.html` links it with `theme-color` and `apple-touch-icon` (Vite adds the base).
 - **Service worker** (`src/platform/serviceWorker.js`, plain JS, emitted as `sw.js` by the `serviceWorker()` plugin of
   `vite.config.ts`, which writes in the precache list and two hashes; scope = the base):
@@ -2252,7 +2252,7 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
     « Nouvelle version disponible » › « Recharger » (`webApp.ts`: `SKIP_WAITING`, reload on `controllerchange`); on
     activation the worker deletes the older `openflyover-shell-` / `openflyover-sky-` caches only, never the offline
     packs (`openflyover-tiles-v1:`) nor « Mes projets » (`openflyover-projects-v1`).
-  Verified in headless Chromium (Pixel 5 emulation, `vite preview` under `/gpx2movie/` and at `/`): manifest without
+  Verified in headless Chromium (Pixel 5 emulation, `vite preview` under `/openflyover/` and at `/`): manifest without
   errors, no installability error (`Page.getInstallabilityErrors`), worker active, second load with the server stopped
   served from the cache. Update while open (Pixel 5 emulation, `sw.js` changed on the server): no request
   when shown again within the gap, one past it (clock moved forward), then the toast and « Recharger » reloads on the
