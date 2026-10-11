@@ -200,6 +200,11 @@ export interface TerrainStats {
    * video export.
    */
   pendingVisibleTiles?: number
+  /**
+   * Tiles of the view that will not get any better: given up on after every attempt (the parent is drawn instead), or
+   * drawn with some imagery missing. Counted in a video export only: it reports the frame as incomplete.
+   */
+  missingVisibleTiles?: number
   /** error target multiplier that keeps the view within the tile budget of a phone or tablet (1 = full detail) */
   lodFactor?: number
 }
@@ -249,6 +254,11 @@ export interface TerrainEngine {
    * many tiles stay loaded.
    */
   setRetention?(retention: TerrainRetention | null): void
+  /**
+   * Video export: `pendingVisibleTiles` also waits for the retries of failed tiles of the view (fetched at once, after
+   * `exportRetryDelayMs`, not last), and tiles that had given up are tried again. `false` at the end of the export.
+   */
+  setExporting?(exporting: boolean): void
   /** sizes of the decoded caches, for the export's breadcrumb (diagnostic) */
   caches?(): TerrainCaches
   dispose(): void

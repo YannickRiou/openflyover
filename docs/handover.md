@@ -155,6 +155,16 @@ features included), `npm run build`,
 - **Map state in the status bar** (10 October 2026): `ui/mapStatus.ts` (ring + « Carte · 72 % », « Carte prête »,
   « N tuiles en erreur »), from the existing terrain stats, no engine change; seen in headless Chromium with simulated
   stats. Not done: « Précharger le survol » (engine `prefetch` along the whole film path, with its own progress).
+- **Export waits for the final view** (11 October 2026, branch `export-complete`, user report: one coarse image then fine, white
+  tiles that turn terrain-coloured, also on a second export): confirmed in tests: a failed visible tile was not waited for (retry
+  after 5 s, parent drawn meanwhile), the 5 s limit, imagery failures kept grey for the life of the tile, and imagery sub-tiles held
+  until their siblings arrived (the fetcher's LRU closes bitmaps: drawn grey, also from the cache). Refuted: children of a loaded
+  parent and the imagery composite of cached tiles are already covered (a tile is `ready` only with its texture, and the settle
+  loop re-runs the selection). Export mode `engine.setExporting`, `stats.missingVisibleTiles`, 45 s per frame, shared timeout, one
+  more settle if the final render asks for tiles. With the tile hosts blocked (e2e) an export now takes ~3.5× longer
+  (three attempts of ~5 s per new tile, then given up and counted incomplete): 63 s → ~228 s for the 20-frame scenario. Not seen
+  with real tile hosts or on a GPU (`docs/tests-gpu.md`). Open: on a computer the prefetched tiles still outlast 30 s of wall
+  time only (a long wait could drop them), not retention in film frames.
 - **Tabs Météo, Lumière, Objectif** (10 October 2026, user request "pense Apple"): eight tabs in montage order, `SettingRow`
   (name and value, control on a tap) replaces every « Plus de réglages »; phone bar scrolls sideways. Seen in headless Chromium.
 - **Home screen** (10 October 2026, user request): without a track the rail holds « Projet » alone (folded) and « Exporter »

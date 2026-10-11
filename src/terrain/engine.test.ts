@@ -10,6 +10,7 @@ import type {
   TileFetcher,
   TileKey,
 } from '../core/types'
+import { DEFAULT_SETTLE, settle as settleView } from '../export/capture'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { tileKeyString, tilesForBounds, zoomForTileBudget } from '../geo/mercator'
 import { DEFAULT_TUNING, NO_IMAGERY_COLOR, createTerrainEngine, type EngineDeps, type EngineTuning, type HeightFieldLike } from './engine'
@@ -203,7 +204,7 @@ describe('createTerrainEngine', () => {
     const engine = engineWith(createFakeDeps())
     expect(engine.group.name).toBe('terrain')
     expect(engine.group.children).toHaveLength(0)
-    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, lodFactor: 1 })
+    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, missingVisibleTiles: 0, lodFactor: 1 })
   })
 
   it('counts apart the tiles the view waits for (pendingVisibleTiles excludes culled tiles)', async () => {
@@ -362,15 +363,29 @@ describe('createTerrainEngine', () => {
     expect(cb).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the tile when the imagery fails (grey material, no texture)', async () => {
+  it('retries a tile whose imagery fails, and keeps it grey once every attempt is used', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
     const deps = createFakeDeps({ failImagery: true })
-    const engine = engineWith(deps)
+    let t = 0
+    deps.now = () => t
+    const engine = engineWith(deps, {}, { retryDelayMs: 1000, maxLoadAttempts: 3 })
     const camera = cameraAbove(600_000)
     engine.update(camera, 1000)
     await settle()
     engine.update(camera, 1000)
+    // the first attempt is not kept: no grey tile on screen while the parent (here nothing) could do better
+    expect(engine.stats.loadedTiles).toBe(0)
+    expect(engine.stats.failedTiles).toBe(ROOT_KEYS.length)
+    for (let i = 0; i < 2; i++) {
+      t += 1000
+      engine.update(camera, 1000)
+      await settle()
+    }
+    t += 1000
+    engine.update(camera, 1000)
     expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
     expect(engine.stats.failedTiles).toBe(0)
+    expect(deps.loadImageryTexture).toHaveBeenCalledTimes(3 * ROOT_KEYS.length)
     for (const mesh of meshesOf(engine)) {
       const material = mesh.material as MeshStandardMaterial
       expect(material.map).toBeNull()
@@ -549,7 +564,7 @@ describe('createTerrainEngine', () => {
     expect(deps.heightField.clear).toHaveBeenCalled()
     for (const spy of textureDispose) expect(spy).toHaveBeenCalled()
     // stats reflect the empty tree right away, not only after the next update()
-    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, lodFactor: 1 })
+    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, missingVisibleTiles: 0, lodFactor: 1 })
 
     engine.update(camera, 1000)
     expect(engine.stats.loadedTiles).toBe(0)
@@ -649,7 +664,7 @@ describe('createTerrainEngine', () => {
     await settle()
 
     expect(engine.group.children).toHaveLength(0)
-    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, lodFactor: 1 })
+    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, missingVisibleTiles: 0, lodFactor: 1 })
     expect(deps.heightField.clear).toHaveBeenCalled()
     // the injected fetcher is not owned by the engine
     expect(deps.fetcher.clear).not.toHaveBeenCalled()
@@ -1071,4 +1086,221 @@ describe('hard tile cap through the level of detail (phone)', () => {
       expect(phoneFar).toBeLessThan(freeFar)
     }, 120_000)
   }
+})
+
+// ---------------------------------------------------------------------------
+// Video export: the view is final when the settle loop returns
+// ---------------------------------------------------------------------------
+
+describe('export: the view is final when the settle loop returns', () => {
+  /** capture.ts's `settle` driven by the real engine, on a virtual clock (a wait step is a macrotask and at least 1 ms) */
+  function exportView(engine: ReturnType<typeof engineWith>, camera: PerspectiveCamera, clock: { t: number }, timeoutMs = DEFAULT_SETTLE.timeoutMs) {
+    const counts = { renders: 0, waits: 0 }
+    const run = () =>
+      settleView(
+        {
+          advance: () => {
+            counts.renders++
+            engine.update(camera, 1000)
+          },
+          separateFinal: () => false,
+          updateTiles: () => engine.update(camera, 1000),
+          pendingTiles: () => engine.stats.pendingVisibleTiles ?? 0,
+          flushDrapes: () => false,
+          now: () => clock.t,
+          wait: async (ms) => {
+            counts.waits++
+            clock.t += Math.max(ms, 1)
+            await settle()
+          },
+          isCanceled: () => false,
+        },
+        { ...DEFAULT_SETTLE, timeoutMs },
+      )
+    return { counts, run }
+  }
+
+  /** the tiles drawn, with whether each has its imagery */
+  const drawn = (engine: ReturnType<typeof engineWith>) =>
+    meshesOf(engine)
+      .filter((m) => m.visible)
+      .map((m) => `${m.name}${(m.material as MeshStandardMaterial).map ? '' : ' grey'}`)
+      .sort()
+
+  /** another update of the same view changes nothing: no request, same tiles drawn, nothing awaited */
+  async function expectFinal(engine: ReturnType<typeof engineWith>, camera: PerspectiveCamera, deps: FakeDeps) {
+    const requests = deps.fetched.length
+    const view = drawn(engine)
+    for (let i = 0; i < 3; i++) {
+      engine.update(camera, 1000)
+      await settle()
+    }
+    expect(deps.fetched.length).toBe(requests)
+    expect(drawn(engine)).toEqual(view)
+    expect(engine.stats.pendingVisibleTiles).toBe(0)
+  }
+
+  const DEEP = { errorTargetPx: 1, maxZoom: ROOT_ZOOM + 2 }
+
+  it('requests the children of a loaded parent before it returns (cached tiles, answered at once)', async () => {
+    const deps = createFakeDeps()
+    const engine = engineWith(deps, DEEP)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(4000)
+    const clock = { t: 0 }
+    expect(await exportView(engine, camera, clock).run()).toBe(true)
+    expect(drawn(engine).some((name) => name.startsWith(`${ROOT_ZOOM + 2}/`))).toBe(true)
+    expect(engine.stats.lodFactor).toBe(1) // a computer: the level of detail never gives way
+    await expectFinal(engine, camera, deps)
+  })
+
+  it('waits for the imagery of tiles whose bitmaps are cached but whose composite comes a few ms later', async () => {
+    const deps = createFakeDeps()
+    deps.loadImageryTexture = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 8))
+      return new Texture()
+    })
+    const engine = engineWith(deps, DEEP)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(4000)
+    expect(await exportView(engine, camera, { t: 0 }).run()).toBe(true)
+    expect(drawn(engine).length).toBeGreaterThan(0)
+    expect(drawn(engine).some((name) => name.endsWith('grey'))).toBe(false)
+    await expectFinal(engine, camera, deps)
+  })
+
+  it('retries a failed tile of the view quickly and returns once it is drawn', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = ROOT_KEYS[0]
+    const badUrl = `https://dem.test/${bad.z}/${bad.x}/${bad.y}.png`
+    let failures = 1
+    const deps = createFakeDeps({ failDem: (url) => url === badUrl && failures-- > 0 })
+    const clock = { t: 0 }
+    deps.now = () => clock.t
+    const engine = engineWith(deps)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(600_000)
+    expect(await exportView(engine, camera, clock).run()).toBe(true)
+    expect(drawn(engine)).toHaveLength(ROOT_KEYS.length)
+    expect(clock.t).toBeLessThan(2000) // not the 5 s of the preview
+    expect(engine.stats.missingVisibleTiles).toBe(0)
+    await expectFinal(engine, camera, deps)
+  })
+
+  it('retries a tile whose imagery failed, so no tile is drawn grey', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const deps = createFakeDeps()
+    let calls = 0
+    deps.loadImageryTexture = vi.fn(async () => {
+      if (calls++ === 0) throw new Error('imagery down')
+      return new Texture()
+    })
+    const clock = { t: 0 }
+    deps.now = () => clock.t
+    const engine = engineWith(deps)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(600_000)
+    expect(await exportView(engine, camera, clock).run()).toBe(true)
+    expect(drawn(engine)).toHaveLength(ROOT_KEYS.length)
+    expect(drawn(engine).some((name) => name.endsWith('grey'))).toBe(false)
+  })
+
+  it('counts a tile it gave up on as missing, after its last attempt, without waiting for the timeout', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = ROOT_KEYS[0]
+    const badUrl = `https://dem.test/${bad.z}/${bad.x}/${bad.y}.png`
+    const deps = createFakeDeps({ failDem: (url) => url === badUrl })
+    const clock = { t: 0 }
+    deps.now = () => clock.t
+    const engine = engineWith(deps)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(600_000)
+    expect(await exportView(engine, camera, clock).run()).toBe(true)
+    expect(deps.fetched.filter((u) => u === badUrl)).toHaveLength(DEFAULT_TUNING.maxLoadAttempts)
+    expect(engine.stats.pendingVisibleTiles).toBe(0)
+    expect(engine.stats.missingVisibleTiles).toBe(1)
+    expect(clock.t).toBeLessThan(5000)
+    // later frames do not wait for it again
+    const again = exportView(engine, camera, clock)
+    await again.run()
+    expect(again.counts.waits).toBe(0)
+  })
+
+  it('counts a tile drawn with some imagery missing, once its attempts are used', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const deps = createFakeDeps()
+    deps.loadImageryTexture = vi.fn(async () => {
+      const texture = new Texture()
+      texture.userData.incomplete = true
+      return texture
+    })
+    const clock = { t: 0 }
+    deps.now = () => clock.t
+    const engine = engineWith(deps)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(600_000)
+    expect(await exportView(engine, camera, clock).run()).toBe(true)
+    expect(deps.loadImageryTexture).toHaveBeenCalledTimes(DEFAULT_TUNING.maxLoadAttempts * ROOT_KEYS.length)
+    expect(drawn(engine)).toHaveLength(ROOT_KEYS.length)
+    expect(engine.stats.missingVisibleTiles).toBe(ROOT_KEYS.length)
+  })
+
+  it('gives up at the timeout when tiles never arrive: not settled, still pending', async () => {
+    const deps = createFakeDeps({ deferDem: true })
+    const clock = { t: 0 }
+    const engine = engineWith(deps)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(600_000)
+    expect(await exportView(engine, camera, clock, 3000).run()).toBe(false)
+    expect(clock.t).toBeGreaterThanOrEqual(3000)
+    expect(engine.stats.pendingVisibleTiles).toBeGreaterThan(0)
+  })
+
+  it('tries again, when an export starts, the tiles that had given up', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = ROOT_KEYS[0]
+    const badUrl = `https://dem.test/${bad.z}/${bad.x}/${bad.y}.png`
+    let down = true
+    const deps = createFakeDeps({ failDem: (url) => url === badUrl && down })
+    const clock = { t: 0 }
+    deps.now = () => clock.t
+    const engine = engineWith(deps)
+    const camera = cameraAbove(600_000)
+    for (let i = 0; i < 4; i++) {
+      engine.update(camera, 1000)
+      await settle()
+      clock.t += 6000
+    }
+    expect(engine.stats.failedTiles).toBe(1)
+    down = false
+    engine.setExporting?.(true)
+    expect(await exportView(engine, camera, clock).run()).toBe(true)
+    expect(drawn(engine)).toHaveLength(ROOT_KEYS.length)
+  })
+
+  it('costs nothing more when every tile is there: one render, no wait, no request', async () => {
+    const deps = createFakeDeps()
+    const engine = engineWith(deps, DEEP)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(4000)
+    await exportView(engine, camera, { t: 0 }).run()
+    const requests = deps.fetched.length
+    const next = exportView(engine, camera, { t: 0 })
+    expect(await next.run()).toBe(true)
+    expect(next.counts).toEqual({ renders: 1, waits: 0 })
+    expect(deps.fetched.length).toBe(requests)
+  })
+
+  it('leaves the preview as it was: the retry of a failed tile is not awaited', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = ROOT_KEYS[0]
+    const badUrl = `https://dem.test/${bad.z}/${bad.x}/${bad.y}.png`
+    const deps = createFakeDeps({ failDem: (url) => url === badUrl })
+    const clock = { t: 0 }
+    deps.now = () => clock.t
+    const engine = engineWith(deps)
+    const camera = cameraAbove(600_000)
+    expect(await exportView(engine, camera, clock).run()).toBe(true)
+    expect(drawn(engine)).toHaveLength(ROOT_KEYS.length - 1)
+  })
 })

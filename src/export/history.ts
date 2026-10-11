@@ -474,7 +474,7 @@ export function entryDetails(entry: HistoryEntry): { label: string; value: strin
       value: `rendu ${comma(entry.renderMs / 1000)} s, tuiles ${comma(entry.waitMs / 1000)} s, encodage ${comma(entry.encodeMs / 1000)} s`,
     })
   }
-  if (entry.timeouts > 0) rows.push({ label: 'Délais dépassés', value: `${entry.timeouts} image(s)` })
+  if (entry.timeouts > 0) rows.push({ label: 'Images avant la fin du chargement', value: `${entry.timeouts} image(s)` })
   if (entry.encoder) rows.push({ label: 'Encodeur', value: ENCODER_LABELS[entry.encoder] })
   return rows
 }

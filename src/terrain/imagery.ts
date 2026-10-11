@@ -2,7 +2,8 @@
  * Composite imagery texture for one terrain tile: for a tile (z, x, y) and `zoomOffset = k`, the 2^k x 2^k imagery
  * sub-tiles at z + k are drawn into one canvas of `tileSize * 2^k` pixels (an sRGB `CanvasTexture` with mipmaps).
  * Past the source's maxZoom the deepest tiles are cropped / scaled up; sub-tiles outside the source coverage are
- * skipped and failed ones left grey; the promise rejects only when every sub-tile failed or the signal was aborted.
+ * skipped and failed ones left grey (`userData.incomplete`); the promise rejects only when every sub-tile failed or the
+ * signal was aborted.
  *
  * `planImagerySubtiles` is pure (and tested); `loadImageryTexture` does the fetching and drawing.
  */
@@ -128,41 +129,54 @@ export const loadImageryTexture: LoadImageryTexture = async (
   if (signal?.aborted) throw createAbortError()
 
   const plan = planImagerySubtiles(key, source, options.zoomOffset)
-  const results = await Promise.allSettled(
-    plan.tiles.map((op) => fetcher.fetchBitmap(buildTileUrl(source, op.key), { priority, signal })),
-  )
-  if (signal?.aborted) throw createAbortError()
-
-  const canvas = createCanvas(plan.canvasSize, plan.canvasSize)
-  const ctx = canvas.getContext('2d') as Canvas2D | null
-  if (!ctx) throw new Error('2D canvas context unavailable: cannot composite imagery.')
-
-  ctx.fillStyle = IMAGERY_FALLBACK_COLOR
-  ctx.fillRect(0, 0, plan.canvasSize, plan.canvasSize)
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = 'high'
+  // created when the first sub-tile arrives (a canvas is megabytes: none for a tile that is cancelled or fails)
+  let canvas: CompositeCanvas | undefined
+  let ctx: Canvas2D | undefined
+  const surface = (): Canvas2D => {
+    if (ctx) return ctx
+    canvas = createCanvas(plan.canvasSize, plan.canvasSize)
+    const context = canvas.getContext('2d') as Canvas2D | null
+    if (!context) throw new Error('2D canvas context unavailable: cannot composite imagery.')
+    context.fillStyle = IMAGERY_FALLBACK_COLOR
+    context.fillRect(0, 0, plan.canvasSize, plan.canvasSize)
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
+    return (ctx = context)
+  }
 
   let drawn = 0
   let failure: unknown
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i]
-    if (result.status === 'rejected') {
-      if (!isAbortError(result.reason)) failure = result.reason
-      continue
-    }
-    const op = plan.tiles[i]
-    const bitmap = result.value
-    // The plan is expressed in catalogue pixels; scale the source rectangle to the bitmap really received.
-    const kx = bitmap.width / source.tileSize
-    const ky = bitmap.height / source.tileSize
-    try {
-      ctx.drawImage(bitmap, op.sx * kx, op.sy * ky, op.sw * kx, op.sh * ky, op.dx, op.dy, op.dw, op.dh)
-      drawn++
-    } catch (error) {
-      // A bitmap evicted and closed by the cache meanwhile: leave the area grey.
-      failure = error
-    }
-  }
+  // Each sub-tile is drawn as soon as it arrives: held until its siblings are in, the fetcher's LRU may evict and close it
+  // (a busy export, 16 sub-tiles a tile) and its area would stay grey, from the cache as from the network.
+  await Promise.all(
+    plan.tiles.map(async (op) => {
+      for (let attempt = 0; ; attempt++) {
+        let bitmap: ImageBitmap
+        try {
+          bitmap = await fetcher.fetchBitmap(buildTileUrl(source, op.key), { priority, signal })
+        } catch (error) {
+          if (!isAbortError(error)) failure = error
+          return
+        }
+        // The plan is expressed in catalogue pixels; scale the source rectangle to the bitmap really received.
+        const kx = bitmap.width / source.tileSize
+        const ky = bitmap.height / source.tileSize
+        const target = surface()
+        try {
+          target.drawImage(bitmap, op.sx * kx, op.sy * ky, op.sw * kx, op.sh * ky, op.dx, op.dy, op.dw, op.dh)
+          drawn++
+          return
+        } catch (error) {
+          // A bitmap closed by the cache meanwhile: ask for it once more, then leave the area grey.
+          if (attempt > 0) {
+            failure = error
+            return
+          }
+        }
+      }
+    }),
+  )
+  if (signal?.aborted) throw createAbortError()
 
   if (plan.tiles.length > 0 && drawn === 0) {
     // Every sub-tile was cancelled by the fetcher itself (clear() on dispose): report it as an abort, not a failure.
@@ -172,5 +186,9 @@ export const loadImageryTexture: LoadImageryTexture = async (
       cause: failure,
     })
   }
-  return createTexture(canvas, key)
+  surface()
+  const texture = createTexture(canvas as CompositeCanvas, key)
+  // grey patches where a sub-tile failed: the engine tries the tile again before it keeps them
+  if (failure !== undefined) texture.userData.incomplete = true
+  return texture
 }

@@ -16,7 +16,14 @@ import { ExportCanceledError } from './encoder'
  * Fake scene on a virtual clock: each render takes 10 ms, `wait` advances the clock, the view's tiles are
  * ready from `1000 + loadedAt` (which leaves a re-drape pending), the camera placement drifts by `drift` m.
  */
-function fakeScene({ loadedAt = 0, canceled = (): boolean => false, drift = 0, clouds = false } = {}) {
+function fakeScene({
+  loadedAt = 0,
+  canceled = (): boolean => false,
+  drift = 0,
+  clouds = false,
+  missing = 0,
+  lateRequest = false,
+} = {}) {
   let clock = 1000
   let drapePending = false
   const renders: number[] = []
@@ -25,18 +32,22 @@ function fakeScene({ loadedAt = 0, canceled = (): boolean => false, drift = 0, c
   const progress: number[] = []
   const flushes: boolean[] = []
   let tileUpdates = 0
+  /** the selection of the first final render asks for tiles that arrive 100 ms later (the view moved since the last check) */
+  let lateUntil = 0
   const deps: RenderFrameDeps = {
     advance: (final) => {
       finals.push(final)
       clock += 10
       if (loadedAt > 0 && renders.length > 0 && clock >= loadedAt + 1000 && renders.at(-1)! < loadedAt + 1000) drapePending = true
       renders.push(clock)
+      if (lateRequest && final && lateUntil === 0) lateUntil = clock + 100
     },
     separateFinal: () => clouds,
     updateTiles: () => {
       tileUpdates++
     },
-    pendingTiles: () => (clock < loadedAt + 1000 ? 2 : 0),
+    pendingTiles: () => (clock < loadedAt + 1000 || clock < lateUntil ? 2 : 0),
+    missingTiles: () => missing,
     flushDrapes: () => {
       const ran = drapePending
       drapePending = false
@@ -166,6 +177,38 @@ describe('renderSettledFrame with clouds', () => {
     await renderSettledFrame(0.25, deps, withClouds)
     expect(progress).toEqual([0.25, 0.25 + REPLACE_EPSILON])
     expect(finals.slice(0, -1).every((f) => !f)).toBe(true)
+  })
+})
+
+describe('renderSettledFrame, the view is final at the capture', () => {
+  it('waits up to 45 s by default, a frame of a slow host included', async () => {
+    expect(DEFAULT_SETTLE.timeoutMs).toBe(45_000)
+    const { deps } = fakeScene({ loadedAt: 30_000 })
+    expect(await renderSettledFrame(0.25, deps)).toBe(true)
+    expect(deps.now()).toBeGreaterThanOrEqual(31_000)
+  })
+
+  it('reports the frame incomplete when tiles of the view were given up on', async () => {
+    const { deps } = fakeScene({ missing: 2 })
+    expect(await renderSettledFrame(0.25, deps)).toBe(false)
+  })
+
+  it('settles and renders again when the final render selected tiles nobody waited for', async () => {
+    const { deps, finals } = fakeScene({ clouds: true, lateRequest: true })
+    expect(await renderSettledFrame(0.25, deps)).toBe(true)
+    // the captured render is the last one and follows the end of the wait
+    expect(finals.filter(Boolean)).toHaveLength(2)
+    expect(finals.at(-1)).toBe(true)
+    expect(deps.pendingTiles()).toBe(0)
+  })
+
+  it('spends one timeout on a frame, not one per settle', async () => {
+    const { deps } = fakeScene({ loadedAt: 400, drift: 5 })
+    expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500, minAdvances: 1 })).toBe(true)
+    const slow = fakeScene({ loadedAt: 450, drift: 5, lateRequest: true, clouds: true })
+    const start = slow.deps.now()
+    await renderSettledFrame(0.25, slow.deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })
+    expect(slow.deps.now() - start).toBeLessThan(500 + 100)
   })
 })
 
