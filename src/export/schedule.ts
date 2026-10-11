@@ -47,7 +47,13 @@ export interface VideoSettings {
   quality: VideoQuality
 }
 
-export const DEFAULT_VIDEO_SETTINGS: VideoSettings = { aspect: '16:9', resolution: '1080p', fps: 30, quality: 'high' }
+/** A phone starts at 720p (44 % fewer pixels than 1080p); it can still choose up to its cap. */
+export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
+  aspect: '16:9',
+  resolution: deviceBudget().kind === 'phone' ? '720p' : '1080p',
+  fps: 30,
+  quality: 'high',
+}
 
 /**
  * Why a resolution class comes out smaller here (phones and tablets), null when it does not. To show next to the

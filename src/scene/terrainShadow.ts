@@ -11,8 +11,6 @@
 import { Box3, Frustum, LightShadow, Matrix4, OrthographicCamera, Plane, Vector3 } from 'three'
 import type { Camera, Light, Mesh, Object3D } from 'three'
 
-/** Shadow map resolution (texels per side), clamped to the GPU limit. */
-export const SHADOW_MAP_SIZE = 4096
 /** Shadows are computed at least this far from the camera (metres)... */
 export const MIN_SHADOW_DISTANCE_M = 30_000
 /** ...and up to this many times the camera height above the lowest terrain (overview: the whole area). */
