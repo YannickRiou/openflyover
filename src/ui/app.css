@@ -1494,6 +1494,57 @@
   white-space: nowrap;
 }
 
+/* « Poids de rendu »: three bars like a signal icon, filled in navy, the rest periwinkle; the heaviest in chartreuse on a navy chip */
+.render-weight {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+  padding: 2px 3px;
+  margin-left: var(--space-2);
+  border-radius: 4px;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.render-weight__bar {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--color-periwinkle);
+}
+
+.render-weight__bar:nth-child(1) {
+  height: 4px;
+}
+
+.render-weight__bar:nth-child(2) {
+  height: 8px;
+}
+
+.render-weight__bar:nth-child(3) {
+  height: 12px;
+}
+
+.render-weight__bar--on {
+  background: var(--color-navy);
+}
+
+.render-weight--3 {
+  background: var(--color-navy);
+}
+
+.render-weight--3 .render-weight__bar--on {
+  background: var(--color-chartreuse);
+}
+
+/* one sentence: wraps inside the panel */
+.render-weight[data-tip]:hover::after,
+.render-weight[data-tip]:focus-visible::after {
+  width: max-content;
+  max-width: 220px;
+  white-space: normal;
+}
+
 /* label + ⓘ on one line */
 .field__label-row {
   display: flex;
