@@ -376,6 +376,28 @@ function visit(node: TileNode, ctx: SelectionContext): void {
   }
 }
 
+/**
+ * Nodes the selection holds once everything it asks for is loaded: drawn tiles, their ancestors and the culled children
+ * of refined nodes (all visited, so none is evicted). Readiness is ignored; a "no data" node holds nothing. Stops past
+ * `limit`. Creates the children it visits, as the selection does.
+ */
+export function countSelection(roots: readonly TileNode[], camera: CameraState, params: SelectionParams, limit = Infinity): number {
+  let count = 0
+  for (let i = 0; i < roots.length && count <= limit; i++) count = countNode(roots[i], camera, params, count, limit)
+  return count
+}
+
+function countNode(node: TileNode, camera: CameraState, params: SelectionParams, count: number, limit: number): number {
+  if (node.state === 'failed' && node.noData) return count
+  count++
+  if (count > limit || !camera.frustum.intersectsSphere(node.boundingSphere)) return count
+  const sse = screenSpaceError(node.geometricError, node.boundingSphere, camera)
+  if (sse <= params.errorTargetPx || node.key.z >= zoomLimit(node, params)) return count
+  const children = node.ensureChildren()
+  for (let i = 0; i < 4 && count <= limit; i++) count = countNode(children[i], camera, params, count, limit)
+  return count
+}
+
 /** Deepest zoom `node` may refine to: `maxZoom`, or `outerMaxZoom` when it lies outside the detail area. */
 export function zoomLimit(node: TileNode, params: SelectionParams): number {
   const { detailArea, outerMaxZoom } = params

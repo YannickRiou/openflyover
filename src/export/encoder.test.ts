@@ -10,7 +10,11 @@ const fake = vi.hoisted(() => ({
     videoMetadata?: { canBeTransparent?: boolean }
   }[],
   streams: [] as { options: unknown }[],
-  sources: [] as { config: { codec: string; alpha?: string; quality: { options: { bitrate: number } } }; added: [number, number][]; closed: boolean }[],
+  sources: [] as {
+    config: { codec: string; alpha?: string; quality: { options: { bitrate: number } }; onEncodedSample: () => void; onEncodedPacket: () => void }
+    added: [number, number][]
+    closed: boolean
+  }[],
   buffer: new ArrayBuffer(8) as ArrayBuffer | null,
   /** audio sources and what they received: [timestamp, frames, first value of each channel] */
   sounds: [] as { config: { codec: string }; added: [number, number, number[]][]; closed: boolean }[],
@@ -53,6 +57,8 @@ vi.mock('mediabunny', () => {
     config: unknown
     added: [number, number][] = []
     closed = false
+    // mediabunny's internal encoder wrapper
+    _encoder = { getQueueSize: () => 2 }
     constructor(_canvas: unknown, config: unknown) {
       this.config = config
       fake.sources.push(this as never)
@@ -278,6 +284,16 @@ describe('createVideoEncoder', () => {
     expect(fake.outputs[0].format.options?.fastStart).toBeUndefined()
     expect(fake.sources[0].closed).toBe(true)
     expect(fake.outputs[0].state).toBe('finalized')
+  })
+
+  it('counts the frames in the encoder: handed over minus packets out, and its queue', async () => {
+    const session = await createVideoEncoder(canvas, OPTIONS, supporting('avc'))
+    const { onEncodedSample, onEncodedPacket } = fake.sources[0].config
+    onEncodedSample()
+    onEncodedSample()
+    onEncodedSample()
+    onEncodedPacket()
+    expect(session.counters?.()).toEqual({ inFlight: 2, queue: 2 })
   })
 
   it('writes WebM when only VP9 / VP8 are available', async () => {

@@ -193,9 +193,30 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      preview): past it `enforceCap` (every update) unloads the ready tiles the current selection did not visit, least
      recently visited first (a prefetch counts half a frame after the update, so a tile ahead outlasts one behind; deeper first on
      a tie; roots stay), and `prefetch` starts nothing. The tiles of the current selection (drawn, shadow casters, their
-     ancestors) are never evicted, so the frame's content does not depend on the cap (it can exceed it when the view alone
-     needs more). A computer sets no retention and no cap: nothing changes there. Estimate behind 120: ~2.6 MB a tile
-     (imagery texture 512² with mipmaps ~1.4 MB, its canvas ~1 MB, DEM grid, geometry) = ~310 MB at the cap.
+     ancestors) are never evicted. A computer sets no retention and no cap: nothing changes there. Estimate behind 120:
+     ~2.6 MB a tile (imagery texture 512² with mipmaps ~1.4 MB, its canvas ~1 MB, DEM grid, geometry) = ~310 MB at the cap.
+   - **The cap is hard: the level of detail gives way** (phone, tablet). A low view looking at the horizon in a portrait
+     film needs 220–390 tiles by itself (iPhone 12: 147 → 224 loaded during the « descente », tab killed), so the
+     selection is made to fit: `solveLodLevel` multiplies `errorTargetPx` by `LOD_STEP` (1.25) per level, 0 to
+     `MAX_LOD_LEVEL` (12, ×14.6), and keeps the finest level whose selection fits `maxResidentTiles`. The count is
+     `countSelection` (`quadtree.ts`): the nodes the selection visits once everything it asks for is loaded (drawn
+     tiles, their ancestors, the culled children of refined nodes, i.e. the shadow casters), readiness ignored, stopped
+     past the budget; a few passes over at most ~120 nodes per update. A larger error target coarsens the distant tiles
+     first: the ground under the camera stays at the deepest zoom. The cap counts the tiles **loaded or loading**
+     (pending loads hold fetches and decode copies): `enforceCap` runs before the loads start and makes room for them,
+     cancelling unvisited loads too, and a phone loads 6 tiles at a time (`maxTileLoads`, 12 tablet, 24 computer).
+     The preview keeps its level and goes one level finer only when that selection holds within `LOD_RELAX_SHARE`
+     (90 %) of the budget, one step per update: no back and forth on a still or slow view. An export (frame retention
+     set) solves the level from the view at every update, without memory: a film frame does not depend on how fast the
+     frames before it went (tested: the same view after another path gives the same tiles in view). The level still
+     reads the tiles' bounding spheres, tight once loaded, like the selection itself. `stats.lodFactor` gives the
+     multiplier (1 = full detail). Simulated (fake tiles, 720 px portrait, 300 m, 2° below the horizon, z15): 376–393
+     tiles without the cap, 120 at most with it (loaded + loading, every update), level 5–6 once settled (×3.1–3.8),
+     about ten one-step changes over 150 frames; the nearest tile stays z15, the farthest drops from z11 to z9, and
+     ~40 tiles are drawn in view instead of ~137. Computer: budget unbounded, level 0, selections bit-identical.
+     Not done: a lower imagery zoom offset for far tiles (the offset is per engine and chosen at load time; a tile
+     coming closer would keep its coarse texture), not loading the culled children on a phone (~45 % of the budget in
+     that view goes to tiles out of the frustum, but they are the shadow casters).
    - Bounding sphere: from the geometry if loaded, otherwise from the tile bounds with heights [-500, 9000] m.
    - Material: `MeshStandardMaterial({ map, roughness: 1, metalness: 0 })`, `side: FrontSide`. `wireframe` option.
    - `sampleHeight` = the terrain **as drawn**: the triangles of the tile drawn at the point (`sampleTileMesh`), else
@@ -2429,6 +2450,7 @@ and short side < 600 CSS px; tablet = touch screen, larger; computer = everythin
 | pixel ratio cap / while playing or touching | `FlyoverCanvas` (`dpr`, `MovingPixelRatio`) | 2 / 2 | 2 / 1.5 | 2 / 1.5 | 1.5 / 1 |
 | decoded tile bitmaps (LRU) | `createTileFetcher` | 600 | 200 | 200 | 120 |
 | height grids (256 px equivalents) | `DEFAULT_TUNING.heightCacheEntries` | 400 | 160 | 160 | 100 |
+| terrain tiles loaded or loading (LOD gives way past it) / loading at once | `DEFAULT_TUNING.maxResidentTiles` / `maxConcurrentLoads` | unbounded / 24 | 160 / 12 | 120 / 6 | 90 / as the device |
 | finest imagery (zoom offset) | `engineOptionsFromSettings`, offline packs (`packImageryLevel`) | « Très fin » (2) | « Fin » (1) | « Fin » (1) | « Fin » |
 | preview clouds: resolution, still frames | `CloudsLayer`, `CLOUD_SETTLE_FRAMES` | 1, 32 | 0.5, 16 | 0.5, 16 | 0.5, 16 |
 | sea of clouds by default | `DEFAULT_CLOUDS.seaRender` | volume | « Nappe » | « Nappe » | « Nappe » |
@@ -2458,7 +2480,9 @@ tab; the automatic reopening of the last project (see "Library") hides it. The f
 | terrain shadow map | 4096², ~128 MB, redrawn every frame | 2048², ~32 MB (1024², ~8 MB with ≤ 2 GB) |
 | MSAA of the default framebuffer | ~75 MB at 1080p, never read under the composer (`multisampling={0}` + SMAA) | none when the context is created with the atmosphere on (`canvasAntialias`); without the atmosphere the scene is drawn straight to it, MSAA stays |
 | tiles resident during an export | LOD evaluated for the film's height (1080, or 1920 in 9:16) | for 720 px at most: the preview's tiles (`exportLodHeight`; the texture of a tile is then up to 1.5× coarser than "3 px" at 1080p) |
-| tiles kept loaded during an export | wall-clock retention (2 s view, 30 s prefetch), no cap: +1.2 tiles per film frame measured on an iPhone 12 (68 → 244 in 100 frames), tab killed | counted in film frames (6 / 30), prefetch +5, +10, +20, hard cap of 120 loaded tiles (160 tablet, 90 with ≤ 2 GB): ~310 MB of tiles at most |
+| tiles kept loaded during an export | wall-clock retention (2 s view, 30 s prefetch), no cap: +1.2 tiles per film frame measured on an iPhone 12 (68 → 244 in 100 frames), tab killed | counted in film frames (6 / 30), prefetch +5, +10, +20, hard cap of 120 loaded or loading tiles (160 tablet, 90 with ≤ 2 GB): ~310 MB of tiles at most |
+| tiles a single view needs | the selection was never evicted: a low portrait view looking at the horizon held 160–224 tiles (iPhone 12, « descente »), tab killed | the error target grows by ×1.25 steps until the view fits the cap (`lodFactor`): distant tiles coarser, the ground under the camera unchanged |
+| tiles loading at once | 24 (each with its fetches, decoded bitmaps, DEM pixels and canvas): ~94 pending at once on an iPhone 12 | 6 (12 tablet, `maxTileLoads`) |
 | film kept in RAM (iOS: no direct disk write) | 1080p30 « Haute » ~16 Mbit/s = 2 MB/s, peak 2.5–3× the film at the end (`BufferTarget`'s growing buffer, `slice`, `Blob`) | ≤ 8 Mbit/s = 1 MB/s; « Débit vidéo » shows the real figure and « plafonné » |
 | warning on the size estimate | 1.5 GB | 250 MB |
 | autosave of a project with a 40 MB clip | every change: whole document serialised as one string (the clip as base64, ~55 MB), UTF-8 copy for the size, `Response` copy: ~4–6× the project, 3 s after each change | `serializeProjectBlob`: the JSON of each medium is made once per table entry (`WeakMap`) and kept as a Blob the next documents reuse; size from `Blob.size`, `Response(blob)` streams to the cache; only the header and the tracks are serialised again |
@@ -2470,8 +2494,19 @@ kept in the tab's `sessionStorage`; if the next start finds it, the export never
 (« Le dernier export a été interrompu… »), with a « Détails » button showing the **breadcrumb**: the last `pagehide` /
 `freeze` / `webglcontextlost` with `renderer.info.memory` textures and geometries and the loaded tile count. iOS kills a
 tab short of memory without any page event (the counters also give the tiles still loading or queued, « N en attente »: a plateau of « tuiles » below the cap is what the tile budget aims at), so the export also writes its own steps (start, video size applied, encoder
-ready with its codec and bitrate, the first 3 frames then 1 in 25, finalisation); the last `MAX_STEPS` (15) are kept
-as a list, each with the JS heap where `performance.memory` exists (Chrome), and each export starts with a fresh list.
+ready with its codec and bitrate, the first 3 rendered frames then 1 in 10 from 50 to 200, where an iPhone 12 died, and
+1 in 25 elsewhere: `isExportStep`; finalisation); the last `MAX_STEPS` (25) are kept as a list, each with the JS heap
+where `performance.memory` exists (Chrome), and each export starts with a fresh list. While a film renders, the export
+adds its own counters to every breadcrumb (`setExportProbe`, page events included): loaded and pending tiles read live
+from the engine, the bitmaps of the fetcher's LRU and their approximate MB (`cachedBytes`, RGBA of each), the decoded
+height grids (`engine.caches()`), the frames « en vol » (handed to the VideoEncoder minus packets out, counted with
+mediabunny's `onEncodedSample` / `onEncodedPacket`) and its `encodeQueueSize` (« file », read through mediabunny's
+internal encoder wrapper, left out if it changes), the re-drapes run by the export's `flushDrapes` since the previous
+step; a step line also gives the time since the one before (« +11,0 s »). « Export de test sans encodage » (checkbox
+under « Diagnostic », Projet tab; the tab's sessionStorage only, `noEncodingTest`, never in the project) runs a film
+export with no encoder: every frame is rendered and composed, none is handed over, the file is discarded and the export
+ends on the error « Export de test terminé sans fichier (n images rendues) »; the report's Export section then says
+« Encodage : désactivé (test) ». It tells, on a phone, the encoder's memory from the render's (docs/tests-gpu.md).
 The **diagnostic report** (`export/diagnostic.ts`, pure and tested: `buildReport`, `formatReport`) is taken at the same
 busy transition, under `openflyover.diagnostic`: app version (`__APP_VERSION__`, vite.config.ts), device and its budget,
 GPU (`setGpuProbe`, registered by the scene like the breadcrumb probe, read once), the export request (size, quality,

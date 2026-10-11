@@ -203,7 +203,7 @@ describe('createTerrainEngine', () => {
     const engine = engineWith(createFakeDeps())
     expect(engine.group.name).toBe('terrain')
     expect(engine.group.children).toHaveLength(0)
-    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0 })
+    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, lodFactor: 1 })
   })
 
   it('counts apart the tiles the view waits for (pendingVisibleTiles excludes culled tiles)', async () => {
@@ -549,7 +549,7 @@ describe('createTerrainEngine', () => {
     expect(deps.heightField.clear).toHaveBeenCalled()
     for (const spy of textureDispose) expect(spy).toHaveBeenCalled()
     // stats reflect the empty tree right away, not only after the next update()
-    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0 })
+    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, lodFactor: 1 })
 
     engine.update(camera, 1000)
     expect(engine.stats.loadedTiles).toBe(0)
@@ -649,7 +649,7 @@ describe('createTerrainEngine', () => {
     await settle()
 
     expect(engine.group.children).toHaveLength(0)
-    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0 })
+    expect(engine.stats).toEqual({ visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, lodFactor: 1 })
     expect(deps.heightField.clear).toHaveBeenCalled()
     // the injected fetcher is not owned by the engine
     expect(deps.fetcher.clear).not.toHaveBeenCalled()
@@ -940,4 +940,135 @@ describe('tile budget', () => {
       expect(Math.max(...desktop)).toBeGreaterThan(cap * 1.4)
     }, 60_000)
   })
+})
+
+describe('hard tile cap through the level of detail (phone)', () => {
+  const AREA_WIDE: LonLatBounds = { west: 5.9, south: 45.3, east: 7.9, north: 46.5 }
+  const FRAMES = 150
+  const PHONE: Partial<EngineTuning> = { maxResidentTiles: 120, maxConcurrentLoads: 6 }
+
+  /** Portrait 720×1280 film camera at frame `i`: a dive from 6 km to 300 m ending on the horizon, or low from the start. */
+  function filmCamera(i: number, low: boolean): PerspectiveCamera {
+    const s = low ? 1 : Math.min(1, i / 120)
+    const x = -20_000 + 40 * i
+    const height = 6000 + (300 - 6000) * s
+    const camera = new PerspectiveCamera(50, 720 / 1280, 1, 2e6)
+    camera.position.set(x, height, 0)
+    // from 45° down to 2° below the horizon
+    camera.lookAt(new Vector3(x + height / Math.tan((45 + (2 - 45) * s) * (Math.PI / 180)), 0, 0))
+    camera.updateProjectionMatrix()
+    return camera
+  }
+
+  /**
+   * A film rendered as an export does: every frame updated until the view waits for nothing, prefetches every 5 frames.
+   * Records, after every update, the tiles loaded and loading (the loads it started are still in flight then).
+   */
+  async function film(tuning: Partial<EngineTuning>, low: boolean) {
+    const deps = createFakeDeps()
+    let t = 0
+    deps.now = () => t
+    const engine = engineWith(deps, { area: AREA_WIDE, maxZoom: 15, segments: 64, errorTargetPx: 3 }, tuning)
+    const held: number[] = []
+    const factors: number[] = []
+    let drawn: Mesh[] = []
+    for (let i = 0; i < FRAMES; i++) {
+      t += 290
+      if (tuning.maxResidentTiles !== undefined) engine.setRetention?.({ frame: i, keepFrames: 6, prefetchKeepFrames: 30 })
+      const camera = filmCamera(i, low)
+      for (let k = 0; k < 80; k++) {
+        const fetched = deps.fetched.length
+        engine.update(camera, 720)
+        held.push(engine.stats.loadedTiles + deps.fetched.length - fetched)
+        factors.push(engine.stats.lodFactor ?? 1)
+        await flush()
+        if (k > 0 && engine.stats.pendingVisibleTiles === 0) break
+      }
+      if (i % 5 === 0) {
+        for (const ahead of [5, 10, 20]) {
+          engine.prefetch?.(filmCamera(i + ahead, low), 720)
+          await flush()
+        }
+      }
+      drawn = meshesOf(engine).filter((m) => m.visible && viewFrustum(camera).intersectsObject(m))
+    }
+    return { held, factors, drawn }
+  }
+
+  /** zoom of the drawn tile nearest to the camera, and of the farthest one (horizontal distance) */
+  function nearAndFar(meshes: Mesh[], camera: PerspectiveCamera): [number, number] {
+    const distance = (m: Mesh) => {
+      m.geometry.computeBoundingSphere()
+      const c = m.geometry.boundingSphere!.center
+      return Math.hypot(c.x - camera.position.x, c.z - camera.position.z)
+    }
+    const sorted = [...meshes].sort((a, b) => distance(a) - distance(b))
+    return [sorted[0], sorted[sorted.length - 1]].map((m) => Number(m.name.split('/')[0])) as [number, number]
+  }
+
+  /** Updates `camera` until the view waits for nothing; returns the factors seen and the drawn tiles. */
+  async function settleOn(engine: ReturnType<typeof engineWith>, camera: PerspectiveCamera, frame?: number) {
+    const factors: number[] = []
+    for (let k = 0; k < 80; k++) {
+      if (frame !== undefined) engine.setRetention?.({ frame, keepFrames: 6, prefetchKeepFrames: 30 })
+      engine.update(camera, 720)
+      factors.push(engine.stats.lodFactor ?? 1)
+      await flush()
+      if (k > 0 && engine.stats.pendingVisibleTiles === 0) break
+    }
+    // in the view (the shadow casters around it are the ready tiles it visits: they depend on what was loaded before)
+    const inView = meshesOf(engine).filter((m) => m.visible && viewFrustum(camera).intersectsObject(m))
+    return { factors, drawn: inView.map((m) => m.name).sort() }
+  }
+  const phoneEngine = () => engineWith(createFakeDeps(), { area: AREA_WIDE, maxZoom: 15, segments: 64, errorTargetPx: 3 }, PHONE)
+
+  it('an export frame depends on its view, not on the frames before', async () => {
+    const direct = phoneEngine()
+    const a = await settleOn(direct, filmCamera(149, true), 0)
+    const after = phoneEngine()
+    for (let i = 0; i < 40; i += 4) await settleOn(after, filmCamera(i, false), i)
+    const b = await settleOn(after, filmCamera(149, true), 40)
+    expect(b.factors.at(-1)).toBe(a.factors.at(-1))
+    expect(b.drawn).toEqual(a.drawn)
+  })
+
+  it('the preview keeps its level on a still view and goes back to full detail one step at a time', async () => {
+    const engine = phoneEngine()
+    const low = await settleOn(engine, filmCamera(149, true))
+    for (let k = 0; k < 30; k++) {
+      engine.update(filmCamera(149, true), 720)
+      await flush()
+      expect(engine.stats.lodFactor).toBe(low.factors.at(-1))
+    }
+    expect(low.factors.at(-1)).toBeGreaterThan(1)
+    const factors: number[] = []
+    for (let k = 0; k < 20; k++) {
+      engine.update(cameraAbove(1_000_000), 720)
+      factors.push(engine.stats.lodFactor ?? 1)
+      await flush()
+    }
+    expect(factors.at(-1)).toBe(1)
+    for (let k = 1; k < factors.length; k++) expect(factors[k]).toBeGreaterThanOrEqual(factors[k - 1] / 1.25 - 1e-9)
+  })
+
+  for (const low of [false, true]) {
+    it(`keeps a phone within its cap on every update, ${low ? 'low from the first frame' : 'through a descent'}`, async () => {
+      const free = await film({}, low)
+      const phone = await film(PHONE, low)
+      // the view alone needs far more than the cap without it
+      expect(Math.max(...free.held)).toBeGreaterThan(200)
+      // a computer: no budget, full detail, the selections of before (the error target times 1)
+      expect(new Set(free.factors)).toEqual(new Set([1]))
+
+      // tiles loaded + loading, after every update
+      expect(Math.max(...phone.held)).toBeLessThanOrEqual(120)
+      expect(Math.max(...phone.factors)).toBeGreaterThan(1)
+      const last = filmCamera(FRAMES - 1, low)
+      const [freeNear, freeFar] = nearAndFar(free.drawn, last)
+      const [phoneNear, phoneFar] = nearAndFar(phone.drawn, last)
+      // the ground under the camera keeps its detail, the distance gets coarser
+      expect(phoneNear).toBe(freeNear)
+      expect(phoneFar).toBeLessThan(freeFar)
+    }, 120_000)
+  }
 })
