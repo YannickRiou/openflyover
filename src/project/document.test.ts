@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Track } from '../core/types'
 import { MEDIA_DEFAULTS } from '../film/model'
 import { buildTrack } from '../import/stats'
@@ -12,6 +12,7 @@ import {
   projectFileName,
   sanitizeSettings,
   serializeProject,
+  serializeProjectBlob,
   toProjectDocument,
 } from './document'
 
@@ -121,6 +122,33 @@ describe('serializeProject / parseProject', () => {
     expect(silent.settings.film.audio).toEqual([])
     expect(silent.warnings).toEqual(['1 musique sans fichier lisible dans le projet, retirée du film.'])
     expect(parseProject(serializeProject(STATE, 'x')).media).toEqual({})
+  })
+
+  it('serializeProjectBlob writes the same document, reusing the stored bytes of each medium', async () => {
+    const data = 'data:video/mp4;base64,AAAAGGZ0eXBtcDQy'
+    const clip = { data, thumb: 'data:image/jpeg;base64,/9j/AAEC', name: 'col.mp4', durationS: 12, width: 4, height: 3 }
+    const photo = { data: 'data:image/jpeg;base64,/9j/AAEC', thumb: 'data:image/jpeg;base64,/9j/AAEC', width: 4, height: 3, name: 'lac é.jpg' }
+    const media = [
+      { id: 'media-1', startS: 8, durationS: 5, kind: 'video' as const, src: 'video-1', ...MEDIA_DEFAULTS },
+      { id: 'media-2', startS: 20, durationS: 5, kind: 'image' as const, src: 'photo-1', ...MEDIA_DEFAULTS },
+    ]
+    const state = { ...STATE, settings: { ...SETTINGS, film: { ...SETTINGS.film, media } } }
+    const table = { 'video-1': clip, 'photo-1': photo }
+    const stringify = vi.spyOn(JSON, 'stringify')
+    const first = serializeProjectBlob(state, 'Tour', table)
+    expect(await first.text()).toBe(serializeProject(state, 'Tour', table))
+    // a setting changed: the media are not serialised again
+    stringify.mockClear()
+    const next = serializeProjectBlob({ ...state, settings: { ...state.settings, exaggeration: 2 } }, 'Tour', table)
+    expect(stringify.mock.calls.some(([value]) => value === clip || value === photo)).toBe(false)
+    expect(parseProject(await next.text()).media).toEqual(table)
+    // a medium replaced (new object) is serialised: nothing stale is written
+    const edited = { ...clip, durationS: 13 }
+    expect(JSON.parse(await serializeProjectBlob(state, 'Tour', { ...table, 'video-1': edited }).text()).media['video-1'].durationS).toBe(13)
+    stringify.mockRestore()
+    // no media, no table: same text
+    expect(await serializeProjectBlob(STATE, 'x').text()).toBe(serializeProject(STATE, 'x'))
+    expect(await serializeProjectBlob({ ...STATE, tracks: [] }, 'x').text()).toBe(serializeProject({ ...STATE, tracks: [] }, 'x'))
   })
 
   it('falls back to the default per invalid or missing setting and ignores unknown keys', () => {

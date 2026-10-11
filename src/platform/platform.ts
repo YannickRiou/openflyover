@@ -87,7 +87,7 @@ export interface ProjectLibrary {
   /** most recent first; an entry that cannot be read is left out */
   list(): Promise<ProjectEntry[]>
   /** write the document of entry `id`, or of a new entry when `id` is null; without `thumbnail` the entry keeps its own */
-  save(id: string | null, project: { name: string; summary: string; text: string; thumbnail?: string }): Promise<ProjectEntry>
+  save(id: string | null, project: { name: string; summary: string; text: string | Blob; thumbnail?: string }): Promise<ProjectEntry>
   /** text of the document */
   load(id: string): Promise<string>
   /** the entry only: the document keeps its name until its next save */

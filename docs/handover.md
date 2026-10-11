@@ -502,3 +502,22 @@ version on 9 October 2026); check again at its next release.
 - Firefox / Safari not tested for export (WebCodecs). HTTPS required outside `localhost`.
 - No component rendering tests (no Testing Library); `npm run e2e` checks the main flows in a
   real browser, but the look is still checked by hand, with screenshots.
+
+## Phone memory (branch `phone-memory`, from master 732a8d8)
+
+Report: on an iPhone 12 (iOS, Chrome / WebKit) the page « refreshes » while changing settings and during an export. No
+code reloads the page; iOS ends the tab (memory) and the browser reloads it, hidden by the reopening of the last
+project. Fixes and figures: ARCHITECTURE.md, "Mobile memory budget". Nothing below was measured: **no iPhone was
+available** and the headless Chromium has no real GPU memory model.
+
+- Not verified without a device: that the tab no longer dies (the memory figures are estimates); the real size of the
+  shadow map and framebuffer savings; that 2048² shadows look right on a phone; that a 720 px LOD at 1080p / 9:16 stays
+  sharp enough; that sessionStorage survives the reload of a killed tab on iOS (else no « interrompu » toast, no harm);
+  that Wake Lock is granted in Safari and Chrome iOS (needs 16.4+); that the capped bitrate looks acceptable; that
+  Blob-backed `Cache.put` of a 55 MB document works on WebKit.
+- Left for later: release of the imagery canvases (needs an imagery redraw after a context restore), the muxer's copies
+  at the end of an in-memory export, `lastOpenProject` still reads the document as text (`load` returns a string: about
+  3× its size at start-up with a 40 MB clip: make `load` return a Blob), and `PosterPanel` subscribes to the whole export
+  store.
+- Autosave keeps its 3 s delay: the heavy part (re-serialising and copying the media) is gone, only the header and the
+  tracks are serialised, and the browser still rewrites the document to the cache.

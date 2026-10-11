@@ -27,6 +27,14 @@ export interface DeviceBudget {
   seaRender: 'volume' | 'surface'
   /** largest short side of an exported film or still, px */
   maxExportShortSide: number
+  /** tallest viewport (px) the terrain LOD is evaluated at during an export: tiles are chosen as for a view this high */
+  maxLodHeightPx: number
+  /** ceiling of the video bitrate (bit/s) when the film is kept in memory (no direct disk write): its size is the RAM it takes */
+  maxVideoBitrate: number
+  /** estimated size (bytes) above which a film kept in memory is flagged as likely to exhaust the tab */
+  memoryWarnBytes: number
+  /** texels per side of the relief's shadow map (memory grows with its square: estimated ~128 MB at 4096², ~32 MB at 2048²) */
+  shadowMapSize: number
 }
 
 export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
@@ -40,9 +48,13 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   cloudResolutionScale: 1,
   seaRender: 'volume',
   maxExportShortSide: 2160,
+  maxLodHeightPx: Infinity,
+  maxVideoBitrate: Infinity,
+  memoryWarnBytes: 1.5e9,
+  shadowMapSize: 4096,
 }
 
-const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide'> = {
+const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes'> = {
   maxPixelRatio: 2,
   movingPixelRatio: 1.5,
   tileBitmaps: 200,
@@ -51,6 +63,8 @@ const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide'> = {
   cloudSettleFrames: 16,
   cloudResolutionScale: 0.5,
   seaRender: 'surface',
+  // a quarter of the computer's memory; the map is refitted to the view every frame and a phone screen is small
+  shadowMapSize: 2048,
 }
 
 /** Below this short side (CSS px), a touch device is a phone. */
@@ -70,11 +84,30 @@ export interface DeviceTraits {
 export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits): DeviceBudget {
   if (!coarsePointer) return { ...DESKTOP_BUDGET }
   const phone = shortSidePx < PHONE_MAX_SHORT_SIDE
-  const budget: DeviceBudget = { ...MOBILE_BUDGET, kind: phone ? 'phone' : 'tablet', maxExportShortSide: phone ? 1080 : 1440 }
+  const budget: DeviceBudget = {
+    ...MOBILE_BUDGET,
+    kind: phone ? 'phone' : 'tablet',
+    maxExportShortSide: phone ? 1080 : 1440,
+    // about the height of the phone's preview: a 1080p or portrait export keeps the tiles the preview already holds
+    maxLodHeightPx: phone ? 720 : Infinity,
+    // 1 MB/s: a 5 minute film is ~300 MB in memory, and the muxer's copies make the peak 2.5-3 times that
+    maxVideoBitrate: phone ? 8e6 : 12e6,
+    // iOS ends a tab well before the computers' 1.5 GB: the film, its copies at the end and the scene add up
+    memoryWarnBytes: 250e6,
+  }
   if (memoryGb !== undefined && memoryGb <= LOW_MEMORY_GB) {
-    return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100 }
+    return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024 }
   }
   return budget
+}
+
+/**
+ * MSAA of the canvas's default framebuffer. A phone or tablet with the atmosphere drops it: the picture then goes
+ * through the composer (SMAA, no multisampling) and the default framebuffer's samples (~75 MB at 1080p) are never used.
+ * Without the atmosphere the scene is drawn straight to it, so it stays. Fixed when the context is created.
+ */
+export function canvasAntialias(budget: Pick<DeviceBudget, 'kind'>, atmosphere: boolean): boolean {
+  return budget.kind === 'desktop' || !atmosphere
 }
 
 /** Traits of the device running `scope` (window); a scope without a screen (tests, workers) reads as a computer. */

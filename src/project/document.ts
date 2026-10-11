@@ -10,7 +10,7 @@
 import { isRecord } from '../core/guards'
 import type { Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
 import { sanitizeMediaTable, usedMedia } from '../film/media'
-import type { MediaTable } from '../film/media'
+import type { MediaAsset, MediaTable } from '../film/media'
 import { isValidFilm, withFilmDefaults } from '../film/model'
 import { FLYOVER_DURATION_RANGE, isValidCamera, withCameraDefaults } from '../flyover/cameraSettings'
 import { isValidPacing, withPacingDefaults } from '../flyover/pacing'
@@ -244,16 +244,43 @@ export function toProjectDocument(state: ProjectSource, name: string, media: Med
   return doc
 }
 
-/** JSON text of the project: header and settings indented, one line per track, then one line per picture. */
-export function serializeProject(state: ProjectSource, name: string, media: MediaTable = {}): string {
+/**
+ * The document as pieces to join: header and settings indented, one line per track, then one line per picture, `asset`
+ * giving the piece of each picture (its JSON, or a stored copy of it).
+ */
+function projectPieces<P extends string | Blob>(state: ProjectSource, name: string, media: MediaTable, asset: (a: MediaAsset) => P): (string | P)[] {
   const { tracks, media: pictures, ...head } = toProjectDocument(state, name, media)
   const headJson = JSON.stringify(head, null, 2)
   const tracksJson = tracks.length === 0 ? '[]' : `[\n${tracks.map((t) => `    ${JSON.stringify(t)}`).join(',\n')}\n  ]`
   const entries = Object.entries(pictures ?? {})
-  const mediaJson =
-    entries.length === 0 ? '' : `,\n  "media": {\n${entries.map(([id, a]) => `    ${JSON.stringify(id)}: ${JSON.stringify(a)}`).join(',\n')}\n  }`
   // headJson ends with "\n}"
-  return `${headJson.slice(0, -2)},\n  "tracks": ${tracksJson}${mediaJson}\n}\n`
+  const start = `${headJson.slice(0, -2)},\n  "tracks": ${tracksJson}`
+  if (entries.length === 0) return [`${start}\n}\n`]
+  const lines = entries.flatMap(([id, a], i) => [`${i === 0 ? '' : ',\n'}    ${JSON.stringify(id)}: `, asset(a)])
+  return [`${start},\n  "media": {\n`, ...lines, '\n  }\n}\n']
+}
+
+/** JSON text of the project. */
+export function serializeProject(state: ProjectSource, name: string, media: MediaTable = {}): string {
+  return projectPieces(state, name, media, (a) => JSON.stringify(a)).join('')
+}
+
+/** JSON of each picture, clip and sound as bytes, made once (a table entry is replaced, never changed). */
+const assetBlobs = new WeakMap<MediaAsset, Blob>()
+
+/**
+ * Same document as `serializeProject`, as a Blob that reuses the stored bytes of each medium: a clip of tens of MB is
+ * neither re-serialised nor copied by each autosave, and the Blob needs no JS string, UTF-8 copy or `Response` copy.
+ */
+export function serializeProjectBlob(state: ProjectSource, name: string, media: MediaTable = {}): Blob {
+  return new Blob(
+    projectPieces(state, name, media, (a) => {
+      let blob = assetBlobs.get(a)
+      if (!blob) assetBlobs.set(a, (blob = new Blob([JSON.stringify(a)])))
+      return blob
+    }),
+    { type: 'application/json' },
+  )
 }
 
 /** File name for a project: characters forbidden by common file systems replaced by "-". */
