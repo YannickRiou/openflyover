@@ -184,14 +184,16 @@ export function viewMotionPx(a: ShutterView, b: ShutterView, heightPx: number, a
 }
 
 /**
- * Renders of a frame needed for the blur to look like the `SHUTTER_SUBFRAMES` of a full one, from the on-screen motion
- * (`viewMotionPx`) between the first and the last of those: the shutter window is 8/7 of it, and its evenly spaced
- * renders are at most `SHUTTER_STEP_PX` apart. 1 when the view stands still (no blur to render).
+ * Renders of a frame needed for the blur to look like the `max` (`SHUTTER_SUBFRAMES`, or fewer for a lighter export
+ * quality) of a full one, from the on-screen motion (`viewMotionPx`) between the first and the last of those: the
+ * shutter window is max / (max - 1) of it, and its evenly spaced renders are at most `SHUTTER_STEP_PX` apart. 1 when
+ * the view stands still (no blur to render).
  */
-export function subFrameCount(spanPx: number): number {
-  const windowPx = (spanPx * SHUTTER_SUBFRAMES) / (SHUTTER_SUBFRAMES - 1)
+export function subFrameCount(spanPx: number, max = SHUTTER_SUBFRAMES): number {
+  if (max < 2) return 1
+  const windowPx = (spanPx * max) / (max - 1)
   // an estimate that failed (NaN) keeps the full blur
-  return windowPx >= 0 ? clamp(Math.ceil(windowPx / SHUTTER_STEP_PX), 1, SHUTTER_SUBFRAMES) : SHUTTER_SUBFRAMES
+  return windowPx >= 0 ? clamp(Math.ceil(windowPx / SHUTTER_STEP_PX), 1, max) : max
 }
 
 /** Frame the motion is measured on: height in pixels, width / height, vertical field of view in degrees. */
@@ -202,8 +204,8 @@ export interface ShutterScreen {
 }
 
 /**
- * Renders of frame `index` with the shutter open: `SHUTTER_SUBFRAMES` of them (`shutterSamples`), fewer when the view
- * barely moves over the shutter. `viewOf` places the film at a render (without the terrain loaded, so that the count
+ * Renders of frame `index` with the shutter open: `max` of them (`shutterSamples`; `SHUTTER_SUBFRAMES`, or fewer for a
+ * lighter export quality), fewer when the view barely moves over the shutter. `viewOf` places the film at a render (without the terrain loaded, so that the count
  * is the same on every run). A function of the film time alone.
  */
 export function adaptiveShutterSamples(
@@ -214,11 +216,12 @@ export function adaptiveShutterSamples(
   viewOf: (sample: ShutterSample) => ShutterView,
   screen: ShutterScreen,
   keep?: (timeS: number) => boolean,
+  max = SHUTTER_SUBFRAMES,
 ): ShutterSample[] {
-  const full = shutterSamples(times, progress, index, shutter, SHUTTER_SUBFRAMES, keep)
+  const full = shutterSamples(times, progress, index, shutter, max, keep)
   if (full.length < 2) return full
   const span = viewMotionPx(viewOf(full[0]), viewOf(full[full.length - 1]), screen.heightPx, screen.aspect, screen.fovDeg)
-  const count = subFrameCount(span)
+  const count = subFrameCount(span, max)
   return count < full.length ? shutterSamples(times, progress, index, shutter, count, keep) : full
 }
 

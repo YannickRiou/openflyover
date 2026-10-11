@@ -1,11 +1,12 @@
 import { useId, useMemo, useState } from 'react'
+import { effectiveRender } from '../export/qualityTier'
 import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
-import { CLOUD_ALTITUDE_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
+import { CLOUD_ALTITUDE_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type CloudQualitySetting, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
@@ -255,6 +256,10 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
   const stats = useAppStore((s) => s.tracks[0]?.stats)
   const setSetting = useAppStore((s) => s.setSetting)
   const set = (patch: Partial<Settings['clouds']>) => setSetting('clouds', { ...clouds, ...patch })
+  // what the export really uses: the quality chosen by hand, else the one of the export quality (qualityTier.ts)
+  const videoQuality = useAppStore((s) => s.settings.video.quality)
+  const effectiveQuality = effectiveRender(videoQuality, clouds).cloudsQuality
+  const qualityLabel = CLOUD_QUALITY_OPTIONS.find((o) => o.value === effectiveQuality)?.label
   return (
     <>
       <fieldset className="field fieldset">
@@ -362,29 +367,36 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
       {clouds.mode !== 'aucun' && (
         <SettingRow
           label="Qualité des nuages à l’export"
-          value={CLOUD_QUALITY_OPTIONS.find((o) => o.value === clouds.quality)?.label}
+          value={qualityLabel}
           paths={['clouds.quality']}
           weight="clouds"
+          preset="clouds"
         >
           <div className="field">
             <div className="field__label-row">
               <label className="field__label" htmlFor={`${id}-clouds-quality`}>
                 Qualité des nuages à l’export
               </label>
-              <InfoTip text="L’aperçu reste en qualité rapide. Une qualité fine allonge l’export." />
+              <InfoTip text="L’aperçu reste en qualité rapide. Une qualité fine allonge l’export. Par défaut, elle suit la qualité de l’export (Standard : rapide, Haute : moyenne, Maximale : fine)." />
             </div>
             <select
               id={`${id}-clouds-quality`}
               className="select"
               value={clouds.quality}
-              onChange={(e) => set({ quality: e.currentTarget.value as CloudQuality })}
+              onChange={(e) => set({ quality: e.currentTarget.value as CloudQualitySetting })}
             >
+              <option value="auto">Selon la qualité de l’export ({qualityLabel})</option>
               {CLOUD_QUALITY_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
+            {clouds.quality !== 'auto' && (
+              <button type="button" className="btn btn--secondary" onClick={() => set({ quality: 'auto' })}>
+                Revenir au préréglage
+              </button>
+            )}
           </div>
         </SettingRow>
       )}
