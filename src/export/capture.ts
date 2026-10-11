@@ -21,13 +21,13 @@ export interface SettleOptions {
    * TerrainLayer selects the tiles for it (useFrame order), and the shadows and post-process follow the camera.
    */
   minAdvances: number
-  /** give up waiting for the terrain after this long and capture what is there */
+  /** give up waiting for the terrain after this long (per frame) and capture what is there */
   timeoutMs: number
   /** wait between tile requests while tiles are loading */
   pollMs: number
 }
 
-export const DEFAULT_SETTLE: SettleOptions = { minAdvances: 1, timeoutMs: 5_000, pollMs: 16 }
+export const DEFAULT_SETTLE: SettleOptions = { minAdvances: 1, timeoutMs: 45_000, pollMs: 16 }
 
 /** Offset used to make the flyover rig place the camera again at (almost) the same progress. */
 export const REPLACE_EPSILON = 1e-9
@@ -41,8 +41,13 @@ export interface SettleDeps {
   separateFinal(): boolean
   /** request the tiles of the current camera without rendering (`engine.update`) */
   updateTiles(): void
-  /** tiles the current view still waits for (`stats.pendingVisibleTiles`) */
+  /**
+   * tiles the current view still waits for (`stats.pendingVisibleTiles`): loading or queued with their imagery, retries of
+   * failed ones included, and any that the selection of the last update would still request
+   */
   pendingTiles(): number
+  /** tiles of the view that will not get any better (`stats.missingVisibleTiles`): given up on, or without all their imagery */
+  missingTiles?(): number
   /** run the debounced re-drapes of the track and labels now; true when one ran */
   flushDrapes(): boolean
   now(): number
@@ -93,21 +98,30 @@ export async function settle(deps: SettleDeps, options: SettleOptions = DEFAULT_
  * placed once more (at a progress REPLACE_EPSILON away, invisible) so the ground clearance uses the final
  * terrain. Not after a timeout: the terrain would not settle any better the second time. Then, when the clouds
  * have slices to compute (`separateFinal`), the one final render that is captured: they run once per frame
- * whatever the number of settle renders.
+ * whatever the number of settle renders. That render selects the tiles once more: if its selection asks for any
+ * (the view moved since the last check), the frame settles again and is rendered again. One timeout covers all of it.
+ * Resolves false when the view was not final at the capture: timeout, or tiles given up on (`missingTiles`).
  */
 export async function renderSettledFrame(
   progress: number,
   deps: RenderFrameDeps,
   options: SettleOptions = DEFAULT_SETTLE,
 ): Promise<boolean> {
+  const start = deps.now()
+  const left = (): SettleOptions => ({ ...options, timeoutMs: Math.max(0, options.timeoutMs - (deps.now() - start)) })
+  const deferred = deps.separateFinal()
   deps.setProgress(progress)
   let complete = await settle(deps, options)
   if (complete && deps.cameraDrift() > REPLACE_TOLERANCE_M) {
     deps.setProgress(progress < 1 ? progress + REPLACE_EPSILON : progress - REPLACE_EPSILON)
-    complete = await settle(deps, options)
+    complete = await settle(deps, left())
   }
-  if (deps.separateFinal()) deps.advance(true)
-  return complete
+  if (deferred) deps.advance(true)
+  while (complete && deps.pendingTiles() > 0) {
+    complete = await settle(deps, left())
+    if (deferred) deps.advance(true)
+  }
+  return complete && (deps.missingTiles?.() ?? 0) === 0
 }
 
 /** Sky gradient behind a transparent canvas (mirrors the CSS background of FlyoverCanvas: glacier → paper). */

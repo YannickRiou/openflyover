@@ -23,7 +23,7 @@ import type {
 import { deviceBudget } from '../core/deviceBudget'
 import { boundsIntersect, lonLatToTileFrac, tileGroundSizeM } from '../geo/mercator'
 import { decodeDem as defaultDecodeDem } from './dem'
-import { createTileFetcher, isNoDataError } from './fetch'
+import { createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
 import { buildTileGeometry, sampleTileMesh } from './mesh'
@@ -96,6 +96,8 @@ export interface EngineTuning {
   maxLoadAttempts: number
   /** wait (ms) before retrying a failed node */
   retryDelayMs: number
+  /** same during a video export, where the view waits for the retry */
+  exportRetryDelayMs: number
   /** share of `maxConcurrentLoads` that prefetches may use (the rest stays free for the current view) */
   prefetchLoadShare: number
   /** skirt depth as a fraction of the tile ground size */
@@ -119,6 +121,7 @@ export const DEFAULT_TUNING: Readonly<EngineTuning> = {
   rootTileBudget: 16,
   maxLoadAttempts: 3,
   retryDelayMs: 5_000,
+  exportRetryDelayMs: 750,
   prefetchLoadShare: 0.5,
   skirtRatio: 0.015,
   minSkirtDepthM: 20,
@@ -202,7 +205,7 @@ export function createTerrainEngine(
   group.name = 'terrain'
   group.matrixAutoUpdate = false
 
-  const stats: TerrainStats = { visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, lodFactor: 1 }
+  const stats: TerrainStats = { visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, missingVisibleTiles: 0, lodFactor: 1 }
   const listeners = new Set<() => void>()
 
   // Hot-path scratch state, allocated once.
@@ -215,6 +218,7 @@ export function createTerrainEngine(
     maxZoom: 0,
     frame: 0,
     maxLoadAttempts: cfg.maxLoadAttempts,
+    exporting: false,
     outerMaxZoom: OUTER_MAX_ZOOM,
   }
   const geometryOptions: BuildTileGeometryOptions = { segments: 0, exaggeration: 1, skirtDepthM: 0 }
@@ -236,6 +240,8 @@ export function createTerrainEngine(
   let disposed = false
   /** export retention in film frames; null = wall time */
   let retention: TerrainRetention | null = null
+  /** video export: the view waits for the retries of its failed tiles too (`setExporting`) */
+  let exporting = false
   /** coarsening of the level of detail that keeps the view within `maxResidentTiles` (0 = none) */
   let lodLevel = 0
 
@@ -290,7 +296,7 @@ export function createTerrainEngine(
   function startLoad(node: TileNode, rank: number): void {
     if (node.state === 'failed' && !node.noData) failedCount--
     // a retry may well fail again: in the background, after every first attempt (it would hold their fetch slots)
-    if (node.failedAttempts > 0) rank += RETRY_RANK
+    if (node.failedAttempts > 0 && !exporting) rank += RETRY_RANK
     const { terrain, imagery, imageryZoomOffset } = opts
     if (terrain.coverage && !boundsIntersect(terrain.coverage, node.bounds)) {
       // No elevation data there: fail permanently without a request (the parent stays rendered).
@@ -309,10 +315,15 @@ export function createTerrainEngine(
       .then((bitmap) => io.decodeDem(bitmap, terrain.encoding))
 
     const wantsImagery = !imagery.coverage || boundsIntersect(imagery.coverage, node.bounds)
+    // an imagery failure is a transient failure of the node too (below): the parent keeps its imagery meanwhile
+    let imageryFailed = false
     const texturePromise: Promise<Texture | undefined> = wantsImagery
       ? io
           .loadImageryTexture(node.key, imagery, io.fetcher, { zoomOffset: imageryZoomOffset, signal, priority: rank })
-          .catch(() => undefined) // imagery failure never fails the node: grey material
+          .catch((error: unknown) => {
+            if (!isAbortError(error)) imageryFailed = true
+            return undefined
+          })
       : Promise.resolve(undefined)
 
     Promise.all([demPromise, texturePromise]).then(
@@ -323,8 +334,13 @@ export function createTerrainEngine(
         }
         node.abortController = undefined
         loadingCount--
+        imageryFailed ||= texture?.userData.incomplete === true
         try {
+          // the last attempt keeps what arrived: grey where the imagery is missing, counted by the export
+          const retry = imageryFailed && node.failedAttempts + 1 < cfg.maxLoadAttempts
+          if (retry) throw new Error(`imagery of tile ${node.id} incomplete`)
           finishLoad(node, grid, texture)
+          node.imageryMissing = imageryFailed
         } catch (error) {
           // A grid the mesh builder rejects must not leave the node 'loading' forever.
           if (texture) disposeTexture(texture)
@@ -384,7 +400,7 @@ export function createTerrainEngine(
     node.state = 'failed'
     node.noData = permanent
     node.failedAttempts = permanent ? cfg.maxLoadAttempts : node.failedAttempts + 1
-    node.retryAt = now() + cfg.retryDelayMs
+    node.retryAt = now() + (exporting ? cfg.exportRetryDelayMs : cfg.retryDelayMs)
     if (permanent) return
     failedCount++
     if (import.meta.env.DEV && error !== undefined) {
@@ -438,6 +454,7 @@ export function createTerrainEngine(
     node.grid = undefined // the height field keeps its own (LRU) copy
     node.state = 'empty'
     node.noData = false
+    node.imageryMissing = false
     node.resetBounds()
   }
 
@@ -599,12 +616,13 @@ export function createTerrainEngine(
   // --- change notifications ---------------------------------------------------------
 
   /** `pendingTiles` = nodes loading + nodes the last selection wanted but could not start. */
-  function refreshStats(pendingTiles: number, pendingVisibleTiles = 0): void {
+  function refreshStats(pendingTiles: number, pendingVisibleTiles = 0, missingVisibleTiles = 0): void {
     stats.visibleTiles = rendered.length
     stats.loadedTiles = readyCount
     stats.pendingTiles = pendingTiles
     stats.failedTiles = failedCount
     stats.pendingVisibleTiles = pendingVisibleTiles
+    stats.missingVisibleTiles = missingVisibleTiles
     stats.lodFactor = LOD_STEP ** lodLevel
   }
 
@@ -657,6 +675,7 @@ export function createTerrainEngine(
     selectionParams.maxZoom = opts.maxZoom
     selectionParams.detailArea = opts.detailArea
     selectionParams.frame = frame
+    selectionParams.exporting = exporting
     selectionParams.now = now()
     selectionParams.keepUntil = retention ? retention.frame + retention.keepFrames : selectionParams.now + cfg.unloadAfterMs
     solveLodLevel()
@@ -692,7 +711,7 @@ export function createTerrainEngine(
     if (dirtyCount > 0) rebuildDirty()
     if (frame % cfg.sweepEveryFrames === 0) sweep()
 
-    refreshStats(loadingCount + (toLoad.length - started), selection.pendingVisible)
+    refreshStats(loadingCount + (toLoad.length - started), selection.pendingVisible, selection.missingVisible)
     flushChange()
   }
 
@@ -788,6 +807,19 @@ export function createTerrainEngine(
     retention = next && { ...next }
   }
 
+  function setExporting(next: boolean): void {
+    if (next === exporting) return
+    exporting = next
+    if (!next) return
+    // tiles that gave up before the export are tried again: the export waits for them
+    forEachNode(roots, (node) => {
+      if (node.state === 'failed' && !node.noData) {
+        node.failedAttempts = 0
+        node.retryAt = 0
+      }
+    })
+  }
+
   function caches(): TerrainCaches {
     return { bitmaps: io.fetcher.stats.cached, bitmapBytes: io.fetcher.cachedBytes, heightGrids: io.heightField.size ?? 0 }
   }
@@ -812,5 +844,5 @@ export function createTerrainEngine(
 
   buildTree()
 
-  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, caches, dispose }
+  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, setExporting, caches, dispose }
 }

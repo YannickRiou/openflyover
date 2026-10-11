@@ -336,6 +336,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     // a region arriving now would change the framing mid-film (camera and highlight): it waits for the end
     holdRegion(true)
     three.setFrameloop('never')
+    // the view waits for the retries of its failed tiles, quickly (engine.ts)
+    deps.engine()?.setExporting?.(true)
     canvas.style.pointerEvents = 'none'
     exportStore().setRenderScale(exportRenderScale(width, height))
     applyVideoSize()
@@ -364,6 +366,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         const stats = deps.engine()?.stats
         return stats ? (stats.pendingVisibleTiles ?? stats.pendingTiles) : 0
       },
+      missingTiles: () => deps.engine()?.stats.missingVisibleTiles ?? 0,
       flushDrapes: () => {
         const ran = flushDrapes()
         if (ran) drapes++
@@ -517,7 +520,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     console.info(
       `[export] ${schedule.length} images (${timings.rendered} rendues) en ${s(performance.now() - startedAt)} s : ` +
         `rendu ${s(timings.renderMs)} s, attente des tuiles ${s(timings.waitMs)} s, encodage ${s(timings.encodeMs)} s, ` +
-        `${timings.timeouts} délai(s) dépassé(s)`,
+        `${timings.timeouts} image(s) avant la fin du chargement`,
     )
     exportStore().complete({
       // null: already written to the chosen file
@@ -534,6 +537,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   } finally {
     setExportProbe(null)
     deps.engine()?.setRetention?.(null)
+    deps.engine()?.setExporting?.(false)
     releaseFrameMedia()
     setShutterSubFrame(0, 1)
     holdRegion(false)

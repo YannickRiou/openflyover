@@ -76,6 +76,8 @@ export class TileNode {
    * never retried, not an error. Only meaningful while `state === 'failed'`.
    */
   noData = false
+  /** drawn with grey patches or a grey material: some imagery never arrived (every attempt used) */
+  imageryMissing = false
   /** engine clock (ms) from which a failed node may be retried */
   retryAt = 0
 
@@ -237,6 +239,8 @@ export interface SelectionParams {
   keepUntil?: number
   /** failed nodes are re-queued at most this many times; default 3 */
   maxLoadAttempts?: number
+  /** video export: the view also waits for the retries of its failed tiles (they are the view's, not background loads) */
+  exporting?: boolean
 }
 
 export interface SelectionResult {
@@ -249,10 +253,12 @@ export interface SelectionResult {
    * Culled nodes (shadow casters, low-priority children) are not counted.
    */
   pendingVisible: number
+  /** In-frustum nodes that will never reach their final state: given up on after every attempt, or drawn without full imagery. */
+  missingVisible: number
 }
 
 export function createSelectionResult(): SelectionResult {
-  return { toRender: [], toLoad: [], pendingVisible: 0 }
+  return { toRender: [], toLoad: [], pendingVisible: 0, missingVisible: 0 }
 }
 
 const DEFAULT_MAX_LOAD_ATTEMPTS = 3
@@ -287,6 +293,7 @@ export function selectTiles(
   out.toRender.length = 0
   out.toLoad.length = 0
   out.pendingVisible = 0
+  out.missingVisible = 0
   const ctx = selectionContext
   ctx.camera = camera
   ctx.params = params
@@ -312,9 +319,15 @@ function queueLoad(node: TileNode, priority: number, ctx: SelectionContext): voi
   node.priority = priority
   const loadable = isLoadable(node, ctx.params.now ?? 0, ctx.maxLoadAttempts)
   if (loadable) ctx.out.toLoad.push(node)
-  // visible nodes have a priority >= 0 (their sse), culled ones a negative one; the view waits for a first attempt
-  // only, a failed node's retry loads in the background (unreachable hosts would otherwise hold every export frame)
-  if (priority >= 0 && node.failedAttempts === 0 && (loadable || node.state === 'loading')) ctx.out.pendingVisible++
+  if (priority < 0) return // culled nodes are never waited for
+  // The view waits for a first attempt only: a failed node's retry loads in the background (unreachable hosts would
+  // otherwise hold every preview frame). An export waits for the retries too, up to the last attempt.
+  const retrying = node.state === 'failed' && !node.noData && node.failedAttempts < ctx.maxLoadAttempts
+  if (loadable || node.state === 'loading' || (ctx.params.exporting && retrying)) {
+    if (node.failedAttempts === 0 || ctx.params.exporting) ctx.out.pendingVisible++
+  } else if (node.state === 'failed' && !node.noData && !retrying) {
+    ctx.out.missingVisible++
+  }
 }
 
 /** Priority of a culled node: always below any visible node, shallow levels first. */
@@ -412,11 +425,16 @@ export function zoomLimit(node: TileNode, params: SelectionParams): number {
 function renderOrQueue(node: TileNode, sse: number, ctx: SelectionContext): void {
   if (node.state === 'ready' && node.mesh) {
     node.priority = sse
-    ctx.out.toRender.push(node)
+    draw(node, ctx)
     return
   }
   queueLoad(node, sse, ctx)
   if (node.children) renderReadyDescendants(node.children, ctx)
+}
+
+function draw(node: TileNode, ctx: SelectionContext): void {
+  ctx.out.toRender.push(node)
+  if (node.imageryMissing) ctx.out.missingVisible++
 }
 
 function renderReadyDescendants(children: readonly TileNode[], ctx: SelectionContext): void {
@@ -425,7 +443,7 @@ function renderReadyDescendants(children: readonly TileNode[], ctx: SelectionCon
     const child = children[i]
     if (!camera.frustum.intersectsSphere(child.boundingSphere)) continue
     stamp(child, params)
-    if (child.state === 'ready' && child.mesh) ctx.out.toRender.push(child)
+    if (child.state === 'ready' && child.mesh) draw(child, ctx)
     else if (child.children) renderReadyDescendants(child.children, ctx)
   }
 }
