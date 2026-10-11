@@ -240,6 +240,23 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'diagnostic',
+    title: 'Rapport de diagnostic (onglet Projet) : appareil et réglages, sans nom de trace',
+    async run({ page }) {
+      if (await page.evaluate(() => document.getElementById('tab-projet')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-projet')
+      await page.click('#tab-panel-projet .setting-row__head::-p-text(Diagnostic)')
+      await clickButton(page, 'Afficher le rapport')
+      await page.waitForSelector('dialog.diagnostic[open]', { visible: true, timeout: STEP_MS })
+      const text = await page.$eval('dialog.diagnostic pre', (pre) => pre.textContent)
+      for (const part of ['[Appareil]', '[Export]', '[Réglages]', 'Traces : 1,', 'budget.kind : desktop']) {
+        assert(text.includes(part), `le rapport ne contient pas « ${part} »`)
+      }
+      assert(!/Mont-Blanc|Chamonix/i.test(text), 'le rapport contient le nom de la trace')
+      await page.keyboard.press('Escape')
+      await until(page, () => !document.querySelector('dialog.diagnostic[open]'))
+    },
+  },
+  {
     id: 'reglage-repli',
     title: 'Réglage replié (onglet Lumière) : nom et valeur, curseur au clavier, Par défaut',
     async run({ page }) {

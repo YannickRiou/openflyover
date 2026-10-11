@@ -2453,7 +2453,17 @@ kept in the tab's `sessionStorage`; if the next start finds it, the export never
 (« Le dernier export a été interrompu… »), with a « Détails » button showing the **breadcrumb**: the last `pagehide` /
 `freeze` / `webglcontextlost` with `renderer.info.memory` textures and geometries and the loaded tile count. iOS kills a
 tab short of memory without any page event, so the export also writes its own steps (start, video size applied, encoder
-ready, the first 3 frames then 1 in 25, finalisation); each export starts with a fresh breadcrumb.
+ready with its codec and bitrate, the first 3 frames then 1 in 25, finalisation); the last `MAX_STEPS` (15) are kept
+as a list, each with the JS heap where `performance.memory` exists (Chrome), and each export starts with a fresh list.
+The **diagnostic report** (`export/diagnostic.ts`, pure and tested: `buildReport`, `formatReport`) is taken at the same
+busy transition, under `openflyover.diagnostic`: app version (`__APP_VERSION__`, vite.config.ts), device and its budget,
+GPU (`setGpuProbe`, registered by the scene like the breadcrumb probe, read once), the export request (size, quality,
+`effectiveRender`, capped `videoBitrate`, memory or disk, frames, estimated size) and the settings (`summariseSettings` +
+`settingsDetails`, plus labels, landmarks, marker, track glow, grading, tracks and points, media of the film by kind and
+size, overlay widgets). No coordinate and no track, place, file or project name. « Détails » of the toast and
+« Diagnostic › Afficher le rapport » (Projet tab, `currentReport`: the report made now plus the last export and its
+steps) open `DiagnosticDialog` (« Copier le rapport », the text selected when the clipboard refuses). Both entries stay
+under ~16 KB of sessionStorage (values cut at 200 characters, steps at 80).
 
 Not done, on purpose: the imagery textures keep their 512² canvases (`CanvasTexture`, about 1 MB of JS memory per
 resident tile): three re-uploads from `texture.image` after a lost context, and the engine has no way to redraw a tile's
