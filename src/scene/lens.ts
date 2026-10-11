@@ -71,8 +71,15 @@ export function depthOfFieldParams(amount: number, focusM: number): { focusRange
 // Motion blur
 // ---------------------------------------------------------------------------
 
-/** Renders averaged per exported frame with the shutter open (the clouds share their noise slices among them). */
+/**
+ * Most renders averaged per exported frame with the shutter open (the clouds share their noise slices among them);
+ * fewer when the view barely moves (`subFrameCount`).
+ */
 export const SHUTTER_SUBFRAMES = 8
+/** Largest step (pixels of the video frame) between two consecutive renders of a frame: the average still reads as a blur. */
+export const SHUTTER_STEP_PX = 1
+/** Nearest relief the motion estimate guards against, as a fraction of the aim distance (a ridge a quarter of the way). */
+const NEAR_FRACTION = 0.25
 
 export interface ShutterSample {
   progress: number
@@ -110,6 +117,109 @@ export function shutterSamples(
     samples.push(keep(timeS) ? { progress: valueAt(progress, f), timeS } : own)
   }
   return samples
+}
+
+/** A point or a direction (a three.js Vector3 fits). */
+interface Point3 {
+  x: number
+  y: number
+  z: number
+}
+
+/** Camera placement and marker of the film at one instant of the shutter. */
+export interface ShutterView {
+  position: Point3
+  target: Point3
+  marker: Point3
+}
+
+const minus = (a: Point3, b: Point3): Point3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z })
+const plus = (a: Point3, b: Point3): Point3 => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z })
+const dot = (a: Point3, b: Point3) => a.x * b.x + a.y * b.y + a.z * b.z
+const cross = (a: Point3, b: Point3): Point3 => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x })
+const scaled = (a: Point3, k: number): Point3 => ({ x: a.x * k, y: a.y * k, z: a.z * k })
+const unit = (a: Point3): Point3 => scaled(a, 1 / (Math.hypot(a.x, a.y, a.z) || 1))
+
+/** Axes of a camera looking from `position` to `target`, level (y up), like `lookAt`. */
+function cameraAxes({ position, target }: ShutterView) {
+  const forward = unit(minus(target, position))
+  const right = unit(cross(forward, { x: 0, y: 1, z: 0 }))
+  // looking straight up or down: any horizontal axis
+  const level = Math.hypot(right.x, right.y, right.z) > 0 ? right : { x: 1, y: 0, z: 0 }
+  return { forward, right: level, up: cross(level, forward) }
+}
+
+/**
+ * Largest distance (pixels of a video frame `heightPx` high) a point of the scene moves on screen between the cameras
+ * of `a` and `b`: the marker (which moves itself), and fixed points of the relief seen at the four corners and the
+ * centre, at the aim distance and, as the worst case of the parallax, a quarter of it (`NEAR_FRACTION`). Translation and
+ * rotation both count; a point that ends up behind the camera counts as infinite.
+ */
+export function viewMotionPx(a: ShutterView, b: ShutterView, heightPx: number, aspect: number, fovDeg: number): number {
+  const half = heightPx / 2
+  const focal = half / Math.tan((fovDeg * Math.PI) / 360)
+  const from = cameraAxes(a)
+  const to = cameraAxes(b)
+  const project = (v: ShutterView, axes: typeof from, p: Point3) => {
+    const d = minus(p, v.position)
+    const z = dot(d, axes.forward)
+    return z > 1e-3 ? { x: (dot(d, axes.right) / z) * focal, y: (dot(d, axes.up) / z) * focal } : null
+  }
+  let worst = 0
+  const marker = [project(a, from, a.marker), project(b, to, b.marker)]
+  if (marker[0] && marker[1]) worst = Math.hypot(marker[1].x - marker[0].x, marker[1].y - marker[0].y)
+  const aimM = Math.max(1, Math.hypot(a.target.x - a.position.x, a.target.y - a.position.y, a.target.z - a.position.z))
+  for (const depth of [aimM, NEAR_FRACTION * aimM]) {
+    for (const [sx, sy] of [[0, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const x = sx * half * aspect
+      const y = sy * half
+      // the point seen at (x, y) from `a`, `depth` away along the view axis
+      const across = plus(scaled(from.right, (x / focal) * depth), scaled(from.up, (y / focal) * depth))
+      const point = plus(plus(a.position, scaled(from.forward, depth)), across)
+      const moved = project(b, to, point)
+      worst = moved ? Math.max(worst, Math.hypot(moved.x - x, moved.y - y)) : Infinity
+    }
+  }
+  return worst
+}
+
+/**
+ * Renders of a frame needed for the blur to look like the `SHUTTER_SUBFRAMES` of a full one, from the on-screen motion
+ * (`viewMotionPx`) between the first and the last of those: the shutter window is 8/7 of it, and its evenly spaced
+ * renders are at most `SHUTTER_STEP_PX` apart. 1 when the view stands still (no blur to render).
+ */
+export function subFrameCount(spanPx: number): number {
+  const windowPx = (spanPx * SHUTTER_SUBFRAMES) / (SHUTTER_SUBFRAMES - 1)
+  // an estimate that failed (NaN) keeps the full blur
+  return windowPx >= 0 ? clamp(Math.ceil(windowPx / SHUTTER_STEP_PX), 1, SHUTTER_SUBFRAMES) : SHUTTER_SUBFRAMES
+}
+
+/** Frame the motion is measured on: height in pixels, width / height, vertical field of view in degrees. */
+export interface ShutterScreen {
+  heightPx: number
+  aspect: number
+  fovDeg: number
+}
+
+/**
+ * Renders of frame `index` with the shutter open: `SHUTTER_SUBFRAMES` of them (`shutterSamples`), fewer when the view
+ * barely moves over the shutter. `viewOf` places the film at a render (without the terrain loaded, so that the count
+ * is the same on every run). A function of the film time alone.
+ */
+export function adaptiveShutterSamples(
+  times: readonly number[],
+  progress: readonly number[],
+  index: number,
+  shutter: number,
+  viewOf: (sample: ShutterSample) => ShutterView,
+  screen: ShutterScreen,
+  keep?: (timeS: number) => boolean,
+): ShutterSample[] {
+  const full = shutterSamples(times, progress, index, shutter, SHUTTER_SUBFRAMES, keep)
+  if (full.length < 2) return full
+  const span = viewMotionPx(viewOf(full[0]), viewOf(full[full.length - 1]), screen.heightPx, screen.aspect, screen.fovDeg)
+  const count = subFrameCount(span)
+  return count < full.length ? shutterSamples(times, progress, index, shutter, count, keep) : full
 }
 
 /**
@@ -156,10 +266,15 @@ export function shutterSubFrame(): ShutterSubFrame {
   return subFrame
 }
 
-/** The cloud noise slices of a frame split among its sub-frames, so the blur does not multiply their cost. */
+/**
+ * The cloud noise slices of a frame split among its sub-frames, so the blur does not multiply their cost: every slice
+ * is used once whatever the number of sub-frames (the first ones take the remainder).
+ */
 export function subFrameSlices(slices: number, { index, count }: ShutterSubFrame): { first: number; count: number } {
-  const per = Math.max(1, Math.round(slices / Math.max(1, count)))
-  return { first: index * per, count: per }
+  const per = Math.floor(slices / Math.max(1, count))
+  if (per < 1) return { first: index, count: 1 }
+  const extra = slices - per * count
+  return { first: index * per + Math.min(index, extra), count: per + (index < extra ? 1 : 0) }
 }
 
 /** `aS` and `bS` belong to the same continuous shot: same phase and no stage cut « À la suite » between them. */
