@@ -13,7 +13,7 @@ import type {
 import { DEFAULT_SETTLE, settle as settleView } from '../export/capture'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { tileKeyString, tilesForBounds, zoomForTileBudget } from '../geo/mercator'
-import { DEFAULT_TUNING, NO_IMAGERY_COLOR, createTerrainEngine, type EngineDeps, type EngineTuning, type HeightFieldLike } from './engine'
+import { DEFAULT_TUNING, LOD_STEP, NO_IMAGERY_COLOR, createTerrainEngine, type EngineDeps, type EngineTuning, type HeightFieldLike } from './engine'
 import { TileFetchError } from './fetch'
 
 // The engine wires these as defaults; the tests inject every dependency, so keep them inert.
@@ -986,7 +986,10 @@ describe('hard tile cap through the level of detail (phone)', () => {
     const engine = engineWith(deps, { area: AREA_WIDE, maxZoom: 15, segments: 64, errorTargetPx: 3 }, tuning)
     const held: number[] = []
     const factors: number[] = []
+    /** share of the tiles in view (before or after) that differ from the previous frame's */
+    const redrawn: number[] = []
     let drawn: Mesh[] = []
+    let before = new Set<string>()
     for (let i = 0; i < FRAMES; i++) {
       t += 290
       if (tuning.maxResidentTiles !== undefined) engine.setRetention?.({ frame: i, keepFrames: 6, prefetchKeepFrames: 30 })
@@ -1006,8 +1009,12 @@ describe('hard tile cap through the level of detail (phone)', () => {
         }
       }
       drawn = meshesOf(engine).filter((m) => m.visible && viewFrustum(camera).intersectsObject(m))
+      const now = new Set(drawn.map((m) => m.name))
+      const changed = [...now].filter((n) => !before.has(n)).length + [...before].filter((n) => !now.has(n)).length
+      redrawn.push(changed / new Set([...now, ...before]).size)
+      before = now
     }
-    return { held, factors, drawn }
+    return { held, factors, drawn, redrawn }
   }
 
   /** zoom of the drawn tile nearest to the camera, and of the farthest one (horizontal distance) */
@@ -1050,12 +1057,17 @@ describe('hard tile cap through the level of detail (phone)', () => {
   it('the preview keeps its level on a still view and goes back to full detail one step at a time', async () => {
     const engine = phoneEngine()
     const low = await settleOn(engine, filmCamera(149, true))
-    for (let k = 0; k < 30; k++) {
+    // once its tiles are in, the view relaxes a step per update to what it needs, then holds: no pumping
+    const still: number[] = []
+    for (let k = 0; k < 40; k++) {
       engine.update(filmCamera(149, true), 720)
+      still.push(engine.stats.lodFactor ?? 1)
       await flush()
-      expect(engine.stats.lodFactor).toBe(low.factors.at(-1))
     }
+    for (let k = 1; k < still.length; k++) expect(still[k]).toBeLessThanOrEqual(still[k - 1])
+    expect(new Set(still.slice(-20)).size).toBe(1)
     expect(low.factors.at(-1)).toBeGreaterThan(1)
+    expect(still.at(-1)).toBeGreaterThan(1)
     const factors: number[] = []
     for (let k = 0; k < 20; k++) {
       engine.update(cameraAbove(1_000_000), 720)
@@ -1063,7 +1075,7 @@ describe('hard tile cap through the level of detail (phone)', () => {
       await flush()
     }
     expect(factors.at(-1)).toBe(1)
-    for (let k = 1; k < factors.length; k++) expect(factors[k]).toBeGreaterThanOrEqual(factors[k - 1] / 1.25 - 1e-9)
+    for (let k = 1; k < factors.length; k++) expect(factors[k]).toBeGreaterThanOrEqual(factors[k - 1] / LOD_STEP - 1e-9)
   })
 
   for (const low of [false, true]) {
@@ -1084,6 +1096,8 @@ describe('hard tile cap through the level of detail (phone)', () => {
       // the ground under the camera keeps its detail, the distance gets coarser
       expect(phoneNear).toBe(freeNear)
       expect(phoneFar).toBeLessThan(freeFar)
+      // the level hovers around the budget: no frame redraws a third of the view (×1.25 steps did, 36 % and 43 %)
+      if (!low) expect(Math.max(...phone.redrawn.slice(3))).toBeLessThan(0.35)
     }, 120_000)
   }
 })

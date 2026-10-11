@@ -139,9 +139,13 @@ export const DEFAULT_IMAGERY_ZOOM_OFFSET = 1
  * high or far away, finer tiles would not show, and the distant landscape of the flight stays cheap.
  */
 export const OUTER_MAX_ZOOM = 11
-/** With a tile budget, the error target is multiplied by LOD_STEP ** level, level in [0, MAX_LOD_LEVEL] (×14.6 at most). */
-export const LOD_STEP = 1.25
-export const MAX_LOD_LEVEL = 12
+/**
+ * With a tile budget, the error target is multiplied by LOD_STEP ** level, level in [0, MAX_LOD_LEVEL] (×14.4 at most).
+ * The step is small: the level hovers around the budget (the count wobbles with what is loaded) and each change
+ * redraws the tiles whose error lies in the band it crosses: ×1.25 redrew a third of the view, ×1.1 a few tiles.
+ */
+export const LOD_STEP = 1.1
+export const MAX_LOD_LEVEL = 28
 /** the preview goes one level finer only when that selection holds within this share of the budget (hysteresis) */
 export const LOD_RELAX_SHARE = 0.9
 /** material colour when a tile has no imagery (neutral grey) */
@@ -563,7 +567,17 @@ export function createTerrainEngine(
     if (budget === Infinity) return
     let level = retention ? 0 : lodLevel
     if (level > 0 && fits(level - 1, Math.floor(budget * LOD_RELAX_SHARE))) level--
-    while (level < MAX_LOD_LEVEL && !fits(level, budget)) level++
+    if (!fits(level, budget)) {
+      // fits() only gets easier with the level: bisect for the first one that does (MAX_LOD_LEVEL if none)
+      let low = Math.min(level + 1, MAX_LOD_LEVEL)
+      let high = MAX_LOD_LEVEL
+      while (low < high) {
+        const mid = (low + high) >> 1
+        if (fits(mid, budget)) high = mid
+        else low = mid + 1
+      }
+      level = low
+    }
     lodLevel = level
   }
 
