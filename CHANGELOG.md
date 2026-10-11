@@ -7,9 +7,18 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **Faster export with clouds**: the volumetric clouds' noise slices are computed once per image (once per
   shutter sub-frame), in the final render only, not again at each render that waits for tiles; the frames are identical.
+- **Render history**: the export drawer lists the last 20 renders (done, canceled or failed) with their real duration,
+  speed per image, output and the settings that change the render time; « Réutiliser ces réglages » puts them back
+  as one undo step. Kept on the device only (no track, no video).
+- **Render weight**: a three-bar pictogram next to the settings that lengthen the export (clouds quality, motion blur,
+  depth of field, resolution, frame rate; the tooltip gives the factor), and a dot on the tab of a setting at its
+  heaviest tier.
 - **Keyframes** (« Image clé », formerly « Garder ce cadrage ici »): keep the 3D view exactly as framed, shown at that
   point of the film; ◁◆ / ◆▷ in the transport row, Alt+← / Alt+→ or a click on the ◆ to go from one to the next;
   the ◆ between the arrows adds a keyframe at the playhead, or removes the one under it.
+- **Space bar**: plays / pauses again after a click on a button or a slider (the focused control used to keep it).
+- **Grainy exports**: the video bitrate of each quality is about 2.8× higher (1080p24 « élevée »: 13.9 Mbit/s, was
+  5), and « Qualité » shows its Mbit/s.
 - **Marker behind the relief**: the marker (and the ghost race markers) fade out when a mountain hides them, like
   the track and the labels.
 - **Marker kept in sight**: the flight camera now clears the relief down to the marker (« Plan cinématique »,

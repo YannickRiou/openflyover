@@ -18,7 +18,7 @@ import { LandmarkPanel } from './ui/LandmarkPanel'
 import { LensPanel } from './ui/LensPanel'
 import { installCloseGuard, installLibraryAutosave } from './ui/library'
 import { OverlayPanel } from './ui/OverlayPanel'
-import { PanelSection } from './ui/PanelSection'
+import { PanelSection, TabWeightDot } from './ui/PanelSection'
 import { PoiPanel } from './ui/PoiPanel'
 import { chooseFilesToOpen, openFiles, reopenLastProject, saveProject } from './ui/projectActions'
 import { ProjectPanel } from './ui/ProjectPanel'
@@ -500,6 +500,7 @@ export default function App() {
                 >
                   <Icon name={TAB_LABELS[tab].icon} size={22} />
                   <span className="rail__label">{TAB_LABELS[tab].label}</span>
+                  <TabWeightDot tab={tab} />
                 </button>
               )
             })}

@@ -32,11 +32,17 @@ reproduce it next to the box.
 - [ ] Clouds computed once per image: export the same short film with clouds (« Moyenne ») and « Objectif » › shutter on,
       before / after the « clouds once » change: identical frames (compare a few PNG frames pixel by pixel), shorter total
       time and `[export]` "rendu" time, the gain growing with the number of renders per image (tiles loading).
+- [ ] Render weight: time a 30 s film in 1080p with clouds « Rapide », « Moyenne », « Fine », then with « Flou de bougé » on
+      (≈ ×8 renders per frame) and 4K: the ratios match the pictogram's bars (1 / 2 / 3) and tooltips; recalibrate the tiers in
+      `src/ui/renderCost.ts` if not (the dot on « Météo » / « Objectif » appears only at the 3-bar level).
 - [ ] Long fast track (540 km raid), volumetric sea of clouds and « Objectif » › shutter on, 1080p: export time per frame and
       `[export]` line against the version before « no rendering while waiting for tiles » (~1 s per frame on a GTX 1060);
       GPU load (Task Manager) drops while the `[export]` "attente des tuiles" grows instead of staying at 100 %; frames
       identical (terrain complete, same clouds and blur), no more "incomplète" frames than before.
 - [ ] PNG and JPEG still image, with and without overlay.
+- [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
+      (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without
+      clouds or shutter give the speeds to calibrate the render time per setting; « Réutiliser ces réglages » then Ctrl+Z; 20 kept.
 - [ ] Overlay only (transparent background): fast export, no waiting for tiles; WebM played with its transparency (Chrome
       on a colored background, Kdenlive or Shotcut), laid over the normal video of the same film: counters, profile, map,
       texts and photos match frame by frame; cancelling leaves no file.

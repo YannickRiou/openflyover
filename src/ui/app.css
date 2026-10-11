@@ -1494,6 +1494,57 @@
   white-space: nowrap;
 }
 
+/* « Poids de rendu »: three bars like a signal icon, filled in navy, the rest periwinkle; the heaviest in chartreuse on a navy chip */
+.render-weight {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+  padding: 2px 3px;
+  margin-left: var(--space-2);
+  border-radius: 4px;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.render-weight__bar {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--color-periwinkle);
+}
+
+.render-weight__bar:nth-child(1) {
+  height: 4px;
+}
+
+.render-weight__bar:nth-child(2) {
+  height: 8px;
+}
+
+.render-weight__bar:nth-child(3) {
+  height: 12px;
+}
+
+.render-weight__bar--on {
+  background: var(--color-navy);
+}
+
+.render-weight--3 {
+  background: var(--color-navy);
+}
+
+.render-weight--3 .render-weight__bar--on {
+  background: var(--color-chartreuse);
+}
+
+/* one sentence: wraps inside the panel */
+.render-weight[data-tip]:hover::after,
+.render-weight[data-tip]:focus-visible::after {
+  width: max-content;
+  max-width: 220px;
+  white-space: normal;
+}
+
 /* label + ⓘ on one line */
 .field__label-row {
   display: flex;
@@ -1933,4 +1984,83 @@
 
 .library__item > .project__row:last-child {
   grid-column: 1 / -1;
+}
+
+/* « Historique des rendus »: one row per render (the look of the setting rows), name and facts stacked, details unfolded */
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history__item + .history__item {
+  margin-top: 0;
+}
+
+/* the panel's own title stays sticky: this header scrolls with its section */
+.export-history > .fold__summary {
+  position: static;
+}
+
+.history__head {
+  align-items: flex-start;
+}
+
+.history__main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.history__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history__meta {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.history__head > .icon {
+  margin-top: 4px;
+}
+
+.history__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.history__rows + .history__rows {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+
+.history__row {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.history__row dt {
+  flex: none;
+  color: var(--text-2);
+}
+
+.history__row dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
