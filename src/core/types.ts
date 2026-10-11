@@ -202,6 +202,15 @@ export interface TerrainStats {
   pendingVisibleTiles?: number
 }
 
+/** Decoded data the engine keeps beside its tiles. */
+export interface TerrainCaches {
+  /** bitmaps in the fetcher's LRU (elevation and imagery) */
+  bitmaps: number
+  bitmapBytes?: number
+  /** decoded elevation grids */
+  heightGrids: number
+}
+
 /** Tile retention counted in film frames (video export on a phone) instead of wall time. */
 export interface TerrainRetention {
   /** film frame being rendered (the engine's clock: it only has to grow) */
@@ -238,6 +247,8 @@ export interface TerrainEngine {
    * many tiles stay loaded.
    */
   setRetention?(retention: TerrainRetention | null): void
+  /** sizes of the decoded caches, for the export's breadcrumb (diagnostic) */
+  caches?(): TerrainCaches
   dispose(): void
 }
 
@@ -260,6 +271,8 @@ export interface TileFetcher {
    */
   fetchBitmap(url: string, options?: { priority?: number; signal?: AbortSignal }): Promise<ImageBitmap>
   readonly stats: TileFetcherStats
+  /** approximate memory of the cached bitmaps (diagnostic) */
+  readonly cachedBytes?: number
   clear(): void
 }
 

@@ -12,6 +12,7 @@ import type {
   DemEncoding,
   HeightGrid,
   LoadImageryTexture,
+  TerrainCaches,
   TerrainEngine,
   TerrainEngineOptions,
   TerrainRetention,
@@ -52,6 +53,7 @@ export interface HeightFieldLike {
   /** evict least recently used grids down to `maxEntries`; returns the number evicted */
   prune(maxEntries: number): number
   clear(): void
+  readonly size?: number
 }
 
 export interface EngineDeps {
@@ -747,6 +749,10 @@ export function createTerrainEngine(
     retention = next && { ...next }
   }
 
+  function caches(): TerrainCaches {
+    return { bitmaps: io.fetcher.stats.cached, bitmapBytes: io.fetcher.cachedBytes, heightGrids: io.heightField.size ?? 0 }
+  }
+
   function onChange(cb: () => void): () => void {
     listeners.add(cb)
     return () => {
@@ -767,5 +773,5 @@ export function createTerrainEngine(
 
   buildTree()
 
-  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, dispose }
+  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, caches, dispose }
 }

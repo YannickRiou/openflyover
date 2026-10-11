@@ -34,9 +34,10 @@ import { holdRegion } from '../osm/region'
 import { useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
 import { REPLACE_EPSILON, composeFrame, composeOverlayFrame, renderSettledFrame, wait, type DrawOverlay } from './capture'
+import { noEncodingTest } from './diagnostic'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createExportEncoder } from './nativeEncoder'
-import { writeBreadcrumb } from './guard'
+import { isExportStep, setExportProbe, writeBreadcrumb } from './guard'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule'
 import {
@@ -177,9 +178,27 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
   }
 }
 
+/** « Export de test sans encodage »: no encoder, frames dropped, and the end is an error with the frames rendered. */
+function noEncodingSession(rendered: () => number): VideoEncodeSession {
+  return {
+    codec: { container: 'mp4', codec: 'avc' },
+    audioCodec: null,
+    bitrate: 0,
+    mimeType: '',
+    extension: '',
+    addFrame: async () => undefined,
+    finish: async () => {
+      throw new Error(`Export de test terminé sans fichier (${rendered()} images rendues)`)
+    },
+    cancel: async () => undefined,
+  }
+}
+
 // oxlint-disable-next-line react/only-export-components -- exported for its tests
 export async function runExport(request: ExportRequest, deps: RunDeps): Promise<void> {
   const exportStore = useExportStore.getState
+  // « Export de test sans encodage » (Projet › Diagnostic): is the encoder or the render what a phone dies of?
+  const noEncoding = noEncodingTest()
   let schedule: number[]
   try {
     // the rig only places the camera when the progress changes: a still starts a hair away from the current one
@@ -331,6 +350,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
 
     /** film time set with every progress (a still keeps the current one) */
     let frameTimeS = saved.timeS
+    /** re-drapes that ran since the last breadcrumb */
+    let drapes = 0
     const frameDeps = {
       advance,
       separateFinal: exportHasClouds,
@@ -343,7 +364,11 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         const stats = deps.engine()?.stats
         return stats ? (stats.pendingVisibleTiles ?? stats.pendingTiles) : 0
       },
-      flushDrapes,
+      flushDrapes: () => {
+        const ran = flushDrapes()
+        if (ran) drapes++
+        return ran
+      },
       now: () => performance.now(),
       wait: timedWait,
       isCanceled,
@@ -373,9 +398,30 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       lengthS: schedule.length / fps,
     })
     if (isCanceled()) throw new ExportCanceledError()
-    // WebCodecs, else the system's ffmpeg (desktop app on Linux)
-    session = await createExportEncoder(compositor, { ...request, audio })
-    writeBreadcrumb(`export : encodeur prêt (${session.codec.container}/${session.codec.codec}, ${(session.bitrate / 1e6).toFixed(1)} Mbit/s)`)
+    // WebCodecs, else the system's ffmpeg (desktop app on Linux); the test without encoding ends on its message
+    session = noEncoding ? noEncodingSession(() => timings.rendered) : await createExportEncoder(compositor, { ...request, audio })
+    writeBreadcrumb(
+      noEncoding
+        ? 'export : test sans encodage'
+        : `export : encodeur prêt (${session.codec.container}/${session.codec.codec}, ${(session.bitrate / 1e6).toFixed(1)} Mbit/s)`,
+    )
+    // the counters of the breadcrumbs written while it runs (pagehide included)
+    const encoder = session
+    setExportProbe(() => {
+      const engine = deps.engine()
+      const caches = engine?.caches?.()
+      const counters = encoder.counters?.()
+      const counts = {
+        ...(engine && { tiles: engine.stats.loadedTiles, pending: engine.stats.pendingTiles }),
+        ...(caches && { bitmaps: caches.bitmaps, grids: caches.heightGrids }),
+        ...(caches?.bitmapBytes !== undefined && { bitmapMb: Math.round(caches.bitmapBytes / 1e6) }),
+        ...(counters && { inFlight: counters.inFlight }),
+        ...(counters?.queue !== undefined && { queue: counters.queue }),
+        drapes,
+      }
+      drapes = 0
+      return counts
+    })
     /** opacities of the timed overlay (cards, timeline texts, photos and clips, dips, stage card) at a frame, '' without overlay */
     const overlayKey = (progress: number, timeS: number) => {
       if (!deps.overlay()) return ''
@@ -438,8 +484,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         frameTimeS = times[i]
         previousTimed = timed
         previousOverlay = overlayNow
-        // a tab killed for memory leaves no page event: the last step tells where (the first frames, then 1 in 25)
-        if (timings.rendered < 3 || timings.rendered % 25 === 0) writeBreadcrumb(`export : image ${i + 1} / ${schedule.length}`)
+        // a tab killed for memory leaves no page event: the last step tells where
+        if (isExportStep(timings.rendered)) writeBreadcrumb(`export : image ${i + 1} / ${schedule.length}`)
         // pictures and video frames decoded before the render: composing must follow it in the same task
         await loadFrameMedia(frameTimeS, progress)
         let complete = true
@@ -486,6 +532,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   } catch (error) {
     await abandon(error, request, session, isCanceled())
   } finally {
+    setExportProbe(null)
     deps.engine()?.setRetention?.(null)
     releaseFrameMedia()
     setShutterSubFrame(0, 1)

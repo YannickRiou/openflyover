@@ -5,6 +5,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Export diagnostic, more counters**: each step of the export now also gives the decoded tile bitmaps and their size,
+  the height grids, the frames waiting in the video encoder, the re-drapes and the seconds since the step before; a step
+  every 10 images from image 50 to 200, and the last 25 steps kept. « Export de test sans encodage » (Projet ›
+  « Diagnostic », this tab only) renders a film without encoding it, to tell whether a phone runs out of memory in the
+  encoder or in the render.
 - **Phones: the export's terrain tiles reach a plateau** (an iPhone 12 export was killed after ~100 images with the loaded
   tiles growing 68 → 244 and no end): during an export a phone or tablet keeps the tiles for a number of film frames
   instead of 30 seconds, prefetches fewer frames ahead, never holds more than 120 tiles (160 tablet) and frees an

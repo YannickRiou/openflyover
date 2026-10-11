@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { closeDiagnostic, copyText, showDiagnostic, useDiagnosticStore } from '../export/diagnostic'
+import { closeDiagnostic, copyText, noEncodingTest, setNoEncodingTest, showDiagnostic, useDiagnosticStore } from '../export/diagnostic'
 import { currentReport } from '../export/guard'
 import { Icon } from './icons'
 import { SettingRow } from './PanelSection'
 
 /** « Diagnostic », last row of the Projet tab: the report made now, with the last export's (« mode debug »). */
 export function DiagnosticRow() {
+  // debug only: kept in the tab's sessionStorage, never in the project
+  const [noEncoding, setNoEncoding] = useState(noEncodingTest)
   return (
     <section className="settings project" aria-label="Diagnostic">
       <SettingRow label="Diagnostic" value="Rapport">
@@ -13,6 +15,17 @@ export function DiagnosticRow() {
         <button type="button" className="btn btn--secondary" onClick={() => showDiagnostic(currentReport())}>
           Afficher le rapport
         </button>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={noEncoding}
+            onChange={(e) => {
+              setNoEncodingTest(e.currentTarget.checked)
+              setNoEncoding(e.currentTarget.checked)
+            }}
+          />
+          Export de test sans encodage
+        </label>
       </SettingRow>
     </section>
   )

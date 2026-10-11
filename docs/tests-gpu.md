@@ -55,8 +55,15 @@ reproduce it next to the box.
       autosave leaves the JS heap flat after the first write. Export with the screen left to dim: stays on (Wake Lock), a
       locked screen must give the « Le dernier export a été interrompu » toast at the next start, with « Détails ».
       After each crash, send the diagnostic report: « Détails » of that toast (or Projet › « Diagnostic » › « Afficher le
-      rapport ») › « Copier le rapport »; it gives the device budget, the GPU, the export, the settings and the last 15 steps
-      (« image i / N » with textures, geometries, tiles), so the step that kills the tab shows without a Mac.
+      rapport ») › « Copier le rapport »; it gives the device budget, the GPU, the export, the settings and the last 25 steps
+      (« image i / N » with textures, geometries, tiles, bitmaps, grids, frames « en vol » and « file » of the encoder,
+      re-drapes, seconds since the step before), so the step that kills the tab shows without a Mac.
+      Encoder or render (A/B, same film, same settings, a fresh tab for each run): (1) Projet › « Diagnostic » › tick
+      « Export de test sans encodage », export, then « Afficher le rapport » › « Copier le rapport » (« Encodage : désactivé
+      (test) » in [Export]); it should end on « Export de test terminé sans fichier (n images rendues) ». (2) untick it,
+      export again, copy the report (« Détails » of the toast if the tab died). Survives past image 200 without encoding but
+      dies with it: the encoder holds the memory (look at « en vol » / « file » growing). Dies at the same image both
+      times: the render / terrain path does (bitmaps, grilles, re-drapages, +s per step). Survives both: not reproduced.
       Tile budget: with the film that was killed after image ~100 (720×1280, 24 fps, Standard, atmosphere + shadows, motion
       blur 20 %, DoF, « Plan cinématique », « détail fin »), the steps must show the tiles plateauing at 120 or below (it was
       68 → 244 at image 100), textures and geometries flat from about image 50, `en attente` near 0, and still 2–3 s per 25

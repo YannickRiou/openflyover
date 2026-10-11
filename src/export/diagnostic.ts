@@ -28,6 +28,36 @@ declare const __APP_VERSION__: string
 export const REPORT_KEY = 'openflyover.diagnostic'
 /** longest value kept (user agent, GPU name) */
 const MAX_VALUE = 200
+/** sessionStorage key of « Export de test sans encodage » (this tab only, never in the project) */
+export const NO_ENCODING_KEY = 'openflyover.export.noEncoding'
+
+type TestStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+
+function tabStorage(): TestStorage | undefined {
+  try {
+    return globalThis.sessionStorage
+  } catch {
+    return undefined
+  }
+}
+
+/** « Export de test sans encodage »: the film exports render and compose every frame but encode none (debug A/B). */
+export function noEncodingTest(storage: TestStorage | undefined = tabStorage()): boolean {
+  try {
+    return storage?.getItem(NO_ENCODING_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function setNoEncodingTest(on: boolean, storage: TestStorage | undefined = tabStorage()): void {
+  try {
+    if (on) storage?.setItem(NO_ENCODING_KEY, '1')
+    else storage?.removeItem(NO_ENCODING_KEY)
+  } catch {
+    // no storage: the switch stays off
+  }
+}
 
 export type ReportRow = [label: string, value: string]
 
@@ -78,6 +108,8 @@ export interface DiagnosticInput {
   media: MediaTable
   /** the export being started; none: the export the current settings would make */
   request?: ReportRequest
+  /** « Export de test sans encodage » is on */
+  noEncoding?: boolean
 }
 
 const yes = (v: boolean) => (v ? 'oui' : 'non')
@@ -111,7 +143,7 @@ function deviceRows(input: DiagnosticInput): ReportRow[] {
   return rows
 }
 
-function exportRows({ request, settings, budget, canStreamToDisk }: DiagnosticInput): ReportRow[] {
+function exportRows({ request, settings, budget, canStreamToDisk, noEncoding }: DiagnosticInput): ReportRow[] {
   const size = request ?? videoSize(settings.video.aspect, settings.video.resolution, budget.maxExportShortSide)
   const fps = request?.fps ?? settings.video.fps
   const quality = request?.quality ?? settings.video.quality
@@ -135,6 +167,7 @@ function exportRows({ request, settings, budget, canStreamToDisk }: DiagnosticIn
   const bitrate = videoBitrate(size.width, size.height, fps, quality, 'avc', cap)
   rows.push(['Débit vidéo (H.264)', `${mbits(bitrate)}${bitrate < videoBitrate(size.width, size.height, fps, quality, 'avc', Infinity) ? `, plafonné à ${mbits(cap)}` : ''}`])
   rows.push(['Destination', request ? (request.destination ? 'fichier sur le disque' : 'mémoire') : canStreamToDisk ? 'disque (au choix)' : 'mémoire'])
+  if (noEncoding) rows.push(['Encodage', 'désactivé (test)'])
   if (request && !request.still) {
     let frames = 0
     try {
@@ -298,6 +331,7 @@ export function collectDiagnostic(request?: ReportRequest, now = Date.now()): Di
     tracks,
     media: useMediaStore.getState().table,
     request,
+    noEncoding: noEncodingTest(),
   })
 }
 

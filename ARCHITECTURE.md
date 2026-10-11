@@ -2470,8 +2470,19 @@ kept in the tab's `sessionStorage`; if the next start finds it, the export never
 (« Le dernier export a été interrompu… »), with a « Détails » button showing the **breadcrumb**: the last `pagehide` /
 `freeze` / `webglcontextlost` with `renderer.info.memory` textures and geometries and the loaded tile count. iOS kills a
 tab short of memory without any page event (the counters also give the tiles still loading or queued, « N en attente »: a plateau of « tuiles » below the cap is what the tile budget aims at), so the export also writes its own steps (start, video size applied, encoder
-ready with its codec and bitrate, the first 3 frames then 1 in 25, finalisation); the last `MAX_STEPS` (15) are kept
-as a list, each with the JS heap where `performance.memory` exists (Chrome), and each export starts with a fresh list.
+ready with its codec and bitrate, the first 3 rendered frames then 1 in 10 from 50 to 200, where an iPhone 12 died, and
+1 in 25 elsewhere: `isExportStep`; finalisation); the last `MAX_STEPS` (25) are kept as a list, each with the JS heap
+where `performance.memory` exists (Chrome), and each export starts with a fresh list. While a film renders, the export
+adds its own counters to every breadcrumb (`setExportProbe`, page events included): loaded and pending tiles read live
+from the engine, the bitmaps of the fetcher's LRU and their approximate MB (`cachedBytes`, RGBA of each), the decoded
+height grids (`engine.caches()`), the frames « en vol » (handed to the VideoEncoder minus packets out, counted with
+mediabunny's `onEncodedSample` / `onEncodedPacket`) and its `encodeQueueSize` (« file », read through mediabunny's
+internal encoder wrapper, left out if it changes), the re-drapes run by the export's `flushDrapes` since the previous
+step; a step line also gives the time since the one before (« +11,0 s »). « Export de test sans encodage » (checkbox
+under « Diagnostic », Projet tab; the tab's sessionStorage only, `noEncodingTest`, never in the project) runs a film
+export with no encoder: every frame is rendered and composed, none is handed over, the file is discarded and the export
+ends on the error « Export de test terminé sans fichier (n images rendues) »; the report's Export section then says
+« Encodage : désactivé (test) ». It tells, on a phone, the encoder's memory from the render's (docs/tests-gpu.md).
 The **diagnostic report** (`export/diagnostic.ts`, pure and tested: `buildReport`, `formatReport`) is taken at the same
 busy transition, under `openflyover.diagnostic`: app version (`__APP_VERSION__`, vite.config.ts), device and its budget,
 GPU (`setGpuProbe`, registered by the scene like the breadcrumb probe, read once), the export request (size, quality,

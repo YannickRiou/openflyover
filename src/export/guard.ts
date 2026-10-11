@@ -14,7 +14,12 @@ import { isExportBusy, useExportStore } from './store'
 export const EXPORT_RUNNING_KEY = 'openflyover.export.running'
 export const BREADCRUMB_KEY = 'openflyover.breadcrumb'
 /** breadcrumbs kept (the oldest go first) */
-export const MAX_STEPS = 15
+export const MAX_STEPS = 25
+
+/** Rendered frames noted as a step: the first 3, then 1 in 10 from 50 to 200 (where an iPhone died), else 1 in 25. */
+export function isExportStep(rendered: number): boolean {
+  return rendered < 3 || rendered % (rendered >= 50 && rendered <= 200 ? 10 : 25) === 0
+}
 
 export const EXPORT_INTERRUPTED_TEXT =
   'Le dernier export a été interrompu (mémoire insuffisante ou écran verrouillé). Essayez 720p, sans nuages, ou gardez l’écran allumé.'
@@ -111,13 +116,31 @@ export interface Breadcrumb {
   pending?: number
   /** JS heap in use, MB (`performance.memory`: Chrome only) */
   heapMb?: number
+  /** decoded tile bitmaps in the LRU and their approximate MB */
+  bitmaps?: number
+  bitmapMb?: number
+  /** decoded elevation grids */
+  grids?: number
+  /** frames handed to the video encoder and not yet out as packets, and its `encodeQueueSize` */
+  inFlight?: number
+  queue?: number
+  /** re-drapes run since the previous breadcrumb */
+  drapes?: number
 }
 
-let probe: (() => Pick<Breadcrumb, 'textures' | 'geometries' | 'tiles' | 'pending'>) | null = null
+type Counters = Omit<Breadcrumb, 'event' | 'at' | 'heapMb'>
+
+let probe: (() => Counters) | null = null
+let exportProbe: (() => Counters) | null = null
 
 /** The scene registers how to read its memory counters (renderer.info, loaded tiles). */
 export function setBreadcrumbProbe(read: typeof probe): void {
   probe = read
+}
+
+/** A running export adds its own counters (terrain caches, encoder, re-drapes); null when it ends. */
+export function setExportProbe(read: typeof exportProbe): void {
+  exportProbe = read
 }
 
 function heapMb(): number | undefined {
@@ -129,24 +152,40 @@ function heapMb(): number | undefined {
 export function writeBreadcrumb(event: string, storage: FlagStorage | undefined = tabStorage(), now = Date.now()): void {
   try {
     const heap = heapMb()
-    const crumb: Breadcrumb = { event: event.slice(0, 80), at: now, ...probe?.(), ...(heap !== undefined && { heapMb: heap }) }
+    const crumb: Breadcrumb = { event: event.slice(0, 80), at: now, ...probe?.(), ...exportProbe?.(), ...(heap !== undefined && { heapMb: heap }) }
     storage?.setItem(BREADCRUMB_KEY, JSON.stringify([...readBreadcrumbs(storage), crumb].slice(-MAX_STEPS)))
   } catch {
     // diagnostic only
   }
 }
 
-/** « pagehide à 12:03:44 · 212 textures, 140 géométries, 96 tuiles, 3 en attente, 310 Mo de tas JS » */
-export function describeBreadcrumb(crumb: Breadcrumb): string {
+/**
+ * « image 100 / 1848 à 16:12:25 · 136 tex, 126 géo, 161 tuiles (12 en attente), 180 bitmaps ~45 Mo, 160 grilles,
+ * 4 en vol, file 2, 37 re-drapages, 310 Mo de tas JS, +11,0 s » (the time since `previous`)
+ */
+export function describeBreadcrumb(crumb: Breadcrumb, previous?: Breadcrumb): string {
   const time = new Date(crumb.at).toLocaleTimeString('fr-FR')
+  const has = (n: number | undefined): n is number => n !== undefined
+  const elapsedS = previous ? (crumb.at - previous.at) / 1000 : undefined
   const counts = [
-    crumb.textures !== undefined && `${crumb.textures} textures`,
-    crumb.geometries !== undefined && `${crumb.geometries} géométries`,
-    crumb.tiles !== undefined && `${crumb.tiles} tuiles`,
-    crumb.pending !== undefined && `${crumb.pending} en attente`,
-    crumb.heapMb !== undefined && `${crumb.heapMb} Mo de tas JS`,
+    has(crumb.textures) && `${crumb.textures} tex`,
+    has(crumb.geometries) && `${crumb.geometries} géo`,
+    has(crumb.tiles) && `${crumb.tiles} tuiles${has(crumb.pending) ? ` (${crumb.pending} en attente)` : ''}`,
+    !has(crumb.tiles) && has(crumb.pending) && `${crumb.pending} en attente`,
+    has(crumb.bitmaps) && `${crumb.bitmaps} bitmaps${has(crumb.bitmapMb) ? ` ~${crumb.bitmapMb} Mo` : ''}`,
+    has(crumb.grids) && `${crumb.grids} grilles`,
+    has(crumb.inFlight) && `${crumb.inFlight} en vol`,
+    has(crumb.queue) && `file ${crumb.queue}`,
+    has(crumb.drapes) && `${crumb.drapes} re-drapages`,
+    has(crumb.heapMb) && `${crumb.heapMb} Mo de tas JS`,
+    has(elapsedS) && `+${elapsedS.toFixed(1).replace('.', ',')} s`,
   ].filter(Boolean)
   return `${crumb.event} à ${time}${counts.length > 0 ? ` · ${counts.join(', ')}` : ''}`
+}
+
+/** The breadcrumbs worded, each with the time since the one before. */
+export function describeSteps(crumbs: readonly Breadcrumb[]): string[] {
+  return crumbs.map((crumb, i) => describeBreadcrumb(crumb, crumbs[i - 1]))
 }
 
 const isCrumb = (c: Breadcrumb | null): c is Breadcrumb => !!c && typeof c.event === 'string' && typeof c.at === 'number'
@@ -167,7 +206,7 @@ function lastExportReport(storage: FlagStorage | undefined): string | null {
   const steps = readBreadcrumbs(storage)
   const report = parseReport(storage?.getItem(REPORT_KEY))
   if (!report && steps.length === 0) return null
-  return formatReport({ ...(report ?? collectDiagnostic()), steps: steps.map(describeBreadcrumb) })
+  return formatReport({ ...(report ?? collectDiagnostic()), steps: describeSteps(steps) })
 }
 
 /** « Afficher le rapport » (Projet tab): the report made now, with the export section and the steps of the last export. */
@@ -178,7 +217,7 @@ export function currentReport(storage: FlagStorage | undefined = tabStorage()): 
   } catch {
     // no storage: no last export
   }
-  return formatReport({ ...withLastExport(collectDiagnostic(), last), steps: readBreadcrumbs(storage).map(describeBreadcrumb) })
+  return formatReport({ ...withLastExport(collectDiagnostic(), last), steps: describeSteps(readBreadcrumbs(storage)) })
 }
 
 /** True once when the previous page lifetime of this tab died in the middle of an export (the flag is then cleared). */

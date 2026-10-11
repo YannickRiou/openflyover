@@ -169,6 +169,8 @@ export interface VideoEncodeSession {
   finish(): Promise<{ blob: Blob | null; sizeBytes: number }>
   /** Abort the encoding and drop what was written (a destination file is removed); later calls reject with ExportCanceledError. */
   cancel(): Promise<void>
+  /** frames handed to the encoder and not yet out as packets, and its `encodeQueueSize` when readable (diagnostic) */
+  counters?(): { inFlight: number; queue?: number }
 }
 
 /** Stream of mediabunny's disk target writing to `file` (chunks at their position). */
@@ -214,12 +216,23 @@ export async function createVideoEncoder(
     format: codec.container === 'mp4' ? new Mp4OutputFormat(destination ? { fastStart: false } : {}) : new WebMOutputFormat(),
     target,
   })
+  // frames handed to the VideoEncoder and packets out of it (the export's breadcrumb)
+  let given = 0
+  let received = 0
   const source = new CanvasSource(canvas, {
     codec: codec.codec,
     quality: new Quality({ bitrate }),
     keyFrameInterval: KEY_FRAME_INTERVAL_S,
     alpha: transparent ? 'keep' : 'discard',
+    onEncodedSample: () => void given++,
+    onEncodedPacket: () => void received++,
   })
+  // mediabunny's encoder wrapper is not public API: no queue figure when it changes
+  const wrapper = (source as unknown as { _encoder?: { getQueueSize?: () => unknown } })._encoder
+  const queue = () => {
+    const size = typeof wrapper?.getQueueSize === 'function' ? wrapper.getQueueSize() : undefined
+    return typeof size === 'number' ? size : undefined
+  }
   output.addVideoTrack(source, { frameRate: options.fps, canBeTransparent: transparent })
   const { audio } = options
   const audioCodec = audio && audio.channels.length > 0 ? await pickAudioCodec(codec.container, audio, canEncodeSound) : null
@@ -282,5 +295,6 @@ export async function createVideoEncoder(
         await destination?.discard()
       }
     },
+    counters: () => ({ inFlight: given - received, queue: queue() }),
   }
 }
