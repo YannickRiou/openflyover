@@ -21,7 +21,7 @@ import { useAppStore } from '../state/store'
 import { filmViewAt } from './filmView'
 import { useTerrainContext } from './TerrainLayer'
 import { frameDelta } from './renderOnDemand'
-import { headsLeft, LEAD_MARKER_COLORS, placeMarker, useMarkerImage } from './markerSprite'
+import { headsLeft, LEAD_MARKER_COLORS, occludeMarker, placeMarker, reliefClearance, useMarkerImage } from './markerSprite'
 import { figureMotion } from './markerSettings'
 import { useFilmClock, useFilmTrack } from './usePacing'
 import type { HeightSampler } from './TrackLines'
@@ -136,9 +136,10 @@ export function FlyoverRig() {
     const mirrored = settings.marker.kind === 'figurine' && headsLeft(path, progress * path.lengthM, view.marker, frame, camera)
     const motion = settings.marker.kind === 'figurine' && settings.marker.animated ? figureMotion(timeS) : undefined
     placeMarker(marker, view.marker, camera, look, LEAD_MARKER_COLORS, mirrored, 1 / gl.toneMappingExposure, motion)
+    occludeMarker(marker, camera, reliefClearance(engine, frame, settings.exaggeration))
   })
 
-  // unlit and drawn over the terrain: readable on the track colour and on dark forest alike
+  // unlit and drawn over the terrain (faded out behind the relief): readable on the track colour and on dark forest alike
   return (
     <sprite ref={markerRef} name="flyover-marker" visible={false} renderOrder={2}>
       <spriteMaterial depthTest={false} depthWrite={false} />

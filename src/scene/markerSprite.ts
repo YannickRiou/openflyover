@@ -9,9 +9,11 @@ import { useEffect, useState } from 'react'
 import { wakeScene } from './renderOnDemand'
 import { CanvasTexture, SRGBColorSpace, Vector3 } from 'three'
 import type { Camera, Sprite, SpriteMaterial, Texture } from 'three'
-import type { LocalFrame } from '../core/types'
+import type { LocalFrame, TerrainEngine } from '../core/types'
 import { samplePath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
+import { lineOfSightClearance, occlusionFade } from './labelModel'
+import type { ClearanceAt } from './labelModel'
 import { BADGE_INK, BADGE_WHITE, drawBadge, loadMarkerImage } from './markerBadge'
 import type { Badge } from './markerBadge'
 import type { MarkerSettings } from './markerSettings'
@@ -155,6 +157,24 @@ export function placeMarker(
   const radius = Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR) * look.marker.size
   sprite.position.copy(position)
   sprite.scale.setScalar(2 * radius * badge.diameter)
+}
+
+const clearanceProbe = new Vector3()
+
+/** Height of a scene point above the relief (exaggerated, metres); null without terrain. */
+export function reliefClearance(engine: TerrainEngine | null, frame: LocalFrame | null, exaggeration: number): ClearanceAt | null {
+  if (!engine || !frame) return null
+  return (x, y, z) => {
+    const p = frame.toLonLat(clearanceProbe.set(x, y, z))
+    const ground = engine.sampleHeight(p.lon, p.lat)
+    return ground === undefined ? undefined : p.height - ground * exaggeration
+  }
+}
+
+/** A marker is drawn without depth test (never sunk into the slope): it fades out behind the relief like the labels. */
+export function occludeMarker(sprite: Sprite, camera: Camera, clearanceAt: ClearanceAt | null): void {
+  const material = sprite.material as SpriteMaterial
+  material.opacity = clearanceAt ? occlusionFade(lineOfSightClearance(camera.position, sprite.position, clearanceAt)) : 1
 }
 
 /** Decoded picture of `settings.marker.image` (null while loading, for none or for an unreadable one). */

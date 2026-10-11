@@ -42,6 +42,7 @@ import {
   type ScreenRect,
 } from './labelModel'
 import { externalLabels, useLabelSources } from './labelSources'
+import { reliefClearance } from './markerSprite'
 import { useFilmClock, useFilmTrack } from './usePacing'
 import { useTerrainContext } from './TerrainLayer'
 import { wakeScene } from './renderOnDemand'
@@ -201,7 +202,6 @@ function drapeLabelSet(set: LabelSet, engine: TerrainEngine | null, exaggeration
 
 const cameraPosition = new Vector3()
 const projected = new Vector3()
-const probe = new Vector3()
 
 /**
  * Per-frame visibility: distance and occlusion fades, screen culling, de-cluttering by priority, fade under the
@@ -228,14 +228,7 @@ function updateLabelSet(
   camera.getWorldPosition(cameraPosition)
   const scale = renderScale * look.size
   const pixel = spriteScaleForPixels(1, size.height, camera.projectionMatrix.elements[5]) * scale
-  const clearanceAt =
-    engine && frame
-      ? (x: number, y: number, z: number) => {
-          const p = frame.toLonLat(probe.set(x, y, z))
-          const ground = engine.sampleHeight(p.lon, p.lat)
-          return ground === undefined ? undefined : p.height - ground * exaggeration
-        }
-      : null
+  const clearanceAt = reliefClearance(engine, frame, exaggeration)
 
   const candidates: { rect: ScreenRect; priority: number }[] = []
   const shown: { entry: LabelEntry; opacity: number }[] = []
