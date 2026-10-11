@@ -108,6 +108,8 @@ export function computePeaks(channels: readonly Float32Array[], count: number): 
   return out
 }
 
+const waveforms = new WeakMap<readonly number[], { key: string; path: string }>()
+
 /**
  * SVG path of the waveform of a clip: the part of the file from `inS` played for `lengthS`, as a band mirrored
  * around the middle, in a viewBox `0 0 lengthS 1` (x in seconds of the clip), louder slices taller (scaled to
@@ -115,6 +117,10 @@ export function computePeaks(channels: readonly Float32Array[], count: number): 
  */
 export function waveformPath(peaks: readonly number[], fileS: number, inS: number, lengthS: number): string {
   if (peaks.length === 0 || !(fileS > 0) || !(lengthS > 0)) return ''
+  // the timeline asks at every render: the path of the same peaks (a table entry is replaced, never changed) is kept
+  const key = `${fileS}|${inS}|${lengthS}`
+  const kept = waveforms.get(peaks)
+  if (kept?.key === key) return kept.path
   const sliceS = fileS / peaks.length
   const loudest = Math.max(...peaks) || 1
   const first = Math.max(0, Math.floor(inS / sliceS))
@@ -127,8 +133,11 @@ export function waveformPath(peaks: readonly number[], fileS: number, inS: numbe
     top.push(`${x} ${(0.5 - h).toFixed(3)}`)
     bottom.push(`${x} ${(0.5 + h).toFixed(3)}`)
   }
-  return `M${top.join('L')}L${bottom.reverse().join('L')}Z`
+  const path = `M${top.join('L')}L${bottom.reverse().join('L')}Z`
+  waveforms.set(peaks, { key, path })
+  return path
 }
+
 
 // ---------------------------------------------------------------------------
 // Volume of a clip (pure)

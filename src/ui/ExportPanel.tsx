@@ -2,6 +2,7 @@ import { deviceBudget } from '../core/deviceBudget'
 import { errorMessage } from '../core/errors'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import {
   batchProgressLabel,
   batchSummary,
@@ -134,7 +135,10 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const durationS = pacing.totalTime()
   const trackName = useAppStore((s) => s.tracks[0]?.name)
   const setSetting = useAppStore((s) => s.setSetting)
-  const { phase, frame, frameCount, etaS, result, error, timings } = useExportStore()
+  // only what the panel draws: `cancelRequested`, `request`, `renderScale`… changing does not redraw it
+  const { phase, frame, frameCount, etaS, result, error, timings } = useExportStore(
+    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, timings: s.timings })),
+  )
   const id = useId()
   const [stillType, setStillType] = useState<StillType>('image/png')
   /** « Habillage seul »: the overlay alone, transparent WebM to lay over one's own footage */
