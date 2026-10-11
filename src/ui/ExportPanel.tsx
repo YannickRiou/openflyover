@@ -158,6 +158,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   // no size estimate for the overlay alone: mostly empty frames come out far below the bitrate
   const estimatedBytes =
     codec && !overlayOnly ? (videoBitrate(width, height, video.fps, video.quality, codec.codec) * totalFrames) / video.fps / 8 : 0
+  // target video bitrate of the chosen quality (H.264 until the codec is known), shown under « Qualité »
+  const bitrateMbps = videoBitrate(width, height, video.fps, video.quality, codec?.codec ?? 'avc') / 1e6
   const secondsPerImage =
     timings.rendered > 0 ? (timings.renderMs + timings.waitMs + timings.encodeMs) / timings.rendered / 1000 : null
 
@@ -437,6 +439,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               </label>
             ))}
           </div>
+          {!overlayOnly && <p className="field__hint">Débit vidéo : {formatNumber(bitrateMbps, 1)} Mbit/s</p>}
         </fieldset>
       </SettingRow>
 
