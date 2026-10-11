@@ -7,9 +7,15 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **Motion blur export**: the shutter's 8 renders per image become 1–8 by how far the picture moves on screen (1 at
   stops, held frames and slow or high cameras, 8 as before when the camera is fast and low): same look, shorter export.
+- **Render weight**: a three-bar pictogram next to the settings that lengthen the export (clouds quality, motion blur,
+  depth of field, resolution, frame rate; the tooltip gives the factor), and a dot on the tab of a setting at its
+  heaviest tier.
 - **Keyframes** (« Image clé », formerly « Garder ce cadrage ici »): keep the 3D view exactly as framed, shown at that
   point of the film; ◁◆ / ◆▷ in the transport row, Alt+← / Alt+→ or a click on the ◆ to go from one to the next;
   the ◆ between the arrows adds a keyframe at the playhead, or removes the one under it.
+- **Space bar**: plays / pauses again after a click on a button or a slider (the focused control used to keep it).
+- **Grainy exports**: the video bitrate of each quality is about 2.8× higher (1080p24 « élevée »: 13.9 Mbit/s, was
+  5), and « Qualité » shows its Mbit/s.
 - **Marker behind the relief**: the marker (and the ghost race markers) fade out when a mountain hides them, like
   the track and the labels.
 - **Marker kept in sight**: the flight camera now clears the relief down to the marker (« Plan cinématique »,

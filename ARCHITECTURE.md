@@ -437,6 +437,26 @@ ink, 7.3:1).
   the four grading sliders, flare, bloom radius, camera style, distance / tilt / aim / smoothing, pacing parameters, transitions; export frame rate, quality, still type. Setting
   keys and behavior unchanged. `InfoTip` (ⓘ, one-sentence `data-tip` tooltip, focusable, `aria-label`) only
   on jargon: exaggeration, wireframe, exposure, highlights. Styles: delimited block at the end of `app.css`.
+- **Render weight** (`src/ui/renderCost.ts`, pure, tested; `RenderWeight` and `TabWeightDot` in `PanelSection.tsx`): which settings lengthen
+  the export, as a pictogram (three bars like a signal icon: filled navy, the rest periwinkle; the heaviest tier in chartreuse on a navy
+  chip; `--color-navy` / `--color-periwinkle` / `--color-chartreuse` in `theme.css`) after the name of the setting (`weight` prop of
+  `SettingRow` and `RangeField`, export drawer included), and a chartreuse dot on a navy ring on a tab (rail and phone bar) while one
+  of its settings is at tier 3 (`tabHasHeavySetting`). Both read the store with their own selector (primitives), so the memoised panels
+  and the 3D scene do not render again; tooltip `data-tip` with the factor, visually hidden « Poids de rendu : léger / moyen / lourd »
+  (the dot adds « réglage lourd actif » to the tab's name). Tiers come from the factors of the code; « ≈ ×N » only where N is one:
+
+  | Setting | 1 bar | 2 bars | 3 bars |
+  | --- | --- | --- | --- |
+  | Clouds (atmosphere on, not « Aucun ») | « Nappe » (one draw call), « Rapide » (16 slices) | « Moyenne » (24 slices) | « Fine » (32 slices) |
+  | Motion blur (« Flou de bougé ») | | | any amount: `SHUTTER_SUBFRAMES` = 8 renders per frame (≈ ×8) |
+  | Depth of field | on | on with the shutter (repeated at each of its 8 renders) | |
+  | Resolution (export drawer; short side, the phone cap applied) | 720p | 1080p (≈ ×2,25 pixels) | 1440p (≈ ×4), 4K (≈ ×9) |
+  | Frame rate (export drawer) | 24, 30 i/s | 60 i/s (≈ ×2 frames) | |
+
+  The shutter has no cheaper tier: any amount renders 8 sub-frames in the export (the radial streak alone exists only in the preview).
+  The default project (« Moyenne », no lens effect, 1080p 30) has no tier 3, so no dot. Bloom, flare and shadows are not shown (one
+  cheap pass per render). These weights are estimates derived from the code, to recalibrate on a real GPU (never measure the export
+  speed on SwiftShader).
 - **Lumière**: toggle "Suivre la trace" (follow the track; = `sunFromTrack`, disabled with an explanation without timestamps) / "Heure
   fixe" (fixed time). In fixed time: solar-hour slider above a night / dawn / day / dusk bar with the
   sunrise and sunset marks (`solarDay` at the origin of the local frame and on the UTC day of the start of the first track, like the
@@ -1591,8 +1611,8 @@ it, know at what time you will pass each point, where the sun will be and what t
 - The WebGL image is composited in the same task as the render onto an `OffscreenCanvas` (sky gradient, image, then overlay
   `DrawOverlay(ctx, { progress, time }, w, h)` after loading its fonts, `time` = `overlayTime(clock, progress,
   frame time)`; still image: current playback time), then encoded by mediabunny (WebCodecs): MP4 H.264,
-  otherwise MP4 HEVC, WebM VP9, WebM VP8, the first one accepted by `VideoEncoder.isConfigSupported`; bitrate = pixels × fps × 0.06 /
-  0.10 / 0.16 bit depending on quality, corrected per codec, bounded to 1–80 Mbit/s; keyframe every 2 s.
+  otherwise MP4 HEVC, WebM VP9, WebM VP8, the first one accepted by `VideoEncoder.isConfigSupported`; bitrate = pixels × 24 × (fps / 24)^0.7 × 0.16 /
+  0.28 / 0.44 bit depending on quality (1080p24 « élevée »: 13.9 Mbit/s), corrected per codec, bounded to 1–80 Mbit/s; keyframe every 2 s.
 - **Direct write to disk** when `capabilities.canStreamToDisk` (desktop, or a browser with `showSaveFilePicker`:
   Chrome, Edge): the "Exporter la vidéo" click first asks where to save (`chooseVideoDestination`, called before any
   `await` because the browser picker requires a user gesture; dialog closed = no export; picker
