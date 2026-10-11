@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { presetBadge } from '../export/qualityTier'
+import type { PresetKnob } from '../export/qualityTier'
 import { getPlatform } from '../platform'
 import { modifiedPaths } from '../project/apply'
 import type { SettingPath } from '../project/apply'
@@ -84,6 +86,21 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
   )
 }
 
+/**
+ * « Imposé par Haute » / « Personnalisé »: next to the name of a row that the export quality drives (qualityTier.ts).
+ * Periwinkle while the quality decides, chartreuse once the value was chosen by hand over it.
+ */
+export function PresetBadge({ knob }: { knob: PresetKnob }) {
+  const kind = useAppStore((s) => presetBadge(s.settings, knob)?.kind)
+  const text = useAppStore((s) => presetBadge(s.settings, knob)?.text)
+  if (!kind) return null
+  return (
+    <span className={`preset-badge preset-badge--${kind}`} data-testid={`preset-badge-${knob}`}>
+      {text}
+    </span>
+  )
+}
+
 /** Dot on a tab of the rail or the phone bar while one of its settings is at the heaviest weight. */
 export function TabWeightDot({ tab }: { tab: ShellTab }) {
   const heavy = useAppStore((s) => tabHasHeavySetting(s.settings, tab))
@@ -112,6 +129,7 @@ export function SettingRow({
   value,
   paths = [],
   weight,
+  preset,
   children,
 }: {
   label: string
@@ -119,6 +137,8 @@ export function SettingRow({
   paths?: readonly SettingPath[]
   /** the setting lengthens the export: its pictogram follows the name */
   weight?: WeightKey
+  /** the export quality drives the setting: its badge follows the pictogram */
+  preset?: PresetKnob
   children: ReactNode
 }) {
   const id = useId()
@@ -139,6 +159,7 @@ export function SettingRow({
         <span className="setting-row__label">
           {label}
           {weight && <RenderWeight weight={weight} />}
+          {preset && <PresetBadge knob={preset} />}
         </span>
         <span className={modified ? 'setting-row__value setting-row__value--modified' : 'setting-row__value'}>
           {value}
@@ -175,6 +196,7 @@ export function RangeField({
   wide = true,
   tip,
   weight,
+  preset,
   spoken = format,
 }: {
   label: string
@@ -190,6 +212,8 @@ export function RangeField({
   tip?: string
   /** the setting lengthens the export: its pictogram follows the name */
   weight?: WeightKey
+  /** the export quality drives the setting: its badge follows the pictogram */
+  preset?: PresetKnob
   /** value read by screen readers, when it differs from the displayed one */
   spoken?(value: number): string
 }) {
@@ -201,11 +225,12 @@ export function RangeField({
   )
   return (
     <div className="field">
-      {tip || weight ? (
+      {tip || weight || preset ? (
         <div className="field__label-row">
           {labelEl}
           {tip && <InfoTip text={tip} />}
           {weight && <RenderWeight weight={weight} />}
+          {preset && <PresetBadge knob={preset} />}
         </div>
       ) : (
         labelEl

@@ -26,6 +26,29 @@ describe('renderWeight', () => {
     expect(weightOf(withClouds({ mode: 'aucun' }), 'clouds').tip).toBe('')
   })
 
+  it('weighs the effective export: the quality decides the clouds on auto and caps the sub-frames, the tip says so', () => {
+    const at = (quality: 'standard' | 'high' | 'max', patch = {}) => ({ ...base, video: { ...base.video, quality }, ...patch })
+    expect([tier(at('standard'), 'clouds'), tier(at('high'), 'clouds'), tier(at('max'), 'clouds')]).toEqual([1, 2, 3])
+    expect(weightOf(at('standard'), 'clouds').tip).toContain('×16')
+    expect(weightOf(at('standard'), 'clouds').tip).toContain('imposé par la qualité Standard')
+    // chosen by hand: the hand wins and the tip does not claim the quality
+    const byHand = at('standard', { clouds: { ...base.clouds, quality: 'high' } })
+    expect(tier(byHand, 'clouds')).toBe(3)
+    expect(weightOf(byHand, 'clouds').tip).toContain('×32')
+    expect(weightOf(byHand, 'clouds').tip).not.toContain('imposé')
+    // motion blur: 4 sub-frames in Standard is one tier lighter, and depth of field repeats 4 times
+    const blurred = (quality: 'standard' | 'high' | 'max') => at(quality, { lens: { ...base.lens, shutter: 0.5, depthOfField: 0.5 } })
+    expect(tier(blurred('standard'), 'shutter')).toBe(2)
+    expect(weightOf(blurred('standard'), 'shutter').tip).toContain('×4')
+    expect(weightOf(blurred('standard'), 'shutter').tip).toContain('imposé par la qualité Standard')
+    expect(weightOf(blurred('standard'), 'depthOfField').tip).toContain('4 rendus')
+    expect(tier(blurred('high'), 'shutter')).toBe(3)
+    expect(weightOf(blurred('max'), 'shutter').tip).not.toContain('imposé')
+    // the dot of the tab follows the effective weight
+    expect(tabHasHeavySetting(blurred('standard'), 'objectif')).toBe(false)
+    expect(tabHasHeavySetting(blurred('high'), 'objectif')).toBe(true)
+  })
+
   it('motion blur: off is nothing, any amount is the 8 sub-frames', () => {
     expect(tier(withLens({ shutter: 0 }), 'shutter')).toBe(0)
     expect(weightOf(withLens({ shutter: 0.05 }), 'shutter')).toMatchObject({ tier: 3 })

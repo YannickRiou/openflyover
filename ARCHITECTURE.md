@@ -448,12 +448,14 @@ ink, 7.3:1).
   | Setting | 1 bar | 2 bars | 3 bars |
   | --- | --- | --- | --- |
   | Clouds (atmosphere on, not « Aucun ») | « Nappe » (one draw call), « Rapide » (16 slices) | « Moyenne » (24 slices) | « Fine » (32 slices) |
-  | Motion blur (« Flou de bougé ») | | | any amount: `SHUTTER_SUBFRAMES` = 8 renders per frame (≈ ×8) |
-  | Depth of field | on | on with the shutter (repeated at each of its 8 renders) | |
+  | Motion blur (« Flou de bougé ») | | « Standard » export quality: up to 4 renders per frame (≈ ×4) | any amount: up to `SHUTTER_SUBFRAMES` = 8 renders per frame (≈ ×8) |
+  | Depth of field | on | on with the shutter (repeated at each of its sub-frames) | |
   | Resolution (export drawer; short side, the phone cap applied) | 720p | 1080p (≈ ×2,25 pixels) | 1440p (≈ ×4), 4K (≈ ×9) |
   | Frame rate (export drawer) | 24, 30 i/s | 60 i/s (≈ ×2 frames) | |
 
-  The shutter has no cheaper tier: any amount renders 8 sub-frames in the export (the radial streak alone exists only in the preview).
+  The weights are those of the effective export: the clouds' quality and the sub-frame cap are the ones the export quality picks
+  (« Qualité d'export » below), and the tooltip says « imposé par la qualité … ». The shutter's amount does not change its weight
+  (the radial streak alone exists only in the preview).
   The default project (« Moyenne », no lens effect, 1080p 30) has no tier 3, so no dot. Bloom, flare and shadows are not shown (one
   cheap pass per render). These weights are estimates derived from the code, to recalibrate on a real GPU (never measure the export
   speed on SwiftShader).
@@ -715,7 +717,7 @@ ink, 7.3:1).
     the last of the 8 reference renders and takes the largest on-screen move (pixels of the video frame) of the marker
     and of fixed points of the relief seen at the centre and the four corners, at the aim distance and at a quarter of
     it (`NEAR_FRACTION`, a deliberately pessimistic near-relief parallax; translation and rotation both count). The
-    shutter window is 8/7 of that span; count = clamp(⌈window / `SHUTTER_STEP_PX`⌉, 1, 8), 1 px being the step at which
+    shutter window is 8/7 of that span (max / (max − 1) with a lower export-quality cap `max`, `Export quality tiers`); count = clamp(⌈window / `SHUTTER_STEP_PX`⌉, 1, max = 8), 1 px being the step at which
     shifted images still average into a continuous blur (vs the 8 renders: ≤ 10% of the contrast on a hard edge, ≤ 3%
     rms on pixel-scale detail, tested on a synthetic displacement model). Fewer renders are the evenly spaced centred
     ones (`shutterSamples` with that count); 8 are the former ones bit for bit; 1 (stops, held frames, distant or slow
@@ -1828,6 +1830,43 @@ it, know at what time you will pass each point, where the sun will be and what t
   depth read as in the Takram effect; uniforms prefixed `weather*`.
 - Limits: weather from a single point applied to the whole scene.
 
+### Export quality tiers (« Qualité d'export »)
+
+- `video.quality` (« Standard » / « Haute » / « Maximale ») sets the bitrate (`encoder.ts`) and, since the tiers, how much the costly
+  effects are computed in the export: `QUALITY_TIERS` in `src/export/qualityTier.ts` (pure, tested), applied **at export time only**:
+  the project is never rewritten and the preview is unchanged. Stills and the poster take the tier of their request's quality too.
+
+  | Quality | Clouds export quality (`EXPORT_SAMPLES`) | Motion blur, most renders per frame | Bitrate (`QUALITY_BITS_PER_PIXEL`) |
+  | --- | --- | --- | --- |
+  | Standard | « Rapide » (`low`, 16 slices) | 4 | 0.16 |
+  | Haute (default) | « Moyenne » (`medium`, 24 slices) | 8 | 0.28 |
+  | Maximale | « Fine » (`high`, 32 slices) | 8 | 0.44 |
+
+- **Precedence**: a value chosen by hand wins over the tier. `settings.clouds.quality` is `'auto' | 'low' | 'medium' | 'high'` and
+  defaults to `'auto'` (« Selon la qualité de l'export »): `effectiveRender(quality, clouds)` takes the tier's clouds quality on
+  `'auto'`, the hand-chosen one otherwise (both ways: « Rapide » by hand stays « Rapide » at « Maximale », « Fine » by hand stays
+  « Fine » at « Standard »). The sub-frame cap has no setting of its own: it comes from the tier and only ever lowers the 8 of
+  `SHUTTER_SUBFRAMES`, so a tier never raises anything above the full quality of before. Not a write-through: `'auto'` is what keeps
+  the export-time override out of the project (a project saved before keeps its `'medium'`, i.e. the same film as before, shown as
+  « Personnalisé »; « Revenir au préréglage » sets `'auto'`).
+- **Where it applies**: `CloudsLayer` reads `effectiveRender(request.quality, …)` while an export runs (`useExportStore`, so web, desktop and
+  the `--rendu` batch, which all go through the export store, use the same tiers); `ExportController` passes `maxSubFrames` to
+  `adaptiveShutterSamples(…, max)` (and `subFrameCount(spanPx, max)`: window = max / (max − 1) of the span, still ≤ `SHUTTER_STEP_PX`
+  between renders) and to `shutterSamples`. The count stays a function of the film time and the quality alone: same project + same
+  quality → same frames. `subFrameSlices` still splits the clouds' slices exactly among the sub-frames.
+- **Badges** (`presetBadge`, `PresetBadge` in `PanelSection.tsx`, `preset` prop of `SettingRow` / `RangeField`): « Imposé par Haute » (periwinkle
+  pill after the weight pictogram) on the clouds quality row (Météo) while it is `'auto'`, and on the motion blur slider (Objectif) only
+  when the tier lowers its 8 (Standard); « Personnalisé » (chartreuse pill) on the clouds row once chosen by hand, with the row's
+  « Revenir au préréglage » button. The « Qualité » row of the export drawer then reads « Haute · Personnalisé » (`isCustomised`), lists
+  what the quality drives and repeats the button. Depth of field has no lever of its own (see below), only the repetition at each
+  sub-frame, which its pictogram counts.
+- **History**: the entry's `RenderSettings.clouds.quality` is the quality the export used, and `tier: { subFrames, cloudsByHand }` records
+  the cap and whether the hand chose the clouds (optional field added to version 1: older entries parse as before, an older app
+  ignores it). « Réutiliser ces réglages » puts `'auto'` back when `cloudsByHand` is false (an entry without `tier` pinned its quality).
+- **Not a lever**: depth of field. The `DepthOfFieldEffect` already runs its near-field targets at half resolution (library default), the
+  far field and the circle of confusion at full size, and its bokeh taps are shader constants: no one-line change cuts its cost without
+  changing the look, so it is left as is (it gets cheaper with the sub-frame cap). To revisit with GPU timings.
+
 ## Volumetric clouds (phase 3)
 
 - `@takram/three-clouds` 0.7.6 (MIT, same family and same versions as `three-atmosphere` / `three-geospatial`).
@@ -1835,7 +1874,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   with the atmosphere, in `manuel` or `mer` mode, or in `meteo` mode once the weather of the first track (« À la
   suite »: of a stage) is loaded.
 - Setting `settings.clouds { mode: 'meteo' | 'manuel' | 'mer' | 'aucun', coverage, altitudeM, seaTopM, seaRender, quality }`
-  (default `meteo`, 0.4, 1,200 m, 2,000 m, `volume`, `medium`; `SETTING_CHECKS`: `isValidClouds`; `SETTING_UPGRADES`:
+  (default `meteo`, 0.4, 1,200 m, 2,000 m, `volume`, `auto` = the export quality's tier, `Export quality tiers`; `SETTING_CHECKS`: `isValidClouds`; `SETTING_UPGRADES`:
   `withCloudDefaults` for projects saved before `seaTopM` and `seaRender`), "Nuages" (clouds) block of the "Atmosphère
   et météo" section.
 - Pure (`sceneClouds.ts`, tested): `cloudCoversAt` gives the cover of the three layers (Open-Meteo low / mid / high at
@@ -1901,7 +1940,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   upsampling and `PREVIEW_MARCH`. Cost: while the view moves, 1/16 of the canvas pixels marched per frame (1/64 at
   half resolution before); once still, 32 frames marching every pixel, ~0.5–1 s on a real GPU (estimate; the first
   one compiles the variant of the shader without upsampling once); the view stays interactive, any input goes back
-  to upsampling. Export (`isExportBusy`): preset `settings.clouds.quality`, full resolution, no upsampling and no
+  to upsampling. Export (`isExportBusy`): preset `effectiveRender(request.quality, settings.clouds).cloudsQuality` (`settings.clouds.quality`, or the tier of the export quality on `'auto'`), full resolution, no upsampling and no
   shadow map TAA; the effect's `update` is wrapped: 16 / 24 / 32 renders per frame (`EXPORT_SAMPLES`, low / medium /
   high; 2 / 4 / 6 before) with the frame counter set to k (noise slice) and `temporalAlpha` = 1/(k+1) — the first
   discards the history, the following ones average (still camera, zero velocity). An exported frame therefore never

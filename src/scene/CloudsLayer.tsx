@@ -17,6 +17,7 @@ import { Vector3, type Camera, type Data3DTexture } from 'three'
 import { CloudLayers, type CloudsEffect } from '@takram/three-clouds'
 import { Clouds, type CloudsProps } from '@takram/three-clouds/r3f'
 import { deviceBudget } from '../core/deviceBudget'
+import { effectiveRender } from '../export/qualityTier'
 import { cloudsSkipped, isExportBusy, registerExportClouds, useExportStore } from '../export/store'
 import { samplePath } from '../flyover/path'
 import { geoidUndulation } from '../geo/geoid'
@@ -111,8 +112,11 @@ interface CloudsLayerProps {
 
 export function CloudsLayer({ date, marker, noise }: CloudsLayerProps) {
   const { frame } = useTerrainContext()
-  const quality = useAppStore((s) => s.settings.clouds.quality)
+  const qualitySetting = useAppStore((s) => s.settings.clouds.quality)
+  const exportQuality = useExportStore((s) => s.request?.quality ?? 'high')
   const exporting = useExportStore((s) => isExportBusy(s.phase))
+  // the export quality of the clouds: the one chosen by hand, else the tier of the export quality (qualityTier.ts)
+  const quality = effectiveRender(exportQuality, { quality: qualitySetting }).cloudsQuality
   const clock = useFilmClock()
   const ref = useRef<CloudsEffect>(null)
   /** preview: inputs of the last frame and number of frames since they last changed */
