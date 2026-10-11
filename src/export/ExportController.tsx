@@ -412,7 +412,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       const caches = engine?.caches?.()
       const counters = encoder.counters?.()
       const counts = {
-        ...(engine && { tiles: engine.stats.loadedTiles, pending: engine.stats.pendingTiles }),
+        ...(engine && { tiles: engine.stats.loadedTiles, pending: engine.stats.pendingTiles, lod: engine.stats.lodFactor }),
         ...(caches && { bitmaps: caches.bitmaps, grids: caches.heightGrids }),
         ...(caches?.bitmapBytes !== undefined && { bitmapMb: Math.round(caches.bitmapBytes / 1e6) }),
         ...(counters && { inFlight: counters.inFlight }),
