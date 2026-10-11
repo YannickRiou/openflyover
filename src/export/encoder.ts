@@ -8,8 +8,9 @@
  * Transparent film (`transparent`): WebM / VP9 whose alpha mediabunny encodes as a second VP9 stream beside each frame
  * (`BlockAdditional`), so the browser only needs a plain VP9 encoder: that is what `pickCodec` checks.
  */
+import { deviceBudget, type DeviceBudget } from '../core/deviceBudget'
 import type { MixedAudio } from '../film/audio'
-import type { WritableFile } from '../platform'
+import { getPlatform, type WritableFile } from '../platform'
 import type { AudioCodec, StreamTargetChunk, VideoCodec, canEncodeAudio, canEncodeVideo } from 'mediabunny'
 import type { VideoQuality } from './schedule'
 
@@ -60,11 +61,26 @@ export const AUDIO_LEAD_S = 1
 
 export const VIDEO_MIME_TYPES: Record<VideoContainer, string> = { mp4: 'video/mp4', webm: 'video/webm' }
 
-/** Target bitrate (bits / s) for a codec at a size, frame rate and quality. */
-export function videoBitrate(width: number, height: number, fps: number, quality: VideoQuality, codec: VideoCodec): number {
+/** Bitrate ceiling of this device: its budget's where the film stays in memory (no direct disk write), none otherwise. */
+export function deviceBitrateCap(
+  budget: Pick<DeviceBudget, 'maxVideoBitrate'> = deviceBudget(),
+  streamsToDisk = getPlatform().capabilities.canStreamToDisk,
+): number {
+  return streamsToDisk ? Infinity : budget.maxVideoBitrate
+}
+
+/** Target bitrate (bits / s) for a codec at a size, frame rate and quality, at most `maxBitrate` (this device's cap). */
+export function videoBitrate(
+  width: number,
+  height: number,
+  fps: number,
+  quality: VideoQuality,
+  codec: VideoCodec,
+  maxBitrate = deviceBitrateCap(),
+): number {
   const rate = REFERENCE_FPS * (fps / REFERENCE_FPS) ** FPS_BITRATE_EXPONENT
   const raw = width * height * rate * QUALITY_BITS_PER_PIXEL[quality] * (CODEC_BITRATE_FACTOR[codec] ?? 1)
-  return Math.round(Math.min(MAX_BITRATE, Math.max(MIN_BITRATE, raw)))
+  return Math.round(Math.min(maxBitrate, MAX_BITRATE, Math.max(MIN_BITRATE, raw)))
 }
 
 export interface VideoEncodeOptions {

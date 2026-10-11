@@ -84,6 +84,14 @@ describe('sound files', () => {
     expect(d.startsWith('M0.000 0.050L1.000 0.275L2.000 0.275L2.000 0.725')).toBe(true)
     expect(d.endsWith('Z')).toBe(true)
     expect(waveformPath([], 4, 0, 2)).toBe('')
+    // asked again for the same peaks and window: kept, not computed again; another window is computed
+    const peaks = [0.2, 1, 0.5, 0.5]
+    const first = waveformPath(peaks, 4, 1, 2)
+    const max = vi.spyOn(Math, 'max')
+    expect(waveformPath(peaks, 4, 1, 2)).toBe(first)
+    expect(max).not.toHaveBeenCalled()
+    expect(waveformPath(peaks, 4, 0, 2)).not.toBe(first)
+    max.mockRestore()
   })
 })
 

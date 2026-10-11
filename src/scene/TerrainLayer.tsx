@@ -17,6 +17,8 @@ import type { Film } from '../film/model'
 import { REGION_AREA_MARGIN_M } from '../flyover/filmCamera'
 import { AREA_MARGIN_M, AREA_MIN_SIZE_M, createTerrainEngine } from '../terrain/engine'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
+import { exportLodHeight } from '../export/schedule'
+import { isExportBusy, useExportStore } from '../export/store'
 import { useAppStore, type Settings } from '../state/store'
 
 // ---------------------------------------------------------------------------
@@ -228,7 +230,9 @@ export function TerrainLayer({ children }: TerrainLayerProps) {
     if (!engine) return
     const perspective = camera as PerspectiveCamera
     if (!perspective.isPerspectiveCamera) return
-    engine.update(perspective, size.height)
+    // the canvas has the film's size during an export: a phone picks its tiles for a lower view (fewer in memory)
+    const exporting = isExportBusy(useExportStore.getState().phase)
+    engine.update(perspective, exporting ? exportLodHeight(size.height) : size.height)
 
     statsClockRef.current += delta
     if (statsClockRef.current < STATS_INTERVAL_S) return

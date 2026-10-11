@@ -47,7 +47,13 @@ export interface VideoSettings {
   quality: VideoQuality
 }
 
-export const DEFAULT_VIDEO_SETTINGS: VideoSettings = { aspect: '16:9', resolution: '1080p', fps: 30, quality: 'high' }
+/** A phone starts at 720p (44 % fewer pixels than 1080p); it can still choose up to its cap. */
+export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
+  aspect: '16:9',
+  resolution: deviceBudget().kind === 'phone' ? '720p' : '1080p',
+  fps: 30,
+  quality: 'high',
+}
 
 /**
  * Why a resolution class comes out smaller here (phones and tablets), null when it does not. To show next to the
@@ -58,6 +64,11 @@ export function exportResolutionNote(resolution: VideoResolution, maxShortSide =
   if (shortSide <= maxShortSide) return null
   const cap = VIDEO_RESOLUTIONS.find((r) => r.shortSide === maxShortSide)?.label ?? `${maxShortSide}p`
   return `Sur cet appareil, l'export est limité à ${cap} (mémoire de la carte graphique) : le film sort en ${cap}.`
+}
+
+/** Viewport height the terrain LOD is evaluated at for a film `heightPx` tall: its own, except on a phone (fewer tiles in memory). */
+export function exportLodHeight(heightPx: number, maxLodHeightPx = deviceBudget().maxLodHeightPx): number {
+  return Math.min(heightPx, maxLodHeightPx)
 }
 
 /** Frames held on the first image (lets the viewer settle) and on the last one (the arrival). */

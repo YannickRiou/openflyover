@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { budgetFor } from '../core/deviceBudget'
 import {
   EMPTY_TIMINGS,
   MEMORY_WARN_BYTES,
@@ -168,6 +169,15 @@ describe('straight to disk', () => {
     expect(warnsInMemory(MEMORY_WARN_BYTES + 1, false)).toBe(true)
     expect(warnsInMemory(MEMORY_WARN_BYTES, false)).toBe(false)
     expect(warnsInMemory(10 * MEMORY_WARN_BYTES, true)).toBe(false)
+  })
+
+  it('warns sooner on a phone or tablet, as the computers always did otherwise', () => {
+    const phone = budgetFor({ coarsePointer: true, shortSidePx: 393 }).memoryWarnBytes
+    expect(phone).toBe(250e6)
+    expect(warnsInMemory(300e6, false, phone)).toBe(true)
+    expect(warnsInMemory(300e6, false)).toBe(false) // this test runs as a computer
+    expect(warnsInMemory(300e6, true, phone)).toBe(false)
+    expect(MEMORY_WARN_BYTES).toBe(1.5e9)
   })
 
   it('chooses the destination: a file, memory, or nothing when the dialog is closed', async () => {

@@ -12,7 +12,7 @@ import { useMediaStore } from '../film/media'
 import { getPlatform } from '../platform'
 import type { KeyValueStore, Platform, ProjectEntry, ProjectLibrary } from '../platform'
 import { sortProjectEntries } from '../platform/projectLibrary'
-import { projectFileName, serializeProject } from '../project/document'
+import { projectFileName, serializeProjectBlob } from '../project/document'
 import { useAppStore } from '../state/store'
 import type { AppState } from '../state/store'
 import { formatDistance, formatNumber } from './format'
@@ -146,7 +146,7 @@ async function writeOpenProject(library: ProjectLibrary, id: string | null): Pro
   const state = useAppStore.getState()
   const snapshot: AppState['savedProject'] = { settings: state.settings, tracks: state.tracks, name: state.projectName }
   const name = effectiveProjectName(state.projectName, state.tracks[0]?.name)
-  const text = serializeProject(state, name, useMediaStore.getState().table)
+  const text = serializeProjectBlob(state, name, useMediaStore.getState().table)
   const opened = openedCount
   const thumbnail = await viewThumbnail()
   const entry = await library.save(id, {

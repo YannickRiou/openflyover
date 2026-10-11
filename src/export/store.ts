@@ -8,6 +8,7 @@
  * the export), else it is kept in memory and downloaded at the end.
  */
 import { create } from 'zustand'
+import { DESKTOP_BUDGET, deviceBudget } from '../core/deviceBudget'
 import type { TrackPath } from '../flyover/path'
 import type { Platform, WritableFile } from '../platform'
 import { showToast } from '../ui/toast'
@@ -183,12 +184,12 @@ function drop(request: Pick<ExportRequest, 'destination'> | null): void {
   void request?.destination?.discard().catch(() => undefined)
 }
 
-/** Above this estimate, a film kept in memory (about twice its size at the end) may exhaust the tab. */
-export const MEMORY_WARN_BYTES = 1.5e9
+/** Above this estimate, a film kept in memory (about twice its size at the end) may exhaust the tab (computers). */
+export const MEMORY_WARN_BYTES = DESKTOP_BUDGET.memoryWarnBytes
 
-/** The size estimate warns: a large film that cannot be written straight to disk. */
-export function warnsInMemory(estimatedBytes: number, streamsToDisk: boolean): boolean {
-  return !streamsToDisk && estimatedBytes > MEMORY_WARN_BYTES
+/** The size estimate warns: a large film that cannot be written straight to disk (phones and tablets: from 250 MB). */
+export function warnsInMemory(estimatedBytes: number, streamsToDisk: boolean, limit = deviceBudget().memoryWarnBytes): boolean {
+  return !streamsToDisk && estimatedBytes > limit
 }
 
 /**
