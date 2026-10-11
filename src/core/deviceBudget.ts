@@ -33,6 +33,15 @@ export interface DeviceBudget {
   maxVideoBitrate: number
   /** estimated size (bytes) above which a film kept in memory is flagged as likely to exhaust the tab */
   memoryWarnBytes: number
+  /**
+   * most terrain tiles the engine keeps loaded (~2.6 MB each: texture, canvas, DEM grid, geometry); the tiles of the
+   * current view are never evicted. Without it a phone's export grows by ~1.2 tiles per frame until iOS ends the tab.
+   */
+  maxResidentTiles: number
+  /** export: film frames a tile of the view is kept after the last frame that needed it; 0 = wall time (the preview's) */
+  exportTileKeepFrames: number
+  /** export: frames ahead whose tiles are prefetched (every few rendered frames) */
+  exportPrefetchAhead: readonly number[]
   /** texels per side of the relief's shadow map (memory grows with its square: estimated ~128 MB at 4096², ~32 MB at 2048²) */
   shadowMapSize: number
 }
@@ -51,10 +60,13 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   maxLodHeightPx: Infinity,
   maxVideoBitrate: Infinity,
   memoryWarnBytes: 1.5e9,
+  maxResidentTiles: Infinity,
+  exportTileKeepFrames: 0,
+  exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
   shadowMapSize: 4096,
 }
 
-const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes'> = {
+const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles'> = {
   maxPixelRatio: 2,
   movingPixelRatio: 1.5,
   tileBitmaps: 200,
@@ -65,6 +77,9 @@ const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodH
   seaRender: 'surface',
   // a quarter of the computer's memory; the map is refitted to the view every frame and a phone screen is small
   shadowMapSize: 2048,
+  // counted in film frames, not seconds: a phone renders a few frames a second, 30 s of wall time hold hundreds of them
+  exportTileKeepFrames: 6,
+  exportPrefetchAhead: [5, 10, 20],
 }
 
 /** Below this short side (CSS px), a touch device is a phone. */
@@ -94,9 +109,11 @@ export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits
     maxVideoBitrate: phone ? 8e6 : 12e6,
     // iOS ends a tab well before the computers' 1.5 GB: the film, its copies at the end and the scene add up
     memoryWarnBytes: 250e6,
+    // the preview holds ~70 tiles; the export (400-500 MB of tiles at most) never needs more
+    maxResidentTiles: phone ? 120 : 160,
   }
   if (memoryGb !== undefined && memoryGb <= LOW_MEMORY_GB) {
-    return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024 }
+    return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024, maxResidentTiles: 90 }
   }
   return budget
 }

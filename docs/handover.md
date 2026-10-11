@@ -175,6 +175,15 @@ features included), `npm run build`,
 - **Keyframes** (11 October 2026, branch `keyframes`, user report « Garder ce cadrage ici ne fonctionne pas »): « Image
   clé » keeps the exact orbited view (pose around the film's aim point, `keyView` / `keyFramingFrom`), ◁◆ / ◆▷, Alt+← /
   Alt+→, click on the ◆; e2e `image-cle`. Not done: the situation shot's « Capturer la vue actuelle » still rounds.
+- **Tile budget in a phone export** (11 October 2026, branch `tile-budget`, iPhone 12 diagnostic report: the export was
+  killed after image ~100 with loaded tiles 68 → 244, textures and geometries ×3–4, no plateau): the engine's retention was
+  wall-clock (2 s / 30 s) while an export renders a few frames a second. Now `engine.setRetention` (film frames, set by
+  `ExportController` when `budget.exportTileKeepFrames > 0`), `maxResidentTiles` hard cap (`enforceCap`, 120 phone / 160
+  tablet / 90 low memory, unbounded on a computer; preview too), `exportPrefetchAhead` [5, 10, 20] on a phone, the
+  imagery canvas released with its tile, `en attente` in the breadcrumbs. Computer unchanged. Unit tests simulate a flight
+  with the injectable clock (`engine.test.ts`, « tile budget »). Not measured on a device: see `docs/tests-gpu.md`
+  (iPhone item) for what the next report's steps should show; if the tab still dies, lower `maxResidentTiles` first
+  (then the shadow map, imagery offset 0).
 - **Left for later** (proposed, not done): the inspector's text field and « Taille » slider could use the shared
   `TextField` (`PanelSection.tsx`) and the overlay's size field (its « Position » is a 3 × 3 grid, the overlay's a
   list: kept apart), `diffEngineOptions` in `TerrainLayer` (used and tested, kept). Declined by the user: "Texte libre" drawn

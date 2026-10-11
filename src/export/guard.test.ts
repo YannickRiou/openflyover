@@ -259,6 +259,7 @@ describe('interrupted export', () => {
 
   it('describes the breadcrumb', () => {
     expect(describeBreadcrumb({ event: 'freeze', at: 0, textures: 5, tiles: 9 })).toMatch(/^freeze à .* · 5 textures, 9 tuiles$/)
+    expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, pending: 3 })).toMatch(/ · 9 tuiles, 3 en attente$/)
     expect(describeBreadcrumb({ event: 'pagehide', at: 0 })).toMatch(/^pagehide à [^·]*$/)
     expect(describeBreadcrumb({ event: 'freeze', at: 0, heapMb: 310 })).toMatch(/ · 310 Mo de tas JS$/)
   })

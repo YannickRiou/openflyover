@@ -12,7 +12,7 @@ import type {
 } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { tileKeyString, tilesForBounds, zoomForTileBudget } from '../geo/mercator'
-import { NO_IMAGERY_COLOR, createTerrainEngine, type EngineDeps, type EngineTuning, type HeightFieldLike } from './engine'
+import { DEFAULT_TUNING, NO_IMAGERY_COLOR, createTerrainEngine, type EngineDeps, type EngineTuning, type HeightFieldLike } from './engine'
 import { TileFetchError } from './fetch'
 
 // The engine wires these as defaults; the tests inject every dependency, so keep them inert.
@@ -742,5 +742,202 @@ describe('createTerrainEngine', () => {
     engine.update(camera, 1000)
     expect(deps.loadImageryTexture).not.toHaveBeenCalled()
     expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tile budget (phone export)
+// ---------------------------------------------------------------------------
+
+/** Settle the loads of the fake deps (a few promise hops, no timer): the simulations run thousands of updates. */
+async function flush(): Promise<void> {
+  for (let i = 0; i < 12; i++) await Promise.resolve()
+}
+
+/** Camera `heightM` above (x, z) in the local frame, looking straight down. */
+function cameraAt(x: number, z: number, heightM: number): PerspectiveCamera {
+  const camera = new PerspectiveCamera(50, 1, 1, 5e6)
+  camera.position.set(x, heightM, z)
+  camera.up.set(0, 0, -1)
+  camera.lookAt(new Vector3(x, 0, z))
+  camera.updateProjectionMatrix()
+  return camera
+}
+
+describe('tile budget', () => {
+  const names = (engine: { group: { children: unknown[] } }, onlyVisible = false) =>
+    new Set(meshesOf(engine).filter((m) => !onlyVisible || m.visible).map((m) => m.name))
+
+  /** Three views side by side, each settled; returns what was loaded and drawn after each, and the engine. */
+  async function threeViews(tuning: Partial<EngineTuning>) {
+    const engine = engineWith(createFakeDeps(), { maxZoom: ROOT_ZOOM + 2 }, { unloadAfterMs: 1e9, ...tuning })
+    const loaded: Array<Set<string>> = []
+    const drawn: Array<Set<string>> = []
+    for (const x of [-8000, 0, 8000]) {
+      const camera = cameraAt(x, 0, 3000)
+      for (let i = 0; i < 4; i++) {
+        engine.update(camera, 1000)
+        await flush()
+      }
+      loaded.push(names(engine))
+      drawn.push(names(engine, true))
+    }
+    return { engine, loaded, drawn }
+  }
+
+  it('evicts, past the cap, the least recently visited tiles first and never those of the current view', async () => {
+    const free = await threeViews({})
+    const cap = free.engine.stats.loadedTiles - 2
+    const capped = await threeViews({ maxResidentTiles: cap })
+
+    expect(capped.engine.stats.loadedTiles).toBe(cap)
+    // what the last view draws (tiles and shadow casters) is what it drew without a cap
+    expect(capped.drawn[2]).toEqual(free.drawn[2])
+    // the two tiles that went were last visited by the first view, not the second one's
+    const evicted = [...free.loaded[2]].filter((name) => !capped.loaded[2].has(name))
+    expect(evicted).toHaveLength(2)
+    const [first, second, third] = free.drawn
+    for (const name of evicted) {
+      expect(first.has(name) && !second.has(name) && !third.has(name)).toBe(true)
+    }
+  })
+
+  it('keeps nothing but the current view and the roots with a cap of zero', async () => {
+    const free = await threeViews({})
+    const { engine, drawn, loaded } = await threeViews({ maxResidentTiles: 0 })
+    expect(drawn[2]).toEqual(free.drawn[2])
+    expect(loaded[2].size).toBeLessThan(free.loaded[2].size)
+    expect(engine.stats.loadedTiles).toBeGreaterThanOrEqual(ROOT_KEYS.length)
+  })
+
+  it('starts no prefetch past the cap', async () => {
+    const deps = createFakeDeps()
+    const engine = engineWith(deps, { maxZoom: ROOT_ZOOM + 4 }, { maxResidentTiles: ROOT_KEYS.length })
+    const high = cameraAbove(600_000)
+    engine.update(high, 1000)
+    await settle()
+    engine.update(high, 1000)
+    expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
+    expect(engine.prefetch?.(cameraAbove(4000), 1000)).toBe(0)
+  })
+
+  it('counts the retention in film frames, not wall time, until it is switched off', async () => {
+    const deps = createFakeDeps()
+    let t = 0
+    deps.now = () => t
+    const engine = engineWith(deps, { maxZoom: ROOT_ZOOM + 1 }, { unloadAfterMs: 1000, sweepEveryFrames: 1 })
+    const retention = (frame: number) => ({ frame, keepFrames: 3, prefetchKeepFrames: 10 })
+    const near = cameraAbove(4000)
+    const far = cameraAbove(600_000)
+    const view = async (camera: PerspectiveCamera) => {
+      for (let i = 0; i < 4; i++) {
+        engine.update(camera, 1000)
+        await settle()
+      }
+      engine.update(camera, 1000)
+      return engine.stats.loadedTiles
+    }
+
+    engine.setRetention?.(retention(0))
+    const withChildren = await view(near)
+    expect(withChildren).toBeGreaterThan(ROOT_KEYS.length)
+
+    t = 600_000 // a long tile wait: the film did not move
+    engine.setRetention?.(retention(2))
+    engine.update(far, 1000)
+    expect(engine.stats.loadedTiles).toBe(withChildren)
+    engine.setRetention?.(retention(4)) // 0 + 3 frames are behind
+    engine.update(far, 1000)
+    expect(engine.stats.loadedTiles).toBeLessThan(withChildren)
+
+    // back to wall time: the delay of the view applies again
+    engine.setRetention?.(null)
+    const again = await view(near)
+    expect(again).toBeGreaterThan(ROOT_KEYS.length)
+    t += 500
+    engine.update(far, 1000)
+    expect(engine.stats.loadedTiles).toBe(again)
+    t += 1500
+    engine.update(far, 1000)
+    expect(engine.stats.loadedTiles).toBeLessThan(again)
+  })
+
+  it('releases the 2D canvas of an imagery texture with the tile', async () => {
+    const deps = createFakeDeps()
+    const canvas = { width: 512, height: 512, getContext: () => null }
+    deps.loadImageryTexture = vi.fn(async () => {
+      const texture = new Texture()
+      texture.image = canvas
+      return texture
+    })
+    const engine = engineWith(deps)
+    engine.update(cameraAbove(600_000), 1000)
+    await settle()
+    expect(canvas.width).toBe(512)
+    engine.dispose()
+    expect(canvas.width).toBe(0)
+    expect(canvas.height).toBe(0)
+  })
+
+  describe('simulated export: a camera flies along a line, prefetching every 5 frames', () => {
+    const AREA_WIDE: LonLatBounds = { west: 5.9, south: 45.3, east: 7.9, north: 46.5 }
+    const FRAMES = 900
+
+    /** Resident tiles after every frame of a film flown at `frameMs` per frame (the injected clock). */
+    async function fly(tuning: Partial<EngineTuning>, o: { frameMs: number; ahead: number[]; keepFrames?: number }) {
+      const deps = createFakeDeps()
+      let t = 0
+      deps.now = () => t
+      const engine = engineWith(
+        deps,
+        { area: AREA_WIDE, maxZoom: 14, segments: 64, errorTargetPx: 8 },
+        tuning,
+      )
+      const at = (i: number) => {
+        const x = -37_000 + 80 * i
+        const z = 3000 * Math.sin(i / 300)
+        const camera = new PerspectiveCamera(50, 720 / 1280, 1, 2e6)
+        camera.position.set(x, 4000 + 1500 * Math.sin(i / 150), z)
+        camera.lookAt(new Vector3(x + 3000, 0, z - 200))
+        camera.updateProjectionMatrix()
+        return camera
+      }
+      const resident: number[] = []
+      for (let i = 0; i < FRAMES; i++) {
+        t += o.frameMs
+        if (o.keepFrames) engine.setRetention?.({ frame: i, keepFrames: o.keepFrames, prefetchKeepFrames: Math.max(...o.ahead) + 10 })
+        for (let k = 0; k < 3; k++) {
+          engine.update(at(i), 720)
+          await flush()
+        }
+        if (i % 5 === 0) {
+          for (const ahead of o.ahead) {
+            engine.prefetch?.(at(i + ahead), 720)
+            await flush()
+          }
+        }
+        resident.push(engine.stats.loadedTiles)
+      }
+      return resident
+    }
+    const FULL_AHEAD = [5, 10, 15, 20, 30, 40]
+
+    it('a phone reaches a plateau under its cap; a computer keeps its wall-clock retention', async () => {
+      const cap = 120
+      const phone = await fly({ maxResidentTiles: cap }, { frameMs: 290, ahead: [5, 10, 20], keepFrames: 6 })
+      expect(Math.max(...phone)).toBeLessThanOrEqual(cap)
+      // no growth: the last third holds no more than the first
+      expect(Math.max(...phone.slice(-300))).toBeLessThanOrEqual(Math.max(...phone.slice(0, 300)) + 5)
+
+      // the former retention (30 s of wall time, every prefetch of the list) holds well above the cap
+      const before = await fly({}, { frameMs: 290, ahead: FULL_AHEAD })
+      expect(Math.max(...before)).toBeGreaterThan(cap * 1.4)
+
+      // a computer: no cap, no frame retention: the default tuning is the unbounded one
+      expect(DEFAULT_TUNING.maxResidentTiles).toBe(Infinity)
+      const desktop = await fly({}, { frameMs: 30, ahead: FULL_AHEAD })
+      expect(desktop).toEqual(await fly({ maxResidentTiles: Infinity }, { frameMs: 30, ahead: FULL_AHEAD }))
+      expect(Math.max(...desktop)).toBeGreaterThan(cap * 1.4)
+    }, 60_000)
   })
 })

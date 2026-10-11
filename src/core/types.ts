@@ -202,6 +202,16 @@ export interface TerrainStats {
   pendingVisibleTiles?: number
 }
 
+/** Tile retention counted in film frames (video export on a phone) instead of wall time. */
+export interface TerrainRetention {
+  /** film frame being rendered (the engine's clock: it only has to grow) */
+  frame: number
+  /** frames the tiles of a view are kept after the last frame that visited them */
+  keepFrames: number
+  /** same for the tiles of a prefetch */
+  prefetchKeepFrames: number
+}
+
 export interface TerrainEngine {
   /** add this to the scene once */
   readonly group: Group
@@ -222,6 +232,12 @@ export interface TerrainEngine {
    * budget. Returns the number of loads started.
    */
   prefetch?(camera: PerspectiveCamera, viewportHeightPx: number): number
+  /**
+   * Count the retention of the tiles in film frames (`TerrainRetention`, set again for every frame) instead of wall
+   * time; `null` goes back to wall time. The export's tile waits and a phone's slow frames then no longer decide how
+   * many tiles stay loaded.
+   */
+  setRetention?(retention: TerrainRetention | null): void
   dispose(): void
 }
 
