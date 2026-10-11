@@ -4,7 +4,7 @@ import type { FilmMedia, FilmText } from '../film/model'
 import { buildTrack } from '../import/stats'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
-import { buildReport, copyText, formatReport, parseReport, withLastExport } from './diagnostic'
+import { buildReport, copyText, formatReport, noEncodingTest, parseReport, setNoEncodingTest, withLastExport } from './diagnostic'
 import type { DiagnosticInput } from './diagnostic'
 import { MAX_STEPS, describeBreadcrumb } from './guard'
 
@@ -94,6 +94,18 @@ describe('diagnostic report', () => {
     expect(rowsOf(privateInput({ request: undefined }), 'Export')).toMatchObject({ Demande: 'aucune (réglages actuels)', Destination: 'mémoire' })
   })
 
+  it('says when « Export de test sans encodage » is on, a switch of the tab only', () => {
+    expect(rowsOf(privateInput({ noEncoding: true }), 'Export').Encodage).toBe('désactivé (test)')
+    const map = new Map<string, string>()
+    const storage = { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v), removeItem: (k: string) => void map.delete(k) }
+    expect(noEncodingTest(storage)).toBe(false)
+    setNoEncodingTest(true, storage)
+    expect(noEncodingTest(storage)).toBe(true)
+    setNoEncodingTest(false, storage)
+    expect(noEncodingTest(storage)).toBe(false)
+    expect(noEncodingTest(undefined)).toBe(false)
+  })
+
   it('tells every setting that weighs on memory, the tracks and the media by kind and size', () => {
     const settings = rowsOf(privateInput(), 'Réglages')
     expect(settings).toMatchObject({
@@ -133,8 +145,9 @@ describe('diagnostic report', () => {
     const report = buildReport(privateInput({ userAgent: 'x'.repeat(5000), gpu: { maxTextureSize: 4096, renderer: 'y'.repeat(5000), antialias: true } }))
     const rows = Object.fromEntries(report.sections[0].rows)
     expect(rows.Navigateur.length).toBe(200)
+    const counters = { textures: 999, geometries: 999, tiles: 999, pending: 999, bitmaps: 999, bitmapMb: 999, grids: 999, inFlight: 99, queue: 99, drapes: 999 }
     const steps = Array.from({ length: MAX_STEPS }, (_, i) =>
-      describeBreadcrumb({ event: `export : image ${i * 25} / 1890`.padEnd(80, '.'), at: 0, textures: 999, geometries: 999, tiles: 999, heapMb: 9999 }),
+      describeBreadcrumb({ event: `export : image ${i * 25} / 1890`.padEnd(80, '.'), at: 0, ...counters, heapMb: 9999 }, { event: '', at: -99_000 }),
     )
     expect(new TextEncoder().encode(JSON.stringify(report)).length + new TextEncoder().encode(JSON.stringify(steps)).length).toBeLessThan(16_000)
   })

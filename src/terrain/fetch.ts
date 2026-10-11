@@ -425,6 +425,12 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
     get stats(): TileFetcherStats {
       return { inflight, queued, cached: cache.size, failed }
     },
+    get cachedBytes(): number {
+      // RGBA of each decoded bitmap: read for the export's breadcrumb, not per frame
+      let bytes = 0
+      for (const bitmap of cache.values()) bytes += bitmap.width * bitmap.height * 4 || 0
+      return bytes
+    },
     clear,
   }
 }

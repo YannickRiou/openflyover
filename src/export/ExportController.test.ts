@@ -8,6 +8,9 @@ import { DEFAULT_PACING } from '../flyover/pacing'
 import type { WritableFile } from '../platform/platform'
 import type { TerrainEngine } from '../core/types'
 import { runExport } from './ExportController'
+import { NO_ENCODING_KEY } from './diagnostic'
+import { readBreadcrumbs } from './guard'
+import { createExportEncoder } from './nativeEncoder'
 import { buildFrameSchedule } from './schedule'
 import { useExportStore, type ExportRequest } from './store'
 
@@ -146,6 +149,26 @@ describe('runExport', () => {
     expect(seen.slice(0, -1).map((retention) => retention?.frame)).toEqual([...Array(frameCount).keys()])
     expect(seen[0]).toMatchObject({ keepFrames: phone.exportTileKeepFrames, prefetchKeepFrames: 30 })
     expect(seen.at(-1)).toBeNull()
+  })
+
+  it('« Export de test sans encodage » renders every frame, encodes none and ends on its message', async () => {
+    const map = new Map([[NO_ENCODING_KEY, '1']])
+    vi.stubGlobal('sessionStorage', { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v), removeItem: (k: string) => void map.delete(k) })
+    try {
+      const engine = { stats: { loadedTiles: 5, pendingTiles: 1 }, caches: () => ({ bitmaps: 3, bitmapBytes: 2e6, heightGrids: 4 }) }
+      const file = destination()
+      await exportFilm(file, { engine: () => engine as unknown as TerrainEngine })
+      expect(createExportEncoder).not.toHaveBeenCalled()
+      expect(session.addFrame).not.toHaveBeenCalled()
+      expect(file.discard).toHaveBeenCalled()
+      expect(useExportStore.getState()).toMatchObject({ phase: 'error', result: null })
+      expect(useExportStore.getState().error).toMatch(/^Export de test terminé sans fichier \(\d+ images rendues\)$/)
+      const steps = readBreadcrumbs(sessionStorage)
+      expect(steps.map((c) => c.event)).toContain('export : test sans encodage')
+      expect(steps.at(-1)).toMatchObject({ tiles: 5, pending: 1, bitmaps: 3, bitmapMb: 2, grids: 4, drapes: 0 })
+    } finally {
+      vi.stubGlobal('sessionStorage', undefined)
+    }
   })
 
   it('a computer keeps the wall-time retention (the engine is only reset at the end)', async () => {

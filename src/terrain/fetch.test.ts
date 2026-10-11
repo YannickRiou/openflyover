@@ -115,6 +115,7 @@ describe('createTileFetcher', () => {
     const results = await Promise.all(promises)
     expect(results).toHaveLength(5)
     expect(fetcher.stats).toEqual({ inflight: 0, queued: 0, cached: 5, failed: 0 })
+    expect(fetcher.cachedBytes).toBe(5 * 256 * 256 * 4)
   })
 
   it('serves the lowest priority first and re-prioritises a repeated URL', async () => {
