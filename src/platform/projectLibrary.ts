@@ -13,7 +13,8 @@ export interface LibraryFiles {
   names(): Promise<string[]>
   /** null when the file does not exist */
   read(name: string): Promise<string | null>
-  write(name: string, text: string): Promise<void>
+  /** a Blob (autosave of a project with clips) is written without making a string of it */
+  write(name: string, body: string | Blob): Promise<void>
   remove(name: string): Promise<void>
 }
 
@@ -100,7 +101,7 @@ export function createProjectLibrary(
         name: cleanProjectName(name),
         updatedAt: now(),
         summary,
-        sizeBytes: new TextEncoder().encode(text).length,
+        sizeBytes: typeof text === 'string' ? new TextEncoder().encode(text).length : text.size,
         ...(picture ? { thumbnail: picture } : {}),
       }
       // the document first: an entry never points to a document that was not written
@@ -148,7 +149,7 @@ export function createDesktopLibraryFiles(loadFs: () => Promise<DesktopFs>): Lib
       if (!(await fs.exists(pathOf(name), { baseDir }))) return null
       return new TextDecoder().decode(await fs.readFile(pathOf(name), { baseDir }))
     },
-    async write(name, text) {
+    async write(name, body) {
       const { fs, baseDir } = await fsAndOptions()
       if (!madeDir) {
         await fs.mkdir(DESKTOP_PROJECT_ROOT, { baseDir, recursive: true })
@@ -157,7 +158,7 @@ export function createDesktopLibraryFiles(loadFs: () => Promise<DesktopFs>): Lib
       // a sibling file renamed over the target: a crash mid-write never leaves a half-written project
       const temp = `${pathOf(name)}.tmp`
       try {
-        await fs.writeFile(temp, new TextEncoder().encode(text), { baseDir })
+        await fs.writeFile(temp, typeof body === 'string' ? new TextEncoder().encode(body) : new Uint8Array(await body.arrayBuffer()), { baseDir })
         await fs.rename(temp, pathOf(name), { oldPathBaseDir: baseDir, newPathBaseDir: baseDir })
       } catch (error) {
         await fs.remove(temp, { baseDir }).catch(() => undefined)
@@ -189,13 +190,13 @@ export function createWebLibraryFiles(
       const response = await (await open()).match(keyOf(name))
       return response ? response.text() : null
     },
-    async write(name, text) {
+    async write(name, body) {
       if (!persistAsked) {
         // best effort: the browser may refuse
         persistAsked = true
         await manager?.persist?.().catch(() => false)
       }
-      await (await open()).put(keyOf(name), new Response(text, { headers: { 'content-type': 'application/json' } }))
+      await (await open()).put(keyOf(name), new Response(body, { headers: { 'content-type': 'application/json' } }))
     },
     async remove(name) {
       await (await open()).delete(keyOf(name))

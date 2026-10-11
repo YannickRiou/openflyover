@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Track } from '../core/types'
 import { DEFAULT_SETTINGS } from '../state/store'
 import { keyValueStore } from '../platform'
-import { createProjectLibrary } from '../platform/projectLibrary'
+import { createDesktopLibraryFiles, createProjectLibrary, createWebLibraryFiles } from '../platform/projectLibrary'
 import type { LibraryFiles } from '../platform/projectLibrary'
 import {
   LAST_PROJECT_KEY,
@@ -207,10 +207,39 @@ describe('« Mes projets »: kept by itself, reopened at start', () => {
     return {
       names: async () => [...files.keys()],
       read: async (name) => files.get(name) ?? null,
-      write: async (name, text) => void files.set(name, text),
+      write: async (name, body) => void files.set(name, typeof body === 'string' ? body : await body.text()),
       remove: async (name) => void files.delete(name),
     }
   }
+
+  it('writes the document as a Blob (autosave) without making a string of it: size and content as for the text', async () => {
+    const projectLibrary = createProjectLibrary(memoryFiles(), () => 1, () => 'p1')
+    const entry = await projectLibrary.save(null, { name: 'Tour', summary: '', text: new Blob(['{"é":', new Blob(['1}'])]) })
+    expect(entry.sizeBytes).toBe(8)
+    expect(await projectLibrary.load('p1')).toBe('{"é":1}')
+    // same size as the string of the same document
+    expect((await createProjectLibrary(memoryFiles(), () => 1, () => 'p2').save(null, { name: 'Tour', summary: '', text: '{"é":1}' })).sizeBytes).toBe(8)
+  })
+
+  it('a Blob reaches the web cache and the desktop file as the same bytes', async () => {
+    const stored = new Map<string, Response>()
+    const cache = { put: async (k: string, r: Response) => void stored.set(k, r), match: async (k: string) => stored.get(k)?.clone() }
+    const web = createWebLibraryFiles({ open: async () => cache as unknown as Cache })
+    await web.write('a.openflyover.json', new Blob(['{"é":', '1}']))
+    expect(await web.read('a.openflyover.json')).toBe('{"é":1}')
+
+    const written = new Map<string, Uint8Array>()
+    const fs = {
+      BaseDirectory: { AppData: 14 },
+      exists: async () => true,
+      mkdir: async () => undefined,
+      writeFile: async (path: string, data: Uint8Array) => void written.set(path, data),
+      rename: async (from: string, to: string) => void written.set(to, written.get(from)!),
+      remove: async () => undefined,
+    }
+    await createDesktopLibraryFiles(async () => fs as never).write('a.openflyover.json', new Blob(['{"é":', '1}']))
+    expect(new TextDecoder().decode(written.get('projects/a.openflyover.json'))).toBe('{"é":1}')
+  })
 
   it('reopens the remembered entry with its document', async () => {
     const storage = keyValueStore(null)
