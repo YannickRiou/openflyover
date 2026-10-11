@@ -361,7 +361,7 @@ Updated on 9 October 2026 (afternoon). The roadmap is built; what remains, by ow
 4. **Camera smoothing in time**: done on the work branch (« Lissage de la visée », « Lissage de la caméra » 3 s by
    default, « Fin en douceur », « Lissage des virages » in metres; see ARCHITECTURE.md, "Flyover"). To check on a GPU.
 5. **« Objectif »**: done on the work branch (« Flou de bougé »: radial speed blur from the film's camera speed, plus
-   the exact shutter blur of the export, 8 sub-frames sharing the cloud renders, and a trail in the preview; « Halo lumineux », « Reflet d'objectif » (atmosphere only), « Profondeur de champ »
+   the exact shutter blur of the export, up to 8 sub-frames (fewer when the view barely moves) sharing the cloud renders, and a trail in the preview; « Halo lumineux », « Reflet d'objectif » (atmosphere only), « Profondeur de champ »
    on the marker; all off by default; ARCHITECTURE.md, "Lens"). Field of view kept fixed (too many framing
    computations depend on it). To check on a GPU (`docs/tests-gpu.md`).
 6. **Situation shot, more control**: done on the work branch (« Lieu » among the areas containing the track,

@@ -36,6 +36,8 @@ reproduce it next to the box.
       `[export]` line against the version before « no rendering while waiting for tiles » (~1 s per frame on a GTX 1060);
       GPU load (Task Manager) drops while the `[export]` "attente des tuiles" grows instead of staying at 100 %; frames
       identical (terrain complete, same clouds and blur), no more "incomplète" frames than before.
+- [ ] « Flou de bougé » export (shutter 100 %, 1080p): same look as before the adaptive sub-frames at the same film time (stops and
+      held frames sharp, fast sections identical), noticeably shorter on slow sections, stops and high cameras (`[export]` line).
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
       (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without
