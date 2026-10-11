@@ -161,6 +161,15 @@ describe('export guard', () => {
     expect(screen.hold).toHaveBeenCalled()
   })
 
+  it('starts each export with a fresh breadcrumb: its first step, not an older one', () => {
+    const storage = memoryStorage()
+    storage.setItem(BREADCRUMB_KEY, JSON.stringify({ event: 'pagehide', at: 1 }))
+    setBreadcrumbProbe(() => ({ tiles: 7 }))
+    stop = installExportGuard(lock(), storage, {})
+    useExportStore.getState().start(REQUEST)
+    expect(JSON.parse(storage.getItem(BREADCRUMB_KEY)!)).toMatchObject({ event: 'export : démarrage', tiles: 7 })
+  })
+
   it('writes a breadcrumb on pagehide and freeze', () => {
     const storage = memoryStorage()
     const page = new EventTarget()
