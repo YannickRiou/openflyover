@@ -265,7 +265,7 @@ describe('interrupted export', () => {
     expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, pending: 3 })).toMatch(/ · 9 tuiles \(3 en attente\)$/)
     expect(describeBreadcrumb({ event: 'freeze', at: 0, pending: 3 })).toMatch(/ · 3 en attente$/)
     // the terrain's detail lowered to keep a phone under its tile budget; full detail is not shown
-    expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, lod: 3.05 })).toMatch(/ · 9 tuiles, détail ÷3,1$/)
+    expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, lod: 3.8 })).toMatch(/ · 9 tuiles, détail ÷3,8$/)
     expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, lod: 1 })).toMatch(/ · 9 tuiles$/)
     expect(describeBreadcrumb({ event: 'pagehide', at: 0 })).toMatch(/^pagehide à [^·]*$/)
     expect(describeBreadcrumb({ event: 'freeze', at: 0, heapMb: 310 })).toMatch(/ · 310 Mo de tas JS$/)
