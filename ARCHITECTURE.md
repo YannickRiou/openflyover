@@ -632,7 +632,8 @@ ink, 7.3:1).
   polar day or night flagged (`polar`, sunrise and sunset `null`). Converted to solar time by `solarHourOf` (inverse of
   `solarHourToDate`) for the "Lumière" interface.
 - **Terrain cast shadows** (`src/scene/terrainShadow.ts`, `settings.shadows`, "Ombres du relief" (terrain shadows) checkbox visible with
-  the atmosphere): the Takram `SunLight` receives a `TerrainShadow` (one 4096² shadow map, PCF through `shadows="percentage"`).
+  the atmosphere): the Takram `SunLight` receives a `TerrainShadow` (one shadow map, `deviceBudget().shadowMapSize`: 4096² on a computer, 2048² on a phone or tablet,
+  1024² with 2 GB or less; PCF through `shadows="percentage"`).
   Its orthographic bounds are recomputed in `updateMatrices(light, viewCamera)`, which three calls just before
   drawing the map: area = view frustum cut at max(30 km, 5 × camera height above the lowest terrain),
   intersected with the box of the visible tiles (`fitShadowFrustum`, pure and tested); near plane pushed toward the sun
@@ -2416,6 +2417,11 @@ and short side < 600 CSS px; tablet = touch screen, larger; computer = everythin
 | preview clouds: resolution, still frames | `CloudsLayer`, `CLOUD_SETTLE_FRAMES` | 1, 32 | 0.5, 16 | 0.5, 16 | 0.5, 16 |
 | sea of clouds by default | `DEFAULT_CLOUDS.seaRender` | volume | « Nappe » | « Nappe » | « Nappe » |
 | export short side | `videoSize` | 2160 (4K) | 1440 | 1080 | as the device |
+| shadow map (texels per side) | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
+| terrain LOD height during an export | `exportLodHeight` (`TerrainLayer`, `ExportController`) | the film's | the film's | min(film, 720) | as the device |
+| video bitrate ceiling, film kept in memory | `videoBitrate` / `deviceBitrateCap` | none | 12 Mbit/s | 8 Mbit/s | as the device |
+| « in memory » size warning | `warnsInMemory` | 1.5 GB | 250 MB | 250 MB | 250 MB |
+| default export resolution | `DEFAULT_VIDEO_SETTINGS` | 1080p | 1080p | 720p | as the device |
 
 « Nappe » is one draw call, no ray march: far cheaper than the volumetric sea. Lens effects stay off by default (as on
 a computer). A larger export class comes out at the cap (`videoSize`), with `exportResolutionNote` to show next to the
@@ -2425,3 +2431,32 @@ ratio, so one drop and one return per gesture); the mouse never changes it. Veri
 emulation (DPR 3) draws at 2, 1.5 while playing, 2 again on pause; 1.5 during a one-finger orbit and a pinch, 2 again
 after release, one change each way, a tap changes nothing; a desktop viewport at DPR 2 stays at 2, mouse drag
 included. Not measured: memory and frame time on a real phone.
+
+#### Mobile memory budget (iPhone 12, 4 GB: the tab is killed by iOS, not reloaded by the app)
+
+No code reloads the page: iOS ends a WebContent process that uses too much memory (Jetsam) and the browser reloads the
+tab; the automatic reopening of the last project (see "Library") hides it. The figures are estimates, not measured.
+
+| What | Before | Now on a phone |
+|---|---|---|
+| terrain shadow map | 4096², ~128 MB, redrawn every frame | 2048², ~32 MB (1024², ~8 MB with ≤ 2 GB) |
+| MSAA of the default framebuffer | ~75 MB at 1080p, never read under the composer (`multisampling={0}` + SMAA) | none when the context is created with the atmosphere on (`canvasAntialias`); without the atmosphere the scene is drawn straight to it, MSAA stays |
+| tiles resident during an export | LOD evaluated for the film's height (1080, or 1920 in 9:16) | for 720 px at most: the preview's tiles (`exportLodHeight`; the texture of a tile is then up to 1.5× coarser than "3 px" at 1080p) |
+| film kept in RAM (iOS: no direct disk write) | 1080p30 « Haute » ~16 Mbit/s = 2 MB/s, peak 2.5–3× the film at the end (`BufferTarget`'s growing buffer, `slice`, `Blob`) | ≤ 8 Mbit/s = 1 MB/s; « Débit vidéo » shows the real figure and « plafonné » |
+| warning on the size estimate | 1.5 GB | 250 MB |
+| autosave of a project with a 40 MB clip | every change: whole document serialised as one string (the clip as base64, ~55 MB), UTF-8 copy for the size, `Response` copy: ~4–6× the project, 3 s after each change | `serializeProjectBlob`: the JSON of each medium is made once per table entry (`WeakMap`) and kept as a Blob the next documents reuse; size from `Blob.size`, `Response(blob)` streams to the cache; only the header and the tracks are serialised again |
+| export default | 1080p | 720p (`DEFAULT_VIDEO_SETTINGS`; a project already saved keeps its own) |
+
+A phone that exports also holds the **screen on** (`export/guard.ts`: Screen Wake Lock, asked again when the page returns
+to the foreground, released at the end, on cancel and on error; no API = no lock). While an export is busy a flag is
+kept in the tab's `sessionStorage`; if the next start finds it, the export never ended and a toast says so
+(« Le dernier export a été interrompu… »), with a « Détails » button showing the **breadcrumb**: the last `pagehide` /
+`freeze` / `webglcontextlost` with `renderer.info.memory` textures and geometries and the loaded tile count.
+
+Not done, on purpose: the imagery textures keep their 512² canvases (`CanvasTexture`, about 1 MB of JS memory per
+resident tile): three re-uploads from `texture.image` after a lost context, and the engine has no way to redraw a tile's
+imagery, so releasing them would leave grey tiles after a restore. The muxer's copies at the end of an in-memory export
+stay (`BufferTarget`; a `StreamTarget` into Blob chunks changes the MP4 layout, « fast start » included: to try with a
+real iPhone and Photos). The canvas is created once: a phone that starts with the atmosphere off keeps the MSAA, one that
+starts with it on and turns it off later draws the plain scene without it.
+

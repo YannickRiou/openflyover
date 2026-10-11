@@ -5,6 +5,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Phones: fewer crashes in editing and export** (iOS ends a tab that uses too much memory): the relief's shadow map is
+  2048² (1024² with 2 GB or less), the unused MSAA of the canvas is gone when the atmosphere is on, a phone exports at
+  720p by default and picks its terrain tiles for a 720 px view, a film kept in memory is capped at 8 Mbit/s with the
+  warning from 250 MB, the screen stays on during an export and an export cut short by the browser is reported at the
+  next start; the autosave no longer re-serialises the photos, clips and music of the project at every change.
 - **Export quality sets the render quality**: « Standard / Haute / Maximale » now also picks, at export time only, the clouds'
   export quality (Rapide / Moyenne / Fine) and the most motion-blur renders per image (4 / 8 / 8), with an « Imposé par Haute »
   pill on those settings. A value chosen by hand wins (« Personnalisé », « Revenir au préréglage »); the project and the
