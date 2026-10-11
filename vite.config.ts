@@ -54,7 +54,7 @@ function atmosphereAssets(): Plugin {
 /**
  * Service worker of the website (`src/platform/serviceWorker.js`), emitted as `sw.js` with its precache list: every
  * build file and public file except the sky and cloud textures (cached on first use) and the Strava callback page.
- * Names are relative to the scope, so the same worker serves under /gpx2movie/ or at a root. Build only.
+ * Names are relative to the scope, so the same worker serves under /openflyover/ or at a root. Build only.
  */
 function serviceWorker(): Plugin {
   const publicDir = fileURLToPath(new URL('./public/', import.meta.url))
@@ -114,7 +114,7 @@ const proxy = Object.fromEntries(
 )
 
 export default defineConfig({
-  // GitHub Pages serves the site under /gpx2movie/ (pages.yml); '/' everywhere else, desktop app included
+  // GitHub Pages serves the site under /openflyover/ (pages.yml); '/' everywhere else, desktop app included
   base: process.env.BASE_PATH ?? '/',
   plugins: [react(), atmosphereAssets(), serviceWorker()],
   // src-tauri/target (Rust build of the desktop app) is not watched

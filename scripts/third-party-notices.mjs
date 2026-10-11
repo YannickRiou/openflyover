@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const CACHE = join(ROOT, 'scripts/notices-cache.local')
-const USER_AGENT = 'openflyover-notices (https://github.com/YannickRiou/gpx2movie)'
+const USER_AGENT = 'openflyover-notices (https://github.com/YannickRiou/openflyover)'
 
 // SPDX identifiers that can be redistributed in an MIT application with these notices (MPL-2.0 is file-level copyleft).
 const PERMISSIVE = new Set(

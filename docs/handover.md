@@ -29,7 +29,7 @@ then run `git status` and `npm run typecheck`.
   merge. The GitHub CI (`ci.yml`) runs on pull requests and on master (Rust tests only when `src-tauri/` changed).
 - Method: one branch per batch, one PR with a manual test procedure, merge (`gh pr merge N --merge`), then a new
   branch from `origin/master`.
-- **Push**: just `git push`. The `origin` remote is `git@github-yannickriou:YannickRiou/gpx2movie.git`, an SSH alias
+- **Push**: just `git push`. The `origin` remote is `git@github-yannickriou:YannickRiou/openflyover.git`, an SSH alias
   defined in `~/.ssh/config` (dedicated key `~/.ssh/id_ed25519_yannickriou`, registered on the personal account
   `YannickRiou`). Do not go back to `git@github.com`: this address authenticates the `yriouvortex` account, which has no
   rights here, and the HTTPS push with the `gh` token returned "Internal Server Error". `~/.gitconfig` still contains a

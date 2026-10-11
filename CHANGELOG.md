@@ -1,7 +1,7 @@
 # Changelog
 
 Notable changes to OpenFlyover. The desktop installers of each version are on the
-[Releases](https://github.com/YannickRiou/gpx2movie/releases) page (`docs/installers.md`).
+[Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
 ## Unreleased
 
