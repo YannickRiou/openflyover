@@ -2,15 +2,19 @@
  * Keeps a phone alive through an export and notices when it was not: the screen stays on while the film renders (a
  * locked screen or a backgrounded app suspends the page and loses the GPU context), and a flag in the tab's
  * sessionStorage tells the next start that the last export never ended (the browser killed the tab: memory, or the
- * screen locked). A small breadcrumb (last step of the export or page event, memory counters) is kept beside it for
- * the diagnosis: iOS kills a tab short of memory without any page event, so the export notes its own steps.
- * Nothing here throws: no Wake Lock API or no storage just means no protection.
+ * screen locked). The last `MAX_STEPS` breadcrumbs (steps of the export or page events, memory counters) and the
+ * diagnostic report of the export (diagnostic.ts) are kept beside it: iOS kills a tab short of memory without any page
+ * event, so the export notes its own steps. Nothing here throws: no Wake Lock API or no storage just means no protection.
  */
 import { showToast } from '../ui/toast'
+import { REPORT_KEY, collectDiagnostic, formatReport, parseReport, showDiagnostic, withLastExport } from './diagnostic'
+import type { DiagnosticReport } from './diagnostic'
 import { isExportBusy, useExportStore } from './store'
 
 export const EXPORT_RUNNING_KEY = 'openflyover.export.running'
 export const BREADCRUMB_KEY = 'openflyover.breadcrumb'
+/** breadcrumbs kept (the oldest go first) */
+export const MAX_STEPS = 15
 
 export const EXPORT_INTERRUPTED_TEXT =
   'Le dernier export a été interrompu (mémoire insuffisante ou écran verrouillé). Essayez 720p, sans nuages, ou gardez l’écran allumé.'
@@ -103,6 +107,8 @@ export interface Breadcrumb {
   textures?: number
   geometries?: number
   tiles?: number
+  /** JS heap in use, MB (`performance.memory`: Chrome only) */
+  heapMb?: number
 }
 
 let probe: (() => Pick<Breadcrumb, 'textures' | 'geometries' | 'tiles'>) | null = null
@@ -112,33 +118,64 @@ export function setBreadcrumbProbe(read: typeof probe): void {
   probe = read
 }
 
+function heapMb(): number | undefined {
+  const used = (globalThis.performance as { memory?: { usedJSHeapSize?: number } } | undefined)?.memory?.usedJSHeapSize
+  return typeof used === 'number' ? Math.round(used / 1e6) : undefined
+}
+
+/** Adds a step to the breadcrumbs of the tab (the last `MAX_STEPS` are kept). */
 export function writeBreadcrumb(event: string, storage: FlagStorage | undefined = tabStorage(), now = Date.now()): void {
   try {
-    const crumb: Breadcrumb = { event, at: now, ...probe?.() }
-    storage?.setItem(BREADCRUMB_KEY, JSON.stringify(crumb))
+    const heap = heapMb()
+    const crumb: Breadcrumb = { event: event.slice(0, 80), at: now, ...probe?.(), ...(heap !== undefined && { heapMb: heap }) }
+    storage?.setItem(BREADCRUMB_KEY, JSON.stringify([...readBreadcrumbs(storage), crumb].slice(-MAX_STEPS)))
   } catch {
     // diagnostic only
   }
 }
 
-/** « pagehide à 12:03:44 · 212 textures, 140 géométries, 96 tuiles » */
+/** « pagehide à 12:03:44 · 212 textures, 140 géométries, 96 tuiles, 310 Mo de tas JS » */
 export function describeBreadcrumb(crumb: Breadcrumb): string {
   const time = new Date(crumb.at).toLocaleTimeString('fr-FR')
   const counts = [
     crumb.textures !== undefined && `${crumb.textures} textures`,
     crumb.geometries !== undefined && `${crumb.geometries} géométries`,
     crumb.tiles !== undefined && `${crumb.tiles} tuiles`,
+    crumb.heapMb !== undefined && `${crumb.heapMb} Mo de tas JS`,
   ].filter(Boolean)
   return `${crumb.event} à ${time}${counts.length > 0 ? ` · ${counts.join(', ')}` : ''}`
 }
 
-function readBreadcrumb(storage: FlagStorage): Breadcrumb | null {
+const isCrumb = (c: Breadcrumb | null): c is Breadcrumb => !!c && typeof c.event === 'string' && typeof c.at === 'number'
+
+/** The breadcrumbs of the tab, oldest first. */
+export function readBreadcrumbs(storage: FlagStorage | undefined = tabStorage()): Breadcrumb[] {
   try {
-    const crumb = JSON.parse(storage.getItem(BREADCRUMB_KEY) ?? 'null') as Breadcrumb | null
-    return crumb && typeof crumb.event === 'string' && typeof crumb.at === 'number' ? crumb : null
+    const raw = JSON.parse(storage?.getItem(BREADCRUMB_KEY) ?? '[]') as Breadcrumb | Breadcrumb[] | null
+    // a single one: written before the steps were kept
+    return (Array.isArray(raw) ? raw : [raw]).filter(isCrumb).slice(-MAX_STEPS)
   } catch {
-    return null
+    return []
   }
+}
+
+/** The report of the last export of the tab with its steps (« Détails » of an interrupted export). */
+function lastExportReport(storage: FlagStorage | undefined): string | null {
+  const steps = readBreadcrumbs(storage)
+  const report = parseReport(storage?.getItem(REPORT_KEY))
+  if (!report && steps.length === 0) return null
+  return formatReport({ ...(report ?? collectDiagnostic()), steps: steps.map(describeBreadcrumb) })
+}
+
+/** « Afficher le rapport » (Projet tab): the report made now, with the export section and the steps of the last export. */
+export function currentReport(storage: FlagStorage | undefined = tabStorage()): string {
+  let last: DiagnosticReport | null = null
+  try {
+    last = parseReport(storage?.getItem(REPORT_KEY))
+  } catch {
+    // no storage: no last export
+  }
+  return formatReport({ ...withLastExport(collectDiagnostic(), last), steps: readBreadcrumbs(storage).map(describeBreadcrumb) })
 }
 
 /** True once when the previous page lifetime of this tab died in the middle of an export (the flag is then cleared). */
@@ -146,23 +183,25 @@ export function takeInterruptedExport(storage: FlagStorage | undefined = tabStor
   try {
     if (!storage || storage.getItem(EXPORT_RUNNING_KEY) === null) return null
     storage.removeItem(EXPORT_RUNNING_KEY)
-    return { breadcrumb: readBreadcrumb(storage) }
+    return { breadcrumb: readBreadcrumbs(storage).at(-1) ?? null }
   } catch {
     return null
   }
 }
 
-/** At start-up: say so when the last export was cut short, with the last breadcrumb a click away. */
-export function reportInterruptedExport(storage?: FlagStorage): boolean {
-  const interrupted = takeInterruptedExport(storage)
-  if (!interrupted) return false
-  const { breadcrumb } = interrupted
+/** At start-up: say so when the last export was cut short, with its diagnostic report a click away. */
+export function reportInterruptedExport(storage: FlagStorage | undefined = tabStorage()): boolean {
+  if (!takeInterruptedExport(storage)) return false
+  let report: string | null = null
+  try {
+    report = lastExportReport(storage)
+  } catch {
+    // no report: the toast alone
+  }
   showToast({
     kind: 'error',
     text: EXPORT_INTERRUPTED_TEXT,
-    ...(breadcrumb && {
-      action: { label: 'Détails', run: () => showToast({ kind: 'info', text: `Dernier événement de la page : ${describeBreadcrumb(breadcrumb)}` }) },
-    }),
+    ...(report !== null && { action: { label: 'Détails', run: () => showDiagnostic(report) } }),
   })
   return true
 }
@@ -186,10 +225,16 @@ export function installExportGuard(
     try {
       if (busy) storage?.setItem(EXPORT_RUNNING_KEY, String(Date.now()))
       else storage?.removeItem(EXPORT_RUNNING_KEY)
-      // the breadcrumb of an earlier export would be taken for this one's
+      // the breadcrumbs and report of an earlier export would be taken for this one's
       if (busy) storage?.removeItem(BREADCRUMB_KEY)
+      if (busy) storage?.removeItem(REPORT_KEY)
     } catch {
       // no flag: an interruption goes unnoticed
+    }
+    try {
+      if (busy) storage?.setItem(REPORT_KEY, JSON.stringify(collectDiagnostic(state.request ?? undefined)))
+    } catch {
+      // diagnostic only
     }
     if (busy) writeBreadcrumb('export : démarrage', storage)
     if (busy) lock.hold()

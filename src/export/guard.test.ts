@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useToastStore } from '../ui/toast'
+import { REPORT_KEY, parseReport, useDiagnosticStore } from './diagnostic'
 import {
   BREADCRUMB_KEY,
   EXPORT_INTERRUPTED_TEXT,
   EXPORT_RUNNING_KEY,
+  MAX_STEPS,
   createScreenWakeLock,
+  currentReport,
   describeBreadcrumb,
   installExportGuard,
+  readBreadcrumbs,
   reportInterruptedExport,
   setBreadcrumbProbe,
   takeInterruptedExport,
@@ -161,13 +165,29 @@ describe('export guard', () => {
     expect(screen.hold).toHaveBeenCalled()
   })
 
-  it('starts each export with a fresh breadcrumb: its first step, not an older one', () => {
+  it('starts each export with fresh breadcrumbs (its first step, not an older one) and its report', () => {
     const storage = memoryStorage()
-    storage.setItem(BREADCRUMB_KEY, JSON.stringify({ event: 'pagehide', at: 1 }))
+    storage.setItem(BREADCRUMB_KEY, JSON.stringify([{ event: 'pagehide', at: 1 }]))
+    storage.setItem(REPORT_KEY, JSON.stringify({ at: 'avant', sections: [] }))
     setBreadcrumbProbe(() => ({ tiles: 7 }))
     stop = installExportGuard(lock(), storage, {})
     useExportStore.getState().start(REQUEST)
-    expect(JSON.parse(storage.getItem(BREADCRUMB_KEY)!)).toMatchObject({ event: 'export : démarrage', tiles: 7 })
+    expect(readBreadcrumbs(storage)).toMatchObject([{ event: 'export : démarrage', tiles: 7 }])
+    const report = parseReport(storage.getItem(REPORT_KEY))
+    expect(report?.at).not.toBe('avant')
+    expect(report?.sections.find((s) => s.title === 'Export')?.rows).toContainEqual(['Taille', '1280 × 720'])
+  })
+
+  it('keeps the last MAX_STEPS breadcrumbs, oldest first', () => {
+    const storage = memoryStorage()
+    for (let i = 1; i <= MAX_STEPS + 5; i++) writeBreadcrumb(`export : image ${i} / 20`, storage, i)
+    const steps = readBreadcrumbs(storage)
+    expect(steps).toHaveLength(MAX_STEPS)
+    expect(steps[0].event).toBe('export : image 6 / 20')
+    expect(steps.at(-1)!.event).toBe('export : image 20 / 20')
+    // a single breadcrumb, as stored before the steps were kept, still reads
+    storage.setItem(BREADCRUMB_KEY, JSON.stringify({ event: 'freeze', at: 3 }))
+    expect(readBreadcrumbs(storage)).toEqual([{ event: 'freeze', at: 3 }])
   })
 
   it('writes a breadcrumb on pagehide and freeze', () => {
@@ -177,14 +197,17 @@ describe('export guard', () => {
     setBreadcrumbProbe(() => ({ textures: 12, geometries: 3, tiles: 40 }))
     stop = installExportGuard(lock(), storage, { pagehide: page, freeze: doc })
     page.dispatchEvent(new Event('pagehide'))
-    expect(JSON.parse(storage.getItem(BREADCRUMB_KEY)!)).toMatchObject({ event: 'pagehide', textures: 12, geometries: 3, tiles: 40 })
+    expect(readBreadcrumbs(storage).at(-1)).toMatchObject({ event: 'pagehide', textures: 12, geometries: 3, tiles: 40 })
     doc.dispatchEvent(new Event('freeze'))
-    expect(JSON.parse(storage.getItem(BREADCRUMB_KEY)!)).toMatchObject({ event: 'freeze' })
+    expect(readBreadcrumbs(storage).map((c) => c.event)).toEqual(['pagehide', 'freeze'])
   })
 })
 
 describe('interrupted export', () => {
-  beforeEach(() => useToastStore.setState({ toasts: [] }))
+  beforeEach(() => {
+    useToastStore.setState({ toasts: [] })
+    useDiagnosticStore.setState({ text: null })
+  })
 
   it('is reported once, when the flag outlived the page', () => {
     const storage = memoryStorage()
@@ -194,18 +217,38 @@ describe('interrupted export', () => {
     expect(takeInterruptedExport(storage)).toBeNull()
   })
 
-  it('shows the toast with the breadcrumb a click away, then nothing the next time', () => {
+  it('shows the toast with the diagnostic report a click away, then nothing the next time', () => {
     const storage = memoryStorage()
     storage.setItem(EXPORT_RUNNING_KEY, '123')
+    writeBreadcrumb('export : démarrage', storage, Date.UTC(2026, 9, 11, 12, 3, 40))
     writeBreadcrumb('pagehide', storage, Date.UTC(2026, 9, 11, 12, 3, 44))
     expect(reportInterruptedExport(storage)).toBe(true)
     const [toast] = useToastStore.getState().toasts
-    expect(toast).toMatchObject({ kind: 'error', text: EXPORT_INTERRUPTED_TEXT })
+    expect(toast).toMatchObject({ kind: 'error', text: EXPORT_INTERRUPTED_TEXT, action: { label: 'Détails' } })
     toast.action!.run()
-    expect(useToastStore.getState().toasts.at(-1)?.text).toMatch(/pagehide à /)
+    const text = useDiagnosticStore.getState().text!
+    expect(text).toMatch(/\[Étapes\]\n1 : export : démarrage à .*\n2 : pagehide à /)
+    expect(text).toContain('[Réglages]')
     useToastStore.setState({ toasts: [] })
     expect(reportInterruptedExport(storage)).toBe(false)
     expect(useToastStore.getState().toasts).toEqual([])
+  })
+
+  it('shows no « Détails » without a report or a breadcrumb', () => {
+    const storage = memoryStorage()
+    storage.setItem(EXPORT_RUNNING_KEY, '123')
+    expect(reportInterruptedExport(storage)).toBe(true)
+    expect(useToastStore.getState().toasts[0].action).toBeUndefined()
+  })
+
+  it('the report of « Afficher le rapport » adds the last export and its steps to the one made now', () => {
+    const storage = memoryStorage()
+    expect(currentReport(storage)).toMatch(/\[Appareil\][\s\S]*\[Export\][\s\S]*\[Réglages\][\s\S]*\[Étapes\]\naucune$/)
+    storage.setItem(REPORT_KEY, JSON.stringify({ at: '2026-10-11T12:03:40.000Z', sections: [{ title: 'Export', rows: [['Taille', '1280 × 720']] }] }))
+    writeBreadcrumb('export : encodeur prêt (mp4/avc, 8.0 Mbit/s)', storage)
+    const text = currentReport(storage)
+    expect(text).toContain('[Dernier export]\nCommencé le : 2026-10-11T12:03:40.000Z\nTaille : 1280 × 720')
+    expect(text).toMatch(/1 : export : encodeur prêt \(mp4\/avc, 8.0 Mbit\/s\) à /)
   })
 
   it('a storage that throws is no interruption', () => {
@@ -217,5 +260,6 @@ describe('interrupted export', () => {
   it('describes the breadcrumb', () => {
     expect(describeBreadcrumb({ event: 'freeze', at: 0, textures: 5, tiles: 9 })).toMatch(/^freeze à .* · 5 textures, 9 tuiles$/)
     expect(describeBreadcrumb({ event: 'pagehide', at: 0 })).toMatch(/^pagehide à [^·]*$/)
+    expect(describeBreadcrumb({ event: 'freeze', at: 0, heapMb: 310 })).toMatch(/ · 310 Mo de tas JS$/)
   })
 })

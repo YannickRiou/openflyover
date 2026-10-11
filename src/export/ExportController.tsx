@@ -372,7 +372,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     if (isCanceled()) throw new ExportCanceledError()
     // WebCodecs, else the system's ffmpeg (desktop app on Linux)
     session = await createExportEncoder(compositor, { ...request, audio })
-    writeBreadcrumb('export : encodeur prêt')
+    writeBreadcrumb(`export : encodeur prêt (${session.codec.container}/${session.codec.codec}, ${(session.bitrate / 1e6).toFixed(1)} Mbit/s)`)
     /** opacities of the timed overlay (cards, timeline texts, photos and clips, dips, stage card) at a frame, '' without overlay */
     const overlayKey = (progress: number, timeS: number) => {
       if (!deps.overlay()) return ''
