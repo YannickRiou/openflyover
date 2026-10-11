@@ -36,7 +36,7 @@ import { REPLACE_EPSILON, composeFrame, composeOverlayFrame, renderSettledFrame,
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createExportEncoder } from './nativeEncoder'
 import { effectiveRender } from './qualityTier'
-import { buildFrameSchedule, buildFrameTimes } from './schedule'
+import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule'
 import {
   EMPTY_TIMINGS,
   exportHasClouds,
@@ -195,6 +195,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   if (request.still && drawView) return runDrawnStill(request, request.still, drawView, deps.signal)
 
   const { width, height, fps } = request
+  const lodHeight = exportLodHeight(height)
   const filmClock = deps.clock()
   const three = deps.get()
   const canvas = three.gl.domElement
@@ -301,7 +302,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       const view = filmViewAt(path, filmClock, schedule[j], times[j], frame, engine, width / height)
       prefetchCamera.position.copy(view.position)
       prefetchCamera.lookAt(view.target)
-      engine.prefetch(prefetchCamera, height)
+      engine.prefetch(prefetchCamera, lodHeight)
     }
   }
 
@@ -330,7 +331,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       // what TerrainLayer does in a render (the only data requested per view), for the camera of the last render
       updateTiles: () => {
         const camera = deps.get().camera as PerspectiveCamera
-        if (camera.isPerspectiveCamera) deps.engine()?.update(camera, height)
+        if (camera.isPerspectiveCamera) deps.engine()?.update(camera, lodHeight)
       },
       pendingTiles: () => {
         const stats = deps.engine()?.stats

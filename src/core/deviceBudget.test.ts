@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_VIDEO_SETTINGS, exportResolutionNote, videoSize } from '../export/schedule'
+import { DEFAULT_VIDEO_SETTINGS, exportLodHeight, exportResolutionNote, videoSize } from '../export/schedule'
 import { CLOUD_SETTLE_FRAMES } from '../scene/renderOnDemand'
 import { DEFAULT_TUNING } from '../terrain/engine'
 import { DEFAULT_CLOUDS } from '../weather/sceneClouds'
@@ -24,6 +24,7 @@ describe('budgetFor', () => {
       cloudResolutionScale: 1,
       seaRender: 'volume',
       maxExportShortSide: 2160,
+      maxLodHeightPx: Infinity,
       shadowMapSize: 4096,
     })
     // a laptop with little memory is still a computer
@@ -42,6 +43,7 @@ describe('budgetFor', () => {
       cloudResolutionScale: 0.5,
       seaRender: 'surface',
       maxExportShortSide: 1080,
+      maxLodHeightPx: 720,
       shadowMapSize: 2048,
     })
   })
@@ -97,8 +99,16 @@ describe('where the limits live (computer)', () => {
     expect(DEFAULT_CLOUDS.seaRender).toBe('volume')
     expect(videoSize('16:9', '4k')).toEqual({ width: 3840, height: 2160 })
     expect(exportResolutionNote('4k')).toBeNull()
+    expect(exportLodHeight(1920)).toBe(1920)
     expect(deviceBudget().shadowMapSize).toBe(4096)
     expect(DEFAULT_VIDEO_SETTINGS.resolution).toBe('1080p')
+  })
+
+  it('only a phone picks its export tiles for a lower view', () => {
+    expect(exportLodHeight(1920, budgetFor({ coarsePointer: true, shortSidePx: 393 }).maxLodHeightPx)).toBe(720)
+    expect(exportLodHeight(540, budgetFor({ coarsePointer: true, shortSidePx: 393 }).maxLodHeightPx)).toBe(540)
+    expect(exportLodHeight(1920, budgetFor({ coarsePointer: true, shortSidePx: 820 }).maxLodHeightPx)).toBe(1920)
+    expect(exportLodHeight(2160, DESKTOP_BUDGET.maxLodHeightPx)).toBe(2160)
   })
 
   it('a phone renders 4K and 1440p at 1080p, and says so', () => {
