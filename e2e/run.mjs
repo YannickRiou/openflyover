@@ -464,7 +464,7 @@ const SCENARIOS = [
   },
   {
     id: 'mobile',
-    title: 'Téléphone (390 × 844, tactile) : exemple, onglets en feuille dans une barre qui défile, un réglage, la feuille d’export',
+    title: 'Téléphone (390 × 844, tactile) : aperçu toujours visible, timeline centrée, onglets en demi-feuille, barre contextuelle, export',
     async run({ url, newPage }) {
       // its own page: switching an open page to touch emulation reloads it
       const page = await newPage()
@@ -478,21 +478,48 @@ const SCENARIOS = [
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
         const tap = async (selector) => (await page.waitForSelector(selector, { visible: true, timeout: STEP_MS })).tap()
         await tap("button::-p-text(Essayer avec l'exemple)")
-        // the timeline starts folded into a strip
-        await page.waitForSelector('.film-tl--folded .film-tl__play', { visible: true, timeout: STEP_MS })
-        /** the open panel or drawer is a bottom sheet above the tab bar, as wide as the screen */
-        const isBottomSheet = (selector) =>
+        // the timeline is open under the preview, its playhead in the middle
+        await page.waitForSelector('.film-tl--centred [role="group"][aria-label="Plans"] .film-tl__block', { visible: true, timeout: STEP_MS })
+        /** the preview is whole on screen, at least a third of its height */
+        const previewShown = () =>
+          page.evaluate(() => {
+            const r = document.querySelector('.view__viewport').getBoundingClientRect()
+            return r.top >= 0 && r.height > innerHeight / 3 && r.width === innerWidth
+          })
+        assert(await previewShown(), 'l’aperçu n’occupe pas le haut de l’écran')
+        /** the open panel or drawer is a half sheet under the preview, as wide as the screen, down to the status bar */
+        const isHalfSheet = (selector) =>
           until(
             page,
             (sel) => {
               const sheet = document.querySelector(sel)
-              const bar = document.querySelector('.rail')?.getBoundingClientRect()
-              if (!sheet || sheet.hidden || !bar) return false
+              const preview = document.querySelector('.view__viewport')?.getBoundingClientRect()
+              const status = document.querySelector('.status')?.getBoundingClientRect()
+              if (!sheet || sheet.hidden || !preview || !status) return false
               const r = sheet.getBoundingClientRect()
-              return r.width === innerWidth && Math.abs(r.bottom - bar.top) < 2 && r.height > 100 && r.top > 100
+              return r.width === innerWidth && r.top >= preview.bottom && Math.abs(r.bottom - status.top) < 2 && r.height > 150
             },
             selector,
           )
+        /** film time of the playhead, read from the transport row (m:ss,d) */
+        const playhead = () =>
+          page.evaluate(() => {
+            const [m, s] = document.querySelector('.film-tl__time strong').textContent.split(':')
+            return Number(m) * 60 + Number(s.replace(',', '.'))
+          })
+        // a slide on the lanes scrolls them under the playhead: the film time follows
+        const before = await playhead()
+        const lanes = await page.$eval('.film-tl__scroller', (el) => {
+          const r = el.getBoundingClientRect()
+          return { x: r.left + r.width * 0.75, y: r.top + r.height * 0.6 }
+        })
+        await page.touchscreen.touchStart(lanes.x, lanes.y)
+        for (let i = 1; i <= 10; i++) await page.touchscreen.touchMove(lanes.x - i * 15, lanes.y)
+        await page.touchscreen.touchEnd()
+        await until(page, (t) => {
+          const [m, s] = document.querySelector('.film-tl__time strong').textContent.split(':')
+          return Number(m) * 60 + Number(s.replace(',', '.')) > t + 1
+        }, before)
         // the eight tabs do not fit: the bar scrolls, and the open tab is brought into sight
         assert(await page.evaluate(() => {
           const bar = document.querySelector('.rail__tabs')
@@ -501,7 +528,12 @@ const SCENARIOS = [
         for (const tab of ['carte', 'projet', 'survol']) {
           await tap(`#tab-${tab}`)
           await until(page, (t) => !document.getElementById(`tab-panel-${t}`)?.hidden, tab)
-          await isBottomSheet('#side-panel')
+          await isHalfSheet('#side-panel')
+          assert(await previewShown(), `l’onglet ${tab} couvre l’aperçu`)
+          if (tab === 'survol') break
+          // « Terminé » gives the timeline and the tab bar back
+          await tap('#side-panel .sheet-handle__done')
+          await until(page, () => document.getElementById('side-panel').hidden)
           await until(
             page,
             (t) => {
@@ -513,9 +545,23 @@ const SCENARIOS = [
         }
         await tap('#tab-panel-survol label:has(input[value="Oiseau"])')
         await until(page, () => document.querySelector('#tab-panel-survol input[value="Oiseau"]')?.checked === true)
+        await tap('#side-panel .sheet-handle__done')
+        await until(page, () => document.getElementById('side-panel').hidden)
+        // a tap on a stop selects it: its actions take the place of the tab bar; « Modifier » opens its inspector
+        await page.$eval('.film-tl__block--stop', (el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }))
+        await tap('.film-tl__block--stop')
+        await page.waitForSelector('.block-tools button::-p-text(Modifier)', { visible: true, timeout: STEP_MS })
+        assert(await page.evaluate(() => document.querySelector('nav.rail').hidden), 'la barre d’onglets est restée sous la barre contextuelle')
+        await tap('.block-tools button::-p-text(Modifier)')
+        await isHalfSheet('.dock[aria-label="Inspecteur"]')
+        assert(await previewShown(), 'l’inspecteur couvre l’aperçu')
+        await tap('.dock[aria-label="Inspecteur"] .sheet-handle__done')
+        await until(page, () => document.querySelector('.dock[aria-label="Inspecteur"]').hidden && document.querySelector('.block-tools'))
+        await tap('.block-tools button::-p-text(Terminé)')
+        await until(page, () => !document.querySelector('.block-tools') && !document.querySelector('nav.rail').hidden)
         await tap('button.topbar__export')
         await page.waitForSelector('#export-dock:not([hidden]) button::-p-text(Image fixe)', { timeout: STEP_MS })
-        await isBottomSheet('#export-dock')
+        await isHalfSheet('#export-dock')
         assert(await page.evaluate(() => document.getElementById('side-panel')?.hidden), 'le panneau est resté ouvert sous la feuille d’export')
         const width = await page.evaluate(() => document.documentElement.scrollWidth)
         assert(width === 390, `la page défile horizontalement (${width} px)`)
