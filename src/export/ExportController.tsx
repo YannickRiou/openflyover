@@ -18,14 +18,14 @@ import type { LocalFrame, TerrainEngine } from '../core/types'
 import { mixFilmAudio } from '../film/audio'
 import type { FilmClock } from '../film/clock'
 import { useMediaStore } from '../film/media'
-import { filmViewMovesWithTime, overviewView } from '../flyover/filmCamera'
+import { CAMERA_FOV_DEG, filmViewMovesWithTime, overviewView } from '../flyover/filmCamera'
 import { filmTrackOf } from '../flyover/sequence'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { loadOverlayFonts } from '../overlay/assets'
 import { filmTextOpacity, overlayTime, overlayTimedState } from '../overlay/draw'
 import { loadFrameMedia, overlayExtras, releaseFrameMedia } from '../overlay/exportOverlay'
 import { filmViewAt } from '../scene/filmView'
-import { SHUTTER_SUBFRAMES, sameShot, setShutterSubFrame, shutterSamples } from '../scene/lens'
+import { SHUTTER_SUBFRAMES, adaptiveShutterSamples, sameShot, setShutterSubFrame, shutterSamples } from '../scene/lens'
 import { useTerrainContext } from '../scene/TerrainLayer'
 import type { HeightSampler } from '../scene/TrackLines'
 import { useFilmClock } from '../scene/usePacing'
@@ -382,6 +382,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       (settings.marker.kind === 'figurine' && settings.marker.animated) ||
       (settings.atmosphere && settings.clouds.mode !== 'aucun') ||
       (settings.water.enabled && useWaterStore.getState().polygons > 0)
+    const localFrame = deps.frame()
+    const aspect = width / height
     /** the view of the last rendered frame moved with time */
     let previousTimed = false
     let previousOverlay = ''
@@ -390,7 +392,21 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       const progress = schedule[i]
       const state = filmClock.stateAt(times[i])
       // the renders of an open shutter stay in the shot of the frame: no blend across a cut
-      const renders = shutterSamples(times, schedule, i, shutter, SHUTTER_SUBFRAMES, (t) => sameShot(filmClock, t, times[i]))
+      const keep = (t: number) => sameShot(filmClock, t, times[i])
+      // fewer renders when the view barely moves over the shutter (ARCHITECTURE.md, « Objectif »); the placements are
+      // computed without the terrain (null) so that the count is the same on every run
+      const renders =
+        path && path.count > 0 && localFrame
+          ? adaptiveShutterSamples(
+              times,
+              schedule,
+              i,
+              shutter,
+              (r) => filmViewAt(path, filmClock, r.progress, r.timeS, localFrame, null, aspect),
+              { heightPx: height, aspect, fovDeg: CAMERA_FOV_DEG },
+              keep,
+            )
+          : shutterSamples(times, schedule, i, shutter, SHUTTER_SUBFRAMES, keep)
       const rendered = renders.map((r) => r.progress).join()
       // held frames (holds, stops) repeat the composed image as is, unless the view, the scene (animated figurine,
       // drifting clouds, rippling water) or the overlay moves with time
