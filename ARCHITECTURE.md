@@ -153,14 +153,16 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
 2. **Fetch** (`fetch.ts`): `fetch()` + `createImageBitmap`, priority queue, concurrency ~12, deduplication of in-flight requests,
    LRU ~600 bitmaps (200 on a phone or tablet, "Device budget"), `AbortSignal` support, 3 retries (250 ms, 1 s, 4 s, bypassing the HTTP cache) on network error, 5xx, 429
    and 400 (the IGN Géoplateforme returned bursts of "Layer … unknown" as 400 for valid tiles, with a
-   `max-age` of 21 days): a failed imagery sub-tile stays gray as long as its terrain tile lives. Before the
+   `max-age` of 21 days): a sub-tile that still fails makes its terrain tile's imagery incomplete (next item). Before the
    network, the copy from an offline pack when a pack contains the URL's source (see "Offline packs").
 3. **DEM** (`dem.ts`): Terrarium `h = (R*256 + G + B/256) - 32768`; Mapbox `h = -10000 + (R*65536 + G*256 + B) * 0.1`.
    Decoding through `OffscreenCanvas` (fallback `HTMLCanvasElement`). Bilinear sampling.
 4. **Imagery** (`imagery.ts`): for the terrain tile (z,x,y) and `zoomOffset = k`, fetch the `2^k × 2^k` sub-tiles
    at z+k and draw them into a `tileSize·2^k` canvas → `CanvasTexture` (sRGB, mipmaps, max anisotropy).
    If z+k > the source's maxZoom: take the deepest available tile and crop it.
-   If a sub-tile fails: leave the area gray, do not reject.
+   Each sub-tile is drawn as soon as it arrives (the fetcher's LRU closes evicted bitmaps: one that waited for its
+   siblings could no longer be drawn; a closed one is asked for once more). If a sub-tile fails: the area is gray and
+   the texture carries `userData.incomplete`; the engine tries the tile again (below). Rejects only if all fail.
 5. **Mesh** (`mesh.ts`): `(segments+1)²` grid; for each vertex, fractional Mercator position → lon/lat →
    bilinear height (DEM grid, height × exaggeration) → ECEF → local through `frame.toLocal`. UV (0,0) = NW corner... careful:
    in Three.js `uv.y = 1` is the top of the image; row 0 of the image tile is the north → `uv.y = 1 - v`.
@@ -171,14 +173,19 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      Screen error `sse = geometricError * viewportH / (2 * distance * tan(fov/2))`, distance = camera → bounding sphere.
    - Refinement by **replacement**: the parent stays displayed until its 4 children are ready (no holes).
      A child outside the frustum counts as ready for replacement (but is loaded at low priority).
-   - Loading priority: decreasing sse. A tile is "ready" when DEM + texture are loaded (failed texture → gray material).
+   - Loading priority: decreasing sse. A tile is "ready" when DEM + texture are loaded: it is never drawn before its
+     imagery is composed. Imagery that failed (or `incomplete`) fails the node like a DEM failure, so the parent keeps
+     its own imagery meanwhile; the last attempt keeps what arrived (gray material or patches, `node.imageryMissing`).
    - Transient DEM failure (network, 5xx, corrupt tile): 3 attempts 5 s apart (`retryDelayMs`, engine clock `deps.now`),
-     counted in `failedTiles`. A retry is fetched after every first attempt and prefetch, and the view does not wait
-     for it (`pendingVisibleTiles`): unreachable tile hosts would otherwise hold every export frame until its timeout.
+     counted in `failedTiles`. In the preview a retry is fetched after every first attempt and prefetch, and the view does
+     not wait for it (`pendingVisibleTiles`): unreachable tile hosts would otherwise hold every frame. During a video
+     export (`engine.setExporting(true)`) it is the view's own: retried after `exportRetryDelayMs` (750 ms), fetched at
+     once, counted in `pendingVisibleTiles` until the last attempt, and tiles that had given up are tried again at the
+     start. A visible tile given up on (or drawn with imagery missing) is counted in `stats.missingVisibleTiles`.
      DEM **4xx or outside coverage = "no data" leaf** (Mapterhorn stops at z12 outside high-resolution areas):
      never retried, not counted as an error, the parent stays displayed at its resolution.
    - Unloading: nodes not visited for > 2 s (`unloadAfterMs`; 30 s after a prefetch, `prefetchKeepMs`, so the export's
-     tiles for the next frames outlast a frame waiting 5 s) and not ancestors of a visible node → dispose geometry/texture; the `HeightField`
+     tiles for the next frames outlast a slow frame; the export waits up to 45 s) and not ancestors of a visible node → dispose geometry/texture; the `HeightField`
      keeps ~400 grids at 256 px equivalent (LRU, i.e. ~100 MB; a 512 px grid counts as four; 160 on a phone or tablet).
      The texture's retained 2D canvas is released with it (`width = height = 0`: WebKit keeps a canvas's backing store until a GC).
    - **Tile retention during an export on a phone or tablet.** Wall time is the wrong clock there: an export renders a few
@@ -1635,8 +1642,16 @@ it, know at what time you will pass each point, where the sun will be and what t
   going back or jumping more than 2 s: reopened at the keyframe; an unreadable video stops the export with a
   message; the frames held at the start and the end stay frozen at
   times 0 and duration).
-- For each progress value (`renderSettledFrame`, `src/export/capture.ts`), `advance` until the view no longer waits for
-  any tile that is actually drawn (`stats.pendingVisibleTiles`, limit 5 s per frame, counted as "incomplète" (incomplete)), then the
+- For each progress value (`renderSettledFrame`, `src/export/capture.ts`), `advance` until the **view is final**:
+  `stats.pendingVisibleTiles === 0` right after an `engine.update` of the camera that will be captured, i.e. the selection
+  of that update asks for no tile that is loading (DEM and imagery together: a tile is `ready`, hence drawable, only with
+  its texture), queued or waiting for its retry (export), and has no child left to request after its parent loaded (the
+  update that finds a parent ready queues the children, so the count is not 0 until the finest level is in). Limit 45 s
+  per frame (`DEFAULT_SETTLE.timeoutMs`, shared by the settles of one frame). The frame is "incomplète" (incomplete,
+  `timings.timeouts`, « N images rendues avant la fin du chargement » in the panel, live and in the result, and in the
+  history) after a timeout or when `stats.missingVisibleTiles > 0` at the capture (tiles given up after their attempts,
+  imagery missing). The final render selects once more: if that selection asks for tiles, the frame settles and renders
+  again. Everything cached: one `advance`, no wait. Then the
   pending re-drapes of the track and labels run right away (`flushDrapes`, instead of their delay) and
   the frame is rendered once more. While tiles load, nothing is rendered: every 16 ms only `engine.update` runs for the
   camera of the last render (`updateTiles`; the other layers load their data per track, not per view), then the frame

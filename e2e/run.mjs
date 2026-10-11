@@ -109,8 +109,13 @@ async function exposeStores(page) {
   for (let attempt = 1; ; attempt++) {
     try {
       return await page.evaluate(async () => {
-        const [exportModule, appModule] = await Promise.all([import('/src/export/store.ts'), import('/src/state/store.ts')])
-        window.__e2e = { exportStore: exportModule.useExportStore, isExportBusy: exportModule.isExportBusy, appStore: appModule.useAppStore }
+        const [exportModule, appModule, history, historyStore] = await Promise.all([
+          import('/src/export/store.ts'),
+          import('/src/state/store.ts'),
+          import('/src/export/history.ts'),
+          import('/src/export/historyStore.ts'),
+        ])
+        window.__e2e = { exportStore: exportModule.useExportStore, isExportBusy: exportModule.isExportBusy, appStore: appModule.useAppStore, history, historyStore }
         return true
       })
     } catch (error) {
@@ -697,7 +702,7 @@ const SCENARIOS = [
       await page.waitForSelector(H, { timeout: STEP_MS })
       // two renders as the recorder writes them: an old one with other settings, a failed one
       const before = await page.evaluate(async () => {
-        const [history, store] = await Promise.all([import('/src/export/history.ts'), import('/src/export/historyStore.ts')])
+        const { history, historyStore: store } = window.__e2e
         const { settings } = window.__e2e.appStore.getState()
         const timings = { rendered: 300, renderMs: 50_000, waitMs: 30_000, encodeMs: 10_000, timeouts: 0 }
         const request = { width: 1920, height: 1080, fps: 60, quality: 'max' }

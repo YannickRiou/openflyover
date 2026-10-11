@@ -5,6 +5,14 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Export: every image shows its final terrain** (reports of coarse terrain for one image, then fine, and of pale tiles that
+  turn to terrain colour seconds later, including when the tiles were already cached): the export now waits, up to 45 s per
+  image instead of 5, for the tiles it draws, their imagery and the retries of failed ones (after 0.75 s, not 5 s, and a
+  tile that had given up is tried again); imagery that failed or lost a sub-tile (a bitmap closed by the tile cache while it
+  waited for its siblings) is loaded again instead of staying grey for the life of the tile, in the preview too, the parent
+  keeping its imagery meanwhile. Images still rendered before the end of the loading (tiles that never arrive) are counted
+  while the export runs and in its result and history.
+
 - **Export diagnostic, more counters**: each step of the export now also gives the decoded tile bitmaps and their size,
   the height grids, the frames waiting in the video encoder, the re-drapes and the seconds since the step before; a step
   every 10 images from image 50 to 200, and the last 25 steps kept. « Export de test sans encodage » (Projet ›

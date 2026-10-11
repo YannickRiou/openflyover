@@ -395,6 +395,11 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                     secondsPerImage === null ? '' : ` · ≈ ${formatNumber(secondsPerImage, 1)} s / image`
                   }${etaS === null ? '' : ` · reste environ ${formatClock(etaS)}`}`}
           </p>
+          {timings.timeouts > 0 && (
+            <p className="field__hint" role="status">
+              {formatNumber(timings.timeouts)} image(s) rendue(s) avant la fin du chargement des tuiles.
+            </p>
+          )}
           <button
             type="button"
             className="btn btn--secondary btn--block"
@@ -422,7 +427,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           ({formatMegabytes(result.sizeBytes)}, {CODEC_LABELS[result.codec] ?? result.codec}
           {result.note && `, ${result.note}`})
           {result.incompleteFrames > 0 &&
-            ` — ${formatNumber(result.incompleteFrames)} image(s) rendue(s) avant la fin du chargement du relief.`}
+            ` — ${formatNumber(result.incompleteFrames)} image(s) rendue(s) avant la fin du chargement des tuiles.`}
         </p>
       )}
 
