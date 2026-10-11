@@ -7,7 +7,10 @@ import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { Icon } from './icons'
 import { ModifiedMarker } from './ModifiedMarker'
+import { TIER_NAMES, tabHasHeavySetting, weightOf } from './renderCost'
+import type { WeightKey } from './renderCost'
 import { FOLDS_KEY, parseFoldPrefs } from './shell'
+import type { ShellTab } from './shell'
 
 /** The fold states remembered by the browser (none when its storage cannot be read). */
 function loadFolds(): Record<string, boolean> {
@@ -63,6 +66,36 @@ export function PanelSection({
   )
 }
 
+/**
+ * « Poids de rendu »: three bars, as many filled as the setting's current value lengthens the export (renderCost.ts);
+ * nothing at weight 0. It reads the store itself, so the memoised panels do not render again with the settings.
+ */
+export function RenderWeight({ weight }: { weight: WeightKey }) {
+  const tier = useAppStore((s) => weightOf(s.settings, weight).tier)
+  const tip = useAppStore((s) => weightOf(s.settings, weight).tip)
+  if (tier === 0) return null
+  return (
+    <span className={`render-weight render-weight--${tier}`} data-tip={tip}>
+      {[1, 2, 3].map((bar) => (
+        <i key={bar} className={bar <= tier ? 'render-weight__bar render-weight__bar--on' : 'render-weight__bar'} aria-hidden="true" />
+      ))}
+      <span className="visually-hidden">Poids de rendu : {TIER_NAMES[tier]}</span>
+    </span>
+  )
+}
+
+/** Dot on a tab of the rail or the phone bar while one of its settings is at the heaviest weight. */
+export function TabWeightDot({ tab }: { tab: ShellTab }) {
+  const heavy = useAppStore((s) => tabHasHeavySetting(s.settings, tab))
+  if (!heavy) return null
+  return (
+    <>
+      <span className="rail__weight" aria-hidden="true" />
+      <span className="visually-hidden">, réglage lourd actif</span>
+    </>
+  )
+}
+
 /** What takes the focus when a row unfolds, first match wins: the chosen radio, a field, else anything focusable (not an ⓘ first). */
 const FOCUS_ORDER = [
   'input[type="radio"]:checked:enabled',
@@ -78,11 +111,14 @@ export function SettingRow({
   label,
   value,
   paths = [],
+  weight,
   children,
 }: {
   label: string
   value: ReactNode
   paths?: readonly SettingPath[]
+  /** the setting lengthens the export: its pictogram follows the name */
+  weight?: WeightKey
   children: ReactNode
 }) {
   const id = useId()
@@ -100,7 +136,10 @@ export function SettingRow({
   return (
     <div className="setting-row">
       <button type="button" className="setting-row__head" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
-        <span className="setting-row__label">{label}</span>
+        <span className="setting-row__label">
+          {label}
+          {weight && <RenderWeight weight={weight} />}
+        </span>
         <span className={modified ? 'setting-row__value setting-row__value--modified' : 'setting-row__value'}>
           {value}
           {modified && <span className="visually-hidden"> (modifié)</span>}
@@ -135,6 +174,7 @@ export function RangeField({
   disabled = false,
   wide = true,
   tip,
+  weight,
   spoken = format,
 }: {
   label: string
@@ -148,6 +188,8 @@ export function RangeField({
   wide?: boolean
   /** explanation in an ⓘ next to the label */
   tip?: string
+  /** the setting lengthens the export: its pictogram follows the name */
+  weight?: WeightKey
   /** value read by screen readers, when it differs from the displayed one */
   spoken?(value: number): string
 }) {
@@ -159,10 +201,11 @@ export function RangeField({
   )
   return (
     <div className="field">
-      {tip ? (
+      {tip || weight ? (
         <div className="field__label-row">
           {labelEl}
-          <InfoTip text={tip} />
+          {tip && <InfoTip text={tip} />}
+          {weight && <RenderWeight weight={weight} />}
         </div>
       ) : (
         labelEl

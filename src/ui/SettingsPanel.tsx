@@ -320,6 +320,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
           label="Rendu de la mer de nuages"
           value={SEA_RENDER_OPTIONS.find((o) => o.value === clouds.seaRender)?.label}
           paths={['clouds.seaRender']}
+          weight="clouds"
         >
           <fieldset className="field fieldset">
             <legend className="field__label">Rendu de la mer de nuages</legend>
@@ -363,6 +364,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
           label="Qualité des nuages à l’export"
           value={CLOUD_QUALITY_OPTIONS.find((o) => o.value === clouds.quality)?.label}
           paths={['clouds.quality']}
+          weight="clouds"
         >
           <div className="field">
             <div className="field__label-row">
