@@ -14,6 +14,7 @@ import type {
   LoadImageryTexture,
   TerrainEngine,
   TerrainEngineOptions,
+  TerrainRetention,
   TerrainStats,
   TileFetcher,
   TileKey,
@@ -70,6 +71,11 @@ export interface EngineTuning {
   unloadAfterMs: number
   /** how long (ms) the nodes a prefetch visits are kept, even when no view visits them */
   prefetchKeepMs: number
+  /**
+   * ready tiles above which the least recently visited ones outside the current view are unloaded, and prefetches
+   * stop (unbounded on a computer, fewer on a phone: core/deviceBudget.ts)
+   */
+  maxResidentTiles: number
   /** how often the unload sweep runs, in frames */
   sweepEveryFrames: number
   /** dirty geometries rebuilt per frame after an exaggeration change */
@@ -101,6 +107,7 @@ export const DEFAULT_TUNING: Readonly<EngineTuning> = {
   unloadAfterMs: 2_000,
   // 5 rendered frames (the export prefetches every 5) waiting the full 5 s each
   prefetchKeepMs: 30_000,
+  maxResidentTiles: deviceBudget().maxResidentTiles,
   sweepEveryFrames: 30,
   rebuildsPerFrame: 4,
   // 400 on a computer, fewer on a phone (core/deviceBudget.ts)
@@ -218,6 +225,8 @@ export function createTerrainEngine(
   let dirtyCount = 0
   let changed = false
   let disposed = false
+  /** export retention in film frames; null = wall time */
+  let retention: TerrainRetention | null = null
 
   // --- tree -------------------------------------------------------------------
 
@@ -298,7 +307,7 @@ export function createTerrainEngine(
     Promise.all([demPromise, texturePromise]).then(
       ([grid, texture]) => {
         if (node.loadToken !== token || disposed) {
-          texture?.dispose()
+          if (texture) disposeTexture(texture)
           return
         }
         node.abortController = undefined
@@ -307,7 +316,7 @@ export function createTerrainEngine(
           finishLoad(node, grid, texture)
         } catch (error) {
           // A grid the mesh builder rejects must not leave the node 'loading' forever.
-          texture?.dispose()
+          if (texture) disposeTexture(texture)
           markFailed(node, false, error)
         }
       },
@@ -316,7 +325,7 @@ export function createTerrainEngine(
         // The DEM is gone: the imagery still in flight is not worth finishing (the texture promise
         // then resolves to undefined), and a texture that already resolved must not leak.
         if (!cancelled) controller.abort()
-        void texturePromise.then((texture) => texture?.dispose())
+        void texturePromise.then((texture) => texture && disposeTexture(texture))
         if (node.loadToken !== token || disposed) return
         node.abortController = undefined
         loadingCount--
@@ -385,6 +394,13 @@ export function createTerrainEngine(
     }
   }
 
+  /** Free a tile's texture and its 2D canvas (WebKit keeps a canvas's backing store until the next GC otherwise). */
+  function disposeTexture(texture: Texture): void {
+    texture.dispose()
+    const image = texture.image as { width: number; height: number; getContext?: unknown } | null | undefined
+    if (image && typeof image.getContext === 'function') image.width = image.height = 0
+  }
+
   /** Free GPU resources and cached grid of one node; the node stays in the tree. */
   function unloadNode(node: TileNode): void {
     cancelLoad(node)
@@ -399,7 +415,7 @@ export function createTerrainEngine(
       node.geometry = undefined
     }
     if (node.texture) {
-      node.texture.dispose()
+      disposeTexture(node.texture)
       node.texture = undefined
     }
     if (node.state === 'ready') readyCount--
@@ -442,6 +458,9 @@ export function createTerrainEngine(
     return false
   }
 
+  /** clock of `keepUntil`: the film frame during an export with frame retention, else wall time */
+  const retentionTime = () => (retention ? retention.frame : now())
+
   /**
    * Post-order sweep. Unloads stale nodes (past their `keepUntil` and not
    * an ancestor of a rendered node) and collapses idle subtrees. Returns true if the node can be
@@ -469,8 +488,27 @@ export function createTerrainEngine(
   }
 
   function sweep(): void {
-    const time = now()
+    const time = retentionTime()
     for (let i = 0; i < roots.length; i++) sweepNode(roots[i], time)
+  }
+
+  /** Least recently visited first (a prefetch counts half a frame after its update); the deeper first on a tie. */
+  function leastRecent(a: TileNode, b: TileNode): number {
+    return a.lastVisitedFrame - b.lastVisitedFrame || b.key.z - a.key.z
+  }
+
+  /**
+   * Hard cap: past `maxResidentTiles`, unload ready tiles the current selection did not visit (so neither a drawn tile,
+   * a shadow caster nor an ancestor of one), least recently visited first. Roots stay, like in the sweep.
+   */
+  function enforceCap(): void {
+    if (readyCount <= cfg.maxResidentTiles) return
+    const evictable: TileNode[] = []
+    forEachNode(roots, (node) => {
+      if (node.state === 'ready' && node.parent !== undefined && node.lastVisitedFrame !== frame) evictable.push(node)
+    })
+    evictable.sort(leastRecent)
+    for (let i = 0; i < evictable.length && readyCount > cfg.maxResidentTiles; i++) unloadNode(evictable[i])
   }
 
   // --- dirty geometries (exaggeration change) -------------------------------------
@@ -581,7 +619,7 @@ export function createTerrainEngine(
     selectionParams.detailArea = opts.detailArea
     selectionParams.frame = frame
     selectionParams.now = now()
-    selectionParams.keepUntil = selectionParams.now + cfg.unloadAfterMs
+    selectionParams.keepUntil = retention ? retention.frame + retention.keepFrames : selectionParams.now + cfg.unloadAfterMs
     selectTiles(roots, cameraState, selectionParams, selection)
 
     // Visibility: only the selected nodes draw.
@@ -611,6 +649,7 @@ export function createTerrainEngine(
 
     if (dirtyCount > 0) rebuildDirty()
     if (frame % cfg.sweepEveryFrames === 0) sweep()
+    enforceCap()
 
     refreshStats(loadingCount + (toLoad.length - started), selection.pendingVisible)
     flushChange()
@@ -627,15 +666,19 @@ export function createTerrainEngine(
     selectionParams.errorTargetPx = opts.errorTargetPx
     selectionParams.maxZoom = opts.maxZoom
     selectionParams.detailArea = opts.detailArea
-    selectionParams.frame = frame
+    selectionParams.frame = frame + 0.5 // after the view of this frame: a tile ahead outlasts one behind in the cap's order
     selectionParams.now = now()
-    selectionParams.keepUntil = selectionParams.now + cfg.prefetchKeepMs
+    selectionParams.keepUntil = retention ? retention.frame + retention.prefetchKeepFrames : selectionParams.now + cfg.prefetchKeepMs
     selectTiles(roots, prefetchCameraState, selectionParams, prefetchSelection)
     const limit = Math.max(1, Math.floor(cfg.maxConcurrentLoads * cfg.prefetchLoadShare))
     const toLoad = prefetchSelection.toLoad
     let started = 0
-    // only what that camera would draw (priority >= 0, sorted first), never its off-screen children
-    for (let i = 0; i < toLoad.length && loadingCount < limit && toLoad[i].priority >= 0; i++) {
+    // only what that camera would draw (priority >= 0, sorted first), never its off-screen children; none past the cap
+    for (
+      let i = 0;
+      i < toLoad.length && loadingCount < limit && readyCount + loadingCount < cfg.maxResidentTiles && toLoad[i].priority >= 0;
+      i++
+    ) {
       startLoad(toLoad[i], PREFETCH_RANK + i)
       started++
     }
@@ -698,6 +741,12 @@ export function createTerrainEngine(
     // errorTargetPx and maxZoom are read by the next update()
   }
 
+  function setRetention(next: TerrainRetention | null): void {
+    // `keepUntil` was stamped on the other clock: start over, the next views and prefetches stamp it again
+    if ((next === null) !== (retention === null)) forEachNode(roots, (node) => (node.keepUntil = 0))
+    retention = next && { ...next }
+  }
+
   function onChange(cb: () => void): () => void {
     listeners.add(cb)
     return () => {
@@ -718,5 +767,5 @@ export function createTerrainEngine(
 
   buildTree()
 
-  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, dispose }
+  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, dispose }
 }

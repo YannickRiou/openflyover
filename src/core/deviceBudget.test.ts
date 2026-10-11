@@ -27,6 +27,9 @@ describe('budgetFor', () => {
       maxLodHeightPx: Infinity,
       maxVideoBitrate: Infinity,
       memoryWarnBytes: 1.5e9,
+      maxResidentTiles: Infinity,
+      exportTileKeepFrames: 0,
+      exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
       shadowMapSize: 4096,
     })
     // a laptop with little memory is still a computer
@@ -48,12 +51,15 @@ describe('budgetFor', () => {
       maxLodHeightPx: 720,
       maxVideoBitrate: 8e6,
       memoryWarnBytes: 250e6,
+      maxResidentTiles: 120,
+      exportTileKeepFrames: 6,
+      exportPrefetchAhead: [5, 10, 20],
       shadowMapSize: 2048,
     })
   })
 
   it('a tablet exports up to 1440p', () => {
-    expect(budgetFor({ coarsePointer: true, shortSidePx: 820 })).toMatchObject({ kind: 'tablet', maxExportShortSide: 1440, tileBitmaps: 200 })
+    expect(budgetFor({ coarsePointer: true, shortSidePx: 820 })).toMatchObject({ kind: 'tablet', maxExportShortSide: 1440, tileBitmaps: 200, maxResidentTiles: 160 })
   })
 
   it('lower still with 2 GB or less (Chrome tells, Safari does not)', () => {
@@ -63,6 +69,7 @@ describe('budgetFor', () => {
       tileBitmaps: 120,
       heightGrids: 100,
       shadowMapSize: 1024,
+      maxResidentTiles: 90,
     })
   })
 
@@ -99,6 +106,7 @@ describe('where the limits live (computer)', () => {
   it('unchanged on a computer', () => {
     expect(deviceBudget().kind).toBe('desktop')
     expect(DEFAULT_TUNING.heightCacheEntries).toBe(400)
+    expect(DEFAULT_TUNING.maxResidentTiles).toBe(Infinity)
     expect(CLOUD_SETTLE_FRAMES).toBe(32)
     expect(DEFAULT_CLOUDS.seaRender).toBe('volume')
     expect(videoSize('16:9', '4k')).toEqual({ width: 3840, height: 2160 })
