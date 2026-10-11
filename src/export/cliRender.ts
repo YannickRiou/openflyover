@@ -55,32 +55,32 @@ export function cliReport(tracks: readonly TrackRunState[], output: string): { c
   return { code: ok ? 0 : 1, text: [summary, '', ...lines, ''].join('\n') }
 }
 
-/** Run the batch asked on the command line, if any; the app quits at the end. Desktop only. */
-export async function runCliRenderIfAsked(invoke: Invoke = tauriInvoke): Promise<void> {
-  if (!getPlatform().capabilities.isDesktop) return
+/** Run the batch asked on the command line, if any (then true); the app quits at the end. Desktop only. */
+export async function runCliRenderIfAsked(invoke: Invoke = tauriInvoke): Promise<boolean> {
+  if (!getPlatform().capabilities.isDesktop) return false
   let request: CliRenderRequest | null
   try {
     request = (await invoke('cli_render')) as CliRenderRequest | null
   } catch (error) {
     // an app built without the command: no batch, the app opens as usual
     console.warn('[rendu en lot] demande illisible :', errorMessage(error))
-    return
+    return false
   }
-  if (!request) return
-  const exit = (code: number, message: string) => invoke('cli_exit', { code, message })
+  if (!request) return false
+  const exit = (code: number, message: string) => invoke('cli_exit', { code, message }).then(() => true)
   try {
     if (request.preset !== null) {
       // names are kept normalized (spaces trimmed and collapsed), as the panel saves them
       const name = normalizePresetName(request.preset)
       const preset = getPresetStore().list().find((p) => p.name === name)
-      if (!preset) return void (await exit(2, `Préréglage introuvable : « ${request.preset} ».`))
+      if (!preset) return await exit(2, `Préréglage introuvable : « ${request.preset} ».`)
       applySettings(presetSettings(preset, useAppStore.getState().settings))
     }
     const { video } = useAppStore.getState().settings
     const formats = cliFormats(request.formats, formatKey(video.aspect, video.resolution))
     const jobs = buildBatchJobs({ formats, still: false, poster: false }, video)
     const files = trackFiles((await readableFolderAt(request.input)).files)
-    if (files.length === 0) return void (await exit(2, `Aucune trace GPX ou FIT dans ${request.input}.`))
+    if (files.length === 0) return await exit(2, `Aucune trace GPX ou FIT dans ${request.input}.`)
     console.info(`[rendu en lot] ${files.length} trace(s) × ${jobs.length} format(s) → ${request.output}`)
     const folder = writableFolderAt(request.output)
     const tracks = await useBatchStore.getState().runTracks(files, jobs, {
@@ -103,4 +103,5 @@ export async function runCliRenderIfAsked(invoke: Invoke = tauriInvoke): Promise
   } catch (error) {
     await exit(2, `Rendu en lot impossible : ${errorMessage(error)}`)
   }
+  return true
 }

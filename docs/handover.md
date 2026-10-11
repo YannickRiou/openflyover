@@ -169,6 +169,9 @@ features included), `npm run build`,
   of 20 frames 45–50 s instead of 82–107 s, 7–9 frames at the timeout instead of 5).
 - **Tabs Météo, Lumière, Objectif** (10 October 2026, user request "pense Apple"): eight tabs in montage order, `SettingRow`
   (name and value, control on a tap) replaces every « Plus de réglages »; phone bar scrolls sideways. Seen in headless Chromium.
+- **Always-saved projects** (11 October 2026, iPhone bug: a project lost after Chrome was discarded in the background):
+  a project with a track gets its « Mes projets » entry by itself and the last open one is reopened at start-up
+  (`reopenLastProject`, e2e `projet`). To check on a real iPhone: kill Chrome from the app switcher, reopen it.
 - **Left for later** (proposed, not done): the inspector's text field and « Taille » slider could use the shared
   `TextField` (`PanelSection.tsx`) and the overlay's size field (its « Position » is a 3 × 3 grid, the overlay's a
   list: kept apart), `diffEngineOptions` in `TerrainLayer` (used and tested, kept). Declined by the user: "Texte libre" drawn
