@@ -54,6 +54,9 @@ reproduce it next to the box.
       note which step kills the tab. Editing with a 40 MB video clip loaded: change a slider ten times, no reload; the
       autosave leaves the JS heap flat after the first write. Export with the screen left to dim: stays on (Wake Lock), a
       locked screen must give the « Le dernier export a été interrompu » toast at the next start, with « Détails ».
+      After each crash, send the diagnostic report: « Détails » of that toast (or Projet › « Diagnostic » › « Afficher le
+      rapport ») › « Copier le rapport »; it gives the device budget, the GPU, the export, the settings and the last 15 steps
+      (« image i / N » with textures, geometries, tiles), so the step that kills the tab shows without a Mac.
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
       (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without

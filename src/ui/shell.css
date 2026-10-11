@@ -1627,6 +1627,36 @@
   white-space: nowrap;
 }
 
+/* « Rapport de diagnostic » (frame of « Sources et licences ») */
+.diagnostic {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.diagnostic__text {
+  max-height: min(55vh, 520px);
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.diagnostic__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.diagnostic__actions .field__hint {
+  margin: 0;
+}
+
 @media (max-width: 599px) {
   .help__groups {
     grid-template-columns: minmax(0, 1fr);

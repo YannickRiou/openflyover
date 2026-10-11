@@ -5,6 +5,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Diagnostic report**: « Détails » of an interrupted export, and « Diagnostic › Afficher le rapport » at the bottom of the
+  « Projet » tab, open a report to copy (« Copier le rapport »): app version, device and its memory budget, GPU, the export
+  asked (size, quality, effective render, bitrate, memory or disk, estimated size), every setting that weighs on memory,
+  the media of the film by kind and size, and the last 15 steps of the export with the memory counters. No position, no
+  track, place or project name.
 - **Phones: fewer crashes in editing and export** (iOS ends a tab that uses too much memory): the relief's shadow map is
   2048² (1024² with 2 GB or less), the unused MSAA of the canvas is gone when the atmosphere is on, a phone exports at
   720p by default and picks its terrain tiles for a 720 px view, a film kept in memory is capped at 8 Mbit/s with the

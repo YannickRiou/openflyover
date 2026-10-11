@@ -113,7 +113,11 @@ const proxy = Object.fromEntries(
   ]),
 )
 
+/** shown by the diagnostic report (src/export/diagnostic.ts) */
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
+
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(version) },
   // GitHub Pages serves the site under /openflyover/ (pages.yml); '/' everywhere else, desktop app included
   base: process.env.BASE_PATH ?? '/',
   plugins: [react(), atmosphereAssets(), serviceWorker()],
