@@ -10,11 +10,10 @@ import {
 } from '../flyover/cameraSettings'
 import type { CameraPreset, CameraSettings, CameraStyle } from '../flyover/cameraSettings'
 import { DEFAULT_FILM, SITUATION_DURATION_S } from '../film/model'
-import { addCameraKey, updateShot } from '../film/timeline'
-import { cameraKeyEaseM, keyedCamera } from '../flyover/cameraKeys'
+import { updateShot } from '../film/timeline'
 import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
-import { editFilm, setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
+import { addKeyframe, editFilm, setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { HighlightsPanel } from './HighlightsPanel'
@@ -231,11 +230,6 @@ export function CameraPanel() {
   const update = (patch: Partial<CameraSettings>) => setSetting('camera', { ...camera, ...patch })
   const updatePacing = (patch: Partial<PacingSettings>) => setFlightTiming({ pacing: { ...pacing, ...patch } })
   const lengthM = useFilmTrack()?.stats.distanceM ?? 0
-  /** a camera key at the marker with the framing seen there (one undo step, selected for the inspector) */
-  const keepFraming = () => {
-    const atM = useAppStore.getState().playback.progress * lengthM
-    editFilm((f) => addCameraKey(f, atM, keyedCamera(camera, film.cameraKeys, atM, cameraKeyEaseM(lengthM, durationS))))
-  }
   /** « Lissage des virages » in Auto for the first track */
   const autoTurnM = lengthM > 0 ? turnSmoothingM({ ...camera, turnSmoothingM: 0 }, lengthM) : undefined
 
@@ -333,12 +327,12 @@ export function CameraPanel() {
           )
         })}
 
-        <button type="button" className="btn btn--secondary" onClick={keepFraming} disabled={lengthM <= 0} aria-describedby={`${id}-key-hint`}>
-          Garder ce cadrage ici
+        <button type="button" className="btn btn--secondary" onClick={addKeyframe} disabled={lengthM <= 0} aria-describedby={`${id}-key-hint`}>
+          Ajouter une image clé
         </button>
         <p id={`${id}-key-hint`} className="field__hint">
-          Pose un cadrage à la position du marqueur (losange de la piste « Plans ») : retouchez sa distance, son inclinaison et sa
-          visée dans l’inspecteur, sans changer le reste du film.
+          Garde la vue 3D telle que vous l’avez cadrée, à la position du marqueur (losange de la piste « Plans ») : le film la
+          montre à cet instant et y passe en douceur. Retouchez-la dans l’inspecteur.
         </p>
       </PanelSection>
 

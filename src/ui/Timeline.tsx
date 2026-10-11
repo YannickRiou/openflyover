@@ -26,6 +26,7 @@ import {
   addSpeed,
   addStop,
   addText,
+  adjacentKey,
   centredScrollLeft,
   centredTime,
   clipSyncOffsetS,
@@ -49,7 +50,7 @@ import type { DragContext, Grip, TimelineItem } from '../film/timeline'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
-import { editFilm, getFilmSource, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { addKeyframe, editFilm, getFilmSource, seekKeyframe, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import { formatDistance, formatNumber } from './format'
 import { Icon } from './icons'
@@ -400,6 +401,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // the scale follows the committed film: it does not change while an edge is dragged
   const pxPerS = fitPxPerS(Math.max(0, width - 2 * PAD_PX), clock.totalTime()) * zoom
   const playheadS = Math.min(storedTimeS ?? clock.timeAtProgress(progress), clock.totalTime())
+  const hasPrevKey = adjacentKey(clock.cameraKeys, playheadS, -1) !== null
+  const hasNextKey = adjacentKey(clock.cameraKeys, playheadS, 1) !== null
   // centred: the lanes scroll so that the playhead time sits in the middle (after every render: time, zoom, width)
   useLayoutEffect(() => {
     const el = scrollerRef.current
@@ -594,6 +597,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const c = Math.min(end, Math.max(0, t))
     setProgress(clock.progressAtTime(c), c < end ? c : null)
   }
+  /** a keyframe pressed and released without dragging: the playhead jumps to it */
+  const jumpToKey = (item: TimelineItem) => {
+    const key = clock.cameraKeys.find((k) => k.id === item)
+    if (key) seek(key.timeS)
+  }
   /** centred: a press that becomes a tap on release (no capture: a slide scrolls the lanes, the browser cancels it) */
   const startTap = (e: PointerEvent<HTMLElement>, item: TimelineItem | null) => {
     if (e.button !== 0 || !e.isPrimary) return
@@ -686,10 +694,16 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     gestureRef.current = null
     cancelAnimationFrame(edgeRef.current?.frame ?? 0)
     edgeRef.current = null
-    if (g?.kind === 'edit' && g.result && e.type === 'pointerup') commit(g.result)
+    if (g?.kind === 'edit' && e.type === 'pointerup') {
+      if (g.result) commit(g.result)
+      else jumpToKey(g.item)
+    }
     if (g?.kind === 'tap' && e.type === 'pointerup') {
       if (g.item === null) seek(timeAt(e.clientX))
-      else setSelected(g.item)
+      else {
+        setSelected(g.item)
+        jumpToKey(g.item)
+      }
     }
     setDraft(null)
   }
@@ -705,7 +719,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const onBlockKeyDown = (e: KeyboardEvent<HTMLElement>, item: TimelineItem) => {
     if (e.key === 'Delete' || e.key === 'Backspace') {
       remove(item)
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
       const step = (e.shiftKey ? FINE_NUDGE_S : NUDGE_S) * (e.key === 'ArrowLeft' ? -1 : 1)
       const grip: Grip = item === 'closing' ? 'start' : item === 'opening' ? 'end' : 'move'
       change((f) => dragFilm(f, item, grip, step, { ...dragContext(item), snapS: 0 }), isStop(item))
@@ -830,6 +844,22 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             seek(0)
           }}
         />
+        <span className="film-tl__key-nav" role="group" aria-label="Images clés">
+          <BarButton
+            icon="keyframe-prev"
+            name="Image clé précédente"
+            tip={withShortcut('Image clé précédente', 'seek-key')}
+            onClick={() => seekKeyframe(clock, -1)}
+            disabled={!hasPrevKey}
+          />
+          <BarButton
+            icon="keyframe-next"
+            name="Image clé suivante"
+            tip={withShortcut('Image clé suivante', 'seek-key', 1)}
+            onClick={() => seekKeyframe(clock, 1)}
+            disabled={!hasNextKey}
+          />
+        </span>
         <span className="film-tl__time">
           <strong>{formatFilmTime(playheadS, true)}</strong> / {formatFilmTime(clock.totalTime())}
         </span>
@@ -859,6 +889,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             name="Ajouter un arrêt à la position du marqueur"
             tip={withShortcut('Ajouter un arrêt à la position du marqueur', 'add-stop')}
             onClick={() => addStopAt(Math.round(progress * lengthM))}
+          />
+          <BarButton
+            icon="diamond"
+            label="Image clé"
+            name="Ajouter une image clé"
+            tip="Ajouter une image clé : garde la vue 3D cadrée à la position du marqueur"
+            onClick={addKeyframe}
           />
           {freeCandidates.length > 0 && (
             <select
@@ -1069,8 +1106,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     role="button"
                     tabIndex={0}
                     aria-pressed={selected === k.id}
-                    aria-label={`Cadrage de la caméra à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
-                    title="Cadrage de la caméra"
+                    aria-label={`Image clé à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
+                    title="Image clé (clic : y aller, glisser : la déplacer)"
                     className={`film-tl__key${selected === k.id ? ' film-tl__key--selected' : ''}`}
                     style={{ left: xOf(k.timeS) }}
                     onPointerDown={(e) => startEdit(e, k.id, 'move')}

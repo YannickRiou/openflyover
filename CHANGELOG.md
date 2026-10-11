@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Keyframes** (« Image clé », formerly « Garder ce cadrage ici »): keep the 3D view exactly as framed, shown at that
+  point of the film; ◁◆ / ◆▷ in the transport row, Alt+← / Alt+→ or a click on the ◆ to go from one to the next.
 - **Marker behind the relief**: the marker (and the ghost race markers) fade out when a mountain hides them, like
   the track and the labels.
 - **Mes projets**: a project with a track is kept and saved by itself, and the project left open comes back at the

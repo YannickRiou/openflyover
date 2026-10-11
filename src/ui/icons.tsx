@@ -12,7 +12,7 @@
  * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  *
- * The frames of the output formats (`AspectIcon`) are drawn from the ratio, not taken from Lucide.
+ * The frames of the output formats (`AspectIcon`) are drawn from the ratio, and the keyframe arrows by hand, not taken from Lucide.
  */
 import type { ReactNode } from 'react'
 
@@ -335,6 +335,21 @@ const PATHS = {
     </>
   ),
   square: <rect width="18" height="18" x="3" y="3" rx="2" />,
+  diamond: (
+    <path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z" />
+  ),
+  'keyframe-prev': (
+    <>
+      <path d="m9 6-6 6 6 6" />
+      <path d="m16 7 5 5-5 5-5-5z" />
+    </>
+  ),
+  'keyframe-next': (
+    <>
+      <path d="m15 6 6 6-6 6" />
+      <path d="m8 7 5 5-5 5-5-5z" />
+    </>
+  ),
   'zoom-in': (
     <>
       <circle cx="11" cy="11" r="8" />

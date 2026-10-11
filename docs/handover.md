@@ -172,6 +172,9 @@ features included), `npm run build`,
 - **Always-saved projects** (11 October 2026, iPhone bug: a project lost after Chrome was discarded in the background):
   a project with a track gets its « Mes projets » entry by itself and the last open one is reopened at start-up
   (`reopenLastProject`, e2e `projet`). To check on a real iPhone: kill Chrome from the app switcher, reopen it.
+- **Keyframes** (11 October 2026, branch `keyframes`, user report « Garder ce cadrage ici ne fonctionne pas »): « Image
+  clé » keeps the exact orbited view (pose around the film's aim point, `keyView` / `keyFramingFrom`), ◁◆ / ◆▷, Alt+← /
+  Alt+→, click on the ◆; e2e `image-cle`. Not done: the situation shot's « Capturer la vue actuelle » still rounds.
 - **Left for later** (proposed, not done): the inspector's text field and « Taille » slider could use the shared
   `TextField` (`PanelSection.tsx`) and the overlay's size field (its « Position » is a 3 × 3 grid, the overlay's a
   list: kept apart), `diffEngineOptions` in `TerrainLayer` (used and tested, kept). Declined by the user: "Texte libre" drawn
