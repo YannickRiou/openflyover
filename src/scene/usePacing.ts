@@ -5,7 +5,7 @@ import type { PassingTimes } from '../film/assemble'
 import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
 import type { Film } from '../film/model'
-import { addCameraKey, adjacentKey, followStops } from '../film/timeline'
+import { addCameraKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
 import { captureKey } from '../flyover/cameraKeys'
 import { filmSequenceOf, filmTrackOf, sequenceLandmarks } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
@@ -79,6 +79,16 @@ export function addKeyframe(): boolean {
   const captured = captureKey()
   if (!captured) return false
   editFilm((f) => addCameraKey(f, captured.atM, captured.framing))
+  return true
+}
+
+/** The ◆ of the transport row: removes the keyframe the playhead is on, else adds one there (one undo step). */
+export function toggleKeyframe(clock: FilmClock): boolean {
+  const store = useAppStore.getState()
+  const total = clock.totalTime()
+  const here = keyAt(clock.cameraKeys, Math.min(store.playback.timeS ?? clock.timeAtProgress(store.playback.progress), total))
+  if (!here) return addKeyframe()
+  editFilm((f) => ({ film: removeFilmItem(f, here.id), id: null }))
   return true
 }
 

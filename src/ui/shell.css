@@ -74,6 +74,14 @@
   }
 }
 
+.icon-btn--on {
+  color: var(--color-accent-light);
+}
+
+.icon-btn--on svg {
+  fill: currentColor;
+}
+
 .icon-btn--label {
   padding: 0 10px 0 8px;
 }

@@ -696,7 +696,7 @@ export function FilmInspector() {
           <p className="field__hint">
             À {formatDistance(cameraKey.atM)}, {formatFilmTime(cameraKey.timeS)} dans le film : la vue cadrée en 3D, retouchable ici. La
             caméra passe en douceur d’une image clé à la suivante ; avant la première et après la dernière, elle reprend les réglages de
-            l’onglet Survol. Pour reprendre la vue, cadrez-la puis « Ajouter une image clé » au même endroit.
+            l’onglet Survol. Pour reprendre la vue, cadrez-la puis appuyez sur ◆ au même endroit.
           </p>
         </>
       )

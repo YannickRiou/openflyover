@@ -332,6 +332,10 @@ const SCENARIOS = [
         await page.click('.film-tl__key')
         await expectPose(page, orbited, 20, 'clic sur le losange')
         assert(await page.evaluate(() => document.querySelector('button[aria-label="Image clé suivante"]').disabled), '« Image clé suivante » active après la dernière')
+        // the ◆ between the arrows removes the keyframe under the playhead
+        await page.click('button[aria-label="Supprimer l’image clé"]')
+        await until(page, () => window.__e2e.appStore.getState().settings.film.cameraKeys.length === 0)
+        await page.waitForSelector('button[aria-label="Ajouter une image clé"]', { visible: true, timeout: STEP_MS })
       } finally {
         await page.evaluate(() => (window.__e2e.scene.getState().controls.enableDamping = true))
         await page.keyboard.press('Escape')
@@ -614,13 +618,13 @@ const SCENARIOS = [
             return Number(m) * 60 + Number(s.replace(',', '.'))
           })
         // previous / next keyframe in the transport row, on screen
-        const keyNav = await page.$$eval('.film-tl__bar button[aria-label^="Image clé"]', (buttons) =>
+        const keyNav = await page.$$eval('.film-tl__key-nav button', (buttons) =>
           buttons.map((b) => {
             const r = b.getBoundingClientRect()
             return r.width >= 44 && r.left >= 0 && r.right <= innerWidth
           }),
         )
-        assert(keyNav.length === 2 && keyNav.every(Boolean), `boutons image clé précédente / suivante : ${JSON.stringify(keyNav)}`)
+        assert(keyNav.length === 3 && keyNav.every(Boolean), `boutons image clé précédente / ◆ / suivante : ${JSON.stringify(keyNav)}`)
         // a slide on the lanes scrolls them under the playhead: the film time follows
         const before = await playhead()
         const lanes = await page.$eval('.film-tl__scroller', (el) => {
