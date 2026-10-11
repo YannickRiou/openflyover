@@ -76,7 +76,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`) |
 | `src/scene/cloudSea.ts` + `src/scene/CloudSeaSurface.tsx` | surface sea of clouds | `seaRelief`, `billow`, `gradientNoise`, `octaveWeight`, `seaNoisePoint`, `seaBaseAltitude`, `curvatureDropM`, `edgeFade`, `rimFade`, `buildRadialGrid`, `terrainBoxOf`, `terrainGridCentres`, `seaReliefGlsl`, `glslFloat`; `CloudSeaSurface` |
 | `src/scene/grading.ts` + `gradingEffect.ts` + `GradingComposer.tsx` | color grading | `GradingSettings`, `DEFAULT_GRADING`, `GRADING_PRESETS`, `GRADING_RANGES`, `isValidGrading`, `isIdentityGrading`, `matchingPreset`, `gradingOfPreset`, `withGradingValue`, `gradingUniforms`; `GradingEffect`; `useGradingEffect`, `GradingComposer` |
-| `src/scene/lens.ts` + `useLensEffects.ts` + `flareEffect.ts` + `shutterEffect.ts` | « Objectif » lens effects (see "Lens") | pure, tested: `LensSettings`, `DEFAULT_LENS`, `LENS_RANGES`, `isValidLens`, `withLensDefaults`, `lensActive`, `bloomParams`, `depthOfFieldParams`, `SHUTTER_SUBFRAMES`, `shutterSamples`, `previewShutterWeight`, `radialBlurLength`, `setShutterSubFrame`, `shutterSubFrame`, `subFrameSlices`; `useLensEffects`, `FlareEffect`, `ShutterEffect`; `filmViewAt` (`filmView.ts`: the camera placement of `FlyoverRig` at a progress and film time, shared with the export); `LensPanel` (`src/ui`) |
+| `src/scene/lens.ts` + `useLensEffects.ts` + `flareEffect.ts` + `shutterEffect.ts` | « Objectif » lens effects (see "Lens") | pure, tested: `LensSettings`, `DEFAULT_LENS`, `LENS_RANGES`, `isValidLens`, `withLensDefaults`, `lensActive`, `bloomParams`, `depthOfFieldParams`, `SHUTTER_SUBFRAMES`, `SHUTTER_STEP_PX`, `shutterSamples`, `adaptiveShutterSamples`, `viewMotionPx`, `subFrameCount`, `previewShutterWeight`, `radialBlurLength`, `setShutterSubFrame`, `shutterSubFrame`, `subFrameSlices`; `useLensEffects`, `FlareEffect`, `ShutterEffect`; `filmViewAt` (`filmView.ts`: the camera placement of `FlyoverRig` at a progress and film time, shared with the export); `LensPanel` (`src/ui`) |
 | `src/project/*` | project document, history, presets | `serializeProject(state, name)`, `parseProject(text): LoadedProject`, `sanitizeSettings(raw, base)`, `SETTING_CHECKS`, `migrateProject`, `MIGRATIONS`, `applyProject`, `applySettings`, `createHistory`, `getSettingsHistory`, `installHistoryShortcuts`, `installSliderGestures`, `createPresetStore`, `getPresetStore`, `presetSettings` |
 | `src/platform/*` | website / desktop (see "Desktop application") | `getPlatform()` → `Platform` (`capabilities`, `storage`, `openFiles`, `saveFile`, `saveUrl`, `createWritableFile`, `droppedFiles`, `tileCache`, `projectLibrary`), `selectPlatform(scope)`, `videoEncoderMissingHint`; pure, tested: `isTauriRuntime`, `detectCapabilities`, `acceptAttribute`, `fileNameOf`, `extensionOf`, `mimeTypeOf`, `saveFilters`, `pickerTypes`, `keyValueStore`, `tileFileName`, `imageTypeOf`; `tileCache.ts`: `TileCache` (`get`, `has`, `put`, `deletePack`, `packs`, `size`), `createWebTileCache`, `createDesktopTileCache`; `projectLibrary.ts`: `ProjectLibrary` (`list`, `save`, `load`, `rename`, `remove`), `createProjectLibrary`, `createWebLibraryFiles`, `createDesktopLibraryFiles`, `projectFileNames`, `cleanProjectName`, `sortProjectEntries`, `parseProjectEntry`, `isProjectThumbnail`; `folder.ts`: `WritableFolder`, `canPickFolder`, `pickFolder`, `joinPath`; `oauthRedirect.ts`: `authorizeInBrowser` (see "Strava import"); `webApp.ts`: `installWebApp`, pure, tested: `shouldRegisterServiceWorker`, `wantsIosInstallHint`, `sharedFileName`, `watchForUpdates`; `serviceWorker.js` (see "Installable web app and mobile"); `isAppleMobile`, `pickerAccept`, `touchScreen`, `SHARE_SAVE_LABEL` |
 | `src/core/deviceBudget.ts` | GPU and memory budget of the device (see "Device budget") | `deviceBudget()`, pure, tested: `budgetFor`, `readDeviceTraits`, `DESKTOP_BUDGET`, `PHONE_MAX_SHORT_SIDE`, `LOW_MEMORY_GB` |
@@ -699,7 +699,7 @@ ink, 7.3:1).
   (which writes no depth) hides it, so occlusion needs no extra pass. Glare, a horizontal streak, a faint ring and six
   ghosts along the line from the sun through the centre (tinted with the palette's periwinkle, water green and
   chartreuse), faded over the last 5% of the frame; none when the sun is off screen. Five texture reads per pixel.
-- **Motion blur**, export (exact and deterministic): each film frame is rendered `SHUTTER_SUBFRAMES` = 8 times at
+- **Motion blur**, export (exact and deterministic): each film frame is rendered up to `SHUTTER_SUBFRAMES` = 8 times at
   instants stratified over ± shutter / 2 frame intervals around it (`shutterSamples`, progress and film time
   interpolated between neighbouring frames of the schedule; an instant in another clock phase, i.e. across the cut of
   an opening or closing shot, is replaced by the frame itself). `ExportController` sets the sub-frame
@@ -708,8 +708,21 @@ ink, 7.3:1).
   then holds the mean and is composed as usual (overlay sharp, on top). Same capture for WebCodecs and the desktop's
   native encoder. Held frames are reused when the progress of every sub-frame is unchanged. The volumetric clouds do
   not average their 16/24/32 noise slices on every sub-frame: `subFrameSlices` gives each sub-frame its own share
-  (2/3/4), so a frame still averages all of them, now spread over the shutter. Cost: × 8 for the scene and the other
-  passes, the clouds unchanged. Stills and posters are never blurred.
+  (2/3/4), so a frame still averages all of them, now spread over the shutter. Cost: up to × 8 for the scene and the
+  other passes, the clouds unchanged. Stills and posters are never blurred.
+  - *Adaptive count* (`adaptiveShutterSamples`, a pure function of the film time: same film, same counts). `viewMotionPx`
+    places the film (`filmViewAt`, **without** the terrain, so the tiles loaded never change a count) at the first and
+    the last of the 8 reference renders and takes the largest on-screen move (pixels of the video frame) of the marker
+    and of fixed points of the relief seen at the centre and the four corners, at the aim distance and at a quarter of
+    it (`NEAR_FRACTION`, a deliberately pessimistic near-relief parallax; translation and rotation both count). The
+    shutter window is 8/7 of that span; count = clamp(⌈window / `SHUTTER_STEP_PX`⌉, 1, 8), 1 px being the step at which
+    shifted images still average into a continuous blur (vs the 8 renders: ≤ 10% of the contrast on a hard edge, ≤ 3%
+    rms on pixel-scale detail, tested on a synthetic displacement model). Fewer renders are the evenly spaced centred
+    ones (`shutterSamples` with that count); 8 are the former ones bit for bit; 1 (stops, held frames, distant or slow
+    cameras) leaves the radial blur alone, which works with a single render. `subFrameSlices` splits the cloud slices
+    exactly, so the clouds' quality does not change. Not counted: an animated figurine, the drift of the clouds, the
+    ripples of the water (a figurine's legs are sharp while the camera stands still). Fast, low flights stay at 8; slow
+    ones, stops and high cameras (« Satellite », « Avion », « Montgolfière ») fall to 1–4. 4K counts twice the pixels.
 - **Radial speed blur** (same "Flou de bougé" slider, preview and export alike): the speed effect of the user's
   request, edges streaked and centre sharp. The shutter blur alone only gives it for a camera flying straight towards
   its aim (focus of expansion on the aim point); in chase it mostly shifts the whole frame. So `ShutterEffect` first
@@ -1648,8 +1661,8 @@ it, know at what time you will pass each point, where the sun will be and what t
   `OffscreenCanvas.convertToBlob` (JPEG quality 0.92; extension based on the type obtained). Name: `<trace> <progression> %`.
   Restoration identical to the film.
 - Overview still image (poster): `still.overview` and `still.compose` (see "Poster").
-- Motion blur (`settings.lens.shutter`): 8 renders per frame across the open shutter, averaged by the composer
-  (see "Lens").
+- Motion blur (`settings.lens.shutter`): up to 8 renders per frame across the open shutter (fewer when the view barely
+  moves), averaged by the composer (see "Lens").
 - **Overlay only** ("Habillage seul (fond transparent)" (overlay only, transparent background) checkbox in the drawer, drawer state, not saved): to lay
   the overlay over your own footage in editing software. `overlayOnly` request: same `buildFrameSchedule` /
   `buildFrameTimes` as the film, hence the same frames, at the same instants, frame for frame; `runOverlayOnly`

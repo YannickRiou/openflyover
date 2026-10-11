@@ -15,7 +15,7 @@ const SLIDERS: { key: keyof LensSettings; label: string; tip: string; weight?: W
     key: 'shutter',
     weight: 'shutter',
     label: 'Flou de bougé (obturateur)',
-    tip: 'Effet de vitesse : les bords de l’image filent vers la direction du mouvement, le centre reste net, selon la vitesse de la caméra. À l’export, chaque image moyenne aussi 8 rendus pendant l’ouverture de l’obturateur (export plus long).',
+    tip: 'Effet de vitesse : les bords de l’image filent vers la direction du mouvement, le centre reste net, selon la vitesse de la caméra. À l’export, chaque image moyenne aussi jusqu’à 8 rendus pendant l’ouverture de l’obturateur (export plus long quand la caméra bouge vite, sans surcoût à l’arrêt).',
   },
   { key: 'bloom', label: 'Halo lumineux', tip: 'Les zones claires rayonnent : soleil, neige, reflets sur l’eau.' },
   { key: 'depthOfField', weight: 'depthOfField', label: 'Profondeur de champ', tip: 'Net sur le marqueur, de plus en plus flou devant et derrière.' },
