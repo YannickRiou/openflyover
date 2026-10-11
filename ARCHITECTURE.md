@@ -1578,8 +1578,8 @@ it, know at what time you will pass each point, where the sun will be and what t
 - The WebGL image is composited in the same task as the render onto an `OffscreenCanvas` (sky gradient, image, then overlay
   `DrawOverlay(ctx, { progress, time }, w, h)` after loading its fonts, `time` = `overlayTime(clock, progress,
   frame time)`; still image: current playback time), then encoded by mediabunny (WebCodecs): MP4 H.264,
-  otherwise MP4 HEVC, WebM VP9, WebM VP8, the first one accepted by `VideoEncoder.isConfigSupported`; bitrate = pixels × fps × 0.06 /
-  0.10 / 0.16 bit depending on quality, corrected per codec, bounded to 1–80 Mbit/s; keyframe every 2 s.
+  otherwise MP4 HEVC, WebM VP9, WebM VP8, the first one accepted by `VideoEncoder.isConfigSupported`; bitrate = pixels × 24 × (fps / 24)^0.7 × 0.16 /
+  0.28 / 0.44 bit depending on quality (1080p24 « élevée »: 13.9 Mbit/s), corrected per codec, bounded to 1–80 Mbit/s; keyframe every 2 s.
 - **Direct write to disk** when `capabilities.canStreamToDisk` (desktop, or a browser with `showSaveFilePicker`:
   Chrome, Edge): the "Exporter la vidéo" click first asks where to save (`chooseVideoDestination`, called before any
   `await` because the browser picker requires a user gesture; dialog closed = no export; picker

@@ -34,8 +34,14 @@ export const CODEC_CANDIDATES: readonly CodecCandidate[] = [
 /** Only candidate of a transparent film: VP9 with alpha in WebM, read by the editors that take transparent video. */
 export const ALPHA_CANDIDATES: readonly CodecCandidate[] = [{ container: 'webm', codec: 'vp9' }]
 
-/** H.264 bits per pixel and per frame for each quality (a sharp orthophoto flyover needs a generous budget). */
-export const QUALITY_BITS_PER_PIXEL: Record<VideoQuality, number> = { standard: 0.06, high: 0.1, max: 0.16 }
+/**
+ * H.264 bits per pixel and per frame at `REFERENCE_FPS` for each quality: a sharp orthophoto flyover needs about 14 Mbit/s
+ * at 1080p24 (« élevée »); at 5 Mbit/s the steep slopes turn to blocky grain.
+ */
+export const QUALITY_BITS_PER_PIXEL: Record<VideoQuality, number> = { standard: 0.16, high: 0.28, max: 0.44 }
+export const REFERENCE_FPS = 24
+/** The bitrate grows with the frame rate to this power: a frame costs less when frames are closer in time. */
+const FPS_BITRATE_EXPONENT = 0.7
 /** Bitrate relative to H.264 for the same visual quality. */
 export const CODEC_BITRATE_FACTOR: Partial<Record<VideoCodec, number>> = { avc: 1, hevc: 0.6, vp9: 0.65, vp8: 1.2 }
 export const MIN_BITRATE = 1_000_000
@@ -56,7 +62,8 @@ export const VIDEO_MIME_TYPES: Record<VideoContainer, string> = { mp4: 'video/mp
 
 /** Target bitrate (bits / s) for a codec at a size, frame rate and quality. */
 export function videoBitrate(width: number, height: number, fps: number, quality: VideoQuality, codec: VideoCodec): number {
-  const raw = width * height * fps * QUALITY_BITS_PER_PIXEL[quality] * (CODEC_BITRATE_FACTOR[codec] ?? 1)
+  const rate = REFERENCE_FPS * (fps / REFERENCE_FPS) ** FPS_BITRATE_EXPONENT
+  const raw = width * height * rate * QUALITY_BITS_PER_PIXEL[quality] * (CODEC_BITRATE_FACTOR[codec] ?? 1)
   return Math.round(Math.min(MAX_BITRATE, Math.max(MIN_BITRATE, raw)))
 }
 
