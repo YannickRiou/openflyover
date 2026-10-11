@@ -10,6 +10,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
   the ◆ between the arrows adds a keyframe at the playhead, or removes the one under it.
 - **Marker behind the relief**: the marker (and the ghost race markers) fade out when a mountain hides them, like
   the track and the labels.
+- **Marker kept in sight**: the flight camera now clears the relief down to the marker (« Plan cinématique »,
+  « Montgolfière » and the other styles), so a ridge just before the marker no longer hides it on twisty mountain
+  roads; keyframes are unchanged.
 - **Mes projets**: a project with a track is kept and saved by itself, and the project left open comes back at the
   next start (« Projet … rouvert »), also when a phone has discarded the tab in the background.
 - **Phone layout like a video editor**: the 3D preview always on top, the timeline always open below it with its
