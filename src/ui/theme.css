@@ -19,6 +19,10 @@
   --color-amber: #7a5200;
   --color-amber-light: #f0c35e;
   --color-white: #ffffff;
+  /* poids de rendu (RenderWeight): project palette, navy / periwinkle bars, chartreuse on navy for the heaviest */
+  --color-navy: #113b54;
+  --color-periwinkle: #bbd1ff;
+  --color-chartreuse: #dbe64c;
 
   --font-heading: 'Fraunces', Georgia, serif;
   --font-body: 'IBM Plex Sans', system-ui, sans-serif;
