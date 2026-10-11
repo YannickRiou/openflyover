@@ -17,6 +17,7 @@ import { canvasAntialias, deviceBudget } from '../core/deviceBudget'
 import { useAppStore } from '../state/store'
 import { dismissToast, showToast } from '../ui/toast'
 import { ExportController } from '../export/ExportController'
+import { setBreadcrumbProbe, writeBreadcrumb } from '../export/guard'
 import { isExportBusy, useExportStore } from '../export/store'
 import { CAMERA_FOV_DEG } from '../flyover/filmCamera'
 import { createOverlayDrawer } from '../overlay/exportOverlay'
@@ -105,8 +106,15 @@ function webgl2Supported(): boolean {
 /** The GPU context can be lost (driver reset, too many contexts): keep the page, say so, redraw once it is back. */
 function watchContextLoss({ gl, invalidate }: RootState) {
   let toast = 0
+  // memory counters of the breadcrumb left on pagehide / freeze / context loss (export/guard.ts)
+  setBreadcrumbProbe(() => ({
+    textures: gl.info.memory.textures,
+    geometries: gl.info.memory.geometries,
+    tiles: useAppStore.getState().terrainStats.loadedTiles,
+  }))
   gl.domElement.addEventListener('webglcontextlost', (e) => {
     e.preventDefault() // lets the browser restore it
+    writeBreadcrumb('webglcontextlost')
     toast = showToast({ kind: 'info', text: 'Affichage 3D interrompu (carte graphique). Il reprendra automatiquement…' })
   })
   gl.domElement.addEventListener('webglcontextrestored', () => {
