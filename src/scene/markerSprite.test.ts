@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { PerspectiveCamera, Vector3 } from 'three'
+import { PerspectiveCamera, Sprite, Vector3 } from 'three'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { buildTrackPath } from '../flyover/path'
 import type { Track } from '../core/types'
 import { DEFAULT_MARKER } from './markerSettings'
-import { BADGE_SCALE, headsLeft, LEAD_MARKER_COLORS, markerBadge, RACE_HALO_SCALE, racerMarkerColors } from './markerSprite'
+import { BADGE_SCALE, headsLeft, LEAD_MARKER_COLORS, markerBadge, occludeMarker, RACE_HALO_SCALE, racerMarkerColors } from './markerSprite'
 
 const look = (kind: 'boule' | 'figurine' | 'image', allowImage = true) => ({
   marker: { ...DEFAULT_MARKER, kind },
@@ -52,5 +52,23 @@ describe('headsLeft', () => {
     const fromNorth = cameraLooking(south.clone().multiplyScalar(-0.5).addScaledVector(up, 300))
     expect(headsLeft(path, path.lengthM / 2, at, frame, fromSouth)).toBe(false)
     expect(headsLeft(path, path.lengthM / 2, at, frame, fromNorth)).toBe(true)
+  })
+})
+
+describe('occludeMarker', () => {
+  // camera 1 km up at x = 0, marker on the ground 5 km away along x
+  const camera = new PerspectiveCamera()
+  camera.position.set(0, 1000, 0)
+  const marker = new Sprite()
+  marker.position.set(5000, 0, 0)
+  const ridgeAt = (heightM: number) => (x: number, y: number) => y - (x > 2000 && x < 3000 ? heightM : 0)
+
+  it('hides a marker behind a ridge, shows it in plain view or without terrain', () => {
+    occludeMarker(marker, camera, ridgeAt(800))
+    expect(marker.material.opacity).toBe(0)
+    occludeMarker(marker, camera, ridgeAt(0))
+    expect(marker.material.opacity).toBe(1)
+    occludeMarker(marker, camera, null)
+    expect(marker.material.opacity).toBe(1)
   })
 })

@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Marker behind the relief**: the marker (and the ghost race markers) fade out when a mountain hides them, like
+  the track and the labels.
 - **Mes projets**: a project with a track is kept and saved by itself, and the project left open comes back at the
   next start (« Projet … rouvert »), also when a phone has discarded the tab in the background.
 - **Phone layout like a video editor**: the 3D preview always on top, the timeline always open below it with its
