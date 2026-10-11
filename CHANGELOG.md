@@ -7,6 +7,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **Motion blur export**: the shutter's 8 renders per image become 1–8 by how far the picture moves on screen (1 at
   stops, held frames and slow or high cameras, 8 as before when the camera is fast and low): same look, shorter export.
+- **Render history**: the export drawer lists the last 20 renders (done, canceled or failed) with their real duration,
+  speed per image, output and the settings that change the render time; « Réutiliser ces réglages » puts them back
+  as one undo step. Kept on the device only (no track, no video).
 - **Render weight**: a three-bar pictogram next to the settings that lengthen the export (clouds quality, motion blur,
   depth of field, resolution, frame rate; the tooltip gives the factor), and a dot on the tab of a setting at its
   heaviest tier.
