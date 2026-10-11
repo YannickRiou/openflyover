@@ -66,6 +66,11 @@ export function exportResolutionNote(resolution: VideoResolution, maxShortSide =
   return `Sur cet appareil, l'export est limité à ${cap} (mémoire de la carte graphique) : le film sort en ${cap}.`
 }
 
+/** Viewport height the terrain LOD is evaluated at for a film `heightPx` tall: its own, except on a phone (fewer tiles in memory). */
+export function exportLodHeight(heightPx: number, maxLodHeightPx = deviceBudget().maxLodHeightPx): number {
+  return Math.min(heightPx, maxLodHeightPx)
+}
+
 /** Frames held on the first image (lets the viewer settle) and on the last one (the arrival). */
 export const EXPORT_HOLD_START_S = 1
 export const EXPORT_HOLD_END_S = 2

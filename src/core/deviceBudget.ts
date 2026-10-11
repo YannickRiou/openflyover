@@ -27,6 +27,8 @@ export interface DeviceBudget {
   seaRender: 'volume' | 'surface'
   /** largest short side of an exported film or still, px */
   maxExportShortSide: number
+  /** tallest viewport (px) the terrain LOD is evaluated at during an export: tiles are chosen as for a view this high */
+  maxLodHeightPx: number
   /** texels per side of the relief's shadow map (memory grows with its square: estimated ~128 MB at 4096², ~32 MB at 2048²) */
   shadowMapSize: number
 }
@@ -42,10 +44,11 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   cloudResolutionScale: 1,
   seaRender: 'volume',
   maxExportShortSide: 2160,
+  maxLodHeightPx: Infinity,
   shadowMapSize: 4096,
 }
 
-const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide'> = {
+const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx'> = {
   maxPixelRatio: 2,
   movingPixelRatio: 1.5,
   tileBitmaps: 200,
@@ -75,7 +78,13 @@ export interface DeviceTraits {
 export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits): DeviceBudget {
   if (!coarsePointer) return { ...DESKTOP_BUDGET }
   const phone = shortSidePx < PHONE_MAX_SHORT_SIDE
-  const budget: DeviceBudget = { ...MOBILE_BUDGET, kind: phone ? 'phone' : 'tablet', maxExportShortSide: phone ? 1080 : 1440 }
+  const budget: DeviceBudget = {
+    ...MOBILE_BUDGET,
+    kind: phone ? 'phone' : 'tablet',
+    maxExportShortSide: phone ? 1080 : 1440,
+    // about the height of the phone's preview: a 1080p or portrait export keeps the tiles the preview already holds
+    maxLodHeightPx: phone ? 720 : Infinity,
+  }
   if (memoryGb !== undefined && memoryGb <= LOW_MEMORY_GB) {
     return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024 }
   }
