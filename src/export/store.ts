@@ -313,3 +313,32 @@ export function flushDrapes(): boolean {
   for (const flush of drapeFlushes) flushed = flush() || flushed
   return flushed
 }
+
+// ---------------------------------------------------------------------------
+// Clouds in the export
+// ---------------------------------------------------------------------------
+
+let exportClouds = 0
+let skipClouds = false
+
+/** CloudsLayer registers while its slices are computed for the export (returns the unregister function). */
+export function registerExportClouds(): () => void {
+  exportClouds++
+  return () => {
+    exportClouds--
+  }
+}
+
+/** True when the export's renders have clouds slices to compute (the controller then makes one final render). */
+export function exportHasClouds(): boolean {
+  return exportClouds > 0
+}
+
+/** Set by the export around a render that is not captured: the clouds skip their slices there. */
+export function setSkipClouds(skip: boolean): void {
+  skipClouds = skip
+}
+
+export function cloudsSkipped(): boolean {
+  return skipClouds
+}

@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Faster export with clouds**: the volumetric clouds' noise slices are computed once per image (once per
+  shutter sub-frame), in the final render only, not again at each render that waits for tiles; the frames are identical.
 - **Motion blur export**: the shutter's 8 renders per image become 1–8 by how far the picture moves on screen (1 at
   stops, held frames and slow or high cameras, 8 as before when the camera is fast and low): same look, shorter export.
 - **Render history**: the export drawer lists the last 20 renders (done, canceled or failed) with their real duration,
