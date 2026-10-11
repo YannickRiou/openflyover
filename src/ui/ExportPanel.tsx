@@ -47,6 +47,7 @@ import { startPoster } from '../poster/export'
 import { PosterPanel } from '../poster/PosterPanel'
 import { useFilmClock } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
+import { ExportHistory } from './ExportHistory'
 import { ModifiedMarker } from './ModifiedMarker'
 import { SettingRow } from './PanelSection'
 import { formatNumber } from './format'
@@ -460,6 +461,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </fieldset>
       </SettingRow>
 
+      <ExportHistory />
+
       <p className="visually-hidden" role="status">
         {announcement}
       </p>
@@ -838,6 +841,8 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           </ul>
         </div>
       )}
+
+      <ExportHistory />
 
       <p className="visually-hidden" role="status">
         {running ? (trackRuns.length > 0 ? trackProgressLabel(trackRuns, 0) : batchProgressLabel(states, 0)) : ''}

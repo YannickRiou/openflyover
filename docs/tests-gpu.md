@@ -34,6 +34,9 @@ reproduce it next to the box.
       GPU load (Task Manager) drops while the `[export]` "attente des tuiles" grows instead of staying at 100 %; frames
       identical (terrain complete, same clouds and blur), no more "incomplète" frames than before.
 - [ ] PNG and JPEG still image, with and without overlay.
+- [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
+      (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without
+      clouds or shutter give the speeds to calibrate the render time per setting; « Réutiliser ces réglages » then Ctrl+Z; 20 kept.
 - [ ] Overlay only (transparent background): fast export, no waiting for tiles; WebM played with its transparency (Chrome
       on a colored background, Kdenlive or Shotcut), laid over the normal video of the same film: counters, profile, map,
       texts and photos match frame by frame; cancelling leaves no file.
