@@ -29,6 +29,9 @@ reproduce it next to the box.
 - [ ] Cancel during the export, or close the "Save" dialog: no file left behind, view and interface restored.
 - [ ] Firefox: in-memory export, warning above an estimated 1.5 GB, download.
 - [ ] Clouds enabled ("Météo" (weather) or "Manuel 50 %" (manual 50%) setting): export cost, same frames from one export to the next.
+- [ ] Clouds computed once per image: export the same short film with clouds (« Moyenne ») and « Objectif » › shutter on,
+      before / after the « clouds once » change: identical frames (compare a few PNG frames pixel by pixel), shorter total
+      time and `[export]` "rendu" time, the gain growing with the number of renders per image (tiles loading).
 - [ ] Render weight: time a 30 s film in 1080p with clouds « Rapide », « Moyenne », « Fine », then with « Flou de bougé » on
       (≈ ×8 renders per frame) and 4K: the ratios match the pictogram's bars (1 / 2 / 3) and tooltips; recalibrate the tiers in
       `src/ui/renderCost.ts` if not (the dot on « Météo » / « Objectif » appears only at the 3-bar level).

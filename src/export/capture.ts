@@ -35,8 +35,10 @@ export const REPLACE_EPSILON = 1e-9
 export const REPLACE_TOLERANCE_M = 1
 
 export interface SettleDeps {
-  /** render one frame (R3F `advance`) */
-  advance(): void
+  /** render one frame (R3F `advance`); `final`: the frame that gets captured, the only one that pays for the clouds */
+  advance(final: boolean): void
+  /** the clouds have slices to compute: only the last render of a frame is made with them (`renderSettledFrame`) */
+  separateFinal(): boolean
   /** request the tiles of the current camera without rendering (`engine.update`) */
   updateTiles(): void
   /** tiles the current view still waits for (`stats.pendingVisibleTiles`) */
@@ -61,17 +63,20 @@ export interface RenderFrameDeps extends SettleDeps {
  * Render until the view waits for no tile (at least `minAdvances` renders), then run the pending re-drapes
  * and render once more if one ran. While tiles load, only their requests follow (`updateTiles`, no render):
  * the next render comes once the view has them, or at the timeout. Resolves true when settled, false on
- * timeout; throws ExportCanceledError when canceled. The last frame is still in the WebGL drawing buffer when
- * the promise settles: capture it right away, without awaiting anything else first.
+ * timeout; throws ExportCanceledError when canceled. With `separateFinal` these renders are all intermediate
+ * (no clouds, no render after the re-drapes): `renderSettledFrame` makes the final one. Otherwise the last frame
+ * is still in the WebGL drawing buffer when the promise settles: capture it right away, without awaiting
+ * anything else first.
  */
 export async function settle(deps: SettleDeps, options: SettleOptions = DEFAULT_SETTLE): Promise<boolean> {
   const start = deps.now()
   const timedOut = () => deps.now() - start >= options.timeoutMs
+  const deferred = deps.separateFinal()
   for (let n = 1; ; n++) {
-    deps.advance()
+    deps.advance(!deferred)
     const done = n >= options.minAdvances && deps.pendingTiles() === 0
     if (done || timedOut()) {
-      if (deps.flushDrapes()) deps.advance()
+      if (deps.flushDrapes() && !deferred) deps.advance(true)
       return done
     }
     do {
@@ -86,7 +91,9 @@ export async function settle(deps: SettleDeps, options: SettleOptions = DEFAULT_
  * Show `progress` and wait for its terrain. The camera is placed once per progress change with the heights
  * loaded at that moment: when the final terrain moves that placement by more than REPLACE_TOLERANCE_M, it is
  * placed once more (at a progress REPLACE_EPSILON away, invisible) so the ground clearance uses the final
- * terrain. Not after a timeout: the terrain would not settle any better the second time.
+ * terrain. Not after a timeout: the terrain would not settle any better the second time. Then, when the clouds
+ * have slices to compute (`separateFinal`), the one final render that is captured: they run once per frame
+ * whatever the number of settle renders.
  */
 export async function renderSettledFrame(
   progress: number,
@@ -94,10 +101,13 @@ export async function renderSettledFrame(
   options: SettleOptions = DEFAULT_SETTLE,
 ): Promise<boolean> {
   deps.setProgress(progress)
-  const complete = await settle(deps, options)
-  if (!complete || deps.cameraDrift() <= REPLACE_TOLERANCE_M) return complete
-  deps.setProgress(progress < 1 ? progress + REPLACE_EPSILON : progress - REPLACE_EPSILON)
-  return settle(deps, options)
+  let complete = await settle(deps, options)
+  if (complete && deps.cameraDrift() > REPLACE_TOLERANCE_M) {
+    deps.setProgress(progress < 1 ? progress + REPLACE_EPSILON : progress - REPLACE_EPSILON)
+    complete = await settle(deps, options)
+  }
+  if (deps.separateFinal()) deps.advance(true)
+  return complete
 }
 
 /** Sky gradient behind a transparent canvas (mirrors the CSS background of FlyoverCanvas: glacier → paper). */
