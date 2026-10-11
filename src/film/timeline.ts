@@ -434,15 +434,21 @@ export function addCameraKey(film: Film, atM: number, framing: KeyPose): { film:
   return { film: updateCameraKey({ ...film, cameraKeys: [...film.cameraKeys, { ...framing, id, atM: at }] }, id, {}), id }
 }
 
+const KEY_EPSILON_S = 1e-3
+
+/** The keyframe at film time `timeS` (the playhead is on it), null when there is none. */
+export function keyAt<T extends { timeS: number }>(keys: readonly T[], timeS: number): T | null {
+  return keys.find((k) => Math.abs(k.timeS - timeS) <= KEY_EPSILON_S) ?? null
+}
+
 /**
  * The keyframe just before (`direction` -1) or after (1) film time `timeS` (« Image clé précédente / suivante »), null
  * when there is none; one at `timeS` is skipped.
  */
 export function adjacentKey<T extends { timeS: number }>(keys: readonly T[], timeS: number, direction: -1 | 1): T | null {
-  const EPSILON_S = 1e-3
   let best: T | null = null
   for (const k of keys) {
-    const ahead = direction > 0 ? k.timeS > timeS + EPSILON_S : k.timeS < timeS - EPSILON_S
+    const ahead = direction > 0 ? k.timeS > timeS + KEY_EPSILON_S : k.timeS < timeS - KEY_EPSILON_S
     if (ahead && (best === null || (k.timeS - best.timeS) * direction < 0)) best = k
   }
   return best
