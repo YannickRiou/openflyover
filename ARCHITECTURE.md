@@ -1724,6 +1724,19 @@ it, know at what time you will pass each point, where the sun will be and what t
   "Vidéo"), reads the tracks in the folder (`readableFolderAt`), runs the same `runTracks` as the drawer with
   `writableFolderAt(output)`, writes `rendu-en-lot.txt` (`cliReport`: one line per track) and quits through `cli_exit`
   (0: all films done; 1: a failure; 2: impossible request). The window opens (WebGL needs it).
+- **Render history** (« Historique des rendus », last section of the export drawer; `src/export/history.ts` pure and
+  tested, `historyStore.ts`, `src/ui/ExportHistory.tsx`): `installExportHistory` (called in `main.tsx`, so also in the
+  command-line batch) watches the export store; the run starts at `begin` (phase `rendering`, after the save and
+  confirmation dialogs) and ends on done / error / canceled, so `wallMs` is the real render time, with the frames,
+  the distinct images rendered, the `ExportTimings` split and the encoder kind (`webcodecs` / `native`). Every film is
+  recorded, each file of a batch too; still images and posters are not. An entry (`HistoryEntry`) is flat and small:
+  name, outcome and short error, output (size, fps, quality, codec, bytes), and `RenderSettings`, the curated summary
+  of the settings that change the render time (atmosphere, shadows, sun, clouds mode / quality, lens, imagery and
+  terrain source ids, water on / off, camera style); no track, coordinate or project. Stored as
+  `{ v: 1, entries }` under `openflyover.exportHistory.v1` in the platform `storage`, newest first, at most
+  `HISTORY_LIMIT` (20) entries and `HISTORY_MAX_BYTES`; `parseHistory` never throws and drops corrupted entries or
+  fields. « Réutiliser ces réglages » (`reuseSettings` + `applySettings` in one history transaction, toast with
+  « Annuler ») puts back the export options and these fields only, ignoring unknown source ids.
 
 ## Poster (phase 7)
 
