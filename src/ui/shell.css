@@ -415,6 +415,19 @@
   height: 40px;
 }
 
+/* a setting of the tab is at its heaviest render weight: chartreuse dot on a navy ring, over the icon's corner */
+.rail__weight {
+  position: absolute;
+  top: 5px;
+  left: calc(50% + 6px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-chartreuse);
+  box-shadow: 0 0 0 2px var(--color-navy);
+  pointer-events: none;
+}
+
 /* open tab: a bar of the accent against the panel side of the rail */
 .rail__tab[aria-selected='true']::before {
   content: '';
@@ -1761,6 +1774,7 @@
   }
 
   .info-tip::before,
+  .render-weight::before,
   .status__info::before {
     content: '';
     position: absolute;

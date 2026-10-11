@@ -19,6 +19,12 @@ export type CloudMode = (typeof CLOUD_MODES)[number]
 export const CLOUD_QUALITIES = ['low', 'medium', 'high'] as const
 export type CloudQuality = (typeof CLOUD_QUALITIES)[number]
 
+/**
+ * Noise slices averaged per exported frame. Each slice is one noisy march per pixel; with 2 / 4 / 6 the exported
+ * frames kept a visible grain on the dense sea of clouds (measured, see ARCHITECTURE.md).
+ */
+export const EXPORT_SAMPLES: Record<CloudQuality, number> = { low: 16, medium: 24, high: 32 }
+
 /** Rendering of the sea of clouds: volumetric clouds, or a lit surface (scene/CloudSeaSurface.tsx). */
 export const SEA_RENDERS = ['volume', 'surface'] as const
 export type SeaRender = (typeof SEA_RENDERS)[number]
