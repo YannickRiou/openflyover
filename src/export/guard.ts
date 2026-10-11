@@ -114,6 +114,8 @@ export interface Breadcrumb {
   tiles?: number
   /** tiles loading or queued by the view */
   pending?: number
+  /** factor on the terrain's error target that keeps a phone's tiles under its budget (1: full detail) */
+  lod?: number
   /** JS heap in use, MB (`performance.memory`: Chrome only) */
   heapMb?: number
   /** decoded tile bitmaps in the LRU and their approximate MB */
@@ -172,6 +174,7 @@ export function describeBreadcrumb(crumb: Breadcrumb, previous?: Breadcrumb): st
     has(crumb.geometries) && `${crumb.geometries} géo`,
     has(crumb.tiles) && `${crumb.tiles} tuiles${has(crumb.pending) ? ` (${crumb.pending} en attente)` : ''}`,
     !has(crumb.tiles) && has(crumb.pending) && `${crumb.pending} en attente`,
+    has(crumb.lod) && crumb.lod !== 1 && `détail ÷${crumb.lod.toFixed(1).replace('.', ',')}`,
     has(crumb.bitmaps) && `${crumb.bitmaps} bitmaps${has(crumb.bitmapMb) ? ` ~${crumb.bitmapMb} Mo` : ''}`,
     has(crumb.grids) && `${crumb.grids} grilles`,
     has(crumb.inFlight) && `${crumb.inFlight} en vol`,
