@@ -61,6 +61,12 @@ reproduce it next to the box.
       blur 20 %, DoF, « Plan cinématique », « détail fin »), the steps must show the tiles plateauing at 120 or below (it was
       68 → 244 at image 100), textures and geometries flat from about image 50, `en attente` near 0, and still 2–3 s per 25
       images late in the film (no thrash); the film has no grey tile that the same project exported on a computer lacks.
+      Hard cap through the level of detail: the same portrait film with the opening « descente », then with « Aucune »
+      (camera low from the first frame), lightest settings first, then the usual ones: the export finishes; every step
+      shows « tuiles » ≤ 120 through the descent (it was 147 → 224) and textures that stop growing, a steady time per 25
+      images (it was 5 s → 14 s → 46 s), `en attente` ≤ ~6 loading; the film's horizon is softer than on a computer, the
+      ground under the camera as sharp. In the preview, a low view looking at the horizon: no pumping of the far terrain
+      on a still view or a slow orbit.
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
       (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without
