@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Motion blur export**: the shutter's 8 renders per image become 1–8 by how far the picture moves on screen (1 at
+  stops, held frames and slow or high cameras, 8 as before when the camera is fast and low): same look, shorter export.
 - **Keyframes** (« Image clé », formerly « Garder ce cadrage ici »): keep the 3D view exactly as framed, shown at that
   point of the film; ◁◆ / ◆▷ in the transport row, Alt+← / Alt+→ or a click on the ◆ to go from one to the next;
   the ◆ between the arrows adds a keyframe at the playhead, or removes the one under it.
