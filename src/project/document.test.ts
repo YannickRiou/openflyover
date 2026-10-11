@@ -172,6 +172,18 @@ describe('serializeProject / parseProject', () => {
     expect(invalid).toEqual(['race'])
   })
 
+  it('loads the keyframes (« Images clés ») of older projects as they were, and saves a pose taken in 3D exactly', () => {
+    const d = doc()
+    const settings = d.settings as Record<string, unknown>
+    // saved by « Garder ce cadrage ici »: no aim shift, rounded figures within the camera ranges
+    const old = { id: 'camera-1', atM: 2500, distance: 2.35, pitchDeg: 61.3, headingOffsetDeg: -170 }
+    settings.film = { ...(settings.film as object), cameraKeys: [old] }
+    expect(parseProject(JSON.stringify(d)).settings.film.cameraKeys).toEqual([old])
+    const taken = { id: 'camera-1', atM: 2500.123456, distance: 0.071234567, pitchDeg: 87.654321, headingOffsetDeg: 12.3456789, aimRightM: -31.25, aimAheadM: 4.5 }
+    const film = { ...SETTINGS.film, cameraKeys: [taken] }
+    expect(parseProject(serializeProject({ ...STATE, settings: { ...SETTINGS, film } }, 'x')).settings.film.cameraKeys).toEqual([taken])
+  })
+
   it('loads « Plusieurs traces » (à la suite, camera of the race) and rejects unknown values', () => {
     const d = doc()
     const settings = d.settings as Record<string, unknown>

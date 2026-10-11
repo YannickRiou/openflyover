@@ -5,7 +5,8 @@ import type { PassingTimes } from '../film/assemble'
 import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
 import type { Film } from '../film/model'
-import { followStops } from '../film/timeline'
+import { addCameraKey, adjacentKey, followStops } from '../film/timeline'
+import { captureKey } from '../flyover/cameraKeys'
 import { filmSequenceOf, filmTrackOf, sequenceLandmarks } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import type { Landmark } from '../osm/landmarks'
@@ -68,6 +69,31 @@ export function editFilm(edit: (film: Film) => { film: Film; id?: string | null 
     else set()
   }
   if (result.id !== undefined) useAppStore.getState().setFilmSelection(result.id)
+}
+
+/**
+ * « Ajouter une image clé »: a keyframe at the marker with the pose of the 3D view as it is now (one undo step,
+ * selected); false when there is no view to read.
+ */
+export function addKeyframe(): boolean {
+  const captured = captureKey()
+  if (!captured) return false
+  editFilm((f) => addCameraKey(f, captured.atM, captured.framing))
+  return true
+}
+
+/**
+ * « Image clé précédente / suivante » (`direction` -1 / 1): the playhead exactly on that keyframe, which the inspector
+ * then shows if it showed a keyframe; false when there is none.
+ */
+export function seekKeyframe(clock: FilmClock, direction: -1 | 1): boolean {
+  const store = useAppStore.getState()
+  const total = clock.totalTime()
+  const key = adjacentKey(clock.cameraKeys, Math.min(store.playback.timeS ?? clock.timeAtProgress(store.playback.progress), total), direction)
+  if (!key) return false
+  store.setProgress(clock.progressAtTime(key.timeS), key.timeS < total ? key.timeS : null)
+  if (clock.cameraKeys.some((k) => k.id === store.filmSelection)) store.setFilmSelection(key.id)
+  return true
 }
 
 /**

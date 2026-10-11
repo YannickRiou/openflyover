@@ -16,6 +16,7 @@ import {
   addSpeed,
   addStop,
   addText,
+  adjacentKey,
   attachToStop,
   centredScrollLeft,
   centredTime,
@@ -627,26 +628,39 @@ describe('camera keys', () => {
     const { film: framed, id } = addItemCamera(film, 12, 22, atTime, framingAt)
     expect(framed.cameraKeys.map((k) => [k.atM, k.distance])).toEqual([
       [2200, 1],
-      [1200, 2.35],
+      [1200, 2.345],
     ])
     expect(framed.cameraKeys.find((k) => k.id === id)?.atM).toBe(1200)
     // the marker holds (a stop): one key only
     expect(addItemCamera(film, 12, 22, () => 1500, framingAt).film.cameraKeys).toHaveLength(1)
   })
 
-  it('adds a key at the marker, rounded, valid; a second one at the same metre takes the framing', () => {
-    const { film: one, id } = addCameraKey(film, 2500.4, framing)
+  it('adds a key at the marker, not rounded (the exact view), valid; a second one at the same metre takes the pose', () => {
+    const { film: one, id } = addCameraKey(film, 2500.4, { ...framing, aimRightM: 12.5 })
     expect(id).toBe('camera-1')
-    expect(one.cameraKeys).toEqual([{ id, atM: 2500, distance: 2.35, pitchDeg: 61.3, headingOffsetDeg: -170 }])
+    expect(one.cameraKeys).toEqual([{ id, atM: 2500.4, distance: 2.345, pitchDeg: 61.27, headingOffsetDeg: -170, aimRightM: 12.5 }])
     expect(isValidFilm(one)).toBe(true)
-    const again = addCameraKey(one, 2500, { distance: 1, pitchDeg: 30, headingOffsetDeg: 0 })
+    const again = addCameraKey(one, 2499.8, { distance: 1, pitchDeg: 30, headingOffsetDeg: 0, aimRightM: 0, aimAheadM: 0 })
     expect(again.id).toBe(id)
-    expect(again.film.cameraKeys).toEqual([{ id, atM: 2500, distance: 1, pitchDeg: 30, headingOffsetDeg: 0 }])
+    expect(again.film.cameraKeys).toEqual([{ id, atM: 2499.8, distance: 1, pitchDeg: 30, headingOffsetDeg: 0, aimRightM: 0, aimAheadM: 0 }])
   })
 
-  it('updates clamp to the camera ranges; moved along the track by the pointer; removed like any block', () => {
+  it('previous / next keyframe: the nearest one before or after the playhead, never the one under it', () => {
+    const keys = [{ timeS: 40 }, { timeS: 10 }, { timeS: 25.5 }]
+    const at = (timeS: number, direction: -1 | 1) => adjacentKey(keys, timeS, direction)?.timeS ?? null
+    expect(at(20, 1)).toBe(25.5)
+    expect(at(20, -1)).toBe(10)
+    expect(at(25.5, 1)).toBe(40)
+    expect(at(25.5, -1)).toBe(10)
+    expect(at(40, 1)).toBeNull()
+    expect(at(5, -1)).toBeNull()
+    expect(adjacentKey([], 5, 1)).toBeNull()
+  })
+
+  it('updates clamp to the keyframe ranges; moved along the track by the pointer; removed like any block', () => {
     const { film: keyed, id } = addCameraKey(film, 2500, framing)
-    expect(updateCameraKey(keyed, id, { distance: 9, pitchDeg: 2, atM: -4 }).cameraKeys[0]).toMatchObject({ distance: 4, pitchDeg: 5, atM: 0 })
+    expect(updateCameraKey(keyed, id, { distance: 2000, pitchDeg: -3, atM: -4 }).cameraKeys[0]).toMatchObject({ distance: 1000, pitchDeg: 0, atM: 0 })
+    expect(updateCameraKey(keyed, id, { pitchDeg: 87.25 }).cameraKeys[0]).toMatchObject({ distance: 2.345, pitchDeg: 87.25 })
     const ctx = contextOf(keyed)
     const key = ctx.clock.cameraKeys[0]
     const moved = dragFilm(keyed, id, 'move', 5, ctx)

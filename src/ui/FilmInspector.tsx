@@ -468,7 +468,7 @@ export function FilmInspector() {
     <button
       type="button"
       className="btn btn--secondary"
-      data-tip="Pose un cadrage au début (à régler) et rend celui d'avant à la fin"
+      data-tip="Pose une image clé au début (à régler) et une à la fin qui rend la vue d'avant"
       onClick={() => {
         const { camera, flyoverDurationS } = useAppStore.getState().settings
         const easeM = cameraKeyEaseM(lengthM, flyoverDurationS)
@@ -683,17 +683,20 @@ export function FilmInspector() {
         </>
       )
     } else if (cameraKey) {
-      title = 'Cadrage'
+      title = 'Image clé'
       const set = (patch: Parameters<typeof updateCameraKey>[2]) => change((f) => updateCameraKey(f, item, patch), false)
+      // a view taken in 3D may lie beyond the slider ranges: they widen to show it
+      const span = (r: { min: number; max: number; step: number }, v: number) => ({ ...r, min: Math.min(r.min, v), max: Math.max(r.max, v) })
       body = (
         <>
-          {range('distance', 'Distance', cameraKey.distance, CAMERA_RANGES.distance, (v) => `×${formatNumber(v, 1)}`, (distance) => set({ distance }))}
-          {range('pitch', 'Inclinaison', cameraKey.pitchDeg, CAMERA_RANGES.pitchDeg, formatDegrees, (pitchDeg) => set({ pitchDeg }))}
+          {range('distance', 'Distance', cameraKey.distance, span(CAMERA_RANGES.distance, cameraKey.distance), (v) => `×${formatNumber(v, 1)}`, (distance) => set({ distance }))}
+          {range('pitch', 'Inclinaison', cameraKey.pitchDeg, span(CAMERA_RANGES.pitchDeg, cameraKey.pitchDeg), formatDegrees, (pitchDeg) => set({ pitchDeg }))}
           {range('heading', 'Visée', cameraKey.headingOffsetDeg, CAMERA_RANGES.headingOffsetDeg, formatDegrees, (headingOffsetDeg) => set({ headingOffsetDeg }))}
           {number('at', 'À (km)', km(cameraKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
           <p className="field__hint">
-            À {formatDistance(cameraKey.atM)}, {formatFilmTime(cameraKey.timeS)} dans le film. La caméra passe en douceur d’un cadrage
-            au suivant ; avant le premier et après le dernier, elle reprend les réglages de l’onglet Survol.
+            À {formatDistance(cameraKey.atM)}, {formatFilmTime(cameraKey.timeS)} dans le film : la vue cadrée en 3D, retouchable ici. La
+            caméra passe en douceur d’une image clé à la suivante ; avant la première et après la dernière, elle reprend les réglages de
+            l’onglet Survol. Pour reprendre la vue, cadrez-la puis « Ajouter une image clé » au même endroit.
           </p>
         </>
       )

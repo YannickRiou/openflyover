@@ -224,16 +224,18 @@ describe('film model', () => {
     for (const camera of ['film', 'orbite', 'large', 'fixe'] as const) expect(isValidFilm(film({ stops: [stop('stop-1', { camera })] }))).toBe(true)
   })
 
-  it('camera keys: framing within the camera ranges, unique ids; none in a film saved before', () => {
+  it('keyframes: pose within the keyframe ranges (aim shift optional), unique ids; none in a film saved before', () => {
     expect(DEFAULT_FILM.cameraKeys).toEqual([])
     const key = (id: string, patch: Partial<FilmCameraKey> = {}): FilmCameraKey => ({ id, atM: 2000, distance: 2, pitchDeg: 60, headingOffsetDeg: -90, ...patch })
-    const good = film({ cameraKeys: [key('camera-2', { atM: 500 }), key('camera-1')] })
+    // a key saved before the aim shift and the exact pose, and one taken from a 3D view
+    const good = film({ cameraKeys: [key('camera-2', { atM: 500 }), key('camera-1', { distance: 0.05, pitchDeg: 89.9, aimRightM: -40.2, aimAheadM: 3 })] })
     expect(isValidFilm(good)).toBe(true)
     expect(isValidSetting('film', good)).toBe(true)
     const bad: Film[] = [
       film({ cameraKeys: [key('camera-1', { atM: -1 })] }),
-      film({ cameraKeys: [key('camera-1', { distance: 5 })] }),
-      film({ cameraKeys: [key('camera-1', { pitchDeg: 90 })] }),
+      film({ cameraKeys: [key('camera-1', { distance: 1001 })] }),
+      film({ cameraKeys: [key('camera-1', { pitchDeg: 91 })] }),
+      film({ cameraKeys: [key('camera-1', { aimRightM: Number.NaN })] }),
       film({ cameraKeys: [key('camera-1', { headingOffsetDeg: 200 })] }),
       film({ cameraKeys: [key('')] }),
       film({ cameraKeys: [key('a')], stops: [stop('a')] }),

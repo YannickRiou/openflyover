@@ -14,13 +14,22 @@ import { Vector3 } from 'three'
 import { clamp, smootherstep } from '../core/math'
 import type { LocalFrame, LonLat } from '../core/types'
 import type { ClockStop, FilmClock, FilmState } from '../film/clock'
-import { SITUATION_DISTANCE_KM_RANGE, SITUATION_TILT_DEFAULT_DEG, SITUATION_TILT_RANGE, shotCuts, situationTiming } from '../film/model'
+import { CAMERA_KEY_RANGES, SITUATION_DISTANCE_KM_RANGE, SITUATION_TILT_DEFAULT_DEG, SITUATION_TILT_RANGE, shotCuts, situationTiming } from '../film/model'
 import type { FilmShot, ShotStyle, SituationFraming, StartHeight } from '../film/model'
 import type { HeightSampler } from '../scene/TrackLines'
-import { MIN_GROUND_CLEARANCE_M, computeCameraView, movesWithTime, type CameraView, type CameraViewOptions } from './camera'
+import {
+  MIN_GROUND_CLEARANCE_M,
+  autoDistanceM,
+  computeCameraView,
+  headingWindowM,
+  movesWithTime,
+  smoothHeadingAt,
+  type CameraView,
+  type CameraViewOptions,
+} from './camera'
 import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, type CameraSettings } from './cameraSettings'
 import { samplePath, type TrackPath } from './path'
-import { cameraKeyEaseM, keyedCamera } from './cameraKeys'
+import { cameraKeyEaseM, keyPoseAt, type KeyFraming } from './cameraKeys'
 import { smoothsInTime, timeSmoothing } from './timeSmoothing'
 
 export { smootherstep }
@@ -142,7 +151,7 @@ export function stopOrbitRad(addedS: number, localS: number, lengthS: number): n
 }
 
 /** Camera of a 'large' stop: farther and higher by `k` (0 = the flight camera, 1 = the widest). */
-export function widenedCamera(camera: CameraSettings, k: number): CameraSettings {
+export function widenedCamera<T extends Pick<CameraSettings, 'distance' | 'pitchDeg'>>(camera: T, k: number): T {
   return {
     ...camera,
     distance: camera.distance * (1 + (STOP_WIDE_DISTANCE_FACTOR - 1) * k),
@@ -484,27 +493,85 @@ export interface FilmView extends CameraView {
 }
 
 /**
- * Camera at film time `timeS` and `progress` (the store's: the export nudges it to re-place the camera). The time-based
- * flight styles follow the flight time, so they start where the opening hands over. The aim and the camera follow the
- * progress smoothed in film time (`timeSmoothing.ts`; camera keys and stops keep the marker's progress and time). With
- * several tracks the flight camera flies what `options.follow` gives, the shots still frame the film track; smoothed
- * progresses are never averaged across a stage cut or a change of leader.
+ * What a keyframe pose is placed around: the film's aim point, the direction of travel, the automatic distance, and a
+ * stop's widening (0..1) and orbit (radians).
  */
-export function computeFilmView(
+export interface KeyBase {
+  target: Vector3
+  reference: Vector3
+  autoDistanceM: number
+  wide: number
+  orbitRad: number
+}
+
+/**
+ * Direction of travel a keyframe's heading is measured from at `d` metres: the default turn window averaged over four
+ * of them, set by the track alone, so a keyframe keeps its pose when the camera settings change.
+ */
+export function keyReferenceAt(path: TrackPath, d: number, frame: LocalFrame): Vector3 {
+  const w = headingWindowM(path, DEFAULT_CAMERA)
+  return smoothHeadingAt(path, d, w, 4 * w, frame)
+}
+
+/** Right of the horizontal direction `reference` (seen from above). */
+const rightOf = (reference: Vector3) => new Vector3(-reference.z, 0, reference.x)
+/** Highest pitch of a keyframe: straight down has no heading. */
+const KEY_MAX_PITCH_DEG = 89.999
+
+/** Camera of keyframe pose `f` around `base`: no style, smoothing or clearance, so it is the view that was taken. */
+export function keyView(base: KeyBase, f: KeyFraming): CameraView {
+  const { reference } = base
+  const right = rightOf(reference)
+  const target = base.target.clone().addScaledVector(reference, f.aimAheadM).addScaledVector(right, f.aimRightM)
+  const { distance, pitchDeg } = widenedCamera(f, base.wide)
+  const angle = f.headingOffsetDeg * DEG + base.orbitRad
+  const pitch = clamp(pitchDeg, 0, KEY_MAX_PITCH_DEG) * DEG
+  const distanceM = base.autoDistanceM * distance
+  const look = reference.clone().multiplyScalar(Math.cos(angle)).addScaledVector(right, Math.sin(angle))
+  const position = target.clone().addScaledVector(look, -distanceM * Math.cos(pitch))
+  position.y += distanceM * Math.sin(pitch)
+  return { target, position }
+}
+
+/**
+ * Keyframe pose of a camera at `position` looking toward `lookAt` around `base` (the inverse of `keyView`). The aim
+ * point is taken on the line of sight at the height of the film's aim point, so a panned view keeps its look.
+ */
+export function keyFramingFrom(base: KeyBase, position: Vector3, lookAt: Vector3): KeyFraming {
+  const { reference } = base
+  const right = rightOf(reference)
+  const sight = lookAt.clone().sub(position)
+  const along = sight.y < -1e-9 ? (base.target.y - position.y) / sight.y : -1
+  const aim = along > 0 ? position.clone().addScaledVector(sight, along) : lookAt.clone().setY(base.target.y)
+  const back = position.clone().sub(aim)
+  const distanceM = Math.max(1e-3, back.length())
+  const angle = Math.atan2(-back.dot(right), -back.dot(reference)) - base.orbitRad
+  const shift = aim.sub(base.target)
+  const widened = 1 + (STOP_WIDE_DISTANCE_FACTOR - 1) * base.wide
+  return {
+    distance: distanceM / base.autoDistanceM / widened,
+    pitchDeg: Math.asin(clamp(back.y / distanceM, -1, 1)) / DEG - STOP_WIDE_PITCH_DEG * base.wide,
+    headingOffsetDeg: ((((angle / DEG + 180) % 360) + 360) % 360) - 180,
+    aimRightM: shift.dot(right),
+    aimAheadM: shift.dot(reference),
+  }
+}
+
+/** The flight camera at a film state, before the keyframes, and what a keyframe is placed around there. */
+function flightAt(
   path: TrackPath,
   clock: FilmClock,
-  timeS: number,
+  state: FilmState,
   progress: number,
   frame: LocalFrame,
   sample: HeightSampler | null,
   options: FilmViewOptions,
-): FilmView {
-  const state = clock.stateAt(timeS)
-  const { aspect, region, follow, ...flightOptions } = options
+): { flight: FilmView; base: KeyBase } {
+  const { aspect, region: _region, follow, ...flightOptions } = options
   const stop = state.stop
-  const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
-  const keyed = keyedCamera(options.camera ?? DEFAULT_CAMERA, clock.cameraKeys, progress * path.lengthM, easeM)
-  const camera = stop?.camera === 'large' ? widenedCamera(keyed, stopBump(state.localS, state.lengthS)) : keyed
+  const settings = options.camera ?? DEFAULT_CAMERA
+  const wide = stop?.camera === 'large' ? stopBump(state.localS, state.lengthS) : 0
+  const camera = wide > 0 ? widenedCamera(settings, wide) : settings
   const orbitRad = stop?.camera === 'orbite' ? stopOrbitRad(stop.addedS, state.localS, state.lengthS) : 0
   const motionS = stop?.camera === 'fixe' ? heldMotionTimeS(stop, state.timeS) - clock.openingS : state.flightTimeS
   const smoothing = timeSmoothing(clock, state.timeS, motionS, camera)
@@ -527,6 +594,62 @@ export function computeFilmView(
   const marker = followed?.markerOnFilm ? markerAt(path, progress, frame, sample, options.exaggeration, options.liftM) : flown.marker
   const framed = followed?.group ? framedGroup(flown, followed.group, frame, sample, options.exaggeration, aspect) : flown
   const flight = followed ? { ...framed, marker } : flown
+  const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame)
+  return { flight, base: { target: flight.target, reference, autoDistanceM: autoDistanceM(flightPath), wide, orbitRad } }
+}
+
+/**
+ * The keyframe pose that shows the camera at `position` looking toward `lookAt` at film time `timeS` and `progress`
+ * (« Ajouter une image clé »): `computeFilmView` shows that very view at the keyframe.
+ */
+export function keyFramingAt(
+  path: TrackPath,
+  clock: FilmClock,
+  timeS: number,
+  progress: number,
+  frame: LocalFrame,
+  sample: HeightSampler | null,
+  options: FilmViewOptions,
+  position: Vector3,
+  lookAt: Vector3,
+): KeyFraming {
+  const { base } = flightAt(path, clock, clock.stateAt(timeS), progress, frame, sample, options)
+  const f = keyFramingFrom(base, position, lookAt)
+  const { distance, pitchDeg } = CAMERA_KEY_RANGES
+  return { ...f, distance: clamp(f.distance, distance.min, distance.max), pitchDeg: clamp(f.pitchDeg, pitchDeg.min, pitchDeg.max) }
+}
+
+/**
+ * Camera at film time `timeS` and `progress` (the store's: the export nudges it to re-place the camera). The time-based
+ * flight styles follow the flight time, so they start where the opening hands over. The aim and the camera follow the
+ * progress smoothed in film time (`timeSmoothing.ts`; stops keep the marker's progress and time). The keyframes take
+ * the flight camera to their exact pose (`keyView`; eased in and out over `cameraKeyEaseM`, kept above the ground
+ * halfway between two). With several tracks the flight camera flies what `options.follow` gives, the shots still frame
+ * the film track; smoothed progresses are never averaged across a stage cut or a change of leader.
+ */
+export function computeFilmView(
+  path: TrackPath,
+  clock: FilmClock,
+  timeS: number,
+  progress: number,
+  frame: LocalFrame,
+  sample: HeightSampler | null,
+  options: FilmViewOptions,
+): FilmView {
+  const state = clock.stateAt(timeS)
+  const { aspect, region } = options
+  const { flight: filmFlight, base } = flightAt(path, clock, state, progress, frame, sample, options)
+  const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
+  const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
+  let flight = filmFlight
+  if (keyed && keyed.weight > 0) {
+    const pose = keyView(base, keyed.framing)
+    if (keyed.free > 0) {
+      const kept = keepAboveGround(pose.position.clone(), frame, sample, options.exaggeration)
+      pose.position.y += (kept.y - pose.position.y) * keyed.free
+    }
+    flight = { ...blendViews(filmFlight, pose, keyed.weight, frame, sample, options.exaggeration), marker: filmFlight.marker }
+  }
   if (state.phase !== 'opening' && state.phase !== 'closing') return flight
 
   const shot = state.phase === 'opening' ? clock.opening : clock.closing

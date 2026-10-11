@@ -56,7 +56,15 @@ describe('matchShortcut', () => {
     expect(matchShortcut(key('Home'), 'other')).toBe('seek-start')
     expect(matchShortcut(key('End'), 'other')).toBe('seek-end')
     expect(matchShortcut(key('ArrowRight', { ctrlKey: true }), 'other')).toBeNull()
-    expect(matchShortcut(key('ArrowRight', { altKey: true }), 'other')).toBeNull()
+    expect(matchShortcut(key('ArrowRight', { altKey: true, shiftKey: true }), 'other')).toBeNull()
+  })
+
+  it('maps Alt+← / Alt+→ to the previous / next keyframe, except in a control that uses the arrows', () => {
+    expect(matchShortcut(key('ArrowLeft', { altKey: true }), 'other')).toBe('seek-prev-key')
+    expect(matchShortcut(key('ArrowRight', { altKey: true }), 'other')).toBe('seek-next-key')
+    expect(matchShortcut(key('ArrowRight', { altKey: true }), 'arrows')).toBeNull()
+    expect(matchShortcut(key('ArrowRight', { altKey: true, ctrlKey: true }), 'other')).toBeNull()
+    expect(withShortcut('Image clé suivante', 'seek-key', 1)).toBe('Image clé suivante (Alt+→)')
   })
 
   it('leaves the arrows, Home and End to a control that uses them, not the other shortcuts', () => {
