@@ -1572,6 +1572,13 @@ it, know at what time you will pass each point, where the sun will be and what t
   tiles answered after 300 ms: 320 → 36 renders for 20 frames; clouds and shutter open, 219 → 58 for 5 frames). The
   engine's delays are times, not numbers of updates, so these 16 ms updates do not hurry them (tile hosts unreachable:
   20 frames in 45–50 s instead of 82–107 s).
+  With volumetric clouds (`exportHasClouds`: `CloudsLayer` registered with its slices) only the last render of a
+  (sub-)frame pays for them: `settle` renders without the clouds (`advance(false)` sets `setSkipClouds`, the wrapped
+  `update` returns at once and the clouds buffer keeps its previous content, never captured), then `flushDrapes` and
+  the camera correction, then `renderSettledFrame` makes one final render (`advance(true)`) with all the noise slices.
+  The captured pixels are those of the old last render (the slices start from scratch each time). Cost: one more
+  render without clouds in the best case (1 render with clouds before; 1 without and 1 with now). Without clouds the
+  renders are as before.
   The camera is repositioned (progress shifted by 1e-9) only if the final terrain moves it
   by more than 1 m, never after a timeout. Every 5 rendered frames, the tiles for frames +5 to +40 are
   requested ahead of time (`engine.prefetch`).
@@ -1852,7 +1859,8 @@ it, know at what time you will pass each point, where the sun will be and what t
   shadow map TAA; the effect's `update` is wrapped: 16 / 24 / 32 renders per frame (`EXPORT_SAMPLES`, low / medium /
   high; 2 / 4 / 6 before) with the frame counter set to k (noise slice) and `temporalAlpha` = 1/(k+1) — the first
   discards the history, the following ones average (still camera, zero velocity). An exported frame therefore never
-  depends on the previous ones, whatever the number of `settle` renders. The export cost of the clouds grows in
+  depends on the previous ones, whatever the number of `settle` renders; only the final render of a (sub-)frame runs
+  them (see "Video export"). The export cost of the clouds grows in
   proportion (×6 for "Moyenne"). With the motion blur, the slices are shared among the sub-frames of the shutter
   (see "Lens").
 - Grain, measured with SwiftShader (sea of clouds at 1,800 m, noon, still view 681 × 383, no terrain; mean absolute
