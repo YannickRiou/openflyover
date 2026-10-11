@@ -2451,7 +2451,9 @@ A phone that exports also holds the **screen on** (`export/guard.ts`: Screen Wak
 to the foreground, released at the end, on cancel and on error; no API = no lock). While an export is busy a flag is
 kept in the tab's `sessionStorage`; if the next start finds it, the export never ended and a toast says so
 (« Le dernier export a été interrompu… »), with a « Détails » button showing the **breadcrumb**: the last `pagehide` /
-`freeze` / `webglcontextlost` with `renderer.info.memory` textures and geometries and the loaded tile count.
+`freeze` / `webglcontextlost` with `renderer.info.memory` textures and geometries and the loaded tile count. iOS kills a
+tab short of memory without any page event, so the export also writes its own steps (start, video size applied, encoder
+ready, the first 3 frames then 1 in 25, finalisation); each export starts with a fresh breadcrumb.
 
 Not done, on purpose: the imagery textures keep their 512² canvases (`CanvasTexture`, about 1 MB of JS memory per
 resident tile): three re-uploads from `texture.image` after a lost context, and the engine has no way to redraw a tile's
