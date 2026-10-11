@@ -1,3 +1,4 @@
+import type { PresetKnob } from '../export/qualityTier'
 import { LENS_RANGES } from '../scene/lens'
 import type { LensSettings } from '../scene/lens'
 import { useAppStore } from '../state/store'
@@ -10,12 +11,13 @@ function formatAmount(value: number): string {
 }
 
 /** Always open: the three effects that change every shot. */
-const SLIDERS: { key: keyof LensSettings; label: string; tip: string; weight?: WeightKey }[] = [
+const SLIDERS: { key: keyof LensSettings; label: string; tip: string; weight?: WeightKey; preset?: PresetKnob }[] = [
   {
     key: 'shutter',
     weight: 'shutter',
+    preset: 'shutter',
     label: 'Flou de bougé (obturateur)',
-    tip: 'Effet de vitesse : les bords de l’image filent vers la direction du mouvement, le centre reste net, selon la vitesse de la caméra. À l’export, chaque image moyenne aussi jusqu’à 8 rendus pendant l’ouverture de l’obturateur (export plus long quand la caméra bouge vite, sans surcoût à l’arrêt).',
+    tip: 'Effet de vitesse : les bords de l’image filent vers la direction du mouvement, le centre reste net, selon la vitesse de la caméra. À l’export, chaque image moyenne aussi jusqu’à 8 rendus (4 en qualité Standard) pendant l’ouverture de l’obturateur (export plus long quand la caméra bouge vite, sans surcoût à l’arrêt).',
   },
   { key: 'bloom', label: 'Halo lumineux', tip: 'Les zones claires rayonnent : soleil, neige, reflets sur l’eau.' },
   { key: 'depthOfField', weight: 'depthOfField', label: 'Profondeur de champ', tip: 'Net sur le marqueur, de plus en plus flou devant et derrière.' },
@@ -30,8 +32,8 @@ export function LensPanel() {
 
   return (
     <PanelSection title="Effets d’objectif" keys={['lens']}>
-      {SLIDERS.map(({ key, label, tip, weight }) => (
-        <RangeField key={key} label={label} tip={tip} weight={weight} {...LENS_RANGES[key]} value={lens[key]} format={formatAmount} onChange={(value) => set(key, value)} />
+      {SLIDERS.map(({ key, label, tip, weight, preset }) => (
+        <RangeField key={key} label={label} tip={tip} weight={weight} preset={preset} {...LENS_RANGES[key]} value={lens[key]} format={formatAmount} onChange={(value) => set(key, value)} />
       ))}
       <SettingRow label="Reflet d’objectif" value={formatAmount(lens.flare)} paths={['lens.flare']}>
         <RangeField

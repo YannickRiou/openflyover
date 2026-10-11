@@ -41,6 +41,11 @@ reproduce it next to the box.
       identical (terrain complete, same clouds and blur), no more "incomplète" frames than before.
 - [ ] « Flou de bougé » export (shutter 100 %, 1080p): same look as before the adaptive sub-frames at the same film time (stops and
       held frames sharp, fast sections identical), noticeably shorter on slow sections, stops and high cameras (`[export]` line).
+- [ ] Export quality tiers: export the same film (clouds on « Selon la qualité de l'export », « Flou de bougé » 100 %, 1080p) at
+      « Standard », « Haute » and « Maximale »: render time falls from Maximale to Standard (clouds 32 / 24 / 16 slices, 8 / 8 / 4
+      sub-frames; `[export]` line), the clouds' grain grows at Standard and the blur stays smooth, the pill reads « Imposé par … » on
+      the clouds and shutter rows; a clouds quality chosen by hand keeps its look at any quality (« Personnalisé »); the history entry
+      shows the quality really used; the same film twice at one quality is identical.
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
       (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without

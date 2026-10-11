@@ -17,6 +17,7 @@ import {
 } from '../export/batch'
 import { videoBitrate, type CodecCandidate } from '../export/encoder'
 import { containerFor, exportCodec } from '../export/nativeEncoder'
+import { CLOUD_QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
 import {
   EXPORT_HOLD_END_S,
   EXPORT_HOLD_START_S,
@@ -120,6 +121,8 @@ interface CodecProbe {
  */
 function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; modes: ReactNode; hidden: boolean }) {
   const video = useAppStore((s) => s.settings.video)
+  const clouds = useAppStore((s) => s.settings.clouds)
+  const customised = useAppStore((s) => isCustomised(s.settings))
   // film length and progress at each film time, with the slow-downs and pauses of the preview
   const pacing = useFilmClock()
   const durationS = pacing.totalTime()
@@ -189,6 +192,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   }, [phase, error])
 
   const update = (patch: Partial<VideoSettings>) => setSetting('video', { ...video, ...patch })
+  // what the quality makes the export use (the clouds chosen by hand win over it)
+  const tier = effectiveRender(video.quality, clouds)
 
   const request = {
     width,
@@ -426,7 +431,11 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </fieldset>
       </SettingRow>
 
-      <SettingRow label="Qualité" value={QUALITIES.find((q) => q.value === video.quality)?.label} paths={['video.quality']}>
+      <SettingRow
+        label="Qualité"
+        value={`${QUALITIES.find((q) => q.value === video.quality)?.label}${customised ? ' · Personnalisé' : ''}`}
+        paths={['video.quality']}
+      >
         <fieldset className="field fieldset" disabled={busy}>
           <legend className="field__label">Qualité</legend>
           <div className="segmented">
@@ -444,6 +453,15 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             ))}
           </div>
           {!overlayOnly && <p className="field__hint">Débit vidéo : {formatNumber(bitrateMbps, 1)} Mbit/s</p>}
+          <p className="field__hint">
+            Règle aussi le rendu de l’export : nuages {CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase()}, flou de bougé {tier.maxSubFrames} rendus
+            par image au plus. Le projet et l’aperçu ne changent pas.
+          </p>
+          {customised && (
+            <button type="button" className="btn btn--secondary" onClick={() => setSetting('clouds', { ...clouds, quality: 'auto' })}>
+              Revenir au préréglage
+            </button>
+          )}
         </fieldset>
       </SettingRow>
 

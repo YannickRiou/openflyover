@@ -5,6 +5,10 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Export quality sets the render quality**: « Standard / Haute / Maximale » now also picks, at export time only, the clouds'
+  export quality (Rapide / Moyenne / Fine) and the most motion-blur renders per image (4 / 8 / 8), with an « Imposé par Haute »
+  pill on those settings. A value chosen by hand wins (« Personnalisé », « Revenir au préréglage »); the project and the
+  preview do not change, and the render history records what was really used. A project saved before keeps its clouds quality.
 - **Faster export with clouds**: the volumetric clouds' noise slices are computed once per image (once per
   shutter sub-frame), in the final render only, not again at each render that waits for tiles; the frames are identical.
 - **Motion blur export**: the shutter's 8 renders per image become 1–8 by how far the picture moves on screen (1 at

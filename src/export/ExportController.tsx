@@ -25,7 +25,7 @@ import { loadOverlayFonts } from '../overlay/assets'
 import { filmTextOpacity, overlayTime, overlayTimedState } from '../overlay/draw'
 import { loadFrameMedia, overlayExtras, releaseFrameMedia } from '../overlay/exportOverlay'
 import { filmViewAt } from '../scene/filmView'
-import { SHUTTER_SUBFRAMES, adaptiveShutterSamples, sameShot, setShutterSubFrame, shutterSamples } from '../scene/lens'
+import { adaptiveShutterSamples, sameShot, setShutterSubFrame, shutterSamples } from '../scene/lens'
 import { useTerrainContext } from '../scene/TerrainLayer'
 import type { HeightSampler } from '../scene/TrackLines'
 import { useFilmClock } from '../scene/usePacing'
@@ -35,6 +35,7 @@ import { useAppStore } from '../state/store'
 import { REPLACE_EPSILON, composeFrame, composeOverlayFrame, renderSettledFrame, wait, type DrawOverlay } from './capture'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createExportEncoder } from './nativeEncoder'
+import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, buildFrameTimes } from './schedule'
 import {
   EMPTY_TIMINGS,
@@ -384,6 +385,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       (settings.water.enabled && useWaterStore.getState().polygons > 0)
     const localFrame = deps.frame()
     const aspect = width / height
+    // most renders per frame: lowered by the quality (qualityTier.ts)
+    const { maxSubFrames } = effectiveRender(request.quality, settings.clouds)
     /** the view of the last rendered frame moved with time */
     let previousTimed = false
     let previousOverlay = ''
@@ -405,8 +408,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
               (r) => filmViewAt(path, filmClock, r.progress, r.timeS, localFrame, null, aspect),
               { heightPx: height, aspect, fovDeg: CAMERA_FOV_DEG },
               keep,
+              maxSubFrames,
             )
-          : shutterSamples(times, schedule, i, shutter, SHUTTER_SUBFRAMES, keep)
+          : shutterSamples(times, schedule, i, shutter, maxSubFrames, keep)
       const rendered = renders.map((r) => r.progress).join()
       // held frames (holds, stops) repeat the composed image as is, unless the view, the scene (animated figurine,
       // drifting clouds, rippling water) or the overlay moves with time

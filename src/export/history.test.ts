@@ -51,8 +51,59 @@ describe('summariseSettings', () => {
     expect(summary.lens).toEqual(settings.lens)
     // no film, track, overlay, title or poster text
     expect(Object.keys(summary).sort()).toEqual(
-      ['atmosphere', 'camera', 'clouds', 'imagery', 'imageryZoom', 'lens', 'shadows', 'sunDate', 'sunFromTrack', 'sunHour', 'terrain', 'water'].sort(),
+      ['atmosphere', 'camera', 'clouds', 'imagery', 'imageryZoom', 'lens', 'shadows', 'sunDate', 'sunFromTrack', 'sunHour', 'terrain', 'tier', 'water'].sort(),
     )
+  })
+})
+
+describe('effective render values', () => {
+  const withClouds = (quality: Settings['clouds']['quality']): Settings => ({ ...DEFAULT_SETTINGS, clouds: { ...DEFAULT_SETTINGS.clouds, quality } })
+  const rendered = (quality: 'standard' | 'high' | 'max', settings: Settings) =>
+    entryOf({ ...RECORD, request: { ...RECORD.request, quality }, settings })
+
+  it('records what the export quality made the export use, not the project value', () => {
+    const [low, mid, high] = (['standard', 'high', 'max'] as const).map((q) => rendered(q, withClouds('auto')).settings)
+    expect([low.clouds?.quality, mid.clouds?.quality, high.clouds?.quality]).toEqual(['low', 'medium', 'high'])
+    expect([low.tier, mid.tier, high.tier]).toEqual([
+      { subFrames: 4, cloudsByHand: false },
+      { subFrames: 8, cloudsByHand: false },
+      { subFrames: 8, cloudsByHand: false },
+    ])
+  })
+
+  it('records a quality chosen by hand over the export quality', () => {
+    const { settings } = rendered('standard', withClouds('high'))
+    expect(settings.clouds?.quality).toBe('high')
+    expect(settings.tier).toEqual({ subFrames: 4, cloudsByHand: true })
+  })
+
+  it('reads back the tier, and drops a malformed one instead of the entry', () => {
+    const e = rendered('standard', withClouds('auto'))
+    expect(parseHistory(serialiseHistory([e]))[0].settings.tier).toEqual({ subFrames: 4, cloudsByHand: false })
+    for (const tier of [{ subFrames: 99, cloudsByHand: false }, { subFrames: 2.5, cloudsByHand: true }, { subFrames: 4 }, 'x']) {
+      const raw = JSON.stringify({ v: 1, entries: [{ ...e, settings: { ...e.settings, tier } }] })
+      const [parsed] = parseHistory(raw)
+      expect(parsed.settings.tier).toBeUndefined()
+      expect(parsed.settings.clouds).toBeDefined()
+    }
+  })
+
+  it('still reads an entry recorded before the tiers (same version, no tier field)', () => {
+    const { tier: _tier, ...old } = entry(1).settings
+    const raw = JSON.stringify({ v: 1, entries: [{ ...entry(1), settings: { ...old, clouds: { mode: 'meteo', quality: 'high', coverage: 0.4, seaRender: 'volume' } } }] })
+    const [parsed] = parseHistory(raw)
+    expect(parsed.settings.tier).toBeUndefined()
+    expect(parsed.settings.clouds?.quality).toBe('high')
+    // an old entry recorded a fixed quality: reusing it pins that quality; a new one follows the export quality again
+    expect(reuseSettings(parsed, DEFAULT_SETTINGS).clouds.quality).toBe('high')
+    expect(reuseSettings(rendered('standard', withClouds('auto')), DEFAULT_SETTINGS).clouds.quality).toBe('auto')
+    expect(reuseSettings(rendered('standard', withClouds('high')), DEFAULT_SETTINGS).clouds.quality).toBe('high')
+  })
+
+  it('shows the cap and the choice in the details', () => {
+    const rows = settingsDetails(rendered('standard', { ...withClouds('high'), lens: { ...DEFAULT_SETTINGS.lens, shutter: 0.5 } }).settings)
+    expect(rows.find((r) => r.label === 'Nuages')?.value).toContain('fine (choisie)')
+    expect(rows.find((r) => r.label === 'Flou de bougé')?.value).toBe('50 %, 4 rendus par image au plus')
   })
 })
 
