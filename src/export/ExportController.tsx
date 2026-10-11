@@ -35,6 +35,7 @@ import { useAppStore } from '../state/store'
 import { REPLACE_EPSILON, composeFrame, composeOverlayFrame, renderSettledFrame, wait, type DrawOverlay } from './capture'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createExportEncoder } from './nativeEncoder'
+import { writeBreadcrumb } from './guard'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule'
 import {
@@ -156,6 +157,7 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
       exportStore().reportFrame(i + 1, performance.now())
     }
     exportStore().finalizing()
+    writeBreadcrumb('export : finalisation du fichier')
     const { blob, sizeBytes } = await session.finish()
     exportStore().complete({
       url: blob && URL.createObjectURL(blob),
@@ -315,6 +317,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     canvas.style.pointerEvents = 'none'
     exportStore().setRenderScale(exportRenderScale(width, height))
     applyVideoSize()
+    writeBreadcrumb(`export : taille ${width}×${height} appliquée`)
     marker?.layers.set(HIDDEN_LAYER)
 
     const compositor = new OffscreenCanvas(width, height)
@@ -369,6 +372,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     if (isCanceled()) throw new ExportCanceledError()
     // WebCodecs, else the system's ffmpeg (desktop app on Linux)
     session = await createExportEncoder(compositor, { ...request, audio })
+    writeBreadcrumb('export : encodeur prêt')
     /** opacities of the timed overlay (cards, timeline texts, photos and clips, dips, stage card) at a frame, '' without overlay */
     const overlayKey = (progress: number, timeS: number) => {
       if (!deps.overlay()) return ''
@@ -421,6 +425,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         frameTimeS = times[i]
         previousTimed = timed
         previousOverlay = overlayNow
+        // a tab killed for memory leaves no page event: the last step tells where (the first frames, then 1 in 25)
+        if (timings.rendered < 3 || timings.rendered % 25 === 0) writeBreadcrumb(`export : image ${i + 1} / ${schedule.length}`)
         // pictures and video frames decoded before the render: composing must follow it in the same task
         await loadFrameMedia(frameTimeS, progress)
         let complete = true
