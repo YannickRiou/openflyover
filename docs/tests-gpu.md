@@ -46,6 +46,14 @@ reproduce it next to the box.
       sub-frames; `[export]` line), the clouds' grain grows at Standard and the blur stays smooth, the pill reads « Imposé par … » on
       the clouds and shutter rows; a clouds quality chosen by hand keeps its look at any quality (« Personnalisé »); the history entry
       shows the quality really used; the same film twice at one quality is identical.
+- [ ] iPhone 12 (4 GB, Safari and Chrome iOS), memory budget: Mac Safari > Develop > the iPhone > Web Inspector > Timelines
+      (Memory, JavaScript & Allocations): note the peak at the load of a project, while changing settings, and during a
+      5 s export. After a crash, Settings > Privacy & Security > Analytics & Improvements > Analytics Data: `JetsamEvent-*` logs
+      (the `per-process-limit` line names OpenFlyover's WebContent process). Then the ablation: a 5 s film at 720p without
+      clouds, shadows or atmosphere must finish; turn back on one by one (atmosphere, shadows, clouds « Nappe », then 1080p) and
+      note which step kills the tab. Editing with a 40 MB video clip loaded: change a slider ten times, no reload; the
+      autosave leaves the JS heap flat after the first write. Export with the screen left to dim: stays on (Wake Lock), a
+      locked screen must give the « Le dernier export a été interrompu » toast at the next start, with « Détails ».
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
       (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without
