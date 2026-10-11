@@ -17,6 +17,7 @@ import { canvasAntialias, deviceBudget } from '../core/deviceBudget'
 import { useAppStore } from '../state/store'
 import { dismissToast, showToast } from '../ui/toast'
 import { ExportController } from '../export/ExportController'
+import { readGpuInfo, setGpuProbe } from '../export/diagnostic'
 import { setBreadcrumbProbe, writeBreadcrumb } from '../export/guard'
 import { isExportBusy, useExportStore } from '../export/store'
 import { CAMERA_FOV_DEG } from '../flyover/filmCamera'
@@ -112,6 +113,8 @@ function watchContextLoss({ gl, invalidate }: RootState) {
     geometries: gl.info.memory.geometries,
     tiles: useAppStore.getState().terrainStats.loadedTiles,
   }))
+  // GPU of the diagnostic report (export/diagnostic.ts)
+  setGpuProbe(() => readGpuInfo(gl.getContext()))
   gl.domElement.addEventListener('webglcontextlost', (e) => {
     e.preventDefault() // lets the browser restore it
     writeBreadcrumb('webglcontextlost')
