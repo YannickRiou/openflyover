@@ -17,6 +17,7 @@ import {
   addStop,
   addText,
   adjacentKey,
+  keyAt,
   attachToStop,
   centredScrollLeft,
   centredTime,
@@ -655,6 +656,13 @@ describe('camera keys', () => {
     expect(at(40, 1)).toBeNull()
     expect(at(5, -1)).toBeNull()
     expect(adjacentKey([], 5, 1)).toBeNull()
+  })
+
+  it('the keyframe under the playhead: found within a millisecond, none elsewhere', () => {
+    const keys = [{ timeS: 10 }, { timeS: 25.5 }]
+    expect(keyAt(keys, 25.5004)).toBe(keys[1])
+    expect(keyAt(keys, 25.6)).toBeNull()
+    expect(keyAt([], 0)).toBeNull()
   })
 
   it('updates clamp to the keyframe ranges; moved along the track by the pointer; removed like any block', () => {

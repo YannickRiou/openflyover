@@ -13,7 +13,7 @@ import { DEFAULT_FILM, SITUATION_DURATION_S } from '../film/model'
 import { updateShot } from '../film/timeline'
 import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
-import { addKeyframe, editFilm, setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
+import { editFilm, setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { HighlightsPanel } from './HighlightsPanel'
@@ -326,14 +326,6 @@ export function CameraPanel() {
             </SettingRow>
           )
         })}
-
-        <button type="button" className="btn btn--secondary" onClick={addKeyframe} disabled={lengthM <= 0} aria-describedby={`${id}-key-hint`}>
-          Ajouter une image clé
-        </button>
-        <p id={`${id}-key-hint`} className="field__hint">
-          Garde la vue 3D telle que vous l’avez cadrée, à la position du marqueur (losange de la piste « Plans ») : le film la
-          montre à cet instant et y passe en douceur. Retouchez-la dans l’inspecteur.
-        </p>
       </PanelSection>
 
       <PanelSection title="Durée et rythme" keys={['flyoverDurationS', 'pacing']}>
