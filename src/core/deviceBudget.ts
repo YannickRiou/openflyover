@@ -27,6 +27,8 @@ export interface DeviceBudget {
   seaRender: 'volume' | 'surface'
   /** largest short side of an exported film or still, px */
   maxExportShortSide: number
+  /** texels per side of the relief's shadow map (memory grows with its square: estimated ~128 MB at 4096², ~32 MB at 2048²) */
+  shadowMapSize: number
 }
 
 export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
@@ -40,6 +42,7 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   cloudResolutionScale: 1,
   seaRender: 'volume',
   maxExportShortSide: 2160,
+  shadowMapSize: 4096,
 }
 
 const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide'> = {
@@ -51,6 +54,8 @@ const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide'> = {
   cloudSettleFrames: 16,
   cloudResolutionScale: 0.5,
   seaRender: 'surface',
+  // a quarter of the computer's memory; the map is refitted to the view every frame and a phone screen is small
+  shadowMapSize: 2048,
 }
 
 /** Below this short side (CSS px), a touch device is a phone. */
@@ -72,9 +77,18 @@ export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits
   const phone = shortSidePx < PHONE_MAX_SHORT_SIDE
   const budget: DeviceBudget = { ...MOBILE_BUDGET, kind: phone ? 'phone' : 'tablet', maxExportShortSide: phone ? 1080 : 1440 }
   if (memoryGb !== undefined && memoryGb <= LOW_MEMORY_GB) {
-    return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100 }
+    return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024 }
   }
   return budget
+}
+
+/**
+ * MSAA of the canvas's default framebuffer. A phone or tablet with the atmosphere drops it: the picture then goes
+ * through the composer (SMAA, no multisampling) and the default framebuffer's samples (~75 MB at 1080p) are never used.
+ * Without the atmosphere the scene is drawn straight to it, so it stays. Fixed when the context is created.
+ */
+export function canvasAntialias(budget: Pick<DeviceBudget, 'kind'>, atmosphere: boolean): boolean {
+  return budget.kind === 'desktop' || !atmosphere
 }
 
 /** Traits of the device running `scope` (window); a scope without a screen (tests, workers) reads as a computer. */

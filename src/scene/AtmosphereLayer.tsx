@@ -16,6 +16,7 @@ import { EffectComposer, ToneMapping, disposePassWithoutEffects } from '@react-t
 import { EffectPass, SMAAEffect, ToneMappingMode } from 'postprocessing'
 import type { AerialPerspectiveEffect, SkyLightProbe, SunDirectionalLight } from '@takram/three-atmosphere'
 import { AerialPerspective, Atmosphere, Sky, SkyLight, Stars, SunLight, type AtmosphereApi } from '@takram/three-atmosphere/r3f'
+import { deviceBudget } from '../core/deviceBudget'
 import type { Track } from '../core/types'
 import { samplePath, trackPathOf, type TrackPath } from '../flyover/path'
 import { trackUnderMarker } from '../flyover/sequence'
@@ -35,7 +36,7 @@ import { useLensEffects } from './useLensEffects'
 import { nightFillIntensity, sceneExposure, sunElevation } from './exposure'
 import { useTerrainContext } from './TerrainLayer'
 import { useFilmClock } from './usePacing'
-import { SHADOW_MAP_SIZE, TerrainShadow } from './terrainShadow'
+import { TerrainShadow } from './terrainShadow'
 import { WeatherEffect } from './weatherEffect'
 
 /** Directory of the precomputed atmosphere textures (EXR) and of the star catalogue. */
@@ -215,7 +216,7 @@ export function AtmosphereLayer() {
   useLayoutEffect(() => {
     if (!sun || !engine || !shadows) return
     const original = sun.shadow
-    const shadow = new TerrainShadow(engine.group, Math.min(SHADOW_MAP_SIZE, gl.capabilities.maxTextureSize))
+    const shadow = new TerrainShadow(engine.group, Math.min(deviceBudget().shadowMapSize, gl.capabilities.maxTextureSize))
     sun.shadow = shadow
     sun.castShadow = true
     return () => {

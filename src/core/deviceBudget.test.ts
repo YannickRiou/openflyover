@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { exportResolutionNote, videoSize } from '../export/schedule'
+import { DEFAULT_VIDEO_SETTINGS, exportResolutionNote, videoSize } from '../export/schedule'
 import { CLOUD_SETTLE_FRAMES } from '../scene/renderOnDemand'
 import { DEFAULT_TUNING } from '../terrain/engine'
 import { DEFAULT_CLOUDS } from '../weather/sceneClouds'
-import { DESKTOP_BUDGET, budgetFor, deviceBudget, readDeviceTraits } from './deviceBudget'
+import { DESKTOP_BUDGET, budgetFor, canvasAntialias, deviceBudget, readDeviceTraits } from './deviceBudget'
 
 const scope = (coarse: boolean, width: number, height: number, deviceMemory?: number) => ({
   matchMedia: (query: string) => ({ matches: coarse && query === '(pointer: coarse)' }),
@@ -24,6 +24,7 @@ describe('budgetFor', () => {
       cloudResolutionScale: 1,
       seaRender: 'volume',
       maxExportShortSide: 2160,
+      shadowMapSize: 4096,
     })
     // a laptop with little memory is still a computer
     expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 2 })).toEqual(DESKTOP_BUDGET)
@@ -41,6 +42,7 @@ describe('budgetFor', () => {
       cloudResolutionScale: 0.5,
       seaRender: 'surface',
       maxExportShortSide: 1080,
+      shadowMapSize: 2048,
     })
   })
 
@@ -54,7 +56,24 @@ describe('budgetFor', () => {
       movingPixelRatio: 1,
       tileBitmaps: 120,
       heightGrids: 100,
+      shadowMapSize: 1024,
     })
+  })
+
+  it('a touch device draws a smaller shadow map, a computer keeps 4096', () => {
+    expect(budgetFor({ coarsePointer: true, shortSidePx: 820 }).shadowMapSize).toBe(2048)
+    expect(budgetFor({ coarsePointer: false, shortSidePx: 1080 }).shadowMapSize).toBe(4096)
+  })
+})
+
+describe('canvasAntialias', () => {
+  it('only a phone or tablet with the atmosphere (composer + SMAA) goes without MSAA', () => {
+    const phone = budgetFor({ coarsePointer: true, shortSidePx: 393 })
+    expect(canvasAntialias(phone, true)).toBe(false)
+    expect(canvasAntialias(phone, false)).toBe(true)
+    expect(canvasAntialias(budgetFor({ coarsePointer: true, shortSidePx: 820 }), true)).toBe(false)
+    expect(canvasAntialias(DESKTOP_BUDGET, true)).toBe(true)
+    expect(canvasAntialias(DESKTOP_BUDGET, false)).toBe(true)
   })
 })
 
@@ -78,6 +97,8 @@ describe('where the limits live (computer)', () => {
     expect(DEFAULT_CLOUDS.seaRender).toBe('volume')
     expect(videoSize('16:9', '4k')).toEqual({ width: 3840, height: 2160 })
     expect(exportResolutionNote('4k')).toBeNull()
+    expect(deviceBudget().shadowMapSize).toBe(4096)
+    expect(DEFAULT_VIDEO_SETTINGS.resolution).toBe('1080p')
   })
 
   it('a phone renders 4K and 1440p at 1080p, and says so', () => {
