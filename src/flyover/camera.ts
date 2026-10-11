@@ -45,11 +45,17 @@ export const GROUND_WINDOW_MAX_M = 150
 /** Aim height: terrain samples on each side of the marker, at multiples of radius / this along the track. */
 export const GROUND_SAMPLES_PER_SIDE = 4
 /**
- * Terrain samples along the sight line camera → aim (fractions 0 .. LINE_OF_SIGHT_MAX_FRACTION); the
- * clearance tapers from MIN_GROUND_CLEARANCE_M under the camera to 0 at the aim.
+ * Terrain samples along the sight line camera → aim. The clearance tapers from MIN_GROUND_CLEARANCE_M under the camera
+ * to LINE_OF_SIGHT_MIN_CLEARANCE_M (the band over which the marker fades out behind the relief, `occlusionFade`), so a
+ * rise just before the marker no longer hides it. The line is checked up to LINE_OF_SIGHT_END_M short of the aim (the
+ * marker's fade leaves the slope under it out, `lineOfSightClearance`) and at most LINE_OF_SIGHT_MAX_GAIN × the
+ * camera's distance short of it: a raise is the clearance gap divided by the share of the line left, so near the aim
+ * the camera would ride every bump of the ground.
  */
-export const LINE_OF_SIGHT_SAMPLES = 12
-export const LINE_OF_SIGHT_MAX_FRACTION = 0.9
+export const LINE_OF_SIGHT_SAMPLES = 24
+export const LINE_OF_SIGHT_END_M = 100
+export const LINE_OF_SIGHT_MIN_CLEARANCE_M = 20
+export const LINE_OF_SIGHT_MAX_GAIN = 20
 
 /**
  * Smoothing scaled with the ground speed of the film (track length / flyover duration, metres per film second), so a
@@ -513,7 +519,8 @@ function positionAround(target: Vector3, { reference, viewAngle, pitchDeg, dista
 /**
  * Lowest camera height (local y, at least `position.y`) that keeps the sight line to `target` above the
  * (exaggerated) grid ground (`gridGround`): the line at fraction f (0 = camera) has height y + (target.y - y) · f
- * and must clear the ground there by MIN_GROUND_CLEARANCE_M · (1 - f). The floor is eased in (`smoothMax`), then
+ * and must clear the ground there by MIN_GROUND_CLEARANCE_M · (1 - f), at least LINE_OF_SIGHT_MIN_CLEARANCE_M, up to
+ * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN). The floor is eased in (`smoothMax`), then
  * the camera is kept MIN_TERRAIN_CLEARANCE_M above the actual terrain below it.
  */
 function lowestClearY(
@@ -525,13 +532,14 @@ function lowestClearY(
   cellM: number,
 ): number {
   let floor = -Infinity
+  const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
   for (let i = 0; i <= LINE_OF_SIGHT_SAMPLES; i++) {
-    const f = (i / LINE_OF_SIGHT_SAMPLES) * LINE_OF_SIGHT_MAX_FRACTION
+    const f = (i / LINE_OF_SIGHT_SAMPLES) * (1 - Math.min(0.5, left))
     _sight.lerpVectors(position, target, f).setY(target.y)
     const ground = gridGround(_sight.x, _sight.z, cellM, frame, sample)
     if (ground === undefined) continue
     const at = frame.toLonLat(_sight)
-    const clearance = MIN_GROUND_CLEARANCE_M * (1 - f)
+    const clearance = Math.max(MIN_GROUND_CLEARANCE_M * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
     const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance, _sight).y
     floor = Math.max(floor, (floorY - target.y * f) / (1 - f))
   }
