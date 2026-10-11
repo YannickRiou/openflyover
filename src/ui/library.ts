@@ -1,15 +1,16 @@
 /**
  * « Mes projets » on the app side: the list and the entry of the open project (`useLibraryStore`), keeping the open
- * project in the library, and its autosave a few seconds after each change (never during an export). Storage is the
- * platform's `projectLibrary` (src/platform/projectLibrary.ts). Opening an entry goes through `openProject`. Closing
- * the window or tab writes the last change first, and asks when something would be lost (`installCloseGuard`).
+ * project in the library, and its autosave a few seconds after each change (never during an export): a project with a
+ * track gets its entry by itself, and the id of the open entry is remembered to reopen it at the next start. Storage is
+ * the platform's `projectLibrary` (src/platform/projectLibrary.ts). Opening an entry goes through `openProject`.
+ * Closing the window or tab writes the last change first, and asks when something would be lost (`installCloseGuard`).
  */
 import { errorMessage } from '../core/errors'
 import { create } from 'zustand'
 import type { Track } from '../core/types'
 import { useMediaStore } from '../film/media'
 import { getPlatform } from '../platform'
-import type { Platform, ProjectEntry, ProjectLibrary } from '../platform'
+import type { KeyValueStore, Platform, ProjectEntry, ProjectLibrary } from '../platform'
 import { sortProjectEntries } from '../platform/projectLibrary'
 import { projectFileName, serializeProject } from '../project/document'
 import { useAppStore } from '../state/store'
@@ -21,6 +22,8 @@ import { showToast } from './toast'
 
 /** Wait after the last change before saving the open entry. */
 export const AUTOSAVE_DELAY_MS = 3000
+/** `getPlatform().storage` key of the entry open when the app was last left */
+export const LAST_PROJECT_KEY = 'openflyover.lastProject.v1'
 
 /** "Tour du Mont-Blanc · 42,3 km", "… · 3 traces" when there are several; the track name only when the project has another. */
 export function projectSummary(tracks: readonly Track[], projectName = ''): string {
@@ -114,6 +117,8 @@ export const useLibraryStore = create<LibraryState>()(() => ({ entries: [], curr
 let kept: SavedProject | null = null
 /** counts the projects opened, so that a write finishing after another project was opened leaves it alone */
 let openedCount = 0
+/** the open project's entry was deleted: it gets no new one by itself (« Garder dans Mes projets » still can) */
+let leftOut = false
 
 const projectOf = (state: AppState): SavedProject => ({ settings: state.settings, tracks: state.tracks, name: state.projectName })
 
@@ -164,6 +169,7 @@ async function writeOpenProject(library: ProjectLibrary, id: string | null): Pro
 /** The open project now is entry `id` (null: not kept); called by `openProject` once the project is applied. */
 export function setOpenEntry(id: string | null): void {
   openedCount++
+  leftOut = false
   kept = id === null ? null : projectOf(useAppStore.getState())
   useLibraryStore.setState({ currentId: id })
 }
@@ -186,8 +192,12 @@ export async function keepOpenProject(): Promise<void> {
   const library = getPlatform().projectLibrary
   if (!library || keeping) return
   keeping = true
+  leftOut = false
   try {
-    const entry = await writeOpenProject(library, null)
+    // the autosave may be writing the entry already
+    await flushAutosave()
+    const { currentId, entries } = useLibraryStore.getState()
+    const entry = entries.find((e) => e.id === currentId) ?? (await writeOpenProject(library, null))
     showToast({ kind: 'success', text: `Projet « ${entry.name} » gardé dans Mes projets` })
   } catch (err) {
     showToast({ kind: 'error', text: `Impossible de garder le projet : ${errorMessage(err)}` })
@@ -229,6 +239,7 @@ export async function deleteEntry(entry: ProjectEntry): Promise<void> {
     if (useLibraryStore.getState().currentId === entry.id) {
       // no longer kept first, then wait for a write in progress: it would bring the entry back after the removal
       setOpenEntry(null)
+      leftOut = true
       await flushAutosave()
     }
     await library.remove(entry.id)
@@ -246,25 +257,69 @@ export function flushAutosave(): Promise<void> {
   return autosave?.flush() ?? Promise.resolve()
 }
 
-/** Save the open entry a few seconds after each change of the project, unless `canSave` says to wait. Once, by `App`. */
+/**
+ * Whether the autosave writes `project`: its entry `id` when it changed since `written` (its last write), else a new
+ * entry once it has a track, when `keepNew` (not left out of « Mes projets », no « Garder » writing it).
+ */
+export function autosaveWrites(project: SavedProject, id: string | null, written: SavedProject | null, keepNew: boolean): boolean {
+  if (id !== null) return written !== null && isProjectDirty(project, written)
+  return keepNew && project.tracks.length > 0
+}
+
+/** Remember the open entry for the next start (null: none). */
+export function rememberOpenEntry(storage: KeyValueStore, id: string | null): void {
+  if (id === null) storage.remove(LAST_PROJECT_KEY)
+  else storage.set(LAST_PROJECT_KEY, id)
+}
+
+/** The entry open when the app was last left, and its document; null when there is none or it is gone. */
+export async function lastOpenProject(
+  platform: Pick<Platform, 'storage' | 'projectLibrary'> = getPlatform(),
+): Promise<{ entry: ProjectEntry; file: File } | null> {
+  const library = platform.projectLibrary
+  const id = platform.storage.get(LAST_PROJECT_KEY)
+  if (!library || id === null) return null
+  try {
+    const entry = (await library.list()).find((e) => e.id === id)
+    if (!entry) {
+      rememberOpenEntry(platform.storage, null)
+      return null
+    }
+    return { entry, file: new File([await library.load(id)], projectFileName(entry.name), { type: 'application/json' }) }
+  } catch (err) {
+    // unreadable now: kept for the next start
+    console.warn('[projets] dernier projet illisible :', errorMessage(err))
+    return null
+  }
+}
+
+/**
+ * Keep the open project in « Mes projets » (its entry made once it has a track), saved a few seconds after each change
+ * unless `canSave` says to wait; the open entry is remembered for the next start. Once, by `App`.
+ */
 export function installLibraryAutosave(canSave: () => boolean): () => void {
-  const library = getPlatform().projectLibrary
+  const { projectLibrary: library, storage } = getPlatform()
   if (!library) return () => {}
   const saver = createAutosave({
     delayMs: AUTOSAVE_DELAY_MS,
     canSave,
     async save() {
       const id = useLibraryStore.getState().currentId
-      if (id !== null && kept && isProjectDirty(projectOf(useAppStore.getState()), kept)) await writeOpenProject(library, id)
+      if (autosaveWrites(projectOf(useAppStore.getState()), id, kept, !leftOut && !keeping)) await writeOpenProject(library, id)
     },
     onError: (err) => showToast({ kind: 'error', text: `Enregistrement automatique dans Mes projets impossible : ${errorMessage(err)}` }),
   })
   autosave = saver
   const unsubscribe = useAppStore.subscribe((state, previous) => {
-    if (useLibraryStore.getState().currentId !== null && isProjectDirty(projectOf(state), projectOf(previous))) saver.changed()
+    const keptOrKeepable = useLibraryStore.getState().currentId !== null || state.tracks.length > 0
+    if (keptOrKeepable && isProjectDirty(projectOf(state), projectOf(previous))) saver.changed()
+  })
+  const forget = useLibraryStore.subscribe((state, previous) => {
+    if (state.currentId !== previous.currentId) rememberOpenEntry(storage, state.currentId)
   })
   return () => {
     unsubscribe()
+    forget()
     saver.cancel()
     if (autosave === saver) autosave = null
   }

@@ -16,7 +16,7 @@ import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
-import { flushAutosave, setOpenEntry } from './library'
+import { flushAutosave, lastOpenProject, setOpenEntry } from './library'
 import { effectiveProjectName, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
 import type { ToastInput } from './toast'
@@ -53,9 +53,9 @@ export async function saveExportedFile(url: string, fileName: string): Promise<v
 
 /**
  * Replace everything by the project in `file`; says so, with the warnings of the file, or why it failed. `entry`: the
- * « Mes projets » entry it comes from (its name wins, it is saved automatically from now on).
+ * « Mes projets » entry it comes from (its name wins, it is saved automatically from now on); `reopened` at start-up.
  */
-export async function openProject(file: File, entry: ProjectEntry | null = null): Promise<void> {
+export async function openProject(file: File, entry: ProjectEntry | null = null, reopened = false): Promise<void> {
   // a change of the project being replaced, still waiting for its autosave
   await flushAutosave()
   try {
@@ -67,13 +67,28 @@ export async function openProject(file: File, entry: ProjectEntry | null = null)
     store.setProjectName(name)
     store.markProjectSaved()
     setOpenEntry(entry?.id ?? null)
-    const opened = `Projet « ${effectiveProjectName(name, store.tracks[0]?.name)} » ouvert`
+    const opened = `Projet « ${effectiveProjectName(name, store.tracks[0]?.name)} » ${reopened ? 'rouvert' : 'ouvert'}`
     if (project.warnings.length > 0) showToast({ kind: 'info', text: `${opened}.\n${project.warnings.join('\n')}` })
     else showToast({ kind: 'success', text: opened })
   } catch (err) {
     const reason = errorMessage(err)
     showToast({ kind: 'error', text: `Impossible d'ouvrir « ${file.name} » : ${reason}` })
   }
+}
+
+let reopening: Promise<void> | null = null
+
+/**
+ * At start-up, once: the « Mes projets » entry open when the app was last left (a phone may have discarded the page),
+ * unless the desktop app was started for a batch render (`rendering`) or a track or project came first.
+ */
+export function reopenLastProject(rendering: Promise<boolean>): Promise<void> {
+  reopening ??= rendering.then(async (busy) => {
+    const last = busy ? null : await lastOpenProject()
+    const { tracks, loading } = useAppStore.getState()
+    if (last && tracks.length === 0 && !loading) await openProject(last.file, last.entry, true)
+  })
+  return reopening
 }
 
 /** Files picked with « Ouvrir » or dropped on the window: the first project is opened, the tracks are imported. */

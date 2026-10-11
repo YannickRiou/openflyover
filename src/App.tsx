@@ -20,7 +20,7 @@ import { installCloseGuard, installLibraryAutosave } from './ui/library'
 import { OverlayPanel } from './ui/OverlayPanel'
 import { PanelSection } from './ui/PanelSection'
 import { PoiPanel } from './ui/PoiPanel'
-import { chooseFilesToOpen, openFiles, saveProject } from './ui/projectActions'
+import { chooseFilesToOpen, openFiles, reopenLastProject, saveProject } from './ui/projectActions'
 import { ProjectPanel } from './ui/ProjectPanel'
 import { LightSettings, MapSettings, WeatherSettings } from './ui/SettingsPanel'
 import { useSafeZonesStore } from './ui/SafeZones'
@@ -156,9 +156,11 @@ export default function App() {
   const collapsedRef = useRef(shell.collapsed)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
 
-  // desktop: a batch asked on the command line runs once the app is up, then the app quits (export/cliRender.ts)
+  // desktop: a batch asked on the command line runs once the app is up, then the app quits (export/cliRender.ts);
+  // otherwise the project open when the app was last left comes back
   useEffect(() => {
-    if (getPlatform().capabilities.isDesktop) void import('./export/cliRender').then((m) => m.runCliRenderIfAsked())
+    const rendering = getPlatform().capabilities.isDesktop ? import('./export/cliRender').then((m) => m.runCliRenderIfAsked()) : Promise.resolve(false)
+    void reopenLastProject(rendering)
   }, [])
 
   // remember the tab and the folded panel chosen by the user (not a fold caused by the export drawer)

@@ -338,8 +338,8 @@ const SCENARIOS = [
   },
   {
     id: 'projet',
-    title: 'Projet enregistré puis rouvert',
-    async run({ page, url }) {
+    title: 'Projet gardé tout seul et rouvert au rechargement, puis enregistré et ouvert depuis son fichier',
+    async run({ page }) {
       const before = { texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       const since = Date.now() - 1000
       await clickButton(page, 'Enregistrer')
@@ -348,17 +348,46 @@ const SCENARIOS = [
       const project = JSON.parse(readFileSync(file.path, 'utf8'))
       assert(Array.isArray(project.tracks) && project.tracks.length === 1, 'le projet enregistré ne contient pas la trace')
 
-      // a fresh page (nothing is saved automatically), then « Ouvrir un projet… » of the welcome card
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
-      await page.waitForSelector('#empty-title', { visible: true, timeout: STEP_MS })
-      const [chooser] = await Promise.all([page.waitForFileChooser({ timeout: STEP_MS }), clickButton(page, 'Ouvrir un projet')])
-      await chooser.accept([file.path])
-      await page.waitForSelector('.toast::-p-text(ouvert)', { visible: true, timeout: STEP_MS })
+      /** the value shown by the « Exposition » row (« Lumière » tab, mounted even when hidden) */
+      const exposure = () =>
+        page.evaluate(
+          () =>
+            [...document.querySelectorAll('#tab-panel-lumiere .setting-row__head')]
+              .find((b) => b.textContent.startsWith('Exposition'))
+              ?.querySelector('.setting-row__value').textContent ?? '',
+        )
+      // the sample is kept in « Mes projets » by itself: a change is written by the autosave (« Enregistré » again)
+      if (await page.evaluate(() => document.getElementById('tab-lumiere')?.getAttribute('aria-selected') !== 'true')) {
+        await page.click('#tab-lumiere')
+      }
+      await page.click('#tab-panel-lumiere .setting-row__head::-p-text(Exposition)')
+      await until(page, () => document.activeElement?.matches('#tab-panel-lumiere .setting-row__body input[type="range"]'))
+      await page.keyboard.press('ArrowRight')
+      await until(page, () => document.querySelector('.topbar__state--dirty'))
+      await until(page, () => document.querySelector('.topbar__state')?.textContent === 'Enregistré')
+      const changed = await exposure()
+      assert(changed.startsWith('+0,5'), `exposition après le changement : ${changed}`)
+      await blur(page)
+
+      // the page reloaded (a phone discarding the tab in the background): the project comes back with the change
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: STEP_MS })
+      await page.waitForSelector('.toast::-p-text(rouvert)', { visible: true, timeout: STEP_MS })
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
-      const after = { texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
+      const reopened = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       assert(
-        after.texts === before.texts && after.stops === before.stops,
-        `timeline différente après réouverture : avant ${JSON.stringify(before)}, après ${JSON.stringify(after)}`,
+        reopened.exposure === changed && reopened.texts === before.texts && reopened.stops === before.stops,
+        `projet rouvert différent : avant ${JSON.stringify({ exposure: changed, ...before })}, après ${JSON.stringify(reopened)}`,
+      )
+
+      // « Ouvrir » of the top bar: the file saved before the change
+      const [chooser] = await Promise.all([page.waitForFileChooser({ timeout: STEP_MS }), page.click('.topbar button::-p-text(Ouvrir)')])
+      await chooser.accept([file.path])
+      await page.waitForSelector('.toast::-p-text(» ouvert)', { visible: true, timeout: STEP_MS })
+      await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
+      const after = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
+      assert(
+        !after.exposure.startsWith('+') && after.texts === before.texts && after.stops === before.stops,
+        `projet du fichier différent : avant ${JSON.stringify(before)}, après ${JSON.stringify(after)}`,
       )
     },
   },
@@ -440,6 +469,11 @@ const SCENARIOS = [
       // its own page: switching an open page to touch emulation reloads it
       const page = await newPage()
       try {
+        // the home screen, not the project left open by the other scenarios
+        await page.evaluateOnNewDocument(() => {
+          // about:blank, the page's first document, has no storage
+          if (location.protocol.startsWith('http')) localStorage.removeItem('openflyover.lastProject.v1')
+        })
         await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
         const tap = async (selector) => (await page.waitForSelector(selector, { visible: true, timeout: STEP_MS })).tap()

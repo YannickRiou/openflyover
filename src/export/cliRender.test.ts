@@ -24,7 +24,7 @@ describe('command-line batch', () => {
 
   it('asks nothing outside the desktop app', async () => {
     const invoke = vi.fn(async () => null)
-    await runCliRenderIfAsked(invoke)
+    expect(await runCliRenderIfAsked(invoke)).toBe(false)
     expect(invoke).not.toHaveBeenCalled()
   })
 })
