@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Mes projets**: a project with a track is kept and saved by itself, and the project left open comes back at the
+  next start (« Projet … rouvert »), also when a phone has discarded the tab in the background.
 - **Phones and tablets**: bottom sheets, tab bar, touch gestures, installable web app (offline shell, Android share
   target, « Partager / Enregistrer »), device budget for mobile GPUs.
 - **Flyover camera**: smooth on long, fast or sparsely recorded tracks (a 540 km raid in 4 min 30 s no longer swings

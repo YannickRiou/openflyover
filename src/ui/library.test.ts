@@ -1,6 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Track } from '../core/types'
-import { closeLoss, confirmClose, createAutosave, formatProjectSize, projectSummary, settleWithin } from './library'
+import { DEFAULT_SETTINGS } from '../state/store'
+import { keyValueStore } from '../platform'
+import { createProjectLibrary } from '../platform/projectLibrary'
+import type { LibraryFiles } from '../platform/projectLibrary'
+import {
+  LAST_PROJECT_KEY,
+  autosaveWrites,
+  closeLoss,
+  confirmClose,
+  createAutosave,
+  formatProjectSize,
+  lastOpenProject,
+  projectSummary,
+  rememberOpenEntry,
+  settleWithin,
+} from './library'
 import type { CloseLoss, CloseSteps } from './library'
 
 const track = (name: string, distanceM: number) => ({ name, stats: { distanceM } }) as Track
@@ -166,5 +181,57 @@ describe('closing the window or tab', () => {
       await vi.advanceTimersByTimeAsync(0)
       expect(settled).toBe(true)
     })
+  })
+})
+
+describe('« Mes projets »: kept by itself, reopened at start', () => {
+  const project = (tracks: Track[], name = '') => ({ settings: DEFAULT_SETTINGS, tracks, name })
+  const one = [track('Jour 1', 850)]
+
+  it('a project with a track gets an entry, unless left out; an empty one never', () => {
+    expect(autosaveWrites(project(one), null, null, true)).toBe(true)
+    expect(autosaveWrites(project([]), null, null, true)).toBe(false)
+    expect(autosaveWrites(project(one), null, null, false)).toBe(false)
+  })
+
+  it('a kept project is written again only when it changed since its last write', () => {
+    const written = project(one)
+    expect(autosaveWrites(written, 'p1', written, true)).toBe(false)
+    expect(autosaveWrites({ ...written, name: 'Tour' }, 'p1', written, true)).toBe(true)
+    // never a second entry for a kept project, whatever `keepNew`
+    expect(autosaveWrites({ ...written, name: 'Tour' }, 'p1', written, false)).toBe(true)
+  })
+
+  function memoryFiles(): LibraryFiles {
+    const files = new Map<string, string>()
+    return {
+      names: async () => [...files.keys()],
+      read: async (name) => files.get(name) ?? null,
+      write: async (name, text) => void files.set(name, text),
+      remove: async (name) => void files.delete(name),
+    }
+  }
+
+  it('reopens the remembered entry with its document', async () => {
+    const storage = keyValueStore(null)
+    const projectLibrary = createProjectLibrary(memoryFiles(), () => 1, () => 'p1')
+    await projectLibrary.save(null, { name: 'Tour', summary: '', text: '{"version":2}' })
+    expect(await lastOpenProject({ storage, projectLibrary })).toBeNull()
+    rememberOpenEntry(storage, 'p1')
+    const last = await lastOpenProject({ storage, projectLibrary })
+    expect(last?.entry.name).toBe('Tour')
+    expect(await last?.file.text()).toBe('{"version":2}')
+    rememberOpenEntry(storage, null)
+    expect(storage.get(LAST_PROJECT_KEY)).toBeNull()
+  })
+
+  it('starts on the home screen when the entry is gone, and forgets it', async () => {
+    const storage = keyValueStore(null)
+    rememberOpenEntry(storage, 'gone')
+    const projectLibrary = createProjectLibrary(memoryFiles())
+    expect(await lastOpenProject({ storage, projectLibrary })).toBeNull()
+    expect(storage.get(LAST_PROJECT_KEY)).toBeNull()
+    // no library (page without Cache Storage): nothing to reopen
+    expect(await lastOpenProject({ storage, projectLibrary: null })).toBeNull()
   })
 })
