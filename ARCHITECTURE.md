@@ -83,7 +83,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/scene/touchGesture.ts` | fingers moving the 3D view (lower pixel ratio, see "Device budget") | tested: `watchTouchGesture`, `TOUCH_SETTLE_MS` |
 | `src/offline/*` | offline tile packs (see "Offline packs") | pure, tested: `planOfflineTiles`, `packImageryLevel`, `splitDistanceM`, `CORRIDOR_WIDTHS_M`, `MAX_PACK_TILES` (`plan.ts`); `offlinePolicy`, `OFFLINE_POLICIES` (`policy.ts`); `startPackDownload`, `createDailyQuota` (`download.ts`); `createPackRegistry`, `createStoredTileReader`, `packIdFor`, `sourcePrefixes` (`packs.ts`); not pure: `useOfflineStore`, `installOfflineTiles`, `preparePack`, `pausePack`, `resumePack`, `cancelPack`, `deletePack` (`store.ts`), `OfflinePanel` (`src/ui`) |
 | `src/state/store.ts` | zustand state | `useAppStore`, `Settings`, `Playback`, `AppState`, `resetAppStore` |
-| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextTabIndex`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `settleSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested) |
+| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextTabIndex`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested) |
 
 ### Development rules
 
@@ -292,7 +292,7 @@ ink, 7.3:1).
   exposure, sun, colour grading), **Survol** (flyover; camera, pacing, highlights), **Objectif** (lens effects),
   **Habillage** (overlay), **Projet** (project; projects, presets, offline packs). All tabs stay mounted (`hidden`): weather, landmarks and export have
   side effects. `App` builds their contents, the stage and the timeline once per track state (`useMemo`, the timeline
-  also per `sheetOpen`): a tab switch re-renders the shell (tab bar, top bar, status bar), not the eight panels nor the
+  also per `sheetOpen` and the phone layout): a tab switch re-renders the shell (tab bar, top bar, status bar), not the eight panels nor the
   3D scene (see "Phone and tablet"). Flat sections separated by a rule, sticky section header (title + "modifié / Par défaut" (modified / default)). A click
   on the open tab, the button at the bottom of the rail or `[` collapses the panel. Tab and collapsed state are remembered by the browser
   (`getPlatform().storage` `openflyover.shell.v1`, `parseShellPrefs`: an unknown tab id falls back to Trace), not by the project.
@@ -376,19 +376,34 @@ ink, 7.3:1).
 - **Phone and tablet** (`BOTTOM_SHEET_QUERY` and `COMPACT_QUERY` in `shell.ts`, same strings as the CSS):
   - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo, the
     project name, « Plus d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: undo, redo, open, save) and « Exporter » with its
-    label; no format picker (the drawer tiles) nor « ? »; the timeline starts folded (`Timeline`: strip with play and
-    time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its unfolding folds them
-    (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`.sources`) are full screen. Safe areas
+    label; no format picker (the drawer tiles) nor « ? »; in landscape the timeline starts folded (`Timeline`: strip
+    with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
+    unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`.sources`) are full screen. Safe areas
     (`viewport-fit=cover` in `index.html`, `env(safe-area-inset-*)` on the shell rows and sides), `100dvh`, no page
     overscroll. A touch tablet in portrait (`max-width: 1023px` and `pointer: coarse`) also takes the « Plus d'actions »
     menu.
-  - *Bottom sheets* (`max-width: 699px`, portrait phone): the rail is a bottom tab bar with labels; panel, export drawer
-    and inspector are bottom sheets above it, with a grip (`SheetHandle.tsx`) that drags the sheet and settles it on
-    a snap (`settleSheet`: `SHEET_SNAPS` peek 0.3 / half 0.55 / full of the room, a flick carries it one step, below half
-    the peek it closes); the snap is the sheet's `data-snap` (CSS heights), a tap on the grip switches half / full,
-    ↑ / ↓ step. The bottom tab bar holds all eight tabs (72 px wide at least, so the next one peeks past the edge) and scrolls
-    sideways. Sheet content scrolls inside the sheet (`overscroll-behavior: contain`); a press on the view does not
-    close it (it does on a tablet side sheet). Landscape phone: the rail stays on the side, without its fold button.
+  - *Portrait phone* (`max-width: 699px`, after CapCut; `App` reads it with `usePhone`): from top to bottom the top
+    bar, the 3D preview (`--phone-preview-h` 42dvh, only with a film: `.view:has(> .film-tl)`), the timeline's bar as a
+    slim transport row (play and time, then « Arrêt », « Vitesse », « Texte », « Média », speed and « Options » in a row
+    that scrolls sideways, `.film-tl__tools`; no ■, readout, zoom nor fold), the timeline (`Timeline` `centred`, below),
+    the bottom tab bar (all eight tabs, 72 px wide at least so the next one peeks past the edge, scrolling sideways),
+    the status bar. Panel, export drawer and inspector are half sheets from under the transport row to the status bar,
+    over the timeline and the tab bar, never over the preview (sliding in, not under `prefers-reduced-motion`). Their
+    head (`SheetHandle.tsx`: grip, tab name, « Terminé » ✓) closes them on ✓ or when dragged down past a third of
+    their height, a flick included (`dismissSheet`); the ✕ of the drawer and the inspector is hidden. Sheet content
+    scrolls inside (`overscroll-behavior: contain`); a press on the view does not close a sheet (it does on a tablet
+    side sheet). A selected block (`inspecting`) replaces the tab bar with its actions (`BlockTools` in `App`:
+    « Terminé » deselects, « Modifier » opens `FilmInspector` in the half sheet (`editing`, `edit` event; ✓ closes it
+    and keeps the selection), « Supprimer », « Sans plan » for the opening and the closing, `removeFilmItem`).
+    Landscape phone: the rail stays on the side, without its fold button; the timeline strip as above.
+  - *Centred timeline* (`Timeline` `centred`, portrait phone): the lanes carry half their width of blank at both
+    ends, the playhead is a line fixed in the middle (`.film-tl__body::after`), so the horizontal scroll is the film
+    time (`centredScrollLeft`, `centredTime` in `film/timeline.ts`): a layout effect after every render scrolls to the
+    playhead (and remembers it), any other scroll (finger, momentum, wheel) seeks. The content takes `touch-action:
+    pan-x pan-y`, so the browser scrolls under the finger; a press is a tap if released within 8 px (a tap on a block
+    selects it, elsewhere it seeks to the tapped time); the selected block takes `touch-action: none` and drags and
+    stretches as before. A touch pauses the playback. A pinch zooms around the playhead (×4 at first, so a 4 s stop
+    is ~80 px wide); lane names hidden, lanes 36 px.
   - *Tab switch cost* (October 2026, headless Chromium, 390 × 844 at DPR 3, touch, CPU throttled 4×, sample loaded,
     scene idle): the sheets lie over the view, so a tab switch, an opening or a fold of the sheet never resizes the 3D
     canvas nor draws a frame. Before the `useMemo` in `App`: 437 components re-rendered and the R3F scene reconciled

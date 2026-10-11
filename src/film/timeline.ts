@@ -59,6 +59,16 @@ export function zoomAt(zoom: number, factor: number, anchorPx: number, scrollLef
 }
 
 /**
+ * Centred timeline (phone): the lanes carry half the visible width of blank at both ends and the playhead stays in the
+ * middle, so the scroll is the film time: `t` seconds at `pxPerS` sit in the middle at this scroll. A zoom keeps the
+ * playhead in place by itself (same `t`, new scale).
+ */
+export const centredScrollLeft = (t: number, pxPerS: number) => Math.max(0, t * pxPerS)
+
+/** Film time in the middle of the centred timeline scrolled by `scrollLeft`, within the film. */
+export const centredTime = (scrollLeft: number, pxPerS: number, totalS: number) => (pxPerS > 0 ? clamp(scrollLeft / pxPerS, 0, totalS) : 0)
+
+/**
  * Speed of the automatic scroll of the zoomed timeline while a block or the playhead is dragged near one of its
  * edges (pixels per second, negative to the left): zero farther than `edgePx` from both edges, growing linearly to
  * `maxPxPerS` at the edge and beyond it.

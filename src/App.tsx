@@ -1,8 +1,8 @@
-import { Suspense, lazy, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { useBatchStore } from './export/batch'
 import { isExportBusy, useExportStore } from './export/store'
-import { addStop, addText } from './film/timeline'
+import { addStop, addText, removeFilmItem } from './film/timeline'
 import { getPlatform } from './platform'
 import { getSettingsHistory, installHistoryShortcuts, installSliderGestures } from './project/history'
 import { editFilm, getFilmSource, useFilmClock } from './scene/usePacing'
@@ -89,6 +89,14 @@ const isExporting = () => isExportBusy(useExportStore.getState().phase) || useBa
 /** a modal dialog (help, sources) is open: it takes the keyboard, Escape closes it */
 const isDialogOpen = () => document.querySelector('dialog[open]') !== null
 
+/** The portrait phone layout (`BOTTOM_SHEET_QUERY`): preview on top, timeline, tab bar, half sheets. */
+const subscribePhone = (onChange: () => void) => {
+  const query = window.matchMedia?.(BOTTOM_SHEET_QUERY)
+  query?.addEventListener('change', onChange)
+  return () => query?.removeEventListener('change', onChange)
+}
+const usePhone = () => useSyncExternalStore(subscribePhone, () => matchesQuery(BOTTOM_SHEET_QUERY))
+
 /** Escape is left to an open menu inside this element (it closes itself first). */
 const handlesOwnEscape = (target: EventTarget | null) => target instanceof Element && target.closest('[data-local-escape]') !== null
 
@@ -134,15 +142,49 @@ function SeekShortcuts() {
   return null
 }
 
+/**
+ * Portrait phone: the actions of the selected timeline block in place of the tab bar (« Terminé » deselects it,
+ * « Modifier » opens its inspector in the half sheet).
+ */
+function BlockTools({ onEdit, disabled }: { onEdit(): void; disabled: boolean }) {
+  const item = useAppStore((s) => s.filmSelection)
+  const shot = useAppStore((s) => (item === 'opening' || item === 'closing' ? s.settings.film[item] : null))
+  const clock = useFilmClock()
+  if (item === null) return null
+  const isStop = clock.stops.some((s) => s.id === item)
+  return (
+    <div className="rail block-tools" role="toolbar" aria-label="Élément sélectionné">
+      <button type="button" className="rail__tab block-tools__done" onClick={() => useAppStore.getState().setFilmSelection(null)}>
+        <Icon name="check" size={22} />
+        <span className="rail__label">Terminé</span>
+      </button>
+      <button type="button" className="rail__tab" onClick={onEdit} disabled={disabled}>
+        <Icon name="sliders-horizontal" size={22} />
+        <span className="rail__label">Modifier</span>
+      </button>
+      <button
+        type="button"
+        className="rail__tab"
+        disabled={disabled || shot?.style === 'aucune'}
+        onClick={() => editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop })}
+      >
+        <Icon name="trash-2" size={22} />
+        <span className="rail__label">{shot ? 'Sans plan' : 'Supprimer'}</span>
+      </button>
+    </div>
+  )
+}
+
 export default function App() {
   const hasTracks = useAppStore((s) => s.tracks.length > 0)
   const exportBusy = useExportStore((s) => isExportBusy(s.phase))
   const batchRunning = useBatchStore((s) => s.phase === 'running')
   const exporting = exportBusy || batchRunning
   const selected = useAppStore((s) => s.filmSelection !== null && s.tracks.length > 0)
+  const phone = usePhone()
   const [shell, dispatch] = useReducer(shellReducer, undefined, () =>
     shellReducer(
-      { ...loadPrefs(), ...(isDrawer() && { collapsed: true }), dockOpen: false, collapsedByDock: false, inspecting: false, home: null },
+      { ...loadPrefs(), ...(isDrawer() && { collapsed: true }), dockOpen: false, collapsedByDock: false, inspecting: false, editing: false, home: null },
       { type: 'tracks', loaded: useAppStore.getState().tracks.length > 0 },
     ),
   )
@@ -400,17 +442,19 @@ export default function App() {
     }),
     [hasTracks],
   )
-  const sheetOpen = !shell.collapsed || shell.dockOpen
+  // the landscape phone timeline folds under a sheet; the portrait one stays (the sheet lies over it)
+  const sheetOpen = (!shell.collapsed || shell.dockOpen) && !phone
   const timeline = useMemo(
     () => (
       <Timeline
         sheetOpen={sheetOpen}
+        centred={phone}
         onUnfold={() => {
           if (matchesQuery(COMPACT_QUERY) && !isExporting()) dispatch({ type: 'fold' })
         }}
       />
     ),
-    [sheetOpen],
+    [sheetOpen, phone],
   )
 
   return (
@@ -423,7 +467,8 @@ export default function App() {
       />
 
       <div className={shell.collapsed ? 'shell__body shell__body--collapsed' : 'shell__body'}>
-        <nav className="rail" aria-label="Panneaux">
+        {/* portrait phone: a selected block's actions take the place of the tab bar */}
+        <nav className="rail" aria-label="Panneaux" hidden={phone && shell.inspecting}>
           <div className="rail__tabs" role="tablist" aria-label="Panneaux de réglages" aria-orientation="vertical">
             {tabs.map((tab, i) => {
               const selected = shell.tab === tab
@@ -470,7 +515,7 @@ export default function App() {
         {/* every tab stays mounted: weather, landmarks and export have side effects */}
         {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
         <aside id="side-panel" className="panel" aria-label="Réglages" hidden={shell.collapsed} inert={exporting}>
-          <SheetHandle onClose={() => dispatch({ type: 'fold' })} />
+          <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
           {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
         </aside>
 
@@ -485,10 +530,11 @@ export default function App() {
             {dockMounted && <ExportPanel onClose={exporting ? undefined : () => dispatch({ type: 'close-dock' })} />}
           </Suspense>
         </aside>
-        {/* the export drawer goes first */}
-        <aside className="dock" aria-label="Inspecteur" hidden={shell.dockOpen || !shell.inspecting} inert={exporting}>
-          <SheetHandle onClose={() => useAppStore.getState().setFilmSelection(null)} />
-          {shell.inspecting && !shell.dockOpen && (
+        {phone && shell.inspecting && <BlockTools disabled={exporting} onEdit={() => dispatch({ type: 'edit', open: true })} />}
+        {/* the export drawer goes first; on a portrait phone the inspector waits for « Modifier » */}
+        <aside className="dock" aria-label="Inspecteur" hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
+          <SheetHandle onClose={() => dispatch({ type: 'edit', open: false })} />
+          {shell.inspecting && !shell.dockOpen && (!phone || shell.editing) && (
             <Suspense>
               <FilmInspector />
             </Suspense>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Track } from '../core/types'
 import { DEFAULT_SETTINGS } from '../state/store'
 import {
+  dismissSheet,
   effectiveProjectName,
   frameRect,
   isFileDrag,
@@ -11,7 +12,6 @@ import {
   parseFoldPrefs,
   parseShellPrefs,
   routeOpenedFiles,
-  settleSheet,
   shellReducer,
   shownTabs,
   SHELL_TABS,
@@ -121,7 +121,7 @@ describe('project name and save state', () => {
 })
 
 describe('shellReducer', () => {
-  const base: ShellState = { tab: 'trace', collapsed: false, dockOpen: false, collapsedByDock: false, inspecting: false, home: null }
+  const base: ShellState = { tab: 'trace', collapsed: false, dockOpen: false, collapsedByDock: false, inspecting: false, editing: false, home: null }
 
   it('a click on the open tab folds the panel, another tab unfolds it', () => {
     const folded = shellReducer(base, { type: 'click-tab', tab: 'trace', narrow: false })
@@ -181,6 +181,20 @@ describe('shellReducer', () => {
     const deselected = shellReducer(drawer, { type: 'inspect', open: false, narrow: true })
     expect(deselected).toMatchObject({ dockOpen: true, inspecting: false, collapsed: true })
     expect(shellReducer(deselected, { type: 'close-dock' })).toMatchObject({ collapsed: false, collapsedByDock: false })
+  })
+
+  it('portrait phone: « Modifier » opens the inspector of the selected block, « Terminé » closes it and keeps the selection', () => {
+    expect(shellReducer(base, { type: 'edit', open: true })).toBe(base)
+    const selected = shellReducer(base, { type: 'inspect', open: true, narrow: true })
+    expect(selected.editing).toBe(false)
+    const editing = shellReducer(selected, { type: 'edit', open: true })
+    expect(editing).toMatchObject({ inspecting: true, editing: true, collapsed: true })
+    expect(shellReducer(editing, { type: 'edit', open: true })).toBe(editing)
+    expect(shellReducer(editing, { type: 'edit', open: false })).toMatchObject({ inspecting: true, editing: false })
+    // deselected, or the panel unfolded: the inspector goes with the selection
+    expect(shellReducer(editing, { type: 'inspect', open: false, narrow: true })).toMatchObject({ inspecting: false, editing: false })
+    expect(shellReducer(editing, { type: 'click-tab', tab: 'carte', narrow: true })).toMatchObject({ inspecting: false, editing: false })
+    expect(shellReducer(editing, { type: 'tracks', loaded: false })).toMatchObject({ inspecting: false, editing: false })
   })
 
   it('unfolding the panel on a narrow window hides the inspector too', () => {
@@ -246,18 +260,16 @@ describe('parseFoldPrefs', () => {
   })
 })
 
-describe('settleSheet', () => {
-  it('settles a slow release on the nearest snap', () => {
-    expect(settleSheet(0.32, 0)).toBe('peek')
-    expect(settleSheet(0.5, 0)).toBe('half')
-    expect(settleSheet(0.9, 0)).toBe('full')
+describe('dismissSheet', () => {
+  it('closes a half sheet dragged down past a third of its height, not a shorter drag', () => {
+    expect(dismissSheet(150, 400, 0)).toBe(true)
+    expect(dismissSheet(100, 400, 0)).toBe(false)
+    expect(dismissSheet(0, 400, 0)).toBe(false)
   })
 
-  it('carries a flick to the next snap, and closes below half the peek', () => {
-    expect(settleSheet(0.55, 2)).toBe('full')
-    expect(settleSheet(0.55, -1.5)).toBe('peek')
-    expect(settleSheet(0.3, -1)).toBeNull()
-    expect(settleSheet(0.1, 0)).toBeNull()
+  it('a flick down closes from a short drag, a move back up keeps it', () => {
+    expect(dismissSheet(40, 400, 1000)).toBe(true)
+    expect(dismissSheet(150, 400, -800)).toBe(false)
   })
 })
 
