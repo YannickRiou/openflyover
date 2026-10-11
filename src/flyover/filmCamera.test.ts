@@ -18,6 +18,9 @@ import {
   heldMotionTimeS,
   JUMP_S,
   keyedCamera,
+  keyFramingAt,
+  keyFramingFrom,
+  keyView,
   markerAt,
   OVERVIEW_DISTANCE_FACTOR,
   OVERVIEW_PITCH_DEG,
@@ -549,6 +552,75 @@ describe('camera keys', () => {
         previous = view
       }
     }
+  })
+})
+
+describe('keyframes (« Images clés »): the view taken, exactly', () => {
+  const none = { style: 'aucune', durationS: 1 } as const
+  const hills = (lon: number, lat: number) => 1000 + 150 * Math.sin(lon * 400) * Math.cos(lat * 300)
+  // a styled camera smoothed in time over relief: none of it moves the pose at the key
+  const styled: FilmViewOptions = { ...options, camera: { ...DEFAULT_CAMERA, style: 'cinematic' } }
+  const direction = (v: { position: Vector3; target: Vector3 }) => v.target.clone().sub(v.position).normalize()
+  const DEG = Math.PI / 180
+
+  it('a pose round-trips through its view, a stop widening and orbiting it included', () => {
+    const base = { target: new Vector3(100, 1200, -50), reference: new Vector3(0.6, 0, -0.8), autoDistanceM: 800, wide: 0.4, orbitRad: 0.3 }
+    const pose = { distance: 1.7, pitchDeg: 23.5, headingOffsetDeg: -131.2, aimRightM: 42, aimAheadM: -17 }
+    const view = keyView(base, pose)
+    const back = keyFramingFrom(base, view.position, view.target)
+    for (const field of Object.keys(pose) as (keyof typeof pose)[]) expect(back[field]).toBeCloseTo(pose[field], 9)
+    // a panned or refitted orbit looks at another point of the same line of sight: same pose
+    const farther = keyFramingFrom(base, view.position, view.target.clone().lerp(view.position, -0.7))
+    for (const field of Object.keys(pose) as (keyof typeof pose)[]) expect(farther[field]).toBeCloseTo(pose[field], 9)
+  })
+
+  it('the film shows the captured camera at the keyframe, eases in and out, and keeps the film camera away from it', () => {
+    const plain = clockOf(none, none)
+    const t = 20
+    const p = plain.progressAtTime(t)
+    const film = computeFilmView(path, plain, t, p, frame, hills, styled)
+    // an orbited and panned 3D view
+    const position = film.target.clone().add(new Vector3(-700, 450, 300))
+    const lookAt = film.target.clone().add(new Vector3(30, 0, -20))
+    const pose = keyFramingAt(path, plain, t, p, frame, hills, styled, position, lookAt)
+    const clock = clockOf(none, none, [], [{ id: 'camera-1', atM: p * path.lengthM, ...pose }])
+    const { timeS } = clock.cameraKeys[0]
+    const viewAt = (c: typeof clock, s: number) => computeFilmView(path, c, s, c.progressAtTime(s), frame, hills, styled)
+    const at = viewAt(clock, timeS)
+    expect(at.position.distanceTo(position)).toBeLessThan(0.01)
+    expect(direction(at).angleTo(lookAt.clone().sub(position).normalize()) / DEG).toBeLessThan(0.01)
+    // the ease (3 s at the base speed) and beyond: the film's own camera
+    expectSameView(viewAt(clock, timeS + 3.1), viewAt(plain, timeS + 3.1))
+    expectSameView(viewAt(clock, timeS - 3.1), viewAt(plain, timeS - 3.1))
+    // continuous: the ease covers the ~900 m to the taken view in 3 s
+    let previous = viewAt(clock, timeS - 4)
+    for (let s = timeS - 4; s <= timeS + 4; s += 1 / 30) {
+      const view = viewAt(clock, s)
+      expect(view.position.distanceTo(previous.position)).toBeLessThan(40)
+      previous = view
+    }
+  })
+
+  it('between two keyframes: each at its time, kept above the ground halfway', () => {
+    const plain = clockOf(none, none)
+    const take = (s: number, offset: Vector3) => {
+      const p = plain.progressAtTime(s)
+      const target = computeFilmView(path, plain, s, p, frame, hills, styled).target
+      return { atM: p * path.lengthM, ...keyFramingAt(path, plain, s, p, frame, hills, styled, target.clone().add(offset), target) }
+    }
+    const clock = clockOf(none, none, [], [
+      { id: 'camera-1', ...take(15, new Vector3(-400, 60, 0)) },
+      { id: 'camera-2', ...take(35, new Vector3(400, 60, 0)) },
+    ])
+    for (const key of clock.cameraKeys) {
+      const p = clock.progressAtTime(key.timeS)
+      const view = computeFilmView(path, clock, key.timeS, p, frame, hills, styled)
+      expect(view.position.distanceTo(computeFilmView(path, plain, key.timeS, p, frame, hills, styled).target)).toBeGreaterThan(300)
+    }
+    // halfway the pose swings over the target (heading eased the short way): above the relief there
+    const middle = computeFilmView(path, clock, 25, clock.progressAtTime(25), frame, hills, styled)
+    const below = frame.toLonLat(middle.position)
+    expect(middle.position.y).toBeGreaterThan(frame.toLocal(below.lon, below.lat, hills(below.lon, below.lat)).y)
   })
 })
 

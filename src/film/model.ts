@@ -264,11 +264,6 @@ export const AUDIO_DEFAULTS: Pick<FilmAudio, 'volume' | 'fadeInS' | 'fadeOutS'> 
 export const AUDIO_DURATION_RANGE = { min: 0.5, max: 3600 } as const
 export const FADE_RANGE = { min: 0, max: 30, step: 0.5 } as const
 
-/**
- * A framing of the flight camera at a place of the first track: distance, pitch and heading offset, same meaning
- * and ranges as the camera settings. The camera eases from one key to the next, and from the film's settings into
- * the first key and back to them after the last one (`keyedCamera`, flyover/filmCamera.ts).
- */
 /** A point of interest placed by hand: a name at a place on the ground, shown as a label in the view and the film. */
 export const POI_ICONS = ['epingle', 'refuge', 'bivouac', 'sommet', 'vue', 'photo', 'drapeau', 'eau', 'repas'] as const
 export type PoiIcon = (typeof POI_ICONS)[number]
@@ -293,6 +288,13 @@ export interface FilmPoi {
   icon?: PoiIcon
 }
 
+/**
+ * A keyframe (« Image clé »): the exact pose of the flight camera at a place of the first track, around the film's
+ * aim point there. `distance` (× the automatic distance), `pitchDeg` (above the horizon) and `headingOffsetDeg` (from
+ * the track's direction of travel, `keyReferenceAt`) place the camera around the aim point shifted by `aimRightM` /
+ * `aimAheadM` (a panned view; absent = 0). At the key the film shows that pose; it eases from one key to the next,
+ * and from the film's camera into the first key and back after the last one (`computeFilmView`).
+ */
 export interface FilmCameraKey {
   id: string
   /** distance along the first track (metres, same scale as `buildTrackPath`) */
@@ -300,7 +302,16 @@ export interface FilmCameraKey {
   distance: number
   pitchDeg: number
   headingOffsetDeg: number
+  aimRightM?: number
+  aimAheadM?: number
 }
+
+/** Validity ranges of a keyframe: any view the 3D orbit can take (the inspector sliders keep the camera ranges). */
+export const CAMERA_KEY_RANGES = {
+  distance: { min: 0.01, max: 1000 },
+  pitchDeg: { min: 0, max: 90 },
+  aimM: { min: -1e6, max: 1e6 },
+} as const
 
 /** Range of the speed factor (also its validity range in a loaded project). */
 export const SPEED_FACTOR_RANGE = { min: 0.25, max: 4 } as const
@@ -535,13 +546,16 @@ export function isValidPoi(poi: unknown): poi is FilmPoi {
 
 export function isValidCameraKey(key: unknown): key is FilmCameraKey {
   if (!isRecord(key)) return false
-  const { distance, pitchDeg, headingOffsetDeg } = CAMERA_RANGES
+  const { distance, pitchDeg, aimM } = CAMERA_KEY_RANGES
+  const { headingOffsetDeg } = CAMERA_RANGES
   return (
     isId(key.id) &&
     within(key.atM, 0, Number.MAX_VALUE) &&
     within(key.distance, distance.min, distance.max) &&
     within(key.pitchDeg, pitchDeg.min, pitchDeg.max) &&
-    within(key.headingOffsetDeg, headingOffsetDeg.min, headingOffsetDeg.max)
+    within(key.headingOffsetDeg, headingOffsetDeg.min, headingOffsetDeg.max) &&
+    (key.aimRightM === undefined || within(key.aimRightM, aimM.min, aimM.max)) &&
+    (key.aimAheadM === undefined || within(key.aimAheadM, aimM.min, aimM.max))
   )
 }
 
