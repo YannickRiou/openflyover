@@ -25,6 +25,8 @@ describe('budgetFor', () => {
       seaRender: 'volume',
       maxExportShortSide: 2160,
       maxLodHeightPx: Infinity,
+      maxVideoBitrate: Infinity,
+      memoryWarnBytes: 1.5e9,
       shadowMapSize: 4096,
     })
     // a laptop with little memory is still a computer
@@ -44,6 +46,8 @@ describe('budgetFor', () => {
       seaRender: 'surface',
       maxExportShortSide: 1080,
       maxLodHeightPx: 720,
+      maxVideoBitrate: 8e6,
+      memoryWarnBytes: 250e6,
       shadowMapSize: 2048,
     })
   })

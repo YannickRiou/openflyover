@@ -29,6 +29,10 @@ export interface DeviceBudget {
   maxExportShortSide: number
   /** tallest viewport (px) the terrain LOD is evaluated at during an export: tiles are chosen as for a view this high */
   maxLodHeightPx: number
+  /** ceiling of the video bitrate (bit/s) when the film is kept in memory (no direct disk write): its size is the RAM it takes */
+  maxVideoBitrate: number
+  /** estimated size (bytes) above which a film kept in memory is flagged as likely to exhaust the tab */
+  memoryWarnBytes: number
   /** texels per side of the relief's shadow map (memory grows with its square: estimated ~128 MB at 4096², ~32 MB at 2048²) */
   shadowMapSize: number
 }
@@ -45,10 +49,12 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   seaRender: 'volume',
   maxExportShortSide: 2160,
   maxLodHeightPx: Infinity,
+  maxVideoBitrate: Infinity,
+  memoryWarnBytes: 1.5e9,
   shadowMapSize: 4096,
 }
 
-const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx'> = {
+const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes'> = {
   maxPixelRatio: 2,
   movingPixelRatio: 1.5,
   tileBitmaps: 200,
@@ -84,6 +90,10 @@ export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits
     maxExportShortSide: phone ? 1080 : 1440,
     // about the height of the phone's preview: a 1080p or portrait export keeps the tiles the preview already holds
     maxLodHeightPx: phone ? 720 : Infinity,
+    // 1 MB/s: a 5 minute film is ~300 MB in memory, and the muxer's copies make the peak 2.5-3 times that
+    maxVideoBitrate: phone ? 8e6 : 12e6,
+    // iOS ends a tab well before the computers' 1.5 GB: the film, its copies at the end and the scene add up
+    memoryWarnBytes: 250e6,
   }
   if (memoryGb !== undefined && memoryGb <= LOW_MEMORY_GB) {
     return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024 }

@@ -143,6 +143,7 @@ vi.mock('mediabunny', () => {
   }
 })
 
+import { DESKTOP_BUDGET, budgetFor } from '../core/deviceBudget'
 import {
   ALPHA_CANDIDATES,
   AUDIO_LEAD_S,
@@ -155,6 +156,7 @@ import {
   createVideoEncoder,
   pickAudioCodec,
   pickCodec,
+  deviceBitrateCap,
   videoBitrate,
   type CanEncode,
   type CanEncodeAudio,
@@ -201,6 +203,19 @@ describe('videoBitrate', () => {
   it('is clamped', () => {
     expect(videoBitrate(320, 180, 10, 'standard', 'avc')).toBe(MIN_BITRATE)
     expect(videoBitrate(3840, 2160, 60, 'max', 'vp8')).toBe(MAX_BITRATE)
+  })
+
+  it('has a ceiling on a phone that keeps the film in memory, none on a computer', () => {
+    const phone = budgetFor({ coarsePointer: true, shortSidePx: 393 })
+    expect(deviceBitrateCap(phone, false)).toBe(8e6)
+    expect(videoBitrate(1920, 1080, 30, 'high', 'avc', 8e6)).toBe(8e6)
+    // 720p30 « élevée » is already under the ceiling: unchanged
+    expect(videoBitrate(1280, 720, 30, 'high', 'avc', 8e6)).toBe(videoBitrate(1280, 720, 30, 'high', 'avc', Infinity))
+    // written straight to disk (Chrome Android with a picker, one day): no ceiling
+    expect(deviceBitrateCap(phone, true)).toBe(Infinity)
+    expect(deviceBitrateCap(budgetFor({ coarsePointer: true, shortSidePx: 820 }), false)).toBe(12e6)
+    expect(deviceBitrateCap(DESKTOP_BUDGET, false)).toBe(Infinity)
+    expect(videoBitrate(1920, 1080, 30, 'high', 'avc')).toBe(videoBitrate(1920, 1080, 30, 'high', 'avc', Infinity))
   })
 })
 

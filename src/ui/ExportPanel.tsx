@@ -1,3 +1,4 @@
+import { deviceBudget } from '../core/deviceBudget'
 import { errorMessage } from '../core/errors'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -90,6 +91,11 @@ function formatMegabytes(bytes: number): string {
   return `${formatNumber(bytes / 1e6, 1)} Mo`
 }
 
+/** bytes -> "1,5 Go" or "250 Mo" (limit of the in-memory warning) */
+function formatLimit(bytes: number): string {
+  return bytes >= 1e9 ? `${formatNumber(bytes / 1e9, 1)} Go` : `${formatNumber(bytes / 1e6)} Mo`
+}
+
 /** Phones without a save picker hand the file to the share sheet, which needs a tap: no automatic download there. */
 function sharesFiles(): boolean {
   const { isDesktop, sharesFiles } = getPlatform().capabilities
@@ -163,7 +169,10 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const estimatedBytes =
     codec && !overlayOnly ? (videoBitrate(width, height, video.fps, video.quality, codec.codec) * totalFrames) / video.fps / 8 : 0
   // target video bitrate of the chosen quality (H.264 until the codec is known), shown under « Qualité »
-  const bitrateMbps = videoBitrate(width, height, video.fps, video.quality, codec?.codec ?? 'avc') / 1e6
+  const bitrate = videoBitrate(width, height, video.fps, video.quality, codec?.codec ?? 'avc')
+  const bitrateMbps = bitrate / 1e6
+  // phones and tablets keep the film in memory: its bitrate has a ceiling (the line shows the real one)
+  const bitrateCapped = bitrate < videoBitrate(width, height, video.fps, video.quality, codec?.codec ?? 'avc', Infinity)
   const secondsPerImage =
     timings.rendered > 0 ? (timings.renderMs + timings.waitMs + timings.encodeMs) / timings.rendered / 1000 : null
 
@@ -326,8 +335,10 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       {codec && streams && <p className="field__hint">Enregistrement direct sur le disque</p>}
       {codec && warnsInMemory(estimatedBytes, streams) && (
         <p className="field__hint">
-          Au-delà de 1,5 Go, le film gardé en mémoire peut saturer l'onglet : Chrome et Edge l'écrivent directement sur
-          le disque.
+          Au-delà de {formatLimit(deviceBudget().memoryWarnBytes)}, le film gardé en mémoire peut saturer l'onglet :{' '}
+          {deviceBudget().kind === 'desktop'
+            ? "Chrome et Edge l'écrivent directement sur le disque."
+            : 'essayez 720p ou un film plus court.'}
         </p>
       )}
       {codec === null && overlayOnly && (
@@ -452,7 +463,11 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               </label>
             ))}
           </div>
-          {!overlayOnly && <p className="field__hint">Débit vidéo : {formatNumber(bitrateMbps, 1)} Mbit/s</p>}
+          {!overlayOnly && (
+            <p className="field__hint">
+              Débit vidéo : {formatNumber(bitrateMbps, 1)} Mbit/s{bitrateCapped && ' (plafonné : le film reste en mémoire sur cet appareil)'}
+            </p>
+          )}
           <p className="field__hint">
             Règle aussi le rendu de l’export : nuages {CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase()}, flou de bougé {tier.maxSubFrames} rendus
             par image au plus. Le projet et l’aperçu ne changent pas.
@@ -772,7 +787,9 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         {!perTrack && estimate.seconds === null && films.length > 0 && ' Durée estimée après un premier film exporté.'}
       </p>
       {warnsInMemory(estimate.bytes, toFolder) && (
-        <p className="field__hint">Au-delà de 1,5 Go en tout, les films gardés en mémoire peuvent saturer l'onglet.</p>
+        <p className="field__hint">
+          Au-delà de {formatLimit(deviceBudget().memoryWarnBytes)} en tout, les films gardés en mémoire peuvent saturer l'onglet.
+        </p>
       )}
       {unencodable.length > 0 && (
         <p className="field__hint" role="alert">
