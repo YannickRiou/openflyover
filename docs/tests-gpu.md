@@ -74,6 +74,16 @@ reproduce it next to the box.
       images (it was 5 s → 14 s → 46 s), `en attente` ≤ ~6 loading; the film's horizon is softer than on a computer, the
       ground under the camera as sharp. In the preview, a low view looking at the horizon: no pumping of the far terrain
       on a still view or a slow orbit.
+- [ ] Final terrain in every image (« export-complete »): a film with a fast low flight over mountains, Haute, imagery « Fin », a
+      computer, tiles never loaded (clear the browser cache / a fresh profile): then play the file frame by frame (VLC, `,` / `.`)
+      through the fast sections: no image with coarser terrain than the next, no pale or grey tile that gets coloured a few
+      images later, no hole showing the sky; the `[export]` line counts « image(s) avant la fin du chargement » (0 on a good
+      connection) and the panel shows no such line. Same film a second time (tiles cached): identical frames to the first.
+      Throttled or flaky network (DevTools › Network › Slow 3G / Fast 3G, or an offline period of 10 s during the export,
+      or a firewall dropping the IGN host for a few seconds): the export slows down (« attente des tuiles » grows) instead of
+      capturing half-loaded views; images still captured before the end of the loading are counted while it runs and in the
+      result and history (« Images avant la fin du chargement »), and their number matches the coarse or grey tiles seen.
+      Before the change (commit `a3de51e`) the same film shows the coarse then fine image and the pale tiles.
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
       (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without

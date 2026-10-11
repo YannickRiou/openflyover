@@ -154,6 +154,8 @@ class FakeContext {
   drawImage = vi.fn()
 }
 
+const OffscreenCanvasInstances: unknown[] = []
+
 class FakeOffscreenCanvas {
   width: number
   height: number
@@ -161,6 +163,7 @@ class FakeOffscreenCanvas {
   constructor(width: number, height: number) {
     this.width = width
     this.height = height
+    OffscreenCanvasInstances.push(this)
   }
   getContext() {
     return this.ctx
@@ -260,7 +263,31 @@ describe('loadImageryTexture', () => {
     }
     vi.stubGlobal('OffscreenCanvas', ThrowingCanvas)
     const texture2 = await loadImageryTexture(KEY, src, fetcher, { zoomOffset: 1 })
-    expect((texture2.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(4)
+    // the bitmap that was closed is asked for again and drawn
+    expect((texture2.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(5)
+    expect(fetcher.calls).toHaveLength(1 + 4 + 1)
+    expect(texture2.userData.incomplete).toBeUndefined()
+  })
+
+  it('draws each sub-tile as it arrives, not once its siblings are in (the cache may close a bitmap that waits)', async () => {
+    const fetcher = fakeFetcher((url) =>
+      url.endsWith('/1061/741.jpg') ? new Promise<ImageBitmap>((resolve) => setTimeout(() => resolve(bitmapFor(url)), 20)) : Promise.resolve(bitmapFor(url)),
+    )
+    const pending = loadImageryTexture(KEY, source(), fetcher, { zoomOffset: 1 })
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    const drawImage = (OffscreenCanvasInstances.at(-1) as FakeOffscreenCanvas).ctx.drawImage
+    expect(drawImage).toHaveBeenCalledTimes(3)
+    const texture = await pending
+    expect((texture.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(4)
+  })
+
+  it('flags a texture with failed sub-tiles as incomplete, a whole one not', async () => {
+    const failing = fakeFetcher((url) =>
+      url.endsWith('/1061/741.jpg') ? Promise.reject(new Error('HTTP 400')) : Promise.resolve(bitmapFor(url)),
+    )
+    expect((await loadImageryTexture(KEY, source(), failing, { zoomOffset: 1 })).userData.incomplete).toBe(true)
+    const whole = fakeFetcher((url) => Promise.resolve(bitmapFor(url)))
+    expect((await loadImageryTexture(KEY, source(), whole, { zoomOffset: 1 })).userData.incomplete).toBeUndefined()
   })
 
   it('rejects when every sub-tile fails', async () => {
