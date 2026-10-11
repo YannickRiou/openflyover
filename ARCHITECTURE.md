@@ -539,7 +539,7 @@ ink, 7.3:1).
   the marker is at the start of the item (selected, to be adjusted) and, if the marker moves during the item, a second one at
   its end that keeps the framing that was there: neighboring framings keep their values (between the end of the item and the
   next framing, the transition is recomputed over the new interval).
-  « Ajouter une image clé » (add a keyframe; "Caméra" section, and « Image clé » in the timeline bar, `addKeyframe`) places
+  The ◆ between « Image clé précédente / suivante » in the transport row (`toggleKeyframe`) removes the keyframe under the playhead, else adds one (`addKeyframe`, « Ajouter une image clé »): it places
   a keyframe at the marker with the pose of the 3D view as framed (`captureKey`: `FlyoverRig` registers the reader of its
   camera and orbit target, `registerKeyCapture`, so the UI does not load three.js; a keyframe already at that metre takes
   it over), one undo step, selected for the inspector (see "Film and timeline", "Keyframes"). It replaced « Garder ce

@@ -27,6 +27,7 @@ import {
   addStop,
   addText,
   adjacentKey,
+  keyAt,
   centredScrollLeft,
   centredTime,
   clipSyncOffsetS,
@@ -50,7 +51,7 @@ import type { DragContext, Grip, TimelineItem } from '../film/timeline'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
-import { addKeyframe, editFilm, getFilmSource, seekKeyframe, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { editFilm, getFilmSource, seekKeyframe, setAutoStops, toggleKeyframe, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import { formatDistance, formatNumber } from './format'
 import { Icon } from './icons'
@@ -155,14 +156,16 @@ interface BarButtonProps {
   label?: string
   onClick(): void
   disabled?: boolean
+  /** the state the button acts on is on (the diamond is filled); the name already says what a click does */
+  on?: boolean
 }
 
 /** Icon button of the bar: icon, optional short label, tooltip. */
-function BarButton({ icon, name, tip = name, label, onClick, disabled }: BarButtonProps) {
+function BarButton({ icon, name, tip = name, label, onClick, disabled, on }: BarButtonProps) {
   return (
     <button
       type="button"
-      className={label ? 'icon-btn icon-btn--label' : 'icon-btn'}
+      className={`${label ? 'icon-btn icon-btn--label' : 'icon-btn'}${on ? ' icon-btn--on' : ''}`}
       onClick={onClick}
       disabled={disabled}
       aria-label={name}
@@ -403,6 +406,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const playheadS = Math.min(storedTimeS ?? clock.timeAtProgress(progress), clock.totalTime())
   const hasPrevKey = adjacentKey(clock.cameraKeys, playheadS, -1) !== null
   const hasNextKey = adjacentKey(clock.cameraKeys, playheadS, 1) !== null
+  const onKey = keyAt(clock.cameraKeys, playheadS) !== null
   // centred: the lanes scroll so that the playhead time sits in the middle (after every render: time, zoom, width)
   useLayoutEffect(() => {
     const el = scrollerRef.current
@@ -853,6 +857,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             disabled={!hasPrevKey}
           />
           <BarButton
+            icon="diamond"
+            name={onKey ? 'Supprimer l’image clé' : 'Ajouter une image clé'}
+            tip={
+              onKey
+                ? 'Supprimer l’image clé sous la tête de lecture'
+                : 'Ajouter une image clé : garde la vue 3D cadrée à la position du marqueur'
+            }
+            onClick={() => toggleKeyframe(clock)}
+            on={onKey}
+          />
+          <BarButton
             icon="keyframe-next"
             name="Image clé suivante"
             tip={withShortcut('Image clé suivante', 'seek-key', 1)}
@@ -889,13 +904,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             name="Ajouter un arrêt à la position du marqueur"
             tip={withShortcut('Ajouter un arrêt à la position du marqueur', 'add-stop')}
             onClick={() => addStopAt(Math.round(progress * lengthM))}
-          />
-          <BarButton
-            icon="diamond"
-            label="Image clé"
-            name="Ajouter une image clé"
-            tip="Ajouter une image clé : garde la vue 3D cadrée à la position du marqueur"
-            onClick={addKeyframe}
           />
           {freeCandidates.length > 0 && (
             <select
