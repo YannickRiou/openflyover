@@ -120,6 +120,8 @@ export interface ShellState {
   collapsedByDock: boolean
   /** a timeline block is selected: the dock shows its inspector (the export drawer goes first) */
   inspecting: boolean
+  /** portrait phone: the inspector of the selected block is open (« Modifier »); else its actions replace the tab bar */
+  editing: boolean
   /** no track (home screen): the tab and fold to restore once one is loaded; null when there is one */
   home: Pick<ShellState, 'tab' | 'collapsed'> | null
 }
@@ -137,6 +139,8 @@ export type ShellEvent =
   | { type: 'close-dock' }
   /** a timeline block is selected (`open`) or no longer */
   | { type: 'inspect'; open: boolean; narrow: boolean }
+  /** portrait phone: « Modifier » opens the selected block's inspector, « Terminé » closes it (the block stays selected) */
+  | { type: 'edit'; open: boolean }
   /** the phone timeline unfolds: panel and export drawer make room (one sheet at a time) */
   | { type: 'fold' }
   /** the first track is loaded (`loaded`) or the last one removed */
@@ -145,7 +149,7 @@ export type ShellEvent =
 /** The panel unfolds; on a narrow window it takes the place of the dock (drawer and inspector). */
 function unfold(state: ShellState, narrow: boolean): ShellState {
   return narrow
-    ? { ...state, collapsed: false, collapsedByDock: false, dockOpen: false, inspecting: false }
+    ? { ...state, collapsed: false, collapsedByDock: false, dockOpen: false, inspecting: false, editing: false }
     : { ...state, collapsed: false, collapsedByDock: false }
 }
 
@@ -187,8 +191,13 @@ export function shellReducer(state: ShellState, event: ShellEvent): ShellState {
       return closeDock(state)
     case 'inspect':
       if (event.open === state.inspecting) return state
-      if (!event.open) return state.dockOpen ? { ...state, inspecting: false } : emptyDock({ ...state, inspecting: false })
+      if (!event.open) {
+        const closed = { ...state, inspecting: false, editing: false }
+        return state.dockOpen ? closed : emptyDock(closed)
+      }
       return state.dockOpen ? { ...state, inspecting: true } : fillDock({ ...state, inspecting: true }, event.narrow)
+    case 'edit':
+      return state.inspecting && state.editing !== event.open ? { ...state, editing: event.open } : state
     case 'fold':
       return { ...state, collapsed: true, collapsedByDock: false, dockOpen: false }
     case 'tracks':
@@ -206,6 +215,7 @@ export function shellReducer(state: ShellState, event: ShellEvent): ShellState {
         collapsedByDock: false,
         dockOpen: false,
         inspecting: false,
+        editing: false,
         home: { tab: state.tab, collapsed: state.collapsed && !state.collapsedByDock },
       }
   }
@@ -247,31 +257,21 @@ export function parseFoldPrefs(raw: string | null): Record<string, boolean> {
 // Phone layouts (media queries of shell.css)
 // ---------------------------------------------------------------------------
 
-/** Portrait phone: tabs in a bottom bar, panels and drawers as bottom sheets. */
+/** Portrait phone: preview on top, timeline under it, tabs in a bottom bar; panels and drawers as half sheets over the timeline. */
 export const BOTTOM_SHEET_QUERY = '(max-width: 699px)'
-/** Phone, either way up: top bar actions in a menu, timeline folded into a strip, dialogs full screen. */
+/** Phone, either way up: top bar actions in a menu, dialogs full screen; in landscape the timeline folds into a strip. */
 export const COMPACT_QUERY = '(max-width: 699px), (max-height: 499px)'
 
 export const matchesQuery = (query: string) => typeof window !== 'undefined' && (window.matchMedia?.(query).matches ?? false)
 
-/** Heights of a bottom sheet, as a fraction of the room above the tab bar. */
-export const SHEET_SNAPS = { peek: 0.3, half: 0.55, full: 1 } as const
-export type SheetSnap = keyof typeof SHEET_SNAPS
-/** How far a flick carries the sheet: its speed (rooms per second) times this (seconds). */
+/** How far a flick carries a half sheet: its speed (px per second, down positive) times this (seconds). */
 const SHEET_FLICK_S = 0.2
+/** A half sheet dragged down past this fraction of its height (flick included) closes. */
+const SHEET_DISMISS = 0.3
 
-/**
- * Where a bottom sheet released at `fraction` of the room settles, given its speed (rooms per second, up positive):
- * the snap nearest to where the flick carries it, or null (closed) below half the peek.
- */
-export function settleSheet(fraction: number, velocity: number): SheetSnap | null {
-  const projected = fraction + velocity * SHEET_FLICK_S
-  if (projected < SHEET_SNAPS.peek / 2) return null
-  let best: SheetSnap = 'peek'
-  for (const snap of Object.keys(SHEET_SNAPS) as SheetSnap[]) {
-    if (Math.abs(SHEET_SNAPS[snap] - projected) < Math.abs(SHEET_SNAPS[best] - projected)) best = snap
-  }
-  return best
+/** A half sheet released `dragPx` below its place (`heightPx` tall), moving down at `velocity` px/s, closes. */
+export function dismissSheet(dragPx: number, heightPx: number, velocity: number): boolean {
+  return dragPx + velocity * SHEET_FLICK_S > heightPx * SHEET_DISMISS
 }
 
 // ---------------------------------------------------------------------------

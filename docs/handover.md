@@ -463,6 +463,11 @@ Updated on 9 October 2026 (afternoon). The roadmap is built; what remains, by ow
     ARCHITECTURE.md "Phone and tablet", guarded by `App.test.tsx`). To verify on the iPhone 12 (WebKit costs that
     Chromium cannot show): tab switches feel immediate with the sample loaded, also while the map loads; if not,
     Safari Web Inspector › Timelines on a tab tap (paint / composite of the sheet and its `--shadow-pop`).
+  - *Phone layout like CapCut* (user request, « la timeline s'ouvre en grand en cachant tout l'écran »): preview always
+    on top, centred-playhead timeline always open, half sheets with « ✓ », block actions in place of the tab bar
+    (ARCHITECTURE.md "Phone and tablet"). Checked in Chromium phone emulation only; to try on an iPhone 12 (Safari) and
+    an Android phone: sliding the lanes (and its momentum) moves the film time smoothly, pinch zoom, a tap selects a
+    block while a slide over it scrolls, swipe down on a half sheet, the safe areas with the home indicator.
 
 **In the user's hands**
 9. Tests on the machine with a GPU (`docs/tests-gpu.md`): clouds (volumetric vs « Nappe », low sun), region highlight,

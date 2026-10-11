@@ -17,6 +17,8 @@ import {
   addStop,
   addText,
   attachToStop,
+  centredScrollLeft,
+  centredTime,
   clipRateAt,
   clipSyncOffsetS,
   dragFilm,
@@ -88,6 +90,21 @@ describe('timeline scale', () => {
     expect((scrollLeft + 200) / (10 * zoom)).toBeCloseTo(before, 12)
     expect(zoomAt(1, 0.5, 200, 0)).toEqual({ zoom: 1, scrollLeft: 0 })
     expect(zoomAt(40, 10, 0, 0).zoom).toBe(50)
+  })
+
+  it('centred playhead: the scroll is the film time, a zoom keeps the playhead in the middle', () => {
+    expect(centredScrollLeft(12, 20)).toBe(240)
+    expect(centredTime(240, 20, 90)).toBe(12)
+    expect(centredScrollLeft(-1, 20)).toBe(0)
+    // overscroll and an empty scale stay within the film
+    expect(centredTime(5000, 20, 90)).toBe(90)
+    expect(centredTime(-30, 20, 90)).toBe(0)
+    expect(centredTime(100, 0, 90)).toBe(0)
+    // a pinch doubles the scale: same time, twice the scroll
+    const pxPerS = fitPxPerS(370, 74) * 4
+    const zoomed = fitPxPerS(370, 74) * zoomAt(4, 2, 0, 0).zoom
+    expect(centredTime(centredScrollLeft(31.3, zoomed), zoomed, 74)).toBeCloseTo(31.3, 12)
+    expect(centredScrollLeft(31.3, zoomed)).toBeCloseTo(2 * centredScrollLeft(31.3, pxPerS), 9)
   })
 
   it('scrolls by itself near an edge, faster closer to it', () => {
