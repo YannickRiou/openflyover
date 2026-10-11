@@ -95,7 +95,8 @@ export function statsEqual(a: TerrainStats, b: TerrainStats): boolean {
     a.visibleTiles === b.visibleTiles &&
     a.loadedTiles === b.loadedTiles &&
     a.pendingTiles === b.pendingTiles &&
-    a.failedTiles === b.failedTiles
+    a.failedTiles === b.failedTiles &&
+    a.lodFactor === b.lodFactor
   )
 }
 

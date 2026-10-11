@@ -10,6 +10,12 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
   every 10 images from image 50 to 200, and the last 25 steps kept. « Export de test sans encodage » (Projet ›
   « Diagnostic », this tab only) renders a film without encoding it, to tell whether a phone runs out of memory in the
   encoder or in the render.
+- **Phones: a low view no longer exhausts the memory** (an iPhone 12 export was killed during the opening « descente »,
+  and earlier with the camera low from the start: the view alone needed 160–224 tiles over a cap of 120): on a phone or
+  tablet the level of detail now gives way so the view fits the cap, distant terrain coarser first, the ground under the
+  camera as detailed as before; the cap counts the tiles still loading, and a phone loads 6 tiles at a time instead of
+  24. Unchanged on a computer.
+
 - **Phones: the export's terrain tiles reach a plateau** (an iPhone 12 export was killed after ~100 images with the loaded
   tiles growing 68 → 244 and no end): during an export a phone or tablet keeps the tiles for a number of film frames
   instead of 30 seconds, prefetches fewer frames ahead, never holds more than 120 tiles (160 tablet) and frees an
