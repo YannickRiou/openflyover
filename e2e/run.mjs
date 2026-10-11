@@ -274,10 +274,53 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'poids-de-rendu',
+    title: 'Poids de rendu : pictogramme sur la ligne des nuages (nom accessible), point sur les onglets Météo et Objectif',
+    async run({ page }) {
+      await exposeStores(page)
+      const set = (key, patch) =>
+        page.evaluate((k, p) => {
+          const { settings, setSetting } = window.__e2e.appStore.getState()
+          setSetting(k, { ...settings[k], ...p })
+        }, key, patch)
+      const dot = (tab) => page.evaluate((t) => !!document.querySelector(`#tab-${t} .rail__weight`), tab)
+      try {
+        // clouds « Fine »: three bars, « lourd », and the dot on « Météo »
+        await set('clouds', { mode: 'meteo', quality: 'high' })
+        await page.click('#tab-meteo')
+        await page.waitForSelector('#tab-panel-meteo .setting-row__label .render-weight--3', { timeout: STEP_MS })
+        const name = await page.$eval('#tab-panel-meteo .setting-row__label .render-weight .visually-hidden', (el) => el.textContent)
+        assert(name === 'Poids de rendu : lourd', `nom accessible du pictogramme : ${name}`)
+        await until(page, () => !!document.querySelector('#tab-meteo .rail__weight'))
+        // « Aucun »: no pictogram, no dot
+        await set('clouds', { mode: 'aucun' })
+        await until(page, () => !document.querySelector('#tab-panel-meteo .render-weight') && !document.querySelector('#tab-meteo .rail__weight'))
+        // « Moyenne » with the motion blur: the dot moves to « Objectif »
+        await set('clouds', { mode: 'meteo', quality: 'medium' })
+        assert(!(await dot('meteo')) && !(await dot('objectif')), 'point sur un onglet avec les réglages par défaut')
+        await set('lens', { shutter: 0.5 })
+        await until(page, () => !!document.querySelector('#tab-objectif .rail__weight'))
+        assert(!(await dot('meteo')), 'point sur Météo avec des nuages « Moyenne »')
+      } finally {
+        await set('clouds', { mode: 'meteo', quality: 'medium' })
+        await set('lens', { shutter: 0 })
+      }
+    },
+  },
+  {
     id: 'image-cle',
     title: 'Image clé : la vue orbitée gardée telle quelle, retrouvée exactement par « précédente / suivante », Alt+← / Alt+→ et son losange',
     async run({ page }) {
       await exposeScene(page)
+      await blur(page)
+      // Space plays / pauses (the logic for a clicked button or a slider is unit-tested: headless Chromium reports
+      // focus-visible after a click, unlike a browser used with a mouse)
+      const playing = () => page.evaluate(() => window.__e2e.appStore.getState().playback.playing)
+      await page.keyboard.press(' ')
+      await until(page, () => window.__e2e.appStore.getState().playback.playing === true)
+      await page.keyboard.press(' ')
+      await until(page, () => window.__e2e.appStore.getState().playback.playing === false)
+      assert((await playing()) === false, 'Espace : la lecture ne se met pas en pause')
       await blur(page)
       // 20 s into the film, paused
       await page.keyboard.press('Home')

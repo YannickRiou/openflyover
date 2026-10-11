@@ -48,7 +48,7 @@ import { PosterPanel } from '../poster/PosterPanel'
 import { useFilmClock } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { ModifiedMarker } from './ModifiedMarker'
-import { SettingRow } from './PanelSection'
+import { RenderWeight, SettingRow } from './PanelSection'
 import { formatNumber } from './format'
 import { saveExportedFile } from './projectActions'
 import { effectiveProjectName } from './shell'
@@ -158,6 +158,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   // no size estimate for the overlay alone: mostly empty frames come out far below the bitrate
   const estimatedBytes =
     codec && !overlayOnly ? (videoBitrate(width, height, video.fps, video.quality, codec.codec) * totalFrames) / video.fps / 8 : 0
+  // target video bitrate of the chosen quality (H.264 until the codec is known), shown under « Qualité »
+  const bitrateMbps = videoBitrate(width, height, video.fps, video.quality, codec?.codec ?? 'avc') / 1e6
   const secondsPerImage =
     timings.rendered > 0 ? (timings.renderMs + timings.waitMs + timings.encodeMs) / timings.rendered / 1000 : null
 
@@ -268,9 +270,12 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </fieldset>
 
       <div className="field">
-        <label className="field__label" htmlFor={`${id}-resolution`}>
-          Résolution
-        </label>
+        <div className="field__label-row">
+          <label className="field__label" htmlFor={`${id}-resolution`}>
+            Résolution
+          </label>
+          <RenderWeight weight="resolution" />
+        </div>
         <select
           id={`${id}-resolution`}
           className="select"
@@ -400,7 +405,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </p>
       )}
 
-      <SettingRow label="Images par seconde" value={`${video.fps} i/s`} paths={['video.fps']}>
+      <SettingRow label="Images par seconde" value={`${video.fps} i/s`} paths={['video.fps']} weight="fps">
         <fieldset className="field fieldset" disabled={busy}>
           <legend className="field__label">Images par seconde</legend>
           <div className="segmented">
@@ -437,6 +442,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               </label>
             ))}
           </div>
+          {!overlayOnly && <p className="field__hint">Débit vidéo : {formatNumber(bitrateMbps, 1)} Mbit/s</p>}
         </fieldset>
       </SettingRow>
 

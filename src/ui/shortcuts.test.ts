@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { SHORTCUTS, SHORTCUT_GROUPS, keyFocus, matchShortcut, seekTime, withShortcut } from './shortcuts'
+import { SHORTCUTS, SHORTCUT_GROUPS, keyFocus, matchShortcut, seekTime, spacePlays, withShortcut } from './shortcuts'
 import type { KeyLike } from './shortcuts'
 
 const key = (k: string, mods: Partial<KeyLike> = {}): KeyLike => ({
@@ -131,5 +131,30 @@ describe('registry', () => {
     expect(withShortcut('Annuler', 'undo')).toBe('Annuler (Ctrl+Z)')
     expect(withShortcut('Rétablir', 'redo')).toBe('Rétablir (Ctrl+Maj+Z)')
     expect(withShortcut('Arrêt', 'add-stop')).toBe('Arrêt (S)')
+  })
+})
+
+describe('spacePlays', () => {
+  const el = (html: string) => {
+    document.body.innerHTML = html
+    return document.body.firstElementChild as HTMLElement
+  }
+  const clicked = () => false
+  const tabbed = () => true
+
+  it('plays from the page, a control focused by a click, or a pointer-focused slider', () => {
+    expect(spacePlays(document.body)).toBe(true)
+    expect(spacePlays(el('<button>OK</button>'), clicked)).toBe(true)
+    expect(spacePlays(el('<input type="range" />'), clicked)).toBe(true)
+    expect(spacePlays(null)).toBe(true)
+  })
+
+  it('leaves Space to a control the keyboard focused, to text fields and to lists', () => {
+    expect(spacePlays(el('<button>OK</button>'), tabbed)).toBe(false)
+    expect(spacePlays(el('<input type="checkbox" />'), tabbed)).toBe(false)
+    expect(spacePlays(el('<input type="text" />'), clicked)).toBe(false)
+    expect(spacePlays(el('<textarea></textarea>'), clicked)).toBe(false)
+    expect(spacePlays(el('<select><option>a</option></select>'), clicked)).toBe(false)
+    expect(spacePlays(el('<div role="listbox"></div>'), clicked)).toBe(false)
   })
 })
