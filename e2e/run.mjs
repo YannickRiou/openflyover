@@ -308,6 +308,55 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'qualite-export',
+    title: 'Qualité d’export : pastille « Imposé par … » sur les nuages et le flou de bougé, « Personnalisé » après un choix à la main, retour au préréglage',
+    async run({ page }) {
+      await exposeStores(page)
+      const set = (key, patch) =>
+        page.evaluate((k, p) => {
+          const { settings, setSetting } = window.__e2e.appStore.getState()
+          setSetting(k, { ...settings[k], ...p })
+        }, key, patch)
+      // a click on the open tab folds the panel
+      const openTab = async (tab) => {
+        const shown = await page.evaluate((t) => document.getElementById(`tab-panel-${t}`)?.offsetParent !== null, tab)
+        if (!shown) await page.click(`#tab-${tab}`)
+      }
+      const badge = (tab, knob) => page.evaluate((t, k) => document.querySelector(`#tab-panel-${t} [data-testid="preset-badge-${k}"]`)?.textContent ?? null, tab, knob)
+      try {
+        await set('clouds', { mode: 'meteo', quality: 'auto' })
+        await set('video', { quality: 'standard' })
+        await openTab('meteo')
+        await until(page, () => document.querySelector('#tab-panel-meteo [data-testid="preset-badge-clouds"]')?.textContent === 'Imposé par Standard')
+        // the pictogram weighs the export that will really run: « Rapide » = one bar
+        const tip = await page.$eval('#tab-panel-meteo .setting-row__label .render-weight', (el) => el.dataset.tip)
+        assert(tip.includes('×16') && tip.includes('imposé par la qualité Standard'), `info-bulle du pictogramme : ${tip}`)
+        // another quality in the export settings: the badge follows
+        await set('video', { quality: 'max' })
+        await until(page, () => document.querySelector('#tab-panel-meteo [data-testid="preset-badge-clouds"]')?.textContent === 'Imposé par Maximale')
+        assert(await page.$('#tab-panel-meteo .render-weight--3'), 'pictogramme « lourd » avec des nuages « Fine » imposés')
+        // chosen by hand: « Personnalisé », and the project keeps the choice
+        await set('clouds', { quality: 'low' })
+        await until(page, () => document.querySelector('#tab-panel-meteo [data-testid="preset-badge-clouds"]')?.textContent === 'Personnalisé')
+        // the way back: the row's button
+        await page.click('#tab-panel-meteo .setting-row__head[aria-expanded]:has([data-testid="preset-badge-clouds"])')
+        await clickButton(page, 'Revenir au préréglage')
+        await until(page, () => window.__e2e.appStore.getState().settings.clouds.quality === 'auto')
+        assert((await badge('meteo', 'clouds')) === 'Imposé par Maximale', `pastille après le retour : ${await badge('meteo', 'clouds')}`)
+        // motion blur: only a quality that lowers the 8 sub-frames is badged
+        await set('lens', { shutter: 0.5 })
+        await openTab('objectif')
+        assert((await badge('objectif', 'shutter')) === null, 'pastille sur le flou de bougé en qualité Maximale')
+        await set('video', { quality: 'standard' })
+        await until(page, () => document.querySelector('#tab-panel-objectif [data-testid="preset-badge-shutter"]')?.textContent === 'Imposé par Standard')
+      } finally {
+        await set('clouds', { mode: 'meteo', quality: 'medium' })
+        await set('video', { quality: 'high' })
+        await set('lens', { shutter: 0 })
+      }
+    },
+  },
+  {
     id: 'image-cle',
     title: 'Image clé : la vue orbitée gardée telle quelle, retrouvée exactement par « précédente / suivante », Alt+← / Alt+→ et son losange',
     async run({ page }) {

@@ -18,6 +18,9 @@ export type CloudMode = (typeof CLOUD_MODES)[number]
 /** Quality of the exported frames (the preview always uses the cheapest one). */
 export const CLOUD_QUALITIES = ['low', 'medium', 'high'] as const
 export type CloudQuality = (typeof CLOUD_QUALITIES)[number]
+/** The setting: a quality chosen by hand, or 'auto' (follows the export quality, `export/qualityTier.ts`). */
+export const CLOUD_QUALITY_SETTINGS = ['auto', ...CLOUD_QUALITIES] as const
+export type CloudQualitySetting = (typeof CLOUD_QUALITY_SETTINGS)[number]
 
 /**
  * Noise slices averaged per exported frame. Each slice is one noisy march per pixel; with 2 / 4 / 6 the exported
@@ -44,17 +47,17 @@ export interface CloudSettings {
   seaTopM: number
   /** rendering of the sea of clouds ('mer') */
   seaRender: SeaRender
-  /** quality of the exported frames */
-  quality: CloudQuality
+  /** quality of the exported frames; 'auto' takes the one of the export quality */
+  quality: CloudQualitySetting
 }
 
 /** `seaRender`: « Nappe » by default on a phone or tablet (core/deviceBudget.ts) */
-export const DEFAULT_CLOUDS: CloudSettings = { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: deviceBudget().seaRender, quality: 'medium' }
+export const DEFAULT_CLOUDS: CloudSettings = { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: deviceBudget().seaRender, quality: 'auto' }
 
 export const CLOUD_ALTITUDE_RANGE = { min: 200, max: 4000, step: 100 } as const
 export const SEA_TOP_RANGE = { min: 300, max: 5000, step: 50 } as const
 
-/** Settings saved before the sea of clouds get its top and rendering by default. */
+/** Settings saved before the sea of clouds get its top and rendering by default (a saved quality stays as chosen). */
 export const withCloudDefaults = withDefaults(DEFAULT_CLOUDS)
 
 /** Part of the climb of the track, from its lowest point, below the proposed top of the sea of clouds. */
@@ -75,7 +78,7 @@ export function seaTopFor(minEle: number | undefined, maxEle: number | undefined
 export function isValidClouds(v: CloudSettings): boolean {
   return (
     (CLOUD_MODES as readonly string[]).includes(v.mode) &&
-    (CLOUD_QUALITIES as readonly string[]).includes(v.quality) &&
+    (CLOUD_QUALITY_SETTINGS as readonly string[]).includes(v.quality) &&
     (SEA_RENDERS as readonly string[]).includes(v.seaRender) &&
     v.coverage >= 0 &&
     v.coverage <= 1 &&

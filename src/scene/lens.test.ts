@@ -261,6 +261,32 @@ describe('number of sub-frames', () => {
     expect(slow.reduce((sum, s) => sum + s.timeS, 0) / slow.length).toBeCloseTo(3)
   })
 
+  it('a lower maximum (lighter export quality) caps the renders and keeps the 8-render window per step', () => {
+    const fast = adaptiveShutterSamples(times, progress, 3, 1, moving(50), screen, undefined, 4)
+    expect(fast).toEqual(shutterSamples(times, progress, 3, 1, 4))
+    // still: the frame itself, whatever the maximum
+    expect(adaptiveShutterSamples(times, progress, 3, 1, moving(0), screen, undefined, 4)).toHaveLength(1)
+    // never more than the maximum, never more than the full count of the same move
+    for (const speed of [0.2, 0.5, 1, 3, 50]) {
+      const capped = adaptiveShutterSamples(times, progress, 3, 1, moving(speed), screen, undefined, 4).length
+      expect(capped).toBeLessThanOrEqual(4)
+      expect(capped).toBeLessThanOrEqual(adaptiveShutterSamples(times, progress, 3, 1, moving(speed), screen).length)
+    }
+    // the same inputs and maximum, the same renders
+    expect(adaptiveShutterSamples(times, progress, 3, 0.6, moving(0.5), screen, undefined, 4)).toEqual(
+      adaptiveShutterSamples(times, progress, 3, 0.6, moving(0.5), screen, undefined, 4),
+    )
+  })
+
+  it('subFrameCount with a maximum: the window is max / (max - 1) of the span, one render below 2', () => {
+    expect(subFrameCount(1000, 4)).toBe(4)
+    expect(subFrameCount(NaN, 4)).toBe(4)
+    expect(subFrameCount((SHUTTER_STEP_PX * 3) / 4, 4)).toBe(1)
+    expect(subFrameCount((SHUTTER_STEP_PX * 3) / 4 + 0.01, 4)).toBe(2)
+    expect(subFrameCount(1000, 1)).toBe(1)
+    expect(subFrameCount(5)).toBe(subFrameCount(5, SHUTTER_SUBFRAMES))
+  })
+
   it('a function of the film time: the same inputs, the same renders', () => {
     expect(adaptiveShutterSamples(times, progress, 3, 0.6, moving(0.5), screen)).toEqual(adaptiveShutterSamples(times, progress, 3, 0.6, moving(0.5), screen))
   })

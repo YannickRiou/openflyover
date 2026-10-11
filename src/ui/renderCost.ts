@@ -2,7 +2,9 @@
  * Render weight of the settings that lengthen the export (the pictogram next to their name, the dot on their tab).
  * Tiers 0 (nothing shown) .. 3 (heaviest) are estimates derived from the factors of the code, to recalibrate on a real
  * GPU (ARCHITECTURE.md, « Poids de rendu »). A tip only gives « ≈ ×N » where N is a real multiplier of the code.
+ * The weights are those of the EFFECTIVE export (what the chosen quality really uses, qualityTier.ts), and say so.
  */
+import { QUALITY_NAMES, effectiveRender, presetBadge } from '../export/qualityTier'
 import { videoSize } from '../export/schedule'
 import { SHUTTER_SUBFRAMES } from '../scene/lens'
 import type { Settings } from '../state/store'
@@ -32,24 +34,32 @@ const comma = (n: number) => String(n).replace('.', ',')
 /** Clouds quality of the export: 16 / 24 / 32 noise slices per frame (`EXPORT_SAMPLES`). */
 const CLOUD_QUALITY_TIER = { low: 1, medium: 2, high: 3 } as const
 
-function cloudsWeight({ atmosphere, clouds }: Input): Weight {
+function cloudsWeight(input: Input): Weight {
+  const { atmosphere, clouds, video } = input
   if (!atmosphere || clouds.mode === 'aucun') return weight(0, '')
   // the lit surface (« Nappe ») is one draw call
   if (clouds.mode === 'mer' && clouds.seaRender === 'surface') return weight(1, 'une seule surface à dessiner')
-  const n = EXPORT_SAMPLES[clouds.quality]
-  return weight(CLOUD_QUALITY_TIER[clouds.quality], `≈ ×${n} sur les nuages (${n} passes par image)`)
+  const { cloudsQuality } = effectiveRender(video.quality, clouds)
+  const n = EXPORT_SAMPLES[cloudsQuality]
+  const from = presetBadge(input, 'clouds')?.kind === 'preset' ? `, imposé par la qualité ${QUALITY_NAMES[video.quality]}` : ''
+  return weight(CLOUD_QUALITY_TIER[cloudsQuality], `≈ ×${n} sur les nuages (${n} passes par image${from})`)
 }
 
-/** An open shutter renders every frame `SHUTTER_SUBFRAMES` times, whatever its amount. */
-function shutterWeight({ lens }: Input): Weight {
-  return weight(lens.shutter > 0 ? 3 : 0, `≈ ×${SHUTTER_SUBFRAMES} (${SHUTTER_SUBFRAMES} rendus par image)`)
+/** An open shutter renders every frame up to `maxSubFrames` times (8, fewer in a lighter quality), whatever its amount. */
+function shutterWeight(input: Input): Weight {
+  const { lens, clouds, video } = input
+  const { maxSubFrames: n } = effectiveRender(video.quality, clouds)
+  const lowered = presetBadge(input, 'shutter') !== null
+  const detail = lowered ? `${n} rendus par image au plus, imposé par la qualité ${QUALITY_NAMES[video.quality]}` : `${n} rendus par image`
+  return weight(lens.shutter > 0 ? (n >= SHUTTER_SUBFRAMES ? 3 : 2) : 0, `≈ ×${n} (${detail})`)
 }
 
 /** One more full-frame blur per render; repeated at each sub-frame of the open shutter, so one tier higher. */
-function depthOfFieldWeight({ lens }: Input): Weight {
+function depthOfFieldWeight({ lens, clouds, video }: Input): Weight {
   if (lens.depthOfField <= 0) return weight(0, '')
+  const { maxSubFrames: n } = effectiveRender(video.quality, clouds)
   return lens.shutter > 0
-    ? weight(2, `refait à chacun des ${SHUTTER_SUBFRAMES} rendus de l’image (flou de bougé)`)
+    ? weight(2, `refait à chacun des ${n} rendus de l’image (flou de bougé)`)
     : weight(1, 'un passage de flou en plus par rendu')
 }
 

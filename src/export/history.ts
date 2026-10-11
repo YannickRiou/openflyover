@@ -8,13 +8,14 @@
  */
 import type { CameraStyle } from '../flyover/cameraSettings'
 import { CAMERA_STYLES, CAMERA_STYLE_LABELS } from '../flyover/cameraSettings'
-import { isValidLens } from '../scene/lens'
+import { SHUTTER_SUBFRAMES, isValidLens } from '../scene/lens'
 import type { LensSettings } from '../scene/lens'
 import type { VideoEncoderKind } from '../platform/platform'
 import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { CLOUD_MODES, CLOUD_QUALITIES, SEA_RENDERS } from '../weather/sceneClouds'
 import type { CloudMode, CloudQuality, SeaRender } from '../weather/sceneClouds'
+import { effectiveRender } from './qualityTier'
 import { VIDEO_ASPECTS, VIDEO_FPS, VIDEO_QUALITIES, VIDEO_RESOLUTIONS, videoSize } from './schedule'
 import type { VideoAspect, VideoQuality, VideoResolution } from './schedule'
 import type { ExportRequest, ExportResult, ExportTimings } from './store'
@@ -40,7 +41,14 @@ export interface RenderSettings {
   /** `YYYY-MM-DD`, '' = the day of the outing */
   sunDate?: string
   sunFromTrack?: boolean
+  /** `quality` is the one the export used (the export quality's, or the one chosen by hand: `tier.cloudsByHand`) */
   clouds?: { mode: CloudMode; quality: CloudQuality; coverage: number; seaRender: SeaRender }
+  /**
+   * What the export quality decided (qualityTier.ts): the most renders per frame it allowed the motion blur, and
+   * whether the clouds' quality was chosen by hand over it. Absent in entries recorded before; added without a new
+   * `HISTORY_VERSION` (every reader ignores a field it does not know).
+   */
+  tier?: { subFrames: number; cloudsByHand: boolean }
   lens?: LensSettings
   /** imagery (map style) and terrain source ids */
   imagery?: string
@@ -87,16 +95,18 @@ export interface HistoryEntry {
   settings: RenderSettings
 }
 
-/** The settings of `settings` that change the render time. */
-export function summariseSettings(settings: Settings): RenderSettings {
-  const { mode, quality, coverage, seaRender } = settings.clouds
+/** The settings of `settings` that change the render time, with the values an export of `quality` really used. */
+export function summariseSettings(settings: Settings, quality: VideoQuality = settings.video.quality): RenderSettings {
+  const { mode, coverage, seaRender } = settings.clouds
+  const used = effectiveRender(quality, settings.clouds)
   return {
     atmosphere: settings.atmosphere,
     shadows: settings.shadows,
     sunHour: settings.sunHour,
     sunDate: settings.sunDate,
     sunFromTrack: settings.sunFromTrack,
-    clouds: { mode, quality, coverage, seaRender },
+    clouds: { mode, quality: used.cloudsQuality, coverage, seaRender },
+    tier: { subFrames: used.maxSubFrames, cloudsByHand: used.cloudsByHand },
     lens: { ...settings.lens },
     imagery: settings.imagerySourceId,
     imageryZoom: settings.imageryZoomOffset,
@@ -154,7 +164,7 @@ export function entryOf(record: RenderRecord): HistoryEntry {
     ...(request.overlayOnly && { overlayOnly: true as const }),
     ...(record.outcome === 'done' && result && { codec: result.codec, bytes: round(result.sizeBytes) }),
     ...(record.encoder && { encoder: record.encoder }),
-    settings: summariseSettings(record.settings),
+    settings: summariseSettings(record.settings, request.quality),
   }
 }
 
@@ -219,6 +229,13 @@ function parseSettings(raw: unknown): RenderSettings {
     const seaRender = oneOf(c.seaRender, SEA_RENDERS)
     const coverage = num(c.coverage)
     if (mode && quality && seaRender && coverage !== undefined && coverage >= 0 && coverage <= 1) set('clouds', { mode, quality, coverage, seaRender })
+  }
+  if (isRecord(raw.tier)) {
+    const subFrames = num(raw.tier.subFrames)
+    const cloudsByHand = bool(raw.tier.cloudsByHand)
+    if (subFrames !== undefined && Number.isInteger(subFrames) && subFrames >= 1 && subFrames <= SHUTTER_SUBFRAMES && cloudsByHand !== undefined) {
+      set('tier', { subFrames, cloudsByHand })
+    }
   }
   if (isRecord(raw.lens)) {
     const { shutter, bloom, bloomRadius, flare, depthOfField } = raw.lens
@@ -323,7 +340,11 @@ export function reuseSettings(entry: HistoryEntry, current: Settings): Settings 
   if (s.sunHour !== undefined) next.sunHour = s.sunHour
   if (s.sunDate !== undefined) next.sunDate = s.sunDate
   if (s.sunFromTrack !== undefined) next.sunFromTrack = s.sunFromTrack
-  if (s.clouds && !same(s.clouds, current.clouds, Object.keys(s.clouds))) next.clouds = { ...current.clouds, ...s.clouds }
+  if (s.clouds) {
+    // taken from the export quality, not chosen by hand: back to 'auto' (an entry without `tier` recorded a fixed quality)
+    const clouds = { ...s.clouds, quality: s.tier?.cloudsByHand === false ? ('auto' as const) : s.clouds.quality }
+    if (!same(clouds, current.clouds, Object.keys(clouds))) next.clouds = { ...current.clouds, ...clouds }
+  }
   if (s.lens && !same(s.lens, current.lens)) next.lens = { ...s.lens }
   if (s.imagery !== undefined && IMAGERY_SOURCES.some((src) => src.id === s.imagery)) next.imagerySourceId = s.imagery
   if (s.imageryZoom !== undefined) next.imageryZoomOffset = s.imageryZoom
@@ -414,12 +435,12 @@ export function settingsSummary(settings: RenderSettings): string {
 export function settingsDetails(settings: RenderSettings): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = []
   const yes = (v: boolean) => (v ? 'oui' : 'non')
-  const { atmosphere, shadows, clouds, lens, sunHour, sunDate, sunFromTrack, imagery, imageryZoom, terrain, water, camera } = settings
+  const { atmosphere, shadows, clouds, lens, tier, sunHour, sunDate, sunFromTrack, imagery, imageryZoom, terrain, water, camera } = settings
   if (atmosphere !== undefined) rows.push({ label: 'Atmosphère', value: yes(atmosphere) })
   if (shadows !== undefined) rows.push({ label: 'Ombres', value: yes(shadows) })
-  if (clouds) rows.push({ label: 'Nuages', value: clouds.mode === 'aucun' ? 'aucun' : `${MODE_LABELS[clouds.mode]}, qualité ${CLOUD_QUALITY_LABELS[clouds.quality]}` })
+  if (clouds) rows.push({ label: 'Nuages', value: clouds.mode === 'aucun' ? 'aucun' : `${MODE_LABELS[clouds.mode]}, qualité ${CLOUD_QUALITY_LABELS[clouds.quality]}${tier?.cloudsByHand ? ' (choisie)' : ''}` })
   if (lens) {
-    rows.push({ label: 'Flou de bougé', value: lens.shutter > 0 ? percent(lens.shutter) : 'non' })
+    rows.push({ label: 'Flou de bougé', value: lens.shutter > 0 ? `${percent(lens.shutter)}${tier ? `, ${tier.subFrames} rendus par image au plus` : ''}` : 'non' })
     rows.push({ label: 'Profondeur de champ', value: lens.depthOfField > 0 ? percent(lens.depthOfField) : 'non' })
     rows.push({ label: 'Halo lumineux', value: lens.bloom > 0 ? `${percent(lens.bloom)}, rayon ${percent(lens.bloomRadius)}` : 'non' })
     rows.push({ label: 'Reflet d’objectif', value: lens.flare > 0 ? percent(lens.flare) : 'non' })
