@@ -4,6 +4,7 @@ import './ui/fonts.css'
 import './index.css'
 import './ui/theme.css'
 import App from './App.tsx'
+import { installExportGuard, reportInterruptedExport } from './export/guard'
 import { installExportHistory } from './export/historyStore'
 import { installOfflineTiles } from './offline/store'
 import { ErrorBoundary } from './ui/ErrorBoundary'
@@ -16,6 +17,9 @@ installOfflineTiles()
 installExternalLinks()
 // renders ended (done, canceled, failed) are written to the history of the export panel
 installExportHistory()
+// screen kept on during an export; an export the browser cut short (tab killed) is reported at the next start
+reportInterruptedExport()
+installExportGuard()
 // website: service worker, update prompt, iOS install hint, tracks shared to the installed app
 installWebApp((files) => void openFiles(files))
 
