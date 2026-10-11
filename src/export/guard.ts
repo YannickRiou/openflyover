@@ -2,7 +2,8 @@
  * Keeps a phone alive through an export and notices when it was not: the screen stays on while the film renders (a
  * locked screen or a backgrounded app suspends the page and loses the GPU context), and a flag in the tab's
  * sessionStorage tells the next start that the last export never ended (the browser killed the tab: memory, or the
- * screen locked). A small breadcrumb (last page event, memory counters) is kept beside it for the diagnosis.
+ * screen locked). A small breadcrumb (last step of the export or page event, memory counters) is kept beside it for
+ * the diagnosis: iOS kills a tab short of memory without any page event, so the export notes its own steps.
  * Nothing here throws: no Wake Lock API or no storage just means no protection.
  */
 import { showToast } from '../ui/toast'
@@ -185,9 +186,12 @@ export function installExportGuard(
     try {
       if (busy) storage?.setItem(EXPORT_RUNNING_KEY, String(Date.now()))
       else storage?.removeItem(EXPORT_RUNNING_KEY)
+      // the breadcrumb of an earlier export would be taken for this one's
+      if (busy) storage?.removeItem(BREADCRUMB_KEY)
     } catch {
       // no flag: an interruption goes unnoticed
     }
+    if (busy) writeBreadcrumb('export : démarrage', storage)
     if (busy) lock.hold()
     else lock.release()
   })
