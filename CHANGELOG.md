@@ -5,6 +5,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Render history**: the export drawer lists the last 20 renders (done, canceled or failed) with their real duration,
+  speed per image, output and the settings that change the render time; « Réutiliser ces réglages » puts them back
+  as one undo step. Kept on the device only (no track, no video).
 - **Keyframes** (« Image clé », formerly « Garder ce cadrage ici »): keep the 3D view exactly as framed, shown at that
   point of the film; ◁◆ / ◆▷ in the transport row, Alt+← / Alt+→ or a click on the ◆ to go from one to the next;
   the ◆ between the arrows adds a keyframe at the playhead, or removes the one under it.
