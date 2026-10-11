@@ -33,6 +33,8 @@ reproduce it next to the box.
       `[export]` line against the version before « no rendering while waiting for tiles » (~1 s per frame on a GTX 1060);
       GPU load (Task Manager) drops while the `[export]` "attente des tuiles" grows instead of staying at 100 %; frames
       identical (terrain complete, same clouds and blur), no more "incomplète" frames than before.
+- [ ] « Flou de bougé » export (shutter 100 %, 1080p): same look as before the adaptive sub-frames at the same film time (stops and
+      held frames sharp, fast sections identical), noticeably shorter on slow sections, stops and high cameras (`[export]` line).
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Overlay only (transparent background): fast export, no waiting for tiles; WebM played with its transparency (Chrome
       on a colored background, Kdenlive or Shotcut), laid over the normal video of the same film: counters, profile, map,
