@@ -1877,7 +1877,7 @@
     display: none;
   }
 
-  .film-tl:not(.film-tl--folded) {
+  .film-tl:not(.film-tl--folded, .film-tl--centred) {
     position: absolute;
     z-index: 7;
     right: 0;
@@ -1943,8 +1943,17 @@
   }
 }
 
-/* Portrait phone: tabs in a bottom bar, panel, export drawer and inspector as bottom sheets above it */
+/*
+ * Portrait phone (after CapCut): the preview keeps the top of the screen, the transport row and the timeline sit under
+ * it, the tabs in a bottom bar; panel, export drawer and inspector are half sheets over the timeline and the tab bar,
+ * never over the preview.
+ */
 @media (max-width: 699px) {
+  :root {
+    --phone-preview-h: 42dvh;
+    --phone-transport-h: 52px;
+  }
+
   .shell__body {
     flex-direction: column;
   }
@@ -2003,35 +2012,44 @@
     order: 1;
   }
 
-  /* heights: SHEET_SNAPS in shell.ts (peek 0.3, half 0.55, full) of the room above the tab bar */
+  /* with a film: the preview at a fixed height, the timeline takes the rest */
+  .view:has(> .film-tl) > .view__viewport {
+    flex: none;
+    height: var(--phone-preview-h);
+  }
+
+  /* the actions of a selected block in the place of the tab bar (App `BlockTools`) */
+  .block-tools {
+    justify-content: flex-start;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0 var(--space-1);
+  }
+
+  .block-tools__done {
+    border-right: 1px solid var(--color-ink-soft);
+    border-radius: 0;
+    color: var(--color-white);
+  }
+
+  /* half sheets: from under the transport row down to the bottom, over the timeline and the tab bar */
   .panel,
   .dock {
     position: absolute;
-    z-index: 8;
-    top: auto;
+    z-index: 10;
+    top: calc(var(--phone-preview-h) + var(--phone-transport-h));
     right: 0;
-    bottom: 56px;
+    bottom: 0;
     left: 0;
     display: flex;
     flex-direction: column;
     width: auto;
-    height: calc((100% - 56px) * 0.55);
     overflow: hidden;
     border: 0;
     border-top: 1px solid var(--line);
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     box-shadow: var(--shadow-pop);
-    transition: height 180ms ease;
-  }
-
-  .panel[data-snap='peek'],
-  .dock[data-snap='peek'] {
-    height: calc((100% - 56px) * 0.3);
-  }
-
-  .panel[data-snap='full'],
-  .dock[data-snap='full'] {
-    height: calc(100% - 56px);
+    animation: sheet-in 160ms ease-out;
   }
 
   .panel > :not(.sheet-handle),
@@ -2042,16 +2060,16 @@
     overscroll-behavior: contain;
   }
 
+  /* head of a half sheet (`SheetHandle`): grip, title, « Terminé »; dragged down, it closes the sheet */
   .sheet-handle,
   .dock > .sheet-handle {
+    position: relative;
     display: flex;
     flex: none;
     align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 44px;
-    padding: 0;
-    border: 0;
+    gap: var(--space-2);
+    height: 52px;
+    padding: 0 var(--space-2) 0 var(--space-4);
     border-bottom: 1px solid var(--line);
     background: var(--surface-panel);
     cursor: grab;
@@ -2059,11 +2077,152 @@
   }
 
   .sheet-handle__bar {
+    position: absolute;
+    top: 6px;
+    left: calc(50% - 20px);
     width: 40px;
     height: 5px;
     border-radius: 3px;
     background: var(--line-strong);
   }
+
+  .sheet-handle__title {
+    font: 600 16px/1.2 var(--font-heading);
+  }
+
+  .sheet-handle__done {
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    color: var(--text-1);
+  }
+
+  /* the ✓ of the head closes: no second close button in the export drawer or the inspector */
+  .dock > .settings > .settings__close {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel,
+    .dock {
+      animation: none;
+    }
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+/* Portrait phone timeline (`Timeline` centred): slim transport row, lanes scrolling under a playhead fixed in the middle */
+.film-tl--centred {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.film-tl--centred .film-tl__bar {
+  flex-wrap: nowrap;
+  height: var(--phone-transport-h, 52px);
+  padding-block: 0;
+}
+
+.film-tl__tools {
+  display: contents;
+}
+
+/* add, speed and options: one row that scrolls sideways after the play button and the time */
+.film-tl--centred .film-tl__tools {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+/* stop button, readout, zoom (pinch instead) and fold: not on a phone */
+.film-tl--centred .film-tl__bar > :is(.icon-btn:not(.film-tl__play), .film-tl__readout, .film-tl__spacer),
+.film-tl--centred :is(.film-tl__sep, .film-tl__zoom) {
+  display: none;
+}
+
+/* the options menu over the lanes, full width (the row that holds its button scrolls and would clip it) */
+.film-tl--centred .film-tl__menu {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.film-tl--centred .film-tl__body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.film-tl--centred .film-tl__heads,
+.film-tl--centred .film-tl__playhead {
+  display: none;
+}
+
+.film-tl--centred .film-tl__scroller {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* a slide scrolls the lanes; the selected block takes the finger to move or stretch */
+.film-tl--centred .film-tl__content {
+  touch-action: pan-x pan-y;
+}
+
+.film-tl--centred :is(.film-tl__block--selected, .film-tl__key--selected) {
+  touch-action: none;
+}
+
+.film-tl--centred .film-tl__head--ruler,
+.film-tl--centred .film-tl__ruler {
+  height: 24px;
+}
+
+.film-tl--centred .film-tl__tick {
+  line-height: 24px;
+}
+
+.film-tl--centred .film-tl__lane {
+  height: 36px;
+}
+
+/* the playhead, fixed in the middle of the lanes */
+.film-tl--centred .film-tl__body::after {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+  background: var(--color-white);
+  pointer-events: none;
+}
+
+.film-tl--centred .film-tl__body::before {
+  content: '';
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: calc(50% - 5px);
+  border: 5px solid transparent;
+  border-top: 6px solid var(--color-accent-light);
+  pointer-events: none;
 }
 
 /* Timeline bar labels: hidden when the timeline itself is narrow (side columns open), not only the window */

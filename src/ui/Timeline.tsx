@@ -8,7 +8,7 @@
  */
 import { errorMessage } from '../core/errors'
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent, PointerEvent, ReactNode } from 'react'
+import type { KeyboardEvent, PointerEvent, ReactNode, UIEvent } from 'react'
 import { freezeLandmarkTitles, materializeStops, stopAt, stopCandidates } from '../film/assemble'
 import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readAudio, startMusicPreview, useMusicPreview, waveformPath } from '../film/audio'
 import { beatTicksPath } from '../film/beats'
@@ -26,6 +26,8 @@ import {
   addSpeed,
   addStop,
   addText,
+  centredScrollLeft,
+  centredTime,
   clipSyncOffsetS,
   dragFilm,
   edgeScrollSpeed,
@@ -72,6 +74,10 @@ const PAD_PX = 10
 const SNAP_PX = 8
 /** Pointer travel before a press on a block becomes a drag (a shorter one only selects). */
 const DRAG_THRESHOLD_PX = 3
+/** Centred timeline (phone): finger travel beyond which a press is a slide (the browser scrolls), not a tap. */
+const TAP_SLOP_PX = 8
+/** Centred timeline: starting zoom, so that a 4 s stop is wide enough to tap. */
+const CENTRED_ZOOM = 4
 const NUDGE_S = 1
 const FINE_NUDGE_S = 0.1
 const WHEEL_ZOOM = 1.2
@@ -85,6 +91,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : 
 
 type Gesture =
   | { kind: 'scrub' }
+  /** centred timeline: a press that selects `item` (or seeks, on nothing) if released without sliding */
+  | { kind: 'tap'; item: TimelineItem | null; x0: number }
   | { kind: 'edit'; item: TimelineItem; grip: Grip; x0: number; scroll0: number; start: Film; ctx: DragContext; result: Film | null }
 
 /** Edge auto-scroll of a gesture: last pointer position, the handler that replays it, animation frame. */
@@ -261,10 +269,12 @@ function FilmOptions({
 }
 
 /**
- * On a phone (`COMPACT_QUERY`) the timeline starts folded into a strip and unfolds as a sheet: it folds when a panel
- * or the export drawer opens (`sheetOpen`), and `onUnfold` lets them make room.
+ * On a landscape phone (`COMPACT_QUERY`) the timeline starts folded into a strip and unfolds as a sheet: it folds when
+ * a panel or the export drawer opens (`sheetOpen`), and `onUnfold` lets them make room. `centred` (portrait phone): the
+ * playhead stays in the middle and the lanes scroll under it, the scroll is the film time; a tap selects a block, a
+ * selected block drags as usual, two fingers zoom around the playhead.
  */
-export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean; onUnfold?(): void }) {
+export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { sheetOpen?: boolean; centred?: boolean; onUnfold?(): void }) {
   const source = useFilmSource()
   const { track, film, durationS, pacing, landmarks } = source
   const sequence = useFilmSequence()
@@ -292,12 +302,12 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
   const setSelected = useAppStore((s) => s.setFilmSelection)
   /** film being dragged (shown on the timeline only), committed on release */
   const [draft, setDraft] = useState<Film | null>(null)
-  const [zoom, setZoom] = useState<number>(ZOOM_RANGE.min)
-  const [collapsed, setCollapsed] = useState(() => matchesQuery(COMPACT_QUERY))
+  const [zoom, setZoom] = useState<number>(centred ? CENTRED_ZOOM : ZOOM_RANGE.min)
+  const [collapsed, setCollapsed] = useState(() => matchesQuery(COMPACT_QUERY) && !centred)
   const [shownSheet, setShownSheet] = useState(sheetOpen)
   if (sheetOpen !== shownSheet) {
     setShownSheet(sheetOpen)
-    if (sheetOpen && matchesQuery(COMPACT_QUERY)) setCollapsed(true)
+    if (sheetOpen && matchesQuery(COMPACT_QUERY) && !centred) setCollapsed(true)
   }
   const [width, setWidth] = useState(0)
   const [reading, setReading] = useState(false)
@@ -309,6 +319,8 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
   const zoomRef = useRef(zoom)
   /** scroll to apply once the zoomed content is laid out */
   const pendingScrollRef = useRef<number | null>(null)
+  /** centred timeline: the scroll last set to follow the playhead (its scroll event is not a seek) */
+  const syncedScrollRef = useRef<number | null>(null)
 
   const shownFilm = draft ?? film
   const shownClock = useMemo(() => (draft ? clockOfFilm(input, draft) : clock), [draft, input, clock])
@@ -356,7 +368,8 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
       const now = measure(e.touches)
       const scroll = (pendingScrollRef.current ?? el.scrollLeft) + pinch.mid - now.mid
       const next = zoomAt(zoomRef.current, now.span / pinch.span, now.mid - el.getBoundingClientRect().left, scroll)
-      pendingScrollRef.current = next.scrollLeft
+      // centred: around the playhead, which the scroll follows
+      if (!centred) pendingScrollRef.current = next.scrollLeft
       zoomRef.current = next.zoom
       setZoom(next.zoom)
       pinch = now
@@ -376,13 +389,25 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
       el.removeEventListener('touchend', onTouchEnd)
       el.removeEventListener('touchcancel', onTouchEnd)
     }
-  }, [collapsed, hasTrack])
+  }, [collapsed, hasTrack, centred])
 
   useLayoutEffect(() => {
     zoomRef.current = zoom
     if (pendingScrollRef.current !== null && scrollerRef.current) scrollerRef.current.scrollLeft = pendingScrollRef.current
     pendingScrollRef.current = null
   }, [zoom])
+
+  // the scale follows the committed film: it does not change while an edge is dragged
+  const pxPerS = fitPxPerS(Math.max(0, width - 2 * PAD_PX), clock.totalTime()) * zoom
+  const playheadS = Math.min(storedTimeS ?? clock.timeAtProgress(progress), clock.totalTime())
+  // centred: the lanes scroll so that the playhead time sits in the middle (after every render: time, zoom, width)
+  useLayoutEffect(() => {
+    const el = scrollerRef.current
+    if (!centred || !el) return
+    const target = centredScrollLeft(playheadS, pxPerS)
+    if (Math.abs(el.scrollLeft - target) > 0.5) el.scrollLeft = target
+    syncedScrollRef.current = el.scrollLeft
+  })
 
   // the music plays along the preview
   useEffect(() => startMusicPreview(), [])
@@ -410,11 +435,10 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
 
   const lengthM = track.stats.distanceM
   const total = shownClock.totalTime()
-  // the scale follows the committed film: it does not change while an edge is dragged
-  const pxPerS = fitPxPerS(Math.max(0, width - 2 * PAD_PX), clock.totalTime()) * zoom
-  const xOf = (t: number) => PAD_PX + t * pxPerS
-  const contentWidth = Math.max(width, Math.ceil(xOf(total) + PAD_PX))
-  const playheadS = Math.min(storedTimeS ?? clock.timeAtProgress(progress), clock.totalTime())
+  // centred: half a width of blank at both ends, so that the start and the end reach the middle
+  const pad = centred ? width / 2 : PAD_PX
+  const xOf = (t: number) => pad + t * pxPerS
+  const contentWidth = Math.max(width, Math.ceil(xOf(total) + pad))
   const ele = profile && path.count > 0 ? samplePath(path, progress * path.lengthM).ele : undefined
   // startTime is set as soon as one point has a time: skips the scan of an untimed track
   const time = track.stats.startTime !== undefined && path.count > 0 ? recordedTimeAt(path, progress * path.lengthM) : undefined
@@ -564,13 +588,20 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
     void pickFiles({ filters: MUSIC_FILTERS, multiple: true }).then((files) => (files.length > 0 ? addMusicFiles(files) : undefined))
 
   // --- pointer -----------------------------------------------------------------------------------------------
-  const timeAt = (clientX: number) => (clientX - (contentRef.current?.getBoundingClientRect().left ?? 0) - PAD_PX) / pxPerS
+  const timeAt = (clientX: number) => (clientX - (contentRef.current?.getBoundingClientRect().left ?? 0) - pad) / pxPerS
   const seek = (t: number) => {
     const end = clock.totalTime()
     const c = Math.min(end, Math.max(0, t))
     setProgress(clock.progressAtTime(c), c < end ? c : null)
   }
+  /** centred: a press that becomes a tap on release (no capture: a slide scrolls the lanes, the browser cancels it) */
+  const startTap = (e: PointerEvent<HTMLElement>, item: TimelineItem | null) => {
+    if (e.button !== 0 || !e.isPrimary) return
+    e.stopPropagation()
+    gestureRef.current = { kind: 'tap', item, x0: e.clientX }
+  }
   const onContentPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (centred) return startTap(e, null)
     // a second finger is a pinch (touch listeners above)
     if (e.button !== 0 || !e.isPrimary) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -578,6 +609,8 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
     seek(timeAt(e.clientX))
   }
   const startEdit = (e: PointerEvent<HTMLElement>, item: TimelineItem, grip: Grip) => {
+    // centred: a block is selected by a tap first, a slide over it scrolls the lanes
+    if (centred && selected !== item) return startTap(e, item)
     if (e.button !== 0 || !e.isPrimary) return
     e.stopPropagation()
     setSelected(item)
@@ -596,6 +629,10 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
     const g = gestureRef.current
     if (!g) return
     if (g.kind === 'scrub') return seek(timeAt(clientX))
+    if (g.kind === 'tap') {
+      if (Math.abs(clientX - g.x0) > TAP_SLOP_PX) gestureRef.current = null
+      return
+    }
     const dx = clientX - g.x0 + (scrollerRef.current?.scrollLeft ?? 0) - g.scroll0
     if (!g.result && Math.abs(dx) < DRAG_THRESHOLD_PX) return
     const dragged = dragFilm(g.start, g.item, g.grip, dx / pxPerS, altKey ? { ...g.ctx, snapS: 0 } : g.ctx)
@@ -642,7 +679,7 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
     if (!g) return
     applyPointer(e.clientX, e.altKey)
     // a press that only selects a block (not dragged yet) does not scroll
-    if (g.kind === 'scrub' || g.result) followEdge(e.clientX, e.altKey)
+    if (g.kind === 'scrub' || (g.kind === 'edit' && g.result)) followEdge(e.clientX, e.altKey)
   }
   const endGesture = (e: PointerEvent<HTMLDivElement>) => {
     const g = gestureRef.current
@@ -650,7 +687,18 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
     cancelAnimationFrame(edgeRef.current?.frame ?? 0)
     edgeRef.current = null
     if (g?.kind === 'edit' && g.result && e.type === 'pointerup') commit(g.result)
+    if (g?.kind === 'tap' && e.type === 'pointerup') {
+      if (g.item === null) seek(timeAt(e.clientX))
+      else setSelected(g.item)
+    }
     setDraft(null)
+  }
+  /** centred: a scroll by the finger (or the wheel) moves the film time; the one that follows the playhead does not */
+  const onScroll = (e: UIEvent<HTMLDivElement>) => {
+    const left = e.currentTarget.scrollLeft
+    if (syncedScrollRef.current !== null && Math.abs(left - syncedScrollRef.current) < 1) return
+    syncedScrollRef.current = left
+    seek(centredTime(left, pxPerS, clock.totalTime()))
   }
 
   // --- keyboard ----------------------------------------------------------------------------------------------
@@ -710,6 +758,7 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
       className={`film-tl__block ${className}${selected === item ? ' film-tl__block--selected' : ''}`}
       style={{ left: xOf(startS), width: Math.max(0, (endS - startS) * pxPerS) }}
       onPointerDown={(e) => {
+        if (centred && selected !== item) return startTap(e, item)
         if (grips.includes('move')) return startEdit(e, item, 'move')
         // a shot: select it and scrub
         e.stopPropagation()
@@ -740,7 +789,7 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
 
   return (
     <div
-      className={collapsed ? 'film-tl film-tl--folded' : 'film-tl'}
+      className={`film-tl${collapsed ? ' film-tl--folded' : ''}${centred ? ' film-tl--centred' : ''}`}
       role="group"
       aria-label={`Timeline du film : ${track.name}`}
       onDragOver={(e) => {
@@ -802,102 +851,105 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
           )}
         </span>
         <span className="film-tl__spacer" />
-        <BarButton
-          icon="map-pin"
-          label="Arrêt"
-          name="Ajouter un arrêt à la position du marqueur"
-          tip={withShortcut('Ajouter un arrêt à la position du marqueur', 'add-stop')}
-          onClick={() => addStopAt(Math.round(progress * lengthM))}
-        />
-        {freeCandidates.length > 0 && (
-          <select
-            className="film-tl__select"
-            aria-label="Ajouter un arrêt à un temps fort"
-            value=""
-            onChange={(e) => {
-              const c = freeCandidates[Number(e.currentTarget.value)]
-              if (c) addStopAt(c.atM, { label: c.label, source: c.source })
-            }}
-          >
-            <option value="" disabled>
-              Arrêt à un temps fort…
-            </option>
-            {freeCandidates.map((c, i) => (
-              <option key={`${c.source.kind}-${c.source.ref}`} value={i}>
-                {c.label} · {formatDistance(c.atM)}
+        {/* a row of its own on a phone, which scrolls sideways */}
+        <div className="film-tl__tools">
+          <BarButton
+            icon="map-pin"
+            label="Arrêt"
+            name="Ajouter un arrêt à la position du marqueur"
+            tip={withShortcut('Ajouter un arrêt à la position du marqueur', 'add-stop')}
+            onClick={() => addStopAt(Math.round(progress * lengthM))}
+          />
+          {freeCandidates.length > 0 && (
+            <select
+              className="film-tl__select"
+              aria-label="Ajouter un arrêt à un temps fort"
+              value=""
+              onChange={(e) => {
+                const c = freeCandidates[Number(e.currentTarget.value)]
+                if (c) addStopAt(c.atM, { label: c.label, source: c.source })
+              }}
+            >
+              <option value="" disabled>
+                Arrêt à un temps fort…
+              </option>
+              {freeCandidates.map((c, i) => (
+                <option key={`${c.source.kind}-${c.source.ref}`} value={i}>
+                  {c.label} · {formatDistance(c.atM)}
+                </option>
+              ))}
+            </select>
+          )}
+          <BarButton
+            icon="gauge"
+            label="Vitesse"
+            name="Accélérer ou ralentir une portion à partir du marqueur"
+            tip="Accélérer ou ralentir une portion (1 km à ×2) à partir du marqueur"
+            onClick={() => addSpeedAt(Math.round(progress * lengthM))}
+          />
+          <BarButton
+            icon="type"
+            label="Texte"
+            name="Ajouter un texte à la tête de lecture"
+            tip={withShortcut('Ajouter un texte à la tête de lecture', 'add-text')}
+            onClick={() => editFilm((f) => addText(f, playheadS))}
+          />
+          <BarButton
+            icon="image"
+            label={reading ? 'Lecture…' : 'Média'}
+            name={reading ? 'Lecture des fichiers…' : 'Ajouter des photos ou des vidéos à la tête de lecture'}
+            tip="Ajouter des photos ou des vidéos (MP4, WebM, MOV ; sans le son) à la tête de lecture, ou les glisser sur la timeline"
+            onClick={() =>
+              void pickFiles({ filters: MEDIA_FILTERS, multiple: true }).then((files) => (files.length > 0 ? addMediaFiles(files) : undefined))
+            }
+            disabled={reading}
+          />
+          <span className="film-tl__sep" aria-hidden="true" />
+          {(film.audio.length > 0 || film.media.some(clipHasSound)) && (
+            <BarButton
+              icon={muted ? 'volume-x' : 'volume-2'}
+              name={muted ? 'Remettre le son' : 'Couper le son'}
+              tip={muted ? 'Remettre le son de la lecture' : 'Couper le son de la musique et des vidéos pendant la lecture (le film exporté le garde)'}
+              onClick={() => useMusicPreview.getState().setMuted(!muted)}
+            />
+          )}
+          <select className="film-tl__select" aria-label="Vitesse de lecture" value={speed} onChange={(e) => setSpeed(Number(e.currentTarget.value))}>
+            {SPEEDS.map((value) => (
+              <option key={value} value={value}>
+                ×{formatNumber(value, value % 1 === 0 ? 0 : 1)}
               </option>
             ))}
           </select>
-        )}
-        <BarButton
-          icon="gauge"
-          label="Vitesse"
-          name="Accélérer ou ralentir une portion à partir du marqueur"
-          tip="Accélérer ou ralentir une portion (1 km à ×2) à partir du marqueur"
-          onClick={() => addSpeedAt(Math.round(progress * lengthM))}
-        />
-        <BarButton
-          icon="type"
-          label="Texte"
-          name="Ajouter un texte à la tête de lecture"
-          tip={withShortcut('Ajouter un texte à la tête de lecture', 'add-text')}
-          onClick={() => editFilm((f) => addText(f, playheadS))}
-        />
-        <BarButton
-          icon="image"
-          label={reading ? 'Lecture…' : 'Média'}
-          name={reading ? 'Lecture des fichiers…' : 'Ajouter des photos ou des vidéos à la tête de lecture'}
-          tip="Ajouter des photos ou des vidéos (MP4, WebM, MOV ; sans le son) à la tête de lecture, ou les glisser sur la timeline"
-          onClick={() =>
-            void pickFiles({ filters: MEDIA_FILTERS, multiple: true }).then((files) => (files.length > 0 ? addMediaFiles(files) : undefined))
-          }
-          disabled={reading}
-        />
-        <span className="film-tl__sep" aria-hidden="true" />
-        {(film.audio.length > 0 || film.media.some(clipHasSound)) && (
-          <BarButton
-            icon={muted ? 'volume-x' : 'volume-2'}
-            name={muted ? 'Remettre le son' : 'Couper le son'}
-            tip={muted ? 'Remettre le son de la lecture' : 'Couper le son de la musique et des vidéos pendant la lecture (le film exporté le garde)'}
-            onClick={() => useMusicPreview.getState().setMuted(!muted)}
-          />
-        )}
-        <select className="film-tl__select" aria-label="Vitesse de lecture" value={speed} onChange={(e) => setSpeed(Number(e.currentTarget.value))}>
-          {SPEEDS.map((value) => (
-            <option key={value} value={value}>
-              ×{formatNumber(value, value % 1 === 0 ? 0 : 1)}
-            </option>
-          ))}
-        </select>
-        <div className="film-tl__zoom" role="group" aria-label="Zoom de la timeline">
-          <BarButton
-            icon="zoom-out"
-            name="Zoom arrière"
-            tip={withShortcut('Zoom arrière', 'zoom')}
-            onClick={() => zoomBy(1 / BUTTON_ZOOM)}
-            disabled={zoom <= ZOOM_RANGE.min}
-          />
-          <input
-            className="film-tl__zoom-range"
-            type="range"
-            min={0}
-            max={ZOOM_SLIDER_STEPS}
-            step={1}
-            value={zoomToSlider(zoom)}
-            aria-label="Zoom"
-            aria-valuetext={`×${formatNumber(zoom, 1)}`}
-            onChange={(e) => zoomBy(sliderToZoom(Number(e.currentTarget.value)) / zoom)}
-          />
-          <BarButton
-            icon="zoom-in"
-            name="Zoom avant"
-            tip={withShortcut('Zoom avant', 'zoom')}
-            onClick={() => zoomBy(BUTTON_ZOOM)}
-            disabled={zoom >= ZOOM_RANGE.max}
-          />
-          <BarButton icon="move-horizontal" label="Ajuster" name="Ajuster : voir tout le film" tip="Voir tout le film" onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
+          <div className="film-tl__zoom" role="group" aria-label="Zoom de la timeline">
+            <BarButton
+              icon="zoom-out"
+              name="Zoom arrière"
+              tip={withShortcut('Zoom arrière', 'zoom')}
+              onClick={() => zoomBy(1 / BUTTON_ZOOM)}
+              disabled={zoom <= ZOOM_RANGE.min}
+            />
+            <input
+              className="film-tl__zoom-range"
+              type="range"
+              min={0}
+              max={ZOOM_SLIDER_STEPS}
+              step={1}
+              value={zoomToSlider(zoom)}
+              aria-label="Zoom"
+              aria-valuetext={`×${formatNumber(zoom, 1)}`}
+              onChange={(e) => zoomBy(sliderToZoom(Number(e.currentTarget.value)) / zoom)}
+            />
+            <BarButton
+              icon="zoom-in"
+              name="Zoom avant"
+              tip={withShortcut('Zoom avant', 'zoom')}
+              onClick={() => zoomBy(BUTTON_ZOOM)}
+              disabled={zoom >= ZOOM_RANGE.max}
+            />
+            <BarButton icon="move-horizontal" label="Ajuster" name="Ajuster : voir tout le film" tip="Voir tout le film" onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
+          </div>
+          <FilmOptions autoStops={film.autoStops} onAutoStops={setAutoStops} onAddMusic={pickMusic} reading={reading} />
         </div>
-        <FilmOptions autoStops={film.autoStops} onAutoStops={setAutoStops} onAddMusic={pickMusic} reading={reading} />
         <button
           type="button"
           className="icon-btn film-tl__fold"
@@ -927,7 +979,13 @@ export function Timeline({ sheetOpen = false, onUnfold }: { sheetOpen?: boolean;
               </div>
             ))}
           </div>
-          <div className="film-tl__scroller" ref={scrollerRef}>
+          <div
+            className="film-tl__scroller"
+            ref={scrollerRef}
+            onScroll={centred ? onScroll : undefined}
+            // centred: a touch stops the playback, else the lanes would follow the playhead under the finger
+            onPointerDownCapture={centred && playing ? () => setPlaying(false) : undefined}
+          >
             <div
               ref={contentRef}
               className="film-tl__content"
