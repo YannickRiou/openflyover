@@ -5,6 +5,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Render weight**: a three-bar pictogram next to the settings that lengthen the export (clouds quality, motion blur,
+  depth of field, resolution, frame rate; the tooltip gives the factor), and a dot on the tab of a setting at its
+  heaviest tier.
 - **Keyframes** (« Image clé », formerly « Garder ce cadrage ici »): keep the 3D view exactly as framed, shown at that
   point of the film; ◁◆ / ◆▷ in the transport row, Alt+← / Alt+→ or a click on the ◆ to go from one to the next;
   the ◆ between the arrows adds a keyframe at the playhead, or removes the one under it.
