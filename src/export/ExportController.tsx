@@ -10,6 +10,7 @@
  * Motion blur (`settings.lens.shutter`): one render per sub-frame of the open shutter, averaged by the composer's
  * shutter effect. `overlayOnly` skips the scene and encodes the overlay with its transparency, frame for frame.
  */
+import { deviceBudget, type DeviceBudget } from '../core/deviceBudget'
 import { errorMessage } from '../core/errors'
 import { useEffect, useRef } from 'react'
 import { useThree, type RootState } from '@react-three/fiber'
@@ -55,8 +56,7 @@ export interface ExportControllerProps {
   drawOverlay?: DrawOverlay
 }
 
-/** Upcoming frames whose tiles are prefetched (frame offsets), every PREFETCH_EVERY rendered frames. */
-const PREFETCH_AHEAD = [5, 10, 15, 20, 30, 40] as const
+/** Upcoming frames are prefetched (offsets in the device budget) every PREFETCH_EVERY rendered frames. */
 const PREFETCH_EVERY = 5
 /** JPEG quality of still images (PNG is lossless) */
 const STILL_JPEG_QUALITY = 0.92
@@ -73,6 +73,8 @@ interface RunDeps {
   /** film clock of the preview (the request's schedule was built from it) */
   clock: () => FilmClock
   signal: AbortSignal
+  /** memory budget of the device (default: this one) */
+  budget?: Pick<DeviceBudget, 'exportTileKeepFrames' | 'exportPrefetchAhead'>
 }
 
 const direction = new Vector3()
@@ -197,6 +199,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   if (request.still && drawView) return runDrawnStill(request, request.still, drawView, deps.signal)
 
   const { width, height, fps } = request
+  const { exportTileKeepFrames, exportPrefetchAhead } = deps.budget ?? deviceBudget()
   const lodHeight = exportLodHeight(height)
   const filmClock = deps.clock()
   const three = deps.get()
@@ -298,7 +301,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const camera = deps.get().camera as PerspectiveCamera
     if (!engine?.prefetch || !path || path.count === 0 || !frame || !camera.isPerspectiveCamera) return
     prefetchCamera.copy(camera, false)
-    for (const ahead of PREFETCH_AHEAD) {
+    for (const ahead of exportPrefetchAhead) {
       const j = i + ahead
       if (j >= schedule.length) break
       const view = filmViewAt(path, filmClock, schedule[j], times[j], frame, engine, width / height)
@@ -395,8 +398,18 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     /** the view of the last rendered frame moved with time */
     let previousTimed = false
     let previousOverlay = ''
+    // a phone: tiles are kept for a number of film frames, not seconds (the engine also caps them, deviceBudget.ts)
+    const retention = {
+      frame: 0,
+      keepFrames: exportTileKeepFrames,
+      prefetchKeepFrames: Math.max(0, ...exportPrefetchAhead) + 2 * PREFETCH_EVERY,
+    }
     for (let i = 0; i < schedule.length; i++) {
       if (isCanceled()) throw new ExportCanceledError()
+      if (exportTileKeepFrames > 0) {
+        retention.frame = i
+        deps.engine()?.setRetention?.(retention)
+      }
       const progress = schedule[i]
       const state = filmClock.stateAt(times[i])
       // the renders of an open shutter stay in the shot of the frame: no blend across a cut
@@ -473,6 +486,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   } catch (error) {
     await abandon(error, request, session, isCanceled())
   } finally {
+    deps.engine()?.setRetention?.(null)
     releaseFrameMedia()
     setShutterSubFrame(0, 1)
     holdRegion(false)

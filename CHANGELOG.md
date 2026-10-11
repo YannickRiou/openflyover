@@ -5,6 +5,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Phones: the export's terrain tiles reach a plateau** (an iPhone 12 export was killed after ~100 images with the loaded
+  tiles growing 68 → 244 and no end): during an export a phone or tablet keeps the tiles for a number of film frames
+  instead of 30 seconds, prefetches fewer frames ahead, never holds more than 120 tiles (160 tablet) and frees an
+  unloaded tile's imagery canvas; the frames are unchanged, a computer behaves as before. The diagnostic steps also
+  give the tiles still loading.
 - **Diagnostic report**: « Détails » of an interrupted export, and « Diagnostic › Afficher le rapport » at the bottom of the
   « Projet » tab, open a report to copy (« Copier le rapport »): app version, device and its memory budget, GPU, the export
   asked (size, quality, effective render, bitrate, memory or disk, estimated size), every setting that weighs on memory,

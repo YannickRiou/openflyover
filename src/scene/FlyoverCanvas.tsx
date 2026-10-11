@@ -112,6 +112,7 @@ function watchContextLoss({ gl, invalidate }: RootState) {
     textures: gl.info.memory.textures,
     geometries: gl.info.memory.geometries,
     tiles: useAppStore.getState().terrainStats.loadedTiles,
+    pending: useAppStore.getState().terrainStats.pendingTiles,
   }))
   // GPU of the diagnostic report (export/diagnostic.ts)
   setGpuProbe(() => readGpuInfo(gl.getContext()))

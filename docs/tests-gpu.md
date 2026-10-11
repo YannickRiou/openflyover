@@ -57,6 +57,10 @@ reproduce it next to the box.
       After each crash, send the diagnostic report: « Détails » of that toast (or Projet › « Diagnostic » › « Afficher le
       rapport ») › « Copier le rapport »; it gives the device budget, the GPU, the export, the settings and the last 15 steps
       (« image i / N » with textures, geometries, tiles), so the step that kills the tab shows without a Mac.
+      Tile budget: with the film that was killed after image ~100 (720×1280, 24 fps, Standard, atmosphere + shadows, motion
+      blur 20 %, DoF, « Plan cinématique », « détail fin »), the steps must show the tiles plateauing at 120 or below (it was
+      68 → 244 at image 100), textures and geometries flat from about image 50, `en attente` near 0, and still 2–3 s per 25
+      images late in the film (no thrash); the film has no grey tile that the same project exported on a computer lacks.
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
       (stopwatch, without the save dialog), frames, s / image and the settings used; renders at 1080p / 4K and with / without

@@ -107,11 +107,13 @@ export interface Breadcrumb {
   textures?: number
   geometries?: number
   tiles?: number
+  /** tiles loading or queued by the view */
+  pending?: number
   /** JS heap in use, MB (`performance.memory`: Chrome only) */
   heapMb?: number
 }
 
-let probe: (() => Pick<Breadcrumb, 'textures' | 'geometries' | 'tiles'>) | null = null
+let probe: (() => Pick<Breadcrumb, 'textures' | 'geometries' | 'tiles' | 'pending'>) | null = null
 
 /** The scene registers how to read its memory counters (renderer.info, loaded tiles). */
 export function setBreadcrumbProbe(read: typeof probe): void {
@@ -134,13 +136,14 @@ export function writeBreadcrumb(event: string, storage: FlagStorage | undefined 
   }
 }
 
-/** « pagehide à 12:03:44 · 212 textures, 140 géométries, 96 tuiles, 310 Mo de tas JS » */
+/** « pagehide à 12:03:44 · 212 textures, 140 géométries, 96 tuiles, 3 en attente, 310 Mo de tas JS » */
 export function describeBreadcrumb(crumb: Breadcrumb): string {
   const time = new Date(crumb.at).toLocaleTimeString('fr-FR')
   const counts = [
     crumb.textures !== undefined && `${crumb.textures} textures`,
     crumb.geometries !== undefined && `${crumb.geometries} géométries`,
     crumb.tiles !== undefined && `${crumb.tiles} tuiles`,
+    crumb.pending !== undefined && `${crumb.pending} en attente`,
     crumb.heapMb !== undefined && `${crumb.heapMb} Mo de tas JS`,
   ].filter(Boolean)
   return `${crumb.event} à ${time}${counts.length > 0 ? ` · ${counts.join(', ')}` : ''}`
