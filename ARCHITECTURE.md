@@ -161,7 +161,11 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    at z+k and draw them into a `tileSize·2^k` canvas → `CanvasTexture` (sRGB, mipmaps, max anisotropy).
    If z+k > the source's maxZoom: take the deepest available tile and crop it.
    Each sub-tile is drawn as soon as it arrives (the fetcher's LRU closes evicted bitmaps: one that waited for its
-   siblings could no longer be drawn; a closed one is asked for once more). If a sub-tile fails: the area is gray and
+   siblings could no longer be drawn; a closed one is asked for once more). A **plain white sub-tile** of a regional source
+   (`source.coverage`: IGN answers one, HTTP 200, outside France from z13, `docs/sources.md`; 8 × 8 samples of the
+   decoded bitmap all ≥ 250) is replaced by the same ground from the nearest coarser tile that is not white (up to 6
+   levels, z12 mosaic for IGN): the terrain no longer turns white, and no longer flips to the coarse colours and back when
+   the level of detail changes. If a sub-tile fails: the area is gray and
    the texture carries `userData.incomplete`; the engine tries the tile again (below). Rejects only if all fail.
 5. **Mesh** (`mesh.ts`): `(segments+1)²` grid; for each vertex, fractional Mercator position → lon/lat →
    bilinear height (DEM grid, height × exaggeration) → ECEF → local through `frame.toLocal`. UV (0,0) = NW corner... careful:
@@ -204,8 +208,12 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      ~2.6 MB a tile (imagery texture 512² with mipmaps ~1.4 MB, its canvas ~1 MB, DEM grid, geometry) = ~310 MB at the cap.
    - **The cap is hard: the level of detail gives way** (phone, tablet). A low view looking at the horizon in a portrait
      film needs 220–390 tiles by itself (iPhone 12: 147 → 224 loaded during the « descente », tab killed), so the
-     selection is made to fit: `solveLodLevel` multiplies `errorTargetPx` by `LOD_STEP` (1.25) per level, 0 to
-     `MAX_LOD_LEVEL` (12, ×14.6), and keeps the finest level whose selection fits `maxResidentTiles`. The count is
+     selection is made to fit: `solveLodLevel` multiplies `errorTargetPx` by `LOD_STEP` (1.1) per level, 0 to
+     `MAX_LOD_LEVEL` (28, ×14.4), and keeps the finest level whose selection fits `maxResidentTiles` (bisection: a
+     selection only gets smaller with the level). The step is small because the level hovers around the budget (the count
+     moves with the tiles loaded, whose bounding spheres are tight, and with the camera): at ×1.25 it flipped between two
+     levels every few frames of a zoom and each flip redrew a third of the view (simulated dive of 150 frames: 8 frames redraw
+     8 tiles or more, up to 43 % of those in view), at ×1.1 a few tiles at a time (2 frames, 29 % at most). The count is
      `countSelection` (`quadtree.ts`): the nodes the selection visits once everything it asks for is loaded (drawn
      tiles, their ancestors, the culled children of refined nodes, i.e. the shadow casters), readiness ignored, stopped
      past the budget; a few passes over at most ~120 nodes per update. A larger error target coarsens the distant tiles
@@ -2496,7 +2504,7 @@ tab; the automatic reopening of the last project (see "Library") hides it. The f
 | MSAA of the default framebuffer | ~75 MB at 1080p, never read under the composer (`multisampling={0}` + SMAA) | none when the context is created with the atmosphere on (`canvasAntialias`); without the atmosphere the scene is drawn straight to it, MSAA stays |
 | tiles resident during an export | LOD evaluated for the film's height (1080, or 1920 in 9:16) | for 720 px at most: the preview's tiles (`exportLodHeight`; the texture of a tile is then up to 1.5× coarser than "3 px" at 1080p) |
 | tiles kept loaded during an export | wall-clock retention (2 s view, 30 s prefetch), no cap: +1.2 tiles per film frame measured on an iPhone 12 (68 → 244 in 100 frames), tab killed | counted in film frames (6 / 30), prefetch +5, +10, +20, hard cap of 120 loaded or loading tiles (160 tablet, 90 with ≤ 2 GB): ~310 MB of tiles at most |
-| tiles a single view needs | the selection was never evicted: a low portrait view looking at the horizon held 160–224 tiles (iPhone 12, « descente »), tab killed | the error target grows by ×1.25 steps until the view fits the cap (`lodFactor`): distant tiles coarser, the ground under the camera unchanged |
+| tiles a single view needs | the selection was never evicted: a low portrait view looking at the horizon held 160–224 tiles (iPhone 12, « descente »), tab killed | the error target grows by ×1.1 steps until the view fits the cap (`lodFactor`): distant tiles coarser, the ground under the camera unchanged |
 | tiles loading at once | 24 (each with its fetches, decoded bitmaps, DEM pixels and canvas): ~94 pending at once on an iPhone 12 | 6 (12 tablet, `maxTileLoads`) |
 | film kept in RAM (iOS: no direct disk write) | 1080p30 « Haute » ~16 Mbit/s = 2 MB/s, peak 2.5–3× the film at the end (`BufferTarget`'s growing buffer, `slice`, `Blob`) | ≤ 8 Mbit/s = 1 MB/s; « Débit vidéo » shows the real figure and « plafonné » |
 | warning on the size estimate | 1.5 GB | 250 MB |

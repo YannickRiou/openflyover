@@ -19,6 +19,12 @@ import { createAbortError, isAbortError } from './fetch'
 /** Neutral grey drawn where imagery is missing (failed, aborted or out of coverage). */
 export const IMAGERY_FALLBACK_COLOR = '#8a8f94'
 
+/** Blank-tile probe: the tile drawn at this size, every channel of every pixel at least this bright = a plain white tile. */
+const BLANK_PROBE_PX = 8
+const BLANK_MIN_LEVEL = 250
+/** Coarser tiles tried at most, one level at a time, in place of a blank one (IGN's white tiles span z13 to z17: five levels up to z12). */
+const BLANK_FALLBACK_LEVELS = 6
+
 /** Largest zoom offset honoured (2^4 = 16 sub-tiles per side, a 4096 px canvas for 256 px tiles). */
 export const MAX_IMAGERY_ZOOM_OFFSET = 4
 
@@ -119,6 +125,24 @@ function createTexture(canvas: CompositeCanvas, key: TileKey): Texture {
   return texture
 }
 
+let probe: Canvas2D | undefined
+
+/**
+ * True for a plain white tile. A regional source that does not cover a place may answer one (HTTP 200) instead of a 404:
+ * IGN does outside France from z13 on (docs/sources.md), where the terrain would turn white next to the coarser tiles'
+ * colours. Eight by eight nearest-neighbour samples: a real tile hardly has all 64 that bright, and a mistake only costs a blurrier tile.
+ */
+function isBlank(bitmap: ImageBitmap): boolean {
+  try {
+    probe ??= createCanvas(BLANK_PROBE_PX, BLANK_PROBE_PX).getContext('2d', { willReadFrequently: true }) as Canvas2D
+    probe.imageSmoothingEnabled = false
+    probe.drawImage(bitmap, 0, 0, BLANK_PROBE_PX, BLANK_PROBE_PX)
+    return probe.getImageData(0, 0, BLANK_PROBE_PX, BLANK_PROBE_PX).data.every((v) => v >= BLANK_MIN_LEVEL)
+  } catch {
+    return false
+  }
+}
+
 export const loadImageryTexture: LoadImageryTexture = async (
   key: TileKey,
   source: ImagerySource,
@@ -152,8 +176,17 @@ export const loadImageryTexture: LoadImageryTexture = async (
     plan.tiles.map(async (op) => {
       for (let attempt = 0; ; attempt++) {
         let bitmap: ImageBitmap
+        let { sx, sy, sw, sh } = op
         try {
-          bitmap = await fetcher.fetchBitmap(buildTileUrl(source, op.key), { priority, signal })
+          let key = op.key
+          bitmap = await fetcher.fetchBitmap(buildTileUrl(source, key), { priority, signal })
+          // a blank tile (regional sources only): the same ground from the nearest coarser tile that is not, like a source's own overview
+          for (let up = 0; up < BLANK_FALLBACK_LEVELS && key.z > source.minZoom && source.coverage && isBlank(bitmap); up++) {
+            const half = source.tileSize / 2
+            ;[sx, sy, sw, sh] = [(key.x & 1) * half + sx / 2, (key.y & 1) * half + sy / 2, sw / 2, sh / 2]
+            key = { z: key.z - 1, x: key.x >> 1, y: key.y >> 1 }
+            bitmap = await fetcher.fetchBitmap(buildTileUrl(source, key), { priority, signal })
+          }
         } catch (error) {
           if (!isAbortError(error)) failure = error
           return
@@ -163,7 +196,7 @@ export const loadImageryTexture: LoadImageryTexture = async (
         const ky = bitmap.height / source.tileSize
         const target = surface()
         try {
-          target.drawImage(bitmap, op.sx * kx, op.sy * ky, op.sw * kx, op.sh * ky, op.dx, op.dy, op.dw, op.dh)
+          target.drawImage(bitmap, sx * kx, sy * ky, sw * kx, sh * ky, op.dx, op.dy, op.dw, op.dh)
           drawn++
           return
         } catch (error) {

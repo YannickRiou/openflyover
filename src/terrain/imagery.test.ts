@@ -151,7 +151,12 @@ class FakeContext {
   imageSmoothingEnabled = false
   imageSmoothingQuality = 'low'
   fillRect = vi.fn()
-  drawImage = vi.fn()
+  /** the blank-tile probe reads back what it drew last: white for a bitmap flagged `white` */
+  lastDrawn: { white?: boolean } | undefined
+  drawImage = vi.fn((bitmap: { white?: boolean }, ..._rect: number[]) => {
+    this.lastDrawn = bitmap
+  })
+  getImageData = vi.fn(() => ({ data: new Uint8ClampedArray(8 * 8 * 4).fill(this.lastDrawn?.white ? 255 : 90) }))
 }
 
 const OffscreenCanvasInstances: unknown[] = []
@@ -193,8 +198,8 @@ function fakeFetcher(answer: (url: string) => Promise<ImageBitmap>): TileFetcher
   }
 }
 
-function bitmapFor(url: string): ImageBitmap {
-  return { width: 256, height: 256, url, close() {} } as unknown as ImageBitmap
+function bitmapFor(url: string, white = false): ImageBitmap {
+  return { width: 256, height: 256, url, white, close() {} } as unknown as ImageBitmap
 }
 
 describe('loadImageryTexture', () => {
@@ -337,6 +342,38 @@ describe('loadImageryTexture', () => {
     const canvas = texture.image as FakeOffscreenCanvas
     expect(canvas.ctx.fillRect).toHaveBeenCalledWith(0, 0, 512, 512)
     expect(canvas.ctx.drawImage).not.toHaveBeenCalled()
+  })
+
+  describe('plain white tiles (a regional source outside its country)', () => {
+    const covered = () => source({ coverage: { west: -5.6, south: 41.2, east: 10.0, north: 51.3 } })
+    const whiteAt = (tile: string) => (url: string) => Promise.resolve(bitmapFor(url, url.endsWith(tile)))
+
+    it('draws the same ground from the coarser tile instead', async () => {
+      const fetcher = fakeFetcher(whiteAt('/11/1061/741.jpg'))
+      const texture = await loadImageryTexture(KEY, covered(), fetcher, { zoomOffset: 1 })
+      expect(fetcher.calls.map((c) => c.url)).toContain('https://tiles.test/10/530/370.jpg')
+      expect(fetcher.calls).toHaveLength(5)
+      const calls = (texture.image as FakeOffscreenCanvas).ctx.drawImage.mock.calls
+      expect(calls).toHaveLength(4)
+      // the SE child (1061, 741) is the SE quarter of its parent: 128 px of it fill the 256 px square
+      const drawn = calls.find((args) => args[5] === 256 && args[6] === 256)!
+      expect((drawn[0] as { url: string }).url).toBe('https://tiles.test/10/530/370.jpg')
+      expect(drawn.slice(1)).toEqual([128, 128, 128, 128, 256, 256, 256, 256])
+      expect(texture.userData.incomplete).toBeUndefined()
+    })
+
+    it('climbs while the tiles stay white, up to a limit, then draws the last one', async () => {
+      const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url, true)))
+      const texture = await loadImageryTexture(KEY, covered(), fetcher, { zoomOffset: 0 })
+      expect(fetcher.calls.map((c) => c.url)).toEqual(['10/530/370', '9/265/185', '8/132/92', '7/66/46', '6/33/23', '5/16/11', '4/8/5'].map((t) => `https://tiles.test/${t}.jpg`))
+      expect((texture.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves a source without coverage alone', async () => {
+      const fetcher = fakeFetcher(whiteAt('/11/1061/741.jpg'))
+      await loadImageryTexture(KEY, source(), fetcher, { zoomOffset: 1 })
+      expect(fetcher.calls).toHaveLength(4)
+    })
   })
 
   it('falls back to a DOM canvas when OffscreenCanvas is unavailable', async () => {
