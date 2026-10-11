@@ -129,9 +129,9 @@ reproduce it next to the box.
       flight; "Lissage de la visée" 2 s: the marker drifts a little off-centre at stops, then comes back; "Fin en douceur"
       3 s: the camera comes to rest at the end and turns to watch the marker finish; "Lissage des virages" "Auto" vs
       1,5 km on a twisty track; an export with these on identical to the preview (stops included).
-- [ ] Framings ("Garder ce cadrage ici" (keep this framing here), diamonds on the "Plans" (shots) track): high, wide view over a long section,
-      smooth transition from one framing to another and back to the film setting, without stutter at the edges; dragged diamond; export
-      identical to the preview.
+- [ ] Keyframes ("Ajouter une image clé" after orbiting the view, diamonds on the "Plans" (shots) track): the view kept as framed,
+      found again with ◁◆ / ◆▷ and Alt+← / Alt+→; high, wide view over a long section, smooth transition from one keyframe to another
+      and back to the film setting, without stutter at the edges; dragged diamond; export identical to the preview.
 - [ ] Photos: adding, thumbnails, "Placer sur le parcours" (place on the route) (GPS), full screen with slow zoom, map in the 3 styles.
 - [ ] Videos: MP4, WebM, MOV; rejection above 50 MB; playback in sync from ×0.5 to ×4; left edge (start within the
       video); video during a stop; frame-by-frame export.
