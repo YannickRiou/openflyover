@@ -180,6 +180,22 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    - Unloading: nodes not visited for > 2 s (`unloadAfterMs`; 30 s after a prefetch, `prefetchKeepMs`, so the export's
      tiles for the next frames outlast a frame waiting 5 s) and not ancestors of a visible node → dispose geometry/texture; the `HeightField`
      keeps ~400 grids at 256 px equivalent (LRU, i.e. ~100 MB; a 512 px grid counts as four; 160 on a phone or tablet).
+     The texture's retained 2D canvas is released with it (`width = height = 0`: WebKit keeps a canvas's backing store until a GC).
+   - **Tile retention during an export on a phone or tablet.** Wall time is the wrong clock there: an export renders a few
+     frames a second, so 30 s keep hundreds of film frames of tiles (measured on an iPhone 12: +1.2 tiles per frame,
+     68 → 244 loaded tiles in 100 frames, no plateau, tab killed). The export (`ExportController`) calls
+     `engine.setRetention({ frame, keepFrames, prefetchKeepFrames })` before every film frame when
+     `budget.exportTileKeepFrames > 0` and `setRetention(null)` at the end: `keepUntil` is then a film frame (views
+     `exportTileKeepFrames` = 6, prefetches the farthest prefetched frame + 2 × 5 = 30; `keepUntil` is reset when the clock
+     changes), so the export's tile waits (updates without a frame) neither hurry nor stretch it. A phone prefetches the
+     frames +5, +10, +20 (`exportPrefetchAhead`) instead of +5…+40. Behind it a **hard cap**, `maxResidentTiles`
+     (`DEFAULT_TUNING`, from the device budget: 120 phone, 160 tablet, 90 with ≤ 2 GB, unbounded on a computer; also in the
+     preview): past it `enforceCap` (every update) unloads the ready tiles the current selection did not visit, least
+     recently visited first (a prefetch counts half a frame after the update, so a tile ahead outlasts one behind; deeper first on
+     a tie; roots stay), and `prefetch` starts nothing. The tiles of the current selection (drawn, shadow casters, their
+     ancestors) are never evicted, so the frame's content does not depend on the cap (it can exceed it when the view alone
+     needs more). A computer sets no retention and no cap: nothing changes there. Estimate behind 120: ~2.6 MB a tile
+     (imagery texture 512² with mipmaps ~1.4 MB, its canvas ~1 MB, DEM grid, geometry) = ~310 MB at the cap.
    - Bounding sphere: from the geometry if loaded, otherwise from the tile bounds with heights [-500, 9000] m.
    - Material: `MeshStandardMaterial({ map, roughness: 1, metalness: 0 })`, `side: FrontSide`. `wireframe` option.
    - `sampleHeight` = the terrain **as drawn**: the triangles of the tile drawn at the point (`sampleTileMesh`), else
@@ -2442,6 +2458,7 @@ tab; the automatic reopening of the last project (see "Library") hides it. The f
 | terrain shadow map | 4096², ~128 MB, redrawn every frame | 2048², ~32 MB (1024², ~8 MB with ≤ 2 GB) |
 | MSAA of the default framebuffer | ~75 MB at 1080p, never read under the composer (`multisampling={0}` + SMAA) | none when the context is created with the atmosphere on (`canvasAntialias`); without the atmosphere the scene is drawn straight to it, MSAA stays |
 | tiles resident during an export | LOD evaluated for the film's height (1080, or 1920 in 9:16) | for 720 px at most: the preview's tiles (`exportLodHeight`; the texture of a tile is then up to 1.5× coarser than "3 px" at 1080p) |
+| tiles kept loaded during an export | wall-clock retention (2 s view, 30 s prefetch), no cap: +1.2 tiles per film frame measured on an iPhone 12 (68 → 244 in 100 frames), tab killed | counted in film frames (6 / 30), prefetch +5, +10, +20, hard cap of 120 loaded tiles (160 tablet, 90 with ≤ 2 GB): ~310 MB of tiles at most |
 | film kept in RAM (iOS: no direct disk write) | 1080p30 « Haute » ~16 Mbit/s = 2 MB/s, peak 2.5–3× the film at the end (`BufferTarget`'s growing buffer, `slice`, `Blob`) | ≤ 8 Mbit/s = 1 MB/s; « Débit vidéo » shows the real figure and « plafonné » |
 | warning on the size estimate | 1.5 GB | 250 MB |
 | autosave of a project with a 40 MB clip | every change: whole document serialised as one string (the clip as base64, ~55 MB), UTF-8 copy for the size, `Response` copy: ~4–6× the project, 3 s after each change | `serializeProjectBlob`: the JSON of each medium is made once per table entry (`WeakMap`) and kept as a Blob the next documents reuse; size from `Blob.size`, `Response(blob)` streams to the cache; only the header and the tracks are serialised again |
@@ -2452,7 +2469,7 @@ to the foreground, released at the end, on cancel and on error; no API = no lock
 kept in the tab's `sessionStorage`; if the next start finds it, the export never ended and a toast says so
 (« Le dernier export a été interrompu… »), with a « Détails » button showing the **breadcrumb**: the last `pagehide` /
 `freeze` / `webglcontextlost` with `renderer.info.memory` textures and geometries and the loaded tile count. iOS kills a
-tab short of memory without any page event, so the export also writes its own steps (start, video size applied, encoder
+tab short of memory without any page event (the counters also give the tiles still loading or queued, « N en attente »: a plateau of « tuiles » below the cap is what the tile budget aims at), so the export also writes its own steps (start, video size applied, encoder
 ready with its codec and bitrate, the first 3 frames then 1 in 25, finalisation); the last `MAX_STEPS` (15) are kept
 as a list, each with the JS heap where `performance.memory` exists (Chrome), and each export starts with a fresh list.
 The **diagnostic report** (`export/diagnostic.ts`, pure and tested: `buildReport`, `formatReport`) is taken at the same
@@ -2465,8 +2482,8 @@ size, overlay widgets). No coordinate and no track, place, file or project name.
 steps) open `DiagnosticDialog` (« Copier le rapport », the text selected when the clipboard refuses). Both entries stay
 under ~16 KB of sessionStorage (values cut at 200 characters, steps at 80).
 
-Not done, on purpose: the imagery textures keep their 512² canvases (`CanvasTexture`, about 1 MB of JS memory per
-resident tile): three re-uploads from `texture.image` after a lost context, and the engine has no way to redraw a tile's
+Not done, on purpose: the imagery textures keep their 512² canvases while the tile lives (`CanvasTexture`, about 1 MB of JS
+memory per resident tile; released when it unloads): three re-uploads from `texture.image` after a lost context, and the engine has no way to redraw a tile's
 imagery, so releasing them would leave grey tiles after a restore. The muxer's copies at the end of an in-memory export
 stay (`BufferTarget`; a `StreamTarget` into Blob chunks changes the MP4 layout, « fast start » included: to try with a
 real iPhone and Photos). The canvas is created once: a phone that starts with the atmosphere off keeps the MSAA, one that

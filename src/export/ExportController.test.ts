@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RootState } from '@react-three/fiber'
 import { PerspectiveCamera } from 'three'
+import { DESKTOP_BUDGET, budgetFor } from '../core/deviceBudget'
 import { DEFAULT_FILM } from '../film/model'
 import { filmClockFor } from '../film/clock'
 import { DEFAULT_PACING } from '../flyover/pacing'
 import type { WritableFile } from '../platform/platform'
+import type { TerrainEngine } from '../core/types'
 import { runExport } from './ExportController'
 import { buildFrameSchedule } from './schedule'
 import { useExportStore, type ExportRequest } from './store'
@@ -64,7 +66,7 @@ function destination(): WritableFile {
 }
 
 /** Starts a 2 s film at 10 fps written to `file` and runs it to the end. */
-async function exportFilm(file: WritableFile) {
+async function exportFilm(file: WritableFile, extra: Partial<Parameters<typeof runExport>[1]> = {}) {
   useExportStore.getState().start({
     width: 320,
     height: 180,
@@ -86,6 +88,7 @@ async function exportFilm(file: WritableFile) {
     overlay: () => undefined,
     clock: () => clock,
     signal: new AbortController().signal,
+    ...extra,
   })
   return { three, frameCount: buildFrameSchedule(request).length }
 }
@@ -93,6 +96,7 @@ async function exportFilm(file: WritableFile) {
 describe('runExport', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    session.addFrame.mockImplementation(async () => undefined)
     useExportStore.setState({ phase: 'idle', request: null, cancelRequested: false, result: null, error: null })
   })
 
@@ -131,5 +135,22 @@ describe('runExport', () => {
     await exportFilm(file)
     expect(file.discard).toHaveBeenCalled()
     expect(useExportStore.getState()).toMatchObject({ phase: 'error', error: 'Disque plein.', result: null })
+  })
+
+  it('counts the tiles of a phone in film frames for the whole export, then goes back to wall time', async () => {
+    // the controller reuses one object: keep what each call saw
+    const seen: Array<{ frame: number; keepFrames: number; prefetchKeepFrames: number } | null> = []
+    const setRetention = vi.fn((retention) => void seen.push(retention && { ...retention }))
+    const phone = budgetFor({ coarsePointer: true, shortSidePx: 393 })
+    const { frameCount } = await exportFilm(destination(), { engine: () => ({ setRetention }) as unknown as TerrainEngine, budget: phone })
+    expect(seen.slice(0, -1).map((retention) => retention?.frame)).toEqual([...Array(frameCount).keys()])
+    expect(seen[0]).toMatchObject({ keepFrames: phone.exportTileKeepFrames, prefetchKeepFrames: 30 })
+    expect(seen.at(-1)).toBeNull()
+  })
+
+  it('a computer keeps the wall-time retention (the engine is only reset at the end)', async () => {
+    const setRetention = vi.fn()
+    await exportFilm(destination(), { engine: () => ({ setRetention }) as unknown as TerrainEngine, budget: DESKTOP_BUDGET })
+    expect(setRetention.mock.calls).toEqual([[null]])
   })
 })
