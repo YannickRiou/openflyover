@@ -34,10 +34,12 @@ export interface DeviceBudget {
   /** estimated size (bytes) above which a film kept in memory is flagged as likely to exhaust the tab */
   memoryWarnBytes: number
   /**
-   * most terrain tiles the engine keeps loaded (~2.6 MB each: texture, canvas, DEM grid, geometry); the tiles of the
-   * current view are never evicted. Without it a phone's export grows by ~1.2 tiles per frame until iOS ends the tab.
+   * most terrain tiles the engine keeps loaded or loading (~2.6 MB each: texture, canvas, DEM grid, geometry); the view's
+   * level of detail coarsens to fit. Without it a phone's export grows by ~1.2 tiles per frame until iOS ends the tab.
    */
   maxResidentTiles: number
+  /** terrain tiles loading at the same time: each holds its fetches and decode copies (bitmaps, DEM pixels, canvas) */
+  maxTileLoads: number
   /** export: film frames a tile of the view is kept after the last frame that needed it; 0 = wall time (the preview's) */
   exportTileKeepFrames: number
   /** export: frames ahead whose tiles are prefetched (every few rendered frames) */
@@ -61,12 +63,13 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   maxVideoBitrate: Infinity,
   memoryWarnBytes: 1.5e9,
   maxResidentTiles: Infinity,
+  maxTileLoads: 24,
   exportTileKeepFrames: 0,
   exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
   shadowMapSize: 4096,
 }
 
-const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles'> = {
+const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'maxTileLoads'> = {
   maxPixelRatio: 2,
   movingPixelRatio: 1.5,
   tileBitmaps: 200,
@@ -111,6 +114,8 @@ export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits
     memoryWarnBytes: 250e6,
     // the preview holds ~70 tiles; the export (400-500 MB of tiles at most) never needs more
     maxResidentTiles: phone ? 120 : 160,
+    // an iPhone 12 held ~94 tiles pending at once in a low view: their decode copies pile up before the cap applies
+    maxTileLoads: phone ? 6 : 12,
   }
   if (memoryGb !== undefined && memoryGb <= LOW_MEMORY_GB) {
     return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024, maxResidentTiles: 90 }

@@ -12,6 +12,7 @@ import type {
   DemEncoding,
   HeightGrid,
   LoadImageryTexture,
+  TerrainCaches,
   TerrainEngine,
   TerrainEngineOptions,
   TerrainRetention,
@@ -28,6 +29,7 @@ import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
 import { buildTileGeometry, sampleTileMesh } from './mesh'
 import {
   TileNode,
+  countSelection,
   createCameraState,
   createRootNodes,
   createSelectionResult,
@@ -52,6 +54,7 @@ export interface HeightFieldLike {
   /** evict least recently used grids down to `maxEntries`; returns the number evicted */
   prune(maxEntries: number): number
   clear(): void
+  readonly size?: number
 }
 
 export interface EngineDeps {
@@ -65,15 +68,16 @@ export interface EngineDeps {
 
 /** Knobs that do not belong to the public `TerrainEngineOptions` (mostly for tests and tuning). */
 export interface EngineTuning {
-  /** nodes loading at the same time */
+  /** nodes loading at the same time (24 on a computer, fewer on a phone: core/deviceBudget.ts) */
   maxConcurrentLoads: number
   /** a node not visited by the selection for more than this long (ms) is unloaded */
   unloadAfterMs: number
   /** how long (ms) the nodes a prefetch visits are kept, even when no view visits them */
   prefetchKeepMs: number
   /**
-   * ready tiles above which the least recently visited ones outside the current view are unloaded, and prefetches
-   * stop (unbounded on a computer, fewer on a phone: core/deviceBudget.ts)
+   * tiles loaded or loading above which the least recently visited ones outside the current view are unloaded, and
+   * prefetches stop; the level of detail coarsens so the view fits (unbounded on a computer, fewer on a phone:
+   * core/deviceBudget.ts)
    */
   maxResidentTiles: number
   /** how often the unload sweep runs, in frames */
@@ -101,7 +105,7 @@ export interface EngineTuning {
 }
 
 export const DEFAULT_TUNING: Readonly<EngineTuning> = {
-  maxConcurrentLoads: 24,
+  maxConcurrentLoads: deviceBudget().maxTileLoads,
   // time-based, so the export's tile waits (an update every 16 ms, no render) do not hurry them:
   // 2 s and 5 s are the former 120 and 300 updates of the preview at 60 fps
   unloadAfterMs: 2_000,
@@ -132,6 +136,11 @@ export const DEFAULT_IMAGERY_ZOOM_OFFSET = 1
  * high or far away, finer tiles would not show, and the distant landscape of the flight stays cheap.
  */
 export const OUTER_MAX_ZOOM = 11
+/** With a tile budget, the error target is multiplied by LOD_STEP ** level, level in [0, MAX_LOD_LEVEL] (×14.6 at most). */
+export const LOD_STEP = 1.25
+export const MAX_LOD_LEVEL = 12
+/** the preview goes one level finer only when that selection holds within this share of the budget (hysteresis) */
+export const LOD_RELAX_SHARE = 0.9
 /** material colour when a tile has no imagery (neutral grey) */
 export const NO_IMAGERY_COLOR = 0x8a8f94
 
@@ -193,7 +202,7 @@ export function createTerrainEngine(
   group.name = 'terrain'
   group.matrixAutoUpdate = false
 
-  const stats: TerrainStats = { visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0 }
+  const stats: TerrainStats = { visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0, pendingVisibleTiles: 0, lodFactor: 1 }
   const listeners = new Set<() => void>()
 
   // Hot-path scratch state, allocated once.
@@ -227,6 +236,8 @@ export function createTerrainEngine(
   let disposed = false
   /** export retention in film frames; null = wall time */
   let retention: TerrainRetention | null = null
+  /** coarsening of the level of detail that keeps the view within `maxResidentTiles` (0 = none) */
+  let lodLevel = 0
 
   // --- tree -------------------------------------------------------------------
 
@@ -498,17 +509,45 @@ export function createTerrainEngine(
   }
 
   /**
-   * Hard cap: past `maxResidentTiles`, unload ready tiles the current selection did not visit (so neither a drawn tile,
-   * a shadow caster nor an ancestor of one), least recently visited first. Roots stay, like in the sweep.
+   * Hard cap: past `maxResidentTiles` tiles loaded or loading (plus `reserve` loads about to start), unload or cancel
+   * the tiles the current selection did not visit (so neither a drawn tile, a shadow caster nor an ancestor of one),
+   * least recently visited first. Roots stay, like in the sweep. The view itself fits through `solveLodLevel`.
    */
-  function enforceCap(): void {
-    if (readyCount <= cfg.maxResidentTiles) return
+  function enforceCap(reserve: number): void {
+    const cap = cfg.maxResidentTiles - reserve
+    if (readyCount + loadingCount <= cap) return
     const evictable: TileNode[] = []
     forEachNode(roots, (node) => {
-      if (node.state === 'ready' && node.parent !== undefined && node.lastVisitedFrame !== frame) evictable.push(node)
+      if ((node.state === 'ready' || node.state === 'loading') && node.parent !== undefined && node.lastVisitedFrame !== frame) {
+        evictable.push(node)
+      }
     })
     evictable.sort(leastRecent)
-    for (let i = 0; i < evictable.length && readyCount > cfg.maxResidentTiles; i++) unloadNode(evictable[i])
+    for (let i = 0; i < evictable.length && readyCount + loadingCount > cap; i++) unloadNode(evictable[i])
+  }
+
+  /** error target of the selections at the current level of detail (exactly `errorTargetPx` at level 0) */
+  const errorTarget = () => opts.errorTargetPx * LOD_STEP ** lodLevel
+
+  /** true if the selection at `level` holds at most `limit` tiles (`selectionParams` set for this update) */
+  function fits(level: number, limit: number): boolean {
+    selectionParams.errorTargetPx = opts.errorTargetPx * LOD_STEP ** level
+    return countSelection(roots, cameraState, selectionParams, limit) <= limit
+  }
+
+  /**
+   * With a tile budget, the finest level of detail whose selection fits `maxResidentTiles`: a larger error target
+   * coarsens the distant tiles first, the near ones stay at their level. The preview keeps its level and goes one finer
+   * only when that fits within `LOD_RELAX_SHARE` of the budget (no back and forth); an export solves it from the view
+   * at every update, so a film frame does not depend on how the previous ones went.
+   */
+  function solveLodLevel(): void {
+    const budget = cfg.maxResidentTiles
+    if (budget === Infinity) return
+    let level = retention ? 0 : lodLevel
+    if (level > 0 && fits(level - 1, Math.floor(budget * LOD_RELAX_SHARE))) level--
+    while (level < MAX_LOD_LEVEL && !fits(level, budget)) level++
+    lodLevel = level
   }
 
   // --- dirty geometries (exaggeration change) -------------------------------------
@@ -566,6 +605,7 @@ export function createTerrainEngine(
     stats.pendingTiles = pendingTiles
     stats.failedTiles = failedCount
     stats.pendingVisibleTiles = pendingVisibleTiles
+    stats.lodFactor = LOD_STEP ** lodLevel
   }
 
   function flushChange(): void {
@@ -614,12 +654,13 @@ export function createTerrainEngine(
     if (disposed) return
     frame++
     updateCameraState(cameraState, camera, viewportHeightPx)
-    selectionParams.errorTargetPx = opts.errorTargetPx
     selectionParams.maxZoom = opts.maxZoom
     selectionParams.detailArea = opts.detailArea
     selectionParams.frame = frame
     selectionParams.now = now()
     selectionParams.keepUntil = retention ? retention.frame + retention.keepFrames : selectionParams.now + cfg.unloadAfterMs
+    solveLodLevel()
+    selectionParams.errorTargetPx = errorTarget()
     selectTiles(roots, cameraState, selectionParams, selection)
 
     // Visibility: only the selected nodes draw.
@@ -639,8 +680,9 @@ export function createTerrainEngine(
     // sampleHeight follows the drawn tiles: what is draped on them must follow too
     if (rendered.length !== renderedBefore.length || rendered.some((node, i) => node !== renderedBefore[i])) changed = true
 
-    // Loads, highest priority first, within the concurrency budget.
+    // Loads, highest priority first, within the concurrency budget; room is made for them under the cap first.
     const toLoad = selection.toLoad
+    enforceCap(Math.max(0, Math.min(toLoad.length, cfg.maxConcurrentLoads - loadingCount)))
     let started = 0
     for (let i = 0; i < toLoad.length && loadingCount < cfg.maxConcurrentLoads; i++) {
       startLoad(toLoad[i], i)
@@ -649,7 +691,6 @@ export function createTerrainEngine(
 
     if (dirtyCount > 0) rebuildDirty()
     if (frame % cfg.sweepEveryFrames === 0) sweep()
-    enforceCap()
 
     refreshStats(loadingCount + (toLoad.length - started), selection.pendingVisible)
     flushChange()
@@ -663,7 +704,7 @@ export function createTerrainEngine(
   function prefetch(camera: PerspectiveCamera, viewportHeightPx: number): number {
     if (disposed) return 0
     updateCameraState(prefetchCameraState, camera, viewportHeightPx)
-    selectionParams.errorTargetPx = opts.errorTargetPx
+    selectionParams.errorTargetPx = errorTarget()
     selectionParams.maxZoom = opts.maxZoom
     selectionParams.detailArea = opts.detailArea
     selectionParams.frame = frame + 0.5 // after the view of this frame: a tile ahead outlasts one behind in the cap's order
@@ -747,6 +788,10 @@ export function createTerrainEngine(
     retention = next && { ...next }
   }
 
+  function caches(): TerrainCaches {
+    return { bitmaps: io.fetcher.stats.cached, bitmapBytes: io.fetcher.cachedBytes, heightGrids: io.heightField.size ?? 0 }
+  }
+
   function onChange(cb: () => void): () => void {
     listeners.add(cb)
     return () => {
@@ -767,5 +812,5 @@ export function createTerrainEngine(
 
   buildTree()
 
-  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, dispose }
+  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, caches, dispose }
 }

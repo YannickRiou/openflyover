@@ -9,10 +9,13 @@ import {
   createScreenWakeLock,
   currentReport,
   describeBreadcrumb,
+  describeSteps,
   installExportGuard,
+  isExportStep,
   readBreadcrumbs,
   reportInterruptedExport,
   setBreadcrumbProbe,
+  setExportProbe,
   takeInterruptedExport,
   writeBreadcrumb,
   type ScreenWakeLock,
@@ -180,11 +183,11 @@ describe('export guard', () => {
 
   it('keeps the last MAX_STEPS breadcrumbs, oldest first', () => {
     const storage = memoryStorage()
-    for (let i = 1; i <= MAX_STEPS + 5; i++) writeBreadcrumb(`export : image ${i} / 20`, storage, i)
+    for (let i = 1; i <= MAX_STEPS + 5; i++) writeBreadcrumb(`export : image ${i} / ${MAX_STEPS + 5}`, storage, i)
     const steps = readBreadcrumbs(storage)
     expect(steps).toHaveLength(MAX_STEPS)
-    expect(steps[0].event).toBe('export : image 6 / 20')
-    expect(steps.at(-1)!.event).toBe('export : image 20 / 20')
+    expect(steps[0].event).toBe(`export : image 6 / ${MAX_STEPS + 5}`)
+    expect(steps.at(-1)!.event).toBe(`export : image ${MAX_STEPS + 5} / ${MAX_STEPS + 5}`)
     // a single breadcrumb, as stored before the steps were kept, still reads
     storage.setItem(BREADCRUMB_KEY, JSON.stringify({ event: 'freeze', at: 3 }))
     expect(readBreadcrumbs(storage)).toEqual([{ event: 'freeze', at: 3 }])
@@ -258,9 +261,40 @@ describe('interrupted export', () => {
   })
 
   it('describes the breadcrumb', () => {
-    expect(describeBreadcrumb({ event: 'freeze', at: 0, textures: 5, tiles: 9 })).toMatch(/^freeze à .* · 5 textures, 9 tuiles$/)
-    expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, pending: 3 })).toMatch(/ · 9 tuiles, 3 en attente$/)
+    expect(describeBreadcrumb({ event: 'freeze', at: 0, textures: 5, tiles: 9 })).toMatch(/^freeze à .* · 5 tex, 9 tuiles$/)
+    expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, pending: 3 })).toMatch(/ · 9 tuiles \(3 en attente\)$/)
+    expect(describeBreadcrumb({ event: 'freeze', at: 0, pending: 3 })).toMatch(/ · 3 en attente$/)
+    // the terrain's detail lowered to keep a phone under its tile budget; full detail is not shown
+    expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, lod: 3.8 })).toMatch(/ · 9 tuiles, détail ÷3,8$/)
+    expect(describeBreadcrumb({ event: 'freeze', at: 0, tiles: 9, lod: 1 })).toMatch(/ · 9 tuiles$/)
     expect(describeBreadcrumb({ event: 'pagehide', at: 0 })).toMatch(/^pagehide à [^·]*$/)
     expect(describeBreadcrumb({ event: 'freeze', at: 0, heapMb: 310 })).toMatch(/ · 310 Mo de tas JS$/)
+    const step = { event: 'export : image 100 / 1848', at: 11_000, textures: 136, geometries: 126, tiles: 161, pending: 12 }
+    const counters = { bitmaps: 180, bitmapMb: 45, grids: 160, inFlight: 4, queue: 2, drapes: 37 }
+    expect(describeBreadcrumb({ ...step, ...counters }, { event: 'export : image 90 / 1848', at: 0 })).toMatch(
+      /^export : image 100 \/ 1848 à .* · 136 tex, 126 géo, 161 tuiles \(12 en attente\), 180 bitmaps ~45 Mo, 160 grilles, 4 en vol, file 2, 37 re-drapages, \+11,0 s$/,
+    )
+    expect(describeSteps([{ event: 'a', at: 0 }, { event: 'b', at: 2_500 }])).toEqual([
+      expect.stringMatching(/^a à [^·]*$/),
+      expect.stringMatching(/^b à .* · \+2,5 s$/),
+    ])
+  })
+
+  it('notes 1 frame in 10 from 50 to 200, 1 in 25 elsewhere, and the first 3', () => {
+    const steps = Array.from({ length: 301 }, (_, i) => i).filter(isExportStep)
+    expect(steps).toEqual([0, 1, 2, 25, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 225, 250, 275, 300])
+  })
+
+  it('adds the counters of a running export to every breadcrumb', () => {
+    const storage = memoryStorage()
+    setBreadcrumbProbe(() => ({ textures: 12, tiles: 40 }))
+    setExportProbe(() => ({ tiles: 41, bitmaps: 180, inFlight: 4 }))
+    writeBreadcrumb('pagehide', storage, 1)
+    setExportProbe(null)
+    writeBreadcrumb('freeze', storage, 2)
+    expect(readBreadcrumbs(storage)).toEqual([
+      { event: 'pagehide', at: 1, textures: 12, tiles: 41, bitmaps: 180, inFlight: 4 },
+      { event: 'freeze', at: 2, textures: 12, tiles: 40 },
+    ])
   })
 })
