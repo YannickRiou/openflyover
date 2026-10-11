@@ -57,8 +57,8 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
 | `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `labelOpacity`, `climbLabels`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
-| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `filmHighlights`, `materializeStops`, `filmStops`, `pickLandmarkTitles`, `withLandmarkTitles`, `withoutLandmarkTitles`, `sameLandmarkTitles`, `freezeLandmarkTitles`; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
-| `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime` |
+| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `filmHighlights`, `materializeStops`, `filmStops`, `pickLandmarkTitles`, `withLandmarkTitles`, `withoutLandmarkTitles`, `sameLandmarkTitles`, `freezeLandmarkTitles`; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
+| `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime`; keyframes: `keyView`, `keyFramingFrom`, `keyFramingAt`, `keyReferenceAt` (`cameraKeys.ts`, no three.js: `keyPoseAt`, `keyedCamera`, `registerKeyCapture`, `captureKey`) |
 | `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)` |
 | `src/flyover/trackColor.ts` | track colored by a metric | `TRACK_COLOR_MODES`, `TrackColorBy`, `TRACK_METRICS` (label, unit, palette), `metricValues`, `trackMetricValues`, `hasMetric`, `robustRange`, `resampleValues`, `colorizeValues`, `VIRIDIS`, `MAGMA`, `MISSING_COLOR` |
 | `src/scene/exposure.ts` | exposure under the atmosphere | `DAYLIGHT_EXPOSURE`, `sunElevation`, `autoExposureEv`, `sceneExposure(elevation, ev)`, `nightFillIntensity` |
@@ -356,7 +356,8 @@ ink, 7.3:1).
   and reused in tooltips (`withShortcut`). `matchShortcut(key, keyFocus(target))`, pure: Ctrl/Cmd+S save,
   Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer, F reframe, G safe zones, S stop at the marker, T text at the playhead, `[` collapse
   and `?` help (AltGr / Shift accepted), Esc, ← / →
-  (Shift: 5 s, `seekTime`), Home / End; nothing in a text field or a list (`isTextEntry`), and no arrows or Home / End
+  (Shift: 5 s, `seekTime`), Home / End, Alt+← / Alt+→ previous / next keyframe (`seekKeyframe`, default prevented: it is
+  also the browser's « back »); nothing in a text field or a list (`isTextEntry`), and no arrows or Home / End
   on a control that uses them (slider, radio, tab, timeline ruler). No digit shortcut (AZERTY). `App`
   listens in the capture phase (no shortcut while a modal box is open); Esc closes, in order, the (native)
   box, the export drawer, then the timeline selection (also from an inspector field); an open menu
@@ -520,7 +521,7 @@ ink, 7.3:1).
   half as much at 3 s, a quarter at 7.5 s; the start of the flight (the flight view was still during the opening, then
   at full speed) no longer jumps. Edges: the clock holds the progress outside the flight (0 during the opening, 1
   during the closing) and clamps the film time, so the windows reach across the shots without a jump; the shot curves,
-  the stop cameras (orbit angle, « Vue large », « Fixe » held motion time) and the camera keys keep the marker's time
+  the stop cameras (orbit angle, « Vue large », « Fixe » held motion time) and the keyframes keep the marker's time
   and progress, so a framing pinned for an item is the one seen during it. « Fin en douceur » `endingS` (0 by
   default): over its last seconds the camera time slows down at a constant rate to a stop (`easedEndTimeS`: speed 1 →
   0, held from the end of the flight at half the ease short of it), the time-based motions (orbit, cinema) too; the
@@ -538,9 +539,12 @@ ink, 7.3:1).
   the marker is at the start of the item (selected, to be adjusted) and, if the marker moves during the item, a second one at
   its end that keeps the framing that was there: neighboring framings keep their values (between the end of the item and the
   next framing, the transition is recomputed over the new interval).
-  "Garder ce cadrage ici" (keep this framing here; "Caméra" section) places a film framing at the marker (`addCameraKey`, with the framing seen
-  there: `keyedCamera`; a framing already at that meter takes it over), one undo step, selected for the inspector (see
-  "Film and timeline", "Camera").
+  « Ajouter une image clé » (add a keyframe; "Caméra" section, and « Image clé » in the timeline bar, `addKeyframe`) places
+  a keyframe at the marker with the pose of the 3D view as framed (`captureKey`: `FlyoverRig` registers the reader of its
+  camera and orbit target, `registerKeyCapture`, so the UI does not load three.js; a keyframe already at that metre takes
+  it over), one undo step, selected for the inspector (see "Film and timeline", "Keyframes"). It replaced « Garder ce
+  cadrage ici », which stored the film's own framing at the marker (`keyedCamera` of the settings), never the 3D view:
+  the camera snapped back to the film's view and the film showed nothing new.
 - **Pacing** (`src/flyover/pacing.ts`, pure; `settings.pacing`, "Caméra" section): progress remains the distance
   fraction; only the film time → progress mapping changes. Highlights: climb summits (`climbsOf`) and, among the OSM
   landmarks passed as an argument, passes crossed (≤ 150 m) and summits within ≤ 300 m. Relative speed
@@ -787,8 +791,10 @@ ink, 7.3:1).
   projects);
   `stops[]` `{ id, atM, durationS (0.5–60 s), camera: 'film' | 'orbite' | 'large' | 'fixe', label?, source?: { kind, ref? } }`
   (`STOP_CAMERA_LABELS`: "Comme le film" (like the film), "Tour lent" (slow orbit), "Vue large" (wide view), "Fixe" (fixed));
-  `cameraKeys[]` `{ id, atM, distance, pitchDeg, headingOffsetDeg }` (flight camera framings along the first
-  track, same ranges as `CAMERA_RANGES`, `isValidCameraKey`; empty by default, a film saved earlier receives `[]`);
+  `cameraKeys[]` `{ id, atM, distance, pitchDeg, headingOffsetDeg, aimRightM?, aimAheadM? }` (keyframes, « Images
+  clés »: exact poses of the flight camera along the first track, not rounded; `CAMERA_KEY_RANGES` (distance ×0.01–×1000,
+  pitch 0–90°, any view the orbit can take; heading ±180°), `isValidCameraKey`; empty by default, a film saved earlier
+  receives `[]`, keys saved by « Garder ce cadrage ici » load unchanged);
   `speeds[]` `{ id, fromM, toM, factor (×0.25–×4) }` (sections of the first track, in meters, never overlapping,
   they may touch; `isValidSpeed`, empty by default, a film saved earlier receives `[]` through `withFilmDefaults`);
   `texts[]` `{ id, startS, durationS, text, subtitle?, anchor, size, color?, font?, stopId? }` (placement of the overlay text widget;
@@ -940,13 +946,23 @@ ink, 7.3:1).
   cinematic styles: their time glides toward the middle of the window during the entry, stays there during the hold, comes back during
   the exit (`heldMotionTimeS`, smootherstep, never backward, no jump). The orbit and cinematic styles follow the
   flight time (`flightTimeS`), so they start where the opening hands them over.
-  **Framings** (`keyedCamera`, pure): distance, pitch and aim of the flight camera at marker distance d, from the
-  film settings and the `cameraKeys` (sorted by position in the clock, `clock.cameraKeys` with their film time):
-  between two framings, from one to the other in smootherstep over distance (first and second derivatives zero at each
-  framing: no jerk); before the first, from the film settings over `cameraKeyEaseM` (3 s of flight at base
-  speed, `CAMERA_KEY_EASE_S`), after the last, back the same way; elsewhere the film settings. Linear in distance and
-  in pitch, aim along the shortest path. Style and smoothing remain those of the film. A function of progress
-  alone: still during a stop, `filmViewMovesWithTime` unchanged.
+  **Keyframes** (`keyPoseAt`, `keyView`, pure): a keyframe is the pose of the camera around the film's aim point at its
+  place (`flight.target`: time smoothing of the aim included), not camera settings: distance × `autoDistanceM`, pitch
+  above the horizon, heading from `keyReferenceAt` (the direction of travel over the default turn window, averaged over
+  four of them: the track alone sets it, so a key keeps its pose when the camera settings change), aim point shifted by
+  `aimRightM` / `aimAheadM` (a panned view). `keyView` places it with no style, time smoothing, pitch clamp or ground
+  clearance, so the film shows the very view that was taken; a « Vue large » or « Tour lent » stop widens or turns it
+  like the film's camera. Capture (`keyFramingAt` → `keyFramingFrom`, the inverse): the aim point is taken on the line
+  of sight at the height of the film's aim point, so a panned or refitted orbit keeps its look; a stop's widening and
+  orbit at that time are taken out. `computeFilmView` blends the flight camera into `keyView` (`blendViews`): between
+  two keys weight 1, the pose from one to the other in smootherstep over distance (linear in distance and pitch, heading
+  the shortest way, aim shift linear: `keyedCamera` gives the same blend of the first three for « Cadrer la caméra
+  pendant cet élément »), raised above the ground (`keepAboveGround`) by a share 4u(1 − u) that is 0 at the keys; before
+  the first and after the last, that key's pose with a weight easing in and out over `cameraKeyEaseM` (3 s of flight at
+  base speed, `CAMERA_KEY_EASE_S`); elsewhere the film's camera. Field of view: `CAMERA_FOV_DEG` everywhere. At the key's
+  film time (`clock.cameraKeys[].timeS`) the view equals the capture (tests: under 1 cm and 0.01° with a cinematic
+  style, time smoothing and relief; e2e `image-cle`: orbit, « Ajouter une image clé », away and back with « Image clé
+  précédente », Alt+← / Alt+→ and a click on the ◆, within 5 cm and 0.1°). A function of progress alone between stops.
   The marker stays on the track (`view.marker`); the target is the flight's aim point (smoothed ground height
   above the marker) during the flight.
 - **Shot transitions** (`transition` of the opening, at its end, and of the closing, at its start; "Transition" in the
@@ -980,10 +996,12 @@ ink, 7.3:1).
   closes with Esc, a click outside or Tab), collapse.
   Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 56 px): click-drag to seek, **opening and closing
   included** (`setProgress(clock.progressAtTime(t), t)`, end of film = progress 1 without a time); it is also a keyboard
-  slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). Lanes "Plans" (shots; opening, flyover with profile, closing;
+  slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). « Image clé précédente / suivante » (◁◆ ◆▷) after the stop
+  button, kept in the phone's transport row (`film-tl__key-nav`): `seekKeyframe` puts the film time exactly on the key
+  (`adjacentKey`, one under the playhead skipped) and moves the inspector to it when it showed a keyframe. Lanes "Plans" (shots; opening, flyover with profile, closing;
   "aucune" (none) = selectable dotted stub; stops are also marked on the flyover bar, tinted window
-  and top edge in the accent color, white for the selected stop; framings are small diamonds where the marker passes,
-  selectable, focusable and draggable), "Arrêts" (stops; window of each stop, entry and exit
+  and top edge in the accent color, white for the selected stop; keyframes are small diamonds (◆) where the marker passes,
+  selectable, focusable and draggable; a click without dragging (a tap on a phone) also seeks to it), "Arrêts" (stops; window of each stop, entry and exit
   included; dotted while they are generated), "Textes" (texts), "Médias" (media; photos and videos, with their thumbnail; a
   video also carries a small camera icon). "Vitesse" (speed) lane under "Plans": one block per section, from its entry to
   its exit in film time, label "×2" (solid frame if sped up, dotted if slowed down); "Vitesse" in the bar
@@ -1038,7 +1056,8 @@ ink, 7.3:1).
   `hasFilmItem`, `Timeline` effect).
 - **Inspector** (`FilmInspector`, no props, in the right dock, sticky header and ✕ like the export drawer): shot
   (style, duration), stop (label, duration, "Caméra pendant l'arrêt" (camera during the stop) as a list with a help sentence, position and window),
-  framing (distance, tilt, aim, "À (km)" (at, km), `updateCameraKey`: camera ranges, aim brought back within ±180°), speed (chips ×0.25 ×0.5 ×1.5
+  « Image clé » (distance, tilt, aim from the captured pose, sliders widened to show a value beyond the camera ranges, "À (km)" (at, km),
+  `updateCameraKey`: keyframe ranges, aim brought back within ±180°, nothing rounded), speed (chips ×0.25 ×0.5 ×1.5
   ×2 ×3 ×4, "Réglage fin" (fine adjustment) in powers of 2, from / to in km bounded by `updateSpeed`, effect on the duration), text (text, subtitle, position,
   size, start, duration, attached to), photo (thumbnail, full-screen / card display, Ken Burns, caption, position, size, start, duration, attached to),
   video (the same without Ken Burns, plus "Début dans la vidéo" (start in the video), file length, "Son" (sound) block: "Son de la

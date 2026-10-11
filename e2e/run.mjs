@@ -120,6 +120,45 @@ async function exposeStores(page) {
   }
 }
 
+/**
+ * The 3D scene's state (camera, orbit controls) on `window.__e2e.scene`: the store of the react-three-fiber root, through
+ * the module URL the dev server gave the app (same instance).
+ */
+async function exposeScene(page) {
+  await exposeStores(page)
+  await page.evaluate(async () => {
+    const url = performance.getEntriesByType('resource').map((e) => e.name).find((name) => name.includes('/@react-three_fiber.js'))
+    const fiber = await import(url)
+    window.__e2e.scene = [...fiber._roots.values()][0].store
+  })
+}
+
+/** Camera pose of the 3D view: position, orientation, field of view. */
+const cameraPose = (page) =>
+  page.evaluate(() => {
+    const { camera } = window.__e2e.scene.getState()
+    return { position: camera.position.toArray(), quaternion: camera.quaternion.toArray(), fov: camera.fov }
+  })
+
+/** Distance (m) and angle (°) between two poses. */
+function poseGap(a, b) {
+  const metres = Math.hypot(...a.position.map((v, i) => v - b.position[i]))
+  const dot = Math.min(1, Math.abs(a.quaternion.reduce((sum, v, i) => sum + v * b.quaternion[i], 0)))
+  return { metres, degrees: (2 * Math.acos(dot) * 180) / Math.PI, fov: Math.abs(a.fov - b.fov) }
+}
+
+/** Waits until the camera shows `pose` again (within 5 cm and 0.1°), the film time at `timeS`. */
+async function expectPose(page, pose, timeS, label) {
+  let gap = null
+  for (const end = Date.now() + STEP_MS; Date.now() < end; ) {
+    const state = await page.evaluate(() => window.__e2e.appStore.getState().playback)
+    gap = poseGap(await cameraPose(page), pose)
+    if (Math.abs((state.timeS ?? -1) - timeS) < 1e-3 && gap.metres < 0.05 && gap.degrees < 0.1 && gap.fov === 0) return
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
+  throw new Error(`${label} : la vue n’est pas celle de l’image clé (${gap.metres.toFixed(3)} m, ${gap.degrees.toFixed(3)}°)`)
+}
+
 async function waitForExport(page, label) {
   const handle = await until(
     page,
@@ -232,6 +271,73 @@ const SCENARIOS = [
       const after = await rowState()
       assert(after.expanded === 'false' && after.hidden && after.value === before.value, `ligne Exposition à la fin : ${JSON.stringify(after)}`)
       await blur(page)
+    },
+  },
+  {
+    id: 'image-cle',
+    title: 'Image clé : la vue orbitée gardée telle quelle, retrouvée exactement par « précédente / suivante », Alt+← / Alt+→ et son losange',
+    async run({ page }) {
+      await exposeScene(page)
+      await blur(page)
+      // 20 s into the film, paused
+      await page.keyboard.press('Home')
+      await page.keyboard.down('Shift')
+      for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight')
+      await page.keyboard.up('Shift')
+      await until(page, () => window.__e2e.appStore.getState().playback.timeS === 20)
+      // orbit the view with the mouse, without inertia (the pose read is then the one the button keeps)
+      await page.evaluate(() => (window.__e2e.scene.getState().controls.enableDamping = false))
+      const film = await cameraPose(page)
+      const box = await (await page.$('canvas[data-engine^="three.js"]')).boundingBox()
+      const [x, y] = [box.x + box.width / 2, box.y + box.height / 2]
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      for (let i = 1; i <= 15; i++) await page.mouse.move(x + i * 16, y - i * 3)
+      await page.mouse.up()
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      const orbited = await cameraPose(page)
+      assert(poseGap(orbited, film).metres > 100, 'la vue n’a pas tourné sous la souris')
+
+      try {
+        await page.click('button[aria-label="Ajouter une image clé"]')
+        await until(page, () => window.__e2e.appStore.getState().settings.film.cameraKeys.length === 1)
+        await page.waitForSelector('.film-tl__key[aria-label^="Image clé"]', { visible: true, timeout: STEP_MS })
+        // the view stays as it was framed
+        await expectPose(page, orbited, 20, 'après « Ajouter une image clé »')
+
+        // away (10 s later, the film's camera), then back with « Image clé précédente »
+        await blur(page)
+        await page.keyboard.down('Shift')
+        await page.keyboard.press('ArrowRight')
+        await page.keyboard.press('ArrowRight')
+        await page.keyboard.up('Shift')
+        await until(page, () => window.__e2e.appStore.getState().playback.timeS === 30)
+        await page.click('button[aria-label="Image clé précédente"]')
+        await expectPose(page, orbited, 20, '« Image clé précédente »')
+        // from the start with Alt+→, from the end with Alt+←
+        await blur(page)
+        await page.keyboard.press('Home')
+        await until(page, () => window.__e2e.appStore.getState().playback.timeS === 0)
+        await page.keyboard.down('Alt')
+        await page.keyboard.press('ArrowRight')
+        await page.keyboard.up('Alt')
+        await expectPose(page, orbited, 20, 'Alt+→')
+        await page.keyboard.press('End')
+        await page.keyboard.down('Alt')
+        await page.keyboard.press('ArrowLeft')
+        await page.keyboard.up('Alt')
+        await expectPose(page, orbited, 20, 'Alt+←')
+        // a click on its diamond on the « Plans » track
+        await page.keyboard.press('Home')
+        await page.click('.film-tl__key')
+        await expectPose(page, orbited, 20, 'clic sur le losange')
+        assert(await page.evaluate(() => document.querySelector('button[aria-label="Image clé suivante"]').disabled), '« Image clé suivante » active après la dernière')
+      } finally {
+        await page.evaluate(() => (window.__e2e.scene.getState().controls.enableDamping = true))
+        await page.keyboard.press('Escape')
+        await blur(page)
+        await page.keyboard.press('Home')
+      }
     },
   },
   {
@@ -507,6 +613,14 @@ const SCENARIOS = [
             const [m, s] = document.querySelector('.film-tl__time strong').textContent.split(':')
             return Number(m) * 60 + Number(s.replace(',', '.'))
           })
+        // previous / next keyframe in the transport row, on screen
+        const keyNav = await page.$$eval('.film-tl__bar button[aria-label^="Image clé"]', (buttons) =>
+          buttons.map((b) => {
+            const r = b.getBoundingClientRect()
+            return r.width >= 44 && r.left >= 0 && r.right <= innerWidth
+          }),
+        )
+        assert(keyNav.length === 2 && keyNav.every(Boolean), `boutons image clé précédente / suivante : ${JSON.stringify(keyNav)}`)
         // a slide on the lanes scrolls them under the playhead: the film time follows
         const before = await playhead()
         const lanes = await page.$eval('.film-tl__scroller', (el) => {

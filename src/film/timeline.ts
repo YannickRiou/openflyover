@@ -7,7 +7,6 @@
  * clip (unique across the film). Times are film times (seconds at x1 from the first frame, opening included).
  */
 import { clamp } from '../core/math'
-import { CAMERA_RANGES } from '../flyover/cameraSettings'
 import type { CameraSettings } from '../flyover/cameraSettings'
 import { distanceAtTime, nearestOnPath, recordedTimeAt } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
@@ -16,6 +15,7 @@ import {
   AUDIO_DEFAULTS,
   AUDIO_DURATION_RANGE,
   AUTO_STOP_S,
+  CAMERA_KEY_RANGES,
   DEFAULT_FILM,
   FADE_RANGE,
   ITEM_DURATION_RANGE,
@@ -419,18 +419,33 @@ export function addSpeed(film: Film, atM: number, lengthM: number): { film: Film
   return { film: { ...film, speeds: [...film.speeds, { id, fromM: from, toM: to, factor: NEW_SPEED_FACTOR }] }, id }
 }
 
+/** Pose of a keyframe added or taken over: its aim shift stays as it was when not given. */
+type KeyPose = Pick<FilmCameraKey, 'distance' | 'pitchDeg' | 'headingOffsetDeg' | 'aimRightM' | 'aimAheadM'>
+
 /**
- * A camera key added at `atM` with `framing` (rounded); with its id. A key already at that metre takes the framing
- * instead (one key per place).
+ * A keyframe (« Image clé ») added at `atM` with pose `framing`; with its id. A key already at that metre takes the
+ * pose and the place instead (one key per place).
  */
-export function addCameraKey(film: Film, atM: number, framing: Pick<CameraSettings, 'distance' | 'pitchDeg' | 'headingOffsetDeg'>): { film: Film; id: string } {
-  const at = Math.max(0, Math.round(atM))
-  const there = film.cameraKeys.find((k) => k.atM === at)
-  if (there) return { film: updateCameraKey(film, there.id, framing), id: there.id }
+export function addCameraKey(film: Film, atM: number, framing: KeyPose): { film: Film; id: string } {
+  const at = Math.max(0, atM)
+  const there = film.cameraKeys.find((k) => Math.round(k.atM) === Math.round(at))
+  if (there) return { film: updateCameraKey(film, there.id, { ...framing, atM: at }), id: there.id }
   const id = nextFilmId(film, 'camera')
-  const { distance, pitchDeg, headingOffsetDeg } = framing
-  const key: FilmCameraKey = { id, atM: at, distance, pitchDeg, headingOffsetDeg }
-  return { film: updateCameraKey({ ...film, cameraKeys: [...film.cameraKeys, key] }, id, {}), id }
+  return { film: updateCameraKey({ ...film, cameraKeys: [...film.cameraKeys, { ...framing, id, atM: at }] }, id, {}), id }
+}
+
+/**
+ * The keyframe just before (`direction` -1) or after (1) film time `timeS` (« Image clé précédente / suivante »), null
+ * when there is none; one at `timeS` is skipped.
+ */
+export function adjacentKey<T extends { timeS: number }>(keys: readonly T[], timeS: number, direction: -1 | 1): T | null {
+  const EPSILON_S = 1e-3
+  let best: T | null = null
+  for (const k of keys) {
+    const ahead = direction > 0 ? k.timeS > timeS + EPSILON_S : k.timeS < timeS - EPSILON_S
+    if (ahead && (best === null || (k.timeS - best.timeS) * direction < 0)) best = k
+  }
+  return best
 }
 
 /**
@@ -679,13 +694,12 @@ export function updateSpeed(film: Film, id: string, patch: Partial<Omit<FilmSpee
 }
 
 /**
- * Camera key `id` with `patch`: distance and pitch clamped to the camera ranges, heading brought into -180°..180°
- * (at 1/100 and 1/10°), position to the metre.
+ * Keyframe `id` with `patch`: distance and pitch clamped to the keyframe ranges, heading brought into -180°..180°. Not
+ * rounded: the key keeps the exact view it was taken from.
  */
 export function updateCameraKey(film: Film, id: string, patch: Partial<Omit<FilmCameraKey, 'id'>>): Film {
-  const { distance, pitchDeg } = CAMERA_RANGES
-  const within = (v: number, r: { min: number; max: number }, per: number) => Math.round(clamp(v, r.min, r.max) * per) / per
-  const heading = (deg: number) => Math.round(((((deg + 180) % 360) + 360) % 360) * 10) / 10 - 180
+  const { distance, pitchDeg } = CAMERA_KEY_RANGES
+  const heading = (deg: number) => ((((deg + 180) % 360) + 360) % 360) - 180
   return {
     ...film,
     cameraKeys: film.cameraKeys.map((k) => {
@@ -693,9 +707,9 @@ export function updateCameraKey(film: Film, id: string, patch: Partial<Omit<Film
       const next = { ...k, ...patch }
       return {
         ...next,
-        atM: Math.max(0, Math.round(next.atM)),
-        distance: within(next.distance, distance, 100),
-        pitchDeg: within(next.pitchDeg, pitchDeg, 10),
+        atM: Math.max(0, next.atM),
+        distance: clamp(next.distance, distance.min, distance.max),
+        pitchDeg: clamp(next.pitchDeg, pitchDeg.min, pitchDeg.max),
         headingOffsetDeg: heading(next.headingOffsetDeg),
       }
     }),

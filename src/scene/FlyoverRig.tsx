@@ -12,13 +12,14 @@
  */
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import type { Sprite, Vector3 } from 'three'
+import { Vector3, type Sprite } from 'three'
+import { registerKeyCapture } from '../flyover/cameraKeys'
 import { filmViewMovesWithTime, situationFramingOf, situationTarget } from '../flyover/filmCamera'
 import { filmFollowOf } from '../flyover/follow'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { registerFramingCapture, useRegionStore } from '../osm/region'
 import { useAppStore } from '../state/store'
-import { filmViewAt } from './filmView'
+import { filmViewAt, keyFramingOfView } from './filmView'
 import { useTerrainContext } from './TerrainLayer'
 import { frameDelta } from './renderOnDemand'
 import { headsLeft, LEAD_MARKER_COLORS, occludeMarker, placeMarker, reliefClearance, useMarkerImage } from './markerSprite'
@@ -74,6 +75,17 @@ export function FlyoverRig() {
       return situationFramingOf(camera.position, situationTarget(path, frame, sampler, exaggeration, region))
     })
   }, [path, frame, engine, camera])
+
+  // « Ajouter une image clé »: the pose of this camera at the playhead, as the film will show it at the keyframe
+  useEffect(() => {
+    if (!path || path.count === 0 || !frame) return
+    return registerKeyCapture(() => {
+      const { progress, timeS } = useAppStore.getState().playback
+      const lookAt = controls?.target ?? camera.getWorldDirection(new Vector3()).add(camera.position)
+      const framing = keyFramingOfView(path, clock, progress, timeS, frame, engine, follow, camera.position, lookAt)
+      return { atM: progress * path.lengthM, framing }
+    })
+  }, [path, frame, engine, camera, controls, clock, follow])
 
   useFrame(({ camera, size, gl }, delta) => {
     const store = useAppStore.getState()

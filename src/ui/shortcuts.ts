@@ -21,6 +21,7 @@ export const SHORTCUTS = [
   { id: 'seek', keys: ['←', '→'], label: 'Reculer ou avancer d’une seconde', group: 'Lecture' },
   { id: 'seek-long', keys: ['Maj+←', 'Maj+→'], label: 'Reculer ou avancer de 5 secondes', group: 'Lecture' },
   { id: 'seek-ends', keys: ['Début', 'Fin'], label: 'Aller au début ou à la fin du film', group: 'Lecture' },
+  { id: 'seek-key', keys: ['Alt+←', 'Alt+→'], label: 'Aller à l’image clé précédente ou suivante', group: 'Lecture' },
   { id: 'undo', keys: ['Ctrl+Z'], label: 'Annuler', group: 'Montage' },
   { id: 'redo', keys: ['Ctrl+Maj+Z', 'Ctrl+Y'], label: 'Rétablir', group: 'Montage' },
   { id: 'nudge', keys: ['←', '→'], label: 'Décaler le bloc sélectionné d’une seconde (Maj : d’un dixième)', group: 'Montage' },
@@ -41,10 +42,10 @@ export const SHORTCUTS = [
 
 export type ShortcutId = (typeof SHORTCUTS)[number]['id']
 
-/** Tooltip text: `label` followed by the first key combination of `id`, « Annuler (Ctrl+Z) ». */
-export function withShortcut(label: string, id: ShortcutId): string {
+/** Tooltip text: `label` followed by key combination `index` (the first by default) of `id`, « Annuler (Ctrl+Z) ». */
+export function withShortcut(label: string, id: ShortcutId, index = 0): string {
   const shortcut: Shortcut | undefined = SHORTCUTS.find((s) => s.id === id)
-  return shortcut ? `${label} (${shortcut.keys[0]})` : label
+  return shortcut ? `${label} (${shortcut.keys[index] ?? shortcut.keys[0]})` : label
 }
 
 export type ShortcutAction =
@@ -64,6 +65,8 @@ export type ShortcutAction =
   | 'seek-forward-long'
   | 'seek-start'
   | 'seek-end'
+  | 'seek-prev-key'
+  | 'seek-next-key'
 
 export interface KeyLike {
   key: string
@@ -90,14 +93,17 @@ export function keyFocus(target: EventTarget | null): KeyFocus {
 /**
  * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer,
  * F fit the view, G the safe zones, [ fold the panel and ? the help (whatever the modifiers that type them: AltGr, Shift), Escape close,
- * S / T add a stop / a text, ← / → seek (Shift: longer), Home / End.
+ * S / T add a stop / a text, ← / → seek (Shift: longer; Alt: to the previous / next keyframe), Home / End.
  */
 export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | null {
   if (focus === 'text') return null
   // « [ » needs AltGr (Ctrl+Alt) on French keyboards: the character decides, not the modifiers
   if (e.key === '[') return e.metaKey ? null : 'toggle-panel'
   if (e.key === '?') return e.metaKey || (e.ctrlKey && !e.altKey) ? null : 'help'
-  if (e.altKey) return null
+  if (e.altKey) {
+    if (focus === 'arrows' || e.ctrlKey || e.metaKey || e.shiftKey) return null
+    return e.key === 'ArrowLeft' ? 'seek-prev-key' : e.key === 'ArrowRight' ? 'seek-next-key' : null
+  }
   const key = e.key.toLowerCase()
   if (e.ctrlKey || e.metaKey) {
     if (e.shiftKey) return null

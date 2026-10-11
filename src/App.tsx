@@ -5,7 +5,7 @@ import { isExportBusy, useExportStore } from './export/store'
 import { addStop, addText, removeFilmItem } from './film/timeline'
 import { getPlatform } from './platform'
 import { getSettingsHistory, installHistoryShortcuts, installSliderGestures } from './project/history'
-import { editFilm, getFilmSource, useFilmClock } from './scene/usePacing'
+import { editFilm, getFilmSource, seekKeyframe, useFilmClock } from './scene/usePacing'
 import { useAppStore } from './state/store'
 import { CameraPanel } from './ui/CameraPanel'
 import { ClimbList } from './ui/ClimbList'
@@ -101,9 +101,10 @@ const usePhone = () => useSyncExternalStore(subscribePhone, () => matchesQuery(B
 const handlesOwnEscape = (target: EventTarget | null) => target instanceof Element && target.closest('[data-local-escape]') !== null
 
 /**
- * ← / → (Shift: 5 s), Home and End move the playhead in film time; S / T add a stop at the marker / a text at the
- * playhead. Its own component: the film clock changes with the settings and must not re-render the shell. Listens in
- * the bubble phase, after a timeline block that moves with the arrows (it prevents the default).
+ * ← / → (Shift: 5 s; Alt: previous / next keyframe), Home and End move the playhead in film time; S / T add a stop at
+ * the marker / a text at the playhead. Its own component: the film clock changes with the settings and must not
+ * re-render the shell. Listens in the bubble phase, after a timeline block that moves with the arrows (it prevents the
+ * default).
  */
 function SeekShortcuts() {
   const clock = useFilmClock()
@@ -129,6 +130,12 @@ function SeekShortcuts() {
           const selectedStop = c.stops.find((s) => s.id === store.filmSelection) ?? null
           editFilm((f) => addText(f, playhead, selectedStop), { stops: selectedStop !== null })
         }
+        return
+      }
+      if (action === 'seek-prev-key' || action === 'seek-next-key') {
+        // Alt+← is also the browser's « back »: kept from it even without a keyframe to go to
+        e.preventDefault()
+        seekKeyframe(c, action === 'seek-prev-key' ? -1 : 1)
         return
       }
       const t = seekTime(action, playhead, total)
