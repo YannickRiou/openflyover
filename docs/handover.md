@@ -184,6 +184,13 @@ features included), `npm run build`,
   with the injectable clock (`engine.test.ts`, « tile budget »). Not measured on a device: see `docs/tests-gpu.md`
   (iPhone item) for what the next report's steps should show; if the tab still dies, lower `maxResidentTiles` first
   (then the shadow map, imagery offset 0).
+- **Hard tile cap through adaptive LOD** (11 October 2026, branch `adaptive-lod`; five iPhone 12 reports: killed during
+  the « descente » with 147 → 224 tiles, and at image 27 with the camera low from the start, ~94 tiles pending): the
+  selection of a low portrait view itself exceeded the cap. Now, with a finite `maxResidentTiles`, `solveLodLevel`
+  (`engine.ts`) raises the error target by ×1.25 steps until `countSelection` (`quadtree.ts`) fits (preview: hysteresis;
+  export: solved per update from the view), `enforceCap` counts loading tiles and makes room before the loads,
+  `maxTileLoads` 6 phone / 12 tablet, `stats.lodFactor` exposed for the diagnostic. Computer: bit-identical selections
+  (checked against master's engine). Not measured on a device: `docs/tests-gpu.md` (iPhone item).
 - **Left for later** (proposed, not done): the inspector's text field and « Taille » slider could use the shared
   `TextField` (`PanelSection.tsx`) and the overlay's size field (its « Position » is a 3 × 3 grid, the overlay's a
   list: kept apart), `diffEngineOptions` in `TerrainLayer` (used and tested, kept). Declined by the user: "Texte libre" drawn

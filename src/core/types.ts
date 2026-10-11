@@ -200,6 +200,8 @@ export interface TerrainStats {
    * video export.
    */
   pendingVisibleTiles?: number
+  /** error target multiplier that keeps the view within the tile budget of a phone or tablet (1 = full detail) */
+  lodFactor?: number
 }
 
 /** Tile retention counted in film frames (video export on a phone) instead of wall time. */
