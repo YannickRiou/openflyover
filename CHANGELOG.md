@@ -8,6 +8,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Keyframes** (« Image clé », formerly « Garder ce cadrage ici »): keep the 3D view exactly as framed, shown at that
   point of the film; ◁◆ / ◆▷ in the transport row, Alt+← / Alt+→ or a click on the ◆ to go from one to the next;
   the ◆ between the arrows adds a keyframe at the playhead, or removes the one under it.
+- **Space bar**: plays / pauses again after a click on a button or a slider (the focused control used to keep it).
 - **Marker behind the relief**: the marker (and the ghost race markers) fade out when a mountain hides them, like
   the track and the labels.
 - **Marker kept in sight**: the flight camera now clears the relief down to the marker (« Plan cinématique »,

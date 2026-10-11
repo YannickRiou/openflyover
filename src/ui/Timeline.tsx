@@ -59,7 +59,7 @@ import type { IconName } from './icons'
 import { ModifiedMarker } from './ModifiedMarker'
 import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
-import { withShortcut } from './shortcuts'
+import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 
 const SPEEDS = PLAYBACK_SPEEDS
@@ -423,15 +423,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   useEffect(() => () => cancelAnimationFrame(edgeRef.current?.frame ?? 0), [])
 
   useEffect(() => {
-    // Space plays / pauses, except in a control that uses it
+    // Space plays / pauses, except in a control that uses it (`spacePlays`)
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return
-      const target = e.target
-      const control = 'input, textarea, select, button, a[href], [role="slider"]'
-      if (target instanceof HTMLElement && (target.isContentEditable || target.closest(control))) return
+      if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey || e.repeat || !spacePlays(e.target)) return
       const store = useAppStore.getState()
       if (store.tracks.length === 0) return
       e.preventDefault()
+      // a button focused by a click would press itself on the key release
+      if (e.target instanceof HTMLElement && e.target !== document.body) e.target.blur()
       store.setPlaying(!store.playback.playing)
     }
     window.addEventListener('keydown', onKeyDown)
