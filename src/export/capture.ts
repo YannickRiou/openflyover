@@ -4,6 +4,7 @@
  * transparent background).
  */
 import type { OverlayTime } from '../overlay/draw'
+import type { TileFailure } from '../terrain/engine'
 import { ExportCanceledError } from './encoder'
 
 /** Where a composed frame is: its progress and its place in the film (film time, clock lengths). */
@@ -21,13 +22,18 @@ export interface SettleOptions {
    * TerrainLayer selects the tiles for it (useFrame order), and the shadows and post-process follow the camera.
    */
   minAdvances: number
-  /** give up waiting for the terrain after this long (per frame) and capture what is there */
+  /** stop waiting for the terrain after this long (per frame): the export then fails (`tileFailureMessage`) */
   timeoutMs: number
   /** wait between tile requests while tiles are loading */
   pollMs: number
 }
 
-export const DEFAULT_SETTLE: SettleOptions = { minAdvances: 1, timeoutMs: 45_000, pollMs: 16 }
+/**
+ * 5 min per frame: longer than two retry chains of the engine in a row (8 attempts over ~2.2 min each, engine.ts), so a
+ * tile that may still come is waited for, and a view whose tiles keep failing ends on « given up » (named tiles)
+ * rather than on this timeout.
+ */
+export const DEFAULT_SETTLE: SettleOptions = { minAdvances: 1, timeoutMs: 300_000, pollMs: 16 }
 
 /** Offset used to make the flyover rig place the camera again at (almost) the same progress. */
 export const REPLACE_EPSILON = 1e-9
@@ -92,6 +98,9 @@ export async function settle(deps: SettleDeps, options: SettleOptions = DEFAULT_
   }
 }
 
+/** How a frame was captured: its view final, or not after the timeout, or with tiles given up on. */
+export type FrameOutcome = 'complete' | 'timeout' | 'missing'
+
 /**
  * Show `progress` and wait for its terrain. The camera is placed once per progress change with the heights
  * loaded at that moment: when the final terrain moves that placement by more than REPLACE_TOLERANCE_M, it is
@@ -100,17 +109,27 @@ export async function settle(deps: SettleDeps, options: SettleOptions = DEFAULT_
  * have slices to compute (`separateFinal`), the one final render that is captured: they run once per frame
  * whatever the number of settle renders. That render selects the tiles once more: if its selection asks for any
  * (the view moved since the last check), the frame settles again and is rendered again. One timeout covers all of it.
- * Resolves false when the view was not final at the capture: timeout, or tiles given up on (`missingTiles`).
+ * `finalFirst` (the previous frame needed no wait): with the clouds, the final render comes first; when it asks for
+ * no tile, runs no re-drape and leaves the camera in place, it is the very image the usual way would capture (same
+ * camera, tiles and drapes: the extra render without the clouds changed nothing), so the frame costs one render
+ * instead of two. Otherwise the frame goes the usual way (that render was an intermediate one).
+ * Resolves 'timeout' or 'missing' (tiles given up on, `missingTiles`) when the view was not final at the capture.
  */
 export async function renderSettledFrame(
   progress: number,
   deps: RenderFrameDeps,
   options: SettleOptions = DEFAULT_SETTLE,
-): Promise<boolean> {
+  finalFirst = false,
+): Promise<FrameOutcome> {
   const start = deps.now()
   const left = (): SettleOptions => ({ ...options, timeoutMs: Math.max(0, options.timeoutMs - (deps.now() - start)) })
+  const outcome = (complete: boolean): FrameOutcome => (!complete ? 'timeout' : (deps.missingTiles?.() ?? 0) > 0 ? 'missing' : 'complete')
   const deferred = deps.separateFinal()
   deps.setProgress(progress)
+  if (deferred && finalFirst && options.minAdvances <= 1) {
+    deps.advance(true)
+    if (deps.pendingTiles() === 0 && !deps.flushDrapes() && deps.cameraDrift() <= REPLACE_TOLERANCE_M) return outcome(true)
+  }
   let complete = await settle(deps, options)
   if (complete && deps.cameraDrift() > REPLACE_TOLERANCE_M) {
     deps.setProgress(progress < 1 ? progress + REPLACE_EPSILON : progress - REPLACE_EPSILON)
@@ -121,7 +140,33 @@ export async function renderSettledFrame(
     complete = await settle(deps, left())
     if (deferred) deps.advance(true)
   }
-  return complete && (deps.missingTiles?.() ?? 0) === 0
+  return outcome(complete)
+}
+
+/** Tiles named in the error, the others counted. */
+const NAMED_TILES = 3
+
+/**
+ * Error of an export stopped on a frame without its terrain (`frame` counted from 1): the tiles given up on, or still
+ * loading at the timeout, with their host and cause.
+ */
+export function tileFailureMessage(
+  outcome: Exclude<FrameOutcome, 'complete'>,
+  frame: number,
+  failures: readonly TileFailure[],
+  pending: number,
+  timeoutMs: number,
+): string {
+  const named = failures.slice(0, NAMED_TILES).map(
+    (f) => `${f.host}, tuile ${f.tile} (${f.layer}) : ${f.cause}, ${f.attempts} essai${f.attempts > 1 ? 's' : ''}`,
+  )
+  const more = failures.length - named.length
+  const list = named.join(' ; ') + (more > 0 ? ` ; et ${more} autre${more > 1 ? 's' : ''}` : '')
+  const head =
+    outcome === 'missing'
+      ? `Tuiles introuvables pour l'image ${frame}`
+      : `Tuiles toujours en chargement après ${Math.round(timeoutMs / 60_000)} min pour l'image ${frame} (${pending} en attente)`
+  return `${head}${list ? ` : ${list}` : ''}. Export arrêté pour ne pas livrer d'images incomplètes : réessayez plus tard ou changez de fond de carte.`
 }
 
 /** Sky gradient behind a transparent canvas (mirrors the CSS background of FlyoverCanvas: glacier → paper). */
@@ -183,6 +228,15 @@ function drawOverlayOn(
   } finally {
     ctx.restore()
   }
+}
+
+/**
+ * Let the page handle its input and paint between two frames of an export: `scheduler.yield()` where the browser has
+ * it (the continuation keeps its priority), else a message port (`wait(0)`, not throttled in background tabs).
+ */
+export function yieldToEventLoop(): Promise<void> {
+  const scheduler = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler
+  return typeof scheduler?.yield === 'function' ? scheduler.yield() : wait(0)
 }
 
 /** Resolve after `ms`; 0 yields to the event loop through a message port (not throttled in background tabs). */

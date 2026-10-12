@@ -80,6 +80,8 @@ export class TileNode {
   imageryMissing = false
   /** engine clock (ms) from which a failed node may be retried */
   retryAt = 0
+  /** why its last attempt failed or came without all its imagery (host and cause, for the export's error) */
+  failure: TileFailureCause | undefined = undefined
 
   constructor(key: TileKey, parent: TileNode | undefined, ctx: QuadtreeContext) {
     this.key = key
@@ -243,6 +245,16 @@ export interface SelectionParams {
   exporting?: boolean
 }
 
+/** Where a tile failed and why (`describeTileError` in engine.ts). */
+export interface TileFailureCause {
+  /** host of the tile server (or the proxy path of a source without CORS) */
+  host: string
+  /** 'élévation' or 'imagerie' */
+  layer: string
+  /** short reason: « HTTP 503 », « erreur réseau », « imagerie incomplète »… */
+  cause: string
+}
+
 export interface SelectionResult {
   /** ready nodes to draw this frame (no overlap between a node and its descendants) */
   toRender: TileNode[]
@@ -255,10 +267,14 @@ export interface SelectionResult {
   pendingVisible: number
   /** In-frustum nodes that will never reach their final state: given up on after every attempt, or drawn without full imagery. */
   missingVisible: number
+  /** those nodes (the export names them in its error) */
+  missing: TileNode[]
+  /** in-frustum nodes the view waits for that already failed at least once (export: retried, not given up yet) */
+  retrying: TileNode[]
 }
 
 export function createSelectionResult(): SelectionResult {
-  return { toRender: [], toLoad: [], pendingVisible: 0, missingVisible: 0 }
+  return { toRender: [], toLoad: [], pendingVisible: 0, missingVisible: 0, missing: [], retrying: [] }
 }
 
 const DEFAULT_MAX_LOAD_ATTEMPTS = 3
@@ -294,6 +310,8 @@ export function selectTiles(
   out.toLoad.length = 0
   out.pendingVisible = 0
   out.missingVisible = 0
+  out.missing.length = 0
+  out.retrying.length = 0
   const ctx = selectionContext
   ctx.camera = camera
   ctx.params = params
@@ -325,8 +343,10 @@ function queueLoad(node: TileNode, priority: number, ctx: SelectionContext): voi
   const retrying = node.state === 'failed' && !node.noData && node.failedAttempts < ctx.maxLoadAttempts
   if (loadable || node.state === 'loading' || (ctx.params.exporting && retrying)) {
     if (node.failedAttempts === 0 || ctx.params.exporting) ctx.out.pendingVisible++
+    if (node.failedAttempts > 0) ctx.out.retrying.push(node)
   } else if (node.state === 'failed' && !node.noData && !retrying) {
     ctx.out.missingVisible++
+    ctx.out.missing.push(node)
   }
 }
 
@@ -434,7 +454,10 @@ function renderOrQueue(node: TileNode, sse: number, ctx: SelectionContext): void
 
 function draw(node: TileNode, ctx: SelectionContext): void {
   ctx.out.toRender.push(node)
-  if (node.imageryMissing) ctx.out.missingVisible++
+  if (node.imageryMissing) {
+    ctx.out.missingVisible++
+    ctx.out.missing.push(node)
+  }
 }
 
 function renderReadyDescendants(children: readonly TileNode[], ctx: SelectionContext): void {

@@ -1,7 +1,8 @@
 /**
  * Video encoder — WebCodecs through mediabunny, writing the file in memory or, given a destination, straight to disk.
  * Codec choice (H.264, else HEVC, else VP9, else VP8: first one the browser can encode at the requested size, rate and
- * bitrate), soundtrack and disk layout: ARCHITECTURE.md "Video export".
+ * bitrate, on the GPU's encoder when it takes it; or the codec chosen in « Encodage »), soundtrack and disk layout:
+ * ARCHITECTURE.md "Video export".
  *
  * On disk the MP4 has no fast start (`moov` after the frames, header size patched at the end): a plain MP4 every player
  * and editor reads, where a fragmented one is less widely supported.
@@ -12,7 +13,7 @@ import { deviceBudget, type DeviceBudget } from '../core/deviceBudget'
 import type { MixedAudio } from '../film/audio'
 import { getPlatform, type WritableFile } from '../platform'
 import type { AudioCodec, StreamTargetChunk, VideoCodec, canEncodeAudio, canEncodeVideo } from 'mediabunny'
-import type { VideoQuality } from './schedule'
+import type { VideoCodecChoice, VideoEncoding, VideoQuality } from './schedule'
 
 /** The muxer (mediabunny, ~700 KB) is loaded on the first export or codec check, not at startup. */
 const mediabunny = () => import('mediabunny')
@@ -22,6 +23,8 @@ export type VideoContainer = 'mp4' | 'webm'
 export interface CodecCandidate {
   container: VideoContainer
   codec: VideoCodec
+  /** the browser takes it on the hardware encoder (`hardwareAcceleration: 'prefer-hardware'`) */
+  hardware?: boolean
 }
 
 /** Preference order: H.264 first for compatibility, VP8 last (largest files). */
@@ -47,7 +50,7 @@ const FPS_BITRATE_EXPONENT = 0.7
 export const CODEC_BITRATE_FACTOR: Partial<Record<VideoCodec, number>> = { avc: 1, hevc: 0.6, vp9: 0.65, vp8: 1.2 }
 export const MIN_BITRATE = 1_000_000
 export const MAX_BITRATE = 80_000_000
-/** Seconds between key frames. */
+/** Seconds between key frames, unless « Encodage » sets them. */
 export const KEY_FRAME_INTERVAL_S = 2
 
 /** Size of the writes to disk (also what one desktop IPC call carries). */
@@ -55,6 +58,7 @@ export const STREAM_CHUNK_BYTES = 4 * 1024 * 1024
 
 /** Audio codecs tried for each container, in order. */
 export const AUDIO_CANDIDATES: Record<VideoContainer, readonly AudioCodec[]> = { mp4: ['aac', 'opus'], webm: ['opus'] }
+/** Bitrate of the soundtrack, unless « Encodage » sets it. */
 export const AUDIO_BITRATE = 192_000
 /** Seconds of sound handed to the muxer ahead of the frame being encoded. */
 export const AUDIO_LEAD_S = 1
@@ -83,11 +87,27 @@ export function videoBitrate(
   return Math.round(Math.min(maxBitrate, MAX_BITRATE, Math.max(MIN_BITRATE, raw)))
 }
 
+/**
+ * Target bitrate of a film: the one chosen by hand in « Encodage » (`encoding.bitrateMbps`, the same for every codec),
+ * else the quality's (`videoBitrate`); within MIN_BITRATE…MAX_BITRATE and this device's cap either way.
+ */
+export function targetBitrate(
+  options: Pick<VideoEncodeOptions, 'width' | 'height' | 'fps' | 'quality' | 'encoding'>,
+  codec: VideoCodec,
+  maxBitrate = deviceBitrateCap(),
+): number {
+  const manual = options.encoding?.bitrateMbps
+  if (manual === null || manual === undefined) return videoBitrate(options.width, options.height, options.fps, options.quality, codec, maxBitrate)
+  return Math.round(Math.min(maxBitrate, MAX_BITRATE, Math.max(MIN_BITRATE, manual * 1e6)))
+}
+
 export interface VideoEncodeOptions {
   width: number
   height: number
   fps: number
   quality: VideoQuality
+  /** « Encodage »: bitrate by hand, codec, key frames, sound bitrate (absent: from the quality, automatic) */
+  encoding?: VideoEncoding
   /** write the film to this file while encoding instead of keeping it in memory */
   destination?: WritableFile
   /** soundtrack from the first frame (none: a silent film) */
@@ -104,12 +124,13 @@ export async function pickAudioCodec(
   container: VideoContainer,
   audio: Pick<MixedAudio, 'sampleRate' | 'channels'>,
   canEncode?: CanEncodeAudio,
+  bitrate = AUDIO_BITRATE,
 ): Promise<AudioCodec | null> {
   const { Quality, canEncodeAudio } = await mediabunny()
   canEncode ??= canEncodeAudio
   for (const codec of AUDIO_CANDIDATES[container]) {
     try {
-      const options = { numberOfChannels: audio.channels.length, sampleRate: audio.sampleRate, quality: new Quality({ bitrate: AUDIO_BITRATE }) }
+      const options = { numberOfChannels: audio.channels.length, sampleRate: audio.sampleRate, quality: new Quality({ bitrate }) }
       if (await canEncode(codec, options)) return codec
     } catch {
       // not this one
@@ -118,7 +139,10 @@ export async function pickAudioCodec(
   return null
 }
 
-/** First candidate the browser can encode with these options, or null. */
+/**
+ * First candidate the browser can encode with these options, or null: on the hardware encoder when it takes this
+ * configuration (`hardware: true`), else on whichever encoder it picks.
+ */
 export async function pickCodec(
   options: VideoEncodeOptions,
   canEncode?: CanEncode,
@@ -126,26 +150,35 @@ export async function pickCodec(
 ): Promise<CodecCandidate | null> {
   const { Quality, canEncodeVideo } = await mediabunny()
   canEncode ??= canEncodeVideo
-  const { width, height, fps, quality } = options
-  for (const candidate of candidates) {
-    const bitrate = videoBitrate(width, height, fps, quality, candidate.codec)
-    try {
-      if (await canEncode(candidate.codec, { width, height, frameRate: fps, quality: new Quality({ bitrate }) })) {
-        return candidate
+  const { width, height, fps } = options
+  for (const { container, codec } of candidates) {
+    const config = { width, height, frameRate: fps, quality: new Quality({ bitrate: targetBitrate(options, codec) }) }
+    for (const hardwareAcceleration of ['prefer-hardware', 'no-preference'] as const) {
+      try {
+        if (await canEncode(codec, { ...config, hardwareAcceleration })) {
+          return hardwareAcceleration === 'prefer-hardware' ? { container, codec, hardware: true } : { container, codec }
+        }
+      } catch {
+        // an invalid configuration for this codec: try the next one
       }
-    } catch {
-      // an invalid configuration for this codec: try the next one
     }
   }
   return null
 }
 
-/** Candidates matching the extension of the chosen file (the user may have typed `.webm`); all of them otherwise. */
-export function candidatesFor(fileName: string | undefined): readonly CodecCandidate[] {
+/**
+ * Candidates of an export: the codec chosen in « Encodage »; else those matching the extension of the chosen file (the
+ * user may have typed `.webm`), all of them otherwise.
+ */
+export function candidatesFor(fileName: string | undefined, choice: VideoCodecChoice = 'auto'): readonly CodecCandidate[] {
+  if (choice !== 'auto') return CODEC_CANDIDATES.filter((c) => c.codec === choice)
   const ext = fileName?.match(/\.([^.]+)$/)?.[1].toLowerCase()
   const matching = CODEC_CANDIDATES.filter((c) => c.container === ext)
   return matching.length > 0 ? matching : CODEC_CANDIDATES
 }
+
+/** Names of the codecs of « Encodage » (export panel, messages). */
+export const CODEC_NAMES: Record<VideoCodecChoice, string> = { auto: 'Automatique', avc: 'H.264', hevc: 'HEVC', vp9: 'VP9' }
 
 /** Thrown by a session used after `cancel()`. */
 export class ExportCanceledError extends Error {
@@ -196,13 +229,18 @@ export async function createVideoEncoder(
   canEncode?: CanEncode,
   canEncodeSound?: CanEncodeAudio,
 ): Promise<VideoEncodeSession> {
-  const { AudioSample, AudioSampleSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality, StreamTarget, WebMOutputFormat } =
+  const { AudioSample, AudioSampleSource, BufferTarget, Mp4OutputFormat, Output, Quality, StreamTarget, VideoSample, VideoSampleSource, WebMOutputFormat } =
     await mediabunny()
-  const { destination, transparent = false } = options
-  const codec = await pickCodec(options, canEncode, transparent ? ALPHA_CANDIDATES : candidatesFor(destination?.fileName))
+  const { destination, transparent = false, encoding } = options
+  const choice = transparent ? 'auto' : (encoding?.codec ?? 'auto')
+  const codec = await pickCodec(options, canEncode, transparent ? ALPHA_CANDIDATES : candidatesFor(destination?.fileName, choice))
+  if (!codec && choice !== 'auto') {
+    throw new Error(`Ce navigateur ne sait pas encoder la vidéo en ${CODEC_NAMES[choice]} à cette taille : choisissez le codec « Automatique ».`)
+  }
   if (!codec) throw new Error("Ce navigateur ne sait encoder la vidéo dans aucun format (WebCodecs indisponible).")
 
-  const bitrate = videoBitrate(options.width, options.height, options.fps, options.quality, codec.codec)
+  const bitrate = targetBitrate(options, codec.codec)
+  const audioBitrate = encoding ? encoding.audioKbps * 1000 : AUDIO_BITRATE
   let canceled = false
   let sizeBytes = 0
   const buffer = new BufferTarget()
@@ -219,10 +257,12 @@ export async function createVideoEncoder(
   // frames handed to the VideoEncoder and packets out of it (the export's breadcrumb)
   let given = 0
   let received = 0
-  const source = new CanvasSource(canvas, {
+  // the frames are taken from the canvas by `addFrame` (as mediabunny's CanvasSource does), before anything is awaited
+  const source = new VideoSampleSource({
     codec: codec.codec,
     quality: new Quality({ bitrate }),
-    keyFrameInterval: KEY_FRAME_INTERVAL_S,
+    keyFrameInterval: encoding?.keyframeIntervalS ?? KEY_FRAME_INTERVAL_S,
+    hardwareAcceleration: codec.hardware ? 'prefer-hardware' : 'no-preference',
     alpha: transparent ? 'keep' : 'discard',
     onEncodedSample: () => void given++,
     onEncodedPacket: () => void received++,
@@ -235,8 +275,8 @@ export async function createVideoEncoder(
   }
   output.addVideoTrack(source, { frameRate: options.fps, canBeTransparent: transparent })
   const { audio } = options
-  const audioCodec = audio && audio.channels.length > 0 ? await pickAudioCodec(codec.container, audio, canEncodeSound) : null
-  const sound = audioCodec ? new AudioSampleSource({ codec: audioCodec, quality: new Quality({ bitrate: AUDIO_BITRATE }) }) : null
+  const audioCodec = audio && audio.channels.length > 0 ? await pickAudioCodec(codec.container, audio, canEncodeSound, audioBitrate) : null
+  const sound = audioCodec ? new AudioSampleSource({ codec: audioCodec, quality: new Quality({ bitrate: audioBitrate }) }) : null
   if (sound) output.addAudioTrack(sound)
   await output.start()
 
@@ -272,8 +312,14 @@ export async function createVideoEncoder(
     extension: `.${codec.container}`,
     async addFrame(index) {
       if (canceled) throw new ExportCanceledError()
-      await addAudio((index + 1) * frameDuration + AUDIO_LEAD_S)
-      await source.add(index * frameDuration, frameDuration)
+      // the canvas is read now, synchronously: the caller may draw the next frame while this one is encoded
+      const sample = new VideoSample(canvas, { timestamp: index * frameDuration, duration: frameDuration })
+      try {
+        await addAudio((index + 1) * frameDuration + AUDIO_LEAD_S)
+        await source.add(sample)
+      } finally {
+        sample.close()
+      }
     },
     async finish() {
       if (canceled) throw new ExportCanceledError()
