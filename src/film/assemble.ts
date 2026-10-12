@@ -64,7 +64,12 @@ export function stopAt<S extends Pick<FilmStop, 'atM'>>(stops: readonly S[], atM
   return stops.find((s) => Math.abs(s.atM - atM) < 1)
 }
 
-/** A row of « Repères » that can have a stop: an OSM landmark (id "node/123") or a point of interest ("poi-2"). */
+/** Id of the row of « Repères » for the top of the `index`-th climb of the track (its stop has `source { kind: 'climb', ref: String(index) }`). */
+export function climbPlaceId(index: number): string {
+  return `climb:${index}`
+}
+
+/** A row of « Repères » that can have a stop: an OSM landmark (id "node/123"), a point of interest ("poi-2") or a climb top ("climb:0"). */
 export interface StopPlace {
   id: string
   /** where its stop goes along the first track (metres) */
@@ -72,13 +77,16 @@ export interface StopPlace {
 }
 
 /**
- * The stop of `stops` made for `place`: the one made for its landmark (`source.ref`), else one placed by hand within a
- * metre of it (`stopAt`; the stops of the points of interest carry their name only). A stop made for another landmark
- * or for a climb there is not its stop.
+ * The stop of `stops` made for `place`: the one made for its landmark or climb (`source.ref`), else one placed by hand
+ * within a metre of it (`stopAt`; the stops of the points of interest carry their name only). A stop made for another
+ * landmark or climb there is not its stop.
  */
 export function placeStop<S extends Pick<FilmStop, 'atM' | 'source'>>(stops: readonly S[], place: StopPlace): S | undefined {
   const byHand = (s: S) => s.source === undefined || s.source.kind === 'manual'
-  return stops.find((s) => s.source?.kind === 'landmark' && s.source.ref === place.id) ?? stopAt(stops.filter(byHand), place.atM)
+  const made = place.id.startsWith('climb:')
+    ? (s: S) => s.source?.kind === 'climb' && s.source.ref === place.id.slice('climb:'.length)
+    : (s: S) => s.source?.kind === 'landmark' && s.source.ref === place.id
+  return stops.find(made) ?? stopAt(stops.filter(byHand), place.atM)
 }
 
 /**
