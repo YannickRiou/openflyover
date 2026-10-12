@@ -135,6 +135,8 @@ export interface PacingPause {
 export interface FlightStop {
   atM: number
   durationS: number
+  /** added to the film whatever `keepDuration`, never shortened (a night of a multi-day track) */
+  extra?: boolean
 }
 
 /** A portion of the track flown `factor` times faster (2) or slower (0.5), metres along it. */
@@ -345,15 +347,20 @@ export function flightPacing(
     raw[i] = raw[i - 1] + ((xs[i] - xs[i - 1]) * durationS) / (L * r)
   }
 
-  // pause lengths (capped with keepDuration) and the scale of the moving time that keeps the film at durationS
+  // pause lengths (capped with keepDuration) and the scale of the moving time that keeps the film at durationS;
+  // the extra pauses (nights) lengthen the film instead
   const moving = raw[n - 1]
-  const wanted = stops.reduce((sum, s) => sum + s.durationS, 0)
+  const wanted = stops.reduce((sum, s) => sum + (s.extra ? 0 : s.durationS), 0)
   const share = settings.keepDuration && wanted > 0 ? Math.min(1, (MAX_PAUSE_SHARE * durationS) / wanted) : 1
-  const pauseS = stops.map((s) => s.durationS * share)
+  const pauseS = stops.map((s) => (s.extra ? s.durationS : s.durationS * share))
   /** time added by the pauses before pause k (`added[k]`), and by all of them (`added[pauseS.length]`) */
   const added = [0]
-  for (const p of pauseS) added.push(added[added.length - 1] + p)
-  const scale = settings.keepDuration ? (durationS - added[pauseS.length]) / moving : 1
+  let squeezed = 0
+  pauseS.forEach((p, k) => {
+    added.push(added[k] + p)
+    if (!stops[k].extra) squeezed += p
+  })
+  const scale = settings.keepDuration ? (durationS - squeezed) / moving : 1
 
   const xTable = Float64Array.from(xs)
   const uTable = raw.map((u) => u * scale)
