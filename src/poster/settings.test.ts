@@ -31,6 +31,18 @@ describe('poster settings', () => {
     expect(sanitizeSettings({ poster: { ...older, flat: 'oui' } }).invalid).toEqual(['poster'])
   })
 
+  it('opens a poster saved before the view and the image type with the overview in PNG', () => {
+    const older: Partial<PosterSettings> = { ...DEFAULT_POSTER, title: 'Tour' }
+    delete older.view
+    delete older.type
+    const { settings, invalid } = sanitizeSettings({ poster: older })
+    expect(invalid).toEqual([])
+    expect(settings.poster).toMatchObject({ title: 'Tour', view: 'overview', type: 'image/png' })
+    expect(isValidPoster({ ...DEFAULT_POSTER, view: 'camera', type: 'image/jpeg' })).toBe(true)
+    expect(isValidPoster({ ...DEFAULT_POSTER, view: 'top' as PosterSettings['view'] })).toBe(false)
+    expect(isValidPoster({ ...DEFAULT_POSTER, type: 'image/webp' as PosterSettings['type'] })).toBe(false)
+  })
+
   it('prints at 300 dpi, the long side at most 4960 px', () => {
     expect(posterSize('a4-portrait')).toEqual({ width: 2480, height: 3508 })
     expect(posterSize('a3-landscape')).toEqual({ width: 4960, height: 3508 })

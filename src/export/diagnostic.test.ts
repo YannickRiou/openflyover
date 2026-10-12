@@ -4,7 +4,18 @@ import type { FilmMedia, FilmText } from '../film/model'
 import { buildTrack } from '../import/stats'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
-import { buildReport, copyText, formatReport, noEncodingTest, parseReport, setNoEncodingTest, withLastExport } from './diagnostic'
+import {
+  buildReport,
+  copyText,
+  formatReport,
+  noEncodingTest,
+  parseReport,
+  resultSection,
+  setNoEncodingTest,
+  withLastExport,
+  withResult,
+} from './diagnostic'
+import { EMPTY_TIMINGS } from './store'
 import type { DiagnosticInput } from './diagnostic'
 import { MAX_STEPS, describeBreadcrumb } from './guard'
 
@@ -163,6 +174,27 @@ describe('diagnostic report', () => {
     expect(merged.sections.map((s) => s.title)).toEqual(['Appareil', 'Export', 'Réglages', 'Dernier export'])
     expect(merged.sections[3].rows[0]).toEqual(['Commencé le', report.at])
     expect(withLastExport(now, null)).toBe(now)
+  })
+
+  it('adds how the export ended: the error naming the tiles, where the time went, the encoder', () => {
+    const error = "Tuiles introuvables pour l'image 12 : data.geopf.fr, tuile 14/8345/5843 (imagerie) : HTTP 503, 8 essais. Export arrêté…"
+    const timings = { ...EMPTY_TIMINGS, rendered: 11, renders: 22, renderMs: 4000, gpuMs: 2000, gpuRenders: 22, givenUp: 1 }
+    const result = resultSection({ phase: 'error', error, frame: 11, frameCount: 300, timings, result: null })
+    const rows = Object.fromEntries(result.rows)
+    expect(rows['Issue']).toBe('échoué')
+    expect(rows['Erreur']).toBe(error)
+    expect(rows['Images']).toBe('11 / 300, 11 rendues, 22 rendus')
+    expect(rows['Répartition']).toContain('GPU 2,0 s')
+    expect(rows['Tuiles']).toBe('0 image(s) au délai, 1 image(s) aux tuiles abandonnées')
+    expect(rows['Temps GPU']).toBeUndefined()
+    // stored with the report of the export, shown with it in « Dernier export »
+    const report = withResult(withResult(buildReport(privateInput()), result), result)
+    expect(report.sections.map((s) => s.title)).toEqual(['Appareil', 'Export', 'Réglages', 'Résultat'])
+    const merged = withLastExport(buildReport(privateInput({ request: undefined })), parseReport(JSON.stringify(report)))
+    expect(merged.sections[3].rows).toContainEqual(['Erreur', error])
+    const unmeasured = resultSection({ phase: 'done', error: null, frame: 1, frameCount: 1, timings: EMPTY_TIMINGS, result: { codec: 'mp4/avc', hardware: true } as never })
+    expect(Object.fromEntries(unmeasured.rows)['Temps GPU']).toMatch(/^non mesuré/)
+    expect(Object.fromEntries(unmeasured.rows)['Fichier']).toBe('mp4/avc, encodeur matériel')
   })
 })
 

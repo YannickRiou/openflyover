@@ -3,7 +3,7 @@ import { getPlatform } from '../platform'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { HISTORY_KEY, HISTORY_LIMIT, parseHistory } from './history'
 import { installExportHistory, useExportHistory } from './historyStore'
-import { resetExportStore, useExportStore, type ExportRequest } from './store'
+import { EMPTY_TIMINGS, resetExportStore, useExportStore, type ExportRequest } from './store'
 
 const REQUEST: Omit<ExportRequest, 'id'> = {
   width: 1920,
@@ -45,7 +45,7 @@ afterEach(() => stop())
 describe('render recorder', () => {
   it('records a finished export with its real time, without the wait before the first frame', () => {
     run((s) => {
-      s.reportFrame(100, clock, { rendered: 60, renderMs: 1, waitMs: 2, encodeMs: 3, timeouts: 0 })
+      s.reportFrame(100, clock, { ...EMPTY_TIMINGS, rendered: 60, renderMs: 1, waitMs: 2, encodeMs: 3 })
       s.complete(RESULT)
     })
     const [entry] = useExportHistory.getState().entries

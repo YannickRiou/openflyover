@@ -15,6 +15,8 @@ import {
   settingsDetails,
   settingsSummary,
   summariseSettings,
+  timingsSummary,
+  entryDetails,
   trim,
   type HistoryEntry,
   type RenderRecord,
@@ -237,7 +239,8 @@ describe('reuseSettings', () => {
   it('puts back the export options and the recorded render settings, nothing else', () => {
     const current: Settings = { ...DEFAULT_SETTINGS, exaggeration: 2.5, camera: { ...DEFAULT_SETTINGS.camera, distance: 3 } }
     const next = reuseSettings(past, current)
-    expect(next.video).toEqual({ aspect: '9:16', resolution: '1080p', fps: 60, quality: 'max' })
+    // the encoding settings (bitrate by hand, codec…) are not recorded: they stay as they are
+    expect(next.video).toEqual({ ...current.video, aspect: '9:16', resolution: '1080p', fps: 60, quality: 'max' })
     expect(next.shadows).toBe(false)
     expect(next.clouds).toEqual({ ...current.clouds, mode: 'aucun', quality: 'low', coverage: 0.2, seaRender: 'surface' })
     expect(next.lens.shutter).toBe(0.5)
@@ -264,6 +267,33 @@ describe('reuseSettings', () => {
     expect(next.imagerySourceId).toBe(DEFAULT_SETTINGS.imagerySourceId)
     expect(next.terrainSourceId).toBe(DEFAULT_SETTINGS.terrainSourceId)
     expect(next.shadows).toBe(DEFAULT_SETTINGS.shadows)
+  })
+})
+
+describe('where the time went', () => {
+  const split = { ...EMPTY_TIMINGS, rendered: 100, renders: 140, renderMs: 50_000, gpuMs: 21_000, gpuRenders: 140, waitMs: 3_000, composeMs: 6_000, frameMs: 1_500, encodeWaitMs: 2_500, encodeMs: 10_000 }
+
+  it('splits the render (GPU when measured), the tiles, the composing, the video frame and the encoder wait', () => {
+    expect(timingsSummary(split)).toBe(
+      "rendu 50,0 s (GPU 21,0 s), 1,4 rendu par image, tuiles 3,0 s, composition 6,0 s, image vidéo 1,5 s, attente de l'encodeur 2,5 s",
+    )
+    // a few queries lost: the average of the measured ones, marked as an estimate
+    expect(timingsSummary({ ...split, gpuMs: 15_000, gpuRenders: 100 })).toContain('(GPU ≈ 21,0 s)')
+    expect(timingsSummary({ ...split, gpuRenders: 0, gpuMs: 0 })).toMatch(/^rendu 50,0 s, /)
+    // an entry recorded before the split: the composing and encoding together
+    expect(timingsSummary({ ...EMPTY_TIMINGS, renderMs: 1000, waitMs: 2000, encodeMs: 3000 })).toBe('rendu 1,0 s, tuiles 2,0 s, composition et encodage 3,0 s')
+  })
+
+  it('records the split, the tiles given up on and the hardware encoder, and reads them back', () => {
+    const e = entryOf({ ...RECORD, timings: { ...split, givenUp: 1 }, result: { ...RECORD.result!, hardware: true } })
+    expect(e).toMatchObject({ renders: 140, gpuMs: 21_000, gpuRenders: 140, composeMs: 6000, frameMs: 1500, encodeWaitMs: 2500, givenUp: 1, hardware: true })
+    expect(parseHistory(serialiseHistory([e]))[0]).toEqual(e)
+    const rows = Object.fromEntries(entryDetails(e).map((r) => [r.label, r.value]))
+    expect(rows['Tuiles abandonnées']).toBe('1 image(s)')
+    expect(rows['Encodeur']).toBe('WebCodecs (navigateur), encodeur matériel')
+    // an entry stored before: zeros, nothing invented
+    const { renders: _r, gpuMs: _g, givenUp: _u, ...older } = e
+    expect(parseHistory(serialiseHistory([older as HistoryEntry]))[0]).toMatchObject({ renders: 0, gpuMs: 0, givenUp: 0 })
   })
 })
 

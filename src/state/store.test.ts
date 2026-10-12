@@ -208,7 +208,17 @@ describe('settings and misc', () => {
       clouds: { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: 'volume', quality: 'auto' },
       water: { enabled: true, strength: 1 },
       overlay: DEFAULT_OVERLAY,
-      video: { aspect: '16:9', resolution: '1080p', fps: 30, quality: 'high' },
+      video: {
+        aspect: '16:9',
+        resolution: '1080p',
+        fps: 30,
+        quality: 'high',
+        manualBitrate: false,
+        bitrateMbps: 14,
+        codec: 'auto',
+        keyframeIntervalS: 2,
+        audioKbps: 192,
+      },
       poster: {
         format: 'a4-portrait',
         style: 'editorial',
@@ -217,6 +227,8 @@ describe('settings and misc', () => {
         figures: { distance: true, ascent: true, time: true, maxAltitude: true, climbs: true },
         weather: true,
         flat: false,
+        view: 'overview',
+        type: 'image/png',
       },
       landmarks: {
         enabled: true,
