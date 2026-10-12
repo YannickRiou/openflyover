@@ -32,6 +32,8 @@ import {
   shotSunOf,
 } from '../film/model'
 import type { Film, FilmShot, MediaLayout, MediaSync, ShotStyle, ShotSun, ShotTransition, StartHeight, StopCamera } from '../film/model'
+import { FILM_PARAMS, PARAM_SPECS, paramAt, paramBase } from '../film/paramKeys'
+import type { FilmParam } from '../film/paramKeys'
 import {
   addItemCamera,
   attachToStop,
@@ -43,6 +45,7 @@ import {
   updateCameraKey,
   updateMedia,
   updateMusic,
+  updateParamKey,
   updateShot,
   updateSpeed,
   updateStop,
@@ -570,6 +573,7 @@ export function FilmInspector() {
     const media = film.media.find((m) => m.id === item)
     const music = film.audio.find((a) => a.id === item)
     const cameraKey = clock.cameraKeys.find((k) => k.id === item)
+    const paramKey = clock.paramKeys.find((k) => k.id === item)
     if (stop) {
       isStop = true
       title = 'Arrêt'
@@ -657,6 +661,42 @@ export function FilmInspector() {
             À {formatDistance(cameraKey.atM)}, {formatFilmTime(cameraKey.timeS)} dans le film : la vue cadrée en 3D, retouchable ici. La
             caméra passe en douceur d’une image clé à la suivante ; avant la première et après la dernière, elle reprend les réglages de
             l’onglet Survol. Pour reprendre la vue, cadrez-la puis appuyez sur ◆ au même endroit.
+          </p>
+        </>
+      )
+    } else if (paramKey) {
+      title = 'Réglage'
+      const spec = PARAM_SPECS[paramKey.param]
+      const set = (patch: Parameters<typeof updateParamKey>[2]) => change((f) => updateParamKey(f, item, patch), false)
+      /** another parameter starts from what the film shows there without this key */
+      const switchTo = (param: FilmParam) => {
+        const others = { ...film, paramKeys: film.paramKeys.filter((k) => k.id !== item) }
+        set({ param, value: paramAt(others, paramBase(useAppStore.getState().settings, param), param, paramKey.atM) })
+      }
+      body = (
+        <>
+          <div className="field">
+            <label className="field__label" htmlFor={`${id}-param`}>
+              Réglage
+            </label>
+            <select id={`${id}-param`} className="select" value={paramKey.param} onChange={(e) => switchTo(e.currentTarget.value as FilmParam)}>
+              {FILM_PARAMS.map((param) => (
+                <option key={param} value={param}>
+                  {PARAM_SPECS[param].label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {range('value', 'Valeur', paramKey.value, spec, spec.format, (value) => set({ value }))}
+          {number('at', 'À (km)', km(paramKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
+          <p className="field__hint">
+            À {formatDistance(paramKey.atM)}, {formatFilmTime(paramKey.timeS)} dans le film : {spec.label.toLowerCase()} {spec.format(paramKey.value)}.
+            La valeur passe en douceur d’une clé à la suivante et reste celle de la première clé avant elle, de la dernière après elle, y
+            compris pendant les arrêts. Dès qu’une clé existe, le curseur de ce réglage dans les panneaux ne sert plus.
+            {paramKey.param === 'speed' &&
+              ` Se combine avec les portions de vitesse et les ralentissements aux temps forts.${pacing.keepDuration ? ' La durée du survol ne change pas : le reste du parcours s’adapte.' : ' La durée du film change d’autant.'}`}
+            {paramKey.param === 'sunHour' && ' Le soleil suit les clés au lieu de l’heure enregistrée de la sortie.'}
+            {!atmosphere && (paramKey.param === 'sunHour' || paramKey.param === 'exposure') && ' Sans atmosphère, ce réglage est sans effet.'}
           </p>
         </>
       )

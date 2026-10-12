@@ -5,7 +5,8 @@ import type { PassingTimes } from '../film/assemble'
 import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
 import type { Film } from '../film/model'
-import { addCameraKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
+import { FILM_PARAMS, paramAt, paramBase } from '../film/paramKeys'
+import { addCameraKey, addParamKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
 import { captureKey } from '../flyover/cameraKeys'
 import { filmSequenceOf, filmTrackOf, sequenceLandmarks } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
@@ -80,6 +81,21 @@ export function addKeyframe(): boolean {
   if (!captured) return false
   editFilm((f) => addCameraKey(f, captured.atM, captured.framing))
   return true
+}
+
+/**
+ * « Ajouter un réglage »: a parameter key at the marker holding the value the film shows there, so nothing changes
+ * until it is edited (one undo step, selected: the inspector sets the parameter and the value). The first parameter
+ * without a key at that place, exposure to begin with.
+ */
+export function addParamKeyHere(): void {
+  const { track } = getFilmSource()
+  const { playback, settings } = useAppStore.getState()
+  const atM = Math.round(playback.progress * (track?.stats.distanceM ?? 0))
+  editFilm((f) => {
+    const free = FILM_PARAMS.find((p) => !f.paramKeys.some((k) => k.param === p && Math.round(k.atM) === atM)) ?? 'exposure'
+    return addParamKey(f, atM, free, paramAt(f, paramBase(settings, free), free, atM))
+  })
 }
 
 /** The ◆ of the transport row: removes the keyframe the playhead is on, else adds one there (one undo step). */
