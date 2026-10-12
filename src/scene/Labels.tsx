@@ -17,6 +17,9 @@ import { CanvasTexture, Group, type Camera, LinearFilter, SRGBColorSpace, Sprite
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { registerDrapeFlush, useExportStore } from '../export/store'
 import { useMediaStore } from '../film/media'
+import { paramAt } from '../film/paramKeys'
+import { trackPathOf } from '../flyover/path'
+import { filmTrackOf } from '../flyover/sequence'
 import type { PoiIcon } from '../film/model'
 import { climbsOf } from '../flyover/climbs'
 import { OVERLAY_THEMES, resolveLabelStyle } from '../overlay/themes'
@@ -214,10 +217,16 @@ function updateLabelSet(
   engine: TerrainEngine | null,
   frame: LocalFrame | null,
   exaggeration: number,
+  /** opacity of the « Étiquettes » keys of the film at this progress (1 without a key) */
+  keyOpacity = 1,
   renderScale = 1,
   /** common size and range of the labels (`settings.labels`) */
   look: { size: number; rangeKm: number } = { size: 1, rangeKm: 70 },
 ): void {
+  if (keyOpacity < MIN_OPACITY) {
+    for (const entry of set.entries) entry.sprite.visible = false
+    return
+  }
   camera.getWorldPosition(cameraPosition)
   const scale = renderScale * look.size
   const pixel = spriteScaleForPixels(1, size.height, camera.projectionMatrix.elements[5]) * scale
@@ -250,7 +259,7 @@ function updateLabelSet(
     if (!visible[i]) return
     entry.sprite.visible = true
     entry.sprite.scale.set(entry.tex.width * pixel, entry.tex.height * pixel, 1)
-    entry.material.opacity = opacity
+    entry.material.opacity = opacity * keyOpacity
     entry.material.color.setScalar(1 / exposure)
   })
 }
@@ -404,9 +413,12 @@ export function Labels() {
 
   useFrame(({ camera, gl, size }) => {
     if (!setRef.current) return
-    const { settings } = useAppStore.getState()
+    const { playback, settings, tracks } = useAppStore.getState()
     const { renderScale } = useExportStore.getState()
-    updateLabelSet(setRef.current, camera, size, gl.toneMappingExposure, engine, frame, exaggeration, renderScale, settings.labels)
+    // the « Étiquettes » keys are anchored in metres along the film track, like the other parameter keys
+    const flown = filmTrackOf(tracks, settings.race)
+    const keyOpacity = paramAt(settings.film, 1, 'labels', playback.progress * (flown ? trackPathOf(flown).lengthM : 0))
+    updateLabelSet(setRef.current, camera, size, gl.toneMappingExposure, engine, frame, exaggeration, keyOpacity, renderScale, settings.labels)
   })
 
   return <group ref={groupRef} name="labels" />
