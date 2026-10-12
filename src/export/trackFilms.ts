@@ -23,7 +23,7 @@ const POLL_MS = 200
 
 /** The film of a track loaded alone: shots, options and music of `film`, stops generated, nothing placed by hand. */
 export function trackFilm(film: Film): Film {
-  return { ...film, autoStops: true, stops: [], speeds: [], cameraKeys: [], paramKeys: [], texts: [], media: [], pois: [] }
+  return { ...film, autoStops: true, stops: [], speeds: [], cameraKeys: [], paramKeys: [], markerKeys: [], texts: [], media: [], pois: [] }
 }
 
 /** Request fields of the film shown (its clock: the track shown, its landmarks), frame rate, quality and encoding of « Vidéo ». */

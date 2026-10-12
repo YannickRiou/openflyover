@@ -136,10 +136,11 @@ export function sanitizeMediaTable(raw: unknown): MediaTable {
   return media
 }
 
-/** The entries of `table` used by the film, media and music (what a saved project keeps). */
-export function usedMedia(film: Pick<Film, 'media'> & Partial<Pick<Film, 'audio'>>, table: MediaTable): MediaTable {
+/** The entries of `table` used by the film: media, music and the pictures of the marker keys (what a saved project keeps). */
+export function usedMedia(film: Pick<Film, 'media'> & Partial<Pick<Film, 'audio' | 'markerKeys'>>, table: MediaTable): MediaTable {
   const out: MediaTable = {}
-  for (const { src } of [...film.media, ...(film.audio ?? [])]) if (table[src]) out[src] = table[src]
+  const ids = [...film.media.map((m) => m.src), ...(film.audio ?? []).map((a) => a.src), ...(film.markerKeys ?? []).flatMap((k) => (k.imageId ? [k.imageId] : []))]
+  for (const id of ids) if (table[id]) out[id] = table[id]
   return out
 }
 

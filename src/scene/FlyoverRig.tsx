@@ -12,7 +12,9 @@
  */
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Vector3, type Sprite } from 'three'
+import { Vector3, type Sprite, type SpriteMaterial } from 'three'
+import { markerAt, markerFadeM } from '../film/markerKeys'
+import { useMediaStore } from '../film/media'
 import { registerKeyCapture } from '../flyover/cameraKeys'
 import { filmViewMovesWithTime, situationFramingOf, situationTarget } from '../flyover/filmCamera'
 import { filmFollowOf } from '../flyover/follow'
@@ -31,9 +33,10 @@ import {
   placeMarker,
   reliefClearance,
   releaseMarkerTexture,
-  useMarkerImage,
+  useMarkerImages,
   useMarkerLabelFont,
 } from './markerSprite'
+import type { MarkerSettings } from './markerSettings'
 import { useFilmClock, useFilmTrack } from './usePacing'
 import type { HeightSampler } from './TrackLines'
 
@@ -62,7 +65,14 @@ export function FlyoverRig() {
   /** clock the store's film time was computed with */
   const clockRef = useRef(clock)
   const markerRef = useRef<Sprite>(null)
-  const markerImage = useMarkerImage(useAppStore((s) => s.settings.marker.image))
+  /** the look the marker leaves while it cross-fades into the next one (marker keys) */
+  const fadeRef = useRef<Sprite>(null)
+  const baseImage = useAppStore((s) => s.settings.marker.image)
+  const markerKeys = useAppStore((s) => s.settings.film.markerKeys)
+  const pictures = useMediaStore((s) => s.table)
+  const markerImages = useMarkerImages(
+    useMemo(() => [baseImage, ...markerKeys.map((k) => (k.imageId ? (pictures[k.imageId]?.data ?? '') : ''))], [baseImage, markerKeys, pictures]),
+  )
   useMarkerLabelFont(useAppStore((s) => s.settings.marker.label !== 'aucune'))
   /** view the camera was last placed for; start at the mount values so the initial fit is kept */
   const { playback: mount, settings: mountSettings } = useAppStore.getState()
@@ -77,8 +87,8 @@ export function FlyoverRig() {
   const camera = useThree((s) => s.camera)
 
   useEffect(() => {
-    const marker = markerRef.current
-    return () => releaseMarkerTexture(marker)
+    const sprites = [markerRef.current, fadeRef.current]
+    return () => sprites.forEach(releaseMarkerTexture)
   }, [])
 
   // « Capturer la vue actuelle »: the framing of this camera around the target of the region view
@@ -129,9 +139,11 @@ export function FlyoverRig() {
 
     if (controls) controls.enabled = !playing
     const marker = markerRef.current
-    if (!marker) return
+    const leaving = fadeRef.current
+    if (!marker || !leaving) return
     if (!path || path.count === 0 || !frame) {
       marker.visible = false
+      leaving.visible = false
       return
     }
 
@@ -162,17 +174,32 @@ export function FlyoverRig() {
     // after the camera move: the figure faces the way the track runs in this very frame; the colour, figure and name
     // of the track under the marker (the stage « À la suite »)
     const under = trackUnderMarker(store.tracks, settings.race, progress)?.track ?? track
-    const look = markerLook(settings.marker, under, true, markerImage)
-    const colors = leadMarkerColors(settings.marker, under?.color ?? '#FFFFFF')
-    const mirrored = settings.marker.kind === 'figurine' && headsLeft(path, progress * path.lengthM, view.marker, frame, camera)
-    placeMarker(marker, view.marker, camera, look, colors, mirrored, 1 / gl.toneMappingExposure, timeS)
-    occludeMarker(marker, camera, reliefClearance(engine, frame, settings.exaggeration))
+    const imageOf = (id: string) => useMediaStore.getState().table[id]?.data ?? ''
+    const blend = markerAt(settings.film, settings.marker, progress * path.lengthM, markerFadeM(path.lengthM, clock.flightS), imageOf)
+    const clearance = reliefClearance(engine, frame, settings.exaggeration)
+    const exposureGain = 1 / gl.toneMappingExposure
+    const draw = (sprite: Sprite, look: MarkerSettings, weight: number) => {
+      const mirrored = look.kind === 'figurine' && headsLeft(path, progress * path.lengthM, view.marker, frame, camera)
+      const colors = leadMarkerColors(look, under?.color ?? '#FFFFFF')
+      placeMarker(sprite, view.marker, camera, markerLook(look, under, true, markerImages.get(look.image) ?? null), colors, mirrored, exposureGain, timeS)
+      occludeMarker(sprite, camera, clearance)
+      ;(sprite.material as SpriteMaterial).opacity *= weight
+    }
+    // a change of look: the new one fades in over the old, which stays opaque until it is settled
+    leaving.visible = blend.mix < 1
+    if (leaving.visible) draw(leaving, blend.from, 1)
+    draw(marker, blend.to, blend.mix)
   })
 
   // unlit and drawn over the terrain (faded out behind the relief): readable on the track colour and on dark forest alike
   return (
-    <sprite ref={markerRef} name="flyover-marker" visible={false} renderOrder={2}>
-      <spriteMaterial depthTest={false} depthWrite={false} />
-    </sprite>
+    <>
+      <sprite ref={fadeRef} name="flyover-marker-from" visible={false} renderOrder={2}>
+        <spriteMaterial depthTest={false} depthWrite={false} />
+      </sprite>
+      <sprite ref={markerRef} name="flyover-marker" visible={false} renderOrder={2}>
+        <spriteMaterial depthTest={false} depthWrite={false} />
+      </sprite>
+    </>
   )
 }
