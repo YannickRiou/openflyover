@@ -1198,7 +1198,7 @@ ink, 7.3:1).
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
   of the « Plans » lane header; on a portrait phone (centred timeline, no lane headers) it leads the sideways-scrolling
   tool row. Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys), « Arrêts »,
-  « Textes », « Médias », « Musique »; there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
+  « Textes », « Médias », « Musique »; « Textes » also carries the opening title and the closing card (see below); there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
   « Ajouter un changement de marqueur » button. `seekKeyframe` puts the film time exactly on the key
   (`adjacentKey`, one under the playhead skipped) and moves the inspector to it when it showed a keyframe. Lanes "Plans" (shots; opening, flyover with profile, closing;
   "aucune" (none) = selectable dotted stub; stops are also marked on the flyover bar, tinted window
@@ -1256,6 +1256,18 @@ ink, 7.3:1).
   focus on a block and by additions (`editFilm` selects the new block), cleared by Esc, closing
   the inspector, a deletion, or when the block no longer exists (undo, other track, generated stops moved:
   `hasFilmItem`, `Timeline` effect).
+- **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
+  card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
+  `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the
+  source of truth and `drawOverlay` is unchanged. The title block runs from film time 0 to `openingS + title.end × flightS`; the
+  closing block from `openingS + end.start × flightS` to the last frame (the real windows of `titleCardOpacity` /
+  `endCardOpacity`). The « Ouverture » / « Clôture » shots of « Plans » are separate and unchanged. A card cannot be moved as a
+  whole: dragging the right edge of the title sets `title.end`, dragging the left edge of the closing card sets `end.start`
+  (`dragCard`: seconds back to a fraction of the flight, snapped, clamped to `TITLE_END_*` / `END_START_*`, to a thousandth),
+  committed on release as one undo step through `setSetting('overlay', …)`. Arrows nudge the same edge (Shift: 0.1 s). Delete,
+  or « Supprimer » in the inspector (and on the phone's block bar), switches the card off (`disableCard`: `enabled: false`,
+  settings kept, one undo step, selection cleared); switching it on again from the panel brings the block back. Selection,
+  focus and tap-to-select on the centred phone timeline are those of the other blocks.
 - **Inspector** (`FilmInspector`, no props, in the right dock, sticky header and ✕ like the export drawer): shot
   (style, duration), stop (label, duration, "Caméra pendant l'arrêt" (camera during the stop) as a list with a help sentence, position and window),
   « Image clé » (distance, tilt, aim from the captured pose, sliders widened to show a value beyond the camera ranges, "À (km)" (at, km),
@@ -1714,7 +1726,7 @@ exports) gets it from the terrain source of the settings.
   profile, closing statistics, weather summary, mini-map outline (`miniMapOutline`: local equirectangular
   projection, x east / y south, longest side = 1, proportions kept, at most 1,500 points). `overlayFrameAt(data, progress)` is
   a pure function of progress (including `mapPoint`, the marker position on the mini-map).
-- **Settings**: `settings.overlay` (`src/overlay/settings.ts`, disabled by default): style (`editorial`, `broadcast`, `app`) and
+- **Settings**: `settings.overlay` (`src/overlay/settings.ts`, disabled by default; the opening title and the closing card keep only their switch, a hint and a « Modifier » button in the « Habillage » panel (« Titres »): their other settings live in the inspector of their timeline block, `CardFields`): style (`editorial`, `broadcast`, `app`) and
   widgets — opening card, closing card, counters, profile, mini-map (optional north arrow), logo, free text,
   weather, ranking — each with `enabled`, `anchor`, `size`. Optional `markerColor` ('#rrggbb', '' or absent = the 3D marker's colour:
   `marker.color`, else the colour of the track under the marker; `OverlayExtras.markerColor`) on `profile` and `minimap`: the position dot

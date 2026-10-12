@@ -4,6 +4,9 @@
  * (ARCHITECTURE.md "Film and timeline"). The inspector of the selected block (`filmSelection` in the store) is in the
  * right dock (`FilmInspector`).
  *
+ * « Textes » also carries the opening title and the closing card while they are on (`film/cards.ts`: blocks of the
+ * overlay settings, whose inner edge sets `title.end` / `end.start`; their settings are in the inspector).
+ *
  * A gesture is previewed on the timeline only and committed on release as one undo step. Edits are the pure
  * functions of `film/timeline.ts`; editing a stop writes the generated stops out first (`materializeStops`).
  */
@@ -14,6 +17,8 @@ import type { KeyboardEvent, PointerEvent, ReactNode, UIEvent } from 'react'
 import { freezeLandmarkTitles, materializeStops, stopAt, stopCandidates } from '../film/assemble'
 import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readAudio, startMusicPreview, useMusicPreview, waveformPath } from '../film/audio'
 import { beatTicksPath } from '../film/beats'
+import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards } from '../film/cards'
+import type { CardId } from '../film/cards'
 import { buildFilmClock, filmClockFor, filmClockInputFor } from '../film/clock'
 import type { FilmClockInput } from '../film/clock'
 import { photoTimeMs } from '../film/exif'
@@ -47,6 +52,7 @@ import {
   removeFilmItem,
   rulerTicks,
   snapTargets,
+  snapTime,
   syncClip,
   updateMedia,
   zoomAt,
@@ -55,7 +61,8 @@ import type { DragContext, Grip, TimelineItem } from '../film/timeline'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
-import { editFilm, getFilmSource, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import type { OverlaySettings } from '../overlay/settings'
+import { disableCard, editFilm, getFilmSource, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
 import { formatClock, formatDistance, formatNumber } from './format'
@@ -69,6 +76,7 @@ import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
 import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
+import './cardBlocks.css'
 import './markerKeys.css'
 
 const SPEEDS = PLAYBACK_SPEEDS
@@ -105,6 +113,8 @@ type Gesture =
   /** centred timeline: a press that selects `item` (or seeks, on nothing) if released without sliding */
   | { kind: 'tap'; item: TimelineItem | null; x0: number }
   | { kind: 'edit'; item: TimelineItem; grip: Grip; x0: number; scroll0: number; start: Film; ctx: DragContext; result: Film | null }
+  /** the edge of an opening title or closing card: it edits the overlay settings, not the film */
+  | { kind: 'card'; item: CardId; grip: Grip; x0: number; scroll0: number; start: OverlaySettings; ctx: DragContext; result: OverlaySettings | null }
 
 /** Edge auto-scroll of a gesture: last pointer position, the handler that replays it, animation frame. */
 interface EdgeScroll {
@@ -315,6 +325,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const setSelected = useAppStore((s) => s.setFilmSelection)
   /** film being dragged (shown on the timeline only), committed on release */
   const [draft, setDraft] = useState<Film | null>(null)
+  const overlay = useAppStore((s) => s.settings.overlay)
+  /** overlay being dragged (the edge of a card), shown on the timeline only */
+  const [cardDraft, setCardDraft] = useState<OverlaySettings | null>(null)
   const [zoom, setZoom] = useState<number>(centred ? CENTRED_ZOOM : ZOOM_RANGE.min)
   const [collapsed, setCollapsed] = useState(() => matchesQuery(COMPACT_QUERY) && !centred)
   const [shownSheet, setShownSheet] = useState(sheetOpen)
@@ -336,6 +349,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const syncedScrollRef = useRef<number | null>(null)
 
   const shownFilm = draft ?? film
+  const shownOverlay = cardDraft ?? overlay
   const shownClock = useMemo(() => (draft ? clockOfFilm(input, draft) : clock), [draft, input, clock])
   const flightXs = useMemo(() => {
     const n = profile?.ele.length ?? 0
@@ -345,9 +359,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   const hasTrack = track !== undefined
   // the selected block went away (undo, other track, generated stops moved): nothing selected
+  const cardGone = isCardItem(selected) && !cardShown(overlay, selected)
   useEffect(() => {
-    if (selected !== null && (!track || !hasFilmItem(film, clock.stops, selected))) setSelected(null)
-  }, [selected, track, film, clock, setSelected])
+    if (selected !== null && (!track || (isCardItem(selected) ? cardGone : !hasFilmItem(film, clock.stops, selected)))) setSelected(null)
+  }, [selected, track, film, clock, cardGone, setSelected])
 
   useEffect(() => {
     const el = scrollerRef.current
@@ -374,6 +389,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       cancelAnimationFrame(edgeRef.current?.frame ?? 0)
       edgeRef.current = null
       setDraft(null)
+      setCardDraft(null)
     }
     const onTouchMove = (e: TouchEvent) => {
       if (!pinch || e.touches.length !== 2) return
@@ -481,7 +497,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     snapS: SNAP_PX / pxPerS,
     audioFileS: (src) => pictures[src]?.durationS,
   })
-  const remove = (item: TimelineItem) => editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop(item) })
+  const remove = (item: TimelineItem) => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop(item) }))
   const addStopAt = (atM: number, patch?: Parameters<typeof addStop>[2]) => editFilm((f) => addStop(f, atM, patch), { stops: true })
   /** a portion twice as fast from the marker (one undo step) */
   const addSpeedAt = (atM: number) => {
@@ -632,8 +648,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     e.stopPropagation()
     setSelected(item)
     contentRef.current?.setPointerCapture(e.pointerId)
-    const start = isStop(item) ? withOwnStops(film) : film
     const scroll0 = scrollerRef.current?.scrollLeft ?? 0
+    if (isCardItem(item)) {
+      gestureRef.current = { kind: 'card', item, grip, x0: e.clientX, scroll0, start: overlay, ctx: dragContext(item), result: null }
+      return
+    }
+    const start = isStop(item) ? withOwnStops(film) : film
     gestureRef.current = { kind: 'edit', item, grip, x0: e.clientX, scroll0, start, ctx: dragContext(item), result: null }
   }
   /** a press on an edge grip, or past it on a narrow block (`pressedGrip`) */
@@ -652,6 +672,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     }
     const dx = clientX - g.x0 + (scrollerRef.current?.scrollLeft ?? 0) - g.scroll0
     if (!g.result && Math.abs(dx) < DRAG_THRESHOLD_PX) return
+    if (g.kind === 'card') {
+      const snapS = altKey ? 0 : g.ctx.snapS
+      g.result = dragCard(g.start, g.item, g.grip, dx / pxPerS, clock, (t) => snapTime(t, g.ctx.targets, snapS))
+      setCardDraft(g.result)
+      return
+    }
     const dragged = dragFilm(g.start, g.item, g.grip, dx / pxPerS, altKey ? { ...g.ctx, snapS: 0 } : g.ctx)
     g.result = followStops(g.start, dragged, clockOf)
     setDraft(g.result)
@@ -696,7 +722,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (!g) return
     applyPointer(e.clientX, e.altKey)
     // a press that only selects a block (not dragged yet) does not scroll
-    if (g.kind === 'scrub' || (g.kind === 'edit' && g.result)) followEdge(e.clientX, e.altKey)
+    if (g.kind === 'scrub' || ((g.kind === 'edit' || g.kind === 'card') && g.result)) followEdge(e.clientX, e.altKey)
   }
   const endGesture = (e: PointerEvent<HTMLDivElement>) => {
     const g = gestureRef.current
@@ -707,6 +733,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       if (g.result) commit(g.result)
       else jumpToKey(g.item)
     }
+    if (g?.kind === 'card' && e.type === 'pointerup' && g.result && g.result !== g.start) {
+      const result = g.result
+      getSettingsHistory().transaction(() => setSetting('overlay', result))
+    }
     if (g?.kind === 'tap' && e.type === 'pointerup') {
       if (g.item === null) seek(timeAt(e.clientX))
       else {
@@ -715,6 +745,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       }
     }
     setDraft(null)
+    setCardDraft(null)
   }
   /** centred: a scroll by the finger (or the wheel) moves the film time; the one that follows the playhead does not */
   const onScroll = (e: UIEvent<HTMLDivElement>) => {
@@ -730,8 +761,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       remove(item)
     } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
       const step = (e.shiftKey ? FINE_NUDGE_S : NUDGE_S) * (e.key === 'ArrowLeft' ? -1 : 1)
-      const grip: Grip = item === 'closing' ? 'start' : item === 'opening' ? 'end' : 'move'
-      change((f) => dragFilm(f, item, grip, step, { ...dragContext(item), snapS: 0 }), isStop(item))
+      const grip: Grip = item === 'closing' || item === END_CARD_ID ? 'start' : item === 'opening' || item === TITLE_CARD_ID ? 'end' : 'move'
+      if (isCardItem(item)) {
+        const next = dragCard(overlay, item, grip, step, clock)
+        if (next !== overlay) setSetting('overlay', next)
+      } else {
+        change((f) => dragFilm(f, item, grip, step, { ...dragContext(item), snapS: 0 }), isStop(item))
+      }
     } else {
       return
     }
@@ -1223,6 +1259,21 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               <div className="film-tl__lane" role="group" aria-label="Textes">
+                {/* the opening title and the closing card (overlay settings): only their inner edge moves */}
+                {shownCards(shownOverlay).map((card) => {
+                  const { startS, endS } = cardWindow(shownOverlay, card, shownClock)
+                  return block(
+                    card,
+                    startS,
+                    endS,
+                    CARD_LABELS[card],
+                    CARD_LABELS[card],
+                    'film-tl__block--card',
+                    card === TITLE_CARD_ID ? ['end'] : ['start'],
+                    undefined,
+                    'type',
+                  )
+                })}
                 {shownFilm.texts.map((t) =>
                   block(t.id, t.startS, t.startS + t.durationS, t.text || 'Texte', `Texte : ${t.text}`, 'film-tl__block--text', [
                     'start',
