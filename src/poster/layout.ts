@@ -7,6 +7,7 @@
  * Units: 1 u = 1 % of the shorter side. Portrait and square posters stack the view above the text; landscape ones put
  * the text in a column beside the view.
  */
+import { POSTER_LAYOUTS } from './settings'
 import type { PosterStyleId } from './settings'
 
 export interface Box {
@@ -194,6 +195,7 @@ const rounded = (b: Box): Box => {
 
 /** Boxes of a poster of `width` × `height` px in `style` with these rows. */
 export function posterLayout(width: number, height: number, style: PosterStyleId, rows: PosterRows): PosterLayout {
+  const family = POSTER_LAYOUTS[style]
   const u = Math.min(width, height) / 100
   const side = width / height > SIDE_RATIO
   // a square poster has less height for the same text: everything a little smaller
@@ -206,7 +208,7 @@ export function posterLayout(width: number, height: number, style: PosterStyleId
     const columns = { figures: Math.max(1, rows.figures), tracks: s < 1 ? 2 : 1 }
     // measure the text column once (its height does not depend on where it starts)
     const probe = (w: number) => stackRows(rows, 0, 0, w, u, s, columns).height
-    if (style === 'editorial') {
+    if (family === 'editorial') {
       const margin = 6 * u
       const gap = 4.5 * u
       const w = width - 2 * margin
@@ -215,7 +217,7 @@ export function posterLayout(width: number, height: number, style: PosterStyleId
       const text = stackRows(rows, margin, view.y + view.h + gap, w, u, s, columns)
       return { ...base, view, panel: null, accentBar: null, ...pick(text) }
     }
-    if (style === 'broadcast') {
+    if (family === 'broadcast') {
       const pad = 5 * u
       const inset = 6 * u
       const bar = 0.8 * u
@@ -238,14 +240,14 @@ export function posterLayout(width: number, height: number, style: PosterStyleId
   // landscape: a text column, two figures per row, the list in one column
   const column = 40 * u
   const columns = { figures: 2, tracks: 1 }
-  if (style === 'editorial') {
+  if (family === 'editorial') {
     const margin = 6 * u
     const gap = 5 * u
     const view = rounded({ x: margin, y: margin, w: width - 2 * margin - gap - column, h: height - 2 * margin })
     const text = stackRows(rows, view.x + view.w + gap, margin, column, u, s, columns, height - margin)
     return { ...base, view, panel: null, accentBar: null, ...pick(text) }
   }
-  if (style === 'broadcast') {
+  if (family === 'broadcast') {
     const pad = 5 * u
     const bar = 0.8 * u
     const panelW = column + 2 * pad + bar
