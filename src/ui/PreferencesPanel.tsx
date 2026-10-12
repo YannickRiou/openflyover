@@ -1,4 +1,5 @@
 import { getPlatform } from '../platform'
+import { DiagnosticRow } from './DiagnosticDialog'
 import { PanelSection } from './PanelSection'
 import { setPreferences, usePreferences } from './preferences'
 import { PERF_ITEMS, STATUS_CHIPS } from './shell'
@@ -39,7 +40,7 @@ function Chips<K extends string>({ legend, labels, keys, value, onChange }: {
 
 /**
  * « Réglages » tab: preferences of the app on this device, not of the project (`preferences.ts`): what the status
- * bar shows, the clock time on the timeline.
+ * bar shows, the clock time on the timeline, the diagnostic report.
  */
 export function PreferencesPanel() {
   const prefs = usePreferences()
@@ -69,6 +70,7 @@ export function PreferencesPanel() {
         </label>
         <p className="field__hint">Heure de la trace à la position du marqueur, après le minutage du film.</p>
       </PanelSection>
+      <DiagnosticRow />
     </>
   )
 }

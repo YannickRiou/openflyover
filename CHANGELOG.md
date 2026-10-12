@@ -35,6 +35,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Project** (#20): « Nouveau projet » and « Fermer le projet » in the Projet tab, which gathers every project action.
 - **Overlay positions** (#39, #38): one 3 × 3 grid for every position, a free position in pixels of the exported
   video, logo opacity.
+- **Diagnostic** (#64): the diagnostic report and the test export without encoding moved from the Projet tab to « Réglages ».
 - **Export diagnostic** (#52): the `[export]` console line and the diagnostic report give the tiles and triangles drawn in
   the shadow pass per render, with the off-screen share, to measure what an off-screen caster filter could save.
 - **Marker keys** (#40): change the marker (ball, figure, own picture) along the track with keys on the timeline,

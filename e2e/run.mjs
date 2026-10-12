@@ -246,10 +246,10 @@ const SCENARIOS = [
   },
   {
     id: 'diagnostic',
-    title: 'Rapport de diagnostic (onglet Projet) : appareil et réglages, sans nom de trace',
+    title: 'Rapport de diagnostic (onglet Réglages) : appareil et réglages, sans nom de trace',
     async run({ page }) {
-      if (await page.evaluate(() => document.getElementById('tab-projet')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-projet')
-      await page.click('#tab-panel-projet .setting-row__head::-p-text(Diagnostic)')
+      if (await page.evaluate(() => document.getElementById('tab-reglages')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-reglages')
+      await page.click('#tab-panel-reglages .setting-row__head::-p-text(Diagnostic)')
       await clickButton(page, 'Afficher le rapport')
       await page.waitForSelector('dialog.diagnostic[open]', { visible: true, timeout: STEP_MS })
       const text = await page.$eval('dialog.diagnostic pre', (pre) => pre.textContent)
