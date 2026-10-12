@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WaterPolygon } from '../osm/water'
-import { buildWaterMesh, clipRing } from './waterMesh'
+import { buildWaterMesh, clipRing, lakeLevel } from './waterMesh'
 
 const M = 111_320
 const LAT = 45.9
@@ -74,5 +74,23 @@ describe('buildWaterMesh', () => {
     const big = buildWaterMesh({ ...lake, outer: square(20_000) }, { cellM: 60, maxCells: 40, fadeM: 40 })
     expect(big.index.length / 3).toBeLessThanOrEqual(40 * 40 * 4)
     expect(meshArea(big)).toBeCloseTo(4e8, -5)
+  })
+})
+
+describe('lakeLevel', () => {
+  it('takes a high percentile of the heights inside the lake, not of the shore', () => {
+    // shore at 1010 (a steep bank), inside 1000 with a few seams up to 1003
+    const heights = [1010, 1010, 1010, 1010, 1000, 1000, 1001, 1001, 1002, 1003]
+    const fade = [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+    expect(lakeLevel(heights, fade)).toBe(1002)
+  })
+
+  it('ignores the vertices whose relief is not loaded yet, and says so when none is known', () => {
+    expect(lakeLevel([Number.NaN, 1000, 1000, 1000, 1000, 1004], [1, 1, 1, 1, 1, 1])).toBe(1000)
+    expect(lakeLevel([Number.NaN, Number.NaN], [1, 1])).toBeNaN()
+  })
+
+  it('falls back to the median of every vertex for a thin lake with almost nothing inside', () => {
+    expect(lakeLevel([1000, 1001, 1002, 1003, 1004], [0, 0.1, 0.2, 0, 1])).toBe(1002)
   })
 })

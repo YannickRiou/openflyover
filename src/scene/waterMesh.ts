@@ -146,3 +146,36 @@ export function buildWaterMesh(polygon: WaterPolygon, options: WaterMeshOptions 
   }
   return { lonLat, fade, index: Uint32Array.from(index) }
 }
+
+/** Share of `fade` from which a vertex counts as inside the water, away from the shore (an OSM shore is a few metres off the DEM's). */
+const INNER_FADE = 0.5
+/** Percentile of the heights inside a lake taken as its level: high, so that the relief of a lake does not poke through. */
+const LAKE_INNER_PERCENTILE = 0.9
+/** Percentile when too few vertices are inside (a thin lake): all the vertices, as the median. */
+const LAKE_ALL_PERCENTILE = 0.5
+/** Fewest inner vertices for the inner percentile. */
+const MIN_INNER_VERTICES = 4
+
+function percentile(values: number[], p: number): number {
+  values.sort((a, b) => a - b)
+  return values[Math.floor((values.length - 1) * p)]
+}
+
+/**
+ * Level of a lake (flat surface) from the heights of its vertices (NaN where the relief is not loaded yet; NaN when none is
+ * known). The water must lie over the relief of the lake: a DEM is not flat on a lake (noise, tile seams) and a coarse
+ * level of detail rises towards the banks, so the level is a high percentile of the heights inside the lake, not of the
+ * shore (which a steep bank lifts) nor a low one (under which the relief shows through as dark patches).
+ */
+export function lakeLevel(heights: ArrayLike<number>, fade: ArrayLike<number>): number {
+  const inner: number[] = []
+  const all: number[] = []
+  for (let v = 0; v < heights.length; v++) {
+    if (Number.isNaN(heights[v])) continue
+    all.push(heights[v])
+    if (fade[v] >= INNER_FADE) inner.push(heights[v])
+  }
+  if (all.length === 0) return Number.NaN
+  return inner.length >= MIN_INNER_VERTICES ? percentile(inner, LAKE_INNER_PERCENTILE) : percentile(all, LAKE_ALL_PERCENTILE)
+}
+
