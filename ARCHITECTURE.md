@@ -1706,7 +1706,9 @@ exports) gets it from the terrain source of the settings.
   a pure function of progress (including `mapPoint`, the marker position on the mini-map).
 - **Settings**: `settings.overlay` (`src/overlay/settings.ts`, disabled by default): style (`editorial`, `broadcast`, `app`) and
   widgets — opening card, closing card, counters, profile, mini-map (optional north arrow), logo, free text,
-  weather, ranking — each with `enabled`, `anchor`, `size`. Optional `offset {x, y}` on every placed widget (`PLACED_WIDGETS`), absent by
+  weather, ranking — each with `enabled`, `anchor`, `size`. Optional `markerColor` ('#rrggbb', '' or absent = the 3D marker's colour:
+  `marker.color`, else the colour of the track under the marker; `OverlayExtras.markerColor`) on `profile` and `minimap`: the position dot
+  (« Point de position » in the widget's Style tab, « Comme le marqueur » to reset). Optional `offset {x, y}` on every placed widget (`PLACED_WIDGETS`), absent by
   default (stacked): whole pixels of the exported film (`OFFSET_MAX_PX` = ±10 000), checked by `isValidOffset`;
   `withWidgetOffset` sets it or drops the key. `overlayExtras` passes `exportSize` (`videoSize(aspect, resolution)` without
   the device cap); `drawOverlay` scales the offsets by the ratio of the shorter sides of the drawn frame and of

@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { videoSize } from '../export/schedule'
+import { filmTrackOf } from '../flyover/sequence'
 import { hasMetric } from '../flyover/trackColor'
 import { fileToLogoDataUrl } from '../overlay/assets'
 import {
@@ -214,6 +215,23 @@ const SWATCHES: readonly { color: string; label: string }[] = [
   { color: '#a9ccd9', label: 'Glacier' },
   { color: '#3f6b4a', label: 'Mousse' },
 ]
+
+/**
+ * Colour of the position dot of the profile or the mini-map: the 3D marker's until one is chosen (`value` '' or
+ * absent), « Comme le marqueur » gives it back.
+ */
+function DotColor({ value, onChange }: { value: string | undefined; onChange(v: string): void }) {
+  // '' of the marker settings: the colour of the track flown
+  const marker = useAppStore((s) => s.settings.marker.color || filmTrackOf(s.tracks, s.settings.race)?.color || '#ffffff')
+  return (
+    <>
+      <ColorField label="Point de position" value={value || marker} onChange={onChange} />
+      <button type="button" className="btn btn--secondary" disabled={!value} onClick={() => onChange('')}>
+        Comme le marqueur
+      </button>
+    </>
+  )
+}
 
 /** Native colour picker followed by the swatches; `value` is '#rrggbb'. */
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange(v: string): void }) {
@@ -648,6 +666,7 @@ export function OverlayPanel() {
                     format={percent}
                     onChange={(height) => setWidget('profile', { height })}
                   />
+                  <DotColor value={overlay.profile.markerColor} onChange={(markerColor) => setWidget('profile', { markerColor })} />
                 </>
               }
             >
@@ -660,7 +679,12 @@ export function OverlayPanel() {
               onToggle={(enabled) => setWidget('minimap', { enabled })}
               position="minimap"
               styled="minimap"
-              style={<SizeField value={overlay.minimap.size} onChange={(size) => setWidget('minimap', { size })} />}
+              style={
+                <>
+                  <SizeField value={overlay.minimap.size} onChange={(size) => setWidget('minimap', { size })} />
+                  <DotColor value={overlay.minimap.markerColor} onChange={(markerColor) => setWidget('minimap', { markerColor })} />
+                </>
+              }
             >
               <p className="field__hint">Tout le tracé vu de dessus, nord en haut, avec la position.</p>
               <label className="checkbox">

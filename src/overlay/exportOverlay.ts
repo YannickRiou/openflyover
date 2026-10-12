@@ -15,6 +15,7 @@ import { getMediaBitmaps, mediaToLoad, useMediaStore } from '../film/media'
 import { createExportVideos } from '../film/video'
 import type { ExportVideos } from '../film/video'
 import { useRegionStore } from '../osm/region'
+import { leadMarkerColors } from '../scene/markerSprite'
 import { useLandmarkStore, useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
 import { useWeatherStore, weatherShown, type StageWeather } from '../weather/store'
@@ -22,7 +23,7 @@ import type { WeatherSeries } from '../weather/series'
 import { trackPathOf } from '../flyover/path'
 import { buildRace, raceAt, raceTrackOf } from '../flyover/race'
 import type { RaceSettings } from '../flyover/race'
-import { filmSequenceOf, filmTrackOf } from '../flyover/sequence'
+import { filmSequenceOf, filmTrackOf, trackUnderMarker } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import { loadLogo } from './assets'
 import { leaderboardRows, overlayCredits, overlayFilmFrameAt, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
@@ -71,6 +72,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     dip: strongerDip(transitionDipAt(settings.film, time), sequence ? stageDipAt(settings.race, time) : null),
     stage: sequence && settings.race.stageCards !== false ? stageCardAt(sequence, time) : null,
     exportSize: videoSize(settings.video.aspect, settings.video.resolution, Number.POSITIVE_INFINITY),
+    markerColor: leadMarkerColors(settings.marker, (trackUnderMarker(tracks, settings.race, progress)?.track ?? filmTrackOf(tracks, settings.race))?.color ?? '#FFFFFF').ball,
     credits: overlayCredits({
       terrainSourceId: settings.terrainSourceId,
       imagerySourceId: settings.imagerySourceId,
