@@ -45,14 +45,16 @@ export const GROUND_WINDOW_MAX_M = 150
 /** Aim height: terrain samples on each side of the marker, at multiples of radius / this along the track. */
 export const GROUND_SAMPLES_PER_SIDE = 4
 /**
- * Terrain samples along the sight line camera → aim. The clearance tapers from MIN_GROUND_CLEARANCE_M under the camera
- * to LINE_OF_SIGHT_MIN_CLEARANCE_M (the band over which the marker fades out behind the relief, `occlusionFade`), so a
- * rise just before the marker no longer hides it. The line is checked up to LINE_OF_SIGHT_END_M short of the aim (the
- * marker's fade leaves the slope under it out, `lineOfSightClearance`) and at most LINE_OF_SIGHT_MAX_GAIN × the
- * camera's distance short of it: a raise is the clearance gap divided by the share of the line left, so near the aim
- * the camera would ride every bump of the ground.
+ * Terrain samples along the sight line camera → marker (at its steady height, not its own: that rides each bump). The
+ * clearance tapers from MIN_GROUND_CLEARANCE_M under the camera to LINE_OF_SIGHT_MIN_CLEARANCE_M (a safety margin: the
+ * marker is not drawn at all once the relief cuts the line, `occlusionFade`), so a rise just before the marker no
+ * longer hides it. The ground is the grid's raised by the relief its cells miss (`reliefGround`). The line is checked
+ * up to LINE_OF_SIGHT_END_M
+ * short of the marker (`lineOfSightClearance` leaves the slope under it out) and at most LINE_OF_SIGHT_MAX_GAIN × the
+ * camera's distance short of it: a raise is the clearance gap divided by the share of the line left, so near the marker
+ * the camera would ride every bump of the ground (the heading swing handles that slope, `swingAngle`).
  */
-export const LINE_OF_SIGHT_SAMPLES = 24
+export const LINE_OF_SIGHT_SAMPLES = 48
 export const LINE_OF_SIGHT_END_M = 100
 export const LINE_OF_SIGHT_MIN_CLEARANCE_M = 20
 export const LINE_OF_SIGHT_MAX_GAIN = 20
@@ -61,17 +63,35 @@ export const LINE_OF_SIGHT_MAX_GAIN = 20
  * Smoothing scaled with the ground speed of the film (track length / flyover duration, metres per film second), so a
  * long track flown fast turns and climbs no faster than a short one: the heading is averaged over
  * ± HEADING_SMOOTHING_FACTOR × « Lissage de la caméra » film seconds of track, the aim point and the camera's point of
- * the track over POSITION_SMOOTHING_S (the corners of a sparse recording rounded off), and the ground cell is at least
- * GROUND_SPEED_S of track (at most GROUND_SPEED_MAX_M).
+ * the track over at least POSITION_SMOOTHING_S (the corners of a sparse recording rounded off), and the ground cell is
+ * at least GROUND_SPEED_S of track (at most GROUND_SPEED_MAX_M). With « Lissage de la caméra », the camera stands on the
+ * track smoothed over a deviation of CAMERA_LINE_FACTOR × « Lissage de la caméra » film seconds (`cameraLine`: it does
+ * not follow the zigzags and the GPS noise) and the aim on one AIM_LINE_SHARE as wide, at most AIM_LINE_MAX_SHARE of
+ * the camera's distance (the marker stays near the middle of the frame).
  */
 export const HEADING_SMOOTHING_FACTOR = 1.5
 export const POSITION_SMOOTHING_S = 0.5
+export const CAMERA_LINE_FACTOR = 0.2
+export const AIM_LINE_SHARE = 0.5
+export const AIM_LINE_MAX_SHARE = 0.06
 export const GROUND_SPEED_S = 0.25
 export const GROUND_SPEED_MAX_M = 500
 /** The aim's height eases between the track's ground and the grid's over this band (smooth maximum). */
 export const AIM_GROUND_EASE_M = 40
 /** Fixed samples on each side of a smoothing window (weights sliding over them). */
 export const SMOOTHING_SAMPLES_PER_SIDE = 8
+
+/**
+ * Heading swing (`swingAngle`): a slope rising from the marker toward the camera steeper than the camera's pitch hides
+ * the marker. Climbing over it is allowed up to SWING_CLIMB_DEG above the style's pitch (less SWING_MARGIN of slope);
+ * beyond, the camera turns around the marker toward the side the slope falls away, eased in over SWING_ONSET of excess
+ * steepness. The slope is the ground's gradient over ± half the camera's ground distance (at least
+ * SWING_SLOPE_BASELINE_M), averaged along the track like the heading, so the swing turns as calmly as the heading.
+ */
+export const SWING_CLIMB_DEG = 10
+export const SWING_MARGIN = 0.05
+export const SWING_SLOPE_BASELINE_M = 150
+export const SWING_ONSET = 0.2
 
 /** 'sway': swing (radians) = SWAY_MAX_RAD · tanh(SWAY_GAIN · turn / SWAY_MAX_RAD), turn measured over ±2w. */
 export const SWAY_GAIN = 0.8
@@ -95,6 +115,7 @@ const _behind = new Vector3()
 const _ahead = new Vector3()
 const _sight = new Vector3()
 const _corner = new Vector3()
+const _sightEnd = new Vector3()
 
 // ---------------------------------------------------------------------------
 // Path measures
@@ -236,6 +257,125 @@ function smoothPointAt(path: TrackPath, d: number, radiusM: number, heightM: num
   return frame.toLocal(at.lon, at.lat, heightM)
 }
 
+/** The track smoothed for the camera to stand on (`cameraLine`): points every `step` metres of track, local frame. */
+interface CameraLine {
+  step: number
+  x: Float64Array
+  z: Float64Array
+}
+
+const cameraLines = new WeakMap<TrackPath, WeakMap<LocalFrame, Map<number, CameraLine>>>()
+
+/**
+ * Moving average of `values` over 2h + 1 entries, the table continued beyond its ends by point symmetry (a straight
+ * end stays straight, its end point in place).
+ */
+function boxFilter(values: Float64Array, h: number): Float64Array {
+  const n = values.length
+  const last = n - 1
+  const at = (i: number): number => {
+    if (i < 0) return 2 * values[0] - values[Math.min(last, -i)]
+    if (i > last) return 2 * values[last] - values[Math.max(0, 2 * last - i)]
+    return values[i]
+  }
+  const out = new Float64Array(n)
+  let sum = 0
+  for (let i = -h; i <= h; i++) sum += at(i)
+  for (let k = 0; k < n; k++) {
+    out[k] = sum / (2 * h + 1)
+    sum += at(k + h + 1) - at(k - h)
+  }
+  return out
+}
+
+/**
+ * The track smoothed with a window of deviation `sigmaM` (three moving averages, close to a Gaussian), built once per
+ * path, frame and window like `headingTable`: the exact mean of the polyline over ± `sigmaM` at fixed steps (every
+ * recorded point counts, so the GPS noise between the steps cannot alias), then two moving averages of the table. The
+ * track is continued beyond its ends by point symmetry, so its ends stay in place. No corner left to jolt the camera; a
+ * bend is cut inside by about sigma² / (2 × its radius).
+ */
+function cameraLine(path: TrackPath, sigmaM: number, frame: LocalFrame): CameraLine {
+  let perFrame = cameraLines.get(path)
+  if (!perFrame) cameraLines.set(path, (perFrame = new WeakMap()))
+  let lines = perFrame.get(frame)
+  if (!lines) perFrame.set(frame, (lines = new Map()))
+  const cached = lines.get(sigmaM)
+  if (cached) return cached
+  const { count, dist, lengthM } = path
+  if (!(lengthM > 0)) {
+    const p = frame.toLocal(path.lon[0], path.lat[0], 0, _corner)
+    return { step: 1, x: Float64Array.of(p.x), z: Float64Array.of(p.z) }
+  }
+  // the recorded points in the local frame and the running integrals of x and z over the distance
+  const vx = new Float64Array(count)
+  const vz = new Float64Array(count)
+  const ix = new Float64Array(count)
+  const iz = new Float64Array(count)
+  for (let i = 0; i < count; i++) {
+    const p = frame.toLocal(path.lon[i], path.lat[i], 0, _corner)
+    vx[i] = p.x
+    vz[i] = p.z
+    if (i === 0) continue
+    const ds = dist[i] - dist[i - 1]
+    ix[i] = ix[i - 1] + (ds * (vx[i] + vx[i - 1])) / 2
+    iz[i] = iz[i - 1] + (ds * (vz[i] + vz[i - 1])) / 2
+  }
+  // ∫ over [0, s] of the track continued beyond its ends by point symmetry (like `boxFilter`)
+  const integral = (values: Float64Array, sums: Float64Array, s: number): number => {
+    if (s < 0) return integral(values, sums, Math.min(lengthM, -s)) - 2 * values[0] * -s
+    if (s > lengthM) return integral(values, sums, Math.max(0, 2 * lengthM - s)) + 2 * values[count - 1] * (s - lengthM)
+    if (s === lengthM) return sums[count - 1]
+    const i = lastIndexAtOrBelow(dist, s)
+    const ds = dist[i + 1] - dist[i]
+    const end = values[i] + (values[i + 1] - values[i]) * (ds > 0 ? (s - dist[i]) / ds : 0)
+    return sums[i] + ((s - dist[i]) * (values[i] + end)) / 2
+  }
+  // at most 100,000 steps, at least 8 per deviation
+  const step = Math.max(sigmaM / 8, lengthM / 100_000, 1e-3)
+  const n = Math.ceil(lengthM / step) + 1
+  let x: Float64Array = new Float64Array(n)
+  let z: Float64Array = new Float64Array(n)
+  for (let k = 0; k < n; k++) {
+    const a = k * step - sigmaM
+    const b = k * step + sigmaM
+    x[k] = (integral(vx, ix, b) - integral(vx, ix, a)) / (2 * sigmaM)
+    z[k] = (integral(vz, iz, b) - integral(vz, iz, a)) / (2 * sigmaM)
+  }
+  // a box of ±sigma has a variance of sigma² / 3, as has each of the two moving averages of ±h steps
+  const h = Math.max(1, Math.round(Math.sqrt(1 + (4 * sigmaM * sigmaM) / (step * step)) / 2 - 0.5))
+  for (let pass = 0; pass < 2; pass++) {
+    x = boxFilter(x, h)
+    z = boxFilter(z, h)
+  }
+  // a few windows per path (camera and aim, a slider being dragged): up to 1.6 MB each
+  if (lines.size > 4) lines.clear()
+  const line = { step, x, z }
+  lines.set(sigmaM, line)
+  return line
+}
+
+/**
+ * Point of the camera's line (`cameraLine`) at `d` (local frame, y = `heightM`): uniform Catmull-Rom between the table
+ * points, so the camera's velocity has no break from one step to the next.
+ */
+function cameraLineAt(path: TrackPath, d: number, sigmaM: number, heightM: number, frame: LocalFrame): Vector3 {
+  const { step, x, z } = cameraLine(path, sigmaM, frame)
+  const last = x.length - 1
+  const u = clamp(d, 0, path.lengthM) / step
+  const k = Math.min(Math.floor(u), Math.max(0, last - 1))
+  const t = Math.min(1, u - k)
+  const spline = (v: Float64Array) => {
+    const p0 = v[clamp(k - 1, 0, last)]
+    const p1 = v[clamp(k, 0, last)]
+    const p2 = v[clamp(k + 1, 0, last)]
+    const p3 = v[clamp(k + 2, 0, last)]
+    return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t)
+  }
+  const at = frame.toLonLat(_corner.set(spline(x), 0, spline(z)))
+  return frame.toLocal(at.lon, at.lat, heightM)
+}
+
 /**
  * Signed turn of the path around `d` (radians, > 0 = to the right, clockwise seen from above): the turning
  * angles of the vertices within ]d - window, d + window[ weighted by the tent max(0, 1 - |s - d| / window).
@@ -370,9 +510,11 @@ function placement(
 /**
  * Camera view at `progress` along `path` and film time `options.timeS`: looks at the aim point from `distance` away
  * at `pitch` above the horizon, then raised (pitch steepens) to stay MIN_GROUND_CLEARANCE_M above the smoothed terrain
- * (MIN_TERRAIN_CLEARANCE_M above the actual one) and until the sight line to the aim clears the terrain between.
- * Aim = the track at the aim's progress, corners rounded off (`smoothPointAt`), at the smoothed ground height
- * (`trackGround` eased with `smoothGridGround`) + `liftM`. Heights: terrain sample, else recorded elevation, else 0;
+ * (MIN_TERRAIN_CLEARANCE_M above the actual one) and until the sight line to the marker clears the terrain between,
+ * turned around the marker first when the slope there is too steep to climb over (`swingAngle`).
+ * Aim = the track at the aim's progress, smoothed (`cameraLine`, `smoothPointAt` without « Lissage de la caméra »), at
+ * the smoothed ground height (`trackGround` eased with `smoothGridGround`) + `liftM`; the camera stands around its own
+ * smoothed point of the track. Heights: terrain sample, else recorded elevation, else 0;
  * times `exaggeration`. `aimProgress` / `cameraProgress`: see `timeSmoothing.ts`.
  */
 export function computeCameraView(
@@ -395,23 +537,47 @@ export function computeCameraView(
   const dCamera = options.cameraProgress === undefined ? d : clamp(options.cameraProgress, 0, 1) * path.lengthM
   const speedMps = path.lengthM / Math.max(1, durationS)
   const pointRadiusM = (speedMps * POSITION_SMOOTHING_S) / 2
-  const aim = smoothPointAt(path, dAim, pointRadiusM, 0, frame)
+  // with « Lissage de la caméra », the camera stands on its own smoothed line and the aim on a shorter one (AIM_LINE_SHARE
+  // of it, at most AIM_LINE_MAX_SHARE of the camera's distance: the marker stays near the middle of the frame); never
+  // less than the corners' rounding (`bump` over ± pointRadiusM, a deviation of 0.28 × pointRadiusM)
+  const pointSigmaM = 0.28 * pointRadiusM
+  const lineSigmaM = Math.max(CAMERA_LINE_FACTOR * camera.cameraSmoothingS * speedMps, pointSigmaM)
+  const aimSigmaM = Math.max(Math.min(lineSigmaM * AIM_LINE_SHARE, autoDistanceM(path) * camera.distance * AIM_LINE_MAX_SHARE), pointSigmaM)
+  const smoothLine = camera.cameraSmoothingS > 0
+  const aim = smoothLine ? cameraLineAt(path, dAim, aimSigmaM, 0, frame) : smoothPointAt(path, dAim, pointRadiusM, 0, frame)
   const cellM = Math.max(
     Math.min(headingWindowM(path, camera) * GROUND_WINDOW_FRACTION, GROUND_WINDOW_MAX_M),
     Math.min(speedMps * GROUND_SPEED_S, GROUND_SPEED_MAX_M),
   )
-  const alongTrack = trackGround(path, dAim, cellM, sample)
-  const gridAtAim = sample ? smoothGridGround(aim.x, aim.z, cellM, frame, sample) : undefined
-  const aimGround = (gridAtAim === undefined ? alongTrack : smoothMax(alongTrack, gridAtAim, AIM_GROUND_EASE_M)) * exaggeration
+  // steady ground height (exaggerated) at the point `p` of the track at `dist`
+  const steadyGround = (dist: number, p: Vector3) => {
+    const alongTrack = trackGround(path, dist, cellM, sample)
+    const grid = sample ? smoothGridGround(p.x, p.z, cellM, frame, sample) : undefined
+    return (grid === undefined ? alongTrack : smoothMax(alongTrack, grid, AIM_GROUND_EASE_M)) * exaggeration
+  }
+  const aimGround = steadyGround(dAim, aim)
   const aimAt = frame.toLonLat(aim)
   const target = frame.toLocal(aimAt.lon, aimAt.lat, aimGround + liftM)
 
   const place = placement(path, dCamera, timeS, frame, camera, speedMps)
   place.viewAngle += options.orbitRad ?? 0
+  if (sample) {
+    const slopeRadiusM = Math.max(speedMps * camera.cameraSmoothingS * HEADING_SMOOTHING_FACTOR, headingWindowM(path, camera))
+    const baselineM = Math.max(SWING_SLOPE_BASELINE_M, (place.distance * Math.cos(clamp(place.pitchDeg, PITCH_MIN_DEG, PITCH_MAX_DEG) * DEG)) / 2)
+    place.viewAngle += swingAngle(place, trackSlope(path, d, slopeRadiusM, baselineM, frame, sample, exaggeration))
+  }
   // placed around its own point of the track, at the aim's height
-  const from = dCamera === dAim ? target : smoothPointAt(path, dCamera, pointRadiusM, aimGround + liftM, frame)
+  const from = smoothLine
+    ? cameraLineAt(path, dCamera, lineSigmaM, aimGround + liftM, frame)
+    : dCamera === dAim
+      ? target
+      : smoothPointAt(path, dCamera, pointRadiusM, aimGround + liftM, frame)
   const position = positionAround(from, place)
-  if (sample) position.y = lowestClearY(position, target, frame, sample, exaggeration, cellM)
+  if (sample) {
+    // the sight line ends at the marker, at its steady height (its own rides each bump)
+    const endGround = dAim === d && !smoothLine ? aimGround : steadyGround(d, marker)
+    position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM)
+  }
   return { target, position, marker }
 }
 
@@ -435,30 +601,96 @@ function trackGround(path: TrackPath, d: number, radiusM: number, sample: Height
 }
 
 /**
- * Ground height (metres, not exaggerated) at local (x, z), bilinear between the terrain at the corners of its cell
- * in a fixed `cellM` grid of the local frame: the corners stay put while the camera moves, so the height follows
- * the relief with a bounded slope, never each bump. Exact on a plane; a bump narrower than the cell can rise above
- * it (hence MIN_TERRAIN_CLEARANCE_M), a cliff is softened over a cell. Undefined without terrain there.
+ * Terrain (metres, not exaggerated) at the corners and the cell centres of a fixed `cellM` grid of the local frame,
+ * each read once per view (the sight line crosses the same cells many times). Undefined where the terrain is unknown.
  */
-function gridGround(x: number, z: number, cellM: number, frame: LocalFrame, sample: HeightSampler): number | undefined {
-  const i = Math.floor(x / cellM)
-  const j = Math.floor(z / cellM)
-  const tx = x / cellM - i
-  const tz = z / cellM - j
+interface TerrainGrid {
+  cellM: number
+  /** terrain at corner (i, j) */
+  corner: (i: number, j: number) => number | undefined
+  /** how far corner (i, j) is raised for the relief the grid misses (`reliefGround`) */
+  lift: (i: number, j: number) => number
+}
+
+function terrainGrid(cellM: number, frame: LocalFrame, sample: HeightSampler): TerrainGrid {
+  const memo = <T>(compute: (i: number, j: number) => T) => {
+    const cache = new Map<number, T>()
+    return (i: number, j: number): T => {
+      // a frame spans far fewer than 2^19 cells each way
+      const key = i * 1_048_576 + j
+      if (cache.has(key)) return cache.get(key) as T
+      const value = compute(i, j)
+      cache.set(key, value)
+      return value
+    }
+  }
+  const terrain = (i: number, j: number) => {
+    const at = frame.toLonLat(_corner.set(i * cellM, 0, j * cellM))
+    return sample(at.lon, at.lat)
+  }
+  const corner = memo(terrain)
+  // rise of the terrain at the centre of cell (i, j) above the mean of its corners: what the grid misses (0 for a hollow)
+  const rise = memo((i, j) => {
+    const h = terrain(i + 0.5, j + 0.5)
+    const a = corner(i, j)
+    const b = corner(i + 1, j)
+    const c = corner(i, j + 1)
+    const d = corner(i + 1, j + 1)
+    if (h === undefined || a === undefined || b === undefined || c === undefined || d === undefined) return 0
+    return Math.max(0, h - (a + b + c + d) / 4)
+  })
+  const lift = memo((i, j) => Math.max(rise(i - 1, j - 1), rise(i, j - 1), rise(i - 1, j), rise(i, j)))
+  return { cellM, corner, lift }
+}
+
+/**
+ * Ground height (metres, not exaggerated) at local (x, z), bilinear between the terrain at the corners of its cell
+ * in `grid`: the corners stay put while the camera moves, so the height follows the relief with a bounded slope, never
+ * each bump. Exact on a plane; a bump narrower than the cell can rise above it (`reliefGround`, MIN_TERRAIN_CLEARANCE_M),
+ * a cliff is softened over a cell. Undefined without terrain there.
+ */
+function gridGround(x: number, z: number, grid: TerrainGrid): number | undefined {
+  const i = Math.floor(x / grid.cellM)
+  const j = Math.floor(z / grid.cellM)
+  const tx = x / grid.cellM - i
+  const tz = z / grid.cellM - j
   let sum = 0
   let weight = 0
   for (let ci = 0; ci <= 1; ci++) {
     for (let cj = 0; cj <= 1; cj++) {
       const w = (ci ? tx : 1 - tx) * (cj ? tz : 1 - tz)
       if (w <= 0) continue
-      const at = frame.toLonLat(_corner.set((i + ci) * cellM, 0, (j + cj) * cellM))
-      const h = sample(at.lon, at.lat)
+      const h = grid.corner(i + ci, j + cj)
       if (h === undefined) continue
       sum += w * h
       weight += w
     }
   }
   return weight > 0 ? sum / weight : undefined
+}
+
+/**
+ * `gridGround` raised by the relief its cells miss: each corner by the largest rise of its four cells (terrain at the
+ * centre above the mean of the corners, `TerrainGrid.lift`), interpolated like the grid, so anywhere in a cell the
+ * ground is at least the grid plus that cell's rise. The samples stay put while the camera moves (fixed corners and
+ * centres), so the line of sight clears a crest narrower than a cell without riding it.
+ */
+function reliefGround(x: number, z: number, grid: TerrainGrid): number | undefined {
+  const base = gridGround(x, z, grid)
+  if (base === undefined) return undefined
+  const i = Math.floor(x / grid.cellM)
+  const j = Math.floor(z / grid.cellM)
+  const tx = x / grid.cellM - i
+  const tz = z / grid.cellM - j
+  let excess = 0
+  for (let ci = 0; ci <= 1; ci++) {
+    for (let cj = 0; cj <= 1; cj++) {
+      const w = (ci ? tx : 1 - tx) * (cj ? tz : 1 - tz)
+      if (w <= 0) continue
+      excess += w * grid.lift(i + ci, j + cj)
+    }
+  }
+  return base + excess
 }
 
 /** Uniform cubic B-spline weights of the four corners around a cell fraction `t`. */
@@ -497,6 +729,59 @@ function anchorAt(path: TrackPath, d: number, heightM: number, frame: LocalFrame
   return frame.toLocal(at.lon, at.lat, heightM)
 }
 
+/**
+ * Ground gradient (exaggerated, rise per metre; x east, z south) under the track around `d`: central differences over
+ * ± `h` at fixed track distances (multiples of radiusM / GROUND_SAMPLES_PER_SIDE), `bump`-weighted over ± `radiusM`.
+ * The samples stay put while the marker moves, so the slope turns smoothly (32 terrain samples).
+ */
+function trackSlope(path: TrackPath, d: number, radiusM: number, h: number, frame: LocalFrame, sample: HeightSampler, exaggeration: number): Vector3 {
+  const step = radiusM / GROUND_SAMPLES_PER_SIDE
+  const slope = new Vector3()
+  let weight = 0
+  for (let k = Math.floor((d - radiusM) / step) + 1; k * step < d + radiusM; k++) {
+    const wk = bump(k * step - d, radiusM)
+    const at = samplePath(path, clamp(k * step, 0, path.lengthM))
+    const { x, z } = frame.toLocal(at.lon, at.lat, 0, _corner)
+    const height = (dx: number, dz: number) => {
+      const q = frame.toLonLat(_corner.set(x + dx, 0, z + dz))
+      return sample(q.lon, q.lat)
+    }
+    const east = height(h, 0)
+    const west = height(-h, 0)
+    const south = height(0, h)
+    const north = height(0, -h)
+    if (east === undefined || west === undefined || south === undefined || north === undefined) continue
+    slope.x += (wk * (east - west)) / (2 * h)
+    slope.z += (wk * (south - north)) / (2 * h)
+    weight += wk
+  }
+  return weight > 0 ? slope.multiplyScalar(exaggeration / weight) : slope
+}
+
+/**
+ * Extra viewing angle (radians, > 0 = right) that keeps the marker in sight across `slope` (`trackSlope`). Seen from
+ * the marker, the ground rises toward the camera by slope · u (u: horizontal direction to the camera) and the sight
+ * line by tan(pitch): beyond tan(pitch + SWING_CLIMB_DEG) - SWING_MARGIN the camera turns until it no longer does,
+ * the camera's angle from uphill α eased to β (where the rise is just allowed) by an odd quintic, continuous with its
+ * slope at ±β (no turn outside, no jolt where it starts), twice the heading's turn rate straight uphill (no flip
+ * between the two sides there: the climb clears it).
+ */
+function swingAngle({ reference, viewAngle, pitchDeg }: Placement, slope: Vector3): number {
+  const steepness = Math.hypot(slope.x, slope.z)
+  const allowed = Math.tan(clamp(pitchDeg + SWING_CLIMB_DEG, PITCH_MIN_DEG, PITCH_MAX_DEG) * DEG) - SWING_MARGIN
+  if (!(steepness > allowed) || allowed <= 0) return 0
+  // acos grows as the square root of the excess: eased in over SWING_ONSET so the swing does not start with a jolt
+  const excess = 1 - allowed / steepness
+  const beta = Math.acos(1 - excess) * Math.min(1, excess / SWING_ONSET)
+  // direction marker → camera (opposite to the viewing direction), angles clockwise from north as atan2(x, -z)
+  const toCamera = Math.atan2(reference.x, -reference.z) + viewAngle + Math.PI
+  const uphill = Math.atan2(slope.x, -slope.z)
+  const alpha = Math.atan2(Math.sin(toCamera - uphill), Math.cos(toCamera - uphill))
+  if (Math.abs(alpha) >= beta) return 0
+  const u = alpha / beta
+  return beta * (2 * u - 2 * u ** 3 + u ** 5) - alpha
+}
+
 /** max(a, b) eased over a band of `k`: never below the larger, at most k / 4 above it, with no kink. */
 function smoothMax(a: number, b: number, k: number): number {
   const h = Math.max(0, k - Math.abs(a - b)) / k
@@ -517,8 +802,9 @@ function positionAround(target: Vector3, { reference, viewAngle, pitchDeg, dista
 }
 
 /**
- * Lowest camera height (local y, at least `position.y`) that keeps the sight line to `target` above the
- * (exaggerated) grid ground (`gridGround`): the line at fraction f (0 = camera) has height y + (target.y - y) · f
+ * Lowest camera height (local y, at least `position.y`) that keeps the sight line to `target` (the marker) above the
+ * (exaggerated) grid ground with the relief its cells miss (`reliefGround`): the line at fraction f (0 = camera) has
+ * height y + (target.y - y) · f
  * and must clear the ground there by MIN_GROUND_CLEARANCE_M · (1 - f), at least LINE_OF_SIGHT_MIN_CLEARANCE_M, up to
  * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN). The floor is eased in (`smoothMax`), then
  * the camera is kept MIN_TERRAIN_CLEARANCE_M above the actual terrain below it.
@@ -532,11 +818,12 @@ function lowestClearY(
   cellM: number,
 ): number {
   let floor = -Infinity
+  const grid = terrainGrid(cellM, frame, sample)
   const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
   for (let i = 0; i <= LINE_OF_SIGHT_SAMPLES; i++) {
     const f = (i / LINE_OF_SIGHT_SAMPLES) * (1 - Math.min(0.5, left))
     _sight.lerpVectors(position, target, f).setY(target.y)
-    const ground = gridGround(_sight.x, _sight.z, cellM, frame, sample)
+    const ground = reliefGround(_sight.x, _sight.z, grid)
     if (ground === undefined) continue
     const at = frame.toLonLat(_sight)
     const clearance = Math.max(MIN_GROUND_CLEARANCE_M * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)

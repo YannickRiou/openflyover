@@ -190,9 +190,6 @@ export const LABEL_FADE_END_M = 70_000
 /** Common size (multiplier) and range (km, where they are gone) of every label, « Étiquettes dans la vue ». */
 export const LABEL_SIZE_RANGE = { min: 0.6, max: 1.6, step: 0.1 } as const
 export const LABEL_RANGE_KM = { min: 10, max: 150, step: 5 } as const
-/** A label whose line of sight passes this far below the relief is hidden; as far above, fully shown (metres). */
-export const LABEL_OCCLUSION_SOFTNESS_M = 20
-
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
   return t * t * (3 - 2 * t)
@@ -203,9 +200,12 @@ export function distanceFade(distanceM: number, endM = LABEL_FADE_END_M): number
   return 1 - smoothstep(endM / 2, endM, distanceM)
 }
 
-/** Opacity factor from the smallest clearance (metres) of the line of sight above the relief. */
+/**
+ * Opacity factor from the smallest clearance (metres) of the line of sight above the relief: what the relief hides is
+ * not drawn at all (0), the rest fully (1), never half-transparent. Unknown terrain (Infinity, NaN) hides nothing.
+ */
 export function occlusionFade(clearanceM: number): number {
-  return smoothstep(-LABEL_OCCLUSION_SOFTNESS_M, LABEL_OCCLUSION_SOFTNESS_M, clearanceM)
+  return clearanceM < 0 ? 0 : 1
 }
 
 /**
@@ -230,10 +230,22 @@ export type ClearanceAt = (x: number, y: number, z: number) => number | undefine
 /** Samples along the line of sight, and how close to the label (metres) the relief is ignored. */
 export const LINE_OF_SIGHT_SAMPLES = 24
 export const LINE_OF_SIGHT_SKIP_END_M = 150
+/**
+ * The lowest dips of the sampled line closer than LINE_OF_SIGHT_REFINE_BAND_M to the relief (at most
+ * LINE_OF_SIGHT_REFINED_DIPS of them) are searched between their two neighbouring samples (golden section,
+ * LINE_OF_SIGHT_REFINE_STEPS evaluations): the clearance is then the crest's, not the nearest sample's, so it does not
+ * wobble as the samples slide over a ridge and an all-or-nothing cut at 0 does not flicker.
+ */
+export const LINE_OF_SIGHT_REFINE_BAND_M = 60
+export const LINE_OF_SIGHT_REFINED_DIPS = 2
+export const LINE_OF_SIGHT_REFINE_STEPS = 8
+
+const GOLDEN = (Math.sqrt(5) - 1) / 2
 
 /**
  * Smallest clearance above the relief of the segment camera → anchor (Infinity when nothing is known),
- * ignoring the last `LINE_OF_SIGHT_SKIP_END_M` so the slope under the label does not hide it.
+ * ignoring the last `LINE_OF_SIGHT_SKIP_END_M` so the slope under the label does not hide it. `samples` evenly
+ * spaced, then the dips near the relief refined (LINE_OF_SIGHT_REFINE_BAND_M). A function of the two points alone.
  */
 export function lineOfSightClearance(
   from: { x: number; y: number; z: number },
@@ -247,11 +259,45 @@ export function lineOfSightClearance(
   const length = Math.hypot(dx, dy, dz)
   if (length === 0) return Infinity
   const tMax = 1 - Math.min(0.5, LINE_OF_SIGHT_SKIP_END_M / length)
+  const at = (t: number) => clearanceAt(from.x + dx * t, from.y + dy * t, from.z + dz * t) ?? Infinity
+  // values[0] stands for the camera end: a bracket edge only, never a dip
+  const values = new Float64Array(samples + 1)
+  values[0] = Infinity
   let min = Infinity
   for (let i = 1; i <= samples; i++) {
-    const t = (i / samples) * tMax
-    const c = clearanceAt(from.x + dx * t, from.y + dy * t, from.z + dz * t)
-    if (c !== undefined && c < min) min = c
+    values[i] = at((i / samples) * tMax)
+    min = Math.min(min, values[i])
+  }
+  if (!(min < LINE_OF_SIGHT_REFINE_BAND_M)) return min
+  const dips: number[] = []
+  for (let i = 1; i <= samples; i++) {
+    if (values[i] < LINE_OF_SIGHT_REFINE_BAND_M && values[i] <= values[i - 1] && (i === samples || values[i] <= values[i + 1])) dips.push(i)
+  }
+  dips.sort((a, b) => values[a] - values[b])
+  for (const i of dips.slice(0, LINE_OF_SIGHT_REFINED_DIPS)) {
+    // golden-section search for the lowest point between the neighbouring samples
+    let a = ((i - 1) / samples) * tMax
+    let b = (Math.min(samples, i + 1) / samples) * tMax
+    let c = b - GOLDEN * (b - a)
+    let d = a + GOLDEN * (b - a)
+    let fc = at(c)
+    let fd = at(d)
+    for (let step = 2; step < LINE_OF_SIGHT_REFINE_STEPS; step++) {
+      if (fc < fd) {
+        b = d
+        d = c
+        fd = fc
+        c = b - GOLDEN * (b - a)
+        fc = at(c)
+      } else {
+        a = c
+        c = d
+        fc = fd
+        d = a + GOLDEN * (b - a)
+        fd = at(d)
+      }
+    }
+    min = Math.min(min, fc, fd)
   }
   return min
 }

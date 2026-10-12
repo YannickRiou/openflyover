@@ -3,7 +3,8 @@
  * project in the library, and its autosave a few seconds after each change (never during an export): a project with a
  * track gets its entry by itself, and the id of the open entry is remembered to reopen it at the next start. Storage is
  * the platform's `projectLibrary` (src/platform/projectLibrary.ts). Opening an entry goes through `openProject`.
- * Closing the window or tab writes the last change first, and asks when something would be lost (`installCloseGuard`).
+ * Closing the window or tab writes the last change first, and asks when something would be lost (`installCloseGuard`);
+ * closing the open project does the same (`projectCloseLoss`, `closeProject` in projectActions.ts).
  */
 import { errorMessage } from '../core/errors'
 import { create } from 'zustand'
@@ -380,6 +381,21 @@ const isOpenProjectDirty = () => {
   return isProjectDirty(projectOf(state), state.savedProject)
 }
 
+/**
+ * What closing the open project (« Fermer le projet », « Nouveau projet ») would lose, once its waiting change is
+ * written: its changes saved nowhere. A project emptied of its tracks loses nothing (its entry or file keeps them).
+ */
+export function projectCloseLoss(): CloseLoss {
+  const dirty = useAppStore.getState().tracks.length > 0 && isOpenProjectDirty()
+  return closeLoss({ exporting: false, dirty })
+}
+
+/** The question asked before closing the open project or the window when its changes would be lost. */
+export function unsavedChangesText(): string {
+  const state = useAppStore.getState()
+  return `Les changements de « ${effectiveProjectName(state.projectName, state.tracks[0]?.name)} » ne sont pas enregistrés.`
+}
+
 /** The question of the desktop window, answered with the step of `confirmClose`. */
 async function askBeforeClose(ask: NonNullable<Platform['ask']>, loss: 'export' | 'changes'): Promise<'save' | 'close' | 'cancel'> {
   if (loss === 'export') {
@@ -391,11 +407,9 @@ async function askBeforeClose(ask: NonNullable<Platform['ask']>, loss: 'export' 
     })
     return answer === 'yes' ? 'close' : 'cancel'
   }
-  const state = useAppStore.getState()
-  const name = effectiveProjectName(state.projectName, state.tracks[0]?.name)
   const answer = await ask({
     title: 'Fermer sans enregistrer ?',
-    text: `Les changements de « ${name} » ne sont pas enregistrés.`,
+    text: unsavedChangesText(),
     yes: 'Enregistrer',
     no: 'Fermer sans enregistrer',
     cancel: 'Annuler',

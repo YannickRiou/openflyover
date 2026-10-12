@@ -6,18 +6,157 @@ import { applySettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
 import { PRESET_NAME_MAX, PRESET_SCOPE_LABELS, PRESET_SCOPES, getPresetStore, normalizePresetName, presetSettings } from '../project/presets'
 import type { PresetScope } from '../project/presets'
+import { useBatchStore } from '../export/batch'
+import { isExportBusy, useExportStore } from '../export/store'
 import { useAppStore } from '../state/store'
-import { deleteEntry, formatProjectSize, keepOpenProject, libraryFile, refreshLibrary, renameEntry, useLibraryStore } from './library'
-import { openProject } from './projectActions'
+import { Icon } from './icons'
+import {
+  deleteEntry,
+  formatProjectSize,
+  keepOpenProject,
+  libraryFile,
+  refreshLibrary,
+  renameEntry,
+  unsavedChangesText,
+  useLibraryStore,
+} from './library'
+import { chooseFilesToOpen, closeProject, newProject, openProject, saveProject } from './projectActions'
+import type { CloseAnswer } from './projectActions'
+import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
 
-/** "Projet" tab: « Mes projets », then the presets of the settings (save, open and undo / redo live in the top bar). */
+/**
+ * "Projet" tab: the actions on the open project (new, open, save as a file, close), « Mes projets », then the presets
+ * of the settings. Open and save are also in the top bar, with their shortcuts.
+ */
 export function ProjectPanel() {
   return (
     <>
+      <ProjectSection />
       <LibrarySection />
       <PresetSection />
     </>
+  )
+}
+
+/** The open project: new, open, save as a file, close; « Fermer sans enregistrer ? » in place when changes would be lost. */
+function ProjectSection() {
+  const hasTracks = useAppStore((s) => s.tracks.length > 0)
+  const named = useAppStore((s) => s.projectName !== '')
+  const kept = useLibraryStore((s) => s.currentId !== null)
+  const exporting = useExportStore((s) => isExportBusy(s.phase))
+  // a batch is busy between two films too (the export store is idle then)
+  const batchRunning = useBatchStore((s) => s.phase === 'running')
+  /** « Nouveau projet » or « Fermer le projet » running (waiting for the last write or the answer) */
+  const [closing, setClosing] = useState(false)
+  /** the question in place, answered by its buttons */
+  const [question, setQuestion] = useState<{ text: string; answer(a: CloseAnswer): void } | null>(null)
+  const id = useId()
+  const busy = exporting || batchRunning
+  // nothing open: no track, no entry, no name
+  const open = hasTracks || kept || named
+
+  // the question is about the project it was asked for: another one opened or imported meanwhile, or an export
+  // started, cancels it
+  useEffect(() => {
+    if (!question) return
+    if (busy) {
+      question.answer('cancel')
+      return
+    }
+    return useAppStore.subscribe((state, previous) => {
+      if (state.tracks !== previous.tracks || state.projectName !== previous.projectName) question.answer('cancel')
+    })
+  }, [question, busy])
+
+  const ask = () =>
+    new Promise<CloseAnswer>((resolve) =>
+      setQuestion({
+        text: unsavedChangesText(),
+        answer(a) {
+          setQuestion(null)
+          resolve(a)
+        },
+      }),
+    )
+  const run = async (action: (ask: () => Promise<CloseAnswer>) => Promise<void>) => {
+    setClosing(true)
+    try {
+      await action(ask)
+    } finally {
+      setClosing(false)
+    }
+  }
+
+  return (
+    <section className="settings project" aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`} className="section-title settings__title">
+        Projet
+      </h2>
+
+      {question ? (
+        <>
+          <p className="field__hint" role="alert">
+            <strong>Fermer sans enregistrer ?</strong> {question.text}
+          </p>
+          <div className="project__row">
+            <button type="button" className="btn btn--secondary" autoFocus onClick={() => question.answer('save')}>
+              Enregistrer
+            </button>
+          </div>
+          <div className="project__row">
+            <button type="button" className="btn btn--secondary" onClick={() => question.answer('close')}>
+              Fermer sans enregistrer
+            </button>
+          </div>
+          <div className="project__row">
+            <button type="button" className="btn btn--secondary" onClick={() => question.answer('cancel')}>
+              Annuler
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="project__row">
+            <button type="button" className="btn btn--secondary" onClick={() => void run(newProject)} disabled={busy || closing}>
+              <Icon name="plus" size={18} />
+              Nouveau projet
+            </button>
+          </div>
+          <div className="project__row">
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => void chooseFilesToOpen()}
+              disabled={busy || closing}
+              data-tip={withShortcut('Ouvrir une trace ou un projet', 'open')}
+            >
+              <Icon name="folder-open" size={18} />
+              Ouvrir…
+            </button>
+          </div>
+          <div className="project__row">
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => void saveProject()}
+              disabled={busy || closing}
+              data-tip={withShortcut('Enregistrer le projet dans un fichier', 'save')}
+            >
+              <Icon name="save" size={18} />
+              Enregistrer un fichier…
+            </button>
+          </div>
+          <div className="project__row">
+            <button type="button" className="btn btn--secondary" onClick={() => void run(closeProject)} disabled={busy || closing || !open}>
+              <Icon name="x" size={18} />
+              Fermer le projet
+            </button>
+          </div>
+          <p className="field__hint">Fermer revient à l’écran d’accueil ; un projet gardé reste dans Mes projets.</p>
+        </>
+      )}
+    </section>
   )
 }
 
@@ -276,8 +415,6 @@ function PresetSection() {
           </button>
         </div>
       </form>
-
-      <p className="field__hint">Ouvrir et enregistrer le projet : barre du haut (Ctrl+O, Ctrl+S).</p>
     </section>
   )
 }
