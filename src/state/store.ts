@@ -20,6 +20,7 @@ import { DEFAULT_MARKER, DEFAULT_TRACK_STYLE } from '../scene/markerSettings'
 import type { MarkerSettings, TrackStyle } from '../scene/markerSettings'
 import type { TrackColorBy } from '../flyover/trackColor'
 import { centroid } from '../geo/lonLat'
+import type { FileTarget } from '../platform/platform'
 import { DEFAULT_LANDMARK_SETTINGS } from '../osm/landmarks'
 import { DEFAULT_LABELS } from '../scene/labelModel'
 import { DEFAULT_WATER } from '../osm/water'
@@ -165,6 +166,9 @@ export interface AppState {
   /** settings, tracks and name at the last save or open (compared by reference: « Modifié » / « Enregistré ») */
   savedProject: { settings: Settings; tracks: Track[]; name: string }
   markProjectSaved(): void
+  /** where the project was last saved or opened from on disk, so that « Enregistrer » writes there again (this session only, not in the project file) */
+  projectFile: FileTarget | null
+  setProjectFile(target: FileTarget | null): void
   /** block selected on the timeline ('opening', 'closing' or a stop, text or medium id), shown by the inspector of the right dock */
   filmSelection: string | null
   setFilmSelection(id: string | null): void
@@ -384,6 +388,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
     const { settings, tracks, projectName } = get()
     set({ savedProject: { settings, tracks, name: projectName } })
   },
+  projectFile: null,
+  setProjectFile(target) {
+    set({ projectFile: target })
+  },
   filmSelection: null,
   setFilmSelection(id) {
     if (get().filmSelection !== id) set({ filmSelection: id })
@@ -410,6 +418,7 @@ export function resetAppStore(): void {
     projectName: '',
     freeFraming: false,
     savedProject: { settings: DEFAULT_SETTINGS, tracks: [], name: '' },
+    projectFile: null,
     filmSelection: null,
   })
 }

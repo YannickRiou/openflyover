@@ -20,7 +20,7 @@ import {
   unsavedChangesText,
   useLibraryStore,
 } from './library'
-import { chooseFilesToOpen, closeProject, newProject, openProject, saveProject } from './projectActions'
+import { chooseFilesToOpen, closeProject, newProject, openProject, saveProject, saveProjectAs } from './projectActions'
 import type { CloseAnswer } from './projectActions'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
@@ -141,10 +141,22 @@ function ProjectSection() {
               className="btn btn--secondary"
               onClick={() => void saveProject()}
               disabled={busy || closing}
-              data-tip={withShortcut('Enregistrer le projet dans un fichier', 'save')}
+              data-tip={withShortcut('Enregistrer le projet (dans le même fichier une fois enregistré)', 'save')}
             >
               <Icon name="save" size={18} />
-              Enregistrer un fichier…
+              Enregistrer
+            </button>
+          </div>
+          <div className="project__row">
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => void saveProjectAs()}
+              disabled={busy || closing}
+              data-tip={withShortcut('Enregistrer le projet sous un autre nom ou à un autre endroit', 'save-as')}
+            >
+              <Icon name="save" size={18} />
+              Enregistrer sous…
             </button>
           </div>
           <div className="project__row">

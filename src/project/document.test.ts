@@ -415,9 +415,9 @@ describe('migrateProject', () => {
 })
 
 describe('projectFileName', () => {
-  it('builds a safe <name>.openflyover.json', () => {
-    expect(projectFileName('Tour du Mont-Blanc J1')).toBe('Tour du Mont-Blanc J1.openflyover.json')
-    expect(projectFileName('a/b:c*?')).toBe('a-b-c-.openflyover.json')
-    expect(projectFileName('  ..  ')).toBe('projet.openflyover.json')
+  it('builds a safe <name>.opnflvr', () => {
+    expect(projectFileName('Tour du Mont-Blanc J1')).toBe('Tour du Mont-Blanc J1.opnflvr')
+    expect(projectFileName('a/b:c*?')).toBe('a-b-c-.opnflvr')
+    expect(projectFileName('  ..  ')).toBe('projet.opnflvr')
   })
 })

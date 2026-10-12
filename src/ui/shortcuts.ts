@@ -33,6 +33,7 @@ export const SHORTCUTS = [
   { id: 'pick', keys: ['Clic sur la trace'], label: 'Placer la tête de lecture à cet endroit (clic droit ou appui long : ajouter un arrêt ou un texte)', group: 'Montage' },
   { id: 'open', keys: ['Ctrl+O'], label: 'Ouvrir une trace ou un projet', group: 'Projet' },
   { id: 'save', keys: ['Ctrl+S'], label: 'Enregistrer le projet', group: 'Projet' },
+  { id: 'save-as', keys: ['Ctrl+Maj+S'], label: 'Enregistrer le projet sous…', group: 'Projet' },
   { id: 'export', keys: ['Ctrl+E'], label: 'Ouvrir ou fermer le tiroir d’export', group: 'Projet' },
   { id: 'fit', keys: ['F'], label: 'Recadrer la vue sur la trace', group: 'Vue' },
   { id: 'safe-zones', keys: ['G'], label: 'Afficher ou masquer les zones de sécurité du format (aperçu seulement)', group: 'Vue' },
@@ -51,6 +52,7 @@ export function withShortcut(label: string, id: ShortcutId, index = 0): string {
 
 export type ShortcutAction =
   | 'save'
+  | 'save-as'
   | 'open'
   | 'export'
   | 'fit'
@@ -112,7 +114,7 @@ export function spacePlays(target: EventTarget | null, focusVisible = (el: Eleme
 }
 
 /**
- * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer,
+ * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+Shift+S save as, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer,
  * F fit the view, G the safe zones, [ fold the panel and ? the help (whatever the modifiers that type them: AltGr, Shift), Escape close,
  * S / T add a stop / a text, ← / → seek (Shift: longer; Alt: to the previous / next keyframe), Home / End.
  */
@@ -127,8 +129,8 @@ export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | nul
   }
   const key = e.key.toLowerCase()
   if (e.ctrlKey || e.metaKey) {
+    if (key === 's') return e.shiftKey ? 'save-as' : 'save'
     if (e.shiftKey) return null
-    if (key === 's') return 'save'
     if (key === 'o') return 'open'
     if (key === 'e') return 'export'
     return null
