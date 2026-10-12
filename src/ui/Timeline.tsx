@@ -292,7 +292,7 @@ function FilmOptions({
  */
 export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { sheetOpen?: boolean; centred?: boolean; onUnfold?(): void }) {
   const source = useFilmSource()
-  const { track, film, durationS, pacing, landmarks } = source
+  const { track, film, durationS, pacing, landmarks, cutsM } = source
   const sequence = useFilmSequence()
   const tracks = useAppStore((s) => s.tracks)
   const clock = useFilmClock()
@@ -316,8 +316,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
   const profile = useMemo(() => (path ? elevationProfile(path, PROFILE_SAMPLES) : undefined), [path])
   const input = useMemo(
-    () => filmClockInputFor({ track, film, durationS, pacing, landmarks }),
-    [track, film, durationS, pacing, landmarks],
+    () => filmClockInputFor({ track, film, durationS, pacing, landmarks, cutsM }),
+    [track, film, durationS, pacing, landmarks, cutsM],
   )
   const candidates = useMemo(() => (track ? stopCandidates({ track, landmarks, pacing }) : []), [track, landmarks, pacing])
 

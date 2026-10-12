@@ -163,6 +163,24 @@ describe('snapping', () => {
     expect(targets).not.toContain(10)
     expect(snapTargets(clock, film, [], 0, 'stop-1')).not.toContain(clock.stops[0].startS)
   })
+
+  it('targets: the cuts between the stages of « À la suite »', () => {
+    const { clock } = contextOf(film)
+    const withCuts = buildFilmClock({
+      opening: film.opening,
+      closing: film.closing,
+      stops: [],
+      cameraKeys: [],
+      lengthM: L,
+      highlightsM: [],
+      durationS: D,
+      pacing: { ...DEFAULT_PACING, keepDuration: false },
+      cutsM: [4000],
+    })
+    expect(withCuts.cuts).toHaveLength(1)
+    expect(snapTargets(withCuts, film, [], 0)).toContain(withCuts.cuts[0].timeS)
+    expect(clock.cuts).toEqual([])
+  })
 })
 
 describe('placing a stop in time', () => {
