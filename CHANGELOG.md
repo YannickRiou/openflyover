@@ -43,6 +43,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Export diagnostic** (#52): the `[export]` console line and the diagnostic report give the tiles and triangles drawn in
   the shadow pass per render, with the off-screen share, to measure what an off-screen caster filter could save.
 - **Inspector over the export drawer** (#69): selecting a block on the timeline now shows its inspector in place of the open export drawer (an export in progress keeps its drawer).
+- **Titles on the timeline** (#65): the opening title and the closing card show as blocks on the « Textes » lane (while the overlay and the card are on): click to edit them in the inspector, drag the inner edge to set how long they show, Delete switches them off. The « Habillage » panel keeps their switch and a « Modifier » button.
 - **Keys harmonised** (#63): camera keys and speed keys are set from the header of their timeline track (◀ ◇ ▶); exposure, sun, saturation, contrast, warmth and vignette from under their slider in the panels; marker keys from the Marqueur section. The « Réglages » track and the « Ajouter un réglage » / « Ajouter un changement de marqueur » buttons are gone; each keyed setting gets its own track, and a « Marqueur » track appears with marker keys.
 - **Marker keys** (#40): change the marker (ball, figure, own picture) along the track with keys on the timeline,
   cross-faded in under a second of film; « Un marqueur par jour / par étape » for chained tracks and « À la suite ».

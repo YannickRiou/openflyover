@@ -1,6 +1,7 @@
 import { useId, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
+import { CARD_LABELS, TITLE_CARD_ID, cardShown, isCardItem } from '../film/cards'
 import { useMediaStore } from '../film/media'
 import {
   AUDIO_DURATION_RANGE,
@@ -78,9 +79,10 @@ const SHOT_SUN_HINTS: Record<ShotSun, readonly [string, string]> = {
 import { REGION_KIND_LABELS, candidateId, captureFraming, useRegionStore } from '../osm/region'
 import { WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
 import type { OverlayAnchor } from '../overlay/settings'
-import { editFilm, useFilmClock, useFilmSource } from '../scene/usePacing'
+import { disableCard, editFilm, useFilmClock, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { AnchorPicker } from './AnchorPicker'
+import { CardFields } from './CardFields'
 import { formatDegrees, formatDistance, formatNumber, formatPercent } from './format'
 import { Icon } from './icons'
 import { FilmTextStyleFields } from './OverlayPanel'
@@ -348,6 +350,7 @@ export function FilmInspector() {
   const clock = useFilmClock()
   const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
+  const overlay = useAppStore((s) => s.settings.overlay)
   if (!item || !track || !path) return null
   const lengthM = track.stats.distanceM
   const change = (fn: (f: Film) => Film, stops: boolean) => editFilm((f) => ({ film: fn(f) }), { stops, step: false })
@@ -949,12 +952,24 @@ export function FilmInspector() {
           </p>
         </>
       )
+    } else if (isCardItem(item) && cardShown(overlay, item)) {
+      // the card's own settings (overlay.title / overlay.end), switched off by deleting its block
+      title = CARD_LABELS[item]
+      body = (
+        <>
+          <CardFields card={item} />
+          <p className="field__hint">
+            Glissez {item === TITLE_CARD_ID ? 'le bord droit' : 'le bord gauche'} du bloc dans la timeline pour régler sa durée. Supprimer désactive la carte : l’option du panneau
+            Habillage la rétablit avec ses réglages.
+          </p>
+        </>
+      )
     } else {
       return null
     }
   }
 
-  const remove = () => editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop })
+  const remove = () => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop }))
 
   return (
     <section

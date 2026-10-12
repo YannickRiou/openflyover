@@ -529,6 +529,30 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'cartes',
+    title: 'Titre d’ouverture et carte de clôture : blocs de la piste Textes, inspecteur, Suppr les désactive',
+    async run({ page }) {
+      if (await page.evaluate(() => document.getElementById('tab-habillage')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-habillage')
+      const overlay = '#tab-panel-habillage .checkbox--switch input'
+      await page.waitForSelector(overlay, { timeout: STEP_MS })
+      const cards = () => page.$$eval('[role="group"][aria-label="Textes"] .film-tl__block--card', (blocks) => blocks.map((b) => b.getAttribute('title')))
+      assert((await cards()).length === 0, 'des cartes sont affichées sans habillage')
+      await page.$eval(overlay, (el) => el.click())
+      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block--card').length === 2)
+      assert((await cards()).join() === "Titre d'ouverture,Carte de clôture", `blocs de cartes : ${(await cards()).join()}`)
+      await page.click('[role="group"][aria-label="Textes"] .film-tl__block--card')
+      await page.waitForSelector('.film-inspector', { visible: true, timeout: STEP_MS })
+      assert((await page.$eval('.film-inspector h2', (h) => h.textContent)).includes("Titre d'ouverture"), 'l’inspecteur n’est pas celui du titre')
+      await page.keyboard.press('Delete')
+      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block--card').length === 1)
+      // back as it was: the title on again, the overlay off
+      await page.keyboard.press('Escape')
+      await page.$eval(overlay, (el) => el.click())
+      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block--card').length === 0)
+      await blur(page)
+    },
+  },
+  {
     id: 'reperes',
     title: 'Repères et points d’intérêt (onglet Carte) : un point au marqueur, son arrêt coché puis décoché, vu sur la timeline',
     async run({ page }) {
