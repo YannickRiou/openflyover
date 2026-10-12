@@ -16,6 +16,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { gunzipSync } from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer-core'
 import { createServer } from 'vite'
@@ -647,8 +648,9 @@ const SCENARIOS = [
       const since = Date.now() - 1000
       await page.click('.topbar__save')
       await page.waitForSelector('.toast::-p-text(Projet enregistré)', { visible: true, timeout: STEP_MS })
-      const file = await waitForDownload('.json', since)
-      const project = JSON.parse(readFileSync(file.path, 'utf8'))
+      const file = await waitForDownload('.opnflvr', since)
+      // 8 bytes: the signature « OPNFLVR » and the version byte, then the gzip of the JSON text
+      const project = JSON.parse(gunzipSync(readFileSync(file.path).subarray(8)).toString('utf8'))
       assert(Array.isArray(project.tracks) && project.tracks.length === 1, 'le projet enregistré ne contient pas la trace')
 
       /** the value shown by the « Exposition » row (« Lumière » tab, mounted even when hidden) */

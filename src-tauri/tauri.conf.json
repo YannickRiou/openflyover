@@ -58,7 +58,10 @@
     ],
     "linux": {
       "deb": {
-        "files": { "/usr/share/doc/open-flyover/copyright": "installer/license.txt" }
+        "files": {
+          "/usr/share/doc/open-flyover/copyright": "installer/license.txt",
+          "/usr/share/mime/packages/openflyover-opnflvr.xml": "mime/openflyover-opnflvr.xml"
+        }
       }
     },
     "windows": {
