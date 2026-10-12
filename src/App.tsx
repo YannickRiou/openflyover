@@ -9,7 +9,7 @@ import { editFilm, getFilmSource, seekKeyframe, useFilmClock } from './scene/use
 import { useAppStore } from './state/store'
 import { CameraPanel } from './ui/CameraPanel'
 import { ClimbList } from './ui/ClimbList'
-import { DiagnosticDialog, DiagnosticRow } from './ui/DiagnosticDialog'
+import { DiagnosticDialog } from './ui/DiagnosticDialog'
 import { EmptyState } from './ui/EmptyState'
 import { GradingPanel } from './ui/GradingPanel'
 import { HelpDialog } from './ui/HelpDialog'
@@ -444,7 +444,6 @@ export default function App() {
               <OfflinePanel />
             </Suspense>
           </PanelSection>
-          <DiagnosticRow />
         </>
       ),
       reglages: <PreferencesPanel />,

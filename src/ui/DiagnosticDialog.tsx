@@ -4,7 +4,7 @@ import { currentReport } from '../export/guard'
 import { Icon } from './icons'
 import { SettingRow } from './PanelSection'
 
-/** « Diagnostic », last row of the Projet tab: the report made now, with the last export's (« mode debug »). */
+/** « Diagnostic », last row of the Réglages tab: the report made now, with the last export's (« mode debug »). */
 export function DiagnosticRow() {
   // debug only: kept in the tab's sessionStorage, never in the project
   const [noEncoding, setNoEncoding] = useState(noEncodingTest)
