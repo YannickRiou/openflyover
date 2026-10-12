@@ -853,7 +853,21 @@ ink, 7.3:1).
 
 - **Settings** `settings.trackStyle { width, dash: 'plein' | 'tirets' | 'points', glow, glowIntensity, glowWidth, glowColor, drawOn,
   smoothingM }` and `settings.marker { kind:
-  'boule' | 'figurine' | 'image', figure, image, size, animated }` (`src/scene/markerSettings.ts`, pure). `animated`: the
+  'boule' | 'figurine' | 'image', figure ('auto' | figure id), image, size, animated, color, ballStyle, figureColor, shape,
+  label, labelText, stick }` (`src/scene/markerSettings.ts`, pure). `color` ('#rrggbb', '' = track colour, default
+  white): ball, and edge of the figure / picture badges; `figureColor` (default ink): disc of a figure, or the figure
+  itself with `shape: 'contour'`. Racers ignore both and keep their track colour (ink edge). `ballStyle`: `plat` (as
+  before), `anneau` (contrasting ring), `halo` (radial glow), `pulsation` (ring widening and fading, period
+  `PULSE_PERIOD_S` = 1.5 s, phase `pulsePhase(timeS)`: a function of the film time; a pulsing sprite redraws its own
+  canvas instead of using the shared cache). `markerMovesWithTime(marker)` tells the export when held frames must be
+  rendered again. `figure: 'auto'` (default): `figureOfActivity(track.activityType)` (GPX `<type>`, FIT sport, Strava),
+  per track (each racer, each stage « À la suite »; unknown → hiker); 17 figures (+ traileur, vae, ski-rando, nageur,
+  kayak, cavalier). `shape`: `rond`, `epingle` (map pin, anchored at its tip), `carre` (rounded square), `contour`
+  (figure alone with an outline). `label`: `aucune` / `nom` (track name) / `texte` (`labelText`, 40 characters, lead only;
+  racers show their track name). `stick`: badge raised on a stick with a soft ground shadow, anchored at its foot (bounce
+  off, sway kept). One sprite and one texture per marker (`markerLayout` / `drawMarker`: badge, stick, label;
+  `sprite.center` = anchor); texture cache of 48 textures and 8 Mpx. 3D models (glTF) evaluated, not done (licensing,
+  lighting parity, poster overview hiding). `animated`: the
   figurine bounces and sways with `figureMotion(timeS)` (two steps per second of film, lift up to 8% of the badge through
   `sprite.center`, ±5° through `material.rotation`), a function of the film time only: a paused film keeps its pose,
   the export matches the preview; the ghost-race markers stay still. Defaults = the previous look

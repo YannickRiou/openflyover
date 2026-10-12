@@ -29,6 +29,7 @@ import { filmTextOpacity, overlayTime, overlayTimedState } from '../overlay/draw
 import { loadFrameMedia, overlayExtras, releaseFrameMedia } from '../overlay/exportOverlay'
 import { filmViewAt } from '../scene/filmView'
 import { adaptiveShutterSamples, sameShot, setShutterSubFrame, shutterSamples } from '../scene/lens'
+import { markerMovesWithTime } from '../scene/markerSettings'
 import { useTerrainContext } from '../scene/TerrainLayer'
 import type { HeightSampler } from '../scene/TrackLines'
 import { useFilmClock } from '../scene/usePacing'
@@ -519,7 +520,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     let previous = ''
     const shutter = settings.lens.shutter
     const sceneMovesWithTime =
-      (settings.marker.kind === 'figurine' && settings.marker.animated) ||
+      markerMovesWithTime(settings.marker) ||
       (settings.atmosphere && settings.clouds.mode !== 'aucun') ||
       (settings.water.enabled && useWaterStore.getState().polygons > 0)
     const localFrame = deps.frame()
