@@ -14,7 +14,7 @@ import { errorMessage } from '../core/errors'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent, ReactNode, UIEvent } from 'react'
-import { freezeLandmarkTitles, materializeStops, stopAt, stopCandidates } from '../film/assemble'
+import { materializeStops, stopAt, stopCandidates } from '../film/assemble'
 import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readAudio, startMusicPreview, useMusicPreview, waveformPath } from '../film/audio'
 import { beatTicksPath } from '../film/beats'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards } from '../film/cards'
@@ -476,15 +476,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const isStop = (item: TimelineItem) => clock.stops.some((s) => s.id === item)
   const withOwnStops = (f: Film) => materializeStops(f, { track, landmarks, pacing })
   const clockOf = (f: Film) => clockOfFilm(input, f)
-  /** one undo step; the texts and media attached to a stop follow it, retouching a landmark title fixes them (as in `editFilm`) */
+  /** one undo step; the texts and media attached to a stop follow it (as in `editFilm`) */
   const commit = (edited: Film) => {
-    const next = freezeLandmarkTitles(film, followStops(film, edited, clockOf))
+    const next = followStops(film, edited, clockOf)
     if (next !== film) getSettingsHistory().transaction(() => setSetting('film', next))
   }
   /** nudges with the arrows (quick changes of the film are merged into one undo step) */
   const change = (fn: (f: Film) => Film, stops: boolean) => {
     const base = stops ? withOwnStops(film) : film
-    const next = freezeLandmarkTitles(film, followStops(base, fn(base), clockOf))
+    const next = followStops(base, fn(base), clockOf)
     if (next !== film) setSetting('film', next)
   }
   const dragContext = (item: TimelineItem): DragContext => ({

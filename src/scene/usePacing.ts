@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import type { Track } from '../core/types'
-import { freezeLandmarkTitles, materializeStops, sameLandmarkTitles, withLandmarkTitles, withoutLandmarkTitles } from '../film/assemble'
-import type { PassingTimes } from '../film/assemble'
+import { materializeStops } from '../film/assemble'
 import { withoutCard } from '../film/cards'
 import type { CardId } from '../film/cards'
 import { filmClockFor } from '../film/clock'
@@ -58,16 +57,15 @@ export function getFilmSource(): FilmClockFor {
 
 /**
  * Edit the film of the stores: `stops` writes the generated stops out first (`materializeStops`, editing a stop);
- * the texts and media attached to a stop follow it (`followStops`); retouching a landmark title fixes them
- * (`freezeLandmarkTitles`); one undo step, or merged with the quick changes before it when `step` is false (typing in
- * the inspector). The edit's `id` is selected on the timeline (null: nothing selected, absent: unchanged).
+ * the texts and media attached to a stop follow it (`followStops`); one undo step, or merged with the quick changes
+ * before it when `step` is false (typing in the inspector). The edit's `id` is selected on the timeline (null: nothing selected, absent: unchanged).
  */
 export function editFilm(edit: (film: Film) => { film: Film; id?: string | null }, { stops = false, step = true } = {}): void {
   const source = getFilmSource()
   const { track, film, pacing, landmarks } = source
   const base = stops && track ? materializeStops(film, { track, landmarks, pacing }) : film
   const result = edit(base)
-  const next = freezeLandmarkTitles(film, followStops(base, result.film, (f) => filmClockFor({ ...source, film: f })))
+  const next = followStops(base, result.film, (f) => filmClockFor({ ...source, film: f }))
   const set = () => useAppStore.getState().setSetting('film', next)
   if (next !== film) {
     if (step) getSettingsHistory().transaction(set)
@@ -184,24 +182,6 @@ export function setAutoStops(on: boolean): void {
 }
 
 /**
- * « Ralentir et titrer aux repères » on the film of the stores: on, its landmark slow-downs and titles made again from
- * the landmarks loaded for the first track (`withLandmarkTitles`); off, removed. The texts and media attached to a
- * stop follow it (`followStops`). One undo step, none when nothing changes (the landmarks are published again and
- * again with the same content).
- */
-export function setLandmarkTitles(on: boolean): void {
-  const source = getFilmSource()
-  const { track, film, landmarks, pacing } = source
-  const next =
-    on && track
-      ? withLandmarkTitles({ ...film, landmarkTitles: true }, { track, landmarks, pacing }, passingTimes(source))
-      : withoutLandmarkTitles({ ...film, landmarkTitles: on })
-  if (next.landmarkTitles === film.landmarkTitles && sameLandmarkTitles(film, next)) return
-  const followed = followStops(film, next, (f) => filmClockFor({ ...source, film: f }))
-  getSettingsHistory().transaction(() => useAppStore.getState().setSetting('film', followed))
-}
-
-/**
  * Set the flyover duration and / or the pacing of the stores; the texts and media attached to a stop follow it
  * (`followStops`) in the same change of the settings, so one undo step (coalesced like any slider).
  */
@@ -262,15 +242,6 @@ export function followLandmarks(): void {
     useAppStore.getState().setSetting('film', film)
   } finally {
     resume()
-  }
-}
-
-/** Film time at which the marker passes a distance along the first track of `source`, in a given film (flight only). */
-function passingTimes(source: FilmClockFor): PassingTimes {
-  const lengthM = source.track?.stats.distanceM ?? 0
-  return (film) => {
-    const clock = filmClockFor({ ...source, film })
-    return (atM) => Math.min(clock.timeAtProgress(lengthM > 0 ? atM / lengthM : 0), clock.openingS + clock.flightS)
   }
 }
 

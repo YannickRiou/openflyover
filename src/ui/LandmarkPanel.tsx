@@ -22,7 +22,7 @@ import { OSM_ATTRIBUTION, OSM_KINDS } from '../osm/overpass'
 import { syncLandmarks, useLandmarkStore } from '../osm/store'
 import { sequenceLandmarks } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
-import { editFilm, followLandmarks, setLandmarkTitles, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { editFilm, followLandmarks, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
@@ -48,7 +48,7 @@ function listedIds(hidden: boolean): string[] {
 
 /**
  * Show or hide the labels of `rows` (and `extraIds`, landmarks of the other tracks) in one undo step: hidden, their
- * stops and titles go with them (`withoutPlaceItems`); every landmark listed now counts as seen.
+ * stops go with them (`withoutPlaceItems`); every landmark listed now counts as seen.
  */
 function setRowsHidden(rows: readonly PlaceRow[], hide: boolean, extraIds: readonly string[] = []): void {
   const listed = [...listedIds(false), ...listedIds(true)]
@@ -103,7 +103,7 @@ function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; o
       type="button"
       className="icon-btn"
       aria-label={hidden ? `Afficher « ${name} »` : `Masquer « ${name} »`}
-      data-tip={hidden ? "Afficher l'étiquette" : "Masquer l'étiquette, son arrêt et son titre"}
+      data-tip={hidden ? "Afficher l'étiquette" : "Masquer l'étiquette et son arrêt"}
       data-tip-side="left"
       onClick={onClick}
     >
@@ -114,15 +114,15 @@ function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; o
 
 /**
  * « Repères et points d'intérêt » (foldable section of the Carte tab): the OSM landmarks (kinds and corridor width,
- * « Ralentir et titrer aux repères », status, ODbL attribution) and the points of interest placed by hand, in one list
+ * status, ODbL attribution) and the points of interest placed by hand, in one list
  * ordered by importance: the points of interest first, then the landmarks from the most to the least important, which the
  * arrows change (`settings.landmarks.rank`; the label of the higher one wins when two overlap). Each row: click = seek the flyover there; the eye shows or hides its label
- * (`settings.landmarks.hiddenIds`; hiding also removes its stop and title); « Arrêt » makes or removes a stop there,
+ * (`settings.landmarks.hiddenIds`; hiding also removes its stop); « Arrêt » makes or removes a stop there,
  * its duration beside it. The cross of a hidden landmark dismisses it (`dismissedIds`) until « Relancer la recherche » asks
  * OpenStreetMap again. « Tout afficher » / « Tout masquer » for every label; landmarks found later (wider distance,
  * another type) are shown, marked « nouveau » until the user shows or hides labels again.
- * Also drives the landmark store, and makes the landmark titles of the film again whenever the landmarks of the first
- * track are published (loaded, kinds or distance changed) while that option is on.
+ * Also drives the landmark store, and keeps what is attached to a stop in step when the landmarks of the first track are
+ * published again (`followLandmarks`).
  */
 export function LandmarkPanel() {
   const id = useId()
@@ -145,10 +145,8 @@ export function LandmarkPanel() {
     syncLandmarks(tracks, settings)
   }, [tracks, settings])
 
-  // not on a change of the film: an undone title stays undone until the landmarks change
   useEffect(() => {
     followLandmarks()
-    if (landmarks && useAppStore.getState().settings.film.landmarkTitles) setLandmarkTitles(true)
   }, [landmarks])
 
   if (!first) return null
@@ -287,18 +285,6 @@ export function LandmarkPanel() {
         </SettingRow>
       )}
 
-      {settings.enabled && (
-        <div className="field">
-          <label className="checkbox checkbox--switch" htmlFor={`${id}-titles`}>
-            <input id={`${id}-titles`} type="checkbox" checked={film.landmarkTitles} onChange={(e) => setLandmarkTitles(e.currentTarget.checked)} />
-            Ralentir et titrer aux repères
-          </label>
-          <p className="field__hint">
-            Le film ralentit aux cols, sommets et refuges sur la trace et affiche leur nom. Retoucher un de ces titres les fige.
-          </p>
-        </div>
-      )}
-
       <p className="field__hint" role="status" aria-live="polite">
         {!settings.enabled && 'Repères désactivés : aucune requête envoyée.'}
         {settings.enabled && status === 'loading' && 'Recherche des repères…'}
@@ -367,7 +353,7 @@ export function LandmarkPanel() {
 
       {rows.length > 0 && (
         <p className="field__hint">
-          Un clic sur un nom y mène. Masquer une étiquette retire aussi son arrêt et son titre.
+          Un clic sur un nom y mène. « Arrêt » : le film s'y arrête le temps indiqué. Masquer une étiquette retire aussi son arrêt.
           {film.autoStops && ' Arrêts automatiques (Options de la timeline) : en changer un les fige.'}
         </p>
       )}

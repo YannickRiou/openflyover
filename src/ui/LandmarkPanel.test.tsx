@@ -54,8 +54,7 @@ const POI = { id: 'poi-1', lon: 6.8, lat: 45.8 + 4000 / M_PER_DEG_LAT, name: 'Pi
 async function mount(film: Film) {
   found.list = [PASS, LAKE]
   found.refreshed = 0
-  // no landmark titles: their making on each publication is a step of its own
-  useAppStore.setState({ tracks: [track], settings: { ...DEFAULT_SETTINGS, film: { ...film, landmarkTitles: false } } })
+  useAppStore.setState({ tracks: [track], settings: { ...DEFAULT_SETTINGS, film } })
   getSettingsHistory().clear()
   const host = document.body.appendChild(document.createElement('div'))
   const root = createRoot(host)

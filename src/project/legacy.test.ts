@@ -157,7 +157,7 @@ describe('frozen old projects', () => {
       autoStops: true,
       autoMode: 'rythme',
       stops: [], speeds: [], cameraKeys: [], paramKeys: [], markerKeys: [], texts: [], media: [], audio: [],
-      duckMusic: false, pois: [], landmarkTitles: false,
+      duckMusic: false, pois: [],
       nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
     })
     expect(s.labels).toEqual({ climbs: true, waypoints: false, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 })
@@ -220,7 +220,6 @@ describe('frozen old projects', () => {
       audio: [],
       duckMusic: false,
       pois: [],
-      landmarkTitles: false,
       nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
     })
     expect(s.labels).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 })
@@ -236,5 +235,41 @@ describe('frozen old projects', () => {
       { lon: 6.8891, lat: 45.9812, ele: 2350, hr: 150 },
     ])
     expect(track.stats).toMatchObject({ ascentM: 350, minEle: 2000, maxEle: 2350, pointCount: 3 })
+  })
+
+  describe('« Ralentir et titrer aux repères » (option removed)', () => {
+    /** a film as written while the option existed: the flag, and when it was on, the items it had made */
+    const savedWith = (landmarkTitles: boolean, generated: boolean) => {
+      const doc = JSON.parse(V2)
+      Object.assign(doc.settings.film, {
+        landmarkTitles,
+        speeds: [
+          { id: 'speed-1', fromM: 0, toM: 80, factor: 2 },
+          ...(generated ? [{ id: 'auto-speed-node-123', fromM: 250, toM: 650, factor: 0.5 }] : []),
+        ],
+        texts: [
+          ...doc.settings.film.texts,
+          ...(generated ? [{ id: 'auto-text-node-123', startS: 9, durationS: 4, text: 'Col de Voza', subtitle: '1 653 m', anchor: 'top-center', size: 1 }] : []),
+        ],
+      })
+      return JSON.stringify(doc)
+    }
+
+    it('on: loads without warning, the generated slow-downs and titles stay as ordinary items, the flag goes', () => {
+      const { settings, warnings } = parseProject(savedWith(true, true))
+      expect(warnings).toEqual([])
+      expect(settings.film).not.toHaveProperty('landmarkTitles')
+      expect(settings.film.speeds.map((x) => x.id)).toEqual(['speed-1', 'auto-speed-node-123'])
+      expect(settings.film.texts.map((x) => x.id)).toEqual(['text-1', 'auto-text-node-123'])
+      expect(settings.film.texts[1]).toMatchObject({ text: 'Col de Voza', subtitle: '1 653 m', startS: 9, durationS: 4 })
+    })
+
+    it('off: loads without warning, nothing else changes', () => {
+      const { settings, warnings } = parseProject(savedWith(false, false))
+      expect(warnings).toEqual([])
+      expect(settings.film).not.toHaveProperty('landmarkTitles')
+      expect(settings.film.speeds.map((x) => x.id)).toEqual(['speed-1'])
+      expect(settings.film.texts.map((x) => x.id)).toEqual(['text-1'])
+    })
   })
 })

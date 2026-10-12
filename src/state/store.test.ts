@@ -213,7 +213,6 @@ describe('settings and misc', () => {
         media: [],
         audio: [],
         duckMusic: false,
-        landmarkTitles: true,
         pois: [],
         nights: { enabled: true, duskS: 3, nightS: 2, dawnS: 3 },
       },
