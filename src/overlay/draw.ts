@@ -14,10 +14,12 @@ import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
-import type { CounterId, CreditsPosition, OverlayAnchor, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { COUNTER_IDS, DEFAULT_TEXT_BACKING, widgetOverrides } from './settings'
+import type { CounterId, CreditsPosition, LaidOutWidget, OverlayAnchor, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
+import { COUNTER_IDS, DEFAULT_TEXT_BACKING, inStyleSlot, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
+import { styleStructure } from './structures'
+import type { Rect, Structure } from './structures'
 
 /** On screen (preview) or offscreen (video export). */
 export type OverlayContext2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
@@ -124,7 +126,7 @@ export const TEXT_FADE_S = 0.4
 export const KEN_BURNS_ZOOM = 1.1
 const KEN_BURNS_PAN = 0.04
 /** Smallest elevation range drawn full height (a flat track stays flat), as in the timeline profile. */
-const PROFILE_MIN_SPAN_M = 100
+export const PROFILE_MIN_SPAN_M = 100
 /** Longer side of the mini-map at size 1 (u), and its most elongated box (longer side / shorter side). */
 const MINIMAP_SIDE_U = 20
 const MINIMAP_MAX_RATIO = 1.6
@@ -291,7 +293,7 @@ export interface CounterText {
 }
 
 /** "12,4 km" -> { value: "12,4", unit: "km" } (the unit follows the last ordinary space). */
-function splitUnit(text: string): CounterText {
+export function splitUnit(text: string): CounterText {
   const i = text.lastIndexOf(' ')
   return i < 0 ? { value: text, unit: '' } : { value: text.slice(0, i), unit: text.slice(i + 1) }
 }
@@ -350,13 +352,14 @@ export interface LayoutItem {
  * Top-left corner of each item inside the safe area. Items sharing an anchor are stacked vertically in
  * order, `gap` apart: from the top edge, the bottom edge or around the middle; aligned left, centred or right.
  * An item with an `offset` leaves the stack (the others close up as if it were not there): it sits alone at its
- * anchor, moved by the offset, and may overlap the others.
+ * anchor, moved by the offset, and may overlap the others. `area` replaces the safe area (what a style's structure
+ * leaves of the frame).
  */
-export function layoutWidgets(items: readonly LayoutItem[], size: OverlaySize, gap: number): { x: number; y: number }[] {
-  const left = size.width * SAFE_MARGIN
-  const right = size.width * (1 - SAFE_MARGIN)
-  const top = size.height * SAFE_MARGIN
-  const bottom = size.height * (1 - SAFE_MARGIN)
+export function layoutWidgets(items: readonly LayoutItem[], size: OverlaySize, gap: number, area?: Rect): { x: number; y: number }[] {
+  const left = area ? area.x : size.width * SAFE_MARGIN
+  const right = area ? area.x + area.w : size.width * (1 - SAFE_MARGIN)
+  const top = area ? area.y : size.height * SAFE_MARGIN
+  const bottom = area ? area.y + area.h : size.height * (1 - SAFE_MARGIN)
   const out = items.map(() => ({ x: 0, y: 0 }))
   const groups = new Map<OverlayAnchor, number[]>()
   items.forEach((item, i) => {
@@ -403,7 +406,7 @@ export function filmTextMaxWidths(anchors: readonly OverlayAnchor[], safeWidth: 
 // Drawing primitives
 // ---------------------------------------------------------------------------
 
-interface Painter {
+export interface Painter {
   ctx: OverlayContext2D
   theme: OverlayTheme
   /** overlay unit (1 % of the shorter side) */
@@ -413,7 +416,7 @@ interface Painter {
   size: OverlaySize
 }
 
-interface TextStyle {
+export interface TextStyle {
   family: string
   weight: number
   sizePx: number
@@ -421,23 +424,24 @@ interface TextStyle {
   uppercase?: boolean
   /** em */
   tracking?: number
+  italic?: boolean
 }
 
 function applyFont(p: Painter, style: TextStyle): void {
-  p.ctx.font = `${style.weight} ${style.sizePx}px ${style.family}`
+  p.ctx.font = `${style.italic ? 'italic ' : ''}${style.weight} ${style.sizePx}px ${style.family}`
   // letterSpacing: Chrome 99+, Firefox 115+, Safari 18+; plain spacing elsewhere
   if ('letterSpacing' in p.ctx) p.ctx.letterSpacing = `${(style.tracking ?? 0) * style.sizePx}px`
 }
 
 const caseOf = (text: string, style: TextStyle) => (style.uppercase ? text.toLocaleUpperCase('fr') : text)
 
-function measure(p: Painter, text: string, style: TextStyle): number {
+export function measure(p: Painter, text: string, style: TextStyle): number {
   applyFont(p, style)
   return p.ctx.measureText(caseOf(text, style)).width
 }
 
 /** Text with its alphabetic baseline at y. */
-function fillText(p: Painter, text: string, x: number, y: number, style: TextStyle, align: CanvasTextAlign = 'left'): void {
+export function fillText(p: Painter, text: string, x: number, y: number, style: TextStyle, align: CanvasTextAlign = 'left'): void {
   const { ctx, theme } = p
   applyFont(p, style)
   ctx.fillStyle = style.color
@@ -523,7 +527,7 @@ function drawPanel(p: Painter, x: number, y: number, w: number, h: number, align
 }
 
 /** Words of `text` packed into lines no wider than `maxWidth` (a single long word overflows). */
-function wrapLines(p: Painter, text: string, maxWidth: number, style: TextStyle): string[] {
+export function wrapLines(p: Painter, text: string, maxWidth: number, style: TextStyle): string[] {
   const lines: string[] = []
   let line = ''
   for (const word of text.split(/\s+/).filter(Boolean)) {
@@ -539,7 +543,7 @@ function wrapLines(p: Painter, text: string, maxWidth: number, style: TextStyle)
 }
 
 /** `text` cut with an ellipsis to fit `maxWidth`. */
-function truncate(p: Painter, text: string, maxWidth: number, style: TextStyle): string {
+export function truncate(p: Painter, text: string, maxWidth: number, style: TextStyle): string {
   if (measure(p, text, style) <= maxWidth) return text
   let cut = text
   while (cut.length > 1 && measure(p, `${cut}…`, style) > maxWidth) cut = cut.slice(0, -1)
@@ -550,7 +554,7 @@ function truncate(p: Painter, text: string, maxWidth: number, style: TextStyle):
 // Widgets
 // ---------------------------------------------------------------------------
 
-interface Widget extends LayoutItem {
+export interface Widget extends LayoutItem {
   opacity: number
   draw(x: number, y: number): void
 }
@@ -778,7 +782,7 @@ function profileWidget(p: Painter, frame: OverlayFrame, settings: OverlaySetting
 }
 
 /** Plan view of the whole track: route ahead, covered part, start and end dots, marker, optional north arrow. */
-function minimapWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number, markerColor?: string): Widget | null {
+export function minimapWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number, markerColor?: string): Widget | null {
   const { outline } = frame.track
   const point = frame.mapPoint
   if (!outline || !point) return null
@@ -965,7 +969,7 @@ function cardWidget(
     sizePx: (theme.titleUppercase ? 5.6 : 6.6) * u * scale * content.titleScale,
     color: theme.text,
     uppercase: theme.titleUppercase,
-    tracking: theme.titleUppercase ? 0.02 : -0.01,
+    tracking: theme.titleTracking ?? (theme.titleUppercase ? 0.02 : -0.01),
   }
   let lines = content.title ? wrapLines(p, content.title, maxW, title) : []
   for (let i = 0; i < 4 && (lines.length > 3 || lines.some((l) => measure(p, l, title) > maxW)); i++) {
@@ -1038,12 +1042,16 @@ function cardWidget(
   }
 }
 
-function titleWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget {
+/** Text of the opening card: its title (the track's name by default) and the date and subtitle line. */
+export function openingText(frame: OverlayFrame, settings: OverlaySettings): { title: string; subtitle: string } {
   const t = settings.title
   const start = frame.track.stats.startTime
   const date = t.showDate && start !== undefined ? formatDateFr(start) : ''
-  const subtitle = [date, t.subtitle.trim()].filter(Boolean).join(' · ')
-  return cardWidget(p, { title: t.title.trim() || frame.track.name, subtitle, titleScale: 1, cells: [] }, t.anchor, t.size, opacity)
+  return { title: t.title.trim() || frame.track.name, subtitle: [date, t.subtitle.trim()].filter(Boolean).join(' · ') }
+}
+
+function titleWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget {
+  return cardWidget(p, { ...openingText(frame, settings), titleScale: 1, cells: [] }, settings.title.anchor, settings.title.size, opacity)
 }
 
 /** Card of a stage « À la suite »: its name, « Étape 2 sur 3 · date », its distance and D+ (centred, closing-card size). */
@@ -1059,10 +1067,8 @@ function stageWidget(p: Painter, card: StageCard, opacity: number): Widget {
   return cardWidget(p, { title: card.name, subtitle, titleScale: 0.6, cells }, 'center', 1, opacity, m)
 }
 
-function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget {
-  const e = settings.end
-  const s = frame.track.stats
-  const m = cellMetrics(p, e.size)
+/** Figures of the closing card (the ones the track records), label and text. */
+export function endStats(s: OverlayTrack['stats']): { label: string; text: CounterText }[] {
   const stats: [string, CounterText | null][] = [
     ['Distance', splitUnit(formatDistance(s.distanceM))],
     ['Dénivelé +', s.ascentM === undefined ? null : { value: formatNumber(s.ascentM), unit: 'm' }],
@@ -1070,7 +1076,14 @@ function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, o
     ['Durée', s.durationS === undefined || s.durationS <= 0 ? null : { value: formatDuration(s.durationS), unit: '' }],
     ['Vitesse max', s.maxSpeedKmh === undefined ? null : { value: formatNumber(s.maxSpeedKmh, 1), unit: 'km/h' }],
   ]
-  const cells = stats.flatMap(([label, text]) => (text ? [makeCell(p, m, label, text, text)] : []))
+  return stats.flatMap(([label, text]) => (text ? [{ label, text }] : []))
+}
+
+function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget {
+  const e = settings.end
+  const s = frame.track.stats
+  const m = cellMetrics(p, e.size)
+  const cells = endStats(s).map(({ label, text }) => makeCell(p, m, label, text, text))
   const subtitle = e.showWeather ? weatherSummaryLine(s.weather) : ''
   return cardWidget(p, { title: e.title.trim() || frame.track.name, subtitle, titleScale: 0.6, cells }, e.anchor, e.size, opacity, m)
 }
@@ -1118,20 +1131,22 @@ function drawWeatherCredit(p: Painter): void {
 
 /**
  * Credits of the sources, small in a corner along the edge (outside the safe area), on a subtle backing of the
- * style that keeps them legible on snow as on forest; wrapped over the safe width when long.
+ * style that keeps them legible on snow as on forest; wrapped over the safe width (or `area`) when long.
  */
-function drawCredits(p: Painter, credits: readonly string[], position: CreditsPosition): void {
+function drawCredits(p: Painter, credits: readonly string[], position: CreditsPosition, area?: Rect): void {
   const { ctx, theme, u, size } = p
   const style: TextStyle = { family: theme.bodyFamily, weight: 500, sizePx: 1.2 * u, color: theme.credits.text }
   const plain = { ...p, theme: { ...theme, textShadow: undefined } }
   const padX = 0.6 * u
   const padY = 0.3 * u
   const lineH = style.sizePx * 1.3
-  const lines = wrapLines(plain, credits.join(' · '), size.width * (1 - 2 * SAFE_MARGIN) - 2 * padX, style)
+  const left = area ? area.x : size.width * SAFE_MARGIN
+  const edgeRight = area ? area.x + area.w : size.width * (1 - SAFE_MARGIN)
+  const lines = wrapLines(plain, credits.join(' · '), edgeRight - left - 2 * padX, style)
   const w = Math.max(...lines.map((line) => measure(plain, line, style))) + 2 * padX
   const h = lines.length * lineH + 2 * padY
   const right = position.endsWith('right')
-  const x = right ? size.width * (1 - SAFE_MARGIN) - w : size.width * SAFE_MARGIN
+  const x = right ? edgeRight - w : left
   const edge = 0.8 * u
   const y = position.startsWith('bottom') ? size.height - edge - h : edge
   ctx.save()
@@ -1388,12 +1403,18 @@ export function drawOverlay(
   const texts: { item: FilmText; opacity: number }[] = []
   let roll: (() => void) | null = null
   let weather: Widget | null = null
+  let weatherShown = false
   let endOpacity = 0
+  let structure: Structure | null = null
   if (settings.enabled) {
     const titleOpacity = settings.title.enabled ? titleCardOpacity(time, settings.title.end) : 0
     endOpacity = settings.end.enabled ? endCardOpacity(time, settings.end.start) : 0
-    // live widgets give way to the cards and to the full-screen photos
-    const live = 1 - Math.max(cardOpacityAt(time, settings), cover, stageOpacity)
+    const rolling = creditLines(settings.end.credits).length > 0
+    // a widget in a slot of the style's structure is drawn by the structure, the others as ordinary widgets
+    const slot = (key: LaidOutWidget) => inStyleSlot(settings, key) && !(key === 'end' && rolling)
+    // live widgets give way to the cards and to the full-screen photos (an opening card that is part of the
+    // structure, a header or a stripe, leaves them as they are)
+    const live = 1 - Math.max(slot('title') ? 0 : titleOpacity, endOpacity, cover, stageOpacity)
 
     // a widget with its own colours or fonts draws with its own theme
     const of = (key: StyledWidget): Painter =>
@@ -1405,19 +1426,21 @@ export function drawOverlay(
       const offset = settings[key].offset
       return w && offset ? { ...w, offset: { x: offset.x * scale, y: offset.y * scale } } : w
     }
-    if (titleOpacity > 0) add(placed('title', titleWidget(of('title'), frame, settings, titleOpacity)))
-    if (endOpacity > 0) {
+    structure = styleStructure({ p, of, frame, settings, slot, live, titleOpacity, endOpacity, markerColor: extras.markerColor })
+    if (titleOpacity > 0 && !slot('title')) add(placed('title', titleWidget(of('title'), frame, settings, titleOpacity)))
+    if (endOpacity > 0 && !slot('end')) {
       const card = endWidget(of('end'), frame, settings, endOpacity)
       const credits = creditLines(settings.end.credits)
       // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
       if (credits.length === 0) add(placed('end', card))
       else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start))
     }
-    if (settings.counters.enabled && live > 0) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
-    if (settings.profile.enabled && live > 0) add(placed('profile', profileWidget(of('profile'), frame, settings, live, extras.markerColor)))
-    weather = settings.weather.enabled && live > 0 ? placed('weather', weatherWidget(of('weather'), frame, settings, live)) : null
+    if (settings.counters.enabled && live > 0 && !slot('counters')) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
+    if (settings.profile.enabled && live > 0 && !slot('profile')) add(placed('profile', profileWidget(of('profile'), frame, settings, live, extras.markerColor)))
+    weather = settings.weather.enabled && live > 0 && !slot('weather') ? placed('weather', weatherWidget(of('weather'), frame, settings, live)) : null
     add(weather)
-    if (settings.minimap.enabled && live > 0) add(placed('minimap', minimapWidget(of('minimap'), frame, settings, live, extras.markerColor)))
+    weatherShown = (weather !== null && weather.opacity > 0.001) || (slot('weather') && settings.weather.enabled && frame.weather !== undefined && live > 0.001)
+    if (settings.minimap.enabled && live > 0 && !slot('minimap')) add(placed('minimap', minimapWidget(of('minimap'), frame, settings, live, extras.markerColor)))
     if (settings.leaderboard.enabled && live > 0) add(placed('leaderboard', leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, live)))
     if (settings.text.enabled) add(placed('text', textWidget(of('text'), settings)))
     if (settings.logo.enabled) add(placed('logo', logoWidget(p, settings, assets)))
@@ -1437,12 +1460,14 @@ export function drawOverlay(
   // texts after the widgets of their anchor
   const maxWidths = filmTextMaxWidths(
     texts.map(({ item }) => item.anchor),
-    size.width * (1 - 2 * SAFE_MARGIN),
+    structure ? structure.area.w : size.width * (1 - 2 * SAFE_MARGIN),
     2 * p.u,
   )
   texts.forEach(({ item, opacity }, i) => add(filmTextWidget(p, item, opacity, maxWidths[i])))
 
-  const positions = layoutWidgets(widgets, size, 2 * p.u)
+  const positions = layoutWidgets(widgets, size, 2 * p.u, structure?.area)
+  // the structure of the style (bars, sheet, band and what sits in them) under the other widgets
+  structure?.draw()
   widgets.forEach((widget, i) => {
     ctx.save()
     ctx.globalAlpha = widget.opacity
@@ -1451,11 +1476,11 @@ export function drawOverlay(
   })
   roll?.()
   if (dip) drawDip(p, dip)
-  if ((weather && weather.opacity > 0.001) || (endOpacity > 0 && settings.end.showWeather && frame.track.stats.weather)) {
+  if (weatherShown || (endOpacity > 0 && settings.end.showWeather && frame.track.stats.weather)) {
     // required by the Open-Meteo licence: with the other credits when they are drawn, else on its own
     if (!settings.credits.enabled) drawWeatherCredit(p)
     else if (!credits.includes(OPEN_METEO_ATTRIBUTION)) credits.push(OPEN_METEO_ATTRIBUTION)
   }
-  if (credits.length > 0) drawCredits(p, credits, settings.credits.position)
+  if (credits.length > 0) drawCredits(p, credits, settings.credits.position, structure?.area)
   ctx.restore()
 }

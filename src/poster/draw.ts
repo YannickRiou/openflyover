@@ -3,7 +3,10 @@
  * preview before any render, a placeholder with the track's outline), the text panel, title, subtitle, figures,
  * list of the tracks, elevation profile, weather and credits. Synchronous; the fonts must be loaded first (`loadOverlayFonts`).
  *
- * The styles take the fonts and colours of the overlay styles of the same name; their arrangement is one of three (`POSTER_LAYOUTS`).
+ * The styles take the fonts and colours of the overlay styles of the same name; each is laid out in one of six
+ * arrangements (`POSTER_LAYOUTS`, boxes in layout.ts) and drawn the way it needs: Cinéma centres its text in a black
+ * band with the figures on one line, Journal de bord lists the figures with dotted leaders in a paper column with a
+ * map, Tableau sportif spreads big figures over the profile in a dark band.
  */
 import { fillSky } from '../export/capture'
 import type { MiniMapOutline } from '../overlay/data'
@@ -12,15 +15,12 @@ import {
   GLACIER,
   INK,
   INK_SOFT,
+  JOURNAL_PAPER,
   NEON_CYAN,
-  OVERLAY_FONT_FAMILIES,
   PAPER,
   PLEX,
   PLEX_CONDENSED,
-  SPORT_ORANGE,
-  TOPO_BROWN,
-  TOPO_PAPER,
-  TOPO_RUST,
+  SCORE_ORANGE,
   TRAIL_RED,
   TRAIL_RED_LIGHT,
 } from '../overlay/themes'
@@ -28,7 +28,8 @@ import { formatDistance, formatNumber } from '../ui/format'
 import type { PosterContent, PosterProfile } from './content'
 import { CREDIT_LINES, FIGURE_VALUE_SHARE, fitLines, fitText, fitTrackList, truncate } from './layout'
 import type { Box, Measure, PosterLayout } from './layout'
-import type { PosterStyleId } from './settings'
+import { POSTER_LAYOUTS } from './settings'
+import type { PosterLayoutId, PosterStyleId } from './settings'
 
 export type PosterContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 
@@ -40,6 +41,7 @@ interface Font {
   uppercase?: boolean
   /** letter spacing (em) */
   tracking?: number
+  italic?: boolean
 }
 
 export interface PosterTheme {
@@ -114,57 +116,6 @@ export const POSTER_THEMES: Record<PosterStyleId, PosterTheme> = {
     label: { family: PLEX, weight: 500 },
     profile: { area: GLACIER, line: INK },
   },
-  // bold and sporty: a solid dark card over the view, heavy condensed capitals, orange accent
-  sport: {
-    page: '#0C1217',
-    panel: 'rgba(12, 18, 23, 0.94)',
-    panelShadow: false,
-    panelRadius: 0.4,
-    accent: SPORT_ORANGE,
-    text: '#FFFFFF',
-    textSoft: 'rgba(255, 255, 255, 0.8)',
-    rule: 'rgba(255, 255, 255, 0.2)',
-    figureRule: false,
-    title: { family: PLEX_CONDENSED, weight: 700, uppercase: true, tracking: 0.02 },
-    body: { family: PLEX_CONDENSED, weight: 500 },
-    number: { family: PLEX_CONDENSED, weight: 700 },
-    label: { family: PLEX_CONDENSED, weight: 600, uppercase: true, tracking: 0.08 },
-    profile: { area: 'rgba(255, 107, 44, 0.35)', line: '#FFFFFF' },
-  },
-  // minimal: monospaced text on a dark sheet, hairlines, white only
-  mono: {
-    page: '#10191F',
-    panel: '#10191F',
-    panelShadow: false,
-    panelRadius: 0,
-    accent: '#FFFFFF',
-    text: '#FFFFFF',
-    textSoft: 'rgba(255, 255, 255, 0.78)',
-    rule: 'rgba(255, 255, 255, 0.25)',
-    figureRule: true,
-    title: { family: OVERLAY_FONT_FAMILIES.mono, weight: 500 },
-    body: { family: OVERLAY_FONT_FAMILIES.mono, weight: 500 },
-    number: { family: OVERLAY_FONT_FAMILIES.mono, weight: 500 },
-    label: { family: OVERLAY_FONT_FAMILIES.mono, weight: 500, uppercase: true, tracking: 0.12 },
-    profile: { area: 'rgba(255, 255, 255, 0.16)', line: '#FFFFFF' },
-  },
-  // topographic sheet: map paper, brown hairlines, serif title, rust accent
-  topo: {
-    page: TOPO_PAPER,
-    panel: TOPO_PAPER,
-    panelShadow: false,
-    panelRadius: 0,
-    accent: TOPO_RUST,
-    text: INK,
-    textSoft: TOPO_BROWN,
-    rule: 'rgba(122, 84, 52, 0.45)',
-    figureRule: true,
-    title: { family: FRAUNCES, weight: 500 },
-    body: { family: PLEX, weight: 500 },
-    number: { family: FRAUNCES, weight: 500 },
-    label: { family: PLEX, weight: 500, uppercase: true, tracking: 0.12 },
-    profile: { area: '#CBD9B0', line: INK },
-  },
   // night neon: deep blue band under the view, cyan accent
   neon: {
     page: '#070A1A',
@@ -182,30 +133,64 @@ export const POSTER_THEMES: Record<PosterStyleId, PosterTheme> = {
     label: { family: PLEX_CONDENSED, weight: 500, uppercase: true, tracking: 0.14 },
     profile: { area: 'rgba(94, 240, 255, 0.2)', line: NEON_CYAN },
   },
-  // magazine: a square white sheet over the view, bold serif headline, tracked small capitals
-  magazine: {
-    page: '#FFFFFF',
-    panel: 'rgba(255, 255, 255, 0.96)',
-    panelShadow: true,
+  // cinema: black bands, thin light serif capitals widely spaced, the figures on one line
+  cinema: {
+    page: '#000000',
+    panel: '#000000',
+    panelShadow: false,
+    panelRadius: 0,
+    accent: TRAIL_RED_LIGHT,
+    text: '#FFFFFF',
+    textSoft: 'rgba(255, 255, 255, 0.78)',
+    rule: 'rgba(255, 255, 255, 0.25)',
+    figureRule: false,
+    title: { family: FRAUNCES, weight: 300, uppercase: true, tracking: 0.3 },
+    body: { family: PLEX, weight: 500 },
+    number: { family: PLEX, weight: 500 },
+    label: { family: PLEX, weight: 500, uppercase: true, tracking: 0.2 },
+    profile: { area: 'rgba(255, 255, 255, 0)', line: '#FFFFFF' },
+  },
+  // logbook: a cream paper column, italic serif title, the figures as a list with dotted leaders, ink line chart
+  journal: {
+    page: JOURNAL_PAPER,
+    panel: JOURNAL_PAPER,
+    panelShadow: false,
     panelRadius: 0,
     accent: TRAIL_RED,
     text: INK,
     textSoft: INK_SOFT,
-    rule: LINE,
-    figureRule: true,
-    title: { family: FRAUNCES, weight: 700 },
+    rule: 'rgba(28, 42, 51, 0.5)',
+    figureRule: false,
+    title: { family: FRAUNCES, weight: 500, italic: true },
     body: { family: PLEX, weight: 500 },
-    number: { family: FRAUNCES, weight: 600 },
-    label: { family: PLEX, weight: 600, uppercase: true, tracking: 0.18 },
-    profile: { area: '#E7E1D3', line: INK },
+    number: { family: FRAUNCES, weight: 500 },
+    label: { family: PLEX, weight: 500 },
+    profile: { area: 'rgba(28, 42, 51, 0)', line: INK },
+  },
+  // scoreboard: a dark band, the title on an orange stripe, big condensed figures over the faded profile
+  tableau: {
+    page: '#0C1217',
+    panel: '#0C1217',
+    panelShadow: false,
+    panelRadius: 0,
+    accent: SCORE_ORANGE,
+    text: '#FFFFFF',
+    textSoft: 'rgba(255, 255, 255, 0.8)',
+    rule: 'rgba(255, 255, 255, 0.2)',
+    figureRule: false,
+    title: { family: PLEX_CONDENSED, weight: 700, uppercase: true, tracking: 0.04 },
+    body: { family: PLEX_CONDENSED, weight: 500 },
+    number: { family: PLEX_CONDENSED, weight: 700 },
+    label: { family: PLEX_CONDENSED, weight: 600, uppercase: true, tracking: 0.12 },
+    profile: { area: 'rgba(255, 255, 255, 0.14)', line: 'rgba(255, 255, 255, 0.6)' },
   },
 }
 
-/** Font faces drawn by the posters (all embedded: they are faces of the overlay, see `OVERLAY_FONTS`; the system monospace needs no loading). */
+/** Font faces drawn by the posters (all embedded: they are faces of the overlay, see `OVERLAY_FONTS`). */
 export const POSTER_FONTS: readonly string[] = [
   ...new Set(
     Object.values(POSTER_THEMES).flatMap((t) =>
-      [t.title, t.body, t.number, t.label].filter((f) => f.family !== OVERLAY_FONT_FAMILIES.mono).map((f) => `${f.weight} 32px ${f.family}`),
+      [t.title, t.body, t.number, t.label].map((f) => `${f.weight} 32px ${f.family}`),
     ),
   ),
 ]
@@ -226,7 +211,7 @@ export function coverCrop(iw: number, ih: number, bw: number, bh: number): Box {
 }
 
 function setFont(ctx: PosterContext, font: Font, px: number): void {
-  ctx.font = `${font.weight} ${px}px ${font.family}`
+  ctx.font = `${font.italic ? 'italic ' : ''}${font.weight} ${px}px ${font.family}`
   // letterSpacing: Chrome 99+, Firefox 115+, Safari 18+; plain spacing elsewhere
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${(font.tracking ?? 0) * px}px`
 }
@@ -292,7 +277,11 @@ function drawProfile(ctx: PosterContext, box: Box, profile: PosterProfile, theme
   text(ctx, left.text, box.x, box.y + captionH / 2, theme.label, left.px, theme.textSoft)
   text(ctx, right.text, box.x + box.w, box.y + captionH / 2, theme.label, right.px, theme.textSoft, 'right')
 
-  const plot = { x: box.x, y: box.y + captionH, w: box.w, h: box.h - captionH }
+  plotProfile(ctx, { x: box.x, y: box.y + captionH, w: box.w, h: box.h - captionH }, profile, theme, Math.max(1, labelPx * 0.14))
+}
+
+/** The area under the profile and its ridge line in `plot` (the highest point at 92 % of its height). */
+function plotProfile(ctx: PosterContext, plot: Box, profile: PosterProfile, theme: PosterTheme, lineWidth: number): void {
   const span = Math.max(100, profile.maxEle - profile.minEle)
   const low = (profile.minEle + profile.maxEle) / 2 - span / 2
   const n = profile.ele.length
@@ -313,18 +302,69 @@ function drawProfile(ctx: PosterContext, box: Box, profile: PosterProfile, theme
   ctx.beginPath()
   points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)))
   ctx.strokeStyle = theme.profile.line
-  ctx.lineWidth = Math.max(1, labelPx * 0.14)
+  ctx.lineWidth = lineWidth
   ctx.lineJoin = 'round'
   ctx.stroke()
 }
 
-function drawFigures(ctx: PosterContext, layout: PosterLayout, content: PosterContent, theme: PosterTheme): void {
+function drawFigures(ctx: PosterContext, layout: PosterLayout, content: PosterContent, theme: PosterTheme, family: PosterLayoutId): void {
   const cells = layout.figures.slice(0, content.figures.length)
   if (cells.length === 0) return
   const number = measurer(ctx, theme.number)
   const body = measurer(ctx, theme.body)
   const label = measurer(ctx, theme.label)
   const { value: valueMax, label: labelMax } = layout.fonts
+  // « Cinéma »: label and value side by side on one line, thin dots between the figures
+  if (family === 'cinema') {
+    cells.forEach((cell, i) => {
+      const f = content.figures[i]
+      const cy = cell.y + cell.h / 2
+      const labelPx = labelMax * 1.1
+      const valuePx = valueMax * 0.5
+      const gap = labelPx * 0.9
+      const unit = f.unit ? valuePx * 0.2 + body(f.unit, valuePx * 0.6) : 0
+      const total = label(f.label, labelPx) + gap + number(f.value, valuePx) + unit
+      const k = Math.min(1, (cell.w * 0.9) / total)
+      let x = cell.x + (cell.w - total * k) / 2
+      text(ctx, f.label, x, cy, theme.label, labelPx * k, theme.textSoft)
+      x += (label(f.label, labelPx) + gap) * k
+      text(ctx, f.value, x, cy, theme.number, valuePx * k, theme.text)
+      if (f.unit) text(ctx, f.unit, x + (number(f.value, valuePx) + valuePx * 0.2) * k, cy, theme.body, valuePx * 0.6 * k, theme.textSoft)
+      if (i > 0) text(ctx, '·', cell.x, cy, theme.body, valuePx * k, theme.textSoft, 'center')
+    })
+    return
+  }
+  // « Journal de bord »: one row per figure, label, dotted leader, value at the right edge
+  if (family === 'journal') {
+    cells.forEach((cell, i) => {
+      const f = content.figures[i]
+      const cy = cell.y + cell.h / 2
+      const labelPx = Math.min(labelMax * 1.3, cell.h * 0.55)
+      const valuePx = cell.h * 0.62
+      const value = f.unit ? `${f.value} ${f.unit}` : f.value
+      const valueW = number(value, valuePx)
+      const labelW = label(f.label, labelPx)
+      text(ctx, f.label, cell.x, cy, theme.label, labelPx, theme.text)
+      text(ctx, value, cell.x + cell.w, cy, theme.number, valuePx, theme.text, 'right')
+      const from = cell.x + labelW + labelPx * 0.6
+      const to = cell.x + cell.w - valueW - labelPx * 0.6
+      if (to > from) {
+        ctx.save()
+        ctx.setLineDash([layout.u * 0.1, layout.u * 0.55])
+        ctx.lineCap = 'round'
+        ctx.lineWidth = Math.max(1, layout.u * 0.2)
+        ctx.strokeStyle = theme.textSoft
+        ctx.beginPath()
+        ctx.moveTo(from, cy + labelPx * 0.35)
+        ctx.lineTo(to, cy + labelPx * 0.35)
+        ctx.stroke()
+        ctx.restore()
+      }
+    })
+    return
+  }
+  // « Tableau sportif »: values and labels centred in their cells, the unit in the accent
+  const centred = family === 'tableau'
   // one size for every value, the largest at which each one (number and unit) fits its cell
   const widthAt = (i: number, px: number) => {
     const f = content.figures[i]
@@ -344,14 +384,61 @@ function drawFigures(ctx: PosterContext, layout: PosterLayout, content: PosterCo
   cells.forEach((cell, i) => {
     const f = content.figures[i]
     const valueY = cell.y + (cell.h * FIGURE_VALUE_SHARE) / 2
-    text(ctx, f.value, cell.x, valueY, theme.number, valuePx, theme.text)
+    const left = centred ? cell.x + (cell.w - widthAt(i, valuePx)) / 2 : cell.x
+    text(ctx, f.value, left, valueY, theme.number, valuePx, theme.text)
     if (f.unit) {
-      const x = cell.x + number(f.value, valuePx) + valuePx * 0.2
-      text(ctx, f.unit, x, valueY + valuePx * 0.12, theme.body, valuePx * 0.45, theme.textSoft)
+      const x = left + number(f.value, valuePx) + valuePx * 0.2
+      text(ctx, f.unit, x, valueY + valuePx * 0.12, theme.body, valuePx * 0.45, centred ? theme.accent : theme.textSoft)
     }
     const fitted = fitText(label, f.label, cell.w, labelMax, labelMax * 0.6)
-    text(ctx, fitted.text, cell.x, cell.y + cell.h * FIGURE_VALUE_SHARE + (cell.h * (1 - FIGURE_VALUE_SHARE)) / 2, theme.label, fitted.px, theme.textSoft)
+    const labelY = cell.y + cell.h * FIGURE_VALUE_SHARE + (cell.h * (1 - FIGURE_VALUE_SHARE)) / 2
+    if (centred) text(ctx, fitted.text, cell.x + cell.w / 2, labelY, theme.label, fitted.px, theme.textSoft, 'center')
+    else text(ctx, fitted.text, cell.x, labelY, theme.label, fitted.px, theme.textSoft)
   })
+}
+
+/** « Journal de bord »: the plan of the track in a thin frame, start and end dots, a small north arrow. */
+function drawMap(ctx: PosterContext, box: Box, outline: MiniMapOutline | undefined, theme: PosterTheme, u: number): void {
+  ctx.strokeStyle = theme.rule
+  ctx.lineWidth = Math.max(1, 0.15 * u)
+  ctx.strokeRect(box.x, box.y, box.w, box.h)
+  if (!outline || outline.x.length < 2 || !(outline.width > 0 || outline.height > 0)) return
+  const inset = 2 * u
+  const scale = Math.min(
+    outline.width > 0 ? (box.w - 2 * inset) / outline.width : Infinity,
+    outline.height > 0 ? (box.h - 2 * inset) / outline.height : Infinity,
+  )
+  const ox = box.x + (box.w - outline.width * scale) / 2
+  const oy = box.y + (box.h - outline.height * scale) / 2
+  const n = outline.x.length
+  ctx.beginPath()
+  for (let i = 0; i < n; i++) {
+    if (i === 0) ctx.moveTo(ox + outline.x[i] * scale, oy + outline.y[i] * scale)
+    else ctx.lineTo(ox + outline.x[i] * scale, oy + outline.y[i] * scale)
+  }
+  ctx.strokeStyle = theme.text
+  ctx.lineWidth = Math.max(1, 0.3 * u)
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  ctx.stroke()
+  for (const [i, color] of [[0, theme.text], [n - 1, theme.accent]] as const) {
+    ctx.beginPath()
+    ctx.arc(ox + outline.x[i] * scale, oy + outline.y[i] * scale, 0.7 * u, 0, 2 * Math.PI)
+    ctx.fillStyle = color
+    ctx.fill()
+  }
+  // north arrow in the corner
+  const ax = box.x + box.w - 2.2 * u
+  const ay = box.y + 1.2 * u
+  ctx.beginPath()
+  ctx.moveTo(ax, ay)
+  ctx.lineTo(ax + 0.7 * u, ay + 1.8 * u)
+  ctx.lineTo(ax, ay + 1.3 * u)
+  ctx.lineTo(ax - 0.7 * u, ay + 1.8 * u)
+  ctx.closePath()
+  ctx.fillStyle = theme.text
+  ctx.fill()
+  text(ctx, 'N', ax, ay + 3.4 * u, theme.label, 1.4 * u, theme.text, 'center')
 }
 
 /** The list of the tracks: a dot of each one's colour, its name, then its distance, D+ and date in aligned columns. */
@@ -393,7 +480,9 @@ export function drawPoster(
   outline?: MiniMapOutline,
 ): void {
   const theme = POSTER_THEMES[style]
-  const { u, fonts } = layout
+  const family = POSTER_LAYOUTS[style]
+  const { u } = layout
+  const fonts = layout.fonts
   ctx.save()
   ctx.fillStyle = theme.page
   ctx.fillRect(0, 0, layout.width, layout.height)
@@ -409,6 +498,11 @@ export function drawPoster(
     ctx.drawImage(view.image, crop.x, crop.y, crop.w, crop.h, layout.view.x, layout.view.y, layout.view.w, layout.view.h)
   } else drawPlaceholder(ctx, layout.view, outline, u)
   ctx.restore()
+
+  for (const band of layout.bands) {
+    ctx.fillStyle = theme.panel
+    ctx.fillRect(band.x, band.y, band.w, band.h)
+  }
 
   // text panel
   if (layout.panel) {
@@ -429,22 +523,47 @@ export function drawPoster(
     ctx.fillRect(b.x, b.y, b.w, b.h)
   }
 
-  const title = fitText(measurer(ctx, theme.title), content.title, layout.title.w, fonts.title, fonts.title * 0.45)
-  text(ctx, title.text, layout.title.x, layout.title.y + layout.title.h / 2, theme.title, title.px, theme.text)
+  // « Tableau sportif »: the profile fills the band, under the figures
+  const behind = family === 'tableau' && layout.panel !== null && layout.figures.length > 0 && content.profile !== undefined
+  if (behind && layout.panel && content.profile) {
+    const band = layout.panel
+    const bar = layout.accentBar?.h ?? 0
+    plotProfile(ctx, { x: band.x, y: band.y + bar + 3 * u, w: band.w, h: band.h - bar - 3 * u }, content.profile, theme, Math.max(1, u * 0.2))
+  }
+
+  // the lines of text: centred in « Cinéma », left in the others
+  const align: CanvasTextAlign = family === 'cinema' ? 'center' : 'left'
+  const lineX = (b: Box) => (align === 'center' ? b.x + b.w / 2 : b.x)
+  if (family === 'journal') {
+    // the title on up to two lines, italic, in the room of its box
+    const lines = fitLines(measurer(ctx, theme.title), content.title, layout.title.w, fonts.title, fonts.title * 0.45, 2)
+    const lineH = layout.title.h / 2
+    lines.lines.forEach((line, i) => text(ctx, line, layout.title.x, layout.title.y + lineH * (i + 0.5), theme.title, lines.px, theme.text))
+  } else {
+    const title = fitText(measurer(ctx, theme.title), content.title, layout.title.w, fonts.title, fonts.title * 0.45)
+    if (family === 'tableau') {
+      // an accent stripe from the edge of the page to the end of the title
+      const width = measurer(ctx, theme.title)(title.text, title.px)
+      ctx.fillStyle = theme.accent
+      ctx.fillRect(0, layout.title.y, layout.title.x + width + 3 * u, layout.title.h)
+    }
+    text(ctx, title.text, lineX(layout.title), layout.title.y + layout.title.h / 2, theme.title, title.px, family === 'tableau' ? '#FFFFFF' : theme.text, align)
+  }
 
   if (layout.subtitle && content.subtitle) {
     const sub = fitText(measurer(ctx, theme.body), content.subtitle, layout.subtitle.w, fonts.subtitle, fonts.subtitle * 0.6)
-    text(ctx, sub.text, layout.subtitle.x, layout.subtitle.y + layout.subtitle.h / 2, theme.body, sub.px, theme.textSoft)
+    text(ctx, sub.text, lineX(layout.subtitle), layout.subtitle.y + layout.subtitle.h / 2, theme.body, sub.px, theme.textSoft, align)
   }
 
-  drawFigures(ctx, layout, content, theme)
+  drawFigures(ctx, layout, content, theme, family)
   drawTrackList(ctx, layout, content, theme)
 
-  if (layout.profile && content.profile) drawProfile(ctx, layout.profile, content.profile, theme, fonts.profile)
+  if (layout.map) drawMap(ctx, layout.map, content.outline ?? outline, theme, u)
+  if (layout.profile && content.profile && !behind) drawProfile(ctx, layout.profile, content.profile, theme, fonts.profile)
 
   if (layout.weather && content.weather) {
     const weather = fitText(measurer(ctx, theme.body), content.weather, layout.weather.w, fonts.weather, fonts.weather * 0.6)
-    text(ctx, weather.text, layout.weather.x, layout.weather.y + layout.weather.h / 2, theme.body, weather.px, theme.text)
+    text(ctx, weather.text, lineX(layout.weather), layout.weather.y + layout.weather.h / 2, theme.body, weather.px, theme.text, align)
   }
 
   // credits of the sources: required by their licences, small but legible
@@ -452,6 +571,6 @@ export function drawPoster(
   const creditFont: Font = { family: PLEX, weight: 500 }
   const fitted = fitLines(measurer(ctx, creditFont), content.credits.join(' · '), credits.w, fonts.credits, fonts.credits * 0.75, CREDIT_LINES)
   const lineH = credits.h / CREDIT_LINES
-  fitted.lines.forEach((line, i) => text(ctx, line, credits.x, credits.y + lineH * (i + 0.5), creditFont, fitted.px, theme.textSoft))
+  fitted.lines.forEach((line, i) => text(ctx, line, lineX(credits), credits.y + lineH * (i + 0.5), creditFont, fitted.px, theme.textSoft, align))
   ctx.restore()
 }

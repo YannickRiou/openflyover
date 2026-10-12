@@ -25,6 +25,8 @@ export interface PosterRows {
   weather: boolean
   /** lines of the list of tracks (0 = no list) */
   tracks: number
+  /** a map of the track (the paper column of « Journal de bord »); absent = none */
+  map?: boolean
 }
 
 export interface PosterFonts {
@@ -47,8 +49,10 @@ export interface PosterLayout {
   side: boolean
   /** where the 3D view goes (whole pixels: its render size) */
   view: Box
-  /** backing of the text: ink band or column (Diffusion), paper card (Application); null = the page (Éditorial) */
+  /** backing of the text: ink band or column (Diffusion), paper card (Application), band (Cinéma, Tableau), column (Journal); null = the page (Éditorial) */
   panel: Box | null
+  /** black bands beyond the panel (the thin upper one of Cinéma) */
+  bands: Box[]
   /** trail-red bar on the panel's leading edge (Diffusion) */
   accentBar: Box | null
   title: Box
@@ -56,6 +60,8 @@ export interface PosterLayout {
   figures: Box[]
   profile: Box | null
   weather: Box | null
+  /** room of the map (Journal), when the column has any */
+  map: Box | null
   /** one row per listed track, column after column */
   tracks: Box[]
   credits: Box
@@ -108,6 +114,7 @@ interface Stacked {
   figures: Box[]
   profile: Box | null
   weather: Box | null
+  map: Box | null
   tracks: Box[]
   credits: Box
   height: number
@@ -117,6 +124,15 @@ interface Stacked {
 interface Columns {
   figures: number
   tracks: number
+}
+
+/** Row heights of an arrangement with its own rhythm, relative to the default (1), and the height (px) of a map row (0 = none). */
+interface Tune {
+  title?: number
+  figure?: number
+  profile?: number
+  group?: number
+  map?: number
 }
 
 /** `count` boxes in `columns` columns of rows `rowH` high from (x, y), filled column after column. */
@@ -135,14 +151,16 @@ function grid(count: number, columns: number, x: number, y: number, w: number, r
  * Text rows from top to bottom in a column at (x, y) of width w, with `columns` figure cells per row and list
  * columns; `bottom`, when given, pins the credits to that edge (else they follow the other rows).
  */
-function stackRows(rows: PosterRows, x: number, y: number, w: number, u: number, s: number, columns: Columns, bottom?: number): Stacked {
+function stackRows(rows: PosterRows, x: number, y: number, w: number, u: number, s: number, columns: Columns, bottom?: number, tune: Tune = {}): Stacked {
+  const group = ROW.group * u * s * (tune.group ?? 1)
+  const figureScale = tune.figure ?? 1
   let cursor = y
   const take = (h: number): Box => {
     const box = { x, y: cursor, w, h }
     cursor += h
     return box
   }
-  const title = take(ROW.title * u * s)
+  const title = take(ROW.title * u * s * (tune.title ?? 1))
   let subtitle: Box | null = null
   if (rows.subtitle) {
     cursor += ROW.afterTitle * u * s
@@ -150,11 +168,11 @@ function stackRows(rows: PosterRows, x: number, y: number, w: number, u: number,
   }
   const figures: Box[] = []
   if (rows.figures > 0) {
-    cursor += ROW.group * u * s
+    cursor += group
     const perRow = Math.min(columns.figures, rows.figures)
-    const gap = ROW.figureGap * u * s
+    const gap = ROW.figureGap * u * s * figureScale
     const cellW = (w - (perRow - 1) * gap) / perRow
-    const cellH = ROW.figure * u * s
+    const cellH = ROW.figure * u * s * figureScale
     const lines = Math.ceil(rows.figures / perRow)
     for (let i = 0; i < rows.figures; i++) {
       const row = Math.floor(i / perRow)
@@ -165,26 +183,31 @@ function stackRows(rows: PosterRows, x: number, y: number, w: number, u: number,
   }
   let tracks: Box[] = []
   if (rows.tracks > 0) {
-    cursor += ROW.group * u * s
+    cursor += group
     const listColumns = Math.min(columns.tracks, rows.tracks)
     const rowH = ROW.track * u * s
     tracks = grid(rows.tracks, listColumns, x, cursor, w, rowH, ROW.trackColumnGap * u * s)
     cursor += Math.ceil(rows.tracks / listColumns) * rowH
   }
+  let map: Box | null = null
+  if (tune.map) {
+    cursor += group
+    map = take(tune.map)
+  }
   let profile: Box | null = null
   if (rows.profile) {
-    cursor += ROW.group * u * s
-    profile = take(ROW.profile * u * s)
+    cursor += group
+    profile = take(ROW.profile * u * s * (tune.profile ?? 1))
   }
   let weather: Box | null = null
   if (rows.weather) {
-    cursor += ROW.group * u * s * 0.7
+    cursor += group * 0.7
     weather = take(ROW.weather * u * s)
   }
   const creditsH = ROW.credits * u
-  cursor += ROW.group * u * s * 0.7
+  cursor += group * 0.7
   const credits = bottom === undefined ? take(creditsH) : { x, y: Math.max(cursor, bottom - creditsH), w, h: creditsH }
-  return { title, subtitle, figures, profile, weather, tracks, credits, height: Math.max(cursor, credits.y + creditsH) - y }
+  return { title, subtitle, figures, profile, weather, map, tracks, credits, height: Math.max(cursor, credits.y + creditsH) - y }
 }
 
 const rounded = (b: Box): Box => {
@@ -201,7 +224,10 @@ export function posterLayout(width: number, height: number, style: PosterStyleId
   // a square poster has less height for the same text: everything a little smaller
   const s = !side && height / width < 1.15 ? 0.7 : 1
   const fonts = fontsAt(u, s)
-  const base = { width, height, u, side, fonts }
+  const base = { width, height, u, side, fonts, bands: [] as Box[] }
+  if (family === 'cinema') return cinemaLayout(base, rows, s)
+  if (family === 'journal') return journalLayout(base, rows, s)
+  if (family === 'tableau') return tableauLayout(base, rows, s)
 
   if (!side) {
     // portrait and square: every figure on one row; the list in one column, two on a square (less height)
@@ -264,8 +290,84 @@ export function posterLayout(width: number, height: number, style: PosterStyleId
   return { ...base, view: { x: 0, y: 0, w: width, h: height }, panel, accentBar: null, ...pick(text) }
 }
 
-function pick({ title, subtitle, figures, profile, weather, tracks, credits }: Stacked) {
-  return { title, subtitle, figures, profile, weather, tracks, credits }
+function pick({ title, subtitle, figures, profile, weather, map, tracks, credits }: Stacked) {
+  return { title, subtitle, figures, profile, weather, map, tracks, credits }
+}
+
+/** What `posterLayout` computes first, whatever the arrangement. */
+interface Base {
+  width: number
+  height: number
+  u: number
+  side: boolean
+  fonts: PosterFonts
+  bands: Box[]
+}
+
+/**
+ * Cinéma: the view between two black bands, the lower one carrying the text centred: title, figures on one thin row,
+ * profile as a line. Same on every format.
+ */
+function cinemaLayout(base: Base, rows: PosterRows, s: number): PosterLayout {
+  const { width, height, u } = base
+  const inset = 6 * u
+  const pad = 4 * u
+  const topH = Math.round(4 * u)
+  const w = width - 2 * inset
+  const columns = { figures: Math.max(1, rows.figures), tracks: base.side || s < 1 ? 2 : 1 }
+  const tune: Tune = { title: 0.9, figure: 0.5, profile: 0.5, group: 0.7 }
+  const bandH = stackRows(rows, 0, 0, w, u, s, columns, undefined, tune).height + 2 * pad
+  const view = rounded({ x: 0, y: topH, w: width, h: height - topH - bandH })
+  const panel = { x: 0, y: view.y + view.h, w: width, h: height - view.y - view.h }
+  const text = stackRows(rows, inset, panel.y + pad, w, u, s, columns, undefined, tune)
+  return { ...base, bands: [{ x: 0, y: 0, w: width, h: topH }], view, panel, accentBar: null, ...pick(text) }
+}
+
+/**
+ * Journal de bord: a paper column down the left edge carrying the title (up to two lines), the figures as a list, the
+ * map of the track in the room that is left, the profile and the credits; the view takes the rest, full height.
+ */
+function journalLayout(base: Base, rows: PosterRows, s: number): PosterLayout {
+  const { width, height, u } = base
+  // a list of tracks needs a wider column for its figures
+  const columnW = rows.tracks > 0 ? Math.min(55 * u, Math.max(44 * u, 0.45 * width)) : Math.min(44 * u, Math.max(30 * u, 0.3 * width))
+  const pad = 3 * u
+  const inner = columnW - 2 * pad
+  const columns = { figures: 1, tracks: 1 }
+  const group = 0.8
+  const tune: Tune = { title: 1.25, figure: 0.4, profile: 0.7, group }
+  const fonts = { ...base.fonts, title: base.fonts.title * 0.7 }
+  const withoutMap = stackRows(rows, pad, pad, inner, u, s, columns, undefined, tune)
+  // the map takes what the other rows leave, a little less than a square at most; none when there is no room for it
+  const room = height - 2 * pad - withoutMap.height - ROW.group * u * s * group
+  const mapH = rows.map ? Math.min(inner * 0.85, room) : 0
+  const text = stackRows(rows, pad, pad, inner, u, s, columns, height - pad, { ...tune, map: mapH >= 8 * u ? mapH : 0 })
+  const view = rounded({ x: columnW, y: 0, w: width - columnW, h: height })
+  return { ...base, fonts, view, panel: { x: 0, y: 0, w: view.x, h: height }, accentBar: null, ...pick(text) }
+}
+
+/**
+ * Tableau sportif: the view over a full-width dark band carrying the title, the figures big and spread evenly and,
+ * behind them, the profile as an area chart (its box is the row of the figures).
+ */
+function tableauLayout(base: Base, rows: PosterRows, s: number): PosterLayout {
+  const { width, height, u } = base
+  const inset = 6 * u
+  const pad = 4 * u
+  const bar = 0.8 * u
+  const w = width - 2 * inset
+  const columns = { figures: Math.max(1, rows.figures), tracks: base.side || s < 1 ? 2 : 1 }
+  const tune: Tune = { title: 0.85, figure: 1.4, group: 0.8 }
+  // the profile sits behind the figures; without figures it is a row of its own
+  const behind = rows.profile && rows.figures > 0
+  const stackable = behind ? { ...rows, profile: false } : rows
+  const bandH = stackRows(stackable, 0, 0, w, u, s, columns, undefined, tune).height + 2 * pad + bar
+  const view = rounded({ x: 0, y: 0, w: width, h: height - bandH })
+  const panel = { x: 0, y: view.h, w: width, h: height - view.h }
+  const text = stackRows(stackable, inset, panel.y + bar + pad, w, u, s, columns, undefined, tune)
+  const profile = behind ? { x: inset, y: text.figures[0].y, w, h: text.figures[0].h } : text.profile
+  const fonts = { ...base.fonts, value: base.fonts.value * 1.5 }
+  return { ...base, fonts, view, panel, accentBar: { x: 0, y: panel.y, w: width, h: bar }, ...pick(text), profile }
 }
 
 // ---------------------------------------------------------------------------
