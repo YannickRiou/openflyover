@@ -9,7 +9,7 @@ import { getSettingsHistory, installHistoryShortcuts, installSliderGestures } fr
 import { disableCard, editFilm, getFilmSource, seekKeyframe, useFilmClock } from './scene/usePacing'
 import { useAppStore } from './state/store'
 import { CameraPanel } from './ui/CameraPanel'
-import { ClimbList } from './ui/ClimbList'
+import { LabelSettings } from './ui/LabelSettings'
 import { DiagnosticDialog } from './ui/DiagnosticDialog'
 import { EmptyState } from './ui/EmptyState'
 import { GradingPanel } from './ui/GradingPanel'
@@ -411,8 +411,8 @@ export default function App() {
           <TrackList />
           <TrackStyleSection hidden={!hasTracks} />
           <MarkerSection hidden={!hasTracks} />
-          <PanelSection title="Montées et étiquettes" keys={['labels']} hidden={!hasTracks}>
-            <ClimbList />
+          <PanelSection title="Étiquettes" keys={['labels']} hidden={!hasTracks}>
+            <LabelSettings />
           </PanelSection>
         </>
       ),

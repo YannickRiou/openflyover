@@ -1,12 +1,10 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import { climbPlaceId, filmStops, placeStop, withoutPlaceItems } from '../film/assemble'
+import { filmStops, placeStop, withoutPlaceItems } from '../film/assemble'
 import type { StopPlace } from '../film/assemble'
 import { POI_ICONS, POI_ICON_LABELS, STOP_DURATION_RANGE, nextFilmId } from '../film/model'
 import type { FilmPoi, FilmStop, PoiIcon } from '../film/model'
 import { POI_NAME_MAX, addPoi, poiStopAtM, removePoi, renamePoi, setPoiIcon } from '../film/pois'
 import { addStop, removeFilmItem, updateStop } from '../film/timeline'
-import { climbsOf } from '../flyover/climbs'
-import type { Climb } from '../flyover/climbs'
 import { samplePath, trackPathOf } from '../flyover/path'
 import {
   KIND_BADGES,
@@ -38,18 +36,8 @@ function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'
   return on === total ? 'Tous' : on === 0 ? 'Aucun' : `${on} sur ${total}`
 }
 
-/** « Montée 1 · sommet 2 401 m »: a climb top as the list and its stop name it. */
-const climbName = (climb: Climb, index: number) => `Montée ${index + 1} · sommet ${formatNumber(climb.topEleM)} m`
-
-/**
- * A row of the list, where its stop goes (`atM`): an OSM landmark of the film track, a point of interest or the top of
- * a climb (no eye: its label is the « Sommets des montées » choice of the Montées section).
- */
-type PlaceRow = StopPlace & { hidden: boolean } & (
-    | { landmark: Landmark; poi?: undefined; climb?: undefined }
-    | { poi: FilmPoi; landmark?: undefined; climb?: undefined }
-    | { climb: Climb; index: number; landmark?: undefined; poi?: undefined }
-  )
+/** A row of the list: an OSM landmark of the film track or a point of interest, where its stop goes (`atM`). */
+type PlaceRow = StopPlace & { hidden: boolean } & ({ landmark: Landmark; poi?: undefined } | { poi: FilmPoi; landmark?: undefined })
 
 /** OSM ids of the landmarks of every track, shown ones and hidden ones (the 3D labels of all tracks). */
 function listedIds(hidden: boolean): string[] {
@@ -171,24 +159,15 @@ export function LandmarkPanel() {
     ...list.map((landmark) => ({ id: landmark.id, atM: landmark.alongM, landmark, hidden: false })),
     ...hiddenList.map((landmark) => ({ id: landmark.id, atM: landmark.alongM, landmark, hidden: true })),
     ...film.pois.map((poi) => ({ id: poi.id, atM: poiStopAtM(path, poi) ?? 0, poi, hidden: hiddenIds.has(poi.id) })),
-    ...climbsOf(first).map((climb, index) => ({ id: climbPlaceId(index), atM: Math.min(lengthM, Math.max(0, climb.endDistM)), climb, index, hidden: false })),
   ]
   rows.sort((a, b) => a.atM - b.atM || (b.landmark?.priority ?? 0) - (a.landmark?.priority ?? 0))
-  // « Tout masquer » is about labels: a climb top has none here
-  const shownRows = rows.filter((r) => !r.hidden && !r.climb)
+  const shownRows = rows.filter((r) => !r.hidden)
 
   const seek = (atM: number) => setProgress(lengthM > 0 ? atM / lengthM : 0)
   const toggleStop = (row: PlaceRow, name: string, on: boolean) =>
     editFilm(
       (f) => {
-        if (on) {
-          const made = row.landmark
-            ? { label: name, source: { kind: 'landmark' as const, ref: row.id } }
-            : row.climb
-              ? { label: name, source: { kind: 'climb' as const, ref: String(row.index) } }
-              : { label: name || undefined }
-          return { film: addStop(f, row.atM, made).film }
-        }
+        if (on) return { film: addStop(f, row.atM, row.landmark ? { label: name, source: { kind: 'landmark', ref: row.id } } : { label: name || undefined }).film }
         const stop = placeStop(f.stops, row)
         return { film: stop ? removeFilmItem(f, stop.id) : f }
       },
@@ -371,23 +350,6 @@ export function LandmarkPanel() {
                       {fresh.has(row.id) && <span className="place__new">nouveau</span>}
                     </span>
                     <StopToggle name={landmark.name} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, landmark.name, on)} />
-                  </div>
-                </li>
-              )
-            }
-            if (row.climb) {
-              const name = climbName(row.climb, row.index)
-              return (
-                <li key={row.id} className={className}>
-                  <button type="button" className="place__go" title="Aller au sommet de cette montée" onClick={() => seek(row.atM)}>
-                    <span className="landmark__kind">Montée</span>
-                    <span className="landmark__name">{name}</span>
-                  </button>
-                  <div className="place__line">
-                    <span className="place__meta">
-                      km {formatNumber(row.atM / 1000, 1)} · D+ {formatNumber(row.climb.gainM)} m · {formatDistance(row.climb.lengthM)}
-                    </span>
-                    <StopToggle name={name} stop={stop} disabled={false} onToggle={(on) => toggleStop(row, name, on)} />
                   </div>
                 </li>
               )

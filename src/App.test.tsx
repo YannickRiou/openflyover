@@ -15,7 +15,7 @@ vi.mock('./ui/Timeline', () => ({ Timeline: counted('Timeline') }))
 vi.mock('./ui/TrackList', () => ({ TrackList: counted('TrackList') }))
 vi.mock('./ui/SettingsPanel', () => ({ MapSettings: counted('MapSettings'), WeatherSettings: counted('WeatherSettings'), LightSettings: counted('LightSettings') }))
 vi.mock('./ui/TrackMarkerSection', () => ({ TrackStyleSection: counted('TrackStyleSection'), MarkerSection: counted('MarkerSection') }))
-vi.mock('./ui/ClimbList', () => ({ ClimbList: counted('ClimbList') }))
+vi.mock('./ui/LabelSettings', () => ({ LabelSettings: counted('LabelSettings') }))
 vi.mock('./ui/LandmarkPanel', () => ({ LandmarkPanel: counted('LandmarkPanel') }))
 vi.mock('./ui/WeatherPanel', () => ({ WeatherPanel: counted('WeatherPanel') }))
 vi.mock('./ui/GradingPanel', () => ({ GradingPanel: counted('GradingPanel') }))
@@ -51,7 +51,7 @@ describe('App shell', () => {
     expect(renders).toEqual(before)
 
     // the track, its line and its marker settings, and the climbs in « Trace »; the map in « Carte »
-    expect(mocksIn('trace')).toEqual(['TrackList', 'TrackStyleSection', 'MarkerSection', 'ClimbList'])
+    expect(mocksIn('trace')).toEqual(['TrackList', 'TrackStyleSection', 'MarkerSection', 'LabelSettings'])
     expect(mocksIn('carte')).toEqual(['MapSettings', 'LandmarkPanel'])
     expect(mocksIn('reglages')).toEqual(['PreferencesPanel'])
     act(() => root.unmount())
