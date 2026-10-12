@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { junctionsM } from '../film/markerKeys'
 import { TRACK_COLOR_MODES, TRACK_METRICS, hasMetric } from '../flyover/trackColor'
 import { getPlatform } from '../platform'
 import { fileToAvatarDataUrl } from '../scene/markerBadge'
@@ -27,11 +28,13 @@ import {
 } from '../scene/markerSettings'
 import type { MarkerFigure, MarkerSettings, TrackStyle } from '../scene/markerSettings'
 import type { SettingPath } from '../project/apply'
+import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { formatDistance, formatNumber, formatPercent } from './format'
 import { Icon } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
+import { showToast } from './toast'
 import './markerSection.css'
 
 /** 4 -> "4", 4.5 -> "4,5", 1.25 -> "1,25" */
@@ -313,6 +316,9 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const setSetting = useAppStore((s) => s.setSetting)
   const firstTrack = useAppStore((s) => s.tracks[0])
   const racing = useAppStore((s) => s.tracks.length > 1 && s.settings.race.enabled)
+  const filmTrack = useFilmTrack()
+  const sequence = useFilmSequence()
+  const junctions = useMemo(() => junctionsM(filmTrack, sequence?.cutsM).length, [filmTrack, sequence])
   const id = useId()
   const updateMarker = (patch: Partial<MarkerSettings>) => setSetting('marker', { ...marker, ...patch })
   const trackColor = firstTrack?.color ?? '#ffffff'
@@ -386,6 +392,23 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(size) => updateMarker({ size })}
         />
       </SettingRow>
+      {junctions > 0 && (
+        <div className="field">
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => {
+              const added = addJunctionMarkerKeys()
+              showToast({ kind: 'success', text: added > 0 ? `${added} clé${added > 1 ? 's' : ''} de marqueur ajoutée${added > 1 ? 's' : ''}` : 'Chaque jonction a déjà sa clé.' })
+            }}
+          >
+            {sequence ? 'Un marqueur par étape' : 'Un marqueur par jour'} ({junctions})
+          </button>
+          <p className="field__hint">
+            Place une clé de marqueur à chaque jonction ; réglez l'aspect de chacune dans la voie « Réglages » de la timeline.
+          </p>
+        </div>
+      )}
       <details className="preset-more">
         <summary className="preset-more__summary">
           <span className="preset-more__label">Plus d'options</span>

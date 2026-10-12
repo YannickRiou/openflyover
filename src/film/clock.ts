@@ -24,6 +24,7 @@ import { shotDurationS } from './model'
 import type { Film, FilmCameraKey, FilmShot, FilmSpeed, FilmStop } from './model'
 import { sortedParamKeys, valueAtKeys } from './paramKeys'
 import type { FilmParamKey } from './paramKeys'
+import type { FilmMarkerKey } from './markerKeys'
 
 export type FilmPhase = 'opening' | 'flight' | 'stop' | 'closing'
 
@@ -62,6 +63,11 @@ export interface ClockCameraKey extends FilmCameraKey {
 
 /** A parameter key of the film placed on the clock: film time at which the marker passes it. */
 export interface ClockParamKey extends FilmParamKey {
+  timeS: number
+}
+
+/** A marker key of the film placed on the clock: film time at which the marker passes it. */
+export interface ClockMarkerKey extends FilmMarkerKey {
   timeS: number
 }
 
@@ -105,6 +111,8 @@ export interface FilmClock {
   cameraKeys: readonly ClockCameraKey[]
   /** parameter keys (speed, exposure, sun hour, grading), by position */
   paramKeys: readonly ClockParamKey[]
+  /** marker keys (changes of the marker's look), by position */
+  markerKeys: readonly ClockMarkerKey[]
   /** cuts between stages « À la suite », by position (none otherwise) */
   cuts: readonly ClockCut[]
   /** nights shown as pauses, by position (none by default) */
@@ -134,6 +142,8 @@ export interface FilmClockInput {
   cameraKeys?: readonly FilmCameraKey[]
   /** parameter keys (none by default): those of the speed set the flight's speed, the others are read by the scene */
   paramKeys?: readonly FilmParamKey[]
+  /** marker keys (none by default) */
+  markerKeys?: readonly FilmMarkerKey[]
   /** cuts between stages « À la suite » (metres, none by default) */
   cutsM?: readonly number[]
   /** nights shown as pauses (none by default) */
@@ -188,6 +198,8 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
     input.lengthM > 0 ? [...(input.cameraKeys ?? [])].sort((a, b) => a.atM - b.atM).map((k) => ({ ...k, timeS: flightTimeOf(k.atM) })) : []
   const paramKeys: ClockParamKey[] =
     input.lengthM > 0 ? [...(input.paramKeys ?? [])].sort((a, b) => a.atM - b.atM).map((k) => ({ ...k, timeS: flightTimeOf(k.atM) })) : []
+  const markerKeys: ClockMarkerKey[] =
+    input.lengthM > 0 ? [...(input.markerKeys ?? [])].sort((a, b) => a.atM - b.atM).map((k) => ({ ...k, timeS: flightTimeOf(k.atM) })) : []
   const cuts: ClockCut[] = input.lengthM > 0 ? [...(input.cutsM ?? [])].sort((a, b) => a - b).map((atM) => ({ atM, timeS: flightTimeOf(atM) })) : []
 
   const progressAtTime = (tS: number) => flight.progressAtTime(tS - openingS)
@@ -231,6 +243,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
     speeds: clockSpeeds,
     cameraKeys,
     paramKeys,
+    markerKeys,
     cuts,
     nights,
     totalTime: () => total,
@@ -266,6 +279,7 @@ export function filmClockInputFor({ track, film, durationS, pacing, landmarks = 
     speeds: track ? film.speeds : [],
     cameraKeys: track ? film.cameraKeys : [],
     paramKeys: track ? film.paramKeys : [],
+    markerKeys: track ? film.markerKeys : [],
     cutsM: track ? cutsM : [],
     nights: track ? flightNights(trackPathOf(track), film.nights, durationS) : [],
     lengthM: track?.stats.distanceM ?? 0,

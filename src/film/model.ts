@@ -12,6 +12,8 @@ import { smootherstep } from '../core/math'
 import { CAMERA_RANGES } from '../flyover/cameraSettings'
 import { OVERLAY_ANCHORS, OVERLAY_FONT_IDS, WIDGET_SIZE_MAX, WIDGET_SIZE_MIN, isHexColor } from '../overlay/settings'
 import type { OverlayAnchor, OverlayFontId } from '../overlay/settings'
+import { isValidMarkerLook } from './markerKeys'
+import type { FilmMarkerKey } from './markerKeys'
 import { FILM_PARAMS, PARAM_SPECS } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
 
@@ -369,6 +371,8 @@ export interface Film {
   cameraKeys: FilmCameraKey[]
   /** values of speed, exposure, sun hour and grading pinned along the first track (`paramKeys.ts`), sorted or not */
   paramKeys: FilmParamKey[]
+  /** places where the marker changes its look, cross-faded (`markerKeys.ts`), sorted or not */
+  markerKeys: FilmMarkerKey[]
   texts: FilmText[]
   media: FilmMedia[]
   /** music of the soundtrack (they may overlap: mixed) */
@@ -402,6 +406,7 @@ export const DEFAULT_FILM: Film = {
   speeds: [],
   cameraKeys: [],
   paramKeys: [],
+  markerKeys: [],
   texts: [],
   media: [],
   audio: [],
@@ -489,7 +494,7 @@ export function transitionDipAt(
 // Ids
 // ---------------------------------------------------------------------------
 
-export type FilmItemKind = 'stop' | 'speed' | 'camera' | 'param' | 'text' | 'media' | 'music' | 'poi'
+export type FilmItemKind = 'stop' | 'speed' | 'camera' | 'param' | 'marker' | 'text' | 'media' | 'music' | 'poi'
 
 /** Next free id `<kind>-<n>` of the film (one more than the highest number used by that kind). */
 export function nextFilmId(film: Film, kind: FilmItemKind): string {
@@ -498,6 +503,7 @@ export function nextFilmId(film: Film, kind: FilmItemKind): string {
     speed: film.speeds,
     camera: film.cameraKeys,
     param: film.paramKeys,
+    marker: film.markerKeys,
     text: film.texts,
     media: film.media,
     music: film.audio,
@@ -599,6 +605,10 @@ export function isValidParamKey(key: unknown): key is FilmParamKey {
   return isId(key.id) && within(key.atM, 0, Number.MAX_VALUE) && within(key.value, min, max)
 }
 
+export function isValidMarkerKey(key: unknown): key is FilmMarkerKey {
+  return isRecord(key) && isId(key.id) && within(key.atM, 0, Number.MAX_VALUE) && isValidMarkerLook(key)
+}
+
 /** No two portions overlap (they may touch). */
 function apart(speeds: readonly FilmSpeed[]): boolean {
   const sorted = [...speeds].sort((a, b) => a.fromM - b.fromM)
@@ -685,15 +695,15 @@ export function isValidFilm(film: Film): boolean {
   if (!film.stops.every(isValidStop) || !film.texts.every(isValidText) || !film.media.every(isValidMedia)) return false
   if (!film.speeds.every(isValidSpeed) || !apart(film.speeds) || !film.audio.every(isValidAudio)) return false
   if (!film.cameraKeys.every(isValidCameraKey) || !film.pois.every(isValidPoi) || !isValidNights(film.nights)) return false
-  if (!film.paramKeys.every(isValidParamKey)) return false
-  const ids = [...film.stops, ...film.speeds, ...film.cameraKeys, ...film.paramKeys, ...film.texts, ...film.media, ...film.audio, ...film.pois].map((item) => item.id)
+  if (!film.paramKeys.every(isValidParamKey) || !film.markerKeys.every(isValidMarkerKey)) return false
+  const ids = [...film.stops, ...film.speeds, ...film.cameraKeys, ...film.paramKeys, ...film.markerKeys, ...film.texts, ...film.media, ...film.audio, ...film.pois].map((item) => item.id)
   return new Set(ids).size === ids.length
 }
 
 /**
  * Fill-in of a film saved before a field existed (`SETTING_UPGRADES`): missing fields from `DEFAULT_FILM`, except
  * `autoMode`, which keeps the automatic stops of those films following the pacing ('rythme'). Films saved before
- * music, camera keys, parameter keys, points of interest, landmark titles or nights get none of them, and old video clips stay silent
+ * music, camera keys, parameter, marker keys, points of interest, landmark titles or nights get none of them, and old video clips stay silent
  * (`muted: true`), so they look and sound as saved. The `epochs` key of earlier versions is dropped. A text or a
  * medium attached to a stop the film does not own (generated stops, unknown id) is loaded free.
  */
