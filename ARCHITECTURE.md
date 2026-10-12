@@ -184,13 +184,18 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    - Transient DEM failure (network, 5xx, corrupt tile): 3 attempts 5 s apart (`retryDelayMs`, engine clock `deps.now`),
      counted in `failedTiles`. In the preview a retry is fetched after every first attempt and prefetch, and the view does
      not wait for it (`pendingVisibleTiles`): unreachable tile hosts would otherwise hold every frame. During a video
-     export (`engine.setExporting(true)`) it is the view's own: retried after `exportRetryDelayMs` (750 ms), fetched at
-     once, counted in `pendingVisibleTiles` until the last attempt, and tiles that had given up are tried again at the
-     start. A visible tile given up on (or drawn with imagery missing) is counted in `stats.missingVisibleTiles`.
+     export (`engine.setExporting(true)`) the view waits for every retry: up to `exportMaxLoadAttempts` (8) attempts,
+     `exportRetryDelayMs` (1 s) apart, doubling up to `exportMaxRetryDelayMs` (30 s) (1, 2, 4, 8, 16, 30, 30 s: ~1.5 min
+     of waits plus the fetcher's own retries, ~2.2 min per tile), fetched at once, counted in `pendingVisibleTiles` until
+     the last attempt; tiles that had given up are tried again at the start. Each failed node keeps why (`node.failure`:
+     host, layer élévation / imagerie, cause such as « HTTP 503 », « erreur réseau (…) », « imagerie incomplète »); the
+     selection lists the visible nodes given up on (`missing`) and those still retried (`retrying`), read by
+     `viewTileFailures(engine)` for the export's error. A visible tile given up on (or drawn with imagery missing) is
+     counted in `stats.missingVisibleTiles`.
      DEM **4xx or outside coverage = "no data" leaf** (Mapterhorn stops at z12 outside high-resolution areas):
      never retried, not counted as an error, the parent stays displayed at its resolution.
    - Unloading: nodes not visited for > 2 s (`unloadAfterMs`; 30 s after a prefetch, `prefetchKeepMs`, so the export's
-     tiles for the next frames outlast a slow frame; the export waits up to 45 s) and not ancestors of a visible node → dispose geometry/texture; the `HeightField`
+     tiles for the next frames outlast a slow frame; the export waits up to 5 min per frame) and not ancestors of a visible node → dispose geometry/texture; the `HeightField`
      keeps ~400 grids at 256 px equivalent (LRU, i.e. ~100 MB; a 512 px grid counts as four; 160 on a phone or tablet).
      The texture's retained 2D canvas is released with it (`width = height = 0`: WebKit keeps a canvas's backing store until a GC).
    - **Tile retention during an export on a phone or tablet.** Wall time is the wrong clock there: an export renders a few
@@ -357,7 +362,7 @@ ink, 7.3:1).
   left (« Trace » in place of « Projet »); the home screen's state is never remembered.
   The tab list scrolls when it does not fit (short window; phone bar), and `App` scrolls the open tab into view.
 - **Right dock** (300 px): non-modal export drawer (`ExportPanel`: formats as tiles, resolution, estimate, "Exporter
-  la vidéo" (export the video), "Image fixe" (still image), rows (`SettingRow`) for frames per second, quality, image type; summary duration · frames · codec ·
+  la vidéo" (export the video), sections « Format », « Encodage », « Rendu »; summary duration · frames · codec ·
   size on one line; modes "Vidéo" (video), "Plusieurs formats" (several formats): resolution chips per format, still image, poster,
   batch estimate, "Tout exporter" (export all), progress "2 / 4 · 16:9 1080p · 42 %", file list, and "Affiche" (poster));
   otherwise the **inspector** of the block
@@ -1718,11 +1723,15 @@ exports) gets it from the terrain source of the settings.
   `stats.pendingVisibleTiles === 0` right after an `engine.update` of the camera that will be captured, i.e. the selection
   of that update asks for no tile that is loading (DEM and imagery together: a tile is `ready`, hence drawable, only with
   its texture), queued or waiting for its retry (export), and has no child left to request after its parent loaded (the
-  update that finds a parent ready queues the children, so the count is not 0 until the finest level is in). Limit 45 s
-  per frame (`DEFAULT_SETTLE.timeoutMs`, shared by the settles of one frame). The frame is "incomplète" (incomplete,
-  `timings.timeouts`, « N images rendues avant la fin du chargement » in the panel, live and in the result, and in the
-  history) after a timeout or when `stats.missingVisibleTiles > 0` at the capture (tiles given up after their attempts,
-  imagery missing). The final render selects once more: if that selection asks for tiles, the frame settles and renders
+  update that finds a parent ready queues the children, so the count is not 0 until the finest level is in). Limit 5 min
+  per frame (`DEFAULT_SETTLE.timeoutMs`, shared by the settles of one frame, longer than two retry chains of the engine in
+  a row). `renderSettledFrame` resolves `'complete'`, `'timeout'` or `'missing'` (`stats.missingVisibleTiles > 0` at the
+  capture). Anything but complete **stops the export like a cancel** (file removed) with an error naming up to three
+  tiles: host, z/x/y, layer, cause, attempts (`tileFailureMessage`); counted as `timeouts` or `givenUp` in the timings,
+  the console line and the history, logged with `console.error` and a breadcrumb. The same applies to a 3D still and the
+  3D poster. When the previous (sub-)frame needed no wait and the clouds have slices (`finalFirst`), the final render is
+  made first; it is kept when it asks for no tile, runs no re-drape and leaves the camera within 1 m: the same image as
+  the usual two renders, one render instead of two. The final render selects once more: if that selection asks for tiles, the frame settles and renders
   again. Everything cached: one `advance`, no wait. Then the
   pending re-drapes of the track and labels run right away (`flushDrapes`, instead of their delay) and
   the frame is rendered once more. While tiles load, nothing is rendered: every 16 ms only `engine.update` runs for the
@@ -1782,13 +1791,18 @@ exports) gets it from the terrain source of the settings.
   at most one and a half frames at the end of the film (the ramp has `round(duration × fps)` frames). Memory: about 23 MB per minute
   of film for the mix, plus the decoded sound of the heard videos (about 23 MB per minute of video in 48 kHz stereo).
 - Everything is restored at the end of the export, on error or on cancel (size, pixel ratio, frameloop, pointer,
-  progress). Setting `settings.video { aspect, resolution, fps, quality }` in the project document (old `video.format`
-  converted by `withVideoDefaults`): formats 16:9, 9:16, 1:1, 4:5, 21:9 × short side 720p, 1080p, 1440p, 4K
+  progress). Setting `settings.video { aspect, resolution, fps, quality, manualBitrate, bitrateMbps, codec,
+  keyframeIntervalS, audioKbps }` in the project document (old `video.format` converted and missing fields filled by
+  `withVideoDefaults`). `quality` drives the render tier and, unless `manualBitrate`, the bitrate; `bitrateMbps` (1–80)
+  overrides it for every codec (`targetBitrate`, still bounded by the device cap); `codec` 'auto' (H.264 › HEVC › VP9 ›
+  VP8) or 'avc' / 'hevc' / 'vp9' (only those the device encodes are offered: `encodableCodecs`); key frame interval
+  0.5 / 1 / 2 / 5 / 10 s; audio 96–320 kbit/s; passed to the encoder as `request.encoding` (`videoEncoding`). The Vidéo
+  panel groups them in « Format », « Encodage » and « Rendu ». formats 16:9, 9:16, 1:1, 4:5, 21:9 × short side 720p, 1080p, 1440p, 4K
   (`videoSize`); 24 / 30 / 60 fps.
 - Render scale `exportRenderScale` = short side / 1080 (1 outside export): track width and label size, in
   pixels, are multiplied so that a 4K film looks like the 1080p one. Markers do not need it (size proportional to the
   camera distance, hence a constant screen fraction).
-- Still image ("Image fixe" button in the export drawer, PNG or JPEG): same request with `still { progress, type }`, the current playback
+- Still image ("Image fixe" button in the « Affiche » mode, `startStill` in `src/poster/export.ts`, type from `settings.poster.type`): same request with `still { progress, type }`, the current playback
   progress, at the video's format × resolution size. Same path as the film (size, pixel ratio 1,
   render scale, `renderSettledFrame`, `composeFrame` with the overlay if it is shown), a single frame rendered at the
   progress shifted by 1e-9 so that the camera is placed by the current style (and not the hand-orbited view), then
@@ -1845,8 +1859,20 @@ exports) gets it from the terrain source of the settings.
 - Batch estimate (`estimateBatch`): files, frames to render (each film counted), size of the films whose codec is
   known, and render time = frames × megapixels × `secondsPerMegapixel`, the speed of the last film exported in the
   session (`filmRate`, measured by the store at the end of a film; nothing before the first).
-- At the end of an export, the console shows the render time, the tile waiting time and the encoding time, and the number of timeouts.
-  "Encoding" includes copying the WebGL image, which waits for the GPU render to finish.
+- **Main thread**: once per frame the loop yields (`yieldToEventLoop`: `scheduler.yield()`, else a message port); the
+  progress reaches the store at most every 250 ms (`throttledReporter`, last frame forced); the overlay preview
+  (`OverlayCanvas`) and the timeline are frozen while an export runs and redrawn at its end.
+- **Encoding pipeline**: the encoder takes the canvas synchronously in `addFrame` (`VideoSampleSource` +
+  `new VideoSample(canvas)` before any await; ffmpeg path: `getImageData`), so frame i is encoded while frame i+1
+  settles and renders (one `addFrame` in flight). `pickCodec` asks `hardwareAcceleration: 'prefer-hardware'` first, else
+  `'no-preference'` (`CodecCandidate.hardware`). On the native path the compositor's 2D context is created with
+  `willReadFrequently` (`compositorAttributes`).
+- **Timings** (`ExportTimings`): `rendered`, `renders` (advance calls), `renderMs` (main thread), `gpuMs` / `gpuRenders`
+  (GPU timer queries `EXT_disjoint_timer_query_webgl2`, `gpuTimer.ts`; 0 where unavailable, e.g. Safari / iOS: the
+  composition then holds the wait for the GPU), `waitMs`, `composeMs`, `frameMs` (VideoFrame / readback), `encodeWaitMs`
+  (back-pressure), `encodeMs` = the last three, `timeouts`, `givenUp`. `timingsSummary` writes them on one line for the
+  console `[export]` line, the history « Répartition » and the diagnostic « Résultat » (added to the stored report when
+  an export ends, shown in « Dernier export »).
 - Limits: without direct writing (Firefox, Safari), file kept in memory (~2× its size); the tab must stay open, speed depends on the GPU (to be measured on a
   machine with a GPU, see `docs/handover.md`).
 - **Command line** (desktop, `src-tauri/src/cli.rs` + `src/export/cliRender.ts`): `openflyover --rendu <dossier>
@@ -1928,8 +1954,16 @@ exports) gets it from the terrain source of the settings.
   none), then each track in its color on an edging in the style's page color, width of the 3D track
   (`trackStyle.width` for 1,080 px).
 - **Preview**: 2D thumbnail (≤ 260 × 220 CSS px) drawn by the same `drawPoster` under a transform, without 3D rendering:
-  the last view rendered for these tracks and this mode (3D or flat, `previewKey`, kept scaled down to 480 px,
-  `usePosterPreview`), otherwise a sky with the outline of the first track (`miniMapOutline`).
+  the last view rendered for these tracks and this view (`previewKey` includes flat / overview / camera, kept scaled
+  down to 480 px, `usePosterPreview`), else an approximate flat map at low zoom (`previewMap`, ≤ 360 px, debounced
+  400 ms, shared fetcher of 4 requests, 64 tiles), else a sky with the outline of the first track (`miniMapOutline`);
+  a hint says the preview is approximate.
+- **View, type and progress**: `poster.view` 'overview' | 'camera' (« Vue d'ensemble » / « Vue actuelle de la caméra »:
+  `still.camera` keeps the camera's pose, put back before every render, marker hidden); `poster.type` 'image/png' |
+  'image/jpeg' (quality 0.92; also for « Image fixe », now in this mode). `renderFlatMap` reports `onProgress(done,
+  total)` and returns `{ view, missingTiles }` (`ExportResult.missingTiles`, shown in the panel);
+  `exportStore.tiles { done, total }` (flat map: requests; 3D: most pending seen and how many came). The 3D poster
+  waits for its tiles like a film frame and fails the same way.
 - **Limits**: ghost race markers drawn at the current progress; an A3 view
   in the "Application" style is 17 Mpx in WebGL (GPU size limit not checked). Flat map: no shaded relief,
   no labels, no start / finish; tiles at other zooms than those of the 3D view, so partly downloaded.
@@ -2353,16 +2387,17 @@ JavaScript.
 
 - **Commands** (async: they do not block the window), one session per export, in a `Mutex<Videos>`:
   `video_available` (`ffmpeg -version` started and successful), `video_sound` (binary body: the sound as WAV, written to the
-  temporary folder → id), `video_open(path, width, height, fps, quality, transparent, sound)` → id, `video_frame` (binary body:
+  temporary folder → id), `video_open(path, width, height, fps, bitrate, keyframeInterval, audioBitrate, transparent,
+  sound)` → id (checked by `Rate::checked`), `video_frame` (binary body:
   the RGBA image, id in the `x-video-session` header), `video_finish(id)` → file size, `video_cancel(id)`.
   Arguments fixed in Rust (`ffmpeg_args`, tested by `cargo test`): `-f rawvideo -pix_fmt rgba -s WxH -r fps -i -`
-  [`-i son.wav`] `-c:v libx264 -preset medium -crf <qualité> -pix_fmt yuv420p`, colors converted and tagged BT.709
-  (`-vf scale=out_color_matrix=bt709`, `-colorspace` / `-color_primaries` / `-color_trc bt709`) [`-c:a aac -b:a 192k`]
-  `-movflags +faststart -f mp4 -y chemin`. Quality → `crf`: standard 23, high 20, maximum 17 (constant quality, no
-  target bitrate: the drawer's size estimate remains that of WebCodecs H.264). Name typed as `.webm` (`is_webm`,
-  `nativeCodecFor` on the JavaScript side): `-c:v libvpx-vp9 -crf <qualité> -b:v 0 -deadline good -cpu-used 4 -row-mt 1`,
-  sound `-c:a libopus`, `-f webm`; `crf` standard 34, high 31, maximum 26 (tried with the ffmpeg of an Ubuntu install: VP9 +
-  Opus read by `ffprobe`, 44.1 kHz WAV resampled automatically).
+  [`-i son.wav`] `-c:v libx264 -preset medium -pix_fmt yuv420p`, colors converted and tagged BT.709
+  (`-vf scale=out_color_matrix=bt709`, `-colorspace` / `-color_primaries` / `-color_trc bt709`) [`-c:a aac -b:a <audio>`]
+  `-movflags +faststart -f mp4 -y chemin`. ffmpeg aims at the export's target bitrate like WebCodecs: `-b:v` target,
+  `-maxrate` 1.5×, `-bufsize` 2×, `-g` key frame interval in frames. Name typed as `.webm` or codec VP9 (`is_webm`,
+  `nativeCodecFor` on the JavaScript side): `-c:v libvpx-vp9 -deadline good -cpu-used 4 -row-mt 1` with the same rate
+  flags, sound `-c:a libopus`, `-f webm` (tried with the ffmpeg of an Ubuntu install: VP9 + Opus read by `ffprobe`,
+  44.1 kHz WAV resampled automatically). HEVC is not offered through ffmpeg.
 - **Overlay alone** (`transparent`, see "Overlay only"): always WebM / VP9, whatever the name typed (MP4 / H.264 has
   no alpha), the same file as the web export: `-pix_fmt yuva420p` instead of `yuv420p` (in the list of
   `ffmpeg -h encoder=libvpx-vp9`); libvpx-vp9 encodes the alpha as a second stream, which the WebM muxer stores
@@ -2374,10 +2409,9 @@ JavaScript.
   tenth of a second of black (`probe_args`: `-f lavfi -i color=c=black:s=256x256:d=0.1 … -f null -`, 5 s at most,
   then killed) with `h264_nvenc`, then `h264_vaapi`; the first that succeeds is kept for the run (`OnceLock`, name
   written to stderr), `libx264` otherwise (not probed). A real encode, not `ffmpeg -encoders`: an ffmpeg built with
-  NVENC or VAAPI may have no GPU or driver to run it. NVENC: `-c:v h264_nvenc -preset p5 -rc vbr -cq <crf> -b:v 0
-  -pix_fmt yuv420p`; VAAPI: `-vaapi_device /dev/dri/renderD128` before the inputs, `-c:v h264_vaapi -rc_mode CQP
-  -qp <crf>`, filter `scale=out_color_matrix=bt709,format=nv12,hwupload`. Same numbers as the crf of libx264 (same
-  0–51 scale, approximate equivalents: sizes may differ). A failure during an export with a GPU encoder is reported
+  NVENC or VAAPI may have no GPU or driver to run it. NVENC: `-c:v h264_nvenc -preset p5 -rc vbr` with the rate flags,
+  `-pix_fmt yuv420p`; VAAPI: `-vaapi_device /dev/dri/renderD128` before the inputs, `-c:v h264_vaapi -rc_mode VBR` with
+  the rate flags, filter `scale=out_color_matrix=bt709,format=nv12,hwupload`. A failure during an export with a GPU encoder is reported
   like any other (no retry on the processor in the middle of a file). WebM stays VP9 on the processor.
 - **Path**: the path of the file chosen in the "Enregistrer" dialog at the start of the export (`WritableFile.path`, set
   by `openWritablePath`; batch render folder included). `video_open` refuses a relative path or one outside the fs
