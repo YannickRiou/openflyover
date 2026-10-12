@@ -1,6 +1,6 @@
 # Design proposal: a clearer, more complete timeline for multi-track films
 
-Status: **proposal, for discussion** (no code in this PR). Language of the UI labels quoted below is French, as in the app.
+Status: **proposal, for discussion** (no code in this PR). The step-by-step implementation guide is [`timeline-multitrack-implementation.md`](timeline-multitrack-implementation.md). Language of the UI labels quoted below is French, as in the app.
 
 ## 1. Why
 
