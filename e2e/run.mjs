@@ -553,6 +553,21 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'cles-etiquettes',
+    title: 'Habillage › Étiquettes 3D : une clé crée la piste « Étiquettes », Suppr la retire',
+    async run({ page }) {
+      if (await page.evaluate(() => document.getElementById('tab-habillage')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-habillage')
+      const lane = '[role="group"][aria-label="Étiquettes"]'
+      assert(!(await page.$(lane)), 'la piste Étiquettes existe sans clé')
+      await page.click('button[aria-label="Étiquettes : ajouter une clé"]')
+      await page.waitForSelector(`${lane} .film-tl__key`, { visible: true, timeout: STEP_MS })
+      await page.click(`${lane} .film-tl__key`)
+      await page.keyboard.press('Delete')
+      await until(page, () => !document.querySelector('[role="group"][aria-label="Étiquettes"]'))
+      await blur(page)
+    },
+  },
+  {
     id: 'reperes',
     title: 'Repères et points d’intérêt (onglet Carte) : un point au marqueur, son arrêt coché puis décoché, vu sur la timeline',
     async run({ page }) {

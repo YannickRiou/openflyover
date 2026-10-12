@@ -39,6 +39,7 @@ import { useWeatherStore } from '../weather/store'
 import { AnchorPicker } from './AnchorPicker'
 import './labelSwatches.css'
 import { formatNumber, formatPercent } from './format'
+import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 
 const COUNTER_LABELS: Record<CounterId, string> = {
@@ -532,6 +533,11 @@ export function OverlayPanel() {
         )}
         {overlay.enabled && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}
         {overlay.enabled && <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />}
+      </PanelSection>
+
+      <PanelSection title="Étiquettes 3D">
+        <p className="field__hint">Toujours affichées. Posez des clés pour les masquer puis les faire revenir en fondu le long du parcours : une clé à 100 % les affiche, à 0 % les masque (deux clés proches font un changement rapide).</p>
+        <PanelKeys target={{ kind: 'param', param: 'labels' }} />
       </PanelSection>
 
       {overlay.enabled && (
