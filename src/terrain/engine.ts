@@ -466,6 +466,44 @@ export function createTerrainEngine(
     if (image && typeof image.getContext === 'function') image.width = image.height = 0
   }
 
+  /**
+   * After a lost WebGL context: the textures of the tiles are gone from the GPU and their released canvases
+   * (`userData.released`, terrain/imagery.ts) cannot be uploaded again, so each is drawn anew from the sources (the
+   * fetcher's cache first). Meanwhile the tile is grey and counts as missing (an export frame then says so); a draw that
+   * fails leaves it so, and the next restore tries again. Tiles whose canvas is still alive upload it by themselves.
+   */
+  function restoreImagery(): void {
+    if (disposed) return
+    const { imagery, imageryZoomOffset } = opts
+    forEachNode(roots, (node) => {
+      const stale = node.texture
+      const material = node.mesh?.material
+      if (!stale?.userData.released || !material) return
+      material.map = null
+      material.color.setHex(NO_IMAGERY_COLOR)
+      material.needsUpdate = true
+      node.imageryMissing = true
+      changed = true
+      io.loadImageryTexture(node.key, imagery, io.fetcher, { zoomOffset: imageryZoomOffset, priority: 0 }).then(
+        (fresh) => {
+          // the tile went away (or the engine was rebuilt) while the imagery was coming
+          if (disposed || node.texture !== stale) {
+            disposeTexture(fresh)
+            return
+          }
+          material.map = fresh
+          material.color.setHex(0xffffff)
+          material.needsUpdate = true
+          node.texture = fresh
+          node.imageryMissing = fresh.userData.incomplete === true
+          disposeTexture(stale)
+          changed = true
+        },
+        () => {},
+      )
+    })
+  }
+
   /** Free GPU resources and cached grid of one node; the node stays in the tree. */
   function unloadNode(node: TileNode): void {
     cancelLoad(node)
@@ -910,6 +948,7 @@ export function createTerrainEngine(
 
   const engine: TerrainEngine = { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, setExporting, caches, dispose }
   failureReaders.set(engine, failures)
+  imageryRestorers.set(engine, restoreImagery)
   return engine
 }
 
@@ -928,6 +967,12 @@ export interface TileFailure extends TileFailureCause {
 }
 
 const failureReaders = new WeakMap<TerrainEngine, () => TileFailure[]>()
+const imageryRestorers = new WeakMap<TerrainEngine, () => void>()
+
+/** Draw again the imagery of the tiles whose canvas was released, once the WebGL context is back (no-op for an engine made elsewhere). */
+export function restoreEngineImagery(engine: TerrainEngine | null | undefined): void {
+  if (engine) imageryRestorers.get(engine)?.()
+}
 
 /** The tiles of the engine's last view that failed (given up on first); empty for an engine made elsewhere. */
 export function viewTileFailures(engine: TerrainEngine | null | undefined): TileFailure[] {
