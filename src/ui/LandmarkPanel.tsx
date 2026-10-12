@@ -314,7 +314,7 @@ export function LandmarkPanel() {
       </p>
 
       {settings.enabled && status === 'error' && (
-        <button type="button" className="btn btn--secondary btn--block" onClick={() => syncLandmarks(tracks, settings, { retry: true })}>
+        <button type="button" className="btn btn--secondary btn--block" onClick={() => syncLandmarks(tracks, settings, { refresh: true })}>
           Réessayer
         </button>
       )}

@@ -128,6 +128,20 @@ describe('syncLandmarks', () => {
     expect(useLandmarkStore.getState().status).toBe('ready')
   })
 
+  it('keeps the landmarks known when a refresh fails', async () => {
+    const { calls, deps } = deferredFetcher()
+    const track = makeTrack('a')
+    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps })
+    calls[0].resolve(FEATURES)
+    await flush()
+    const known = useLandmarkStore.getState().landmarks.a
+    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps, refresh: true })
+    expect(useLandmarkStore.getState().landmarks.a).toEqual(known)
+    calls[1].reject(new OverpassError('HTTP 504', 504))
+    await flush()
+    expect(useLandmarkStore.getState()).toMatchObject({ status: 'error', landmarks: { a: known } })
+  })
+
   it('handles several tracks, forgets a removed one and cancels on disable', async () => {
     const { calls, deps } = deferredFetcher()
     const a = makeTrack('a')
