@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Interface appearance**: dark theme (or follow the system), accent colour, top bar and rail colour, compact density; « Apparence » section of the « Réglages » tab, per device.
 - **Timeline size**: a handle between the 3D view and the timeline sets their proportion (mouse, touch and keyboard; double-click resets), remembered on the device.
 - **Space on the ruler**: Space plays / pauses even when the timeline ruler (the row of times) was the last thing clicked or moved with the arrows.
 - **Landmark ranking**: « Repères et points d'intérêt » lists the landmarks from the most to the least important with ▲ ▼ arrows (the higher one keeps its label when two overlap); a cross on hidden landmarks dismisses them, and « Relancer la recherche » asks OpenStreetMap again and brings the dismissed ones back.
