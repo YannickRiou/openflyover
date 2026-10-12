@@ -7,12 +7,14 @@ import {
   landmarkLabels,
   landmarkPriority,
   landmarkText,
+  newLandmarkIds,
   parseEle,
   parsePopulation,
   pathBoxDistanceM,
   placeSizeOf,
   projectOnPath,
   splitHidden,
+  withHidden,
   withLandmarkDefaults,
   withPlaceSize,
 } from './landmarks'
@@ -254,8 +256,11 @@ describe('withLandmarkDefaults', () => {
       kinds: { ...older.kinds, waterPoint: false },
       places: { city: true, village: true, hamlet: true },
       hiddenIds: [],
+      seenIds: [],
     })
     expect(withLandmarkDefaults({ ...older, hiddenIds: ['node/1'] })).toMatchObject({ hiddenIds: ['node/1'] })
+    expect(withLandmarkDefaults({ ...older, seenIds: ['node/1', 2] })).toMatchObject({ seenIds: ['node/1'] })
+    expect(withLandmarkDefaults({ ...older, seenIds: 'x' })).toMatchObject({ seenIds: [] })
     expect(withLandmarkDefaults({ ...older, places: { hamlet: false } })).toMatchObject({ places: { city: true, village: true, hamlet: false } })
     expect(withLandmarkDefaults({ ...older, places: 'x' })).toMatchObject({ places: 'x' })
     expect(withLandmarkDefaults('x')).toBe('x')
@@ -293,5 +298,23 @@ describe('splitHidden', () => {
     const { shown, hidden } = splitHidden(list, ['way/3', 'node/1', 'node/99'])
     expect(shown.map((l) => l.id)).toEqual(['node/2'])
     expect(hidden.map((l) => l.id)).toEqual(['node/1', 'way/3'])
+  })
+})
+
+describe('withHidden / newLandmarkIds', () => {
+  const settings = { ...DEFAULT_LANDMARK_SETTINGS, hiddenIds: ['node/1', 'poi-2'] }
+
+  it('hides or shows labels by id, every landmark listed now seen', () => {
+    const hidden = withHidden(settings, ['node/3', 'node/1'], true, ['node/1', 'node/3', 'node/4'])
+    expect(hidden.hiddenIds).toEqual(['poi-2', 'node/3', 'node/1'])
+    expect(hidden.seenIds).toEqual(['node/1', 'node/3', 'node/4'])
+    const shown = withHidden(hidden, hidden.hiddenIds, false, ['node/5'])
+    expect(shown.hiddenIds).toEqual([])
+    expect(shown.seenIds).toEqual(['node/1', 'node/3', 'node/4', 'node/5'])
+  })
+
+  it('the landmarks listed and not seen are new, none before the first choice', () => {
+    expect(newLandmarkIds(settings, ['node/1', 'node/2'])).toEqual(new Set())
+    expect(newLandmarkIds({ seenIds: ['node/1'] }, ['node/1', 'node/2'])).toEqual(new Set(['node/2']))
   })
 })

@@ -269,6 +269,7 @@ export function Labels() {
   const show = useAppStore((s) => s.settings.labels)
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const pois = useAppStore((s) => s.settings.film.pois)
+  const hiddenIds = useAppStore((s) => s.settings.landmarks.hiddenIds)
   const media = useAppStore((s) => s.settings.film.media)
   const table = useMediaStore((s) => s.table)
   const sources = useLabelSources((s) => s.sources)
@@ -290,10 +291,11 @@ export function Labels() {
     const flown = filmTrack !== tracks[0]
     tracks.forEach((track, i) => out.push(...endpointLabels(track, show.endpoints && (i === 0 || flown))))
     if (show.photos) out.push(...photoLabels(media, table))
-    out.push(...poiLabels(pois))
+    // a point of interest hidden with its eye (« Repères et points d'intérêt ») gets no label
+    out.push(...poiLabels(pois.filter((poi) => !hiddenIds.includes(poi.id))))
     out.push(...externalLabels(sources))
     return out
-  }, [tracks, filmTrack, show, pois, media, table, sources])
+  }, [tracks, filmTrack, show, pois, hiddenIds, media, table, sources])
 
   // Redraw the textures once the web font is available (the first ones may use the fallback font).
   useEffect(() => {
