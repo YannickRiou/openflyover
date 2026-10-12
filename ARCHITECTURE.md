@@ -510,7 +510,7 @@ ink, 7.3:1).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
   `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
-  "Durée et rythme" (duration and pacing; duration, film duration, slow-downs on / off, « Plan de situation » switches for the opening and the closing). Objectif: "Effets d'objectif" (`LensPanel`).
+  "Durée et rythme" (duration and pacing; duration with « − » / « + » buttons (one slider notch) around the slider and the acceleration over the recorded time (`formatSpeedUp`: elapsed time start to end, nights included, over the duration; hidden for an untimed track), film duration, slow-downs on / off, « Plan de situation » switches for the opening and the closing). Objectif: "Effets d'objectif" (`LensPanel`).
   The two or three essential settings of a section stay open; every other one is a `SettingRow`: one button row with
   its name and current value (iOS Settings style, `aria-expanded`), whose control stays hidden (mounted, `hidden`)
   until the row is pressed, then unfolds under it and takes the focus (the checked radio, else the first field); the
