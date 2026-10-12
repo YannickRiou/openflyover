@@ -48,7 +48,26 @@ export const MARKER_FIGURE_PATHS: Record<MarkerFigure, readonly string[]> = {
     'M11.5 12.5 15 15 14 20',
     'M11.5 12.5 9.8 16.6 6 17.6',
   ],
+  traileur: [
+    circlePath(15, 3.6, 2),
+    'M14 6.4 11.6 11.6',
+    // running vest on the back, one arm swinging forward
+    'M13.6 7 11.2 7.4 10.4 10.6 12.2 10.8',
+    'M13.6 7.6 16 10.2 18 8.8',
+    'M11.6 11.6 15 14 14.4 17.4',
+    'M11.6 11.6 10 15.2 6.6 16.2',
+    // rocky ground
+    'M2 21.5 5.5 19 9 20.5 13 18.8 17 20.4 22 18',
+  ],
   cycliste: [circlePath(18.5, 17.5, 3.5), circlePath(5.5, 17.5, 3.5), circlePath(15, 5, 1), 'M12 17.5V14l-3-3 4-3 2 3h2'],
+  vae: [
+    circlePath(18.5, 17.5, 3.5),
+    circlePath(5.5, 17.5, 3.5),
+    circlePath(15, 5, 1),
+    'M12 17.5V14l-3-3 4-3 2 3h2',
+    // lightning bolt above the rear wheel
+    'M6.2 2.5 3.4 7.4h3.2L5.6 11.6l3.4-5.2H5.9Z',
+  ],
   bikepacking: [
     circlePath(18.5, 17.5, 3.5),
     circlePath(5.5, 17.5, 3.5),
@@ -76,6 +95,47 @@ export const MARKER_FIGURE_PATHS: Record<MarkerFigure, readonly string[]> = {
     'M9.5 12 13 14 11.5 18.5',
     'M9.5 12 11 15 8.5 17.6',
     'M3 16 21.5 21.5',
+  ],
+  'ski-rando': [
+    circlePath(12.5, 4, 2),
+    'M12 6.8 10.6 12.4',
+    // backpack, the pole planted ahead, the legs striding up the slope on the ski
+    'M11.6 7.4 8.8 8.4 8.4 11.6 10.8 11.8',
+    'M11.8 8.4 15 10.6',
+    'M15 10.6 16 16.6',
+    'M10.6 12.4 13.2 14.6 13.4 17.4',
+    'M10.6 12.4 9 15.4 7.6 19',
+    'M2 21 22 15',
+  ],
+  nageur: [
+    // front crawl: the head out of the water, one arm reaching ahead
+    circlePath(17.5, 11, 2),
+    'M14.8 12.4 3 14.4',
+    'M12 12.8 14.6 7 20.6 8.2',
+    'M2 18.5c1.7 0 1.7-1.2 3.3-1.2s1.7 1.2 3.3 1.2 1.7-1.2 3.3-1.2 1.7 1.2 3.4 1.2 1.7-1.2 3.3-1.2 1.7 1.2 3.4 1.2',
+  ],
+  kayak: [
+    // the hull, the paddler sitting in it, the double paddle across
+    'M2 16.4C6 19.4 18 19.4 22 16.4C18 15 6 15 2 16.4Z',
+    circlePath(11, 5.6, 2),
+    'M10.9 8.2 10.2 15.2',
+    'M10.8 9.8 14.2 8.1',
+    'M7.2 13.6 18.4 4.8',
+    'M17.7 3.9 19.1 5.7',
+    'M6.5 12.7 7.9 14.5',
+  ],
+  cavalier: [
+    // the horse: body, neck and head to the right, legs and tail; the rider on its back holding the reins
+    'M5.5 10.5h9a1.75 1.75 0 0 1 0 3.5h-9a1.75 1.75 0 0 1 0-3.5Z',
+    'M14.6 10.8 17.6 5.4 21 8.4',
+    'M5.6 14 4.8 20.5',
+    'M8 14 8.6 20.5',
+    'M13.6 14 13 20.5',
+    'M15.6 13.8 17 20.2',
+    'M3.9 11.6C2.6 12.4 2.2 14.2 2.4 16.4',
+    circlePath(10.6, 3.4, 1.6),
+    'M10.4 5.4 9.8 10',
+    'M10.2 7.2 15.4 8.2',
   ],
   parapente: [
     // the wing, then the lines down to the pilot
