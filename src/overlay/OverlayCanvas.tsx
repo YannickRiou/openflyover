@@ -23,6 +23,7 @@ import { createOverlayFilmCache, overlayExtras, photoAssets } from './exportOver
  * frame after any change of what it reads (store subscriptions, no React render per frame). Video clips are video
  * elements playing along during the playback, seeked to the film time when scrubbing (none during an export, which
  * decodes its own frames). Rendered only while something is to draw (overlay or credits on, photos, clips, dips, stages).
+ * Frozen during an export (the progress changes every frame there, and the export composes its own overlay).
  */
 export function OverlayCanvas() {
   const enabled = useAppStore(
@@ -108,8 +109,9 @@ function OverlayPreview() {
       // clips not drawn by this frame are paused
       videos.settle()
     }
+    // frozen during an export, which draws its own overlay frame by frame: the preview is redrawn once it ends
     const schedule = () => {
-      if (!raf && !disposed) raf = requestAnimationFrame(draw)
+      if (!raf && !disposed && !isExportBusy(useExportStore.getState().phase)) raf = requestAnimationFrame(draw)
     }
 
     scheduleRef.current = schedule
@@ -139,6 +141,9 @@ function OverlayPreview() {
     const unsubscribeRegion = useRegionStore.subscribe((state, prev) => {
       if (state.region !== prev.region) schedule()
     })
+    const unsubscribeExport = useExportStore.subscribe((state, prev) => {
+      if (isExportBusy(state.phase) !== isExportBusy(prev.phase)) schedule()
+    })
     const unsubscribeSound = useMusicPreview.subscribe(schedule)
     const unsubscribePhotos = bitmaps.subscribe(schedule)
     const unsubscribeVideos = videos.subscribe(schedule)
@@ -161,6 +166,7 @@ function OverlayPreview() {
       unsubscribeLandmarks()
       unsubscribeWater()
       unsubscribeRegion()
+      unsubscribeExport()
       unsubscribeSound()
       unsubscribePhotos()
       unsubscribeVideos()
