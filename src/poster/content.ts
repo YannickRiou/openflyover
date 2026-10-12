@@ -10,6 +10,8 @@
 import type { Track, TrackStats } from '../core/types'
 import { buildTrackPath, elevationProfile } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
+import { miniMapOutline } from '../overlay/data'
+import type { MiniMapOutline } from '../overlay/data'
 import { formatDateFr, weatherSummaryLine } from '../overlay/draw'
 import { formatDistance, formatDuration, formatNumber } from '../ui/format'
 import type { WeatherSummary } from '../weather/series'
@@ -56,6 +58,8 @@ export interface PosterContent {
   subtitle: string
   figures: PosterFigure[]
   profile?: PosterProfile
+  /** plan of the track, for the map of « Journal de bord » (a single track only) */
+  outline?: MiniMapOutline
   /** '' when hidden or unknown */
   weather: string
   /** several tracks, at most POSTER_LIST_MAX: one line each (empty otherwise) */
@@ -177,12 +181,14 @@ export function posterContent(input: PosterContentInput): PosterContent {
   const stats = posterStats(tracks, race)
   const climbCount = outings ? climbs.reduce((a, b) => a + b, 0) : (climbs[0] ?? 0)
   const count = several ? `${formatNumber(tracks.length)} ${race ? 'traces' : 'sorties'}` : ''
+  // several tracks: the list takes the place of the profile and the map
+  const path = several ? undefined : (input.path ?? buildTrackPath(lead))
   return {
     title: poster.title.trim() || projectName.trim() || lead.name,
     subtitle: [poster.subtitle.trim(), count, dateSpan(outings ? tracks : [lead])].filter(Boolean).join(' · '),
     figures: POSTER_FIGURES.filter((id) => poster.figures[id]).flatMap((id) => posterFigure(id, stats, climbCount) ?? []),
-    // several tracks: the list takes its place
-    profile: several ? undefined : profileOf(input.path ?? buildTrackPath(lead)),
+    profile: path && profileOf(path),
+    outline: path && miniMapOutline(path),
     weather: poster.weather && !outings ? weatherSummaryLine(weather) : '',
     tracks: several && tracks.length <= POSTER_LIST_MAX ? tracks.map(trackLine) : [],
     credits: [...credits],
