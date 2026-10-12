@@ -17,18 +17,26 @@ import {
   type BatchJobState,
   type TrackRunState,
 } from '../export/batch'
-import { videoBitrate, type CodecCandidate } from '../export/encoder'
-import { containerFor, exportCodec } from '../export/nativeEncoder'
+import { currentReport } from '../export/guard'
+import { showDiagnostic } from '../export/diagnostic'
+import { targetBitrate, type CodecCandidate } from '../export/encoder'
+import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
 import { CLOUD_QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
 import {
+  AUDIO_BITRATES_KBPS,
+  BITRATE_RANGE_MBPS,
   EXPORT_HOLD_END_S,
   EXPORT_HOLD_START_S,
+  KEYFRAME_INTERVALS_S,
   VIDEO_ASPECTS,
+  VIDEO_CODEC_CHOICES,
   VIDEO_FPS,
   VIDEO_RESOLUTIONS,
   buildFrameSchedule,
   exportResolutionNote,
+  videoEncoding,
   videoSize,
+  type VideoCodecChoice,
   type VideoQuality,
   type VideoSettings,
 } from '../export/schedule'
@@ -36,12 +44,10 @@ import {
   chooseVideoDestination,
   isExportBusy,
   overlayBaseName,
-  stillBaseName,
   useExportStore,
   videoFileName,
   warnsInMemory,
   type ExportResult,
-  type StillType,
 } from '../export/store'
 import { getPlatform, videoEncoderMissingHint } from '../platform'
 import { SHARE_SAVE_LABEL } from '../platform/platform'
@@ -52,13 +58,14 @@ import { useFilmClock } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { ExportHistory } from './ExportHistory'
 import { ModifiedMarker } from './ModifiedMarker'
-import { RenderWeight, SettingRow } from './PanelSection'
+import { RangeField, RenderWeight, SettingRow } from './PanelSection'
 import { formatNumber } from './format'
 import { saveExportedFile } from './projectActions'
 import { effectiveProjectName } from './shell'
 import { AspectIcon, Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
+import './exportPanel.css'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
   { value: 'standard', label: 'Standard' },
@@ -74,11 +81,6 @@ const CODEC_LABELS: Record<string, string> = {
   png: 'PNG',
   jpeg: 'JPEG',
 }
-
-const STILL_TYPES: { value: StillType; label: string }[] = [
-  { value: 'image/png', label: 'PNG' },
-  { value: 'image/jpeg', label: 'JPEG' },
-]
 
 /** 75 -> "1 min 15 s", 42 -> "42 s" */
 function formatClock(seconds: number): string {
@@ -115,16 +117,27 @@ function download(url: string, fileName: string): void {
   link.remove()
 }
 
-/** Codec the browser would use for a size / rate / quality (`key`), null when it can encode none. */
+/** Codec the browser would use for a size / rate / quality / encoding (`key`), null when it can encode none. */
 interface CodecProbe {
   key: string
   codec: CodecCandidate | null
 }
 
+const CODEC_CHOICE_LABELS: Record<VideoCodecChoice, string> = {
+  auto: 'Automatique',
+  avc: 'H.264 (MP4)',
+  hevc: 'HEVC (MP4)',
+  vp9: 'VP9 (WebM)',
+}
+
+/** « 0,5 s », « 2 s » */
+const seconds = (s: number) => `${formatNumber(s, s % 1 === 0 ? 0 : 1)} s`
+
 /**
- * "Exporter" drawer: aspect (tiles), resolution, codec and estimated size, start / cancel, progress and download;
- * also a still image of the current progress at the same size, or the overlay alone over a transparent background;
- * frame rate, quality and image type as rows (name and value, control on demand).
+ * "Exporter" drawer, « Vidéo » mode, in sections: « Format » (aspect tiles, resolution, frame rate), « Encodage »
+ * (bitrate of the quality or chosen by hand, codec and container, key frames, sound), « Rendu » (the quality's render
+ * tier), then the overlay alone, the estimate, start / cancel, progress, error and download. The still image is in the
+ * « Affiche » mode.
  */
 function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; modes: ReactNode; hidden: boolean }) {
   const video = useAppStore((s) => s.settings.video)
@@ -140,7 +153,6 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
     useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, timings: s.timings })),
   )
   const id = useId()
-  const [stillType, setStillType] = useState<StillType>('image/png')
   /** « Habillage seul »: the overlay alone, transparent WebM to lay over one's own footage */
   const [overlayOnly, setOverlayOnly] = useState(false)
   const downloadedRef = useRef<ExportResult | null>(null)
@@ -149,6 +161,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const busy = isExportBusy(phase)
   const { width, height } = videoSize(video.aspect, video.resolution)
   const resolutionNote = exportResolutionNote(video.resolution)
+  const encoding = videoEncoding(video)
   const totalFrames = buildFrameSchedule({
     durationS,
     fps: video.fps,
@@ -157,26 +170,40 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   }).length
 
   // Ask the browser which codec it can use at this size (H.264 may refuse large or tall frames).
-  const probeKey = `${width}x${height}@${video.fps}/${video.quality}${overlayOnly ? '/alpha' : ''}`
+  const probeKey = `${width}x${height}@${video.fps}/${video.quality}/${encoding.codec}/${encoding.bitrateMbps ?? ''}${overlayOnly ? '/alpha' : ''}`
   const [probe, setProbe] = useState<CodecProbe | null>(null)
   useEffect(() => {
     let alive = true
-    void exportCodec({ width, height, fps: video.fps, quality: video.quality, transparent: overlayOnly }).then((codec) => {
+    const options = { width, height, fps: video.fps, quality: video.quality, encoding: videoEncoding(video), transparent: overlayOnly }
+    void exportCodec(options).then((codec) => {
       if (alive) setProbe({ key: probeKey, codec })
     })
     return () => {
       alive = false
     }
-  }, [probeKey, width, height, video.fps, video.quality, overlayOnly])
+  }, [probeKey, width, height, video, overlayOnly])
   const codec = probe?.key === probeKey ? probe.codec : undefined
+  // the codecs « Encodage » offers: those this device encodes at this size
+  const codecsKey = `${width}x${height}@${video.fps}/${video.quality}/${encoding.bitrateMbps ?? ''}`
+  const [codecs, setCodecs] = useState<{ key: string; list: VideoCodecChoice[] } | null>(null)
+  useEffect(() => {
+    let alive = true
+    void encodableCodecs({ width, height, fps: video.fps, quality: video.quality, encoding: videoEncoding(video) }).then((list) => {
+      if (alive) setCodecs({ key: codecsKey, list })
+    })
+    return () => {
+      alive = false
+    }
+  }, [codecsKey, width, height, video])
+  const offered = codecs?.key === codecsKey ? codecs.list : (['auto'] as VideoCodecChoice[])
+  const encodeOptions = { width, height, fps: video.fps, quality: video.quality, encoding }
   // no size estimate for the overlay alone: mostly empty frames come out far below the bitrate
-  const estimatedBytes =
-    codec && !overlayOnly ? (videoBitrate(width, height, video.fps, video.quality, codec.codec) * totalFrames) / video.fps / 8 : 0
-  // target video bitrate of the chosen quality (H.264 until the codec is known), shown under « Qualité »
-  const bitrate = videoBitrate(width, height, video.fps, video.quality, codec?.codec ?? 'avc')
-  const bitrateMbps = bitrate / 1e6
+  const estimatedBytes = codec && !overlayOnly ? (targetBitrate(encodeOptions, codec.codec) * totalFrames) / video.fps / 8 : 0
+  // target video bitrate (H.264 until the codec is known), shown in « Encodage »
+  const bitrate = targetBitrate(encodeOptions, codec?.codec ?? 'avc')
+  const presetBitrate = targetBitrate({ ...encodeOptions, encoding: { ...encoding, bitrateMbps: null } }, codec?.codec ?? 'avc')
   // phones and tablets keep the film in memory: its bitrate has a ceiling (the line shows the real one)
-  const bitrateCapped = bitrate < videoBitrate(width, height, video.fps, video.quality, codec?.codec ?? 'avc', Infinity)
+  const bitrateCapped = bitrate < targetBitrate(encodeOptions, codec?.codec ?? 'avc', Infinity)
   const secondsPerImage =
     timings.rendered > 0 ? (timings.renderMs + timings.waitMs + timings.encodeMs) / timings.rendered / 1000 : null
 
@@ -208,34 +235,27 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   // what the quality makes the export use (the clouds chosen by hand win over it)
   const tier = effectiveRender(video.quality, clouds)
 
-  const request = {
-    width,
-    height,
-    fps: video.fps,
-    quality: video.quality,
-    durationS,
-    progressAt: pacing.progressAtTime,
-    holdStartS: EXPORT_HOLD_START_S,
-    holdEndS: EXPORT_HOLD_END_S,
-  }
-
   const start = () => {
     if (!trackName || !codec) return
     const baseName = overlayOnly ? overlayBaseName(trackName) : trackName
     // asked now: the browser's save picker needs this click
     const fileName = videoFileName(baseName, `.${codec.container}`)
     void chooseVideoDestination(getPlatform(), fileName).then(({ start: go, destination }) => {
-      if (go) useExportStore.getState().start({ ...request, baseName, destination, overlayOnly })
-    })
-  }
-
-  const startStill = () => {
-    if (!trackName) return
-    const progress = useAppStore.getState().playback.progress
-    useExportStore.getState().start({
-      ...request,
-      baseName: stillBaseName(trackName, progress),
-      still: { progress, type: stillType },
+      if (!go) return
+      useExportStore.getState().start({
+        width,
+        height,
+        fps: video.fps,
+        quality: video.quality,
+        encoding,
+        durationS,
+        progressAt: pacing.progressAtTime,
+        holdStartS: EXPORT_HOLD_START_S,
+        holdEndS: EXPORT_HOLD_END_S,
+        baseName,
+        destination,
+        overlayOnly,
+      })
     })
   }
 
@@ -266,8 +286,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
       {modes}
 
+      <h3 className="export__group">Format</h3>
       <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">Format</legend>
+        <legend className="field__label">Proportions</legend>
         <div className="format-tiles">
           {VIDEO_ASPECTS.map((a) => (
             <label key={a.id} className="format-tile" title={a.label}>
@@ -318,6 +339,162 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </p>
       </div>
 
+      <fieldset className="field fieldset" disabled={busy}>
+        <legend className="field__label">
+          Images par seconde <RenderWeight weight="fps" />
+        </legend>
+        <div className="segmented">
+          {VIDEO_FPS.map((fps) => (
+            <label key={fps} className="segmented__option">
+              <input type="radio" name={`${id}-fps`} value={fps} checked={video.fps === fps} onChange={() => update({ fps })} />
+              {fps}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <h3 className="export__group">Encodage</h3>
+      <fieldset className="field fieldset" disabled={busy || overlayOnly}>
+        <legend className="field__label">Débit vidéo</legend>
+        <div className="segmented">
+          <label className="segmented__option">
+            <input type="radio" name={`${id}-bitrate`} checked={!video.manualBitrate} onChange={() => update({ manualBitrate: false })} />
+            Selon la qualité
+          </label>
+          <label className="segmented__option">
+            <input
+              type="radio"
+              name={`${id}-bitrate`}
+              checked={video.manualBitrate}
+              // starts from the quality's bitrate, on the slider's steps
+              onChange={() => update({ manualBitrate: true, bitrateMbps: snapBitrate(presetBitrate / 1e6) })}
+            />
+            Manuel
+          </label>
+        </div>
+      </fieldset>
+      {video.manualBitrate && !overlayOnly && (
+        <RangeField
+          label="Débit manuel"
+          min={BITRATE_RANGE_MBPS.min}
+          max={BITRATE_RANGE_MBPS.max}
+          step={BITRATE_RANGE_MBPS.step}
+          value={video.bitrateMbps}
+          disabled={busy}
+          format={(v) => `${formatNumber(v, 1)} Mbit/s`}
+          onChange={(bitrateMbps) => update({ bitrateMbps })}
+        />
+      )}
+      {!overlayOnly && (
+        <p className="field__hint">
+          {video.manualBitrate
+            ? `La qualité suggère ${formatNumber(presetBitrate / 1e6, 1)} Mbit/s à cette taille.`
+            : `${formatNumber(bitrate / 1e6, 1)} Mbit/s, d'après la qualité (section « Rendu »).`}
+          {bitrateCapped && ` Plafonné à ${formatNumber(bitrate / 1e6, 1)} Mbit/s : le film reste en mémoire sur cet appareil.`}
+        </p>
+      )}
+
+      <SettingRow label="Codec" value={overlayOnly ? 'VP9 (WebM)' : CODEC_CHOICE_LABELS[video.codec]} paths={['video.codec']}>
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-codec`}>
+            Codec et conteneur
+          </label>
+          <select
+            id={`${id}-codec`}
+            className="select"
+            value={video.codec}
+            disabled={busy || overlayOnly}
+            onChange={(e) => {
+              const choice = VIDEO_CODEC_CHOICES.find((c) => c === e.currentTarget.value)
+              if (choice) update({ codec: choice })
+            }}
+          >
+            {VIDEO_CODEC_CHOICES.filter((c) => offered.includes(c) || c === video.codec).map((c) => (
+              <option key={c} value={c}>
+                {CODEC_CHOICE_LABELS[c]}
+              </option>
+            ))}
+          </select>
+          <p className="field__hint">
+            {overlayOnly
+              ? "L'habillage seul est toujours en VP9 (WebM), pour garder la transparence."
+              : 'Seuls les codecs que cet appareil sait encoder à cette taille sont proposés. Automatique : H.264 d’abord, lu partout.'}
+          </p>
+        </div>
+      </SettingRow>
+      <SettingRow label="Images clés" value={`toutes les ${seconds(video.keyframeIntervalS)}`} paths={['video.keyframeIntervalS']}>
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-keyframes`}>
+            Une image clé toutes les
+          </label>
+          <select
+            id={`${id}-keyframes`}
+            className="select"
+            value={video.keyframeIntervalS}
+            disabled={busy}
+            onChange={(e) => update({ keyframeIntervalS: Number(e.currentTarget.value) })}
+          >
+            {KEYFRAME_INTERVALS_S.map((s) => (
+              <option key={s} value={s}>
+                {seconds(s)}
+              </option>
+            ))}
+          </select>
+          <p className="field__hint">Plus rapprochées : navigation plus précise au montage, fichier un peu plus lourd.</p>
+        </div>
+      </SettingRow>
+      <SettingRow label="Son" value={`${video.audioKbps} kbit/s`} paths={['video.audioKbps']}>
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-audio`}>
+            Débit du son
+          </label>
+          <select
+            id={`${id}-audio`}
+            className="select"
+            value={video.audioKbps}
+            disabled={busy}
+            onChange={(e) => update({ audioKbps: Number(e.currentTarget.value) })}
+          >
+            {AUDIO_BITRATES_KBPS.map((k) => (
+              <option key={k} value={k}>
+                {k} kbit/s
+              </option>
+            ))}
+          </select>
+          <p className="field__hint">Musique et son des vidéos du film (AAC en MP4, Opus en WebM).</p>
+        </div>
+      </SettingRow>
+
+      <h3 className="export__group">Rendu</h3>
+      <fieldset className="field fieldset" disabled={busy}>
+        <legend className="field__label">
+          Qualité de rendu{customised ? ' · Personnalisé' : ''}
+        </legend>
+        <div className="segmented">
+          {QUALITIES.map((q) => (
+            <label key={q.value} className="segmented__option">
+              <input
+                type="radio"
+                name={`${id}-quality`}
+                value={q.value}
+                checked={video.quality === q.value}
+                onChange={() => update({ quality: q.value })}
+              />
+              {q.label}
+            </label>
+          ))}
+        </div>
+        <p className="field__hint">
+          Nuages {CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase()}, flou de bougé {tier.maxSubFrames} rendus par image au plus
+          {video.manualBitrate ? '' : ', et le débit vidéo'}. Le projet et l’aperçu ne changent pas.
+        </p>
+        {customised && (
+          <button type="button" className="btn btn--secondary" onClick={() => setSetting('clouds', { ...clouds, quality: 'auto' })}>
+            Revenir au préréglage
+          </button>
+        )}
+      </fieldset>
+
       <div className="field">
         <label className="checkbox">
           <input type="checkbox" checked={overlayOnly} disabled={busy} onChange={(e) => setOverlayOnly(e.currentTarget.checked)} />
@@ -354,8 +531,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
       {codec === null && !overlayOnly && (
         <p className="field__hint" role="alert">
-          Ce navigateur ne sait pas encoder une vidéo de {formatNumber(width)} × {formatNumber(height)} pixels :{' '}
-          {videoEncoderMissingHint() ?? 'choisissez une résolution plus petite.'}
+          {video.codec === 'auto'
+            ? `Ce navigateur ne sait pas encoder une vidéo de ${formatNumber(width)} × ${formatNumber(height)} pixels : ${videoEncoderMissingHint() ?? 'choisissez une résolution plus petite.'}`
+            : `Cet appareil ne sait pas encoder en ${CODEC_CHOICE_LABELS[video.codec]} à ${formatNumber(width)} × ${formatNumber(height)} pixels : choisissez le codec « Automatique ».`}
         </p>
       )}
 
@@ -364,16 +542,6 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <button type="button" className="btn btn--primary" onClick={start} disabled={!trackName || !codec}>
             <Icon name="download" size={18} />
             {overlayOnly ? "Exporter l'habillage" : 'Exporter la vidéo'}
-          </button>
-          <button
-            type="button"
-            className="btn btn--secondary"
-            onClick={startStill}
-            disabled={!trackName}
-            title="Image à la position de lecture, à la taille de la vidéo"
-          >
-            <Icon name="image" size={18} />
-            Image fixe
           </button>
         </div>
       )}
@@ -395,11 +563,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                     secondsPerImage === null ? '' : ` · ≈ ${formatNumber(secondsPerImage, 1)} s / image`
                   }${etaS === null ? '' : ` · reste environ ${formatClock(etaS)}`}`}
           </p>
-          {timings.timeouts > 0 && (
-            <p className="field__hint" role="status">
-              {formatNumber(timings.timeouts)} image(s) rendue(s) avant la fin du chargement des tuiles.
-            </p>
-          )}
+          <p className="field__hint">L'aperçu reste figé pendant l'export ; chaque image attend que ses tuiles soient chargées.</p>
           <button
             type="button"
             className="btn btn--secondary btn--block"
@@ -407,6 +571,15 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             disabled={phase === 'finalizing'}
           >
             Annuler l'export
+          </button>
+        </div>
+      )}
+
+      {phase === 'error' && error && (
+        <div className="field export__error" role="alert">
+          <p className="field__hint">Échec de l'export : {error}</p>
+          <button type="button" className="btn btn--secondary btn--small" onClick={() => showDiagnostic(currentReport())}>
+            Rapport de diagnostic
           </button>
         </div>
       )}
@@ -425,89 +598,10 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             </a>
           )}{' '}
           ({formatMegabytes(result.sizeBytes)}, {CODEC_LABELS[result.codec] ?? result.codec}
+          {result.hardware && ', encodeur matériel'}
           {result.note && `, ${result.note}`})
-          {result.incompleteFrames > 0 &&
-            ` — ${formatNumber(result.incompleteFrames)} image(s) rendue(s) avant la fin du chargement des tuiles.`}
         </p>
       )}
-
-      <SettingRow label="Images par seconde" value={`${video.fps} i/s`} paths={['video.fps']} weight="fps">
-        <fieldset className="field fieldset" disabled={busy}>
-          <legend className="field__label">Images par seconde</legend>
-          <div className="segmented">
-            {VIDEO_FPS.map((fps) => (
-              <label key={fps} className="segmented__option">
-                <input
-                  type="radio"
-                  name={`${id}-fps`}
-                  value={fps}
-                  checked={video.fps === fps}
-                  onChange={() => update({ fps })}
-                />
-                {fps}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      </SettingRow>
-
-      <SettingRow
-        label="Qualité"
-        value={`${QUALITIES.find((q) => q.value === video.quality)?.label}${customised ? ' · Personnalisé' : ''}`}
-        paths={['video.quality']}
-      >
-        <fieldset className="field fieldset" disabled={busy}>
-          <legend className="field__label">Qualité</legend>
-          <div className="segmented">
-            {QUALITIES.map((q) => (
-              <label key={q.value} className="segmented__option">
-                <input
-                  type="radio"
-                  name={`${id}-quality`}
-                  value={q.value}
-                  checked={video.quality === q.value}
-                  onChange={() => update({ quality: q.value })}
-                />
-                {q.label}
-              </label>
-            ))}
-          </div>
-          {!overlayOnly && (
-            <p className="field__hint">
-              Débit vidéo : {formatNumber(bitrateMbps, 1)} Mbit/s{bitrateCapped && ' (plafonné : le film reste en mémoire sur cet appareil)'}
-            </p>
-          )}
-          <p className="field__hint">
-            Règle aussi le rendu de l’export : nuages {CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase()}, flou de bougé {tier.maxSubFrames} rendus
-            par image au plus. Le projet et l’aperçu ne changent pas.
-          </p>
-          {customised && (
-            <button type="button" className="btn btn--secondary" onClick={() => setSetting('clouds', { ...clouds, quality: 'auto' })}>
-              Revenir au préréglage
-            </button>
-          )}
-        </fieldset>
-      </SettingRow>
-
-      <SettingRow label="Type de l'image fixe" value={STILL_TYPES.find((t) => t.value === stillType)?.label}>
-        <fieldset className="field fieldset" disabled={busy}>
-          <legend className="field__label">Type de l'image fixe</legend>
-          <div className="segmented">
-            {STILL_TYPES.map((t) => (
-              <label key={t.value} className="segmented__option">
-                <input
-                  type="radio"
-                  name={`${id}-still`}
-                  value={t.value}
-                  checked={stillType === t.value}
-                  onChange={() => setStillType(t.value)}
-                />
-                {t.label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      </SettingRow>
 
       <ExportHistory />
 
@@ -516,6 +610,12 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </p>
     </section>
   )
+}
+
+/** A bitrate on the steps of the manual slider, within its range. */
+function snapBitrate(mbps: number): number {
+  const { min, max, step } = BITRATE_RANGE_MBPS
+  return Math.min(max, Math.max(min, Math.round(mbps / step) * step))
 }
 
 /** Line of a job in the result list of a batch. */
@@ -601,26 +701,27 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   }).length
 
   // codec of each ticked film, for its size (H.264 may refuse large or tall frames)
-  const probeKey = `${films.map((j) => j.key).join()}@${video.fps}/${video.quality}`
+  const probeKey = `${films.map((j) => j.key).join()}@${video.fps}/${video.quality}/${video.codec}/${video.manualBitrate ? video.bitrateMbps : ''}`
   const [probe, setProbe] = useState<{ key: string; codecs: Record<string, CodecCandidate | null> } | null>(null)
   useEffect(() => {
     let alive = true
     void Promise.all(
-      films.map(async (j) => [j.key, await exportCodec({ width: j.width, height: j.height, fps: video.fps, quality: video.quality })] as const),
+      films.map(async (j) => [j.key, await exportCodec({ width: j.width, height: j.height, fps: video.fps, quality: video.quality, encoding: videoEncoding(video) })] as const),
     ).then((entries) => {
       if (alive) setProbe({ key: probeKey, codecs: Object.fromEntries(entries) })
     })
     return () => {
       alive = false
     }
-  }, [probeKey, films, video.fps, video.quality])
+  }, [probeKey, films, video])
   const codecs = probe?.key === probeKey ? probe.codecs : null
   const estimate = estimateBatch(
     jobs,
     frames,
     (j) => {
       const codec = codecs?.[j.key]
-      return codec ? (videoBitrate(j.width, j.height, video.fps, video.quality, codec.codec) * frames) / video.fps / 8 : null
+      const options = { width: j.width, height: j.height, fps: video.fps, quality: video.quality, encoding: videoEncoding(video) }
+      return codec ? (targetBitrate(options, codec.codec) * frames) / video.fps / 8 : null
     },
     rate,
   )
@@ -634,7 +735,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   /** What both sources share (the folder aside). */
   const shared = (): Pick<BatchContext, 'still' | 'containerOf' | 'startPoster' | 'save'> => ({
     still: { progress: useAppStore.getState().playback.progress, type: 'image/png' },
-    containerOf: containerFor(video),
+    containerOf: containerFor({ ...video, encoding: videoEncoding(video) }),
     startPoster,
     save: (r) => r.url && download(r.url, r.fileName),
   })
@@ -655,6 +756,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         film: {
           fps: video.fps,
           quality: video.quality,
+          encoding: videoEncoding(video),
           durationS,
           progressAt: pacing.progressAtTime,
           holdStartS: EXPORT_HOLD_START_S,
@@ -904,8 +1006,8 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 type ExportMode = 'video' | 'batch' | 'poster'
 
 /**
- * "Exporter" drawer in three modes: « Vidéo » (film and still image), « Plusieurs formats » (batch) and « Affiche »
- * (poster, src/poster). All stay mounted, so the result of a single export is always handled once, by the video mode
+ * "Exporter" drawer in three modes: « Vidéo » (film), « Plusieurs formats » (batch) and « Affiche » (poster and still
+ * image, src/poster). All stay mounted, so the result of a single export is always handled once, by the video mode
  * (download, toast); a batch saves and announces its own files.
  */
 export function ExportPanel({ onClose }: { onClose?: () => void }) {

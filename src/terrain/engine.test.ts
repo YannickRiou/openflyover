@@ -13,7 +13,18 @@ import type {
 import { DEFAULT_SETTLE, settle as settleView } from '../export/capture'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { tileKeyString, tilesForBounds, zoomForTileBudget } from '../geo/mercator'
-import { DEFAULT_TUNING, LOD_STEP, NO_IMAGERY_COLOR, createTerrainEngine, type EngineDeps, type EngineTuning, type HeightFieldLike } from './engine'
+import {
+  DEFAULT_TUNING,
+  LOD_STEP,
+  NO_IMAGERY_COLOR,
+  createTerrainEngine,
+  describeTileError,
+  hostOf,
+  viewTileFailures,
+  type EngineDeps,
+  type EngineTuning,
+  type HeightFieldLike,
+} from './engine'
 import { TileFetchError } from './fetch'
 
 // The engine wires these as defaults; the tests inject every dependency, so keep them inert.
@@ -1219,6 +1230,9 @@ describe('export: the view is final when the settle loop returns', () => {
     expect(drawn(engine).some((name) => name.endsWith('grey'))).toBe(false)
   })
 
+  /** export retries 10 ms apart, doubling up to 80 ms: the same chain as the real one, on a short clock */
+  const FAST_RETRIES = { exportRetryDelayMs: 10, exportMaxRetryDelayMs: 80 }
+
   it('counts a tile it gave up on as missing, after its last attempt, without waiting for the timeout', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     const bad = ROOT_KEYS[0]
@@ -1226,14 +1240,20 @@ describe('export: the view is final when the settle loop returns', () => {
     const deps = createFakeDeps({ failDem: (url) => url === badUrl })
     const clock = { t: 0 }
     deps.now = () => clock.t
-    const engine = engineWith(deps)
+    const engine = engineWith(deps, {}, FAST_RETRIES)
     engine.setExporting?.(true)
     const camera = cameraAbove(600_000)
     expect(await exportView(engine, camera, clock).run()).toBe(true)
-    expect(deps.fetched.filter((u) => u === badUrl)).toHaveLength(DEFAULT_TUNING.maxLoadAttempts)
+    expect(deps.fetched.filter((u) => u === badUrl)).toHaveLength(DEFAULT_TUNING.exportMaxLoadAttempts)
     expect(engine.stats.pendingVisibleTiles).toBe(0)
     expect(engine.stats.missingVisibleTiles).toBe(1)
-    expect(clock.t).toBeLessThan(5000)
+    // 10 + 20 + 40 + 80 × 4 ms between the attempts, then the last one
+    expect(clock.t).toBeGreaterThanOrEqual(390)
+    expect(clock.t).toBeLessThan(1000)
+    // named in the error of the export: host, tile, cause, attempts
+    expect(viewTileFailures(engine)).toEqual([
+      { tile: `${bad.z}/${bad.x}/${bad.y}`, host: 'dem.test', layer: 'élévation', cause: expect.any(String), attempts: 8, givenUp: true },
+    ])
     // later frames do not wait for it again
     const again = exportView(engine, camera, clock)
     await again.run()
@@ -1250,13 +1270,16 @@ describe('export: the view is final when the settle loop returns', () => {
     })
     const clock = { t: 0 }
     deps.now = () => clock.t
-    const engine = engineWith(deps)
+    const engine = engineWith(deps, {}, FAST_RETRIES)
     engine.setExporting?.(true)
     const camera = cameraAbove(600_000)
     expect(await exportView(engine, camera, clock).run()).toBe(true)
-    expect(deps.loadImageryTexture).toHaveBeenCalledTimes(DEFAULT_TUNING.maxLoadAttempts * ROOT_KEYS.length)
+    expect(deps.loadImageryTexture).toHaveBeenCalledTimes(DEFAULT_TUNING.exportMaxLoadAttempts * ROOT_KEYS.length)
     expect(drawn(engine)).toHaveLength(ROOT_KEYS.length)
     expect(engine.stats.missingVisibleTiles).toBe(ROOT_KEYS.length)
+    expect(viewTileFailures(engine).map((f) => [f.layer, f.cause, f.givenUp])).toEqual(
+      ROOT_KEYS.map(() => ['imagerie', 'imagerie incomplète', true]),
+    )
   })
 
   it('gives up at the timeout when tiles never arrive: not settled, still pending', async () => {
@@ -1316,5 +1339,50 @@ describe('export: the view is final when the settle loop returns', () => {
     const camera = cameraAbove(600_000)
     expect(await exportView(engine, camera, clock).run()).toBe(true)
     expect(drawn(engine)).toHaveLength(ROOT_KEYS.length - 1)
+  })
+})
+
+describe('tile failures', () => {
+  it('names the host of a tile, or the proxy path of a source without CORS', () => {
+    expect(hostOf('https://data.geopf.fr/wmts?x=1')).toBe('data.geopf.fr')
+    expect(hostOf('/tiles/ign-ortho/14/1/2.jpg')).toBe('/tiles/ign-ortho')
+  })
+
+  it('reads the HTTP status of the request, through the error the imagery wraps it in', () => {
+    const http = new TileFetchError('https://tiles.mapterhorn.com/12/1/2.webp', 503)
+    expect(describeTileError(http, 'https://other.test/x', 'élévation')).toEqual({ host: 'tiles.mapterhorn.com', layer: 'élévation', cause: 'HTTP 503' })
+    const wrapped = new Error('No imagery could be loaded', { cause: new TileFetchError('https://data.geopf.fr/a', 400) })
+    expect(describeTileError(wrapped, 'https://x.test/b', 'imagerie')).toMatchObject({ host: 'data.geopf.fr', cause: 'HTTP 400' })
+  })
+
+  it('says « erreur réseau » for a request that never got an answer', () => {
+    expect(describeTileError(new TypeError('Failed to fetch'), 'https://tiles.test/1/2/3.png', 'imagerie')).toEqual({
+      host: 'tiles.test',
+      layer: 'imagerie',
+      cause: 'erreur réseau (Failed to fetch)',
+    })
+  })
+
+  it('waits longer and longer between the attempts of an export, not in the preview', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = ROOT_KEYS[0]
+    const badUrl = `https://dem.test/${bad.z}/${bad.x}/${bad.y}.png`
+    const deps = createFakeDeps({ failDem: (url) => url === badUrl })
+    let t = 0
+    deps.now = () => t
+    const engine = engineWith(deps, {}, { exportRetryDelayMs: 1000, exportMaxRetryDelayMs: 4000 })
+    engine.setExporting?.(true)
+    const camera = cameraAbove(600_000)
+    /** times of the requests of the bad tile, with one update every 100 ms */
+    const times: number[] = []
+    for (; t <= 30_000; t += 100) {
+      const before = deps.fetched.filter((u) => u === badUrl).length
+      engine.update(camera, 1000)
+      await settle()
+      if (deps.fetched.filter((u) => u === badUrl).length > before) times.push(t)
+    }
+    const gaps = times.slice(1).map((time, i) => time - times[i])
+    expect(gaps).toEqual([1000, 2000, 4000, 4000, 4000, 4000, 4000])
+    expect(viewTileFailures(engine)[0]).toMatchObject({ givenUp: true, attempts: 8 })
   })
 })
