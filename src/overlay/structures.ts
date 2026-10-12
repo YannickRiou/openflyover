@@ -555,13 +555,17 @@ function tableau(i: StructureInput): Structure {
     const text = openingText(frame, settings)
     const style: TextStyle = { family: pt.theme.titleFamily, weight: pt.theme.titleWeight, sizePx: 4.6 * u * s, color: pt.theme.text, uppercase: pt.theme.titleUppercase, tracking: 0.04 }
     const padX = 3 * u * s
-    const name = truncate(pt, text.title, W * 0.6 - 2 * padX, style)
-    const blockW = measure(pt, name, style) + 2 * padX
-    const blockH = style.sizePx * 1.6
+    // two lines at most, the second cut with an ellipsis
+    const maxW = W * 0.6 - 2 * padX
+    const wrapped = wrapLines(pt, text.title, maxW, style)
+    const lines = wrapped.length > 2 ? [wrapped[0], truncate(pt, wrapped.slice(1).join(' '), maxW, style)] : wrapped
+    const blockW = Math.max(...lines.map((line) => measure(pt, line, style))) + 2 * padX
+    const lineH = style.sizePx * 1.6
+    const blockH = lineH * lines.length
     const y = H * SAFE_MARGIN
     ctx.fillStyle = pt.theme.accent
     ctx.fillRect(0, y, blockW, blockH)
-    fillText(pt, name, padX, baselineAt(y + blockH / 2, style.sizePx), style)
+    lines.forEach((line, k) => fillText(pt, line, padX, baselineAt(y + lineH * (k + 0.5), style.sizePx), style))
     if (!text.subtitle) return
     const sub: TextStyle = { family: pt.theme.bodyFamily, weight: pt.theme.labelWeight, sizePx: 1.8 * u * s, color: pt.theme.text, uppercase: true, tracking: 0.14 }
     const line = truncate(pt, text.subtitle, W * 0.6 - 2 * padX, sub)
