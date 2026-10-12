@@ -13,7 +13,7 @@ describe('poster settings', () => {
 
   it('rejects unknown formats and styles, and a malformed value from a project', () => {
     expect(isValidPoster({ ...DEFAULT_POSTER, format: 'a0' as PosterSettings['format'] })).toBe(false)
-    expect(isValidPoster({ ...DEFAULT_POSTER, style: 'neon' as PosterSettings['style'] })).toBe(false)
+    expect(isValidPoster({ ...DEFAULT_POSTER, style: 'nope' as PosterSettings['style'] })).toBe(false)
     const custom: PosterSettings = { ...DEFAULT_POSTER, format: 'square', style: 'app', title: 'Tour', figures: { ...DEFAULT_POSTER.figures, climbs: false } }
     expect(sanitizeSettings({ poster: custom }).settings.poster).toEqual(custom)
     const { settings, invalid } = sanitizeSettings({ poster: { ...custom, figures: { distance: true } } })

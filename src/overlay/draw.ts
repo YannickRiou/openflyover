@@ -15,7 +15,7 @@ import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
 import type { CounterId, CreditsPosition, OverlayAnchor, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { COUNTER_IDS, widgetOverrides } from './settings'
+import { COUNTER_IDS, DEFAULT_TEXT_BACKING, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 
@@ -441,9 +441,19 @@ function fillText(p: Painter, text: string, x: number, y: number, style: TextSty
   ctx.fillStyle = style.color
   ctx.textAlign = align
   ctx.textBaseline = 'alphabetic'
-  if (theme.textShadow) {
-    ctx.shadowColor = theme.textShadow.color
-    ctx.shadowBlur = theme.textShadow.blur * p.u * p.px
+  const backing = theme.panel ? undefined : theme.textBacking
+  if (theme.textShadow && backing === 'outline') {
+    // outline only: a dark rim round the glyphs, no shadow
+    ctx.lineJoin = 'round'
+    ctx.miterLimit = 2
+    ctx.lineWidth = Math.max(0.2 * p.u, style.sizePx * 0.12)
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)'
+    ctx.strokeText(caseOf(text, style), x, y)
+  } else if (theme.textShadow) {
+    // shadow only: darker and wider than the soft shadow that accompanies the blurred backing
+    const alone = backing === 'shadow'
+    ctx.shadowColor = alone ? 'rgba(0, 0, 0, 0.85)' : theme.textShadow.color
+    ctx.shadowBlur = theme.textShadow.blur * (alone ? 1.5 : 1) * p.u * p.px
     ctx.shadowOffsetY = 0.1 * p.u * p.px
   }
   ctx.fillText(caseOf(text, style), x, y)
@@ -465,28 +475,28 @@ function roundedRect(ctx: OverlayContext2D, x: number, y: number, w: number, h: 
 
 /**
  * Background of a widget: the style's panel (with an accent bar on the `align` side when the style has one),
- * or, for the styles without panel, a soft dark elliptic scrim that keeps light text readable on snow.
+ * or, for the styles without panel, a discreet blurred rounded rectangle that keeps light text readable on snow
+ * (none when the user chose the shadow or the outline of the text instead, see `fillText`).
  */
 function drawPanel(p: Painter, x: number, y: number, w: number, h: number, align: CanvasTextAlign = 'left'): void {
   const { ctx, theme, u } = p
-  ctx.save()
   const panel = theme.panel
   if (!panel) {
-    const rx = w / 2 + 6 * u
-    const ry = h / 2 + 4 * u
-    ctx.translate(x + w / 2, y + h / 2)
-    ctx.scale(rx, ry)
-    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.5)')
-    gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.32)')
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
-    ctx.fillStyle = gradient
-    ctx.beginPath()
-    ctx.arc(0, 0, 1, 0, Math.PI * 2)
+    if ((theme.textBacking ?? DEFAULT_TEXT_BACKING) !== 'blur') return
+    // the rectangle is drawn off the canvas and only its blurred shadow lands in place (`ctx.filter` is missing in Safari)
+    const away = p.size.width + w + 10 * u
+    ctx.save()
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
+    ctx.shadowBlur = 4 * u * p.px
+    ctx.shadowOffsetX = away * p.px
+    ctx.shadowOffsetY = 0
+    ctx.fillStyle = '#000000'
+    roundedRect(ctx, x - away - 1.4 * u, y - 1 * u, w + 2.8 * u, h + 2 * u, 2.2 * u)
     ctx.fill()
     ctx.restore()
     return
   }
+  ctx.save()
   roundedRect(ctx, x, y, w, h, panel.radius * u)
   if (panel.shadow) {
     ctx.shadowColor = panel.shadow.color
