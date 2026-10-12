@@ -6,7 +6,7 @@
  * phase of the film time, so every frame of the film gets the same marker whatever frames came before (the export
  * renders any frame on its own).
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { wakeScene } from './renderOnDemand'
 import { CanvasTexture, SRGBColorSpace, Vector3 } from 'three'
 import type { Camera, Sprite, SpriteMaterial } from 'three'
@@ -296,25 +296,32 @@ export function occludeMarker(sprite: Sprite, camera: Camera, clearanceAt: Clear
   material.opacity = clearanceAt ? occlusionFade(lineOfSightClearance(camera.position, sprite.position, clearanceAt)) : 1
 }
 
-/** Decoded picture of `settings.marker.image` (null while loading, for none or for an unreadable one). */
-export function useMarkerImage(dataUrl: string): HTMLImageElement | null {
-  const [loaded, setLoaded] = useState<{ src: string; image: HTMLImageElement } | null>(null)
+/** Decoded pictures of `dataUrls` (the marker's, and those of its keys): absent while loading, for none or for an unreadable one. */
+export function useMarkerImages(dataUrls: readonly string[]): ReadonlyMap<string, HTMLImageElement> {
+  const [loaded, setLoaded] = useState<ReadonlyMap<string, HTMLImageElement>>(new Map())
+  const requested = useRef(new Set<string>())
+  const alive = useRef(true)
   useEffect(() => {
-    if (!dataUrl) return
-    let alive = true
-    loadMarkerImage(dataUrl).then(
-      (image) => {
-        if (!alive) return
-        setLoaded({ src: dataUrl, image })
-        wakeScene()
-      },
-      () => alive && setLoaded(null),
-    )
+    alive.current = true
     return () => {
-      alive = false
+      alive.current = false
     }
-  }, [dataUrl])
-  return loaded && loaded.src === dataUrl ? loaded.image : null
+  }, [])
+  useEffect(() => {
+    for (const url of dataUrls) {
+      if (!url || requested.current.has(url)) continue
+      requested.current.add(url)
+      loadMarkerImage(url).then(
+        (image) => {
+          if (!alive.current) return
+          setLoaded((now) => new Map(now).set(url, image))
+          wakeScene()
+        },
+        () => undefined,
+      )
+    }
+  }, [dataUrls])
+  return loaded
 }
 
 /** Load the font of the marker labels once one is shown (the first texture may use the fallback font). */
