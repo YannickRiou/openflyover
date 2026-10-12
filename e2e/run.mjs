@@ -587,6 +587,8 @@ const SCENARIOS = [
       if (await page.evaluate(() => document.getElementById('tab-lumiere')?.getAttribute('aria-selected') !== 'true')) {
         await page.click('#tab-lumiere')
       }
+      // centred first: scrolled to the top edge, the row would sit under the sticky section title and the click hit it
+      await page.$eval('#tab-panel-lumiere .setting-row__head::-p-text(Exposition)', (el) => el.scrollIntoView({ block: 'center' }))
       await page.click('#tab-panel-lumiere .setting-row__head::-p-text(Exposition)')
       await until(page, () => document.activeElement?.matches('#tab-panel-lumiere .setting-row__body input[type="range"]'))
       await page.keyboard.press('ArrowRight')
