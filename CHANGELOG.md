@@ -59,6 +59,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Marker** (#21, #30): free or track colour, ring / halo / pulse styles; six new figures, figure chosen from the
   activity, pin / rounded square / silhouette badges, a label and a stick with its ground shadow.
 
+- **Export in memory** (Firefox, Safari, phones): the film is no longer copied two more times at the end, which lowers the peak memory.
 - **Export and preview: fewer visible tile swaps** (an iPhone export of a track near a border showed, while zooming
   and moving, large parts of the terrain changing colour from one image to the next, white patches coming and going, and
   the detail of whole bands jumping): the white tile IGN answers outside France from z13 is no longer drawn (the coarser

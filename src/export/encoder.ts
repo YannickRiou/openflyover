@@ -219,6 +219,50 @@ function diskStream(file: WritableFile, isCanceled: () => boolean, written: (end
   })
 }
 
+interface MemoryPart {
+  start: number
+  blob: Blob
+}
+
+/** What is left of `part` outside the bytes `from`…`to` that a later write replaces. */
+function outside({ start, blob }: MemoryPart, from: number, to: number): MemoryPart[] {
+  const end = start + blob.size
+  if (end <= from || start >= to) return [{ start, blob }]
+  const kept: MemoryPart[] = []
+  if (start < from) kept.push({ start, blob: blob.slice(0, from - start) })
+  if (end > to) kept.push({ start: to, blob: blob.slice(to - start) })
+  return kept
+}
+
+/**
+ * The film kept in memory: each chunk of mediabunny's target becomes a Blob part as soon as it arrives (the muxer's 4 MB
+ * buffer is released at once), and the film is the Blob of those parts: the bytes are never concatenated into one buffer.
+ * Later writes over bytes already written (sizes patched at the end) replace them.
+ */
+function memoryStream() {
+  let parts: MemoryPart[] = []
+  let size = 0
+  const stream = new WritableStream<StreamTargetChunk>({
+    write({ data, position }) {
+      const end = position + data.length
+      if (position < size) parts = parts.flatMap((part) => outside(part, position, end))
+      else if (position > size) parts.push({ start: size, blob: new Blob([new Uint8Array(position - size)]) })
+      parts.push({ start: position, blob: new Blob([data]) })
+      size = Math.max(size, end)
+    },
+  })
+  return {
+    stream,
+    size: () => size,
+    /** The film as a Blob, null when nothing was written; the parts are dropped (the Blob holds the bytes). */
+    take(type: string): Blob | null {
+      const blob = size > 0 ? new Blob(parts.sort((a, b) => a.start - b.start).map((part) => part.blob), { type }) : null
+      parts = []
+      return blob
+    },
+  }
+}
+
 /**
  * Start an encoding session reading its frames from `canvas` (which must keep the size of the video).
  * Rejects when no codec is available.
@@ -229,7 +273,7 @@ export async function createVideoEncoder(
   canEncode?: CanEncode,
   canEncodeSound?: CanEncodeAudio,
 ): Promise<VideoEncodeSession> {
-  const { AudioSample, AudioSampleSource, BufferTarget, Mp4OutputFormat, Output, Quality, StreamTarget, VideoSample, VideoSampleSource, WebMOutputFormat } =
+  const { AudioSample, AudioSampleSource, Mp4OutputFormat, Output, Quality, StreamTarget, VideoSample, VideoSampleSource, WebMOutputFormat } =
     await mediabunny()
   const { destination, transparent = false, encoding } = options
   const choice = transparent ? 'auto' : (encoding?.codec ?? 'auto')
@@ -243,15 +287,12 @@ export async function createVideoEncoder(
   const audioBitrate = encoding ? encoding.audioKbps * 1000 : AUDIO_BITRATE
   let canceled = false
   let sizeBytes = 0
-  const buffer = new BufferTarget()
-  const target = destination
-    ? new StreamTarget(
-        diskStream(destination, () => canceled, (end) => (sizeBytes = Math.max(sizeBytes, end))),
-        { chunked: true, chunkSize: STREAM_CHUNK_BYTES },
-      )
-    : buffer
+  const memory = destination ? null : memoryStream()
+  const stream = destination ? diskStream(destination, () => canceled, (end) => (sizeBytes = Math.max(sizeBytes, end))) : memory!.stream
+  const target = new StreamTarget(stream, { chunked: true, chunkSize: STREAM_CHUNK_BYTES })
   const output = new Output({
-    format: codec.container === 'mp4' ? new Mp4OutputFormat(destination ? { fastStart: false } : {}) : new WebMOutputFormat(),
+    // in memory the index goes at the start (mediabunny's default for a buffer target), on disk after the frames
+    format: codec.container === 'mp4' ? new Mp4OutputFormat({ fastStart: destination ? false : 'in-memory' }) : new WebMOutputFormat(),
     target,
   })
   // frames handed to the VideoEncoder and packets out of it (the export's breadcrumb)
@@ -327,9 +368,10 @@ export async function createVideoEncoder(
       sound?.close()
       source.close()
       await output.finalize()
-      if (destination) return { blob: null, sizeBytes }
-      if (!buffer.buffer) throw new Error('Le fichier vidéo est vide.')
-      return { blob: new Blob([buffer.buffer], { type: mimeType }), sizeBytes: buffer.buffer.byteLength }
+      if (!memory) return { blob: null, sizeBytes }
+      const blob = memory.take(mimeType)
+      if (!blob) throw new Error('Le fichier vidéo est vide.')
+      return { blob, sizeBytes: blob.size }
     },
     async cancel() {
       if (canceled) return
