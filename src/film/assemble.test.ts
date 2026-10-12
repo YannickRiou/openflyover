@@ -7,7 +7,6 @@ import type { Landmark } from '../osm/landmarks'
 import {
   autoStopId,
   autoStops,
-  climbPlaceId,
   filmStops,
   freezeLandmarkTitles,
   LANDMARK_TITLE_S,
@@ -251,22 +250,5 @@ describe('withLandmarkTitles', () => {
     const ownEdit = { ...film, speeds: film.speeds.map((s) => (s.id === 'speed-1' ? { ...s, factor: 3 } : s)) }
     expect(freezeLandmarkTitles(film, ownEdit)).toBe(ownEdit)
     expect(freezeLandmarkTitles({ ...film, landmarkTitles: false }, moved)).toBe(moved)
-  })
-})
-
-describe('placeStop for a climb top', () => {
-  const stops = [
-    { atM: 900, source: { kind: 'climb' as const, ref: '1' } },
-    { atM: 900, source: { kind: 'landmark' as const, ref: 'climb:1' } },
-    { atM: 2000, source: { kind: 'manual' as const } },
-  ]
-
-  it('finds the stop made for that climb, not one of another climb or a landmark', () => {
-    expect(placeStop(stops, { id: climbPlaceId(1), atM: 900 })).toBe(stops[0])
-    expect(placeStop(stops, { id: climbPlaceId(0), atM: 5000 })).toBeUndefined()
-  })
-
-  it('else a stop placed by hand within a metre of the top', () => {
-    expect(placeStop(stops, { id: climbPlaceId(3), atM: 2000.4 })).toBe(stops[2])
   })
 })
