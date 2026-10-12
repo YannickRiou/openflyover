@@ -131,6 +131,7 @@ describe('engine options from settings', () => {
     landmarks: {
       enabled: true,
       kinds: { peak: true, pass: true, hut: true, lake: true, waterfall: false, place: false, viewpoint: false, glacier: false, waterPoint: false },
+      places: { city: true, village: true, hamlet: true },
       maxDistanceM: 1500,
       hiddenIds: [],
     },

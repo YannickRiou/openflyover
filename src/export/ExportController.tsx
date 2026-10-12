@@ -23,6 +23,7 @@ import { useMediaStore } from '../film/media'
 import { CAMERA_FOV_DEG, filmViewMovesWithTime, overviewView } from '../flyover/filmCamera'
 import { filmTrackOf } from '../flyover/sequence'
 import { smoothedTrackPath } from '../flyover/smooth'
+import { nightAt } from '../flyover/sun'
 import { loadOverlayFonts } from '../overlay/assets'
 import { filmTextOpacity, overlayTime, overlayTimedState } from '../overlay/draw'
 import { loadFrameMedia, overlayExtras, releaseFrameMedia } from '../overlay/exportOverlay'
@@ -565,8 +566,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
           : shutterSamples(times, schedule, i, shutter, maxSubFrames, keep)
       const rendered = renders.map((r) => r.progress).join()
       // held frames (holds, stops) repeat the composed image as is, unless the view, the scene (animated figurine,
-      // drifting clouds, rippling water) or the overlay moves with time
-      const timed = sceneMovesWithTime || filmViewMovesWithTime(state, settings.camera)
+      // drifting clouds, rippling water), the sun (a night pause) or the overlay moves with time
+      const timed = sceneMovesWithTime || filmViewMovesWithTime(state, settings.camera) || nightAt(filmClock, times[i]) !== null
       const overlayNow = overlayKey(progress, times[i])
       if (rendered !== previous || ((timed || previousTimed) && times[i] !== frameTimeS) || overlayNow !== previousOverlay) {
         frameTimeS = times[i]

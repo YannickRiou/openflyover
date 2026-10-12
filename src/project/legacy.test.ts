@@ -158,6 +158,7 @@ describe('frozen old projects', () => {
       autoMode: 'rythme',
       stops: [], speeds: [], cameraKeys: [], texts: [], media: [], audio: [],
       duckMusic: false, pois: [], landmarkTitles: false,
+      nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
     })
     expect(s.labels).toEqual({ climbs: true, waypoints: false, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 })
     expect(s.overlay).toMatchObject({
@@ -173,6 +174,7 @@ describe('frozen old projects', () => {
     expect(s.landmarks).toEqual({
       enabled: true,
       kinds: { peak: true, pass: true, hut: false, lake: true, waterfall: false, place: false, viewpoint: false, glacier: false, waterPoint: false },
+      places: { city: true, village: true, hamlet: true },
       maxDistanceM: 800,
       hiddenIds: [],
     })
@@ -214,6 +216,7 @@ describe('frozen old projects', () => {
       duckMusic: false,
       pois: [],
       landmarkTitles: false,
+      nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
     })
     expect(s.labels).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 })
     expect(s.overlay.enabled).toBe(false)

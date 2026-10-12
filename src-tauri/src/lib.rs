@@ -1,9 +1,10 @@
 //! Desktop shell of OpenFlyover: the web app (../dist) in a native window, with the dialog and fs plugins used by
 //! src/platform/desktop.ts, the oauth and opener plugins of the Strava connection (src/platform/oauthRedirect.ts), the
-//! native video encoder (system ffmpeg) for webviews without WebCodecs (video.rs), and batch rendering from the command
-//! line (cli.rs).
+//! native video encoder (system ffmpeg) for webviews without WebCodecs (video.rs), batch rendering from the command
+//! line (cli.rs) and the load of the machine shown in the status bar (system.rs).
 
 mod cli;
+mod system;
 mod video;
 
 use tauri::Manager;
@@ -17,6 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(video::VideoState::default())
         .manage(cli::CliState::default())
+        .manage(system::new_state())
         .setup(|app| {
             cli::setup(app.handle());
             Ok(())
@@ -24,6 +26,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             cli::cli_render,
             cli::cli_exit,
+            system::system_stats,
             video::video_available,
             video::video_sound,
             video::video_open,

@@ -200,6 +200,7 @@ describe('settings and misc', () => {
         duckMusic: false,
         landmarkTitles: true,
         pois: [],
+        nights: { enabled: true, duskS: 3, nightS: 2, dawnS: 3 },
       },
       labels: { climbs: true, waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 },
       weather: { enabled: true },
@@ -219,7 +220,8 @@ describe('settings and misc', () => {
       },
       landmarks: {
         enabled: true,
-        kinds: { peak: true, pass: true, hut: true, lake: true, waterfall: false, place: false, viewpoint: false, glacier: false, waterPoint: false },
+        kinds: { peak: true, pass: true, hut: true, lake: true, waterfall: false, place: true, viewpoint: false, glacier: false, waterPoint: false },
+        places: { city: true, village: true, hamlet: true },
         maxDistanceM: 1500,
         hiddenIds: [],
       },

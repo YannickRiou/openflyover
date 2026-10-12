@@ -309,6 +309,18 @@ describe('flight stops (pauses given by the film)', () => {
     expect(pacing.pauses.map((p) => p.durationS)).toEqual([22.5, 7.5])
   })
 
+  it('an extra pause (a night) lengthens the film whatever keepDuration and is never shortened', () => {
+    const pacing = flightPacing(L, [], D, { ...off, keepDuration: true }, [
+      { atM: 3000, durationS: 30 },
+      { atM: 5000, durationS: 12, extra: true },
+      { atM: 7000, durationS: 10 },
+    ])
+    expect(pacing.totalTime()).toBeCloseTo(D + 12, 9)
+    expect(pacing.pauses.map((p) => p.durationS)).toEqual([22.5, 12, 7.5])
+    // the stops take half of the duration: the base speed doubles
+    expectWellFormed(pacing, 2 / D)
+  })
+
   it('two stops at the same place: one after the other, reached at the first', () => {
     const pacing = flightPacing(L, [], D, off, [
       { atM: 5000, durationS: 2 },

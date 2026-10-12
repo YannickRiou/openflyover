@@ -97,6 +97,11 @@ export interface Track {
   utcOffsetMin?: number
   /** the point times are estimated from a planned departure (« Prévoir la sortie », src/plan/timing.ts), not recorded */
   timesEstimated?: boolean
+  /**
+   * elevations read from the terrain source (« Calculer l'altitude », src/terrain/elevation.ts), not recorded: 'all'
+   * when the file had none, 'gaps' when only the points without one were filled
+   */
+  elevationEstimated?: 'all' | 'gaps'
 }
 
 /** A named point stored with a track (GPX <wpt>), not part of the path. */
