@@ -35,6 +35,16 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Project** (#20): « Nouveau projet » and « Fermer le projet » in the Projet tab, which gathers every project action.
 - **Overlay positions** (#39, #38): one 3 × 3 grid for every position, a free position in pixels of the exported
   video, logo opacity.
+- **Marker keys** (#40): change the marker (ball, figure, own picture) along the track with keys on the timeline,
+  cross-faded in under a second of film; « Un marqueur par jour / par étape » for chained tracks and « À la suite ».
+  Same in the export.
+- **Keys on more than the camera** (#24): speed, exposure, sun hour and colour grading can be keyed along the track in a
+  new « Réglages » lane of the timeline.
+- **More overlay styles** (#19): five new styles (Sportif, Minimal mono, Topo, Néon nuit, Magazine) for the film and the
+  poster; 3D labels follow the overlay style with one editable colour per label type; the text backing of styles without
+  a panel is a discreet blurred rounded rectangle, or the text's shadow or outline only.
+- **Relief at sea** (#28): optional « Nettoyer le relief en mer » removes the isolated spikes elevation data leaves over
+  the sea (the 3D track follows), with « Ramener la mer à 0 m » as a sub-option.
 - **Marker** (#21, #30): free or track colour, ring / halo / pulse styles; six new figures, figure chosen from the
   activity, pin / rounded square / silhouette badges, a label and a stick with its ground shadow.
 

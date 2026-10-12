@@ -156,7 +156,7 @@ describe('frozen old projects', () => {
       closing: { style: 'descente', durationS: 5 },
       autoStops: true,
       autoMode: 'rythme',
-      stops: [], speeds: [], cameraKeys: [], paramKeys: [], texts: [], media: [], audio: [],
+      stops: [], speeds: [], cameraKeys: [], paramKeys: [], markerKeys: [], texts: [], media: [], audio: [],
       duckMusic: false, pois: [], landmarkTitles: false,
       nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
     })
@@ -212,6 +212,7 @@ describe('frozen old projects', () => {
       speeds: [],
       cameraKeys: [],
       paramKeys: [],
+      markerKeys: [],
       texts: [{ id: 'text-1', startS: 3, durationS: 4, text: 'Départ', anchor: 'bottom-left', size: 1 }],
       media: [],
       audio: [],
