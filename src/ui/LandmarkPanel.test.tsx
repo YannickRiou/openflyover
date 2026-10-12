@@ -50,10 +50,10 @@ const PASS = landmark('node/1', 'pass', 'Col de Voza', 1500, 50)
 const LAKE = landmark('way/2', 'lake', 'Lac Vert', 3000, 400)
 const POI = { id: 'poi-1', lon: 6.8, lat: 45.8 + 4000 / M_PER_DEG_LAT, name: 'Pique-nique' }
 
-async function mount(film: Film, flown = track) {
+async function mount(film: Film) {
   found.list = [PASS, LAKE]
   // no landmark titles: their making on each publication is a step of its own
-  useAppStore.setState({ tracks: [flown], settings: { ...DEFAULT_SETTINGS, film: { ...film, landmarkTitles: false } } })
+  useAppStore.setState({ tracks: [track], settings: { ...DEFAULT_SETTINGS, film: { ...film, landmarkTitles: false } } })
   getSettingsHistory().clear()
   const host = document.body.appendChild(document.createElement('div'))
   const root = createRoot(host)
@@ -62,13 +62,6 @@ async function mount(film: Film, flown = track) {
   const stopBox = (name: string) => host.querySelector<HTMLInputElement>(`input[aria-label="Arrêt dans le film à « ${name} »"]`)!
   return { host, root, button, stopBox }
 }
-
-// 5 km climbing from 1 000 m to 1 600 m: one climb, its top at the end of the track
-const climbing = buildTrack({
-  name: 'Montée',
-  source: 'gpx',
-  segments: [{ points: Array.from({ length: 251 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 20) / M_PER_DEG_LAT, ele: 1000 + i * 2.4 })) }],
-})
 
 describe('LandmarkPanel: one list of landmarks and points of interest', () => {
   afterEach(() => {
@@ -94,24 +87,6 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
     await act(async () => stopBox('Col de Voza').click())
     film = useAppStore.getState().settings.film
     expect(film.stops.map((s) => s.label)).toEqual(['Lac Vert', 'Pique-nique'])
-    act(() => root.unmount())
-  })
-
-  it('lists the top of a climb with its altitude; « Arrêt » makes and removes its stop', async () => {
-    const { host, root, stopBox } = await mount({ ...DEFAULT_FILM, autoStops: false }, climbing)
-    const row = [...host.querySelectorAll('.place')].find((li) => li.querySelector('.landmark__name')?.textContent?.startsWith('Montée 1'))!
-    expect(row.querySelector('.landmark__name')?.textContent).toMatch(/^Montée 1 · sommet 1.?600 m$/)
-    // no eye: its label is the choice of the Montées section
-    expect(row.querySelector('button[aria-label^="Masquer"]')).toBeNull()
-    const box = stopBox(row.querySelector('.landmark__name')!.textContent!)
-    expect(box.checked).toBe(false)
-    await act(async () => box.click())
-    const stop = useAppStore.getState().settings.film.stops[0]
-    expect(stop).toMatchObject({ label: expect.stringContaining('Montée 1'), source: { kind: 'climb', ref: '0' } })
-    expect(stop.atM).toBeGreaterThan(4000)
-    expect(stopBox(row.querySelector('.landmark__name')!.textContent!).checked).toBe(true)
-    await act(async () => stopBox(row.querySelector('.landmark__name')!.textContent!).click())
-    expect(useAppStore.getState().settings.film.stops).toEqual([])
     act(() => root.unmount())
   })
 

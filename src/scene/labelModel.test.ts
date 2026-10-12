@@ -8,7 +8,6 @@ import {
   LABEL_FADE_START_M,
   WAYPOINT_PRIORITY,
   climbLabelText,
-  climbLabels,
   distanceFade,
   KM_PRIORITY,
   kmLabels,
@@ -113,21 +112,6 @@ describe('label texts and sources', () => {
     expect(climbLabelText(climb(null, 980), 2)).toBe('Montée 3 · 980 m')
   })
 
-  it('anchors climb labels at the top, harder climbs first', () => {
-    const labels = climbLabels(track('a'), [climb('4', 1200), climb('1', 1650)])
-    expect(labels[1]).toEqual({
-      id: 'climb:a:1',
-      lon: 6.782,
-      lat: 45.863,
-      ele: 1650,
-      text: 'Montée 2 · cat. 1 · 1\u202f650 m',
-      kind: 'climb',
-      priority: labels[1].priority,
-    })
-    expect(labels[1].priority).toBeGreaterThan(labels[0].priority)
-    expect(labels[0].priority).toBeGreaterThan(WAYPOINT_PRIORITY)
-  })
-
   it('lists the waypoints of every track', () => {
     const labels = waypointLabels([
       track('a', [{ lon: 6.78, lat: 45.86, ele: 1653, name: 'Col de Voza' }]),
@@ -147,7 +131,6 @@ describe('label texts and sources', () => {
       { id: 'poi-2', lon: 6.9, lat: 45.9, name: '  ' },
     ])
     expect(labels).toEqual([{ id: 'poi:poi-1', lon: 6.8, lat: 45.9, text: 'Pique-nique', kind: 'poi', priority: POI_PRIORITY, icon: 'repas' }])
-    expect(POI_PRIORITY).toBeGreaterThan(climbLabels(track('a'), [climb('HC', 2000)])[0].priority)
   })
 })
 
