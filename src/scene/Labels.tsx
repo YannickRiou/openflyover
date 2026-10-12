@@ -1,6 +1,6 @@
 /**
  * Labels — names anchored on the draped relief, drawn inside WebGL so a canvas capture (video export) includes them:
- * climb tops, GPX waypoints, points of interest (`film.pois`) and the sources registered in `labelSources.ts`.
+ * GPX waypoints, points of interest (`film.pois`) and the sources registered in `labelSources.ts`.
  * The start and the finish of every track always have a flag pin.
  *
  * Each label is a Sprite (sizeAttenuation off: constant screen size). Sprites skip the depth test; instead, every frame,
@@ -21,12 +21,10 @@ import { paramAt } from '../film/paramKeys'
 import { trackPathOf } from '../flyover/path'
 import { filmTrackOf } from '../flyover/sequence'
 import type { PoiIcon } from '../film/model'
-import { climbsOf } from '../flyover/climbs'
 import { OVERLAY_THEMES, resolveLabelStyle } from '../overlay/themes'
 import type { LabelStyle } from '../overlay/themes'
 import { useAppStore } from '../state/store'
 import {
-  climbLabels,
   kmLabels,
   endpointLabels,
   photoLabels,
@@ -291,7 +289,6 @@ export function Labels() {
   const labels = useMemo(() => {
     const out: LandmarkLabel[] = []
     const first = filmTrack
-    if (show.climbs && first) out.push(...climbLabels(first, climbsOf(first)))
     if (show.waypoints) out.push(...waypointLabels(tracks))
     if (first) out.push(...kmLabels(first, show.kmStep))
     // « À la suite », every stage is flown: each one's start and finish named
