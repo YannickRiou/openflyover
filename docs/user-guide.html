@@ -510,12 +510,14 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     <li><div>Click <strong>"Exporter la vidéo"</strong>. In Chrome, Edge and the desktop app you first pick where to save: the file is written as the export progresses. Each frame waits for the visible terrain to load. The top button shows progress ("42 % · Annuler"); click it to stop.</div></li>
     <li><div>At the end the panel shows "Enregistrée dans…". In other browsers the file downloads at the end.</div></li>
   </ol>
-  <p class="note">Keep the tab open during the export; tabs and format are locked. Without direct writing to disk, the video is built in memory (about twice its size); above an estimated 1.5 GB the panel warns you.</p>
+  <p>The Vidéo panel is grouped in "Format" (proportions, resolution, frames per second), "Encodage" (video bitrate "Selon la qualité" or "Manuel" with a 1–80 Mbit/s slider; codec and container, only those your device can encode; key frames every 0.5 to 10 s; sound 96 to 320 kbit/s) and "Rendu" ("Qualité de rendu": clouds and motion blur of the export, and the bitrate unless it is manual).</p>
+  <p>Each image waits for its map tiles. If a tile server keeps failing (a few minutes of retries), the export stops with a message naming the server and the tile; "Rapport de diagnostic" gives the details. Try again later or pick another base map.</p>
+  <p class="note">Keep the tab open during the export; tabs and format are locked, and the preview stays still until the end. Without direct writing to disk, the video is built in memory (about twice its size); above an estimated 1.5 GB the panel warns you.</p>
   <h3 class="sub">Other outputs</h3>
   <div class="cols">
     <div>
       <h4>Still image</h4>
-      <p>Move the playhead, then "Image fixe" (PNG, or JPEG in the "Type de l'image fixe" row). Same size as the video, overlay included.</p>
+      <p>Move the playhead, then "Image fixe" in the "Affiche" mode (PNG or JPEG in its "Type d'image" row). Same size as the video, overlay included.</p>
     </div>
     <div>
       <h4>Overlay only</h4>
@@ -527,7 +529,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     </div>
     <div>
       <h4>Poster</h4>
-      <p>"Affiche": A4 or A3 at 300 dpi, portrait or landscape, or square. Title, date, key figures, profile, weather, credits; several tracks each in its colour; "Carte à plat" for a map seen from above.</p>
+      <p>"Affiche": A4 or A3 at 300 dpi, portrait or landscape, or square. Title, date, key figures, profile, weather, credits; several tracks each in its colour; "Carte à plat" for a map seen from above. Otherwise "Vue 3D" picks "Vue d'ensemble" or "Vue actuelle de la caméra" (place the camera by hand first). "Type d'image": PNG or JPEG. The thumbnail is an approximation (low-resolution flat map); a bar shows the tiles loading, and missing flat-map tiles are reported.</p>
     </div>
   </div>
   <p>At the bottom of the drawer, "Historique des rendus" lists your last 20 films (done, canceled or failed) with the real export time, the speed per image, the output and the settings that make a render slower (clouds, shadows, lens effects, map style). "Réutiliser ces réglages" puts them back in one step you can undo; the list stays on this device and holds no track and no video.</p>
