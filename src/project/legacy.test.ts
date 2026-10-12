@@ -174,6 +174,7 @@ describe('frozen old projects', () => {
     expect(s.landmarks).toEqual({
       enabled: true,
       kinds: { peak: true, pass: true, hut: false, lake: true, waterfall: false, place: false, viewpoint: false, glacier: false, waterPoint: false },
+      places: { city: true, village: true, hamlet: true },
       maxDistanceM: 800,
       hiddenIds: [],
     })
