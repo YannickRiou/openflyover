@@ -88,8 +88,8 @@ export interface ProjectLibrary {
   list(): Promise<ProjectEntry[]>
   /** write the document of entry `id`, or of a new entry when `id` is null; without `thumbnail` the entry keeps its own */
   save(id: string | null, project: { name: string; summary: string; text: string | Blob; thumbnail?: string }): Promise<ProjectEntry>
-  /** text of the document */
-  load(id: string): Promise<string>
+  /** the document as a Blob (`.text()` where the JSON is needed, then drop it): never a string of tens of MB held up front */
+  load(id: string): Promise<Blob>
   /** the entry only: the document keeps its name until its next save */
   rename(id: string, name: string): Promise<ProjectEntry>
   remove(id: string): Promise<void>
