@@ -1716,16 +1716,33 @@ exports) gets it from the terrain source of the settings.
   (`src/overlay/draw.ts`), draws it on a 2D context, on screen or off screen. The preview (`OverlayCanvas`, a 2D canvas above
   the 3D canvas, without mouse events) and the video export (`exportOverlay.ts` → `ExportController`) call
   the same function: the film shows exactly the preview.
-- **Styles** (`OVERLAY_STYLES`, `OVERLAY_THEMES`): `editorial`, `broadcast`, `app`, `sport` (« Sportif »: near-black blocks,
-  orange edge, condensed capitals), `mono` (« Minimal mono »: no panel, monospaced figures), `topo` (« Topo »: map-paper
-  panels, Fraunces serif, rust accent), `neon` (« Néon nuit »: deep-blue glass, glowing cyan edge), `magazine` (square
-  white sheets, bold serif, thin red edge); also for the poster (`POSTER_LAYOUTS`: each style picks an existing
-  arrangement). **Text backing** (`OverlayOverrides.textBacking`, styles without panel: Éditorial, Minimal mono):
+- **Styles** (`OVERLAY_STYLES`, `OVERLAY_THEMES`): `editorial`, `broadcast`, `app` and `neon` (« Néon nuit »: deep-blue glass,
+  glowing cyan edge) place the widgets at the user's anchors and only differ by colours, fonts and panels. Three styles
+  have a structure of their own (`src/overlay/structures.ts`, `styleStructure`, a pure function of the frame like the rest):
+  `cinema` (« Cinéma »: two black letterbox bars of 11 % of the height; the counters as one centred subtitle line in the
+  bottom bar, « 12,4 km · alt. 2 450 m · D+ 980 m · 4 h 12 », widely spaced, thin dots between; the profile as a thin line
+  along the top edge of the bottom bar; weather and a small map in the top bar; the opening card centred in light Fraunces
+  capitals with wide letter spacing), `journal` (« Journal de bord »: a full-height cream sheet with a thin ink border on
+  the left edge, about 24 % of the width; from the top, the title in italic serif, the counters as a list with dotted
+  leaders, the weather, the framed map with its north arrow, the profile as an ink line with altitude ticks; the closing
+  card replaces the figures with the totals in the same list; nothing in the right half) and `tableau` (« Tableau sportif »:
+  a translucent dark band over the bottom 20 %, the counters as big condensed numbers spread evenly with the unit in the
+  accent and a small capital label, the profile as a faded area filling the band, the title on an accent stripe at the top
+  left (two lines at most), the map clipped to a circle at the top right). `STYLE_LAYOUTS` gives each of them the default
+  anchors and sizes of its widgets, applied by `withStyleLayout(overlay, style)` when the style is chosen in the picker
+  (nothing is overwritten while the style stays the same; the free offsets of the laid-out widgets are dropped; leaving a
+  structured style puts the anchors back to the defaults of a new project). A widget is drawn by the structure only while
+  it sits in a slot of the style (`inStyleSlot`: the style's anchor, or the left column for `journal`, and no free offset);
+  moved elsewhere, it is an ordinary widget with the style's theme. The structure leaves an `area` of the frame to the
+  ordinary widgets, the timeline texts, the photos and the credits (`layoutWidgets(items, size, gap, area)`). A structure is
+  drawn whenever the overlay is on. Removed ids (`sport`, `mono`, `topo`, `magazine`, never released) open in `broadcast`,
+  `editorial`, `editorial`, `editorial` (`withKnownStyle`, in `SETTING_UPGRADES`, for the overlay and the poster). Also for
+  the poster (`POSTER_LAYOUTS`). **Text backing** (`OverlayOverrides.textBacking`, styles without panel: Éditorial, Cinéma):
   'blur' (default: `drawPanel` draws a rounded rect off-canvas and only its `shadowBlur` shadow lands in place, no
-  `ctx.filter` for Safari; replaces the former oval scrim), 'shadow' (darker, wider text shadow), 'outline'
-  (`strokeText` rim). **Labels** follow the style (`OverlayTheme.label`, `resolveLabelStyle`: font, panel, text colour,
-  radius, one accent per `LandmarkKind`), even with the overlay off; `OverlaySettings.labelColors?` (partial kind →
-  '#rrggbb', `isValidLabelColors`, `withLabelColor`) overrides an accent; Éditorial reproduces the former look.
+  `ctx.filter` for Safari; replaces the former oval scrim), 'shadow' (darker, wider text shadow), 'outline' (`strokeText`
+  rim). **Labels** follow the style (`OverlayTheme.label`, `resolveLabelStyle`: font, panel, text colour, radius, one accent
+  per `LandmarkKind`), even with the overlay off; `OverlaySettings.labelColors?` (partial kind → '#rrggbb',
+  `isValidLabelColors`, `withLabelColor`) overrides an accent; Éditorial reproduces the former look.
 - **Units**: 1 u = 1% of the shorter side of the image; safety margins of 5% on each side; shadow blurs corrected for the
   context transform (devicePixelRatio). Widgets that share one of the 9 anchors stack (`layoutWidgets`). A widget with a free position (`offset`) leaves its
   anchor's stack (the others close up as if it were not there): it is placed alone at its anchor, moved by the offset
@@ -2036,7 +2053,7 @@ exports) gets it from the terrain source of the settings.
   The 3D view is rendered through the still-image path (`ExportController`) at the size of the layout's view box,
   then drawn with the text onto an `OffscreenCanvas` the size of the poster by `drawPoster`.
 - **Settings**: `settings.poster` (`src/poster/settings.ts`): `format` (A4 2,480 × 3,508, A3 3,508 × 4,960, portrait or
-  landscape, at 300 dpi; square 2,160 × 2,160), `style` (`editorial`, `broadcast`, `app`, the overlay's labels), `title`
+  landscape, at 300 dpi; square 2,160 × 2,160), `style` (the seven styles of the overlay, with its labels), `title`
   (empty = project name, `effectiveProjectName`), `subtitle` (followed by the track date), `figures` (distance, elevation gain, duration,
   max. elevation, number of climbs), `weather`, `flat` ("Carte à plat" (flat map), missing from an old project: `false` through
   `withPosterDefaults`, `SETTING_UPGRADES`). Validation `isValidPoster` (`SETTING_CHECKS`). A preset keeps only
@@ -2054,14 +2071,12 @@ exports) gets it from the terrain source of the settings.
 - **Layout** (`layout.ts`, pure): 1 u = 1% of the short side. The boxes depend only on the size, the style and the
   rows present, never on a measured text: the size of the view to render is known before any measurement, and a text cannot
   spill over onto its neighbor. Portrait and square: text below the view (one row of figures); landscape (ratio
-  > 1.15): 40 u column on the right (two figures per row, credits at the foot of the column). Square: rows at 70%. Styles:
-  "Éditorial" (paper page, view inset by 6 u), "Diffusion" (full-bleed view, ink band or column with a trail-marker red
-  bar), "Application" (view across the whole poster, rounded and shadowed paper card on top). The text is fitted to the drawing
+  > 1.15): 40 u column on the right (two figures per row, credits at the foot of the column). Square: rows at 70%. Arrangements (`POSTER_LAYOUTS`, each style picks one): "Éditorial" (paper page, view inset by 6 u), "Diffusion" and "Néon nuit" (full-bleed view, ink band or column with a trail-marker red bar), "Application" (view across the whole poster, rounded and shadowed paper card on top), "Cinéma" (a thin black band over the view, the lower band carrying the text centred: title in capitals, the figures on one thin line, profile as a line; same on every format), "Journal de bord" (a paper column down the left edge, 30 % of the width, wider for a list of tracks, with the title on two lines, the figures as a list with dotted leaders, the map of the track in the room left — `PosterContent.outline`, `PosterRows.map`, `PosterLayout.map` — the profile, the weather and the credits at the foot; the view takes the rest over the whole height) and "Tableau sportif" (the view over a full-width dark band with an accent line: the title on an accent stripe, the figures big and spread evenly, the profile as an area behind them). `PosterLayout.bands` holds the black bands beyond the panel. The text is fitted to the drawing
   (`fitText`: size reduced down to a floor, then "…"; `fitLines`: credits on two lines at most, fixed size of
   1.15 u before reduction). Track list: 3 u rows, one column (two on the square, filled column after
   column); a single size for all rows (`fitTrackList`: figures in right-aligned columns as
   wide as their longest text, reduced until 40% of the row is left for the name, cut with "…"). Tests: all boxes within the page and its margins, within the panel, with no overlap between
-  them or with the view (except the floating card), view ≥ 38% of the poster, for each format × style × set of rows.
+  them or with the view (except the floating card and, in "Tableau sportif", the profile area behind the figures), view ≥ 38% of the poster, for each format × style × set of rows.
 - **Drawing** (`draw.ts`): `POSTER_THEMES` themes in the "Carte alpine" design system (paper, ink, trail-marker red, glacier),
   fonts of the overlay styles of the same name (Fraunces, IBM Plex Sans, Plex Sans Condensed), all in `OVERLAY_FONTS`
   (bundled and loaded by `loadOverlayFonts`, tested). View cropped to cover its box (`coverCrop`).
