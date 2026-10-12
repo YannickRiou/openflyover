@@ -12,7 +12,7 @@ import { DESKTOP_BUDGET, deviceBudget } from '../core/deviceBudget'
 import type { TrackPath } from '../flyover/path'
 import type { Platform, WritableFile } from '../platform'
 import { showToast } from '../ui/toast'
-import type { VideoQuality } from './schedule'
+import type { VideoEncoding, VideoQuality } from './schedule'
 
 export type ExportPhase = 'idle' | 'starting' | 'rendering' | 'finalizing' | 'done' | 'error' | 'canceled'
 
@@ -33,16 +33,23 @@ export interface ExportRequest {
   holdEndS: number
   /** file name without extension */
   baseName: string
+  /** encoding settings of « Vidéo » (bitrate by hand, codec, key frames, sound); none: from the quality, automatic */
+  encoding?: VideoEncoding
   /** a still image of this progress instead of the film (the timing fields are then unused) */
   still?: {
     progress: number
     type: StillType
     /** the whole track from the south (overview shot framing) instead of the view at `progress`, no marker */
     overview?: boolean
+    /** the camera as it is now (placed by hand, or by the film), instead of the view at `progress`, no marker */
+    camera?: boolean
     /** what the overview frames (default: the first track) */
     framing?: TrackPath
-    /** the view drawn without the scene (flat map poster), in place of a 3D render */
-    drawView?: (signal: AbortSignal) => Promise<OffscreenCanvas>
+    /**
+     * the view drawn without the scene (flat map poster), in place of a 3D render: `progress` follows its tiles; it
+     * resolves with the tiles that never came (grey there)
+     */
+    drawView?: (signal: AbortSignal, progress: (done: number, total: number) => void) => Promise<{ view: OffscreenCanvas; missingTiles: number }>
     /** draws the rendered image into the final picture (the poster), in place of the film overlay */
     compose?: (view: OffscreenCanvas) => Promise<OffscreenCanvas>
   }
@@ -60,8 +67,12 @@ export interface ExportResult {
   sizeBytes: number
   /** e.g. 'mp4/avc', 'png' */
   codec: string
+  /** encoded on the GPU's video encoder (WebCodecs `prefer-hardware` taken) */
+  hardware?: boolean
   /** frames captured before their terrain had finished loading (per-frame timeout) */
   incompleteFrames: number
+  /** tiles of a flat map poster that never came (grey there) */
+  missingTiles?: number
   /** about the soundtrack, shown with the result ('avec le son (AAC)', 'sans le son : …') */
   note?: string
 }
@@ -70,17 +81,46 @@ export interface ExportResult {
 export interface ExportTimings {
   /** distinct images rendered (held frames reuse the previous one) */
   rendered: number
-  /** `advance` calls: scene update + WebGL render */
+  /** `advance` calls (scene update + WebGL render): several per image with the clouds, a re-drape or the motion blur */
+  renders: number
+  /** time of the `advance` calls on the main thread: the GPU works on after them (`gpuMs`) */
   renderMs: number
+  /** GPU time of the renders measured (`gpuRenders` of them) by timer queries; 0 / 0 where the browser has none */
+  gpuMs: number
+  gpuRenders: number
   /** waiting for tiles between renders */
   waitMs: number
-  /** composing and encoding */
+  /** composing and encoding: `composeMs` + `frameMs` + `encodeWaitMs` */
   encodeMs: number
-  /** images captured at the per-frame timeout */
+  /** sky, WebGL image (which waits for the GPU to finish the render) and overlay drawn into the encoder canvas */
+  composeMs: number
+  /** the video frame taken from that canvas (`VideoFrame`, or its pixels read back for ffmpeg) */
+  frameMs: number
+  /** waiting for the encoder to take the previous frame (back-pressure) */
+  encodeWaitMs: number
+  /** frames whose tiles were still loading at the per-frame timeout (the export then fails) */
   timeouts: number
+  /** frames with tiles given up on after every attempt (the export then fails) */
+  givenUp: number
 }
 
-export const EMPTY_TIMINGS: ExportTimings = { rendered: 0, renderMs: 0, waitMs: 0, encodeMs: 0, timeouts: 0 }
+export const EMPTY_TIMINGS: ExportTimings = {
+  rendered: 0,
+  renders: 0,
+  renderMs: 0,
+  gpuMs: 0,
+  gpuRenders: 0,
+  waitMs: 0,
+  encodeMs: 0,
+  composeMs: 0,
+  frameMs: 0,
+  encodeWaitMs: 0,
+  timeouts: 0,
+  givenUp: 0,
+}
+
+/** The progress reaches the store (and the panels that draw it) at most this often during an export. */
+export const REPORT_INTERVAL_MS = 250
 
 /**
  * Short side of the frame at which pixel-sized scene elements (labels, track width) keep their preview size;
@@ -110,6 +150,8 @@ export interface ExportState {
   renderScale: number
   /** seconds per frame and per megapixel of the last film exported (time hint of a batch), kept by `start` and `reset` */
   secondsPerMegapixel: number | null
+  /** tiles of a still's view loaded / to load (flat map: requests; 3D: the most pending seen so far), null otherwise */
+  tiles: { done: number; total: number } | null
 
   start(request: Omit<ExportRequest, 'id'>): void
   cancel(): void
@@ -121,6 +163,7 @@ export interface ExportState {
   // reported by the controller
   begin(id: number, frameCount: number, now: number): boolean
   reportFrame(frame: number, now: number, timings?: ExportTimings): void
+  reportTiles(done: number, total: number): void
   setRenderScale(scale: number): void
   finalizing(): void
   complete(result: ExportResult): void
@@ -173,6 +216,7 @@ const IDLE = {
   error: null,
   timings: EMPTY_TIMINGS,
   renderScale: 1,
+  tiles: null,
 }
 
 function revoke(result: ExportResult | null): void {
@@ -253,13 +297,18 @@ export const useExportStore = create<ExportState>()((set, get) => ({
   begin(id, frameCount, now) {
     const { phase, request } = get()
     if (phase !== 'starting' || request?.id !== id) return false
-    set({ phase: 'rendering', frame: 0, frameCount, startedAt: now, etaS: null, timings: EMPTY_TIMINGS })
+    set({ phase: 'rendering', frame: 0, frameCount, startedAt: now, etaS: null, timings: EMPTY_TIMINGS, tiles: null })
     return true
   },
 
   reportFrame(frame, now, timings) {
     const { startedAt, frameCount } = get()
     set({ frame, etaS: estimateRemainingS(now - startedAt, frame, frameCount), ...(timings && { timings: { ...timings } }) })
+  },
+
+  reportTiles(done, total) {
+    const { tiles } = get()
+    if (tiles?.done !== done || tiles.total !== total) set({ tiles: { done, total } })
   },
 
   setRenderScale(renderScale) {
@@ -284,6 +333,19 @@ export const useExportStore = create<ExportState>()((set, get) => ({
     set({ phase: 'canceled', request: null, cancelRequested: false, etaS: null })
   },
 }))
+
+/**
+ * `reportFrame` at most every `interval` ms: each store update re-renders the panels that show the progress, which the
+ * export's main thread pays for. `force`: the last frame, or before the export ends (the history reads the timings).
+ */
+export function throttledReporter(interval = REPORT_INTERVAL_MS) {
+  let last = -Infinity
+  return (frame: number, now: number, timings?: ExportTimings, force = false): void => {
+    if (!force && now - last < interval) return
+    last = now
+    useExportStore.getState().reportFrame(frame, now, timings)
+  }
+}
 
 /** Back to the initial state (tests). */
 export function resetExportStore(): void {

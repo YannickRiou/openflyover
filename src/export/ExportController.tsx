@@ -4,7 +4,8 @@
  *
  * During an export: playback paused, frameloop 'never' (frames are drawn by `advance` only), renderer and camera at
  * the video size with a pixel ratio of 1, pointer events off. Each frame is rendered until the view has its tiles
- * (capture.ts), composed with the overlay into an OffscreenCanvas and encoded. Everything is restored afterwards, on
+ * (capture.ts), composed with the overlay into an OffscreenCanvas and encoded. A frame whose tiles cannot be had (given
+ * up on, or still loading at the timeout) stops the export with the tiles named. Everything is restored afterwards, on
  * success, error or cancel.
  *
  * Motion blur (`settings.lens.shutter`): one render per sub-frame of the open shutter, averaged by the composer's
@@ -33,19 +34,35 @@ import { useFilmClock } from '../scene/usePacing'
 import { holdRegion } from '../osm/region'
 import { useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
-import { REPLACE_EPSILON, composeFrame, composeOverlayFrame, renderSettledFrame, wait, type DrawOverlay } from './capture'
+import { viewTileFailures } from '../terrain/engine'
+import {
+  DEFAULT_SETTLE,
+  REPLACE_EPSILON,
+  composeFrame,
+  composeOverlayFrame,
+  renderSettledFrame,
+  tileFailureMessage,
+  wait,
+  yieldToEventLoop,
+  type DrawOverlay,
+  type FrameOutcome,
+} from './capture'
 import { noEncodingTest } from './diagnostic'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
-import { createExportEncoder } from './nativeEncoder'
+import { createGpuTimer } from './gpuTimer'
+import { timingsSummary } from './history'
+import { compositorAttributes, createExportEncoder } from './nativeEncoder'
 import { isExportStep, setExportProbe, writeBreadcrumb } from './guard'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule'
 import {
   EMPTY_TIMINGS,
+  REPORT_INTERVAL_MS,
   exportHasClouds,
   exportRenderScale,
   flushDrapes,
   setSkipClouds,
+  throttledReporter,
   useExportStore,
   videoFileName,
   type ExportRequest,
@@ -65,6 +82,8 @@ const STILL_JPEG_QUALITY = 0.92
 const FROM_SOUTH = { target: new Vector3(0, 0, 0), position: new Vector3(0, 0, 1) }
 /** Layer no camera renders: hides the progress marker on an overview still. */
 const HIDDEN_LAYER = 31
+/** Tasks waited at the end for the GPU timings of the last renders. */
+const GPU_TIMER_FLUSH_POLLS = 8
 
 interface RunDeps {
   get: () => RootState
@@ -93,7 +112,7 @@ async function abandon(error: unknown, request: ExportRequest, session: VideoEnc
 type Still = NonNullable<ExportRequest['still']>
 
 /** Encodes the still image (composed by the poster when it has `compose`) and hands the result to the store. */
-async function finishStill(request: ExportRequest, still: Still, view: OffscreenCanvas, incompleteFrames: number): Promise<void> {
+async function finishStill(request: ExportRequest, still: Still, view: OffscreenCanvas, missingTiles = 0): Promise<void> {
   useExportStore.getState().finalizing()
   const output = still.compose ? await still.compose(view) : view
   const blob = await output.convertToBlob({ type: still.type, quality: STILL_JPEG_QUALITY })
@@ -105,17 +124,13 @@ async function finishStill(request: ExportRequest, still: Still, view: Offscreen
     mimeType: blob.type,
     sizeBytes: blob.size,
     codec: jpeg ? 'jpeg' : 'png',
-    incompleteFrames,
+    incompleteFrames: 0,
+    ...(missingTiles > 0 && { missingTiles }),
   })
 }
 
 /** A still whose view is drawn without the scene (`drawView`, flat map poster): no WebGL frame, nothing to restore. */
-async function runDrawnStill(
-  request: ExportRequest,
-  still: Still,
-  drawView: (signal: AbortSignal) => Promise<OffscreenCanvas>,
-  signal: AbortSignal,
-): Promise<void> {
+async function runDrawnStill(request: ExportRequest, still: Still, drawView: NonNullable<Still['drawView']>, signal: AbortSignal): Promise<void> {
   const abort = new AbortController()
   const isCanceled = () => signal.aborted || useExportStore.getState().cancelRequested
   const stop = useExportStore.subscribe(() => {
@@ -123,9 +138,9 @@ async function runDrawnStill(
   })
   signal.addEventListener('abort', () => abort.abort(), { once: true })
   try {
-    const view = await drawView(abort.signal)
+    const { view, missingTiles } = await drawView(abort.signal, (done, total) => useExportStore.getState().reportTiles(done, total))
     useExportStore.getState().reportFrame(1, performance.now())
-    await finishStill(request, still, view, 0)
+    await finishStill(request, still, view, missingTiles)
   } catch (error) {
     await abandon(error, request, null, isCanceled())
   } finally {
@@ -143,21 +158,24 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
   const clock = deps.clock()
   const drawOverlay = deps.overlay()
   const isCanceled = () => deps.signal.aborted || exportStore().cancelRequested
+  const report = throttledReporter()
   let session: VideoEncodeSession | null = null
   try {
     useAppStore.getState().setPlaying(false)
     const compositor = new OffscreenCanvas(width, height)
-    const ctx = compositor.getContext('2d')
+    const ctx = compositor.getContext('2d', compositorAttributes())
     if (!ctx) throw new Error("Impossible de créer l'image de composition.")
     if (drawOverlay) await loadOverlayFonts()
     session = await createExportEncoder(compositor, { ...request, transparent: true })
     for (let i = 0; i < schedule.length; i++) {
       if (isCanceled()) throw new ExportCanceledError()
+      // the page answers between two frames (the frames themselves are a few ms of 2D drawing)
+      await yieldToEventLoop()
       const progress = schedule[i]
       await loadFrameMedia(times[i], progress)
       composeOverlayFrame(ctx, { progress, time: overlayTime(clock, progress, times[i]) }, width, height, drawOverlay)
       await session.addFrame(i)
-      exportStore().reportFrame(i + 1, performance.now())
+      report(i + 1, performance.now(), undefined, i === schedule.length - 1)
     }
     exportStore().finalizing()
     writeBreadcrumb('export : finalisation du fichier')
@@ -168,6 +186,7 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
       mimeType: session.mimeType,
       sizeBytes,
       codec: `${session.codec.container}/${session.codec.codec}`,
+      hardware: session.codec.hardware,
       incompleteFrames: 0,
       note: 'fond transparent, sans le son',
     })
@@ -239,24 +258,42 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   const path = track ? smoothedTrackPath(track, useAppStore.getState().settings.trackStyle.smoothingM) : null
   const timings: ExportTimings = { ...EMPTY_TIMINGS }
   const startedAt = performance.now()
+  const report = throttledReporter()
+  // GPU time of the renders, where the browser has timer queries (diagnostic, gpuTimer.ts)
+  const gl = three.gl as { getContext?: () => unknown }
+  const gpuTimer = typeof gl.getContext === 'function' ? createGpuTimer(gl.getContext()) : null
+  const readGpuTimer = () => {
+    if (!gpuTimer) return
+    gpuTimer.poll()
+    timings.gpuMs = gpuTimer.totalMs
+    timings.gpuRenders = gpuTimer.measured
+  }
 
-  // Overview still (poster): the progress, hence the rig, stays put; the camera is placed here before every render
-  // and put back afterwards, the progress marker hidden meanwhile.
+  // Stills of a fixed view: the overview (poster) or the camera as it is now. The progress, hence the rig, stays put;
+  // the camera is placed here before every render and put back afterwards, the progress marker hidden meanwhile.
   const overview = request.still?.overview === true
+  const fixedView = overview || request.still?.camera === true
   const controlsTarget = () => (deps.get().controls as unknown as { target?: Vector3 } | null)?.target
-  const savedView = overview
+  const savedView = fixedView
     ? { position: three.camera.position.clone(), quaternion: three.camera.quaternion.clone(), target: controlsTarget()?.clone() }
     : null
-  const marker = overview ? three.scene.getObjectByName('flyover-marker') : undefined
+  const marker = fixedView ? three.scene.getObjectByName('flyover-marker') : undefined
   const markerLayers = marker?.layers.mask
   const framing = request.still?.framing ?? path
-  const placeOverview = () => {
+  const placeFixedView = () => {
+    const { camera } = deps.get()
+    if (!overview) {
+      if (savedView) {
+        camera.position.copy(savedView.position)
+        camera.quaternion.copy(savedView.quaternion)
+      }
+      return
+    }
     const frame = deps.frame()
     const engine = deps.engine()
     if (!framing || framing.count === 0 || !frame) return
     const sampler: HeightSampler | null = engine ? (lon, lat) => engine.sampleHeight(lon, lat) : null
     const view = overviewView(framing, frame, sampler, useAppStore.getState().settings.exaggeration, width / height, FROM_SOUTH)
-    const { camera } = deps.get()
     camera.position.copy(view.position)
     camera.lookAt(view.target)
     controlsTarget()?.copy(view.target)
@@ -281,26 +318,42 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     if (app.playback.playing) app.setPlaying(false)
     applyVideoSize()
     clock += 1 / fps
-    if (overview) placeOverview()
+    if (fixedView) placeFixedView()
     setSkipClouds(!final)
+    readGpuTimer()
+    gpuTimer?.begin()
     try {
       deps.get().advance(clock)
     } finally {
+      gpuTimer?.end()
       setSkipClouds(false)
     }
+    timings.renders++
     timings.renderMs += performance.now() - t0
   }
 
+  /** waits of the current export (a frame that waited for none lets the next one try its final render first) */
+  let waits = 0
+  /** a still reports its tiles: the most pending seen, and how many of them came */
+  let peakPending = 0
+  let tilesReportedAt = -Infinity
   const timedWait = async (ms: number) => {
     const t0 = performance.now()
+    waits++
+    if (request.still && t0 - tilesReportedAt >= REPORT_INTERVAL_MS) {
+      tilesReportedAt = t0
+      const pending = frameDeps.pendingTiles()
+      peakPending = Math.max(peakPending, pending)
+      exportStore().reportTiles(peakPending - pending, peakPending)
+    }
     await wait(ms)
     timings.waitMs += performance.now() - t0
   }
 
   // Distance between the camera in use and the placement the rig would compute with the terrain loaded now.
   const cameraDrift = () => {
-    // the overview is placed again before every render
-    if (overview) return 0
+    // a fixed view is placed again before every render
+    if (fixedView) return 0
     const frame = deps.frame()
     if (!path || path.count === 0 || !frame) return 0
     const camera = deps.get().camera
@@ -330,13 +383,70 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     }
   }
 
+  /** film time set with every progress (a still keeps the current one) */
+  let frameTimeS = saved.timeS
+  /** re-drapes that ran since the last breadcrumb */
+  let drapes = 0
+  const frameDeps = {
+    advance,
+    separateFinal: exportHasClouds,
+    // what TerrainLayer does in a render (the only data requested per view), for the camera of the last render
+    updateTiles: () => {
+      const camera = deps.get().camera as PerspectiveCamera
+      if (camera.isPerspectiveCamera) deps.engine()?.update(camera, lodHeight)
+    },
+    pendingTiles: () => {
+      const stats = deps.engine()?.stats
+      return stats ? (stats.pendingVisibleTiles ?? stats.pendingTiles) : 0
+    },
+    missingTiles: () => deps.engine()?.stats.missingVisibleTiles ?? 0,
+    flushDrapes: () => {
+      const ran = flushDrapes()
+      if (ran) drapes++
+      return ran
+    },
+    now: () => performance.now(),
+    wait: timedWait,
+    isCanceled,
+    setProgress: (p: number) => {
+      if (!fixedView) useAppStore.getState().setProgress(p, frameTimeS)
+    },
+    cameraDrift,
+  }
+
+  /** A frame (1-based `frame`) without its terrain: counted, logged with its tiles, and the export stops (#36). */
+  const tilesFailed = (outcome: Exclude<FrameOutcome, 'complete'>, frame: number): Error => {
+    if (outcome === 'timeout') timings.timeouts++
+    else timings.givenUp++
+    const failures = viewTileFailures(deps.engine())
+    const message = tileFailureMessage(outcome, frame, failures, frameDeps.pendingTiles(), DEFAULT_SETTLE.timeoutMs)
+    console.error(`[export] ${message}`, failures)
+    writeBreadcrumb(`export : tuiles ${outcome === 'timeout' ? 'en retard' : 'abandonnées'} à l'image ${frame}`)
+    return new Error(message)
+  }
+
   let session: VideoEncodeSession | null = null
+  /** the frame being encoded while the next one renders (`addFrame` reads the canvas before it awaits anything) */
+  let encoding: Promise<void> | null = null
+  /** wait for the frame being encoded: the encoder's back-pressure, counted apart */
+  const encoded = async () => {
+    if (!encoding) return
+    const t0 = performance.now()
+    try {
+      await encoding
+    } finally {
+      encoding = null
+      const spent = performance.now() - t0
+      timings.encodeWaitMs += spent
+      timings.encodeMs += spent
+    }
+  }
   try {
     useAppStore.getState().setPlaying(false)
     // a region arriving now would change the framing mid-film (camera and highlight): it waits for the end
     holdRegion(true)
     three.setFrameloop('never')
-    // the view waits for the retries of its failed tiles, quickly (engine.ts)
+    // the view waits for the retries of its failed tiles, longer and longer (engine.ts)
     deps.engine()?.setExporting?.(true)
     canvas.style.pointerEvents = 'none'
     exportStore().setRenderScale(exportRenderScale(width, height))
@@ -345,52 +455,23 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     marker?.layers.set(HIDDEN_LAYER)
 
     const compositor = new OffscreenCanvas(width, height)
-    const ctx = compositor.getContext('2d', { alpha: false })
+    const ctx = compositor.getContext('2d', { alpha: false, ...compositorAttributes() })
     if (!ctx) throw new Error("Impossible de créer l'image de composition.")
     // a canvas never downloads web fonts by itself: the overlay faces must be ready before the first frame
     if (deps.overlay()) await loadOverlayFonts()
-
-    /** film time set with every progress (a still keeps the current one) */
-    let frameTimeS = saved.timeS
-    /** re-drapes that ran since the last breadcrumb */
-    let drapes = 0
-    const frameDeps = {
-      advance,
-      separateFinal: exportHasClouds,
-      // what TerrainLayer does in a render (the only data requested per view), for the camera of the last render
-      updateTiles: () => {
-        const camera = deps.get().camera as PerspectiveCamera
-        if (camera.isPerspectiveCamera) deps.engine()?.update(camera, lodHeight)
-      },
-      pendingTiles: () => {
-        const stats = deps.engine()?.stats
-        return stats ? (stats.pendingVisibleTiles ?? stats.pendingTiles) : 0
-      },
-      missingTiles: () => deps.engine()?.stats.missingVisibleTiles ?? 0,
-      flushDrapes: () => {
-        const ran = flushDrapes()
-        if (ran) drapes++
-        return ran
-      },
-      now: () => performance.now(),
-      wait: timedWait,
-      isCanceled,
-      setProgress: (p: number) => {
-        if (!overview) useAppStore.getState().setProgress(p, frameTimeS)
-      },
-      cameraDrift,
-    }
 
     if (request.still) {
       const { progress, compose } = request.still
       const time = overlayTime(filmClock, progress, saved.timeS)
       // pictures and video frames decoded before the render: composing must follow it in the same task
       if (!compose) await loadFrameMedia(time.timeS, progress)
-      const complete = await renderSettledFrame(schedule[0], frameDeps)
+      const outcome = await renderSettledFrame(schedule[0], frameDeps)
+      if (outcome !== 'complete') throw tilesFailed(outcome, 1)
       // a composed still (poster) draws its own text instead of the film overlay
       composeFrame(ctx, canvas, { progress, time }, width, height, compose ? undefined : deps.overlay())
+      exportStore().reportTiles(peakPending, peakPending)
       exportStore().reportFrame(1, performance.now())
-      await finishStill(request, request.still, compositor, complete ? 0 : 1)
+      await finishStill(request, request.still, compositor)
       return
     }
 
@@ -406,7 +487,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     writeBreadcrumb(
       noEncoding
         ? 'export : test sans encodage'
-        : `export : encodeur prêt (${session.codec.container}/${session.codec.codec}, ${(session.bitrate / 1e6).toFixed(1)} Mbit/s)`,
+        : `export : encodeur prêt (${session.codec.container}/${session.codec.codec}${session.codec.hardware ? ' matériel' : ''}, ${(session.bitrate / 1e6).toFixed(1)} Mbit/s)`,
     )
     // the counters of the breadcrumbs written while it runs (pagehide included)
     const encoder = session
@@ -447,6 +528,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     /** the view of the last rendered frame moved with time */
     let previousTimed = false
     let previousOverlay = ''
+    /** the last (sub-)frame rendered waited for no tile: the next one tries its final render first (capture.ts) */
+    let settledAtOnce = false
     // a phone: tiles are kept for a number of film frames, not seconds (the engine also caps them, deviceBudget.ts)
     const retention = {
       frame: 0,
@@ -455,6 +538,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     }
     for (let i = 0; i < schedule.length; i++) {
       if (isCanceled()) throw new ExportCanceledError()
+      // once per frame the page handles its input and paints (the export never waits otherwise when tiles are cached)
+      await yieldToEventLoop()
       if (exportTileKeepFrames > 0) {
         retention.frame = i
         deps.engine()?.setRetention?.(retention)
@@ -491,36 +576,51 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         if (isExportStep(timings.rendered)) writeBreadcrumb(`export : image ${i + 1} / ${schedule.length}`)
         // pictures and video frames decoded before the render: composing must follow it in the same task
         await loadFrameMedia(frameTimeS, progress)
-        let complete = true
         for (let j = 0; j < renders.length; j++) {
           setShutterSubFrame(j, renders.length)
           frameTimeS = renders[j].timeS
-          if (!(await renderSettledFrame(renders[j].progress, frameDeps))) complete = false
+          const waitsBefore = waits
+          const outcome = await renderSettledFrame(renders[j].progress, frameDeps, DEFAULT_SETTLE, settledAtOnce)
+          settledAtOnce = waits === waitsBefore
+          if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
         }
         frameTimeS = times[i]
         // same task as the last render: the drawing buffer still holds the frame
         const t0 = performance.now()
         composeFrame(ctx, canvas, { progress, time: overlayTime(filmClock, progress, frameTimeS) }, width, height, deps.overlay())
-        timings.encodeMs += performance.now() - t0
+        const composed = performance.now() - t0
+        timings.composeMs += composed
+        timings.encodeMs += composed
         timings.rendered++
-        if (!complete) timings.timeouts++
         if ((timings.rendered - 1) % PREFETCH_EVERY === 0) prefetchAhead(i)
         previous = rendered
       }
+      // the previous frame out of the way, this one handed over: its canvas is read now, its encoding goes on while
+      // the next frame renders
+      await encoded()
       const t0 = performance.now()
-      await session.addFrame(i)
-      timings.encodeMs += performance.now() - t0
-      exportStore().reportFrame(i + 1, performance.now(), timings)
+      encoding = session.addFrame(i)
+      const taken = performance.now() - t0
+      timings.frameMs += taken
+      timings.encodeMs += taken
+      report(i + 1, performance.now(), timings, i === schedule.length - 1)
     }
+    await encoded()
 
     exportStore().finalizing()
     const { blob, sizeBytes } = await session.finish()
-    const { container, codec } = session.codec
+    const { container, codec, hardware } = session.codec
+    for (let k = 0; gpuTimer && gpuTimer.pending > 0 && k < GPU_TIMER_FLUSH_POLLS; k++) {
+      await wait(16)
+      readGpuTimer()
+    }
+    report(schedule.length, performance.now(), timings, true)
     const s = (ms: number) => (ms / 1000).toFixed(1)
     console.info(
-      `[export] ${schedule.length} images (${timings.rendered} rendues) en ${s(performance.now() - startedAt)} s : ` +
-        `rendu ${s(timings.renderMs)} s, attente des tuiles ${s(timings.waitMs)} s, encodage ${s(timings.encodeMs)} s, ` +
-        `${timings.timeouts} image(s) avant la fin du chargement`,
+      `[export] ${schedule.length} images (${timings.rendered} rendues) en ${s(performance.now() - startedAt)} s : ${timingsSummary(timings)}` +
+        `${timings.gpuRenders === 0 ? ' (GPU non mesuré : la composition attend la fin du rendu)' : ''} ; ` +
+        `encodeur ${container}/${codec}${hardware ? ' matériel' : ''} ; ` +
+        `${timings.timeouts} image(s) au délai, ${timings.givenUp} image(s) aux tuiles abandonnées`,
     )
     exportStore().complete({
       // null: already written to the chosen file
@@ -529,12 +629,18 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       mimeType: session.mimeType,
       sizeBytes,
       codec: `${container}/${codec}`,
-      incompleteFrames: timings.timeouts,
+      hardware,
+      incompleteFrames: timings.timeouts + timings.givenUp,
       note: audio ? (session.audioCodec ? `avec le son (${session.audioCodec === 'aac' ? 'AAC' : 'Opus'})` : 'sans le son : ce navigateur ne sait pas l’encoder') : undefined,
     })
   } catch (error) {
+    // the frame in flight is dropped with the session; the history reads the timings of the store
+    encoding?.catch(() => undefined)
+    readGpuTimer()
+    report(exportStore().frame, performance.now(), timings, true)
     await abandon(error, request, session, isCanceled())
   } finally {
+    gpuTimer?.dispose()
     setExportProbe(null)
     deps.engine()?.setRetention?.(null)
     deps.engine()?.setExporting?.(false)
