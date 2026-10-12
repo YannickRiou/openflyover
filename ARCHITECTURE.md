@@ -1574,8 +1574,17 @@ it, know at what time you will pass each point, where the sun will be and what t
 
 ### Landmarks and points of interest, one list (« Repères et points d'intérêt »)
 
-- **Rows** (`LandmarkPanel`, Carte tab): OSM landmarks of the film track (shown and hidden) and `film.pois`, by position
-  (`alongM`, `poiStopAtM`). Climbs are not listed or labelled. Click on the name or badge: seek.
+- **Rows** (`LandmarkPanel`, Carte tab): the points of interest (`film.pois`, by position, `poiStopAtM`), then the OSM
+  landmarks of the film track (shown and hidden) from the most to the least important. Climbs are not listed or labelled.
+  Click on the name or badge: seek.
+- **Ranking**: ▲ ▼ move a landmark one place (`movedInRank`); `settings.landmarks.rank` holds the OSM ids in that order
+  (empty until the first move, then the others keep their own importance). `withRank` hands the importances of the
+  ranked ones back in that order (strictly decreasing), so the list and the label overlap (`resolveOverlaps`) follow it;
+  applied in `publish` (`osm/store.ts`) after `buildLandmarks`, before `splitHidden`.
+- **Cross and « Relancer la recherche »**: the cross of a hidden landmark puts its id in `settings.landmarks.dismissedIds`
+  (`buildLandmarks` skips it before the cap, so another takes its place); the button empties `dismissedIds` and calls
+  `syncLandmarks(…, { refresh: true })`, which asks Overpass again for every track (the known landmarks stay until the answer, and if it fails; « Réessayer » does the same; `fetchTrackFeatures(…, refresh)`
+  skips the memory and the persistent cache, then caches the answer). `withLandmarkDefaults` gives `[]` to both lists.
 - **Eye**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids. Hiding removes, in the same undo step,
   the row's own stop (`placeStop`: the stop whose `source.ref` is the landmark, else a stop placed by hand within 1 m)
   and, while `landmarkTitles` is off, its `auto-text-` / `auto-speed-` items (`withoutPlaceItems`). Generated stops and

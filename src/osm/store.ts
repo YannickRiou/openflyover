@@ -10,7 +10,7 @@ import { create } from 'zustand'
 import type { Track } from '../core/types'
 import { trackPathOf } from '../flyover/path'
 import { setLabelSource, useLabelSources } from '../scene/labelSources'
-import { DEFAULT_LANDMARK_SETTINGS, buildLandmarks, landmarkLabels, splitHidden } from './landmarks'
+import { DEFAULT_LANDMARK_SETTINGS, buildLandmarks, landmarkLabels, splitHidden, withRank } from './landmarks'
 import type { Landmark, LandmarkSettings } from './landmarks'
 import { OverpassError, fetchTrackFeatures } from './overpass'
 import type { OsmFeature } from './overpass'
@@ -59,7 +59,7 @@ function publish(tracks: readonly Track[], settings: LandmarkSettings, message: 
   for (const track of tracks) {
     const list = features[track.id]
     if (!list) continue
-    const split = splitHidden(buildLandmarks(list, trackPathOf(track), settings), settings.hiddenIds)
+    const split = splitHidden(withRank(buildLandmarks(list, trackPathOf(track), settings), settings.rank), settings.hiddenIds)
     landmarks[track.id] = split.shown
     hidden[track.id] = split.hidden
   }
@@ -71,12 +71,13 @@ function publish(tracks: readonly Track[], settings: LandmarkSettings, message: 
 /**
  * Bring the landmarks in line with the tracks and the setting: idle (and no label) without a track or when
  * disabled; else the features of each new track are fetched, the landmarks of every track re-filtered.
- * `retry` refetches the tracks whose request failed.
+ * `retry` refetches the tracks whose request failed; `refresh` asks OpenStreetMap again for every track (the caches
+ * skipped); the landmarks known stay until the answer, and stay if it fails.
  */
 export function syncLandmarks(
   tracks: readonly Track[],
   settings: LandmarkSettings,
-  { retry = false, deps = { fetchFeatures: fetchTrackFeatures } }: { retry?: boolean; deps?: SyncLandmarksDeps } = {},
+  { retry = false, refresh = false, deps = { fetchFeatures: fetchTrackFeatures } }: { retry?: boolean; refresh?: boolean; deps?: SyncLandmarksDeps } = {},
 ): void {
   latest = { tracks, settings }
   if (tracks.length === 0 || !settings.enabled) {
@@ -96,15 +97,19 @@ export function syncLandmarks(
   for (const id of failed) if (!ids.has(id)) failed.delete(id)
   const features: Record<string, readonly OsmFeature[]> = {}
   for (const id of Object.keys(state.features)) if (ids.has(id)) features[id] = state.features[id]
-  if (retry) failed.clear()
+  if (retry || refresh) failed.clear()
+  if (refresh) {
+    for (const ctrl of pending.values()) ctrl.abort()
+    pending.clear()
+  }
   useLandmarkStore.setState({ features })
 
   let message = state.message
   for (const track of tracks) {
-    if (features[track.id] || pending.has(track.id) || failed.has(track.id)) continue
+    if ((features[track.id] && !refresh) || pending.has(track.id) || failed.has(track.id)) continue
     const ctrl = new AbortController()
     pending.set(track.id, ctrl)
-    deps.fetchFeatures(track, ctrl.signal).then(
+    deps.fetchFeatures(track, ctrl.signal, undefined, refresh).then(
       (list) => {
         if (pending.get(track.id) !== ctrl) return
         pending.delete(track.id)

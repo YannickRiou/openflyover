@@ -408,30 +408,37 @@ function writeCache(storage: OverpassDeps['storage'], key: string, features: rea
 
 /**
  * Landmarks near `track` (all kinds, `MAX_LANDMARK_DISTANCE_M` corridor), from the memory cache, the
- * persistent cache or one queued Overpass query. A failed or aborted query is not cached.
+ * persistent cache or one queued Overpass query (always the query with `refresh`). A failed or aborted query is not cached.
  */
-export function fetchTrackFeatures(track: Track, signal?: AbortSignal, deps: OverpassDeps = defaultDeps()): Promise<OsmFeature[]> {
-  return cachedOverpassQuery(trackQuery(track), parseOverpass, signal, deps)
+export function fetchTrackFeatures(
+  track: Track,
+  signal?: AbortSignal,
+  deps: OverpassDeps = defaultDeps(),
+  refresh = false,
+): Promise<OsmFeature[]> {
+  return cachedOverpassQuery(trackQuery(track), parseOverpass, signal, deps, refresh)
 }
 
 /**
  * Result of `query` parsed by `parse` (a JSON-serialisable list), from the memory cache, the persistent cache or
- * one queued Overpass query (shared by the landmarks and the water, `water.ts`). A failed or aborted query is not
- * cached.
+ * one queued Overpass query (shared by the landmarks and the water, `water.ts`; always the query with `refresh`). A
+ * failed or aborted query is not cached.
  */
 export function cachedOverpassQuery<T>(
   query: string,
   parse: (json: unknown) => T[],
   signal?: AbortSignal,
   deps: OverpassDeps = defaultDeps(),
+  refresh = false,
 ): Promise<T[]> {
   const key = hashQuery(query)
+  if (refresh) memoryCache.delete(key)
   const cached = memoryCache.get(key) as Promise<T[]> | undefined
   if (cached) {
     remember(key, cached)
     return cached
   }
-  const stored = readCache<T>(deps.storage, key, deps.now())
+  const stored = refresh ? null : readCache<T>(deps.storage, key, deps.now())
   if (stored) {
     const promise = Promise.resolve(stored)
     remember(key, promise)
