@@ -193,5 +193,4 @@ First release: the website and the Windows, macOS and Linux desktop applications
 - **Quality**: French interface with tips, error messages in French, error screen, WebGL loss handled; about 1,600
   unit tests, end-to-end tests in a real browser, coverage badge; third-party notices shipped with the installers.
 
-Known limits are listed in `docs/handover.md` ("Limits and open points") and the checks that need a GPU in
-`docs/tests-gpu.md`.
+The checks that need a GPU are listed in `docs/tests-gpu.md`.
