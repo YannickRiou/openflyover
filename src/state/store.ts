@@ -79,10 +79,10 @@ export interface Settings {
   /** the film arranged on the timeline: opening and closing shots, stops, texts, media (see film/model.ts) */
   film: Film
   /**
-   * 3D labels on the relief: tops of the detected climbs of the first track, GPX waypoints, a marker every `kmStep` km
+   * 3D labels on the relief: GPX waypoints, a marker every `kmStep` km
    * (0: none), « Départ » / « Arrivée » at the ends of the first track, the photos with a GPS position; common size (multiplier) and range (km from the camera) of every label
    */
-  labels: { climbs: boolean; waypoints: boolean; kmStep: number; endpoints: boolean; photos: boolean; size: number; rangeKm: number }
+  labels: { waypoints: boolean; kmStep: number; endpoints: boolean; photos: boolean; size: number; rangeKm: number }
   /** historical weather of the first timed track (Open-Meteo archive, network) */
   weather: { enabled: boolean }
   /** the weather of the outing drives the scene (clouds dim the sun, haze, veiled sky), strength 0..1 (atmosphere only) */

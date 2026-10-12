@@ -41,6 +41,10 @@ export interface LandmarkSettings {
   hiddenIds: string[]
   /** OSM ids of the landmarks listed when the user last showed or hid labels: the others are new (« nouveau ») */
   seenIds: string[]
+  /** OSM ids in the order the user ranked them (first = most important); empty until the first move, the others follow their own importance */
+  rank: string[]
+  /** OSM ids the user dismissed with the cross: left out of the list and the labels until « Relancer la recherche » */
+  dismissedIds: string[]
 }
 
 export const DEFAULT_LANDMARK_SETTINGS: LandmarkSettings = {
@@ -60,6 +64,8 @@ export const DEFAULT_LANDMARK_SETTINGS: LandmarkSettings = {
   maxDistanceM: 1500,
   hiddenIds: [],
   seenIds: [],
+  rank: [],
+  dismissedIds: [],
 }
 
 /**
@@ -78,7 +84,7 @@ export function withLandmarkDefaults(raw: unknown): unknown {
         ? { ...DEFAULT_LANDMARK_SETTINGS.places, ...settings.places }
         : settings.places
   const seenIds = Array.isArray(settings.seenIds) ? settings.seenIds.filter((id) => typeof id === 'string') : []
-  return { hiddenIds: [], ...settings, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, ...settings.kinds }, places, seenIds }
+  return { hiddenIds: [], rank: [], dismissedIds: [], ...settings, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, ...settings.kinds }, places, seenIds }
 }
 
 /**
@@ -89,6 +95,32 @@ export function withHidden(settings: LandmarkSettings, ids: readonly string[], h
   const changed = new Set(ids)
   const rest = settings.hiddenIds.filter((id) => !changed.has(id))
   return { ...settings, hiddenIds: hide ? [...rest, ...changed] : rest, seenIds: [...new Set([...settings.seenIds, ...listed])] }
+}
+
+/**
+ * `landmarks` ranked by the user: the importances of the ranked ones are given back in the order of `rank`, strictly
+ * decreasing, so the labels and the list follow it; the others keep theirs.
+ */
+export function withRank(landmarks: readonly Landmark[], rank: readonly string[]): Landmark[] {
+  const position = new Map(rank.map((id, i) => [id, i]))
+  const ranked = landmarks.filter((l) => position.has(l.id)).sort((a, b) => position.get(a.id)! - position.get(b.id)!)
+  const values = ranked.map((l) => l.priority).sort((a, b) => b - a)
+  const given = new Map<string, number>()
+  ranked.forEach((l, i) => given.set(l.id, i === 0 ? values[0] : Math.min(values[i], given.get(ranked[i - 1].id)! - RANK_STEP)))
+  return landmarks.map((l) => (given.has(l.id) ? { ...l, priority: given.get(l.id)! } : l))
+}
+
+/** Gap between two ranked landmarks of the same importance. */
+const RANK_STEP = 1e-3
+
+/** The ids of `ordered` with `id` one place `up` (earlier) or down; the same order when it cannot move. */
+export function movedInRank(ordered: readonly string[], id: string, up: boolean): string[] {
+  const from = ordered.indexOf(id)
+  const to = up ? from - 1 : from + 1
+  if (from < 0 || to < 0 || to >= ordered.length) return [...ordered]
+  const next = [...ordered]
+  ;[next[from], next[to]] = [next[to], next[from]]
+  return next
 }
 
 /** The landmarks of `listed` (OSM ids) not seen yet; none before the user first showed or hid labels. */
@@ -378,13 +410,14 @@ function capWithPlaces<T extends { kind: OsmKind }>(sorted: readonly T[], maxCou
 export function buildLandmarks(
   features: readonly OsmFeature[],
   path: TrackPath,
-  settings: Pick<LandmarkSettings, 'kinds' | 'places' | 'maxDistanceM'>,
+  settings: Pick<LandmarkSettings, 'kinds' | 'places' | 'maxDistanceM'> & { dismissedIds?: readonly string[] },
   maxCount = MAX_LANDMARKS,
 ): Landmark[] {
+  const dismissed = new Set(settings.dismissedIds)
   const candidates: Landmark[] = []
   const areas = new Map<Landmark, LonLatBounds>()
   for (const f of features) {
-    if (!settings.kinds[f.kind]) continue
+    if (!settings.kinds[f.kind] || dismissed.has(f.id)) continue
     if (f.kind === 'place' && !settings.places[placeSizeOf(f.detail)]) continue
     const projected = projectOnPath(path, f.lon, f.lat)
     const distanceM = f.area ? Math.min(projected.distanceM, pathBoxDistanceM(path, f.area)) : projected.distanceM

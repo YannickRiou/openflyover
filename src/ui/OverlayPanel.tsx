@@ -32,13 +32,12 @@ import {
   withWidgetOverrides,
   widgetOverrides,
 } from '../overlay/settings'
-import type { CounterId, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, TextBacking, WidgetOffset } from '../overlay/settings'
+import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, TextBacking, WidgetOffset } from '../overlay/settings'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
 import { AnchorPicker } from './AnchorPicker'
-import './labelSwatches.css'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
@@ -420,11 +419,16 @@ function StyleOverrides({
   )
 }
 
+/** Kinds of 3D label shown in « Couleurs des étiquettes » (climbs have no label any more). */
+const COLOURED_LABEL_KINDS = LABEL_KINDS.filter((kind) => kind !== 'climb')
+
 /**
- * « Couleurs des étiquettes »: one swatch per kind of 3D label (montée, col, sommet…), the style's colour until changed.
- * The labels also take the style's font and panel.
+ * « Couleurs des étiquettes »: a list to pick the kind of 3D label (col, sommet, refuge…), then its colour (the
+ * style's until changed). The labels also take the style's font and panel.
  */
 function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange(next: OverlaySettings): void }) {
+  const kindId = useId()
+  const [kind, setKind] = useState<LabelKind>(COLOURED_LABEL_KINDS[0] ?? 'pass')
   const look = resolveLabelStyle(overlay.style, overlay.labelColors)
   const own = overlay.labelColors ?? {}
   return (
@@ -433,20 +437,21 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
       value={Object.keys(own).length > 0 ? 'Personnalisées' : 'Celles du style'}
       paths={['overlay.labelColors']}
     >
-      <div className="label-swatches" role="group" aria-label="Couleur de chaque type d'étiquette">
-        {LABEL_KINDS.map((kind) => (
-          <input
-            key={kind}
-            type="color"
-            className="label-swatches__input"
-            value={toHex(look.accents[kind])}
-            title={LABEL_KIND_LABELS[kind]}
-            aria-label={`Étiquettes : ${LABEL_KIND_LABELS[kind]}`}
-            onChange={(e) => onChange(withLabelColor(overlay, kind, e.currentTarget.value))}
-          />
-        ))}
+      <div className="field">
+        <label className="field__label" htmlFor={kindId}>
+          Type d'étiquette
+        </label>
+        <select id={kindId} className="select" value={kind} onChange={(e) => setKind(e.currentTarget.value as LabelKind)}>
+          {COLOURED_LABEL_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {LABEL_KIND_LABELS[k]}
+              {own[k] ? ' (modifiée)' : ''}
+            </option>
+          ))}
+        </select>
       </div>
-      <p className="field__hint">Passez sur une pastille pour voir le type d'étiquette. La police et le fond suivent le style.</p>
+      <ColorField label="Couleur" value={toHex(look.accents[kind])} onChange={(color) => onChange(withLabelColor(overlay, kind, color))} />
+      <p className="field__hint">La police et le fond des étiquettes suivent le style.</p>
       <button
         type="button"
         className="btn btn--secondary"

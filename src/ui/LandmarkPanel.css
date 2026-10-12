@@ -148,3 +148,9 @@ button.landmark__kind {
 .place--hidden .landmark__name {
   text-decoration: line-through;
 }
+
+/* arrows (importance), eye and cross of a landmark row */
+.place__actions {
+  display: flex;
+  align-items: center;
+}

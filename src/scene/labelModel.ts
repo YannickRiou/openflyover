@@ -8,7 +8,7 @@ import { inRange, withDefaults } from '../core/guards'
 import type { Track } from '../core/types'
 import type { MediaTable } from '../film/media'
 import type { FilmMedia, FilmPoi, PoiIcon } from '../film/model'
-import type { Climb, ClimbCategory } from '../flyover/climbs'
+import type { Climb } from '../flyover/climbs'
 import { samplePath, trackPathOf } from '../flyover/path'
 import { haversineM } from '../geo/lonLat'
 import { formatNumber } from '../ui/format'
@@ -54,9 +54,9 @@ export const LABEL_KIND_ACCENTS: Readonly<Record<LandmarkKind, string>> = {
 export const LABEL_PANEL_COLOR = '#1C2A33' // --color-ink
 export const LABEL_TEXT_COLOR = '#FFFFFF' // --color-white
 
-/** Priority of waypoint labels; climbs come above them, hardest first (`climbPriority`). */
+/** Priority of waypoint labels. */
 export const WAYPOINT_PRIORITY = 50
-/** Start and finish come above the climbs and waypoints, below the points of interest. */
+/** Start and finish come above the waypoints, below the points of interest. */
 export const ENDPOINT_PRIORITY = 150
 /** Closer than this (metres), the start and the finish are one label: a loop. */
 export const LOOP_GAP_M = 100
@@ -66,31 +66,12 @@ export const KM_PRIORITY = 20
 export const KM_MARKER_STEPS = [0, 1, 2, 5, 10] as const
 /** Points of interest placed by hand come above every other label: the user named them. */
 export const POI_PRIORITY = 200
-const CATEGORY_RANK: Readonly<Record<ClimbCategory, number>> = { '4': 1, '3': 2, '2': 3, '1': 4, HC: 5 }
-
-export function climbPriority(category: ClimbCategory | null): number {
-  return 100 + (category ? CATEGORY_RANK[category] * 10 : 0)
-}
-
 /** « Montée 2 · cat. 3 · 1 653 m » (no category below catégorie 4); `index` starts at 0. */
 export function climbLabelText(climb: Climb, index: number): string {
   const parts = [`Montée ${index + 1}`]
   if (climb.category) parts.push(climb.category === 'HC' ? 'HC' : `cat. ${climb.category}`)
   parts.push(`${formatNumber(climb.topEleM)} m`)
   return parts.join(' · ')
-}
-
-/** One label at the top of each climb of `track`. */
-export function climbLabels(track: Track, climbs: readonly Climb[]): LandmarkLabel[] {
-  return climbs.map((climb, i) => ({
-    id: `climb:${track.id}:${i}`,
-    lon: climb.top.lon,
-    lat: climb.top.lat,
-    ele: climb.topEleM,
-    text: climbLabelText(climb, i),
-    kind: 'climb',
-    priority: climbPriority(climb.category),
-  }))
 }
 
 /** A marker every `stepKm` along `track` (« 5 km », « 10 km »…), none at the start; same distances as the counters. */
@@ -128,8 +109,8 @@ export function endpointLabels(track: Track, withText = true): LandmarkLabel[] {
   return [label('start', start, 'Départ'), label('finish', end, 'Arrivée')]
 }
 
-/** « Étiquettes dans la vue » (`settings.labels`): climbs and waypoints on, the rest off, size ×1, range 70 km (`LABEL_FADE_END_M`). */
-export const DEFAULT_LABELS = { climbs: true, waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 }
+/** « Étiquettes dans la vue » (`settings.labels`): waypoints on, the rest off, size ×1, range 70 km (`LABEL_FADE_END_M`). */
+export const DEFAULT_LABELS = { waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 }
 
 /** Labels settings of an older project: the fields added since take their default. */
 export const withLabelDefaults = withDefaults(DEFAULT_LABELS)

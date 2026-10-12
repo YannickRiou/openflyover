@@ -136,6 +136,8 @@ describe('engine options from settings', () => {
       maxDistanceM: 1500,
       hiddenIds: [],
       seenIds: [],
+      rank: [],
+      dismissedIds: [],
     },
     race: { enabled: false, sync: 'elapsed' as const },
     trackStyle: DEFAULT_TRACK_STYLE,
