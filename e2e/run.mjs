@@ -587,6 +587,8 @@ const SCENARIOS = [
       if (await page.evaluate(() => document.getElementById('tab-lumiere')?.getAttribute('aria-selected') !== 'true')) {
         await page.click('#tab-lumiere')
       }
+      // centred first: scrolled to the top edge, the row would sit under the sticky section title and the click hit it
+      await page.$eval('#tab-panel-lumiere .setting-row__head::-p-text(Exposition)', (el) => el.scrollIntoView({ block: 'center' }))
       await page.click('#tab-panel-lumiere .setting-row__head::-p-text(Exposition)')
       await until(page, () => document.activeElement?.matches('#tab-panel-lumiere .setting-row__body input[type="range"]'))
       await page.keyboard.press('ArrowRight')
@@ -858,6 +860,9 @@ const SCENARIOS = [
         await until(page, () => document.querySelector('#tab-panel-survol input[value="Oiseau"]')?.checked === true)
         await tap('#side-panel .sheet-handle__done')
         await until(page, () => document.getElementById('side-panel').hidden)
+        // the sample has no stop of its own: one at the marker
+        await tap('button[aria-label="Ajouter un arrêt à la position du marqueur"]')
+        await page.waitForSelector('.film-tl__block--stop', { timeout: STEP_MS })
         // a tap on a stop selects it: its actions take the place of the tab bar; « Modifier » opens its inspector
         await page.$eval('.film-tl__block--stop', (el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }))
         await tap('.film-tl__block--stop')

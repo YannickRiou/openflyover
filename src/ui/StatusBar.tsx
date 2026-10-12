@@ -149,10 +149,17 @@ function Chip({ chip }: { chip: FetchChip }) {
 /** Weather, landmarks, region and water fetches, as chosen in « Réglages » (nothing while idle). */
 function FetchChips() {
   const shown = usePreferences((s) => s.status)
-  const weather = useWeatherStore((s) => fetchChip('weather', s.status, s.message))
-  const landmarks = useLandmarkStore((s) => fetchChip('landmarks', s.status, s.message))
-  const region = useRegionStore((s) => fetchChip('region', s.status))
-  const water = useWaterStatusStore((s) => fetchChip('water', s.status))
+  // primitives only: a selector returning a new object on every call makes the store re-render forever
+  const weatherStatus = useWeatherStore((s) => s.status)
+  const weatherMessage = useWeatherStore((s) => s.message)
+  const landmarksStatus = useLandmarkStore((s) => s.status)
+  const landmarksMessage = useLandmarkStore((s) => s.message)
+  const regionStatus = useRegionStore((s) => s.status)
+  const waterStatus = useWaterStatusStore((s) => s.status)
+  const weather = fetchChip('weather', weatherStatus, weatherMessage)
+  const landmarks = fetchChip('landmarks', landmarksStatus, landmarksMessage)
+  const region = fetchChip('region', regionStatus)
+  const water = fetchChip('water', waterStatus)
   const chips = [shown.weather && weather, shown.landmarks && landmarks, shown.region && region, shown.water && water].filter((c) => !!c)
   if (chips.length === 0) return null
   return (
