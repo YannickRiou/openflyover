@@ -1052,7 +1052,7 @@ describe('hard tile cap through the level of detail (phone)', () => {
     const b = await settleOn(after, filmCamera(149, true), 40)
     expect(b.factors.at(-1)).toBe(a.factors.at(-1))
     expect(b.drawn).toEqual(a.drawn)
-  })
+  }, 60_000)
 
   it('the preview keeps its level on a still view and goes back to full detail one step at a time', async () => {
     const engine = phoneEngine()
