@@ -4,7 +4,7 @@
  * lead (`settings.marker`, see `markerSprite.ts`: style, shape, stick) in the track's colour with an ink ring, the
  * figure of its own activity ('auto') and its own name as label; a picture stays the lead's own, so the racers then
  * show their ball. Same constant screen size as the lead marker, unlit, drawn over
- * the terrain but faded out behind the relief, height = (terrain ?? recorded elevation ?? 0) × exaggeration + LINE_LIFT_M like the lead marker.
+ * the terrain but hidden behind the relief, height = (terrain ?? recorded elevation ?? 0) × exaggeration + LINE_LIFT_M like the lead marker.
  * The camera keeps following the first track (FlyoverRig); mounted after it so the progress and the camera of
  * this frame are used.
  */
