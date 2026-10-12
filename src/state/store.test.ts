@@ -207,6 +207,7 @@ describe('settings and misc', () => {
         stops: [],
         speeds: [],
         cameraKeys: [],
+        paramKeys: [],
         texts: [],
         media: [],
         audio: [],

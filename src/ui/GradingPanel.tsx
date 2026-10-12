@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { hasGradingKeys } from '../film/paramKeys'
 import { getSettingsHistory } from '../project/history'
 import { GRADING_PRESETS, GRADING_RANGES, gradingOfPreset, withGradingValue } from '../scene/grading'
 import type { GradingValues } from '../scene/grading'
@@ -26,6 +27,7 @@ function formatSigned(v: number): string {
 export function GradingPanel() {
   const id = useId()
   const grading = useAppStore((s) => s.settings.grading)
+  const keyed = useAppStore((s) => hasGradingKeys(s.settings.film))
   const setSetting = useAppStore((s) => s.setSetting)
 
   return (
@@ -49,6 +51,12 @@ export function GradingPanel() {
         </div>
         {grading.preset === 'personnalise' && <p className="field__hint">Réglage personnalisé.</p>}
       </div>
+
+      {keyed && (
+        <p className="field__hint">
+          Des clés de la ligne « Réglages » de la timeline pilotent certaines de ces valeurs le long du parcours : leur curseur ne sert alors plus.
+        </p>
+      )}
 
       {SLIDERS.map(({ key, label, tip }) => {
         const range = GRADING_RANGES[key]
