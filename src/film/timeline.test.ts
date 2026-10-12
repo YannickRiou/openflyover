@@ -18,6 +18,7 @@ import {
   addText,
   adjacentKey,
   keyAt,
+  keyState,
   attachToStop,
   centredScrollLeft,
   centredTime,
@@ -670,6 +671,14 @@ describe('camera keys', () => {
     expect(keyAt(keys, 25.5004)).toBe(keys[1])
     expect(keyAt(keys, 25.6)).toBeNull()
     expect(keyAt([], 0)).toBeNull()
+  })
+
+  it('key buttons state: a key before, a key after, the playhead on a key (a lane or panel with no key: all off)', () => {
+    const keys = [{ timeS: 10 }, { timeS: 25.5 }, { timeS: 40 }]
+    expect(keyState(keys, 5)).toEqual({ prev: false, next: true, on: false })
+    expect(keyState(keys, 25.5)).toEqual({ prev: true, next: true, on: true })
+    expect(keyState(keys, 40)).toEqual({ prev: true, next: false, on: true })
+    expect(keyState([], 3)).toEqual({ prev: false, next: false, on: false })
   })
 
   it('updates clamp to the keyframe ranges; moved along the track by the pointer; removed like any block', () => {

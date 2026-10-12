@@ -6,7 +6,8 @@ import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
 import { junctionsM, sortedMarkerKeys } from '../film/markerKeys'
 import type { Film } from '../film/model'
-import { FILM_PARAMS, paramAt, paramBase } from '../film/paramKeys'
+import { paramAt, paramBase } from '../film/paramKeys'
+import type { FilmParam } from '../film/paramKeys'
 import { addCameraKey, addMarkerKey, addMarkerKeysAt, addParamKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
 import { captureKey } from '../flyover/cameraKeys'
 import { filmSequenceOf, filmTrackOf, sequenceLandmarks } from '../flyover/sequence'
@@ -85,22 +86,31 @@ export function addKeyframe(): boolean {
 }
 
 /**
- * « Ajouter un réglage »: a parameter key at the marker holding the value the film shows there, so nothing changes
- * until it is edited (one undo step, selected: the inspector sets the parameter and the value). The first parameter
- * without a key at that place, exposure to begin with.
+ * The playhead exactly on the key that `editFilm` just selected: a parameter or marker key is placed at a whole metre,
+ * so the playhead is moved by under half a metre, and the ◀ ◇ ▶ then see it on the key.
  */
-export function addParamKeyHere(): void {
-  const { track } = getFilmSource()
-  const { playback, settings } = useAppStore.getState()
-  const atM = Math.round(playback.progress * (track?.stats.distanceM ?? 0))
-  editFilm((f) => {
-    const free = FILM_PARAMS.find((p) => !f.paramKeys.some((k) => k.param === p && Math.round(k.atM) === atM)) ?? 'exposure'
-    return addParamKey(f, atM, free, paramAt(f, paramBase(settings, free), free, atM))
-  })
+function parkOnSelectedKey(): void {
+  const store = useAppStore.getState()
+  const clock = filmClockFor(getFilmSource())
+  const key = [...clock.paramKeys, ...clock.markerKeys].find((k) => k.id === store.filmSelection)
+  if (key) store.setProgress(clock.progressAtTime(key.timeS), key.timeS < clock.totalTime() ? key.timeS : null)
 }
 
 /**
- * « Ajouter un changement de marqueur »: a marker key at the marker's place holding the look it has there, so nothing
+ * The ◇ of a parameter (speed on its lane, the others under their slider): a key for `param` at the marker holding the
+ * value the film shows there (the speed ×1 or the setting without key), so nothing changes until the inspector edits it;
+ * a key already at that place keeps its value. One undo step, selected for the inspector.
+ */
+export function addParamKeyHere(param: FilmParam): void {
+  const { track } = getFilmSource()
+  const { playback, settings } = useAppStore.getState()
+  const atM = Math.round(playback.progress * (track?.stats.distanceM ?? 0))
+  editFilm((f) => addParamKey(f, atM, param, paramAt(f, paramBase(settings, param), param, atM)))
+  parkOnSelectedKey()
+}
+
+/**
+ * The ◉ of the « Marqueur » section: a marker key at the marker's place holding the look it has there, so nothing
  * changes until the inspector edits it (one undo step, selected).
  */
 export function addMarkerKeyHere(): void {
@@ -112,6 +122,7 @@ export function addMarkerKeyHere(): void {
     const { kind, figure } = settings.marker
     return addMarkerKey(f, atM, before ? { kind: before.kind, figure: before.figure, imageId: before.imageId } : { kind, figure })
   })
+  parkOnSelectedKey()
 }
 
 /**
@@ -127,7 +138,7 @@ export function addJunctionMarkerKeys(): number {
   return places.length
 }
 
-/** The ◆ of the transport row: removes the keyframe the playhead is on, else adds one there (one undo step). */
+/** The ◇ of the « Plans » lane: removes the keyframe the playhead is on, else adds one there (one undo step). */
 export function toggleKeyframe(clock: FilmClock): boolean {
   const store = useAppStore.getState()
   const total = clock.totalTime()
@@ -139,15 +150,16 @@ export function toggleKeyframe(clock: FilmClock): boolean {
 
 /**
  * « Image clé précédente / suivante » (`direction` -1 / 1): the playhead exactly on that keyframe, which the inspector
- * then shows if it showed a keyframe; false when there is none.
+ * then shows if it showed a key of the same kind; false when there is none. `keys` are the keys to walk through: the
+ * camera keys, or the keys of one parameter or of the marker for the ◀ ▶ of their lane or panel.
  */
-export function seekKeyframe(clock: FilmClock, direction: -1 | 1): boolean {
+export function seekKeyframe(clock: FilmClock, direction: -1 | 1, keys: readonly { id: string; timeS: number }[] = clock.cameraKeys): boolean {
   const store = useAppStore.getState()
   const total = clock.totalTime()
-  const key = adjacentKey(clock.cameraKeys, Math.min(store.playback.timeS ?? clock.timeAtProgress(store.playback.progress), total), direction)
+  const key = adjacentKey(keys, Math.min(store.playback.timeS ?? clock.timeAtProgress(store.playback.progress), total), direction)
   if (!key) return false
   store.setProgress(clock.progressAtTime(key.timeS), key.timeS < total ? key.timeS : null)
-  if (clock.cameraKeys.some((k) => k.id === store.filmSelection)) store.setFilmSelection(key.id)
+  if (keys.some((k) => k.id === store.filmSelection)) store.setFilmSelection(key.id)
   return true
 }
 
