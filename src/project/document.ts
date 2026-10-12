@@ -20,7 +20,7 @@ import { TRACK_COLORS } from '../import'
 import { buildTrack, isUtcOffsetMin } from '../import/stats'
 import { isValidVideoSettings, withVideoDefaults } from '../export/schedule'
 import { LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } from '../osm/landmarks'
-import { isValidOverlay, withOverlayDefaults } from '../overlay/settings'
+import { isValidOverlay, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
 import { isValidPoster, withPosterDefaults } from '../poster/settings'
 import { isValidGrading } from '../scene/grading'
 import { isValidLens, withLensDefaults } from '../scene/lens'
@@ -142,12 +142,13 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
  */
 export const SETTING_UPGRADES: { [K in keyof Settings]?: (raw: unknown) => unknown } = {
   camera: withCameraDefaults,
-  overlay: withOverlayDefaults,
+  // a style id that was dropped (never released) opens in its successor, in the overlay and on the poster
+  overlay: (raw) => withOverlayDefaults(withKnownStyle(raw)),
   video: withVideoDefaults,
   film: withFilmDefaults,
   trackStyle: withTrackStyleDefaults,
   marker: withMarkerDefaults,
-  poster: withPosterDefaults,
+  poster: (raw) => withPosterDefaults(withKnownStyle(raw)),
   labels: withLabelDefaults,
   pacing: withPacingDefaults,
   landmarks: withLandmarkDefaults,
