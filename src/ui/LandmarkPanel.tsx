@@ -1,5 +1,6 @@
 import { useEffect, useId } from 'react'
-import { KIND_BADGES, KIND_LABELS, LANDMARK_DISTANCE_RANGE } from '../osm/landmarks'
+import { KIND_BADGES, KIND_LABELS, LANDMARK_DISTANCE_RANGE, PLACE_SIZES, PLACE_SIZE_LABELS, withPlaceSize } from '../osm/landmarks'
+import type { LandmarkSettings } from '../osm/landmarks'
 import { OSM_ATTRIBUTION, OSM_KINDS } from '../osm/overpass'
 import { syncLandmarks, useLandmarkStore } from '../osm/store'
 import { sequenceLandmarks } from '../flyover/sequence'
@@ -9,10 +10,12 @@ import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
 
-/** Kinds shown, in a few words: « Tous », « 4 sur 9 », « Aucun ». */
-function kindsLabel(kinds: Record<string, boolean>): string {
-  const on = OSM_KINDS.filter((kind) => kinds[kind]).length
-  return on === OSM_KINDS.length ? 'Tous' : on === 0 ? 'Aucun' : `${on} sur ${OSM_KINDS.length}`
+/** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
+function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'>): string {
+  const total = OSM_KINDS.length - 1 + PLACE_SIZES.length
+  const on =
+    OSM_KINDS.filter((kind) => kind !== 'place' && kinds[kind]).length + (kinds.place ? PLACE_SIZES.filter((s) => places[s]).length : 0)
+  return on === total ? 'Tous' : on === 0 ? 'Aucun' : `${on} sur ${total}`
 }
 
 /**
@@ -73,22 +76,36 @@ export function LandmarkPanel() {
       </label>
 
       {settings.enabled && (
-        <SettingRow label="Types" value={kindsLabel(settings.kinds)} paths={['landmarks.kinds']}>
+        <SettingRow label="Types" value={kindsLabel(settings)} paths={['landmarks.kinds', 'landmarks.places']}>
           <fieldset className="field fieldset">
             <legend className="field__label">Types</legend>
             <div className="chips">
-              {OSM_KINDS.map((kind) => (
-                <label key={kind} className="chip">
-                  <input
-                    type="checkbox"
-                    checked={settings.kinds[kind]}
-                    onChange={(e) =>
-                      setSetting('landmarks', { ...settings, kinds: { ...settings.kinds, [kind]: e.currentTarget.checked } })
-                    }
-                  />
-                  {KIND_LABELS[kind]}
-                </label>
-              ))}
+              {OSM_KINDS.map((kind) =>
+                kind === 'place' ? (
+                  // places as three chips, by size
+                  PLACE_SIZES.map((size) => (
+                    <label key={size} className="chip">
+                      <input
+                        type="checkbox"
+                        checked={settings.kinds.place && settings.places[size]}
+                        onChange={(e) => setSetting('landmarks', withPlaceSize(settings, size, e.currentTarget.checked))}
+                      />
+                      {PLACE_SIZE_LABELS[size]}
+                    </label>
+                  ))
+                ) : (
+                  <label key={kind} className="chip">
+                    <input
+                      type="checkbox"
+                      checked={settings.kinds[kind]}
+                      onChange={(e) =>
+                        setSetting('landmarks', { ...settings, kinds: { ...settings.kinds, [kind]: e.currentTarget.checked } })
+                      }
+                    />
+                    {KIND_LABELS[kind]}
+                  </label>
+                ),
+              )}
             </div>
           </fieldset>
         </SettingRow>

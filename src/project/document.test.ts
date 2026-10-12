@@ -332,6 +332,21 @@ describe('serializeProject / parseProject', () => {
     expect(reloaded.tracks[0]).not.toHaveProperty('timesEstimated')
     expect(reloaded.tracks[1]).not.toHaveProperty('timesEstimated')
   })
+
+  it('round-trips computed elevations, and drops the flag on a track without elevation or a wrong value', () => {
+    const track: Track = { ...makeTrack('a', '#FF5A36'), elevationEstimated: 'all' }
+    const text = serializeProject({ ...STATE, tracks: [track, makeTrack('b', '#5BC0EB')] }, 'x')
+    const loaded = parseProject(text)
+    expect(loaded.tracks[0].elevationEstimated).toBe('all')
+    expect(loaded.tracks[1]).not.toHaveProperty('elevationEstimated')
+    const d = JSON.parse(text) as { tracks: { elevationEstimated?: unknown; segments: Record<string, unknown>[] }[] }
+    d.tracks[0].elevationEstimated = true
+    d.tracks[1].elevationEstimated = 'gaps'
+    for (const segment of d.tracks[1].segments) delete segment.ele
+    const reloaded = parseProject(JSON.stringify(d))
+    expect(reloaded.tracks[0]).not.toHaveProperty('elevationEstimated')
+    expect(reloaded.tracks[1]).not.toHaveProperty('elevationEstimated')
+  })
 })
 
 describe('parseProject errors', () => {

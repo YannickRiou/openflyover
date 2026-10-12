@@ -60,13 +60,17 @@ export interface OsmFeature {
   kind: OsmKind
   /** French name when tagged (`name:fr`), else `name` */
   name: string
-  /** node position, or the centre of the bounding box of a way / relation (`out center`) */
+  /** node position, or the centre of the bounding box of a way / relation (`out bb`) */
   lon: number
   lat: number
   /** raw `ele` tag (parsed by `landmarks.ts`) */
   ele?: string
-  /** finer type: `place` value (town / village / hamlet), `volcano`, `wilderness_hut`, `water` value… */
+  /** finer type: `place` value (city / town / village / hamlet), `volcano`, `wilderness_hut`, `water` value… */
   detail?: string
+  /** places only: bounding box of a place mapped as a way or relation (its distance to the track is measured to it) */
+  area?: LonLatBounds
+  /** places only: raw `population` tag (parsed by `landmarks.ts`) */
+  population?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -187,7 +191,7 @@ const STATEMENTS: readonly string[] = [
   'nwr["tourism"~"^(alpine_hut|wilderness_hut)$"]["name"]',
   'nwr["natural"="water"]["name"]["water"!~"^(river|stream|canal|ditch|drain|wastewater|moat)$"]',
   'node["waterway"="waterfall"]["name"]',
-  'node["place"~"^(town|village|hamlet)$"]["name"]',
+  'nwr["place"~"^(city|town|village|hamlet)$"]["name"]',
   'node["tourism"="viewpoint"]["name"]',
   'nwr["natural"="glacier"]["name"]',
   'node["amenity"="drinking_water"]',
@@ -199,13 +203,13 @@ export function overpassBbox(b: LonLatBounds): string {
   return `(${b.south.toFixed(5)},${b.west.toFixed(5)},${b.north.toFixed(5)},${b.east.toFixed(5)})`
 }
 
-/** Overpass QL query for the landmarks inside `boxes` (ways and relations reduced to their centre). */
+/** Overpass QL query for the landmarks inside `boxes` (ways and relations reduced to their bounding box). */
 export function buildOverpassQuery(boxes: readonly LonLatBounds[]): string {
   const lines = boxes.flatMap((b) => {
     const bbox = overpassBbox(b)
     return STATEMENTS.map((s) => `  ${s}${bbox};`)
   })
-  return `[out:json][timeout:${QUERY_TIMEOUT_S}];\n(\n${lines.join('\n')}\n);\nout center tags qt;\n`
+  return `[out:json][timeout:${QUERY_TIMEOUT_S}];\n(\n${lines.join('\n')}\n);\nout tags bb qt;\n`
 }
 
 /** The query of a track: its corridor boxes, `MAX_LANDMARK_DISTANCE_M` wide. */
@@ -223,6 +227,7 @@ interface OverpassElement {
   lat?: number
   lon?: number
   center?: { lat: number; lon: number }
+  bounds?: { minlat: number; minlon: number; maxlat: number; maxlon: number }
   tags?: Record<string, string>
 }
 
@@ -236,7 +241,7 @@ function classify(tags: Record<string, string>): { kind: OsmKind; detail?: strin
   if (tags.waterway === 'waterfall') return { kind: 'waterfall' }
   if (natural === 'glacier') return { kind: 'glacier' }
   if (tags.tourism === 'viewpoint') return { kind: 'viewpoint' }
-  if (tags.place === 'town' || tags.place === 'village' || tags.place === 'hamlet') return { kind: 'place', detail: tags.place }
+  if (/^(city|town|village|hamlet)$/.test(tags.place ?? '')) return { kind: 'place', detail: tags.place }
   if (tags.amenity === 'drinking_water') return { kind: 'waterPoint', detail: 'drinking_water' }
   if (natural === 'spring') return { kind: 'waterPoint', detail: 'spring' }
   return null
@@ -260,12 +265,18 @@ export function parseOverpass(json: unknown): OsmFeature[] {
     if (!type) continue
     const tagged = (tags['name:fr'] ?? tags.name ?? '').trim()
     const name = tagged || (type.detail === 'drinking_water' ? UNNAMED_DRINKING_WATER : '')
-    const lat = element.lat ?? element.center?.lat
-    const lon = element.lon ?? element.center?.lon
+    const b = element.bounds
+    // `out bb` gives ways and relations their bounding box; its middle is what `out center` gave
+    const lat = element.lat ?? element.center?.lat ?? (b && (b.minlat + b.maxlat) / 2)
+    const lon = element.lon ?? element.center?.lon ?? (b && (b.minlon + b.maxlon) / 2)
     if (!name || lat === undefined || lon === undefined) continue
     const feature: OsmFeature = { id: `${element.type}/${element.id}`, kind: type.kind, name, lon, lat }
     if (tags.ele) feature.ele = tags.ele
     if (type.detail) feature.detail = type.detail
+    if (type.kind === 'place') {
+      if (b && element.type !== 'node') feature.area = { west: b.minlon, south: b.minlat, east: b.maxlon, north: b.maxlat }
+      if (tags.population) feature.population = tags.population
+    }
     out.push(feature)
   }
   return out
