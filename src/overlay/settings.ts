@@ -188,6 +188,8 @@ export interface ProfileSettings extends Placed {
   width: number
   /** fraction of the frame height */
   height: number
+  /** '#rrggbb' of the position dot; absent or '' = the colour of the 3D marker */
+  markerColor?: string
 }
 
 export interface LogoSettings extends Sized {
@@ -204,6 +206,8 @@ export interface TextSettings extends Sized {
 export interface MiniMapSettings extends Sized {
   /** small north arrow beside the map (north is always up) */
   northArrow: boolean
+  /** '#rrggbb' of the position dot; absent or '' = the colour of the 3D marker */
+  markerColor?: string
 }
 
 /**
@@ -346,6 +350,11 @@ export function isValidOverrides(o: unknown): boolean {
   return Object.entries(o).every(([key, value]) => Object.hasOwn(OVERRIDE_CHECKS, key) && OVERRIDE_CHECKS[key as keyof OverlayOverrides](value))
 }
 
+/** Position dot colour read from a project: absent, '' (the marker's) or '#rrggbb'. */
+function isValidDotColor(v: unknown): boolean {
+  return v === undefined || v === '' || isHexColor(v)
+}
+
 /** Label colours read from a project: absent, or an object of known kinds with '#rrggbb' values. */
 export function isValidLabelColors(o: unknown): boolean {
   if (o === undefined) return true
@@ -389,6 +398,8 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     validSized(o.text) &&
     validSized(o.weather) &&
     validSized(o.minimap) &&
+    isValidDotColor(o.profile.markerColor) &&
+    isValidDotColor(o.minimap.markerColor) &&
     validSized(o.leaderboard) &&
     (CREDITS_POSITIONS as readonly string[]).includes(o.credits.position) &&
     isValidOverrides(o.overrides) &&

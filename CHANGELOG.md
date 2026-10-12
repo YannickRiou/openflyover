@@ -17,6 +17,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
   tab is grouped in Format, Encodage and Rendu. The Linux desktop encoder targets the same bitrate as the browser.
 - **Affiche** (#34): current camera view or overview, PNG or JPEG, an approximate live preview, tile progress and missing
   tiles reported; « Image fixe » moves to the Affiche tab.
+- **Position dot colour** (#66): the dot of the elevation profile and of the mini-map has its own colour setting in the Habillage tab, the 3D marker's colour by default (was the style's).
 - **Camera and visibility** (#18, #41): markers and labels hidden by the relief disappear completely (never
   half-transparent); the flyover camera checks its sight line to the marker itself and turns around it when the slope
   is too steep; « Poursuite » and the other chase cameras no longer shake on noisy or zigzag tracks.

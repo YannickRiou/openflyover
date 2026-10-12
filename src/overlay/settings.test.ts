@@ -243,6 +243,10 @@ describe('overlay styles, text backing and label colours', () => {
     expect(isValidOverlay({ ...DEFAULT_OVERLAY, overrides: { textBacking: 'glow' as 'blur' } })).toBe(false)
     expect(isValidOverlay({ ...DEFAULT_OVERLAY, labelColors: { climb: '#112233' } })).toBe(true)
     expect(isValidOverlay({ ...DEFAULT_OVERLAY, labelColors: { climb: 'red' } })).toBe(false)
+    // position dot of the profile and the mini-map: absent, '' (the marker's) or '#rrggbb'
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, profile: { ...DEFAULT_OVERLAY.profile, markerColor: '#112233' }, minimap: { ...DEFAULT_OVERLAY.minimap, markerColor: '' } })).toBe(true)
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, minimap: { ...DEFAULT_OVERLAY.minimap, markerColor: 'blue' } })).toBe(false)
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, profile: { ...DEFAULT_OVERLAY.profile, markerColor: 7 as never } })).toBe(false)
     expect(isValidOverlay({ ...DEFAULT_OVERLAY, labelColors: { dragon: '#112233' } as never })).toBe(false)
     expect(isValidSetting('overlay', DEFAULT_OVERLAY)).toBe(true)
   })
