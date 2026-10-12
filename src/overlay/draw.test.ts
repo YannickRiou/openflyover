@@ -26,7 +26,7 @@ import {
 import type { OverlayContext2D, OverlayExtras } from './draw'
 import { MEDIA_DEFAULTS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
-import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, TEXT_BACKINGS } from './settings'
+import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, withStyleLayout } from './settings'
 import type { OverlaySettings } from './settings'
 import { OVERLAY_FONT_FAMILIES } from './themes'
 import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
@@ -40,6 +40,8 @@ interface TextCall {
   alpha: number
   /** font set when the text was drawn */
   font: string
+  /** fill colour when the text was drawn */
+  color: string
 }
 
 interface PointCall {
@@ -63,6 +65,8 @@ function fakeContext() {
   const offsets: number[] = []
   /** fill colour at each visible `fill()` */
   const fills: string[] = []
+  /** filled rectangles, in the order drawn */
+  const rects: { x: number; y: number; w: number; h: number; fill: string; alpha: number }[] = []
   const state = { font: '10px sans-serif', globalAlpha: 1, shadowOffsetX: 0 }
   const stack: (typeof state)[] = []
   const fontPx = () => Number(/(\d+(?:\.\d+)?)px/.exec(state.font)?.[1] ?? 10)
@@ -72,7 +76,7 @@ function fakeContext() {
     measureText: (text: string) => ({ width: text.length * fontPx() * 0.5 }),
     fillText: (text: string, x: number, y: number) => {
       order.push('text')
-      texts.push({ text, x, y, alpha: state.globalAlpha, font: state.font })
+      texts.push({ text, x, y, alpha: state.globalAlpha, font: state.font, color: String(target.fillStyle) })
     },
     drawImage: (_image: unknown, ...args: number[]) => {
       order.push('image')
@@ -92,7 +96,10 @@ function fakeContext() {
         if (visible && (key === 'moveTo' || key === 'lineTo')) points.push({ op: key, x: args[0] as number, y: args[1] as number })
         if (visible && key === 'arc') points.push({ op: key, x: args[0] as number, y: args[1] as number, r: args[2] as number })
         if (visible && key === 'fill') fills.push(String(t.fillStyle))
-        if (key === 'fillRect') order.push(`rect ${String(t.fillStyle)} ${state.globalAlpha}`)
+        if (key === 'fillRect') {
+          order.push(`rect ${String(t.fillStyle)} ${state.globalAlpha}`)
+          rects.push({ x: args[0] as number, y: args[1] as number, w: args[2] as number, h: args[3] as number, fill: String(t.fillStyle), alpha: state.globalAlpha })
+        }
         return calls.push(`${key}(${args.length})`)
       }
     },
@@ -104,8 +111,11 @@ function fakeContext() {
     },
     has: () => true,
   })
-  return { ctx: ctx as unknown as OverlayContext2D, texts, calls, points, images, order, offsets, fills }
+  return { ctx: ctx as unknown as OverlayContext2D, texts, calls, points, images, order, offsets, fills, rects }
 }
+
+/** The styles that only recolour the widgets placed at the user's anchors (the others draw a structure of their own). */
+const FREE_STYLES = OVERLAY_STYLES.filter((style) => !(style in STYLE_LAYOUTS))
 
 const sampleTrack = parseGpx(sampleGpx, 'tour-du-mont-blanc-j1.gpx')[0]
 const track = prepareOverlayTrack(sampleTrack)
@@ -329,8 +339,8 @@ describe('drawOverlay', () => {
     const closing = draw(0.99, settings)
     for (const label of ['Dénivelé +', 'Altitude max', 'Durée', 'Vitesse max']) expect(closing.joined.toLowerCase()).toContain(label.toLowerCase())
 
-    // every text starts inside the safe area
-    for (const { x, y } of [...opening.texts, ...middle.texts, ...closing.texts]) {
+    // every text starts inside the safe area (a structure draws its own furniture beyond it)
+    for (const { x, y } of FREE_STYLES.includes(style) ? [...opening.texts, ...middle.texts, ...closing.texts] : []) {
       expect(x).toBeGreaterThanOrEqual(SIZE.width * SAFE_MARGIN - 1)
       expect(x).toBeLessThanOrEqual(SIZE.width * (1 - SAFE_MARGIN) + 1)
       expect(y).toBeGreaterThanOrEqual(SIZE.height * SAFE_MARGIN - 1)
@@ -495,7 +505,7 @@ describe('mini-map', () => {
     expect(ratio).toBeCloseTo(outline.width / outline.height, 6)
   })
 
-  it.each(OVERLAY_STYLES)('style %s: stays inside the safe area at every anchor', (style) => {
+  it.each(FREE_STYLES)('style %s: stays inside the safe area at every anchor', (style) => {
     for (const anchor of OVERLAY_ANCHORS) {
       for (const size of [1, 2]) {
         const { texts, points } = render(0.5, minimapOnly({ anchor, size }, style))
@@ -891,5 +901,307 @@ describe('text backing of a style without panel', () => {
 
   it('leaves the styles with a panel alone', () => {
     for (const backing of TEXT_BACKINGS) expect(run('broadcast', backing).strokes).toBe(0)
+  })
+})
+
+describe('styles with a structure', () => {
+  const U = SIZE.height / 100
+  const SAFE_LEFT = SIZE.width * SAFE_MARGIN
+  const styled = (style: OverlaySettings['style'], patch: Partial<OverlaySettings> = {}): OverlaySettings => ({ ...withStyleLayout(DEFAULT_OVERLAY, style), enabled: true, ...patch })
+  const off = <T extends { enabled: boolean }>(w: T): T => ({ ...w, enabled: false })
+  const render = (settings: OverlaySettings, progress: number, extras: OverlayExtras = {}, data = track) => {
+    const result = fakeContext()
+    drawOverlay(result.ctx, overlayFrameAt(data, progress), settings, SIZE, {}, extras)
+    return result
+  }
+  const hours = 14
+  const constant = (v: number) => new Array<number>(hours).fill(v)
+  const weatherValues = {} as Record<WeatherVariable, number[]>
+  for (const v of WEATHER_VARIABLES) weatherValues[v] = constant(0)
+  Object.assign(weatherValues, { temperature: constant(14), weatherCode: constant(1), windSpeed: constant(12), windDirection: constant(315) })
+  const withWeather = prepareOverlayTrack(sampleTrack, {
+    time: Array.from({ length: hours }, (_, h) => Date.UTC(2025, 6, 12, 5) + h * 3_600_000),
+    stations: [{ lon: 6.77, lat: 45.86, values: weatherValues }],
+  })
+  const inFrame = (pt: { x: number; y: number }) => pt.x >= 0 && pt.x <= SIZE.width && pt.y >= 0 && pt.y <= SIZE.height
+  const px = (t: TextCall) => Number(/(\d+(?:\.\d+)?)px/.exec(t.font)![1])
+
+  describe('Cinéma', () => {
+    const BAR = 0.11 * SIZE.height
+    const cinema = (patch: Partial<OverlaySettings> = {}) => styled('cinema', patch)
+    const inBottomBar = (t: TextCall) => t.y > SIZE.height - BAR
+    const inTopBar = (t: TextCall) => t.y < BAR
+
+    it('draws a pure black bar at the top and at the bottom, even with every widget off', () => {
+      const bare = cinema({ counters: off(DEFAULT_OVERLAY.counters), profile: off(DEFAULT_OVERLAY.profile) })
+      const bars = render(bare, 0.5).rects.filter((r) => r.fill === '#000000')
+      expect(bars).toEqual([
+        { x: 0, y: 0, w: SIZE.width, h: BAR, fill: '#000000', alpha: 1 },
+        { x: 0, y: SIZE.height - BAR, w: SIZE.width, h: BAR, fill: '#000000', alpha: 1 },
+      ])
+      expect(BAR / SIZE.height).toBeCloseTo(0.11, 9)
+      // the bars are part of the overlay: none while it is off
+      expect(render({ ...bare, enabled: false }, 0.5).rects).toEqual([])
+    })
+
+    it('puts the counters on one line in the middle of the bottom bar, widely spaced and separated by dots, not in the corners', () => {
+      const { texts } = render(cinema(), 0.5)
+      const line = texts.filter(inBottomBar)
+      const parts = line.filter((t) => t.text !== '·')
+      expect(parts.map((t) => t.text)).toEqual([
+        expect.stringMatching(/^\d+,\d km$/),
+        expect.stringMatching(/^alt\. [\d ]+ m$/),
+        expect.stringMatching(/^D\+ [\d ]+ m$/),
+        expect.stringMatching(/^(\d+ h \d\d|\d+ min)$/),
+      ])
+      expect(line.filter((t) => t.text === '·')).toHaveLength(3)
+      // one baseline, left to right, centred on the frame
+      for (const t of line) expect(t.y).toBeCloseTo(line[0].y, 6)
+      const xs = line.map((t) => t.x)
+      expect(xs).toEqual([...xs].sort((a, b) => a - b))
+      expect((xs[0] + xs[xs.length - 1]) / 2).toBeGreaterThan(SIZE.width * 0.4)
+      expect((xs[0] + xs[xs.length - 1]) / 2).toBeLessThan(SIZE.width * 0.6)
+      expect(xs[0]).toBeGreaterThan(SIZE.width * 0.25)
+      expect(xs[xs.length - 1]).toBeLessThan(SIZE.width * 0.75)
+      // small type, no label on the line
+      expect(line[0].font).toMatch(/^500 \d+(\.\d+)?px "IBM Plex Sans"/)
+      expect(texts.map((t) => t.text.toLowerCase())).not.toContain('distance')
+      expect(texts.filter((t) => !inBottomBar(t) && !inTopBar(t))).toEqual([])
+    })
+
+    it('keeps the place of each figure of the line while the figures change', () => {
+      const first = render(cinema(), 0.3).texts.filter(inBottomBar).filter((t) => t.text !== '·')
+      const second = render(cinema(), 0.7).texts.filter(inBottomBar).filter((t) => t.text !== '·')
+      expect(second.map((t) => t.x)).toEqual(first.map((t) => t.x))
+    })
+
+    it('runs the profile as a thin line along the top edge of the bottom bar, full width, with no area under it', () => {
+      const { points, fills, calls } = render(cinema({ counters: off(DEFAULT_OVERLAY.counters) }), 0.5)
+      const ridge = points.filter((pt) => pt.op !== 'arc')
+      const barTop = SIZE.height - BAR
+      expect(Math.min(...ridge.map((pt) => pt.x))).toBeCloseTo(0, 6)
+      expect(Math.max(...ridge.map((pt) => pt.x))).toBeCloseTo(SIZE.width, 6)
+      for (const pt of ridge) {
+        expect(pt.y).toBeLessThanOrEqual(barTop)
+        expect(pt.y).toBeGreaterThan(barTop - 0.05 * SIZE.height - U)
+      }
+      // only the position dot is filled
+      expect(fills).toHaveLength(1)
+      expect(calls).toContain('arc(5)')
+    })
+
+    it('puts the weather in the top bar at the left and the map in the top bar at the right', () => {
+      const both = cinema({
+        counters: off(DEFAULT_OVERLAY.counters),
+        profile: off(DEFAULT_OVERLAY.profile),
+        weather: { ...DEFAULT_OVERLAY.weather, enabled: true, anchor: 'top-left' },
+        minimap: { ...DEFAULT_OVERLAY.minimap, enabled: true, anchor: 'top-right' },
+      })
+      const { texts, points } = render(both, 0.5, {}, withWeather)
+      const weather = texts.find((t) => t.text.toLowerCase().includes('plutôt dégagé'))!
+      expect(weather.text).toMatch(/14 °C/)
+      expect(inTopBar(weather)).toBe(true)
+      expect(weather.x).toBeCloseTo(SAFE_LEFT, 6)
+      // the map: what is drawn in the upper half (the weather credit has its box at the foot of the frame)
+      const map = points.filter((pt) => (pt.op === 'moveTo' || pt.op === 'lineTo') && pt.y < SIZE.height / 2)
+      expect(map.length).toBeGreaterThan(10)
+      for (const pt of map) {
+        expect(pt.y).toBeGreaterThanOrEqual(0)
+        expect(pt.y).toBeLessThanOrEqual(BAR)
+        expect(pt.x).toBeGreaterThan(SIZE.width * 0.8)
+      }
+    })
+
+    it('leaves the opening card centred, in widely spaced light capitals, and the other widgets out of the bars', () => {
+      const opening = render(cinema(), 0.02).texts
+      const title = opening.find((t) => t.text === t.text.toLocaleUpperCase('fr') && /[A-Z]{4}/.test(t.text))!
+      expect(title.font).toMatch(/^300 .*Fraunces/)
+      expect(title.x).toBeCloseTo(SIZE.width / 2, 0)
+      expect(title.y).toBeGreaterThan(BAR)
+      expect(title.y).toBeLessThan(SIZE.height - BAR)
+      const texts: FilmText[] = [
+        { ...FILM_TEXT, startS: 0.4, durationS: 0.4, anchor: 'bottom-left' },
+        { ...FILM_TEXT, id: 'text-2', startS: 0.4, durationS: 0.4, anchor: 'top-left', text: 'Départ' },
+      ]
+      const drawn = render(cinema(), 0.6, { texts }).texts
+      expect(drawn.find((t) => t.text === 'Col de Balme')!.y).toBeLessThan(SIZE.height - BAR)
+      expect(drawn.find((t) => t.text === 'Départ')!.y).toBeGreaterThan(BAR)
+    })
+
+    it('draws a counter moved out of its slot as an ordinary widget again', () => {
+      const moved = cinema({ counters: { ...DEFAULT_OVERLAY.counters, anchor: 'top-left' } })
+      const { texts } = render(moved, 0.5)
+      expect(texts.map((t) => t.text.toLowerCase())).toContain('distance')
+      expect(texts.filter(inBottomBar).filter((t) => t.text !== '·')).toEqual([])
+    })
+  })
+
+  describe('Journal de bord', () => {
+    const SHEET = 0.24 * SIZE.width
+    const PAD = 2.6 * U
+    const journal = (patch: Partial<OverlaySettings> = {}) =>
+      styled('journal', { minimap: { ...withStyleLayout(DEFAULT_OVERLAY, 'journal').minimap, enabled: true }, ...patch })
+
+    it('glues a full-height cream sheet to the left edge, about a quarter of the width, under everything else', () => {
+      const { rects, order } = render(journal(), 0.5)
+      expect(rects[0]).toMatchObject({ x: 0, y: 0, h: SIZE.height, fill: 'rgba(244, 237, 218, 0.97)', alpha: 1 })
+      expect(rects[0].w).toBeCloseTo(SHEET, 6)
+      expect(order[0]).toMatch(/^rect /)
+      // the sheet is drawn even when nothing else is on
+      const bare = journal({ counters: off(DEFAULT_OVERLAY.counters), profile: off(DEFAULT_OVERLAY.profile), minimap: off(DEFAULT_OVERLAY.minimap) })
+      expect(render(bare, 0.5).rects[0].w).toBeCloseTo(SHEET, 6)
+      expect(render({ ...journal(), enabled: false }, 0.5).rects).toEqual([])
+    })
+
+    it('stacks the title in italic serif, the counters as rows with dotted leaders, the map, then the profile with its altitude ticks', () => {
+      const { texts, calls } = render(journal(), 0.5)
+      const header = texts.find((t) => t.font.startsWith('italic'))!
+      expect(header.font).toMatch(/Fraunces/)
+      expect(header.x).toBeCloseTo(PAD, 6)
+      const rows = ['Distance', 'Altitude', 'D+', 'Temps'].map((label) => texts.find((t) => t.text === label)!)
+      // labels on one left edge, one row under the other, values on the right edge of the sheet
+      for (const row of rows) expect(row.x).toBeCloseTo(PAD, 6)
+      for (let i = 1; i < rows.length; i++) expect(rows[i].y).toBeGreaterThan(rows[i - 1].y)
+      const values = rows.map((row) => texts.find((t) => t.y === row.y && t.x > row.x)!)
+      expect(values[0].text).toMatch(/^\d+,\d km$/)
+      for (const value of values) expect(value.x).toBeCloseTo(SHEET - PAD, 6)
+      // one dotted leader per row, plus the one of the profile
+      expect(calls.filter((c) => c === 'setLineDash(1)').length).toBeGreaterThanOrEqual(rows.length)
+      const north = texts.find((t) => t.text === 'N')!
+      const ticks = texts.filter((t) => /^[\d ]+ m$/.test(t.text) && t.y > north.y)
+      expect(ticks).toHaveLength(2)
+      expect(header.y).toBeLessThan(rows[0].y)
+      expect(rows[rows.length - 1].y).toBeLessThan(north.y)
+      expect(north.y).toBeLessThan(ticks[0].y)
+      // highest altitude above the lowest, both on the left axis of the chart
+      expect(ticks[0].y).toBeLessThan(ticks[1].y)
+      expect(Number(ticks[0].text.replace(/\D/g, ''))).toBe(Math.round(track.profile!.maxEle))
+      expect(Number(ticks[1].text.replace(/\D/g, ''))).toBe(Math.round(track.profile!.minEle))
+    })
+
+    it('puts nothing in the right half of the frame', () => {
+      const settings = journal({ weather: { ...DEFAULT_OVERLAY.weather, enabled: true, anchor: 'middle-left' }, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } })
+      const { texts: all, points } = render(settings, 0.5, {}, withWeather)
+      // the credit of the weather is required, and drawn on its own at the bottom right
+      const texts = all.filter((t) => t.text !== OPEN_METEO_ATTRIBUTION)
+      expect(texts.length).toBeGreaterThan(10)
+      for (const t of texts) expect(t.x).toBeLessThanOrEqual(SHEET)
+      for (const pt of points) expect(pt.x).toBeLessThanOrEqual(SHEET)
+      expect(texts.map((t) => t.text)).toEqual(expect.arrayContaining(['Météo', 'Température', 'Vent']))
+    })
+
+    it('replaces the content of the sheet with the totals in the same list form for the closing card', () => {
+      const { texts } = render(journal(), 0.99)
+      for (const label of ['Distance', 'Dénivelé +', 'Altitude max', 'Durée', 'Vitesse max']) {
+        expect(texts.find((t) => t.text === label)?.x).toBeCloseTo(PAD, 6)
+      }
+      // the live rows are gone, the title stays (as the closing card's name)
+      expect(texts.map((t) => t.text)).not.toContain('Temps')
+      expect(texts.some((t) => t.font.startsWith('italic'))).toBe(true)
+      for (const t of texts) expect(t.x).toBeLessThanOrEqual(SHEET)
+    })
+
+    it('keeps the free widgets and the credits out of the sheet', () => {
+      const texts: FilmText[] = [{ ...FILM_TEXT, startS: 0.4, durationS: 0.4, anchor: 'top-left' }]
+      const drawn = render(journal(), 0.6, { texts, credits: ['Relief : © Mapterhorn'] }).texts
+      expect(drawn.find((t) => t.text === 'Col de Balme')!.x).toBeGreaterThan(SHEET)
+      const credit = drawn.find((t) => t.text.startsWith('Relief'))!
+      expect(credit.x).toBeGreaterThan(SHEET)
+      expect(credit.x).toBeLessThanOrEqual(SIZE.width)
+    })
+
+    it('draws a widget out of the left column as an ordinary widget', () => {
+      const moved = journal({ counters: { ...DEFAULT_OVERLAY.counters, anchor: 'top-right' } })
+      const { texts } = render(moved, 0.5)
+      expect(texts.find((t) => t.text.toLowerCase() === 'distance')!.x).toBeGreaterThan(SIZE.width / 2)
+    })
+  })
+
+  describe('Tableau sportif', () => {
+    const BAND_Y = 0.8 * SIZE.height
+    const tableau = (patch: Partial<OverlaySettings> = {}) =>
+      styled('tableau', { minimap: { ...withStyleLayout(DEFAULT_OVERLAY, 'tableau').minimap, enabled: true }, ...patch })
+    const inBand = (t: TextCall) => t.y > BAND_Y
+
+    it('draws a translucent dark band across the bottom fifth of the frame, under an accent line', () => {
+      const { rects } = render(tableau(), 0.5)
+      expect(rects[0]).toMatchObject({ x: 0, y: BAND_Y, w: SIZE.width, h: 0.2 * SIZE.height, fill: 'rgba(12, 18, 23, 0.84)' })
+      expect(rects[1]).toMatchObject({ x: 0, y: BAND_Y, w: SIZE.width, fill: '#E8501A' })
+      expect(render({ ...tableau(), enabled: false }, 0.5).rects).toEqual([])
+    })
+
+    it('spreads the counters as big numbers evenly across the band, the unit in the accent and a small capital label under each', () => {
+      const { texts } = render(tableau(), 0.5)
+      const labels = ['DISTANCE', 'ALTITUDE', 'D+', 'TEMPS'].map((label) => texts.find((t) => t.text === label)!)
+      for (const label of labels) expect(inBand(label)).toBe(true)
+      for (const label of labels) expect(label.y).toBeCloseTo(labels[0].y, 6)
+      // cells of the same width over the safe width, labels centred in them
+      const cell = (SIZE.width - 2 * SAFE_LEFT) / labels.length
+      labels.forEach((label, i) => expect(label.x).toBeCloseTo(SAFE_LEFT + (i + 0.5) * cell, 6))
+      // the number above its label, in bold condensed figures, much bigger than the label
+      const number = texts.find((t) => /^\d+,\d$/.test(t.text) && inBand(t))!
+      expect(number.font).toMatch(/^700 .*Condensed/)
+      expect(number.y).toBeLessThan(labels[0].y)
+      expect(px(number)).toBeGreaterThan(3 * px(labels[0]))
+      expect(number.color).toBe('#FFFFFF')
+      const unit = texts.find((t) => t.text === 'km')!
+      expect(unit.color).toBe('#E8501A')
+      expect(unit.y).toBeCloseTo(number.y, 6)
+      expect(px(unit)).toBeLessThan(px(number))
+      // none in the corners of the frame: all between the first and the last cell
+      for (const t of texts.filter(inBand)) {
+        expect(t.x).toBeGreaterThan(SAFE_LEFT)
+        expect(t.x).toBeLessThan(SIZE.width - SAFE_LEFT)
+      }
+    })
+
+    it('fills the band with the profile as a faded area, over its whole width', () => {
+      const { points, fills } = render(tableau({ counters: off(DEFAULT_OVERLAY.counters), minimap: off(DEFAULT_OVERLAY.minimap) }), 0.5)
+      expect(fills).toContain('rgba(255, 255, 255, 0.14)')
+      const area = points.filter((pt) => pt.op !== 'arc')
+      expect(Math.min(...area.map((pt) => pt.x))).toBeCloseTo(0, 6)
+      expect(Math.max(...area.map((pt) => pt.x))).toBeCloseTo(SIZE.width, 6)
+      for (const pt of area) {
+        expect(pt.y).toBeGreaterThanOrEqual(BAND_Y)
+        expect(pt.y).toBeLessThanOrEqual(SIZE.height)
+      }
+    })
+
+    it('puts the title on an accent stripe at the top left, and the map in a circle at the top right', () => {
+      const opening = render(tableau(), 0.02)
+      const stripe = opening.rects.find((r) => r.fill === '#E8501A' && r.y < BAND_Y)!
+      expect(stripe.x).toBe(0)
+      expect(stripe.y).toBeCloseTo(SIZE.height * SAFE_MARGIN, 6)
+      const title = opening.texts.find((t) => t.color === '#FFFFFF' && /[A-Z]{4}/.test(t.text))!
+      expect(title.x).toBeGreaterThan(0)
+      expect(title.x).toBeLessThan(stripe.w)
+      expect(title.y).toBeGreaterThan(stripe.y)
+      expect(title.y).toBeLessThan(stripe.y + stripe.h)
+      const { points } = render(tableau(), 0.5)
+      const [ring] = points.filter((pt) => pt.op === 'arc' && (pt.r ?? 0) > 5 * U)
+      expect(ring.r).toBeCloseTo(10 * U, 6)
+      expect(ring.x).toBeCloseTo(SIZE.width - SAFE_LEFT - 10 * U, 6)
+      expect(ring.y).toBeCloseTo(SIZE.height * SAFE_MARGIN + 10 * U, 6)
+      for (const pt of points.filter((p) => p.op !== 'arc' && p.x > SIZE.width / 2 && p.y < BAND_Y)) {
+        expect(Math.hypot(pt.x - ring.x, pt.y - ring.y)).toBeLessThanOrEqual(ring.r! + 1e-6)
+      }
+    })
+
+    it('keeps the free widgets above the band, and draws a counter out of its slot as an ordinary widget', () => {
+      const texts: FilmText[] = [{ ...FILM_TEXT, startS: 0.4, durationS: 0.4, anchor: 'bottom-left' }]
+      expect(render(tableau(), 0.6, { texts }).texts.find((t) => t.text === 'Col de Balme')!.y).toBeLessThan(BAND_Y)
+      const { texts: moved } = render(tableau({ counters: { ...DEFAULT_OVERLAY.counters, anchor: 'top-center' } }), 0.5)
+      expect(moved.filter(inBand).filter((t) => t.text.toLowerCase() === 'distance')).toEqual([])
+      expect(moved.map((t) => t.text.toLowerCase())).toContain('distance')
+    })
+  })
+
+  it.each(['cinema', 'journal', 'tableau'] as const)('%s: every point and text of a frame stays inside it, at every moment of the film', (style) => {
+    const layout = withStyleLayout(DEFAULT_OVERLAY, style)
+    const settings = styled(style, { minimap: { ...layout.minimap, enabled: true }, weather: { ...layout.weather, enabled: true } })
+    for (const progress of [0, 0.02, 0.09, 0.5, 0.92, 1]) {
+      const { texts, points } = render(settings, progress, {}, withWeather)
+      for (const pt of [...texts, ...points]) expect(inFrame(pt)).toBe(true)
+    }
   })
 })

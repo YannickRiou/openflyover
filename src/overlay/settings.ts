@@ -8,18 +8,27 @@
  */
 import { isRecord } from '../core/guards'
 
-export const OVERLAY_STYLES = ['editorial', 'broadcast', 'app', 'sport', 'mono', 'topo', 'neon', 'magazine'] as const
+export const OVERLAY_STYLES = ['editorial', 'broadcast', 'app', 'neon', 'cinema', 'journal', 'tableau'] as const
 export type OverlayStyleId = (typeof OVERLAY_STYLES)[number]
 
 export const OVERLAY_STYLE_LABELS: Record<OverlayStyleId, string> = {
   editorial: 'Éditorial',
   broadcast: 'Diffusion',
   app: 'Application',
-  sport: 'Sportif',
-  mono: 'Minimal mono',
-  topo: 'Topo',
   neon: 'Néon nuit',
-  magazine: 'Magazine',
+  cinema: 'Cinéma',
+  journal: 'Journal de bord',
+  tableau: 'Tableau sportif',
+}
+
+/** Styles that existed for a short while and were dropped, each with the style an old project is opened in. */
+const REMOVED_STYLES: Readonly<Record<string, OverlayStyleId>> = { sport: 'broadcast', mono: 'editorial', topo: 'editorial', magazine: 'editorial' }
+
+/** Raw overlay or poster settings of an older project with a removed style id replaced by its successor (`SETTING_UPGRADES`). */
+export function withKnownStyle(raw: unknown): unknown {
+  if (!isRecord(raw) || typeof raw.style !== 'string') return raw
+  const successor = Object.hasOwn(REMOVED_STYLES, raw.style) ? REMOVED_STYLES[raw.style] : undefined
+  return successor ? { ...raw, style: successor } : raw
 }
 
 /** What keeps the text readable in a style without panel: a blurred rounded rectangle, the text's shadow, or its outline. */
@@ -259,6 +268,91 @@ export const DEFAULT_OVERLAY: OverlaySettings = {
   minimap: { enabled: false, anchor: 'bottom-right', size: 1, northArrow: true },
   leaderboard: { enabled: false, anchor: 'middle-right', size: 1 },
   credits: { enabled: true, position: 'bottom-right' },
+}
+
+/** Widgets a style places: its anchors and sizes are applied when the style is chosen (`withStyleLayout`). */
+export const LAID_OUT_WIDGETS = ['title', 'end', 'counters', 'profile', 'minimap', 'weather'] as const
+export type LaidOutWidget = (typeof LAID_OUT_WIDGETS)[number]
+
+/** Where a style puts its widgets, and where it draws them itself as part of its structure (bars, sheet, band). */
+export interface StyleLayout {
+  title: { anchor: OverlayAnchor; size: number }
+  end: { anchor: OverlayAnchor; size: number }
+  counters: { anchor: OverlayAnchor; size: number }
+  profile: { anchor: OverlayAnchor; width: number; height: number }
+  minimap: { anchor: OverlayAnchor; size: number }
+  weather: { anchor: OverlayAnchor; size: number }
+  /** anchors at which a widget sits in the structure of the style; at any other (or with a free offset) it stays an ordinary widget */
+  slots: Record<LaidOutWidget, readonly OverlayAnchor[]>
+}
+
+const LEFT_COLUMN: readonly OverlayAnchor[] = ['top-left', 'middle-left', 'bottom-left']
+
+/** Styles with a structure of their own; the others draw the widgets where the user's anchors put them. */
+export const STYLE_LAYOUTS: Partial<Record<OverlayStyleId, StyleLayout>> = {
+  // letterbox bars: figures as a subtitle line in the bottom bar, profile on its top edge, weather and map in the top bar
+  cinema: {
+    title: { anchor: 'center', size: 1 },
+    end: { anchor: 'center', size: 1 },
+    counters: { anchor: 'bottom-center', size: 1 },
+    profile: { anchor: 'bottom-center', width: 0.3, height: 0.05 },
+    minimap: { anchor: 'top-right', size: 0.5 },
+    weather: { anchor: 'top-left', size: 1 },
+    slots: { title: [], end: [], counters: ['bottom-center'], profile: ['bottom-center'], minimap: ['top-right'], weather: ['top-left'] },
+  },
+  // a paper sheet down the left edge: title, list of figures, map and profile one under the other
+  journal: {
+    title: { anchor: 'top-left', size: 1 },
+    end: { anchor: 'top-left', size: 1 },
+    counters: { anchor: 'middle-left', size: 1 },
+    profile: { anchor: 'bottom-left', width: 0.2, height: 0.12 },
+    minimap: { anchor: 'middle-left', size: 1 },
+    weather: { anchor: 'middle-left', size: 1 },
+    slots: { title: LEFT_COLUMN, end: LEFT_COLUMN, counters: LEFT_COLUMN, profile: LEFT_COLUMN, minimap: LEFT_COLUMN, weather: LEFT_COLUMN },
+  },
+  // a dark band along the bottom: big figures over the profile; title stripe at the top left, round map at the top right
+  tableau: {
+    title: { anchor: 'top-left', size: 1 },
+    end: { anchor: 'center', size: 1 },
+    counters: { anchor: 'bottom-center', size: 1 },
+    profile: { anchor: 'bottom-center', width: 0.6, height: 0.2 },
+    minimap: { anchor: 'top-right', size: 1 },
+    weather: { anchor: 'top-center', size: 1 },
+    slots: { title: ['top-left'], end: [], counters: ['bottom-center'], profile: ['bottom-center'], minimap: ['top-right'], weather: [] },
+  },
+}
+
+/** Placement of the styles without a structure: the defaults of a new project. */
+const FREE_LAYOUT: StyleLayout = {
+  title: { anchor: DEFAULT_OVERLAY.title.anchor, size: DEFAULT_OVERLAY.title.size },
+  end: { anchor: DEFAULT_OVERLAY.end.anchor, size: DEFAULT_OVERLAY.end.size },
+  counters: { anchor: DEFAULT_OVERLAY.counters.anchor, size: DEFAULT_OVERLAY.counters.size },
+  profile: { anchor: DEFAULT_OVERLAY.profile.anchor, width: DEFAULT_OVERLAY.profile.width, height: DEFAULT_OVERLAY.profile.height },
+  minimap: { anchor: DEFAULT_OVERLAY.minimap.anchor, size: DEFAULT_OVERLAY.minimap.size },
+  weather: { anchor: DEFAULT_OVERLAY.weather.anchor, size: DEFAULT_OVERLAY.weather.size },
+  slots: { title: [], end: [], counters: [], profile: [], minimap: [], weather: [] },
+}
+
+/**
+ * `overlay` in `style`, with the style's placement of its widgets (anchors, sizes, no free offset) when the style
+ * changes; going from a style with a structure to one without puts them back where a new project has them.
+ * Nothing is touched while the style stays the same, so the user's own positions are kept.
+ */
+export function withStyleLayout(overlay: OverlaySettings, style: OverlayStyleId): OverlaySettings {
+  if (overlay.style === style) return overlay
+  const layout = STYLE_LAYOUTS[style] ?? (STYLE_LAYOUTS[overlay.style] ? FREE_LAYOUT : undefined)
+  if (!layout) return { ...overlay, style }
+  const place = <K extends LaidOutWidget>(key: K): OverlaySettings[K] => {
+    const { offset: _offset, ...rest } = overlay[key]
+    return { ...rest, ...layout[key] } as OverlaySettings[K]
+  }
+  return { ...overlay, style, title: place('title'), end: place('end'), counters: place('counters'), profile: place('profile'), minimap: place('minimap'), weather: place('weather') }
+}
+
+/** Is widget `key` where the structure of the style draws it (a slot of the style, no free offset)? Else it is an ordinary widget. */
+export function inStyleSlot(overlay: OverlaySettings, key: LaidOutWidget): boolean {
+  const layout = STYLE_LAYOUTS[overlay.style]
+  return layout !== undefined && !overlay[key].offset && layout.slots[key].includes(overlay[key].anchor)
 }
 
 /** Widgets added after the first saved format: missing from older projects and presets. */
