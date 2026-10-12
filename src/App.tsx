@@ -2,10 +2,11 @@ import { Suspense, lazy, useEffect, useMemo, useReducer, useRef, useState, useSy
 import type { KeyboardEvent, ReactNode } from 'react'
 import { useBatchStore } from './export/batch'
 import { isExportBusy, useExportStore } from './export/store'
+import { isCardItem } from './film/cards'
 import { addStop, addText, removeFilmItem } from './film/timeline'
 import { getPlatform } from './platform'
 import { getSettingsHistory, installHistoryShortcuts, installSliderGestures } from './project/history'
-import { editFilm, getFilmSource, seekKeyframe, useFilmClock } from './scene/usePacing'
+import { disableCard, editFilm, getFilmSource, seekKeyframe, useFilmClock } from './scene/usePacing'
 import { useAppStore } from './state/store'
 import { CameraPanel } from './ui/CameraPanel'
 import { ClimbList } from './ui/ClimbList'
@@ -175,7 +176,7 @@ function BlockTools({ onEdit, disabled }: { onEdit(): void; disabled: boolean })
         type="button"
         className="rail__tab"
         disabled={disabled || shot?.style === 'aucune'}
-        onClick={() => editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop })}
+        onClick={() => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop }))}
       >
         <Icon name="trash-2" size={22} />
         <span className="rail__label">{shot ? 'Sans plan' : 'Supprimer'}</span>

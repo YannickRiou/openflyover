@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import type { Track } from '../core/types'
 import { freezeLandmarkTitles, materializeStops, sameLandmarkTitles, withLandmarkTitles, withoutLandmarkTitles } from '../film/assemble'
 import type { PassingTimes } from '../film/assemble'
+import { withoutCard } from '../film/cards'
+import type { CardId } from '../film/cards'
 import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
 import { junctionsM, sortedMarkerKeys } from '../film/markerKeys'
@@ -72,6 +74,16 @@ export function editFilm(edit: (film: Film) => { film: Film; id?: string | null 
     else set()
   }
   if (result.id !== undefined) useAppStore.getState().setFilmSelection(result.id)
+}
+
+/**
+ * Delete the block of the opening title or of the closing card: the card is switched off (one undo step; its settings
+ * are kept, switching it on again from the panel brings the block back) and nothing stays selected.
+ */
+export function disableCard(card: CardId): void {
+  const store = useAppStore.getState()
+  getSettingsHistory().transaction(() => store.setSetting('overlay', withoutCard(store.settings.overlay, card)))
+  store.setFilmSelection(null)
 }
 
 /**
