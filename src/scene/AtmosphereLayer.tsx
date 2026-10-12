@@ -21,7 +21,7 @@ import type { Track } from '../core/types'
 import { samplePath, trackPathOf, type TrackPath } from '../flyover/path'
 import { trackUnderMarker } from '../flyover/sequence'
 import { mslLocalToEcef } from '../geo/geoid'
-import { SHOT_DAYLIGHT_HOUR, shotSunDate, solarHourToDate, sunDateAt, sunDayMs } from '../flyover/sun'
+import { SHOT_DAYLIGHT_HOUR, nightSunDate, shotSunDate, solarHourToDate, sunDateAt, sunDayMs } from '../flyover/sun'
 import { useAppStore } from '../state/store'
 import { CLEAR_SCENE_WEATHER, hazeExtinction, sceneWeatherAt } from '../weather/sceneWeather'
 import type { SceneWeather } from '../weather/sceneWeather'
@@ -126,14 +126,21 @@ export function AtmosphereLayer() {
     const under = at && { ...at, path: trackPathOf(at.track), series: weatherSeriesOf(useWeatherStore.getState(), at.track) }
     markerRef.current = under ?? null
     const dayMs = sunDayMs(settings.sunDate, under?.track.stats.startTime, today)
-    const sunDate = sunDateAt(under?.path ?? null, under?.progress ?? playback.progress, {
-      sunFromTrack: settings.sunFromTrack,
-      solarHour: settings.sunHour,
-      lon: frame.origin.lon,
-      dayMs,
-    })
+    /** the flight's sun at a film progress: the recorded time of the track under the marker there */
+    const sunAt = (progress: number) => {
+      const there = progress === playback.progress ? under : trackUnderMarker(tracks, settings.race, progress)
+      return sunDateAt(there ? trackPathOf(there.track) : null, there?.progress ?? progress, {
+        sunFromTrack: settings.sunFromTrack,
+        solarHour: settings.sunHour,
+        lon: frame.origin.lon,
+        dayMs: there ? sunDayMs(settings.sunDate, there.track.stats.startTime, today) : dayMs,
+      })
+    }
+    const timeS = playback.timeS ?? clock.timeAtProgress(playback.progress)
+    // the nights of a multi-day track pass during their pause (flyover/nights.ts)
+    const sunDate = nightSunDate(clock, timeS, playback.progress, sunAt)
     const daylight = solarHourToDate(dayMs, frame.origin.lon, SHOT_DAYLIGHT_HOUR)
-    const date = shotSunDate(clock, playback.timeS ?? clock.timeAtProgress(playback.progress), sunDate, daylight)
+    const date = shotSunDate(clock, timeS, sunDate, daylight)
     atmosphere.updateByDate(date)
     dateRef.current = date
     const elevation = sunElevation(atmosphere.sunDirection, up)
@@ -238,7 +245,7 @@ export function AtmosphereLayer() {
       </group>
       {seaSurface && <CloudSeaSurface sun={sun} sky={skyLightRef} nightFill={nightFillRef} marker={markerRef} />}
       <EffectComposer multisampling={0}>
-        {cloudsOn && <CloudsLayer date={dateRef} marker={markerRef} noise={noise} />}
+        {cloudsOn && <CloudsLayer date={dateRef} marker={markerRef} nightFill={nightFillRef} noise={noise} />}
         <AerialPerspective ref={aerialRef} stbnTexture={noise} />
         <primitive object={weatherEffect} mainCamera={camera} />
         <ToneMapping mode={ToneMappingMode.NEUTRAL} />
