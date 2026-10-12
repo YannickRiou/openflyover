@@ -2316,8 +2316,8 @@
   scrollbar-width: none;
 }
 
-/* stop button, readout, zoom (pinch instead) and fold: not on a phone */
-.film-tl--centred .film-tl__bar > :is(.icon-btn:not(.film-tl__play), .film-tl__readout, .film-tl__spacer),
+/* stop button, readout and clock, zoom (pinch instead) and fold: not on a phone */
+.film-tl--centred .film-tl__bar > :is(.icon-btn:not(.film-tl__play), .film-tl__readout, .film-tl__clockout, .film-tl__spacer),
 .film-tl--centred :is(.film-tl__sep, .film-tl__zoom) {
   display: none;
 }
