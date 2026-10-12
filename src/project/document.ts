@@ -31,11 +31,12 @@ import { DEFAULT_PLAYBACK, DEFAULT_SETTINGS, PLAYBACK_SPEEDS } from '../state/st
 import type { AppState, Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { isValidClouds, withCloudDefaults } from '../weather/sceneClouds'
+import { PROJECT_EXTENSION } from './file'
 
 export const PROJECT_FORMAT = 'openflyover-project'
 export const PROJECT_VERSION = 2
-/** Suffix of saved project files (`<name>.openflyover.json`). */
-export const PROJECT_FILE_SUFFIX = '.openflyover.json'
+/** Suffix of saved project files (`<name>.opnflvr`, see `file.ts`). */
+export const PROJECT_FILE_SUFFIX = `.${PROJECT_EXTENSION}`
 export const DEFAULT_PROJECT_NAME = 'Sans titre'
 
 /** Optional per-point values, stored as columns (null where a point has no value). */

@@ -61,7 +61,7 @@ pub fn prepare(request: CliRender) -> Result<CliRender, String> {
     Ok(CliRender { input, output, ..request })
 }
 
-fn absolute(path: &Path) -> std::io::Result<PathBuf> {
+pub fn absolute(path: &Path) -> std::io::Result<PathBuf> {
     let full = std::fs::canonicalize(path)?;
     // canonicalize gives \\?\C:\… on Windows: the webview and the fs plugin expect C:\…
     Ok(PathBuf::from(full.to_string_lossy().trim_start_matches(r"\\?\")))

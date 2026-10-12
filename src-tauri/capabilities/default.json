@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window: open and save dialogs; reading and writing only the files picked in those dialogs (the dialog plugin adds each picked path to the fs scope). A film is written through a file handle (open, seek, write) and removed when its export does not finish. Offline tile packs and « Mes projets »: files under $APPDATA/tiles and $APPDATA/projects only (mkdir, read_dir, exists, rename added, scope limited to those folders; a project is written to a .tmp file then renamed). Native video encoder (system ffmpeg, src/video.rs): its six commands, writing only a file picked in the save dialog. Batch rendering from the command line (src/cli.rs): its two commands; the input and output folders given on the command line are added to the fs scope at startup. Status bar: memory and processor load of the machine (src/system.rs, read only). Closing the window: a question (message dialog), then destroy once the last write is done (src/ui/library.ts, installCloseGuard). « Importer depuis Strava »: a one-shot listener on 127.0.0.1 for the redirect (oauth plugin), and the system browser opened on https URLs only (opener plugin: the Strava authorization page, and the links of the app that open in a new tab, src/platform/externalLinks.ts).",
+  "description": "Main window: open and save dialogs; reading and writing only the files picked in those dialogs (the dialog plugin adds each picked path to the fs scope). A film is written through a file handle (open, seek, write) and removed when its export does not finish. Offline tile packs and « Mes projets »: files under $APPDATA/tiles and $APPDATA/projects only (mkdir, read_dir, exists, rename added, scope limited to those folders; a project is written to a .tmp file then renamed). Native video encoder (system ffmpeg, src/video.rs): its six commands, writing only a file picked in the save dialog. Batch rendering from the command line (src/cli.rs): its two commands; the input and output folders given on the command line are added to the fs scope at startup. Project files opened by the system (double-click on a .opnflvr file, « Ouvrir avec… », a path on the command line, the Finder on macOS; src/opened.rs): one command that hands over the queued paths once, each path being added to the fs scope when it is received (the frontend may then read it and write it again in place), and the event it emits on macOS (core:event, in core:default). Status bar: memory and processor load of the machine (src/system.rs, read only). Closing the window: a question (message dialog), then destroy once the last write is done (src/ui/library.ts, installCloseGuard). « Importer depuis Strava »: a one-shot listener on 127.0.0.1 for the redirect (oauth plugin), and the system browser opened on https URLs only (opener plugin: the Strava authorization page, and the links of the app that open in a new tab, src/platform/externalLinks.ts).",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -27,6 +27,7 @@
     "allow-video-cancel",
     "allow-cli-render",
     "allow-cli-exit",
+    "allow-opened-files",
     "allow-system-stats",
     "oauth:allow-start",
     "oauth:allow-cancel",

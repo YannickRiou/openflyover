@@ -87,10 +87,14 @@ describe('pickerAccept', () => {
   const tracks = [{ name: 'Traces GPX ou FIT', extensions: ['gpx', 'fit'] }]
   const images = [{ name: 'Images', extensions: ['png', 'jpg'] }]
 
-  it('filters by extension, except tracks on iOS (Safari greys out the types it does not know)', () => {
+  it('filters by extension, except tracks and projects on iOS (Safari greys out the types it does not know)', () => {
     expect(pickerAccept(tracks, false)).toBe('.gpx,.fit')
     expect(pickerAccept(tracks, true)).toBe('')
     expect(pickerAccept(images, true)).toBe('.png,.jpg')
+    // a project file has no type iOS knows either
+    const projects = [{ name: 'Projet OpenFlyover', extensions: ['opnflvr', 'json'] }]
+    expect(pickerAccept(projects, false)).toBe('.opnflvr,.json')
+    expect(pickerAccept(projects, true)).toBe('')
   })
 })
 
