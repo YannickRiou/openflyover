@@ -914,16 +914,16 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               m
             </>
           )}
-          {time !== undefined && (
-            <>
-              {' · '}
-              <span className="visually-hidden">Heure enregistrée : </span>
-              <time className="film-tl__value film-tl__clock" dateTime={new Date(time).toISOString()}>
-                {formatClock(time)}
-              </time>
-            </>
-          )}
         </span>
+        {/* apart from the readout, which a narrow timeline hides: the clock was asked for in « Réglages » */}
+        {time !== undefined && (
+          <span className="film-tl__clockout">
+            <span className="visually-hidden">Heure enregistrée : </span>
+            <time className="film-tl__value film-tl__clock" dateTime={new Date(time).toISOString()}>
+              {formatClock(time)}
+            </time>
+          </span>
+        )}
         <span className="film-tl__spacer" />
         {/* a row of its own on a phone, which scrolls sideways */}
         <div className="film-tl__tools">

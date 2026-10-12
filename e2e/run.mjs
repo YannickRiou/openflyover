@@ -500,6 +500,21 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'heure',
+    title: 'Réglages › Timeline : « Afficher l’heure enregistrée » montre l’heure de la trace dans la barre de la timeline',
+    async run({ page }) {
+      if (await page.evaluate(() => document.getElementById('tab-reglages')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-reglages')
+      const toggle = '#tab-panel-reglages .checkbox--switch input'
+      await page.waitForSelector(toggle, { timeout: STEP_MS })
+      assert(!(await page.$('.film-tl__clock')), 'l’heure est affichée avant d’avoir été demandée')
+      await page.$eval(toggle, (el) => el.click())
+      await page.waitForSelector('.film-tl__clock', { visible: true, timeout: STEP_MS })
+      await page.$eval(toggle, (el) => el.click())
+      await until(page, () => !document.querySelector('.film-tl__clock'))
+      await blur(page)
+    },
+  },
+  {
     id: 'reperes',
     title: 'Repères et points d’intérêt (onglet Carte) : un point au marqueur, son arrêt coché puis décoché, vu sur la timeline',
     async run({ page }) {
