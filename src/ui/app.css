@@ -38,7 +38,7 @@
   align-items: center;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--color-card);
+  background: var(--surface-card);
 }
 
 .track__swatch {
@@ -47,7 +47,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 1px solid rgba(28, 42, 51, 0.35);
+  border: 1px solid var(--swatch-border);
   cursor: pointer;
 }
 
@@ -78,20 +78,20 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
   cursor: pointer;
 }
 
 @media (hover: hover) {
   .track__fly:hover:not(:disabled) {
-    background: var(--color-line);
+    background: var(--line);
   }
 }
 
 .track__name {
   grid-column: 2;
   font-weight: 700;
-  color: var(--color-ink);
+  color: var(--text-1);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -100,7 +100,7 @@
 .track__meta {
   grid-column: 2;
   font-size: 12px;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
 }
 
 .track__delete {
@@ -111,7 +111,7 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -119,14 +119,14 @@
 
 @media (hover: hover) {
   .track__delete:hover {
-    background: var(--color-line);
+    background: var(--line);
   }
 }
 
 .track__badge {
   margin-left: var(--space-2);
   font-weight: 600;
-  color: var(--color-glacier-deep);
+  color: var(--text-info);
 }
 
 /* « Prévoir la sortie »: folded under the card, date and departure side by side */
@@ -155,9 +155,9 @@
 .tracks__empty {
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--color-card);
+  background: var(--surface-card);
   font-size: 13px;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
   text-align: center;
 }
 
@@ -182,7 +182,7 @@
   align-items: center;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  background: var(--color-paper);
+  background: var(--surface-panel);
   font-size: 13px;
 }
 
@@ -190,7 +190,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 1px solid rgba(28, 42, 51, 0.35);
+  border: 1px solid var(--swatch-border);
 }
 
 .race__name {
@@ -198,12 +198,12 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 .race__distance {
   font-variant-numeric: tabular-nums;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
 }
 
 .race__gap {
@@ -211,7 +211,7 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 /* Settings ---------------------------------------------------------------- */
@@ -222,7 +222,7 @@
   gap: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--color-card);
+  background: var(--surface-card);
 }
 
 .settings__title {
@@ -254,10 +254,10 @@
 
 .modified__reset {
   padding: 1px var(--space-2);
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: var(--color-white);
-  color: var(--color-ink);
+  background: var(--surface-control);
+  color: var(--text-1);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -265,7 +265,7 @@
 
 @media (hover: hover) {
   .modified__reset:hover:not(:disabled) {
-    border-color: var(--color-ink);
+    border-color: var(--text-1);
   }
 }
 
@@ -360,7 +360,7 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 .range-row__value--wide {
@@ -389,7 +389,7 @@
 
 @media (hover: hover) {
   .step-btn:hover:not(:disabled) {
-    border-color: var(--color-ink);
+    border-color: var(--text-1);
   }
 }
 
@@ -418,13 +418,13 @@
 
 .checkbox:has(input:disabled) {
   cursor: default;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
 }
 
 .field__hint {
   margin: 0;
   font-size: 12px;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
 }
 
 /* Project ----------------------------------------------------------------- */
@@ -466,7 +466,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 2px;
   padding: var(--space-2);
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
 }
 
@@ -492,7 +492,7 @@
   margin-left: var(--space-2);
   font-size: 12px;
   font-weight: 400;
-  color: var(--color-glacier-deep);
+  color: var(--text-info);
 }
 
 /* « Hors ligne » packs: name and figures, then « Supprimer » */
@@ -522,7 +522,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding-top: var(--space-3);
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--line);
 }
 
 .overlay-widget__body {
@@ -567,7 +567,7 @@
   padding: 2px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: var(--color-white);
+  background: var(--surface-control);
   cursor: pointer;
 }
 
@@ -575,18 +575,18 @@
   width: 22px;
   height: 22px;
   padding: 0;
-  border: 1px solid rgb(28 42 51 / 0.35);
+  border: 1px solid var(--swatch-border);
   border-radius: 50%;
   cursor: pointer;
 }
 
 .color-row__swatch[aria-pressed='true'] {
-  box-shadow: 0 0 0 2px var(--color-paper), 0 0 0 4px var(--color-ink);
+  box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--text-1);
 }
 
 @media (hover: hover) {
   .color-row__swatch:hover {
-    box-shadow: 0 0 0 2px var(--color-paper), 0 0 0 4px var(--color-ink);
+    box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--text-1);
   }
 }
 
@@ -608,7 +608,7 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  background: var(--color-ink);
+  background: var(--surface-chrome);
   color: var(--color-white);
   font-size: 12px;
 }
@@ -666,7 +666,7 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--color-ink-soft);
   border-radius: var(--radius-sm);
-  background: var(--color-ink);
+  background: var(--surface-chrome);
   color: var(--color-white);
   font-size: 12px;
   font-weight: 600;
@@ -1136,7 +1136,7 @@
 .export__progress {
   width: 100%;
   height: 10px;
-  accent-color: var(--color-accent);
+  accent-color: var(--accent);
 }
 
 /* batch export: one row of resolution chips per aspect, then the list of the files */
@@ -1190,12 +1190,12 @@
 }
 
 .weather__list dt {
-  color: var(--color-ink-soft);
+  color: var(--text-2);
 }
 
 .weather__list dd {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 /* Landmarks (OpenStreetMap) ---------------------------------------------- */
@@ -1216,14 +1216,14 @@
   padding: var(--space-1) var(--space-2);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  background: var(--color-white);
+  background: var(--surface-control);
   text-align: left;
   cursor: pointer;
 }
 
 @media (hover: hover) {
   .landmark:hover {
-    border-color: var(--color-ink);
+    border-color: var(--text-1);
   }
 }
 
@@ -1247,14 +1247,14 @@
   overflow: hidden;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--text-1);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .landmark__meta {
   font-size: 12px;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
 }
 
 /* One landmark: the seek button plus the eye button that hides / shows it */
@@ -1271,7 +1271,7 @@
 
 .landmark-row--hidden .landmark {
   border-style: dashed;
-  border-color: var(--color-ink-soft);
+  border-color: var(--text-2);
   background: transparent;
   opacity: 0.6;
 }
@@ -1293,7 +1293,7 @@
 .highlight {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
-  background: var(--color-card);
+  background: var(--surface-card);
 }
 
 @media (hover: hover) {
@@ -1311,7 +1311,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-ink);
+  color: var(--text-1);
   text-align: left;
   cursor: pointer;
 }
@@ -1324,7 +1324,7 @@
 
 .highlight__meta {
   font-size: 12px;
-  color: var(--color-ink-soft);
+  color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1342,7 +1342,7 @@
 }
 
 .highlight__added {
-  color: var(--color-ink-soft);
+  color: var(--text-2);
 }
 
 .highlight__duration {
@@ -1663,7 +1663,7 @@
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--color-white);
+  background: var(--surface-control);
   color: var(--text-1);
   font: inherit;
   font-size: 12px;
@@ -1673,7 +1673,7 @@
 
 @media (hover: hover) {
   .sun-chip:hover:not(:disabled) {
-    border-color: var(--color-ink);
+    border-color: var(--text-1);
   }
 }
 
@@ -1780,7 +1780,7 @@
   height: 18px;
   border: 1px solid var(--text-2);
   border-radius: 999px;
-  background: var(--color-white);
+  background: var(--surface-control);
   appearance: none;
   cursor: pointer;
   transition: background-color 120ms ease;
@@ -1804,7 +1804,7 @@
 }
 
 .checkbox.checkbox--switch input:checked::before {
-  background: var(--color-white);
+  background: var(--surface-control);
   transform: translateX(12px);
 }
 
@@ -1829,7 +1829,7 @@
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--color-white);
+  background: var(--surface-control);
   color: var(--text-1);
   font-size: 12px;
   font-weight: 600;
@@ -1847,7 +1847,7 @@
 
 @media (hover: hover) {
   .chip:hover {
-    border-color: var(--color-ink);
+    border-color: var(--text-1);
   }
 }
 

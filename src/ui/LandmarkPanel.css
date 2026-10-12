@@ -43,7 +43,7 @@
   column-gap: var(--space-1);
   padding: 2px 0 2px var(--space-1);
   border-radius: var(--radius-sm);
-  background: var(--color-white);
+  background: var(--surface-control);
 }
 
 .place__go {
