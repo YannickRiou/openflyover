@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { clamp } from '../core/math'
 import {
   CAMERA_PRESETS,
   CAMERA_RANGES,
@@ -15,7 +16,7 @@ import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { editFilm, setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
-import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
+import { formatDegrees, formatDistance, formatDuration, formatNumber, formatPercent, formatSecondsShort, formatSpeedUp } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
@@ -212,8 +213,13 @@ export function CameraPanel() {
   const pacing = useAppStore((s) => s.settings.pacing)
   const film = useFilmClock()
   const stopCount = film.stops.length
+  const recordedS = useFilmTrack()?.stats.durationS
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
+  const speedUp = formatSpeedUp(recordedS, durationS)
+  /** one notch of the slider, one way or the other, kept inside the range */
+  const stepDuration = (direction: 1 | -1) =>
+    setFlightTiming({ durationS: clamp(durationS + direction * FLYOVER_DURATION_RANGE.step, FLYOVER_DURATION_RANGE.min, FLYOVER_DURATION_RANGE.max) })
   const preset = findCameraPreset(camera)
   // the current preset stays in the main grid when it is a folded one
   const mainPresets = CAMERA_PRESETS.filter((p) => MAIN_PRESETS.has(p.name) || p === preset)
@@ -336,6 +342,15 @@ export function CameraPanel() {
             <InfoTip text="Durée du trajet à la vitesse ×1, sans les arrêts de la timeline." />
           </div>
           <div className="range-row">
+            <button
+              type="button"
+              className="step-btn"
+              aria-label="Réduire la durée du survol"
+              disabled={durationS <= FLYOVER_DURATION_RANGE.min}
+              onClick={() => stepDuration(-1)}
+            >
+              −
+            </button>
             <input
               id={`${id}-duration`}
               className="range"
@@ -347,6 +362,15 @@ export function CameraPanel() {
               onChange={(e) => setFlightTiming({ durationS: Number(e.currentTarget.value) })}
               aria-valuetext={formatSeconds(durationS)}
             />
+            <button
+              type="button"
+              className="step-btn"
+              aria-label="Allonger la durée du survol"
+              disabled={durationS >= FLYOVER_DURATION_RANGE.max}
+              onClick={() => stepDuration(1)}
+            >
+              +
+            </button>
             <output className="range-row__value range-row__value--wide" htmlFor={`${id}-duration`}>
               {formatSeconds(durationS)}
             </output>
@@ -354,6 +378,7 @@ export function CameraPanel() {
           <p className="field__hint">
             Film : {formatSeconds(Math.round(film.totalTime()))} ·{' '}
             {stopCount === 0 ? 'aucun arrêt' : `${stopCount} arrêt${stopCount > 1 ? 's' : ''}`}
+            {speedUp && ` · accélération ${speedUp} (sortie de ${formatDuration(recordedS ?? 0)})`}
           </p>
         </div>
 
