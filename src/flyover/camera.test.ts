@@ -169,6 +169,32 @@ describe('computeCameraView — chase (default)', () => {
       if (onRidge(at.lat - cell) && onRidge(at.lat + cell)) expect(at.height).toBeGreaterThan(2000)
     }
   })
+
+  it('clears a crest narrower than a ground cell', () => {
+    // a ridge 60 m wide at its foot (one grid cell is 37.5 m here), 300 m high, 170 m south of the marker (between two grid corners)
+    const ridgeLat = 45.9 - 170 / M_PER_DEG_LAT
+    const sample = (_lon: number, lat: number) => 1000 + 300 * Math.max(0, 1 - (Math.abs(lat - ridgeLat) * M_PER_DEG_LAT) / 30)
+    const view = computeCameraView(northbound, 0.5, frame, sample, options())
+    for (let f = 0; f <= 1; f += 0.001) {
+      const at = frame.toLonLat(view.position.clone().lerp(view.marker, f))
+      expect(at.height).toBeGreaterThan(sample(at.lon, at.lat))
+    }
+  })
+
+  it('turns away from a slope too steep to climb over, not on a gentle one', () => {
+    // a plane rising to the east; looking 80° left of the track, the camera stands east-south-east, uphill of the marker
+    const plane = (slope: number) => (lon: number) => 1000 + slope * (lon - 6.85) * M_PER_DEG_LON
+    const asked = (100 * Math.PI) / 180
+    const azimuth = (slope: number) => {
+      const view = computeCameraView(northbound, 0.5, frame, plane(slope), options({ headingOffsetDeg: -80 }))
+      return azimuthFromTarget(view.position, view.marker)
+    }
+    expect(azimuth(0.3)).toBeCloseTo(asked, 4)
+    // 45°, steeper than the pitch (30°) plus the climb allowed: swung toward the south, away from uphill (east)
+    const swung = azimuth(1) - asked
+    expect(swung).toBeGreaterThan((5 * Math.PI) / 180)
+    expect(swung).toBeLessThan((40 * Math.PI) / 180)
+  })
 })
 
 describe('computeCameraView — styles', () => {
@@ -185,7 +211,8 @@ describe('computeCameraView — styles', () => {
     const chase = computeCameraView(path, 0.5, frame, null, options())
     const sway = computeCameraView(path, 0.5, frame, null, options({ style: 'sway' }))
     expect(radial(sway.position)).toBeGreaterThan(radial(chase.position) + 80)
-    expect(sway.position.distanceTo(sway.target)).toBeCloseTo(chase.position.distanceTo(chase.target), 3)
+    // the camera stands on its own smoothed line, a few decimetres inside the bend: the same distance within a metre
+    expect(Math.abs(sway.position.distanceTo(sway.target) - chase.position.distanceTo(chase.target))).toBeLessThan(1)
   })
 
   it('orbit turns around the marker at a constant angular speed, whatever the track direction', () => {

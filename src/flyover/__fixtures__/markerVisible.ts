@@ -83,7 +83,7 @@ export interface MarkerFrame {
   /** normalised device coordinates of the marker (|x|, |y| ≤ 1 inside the frame), NaN when behind the camera */
   ndcX: number
   ndcY: number
-  /** smallest clearance of the line of sight above the relief (metres, `lineOfSightClearance`): < 0 = fading out behind it */
+  /** smallest clearance of the line of sight above the relief (metres, `lineOfSightClearance`): < 0 = hidden behind it, not drawn */
   clearanceM: number
 }
 

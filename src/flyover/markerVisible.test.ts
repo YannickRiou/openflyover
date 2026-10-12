@@ -5,8 +5,11 @@ import { flyFilm } from './__fixtures__/smoothness'
 
 /**
  * The lead marker stays visible whatever the camera: in the middle of the frame and not hidden behind the relief
- * (`lineOfSightClearance`, which fades the marker out). Twisty tracks (switchbacks, loops, right angles) over a steep
- * synthetic massif, every camera preset, 60 s flights.
+ * (`lineOfSightClearance`: below 0 the marker is not drawn at all). Twisty tracks (switchbacks, loops, right angles)
+ * over a steep synthetic massif, every camera preset, 60 s flights. Measured at 10 fps: 2 frames hidden out of 21,600
+ * over the 36 flights, both in one (« Montgolfière » on the switchbacks, 4 m behind the crest at most); it was 0.3%,
+ * up to 8% for one flight with 22 switches between shown and hidden. The marker stays within 0.15 of the half-frame
+ * from its centre (0.14 at most), 0.2 through stops (0.16: the aim stands on a smoothed line, `cameraLine`).
  */
 const LENGTH_S = 60
 const edge = (f: { ndcX: number; ndcY: number }) => (Number.isNaN(f.ndcX) ? Infinity : Math.max(Math.abs(f.ndcX), Math.abs(f.ndcY)))
@@ -16,12 +19,20 @@ describe('marker visibility', { timeout: 120_000 }, () => {
     const track = make()
 
     it(`${name}: no camera preset hides the marker behind the relief`, () => {
+      let hiddenFrames = 0
+      let allFrames = 0
       for (const { name: preset, camera } of CAMERA_PRESETS) {
         const frames = flyMarker(track, LENGTH_S, steepSampler, camera, 10)
-        const hidden = frames.filter((f) => f.clearanceM < 0).length / frames.length
-        expect(hidden, preset).toBeLessThan(0.1)
-        expect(Math.min(...frames.map((f) => f.clearanceM)), preset).toBeGreaterThan(-10)
+        const hidden = frames.map((f) => f.clearanceM < 0)
+        hiddenFrames += hidden.filter(Boolean).length
+        allFrames += frames.length
+        expect(hidden.filter(Boolean).length / frames.length, preset).toBeLessThan(0.005)
+        expect(Math.min(...frames.map((f) => f.clearanceM)), preset).toBeGreaterThan(-8)
+        // no blinking: shown and hidden swap a few times at most over the flight
+        expect(hidden.filter((h, i) => i > 0 && h !== hidden[i - 1]).length, preset).toBeLessThanOrEqual(4)
+        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.15)
       }
+      expect(hiddenFrames / allFrames).toBeLessThan(0.001)
     })
 
     it(`${name}: the marker stays in the middle of the frame through stops and speed changes`, () => {
@@ -40,7 +51,7 @@ describe('marker visibility', { timeout: 120_000 }, () => {
       } as const
       for (const { name: preset, camera } of CAMERA_PRESETS) {
         const frames = flyMarker(track, LENGTH_S, steepSampler, camera, 10, 16 / 9, 1, { ...film, stops: [...film.stops], speeds: [...film.speeds] })
-        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.4)
+        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.2)
       }
     })
   }
