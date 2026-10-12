@@ -551,8 +551,10 @@ ink, 7.3:1).
   "Détails" (details); ghost race synchronization and ranking only once it is enabled. Habillage (`OverlayPanel`)
   in `PanelSection`: "Habillage" (switch, style, "Couleurs et polices" (colors and fonts) collapsed; the only "modifié / Par défaut",
   for all of `overlay`), "Titres" (titles), "Compteurs" (counters; and "Classement (course fantôme)" (ghost race ranking) from two tracks), "Profil et mini-carte" (profile and mini-map), "Météo, logo et texte" (weather, logo and text; absent when the overlay is off), "Crédits des
-  sources" (source credits; always). Each element (`WidgetGroup`) has its switch, then up to three tabs, only those it
-  has: "Contenu" (content: `children`), "Style" (`style`: position, size, then its own colors and fonts) and
+  sources" (source credits; always). Each element (`WidgetGroup`) has its switch, then its position (`WidgetPosition`: 3 × 3
+  grid `AnchorPicker`, then "Position libre" with two offsets in pixels of the exported film, labelled from the anchor),
+  then up to three tabs, only those it has: "Contenu" (content: `children`), "Style" (`style`: size, the logo's opacity,
+  then its own colors and fonts) and
   "Visibilité" (visibility: `visibility`, e.g. the display time of the opening card). `PanelSection` accepts sections
   without `keys` (no marker). Projet: without presets, one
   line instead of an empty list. Lumière: sunrise / sunset on one line (local time if the track gives its offset,
@@ -1625,7 +1627,11 @@ exports) gets it from the terrain source of the settings.
   the 3D canvas, without mouse events) and the video export (`exportOverlay.ts` → `ExportController`) call
   the same function: the film shows exactly the preview.
 - **Units**: 1 u = 1% of the shorter side of the image; safety margins of 5% on each side; shadow blurs corrected for the
-  context transform (devicePixelRatio). Widgets that share one of the 9 anchors stack.
+  context transform (devicePixelRatio). Widgets that share one of the 9 anchors stack (`layoutWidgets`). A widget with a free position (`offset`) leaves its
+  anchor's stack (the others close up as if it were not there): it is placed alone at its anchor, moved by the offset
+  from the anchor's corner of the safe area towards the inside of the frame (to the right / down on a centred axis), and
+  may overlap the others. Every choice of a position in the frame uses the same 3 × 3 grid (`src/ui/AnchorPicker.tsx`,
+  arrow keys via `nextGridIndex`): overlay elements, source credits (`allowed`: the four corners), timeline texts and photos.
 - **Data** (`data.ts`): `prepareOverlayTrack(track, weather?)` once per track: path, cumulative elevation gain (same smoothing and same
   3 m hysteresis as `computeStats`, so the last value equals `stats.ascentM`), smoothed speed and heart rate,
   profile, closing statistics, weather summary, mini-map outline (`miniMapOutline`: local equirectangular
@@ -1633,7 +1639,12 @@ exports) gets it from the terrain source of the settings.
   a pure function of progress (including `mapPoint`, the marker position on the mini-map).
 - **Settings**: `settings.overlay` (`src/overlay/settings.ts`, disabled by default): style (`editorial`, `broadcast`, `app`) and
   widgets — opening card, closing card, counters, profile, mini-map (optional north arrow), logo, free text,
-  weather, ranking — each with `enabled`, `anchor`, `size`. Widgets added after the first format (`minimap`,
+  weather, ranking — each with `enabled`, `anchor`, `size`. Optional `offset {x, y}` on every placed widget (`PLACED_WIDGETS`), absent by
+  default (stacked): whole pixels of the exported film (`OFFSET_MAX_PX` = ±10 000), checked by `isValidOffset`;
+  `withWidgetOffset` sets it or drops the key. `overlayExtras` passes `exportSize` (`videoSize(aspect, resolution)` without
+  the device cap); `drawOverlay` scales the offsets by the ratio of the shorter sides of the drawn frame and of
+  `exportSize`. Ignored on the closing card while its credits roll. `logo.opacity` (0–1, default 1, filled in by
+  `withOverlayDefaults`) is the opacity the logo is drawn at. Widgets added after the first format (`minimap`,
   `credits`, `leaderboard`) are completed with
   their default before validation (`withOverlayDefaults`, via `SETTING_UPGRADES` in `src/project/document.ts`): old projects
   and presets always load (`minimap` and `leaderboard` disabled, `credits` enabled). Live widgets fade out during the
@@ -1694,7 +1705,7 @@ exports) gets it from the terrain source of the settings.
   credits only: it is a transition of the whole picture (widgets left on a black screen would float), brief, and the
   credits required by the licenses stay readable. The export counts its opacity in `overlayTimedState` (a held frame
   is not repeated during a fade); the overlay-only export contains it too.
-- **Source credits** (`settings.overlay.credits { enabled, position }`, enabled by default, four corners): small line
+- **Source credits** (`settings.overlay.credits { enabled, position }`, enabled by default, four corners, chosen on the same 3 × 3 grid with only the corners enabled): small line
   along the edge, outside the safety margins, on a discreet background specific to each style (`theme.credits`: translucent ink
   and white text for "Éditorial" and "Diffusion", paper and ink for "Application", readable on snow as on forest), wrapped
   to the safe width if it is long. Content: `overlayCredits` (`data.ts`), the same strings as the status bar
