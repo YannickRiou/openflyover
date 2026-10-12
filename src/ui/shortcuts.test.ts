@@ -19,6 +19,14 @@ describe('matchShortcut', () => {
     expect(matchShortcut(key('e', { ctrlKey: true }), 'other')).toBe('export')
   })
 
+  it('maps Ctrl or Cmd + Shift + S to save as, and no other Shift combination', () => {
+    expect(matchShortcut(key('S', { ctrlKey: true, shiftKey: true }), 'other')).toBe('save-as')
+    expect(matchShortcut(key('s', { metaKey: true, shiftKey: true }), 'other')).toBe('save-as')
+    expect(matchShortcut(key('O', { ctrlKey: true, shiftKey: true }), 'other')).toBeNull()
+    expect(matchShortcut(key('S', { ctrlKey: true, shiftKey: true }), 'text')).toBeNull()
+    expect(withShortcut('Enregistrer sous…', 'save-as')).toBe('Enregistrer sous… (Ctrl+Maj+S)')
+  })
+
   it('maps F, [ and ? without modifier, and the characters typed with AltGr or Shift', () => {
     expect(matchShortcut(key('f'), 'other')).toBe('fit')
     expect(matchShortcut(key('F'), 'other')).toBe('fit')
@@ -79,7 +87,7 @@ describe('matchShortcut', () => {
     for (const k of [key('s', { ctrlKey: true }), key('f'), key('['), key('?'), key('Escape'), key('ArrowLeft')]) {
       expect(matchShortcut(k, 'text')).toBeNull()
     }
-    expect(matchShortcut(key('s', { ctrlKey: true, shiftKey: true }), 'other')).toBeNull()
+    expect(matchShortcut(key('e', { ctrlKey: true, shiftKey: true }), 'other')).toBeNull()
     expect(matchShortcut(key('f', { altKey: true }), 'other')).toBeNull()
     expect(matchShortcut(key('f', { ctrlKey: true }), 'other')).toBeNull()
     expect(matchShortcut(key('z', { ctrlKey: true }), 'other')).toBeNull()

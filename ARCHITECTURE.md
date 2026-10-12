@@ -352,7 +352,7 @@ pointer (`appearance.css`).
   first track, `effectiveProjectName`) and the saved state, told by the save icon (a dot while modified, the accent colour for 3 s once saved: `topbar__save--unsaved` /
   `--saved`; `savedProject`: settings, tracks and name at the
   last save or the last open, compared by reference, `isProjectDirty`; a project with a track is saved
-  automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open, icon only; a single picker: `.json` → project, anything else → track import,
+  automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open, icon only; a single picker: `.opnflvr` / `.json` → project, anything else → track import,
   `routeOpenedFiles`; opening a project clears the history), "Enregistrer" (save); in the center the **output format** ("Libre" (free),
   16:9, 9:16, 1:1, 4:5, 21:9); on the right "?" (shortcuts) and "Exporter" (export), the only primary button of the shell, which opens
   the export drawer and becomes "42 % · Annuler" (cancel) during an export.
@@ -1454,7 +1454,26 @@ pointer (`appearance.css`).
 
 ## Project (phase 4)
 
-- A project is a single JSON file `<name>.openflyover.json` (`format: "openflyover-project"`, `version`, `name`, `settings`,
+- The project file is `<name>.opnflvr` (MIME `application/x-opnflvr`, `src/project/file.ts`): the ASCII signature `OPNFLVR`, a
+  version byte (1 = gzip of the JSON text, 2 = uncompressed JSON where `CompressionStream` is missing), then the exact text
+  produced by `serializeProject`. The reader detects the signature; otherwise it parses plain JSON (older `.openflyover.json`
+  projects and the « Mes projets » documents); anything else gives a French error.
+- **Save in place**: `Platform.saveDocument(produce, { target, ask })` returns an opaque `FileTarget`: on the website the
+  `FileSystemFileHandle` (Chromium, `showSaveFilePicker` / `showOpenFilePicker` with `rewritable`; write permission is requested
+  when needed, a refused permission or a vanished file falls back to the picker, other errors throw); on the desktop the path (in the
+  fs scope: dialog plugin, or added in Rust for files opened by the OS); Firefox, Safari and iOS download or share, with no
+  target (nothing is overwritten). The target lives in `useAppStore.projectFile` (session only, not in the file); it is set by a
+  save, « Enregistrer sous… » or « Ouvrir » and forgotten by `closeProject` / `newProject`. « Enregistrer » (`topbar__save`,
+  Ctrl+S) = `saveProject`, « Enregistrer sous… » (Projet tab, Ctrl+Maj+S) = `saveProjectAs`; a failed write keeps the project
+  « Modifié »; the autosave to « Mes projets » is unchanged (plain JSON).
+- **Desktop opening** (`src-tauri/src/opened.rs`, `src/platform/openedFiles.ts`): a `.opnflvr` or `.json` argv path (Windows and
+  Linux), or a macOS `RunEvent::Opened`, is added to the fs scope and queued; the command `opened_files` hands the queue over once,
+  the event `openflyover://opened-files` (macOS, app running) makes the frontend take it again; `reopenLastProject` takes the
+  OS files first. The `--rendu` arguments of `cli.rs` are ignored by the parser. Windows and Linux have no single-instance plugin: a
+  double-click while the app runs opens a second instance. `bundle.fileAssociations` declares the type (UTI
+  `io.github.yannickriou.openflyover.project`). The document icon: NSIS uses the exe's (`exe,0`); MSI, macOS (no
+  `CFBundleTypeIconFile`) and Linux cannot be set by configuration; the deb installs `mime/openflyover-opnflvr.xml`.
+- (Before the `.opnflvr` format) a project was a single JSON file `<name>.openflyover.json` (`format: "openflyover-project"`, `version`, `name`, `settings`,
   `playback.speed`, `tracks`, and `media` when the film has photos: table of images by id, one line per image after
   the tracks, see "Film and timeline", "Media table"; optional field, no version change). On
   open, invalid images are discarded and film photos without an image are removed with a warning (music

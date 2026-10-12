@@ -10,6 +10,10 @@ GitHub builds the desktop application installers (workflow `.github/workflows/de
 
 Allow 15 to 30 minutes per system (the Rust cache shortens later runs).
 
+## The project file type (`.opnflvr`)
+
+The installers register the `.opnflvr` file type (« Projet OpenFlyover », `bundle.fileAssociations`): a double-click opens the project in the app. The document icon is the application's on Windows with the `.exe` (NSIS) installer; with the `.msi` it is generic (the WiX template has no icon for a file type), macOS has no per-type icon in the configuration, and on Linux the deb installs `src-tauri/mime/openflyover-opnflvr.xml` (shared-mime-info) so that the type is known. On Windows and Linux a second double-click while the app runs starts a second instance (no single-instance plugin).
+
 ## What the installers show
 
 The installers use the colours of the application (the « Carte alpine » palette: paper, ink, rust red, glacier).
