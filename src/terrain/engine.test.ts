@@ -20,6 +20,7 @@ import {
   createTerrainEngine,
   describeTileError,
   hostOf,
+  restoreEngineImagery,
   viewTileFailures,
   type EngineDeps,
   type EngineTuning,
@@ -923,6 +924,115 @@ describe('tile budget', () => {
     engine.dispose()
     expect(canvas.width).toBe(0)
     expect(canvas.height).toBe(0)
+  })
+
+  describe('after a lost WebGL context', () => {
+    type Deps = ReturnType<typeof createFakeDeps>
+    /** a texture the way the imagery loader leaves it once uploaded: no canvas, flagged as released */
+    function texture(deps: Deps, released: boolean, incomplete = false): Texture {
+      const tex = new Texture()
+      tex.addEventListener('dispose', () => deps.disposedTextures.push(tex))
+      deps.textures.push(tex)
+      if (released) tex.userData.released = true
+      if (incomplete) tex.userData.incomplete = true
+      return tex
+    }
+    /** the engine keeps the loader it was made with: the tests change what it answers */
+    let answer: () => Promise<Texture>
+    const callsOf = (deps: Deps) => (deps.loadImageryTexture as ReturnType<typeof vi.fn>).mock.calls.length
+    const mapOf = (mesh: Mesh) => (mesh.material as MeshStandardMaterial).map
+    const colorOf = (mesh: Mesh) => (mesh.material as MeshStandardMaterial).color.getHex()
+
+    async function loadedEngine(deps: Deps) {
+      deps.loadImageryTexture = vi.fn(() => answer())
+      const engine = engineWith(deps)
+      engine.update(cameraAbove(600_000), 1000)
+      await settle()
+      const meshes = meshesOf(engine)
+      expect(meshes.length).toBeGreaterThan(0)
+      return { engine, meshes }
+    }
+
+    it('draws a released tile again: grey and missing meanwhile, then the new texture, the old one disposed', async () => {
+      const deps = createFakeDeps()
+      answer = async () => texture(deps, true)
+      const { engine, meshes } = await loadedEngine(deps)
+      const before = meshes.map(mapOf)
+      const loads = callsOf(deps)
+
+      let release!: () => void
+      const gate = new Promise<void>((resolve) => (release = resolve))
+      answer = async () => {
+        await gate
+        return texture(deps, false)
+      }
+      restoreEngineImagery(engine)
+      for (const mesh of meshes) {
+        expect(mapOf(mesh)).toBeNull()
+        expect(colorOf(mesh)).toBe(NO_IMAGERY_COLOR)
+      }
+      engine.update(cameraAbove(600_000), 1000)
+      expect(engine.stats.missingVisibleTiles).toBeGreaterThan(0)
+
+      release()
+      await settle()
+      expect(callsOf(deps)).toBe(loads + meshes.length)
+      meshes.forEach((mesh, i) => {
+        expect(mapOf(mesh)).not.toBeNull()
+        expect(mapOf(mesh)).not.toBe(before[i])
+        expect(colorOf(mesh)).toBe(0xffffff)
+        expect(deps.disposedTextures).toContain(before[i])
+      })
+      engine.update(cameraAbove(600_000), 1000)
+      expect(engine.stats.missingVisibleTiles).toBe(0)
+    })
+
+    it('leaves a tile whose canvas is alive alone', async () => {
+      const deps = createFakeDeps()
+      answer = async () => texture(deps, false)
+      const { engine, meshes } = await loadedEngine(deps)
+      const before = meshes.map(mapOf)
+      const loads = callsOf(deps)
+      restoreEngineImagery(engine)
+      await settle()
+      expect(callsOf(deps)).toBe(loads)
+      meshes.forEach((mesh, i) => expect(mapOf(mesh)).toBe(before[i]))
+    })
+
+    it('keeps a tile grey when the redraw fails, and tries again at the next restore', async () => {
+      const deps = createFakeDeps()
+      answer = async () => texture(deps, true)
+      const { engine, meshes } = await loadedEngine(deps)
+      answer = async () => {
+        throw new Error('offline')
+      }
+      restoreEngineImagery(engine)
+      await settle()
+      for (const mesh of meshes) {
+        expect(mapOf(mesh)).toBeNull()
+        expect(colorOf(mesh)).toBe(NO_IMAGERY_COLOR)
+      }
+      answer = async () => texture(deps, false)
+      restoreEngineImagery(engine)
+      await settle()
+      for (const mesh of meshes) expect(mapOf(mesh)).not.toBeNull()
+    })
+
+    it('drops a redraw that arrives after the engine is disposed, and frees its texture', async () => {
+      const deps = createFakeDeps()
+      answer = async () => texture(deps, true)
+      const { engine } = await loadedEngine(deps)
+      const late = texture(deps, false)
+      answer = async () => late
+      restoreEngineImagery(engine)
+      engine.dispose()
+      await settle()
+      expect(deps.disposedTextures).toContain(late)
+    })
+
+    it('is a no-op for no engine', () => {
+      expect(() => restoreEngineImagery(null)).not.toThrow()
+    })
   })
 
   describe('simulated export: a camera flies along a line, prefetching every 5 frames', () => {
