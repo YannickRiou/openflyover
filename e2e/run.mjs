@@ -56,7 +56,7 @@ const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`
 // ---------------------------------------------------------------------------------------------------- helpers
 
 /** The tabs of the side panel, in the order of the rail (SHELL_TABS in src/ui/shell.ts). */
-const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet']
+const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet', 'reglages']
 
 /** Waits until `fn` (run in the page) returns a truthy value. */
 const until = (page, fn, arg, timeout = STEP_MS) => page.waitForFunction(fn, { timeout, polling: 250 }, arg)
@@ -643,7 +643,7 @@ const SCENARIOS = [
       })
       // the export drawer, loaded on its first opening, downloads the finished films: open it first
       await page.click('button.topbar__export')
-      await page.waitForSelector('#export-dock:not([hidden]) button::-p-text(Image fixe)', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector('#export-dock:not([hidden]) button::-p-text(Exporter la vidéo)', { visible: true, timeout: STEP_MS })
       // the film: straight into the export store (the panel's sizes start at 720p)
       let since = Date.now() - 1000
       await page.evaluate(() => {
@@ -681,9 +681,18 @@ const SCENARIOS = [
         setValue.call(select, '720p')
         select.dispatchEvent(new Event('change', { bubbles: true }))
       })
+      // « Image fixe » is in the « Affiche » mode of the drawer; back to « Vidéo » afterwards (the history is there)
+      const exportMode = (label) =>
+        page.evaluate((text) => {
+          const option = [...document.querySelectorAll('#export-dock label.segmented__option')].find((l) => l.textContent.trim() === text && l.offsetParent)
+          if (!option) throw new Error(`mode d'export « ${text} » introuvable`)
+          option.querySelector('input').click()
+        }, label)
+      await exportMode('Affiche')
       since = Date.now() - 1000
       await clickButton(page, 'Image fixe')
       const still = await waitForExport(page, 'image fixe')
+      await exportMode('Vidéo')
       assert(still.result.mimeType === 'image/png' && still.result.sizeBytes > 0, `image fixe : ${still.result.mimeType}, ${still.result.sizeBytes} octets`)
       const png = await waitForDownload('.png', since)
       assert(readFileSync(png.path).subarray(1, 4).toString() === 'PNG', "le fichier image n'est pas un PNG")
@@ -859,7 +868,7 @@ const SCENARIOS = [
         await tap('.block-tools button::-p-text(Terminé)')
         await until(page, () => !document.querySelector('.block-tools') && !document.querySelector('nav.rail').hidden)
         await tap('button.topbar__export')
-        await page.waitForSelector('#export-dock:not([hidden]) button::-p-text(Image fixe)', { timeout: STEP_MS })
+        await page.waitForSelector('#export-dock:not([hidden]) button::-p-text(Exporter la vidéo)', { timeout: STEP_MS })
         await isHalfSheet('#export-dock')
         assert(await page.evaluate(() => document.getElementById('side-panel')?.hidden), 'le panneau est resté ouvert sous la feuille d’export')
         const width = await page.evaluate(() => document.documentElement.scrollWidth)

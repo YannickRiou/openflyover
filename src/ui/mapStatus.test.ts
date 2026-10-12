@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TerrainStats } from '../core/types'
-import { IDLE_MAP_STATUS, nextMapStatus, viewProgress, type MapStatus } from './mapStatus'
+import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
+import { IDLE_MAP_STATUS, SOURCE_CREDITS, compactCredits, fetchChip, nextMapStatus, perfParts, viewProgress, type MapStatus } from './mapStatus'
 
 function stats(visibleTiles: number, pendingVisibleTiles: number, failedTiles = 0): TerrainStats {
   return { visibleTiles, loadedTiles: visibleTiles, pendingTiles: pendingVisibleTiles, failedTiles, pendingVisibleTiles }
@@ -64,5 +65,57 @@ describe('nextMapStatus', () => {
   it('carries the failed tiles', () => {
     expect(nextMapStatus(IDLE_MAP_STATUS, stats(40, 0, 3), 0).failed).toBe(3)
     expect(nextMapStatus(IDLE_MAP_STATUS, stats(0, 0, 2), 0)).toMatchObject({ phase: 'ready', failed: 2 })
+  })
+})
+
+describe('fetchChip', () => {
+  it('nothing while idle, a chip per state otherwise, the store message on error', () => {
+    expect(fetchChip('weather', 'idle')).toBeNull()
+    expect(fetchChip('weather', 'loading')).toMatchObject({ label: 'Météo', tone: 'loading' })
+    expect(fetchChip('water', 'ready')).toMatchObject({ label: 'Eau', tone: 'ready' })
+    expect(fetchChip('landmarks', 'error', 'Serveur saturé')).toEqual({ label: 'Repères', tone: 'attention', tip: 'Serveur saturé' })
+    expect(fetchChip('region', 'none')?.tone).toBe('muted')
+    expect(fetchChip('weather', 'unavailable', 'Trace sans horaires')?.tip).toBe('Trace sans horaires')
+  })
+})
+
+describe('perfParts', () => {
+  const all = { fps: true, gpu: true, tiles: true, memory: true, system: true }
+  it('shows the parts asked for and known, in order', () => {
+    const sample = {
+      fps: 59.6,
+      textures: 412,
+      geometries: 380,
+      tiles: 245,
+      heapBytes: 312e6,
+      system: { usedMemoryBytes: 8.2e9, totalMemoryBytes: 16e9, cpuPercent: 23.4 },
+    }
+    expect(perfParts(sample, all)).toEqual(['60 i/s', '412 textures · 380 géométries', '245 tuiles', 'JS 312 Mo', 'RAM 8,2 Go / 16,0 Go', 'CPU 23 %'])
+    expect(perfParts(sample, { ...all, gpu: false, system: false })).toEqual(['60 i/s', '245 tuiles', 'JS 312 Mo'])
+    expect(perfParts({ fps: 0 }, all)).toEqual(['3D au repos'])
+  })
+})
+
+describe('compactCredits', () => {
+  const ids = { terrainSourceId: 'mapterhorn', imagerySourceId: 'eox-s2cloudless', weather: false, osm: false }
+  const texts = (items: { text: string }[]) => items.map((i) => i.text)
+
+  it('short names of the active sources only, OpenStreetMap first and once', () => {
+    expect(texts(compactCredits(ids))).toEqual(['EOX', '© Mapterhorn'])
+    expect(texts(compactCredits({ ...ids, imagerySourceId: 'opentopomap', osm: true, weather: true }))).toEqual([
+      '© OpenStreetMap',
+      '© OpenTopoMap',
+      '© Mapterhorn',
+      'Open-Meteo',
+    ])
+    expect(compactCredits({ ...ids, osm: true })[0].href).toBe('https://www.openstreetmap.org/copyright')
+    expect(compactCredits({ ...ids, imagerySourceId: 'arcgis-world-imagery' })[0]).toEqual({
+      text: 'Powered by Esri',
+      more: 'Esri, Vantor, Earthstar Geographics, GIS User Community',
+    })
+  })
+
+  it('has a short name for every source of the catalogue', () => {
+    for (const source of [...TERRAIN_SOURCES, ...IMAGERY_SOURCES]) expect(SOURCE_CREDITS[source.id], source.id).toBeDefined()
   })
 })

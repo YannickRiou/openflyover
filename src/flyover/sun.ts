@@ -4,7 +4,7 @@
  *
  * Pure functions (no DOM, no React, no Three).
  */
-import type { FilmClock } from '../film/clock'
+import type { ClockNight, FilmClock } from '../film/clock'
 import { shotSunOf } from '../film/model'
 import { recordedTimeAt, type TrackPath } from './path'
 
@@ -52,11 +52,11 @@ export function sunDateAt(path: TrackPath | null, progress: number, opts: SunDat
   return solarHourToDate(opts.dayMs, opts.lon, opts.solarHour)
 }
 
-/** Hours of the day the sun runs over a 'situation' shot that moves it (« Faire bouger le soleil »). */
+/** Hours of the day the sun runs over a shot in « Accéléré ». */
 export const SHOT_SUN_HOURS = 2
 
 /**
- * Shift (ms) of the sun date at film time `timeS` during a 'situation' shot with `moveSun`, 0 anywhere else: a time
+ * Shift (ms) of the sun date at film time `timeS` during a shot in « Accéléré », 0 anywhere else: a time
  * lapse of SHOT_SUN_HOURS over the whole shot that joins the flight's own sun without a jump. Opening: from
  * SHOT_SUN_HOURS before the time at the start of the flight, slowing down to it (−H·(1 − u)², u = share of the
  * shot); closing: from the time at the end of the flight, speeding up to SHOT_SUN_HOURS after it (H·u²). The sun
@@ -68,13 +68,14 @@ export function shotSunShiftMs(clock: Pick<FilmClock, 'stateAt' | 'opening' | 'c
   return away === null ? 0 : (away.opening ? -away.weight : away.weight) * SHOT_SUN_HOURS * HOUR_MS
 }
 
-/** Solar hour of « Plein jour »: the region view is lit whatever the time of the outing. */
+/** Solar hour of « Plein jour »: the wide view is lit whatever the time of the outing. */
 export const SHOT_DAYLIGHT_HOUR = 13
 
 /**
- * Sun date at film time `timeS`: `flightDate` (the sun of the flight) outside a 'situation' shot and with « Heure du
- * survol »; « Accéléré », the time lapse of `shotSunShiftMs`; « Plein jour », from `daylight` at the region view to
- * `flightDate` where the shot meets the flight, with the same easing (no jump, the sun stands still at the joint).
+ * Sun date at film time `timeS`: `flightDate` (the sun of the flight) outside the opening and closing shots and with
+ * « Heure du survol »; « Accéléré », the time lapse of `shotSunShiftMs`; « Plein jour », from `daylight` at the wide
+ * view to `flightDate` where the shot meets the flight, with the same easing (no jump, the sun stands still at the
+ * joint). Every shot style but 'aucune' (`shotSunOf`: the default of its style when the shot has no choice).
  */
 export function shotSunDate(clock: Pick<FilmClock, 'stateAt' | 'opening' | 'closing'>, timeS: number, flightDate: Date, daylight: Date): Date {
   const away = shotSunAway(clock, timeS, 'jour')
@@ -82,15 +83,57 @@ export function shotSunDate(clock: Pick<FilmClock, 'stateAt' | 'opening' | 'clos
   return new Date(flightDate.getTime() + shotSunShiftMs(clock, timeS))
 }
 
-/** Share (1 at the region view, 0 where the shot meets the flight) of a 'situation' shot lit in `mode`, else null. */
+/** Share (1 at the wide view, 0 where the shot meets the flight) of an opening or closing shot lit in `mode`, else null. */
 function shotSunAway(clock: Pick<FilmClock, 'stateAt' | 'opening' | 'closing'>, timeS: number, mode: 'jour' | 'accelere'): { weight: number; opening: boolean } | null {
   const state = clock.stateAt(timeS)
   if (state.phase !== 'opening' && state.phase !== 'closing') return null
   const opening = state.phase === 'opening'
   const shot = opening ? clock.opening : clock.closing
-  if (shot.style !== 'situation' || shotSunOf(shot) !== mode || !(state.lengthS > 0)) return null
+  if (shot.style === 'aucune' || shotSunOf(shot) !== mode || !(state.lengthS > 0)) return null
   const u = Math.min(1, Math.max(0, state.localS / state.lengthS))
   return { weight: opening ? (1 - u) ** 2 : u ** 2, opening }
+}
+
+/** Time between sunset and full darkness, and between the end of the dark and sunrise (ms), for a night pause. */
+export const NIGHT_DARK_MARGIN_MS = HOUR_MS
+
+/** The night pause of the clock at film time `timeS` (from the start of its ease-in to the end of its ease-out), else null. */
+export function nightAt(clock: Pick<FilmClock, 'nights'>, timeS: number): ClockNight | null {
+  return clock.nights.find((n) => timeS >= n.startS && timeS < n.endS) ?? null
+}
+
+/**
+ * Sun date at film time `timeS` with the nights of a multi-day track: `sunAt(progress)` (the flight's sun at the
+ * marker) outside a night pause; during one, its parts in turn over the pause, in proportion to their seconds:
+ * dusk, from the flight's sun where the pause starts to full darkness (NIGHT_DARK_MARGIN_MS after sunset); night,
+ * to the end of the dark (as long before sunrise); dawn, to the flight's sun where the pause ends. Each part is
+ * linear in film time and the ends join the flight: no jump. Darkness is held within the recorded times around the
+ * pause (an arrival after dark has no dusk to show). A pure function of the film time.
+ */
+export function nightSunDate(
+  clock: Pick<FilmClock, 'nights' | 'progressAtTime'>,
+  timeS: number,
+  progress: number,
+  sunAt: (progress: number) => Date,
+): Date {
+  const night = nightAt(clock, timeS)
+  if (!night) return sunAt(progress)
+  // where the pause has no ease (at the very start of the track), the recorded times around it
+  const fromP = clock.progressAtTime(night.startS)
+  const toP = clock.progressAtTime(night.endS)
+  const from = fromP < night.progress ? sunAt(fromP).getTime() : night.fromMs
+  const to = toP > night.progress ? sunAt(toP).getTime() : night.toMs
+  const clampTime = (ms: number, min: number) => Math.min(to, Math.max(min, ms))
+  const dark = clampTime(night.sunsetMs + NIGHT_DARK_MARGIN_MS, from)
+  const light = clampTime(night.sunriseMs - NIGHT_DARK_MARGIN_MS, dark)
+  const parts = night.duskS + night.nightS + night.dawnS
+  const scale = (night.endS - night.startS) / parts
+  const darkS = night.startS + night.duskS * scale
+  const lightS = darkS + night.nightS * scale
+  const lerp = (t0: number, t1: number, d0: number, d1: number) => (t1 > t0 ? d0 + ((d1 - d0) * (timeS - t0)) / (t1 - t0) : d1)
+  if (timeS < darkS) return new Date(lerp(night.startS, darkS, from, dark))
+  if (timeS < lightS) return new Date(lerp(darkS, lightS, dark, light))
+  return new Date(lerp(lightS, night.endS, light, to))
 }
 
 /** Local mean solar time (hours) at `lon` of `date`, counted from the UTC day containing `dayMs` (inverse of `solarHourToDate`). */

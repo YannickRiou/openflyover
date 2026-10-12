@@ -7,6 +7,7 @@
  * the first / last image.
  */
 import { deviceBudget } from '../core/deviceBudget'
+import { isRecord } from '../core/guards'
 
 /**
  * Film aspect ratios (`x:y` = width:height). The size is the aspect × a resolution class defined by the short
@@ -35,17 +36,42 @@ export type VideoResolution = (typeof VIDEO_RESOLUTIONS)[number]['id']
 export const VIDEO_FPS = [24, 30, 60] as const
 export type VideoFps = (typeof VIDEO_FPS)[number]
 
-/** Encoding quality, mapped to a bitrate by the encoder (`videoBitrate`). */
+/** Export quality: the render tier (qualityTier.ts) and, unless it is set by hand, the bitrate (`videoBitrate`). */
 export const VIDEO_QUALITIES = ['standard', 'high', 'max'] as const
 export type VideoQuality = (typeof VIDEO_QUALITIES)[number]
 
-/** Film format of the project (stored in the settings). */
+/** Codecs of « Encodage »: 'auto' takes the first one the device encodes (H.264, HEVC, VP9, VP8). */
+export const VIDEO_CODEC_CHOICES = ['auto', 'avc', 'hevc', 'vp9'] as const
+export type VideoCodecChoice = (typeof VIDEO_CODEC_CHOICES)[number]
+/** Bitrate chosen by hand, Mbit/s (the encoder's bounds, `MIN_BITRATE` / `MAX_BITRATE`). */
+export const BITRATE_RANGE_MBPS = { min: 1, max: 80, step: 0.5 } as const
+export const KEYFRAME_INTERVALS_S = [0.5, 1, 2, 5, 10] as const
+export const AUDIO_BITRATES_KBPS = [96, 128, 192, 256, 320] as const
+
+/** Film format and encoding of the project (stored in the settings). */
 export interface VideoSettings {
   aspect: VideoAspect
   resolution: VideoResolution
   fps: VideoFps
   quality: VideoQuality
+  /** the bitrate is `bitrateMbps`, chosen by hand, instead of the quality's */
+  manualBitrate: boolean
+  bitrateMbps: number
+  codec: VideoCodecChoice
+  /** seconds between key frames (seeking in an editor against file size) */
+  keyframeIntervalS: number
+  /** bitrate of the soundtrack, kbit/s */
+  audioKbps: number
 }
+
+/** Encoding fields, also those an older project lacks: it encodes as it did (bitrate of the quality, first codec). */
+const ENCODING_DEFAULTS = {
+  manualBitrate: false,
+  bitrateMbps: 14,
+  codec: 'auto',
+  keyframeIntervalS: 2,
+  audioKbps: 192,
+} as const satisfies Partial<VideoSettings>
 
 /** A phone starts at 720p (44 % fewer pixels than 1080p); it can still choose up to its cap. */
 export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
@@ -53,7 +79,27 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   resolution: deviceBudget().kind === 'phone' ? '720p' : '1080p',
   fps: 30,
   quality: 'high',
+  ...ENCODING_DEFAULTS,
 }
+
+/** What the encoder needs of the settings: the bitrate by hand (null: the quality's), codec, key frames, sound. */
+export interface VideoEncoding {
+  bitrateMbps: number | null
+  codec: VideoCodecChoice
+  keyframeIntervalS: number
+  audioKbps: number
+}
+
+export function videoEncoding(video: VideoSettings): VideoEncoding {
+  return {
+    bitrateMbps: video.manualBitrate ? video.bitrateMbps : null,
+    codec: video.codec,
+    keyframeIntervalS: video.keyframeIntervalS,
+    audioKbps: video.audioKbps,
+  }
+}
+
+export const DEFAULT_ENCODING: VideoEncoding = videoEncoding(DEFAULT_VIDEO_SETTINGS)
 
 /**
  * Why a resolution class comes out smaller here (phones and tablets), null when it does not. To show next to the
@@ -97,7 +143,12 @@ export function isValidVideoSettings(video: VideoSettings): boolean {
     VIDEO_ASPECTS.some((a) => a.id === video.aspect) &&
     VIDEO_RESOLUTIONS.some((r) => r.id === video.resolution) &&
     (VIDEO_FPS as readonly number[]).includes(video.fps) &&
-    (VIDEO_QUALITIES as readonly string[]).includes(video.quality)
+    (VIDEO_QUALITIES as readonly string[]).includes(video.quality) &&
+    video.bitrateMbps >= BITRATE_RANGE_MBPS.min &&
+    video.bitrateMbps <= BITRATE_RANGE_MBPS.max &&
+    (VIDEO_CODEC_CHOICES as readonly string[]).includes(video.codec) &&
+    (KEYFRAME_INTERVALS_S as readonly number[]).includes(video.keyframeIntervalS) &&
+    (AUDIO_BITRATES_KBPS as readonly number[]).includes(video.audioKbps)
   )
 }
 
@@ -113,14 +164,16 @@ const LEGACY_FORMATS: Record<string, Pick<VideoSettings, 'aspect' | 'resolution'
 
 /**
  * Upgrade of a saved `video` setting (project or preset) before validation: `{ format, fps, quality }`
- * becomes `{ aspect, resolution, fps, quality }` (an unknown format falls back to 16:9 1080p).
+ * becomes `{ aspect, resolution, fps, quality }` (an unknown format falls back to 16:9 1080p), and the encoding fields
+ * it lacks take their defaults.
  */
 export function withVideoDefaults(raw: unknown): unknown {
-  if (raw === null || typeof raw !== 'object' || Array.isArray(raw) || !('format' in raw)) return raw
-  const { format, ...rest } = raw as Record<string, unknown>
-  if ('aspect' in rest && 'resolution' in rest) return rest
+  if (!isRecord(raw)) return raw
+  if (!('format' in raw)) return { ...ENCODING_DEFAULTS, ...raw }
+  const { format, ...rest } = raw
+  if ('aspect' in rest && 'resolution' in rest) return { ...ENCODING_DEFAULTS, ...rest }
   const legacy = (typeof format === 'string' && LEGACY_FORMATS[format]) || DEFAULT_VIDEO_SETTINGS
-  return { ...rest, aspect: legacy.aspect, resolution: legacy.resolution }
+  return { ...ENCODING_DEFAULTS, ...rest, aspect: legacy.aspect, resolution: legacy.resolution }
 }
 
 export interface ScheduleOptions {

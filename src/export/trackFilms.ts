@@ -15,7 +15,7 @@ import { getFilmSource, setLandmarkTitles } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { syncWeather, useWeatherStore } from '../weather/store'
 import type { BatchContext } from './batch'
-import { EXPORT_HOLD_END_S, EXPORT_HOLD_START_S } from './schedule'
+import { EXPORT_HOLD_END_S, EXPORT_HOLD_START_S, videoEncoding } from './schedule'
 
 /** Longest wait for the landmarks and the weather of a track (ms): past it, its film is rendered without them. */
 export const TRACK_DATA_WAIT_MS = 30_000
@@ -26,13 +26,14 @@ export function trackFilm(film: Film): Film {
   return { ...film, autoStops: true, stops: [], speeds: [], cameraKeys: [], texts: [], media: [], pois: [] }
 }
 
-/** Request fields of the film shown (its clock: the track shown, its landmarks), frame rate and quality of « Vidéo ». */
+/** Request fields of the film shown (its clock: the track shown, its landmarks), frame rate, quality and encoding of « Vidéo ». */
 export function shownFilm(): BatchContext['film'] {
   const clock = filmClockFor(getFilmSource())
-  const { fps, quality } = useAppStore.getState().settings.video
+  const { video } = useAppStore.getState().settings
   return {
-    fps,
-    quality,
+    fps: video.fps,
+    quality: video.quality,
+    encoding: videoEncoding(video),
     durationS: clock.totalTime(),
     progressAt: clock.progressAtTime,
     holdStartS: EXPORT_HOLD_START_S,

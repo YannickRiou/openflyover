@@ -225,7 +225,7 @@ describe('serializeProject / parseProject', () => {
   it('loads the fixed video formats of older projects as aspect × resolution', () => {
     const { settings, invalid } = sanitizeSettings({ video: { format: '1080x1920', fps: 60, quality: 'max' } })
     expect(invalid).toEqual([])
-    expect(settings.video).toEqual({ aspect: '9:16', resolution: '1080p', fps: 60, quality: 'max' })
+    expect(settings.video).toEqual({ ...DEFAULT_SETTINGS.video, aspect: '9:16', resolution: '1080p', fps: 60, quality: 'max' })
     expect(sanitizeSettings({ video: { aspect: '1:1', resolution: '8k', fps: 30, quality: 'high' } }).invalid).toEqual(['video'])
   })
 
@@ -331,6 +331,21 @@ describe('serializeProject / parseProject', () => {
     const reloaded = parseProject(JSON.stringify(d))
     expect(reloaded.tracks[0]).not.toHaveProperty('timesEstimated')
     expect(reloaded.tracks[1]).not.toHaveProperty('timesEstimated')
+  })
+
+  it('round-trips computed elevations, and drops the flag on a track without elevation or a wrong value', () => {
+    const track: Track = { ...makeTrack('a', '#FF5A36'), elevationEstimated: 'all' }
+    const text = serializeProject({ ...STATE, tracks: [track, makeTrack('b', '#5BC0EB')] }, 'x')
+    const loaded = parseProject(text)
+    expect(loaded.tracks[0].elevationEstimated).toBe('all')
+    expect(loaded.tracks[1]).not.toHaveProperty('elevationEstimated')
+    const d = JSON.parse(text) as { tracks: { elevationEstimated?: unknown; segments: Record<string, unknown>[] }[] }
+    d.tracks[0].elevationEstimated = true
+    d.tracks[1].elevationEstimated = 'gaps'
+    for (const segment of d.tracks[1].segments) delete segment.ele
+    const reloaded = parseProject(JSON.stringify(d))
+    expect(reloaded.tracks[0]).not.toHaveProperty('elevationEstimated')
+    expect(reloaded.tracks[1]).not.toHaveProperty('elevationEstimated')
   })
 })
 
