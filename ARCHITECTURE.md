@@ -1583,7 +1583,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   applied in `publish` (`osm/store.ts`) after `buildLandmarks`, before `splitHidden`.
 - **Cross and « Relancer la recherche »**: the cross of a hidden landmark puts its id in `settings.landmarks.dismissedIds`
   (`buildLandmarks` skips it before the cap, so another takes its place); the button empties `dismissedIds` and calls
-  `syncLandmarks(…, { refresh: true })`, which forgets the features and asks Overpass again (`fetchTrackFeatures(…, refresh)`
+  `syncLandmarks(…, { refresh: true })`, which asks Overpass again for every track (the known landmarks stay until the answer, and if it fails; « Réessayer » does the same; `fetchTrackFeatures(…, refresh)`
   skips the memory and the persistent cache, then caches the answer). `withLandmarkDefaults` gives `[]` to both lists.
 - **Eye**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids. Hiding removes, in the same undo step,
   the row's own stop (`placeStop`: the stop whose `source.ref` is the landmark, else a stop placed by hand within 1 m)

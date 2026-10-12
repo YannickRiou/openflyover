@@ -71,8 +71,8 @@ function publish(tracks: readonly Track[], settings: LandmarkSettings, message: 
 /**
  * Bring the landmarks in line with the tracks and the setting: idle (and no label) without a track or when
  * disabled; else the features of each new track are fetched, the landmarks of every track re-filtered.
- * `retry` refetches the tracks whose request failed; `refresh` forgets every track's features and asks OpenStreetMap
- * again (the caches skipped).
+ * `retry` refetches the tracks whose request failed; `refresh` asks OpenStreetMap again for every track (the caches
+ * skipped); the landmarks known stay until the answer, and stay if it fails.
  */
 export function syncLandmarks(
   tracks: readonly Track[],
@@ -96,7 +96,7 @@ export function syncLandmarks(
   }
   for (const id of failed) if (!ids.has(id)) failed.delete(id)
   const features: Record<string, readonly OsmFeature[]> = {}
-  for (const id of Object.keys(state.features)) if (ids.has(id) && !refresh) features[id] = state.features[id]
+  for (const id of Object.keys(state.features)) if (ids.has(id)) features[id] = state.features[id]
   if (retry || refresh) failed.clear()
   if (refresh) {
     for (const ctrl of pending.values()) ctrl.abort()
@@ -106,7 +106,7 @@ export function syncLandmarks(
 
   let message = state.message
   for (const track of tracks) {
-    if (features[track.id] || pending.has(track.id) || failed.has(track.id)) continue
+    if ((features[track.id] && !refresh) || pending.has(track.id) || failed.has(track.id)) continue
     const ctrl = new AbortController()
     pending.set(track.id, ctrl)
     deps.fetchFeatures(track, ctrl.signal, undefined, refresh).then(
