@@ -5,6 +5,39 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Export: every image waits for its tiles, or the export stops** (#36): more retries with growing delays (up to about
+  2 min per tile), 5 minutes at most per image; a tile that never comes stops the export with an error naming the
+  server, the tile and the cause, instead of delivering incomplete images.
+- **Export: faster and lighter** (#35, #37): the interface stays responsive during an export; render-time breakdown (GPU
+  when the browser measures it, composing, video frame, encoder wait, renders per image) in the console, the history and
+  the diagnostic report; hardware video encoder when available; one render instead of two per image with clouds when
+  the tiles are ready; encoding overlaps the next image.
+- **Export settings** (#33): manual video bitrate, codec and container, key frame interval and audio bitrate; the Vidéo
+  tab is grouped in Format, Encodage and Rendu. The Linux desktop encoder targets the same bitrate as the browser.
+- **Affiche** (#34): current camera view or overview, PNG or JPEG, an approximate live preview, tile progress and missing
+  tiles reported; « Image fixe » moves to the Affiche tab.
+- **Camera and visibility** (#18, #41): markers and labels hidden by the relief disappear completely (never
+  half-transparent); the flyover camera checks its sight line to the marker itself and turns around it when the slope
+  is too steep; « Poursuite » and the other chase cameras no longer shake on noisy or zigzag tracks.
+- **Light** (#31, #42, #27): « Soleil » offered for every opening and closing style; volumetric clouds faintly moonlit
+  at night instead of black; on a multi-day track each night is a pause with settable dusk, night and dawn, and
+  « Jour n » cards can be added.
+- **Elevation from the terrain** (#32): a track without elevation gets it from the terrain source, automatically at
+  import for usual outings, otherwise with « Calculer l'altitude »; saved in the project.
+- **OpenStreetMap places** (#29): cities and places mapped as areas are found; towns, villages and hamlets shown by
+  default (chips « Villes », « Villages », « Hameaux »), ranked by population.
+- **« Repères et points d'intérêt »** (#23): one list in the Carte tab, each row with an eye and an « Arrêt »;
+  « Tout afficher » / « Tout masquer »; landmarks found later marked « nouveau ». The « Temps forts » section is
+  removed and automatic stops no longer stop at climb tops.
+- **Interface** (#22, #25, #26): track and marker settings in the Trace tab (« Trace », « Marqueur »); new « Réglages »
+  tab; status bar with fetch states, performance (desktop: RAM and CPU) and always-visible short credits, IGN update
+  date in « Sources et licences »; fixed-width timecode and icon-only timeline tools, so the view no longer resizes.
+- **Project** (#20): « Nouveau projet » and « Fermer le projet » in the Projet tab, which gathers every project action.
+- **Overlay positions** (#39, #38): one 3 × 3 grid for every position, a free position in pixels of the exported
+  video, logo opacity.
+- **Marker** (#21, #30): free or track colour, ring / halo / pulse styles; six new figures, figure chosen from the
+  activity, pin / rounded square / silhouette badges, a label and a stick with its ground shadow.
+
 - **Export and preview: fewer visible tile swaps** (an iPhone export of a track near a border showed, while zooming
   and moving, large parts of the terrain changing colour from one image to the next, white patches coming and going, and
   the detail of whole bands jumping): the white tile IGN answers outside France from z13 is no longer drawn (the coarser
