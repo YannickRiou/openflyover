@@ -15,7 +15,7 @@ then run `git status` and `npm run typecheck`.
 - PR #12 (9 October 2026): review fixes, simplifications, knowledge base, `lot-suites` merge, Windows build fix
   (`safeZoneLayout.ts`); the "Desktop installers" workflow then passed on master for the three systems.
 - `ai-dev/confident-darwin-83rxik` (cloud session, after PR #12): slider and helper simplifications, concise README and
-  user guide (`docs/user-guide.html`, `docs/deploying.md`, `docs/roadmap.md`), and the features ported from the old
+  user guide (`docs/user-guide.html`, `docs/deploying.md`), and the features ported from the old
   branch chain (see "Work in progress").
 - Old branch chain `landmarks-hide` → `track-style` → `ui-polish` → `timeline-polish` → `export-stream` →
   `timeline-videos` → `water` (7 October 2026): most of it reached master through other commits; what was missing
