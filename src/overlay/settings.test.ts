@@ -5,6 +5,7 @@ import {
   DEFAULT_OVERLAY,
   LABEL_KINDS,
   OFFSET_MAX_PX,
+  WIDGET_SIZE_MIN,
   OVERLAY_STYLES,
   OVERLAY_STYLE_LABELS,
   STYLE_LAYOUTS,
@@ -369,5 +370,14 @@ describe('styles that were dropped', () => {
     for (const style of OVERLAY_STYLES) {
       expect(sanitizeSettings({ overlay: { ...DEFAULT_OVERLAY, style }, poster: { ...DEFAULT_POSTER, style } }).settings).toMatchObject({ overlay: { style }, poster: { style } })
     }
+  })
+})
+
+describe('widget size range', () => {
+  it('lets the opening title and the closing card shrink to a fifth, not further', () => {
+    const sized = (size: number) => ({ ...DEFAULT_OVERLAY, title: { ...DEFAULT_OVERLAY.title, size }, end: { ...DEFAULT_OVERLAY.end, size } })
+    expect(isValidOverlay(sized(WIDGET_SIZE_MIN))).toBe(true)
+    expect(WIDGET_SIZE_MIN).toBe(0.2)
+    expect(isValidOverlay(sized(WIDGET_SIZE_MIN - 0.05))).toBe(false)
   })
 })
