@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { isValidSetting, sanitizeSettings } from '../project/document'
+import { DEFAULT_POSTER } from '../poster/settings'
 import {
   DEFAULT_OVERLAY,
   LABEL_KINDS,
   OFFSET_MAX_PX,
   OVERLAY_STYLES,
+  OVERLAY_STYLE_LABELS,
+  STYLE_LAYOUTS,
+  inStyleSlot,
   isValidOverlay,
   widgetOverrides,
   withLabelColor,
   withOverlayDefaults,
   withOverrides,
+  withStyleLayout,
   withWidgetOffset,
   withWidgetOverrides,
 } from './settings'
@@ -262,5 +267,107 @@ describe('overlay styles, text backing and label colours', () => {
   it('takes the text backing from the overrides', () => {
     expect(resolveOverlayTheme('editorial', { textBacking: 'shadow' }).textBacking).toBe('shadow')
     expect(resolveOverlayTheme('editorial', undefined).textBacking).toBeUndefined()
+  })
+})
+
+describe('styles with a structure', () => {
+  it('has the seven styles, three of them laid out by the style itself', () => {
+    expect([...OVERLAY_STYLES]).toEqual(['editorial', 'broadcast', 'app', 'neon', 'cinema', 'journal', 'tableau'])
+    expect(OVERLAY_STYLE_LABELS).toMatchObject({ neon: 'Néon nuit', cinema: 'Cinéma', journal: 'Journal de bord', tableau: 'Tableau sportif' })
+    expect(Object.keys(STYLE_LAYOUTS)).toEqual(['cinema', 'journal', 'tableau'])
+  })
+
+  it('applies the anchors and sizes of a style when it is chosen', () => {
+    const cinema = withStyleLayout(DEFAULT_OVERLAY, 'cinema')
+    expect(cinema.style).toBe('cinema')
+    expect(cinema.counters).toMatchObject({ anchor: 'bottom-center', size: 1 })
+    expect(cinema.profile).toMatchObject({ anchor: 'bottom-center', height: 0.05 })
+    expect(cinema.minimap).toMatchObject({ anchor: 'top-right', size: 0.5 })
+    expect(cinema.weather.anchor).toBe('top-left')
+    expect(cinema.title.anchor).toBe('center')
+    const journal = withStyleLayout(DEFAULT_OVERLAY, 'journal')
+    for (const key of ['title', 'end', 'counters', 'profile', 'minimap', 'weather'] as const) expect(journal[key].anchor.endsWith('-left')).toBe(true)
+    const tableau = withStyleLayout(DEFAULT_OVERLAY, 'tableau')
+    expect(tableau.title.anchor).toBe('top-left')
+    expect(tableau.counters.anchor).toBe('bottom-center')
+    expect(tableau.minimap.anchor).toBe('top-right')
+    // every result is a valid setting
+    for (const o of [cinema, journal, tableau]) expect(isValidOverlay(o)).toBe(true)
+  })
+
+  it.each(['cinema', 'journal', 'tableau'] as const)('%s: idempotent, and the user keeps their own positions while the style stays', (style) => {
+    const once = withStyleLayout(DEFAULT_OVERLAY, style)
+    expect(withStyleLayout(once, style)).toBe(once)
+    const moved = { ...once, counters: { ...once.counters, anchor: 'top-center' as const } }
+    expect(withStyleLayout(moved, style)).toBe(moved)
+  })
+
+  it('keeps what is not a placement, drops the free offsets, and gives the widgets back to the free styles', () => {
+    const custom: OverlaySettings = {
+      ...withWidgetOffset(DEFAULT_OVERLAY, 'counters', { x: 10, y: 20 }),
+      enabled: true,
+      overrides: { accent: '#112233' },
+      labelColors: { peak: '#445566' },
+      counters: { ...DEFAULT_OVERLAY.counters, overrides: { text: '#ffffff' }, offset: { x: 10, y: 20 }, fields: { ...DEFAULT_OVERLAY.counters.fields, speed: true } },
+    }
+    const tableau = withStyleLayout(custom, 'tableau')
+    expect(tableau.enabled).toBe(true)
+    expect(tableau.overrides).toEqual({ accent: '#112233' })
+    expect(tableau.labelColors).toEqual({ peak: '#445566' })
+    expect(tableau.counters.overrides).toEqual({ text: '#ffffff' })
+    expect(tableau.counters.fields.speed).toBe(true)
+    expect(tableau.counters.offset).toBeUndefined()
+    // a style without a structure takes nothing from a style that had none...
+    expect(withStyleLayout(DEFAULT_OVERLAY, 'neon')).toEqual({ ...DEFAULT_OVERLAY, style: 'neon' })
+    expect(withStyleLayout(custom, 'broadcast').counters).toBe(custom.counters)
+    // ...and puts the widgets back where a new project has them when it comes after one that had
+    const back = withStyleLayout(withStyleLayout(DEFAULT_OVERLAY, 'journal'), 'editorial')
+    expect(back).toEqual({ ...DEFAULT_OVERLAY, style: 'editorial' })
+  })
+
+  it('draws a widget in the structure only at a slot of its style, with no free offset', () => {
+    const cinema = withStyleLayout(DEFAULT_OVERLAY, 'cinema')
+    expect(inStyleSlot(cinema, 'counters')).toBe(true)
+    expect(inStyleSlot(cinema, 'minimap')).toBe(true)
+    // the opening card of the cinema is an ordinary card
+    expect(inStyleSlot(cinema, 'title')).toBe(false)
+    expect(inStyleSlot({ ...cinema, counters: { ...cinema.counters, anchor: 'top-left' } }, 'counters')).toBe(false)
+    expect(inStyleSlot(withWidgetOffset(cinema, 'counters', { x: 5, y: 5 }), 'counters')).toBe(false)
+    const journal = withStyleLayout(DEFAULT_OVERLAY, 'journal')
+    expect(inStyleSlot({ ...journal, profile: { ...journal.profile, anchor: 'top-left' } }, 'profile')).toBe(true)
+    expect(inStyleSlot({ ...journal, profile: { ...journal.profile, anchor: 'top-right' } }, 'profile')).toBe(false)
+    for (const key of ['title', 'counters', 'profile'] as const) expect(inStyleSlot(DEFAULT_OVERLAY, key)).toBe(false)
+  })
+
+  it('has a theme and labels for each of them, dark for the cinema and the scoreboard, paper for the logbook', () => {
+    expect(OVERLAY_THEMES.cinema.label.panel).toMatch(/^#0/)
+    expect(OVERLAY_THEMES.journal.label).toMatchObject({ text: OVERLAY_THEMES.journal.text })
+    expect(OVERLAY_THEMES.journal.label.panel).toBe('#F4EDDA')
+    expect(OVERLAY_THEMES.tableau.label.accents.climb).toBe(OVERLAY_THEMES.tableau.accent)
+    expect(OVERLAY_THEMES.cinema.titleUppercase).toBe(true)
+    expect(OVERLAY_THEMES.cinema.titleTracking).toBeGreaterThan(0.2)
+  })
+})
+
+describe('styles that were dropped', () => {
+  const successors = { sport: 'broadcast', mono: 'editorial', topo: 'editorial', magazine: 'editorial' } as const
+
+  it.each(Object.entries(successors))('opens a project saved with the style %s in %s, overlay and poster', (removed, successor) => {
+    const custom = withWidgetOverrides(withLabelColor(withOverrides({ ...DEFAULT_OVERLAY, enabled: true }, { accent: '#112233' }), 'peak', '#445566'), 'counters', { text: '#ffffff' })
+    const { settings, invalid } = sanitizeSettings({ overlay: { ...custom, style: removed }, poster: { ...DEFAULT_POSTER, style: removed, title: 'Tour' } })
+    expect(invalid).toEqual([])
+    expect(settings.overlay).toEqual({ ...custom, style: successor })
+    expect(settings.poster).toEqual({ ...DEFAULT_POSTER, style: successor, title: 'Tour' })
+  })
+
+  it('still refuses a style it never knew', () => {
+    expect(sanitizeSettings({ overlay: { ...DEFAULT_OVERLAY, style: 'nope' } }).invalid).toEqual(['overlay'])
+    expect(sanitizeSettings({ poster: { ...DEFAULT_POSTER, style: 'hasOwnProperty' } }).invalid).toEqual(['poster'])
+  })
+
+  it('leaves the styles that are still there as they are', () => {
+    for (const style of OVERLAY_STYLES) {
+      expect(sanitizeSettings({ overlay: { ...DEFAULT_OVERLAY, style }, poster: { ...DEFAULT_POSTER, style } }).settings).toMatchObject({ overlay: { style }, poster: { style } })
+    }
   })
 })
