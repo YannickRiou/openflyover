@@ -1996,7 +1996,7 @@ exports) gets it from the terrain source of the settings.
   champ), K triangles (… hors champ) par rendu » in the console `[export]` line and the diagnostic « Ombres » row (not in
   the history). Measure before changing which tiles cast.
 - Limits: without direct writing (Firefox, Safari), file kept in memory (~2× its size); the tab must stay open, speed depends on the GPU (to be measured on a
-  machine with a GPU, see `docs/handover.md`).
+  machine with a GPU, see `docs/tests-gpu.md`).
 - **Command line** (desktop, `src-tauri/src/cli.rs` + `src/export/cliRender.ts`): `openflyover --rendu <dossier>
   [--sortie <dossier>] [--prereglage <nom>] [--formats 16:9@1080p,…]`. Rust reads the arguments at startup (`parse_cli`,
   tested; unknown option, missing value, options without `--rendu`: message and exit code 2), makes the paths absolute
