@@ -134,7 +134,27 @@ recording gaps. For multi-day journeys the two interact badly. Proposal:
 
 « Étapes » lane (stage blocks with colour, name, distance, duration; junction badges between them) · junction inspector
 (transition type, duration with − / +, card, light) · stage inspector (name, colour, later trim and speed) · stage cards as blocks
-in « Textes » · snap targets on junctions, card edges and nights · drag handle on track cards.
+in « Textes » · snap targets on junctions, card edges and nights, with alignment guides (§6.6) · drag handle on track cards.
+
+### 6.6 Magnet and alignment aids (owner comment on the PR)
+
+Requirement: the timeline should feel magnetic, with alignment aids when an object is placed on one lane near an object of
+another lane.
+
+Today (`snapTargets`, `snapTime`): one global snap at 8 px to the film ends, shot edges, stop and speed edges, text / media / music
+edges, highlights and the playhead; Alt disables it; nothing is drawn while snapping. Proposal:
+
+- **Targets across all lanes**: every edge **and centre** of every item (stops, speeds, texts, media, music, cards, junctions, transitions,
+  keys), the playhead, the ruler ticks, and later the music beats. Items of the selection being dragged are excluded.
+- **Alignment guides**: while dragging, a thin vertical guide line spans the lanes at the snapped time, with a small tag naming what
+  it aligns to (« Fin de Itxassou », « Jonction », « Tête de lecture »); when several targets share the time, they all light up.
+- **Magnet feel**: a pull distance (≈ 8 px) to catch and a larger release distance (≈ 14 px) to leave (hysteresis, so it does not
+  flicker), a short ease into the target, and the same behaviour for resize handles and for dropping a new item from the toolbar.
+- **Control**: a magnet toggle in the timeline bar (and a key to hold to temporarily invert it); the existing Alt override stays.
+- **Cross-lane rule**: moving an item **vertically is not needed** (lanes are typed), so alignment is about time only; for the
+  « Étapes » lane, items also snap to the stage boundaries (junction start / end of the held transition).
+- **Phase**: this belongs to phase 1 for the new items (junctions, cards) and is extended to all items in the same PR if the snap
+  code stays pure (`snapTargets` returns labelled targets `{ timeS, label }`, tested), otherwise a phase 1b.
 
 ## 7. Phasing and expected impact
 
