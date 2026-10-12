@@ -3,11 +3,27 @@
  * preview before any render, a placeholder with the track's outline), the text panel, title, subtitle, figures,
  * list of the tracks, elevation profile, weather and credits. Synchronous; the fonts must be loaded first (`loadOverlayFonts`).
  *
- * The three styles take the fonts of the overlay styles of the same name and the « Carte alpine » colours.
+ * The styles take the fonts and colours of the overlay styles of the same name; their arrangement is one of three (`POSTER_LAYOUTS`).
  */
 import { fillSky } from '../export/capture'
 import type { MiniMapOutline } from '../overlay/data'
-import { FRAUNCES, GLACIER, INK, INK_SOFT, PAPER, PLEX, PLEX_CONDENSED, TRAIL_RED, TRAIL_RED_LIGHT } from '../overlay/themes'
+import {
+  FRAUNCES,
+  GLACIER,
+  INK,
+  INK_SOFT,
+  NEON_CYAN,
+  OVERLAY_FONT_FAMILIES,
+  PAPER,
+  PLEX,
+  PLEX_CONDENSED,
+  SPORT_ORANGE,
+  TOPO_BROWN,
+  TOPO_PAPER,
+  TOPO_RUST,
+  TRAIL_RED,
+  TRAIL_RED_LIGHT,
+} from '../overlay/themes'
 import { formatDistance, formatNumber } from '../ui/format'
 import type { PosterContent, PosterProfile } from './content'
 import { CREDIT_LINES, FIGURE_VALUE_SHARE, fitLines, fitText, fitTrackList, truncate } from './layout'
@@ -98,12 +114,99 @@ export const POSTER_THEMES: Record<PosterStyleId, PosterTheme> = {
     label: { family: PLEX, weight: 500 },
     profile: { area: GLACIER, line: INK },
   },
+  // bold and sporty: a solid dark card over the view, heavy condensed capitals, orange accent
+  sport: {
+    page: '#0C1217',
+    panel: 'rgba(12, 18, 23, 0.94)',
+    panelShadow: false,
+    panelRadius: 0.4,
+    accent: SPORT_ORANGE,
+    text: '#FFFFFF',
+    textSoft: 'rgba(255, 255, 255, 0.8)',
+    rule: 'rgba(255, 255, 255, 0.2)',
+    figureRule: false,
+    title: { family: PLEX_CONDENSED, weight: 700, uppercase: true, tracking: 0.02 },
+    body: { family: PLEX_CONDENSED, weight: 500 },
+    number: { family: PLEX_CONDENSED, weight: 700 },
+    label: { family: PLEX_CONDENSED, weight: 600, uppercase: true, tracking: 0.08 },
+    profile: { area: 'rgba(255, 107, 44, 0.35)', line: '#FFFFFF' },
+  },
+  // minimal: monospaced text on a dark sheet, hairlines, white only
+  mono: {
+    page: '#10191F',
+    panel: '#10191F',
+    panelShadow: false,
+    panelRadius: 0,
+    accent: '#FFFFFF',
+    text: '#FFFFFF',
+    textSoft: 'rgba(255, 255, 255, 0.78)',
+    rule: 'rgba(255, 255, 255, 0.25)',
+    figureRule: true,
+    title: { family: OVERLAY_FONT_FAMILIES.mono, weight: 500 },
+    body: { family: OVERLAY_FONT_FAMILIES.mono, weight: 500 },
+    number: { family: OVERLAY_FONT_FAMILIES.mono, weight: 500 },
+    label: { family: OVERLAY_FONT_FAMILIES.mono, weight: 500, uppercase: true, tracking: 0.12 },
+    profile: { area: 'rgba(255, 255, 255, 0.16)', line: '#FFFFFF' },
+  },
+  // topographic sheet: map paper, brown hairlines, serif title, rust accent
+  topo: {
+    page: TOPO_PAPER,
+    panel: TOPO_PAPER,
+    panelShadow: false,
+    panelRadius: 0,
+    accent: TOPO_RUST,
+    text: INK,
+    textSoft: TOPO_BROWN,
+    rule: 'rgba(122, 84, 52, 0.45)',
+    figureRule: true,
+    title: { family: FRAUNCES, weight: 500 },
+    body: { family: PLEX, weight: 500 },
+    number: { family: FRAUNCES, weight: 500 },
+    label: { family: PLEX, weight: 500, uppercase: true, tracking: 0.12 },
+    profile: { area: '#CBD9B0', line: INK },
+  },
+  // night neon: deep blue band under the view, cyan accent
+  neon: {
+    page: '#070A1A',
+    panel: '#070A1A',
+    panelShadow: false,
+    panelRadius: 0,
+    accent: NEON_CYAN,
+    text: '#FFFFFF',
+    textSoft: 'rgba(255, 255, 255, 0.8)',
+    rule: 'rgba(94, 240, 255, 0.35)',
+    figureRule: false,
+    title: { family: PLEX_CONDENSED, weight: 700, uppercase: true, tracking: 0.06 },
+    body: { family: PLEX_CONDENSED, weight: 500 },
+    number: { family: PLEX_CONDENSED, weight: 600 },
+    label: { family: PLEX_CONDENSED, weight: 500, uppercase: true, tracking: 0.14 },
+    profile: { area: 'rgba(94, 240, 255, 0.2)', line: NEON_CYAN },
+  },
+  // magazine: a square white sheet over the view, bold serif headline, tracked small capitals
+  magazine: {
+    page: '#FFFFFF',
+    panel: 'rgba(255, 255, 255, 0.96)',
+    panelShadow: true,
+    panelRadius: 0,
+    accent: TRAIL_RED,
+    text: INK,
+    textSoft: INK_SOFT,
+    rule: LINE,
+    figureRule: true,
+    title: { family: FRAUNCES, weight: 700 },
+    body: { family: PLEX, weight: 500 },
+    number: { family: FRAUNCES, weight: 600 },
+    label: { family: PLEX, weight: 600, uppercase: true, tracking: 0.18 },
+    profile: { area: '#E7E1D3', line: INK },
+  },
 }
 
-/** Font faces drawn by the posters (all embedded: they are faces of the overlay, see `OVERLAY_FONTS`). */
+/** Font faces drawn by the posters (all embedded: they are faces of the overlay, see `OVERLAY_FONTS`; the system monospace needs no loading). */
 export const POSTER_FONTS: readonly string[] = [
   ...new Set(
-    Object.values(POSTER_THEMES).flatMap((t) => [t.title, t.body, t.number, t.label].map((f) => `${f.weight} 32px ${f.family}`)),
+    Object.values(POSTER_THEMES).flatMap((t) =>
+      [t.title, t.body, t.number, t.label].filter((f) => f.family !== OVERLAY_FONT_FAMILIES.mono).map((f) => `${f.weight} 32px ${f.family}`),
+    ),
   ),
 ]
 

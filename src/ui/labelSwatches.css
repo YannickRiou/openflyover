@@ -1,0 +1,37 @@
+/* « Couleurs des étiquettes »: one round colour swatch per kind of 3D label, in a compact row. */
+.label-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.label-swatches__input {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgb(28 42 51 / 0.35);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+  overflow: hidden;
+}
+
+.label-swatches__input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.label-swatches__input::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.label-swatches__input::-moz-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.label-swatches__input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

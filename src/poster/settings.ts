@@ -19,9 +19,22 @@ export const POSTER_FORMATS = [
 ] as const
 export type PosterFormatId = (typeof POSTER_FORMATS)[number]['id']
 
-/** The three styles of the film overlay, as posters. */
-export const POSTER_STYLES = ['editorial', 'broadcast', 'app'] as const satisfies readonly OverlayStyleId[]
+/** The styles of the film overlay, as posters. */
+export const POSTER_STYLES = ['editorial', 'broadcast', 'app', 'sport', 'mono', 'topo', 'neon', 'magazine'] as const satisfies readonly OverlayStyleId[]
 export type PosterStyleId = (typeof POSTER_STYLES)[number]
+
+/** Arrangement of a poster: the view in a printed margin (editorial), over a text band (broadcast) or under a card (app). */
+export type PosterLayoutId = 'editorial' | 'broadcast' | 'app'
+export const POSTER_LAYOUTS: Record<PosterStyleId, PosterLayoutId> = {
+  editorial: 'editorial',
+  broadcast: 'broadcast',
+  app: 'app',
+  sport: 'app',
+  mono: 'editorial',
+  topo: 'editorial',
+  neon: 'broadcast',
+  magazine: 'app',
+}
 
 /** The 3D view of the poster: every track framed from the south (« Vue d'ensemble »), or the camera as it is now. */
 export const POSTER_VIEWS = ['overview', 'camera'] as const

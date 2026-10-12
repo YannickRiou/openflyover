@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { isValidSetting, sanitizeSettings } from '../project/document'
-import { DEFAULT_OVERLAY, OFFSET_MAX_PX, isValidOverlay, widgetOverrides, withOverlayDefaults, withOverrides, withWidgetOffset, withWidgetOverrides } from './settings'
+import {
+  DEFAULT_OVERLAY,
+  LABEL_KINDS,
+  OFFSET_MAX_PX,
+  OVERLAY_STYLES,
+  isValidOverlay,
+  widgetOverrides,
+  withLabelColor,
+  withOverlayDefaults,
+  withOverrides,
+  withWidgetOffset,
+  withWidgetOverrides,
+} from './settings'
 import type { OverlaySettings } from './settings'
-import { OVERLAY_FONT_FAMILIES, OVERLAY_THEMES, parseColor, resolveOverlayTheme, toHex } from './themes'
+import { LABEL_KIND_ACCENTS } from '../scene/labelModel'
+import { OVERLAY_FONT_FAMILIES, OVERLAY_THEMES, parseColor, resolveLabelStyle, resolveOverlayTheme, toHex } from './themes'
 
 const withPatch = (patch: (o: OverlaySettings) => void): OverlaySettings => {
   const copy = structuredClone(DEFAULT_OVERLAY)
@@ -17,7 +30,7 @@ describe('overlay settings', () => {
   })
 
   it('rejects unknown styles and anchors, out-of-range values and foreign logos', () => {
-    expect(isValidOverlay(withPatch((o) => (o.style = 'neon' as OverlaySettings['style'])))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => (o.style = 'nope' as OverlaySettings['style'])))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.counters.anchor = 'nowhere' as OverlaySettings['counters']['anchor'])))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.title.end = 0.9)))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.end.start = 0.1)))).toBe(false)
@@ -211,5 +224,39 @@ describe('resolveOverlayTheme', () => {
     expect(toHex('rgba(16, 25, 31, 0.78)')).toBe('#10191f')
     expect(parseColor('rgb(1, 2, 3)')).toEqual({ r: 1, g: 2, b: 3, a: 1 })
     expect(parseColor('red')).toBeNull()
+  })
+})
+
+describe('overlay styles, text backing and label colours', () => {
+  it.each(OVERLAY_STYLES)('style %s: a theme with every label kind, and a valid setting', (style) => {
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, style })).toBe(true)
+    const { label } = OVERLAY_THEMES[style]
+    for (const kind of LABEL_KINDS) expect(label.accents[kind]).toMatch(/^#[0-9a-f]{6}$/i)
+  })
+
+  it('keeps the labels of the default style as they always were', () => {
+    expect(resolveLabelStyle('editorial', undefined).accents).toEqual(LABEL_KIND_ACCENTS)
+  })
+
+  it('validates the text backing and the label colours, and an old project without them', () => {
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, overrides: { textBacking: 'outline' } })).toBe(true)
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, overrides: { textBacking: 'glow' as 'blur' } })).toBe(false)
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, labelColors: { climb: '#112233' } })).toBe(true)
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, labelColors: { climb: 'red' } })).toBe(false)
+    expect(isValidOverlay({ ...DEFAULT_OVERLAY, labelColors: { dragon: '#112233' } as never })).toBe(false)
+    expect(isValidSetting('overlay', DEFAULT_OVERLAY)).toBe(true)
+  })
+
+  it('sets and drops the colour of a label kind, the key going with the last one', () => {
+    const one = withLabelColor(DEFAULT_OVERLAY, 'peak', '#112233')
+    expect(one.labelColors).toEqual({ peak: '#112233' })
+    expect(resolveLabelStyle('app', one.labelColors).accents.peak).toBe('#112233')
+    expect(resolveLabelStyle('app', one.labelColors).accents.climb).toBe(OVERLAY_THEMES.app.label.accents.climb)
+    expect(withLabelColor(one, 'peak', null)).toEqual(DEFAULT_OVERLAY)
+  })
+
+  it('takes the text backing from the overrides', () => {
+    expect(resolveOverlayTheme('editorial', { textBacking: 'shadow' }).textBacking).toBe('shadow')
+    expect(resolveOverlayTheme('editorial', undefined).textBacking).toBeUndefined()
   })
 })

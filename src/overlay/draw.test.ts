@@ -26,7 +26,7 @@ import {
 import type { OverlayContext2D, OverlayExtras } from './draw'
 import { MEDIA_DEFAULTS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
-import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES } from './settings'
+import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, TEXT_BACKINGS } from './settings'
 import type { OverlaySettings } from './settings'
 import { OVERLAY_FONT_FAMILIES } from './themes'
 import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
@@ -59,7 +59,9 @@ function fakeContext() {
   const images: { args: number[]; alpha: number }[] = []
   /** order of the texts, images and filled rectangles (`rect <fill> <opacity>`) drawn */
   const order: string[] = []
-  const state = { font: '10px sans-serif', globalAlpha: 1 }
+  /** non-zero shadow offsets set: the blurred rectangles of the text backing, drawn off the canvas */
+  const offsets: number[] = []
+  const state = { font: '10px sans-serif', globalAlpha: 1, shadowOffsetX: 0 }
   const stack: (typeof state)[] = []
   const fontPx = () => Number(/(\d+(?:\.\d+)?)px/.exec(state.font)?.[1] ?? 10)
   const target: Record<string, unknown> = {
@@ -83,20 +85,23 @@ function fakeContext() {
       if (key in state) return state[key as keyof typeof state]
       if (key in t) return t[key]
       return (...args: unknown[]) => {
-        if (key === 'moveTo' || key === 'lineTo') points.push({ op: key, x: args[0] as number, y: args[1] as number })
-        if (key === 'arc') points.push({ op: key, x: args[0] as number, y: args[1] as number, r: args[2] as number })
+        // a shape drawn with a shadow offset is only the source of its (blurred) shadow, off the canvas
+        const visible = state.shadowOffsetX === 0
+        if (visible && (key === 'moveTo' || key === 'lineTo')) points.push({ op: key, x: args[0] as number, y: args[1] as number })
+        if (visible && key === 'arc') points.push({ op: key, x: args[0] as number, y: args[1] as number, r: args[2] as number })
         if (key === 'fillRect') order.push(`rect ${String(t.fillStyle)} ${state.globalAlpha}`)
         return calls.push(`${key}(${args.length})`)
       }
     },
     set: (t, key: string, value) => {
+      if (key === 'shadowOffsetX' && value !== 0) offsets.push(value as number)
       if (key in state) (state as Record<string, unknown>)[key] = value
       else t[key] = value
       return true
     },
     has: () => true,
   })
-  return { ctx: ctx as unknown as OverlayContext2D, texts, calls, points, images, order }
+  return { ctx: ctx as unknown as OverlayContext2D, texts, calls, points, images, order, offsets }
 }
 
 const sampleTrack = parseGpx(sampleGpx, 'tour-du-mont-blanc-j1.gpx')[0]
@@ -424,8 +429,7 @@ describe('mini-map', () => {
   const render = (progress: number, settings: OverlaySettings) => {
     const { ctx, texts, points } = fakeContext()
     drawOverlay(ctx, overlayFrameAt(track, progress), settings, SIZE)
-    // the scrim of the editorial style is drawn around the origin of a scaled context
-    return { texts, points: points.filter((pt) => !(pt.x === 0 && pt.y === 0 && pt.r === 1)) }
+    return { texts, points }
   }
   /** arcs of the mini-map: end dot, start dot, marker */
   const dots = (progress: number, settings = minimapOnly()) => render(progress, settings).points.filter((pt) => pt.op === 'arc')
@@ -823,5 +827,36 @@ describe('colours and fonts of one widget', () => {
     expect(value?.font).toContain('monospace')
     const plain = draw(0.5, enabled({ title: { ...DEFAULT_OVERLAY.title, enabled: false } })).texts
     expect(plain.some((t) => t.font.includes('monospace'))).toBe(false)
+  })
+})
+
+describe('text backing of a style without panel', () => {
+  const run = (style: OverlaySettings['style'], textBacking?: (typeof TEXT_BACKINGS)[number]) => {
+    const { ctx, calls, offsets } = fakeContext()
+    const overrides = textBacking ? { textBacking } : undefined
+    drawOverlay(ctx, overlayFrameAt(track, 0.5), enabled({ style, ...(overrides ? { overrides } : {}) }), SIZE)
+    return { strokes: calls.filter((c) => c.startsWith('strokeText')).length, offsets }
+  }
+
+  it('is a blurred rounded rectangle by default: drawn off the canvas, its shadow lands in place', () => {
+    const { strokes, offsets } = run('editorial')
+    expect(offsets.length).toBeGreaterThan(0)
+    expect(offsets.every((o) => o > 0)).toBe(true)
+    expect(strokes).toBe(0)
+    expect(run('editorial', 'blur')).toEqual({ strokes, offsets })
+  })
+
+  it('is the shadow of the text only: no rectangle, no outline', () => {
+    expect(run('editorial', 'shadow')).toEqual({ strokes: 0, offsets: [] })
+  })
+
+  it('is the outline of the text only: no rectangle', () => {
+    const { strokes, offsets } = run('editorial', 'outline')
+    expect(strokes).toBeGreaterThan(0)
+    expect(offsets).toEqual([])
+  })
+
+  it('leaves the styles with a panel alone', () => {
+    for (const backing of TEXT_BACKINGS) expect(run('broadcast', backing).strokes).toBe(0)
   })
 })

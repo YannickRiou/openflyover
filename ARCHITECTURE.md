@@ -1672,6 +1672,16 @@ exports) gets it from the terrain source of the settings.
   (`src/overlay/draw.ts`), draws it on a 2D context, on screen or off screen. The preview (`OverlayCanvas`, a 2D canvas above
   the 3D canvas, without mouse events) and the video export (`exportOverlay.ts` → `ExportController`) call
   the same function: the film shows exactly the preview.
+- **Styles** (`OVERLAY_STYLES`, `OVERLAY_THEMES`): `editorial`, `broadcast`, `app`, `sport` (« Sportif »: near-black blocks,
+  orange edge, condensed capitals), `mono` (« Minimal mono »: no panel, monospaced figures), `topo` (« Topo »: map-paper
+  panels, Fraunces serif, rust accent), `neon` (« Néon nuit »: deep-blue glass, glowing cyan edge), `magazine` (square
+  white sheets, bold serif, thin red edge); also for the poster (`POSTER_LAYOUTS`: each style picks an existing
+  arrangement). **Text backing** (`OverlayOverrides.textBacking`, styles without panel: Éditorial, Minimal mono):
+  'blur' (default: `drawPanel` draws a rounded rect off-canvas and only its `shadowBlur` shadow lands in place, no
+  `ctx.filter` for Safari; replaces the former oval scrim), 'shadow' (darker, wider text shadow), 'outline'
+  (`strokeText` rim). **Labels** follow the style (`OverlayTheme.label`, `resolveLabelStyle`: font, panel, text colour,
+  radius, one accent per `LandmarkKind`), even with the overlay off; `OverlaySettings.labelColors?` (partial kind →
+  '#rrggbb', `isValidLabelColors`, `withLabelColor`) overrides an accent; Éditorial reproduces the former look.
 - **Units**: 1 u = 1% of the shorter side of the image; safety margins of 5% on each side; shadow blurs corrected for the
   context transform (devicePixelRatio). Widgets that share one of the 9 anchors stack (`layoutWidgets`). A widget with a free position (`offset`) leaves its
   anchor's stack (the others close up as if it were not there): it is placed alone at its anchor, moved by the offset
