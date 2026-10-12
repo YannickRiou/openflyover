@@ -8,6 +8,7 @@ import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { CLOUD_ALTITUDE_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type CloudQualitySetting, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
+import { NightSettings } from './NightSettings'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
 
@@ -660,6 +661,8 @@ export function LightSettings() {
           <p className="field__hint">Activez l’atmosphère (section précédente) pour régler l’heure du soleil.</p>
         )}
       </PanelSection>
+
+      <NightSettings />
     </>
   )
 }

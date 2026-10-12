@@ -348,7 +348,9 @@ describe('film model', () => {
     expect(parseProject(JSON.stringify(doc)).settings.film).toEqual(custom)
     // a v1 project saved before the film existed: default shots, stops of its pacing
     const { film: _, ...before } = doc.settings
-    expect(parseProject(JSON.stringify({ ...doc, settings: before })).settings.film).toEqual(film({ autoMode: 'rythme', landmarkTitles: false }))
+    expect(parseProject(JSON.stringify({ ...doc, settings: before })).settings.film).toEqual(
+      film({ autoMode: 'rythme', landmarkTitles: false, nights: { ...DEFAULT_FILM.nights, enabled: false } }),
+    )
   })
 
   it('time in the file of a video: from its start in the file, held at its end', () => {

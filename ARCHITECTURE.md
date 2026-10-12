@@ -56,10 +56,11 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
 | `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `labelOpacity`, `climbLabels`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
-| `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
-| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `filmHighlights`, `materializeStops`, `filmStops`, `pickLandmarkTitles`, `withLandmarkTitles`, `withoutLandmarkTitles`, `sameLandmarkTitles`, `freezeLandmarkTitles`; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
+| `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
+| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `filmHighlights`, `materializeStops`, `filmStops`, `pickLandmarkTitles`, `withLandmarkTitles`, `withoutLandmarkTitles`, `sameLandmarkTitles`, `freezeLandmarkTitles`; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
 | `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime`; keyframes: `keyView`, `keyFramingFrom`, `keyFramingAt`, `keyReferenceAt` (`cameraKeys.ts`, no three.js: `keyPoseAt`, `keyedCamera`, `registerKeyCapture`, `captureKey`) |
-| `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)` |
+| `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)`, `nightAt`, `nightSunDate`, `NIGHT_DARK_MARGIN_MS` |
+| `src/flyover/nights.ts` | nights of a multi-day track (see "Sun at the time of the outing") | `trackNights`, `flightNights`, `nightPauseS`, `TrackNight`, `FlightNight` |
 | `src/flyover/trackColor.ts` | track colored by a metric | `TRACK_COLOR_MODES`, `TrackColorBy`, `TRACK_METRICS` (label, unit, palette), `metricValues`, `trackMetricValues`, `hasMetric`, `robustRange`, `resampleValues`, `colorizeValues`, `VIRIDIS`, `MAGMA`, `MISSING_COLOR` |
 | `src/scene/exposure.ts` | exposure under the atmosphere | `DAYLIGHT_EXPOSURE`, `sunElevation`, `autoExposureEv`, `sceneExposure(elevation, ev)`, `nightFillIntensity` |
 | `src/weather/*` | weather of the outing (archive, or forecast for a planned outing) | `fetchOutingWeather(path, opts)`, `sampleLocations`, `outingDays` (source and days), `forecastCacheKey`, `createWeatherCache`, `WeatherError`, `OPEN_METEO_ATTRIBUTION`; `weatherAt(series, timeMs, lon, lat)`, `weatherAtTimes(series, timesMs, lon, lat)`, `weatherWidgetData(series, path, progress)`, `summarizeOuting`, `describeWeatherCode`, `windFromLabel`; `useWeatherStore`, `syncWeather` |
@@ -476,7 +477,7 @@ ink, 7.3:1).
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
   (imagery, water), "Relief" (exaggeration), "Trace et marqueur" (track and marker; `TrackMarkerSection`, track colouring included), "Montées et étiquettes" (climbs and labels; `ClimbList`), "Repères (OpenStreetMap)" (landmarks; `LandmarkPanel`, absent without a track) and "Points d'intérêt" (points of interest; `PoiPanel`, likewise).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
-  `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`),
+  `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
   "Durée et rythme" (duration and pacing; duration, film duration, slow-downs on / off, « Plan de situation » switches for the opening and the closing), "Temps forts". Objectif: "Effets d'objectif" (`LensPanel`).
   The two or three essential settings of a section stay open; every other one is a `SettingRow`: one button row with
@@ -670,7 +671,16 @@ ink, 7.3:1).
   moves the sun, `shotSunShiftMs`, see "Film and timeline"), updated every frame by
   `atmosphereRef.current.updateByDate(date)` in `useFrame` (not the `date` prop: the two do not combine). Points without
   a time are filled by interpolation over distance (`recordedTimeAt`); a pause or a jump between segments is crossed
-  instantly. Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
+  instantly, except a night. **Nights** (`src/flyover/nights.ts`, `film.nights`): `trackNights` finds each night whose
+  sunset and sunrise (`sunTimes` where the track is at noon that day) are both recorded, placed between the two timed
+  points sharing most of it; `flightNights` keeps those the flight would cross, at base speed, faster than dusk + night +
+  dawn (a night spent riding is shown by the flight). Each is a pause of the flight (`FlightStop.extra`: added to the film
+  whatever « Garder la durée », never shortened; `clock.nights`, phase 'flight', marker held). During it `nightSunDate` runs
+  the sun date from the flight's sun to sunset + 1 h (dusk), to sunrise − 1 h (night), then to the flight's sun (dawn),
+  linearly over parts proportional to their seconds: continuous, never backwards, a pure function of the film time. The
+  export re-renders those frames (`nightAt` in the held-frame test). « Ajouter les cartes de jour » (`src/film/days.ts`)
+  adds texts `day-n` « Jour n » at the start of each local calendar day (recording clock when `utcOffsetMin` is known,
+  device clock otherwise), with the day and / or cumulative distance; a new click replaces only the `day-` texts. Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
   (browser time zone).
 - **Exposure** (`src/scene/exposure.ts`): `DAYLIGHT_EXPOSURE` (5) × 2^(automatic + `settings.exposureEv`). The automatic part
   opens up as the sun goes down: 0 EV above 10°, +3 EV at civil twilight (−6°), +6 EV at night (−18°). A faint
@@ -882,7 +892,8 @@ ink, 7.3:1).
   `relation/<id>` or `way/<id>`, absent = automatic) and `holdS` (« Maintien », 0–10 s, `SITUATION_HOLD_RANGE`,
   absent = 0) and its framing, `tiltDeg` (1–60°), `distanceKm` (5–400 km), `heading` (`'libre'` / `'boussole'`),
   `bearingDeg` (0–359°), `headroomPct` (0–30 %), all absent by default (`SituationFraming`), and `sun` (`'jour'` / `'survol'` /
-  `'accelere'`, absent = « Plein jour », or « Accéléré » for older projects with `moveSun`) for a `situation` shot,
+  `'accelere'`) for any shot but `aucune`; absent: « Plein jour » for `situation` (« Accéléré » with an old `moveSun`),
+  « Heure du survol » for the other styles,
   see below);
   `autoStops` (generated stops) and `autoMode`: `'temps-forts'` (default for new projects) or `'rythme'` (earlier
   projects);
@@ -909,7 +920,9 @@ ink, 7.3:1).
   0.5 s / 2 s; `isValidAudio`; a film saved earlier receives `[]`), anchored in film time, and `duckMusic` ("Baisser la
   musique sous les vidéos" (lower the music under the videos), false by default and for a film saved earlier); `pois[]` `{ id, lon, lat, name }` (points
   of interest placed by hand, see "Points of interest"; a film saved earlier receives `[]`); `landmarkTitles` ("Ralentir
-  et titrer aux repères" (slow down and add titles at landmarks), true by default, false for a film saved earlier: its flight does not change); ids unique within the film
+  et titrer aux repères" (slow down and add titles at landmarks), true by default, false for a film saved earlier: its flight does not change); `nights` `{ enabled, duskS, nightS, dawnS }`
+  (« Jours et nuits », 0–20 s each, `NIGHT_PART_RANGE`; on, 3 / 2 / 3 s by default; off for a film saved earlier, so its
+  timing stays); ids unique within the film
   (`stop-3`, `text-1`, `media-2`, `music-1`, `poi-2`, `nextFilmId`).
 - **Automatic assembly** (`src/film/assemble.ts`): as long as `autoStops` is true, stops are generated on every computation
   (`autoStops`) at the highlights (`stopCandidates`: climb summits, passes crossed, nearby summits, according to the pacing's
@@ -992,9 +1005,11 @@ ink, 7.3:1).
   `situationTarget` (region centre when the shot highlights and it is loaded, else the track's), and
   `situationFramingOf` turns it into tilt, distance and bearing, rounded and clamped (heading set to « Boussole »).
   A compass bearing opposite to the flight's direction makes the camera turn quickly during the push-in (directions
-  are nlerped, as for every shot). **Sun of the shot** (« Soleil », `shotSunOf`): « Plein jour » (default) lights the region view at
+  are nlerped, as for every shot). **Sun of the shot** (« Soleil », `shotSunOf`, every style but « Aucune », opening and closing): « Plein jour » (default
+  of a `situation` shot) lights the wide view (overview or region view) at
   `SHOT_DAYLIGHT_HOUR` (13 h solar) on the day of the outing and eases to the flight's sun with the same curve as
-  below, so a dawn or evening outing does not open on a dark region; « Heure du survol » keeps the flight's sun;
+  below, so a dawn or evening outing does not open on a dark region; « Heure du survol » keeps the flight's sun (default
+  of the other styles, so a track ending at night still closes in the dark unless « Plein jour » is chosen);
   « Accéléré » is a time lapse
   of `SHOT_SUN_HOURS` (2 h) of the day over the whole shot, added to the sun date of the frame
   (`shotSunShiftMs`; both through `shotSunDate` in `src/flyover/sun.ts`, applied by `AtmosphereLayer`, so the clouds and the
@@ -2039,6 +2054,10 @@ it, know at what time you will pass each point, where the sun will be and what t
   towards the sun only. Verified with SwiftShader (golden hour, sea of clouds, with relief): black before, lit and
   self-shadowed after; not yet on a GPU. The resolve also drops a non-finite history or output (`guardResolve`,
   defensive: a single NaN frame would otherwise stay in the history for good).
+- **Night**: the atmosphere lights the clouds with the sun and sky only, so they went black at night. `addNightFill`
+  patches the march shader (sky-light line) with a `nightIrradiance` uniform set each frame to the terrain's night fill
+  (hemisphere sky colour × `nightFillIntensity`): constant moonlight, no moon phase or position. Occlusion unchanged (a
+  cloud hides the marker and the track). Not yet checked on a GPU.
 
 ## Reflective water (phase 3)
 

@@ -200,6 +200,7 @@ describe('settings and misc', () => {
         duckMusic: false,
         landmarkTitles: true,
         pois: [],
+        nights: { enabled: true, duskS: 3, nightS: 2, dawnS: 3 },
       },
       labels: { climbs: true, waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 },
       weather: { enabled: true },

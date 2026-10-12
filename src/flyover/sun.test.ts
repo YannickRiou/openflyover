@@ -226,6 +226,31 @@ describe('shotSunShiftMs', () => {
     expect(shotSunDate(clockOf(moving, moving), 0, flight, daylight).getTime()).toBe(flight.getTime() - SHOT_SUN_HOURS * HOUR)
   })
 
+  it('« Soleil » applies to every shot style but « Aucune »; the default of the others holds the flight\'s sun', () => {
+    const night = new Date(Date.UTC(2026, 5, 1, 22)), daylight = new Date(Date.UTC(2026, 5, 1, SHOT_DAYLIGHT_HOUR))
+    // a track ending at night, closing « Descente » in « Plein jour »: from the arrival's sun to daylight
+    const descent = { style: 'descente', durationS: 5 } as const
+    const clock = clockOf({ style: 'aucune', durationS: 6 }, { ...descent, sun: 'jour' })
+    const closingS = clock.openingS + clock.flightS
+    expect(shotSunDate(clock, closingS, night, daylight)).toEqual(night)
+    expect(shotSunDate(clock, closingS + 2.5, night, daylight).getTime()).toBeCloseTo(night.getTime() + 0.25 * (daylight.getTime() - night.getTime()), -1)
+    expect(shotSunDate(clock, clock.totalTime(), night, daylight)).toEqual(daylight)
+    // the flight itself keeps its sun
+    expect(shotSunDate(clock, closingS - 1, night, daylight)).toEqual(night)
+    // without a choice, « Descente », « Saut » and « Balayage » keep the flight's sun (no change for saved films)
+    for (const style of ['descente', 'saut', 'balayage'] as const) {
+      const plain = clockOf({ style, durationS: 6 }, { style, durationS: 5 })
+      for (const t of [0, 3, plain.totalTime()]) expect(shotSunDate(plain, t, night, daylight)).toEqual(night)
+    }
+    // « Accéléré » on an opening « Balayage »: the time lapse of a « Depuis la région » shot
+    const sweep = clockOf({ style: 'balayage', durationS: 8, sun: 'accelere' }, descent)
+    expect(shotSunShiftMs(sweep, 0)).toBe(-SHOT_SUN_HOURS * HOUR)
+    expect(shotSunShiftMs(sweep, 8)).toBe(0)
+    // « Aucune » has no shot, so no sun of its own
+    const none = clockOf({ style: 'aucune', durationS: 6, sun: 'jour' }, { style: 'aucune', durationS: 5, sun: 'accelere' })
+    for (const t of [0, none.totalTime()]) expect(shotSunDate(none, t, night, daylight)).toEqual(night)
+  })
+
   it('no time lapse without « Accéléré », outside a « Depuis la région » shot', () => {
     for (const shot of [{ style: 'situation', durationS: 8 }, { style: 'descente', durationS: 8, moveSun: true }] as const) {
       const clock = clockOf(shot, shot)
