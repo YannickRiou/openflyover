@@ -85,6 +85,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
   camera as detailed as before; the cap counts the tiles still loading, and a phone loads 6 tiles at a time instead of
   24. Unchanged on a computer.
 
+- **Imagery memory** (phones): the canvas of a terrain imagery texture is freed once the texture is uploaded to the GPU; the tiles are redrawn after a lost WebGL context.
 - **Phones: the export's terrain tiles reach a plateau** (an iPhone 12 export was killed after ~100 images with the loaded
   tiles growing 68 → 244 and no end): during an export a phone or tablet keeps the tiles for a number of film frames
   instead of 30 seconds, prefetches fewer frames ahead, never holds more than 120 tiles (160 tablet) and frees an
