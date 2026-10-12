@@ -71,6 +71,8 @@ export interface ProjectTrack {
   utcOffsetMin?: number
   /** `Track.timesEstimated`, omitted for recorded or untimed tracks */
   timesEstimated?: true
+  /** `Track.elevationEstimated`, omitted for recorded elevations */
+  elevationEstimated?: 'all' | 'gaps'
 }
 
 export interface ProjectDocument {
@@ -237,6 +239,7 @@ export function toProjectDocument(state: ProjectSource, name: string, media: Med
       if (track.waypoints?.length) out.waypoints = track.waypoints.map(encodeWaypoint)
       if (track.utcOffsetMin !== undefined) out.utcOffsetMin = track.utcOffsetMin
       if (track.timesEstimated) out.timesEstimated = true
+      if (track.elevationEstimated) out.elevationEstimated = track.elevationEstimated
       return out
     }),
   }
@@ -396,6 +399,10 @@ function decodeTrack(raw: unknown, index: number): Track {
   if (isUtcOffsetMin(raw.utcOffsetMin)) track.utcOffsetMin = raw.utcOffsetMin
   // estimated only means something on a timed track
   if (raw.timesEstimated === true && track.stats.startTime !== undefined) track.timesEstimated = true
+  // computed only means something on a track with elevations
+  if ((raw.elevationEstimated === 'all' || raw.elevationEstimated === 'gaps') && track.stats.maxEle !== undefined) {
+    track.elevationEstimated = raw.elevationEstimated
+  }
   track.id = raw.id
   track.color =
     typeof raw.color === 'string' && /^#[0-9a-f]{6}$/i.test(raw.color) ? raw.color : TRACK_COLORS[index % TRACK_COLORS.length]

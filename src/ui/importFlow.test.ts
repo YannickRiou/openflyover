@@ -143,4 +143,14 @@ describe('importFiles', () => {
   it('names the track when there is only one', () => {
     expect(importedMessage([{ name: 'Col du Galibier' }])).toBe('Trace « Col du Galibier » importée')
   })
+
+  it('adds the tracks with the elevation computed for those without, and says so', async () => {
+    const s = sink()
+    const computed = { ...track('b'), elevationEstimated: 'all' as const }
+    s.value.completeElevation = vi.fn(async (tracks: Track[]) => tracks.map((t) => (t.id === 'b' ? computed : t)))
+    const outcome = await importFiles([{ label: 'a.gpx', run: async () => [track('a'), track('b')] }], s.value)
+    expect(s.value.completeElevation).toHaveBeenCalledTimes(1)
+    expect(outcome.tracks[1]).toBe(computed)
+    expect(s.calls).toEqual(['loading:true', 'add:a,b', 'success:2 traces importées, altitude calculée d’après le relief', 'loading:false'])
+  })
 })
