@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Timeline, « À la suite »**: the stage blocks keep their place while a block is being dragged (they collapsed during the drag), and the junctions between stages are snap targets.
 - **Smaller cards and widgets**: the size of the opening title, the closing card and the other widgets can go down to ×0.2 (it was ×0.5), so a card no longer has to hide the start of the track.
 - **Landmarks: one way to pause the film**: « Ralentir et titrer aux repères » is removed from « Repères et points d'intérêt » (it overlapped « Arrêt »): the film no longer slows down or adds a title card at landmarks by itself; use « Arrêt » (or « Arrêts automatiques »). A project saved with the option still opens as it was: the slow-downs and titles it had written stay on the timeline as ordinary sections and texts, which you can edit or delete.
 - **Project file `.opnflvr`**: projects are saved as `<name>.opnflvr` (compressed, with a signature; older `.json` projects still open). « Enregistrer » (Ctrl+S) rewrites the same file once it has been saved or opened (Chrome, Edge, desktop app), « Enregistrer sous… » (Ctrl+Maj+S) always asks; the desktop installers register the file type, a double-click opens the project.

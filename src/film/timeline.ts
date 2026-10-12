@@ -135,7 +135,7 @@ export function snapTime(t: number, targets: readonly number[], thresholdS: numb
 
 /**
  * Times a dragged edge snaps to: start and end of the film, edges of the shots, of the stops, speed portions, texts,
- * media and music clips (but those of `except`), highlights (progress values), playhead.
+ * media and music clips (but those of `except`), the cuts between the stages of « À la suite », highlights (progress values), playhead.
  */
 export function snapTargets(
   clock: FilmClock,
@@ -145,7 +145,7 @@ export function snapTargets(
   except?: TimelineItem,
 ): number[] {
   const total = clock.totalTime()
-  const out = [0, total, clock.openingS, total - clock.closingS, playheadS]
+  const out = [0, total, clock.openingS, total - clock.closingS, playheadS, ...clock.cuts.map((c) => c.timeS)]
   for (const s of [...clock.stops, ...clock.speeds]) if (s.id !== except) out.push(s.startS, s.endS)
   for (const t of [...film.texts, ...film.media, ...film.audio]) if (t.id !== except) out.push(t.startS, t.startS + t.durationS)
   for (const h of highlights) out.push(clock.timeAtProgress(h))
