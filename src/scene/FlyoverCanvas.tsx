@@ -20,6 +20,7 @@ import { ExportController } from '../export/ExportController'
 import { readGpuInfo, setGpuProbe } from '../export/diagnostic'
 import { setBreadcrumbProbe, writeBreadcrumb } from '../export/guard'
 import { isExportBusy, useExportStore } from '../export/store'
+import { hasGradingKeys } from '../film/paramKeys'
 import { CAMERA_FOV_DEG } from '../flyover/filmCamera'
 import { createOverlayDrawer } from '../overlay/exportOverlay'
 import { CameraRig } from './CameraRig'
@@ -132,7 +133,9 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   // fixed with the context: a phone that starts with the atmosphere keeps its default framebuffer without MSAA
   const [gl] = useState(() => ({ ...GL, antialias: canvasAntialias(BUDGET, useAppStore.getState().settings.atmosphere) }))
-  const postProcessed = useAppStore((s) => !isIdentityGrading(s.settings.grading) || lensActive(s.settings.lens, false))
+  const postProcessed = useAppStore(
+    (s) => !isIdentityGrading(s.settings.grading) || hasGradingKeys(s.settings.film) || lensActive(s.settings.lens, false),
+  )
   // the video export draws the film overlay through the same code as the preview
   const overlayDrawer = useMemo(createOverlayDrawer, [])
   useEffect(() => () => overlayDrawer.dispose(), [overlayDrawer])

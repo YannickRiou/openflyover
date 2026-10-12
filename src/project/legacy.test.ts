@@ -156,7 +156,7 @@ describe('frozen old projects', () => {
       closing: { style: 'descente', durationS: 5 },
       autoStops: true,
       autoMode: 'rythme',
-      stops: [], speeds: [], cameraKeys: [], texts: [], media: [], audio: [],
+      stops: [], speeds: [], cameraKeys: [], paramKeys: [], texts: [], media: [], audio: [],
       duckMusic: false, pois: [], landmarkTitles: false,
       nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
     })
@@ -211,6 +211,7 @@ describe('frozen old projects', () => {
       stops: [{ id: 'stop-1', atM: 120, durationS: 6, camera: 'orbite', label: 'Lac' }],
       speeds: [],
       cameraKeys: [],
+      paramKeys: [],
       texts: [{ id: 'text-1', startS: 3, durationS: 4, text: 'Départ', anchor: 'bottom-left', size: 1 }],
       media: [],
       audio: [],
