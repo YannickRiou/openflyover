@@ -107,7 +107,7 @@ export function seekKeyframe(clock: FilmClock, direction: -1 | 1): boolean {
 }
 
 /**
- * « Arrêts automatiques » on the film of the stores (timeline options, « Temps forts »): on, a stop generated at every
+ * « Arrêts automatiques » on the film of the stores (timeline options): on, a stop generated at every
  * highlight, the film's own stops dropped; off, the generated stops written out as its own. One undo step.
  */
 export function setAutoStops(on: boolean): void {

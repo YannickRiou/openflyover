@@ -1,14 +1,32 @@
-import { useEffect, useId } from 'react'
-import { KIND_BADGES, KIND_LABELS, LANDMARK_DISTANCE_RANGE, PLACE_SIZES, PLACE_SIZE_LABELS, withPlaceSize } from '../osm/landmarks'
-import type { LandmarkSettings } from '../osm/landmarks'
+import { useEffect, useId, useMemo, useState } from 'react'
+import { filmStops, placeStop, withoutPlaceItems } from '../film/assemble'
+import type { StopPlace } from '../film/assemble'
+import { POI_ICONS, POI_ICON_LABELS, STOP_DURATION_RANGE, nextFilmId } from '../film/model'
+import type { FilmPoi, FilmStop, PoiIcon } from '../film/model'
+import { POI_NAME_MAX, addPoi, poiStopAtM, removePoi, renamePoi, setPoiIcon } from '../film/pois'
+import { addStop, removeFilmItem, updateStop } from '../film/timeline'
+import { samplePath, trackPathOf } from '../flyover/path'
+import {
+  KIND_BADGES,
+  KIND_LABELS,
+  LANDMARK_DISTANCE_RANGE,
+  PLACE_SIZES,
+  PLACE_SIZE_LABELS,
+  newLandmarkIds,
+  withHidden,
+  withPlaceSize,
+} from '../osm/landmarks'
+import type { Landmark, LandmarkSettings } from '../osm/landmarks'
 import { OSM_ATTRIBUTION, OSM_KINDS } from '../osm/overpass'
 import { syncLandmarks, useLandmarkStore } from '../osm/store'
 import { sequenceLandmarks } from '../flyover/sequence'
-import { followLandmarks, setLandmarkTitles, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { getSettingsHistory } from '../project/history'
+import { editFilm, followLandmarks, setLandmarkTitles, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
+import './LandmarkPanel.css'
 
 /** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
 function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'>): string {
@@ -18,12 +36,90 @@ function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'
   return on === total ? 'Tous' : on === 0 ? 'Aucun' : `${on} sur ${total}`
 }
 
+/** A row of the list: an OSM landmark of the film track or a point of interest, where its stop goes (`atM`). */
+type PlaceRow = StopPlace & { hidden: boolean } & ({ landmark: Landmark; poi?: undefined } | { poi: FilmPoi; landmark?: undefined })
+
+/** OSM ids of the landmarks of every track, shown ones and hidden ones (the 3D labels of all tracks). */
+function listedIds(hidden: boolean): string[] {
+  const state = useLandmarkStore.getState()
+  return Object.values(hidden ? state.hidden : state.landmarks).flatMap((list) => list.map((l) => l.id))
+}
+
 /**
- * « Repères (OpenStreetMap) » (foldable section of the Carte tab): kinds and corridor width, « Ralentir et titrer aux
- * repères », status, the landmarks of the first track ordered along it (click = seek the flyover there; the eye button
- * hides one, kept in the project as `settings.landmarks.hiddenIds`, hidden ones stay listed greyed out) and the ODbL
- * attribution. Also drives the landmark store, and makes the landmark titles of the film again whenever the landmarks
- * of the first track are published (loaded, kinds or distance changed) while that option is on.
+ * Show or hide the labels of `rows` (and `extraIds`, landmarks of the other tracks) in one undo step: hidden, their
+ * stops and titles go with them (`withoutPlaceItems`); every landmark listed now counts as seen.
+ */
+function setRowsHidden(rows: readonly PlaceRow[], hide: boolean, extraIds: readonly string[] = []): void {
+  const listed = [...listedIds(false), ...listedIds(true)]
+  getSettingsHistory().transaction(() => {
+    if (hide) editFilm((film) => ({ film: withoutPlaceItems(film, rows) }))
+    const { settings, setSetting } = useAppStore.getState()
+    setSetting('landmarks', withHidden(settings.landmarks, [...rows.map((r) => r.id), ...extraIds], hide, listed))
+  })
+}
+
+/** « Arrêt » of a row: the film stops there (checked) and for how long. */
+function StopToggle({ name, stop, disabled, onToggle }: { name: string; stop?: FilmStop; disabled: boolean; onToggle(on: boolean): void }) {
+  return (
+    <div className="place__stop">
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          aria-label={`Arrêt dans le film à « ${name} »`}
+          checked={stop !== undefined}
+          disabled={disabled}
+          onChange={(e) => onToggle(e.currentTarget.checked)}
+        />
+        Arrêt
+      </label>
+      {stop && (
+        <label className="place__duration">
+          <input
+            className="input"
+            type="number"
+            aria-label={`Durée de l'arrêt « ${name} » (secondes)`}
+            min={STOP_DURATION_RANGE.min}
+            max={STOP_DURATION_RANGE.max}
+            step={STOP_DURATION_RANGE.step}
+            value={stop.durationS}
+            onChange={(e) => {
+              const durationS = e.currentTarget.valueAsNumber
+              const id = stop.id
+              if (Number.isFinite(durationS)) editFilm((f) => ({ film: updateStop(f, id, { durationS }) }), { stops: true, step: false })
+            }}
+          />
+          s
+        </label>
+      )}
+    </div>
+  )
+}
+
+/** The eye of a row: shows or hides its label. */
+function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; onClick(): void }) {
+  return (
+    <button
+      type="button"
+      className="icon-btn"
+      aria-label={hidden ? `Afficher « ${name} »` : `Masquer « ${name} »`}
+      data-tip={hidden ? "Afficher l'étiquette" : "Masquer l'étiquette, son arrêt et son titre"}
+      data-tip-side="left"
+      onClick={onClick}
+    >
+      <Icon name={hidden ? 'eye-off' : 'eye'} size={16} />
+    </button>
+  )
+}
+
+/**
+ * « Repères et points d'intérêt » (foldable section of the Carte tab): the OSM landmarks (kinds and corridor width,
+ * « Ralentir et titrer aux repères », status, ODbL attribution) and the points of interest placed by hand, in one list
+ * ordered along the film track. Each row: click = seek the flyover there; the eye shows or hides its label
+ * (`settings.landmarks.hiddenIds`; hiding also removes its stop and title); « Arrêt » makes or removes a stop there,
+ * its duration beside it. « Tout afficher » / « Tout masquer » for every label; landmarks found later (wider distance,
+ * another type) are shown, marked « nouveau » until the user shows or hides labels again.
+ * Also drives the landmark store, and makes the landmark titles of the film again whenever the landmarks of the first
+ * track are published (loaded, kinds or distance changed) while that option is on.
  */
 export function LandmarkPanel() {
   const id = useId()
@@ -34,11 +130,13 @@ export function LandmarkPanel() {
   const status = useLandmarkStore((s) => s.status)
   const message = useLandmarkStore((s) => s.message)
   // the landmarks along the film: the first track's, or « À la suite » those of every stage
-  const { track: first, landmarks } = useFilmSource()
+  const { track: first, landmarks, film, pacing } = useFilmSource()
   const sequence = useFilmSequence()
   const hiddenByTrack = useLandmarkStore((s) => s.hidden)
   const hidden = sequence ? sequenceLandmarks(sequence, hiddenByTrack) : first ? hiddenByTrack[first.id] : undefined
-  const titles = useAppStore((s) => s.settings.film.landmarkTitles)
+  /** the point just added from here, whose name field takes the focus */
+  const [added, setAdded] = useState<string | null>(null)
+  const stops = useMemo(() => (first ? filmStops(film, { track: first, landmarks, pacing }) : []), [first, film, landmarks, pacing])
 
   useEffect(() => {
     syncLandmarks(tracks, settings)
@@ -51,20 +149,45 @@ export function LandmarkPanel() {
   }, [landmarks])
 
   if (!first) return null
+  const path = trackPathOf(first)
   const lengthM = first.stats.distanceM
-  const list = landmarks ?? []
-  const hiddenList = hidden ?? []
-  const rows = [
-    ...list.map((landmark) => ({ landmark, hidden: false })),
-    ...hiddenList.map((landmark) => ({ landmark, hidden: true })),
-  ].sort((a, b) => a.landmark.alongM - b.landmark.alongM || b.landmark.priority - a.landmark.priority)
-  const setHidden = (landmarkId: string, hide: boolean) => {
-    const rest = settings.hiddenIds.filter((hiddenId) => hiddenId !== landmarkId)
-    setSetting('landmarks', { ...settings, hiddenIds: hide ? [...rest, landmarkId] : rest })
+  const hiddenIds = new Set(settings.hiddenIds)
+  const list = settings.enabled ? (landmarks ?? []) : []
+  const hiddenList = settings.enabled ? (hidden ?? []) : []
+  const fresh = newLandmarkIds(settings, list.map((l) => l.id))
+  const rows: PlaceRow[] = [
+    ...list.map((landmark) => ({ id: landmark.id, atM: landmark.alongM, landmark, hidden: false })),
+    ...hiddenList.map((landmark) => ({ id: landmark.id, atM: landmark.alongM, landmark, hidden: true })),
+    ...film.pois.map((poi) => ({ id: poi.id, atM: poiStopAtM(path, poi) ?? 0, poi, hidden: hiddenIds.has(poi.id) })),
+  ]
+  rows.sort((a, b) => a.atM - b.atM || (b.landmark?.priority ?? 0) - (a.landmark?.priority ?? 0))
+  const shownRows = rows.filter((r) => !r.hidden)
+
+  const seek = (atM: number) => setProgress(lengthM > 0 ? atM / lengthM : 0)
+  const toggleStop = (row: PlaceRow, name: string, on: boolean) =>
+    editFilm(
+      (f) => {
+        if (on) return { film: addStop(f, row.atM, row.landmark ? { label: name, source: { kind: 'landmark', ref: row.id } } : { label: name || undefined }).film }
+        const stop = placeStop(f.stops, row)
+        return { film: stop ? removeFilmItem(f, stop.id) : f }
+      },
+      { stops: true },
+    )
+  const addAtMarker = () => {
+    const at = samplePath(path, useAppStore.getState().playback.progress * path.lengthM)
+    setAdded(nextFilmId(useAppStore.getState().settings.film, 'poi'))
+    editFilm((f) => ({ film: addPoi(f, at) }))
   }
+  const deletePoi = (poi: FilmPoi) =>
+    getSettingsHistory().transaction(() => {
+      editFilm((f) => ({ film: removePoi(f, poi.id) }))
+      // its id may be given to the next point
+      const current = useAppStore.getState().settings.landmarks
+      if (current.hiddenIds.includes(poi.id)) setSetting('landmarks', withHidden(current, [poi.id], false, []))
+    })
 
   return (
-    <PanelSection title="Repères (OpenStreetMap)" keys={['landmarks']}>
+    <PanelSection title="Repères et points d'intérêt" keys={['landmarks']}>
       <label className="checkbox checkbox--switch" htmlFor={`${id}-enabled`}>
         <input
           id={`${id}-enabled`}
@@ -139,7 +262,7 @@ export function LandmarkPanel() {
       {settings.enabled && (
         <div className="field">
           <label className="checkbox checkbox--switch" htmlFor={`${id}-titles`}>
-            <input id={`${id}-titles`} type="checkbox" checked={titles} onChange={(e) => setLandmarkTitles(e.currentTarget.checked)} />
+            <input id={`${id}-titles`} type="checkbox" checked={film.landmarkTitles} onChange={(e) => setLandmarkTitles(e.currentTarget.checked)} />
             Ralentir et titrer aux repères
           </label>
           <p className="field__hint">
@@ -149,18 +272,16 @@ export function LandmarkPanel() {
       )}
 
       <p className="field__hint" role="status" aria-live="polite">
-        {!settings.enabled && 'Désactivés : aucune requête envoyée.'}
+        {!settings.enabled && 'Repères désactivés : aucune requête envoyée.'}
         {settings.enabled && status === 'loading' && 'Recherche des repères…'}
         {settings.enabled && status === 'error' && message}
         {settings.enabled &&
           status === 'ready' &&
-          (rows.length === 0
+          (list.length + hiddenList.length === 0
             ? 'Aucun repère de ces types près de la trace.'
-            : list.length === 0
-              ? `Tous les repères sont masqués (${hiddenList.length}).`
-              : `${list.length} ${list.length > 1 ? 'repères' : 'repère'} le long de la trace` +
-                (hiddenList.length > 0 ? ` · ${hiddenList.length} ${hiddenList.length > 1 ? 'masqués' : 'masqué'}` : '') +
-                '. Cliquez pour y aller.')}
+            : `${list.length} ${list.length > 1 ? 'repères' : 'repère'} le long de la trace` +
+              (hiddenList.length > 0 ? ` · ${hiddenList.length} ${hiddenList.length > 1 ? 'masqués' : 'masqué'}` : '') +
+              '.')}
       </p>
 
       {settings.enabled && status === 'error' && (
@@ -169,48 +290,134 @@ export function LandmarkPanel() {
         </button>
       )}
 
-      {settings.enabled && rows.length > 0 && (
-        <ul className="landmarks">
-          {rows.map(({ landmark, hidden: isHidden }) => (
-            <li key={landmark.id} className={isHidden ? 'landmark-row landmark-row--hidden' : 'landmark-row'}>
-              <button
-                type="button"
-                className="landmark"
-                title={isHidden ? 'Repère masqué · aller à ce repère' : 'Aller à ce repère'}
-                onClick={() => setProgress(lengthM > 0 ? landmark.alongM / lengthM : 0)}
-              >
-                <span className={landmark.kind === 'pass' ? 'landmark__kind landmark__kind--pass' : 'landmark__kind'}>
-                  {KIND_BADGES[landmark.kind]}
-                </span>
-                <span className="landmark__name">{landmark.text}</span>
-                <span className="landmark__meta">
-                  au km {formatNumber(landmark.alongM / 1000, 1)} · à {formatDistance(landmark.distanceM)} de la trace
-                </span>
-              </button>
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label={isHidden ? `Afficher le repère ${landmark.text}` : `Masquer le repère ${landmark.text}`}
-                data-tip={isHidden ? 'Afficher ce repère' : 'Masquer ce repère'}
-                data-tip-side="left"
-                onClick={() => setHidden(landmark.id, !isHidden)}
-              >
-                <Icon name={isHidden ? 'eye-off' : 'eye'} size={16} />
-              </button>
-            </li>
-          ))}
+      {rows.length > 0 && (
+        <div className="places__tools">
+          {fresh.size > 0 && (
+            <button
+              type="button"
+              className="places__fresh"
+              data-tip="Trouvés depuis votre dernier choix : les marquer comme vus"
+              onClick={() => setSetting('landmarks', withHidden(settings, [], false, listedIds(false)))}
+            >
+              {fresh.size} {fresh.size > 1 ? 'nouveaux' : 'nouveau'}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn--secondary btn--small"
+            disabled={settings.hiddenIds.length === 0}
+            onClick={() => setRowsHidden(rows.filter((r) => r.hidden), false, settings.hiddenIds)}
+          >
+            <Icon name="eye" size={16} />
+            Tout afficher
+          </button>
+          <button
+            type="button"
+            className="btn btn--secondary btn--small"
+            disabled={shownRows.length === 0}
+            onClick={() => setRowsHidden(shownRows, true, listedIds(false))}
+          >
+            <Icon name="eye-off" size={16} />
+            Tout masquer
+          </button>
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <p className="field__hint">
+          Un clic sur un nom y mène. Masquer une étiquette retire aussi son arrêt et son titre.
+          {film.autoStops && ' Arrêts automatiques (Options de la timeline) : en changer un les fige.'}
+        </p>
+      )}
+
+      {rows.length > 0 && (
+        <ul className="places">
+          {rows.map((row) => {
+            const stop = row.hidden ? undefined : placeStop(stops, row)
+            const className = row.hidden ? 'place place--hidden' : 'place'
+            if (row.landmark) {
+              const { landmark } = row
+              return (
+                <li key={row.id} className={className}>
+                  <button type="button" className="place__go" title={row.hidden ? 'Repère masqué · y aller' : 'Aller à ce repère'} onClick={() => seek(row.atM)}>
+                    <span className={landmark.kind === 'pass' ? 'landmark__kind landmark__kind--pass' : 'landmark__kind'}>{KIND_BADGES[landmark.kind]}</span>
+                    <span className="landmark__name">{landmark.text}</span>
+                  </button>
+                  <EyeButton name={landmark.name} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
+                  <div className="place__line">
+                    <span className="place__meta">
+                      km {formatNumber(row.atM / 1000, 1)} · à {formatDistance(landmark.distanceM)}
+                      {fresh.has(row.id) && <span className="place__new">nouveau</span>}
+                    </span>
+                    <StopToggle name={landmark.name} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, landmark.name, on)} />
+                  </div>
+                </li>
+              )
+            }
+            const { poi } = row
+            const name = poi.name.trim()
+            return (
+              <li key={row.id} className={className}>
+                <div className="place__go place__go--poi">
+                  <button type="button" className="landmark__kind landmark__kind--poi" title="Aller à ce point d'intérêt" onClick={() => seek(row.atM)}>
+                    Point
+                  </button>
+                  <input
+                    className="input"
+                    aria-label="Nom du point d'intérêt"
+                    placeholder="Sans nom : pas d'étiquette"
+                    value={poi.name}
+                    maxLength={POI_NAME_MAX}
+                    autoFocus={poi.id === added}
+                    onFocus={(e) => {
+                      if (poi.id === added) e.currentTarget.select()
+                    }}
+                    onBlur={() => setAdded(null)}
+                    onChange={(e) => {
+                      const value = e.currentTarget.value
+                      editFilm((f) => ({ film: renamePoi(f, poi.id, value) }), { step: false })
+                    }}
+                  />
+                </div>
+                <EyeButton name={name || "ce point d'intérêt"} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
+                <div className="place__line">
+                  <select
+                    className="select place__icon"
+                    aria-label={`Pictogramme de ${name || "ce point d'intérêt"}`}
+                    value={poi.icon ?? 'epingle'}
+                    onChange={(e) => {
+                      const icon = e.currentTarget.value as PoiIcon
+                      editFilm((f) => ({ film: setPoiIcon(f, poi.id, icon) }))
+                    }}
+                  >
+                    {POI_ICONS.map((icon) => (
+                      <option key={icon} value={icon}>
+                        {POI_ICON_LABELS[icon]}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label={`Supprimer le point d'intérêt ${name}`}
+                    data-tip="Supprimer"
+                    onClick={() => deletePoi(poi)}
+                  >
+                    <Icon name="x" size={16} />
+                  </button>
+                  <StopToggle name={name || "Point d'intérêt"} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, name, on)} />
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
 
-      {settings.enabled && settings.hiddenIds.length > 0 && (
-        <button
-          type="button"
-          className="btn btn--secondary btn--block"
-          onClick={() => setSetting('landmarks', { ...settings, hiddenIds: [] })}
-        >
-          Réafficher tous les repères masqués
-        </button>
-      )}
+      <button type="button" className="btn btn--secondary btn--block" onClick={addAtMarker}>
+        <Icon name="plus" size={16} />
+        Point d'intérêt au marqueur
+      </button>
+      <p className="field__hint">Vos lieux à vous, aussi par un clic droit sur le relief.</p>
 
       {settings.enabled && status !== 'idle' && (
         <p className="field__hint">

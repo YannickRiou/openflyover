@@ -258,7 +258,7 @@ function FilmOptions({
             Arrêts automatiques
           </label>
           <p className="film-tl__menu-hint">
-            Un arrêt à chaque temps fort : sommets des montées, cols, sommets. Retoucher un arrêt les fige.
+            Un arrêt à chaque col franchi et sommet proche (Repères, onglet Carte). Retoucher un arrêt les fige.
           </p>
           <ModifiedMarker keys={['film']} label="Film" />
         </div>
