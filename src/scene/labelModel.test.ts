@@ -175,8 +175,10 @@ describe('screen-space rules', () => {
     // a shorter range: opaque up to its half
     expect(distanceFade(10_000, 20_000)).toBe(1)
     expect(distanceFade(20_000, 20_000)).toBe(0)
+    // behind the relief: not drawn at all, never half-transparent
     expect(occlusionFade(Infinity)).toBe(1)
-    expect(occlusionFade(0)).toBeCloseTo(0.5, 6)
+    expect(occlusionFade(0)).toBe(1)
+    expect(occlusionFade(-0.1)).toBe(0)
     expect(occlusionFade(-100)).toBe(0)
   })
 
@@ -195,6 +197,31 @@ describe('screen-space rules', () => {
     // the slope right under the label (last 150 m) never hides it
     expect(lineOfSightClearance({ x: 0, y: 50, z: 0 }, { x: 500, y: 50, z: 0 }, clearance, 48)).toBeGreaterThan(0)
     expect(lineOfSightClearance({ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, () => undefined)).toBe(Infinity)
+  })
+
+  it('finds the crest between the samples, so a moving camera does not flicker at the cut', () => {
+    // a rounded ridge 100 m high at x = 1000 (σ 120 m), the label 3 km away; the camera slides toward the ridge
+    const ground = (x: number) => 100 * Math.exp(-(((x - 1000) / 120) ** 2) / 2)
+    const clearance = (x: number, y: number) => y - ground(x)
+    const to = { x: 3000, y: 10, z: 0 }
+    let toggles = 0
+    let wasHidden: boolean | null = null
+    for (let x = -500; x <= 500; x += 2) {
+      const from = { x, y: 160, z: 0 }
+      let exact = Infinity
+      const tMax = 1 - 150 / Math.hypot(to.x - x, to.y - from.y)
+      for (let i = 1; i <= 20_000; i++) {
+        const t = (i / 20_000) * tMax
+        exact = Math.min(exact, clearance(x + (to.x - x) * t, from.y + (to.y - from.y) * t))
+      }
+      const measured = lineOfSightClearance(from, to, clearance)
+      expect(Math.abs(measured - exact), `x = ${x}`).toBeLessThan(1)
+      const hidden = occlusionFade(measured) === 0
+      if (wasHidden !== null && hidden !== wasHidden) toggles++
+      wasHidden = hidden
+    }
+    // hidden at first, then shown for good
+    expect(toggles).toBe(1)
   })
 
   it('keeps the highest priority among overlapping labels', () => {

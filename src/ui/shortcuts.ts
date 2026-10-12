@@ -1,7 +1,8 @@
 /**
  * Keyboard shortcuts: the list shown in the help (« ? ») and in the tooltips, and the matching of a key press for the
  * shell (`matchShortcut`, pure). Undo / redo stay in `installHistoryShortcuts`, Space and the timeline keys in
- * `Timeline.tsx`; they are listed here for the help. No digit shortcuts: AZERTY types them with Shift.
+ * `Timeline.tsx`; they are listed here for the help. No digit shortcuts: AZERTY types them with Shift. No Ctrl+N for
+ * « Nouveau projet »: browsers keep it for a new window, a page cannot take it.
  */
 import { isTextEntry } from '../project/history'
 

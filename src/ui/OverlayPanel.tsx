@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
+import { videoSize } from '../export/schedule'
 import { hasMetric } from '../flyover/trackColor'
 import { fileToLogoDataUrl } from '../overlay/assets'
 import {
@@ -8,8 +9,7 @@ import {
   END_CREDITS_MAX,
   END_START_MAX,
   END_START_MIN,
-  OVERLAY_ANCHORS,
-  OVERLAY_ANCHOR_LABELS,
+  OFFSET_MAX_PX,
   OVERLAY_FONT_IDS,
   OVERLAY_FONT_LABELS,
   OVERLAY_STYLES,
@@ -23,14 +23,16 @@ import {
   WIDGET_SIZE_MAX,
   WIDGET_SIZE_MIN,
   withOverrides,
+  withWidgetOffset,
   withWidgetOverrides,
   widgetOverrides,
 } from '../overlay/settings'
-import type { CounterId, CreditsPosition, OverlayAnchor, OverlayFontId, OverlayOverrides, OverlaySettings, StyledWidget } from '../overlay/settings'
+import type { CounterId, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
 import { panelColorOf, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
+import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 
@@ -47,21 +49,68 @@ type WidgetKey = Exclude<keyof OverlaySettings, 'enabled' | 'style' | 'overrides
 
 const percent = formatPercent
 
-function AnchorField({ value, onChange }: { value: OverlayAnchor; onChange(v: OverlayAnchor): void }) {
+/** Names of the offset fields, by column and by row of the anchor (from the edge, or from the middle). */
+const OFFSET_X_LABELS: Record<string, string> = { left: 'Depuis la gauche (px)', center: 'Vers la droite (px)', right: 'Depuis la droite (px)' }
+const OFFSET_Y_LABELS: Record<string, string> = { top: 'Depuis le haut (px)', middle: 'Vers le bas (px)', bottom: 'Depuis le bas (px)' }
+
+/**
+ * Where a widget sits: its anchor on the 3 × 3 grid, then « Position libre », an offset in pixels of the exported film
+ * from that corner of the safe area (the widget leaves its anchor's stack).
+ */
+function WidgetPosition({ widget }: { widget: PlacedWidget }) {
   const id = useId()
-  return (
+  const overlay = useAppStore((s) => s.settings.overlay)
+  const video = useAppStore((s) => s.settings.video)
+  const set = (next: OverlaySettings) => useAppStore.getState().setSetting('overlay', next)
+  const { anchor, offset } = overlay[widget]
+  const [row, column] = anchor === 'center' ? ['middle', 'center'] : anchor.split('-')
+  const film = videoSize(video.aspect, video.resolution, Number.POSITIVE_INFINITY)
+  const axis = (key: keyof WidgetOffset, label: string, current: WidgetOffset) => (
     <div className="field">
-      <label className="field__label" htmlFor={id}>
-        Position
+      <label className="field__label" htmlFor={`${id}-${key}`}>
+        {label}
       </label>
-      <select id={id} className="select" value={value} onChange={(e) => onChange(e.currentTarget.value as OverlayAnchor)}>
-        {OVERLAY_ANCHORS.map((anchor) => (
-          <option key={anchor} value={anchor}>
-            {OVERLAY_ANCHOR_LABELS[anchor]}
-          </option>
-        ))}
-      </select>
+      <input
+        id={`${id}-${key}`}
+        className="input"
+        type="number"
+        min={-OFFSET_MAX_PX}
+        max={OFFSET_MAX_PX}
+        step={1}
+        value={current[key]}
+        onChange={(e) => {
+          const v = e.currentTarget.valueAsNumber
+          if (!Number.isFinite(v)) return
+          const px = Math.max(-OFFSET_MAX_PX, Math.min(OFFSET_MAX_PX, Math.round(v)))
+          set(withWidgetOffset(overlay, widget, { ...current, [key]: px }))
+        }}
+      />
     </div>
+  )
+  return (
+    <>
+      <AnchorPicker label="Position" value={anchor} onChange={(next) => set({ ...overlay, [widget]: { ...overlay[widget], anchor: next } })} />
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          checked={offset !== undefined}
+          onChange={(e) => set(withWidgetOffset(overlay, widget, e.currentTarget.checked ? { x: 0, y: 0 } : null))}
+        />
+        Position libre
+      </label>
+      {offset && (
+        <>
+          <div className="position-offset">
+            {axis('x', OFFSET_X_LABELS[column], offset)}
+            {axis('y', OFFSET_Y_LABELS[row], offset)}
+          </div>
+          <p className="field__hint">
+            En pixels du film exporté ({film.width} × {film.height}), depuis la marge de sécurité ; l'aperçu suit à l'échelle. Hors de la pile de sa
+            position, l'élément peut chevaucher les autres.
+          </p>
+        </>
+      )}
+    </>
   )
 }
 
@@ -69,11 +118,12 @@ const SizeField = ({ value, onChange }: { value: number; onChange(v: number): vo
   <RangeField label="Taille" min={WIDGET_SIZE_MIN} max={WIDGET_SIZE_MAX} step={0.1} value={value} format={(v) => `×${formatNumber(v, 1)}`} onChange={onChange} />
 )
 
-/** One widget: a checkbox that shows its options while it is enabled. */
+/** One widget: a checkbox that shows its options while it is enabled, its position first (out of the tabs). */
 function WidgetGroup({
   label,
   enabled,
   onToggle,
+  position,
   styled,
   style,
   visibility,
@@ -82,9 +132,11 @@ function WidgetGroup({
   label: string
   enabled: boolean
   onToggle(v: boolean): void
+  /** where it sits (`WidgetPosition`), above the tabs */
+  position?: PlacedWidget
   /** its own colours and fonts (« Couleurs et polices » at the end of its « Style » tab) */
   styled?: StyledWidget
-  /** « Style » tab: position, size… */
+  /** « Style » tab: size… */
   style?: ReactNode
   /** « Visibilité » tab: when it shows */
   visibility?: ReactNode
@@ -104,6 +156,7 @@ function WidgetGroup({
       </label>
       {enabled && (
         <div className="overlay-widget__body">
+          {position && <WidgetPosition widget={position} />}
           {tabs.length > 1 && (
             <div className="overlay-widget__tabs segmented" role="group" aria-label={`Réglages de ${label}`}>
               {tabs.map((t) => (
@@ -376,13 +429,9 @@ export function OverlayPanel() {
               label="Titre d'ouverture"
               enabled={overlay.title.enabled}
               onToggle={(enabled) => setWidget('title', { enabled })}
+              position="title"
               styled="title"
-              style={
-                <>
-                  <AnchorField value={overlay.title.anchor} onChange={(anchor) => setWidget('title', { anchor })} />
-                  <SizeField value={overlay.title.size} onChange={(size) => setWidget('title', { size })} />
-                </>
-              }
+              style={<SizeField value={overlay.title.size} onChange={(size) => setWidget('title', { size })} />}
               visibility={
                 <>
                   <RangeField
@@ -414,13 +463,9 @@ export function OverlayPanel() {
               label="Carte de clôture"
               enabled={overlay.end.enabled}
               onToggle={(enabled) => setWidget('end', { enabled })}
+              position="end"
               styled="end"
-              style={
-                <>
-                  <AnchorField value={overlay.end.anchor} onChange={(anchor) => setWidget('end', { anchor })} />
-                  <SizeField value={overlay.end.size} onChange={(size) => setWidget('end', { size })} />
-                </>
-              }
+              style={<SizeField value={overlay.end.size} onChange={(size) => setWidget('end', { size })} />}
               visibility={
                 <>
                   <RangeField
@@ -468,13 +513,9 @@ export function OverlayPanel() {
               label="Afficher les compteurs"
               enabled={overlay.counters.enabled}
               onToggle={(enabled) => setWidget('counters', { enabled })}
+              position="counters"
               styled="counters"
-              style={
-                <>
-                  <AnchorField value={overlay.counters.anchor} onChange={(anchor) => setWidget('counters', { anchor })} />
-                  <SizeField value={overlay.counters.size} onChange={(size) => setWidget('counters', { size })} />
-                </>
-              }
+              style={<SizeField value={overlay.counters.size} onChange={(size) => setWidget('counters', { size })} />}
             >
               <fieldset className="field fieldset">
                 <legend className="field__label">Valeurs</legend>
@@ -499,13 +540,9 @@ export function OverlayPanel() {
                 label="Classement (course fantôme)"
                 enabled={overlay.leaderboard.enabled}
                 onToggle={(enabled) => setWidget('leaderboard', { enabled })}
+                position="leaderboard"
                 styled="leaderboard"
-                style={
-                  <>
-                    <AnchorField value={overlay.leaderboard.anchor} onChange={(anchor) => setWidget('leaderboard', { anchor })} />
-                    <SizeField value={overlay.leaderboard.size} onChange={(size) => setWidget('leaderboard', { size })} />
-                  </>
-                }
+                style={<SizeField value={overlay.leaderboard.size} onChange={(size) => setWidget('leaderboard', { size })} />}
               >
                 <p className="field__hint">
                   {raceOn
@@ -521,6 +558,7 @@ export function OverlayPanel() {
               label="Profil altimétrique"
               enabled={overlay.profile.enabled}
               onToggle={(enabled) => setWidget('profile', { enabled })}
+              position="profile"
               styled="profile"
               style={
                 <>
@@ -542,7 +580,6 @@ export function OverlayPanel() {
                     format={percent}
                     onChange={(height) => setWidget('profile', { height })}
                   />
-                  <AnchorField value={overlay.profile.anchor} onChange={(anchor) => setWidget('profile', { anchor })} />
                 </>
               }
             >
@@ -553,13 +590,9 @@ export function OverlayPanel() {
               label="Mini-carte"
               enabled={overlay.minimap.enabled}
               onToggle={(enabled) => setWidget('minimap', { enabled })}
+              position="minimap"
               styled="minimap"
-              style={
-                <>
-                  <AnchorField value={overlay.minimap.anchor} onChange={(anchor) => setWidget('minimap', { anchor })} />
-                  <SizeField value={overlay.minimap.size} onChange={(size) => setWidget('minimap', { size })} />
-                </>
-              }
+              style={<SizeField value={overlay.minimap.size} onChange={(size) => setWidget('minimap', { size })} />}
             >
               <p className="field__hint">Tout le tracé vu de dessus, nord en haut, avec la position.</p>
               <label className="checkbox">
@@ -578,13 +611,9 @@ export function OverlayPanel() {
               label="Météo"
               enabled={overlay.weather.enabled}
               onToggle={(enabled) => setWidget('weather', { enabled })}
+              position="weather"
               styled="weather"
-              style={
-                <>
-                  <AnchorField value={overlay.weather.anchor} onChange={(anchor) => setWidget('weather', { anchor })} />
-                  <SizeField value={overlay.weather.size} onChange={(size) => setWidget('weather', { size })} />
-                </>
-              }
+              style={<SizeField value={overlay.weather.size} onChange={(size) => setWidget('weather', { size })} />}
             >
               <p className="field__hint">
                 {hasWeather
@@ -597,10 +626,19 @@ export function OverlayPanel() {
               label="Logo"
               enabled={overlay.logo.enabled}
               onToggle={(enabled) => setWidget('logo', { enabled })}
+              position="logo"
               style={
                 <>
-                  <AnchorField value={overlay.logo.anchor} onChange={(anchor) => setWidget('logo', { anchor })} />
                   <SizeField value={overlay.logo.size} onChange={(size) => setWidget('logo', { size })} />
+                  <RangeField
+                    label="Opacité"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={overlay.logo.opacity}
+                    format={percent}
+                    onChange={(opacity) => setWidget('logo', { opacity })}
+                  />
                 </>
               }
             >
@@ -625,13 +663,9 @@ export function OverlayPanel() {
               label="Texte libre"
               enabled={overlay.text.enabled}
               onToggle={(enabled) => setWidget('text', { enabled })}
+              position="text"
               styled="text"
-              style={
-                <>
-                  <AnchorField value={overlay.text.anchor} onChange={(anchor) => setWidget('text', { anchor })} />
-                  <SizeField value={overlay.text.size} onChange={(size) => setWidget('text', { size })} />
-                </>
-              }
+              style={<SizeField value={overlay.text.size} onChange={(size) => setWidget('text', { size })} />}
             >
               <TextField label="Texte" value={overlay.text.text} placeholder="Ex. : avec Marie et Paul" onChange={(text) => setWidget('text', { text })} />
             </WidgetGroup>
@@ -648,24 +682,15 @@ export function OverlayPanel() {
           <InfoTip text="Les licences du relief, de l'imagerie, de la météo et d'OpenStreetMap demandent de citer les sources dans le film publié." />
         </div>
         {overlay.credits.enabled ? (
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-credits`}>
-              Position
-            </label>
-            <select
-              id={`${id}-credits`}
-              className="select"
+          <>
+            <AnchorPicker
+              label="Position"
               value={overlay.credits.position}
-              onChange={(e) => setWidget('credits', { position: e.currentTarget.value as CreditsPosition })}
-            >
-              {CREDITS_POSITIONS.map((position) => (
-                <option key={position} value={position}>
-                  {OVERLAY_ANCHOR_LABELS[position]}
-                </option>
-              ))}
-            </select>
-            <p className="field__hint">En petit, dans chaque image exportée, même sans le reste de l'habillage.</p>
-          </div>
+              allowed={CREDITS_POSITIONS}
+              onChange={(position) => setWidget('credits', { position })}
+            />
+            <p className="field__hint">En petit, dans un coin de chaque image exportée, même sans le reste de l'habillage.</p>
+          </>
         ) : (
           <p className="field__hint">Citez alors les sources ailleurs (description de la vidéo, générique).</p>
         )}

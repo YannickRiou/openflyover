@@ -1,6 +1,7 @@
 /**
  * File actions shared by the top bar, its keyboard shortcuts, the window drop and the panels: save / open the project
- * file, import GPX / FIT tracks and the sample, chain tracks into one, save an export on the desktop (src/platform).
+ * file, close it or start a new one, import GPX / FIT tracks and the sample, chain tracks into one, save an export on
+ * the desktop (src/platform).
  * Outcomes are shown as toasts.
  */
 import { errorMessage } from '../core/errors'
@@ -10,13 +11,13 @@ import { importFile, importText } from '../import'
 import { chainTracks, followEachOther, replaceByChain } from '../import/chain'
 import { getPlatform } from '../platform'
 import type { OpenFilesOptions, ProjectEntry } from '../platform'
-import { applyProject } from '../project/apply'
+import { applyEmptyProject, applyProject } from '../project/apply'
 import { parseProject, projectFileName, serializeProject } from '../project/document'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
-import { flushAutosave, lastOpenProject, setOpenEntry } from './library'
+import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry } from './library'
 import { effectiveProjectName, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
 import type { ToastInput } from './toast'
@@ -74,6 +75,37 @@ export async function openProject(file: File, entry: ProjectEntry | null = null,
     const reason = errorMessage(err)
     showToast({ kind: 'error', text: `Impossible d'ouvrir « ${file.name} » : ${reason}` })
   }
+}
+
+/** The answer to « Fermer sans enregistrer ? »: save the file first, close anyway, or keep the project open. */
+export type CloseAnswer = 'save' | 'close' | 'cancel'
+
+/**
+ * Replace the open project by an empty one with the default settings (the home screen shows): its waiting change is
+ * written to « Mes projets » first, then `ask` only when changes would still be lost. False when it stays open.
+ */
+async function closeOpenProject(ask: () => Promise<CloseAnswer>): Promise<boolean> {
+  const closing = await confirmClose({ flush: flushAutosave, loss: projectCloseLoss, ask, save: saveProject })
+  if (!closing) return false
+  applyEmptyProject()
+  getSettingsHistory().clear()
+  const store = useAppStore.getState()
+  store.setProjectName('')
+  store.markProjectSaved()
+  setOpenEntry(null)
+  return true
+}
+
+/** « Fermer le projet » (Projet tab): back to the home screen; a kept project stays in « Mes projets ». */
+export async function closeProject(ask: () => Promise<CloseAnswer>): Promise<void> {
+  const { projectName, tracks } = useAppStore.getState()
+  const name = effectiveProjectName(projectName, tracks[0]?.name)
+  if (await closeOpenProject(ask)) showToast({ kind: 'success', text: `Projet « ${name} » fermé` })
+}
+
+/** « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import. */
+export async function newProject(ask: () => Promise<CloseAnswer>): Promise<void> {
+  if (await closeOpenProject(ask)) await chooseTracksToImport()
 }
 
 let reopening: Promise<void> | null = null

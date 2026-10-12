@@ -134,6 +134,28 @@ export function curvyOuting(lengthKm = 540, nights = 8, seed = 7): Track {
   return buildTrack({ name: 'raid', source: 'gpx', segments: [{ points }] })
 }
 
+/**
+ * A ≈ 6 km walk recorded every 3 m with ±`noiseM` of GPS noise, along gentle bends, with stretches of tight zigzags
+ * (a sawtooth ±`zigzagM` every 40 m, like a path up a steep slope or a jittery watch): the many small movements a chase
+ * camera should not follow. `zigzagOuting(0, 0)` is the clean route.
+ */
+export function zigzagOuting(noiseM = 6, zigzagM = 12, seed = 3): Track {
+  const rnd = random(seed)
+  const points: TrackPoint[] = []
+  let t = Date.parse('2026-10-01T08:00:00Z')
+  for (let s = 0; s <= 6_000; s += 3) {
+    // the route: a slow S-bend heading north-east
+    const x = s * 0.7 + 400 * Math.sin(s / 1_500)
+    const y = s * 0.7
+    // zigzags across the route on two stretches (a sawtooth, sharp corners every 20 m)
+    const zig = (s > 1_000 && s < 2_500) || (s > 3_500 && s < 5_000) ? zigzagM * (2 * Math.abs(((s / 40) % 1) * 2 - 1) - 1) : 0
+    const at = toLonLat(x + zig * 0.7 + (rnd() - 0.5) * 2 * noiseM, y - zig * 0.7 + (rnd() - 0.5) * 2 * noiseM)
+    points.push({ lon: at.lon, lat: at.lat, time: t })
+    t += 3_000
+  }
+  return buildTrack({ name: 'zigzag', source: 'gpx', segments: [{ points }] })
+}
+
 /** Track of a GPX text (trkpt with lat, lon, ele and time), without a DOM. */
 export function gpxTrack(text: string): Track {
   const points: TrackPoint[] = []
@@ -157,6 +179,8 @@ export interface MotionStats {
   jerk: number[]
   /** vertical jerk of the camera (m/s³) */
   climbJerk: number[]
+  /** sideways jerk of the camera, horizontal and across the look direction: the side-to-side shake (m/s³) */
+  lateralJerk: number[]
   /** turn rate and angular acceleration of the look direction (deg/s, deg/s²) */
   turn: number[]
   turnAccel: number[]
@@ -164,7 +188,7 @@ export interface MotionStats {
 
 /** Motion of the camera over placements one frame (`dtS` of film time) apart. */
 export function motionOf(frames: readonly Placement[], dtS: number): MotionStats {
-  const out: MotionStats = { speed: [], accel: [], jerk: [], climbJerk: [], turn: [], turnAccel: [] }
+  const out: MotionStats = { speed: [], accel: [], jerk: [], climbJerk: [], lateralJerk: [], turn: [], turnAccel: [] }
   const vel: Vector3[] = []
   const omega: Vector3[] = []
   for (let i = 0; i + 1 < frames.length; i++) {
@@ -185,6 +209,8 @@ export function motionOf(frames: readonly Placement[], dtS: number): MotionStats
     const jerk = vel[i + 2].clone().sub(vel[i + 1]).sub(vel[i + 1].clone().sub(vel[i])).divideScalar(dtS * dtS)
     out.jerk.push(jerk.length())
     out.climbJerk.push(Math.abs(jerk.y))
+    const look = frames[i + 1].target.clone().sub(frames[i + 1].position).setY(0).normalize()
+    out.lateralJerk.push(Math.abs(jerk.x * -look.z + jerk.z * look.x))
   }
   return out
 }
