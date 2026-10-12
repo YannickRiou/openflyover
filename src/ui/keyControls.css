@@ -52,7 +52,7 @@
 }
 
 .key-field .key-btn--on {
-  color: var(--color-accent);
+  color: var(--accent);
 }
 
 /* timeline: the lanes with keys of their own carry the group under their name, so their header and lane are taller */

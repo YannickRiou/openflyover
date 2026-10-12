@@ -792,7 +792,7 @@
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
-  color: var(--color-ink);
+  color: var(--text-1);
   font-size: 14px;
   font-weight: 600;
   text-decoration: underline;
@@ -802,7 +802,7 @@
 
 @media (hover: hover) {
   .empty__link:hover:not(:disabled) {
-    color: var(--color-accent-strong);
+    color: var(--accent-hover);
   }
 }
 
@@ -1050,14 +1050,14 @@
   padding: var(--space-2) var(--space-1) 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: var(--color-white);
+  background: var(--surface-control);
   color: var(--text-1);
   cursor: pointer;
 }
 
 @media (hover: hover) {
   .format-tile:hover {
-    border-color: var(--color-ink);
+    border-color: var(--text-1);
   }
 }
 
@@ -1105,7 +1105,7 @@
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: var(--color-white);
+  background: var(--surface-control);
 }
 
 .anchor-picker__cell {
@@ -1113,7 +1113,7 @@
   padding: 0;
   border: 0;
   border-radius: 2px;
-  background: var(--color-paper);
+  background: var(--surface-panel);
   cursor: pointer;
 }
 
@@ -1140,7 +1140,7 @@
 }
 
 .anchor-picker__cell[aria-checked='true']::before {
-  background: var(--color-white);
+  background: var(--surface-control);
 }
 
 .anchor-picker__cell:disabled {
@@ -1731,7 +1731,7 @@
   border: 1px solid var(--line);
   border-bottom-width: 2px;
   border-radius: 4px;
-  background: var(--color-white);
+  background: var(--surface-control);
   color: var(--text-1);
   font: 600 12px/1.5 var(--font-body);
   text-align: center;
