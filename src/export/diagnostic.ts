@@ -200,7 +200,6 @@ function settingsRows({ settings, tracks, media, request }: DiagnosticInput): Re
   if (clouds.mode !== 'aucun') rows.push(['Couverture des nuages', `${Math.round(clouds.coverage * 100)} %${clouds.mode === 'mer' ? `, mer ${clouds.seaRender === 'surface' ? 'en nappe' : 'en volume'}` : ''}`])
   rows.push(['Exagération du relief', `× ${comma(settings.exaggeration, 2)}`])
   const shown = [
-    labels.climbs && 'sommets',
     labels.waypoints && 'points du fichier',
     labels.kmStep > 0 && `bornes ${labels.kmStep} km`,
     labels.endpoints && 'départ et arrivée',

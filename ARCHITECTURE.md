@@ -56,7 +56,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/cameraSettings.ts` | camera styles and presets | `CAMERA_STYLES`, `DEFAULT_CAMERA`, `CAMERA_RANGES`, `CAMERA_PRESETS`, `isValidCamera`, `withCameraDefaults`, `turnSmoothingM(camera, lengthM)`, `advanceProgress(progress, dt, speed, durationS)` |
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
-| `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `climbLabels`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
+| `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
@@ -353,7 +353,7 @@ ink, 7.3:1).
   sample), "Ouvrir un projet…" (open a project; a single picker whose `accept` changes), then "Récents": the three latest
   entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab).
 - **Rail and panel**: vertical rail of icon + label tabs (64 px; `tablist`, roving focus, arrows / Home / End) and a
-  320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Montées et étiquettes », hidden without a track),
+  320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Étiquettes », hidden without a track),
   **Carte** (map; base map and water, relief, OSM landmarks and points of interest),
   **Météo** (weather; weather of the outing, clouds, weather in the image), **Lumière** (light; atmosphere, shadows,
   exposure, sun, colour grading), **Survol** (flyover; camera, pacing), **Objectif** (lens effects),
@@ -507,7 +507,7 @@ ink, 7.3:1).
   state remembered by title in the platform storage (`FOLDS_KEY` `openflyover.folds.v1`, `parseFoldPrefs` in `shell.ts`,
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
   (imagery, water), "Relief" (exaggeration), "Repères et points d'intérêt" (`LandmarkPanel`, absent without a track).
-  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`), "Montées et étiquettes" (climbs and labels; `ClimbList`). Réglages: « Barre d'état », « Timeline » (`PreferencesPanel`).
+  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`), "Étiquettes" (`LabelSettings`). Réglages: « Barre d'état », « Timeline » (`PreferencesPanel`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
   `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
@@ -1574,15 +1574,23 @@ it, know at what time you will pass each point, where the sun will be and what t
 
 ### Landmarks and points of interest, one list (« Repères et points d'intérêt »)
 
-- **Rows** (`LandmarkPanel`, Carte tab): OSM landmarks of the film track (shown and hidden) and `film.pois`, by position
-  (`alongM`, `poiStopAtM`), and the top of each climb of the track (id `climb:N`, `climbPlaceId`; « Montée 1 · sommet 2 401 m »; no eye: its
-  label is the « Sommets des montées » choice of « Montées et étiquettes », Trace tab; not hidden by « Tout masquer »). Click on the name or badge: seek.
+- **Rows** (`LandmarkPanel`, Carte tab): the points of interest (`film.pois`, by position, `poiStopAtM`), then the OSM
+  landmarks of the film track (shown and hidden) from the most to the least important. Climbs are not listed or labelled.
+  Click on the name or badge: seek.
+- **Ranking**: ▲ ▼ move a landmark one place (`movedInRank`); `settings.landmarks.rank` holds the OSM ids in that order
+  (empty until the first move, then the others keep their own importance). `withRank` hands the importances of the
+  ranked ones back in that order (strictly decreasing), so the list and the label overlap (`resolveOverlaps`) follow it;
+  applied in `publish` (`osm/store.ts`) after `buildLandmarks`, before `splitHidden`.
+- **Cross and « Relancer la recherche »**: the cross of a hidden landmark puts its id in `settings.landmarks.dismissedIds`
+  (`buildLandmarks` skips it before the cap, so another takes its place); the button empties `dismissedIds` and calls
+  `syncLandmarks(…, { refresh: true })`, which asks Overpass again for every track (the known landmarks stay until the answer, and if it fails; « Réessayer » does the same; `fetchTrackFeatures(…, refresh)`
+  skips the memory and the persistent cache, then caches the answer). `withLandmarkDefaults` gives `[]` to both lists.
 - **Eye**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids. Hiding removes, in the same undo step,
   the row's own stop (`placeStop`: the stop whose `source.ref` is the landmark, else a stop placed by hand within 1 m)
   and, while `landmarkTitles` is off, its `auto-text-` / `auto-speed-` items (`withoutPlaceItems`). Generated stops and
   live titles follow `splitHidden`; a hidden point of interest gets no label. Deleting a point of interest drops its id
   (ids are reused).
-- **« Arrêt »**: `addStop` (landmark: label = name, source `{ kind: 'landmark', ref }`; climb top: label = « Montée N · sommet … m », source `{ kind: 'climb', ref: String(N) }`, found again by `placeStop`; point of interest: name, nearest
+- **« Arrêt »**: `addStop` (landmark: label = name, source `{ kind: 'landmark', ref }`; point of interest: name, nearest
   point of the track); duration with `updateStop`; through `editFilm({ stops: true })`, so the first edit writes the
   generated stops out.
 - **« Tout afficher » / « Tout masquer »**: every label of every track and every point of interest, one undo step
@@ -1644,9 +1652,9 @@ exports) gets it from the terrain source of the settings.
   both ends are less than 100 m apart: a loop), always shown; with `labels.endpoints` ("Départ et arrivée") the pins of the
   first track read "Départ", "Arrivée" or "Départ et arrivée", otherwise the pin alone (a square panel). They and the photos of the film whose file gave a GPS position (`photoLabels`,
   `labels.photos`, priority 190, `MediaAsset.lon` / `lat` read from EXIF when the photo is added) use the pictogram
-  panel of the points of interest. Setting `settings.labels { climbs, waypoints, kmStep, endpoints, photos, size, rangeKm }` (old projects completed by
+  panel of the points of interest. Setting `settings.labels { waypoints, kmStep, endpoints, photos, size, rangeKm }` (old projects completed by
   `withLabelDefaults`, values checked by `isValidLabelSettings`), section
-  "Montées" (climbs; `ClimbList`, a click places the flyover at the foot of the climb).
+  "Étiquettes" (`LabelSettings`).
 
 ## OpenStreetMap landmarks (phase 7)
 

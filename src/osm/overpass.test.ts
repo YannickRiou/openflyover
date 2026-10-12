@@ -288,6 +288,18 @@ describe('fetchTrackFeatures', () => {
     expect(later.fetch).toHaveBeenCalledTimes(1)
   })
 
+  it('refresh skips the memory and the persistent cache', async () => {
+    const storage = memoryStorage()
+    const track = northTrack(3, 1000)
+    await fetchTrackFeatures(track, undefined, makeDeps([json(RESPONSE)], storage))
+    const deps = makeDeps([json(RESPONSE)], storage)
+    await fetchTrackFeatures(track, undefined, deps, true)
+    expect(deps.fetch).toHaveBeenCalledTimes(1)
+    // and the answer is cached again
+    await fetchTrackFeatures(track, undefined, deps)
+    expect(deps.fetch).toHaveBeenCalledTimes(1)
+  })
+
   it('does not cache a failed query and survives a broken storage', async () => {
     const broken = keyValueStore({
       getItem: () => {

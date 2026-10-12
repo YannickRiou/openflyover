@@ -5,9 +5,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Landmark ranking**: « Repères et points d'intérêt » lists the landmarks from the most to the least important with ▲ ▼ arrows (the higher one keeps its label when two overlap); a cross on hidden landmarks dismisses them, and « Relancer la recherche » asks OpenStreetMap again and brings the dismissed ones back.
+- **No more climb display**: the climb cards, the climb labels in the 3D view and the « Sommets des montées » option are gone; the Trace tab section is now « Étiquettes ». Climbs still slow the film down (« Ralentir sur »).
+- **Label colours**: « Couleurs des étiquettes » is now a list to pick the label type, then one colour for it (instead of a grid of unnamed swatches).
 - **Labels under the cards**: the 3D labels stay visible while the opening title and the closing card are shown (they no longer fade out behind them).
 - **Label keys**: « Habillage » › « Étiquettes 3D » has the ◀ ◇ ▶ keys to hide the 3D labels and bring them back with a fade along the track (an « Étiquettes » lane on the timeline once keyed).
-- **Climb tops in the list**: « Repères et points d'intérêt » (Carte) also lists the top of each climb (« Montée 1 · sommet 2 401 m ») with its « Arrêt », like the passes and peaks.
 - **Export: every image waits for its tiles, or the export stops** (#36): more retries with growing delays (up to about
   2 min per tile), 5 minutes at most per image; a tile that never comes stops the export with an error naming the
   server, the tile and the cause, instead of delivering incomplete images.
