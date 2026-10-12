@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Space on the ruler**: Space plays / pauses even when the timeline ruler (the row of times) was the last thing clicked or moved with the arrows.
 - **Landmark ranking**: « Repères et points d'intérêt » lists the landmarks from the most to the least important with ▲ ▼ arrows (the higher one keeps its label when two overlap); a cross on hidden landmarks dismisses them, and « Relancer la recherche » asks OpenStreetMap again and brings the dismissed ones back.
 - **No more climb display**: the climb cards, the climb labels in the 3D view and the « Sommets des montées » option are gone; the Trace tab section is now « Étiquettes ». Climbs still slow the film down (« Ralentir sur »).
 - **Label colours**: « Couleurs des étiquettes » is now a list to pick the label type, then one colour for it (instead of a grid of unnamed swatches).
@@ -56,9 +57,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Memory at start-up**: reopening a project with a large embedded clip uses about half the memory (saved projects are read as a Blob, no raw string kept beside the parsed document).
 - **Keys on more than the camera** (#24): speed, exposure, sun hour and colour grading can be keyed along the track in a
   new « Réglages » lane of the timeline.
-- **More overlay styles** (#19): five new styles (Sportif, Minimal mono, Topo, Néon nuit, Magazine) for the film and the
-  poster; 3D labels follow the overlay style with one editable colour per label type; the text backing of styles without
-  a panel is a discreet blurred rounded rectangle, or the text's shadow or outline only.
+- **More overlay styles** (#19): « Néon nuit », « Cinéma » (letterbox bars, the figures as a subtitle line), « Journal de bord » (a paper sheet on the left with the figures as a list, the map and the profile) and « Tableau sportif » (a dark band with big figures over the profile) for the film and the poster, each with its own layout and structure, not only other colours; choosing one of the last three places the widgets (you can still move them); 3D labels follow the overlay style with one editable colour per label type; the text backing of styles without a panel is a discreet blurred rounded rectangle, or the text's shadow or outline only. Projects saved with a dropped style (Sportif, Minimal mono, Topo, Magazine) open in Diffusion or Éditorial.
 - **Relief at sea** (#28): optional « Nettoyer le relief en mer » removes the isolated spikes elevation data leaves over
   the sea (the 3D track follows), with « Ramener la mer à 0 m » as a sub-option.
 - **Marker** (#21, #30): free or track colour, ring / halo / pulse styles; six new figures, figure chosen from the
