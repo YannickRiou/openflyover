@@ -20,6 +20,7 @@ import {
   TEXT_BACKINGS,
   TEXT_BACKING_LABELS,
   withLabelColor,
+  withStyleLayout,
   PROFILE_HEIGHT_MAX,
   PROFILE_HEIGHT_MIN,
   PROFILE_WIDTH_MAX,
@@ -528,7 +529,7 @@ export function OverlayPanel() {
                     name={`${id}-style`}
                     value={style}
                     checked={overlay.style === style}
-                    onChange={() => set({ style })}
+                    onChange={() => set(withStyleLayout(overlay, style))}
                   />
                   {OVERLAY_STYLE_LABELS[style]}
                 </label>
