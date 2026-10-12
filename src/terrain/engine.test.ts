@@ -1143,14 +1143,19 @@ describe('export: the view is final when the settle loop returns', () => {
 
   /** another update of the same view changes nothing: no request, same tiles drawn, nothing awaited */
   async function expectFinal(engine: ReturnType<typeof engineWith>, camera: PerspectiveCamera, deps: FakeDeps) {
+    // the view only: tiles outside it are never waited for, so a shadow caster may still arrive afterwards
+    const inView = () =>
+      meshesOf(engine)
+        .filter((m) => m.visible && viewFrustum(camera).intersectsObject(m))
+        .map((m) => `${m.name}${(m.material as MeshStandardMaterial).map ? '' : ' grey'}`)
     const requests = deps.fetched.length
-    const view = drawn(engine)
+    const view = inView()
     for (let i = 0; i < 3; i++) {
       engine.update(camera, 1000)
       await settle()
     }
     expect(deps.fetched.length).toBe(requests)
-    expect(drawn(engine)).toEqual(view)
+    expect(inView()).toEqual(view)
     expect(engine.stats.pendingVisibleTiles).toBe(0)
   }
 
