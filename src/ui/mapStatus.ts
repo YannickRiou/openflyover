@@ -1,8 +1,12 @@
 /**
- * Map state of the status bar (« Carte · 72 % » / « Carte prête »), derived from the terrain stats.
- * Pure: the caller passes the time, so the smoothing is testable.
+ * What the status bar says, pure: the map state (« Carte · 72 % » / « Carte prête », derived from the terrain stats;
+ * the caller passes the time, so the smoothing is testable), the chips of the other fetches, the performance readout
+ * and the short credits of the active sources.
  */
 import type { TerrainStats } from '../core/types'
+import { getImagerySource, getTerrainSource } from '../terrain/sources'
+import { formatNumber } from './format'
+import type { PerfItem, StatusChip } from './shell'
 
 /** A load shorter than this never shows: a small camera move stays « Carte prête ». */
 export const MAP_LOADING_DELAY_MS = 500
@@ -45,4 +49,146 @@ export function nextMapStatus(prev: MapStatus, stats: TerrainStats, nowMs: numbe
   // until the delay, the previous resting state stays on screen (nothing at the very start, « Carte prête » later)
   const shown = nowMs - since >= MAP_LOADING_DELAY_MS ? 'loading' : continuing ? prev.shown : prev.phase
   return { phase: 'loading', shown, progress, since, failed }
+}
+
+// ---------------------------------------------------------------------------
+// Chips of the other fetches (« Réglages » › « Barre d'état »)
+// ---------------------------------------------------------------------------
+
+export type ChipTone = 'loading' | 'ready' | 'attention' | 'muted'
+
+export interface FetchChip {
+  label: string
+  tone: ChipTone
+  /** the state in words (tooltip, screen readers) */
+  tip: string
+}
+
+const CHIP_LABELS: Record<StatusChip, string> = { weather: 'Météo', landmarks: 'Repères', region: 'Région', water: 'Eau' }
+const CHIP_SOURCES: Record<StatusChip, string> = {
+  weather: 'Météo de la sortie (Open-Meteo)',
+  landmarks: 'Repères (OpenStreetMap)',
+  region: 'Région du plan de situation (OpenStreetMap)',
+  water: 'Eau (OpenStreetMap)',
+}
+
+/**
+ * Chip of a fetch from the status of its store (weather, landmarks, region, water), null while idle. « unavailable »
+ * (untimed track) and « none » (no region around the track) are not errors.
+ */
+export function fetchChip(chip: StatusChip, status: string, message: string | null = null): FetchChip | null {
+  const label = CHIP_LABELS[chip]
+  const source = CHIP_SOURCES[chip]
+  switch (status) {
+    case 'loading':
+      return { label, tone: 'loading', tip: `${source} : chargement…` }
+    case 'ready':
+      return { label, tone: 'ready', tip: `${source} : chargement terminé` }
+    case 'error':
+      return { label, tone: 'attention', tip: message ?? `${source} : échec du chargement` }
+    case 'unavailable':
+    case 'none':
+      return { label, tone: 'muted', tip: message ?? `${source} : rien autour de la trace` }
+    default:
+      return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Performance readout
+// ---------------------------------------------------------------------------
+
+/** Machine load read by the desktop app (src-tauri/src/system.rs). */
+export interface SystemStats {
+  usedMemoryBytes: number
+  totalMemoryBytes: number
+  cpuPercent: number
+}
+
+/** One reading, every part optional (unknown here or not read yet). */
+export interface PerfSample {
+  /** frames drawn by the 3D view over the last second */
+  fps?: number
+  textures?: number
+  geometries?: number
+  tiles?: number
+  /** JavaScript heap in use (Chromium only) */
+  heapBytes?: number
+  system?: SystemStats
+}
+
+/** 312 Mo, 8,2 Go */
+export function formatMemory(bytes: number): string {
+  return bytes >= 1e9 ? `${formatNumber(bytes / 1e9, 1)} Go` : `${formatNumber(bytes / 1e6)} Mo`
+}
+
+/** The parts of the readout `shown` asks for and `sample` knows, in a fixed order. */
+export function perfParts(sample: PerfSample, shown: Record<PerfItem, boolean>): string[] {
+  const parts: string[] = []
+  if (shown.fps && sample.fps !== undefined) parts.push(sample.fps > 0 ? `${formatNumber(sample.fps)} i/s` : '3D au repos')
+  if (shown.gpu && sample.textures !== undefined && sample.geometries !== undefined) {
+    parts.push(`${formatNumber(sample.textures)} textures · ${formatNumber(sample.geometries)} géométries`)
+  }
+  if (shown.tiles && sample.tiles !== undefined) parts.push(`${formatNumber(sample.tiles)} tuiles`)
+  if (shown.memory && sample.heapBytes !== undefined) parts.push(`JS ${formatMemory(sample.heapBytes)}`)
+  if (shown.system && sample.system) {
+    const { usedMemoryBytes, totalMemoryBytes, cpuPercent } = sample.system
+    parts.push(`RAM ${formatMemory(usedMemoryBytes)} / ${formatMemory(totalMemoryBytes)}`, `CPU ${formatNumber(cpuPercent)} %`)
+  }
+  return parts
+}
+
+// ---------------------------------------------------------------------------
+// Short credits of the active sources: always on the status bar, the full lines in « Sources et licences »
+// ---------------------------------------------------------------------------
+
+export interface CreditItem {
+  text: string
+  /** licence or attribution page */
+  href?: string
+  /** data providers that may fold into an expandable element on a narrow status bar (Esri) */
+  more?: string
+}
+
+const OSM_CREDIT: CreditItem = { text: '© OpenStreetMap', href: 'https://www.openstreetmap.org/copyright' }
+const OPEN_METEO_CREDIT: CreditItem = { text: 'Open-Meteo', href: 'https://open-meteo.com/' }
+const IGN_CREDIT: CreditItem[] = [{ text: '© IGN' }]
+const SWISSTOPO_CREDIT: CreditItem[] = [{ text: '© swisstopo' }]
+
+/** Short names of the `attribution` of each source of `terrain/sources.ts`, by id. */
+export const SOURCE_CREDITS: Readonly<Record<string, readonly CreditItem[]>> = {
+  mapterhorn: [{ text: '© Mapterhorn', href: 'https://mapterhorn.com/attribution' }],
+  'aws-terrarium': [{ text: 'Mapzen / AWS Terrain Tiles' }],
+  'ign-ortho': IGN_CREDIT,
+  'ign-plan': IGN_CREDIT,
+  'ign-ortho-2000-2005': IGN_CREDIT,
+  'ign-ortho-1965-1980': IGN_CREDIT,
+  'ign-ortho-1950-1965': IGN_CREDIT,
+  swisstopo: SWISSTOPO_CREDIT,
+  'swisstopo-carte': SWISSTOPO_CREDIT,
+  'arcgis-world-imagery': [{ text: 'Powered by Esri', more: 'Esri, Vantor, Earthstar Geographics, GIS User Community' }],
+  'eox-s2cloudless': [{ text: 'EOX', href: 'https://cloudless.eox.at' }],
+  opentopomap: [OSM_CREDIT, { text: '© OpenTopoMap', href: 'https://opentopomap.org/about' }],
+}
+
+export interface CreditSourceIds {
+  terrainSourceId: string
+  imagerySourceId: string
+  /** weather data loaded */
+  weather: boolean
+  /** OpenStreetMap data shown: landmarks, water or the highlighted region */
+  osm: boolean
+}
+
+/** Short credits of the active sources, OpenStreetMap first, each once; a source without a short name keeps its full attribution. */
+export function compactCredits({ terrainSourceId, imagerySourceId, weather, osm }: CreditSourceIds): CreditItem[] {
+  const imagery = getImagerySource(imagerySourceId)
+  const terrain = getTerrainSource(terrainSourceId)
+  const items = [
+    ...(osm ? [OSM_CREDIT] : []),
+    ...(SOURCE_CREDITS[imagery.id] ?? [{ text: imagery.attribution }]),
+    ...(SOURCE_CREDITS[terrain.id] ?? [{ text: terrain.attribution }]),
+    ...(weather ? [OPEN_METEO_CREDIT] : []),
+  ]
+  return items.filter((item, i) => items.findIndex((other) => other.text === item.text) === i)
 }

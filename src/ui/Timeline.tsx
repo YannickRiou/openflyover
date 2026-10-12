@@ -7,6 +7,7 @@
  * functions of `film/timeline.ts`; editing a stop writes the generated stops out first (`materializeStops`).
  */
 import { errorMessage } from '../core/errors'
+import { isExportBusy, useExportStore } from '../export/store'
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent, ReactNode, UIEvent } from 'react'
 import { freezeLandmarkTitles, materializeStops, stopAt, stopCandidates } from '../film/assemble'
@@ -37,6 +38,7 @@ import {
   followStops,
   formatFilmTime,
   formatSpeedFactor,
+  formatTimecode,
   hasFilmItem,
   photoFilmTime,
   pressedGrip,
@@ -53,10 +55,12 @@ import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
 import { editFilm, getFilmSource, seekKeyframe, setAutoStops, toggleKeyframe, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
-import { formatDistance, formatNumber } from './format'
+import type { Playback } from '../state/store'
+import { formatClock, formatDistance, formatNumber } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
 import { ModifiedMarker } from './ModifiedMarker'
+import { usePreferences } from './preferences'
 import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
 import { spacePlays, withShortcut } from './shortcuts'
@@ -120,12 +124,6 @@ const clockOfFilm = (input: FilmClockInput, film: Film) =>
     cameraKeys: film.cameraKeys,
   })
 
-/** Recorded instant -> "14 h 32", in the browser time zone. */
-function formatClock(ms: number): string {
-  const date = new Date(ms)
-  return `${date.getHours()} h ${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 /** Closed SVG area under the profile at abscissas `xs`, one sub-path per run of known elevations. */
 function profileAreaPath(profile: ElevationProfile, xs: readonly number[]): string {
   const { ele, minEle, maxEle } = profile
@@ -152,20 +150,18 @@ interface BarButtonProps {
   /** accessible name, also the tooltip unless `tip` is given (with the shortcut) */
   name: string
   tip?: string
-  /** short visible label (hidden on narrow windows) */
-  label?: string
   onClick(): void
   disabled?: boolean
   /** the state the button acts on is on (the diamond is filled); the name already says what a click does */
   on?: boolean
 }
 
-/** Icon button of the bar: icon, optional short label, tooltip. */
-function BarButton({ icon, name, tip = name, label, onClick, disabled, on }: BarButtonProps) {
+/** Icon button of the bar: icon only, its name as tooltip and accessible name. */
+function BarButton({ icon, name, tip = name, onClick, disabled, on }: BarButtonProps) {
   return (
     <button
       type="button"
-      className={`${label ? 'icon-btn icon-btn--label' : 'icon-btn'}${on ? ' icon-btn--on' : ''}`}
+      className={on ? 'icon-btn icon-btn--on' : 'icon-btn'}
       onClick={onClick}
       disabled={disabled}
       aria-label={name}
@@ -173,7 +169,6 @@ function BarButton({ icon, name, tip = name, label, onClick, disabled, on }: Bar
       data-tip-side="top"
     >
       <Icon name={icon} size={18} />
-      {label && <span className="icon-btn__text">{label}</span>}
     </button>
   )
 }
@@ -225,16 +220,16 @@ function FilmOptions({
       <button
         ref={toggleRef}
         type="button"
-        className="icon-btn icon-btn--label"
+        className="icon-btn"
         aria-expanded={open}
         aria-controls={`${id}-menu`}
+        aria-label="Options du film"
         data-tip="Options du film"
         data-tip-side="top"
         data-tip-align="end"
         onClick={() => setOpen(!open)}
       >
-        <span className="icon-btn__text">Options</span>
-        <Icon name="chevron-down" size={16} />
+        <Icon name="ellipsis" size={18} />
         {modified && (
           <>
             <span className="film-tl__dot" />
@@ -284,7 +279,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const sequence = useFilmSequence()
   const tracks = useAppStore((s) => s.tracks)
   const clock = useFilmClock()
-  const { playing, progress, timeS: storedTimeS, speed } = useAppStore((s) => s.playback)
+  // the export moves the playhead at every frame: the timeline keeps the playback it had (it would render with each one)
+  const exporting = useExportStore((s) => isExportBusy(s.phase))
+  const livePlayback = useAppStore((s) => (exporting ? null : s.playback))
+  const [frozenPlayback, setFrozenPlayback] = useState<Playback | null>(null)
+  if (livePlayback && frozenPlayback) setFrozenPlayback(null)
+  else if (!livePlayback && !frozenPlayback) setFrozenPlayback(useAppStore.getState().playback)
+  const { playing, progress, timeS: storedTimeS, speed } = livePlayback ?? frozenPlayback ?? useAppStore.getState().playback
+  const timelineClock = usePreferences((s) => s.timelineClock)
   const setPlaying = useAppStore((s) => s.setPlaying)
   const setProgress = useAppStore((s) => s.setProgress)
   const setSpeed = useAppStore((s) => s.setSpeed)
@@ -447,7 +449,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const contentWidth = Math.max(width, Math.ceil(xOf(total) + pad))
   const ele = profile && path.count > 0 ? samplePath(path, progress * path.lengthM).ele : undefined
   // startTime is set as soon as one point has a time: skips the scan of an untimed track
-  const time = track.stats.startTime !== undefined && path.count > 0 ? recordedTimeAt(path, progress * path.lengthM) : undefined
+  const time = timelineClock && track.stats.startTime !== undefined && path.count > 0 ? recordedTimeAt(path, progress * path.lengthM) : undefined
   const freeCandidates = candidates.filter((c) => !stopAt(shownClock.stops, c.atM))
 
   // --- edits -------------------------------------------------------------------------------------------------
@@ -874,23 +876,32 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             disabled={!hasNextKey}
           />
         </span>
+        {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
         <span className="film-tl__time">
-          <strong>{formatFilmTime(playheadS, true)}</strong> / {formatFilmTime(clock.totalTime())}
+          <strong>{formatTimecode(playheadS, true)}</strong> / {formatTimecode(clock.totalTime())}
         </span>
         <span className="film-tl__readout">
-          {formatDistance(progress * lengthM)} / {formatDistance(lengthM)}
-          {ele !== undefined && (
+          <span className="film-tl__value" style={{ minWidth: `${formatDistance(lengthM).length + 1}ch` }}>
+            {formatDistance(progress * lengthM)}
+          </span>{' '}
+          / {formatDistance(lengthM)}
+          {ele !== undefined && profile && (
             <>
               {' · '}
               <span className="visually-hidden">Altitude : </span>
-              {formatNumber(ele)} m
+              <span className="film-tl__value" style={{ minWidth: `${formatNumber(profile.maxEle).length + 1}ch` }}>
+                {formatNumber(ele)}
+              </span>{' '}
+              m
             </>
           )}
           {time !== undefined && (
             <>
               {' · '}
               <span className="visually-hidden">Heure enregistrée : </span>
-              <time dateTime={new Date(time).toISOString()}>{formatClock(time)}</time>
+              <time className="film-tl__value film-tl__clock" dateTime={new Date(time).toISOString()}>
+                {formatClock(time)}
+              </time>
             </>
           )}
         </span>
@@ -899,7 +910,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         <div className="film-tl__tools">
           <BarButton
             icon="map-pin"
-            label="Arrêt"
             name="Ajouter un arrêt à la position du marqueur"
             tip={withShortcut('Ajouter un arrêt à la position du marqueur', 'add-stop')}
             onClick={() => addStopAt(Math.round(progress * lengthM))}
@@ -926,21 +936,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           )}
           <BarButton
             icon="gauge"
-            label="Vitesse"
             name="Accélérer ou ralentir une portion à partir du marqueur"
             tip="Accélérer ou ralentir une portion (1 km à ×2) à partir du marqueur"
             onClick={() => addSpeedAt(Math.round(progress * lengthM))}
           />
           <BarButton
             icon="type"
-            label="Texte"
             name="Ajouter un texte à la tête de lecture"
             tip={withShortcut('Ajouter un texte à la tête de lecture', 'add-text')}
             onClick={() => editFilm((f) => addText(f, playheadS))}
           />
           <BarButton
             icon="image"
-            label={reading ? 'Lecture…' : 'Média'}
             name={reading ? 'Lecture des fichiers…' : 'Ajouter des photos ou des vidéos à la tête de lecture'}
             tip="Ajouter des photos ou des vidéos (MP4, WebM, MOV ; sans le son) à la tête de lecture, ou les glisser sur la timeline"
             onClick={() =>
@@ -990,7 +997,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onClick={() => zoomBy(BUTTON_ZOOM)}
               disabled={zoom >= ZOOM_RANGE.max}
             />
-            <BarButton icon="move-horizontal" label="Ajuster" name="Ajuster : voir tout le film" tip="Voir tout le film" onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
+            <BarButton icon="move-horizontal" name="Ajuster : voir tout le film" tip="Voir tout le film" onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
           </div>
           <FilmOptions autoStops={film.autoStops} onAutoStops={setAutoStops} onAddMusic={pickMusic} reading={reading} />
         </div>
