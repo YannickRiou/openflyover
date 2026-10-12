@@ -5,7 +5,7 @@
  * consumers can subscribe to them with plain selectors and no memoisation.
  */
 import { create } from 'zustand'
-import type { LonLat, LonLatBounds, TerrainStats, Track } from '../core/types'
+import type { DemCleanOptions, LonLat, LonLatBounds, TerrainStats, Track } from '../core/types'
 import { DEFAULT_VIDEO_SETTINGS } from '../export/schedule'
 import type { VideoSettings } from '../export/schedule'
 import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S } from '../flyover/cameraSettings'
@@ -37,10 +37,13 @@ import { IMAGERY_SOURCES, sourceCovers } from '../terrain/sources'
 import { DEFAULT_CLOUDS } from '../weather/sceneClouds'
 import type { CloudSettings } from '../weather/sceneClouds'
 import { DEFAULT_WEATHER_SCENE } from '../weather/sceneWeather'
+import { DEFAULT_DEM_CLEAN } from '../terrain/demClean'
 import type { WeatherSceneSettings } from '../weather/sceneWeather'
 
 export interface Settings {
   terrainSourceId: string
+  /** « Nettoyer le relief en mer » (terrain/demClean.ts) */
+  demClean: DemCleanOptions
   imagerySourceId: string
   imageryZoomOffset: 0 | 1 | 2
   exaggeration: number
@@ -169,6 +172,7 @@ export interface AppState {
 
 export const DEFAULT_SETTINGS: Settings = {
   terrainSourceId: 'mapterhorn',
+  demClean: DEFAULT_DEM_CLEAN,
   imagerySourceId: 'eox-s2cloudless',
   imageryZoomOffset: 1,
   exaggeration: 1,

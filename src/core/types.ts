@@ -192,6 +192,16 @@ export interface TerrainEngineOptions {
   segments?: number
   /** debug: render wireframe */
   wireframe?: boolean
+  /** clean the elevation data of the sea when decoding (spikes, optional flattening to 0 m); default off */
+  demClean?: DemCleanOptions
+}
+
+/** « Nettoyer le relief en mer »: how decoded elevation tiles are cleaned (see terrain/demClean.ts). */
+export interface DemCleanOptions {
+  /** replace isolated spikes standing out of a low (sea level) neighbourhood by the median of that neighbourhood */
+  enabled: boolean
+  /** also bring heights below 0 m to 0 m (flattens real depressions: off by default) */
+  seaToZero: boolean
 }
 
 export interface TerrainStats {
