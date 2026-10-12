@@ -253,6 +253,8 @@ describe('settings and misc', () => {
         maxDistanceM: 1500,
         hiddenIds: [],
         seenIds: [],
+        rank: [],
+        dismissedIds: [],
       },
       race: { enabled: false, sync: 'elapsed' },
     })
