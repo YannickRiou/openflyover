@@ -86,11 +86,12 @@ describe('simplifyLine / corridorBoxes', () => {
       { west: 6.8, south: 45.9, east: 6.9, north: 46 },
     ])
     expect(query.startsWith('[out:json][timeout:60];')).toBe(true)
-    expect(query.trim().endsWith('out center tags qt;')).toBe(true)
+    expect(query.trim().endsWith('out tags bb qt;')).toBe(true)
     expect(query.match(/\(45\.80000,6\.70000,45\.90000,6\.80000\)/g)).toHaveLength(10)
     expect(query.match(/\(45\.90000,6\.80000,46\.00000,6\.90000\)/g)).toHaveLength(10)
     expect(query).toContain('node["natural"~"^(peak|volcano|saddle)$"]["name"]')
     expect(query).toContain('nwr["natural"="water"]["name"]')
+    expect(query).toContain('nwr["place"~"^(city|town|village|hamlet)$"]["name"]')
     expect(trackQuery(northTrack(3, 1000)).match(/\n  /g)).toHaveLength(10)
   })
 
@@ -111,6 +112,36 @@ describe('parseOverpass', () => {
     expect(features[3]).toMatchObject({ kind: 'hut', detail: 'alpine_hut', lon: 6.7996, lat: 45.8561 })
     expect(features[4]).toMatchObject({ kind: 'lake', detail: 'lake' })
     expect(features[5]).toMatchObject({ kind: 'place', detail: 'village' })
+  })
+
+  it('keeps the box of the places mapped as areas and their population', () => {
+    const features = parseOverpass({
+      elements: [
+        {
+          type: 'relation',
+          id: 10,
+          bounds: { minlat: 45.9, minlon: 6.8, maxlat: 46, maxlon: 7 },
+          tags: { name: 'Ville', place: 'city', population: '120 000' },
+        },
+        { type: 'way', id: 11, bounds: { minlat: 45.8, minlon: 6.7, maxlat: 45.82, maxlon: 6.74 }, tags: { name: 'Lac', natural: 'water' } },
+        { type: 'node', id: 12, lat: 45.91, lon: 6.81, tags: { name: 'Bourg', place: 'town', population: '9000' } },
+        { type: 'node', id: 13, lat: 45.91, lon: 6.81, tags: { name: 'Lieu-dit', place: 'locality' } },
+      ],
+    })
+    expect(features).toHaveLength(3)
+    const [city, lake, town] = features
+    expect(city).toEqual({
+      id: 'relation/10',
+      kind: 'place',
+      name: 'Ville',
+      lon: 6.9,
+      lat: 45.95,
+      detail: 'city',
+      area: { west: 6.8, south: 45.9, east: 7, north: 46 },
+      population: '120 000',
+    })
+    expect(lake).toEqual({ id: 'way/11', kind: 'lake', name: 'Lac', lon: (6.7 + 6.74) / 2, lat: (45.8 + 45.82) / 2 })
+    expect(town).toEqual({ id: 'node/12', kind: 'place', name: 'Bourg', lon: 6.81, lat: 45.91, detail: 'town', population: '9000' })
   })
 
   it('keeps drinking water without a name, not an unnamed spring', () => {
