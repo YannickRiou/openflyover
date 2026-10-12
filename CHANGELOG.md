@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Branded desktop installers**: Windows NSIS and MSI in French with header, sidebar and banner images, macOS disk image with a background, a licence page (MIT licence plus a reminder of the third-party licences and data attributions) on the Windows and macOS installers and as the Debian copyright file, all in the colours of the application. `npm run installer-assets` regenerates the images; `npm run notices` also regenerates the licence pages. The Windows MSI is now built in French (`…_x64_fr-FR.msi`).
 - **Lighter top bar**: « Ouvrir » and « Enregistrer » are icons; the « Modifié / Enregistré » text is replaced by a dot on the save icon while changes are unsaved, and by the accent colour on that icon for a few seconds once saved.
 - **Interface appearance**: dark theme (or follow the system), accent colour, top bar and rail colour, compact density; « Apparence » section of the « Réglages » tab, per device.
 - **Timeline size**: a handle between the 3D view and the timeline sets their proportion (mouse, touch and keyboard; double-click resets), remembered on the device.
