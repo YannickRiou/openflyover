@@ -343,7 +343,7 @@ ink, 7.3:1).
   **Carte** (map; base map and water, relief, OSM landmarks, points of interest),
   **Météo** (weather; weather of the outing, clouds, weather in the image), **Lumière** (light; atmosphere, shadows,
   exposure, sun, colour grading), **Survol** (flyover; camera, pacing, highlights), **Objectif** (lens effects),
-  **Habillage** (overlay), **Projet** (project; projects, presets, offline packs), **Réglages** (preferences of the app on this
+  **Habillage** (overlay), **Projet** (project; the open project's actions, « Mes projets », presets, offline packs), **Réglages** (preferences of the app on this
   device, not of the project: `src/ui/preferences.ts`, `openflyover.preferences.v1` in `getPlatform().storage`, parsing
   `parsePreferences` in `shell.ts`; not shown on the home screen). All tabs stay mounted (`hidden`): weather, landmarks and export have
   side effects. `App` builds their contents, the stage and the timeline once per track state (`useMemo`, the timeline
@@ -427,7 +427,7 @@ ink, 7.3:1).
   and `?` help (AltGr / Shift accepted), Esc, ← / →
   (Shift: 5 s, `seekTime`), Home / End, Alt+← / Alt+→ previous / next keyframe (`seekKeyframe`, default prevented: it is
   also the browser's « back »); nothing in a text field or a list (`isTextEntry`), and no arrows or Home / End
-  on a control that uses them (slider, radio, tab, timeline ruler). No digit shortcut (AZERTY). `App`
+  on a control that uses them (slider, radio, tab, timeline ruler). No digit shortcut (AZERTY). No Ctrl+N (browsers keep it for a new window). `App`
   listens in the capture phase (no shortcut while a modal box is open); Esc closes, in order, the (native)
   box, the export drawer, then the timeline selection (also from an inspector field); an open menu
   (timeline "Options", right-click on the track: `data-local-escape`) closes itself first. Moving
@@ -1364,8 +1364,21 @@ ink, 7.3:1).
   same keys less than 400 ms apart are merged (keyboard), a pointer slider drag = one step from press to release however
   slow it is (`beginGesture`, wired to every `input[type=range]` by `installSliderGestures`), a preset = one step, a timeline gesture = one step; the regional imagery picked on import
   is not recorded; nothing is recorded during "Un film par trace" (one film per track; `suspend`); opening a project clears the history. Shortcuts Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y (ignored in
-  text fields), installed once by `App`. Save, open and the project name are in the top bar; the
-  "Projet" panel keeps "Mes projets" (my projects) and the presets.
+  text fields), installed once by `App`. The project name, save and open are in the top bar
+  (with Ctrl/Cmd+S, Ctrl/Cmd+O); the "Projet" panel is the complete place for project actions: a « Projet » section
+  (« Nouveau projet », « Ouvrir… », « Enregistrer un fichier… », « Fermer le projet »), then "Mes projets" and the presets.
+- **Closing the project / a new one** (`closeProject`, `newProject` in `ui/projectActions.ts`, « Projet » section of
+  `ProjectPanel.tsx`): through `confirmClose` like the desktop window: the change waiting for the autosave is written
+  first (`flushAutosave`), then a question only when changes would still be lost (`projectCloseLoss` in `ui/library.ts`:
+  a project with a track still « Modifié »; a project emptied of its tracks loses nothing). The question is shown in
+  place in the section on both targets (« Fermer sans enregistrer ? », `unsavedChangesText`: « Enregistrer » / « Fermer
+  sans enregistrer » / « Annuler ») and is cancelled when another project is opened or imported, or an export starts.
+  Then `applyEmptyProject` (`project/apply.ts`: no track, no media, `DEFAULT_SETTINGS` set as a whole, default playback
+  speed, no block selected, imagery choice forgotten so the next import picks the regional imagery), history cleared,
+  name emptied, marked saved, no open entry (`setOpenEntry(null)`, which forgets the remembered last project): the home
+  screen appears by itself, the closed project among its « Récents ». « Nouveau projet » then opens the GPX / FIT
+  picker. Disabled during an export; « Fermer le projet » also when nothing is open. Removing the last track still keeps
+  the project open and empty.
 - **"modifié" chip + "Par défaut" button** (`ui/ModifiedMarker.tsx`) at the top right of each settings panel: list
   of the panel's `Settings` keys, deep-compared with the values of `DEFAULT_SETTINGS` (`modifiedSettings` /
   `sameValue`, `project/apply.ts`); "Par défaut" resets these keys to default in a single history step (`resetSettings`,

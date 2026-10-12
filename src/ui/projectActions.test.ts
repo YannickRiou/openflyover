@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useMediaStore } from '../film/media'
+import type { MediaAsset } from '../film/media'
 import { buildTrack } from '../import/stats'
 import type { OpenFilesOptions, SaveFileOptions, SaveOutcome } from '../platform'
 import { getSettingsHistory } from '../project/history'
-import { resetAppStore, useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, resetAppStore, useAppStore } from '../state/store'
 import { useLibraryStore } from './library'
+import type { CloseAnswer } from './projectActions'
 import { isProjectDirty } from './shell'
 import { useToastStore } from './toast'
 
@@ -13,7 +16,7 @@ const platform = vi.hoisted(() => ({
 }))
 vi.mock('../platform', async (original) => ({ ...(await original<object>()), getPlatform: () => platform }))
 
-const { chooseProjectToOpen, openProject, saveProject } = await import('./projectActions')
+const { chooseProjectToOpen, closeProject, newProject, openProject, saveProject } = await import('./projectActions')
 
 const rando = () =>
   buildTrack({
@@ -135,5 +138,88 @@ describe('chooseProjectToOpen', () => {
     await chooseProjectToOpen()
     expect(useAppStore.getState().projectName).toBe('Rando')
     expect(useAppStore.getState().tracks).toHaveLength(1)
+  })
+})
+
+describe('closeProject / newProject', () => {
+  const answering = (answer: CloseAnswer) => vi.fn(async () => answer)
+  /** back to an empty project: default settings and speed, no name, no entry, no picture, nothing to undo */
+  const expectEmpty = () => {
+    const s = useAppStore.getState()
+    expect(s.tracks).toEqual([])
+    expect(s.settings).toEqual(DEFAULT_SETTINGS)
+    expect(s.playback.speed).toBe(1)
+    expect(s.projectName).toBe('')
+    expect(s.filmSelection).toBeNull()
+    expect(dirty()).toBe(false)
+    expect(getSettingsHistory().getState().canUndo).toBe(false)
+    expect(useLibraryStore.getState().currentId).toBeNull()
+    expect(useMediaStore.getState().table).toEqual({})
+  }
+
+  it('a saved project closes without a question, back to an empty project with the default settings', async () => {
+    await savedFile()
+    useAppStore.getState().setSpeed(2)
+    useAppStore.getState().setFilmSelection('opening')
+    useMediaStore.setState({ table: { 'photo-1': {} as MediaAsset } })
+    useLibraryStore.setState({ currentId: 'p-1' })
+    useToastStore.setState({ toasts: [] })
+    const ask = answering('cancel')
+
+    await closeProject(ask)
+    expect(ask).not.toHaveBeenCalled()
+    expectEmpty()
+    expect(toasts()).toEqual([{ kind: 'success', text: 'Projet « Rando » fermé' }])
+  })
+
+  it('asks when changes would be lost: « Annuler » keeps the project, « Fermer sans enregistrer » drops them', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const cancel = answering('cancel')
+    await closeProject(cancel)
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(useAppStore.getState().tracks).toHaveLength(1)
+    expect(dirty()).toBe(true)
+    expect(toasts()).toEqual([])
+
+    await closeProject(answering('close'))
+    expectEmpty()
+    expect(platform.saveFile).not.toHaveBeenCalled()
+  })
+
+  it('« Enregistrer » saves the file first; a closed dialog keeps the project open', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    platform.saveFile.mockResolvedValueOnce({ saved: false })
+    await closeProject(answering('save'))
+    expect(useAppStore.getState().tracks).toHaveLength(1)
+
+    platform.saveFile.mockImplementationOnce(async (_data, options) => ({ saved: true, fileName: options.fileName }))
+    await closeProject(answering('save'))
+    expect(platform.saveFile).toHaveBeenCalledTimes(2)
+    expectEmpty()
+  })
+
+  it('a project emptied of its tracks closes without a question (its entry or file keeps them)', async () => {
+    await savedFile()
+    useAppStore.getState().clearTracks()
+    expect(dirty()).toBe(true)
+    const ask = answering('cancel')
+    await closeProject(ask)
+    expect(ask).not.toHaveBeenCalled()
+    expectEmpty()
+  })
+
+  it('newProject closes the open project, then asks for GPX / FIT files to import; nothing when kept open', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    await newProject(answering('cancel'))
+    expect(platform.openFiles).not.toHaveBeenCalled()
+
+    platform.openFiles.mockResolvedValueOnce([])
+    await newProject(answering('close'))
+    expectEmpty()
+    expect(platform.openFiles).toHaveBeenCalledWith({ filters: [{ name: 'Traces GPX ou FIT', extensions: ['gpx', 'fit'] }], multiple: true })
+    expect(toasts()).toEqual([])
   })
 })
