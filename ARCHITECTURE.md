@@ -42,7 +42,8 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/strava/*` | Strava import (see "Strava import") | `api.ts`: pure, tested: `authorizeUrl`, `tokenRequestBody`, `activitiesUrl`, `streamsUrl`, `callbackDomain`, `parseCallback`, `needsRefresh`, `tokensFromResponse`, `stravaError`, `StravaAuthError`; storage and requests: `loadApp`, `saveApp`, `forgetApp`, `loadTokens`, `disconnect`, `connect`, `listActivities`, `fetchStreams`; `track.ts`: `streamsToTrack`, `stravaActivityType`, `stravaSportLabel` |
 | `src/terrain/sources.ts` | source catalog | `TERRAIN_SOURCES: TerrainSource[]`, `IMAGERY_SOURCES: ImagerySource[]`, `buildTileUrl(source, key): string`, `getTerrainSource(id)`, `getImagerySource(id)`, `sourceCovers(source, bounds \| point)` |
 | `src/terrain/fetch.ts` | fetch + bitmap cache | `createTileFetcher(opts?: {concurrency?, maxEntries?, retryDelayMs?, storedTiles?}): TileFetcher`, `TileFetchError` (`status`, `url`), `isAbortError(e)`, `downloadTile(url, signal?, retryDelayMs?)` (same retry policy), `setStoredTileReader(reader)` + `StoredTileReader` (`covers`, `get`: offline packs read before the network) |
-| `src/terrain/dem.ts` | elevation decoding | `decodeDem(bitmap, encoding): HeightGrid`, `sampleGrid(grid, u, v): number` (bilinear, NaN-safe) |
+| `src/terrain/demClean.ts` | « Nettoyer le relief en mer » | `removeSeaSpikes`, `clampSeaToZero`, `cleanDem`, `DEFAULT_DEM_CLEAN`, `sameDemClean`, `isValidDemClean`, `withDemCleanDefaults` |
+| `src/terrain/dem.ts` | elevation decoding | `decodeDem(bitmap, encoding, clean?): HeightGrid`, `sampleGrid(grid, u, v): number` (bilinear, NaN-safe) |
 | `src/terrain/heightField.ts` | multi-level height field | `class HeightField { set(key, grid); delete(key); has(key); sampleHeight(lon, lat): number \| undefined }` (deepest tile containing the point; the engine's fallback where no tile of its tree is loaded) |
 | `src/terrain/imagery.ts` | composed texture | `loadImageryTexture: LoadImageryTexture` |
 | `src/terrain/mesh.ts` | tile geometry | `buildTileGeometry(key, grid, frame, opts: BuildTileGeometryOptions): TileGeometryResult`, `sampleTileMesh(key, grid, segments, lon, lat)` (height of that mesh) |
@@ -193,6 +194,12 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      selection lists the visible nodes given up on (`missing`) and those still retried (`retrying`), read by
      `viewTileFailures(engine)` for the export's error. A visible tile given up on (or drawn with imagery missing) is
      counted in `stats.missingVisibleTiles`.
+     **Optional cleaning** (`demClean` engine option, setting `demClean { enabled, seaToZero }`, off by default): the source
+     DEMs (Mapterhorn and AWS alike) contain isolated spikes over the sea (seen off Corsica), and the 3D track follows the
+     DEM. A pixel is replaced by the median of its 8 neighbours when it differs from it by more than 150 m, the median is
+     below 20 m and at most one neighbour is within 150 m of it (isolated: capes, cliffs and mountains are never touched).
+     `seaToZero` then brings heights below 0 m to 0 m (flattens real depressions, hence a separate option). A change
+     rebuilds the tiles like a source change. The elevation computed for a track (`terrain/elevation.ts`) is not cleaned.
      DEM **4xx or outside coverage = "no data" leaf** (Mapterhorn stops at z12 outside high-resolution areas):
      never retried, not counted as an error, the parent stays displayed at its resolution.
    - Unloading: nodes not visited for > 2 s (`unloadAfterMs`; 30 s after a prefetch, `prefetchKeepMs`, so the export's
