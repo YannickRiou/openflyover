@@ -4,6 +4,8 @@
  * tooltip placement (its DOM listener `installTipPlacement` aside).
  */
 import { isRecord } from '../core/guards'
+import { DEFAULT_APPEARANCE, parseAppearance } from './appearance'
+import type { Appearance } from './appearance'
 import type { Track } from '../core/types'
 import { DEFAULT_PROJECT_NAME } from '../project/document'
 import type { Settings } from '../state/store'
@@ -279,12 +281,15 @@ export interface Preferences {
   performance: Record<PerfItem, boolean>
   /** recorded clock time of the marker on the timeline bar, after the timecode */
   timelineClock: boolean
+  /** look of the interface (`appearance.ts`) */
+  appearance: Appearance
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   status: { weather: true, landmarks: true, region: true, water: true },
   performance: { fps: true, gpu: false, tiles: true, memory: true, system: true },
   timelineClock: false,
+  appearance: DEFAULT_APPEARANCE,
 }
 
 /** The booleans of `raw` for `keys`, the defaults for anything missing or not a boolean. */
@@ -306,6 +311,7 @@ export function parsePreferences(raw: string | null): Preferences {
     status: booleans(STATUS_CHIPS, v.status, DEFAULT_PREFERENCES.status),
     performance: booleans(PERF_ITEMS, v.performance, DEFAULT_PREFERENCES.performance),
     timelineClock: typeof v.timelineClock === 'boolean' ? v.timelineClock : DEFAULT_PREFERENCES.timelineClock,
+    appearance: parseAppearance(v.appearance),
   }
 }
 

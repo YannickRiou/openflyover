@@ -36,7 +36,7 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  /* semantic roles, mapped to the palette above (a dark variant would only remap these) */
+  /* semantic roles, mapped to the palette above (the dark theme below only remaps these) */
   --surface-chrome: var(--color-ink);
   --surface-chrome-raised: var(--color-ink-raised);
   --surface-panel: var(--color-paper);
@@ -46,10 +46,14 @@
   --text-2: var(--color-ink-soft);
   --text-on-dark: var(--color-white);
   --text-on-dark-2: var(--color-glacier);
+  --text-info: var(--color-glacier-deep);
   --line: var(--color-line);
   --line-strong: var(--color-line-strong);
   --accent: var(--color-accent);
   --accent-hover: var(--color-accent-strong);
+  /* fill under white text (primary button) and its hover: unlike `--accent` they stay dark in the dark theme */
+  --accent-fill: var(--color-accent);
+  --accent-fill-hover: var(--color-accent-strong);
   --accent-tint: var(--color-accent-tint);
   --accent-on-dark: var(--color-accent-light);
   /* status: attention (unsaved, tiles in error), ok (start, success), error (toasts); each with its on-dark variant */
@@ -57,8 +61,9 @@
   --status-attention-on-dark: var(--color-amber-light);
   --status-ok: var(--color-moss);
   --status-ok-on-dark: var(--color-moss-light);
-  --status-error: var(--color-accent-strong);
-  --status-error-on-dark: var(--color-accent-light);
+  /* fixed reds: an error stays red whatever the accent colour chosen in « Réglages » */
+  --status-error: #962c15;
+  --status-error-on-dark: #ff9b73;
 
   /* shell layout and density */
   --topbar-h: 48px;
@@ -69,10 +74,39 @@
   --control-h: 32px;
   --shadow-card: 0 1px 2px rgb(27 40 50 / 0.08);
   --shadow-pop: 0 2px 6px rgb(27 40 50 / 0.12), 0 12px 32px rgb(27 40 50 / 0.18);
+  /* rim of a colour swatch, visible on the panel */
+  --swatch-border: rgb(28 42 51 / 0.35);
 
   --focus-ring: 2px solid var(--accent);
   /* on the ink chrome: 7.3:1 against --color-ink */
   --focus-ring-on-dark: 2px solid var(--accent-on-dark);
+}
+
+/*
+ * Dark theme (`data-theme="dark"` on <html>, set by `applyAppearance`): remaps the roles of the panels; the bar, the rail
+ * and the status bar are dark in both themes. Contrast: text 1 on panel / card / control 14.1 / 12.0 / 15.0, text 2 on
+ * them 8.0 / 6.8 / 8.6, accent on tint 7.2, field borders 3.3 to 4.2 (all computed on the values below).
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --surface-panel: #151c22;
+  --surface-card: #1f2a32;
+  --surface-control: #0f151a;
+  --text-1: #ece8dd;
+  --text-2: #a7b3ba;
+  --text-info: #8fc3d6;
+  --line: #2e3a43;
+  --line-strong: #6c7a84;
+  /* the accent on a panel is its light variant; the tint is the accent in the panel colour (derived for another accent) */
+  --color-accent-tint: #392221;
+  --accent: var(--color-accent-light);
+  --accent-hover: var(--color-accent-light);
+  --status-attention: var(--color-amber-light);
+  --status-ok: var(--color-moss-light);
+  --status-error: #ff9b73;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 2px 6px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.5);
+  --swatch-border: rgb(255 255 255 / 0.4);
 }
 
 h1,
@@ -81,7 +115,7 @@ h3,
 h4 {
   font-family: var(--font-heading);
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--text-1);
   margin: 0;
   line-height: 1.2;
 }
@@ -130,25 +164,25 @@ select {
 }
 
 .btn--primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--color-white);
 }
 
 @media (hover: hover) {
   .btn--primary:hover:not(:disabled) {
-    background: var(--accent-hover);
+    background: var(--accent-fill-hover);
   }
 }
 
 .btn--secondary {
-  background: var(--color-white);
-  border-color: var(--color-line);
-  color: var(--color-ink);
+  background: var(--surface-control);
+  border-color: var(--line);
+  color: var(--text-1);
 }
 
 @media (hover: hover) {
   .btn--secondary:hover:not(:disabled) {
-    border-color: var(--color-ink);
+    border-color: var(--text-1);
   }
 }
 
@@ -166,7 +200,7 @@ select {
 .field__label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 .select,
@@ -177,7 +211,7 @@ select {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: var(--surface-control);
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 .input--multiline {
