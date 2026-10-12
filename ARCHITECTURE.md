@@ -332,10 +332,21 @@ Track colors (`TRACK_COLORS`) are chosen for legibility over orthophotos, not fr
 ## Interface
 
 Dark shell (ink) around light panels (paper), in the "Carte alpine" tokens. Layout: `src/ui/shell.css`
-(panel components: `app.css`). Tokens in `theme.css`: the semantic roles listed above (plain aliases of the palette: a dark
-variant would only be a remapping), sizes (`--topbar-h` 48, `--rail-w` 64, `--panel-w` 320, `--dock-w` 300,
+(panel components: `app.css`). Tokens in `theme.css`: the semantic roles listed above (aliases of the palette; the dark theme
+only remaps them), sizes (`--topbar-h` 48, `--rail-w` 64, `--panel-w` 320, `--dock-w` 300,
 `--statusbar-h` 24, `--control-h` 32, `--space-6`), `--shadow-card`, `--shadow-pop`, `--focus-ring-on-dark` (accent on
-ink, 7.3:1).
+ink, 7.3:1). Dark theme: `:root[data-theme='dark']` in `theme.css` remaps the panel roles (`--surface-panel/card/control`,
+`--text-1/2`, `--text-info`, `--line`, `--line-strong`, status and shadows); the bar, rail and status bar are dark in both
+themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under white text), `--text-info`, `--swatch-border`;
+`--status-error*` are fixed reds (they no longer follow the accent).
+**Appearance** (« Réglages » › « Apparence », `PreferencesPanel`): theme Clair / Sombre / Système, accent colour, bar and rail
+colour, density, reset. Device preferences in `Preferences.appearance` (`openflyover.preferences.v1`, `parseAppearance` in
+`appearance.ts`). `applyAppearance(root, appearance, systemDark)` sets `data-theme` and `data-density` on `<html>` and the
+properties `--color-accent*`, `--surface-chrome*` (nothing for the default colours). `installAppearance()` (`preferences.ts`,
+called first in `main.tsx`) applies it at start-up and on changes of the preferences or of `prefers-color-scheme`; `index.html`
+has a tiny inline script for theme and density before the first paint. Free colours are clamped: the accent so that white text
+keeps 4.5:1, the bar for its secondary text (hint in the panel). Compact: spacing scale ×0.85, `--control-h` 28 px with a fine
+pointer (`appearance.css`).
 
 - **Top bar** (`TopBar.tsx`): logo, project name editable in place (`projectName` in the store, empty = name of the
   first track, `effectiveProjectName`) and "Modifié / Enregistré" (modified / saved) status (`savedProject`: settings, tracks and name at the
@@ -516,7 +527,7 @@ ink, 7.3:1).
   state remembered by title in the platform storage (`FOLDS_KEY` `openflyover.folds.v1`, `parseFoldPrefs` in `shell.ts`,
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
   (imagery, water), "Relief" (exaggeration), "Repères et points d'intérêt" (`LandmarkPanel`, absent without a track).
-  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`), "Étiquettes" (`LabelSettings`). Réglages: « Barre d'état », « Timeline » (`PreferencesPanel`).
+  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`), "Étiquettes" (`LabelSettings`). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
   `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),

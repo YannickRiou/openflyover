@@ -278,6 +278,17 @@ describe('parsePreferences', () => {
       status: { ...DEFAULT_PREFERENCES.status, water: false },
       performance: { ...DEFAULT_PREFERENCES.performance, gpu: true },
       timelineClock: true,
+      appearance: DEFAULT_PREFERENCES.appearance,
+    })
+  })
+
+  it('reads the appearance, the defaults for preferences stored before it existed', () => {
+    expect(parsePreferences('{"timelineClock":true}').appearance).toEqual(DEFAULT_PREFERENCES.appearance)
+    expect(parsePreferences('{"appearance":{"theme":"dark","accent":"#00766F","density":"compact"}}').appearance).toEqual({
+      ...DEFAULT_PREFERENCES.appearance,
+      theme: 'dark',
+      accent: '#00766f',
+      density: 'compact',
     })
   })
 })
