@@ -858,6 +858,9 @@ const SCENARIOS = [
         await until(page, () => document.querySelector('#tab-panel-survol input[value="Oiseau"]')?.checked === true)
         await tap('#side-panel .sheet-handle__done')
         await until(page, () => document.getElementById('side-panel').hidden)
+        // the sample has no stop of its own: one at the marker
+        await tap('button[aria-label="Ajouter un arrêt à la position du marqueur"]')
+        await page.waitForSelector('.film-tl__block--stop', { timeout: STEP_MS })
         // a tap on a stop selects it: its actions take the place of the tab bar; « Modifier » opens its inspector
         await page.$eval('.film-tl__block--stop', (el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }))
         await tap('.film-tl__block--stop')
