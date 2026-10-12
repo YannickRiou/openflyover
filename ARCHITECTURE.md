@@ -338,9 +338,10 @@ variant would only be a remapping), sizes (`--topbar-h` 48, `--rail-w` 64, `--pa
 ink, 7.3:1).
 
 - **Top bar** (`TopBar.tsx`): logo, project name editable in place (`projectName` in the store, empty = name of the
-  first track, `effectiveProjectName`) and "Modifié / Enregistré" (modified / saved) status (`savedProject`: settings, tracks and name at the
+  first track, `effectiveProjectName`) and the saved state, told by the save icon (a dot while modified, the accent colour for 3 s once saved: `topbar__save--unsaved` /
+  `--saved`; `savedProject`: settings, tracks and name at the
   last save or the last open, compared by reference, `isProjectDirty`; a project with a track is saved
-  automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open; a single picker: `.json` → project, anything else → track import,
+  automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open, icon only; a single picker: `.json` → project, anything else → track import,
   `routeOpenedFiles`; opening a project clears the history), "Enregistrer" (save); in the center the **output format** ("Libre" (free),
   16:9, 9:16, 1:1, 4:5, 21:9); on the right "?" (shortcuts) and "Exporter" (export), the only primary button of the shell, which opens
   the export drawer and becomes "42 % · Annuler" (cancel) during an export.
