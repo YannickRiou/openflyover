@@ -820,8 +820,8 @@ const SCENARIOS = [
             const [m, s] = document.querySelector('.film-tl__time strong').textContent.split(':')
             return Number(m) * 60 + Number(s.replace(',', '.'))
           })
-        // previous / next keyframe in the transport row, on screen
-        const keyNav = await page.$$eval('.film-tl__key-nav button', (buttons) =>
+        // previous / add / next keyframe leading the tool row, on screen
+        const keyNav = await page.$$eval('.film-tl__tools [aria-label="Images clés"] button', (buttons) =>
           buttons.map((b) => {
             const r = b.getBoundingClientRect()
             return r.width >= 44 && r.left >= 0 && r.right <= innerWidth

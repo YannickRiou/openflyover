@@ -1,7 +1,8 @@
 /**
  * Film timeline under the 3D view, in film time (opening and closing included): bar, ruler, and the lanes « Plans »,
- * « Vitesse », « Arrêts », « Textes », « Médias », « Musique » (ARCHITECTURE.md "Film and timeline"). The inspector of
- * the selected block (`filmSelection` in the store) is in the right dock (`FilmInspector`).
+ * « Vitesse », a lane per keyed parameter, « Marqueur » (marker keys), « Arrêts », « Textes », « Médias », « Musique »
+ * (ARCHITECTURE.md "Film and timeline"). The inspector of the selected block (`filmSelection` in the store) is in the
+ * right dock (`FilmInspector`).
  *
  * A gesture is previewed on the timeline only and committed on release as one undo step. Edits are the pure
  * functions of `film/timeline.ts`; editing a stop writes the generated stops out first (`materializeStops`).
@@ -19,7 +20,8 @@ import { photoTimeMs } from '../film/exif'
 import { useMediaStore } from '../film/media'
 import { isMediaFile, readMedia } from '../film/video'
 import { STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
-import { PARAM_SPECS } from '../film/paramKeys'
+import { PARAM_LANE_LABELS, PARAM_SPECS, keysOfParam, paramLanes } from '../film/paramKeys'
+import type { FilmParamKey } from '../film/paramKeys'
 import { MARKER_FIGURE_LABELS, MARKER_KIND_LABELS } from '../scene/markerSettings'
 import type { Film, FilmMedia, FilmSpeed, FilmStop } from '../film/model'
 import {
@@ -29,8 +31,6 @@ import {
   addSpeed,
   addStop,
   addText,
-  adjacentKey,
-  keyAt,
   centredScrollLeft,
   centredTime,
   clipSyncOffsetS,
@@ -55,12 +55,14 @@ import type { DragContext, Grip, TimelineItem } from '../film/timeline'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
-import { addMarkerKeyHere, addParamKeyHere, editFilm, getFilmSource, seekKeyframe, setAutoStops, toggleKeyframe, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { editFilm, getFilmSource, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
 import { formatClock, formatDistance, formatNumber } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
+import { KeyGroup } from './KeyControls'
+import type { KeyTarget } from './KeyControls'
 import { ModifiedMarker } from './ModifiedMarker'
 import { usePreferences } from './preferences'
 import { pickFiles } from './projectActions'
@@ -411,9 +413,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // the scale follows the committed film: it does not change while an edge is dragged
   const pxPerS = fitPxPerS(Math.max(0, width - 2 * PAD_PX), clock.totalTime()) * zoom
   const playheadS = Math.min(storedTimeS ?? clock.timeAtProgress(progress), clock.totalTime())
-  const hasPrevKey = adjacentKey(clock.cameraKeys, playheadS, -1) !== null
-  const hasNextKey = adjacentKey(clock.cameraKeys, playheadS, 1) !== null
-  const onKey = keyAt(clock.cameraKeys, playheadS) !== null
   // centred: the lanes scroll so that the playhead time sits in the middle (after every render: time, zoom, width)
   useLayoutEffect(() => {
     const el = scrollerRef.current
@@ -809,6 +808,34 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const flightStart = shownClock.openingS
   const flightEnd = flightStart + shownClock.flightS
   const ticks = rulerTicks(total, pxPerS)
+  /** the lanes: always « Plans » and « Vitesse », a lane per keyed parameter, « Marqueur » with marker keys, the rest */
+  const lanes: { name: string; keys?: KeyTarget }[] = [
+    { name: 'Plans', keys: { kind: 'camera' } },
+    { name: PARAM_LANE_LABELS.speed, keys: { kind: 'param', param: 'speed' } },
+    ...paramLanes(shownClock).map((param) => ({ name: PARAM_LANE_LABELS[param] })),
+    ...(shownClock.markerKeys.length > 0 ? [{ name: 'Marqueur' }] : []),
+    ...['Arrêts', 'Textes', 'Médias', 'Musique'].map((name) => ({ name })),
+  ]
+  /** a parameter key ◆ on its lane: click goes to it, drag moves it, Delete removes it */
+  const paramKeyDot = (k: FilmParamKey & { timeS: number }) => {
+    const spec = PARAM_SPECS[k.param]
+    const what = `${spec.label} ${spec.format(k.value)}`
+    return (
+      <div
+        key={k.id}
+        role="button"
+        tabIndex={0}
+        aria-pressed={selected === k.id}
+        aria-label={`Réglage : ${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
+        title={`${what} (clic : y aller, glisser : le déplacer)`}
+        className={`film-tl__key${selected === k.id ? ' film-tl__key--selected' : ''}`}
+        style={{ left: xOf(k.timeS) }}
+        onPointerDown={(e) => startEdit(e, k.id, 'move')}
+        onFocus={() => setSelected(k.id)}
+        onKeyDown={(e) => onBlockKeyDown(e, k.id)}
+      />
+    )
+  }
   const mediaLabel = (m: FilmMedia) => m.caption?.trim() || pictures[m.src]?.name || (m.kind === 'video' ? 'Vidéo' : 'Photo')
 
   return (
@@ -854,47 +881,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             seek(0)
           }}
         />
-        <span className="film-tl__key-nav" role="group" aria-label="Images clés">
-          <BarButton
-            icon="keyframe-prev"
-            name="Image clé précédente"
-            tip={withShortcut('Image clé précédente', 'seek-key')}
-            onClick={() => seekKeyframe(clock, -1)}
-            disabled={!hasPrevKey}
-          />
-          <BarButton
-            icon="diamond"
-            name={onKey ? 'Supprimer l’image clé' : 'Ajouter une image clé'}
-            tip={
-              onKey
-                ? 'Supprimer l’image clé sous la tête de lecture'
-                : 'Ajouter une image clé : garde la vue 3D cadrée à la position du marqueur'
-            }
-            onClick={() => toggleKeyframe(clock)}
-            on={onKey}
-          />
-          <BarButton
-            icon="keyframe-next"
-            name="Image clé suivante"
-            tip={withShortcut('Image clé suivante', 'seek-key', 1)}
-            onClick={() => seekKeyframe(clock, 1)}
-            disabled={!hasNextKey}
-          />
-        </span>
-        <BarButton
-          icon="gauge"
-          name="Ajouter un réglage"
-          tip="Ajouter une clé de réglage (vitesse, exposition, soleil, couleurs) à la position du marqueur"
-          onClick={addParamKeyHere}
-          disabled={!hasTrack}
-        />
-        <BarButton
-          icon="map-pin"
-          name="Ajouter un changement de marqueur"
-          tip="Ajouter une clé de marqueur : à cet endroit, le marqueur change d’aspect (boule, figurine, image) en fondu"
-          onClick={addMarkerKeyHere}
-          disabled={!hasTrack}
-        />
         {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
         <span className="film-tl__time">
           <strong>{formatTimecode(playheadS, true)}</strong> / {formatTimecode(clock.totalTime())}
@@ -927,6 +913,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         <span className="film-tl__spacer" />
         {/* a row of its own on a phone, which scrolls sideways */}
         <div className="film-tl__tools">
+          {/* no lane headers on a centred timeline: the groups of the camera and speed keys lead the row */}
+          {centred && (
+            <>
+              <span className="film-tl__keys-label">Plans</span>
+              <KeyGroup target={{ kind: 'camera' }} clock={clock} timeS={playheadS} disabled={!hasTrack} />
+              <span className="film-tl__keys-label">Vitesse</span>
+              <KeyGroup target={{ kind: 'param', param: 'speed' }} clock={clock} timeS={playheadS} disabled={!hasTrack} />
+            </>
+          )}
           <BarButton
             icon="map-pin"
             name="Ajouter un arrêt à la position du marqueur"
@@ -1042,12 +1037,19 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         <div className="film-tl__body" id={`${id}-lanes`}>
           <div className="film-tl__heads">
             <div className="film-tl__head film-tl__head--ruler" />
-            {/* the lanes carry the same names */}
-            {['Plans', 'Vitesse', 'Réglages', 'Arrêts', 'Textes', 'Médias', 'Musique'].map((name) => (
-              <div key={name} className="film-tl__head" aria-hidden="true">
-                {name}
-              </div>
-            ))}
+            {/* the lanes carry the same names; the camera and speed keys have their ◀ ◇ ▶ under theirs */}
+            {lanes.map((lane) =>
+              lane.keys ? (
+                <div key={lane.name} className="film-tl__head film-tl__head--keyed">
+                  <span>{lane.name}</span>
+                  <KeyGroup target={lane.keys} clock={clock} timeS={playheadS} disabled={!hasTrack} />
+                </div>
+              ) : (
+                <div key={lane.name} className="film-tl__head" aria-hidden="true">
+                  <span>{lane.name}</span>
+                </div>
+              ),
+            )}
           </div>
           <div
             className="film-tl__scroller"
@@ -1083,7 +1085,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 ))}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label="Plans">
+              <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label="Plans">
                 {block(
                   'opening',
                   0,
@@ -1159,7 +1161,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label="Vitesse">
+              <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label="Vitesse">
                 {shownClock.speeds.map((s) => {
                   const label = formatSpeedFactor(s.factor)
                   const how = s.factor > 1 ? 'accélérée' : s.factor < 1 ? 'ralentie' : 'à vitesse normale'
@@ -1173,52 +1175,37 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     ['start', 'move', 'end'],
                   )
                 })}
+                {keysOfParam(shownClock.paramKeys, 'speed').map(paramKeyDot)}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label="Réglages">
-                {shownClock.paramKeys.length === 0 && shownClock.markerKeys.length === 0 && (
-                  <span className="film-tl__empty" style={{ left: xOf(0) }}>
-                    Réglages clés : vitesse, exposition, soleil, couleurs, marqueur (boutons ci-dessus)
-                  </span>
-                )}
-                {shownClock.markerKeys.map((k) => {
-                  const what = `Marqueur : ${MARKER_KIND_LABELS[k.kind].toLowerCase()}${k.kind === 'figurine' ? ` (${MARKER_FIGURE_LABELS[k.figure].toLowerCase()})` : ''}`
-                  return (
-                    <div
-                      key={k.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-pressed={selected === k.id}
-                      aria-label={`${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
-                      title={`${what} (clic : y aller, glisser : le déplacer)`}
-                      className={`film-tl__key film-tl__key--marker${selected === k.id ? ' film-tl__key--selected' : ''}`}
-                      style={{ left: xOf(k.timeS) }}
-                      onPointerDown={(e) => startEdit(e, k.id, 'move')}
-                      onFocus={() => setSelected(k.id)}
-                      onKeyDown={(e) => onBlockKeyDown(e, k.id)}
-                    />
-                  )
-                })}
-                {shownClock.paramKeys.map((k) => {
-                  const spec = PARAM_SPECS[k.param]
-                  const what = `${spec.label} ${spec.format(k.value)}`
-                  return (
-                    <div
-                      key={k.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-pressed={selected === k.id}
-                      aria-label={`Réglage : ${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
-                      title={`${what} (clic : y aller, glisser : le déplacer)`}
-                      className={`film-tl__key${selected === k.id ? ' film-tl__key--selected' : ''}`}
-                      style={{ left: xOf(k.timeS) }}
-                      onPointerDown={(e) => startEdit(e, k.id, 'move')}
-                      onFocus={() => setSelected(k.id)}
-                      onKeyDown={(e) => onBlockKeyDown(e, k.id)}
-                    />
-                  )
-                })}
-              </div>
+              {paramLanes(shownClock).map((param) => (
+                <div key={param} className="film-tl__lane" role="group" aria-label={PARAM_LANE_LABELS[param]}>
+                  {keysOfParam(shownClock.paramKeys, param).map(paramKeyDot)}
+                </div>
+              ))}
+
+              {shownClock.markerKeys.length > 0 && (
+                <div className="film-tl__lane" role="group" aria-label="Marqueur">
+                  {shownClock.markerKeys.map((k) => {
+                    const what = `Marqueur : ${MARKER_KIND_LABELS[k.kind].toLowerCase()}${k.kind === 'figurine' ? ` (${MARKER_FIGURE_LABELS[k.figure].toLowerCase()})` : ''}`
+                    return (
+                      <div
+                        key={k.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={selected === k.id}
+                        aria-label={`${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
+                        title={`${what} (clic : y aller, glisser : le déplacer)`}
+                        className={`film-tl__key film-tl__key--marker${selected === k.id ? ' film-tl__key--selected' : ''}`}
+                        style={{ left: xOf(k.timeS) }}
+                        onPointerDown={(e) => startEdit(e, k.id, 'move')}
+                        onFocus={() => setSelected(k.id)}
+                        onKeyDown={(e) => onBlockKeyDown(e, k.id)}
+                      />
+                    )
+                  })}
+                </div>
+              )}
 
               <div className="film-tl__lane" role="group" aria-label="Arrêts">
                 {shownClock.stops.map((s) => {

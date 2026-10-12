@@ -653,11 +653,6 @@
   padding: 0;
 }
 
-/* previous / next keyframe: in the transport row, the phone's included */
-.film-tl__key-nav {
-  display: contents;
-}
-
 .film-tl__time,
 .film-tl__readout {
   font-variant-numeric: tabular-nums;

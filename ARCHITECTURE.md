@@ -57,7 +57,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
 | `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `labelOpacity`, `climbLabels`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
-| `src/film/paramKeys.ts` | parameter keys (« Réglages ») | `FILM_PARAMS`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
+| `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
 | `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, `pickLandmarkTitles`, `withLandmarkTitles`, `withoutLandmarkTitles`, `sameLandmarkTitles`, `freezeLandmarkTitles`; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
@@ -666,7 +666,7 @@ ink, 7.3:1).
   the marker is at the start of the item (selected, to be adjusted) and, if the marker moves during the item, a second one at
   its end that keeps the framing that was there: neighboring framings keep their values (between the end of the item and the
   next framing, the transition is recomputed over the new interval).
-  The ◆ between « Image clé précédente / suivante » in the transport row (`toggleKeyframe`) removes the keyframe under the playhead, else adds one (`addKeyframe`, « Ajouter une image clé »): it places
+  The ◇ of the « Plans » lane header (`toggleKeyframe`) removes the keyframe under the playhead, else adds one (`addKeyframe`, « Ajouter une image clé »): it places
   a keyframe at the marker with the pose of the 3D view as framed (`captureKey`: `FlyoverRig` registers the reader of its
   camera and orbit target, `registerKeyCapture`, so the UI does not load three.js; a keyframe already at that metre takes
   it over), one undo step, selected for the inspector (see "Film and timeline", "Keyframes"). It replaced « Garder ce
@@ -957,8 +957,8 @@ ink, 7.3:1).
   `stops[]` `{ id, atM, durationS (0.5–60 s), camera: 'film' | 'orbite' | 'large' | 'fixe', label?, source?: { kind, ref? } }`
   (`STOP_CAMERA_LABELS`: "Comme le film" (like the film), "Tour lent" (slow orbit), "Vue large" (wide view), "Fixe" (fixed));
   `markerKeys[]` `{ id, atM, kind, figure, imageId? }` (places along the film track where the marker changes its look:
-  ball, figure or picture; anchored in metres like the camera keys, round dots in the « Réglages » lane,
-  `.film-tl__key--marker`). `markerAt(film, settings.marker, atM, fadeM, imageOf)`, pure: the marker of the settings
+  ball, figure or picture; anchored in metres like the camera keys, round dots on the « Marqueur » lane,
+  `.film-tl__key--marker`; added from the « Marqueur » section of the Trace tab with ◀ ◉ ▶, `addMarkerKeyHere`). `markerAt(film, settings.marker, atM, fadeM, imageOf)`, pure: the marker of the settings
   before the first key; around a key a smootherstep cross-fade of `fadeM = MARKER_FADE_S (0.8 s) × length / flightS`
   metres centred on the key, from the previous look; a key replaces kind, figure and picture only (size, colours, label
   and stick stay those of the settings). `FlyoverRig` draws the new look over the old one on a second sprite
@@ -966,7 +966,7 @@ ink, 7.3:1).
   `markerKeysMoveWithTime` feeds the held-frame test. Picture of a key: `imageId` in the project media table (128 px
   PNG, kept by `usedMedia`); no id = the picture of the Trace panel. `withFilmDefaults` gives `[]` (no version bump); not
   kept by « Un film par trace »;
-  `paramKeys[]` `{ id, atM, param, value }` (« Réglages »: a film-wide setting pinned along the first track in metres,
+  `paramKeys[]` `{ id, atM, param, value }` (a film-wide setting pinned along the first track in metres,
   like the camera keys, so values hold during stops; `param`: `speed` (×0.25–×4), `exposure` (±4 EV), `sunHour` (0–24 h
   solar), `saturation`, `contrast`, `warmth`, `vignette`; `paramAt(film, base, param, atM)`, pure: base value without a
   key, first key's value before it, last key's after it, smootherstep between keys (geometric for the speed). Readers:
@@ -974,9 +974,14 @@ ink, 7.3:1).
   `useGradingEffect` (grading per frame; composer mounted when a grading key exists), the clock (speed keys become a
   `SpeedCurve` of `flightPacing`, multiplying the speed portions and slow-downs; with « Garder la durée » they only
   redistribute time; speed portions are not migrated). A function of the progress only, so the export stays
-  deterministic and held frames need no change. Timeline « Réglages » lane (◆: click = go, drag = move, Delete), gauge
-  button « Ajouter un réglage » (key at the marker holding the current value), « Réglage » inspector; empty by default,
-  `[]` for a film saved earlier, no version bump);
+  deterministic and held frames need no change. Speed keys (◆) are on the « Vitesse » lane with a ◀ ◇ ▶ group in its
+  header; every other parameter gets a lane of its own once keyed (`paramLanes`, labels `PARAM_LANE_LABELS`: « Exposition »,
+  « Soleil », « Saturation », « Contraste », « Température », « Vignettage »; the lane disappears with its last key; ◆:
+  click selects and goes there, drag moves, Delete removes). Their ◀ ◇ ▶ group (`PanelKeys`, `src/ui/KeyControls.tsx`) is
+  under the slider in the left panels: exposure and sun hour in the Lumière tab (`SettingsPanel`), saturation, contrast,
+  warmth and vignette in `GradingPanel`. ◇ = `addParamKeyHere(param)`: a key at the marker holding the value the film
+  shows there (the setting without key, ×1 for speed), then the playhead is put exactly on it (`parkOnSelectedKey`); on a
+  key it selects it for the « Réglage » inspector. Empty by default, `[]` for a film saved earlier, no version bump);
   `cameraKeys[]` `{ id, atM, distance, pitchDeg, headingOffsetDeg, aimRightM?, aimAheadM? }` (keyframes, « Images
   clés »: exact poses of the flight camera along the first track, not rounded; `CAMERA_KEY_RANGES` (distance ×0.01–×1000,
   pitch 0–90°, any view the orbit can take; heading ±180°), `isValidCameraKey`; empty by default, a film saved earlier
@@ -1188,8 +1193,12 @@ ink, 7.3:1).
   closes with Esc, a click outside or Tab), collapse.
   Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 56 px): click-drag to seek, **opening and closing
   included** (`setProgress(clock.progressAtTime(t), t)`, end of film = progress 1 without a time); it is also a keyboard
-  slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). « Image clé précédente / suivante » (◁◆ ◆▷) after the stop
-  button, kept in the phone's transport row (`film-tl__key-nav`): `seekKeyframe` puts the film time exactly on the key
+  slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). The keys are set where they live. Camera keys: the ◀ ◇ ▶ group (`KeyGroup`,
+  `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
+  of the « Plans » lane header; on a portrait phone (centred timeline, no lane headers) it leads the sideways-scrolling
+  tool row. Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys), « Arrêts »,
+  « Textes », « Médias », « Musique »; there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
+  « Ajouter un changement de marqueur » button. `seekKeyframe` puts the film time exactly on the key
   (`adjacentKey`, one under the playhead skipped) and moves the inspector to it when it showed a keyframe. Lanes "Plans" (shots; opening, flyover with profile, closing;
   "aucune" (none) = selectable dotted stub; stops are also marked on the flyover bar, tinted window
   and top edge in the accent color, white for the selected stop; keyframes are small diamonds (◆) where the marker passes,

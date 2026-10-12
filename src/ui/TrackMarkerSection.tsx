@@ -33,6 +33,7 @@ import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { formatDistance, formatNumber, formatPercent } from './format'
 import { Icon } from './icons'
+import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 import { showToast } from './toast'
 import './markerSection.css'
@@ -392,6 +393,13 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(size) => updateMarker({ size })}
         />
       </SettingRow>
+      <div className="field">
+        <div className="field__label-row">
+          <span className="field__label">Changements de marqueur</span>
+          <InfoTip text="Ajoute une clé à la position du marqueur : à cet endroit, il change d’aspect (boule, figurine, image) en fondu. L’aspect de chaque clé se règle dans l’inspecteur, sur la voie « Marqueur » de la timeline." />
+        </div>
+        <PanelKeys target={{ kind: 'marker' }} />
+      </div>
       {junctions > 0 && (
         <div className="field">
           <button
@@ -405,7 +413,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
             {sequence ? 'Un marqueur par étape' : 'Un marqueur par jour'} ({junctions})
           </button>
           <p className="field__hint">
-            Place une clé de marqueur à chaque jonction ; réglez l'aspect de chacune dans la voie « Réglages » de la timeline.
+            Place une clé de marqueur à chaque jonction ; réglez l'aspect de chacune dans la voie « Marqueur » de la timeline.
           </p>
         </div>
       )}

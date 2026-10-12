@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import { effectiveRender } from '../export/qualityTier'
+import { hasParamKeys } from '../film/paramKeys'
 import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
 import { getSettingsHistory } from '../project/history'
@@ -9,6 +10,7 @@ import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { CLOUD_ALTITUDE_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type CloudQualitySetting, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
 import { NightSettings } from './NightSettings'
+import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
 
@@ -80,6 +82,7 @@ function SunTimeControl() {
   const sunFromTrack = useAppStore((s) => s.settings.sunFromTrack)
   const sunDate = useAppStore((s) => s.settings.sunDate)
   const setSetting = useAppStore((s) => s.setSetting)
+  const sunKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['sunHour']))
   const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
   const utcOffsetMin = useAppStore((s) => s.tracks[0]?.utcOffsetMin)
   const origin = useAppStore((s) => s.frameOrigin)
@@ -146,6 +149,13 @@ function SunTimeControl() {
         </p>
       </fieldset>
 
+      {sunKeyed && (
+        <p className="field__hint">
+          Des clés de la ligne « Soleil » de la timeline pilotent l’heure du soleil le long du parcours : {follows ? 'elles remplacent l’heure enregistrée' : 'le curseur ne sert alors plus'}.
+        </p>
+      )}
+      {follows && sunKeyed && <PanelKeys target={{ kind: 'param', param: 'sunHour' }} />}
+
       {!follows && (
         <div className="field">
           <div className="field__label-row">
@@ -177,6 +187,7 @@ function SunTimeControl() {
               {formatHour(sunHour)}
             </output>
           </div>
+          <PanelKeys target={{ kind: 'param', param: 'sunHour' }} />
           <p id={`${id}-sun-day`} className="field__hint">
             {dayHint}
           </p>
@@ -654,6 +665,7 @@ export function LightSettings() {
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const shadows = useAppStore((s) => s.settings.shadows)
   const exposureEv = useAppStore((s) => s.settings.exposureEv)
+  const exposureKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['exposure']))
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
 
@@ -689,6 +701,10 @@ export function LightSettings() {
               format={formatEv}
               onChange={(ev) => setSetting('exposureEv', ev)}
             />
+            {exposureKeyed && (
+              <p className="field__hint">Des clés de la ligne « Exposition » de la timeline pilotent cette valeur le long du parcours : le curseur ne sert alors plus.</p>
+            )}
+            <PanelKeys target={{ kind: 'param', param: 'exposure' }} />
           </SettingRow>
         )}
       </PanelSection>
