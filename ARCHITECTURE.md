@@ -1964,6 +1964,11 @@ exports) gets it from the terrain source of the settings.
   (back-pressure), `encodeMs` = the last three, `timeouts`, `givenUp`. `timingsSummary` writes them on one line for the
   console `[export]` line, the history « Répartition » and the diagnostic « Résultat » (added to the stored report when
   an export ends, shown in « Dernier export »).
+- **Shadow pass count** (#52): `shadowTiles`, `shadowTriangles` and their `shadowOffscreen…` share, summed over the renders. `TerrainShadow`
+  counts them after fitting its camera (`lastShadowPass`: the visible tiles three's shadow culling keeps, the off-screen
+  casters apart); `ExportController` adds them after each `advance`. `shadowSummary` writes « ombres : N tuiles (M hors
+  champ), K triangles (… hors champ) par rendu » in the console `[export]` line and the diagnostic « Ombres » row (not in
+  the history). Measure before changing which tiles cast.
 - Limits: without direct writing (Firefox, Safari), file kept in memory (~2× its size); the tab must stay open, speed depends on the GPU (to be measured on a
   machine with a GPU, see `docs/handover.md`).
 - **Command line** (desktop, `src-tauri/src/cli.rs` + `src/export/cliRender.ts`): `openflyover --rendu <dossier>

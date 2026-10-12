@@ -17,6 +17,7 @@ import {
   SHADOW_DISTANCE_PER_HEIGHT,
   TerrainShadow,
   fitShadowFrustum,
+  lastShadowPass,
   shadowDistance,
   type ShadowFit,
 } from './terrainShadow'
@@ -149,6 +150,26 @@ describe('TerrainShadow', () => {
     expect(shadow.normalBias).toBeCloseTo((NORMAL_BIAS_TEXELS * Math.max(width, ortho.top - ortho.bottom)) / MAP_SIZE)
     expect(shadow.bias).toBeLessThan(0)
     expect(shadow.mapSize.x).toBe(MAP_SIZE)
+  })
+
+  it('counts the tiles and triangles of the shadow pass, the off-screen casters apart', () => {
+    const { terrain, light, camera } = scene()
+    // looking east from the middle of the terrain, a western sun: a ridge behind the camera casts into the view
+    light.position.copy(LOW_SUN).normalize()
+    light.updateMatrixWorld()
+    camera.position.set(0, 2500, 0)
+    camera.lookAt(5000, 1500, 0)
+    camera.updateMatrixWorld()
+    const ridge = new BoxGeometry(2000, 2000, 2000).translate(-6000, 2000, 0)
+    ridge.computeBoundingBox()
+    terrain.add(new Mesh(ridge))
+    const shadow = new TerrainShadow(terrain, MAP_SIZE)
+    shadow.updateMatrices(light, camera)
+    expect(lastShadowPass).toEqual({ tiles: 2, triangles: 24, offscreenTiles: 1, offscreenTriangles: 12 })
+    // a hidden tile is not drawn
+    terrain.children[1].visible = false
+    shadow.updateMatrices(light, camera)
+    expect(lastShadowPass).toMatchObject({ tiles: 1, offscreenTiles: 0 })
   })
 
   it('leaves the default projection when no terrain mesh is visible', () => {

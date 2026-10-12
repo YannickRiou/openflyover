@@ -24,6 +24,22 @@ export const SHADOW_RADIUS = 2
 /** Ortho extents grow by steps of 2^(1/8) (~9 %) so the texel size only changes when the region really does. */
 const EXTENT_STEPS_PER_OCTAVE = 8
 
+/** What the last shadow pass draws (export diagnostic, #52): the terrain tiles the shadow camera sees, with the share of off-screen casters. */
+export interface ShadowPassCount {
+  tiles: number
+  triangles: number
+  /** of those, the tiles outside the view (kept visible for the shadow map only) */
+  offscreenTiles: number
+  offscreenTriangles: number
+}
+
+export const lastShadowPass: ShadowPassCount = { tiles: 0, triangles: 0, offscreenTiles: 0, offscreenTriangles: 0 }
+
+/** Zero the count: a render without shadow map then leaves it at zero. */
+export function resetShadowPass(): void {
+  lastShadowPass.tiles = lastShadowPass.triangles = lastShadowPass.offscreenTiles = lastShadowPass.offscreenTriangles = 0
+}
+
 export interface ShadowFit {
   left: number
   right: number
@@ -189,6 +205,25 @@ export class TerrainShadow extends LightShadow<OrthographicCamera> {
     this.normalBias = NORMAL_BIAS_TEXELS * fit.texelSize
     this.bias = -DEPTH_BIAS_M / (fit.far - fit.near)
     super.updateMatrices(light) // shadow matrix and culling frustum with the new projection
+    this.countPass()
+  }
+
+  /** The tiles three draws in the shadow map (those its culling frustum meets), apart from those the view sees. */
+  private countPass(): void {
+    resetShadowPass()
+    const shadowFrustum = this.getFrustum()
+    for (const mesh of this.terrain.children as Mesh[]) {
+      if (!mesh.visible || !shadowFrustum.intersectsObject(mesh)) continue
+      const geometry = mesh.geometry
+      const triangles = (geometry.index?.count ?? geometry.getAttribute('position').count) / 3
+      lastShadowPass.tiles++
+      lastShadowPass.triangles += triangles
+      // `_frustum` still holds the view's, set by `fit` just before
+      if (!_frustum.intersectsObject(mesh)) {
+        lastShadowPass.offscreenTiles++
+        lastShadowPass.offscreenTriangles += triangles
+      }
+    }
   }
 
   private fit(view: Camera): ShadowFit | null {
