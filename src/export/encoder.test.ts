@@ -25,7 +25,8 @@ const fake = vi.hoisted(() => ({
   }[],
   /** video samples taken from the canvas, closed once encoded */
   samples: [] as { closed: boolean }[],
-  buffer: new ArrayBuffer(8) as ArrayBuffer | null,
+  /** chunks the fake output writes when finalized, at their position (none: an empty file) */
+  writes: [] as [position: number, bytes: number[]][],
   /** audio sources and what they received: [timestamp, frames, first value of each channel] */
   sounds: [] as { config: { codec: string }; added: [number, number, number[]][]; closed: boolean }[],
   /** order of the calls reaching the tracks: 'v' (a frame), 'a' (a sound sample) */
@@ -38,9 +39,6 @@ vi.mock('mediabunny', () => {
     constructor(options: unknown) {
       this.options = options
     }
-  }
-  class BufferTarget {
-    buffer: ArrayBuffer | null = null
   }
   // like mediabunny: a writer taken at start, chunks at their position, closed on finalize and on cancel
   class StreamTarget {
@@ -122,9 +120,9 @@ vi.mock('mediabunny', () => {
   }
   class Output {
     format: unknown
-    target: BufferTarget | StreamTarget
+    target: StreamTarget
     state = 'pending'
-    constructor({ format, target }: { format: unknown; target: BufferTarget | StreamTarget }) {
+    constructor({ format, target }: { format: unknown; target: StreamTarget }) {
       this.format = format
       this.target = target
       fake.outputs.push(this as never)
@@ -139,25 +137,21 @@ vi.mock('mediabunny', () => {
     }
     async start() {
       this.state = 'started'
-      if (this.target instanceof StreamTarget) this.target.writer = this.target.writable.getWriter()
+      this.target.writer = this.target.writable.getWriter()
     }
     async finalize() {
-      if (this.target instanceof StreamTarget) {
-        const writer = this.target.writer!
-        await writer.write({ type: 'write', data: new Uint8Array(10), position: 0 })
-        await writer.write({ type: 'write', data: new Uint8Array(4), position: 2 })
-        await writer.close()
-      } else this.target.buffer = fake.buffer
+      const writer = this.target.writer!
+      for (const [position, bytes] of fake.writes) await writer.write({ type: 'write', data: Uint8Array.from(bytes), position })
+      await writer.close()
       this.state = 'finalized'
     }
     async cancel() {
       this.state = 'canceled'
-      if (this.target instanceof StreamTarget) await this.target.writer?.close()
+      await this.target.writer?.close()
     }
   }
   return {
     Quality,
-    BufferTarget,
     StreamTarget,
     Mp4OutputFormat,
     WebMOutputFormat,
@@ -209,7 +203,11 @@ beforeEach(() => {
   fake.streams.length = 0
   fake.sources.length = 0
   fake.samples.length = 0
-  fake.buffer = new ArrayBuffer(8)
+  // like mediabunny closing a file: the whole of it, then a size patched in the first bytes
+  fake.writes = [
+    [0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]],
+    [2, [255, 255, 255, 255]],
+  ]
   fake.sounds.length = 0
   fake.calls.length = 0
 })
@@ -330,9 +328,9 @@ describe('createVideoEncoder', () => {
 
     const { blob, sizeBytes } = await session.finish()
     expect(blob?.type).toBe('video/mp4')
-    expect(blob?.size).toBe(8)
-    expect(sizeBytes).toBe(8)
-    expect(fake.outputs[0].format.options?.fastStart).toBeUndefined()
+    expect(blob?.size).toBe(10)
+    expect(sizeBytes).toBe(10)
+    expect(fake.outputs[0].format.options?.fastStart).toBe('in-memory')
     expect(fake.sources[0].closed).toBe(true)
     expect(fake.outputs[0].state).toBe('finalized')
   })
@@ -404,9 +402,53 @@ describe('createVideoEncoder', () => {
   })
 
   it('reports an empty output', async () => {
-    fake.buffer = null
+    fake.writes = []
     const session = await createVideoEncoder(canvas, OPTIONS, supporting('avc'))
     await expect(session.finish()).rejects.toThrow(/vide/)
+  })
+})
+
+describe('createVideoEncoder in memory', () => {
+  it('builds the Blob from the chunks of the muxer, never from one concatenated buffer', async () => {
+    const RealBlob = Blob
+    const built: unknown[][] = []
+    vi.stubGlobal(
+      'Blob',
+      class extends RealBlob {
+        constructor(parts?: BlobPart[], options?: BlobPropertyBag) {
+          super(parts, options)
+          built.push(parts ?? [])
+        }
+      },
+    )
+    try {
+      const session = await createVideoEncoder(canvas, OPTIONS, supporting('avc'))
+      await session.addFrame(0)
+      const { blob, sizeBytes } = await session.finish()
+      // a chunked stream target, like the disk's: no buffer target growing and copied at the end
+      expect(fake.streams[0].options).toEqual({ chunked: true, chunkSize: STREAM_CHUNK_BYTES })
+      expect(sizeBytes).toBe(10)
+      expect(blob?.type).toBe('video/mp4')
+      // the bytes patched at the start replace the first ones
+      expect([...new Uint8Array(await blob!.arrayBuffer())]).toEqual([0, 1, 255, 255, 255, 255, 6, 7, 8, 9])
+      // the film is a Blob of Blobs (before the patch, the patch, after it), each chunk a Blob of its own as it arrived
+      expect(built.at(-1)).toHaveLength(3)
+      expect(built.at(-1)?.every((part) => part instanceof RealBlob)).toBe(true)
+      expect(built.slice(0, -1).flat().every((part) => ArrayBuffer.isView(part) && part.byteLength <= 10)).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('keeps the chunks in order wherever they land, and fills a gap with zeros', async () => {
+    fake.writes = [
+      [4, [4, 5]],
+      [0, [0, 1]],
+      [8, [8]],
+    ]
+    const session = await createVideoEncoder(canvas, OPTIONS, supporting('avc'))
+    const { blob } = await session.finish()
+    expect([...new Uint8Array(await blob!.arrayBuffer())]).toEqual([0, 1, 0, 0, 4, 5, 0, 0, 8])
   })
 })
 

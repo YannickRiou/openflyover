@@ -1886,7 +1886,8 @@ exports) gets it from the terrain source of the settings.
   "Enregistrée dans <nom>", without a new download. The drawer shows "Enregistrement direct sur le disque";
   otherwise, above an estimate of 1.5 GB (`MEMORY_WARN_BYTES`, `warnsInMemory`), it warns that the film kept in
   memory may saturate the tab.
-- Otherwise an in-memory file (MP4 with its index at the start), downloaded at the end.
+- Otherwise an in-memory file (MP4 with its index at the start), downloaded at the end. Written through the same chunked
+  `StreamTarget` as the disk, collected as `Blob` parts (about 1× the file in memory at the end, not 3×).
 - **Sound** (music and video sound): before the first frame, `mixFilmAudio(film, …)` (`src/film/audio.ts`) mixes the
   film's sound in an `OfflineAudioContext` (48 kHz, stereo) over the exact length of the video (`frame count / fps`,
   held frames included), each music track placed at its film time + the frames held at the start (`round(1 s × fps) / fps`:
@@ -1993,7 +1994,7 @@ exports) gets it from the terrain source of the settings.
   casters apart); `ExportController` adds them after each `advance`. `shadowSummary` writes « ombres : N tuiles (M hors
   champ), K triangles (… hors champ) par rendu » in the console `[export]` line and the diagnostic « Ombres » row (not in
   the history). Measure before changing which tiles cast.
-- Limits: without direct writing (Firefox, Safari), file kept in memory (~2× its size); the tab must stay open, speed depends on the GPU (to be measured on a
+- Limits: without direct writing (Firefox, Safari), file kept in memory (~1× its size at the end); the tab must stay open, speed depends on the GPU (to be measured on a
   machine with a GPU, see `docs/handover.md`).
 - **Command line** (desktop, `src-tauri/src/cli.rs` + `src/export/cliRender.ts`): `openflyover --rendu <dossier>
   [--sortie <dossier>] [--prereglage <nom>] [--formats 16:9@1080p,…]`. Rust reads the arguments at startup (`parse_cli`,
@@ -2772,7 +2773,9 @@ under ~16 KB of sessionStorage (values cut at 200 characters, steps at 80).
 Not done, on purpose: the imagery textures keep their 512² canvases while the tile lives (`CanvasTexture`, about 1 MB of JS
 memory per resident tile; released when it unloads): three re-uploads from `texture.image` after a lost context, and the engine has no way to redraw a tile's
 imagery, so releasing them would leave grey tiles after a restore. The muxer's copies at the end of an in-memory export
-stay (`BufferTarget`; a `StreamTarget` into Blob chunks changes the MP4 layout, « fast start » included: to try with a
-real iPhone and Photos). The canvas is created once: a phone that starts with the atmosphere off keeps the MSAA, one that
+are gone: the encoder writes through a chunked `StreamTarget` whose chunks become `Blob` parts as they arrive (`memoryStream`), and
+the film is the `Blob` of those parts, never one concatenated buffer (the old `BufferTarget` held its working buffer, a `slice`
+copy and the `Blob` copy at the same time, about 3× the file). The MP4 layout is unchanged (`fastStart: 'in-memory'`, index at
+the start). Still to confirm on a real iPhone: the peak while the muxer's samples move into the parts. The canvas is created once: a phone that starts with the atmosphere off keeps the MSAA, one that
 starts with it on and turns it off later draws the plain scene without it.
 
