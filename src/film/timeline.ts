@@ -524,6 +524,11 @@ export function adjacentKey<T extends { timeS: number }>(keys: readonly T[], tim
   return best
 }
 
+/** What the key buttons need to know at film time `timeS`: a key before, a key after, the playhead on a key. */
+export function keyState<T extends { timeS: number }>(keys: readonly T[], timeS: number): { prev: boolean; next: boolean; on: boolean } {
+  return { prev: adjacentKey(keys, timeS, -1) !== null, next: adjacentKey(keys, timeS, 1) !== null, on: keyAt(keys, timeS) !== null }
+}
+
 /**
  * A camera of its own for a text or a photo shown from film time `startS` to `endS`: a camera key where the marker is at
  * its start (the framing there, to adjust: it is the key returned) and, when the marker moves meanwhile, one at its end

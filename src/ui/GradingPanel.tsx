@@ -4,6 +4,7 @@ import { getSettingsHistory } from '../project/history'
 import { GRADING_PRESETS, GRADING_RANGES, gradingOfPreset, withGradingValue } from '../scene/grading'
 import type { GradingValues } from '../scene/grading'
 import { useAppStore } from '../state/store'
+import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, SettingRow } from './PanelSection'
 import { formatNumber } from './format'
 
@@ -22,7 +23,7 @@ function formatSigned(v: number): string {
 
 /**
  * « Couleurs » (section of the Lumière tab): colour grading of the image, preview and export alike. Preset chips
- * first (one undo step each), then the four sliders, one row each (name and value, slider on demand).
+ * first (one undo step each), then the four sliders, one row each (name and value, slider and ◀ ◇ ▶ keys on demand).
  */
 export function GradingPanel() {
   const id = useId()
@@ -54,7 +55,7 @@ export function GradingPanel() {
 
       {keyed && (
         <p className="field__hint">
-          Des clés de la ligne « Réglages » de la timeline pilotent certaines de ces valeurs le long du parcours : leur curseur ne sert alors plus.
+          Les valeurs qui ont des clés (une ligne de la timeline chacune) suivent ces clés le long du parcours : leur curseur ne sert alors plus.
         </p>
       )}
 
@@ -88,6 +89,7 @@ export function GradingPanel() {
                 </output>
               </div>
             </div>
+            <PanelKeys target={{ kind: 'param', param: key }} />
           </SettingRow>
         )
       })}
