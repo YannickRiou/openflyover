@@ -61,6 +61,8 @@ function fakeContext() {
   const order: string[] = []
   /** non-zero shadow offsets set: the blurred rectangles of the text backing, drawn off the canvas */
   const offsets: number[] = []
+  /** fill colour at each visible `fill()` */
+  const fills: string[] = []
   const state = { font: '10px sans-serif', globalAlpha: 1, shadowOffsetX: 0 }
   const stack: (typeof state)[] = []
   const fontPx = () => Number(/(\d+(?:\.\d+)?)px/.exec(state.font)?.[1] ?? 10)
@@ -89,6 +91,7 @@ function fakeContext() {
         const visible = state.shadowOffsetX === 0
         if (visible && (key === 'moveTo' || key === 'lineTo')) points.push({ op: key, x: args[0] as number, y: args[1] as number })
         if (visible && key === 'arc') points.push({ op: key, x: args[0] as number, y: args[1] as number, r: args[2] as number })
+        if (visible && key === 'fill') fills.push(String(t.fillStyle))
         if (key === 'fillRect') order.push(`rect ${String(t.fillStyle)} ${state.globalAlpha}`)
         return calls.push(`${key}(${args.length})`)
       }
@@ -101,7 +104,7 @@ function fakeContext() {
     },
     has: () => true,
   })
-  return { ctx: ctx as unknown as OverlayContext2D, texts, calls, points, images, order, offsets }
+  return { ctx: ctx as unknown as OverlayContext2D, texts, calls, points, images, order, offsets, fills }
 }
 
 const sampleTrack = parseGpx(sampleGpx, 'tour-du-mont-blanc-j1.gpx')[0]
@@ -413,6 +416,36 @@ describe('drawOverlay', () => {
     expect(drawn({ offset: { x: 100, y: 40 } }).args.slice(0, 2)).toEqual([left + 100, top + 40])
     // measured in pixels of a 4K film: half as far on this 1080p frame
     expect(drawn({ offset: { x: 100, y: 40 } }, { exportSize: { width: 3840, height: 2160 } }).args.slice(0, 2)).toEqual([left + 50, top + 20])
+  })
+})
+
+describe('position dot colour (mini-map and profile)', () => {
+  const off = <T extends { enabled: boolean }>(w: T): T => ({ ...w, enabled: false })
+  const only = (widget: 'minimap' | 'profile', own: string | undefined): OverlaySettings =>
+    enabled({
+      title: off(DEFAULT_OVERLAY.title),
+      end: off(DEFAULT_OVERLAY.end),
+      counters: off(DEFAULT_OVERLAY.counters),
+      profile: { ...DEFAULT_OVERLAY.profile, enabled: widget === 'profile', markerColor: widget === 'profile' ? own : undefined },
+      minimap: { ...DEFAULT_OVERLAY.minimap, enabled: widget === 'minimap', markerColor: widget === 'minimap' ? own : undefined },
+    })
+  const fillsOf = (settings: OverlaySettings, markerColor?: string) => {
+    const { ctx, fills } = fakeContext()
+    drawOverlay(ctx, overlayFrameAt(track, 0.5), settings, SIZE, {}, { markerColor })
+    return fills
+  }
+
+  it.each(['minimap', 'profile'] as const)('%s: the dot takes the own colour, else the 3D marker colour, else the style one', (widget) => {
+    const own = fillsOf(only(widget, '#aa0000'), '#112233')
+    expect(own).toContain('#aa0000')
+    expect(own).not.toContain('#112233')
+    const marker = fillsOf(only(widget, undefined), '#112233')
+    expect(marker).toContain('#112233')
+    expect(marker).not.toContain('#aa0000')
+    // '' is as absent: the marker's colour
+    expect(fillsOf(only(widget, ''), '#112233')).toContain('#112233')
+    const style = fillsOf(only(widget, undefined))
+    expect(style).not.toContain('#112233')
   })
 })
 

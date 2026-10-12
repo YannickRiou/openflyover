@@ -95,6 +95,8 @@ export interface OverlayExtras {
   stage?: StageCard | null
   /** size of the exported film, which the free offsets of the widgets are measured in; default: the drawn frame */
   exportSize?: OverlaySize
+  /** colour of the 3D marker ('#rrggbb'): the position dot of the profile and the mini-map, until they have their own */
+  markerColor?: string
 }
 
 /** Card of a stage « À la suite »: name, number, date and figures of its track, shown from `startS` for `durationS`. */
@@ -688,7 +690,7 @@ function cellsWidget(
   }
 }
 
-function profileWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget | null {
+function profileWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number, markerColor?: string): Widget | null {
   const profile = frame.track.profile
   if (!profile) return null
   const { theme, u, ctx, size } = p
@@ -764,7 +766,7 @@ function profileWidget(p: Painter, frame: OverlayFrame, settings: OverlaySetting
       if (frame.ele !== undefined) {
         ctx.beginPath()
         ctx.arc(markerX, yAt(frame.ele), 0.9 * u, 0, Math.PI * 2)
-        ctx.fillStyle = theme.profile.marker
+        ctx.fillStyle = settings.profile.markerColor || markerColor || theme.profile.marker
         ctx.fill()
         ctx.lineWidth = 0.35 * u
         ctx.strokeStyle = theme.profile.markerRing
@@ -776,7 +778,7 @@ function profileWidget(p: Painter, frame: OverlayFrame, settings: OverlaySetting
 }
 
 /** Plan view of the whole track: route ahead, covered part, start and end dots, marker, optional north arrow. */
-function minimapWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget | null {
+function minimapWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number, markerColor?: string): Widget | null {
   const { outline } = frame.track
   const point = frame.mapPoint
   if (!outline || !point) return null
@@ -845,7 +847,7 @@ function minimapWidget(p: Painter, frame: OverlayFrame, settings: OverlaySetting
       }
       dot(px(outline.x[n - 1]), py(outline.y[n - 1]), 0.6 * u * s, theme.minimap.end)
       dot(px(outline.x[0]), py(outline.y[0]), 0.6 * u * s, theme.minimap.start)
-      dot(px(point.x), py(point.y), 0.9 * u * s, theme.profile.marker)
+      dot(px(point.x), py(point.y), 0.9 * u * s, settings.minimap.markerColor || markerColor || theme.profile.marker)
       ctx.restore()
 
       if (northArrow) {
@@ -1412,10 +1414,10 @@ export function drawOverlay(
       else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start))
     }
     if (settings.counters.enabled && live > 0) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
-    if (settings.profile.enabled && live > 0) add(placed('profile', profileWidget(of('profile'), frame, settings, live)))
+    if (settings.profile.enabled && live > 0) add(placed('profile', profileWidget(of('profile'), frame, settings, live, extras.markerColor)))
     weather = settings.weather.enabled && live > 0 ? placed('weather', weatherWidget(of('weather'), frame, settings, live)) : null
     add(weather)
-    if (settings.minimap.enabled && live > 0) add(placed('minimap', minimapWidget(of('minimap'), frame, settings, live)))
+    if (settings.minimap.enabled && live > 0) add(placed('minimap', minimapWidget(of('minimap'), frame, settings, live, extras.markerColor)))
     if (settings.leaderboard.enabled && live > 0) add(placed('leaderboard', leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, live)))
     if (settings.text.enabled) add(placed('text', textWidget(of('text'), settings)))
     if (settings.logo.enabled) add(placed('logo', logoWidget(p, settings, assets)))
