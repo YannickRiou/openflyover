@@ -106,6 +106,12 @@ export function formatFilmTime(seconds: number, tenths = false): string {
   return tenths ? `${m}:${s},${units % 10}` : `${m}:${s}`
 }
 
+/** Timecode of the timeline bar, minutes on two digits at least: 75.4 -> "01:15,4", so its width stays the same while it plays. */
+export function formatTimecode(seconds: number, tenths = false): string {
+  const text = formatFilmTime(seconds, tenths)
+  return text.indexOf(':') < 2 ? `0${text}` : text
+}
+
 // ---------------------------------------------------------------------------
 // Snapping
 // ---------------------------------------------------------------------------

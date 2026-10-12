@@ -28,6 +28,7 @@ import {
   fitPxPerS,
   followStops,
   formatFilmTime,
+  formatTimecode,
   formatSpeedFactor,
   hasFilmItem,
   photoFilmTime,
@@ -136,6 +137,12 @@ describe('timeline scale', () => {
     expect(formatFilmTime(59.96, true)).toBe('1:00,0')
     expect(formatFilmTime(-3)).toBe('0:00')
     expect(formatFilmTime(3600)).toBe('60:00')
+  })
+
+  it('formats the timecode of the bar on a fixed width', () => {
+    expect(formatTimecode(75.44, true)).toBe('01:15,4')
+    expect(formatTimecode(0)).toBe('00:00')
+    expect(formatTimecode(605.2, true)).toBe('10:05,2')
   })
 })
 
