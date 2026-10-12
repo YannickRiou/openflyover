@@ -10,6 +10,9 @@ import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
 import { withShortcut } from './shortcuts'
 
+/** How long the save icon keeps the accent colour once the project is saved (ms). */
+const SAVED_FLASH_MS = 3000
+
 /** Output format of the preview and of the export: « Libre » (preview only) or one of the video aspects. */
 function FormatSwitcher({ disabled }: { disabled: boolean }) {
   const aspect = useAppStore((s) => s.settings.video.aspect)
@@ -107,7 +110,7 @@ interface TopBarProps {
 }
 
 /**
- * Top bar: logo, project name (edited in place) and save state, undo / redo, open / save, output format,
+ * Top bar: logo, project name (edited in place), undo / redo, open / save (icons; the save icon tells its state), output format,
  * shortcuts (« ? »), « Exporter » (the export drawer; « 42 % · Annuler » while exporting).
  */
 export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarProps) {
@@ -122,6 +125,21 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
   // a batch is busy between two films too (the export store is idle then)
   const batchRunning = useBatchStore((s) => s.phase === 'running')
   const busy = isExportBusy(phase) || batchRunning
+  // the save icon: a dot while changes are not saved, the accent colour for a few seconds once they are
+  const unsaved = hasTracks && dirty
+  const [justSaved, setJustSaved] = useState(false)
+  const wasUnsaved = useRef(unsaved)
+  useEffect(() => {
+    const saved = wasUnsaved.current && !unsaved
+    wasUnsaved.current = unsaved
+    if (!saved) {
+      if (unsaved) setJustSaved(false)
+      return
+    }
+    setJustSaved(true)
+    const timer = setTimeout(() => setJustSaved(false), SAVED_FLASH_MS)
+    return () => clearTimeout(timer)
+  }, [unsaved])
 
   return (
     <header className="topbar">
@@ -138,11 +156,6 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
           title="Nom du projet : cliquez pour le modifier"
           onChange={(e) => useAppStore.getState().setProjectName(e.currentTarget.value)}
         />
-        {hasTracks && (
-          <span className={dirty ? 'topbar__state topbar__state--dirty' : 'topbar__state'} title={dirty ? 'Modifié depuis le dernier enregistrement (Ctrl+S pour enregistrer)' : 'Aucun changement depuis le dernier enregistrement'}>
-            {dirty ? 'Modifié' : 'Enregistré'}
-          </span>
-        )}
         <span className="topbar__sep" aria-hidden="true" />
         <button type="button" className="icon-btn" onClick={history.undo} disabled={!canUndo || busy} aria-label="Annuler" data-tip={withShortcut('Annuler', 'undo')}>
           <Icon name="undo" />
@@ -150,13 +163,18 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
         <button type="button" className="icon-btn" onClick={history.redo} disabled={!canRedo || busy} aria-label="Rétablir" data-tip={withShortcut('Rétablir', 'redo')}>
           <Icon name="redo" />
         </button>
-        <button type="button" className="icon-btn icon-btn--label" onClick={onOpen} disabled={busy} data-tip={withShortcut('Ouvrir une trace ou un projet', 'open')}>
+        <button type="button" className="icon-btn" onClick={onOpen} disabled={busy} aria-label="Ouvrir" data-tip={withShortcut('Ouvrir une trace ou un projet', 'open')}>
           <Icon name="folder-open" />
-          <span className="icon-btn__text">Ouvrir</span>
         </button>
-        <button type="button" className="icon-btn icon-btn--label" onClick={saveProject} disabled={busy} data-tip={withShortcut('Enregistrer le projet', 'save')}>
+        <button
+          type="button"
+          className={`icon-btn topbar__save${unsaved ? ' topbar__save--unsaved' : ''}${justSaved ? ' topbar__save--saved' : ''}`}
+          onClick={saveProject}
+          disabled={busy}
+          aria-label={unsaved ? 'Enregistrer (modifications non enregistrées)' : 'Enregistrer'}
+          data-tip={withShortcut(unsaved ? 'Enregistrer : modifications non enregistrées' : 'Enregistrer le projet', 'save')}
+        >
           <Icon name="save" />
-          <span className="icon-btn__text">Enregistrer</span>
         </button>
       </div>
 
