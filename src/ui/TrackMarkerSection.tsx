@@ -5,10 +5,18 @@ import { getPlatform } from '../platform'
 import { fileToAvatarDataUrl } from '../scene/markerBadge'
 import { FIGURE_GRID, MARKER_FIGURE_PATHS } from '../scene/markerFigures'
 import {
+  figureOfActivity,
+  MARKER_BALL_STYLE_LABELS,
+  MARKER_BALL_STYLES,
+  MARKER_FIGURE_CHOICES,
   MARKER_FIGURE_LABELS,
-  MARKER_FIGURES,
   MARKER_KIND_LABELS,
   MARKER_KINDS,
+  MARKER_LABEL_MAX_CHARS,
+  MARKER_LABEL_MODE_LABELS,
+  MARKER_LABEL_MODES,
+  MARKER_SHAPE_LABELS,
+  MARKER_SHAPES,
   MARKER_SIZE_RANGE,
   TRACK_DASH_LABELS,
   TRACK_DASHES,
@@ -18,10 +26,13 @@ import {
   TRACK_WIDTH_RANGE,
 } from '../scene/markerSettings'
 import type { MarkerFigure, MarkerSettings, TrackStyle } from '../scene/markerSettings'
+import type { SettingPath } from '../project/apply'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { formatDistance, formatNumber, formatPercent } from './format'
-import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { Icon } from './icons'
+import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
+import './markerSection.css'
 
 /** 4 -> "4", 4.5 -> "4,5", 1.25 -> "1,25" */
 function formatShort(value: number): string {
@@ -255,12 +266,59 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   )
 }
 
-/** « Marqueur » section of the Trace tab: ball, figurine or picture, then its size as a row. */
+/** A colour of the marker, '' = the colour of the track (« Celle de la trace »), as a row. */
+function MarkerColorRow({
+  label,
+  path,
+  value,
+  trackColor,
+  onChange,
+}: {
+  label: string
+  path: SettingPath
+  value: string
+  trackColor: string
+  onChange(color: string): void
+}) {
+  const id = useId()
+  return (
+    <SettingRow label={label} value={value ? 'Personnalisée' : 'Celle de la trace'} paths={[path]}>
+      <div className="field">
+        <label className="field__label" htmlFor={id}>
+          {label}
+        </label>
+        <div className="color-row">
+          <input
+            id={id}
+            className="color-row__input"
+            type="color"
+            value={value || trackColor}
+            onChange={(e) => onChange(e.currentTarget.value)}
+          />
+          <button type="button" className="btn btn--secondary" disabled={!value} onClick={() => onChange('')}>
+            Celle de la trace
+          </button>
+        </div>
+      </div>
+    </SettingRow>
+  )
+}
+
+/**
+ * « Marqueur » section of the Trace tab: ball (and its style), figurine or picture, its main colour and its size;
+ * the badge shape, the edge colour, the label and the stick folded under « Plus d'options ».
+ */
 export function MarkerSection({ hidden }: { hidden: boolean }) {
   const marker = useAppStore((s) => s.settings.marker)
   const setSetting = useAppStore((s) => s.setSetting)
+  const firstTrack = useAppStore((s) => s.tracks[0])
+  const racing = useAppStore((s) => s.tracks.length > 1 && s.settings.race.enabled)
   const id = useId()
   const updateMarker = (patch: Partial<MarkerSettings>) => setSetting('marker', { ...marker, ...patch })
+  const trackColor = firstTrack?.color ?? '#ffffff'
+  const activityFigure = figureOfActivity(firstTrack?.activityType)
+  const figurine = marker.kind === 'figurine'
+  const alone = figurine && marker.shape === 'contour'
 
   return (
     <PanelSection title="Marqueur" keys={['marker']} hidden={hidden}>
@@ -272,24 +330,53 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         labels={MARKER_KIND_LABELS}
         onChange={(kind) => updateMarker({ kind })}
       />
-      {marker.kind === 'figurine' && (
+      {marker.kind === 'boule' && (
+        <ChipChoice
+          label="Style"
+          name={`${id}-ball`}
+          options={MARKER_BALL_STYLES}
+          value={marker.ballStyle}
+          labels={MARKER_BALL_STYLE_LABELS}
+          onChange={(ballStyle) => updateMarker({ ballStyle })}
+        />
+      )}
+      {figurine && (
         <ChipChoice
           label="Figurine"
           name={`${id}-figure`}
-          options={MARKER_FIGURES}
+          options={MARKER_FIGURE_CHOICES}
           value={marker.figure}
           labels={MARKER_FIGURE_LABELS}
-          icon={(figure) => <FigureIcon figure={figure} />}
+          icon={(figure) => <FigureIcon figure={figure === 'auto' ? activityFigure : figure} />}
           onChange={(figure) => updateMarker({ figure })}
         />
       )}
-      {marker.kind === 'figurine' && (
+      {figurine && (
         <label className="checkbox">
           <input type="checkbox" checked={marker.animated} onChange={(e) => updateMarker({ animated: e.currentTarget.checked })} />
           Animer la figurine (pas et balancement)
         </label>
       )}
       {marker.kind === 'image' && <MarkerImageField marker={marker} update={updateMarker} />}
+      {marker.kind === 'boule' && (
+        <MarkerColorRow
+          label="Couleur"
+          path="marker.color"
+          value={marker.color}
+          trackColor={trackColor}
+          onChange={(color) => updateMarker({ color })}
+        />
+      )}
+      {figurine && (
+        <MarkerColorRow
+          label={alone ? 'Couleur de la figurine' : 'Couleur du disque'}
+          path="marker.figureColor"
+          value={marker.figureColor}
+          trackColor={trackColor}
+          onChange={(figureColor) => updateMarker({ figureColor })}
+        />
+      )}
+      {racing && marker.kind !== 'image' && <p className="field__hint">En parallèle, chaque marqueur garde la couleur de sa trace.</p>}
       <SettingRow label="Taille du marqueur" value={`×${formatShort(marker.size)}`} paths={['marker.size']}>
         <RangeField
           label="Taille du marqueur"
@@ -299,6 +386,57 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(size) => updateMarker({ size })}
         />
       </SettingRow>
+      <details className="preset-more">
+        <summary className="preset-more__summary">
+          <span className="preset-more__label">Plus d'options</span>
+          <Icon name="chevron-down" size={16} />
+        </summary>
+        <div className="marker-more__body">
+          {figurine && (
+            <ChipChoice
+              label="Badge"
+              name={`${id}-shape`}
+              options={MARKER_SHAPES}
+              value={marker.shape}
+              labels={MARKER_SHAPE_LABELS}
+              onChange={(shape) => updateMarker({ shape })}
+            />
+          )}
+          {marker.kind !== 'boule' && (
+            <MarkerColorRow
+              label={alone ? 'Couleur du contour' : 'Couleur du bord'}
+              path="marker.color"
+              value={marker.color}
+              trackColor={trackColor}
+              onChange={(color) => updateMarker({ color })}
+            />
+          )}
+          <ChipChoice
+            label="Étiquette"
+            name={`${id}-label`}
+            options={MARKER_LABEL_MODES}
+            value={marker.label}
+            labels={MARKER_LABEL_MODE_LABELS}
+            onChange={(label) => updateMarker({ label })}
+          />
+          {marker.label === 'texte' && (
+            <TextField
+              label="Texte de l'étiquette"
+              value={marker.labelText}
+              placeholder={firstTrack?.name}
+              onChange={(labelText) => updateMarker({ labelText: labelText.slice(0, MARKER_LABEL_MAX_CHARS) })}
+            />
+          )}
+          {marker.label !== 'aucune' && racing && <p className="field__hint">Les autres marqueurs portent le nom de leur trace.</p>}
+          <div className="field__label-row">
+            <label className="checkbox checkbox--switch">
+              <input type="checkbox" checked={marker.stick} onChange={(e) => updateMarker({ stick: e.currentTarget.checked })} />
+              Tige et ombre au sol
+            </label>
+            <InfoTip text="Le marqueur se dresse sur une tige au-dessus de la trace, son ombre posée au sol." />
+          </div>
+        </div>
+      </details>
     </PanelSection>
   )
 }

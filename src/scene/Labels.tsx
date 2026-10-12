@@ -4,7 +4,7 @@
  * The start and the finish of every track always have a flag pin.
  *
  * Each label is a Sprite (sizeAttenuation off: constant screen size). Sprites skip the depth test; instead, every frame,
- * a label fades out when its line of sight passes under the relief or when it is far away, and colliding labels are
+ * a label is hidden when its line of sight passes under the relief and fades out when it is far away, and colliding labels are
  * dropped by priority. Opacity is a pure function of the view, the progress, the film time and the overlay settings
  * (no temporal smoothing) so any frame renders the same in isolation.
  *
@@ -204,7 +204,7 @@ const cameraPosition = new Vector3()
 const projected = new Vector3()
 
 /**
- * Per-frame visibility: distance and occlusion fades, screen culling, de-cluttering by priority, fade under the
+ * Per-frame visibility: distance fade, occlusion cut, screen culling, de-cluttering by priority, fade under the
  * overlay cards (`cardOpacity`), constant screen size (times `renderScale`, > 1 for a video larger than the
  * preview), and colour divided by the renderer exposure (unlit sprites, like the track).
  */

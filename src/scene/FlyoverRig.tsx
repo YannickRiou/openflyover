@@ -22,8 +22,18 @@ import { useAppStore } from '../state/store'
 import { filmViewAt, keyFramingOfView } from './filmView'
 import { useTerrainContext } from './TerrainLayer'
 import { frameDelta } from './renderOnDemand'
-import { headsLeft, LEAD_MARKER_COLORS, occludeMarker, placeMarker, reliefClearance, useMarkerImage } from './markerSprite'
-import { figureMotion } from './markerSettings'
+import { trackUnderMarker } from '../flyover/sequence'
+import {
+  headsLeft,
+  leadMarkerColors,
+  markerLook,
+  occludeMarker,
+  placeMarker,
+  reliefClearance,
+  releaseMarkerTexture,
+  useMarkerImage,
+  useMarkerLabelFont,
+} from './markerSprite'
 import { useFilmClock, useFilmTrack } from './usePacing'
 import type { HeightSampler } from './TrackLines'
 
@@ -53,6 +63,7 @@ export function FlyoverRig() {
   const clockRef = useRef(clock)
   const markerRef = useRef<Sprite>(null)
   const markerImage = useMarkerImage(useAppStore((s) => s.settings.marker.image))
+  useMarkerLabelFont(useAppStore((s) => s.settings.marker.label !== 'aucune'))
   /** view the camera was last placed for; start at the mount values so the initial fit is kept */
   const { playback: mount, settings: mountSettings } = useAppStore.getState()
   const mountTimeS = mount.timeS ?? clock.timeAtProgress(mount.progress)
@@ -64,6 +75,11 @@ export function FlyoverRig() {
   const appliedSettingsRef = useRef(mountSettings)
   const appliedRegionRef = useRef(useRegionStore.getState().frame)
   const camera = useThree((s) => s.camera)
+
+  useEffect(() => {
+    const marker = markerRef.current
+    return () => releaseMarkerTexture(marker)
+  }, [])
 
   // « Capturer la vue actuelle »: the framing of this camera around the target of the region view
   useEffect(() => {
@@ -143,11 +159,13 @@ export function FlyoverRig() {
       camera.lookAt(view.target)
       controls?.target.copy(view.target)
     }
-    // after the camera move: the figure faces the way the track runs in this very frame
-    const look = { marker: settings.marker, image: markerImage, allowImage: true }
+    // after the camera move: the figure faces the way the track runs in this very frame; the colour, figure and name
+    // of the track under the marker (the stage « À la suite »)
+    const under = trackUnderMarker(store.tracks, settings.race, progress)?.track ?? track
+    const look = markerLook(settings.marker, under, true, markerImage)
+    const colors = leadMarkerColors(settings.marker, under?.color ?? '#FFFFFF')
     const mirrored = settings.marker.kind === 'figurine' && headsLeft(path, progress * path.lengthM, view.marker, frame, camera)
-    const motion = settings.marker.kind === 'figurine' && settings.marker.animated ? figureMotion(timeS) : undefined
-    placeMarker(marker, view.marker, camera, look, LEAD_MARKER_COLORS, mirrored, 1 / gl.toneMappingExposure, motion)
+    placeMarker(marker, view.marker, camera, look, colors, mirrored, 1 / gl.toneMappingExposure, timeS)
     occludeMarker(marker, camera, reliefClearance(engine, frame, settings.exaggeration))
   })
 

@@ -5,10 +5,13 @@ import {
   DEFAULT_MARKER,
   DEFAULT_TRACK_STYLE,
   figureMotion,
+  figureOfActivity,
   isValidMarker,
   isValidTrackStyle,
   MARKER_FIGURES,
   MARKER_IMAGE_MAX_CHARS,
+  markerMovesWithTime,
+  pulsePhase,
   withMarkerDefaults,
 } from './markerSettings'
 import { MARKER_FIGURE_PATHS } from './markerFigures'
@@ -32,6 +35,18 @@ describe('track style and marker settings', () => {
     expect(isValidMarker({ ...DEFAULT_MARKER, image: 'https://example.org/me.png' })).toBe(false)
     expect(isValidMarker({ ...DEFAULT_MARKER, image: 'data:image/png;base64,AAAA' })).toBe(true)
     expect(isValidMarker({ ...DEFAULT_MARKER, image: `data:image/png;base64,${'A'.repeat(MARKER_IMAGE_MAX_CHARS)}` })).toBe(false)
+    expect(isValidMarker({ ...DEFAULT_MARKER, color: '', figureColor: '#FFD23F', ballStyle: 'pulsation', shape: 'epingle' })).toBe(true)
+    expect(isValidMarker({ ...DEFAULT_MARKER, color: 'red' })).toBe(false)
+    expect(isValidMarker({ ...DEFAULT_MARKER, ballStyle: 'etoile' as never })).toBe(false)
+    expect(isValidMarker({ ...DEFAULT_MARKER, shape: 'losange' as never })).toBe(false)
+    expect(isValidMarker({ ...DEFAULT_MARKER, label: 'texte', labelText: 'x'.repeat(41) })).toBe(false)
+  })
+
+  it('a marker saved before the colours, styles, shapes, label and stick keeps its former look', () => {
+    const { settings, invalid } = sanitizeSettings({ marker: { kind: 'figurine', figure: 'randonneur', image: '', size: 2, animated: true } })
+    expect(invalid).toEqual([])
+    expect(settings.marker).toEqual({ ...DEFAULT_MARKER, kind: 'figurine', figure: 'randonneur', size: 2, animated: true })
+    expect(settings.marker).toMatchObject({ color: '#FFFFFF', figureColor: '#1C2A33', ballStyle: 'plat', shape: 'rond', label: 'aucune', stick: false })
   })
 
   it('projects: older ones get the defaults, a partial marker is completed, an invalid one is reported', () => {
@@ -61,5 +76,48 @@ describe('figureMotion', () => {
     expect(top.tilt).toBeGreaterThan(0)
     expect(figureMotion(0.75).tilt).toBeLessThan(0)
     expect(figureMotion(0.5).lift).toBeCloseTo(0, 6)
+  })
+})
+
+describe('pulsePhase', () => {
+  it('pulses every 1.5 s of film, a function of the film time alone', () => {
+    expect(pulsePhase(0)).toBe(0)
+    expect(pulsePhase(0.76)).toBeCloseTo(0.5, 1)
+    expect(pulsePhase(1.5 + 0.76)).toBe(pulsePhase(0.76))
+    expect(pulsePhase(1.49)).toBeLessThan(1)
+  })
+
+  it('tells the export when the marker moves with the film time', () => {
+    expect(markerMovesWithTime(DEFAULT_MARKER)).toBe(false)
+    expect(markerMovesWithTime({ ...DEFAULT_MARKER, ballStyle: 'pulsation' })).toBe(true)
+    expect(markerMovesWithTime({ ...DEFAULT_MARKER, kind: 'figurine', animated: true })).toBe(true)
+    expect(markerMovesWithTime({ ...DEFAULT_MARKER, kind: 'figurine', ballStyle: 'pulsation' })).toBe(false)
+  })
+})
+
+describe('figureOfActivity', () => {
+  it('reads GPX types, FIT sports and Strava sports, the hiker when unknown', () => {
+    expect(figureOfActivity(undefined)).toBe('randonneur')
+    expect(figureOfActivity('hiking')).toBe('randonneur')
+    expect(figureOfActivity('running')).toBe('coureur')
+    expect(figureOfActivity('trail_running')).toBe('traileur')
+    expect(figureOfActivity('cycling')).toBe('cycliste')
+    expect(figureOfActivity('Vélo')).toBe('cycliste')
+    expect(figureOfActivity('eBiking')).toBe('vae')
+    expect(figureOfActivity('e_biking')).toBe('vae')
+    expect(figureOfActivity('single_bike')).toBe('cycliste')
+    expect(figureOfActivity('mountain_biking')).toBe('vtt')
+    expect(figureOfActivity('motorcycling')).toBe('moto')
+    expect(figureOfActivity('swimming')).toBe('nageur')
+    expect(figureOfActivity('kayaking')).toBe('kayak')
+    expect(figureOfActivity('standUpPaddleboarding')).toBe('kayak')
+    expect(figureOfActivity('backcountry_skiing')).toBe('ski-rando')
+    expect(figureOfActivity('alpineSkiing')).toBe('skieur')
+    expect(figureOfActivity('cross_country_skiing')).toBe('skieur')
+    expect(figureOfActivity('horsebackRiding')).toBe('cavalier')
+    expect(figureOfActivity('mountaineering')).toBe('alpiniste')
+    expect(figureOfActivity('hangGliding')).toBe('parapente')
+    expect(figureOfActivity('flying')).toBe('avion')
+    expect(figureOfActivity('driving')).toBe('voiture')
   })
 })
