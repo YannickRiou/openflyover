@@ -90,7 +90,7 @@ export const COUNTER_IDS = ['distance', 'altitude', 'ascent', 'time', 'speed', '
 export type CounterId = (typeof COUNTER_IDS)[number]
 
 /** Size multiplier of a widget (1 = default size). */
-export const WIDGET_SIZE_MIN = 0.5
+export const WIDGET_SIZE_MIN = 0.2
 export const WIDGET_SIZE_MAX = 2
 /** Opening card: shown from the start until `end` (fraction of the flyover). */
 export const TITLE_END_MIN = 0.03
