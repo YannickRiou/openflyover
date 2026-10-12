@@ -149,6 +149,10 @@ describe('spacePlays', () => {
     expect(spacePlays(null)).toBe(true)
   })
 
+  it('plays from the timeline ruler even after the keyboard moved the focus there', () => {
+    expect(spacePlays(el('<div role="slider" tabindex="0"></div>'), tabbed)).toBe(true)
+  })
+
   it('leaves Space to a control the keyboard focused, to text fields and to lists', () => {
     expect(spacePlays(el('<button>OK</button>'), tabbed)).toBe(false)
     expect(spacePlays(el('<input type="checkbox" />'), tabbed)).toBe(false)

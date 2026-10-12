@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Space on the ruler**: Space plays / pauses even when the timeline ruler (the row of times) was the last thing clicked or moved with the arrows.
 - **Landmark ranking**: « Repères et points d'intérêt » lists the landmarks from the most to the least important with ▲ ▼ arrows (the higher one keeps its label when two overlap); a cross on hidden landmarks dismisses them, and « Relancer la recherche » asks OpenStreetMap again and brings the dismissed ones back.
 - **No more climb display**: the climb cards, the climb labels in the 3D view and the « Sommets des montées » option are gone; the Trace tab section is now « Étiquettes ». Climbs still slow the film down (« Ralentir sur »).
 - **Label colours**: « Couleurs des étiquettes » is now a list to pick the label type, then one colour for it (instead of a grid of unnamed swatches).
