@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Lakes**: the water surface of a lake sits higher over the relief (90th percentile of the heights inside the lake, a polygon offset towards the camera), so the relief no longer shows through as dark patches with jagged edges.
 - **Lighter top bar**: « Ouvrir » and « Enregistrer » are icons; the « Modifié / Enregistré » text is replaced by a dot on the save icon while changes are unsaved, and by the accent colour on that icon for a few seconds once saved.
 - **Interface appearance**: dark theme (or follow the system), accent colour, top bar and rail colour, compact density; « Apparence » section of the « Réglages » tab, per device.
 - **Timeline size**: a handle between the 3D view and the timeline sets their proportion (mouse, touch and keyboard; double-click resets), remembered on the device.
