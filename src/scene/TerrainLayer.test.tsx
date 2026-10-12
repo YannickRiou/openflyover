@@ -132,6 +132,7 @@ describe('engine options from settings', () => {
       places: { city: true, village: true, hamlet: true },
       maxDistanceM: 1500,
       hiddenIds: [],
+      seenIds: [],
     },
     race: { enabled: false, sync: 'elapsed' as const },
     trackStyle: DEFAULT_TRACK_STYLE,

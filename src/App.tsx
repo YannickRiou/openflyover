@@ -20,7 +20,6 @@ import { LensPanel } from './ui/LensPanel'
 import { installCloseGuard, installLibraryAutosave } from './ui/library'
 import { OverlayPanel } from './ui/OverlayPanel'
 import { PanelSection, TabWeightDot } from './ui/PanelSection'
-import { PoiPanel } from './ui/PoiPanel'
 import { PreferencesPanel } from './ui/PreferencesPanel'
 import { chooseFilesToOpen, openFiles, reopenLastProject, saveProject } from './ui/projectActions'
 import { ProjectPanel } from './ui/ProjectPanel'
@@ -418,7 +417,6 @@ export default function App() {
         <>
           <MapSettings />
           <LandmarkPanel />
-          <PoiPanel />
         </>
       ),
       meteo: (

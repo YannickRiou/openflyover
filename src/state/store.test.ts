@@ -224,6 +224,7 @@ describe('settings and misc', () => {
         places: { city: true, village: true, hamlet: true },
         maxDistanceM: 1500,
         hiddenIds: [],
+        seenIds: [],
       },
       race: { enabled: false, sync: 'elapsed' },
     })
