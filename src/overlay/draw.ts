@@ -14,7 +14,7 @@ import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
-import type { CounterId, CreditsPosition, OverlayAnchor, OverlaySettings, StyledWidget } from './settings'
+import type { CounterId, CreditsPosition, OverlayAnchor, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
 import { COUNTER_IDS, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
@@ -93,6 +93,8 @@ export interface OverlayExtras {
   dip?: TransitionDip | null
   /** card of the stage starting « À la suite » (`stageCardAt`), drawn inside its window even while the overlay is off */
   stage?: StageCard | null
+  /** size of the exported film, which the free offsets of the widgets are measured in; default: the drawn frame */
+  exportSize?: OverlaySize
 }
 
 /** Card of a stage « À la suite »: name, number, date and figures of its track, shown from `startS` for `durationS`. */
@@ -338,11 +340,15 @@ export interface LayoutItem {
   anchor: OverlayAnchor
   width: number
   height: number
+  /** free position in frame units, from the anchor's corner of the safe area towards the inside (right / down when centred) */
+  offset?: WidgetOffset
 }
 
 /**
  * Top-left corner of each item inside the safe area. Items sharing an anchor are stacked vertically in
  * order, `gap` apart: from the top edge, the bottom edge or around the middle; aligned left, centred or right.
+ * An item with an `offset` leaves the stack (the others close up as if it were not there): it sits alone at its
+ * anchor, moved by the offset, and may overlap the others.
  */
 export function layoutWidgets(items: readonly LayoutItem[], size: OverlaySize, gap: number): { x: number; y: number }[] {
   const left = size.width * SAFE_MARGIN
@@ -351,18 +357,24 @@ export function layoutWidgets(items: readonly LayoutItem[], size: OverlaySize, g
   const bottom = size.height * (1 - SAFE_MARGIN)
   const out = items.map(() => ({ x: 0, y: 0 }))
   const groups = new Map<OverlayAnchor, number[]>()
-  items.forEach((item, i) => groups.set(item.anchor, [...(groups.get(item.anchor) ?? []), i]))
-  for (const [anchor, indices] of groups) {
+  items.forEach((item, i) => {
+    if (!item.offset) groups.set(item.anchor, [...(groups.get(item.anchor) ?? []), i])
+  })
+  const place = (anchor: OverlayAnchor, indices: readonly number[], dx: number, dy: number) => {
     const [row, column] = anchor === 'center' ? ['middle', 'center'] : anchor.split('-')
     const total = indices.reduce((sum, i) => sum + items[i].height, 0) + gap * (indices.length - 1)
-    let y = row === 'top' ? top : row === 'bottom' ? bottom - total : (top + bottom) / 2 - total / 2
+    let y = row === 'top' ? top + dy : row === 'bottom' ? bottom - total - dy : (top + bottom) / 2 - total / 2 + dy
     for (const i of indices) {
       const w = items[i].width
-      out[i].x = column === 'left' ? left : column === 'right' ? right - w : size.width / 2 - w / 2
+      out[i].x = column === 'left' ? left + dx : column === 'right' ? right - w - dx : size.width / 2 - w / 2 + dx
       out[i].y = y
       y += items[i].height + gap
     }
   }
+  for (const [anchor, indices] of groups) place(anchor, indices, 0, 0)
+  items.forEach(({ anchor, offset }, i) => {
+    if (offset) place(anchor, [i], offset.x, offset.y)
+  })
   return out
 }
 
@@ -1290,7 +1302,7 @@ function logoWidget(p: Painter, settings: OverlaySettings, assets: OverlayAssets
     anchor: settings.logo.anchor,
     width: w,
     height: h,
-    opacity: 1,
+    opacity: settings.logo.opacity,
     draw(x, y) {
       ctx.imageSmoothingQuality = 'high'
       ctx.drawImage(logo.image, x, y, w, h)
@@ -1374,22 +1386,29 @@ export function drawOverlay(
     // a widget with its own colours or fonts draws with its own theme
     const of = (key: StyledWidget): Painter =>
       settings[key].overrides ? { ...p, theme: resolveOverlayTheme(settings.style, widgetOverrides(settings, key)) } : p
-    if (titleOpacity > 0) add(titleWidget(of('title'), frame, settings, titleOpacity))
+    // a widget at a free position: its offset in pixels of the exported film, scaled to this frame
+    const exported = extras.exportSize
+    const scale = exported && exported.width > 0 && exported.height > 0 ? Math.min(size.width, size.height) / Math.min(exported.width, exported.height) : 1
+    const placed = (key: PlacedWidget, w: Widget | null): Widget | null => {
+      const offset = settings[key].offset
+      return w && offset ? { ...w, offset: { x: offset.x * scale, y: offset.y * scale } } : w
+    }
+    if (titleOpacity > 0) add(placed('title', titleWidget(of('title'), frame, settings, titleOpacity)))
     if (endOpacity > 0) {
       const card = endWidget(of('end'), frame, settings, endOpacity)
       const credits = creditLines(settings.end.credits)
       // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
-      if (credits.length === 0) add(card)
+      if (credits.length === 0) add(placed('end', card))
       else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start))
     }
-    if (settings.counters.enabled && live > 0) add(countersWidget(of('counters'), frame, settings, live))
-    if (settings.profile.enabled && live > 0) add(profileWidget(of('profile'), frame, settings, live))
-    weather = settings.weather.enabled && live > 0 ? weatherWidget(of('weather'), frame, settings, live) : null
+    if (settings.counters.enabled && live > 0) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
+    if (settings.profile.enabled && live > 0) add(placed('profile', profileWidget(of('profile'), frame, settings, live)))
+    weather = settings.weather.enabled && live > 0 ? placed('weather', weatherWidget(of('weather'), frame, settings, live)) : null
     add(weather)
-    if (settings.minimap.enabled && live > 0) add(minimapWidget(of('minimap'), frame, settings, live))
-    if (settings.leaderboard.enabled && live > 0) add(leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, live))
-    if (settings.text.enabled) add(textWidget(of('text'), settings))
-    if (settings.logo.enabled) add(logoWidget(p, settings, assets))
+    if (settings.minimap.enabled && live > 0) add(placed('minimap', minimapWidget(of('minimap'), frame, settings, live)))
+    if (settings.leaderboard.enabled && live > 0) add(placed('leaderboard', leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, live)))
+    if (settings.text.enabled) add(placed('text', textWidget(of('text'), settings)))
+    if (settings.logo.enabled) add(placed('logo', logoWidget(p, settings, assets)))
     // texts of the timeline inside their window
     for (const item of extras.texts ?? []) {
       const opacity = filmTextOpacity(item, time.timeS)
