@@ -177,6 +177,7 @@ describe('frozen old projects', () => {
       places: { city: true, village: true, hamlet: true },
       maxDistanceM: 800,
       hiddenIds: [],
+      seenIds: [],
     })
     expectDefaultsBut(s, [...CHECKED, 'sunDate'])
     expect(s.sunDate).toBe('')

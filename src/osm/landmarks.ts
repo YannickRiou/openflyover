@@ -34,8 +34,13 @@ export interface LandmarkSettings {
   places: Record<PlaceSize, boolean>
   /** largest distance between a landmark and the track (metres) */
   maxDistanceM: number
-  /** OSM ids ("node/123") of the landmarks hidden one by one by the user (kept in the project) */
+  /**
+   * ids of the labels hidden by the user (kept in the project): OSM ids ("node/123") of landmarks and ids ("poi-2") of
+   * points of interest
+   */
   hiddenIds: string[]
+  /** OSM ids of the landmarks listed when the user last showed or hid labels: the others are new (« nouveau ») */
+  seenIds: string[]
 }
 
 export const DEFAULT_LANDMARK_SETTINGS: LandmarkSettings = {
@@ -54,16 +59,17 @@ export const DEFAULT_LANDMARK_SETTINGS: LandmarkSettings = {
   places: { city: true, village: true, hamlet: true },
   maxDistanceM: 1500,
   hiddenIds: [],
+  seenIds: [],
 }
 
 /**
  * The settings of an older project with the kinds added since set to their default (« Points d'eau »), every place
- * size and no hidden landmark. A saved `kinds.place` is kept (off for most older projects: their landmarks do not
- * change).
+ * size, no hidden landmark and none seen. A saved `kinds.place` is kept (off for most older projects: their landmarks
+ * do not change). Seen ids that are not strings are dropped (only the « nouveau » badges depend on them).
  */
 export function withLandmarkDefaults(raw: unknown): unknown {
   if (raw === null || typeof raw !== 'object') return raw
-  const settings = raw as { kinds?: unknown; places?: unknown }
+  const settings = raw as { kinds?: unknown; places?: unknown; seenIds?: unknown }
   if (settings.kinds === null || typeof settings.kinds !== 'object') return raw
   const places =
     settings.places === undefined
@@ -71,7 +77,25 @@ export function withLandmarkDefaults(raw: unknown): unknown {
       : settings.places !== null && typeof settings.places === 'object'
         ? { ...DEFAULT_LANDMARK_SETTINGS.places, ...settings.places }
         : settings.places
-  return { hiddenIds: [], ...settings, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, ...settings.kinds }, places }
+  const seenIds = Array.isArray(settings.seenIds) ? settings.seenIds.filter((id) => typeof id === 'string') : []
+  return { hiddenIds: [], ...settings, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, ...settings.kinds }, places, seenIds }
+}
+
+/**
+ * The settings with the labels `ids` hidden (`hide`) or shown again, and the landmarks `listed` now (OSM ids) seen:
+ * landmarks found later (wider distance, another type) are shown, as new ones.
+ */
+export function withHidden(settings: LandmarkSettings, ids: readonly string[], hide: boolean, listed: readonly string[]): LandmarkSettings {
+  const changed = new Set(ids)
+  const rest = settings.hiddenIds.filter((id) => !changed.has(id))
+  return { ...settings, hiddenIds: hide ? [...rest, ...changed] : rest, seenIds: [...new Set([...settings.seenIds, ...listed])] }
+}
+
+/** The landmarks of `listed` (OSM ids) not seen yet; none before the user first showed or hid labels. */
+export function newLandmarkIds(settings: Pick<LandmarkSettings, 'seenIds'>, listed: readonly string[]): Set<string> {
+  if (settings.seenIds.length === 0) return new Set()
+  const seen = new Set(settings.seenIds)
+  return new Set(listed.filter((id) => !seen.has(id)))
 }
 
 /**

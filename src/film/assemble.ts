@@ -1,11 +1,12 @@
 /**
- * Automatic assembly of the film when a track is loaded: overview opening, flight with a stop at each highlight of the
- * pacing (one per cluster, like the pauses it replaces), overview closing. The user retouches it on the timeline.
+ * Automatic assembly of the film when a track is loaded: overview opening, flight with a stop at each highlight (one
+ * per cluster, like the pauses it replaces), overview closing. The user retouches it on the timeline and in « Repères »
+ * (Carte tab), where each landmark and point of interest has its « Arrêt ».
  *
- * New films ('temps-forts') stop at every highlight, camera orbiting; films saved before the timeline ('rythme') keep
- * the pauses of the pacing. « Ralentir et titrer aux repères » (`film.landmarkTitles`) writes a slow-down portion and a
- * title card at the notable landmarks into the film (`withLandmarkTitles`), told apart from the user's items by their
- * ids (`auto-speed-...`, `auto-text-...`). Pure module.
+ * New films ('temps-forts') stop at every pass crossed and peak nearby, camera orbiting; films saved before the
+ * timeline ('rythme') keep the pauses of the pacing, climb tops included. « Ralentir et titrer aux repères »
+ * (`film.landmarkTitles`) writes a slow-down portion and a title card at the notable landmarks into the film
+ * (`withLandmarkTitles`), told apart from the user's items by their ids (`auto-speed-...`, `auto-text-...`). Pure module.
  */
 import type { Track } from '../core/types'
 import { climbsOf } from '../flyover/climbs'
@@ -34,22 +35,28 @@ export function autoStopId(atM: number): string {
 /** A highlight a stop can be made for. */
 export type StopCandidate = Required<Pick<FilmStop, 'atM' | 'label' | 'source'>>
 
-/** Highlights of the track selected by the pacing kinds (climb tops, passes crossed, peaks nearby), by position. */
-export function stopCandidates({ track, landmarks = [], pacing }: AssembleInput): StopCandidate[] {
+/** Climb tops of the track (`pacing.climbs`): only the pauses of the films saved before the timeline ('rythme') stop there. */
+function climbCandidates({ track, pacing }: AssembleInput): StopCandidate[] {
+  if (!pacing.climbs) return []
   const L = track.stats.distanceM
-  const candidates: StopCandidate[] = []
-  const at = (m: number) => Math.min(L, Math.max(0, m))
-  if (pacing.climbs) {
-    climbsOf(track).forEach((climb, i) =>
-      candidates.push({ atM: at(climb.endDistM), label: climbLabelText(climb, i), source: { kind: 'climb', ref: String(i) } }),
-    )
-  }
-  if (pacing.landmarks) {
-    for (const l of landmarks.filter(isHighlightLandmark)) {
-      candidates.push({ atM: at(l.alongM), label: l.name, source: { kind: 'landmark', ref: l.id } })
-    }
-  }
-  return candidates.sort((a, b) => a.atM - b.atM)
+  return climbsOf(track).map((climb, i) => ({
+    atM: Math.min(L, Math.max(0, climb.endDistM)),
+    label: climbLabelText(climb, i),
+    source: { kind: 'climb', ref: String(i) },
+  }))
+}
+
+/**
+ * Where the film offers a stop by itself, by position: the passes crossed and the peaks nearby among the landmarks
+ * shown (`pacing.landmarks`). Not the climb tops: stops come from the landmarks, the points of interest and the timeline.
+ */
+export function stopCandidates({ track, landmarks = [], pacing }: AssembleInput): StopCandidate[] {
+  if (!pacing.landmarks) return []
+  const L = track.stats.distanceM
+  return landmarks
+    .filter(isHighlightLandmark)
+    .map((l): StopCandidate => ({ atM: Math.min(L, Math.max(0, l.alongM)), label: l.name, source: { kind: 'landmark', ref: l.id } }))
+    .sort((a, b) => a.atM - b.atM)
 }
 
 /** The stop of `stops` at `atM` (within a metre), the one a highlight there has. */
@@ -57,42 +64,47 @@ export function stopAt<S extends Pick<FilmStop, 'atM'>>(stops: readonly S[], atM
   return stops.find((s) => Math.abs(s.atM - atM) < 1)
 }
 
-/** A row of « Temps forts »: a detected highlight (`source` set) or a stop placed elsewhere by hand. */
-export interface FilmHighlight {
+/** A row of « Repères » that can have a stop: an OSM landmark (id "node/123") or a point of interest ("poi-2"). */
+export interface StopPlace {
+  id: string
+  /** where its stop goes along the first track (metres) */
   atM: number
-  label: string
-  source?: StopCandidate['source']
-  /** its stop in the film, if any */
-  stop?: FilmStop
 }
 
 /**
- * The highlights of the film by position: each candidate (one per position) with its stop (`stopAt`), then the other
- * stops (added by hand, a second one at the same place included). `stops` are the film's, generated ones included
- * (`FilmClock.stops`).
+ * The stop of `stops` made for `place`: the one made for its landmark (`source.ref`), else one placed by hand within a
+ * metre of it (`stopAt`; the stops of the points of interest carry their name only). A stop made for another landmark
+ * or for a climb there is not its stop.
  */
-export function filmHighlights(candidates: readonly StopCandidate[], stops: readonly FilmStop[]): FilmHighlight[] {
-  let free = stops
-  const detected = candidates
-    .filter((c, i) => candidates.findIndex((d) => d.atM === c.atM) === i)
-    .map((c) => {
-      const stop = stopAt(free, c.atM)
-      free = free.filter((s) => s !== stop)
-      return { ...c, stop }
-    })
-  const added = free.map((stop) => ({ atM: stop.atM, label: stop.label || 'Arrêt', stop }))
-  return [...detected, ...added].sort((a, b) => a.atM - b.atM)
+export function placeStop<S extends Pick<FilmStop, 'atM' | 'source'>>(stops: readonly S[], place: StopPlace): S | undefined {
+  const byHand = (s: S) => s.source === undefined || s.source.kind === 'manual'
+  return stops.find((s) => s.source?.kind === 'landmark' && s.source.ref === place.id) ?? stopAt(stops.filter(byHand), place.atM)
 }
 
 /**
- * Stops at the highlights, one per cluster (like the pauses they replace): 'temps-forts' `AUTO_STOP_S` each,
- * camera orbiting; 'rythme' only while the pacing is on, `pauseS` each, camera as in the film (as these pauses were).
+ * `film` without what was made for the `places` the user hides: their stops (the film's own; generated ones follow
+ * the landmarks shown by themselves) and, while the landmark titles are left as they are (`landmarkTitles` off; on,
+ * they are made again from the landmarks shown), their title and slow-down. The same film when nothing goes.
+ */
+export function withoutPlaceItems(film: Film, places: readonly StopPlace[]): Film {
+  const stops = film.autoStops ? film.stops : film.stops.filter((s) => !places.some((p) => placeStop([s], p)))
+  const titled = new Set(film.landmarkTitles ? [] : places.flatMap((p) => [titleItemId('speed', p.id), titleItemId('text', p.id)]))
+  const speeds = film.speeds.filter((s) => !titled.has(s.id))
+  const texts = film.texts.filter((t) => !titled.has(t.id))
+  if (stops.length === film.stops.length && speeds.length === film.speeds.length && texts.length === film.texts.length) return film
+  return { ...film, stops, speeds, texts }
+}
+
+/**
+ * Stops at the highlights, one per cluster (like the pauses they replace): 'temps-forts' at the `stopCandidates`,
+ * `AUTO_STOP_S` each, camera orbiting; 'rythme' at the highlights of the pacing (climb tops included) only while it is
+ * on, `pauseS` each, camera as in the film (as these pauses were).
  */
 export function autoStops(input: AssembleInput, mode: AutoStopMode): FilmStop[] {
   const { track, pacing } = input
   const legacy = mode === 'rythme'
   if (!(track.stats.distanceM > 0) || (legacy && (!pacing.enabled || !(pacing.pauseS > 0)))) return []
-  const candidates = stopCandidates(input)
+  const candidates = legacy ? [...climbCandidates(input), ...stopCandidates(input)].sort((a, b) => a.atM - b.atM) : stopCandidates(input)
   const positions = [...new Set(candidates.map((c) => c.atM))]
   return pausePositions(positions, pacing.windowM).map((atM) => {
     const { label, source } = candidates.find((c) => c.atM === atM)!
@@ -191,8 +203,8 @@ export function pickLandmarkTitles({ landmarks, lengthM, heldM, speeds, timeAtM 
     })
 }
 
-/** Id of an item made for a landmark: `auto-speed-node-123`, `auto-text-node-123`. */
-const titleItemId = (kind: 'speed' | 'text', landmark: Landmark) => `auto-${kind}-${landmark.id.replace('/', '-')}`
+/** Id of an item made for a landmark (its OSM id): `auto-speed-node-123`, `auto-text-node-123`. */
+const titleItemId = (kind: 'speed' | 'text', landmarkId: string) => `auto-${kind}-${landmarkId.replace('/', '-')}`
 
 /** The item was made for a landmark (`withLandmarkTitles`). */
 export const isLandmarkTitleItem = (item: { id: string }) => /^auto-(speed|text)-/.test(item.id)
@@ -200,7 +212,7 @@ export const isLandmarkTitleItem = (item: { id: string }) => /^auto-(speed|text)
 /** Title card of a landmark passed at film time `passS`: its name, its elevation below when known. */
 function titleText(landmark: Landmark, passS: number): FilmText {
   const startS = Math.round(Math.max(0, passS - TITLE_LEAD_S) * 10) / 10
-  const text: FilmText = { id: titleItemId('text', landmark), startS, durationS: LANDMARK_TITLE_S, text: landmark.name, anchor: 'top-center', size: 1 }
+  const text: FilmText = { id: titleItemId('text', landmark.id), startS, durationS: LANDMARK_TITLE_S, text: landmark.name, anchor: 'top-center', size: 1 }
   if (landmark.ele !== undefined) text.subtitle = `${formatNumber(landmark.ele)} m`
   return text
 }
@@ -220,7 +232,7 @@ export function withLandmarkTitles(film: Film, input: AssembleInput, passingTime
   const { track, landmarks = [], pacing } = input
   const heldM = [...filmStops(own, input).map((s) => s.atM), ...(pacing.enabled ? pacingHighlights(track, pacing, landmarks) : [])]
   const titles = pickLandmarkTitles({ landmarks, lengthM: track.stats.distanceM, heldM, speeds: own.speeds, timeAtM: passingTimes(own) })
-  const speeds = titles.flatMap(({ landmark, slow }) => (slow ? [{ id: titleItemId('speed', landmark), ...slow, factor: TITLE_SLOW.factor }] : []))
+  const speeds = titles.flatMap(({ landmark, slow }) => (slow ? [{ id: titleItemId('speed', landmark.id), ...slow, factor: TITLE_SLOW.factor }] : []))
   const slowed = { ...own, speeds: [...own.speeds, ...speeds] }
   const passS = passingTimes(slowed)
   return { ...slowed, texts: [...own.texts, ...titles.map(({ landmark }) => titleText(landmark, passS(landmark.alongM)))] }

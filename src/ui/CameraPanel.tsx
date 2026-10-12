@@ -16,7 +16,6 @@ import type { PacingSettings } from '../flyover/pacing'
 import { editFilm, setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
-import { HighlightsPanel } from './HighlightsPanel'
 import { Icon } from './icons'
 import type { IconName } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
@@ -204,8 +203,8 @@ function SituationShotSwitches() {
 
 /**
  * « Survol » tab: sections Caméra (preset tiles; style and fine parameters as rows), Durée et rythme (flyover duration,
- * situation shots of the opening and closing, slow-downs on/off; their details as rows) and Temps forts. A row shows a
- * setting's name and value, its control on demand.
+ * situation shots of the opening and closing, slow-downs on/off; their details as rows). A row shows a setting's name
+ * and value, its control on demand. Stops are chosen on the timeline and in « Repères et points d'intérêt » (Carte).
  */
 export function CameraPanel() {
   const camera = useAppStore((s) => s.settings.camera)
@@ -439,8 +438,6 @@ export function CameraPanel() {
           />
         </SettingRow>
       </PanelSection>
-
-      <HighlightsPanel />
     </>
   )
 }
