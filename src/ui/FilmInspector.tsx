@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef } from 'react'
+import { useId, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
 import { useMediaStore } from '../film/media'
@@ -68,16 +68,16 @@ const SHOT_SUN_HINTS: Record<ShotSun, readonly [string, string]> = {
   ],
 }
 import { REGION_KIND_LABELS, candidateId, captureFraming, useRegionStore } from '../osm/region'
-import { OVERLAY_ANCHORS, OVERLAY_ANCHOR_LABELS, WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
+import { WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
 import type { OverlayAnchor } from '../overlay/settings'
 import { editFilm, useFilmClock, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
+import { AnchorPicker } from './AnchorPicker'
 import { formatDegrees, formatDistance, formatNumber, formatPercent } from './format'
 import { Icon } from './icons'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
-import { nextGridIndex } from './shell'
 import { showToast } from './toast'
 
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
@@ -327,48 +327,6 @@ const VOLUME_RANGE = { min: 0, max: 1, step: 0.01 }
 const percent = formatPercent
 const FADE_SLIDER = { min: FADE_RANGE.min, max: 10, step: FADE_RANGE.step }
 
-
-/** Position in the frame as a 3 × 3 grid of radio buttons (the arrows move and choose, like native radios). */
-function AnchorPicker({ label, value, onChange }: { label: string; value: OverlayAnchor; onChange(anchor: OverlayAnchor): void }) {
-  const id = useId()
-  const cells = useRef<(HTMLButtonElement | null)[]>([])
-  return (
-    <div className="field">
-      <span id={`${id}-label`} className="field__label">
-        {label}
-      </span>
-      <div className="anchor-picker">
-        <div className="anchor-picker__grid" role="radiogroup" aria-labelledby={`${id}-label`}>
-          {OVERLAY_ANCHORS.map((anchor, i) => (
-            <button
-              key={anchor}
-              ref={(el) => {
-                cells.current[i] = el
-              }}
-              type="button"
-              role="radio"
-              className="anchor-picker__cell"
-              aria-checked={anchor === value}
-              aria-label={OVERLAY_ANCHOR_LABELS[anchor]}
-              tabIndex={anchor === value ? 0 : -1}
-              onClick={() => onChange(anchor)}
-              onKeyDown={(e) => {
-                const next = nextGridIndex(i, e.key, 3, OVERLAY_ANCHORS.length)
-                if (next === null) return
-                e.preventDefault()
-                onChange(OVERLAY_ANCHORS[next])
-                cells.current[next]?.focus()
-              }}
-            />
-          ))}
-        </div>
-        <span className="anchor-picker__value" aria-hidden="true">
-          {OVERLAY_ANCHOR_LABELS[value]}
-        </span>
-      </div>
-    </div>
-  )
-}
 
 /**
  * Settings of the block selected on the timeline (`filmSelection`), in the right dock: opening / closing shot, stop, camera key,
