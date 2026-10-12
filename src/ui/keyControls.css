@@ -117,9 +117,10 @@
   font-weight: 600;
 }
 
+/* touch targets: 44 px, as the other buttons of the phone's tool row */
 .film-tl--centred .key-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   color: var(--color-white);
 }
 
