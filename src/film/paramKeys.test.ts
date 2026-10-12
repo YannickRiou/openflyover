@@ -5,7 +5,7 @@ import { buildFilmClock } from './clock'
 import type { FilmClockInput } from './clock'
 import { DEFAULT_FILM, SPEED_FACTOR_RANGE, isValidFilm, isValidParamKey, nextFilmId, withFilmDefaults } from './model'
 import type { Film } from './model'
-import { FILM_PARAMS, PARAM_SPECS, clampParamValue, gradingAt, paramAt, paramBase, sortedParamKeys, valueAtKeys } from './paramKeys'
+import { FILM_PARAMS, PARAM_LANE_LABELS, PARAM_SPECS, clampParamValue, gradingAt, keysOfParam, paramAt, paramBase, paramLanes, sortedParamKeys, valueAtKeys } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
 import { addParamKey, removeFilmItem, updateParamKey } from './timeline'
 
@@ -139,5 +139,30 @@ describe('speed keys in the clock', () => {
       expect(p).toBeGreaterThanOrEqual(last)
       last = p
     }
+  })
+})
+
+describe('lanes and navigation of the parameter keys', () => {
+  const keys = [key('a', 300, 'warmth', 0.2), key('b', 100, 'speed', 2), key('c', 50, 'exposure', 1), key('d', 700, 'warmth', -0.1)]
+
+  it('a lane only for a parameter that has a key, in the order of the parameters, the speed on its own lane', () => {
+    expect(paramLanes(film([]))).toEqual([])
+    expect(paramLanes(film([key('s', 0, 'speed', 2)]))).toEqual([])
+    expect(paramLanes(film(keys))).toEqual(['exposure', 'warmth'])
+    // the lane goes with its last key
+    expect(paramLanes(removeFilmItem(film(keys), 'c'))).toEqual(['warmth'])
+  })
+
+  it('every parameter has a lane name, none called « Réglages »', () => {
+    expect(Object.keys(PARAM_LANE_LABELS)).toEqual([...FILM_PARAMS])
+    expect(Object.values(PARAM_LANE_LABELS)).not.toContain('Réglages')
+    expect(PARAM_LANE_LABELS.sunHour).toBe('Soleil')
+    expect(PARAM_LANE_LABELS.warmth).toBe('Température')
+  })
+
+  it('the keys of one parameter, in the order given (clock keys included)', () => {
+    expect(keysOfParam(keys, 'warmth').map((k) => k.id)).toEqual(['a', 'd'])
+    expect(keysOfParam(keys, 'vignette')).toEqual([])
+    expect(keysOfParam(keys.map((k) => ({ ...k, timeS: k.atM / 10 })), 'speed')).toEqual([{ ...keys[1], timeS: 10 }])
   })
 })

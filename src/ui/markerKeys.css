@@ -1,4 +1,4 @@
-/* marker keys of the timeline (« Réglages » lane): a round dot, where the other keys are diamonds */
+/* marker keys of the timeline (« Marqueur » lane): a round dot, where the other keys are diamonds */
 .film-tl__key--marker {
   background: var(--color-chartreuse);
   border-radius: 50%;

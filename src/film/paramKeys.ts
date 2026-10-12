@@ -1,7 +1,7 @@
 /**
- * Parameter keys of the film (« Réglages », `film.paramKeys`): values of a film-wide setting (speed, exposure, sun
- * hour, colour grading) pinned along the track and eased from one key to the next. Same anchor as the camera keys, the
- * distance along the first track: a key holds during a stop. Pure module (no three.js), generic over the parameter so
+ * Parameter keys of the film (`film.paramKeys`; one timeline lane per keyed parameter): values of a film-wide setting
+ * (speed, exposure, sun hour, colour grading) pinned along the track and eased from one key to the next. Same anchor as
+ * the camera keys, the distance along the first track: a key holds during a stop. Pure module (no three.js), generic over the parameter so
  * other keyed values can reuse it: add a name to `FILM_PARAMS` and its entry to `PARAM_SPECS`.
  */
 import { smootherstep } from '../core/math'
@@ -52,6 +52,30 @@ export const PARAM_SPECS: Record<FilmParam, ParamSpec> = {
   contrast: gradingSpec('Contraste', 'contrast'),
   warmth: gradingSpec('Température', 'warmth'),
   vignette: gradingSpec('Vignettage', 'vignette'),
+}
+
+/** Names of the timeline lanes, one per keyed parameter (shorter than the labels of `PARAM_SPECS`). */
+export const PARAM_LANE_LABELS: Record<FilmParam, string> = {
+  speed: 'Vitesse',
+  exposure: 'Exposition',
+  sunHour: 'Soleil',
+  saturation: 'Saturation',
+  contrast: 'Contraste',
+  warmth: 'Température',
+  vignette: 'Vignettage',
+}
+
+/** The keys of one parameter among `keys` (the film's or the clock's: any key with a `param`), in their order. */
+export function keysOfParam<T extends { param: FilmParam }>(keys: readonly T[], param: FilmParam): T[] {
+  return keys.filter((k) => k.param === param)
+}
+
+/**
+ * The parameters that get a timeline lane of their own: those with at least one key, in `FILM_PARAMS` order. Not the
+ * speed, whose keys sit on the « Vitesse » lane, which always exists.
+ */
+export function paramLanes(film: { paramKeys: readonly { param: FilmParam }[] }): FilmParam[] {
+  return FILM_PARAMS.filter((p) => p !== 'speed' && film.paramKeys.some((k) => k.param === p))
 }
 
 /** The keys of one parameter, by position. */
