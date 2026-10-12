@@ -441,6 +441,43 @@ function WaterControl() {
   )
 }
 
+/** « Nettoyer le relief en mer »: spikes of the elevation data over the sea, and the sea brought to 0 m. */
+function DemCleanControl() {
+  const id = useId()
+  const demClean = useAppStore((s) => s.settings.demClean)
+  const setSetting = useAppStore((s) => s.setSetting)
+  return (
+    <>
+      <div className="field__label-row">
+        <label className="checkbox" htmlFor={`${id}-clean`}>
+          <input
+            id={`${id}-clean`}
+            type="checkbox"
+            checked={demClean.enabled}
+            onChange={(e) => setSetting('demClean', { ...demClean, enabled: e.currentTarget.checked })}
+          />
+          Nettoyer le relief en mer
+        </label>
+        <InfoTip text="Supprime les pics isolés que les données d’altitude laissent parfois au-dessus de la mer (la trace 3D suit ce relief). Les montagnes et les côtes ne sont pas touchées." />
+      </div>
+      {demClean.enabled && (
+        <div className="field__label-row">
+          <label className="checkbox" htmlFor={`${id}-sea`}>
+            <input
+              id={`${id}-sea`}
+              type="checkbox"
+              checked={demClean.seaToZero}
+              onChange={(e) => setSetting('demClean', { ...demClean, seaToZero: e.currentTarget.checked })}
+            />
+            Ramener la mer à 0 m
+          </label>
+          <InfoTip text="Remonte à 0 m tout ce qui est sous le niveau de la mer. Aplatit aussi les vraies dépressions (mer Morte, polders)." />
+        </div>
+      )}
+    </>
+  )
+}
+
 /** « Carte » tab, before the track and the landmarks: sections Fond de carte and Relief. */
 export function MapSettings() {
   const settings = useAppStore((s) => s.settings)
@@ -517,7 +554,7 @@ export function MapSettings() {
         </SettingRow>
       </PanelSection>
 
-      <PanelSection title="Relief" keys={['exaggeration', 'wireframe']}>
+      <PanelSection title="Relief" keys={['exaggeration', 'demClean', 'wireframe']}>
         <RangeField
           label="Exagération du relief"
           tip="Multiplie les hauteurs pour accentuer les montagnes (×1 = relief réel)."
@@ -529,6 +566,8 @@ export function MapSettings() {
           onChange={(exaggeration) => setSetting('exaggeration', exaggeration)}
           wide={false}
         />
+
+        <DemCleanControl />
 
         <SettingRow label="Filaire" value={settings.wireframe ? 'Oui' : 'Non'} paths={['wireframe']}>
           <div className="field__label-row">
