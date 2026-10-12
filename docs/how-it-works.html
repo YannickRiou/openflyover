@@ -1041,7 +1041,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
         <tr><td><code>e2e/</code></td><td>end-to-end tests</td><td><code>run.mjs</code></td></tr>
         <tr><td><code>public/</code></td><td>files served as they are</td><td><code>samples/</code>, <code>fonts/</code>, <code>favicon.svg</code></td></tr>
         <tr><td><code>scripts/</code></td><td>generators for bundled data</td><td><code>gen-sample-gpx.mjs</code>, <code>gen-geoid.mjs</code></td></tr>
-        <tr><td><code>docs/</code></td><td>documentation</td><td><code>handover.md</code>, <code>sources.md</code>, <code>tests-gpu.md</code>, <code>installers.md</code>, this page</td></tr>
+        <tr><td><code>docs/</code></td><td>documentation</td><td><code>sources.md</code>, <code>tests-gpu.md</code>, <code>installers.md</code>, this page</td></tr>
       </tbody>
     </table>
   </div>
@@ -1105,7 +1105,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
     <li><strong>Look</strong>: the "Carte alpine" palette in <code>src/ui/theme.css</code>, bundled fonts (Fraunces, IBM Plex), Lucide icons.</li>
     <li><strong>Before each commit</strong>: types, lint and tests green; one commit per feature. Each test file sits next to its module.</li>
   </ul>
-  <p class="note">On the development machines, Node is not on the default path: under WSL, run <code>source ~/.nvm/nvm.sh &amp;&amp; nvm use 24</code> first; on Windows, see the path given in the README. The current state of the work is in <a href="handover.md"><code>docs/handover.md</code></a>.</p>
+  <p class="note">On the development machines, Node is not on the default path: under WSL, run <code>source ~/.nvm/nvm.sh &amp;&amp; nvm use 24</code> first; on Windows, see the path given in the README.</p>
 </section>
 
 <!-- ================================================================== 8 -->
@@ -1134,7 +1134,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
 <!-- ================================================================== 9 -->
 <section id="limits">
   <div class="sec-head"><span class="num">09</span><h2>Known limits and open points</h2></div>
-  <p>From <a href="handover.md"><code>docs/handover.md</code></a> and <a href="../ARCHITECTURE.md"><code>ARCHITECTURE.md</code></a>. The roadmap has nothing left to build; what remains is mostly checking on real hardware.</p>
+  <p>See also <a href="../ARCHITECTURE.md"><code>ARCHITECTURE.md</code></a>. What remains is mostly checking on real hardware.</p>
   <ul class="limits">
     <li><span class="tag warn">to check</span><span>Never seen on a real graphics card: export speed, smoothness, sound and the final look. Development uses software rendering. The checklist is <a href="tests-gpu.md"><code>docs/tests-gpu.md</code></a>.</span></li>
     <li><span class="tag warn">to check</span><span>The desktop app has been run on Windows only; the macOS and Linux installers, built on GitHub, and command-line rendering have not been run on a real machine. Installers are not signed, so Windows and macOS warn on first launch.</span></li>
@@ -1214,7 +1214,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
 </main>
 
 <footer>
-  OpenFlyover · code under the MIT license · this page summarizes <code>README.md</code>, <code>ARCHITECTURE.md</code>, <code>docs/handover.md</code> and the code as of 9 October 2026 (React 19, three.js r186, Vite 8, Vitest 5, TypeScript 6, Tauri 2, Node 24). When in doubt, the code and <code>ARCHITECTURE.md</code> are authoritative.
+  OpenFlyover · code under the MIT license · this page summarizes <code>README.md</code>, <code>ARCHITECTURE.md</code> and the code as of 9 October 2026 (React 19, three.js r186, Vite 8, Vitest 5, TypeScript 6, Tauri 2, Node 24). When in doubt, the code and <code>ARCHITECTURE.md</code> are authoritative.
 </footer>
 
 </div>
