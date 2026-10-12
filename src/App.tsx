@@ -45,6 +45,7 @@ import { keyFocus, matchShortcut, seekTime, withShortcut } from './ui/shortcuts'
 import { Stage } from './ui/Stage'
 import { StatusBar } from './ui/StatusBar'
 import { Timeline } from './ui/Timeline'
+import { TimelineResizer } from './ui/TimelineResizer'
 import { Toaster } from './ui/Toaster'
 import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
@@ -539,6 +540,7 @@ export default function App() {
 
         <main className="view">
           {contents.stage}
+          {hasTracks && <TimelineResizer disabled={exporting} />}
           {timeline}
         </main>
 

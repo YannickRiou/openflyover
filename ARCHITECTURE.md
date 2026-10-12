@@ -392,6 +392,15 @@ pointer (`appearance.css`).
   time: whatever fills the dock (drawer or inspector) collapses the panel, which comes back when the dock empties; expanding the
   panel empties the dock and deselects the block (`shellReducer`: `inspecting`, `inspect` event, which `App` sends when
   `filmSelection` changes, after a press is released: the timeline does not change scale during a drag).
+- **Timeline size** (`TimelineResizer.tsx`, `timelineResizer.css`, pure and tested `layoutSize.ts`: `TIMELINE_HEIGHT_KEY`,
+  `parseTimelineHeight`, `timelineHeightRange`, `clampTimelineHeight`): on wide layouts (not the phone layouts), a thin
+  separator (`role="separator"`, « Taille de la timeline ») between the 3D view and the timeline. Pointer drag (capture),
+  Up / Down (Shift: larger), Home / End (smallest / largest), double-click = default layout. The height is clamped
+  (transport row + ruler + « Plans » lane at least; the view keeps at least 35 % of the shared height) and re-clamped on
+  window resize. Remembered per device (`getPlatform().storage`, `openflyover.layout.v1`, `{"timelineH": px}`), not in the
+  project nor in `preferences.ts`; absent = the timeline takes the height of its content. The handle sets
+  `data-timeline-sized` and `--timeline-h` on `.view`; the stage resizes through its `ResizeObserver` and R3F invalidates on
+  size changes; the export renders its own size. Disabled during an export.
 - **During an export**: tabs, panel collapse, format, "Ouvrir", "Recadrer" (reframe), undo / redo (buttons) and
   closing the drawer are disabled (resizing the scene would resize the canvas).
 - **View**: floating "Recadrer la vue" (reframe the view) button (F); click on the track and right-click menu (`TrackPicker`, see "Film and
