@@ -1429,7 +1429,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   "Temps" (time) counter shows "≈" before an estimated time (`OverlayTrackStats.timesEstimated`). A timestamped track
   is not re-estimated (its real times would be lost).
 - **Project**: `timesEstimated: true` saved with the track, read back only on a timestamped track; old projects
-  unchanged.
+  unchanged. `elevationEstimated` is saved the same way ("Elevation from the terrain").
 - **Weather forecast** (`src/weather/openMeteo.ts`): `outingDays` chooses the source, the archive if the outing ends
   today (UTC) at the latest, otherwise `api.open-meteo.com/v1/forecast` (same parameters and hourly variables, same
   places, same response), up to the 16th day (today included, end trimmed to that day); beyond: "Sortie dans plus de
@@ -1458,6 +1458,31 @@ it, know at what time you will pass each point, where the sun will be and what t
   water) when it has no name, and named `natural=spring`), off by default for the film and the labels; an old project
   receives the type through `withLandmarkDefaults`.
 
+
+## Elevation from the terrain (« Calculer l'altitude »)
+
+`src/terrain/elevation.ts`, pure apart from the loader. A track whose points lack elevation (routes drawn on a map, some
+exports) gets it from the terrain source of the settings.
+
+- **Tiles**: read at z12 for 512 px sources and z13 for 256 px ones (about 14 m per pixel at 45° N), only under the
+  points without elevation and the recorded point on each side of a gap. They go through a `createTileFetcher`
+  (4 requests, offline packs first, then the network and its HTTP cache), are decoded with `decodeDem` and sampled
+  bilinearly (`sampleGrid`); each grid is dropped once its points are read. A 4xx answer means no data there; any other
+  failure rejects, nothing is half-computed.
+- **`withTerrainElevation(track, sampler)`** fills the missing points, shifting each gap onto the recorded points around
+  it (offset blended by distance, so no step and no false D+), recomputes the stats and sets `Track.elevationEstimated`
+  (`'all'`: the file had none; `'gaps'`: gaps filled).
+- **At import** (`importFiles`, `ImportSink.completeElevation`, default `completeImportedElevations` with the settings'
+  terrain source): automatic, before the tracks are added, for a track needing at most `AUTO_ELEVATION_MAX_TILES` = 64
+  tiles, the whole batch within 15 s. Measured with Mapterhorn z12 on straight lines at 45.9° N: 20 km → 4 tiles,
+  100 km → 16, 200 km → 30, 540 km → 80; about 150 KB per tile, so 64 tiles ≈ 10 MB, about what the 3D view loads when
+  it opens. A longer, failing or too slow track comes without elevation, and its card offers « Calculer l'altitude ».
+- **Track card**: chip « altitude calculée » / « altitude complétée », « Effacer l'altitude » only for `'all'` (for
+  `'gaps'` the computed points cannot be told apart after a reload).
+- **Project**: `elevationEstimated` saved with the track, read back only when its value is valid and the track has
+  elevation; old projects unchanged. The Habillage altitude and D+ counters turn on by themselves (`stats.maxEle`).
+- **Limits**: bridges and tunnels follow the ground; times estimated before the calculation are not re-estimated;
+  « Un film par trace » and chaining do not compute it or keep the flag.
 ## Climbs and labels
 
 - **Climbs** (`src/flyover/climbs.ts`) on the **recorded** elevations of the first track: resampling every 20 m,

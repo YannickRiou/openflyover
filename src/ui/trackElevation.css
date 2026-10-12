@@ -1,0 +1,17 @@
+/* « Calculer l'altitude » / « Effacer l'altitude » under a track card (TrackList) */
+.track__elevation {
+  grid-column: 2 / span 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.track__elevation .btn {
+  padding: 0 10px;
+}
+
+.track__elevation .field__hint {
+  margin: 0;
+}
