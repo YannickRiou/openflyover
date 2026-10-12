@@ -1,0 +1,24 @@
+/* Interface appearance (« Réglages » > « Apparence »): density and the page background in the dark theme.
+   The dark theme and the accent colours are in theme.css; the attributes are set by `applyAppearance` (appearance.ts). */
+
+/* the page behind the panels follows the theme (index.css paints it with the palette) */
+body {
+  background: var(--surface-panel);
+  color: var(--text-1);
+}
+
+/* compact: the spacing scale about 15 % tighter, 28 px controls for a mouse (touch screens keep their 44 px targets) */
+:root[data-density='compact'] {
+  --space-1: 3px;
+  --space-2: 7px;
+  --space-3: 10px;
+  --space-4: 14px;
+  --space-5: 20px;
+  --space-6: 27px;
+}
+
+@media (pointer: fine) {
+  :root[data-density='compact'] {
+    --control-h: 28px;
+  }
+}
