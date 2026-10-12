@@ -290,7 +290,7 @@ export function reliefClearance(engine: TerrainEngine | null, frame: LocalFrame 
   }
 }
 
-/** A marker is drawn without depth test (never sunk into the slope): it fades out behind the relief like the labels. */
+/** A marker is drawn without depth test (never sunk into the slope): it is hidden behind the relief like the labels (hard cut). */
 export function occludeMarker(sprite: Sprite, camera: Camera, clearanceAt: ClearanceAt | null): void {
   const material = sprite.material as SpriteMaterial
   material.opacity = clearanceAt ? occlusionFade(lineOfSightClearance(camera.position, sprite.position, clearanceAt)) : 1
