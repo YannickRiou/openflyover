@@ -588,6 +588,26 @@ describe('createTerrainEngine', () => {
     for (const mesh of newMeshes) expect(oldMeshes).not.toContain(mesh)
   })
 
+  it('decodes again with the cleaning chosen when it changes, and only then', async () => {
+    const deps = createFakeDeps()
+    const engine = engineWith(deps)
+    const camera = cameraAbove(600_000)
+    engine.update(camera, 1000)
+    await settle()
+    expect(deps.decodeDem).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), { enabled: false, seaToZero: false })
+
+    // `seaToZero` means nothing while the cleaning is off: nothing to rebuild
+    engine.setOptions({ demClean: { enabled: false, seaToZero: true } })
+    expect(deps.heightField.clear).not.toHaveBeenCalled()
+
+    engine.setOptions({ demClean: { enabled: true, seaToZero: false } })
+    expect(engine.group.children).toHaveLength(0)
+    expect(deps.heightField.clear).toHaveBeenCalled()
+    engine.update(camera, 1000)
+    await settle()
+    expect(deps.decodeDem).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), { enabled: true, seaToZero: false })
+  })
+
   it('does not refetch when an unrelated option changes', async () => {
     const deps = createFakeDeps()
     const engine = engineWith(deps)

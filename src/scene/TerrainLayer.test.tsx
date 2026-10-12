@@ -124,6 +124,7 @@ describe('engine options from settings', () => {
     weather: { enabled: true },
     weatherScene: { enabled: true, strength: 1 },
     clouds: { mode: 'meteo' as const, coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: 'volume' as const, quality: 'medium' as const },
+    demClean: { enabled: false, seaToZero: false },
     water: { enabled: true, strength: 1 },
     overlay: DEFAULT_OVERLAY,
     video: { ...DEFAULT_VIDEO_SETTINGS, aspect: '16:9' as const, resolution: '1080p' as const, fps: 30 as const, quality: 'high' as const },
@@ -174,5 +175,11 @@ describe('engine options from settings', () => {
     })
     const partial = diffEngineOptions(a, b)
     expect(Object.keys(partial ?? {}).sort()).toEqual(['imageryZoomOffset', 'terrain', 'wireframe'])
+  })
+
+  it('diff detects a change of the cleaning of the sea', () => {
+    const a = engineOptionsFromSettings(settings)
+    const b = engineOptionsFromSettings({ ...settings, demClean: { enabled: true, seaToZero: false } })
+    expect(diffEngineOptions(a, b)).toEqual({ demClean: { enabled: true, seaToZero: false } })
   })
 })
