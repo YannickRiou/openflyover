@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "notices": "node scripts/third-party-notices.mjs"
+    "notices": "node scripts/third-party-notices.mjs && node scripts/installer-license.mjs",
+    "installer-assets": "node scripts/installer-assets.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

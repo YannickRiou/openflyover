@@ -4,11 +4,25 @@ GitHub builds the desktop application installers (workflow `.github/workflows/de
 
 | System | Files |
 |---|---|
-| Windows | `OpenFlyover_<version>_x64-setup.exe` (NSIS) and `OpenFlyover_<version>_x64_en-US.msi` |
+| Windows | `OpenFlyover_<version>_x64-setup.exe` (NSIS) and `OpenFlyover_<version>_x64_fr-FR.msi` |
 | macOS | `OpenFlyover_<version>_universal.dmg` (Apple Silicon and Intel) |
 | Linux | `OpenFlyover_<version>_amd64.AppImage` and `OpenFlyover_<version>_amd64.deb` (Ubuntu 22.04, Debian 12 or newer) |
 
 Allow 15 to 30 minutes per system (the Rust cache shortens later runs).
+
+## What the installers show
+
+The installers use the colours of the application (the « Carte alpine » palette: paper, ink, rust red, glacier).
+
+- **Windows `.exe` (NSIS)**: wizard in French; header image (ink band, logo, name), sidebar image on the welcome and finish pages (logo, name, screenshot of the app), then the licence page with « J'accepte » (the MIT licence followed by a reminder of the licences of the products used and of the data sources).
+- **Windows `.msi`**: dialogs in French, same banner and welcome image, licence dialog from the same text.
+- **macOS `.dmg`**: window with the « Carte alpine » background, an arrow towards the Applications folder; the licence is shown as a dialog to accept when the disk image is opened (to remove it: add `src-tauri/tauri.macos.conf.json` with `{"bundle":{"licenseFile":null}}`).
+- **Linux (`.deb`, AppImage)**: no visual customisation is possible; the deb installs the licence text as `/usr/share/doc/open-flyover/copyright`. `THIRD_PARTY_NOTICES.md` (full licence texts) is installed next to the application by all of them.
+
+The images and licence pages are build inputs committed in `src-tauri/installer/` (`nsis-header.bmp` 150×57, `nsis-sidebar.bmp` 164×314, `wix-banner.bmp` 493×58, `wix-dialog.bmp` 493×312, `dmg-background.png` 660×400, `license.rtf`, `license.txt`), referenced by `bundle.licenseFile`, `bundle.windows.nsis`, `bundle.windows.wix`, `bundle.macOS.dmg` and `bundle.linux.deb.files` in `tauri.conf.json` (`licenseFile` must stay an RTF: WiX requires one).
+
+- Images: `npm run installer-assets` (needs a Chromium, `OPENFLYOVER_CHROME` if it is not found, and internet access so that the screenshot shows the terrain). Commit the result.
+- Licence pages: `npm run notices` regenerates them after `THIRD_PARTY_NOTICES.md`; `node scripts/installer-license.mjs` alone rebuilds them from the committed notices.
 
 ## Building the installers
 
@@ -19,7 +33,7 @@ Allow 15 to 30 minutes per system (the Rust cache shortens later runs).
 1. Put the same number in `src-tauri/tauri.conf.json` (`version`) and `src-tauri/Cargo.toml` (`version`), for example
    `0.2.0`. This is the number that appears in the file names.
 2. Regenerate the third-party licenses with `npm run notices` (after `npm ci`; the first run takes about 8 minutes because
-   of the crates.io rate limit) and commit `THIRD_PARTY_NOTICES.md`: it is shipped with the installers.
+   of the crates.io rate limit) and commit `THIRD_PARTY_NOTICES.md` and `src-tauri/installer/license.rtf` / `license.txt`: they are shipped with the installers.
 3. Create and push the tag: `git tag v0.2.0`, then `git push origin v0.2.0`.
 
 ## Where to download them
