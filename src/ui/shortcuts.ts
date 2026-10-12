@@ -91,7 +91,8 @@ export function keyFocus(target: EventTarget | null): KeyFocus {
   return 'other'
 }
 
-const SPACE_CONTROLS = 'input, button, a[href], [role="slider"], [role="tab"], [role="radio"], [role="switch"]'
+/** Controls that may keep Space (not the timeline ruler, a `role="slider"` div whose keys are arrows only: Space plays from there). */
+const SPACE_CONTROLS = 'input, button, a[href], [role="tab"], [role="radio"], [role="switch"]'
 
 /**
  * Space plays / pauses unless it belongs to the focused element: a text field, a list, or a control the keyboard moved
