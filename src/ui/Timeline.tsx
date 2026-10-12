@@ -20,6 +20,7 @@ import { useMediaStore } from '../film/media'
 import { isMediaFile, readMedia } from '../film/video'
 import { STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
 import { PARAM_SPECS } from '../film/paramKeys'
+import { MARKER_FIGURE_LABELS, MARKER_KIND_LABELS } from '../scene/markerSettings'
 import type { Film, FilmMedia, FilmSpeed, FilmStop } from '../film/model'
 import {
   ZOOM_RANGE,
@@ -54,7 +55,7 @@ import type { DragContext, Grip, TimelineItem } from '../film/timeline'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
-import { addParamKeyHere, editFilm, getFilmSource, seekKeyframe, setAutoStops, toggleKeyframe, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { addMarkerKeyHere, addParamKeyHere, editFilm, getFilmSource, seekKeyframe, setAutoStops, toggleKeyframe, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
 import { formatClock, formatDistance, formatNumber } from './format'
@@ -66,6 +67,7 @@ import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
 import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
+import './markerKeys.css'
 
 const SPEEDS = PLAYBACK_SPEEDS
 /** « Média » picker: pictures and videos recognised on both targets (the desktop types a file by `mimeTypeOf`). */
@@ -124,6 +126,7 @@ const clockOfFilm = (input: FilmClockInput, film: Film) =>
     speeds: film.speeds,
     cameraKeys: film.cameraKeys,
     paramKeys: film.paramKeys,
+    markerKeys: film.markerKeys,
   })
 
 /** Closed SVG area under the profile at abscissas `xs`, one sub-path per run of known elevations. */
@@ -606,7 +609,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   }
   /** a keyframe pressed and released without dragging: the playhead jumps to it */
   const jumpToKey = (item: TimelineItem) => {
-    const key = clock.cameraKeys.find((k) => k.id === item) ?? clock.paramKeys.find((k) => k.id === item)
+    const key = clock.cameraKeys.find((k) => k.id === item) ?? clock.paramKeys.find((k) => k.id === item) ?? clock.markerKeys.find((k) => k.id === item)
     if (key) seek(key.timeS)
   }
   /** centred: a press that becomes a tap on release (no capture: a slide scrolls the lanes, the browser cancels it) */
@@ -883,6 +886,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           name="Ajouter un réglage"
           tip="Ajouter une clé de réglage (vitesse, exposition, soleil, couleurs) à la position du marqueur"
           onClick={addParamKeyHere}
+          disabled={!hasTrack}
+        />
+        <BarButton
+          icon="map-pin"
+          name="Ajouter un changement de marqueur"
+          tip="Ajouter une clé de marqueur : à cet endroit, le marqueur change d’aspect (boule, figurine, image) en fondu"
+          onClick={addMarkerKeyHere}
           disabled={!hasTrack}
         />
         {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
@@ -1166,11 +1176,29 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               <div className="film-tl__lane" role="group" aria-label="Réglages">
-                {shownClock.paramKeys.length === 0 && (
+                {shownClock.paramKeys.length === 0 && shownClock.markerKeys.length === 0 && (
                   <span className="film-tl__empty" style={{ left: xOf(0) }}>
-                    Réglages clés : vitesse, exposition, soleil, couleurs (bouton ci-dessus)
+                    Réglages clés : vitesse, exposition, soleil, couleurs, marqueur (boutons ci-dessus)
                   </span>
                 )}
+                {shownClock.markerKeys.map((k) => {
+                  const what = `Marqueur : ${MARKER_KIND_LABELS[k.kind].toLowerCase()}${k.kind === 'figurine' ? ` (${MARKER_FIGURE_LABELS[k.figure].toLowerCase()})` : ''}`
+                  return (
+                    <div
+                      key={k.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={selected === k.id}
+                      aria-label={`${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
+                      title={`${what} (clic : y aller, glisser : le déplacer)`}
+                      className={`film-tl__key film-tl__key--marker${selected === k.id ? ' film-tl__key--selected' : ''}`}
+                      style={{ left: xOf(k.timeS) }}
+                      onPointerDown={(e) => startEdit(e, k.id, 'move')}
+                      onFocus={() => setSelected(k.id)}
+                      onKeyDown={(e) => onBlockKeyDown(e, k.id)}
+                    />
+                  )
+                })}
                 {shownClock.paramKeys.map((k) => {
                   const spec = PARAM_SPECS[k.param]
                   const what = `${spec.label} ${spec.format(k.value)}`

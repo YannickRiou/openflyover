@@ -4,9 +4,10 @@ import { freezeLandmarkTitles, materializeStops, sameLandmarkTitles, withLandmar
 import type { PassingTimes } from '../film/assemble'
 import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
+import { junctionsM, sortedMarkerKeys } from '../film/markerKeys'
 import type { Film } from '../film/model'
 import { FILM_PARAMS, paramAt, paramBase } from '../film/paramKeys'
-import { addCameraKey, addParamKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
+import { addCameraKey, addMarkerKey, addMarkerKeysAt, addParamKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
 import { captureKey } from '../flyover/cameraKeys'
 import { filmSequenceOf, filmTrackOf, sequenceLandmarks } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
@@ -96,6 +97,34 @@ export function addParamKeyHere(): void {
     const free = FILM_PARAMS.find((p) => !f.paramKeys.some((k) => k.param === p && Math.round(k.atM) === atM)) ?? 'exposure'
     return addParamKey(f, atM, free, paramAt(f, paramBase(settings, free), free, atM))
   })
+}
+
+/**
+ * « Ajouter un changement de marqueur »: a marker key at the marker's place holding the look it has there, so nothing
+ * changes until the inspector edits it (one undo step, selected).
+ */
+export function addMarkerKeyHere(): void {
+  const { track } = getFilmSource()
+  const { playback, settings } = useAppStore.getState()
+  const atM = Math.round(playback.progress * (track?.stats.distanceM ?? 0))
+  editFilm((f) => {
+    const before = sortedMarkerKeys(f.markerKeys).filter((k) => k.atM <= atM).pop()
+    const { kind, figure } = settings.marker
+    return addMarkerKey(f, atM, before ? { kind: before.kind, figure: before.figure, imageId: before.imageId } : { kind, figure })
+  })
+}
+
+/**
+ * « Un marqueur par étape ou par jour »: a marker key with the look of the settings at each junction of the film
+ * track (stages « À la suite », days of a chained track) that has none, to give each its own look in the inspector.
+ * Returns the number of keys added (one undo step).
+ */
+export function addJunctionMarkerKeys(): number {
+  const { track, cutsM, film } = getFilmSource()
+  const { kind, figure } = useAppStore.getState().settings.marker
+  const places = junctionsM(track, cutsM).filter((m) => !film.markerKeys.some((k) => Math.round(k.atM) === Math.round(m)))
+  if (places.length > 0) editFilm((f) => ({ film: addMarkerKeysAt(f, places, { kind, figure }), id: null }))
+  return places.length
 }
 
 /** The ◆ of the transport row: removes the keyframe the playhead is on, else adds one there (one undo step). */
