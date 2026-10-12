@@ -48,7 +48,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Marker keys** (#40): change the marker (ball, figure, own picture) along the track with keys on the timeline,
   cross-faded in under a second of film; « Un marqueur par jour / par étape » for chained tracks and « À la suite ».
   Same in the export.
-- **Memory at start-up** (#phone memory): reopening a project with a large embedded clip uses about half the memory (saved projects are read as a Blob, no raw string kept beside the parsed document).
+- **Memory at start-up**: reopening a project with a large embedded clip uses about half the memory (saved projects are read as a Blob, no raw string kept beside the parsed document).
 - **Keys on more than the camera** (#24): speed, exposure, sun hour and colour grading can be keyed along the track in a
   new « Réglages » lane of the timeline.
 - **More overlay styles** (#19): five new styles (Sportif, Minimal mono, Topo, Néon nuit, Magazine) for the film and the
