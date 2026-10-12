@@ -39,6 +39,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Overlay positions** (#39, #38): one 3 × 3 grid for every position, a free position in pixels of the exported
   video, logo opacity.
 - **Style picker** (#61): the eight overlay styles (and the poster's) wrap onto several rows instead of scrolling sideways.
+- **Recorded clock time** (#62): « Afficher l’heure enregistrée » (Réglages) now shows the hour with a side panel open too: it is no longer hidden with the distance and altitude readout when the timeline is narrow.
 - **Export diagnostic** (#52): the `[export]` console line and the diagnostic report give the tiles and triangles drawn in
   the shadow pass per render, with the off-screen share, to measure what an off-screen caster filter could save.
 - **Keys harmonised** (#63): camera keys and speed keys are set from the header of their timeline track (◀ ◇ ▶); exposure, sun, saturation, contrast, warmth and vignette from under their slider in the panels; marker keys from the Marqueur section. The « Réglages » track and the « Ajouter un réglage » / « Ajouter un changement de marqueur » buttons are gone; each keyed setting gets its own track, and a « Marqueur » track appears with marker keys.
