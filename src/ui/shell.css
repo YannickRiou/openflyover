@@ -82,10 +82,6 @@
   fill: currentColor;
 }
 
-.icon-btn--label {
-  padding: 0 10px 0 8px;
-}
-
 .icon-btn--float {
   width: 36px;
   height: 36px;
@@ -255,28 +251,25 @@
   color: var(--color-ink-soft);
 }
 
-.topbar__state {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0 var(--space-1);
-  color: var(--color-glacier);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
+.topbar__save {
+  position: relative;
 }
 
-.topbar__state--dirty {
-  color: var(--status-attention-on-dark);
-}
-
-.topbar__state--dirty::before {
+/* changes not saved yet: a small dot on the icon */
+.topbar__save--unsaved::after {
   content: '';
-  width: 6px;
-  height: 6px;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--status-attention-on-dark);
+}
+
+/* just saved: the accent colour for a few seconds */
+.topbar__save--saved {
+  color: var(--accent-on-dark);
 }
 
 .topbar__sep {
@@ -1810,19 +1803,6 @@
     --panel-w: 280px;
     --dock-w: 280px;
   }
-
-  .icon-btn--label .icon-btn__text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
-  .icon-btn--label {
-    padding: 0 6px;
-  }
 }
 
 /* the panel becomes a drawer over the view, the export drawer and the inspector too (on the right) */
@@ -2030,7 +2010,6 @@
 
   /* no format picker (the export drawer has it) nor shortcuts */
   .format-switch,
-  .topbar__state,
   .topbar__end > .icon-btn {
     display: none;
   }
