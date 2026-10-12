@@ -3,7 +3,8 @@
 //! path it writes is the file picked in the save dialog (checked against the fs scope, where the dialog plugin adds
 //! it). The soundtrack, when the film has one, is handed over first as a WAV file in the temporary folder. MP4 is
 //! encoded on the GPU when ffmpeg can (NVENC, VAAPI), on the processor otherwise (libx264). The overlay alone keeps
-//! its alpha (WebM / VP9).
+//! its alpha (WebM / VP9). Every encoder aims at the target bitrate of the export (the same as WebCodecs, set by the
+//! quality or by hand), with a ceiling, a key frame interval and a sound bitrate from « Encodage ».
 
 use std::collections::HashMap;
 use std::ffi::OsString;
@@ -21,7 +22,6 @@ use tauri_plugin_fs::FsExt;
 
 /// Header of `video_frame` naming its session (the body is the frame itself).
 const SESSION_HEADER: &str = "x-video-session";
-const AUDIO_BITRATE: &str = "192k";
 /// Last lines of ffmpeg's error output shown when it fails.
 const ERROR_LINES: usize = 3;
 /// Colours converted to BT.709 (see `ffmpeg_args`).
@@ -76,17 +76,45 @@ fn is_webm(output: &Path) -> bool {
     output.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("webm"))
 }
 
-/// Constant rate factor for each export quality (lower: sharper and larger), on the scale of libx264 or libvpx-vp9
-/// (also NVENC's `-cq` and VAAPI's `-qp`, see `h264_args`).
-fn crf(quality: &str, webm: bool) -> Option<u8> {
-    match (quality, webm) {
-        ("standard", false) => Some(23),
-        ("high", false) => Some(20),
-        ("max", false) => Some(17),
-        ("standard", true) => Some(34),
-        ("high", true) => Some(31),
-        ("max", true) => Some(26),
-        _ => None,
+/// Bitrate of an encoding, as the export panel sets it (`targetBitrate` in src/export/encoder.ts).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Rate {
+    /// target video bitrate, bits per second
+    video: u32,
+    /// frames between key frames
+    keyframes: u32,
+    /// sound bitrate, bits per second
+    audio: u32,
+}
+
+/// Rate of the encoder probes: any working value.
+const PROBE_RATE: Rate = Rate { video: 2_000_000, keyframes: 60, audio: 128_000 };
+/// Highest bitrate accepted (`MAX_BITRATE` of the web encoder, with room) and the lowest.
+const MAX_VIDEO_BITRATE: u32 = 100_000_000;
+const MIN_VIDEO_BITRATE: u32 = 100_000;
+
+impl Rate {
+    /// The rate asked by the export, or why it cannot be used.
+    fn checked(video: u32, keyframes: u32, audio: u32) -> Result<Rate, String> {
+        if !(MIN_VIDEO_BITRATE..=MAX_VIDEO_BITRATE).contains(&video) {
+            return Err(format!("Débit vidéo hors limites : {video} bit/s"));
+        }
+        if keyframes == 0 || !(32_000..=512_000).contains(&audio) {
+            return Err("Réglages d'encodage invalides.".into());
+        }
+        Ok(Rate { video, keyframes, audio })
+    }
+
+    /// `-b:v` at the target, `-maxrate` 1.5 times it (complex passages may go above, briefly), a buffer of two
+    /// seconds' worth at the target (`-bufsize`), and the key frame interval (`-g`).
+    fn video_args(self) -> Vec<OsString> {
+        let (rate, max, buffer, gop) = (
+            self.video.to_string(),
+            (self.video as u64 * 3 / 2).to_string(),
+            (self.video as u64 * 2).to_string(),
+            self.keyframes.to_string(),
+        );
+        os(&["-b:v", &rate, "-maxrate", &max, "-bufsize", &buffer, "-g", &gop])
     }
 }
 
@@ -112,24 +140,28 @@ fn os(items: &[&str]) -> Vec<OsString> {
     items.iter().map(OsString::from).collect()
 }
 
-/// Video codec options of `encoder` at constant quality `crf`. NVENC's `-cq` (VBR without a target bitrate) and
-/// VAAPI's fixed `-qp` take the crf of libx264 as is: same 0-51 scale, approximate equivalents (neither adapts like
-/// crf; the size may differ).
-fn h264_args(encoder: H264, crf: &str) -> Vec<OsString> {
+/// Video codec options of `encoder` at the target bitrate of `rate` (variable, with a ceiling): the same setting gives
+/// the same size whatever the machine's encoder, as with WebCodecs.
+fn h264_args(encoder: H264, rate: Rate) -> Vec<OsString> {
     let codec = encoder.name();
-    match encoder {
-        H264::Nvenc => os(&["-c:v", codec, "-preset", "p5", "-rc", "vbr", "-cq", crf, "-b:v", "0", "-pix_fmt", "yuv420p"]),
-        H264::Vaapi => os(&["-c:v", codec, "-rc_mode", "CQP", "-qp", crf]),
-        H264::X264 => os(&["-c:v", codec, "-preset", "medium", "-crf", crf, "-pix_fmt", "yuv420p"]),
+    let mut args = match encoder {
+        H264::Nvenc => os(&["-c:v", codec, "-preset", "p5", "-rc", "vbr"]),
+        H264::Vaapi => os(&["-c:v", codec, "-rc_mode", "VBR"]),
+        H264::X264 => os(&["-c:v", codec, "-preset", "medium"]),
+    };
+    args.extend(rate.video_args());
+    if encoder != H264::Vaapi {
+        args.extend(os(&["-pix_fmt", "yuv420p"]));
     }
+    args
 }
 
 /// Arguments of ffmpeg: raw RGBA frames on stdin, the optional WAV soundtrack, MP4 / H.264 (+ AAC) by `encoder` at
 /// `output`, or WebM / VP9 (+ Opus) when its name ends in `.webm` or the film is `transparent` (`encoder` unused).
 /// Colours converted and tagged as BT.709, what players assume for HD video.
 #[allow(clippy::too_many_arguments)]
-fn ffmpeg_args(width: u32, height: u32, fps: u32, crf: u8, encoder: H264, transparent: bool, sound: Option<&Path>, output: &Path) -> Vec<OsString> {
-    let (size, fps, crf) = (format!("{width}x{height}"), fps.to_string(), crf.to_string());
+fn ffmpeg_args(width: u32, height: u32, fps: u32, rate: Rate, encoder: H264, transparent: bool, sound: Option<&Path>, output: &Path) -> Vec<OsString> {
+    let (size, fps) = (format!("{width}x{height}"), fps.to_string());
     let webm = transparent || is_webm(output);
     let vaapi = !webm && encoder == H264::Vaapi;
     let mut args = os(&["-hide_banner", "-loglevel", "error", "-nostats"]);
@@ -141,15 +173,18 @@ fn ffmpeg_args(width: u32, height: u32, fps: u32, crf: u8, encoder: H264, transp
         args.extend([OsString::from("-i"), sound.into()]);
     }
     if webm {
-        // constant quality (-b:v 0); "good" with cpu-used 4 and row threads: a few times slower than x264, not dozens
-        args.extend(os(&["-c:v", "libvpx-vp9", "-crf", &crf, "-b:v", "0", "-deadline", "good", "-cpu-used", "4", "-row-mt", "1"]));
+        // "good" with cpu-used 4 and row threads: a few times slower than x264, not dozens
+        args.extend(os(&["-c:v", "libvpx-vp9"]));
+        args.extend(rate.video_args());
+        args.extend(os(&["-deadline", "good", "-cpu-used", "4", "-row-mt", "1"]));
         args.extend(os(&["-pix_fmt", if transparent { "yuva420p" } else { "yuv420p" }]));
     } else {
-        args.extend(h264_args(encoder, &crf));
+        args.extend(h264_args(encoder, rate));
     }
     args.extend(os(&["-vf", if vaapi { VAAPI_FILTER } else { COLOR_FILTER }, "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709"]));
     if sound.is_some() {
-        args.extend(os(&["-c:a", if webm { "libopus" } else { "aac" }, "-b:a", AUDIO_BITRATE]));
+        let audio = format!("{}k", rate.audio / 1000);
+        args.extend(os(&["-c:a", if webm { "libopus" } else { "aac" }, "-b:a", &audio]));
     }
     if webm {
         args.extend(os(&["-f", "webm", "-y"]));
@@ -168,7 +203,7 @@ fn probe_args(encoder: H264) -> Vec<OsString> {
         args.extend(os(&VAAPI_DEVICE));
     }
     args.extend(os(&["-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.1"]));
-    args.extend(h264_args(encoder, "23"));
+    args.extend(h264_args(encoder, PROBE_RATE));
     args.extend(os(&["-vf", if vaapi { VAAPI_FILTER } else { COLOR_FILTER }, "-f", "null", "-"]));
     args
 }
@@ -284,13 +319,12 @@ pub async fn video_sound(request: Request<'_>, videos: State<'_, VideoState>) ->
 
 /// ffmpeg started on `output`, reading its frames from the pipe.
 #[allow(clippy::too_many_arguments)]
-fn start(app: &AppHandle, output: PathBuf, width: u32, height: u32, fps: u32, quality: &str, encoder: H264, transparent: bool, sound: Option<PathBuf>) -> Result<Session, String> {
-    let crf = crf(quality, transparent || is_webm(&output)).ok_or(format!("Qualité inconnue : {quality}"))?;
+fn start(app: &AppHandle, output: PathBuf, width: u32, height: u32, fps: u32, rate: Rate, encoder: H264, transparent: bool, sound: Option<PathBuf>) -> Result<Session, String> {
     if !output.is_absolute() || !app.fs_scope().is_allowed(&output) {
         return Err("Ce fichier n'a pas été choisi dans la fenêtre « Enregistrer ».".into());
     }
     let mut ffmpeg = Command::new("ffmpeg")
-        .args(ffmpeg_args(width, height, fps, crf, encoder, transparent, sound.as_deref(), &output))
+        .args(ffmpeg_args(width, height, fps, rate, encoder, transparent, sound.as_deref(), &output))
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
@@ -307,8 +341,8 @@ fn start(app: &AppHandle, output: PathBuf, width: u32, height: u32, fps: u32, qu
     Ok(Session { ffmpeg, input, frame_bytes, output, sound, errors })
 }
 
-/// Start ffmpeg writing `path` (picked in the save dialog) and return the id of the session; `transparent`: the overlay
-/// alone, with its alpha.
+/// Start ffmpeg writing `path` (picked in the save dialog) and return the id of the session; `bitrate` and
+/// `audio_bitrate` in bits per second, `keyframe_interval` in frames; `transparent`: the overlay alone, with its alpha.
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn video_open(
@@ -318,10 +352,13 @@ pub async fn video_open(
     width: u32,
     height: u32,
     fps: u32,
-    quality: String,
+    bitrate: u32,
+    keyframe_interval: u32,
+    audio_bitrate: u32,
     transparent: bool,
     sound: Option<u32>,
 ) -> Result<u32, String> {
+    let rate = Rate::checked(bitrate, keyframe_interval, audio_bitrate)?;
     // before the lock: the first MP4 export probes the GPU (WebM is always encoded on the processor)
     let encoder = if transparent || is_webm(&path) { H264::X264 } else { h264_encoder() };
     let mut videos = lock(&videos);
@@ -329,7 +366,7 @@ pub async fn video_open(
         Some(id) => Some(videos.sounds.remove(&id).ok_or("Son du film introuvable.")?),
         None => None,
     };
-    match start(&app, path, width, height, fps, &quality, encoder, transparent, sound.clone()) {
+    match start(&app, path, width, height, fps, rate, encoder, transparent, sound.clone()) {
         Ok(session) => {
             let id = videos.new_id();
             videos.sessions.insert(id, session);
@@ -389,19 +426,24 @@ mod tests {
         args.iter().map(|a| a.to_string_lossy()).collect::<Vec<_>>().join(" ")
     }
 
+    /// 14 Mbit/s, a key frame every 60 frames, sound at 192 kbit/s
+    const RATE: Rate = Rate { video: 14_000_000, keyframes: 60, audio: 192_000 };
+    const TARGET: &str = "-b:v 14000000 -maxrate 21000000 -bufsize 28000000 -g 60";
+
     #[test]
-    fn maps_each_quality_to_a_crf() {
-        assert_eq!(crf("standard", false), Some(23));
-        assert_eq!(crf("high", false), Some(20));
-        assert_eq!(crf("max", false), Some(17));
-        assert_eq!(crf("high", true), Some(31));
-        assert_eq!(crf("best", false), None);
+    fn checks_the_rate_asked() {
+        assert_eq!(Rate::checked(14_000_000, 60, 192_000), Ok(RATE));
+        assert!(Rate::checked(0, 60, 192_000).is_err());
+        assert!(Rate::checked(500_000_000, 60, 192_000).is_err());
+        assert!(Rate::checked(14_000_000, 0, 192_000).is_err());
+        assert!(Rate::checked(14_000_000, 60, 8_000).is_err());
     }
 
     #[test]
     fn reads_rgba_frames_and_writes_an_h264_mp4() {
-        let args = text(&ffmpeg_args(1920, 1080, 30, 20, H264::X264, false, None, Path::new("/films/Tour.mp4")));
-        assert!(args.contains("-f rawvideo -pix_fmt rgba -s 1920x1080 -r 30 -i - -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p"));
+        let args = text(&ffmpeg_args(1920, 1080, 30, RATE, H264::X264, false, None, Path::new("/films/Tour.mp4")));
+        assert!(args.contains(&format!("-f rawvideo -pix_fmt rgba -s 1920x1080 -r 30 -i - -c:v libx264 -preset medium {TARGET} -pix_fmt yuv420p")));
+        assert!(!args.contains("-crf"));
         assert!(args.contains("-pix_fmt yuv420p -vf scale=out_color_matrix=bt709 -colorspace bt709"));
         assert!(args.ends_with("-movflags +faststart -f mp4 -y /films/Tour.mp4"));
         assert!(!args.contains("-c:a"));
@@ -409,18 +451,18 @@ mod tests {
     }
 
     #[test]
-    fn encodes_on_an_nvidia_gpu_at_constant_quality() {
-        let args = text(&ffmpeg_args(1920, 1080, 30, 20, H264::Nvenc, false, None, Path::new("/films/Tour.mp4")));
+    fn encodes_on_an_nvidia_gpu_at_the_target_bitrate() {
+        let args = text(&ffmpeg_args(1920, 1080, 30, RATE, H264::Nvenc, false, None, Path::new("/films/Tour.mp4")));
         assert!(args.starts_with("-hide_banner -loglevel error -nostats -f rawvideo"));
-        assert!(args.contains("-i - -c:v h264_nvenc -preset p5 -rc vbr -cq 20 -b:v 0 -pix_fmt yuv420p -vf scale=out_color_matrix=bt709 -colorspace"));
+        assert!(args.contains(&format!("-i - -c:v h264_nvenc -preset p5 -rc vbr {TARGET} -pix_fmt yuv420p -vf scale=out_color_matrix=bt709 -colorspace")));
         assert!(args.ends_with("-movflags +faststart -f mp4 -y /films/Tour.mp4"));
     }
 
     #[test]
     fn uploads_the_frames_to_the_vaapi_device() {
-        let args = text(&ffmpeg_args(1920, 1080, 30, 17, H264::Vaapi, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.mp4")));
+        let args = text(&ffmpeg_args(1920, 1080, 30, RATE, H264::Vaapi, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.mp4")));
         assert!(args.starts_with("-hide_banner -loglevel error -nostats -vaapi_device /dev/dri/renderD128 -f rawvideo"));
-        assert!(args.contains("-i /tmp/s.wav -c:v h264_vaapi -rc_mode CQP -qp 17 -vf scale=out_color_matrix=bt709,format=nv12,hwupload -colorspace bt709"));
+        assert!(args.contains(&format!("-i /tmp/s.wav -c:v h264_vaapi -rc_mode VBR {TARGET} -vf scale=out_color_matrix=bt709,format=nv12,hwupload -colorspace bt709")));
         assert!(!args.contains("yuv420p"));
         assert!(args.ends_with("-c:a aac -b:a 192k -movflags +faststart -f mp4 -y /films/Tour.mp4"));
     }
@@ -432,44 +474,46 @@ mod tests {
         assert!(args.ends_with("-vf scale=out_color_matrix=bt709 -f null -"));
         let args = text(&probe_args(H264::Vaapi));
         assert!(args.contains("-vaapi_device /dev/dri/renderD128 -f lavfi"));
-        assert!(args.ends_with("-c:v h264_vaapi -rc_mode CQP -qp 23 -vf scale=out_color_matrix=bt709,format=nv12,hwupload -f null -"));
+        assert!(args.ends_with("-c:v h264_vaapi -rc_mode VBR -b:v 2000000 -maxrate 3000000 -bufsize 4000000 -g 60 -vf scale=out_color_matrix=bt709,format=nv12,hwupload -f null -"));
     }
 
     #[test]
     fn adds_the_soundtrack_as_a_second_input() {
-        let args = text(&ffmpeg_args(1080, 1920, 60, 17, H264::X264, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.mp4")));
+        let args = text(&ffmpeg_args(1080, 1920, 60, RATE, H264::X264, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.mp4")));
         assert!(args.contains("-i - -i /tmp/s.wav -c:v libx264"));
         assert!(args.contains("-c:a aac -b:a 192k -movflags"));
+        let lighter = text(&ffmpeg_args(1080, 1920, 60, Rate { audio: 96_000, ..RATE }, H264::X264, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.mp4")));
+        assert!(lighter.contains("-c:a aac -b:a 96k -movflags"));
     }
 
     #[test]
     fn writes_vp9_and_opus_in_webm_when_the_name_ends_in_webm() {
         assert!(is_webm(Path::new("/films/Tour.WebM")));
         assert!(!is_webm(Path::new("/films/Tour.mp4")));
-        let args = text(&ffmpeg_args(1920, 1080, 30, 31, H264::X264, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.webm")));
-        assert!(args.contains("-i /tmp/s.wav -c:v libvpx-vp9 -crf 31 -b:v 0"));
+        let args = text(&ffmpeg_args(1920, 1080, 30, RATE, H264::X264, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.webm")));
+        assert!(args.contains(&format!("-i /tmp/s.wav -c:v libvpx-vp9 {TARGET} -deadline good")));
         assert!(args.contains("-c:a libopus -b:a 192k"));
         assert!(args.ends_with("-f webm -y /films/Tour.webm"));
         assert!(!args.contains("movflags"));
         // the H.264 encoder found on the machine does not change WebM
         for encoder in [H264::Nvenc, H264::Vaapi] {
-            let other = text(&ffmpeg_args(1920, 1080, 30, 31, encoder, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.webm")));
+            let other = text(&ffmpeg_args(1920, 1080, 30, RATE, encoder, false, Some(Path::new("/tmp/s.wav")), Path::new("/films/Tour.webm")));
             assert_eq!(other, args);
         }
     }
 
     #[test]
     fn keeps_the_alpha_of_a_transparent_film_in_vp9_webm() {
-        let args = text(&ffmpeg_args(1920, 1080, 30, 31, H264::Nvenc, true, None, Path::new("/films/Tour habillage.webm")));
-        assert!(args.contains("-f rawvideo -pix_fmt rgba -s 1920x1080 -r 30 -i - -c:v libvpx-vp9 -crf 31 -b:v 0"));
+        let args = text(&ffmpeg_args(1920, 1080, 30, RATE, H264::Nvenc, true, None, Path::new("/films/Tour habillage.webm")));
+        assert!(args.contains(&format!("-f rawvideo -pix_fmt rgba -s 1920x1080 -r 30 -i - -c:v libvpx-vp9 {TARGET}")));
         assert!(args.contains("-row-mt 1 -pix_fmt yuva420p -vf scale=out_color_matrix=bt709 -colorspace bt709"));
         assert!(args.ends_with("-f webm -y /films/Tour habillage.webm"));
         assert!(!args.contains("nvenc"));
         // WebM even when the name typed in the save dialog says otherwise: MP4 / H.264 has no alpha
-        let renamed = text(&ffmpeg_args(1920, 1080, 30, 31, H264::X264, true, None, Path::new("/films/Tour.mp4")));
+        let renamed = text(&ffmpeg_args(1920, 1080, 30, RATE, H264::X264, true, None, Path::new("/films/Tour.mp4")));
         assert!(renamed.contains("-c:v libvpx-vp9") && renamed.contains("-pix_fmt yuva420p"));
         assert!(renamed.ends_with("-f webm -y /films/Tour.mp4"));
-        let opaque = text(&ffmpeg_args(1920, 1080, 30, 31, H264::X264, false, None, Path::new("/films/Tour.webm")));
+        let opaque = text(&ffmpeg_args(1920, 1080, 30, RATE, H264::X264, false, None, Path::new("/films/Tour.webm")));
         assert!(opaque.contains("-pix_fmt yuv420p") && !opaque.contains("yuva"));
     }
 
