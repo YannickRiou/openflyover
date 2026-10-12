@@ -645,7 +645,7 @@ const SCENARIOS = [
     async run({ page }) {
       const before = { texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       const since = Date.now() - 1000
-      await clickButton(page, 'Enregistrer')
+      await page.click('.topbar__save')
       await page.waitForSelector('.toast::-p-text(Projet enregistré)', { visible: true, timeout: STEP_MS })
       const file = await waitForDownload('.json', since)
       const project = JSON.parse(readFileSync(file.path, 'utf8'))
@@ -668,8 +668,9 @@ const SCENARIOS = [
       await page.click('#tab-panel-lumiere .setting-row__head::-p-text(Exposition)')
       await until(page, () => document.activeElement?.matches('#tab-panel-lumiere .setting-row__body input[type="range"]'))
       await page.keyboard.press('ArrowRight')
-      await until(page, () => document.querySelector('.topbar__state--dirty'))
-      await until(page, () => document.querySelector('.topbar__state')?.textContent === 'Enregistré')
+      // the save icon: a dot while the change is not saved, then the accent colour once the autosave wrote it
+      await until(page, () => document.querySelector('.topbar__save--unsaved'))
+      await until(page, () => !document.querySelector('.topbar__save--unsaved') && document.querySelector('.topbar__save--saved'))
       const changed = await exposure()
       assert(changed.startsWith('+0,5'), `exposition après le changement : ${changed}`)
       await blur(page)
@@ -685,7 +686,7 @@ const SCENARIOS = [
       )
 
       // « Ouvrir » of the top bar: the file saved before the change
-      const [chooser] = await Promise.all([page.waitForFileChooser({ timeout: STEP_MS }), page.click('.topbar button::-p-text(Ouvrir)')])
+      const [chooser] = await Promise.all([page.waitForFileChooser({ timeout: STEP_MS }), page.click('.topbar button[aria-label="Ouvrir"]')])
       await chooser.accept([file.path])
       await page.waitForSelector('.toast::-p-text(» ouvert)', { visible: true, timeout: STEP_MS })
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
