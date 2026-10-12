@@ -650,7 +650,7 @@ ink, 7.3:1).
   `withCameraDefaults` in `SETTING_UPGRADES`: « Auto » keeps its multiplier, so the turns look the same) and named
   presets (`CAMERA_PRESETS`, 12: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite; `findCameraPreset`; « Préréglage » is a grid of tiles with distance and tilt: six first, one per style plus a high view (`MAIN_PRESETS` in `CameraPanel.tsx`: Poursuite, Oiseau, Orbite, Cinéma, Drone haut, Satellite), the others under « Plus de préréglages », the current one always in the first grid, plus a « Personnalisé » tile when the settings match no preset) in
   `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s, 60 by default) = duration at ×1, the timeline
-  speed applies on top. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra", "Durée et rythme" and "Temps forts" sections; the
+  speed applies on top. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra" and "Durée et rythme" sections; the
   smoothing sliders as rows of « Caméra », « Lissage des virages » showing the « Auto » length for
   the first track). While paused, a camera setting change repositions the camera.
   "Cadrer la caméra pendant cet élément" (frame the camera during this item; inspector of a text or a media item): `addItemCamera` places a framing where
