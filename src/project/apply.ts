@@ -2,7 +2,7 @@
  * Bridge between project data and the app store, through the store's public actions only.
  */
 import { useMediaStore } from '../film/media'
-import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
+import { DEFAULT_PLAYBACK, DEFAULT_SETTINGS, forgetImageryChoice, useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import type { LoadedProject } from './document'
 
@@ -67,4 +67,19 @@ export function applyProject(project: LoadedProject): void {
   // (all synchronous: the scene never sees the intermediate source)
   applySettings(project.settings)
   store.setSpeed(project.speed)
+}
+
+/**
+ * Replace the open project by an empty one, with the default settings and playback speed (« Fermer le projet »,
+ * « Nouveau projet »): no track, so the home screen shows. The settings are set as a whole, not key by key through
+ * `setSetting`: the default imagery is not a choice of the user, the next import may still pick the regional one.
+ */
+export function applyEmptyProject(): void {
+  const store = useAppStore.getState()
+  useMediaStore.getState().replace({})
+  store.clearTracks()
+  // the selected block belonged to the film being closed
+  useAppStore.setState({ settings: { ...DEFAULT_SETTINGS }, filmSelection: null })
+  store.setSpeed(DEFAULT_PLAYBACK.speed)
+  forgetImageryChoice()
 }
