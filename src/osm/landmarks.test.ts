@@ -7,6 +7,7 @@ import {
   landmarkLabels,
   landmarkPriority,
   landmarkText,
+  movedInRank,
   newLandmarkIds,
   parseEle,
   parsePopulation,
@@ -17,7 +18,9 @@ import {
   withHidden,
   withLandmarkDefaults,
   withPlaceSize,
+  withRank,
 } from './landmarks'
+import type { Landmark } from './landmarks'
 import type { OsmFeature } from './overpass'
 
 /** Straight track going south along 6.78° E from 45.90° N, 1 km per point (≈ 11 km). */
@@ -161,6 +164,15 @@ describe('buildLandmarks', () => {
     expect(out[1].alongM).toBeLessThan(out[2].alongM)
   })
 
+  it('leaves out the dismissed ones, others take their place under the cap', () => {
+    const features = [
+      feature({ id: 'node/1', kind: 'peak', name: 'Mont A', lat: 45.9 - 1 * 0.009, lon: 6.785 }),
+      feature({ id: 'node/2', kind: 'peak', name: 'Mont B', lat: 45.9 - 3 * 0.009, lon: 6.785 }),
+      feature({ id: 'node/3', kind: 'peak', name: 'Mont C', lat: 45.9 - 5 * 0.009, lon: 6.785 }),
+    ]
+    expect(buildLandmarks(features, PATH, { ...noPlaces, dismissedIds: ['node/2'] }, 2).map((l) => l.id)).toEqual(['node/1', 'node/3'])
+  })
+
   it('keeps one landmark per name nearby, the most important one', () => {
     const features = [
       feature({ id: 'node/1', kind: 'pass', name: 'Col de Voza', lat: 45.9 - 3 * 0.009 }),
@@ -257,6 +269,8 @@ describe('withLandmarkDefaults', () => {
       places: { city: true, village: true, hamlet: true },
       hiddenIds: [],
       seenIds: [],
+      rank: [],
+      dismissedIds: [],
     })
     expect(withLandmarkDefaults({ ...older, hiddenIds: ['node/1'] })).toMatchObject({ hiddenIds: ['node/1'] })
     expect(withLandmarkDefaults({ ...older, seenIds: ['node/1', 2] })).toMatchObject({ seenIds: ['node/1'] })
@@ -298,6 +312,36 @@ describe('splitHidden', () => {
     const { shown, hidden } = splitHidden(list, ['way/3', 'node/1', 'node/99'])
     expect(shown.map((l) => l.id)).toEqual(['node/2'])
     expect(hidden.map((l) => l.id)).toEqual(['node/1', 'way/3'])
+  })
+})
+
+describe('withRank / movedInRank', () => {
+  const at = (id: string, priority: number) => ({ id, priority }) as Landmark
+  const list = [at('a', 30), at('b', 20), at('c', 25), at('d', 10)]
+
+  it('gives the importances of the ranked ones back in the order of the rank, the others keep theirs', () => {
+    const out = withRank(list, ['b', 'a', 'x'])
+    const byId = Object.fromEntries(out.map((l) => [l.id, l.priority]))
+    expect(out.map((l) => l.id)).toEqual(['a', 'b', 'c', 'd'])
+    expect(byId.b).toBe(30)
+    expect(byId.a).toBeCloseTo(20, 2)
+    expect(byId.b).toBeGreaterThan(byId.a)
+    expect(byId.c).toBe(25)
+    expect(byId.d).toBe(10)
+    expect(withRank(list, [])).toEqual(list)
+  })
+
+  it('keeps the order strictly even between landmarks of the same importance', () => {
+    const out = withRank([at('a', 10), at('b', 10)], ['b', 'a'])
+    expect(out[1].priority).toBeGreaterThan(out[0].priority)
+  })
+
+  it('moves an id one place, not beyond the ends', () => {
+    expect(movedInRank(['a', 'b', 'c'], 'b', true)).toEqual(['b', 'a', 'c'])
+    expect(movedInRank(['a', 'b', 'c'], 'b', false)).toEqual(['a', 'c', 'b'])
+    expect(movedInRank(['a', 'b', 'c'], 'a', true)).toEqual(['a', 'b', 'c'])
+    expect(movedInRank(['a', 'b', 'c'], 'c', false)).toEqual(['a', 'b', 'c'])
+    expect(movedInRank(['a', 'b'], 'z', true)).toEqual(['a', 'b'])
   })
 })
 

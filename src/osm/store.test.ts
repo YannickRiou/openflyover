@@ -43,10 +43,10 @@ const NO_PLACES: LandmarkSettings = { ...DEFAULT_LANDMARK_SETTINGS, kinds: { ...
 
 /** A fetcher whose promises the test settles by hand. */
 function deferredFetcher() {
-  const calls: { trackId: string; resolve: (f: OsmFeature[]) => void; reject: (e: unknown) => void; signal?: AbortSignal }[] = []
+  const calls: { trackId: string; resolve: (f: OsmFeature[]) => void; reject: (e: unknown) => void; signal?: AbortSignal; refresh?: boolean }[] = []
   const fetchFeatures = vi.fn(
-    (track: Track, signal?: AbortSignal) =>
-      new Promise<OsmFeature[]>((resolve, reject) => calls.push({ trackId: track.id, resolve, reject, signal })),
+    (track: Track, signal?: AbortSignal, _deps?: unknown, refresh?: boolean) =>
+      new Promise<OsmFeature[]>((resolve, reject) => calls.push({ trackId: track.id, resolve, reject, signal, refresh })),
   )
   return { calls, deps: { fetchFeatures } }
 }
@@ -109,6 +109,23 @@ describe('syncLandmarks', () => {
     calls[1].resolve(FEATURES)
     await flush()
     expect(useLandmarkStore.getState()).toMatchObject({ status: 'ready', message: null })
+  })
+
+  it('refresh asks again for every track even when its features are known, and passes the flag on', async () => {
+    const { calls, deps } = deferredFetcher()
+    const track = makeTrack('a')
+    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps })
+    calls[0].resolve(FEATURES)
+    await flush()
+    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps })
+    expect(deps.fetchFeatures).toHaveBeenCalledTimes(1)
+    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps, refresh: true })
+    expect(deps.fetchFeatures).toHaveBeenCalledTimes(2)
+    expect(calls[1].refresh).toBe(true)
+    expect(useLandmarkStore.getState().status).toBe('loading')
+    calls[1].resolve(FEATURES)
+    await flush()
+    expect(useLandmarkStore.getState().status).toBe('ready')
   })
 
   it('handles several tracks, forgets a removed one and cancels on disable', async () => {

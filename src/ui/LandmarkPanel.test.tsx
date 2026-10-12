@@ -5,7 +5,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_FILM } from '../film/model'
 import type { Film } from '../film/model'
 import { buildTrack } from '../import/stats'
-import { splitHidden } from '../osm/landmarks'
+import { splitHidden, withRank } from '../osm/landmarks'
 import type { Landmark, LandmarkSettings } from '../osm/landmarks'
 import { useLandmarkStore } from '../osm/store'
 import { getSettingsHistory } from '../project/history'
@@ -13,14 +13,15 @@ import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { LandmarkPanel } from './LandmarkPanel'
 
 /** the landmarks "found" for the track, filtered by distance and split by hidden id like the store does */
-const found = vi.hoisted(() => ({ list: [] as Landmark[] }))
+const found = vi.hoisted(() => ({ list: [] as Landmark[], refreshed: 0 }))
 vi.mock('../osm/store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../osm/store')>()
   return {
     ...actual,
-    syncLandmarks: (tracks: readonly { id: string }[], settings: LandmarkSettings) => {
-      const near = found.list.filter((l) => l.distanceM <= settings.maxDistanceM)
-      const { shown, hidden } = splitHidden(near, settings.hiddenIds)
+    syncLandmarks: (tracks: readonly { id: string }[], settings: LandmarkSettings, options?: { refresh?: boolean }) => {
+      if (options?.refresh) found.refreshed++
+      const near = found.list.filter((l) => l.distanceM <= settings.maxDistanceM && !settings.dismissedIds.includes(l.id))
+      const { shown, hidden } = splitHidden(withRank(near, settings.rank), settings.hiddenIds)
       const id = tracks[0].id
       actual.useLandmarkStore.setState({ status: 'ready', landmarks: { [id]: shown }, hidden: { [id]: hidden } })
     },
@@ -52,6 +53,7 @@ const POI = { id: 'poi-1', lon: 6.8, lat: 45.8 + 4000 / M_PER_DEG_LAT, name: 'Pi
 
 async function mount(film: Film) {
   found.list = [PASS, LAKE]
+  found.refreshed = 0
   // no landmark titles: their making on each publication is a step of its own
   useAppStore.setState({ tracks: [track], settings: { ...DEFAULT_SETTINGS, film: { ...film, landmarkTitles: false } } })
   getSettingsHistory().clear()
@@ -69,14 +71,11 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
     useLandmarkStore.setState({ status: 'idle', landmarks: {}, hidden: {}, features: {} })
   })
 
-  it('lists both along the track; « Arrêt » makes and removes a stop there', async () => {
+  it('lists both, points of interest first; « Arrêt » makes and removes a stop there', async () => {
     const { host, root, stopBox } = await mount({ ...DEFAULT_FILM, pois: [POI] })
     const names = [...host.querySelectorAll('.place')].map((li) => li.querySelector('.landmark__name')?.textContent ?? li.querySelector('input')?.value)
-    expect(names).toEqual([
-      'Col de Voza',
-      'Lac Vert',
-      'Pique-nique',
-    ])
+    // the points of interest first, then the landmarks by importance (equal here: along the track)
+    expect(names).toEqual(['Pique-nique', 'Col de Voza', 'Lac Vert'])
     // the pass has its automatic stop
     expect(stopBox('Col de Voza').checked).toBe(true)
     await act(async () => stopBox('Lac Vert').click())
@@ -87,6 +86,31 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
     await act(async () => stopBox('Col de Voza').click())
     film = useAppStore.getState().settings.film
     expect(film.stops.map((s) => s.label)).toEqual(['Lac Vert', 'Pique-nique'])
+    act(() => root.unmount())
+  })
+
+  it('the arrows rank the landmarks; the cross of a hidden one dismisses it until « Relancer la recherche »', async () => {
+    const { host, root, button } = await mount({ ...DEFAULT_FILM })
+    const names = () => [...host.querySelectorAll('.place .landmark__name')].map((n) => n.textContent)
+    const click = (label: string) => act(async () => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click())
+    expect(names()).toEqual(['Col de Voza', 'Lac Vert'])
+    expect(host.querySelector<HTMLButtonElement>('button[aria-label="Monter « Col de Voza » dans le classement"]')!.disabled).toBe(true)
+    await click('Descendre « Col de Voza » dans le classement')
+    expect(useAppStore.getState().settings.landmarks.rank).toEqual(['way/2', 'node/1'])
+    expect(names()).toEqual(['Lac Vert', 'Col de Voza'])
+
+    // no cross on a shown landmark
+    expect(host.querySelector('button[aria-label="Écarter « Lac Vert »"]')).toBeNull()
+    await click('Masquer « Lac Vert »')
+    await click('Écarter « Lac Vert »')
+    const { landmarks } = useAppStore.getState().settings
+    expect(landmarks).toMatchObject({ dismissedIds: ['way/2'], hiddenIds: [], rank: ['node/1'] })
+    expect(names()).toEqual(['Col de Voza'])
+
+    await act(async () => button('Relancer la recherche').click())
+    expect(found.refreshed).toBe(1)
+    expect(useAppStore.getState().settings.landmarks.dismissedIds).toEqual([])
+    expect(names()).toEqual(['Col de Voza', 'Lac Vert'])
     act(() => root.unmount())
   })
 
