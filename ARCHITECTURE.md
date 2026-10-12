@@ -66,7 +66,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/weather/*` | weather of the outing (archive, or forecast for a planned outing) | `fetchOutingWeather(path, opts)`, `sampleLocations`, `outingDays` (source and days), `forecastCacheKey`, `createWeatherCache`, `WeatherError`, `OPEN_METEO_ATTRIBUTION`; `weatherAt(series, timeMs, lon, lat)`, `weatherAtTimes(series, timesMs, lon, lat)`, `weatherWidgetData(series, path, progress)`, `summarizeOuting`, `describeWeatherCode`, `windFromLabel`; `useWeatherStore`, `syncWeather` |
 | `src/plan/timing.ts` | estimated times of a planned outing (see "Planned outing") | `PLAN_ACTIVITIES`, `PLAN_ACTIVITY_LABELS`, `PACE_RANGE`, `OutingPlan`, `stretchHours`, `estimateElapsedS`, `withEstimatedTimes`, `withoutTimes`, `planActivityOf`, `localDepartureMs`, `localDayAndTime`, `localUtcOffsetMin` |
 | `src/osm/region.ts` + `src/scene/regionMesh.ts` + `src/scene/RegionHighlight.tsx` | administrative region of the outing, framed and highlighted by the region view (see "Film and timeline", Camera) | `regionName`, `regionCandidatesQuery`, `regionKind`, `REGION_KIND_LABELS`, `parseRegionCandidates`, `containingRegions`, `chooseRegion`, `candidateId`, `regionGeometryQuery`, `parseRegionGeometry`, `simplifyRings`, `fetchRegion`, `regionFrame`, `REGION_MIN_RATIO`, `REGION_MAX_POINTS`; `useRegionStore`, `syncRegion`, `holdRegion`; pure, tested: `buildRegionMesh`, `ringDepths`, `labelPoint`, `ringSegments`, `LABEL_GRID`; `RegionHighlight` |
-| `src/osm/*` | OpenStreetMap landmarks | `OVERPASS_ENDPOINTS`, `OSM_ATTRIBUTION`, `corridorBoxes`, `buildOverpassQuery`, `trackQuery`, `parseOverpass`, `runOverpassQuery`, `fetchTrackFeatures`; `parseEle`, `projectOnPath`, `landmarkPriority`, `landmarkText`, `buildLandmarks`, `landmarkLabels`, `splitHidden`, `DEFAULT_LANDMARK_SETTINGS`, `withLandmarkDefaults`, `LANDMARK_DISTANCE_RANGE`, `KIND_LABELS`, `KIND_BADGES`; `useLandmarkStore`, `syncLandmarks`, `resetLandmarkStore` |
+| `src/osm/*` | OpenStreetMap landmarks | `OVERPASS_ENDPOINTS`, `OSM_ATTRIBUTION`, `corridorBoxes`, `buildOverpassQuery`, `trackQuery`, `parseOverpass`, `runOverpassQuery`, `fetchTrackFeatures`; `parseEle`, `projectOnPath`, `landmarkPriority`, `landmarkText`, `buildLandmarks`, `landmarkLabels`, `splitHidden`, `DEFAULT_LANDMARK_SETTINGS`, `withLandmarkDefaults`, `PLACE_SIZES`, `PLACE_SIZE_LABELS`, `placeSizeOf`, `withPlaceSize`, `parsePopulation`, `pathBoxDistanceM`, `PLACE_SHARE`, `LANDMARK_DISTANCE_RANGE`, `KIND_LABELS`, `KIND_BADGES`; `useLandmarkStore`, `syncLandmarks`, `resetLandmarkStore` |
 | `src/overlay/*` | film overlay | `drawOverlay(ctx, frame, settings, size, assets)`, `prepareOverlayTrack(track, weather?)`, `overlayFrameAt(data, progress)`, `prepareOverlayFilm`, `overlayFilmFrameAt`, `stageCardAt`, `stageDipAt`, `createOverlayFilmCache`, `cardOpacityAt`, `miniMapOutline`, `DEFAULT_OVERLAY`, `isValidOverlay`, `withOverlayDefaults`, `withOverrides`, `resolveOverlayTheme`, `leaderboardRows`, `loadLogo`, `loadOverlayFonts`, `createOverlayDrawer` (bridge to the export), `OverlayCanvas` |
 | `src/export/*` | video export | `buildFrameSchedule`, `VIDEO_ASPECTS`, `VIDEO_RESOLUTIONS`, `videoSize`, `createVideoEncoder(canvas, options)`, `ExportCanceledError`, `nativeEncoder.ts` (desktop ffmpeg): `exportCodec`, `createExportEncoder`, `createNativeVideoEncoder`, `wavFile`, `settle`, `renderSettledFrame`, `composeFrame`, `composeOverlayFrame`, `fillSky` (export sky, reused by the poster), `useExportStore`, `videoFileName`, `overlayBaseName`, `ALPHA_CANDIDATES`, `chooseVideoDestination`, `warnsInMemory`, `filmRate`, `ExportController`; `batch.ts` (batch rendering): pure, tested: `buildBatchJobs`, `formatKey`, `batchBaseName`, `estimateBatch`, `runBatch`, `batchProgressLabel`, `batchSummary`; `exportJob`, `useBatchStore` |
 | `src/poster/*` | poster (see "Poster") | pure, tested: `PosterSettings`, `DEFAULT_POSTER`, `POSTER_FORMATS`, `posterSize`, `isValidPoster`, `withPosterDefaults`; `posterContent`, `posterFigure`, `availableFigures`, `posterStats`, `totalStats`, `trackLine`, `POSTER_LIST_MAX`; `posterLayout` (boxes), `fitText`, `fitLines`, `fitTrackList`, `wrapText`, `truncate`; `drawPoster`, `coverCrop`, `POSTER_THEMES`, `POSTER_FONTS`; `framingPath`, `planFlatMap` (`view.ts`); not pure: `renderFlatMap` (`view.ts`), `currentPosterContent`, `startPoster`, `usePosterPreview`, `previewKey` (`export.ts`), `PosterPanel` |
@@ -1444,7 +1444,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   "Temps" (time) counter shows "≈" before an estimated time (`OverlayTrackStats.timesEstimated`). A timestamped track
   is not re-estimated (its real times would be lost).
 - **Project**: `timesEstimated: true` saved with the track, read back only on a timestamped track; old projects
-  unchanged.
+  unchanged. `elevationEstimated` is saved the same way ("Elevation from the terrain").
 - **Weather forecast** (`src/weather/openMeteo.ts`): `outingDays` chooses the source, the archive if the outing ends
   today (UTC) at the latest, otherwise `api.open-meteo.com/v1/forecast` (same parameters and hourly variables, same
   places, same response), up to the 16th day (today included, end trimmed to that day); beyond: "Sortie dans plus de
@@ -1473,6 +1473,31 @@ it, know at what time you will pass each point, where the sun will be and what t
   water) when it has no name, and named `natural=spring`), off by default for the film and the labels; an old project
   receives the type through `withLandmarkDefaults`.
 
+
+## Elevation from the terrain (« Calculer l'altitude »)
+
+`src/terrain/elevation.ts`, pure apart from the loader. A track whose points lack elevation (routes drawn on a map, some
+exports) gets it from the terrain source of the settings.
+
+- **Tiles**: read at z12 for 512 px sources and z13 for 256 px ones (about 14 m per pixel at 45° N), only under the
+  points without elevation and the recorded point on each side of a gap. They go through a `createTileFetcher`
+  (4 requests, offline packs first, then the network and its HTTP cache), are decoded with `decodeDem` and sampled
+  bilinearly (`sampleGrid`); each grid is dropped once its points are read. A 4xx answer means no data there; any other
+  failure rejects, nothing is half-computed.
+- **`withTerrainElevation(track, sampler)`** fills the missing points, shifting each gap onto the recorded points around
+  it (offset blended by distance, so no step and no false D+), recomputes the stats and sets `Track.elevationEstimated`
+  (`'all'`: the file had none; `'gaps'`: gaps filled).
+- **At import** (`importFiles`, `ImportSink.completeElevation`, default `completeImportedElevations` with the settings'
+  terrain source): automatic, before the tracks are added, for a track needing at most `AUTO_ELEVATION_MAX_TILES` = 64
+  tiles, the whole batch within 15 s. Measured with Mapterhorn z12 on straight lines at 45.9° N: 20 km → 4 tiles,
+  100 km → 16, 200 km → 30, 540 km → 80; about 150 KB per tile, so 64 tiles ≈ 10 MB, about what the 3D view loads when
+  it opens. A longer, failing or too slow track comes without elevation, and its card offers « Calculer l'altitude ».
+- **Track card**: chip « altitude calculée » / « altitude complétée », « Effacer l'altitude » only for `'all'` (for
+  `'gaps'` the computed points cannot be told apart after a reload).
+- **Project**: `elevationEstimated` saved with the track, read back only when its value is valid and the track has
+  elevation; old projects unchanged. The Habillage altitude and D+ counters turn on by themselves (`stats.maxEle`).
+- **Limits**: bridges and tunnels follow the ground; times estimated before the calculation are not re-estimated;
+  « Un film par trace » and chaining do not compute it or keep the flag.
 ## Climbs and labels
 
 - **Climbs** (`src/flyover/climbs.ts`) on the **recorded** elevations of the first track: resampling every 20 m,
@@ -1511,16 +1536,22 @@ it, know at what time you will pass each point, where the sun will be and what t
   `docs/sources.md`. The request must stay "simple" (POST `application/x-www-form-urlencoded`): the CORS preflight
   returns 406.
 - **One request per track** (`src/osm/overpass.ts`): track bounding box widened by 3 km (several consecutive boxes
-  beyond a 40 km footprint), 10 tagged and named statements (summits / saddles, passes, huts, lakes, waterfalls, villages and
-  hamlets, viewpoints, glaciers, springs; drinking water even without a name), `out center` to bring ways and relations down to a point. The `around:` form on a
+  beyond a 40 km footprint), 10 tagged and named statements (summits / saddles, passes, huts, lakes, waterfalls, places (cities,
+  towns, villages, hamlets; nodes, ways and relations), viewpoints, glaciers, springs; drinking water even without a name),
+  `out tags bb` (ways and relations reduced to their bounding box, positioned at its middle; the box is kept for places as
+  `OsmFeature.area`, with the raw `population` tag). The `around:` form on a
   polyline exceeds the public server's timeout; the distance to the track is computed locally, so changing the types or the
   distance never triggers a new request. Queue (one request at a time), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
   `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
   error `remark` (timeout exceeded) is an error.
 - **Pure post-processing** (`src/osm/landmarks.ts`): projection onto the path → distance and offset, filter by type and distance
-  (`settings.landmarks`, default summits + passes + huts + lakes within 1.5 km), elevation from `ele` (free formats), priority in
-  [0, 50) below waypoints and climbs (pass crossed > high and nearby summit > neighboring pass > hut > lake > waterfall / viewpoint /
-  glacier > place), deduplication by name within 1 km, cap of 40 landmarks, label "Nom · 1 653 m" for summits and passes.
+  (`settings.landmarks`, default summits + passes + huts + lakes + places (cities, villages, hamlets) within 1.5 km;
+  `settings.landmarks.places { city, village, hamlet }` filters the places, « Villes » = city + town), elevation from `ele`
+  (free formats), priority in [0, 50) below waypoints and climbs (pass crossed > high and nearby summit > neighboring pass > hut >
+  lake > waterfall / viewpoint / glacier > place). A place mapped as an area is measured to its bounding box (0 when crossed);
+  places rank by `population` when tagged (3·log10 − 6, in [0, 10]), else city 9 > town 6 > village 3 > hamlet 0.
+  Deduplication by name within 1 km or inside the other's box, cap of 40 landmarks with `PLACE_SHARE` (25 %) of them kept for
+  places when there are enough (also for the 3D labels), label "Nom · 1 653 m" for summits and passes.
 - **State** (`src/osm/store.ts`): `useLandmarkStore` driven by `syncLandmarks` from `LandmarkPanel`; the landmarks of all
   tracks are published to the 3D labels through `setLabelSource('osm', …)` (empty list when disabled). The panel list follows
   the first track (click = `setProgress`). The same effect rebuilds the film's slow-downs and titles on each publication
@@ -1530,6 +1561,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   stops, titles) from the hidden ones (`hidden`, listed greyed out and struck through in the panel so they can be shown again;
   "Réafficher tous les repères masqués" empties the list), without a new request. Projects saved without `hiddenIds` are
   completed on load (`withLandmarkDefaults`); ids that are not strings invalidate the setting.
+  Projects saved without `places` get every size (`withLandmarkDefaults`); a saved `kinds.place` is kept.
 
 ## Points of interest
 
