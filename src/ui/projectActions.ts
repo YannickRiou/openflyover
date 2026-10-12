@@ -1,6 +1,6 @@
 /**
- * File actions shared by the top bar, its keyboard shortcuts, the window drop and the panels: save / open the project
- * file, close it or start a new one, import GPX / FIT tracks and the sample, chain tracks into one, save an export on
+ * File actions shared by the top bar, its keyboard shortcuts, the window drop and the panels: save (in place, or as) and open
+ * the project file, close it or start a new one, import GPX / FIT tracks and the sample, chain tracks into one, save an export on
  * the desktop (src/platform).
  * Outcomes are shown as toasts.
  */
@@ -9,10 +9,11 @@ import type { Track } from '../core/types'
 import { useMediaStore } from '../film/media'
 import { importFile, importText } from '../import'
 import { chainTracks, followEachOther, replaceByChain } from '../import/chain'
-import { getPlatform } from '../platform'
+import { fileTargetOf, getPlatform } from '../platform'
 import type { OpenFilesOptions, ProjectEntry } from '../platform'
 import { applyEmptyProject, applyProject } from '../project/apply'
 import { parseProject, projectFileName, serializeProject } from '../project/document'
+import { PROJECT_EXTENSION, decodeProjectFile, encodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { importFiles } from './importFlow'
@@ -22,23 +23,41 @@ import { effectiveProjectName, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
 import type { ToastInput } from './toast'
 
-/** Save the project as `<nom>.openflyover.json` (download, or save dialog on the desktop) and mark it saved. */
-export async function saveProject(): Promise<void> {
+/**
+ * Write the project file and mark the project saved. `ask`: always through the dialog (« Enregistrer sous… »), else
+ * where it was last saved or opened from when the platform kept that place (`projectFile`), else through the dialog or,
+ * on browsers that have none, as a download. The place is remembered for the next save; a failed write says why and
+ * leaves the project « Modifié ».
+ */
+async function writeProject(ask: boolean): Promise<void> {
   const state = useAppStore.getState()
   const name = effectiveProjectName(state.projectName, state.tracks[0]?.name)
   const text = serializeProject(state, name, useMediaStore.getState().table)
   try {
-    const outcome = await getPlatform().saveFile(new Blob([text], { type: 'application/json' }), {
+    const outcome = await getPlatform().saveDocument(() => encodeProjectFile(text), {
       fileName: projectFileName(name),
-      filters: [{ name: 'Projet OpenFlyover', extensions: ['json'] }],
+      filters: [{ name: 'Projet OpenFlyover', extensions: [PROJECT_EXTENSION] }],
+      target: state.projectFile,
+      ask,
     })
     if (!outcome.saved) return
+    state.setProjectFile(outcome.target ?? null)
     state.markProjectSaved()
     showToast({ kind: 'success', text: `Projet enregistré : ${outcome.fileName}` })
   } catch (err) {
     const reason = errorMessage(err)
     showToast({ kind: 'error', text: `Impossible d'enregistrer le projet : ${reason}` })
   }
+}
+
+/** « Enregistrer » (Ctrl+S): the file the project was saved to or opened from is written again without a dialog. */
+export function saveProject(): Promise<void> {
+  return writeProject(false)
+}
+
+/** « Enregistrer sous… » (Ctrl+Maj+S): always asks where; the project is then saved there from now on. */
+export function saveProjectAs(): Promise<void> {
+  return writeProject(true)
 }
 
 /** Desktop: an export result (object URL) through the save dialog; says where it went, or why it failed. */
@@ -60,13 +79,15 @@ export async function openProject(file: File, entry: ProjectEntry | null = null,
   // a change of the project being replaced, still waiting for its autosave
   await flushAutosave()
   try {
-    const project = parseProject(await file.text())
+    const project = parseProject(await decodeProjectFile(file))
     applyProject(project)
     getSettingsHistory().clear()
     const store = useAppStore.getState()
     const name = entry?.name ?? project.name
     store.setProjectName(name)
     store.markProjectSaved()
+    // a file opened from disk is written again by « Enregistrer » where the platform kept its place
+    store.setProjectFile(entry ? null : fileTargetOf(file))
     setOpenEntry(entry?.id ?? null)
     const opened = `Projet « ${effectiveProjectName(name, store.tracks[0]?.name)} » ${reopened ? 'rouvert' : 'ouvert'}`
     if (project.warnings.length > 0) showToast({ kind: 'info', text: `${opened}.\n${project.warnings.join('\n')}` })
@@ -75,6 +96,11 @@ export async function openProject(file: File, entry: ProjectEntry | null = null,
     const reason = errorMessage(err)
     showToast({ kind: 'error', text: `Impossible d'ouvrir « ${file.name} » : ${reason}` })
   }
+}
+
+/** A file the system asked the app to open (double-click on a project) that could not be read. */
+export function reportOpenFailure(fileName: string, reason: string): void {
+  showToast({ kind: 'error', text: `Impossible d'ouvrir « ${fileName} » : ${reason}` })
 }
 
 /** The answer to « Fermer sans enregistrer ? »: save the file first, close anyway, or keep the project open. */
@@ -92,6 +118,7 @@ async function closeOpenProject(ask: () => Promise<CloseAnswer>): Promise<boolea
   const store = useAppStore.getState()
   store.setProjectName('')
   store.markProjectSaved()
+  store.setProjectFile(null)
   setOpenEntry(null)
   return true
 }
@@ -111,11 +138,17 @@ export async function newProject(ask: () => Promise<CloseAnswer>): Promise<void>
 let reopening: Promise<void> | null = null
 
 /**
- * At start-up, once: the « Mes projets » entry open when the app was last left (a phone may have discarded the page),
- * unless the desktop app was started for a batch render (`rendering`) or a track or project came first.
+ * At start-up, once: the files the system started the app with (`openedByOs`: double-click on a project, desktop), else
+ * the « Mes projets » entry open when the app was last left (a phone may have discarded the page), unless the desktop
+ * app was started for a batch render (`rendering`) or a track or project came first.
  */
-export function reopenLastProject(rendering: Promise<boolean>): Promise<void> {
+export function reopenLastProject(rendering: Promise<boolean>, openedByOs: () => Promise<File[]> = async () => []): Promise<void> {
   reopening ??= rendering.then(async (busy) => {
+    const given = busy ? [] : await openedByOs().catch(() => [])
+    if (given.length > 0) {
+      await openFiles(given)
+      return
+    }
     const last = busy ? null : await lastOpenProject()
     const { tracks, loading } = useAppStore.getState()
     if (last && tracks.length === 0 && !loading) await openProject(last.file, last.entry, true)
@@ -150,15 +183,16 @@ export async function chooseTracksToImport(): Promise<void> {
 
 /** « Ouvrir un projet… » : one project file (dialog on the desktop). */
 export async function chooseProjectToOpen(): Promise<void> {
-  const files = await pickFiles({ filters: [{ name: 'Projet OpenFlyover', extensions: ['json'] }] })
+  const files = await pickFiles({ filters: [{ name: 'Projet OpenFlyover', extensions: [PROJECT_EXTENSION, 'json'] }], rewritable: true })
   if (files.length > 0) await openFiles(files)
 }
 
 /** « Ouvrir » : file picker (dialog on the desktop) for tracks and a project. */
 export async function chooseFilesToOpen(): Promise<void> {
   const files = await pickFiles({
-    filters: [{ name: 'Traces et projets', extensions: ['gpx', 'fit', 'json'] }],
+    filters: [{ name: 'Traces et projets', extensions: ['gpx', 'fit', PROJECT_EXTENSION, 'json'] }],
     multiple: true,
+    rewritable: true,
   })
   if (files.length > 0) await openFiles(files)
 }

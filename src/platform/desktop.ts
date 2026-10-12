@@ -7,8 +7,8 @@
  * under `<app data>/tiles/`, « Mes projets » under `<app data>/projects/` (the only folders the capability adds to the
  * fs scope). Closing the window waits for `guardClose` (last write, question when something would be lost).
  */
-import { droppedFiles, fileNameOf, keyValueStore, mimeTypeOf, saveFilters } from './platform'
-import type { Capabilities, FileFilter, Platform, SaveFileOptions, SaveOutcome, WritableFile } from './platform'
+import { droppedFiles, fileNameOf, keyValueStore, mimeTypeOf, rememberFileTarget, saveFilters } from './platform'
+import type { Capabilities, DocumentOutcome, FileFilter, FileTarget, Platform, SaveDocumentOptions, SaveFileOptions, SaveOutcome, WritableFile } from './platform'
 import { createDesktopLibraryFiles, createProjectLibrary } from './projectLibrary'
 import { createDesktopTileCache } from './tileCache'
 
@@ -20,6 +20,54 @@ async function saveBlob(data: Blob, options: SaveFileOptions): Promise<SaveOutco
   if (!path) return { saved: false }
   await writeFile(path, new Uint8Array(await data.arrayBuffer()))
   return { saved: true, fileName: fileNameOf(path) }
+}
+
+/** Target of a file the desktop app can write again: its path (in the fs scope: picked in a dialog, or opened by the OS). */
+export interface DesktopFileTarget extends FileTarget {
+  readonly path: string
+}
+
+const desktopTarget = (path: string): DesktopFileTarget => ({ fileName: fileNameOf(path), path })
+
+type ReadFile = (path: string) => Promise<BlobPart>
+
+/** The file at `path` as a `File` that remembers where it came from (`fileTargetOf`). */
+async function fileAt(path: string, readFile: ReadFile): Promise<File> {
+  const name = fileNameOf(path)
+  const file = new File([await readFile(path)], name, { type: mimeTypeOf(name) })
+  rememberFileTarget(file, desktopTarget(path))
+  return file
+}
+
+/** The files at `paths` (each remembers its path), the fs plugin loaded once. */
+export async function readPathsAsFiles(paths: readonly string[]): Promise<File[]> {
+  if (paths.length === 0) return []
+  const { readFile } = await import('@tauri-apps/plugin-fs')
+  return Promise.all(paths.map((path) => fileAt(path, readFile)))
+}
+
+/**
+ * `saveDocument`: the path of the target, else the save dialog (on the folder of the target when asked again). A write
+ * that fails with the file gone (folder removed, drive unplugged) opens the dialog; any other failure throws.
+ */
+async function saveDocument(produce: () => Promise<Blob>, options: SaveDocumentOptions): Promise<DocumentOutcome> {
+  const [{ save }, { writeFile, exists }] = await Promise.all([import('@tauri-apps/plugin-dialog'), import('@tauri-apps/plugin-fs')])
+  const previous = (options.target as DesktopFileTarget | null | undefined)?.path
+  const ask = async () => save({ defaultPath: previous ?? options.fileName, filters: dialogFilters(saveFilters(options)) })
+  let path = previous && !options.ask ? previous : await ask()
+  if (!path) return { saved: false }
+  const bytes = new Uint8Array(await (await produce()).arrayBuffer())
+  try {
+    await writeFile(path, bytes)
+  } catch (error) {
+    // the file is still there (or that cannot be told): a real failure (disk full, access), the project stays as it was
+    if (path !== previous || options.ask || (await exists(path).catch(() => true))) throw error
+    const chosen = await ask()
+    if (!chosen) return { saved: false }
+    path = chosen
+    await writeFile(path, bytes)
+  }
+  return { saved: true, fileName: fileNameOf(path), target: desktopTarget(path) }
 }
 
 async function createWritableFile(options: SaveFileOptions): Promise<WritableFile | null> {
@@ -65,20 +113,16 @@ export function createDesktopPlatform(capabilities: Capabilities): Platform {
     capabilities,
     storage: keyValueStore(globalThis.localStorage ?? null),
     async openFiles({ filters, multiple = false }) {
-      const [{ open }, { readFile }] = await Promise.all([import('@tauri-apps/plugin-dialog'), import('@tauri-apps/plugin-fs')])
+      const { open } = await import('@tauri-apps/plugin-dialog')
       const picked = (await open({ multiple, directory: false, filters: dialogFilters(filters) })) as string | string[] | null
       const paths = picked === null ? [] : Array.isArray(picked) ? picked : [picked]
-      return Promise.all(
-        paths.map(async (path) => {
-          const name = fileNameOf(path)
-          return new File([await readFile(path)], name, { type: mimeTypeOf(name) })
-        }),
-      )
+      return readPathsAsFiles(paths)
     },
     saveFile: saveBlob,
     async saveUrl(url, options) {
       return saveBlob(await (await fetch(url)).blob(), options)
     },
+    saveDocument,
     createWritableFile,
     droppedFiles,
     tileCache: createDesktopTileCache(() => import('@tauri-apps/plugin-fs')),

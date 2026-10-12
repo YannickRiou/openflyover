@@ -1,4 +1,4 @@
-/// Commands of the app itself (video.rs, cli.rs, system.rs): each gets an `allow-…` permission, granted in capabilities/default.json.
+/// Commands of the app itself (video.rs, cli.rs, opened.rs, system.rs): each gets an `allow-…` permission, granted in capabilities/default.json.
 const COMMANDS: &[&str] = &[
     "video_available",
     "video_sound",
@@ -8,6 +8,7 @@ const COMMANDS: &[&str] = &[
     "video_cancel",
     "cli_render",
     "cli_exit",
+    "opened_files",
     "system_stats",
 ];
 

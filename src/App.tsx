@@ -5,6 +5,7 @@ import { isExportBusy, useExportStore } from './export/store'
 import { isCardItem } from './film/cards'
 import { addStop, addText, removeFilmItem } from './film/timeline'
 import { getPlatform } from './platform'
+import { takeOpenedFiles, watchOpenedFiles } from './platform/openedFiles'
 import { getSettingsHistory, installHistoryShortcuts, installSliderGestures } from './project/history'
 import { disableCard, editFilm, getFilmSource, seekKeyframe, useFilmClock } from './scene/usePacing'
 import { useAppStore } from './state/store'
@@ -22,7 +23,7 @@ import { installCloseGuard, installLibraryAutosave } from './ui/library'
 import { OverlayPanel } from './ui/OverlayPanel'
 import { PanelSection, TabWeightDot } from './ui/PanelSection'
 import { PreferencesPanel } from './ui/PreferencesPanel'
-import { chooseFilesToOpen, openFiles, reopenLastProject, saveProject } from './ui/projectActions'
+import { chooseFilesToOpen, openFiles, reopenLastProject, reportOpenFailure, saveProject, saveProjectAs } from './ui/projectActions'
 import { ProjectPanel } from './ui/ProjectPanel'
 import { LightSettings, MapSettings, WeatherSettings } from './ui/SettingsPanel'
 import { useSafeZonesStore } from './ui/SafeZones'
@@ -47,6 +48,7 @@ import { StatusBar } from './ui/StatusBar'
 import { Timeline } from './ui/Timeline'
 import { TimelineResizer } from './ui/TimelineResizer'
 import { Toaster } from './ui/Toaster'
+import { showToast } from './ui/toast'
 import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
 import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
@@ -215,8 +217,18 @@ export default function App() {
   // otherwise the project open when the app was last left comes back
   useEffect(() => {
     const rendering = getPlatform().capabilities.isDesktop ? import('./export/cliRender').then((m) => m.runCliRenderIfAsked()) : Promise.resolve(false)
-    void reopenLastProject(rendering)
+    void reopenLastProject(rendering, () => takeOpenedFiles(reportOpenFailure))
   }, [])
+
+  // desktop: a project the system opens with the app while it runs (macOS; elsewhere each file starts an instance)
+  useEffect(
+    () =>
+      watchOpenedFiles((files) => {
+        if (isExporting()) showToast({ kind: 'info', text: "Un export est en cours : le fichier n'a pas été ouvert." })
+        else void openFiles(files)
+      }, reportOpenFailure),
+    [],
+  )
 
   // remember the tab and the folded panel chosen by the user (not a fold caused by the export drawer)
   const keptCollapsed = shell.collapsed && !shell.collapsedByDock
@@ -331,8 +343,9 @@ export default function App() {
         helpDialog.current?.showModal()
       } else if (action === 'save') {
         if (!isExporting()) saveProject()
-      }
-      else if (action === 'open') {
+      } else if (action === 'save-as') {
+        if (!isExporting()) void saveProjectAs()
+      } else if (action === 'open') {
         if (!isExporting()) void chooseFilesToOpen()
       } else if (action === 'export') {
         if (!isExporting()) dispatch({ type: 'toggle-dock', narrow: isNarrow() })
@@ -571,7 +584,7 @@ export default function App() {
           <div className="drop-veil__box">
             <Icon name="upload" size={32} />
             <p className="drop-veil__title">Déposez vos traces GPX ou FIT</p>
-            <p className="drop-veil__hint">ou un projet .json</p>
+            <p className="drop-veil__hint">ou un projet .opnflvr</p>
           </div>
         </div>
       )}

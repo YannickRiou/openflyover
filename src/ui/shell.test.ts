@@ -64,6 +64,13 @@ describe('routeOpenedFiles', () => {
     expect(out.extraProjects.map((f) => f.name)).toEqual(['c.json'])
   })
 
+  it('takes .opnflvr files (any case) as projects, before or after the older .json ones', () => {
+    const out = routeOpenedFiles([{ name: 'a.gpx' }, { name: 'Tour.OPNFLVR' }, { name: 'old.openflyover.json' }, { name: 'b.opnflvr' }, { name: 'opnflvr' }])
+    expect(out.project?.name).toBe('Tour.OPNFLVR')
+    expect(out.tracks.map((f) => f.name)).toEqual(['a.gpx', 'opnflvr'])
+    expect(out.extraProjects.map((f) => f.name)).toEqual(['old.openflyover.json', 'b.opnflvr'])
+  })
+
   it('has no project for tracks only', () => {
     expect(routeOpenedFiles([{ name: 'x.gpx' }]).project).toBeNull()
   })

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Declares the project file type for the Linux desktop (shared-mime-info): without it, file managers do not map
+     .opnflvr to application/x-opnflvr, the type the .desktop entry of the app handles. To install as
+     /usr/share/mime/packages/openflyover-opnflvr.xml (see docs/installers.md). -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-opnflvr">
+    <comment>Projet OpenFlyover</comment>
+    <comment xml:lang="fr">Projet OpenFlyover</comment>
+    <magic priority="60">
+      <match type="string" offset="0" value="OPNFLVR"/>
+    </magic>
+    <glob pattern="*.opnflvr"/>
+    <!-- the icon of the application (hicolor theme), so that the document looks like the program -->
+    <icon name="openflyover"/>
+  </mime-type>
+</mime-info>

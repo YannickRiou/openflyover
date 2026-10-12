@@ -30,7 +30,7 @@ export function frameRect(width: number, height: number, aspect: number | null):
   return { left: Math.floor((width - w) / 2), top: Math.floor((height - h) / 2), width: w, height: h }
 }
 
-/** Files picked with « Ouvrir » or dropped on the window: a project (.json) is opened, everything else goes to the track importer. */
+/** Files picked with « Ouvrir » or dropped on the window: a project (.opnflvr, or an older .json) is opened, everything else goes to the track importer. */
 export interface OpenedFiles<F> {
   project: F | null
   tracks: F[]
@@ -41,7 +41,7 @@ export interface OpenedFiles<F> {
 export function routeOpenedFiles<F extends { name: string }>(files: readonly F[]): OpenedFiles<F> {
   const out: OpenedFiles<F> = { project: null, tracks: [], extraProjects: [] }
   for (const file of files) {
-    if (!/\.json$/i.test(file.name)) out.tracks.push(file)
+    if (!/\.(opnflvr|json)$/i.test(file.name)) out.tracks.push(file)
     else if (out.project) out.extraProjects.push(file)
     else out.project = file
   }

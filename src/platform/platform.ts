@@ -12,6 +12,11 @@ export interface FileFilter {
 export interface OpenFilesOptions {
   filters: readonly FileFilter[]
   multiple?: boolean
+  /**
+   * The files may be written again where they were found (a project): the website then asks for them through
+   * `showOpenFilePicker` where it exists, to keep their handles (`fileTargetOf`). Without handles, nothing changes.
+   */
+  rewritable?: boolean
 }
 
 export interface SaveFileOptions {
@@ -23,6 +28,41 @@ export interface SaveFileOptions {
 
 /** `saved: false` when the user closed the dialog; `fileName` is the name actually written. */
 export type SaveOutcome = { saved: true; fileName: string } | { saved: false }
+
+/**
+ * Where a document lives on disk, kept to write it again without a dialog: a `FileSystemFileHandle` on the website
+ * (Chrome, Edge), a path on the desktop. Opaque to the app, which only keeps it for the session (never saved in a
+ * project) and hands it back to `saveDocument`; each platform makes and reads its own kind.
+ */
+export interface FileTarget {
+  /** name of the file, shown in messages */
+  readonly fileName: string
+}
+
+export interface SaveDocumentOptions extends SaveFileOptions {
+  /**
+   * Where the document went last time: written again there, without a dialog, unless `ask`. Forgotten by the platform
+   * when it cannot be written (permission refused, file or folder gone): the dialog opens then.
+   */
+  target?: FileTarget | null
+  /** always open the dialog (« Enregistrer sous… »), on the folder of `target` */
+  ask?: boolean
+}
+
+/** `target` only where the file can be written again (handles, desktop paths): absent after a download or a share sheet. */
+export type DocumentOutcome = { saved: true; fileName: string; target?: FileTarget } | { saved: false }
+
+/** Targets of the files `openFiles` found, by file (`rewritable` picks on the website, every file on the desktop). */
+const fileTargets = new WeakMap<File, FileTarget>()
+
+export function rememberFileTarget(file: File, target: FileTarget): void {
+  fileTargets.set(file, target)
+}
+
+/** Where `file` was read from, when it can be written again there. */
+export function fileTargetOf(file: File): FileTarget | null {
+  return fileTargets.get(file) ?? null
+}
 
 /**
  * A file being written while it is produced (long films go straight to disk instead of memory). The encoder writes
@@ -133,6 +173,14 @@ export interface Platform {
   /** same for an object URL already made (export result) */
   saveUrl(url: string, options: SaveFileOptions): Promise<SaveOutcome>
   /**
+   * Write a document the user keeps working on (the project): at `options.target` without a dialog when it has one,
+   * else after a save dialog where the platform has one with handles (desktop, Chrome, Edge: the outcome then carries the
+   * new `target`), else as `saveFile` does (download, share sheet: no target, and nothing is overwritten). `produce`
+   * makes the bytes (serialising, compressing: it can take a while) and runs after the dialog, so that the website's
+   * picker still has the user's click; a failed write throws and keeps the target.
+   */
+  saveDocument(produce: () => Promise<Blob>, options: SaveDocumentOptions): Promise<DocumentOutcome>
+  /**
    * Ask where to save, then hand a file open for writing; null when the dialog is closed. Only when
    * `capabilities.canStreamToDisk`; on the web it must be called from the user's click (before any await).
    */
@@ -187,12 +235,12 @@ export function isAppleMobile(nav: { userAgent: string; maxTouchPoints?: number 
 }
 
 /**
- * `accept` of the web file input: the filters' extensions, except for tracks on iOS, where Safari greys out the
- * .gpx / .fit files it has no type for (Files, apps); the import checks the extension anyway.
+ * `accept` of the web file input: the filters' extensions, except for tracks and projects on iOS, where Safari greys
+ * out the .gpx / .fit / .opnflvr files it has no type for (Files, apps); the import checks the extension anyway.
  */
 export function pickerAccept(filters: readonly FileFilter[], appleMobile: boolean): string {
-  const tracks = filters.some((f) => f.extensions.some((e) => /^(gpx|fit)$/i.test(e)))
-  return appleMobile && tracks ? '' : acceptAttribute(filters)
+  const unknownTypes = filters.some((f) => f.extensions.some((e) => /^(gpx|fit|opnflvr)$/i.test(e)))
+  return appleMobile && unknownTypes ? '' : acceptAttribute(filters)
 }
 
 /** Filters -> `accept` attribute of a file input: ".gpx,.fit,.json". */
@@ -214,6 +262,7 @@ export function extensionOf(fileName: string): string {
 const MIME_TYPES: Record<string, string> = {
   gpx: 'application/gpx+xml',
   json: 'application/json',
+  opnflvr: 'application/x-opnflvr',
   mp4: 'video/mp4',
   webm: 'video/webm',
   mov: 'video/quicktime',
