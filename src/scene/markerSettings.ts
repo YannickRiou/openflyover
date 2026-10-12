@@ -56,27 +56,90 @@ export const TRACK_DASH_LABELS: Record<TrackDash, string> = { plein: 'Plein', ti
 export const MARKER_KINDS = ['boule', 'figurine', 'image'] as const
 export type MarkerKind = (typeof MARKER_KINDS)[number]
 
-export const MARKER_FIGURES = ['randonneur', 'alpiniste', 'coureur', 'cycliste', 'bikepacking', 'vtt', 'skieur', 'parapente', 'moto', 'voiture', 'avion'] as const
+export const MARKER_FIGURES = [
+  'randonneur',
+  'alpiniste',
+  'coureur',
+  'traileur',
+  'cycliste',
+  'vae',
+  'bikepacking',
+  'vtt',
+  'skieur',
+  'ski-rando',
+  'nageur',
+  'kayak',
+  'cavalier',
+  'parapente',
+  'moto',
+  'voiture',
+  'avion',
+] as const
 export type MarkerFigure = (typeof MARKER_FIGURES)[number]
+/** 'auto': the figure of the track's activity (`figureOfActivity`), each racer its own. */
+export const MARKER_FIGURE_CHOICES = ['auto', ...MARKER_FIGURES] as const
+export type MarkerFigureChoice = (typeof MARKER_FIGURE_CHOICES)[number]
+
+/** Look of a ball: plain disc (as before), with a contrasting ring, a soft halo, or a ring pulsing outwards. */
+export const MARKER_BALL_STYLES = ['plat', 'anneau', 'halo', 'pulsation'] as const
+export type MarkerBallStyle = (typeof MARKER_BALL_STYLES)[number]
+
+/** Outline of a figure badge: disc, map pin (its tip on the track), rounded square, or the figure alone, outlined. */
+export const MARKER_SHAPES = ['rond', 'epingle', 'carre', 'contour'] as const
+export type MarkerShape = (typeof MARKER_SHAPES)[number]
+
+/** Text under the markers: none, the track's name, or a free text on the lead (the racers show their track's name). */
+export const MARKER_LABEL_MODES = ['aucune', 'nom', 'texte'] as const
+export type MarkerLabelMode = (typeof MARKER_LABEL_MODES)[number]
 
 export interface MarkerSettings {
   kind: MarkerKind
   /** pictogram of a 'figurine' marker */
-  figure: MarkerFigure
+  figure: MarkerFigureChoice
   /** picture of an 'image' marker: small square PNG data URL, '' = none (the marker is then a ball) */
   image: string
   /** multiplier of the on-screen size (1 = the ball of a 1000-pixel frame, about 14 pixels across) */
   size: number
   /** a 'figurine' marker bounces and sways with the film time (`figureMotion`) */
   animated: boolean
+  /**
+   * '#rrggbb' of the ball and of the ring of a figure or picture badge, '' = the colour of the track. The lead
+   * marker's only: the racers keep the colour of their own track.
+   */
+  color: string
+  ballStyle: MarkerBallStyle
+  /** '#rrggbb' of the disc of a figure badge (of the figure itself with 'contour'), '' = the colour of the track */
+  figureColor: string
+  shape: MarkerShape
+  label: MarkerLabelMode
+  /** text of the 'texte' label, MARKER_LABEL_MAX_CHARS at most */
+  labelText: string
+  /** the badge stands on a stick above the track, its shadow on the ground at the foot */
+  stick: boolean
 }
 
 export const MARKER_SIZE_RANGE = { min: 0.5, max: 3, step: 0.25 } as const
 
 /** Bound on the stored picture: a 128-pixel PNG is far below, a pasted photo is not. */
 export const MARKER_IMAGE_MAX_CHARS = 300_000
+/** Longest text under a marker (a longer track name is cut with an ellipsis). */
+export const MARKER_LABEL_MAX_CHARS = 40
 
-export const DEFAULT_MARKER: MarkerSettings = { kind: 'boule', figure: 'randonneur', image: '', size: 1, animated: false }
+/** White ball, ink figure badge edged in white (`BADGE_WHITE`, `BADGE_INK` of markerBadge.ts): the look before these settings. */
+export const DEFAULT_MARKER: MarkerSettings = {
+  kind: 'boule',
+  figure: 'auto',
+  image: '',
+  size: 1,
+  animated: false,
+  color: '#FFFFFF',
+  ballStyle: 'plat',
+  figureColor: '#1C2A33',
+  shape: 'rond',
+  label: 'aucune',
+  labelText: '',
+  stick: false,
+}
 
 /** Steps of an animated figure per second of film, height of its bounce (fraction of the badge) and sway (radians). */
 const FIGURE_STEPS_PER_S = 2
@@ -92,20 +155,89 @@ export function figureMotion(timeS: number): { lift: number; tilt: number } {
   return { lift: FIGURE_LIFT * Math.abs(Math.sin(phase)), tilt: FIGURE_SWAY_RAD * Math.sin(phase) }
 }
 
+/** One pulse of a 'pulsation' ball every PULSE_PERIOD_S of film, drawn in PULSE_STEPS steps. */
+export const PULSE_PERIOD_S = 1.5
+const PULSE_STEPS = 45
+
+/** Phase in [0, 1) of the pulse at film time `timeS`: like `figureMotion`, a function of the film time alone. */
+export function pulsePhase(timeS: number): number {
+  const turns = timeS / PULSE_PERIOD_S
+  return Math.floor((turns - Math.floor(turns)) * PULSE_STEPS) / PULSE_STEPS
+}
+
+/** The marker changes with the film time alone (an animated figure, a pulsing ball): a held export frame is not reused. */
+export function markerMovesWithTime(marker: MarkerSettings): boolean {
+  return marker.kind === 'figurine' ? marker.animated : marker.ballStyle === 'pulsation'
+}
+
+/**
+ * Figure of an activity type (GPX <type>, FIT sport, Strava sport in snake case), the first pattern that matches;
+ * the hiker when unknown. Same idea as `planActivityOf` (plan/timing.ts), with more activities.
+ */
+const ACTIVITY_FIGURES: readonly (readonly [RegExp, MarkerFigure])[] = [
+  [/swim|natation|nage/, 'nageur'],
+  [/kayak|cano[eë]|paddl|raft|rowing|aviron/, 'kayak'],
+  [/backcountry|ski_?tour|skitour|ski de rando|splitboard/, 'ski-rando'],
+  [/ski|snowboard/, 'skieur'],
+  [/trail/, 'traileur'],
+  [/run|course|jog/, 'coureur'],
+  [/horse|equestr|[ée]questre|cheval/, 'cavalier'],
+  [/motorcycl|moto/, 'moto'],
+  [/\be[-_ ]?bik|lectri|\bvae\b/, 'vae'],
+  [/mountain_?bik|mtb|vtt/, 'vtt'],
+  [/gravel|cycl|bik|ride|v[ée]lo/, 'cycliste'],
+  [/mountaineer|alpinis|climb|escalade/, 'alpiniste'],
+  [/paraglid|parapente|hang_?glid|deltaplane/, 'parapente'],
+  [/fly|avion|aviation/, 'avion'],
+  [/driv|voiture/, 'voiture'],
+]
+
+export function figureOfActivity(activityType: string | undefined): MarkerFigure {
+  const type = activityType?.toLowerCase() ?? ''
+  return ACTIVITY_FIGURES.find(([pattern]) => pattern.test(type))?.[1] ?? 'randonneur'
+}
+
 export const MARKER_KIND_LABELS: Record<MarkerKind, string> = { boule: 'Boule', figurine: 'Figurine', image: 'Image' }
 
-export const MARKER_FIGURE_LABELS: Record<MarkerFigure, string> = {
+export const MARKER_FIGURE_LABELS: Record<MarkerFigureChoice, string> = {
+  auto: "Selon l'activité",
   randonneur: 'Randonneur',
   alpiniste: 'Alpiniste',
   coureur: 'Coureur',
+  traileur: 'Traileur',
   cycliste: 'Cycliste',
+  vae: 'Vélo électrique',
   bikepacking: 'Bikepacking',
   vtt: 'VTT',
   skieur: 'Skieur',
+  'ski-rando': 'Ski de rando',
+  nageur: 'Nageur',
+  kayak: 'Kayak',
+  cavalier: 'Cavalier',
   parapente: 'Parapente',
   moto: 'Moto',
   voiture: 'Voiture',
   avion: 'Avion léger',
+}
+
+export const MARKER_BALL_STYLE_LABELS: Record<MarkerBallStyle, string> = {
+  plat: 'Disque',
+  anneau: 'Anneau',
+  halo: 'Halo',
+  pulsation: 'Pulsation',
+}
+
+export const MARKER_SHAPE_LABELS: Record<MarkerShape, string> = {
+  rond: 'Rond',
+  epingle: 'Épingle',
+  carre: 'Carré arrondi',
+  contour: 'Silhouette',
+}
+
+export const MARKER_LABEL_MODE_LABELS: Record<MarkerLabelMode, string> = {
+  aucune: 'Aucune',
+  nom: 'Nom de la trace',
+  texte: 'Texte libre',
 }
 
 // ---------------------------------------------------------------------------
@@ -124,9 +256,22 @@ export function isValidTrackStyle(style: TrackStyle): boolean {
   )
 }
 
+const isTrackOrHexColor = (color: string) => color === '' || isHexColor(color)
+
 export function isValidMarker(marker: MarkerSettings): boolean {
   const image = marker.image === '' || (marker.image.startsWith('data:image/') && marker.image.length <= MARKER_IMAGE_MAX_CHARS)
-  return oneOf(MARKER_KINDS, marker.kind) && oneOf(MARKER_FIGURES, marker.figure) && image && inRange(marker.size, MARKER_SIZE_RANGE)
+  return (
+    oneOf(MARKER_KINDS, marker.kind) &&
+    oneOf(MARKER_FIGURE_CHOICES, marker.figure) &&
+    image &&
+    inRange(marker.size, MARKER_SIZE_RANGE) &&
+    isTrackOrHexColor(marker.color) &&
+    oneOf(MARKER_BALL_STYLES, marker.ballStyle) &&
+    isTrackOrHexColor(marker.figureColor) &&
+    oneOf(MARKER_SHAPES, marker.shape) &&
+    oneOf(MARKER_LABEL_MODES, marker.label) &&
+    marker.labelText.length <= MARKER_LABEL_MAX_CHARS
+  )
 }
 
 export const withTrackStyleDefaults = withDefaults(DEFAULT_TRACK_STYLE)

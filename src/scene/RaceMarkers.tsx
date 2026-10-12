@@ -1,8 +1,9 @@
 /**
  * RaceMarkers — ghost race (« course fantôme »): one marker on every track but the first, placed by
  * `raceAt(race, progress)` (see `flyover/race.ts`) for the current playback progress. Same kind of marker as the
- * lead (`settings.marker`, see `markerSprite.ts`) in the track's colour with an ink ring; a picture stays the
- * lead's own, so the racers then show their ball. Same constant screen size as the lead marker, unlit, drawn over
+ * lead (`settings.marker`, see `markerSprite.ts`: style, shape, stick) in the track's colour with an ink ring, the
+ * figure of its own activity ('auto') and its own name as label; a picture stays the lead's own, so the racers then
+ * show their ball. Same constant screen size as the lead marker, unlit, drawn over
  * the terrain but faded out behind the relief, height = (terrain ?? recorded elevation ?? 0) × exaggeration + LINE_LIFT_M like the lead marker.
  * The camera keeps following the first track (FlyoverRig); mounted after it so the progress and the camera of
  * this frame are used.
@@ -12,9 +13,10 @@ import { useFrame } from '@react-three/fiber'
 import type { Group, Sprite } from 'three'
 import { raceAt } from '../flyover/race'
 import { useAppStore } from '../state/store'
-import { headsLeft, occludeMarker, placeMarker, racerMarkerColors, reliefClearance } from './markerSprite'
+import { headsLeft, markerLook, occludeMarker, placeMarker, racerMarkerColors, reliefClearance, releaseMarkerTexture } from './markerSprite'
 import { useTerrainContext } from './TerrainLayer'
 import { LINE_LIFT_M } from './TrackLines'
+import { useFilmClock } from './usePacing'
 import { useRace } from './useRace'
 
 export function RaceMarkers() {
@@ -25,6 +27,7 @@ export function RaceMarkers() {
   const groupRef = useRef<Group>(null)
   /** marker of tracks[i + 1] */
   const markersRef = useRef<(Sprite | null)[]>([])
+  const clock = useFilmClock()
 
   useFrame(({ camera, gl }) => {
     const group = groupRef.current
@@ -36,7 +39,7 @@ export function RaceMarkers() {
     for (const marker of markers) if (marker) marker.visible = false
     // unlit colours divided by the exposure, as the track lines (see applyExposure)
     const gain = 1 / gl.toneMappingExposure
-    const look = { marker: settings.marker, image: null, allowImage: false }
+    const timeS = playback.timeS ?? clock.timeAtProgress(playback.progress)
     const clearanceAt = reliefClearance(engine, frame, settings.exaggeration)
 
     for (const racer of raceAt(race, playback.progress)) {
@@ -48,7 +51,8 @@ export function RaceMarkers() {
       const position = frame.toLocal(racer.lon, racer.lat, ground * settings.exaggeration + LINE_LIFT_M, marker.position)
       const { path } = race.tracks[racer.index]
       const mirrored = settings.marker.kind === 'figurine' && headsLeft(path, racer.distanceM, position, frame, camera)
-      placeMarker(marker, position, camera, look, racerMarkerColors(track.color), mirrored, gain)
+      const look = markerLook(settings.marker, track, false)
+      placeMarker(marker, position, camera, look, racerMarkerColors(track.color), mirrored, gain, timeS)
       occludeMarker(marker, camera, clearanceAt)
       marker.visible = true
     }
@@ -64,6 +68,8 @@ export function RaceMarkers() {
           visible={false}
           renderOrder={1.5}
           ref={(sprite) => {
+            // the texture a pulsing ball drew for itself goes with its sprite
+            if (!sprite) releaseMarkerTexture(markersRef.current[i] ?? null)
             markersRef.current[i] = sprite
           }}
         >

@@ -1,0 +1,7 @@
+/* « Plus d'options » of the « Marqueur » section (TrackMarkerSection): the folded settings, spaced like the section */
+.marker-more__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
