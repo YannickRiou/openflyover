@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Label colours**: « Couleurs des étiquettes » is now a list to pick the label type, then one colour for it (instead of a grid of unnamed swatches).
 - **Labels under the cards**: the 3D labels stay visible while the opening title and the closing card are shown (they no longer fade out behind them).
 - **Label keys**: « Habillage » › « Étiquettes 3D » has the ◀ ◇ ▶ keys to hide the 3D labels and bring them back with a fade along the track (an « Étiquettes » lane on the timeline once keyed).
 - **Climb tops in the list**: « Repères et points d'intérêt » (Carte) also lists the top of each climb (« Montée 1 · sommet 2 401 m ») with its « Arrêt », like the passes and peaks.
