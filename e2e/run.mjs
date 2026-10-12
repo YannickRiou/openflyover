@@ -231,6 +231,14 @@ const SCENARIOS = [
           },
           tab,
         )
+        // a choice with many options wraps onto rows, it never scrolls sideways (the overlay styles, #61): shown by turning
+        // the overlay on for the check
+        const overlaySwitch = tab === 'habillage' ? await page.$('#tab-panel-habillage .checkbox--switch input') : null
+        if (overlaySwitch && !(await overlaySwitch.evaluate((el) => el.checked))) await overlaySwitch.evaluate((el) => el.click())
+        else if (overlaySwitch) await overlaySwitch.dispose()
+        const overflowing = await page.$$eval(`#tab-panel-${tab} .segmented`, (groups) => groups.filter((g) => g.scrollWidth > g.clientWidth + 1).length)
+        if (overlaySwitch) await page.$eval('#tab-panel-habillage .checkbox--switch input', (el) => el.checked && el.click())
+        assert(overflowing === 0, `onglet ${tab} : ${overflowing} choix qui débordent sur le côté`)
       }
       // the « ? » button, then the « ? » key; Escape closes the dialog both times
       await page.click('button[aria-label="Raccourcis clavier"]')
