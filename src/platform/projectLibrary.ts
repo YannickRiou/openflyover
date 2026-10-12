@@ -11,8 +11,8 @@ import type { ProjectEntry, ProjectLibrary } from './platform'
 /** Named text files in one folder. */
 export interface LibraryFiles {
   names(): Promise<string[]>
-  /** null when the file does not exist */
-  read(name: string): Promise<string | null>
+  /** null when the file does not exist; a Blob so a document of tens of MB is not read as a string (`.text()` for the small files) */
+  read(name: string): Promise<Blob | null>
   /** a Blob (autosave of a project with clips) is written without making a string of it */
   write(name: string, body: string | Blob): Promise<void>
   remove(name: string): Promise<void>
@@ -80,8 +80,8 @@ export function createProjectLibrary(
   newId: () => string = () => crypto.randomUUID(),
 ): ProjectLibrary {
   const readEntry = async (id: string) => {
-    const text = await files.read(projectFileNames(id).entry)
-    const entry = text === null ? null : parseProjectEntry(text, id)
+    const blob = await files.read(projectFileNames(id).entry)
+    const entry = blob === null ? null : parseProjectEntry(await blob.text(), id)
     if (!entry) throw new Error('Ce projet n’est plus dans « Mes projets ».')
     return entry
   }
@@ -110,9 +110,9 @@ export function createProjectLibrary(
       return entry
     },
     async load(id) {
-      const text = await files.read(projectFileNames(id).document)
-      if (text === null) throw new Error('Ce projet n’est plus dans « Mes projets ».')
-      return text
+      const document = await files.read(projectFileNames(id).document)
+      if (document === null) throw new Error('Ce projet n’est plus dans « Mes projets ».')
+      return document
     },
     async rename(id, name) {
       const entry = { ...(await readEntry(id)), name: cleanProjectName(name) }
@@ -147,7 +147,8 @@ export function createDesktopLibraryFiles(loadFs: () => Promise<DesktopFs>): Lib
     async read(name) {
       const { fs, baseDir } = await fsAndOptions()
       if (!(await fs.exists(pathOf(name), { baseDir }))) return null
-      return new TextDecoder().decode(await fs.readFile(pathOf(name), { baseDir }))
+      // plugin-fs hands the bytes over whole: one copy into a Blob, then they are released
+      return new Blob([await fs.readFile(pathOf(name), { baseDir })])
     },
     async write(name, body) {
       const { fs, baseDir } = await fsAndOptions()
@@ -188,7 +189,8 @@ export function createWebLibraryFiles(
     },
     async read(name) {
       const response = await (await open()).match(keyOf(name))
-      return response ? response.text() : null
+      // backed by the cache entry, not read into the page until `.text()` is asked
+      return response ? response.blob() : null
     },
     async write(name, body) {
       if (!persistAsked) {
