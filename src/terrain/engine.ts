@@ -23,7 +23,8 @@ import type {
 import { deviceBudget } from '../core/deviceBudget'
 import { boundsIntersect, lonLatToTileFrac, tileGroundSizeM } from '../geo/mercator'
 import { decodeDem as defaultDecodeDem } from './dem'
-import { createTileFetcher, isAbortError, isNoDataError } from './fetch'
+import { errorMessage } from '../core/errors'
+import { TileFetchError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
 import { buildTileGeometry, sampleTileMesh } from './mesh'
@@ -38,6 +39,7 @@ import {
   updateCameraState,
   type QuadtreeContext,
   type SelectionParams,
+  type TileFailureCause,
 } from './quadtree'
 import { buildTileUrl } from './sources'
 
@@ -96,8 +98,11 @@ export interface EngineTuning {
   maxLoadAttempts: number
   /** wait (ms) before retrying a failed node */
   retryDelayMs: number
-  /** same during a video export, where the view waits for the retry */
+  /** attempts of a node during a video export, where the view waits for every retry (it fails the export after the last) */
+  exportMaxLoadAttempts: number
+  /** wait (ms) before the first retry during a video export, doubled after each failure up to `exportMaxRetryDelayMs` */
   exportRetryDelayMs: number
+  exportMaxRetryDelayMs: number
   /** share of `maxConcurrentLoads` that prefetches may use (the rest stays free for the current view) */
   prefetchLoadShare: number
   /** skirt depth as a fraction of the tile ground size */
@@ -121,7 +126,11 @@ export const DEFAULT_TUNING: Readonly<EngineTuning> = {
   rootTileBudget: 16,
   maxLoadAttempts: 3,
   retryDelayMs: 5_000,
-  exportRetryDelayMs: 750,
+  // an export waits as long as a tile may still come (a server overloaded for a minute or two), then fails: 8 attempts
+  // 1, 2, 4, 8, 16, 30, 30 s apart, ~1.5 min of waits plus the fetcher's own retries (~5 s per attempt), ~2.2 min in all
+  exportMaxLoadAttempts: 8,
+  exportRetryDelayMs: 1_000,
+  exportMaxRetryDelayMs: 30_000,
   prefetchLoadShare: 0.5,
   skirtRatio: 0.015,
   minSkirtDepthM: 20,
@@ -297,6 +306,15 @@ export function createTerrainEngine(
 
   // --- loading ------------------------------------------------------------------
 
+  /** attempts of a node before it is given up: more during an export, which waits for them (`setExporting`) */
+  const attemptLimit = () => (exporting ? cfg.exportMaxLoadAttempts : cfg.maxLoadAttempts)
+
+  /** wait before the next attempt after `attempts` failures: fixed in the preview, doubling during an export */
+  function retryDelay(attempts: number): number {
+    if (!exporting) return cfg.retryDelayMs
+    return Math.min(cfg.exportMaxRetryDelayMs, cfg.exportRetryDelayMs * 2 ** Math.max(0, attempts - 1))
+  }
+
   function startLoad(node: TileNode, rank: number): void {
     if (node.state === 'failed' && !node.noData) failedCount--
     // a retry may well fail again: in the background, after every first attempt (it would hold their fetch slots)
@@ -321,14 +339,20 @@ export function createTerrainEngine(
     const wantsImagery = !imagery.coverage || boundsIntersect(imagery.coverage, node.bounds)
     // an imagery failure is a transient failure of the node too (below): the parent keeps its imagery meanwhile
     let imageryFailed = false
+    let imageryError: unknown
     const texturePromise: Promise<Texture | undefined> = wantsImagery
       ? io
           .loadImageryTexture(node.key, imagery, io.fetcher, { zoomOffset: imageryZoomOffset, signal, priority: rank })
           .catch((error: unknown) => {
-            if (!isAbortError(error)) imageryFailed = true
+            if (!isAbortError(error)) {
+              imageryFailed = true
+              imageryError = error
+            }
             return undefined
           })
       : Promise.resolve(undefined)
+    const imageryFailure = () =>
+      describeTileError(imageryError ?? new Error('imagerie incomplète'), buildTileUrl(imagery, node.key), 'imagerie')
 
     Promise.all([demPromise, texturePromise]).then(
       ([grid, texture]) => {
@@ -339,16 +363,20 @@ export function createTerrainEngine(
         node.abortController = undefined
         loadingCount--
         imageryFailed ||= texture?.userData.incomplete === true
+        if (imageryFailed && node.failedAttempts + 1 < attemptLimit()) {
+          if (texture) disposeTexture(texture)
+          markFailed(node, false, imageryError, imageryFailure())
+          return
+        }
         try {
           // the last attempt keeps what arrived: grey where the imagery is missing, counted by the export
-          const retry = imageryFailed && node.failedAttempts + 1 < cfg.maxLoadAttempts
-          if (retry) throw new Error(`imagery of tile ${node.id} incomplete`)
           finishLoad(node, grid, texture)
           node.imageryMissing = imageryFailed
+          if (imageryFailed) node.failure = imageryFailure()
         } catch (error) {
           // A grid the mesh builder rejects must not leave the node 'loading' forever.
           if (texture) disposeTexture(texture)
-          markFailed(node, false, error)
+          markFailed(node, false, error, describeTileError(error, buildTileUrl(terrain, node.key), 'élévation'))
         }
       },
       (error: unknown) => {
@@ -364,7 +392,7 @@ export function createTerrainEngine(
           node.state = 'empty'
           return
         }
-        markFailed(node, isNoDataError(error), error)
+        markFailed(node, isNoDataError(error), error, describeTileError(error, buildTileUrl(terrain, node.key), 'élévation'))
       },
     )
   }
@@ -390,6 +418,7 @@ export function createTerrainEngine(
     rememberGrid(node.key, grid)
     node.state = 'ready'
     node.failedAttempts = 0
+    node.failure = undefined
     readyCount++
     changed = true
   }
@@ -399,13 +428,14 @@ export function createTerrainEngine(
    * becomes a leaf that is never retried and is NOT counted in `stats.failedTiles`. Otherwise the
    * failure is transient (network, 5xx, corrupt tile) and the node is retried after a delay.
    */
-  function markFailed(node: TileNode, permanent: boolean, error?: unknown): void {
+  function markFailed(node: TileNode, permanent: boolean, error?: unknown, failure?: TileFailureCause): void {
     node.abortController = undefined
     node.state = 'failed'
     node.noData = permanent
-    node.failedAttempts = permanent ? cfg.maxLoadAttempts : node.failedAttempts + 1
-    node.retryAt = now() + (exporting ? cfg.exportRetryDelayMs : cfg.retryDelayMs)
+    node.failedAttempts = permanent ? Math.max(cfg.maxLoadAttempts, cfg.exportMaxLoadAttempts) : node.failedAttempts + 1
+    node.retryAt = now() + retryDelay(node.failedAttempts)
     if (permanent) return
+    node.failure = failure
     failedCount++
     if (import.meta.env.DEV && error !== undefined) {
       console.warn(`[terrain] tuile ${node.id} : chargement échoué (tentative ${node.failedAttempts})`, error)
@@ -459,6 +489,7 @@ export function createTerrainEngine(
     node.state = 'empty'
     node.noData = false
     node.imageryMissing = false
+    node.failure = undefined
     node.resetBounds()
   }
 
@@ -824,6 +855,7 @@ export function createTerrainEngine(
   function setExporting(next: boolean): void {
     if (next === exporting) return
     exporting = next
+    selectionParams.maxLoadAttempts = attemptLimit()
     if (!next) return
     // tiles that gave up before the export are tried again: the export waits for them
     forEachNode(roots, (node) => {
@@ -856,7 +888,62 @@ export function createTerrainEngine(
     refreshStats(0)
   }
 
+  /** the tiles of the last view that failed: given up on first, then the ones still retried */
+  function failures(): TileFailure[] {
+    const describe = (node: TileNode, givenUp: boolean): TileFailure => ({
+      tile: node.id,
+      attempts: node.state === 'ready' ? attemptLimit() : node.failedAttempts,
+      givenUp,
+      ...(node.failure ?? { host: hostOf(buildTileUrl(opts.terrain, node.key)), layer: 'élévation', cause: 'cause inconnue' }),
+    })
+    return [...selection.missing.map((node) => describe(node, true)), ...selection.retrying.map((node) => describe(node, false))]
+  }
+
   buildTree()
 
-  return { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, setExporting, caches, dispose }
+  const engine: TerrainEngine = { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, setExporting, caches, dispose }
+  failureReaders.set(engine, failures)
+  return engine
+}
+
+// ---------------------------------------------------------------------------
+// Tile failures (named in the error of an export that could not get its tiles)
+// ---------------------------------------------------------------------------
+
+/** A tile of the view that failed. */
+export interface TileFailure extends TileFailureCause {
+  /** 'z/x/y' */
+  tile: string
+  /** attempts made */
+  attempts: number
+  /** every attempt used (or drawn without all its imagery); false: it is still retried */
+  givenUp: boolean
+}
+
+const failureReaders = new WeakMap<TerrainEngine, () => TileFailure[]>()
+
+/** The tiles of the engine's last view that failed (given up on first); empty for an engine made elsewhere. */
+export function viewTileFailures(engine: TerrainEngine | null | undefined): TileFailure[] {
+  return (engine && failureReaders.get(engine)?.()) || []
+}
+
+/** Host of a tile URL; the proxy path (`/tiles/<source>`) of a source served without CORS. */
+export function hostOf(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return url.split('/').slice(0, 3).join('/') || url
+  }
+}
+
+const MAX_CAUSE = 80
+
+/** Host and short reason of a failed tile request (HTTP status, network error, decoding…). */
+export function describeTileError(error: unknown, url: string, layer: string): TileFailureCause {
+  let cause = error
+  // the imagery wraps the error of its sub-tile
+  while (!(cause instanceof TileFetchError) && cause instanceof Error && cause.cause !== undefined) cause = cause.cause
+  if (cause instanceof TileFetchError) return { host: hostOf(cause.url), layer, cause: `HTTP ${cause.status}` }
+  if (cause instanceof TypeError) return { host: hostOf(url), layer, cause: `erreur réseau (${cause.message.slice(0, MAX_CAUSE)})` }
+  return { host: hostOf(url), layer, cause: errorMessage(cause).slice(0, MAX_CAUSE) }
 }

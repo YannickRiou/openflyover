@@ -18,6 +18,7 @@ import {
   resetExportStore,
   overlayBaseName,
   stillBaseName,
+  throttledReporter,
   useExportStore,
   videoFileName,
   type ExportRequest,
@@ -260,6 +261,36 @@ describe('render scale and timings', () => {
     store().complete(RESULT)
     store().reset()
     expect(store().secondsPerMegapixel).toBeCloseTo(1)
+  })
+
+  it('reaches the store a few times a second during an export, the last frame always', () => {
+    const store = useExportStore.getState
+    store().start(REQUEST)
+    store().begin(store().request!.id, 100, 0)
+    const report = throttledReporter(250)
+    for (let frame = 1; frame <= 100; frame++) report(frame, frame * 10, { ...EMPTY_TIMINGS, rendered: frame }, frame === 100)
+    // 1 s of frames 10 ms apart: frames 1, 26, 51, 76, then the last one
+    expect(store().frame).toBe(100)
+    expect(store().timings.rendered).toBe(100)
+    const reportFrame = vi.spyOn(store(), 'reportFrame')
+    const again = throttledReporter(250)
+    for (let frame = 1; frame <= 100; frame++) again(frame, frame * 10, undefined, frame === 100)
+    expect(reportFrame.mock.calls.map(([frame]) => frame)).toEqual([1, 26, 51, 76, 100])
+  })
+
+  it('follows the tiles of a still, and forgets them on the next export', () => {
+    const store = useExportStore.getState
+    store().start(REQUEST)
+    store().begin(store().request!.id, 1, 0)
+    store().reportTiles(3, 10)
+    expect(store().tiles).toEqual({ done: 3, total: 10 })
+    const same = store().tiles
+    store().reportTiles(3, 10)
+    expect(store().tiles).toBe(same)
+    store().canceled()
+    store().start(REQUEST)
+    store().begin(store().request!.id, 1, 0)
+    expect(store().tiles).toBeNull()
   })
 
   it('hands its result over without revoking it', () => {

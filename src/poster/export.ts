@@ -1,12 +1,14 @@
 /**
  * The poster from the stores: its content (every track, weather of the first one's outing, credits of the sources in
- * use), its export (an overview still of the 3D view framing every track, or the flat map, at the size of the
- * layout's view box, composed into the poster by `drawPoster`), and the last rendered view, kept small for the live
- * preview of the panel.
+ * use), its export (a still of the 3D view, the overview framing every track or the camera as it is, or the flat map,
+ * at the size of the layout's view box, composed into the poster by `drawPoster`), the still image of the playback
+ * position, and the views of the live preview of the panel: the last rendered one, kept small, else a flat map at a
+ * low zoom (`previewMap`).
  */
 import { create } from 'zustand'
-import type { Track } from '../core/types'
-import { useExportStore } from '../export/store'
+import type { TileFetcher, Track } from '../core/types'
+import { videoSize } from '../export/schedule'
+import { stillBaseName, useExportStore } from '../export/store'
 import { climbsOf } from '../flyover/climbs'
 import { trackPathOf } from '../flyover/path'
 import { useLandmarkStore, useWaterStore } from '../osm/store'
@@ -25,12 +27,17 @@ import { POSTER_THEMES, drawPoster } from './draw'
 import { posterLayout } from './layout'
 import type { Box, PosterRows } from './layout'
 import { posterSize } from './settings'
-import { framingPath, renderFlatMap } from './view'
+import type { PosterSettings } from './settings'
+import { framingPath, renderFlatMap, type FlatMap } from './view'
 
 /** Longest side of the view kept for the preview (px). */
 const PREVIEW_VIEW_PX = 480
 /** Simultaneous tile requests of a flat map (the imagery servers are shared). */
 const FLAT_MAP_CONCURRENCY = 6
+/** Longest side of the approximate view of the preview (px): a flat map of a handful of low-zoom tiles. */
+const PREVIEW_MAP_PX = 360
+/** Thinnest track line of a flat map (px): the small preview keeps it visible. */
+const MIN_LINE_PX = 1.5
 
 /** Rows of the layout for a content. */
 export function posterRows(content: PosterContent): PosterRows {
@@ -82,9 +89,9 @@ export interface PosterPreviewState {
   view: { key: string; image: ImageBitmap; width: number; height: number } | null
 }
 
-/** What a rendered view shows: these tracks, in 3D or as a flat map. */
-export function previewKey(tracks: readonly Track[], flat: boolean): string {
-  return `${flat ? 'plat' : '3d'}:${tracks.map((t) => t.id).join(',')}`
+/** What a rendered view shows: these tracks, as a flat map, the 3D overview or the camera's view. */
+export function previewKey(tracks: readonly Track[], poster: Pick<PosterSettings, 'flat' | 'view'>): string {
+  return `${poster.flat ? 'plat' : poster.view === 'camera' ? 'camera' : '3d'}:${tracks.map((t) => t.id).join(',')}`
 }
 
 export const usePosterPreview = create<PosterPreviewState>()(() => ({ view: null }))
@@ -102,14 +109,19 @@ async function rememberView(key: string, view: OffscreenCanvas): Promise<void> {
   }
 }
 
-/** The flat map of every track for a view box of `width` × `height` px, from the imagery source in use. */
+/**
+ * The flat map of every track for a view box of `width` × `height` px, from the imagery source in use. With no
+ * `fetcher`, one of its own, cleared afterwards.
+ */
 async function drawFlatView(
-  { w: width, h: height }: Box,
+  { w: width, h: height }: Pick<Box, 'w' | 'h'>,
   { tracks, bounds, settings }: Pick<AppState, 'tracks' | 'bounds' | 'settings'>,
   signal: AbortSignal,
-): Promise<OffscreenCanvas> {
+  onProgress?: (done: number, total: number) => void,
+  shared?: TileFetcher,
+): Promise<FlatMap> {
   if (!bounds) throw new Error('Aucune trace à dessiner.')
-  const fetcher = createTileFetcher({ concurrency: FLAT_MAP_CONCURRENCY, maxEntries: 32 })
+  const fetcher = shared ?? createTileFetcher({ concurrency: FLAT_MAP_CONCURRENCY, maxEntries: 32 })
   try {
     return await renderFlatMap({
       width,
@@ -118,20 +130,35 @@ async function drawFlatView(
       source: getImagerySource(settings.imagerySourceId),
       tracks,
       // the width of the 3D line (`trackStyle.width` on a 1080 px frame)
-      lineWidth: (settings.trackStyle.width * Math.min(width, height)) / 1080,
+      lineWidth: Math.max(MIN_LINE_PX, (settings.trackStyle.width * Math.min(width, height)) / 1080),
       casing: POSTER_THEMES[settings.poster.style].page,
       fetcher,
       signal,
+      onProgress,
     })
   } finally {
-    fetcher.clear()
+    if (!shared) fetcher.clear()
   }
+}
+
+/** Tiles of the previews, kept from one to the next (a few at low zoom). */
+let previewFetcher: TileFetcher | null = null
+
+/**
+ * Approximate view of the preview, without any 3D render: the flat map of every track at a low zoom, `box` scaled down
+ * to PREVIEW_MAP_PX. Readable enough to judge the layout; the 3D view itself is rendered when the poster is made.
+ */
+export function previewMap(box: Pick<Box, 'w' | 'h'>, signal: AbortSignal): Promise<FlatMap> {
+  const scale = Math.min(1, PREVIEW_MAP_PX / Math.max(box.w, box.h))
+  const small = { w: Math.max(1, Math.round(box.w * scale)), h: Math.max(1, Math.round(box.h * scale)) }
+  previewFetcher ??= createTileFetcher({ concurrency: 4, maxEntries: 64 })
+  return drawFlatView(small, useAppStore.getState(), signal, undefined, previewFetcher)
 }
 
 /**
  * Ask the export controller for the poster: its fonts loaded first (the text is fitted with them), the view (the 3D
- * overview of every track, or the flat map) at the size of the layout's view box, then the whole poster composed as a
- * PNG. False without a track.
+ * overview of every track, the camera's view as it is, or the flat map) at the size of the layout's view box, then the
+ * whole poster composed as a PNG or a JPEG. False without a track.
  */
 export async function startPoster(): Promise<boolean> {
   const content = currentPosterContent()
@@ -140,7 +167,7 @@ export async function startPoster(): Promise<boolean> {
   const track = tracks[0]
   if (!content || !track) return false
   await loadOverlayFonts()
-  const { format, style, flat } = settings.poster
+  const { format, style, flat, view: shot, type } = settings.poster
   const { width, height } = posterSize(format)
   const layout = posterLayout(width, height, style, posterRows(content))
   useExportStore.getState().start({
@@ -154,19 +181,40 @@ export async function startPoster(): Promise<boolean> {
     baseName: posterBaseName(effectiveProjectName(projectName, track.name)),
     still: {
       progress: playback.progress,
-      type: 'image/png',
-      overview: true,
-      framing: framingPath(tracks),
-      drawView: flat ? (signal) => drawFlatView(layout.view, state, signal) : undefined,
+      type,
+      ...(shot === 'camera' ? { camera: true } : { overview: true, framing: framingPath(tracks) }),
+      drawView: flat ? (signal, progress) => drawFlatView(layout.view, state, signal, progress) : undefined,
       async compose(view) {
         const poster = new OffscreenCanvas(width, height)
         const ctx = poster.getContext('2d', { alpha: false })
         if (!ctx) throw new Error("Impossible de créer l'image de l'affiche.")
         drawPoster(ctx, layout, content, style, { image: view, width: view.width, height: view.height })
-        await rememberView(previewKey(tracks, flat), view)
+        await rememberView(previewKey(tracks, settings.poster), view)
         return poster
       },
     },
+  })
+  return true
+}
+
+/**
+ * « Image fixe »: the film's view at the playback position, at the size of the film (« Vidéo »), with its overlay, in
+ * the image type of the poster. False without a track.
+ */
+export function startStill(): boolean {
+  const { tracks, settings, playback } = useAppStore.getState()
+  const track = tracks[0]
+  if (!track) return false
+  const { aspect, resolution, fps, quality } = settings.video
+  useExportStore.getState().start({
+    ...videoSize(aspect, resolution),
+    fps,
+    quality,
+    durationS: 0,
+    holdStartS: 0,
+    holdEndS: 0,
+    baseName: stillBaseName(track.name, playback.progress),
+    still: { progress: playback.progress, type: settings.poster.type },
   })
   return true
 }

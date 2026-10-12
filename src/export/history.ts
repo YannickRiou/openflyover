@@ -76,8 +76,20 @@ export interface HistoryEntry {
   renderMs: number
   waitMs: number
   encodeMs: number
-  /** images captured at the per-frame timeout */
+  /**
+   * Split of the render and encoding time (`ExportTimings`): renders made, GPU time measured (`gpuRenders` of them,
+   * 0 where the browser has no timer queries), composing, video frame, waiting for the encoder. 0 in entries recorded
+   * before (added without a new `HISTORY_VERSION`).
+   */
+  renders: number
+  gpuMs: number
+  gpuRenders: number
+  composeMs: number
+  frameMs: number
+  encodeWaitMs: number
+  /** frames whose tiles were still loading at the per-frame timeout, frames with tiles given up on (either fails the export) */
   timeouts: number
+  givenUp: number
   /** film duration, held frames included (s) */
   filmS: number
   width: number
@@ -92,6 +104,8 @@ export interface HistoryEntry {
   codec?: string
   bytes?: number
   encoder?: 'webcodecs' | 'native'
+  /** the browser encoded on the GPU's encoder (`prefer-hardware`) */
+  hardware?: true
   settings: RenderSettings
 }
 
@@ -125,7 +139,7 @@ export interface RenderRecord {
   frames: number
   encoded: number
   timings: ExportTimings
-  result: Pick<ExportResult, 'codec' | 'sizeBytes'> | null
+  result: Pick<ExportResult, 'codec' | 'sizeBytes' | 'hardware'> | null
   encoder: VideoEncoderKind
   settings: Settings
   /** ms since 1970 */
@@ -154,7 +168,14 @@ export function entryOf(record: RenderRecord): HistoryEntry {
     renderMs: round(timings.renderMs),
     waitMs: round(timings.waitMs),
     encodeMs: round(timings.encodeMs),
+    renders: round(timings.renders),
+    gpuMs: round(timings.gpuMs),
+    gpuRenders: round(timings.gpuRenders),
+    composeMs: round(timings.composeMs),
+    frameMs: round(timings.frameMs),
+    encodeWaitMs: round(timings.encodeWaitMs),
     timeouts: round(timings.timeouts),
+    givenUp: round(timings.givenUp),
     filmS: fps > 0 ? Math.round((record.frames / fps) * 10) / 10 : 0,
     width,
     height,
@@ -164,6 +185,7 @@ export function entryOf(record: RenderRecord): HistoryEntry {
     ...(request.overlayOnly && { overlayOnly: true as const }),
     ...(record.outcome === 'done' && result && { codec: result.codec, bytes: round(result.sizeBytes) }),
     ...(record.encoder && { encoder: record.encoder }),
+    ...(result?.hardware && { hardware: true as const }),
     settings: summariseSettings(record.settings, request.quality),
   }
 }
@@ -276,7 +298,14 @@ function parseEntry(raw: unknown): HistoryEntry | null {
     renderMs: count(raw.renderMs),
     waitMs: count(raw.waitMs),
     encodeMs: count(raw.encodeMs),
+    renders: count(raw.renders),
+    gpuMs: count(raw.gpuMs),
+    gpuRenders: count(raw.gpuRenders),
+    composeMs: count(raw.composeMs),
+    frameMs: count(raw.frameMs),
+    encodeWaitMs: count(raw.encodeWaitMs),
     timeouts: count(raw.timeouts),
+    givenUp: count(raw.givenUp),
     filmS: count(raw.filmS),
     width,
     height,
@@ -287,6 +316,7 @@ function parseEntry(raw: unknown): HistoryEntry | null {
     ...(codec && { codec }),
     ...(bytes !== undefined && bytes >= 0 && { bytes }),
     ...(encoder && { encoder }),
+    ...(raw.hardware === true && { hardware: true as const }),
     settings: parseSettings(raw.settings),
   }
 }
@@ -459,6 +489,30 @@ export function settingsDetails(settings: RenderSettings): { label: string; valu
   return rows
 }
 
+type TimingSplit = Pick<
+  ExportTimings,
+  'rendered' | 'renders' | 'renderMs' | 'gpuMs' | 'gpuRenders' | 'waitMs' | 'encodeMs' | 'composeMs' | 'frameMs' | 'encodeWaitMs'
+>
+
+/**
+ * Where the time of a render went, on one line: « rendu 50,0 s (GPU 21,3 s), 1,4 rendu par image, tuiles 30,0 s,
+ * composition 6,0 s, image vidéo 1,5 s, attente de l'encodeur 2,5 s ». The GPU time when measured: without it, the
+ * composition also holds the wait for the GPU to finish the render (it reads the WebGL image). A split recorded before
+ * the composition was measured apart gives « composition et encodage ».
+ */
+export function timingsSummary(t: TimingSplit): string {
+  const s = (ms: number) => `${comma(ms / 1000)} s`
+  // a few queries may be lost (GPU reset, the last ones): the measured average over every render
+  const gpu = t.gpuRenders > 0 ? ` (GPU ${t.gpuRenders < t.renders ? '≈ ' : ''}${s((t.gpuMs * Math.max(t.renders, t.gpuRenders)) / t.gpuRenders)})` : ''
+  const parts = [`rendu ${s(t.renderMs)}${gpu}`]
+  if (t.renders > 0 && t.rendered > 0) parts.push(`${comma(t.renders / t.rendered)} rendu${t.renders >= 2 * t.rendered ? 's' : ''} par image`)
+  parts.push(`tuiles ${s(t.waitMs)}`)
+  if (t.composeMs + t.frameMs + t.encodeWaitMs > 0) {
+    parts.push(`composition ${s(t.composeMs)}`, `image vidéo ${s(t.frameMs)}`, `attente de l'encodeur ${s(t.encodeWaitMs)}`)
+  } else parts.push(`composition et encodage ${s(t.encodeMs)}`)
+  return parts.join(', ')
+}
+
 /** Rows of the technical detail of a render: output, film, speed, encoder. */
 export function entryDetails(entry: HistoryEntry): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = []
@@ -468,13 +522,9 @@ export function entryDetails(entry: HistoryEntry): { label: string; value: strin
   rows.push({ label: 'Film', value: `${comma(entry.filmS)} s, ${entry.frames} images (${entry.rendered} rendues)` })
   const mp = secondsPerMegapixel(entry)
   if (mp !== null) rows.push({ label: 'Vitesse', value: `${formatSpeed(entry)}, ${comma(mp)}\u00a0s\u00a0/\u00a0Mpx` })
-  if (entry.renderMs + entry.waitMs + entry.encodeMs > 0) {
-    rows.push({
-      label: 'Répartition',
-      value: `rendu ${comma(entry.renderMs / 1000)} s, tuiles ${comma(entry.waitMs / 1000)} s, encodage ${comma(entry.encodeMs / 1000)} s`,
-    })
-  }
-  if (entry.timeouts > 0) rows.push({ label: 'Images avant la fin du chargement', value: `${entry.timeouts} image(s)` })
-  if (entry.encoder) rows.push({ label: 'Encodeur', value: ENCODER_LABELS[entry.encoder] })
+  if (entry.renderMs + entry.waitMs + entry.encodeMs > 0) rows.push({ label: 'Répartition', value: timingsSummary(entry) })
+  if (entry.timeouts > 0) rows.push({ label: 'Tuiles encore en chargement au délai', value: `${entry.timeouts} image(s)` })
+  if (entry.givenUp > 0) rows.push({ label: 'Tuiles abandonnées', value: `${entry.givenUp} image(s)` })
+  if (entry.encoder) rows.push({ label: 'Encodeur', value: `${ENCODER_LABELS[entry.encoder]}${entry.hardware ? ', encodeur matériel' : ''}` })
   return rows
 }

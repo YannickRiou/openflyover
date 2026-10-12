@@ -9,6 +9,7 @@ import type { WritableFile } from '../platform/platform'
 import type { TerrainEngine } from '../core/types'
 import { runExport } from './ExportController'
 import { NO_ENCODING_KEY } from './diagnostic'
+import { renderSettledFrame } from './capture'
 import { readBreadcrumbs } from './guard'
 import { createExportEncoder } from './nativeEncoder'
 import { buildFrameSchedule } from './schedule'
@@ -25,7 +26,7 @@ const session = {
   cancel: vi.fn(async () => undefined),
 }
 
-vi.mock('./nativeEncoder', () => ({ createExportEncoder: vi.fn(async () => session) }))
+vi.mock('./nativeEncoder', () => ({ createExportEncoder: vi.fn(async () => session), compositorAttributes: () => ({}) }))
 vi.mock('../film/audio', () => ({ mixFilmAudio: vi.fn(async () => null) }))
 vi.mock('../overlay/exportOverlay', () => ({
   loadFrameMedia: vi.fn(async () => undefined),
@@ -34,7 +35,7 @@ vi.mock('../overlay/exportOverlay', () => ({
 }))
 vi.mock('./capture', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./capture')>()),
-  renderSettledFrame: vi.fn(async () => true),
+  renderSettledFrame: vi.fn(async () => 'complete'),
   composeFrame: vi.fn(),
 }))
 
@@ -138,6 +139,33 @@ describe('runExport', () => {
     await exportFilm(file)
     expect(file.discard).toHaveBeenCalled()
     expect(useExportStore.getState()).toMatchObject({ phase: 'error', error: 'Disque plein.', result: null })
+  })
+
+  it('stops like a cancel, with the error named, when a frame cannot get its tiles', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(renderSettledFrame).mockResolvedValueOnce('complete').mockResolvedValueOnce('missing')
+    const file = destination()
+    const { three } = await exportFilm(file)
+    expect(session.cancel).toHaveBeenCalled()
+    expect(session.finish).not.toHaveBeenCalled()
+    expect(file.discard).toHaveBeenCalled()
+    const state = useExportStore.getState()
+    expect(state).toMatchObject({ phase: 'error', result: null })
+    expect(state.error).toMatch(/^Tuiles introuvables pour l'image \d+\. Export arrêté/)
+    // the history reads these: one frame given up, none at the timeout
+    expect(state.timings).toMatchObject({ givenUp: 1, timeouts: 0 })
+    expect(three.setFrameloop).toHaveBeenLastCalledWith('demand')
+  })
+
+  it('counts the renders and the time of each step, and reaches the store a few times a second only', async () => {
+    const reportFrame = vi.spyOn(useExportStore.getState(), 'reportFrame')
+    const { frameCount } = await exportFilm(destination())
+    const { timings } = useExportStore.getState()
+    expect(timings.rendered).toBeGreaterThan(0)
+    expect(timings.encodeMs).toBeCloseTo(timings.composeMs + timings.frameMs + timings.encodeWaitMs, 5)
+    // the first frame, then at most every 250 ms, and the last one (twice: the end of the loop and of the export)
+    expect(reportFrame.mock.calls.length).toBeLessThan(frameCount)
+    expect(reportFrame.mock.calls.at(-1)?.[0]).toBe(frameCount)
   })
 
   it('counts the tiles of a phone in film frames for the whole export, then goes back to wall time', async () => {

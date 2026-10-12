@@ -11,10 +11,20 @@ const fake = vi.hoisted(() => ({
   }[],
   streams: [] as { options: unknown }[],
   sources: [] as {
-    config: { codec: string; alpha?: string; quality: { options: { bitrate: number } }; onEncodedSample: () => void; onEncodedPacket: () => void }
+    config: {
+      codec: string
+      alpha?: string
+      keyFrameInterval?: number
+      hardwareAcceleration?: string
+      quality: { options: { bitrate: number } }
+      onEncodedSample: () => void
+      onEncodedPacket: () => void
+    }
     added: [number, number][]
     closed: boolean
   }[],
+  /** video samples taken from the canvas, closed once encoded */
+  samples: [] as { closed: boolean }[],
   buffer: new ArrayBuffer(8) as ArrayBuffer | null,
   /** audio sources and what they received: [timestamp, frames, first value of each channel] */
   sounds: [] as { config: { codec: string }; added: [number, number, number[]][]; closed: boolean }[],
@@ -53,18 +63,29 @@ vi.mock('mediabunny', () => {
   class WebMOutputFormat {
     kind = 'webm'
   }
-  class CanvasSource {
+  class VideoSample {
+    init: { timestamp: number; duration: number }
+    closed = false
+    constructor(_canvas: unknown, init: VideoSample['init']) {
+      this.init = init
+      fake.samples.push(this)
+    }
+    close() {
+      this.closed = true
+    }
+  }
+  class VideoSampleSource {
     config: unknown
     added: [number, number][] = []
     closed = false
     // mediabunny's internal encoder wrapper
     _encoder = { getQueueSize: () => 2 }
-    constructor(_canvas: unknown, config: unknown) {
+    constructor(config: unknown) {
       this.config = config
       fake.sources.push(this as never)
     }
-    async add(timestamp: number, duration: number) {
-      this.added.push([timestamp, duration])
+    async add(sample: VideoSample) {
+      this.added.push([sample.init.timestamp, sample.init.duration])
       fake.calls.push('v')
     }
     close() {
@@ -140,7 +161,8 @@ vi.mock('mediabunny', () => {
     StreamTarget,
     Mp4OutputFormat,
     WebMOutputFormat,
-    CanvasSource,
+    VideoSample,
+    VideoSampleSource,
     AudioSample,
     AudioSampleSource,
     Output,
@@ -163,6 +185,7 @@ import {
   pickAudioCodec,
   pickCodec,
   deviceBitrateCap,
+  targetBitrate,
   videoBitrate,
   type CanEncode,
   type CanEncodeAudio,
@@ -171,8 +194,13 @@ import {
 const OPTIONS = { width: 1920, height: 1080, fps: 30, quality: 'high' as const }
 const canvas = {} as OffscreenCanvas
 
-/** canEncode stub accepting only the given codecs. */
+/** canEncode stub accepting only the given codecs, on no hardware encoder. */
 function supporting(...codecs: string[]): CanEncode & ReturnType<typeof vi.fn> {
+  return vi.fn(async (codec: string, query?: { hardwareAcceleration?: string }) => codecs.includes(codec) && query?.hardwareAcceleration !== 'prefer-hardware') as never
+}
+
+/** canEncode stub accepting the given codecs, on the hardware encoder too. */
+function onHardware(...codecs: string[]): CanEncode & ReturnType<typeof vi.fn> {
   return vi.fn(async (codec: string) => codecs.includes(codec)) as never
 }
 
@@ -180,6 +208,7 @@ beforeEach(() => {
   fake.outputs.length = 0
   fake.streams.length = 0
   fake.sources.length = 0
+  fake.samples.length = 0
   fake.buffer = new ArrayBuffer(8)
   fake.sounds.length = 0
   fake.calls.length = 0
@@ -223,17 +252,37 @@ describe('videoBitrate', () => {
     expect(deviceBitrateCap(DESKTOP_BUDGET, false)).toBe(Infinity)
     expect(videoBitrate(1920, 1080, 30, 'high', 'avc')).toBe(videoBitrate(1920, 1080, 30, 'high', 'avc', Infinity))
   })
+
+  it('takes the bitrate chosen by hand over the quality, within the bounds and the device cap', () => {
+    const encoding = { bitrateMbps: 25, codec: 'auto' as const, keyframeIntervalS: 2, audioKbps: 192 }
+    expect(targetBitrate({ ...OPTIONS, encoding }, 'hevc', Infinity)).toBe(25e6)
+    expect(targetBitrate({ ...OPTIONS, encoding: { ...encoding, bitrateMbps: 0.2 } }, 'avc', Infinity)).toBe(MIN_BITRATE)
+    expect(targetBitrate({ ...OPTIONS, encoding }, 'avc', 8e6)).toBe(8e6)
+    expect(targetBitrate({ ...OPTIONS, encoding: { ...encoding, bitrateMbps: null } }, 'avc', Infinity)).toBe(videoBitrate(1920, 1080, 30, 'high', 'avc', Infinity))
+  })
 })
 
 describe('pickCodec', () => {
   it('prefers MP4 / H.264', async () => {
     const canEncode = supporting('avc', 'hevc', 'vp9', 'vp8')
     expect(await pickCodec(OPTIONS, canEncode)).toEqual({ container: 'mp4', codec: 'avc' })
-    expect(canEncode).toHaveBeenCalledTimes(1)
+    // the hardware encoder first, refused here, then any
+    expect(canEncode).toHaveBeenCalledTimes(2)
     const [codec, query] = canEncode.mock.calls[0] as [string, Record<string, unknown>]
     expect(codec).toBe('avc')
-    expect(query).toMatchObject({ width: 1920, height: 1080, frameRate: 30 })
+    expect(query).toMatchObject({ width: 1920, height: 1080, frameRate: 30, hardwareAcceleration: 'prefer-hardware' })
     expect(query.quality).toMatchObject({ options: { bitrate: videoBitrate(1920, 1080, 30, 'high', 'avc') } })
+    expect(canEncode.mock.calls[1][1]).toMatchObject({ hardwareAcceleration: 'no-preference' })
+  })
+
+  it('asks for the hardware encoder when the browser takes the configuration on it', async () => {
+    const canEncode = onHardware('avc')
+    expect(await pickCodec(OPTIONS, canEncode)).toEqual({ container: 'mp4', codec: 'avc', hardware: true })
+    expect(canEncode).toHaveBeenCalledTimes(1)
+    await createVideoEncoder(canvas, OPTIONS, onHardware('avc'))
+    expect(fake.sources[0].config.hardwareAcceleration).toBe('prefer-hardware')
+    await createVideoEncoder(canvas, OPTIONS, supporting('avc'))
+    expect(fake.sources[1].config.hardwareAcceleration).toBe('no-preference')
   })
 
   it('falls back to HEVC, then WebM VP9, then VP8', async () => {
@@ -247,7 +296,7 @@ describe('pickCodec', () => {
       if (codec === 'avc') throw new TypeError('bad config')
       return codec === 'vp9'
     }) as unknown as CanEncode
-    expect(await pickCodec(OPTIONS, canEncode)).toEqual({ container: 'webm', codec: 'vp9' })
+    expect(await pickCodec(OPTIONS, canEncode)).toMatchObject({ container: 'webm', codec: 'vp9' })
     expect(await pickCodec(OPTIONS, supporting())).toBeNull()
   })
 
@@ -255,9 +304,9 @@ describe('pickCodec', () => {
     const limitedAvc = vi.fn(async (codec: string, query: { width: number; height: number }) =>
       codec === 'avc' ? query.width <= 4096 && query.height <= 2304 : codec === 'vp9',
     ) as unknown as CanEncode
-    expect(await pickCodec({ ...OPTIONS, width: 3840, height: 2160 }, limitedAvc)).toEqual({ container: 'mp4', codec: 'avc' })
-    expect(await pickCodec({ ...OPTIONS, width: 2160, height: 3840 }, limitedAvc)).toEqual({ container: 'webm', codec: 'vp9' })
-    expect(await pickCodec({ ...OPTIONS, width: 5040, height: 2160 }, limitedAvc)).toEqual({ container: 'webm', codec: 'vp9' })
+    expect(await pickCodec({ ...OPTIONS, width: 3840, height: 2160 }, limitedAvc)).toMatchObject({ container: 'mp4', codec: 'avc' })
+    expect(await pickCodec({ ...OPTIONS, width: 2160, height: 3840 }, limitedAvc)).toMatchObject({ container: 'webm', codec: 'vp9' })
+    expect(await pickCodec({ ...OPTIONS, width: 5040, height: 2160 }, limitedAvc)).toMatchObject({ container: 'webm', codec: 'vp9' })
   })
 })
 
@@ -276,6 +325,8 @@ describe('createVideoEncoder', () => {
     await session.addFrame(2)
     expect(fake.sources[0].added.map(([t]) => t)).toEqual([0, 1 / 30, 2 / 30])
     expect(fake.sources[0].added[0][1]).toBeCloseTo(1 / 30)
+    expect(fake.samples.every((sample) => sample.closed)).toBe(true)
+    expect(fake.sources[0].config.keyFrameInterval).toBe(2)
 
     const { blob, sizeBytes } = await session.finish()
     expect(blob?.type).toBe('video/mp4')
@@ -310,6 +361,25 @@ describe('createVideoEncoder', () => {
     expect(fake.outputs[0].videoMetadata).toMatchObject({ canBeTransparent: true })
     expect(await pickCodec(OPTIONS, supporting('avc', 'vp8'), ALPHA_CANDIDATES)).toBeNull()
     await expect(createVideoEncoder(canvas, { ...OPTIONS, transparent: true }, supporting('avc', 'vp8'))).rejects.toThrow(/aucun format/)
+  })
+
+  it('takes the canvas at the call, before awaiting anything: the next frame may be drawn meanwhile', async () => {
+    const session = await createVideoEncoder(canvas, { ...OPTIONS, fps: 2, audio: soundtrack(3) }, supporting('avc'), supporting('aac') as never)
+    const pending = session.addFrame(0)
+    expect(fake.samples).toHaveLength(1)
+    await pending
+    expect(fake.samples[0].closed).toBe(true)
+  })
+
+  it('encodes with the codec, key frames and sound bitrate chosen in « Encodage »', async () => {
+    const encoding = { bitrateMbps: 30, codec: 'vp9' as const, keyframeIntervalS: 5, audioKbps: 128 }
+    const session = await createVideoEncoder(canvas, { ...OPTIONS, encoding, audio: soundtrack(1) }, supporting('avc', 'vp9'), supporting('opus') as never)
+    expect(session.codec).toEqual({ container: 'webm', codec: 'vp9' })
+    expect(session.bitrate).toBe(30e6)
+    expect(fake.sources[0].config.keyFrameInterval).toBe(5)
+    expect(fake.sounds[0].config).toMatchObject({ quality: { options: { bitrate: 128_000 } } })
+    await expect(createVideoEncoder(canvas, { ...OPTIONS, encoding: { ...encoding, codec: 'hevc' } }, supporting('avc'))).rejects.toThrow(/HEVC/)
+    expect(candidatesFor('Tour.mp4', 'vp9')).toEqual([{ container: 'webm', codec: 'vp9' }])
   })
 
   it('discards the alpha of an ordinary film', async () => {
