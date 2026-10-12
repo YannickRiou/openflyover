@@ -48,7 +48,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/terrain/mesh.ts` | tile geometry | `buildTileGeometry(key, grid, frame, opts: BuildTileGeometryOptions): TileGeometryResult`, `sampleTileMesh(key, grid, segments, lon, lat)` (height of that mesh) |
 | `src/terrain/quadtree.ts` + `engine.ts` | LOD, loading, Three group | `createTerrainEngine(options: TerrainEngineOptions, deps?: Partial<EngineDeps>, tuning?: Partial<EngineTuning>): TerrainEngine` (deps injectable for tests) |
 | `src/scene/*.tsx` | R3F components | `FlyoverCanvas`, `TerrainLayer` (+ `useTerrainContext`), `TrackLines`, `TrackPicker` (+ `TrackMenu`, DOM), `CameraRig`, `FlyoverRig`, `useDebouncedCallback` |
-| `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImage`, `MARKER_SCREEN_FACTOR` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine` (`trackLineStyle.ts`); `TrackMarkerSection` (`src/ui`) |
+| `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImage`, `MARKER_SCREEN_FACTOR` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine` (`trackLineStyle.ts`); `TrackStyleSection`, `MarkerSection` (`src/ui/TrackMarkerSection.tsx`) |
 | `src/flyover/path.ts` | flyover path | `buildTrackPath(track): TrackPath` (concatenated segments, cumulative distances, `time` in ms or NaN), `trackPathOf(track)` (same path, cached per track), `samplePath(path, distanceM): PathSample` (`ele` and `time` interpolated only if both neighbors have them), `recordedTimeAt(path, distanceM)` (fills points without a time), `elevationProfile(path, samples)`, `nearestOnPath(path, lonLat, timeMs?)`, `distanceAtTime(path, timeMs, toleranceMs?)`, `pickProjectedPath(screen, distM, px, py, maxPx)` (point of the projected track closest to the pointer) |
 | `src/flyover/smooth.ts` | track smoothing (see "Track and marker") | `smoothPoints(points, windowM)`, `smoothTrack(track, windowM)`, `smoothedTrackPath(track, windowM)` (smoothed positions, recorded distances and times) |
 | `src/flyover/camera.ts` | flyover camera | `computeCameraView(path, progress, frame, sampler, { exaggeration, liftM, camera?, durationS?, timeS?, orbitRad?, aimProgress?, cameraProgress? })` → `{ target, position, marker }`, `autoDistanceM`, `smoothedTurn`, `smoothHeadingAt`, `movesWithTime` |
@@ -338,13 +338,15 @@ ink, 7.3:1).
   sample), "Ouvrir un projet…" (open a project; a single picker whose `accept` changes), then "Récents": the three latest
   entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab).
 - **Rail and panel**: vertical rail of icon + label tabs (64 px; `tablist`, roving focus, arrows / Home / End) and a
-  320 px panel, one tab at a time, eight tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track),
-  **Carte** (map; base map and water, relief, track and marker, climbs and labels, OSM landmarks, points of interest),
+  320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Montées et étiquettes », hidden without a track),
+  **Carte** (map; base map and water, relief, OSM landmarks, points of interest),
   **Météo** (weather; weather of the outing, clouds, weather in the image), **Lumière** (light; atmosphere, shadows,
   exposure, sun, colour grading), **Survol** (flyover; camera, pacing, highlights), **Objectif** (lens effects),
-  **Habillage** (overlay), **Projet** (project; projects, presets, offline packs). All tabs stay mounted (`hidden`): weather, landmarks and export have
+  **Habillage** (overlay), **Projet** (project; projects, presets, offline packs), **Réglages** (preferences of the app on this
+  device, not of the project: `src/ui/preferences.ts`, `openflyover.preferences.v1` in `getPlatform().storage`, parsing
+  `parsePreferences` in `shell.ts`; not shown on the home screen). All tabs stay mounted (`hidden`): weather, landmarks and export have
   side effects. `App` builds their contents, the stage and the timeline once per track state (`useMemo`, the timeline
-  also per `sheetOpen` and the phone layout): a tab switch re-renders the shell (tab bar, top bar, status bar), not the eight panels nor the
+  also per `sheetOpen` and the phone layout): a tab switch re-renders the shell (tab bar, top bar, status bar), not the nine panels nor the
   3D scene (see "Phone and tablet"). Flat sections separated by a rule, sticky section header (title + "modifié / Par défaut" (modified / default)). A click
   on the open tab, the button at the bottom of the rail or `[` collapses the panel. Tab and collapsed state are remembered by the browser
   (`getPlatform().storage` `openflyover.shell.v1`, `parseShellPrefs`: an unknown tab id falls back to Trace), not by the project.
@@ -397,12 +399,26 @@ ink, 7.3:1).
   as a project (`openFiles`, routing `routeOpenedFiles`), full-screen veil "Déposez vos traces GPX ou FIT" (drop your GPX or FIT tracks)
   (`pointer-events: none`) during the drag (`isFileDrag`). A drop already handled (`defaultPrevented`: the timeline
   takes photos) is left as is, and the veil fades out over the timeline; nothing is accepted during an export.
+- **Timeline bar**: timecode `formatTimecode` (minutes on two digits) and fixed-width readout values: the bar never
+  wraps differently while the film plays, so the view never resizes. The recorded clock time only with the « Réglages »
+  preference. Tool buttons are icons only (tooltip and `aria-label`), « Options » included. During an export the
+  timeline keeps the playback it had (it does not follow the export's playhead, so it does not re-render per frame).
 - **Status bar** (24 px, below the timeline): map state of the current view (`ui/mapStatus.ts`, pure): a ring and
   "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
   99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
   erreur" (N tiles in error) in yellow with a tip; nothing before the first tile; not a live region, the ring is a
-  `progressbar`. Import in progress, attributions on one line (`overlayCredits`,
-  same strings as in the film) and ⓘ, which opens "Sources et licences" (sources and licenses) (`<dialog>`).
+  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau from `useWeatherStore`,
+  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`; `fetchChip` in `mapStatus.ts`;
+  spinner / check / attention with the store message / muted); a performance readout when the bar is at least 900 px
+  wide (`perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of the renderer
+  through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through the Tauri
+  command `system_stats`), each part chosen in « Réglages »; then the short credits of the active sources, always
+  visible (`compactCredits`, `SOURCE_CREDITS`; OpenStreetMap first and linked to its copyright page; OpenTopoMap and
+  Esri never collapsed, Esri's providers behind « … » below 560 px: OSMF, OpenTopoMap and Esri ask for a credit visible
+  without interaction), and ⓘ, which opens "Sources et licences" (sources and licenses) (`<dialog>`) with the full lines
+  (`overlayCredits`, same strings as in the film), licence links, and for IGN layers the update date of the data read
+  from the tiles' `Last-Modified` (`terrain/sourceDates.ts`, Licence Ouverte Etalab 2.0) or « date de mise à jour non
+  communiquée par le service ».
 - **Shortcuts** (`src/ui/shortcuts.ts`): `SHORTCUTS` registry (id, keys, label, group Lecture / Montage / Projet /
   Vue (playback / editing / project / view)) shown by the "Raccourcis clavier" (keyboard shortcuts) box (`HelpDialog.tsx`, native `<dialog>`, "?" or the bar button)
   and reused in tooltips (`withShortcut`). `matchShortcut(key, keyFocus(target))`, pure: Ctrl/Cmd+S save,
@@ -437,9 +453,9 @@ ink, 7.3:1).
     menu.
   - *Portrait phone* (`max-width: 699px`, after CapCut; `App` reads it with `usePhone`): from top to bottom the top
     bar, the 3D preview (`--phone-preview-h` 42dvh, only with a film: `.view:has(> .film-tl)`), the timeline's bar as a
-    slim transport row (play and time, then « Arrêt », « Vitesse », « Texte », « Média », speed and « Options » in a row
+    slim transport row (play and time, then the « Arrêt », « Vitesse », « Texte », « Média », speed and « Options » icons in a row
     that scrolls sideways, `.film-tl__tools`; no ■, readout, zoom nor fold), the timeline (`Timeline` `centred`, below),
-    the bottom tab bar (all eight tabs, 72 px wide at least so the next one peeks past the edge, scrolling sideways),
+    the bottom tab bar (all nine tabs, 72 px wide at least so the next one peeks past the edge, scrolling sideways),
     the status bar. Panel, export drawer and inspector are half sheets from under the transport row to the status bar,
     over the timeline and the tab bar, never over the preview (sliding in, not under `prefers-reduced-motion`). Their
     head (`SheetHandle.tsx`: grip, tab name, « Terminé » ✓) closes them on ✓ or when dragged down past a third of
@@ -474,7 +490,8 @@ ink, 7.3:1).
   sticky header: title, "modifié / Par défaut" of its keys, chevron), open initially, then as last left: open / folded
   state remembered by title in the platform storage (`FOLDS_KEY` `openflyover.folds.v1`, `parseFoldPrefs` in `shell.ts`,
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
-  (imagery, water), "Relief" (exaggeration), "Trace et marqueur" (track and marker; `TrackMarkerSection`, track colouring included), "Montées et étiquettes" (climbs and labels; `ClimbList`), "Repères (OpenStreetMap)" (landmarks; `LandmarkPanel`, absent without a track) and "Points d'intérêt" (points of interest; `PoiPanel`, likewise).
+  (imagery, water), "Relief" (exaggeration), "Repères (OpenStreetMap)" (landmarks; `LandmarkPanel`, absent without a track) and "Points d'intérêt" (points of interest; `PoiPanel`, likewise).
+  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`), "Montées et étiquettes" (climbs and labels; `ClimbList`). Réglages: « Barre d'état », « Timeline » (`PreferencesPanel`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
   `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
@@ -827,7 +844,7 @@ ink, 7.3:1).
   the export matches the preview; the ghost-race markers stay still. Defaults = the previous look
   (4 px, solid, white ball). Checked by `SETTING_CHECKS`, completed by `SETTING_UPGRADES` (keys added later).
   `image`: 128 px square PNG as a data URL (`fileToAvatarDataUrl`, platform picker), 300,000 characters at most.
-  "Trace et marqueur" (track and marker) section of the Carte tab (`src/ui/TrackMarkerSection.tsx`).
+  « Trace » and « Marqueur » sections of the Trace tab (`src/ui/TrackMarkerSection.tsx`).
 - **Width**: pixels of a 1080 px image, times `renderScale` in the export (as before). **Glow** (« Halo de la trace »):
   a second `Line2` on the same geometry, `glowWidth` px wide (6–64, default 24), `LineMaterial` material whose fragment
   shader is replaced (`onBeforeCompile`, own program key): colour × `glowStrength` × radial fade (`vUv`) from the edge
@@ -2338,6 +2355,9 @@ JavaScript.
 - **Verified**: `cargo check --target x86_64-pc-windows-msvc`; JavaScript tests with a fake invoke
   (`nativeEncoder.test.ts`); GPU probe without a GPU (both fail, `libx264` kept). To be checked on a Linux desktop
   (`cargo test`, real export, NVENC / VAAPI): `docs/tests-gpu.md`, section 7.
+- **Machine load** (`src-tauri/src/system.rs`): read-only command `system_stats` → used / total RAM and CPU %, for the
+  status bar's performance readout (`sysinfo` 0.36, the last release for `rust-version` 1.77, `system` feature only;
+  permission `allow-system-stats` in `capabilities/default.json`).
 
 ## Offline packs (phase 6)
 

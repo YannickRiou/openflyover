@@ -656,7 +656,18 @@
 }
 
 .film-tl__time {
+  min-width: 15ch;
   font-size: 13px;
+}
+
+/* the changing values of the readout keep the width of their longest value (set inline from the track) */
+.film-tl__value {
+  display: inline-block;
+  text-align: right;
+}
+
+.film-tl__clock {
+  min-width: 7ch;
 }
 
 .film-tl__time strong {
@@ -2092,4 +2103,9 @@
   font-variant-numeric: tabular-nums;
   text-align: right;
   overflow-wrap: anywhere;
+}
+
+/* « Réglages »: the line that says these preferences belong to the device */
+.prefs__intro {
+  padding-top: var(--space-3);
 }

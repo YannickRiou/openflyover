@@ -9,6 +9,7 @@
  */
 import { deviceBudget } from '../core/deviceBudget'
 import type { TileFetcher, TileFetcherStats } from '../core/types'
+import { noteTileLastModified } from './sourceDates'
 
 export interface TileFetcherOptions {
   /** Maximum simultaneous network requests. Default 12. */
@@ -108,6 +109,8 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 export async function fetchTileBlob(url: string, signal?: AbortSignal, reload = false): Promise<Blob> {
   const response = await fetch(url, reload ? { signal, cache: 'reload' } : { signal })
   if (!response.ok) throw new TileFetchError(url, response.status)
+  // update date of the IGN layers (Etalab licence), shown in « Sources et licences »
+  noteTileLastModified(url, response.headers?.get('Last-Modified'))
   return response.blob()
 }
 

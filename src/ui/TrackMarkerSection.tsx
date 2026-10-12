@@ -125,16 +125,14 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
 }
 
 /**
- * « Trace et marqueur » section of the Carte tab: the marker (ball, figurine, picture), the draw-on and the glow first;
- * colouring, smoothing, line width, dashes and marker size as rows (name and value, control on demand).
+ * « Trace » section of the Trace tab: the draw-on and the glow first; colouring, smoothing, line width and dashes as
+ * rows (name and value, control on demand).
  */
-export function TrackMarkerSection() {
+export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const style = useAppStore((s) => s.settings.trackStyle)
-  const marker = useAppStore((s) => s.settings.marker)
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
   const updateStyle = (patch: Partial<TrackStyle>) => setSetting('trackStyle', { ...style, ...patch })
-  const updateMarker = (patch: Partial<MarkerSettings>) => setSetting('marker', { ...marker, ...patch })
   const trackColorBy = useAppStore((s) => s.settings.trackColorBy)
   const firstTrack = useAppStore((s) => s.tracks[0])
   const colorModes = useMemo(
@@ -148,34 +146,7 @@ export function TrackMarkerSection() {
   )
 
   return (
-    <PanelSection title="Trace et marqueur" keys={['trackColorBy', 'trackStyle', 'marker']}>
-      <ChipChoice
-        label="Marqueur"
-        name={`${id}-kind`}
-        options={MARKER_KINDS}
-        value={marker.kind}
-        labels={MARKER_KIND_LABELS}
-        onChange={(kind) => updateMarker({ kind })}
-      />
-      {marker.kind === 'figurine' && (
-        <ChipChoice
-          label="Figurine"
-          name={`${id}-figure`}
-          options={MARKER_FIGURES}
-          value={marker.figure}
-          labels={MARKER_FIGURE_LABELS}
-          icon={(figure) => <FigureIcon figure={figure} />}
-          onChange={(figure) => updateMarker({ figure })}
-        />
-      )}
-      {marker.kind === 'figurine' && (
-        <label className="checkbox">
-          <input type="checkbox" checked={marker.animated} onChange={(e) => updateMarker({ animated: e.currentTarget.checked })} />
-          Animer la figurine (pas et balancement)
-        </label>
-      )}
-      {marker.kind === 'image' && <MarkerImageField marker={marker} update={updateMarker} />}
-
+    <PanelSection title="Trace" keys={['trackColorBy', 'trackStyle']} hidden={hidden}>
       <div className="field__label-row">
         <label className="checkbox checkbox--switch">
           <input type="checkbox" checked={style.drawOn} onChange={(e) => updateStyle({ drawOn: e.currentTarget.checked })} />
@@ -280,6 +251,45 @@ export function TrackMarkerSection() {
           onChange={(dash) => updateStyle({ dash })}
         />
       </SettingRow>
+    </PanelSection>
+  )
+}
+
+/** « Marqueur » section of the Trace tab: ball, figurine or picture, then its size as a row. */
+export function MarkerSection({ hidden }: { hidden: boolean }) {
+  const marker = useAppStore((s) => s.settings.marker)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const id = useId()
+  const updateMarker = (patch: Partial<MarkerSettings>) => setSetting('marker', { ...marker, ...patch })
+
+  return (
+    <PanelSection title="Marqueur" keys={['marker']} hidden={hidden}>
+      <ChipChoice
+        label="Forme"
+        name={`${id}-kind`}
+        options={MARKER_KINDS}
+        value={marker.kind}
+        labels={MARKER_KIND_LABELS}
+        onChange={(kind) => updateMarker({ kind })}
+      />
+      {marker.kind === 'figurine' && (
+        <ChipChoice
+          label="Figurine"
+          name={`${id}-figure`}
+          options={MARKER_FIGURES}
+          value={marker.figure}
+          labels={MARKER_FIGURE_LABELS}
+          icon={(figure) => <FigureIcon figure={figure} />}
+          onChange={(figure) => updateMarker({ figure })}
+        />
+      )}
+      {marker.kind === 'figurine' && (
+        <label className="checkbox">
+          <input type="checkbox" checked={marker.animated} onChange={(e) => updateMarker({ animated: e.currentTarget.checked })} />
+          Animer la figurine (pas et balancement)
+        </label>
+      )}
+      {marker.kind === 'image' && <MarkerImageField marker={marker} update={updateMarker} />}
       <SettingRow label="Taille du marqueur" value={`×${formatShort(marker.size)}`} paths={['marker.size']}>
         <RangeField
           label="Taille du marqueur"

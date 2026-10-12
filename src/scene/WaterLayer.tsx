@@ -22,6 +22,7 @@ import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './TrackLines'
 import { useTerrainContext } from './TerrainLayer'
 import { wakeScene } from './renderOnDemand'
 import { useFilmClock, useFilmTrack } from './usePacing'
+import { setWaterStatus } from './waterStatus'
 import { buildWaterMesh, type WaterMesh } from './waterMesh'
 
 /** Height of the surface above the draped relief (metres, not exaggerated: like the track). */
@@ -194,21 +195,39 @@ export function WaterLayer() {
 
   // one Overpass query per track (cached); nothing is sent while the setting is off
   useEffect(() => {
-    if (!enabled || !track) return
+    if (!enabled || !track) {
+      setWaterStatus('idle')
+      return
+    }
     // not aborted on cleanup: the query is shared and cached (StrictMode runs this effect twice), only its
     // answer is ignored once stale
     let current = true
     const trackId = track.id
+    setWaterStatus('loading')
     fetchTrackWater(track).then(
-      (result) => current && setFetched({ trackId, polygons: result }),
-      () => current && setFetched({ trackId, polygons: [] }),
+      (result) => {
+        if (!current) return
+        setFetched({ trackId, polygons: result })
+        setWaterStatus('ready')
+      },
+      () => {
+        if (!current) return
+        setFetched({ trackId, polygons: [] })
+        setWaterStatus('error')
+      },
     )
     return () => {
       current = false
     }
   }, [enabled, track])
   useEffect(() => useWaterStore.setState({ polygons: polygons.length }), [polygons])
-  useEffect(() => () => useWaterStore.setState({ polygons: 0 }), [])
+  useEffect(
+    () => () => {
+      useWaterStore.setState({ polygons: 0 })
+      setWaterStatus('idle')
+    },
+    [],
+  )
 
   const meshes = useMemo(() => polygons.map((polygon) => ({ polygon, mesh: buildWaterMesh(polygon) })), [polygons])
   const drape = useCallback(
