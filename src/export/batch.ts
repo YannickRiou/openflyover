@@ -323,7 +323,7 @@ export function trackProgressLabel(tracks: readonly TrackRunState[], fraction: n
 export interface BatchContext {
   projectName: string
   /** request fields of the current film, the same for each format */
-  film: Pick<ExportRequest, 'fps' | 'quality' | 'durationS' | 'progressAt' | 'holdStartS' | 'holdEndS'>
+  film: Pick<ExportRequest, 'fps' | 'quality' | 'encoding' | 'durationS' | 'progressAt' | 'holdStartS' | 'holdEndS'>
   still: { progress: number; type: StillType }
   /** receives every file; null: each file kept in memory and handed to `save` */
   folder: WritableFolder | null

@@ -23,6 +23,15 @@ export type PosterFormatId = (typeof POSTER_FORMATS)[number]['id']
 export const POSTER_STYLES = ['editorial', 'broadcast', 'app'] as const satisfies readonly OverlayStyleId[]
 export type PosterStyleId = (typeof POSTER_STYLES)[number]
 
+/** The 3D view of the poster: every track framed from the south (« Vue d'ensemble »), or the camera as it is now. */
+export const POSTER_VIEWS = ['overview', 'camera'] as const
+export type PosterView = (typeof POSTER_VIEWS)[number]
+export const POSTER_VIEW_LABELS: Record<PosterView, string> = { overview: "Vue d'ensemble", camera: 'Vue actuelle de la caméra' }
+
+/** File type of the poster and of the still image (« Image fixe »). */
+export const POSTER_TYPES = ['image/png', 'image/jpeg'] as const
+export type PosterType = (typeof POSTER_TYPES)[number]
+
 export const POSTER_FIGURES = ['distance', 'ascent', 'time', 'maxAltitude', 'climbs'] as const
 export type PosterFigureId = (typeof POSTER_FIGURES)[number]
 
@@ -46,6 +55,10 @@ export interface PosterSettings {
   weather: boolean
   /** « Carte à plat »: the view is a map seen from straight above (imagery tiles), not the 3D overview */
   flat: boolean
+  /** the 3D view (not the flat map): the overview of every track, or the camera as it is now */
+  view: PosterView
+  /** PNG (lossless) or JPEG (smaller), for the poster and the still image */
+  type: PosterType
 }
 
 export const DEFAULT_POSTER: PosterSettings = {
@@ -56,6 +69,8 @@ export const DEFAULT_POSTER: PosterSettings = {
   figures: { distance: true, ascent: true, time: true, maxAltitude: true, climbs: true },
   weather: true,
   flat: false,
+  view: 'overview',
+  type: 'image/png',
 }
 
 /** Pixel size of a format. */
@@ -64,9 +79,14 @@ export function posterSize(format: PosterFormatId): { width: number; height: num
   return { width: found.width, height: found.height }
 }
 
-/** Value checks once the JSON shape matches `DEFAULT_POSTER` (`SETTING_CHECKS`): format and style ids. */
+/** Value checks once the JSON shape matches `DEFAULT_POSTER` (`SETTING_CHECKS`): format, style, view and type ids. */
 export function isValidPoster(p: PosterSettings): boolean {
-  return POSTER_FORMATS.some((f) => f.id === p.format) && (POSTER_STYLES as readonly string[]).includes(p.style)
+  return (
+    POSTER_FORMATS.some((f) => f.id === p.format) &&
+    (POSTER_STYLES as readonly string[]).includes(p.style) &&
+    (POSTER_VIEWS as readonly string[]).includes(p.view) &&
+    (POSTER_TYPES as readonly string[]).includes(p.type)
+  )
 }
 
 /** Fields missing from a poster saved before they were added, taken from `DEFAULT_POSTER` (`SETTING_UPGRADES`). */

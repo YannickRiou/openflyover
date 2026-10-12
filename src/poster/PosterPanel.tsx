@@ -1,11 +1,14 @@
 /**
- * « Affiche » mode of the export drawer: format, style, title, subtitle, figures, weather and « Carte à plat » of the
- * poster, a live thumbnail of its layout (2D only: the last rendered view, or a placeholder with the track's
- * outline), and the button that renders it. The result is saved like the other exports (export drawer, `getPlatform().saveUrl`).
+ * « Affiche » mode of the export drawer: format, style, title, subtitle, figures, weather, « Carte à plat » and the 3D
+ * view of the poster, its image type, a live thumbnail of its layout (2D only: the last rendered view, else a flat map
+ * at a low zoom as an approximation, else a placeholder with the track's outline), the button that renders it and the
+ * still image of the playback position (« Image fixe »). The result is saved like the other exports (export drawer,
+ * `getPlatform().saveUrl`).
  */
 import { errorMessage } from '../core/errors'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { isExportBusy, useExportStore } from '../export/store'
 import type { ExportResult } from '../export/store'
 import { buildTrackPath } from '../flyover/path'
@@ -25,17 +28,27 @@ import { showToast } from '../ui/toast'
 import { useWeatherStore } from '../weather/store'
 import { availableFigures, posterStats } from './content'
 import { drawPoster } from './draw'
-import { currentPosterContent, posterRows, previewKey, startPoster, usePosterPreview } from './export'
+import { currentPosterContent, posterRows, previewKey, previewMap, startPoster, startStill, usePosterPreview } from './export'
 import { posterLayout } from './layout'
-import { POSTER_FIGURES, POSTER_FIGURE_LABELS, POSTER_FORMATS, POSTER_STYLES, posterSize } from './settings'
-import type { PosterSettings } from './settings'
+import { POSTER_FIGURES, POSTER_FIGURE_LABELS, POSTER_FORMATS, POSTER_STYLES, POSTER_VIEWS, POSTER_VIEW_LABELS, posterSize } from './settings'
+import type { PosterSettings, PosterType } from './settings'
 import './poster.css'
 
 /** Largest size of the thumbnail in the drawer (CSS px). */
 const PREVIEW_MAX_W = 260
 const PREVIEW_MAX_H = 220
+/** The approximate view waits for the settings to rest this long (ms) before fetching its tiles. */
+const PREVIEW_DEBOUNCE_MS = 400
 
-/** Live thumbnail of the poster: the same drawing as the export, scaled down, without rendering the 3D view. */
+const IMAGE_TYPES: { value: PosterType; label: string }[] = [
+  { value: 'image/png', label: 'PNG' },
+  { value: 'image/jpeg', label: 'JPEG' },
+]
+
+/**
+ * Live thumbnail of the poster: the same drawing as the export, scaled down, without rendering the 3D view. Its view is
+ * the last one rendered for these tracks and this view, else a flat map at a low zoom (debounced), else the placeholder.
+ */
 function PosterPreview({ poster }: { poster: PosterSettings }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tracks = useAppStore((s) => s.tracks)
@@ -45,10 +58,14 @@ function PosterPreview({ poster }: { poster: PosterSettings }) {
   const projectName = useAppStore((s) => s.projectName)
   const terrain = useAppStore((s) => s.settings.terrainSourceId)
   const imagery = useAppStore((s) => s.settings.imagerySourceId)
+  const bounds = useAppStore((s) => s.bounds)
   const weather = useWeatherStore((s) => s.series)
   const landmarks = useLandmarkStore((s) => s.landmarks)
   const view = usePosterPreview((s) => s.view)
   const [fontsReady, setFontsReady] = useState(false)
+  /** size of the layout's view box, for the approximate view */
+  const [viewBox, setViewBox] = useState<{ w: number; h: number } | null>(null)
+  const [approx, setApprox] = useState<{ key: string; image: OffscreenCanvas } | null>(null)
   const outline = useMemo(() => (track ? miniMapOutline(buildTrackPath(track)) : undefined), [track])
 
   useEffect(() => {
@@ -63,6 +80,26 @@ function PosterPreview({ poster }: { poster: PosterSettings }) {
   const scale = Math.min(PREVIEW_MAX_W / width, PREVIEW_MAX_H / height)
   const cssW = Math.round(width * scale)
   const cssH = Math.round(height * scale)
+  const exact = view && view.key === previewKey(tracks, poster) ? view : null
+  // the approximate view of these tracks, this imagery, this box and this page colour (the casing of the lines)
+  const approxKey = viewBox ? `${tracks.map((t) => t.id).join()}|${imagery}|${poster.style}|${viewBox.w}x${viewBox.h}` : ''
+  const shownApprox = !exact && approx?.key === approxKey ? approx : null
+
+  useEffect(() => {
+    if (!approxKey || !viewBox || !bounds || exact) return undefined
+    const abort = new AbortController()
+    const timer = setTimeout(() => {
+      previewMap(viewBox, abort.signal).then(
+        ({ view: image }) => !abort.signal.aborted && setApprox({ key: approxKey, image }),
+        // no tile: the placeholder stays
+        () => undefined,
+      )
+    }, PREVIEW_DEBOUNCE_MS)
+    return () => {
+      clearTimeout(timer)
+      abort.abort()
+    }
+  }, [approxKey, viewBox, bounds, exact])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -75,18 +112,27 @@ function PosterPreview({ poster }: { poster: PosterSettings }) {
     const k = canvas.width / width
     ctx.setTransform(k, 0, 0, k, 0, 0)
     const layout = posterLayout(width, height, poster.style, posterRows(content))
-    const shown = view && view.key === previewKey(tracks, poster.flat) ? { image: view.image, width: view.width, height: view.height } : null
-    drawPoster(ctx, layout, content, poster.style, shown, outline)
-  }, [poster, tracks, race, projectName, terrain, imagery, weather, landmarks, view, fontsReady, outline, width, height, cssW, cssH])
+    setViewBox((box) => (box?.w === layout.view.w && box.h === layout.view.h ? box : { w: layout.view.w, h: layout.view.h }))
+    const image = exact ?? (shownApprox && { image: shownApprox.image, width: shownApprox.image.width, height: shownApprox.image.height })
+    drawPoster(ctx, layout, content, poster.style, image ? { image: image.image, width: image.width, height: image.height } : null, outline)
+  }, [poster, tracks, race, projectName, terrain, imagery, weather, landmarks, exact, shownApprox, fontsReady, outline, width, height, cssW, cssH])
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="poster__preview"
-      style={{ width: cssW, height: cssH }}
-      role="img"
-      aria-label="Aperçu de l'affiche"
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="poster__preview"
+        style={{ width: cssW, height: cssH }}
+        role="img"
+        aria-label="Aperçu de l'affiche"
+      />
+      {!exact && (
+        <p className="field__hint">
+          Aperçu approximatif{shownApprox ? ' : carte à plat en basse résolution' : ''}.{' '}
+          {poster.flat ? 'La carte est chargée en détail' : 'La vue 3D est rendue'} à la création de l'affiche.
+        </p>
+      )}
+    </>
   )
 }
 
@@ -104,26 +150,44 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
   // a set of outings is summed: no weather of a single day
   const outings = tracks.length > 1 && !race
   const hasWeather = useWeatherStore((s) => s.status === 'ready' && s.trackId === track?.id) && !outings
-  const { phase, result } = useExportStore()
+  // only what the panel draws: the frames and timings of a film do not redraw it
+  const { phase, result, tiles, still } = useExportStore(
+    useShallow((s) => ({ phase: s.phase, result: s.result, tiles: s.tiles, still: s.request?.still })),
+  )
   const busy = isExportBusy(phase)
-  /** the last poster made (shown while it is still the last export) */
+  /** the last poster or still image made here (shown while it is still the last export) */
   const [done, setDone] = useState<ExportResult | null>(null)
+  /** an export started here is running: its progress belongs to this panel */
+  const [running, setRunning] = useState(false)
+  /** why the last one started here failed */
+  const [failed, setFailed] = useState<string | null>(null)
 
   const available = useMemo(() => (track ? availableFigures(posterStats(tracks, race)) : null), [track, tracks, race])
   const set = (patch: Partial<PosterSettings>) => setSetting('poster', { ...poster, ...patch })
   const { width, height } = posterSize(poster.format)
   const defaultTitle = effectiveProjectName(projectName, track?.name)
 
+  /** follow an export started here until it ends */
+  const follow = (started: boolean) => {
+    if (!started || !isExportBusy(useExportStore.getState().phase)) return
+    setRunning(true)
+    const stop = useExportStore.subscribe((s) => {
+      if (isExportBusy(s.phase)) return
+      stop()
+      setRunning(false)
+      if (s.phase === 'done') setDone(s.result)
+      if (s.phase === 'error') setFailed(s.error)
+    })
+  }
   const create = () => {
     setDone(null)
-    void startPoster().then((started) => {
-      if (!started) return
-      const stop = useExportStore.subscribe((s) => {
-        if (isExportBusy(s.phase)) return
-        stop()
-        if (s.phase === 'done') setDone(s.result)
-      })
-    })
+    setFailed(null)
+    void startPoster().then(follow)
+  }
+  const createStill = () => {
+    setDone(null)
+    setFailed(null)
+    follow(startStill())
   }
 
   const saveAgain = (r: ExportResult) => {
@@ -132,6 +196,18 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
       .saveUrl(r.url, { fileName: r.fileName })
       .catch((err: unknown) => showToast({ kind: 'error', text: `Impossible d'enregistrer « ${r.fileName} » : ${errorMessage(err)}` }))
   }
+
+  const flatMap = Boolean(still?.drawView)
+  const progressLabel =
+    phase === 'finalizing'
+      ? still?.compose
+        ? "Composition de l'affiche…"
+        : "Enregistrement de l'image…"
+      : tiles && tiles.total > 0
+        ? `${flatMap ? 'Tuiles de la carte' : 'Tuiles de la vue 3D'} : ${formatNumber(tiles.done)} / ${formatNumber(tiles.total)}`
+        : flatMap
+          ? 'Chargement de la carte…'
+          : 'Rendu de la vue 3D…'
 
   return (
     <section className="settings export poster" aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
@@ -229,21 +305,67 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
         <input type="checkbox" checked={poster.flat} disabled={busy} onChange={(e) => set({ flat: e.currentTarget.checked })} />
         Carte à plat
       </label>
+      <fieldset className="field fieldset" disabled={busy || poster.flat}>
+        <legend className="field__label">Vue 3D</legend>
+        <div className="segmented">
+          {POSTER_VIEWS.map((view) => (
+            <label key={view} className="segmented__option">
+              <input type="radio" name={`${id}-view`} value={view} checked={poster.view === view} onChange={() => set({ view })} />
+              {POSTER_VIEW_LABELS[view]}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <p className="field__hint">
-        {poster.flat ? "Carte vue d'en haut, tirée de l'imagerie choisie" : 'Vue 3D'}
-        {tracks.length > 1 ? ' de toutes les traces' : ' de toute la trace'}, nord en haut. Les crédits des sources figurent en petit au
-        bas de l'affiche.
+        {poster.flat
+          ? `Carte vue d'en haut, tirée de l'imagerie choisie, ${tracks.length > 1 ? 'de toutes les traces' : 'de toute la trace'}, nord en haut.`
+          : poster.view === 'camera'
+            ? 'La vue 3D telle que la caméra la montre maintenant : placez-la à la main avant de créer l’affiche.'
+            : `Vue 3D ${tracks.length > 1 ? 'de toutes les traces' : 'de toute la trace'}, nord en haut.`}{' '}
+        Les crédits des sources figurent en petit au bas de l'affiche.
       </p>
 
+      <fieldset className="field fieldset" disabled={busy}>
+        <legend className="field__label">Type d'image</legend>
+        <div className="segmented">
+          {IMAGE_TYPES.map((t) => (
+            <label key={t.value} className="segmented__option">
+              <input type="radio" name={`${id}-type`} value={t.value} checked={poster.type === t.value} onChange={() => set({ type: t.value })} />
+              {t.label}
+            </label>
+          ))}
+        </div>
+        <p className="field__hint">Pour l'affiche et l'image fixe. PNG sans perte, JPEG plus léger.</p>
+      </fieldset>
+
       {!busy && (
-        <button type="button" className="btn btn--primary" onClick={create} disabled={!track}>
-          <Icon name="map" size={18} />
-          Créer l'affiche
-        </button>
+        <div className="export__actions">
+          <button type="button" className="btn btn--primary" onClick={create} disabled={!track}>
+            <Icon name="map" size={18} />
+            Créer l'affiche
+          </button>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={createStill}
+            disabled={!track}
+            title="La vue du film à la position de lecture, à la taille de la vidéo (mode « Vidéo »), avec l'habillage"
+          >
+            <Icon name="image" size={18} />
+            Image fixe
+          </button>
+        </div>
       )}
-      {busy && (
+      {busy && running && still && (
         <div className="field">
-          <p className="field__hint">{phase === 'finalizing' ? "Composition de l'affiche…" : 'Rendu de la vue 3D…'}</p>
+          <progress
+            className="export__progress"
+            aria-label="Progression de l'image"
+            {...(tiles && tiles.total > 0 && { max: tiles.total, value: phase === 'finalizing' ? tiles.total : tiles.done })}
+          />
+          <p className="field__hint" role="status">
+            {progressLabel}
+          </p>
           <button
             type="button"
             className="btn btn--secondary btn--block"
@@ -254,12 +376,24 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
           </button>
         </div>
       )}
+      {!busy && failed && (
+        <p className="field__hint export__error" role="alert">
+          Échec : {failed}
+        </p>
+      )}
       {!busy && done && done === result && (
         <p className="field__hint">
           {done.fileName} ({formatNumber(done.sizeBytes / 1e6, 1)} Mo){' '}
           <button type="button" className="poster__again" onClick={() => saveAgain(done)}>
             Enregistrer à nouveau…
           </button>
+          {done.missingTiles !== undefined && done.missingTiles > 0 && (
+            <span className="export__warning">
+              {' '}
+              — {formatNumber(done.missingTiles)} tuile{done.missingTiles > 1 ? 's' : ''} de la carte jamais reçue
+              {done.missingTiles > 1 ? 's' : ''} (en gris) : réessayez plus tard ou changez de fond de carte.
+            </span>
+          )}
         </p>
       )}
     </section>

@@ -7,7 +7,9 @@ import {
   composeOverlayFrame,
   renderSettledFrame,
   settle,
+  tileFailureMessage,
   wait,
+  yieldToEventLoop,
   type RenderFrameDeps,
 } from './capture'
 import { ExportCanceledError } from './encoder'
@@ -116,19 +118,19 @@ describe('settle', () => {
 describe('renderSettledFrame', () => {
   it('sets the progress once when the placement does not move', async () => {
     const { deps, progress } = fakeScene({ loadedAt: 100, drift: REPLACE_TOLERANCE_M / 2 })
-    expect(await renderSettledFrame(0.25, deps)).toBe(true)
+    expect(await renderSettledFrame(0.25, deps)).toBe('complete')
     expect(progress).toEqual([0.25])
   })
 
   it('places the camera again when the final terrain moves it', async () => {
     const { deps, progress } = fakeScene({ loadedAt: 100, drift: 5 })
-    expect(await renderSettledFrame(0.25, deps)).toBe(true)
+    expect(await renderSettledFrame(0.25, deps)).toBe('complete')
     expect(progress).toEqual([0.25, 0.25 + REPLACE_EPSILON])
   })
 
   it('does not place the camera again after a timeout', async () => {
     const { deps, progress } = fakeScene({ loadedAt: 60_000, drift: 5 })
-    expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })).toBe(false)
+    expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })).toBe('timeout')
     expect(progress).toEqual([0.25])
   })
 
@@ -144,13 +146,13 @@ describe('renderSettledFrame with clouds', () => {
 
   it('renders once without clouds, then once with them, when the terrain is already complete', async () => {
     const { deps, finals } = fakeScene({ clouds: true })
-    expect(await renderSettledFrame(0.25, deps, withClouds)).toBe(true)
+    expect(await renderSettledFrame(0.25, deps, withClouds)).toBe('complete')
     expect(finals).toEqual([false, true])
   })
 
   it('computes the clouds once however many renders the tiles and the re-drape take', async () => {
     const { deps, finals, flushes } = fakeScene({ clouds: true, loadedAt: 1000, drift: 5 })
-    expect(await renderSettledFrame(0.25, deps, withClouds)).toBe(true)
+    expect(await renderSettledFrame(0.25, deps, withClouds)).toBe('complete')
     expect(finals.filter(Boolean)).toHaveLength(1)
     // the final render is the last one, after the re-drapes
     expect(finals.at(-1)).toBe(true)
@@ -160,7 +162,7 @@ describe('renderSettledFrame with clouds', () => {
 
   it('renders the final frame at the timeout too', async () => {
     const { deps, finals } = fakeScene({ clouds: true, loadedAt: 60_000, drift: 5 })
-    expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })).toBe(false)
+    expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })).toBe('timeout')
     expect(finals.at(-1)).toBe(true)
     expect(finals.filter(Boolean)).toHaveLength(1)
   })
@@ -181,21 +183,21 @@ describe('renderSettledFrame with clouds', () => {
 })
 
 describe('renderSettledFrame, the view is final at the capture', () => {
-  it('waits up to 45 s by default, a frame of a slow host included', async () => {
-    expect(DEFAULT_SETTLE.timeoutMs).toBe(45_000)
-    const { deps } = fakeScene({ loadedAt: 30_000 })
-    expect(await renderSettledFrame(0.25, deps)).toBe(true)
-    expect(deps.now()).toBeGreaterThanOrEqual(31_000)
+  it('waits up to 5 min by default, a frame of a slow host included', async () => {
+    expect(DEFAULT_SETTLE.timeoutMs).toBe(300_000)
+    const { deps } = fakeScene({ loadedAt: 200_000 })
+    expect(await renderSettledFrame(0.25, deps)).toBe('complete')
+    expect(deps.now()).toBeGreaterThanOrEqual(201_000)
   })
 
   it('reports the frame incomplete when tiles of the view were given up on', async () => {
     const { deps } = fakeScene({ missing: 2 })
-    expect(await renderSettledFrame(0.25, deps)).toBe(false)
+    expect(await renderSettledFrame(0.25, deps)).toBe('missing')
   })
 
   it('settles and renders again when the final render selected tiles nobody waited for', async () => {
     const { deps, finals } = fakeScene({ clouds: true, lateRequest: true })
-    expect(await renderSettledFrame(0.25, deps)).toBe(true)
+    expect(await renderSettledFrame(0.25, deps)).toBe('complete')
     // the captured render is the last one and follows the end of the wait
     expect(finals.filter(Boolean)).toHaveLength(2)
     expect(finals.at(-1)).toBe(true)
@@ -204,11 +206,58 @@ describe('renderSettledFrame, the view is final at the capture', () => {
 
   it('spends one timeout on a frame, not one per settle', async () => {
     const { deps } = fakeScene({ loadedAt: 400, drift: 5 })
-    expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500, minAdvances: 1 })).toBe(true)
+    expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500, minAdvances: 1 })).toBe('complete')
     const slow = fakeScene({ loadedAt: 450, drift: 5, lateRequest: true, clouds: true })
     const start = slow.deps.now()
     await renderSettledFrame(0.25, slow.deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })
     expect(slow.deps.now() - start).toBeLessThan(500 + 100)
+  })
+})
+
+describe('renderSettledFrame, final render first (the previous frame needed no wait)', () => {
+  it('renders once, with the clouds, when the view has its tiles', async () => {
+    const { deps, finals } = fakeScene({ clouds: true })
+    expect(await renderSettledFrame(0.25, deps, DEFAULT_SETTLE, true)).toBe('complete')
+    expect(finals).toEqual([true])
+  })
+
+  it('goes the usual way, ending on a final render, when that render asks for tiles', async () => {
+    const { deps, finals } = fakeScene({ clouds: true, loadedAt: 100 })
+    expect(await renderSettledFrame(0.25, deps, DEFAULT_SETTLE, true)).toBe('complete')
+    expect(finals[0]).toBe(true)
+    expect(finals.at(-1)).toBe(true)
+    expect(finals.slice(1, -1).every((f) => !f)).toBe(true)
+  })
+
+  it('goes the usual way when the camera must be placed again', async () => {
+    const { deps, finals, progress } = fakeScene({ clouds: true, drift: 5 })
+    await renderSettledFrame(0.25, deps, DEFAULT_SETTLE, true)
+    expect(progress).toEqual([0.25, 0.25 + REPLACE_EPSILON])
+    expect(finals.at(-1)).toBe(true)
+  })
+
+  it('changes nothing without clouds', async () => {
+    const { deps, finals } = fakeScene()
+    await renderSettledFrame(0.25, deps, DEFAULT_SETTLE, true)
+    expect(finals).toEqual([true])
+  })
+})
+
+describe('tileFailureMessage', () => {
+  const failure = (tile: string, givenUp = true) => ({ tile, host: 'data.geopf.fr', layer: 'imagerie', cause: 'HTTP 503', attempts: 8, givenUp })
+
+  it('names the host, the tile and the cause of the tiles given up on', () => {
+    const text = tileFailureMessage('missing', 12, [failure('14/8345/5843')], 0, 300_000)
+    expect(text).toContain("Tuiles introuvables pour l'image 12")
+    expect(text).toContain('data.geopf.fr, tuile 14/8345/5843 (imagerie) : HTTP 503, 8 essais')
+    expect(text).toContain('Export arrêté')
+  })
+
+  it('counts the tiles past the first three, and says how long the frame waited', () => {
+    const text = tileFailureMessage('timeout', 3, ['1/0/0', '1/0/1', '1/1/0', '1/1/1', '2/0/0'].map((t) => failure(t, false)), 7, 300_000)
+    expect(text).toContain("après 5 min pour l'image 3 (7 en attente)")
+    expect(text).toContain('et 2 autres')
+    expect(tileFailureMessage('timeout', 3, [], 7, 300_000)).toMatch(/en attente\)\. Export/)
   })
 })
 
@@ -260,5 +309,20 @@ describe('wait', () => {
   it('resolves with and without a delay', async () => {
     await expect(wait(0)).resolves.toBeUndefined()
     await expect(wait(1)).resolves.toBeUndefined()
+  })
+
+  it('yields through scheduler.yield where the browser has it, else a message port', async () => {
+    const scope = globalThis as { scheduler?: unknown }
+    const saved = scope.scheduler
+    try {
+      const yielded = vi.fn(async () => undefined)
+      scope.scheduler = { yield: yielded }
+      await yieldToEventLoop()
+      expect(yielded).toHaveBeenCalledOnce()
+      scope.scheduler = undefined
+      await expect(yieldToEventLoop()).resolves.toBeUndefined()
+    } finally {
+      scope.scheduler = saved
+    }
   })
 })
