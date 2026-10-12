@@ -276,6 +276,30 @@ describe('layoutWidgets', () => {
       { x: 890, y: 255 },
     ])
   })
+
+  it('places a widget with an offset out of its stack, from its corner towards the inside', () => {
+    const items = [
+      { anchor: 'bottom-left' as const, width: 100, height: 50, offset: { x: 30, y: 20 } },
+      { anchor: 'bottom-left' as const, width: 80, height: 30 },
+      { anchor: 'bottom-right' as const, width: 100, height: 50, offset: { x: 30, y: 20 } },
+      { anchor: 'center' as const, width: 200, height: 100, offset: { x: -40, y: 10 } },
+      { anchor: 'top-left' as const, width: 100, height: 50, offset: { x: 0, y: 0 } },
+      { anchor: 'top-left' as const, width: 100, height: 50 },
+    ]
+    expect(layoutWidgets(items, size, 10)).toEqual([
+      // from the bottom-left corner of the safe area, 30 right and 20 up
+      { x: 80, y: 475 - 50 - 20 },
+      // the other widget of the anchor closes up as if alone
+      { x: 50, y: 445 },
+      // from the bottom-right corner, 30 left and 20 up
+      { x: 950 - 100 - 30, y: 475 - 50 - 20 },
+      // centred axes: to the right and down
+      { x: 360, y: 210 },
+      // overlaps the widget stacked at its anchor
+      { x: 50, y: 25 },
+      { x: 50, y: 25 },
+    ])
+  })
 })
 
 describe('drawOverlay', () => {
@@ -365,6 +389,25 @@ describe('drawOverlay', () => {
     const { ctx, calls } = fakeContext()
     drawOverlay(ctx, overlayFrameAt(track, 0.5), settings, SIZE, { logo: { image: {} as CanvasImageSource, width: 400, height: 100 } })
     expect(calls).toContain('drawImage(5)')
+  })
+
+  it('draws the logo at its opacity, at its free position scaled from the exported film', () => {
+    const image = { image: {} as CanvasImageSource, width: 400, height: 100 }
+    const logo = { ...DEFAULT_OVERLAY.logo, enabled: true, image: 'data:image/png;base64,AAAA', anchor: 'top-left' as const }
+    const drawn = (patch: Partial<OverlaySettings['logo']>, extras: OverlayExtras = {}) => {
+      const { ctx, images } = fakeContext()
+      drawOverlay(ctx, overlayFrameAt(track, 0.5), enabled({ logo: { ...logo, ...patch } }), SIZE, { logo: image }, extras)
+      return images[0]
+    }
+    expect(drawn({}).alpha).toBe(1)
+    expect(drawn({ opacity: 0.4 }).alpha).toBeCloseTo(0.4)
+    expect(drawn({ opacity: 0 })).toBeUndefined()
+    const left = SIZE.width * SAFE_MARGIN
+    const top = SIZE.height * SAFE_MARGIN
+    // at the corner of the counters, out of their stack
+    expect(drawn({ offset: { x: 100, y: 40 } }).args.slice(0, 2)).toEqual([left + 100, top + 40])
+    // measured in pixels of a 4K film: half as far on this 1080p frame
+    expect(drawn({ offset: { x: 100, y: 40 } }, { exportSize: { width: 3840, height: 2160 } }).args.slice(0, 2)).toEqual([left + 50, top + 20])
   })
 })
 

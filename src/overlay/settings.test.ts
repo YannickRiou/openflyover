@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isValidSetting, sanitizeSettings } from '../project/document'
-import { DEFAULT_OVERLAY, isValidOverlay, widgetOverrides, withOverlayDefaults, withOverrides, withWidgetOverrides } from './settings'
+import { DEFAULT_OVERLAY, OFFSET_MAX_PX, isValidOverlay, widgetOverrides, withOverlayDefaults, withOverrides, withWidgetOffset, withWidgetOverrides } from './settings'
 import type { OverlaySettings } from './settings'
 import { OVERLAY_FONT_FAMILIES, OVERLAY_THEMES, parseColor, resolveOverlayTheme, toHex } from './themes'
 
@@ -75,6 +75,39 @@ describe('overlay settings', () => {
 
   it('validates the leaderboard', () => {
     expect(isValidOverlay(withPatch((o) => (o.leaderboard.size = 9)))).toBe(false)
+  })
+
+  it('validates the logo opacity, and fills it in for an overlay saved before it', () => {
+    expect(DEFAULT_OVERLAY.logo.opacity).toBe(1)
+    expect(isValidOverlay(withPatch((o) => (o.logo.opacity = 0)))).toBe(true)
+    expect(isValidOverlay(withPatch((o) => (o.logo.opacity = 1.2)))).toBe(false)
+    const custom = withPatch((o) => (o.logo.size = 1.5))
+    const { opacity: _opacity, ...oldLogo } = custom.logo
+    const { settings, invalid } = sanitizeSettings({ overlay: { ...custom, logo: oldLogo } })
+    expect(invalid).toEqual([])
+    expect(settings.overlay).toEqual(custom)
+  })
+})
+
+describe('free position of a widget', () => {
+  it('is absent by default, set and dropped by withWidgetOffset', () => {
+    expect(DEFAULT_OVERLAY.counters.offset).toBeUndefined()
+    const moved = withWidgetOffset(DEFAULT_OVERLAY, 'logo', { x: 120, y: -8 })
+    expect(moved.logo).toEqual({ ...DEFAULT_OVERLAY.logo, offset: { x: 120, y: -8 } })
+    expect(moved.counters).toBe(DEFAULT_OVERLAY.counters)
+    const back = withWidgetOffset(moved, 'logo', null)
+    expect(back).toEqual(DEFAULT_OVERLAY)
+    expect('offset' in back.logo).toBe(false)
+  })
+
+  it('is restored from a project when valid, and rejects the overlay when not', () => {
+    const custom = withWidgetOffset(withWidgetOffset(DEFAULT_OVERLAY, 'title', { x: 0, y: 40 }), 'profile', { x: -OFFSET_MAX_PX, y: 3.5 })
+    expect(sanitizeSettings({ overlay: custom }).settings.overlay).toEqual(custom)
+    for (const bad of [null, [], { x: 1 }, { x: 1, y: '2' }, { x: 1, y: OFFSET_MAX_PX + 1 }, { x: 1, y: 2, z: 3 }]) {
+      const overlay = { ...DEFAULT_OVERLAY, text: { ...DEFAULT_OVERLAY.text, offset: bad } }
+      expect(isValidOverlay(overlay as OverlaySettings)).toBe(false)
+      expect(sanitizeSettings({ overlay }).invalid).toEqual(['overlay'])
+    }
   })
 })
 

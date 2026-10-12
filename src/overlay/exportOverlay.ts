@@ -10,6 +10,7 @@ import type { Track } from '../core/types'
 import { DIP_DEFAULT_S, dipAlpha, transitionDipAt } from '../film/model'
 import type { FilmMedia, TransitionDip } from '../film/model'
 import type { DrawOverlay } from '../export/capture'
+import { videoSize } from '../export/schedule'
 import { getMediaBitmaps, mediaToLoad, useMediaStore } from '../film/media'
 import { createExportVideos } from '../film/video'
 import type { ExportVideos } from '../film/video'
@@ -55,8 +56,9 @@ const strongerDip = (a: TransitionDip | null, b: TransitionDip | null) => (b && 
 /**
  * What the overlay draws beyond the track at film time `time` and `progress`, from the stores: the texts and photos
  * of the timeline, the credits of the sources in use (as the status bar: relief, imagery, weather and OpenStreetMap
- * once loaded), the ghost-race leaderboard, the dip of a shot transition, and « À la suite » the card and the dip of
- * each stage.
+ * once loaded), the ghost-race leaderboard, the dip of a shot transition, « À la suite » the card and the dip of
+ * each stage, and the size of the film chosen for the project (the free offsets of the widgets are its pixels, whatever
+ * the device caps it to).
  */
 export function overlayExtras(time: OverlayTime, progress: number): OverlayExtras {
   const { settings, tracks } = useAppStore.getState()
@@ -68,6 +70,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     media: settings.film.media,
     dip: strongerDip(transitionDipAt(settings.film, time), sequence ? stageDipAt(settings.race, time) : null),
     stage: sequence && settings.race.stageCards !== false ? stageCardAt(sequence, time) : null,
+    exportSize: videoSize(settings.video.aspect, settings.video.resolution, Number.POSITIVE_INFINITY),
     credits: overlayCredits({
       terrainSourceId: settings.terrainSourceId,
       imagerySourceId: settings.imagerySourceId,
