@@ -585,9 +585,15 @@ ink, 7.3:1).
   (each against the last chord at least w / 2 long) and weighted by the chord length, so a loop, an out-and-back or a
   GPS star at a rest turns the camera through instead of flipping it (the bare chord swung by up to 180° in a frame
   there: 3,000 °/s); 'sway' measures its turn as the averaged direction w ahead minus w behind. The aim point and the
-  camera's point of the track are the track averaged over 0.5 s × v (`POSITION_SMOOTHING_S`): the corners of a sparse
-  recording (a point every 60 m–2 km) are rounded off instead of jolting the view at each one. Weights: squared raised
-  cosine sliding over fixed samples (8 per side), flat to the second derivative at the window edges.
+  camera's point of the track are the track averaged over at least 0.5 s × v (`POSITION_SMOOTHING_S`): the corners of a
+  sparse recording (a point every 60 m–2 km) are rounded off instead of jolting the view at each one. With « Lissage de
+  la caméra » the camera stands on the track smoothed over a deviation σ = 0.2 × « Lissage de la caméra » × v
+  (`cameraLine`: exact mean of the polyline over ± σ through running integrals, then two moving averages, ends continued
+  by point symmetry, Catmull-Rom read-back; built once per path, frame and σ, at most 4 windows per path) and the aim on
+  one half as wide, at most 6 % of the camera's distance: GPS noise and tight zigzags no longer shake the camera
+  (sideways jerk p99 22,000 → 64 m/s³ on a noisy zigzag walk in « Poursuite ») while the marker stays near the centre
+  (≤ 0.16 of the half-frame). « Lissage de la caméra » at 0 keeps the previous behaviour. `computeCameraView` costs
+  ~145–225 µs per call (was ~100) with an analytic sampler, 163–251 terrain samples per call.
   Styles (`settings.camera.style`): `chase` (behind the marker), `sway` (swing toward the outside of bends:
   50° · tanh(0.8 · T / 50°), T = sum of turn angles weighted by a tent over ±2w, continuous and calm), `orbit` (6°/s
   around the marker from the start heading), `top` (≥ 70°, distance × 2.5, north or heading up), `cinematic` (distance × 1.6,
@@ -595,12 +601,16 @@ ink, 7.3:1).
   (25 samples); the tests check continuity in progress.
   **Marker kept visible**: the aim is the marker (the time smoothing only averages the progress), so it never leaves the
   frame (`markerVisible.test.ts`: at most 0.15 of the half-frame from its centre over every preset, with stops and speed
-  portions); what hides it is the relief. The sight line is therefore checked down to 100 m short of the aim (the part
-  `lineOfSightClearance` leaves out, which fades the marker out) and tapers to 20 m of clearance (the fade band)
-  instead of 0, with the share of the line left capped at 1/20 so the camera does not ride each bump near the aim. A
-  rise a few hundred metres before the marker now lifts the camera instead of hiding the marker: on steep, twisty
-  synthetic tracks the frames where the marker is behind the relief drop from 3.5–7% to under 1% over the 12 presets
-  (« Cinéma »: 4–25% to 0, « Montgolfière »: 19–28% to 0–8%), frames that were well visible barely move. Keyframes
+  portions); what hides it is the relief. The sight line is checked from the camera to the marker itself (at its
+  steady ground height) down to 100 m short of it, at most 1/20 of the line, against the grid ground raised by the
+  relief its cells miss (`reliefGround`: each corner by the largest rise of its four cell centres above their corners'
+  mean: fixed samples, so a crest narrower than a cell is cleared without riding it), tapering to 20 m of clearance;
+  48 samples, each grid corner and centre read once per view. When the ground between the marker and the camera
+  (gradient over ± half the camera's ground distance, ≥ 150 m, averaged along the track like the heading) rises faster
+  than tan(pitch + 10°) − 0.05, the camera turns around the marker away from uphill (`swingAngle`: odd quintic easing,
+  continuous with its slope, eased in over 0.2 of excess steepness; straight uphill it climbs instead of picking a
+  side). Hidden frames on the steep synthetic tracks over the 12 presets: 0.3 % (up to 8 % for one flight) → 2 of
+  21,600; at most 4 shown ↔ hidden switches per flight; the marker stays within 0.15 of the half-frame (0.2 through stops). Keyframes
   (`keyView`) are untouched.
   **Steady heights** (no frame-to-frame state, so preview and export stay identical): the heights are read from
   terrain samples that stay put while the marker moves, so the camera follows the relief without riding each bump
@@ -890,7 +900,7 @@ ink, 7.3:1).
   frame, although `TrackLines` runs before it) and on every frame (after a drape); no effect when nothing changes.
   A function of progress alone: preview = export. The part still to come is hidden.
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
-  `RaceMarkers`; drawn without depth test so the slope never cuts them, faded out behind the relief with the labels'
+  `RaceMarkers`; drawn without depth test so the slope never cuts them, hidden (opacity 0, never half-transparent) behind the relief with the labels'
   line of sight: `reliefClearance`, `occludeMarker`), badge texture drawn on a canvas (`markerBadge.ts`) and cached by key (48 at most). Ball:
   white disk (head) or track color in an ink halo ×1.35 (race) — same look as before. Figurine: 24 × 24 line
   pictogram (Lucide style; bike and car taken from Lucide) on an ink disk edged in white (head) or track color
@@ -1553,7 +1563,7 @@ exports) gets it from the terrain source of the settings.
   of interest (`poiLabels`, light orange pictogram instead of the stroke, `FilmPoi.icon` among 9 Lucide paths in
   `Labels.tsx`, priority 200: above everything) and any external source registered through
   `setLabelSource(id, LandmarkLabel[])` (e.g. `'osm'`). Height = terrain (or recorded elevation) × exaggeration, re-draped on
-  `engine.onChange` (same debounce as the track). Fades when the line of sight goes below the terrain (24 samples, ±20 m) and
+  `engine.onChange` (same debounce as the track). Hidden when the line of sight goes below the terrain (24 samples, the 2 lowest dips within 60 m refined by a golden-section search between their neighbours, so the cut does not flicker as samples slide over a ridge) and
   between half the range and the range (`labels.rangeKm`, 70 km by default: `distanceFade`); shared size
   `labels.size` (×0.6 to ×1.6); on overlap, the highest priority wins. Opacity is a function of the view alone (no
   temporal smoothing): each export frame is rendered in isolation. With the overlay active: opacity multiplied by

@@ -114,11 +114,13 @@ describe('film camera smoothed in time', () => {
   it('constant speed: the same view as without smoothing, away from the edges of the flight', () => {
     const clock = clockOf(NO_SHOT, NO_SHOT)
     const smoothed = { ...NONE, aimSmoothingS: 2, cameraSmoothingS: 7.5 }
+    // within a centimetre: the aim and the camera then stand on lines smoothed with « Lissage de la caméra », exact
+    // means of the straight track, where the sliding weights of the plain corner rounding are a few millimetres off
     for (const t of [10, 30, 50]) {
       const a = viewAt(clock, t, smoothed)
       const b = viewAt(clock, t, NONE)
-      expect(a.position.distanceTo(b.position)).toBeLessThan(1e-3)
-      expect(a.target.distanceTo(b.target)).toBeLessThan(1e-3)
+      expect(a.position.distanceTo(b.position)).toBeLessThan(0.01)
+      expect(a.target.distanceTo(b.target)).toBeLessThan(0.01)
     }
   })
 
