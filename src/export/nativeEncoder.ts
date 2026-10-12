@@ -11,16 +11,19 @@ import type { MixedAudio } from '../film/audio'
 import { getPlatform, type Capabilities } from '../platform'
 import {
   ALPHA_CANDIDATES,
-  CODEC_CANDIDATES,
+  AUDIO_BITRATE,
   ExportCanceledError,
+  KEY_FRAME_INTERVAL_S,
   VIDEO_MIME_TYPES,
+  candidatesFor,
   createVideoEncoder,
   pickCodec,
-  videoBitrate,
+  targetBitrate,
   type CodecCandidate,
   type VideoEncodeOptions,
   type VideoEncodeSession,
 } from './encoder'
+import { DEFAULT_ENCODING, VIDEO_CODEC_CHOICES, type VideoCodecChoice } from './schedule'
 
 export type Invoke = (command: string, args?: InvokeArgs, options?: InvokeOptions) => Promise<unknown>
 
@@ -43,21 +46,46 @@ export async function nativeVideoAvailable(invoke: Invoke = tauriInvoke): Promis
   return (await invoke('video_available')) === true
 }
 
-/** Codec an export would use here: WebCodecs (`pickCodec`), else the system's ffmpeg when installed, else null. */
+/** Codec ffmpeg writes for a codec of « Encodage »: H.264 or VP9 (no HEVC encoder is assumed on the system), else null. */
+function nativeCodecOf(choice: VideoCodecChoice): CodecCandidate | null {
+  return choice === 'vp9' ? NATIVE_WEBM_CODEC : choice === 'hevc' ? null : NATIVE_CODEC
+}
+
+/**
+ * Codec an export would use here: WebCodecs (`pickCodec`, the codec of « Encodage » when one is chosen), else the
+ * system's ffmpeg when installed, else null.
+ */
 export async function exportCodec(
   options: VideoEncodeOptions,
   capabilities: Capabilities = getPlatform().capabilities,
   invoke: Invoke = tauriInvoke,
 ): Promise<CodecCandidate | null> {
-  if (capabilities.videoEncoder !== 'native') return pickCodec(options, undefined, options.transparent ? ALPHA_CANDIDATES : CODEC_CANDIDATES)
+  const choice = options.transparent ? 'auto' : (options.encoding?.codec ?? 'auto')
+  if (capabilities.videoEncoder !== 'native') return pickCodec(options, undefined, options.transparent ? ALPHA_CANDIDATES : candidatesFor(undefined, choice))
   if (!(await nativeVideoAvailable(invoke))) return null
-  return options.transparent ? NATIVE_WEBM_CODEC : NATIVE_CODEC
+  return options.transparent ? NATIVE_WEBM_CODEC : nativeCodecOf(choice)
 }
 
-/** `BatchContext.containerOf` for the frame rate and quality of « Vidéo »: the container a film of that size would get. */
-export function containerFor(video: Pick<VideoEncodeOptions, 'fps' | 'quality'>) {
+/** Codecs of « Encodage » this device can encode a film of these options in ('auto' first, always offered). */
+export async function encodableCodecs(
+  options: VideoEncodeOptions,
+  capabilities: Capabilities = getPlatform().capabilities,
+  invoke: Invoke = tauriInvoke,
+): Promise<VideoCodecChoice[]> {
+  const found = await Promise.all(
+    VIDEO_CODEC_CHOICES.map(async (codec) =>
+      codec === 'auto' || (await exportCodec({ ...options, transparent: false, encoding: { ...(options.encoding ?? DEFAULT_ENCODING), codec } }, capabilities, invoke))
+        ? codec
+        : null,
+    ),
+  )
+  return found.filter((codec): codec is VideoCodecChoice => codec !== null)
+}
+
+/** `BatchContext.containerOf` for the frame rate, quality and encoding of « Vidéo »: the container a film of that size would get. */
+export function containerFor(video: Pick<VideoEncodeOptions, 'fps' | 'quality' | 'encoding'>) {
   return async (job: { width: number; height: number }): Promise<string | null> =>
-    (await exportCodec({ width: job.width, height: job.height, fps: video.fps, quality: video.quality }))?.container ?? null
+    (await exportCodec({ width: job.width, height: job.height, fps: video.fps, quality: video.quality, encoding: video.encoding }))?.container ?? null
 }
 
 /** Encoding session of an export: WebCodecs, or the native encoder on a desktop without it. */
@@ -67,6 +95,14 @@ export function createExportEncoder(
   capabilities: Capabilities = getPlatform().capabilities,
 ): Promise<VideoEncodeSession> {
   return capabilities.videoEncoder === 'native' ? createNativeVideoEncoder(canvas, options) : createVideoEncoder(canvas, options)
+}
+
+/**
+ * 2D context attributes of the encoder canvas: the native encoder reads every frame back (`getImageData`), so its
+ * pixels are kept where the processor reads them; WebCodecs takes the canvas as a `VideoFrame`, on the GPU.
+ */
+export function compositorAttributes(capabilities: Capabilities = getPlatform().capabilities): { willReadFrequently?: boolean } {
+  return capabilities.videoEncoder === 'native' ? { willReadFrequently: true } : {}
 }
 
 /** The soundtrack as a 16-bit PCM WAV file (the second input of ffmpeg). */
@@ -108,22 +144,26 @@ export async function createNativeVideoEncoder(
   options: VideoEncodeOptions,
   invoke: Invoke = tauriInvoke,
 ): Promise<VideoEncodeSession> {
-  const { width, height, fps, quality, destination, audio, transparent = false } = options
+  const { width, height, fps, destination, audio, encoding, transparent = false } = options
   if (!destination?.path) throw new Error("Le film doit être écrit sur le disque : choisissez où l'enregistrer.")
+  // created with `compositorAttributes` by the export: this returns that context
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error("Impossible de lire l'image de composition.")
-  const sound = audio && audio.channels.length > 0 ? ((await invoke('video_sound', wavFile(audio))) as number) : null
-  const id = (await invoke('video_open', { path: destination.path, width, height, fps, quality, transparent, sound })) as number
-  const frameOptions = { headers: { [SESSION_HEADER]: String(id) } }
   // the overlay alone is always WebM (video.rs), whatever the name
   const codec = transparent ? NATIVE_WEBM_CODEC : nativeCodecFor(destination.path)
+  // ffmpeg aims at the same target bitrate as WebCodecs (`-b:v`, with a ceiling), so a setting means the same everywhere
+  const bitrate = targetBitrate(options, codec.codec)
+  const keyframeInterval = Math.max(1, Math.round((encoding?.keyframeIntervalS ?? KEY_FRAME_INTERVAL_S) * fps))
+  const audioBitrate = encoding ? encoding.audioKbps * 1000 : AUDIO_BITRATE
+  const sound = audio && audio.channels.length > 0 ? ((await invoke('video_sound', wavFile(audio))) as number) : null
+  const id = (await invoke('video_open', { path: destination.path, width, height, fps, bitrate, keyframeInterval, audioBitrate, transparent, sound })) as number
+  const frameOptions = { headers: { [SESSION_HEADER]: String(id) } }
   let canceled = false
 
   return {
     codec,
     audioCodec: sound === null ? null : codec.container === 'webm' ? 'opus' : 'aac',
-    // ffmpeg aims at a constant quality (crf), not at a bitrate: this one is only the size estimate
-    bitrate: videoBitrate(width, height, fps, quality, codec.codec),
+    bitrate,
     mimeType: VIDEO_MIME_TYPES[codec.container],
     extension: `.${codec.container}`,
     async addFrame() {

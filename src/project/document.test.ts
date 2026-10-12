@@ -225,7 +225,7 @@ describe('serializeProject / parseProject', () => {
   it('loads the fixed video formats of older projects as aspect × resolution', () => {
     const { settings, invalid } = sanitizeSettings({ video: { format: '1080x1920', fps: 60, quality: 'max' } })
     expect(invalid).toEqual([])
-    expect(settings.video).toEqual({ aspect: '9:16', resolution: '1080p', fps: 60, quality: 'max' })
+    expect(settings.video).toEqual({ ...DEFAULT_SETTINGS.video, aspect: '9:16', resolution: '1080p', fps: 60, quality: 'max' })
     expect(sanitizeSettings({ video: { aspect: '1:1', resolution: '8k', fps: 30, quality: 'high' } }).invalid).toEqual(['video'])
   })
 

@@ -17,3 +17,4 @@
 - UI in French. Visual identity in `src/ui/theme.css`.
 - Documentation (README, ARCHITECTURE, docs/) is written in English; UI labels quoted from the app stay in French.
 - Strict TypeScript with `verbatimModuleSyntax` (use `import type`) and `erasableSyntaxOnly` (no `enum`, no constructor parameter properties).
+- Sub-agents: only when really needed (broad exploration, truly independent parallel work), always on the Sonnet 5.5 model (`model: "sonnet"`), to keep token use low. Sub-agents run no git command; the main session commits.
