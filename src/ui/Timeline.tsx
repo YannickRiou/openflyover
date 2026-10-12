@@ -19,6 +19,7 @@ import { photoTimeMs } from '../film/exif'
 import { useMediaStore } from '../film/media'
 import { isMediaFile, readMedia } from '../film/video'
 import { STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
+import { PARAM_SPECS } from '../film/paramKeys'
 import type { Film, FilmMedia, FilmSpeed, FilmStop } from '../film/model'
 import {
   ZOOM_RANGE,
@@ -53,7 +54,7 @@ import type { DragContext, Grip, TimelineItem } from '../film/timeline'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
-import { editFilm, getFilmSource, seekKeyframe, setAutoStops, toggleKeyframe, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { addParamKeyHere, editFilm, getFilmSource, seekKeyframe, setAutoStops, toggleKeyframe, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
 import { formatClock, formatDistance, formatNumber } from './format'
@@ -122,6 +123,7 @@ const clockOfFilm = (input: FilmClockInput, film: Film) =>
     stops: film.autoStops ? input.stops : film.stops,
     speeds: film.speeds,
     cameraKeys: film.cameraKeys,
+    paramKeys: film.paramKeys,
   })
 
 /** Closed SVG area under the profile at abscissas `xs`, one sub-path per run of known elevations. */
@@ -604,7 +606,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   }
   /** a keyframe pressed and released without dragging: the playhead jumps to it */
   const jumpToKey = (item: TimelineItem) => {
-    const key = clock.cameraKeys.find((k) => k.id === item)
+    const key = clock.cameraKeys.find((k) => k.id === item) ?? clock.paramKeys.find((k) => k.id === item)
     if (key) seek(key.timeS)
   }
   /** centred: a press that becomes a tap on release (no capture: a slide scrolls the lanes, the browser cancels it) */
@@ -876,6 +878,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             disabled={!hasNextKey}
           />
         </span>
+        <BarButton
+          icon="gauge"
+          name="Ajouter un réglage"
+          tip="Ajouter une clé de réglage (vitesse, exposition, soleil, couleurs) à la position du marqueur"
+          onClick={addParamKeyHere}
+          disabled={!hasTrack}
+        />
         {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
         <span className="film-tl__time">
           <strong>{formatTimecode(playheadS, true)}</strong> / {formatTimecode(clock.totalTime())}
@@ -1024,7 +1033,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           <div className="film-tl__heads">
             <div className="film-tl__head film-tl__head--ruler" />
             {/* the lanes carry the same names */}
-            {['Plans', 'Vitesse', 'Arrêts', 'Textes', 'Médias', 'Musique'].map((name) => (
+            {['Plans', 'Vitesse', 'Réglages', 'Arrêts', 'Textes', 'Médias', 'Musique'].map((name) => (
               <div key={name} className="film-tl__head" aria-hidden="true">
                 {name}
               </div>
@@ -1152,6 +1161,33 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     `Portion ${how} ${label}, de ${formatDistance(s.fromM)} à ${formatDistance(s.toM)}`,
                     `film-tl__block--speed${s.factor < 1 ? ' film-tl__block--slow' : ''}`,
                     ['start', 'move', 'end'],
+                  )
+                })}
+              </div>
+
+              <div className="film-tl__lane" role="group" aria-label="Réglages">
+                {shownClock.paramKeys.length === 0 && (
+                  <span className="film-tl__empty" style={{ left: xOf(0) }}>
+                    Réglages clés : vitesse, exposition, soleil, couleurs (bouton ci-dessus)
+                  </span>
+                )}
+                {shownClock.paramKeys.map((k) => {
+                  const spec = PARAM_SPECS[k.param]
+                  const what = `${spec.label} ${spec.format(k.value)}`
+                  return (
+                    <div
+                      key={k.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={selected === k.id}
+                      aria-label={`Réglage : ${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
+                      title={`${what} (clic : y aller, glisser : le déplacer)`}
+                      className={`film-tl__key${selected === k.id ? ' film-tl__key--selected' : ''}`}
+                      style={{ left: xOf(k.timeS) }}
+                      onPointerDown={(e) => startEdit(e, k.id, 'move')}
+                      onFocus={() => setSelected(k.id)}
+                      onKeyDown={(e) => onBlockKeyDown(e, k.id)}
+                    />
                   )
                 })}
               </div>

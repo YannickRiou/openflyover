@@ -30,6 +30,8 @@ import {
   nextFilmId,
 } from './model'
 import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText, MediaSync } from './model'
+import { clampParamValue } from './paramKeys'
+import type { FilmParam, FilmParamKey } from './paramKeys'
 
 export type TimelineItem = 'opening' | 'closing' | string
 /** part of a block a gesture holds: its body (move) or one of its edges */
@@ -351,6 +353,12 @@ export function dragFilm(film: Film, item: TimelineItem, grip: Grip, deltaS: num
     return { ...film, cameraKeys: film.cameraKeys.map((k) => (k.id === item ? { ...k, atM } : k)) }
   }
 
+  const paramKey = clock.paramKeys.find((k) => k.id === item)
+  if (paramKey && grip === 'move') {
+    const atM = Math.round(clamp(clock.progressAtTime(snap(paramKey.timeS + deltaS)), 0, 1) * ctx.lengthM)
+    return { ...film, paramKeys: film.paramKeys.map((k) => (k.id === item ? { ...k, atM } : k)) }
+  }
+
   const speed = film.speeds.find((s) => s.id === item)
   if (speed) {
     const next = dragSpeed(film, speed, grip, deltaS, ctx, snap)
@@ -438,6 +446,30 @@ export function addCameraKey(film: Film, atM: number, framing: KeyPose): { film:
   if (there) return { film: updateCameraKey(film, there.id, { ...framing, atM: at }), id: there.id }
   const id = nextFilmId(film, 'camera')
   return { film: updateCameraKey({ ...film, cameraKeys: [...film.cameraKeys, { ...framing, id, atM: at }] }, id, {}), id }
+}
+
+/**
+ * A parameter key (« Réglage ») for `param` at `atM`, with its id. A key of that parameter already at that metre takes
+ * the value instead (one key per parameter and place).
+ */
+export function addParamKey(film: Film, atM: number, param: FilmParam, value: number): { film: Film; id: string } {
+  const at = Math.max(0, atM)
+  const there = film.paramKeys.find((k) => k.param === param && Math.round(k.atM) === Math.round(at))
+  if (there) return { film: updateParamKey(film, there.id, { value }), id: there.id }
+  const id = nextFilmId(film, 'param')
+  return { film: updateParamKey({ ...film, paramKeys: [...film.paramKeys, { id, atM: at, param, value }] }, id, {}), id }
+}
+
+/** Parameter key `id` with `patch`: the value is kept in the range of its parameter, the place on the track. */
+export function updateParamKey(film: Film, id: string, patch: Partial<Omit<FilmParamKey, 'id'>>): Film {
+  return {
+    ...film,
+    paramKeys: film.paramKeys.map((k) => {
+      if (k.id !== id) return k
+      const next = { ...k, ...patch }
+      return { ...next, atM: Math.max(0, next.atM), value: clampParamValue(next.param, next.value) }
+    }),
+  }
 }
 
 const KEY_EPSILON_S = 1e-3
@@ -645,7 +677,7 @@ export function clipRateAt(media: FilmMedia, path: TrackPath, clock: Pick<FilmCl
   return Math.max(0, (clipTimeS(media, timeS + FOLLOW_RATE_STEP_S, b) - clipTimeS(media, timeS, a)) / FOLLOW_RATE_STEP_S)
 }
 
-/** `film` without the stop, speed portion, camera key, text, medium or music clip `id`; a shot cannot be removed: it goes to style 'aucune'. */
+/** `film` without the stop, speed portion, camera or parameter key, text, medium or music clip `id`; a shot cannot be removed: it goes to style 'aucune'. */
 export function removeFilmItem(film: Film, id: TimelineItem): Film {
   if (id === 'opening' || id === 'closing') return updateShot(film, id, { style: 'aucune' })
   return {
@@ -653,6 +685,7 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
     stops: film.stops.filter((s) => s.id !== id),
     speeds: film.speeds.filter((s) => s.id !== id),
     cameraKeys: film.cameraKeys.filter((k) => k.id !== id),
+    paramKeys: film.paramKeys.filter((k) => k.id !== id),
     texts: film.texts.filter((t) => t.id !== id),
     media: film.media.filter((m) => m.id !== id),
     audio: film.audio.filter((a) => a.id !== id),
@@ -661,11 +694,11 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
 
 /**
  * `item` is in the film: a shot (always there), one of the clock's `stops` (generated ones included), a speed portion,
- * a camera key, a text, a medium or a music clip.
+ * a camera or parameter key, a text, a medium or a music clip.
  */
 export function hasFilmItem(film: Film, stops: readonly { id: string }[], item: TimelineItem): boolean {
   if (item === 'opening' || item === 'closing') return true
-  return [stops, film.speeds, film.cameraKeys, film.texts, film.media, film.audio].some((lane) => lane.some((s) => s.id === item))
+  return [stops, film.speeds, film.cameraKeys, film.paramKeys, film.texts, film.media, film.audio].some((lane) => lane.some((s) => s.id === item))
 }
 
 /** Stop `id` with `patch`, duration clamped to its range. */

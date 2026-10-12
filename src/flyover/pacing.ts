@@ -146,6 +146,15 @@ export interface FlightSpeed {
   factor: number
 }
 
+/**
+ * Speed multiplier set by keys along the track (film `paramKeys` of the speed): `at(x)` at `x` metres, 1 = normal;
+ * `knotsM` the key positions, sorted. Combined with the portions and the slow-downs.
+ */
+export interface SpeedCurve {
+  knotsM: readonly number[]
+  at(xM: number): number
+}
+
 /** Speed portion clamped to the track, with the length of its transitions (metres). */
 interface SpeedRamp extends FlightSpeed {
   rampM: number
@@ -295,8 +304,14 @@ function distanceGrid(
   pauseAt: readonly number[],
   ramps: readonly SpeedRamp[],
   slowWindowM: number | null,
+  curve?: SpeedCurve,
 ): number[] {
   const nodes = [0, lengthM, ...highlights, ...pauseAt]
+  const knots = curve?.knotsM ?? []
+  for (let i = 0; i < knots.length; i++) {
+    nodes.push(clamp(knots[i], 0, lengthM))
+    if (i > 0) for (let j = 1; j < SPEED_SAMPLES; j++) nodes.push(clamp(knots[i - 1] + (j * (knots[i] - knots[i - 1])) / SPEED_SAMPLES, 0, lengthM))
+  }
   for (const { fromM, toM, rampM } of ramps) {
     for (let j = 0; j <= SPEED_SAMPLES; j++) nodes.push(fromM + (j * rampM) / SPEED_SAMPLES, toM - (j * rampM) / SPEED_SAMPLES)
   }
@@ -317,8 +332,8 @@ function distanceGrid(
 
 /**
  * Pacing of the flight with the slow-downs at `highlightsM` (when `settings.enabled`), the given pauses
- * (`stops`, sorted by position) and speed portions (`speeds`, not overlapping); pauses and portions apply whatever
- * `settings.enabled`. The identity pacing without length, or without slow-down, pause nor portion.
+ * (`stops`, sorted by position), speed portions (`speeds`, not overlapping) and speed keys (`curve`); pauses, portions
+ * and keys apply whatever `settings.enabled`. The identity pacing without length, or without slow-down, pause nor portion.
  */
 export function flightPacing(
   lengthM: number,
@@ -327,23 +342,24 @@ export function flightPacing(
   settings: PacingSettings,
   stops: readonly FlightStop[],
   speeds: readonly FlightSpeed[] = [],
+  curve?: SpeedCurve,
 ): Pacing {
   const L = lengthM
   if (!(L > 0) || !(durationS > 0)) return identityPacing(durationS > 0 ? durationS : 1)
   const highlights = settings.enabled ? normalizeHighlights(highlightsM, L) : []
   const slows = highlights.length > 0 && settings.slowFactor < 1
   const ramps = speedRamps(speeds, L, (settings.transitionS * L) / durationS)
-  if (!slows && stops.length === 0 && ramps.length === 0) return identityPacing(durationS)
+  if (!slows && stops.length === 0 && ramps.length === 0 && !curve) return identityPacing(durationS)
   const W = settings.windowM
   const pauseAt = stops.map((s) => clamp(s.atM, 0, L))
-  const xs = distanceGrid(L, highlights, pauseAt, ramps, slows ? W : null)
+  const xs = distanceGrid(L, highlights, pauseAt, ramps, slows ? W : null, curve)
 
   // moving time at ×1 before scaling: speed v0 · r · m (midpoint) on each step
   const n = xs.length
   const raw = new Float64Array(n)
   for (let i = 1; i < n; i++) {
     const mid = (xs[i - 1] + xs[i]) / 2
-    const r = (slows ? relativeSpeed(mid, highlights, settings.slowFactor, W) : 1) * speedMultiplier(mid, ramps)
+    const r = (slows ? relativeSpeed(mid, highlights, settings.slowFactor, W) : 1) * speedMultiplier(mid, ramps) * (curve ? curve.at(mid) : 1)
     raw[i] = raw[i - 1] + ((xs[i] - xs[i - 1]) * durationS) / (L * r)
   }
 

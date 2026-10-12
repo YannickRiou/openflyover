@@ -8,15 +8,23 @@
  * « Naturel » (identity) mounts nothing: no extra pass, no shader, no render target.
  */
 import { useEffect, useLayoutEffect, useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { EffectComposer, SMAA } from '@react-three/postprocessing'
+import { gradingAt, hasGradingKeys } from '../film/paramKeys'
+import { filmTrackOf } from '../flyover/sequence'
+import { trackPathOf } from '../flyover/path'
 import { useAppStore } from '../state/store'
 import { isIdentityGrading } from './grading'
 import { GradingEffect, type GradingEffectOptions } from './gradingEffect'
 import { useLensEffects } from './useLensEffects'
 
-/** The grading effect kept in sync with the settings, and whether it changes the image (else leave it unmounted). */
+/**
+ * The grading effect kept in sync with the settings, and whether it changes the image (else leave it unmounted): keys on
+ * a grading value (« Réglages ») set it from the film progress, before each frame (a pure function of the progress).
+ */
 export function useGradingEffect(options?: GradingEffectOptions): { effect: GradingEffect; active: boolean } {
   const grading = useAppStore((s) => s.settings.grading)
+  const keyed = useAppStore((s) => hasGradingKeys(s.settings.film))
   const top = options?.skyBackdrop?.top
   const horizon = options?.skyBackdrop?.horizon
   const effect = useMemo(
@@ -24,8 +32,14 @@ export function useGradingEffect(options?: GradingEffectOptions): { effect: Grad
     [top, horizon],
   )
   useEffect(() => () => effect.dispose(), [effect])
-  useLayoutEffect(() => effect.setGrading(grading), [effect, grading])
-  return { effect, active: !isIdentityGrading(grading) }
+  useLayoutEffect(() => effect.setGrading(grading), [effect, grading, keyed])
+  useFrame(() => {
+    if (!keyed) return
+    const { playback, settings, tracks } = useAppStore.getState()
+    const track = filmTrackOf(tracks, settings.race)
+    effect.setGrading(gradingAt(settings.film, settings.grading, playback.progress * (track ? trackPathOf(track).lengthM : 0)))
+  }, -1)
+  return { effect, active: keyed || !isIdentityGrading(grading) }
 }
 
 /** Grading and lens effects without the atmosphere: a composer of their own, over the CSS sky gradient of the canvas. */

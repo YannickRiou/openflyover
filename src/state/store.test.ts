@@ -207,6 +207,7 @@ describe('settings and misc', () => {
         stops: [],
         speeds: [],
         cameraKeys: [],
+        paramKeys: [],
         texts: [],
         media: [],
         audio: [],
@@ -219,6 +220,7 @@ describe('settings and misc', () => {
       weather: { enabled: true },
       weatherScene: { enabled: true, strength: 1 },
       clouds: { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: 'volume', quality: 'auto' },
+      demClean: { enabled: false, seaToZero: false },
       water: { enabled: true, strength: 1 },
       overlay: DEFAULT_OVERLAY,
       video: {
