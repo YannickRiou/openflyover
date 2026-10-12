@@ -351,6 +351,15 @@
   background: var(--surface-card);
 }
 
+/* many options (the eight overlay styles): they wrap onto several rows instead of overflowing sideways */
+.segmented--wrap {
+  flex-wrap: wrap;
+}
+
+.segmented--wrap .segmented__option {
+  flex: 1 1 auto;
+}
+
 .segmented__option {
   flex: 1 1 0;
   position: relative;

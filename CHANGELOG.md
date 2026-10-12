@@ -32,10 +32,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Interface** (#22, #25, #26): track and marker settings in the Trace tab (« Trace », « Marqueur »); new « Réglages »
   tab; status bar with fetch states, performance (desktop: RAM and CPU) and always-visible short credits, IGN update
   date in « Sources et licences »; fixed-width timecode and icon-only timeline tools, so the view no longer resizes.
+- **Flyover duration** (#68): « − » and « + » buttons around the slider, and the acceleration it gives over the recorded outing (« accélération × 24 (sortie de 4 h 00) »).
 - **Project** (#20): « Nouveau projet » and « Fermer le projet » in the Projet tab, which gathers every project action.
 - **Overlay positions** (#39, #38): one 3 × 3 grid for every position, a free position in pixels of the exported
   video, logo opacity.
-- **Flyover duration** (#68): « − » and « + » buttons around the slider, and the acceleration it gives over the recorded outing (« accélération × 24 (sortie de 4 h 00) »).
+- **Style picker** (#61): the eight overlay styles (and the poster's) wrap onto several rows instead of scrolling sideways.
 - **Export diagnostic** (#52): the `[export]` console line and the diagnostic report give the tiles and triangles drawn in
   the shadow pass per render, with the off-screen share, to measure what an off-screen caster filter could save.
 - **Marker keys** (#40): change the marker (ball, figure, own picture) along the track with keys on the timeline,
