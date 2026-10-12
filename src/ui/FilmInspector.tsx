@@ -33,6 +33,10 @@ import {
 } from '../film/model'
 import type { Film, FilmShot, MediaLayout, MediaSync, ShotStyle, ShotSun, ShotTransition, StartHeight, StopCamera } from '../film/model'
 import { FILM_PARAMS, PARAM_SPECS, paramAt, paramBase } from '../film/paramKeys'
+import { getPlatform } from '../platform'
+import { AVATAR_SIZE_PX, fileToAvatarDataUrl } from '../scene/markerBadge'
+import { MARKER_FIGURE_CHOICES, MARKER_FIGURE_LABELS, MARKER_KIND_LABELS, MARKER_KINDS } from '../scene/markerSettings'
+import type { MarkerFigureChoice, MarkerKind } from '../scene/markerSettings'
 import type { FilmParam } from '../film/paramKeys'
 import {
   addItemCamera,
@@ -43,6 +47,7 @@ import {
   removeFilmItem,
   setFilmPlace,
   updateCameraKey,
+  updateMarkerKey,
   updateMedia,
   updateMusic,
   updateParamKey,
@@ -574,6 +579,7 @@ export function FilmInspector() {
     const music = film.audio.find((a) => a.id === item)
     const cameraKey = clock.cameraKeys.find((k) => k.id === item)
     const paramKey = clock.paramKeys.find((k) => k.id === item)
+    const markerKey = clock.markerKeys.find((k) => k.id === item)
     if (stop) {
       isStop = true
       title = 'Arrêt'
@@ -697,6 +703,77 @@ export function FilmInspector() {
               ` Se combine avec les portions de vitesse et les ralentissements aux temps forts.${pacing.keepDuration ? ' La durée du survol ne change pas : le reste du parcours s’adapte.' : ' La durée du film change d’autant.'}`}
             {paramKey.param === 'sunHour' && ' Le soleil suit les clés au lieu de l’heure enregistrée de la sortie.'}
             {!atmosphere && (paramKey.param === 'sunHour' || paramKey.param === 'exposure') && ' Sans atmosphère, ce réglage est sans effet.'}
+          </p>
+        </>
+      )
+    } else if (markerKey) {
+      title = 'Marqueur'
+      const set = (patch: Parameters<typeof updateMarkerKey>[2]) => change((f) => updateMarkerKey(f, item, patch), false)
+      /** a picture of its own for this look: kept in the project's media table, by id */
+      const choosePicture = async () => {
+        try {
+          const [file] = await getPlatform().openFiles({ filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] })
+          if (!file) return
+          const data = await fileToAvatarDataUrl(file)
+          const [imageId] = useMediaStore.getState().add([{ data, thumb: data, width: AVATAR_SIZE_PX, height: AVATAR_SIZE_PX, name: file.name }])
+          set({ kind: 'image', imageId })
+        } catch {
+          showToast({ kind: 'error', text: 'Cette image n’a pas pu être lue.' })
+        }
+      }
+      body = (
+        <>
+          <div className="field">
+            <label className="field__label" htmlFor={`${id}-marker-kind`}>
+              Forme
+            </label>
+            <select id={`${id}-marker-kind`} className="select" value={markerKey.kind} onChange={(e) => set({ kind: e.currentTarget.value as MarkerKind })}>
+              {MARKER_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {MARKER_KIND_LABELS[kind]}
+                </option>
+              ))}
+            </select>
+          </div>
+          {markerKey.kind === 'figurine' && (
+            <div className="field">
+              <label className="field__label" htmlFor={`${id}-marker-figure`}>
+                Figurine
+              </label>
+              <select
+                id={`${id}-marker-figure`}
+                className="select"
+                value={markerKey.figure}
+                onChange={(e) => set({ figure: e.currentTarget.value as MarkerFigureChoice })}
+              >
+                {MARKER_FIGURE_CHOICES.map((figure) => (
+                  <option key={figure} value={figure}>
+                    {MARKER_FIGURE_LABELS[figure]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {markerKey.kind === 'image' && (
+            <div className="field">
+              <div className="field__label-row">
+                <button type="button" className="btn btn--secondary" onClick={() => void choosePicture()}>
+                  {markerKey.imageId ? 'Changer l’image' : 'Choisir une image'}
+                </button>
+                {markerKey.imageId && (
+                  <button type="button" className="btn btn--secondary" onClick={() => set({ imageId: undefined })}>
+                    Retirer
+                  </button>
+                )}
+              </div>
+              <p className="field__hint">Sans image propre, le marqueur reprend celle du panneau Trace.</p>
+            </div>
+          )}
+          {number('at', 'À (km)', km(markerKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
+          <p className="field__hint">
+            À {formatDistance(markerKey.atM)}, {formatFilmTime(markerKey.timeS)} dans le film : le marqueur prend cet aspect, en fondu sur
+            une courte portion autour de ce point (moins d’une seconde de film). Avant la première clé, il a l’aspect du panneau Trace ;
+            taille, couleurs et étiquette restent ceux du panneau.
           </p>
         </>
       )

@@ -32,6 +32,7 @@ import {
 import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText, MediaSync } from './model'
 import { clampParamValue } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
+import type { FilmMarkerKey } from './markerKeys'
 
 export type TimelineItem = 'opening' | 'closing' | string
 /** part of a block a gesture holds: its body (move) or one of its edges */
@@ -359,6 +360,12 @@ export function dragFilm(film: Film, item: TimelineItem, grip: Grip, deltaS: num
     return { ...film, paramKeys: film.paramKeys.map((k) => (k.id === item ? { ...k, atM } : k)) }
   }
 
+  const markerKey = clock.markerKeys.find((k) => k.id === item)
+  if (markerKey && grip === 'move') {
+    const atM = Math.round(clamp(clock.progressAtTime(snap(markerKey.timeS + deltaS)), 0, 1) * ctx.lengthM)
+    return { ...film, markerKeys: film.markerKeys.map((k) => (k.id === item ? { ...k, atM } : k)) }
+  }
+
   const speed = film.speeds.find((s) => s.id === item)
   if (speed) {
     const next = dragSpeed(film, speed, grip, deltaS, ctx, snap)
@@ -469,6 +476,31 @@ export function updateParamKey(film: Film, id: string, patch: Partial<Omit<FilmP
       const next = { ...k, ...patch }
       return { ...next, atM: Math.max(0, next.atM), value: clampParamValue(next.param, next.value) }
     }),
+  }
+}
+
+/**
+ * A marker key at `atM` with the look `look`, and its id. A key already at that metre takes the look instead (one key
+ * per place).
+ */
+export function addMarkerKey(film: Film, atM: number, look: Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId'>): { film: Film; id: string } {
+  const at = Math.max(0, Math.round(atM))
+  const there = film.markerKeys.find((k) => Math.round(k.atM) === at)
+  if (there) return { film: updateMarkerKey(film, there.id, look), id: there.id }
+  const id = nextFilmId(film, 'marker')
+  return { film: { ...film, markerKeys: [...film.markerKeys, { id, atM: at, ...look }] }, id }
+}
+
+/** Marker keys at each of `placesM` that has none, with the look `look` (the junctions of a chained or sequenced track). */
+export function addMarkerKeysAt(film: Film, placesM: readonly number[], look: Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId'>): Film {
+  return placesM.reduce((f, atM) => (f.markerKeys.some((k) => Math.round(k.atM) === Math.round(atM)) ? f : addMarkerKey(f, atM, look).film), film)
+}
+
+/** Marker key `id` with `patch` (the place stays on the track; no picture of its own: `imageId: undefined`). */
+export function updateMarkerKey(film: Film, id: string, patch: Partial<Omit<FilmMarkerKey, 'id'>>): Film {
+  return {
+    ...film,
+    markerKeys: film.markerKeys.map((k) => (k.id === id ? { ...k, ...patch, atM: Math.max(0, patch.atM ?? k.atM) } : k)),
   }
 }
 
@@ -677,7 +709,7 @@ export function clipRateAt(media: FilmMedia, path: TrackPath, clock: Pick<FilmCl
   return Math.max(0, (clipTimeS(media, timeS + FOLLOW_RATE_STEP_S, b) - clipTimeS(media, timeS, a)) / FOLLOW_RATE_STEP_S)
 }
 
-/** `film` without the stop, speed portion, camera or parameter key, text, medium or music clip `id`; a shot cannot be removed: it goes to style 'aucune'. */
+/** `film` without the stop, speed portion, camera, parameter or marker key, text, medium or music clip `id`; a shot cannot be removed: it goes to style 'aucune'. */
 export function removeFilmItem(film: Film, id: TimelineItem): Film {
   if (id === 'opening' || id === 'closing') return updateShot(film, id, { style: 'aucune' })
   return {
@@ -686,6 +718,7 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
     speeds: film.speeds.filter((s) => s.id !== id),
     cameraKeys: film.cameraKeys.filter((k) => k.id !== id),
     paramKeys: film.paramKeys.filter((k) => k.id !== id),
+    markerKeys: film.markerKeys.filter((k) => k.id !== id),
     texts: film.texts.filter((t) => t.id !== id),
     media: film.media.filter((m) => m.id !== id),
     audio: film.audio.filter((a) => a.id !== id),
@@ -694,11 +727,11 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
 
 /**
  * `item` is in the film: a shot (always there), one of the clock's `stops` (generated ones included), a speed portion,
- * a camera or parameter key, a text, a medium or a music clip.
+ * a camera, parameter or marker key, a text, a medium or a music clip.
  */
 export function hasFilmItem(film: Film, stops: readonly { id: string }[], item: TimelineItem): boolean {
   if (item === 'opening' || item === 'closing') return true
-  return [stops, film.speeds, film.cameraKeys, film.paramKeys, film.texts, film.media, film.audio].some((lane) => lane.some((s) => s.id === item))
+  return [stops, film.speeds, film.cameraKeys, film.paramKeys, film.markerKeys, film.texts, film.media, film.audio].some((lane) => lane.some((s) => s.id === item))
 }
 
 /** Stop `id` with `patch`, duration clamped to its range. */

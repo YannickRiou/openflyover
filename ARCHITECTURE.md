@@ -58,6 +58,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
 | `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `labelOpacity`, `climbLabels`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
 | `src/film/paramKeys.ts` | parameter keys (« Réglages ») | `FILM_PARAMS`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
+| `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
 | `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, `pickLandmarkTitles`, `withLandmarkTitles`, `withoutLandmarkTitles`, `sameLandmarkTitles`, `freezeLandmarkTitles`; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
 | `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime`; keyframes: `keyView`, `keyFramingFrom`, `keyFramingAt`, `keyReferenceAt` (`cameraKeys.ts`, no three.js: `keyPoseAt`, `keyedCamera`, `registerKeyCapture`, `captureKey`) |
@@ -955,6 +956,16 @@ ink, 7.3:1).
   projects);
   `stops[]` `{ id, atM, durationS (0.5–60 s), camera: 'film' | 'orbite' | 'large' | 'fixe', label?, source?: { kind, ref? } }`
   (`STOP_CAMERA_LABELS`: "Comme le film" (like the film), "Tour lent" (slow orbit), "Vue large" (wide view), "Fixe" (fixed));
+  `markerKeys[]` `{ id, atM, kind, figure, imageId? }` (places along the film track where the marker changes its look:
+  ball, figure or picture; anchored in metres like the camera keys, round dots in the « Réglages » lane,
+  `.film-tl__key--marker`). `markerAt(film, settings.marker, atM, fadeM, imageOf)`, pure: the marker of the settings
+  before the first key; around a key a smootherstep cross-fade of `fadeM = MARKER_FADE_S (0.8 s) × length / flightS`
+  metres centred on the key, from the previous look; a key replaces kind, figure and picture only (size, colours, label
+  and stick stay those of the settings). `FlyoverRig` draws the new look over the old one on a second sprite
+  (`flyover-marker-from`) until the fade ends; the export uses the same rig and a stop holds the look.
+  `markerKeysMoveWithTime` feeds the held-frame test. Picture of a key: `imageId` in the project media table (128 px
+  PNG, kept by `usedMedia`); no id = the picture of the Trace panel. `withFilmDefaults` gives `[]` (no version bump); not
+  kept by « Un film par trace »;
   `paramKeys[]` `{ id, atM, param, value }` (« Réglages »: a film-wide setting pinned along the first track in metres,
   like the camera keys, so values hold during stops; `param`: `speed` (×0.25–×4), `exposure` (±4 EV), `sunHour` (0–24 h
   solar), `saturation`, `contrast`, `warmth`, `vignette`; `paramAt(film, base, param, atM)`, pure: base value without a
@@ -2273,6 +2284,8 @@ exports) gets it from the terrain source of the settings.
   parallèle » is `enabled` (as before), « À la suite » the optional `sequence` flag (ignored while `enabled`), with
   `stageCards` (absent = on) and `stageTransition` (`'coupe'`, `'fondu-noir'` (absent), `'fondu-blanc'`); a project
   saved before has neither, so its film is unchanged; one track is never a sequence (`playsInSequence`).
+- À la suite: each stage can have its own marker through marker keys at the stage cuts (« Un marqueur par étape »,
+  Marqueur section).
 - « À la suite » (`src/flyover/sequence.ts`, pure): the film flies a **sequence track** (`buildSequence`: the tracks'
   segments one after the other in list order, id `suite:<ids>`, name `chainName`, never stored), cached on the tracks'
   ids, points and names (`sequenceOf`) so it keeps its identity. Unlike « Enchaîner en un seul parcours », nothing is
@@ -2324,6 +2337,8 @@ exports) gets it from the terrain source of the settings.
   disappears on the next change to the tracks (`chainLoadedTracks`, `projectActions.ts`).
 - Import: when a single import yields timestamped tracks that follow each other (no overlap, less than 24 h apart,
   `followEachOther`), an "Enchaîner ces N traces ?" message offers the action on these tracks only.
+- « Un marqueur par jour » (Marqueur section): one marker key per junction (`junctionsM`: the segment starts), set
+  afterwards in the inspector.
 - Limit: stops, key framings and landmarks anchored in meters on the old first track are not re-anchored.
 
 ## Strava import
