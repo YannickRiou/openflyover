@@ -141,8 +141,8 @@ export type ShellEvent =
   | { type: 'toggle-panel'; narrow: boolean }
   | { type: 'toggle-dock'; narrow: boolean }
   | { type: 'close-dock' }
-  /** a timeline block is selected (`open`) or no longer */
-  | { type: 'inspect'; open: boolean; narrow: boolean }
+  /** a timeline block is selected (`open`) or no longer; `exporting`: an export runs, its drawer stays over the inspector */
+  | { type: 'inspect'; open: boolean; narrow: boolean; exporting?: boolean }
   /** portrait phone: « Modifier » opens the selected block's inspector, « Terminé » closes it (the block stays selected) */
   | { type: 'edit'; open: boolean }
   /** the phone timeline unfolds: panel and export drawer make room (one sheet at a time) */
@@ -194,6 +194,8 @@ export function shellReducer(state: ShellState, event: ShellEvent): ShellState {
     case 'close-dock':
       return closeDock(state)
     case 'inspect':
+      // a block selected comes over the export drawer, which an export in progress keeps
+      if (event.open && state.dockOpen && !event.exporting) return { ...state, inspecting: true, dockOpen: false }
       if (event.open === state.inspecting) return state
       if (!event.open) {
         const closed = { ...state, inspecting: false, editing: false }
