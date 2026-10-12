@@ -60,7 +60,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
-| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, `pickLandmarkTitles`, `withLandmarkTitles`, `withoutLandmarkTitles`, `sameLandmarkTitles`, `freezeLandmarkTitles`; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
+| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, ; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
 | `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime`; keyframes: `keyView`, `keyFramingFrom`, `keyFramingAt`, `keyReferenceAt` (`cameraKeys.ts`, no three.js: `keyPoseAt`, `keyedCamera`, `registerKeyCapture`, `captureKey`) |
 | `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)`, `nightAt`, `nightSunDate`, `NIGHT_DARK_MARGIN_MS` |
 | `src/flyover/nights.ts` | nights of a multi-day track (see "Sun at the time of the outing") | `trackNights`, `flightNights`, `nightPauseS`, `TrackNight`, `FlightNight` |
@@ -1025,8 +1025,7 @@ pointer (`appearance.css`).
   (music tracks, see "Music"; `src` = id of the sound file in the media table; `AUDIO_DEFAULTS`: volume 1, fades
   0.5 s / 2 s; `isValidAudio`; a film saved earlier receives `[]`), anchored in film time, and `duckMusic` ("Baisser la
   musique sous les vidéos" (lower the music under the videos), false by default and for a film saved earlier); `pois[]` `{ id, lon, lat, name }` (points
-  of interest placed by hand, see "Points of interest"; a film saved earlier receives `[]`); `landmarkTitles` ("Ralentir
-  et titrer aux repères" (slow down and add titles at landmarks), true by default, false for a film saved earlier: its flight does not change); `nights` `{ enabled, duskS, nightS, dawnS }`
+  of interest placed by hand, see "Points of interest"; a film saved earlier receives `[]`); `nights` `{ enabled, duskS, nightS, dawnS }`
   (« Jours et nuits », 0–20 s each, `NIGHT_PART_RANGE`; on, 3 / 2 / 3 s by default; off for a film saved earlier, so its
   timing stays); ids unique within the film
   (`stop-3`, `text-1`, `media-2`, `music-1`, `poi-2`, `nextFilmId`).
@@ -1040,22 +1039,12 @@ pointer (`appearance.css`).
   summits or passes). `'rythme'`: the pacing pauses from before the timeline (nothing if pacing is disabled,
   `pauseS`, `film` camera, like those pauses before). `materializeStops` writes the generated stops into the film (`autoStops: false`) on the first
   edit of a stop.
-- **Slow-downs and titles at landmarks** (`landmarkTitles`, same module): `pickLandmarkTitles` picks, among the landmarks of the
-  first track, passes and summits within 150 m (`TITLE_NEAR_M`) and huts within 100 m, by decreasing
-  priority (tie: position, then id: deterministic), never two less than 10 s of film apart (`TITLE_GAP_S`), one per
-  3 km of track (at least one, at most 6). Each one receives a text card (`texts`, id `auto-text-<OSM id>`, name, elevation
-  as subtitle if known, top center, 4 s starting 1 s before the marker passes) and a ×0.5 section over 400 m
-  centered on it (`speeds`, id `auto-speed-<OSM id>`), unless it would cover a film stop or a highlight slowed down
-  by the active pacing, or overlap another section: then the title alone (at the start of a stop's hold).
-  Unlike stops, these items are **written into the film** (the timing of texts depends on the clock):
-  `withLandmarkTitles` removes the `auto-speed-` / `auto-text-` items and rebuilds them, without touching the user's;
-  titles are placed with the clock of the slowed-down film (`PassingTimes`). **When**: `setLandmarkTitles`
-  (`scene/usePacing.ts`) on the landmark panel checkbox (checked: rebuilt, unchecked: removed) and, with the box checked, on each
-  publication of the first track's landmarks (Overpass load, types or distance changed; `LandmarkPanel` effect),
-  one undo step, none when nothing changes (landmarks republished identically, project reopened as saved).
-  Not on a film or duration edit: like all texts, the titles stay at their time until the next
-  publication, which repositions them; an undone title stays undone until then. Editing or deleting one of these items (`editFilm`, timeline gestures and
-  arrows) unchecks the box (`freezeLandmarkTitles`), just as editing a stop freezes the generated stops.
+- **No slow-down or title at landmarks.** A film does not slow down or add a title card at landmarks by itself: the only
+  things it does at a landmark are its stop (« Arrêt », generated by `autoStops` or added by hand) and the 3D labels. The former
+  option « Ralentir et titrer aux repères » (`film.landmarkTitles`) was removed as redundant with the stops. **Old projects**: a
+  project saved with the option keeps loading without warning; `withFilmDefaults` drops the `landmarkTitles` flag (like
+  `epochs`) and the `auto-speed-<OSM id>` / `auto-text-<OSM id>` items it had written stay as ordinary speed sections and texts,
+  editable and deletable. A new film has none.
 - **Old projects**: a film saved without `autoMode` is completed by `withFilmDefaults` (`SETTING_UPGRADES`, also for
   presets) with `'rythme'`; a v1 project without a film receives `{ autoMode: 'rythme' }` through the v1 → v2 migration
   (`MIGRATIONS[1]`), completed the same way: their stops remain those of their pacing.
@@ -1259,7 +1248,7 @@ pointer (`appearance.css`).
 - **Attached to a stop** (`stopId`, pure in `timeline.ts`): `attachToStop` attaches a text or a video (moved to the start
   of the stop's hold, duration kept) or a photo (fitted to the hold: shown while the marker holds), or frees it (time
   kept). `followStops(before, after, clockOf, clockBefore?)` runs on every edit of the film (`editFilm`, the timeline's
-  `commit` and `change`, the draft of a gesture), on "Ralentir et titrer aux repères" (`setLandmarkTitles`) and on
+  `commit` and `change`, the draft of a gesture) and on
   the flyover duration and pacing (`setFlightTiming`: the setting and the film in one change, `clockBefore` = the clock
   before it; their "Par défaut": `followFlightTiming` inside the `resetSettings` step) and when the first track's
   landmarks are published again (`followLandmarks` from the `LandmarkPanel` effect, `clockBefore` = the clock with the
@@ -1414,7 +1403,7 @@ pointer (`appearance.css`).
   time where it begins, clock recomputed with the moved section) goes to the beat, its length kept, to the meter,
   between its neighbors; it stays if its start lands more than `BEAT_SNAP_S` / 4 from the target beat. One undo
   step (`editFilm`); the generated stops are written (like any stop
-  edit), a moved landmark title freezes the landmark titles. Resyncing moves nothing. Toast "N éléments calés
+  edit). Resyncing moves nothing. Toast "N éléments calés
   sur le rythme (≈ 112 BPM)"; uncertain tempo: message, nothing is done.
 - **Video sound** (`clipHasSound`, `clipSounds`, `duckEnvelope` in `src/film/audio.ts`, pure and tested): an added video
   has its sound (`VIDEO_SOUND_DEFAULTS`: `muted: false`, `volume: 1`); a video saved without `muted` (earlier
@@ -1627,8 +1616,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   skips the memory and the persistent cache, then caches the answer). `withLandmarkDefaults` gives `[]` to both lists.
 - **Eye**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids. Hiding removes, in the same undo step,
   the row's own stop (`placeStop`: the stop whose `source.ref` is the landmark, else a stop placed by hand within 1 m)
-  and, while `landmarkTitles` is off, its `auto-text-` / `auto-speed-` items (`withoutPlaceItems`). Generated stops and
-  live titles follow `splitHidden`; a hidden point of interest gets no label. Deleting a point of interest drops its id
+  (`withoutPlaceItems`). Generated stops follow `splitHidden`; a hidden point of interest gets no label. Deleting a point of interest drops its id
   (ids are reused).
 - **« Arrêt »**: `addStop` (landmark: label = name, source `{ kind: 'landmark', ref }`; point of interest: name, nearest
   point of the track); duration with `updateStop`; through `editFilm({ stops: true })`, so the first edit writes the
@@ -1721,8 +1709,7 @@ exports) gets it from the terrain source of the settings.
   places when there are enough (also for the 3D labels), label "Nom · 1 653 m" for summits and passes.
 - **State** (`src/osm/store.ts`): `useLandmarkStore` driven by `syncLandmarks` from `LandmarkPanel`; the landmarks of all
   tracks are published to the 3D labels through `setLabelSource('osm', …)` (empty list when disabled). The panel list follows
-  the first track (click = `setProgress`). The same effect rebuilds the film's slow-downs and titles on each publication
-  (see "Slow-downs and titles at landmarks").
+  the first track (click = `setProgress`). The same effect calls `followLandmarks` (items attached to a stop follow it when the landmarks are published again).
 - **Hiding one by one**: the eye button of a landmark adds its OSM id to `settings.landmarks.hiddenIds` (project document,
   undoable, "modifié" chip). After filter and cap, `splitHidden` separates the shown landmarks (`landmarks`: labels, automatic
   stops, titles) from the hidden ones (`hidden`, listed greyed out and struck through in the panel so they can be shown again;
@@ -2033,7 +2020,7 @@ exports) gets it from the terrain source of the settings.
   for each file, `show` imports it alone (`importFile`) and displays it in place of the tracks (`clearTracks` +
   `addTracks`, like opening a project) with the automatic film (`trackFilm`: shots, options and music from the user's
   film; generated stops; speeds, framings, texts, media and points of interest removed), starts the track's landmarks and
-  weather and waits for them (`TRACK_DATA_WAIT_MS`, 30 s at most), rebuilds the landmark titles; then the checked
+  weather and waits for them (`TRACK_DATA_WAIT_MS`, 30 s at most); then the checked
   jobs go through `runBatch` / `exportJob`, request derived from this track's clock (`shownFilm`), names
   "<fichier sans extension> – 16x9-1080p.mp4" (`trackFilmName`). Unreadable file or failed film: track flagged,
   move on to the next one; track without timestamps: film without weather or time, as if loaded by hand. Progress
@@ -2404,7 +2391,7 @@ exports) gets it from the terrain source of the settings.
   and clock (`useFilmSource`, `getFilmSource`: landmarks of every stage along the sequence, `sequenceLandmarks`, a
   landmark near two stages once), FlyoverRig and the export, timeline, track picker, climbs and their labels,
   kilometre labels, landmark, climb, highlight and point-of-interest panels (seeking in metres along the film), region
-  highlight, water. Stops, speed sections, camera keys and landmark titles are anchored in metres along the sequence:
+  highlight, water. Stops, speed sections and camera keys are anchored in metres along the sequence:
   the first stage keeps the first track's metres, so switching mode keeps what was placed on it.
 - Clock: `FilmClockFor.cutsM` (the stages' starts) → `clock.cuts` (`{ atM, timeS }`, like the camera keys), read by
   the timeline (one segment per stage in the « Plans » lane, `.film-tl__stage`: name and a band in the track's colour)

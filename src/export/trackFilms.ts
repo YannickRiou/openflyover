@@ -11,7 +11,7 @@ import type { Film } from '../film/model'
 import { importFile } from '../import'
 import { syncLandmarks, useLandmarkStore } from '../osm/store'
 import { getSettingsHistory } from '../project/history'
-import { getFilmSource, setLandmarkTitles } from '../scene/usePacing'
+import { getFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { syncWeather, useWeatherStore } from '../weather/store'
 import type { BatchContext } from './batch'
@@ -45,7 +45,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * Fetch the landmarks and the weather of the track shown (as their panels do on a change of track), wait for them
- * (at most `TRACK_DATA_WAIT_MS`, or until canceled), then title the landmarks when the film does.
+ * (at most `TRACK_DATA_WAIT_MS`, or until canceled).
  */
 async function loadTrackData(canceled: () => boolean): Promise<void> {
   const { tracks, settings } = useAppStore.getState()
@@ -54,7 +54,6 @@ async function loadTrackData(canceled: () => boolean): Promise<void> {
   const loading = () => useLandmarkStore.getState().status === 'loading' || useWeatherStore.getState().status === 'loading'
   const end = Date.now() + TRACK_DATA_WAIT_MS
   while (loading() && !canceled() && Date.now() < end) await delay(POLL_MS)
-  if (useAppStore.getState().settings.film.landmarkTitles) setLandmarkTitles(true)
 }
 
 export interface TrackFilmsSession {

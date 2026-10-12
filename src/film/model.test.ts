@@ -323,10 +323,24 @@ describe('film model', () => {
     expect(invalid).toEqual(['film'])
     expect(settings.film).toEqual(DEFAULT_FILM)
     expect(isValidFilm(film({ autoMode: 'partout' as 'rythme' }))).toBe(false)
-    // landmark titles: on for new films, off for those saved before them (their flight stays as it was)
-    expect(DEFAULT_FILM.landmarkTitles).toBe(true)
-    const { landmarkTitles: _t, ...untitled } = film({})
-    expect(sanitizeSettings({ film: untitled }).settings.film.landmarkTitles).toBe(false)
+    // « Ralentir et titrer aux repères » is gone: a new film has no slow-down or title of that kind
+    expect(DEFAULT_FILM).not.toHaveProperty('landmarkTitles')
+    expect(DEFAULT_FILM.speeds).toEqual([])
+    expect(DEFAULT_FILM.texts).toEqual([])
+    // a film saved with the flag still opens, with or without it: the items it had made stay (ordinary ones), the flag goes
+    const generated = {
+      speeds: [{ id: 'auto-speed-node-1', fromM: 100, toM: 500, factor: 0.5 }],
+      texts: [text('auto-text-node-1')],
+    }
+    for (const landmarkTitles of [true, false]) {
+      const saved = { ...film(generated), landmarkTitles }
+      const loaded = sanitizeSettings({ film: saved })
+      expect(loaded.invalid).toEqual([])
+      expect(loaded.settings.film).toEqual(film(generated))
+      expect(loaded.settings.film).not.toHaveProperty('landmarkTitles')
+    }
+    expect(isValidFilm({ ...film(generated), landmarkTitles: true } as unknown as Film)).toBe(true)
+    expect(isValidFilm(film(generated))).toBe(true)
     // media saved before their placement get the defaults
     const bare = { id: 'media-1', startS: 10, durationS: 5, kind: 'image', src: 'photo-1' }
     expect(sanitizeSettings({ film: { ...DEFAULT_FILM, media: [bare] } }).settings.film.media).toEqual([media('media-1')])
@@ -349,7 +363,7 @@ describe('film model', () => {
     // a v1 project saved before the film existed: default shots, stops of its pacing
     const { film: _, ...before } = doc.settings
     expect(parseProject(JSON.stringify({ ...doc, settings: before })).settings.film).toEqual(
-      film({ autoMode: 'rythme', landmarkTitles: false, nights: { ...DEFAULT_FILM.nights, enabled: false } }),
+      film({ autoMode: 'rythme', nights: { ...DEFAULT_FILM.nights, enabled: false } }),
     )
   })
 

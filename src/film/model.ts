@@ -381,11 +381,6 @@ export interface Film {
   duckMusic: boolean
   /** points of interest placed by hand (labels only: they change neither the flight nor its time) */
   pois: FilmPoi[]
-  /**
-   * slow-downs and titles made at the landmarks as they load (« Ralentir et titrer aux repères », `withLandmarkTitles`
-   * in `assemble.ts`); off for the films saved before it, cleared by retouching one of those items
-   */
-  landmarkTitles: boolean
   /** nights of a multi-day track shown as pauses; off for the films saved before it (their timing stays) */
   nights: FilmNights
 }
@@ -412,7 +407,6 @@ export const DEFAULT_FILM: Film = {
   audio: [],
   duckMusic: false,
   pois: [],
-  landmarkTitles: true,
   nights: DEFAULT_NIGHTS,
 }
 
@@ -690,7 +684,7 @@ export function isValidNights(nights: FilmNights): boolean {
  */
 export function isValidFilm(film: Film): boolean {
   if (!isValidShot(film.opening) || !isValidShot(film.closing) || typeof film.autoStops !== 'boolean') return false
-  if (typeof film.duckMusic !== 'boolean' || typeof film.landmarkTitles !== 'boolean') return false
+  if (typeof film.duckMusic !== 'boolean') return false
   if (!oneOf(AUTO_STOP_MODES, film.autoMode)) return false
   if (!film.stops.every(isValidStop) || !film.texts.every(isValidText) || !film.media.every(isValidMedia)) return false
   if (!film.speeds.every(isValidSpeed) || !apart(film.speeds) || !film.audio.every(isValidAudio)) return false
@@ -703,17 +697,18 @@ export function isValidFilm(film: Film): boolean {
 /**
  * Fill-in of a film saved before a field existed (`SETTING_UPGRADES`): missing fields from `DEFAULT_FILM`, except
  * `autoMode`, which keeps the automatic stops of those films following the pacing ('rythme'). Films saved before
- * music, camera keys, parameter, marker keys, points of interest, landmark titles or nights get none of them, and old video clips stay silent
- * (`muted: true`), so they look and sound as saved. The `epochs` key of earlier versions is dropped. A text or a
+ * music, camera keys, parameter, marker keys, points of interest or nights get none of them, and old video clips stay silent
+ * (`muted: true`), so they look and sound as saved. The `epochs` key of earlier versions and the `landmarkTitles` flag
+ * (« Ralentir et titrer aux repères », removed) are dropped: the slow-downs and titles that option had written stay in
+ * `speeds` and `texts` as ordinary items. A text or a
  * medium attached to a stop the film does not own (generated stops, unknown id) is loaded free.
  */
 export function withFilmDefaults(raw: unknown): unknown {
   if (!isRecord(raw)) return raw
-  const { epochs: _dropped, ...saved } = raw
+  const { epochs: _epochs, landmarkTitles: _landmarkTitles, ...saved } = raw
   const film: Record<string, unknown> = {
     ...DEFAULT_FILM,
     autoMode: 'rythme',
-    landmarkTitles: false,
     nights: { ...DEFAULT_NIGHTS, enabled: false },
     ...saved,
   }
