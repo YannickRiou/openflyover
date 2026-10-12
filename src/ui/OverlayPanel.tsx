@@ -1,15 +1,14 @@
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { videoSize } from '../export/schedule'
+import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
+import type { CardId } from '../film/cards'
 import { filmTrackOf } from '../flyover/sequence'
 import { hasMetric } from '../flyover/trackColor'
 import { fileToLogoDataUrl } from '../overlay/assets'
 import {
   COUNTER_IDS,
   CREDITS_POSITIONS,
-  END_CREDITS_MAX,
-  END_START_MAX,
-  END_START_MIN,
   OFFSET_MAX_PX,
   OVERLAY_FONT_IDS,
   OVERLAY_FONT_LABELS,
@@ -25,8 +24,6 @@ import {
   PROFILE_HEIGHT_MIN,
   PROFILE_WIDTH_MAX,
   PROFILE_WIDTH_MIN,
-  TITLE_END_MAX,
-  TITLE_END_MIN,
   WIDGET_SIZE_MAX,
   WIDGET_SIZE_MIN,
   withOverrides,
@@ -65,7 +62,7 @@ const OFFSET_Y_LABELS: Record<string, string> = { top: 'Depuis le haut (px)', mi
  * Where a widget sits: its anchor on the 3 × 3 grid, then « Position libre », an offset in pixels of the exported film
  * from that corner of the safe area (the widget leaves its anchor's stack).
  */
-function WidgetPosition({ widget }: { widget: PlacedWidget }) {
+export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
   const id = useId()
   const overlay = useAppStore((s) => s.settings.overlay)
   const video = useAppStore((s) => s.settings.video)
@@ -122,7 +119,7 @@ function WidgetPosition({ widget }: { widget: PlacedWidget }) {
   )
 }
 
-const SizeField = ({ value, onChange }: { value: number; onChange(v: number): void }) => (
+export const SizeField = ({ value, onChange }: { value: number; onChange(v: number): void }) => (
   <RangeField label="Taille" min={WIDGET_SIZE_MIN} max={WIDGET_SIZE_MAX} step={0.1} value={value} format={(v) => `×${formatNumber(v, 1)}`} onChange={onChange} />
 )
 
@@ -152,7 +149,6 @@ function WidgetGroup({
   children?: ReactNode
 }) {
   const id = useId()
-  const overlay = useAppStore((s) => s.settings.overlay)
   const tabs = WIDGET_TABS.filter((tab) => (tab === 'contenu' ? children : tab === 'style' ? style || styled : visibility))
   const [tab, setTab] = useState<WidgetTab>(tabs[0] ?? 'contenu')
   const shown = tabs.includes(tab) ? tab : tabs[0]
@@ -184,17 +180,41 @@ function WidgetGroup({
           {shown === 'style' && (
             <>
               {style}
-              {styled && (
-                <StyleOverrides
-                  overlay={overlay}
-                  widget={styled}
-                  onChange={(patch) => useAppStore.getState().setSetting('overlay', withWidgetOverrides(overlay, styled, patch))}
-                />
-              )}
+              {styled && <WidgetStyleOverrides widget={styled} />}
             </>
           )}
           {shown === 'visibilite' && visibility}
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The opening title or the closing card: its switch, here; its settings are those of its block on the timeline's
+ * « Textes » lane (`CardFields`, in the inspector), which « Modifier » selects.
+ */
+function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolean; onToggle(v: boolean): void }) {
+  const id = useId()
+  const hasTrack = useAppStore((s) => s.tracks.length > 0)
+  const label = CARD_LABELS[card]
+  return (
+    <div className="overlay-widget" role="group" aria-labelledby={id}>
+      <label className="checkbox checkbox--switch" id={id}>
+        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.currentTarget.checked)} />
+        {label}
+      </label>
+      <p className="field__hint">Réglages : cliquez le bloc dans la timeline.</p>
+      {enabled && (
+        <button
+          type="button"
+          className="btn btn--secondary"
+          disabled={!hasTrack}
+          aria-label={`Modifier : ${label}`}
+          onClick={() => useAppStore.getState().setFilmSelection(card)}
+        >
+          Modifier
+        </button>
       )}
     </div>
   )
@@ -320,6 +340,12 @@ export function FilmTextStyleFields({
       </button>
     </SettingRow>
   )
+}
+
+/** « Couleurs et polices » of one widget (`StyleOverrides` on its own changes), in its panel group or in the inspector of a card. */
+export function WidgetStyleOverrides({ widget }: { widget: StyledWidget }) {
+  const overlay = useAppStore((s) => s.settings.overlay)
+  return <StyleOverrides overlay={overlay} widget={widget} onChange={(patch) => useAppStore.getState().setSetting('overlay', withWidgetOverrides(overlay, widget, patch))} />
 }
 
 /**
@@ -511,87 +537,8 @@ export function OverlayPanel() {
       {overlay.enabled && (
         <>
           <PanelSection title="Titres">
-            <WidgetGroup
-              label="Titre d'ouverture"
-              enabled={overlay.title.enabled}
-              onToggle={(enabled) => setWidget('title', { enabled })}
-              position="title"
-              styled="title"
-              style={<SizeField value={overlay.title.size} onChange={(size) => setWidget('title', { size })} />}
-              visibility={
-                <>
-                  <RangeField
-                    label="Durée d'affichage"
-                    min={TITLE_END_MIN}
-                    max={TITLE_END_MAX}
-                    step={0.01}
-                    value={overlay.title.end}
-                    format={(v) => `${percent(v)} du survol`}
-                    onChange={(end) => setWidget('title', { end })}
-                  />
-                </>
-              }
-            >
-              <TextField label="Titre" value={overlay.title.title} placeholder={track?.name ?? 'Nom de la trace'} onChange={(title) => setWidget('title', { title })} />
-              <TextField label="Sous-titre" value={overlay.title.subtitle} placeholder="Lieu, occasion…" onChange={(subtitle) => setWidget('title', { subtitle })} />
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={overlay.title.showDate && hasTime}
-                  disabled={!hasTime}
-                  onChange={(e) => setWidget('title', { showDate: e.currentTarget.checked })}
-                />
-                Date de la sortie
-              </label>
-            </WidgetGroup>
-
-            <WidgetGroup
-              label="Carte de clôture"
-              enabled={overlay.end.enabled}
-              onToggle={(enabled) => setWidget('end', { enabled })}
-              position="end"
-              styled="end"
-              style={<SizeField value={overlay.end.size} onChange={(size) => setWidget('end', { size })} />}
-              visibility={
-                <>
-                  <RangeField
-                    label="Apparition"
-                    min={END_START_MIN}
-                    max={END_START_MAX}
-                    step={0.01}
-                    value={overlay.end.start}
-                    format={(v) => `à ${percent(v)} du survol`}
-                    onChange={(start) => setWidget('end', { start })}
-                  />
-                </>
-              }
-            >
-              <TextField label="Titre" value={overlay.end.title} placeholder={track?.name ?? 'Nom de la trace'} onChange={(title) => setWidget('end', { title })} />
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={overlay.end.showWeather && hasWeather}
-                  disabled={!hasWeather}
-                  onChange={(e) => setWidget('end', { showWeather: e.currentTarget.checked })}
-                />
-                Météo de la sortie
-              </label>
-              <div className="field">
-                <label className="field__label" htmlFor={`${id}-end-credits`}>
-                  Générique
-                </label>
-                <textarea
-                  id={`${id}-end-credits`}
-                  className="input input--multiline"
-                  rows={4}
-                  maxLength={END_CREDITS_MAX}
-                  placeholder={'Une ligne par nom\nMusique : …'}
-                  value={overlay.end.credits ?? ''}
-                  onChange={(e) => setWidget('end', { credits: e.currentTarget.value || undefined })}
-                />
-                <p className="field__hint">Rempli, il défile sous la carte jusqu’à la fin du film, centré.</p>
-              </div>
-            </WidgetGroup>
+            <CardSwitch card={TITLE_CARD_ID} enabled={overlay.title.enabled} onToggle={(enabled) => setWidget('title', { enabled })} />
+            <CardSwitch card={END_CARD_ID} enabled={overlay.end.enabled} onToggle={(enabled) => setWidget('end', { enabled })} />
           </PanelSection>
 
           <PanelSection title="Compteurs">
