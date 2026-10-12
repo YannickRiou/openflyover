@@ -23,7 +23,6 @@ OpenFlyover makes a 3D flyover movie from a GPX or FIT track, over the real terr
 - [Data sources](#data-sources)
 - [Licenses](#licenses)
 - [Contributing](#contributing)
-- [Roadmap](#roadmap)
 
 ## Overview
 
@@ -106,7 +105,6 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 | [Desktop installers](docs/installers.md) | installers built on GitHub, signing |
 | [Data sources](docs/sources.md) | attributions, licenses, offline rules and how each source was checked |
 | [GPU tests](docs/tests-gpu.md) | manual checks on a machine with a real graphics card |
-| [Roadmap](docs/roadmap.md) | phases and what each one contains |
 | [Handover](docs/handover.md) | project status and next steps |
 | [Changelog](CHANGELOG.md) | what each version brings |
 
@@ -207,17 +205,3 @@ Conventions:
 - Visual identity in [`src/ui/theme.css`](src/ui/theme.css).
 - Open, keyless sources only; any new source goes into `src/terrain/sources.ts` and `docs/sources.md`.
 - Types, lint and tests green before each commit, one commit per feature.
-
-## Roadmap
-
-| Phase | Status |
-|---|---|
-| 1 — Viewer | done |
-| 2 — Flyover | done |
-| 3 — Atmosphere | done |
-| 4 — Customization | done |
-| 5 — Video export | in progress: speed measurement on a machine with a GPU |
-| 6 — Desktop application | in progress: command-line rendering and macOS / Linux installers to run on a real machine, signing |
-| 7 — Beyond the flyover | done |
-
-Content of each phase: [`docs/roadmap.md`](docs/roadmap.md).
