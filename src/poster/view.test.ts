@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import sampleGpx from '../../public/samples/tour-du-mont-blanc-j1.gpx?raw'
-import type { LonLatBounds, TileSourceBase } from '../core/types'
+import type { LonLatBounds, TileFetcher, TileSourceBase } from '../core/types'
 import { parseGpx } from '../import/gpx'
 import { buildTrack } from '../import/stats'
 import { unionBounds } from '../state/store'
-import { FLAT_MAP_MARGIN, FLAT_MAP_MAX_TILES, framingPath, planFlatMap } from './view'
+import { FLAT_MAP_MARGIN, FLAT_MAP_MAX_TILES, framingPath, planFlatMap, renderFlatMap } from './view'
 
 const sample = parseGpx(sampleGpx, 'tour-du-mont-blanc-j1.gpx')[0]
 /** a short outing north-east of the sample */
@@ -86,5 +86,49 @@ describe('planFlatMap', () => {
     const west = planFlatMap(bounds, 2000, 2000, { ...SOURCE, coverage: { west: 0, east: 6.9, south: 40, north: 50 } })
     expect(west.tiles.length).toBeGreaterThan(0)
     expect(west.tiles.length).toBeLessThan(all.tiles.length)
+  })
+})
+
+describe('renderFlatMap', () => {
+  it('follows its tiles as they come and counts those that never did', async () => {
+    const ctx = new Proxy({}, { get: () => () => undefined, set: () => true })
+    vi.stubGlobal('OffscreenCanvas', class {
+      width: number
+      height: number
+      constructor(w: number, h: number) {
+        this.width = w
+        this.height = h
+      }
+      getContext() {
+        return ctx
+      }
+    })
+    try {
+      let n = 0
+      // every third tile fails
+      const fetcher = { fetchBitmap: vi.fn(async () => (n++ % 3 === 2 ? Promise.reject(new Error('HTTP 503')) : ({} as ImageBitmap))) }
+      const progress: [number, number][] = []
+      const bounds = { west: 6.8, east: 7.0, south: 45.8, north: 46.0 }
+      const source = { ...SOURCE, id: 'test', name: 'Test', urlTemplate: 'https://t.test/{z}/{x}/{y}.png' } as unknown as TileSourceBase
+      const map = await renderFlatMap({
+        width: 600,
+        height: 400,
+        bounds,
+        source,
+        tracks: [other],
+        lineWidth: 2,
+        casing: '#fff',
+        fetcher: fetcher as unknown as TileFetcher,
+        signal: new AbortController().signal,
+        onProgress: (done, total) => progress.push([done, total]),
+      })
+      const total = fetcher.fetchBitmap.mock.calls.length
+      expect(progress[0]).toEqual([0, total])
+      expect(progress.at(-1)).toEqual([total, total])
+      expect(map.missingTiles).toBe(Math.floor(total / 3))
+      expect(map.view.width).toBe(600)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

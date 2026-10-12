@@ -108,6 +108,14 @@ export interface FlatMapInput {
   casing: string
   fetcher: TileFetcher
   signal: AbortSignal
+  /** tiles settled (drawn or failed) out of the map's, after each one */
+  onProgress?: (done: number, total: number) => void
+}
+
+/** A flat map and the tiles that never came (grey there). */
+export interface FlatMap {
+  view: OffscreenCanvas
+  missingTiles: number
 }
 
 /** Each segment of each track: casings first, so a line crossing another stays whole. */
@@ -133,25 +141,35 @@ function drawTracks(ctx: OffscreenCanvasRenderingContext2D, plan: FlatMapPlan, i
   stroke((track) => track.color, input.lineWidth)
 }
 
-/** The flat map, tiles drawn as they come (grey where one fails). Rejects when not a single tile came. */
-export async function renderFlatMap(input: FlatMapInput): Promise<OffscreenCanvas> {
-  const { width, height, source, fetcher, signal } = input
+/**
+ * The flat map, tiles drawn as they come (grey where one fails), with the count of those that failed. Rejects when not
+ * a single tile came.
+ */
+export async function renderFlatMap(input: FlatMapInput): Promise<FlatMap> {
+  const { width, height, source, fetcher, signal, onProgress } = input
   const canvas = new OffscreenCanvas(width, height)
   const ctx = canvas.getContext('2d', { alpha: false })
   if (!ctx) throw new Error("Impossible de créer l'image de la carte.")
   ctx.fillStyle = MISSING_TILE
   ctx.fillRect(0, 0, width, height)
   const plan = planFlatMap(input.bounds, width, height, source)
+  let done = 0
+  onProgress?.(0, plan.tiles.length)
   const loaded = await Promise.allSettled(
     plan.tiles.map(async (tile) => {
-      const bitmap = await fetcher.fetchBitmap(buildTileUrl(source, tile.key), { signal })
-      ctx.drawImage(bitmap, tile.x, tile.y, tile.w, tile.h)
+      try {
+        const bitmap = await fetcher.fetchBitmap(buildTileUrl(source, tile.key), { signal })
+        ctx.drawImage(bitmap, tile.x, tile.y, tile.w, tile.h)
+      } finally {
+        onProgress?.(++done, plan.tiles.length)
+      }
     }),
   )
   signal.throwIfAborted()
-  if (plan.tiles.length > 0 && loaded.every((r) => r.status === 'rejected')) {
+  const missingTiles = loaded.filter((r) => r.status === 'rejected').length
+  if (plan.tiles.length > 0 && missingTiles === plan.tiles.length) {
     throw new Error(`Impossible de charger la carte : aucune tuile de « ${source.name} » reçue.`)
   }
   drawTracks(ctx, plan, input)
-  return canvas
+  return { view: canvas, missingTiles }
 }
