@@ -187,6 +187,9 @@ describe('diagnostic report', () => {
     expect(rows['Répartition']).toContain('GPU 2,0 s')
     expect(rows['Tuiles']).toBe('0 image(s) au délai, 1 image(s) aux tuiles abandonnées')
     expect(rows['Temps GPU']).toBeUndefined()
+    expect(rows['Ombres']).toBeUndefined()
+    const shadowed = resultSection({ phase: 'done', error: null, frame: 1, frameCount: 1, timings: { ...timings, shadowTiles: 44, shadowOffscreenTiles: 22 }, result: null })
+    expect(Object.fromEntries(shadowed.rows)['Ombres']).toContain('2 tuiles (1 hors champ)')
     // stored with the report of the export, shown with it in « Dernier export »
     const report = withResult(withResult(buildReport(privateInput()), result), result)
     expect(report.sections.map((s) => s.title)).toEqual(['Appareil', 'Export', 'Réglages', 'Résultat'])

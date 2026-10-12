@@ -513,6 +513,19 @@ export function timingsSummary(t: TimingSplit): string {
   return parts.join(', ')
 }
 
+/**
+ * What the shadow pass draws per render, on one line: « ombres : 96 tuiles (31 hors champ), 410 k triangles (120 k hors
+ * champ) par rendu ». Empty when no shadow was drawn.
+ */
+export function shadowSummary(
+  t: Pick<ExportTimings, 'renders' | 'shadowTiles' | 'shadowTriangles' | 'shadowOffscreenTiles' | 'shadowOffscreenTriangles'>,
+): string {
+  if (t.renders === 0 || t.shadowTiles === 0) return ''
+  const per = (n: number) => Math.round(n / t.renders)
+  const k = (n: number) => `${Math.round(per(n) / 1000)}\u00a0k`
+  return `ombres : ${per(t.shadowTiles)} tuiles (${per(t.shadowOffscreenTiles)} hors champ), ${k(t.shadowTriangles)} triangles (${k(t.shadowOffscreenTriangles)} hors champ) par rendu`
+}
+
 /** Rows of the technical detail of a render: output, film, speed, encoder. */
 export function entryDetails(entry: HistoryEntry): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = []
