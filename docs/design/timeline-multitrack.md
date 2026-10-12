@@ -160,7 +160,20 @@ junction defaults and migration, clock holds, light blend), then UI tests of the
 - **Weather, poster and sunrise / sunset still read the first track** (documented limit); not changed here.
 - **Mobile**: long-press drag, no timeline drag in the centred-playhead layout.
 
-## 9. Questions for the owner
+## 9. Decisions (owner answers, 12 Oct)
 
-See the PR description (numbered Q1–Q10); the decisions that change the design most are Q1 (inserted time), Q3 (which transitions),
-Q5 (per-stage duration) and Q9 (chaining vs sequence).
+| # | Question | Decision |
+|---|---|---|
+| Q1 | Transition adds time to the film? | **Yes.** Transitions are held on the clock; the flyover duration means flight time, transitions come on top. |
+| Q3 | Which transitions? | **Yes to all four**: coupe, fondu noir / blanc, nuit, survol (the camera transition stays last, phase 4). |
+| Q5 | Duration share between stages | **A duration per stage** (set on the stage; unset = today's proportional share). Brought forward to phase 3. |
+| Q7 | Light at a junction | **Smooth blend at the junction** (each stage at its real hour, fade between). |
+| Q9 | « Enchaîner en un seul parcours » | **Kept** (clearer for the owner); « À la suite » stays too. Both are documented as different: chaining = one track with one continuous profile and statistics, sequence = separate stages. |
+
+Assumed until answered (shout if wrong): **Q2** default transition fondu noir, 1.5 s, in « Réglages » with *Apply to all*; **Q4** stage
+card = editable block in « Textes », shown inside the dip, variables name / day / date / distance / ascent; **Q6** no trimming
+(not requested); **Q8** reorder both in the track list and on the timeline; **Q10** phases as below, with per-stage duration moved
+into phase 3.
+
+Phases after the decisions: 0 hygiene → 1 junctions (type, held duration, cards as blocks, « Étapes » lane, inspector, migration) →
+2 reorder (drag, remap, undo, « Ordonner par date ») → 3 per-stage duration + light blend → 4 « Survol » transition.
