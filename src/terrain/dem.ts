@@ -7,7 +7,8 @@
  * Grids are row-major with row 0 at the north edge (see `HeightGrid` in core/types).
  */
 import { clamp } from '../core/math'
-import type { DemEncoding, HeightGrid } from '../core/types'
+import type { DemCleanOptions, DemEncoding, HeightGrid } from '../core/types'
+import { cleanDem } from './demClean'
 
 /** Height encoded by a Terrarium (0, 0, 0) pixel; several providers use it as a nodata sentinel. */
 const TERRARIUM_NODATA = -32768
@@ -89,10 +90,11 @@ export function readImagePixels(image: CanvasImageSource, width: number, height:
   return ctx.getImageData(0, 0, width, height).data
 }
 
-/** Decode a bitmap elevation tile into a height grid (NaN = nodata). */
-export function decodeDem(bitmap: ImageBitmap, encoding: DemEncoding): HeightGrid {
+/** Decode a bitmap elevation tile into a height grid (NaN = nodata), optionally cleaned of the spikes of the sea. */
+export function decodeDem(bitmap: ImageBitmap, encoding: DemEncoding, clean?: DemCleanOptions): HeightGrid {
   const { width, height } = bitmap
-  return decodeDemPixels(readImagePixels(bitmap, width, height), width, height, encoding)
+  const grid = decodeDemPixels(readImagePixels(bitmap, width, height), width, height, encoding)
+  return clean ? cleanDem(grid, clean) : grid
 }
 
 // ---------------------------------------------------------------------------
