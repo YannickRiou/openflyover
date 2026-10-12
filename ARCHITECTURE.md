@@ -2739,10 +2739,13 @@ tab; the automatic reopening of the last project (see "Library") hides it. The f
 | tiles a single view needs | the selection was never evicted: a low portrait view looking at the horizon held 160–224 tiles (iPhone 12, « descente »), tab killed | the error target grows by ×1.1 steps until the view fits the cap (`lodFactor`): distant tiles coarser, the ground under the camera unchanged |
 | tiles loading at once | 24 (each with its fetches, decoded bitmaps, DEM pixels and canvas): ~94 pending at once on an iPhone 12 | 6 (12 tablet, `maxTileLoads`) |
 | film kept in RAM (iOS: no direct disk write) | 1080p30 « Haute » ~16 Mbit/s = 2 MB/s, peak 2.5–3× the film at the end (`BufferTarget`'s growing buffer, `slice`, `Blob`) | ≤ 8 Mbit/s = 1 MB/s; « Débit vidéo » shows the real figure and « plafonné » |
+| imagery canvases (512² to 1024²+ each, ~1–4 MB of JS memory per resident tile) | kept as long as the tile lived | released as soon as the texture is uploaded (`texture.onUpdate`: 0×0, reference dropped); a new WebGL context redraws them (`restoreEngineImagery`) |
 | warning on the size estimate | 1.5 GB | 250 MB |
 | autosave of a project with a 40 MB clip | every change: whole document serialised as one string (the clip as base64, ~55 MB), UTF-8 copy for the size, `Response` copy: ~4–6× the project, 3 s after each change | `serializeProjectBlob`: the JSON of each medium is made once per table entry (`WeakMap`) and kept as a Blob the next documents reuse; size from `Blob.size`, `Response(blob)` streams to the cache; only the header and the tracks are serialised again |
 | reopening a project with a 40 MB clip at start-up | the document read as a string (~55 MB), a UTF-8 copy for the `File`, a second string at `file.text()`, the parsed object: ~3–4× the project | `load` returns a `Blob`: the `File` shares it, one string is made at `file.text()` and freed after `JSON.parse`: ~2× the project at peak |
 | export default | 1080p | 720p (`DEFAULT_VIDEO_SETTINGS`; a project already saved keeps its own) |
+
+Imagery canvases are released once uploaded (`releaseCanvas`, `terrain/imagery.ts`: 0×0, `texture.image = null`, `userData.released`). After `webglcontextrestored`, `TerrainLayer` calls `restoreEngineImagery(engine)`: each tile whose texture was released goes grey (and counts as « missing » for an export frame), is drawn again by `loadImageryTexture` through the fetcher's cache, and gets its new texture; a failed redraw stays grey until the next restore. Tiles never drawn keep their canvas until their first draw.
 
 A phone that exports also holds the **screen on** (`export/guard.ts`: Screen Wake Lock, asked again when the page returns
 to the foreground, released at the end, on cancel and on error; no API = no lock). While an export is busy a flag is
@@ -2773,12 +2776,12 @@ size, overlay widgets). No coordinate and no track, place, file or project name.
 steps) open `DiagnosticDialog` (« Copier le rapport », the text selected when the clipboard refuses). Both entries stay
 under ~16 KB of sessionStorage (values cut at 200 characters, steps at 80).
 
-Not done, on purpose: the imagery textures keep their 512² canvases while the tile lives (`CanvasTexture`, about 1 MB of JS
-memory per resident tile; released when it unloads): three re-uploads from `texture.image` after a lost context, and the engine has no way to redraw a tile's
-imagery, so releasing them would leave grey tiles after a restore. The muxer's copies at the end of an in-memory export
-are gone: the encoder writes through a chunked `StreamTarget` whose chunks become `Blob` parts as they arrive (`memoryStream`), and
-the film is the `Blob` of those parts, never one concatenated buffer (the old `BufferTarget` held its working buffer, a `slice`
-copy and the `Blob` copy at the same time, about 3× the file). The MP4 layout is unchanged (`fastStart: 'in-memory'`, index at
-the start). Still to confirm on a real iPhone: the peak while the muxer's samples move into the parts. The canvas is created once: a phone that starts with the atmosphere off keeps the MSAA, one that
+The muxer's copies at the end of an in-memory export are gone: the encoder writes through a chunked `StreamTarget` whose chunks
+become `Blob` parts as they arrive (`memoryStream`), and the film is the `Blob` of those parts, never one concatenated buffer
+(the old `BufferTarget` held its working buffer, a `slice` copy and the `Blob` copy at the same time, about 3× the file). The
+MP4 layout is unchanged (`fastStart: 'in-memory'`, index at the start). Still to confirm on a real iPhone: the peak while the
+muxer's samples move into the parts.
+
+Not done, on purpose: the canvas is created once: a phone that starts with the atmosphere off keeps the MSAA, one that
 starts with it on and turns it off later draws the plain scene without it.
 

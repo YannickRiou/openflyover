@@ -5,6 +5,10 @@
  * skipped and failed ones left grey (`userData.incomplete`); the promise rejects only when every sub-tile failed or the
  * signal was aborted.
  *
+ * Once the GPU has the pixels (`texture.onUpdate`), the canvas is released (`releaseCanvas`: 0 x 0, reference dropped,
+ * `userData.released`): a phone cannot afford ~1 MB of JS memory a resident tile. A new WebGL context has none of them, so
+ * the engine redraws a released tile from the sources (`restoreEngineImagery`).
+ *
  * `planImagerySubtiles` is pure (and tested); `loadImageryTexture` does the fetching and drawing.
  */
 import { errorMessage } from '../core/errors'
@@ -110,6 +114,15 @@ export function planImagerySubtiles(key: TileKey, source: ImagerySource, zoomOff
 type CompositeCanvas = OffscreenCanvas | HTMLCanvasElement
 type Canvas2D = OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D
 
+/** The GPU has the pixels: free the canvas (WebKit keeps a canvas's backing store until the next GC otherwise). */
+function releaseCanvas(texture: Texture): void {
+  const canvas = texture.image as CompositeCanvas | null
+  if (!canvas) return
+  canvas.width = canvas.height = 0
+  texture.image = null
+  texture.userData.released = true
+}
+
 function createTexture(canvas: CompositeCanvas, key: TileKey): Texture {
   const texture = new CanvasTexture<CompositeCanvas>(canvas)
   texture.name = `imagery ${tileKeyString(key)}`
@@ -121,6 +134,7 @@ function createTexture(canvas: CompositeCanvas, key: TileKey): Texture {
   texture.wrapT = ClampToEdgeWrapping
   texture.anisotropy = 16 // the engine clamps it to the renderer's maximum
   texture.flipY = true // canvas row 0 is the north edge; the mesh builder uses uv.y = 1 - v
+  texture.onUpdate = releaseCanvas
   texture.needsUpdate = true
   return texture
 }
