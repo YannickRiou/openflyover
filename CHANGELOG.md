@@ -8,6 +8,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Export: every image waits for its tiles, or the export stops** (#36): more retries with growing delays (up to about
   2 min per tile), 5 minutes at most per image; a tile that never comes stops the export with an error naming the
   server, the tile and the cause, instead of delivering incomplete images.
+- **Diagnostic** (#64): the diagnostic report and the test export without encoding moved from the Projet tab to « Réglages ».
 - **Export: faster and lighter** (#35, #37): the interface stays responsive during an export; render-time breakdown (GPU
   when the browser measures it, composing, video frame, encoder wait, renders per image) in the console, the history and
   the diagnostic report; hardware video encoder when available; one render instead of two per image with clouds when

@@ -2731,7 +2731,7 @@ height grids (`engine.caches()`), the frames « en vol » (handed to the VideoEn
 mediabunny's `onEncodedSample` / `onEncodedPacket`) and its `encodeQueueSize` (« file », read through mediabunny's
 internal encoder wrapper, left out if it changes), the re-drapes run by the export's `flushDrapes` since the previous
 step; a step line also gives the time since the one before (« +11,0 s »). « Export de test sans encodage » (checkbox
-under « Diagnostic », Projet tab; the tab's sessionStorage only, `noEncodingTest`, never in the project) runs a film
+under « Diagnostic », Réglages tab; the tab's sessionStorage only, `noEncodingTest`, never in the project) runs a film
 export with no encoder: every frame is rendered and composed, none is handed over, the file is discarded and the export
 ends on the error « Export de test terminé sans fichier (n images rendues) »; the report's Export section then says
 « Encodage : désactivé (test) ». It tells, on a phone, the encoder's memory from the render's (docs/tests-gpu.md).
@@ -2741,7 +2741,7 @@ GPU (`setGpuProbe`, registered by the scene like the breadcrumb probe, read once
 `effectiveRender`, capped `videoBitrate`, memory or disk, frames, estimated size) and the settings (`summariseSettings` +
 `settingsDetails`, plus labels, landmarks, marker, track glow, grading, tracks and points, media of the film by kind and
 size, overlay widgets). No coordinate and no track, place, file or project name. « Détails » of the toast and
-« Diagnostic › Afficher le rapport » (Projet tab, `currentReport`: the report made now plus the last export and its
+« Diagnostic › Afficher le rapport » (Réglages tab, `currentReport`: the report made now plus the last export and its
 steps) open `DiagnosticDialog` (« Copier le rapport », the text selected when the clipboard refuses). Both entries stay
 under ~16 KB of sessionStorage (values cut at 200 characters, steps at 80).
 
