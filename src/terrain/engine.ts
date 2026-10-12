@@ -9,6 +9,7 @@ import { FrontSide, Group, Mesh, MeshStandardMaterial } from 'three'
 import type { PerspectiveCamera, Texture } from 'three'
 import type {
   BuildTileGeometryOptions,
+  DemCleanOptions,
   DemEncoding,
   HeightGrid,
   LoadImageryTexture,
@@ -23,6 +24,7 @@ import type {
 import { deviceBudget } from '../core/deviceBudget'
 import { boundsIntersect, lonLatToTileFrac, tileGroundSizeM } from '../geo/mercator'
 import { decodeDem as defaultDecodeDem } from './dem'
+import { DEFAULT_DEM_CLEAN, sameDemClean } from './demClean'
 import { errorMessage } from '../core/errors'
 import { TileFetchError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
@@ -61,7 +63,7 @@ export interface HeightFieldLike {
 
 export interface EngineDeps {
   fetcher: TileFetcher
-  decodeDem: (bitmap: ImageBitmap, encoding: DemEncoding) => HeightGrid
+  decodeDem: (bitmap: ImageBitmap, encoding: DemEncoding, clean?: DemCleanOptions) => HeightGrid
   loadImageryTexture: LoadImageryTexture
   heightField: HeightFieldLike
   /** clock (ms) of the retry and unload delays; default `performance.now` */
@@ -173,6 +175,7 @@ interface ResolvedOptions {
   maxZoom: number
   segments: number
   wireframe: boolean
+  demClean: DemCleanOptions
 }
 
 function resolveOptions(raw: TerrainEngineOptions): ResolvedOptions {
@@ -189,6 +192,7 @@ function resolveOptions(raw: TerrainEngineOptions): ResolvedOptions {
     maxZoom: Math.max(raw.terrain.minZoom, Math.min(raw.maxZoom ?? terrainMax, terrainMax)),
     segments: Math.max(1, Math.floor(raw.segments ?? DEFAULT_SEGMENTS)),
     wireframe: raw.wireframe ?? false,
+    demClean: raw.demClean ?? DEFAULT_DEM_CLEAN,
   }
 }
 
@@ -319,7 +323,7 @@ export function createTerrainEngine(
     if (node.state === 'failed' && !node.noData) failedCount--
     // a retry may well fail again: in the background, after every first attempt (it would hold their fetch slots)
     if (node.failedAttempts > 0 && !exporting) rank += RETRY_RANK
-    const { terrain, imagery, imageryZoomOffset } = opts
+    const { terrain, imagery, imageryZoomOffset, demClean } = opts
     if (terrain.coverage && !boundsIntersect(terrain.coverage, node.bounds)) {
       // No elevation data there: fail permanently without a request (the parent stays rendered).
       markFailed(node, true)
@@ -334,7 +338,7 @@ export function createTerrainEngine(
 
     const demPromise = io.fetcher
       .fetchBitmap(buildTileUrl(terrain, node.key), { priority: rank, signal })
-      .then((bitmap) => io.decodeDem(bitmap, terrain.encoding))
+      .then((bitmap) => io.decodeDem(bitmap, terrain.encoding, demClean))
 
     const wantsImagery = !imagery.coverage || boundsIntersect(imagery.coverage, node.bounds)
     // an imagery failure is a transient failure of the node too (below): the parent keeps its imagery meanwhile
@@ -824,14 +828,17 @@ export function createTerrainEngine(
     opts = resolveOptions(raw)
 
     const terrainChanged = opts.terrain.id !== prev.terrain.id
+    // the decoded grids depend on the cleaning: like a new source, everything is decoded again
+    const cleanChanged = !sameDemClean(opts.demClean, prev.demClean)
     const sourcesChanged =
       terrainChanged ||
+      cleanChanged ||
       opts.imagery.id !== prev.imagery.id ||
       opts.imageryZoomOffset !== prev.imageryZoomOffset ||
       opts.segments !== prev.segments
     if (sourcesChanged) {
       disposeTree()
-      if (terrainChanged) clearHeightField()
+      if (terrainChanged || cleanChanged) clearHeightField()
       buildTree()
       refreshStats(0)
       changed = true

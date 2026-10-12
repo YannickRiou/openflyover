@@ -16,6 +16,7 @@ import { createLocalFrame, expandBounds } from '../geo/ellipsoid'
 import type { Film } from '../film/model'
 import { REGION_AREA_MARGIN_M } from '../flyover/filmCamera'
 import { AREA_MARGIN_M, AREA_MIN_SIZE_M, createTerrainEngine } from '../terrain/engine'
+import { DEFAULT_DEM_CLEAN, sameDemClean } from '../terrain/demClean'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { exportLodHeight } from '../export/schedule'
 import { isExportBusy, useExportStore } from '../export/store'
@@ -103,7 +104,7 @@ export function statsEqual(a: TerrainStats, b: TerrainStats): boolean {
 /** The subset of engine options that is driven by the user settings. */
 export type EngineSettingsOptions = Pick<
   TerrainEngineOptions,
-  'terrain' | 'imagery' | 'imageryZoomOffset' | 'exaggeration' | 'wireframe'
+  'terrain' | 'imagery' | 'imageryZoomOffset' | 'exaggeration' | 'wireframe' | 'demClean'
 >
 
 export function engineOptionsFromSettings(settings: Settings): EngineSettingsOptions {
@@ -114,6 +115,7 @@ export function engineOptionsFromSettings(settings: Settings): EngineSettingsOpt
     imageryZoomOffset: Math.min(settings.imageryZoomOffset, deviceBudget().maxImageryZoomOffset),
     exaggeration: settings.exaggeration,
     wireframe: settings.wireframe,
+    demClean: settings.demClean,
   }
 }
 
@@ -142,6 +144,10 @@ export function diffEngineOptions(
   }
   if (prev.wireframe !== next.wireframe) {
     partial.wireframe = next.wireframe
+    changed = true
+  }
+  if (!sameDemClean(prev.demClean ?? DEFAULT_DEM_CLEAN, next.demClean ?? DEFAULT_DEM_CLEAN)) {
+    partial.demClean = next.demClean
     changed = true
   }
   return changed ? partial : null
