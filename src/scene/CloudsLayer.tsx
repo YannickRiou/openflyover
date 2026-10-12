@@ -9,11 +9,12 @@
  * Export: full resolution, no reprojection: each render averages a fixed number of noise slices from scratch, so a
  * frame never depends on the frames rendered before it. The textures are served locally at /clouds/ (vite.config.ts),
  * with a generated noise instead of the Takram blue noise (cloudNoise.ts): nothing is downloaded from GitHub.
+ * At night the clouds get the faint fill light of the terrain (`addNightFill`): the atmosphere only models sunlight.
  * Limit: the terrain is lit by light sources (SunLight), so the cloud shadows do not reach it.
  */
 import { useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Vector3, type Camera, type Data3DTexture } from 'three'
+import { Uniform, Vector3, type Camera, type Data3DTexture, type HemisphereLight } from 'three'
 import { CloudLayers, type CloudsEffect } from '@takram/three-clouds'
 import { Clouds, type CloudsProps } from '@takram/three-clouds/r3f'
 import { deviceBudget } from '../core/deviceBudget'
@@ -77,6 +78,29 @@ function guardResolve(effect: CloudsEffect): void {
   material.needsUpdate = true
 }
 
+const SKY_LIGHT_SCALE = 'uniform float skyLightScale;'
+const SKY_LIGHT = 'radiance += skyIrradiance * RECIPROCAL_PI4 * skyGradient * skyLightScale;'
+
+/**
+ * The atmosphere lights the clouds with the sun and the sky only: at night they turn black while the terrain keeps
+ * its faint night fill (hemisphere light, exposure.ts `nightFillIntensity`). The same irradiance (its sky colour,
+ * constant moonlight: no moon phase or position) is added to the sky light of the march, so the clouds read as
+ * moonlit grey. Occlusion is unchanged: a cloud still hides the marker and the track behind it.
+ */
+function addNightFill(effect: CloudsEffect): Uniform<Vector3> {
+  const material = effect.cloudsPass.currentMaterial
+  const uniforms = material.uniforms as unknown as Record<string, Uniform>
+  const uniform = (uniforms.nightIrradiance as Uniform<Vector3> | undefined) ?? new Uniform(new Vector3())
+  uniforms.nightIrradiance = uniform
+  const source = material.fragmentShader
+  if (!source.includes(SKY_LIGHT) || !source.includes(SKY_LIGHT_SCALE) || source.includes('nightIrradiance')) return uniform
+  material.fragmentShader = source
+    .replace(SKY_LIGHT_SCALE, `${SKY_LIGHT_SCALE}\nuniform vec3 nightIrradiance;`)
+    .replace(SKY_LIGHT, 'radiance += (skyIrradiance * skyLightScale + nightIrradiance) * RECIPROCAL_PI4 * skyGradient;')
+  material.needsUpdate = true
+  return uniform
+}
+
 const _east = new Vector3()
 const _north = new Vector3()
 const _origin = new Vector3()
@@ -107,10 +131,12 @@ function cloudInputs(effect: CloudsEffect, camera: Camera): number[] {
 interface CloudsLayerProps {
   date: RefObject<Date | null>
   marker: RefObject<MarkerTrack | null>
+  /** night fill of the terrain, set for the frame by AtmosphereLayer */
+  nightFill: RefObject<HemisphereLight | null>
   noise: Data3DTexture
 }
 
-export function CloudsLayer({ date, marker, noise }: CloudsLayerProps) {
+export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps) {
   const { frame } = useTerrainContext()
   const qualitySetting = useAppStore((s) => s.settings.clouds.quality)
   const exportQuality = useExportStore((s) => s.request?.quality ?? 'high')
@@ -122,11 +148,14 @@ export function CloudsLayer({ date, marker, noise }: CloudsLayerProps) {
   /** preview: inputs of the last frame and number of frames since they last changed */
   const last = useRef<number[]>([])
   const still = useRef(0)
+  const nightIrradiance = useRef<Uniform<Vector3> | null>(null)
   /** cloud altitudes are above the ellipsoid, the scene heights above sea level (geo/geoid.ts) */
   const undulation = useMemo(() => (frame ? geoidUndulation(frame.origin.lon, frame.origin.lat) : 0), [frame])
 
   useLayoutEffect(() => {
-    if (ref.current) guardResolve(ref.current)
+    if (!ref.current) return
+    guardResolve(ref.current)
+    nightIrradiance.current = addNightFill(ref.current)
   }, [])
 
   // Preview: cheap, upscaled until the view is still (useFrame); export: chosen quality, averaged noise slices.
@@ -205,6 +234,9 @@ export function CloudsLayer({ date, marker, noise }: CloudsLayerProps) {
       else layer.densityProfile.copy(initial.densityProfile)
     }
     effect.shapeRepeat.setScalar(1 / (clouds?.shapePeriodM ?? DEFAULT_SHAPE_PERIOD_M))
+    // the terrain's night fill: irradiance of its sky colour, a function of the sun elevation (so of the film time)
+    const fill = nightFill.current
+    nightIrradiance.current?.value.set(fill?.color.r ?? 0, fill?.color.g ?? 0, fill?.color.b ?? 0).multiplyScalar(fill?.intensity ?? 0)
 
     // drift with the wind, a function of the film time only
     const timeS = playback.timeS ?? clock.timeAtProgress(playback.progress)
