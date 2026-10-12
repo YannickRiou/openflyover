@@ -375,8 +375,9 @@ ink, 7.3:1).
   size on one line; modes "Vidéo" (video), "Plusieurs formats" (several formats): resolution chips per format, still image, poster,
   batch estimate, "Tout exporter" (export all), progress "2 / 4 · 16:9 1080p · 42 %", file list, and "Affiche" (poster));
   otherwise the **inspector** of the block
-  selected on the timeline (`FilmInspector`, two `<aside class="dock">` of which only one is visible: the drawer takes precedence,
-  the inspector comes back when it closes if the block is still selected). Below 1360 px wide, only one side is open at a
+  selected on the timeline (`FilmInspector`, two `<aside class="dock">` of which only one is visible: selecting a block brings its inspector over the drawer (the
+  `inspect` event closes it, `exporting` keeps it while an export runs), opening the drawer puts it over the inspector,
+  which comes back when the drawer closes if the block is still selected). Below 1360 px wide, only one side is open at a
   time: whatever fills the dock (drawer or inspector) collapses the panel, which comes back when the dock empties; expanding the
   panel empties the dock and deselects the block (`shellReducer`: `inspecting`, `inspect` event, which `App` sends when
   `filmSelection` changes, after a press is released: the timeline does not change scale during a drag).
