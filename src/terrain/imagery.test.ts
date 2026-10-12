@@ -241,6 +241,21 @@ describe('loadImageryTexture', () => {
     expect(texture.version).toBeGreaterThan(0) // needsUpdate was set (write-only setter bumping version)
   })
 
+  it('releases the canvas once the GPU has the pixels (the renderer calls onUpdate after the upload)', async () => {
+    const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url)))
+    const texture = await loadImageryTexture(KEY, source(), fetcher, { zoomOffset: 1 })
+    const canvas = texture.image as FakeOffscreenCanvas
+    expect(canvas.width).toBe(512) // not uploaded yet: still needed
+    expect(texture.userData.released).toBeUndefined()
+    texture.onUpdate?.(texture)
+    expect(canvas.width).toBe(0)
+    expect(canvas.height).toBe(0)
+    expect(texture.image).toBeNull()
+    expect(texture.userData.released).toBe(true)
+    texture.onUpdate?.(texture) // a second call changes nothing
+    expect(texture.image).toBeNull()
+  })
+
   it('leaves failed sub-tiles grey without rejecting', async () => {
     const src = source()
     const fetcher = fakeFetcher((url) =>

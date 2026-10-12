@@ -8,14 +8,14 @@
  * is added or removed (`engineAreaFor`); settings changes go through `engine.setOptions`.
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import type { PerspectiveCamera } from 'three'
 import { deviceBudget } from '../core/deviceBudget'
 import type { LocalFrame, LonLatBounds, TerrainEngine, TerrainEngineOptions, TerrainStats } from '../core/types'
 import { createLocalFrame, expandBounds } from '../geo/ellipsoid'
 import type { Film } from '../film/model'
 import { REGION_AREA_MARGIN_M } from '../flyover/filmCamera'
-import { AREA_MARGIN_M, AREA_MIN_SIZE_M, createTerrainEngine } from '../terrain/engine'
+import { AREA_MARGIN_M, AREA_MIN_SIZE_M, createTerrainEngine, restoreEngineImagery } from '../terrain/engine'
 import { DEFAULT_DEM_CLEAN, sameDemClean } from '../terrain/demClean'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { exportLodHeight } from '../export/schedule'
@@ -220,6 +220,15 @@ export function TerrainLayer({ children }: TerrainLayerProps) {
       setTerrainStats({ ...EMPTY_TERRAIN_STATS })
     }
   }, [frame, area, setTerrainStats])
+
+  // A new WebGL context has none of the textures: the imagery canvases released after their upload are drawn again.
+  const domElement = useThree((s) => s.gl)?.domElement
+  useEffect(() => {
+    if (!engine || !domElement) return undefined
+    const restore = () => restoreEngineImagery(engine)
+    domElement.addEventListener('webglcontextrestored', restore)
+    return () => domElement.removeEventListener('webglcontextrestored', restore)
+  }, [engine, domElement])
 
   // Forward settings changes (only the keys that actually changed).
   useEffect(() => {
