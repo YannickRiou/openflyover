@@ -105,7 +105,6 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 | [Desktop installers](docs/installers.md) | installers built on GitHub, signing |
 | [Data sources](docs/sources.md) | attributions, licenses, offline rules and how each source was checked |
 | [GPU tests](docs/tests-gpu.md) | manual checks on a machine with a real graphics card |
-| [Handover](docs/handover.md) | project status and next steps |
 | [Changelog](CHANGELOG.md) | what each version brings |
 
 The HTML pages are standalone: open them in a browser from a clone, or through any static host.
