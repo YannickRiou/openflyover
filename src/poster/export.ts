@@ -47,6 +47,7 @@ export function posterRows(content: PosterContent): PosterRows {
     profile: content.profile !== undefined,
     weather: content.weather !== '',
     tracks: content.tracks.length,
+    map: content.outline !== undefined,
   }
 }
 
