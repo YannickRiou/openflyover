@@ -470,7 +470,7 @@ export function OverlayPanel() {
         {overlay.enabled && (
           <fieldset className="field fieldset">
             <legend className="field__label">Style</legend>
-            <div className="segmented">
+            <div className="segmented segmented--wrap">
               {OVERLAY_STYLES.map((style) => (
                 <label key={style} className="segmented__option">
                   <input
