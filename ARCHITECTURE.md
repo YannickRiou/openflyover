@@ -1575,13 +1575,14 @@ it, know at what time you will pass each point, where the sun will be and what t
 ### Landmarks and points of interest, one list (« Repères et points d'intérêt »)
 
 - **Rows** (`LandmarkPanel`, Carte tab): OSM landmarks of the film track (shown and hidden) and `film.pois`, by position
-  (`alongM`, `poiStopAtM`). Climbs are not listed (« Montées et étiquettes », Trace tab). Click on the name or badge: seek.
+  (`alongM`, `poiStopAtM`), and the top of each climb of the track (id `climb:N`, `climbPlaceId`; « Montée 1 · sommet 2 401 m »; no eye: its
+  label is the « Sommets des montées » choice of « Montées et étiquettes », Trace tab; not hidden by « Tout masquer »). Click on the name or badge: seek.
 - **Eye**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids. Hiding removes, in the same undo step,
   the row's own stop (`placeStop`: the stop whose `source.ref` is the landmark, else a stop placed by hand within 1 m)
   and, while `landmarkTitles` is off, its `auto-text-` / `auto-speed-` items (`withoutPlaceItems`). Generated stops and
   live titles follow `splitHidden`; a hidden point of interest gets no label. Deleting a point of interest drops its id
   (ids are reused).
-- **« Arrêt »**: `addStop` (landmark: label = name, source `{ kind: 'landmark', ref }`; point of interest: name, nearest
+- **« Arrêt »**: `addStop` (landmark: label = name, source `{ kind: 'landmark', ref }`; climb top: label = « Montée N · sommet … m », source `{ kind: 'climb', ref: String(N) }`, found again by `placeStop`; point of interest: name, nearest
   point of the track); duration with `updateStop`; through `editFilm({ stops: true })`, so the first edit writes the
   generated stops out.
 - **« Tout afficher » / « Tout masquer »**: every label of every track and every point of interest, one undo step
