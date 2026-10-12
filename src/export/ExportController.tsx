@@ -30,6 +30,7 @@ import { loadFrameMedia, overlayExtras, releaseFrameMedia } from '../overlay/exp
 import { filmViewAt } from '../scene/filmView'
 import { adaptiveShutterSamples, sameShot, setShutterSubFrame, shutterSamples } from '../scene/lens'
 import { markerKeysMoveWithTime } from '../film/markerKeys'
+import { lastShadowPass, resetShadowPass } from '../scene/terrainShadow'
 import { useTerrainContext } from '../scene/TerrainLayer'
 import type { HeightSampler } from '../scene/TrackLines'
 import { useFilmClock } from '../scene/usePacing'
@@ -52,7 +53,7 @@ import {
 import { noEncodingTest } from './diagnostic'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createGpuTimer } from './gpuTimer'
-import { timingsSummary } from './history'
+import { shadowSummary, timingsSummary } from './history'
 import { compositorAttributes, createExportEncoder } from './nativeEncoder'
 import { isExportStep, setExportProbe, writeBreadcrumb } from './guard'
 import { effectiveRender } from './qualityTier'
@@ -324,6 +325,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     setSkipClouds(!final)
     readGpuTimer()
     gpuTimer?.begin()
+    resetShadowPass()
     try {
       deps.get().advance(clock)
     } finally {
@@ -331,6 +333,10 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       setSkipClouds(false)
     }
     timings.renders++
+    timings.shadowTiles += lastShadowPass.tiles
+    timings.shadowTriangles += lastShadowPass.triangles
+    timings.shadowOffscreenTiles += lastShadowPass.offscreenTiles
+    timings.shadowOffscreenTriangles += lastShadowPass.offscreenTriangles
     timings.renderMs += performance.now() - t0
   }
 
@@ -620,6 +626,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const s = (ms: number) => (ms / 1000).toFixed(1)
     console.info(
       `[export] ${schedule.length} images (${timings.rendered} rendues) en ${s(performance.now() - startedAt)} s : ${timingsSummary(timings)}` +
+        `${shadowSummary(timings) ? ` ; ${shadowSummary(timings)}` : ''}` +
         `${timings.gpuRenders === 0 ? ' (GPU non mesuré : la composition attend la fin du rendu)' : ''} ; ` +
         `encodeur ${container}/${codec}${hardware ? ' matériel' : ''} ; ` +
         `${timings.timeouts} image(s) au délai, ${timings.givenUp} image(s) aux tuiles abandonnées`,

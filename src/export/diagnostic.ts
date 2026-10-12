@@ -16,7 +16,7 @@ import { isIdentityGrading } from '../scene/grading'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { deviceBitrateCap, targetBitrate } from './encoder'
-import { OUTCOME_LABELS, settingsDetails, summariseSettings, timingsSummary } from './history'
+import { OUTCOME_LABELS, settingsDetails, shadowSummary, summariseSettings, timingsSummary } from './history'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, videoEncoding, videoSize } from './schedule'
 import type { ExportRequest, ExportState } from './store'
@@ -260,6 +260,8 @@ export function resultSection(state: Pick<ExportState, 'phase' | 'error' | 'fram
   if (error) rows.push(['Erreur', error.length > MAX_ERROR ? `${error.slice(0, MAX_ERROR - 1)}…` : error])
   rows.push(['Images', `${state.frame} / ${state.frameCount}, ${timings.rendered} rendues, ${timings.renders} rendus`])
   rows.push(['Répartition', timingsSummary(timings)])
+  const shadows = shadowSummary(timings)
+  if (shadows) rows.push(['Ombres', shadows])
   if (timings.gpuRenders === 0) rows.push(['Temps GPU', 'non mesuré (pas de requêtes de minuterie WebGL ici) : la composition attend la fin du rendu'])
   rows.push(['Tuiles', `${timings.timeouts} image(s) au délai, ${timings.givenUp} image(s) aux tuiles abandonnées`])
   if (result) rows.push(['Fichier', `${result.codec}${result.hardware ? ', encodeur matériel' : ''}`])
