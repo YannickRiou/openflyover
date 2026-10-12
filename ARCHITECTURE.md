@@ -2327,9 +2327,12 @@ exports) gets it from the terrain source of the settings.
   grid puts vertices inside the water: a river follows its valley and the opacity fades toward the bank (`fade` = distance to the closest
   edge / 40 m, capped at 1).
 - **Draping** (`WaterLayer`, in `TerrainLayer`): like the track, `engine.sampleHeight` × exaggeration + 2 m, re-draped
-  (debounced, flushed by the export via `registerDrapeFlush`) on each `engine.onChange`. A lake is flat at the 25th percentile of the
-  heights of its vertices (the DEM banks do not lift it); a polygon with no known height waits for its tiles.
-  A single merged geometry (one draw call), `raycast` neutralized (track picker, camera), `depthWrite` off.
+  (debounced, flushed by the export via `registerDrapeFlush`) on each `engine.onChange`. A lake is flat at the 90th percentile of the
+  heights of its vertices away from the shore (`fade` ≥ 0.5; the median of all of them when fewer than 4: `lakeLevel` in
+  `waterMesh.ts`): a low level let the relief of the lake (DEM noise, tile seams, coarse levels of detail rising towards the
+  banks) poke through the water as dark patches. A polygon with no known height waits for its tiles.
+  A single merged geometry (one draw call), `raycast` neutralized (track picker, camera), `depthWrite` off, a polygon offset
+  (−2, −4) towards the camera.
 - **Rendering**: `MeshStandardMaterial` (roughness 0.08: sun glint from the `SunLight`, terrain shadows) extended in
   `onBeforeCompile`: normals from four sine waves (23, 9, 4.1 and 1.7 m) animated by the **film time**
   (`playback.timeS`, otherwise `clock.timeAtProgress`), faded out when their wavelength covers fewer than ~8 pixels (no

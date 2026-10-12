@@ -3,8 +3,8 @@
  * relief, inside TerrainLayer. See ARCHITECTURE.md "Reflective water".
  *
  * Each polygon is meshed once (scene/waterMesh.ts), draped like the track (`engine.sampleHeight` x exaggeration +
- * WATER_LIFT_M) and re-draped (debounced, flushed by the video export) when tiles arrive. A lake is flat at a low
- * percentile of its heights (the DEM of its banks does not lift it), a river area follows its valley.
+ * WATER_LIFT_M) and re-draped (debounced, flushed by the video export) when tiles arrive. A lake is flat at a high
+ * percentile of the heights inside it (`lakeLevel`: the relief must not poke through), a river area follows its valley.
  *
  * Shading: MeshStandardMaterial extended in `onBeforeCompile` (animated waves faded out below a few pixels, Fresnel
  * reflection of the sky). Everything is a function of the film time: the export is deterministic.
@@ -23,12 +23,10 @@ import { useTerrainContext } from './TerrainLayer'
 import { wakeScene } from './renderOnDemand'
 import { useFilmClock, useFilmTrack } from './usePacing'
 import { setWaterStatus } from './waterStatus'
-import { buildWaterMesh, type WaterMesh } from './waterMesh'
+import { buildWaterMesh, lakeLevel, type WaterMesh } from './waterMesh'
 
 /** Height of the surface above the draped relief (metres, not exaggerated: like the track). */
 export const WATER_LIFT_M = 2
-/** Percentile of the heights of a lake taken as its level. */
-const LAKE_LEVEL_PERCENTILE = 0.25
 /** Deep alpine lake. */
 const WATER_COLOR = '#1F4252'
 /** Opacity seen from above; grazing angles reflect almost everything (Fresnel). */
@@ -94,6 +92,10 @@ function createWaterMaterial(uniforms: Record<string, Uniform>): MeshStandardMat
     metalness: 0,
     transparent: true,
     depthWrite: false,
+    // a little nearer than the relief it lies on: the coarse levels of detail of the relief do not reach through
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -4,
   })
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms)
@@ -116,12 +118,6 @@ function sampleHeights(mesh: WaterMesh, engine: TerrainEngine | null): Float64Ar
   return heights
 }
 
-/** Low percentile of the known heights, NaN when none is known. */
-function lakeLevel(heights: Float64Array): number {
-  const known = Array.from(heights).filter((h) => !Number.isNaN(h)).sort((a, b) => a - b)
-  return known.length === 0 ? Number.NaN : known[Math.floor((known.length - 1) * LAKE_LEVEL_PERCENTILE)]
-}
-
 const _p = new Vector3()
 
 /** Merged geometry of every draped polygon whose relief is known (lakes flat, rivers per vertex). */
@@ -136,7 +132,7 @@ function drapeWater(
   const index: number[] = []
   for (const { polygon, mesh } of meshes) {
     const heights = sampleHeights(mesh, engine)
-    const level = lakeLevel(heights)
+    const level = lakeLevel(heights, mesh.fade)
     if (Number.isNaN(level)) continue
     const base = positions.length / 3
     for (let v = 0; v < mesh.fade.length; v++) {
