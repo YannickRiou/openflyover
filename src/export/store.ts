@@ -102,6 +102,11 @@ export interface ExportTimings {
   timeouts: number
   /** frames with tiles given up on after every attempt (the export then fails) */
   givenUp: number
+  /** shadow pass, summed over the renders: tiles and triangles drawn into the shadow map, and the off-screen share (#52) */
+  shadowTiles: number
+  shadowTriangles: number
+  shadowOffscreenTiles: number
+  shadowOffscreenTriangles: number
 }
 
 export const EMPTY_TIMINGS: ExportTimings = {
@@ -117,6 +122,10 @@ export const EMPTY_TIMINGS: ExportTimings = {
   encodeWaitMs: 0,
   timeouts: 0,
   givenUp: 0,
+  shadowTiles: 0,
+  shadowTriangles: 0,
+  shadowOffscreenTiles: 0,
+  shadowOffscreenTriangles: 0,
 }
 
 /** The progress reaches the store (and the panels that draw it) at most this often during an export. */

@@ -14,6 +14,7 @@ import {
   serialiseHistory,
   settingsDetails,
   settingsSummary,
+  shadowSummary,
   summariseSettings,
   timingsSummary,
   entryDetails,
@@ -282,6 +283,12 @@ describe('where the time went', () => {
     expect(timingsSummary({ ...split, gpuRenders: 0, gpuMs: 0 })).toMatch(/^rendu 50,0 s, /)
     // an entry recorded before the split: the composing and encoding together
     expect(timingsSummary({ ...EMPTY_TIMINGS, renderMs: 1000, waitMs: 2000, encodeMs: 3000 })).toBe('rendu 1,0 s, tuiles 2,0 s, composition et encodage 3,0 s')
+  })
+
+  it('sums the shadow pass per render, and says nothing without one', () => {
+    const shadows = { ...split, renders: 2, shadowTiles: 200, shadowOffscreenTiles: 60, shadowTriangles: 820_000, shadowOffscreenTriangles: 240_000 }
+    expect(shadowSummary(shadows)).toBe('ombres : 100 tuiles (30 hors champ), 410\u00a0k triangles (120\u00a0k hors champ) par rendu')
+    expect(shadowSummary(split)).toBe('')
   })
 
   it('records the split, the tiles given up on and the hardware encoder, and reads them back', () => {
