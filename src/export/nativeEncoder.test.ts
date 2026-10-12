@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Capabilities, WritableFile } from '../platform'
 import { ExportCanceledError } from './encoder'
-import { NATIVE_CODEC, NATIVE_WEBM_CODEC, SESSION_HEADER, createNativeVideoEncoder, exportCodec, wavFile, type Invoke } from './nativeEncoder'
+import {
+  NATIVE_CODEC,
+  NATIVE_WEBM_CODEC,
+  SESSION_HEADER,
+  compositorAttributes,
+  createNativeVideoEncoder,
+  encodableCodecs,
+  exportCodec,
+  wavFile,
+  type Invoke,
+} from './nativeEncoder'
 
 const OPTIONS = { width: 4, height: 2, fps: 30, quality: 'high' as const }
 const NATIVE: Capabilities = { isDesktop: true, videoEncoder: 'native', canStreamToDisk: true }
@@ -39,6 +49,18 @@ describe('exportCodec', () => {
     const missing = vi.fn<Invoke>(async () => false)
     expect(await exportCodec({ ...OPTIONS, transparent: true }, NATIVE, missing)).toBeNull()
   })
+
+  it('offers H.264 and VP9 through ffmpeg, not HEVC', async () => {
+    const encoding = { bitrateMbps: null, codec: 'vp9' as const, keyframeIntervalS: 2, audioKbps: 192 }
+    expect(await exportCodec({ ...OPTIONS, encoding }, NATIVE, fakeInvoke().invoke)).toEqual(NATIVE_WEBM_CODEC)
+    expect(await exportCodec({ ...OPTIONS, encoding: { ...encoding, codec: 'hevc' } }, NATIVE, fakeInvoke().invoke)).toBeNull()
+    expect(await encodableCodecs(OPTIONS, NATIVE, fakeInvoke().invoke)).toEqual(['auto', 'avc', 'vp9'])
+  })
+
+  it('keeps the pixels of the encoder canvas where ffmpeg reads them back', () => {
+    expect(compositorAttributes(NATIVE)).toEqual({ willReadFrequently: true })
+    expect(compositorAttributes({ ...NATIVE, videoEncoder: 'webcodecs' })).toEqual({})
+  })
 })
 
 describe('wavFile', () => {
@@ -59,7 +81,19 @@ describe('createNativeVideoEncoder', () => {
     const { invoke, calls, commands } = fakeInvoke()
     const file = fakeFile()
     const session = await createNativeVideoEncoder(fakeCanvas(), { ...OPTIONS, destination: file }, invoke)
-    expect(calls[0].args).toEqual({ path: '/films/Tour.mp4', width: 4, height: 2, fps: 30, quality: 'high', transparent: false, sound: null })
+    // a target bitrate (the quality's at this size: the floor), a key frame every 2 s, the sound at 192 kbit/s
+    expect(calls[0].args).toEqual({
+      path: '/films/Tour.mp4',
+      width: 4,
+      height: 2,
+      fps: 30,
+      bitrate: 1_000_000,
+      keyframeInterval: 60,
+      audioBitrate: 192_000,
+      transparent: false,
+      sound: null,
+    })
+    expect(session.bitrate).toBe(1_000_000)
     expect(session.audioCodec).toBeNull()
     expect(session.extension).toBe('.mp4')
     await session.addFrame(0)
@@ -73,6 +107,13 @@ describe('createNativeVideoEncoder', () => {
     expect(calls[2].args).toEqual({ id: 3 })
     expect(file.close).toHaveBeenCalled()
     expect(file.discard).not.toHaveBeenCalled()
+  })
+
+  it('takes the bitrate, key frames and sound bitrate of « Encodage »', async () => {
+    const { invoke, calls } = fakeInvoke()
+    const encoding = { bitrateMbps: 20, codec: 'auto' as const, keyframeIntervalS: 0.5, audioKbps: 256 }
+    await createNativeVideoEncoder(fakeCanvas(), { ...OPTIONS, fps: 24, encoding, destination: fakeFile() }, invoke)
+    expect(calls[0].args).toMatchObject({ bitrate: 20_000_000, keyframeInterval: 12, audioBitrate: 256_000 })
   })
 
   it('hands the soundtrack over first', async () => {

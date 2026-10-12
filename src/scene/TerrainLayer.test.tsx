@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { LonLatBounds } from '../core/types'
+import { DEFAULT_VIDEO_SETTINGS } from '../export/schedule'
 import { DEFAULT_FILM } from '../film/model'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
+import { DEFAULT_POSTER } from '../poster/settings'
 import { AREA_MARGIN_M } from '../terrain/engine'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { DEFAULT_GRADING } from './grading'
@@ -124,11 +126,12 @@ describe('engine options from settings', () => {
     clouds: { mode: 'meteo' as const, coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: 'volume' as const, quality: 'medium' as const },
     water: { enabled: true, strength: 1 },
     overlay: DEFAULT_OVERLAY,
-    video: { aspect: '16:9' as const, resolution: '1080p' as const, fps: 30 as const, quality: 'high' as const },
-    poster: { format: 'a4-portrait' as const, style: 'editorial' as const, title: '', subtitle: '', figures: { distance: true, ascent: true, time: true, maxAltitude: true, climbs: true }, weather: true, flat: false },
+    video: { ...DEFAULT_VIDEO_SETTINGS, aspect: '16:9' as const, resolution: '1080p' as const, fps: 30 as const, quality: 'high' as const },
+    poster: DEFAULT_POSTER,
     landmarks: {
       enabled: true,
       kinds: { peak: true, pass: true, hut: true, lake: true, waterfall: false, place: false, viewpoint: false, glacier: false, waterPoint: false },
+      places: { city: true, village: true, hamlet: true },
       maxDistanceM: 1500,
       hiddenIds: [],
     },

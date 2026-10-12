@@ -9,8 +9,10 @@ import {
   buildFrameSchedule,
   buildFrameTimes,
   isValidVideoSettings,
+  videoEncoding,
   videoSize,
   withVideoDefaults,
+  type VideoSettings,
 } from './schedule'
 
 describe('video formats', () => {
@@ -48,10 +50,22 @@ describe('video formats', () => {
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, resolution: '8k' as never })).toBe(false)
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, fps: 25 as never })).toBe(false)
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, quality: 'ultra' as never })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, manualBitrate: true, bitrateMbps: 35.5 })).toBe(true)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, bitrateMbps: 0.5 })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, bitrateMbps: 120 })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, codec: 'av1' as never })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, keyframeIntervalS: 3 })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, audioKbps: 64 })).toBe(false)
+  })
+
+  it('hands the encoder the bitrate by hand only when it is chosen', () => {
+    expect(videoEncoding(DEFAULT_VIDEO_SETTINGS)).toEqual({ bitrateMbps: null, codec: 'auto', keyframeIntervalS: 2, audioKbps: 192 })
+    expect(videoEncoding({ ...DEFAULT_VIDEO_SETTINGS, manualBitrate: true, bitrateMbps: 25, codec: 'hevc' })).toMatchObject({ bitrateMbps: 25, codec: 'hevc' })
   })
 
   it('upgrades the former fixed formats', () => {
     expect(withVideoDefaults({ format: '1080x1920', fps: 60, quality: 'max' })).toEqual({
+      ...DEFAULT_VIDEO_SETTINGS,
       aspect: '9:16',
       resolution: '1080p',
       fps: 60,
@@ -59,15 +73,25 @@ describe('video formats', () => {
     })
     expect(withVideoDefaults({ format: '3840x2160', fps: 30, quality: 'high' })).toMatchObject({ aspect: '16:9', resolution: '4k' })
     expect(withVideoDefaults({ format: '1080x1350', fps: 30, quality: 'high' })).toMatchObject({ aspect: '4:5', resolution: '1080p' })
-    expect(withVideoDefaults({ format: '640x480', fps: 24, quality: 'standard' })).toEqual({
+    expect(withVideoDefaults({ format: '640x480', fps: 24, quality: 'standard' })).toMatchObject({
       aspect: '16:9',
       resolution: '1080p',
       fps: 24,
       quality: 'standard',
     })
     // current shape and unrelated values are left alone
-    expect(withVideoDefaults(DEFAULT_VIDEO_SETTINGS)).toBe(DEFAULT_VIDEO_SETTINGS)
+    expect(withVideoDefaults(DEFAULT_VIDEO_SETTINGS)).toEqual(DEFAULT_VIDEO_SETTINGS)
     expect(withVideoDefaults(null)).toBeNull()
+  })
+
+  it('gives a project saved before the encoding settings the encoding it had', () => {
+    const old = { aspect: '1:1', resolution: '720p', fps: 24, quality: 'max' }
+    const upgraded = withVideoDefaults(old) as VideoSettings
+    expect(upgraded).toEqual({ ...DEFAULT_VIDEO_SETTINGS, ...old })
+    expect(isValidVideoSettings(upgraded)).toBe(true)
+    expect(videoEncoding(upgraded).bitrateMbps).toBeNull()
+    // a value saved by hand is kept
+    expect(withVideoDefaults({ ...old, manualBitrate: true, bitrateMbps: 30 })).toMatchObject({ manualBitrate: true, bitrateMbps: 30 })
   })
 })
 

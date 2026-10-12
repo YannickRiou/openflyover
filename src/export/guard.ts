@@ -7,7 +7,7 @@
  * event, so the export notes its own steps. Nothing here throws: no Wake Lock API or no storage just means no protection.
  */
 import { showToast } from '../ui/toast'
-import { REPORT_KEY, collectDiagnostic, formatReport, parseReport, showDiagnostic, withLastExport } from './diagnostic'
+import { REPORT_KEY, collectDiagnostic, formatReport, parseReport, resultSection, showDiagnostic, withLastExport, withResult } from './diagnostic'
 import type { DiagnosticReport } from './diagnostic'
 import { isExportBusy, useExportStore } from './store'
 
@@ -278,6 +278,9 @@ export function installExportGuard(
     }
     try {
       if (busy) storage?.setItem(REPORT_KEY, JSON.stringify(collectDiagnostic(state.request ?? undefined)))
+      // the end: how it went and where the time went, beside the export it describes
+      const report = busy ? null : parseReport(storage?.getItem(REPORT_KEY))
+      if (report) storage?.setItem(REPORT_KEY, JSON.stringify(withResult(report, resultSection(state))))
     } catch {
       // diagnostic only
     }

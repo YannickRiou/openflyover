@@ -15,11 +15,11 @@ import type { VideoEncoderKind } from '../platform'
 import { isIdentityGrading } from '../scene/grading'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
-import { deviceBitrateCap, videoBitrate } from './encoder'
-import { settingsDetails, summariseSettings } from './history'
+import { deviceBitrateCap, targetBitrate } from './encoder'
+import { OUTCOME_LABELS, settingsDetails, summariseSettings, timingsSummary } from './history'
 import { effectiveRender } from './qualityTier'
-import { buildFrameSchedule, videoSize } from './schedule'
-import type { ExportRequest } from './store'
+import { buildFrameSchedule, videoEncoding, videoSize } from './schedule'
+import type { ExportRequest, ExportState } from './store'
 
 /** package.json version, set by vite.config.ts */
 declare const __APP_VERSION__: string
@@ -84,7 +84,7 @@ export interface GpuInfo {
 
 export type ReportRequest = Pick<
   ExportRequest,
-  'width' | 'height' | 'fps' | 'quality' | 'durationS' | 'progressAt' | 'holdStartS' | 'holdEndS' | 'still' | 'destination' | 'overlayOnly'
+  'width' | 'height' | 'fps' | 'quality' | 'durationS' | 'progressAt' | 'holdStartS' | 'holdEndS' | 'still' | 'destination' | 'overlayOnly' | 'encoding'
 >
 
 export interface DiagnosticInput {
@@ -162,10 +162,19 @@ function exportRows({ request, settings, budget, canStreamToDisk, noEncoding }: 
   ]
   const used = effectiveRender(quality, settings.clouds)
   rows.push(['Rendu effectif', `nuages ${used.cloudsQuality}${used.cloudsByHand ? ' (choisie)' : ''}, ${used.maxSubFrames} rendus par image au plus`])
-  // the encoder's bitrate for H.264 (the codec chosen is in the steps)
+  // the encoder's bitrate for H.264 (the codec chosen is in the steps), or the one set by hand
   const cap = deviceBitrateCap(budget, canStreamToDisk)
-  const bitrate = videoBitrate(size.width, size.height, fps, quality, 'avc', cap)
-  rows.push(['Débit vidéo (H.264)', `${mbits(bitrate)}${bitrate < videoBitrate(size.width, size.height, fps, quality, 'avc', Infinity) ? `, plafonné à ${mbits(cap)}` : ''}`])
+  const encoding = request ? request.encoding : videoEncoding(settings.video)
+  const options = { width: size.width, height: size.height, fps, quality, encoding }
+  const bitrate = targetBitrate(options, 'avc', cap)
+  const manual = encoding?.bitrateMbps !== null && encoding?.bitrateMbps !== undefined
+  rows.push([
+    manual ? 'Débit vidéo (manuel)' : 'Débit vidéo (H.264)',
+    `${mbits(bitrate)}${bitrate < targetBitrate(options, 'avc', Infinity) ? `, plafonné à ${mbits(cap)}` : ''}`,
+  ])
+  if (encoding) {
+    rows.push(['Encodage', `codec ${encoding.codec}, image clé toutes les ${comma(encoding.keyframeIntervalS)} s, son ${encoding.audioKbps} kbit/s`])
+  }
   rows.push(['Destination', request ? (request.destination ? 'fichier sur le disque' : 'mémoire') : canStreamToDisk ? 'disque (au choix)' : 'mémoire'])
   if (noEncoding) rows.push(['Encodage', 'désactivé (test)'])
   if (request && !request.still) {
@@ -235,11 +244,39 @@ export function buildReport(input: DiagnosticInput): DiagnosticReport {
   }
 }
 
-/** `now` with the export section of `last` (the report of the last export) as « Dernier export ». */
+/** Title of the section added to the report of an export when it ends (`resultSection`). */
+export const RESULT_TITLE = 'Résultat'
+/** Longest error kept (the tiles an export could not get are named in it) */
+const MAX_ERROR = 600
+
+/**
+ * « Résultat » of an export, added to its report when it ends: outcome and error (the hosts, tiles and causes when the
+ * tiles failed), frames, where the time went (GPU, composing, video frame, encoder wait), the encoder.
+ */
+export function resultSection(state: Pick<ExportState, 'phase' | 'error' | 'frame' | 'frameCount' | 'timings' | 'result'>): ReportSection {
+  const { phase, error, timings, result } = state
+  const outcome = phase === 'done' || phase === 'error' || phase === 'canceled' ? OUTCOME_LABELS[phase] : phase
+  const rows: ReportRow[] = [['Issue', outcome]]
+  if (error) rows.push(['Erreur', error.length > MAX_ERROR ? `${error.slice(0, MAX_ERROR - 1)}…` : error])
+  rows.push(['Images', `${state.frame} / ${state.frameCount}, ${timings.rendered} rendues, ${timings.renders} rendus`])
+  rows.push(['Répartition', timingsSummary(timings)])
+  if (timings.gpuRenders === 0) rows.push(['Temps GPU', 'non mesuré (pas de requêtes de minuterie WebGL ici) : la composition attend la fin du rendu'])
+  rows.push(['Tuiles', `${timings.timeouts} image(s) au délai, ${timings.givenUp} image(s) aux tuiles abandonnées`])
+  if (result) rows.push(['Fichier', `${result.codec}${result.hardware ? ', encodeur matériel' : ''}`])
+  return { title: RESULT_TITLE, rows }
+}
+
+/** `report` with its « Résultat » section (replaced when there is one). */
+export function withResult(report: DiagnosticReport, result: ReportSection): DiagnosticReport {
+  return { ...report, sections: [...report.sections.filter((s) => s.title !== RESULT_TITLE), result] }
+}
+
+/** `now` with the export and result sections of `last` (the report of the last export) as « Dernier export ». */
 export function withLastExport(now: DiagnosticReport, last: DiagnosticReport | null): DiagnosticReport {
   const rows = last?.sections.find((s) => s.title === 'Export')?.rows
   if (!last || !rows) return now
-  return { ...now, sections: [...now.sections, { title: 'Dernier export', rows: [['Commencé le', last.at], ...rows] }] }
+  const result = last.sections.find((s) => s.title === RESULT_TITLE)?.rows ?? []
+  return { ...now, sections: [...now.sections, { title: 'Dernier export', rows: [['Commencé le', last.at], ...rows, ...result] }] }
 }
 
 /** Plain text, one « clé : valeur » per line, by section. */

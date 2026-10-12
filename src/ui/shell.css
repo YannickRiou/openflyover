@@ -1448,12 +1448,114 @@
   }
 }
 
-.status__attribution {
-  flex: 1 1 auto;
+/* weather, landmarks, region, water: spinner while loading, check once loaded, attention colour on error */
+.status__chips {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--space-2);
   min-width: 0;
   overflow: hidden;
-  text-align: right;
+}
+
+.status__chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.status__chip--loading {
+  color: var(--text-on-dark);
+}
+
+.status__chip--ready .icon {
+  color: var(--status-ok-on-dark);
+}
+
+.status__chip--attention {
+  color: var(--status-attention-on-dark);
+}
+
+.status__chip--muted {
+  opacity: 0.75;
+}
+
+/* performance readout: only when the strip has room (it gives way to the credits, which must stay visible) */
+.status__perf {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* short credits of the active sources, always visible; the full lines are behind ⓘ */
+.status__credits {
+  flex: 1 0 auto;
+  margin-left: auto;
+  text-align: right;
+}
+
+.status__credits a {
+  color: inherit;
+}
+
+@media (hover: hover) {
+  .status__credits a:hover {
+    color: var(--color-white);
+  }
+}
+
+/* Esri's data providers: in full, or behind « … » on a narrow strip (the popover opens above it) */
+.status__credit-fold {
+  display: none;
+  position: relative;
+}
+
+.status__credit-fold > summary {
+  padding: 0 4px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.status__credit-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.status__credit-pop {
+  position: absolute;
+  z-index: 9;
+  right: 0;
+  bottom: calc(100% + 6px);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-chrome);
+  box-shadow: var(--shadow-pop);
+  color: var(--color-white);
+}
+
+.status {
+  container: status / inline-size;
+}
+
+@container status (max-width: 900px) {
+  .status__perf {
+    display: none;
+  }
+}
+
+@container status (max-width: 560px) {
+  .status__chip {
+    font-size: 0;
+  }
+
+  .status__credit-more {
+    display: none;
+  }
+
+  .status__credit-fold {
+    display: inline-block;
+  }
 }
 
 .status__info {
@@ -2277,25 +2379,12 @@
   pointer-events: none;
 }
 
-/* Timeline bar labels: hidden when the timeline itself is narrow (side columns open), not only the window */
+/* Timeline bar: lighter when the timeline itself is narrow (side columns open), not only the window */
 .film-tl {
   container: film-tl / inline-size;
 }
 
 @container film-tl (max-width: 1200px) {
-  .film-tl__bar .icon-btn--label .icon-btn__text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
-  .film-tl__bar .icon-btn--label {
-    padding: 0 6px;
-  }
-
   /* distance / altitude / hour of the marker: shown again when the timeline is wide */
   .film-tl__readout {
     display: none;

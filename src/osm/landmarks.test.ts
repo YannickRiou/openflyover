@@ -8,9 +8,13 @@ import {
   landmarkPriority,
   landmarkText,
   parseEle,
+  parsePopulation,
+  pathBoxDistanceM,
+  placeSizeOf,
   projectOnPath,
   splitHidden,
   withLandmarkDefaults,
+  withPlaceSize,
 } from './landmarks'
 import type { OsmFeature } from './overpass'
 
@@ -84,6 +88,26 @@ describe('landmarkPriority / landmarkText', () => {
     expect(landmarkPriority('place', undefined, 3000, 'hamlet')).toBe(0)
   })
 
+  it('ranks places by type, or by population when tagged', () => {
+    const city = landmarkPriority('place', undefined, 100, 'city')
+    const town = landmarkPriority('place', undefined, 100, 'town')
+    const village = landmarkPriority('place', undefined, 100, 'village')
+    expect(city).toBeGreaterThan(town)
+    expect(town).toBeGreaterThan(village)
+    expect(landmarkPriority('place', undefined, 100, 'village', 10_000)).toBeCloseTo(town)
+    expect(landmarkPriority('place', undefined, 100, 'town', 300)).toBeLessThan(village)
+    expect(landmarkPriority('place', undefined, 100, 'city', 5_000_000)).toBeLessThan(landmarkPriority('lake', undefined, 100))
+  })
+
+  it('reads the population', () => {
+    expect(parsePopulation('1250')).toBe(1250)
+    expect(parsePopulation('12 345')).toBe(12345)
+    expect(parsePopulation('12,345')).toBe(12345)
+    expect(parsePopulation('~500')).toBeUndefined()
+    expect(parsePopulation('0')).toBeUndefined()
+    expect(parsePopulation(undefined)).toBeUndefined()
+  })
+
   it('adds the elevation to summits and passes only', () => {
     // narrow no-break space as thousands separator (formatNumber)
     expect(landmarkText('pass', 'Col de Voza', 1653)).toBe('Col de Voza · 1 653 m')
@@ -94,8 +118,27 @@ describe('landmarkPriority / landmarkText', () => {
   })
 })
 
+describe('pathBoxDistanceM', () => {
+  it('is 0 when the track goes through the box, else the gap to its nearest side or corner', () => {
+    // the track runs along 6.78° E: a box across it, one 0.01° east of it (≈ 775 m), one beyond its southern end
+    expect(pathBoxDistanceM(PATH, { west: 6.77, south: 45.85, east: 6.79, north: 45.86 })).toBe(0)
+    expect(pathBoxDistanceM(PATH, { west: 6.79, south: 45.85, east: 6.8, north: 45.86 })).toBeCloseTo(775, -1)
+    const south = 45.9 - 11 * 0.009
+    expect(pathBoxDistanceM(PATH, { west: 6.79, south: south - 0.02, east: 6.8, north: south - 0.01 })).toBeCloseTo(
+      Math.hypot(775, 1113),
+      -1,
+    )
+  })
+
+  it('is 0 when a segment crosses the box between two points', () => {
+    // a 200 m wide box between the 3rd and 4th points (1 km apart)
+    expect(pathBoxDistanceM(PATH, { west: 6.775, south: 45.9 - 2.6 * 0.009, east: 6.785, north: 45.9 - 2.4 * 0.009 })).toBe(0)
+  })
+})
+
 describe('buildLandmarks', () => {
-  const settings = { kinds: DEFAULT_LANDMARK_SETTINGS.kinds, maxDistanceM: 1500 }
+  const settings = { kinds: DEFAULT_LANDMARK_SETTINGS.kinds, places: DEFAULT_LANDMARK_SETTINGS.places, maxDistanceM: 1500 }
+  const noPlaces = { ...settings, kinds: { ...settings.kinds, place: false } }
 
   it('filters by kind and distance, parses the elevation and orders along the track', () => {
     const features = [
@@ -105,8 +148,9 @@ describe('buildLandmarks', () => {
       feature({ kind: 'place', name: 'Hameau', lat: 45.9 - 1 * 0.009, detail: 'hamlet' }),
       feature({ kind: 'peak', name: 'Trop loin', ele: '3000', lat: 45.9 - 6 * 0.009, lon: 6.81 }),
     ]
-    const out = buildLandmarks(features, PATH, settings)
+    const out = buildLandmarks(features, PATH, noPlaces)
     expect(out.map((l) => l.name)).toEqual(['Col de Voza', 'Refuge', 'Mont Truc'])
+    expect(buildLandmarks(features, PATH, settings).map((l) => l.name)).toEqual(['Hameau', 'Col de Voza', 'Refuge', 'Mont Truc'])
     expect(out[0]).toMatchObject({ kind: 'pass', ele: 1650, text: 'Col de Voza · 1 650 m' })
     expect(out[0].distanceM).toBeLessThan(1)
     expect(out[2].ele).toBe(1811)
@@ -133,6 +177,48 @@ describe('buildLandmarks', () => {
     const out = buildLandmarks(features, PATH, settings, 3)
     expect(out.map((l) => l.name)).toEqual(['Pic 7', 'Pic 8', 'Pic 9'])
   })
+
+  it('filters places by size', () => {
+    const features = [
+      feature({ kind: 'place', name: 'Ville', detail: 'city' }),
+      feature({ kind: 'place', name: 'Bourg', detail: 'town', lat: 45.9 - 2 * 0.009 }),
+      feature({ kind: 'place', name: 'Village', detail: 'village', lat: 45.9 - 4 * 0.009 }),
+      feature({ kind: 'place', name: 'Hameau', detail: 'hamlet', lat: 45.9 - 6 * 0.009 }),
+    ]
+    const sizes = (places: typeof settings.places) => buildLandmarks(features, PATH, { ...settings, places }).map((l) => l.name)
+    expect(sizes({ city: true, village: false, hamlet: false })).toEqual(['Ville', 'Bourg'])
+    expect(sizes({ city: false, village: true, hamlet: true })).toEqual(['Village', 'Hameau'])
+    expect(buildLandmarks(features, PATH, noPlaces)).toEqual([])
+  })
+
+  it('measures a place mapped as an area to its box, and merges it with its node', () => {
+    // a town whose centre is 2 km east of the track, its area reaching over it
+    const area = { west: 6.775, south: 45.86, east: 6.83, north: 45.88 }
+    const features = [
+      feature({ id: 'relation/1', kind: 'place', name: 'Bourg', detail: 'town', lon: 6.806, lat: 45.87, area }),
+      feature({ id: 'node/2', kind: 'place', name: 'Bourg', detail: 'town', lon: 6.81, lat: 45.875 }),
+      feature({ id: 'node/3', kind: 'place', name: 'Loin', detail: 'town', lon: 6.806, lat: 45.85 }),
+    ]
+    const out = buildLandmarks(features, PATH, { ...settings, maxDistanceM: 3000 })
+    expect(out.map((l) => l.id)).toEqual(['relation/1', 'node/3'])
+    expect(out[0].distanceM).toBe(0)
+    expect(out[0].alongM).toBeCloseTo(PATH.lengthM * (3.33 / 11), -2)
+    expect(buildLandmarks(features, PATH, settings).map((l) => l.id)).toEqual(['relation/1'])
+  })
+
+  it('keeps a share of the cap for places, which rank last', () => {
+    const peaks = Array.from({ length: 10 }, (_, i) =>
+      feature({ id: `node/p${i}`, kind: 'peak', name: `Pic ${i}`, ele: '2000', lat: 45.9 - i * 0.009 }),
+    )
+    const places = Array.from({ length: 4 }, (_, i) =>
+      feature({ id: `node/v${i}`, kind: 'place', name: `Village ${i}`, detail: 'village', lat: 45.9 - i * 0.009 }),
+    )
+    const out = buildLandmarks([...peaks, ...places], PATH, settings, 8)
+    expect(out.filter((l) => l.kind === 'place')).toHaveLength(2)
+    expect(out).toHaveLength(8)
+    // fewer places than the share: the other kinds take the rest
+    expect(buildLandmarks([...peaks, places[0]], PATH, settings, 8).filter((l) => l.kind === 'peak')).toHaveLength(7)
+  })
 })
 
 describe('landmarkLabels', () => {
@@ -153,16 +239,44 @@ describe('landmarkLabels', () => {
       { id: 'osm:node/3', lon: 6.78, lat: 45.9, text: 'Glacier', kind: 'other', priority: 14 },
     ])
     expect(landmarkLabels([a, b], 1)).toHaveLength(1)
+    const place = { ...base, id: 'node/4', kind: 'place' as const, name: 'Village', priority: 8, text: 'Village' }
+    expect(landmarkLabels([a, b, [place]], 4).map((l) => l.id)).toEqual(['osm:node/1', 'osm:way/2', 'osm:node/3', 'osm:node/4'])
+    expect(landmarkLabels([a, b, [place]], 3).map((l) => l.id)).toEqual(['osm:node/1', 'osm:way/2', 'osm:node/4'])
   })
 })
 
 describe('withLandmarkDefaults', () => {
-  it('gives an older project the kinds added since, off', () => {
+  it('gives an older project the kinds added since, off, and every place size', () => {
     const { waterPoint: _added, ...olderKinds } = DEFAULT_LANDMARK_SETTINGS.kinds
-    const older = { enabled: true, kinds: { ...olderKinds, place: true }, maxDistanceM: 800 }
-    expect(withLandmarkDefaults(older)).toEqual({ ...older, kinds: { ...older.kinds, waterPoint: false }, hiddenIds: [] })
+    const older = { enabled: true, kinds: { ...olderKinds, place: false }, maxDistanceM: 800 }
+    expect(withLandmarkDefaults(older)).toEqual({
+      ...older,
+      kinds: { ...older.kinds, waterPoint: false },
+      places: { city: true, village: true, hamlet: true },
+      hiddenIds: [],
+    })
     expect(withLandmarkDefaults({ ...older, hiddenIds: ['node/1'] })).toMatchObject({ hiddenIds: ['node/1'] })
+    expect(withLandmarkDefaults({ ...older, places: { hamlet: false } })).toMatchObject({ places: { city: true, village: true, hamlet: false } })
+    expect(withLandmarkDefaults({ ...older, places: 'x' })).toMatchObject({ places: 'x' })
     expect(withLandmarkDefaults('x')).toBe('x')
+  })
+})
+
+describe('withPlaceSize / placeSizeOf', () => {
+  it('groups cities and towns', () => {
+    expect(['city', 'town', 'village', 'hamlet', undefined].map(placeSizeOf)).toEqual(['city', 'city', 'village', 'hamlet', 'hamlet'])
+  })
+
+  it('turns places on with the first size shown and off with the last one hidden', () => {
+    const off = { kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, place: false }, places: DEFAULT_LANDMARK_SETTINGS.places }
+    const villages = withPlaceSize(off, 'village', true)
+    expect(villages).toMatchObject({ kinds: { place: true }, places: { city: false, village: true, hamlet: false } })
+    const withCities = withPlaceSize(villages, 'city', true)
+    expect(withCities.places).toEqual({ city: true, village: true, hamlet: false })
+    expect(withPlaceSize(withPlaceSize(withCities, 'city', false), 'village', false)).toMatchObject({
+      kinds: { place: false },
+      places: { city: false, village: false, hamlet: false },
+    })
   })
 })
 
