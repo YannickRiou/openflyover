@@ -63,9 +63,12 @@ export interface FilmShot {
   heading?: SituationHeading
   bearingDeg?: number
   headroomPct?: number
-  /** 'situation': light of the shot (« Soleil », flyover/sun.ts `shotSunDate`); absent: « Plein jour », or 'accelere' when `moveSun` */
+  /**
+   * light of the shot (« Soleil », flyover/sun.ts `shotSunDate`), any style but 'aucune'; absent: the flight's sun
+   * ('survol'), except a 'situation' shot: « Plein jour », or 'accelere' when `moveSun`
+   */
   sun?: ShotSun
-  /** older projects: « Faire bouger le soleil », read as `sun: 'accelere'` */
+  /** older projects, 'situation' only: « Faire bouger le soleil », read as `sun: 'accelere'` */
   moveSun?: boolean
 }
 
@@ -73,8 +76,15 @@ export const SHOT_SUNS = ['jour', 'survol', 'accelere'] as const
 /** « Plein jour » (daylight easing into the flight's sun), « Heure du survol », « Accéléré » (a 2 h time lapse). */
 export type ShotSun = (typeof SHOT_SUNS)[number]
 
-export function shotSunOf(shot: Pick<FilmShot, 'sun' | 'moveSun'>): ShotSun {
-  return shot.sun ?? (shot.moveSun === true ? 'accelere' : 'jour')
+/**
+ * Sun of a shot: its own choice, else the default of its style, unchanged for films saved before the choice was
+ * offered for every style: a 'situation' shot in « Plein jour » (« Accéléré » with `moveSun`), the others hold the
+ * flight's sun.
+ */
+export function shotSunOf(shot: Pick<FilmShot, 'style' | 'sun' | 'moveSun'>): ShotSun {
+  if (shot.sun) return shot.sun
+  if (shot.style !== 'situation') return 'survol'
+  return shot.moveSun === true ? 'accelere' : 'jour'
 }
 
 export const SITUATION_HEADINGS = ['libre', 'boussole'] as const
@@ -329,6 +339,21 @@ export const MEDIA_DEFAULTS: Pick<FilmMedia, 'layout' | 'anchor' | 'size' | 'ken
   kenBurns: true,
 }
 
+/**
+ * The nights of a multi-day track (« Jours et nuits », Lumière tab): where the recording rests overnight, the flight
+ * pauses for `duskS` + `nightS` + `dawnS` seconds while the sun sets, the night passes and the sun rises again
+ * (flyover/nights.ts, `nightSunDate`); added to the film whatever « Garder la durée ».
+ */
+export interface FilmNights {
+  enabled: boolean
+  duskS: number
+  nightS: number
+  dawnS: number
+}
+/** Range of each part of a night (seconds at ×1; also their validity range in a loaded project). */
+export const NIGHT_PART_RANGE = { min: 0, max: 20, step: 0.5 } as const
+export const DEFAULT_NIGHTS: FilmNights = { enabled: true, duskS: 3, nightS: 2, dawnS: 3 }
+
 export interface Film {
   opening: FilmShot
   closing: FilmShot
@@ -353,6 +378,8 @@ export interface Film {
    * in `assemble.ts`); off for the films saved before it, cleared by retouching one of those items
    */
   landmarkTitles: boolean
+  /** nights of a multi-day track shown as pauses; off for the films saved before it (their timing stays) */
+  nights: FilmNights
 }
 
 /** Slider ranges (also the validity ranges of a loaded project), seconds. */
@@ -376,6 +403,7 @@ export const DEFAULT_FILM: Film = {
   duckMusic: false,
   pois: [],
   landmarkTitles: true,
+  nights: DEFAULT_NIGHTS,
 }
 
 /**
@@ -629,6 +657,11 @@ export function isValidAudio(audio: unknown): audio is FilmAudio {
   )
 }
 
+export function isValidNights(nights: FilmNights): boolean {
+  const part = (v: unknown) => within(v, NIGHT_PART_RANGE.min, NIGHT_PART_RANGE.max)
+  return typeof nights.enabled === 'boolean' && part(nights.duskS) && part(nights.nightS) && part(nights.dawnS)
+}
+
 /**
  * Value checks of a film whose top-level shape already matches `DEFAULT_FILM` (see `SETTING_CHECKS` in the
  * project document): shots, every item of every lane, speed portions apart, ids unique across the film.
@@ -639,7 +672,7 @@ export function isValidFilm(film: Film): boolean {
   if (!oneOf(AUTO_STOP_MODES, film.autoMode)) return false
   if (!film.stops.every(isValidStop) || !film.texts.every(isValidText) || !film.media.every(isValidMedia)) return false
   if (!film.speeds.every(isValidSpeed) || !apart(film.speeds) || !film.audio.every(isValidAudio)) return false
-  if (!film.cameraKeys.every(isValidCameraKey) || !film.pois.every(isValidPoi)) return false
+  if (!film.cameraKeys.every(isValidCameraKey) || !film.pois.every(isValidPoi) || !isValidNights(film.nights)) return false
   const ids = [...film.stops, ...film.speeds, ...film.cameraKeys, ...film.texts, ...film.media, ...film.audio, ...film.pois].map((item) => item.id)
   return new Set(ids).size === ids.length
 }
@@ -647,14 +680,20 @@ export function isValidFilm(film: Film): boolean {
 /**
  * Fill-in of a film saved before a field existed (`SETTING_UPGRADES`): missing fields from `DEFAULT_FILM`, except
  * `autoMode`, which keeps the automatic stops of those films following the pacing ('rythme'). Films saved before
- * music, camera keys, points of interest or landmark titles get none of them, and old video clips stay silent
+ * music, camera keys, points of interest, landmark titles or nights get none of them, and old video clips stay silent
  * (`muted: true`), so they look and sound as saved. The `epochs` key of earlier versions is dropped. A text or a
  * medium attached to a stop the film does not own (generated stops, unknown id) is loaded free.
  */
 export function withFilmDefaults(raw: unknown): unknown {
   if (!isRecord(raw)) return raw
   const { epochs: _dropped, ...saved } = raw
-  const film: Record<string, unknown> = { ...DEFAULT_FILM, autoMode: 'rythme', landmarkTitles: false, ...saved }
+  const film: Record<string, unknown> = {
+    ...DEFAULT_FILM,
+    autoMode: 'rythme',
+    landmarkTitles: false,
+    nights: { ...DEFAULT_NIGHTS, enabled: false },
+    ...saved,
+  }
   const own = film.autoStops === false && Array.isArray(film.stops) ? film.stops.filter(isRecord).map((s) => s.id) : []
   const attached = (item: unknown) => {
     if (!isRecord(item) || !('stopId' in item) || own.includes(item.stopId)) return item

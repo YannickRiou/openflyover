@@ -58,8 +58,8 @@ import { SHOT_SUN_HOURS } from '../flyover/sun'
 /** Hint of each « Soleil » choice, [opening, closing]. */
 const SHOT_SUN_HINTS: Record<ShotSun, readonly [string, string]> = {
   jour: [
-    'La vue de la région est en plein jour, puis le soleil rejoint l’heure du départ pendant la plongée.',
-    'Le soleil quitte l’heure de l’arrivée pour le plein jour pendant la remontée.',
+    'La vue de départ est en plein jour, puis le soleil rejoint l’heure du départ pendant le plan.',
+    'Le soleil quitte l’heure de l’arrivée pour le plein jour pendant le plan.',
   ],
   survol: ['Le soleil de l’heure du départ, comme le survol.', 'Le soleil de l’heure de l’arrivée, comme le survol.'],
   accelere: [
@@ -101,7 +101,7 @@ const TRANSITION_HINTS: Record<ShotTransition, string> = {
   'fondu-blanc': 'Le plan reste fixe ; l’image passe par le blanc entre le plan et le survol.',
 }
 
-/** Titled group of fields of a 'situation' shot (« Lieu », « Durées », « Cadrage », « Soleil »). */
+/** Titled group of fields of a shot (« Lieu », « Durées », « Cadrage » of a 'situation' shot; « Soleil »). */
 function InspectorGroup({ title, children }: { title: string; children: ReactNode }) {
   const id = useId()
   return (
@@ -546,23 +546,6 @@ export function FilmInspector() {
               onChange={(patch) => change((f) => updateShot(f, item, patch), false)}
             />
             <SituationFramingFields phase={item} shot={shot} onChange={(patch) => change((f) => updateShot(f, item, patch), false)} />
-            <InspectorGroup title="Soleil">
-              <select
-                className="select"
-                aria-label="Soleil du plan"
-                aria-describedby={`${id}-sun-hint`}
-                value={shotSunOf(shot)}
-                onChange={(e) => change((f) => updateShot(f, item, { sun: e.currentTarget.value as ShotSun, moveSun: undefined }), false)}
-              >
-                <option value="jour">Plein jour</option>
-                <option value="survol">Heure du survol</option>
-                <option value="accelere">Accéléré ({SHOT_SUN_HOURS} h)</option>
-              </select>
-              <p id={`${id}-sun-hint`} className="field__hint">
-                {SHOT_SUN_HINTS[shotSunOf(shot)][item === 'opening' ? 0 : 1]}
-                {!atmosphere && ' Avec l’atmosphère seulement.'}
-              </p>
-            </InspectorGroup>
           </>
         )}
         {shot.style !== 'situation' &&
@@ -575,6 +558,25 @@ export function FilmInspector() {
             (durationS) => change((f) => updateShot(f, item, { durationS }), false),
             shot.style === 'aucune',
           )}
+        {shot.style !== 'aucune' && (
+          <InspectorGroup title="Soleil">
+            <select
+              className="select"
+              aria-label="Soleil du plan"
+              aria-describedby={`${id}-sun-hint`}
+              value={shotSunOf(shot)}
+              onChange={(e) => change((f) => updateShot(f, item, { sun: e.currentTarget.value as ShotSun, moveSun: undefined }), false)}
+            >
+              <option value="jour">Plein jour</option>
+              <option value="survol">Heure du survol</option>
+              <option value="accelere">Accéléré ({SHOT_SUN_HOURS} h)</option>
+            </select>
+            <p id={`${id}-sun-hint`} className="field__hint">
+              {SHOT_SUN_HINTS[shotSunOf(shot)][item === 'opening' ? 0 : 1]}
+              {!atmosphere && ' Avec l’atmosphère seulement.'}
+            </p>
+          </InspectorGroup>
+        )}
         <div className="field">
           <label className="field__label" htmlFor={`${id}-transition`}>
             Transition
