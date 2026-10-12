@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatPercent,
   formatSecondsShort,
+  formatSpeedUp,
   formatAscent,
   formatClock,
   formatDistance,
@@ -104,5 +105,19 @@ describe('formatClock', () => {
   it('reads the browser clock, minutes zero-padded', () => {
     expect(formatClock(new Date(2026, 9, 10, 8, 5).getTime())).toBe('8 h 05')
     expect(formatClock(new Date(2026, 9, 10, 14, 32).getTime())).toBe('14 h 32')
+  })
+})
+
+describe('formatSpeedUp', () => {
+  it('gives the recorded time over the flyover duration, one decimal under ten', () => {
+    expect(formatSpeedUp(4 * 3600, 600)).toBe('× 24')
+    expect(formatSpeedUp(3600, 600)).toBe('× 6,0')
+    expect(formatSpeedUp(90, 60)).toBe('× 1,5')
+  })
+
+  it('says nothing for an untimed track or a null duration', () => {
+    expect(formatSpeedUp(undefined, 60)).toBeNull()
+    expect(formatSpeedUp(0, 60)).toBeNull()
+    expect(formatSpeedUp(3600, 0)).toBeNull()
   })
 })
