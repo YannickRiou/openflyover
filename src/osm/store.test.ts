@@ -38,6 +38,9 @@ const FEATURES: OsmFeature[] = [
   { id: 'node/3', kind: 'place', name: 'Les Houches', lon: 6.78, lat: 45.9, detail: 'village' },
 ]
 
+/** The default kinds without the places. */
+const NO_PLACES: LandmarkSettings = { ...DEFAULT_LANDMARK_SETTINGS, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, place: false } }
+
 /** A fetcher whose promises the test settles by hand. */
 function deferredFetcher() {
   const calls: { trackId: string; resolve: (f: OsmFeature[]) => void; reject: (e: unknown) => void; signal?: AbortSignal }[] = []
@@ -77,16 +80,15 @@ describe('syncLandmarks', () => {
     const state = useLandmarkStore.getState()
     expect(state.status).toBe('ready')
     expect(state.features.a).toBe(FEATURES)
-    // the village is off by default, the pass comes before the peak along the track
-    expect(state.landmarks.a.map((l) => l.name)).toEqual(['Col de Voza', 'Le Prarion'])
-    expect(osmLabels().map((l) => l.id)).toEqual(['osm:node/1', 'osm:node/2'])
+    // the village is on by default; ordered along the track, labels by priority
+    expect(state.landmarks.a.map((l) => l.name)).toEqual(['Les Houches', 'Col de Voza', 'Le Prarion'])
+    expect(osmLabels().map((l) => l.id)).toEqual(['osm:node/1', 'osm:node/2', 'osm:node/3'])
     expect(osmLabels()[0]).toMatchObject({ kind: 'pass', text: 'Col de Voza · 1 650 m', ele: 1650 })
 
     // changing the kinds or the distance re-filters without a request
-    const settings: LandmarkSettings = { ...DEFAULT_LANDMARK_SETTINGS, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, place: true } }
-    syncLandmarks([track], settings, { deps })
-    expect(useLandmarkStore.getState().landmarks.a.map((l) => l.name)).toEqual(['Les Houches', 'Col de Voza', 'Le Prarion'])
-    syncLandmarks([track], { ...settings, maxDistanceM: 100 }, { deps })
+    syncLandmarks([track], NO_PLACES, { deps })
+    expect(useLandmarkStore.getState().landmarks.a.map((l) => l.name)).toEqual(['Col de Voza', 'Le Prarion'])
+    syncLandmarks([track], { ...DEFAULT_LANDMARK_SETTINGS, maxDistanceM: 100 }, { deps })
     expect(useLandmarkStore.getState().landmarks.a.map((l) => l.name)).toEqual(['Les Houches', 'Col de Voza'])
     expect(deps.fetchFeatures).toHaveBeenCalledTimes(1)
   })
@@ -113,14 +115,14 @@ describe('syncLandmarks', () => {
     const { calls, deps } = deferredFetcher()
     const a = makeTrack('a')
     const b = makeTrack('b', 6.79)
-    syncLandmarks([a, b], DEFAULT_LANDMARK_SETTINGS, { deps })
+    syncLandmarks([a, b], NO_PLACES, { deps })
     expect(deps.fetchFeatures).toHaveBeenCalledTimes(2)
     calls[0].resolve(FEATURES)
     await flush()
     expect(useLandmarkStore.getState().status).toBe('loading')
     expect(useLandmarkStore.getState().landmarks.a).toHaveLength(2)
 
-    syncLandmarks([a], DEFAULT_LANDMARK_SETTINGS, { deps })
+    syncLandmarks([a], NO_PLACES, { deps })
     expect(calls[1].signal?.aborted).toBe(true)
     expect(useLandmarkStore.getState().status).toBe('ready')
     expect(Object.keys(useLandmarkStore.getState().features)).toEqual(['a'])
@@ -133,7 +135,7 @@ describe('syncLandmarks', () => {
   it('keeps the landmarks hidden by the user aside, out of the labels, without refetching', async () => {
     const { calls, deps } = deferredFetcher()
     const track = makeTrack('a')
-    const hiding: LandmarkSettings = { ...DEFAULT_LANDMARK_SETTINGS, hiddenIds: ['node/1', 'node/999'] }
+    const hiding: LandmarkSettings = { ...NO_PLACES, hiddenIds: ['node/1', 'node/999'] }
     syncLandmarks([track], hiding, { deps })
     calls[0].resolve(FEATURES)
     await flush()
@@ -142,7 +144,7 @@ describe('syncLandmarks', () => {
     expect(state.hidden.a.map((l) => l.id)).toEqual(['node/1'])
     expect(osmLabels().map((l) => l.id)).toEqual(['osm:node/2'])
 
-    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps })
+    syncLandmarks([track], NO_PLACES, { deps })
     expect(deps.fetchFeatures).toHaveBeenCalledTimes(1)
     state = useLandmarkStore.getState()
     expect(state.landmarks.a.map((l) => l.id)).toEqual(['node/1', 'node/2'])

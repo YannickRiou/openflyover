@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Track } from '../core/types'
 import { isExportBusy, useExportStore } from '../export/store'
@@ -29,10 +29,13 @@ import {
 import type { PlanActivity } from '../plan/timing'
 import { useRace } from '../scene/useRace'
 import { useAppStore } from '../state/store'
+import { computeTrackElevation, hasMissingElevation, withoutTerrainElevation } from '../terrain/elevation'
+import { getTerrainSource } from '../terrain/sources'
 import { formatClock, formatDistance, formatDistanceGap, formatNumber, formatTimeGap, formatTrackSummary } from './format'
 import { Icon } from './icons'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
+import './trackElevation.css'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -335,7 +338,7 @@ function ChainTracks({ tracks }: { tracks: readonly Track[] }) {
   )
 }
 
-/** Replace one track of the list by its new version (same id: estimated times written or cleared). */
+/** Replace one track of the list by its new version (same id: estimated times or computed elevation written or cleared). */
 function replaceTrack(next: Track): void {
   const { tracks, replaceTracks } = useAppStore.getState()
   replaceTracks(tracks.map((t) => (t.id === next.id ? next : t)))
@@ -461,6 +464,67 @@ function OutingPlanForm({ track }: { track: Track }) {
   )
 }
 
+/**
+ * Elevation read from the terrain (src/terrain/elevation.ts): « Calculer l'altitude » on a track with points without
+ * one (the import computes it by itself when it costs few tiles), « Effacer l'altitude » on a track whose whole
+ * elevation was computed.
+ */
+function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
+  const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
+  const missing = useMemo(() => hasMissingElevation(track), [track])
+  const [computing, setComputing] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+
+  async function compute() {
+    setComputing(true)
+    setNote(null)
+    try {
+      const next = await computeTrackElevation(track, getTerrainSource(terrainSourceId))
+      if (next === track) setNote('Aucun relief connu sous cette trace.')
+      // the track may have been removed or replaced meanwhile, or an export started
+      else if (useAppStore.getState().tracks.includes(track) && !isExportBusy(useExportStore.getState().phase)) replaceTrack(next)
+    } catch {
+      setNote('Relief injoignable (hors ligne ?). Réessayez plus tard.')
+    } finally {
+      setComputing(false)
+    }
+  }
+
+  if (track.elevationEstimated === 'all') {
+    return (
+      <div className="track__elevation">
+        <button
+          type="button"
+          className="btn btn--secondary btn--small"
+          disabled={busy}
+          onClick={() => replaceTrack(withoutTerrainElevation(track))}
+        >
+          Effacer l’altitude
+        </button>
+      </div>
+    )
+  }
+  if (track.elevationEstimated || !missing) return null
+  return (
+    <div className="track__elevation">
+      <button
+        type="button"
+        className="btn btn--secondary btn--small"
+        data-tip="D’après la source du relief (Carte › Fond de carte) : profil, D+ et compteurs d’altitude"
+        disabled={busy || computing}
+        onClick={() => void compute()}
+      >
+        {computing ? 'Calcul de l’altitude…' : 'Calculer l’altitude'}
+      </button>
+      {note && (
+        <p className="field__hint" role="status">
+          {note}
+        </p>
+      )}
+    </div>
+  )
+}
+
 /** One card per imported track, with a delete button; chaining and « Plusieurs traces » from two tracks. */
 export function TrackList() {
   const tracks = useAppStore((s) => s.tracks)
@@ -539,7 +603,13 @@ export function TrackList() {
               <span className="track__meta">
                 {formatTrackSummary(track.stats)}
                 {track.timesEstimated && <span className="track__badge">horaires estimés</span>}
+                {track.elevationEstimated && (
+                  <span className="track__badge" title="Altitude lue sur le relief : ponts et tunnels suivent le sol">
+                    {track.elevationEstimated === 'all' ? 'altitude calculée' : 'altitude complétée'}
+                  </span>
+                )}
               </span>
+              <TrackElevation track={track} busy={busy} />
               {(track.timesEstimated || track.stats.startTime === undefined) && <OutingPlanForm track={track} />}
             </li>
           ))}

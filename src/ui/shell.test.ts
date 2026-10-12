@@ -9,7 +9,9 @@ import {
   isProjectDirty,
   nextGridIndex,
   nextTabIndex,
+  DEFAULT_PREFERENCES,
   parseFoldPrefs,
+  parsePreferences,
   parseShellPrefs,
   routeOpenedFiles,
   shellReducer,
@@ -243,10 +245,24 @@ describe('parseShellPrefs', () => {
   })
 
   it('reads the tabs added later, and an unknown tab id falls back to Trace with the fold kept', () => {
-    for (const tab of ['meteo', 'lumiere', 'objectif'] as const) {
+    for (const tab of ['meteo', 'lumiere', 'objectif', 'reglages'] as const) {
       expect(parseShellPrefs(`{"tab":"${tab}","collapsed":false}`)).toEqual({ tab, collapsed: false })
     }
-    expect(parseShellPrefs('{"tab":"reglages","collapsed":true}')).toEqual({ tab: 'trace', collapsed: true })
+    expect(parseShellPrefs('{"tab":"preferences","collapsed":true}')).toEqual({ tab: 'trace', collapsed: true })
+  })
+})
+
+describe('parsePreferences', () => {
+  it('reads each preference, defaults for anything missing, unknown or malformed', () => {
+    expect(parsePreferences(null)).toEqual(DEFAULT_PREFERENCES)
+    expect(parsePreferences('{')).toEqual(DEFAULT_PREFERENCES)
+    expect(parsePreferences('[1]')).toEqual(DEFAULT_PREFERENCES)
+    const read = parsePreferences('{"status":{"water":false,"weather":"non"},"performance":{"gpu":true,"cpu":true},"timelineClock":true}')
+    expect(read).toEqual({
+      status: { ...DEFAULT_PREFERENCES.status, water: false },
+      performance: { ...DEFAULT_PREFERENCES.performance, gpu: true },
+      timelineClock: true,
+    })
   })
 })
 

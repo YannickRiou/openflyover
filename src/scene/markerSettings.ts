@@ -1,5 +1,5 @@
 /**
- * Look of the tracks and of the progress markers (« Trace et marqueur », Survol tab): settings types, defaults
+ * Look of the tracks and of the progress markers (« Trace » and « Marqueur », Trace tab): settings types, defaults
  * (the look before these settings existed), ranges, French labels, and the checks and upgrades used by the
  * project document. Pure: no Three.js, no DOM, so the store and the interface can import it cheaply.
  */

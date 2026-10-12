@@ -4,17 +4,17 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
 import { buildTrack } from './import/stats'
 
-/** renders of the mocked heavy parts, by name */
+/** renders of the mocked heavy parts, by name; each leaves a mark to find which tab holds it */
 const renders = vi.hoisted(() => new Map<string, number>())
 const counted = (name: string) => () => {
   renders.set(name, (renders.get(name) ?? 0) + 1)
-  return null
+  return <i data-mock={name} />
 }
 vi.mock('./ui/Stage', () => ({ Stage: counted('Stage') }))
 vi.mock('./ui/Timeline', () => ({ Timeline: counted('Timeline') }))
 vi.mock('./ui/TrackList', () => ({ TrackList: counted('TrackList') }))
 vi.mock('./ui/SettingsPanel', () => ({ MapSettings: counted('MapSettings'), WeatherSettings: counted('WeatherSettings'), LightSettings: counted('LightSettings') }))
-vi.mock('./ui/TrackMarkerSection', () => ({ TrackMarkerSection: counted('TrackMarkerSection') }))
+vi.mock('./ui/TrackMarkerSection', () => ({ TrackStyleSection: counted('TrackStyleSection'), MarkerSection: counted('MarkerSection') }))
 vi.mock('./ui/ClimbList', () => ({ ClimbList: counted('ClimbList') }))
 vi.mock('./ui/LandmarkPanel', () => ({ LandmarkPanel: counted('LandmarkPanel') }))
 vi.mock('./ui/PoiPanel', () => ({ PoiPanel: counted('PoiPanel') }))
@@ -25,9 +25,13 @@ vi.mock('./ui/LensPanel', () => ({ LensPanel: counted('LensPanel') }))
 vi.mock('./ui/OverlayPanel', () => ({ OverlayPanel: counted('OverlayPanel') }))
 vi.mock('./ui/ProjectPanel', () => ({ ProjectPanel: counted('ProjectPanel') }))
 vi.mock('./ui/OfflinePanel', () => ({ OfflinePanel: counted('OfflinePanel') }))
+vi.mock('./ui/PreferencesPanel', () => ({ PreferencesPanel: counted('PreferencesPanel') }))
 
 const { default: App } = await import('./App')
 const { useAppStore } = await import('./state/store')
+
+/** names of the mocked parts shown in tab `tab` */
+const mocksIn = (tab: string) => [...document.querySelectorAll(`#tab-panel-${tab} [data-mock]`)].map((el) => el.getAttribute('data-mock'))
 
 describe('App shell', () => {
   it('switches tabs without rendering the panels, the stage or the timeline again', async () => {
@@ -41,11 +45,16 @@ describe('App shell', () => {
     const before = new Map(renders)
     expect(before.get('CameraPanel')).toBeGreaterThan(0)
 
-    for (const tab of ['carte', 'survol', 'projet']) {
+    for (const tab of ['carte', 'survol', 'projet', 'reglages']) {
       await act(async () => document.getElementById(`tab-${tab}`)!.click())
       expect(document.getElementById(`tab-panel-${tab}`)!.hidden).toBe(false)
     }
     expect(renders).toEqual(before)
+
+    // the track, its line and its marker settings, and the climbs in « Trace »; the map in « Carte »
+    expect(mocksIn('trace')).toEqual(['TrackList', 'TrackStyleSection', 'MarkerSection', 'ClimbList'])
+    expect(mocksIn('carte')).toEqual(['MapSettings', 'LandmarkPanel', 'PoiPanel'])
+    expect(mocksIn('reglages')).toEqual(['PreferencesPanel'])
     act(() => root.unmount())
   })
 })

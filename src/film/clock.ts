@@ -7,12 +7,17 @@
  *   [O, O + F)      flight: pacing slow-downs, speed portions and stops (`flightPacing`); 'stop' phase in a stop window
  *   [O + F, total]  closing: overview shot, progress 1
  *
+ * The nights of a multi-day track are pauses of the flight too (`nights`, 'flight' phase), added to the film.
+ *
  * A pure function of the film time: any frame can be computed alone.
  */
 import { clamp } from '../core/math'
 import type { Track } from '../core/types'
+import { flightNights, nightPauseS } from '../flyover/nights'
+import type { FlightNight } from '../flyover/nights'
 import { flightPacing, pacingHighlights } from '../flyover/pacing'
-import type { Pacing, PacingPosition, PacingSettings } from '../flyover/pacing'
+import type { FlightStop, Pacing, PacingPosition, PacingSettings } from '../flyover/pacing'
+import { trackPathOf } from '../flyover/path'
 import type { Landmark } from '../osm/landmarks'
 import { filmStops } from './assemble'
 import { shotDurationS } from './model'
@@ -30,6 +35,16 @@ export interface ClockStop extends FilmStop {
   endS: number
   /** time added to the film (after the `keepDuration` cap of the pacing) */
   addedS: number
+}
+
+/** A night of the track placed on the clock: the pause of the flight during which the sun sets and rises again. */
+export interface ClockNight extends FlightNight {
+  progress: number
+  /** start of the ease-in, hold, end of the ease-out (film times) */
+  startS: number
+  holdStartS: number
+  holdEndS: number
+  endS: number
 }
 
 /** A speed portion of the film placed on the clock: film times at which the marker enters and leaves it. */
@@ -83,6 +98,8 @@ export interface FilmClock {
   cameraKeys: readonly ClockCameraKey[]
   /** cuts between stages « À la suite », by position (none otherwise) */
   cuts: readonly ClockCut[]
+  /** nights shown as pauses, by position (none by default) */
+  nights: readonly ClockNight[]
   /** film length at ×1 (seconds) */
   totalTime(): number
   /** progress at film time `tS` (0 during the opening, 1 during the closing); continuous and non-decreasing */
@@ -108,6 +125,8 @@ export interface FilmClockInput {
   cameraKeys?: readonly FilmCameraKey[]
   /** cuts between stages « À la suite » (metres, none by default) */
   cutsM?: readonly number[]
+  /** nights shown as pauses (none by default) */
+  nights?: readonly FlightNight[]
   /** length of the first track (metres), 0 without track */
   lengthM: number
   /** pacing highlights (metres along the track), slowed down when `pacing.enabled` */
@@ -119,23 +138,33 @@ export interface FilmClockInput {
 
 /** Clock of a film whose stops are known. */
 export function buildFilmClock(input: FilmClockInput): FilmClock {
-  const sorted = [...input.stops].sort((a, b) => a.atM - b.atM)
+  // the film's stops and the nights, one pause each, by position (a stop first at the same place)
+  const pauses: (FlightStop & { stop?: FilmStop; night?: FlightNight })[] = [
+    ...input.stops.map((stop) => ({ atM: stop.atM, durationS: stop.durationS, stop })),
+    ...(input.nights ?? []).map((night) => ({ atM: night.atM, durationS: nightPauseS(night), extra: true, night })),
+  ]
+  pauses.sort((a, b) => a.atM - b.atM || (a.stop ? 0 : 1) - (b.stop ? 0 : 1))
   const speeds = [...(input.speeds ?? [])].sort((a, b) => a.fromM - b.fromM)
-  const flight: Pacing = flightPacing(input.lengthM, input.highlightsM, input.durationS, input.pacing, sorted, speeds)
+  const flight: Pacing = flightPacing(input.lengthM, input.highlightsM, input.durationS, input.pacing, pauses, speeds)
   const openingS = shotDurationS(input.opening)
   const closingS = shotDurationS(input.closing)
   const flightS = flight.totalTime()
   const total = openingS + flightS + closingS
   // the identity flight (no track) has no pause: no stop either
-  const stops: ClockStop[] = flight.pauses.map((pause, k) => ({
-    ...sorted[k],
-    progress: pause.progress,
-    startS: openingS + pause.startS,
-    holdStartS: openingS + pause.holdStartS,
-    holdEndS: openingS + pause.holdEndS,
-    endS: openingS + pause.endS,
-    addedS: pause.durationS,
-  }))
+  const stops: ClockStop[] = []
+  const nights: ClockNight[] = []
+  flight.pauses.forEach((pause, k) => {
+    const times = {
+      progress: pause.progress,
+      startS: openingS + pause.startS,
+      holdStartS: openingS + pause.holdStartS,
+      holdEndS: openingS + pause.holdEndS,
+      endS: openingS + pause.endS,
+    }
+    const { stop, night } = pauses[k]
+    if (stop) stops.push({ ...stop, ...times, addedS: pause.durationS })
+    else if (night) nights.push({ ...night, ...times })
+  })
 
   // without track (no length) the portions have no place in the flight
   const flightTimeOf = (atM: number) => openingS + flight.timeAtProgress(Math.min(1, atM / input.lengthM))
@@ -186,6 +215,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
     speeds: clockSpeeds,
     cameraKeys,
     cuts,
+    nights,
     totalTime: () => total,
     progressAtTime,
     timeAtProgress,
@@ -219,6 +249,7 @@ export function filmClockInputFor({ track, film, durationS, pacing, landmarks = 
     speeds: track ? film.speeds : [],
     cameraKeys: track ? film.cameraKeys : [],
     cutsM: track ? cutsM : [],
+    nights: track ? flightNights(trackPathOf(track), film.nights, durationS) : [],
     lengthM: track?.stats.distanceM ?? 0,
     highlightsM: track && pacing.enabled ? pacingHighlights(track, pacing, landmarks) : [],
     durationS,

@@ -3,6 +3,7 @@
  * routing of the opened or dropped files, roving focus of the tabs, project name and save state (shortcuts: `shortcuts.ts`),
  * tooltip placement (its DOM listener `installTipPlacement` aside).
  */
+import { isRecord } from '../core/guards'
 import type { Track } from '../core/types'
 import { DEFAULT_PROJECT_NAME } from '../project/document'
 import type { Settings } from '../state/store'
@@ -100,8 +101,11 @@ export function isProjectDirty(current: SavedProject, saved: SavedProject): bool
 // Side columns: tabs of the left panel and the right dock (export drawer, else the inspector of the timeline)
 // ---------------------------------------------------------------------------
 
-/** In montage order: the track, the place, the weather, the light, the camera, the lens, the overlay, the project. */
-export const SHELL_TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet'] as const
+/**
+ * In montage order: the track, the place, the weather, the light, the camera, the lens, the overlay, the project; then
+ * the preferences of the app (not of the project).
+ */
+export const SHELL_TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet', 'reglages'] as const
 export type ShellTab = (typeof SHELL_TABS)[number]
 
 /** The only tab of the home screen (no track): the others have nothing to act on yet. */
@@ -250,6 +254,56 @@ export function parseFoldPrefs(raw: string | null): Record<string, boolean> {
     return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'))
   } catch {
     return {}
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Preferences of the app on this device (« Réglages » tab, `preferences.ts`)
+// ---------------------------------------------------------------------------
+
+/** Fetches shown as chips in the status bar. */
+export const STATUS_CHIPS = ['weather', 'landmarks', 'region', 'water'] as const
+export type StatusChip = (typeof STATUS_CHIPS)[number]
+
+/**
+ * Parts of the performance readout of the status bar: frames drawn per second, textures and geometries on the GPU,
+ * terrain tiles loaded, JavaScript memory (Chromium), memory and processor of the machine (desktop app).
+ */
+export const PERF_ITEMS = ['fps', 'gpu', 'tiles', 'memory', 'system'] as const
+export type PerfItem = (typeof PERF_ITEMS)[number]
+
+export interface Preferences {
+  status: Record<StatusChip, boolean>
+  performance: Record<PerfItem, boolean>
+  /** recorded clock time of the marker on the timeline bar, after the timecode */
+  timelineClock: boolean
+}
+
+export const DEFAULT_PREFERENCES: Preferences = {
+  status: { weather: true, landmarks: true, region: true, water: true },
+  performance: { fps: true, gpu: false, tiles: true, memory: true, system: true },
+  timelineClock: false,
+}
+
+/** The booleans of `raw` for `keys`, the defaults for anything missing or not a boolean. */
+function booleans<K extends string>(keys: readonly K[], raw: unknown, defaults: Record<K, boolean>): Record<K, boolean> {
+  const value = isRecord(raw) ? raw : {}
+  return Object.fromEntries(keys.map((key) => [key, typeof value[key] === 'boolean' ? value[key] : defaults[key]])) as Record<K, boolean>
+}
+
+/** Preferences remembered by the platform storage; defaults for anything unreadable or unknown. */
+export function parsePreferences(raw: string | null): Preferences {
+  let value: unknown = null
+  try {
+    value = raw ? JSON.parse(raw) : null
+  } catch {
+    // unreadable: the defaults
+  }
+  const v = isRecord(value) ? value : {}
+  return {
+    status: booleans(STATUS_CHIPS, v.status, DEFAULT_PREFERENCES.status),
+    performance: booleans(PERF_ITEMS, v.performance, DEFAULT_PREFERENCES.performance),
+    timelineClock: typeof v.timelineClock === 'boolean' ? v.timelineClock : DEFAULT_PREFERENCES.timelineClock,
   }
 }
 
