@@ -386,6 +386,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 }))
 
+/** A new project starts without an imagery choice: its first import picks the regional imagery again. */
+export function forgetImageryChoice(): void {
+  imageryChosenByUser = false
+}
+
 /** Restore the initial state (tests). */
 export function resetAppStore(): void {
   imageryChosenByUser = false
