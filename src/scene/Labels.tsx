@@ -19,7 +19,6 @@ import { registerDrapeFlush, useExportStore } from '../export/store'
 import { useMediaStore } from '../film/media'
 import type { PoiIcon } from '../film/model'
 import { climbsOf } from '../flyover/climbs'
-import { cardOpacityAt, overlayTime } from '../overlay/draw'
 import { OVERLAY_THEMES, resolveLabelStyle } from '../overlay/themes'
 import type { LabelStyle } from '../overlay/themes'
 import { useAppStore } from '../state/store'
@@ -29,7 +28,6 @@ import {
   endpointLabels,
   photoLabels,
   distanceFade,
-  labelOpacity,
   lineOfSightClearance,
   occlusionFade,
   poiLabels,
@@ -42,7 +40,7 @@ import {
 } from './labelModel'
 import { externalLabels, useLabelSources } from './labelSources'
 import { reliefClearance } from './markerSprite'
-import { useFilmClock, useFilmTrack } from './usePacing'
+import { useFilmTrack } from './usePacing'
 import { useTerrainContext } from './TerrainLayer'
 import { wakeScene } from './renderOnDemand'
 import {
@@ -205,7 +203,7 @@ const projected = new Vector3()
 
 /**
  * Per-frame visibility: distance fade, occlusion cut, screen culling, de-cluttering by priority, fade under the
- * overlay cards (`cardOpacity`), constant screen size (times `renderScale`, > 1 for a video larger than the
+ * constant screen size (times `renderScale`, > 1 for a video larger than the
  * preview), and colour divided by the renderer exposure (unlit sprites, like the track).
  */
 function updateLabelSet(
@@ -216,15 +214,10 @@ function updateLabelSet(
   engine: TerrainEngine | null,
   frame: LocalFrame | null,
   exaggeration: number,
-  cardOpacity: number,
   renderScale = 1,
   /** common size and range of the labels (`settings.labels`) */
   look: { size: number; rangeKm: number } = { size: 1, rangeKm: 70 },
 ): void {
-  if (labelOpacity(1, cardOpacity) < MIN_OPACITY) {
-    for (const entry of set.entries) entry.sprite.visible = false
-    return
-  }
   camera.getWorldPosition(cameraPosition)
   const scale = renderScale * look.size
   const pixel = spriteScaleForPixels(1, size.height, camera.projectionMatrix.elements[5]) * scale
@@ -257,7 +250,7 @@ function updateLabelSet(
     if (!visible[i]) return
     entry.sprite.visible = true
     entry.sprite.scale.set(entry.tex.width * pixel, entry.tex.height * pixel, 1)
-    entry.material.opacity = labelOpacity(opacity, cardOpacity)
+    entry.material.opacity = opacity
     entry.material.color.setScalar(1 / exposure)
   })
 }
@@ -409,19 +402,11 @@ export function Labels() {
     [],
   )
 
-  // the overlay cards are timed in film time
-  const clock = useFilmClock()
-  const clockRef = useRef(clock)
-  useEffect(() => {
-    clockRef.current = clock
-  })
-
   useFrame(({ camera, gl, size }) => {
     if (!setRef.current) return
-    const { playback, settings } = useAppStore.getState()
-    const card = cardOpacityAt(overlayTime(clockRef.current, playback.progress, playback.timeS), settings.overlay)
+    const { settings } = useAppStore.getState()
     const { renderScale } = useExportStore.getState()
-    updateLabelSet(setRef.current, camera, size, gl.toneMappingExposure, engine, frame, exaggeration, card, renderScale, settings.labels)
+    updateLabelSet(setRef.current, camera, size, gl.toneMappingExposure, engine, frame, exaggeration, renderScale, settings.labels)
   })
 
   return <group ref={groupRef} name="labels" />

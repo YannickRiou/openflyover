@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Labels under the cards**: the 3D labels stay visible while the opening title and the closing card are shown (they no longer fade out behind them).
 - **Export: every image waits for its tiles, or the export stops** (#36): more retries with growing delays (up to about
   2 min per tile), 5 minutes at most per image; a tile that never comes stops the export with an error naming the
   server, the tile and the cause, instead of delivering incomplete images.
