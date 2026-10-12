@@ -206,7 +206,7 @@ describe('« Mes projets »: kept by itself, reopened at start', () => {
     const files = new Map<string, string>()
     return {
       names: async () => [...files.keys()],
-      read: async (name) => files.get(name) ?? null,
+      read: async (name) => (files.has(name) ? new Blob([files.get(name)!]) : null),
       write: async (name, body) => void files.set(name, typeof body === 'string' ? body : await body.text()),
       remove: async (name) => void files.delete(name),
     }
@@ -216,7 +216,7 @@ describe('« Mes projets »: kept by itself, reopened at start', () => {
     const projectLibrary = createProjectLibrary(memoryFiles(), () => 1, () => 'p1')
     const entry = await projectLibrary.save(null, { name: 'Tour', summary: '', text: new Blob(['{"é":', new Blob(['1}'])]) })
     expect(entry.sizeBytes).toBe(8)
-    expect(await projectLibrary.load('p1')).toBe('{"é":1}')
+    expect(await (await projectLibrary.load('p1')).text()).toBe('{"é":1}')
     // same size as the string of the same document
     expect((await createProjectLibrary(memoryFiles(), () => 1, () => 'p2').save(null, { name: 'Tour', summary: '', text: '{"é":1}' })).sizeBytes).toBe(8)
   })
@@ -226,7 +226,7 @@ describe('« Mes projets »: kept by itself, reopened at start', () => {
     const cache = { put: async (k: string, r: Response) => void stored.set(k, r), match: async (k: string) => stored.get(k)?.clone() }
     const web = createWebLibraryFiles({ open: async () => cache as unknown as Cache })
     await web.write('a.openflyover.json', new Blob(['{"é":', '1}']))
-    expect(await web.read('a.openflyover.json')).toBe('{"é":1}')
+    expect(await (await web.read('a.openflyover.json'))?.text()).toBe('{"é":1}')
 
     const written = new Map<string, Uint8Array>()
     const fs = {
@@ -252,6 +252,21 @@ describe('« Mes projets »: kept by itself, reopened at start', () => {
     expect(await last?.file.text()).toBe('{"version":2}')
     rememberOpenEntry(storage, null)
     expect(storage.get(LAST_PROJECT_KEY)).toBeNull()
+  })
+
+  it('load returns a Blob and a project with a big clip is restored at start-up from it', async () => {
+    const storage = keyValueStore(null)
+    const projectLibrary = createProjectLibrary(memoryFiles(), () => 1, () => 'p1')
+    const clip = 'data:video/mp4;base64,' + 'A'.repeat(200_000)
+    const text = JSON.stringify({ version: 2, media: { m1: clip } })
+    await projectLibrary.save(null, { name: 'Tour', summary: '', text: new Blob([text]) })
+    const document = await projectLibrary.load('p1')
+    expect(document).toBeInstanceOf(Blob)
+    expect(document.size).toBe(text.length)
+    rememberOpenEntry(storage, 'p1')
+    const last = await lastOpenProject({ storage, projectLibrary })
+    expect(last?.file.size).toBe(text.length)
+    expect(JSON.parse(await last!.file.text()).media.m1).toBe(clip)
   })
 
   it('starts on the home screen when the entry is gone, and forgets it', async () => {

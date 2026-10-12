@@ -1473,7 +1473,9 @@ ink, 7.3:1).
   (null on the website without Cache Storage). Two text files per project, named by a checked id (`[a-z0-9-]`, never a
   path coming from elsewhere): the document `<id>.openflyover.json` (the one from "Enregistrer", media included) then the entry
   `<id>.entry.json` (`ProjectEntry { id, name, updatedAt, summary, sizeBytes, thumbnail? }`, the only one read for the list; an unreadable
-  entry is discarded). Desktop: `<app data>/projects/` (plugin-fs, `readFile` / `writeFile` in UTF-8, same permissions as
+  entry is discarded). `ProjectLibrary.load` returns the document as a `Blob` (`LibraryFiles.read`: `Response.blob()` over the cache entry on the
+  web, one `Blob` over the bytes on the desktop); only the small entry files are read as text. `lastOpenProject` / `libraryFile` wrap it in a
+  `File` and `openProject` reads the text once and parses it, so the raw string never lives beside the document's other copies. Desktop: `<app data>/projects/` (plugin-fs, `readFile` / `writeFile` in UTF-8, same permissions as
   the packs). Website: cache `openflyover-projects-v1` (keys `/openflyover-projects/<file>`, `persist()` requested
   once). **Thumbnail**: each write takes the 3D view (`scene/thumbnail.ts`, loaded with the scene: the canvas has no
   `preserveDrawingBuffer`, so `invalidate` asks for one frame and R3F's `addAfterEffect` copies it in the same
@@ -2739,6 +2741,7 @@ tab; the automatic reopening of the last project (see "Library") hides it. The f
 | film kept in RAM (iOS: no direct disk write) | 1080p30 « Haute » ~16 Mbit/s = 2 MB/s, peak 2.5–3× the film at the end (`BufferTarget`'s growing buffer, `slice`, `Blob`) | ≤ 8 Mbit/s = 1 MB/s; « Débit vidéo » shows the real figure and « plafonné » |
 | warning on the size estimate | 1.5 GB | 250 MB |
 | autosave of a project with a 40 MB clip | every change: whole document serialised as one string (the clip as base64, ~55 MB), UTF-8 copy for the size, `Response` copy: ~4–6× the project, 3 s after each change | `serializeProjectBlob`: the JSON of each medium is made once per table entry (`WeakMap`) and kept as a Blob the next documents reuse; size from `Blob.size`, `Response(blob)` streams to the cache; only the header and the tracks are serialised again |
+| reopening a project with a 40 MB clip at start-up | the document read as a string (~55 MB), a UTF-8 copy for the `File`, a second string at `file.text()`, the parsed object: ~3–4× the project | `load` returns a `Blob`: the `File` shares it, one string is made at `file.text()` and freed after `JSON.parse`: ~2× the project at peak |
 | export default | 1080p | 720p (`DEFAULT_VIDEO_SETTINGS`; a project already saved keeps its own) |
 
 A phone that exports also holds the **screen on** (`export/guard.ts`: Screen Wake Lock, asked again when the page returns
