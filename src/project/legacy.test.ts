@@ -178,6 +178,8 @@ describe('frozen old projects', () => {
       maxDistanceM: 800,
       hiddenIds: [],
       seenIds: [],
+      rank: [],
+      dismissedIds: [],
     })
     expectDefaultsBut(s, [...CHECKED, 'sunDate'])
     expect(s.sunDate).toBe('')
