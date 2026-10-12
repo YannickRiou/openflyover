@@ -27,6 +27,16 @@ export function formatSecondsShort(seconds: number): string {
   return `${formatNumber(seconds, 2).replace(/,?0+$/, '')} s`
 }
 
+/**
+ * How many times faster than the outing the flyover runs: recorded time (start to end, nights included) over the
+ * flyover duration, « × 24 » (one decimal under 10); null when the track has no times.
+ */
+export function formatSpeedUp(recordedS: number | undefined, flightS: number): string | null {
+  if (recordedS === undefined || !(recordedS > 0) || !(flightS > 0)) return null
+  const ratio = recordedS / flightS
+  return `× ${ratio >= 10 ? Math.round(ratio) : formatNumber(ratio, 1)}`
+}
+
 /** Metres -> "850 m" below 1 km, otherwise "12,4 km" (999,6 m rounds up to "1,0 km", never "1 000 m"). */
 export function formatDistance(metres: number): string {
   if (!Number.isFinite(metres) || metres < 0) return PLACEHOLDER
