@@ -969,7 +969,8 @@ ink, 7.3:1).
   kept by « Un film par trace »;
   `paramKeys[]` `{ id, atM, param, value }` (a film-wide setting pinned along the first track in metres,
   like the camera keys, so values hold during stops; `param`: `speed` (×0.25–×4), `exposure` (±4 EV), `sunHour` (0–24 h
-  solar), `saturation`, `contrast`, `warmth`, `vignette`; `paramAt(film, base, param, atM)`, pure: base value without a
+  solar), `saturation`, `contrast`, `warmth`, `vignette`, `labels` (0–1 opacity of the 3D labels, 1 without a key: read by `Labels`
+  per frame, set from « Habillage » › « Étiquettes 3D », hidden under 2 %); `paramAt(film, base, param, atM)`, pure: base value without a
   key, first key's value before it, last key's after it, smootherstep between keys (geometric for the speed). Readers:
   `AtmosphereLayer` (exposure; sun hour: sun keys replace `sunFromTrack`, linear, no wrap past midnight),
   `useGradingEffect` (grading per frame; composer mounted when a grading key exists), the clock (speed keys become a

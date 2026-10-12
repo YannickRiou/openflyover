@@ -54,7 +54,7 @@ describe('paramAt', () => {
 
   it('bases come from the film-wide settings; sortedParamKeys sorts one parameter', () => {
     const settings = { exposureEv: 1, sunHour: 14, grading: { ...DEFAULT_GRADING, contrast: 0.4 } }
-    expect(FILM_PARAMS.map((p) => paramBase(settings, p))).toEqual([1, 1, 14, 0, 0.4, 0, 0])
+    expect(FILM_PARAMS.map((p) => paramBase(settings, p))).toEqual([1, 1, 14, 0, 0.4, 0, 0, 1])
     expect(sortedParamKeys(f.paramKeys, 'exposure').map((k) => k.id)).toEqual(['param-1', 'param-2'])
     expect(valueAtKeys([], 7, 3)).toBe(7)
   })
@@ -164,5 +164,24 @@ describe('lanes and navigation of the parameter keys', () => {
     expect(keysOfParam(keys, 'warmth').map((k) => k.id)).toEqual(['a', 'd'])
     expect(keysOfParam(keys, 'vignette')).toEqual([])
     expect(keysOfParam(keys.map((k) => ({ ...k, timeS: k.atM / 10 })), 'speed')).toEqual([{ ...keys[1], timeS: 10 }])
+  })
+})
+
+describe('label opacity keys', () => {
+  const keys = [key('a', 1000, 'labels', 1), key('b', 2000, 'labels', 0), key('c', 3000, 'labels', 0), key('d', 4000, 'labels', 1)]
+
+  it('shows the labels without a key, then eases them out and back along the keys', () => {
+    expect(paramAt(film([]), paramBase({ exposureEv: 0, sunHour: 12, grading: { contrast: 0, saturation: 0, warmth: 0, vignette: 0 } }, 'labels'), 'labels', 500)).toBe(1)
+    expect(paramAt(film(keys), 1, 'labels', 1000)).toBe(1)
+    expect(paramAt(film(keys), 1, 'labels', 1500)).toBeCloseTo(0.5, 9)
+    expect(paramAt(film(keys), 1, 'labels', 2500)).toBe(0)
+    expect(paramAt(film(keys), 1, 'labels', 5000)).toBe(1)
+  })
+
+  it('is a parameter with a lane of its own and a percentage display', () => {
+    expect(paramLanes(film(keys))).toEqual(['labels'])
+    expect(PARAM_SPECS.labels.format(0.5)).toBe('50 %')
+    expect(clampParamValue('labels', 1.4)).toBe(1)
+    expect(clampParamValue('labels', -1)).toBe(0)
   })
 })
