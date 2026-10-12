@@ -22,6 +22,8 @@ serde = { version = "1", features = ["derive"] }
 # « Importer depuis Strava »: the redirect is caught on 127.0.0.1, Strava opens in the system browser
 tauri-plugin-oauth = "2"
 tauri-plugin-opener = "2"
+# memory and processor load shown in the status bar (system.rs); 0.36 is the last release for rust-version 1.77
+sysinfo = { version = "0.36", default-features = false, features = ["system"] }
 
 [profile.release]
 codegen-units = 1

@@ -56,7 +56,7 @@ const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`
 // ---------------------------------------------------------------------------------------------------- helpers
 
 /** The tabs of the side panel, in the order of the rail (SHELL_TABS in src/ui/shell.ts). */
-const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet']
+const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet', 'reglages']
 
 /** Waits until `fn` (run in the page) returns a truthy value. */
 const until = (page, fn, arg, timeout = STEP_MS) => page.waitForFunction(fn, { timeout, polling: 250 }, arg)

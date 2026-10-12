@@ -21,6 +21,7 @@ import { installCloseGuard, installLibraryAutosave } from './ui/library'
 import { OverlayPanel } from './ui/OverlayPanel'
 import { PanelSection, TabWeightDot } from './ui/PanelSection'
 import { PoiPanel } from './ui/PoiPanel'
+import { PreferencesPanel } from './ui/PreferencesPanel'
 import { chooseFilesToOpen, openFiles, reopenLastProject, saveProject } from './ui/projectActions'
 import { ProjectPanel } from './ui/ProjectPanel'
 import { LightSettings, MapSettings, WeatherSettings } from './ui/SettingsPanel'
@@ -47,7 +48,7 @@ import { Timeline } from './ui/Timeline'
 import { Toaster } from './ui/Toaster'
 import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
-import { TrackMarkerSection } from './ui/TrackMarkerSection'
+import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
 import { WeatherPanel } from './ui/WeatherPanel'
 import './ui/app.css'
 import './ui/shell.css'
@@ -69,6 +70,7 @@ const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
   objectif: { label: 'Objectif', icon: 'aperture' },
   habillage: { label: 'Habillage', icon: 'layers' },
   projet: { label: 'Projet', icon: 'folder' },
+  reglages: { label: 'Réglages', icon: 'sliders-horizontal' },
 }
 
 const PREFS_KEY = 'openflyover.shell.v1'
@@ -399,17 +401,22 @@ export default function App() {
   )
 
   // the tab contents, the stage and the timeline are built once per track state: React skips the same elements when
-  // only the shell changes (else a tab switch re-renders the eight panels and reconciles the 3D scene; slow on a phone)
+  // only the shell changes (else a tab switch re-renders the nine panels and reconciles the 3D scene; slow on a phone)
   const contents = useMemo(
     () => ({
-      trace: <TrackList />,
-      carte: (
+      trace: (
         <>
-          <MapSettings />
-          <TrackMarkerSection />
+          <TrackList />
+          <TrackStyleSection hidden={!hasTracks} />
+          <MarkerSection hidden={!hasTracks} />
           <PanelSection title="Montées et étiquettes" keys={['labels']} hidden={!hasTracks}>
             <ClimbList />
           </PanelSection>
+        </>
+      ),
+      carte: (
+        <>
+          <MapSettings />
           <LandmarkPanel />
           <PoiPanel />
         </>
@@ -442,6 +449,7 @@ export default function App() {
           <DiagnosticRow />
         </>
       ),
+      reglages: <PreferencesPanel />,
       stage: (
         <Stage>
           {!hasTracks && <EmptyState />}

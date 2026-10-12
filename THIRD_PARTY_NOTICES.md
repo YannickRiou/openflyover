@@ -2850,7 +2850,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Rust crates (462)
+## Rust crates (474)
 
 Every registry crate of `src-tauri/Cargo.lock`, including those used only on one operating system or at build time. License as declared on crates.io; the copyright notice of each crate is in its source, <https://crates.io/crates/NAME/VERSION>.
 
@@ -3061,6 +3061,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - ndk-context 0.1.1: MIT OR Apache-2.0
 - ndk-sys 0.6.0+11769913: MIT OR Apache-2.0
 - new_debug_unreachable 1.0.6: MIT
+- ntapi 0.4.3: Apache-2.0 OR MIT
 - num-conv 0.2.2: MIT OR Apache-2.0
 - num-traits 0.2.19: MIT OR Apache-2.0
 - num_enum 0.7.6: BSD-3-Clause OR MIT OR Apache-2.0
@@ -3077,6 +3078,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - objc2-encode 4.1.0: MIT
 - objc2-exception-helper 0.1.1: Zlib OR Apache-2.0 OR MIT
 - objc2-foundation 0.3.2: MIT
+- objc2-io-kit 0.3.2: Zlib OR Apache-2.0 OR MIT
 - objc2-io-surface 0.3.2: Zlib OR Apache-2.0 OR MIT
 - objc2-quartz-core 0.3.2: Zlib OR Apache-2.0 OR MIT
 - objc2-ui-kit 0.3.2: Zlib OR Apache-2.0 OR MIT
@@ -3176,6 +3178,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - syn 3.0.6: MIT OR Apache-2.0
 - sync_wrapper 1.0.2: Apache-2.0
 - synstructure 0.14.0: MIT
+- sysinfo 0.36.1: MIT
 - system-deps 6.2.2: MIT OR Apache-2.0
 - tao 0.37.1: Apache-2.0
 - tao-macros 0.1.4: MIT OR Apache-2.0
@@ -3260,21 +3263,30 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - winapi-util 0.1.11: Unlicense OR MIT
 - winapi-x86_64-pc-windows-gnu 0.4.0: MIT/Apache-2.0
 - window-vibrancy 0.8.1: Apache-2.0 OR MIT
+- windows 0.61.3: MIT OR Apache-2.0
 - windows 0.62.2: MIT OR Apache-2.0
+- windows-collections 0.2.0: MIT OR Apache-2.0
 - windows-collections 0.3.2: MIT OR Apache-2.0
+- windows-core 0.61.2: MIT OR Apache-2.0
 - windows-core 0.62.2: MIT OR Apache-2.0
+- windows-future 0.2.1: MIT OR Apache-2.0
 - windows-future 0.3.2: MIT OR Apache-2.0
 - windows-implement 0.60.2: MIT OR Apache-2.0
 - windows-interface 0.59.3: MIT OR Apache-2.0
+- windows-link 0.1.3: MIT OR Apache-2.0
 - windows-link 0.2.1: MIT OR Apache-2.0
+- windows-numerics 0.2.0: MIT OR Apache-2.0
 - windows-numerics 0.3.1: MIT OR Apache-2.0
+- windows-result 0.3.4: MIT OR Apache-2.0
 - windows-result 0.4.1: MIT OR Apache-2.0
+- windows-strings 0.4.2: MIT OR Apache-2.0
 - windows-strings 0.5.1: MIT OR Apache-2.0
 - windows-sys 0.45.0: MIT OR Apache-2.0
 - windows-sys 0.60.2: MIT OR Apache-2.0
 - windows-sys 0.61.2: MIT OR Apache-2.0
 - windows-targets 0.42.2: MIT OR Apache-2.0
 - windows-targets 0.53.5: MIT OR Apache-2.0
+- windows-threading 0.1.0: MIT OR Apache-2.0
 - windows-threading 0.2.1: MIT OR Apache-2.0
 - windows-version 0.1.7: MIT OR Apache-2.0
 - windows_aarch64_gnullvm 0.42.2: MIT OR Apache-2.0
