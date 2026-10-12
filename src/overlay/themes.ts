@@ -1,9 +1,9 @@
 /**
- * The three overlay styles. They belong to the film, not to the interface: their colours are chosen for
+ * The overlay styles. They belong to the film, not to the interface: their colours are chosen for
  * legibility over any imagery, from the same family as the charte « Carte alpine » (paper, ink, trail red).
  * Sizes are in overlay units (1 u = 1 % of the shorter side of the frame).
  */
-import type { OverlayFontId, OverlayOverrides, OverlayStyleId } from './settings'
+import type { LabelKind, OverlayFontId, OverlayOverrides, OverlayStyleId, TextBacking } from './settings'
 
 export interface OverlayPanelStyle {
   fill: string
@@ -13,6 +13,32 @@ export interface OverlayPanelStyle {
   radius: number
   /** drop shadow under the panel */
   shadow?: { color: string; blur: number; offsetY: number }
+}
+
+/** The 3D labels in a style (see `Labels.tsx`): ink-like panel, text, corner radius (px) and the accent of each kind. */
+export interface LabelStyle {
+  /** '#rrggbb' */
+  panel: string
+  text: string
+  radius: number
+  accents: Readonly<Record<LabelKind, string>>
+}
+
+/** Accents of a label style from five roles: climbs, passes and points of interest; summits and ends; waypoints and water; huts and km; places. */
+function kindAccents(a: { strong: string; peak: string; cool: string; soft: string; muted: string }): Record<LabelKind, string> {
+  return {
+    climb: a.strong,
+    pass: a.strong,
+    poi: a.strong,
+    peak: a.peak,
+    endpoint: a.peak,
+    waypoint: a.cool,
+    water: a.cool,
+    hut: a.soft,
+    km: a.soft,
+    place: a.muted,
+    other: a.muted,
+  }
 }
 
 export interface OverlayTheme {
@@ -35,6 +61,8 @@ export interface OverlayTheme {
   groupedCounters: boolean
   /** shadow under the text (u), for the styles without panel */
   textShadow?: { color: string; blur: number }
+  /** what backs the text of a style without panel (user choice; absent = `DEFAULT_TEXT_BACKING`) */
+  textBacking?: TextBacking
   /** accent bar on the leading edge of panels and cards (u), 0 = none */
   accentBar: number
   profile: { area: string; played: string; line: string; marker: string; markerRing: string }
@@ -44,6 +72,8 @@ export interface OverlayTheme {
   credits: { fill: string; text: string }
   /** photo card of the timeline: mat around the picture (pad and radii in u), caption colour on the mat */
   photo: OverlayPhotoStyle
+  /** the 3D labels of the scene */
+  label: LabelStyle
 }
 
 export interface OverlayPhotoStyle {
@@ -77,6 +107,12 @@ export const TRAIL_RED = '#C23B22'
 export const TRAIL_RED_LIGHT = '#FF8A5C'
 export const GLACIER = '#A9CCD9'
 const MOSS = '#3F6B4A'
+export const SPORT_ORANGE = '#FF6B2C'
+export const TOPO_RUST = '#A64A24'
+export const TOPO_PAPER = '#F0E8D3'
+export const TOPO_BROWN = '#5B4A3A'
+export const NEON_CYAN = '#5EF0FF'
+const NEON_MAGENTA = '#FF4FD8'
 
 export const OVERLAY_THEMES: Record<OverlayStyleId, OverlayTheme> = {
   // light serif titles straight on the image, generous spacing
@@ -108,6 +144,8 @@ export const OVERLAY_THEMES: Record<OverlayStyleId, OverlayTheme> = {
     credits: { fill: 'rgba(16, 25, 31, 0.6)', text: '#FFFFFF' },
     // white print mat, like a photo laid on the map
     photo: { mat: '#FFFFFF', pad: 0.8, radius: 0.3, imageRadius: 0, caption: INK, shadow: { color: 'rgba(0, 0, 0, 0.35)', blur: 2, offsetY: 0.4 } },
+    // the labels as they always were: ink panel, white text
+    label: { panel: INK, text: '#FFFFFF', radius: 5, accents: kindAccents({ strong: TRAIL_RED_LIGHT, peak: '#FFFFFF', cool: GLACIER, soft: '#EAE4D6', muted: '#D6CDBB' }) },
   },
   // dark glass panels, condensed figures, trail-red bar
   broadcast: {
@@ -136,6 +174,7 @@ export const OVERLAY_THEMES: Record<OverlayStyleId, OverlayTheme> = {
     minimap: { route: 'rgba(255, 255, 255, 0.4)', covered: TRAIL_RED_LIGHT, start: MOSS, end: '#FFFFFF' },
     credits: { fill: 'rgba(16, 25, 31, 0.7)', text: '#FFFFFF' },
     photo: { mat: 'rgba(16, 25, 31, 0.78)', stroke: 'rgba(255, 255, 255, 0.14)', pad: 0.6, radius: 0.5, imageRadius: 0.2, caption: '#FFFFFF' },
+    label: { panel: INK, text: '#FFFFFF', radius: 3, accents: kindAccents({ strong: TRAIL_RED_LIGHT, peak: '#FFFFFF', cool: GLACIER, soft: '#EAE4D6', muted: '#D6CDBB' }) },
   },
   // pale rounded cards, like a navigation app
   app: {
@@ -169,6 +208,136 @@ export const OVERLAY_THEMES: Record<OverlayStyleId, OverlayTheme> = {
       caption: INK,
       shadow: { color: 'rgba(0, 0, 0, 0.28)', blur: 1.6, offsetY: 0.3 },
     },
+    label: { panel: PAPER, text: INK, radius: 8, accents: kindAccents({ strong: TRAIL_RED, peak: INK, cool: '#3E7C97', soft: '#7A6F5A', muted: INK_SOFT }) },
+  },
+  // bold and sporty: heavy condensed capitals on solid dark blocks, a thick orange edge
+  sport: {
+    titleFamily: PLEX_CONDENSED,
+    titleWeight: 700,
+    titleUppercase: true,
+    bodyFamily: PLEX_CONDENSED,
+    numberFamily: PLEX_CONDENSED,
+    numberWeight: 700,
+    labelWeight: 600,
+    labelUppercase: true,
+    labelTracking: 0.08,
+    text: '#FFFFFF',
+    textSoft: 'rgba(255, 255, 255, 0.8)',
+    accent: SPORT_ORANGE,
+    panel: { fill: 'rgba(12, 18, 23, 0.9)', radius: 0.2 },
+    groupedCounters: false,
+    accentBar: 1.1,
+    profile: { area: 'rgba(255, 107, 44, 0.3)', played: SPORT_ORANGE, line: '#FFFFFF', marker: SPORT_ORANGE, markerRing: '#FFFFFF' },
+    minimap: { route: 'rgba(255, 255, 255, 0.45)', covered: SPORT_ORANGE, start: MOSS, end: '#FFFFFF' },
+    credits: { fill: 'rgba(12, 18, 23, 0.72)', text: '#FFFFFF' },
+    photo: { mat: 'rgba(12, 18, 23, 0.9)', pad: 0.6, radius: 0.2, imageRadius: 0, caption: '#FFFFFF' },
+    label: { panel: '#0C1217', text: '#FFFFFF', radius: 2, accents: kindAccents({ strong: SPORT_ORANGE, peak: '#FFFFFF', cool: GLACIER, soft: '#EAE4D6', muted: '#D6CDBB' }) },
+  },
+  // minimal: monospaced figures straight on the image, no panel, white only
+  mono: {
+    titleFamily: OVERLAY_FONT_FAMILIES.mono,
+    titleWeight: 500,
+    titleUppercase: false,
+    bodyFamily: OVERLAY_FONT_FAMILIES.mono,
+    numberFamily: OVERLAY_FONT_FAMILIES.mono,
+    numberWeight: 500,
+    labelWeight: 500,
+    labelUppercase: true,
+    labelTracking: 0.12,
+    text: '#FFFFFF',
+    textSoft: 'rgba(255, 255, 255, 0.8)',
+    accent: '#FFFFFF',
+    panel: null,
+    groupedCounters: true,
+    textShadow: { color: 'rgba(0, 0, 0, 0.65)', blur: 1 },
+    accentBar: 0,
+    profile: { area: 'rgba(255, 255, 255, 0.18)', played: 'rgba(255, 255, 255, 0.85)', line: '#FFFFFF', marker: '#FFFFFF', markerRing: 'rgba(0, 0, 0, 0.6)' },
+    minimap: { route: 'rgba(255, 255, 255, 0.45)', covered: '#FFFFFF', start: 'rgba(255, 255, 255, 0.6)', end: '#FFFFFF' },
+    credits: { fill: 'rgba(16, 25, 31, 0.6)', text: '#FFFFFF' },
+    photo: { mat: '#FFFFFF', pad: 0.5, radius: 0, imageRadius: 0, caption: INK, shadow: { color: 'rgba(0, 0, 0, 0.35)', blur: 2, offsetY: 0.4 } },
+    label: { panel: '#10191F', text: '#FFFFFF', radius: 1, accents: kindAccents({ strong: '#FFFFFF', peak: '#FFFFFF', cool: '#C9D3D9', soft: '#AAB5BC', muted: '#8E999F' }) },
+  },
+  // topographic sheet: map paper with a brown hairline, serif titles, rust contour accent
+  topo: {
+    titleFamily: FRAUNCES,
+    titleWeight: 500,
+    titleUppercase: false,
+    bodyFamily: PLEX,
+    numberFamily: FRAUNCES,
+    numberWeight: 500,
+    labelWeight: 500,
+    labelUppercase: true,
+    labelTracking: 0.12,
+    text: INK,
+    textSoft: TOPO_BROWN,
+    accent: TOPO_RUST,
+    panel: { fill: 'rgba(240, 232, 211, 0.95)', stroke: 'rgba(122, 84, 52, 0.7)', radius: 0.3 },
+    groupedCounters: true,
+    accentBar: 0,
+    profile: { area: '#CBD9B0', played: TOPO_RUST, line: INK, marker: TOPO_RUST, markerRing: TOPO_PAPER },
+    minimap: { route: 'rgba(28, 42, 51, 0.4)', covered: TOPO_RUST, start: MOSS, end: INK },
+    credits: { fill: 'rgba(240, 232, 211, 0.85)', text: INK },
+    photo: { mat: 'rgba(240, 232, 211, 0.95)', stroke: 'rgba(122, 84, 52, 0.7)', pad: 0.8, radius: 0.3, imageRadius: 0, caption: INK },
+    label: { panel: TOPO_PAPER, text: INK, radius: 2, accents: kindAccents({ strong: TOPO_RUST, peak: INK, cool: '#2F6F8F', soft: '#7A5434', muted: '#5B6B4A' }) },
+  },
+  // night neon: deep blue glass with a glowing cyan edge, magenta marker
+  neon: {
+    titleFamily: PLEX_CONDENSED,
+    titleWeight: 700,
+    titleUppercase: true,
+    bodyFamily: PLEX_CONDENSED,
+    numberFamily: PLEX_CONDENSED,
+    numberWeight: 600,
+    labelWeight: 500,
+    labelUppercase: true,
+    labelTracking: 0.14,
+    text: '#FFFFFF',
+    textSoft: 'rgba(255, 255, 255, 0.8)',
+    accent: NEON_CYAN,
+    panel: {
+      fill: 'rgba(7, 10, 26, 0.84)',
+      stroke: 'rgba(94, 240, 255, 0.75)',
+      radius: 0.8,
+      shadow: { color: 'rgba(94, 240, 255, 0.5)', blur: 2.4, offsetY: 0 },
+    },
+    groupedCounters: true,
+    accentBar: 0,
+    profile: { area: 'rgba(94, 240, 255, 0.2)', played: NEON_CYAN, line: '#FFFFFF', marker: NEON_MAGENTA, markerRing: '#FFFFFF' },
+    minimap: { route: 'rgba(255, 255, 255, 0.4)', covered: NEON_CYAN, start: NEON_MAGENTA, end: '#FFFFFF' },
+    credits: { fill: 'rgba(7, 10, 26, 0.78)', text: '#FFFFFF' },
+    photo: {
+      mat: 'rgba(7, 10, 26, 0.84)',
+      stroke: 'rgba(94, 240, 255, 0.75)',
+      pad: 0.6,
+      radius: 0.8,
+      imageRadius: 0.3,
+      caption: '#FFFFFF',
+      shadow: { color: 'rgba(94, 240, 255, 0.5)', blur: 2.4, offsetY: 0 },
+    },
+    label: { panel: '#070A1A', text: '#FFFFFF', radius: 4, accents: kindAccents({ strong: NEON_MAGENTA, peak: '#FFFFFF', cool: NEON_CYAN, soft: '#B8A4FF', muted: '#8FA3C8' }) },
+  },
+  // magazine: square white sheets, bold serif headline, tracked small capitals, red edge
+  magazine: {
+    titleFamily: FRAUNCES,
+    titleWeight: 700,
+    titleUppercase: false,
+    bodyFamily: PLEX,
+    numberFamily: FRAUNCES,
+    numberWeight: 600,
+    labelWeight: 600,
+    labelUppercase: true,
+    labelTracking: 0.18,
+    text: INK,
+    textSoft: INK_SOFT,
+    accent: TRAIL_RED,
+    panel: { fill: 'rgba(255, 255, 255, 0.96)', radius: 0, shadow: { color: 'rgba(0, 0, 0, 0.3)', blur: 1.2, offsetY: 0.3 } },
+    groupedCounters: true,
+    accentBar: 0.4,
+    profile: { area: '#E7E1D3', played: TRAIL_RED, line: INK, marker: TRAIL_RED, markerRing: '#FFFFFF' },
+    minimap: { route: 'rgba(28, 42, 51, 0.35)', covered: TRAIL_RED, start: MOSS, end: INK },
+    credits: { fill: 'rgba(255, 255, 255, 0.85)', text: INK },
+    photo: { mat: '#FFFFFF', pad: 0.9, radius: 0, imageRadius: 0, caption: INK, shadow: { color: 'rgba(0, 0, 0, 0.3)', blur: 1.2, offsetY: 0.3 } },
+    label: { panel: '#FFFFFF', text: INK, radius: 0, accents: kindAccents({ strong: TRAIL_RED, peak: INK, cool: '#3E7C97', soft: '#7A6F5A', muted: INK_SOFT }) },
   },
 }
 
@@ -179,6 +348,8 @@ export const OVERLAY_THEMES: Record<OverlayStyleId, OverlayTheme> = {
 export const OVERLAY_FONTS: readonly string[] = [
   `300 32px ${FRAUNCES}`,
   `500 32px ${FRAUNCES}`,
+  `600 32px ${FRAUNCES}`,
+  `700 32px ${FRAUNCES}`,
   `500 32px ${PLEX}`,
   `600 32px ${PLEX}`,
   `500 32px ${PLEX_CONDENSED}`,
@@ -259,7 +430,14 @@ export function resolveOverlayTheme(style: OverlayStyleId, overrides: OverlayOve
     theme.panel = { ...base.panel, fill }
     theme.photo.mat = fill
   }
+  if (overrides.textBacking) theme.textBacking = overrides.textBacking
   if (titleFont) theme.titleFamily = OVERLAY_FONT_FAMILIES[titleFont]
   if (numberFont) theme.numberFamily = OVERLAY_FONT_FAMILIES[numberFont]
   return theme
+}
+
+/** Labels of the style, each kind in the user's colour when it chose one (`OverlaySettings.labelColors`). */
+export function resolveLabelStyle(style: OverlayStyleId, labelColors: Partial<Record<LabelKind, string>> | undefined): LabelStyle {
+  const { label } = OVERLAY_THEMES[style] ?? OVERLAY_THEMES.editorial
+  return labelColors && Object.keys(labelColors).length > 0 ? { ...label, accents: { ...label.accents, ...labelColors } } : label
 }

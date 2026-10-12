@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LIST_NAME_SHARE, fitLines, fitText, fitTrackList, posterLayout, truncate, wrapText } from './layout'
 import type { Box, Measure, PosterLayout, PosterRows } from './layout'
-import { POSTER_FORMATS, POSTER_STYLES } from './settings'
+import { POSTER_FORMATS, POSTER_LAYOUTS, POSTER_STYLES } from './settings'
 
 /** a glyph is half the font size wide */
 const measure: Measure = (text, px) => text.length * px * 0.5
@@ -51,7 +51,7 @@ describe('posterLayout', () => {
       expect(inside(box, safe)).toBe(true)
       if (l.panel) expect(inside(box, l.panel)).toBe(true)
       // the Application card floats over a full-page view; elsewhere the text is off the view
-      if (style !== 'app') expect(overlap(box, l.view)).toBe(false)
+      if (POSTER_LAYOUTS[style] !== 'app') expect(overlap(box, l.view)).toBe(false)
     }
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) expect(overlap(boxes[i], boxes[j])).toBe(false)
     if (l.panel) expect(inside(l.panel, page)).toBe(true)
