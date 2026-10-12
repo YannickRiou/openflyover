@@ -189,7 +189,7 @@ export function creditsRollProgress(time: OverlayTime, start: number): number {
 
 /**
  * Opacity of the opening or closing card at film time `time` (the larger one), 0 while the overlay is off. Pure
- * function of the time and the settings: the live widgets and the 3D labels give way to the cards.
+ * function of the time and the settings: the live widgets give way to the cards.
  */
 export function cardOpacityAt(time: OverlayTime, settings: OverlaySettings): number {
   if (!settings.enabled) return 0
