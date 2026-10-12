@@ -189,7 +189,9 @@ export default function App() {
   const exportBusy = useExportStore((s) => isExportBusy(s.phase))
   const batchRunning = useBatchStore((s) => s.phase === 'running')
   const exporting = exportBusy || batchRunning
-  const selected = useAppStore((s) => s.filmSelection !== null && s.tracks.length > 0)
+  // the block selected: a new one brings the inspector over the export drawer again
+  const selection = useAppStore((s) => (s.tracks.length > 0 ? s.filmSelection : null))
+  const selected = selection !== null
   const phone = usePhone()
   const [shell, dispatch] = useReducer(shellReducer, undefined, () =>
     shellReducer(
@@ -286,13 +288,13 @@ export default function App() {
     }
   }, [])
 
-  // a timeline block selected: its inspector in the dock, after the release of a press (the timeline must not change
-  // scale under a drag); the dock given back to the panel (narrow window): deselected
+  // a timeline block selected: its inspector in the dock, over the export drawer unless an export runs, after the release
+  // of a press (the timeline must not change scale under a drag); the dock given back to the panel (narrow window): deselected
   useEffect(() => {
     const show = () => {
       window.removeEventListener('pointerup', show)
       window.removeEventListener('pointercancel', show)
-      dispatch({ type: 'inspect', open: selected, narrow: isNarrow() })
+      dispatch({ type: 'inspect', open: selected, narrow: isNarrow(), exporting: isExportBusy(useExportStore.getState().phase) || useBatchStore.getState().phase === 'running' })
     }
     if (!selected || !pressed.current) {
       show()
@@ -304,7 +306,7 @@ export default function App() {
       window.removeEventListener('pointerup', show)
       window.removeEventListener('pointercancel', show)
     }
-  }, [selected])
+  }, [selected, selection])
   useEffect(() => {
     if (!shell.inspecting) useAppStore.getState().setFilmSelection(null)
   }, [shell.inspecting])

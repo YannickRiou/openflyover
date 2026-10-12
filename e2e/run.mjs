@@ -500,6 +500,20 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'inspecteur',
+    title: 'Un bloc de la timeline choisi : son inspecteur prend la place du tiroir d’export',
+    async run({ page }) {
+      await clickButton(page, 'Exporter')
+      await page.waitForSelector('#export-dock:not([hidden])', { timeout: STEP_MS })
+      await page.click('[role="group"][aria-label="Plans"] .film-tl__block')
+      await page.waitForSelector('aside[aria-label="Inspecteur"]:not([hidden])', { visible: true, timeout: STEP_MS })
+      assert(await page.$eval('#export-dock', (el) => el.hidden), 'le tiroir d’export reste affiché sur l’inspecteur')
+      await page.keyboard.press('Escape')
+      await until(page, () => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === true)
+      await blur(page)
+    },
+  },
+  {
     id: 'reperes',
     title: 'Repères et points d’intérêt (onglet Carte) : un point au marqueur, son arrêt coché puis décoché, vu sur la timeline',
     async run({ page }) {

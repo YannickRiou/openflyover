@@ -185,6 +185,22 @@ describe('shellReducer', () => {
     expect(shellReducer(deselected, { type: 'close-dock' })).toMatchObject({ collapsed: false, collapsedByDock: false })
   })
 
+  it('selecting a block brings its inspector over the export drawer, which an export in progress keeps', () => {
+    const drawer = shellReducer(base, { type: 'toggle-dock', narrow: false })
+    expect(drawer.dockOpen).toBe(true)
+    // the drawer was open when the block is selected (or another one is): the inspector replaces it
+    expect(shellReducer(drawer, { type: 'inspect', open: true, narrow: false })).toMatchObject({ dockOpen: false, inspecting: true })
+    const inspecting = shellReducer(drawer, { type: 'inspect', open: true, narrow: false })
+    const reopened = shellReducer(inspecting, { type: 'toggle-dock', narrow: false })
+    expect(reopened).toMatchObject({ dockOpen: true, inspecting: true })
+    expect(shellReducer(reopened, { type: 'inspect', open: true, narrow: false })).toMatchObject({ dockOpen: false, inspecting: true })
+    // while exporting the drawer stays over it
+    expect(shellReducer(drawer, { type: 'inspect', open: true, narrow: false, exporting: true })).toMatchObject({ dockOpen: true, inspecting: true })
+    // the panel folded by the drawer on a narrow window stays folded: the inspector takes the dock
+    const narrow = shellReducer(base, { type: 'toggle-dock', narrow: true })
+    expect(shellReducer(narrow, { type: 'inspect', open: true, narrow: true })).toMatchObject({ dockOpen: false, inspecting: true, collapsed: true })
+  })
+
   it('portrait phone: « Modifier » opens the inspector of the selected block, « Terminé » closes it and keeps the selection', () => {
     expect(shellReducer(base, { type: 'edit', open: true })).toBe(base)
     const selected = shellReducer(base, { type: 'inspect', open: true, narrow: true })
