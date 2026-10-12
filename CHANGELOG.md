@@ -8,6 +8,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Export: every image waits for its tiles, or the export stops** (#36): more retries with growing delays (up to about
   2 min per tile), 5 minutes at most per image; a tile that never comes stops the export with an error naming the
   server, the tile and the cause, instead of delivering incomplete images.
+- **Diagnostic** (#64): the diagnostic report and the test export without encoding moved from the Projet tab to « Réglages ».
 - **Export: faster and lighter** (#35, #37): the interface stays responsive during an export; render-time breakdown (GPU
   when the browser measures it, composing, video frame, encoder wait, renders per image) in the console, the history and
   the diagnostic report; hardware video encoder when available; one render instead of two per image with clouds when
@@ -35,7 +36,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Project** (#20): « Nouveau projet » and « Fermer le projet » in the Projet tab, which gathers every project action.
 - **Overlay positions** (#39, #38): one 3 × 3 grid for every position, a free position in pixels of the exported
   video, logo opacity.
-- **Diagnostic** (#64): the diagnostic report and the test export without encoding moved from the Projet tab to « Réglages ».
+- **Style picker** (#61): the eight overlay styles (and the poster's) wrap onto several rows instead of scrolling sideways.
 - **Export diagnostic** (#52): the `[export]` console line and the diagnostic report give the tiles and triangles drawn in
   the shadow pass per render, with the off-screen share, to measure what an off-screen caster filter could save.
 - **Marker keys** (#40): change the marker (ball, figure, own picture) along the track with keys on the timeline,

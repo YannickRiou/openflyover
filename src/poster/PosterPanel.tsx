@@ -259,7 +259,7 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
 
       <fieldset className="field fieldset" disabled={busy}>
         <legend className="field__label">Style</legend>
-        <div className="segmented">
+        <div className="segmented segmented--wrap">
           {POSTER_STYLES.map((style) => (
             <label key={style} className="segmented__option">
               <input type="radio" name={`${id}-style`} value={style} checked={poster.style === style} onChange={() => set({ style })} />
