@@ -19,7 +19,8 @@ import { AerialPerspective, Atmosphere, Sky, SkyLight, Stars, SunLight, type Atm
 import { deviceBudget } from '../core/deviceBudget'
 import type { Track } from '../core/types'
 import { samplePath, trackPathOf, type TrackPath } from '../flyover/path'
-import { trackUnderMarker } from '../flyover/sequence'
+import { filmTrackOf, trackUnderMarker } from '../flyover/sequence'
+import { hasParamKeys, paramAt } from '../film/paramKeys'
 import { mslLocalToEcef } from '../geo/geoid'
 import { SHOT_DAYLIGHT_HOUR, nightSunDate, shotSunDate, solarHourToDate, sunDateAt, sunDayMs } from '../flyover/sun'
 import { useAppStore } from '../state/store'
@@ -126,12 +127,18 @@ export function AtmosphereLayer() {
     const under = at && { ...at, path: trackPathOf(at.track), series: weatherSeriesOf(useWeatherStore.getState(), at.track) }
     markerRef.current = under ?? null
     const dayMs = sunDayMs(settings.sunDate, under?.track.stats.startTime, today)
+    // parameter keys (« Réglages ») are anchored along the film track: its length turns a progress into metres
+    const { film } = settings
+    const filmTrack = filmTrackOf(tracks, settings.race)
+    const lengthM = filmTrack ? trackPathOf(filmTrack).lengthM : 0
+    const sunKeyed = hasParamKeys(film, ['sunHour'])
     /** the flight's sun at a film progress: the recorded time of the track under the marker there */
     const sunAt = (progress: number) => {
       const there = progress === playback.progress ? under : trackUnderMarker(tracks, settings.race, progress)
       return sunDateAt(there ? trackPathOf(there.track) : null, there?.progress ?? progress, {
-        sunFromTrack: settings.sunFromTrack,
-        solarHour: settings.sunHour,
+        // keys on the sun hour take over from the recorded time: the sun then follows them
+        sunFromTrack: settings.sunFromTrack && !sunKeyed,
+        solarHour: paramAt(film, settings.sunHour, 'sunHour', progress * lengthM),
         lon: frame.origin.lon,
         dayMs: there ? sunDayMs(settings.sunDate, there.track.stats.startTime, today) : dayMs,
       })
@@ -157,7 +164,7 @@ export function AtmosphereLayer() {
     }
     weatherRef.current = weather
 
-    gl.toneMappingExposure = sceneExposure(elevation, settings.exposureEv + weather.exposureCompensationEv)
+    gl.toneMappingExposure = sceneExposure(elevation, paramAt(film, settings.exposureEv, 'exposure', playback.progress * lengthM) + weather.exposureCompensationEv)
     if (nightFillRef.current) nightFillRef.current.intensity = nightFillIntensity(elevation)
     if (sun) {
       sun.intensity = weather.sunScale
