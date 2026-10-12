@@ -8,13 +8,47 @@
  */
 import { isRecord } from '../core/guards'
 
-export const OVERLAY_STYLES = ['editorial', 'broadcast', 'app'] as const
+export const OVERLAY_STYLES = ['editorial', 'broadcast', 'app', 'sport', 'mono', 'topo', 'neon', 'magazine'] as const
 export type OverlayStyleId = (typeof OVERLAY_STYLES)[number]
 
 export const OVERLAY_STYLE_LABELS: Record<OverlayStyleId, string> = {
   editorial: 'Éditorial',
   broadcast: 'Diffusion',
   app: 'Application',
+  sport: 'Sportif',
+  mono: 'Minimal mono',
+  topo: 'Topo',
+  neon: 'Néon nuit',
+  magazine: 'Magazine',
+}
+
+/** What keeps the text readable in a style without panel: a blurred rounded rectangle, the text's shadow, or its outline. */
+export const TEXT_BACKINGS = ['blur', 'shadow', 'outline'] as const
+export type TextBacking = (typeof TEXT_BACKINGS)[number]
+export const DEFAULT_TEXT_BACKING: TextBacking = 'blur'
+
+export const TEXT_BACKING_LABELS: Record<TextBacking, string> = {
+  blur: 'Rectangle arrondi flouté',
+  shadow: 'Ombre du texte seulement',
+  outline: 'Contour du texte seulement',
+}
+
+/** Kinds of 3D label, each with its own colour (the stripe, the dot and the pin of the label; same ids as `LandmarkKind`). */
+export const LABEL_KINDS = ['climb', 'pass', 'peak', 'waypoint', 'water', 'hut', 'place', 'other', 'poi', 'km', 'endpoint'] as const
+export type LabelKind = (typeof LABEL_KINDS)[number]
+
+export const LABEL_KIND_LABELS: Record<LabelKind, string> = {
+  climb: 'Montée',
+  pass: 'Col',
+  peak: 'Sommet',
+  waypoint: 'Point de passage',
+  water: 'Eau',
+  hut: 'Refuge',
+  place: 'Lieu',
+  other: 'Autre',
+  poi: "Point d'intérêt",
+  km: 'Kilomètre',
+  endpoint: 'Départ et arrivée',
 }
 
 /** The nine anchors of the safe area. */
@@ -94,6 +128,8 @@ export interface OverlayOverrides {
   panelOpacity?: number
   titleFont?: OverlayFontId
   numberFont?: OverlayFontId
+  /** what backs the text in a style without panel (absent = `DEFAULT_TEXT_BACKING`) */
+  textBacking?: TextBacking
 }
 
 /**
@@ -197,6 +233,8 @@ export interface OverlaySettings {
   credits: CreditsSettings
   /** colours and fonts changed on top of the style; absent = the style as designed */
   overrides?: OverlayOverrides
+  /** colour of the 3D labels by kind, on top of the style's; a missing kind keeps the style's */
+  labelColors?: Partial<Record<LabelKind, string>>
 }
 
 export const DEFAULT_OVERLAY: OverlaySettings = {
@@ -290,6 +328,7 @@ const OVERRIDE_CHECKS: { [K in keyof OverlayOverrides]-?: (v: unknown) => boolea
   panelOpacity: (v) => typeof v === 'number' && within(v, 0, 1),
   titleFont: (v) => (OVERLAY_FONT_IDS as readonly unknown[]).includes(v),
   numberFont: (v) => (OVERLAY_FONT_IDS as readonly unknown[]).includes(v),
+  textBacking: (v) => (TEXT_BACKINGS as readonly unknown[]).includes(v),
 }
 
 /** '#rrggbb' (either case). */
@@ -305,6 +344,19 @@ export function isValidOverrides(o: unknown): boolean {
   if (o === undefined) return true
   if (o === null || typeof o !== 'object' || Array.isArray(o)) return false
   return Object.entries(o).every(([key, value]) => Object.hasOwn(OVERRIDE_CHECKS, key) && OVERRIDE_CHECKS[key as keyof OverlayOverrides](value))
+}
+
+/** Label colours read from a project: absent, or an object of known kinds with '#rrggbb' values. */
+export function isValidLabelColors(o: unknown): boolean {
+  if (o === undefined) return true
+  return isRecord(o) && Object.entries(o).every(([kind, color]) => (LABEL_KINDS as readonly string[]).includes(kind) && isHexColor(color))
+}
+
+/** `overlay` with the colour of label `kind` set to `color` ('#rrggbb'), or back to the style's (null); the key dropped once none is left. */
+export function withLabelColor(overlay: OverlaySettings, kind: LabelKind, color: string | null): OverlaySettings {
+  const { labelColors, ...rest } = overlay
+  const kept = Object.fromEntries(Object.entries({ ...labelColors, [kind]: color }).filter(([, v]) => v !== null)) as Partial<Record<LabelKind, string>>
+  return Object.keys(kept).length > 0 ? { ...rest, labelColors: kept } : rest
 }
 
 const isOffsetValue = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= OFFSET_MAX_PX
@@ -340,6 +392,7 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     validSized(o.leaderboard) &&
     (CREDITS_POSITIONS as readonly string[]).includes(o.credits.position) &&
     isValidOverrides(o.overrides) &&
+    isValidLabelColors(o.labelColors) &&
     STYLED_WIDGETS.every((key) => isValidOverrides(o[key].overrides)) &&
     PLACED_WIDGETS.every((key) => isValidOffset(o[key].offset))
   )

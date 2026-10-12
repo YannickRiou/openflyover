@@ -119,6 +119,6 @@ describe('presetSettings', () => {
 
     const base = { ...DEFAULT_SETTINGS, poster: { ...DEFAULT_SETTINGS.poster, title: 'Ce projet' } }
     expect(presetSettings(store.list()[0], base).poster).toEqual({ ...base.poster, style: 'broadcast' })
-    expect(presetSettings({ name: 'bad', settings: { poster: { style: 'neon' } } as never }, base).poster).toBe(base.poster)
+    expect(presetSettings({ name: 'bad', settings: { poster: { style: 'nope' } } as never }, base).poster).toBe(base.poster)
   })
 })

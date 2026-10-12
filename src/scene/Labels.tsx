@@ -20,11 +20,10 @@ import { useMediaStore } from '../film/media'
 import type { PoiIcon } from '../film/model'
 import { climbsOf } from '../flyover/climbs'
 import { cardOpacityAt, overlayTime } from '../overlay/draw'
+import { OVERLAY_THEMES, resolveLabelStyle } from '../overlay/themes'
+import type { LabelStyle } from '../overlay/themes'
 import { useAppStore } from '../state/store'
 import {
-  LABEL_KIND_ACCENTS,
-  LABEL_PANEL_COLOR,
-  LABEL_TEXT_COLOR,
   climbLabels,
   kmLabels,
   endpointLabels,
@@ -97,18 +96,19 @@ interface LabelTexture {
   anchorY: number
 }
 
-function labelFont(scale: number): string {
-  return `600 ${LABEL_FONT_PX * scale}px "IBM Plex Sans", system-ui, sans-serif`
+/** Font of the labels: the body font of the overlay style (the same faces as the overlay, loaded with it). */
+function labelFont(scale: number, family: string): string {
+  return `600 ${LABEL_FONT_PX * scale}px ${family}`
 }
 
 /** Canvas texture of one label, or null where 2D canvases are unavailable (jsdom). */
-function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon = 'epingle'): LabelTexture | null {
+function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon, look: LabelStyle, family: string): LabelTexture | null {
   const text = rawText.length > MAX_CHARS ? `${rawText.slice(0, MAX_CHARS - 1)}…` : rawText
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
   const s = TEXTURE_SCALE
-  ctx.font = labelFont(s)
+  ctx.font = labelFont(s, family)
   const pin = kind === 'poi' || kind === 'endpoint'
   // left of the text: the accent stripe and its padding, or a padding, the pin and a gap
   const lead = pin ? PIN_X + PIN_PX + PIN_GAP : STRIPE_W + PAD_X
@@ -118,13 +118,13 @@ function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon = '
   canvas.width = width * s
   canvas.height = height * s
   ctx.scale(s, s)
-  const accent = LABEL_KIND_ACCENTS[kind]
+  const accent = look.accents[kind]
 
   ctx.save()
   ctx.beginPath()
-  ctx.roundRect(0, 0, width, PANEL_H, 5)
+  ctx.roundRect(0, 0, width, PANEL_H, look.radius)
   ctx.clip()
-  ctx.fillStyle = LABEL_PANEL_COLOR
+  ctx.fillStyle = look.panel
   ctx.globalAlpha = 0.9
   ctx.fillRect(0, 0, width, PANEL_H)
   ctx.globalAlpha = 1
@@ -133,14 +133,14 @@ function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon = '
   ctx.restore()
   if (pin) drawPin(ctx, PIN_X, (PANEL_H - PIN_PX) / 2, accent, icon)
 
-  ctx.font = labelFont(1)
-  ctx.fillStyle = LABEL_TEXT_COLOR
+  ctx.font = labelFont(1, family)
+  ctx.fillStyle = look.text
   ctx.textBaseline = 'middle'
   ctx.fillText(text, lead, PANEL_H / 2 + 0.5)
 
   const cx = width / 2
   const dotY = PANEL_H + STEM_H + 1 + DOT_R
-  ctx.strokeStyle = LABEL_PANEL_COLOR
+  ctx.strokeStyle = look.panel
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(cx, PANEL_H)
@@ -279,7 +279,12 @@ export function Labels() {
   const setRef = useRef<LabelSet | null>(null)
   const texturesRef = useRef(new Map<string, LabelTexture>())
   const [fontVersion, setFontVersion] = useState(0)
-  const texturesFontRef = useRef(0)
+  // the labels follow the overlay style (font, panel) and the colours chosen by kind
+  const overlayStyle = useAppStore((s) => s.settings.overlay.style)
+  const labelColors = useAppStore((s) => s.settings.overlay.labelColors)
+  const look = useMemo(() => resolveLabelStyle(overlayStyle, labelColors), [overlayStyle, labelColors])
+  const family = (OVERLAY_THEMES[overlayStyle] ?? OVERLAY_THEMES.editorial).bodyFamily
+  const texturesLookRef = useRef<unknown>(null)
 
   const labels = useMemo(() => {
     const out: LandmarkLabel[] = []
@@ -301,7 +306,7 @@ export function Labels() {
   useEffect(() => {
     let alive = true
     document.fonts
-      ?.load(labelFont(1))
+      ?.load(labelFont(1, family))
       .then(() => {
         if (alive) setFontVersion((v) => v + 1)
       })
@@ -309,7 +314,7 @@ export function Labels() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [family])
 
   const drape = useCallback(
     (current: TerrainEngine | null, factor: number) => {
@@ -327,10 +332,13 @@ export function Labels() {
     disposeLabelSet(setRef.current)
     setRef.current = null
     const textures = texturesRef.current
-    if (texturesFontRef.current !== fontVersion) {
+    // the drawn textures depend on the font and on the look of the labels
+    const stamp = { fontVersion, look, family }
+    const previous = texturesLookRef.current as typeof stamp | null
+    if (!previous || previous.fontVersion !== fontVersion || previous.look !== look || previous.family !== family) {
       for (const tex of textures.values()) tex.texture.dispose()
       textures.clear()
-      texturesFontRef.current = fontVersion
+      texturesLookRef.current = stamp
     }
     const used = new Set<string>()
     const entries: LabelEntry[] = []
@@ -339,7 +347,7 @@ export function Labels() {
         const key = `${label.kind}\n${label.icon ?? ''}\n${label.text}`
         let tex = textures.get(key)
         if (!tex) {
-          tex = drawLabelTexture(label.text, label.kind, label.icon) ?? undefined
+          tex = drawLabelTexture(label.text, label.kind, label.icon ?? 'epingle', look, family) ?? undefined
           if (!tex) continue
           textures.set(key, tex)
         }
@@ -369,7 +377,7 @@ export function Labels() {
     const buffer = buildDrapeBuffer(entries.map((e) => e.label), frame)
     setRef.current = { entries, buffer, positions: new Float32Array(buffer.count * 3) }
     drape(engine, exaggeration)
-  }, [labels, frame, engine, exaggeration, fontVersion, drape])
+  }, [labels, frame, engine, exaggeration, fontVersion, look, family, drape])
 
   const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
   // the video export runs the pending re-drape right away instead of waiting for the debounce

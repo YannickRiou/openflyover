@@ -14,6 +14,12 @@ import {
   OVERLAY_FONT_LABELS,
   OVERLAY_STYLES,
   OVERLAY_STYLE_LABELS,
+  DEFAULT_TEXT_BACKING,
+  LABEL_KINDS,
+  LABEL_KIND_LABELS,
+  TEXT_BACKINGS,
+  TEXT_BACKING_LABELS,
+  withLabelColor,
   PROFILE_HEIGHT_MAX,
   PROFILE_HEIGHT_MIN,
   PROFILE_WIDTH_MAX,
@@ -27,12 +33,13 @@ import {
   withWidgetOverrides,
   widgetOverrides,
 } from '../overlay/settings'
-import type { CounterId, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
-import { panelColorOf, resolveOverlayTheme, toHex } from '../overlay/themes'
+import type { CounterId, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, TextBacking, WidgetOffset } from '../overlay/settings'
+import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
 import { AnchorPicker } from './AnchorPicker'
+import './labelSwatches.css'
 import { formatNumber, formatPercent } from './format'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 
@@ -315,6 +322,7 @@ function StyleOverrides({
   const panel = panelColorOf(theme)
   const own = (widget ? overlay[widget].overrides : overlay.overrides) ?? {}
   const inherit = widget ? "Celle de l'habillage" : 'Celle du style'
+  const backingId = useId()
   return (
     // a widget's own changes: no « modifié » badge (the paths stop at the widget, which has its other settings)
     <SettingRow
@@ -338,12 +346,71 @@ function StyleOverrides({
           />
         </>
       ) : (
-        <p className="field__hint">Ce style pose le texte sur l'image, sans fond d'encart.</p>
+        <div className="field">
+          <label className="field__label" htmlFor={backingId}>
+            Fond du texte
+          </label>
+          <select
+            id={backingId}
+            className="select"
+            value={theme.textBacking ?? DEFAULT_TEXT_BACKING}
+            onChange={(e) => onChange({ textBacking: e.currentTarget.value as TextBacking })}
+          >
+            {TEXT_BACKINGS.map((backing) => (
+              <option key={backing} value={backing}>
+                {TEXT_BACKING_LABELS[backing]}
+              </option>
+            ))}
+          </select>
+          <p className="field__hint">Ce style pose le texte sur l'image, sans fond d'encart.</p>
+        </div>
       )}
       <FontField label="Police des titres" value={own.titleFont} inherit={inherit} onChange={(titleFont) => onChange({ titleFont })} />
       <FontField label="Police des chiffres" value={own.numberFont} inherit={inherit} onChange={(numberFont) => onChange({ numberFont })} />
       <button type="button" className="btn btn--secondary" disabled={Object.keys(own).length === 0} onClick={() => onChange(null)}>
         {widget ? "Comme le reste de l'habillage" : 'Revenir au style'}
+      </button>
+    </SettingRow>
+  )
+}
+
+/**
+ * « Couleurs des étiquettes »: one swatch per kind of 3D label (montée, col, sommet…), the style's colour until changed.
+ * The labels also take the style's font and panel.
+ */
+function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange(next: OverlaySettings): void }) {
+  const look = resolveLabelStyle(overlay.style, overlay.labelColors)
+  const own = overlay.labelColors ?? {}
+  return (
+    <SettingRow
+      label="Couleurs des étiquettes"
+      value={Object.keys(own).length > 0 ? 'Personnalisées' : 'Celles du style'}
+      paths={['overlay.labelColors']}
+    >
+      <div className="label-swatches" role="group" aria-label="Couleur de chaque type d'étiquette">
+        {LABEL_KINDS.map((kind) => (
+          <input
+            key={kind}
+            type="color"
+            className="label-swatches__input"
+            value={toHex(look.accents[kind])}
+            title={LABEL_KIND_LABELS[kind]}
+            aria-label={`Étiquettes : ${LABEL_KIND_LABELS[kind]}`}
+            onChange={(e) => onChange(withLabelColor(overlay, kind, e.currentTarget.value))}
+          />
+        ))}
+      </div>
+      <p className="field__hint">Passez sur une pastille pour voir le type d'étiquette. La police et le fond suivent le style.</p>
+      <button
+        type="button"
+        className="btn btn--secondary"
+        disabled={Object.keys(own).length === 0}
+        onClick={() => {
+          const { labelColors: _labelColors, ...rest } = overlay
+          onChange(rest)
+        }}
+      >
+        Revenir aux couleurs du style
       </button>
     </SettingRow>
   )
@@ -420,6 +487,7 @@ export function OverlayPanel() {
           </fieldset>
         )}
         {overlay.enabled && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}
+        {overlay.enabled && <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />}
       </PanelSection>
 
       {overlay.enabled && (
