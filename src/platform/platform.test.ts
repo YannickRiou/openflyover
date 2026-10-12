@@ -614,12 +614,12 @@ describe('offline tile cache', () => {
     fs.files.set(`${DESKTOP_PROJECT_ROOT}/p9.entry.json`, new TextEncoder().encode('{'))
 
     expect((await library.list()).map((e) => e.name)).toEqual(['Écrins', 'Mont Blanc'])
-    expect(await library.load('p1')).toBe('{"é":1}')
+    expect(await (await library.load('p1')).text()).toBe('{"é":1}')
     const saved = await library.save('p1', { name: 'Mont Blanc', summary: '', text: '{"v":2}' })
     expect(saved.updatedAt).toBe(1002)
     expect((await library.list())[0].id).toBe('p1')
     expect((await library.rename('p1', 'Tour du Mont-Blanc')).name).toBe('Tour du Mont-Blanc')
-    expect(await library.load('p1')).toBe('{"v":2}')
+    expect(await (await library.load('p1')).text()).toBe('{"v":2}')
 
     await library.remove('p1')
     expect(fs.files.has(`${DESKTOP_PROJECT_ROOT}/p1.openflyover.json`)).toBe(false)
@@ -638,7 +638,7 @@ describe('offline tile cache', () => {
     expect(persist).toHaveBeenCalledTimes(1)
     expect([...storage.caches.keys()]).toEqual([WEB_PROJECT_CACHE])
     expect(await library.list()).toEqual([{ id: 'w1', name: 'Vercors', updatedAt: 5, summary: '', sizeBytes: 7 }])
-    expect(await library.load('w1')).toBe('{"a":2}')
+    expect(await (await library.load('w1')).text()).toBe('{"a":2}')
     await library.remove('w1')
     expect(await library.list()).toEqual([])
   })
