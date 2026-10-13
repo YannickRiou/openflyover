@@ -13,7 +13,7 @@ const JUNCTION_KIND_HINTS: Record<JunctionKind, string> = {
   coupe: 'L’image passe d’un coup d’une étape à l’autre ; le film ne s’arrête pas.',
   'fondu-noir': 'Le film s’arrête ici le temps indiqué, en fondu au noir.',
   'fondu-blanc': 'Le film s’arrête ici le temps indiqué, en fondu au blanc.',
-  nuit: 'La nuit passée entre les deux étapes : le soleil se couche, la nuit passe, il se lève (durées dans « Jours et nuits »). Sans nuit entre elles, un fondu au noir.',
+  nuit: 'La nuit passée entre les deux étapes : le soleil se couche, la nuit passe, il se lève. Sans nuit entre elles, un fondu au noir.',
 }
 
 const seconds = (s: number) => `${formatNumber(s, Number.isInteger(s) ? 0 : 1)} s`

@@ -19,10 +19,10 @@ import { AerialPerspective, Atmosphere, Sky, SkyLight, Stars, SunLight, type Atm
 import { deviceBudget } from '../core/deviceBudget'
 import type { Track } from '../core/types'
 import { samplePath, trackPathOf, type TrackPath } from '../flyover/path'
-import { filmTrackOf, trackUnderMarker } from '../flyover/sequence'
+import { filmSequenceOf, filmTrackOf, trackUnderMarker } from '../flyover/sequence'
 import { hasParamKeys, paramAt } from '../film/paramKeys'
 import { mslLocalToEcef } from '../geo/geoid'
-import { SHOT_DAYLIGHT_HOUR, nightSunDate, shotSunDate, solarHourToDate, sunDateAt, sunDayMs } from '../flyover/sun'
+import { SHOT_DAYLIGHT_HOUR, junctionSunDate, nightSunDate, shotSunDate, solarHourToDate, sunDateAt, sunDayMs } from '../flyover/sun'
 import { useAppStore } from '../state/store'
 import { CLEAR_SCENE_WEATHER, hazeExtinction, sceneWeatherAt } from '../weather/sceneWeather'
 import type { SceneWeather } from '../weather/sceneWeather'
@@ -50,6 +50,8 @@ const NIGHT_GROUND_COLOR = '#1C2A33'
 const HAZE_ALBEDO = 0.8
 /** Part of the weather veil kept over the sky pixels while volumetric clouds are shown. */
 const CLOUDS_SKY_VEIL = 0.3
+/** Progress just short of the start of a stage: still the stage before, at its end. */
+const STAGE_EDGE = 1e-9
 const WORLD_UP = new Vector3(0, 1, 0)
 const _marker = new Vector3()
 const _irradiance = new Vector3()
@@ -145,7 +147,13 @@ export function AtmosphereLayer() {
     }
     const timeS = playback.timeS ?? clock.timeAtProgress(playback.progress)
     // the nights of a multi-day track pass during their pause (flyover/nights.ts)
-    const sunDate = nightSunDate(clock, timeS, playback.progress, sunAt)
+    const nightDate = nightSunDate(clock, timeS, playback.progress, sunAt)
+    // across a fade between two stages the light blends from the end of one to the start of the next (keys on the sun hour rule instead)
+    const sequence = sunKeyed ? null : filmSequenceOf(tracks, settings.race)
+    const sunDate = junctionSunDate(clock, timeS, nightDate, (j) => {
+      const from = sequence?.stages[clock.junctions.indexOf(j) + 1]?.from
+      return from === undefined ? null : { before: sunAt(from - STAGE_EDGE), after: sunAt(from) }
+    })
     const daylight = solarHourToDate(dayMs, frame.origin.lon, SHOT_DAYLIGHT_HOUR)
     const date = shotSunDate(clock, timeS, sunDate, daylight)
     atmosphere.updateByDate(date)

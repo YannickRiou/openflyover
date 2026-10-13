@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { buildFilmClock } from '../film/clock'
+import { buildFilmClock, filmClockFor } from '../film/clock'
+import type { ClockJunction } from '../film/clock'
+import { DEFAULT_FILM } from '../film/model'
 import type { FilmShot } from '../film/model'
 import { buildTrack } from '../import/stats'
 import { DEFAULT_PACING } from './pacing'
 import { buildTrackPath } from './path'
+import { buildSequence, stageAt } from './sequence'
 import {
   SHOT_SUN_HOURS,
   SUN_CHIPS,
+  blendSunDates,
+  junctionBlendAt,
+  junctionSunDate,
   clockHourOfSolar,
   isSunDate,
   SHOT_DAYLIGHT_HOUR,
@@ -256,5 +262,124 @@ describe('shotSunShiftMs', () => {
       const clock = clockOf(shot, shot)
       for (const t of [0, 4, clock.totalTime()]) expect(shotSunShiftMs(clock, t)).toBe(0)
     }
+  })
+})
+
+describe('the light across a fade between two stages', () => {
+  const HOUR = 3_600_000
+  const evening = new Date(Date.UTC(2026, 6, 14, 18))
+  const morning = new Date(Date.UTC(2026, 6, 15, 6))
+  const junction = (kind: ClockJunction['kind'], patch: Partial<ClockJunction> = {}): ClockJunction => ({
+    id: 'junction-a',
+    afterTrackId: 'a',
+    atM: 1000,
+    kind,
+    holdS: 2,
+    progress: 0.5,
+    startS: 10,
+    holdStartS: 11.5,
+    holdEndS: 13.5,
+    endS: 15,
+    ...patch,
+  })
+  const hourOf = (d: Date) => (d.getTime() - Date.UTC(2026, 6, 14)) / HOUR
+
+  it('an evening into a morning runs forward through the night, eased, joining both ends', () => {
+    expect(blendSunDates(evening, morning, 0).getTime()).toBe(evening.getTime())
+    expect(blendSunDates(evening, morning, 1).getTime()).toBe(morning.getTime())
+    expect(hourOf(blendSunDates(evening, morning, 0.5))).toBeCloseTo(24, 9)
+    const hours = Array.from({ length: 21 }, (_, k) => hourOf(blendSunDates(evening, morning, k / 20)))
+    expect(hours.every((h, k) => k === 0 || h >= hours[k - 1])).toBe(true)
+  })
+
+  it('a stage that is earlier runs backward; the whole days between are taken once, half-way', () => {
+    const before = new Date(Date.UTC(2026, 6, 15, 8))
+    const after = new Date(Date.UTC(2026, 6, 14, 18))
+    expect(hourOf(blendSunDates(before, after, 0.5))).toBeCloseTo(25, 9)
+    const a = new Date(Date.UTC(2026, 6, 14, 8))
+    const b = new Date(Date.UTC(2026, 6, 17, 8))
+    expect(blendSunDates(a, b, 0.49).getTime()).toBe(a.getTime())
+    expect(blendSunDates(a, b, 0.5).getTime()).toBe(b.getTime())
+  })
+
+  it('the same sun on both sides stays the same sun', () => {
+    for (const u of [0, 0.3, 0.5, 0.9, 1]) expect(blendSunDates(evening, evening, u).getTime()).toBe(evening.getTime())
+  })
+
+  it('only the fades blend, from the start of the pause to its end; the flight’s sun elsewhere', () => {
+    const flight = new Date(Date.UTC(2026, 6, 14, 12))
+    const ends = () => ({ before: evening, after: morning })
+    const at = (kind: ClockJunction['kind'], t: number) => junctionSunDate({ junctions: [junction(kind)] }, t, flight, ends)
+    expect(at('fondu-noir', 9.99)).toBe(flight)
+    expect(at('fondu-noir', 15)).toBe(flight)
+    expect(at('fondu-noir', 10).getTime()).toBe(evening.getTime())
+    expect(at('fondu-blanc', 12.5).getTime()).toBeGreaterThan(evening.getTime())
+    expect(at('fondu-blanc', 14.999).getTime()).toBeCloseTo(morning.getTime(), -3)
+    // the middle of the pause is the middle of the night
+    expect(hourOf(at('fondu-noir', 12.5))).toBeCloseTo(24, 9)
+    // a cut has no pause, a night its own dusk, night and dawn
+    expect(at('coupe', 12.5)).toBe(flight)
+    expect(at('nuit', 12.5)).toBe(flight)
+    expect(junctionBlendAt({ junctions: [junction('fondu-noir', { holdS: 0 })] }, 12.5)).toBeNull()
+    // the stages' ends unknown: the flight’s sun
+    expect(junctionSunDate({ junctions: [junction('fondu-noir')] }, 12.5, flight, () => null)).toBe(flight)
+  })
+
+  it('is a pure function of the film time', () => {
+    const clock = { junctions: [junction('fondu-noir')] }
+    const ends = () => ({ before: evening, after: morning })
+    const first = [10.5, 12.5, 14.5].map((t) => junctionSunDate(clock, t, evening, ends).getTime())
+    expect([14.5, 10.5, 12.5].map((t) => junctionSunDate(clock, t, evening, ends).getTime())).toEqual([first[2], first[0], first[1]])
+  })
+})
+
+describe('three days À la suite: the light across the fades', () => {
+  const day = (name: string, lat: number, startMs: number) =>
+    buildTrack({
+      name,
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 5 }, (_, i) => ({ lon: 6.8 + i * 0.01, lat, ele: 1000, time: startMs + i * 10 * 60_000 })) }],
+    })
+  const start = Date.UTC(2026, 6, 1, 8)
+  const sequence = buildSequence([day('a', 45, start), day('b', 45.1, start + 24 * 3_600_000), day('c', 45.2, start + 48 * 3_600_000)])
+  const film = { ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, enabled: false } }
+  const clock = filmClockFor({ track: sequence.track, film, durationS: 60, pacing: DEFAULT_PACING, cutsM: sequence.cutsM, stageIds: sequence.stageIds })
+  const sunAt = (progress: number) => {
+    const at = stageAt(sequence, progress)
+    return sunDateAt(buildTrackPath(at.stage.track), at.progress, { sunFromTrack: true, solarHour: 10, lon: 6.8, dayMs: start })
+  }
+  const dateAt = (t: number) =>
+    junctionSunDate(clock, t, sunAt(clock.progressAtTime(t)), (j) => {
+      const from = sequence.stages[clock.junctions.indexOf(j) + 1].from
+      return { before: sunAt(from - 1e-9), after: sunAt(from) }
+    }).getTime()
+
+  it('every stage is lit at its own recorded hour, the junctions are fades', () => {
+    expect(clock.junctions.map((j) => j.kind)).toEqual(['fondu-noir', 'fondu-noir'])
+    const [a, b] = [sunAt(0.1).getTime(), sunAt(0.5).getTime()]
+    expect(b - a).toBeGreaterThan(20 * 3_600_000)
+  })
+
+  it('across a junction the light runs on without a jump at either end of the pause, forward through the night', () => {
+    const MINUTES_5 = 5 * 60_000
+    for (const j of clock.junctions) {
+      const flightAt = (t: number) => sunAt(clock.progressAtTime(t)).getTime()
+      expect(Math.abs(dateAt(j.startS) - flightAt(j.startS - 1e-6))).toBeLessThan(MINUTES_5)
+      expect(Math.abs(dateAt(j.endS - 1e-6) - flightAt(j.endS))).toBeLessThan(MINUTES_5)
+      const dates = Array.from({ length: 41 }, (_, k) => dateAt(j.startS + ((j.endS - j.startS) * k) / 41))
+      expect(dates.every((d, k) => k === 0 || d >= dates[k - 1])).toBe(true)
+      // the sun spends the middle of the pause in the night, the pause itself being a whole night apart
+      const middle = new Date(dateAt((j.startS + j.endS) / 2))
+      expect(middle.getUTCHours() >= 20 || middle.getUTCHours() <= 4).toBe(true)
+    }
+  })
+
+  it('the same film time gives the same light however the film is reached', () => {
+    const j = clock.junctions[0]
+    const t = (j.startS + j.endS) / 2
+    const first = dateAt(t)
+    dateAt(0)
+    dateAt(clock.totalTime())
+    expect(dateAt(t)).toBe(first)
   })
 })
