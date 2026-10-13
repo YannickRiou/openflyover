@@ -20,7 +20,7 @@ import { centroid } from '../geo/ellipsoid'
 import { useAppStore } from '../state/store'
 import { useTerrainContext } from './TerrainLayer'
 import { frameDelta, wakeScene } from './renderOnDemand'
-import type { HeightSampler } from './TrackLines'
+import type { HeightSampler } from './trackLineSet'
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 

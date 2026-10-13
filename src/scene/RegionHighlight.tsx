@@ -40,7 +40,7 @@ import { LABEL_KIND_ACCENTS, LABEL_PANEL_COLOR, spriteScaleForPixels } from './l
 import { buildRegionMesh, ringSegments } from './regionMesh'
 import { wakeScene } from './renderOnDemand'
 import { useTerrainContext } from './TerrainLayer'
-import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, buildDrapeBuffer, computeDrapedPositions } from './TrackLines'
+import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, buildDrapeBuffer, computeDrapedPositions } from './trackLineSet'
 import { createGlowMaterial } from './trackLineStyle'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { useFilmClock, useFilmTrack } from './usePacing'

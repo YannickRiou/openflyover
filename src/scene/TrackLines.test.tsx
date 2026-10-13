@@ -8,7 +8,7 @@ import { buildSequence } from '../flyover/sequence'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { DEFAULT_TRACK_STYLE } from './markerSettings'
 import { TRACK_GLOW_MAX_STRENGTH } from './trackLineStyle'
-import type { TrackLineSet } from './TrackLines'
+import type { TrackLineSet } from './trackLineSet'
 
 vi.mock('@react-three/fiber', () => ({ useFrame: vi.fn(), useThree: vi.fn() }))
 vi.mock('../terrain/engine', () => ({ createTerrainEngine: vi.fn() }))
@@ -29,7 +29,7 @@ const {
   LINE_LIFT_M,
   LINE_WIDTH_PX,
   DENSIFY_STEP_M,
-} = await import('./TrackLines')
+} = await import('./trackLineSet')
 
 const frame = createLocalFrame(6.5, 45.5)
 const points: TrackPoint[] = [

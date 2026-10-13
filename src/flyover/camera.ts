@@ -11,7 +11,7 @@
 import { Vector3 } from 'three'
 import { clamp, lastIndexAtOrBelow } from '../core/math'
 import type { LocalFrame } from '../core/types'
-import type { HeightSampler } from '../scene/TrackLines'
+import type { HeightSampler } from '../scene/trackLineSet'
 import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
 import { samplePath, type TrackPath } from './path'
 

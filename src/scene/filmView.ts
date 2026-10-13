@@ -7,7 +7,7 @@ import { filmFollowOf, type FollowFlight } from '../flyover/follow'
 import type { TrackPath } from '../flyover/path'
 import { useRegionStore } from '../osm/region'
 import { useAppStore } from '../state/store'
-import { LINE_LIFT_M, type HeightSampler } from './TrackLines'
+import { LINE_LIFT_M, type HeightSampler } from './trackLineSet'
 
 /** Terrain sampler and film view options from the settings and the terrain loaded now. */
 function viewInputs(engine: TerrainEngine | null, aspect: number, follow?: FollowFlight | null) {

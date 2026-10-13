@@ -50,7 +50,7 @@ import {
 } from './cloudSea'
 import { wakeScene } from './renderOnDemand'
 import { useTerrainContext } from './TerrainLayer'
-import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './TrackLines'
+import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { useFilmClock } from './usePacing'
 
