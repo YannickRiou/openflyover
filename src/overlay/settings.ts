@@ -93,11 +93,11 @@ export type CounterId = (typeof COUNTER_IDS)[number]
 export const WIDGET_SIZE_MIN = 0.2
 export const WIDGET_SIZE_MAX = 2
 /** Opening card: shown from the start until `end` (fraction of the flyover). */
-export const TITLE_END_MIN = 0.03
+export const TITLE_END_MIN = 0.01
 export const TITLE_END_MAX = 0.3
 /** Closing card: shown from `start` to the end. */
 export const END_START_MIN = 0.6
-export const END_START_MAX = 0.97
+export const END_START_MAX = 0.99
 /** Elevation profile size, as fractions of the frame width / height. */
 export const PROFILE_WIDTH_MIN = 0.1
 export const PROFILE_WIDTH_MAX = 0.6

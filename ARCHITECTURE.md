@@ -964,9 +964,9 @@ pointer (`appearance.css`).
 - **Model** (`src/film/model.ts`, `settings.film`: saved in the project document, undoable, validated by
   `isValidFilm` in `SETTING_CHECKS`; an old project receives `DEFAULT_FILM`, and the v1 → v2 migration in `src/project/document.ts` gives a v1 project without a film `{ autoMode: 'rythme' }`):
   `opening` / `closing` `{ style: 'aucune' | 'descente' | 'saut' | 'situation' | 'balayage', durationS, transition?, dipS?,
-  startHeight?, highlight? }` (1–30 s; default descente 6 s / 5 s; a shot switched to `situation` while it still has its
+  startHeight?, highlight? }` (0.5–30 s; default descente 6 s / 5 s; a shot switched to `situation` while it still has its
   default duration gets `SITUATION_DURATION_S`, 9 s, for its long dive (`updateShot`; saved films keep theirs); `transition` `'enchaine'` by default, `'coupe'`,
-  `'fondu-noir'`, `'fondu-blanc'`, `dipS` 0.3–2 s, 1 s by default: optional, an old film stays continuous;
+  `'fondu-noir'`, `'fondu-blanc'`, `dipS` 0.3–2 s, 1 s by default: optional, an old film stays continuous (a dip is centred on the cut and a pure function of the film time, so one longer than a very short shot simply extends past it);
   `startHeight` `'region'` (default) or `'pays'`, `highlight` (default off) and `regionId` (« Lieu », OSM area
   `relation/<id>` or `way/<id>`, absent = automatic) and `holdS` (« Maintien », 0–10 s, `SITUATION_HOLD_RANGE`,
   absent = 0) and its framing, `tiltDeg` (1–60°), `distanceKm` (5–400 km), `heading` (`'libre'` / `'boussole'`),
