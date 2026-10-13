@@ -3,7 +3,7 @@ import type { Track } from '../core/types'
 import { DEFAULT_PACING } from '../flyover/pacing'
 import { DEFAULT_MARKER } from '../scene/markerSettings'
 import { buildFilmClock } from './clock'
-import { MARKER_FADE_S, junctionsM, markerAt, markerFadeM, markerKeysMoveWithTime, sortedMarkerKeys } from './markerKeys'
+import { MARKER_FADE_S, junctionsM, markerAt, markerFadeM, markerKeyLook, markerKeysMoveWithTime, sortedMarkerKeys, withKey } from './markerKeys'
 import type { FilmMarkerKey } from './markerKeys'
 import { usedMedia } from './media'
 import { DEFAULT_FILM, isValidFilm, isValidMarkerKey, nextFilmId, withFilmDefaults } from './model'
@@ -58,6 +58,16 @@ describe('markerAt', () => {
     expect(markerAt(film([key('marker-1', 100, 'image')]), { ...DEFAULT_MARKER, image: 'data:base' }, 500, FADE).to.image).toBe('data:base')
   })
 
+  it('a key brings its own colours and size, the settings\' where it sets none; they cross-fade with the look', () => {
+    const own = film([{ ...key('marker-1', 1000, 'boule'), color: '#ff0000', figureColor: '', size: 2 }, key('marker-2', 2000, 'boule')])
+    expect(markerAt(own, DEFAULT_MARKER, 1050, FADE).to).toMatchObject({ color: '#ff0000', figureColor: '', size: 2 })
+    // the next key sets nothing: back to the settings, fading from the colours of the key before it
+    const back = markerAt(own, DEFAULT_MARKER, 2000, FADE)
+    expect(back.from).toMatchObject({ color: '#ff0000', size: 2 })
+    expect(back.to).toMatchObject({ color: DEFAULT_MARKER.color, figureColor: DEFAULT_MARKER.figureColor, size: DEFAULT_MARKER.size })
+    expect(withKey(DEFAULT_MARKER, key('a', 1, 'boule'), () => '')).toEqual({ ...DEFAULT_MARKER, kind: 'boule', figure: 'auto' })
+  })
+
   it('a key at the start is the look from the first metre (the fade does not begin before the track)', () => {
     const at0 = film([key('marker-1', 0, 'figurine')])
     expect(markerAt(at0, DEFAULT_MARKER, 0, FADE).mix).toBe(0)
@@ -98,6 +108,11 @@ describe('film model', () => {
       { ...key('marker-1', 1, 'boule'), imageId: 7 as unknown as string },
     ]
     for (const k of bad) expect(isValidMarkerKey(k)).toBe(false)
+    // colours and size are optional (a project saved before has none) and follow the rules of the settings
+    expect(isValidMarkerKey({ ...key('marker-1', 1, 'boule'), color: '#aabbcc', figureColor: '', size: 0.5 })).toBe(true)
+    for (const patch of [{ color: 'red' }, { figureColor: '#fff' }, { color: 3 }, { size: 0.25 }, { size: 3.5 }, { size: '1' }]) {
+      expect(isValidMarkerKey({ ...key('marker-1', 1, 'boule'), ...patch })).toBe(false)
+    }
     expect(isValidFilm({ ...film([key('a', 1, 'boule')]), stops: [{ id: 'a', atM: 1, durationS: 2, camera: 'film' }] })).toBe(false)
     const { markerKeys: _, ...saved } = film([])
     expect((withFilmDefaults(saved) as Film).markerKeys).toEqual([])
@@ -120,6 +135,21 @@ describe('film model', () => {
     const table = { 'photo-1': { data: 'a' }, 'photo-2': { data: 'b' } } as never
     expect(Object.keys(usedMedia(withPicture, table))).toEqual(['photo-2'])
     expect(sortedMarkerKeys([key('b', 9, 'boule'), key('a', 1, 'boule')]).map((k) => k.id)).toEqual(['a', 'b'])
+  })
+
+  it('a new key takes the colours and size of the previous key, else follows the settings\'', () => {
+    const settings = { ...DEFAULT_MARKER, color: '#112233', figureColor: '', size: 1.5 }
+    expect(markerKeyLook(undefined, settings)).toEqual({ kind: 'boule', figure: 'auto' })
+    const first = addMarkerKey(film([]), 100, markerKeyLook(undefined, settings)).film
+    expect(first.markerKeys[0].color).toBeUndefined()
+    expect(markerAt(first, settings, 100, 50).to).toMatchObject({ color: '#112233', size: 1.5 })
+    const own = updateMarkerKey(first, 'marker-1', { color: '#ff0000', size: 3 })
+    const second = addMarkerKey(own, 900, markerKeyLook(own.markerKeys[0], settings)).film.markerKeys[1]
+    expect(second).toMatchObject({ color: '#ff0000', size: 3 })
+    // adding a key does not change the marker there
+    expect(markerAt(addMarkerKey(own, 900, markerKeyLook(own.markerKeys[0], settings)).film, settings, 900, 50).to).toEqual(
+      markerAt(own, settings, 900, 50).to,
+    )
   })
 
   it('a key at each junction that has none, with the given look', () => {

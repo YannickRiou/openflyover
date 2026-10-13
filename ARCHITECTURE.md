@@ -978,12 +978,16 @@ pointer (`appearance.css`).
   projects);
   `stops[]` `{ id, atM, durationS (0.5–60 s), camera: 'film' | 'orbite' | 'large' | 'fixe', label?, source?: { kind, ref? } }`
   (`STOP_CAMERA_LABELS`: "Comme le film" (like the film), "Tour lent" (slow orbit), "Vue large" (wide view), "Fixe" (fixed));
-  `markerKeys[]` `{ id, atM, kind, figure, imageId? }` (places along the film track where the marker changes its look:
-  ball, figure or picture; anchored in metres like the camera keys, round dots on the « Marqueur » lane,
+  `markerKeys[]` `{ id, atM, kind, figure, imageId?, color?, figureColor?, size? }` (places along the film track where the marker changes its look:
+  ball, figure or picture, with its own colours and size; anchored in metres like the camera keys, round dots on the « Marqueur » lane,
   `.film-tl__key--marker`; added from the « Marqueur » section of the Trace tab with ◀ ◉ ▶, `addMarkerKeyHere`). `markerAt(film, settings.marker, atM, fadeM, imageOf)`, pure: the marker of the settings
   before the first key; around a key a smootherstep cross-fade of `fadeM = MARKER_FADE_S (0.8 s) × length / flightS`
-  metres centred on the key, from the previous look; a key replaces kind, figure and picture only (size, colours, label
-  and stick stay those of the settings). `FlyoverRig` draws the new look over the old one on a second sprite
+  metres centred on the key, from the previous look; a key replaces kind, figure and picture, and `color` / `figureColor` ('' = the track's) / `size`
+  where set (`withKey`; unset = the settings', same rules as `isValidMarker`, no version bump), while label, stick and animation stay those of
+  the settings; a new key (`markerKeyLook`) copies the stored look of the key before it, else the settings' shape and figure with colours and size unset (they keep following the panel), so adding it changes nothing. The colours and size
+  cross-fade through `markerAt` like the rest (`from` / `to` are full settings, two sprites); they enter the texture cache key through `leadMarkerColors`
+  and the sprite scale, never the film time, so the export stays deterministic. The timeline dot takes the colour as `--key-color`
+  (`figureColor` for a figurine), its title lists shape, colour and size. `FlyoverRig` draws the new look over the old one on a second sprite
   (`flyover-marker-from`) until the fade ends; the export uses the same rig and a stop holds the look.
   `markerKeysMoveWithTime` feeds the held-frame test. Picture of a key: `imageId` in the project media table (128 px
   PNG, kept by `usedMedia`); no id = the picture of the Trace panel. `withFilmDefaults` gives `[]` (no version bump); not

@@ -5,7 +5,7 @@ import { withoutCard } from '../film/cards'
 import type { CardId } from '../film/cards'
 import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
-import { junctionsM, sortedMarkerKeys } from '../film/markerKeys'
+import { junctionsM, markerKeyLook, sortedMarkerKeys } from '../film/markerKeys'
 import type { Film } from '../film/model'
 import { paramAt, paramBase } from '../film/paramKeys'
 import type { FilmParam } from '../film/paramKeys'
@@ -129,22 +129,21 @@ export function addMarkerKeyHere(): void {
   const atM = Math.round(playback.progress * (track?.stats.distanceM ?? 0))
   editFilm((f) => {
     const before = sortedMarkerKeys(f.markerKeys).filter((k) => k.atM <= atM).pop()
-    const { kind, figure } = settings.marker
-    return addMarkerKey(f, atM, before ? { kind: before.kind, figure: before.figure, imageId: before.imageId } : { kind, figure })
+    return addMarkerKey(f, atM, markerKeyLook(before, settings.marker))
   })
   parkOnSelectedKey()
 }
 
 /**
- * « Un marqueur par étape ou par jour »: a marker key with the look of the settings at each junction of the film
+ * « Un marqueur par étape ou par jour »: a marker key with the look (shape, colours, size) of the settings at each junction of the film
  * track (stages « À la suite », days of a chained track) that has none, to give each its own look in the inspector.
  * Returns the number of keys added (one undo step).
  */
 export function addJunctionMarkerKeys(): number {
   const { track, cutsM, film } = getFilmSource()
-  const { kind, figure } = useAppStore.getState().settings.marker
+  const look = markerKeyLook(undefined, useAppStore.getState().settings.marker)
   const places = junctionsM(track, cutsM).filter((m) => !film.markerKeys.some((k) => Math.round(k.atM) === Math.round(m)))
-  if (places.length > 0) editFilm((f) => ({ film: addMarkerKeysAt(f, places, { kind, figure }), id: null }))
+  if (places.length > 0) editFilm((f) => ({ film: addMarkerKeysAt(f, places, look), id: null }))
   return places.length
 }
 
