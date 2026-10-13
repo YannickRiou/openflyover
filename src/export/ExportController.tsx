@@ -32,7 +32,7 @@ import { adaptiveShutterSamples, sameShot, setShutterSubFrame, shutterSamples } 
 import { markerKeysMoveWithTime } from '../film/markerKeys'
 import { lastShadowPass, resetShadowPass } from '../scene/terrainShadow'
 import { useTerrainContext } from '../scene/TerrainLayer'
-import type { HeightSampler } from '../scene/TrackLines'
+import type { HeightSampler } from '../scene/trackLineSet'
 import { useFilmClock } from '../scene/usePacing'
 import { holdRegion } from '../osm/region'
 import { useWaterStore } from '../osm/store'
