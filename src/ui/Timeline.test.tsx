@@ -6,7 +6,7 @@ import { useExportStore } from '../export/store'
 import { buildTrack } from '../import/stats'
 import { END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { DEFAULT_FILM } from '../film/model'
-import { removeFilmItem } from '../film/timeline'
+import { removeFilmItem, updateMarkerKey } from '../film/timeline'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
 import { addMarkerKeyHere, addParamKeyHere } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -92,6 +92,59 @@ describe('Timeline', () => {
     expect(lanes()).toEqual(['Plans', 'Vitesse', 'Température', 'Marqueur', 'Arrêts', 'Textes', 'Médias', 'Musique'])
     expect(host.querySelectorAll('[role="group"][aria-label="Marqueur"] .film-tl__key--marker')).toHaveLength(1)
     expect(lanes()).not.toContain('Réglages')
+
+    // the dot shows the colour of the marker from that key on, and its title lists the look
+    const dot = () => host.querySelector<HTMLElement>('.film-tl__key--marker')!
+    expect(dot().style.getPropertyValue('--key-color')).toBe('#FFFFFF')
+    expect(dot().title).toContain('couleur #FFFFFF, taille ×1')
+    const marker = useAppStore.getState().settings.film.markerKeys[0]
+    await act(async () =>
+      useAppStore.getState().setSetting('film', updateMarkerKey(useAppStore.getState().settings.film, marker.id, { color: '#FF0000', size: 1.5 })),
+    )
+    expect(dot().style.getPropertyValue('--key-color')).toBe('#FF0000')
+    expect(dot().getAttribute('aria-label')).toContain('couleur #FF0000, taille ×1,5')
+    act(() => root.unmount())
+  })
+
+  it('shows the colours and size of a selected marker key in the inspector, with what stays the panel\'s', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () =>
+      root.render(
+        <>
+          <Timeline />
+          <FilmInspector />
+        </>,
+      ),
+    )
+    await act(async () => useAppStore.getState().setSetting('film', DEFAULT_FILM))
+    await act(async () => addMarkerKeyHere())
+    const keys = () => useAppStore.getState().settings.film.markerKeys
+    const button = (label: string) => Array.from(host.querySelectorAll('button')).find((b) => b.textContent === label)!
+    const colour = () => host.querySelector<HTMLInputElement>('input[type="color"]')!
+    // a new key follows the panel's colours and size until it is given its own
+    expect(keys()[0].color).toBeUndefined()
+    expect(keys()[0].size).toBeUndefined()
+    expect(colour().value).toBe('#ffffff')
+    expect(host.textContent).toContain('Restent ceux du panneau : étiquette (aucune), tige (non)')
+    expect(button('Reprendre couleurs et taille du panneau').disabled).toBe(true)
+
+    // « Celle de la trace » stores '' (the track's colour), the reset goes back to the panel's values
+    await act(async () => button('Celle de la trace').click())
+    expect(keys()[0].color).toBe('')
+    expect(button('Celle de la trace').disabled).toBe(true)
+    await act(async () => button('Reprendre couleurs et taille du panneau').click())
+    expect(keys()[0].color).toBeUndefined()
+    expect(keys()[0].size).toBeUndefined()
+    expect(button('Reprendre couleurs et taille du panneau').disabled).toBe(true)
     act(() => root.unmount())
   })
 

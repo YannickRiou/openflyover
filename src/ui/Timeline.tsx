@@ -13,7 +13,7 @@
 import { errorMessage } from '../core/errors'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent, PointerEvent, ReactNode, UIEvent } from 'react'
+import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode, UIEvent } from 'react'
 import { materializeStops, stopAt, stopCandidates } from '../film/assemble'
 import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readAudio, startMusicPreview, useMusicPreview, waveformPath } from '../film/audio'
 import { beatTicksPath } from '../film/beats'
@@ -23,6 +23,7 @@ import { buildFilmClock, filmClockFor, filmClockInputFor, junctionInputsFor } fr
 import type { FilmClock, FilmClockFor, FilmClockInput } from '../film/clock'
 import { hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, stageCardAfterOf, stageCardId, stageCardWindow, stageItemId, stageTrackOf, junctionTrackOf } from '../film/junctions'
 import { photoTimeMs } from '../film/exif'
+import { withKey } from '../film/markerKeys'
 import { useMediaStore } from '../film/media'
 import { isMediaFile, readMedia } from '../film/video'
 import { JUNCTION_KIND_LABELS, STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
@@ -66,7 +67,7 @@ import type { OverlaySettings } from '../overlay/settings'
 import { disableCard, editFilm, getFilmSource, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
-import { formatClock, formatDistance, formatNumber } from './format'
+import { formatClock, formatDistance, formatNumber, formatShort } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
 import { KeyGroup } from './KeyControls'
@@ -300,6 +301,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const { track, film, durationS, pacing, landmarks, cutsM, stageIds } = useFilmSource()
   const sequence = useFilmSequence()
   const tracks = useAppStore((s) => s.tracks)
+  const settingsMarker = useAppStore((s) => s.settings.marker)
   const clock = useFilmClock()
   // the export moves the playhead at every frame: the timeline keeps the playback it had (it would render with each one)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
@@ -1328,7 +1330,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               {shownClock.markerKeys.length > 0 && (
                 <div className="film-tl__lane" role="group" aria-label="Marqueur">
                   {shownClock.markerKeys.map((k) => {
-                    const what = `Marqueur : ${MARKER_KIND_LABELS[k.kind].toLowerCase()}${k.kind === 'figurine' ? ` (${MARKER_FIGURE_LABELS[k.figure].toLowerCase()})` : ''}`
+                    // what the marker looks like from this key on: its own colours and size, else those of the Trace panel
+                    const look = withKey(settingsMarker, k, () => '')
+                    const dot = (k.kind === 'figurine' ? look.figureColor : look.color) || track?.color
+                    const what = `Marqueur : ${MARKER_KIND_LABELS[k.kind].toLowerCase()}${k.kind === 'figurine' ? ` (${MARKER_FIGURE_LABELS[k.figure].toLowerCase()})` : ''}, ${
+                      dot ? `couleur ${dot}` : 'couleur de la trace'
+                    }, taille ×${formatShort(look.size)}`
                     return (
                       <div
                         key={k.id}
@@ -1338,7 +1345,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                         aria-label={`${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
                         title={`${what} (clic : y aller, glisser : le déplacer)`}
                         className={`film-tl__key film-tl__key--marker${selected === k.id ? ' film-tl__key--selected' : ''}`}
-                        style={{ left: xOf(k.timeS) }}
+                        style={{ left: xOf(k.timeS), ...(dot ? { '--key-color': dot } : {}) } as CSSProperties}
                         onPointerDown={(e) => startEdit(e, k.id, 'move')}
                         onFocus={() => setSelected(k.id)}
                         onKeyDown={(e) => onBlockKeyDown(e, k.id)}

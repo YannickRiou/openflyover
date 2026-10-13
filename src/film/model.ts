@@ -449,7 +449,7 @@ export interface Film {
 }
 
 /** Slider ranges (also the validity ranges of a loaded project), seconds. */
-export const SHOT_DURATION_RANGE = { min: 1, max: 30, step: 0.5 } as const
+export const SHOT_DURATION_RANGE = { min: 0.5, max: 30, step: 0.5 } as const
 export const STOP_DURATION_RANGE = { min: 0.5, max: 60, step: 0.5 } as const
 export const ITEM_DURATION_RANGE = { min: 0.5, max: 600, step: 0.5 } as const
 /** Length of a generated stop ('temps-forts') and of a stop added on the timeline (seconds). */

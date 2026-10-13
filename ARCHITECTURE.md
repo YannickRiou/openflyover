@@ -583,7 +583,8 @@ pointer (`appearance.css`).
   in `PanelSection`: "Habillage" (switch, style, "Couleurs et polices" (colors and fonts) collapsed; the only "modifié / Par défaut",
   for all of `overlay`), "Titres" (titles), "Compteurs" (counters; and "Classement (course fantôme)" (ghost race ranking) from two tracks), "Profil et mini-carte" (profile and mini-map), "Météo, logo et texte" (weather, logo and text; absent when the overlay is off), "Crédits des
   sources" (source credits; always). Each element (`WidgetGroup`) has its switch, then its position (`WidgetPosition`: 3 × 3
-  grid `AnchorPicker`, then "Position libre" with two offsets in pixels of the exported film, labelled from the anchor),
+  grid `AnchorPicker`, then "Position libre" with two offsets in pixels of the exported film, labelled from the anchor; `OffsetField` keeps a draft
+  while focused, one undo step per edit),
   then up to three tabs, only those it has: "Contenu" (content: `children`), "Style" (`style`: size, the logo's opacity,
   then its own colors and fonts) and
   "Visibilité" (visibility: `visibility`, e.g. the display time of the opening card). `PanelSection` accepts sections
@@ -964,9 +965,9 @@ pointer (`appearance.css`).
 - **Model** (`src/film/model.ts`, `settings.film`: saved in the project document, undoable, validated by
   `isValidFilm` in `SETTING_CHECKS`; an old project receives `DEFAULT_FILM`, and the v1 → v2 migration in `src/project/document.ts` gives a v1 project without a film `{ autoMode: 'rythme' }`):
   `opening` / `closing` `{ style: 'aucune' | 'descente' | 'saut' | 'situation' | 'balayage', durationS, transition?, dipS?,
-  startHeight?, highlight? }` (1–30 s; default descente 6 s / 5 s; a shot switched to `situation` while it still has its
+  startHeight?, highlight? }` (0.5–30 s; default descente 6 s / 5 s; a shot switched to `situation` while it still has its
   default duration gets `SITUATION_DURATION_S`, 9 s, for its long dive (`updateShot`; saved films keep theirs); `transition` `'enchaine'` by default, `'coupe'`,
-  `'fondu-noir'`, `'fondu-blanc'`, `dipS` 0.3–2 s, 1 s by default: optional, an old film stays continuous;
+  `'fondu-noir'`, `'fondu-blanc'`, `dipS` 0.3–2 s, 1 s by default: optional, an old film stays continuous (a dip is centred on the cut and a pure function of the film time, so one longer than a very short shot simply extends past it);
   `startHeight` `'region'` (default) or `'pays'`, `highlight` (default off) and `regionId` (« Lieu », OSM area
   `relation/<id>` or `way/<id>`, absent = automatic) and `holdS` (« Maintien », 0–10 s, `SITUATION_HOLD_RANGE`,
   absent = 0) and its framing, `tiltDeg` (1–60°), `distanceKm` (5–400 km), `heading` (`'libre'` / `'boussole'`),
@@ -978,12 +979,16 @@ pointer (`appearance.css`).
   projects);
   `stops[]` `{ id, atM, durationS (0.5–60 s), camera: 'film' | 'orbite' | 'large' | 'fixe', label?, source?: { kind, ref? } }`
   (`STOP_CAMERA_LABELS`: "Comme le film" (like the film), "Tour lent" (slow orbit), "Vue large" (wide view), "Fixe" (fixed));
-  `markerKeys[]` `{ id, atM, kind, figure, imageId? }` (places along the film track where the marker changes its look:
-  ball, figure or picture; anchored in metres like the camera keys, round dots on the « Marqueur » lane,
+  `markerKeys[]` `{ id, atM, kind, figure, imageId?, color?, figureColor?, size? }` (places along the film track where the marker changes its look:
+  ball, figure or picture, with its own colours and size; anchored in metres like the camera keys, round dots on the « Marqueur » lane,
   `.film-tl__key--marker`; added from the « Marqueur » section of the Trace tab with ◀ ◉ ▶, `addMarkerKeyHere`). `markerAt(film, settings.marker, atM, fadeM, imageOf)`, pure: the marker of the settings
   before the first key; around a key a smootherstep cross-fade of `fadeM = MARKER_FADE_S (0.8 s) × length / flightS`
-  metres centred on the key, from the previous look; a key replaces kind, figure and picture only (size, colours, label
-  and stick stay those of the settings). `FlyoverRig` draws the new look over the old one on a second sprite
+  metres centred on the key, from the previous look; a key replaces kind, figure and picture, and `color` / `figureColor` ('' = the track's) / `size`
+  where set (`withKey`; unset = the settings', same rules as `isValidMarker`, no version bump), while label, stick and animation stay those of
+  the settings; a new key (`markerKeyLook`) copies the stored look of the key before it, else the settings' shape and figure with colours and size unset (they keep following the panel), so adding it changes nothing. The colours and size
+  cross-fade through `markerAt` like the rest (`from` / `to` are full settings, two sprites); they enter the texture cache key through `leadMarkerColors`
+  and the sprite scale, never the film time, so the export stays deterministic. The timeline dot takes the colour as `--key-color`
+  (`figureColor` for a figurine), its title lists shape, colour and size. `FlyoverRig` draws the new look over the old one on a second sprite
   (`flyover-marker-from`) until the fade ends; the export uses the same rig and a stop holds the look.
   `markerKeysMoveWithTime` feeds the held-frame test. Picture of a key: `imageId` in the project media table (128 px
   PNG, kept by `usedMedia`); no id = the picture of the Trace panel. `withFilmDefaults` gives `[]` (no version bump); not
@@ -1075,6 +1080,11 @@ pointer (`appearance.css`).
   distance 1.6 × diagonal (terrain included, × height / width for a frame taller than wide: 9:16 keeps the whole
   track), 40° above the horizon, on the side the flight camera looks from at the cut (no turn during the transition).
   Transition: interpolated target, normalized direction (nlerp), geometric distance, smootherstep, 80 m above the ground;
+  in between (not at the wide view nor at the flight view, eased in over the first and last 10% of the blend) the camera is
+  also raised (`clearOnTheWay`, pure: sampled terrain only, so preview and export agree) to a glide slope of
+  `SHOT_GLIDE_DEG` = 15° over the flight camera (no dive far from the start of the track), to `SHOT_CLEARANCE_SHARE` = 8% of its
+  distance (at least 80 m) above the ground under it, and so that the line to the aim clears the relief (16 samples up to 90%
+  of the way, the clearance tapering to 20 m): the straight blend knows nothing of the ridges between the two views;
   `descente` over the whole shot duration, `saut` holds the overview then moves in 0.6 s. `balayage`: the
   overview turns by `SWEEP_DEG` = 75° around its target (`turnedView`, `sweepRad`) during the first 60% of the opening
   shot and ends on the flight side, then glides like `descente` (closing: the reverse). `situation` ("Depuis la
@@ -1618,9 +1628,18 @@ it, know at what time you will pass each point, where the sun will be and what t
   ranked ones back in that order (strictly decreasing), so the list and the label overlap (`resolveOverlaps`) follow it;
   applied in `publish` (`osm/store.ts`) after `buildLandmarks`, before `splitHidden`.
 - **Cross and « Relancer la recherche »**: the cross of a hidden landmark puts its id in `settings.landmarks.dismissedIds`
-  (`buildLandmarks` skips it before the cap, so another takes its place); the button empties `dismissedIds` and calls
+  (`buildLandmarks` leaves it out after the cap and the deduplication, so it frees no slot and no other landmark pops up in its place); the button empties `dismissedIds` and calls
   `syncLandmarks(…, { refresh: true })`, which asks Overpass again for every track (the known landmarks stay until the answer, and if it fails; « Réessayer » does the same; `fetchTrackFeatures(…, refresh)`
   skips the memory and the persistent cache, then caches the answer). `withLandmarkDefaults` gives `[]` to both lists.
+- **Cap and pins**: `settings.landmarks.maxCount` (slider « Nombre maximal », `LANDMARK_COUNT_RANGE` 5-80, default
+  `MAX_LANDMARKS` = 40) caps the landmarks of each track in `buildLandmarks` and, globally over the tracks, the 3D labels
+  in `landmarkLabels`. `settings.landmarks.pinnedIds` (pin button of a row): a pinned landmark that passes the filters
+  is exempt from the cap and from the name deduplication (it wins over an unpinned duplicate), counts in `maxCount`, and
+  the others share what is left (`maxCount` − pinned); a pinned id absent from the Overpass answer is ignored.
+  « Garder les épinglés » (`withPinnedOnly`, one undo step with the stops of the shown ones) dismisses every landmark of
+  every track that is not pinned; since a dismissed landmark frees no slot, nothing new appears. The cross of a pinned
+  landmark unpins it. An old project receives `maxCount` 40 and `pinnedIds` `[]` (`withLandmarkDefaults`); a count out of
+  range or ids that are not strings invalidate the setting.
 - **Eye**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids. Hiding removes, in the same undo step,
   the row's own stop (`placeStop`: the stop whose `source.ref` is the landmark, else a stop placed by hand within 1 m)
   (`withoutPlaceItems`). Generated stops follow `splitHidden`; a hidden point of interest gets no label. Deleting a point of interest drops its id
@@ -1712,7 +1731,7 @@ exports) gets it from the terrain source of the settings.
   (free formats), priority in [0, 50) below waypoints and climbs (pass crossed > high and nearby summit > neighboring pass > hut >
   lake > waterfall / viewpoint / glacier > place). A place mapped as an area is measured to its bounding box (0 when crossed);
   places rank by `population` when tagged (3·log10 − 6, in [0, 10]), else city 9 > town 6 > village 3 > hamlet 0.
-  Deduplication by name within 1 km or inside the other's box, cap of 40 landmarks with `PLACE_SHARE` (25 %) of them kept for
+  Deduplication by name within 1 km or inside the other's box, cap of `maxCount` landmarks (40 by default) with `PLACE_SHARE` (25 %) of them kept for
   places when there are enough (also for the 3D labels), label "Nom · 1 653 m" for summits and passes.
 - **State** (`src/osm/store.ts`): `useLandmarkStore` driven by `syncLandmarks` from `LandmarkPanel`; the landmarks of all
   tracks are published to the 3D labels through `setLabelSource('osm', …)` (empty list when disabled). The panel list follows

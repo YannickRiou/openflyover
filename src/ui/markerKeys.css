@@ -1,10 +1,17 @@
-/* marker keys of the timeline (« Marqueur » lane): a round dot, where the other keys are diamonds */
+/*
+ * marker keys of the timeline (« Marqueur » lane): a round dot, where the other keys are diamonds, in the colour of the
+ * marker from that key on (--key-color, set by the timeline); a thin white edge keeps a dark colour readable, and the
+ * selected key is ringed so that its colour stays visible
+ */
 .film-tl__key--marker {
-  background: var(--color-chartreuse);
+  background: var(--key-color, var(--color-chartreuse));
+  border: 1px solid var(--color-white);
   border-radius: 50%;
   transform: none;
 }
 
 .film-tl__key--marker.film-tl__key--selected {
-  background: var(--color-white);
+  background: var(--key-color, var(--color-chartreuse));
+  outline: 2px solid var(--color-white);
+  outline-offset: 2px;
 }

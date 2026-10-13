@@ -180,6 +180,8 @@ describe('frozen old projects', () => {
       seenIds: [],
       rank: [],
       dismissedIds: [],
+      pinnedIds: [],
+      maxCount: 40,
     })
     expectDefaultsBut(s, [...CHECKED, 'sunDate'])
     expect(s.sunDate).toBe('')

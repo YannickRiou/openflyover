@@ -2,15 +2,16 @@
  * Marker keys of the film (`film.markerKeys`): the place along the track where the marker changes its look (ball,
  * figure or picture), cross-faded over a short stretch. Same anchor as the camera and parameter keys, the distance
  * along the film track; a key holds during a stop. Before the first key the marker is the one of the « Marqueur »
- * settings. A key replaces the shape, the figure and the picture only: size, colours, label and stick stay those of
- * the settings. Pure module (no three.js): `markerAt` is a function of the position alone, so a frame depends on the
+ * settings. A key replaces the shape, the figure and the picture, and may bring its own colours and size; label,
+ * stick and animation stay those of the settings. Pure module (no three.js): `markerAt` is a function of the position alone, so a frame depends on the
  * film progress only (the export stays deterministic).
  */
-import { oneOf } from '../core/guards'
+import { inRange, oneOf } from '../core/guards'
 import { smootherstep } from '../core/math'
 import type { Track } from '../core/types'
 import { trackPathOf } from '../flyover/path'
-import { MARKER_FIGURE_CHOICES, MARKER_KINDS, markerMovesWithTime } from '../scene/markerSettings'
+import { isHexColor } from '../overlay/settings'
+import { MARKER_FIGURE_CHOICES, MARKER_KINDS, MARKER_SIZE_RANGE, markerMovesWithTime } from '../scene/markerSettings'
 import type { MarkerFigureChoice, MarkerKind, MarkerSettings } from '../scene/markerSettings'
 import type { Film } from './model'
 
@@ -22,6 +23,25 @@ export interface FilmMarkerKey {
   figure: MarkerFigureChoice
   /** picture of an 'image' look: id of the project media table (`film/media.ts`); none: the picture of the settings */
   imageId?: string
+  /** ball and ring colour ('#rrggbb', '' = the track's); none: the colour of the settings */
+  color?: string
+  /** colour of the disc of a figure badge ('#rrggbb', '' = the track's); none: the colour of the settings */
+  figureColor?: string
+  /** multiplier of the on-screen size (`MARKER_SIZE_RANGE`); none: the size of the settings */
+  size?: number
+}
+
+/** What a key holds as its look: a key is added with the one in effect, so adding it changes nothing on screen. */
+export type MarkerKeyLook = Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId' | 'color' | 'figureColor' | 'size'>
+
+/**
+ * The look of `key` as stored (its own colours and size stay unset when it has none), else the shape and figure of the
+ * `base` settings with colours and size unset: they keep following the « Marqueur » panel.
+ */
+export function markerKeyLook(key: FilmMarkerKey | undefined, base: MarkerSettings): MarkerKeyLook {
+  if (!key) return { kind: base.kind, figure: base.figure }
+  const { kind, figure, imageId, color, figureColor, size } = key
+  return { kind, figure, imageId, color, figureColor, size }
 }
 
 /**
@@ -40,9 +60,18 @@ export function sortedMarkerKeys(keys: readonly FilmMarkerKey[]): FilmMarkerKey[
   return [...keys].sort((a, b) => a.atM - b.atM)
 }
 
-/** Shape, figure and picture of a loaded key (the id and the place are checked by the film). */
+const isOptionalColor = (color: unknown) => color === undefined || color === '' || isHexColor(color)
+
+/** Shape, figure, picture, colours and size of a loaded key (the id and the place are checked by the film). */
 export function isValidMarkerLook(key: Record<string, unknown>): boolean {
-  return oneOf(MARKER_KINDS, key.kind) && oneOf(MARKER_FIGURE_CHOICES, key.figure) && (key.imageId === undefined || typeof key.imageId === 'string')
+  return (
+    oneOf(MARKER_KINDS, key.kind) &&
+    oneOf(MARKER_FIGURE_CHOICES, key.figure) &&
+    (key.imageId === undefined || typeof key.imageId === 'string') &&
+    isOptionalColor(key.color) &&
+    isOptionalColor(key.figureColor) &&
+    (key.size === undefined || inRange(key.size, MARKER_SIZE_RANGE))
+  )
 }
 
 /** What the marker shows between two looks: `from` fading into `to` (`mix` 0..1; the same object when settled). */
@@ -52,9 +81,20 @@ export interface MarkerBlend {
   mix: number
 }
 
-/** The settings with the look of `key`; a picture look without a picture of its own keeps the one of the settings. */
-function withKey(base: MarkerSettings, key: FilmMarkerKey, imageOf: (id: string) => string): MarkerSettings {
-  return { ...base, kind: key.kind, figure: key.figure, image: key.imageId ? imageOf(key.imageId) : base.image }
+/**
+ * The settings with the look of `key`; a picture look without a picture of its own keeps the one of the settings, and
+ * so do the colours and the size the key does not set.
+ */
+export function withKey(base: MarkerSettings, key: FilmMarkerKey, imageOf: (id: string) => string): MarkerSettings {
+  return {
+    ...base,
+    kind: key.kind,
+    figure: key.figure,
+    image: key.imageId ? imageOf(key.imageId) : base.image,
+    color: key.color ?? base.color,
+    figureColor: key.figureColor ?? base.figureColor,
+    size: key.size ?? base.size,
+  }
 }
 
 /**

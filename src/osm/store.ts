@@ -65,7 +65,7 @@ function publish(tracks: readonly Track[], settings: LandmarkSettings, message: 
   }
   const status: LandmarkStatus = pending.size > 0 ? 'loading' : failed.size > 0 ? 'error' : 'ready'
   useLandmarkStore.setState({ status, message: status === 'error' ? message : null, landmarks, hidden })
-  setLabelSource('osm', landmarkLabels(Object.values(landmarks)))
+  setLabelSource('osm', landmarkLabels(Object.values(landmarks), settings.maxCount, settings.pinnedIds))
 }
 
 /**

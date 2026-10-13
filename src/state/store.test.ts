@@ -254,6 +254,8 @@ describe('settings and misc', () => {
         seenIds: [],
         rank: [],
         dismissedIds: [],
+        pinnedIds: [],
+        maxCount: 40,
       },
       race: { enabled: false, sync: 'elapsed' },
     })

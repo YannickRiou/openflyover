@@ -20,7 +20,7 @@ import { isSunDate } from '../flyover/sun'
 import { TRACK_COLORS } from '../import'
 import { buildTrack, isUtcOffsetMin } from '../import/stats'
 import { isValidVideoSettings, withVideoDefaults } from '../export/schedule'
-import { LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } from '../osm/landmarks'
+import { LANDMARK_COUNT_RANGE, LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } from '../osm/landmarks'
 import { isValidOverlay, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
 import { isValidPoster, withPosterDefaults } from '../poster/settings'
 import { isValidGrading } from '../scene/grading'
@@ -131,7 +131,10 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   landmarks: (v) =>
     v.maxDistanceM >= LANDMARK_DISTANCE_RANGE.min &&
     v.maxDistanceM <= LANDMARK_DISTANCE_RANGE.max &&
-    v.hiddenIds.every((id) => typeof id === 'string'),
+    v.maxCount >= LANDMARK_COUNT_RANGE.min &&
+    v.maxCount <= LANDMARK_COUNT_RANGE.max &&
+    v.hiddenIds.every((id) => typeof id === 'string') &&
+    v.pinnedIds.every((id) => typeof id === 'string'),
   race: isValidRace,
   trackStyle: isValidTrackStyle,
   marker: isValidMarker,
