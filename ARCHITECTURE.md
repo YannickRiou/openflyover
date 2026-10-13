@@ -1959,7 +1959,7 @@ exports) gets it from the terrain source of the settings.
   by more than 1 m, never after a timeout. Every 5 rendered frames, the tiles for frames +5 to +40 are
   requested ahead of time (`engine.prefetch`), and again at most every 100 ms while a frame waits for its tiles
   (`PREFETCH_WAIT_MS`): the network is mostly idle during those waits (one load in flight out of 24 was typical), and
-  a prefetch only reaches one level deeper per call (children are selected once their parent is loaded).
+  a prefetch only reaches one level deeper per call (children are selected once their parent is loaded). Prefetches (and the preview's retries) are fetched at a low network priority (`priority: 'low'`, Priority Hints, `BACKGROUND_PRIORITY` in `terrain/fetch.ts`; ignored where unsupported): the browser serves the tiles the frame waits for first.
 - The WebGL image is composited in the same task as the render onto an `OffscreenCanvas` (sky gradient, image, then overlay
   `DrawOverlay(ctx, { progress, time }, w, h)` after loading its fonts, `time` = `overlayTime(clock, progress,
   frame time)`; still image: current playback time), then encoded by mediabunny (WebCodecs): MP4 H.264,
