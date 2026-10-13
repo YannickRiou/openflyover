@@ -18,6 +18,17 @@ body {
   color: var(--color-ink, #1c2a33);
   background: var(--color-paper, #f5f2ea);
   -webkit-font-smoothing: antialiased;
+  /* an application, not a page: a drag never highlights the interface */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* what is typed stays selectable (the diagnostic report, meant to be copied, sets it too: shell.css) */
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 p {
