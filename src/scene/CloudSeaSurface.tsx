@@ -49,7 +49,7 @@ import {
   type TerrainBox,
 } from './cloudSea'
 import { wakeScene } from './renderOnDemand'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { useFilmClock } from './usePacing'

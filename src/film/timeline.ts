@@ -12,7 +12,7 @@ import type { CameraSettings } from '../flyover/cameraSettings'
 import { distanceAtTime, nearestOnPath, recordedTimeAt } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import type { ClockStop, FilmClock } from './clock'
-import { hasStageItem, isJunctionItem, isStageCardItem, junctionCardOf, junctionTrackOf, resetJunction, stageCardAfterOf, withJunction, withJunctionCard } from './junctions'
+import { hasStageItem, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from './junctions'
 import {
   AUDIO_DEFAULTS,
   AUDIO_DURATION_RANGE,
@@ -28,6 +28,7 @@ import {
   SHOT_DURATION_RANGE,
   SITUATION_DURATION_S,
   SPEED_FACTOR_RANGE,
+  STAGE_DURATION_RANGE,
   STOP_DURATION_RANGE,
   VIDEO_SOUND_DEFAULTS,
   clipTimeS,
@@ -464,6 +465,7 @@ export function dragFilm(film: Film, item: TimelineItem, grip: Grip, deltaS: num
 
   if (isJunctionItem(item)) return dragJunction(film, junctionTrackOf(item), grip, deltaS, ctx, snap)
   if (isStageCardItem(item)) return dragStageCard(film, stageCardAfterOf(item), grip, deltaS, ctx, snap)
+  if (isStageItem(item)) return dragStage(film, stageTrackOf(item), grip, deltaS, ctx, snap)
 
   const stop = clock.stops.find((s) => s.id === item)
   if (stop && film.stops.some((s) => s.id === item)) {
@@ -551,6 +553,19 @@ function dragJunction(film: Film, afterTrackId: string, grip: Grip, deltaS: numb
   const endAt = (holdS: number) => clockOfFilm(withJunction(film, afterTrackId, { holdS })).junctions.find((j) => j.afterTrackId === afterTrackId)?.endS ?? placed.endS
   const holdS = positionAtTime(endAt, snap(placed.endS + deltaS), JUNCTION_HOLD_RANGE.min, JUNCTION_HOLD_RANGE.max)
   return withJunction(film, afterTrackId, { holdS })
+}
+
+/**
+ * The film after dragging the right edge of the stage of track `trackId` by `deltaS`: its flight time follows the pointer
+ * (the end of the stage, found on the clock of the film with the duration changed: `ctx.clockOfFilm`, so what comes after
+ * ripples), within `STAGE_DURATION_RANGE`. The stage is the one before the junction after that track, the last one without.
+ */
+function dragStage(film: Film, trackId: string, grip: Grip, deltaS: number, ctx: DragContext, snap: (t: number) => number): Film {
+  const clockOfFilm = ctx.clockOfFilm
+  if (grip !== 'end' || !clockOfFilm) return film
+  const endOf = (clock: FilmClock) => clock.junctions.find((j) => j.afterTrackId === trackId)?.startS ?? clock.openingS + clock.flightS
+  const durationS = positionAtTime((d) => endOf(clockOfFilm(withStageDuration(film, trackId, d))), snap(endOf(ctx.clock) + deltaS), STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max)
+  return withStageDuration(film, trackId, durationS)
 }
 
 /** The card after junction `afterTrackId` (null: the first stage) with its end edge dragged by `deltaS`: its duration. */
@@ -876,6 +891,8 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
   // a junction goes back to the default one, a stage card is switched off (its settings are kept)
   if (isJunctionItem(id)) return resetJunction(film, junctionTrackOf(id))
   if (isStageCardItem(id)) return withJunctionCard(film, stageCardAfterOf(id), { enabled: false })
+  // a stage goes back to its share of the flyover duration
+  if (isStageItem(id)) return withStageDuration(film, stageTrackOf(id), null)
   return {
     ...film,
     stops: film.stops.filter((s) => s.id !== id),
@@ -1083,7 +1100,8 @@ export function followStops(
     before.closing !== after.closing ||
     before.autoStops !== after.autoStops ||
     before.junctions !== after.junctions ||
-    before.junctionDefault !== after.junctionDefault
+    before.junctionDefault !== after.junctionDefault ||
+    before.stageDurations !== after.stageDurations
   let clocks: { from: FilmClock; to: FilmClock } | undefined
   let changed = false
   const follow = <T extends Attachable>(item: T, previous: readonly T[]): T => {

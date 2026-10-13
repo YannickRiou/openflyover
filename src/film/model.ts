@@ -356,6 +356,12 @@ export interface FilmNights {
 }
 /** Range of each part of a night (seconds at ×1; also their validity range in a loaded project). */
 export const NIGHT_PART_RANGE = { min: 0, max: 20, step: 0.5 } as const
+/** The three parts of a night, with their label and tip in the settings and in the inspector of a « Nuit » junction. */
+export const NIGHT_PARTS: { key: 'duskS' | 'nightS' | 'dawnS'; label: string; tip: string }[] = [
+  { key: 'duskS', label: 'Crépuscule', tip: 'Le soleil se couche : de l’arrivée du soir à la nuit noire.' },
+  { key: 'nightS', label: 'Nuit', tip: 'La nuit passe, éclairée par la lune.' },
+  { key: 'dawnS', label: 'Aube', tip: 'Le soleil se lève, jusqu’au départ du matin.' },
+]
 export const DEFAULT_NIGHTS: FilmNights = { enabled: true, duskS: 3, nightS: 2, dawnS: 3 }
 
 export const JUNCTION_KINDS = ['coupe', 'fondu-noir', 'fondu-blanc', 'nuit'] as const
@@ -376,6 +382,8 @@ export const JUNCTION_HOLD_RANGE = { min: 0.5, max: 10, step: 0.1 } as const
 /** Length of a stage card (seconds; also its validity range in a loaded project) and its default. */
 export const JUNCTION_CARD_RANGE = { min: 1, max: 15, step: 0.5 } as const
 export const JUNCTION_CARD_DEFAULT_S = 5
+/** Flight time of one stage « À la suite » set by hand (seconds; also its validity range in a loaded project). */
+export const STAGE_DURATION_RANGE = { min: 5, max: 600, step: 0.1 } as const
 
 /**
  * The card of a stage « À la suite »: shown from the middle of the junction before it (the start of the flight for the
@@ -446,6 +454,11 @@ export interface Film {
   junctionDefault?: JunctionDefault
   /** card of the first stage (absent: the default card, `junctionCardOf`) */
   firstCard?: JunctionCard
+  /**
+   * flight time of the stages « À la suite » whose duration is set (seconds, by track id; absent or missing: the stage's
+   * share of the flyover duration, proportional to its distance, as ever); read with a sequence only (`stageSpecsOf`)
+   */
+  stageDurations?: Record<string, number>
 }
 
 /** Slider ranges (also the validity ranges of a loaded project), seconds. */
@@ -775,7 +788,7 @@ function isValidJunctionDefault(d: unknown): d is JunctionDefault {
   )
 }
 
-/** The optional junction fields, when present: valid, one junction per track. */
+/** The optional junction and stage fields, when present: valid, one junction per track. */
 function hasValidJunctions(film: Film): boolean {
   if (film.junctions !== undefined) {
     if (!Array.isArray(film.junctions) || !film.junctions.every(isValidJunction)) return false
@@ -783,7 +796,9 @@ function hasValidJunctions(film: Film): boolean {
   }
   return (
     (film.junctionDefault === undefined || isValidJunctionDefault(film.junctionDefault)) &&
-    (film.firstCard === undefined || isValidJunctionCard(film.firstCard))
+    (film.firstCard === undefined || isValidJunctionCard(film.firstCard)) &&
+    (film.stageDurations === undefined ||
+      (isRecord(film.stageDurations) && Object.entries(film.stageDurations).every(([id, s]) => isId(id) && within(s, STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max))))
   )
 }
 

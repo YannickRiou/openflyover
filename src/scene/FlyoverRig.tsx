@@ -22,7 +22,7 @@ import { smoothedTrackPath } from '../flyover/smooth'
 import { registerFramingCapture, useRegionStore } from '../osm/region'
 import { useAppStore } from '../state/store'
 import { filmViewAt, keyFramingOfView } from './filmView'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 import { frameDelta } from './renderOnDemand'
 import { trackUnderMarker } from '../flyover/sequence'
 import {

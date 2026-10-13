@@ -228,6 +228,11 @@ describe('serializeProject / parseProject', () => {
     expect(parseProject(serializeProject({ ...STATE, settings: ordered }, 'x')).settings.race.order).toEqual(['b', 'a'])
     expect(sanitizeSettings({ race: { ...race, order: [1] } }).invalid).toEqual(['race'])
     expect(sanitizeSettings({ race: { enabled: false, sync: 'elapsed', sequence: true } }).settings.race).not.toHaveProperty('order')
+    // the flight time of a stage is saved with the film; a project without any, or with one out of range, is the film as ever
+    const timed = { ...SETTINGS, film: { ...SETTINGS.film, stageDurations: { a: 42.5 } } }
+    expect(parseProject(serializeProject({ ...STATE, settings: timed }, 'x')).settings.film.stageDurations).toEqual({ a: 42.5 })
+    expect(parseProject(serializeProject(STATE, 'x')).settings.film).not.toHaveProperty('stageDurations')
+    expect(sanitizeSettings({ film: { ...SETTINGS.film, stageDurations: { a: 2 } } }).invalid).toEqual(['film'])
   })
 
   it('migrates the transition of « À la suite » into the film’s default junction, once', () => {

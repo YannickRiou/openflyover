@@ -4,6 +4,7 @@ import { hasParamKeys } from '../film/paramKeys'
 import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
 import { getSettingsHistory } from '../project/history'
+import { useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
@@ -73,8 +74,9 @@ function dayGradient(day: SolarDay): string {
 }
 
 /**
- * « Lumière »: the sun follows the recorded time of the track or a fixed solar hour, chosen on a day bar (night,
- * sunrise, day, sunset at the place and on the day of the first track) or with a chip (one undo step per chip).
+ * « Lumière »: « Source de la lumière », the recorded time of the track (« À la suite »: each stage at its own hour, the
+ * light blending across the junctions) or a fixed solar hour for the whole film, chosen on a day bar (night, sunrise,
+ * day, sunset at the place and on the day of the film track) or with a chip (one undo step per chip).
  */
 function SunTimeControl() {
   const id = useId()
@@ -83,8 +85,10 @@ function SunTimeControl() {
   const sunDate = useAppStore((s) => s.settings.sunDate)
   const setSetting = useAppStore((s) => s.setSetting)
   const sunKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['sunHour']))
-  const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
-  const utcOffsetMin = useAppStore((s) => s.tracks[0]?.utcOffsetMin)
+  const stages = useFilmSequence()?.stages.length ?? 0
+  const filmTrack = useFilmTrack()
+  const startTime = filmTrack?.stats.startTime
+  const utcOffsetMin = filmTrack?.utcOffsetMin
   const origin = useAppStore((s) => s.frameOrigin)
   const [today] = useState(() => Date.now())
   const trackHasTime = startTime !== undefined
@@ -117,7 +121,7 @@ function SunTimeControl() {
   return (
     <>
       <fieldset className="field fieldset">
-        <legend className="field__label">Heure du soleil</legend>
+        <legend className="field__label">Source de la lumière</legend>
         <div className="segmented">
           <label className="segmented__option">
             <input
@@ -128,7 +132,7 @@ function SunTimeControl() {
               aria-describedby={`${id}-sun-mode-hint`}
               onChange={() => setSetting('sunFromTrack', true)}
             />
-            Suivre la trace
+            Heure de la trace
           </label>
           <label className="segmented__option">
             <input
@@ -142,10 +146,14 @@ function SunTimeControl() {
         </div>
         <p id={`${id}-sun-mode-hint`} className="field__hint">
           {!trackHasTime
-            ? '« Suivre la trace » demande une trace horodatée.'
+            ? '« Heure de la trace » demande une trace horodatée.'
             : follows
-              ? 'Le soleil suit l’heure enregistrée au marqueur.'
-              : 'Le soleil reste à la même heure tout le film.'}
+              ? stages > 1
+                ? 'Chaque étape est éclairée à son heure enregistrée ; entre deux étapes, la lumière passe de l’une à l’autre pendant la jonction.'
+                : 'Le soleil suit l’heure enregistrée au marqueur.'
+              : stages > 1
+                ? 'Toutes les étapes sont éclairées à la même heure.'
+                : 'Le soleil reste à la même heure tout le film.'}
         </p>
       </fieldset>
 

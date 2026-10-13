@@ -25,14 +25,17 @@ import {
   stageCardAfterOf,
   stageCardId,
   stageCardWindow,
+  stageFlightS,
   stageItemId,
+  stageSpansOf,
   withDefaultCard,
   withDefaultJunction,
   withJunction,
   withJunctionCard,
+  withStageDuration,
   withStageSettingsMigrated,
 } from './junctions'
-import { DEFAULT_FILM, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, isValidFilm } from './model'
+import { DEFAULT_FILM, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, STAGE_DURATION_RANGE, isValidFilm } from './model'
 import type { Film } from './model'
 import { dragFilm, hasFilmItem, removeFilmItem } from './timeline'
 import type { DragContext } from './timeline'
@@ -343,6 +346,75 @@ describe('dragging a junction or a card', () => {
     expect(junctionCardOf(dragFilm(film, FIRST_STAGE_CARD_ID, 'end', 3, ctx(film)), null).durationS).toBe(8)
     expect(dragFilm(film, 'card-stage-a', 'start', 2, ctx(film))).toBe(film)
     expect(first.junctions).toHaveLength(1)
+  })
+})
+
+describe('the duration of a stage', () => {
+  const input: FilmClockInput = {
+    opening: { style: 'aucune', durationS: 5 },
+    closing: { style: 'aucune', durationS: 5 },
+    stops: [],
+    lengthM: 10_000,
+    highlightsM: [],
+    durationS: 60,
+    pacing: { ...DEFAULT_PACING, keepDuration: false },
+    cutsM: [5000],
+  }
+  const clockOfFilm = (f: Film) =>
+    buildFilmClock({ ...input, junctions: [{ ...junctionOf(f, 'a'), atM: 5000 }], stages: stageSpansOf(f, ['a', 'b'], [5000], 10_000) })
+  const ctx = (f: Film, patch: Partial<DragContext> = {}): DragContext => ({
+    clock: clockOfFilm(f),
+    clockOf: () => clockOfFilm(f),
+    clockOfFilm,
+    lengthM: 10_000,
+    targets: [],
+    targetsM: [],
+    snapS: 0,
+    ...patch,
+  })
+
+  it('stageSpansOf: the stages with their durations, none when no stage sets one or without a sequence', () => {
+    const set = withStageDuration(film, 'b', 20)
+    expect(stageSpansOf(set, ['a', 'b'], [5000], 10_000)).toEqual([
+      { fromM: 0, toM: 5000 },
+      { fromM: 5000, toM: 10_000, durationS: 20 },
+    ])
+    expect(stageSpansOf(film, ['a', 'b'], [5000], 10_000)).toEqual([])
+    expect(stageSpansOf(set, ['a', 'b'], undefined, 10_000)).toEqual([])
+    // a duration kept for a track that is not a stage any more
+    expect(stageSpansOf(withStageDuration(film, 'gone', 20), ['a', 'b'], [5000], 10_000)).toEqual([])
+    // the film's durations are valid in their range only
+    expect(isValidFilm(set)).toBe(true)
+    expect(isValidFilm({ ...film, stageDurations: { b: STAGE_DURATION_RANGE.min - 1 } })).toBe(false)
+    expect(isValidFilm({ ...film, stageDurations: { b: STAGE_DURATION_RANGE.max + 1 } })).toBe(false)
+    expect(isValidFilm({ ...film, stageDurations: { b: 'long' as never } })).toBe(false)
+  })
+
+  it('the right edge of a stage sets its flight time: the pointer moves it and what follows ripples', () => {
+    const before = clockOfFilm(film)
+    const edge = before.junctions[0].startS
+    const longer = dragFilm(film, 'stage-a', 'end', 4, ctx(film))
+    expect(longer.stageDurations?.a).toBeCloseTo(34, 1)
+    expect(clockOfFilm(longer).junctions[0].startS).toBeCloseTo(edge + 4, 1)
+    expect(clockOfFilm(longer).totalTime()).toBeCloseTo(before.totalTime() + 4, 1)
+    // the last stage ends with the flight
+    const last = dragFilm(film, 'stage-b', 'end', -10, ctx(film))
+    expect(stageFlightS(clockOfFilm(last), 1)).toBeCloseTo(20, 1)
+    // kept in its range
+    expect(dragFilm(film, 'stage-a', 'end', 1000, ctx(film)).stageDurations?.a).toBe(STAGE_DURATION_RANGE.max)
+    expect(dragFilm(film, 'stage-a', 'end', -1000, ctx(film)).stageDurations?.a).toBe(STAGE_DURATION_RANGE.min)
+  })
+
+  it('only the right edge sets the duration (the body reorders), and not without the film’s clock', () => {
+    expect(dragFilm(film, 'stage-a', 'move', 4, ctx(film))).toBe(film)
+    expect(dragFilm(film, 'stage-a', 'start', 4, ctx(film))).toBe(film)
+    expect(dragFilm(film, 'stage-a', 'end', 4, { ...ctx(film), clockOfFilm: undefined })).toBe(film)
+  })
+
+  it('Delete on a stage goes back to its share of the duration', () => {
+    const set = withStageDuration(film, 'a', 20)
+    expect(removeFilmItem(set, 'stage-a')).toEqual(film)
+    expect(removeFilmItem(film, 'stage-a')).toEqual(film)
   })
 })
 

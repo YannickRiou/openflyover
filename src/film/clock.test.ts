@@ -8,7 +8,7 @@ import type { Landmark } from '../osm/landmarks'
 import { buildSequence } from '../flyover/sequence'
 import { buildFilmClock, filmClockFor } from './clock'
 import type { FilmClock, FilmClockInput } from './clock'
-import { withJunction } from './junctions'
+import { stageFlightS, withJunction, withStageDuration } from './junctions'
 import type { JunctionInput } from './junctions'
 import { DEFAULT_FILM } from './model'
 import type { Film, FilmShot, FilmStop } from './model'
@@ -301,5 +301,83 @@ describe('film clock — three days À la suite with nights', () => {
     expect(off.nights).toEqual([])
     // « Nuit » asked for with the nights off: the junction passes the night all the same
     expect(clockOfFilm(withJunction(nightsOff, sequence.stageIds[1], { kind: 'nuit' })).junctions.map((j) => j.kind)).toEqual(['fondu-noir', 'nuit'])
+  })
+})
+
+describe('film clock — a duration per stage', () => {
+  // three stages of 1 : 2 : 1 in length, the middle one twice as long
+  const line = (name: string, lat: number, step: number): Track =>
+    buildTrack({ name, source: 'gpx', segments: [{ points: [0, 1, 2].map((k) => ({ lon: 6.8 + k * step, lat, ele: 1000 })) }] })
+  const sequence = buildSequence([line('a', 45, 0.01), line('b', 45.1, 0.02), line('c', 45.2, 0.01)])
+  const [a, b, c] = sequence.stageIds
+  const cut: Film = { ...DEFAULT_FILM, junctionDefault: { kind: 'coupe', holdS: 0, card: true } }
+  const clockOfFilm = (film: Film, pacing: PacingSettings = OFF) =>
+    filmClockFor({ track: sequence.track, film, durationS: D, pacing, cutsM: sequence.cutsM, stageIds: sequence.stageIds })
+  const stagesS = (clock: FilmClock) => [0, 1, 2].map((k) => stageFlightS(clock, k))
+  const share = sequence.stages.map((s) => (D * (s.endM - s.startM)) / sequence.track.stats.distanceM)
+  /** about twice the share of the last stage, in tenths of a second as the film keeps them */
+  const twice = Math.round(share[2] * 20) / 10
+
+  it('without a duration of its own, every stage shares the flyover duration by its distance', () => {
+    const clock = clockOfFilm(cut)
+    stagesS(clock).forEach((s, k) => expect(s).toBeCloseTo(share[k], 6))
+    expect(clock.flightS).toBeCloseTo(D, 9)
+  })
+
+  it('a stage set to twice its share lasts that long; the others keep theirs and the film grows by the difference', () => {
+    for (const keepDuration of [false, true]) {
+      const clock = clockOfFilm(withStageDuration(cut, c, twice), { ...OFF, keepDuration })
+      const [s0, s1, s2] = stagesS(clock)
+      expect(s2).toBeCloseTo(twice, 6)
+      expect(s0).toBeCloseTo(share[0], 6)
+      expect(s1).toBeCloseTo(share[1], 6)
+      expect(clock.flightS).toBeCloseTo(D + twice - share[2], 9)
+    }
+  })
+
+  it('every stage set: the durations add up, the flyover duration no longer matters', () => {
+    const film = withStageDuration(withStageDuration(withStageDuration(cut, a, 10), b, 30), c, 20)
+    const clock = clockOfFilm(film)
+    expect(stagesS(clock).map((s) => Math.round(s * 1e6) / 1e6)).toEqual([10, 30, 20])
+    expect(clock.flightS).toBeCloseTo(60, 9)
+    expect(filmClockFor({ track: sequence.track, film, durationS: 300, pacing: OFF, cutsM: sequence.cutsM, stageIds: sequence.stageIds }).flightS).toBeCloseTo(60, 9)
+  })
+
+  it('the stops of a stage are inside its duration, with or without « Garder la durée »; the holds of the junctions are not', () => {
+    const stops = [stop('s1', sequence.stages[1].startM + 500, 4), stop('s2', sequence.stages[1].startM + 1500, 3)]
+    for (const keepDuration of [false, true]) {
+      const film = withStageDuration({ ...DEFAULT_FILM, autoStops: false, stops }, b, 40)
+      const clock = clockOfFilm(film, { ...OFF, keepDuration })
+      expect(stageFlightS(clock, 1)).toBeCloseTo(40, 6)
+      expect(clock.stops).toHaveLength(2)
+      // the default junctions hold the film 1.5 s each, on top
+      expect(clock.flightS).toBeCloseTo(40 + share[0] + share[2] + 3, 6)
+    }
+  })
+
+  it('a stage with a stop inside a stage that is not set is left to the shared duration', () => {
+    const stops = [stop('s1', sequence.stages[1].startM + 500, 4)]
+    const clock = clockOfFilm(withStageDuration({ ...DEFAULT_FILM, autoStops: false, stops, junctionDefault: cut.junctionDefault }, a, 20), { ...OFF, keepDuration: true })
+    expect(stageFlightS(clock, 0)).toBeCloseTo(20, 6)
+    // the two others share what is left of the duration, their stop squeezed in
+    expect(stageFlightS(clock, 1) + stageFlightS(clock, 2)).toBeCloseTo(share[1] + share[2], 6)
+  })
+
+  it('a film without durations, or one that does not play « À la suite », flies as before', () => {
+    const bare = clockOfFilm(cut)
+    const mark = (clock: FilmClock) => [0, 0.1, 0.35, 0.5, 0.77, 1].map((t) => clock.progressAtTime(t * clock.totalTime()))
+    expect(mark(clockOfFilm({ ...cut, stageDurations: {} }))).toEqual(mark(bare))
+    // a duration kept for a track that is not a stage
+    expect(mark(clockOfFilm({ ...cut, stageDurations: { gone: 50 } }))).toEqual(mark(bare))
+    const single = filmClockFor({ track: sequence.track, film: { ...cut, stageDurations: { [a]: 5 } }, durationS: D, pacing: OFF })
+    expect(single.flightS).toBe(D)
+  })
+
+  it('sets and clears a duration in the film, kept in its range', () => {
+    expect(withStageDuration(cut, a, 1).stageDurations).toEqual({ [a]: 5 })
+    expect(withStageDuration(cut, a, 9999).stageDurations).toEqual({ [a]: 600 })
+    expect(withStageDuration(withStageDuration(cut, a, 20), b, 30).stageDurations).toEqual({ [a]: 20, [b]: 30 })
+    expect(withStageDuration(withStageDuration(cut, a, 20), a, null)).toEqual(cut)
+    expect(withStageDuration(cut, a, null)).toEqual(cut)
   })
 })

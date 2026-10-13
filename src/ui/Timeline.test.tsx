@@ -5,12 +5,13 @@ import { describe, expect, it } from 'vitest'
 import { useExportStore } from '../export/store'
 import { buildTrack } from '../import/stats'
 import { END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
+import { filmClockFor } from '../film/clock'
 import { DEFAULT_FILM } from '../film/model'
 import { removeFilmItem, updateMarkerKey } from '../film/timeline'
 import { filmSequenceOf } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
-import { addMarkerKeyHere, addParamKeyHere } from '../scene/usePacing'
+import { addMarkerKeyHere, addParamKeyHere, getFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { FilmInspector } from './FilmInspector'
 import { OverlayPanel } from './OverlayPanel'
@@ -366,6 +367,26 @@ describe('Timeline — stages « À la suite »', () => {
     await act(async () => reset.click())
     expect(useAppStore.getState().settings.film.junctions).toEqual([])
     expect(useAppStore.getState().filmSelection).toBe(`junction-${tracks[0].id}`)
+    act(() => root.unmount())
+  })
+
+  it('a stage takes the duration set from the keyboard, the inspector shows it and « Durée automatique » takes it back; the film follows', async () => {
+    const { host, root, blocks, press, tracks } = await setup(2)
+    const total = () => filmClockFor(getFilmSource()).totalTime()
+    const before = total()
+    const stage = () => blocks('Étapes', '.film-tl__block--stage')[0]
+    await act(async () => stage().focus())
+    expect(host.querySelector('.film-inspector h2')?.textContent).toBe('Étape 1')
+    expect(useAppStore.getState().settings.film.stageDurations).toBeUndefined()
+    // one second more than its share: the stage is set, the film is longer by as much
+    await press(stage(), 'ArrowRight')
+    expect(useAppStore.getState().settings.film.stageDurations).toEqual({ [tracks[0].id]: expect.any(Number) })
+    expect(total()).toBeGreaterThanOrEqual(before + 0.9)
+    expect(host.querySelector('.film-inspector')?.textContent).toContain('Durée fixée')
+    const auto = Array.from(host.querySelectorAll<HTMLButtonElement>('.film-inspector__remove')).find((b) => b.textContent === 'Durée automatique')!
+    await act(async () => auto.click())
+    expect(useAppStore.getState().settings.film.stageDurations).toBeUndefined()
+    expect(total()).toBeCloseTo(before, 1)
     act(() => root.unmount())
   })
 

@@ -733,7 +733,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     setSelected(item)
     contentRef.current?.setPointerCapture(e.pointerId)
     const scroll0 = scrollerRef.current?.scrollLeft ?? 0
-    if (isStageItem(item)) {
+    if (isStageItem(item) && grip === 'move') {
       gestureRef.current = { kind: 'reorder', item, x0: e.clientX, scroll0, to: -1, moved: false }
       return
     }
@@ -904,7 +904,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       const grip: Grip =
         item === 'closing' || item === END_CARD_ID
           ? 'start'
-          : item === 'opening' || item === TITLE_CARD_ID || isJunctionItem(item) || isStageCardItem(item)
+          : item === 'opening' || item === TITLE_CARD_ID || isJunctionItem(item) || isStageCardItem(item) || isStageItem(item)
             ? 'end'
             : 'move'
       if (isCardItem(item)) {
@@ -1020,7 +1020,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           name,
           `Étape ${k + 1} : ${stage.track.name}`,
           'film-tl__block--stage',
-          ['move'],
+          ['move', 'end'],
           undefined,
           undefined,
           <span className="film-tl__stage-band" style={{ background: color }} />,

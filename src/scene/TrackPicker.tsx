@@ -20,7 +20,7 @@ import { POI_NAME_MAX, addPoi, defaultPoiName } from '../film/pois'
 import { addSpeed, addStop, addText } from '../film/timeline'
 import { buildTrackPath, pickProjectedPath, samplePath } from '../flyover/path'
 import { useAppStore } from '../state/store'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 import { LINE_LIFT_M } from './trackLineSet'
 import { editFilm, getFilmSource, useFilmClock, useFilmTrack } from './usePacing'
 
