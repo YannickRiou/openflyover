@@ -1,6 +1,6 @@
 # Design: styling on Tailwind CSS
 
-Status: proposed. Target: v2.0.0 (after v1.0.0). Prerequisite of [heroui.md](heroui.md).
+Status: accepted. Target: v2.0.0 (after v1.0.0). Prerequisite of [heroui.md](heroui.md).
 
 ## Why
 
