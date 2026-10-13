@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## Unreleased
 
 - **Opening and closing shots: no dive, no skimming the relief** (#106): between the wide view and the flight view the camera stays on a glide slope over the flight camera (it no longer drops far from the start of the track) and clears the ground under it, and the line to its aim, by a share of its distance instead of 80 m under the camera only, so it no longer flies just over a ridge on the way in.
+- **Landmarks under control**: « Nombre maximal » (5 to 80, 40 by default) caps the landmarks per track and the 3D labels; the pin of a row keeps a landmark whatever the cap, and « Garder les épinglés » dismisses all the others at once (one undo step). Dismissing a landmark with the cross no longer brings another one in its place.
 - **Faster video export**: while a frame waits for its terrain tiles, the tiles of the next frames are now requested too (before, only once every 5 frames), so the network no longer sits mostly idle during the export.
 - **Timeline, « À la suite »**: the stage blocks keep their place while a block is being dragged (they collapsed during the drag), and the junctions between stages are snap targets.
 - **Smaller cards and widgets**: the size of the opening title, the closing card and the other widgets can go down to ×0.2 (it was ×0.5), so a card no longer has to hide the start of the track.
