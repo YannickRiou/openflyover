@@ -7,14 +7,14 @@ import {
   RACE_CAMERAS,
   RACE_SYNC_LABELS,
   RACE_SYNC_MODES,
-  STAGE_TRANSITION_LABELS,
-  STAGE_TRANSITIONS,
   raceAt,
   rankRacers,
   syncNeedsTime,
 } from '../flyover/race'
-import type { Race, RaceCamera, RaceSettings, RaceSync, Racer, StageTransition } from '../flyover/race'
+import type { Race, RaceCamera, RaceSettings, RaceSync, Racer } from '../flyover/race'
 import { playsInSequence } from '../flyover/sequence'
+import { DEFAULT_JUNCTION, junctionDefaultOf, withDefaultCard, withDefaultJunction } from '../film/junctions'
+import { editFilm } from '../scene/usePacing'
 import {
   PACE_RANGE,
   PLAN_ACTIVITIES,
@@ -33,6 +33,7 @@ import { computeTrackElevation, hasMissingElevation, withoutTerrainElevation } f
 import { getTerrainSource } from '../terrain/sources'
 import { formatClock, formatDistance, formatDistanceGap, formatNumber, formatTimeGap, formatTrackSummary } from './format'
 import { Icon } from './icons'
+import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import './trackElevation.css'
@@ -104,6 +105,34 @@ function withMultiMode(race: RaceSettings, mode: MultiMode): RaceSettings {
 }
 
 /**
+ * « À la suite »: the transition between two stages and the card of each stage as the film makes them by default
+ * (`film.junctionDefault`); each junction and each card is set on the timeline (« Étapes » lane), where it keeps its own.
+ */
+function StageDefaults() {
+  const film = useAppStore((s) => s.settings.film)
+  const id = useId()
+  const { kind, holdS, card } = junctionDefaultOf(film)
+  return (
+    <>
+      <JunctionTransitionFields
+        kind={kind}
+        holdS={holdS || DEFAULT_JUNCTION.holdS}
+        onChange={(patch) => editFilm((f) => ({ film: withDefaultJunction(f, patch) }), { step: patch.kind !== undefined })}
+      />
+      <label className="checkbox checkbox--switch" htmlFor={`${id}-cards`}>
+        <input id={`${id}-cards`} type="checkbox" checked={card} onChange={(e) => editFilm((f) => ({ film: withDefaultCard(f, e.currentTarget.checked) }))} />
+        Carton au début de chaque étape
+      </label>
+      <p className="field__hint">
+        Par défaut : la transition garde le film ici le temps indiqué ; le carton donne le nom, la date, la distance et le dénivelé de l’étape. Chaque
+        jonction et chaque carton se règlent sur la timeline (ligne « Étapes », bloc de la jonction, bloc du carton dans « Textes »). L’ordre est celui
+        de la liste (flèche pour monter une trace).
+      </p>
+    </>
+  )
+}
+
+/**
  * « Plusieurs traces » (2+ tracks): the first one alone, « À la suite » (stages, their transition and cards) or
  * « En parallèle » (the ghost race: sync, what the camera follows, leaderboard).
  */
@@ -153,37 +182,7 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
         {MULTI_MODE_HINTS[mode]}
       </p>
 
-      {mode === 'suite' && (
-        <>
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-transition`}>
-              Entre deux étapes
-            </label>
-            <select
-              id={`${id}-transition`}
-              className="select"
-              value={settings.stageTransition ?? 'fondu-noir'}
-              onChange={(e) => set({ stageTransition: e.currentTarget.value as StageTransition })}
-            >
-              {STAGE_TRANSITIONS.map((t) => (
-                <option key={t} value={t}>
-                  {STAGE_TRANSITION_LABELS[t]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="checkbox checkbox--switch" htmlFor={`${id}-cards`}>
-            <input
-              id={`${id}-cards`}
-              type="checkbox"
-              checked={settings.stageCards !== false}
-              onChange={(e) => set({ stageCards: e.currentTarget.checked })}
-            />
-            Carton au début de chaque étape
-          </label>
-          <p className="field__hint">Nom, date, distance et dénivelé de l’étape. L’ordre est celui de la liste (flèche pour monter une trace).</p>
-        </>
-      )}
+      {mode === 'suite' && <StageDefaults />}
 
       <div className="field" hidden={mode !== 'parallele'}>
         <label className="field__label" htmlFor={`${id}-sync`}>

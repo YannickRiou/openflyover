@@ -377,6 +377,18 @@ describe('film model', () => {
     )
   })
 
+  it('a film saved before the junctions loads without any: the defaults apply, nothing is added to the film', () => {
+    const loaded = sanitizeSettings({ film: { ...DEFAULT_FILM } })
+    expect(loaded.invalid).toEqual([])
+    expect(loaded.settings.film).toEqual(DEFAULT_FILM)
+    expect(loaded.settings.film).not.toHaveProperty('junctions')
+    // the project's « Plusieurs traces » transition moved to the film's default junction, the film otherwise unchanged
+    const old = sanitizeSettings({ race: { ...DEFAULT_SETTINGS.race, sequence: true, stageTransition: 'fondu-blanc' }, film: DEFAULT_FILM })
+    expect(old.invalid).toEqual([])
+    expect(old.settings.film).toEqual({ ...DEFAULT_FILM, junctionDefault: { kind: 'fondu-blanc', holdS: 1.5, card: true } })
+    expect(isValidFilm(old.settings.film)).toBe(true)
+  })
+
   it('time in the file of a video: from its start in the file, held at its end', () => {
     const clip = media('media-1', { kind: 'video', startS: 10, inS: 2 })
     expect(clipTimeS(clip, 10)).toBe(2)

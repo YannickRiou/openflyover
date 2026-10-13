@@ -11,6 +11,7 @@ import { isRecord } from '../core/guards'
 import type { Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
 import { sanitizeMediaTable, usedMedia } from '../film/media'
 import type { MediaAsset, MediaTable } from '../film/media'
+import { withStageSettingsMigrated } from '../film/junctions'
 import { isValidFilm, withFilmDefaults } from '../film/model'
 import { FLYOVER_DURATION_RANGE, isValidCamera, withCameraDefaults } from '../flyover/cameraSettings'
 import { isValidPacing, withPacingDefaults } from '../flyover/pacing'
@@ -195,7 +196,8 @@ export function sanitizeSettings(raw: unknown, base: Settings = DEFAULT_SETTINGS
     if (isValidSetting(key, value)) (settings as Record<string, unknown>)[key] = value
     else invalid.push(key)
   }
-  return { settings, invalid }
+  // the transition and cards « À la suite » moved from `race` to the film's junction default
+  return { settings: withStageSettingsMigrated(settings), invalid }
 }
 
 // ---------------------------------------------------------------------------

@@ -26,6 +26,7 @@ export const SHORTCUTS = [
   { id: 'undo', keys: ['Ctrl+Z'], label: 'Annuler', group: 'Montage' },
   { id: 'redo', keys: ['Ctrl+Maj+Z', 'Ctrl+Y'], label: 'Rétablir', group: 'Montage' },
   { id: 'nudge', keys: ['←', '→'], label: 'Décaler le bloc sélectionné d’une seconde (Maj : d’un dixième)', group: 'Montage' },
+  { id: 'magnet', keys: ['Alt+glisser'], label: 'Inverser l’aimantation de la timeline pendant un glissement', group: 'Montage' },
   { id: 'add-stop', keys: ['S'], label: 'Ajouter un arrêt à la position du marqueur', group: 'Montage' },
   { id: 'add-text', keys: ['T'], label: 'Ajouter un texte à la tête de lecture', group: 'Montage' },
   { id: 'remove', keys: ['Suppr'], label: 'Supprimer le bloc sélectionné', group: 'Montage' },

@@ -31,6 +31,8 @@ export interface Sequence {
   stages: readonly Stage[]
   /** where a stage starts, every one but the first (metres along the sequence) */
   cutsM: readonly number[]
+  /** the stages' track ids in order: the junction k (after the stage k, at `cutsM[k]`) is keyed by the id k */
+  stageIds: readonly string[]
 }
 
 /** The tracks are flown one after the other: « À la suite » chosen (the ghost race wins when both are set), 2+ tracks. */
@@ -65,7 +67,7 @@ export function buildSequence(tracks: readonly Track[]): Sequence {
     startM = endM
     return stage
   })
-  return { track, stages, cutsM: stages.slice(1).map((s) => s.startM) }
+  return { track, stages, cutsM: stages.slice(1).map((s) => s.startM), stageIds: tracks.map((t) => t.id) }
 }
 
 /** Last sequence built, with the tracks it was built from. */

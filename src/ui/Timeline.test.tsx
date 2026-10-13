@@ -277,3 +277,137 @@ describe('Timeline', () => {
     })
   })
 })
+
+describe('Timeline — stages « À la suite »', () => {
+  const setup = async (stages: number, sequence = true) => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const tracks = Array.from({ length: stages }, (_, k) =>
+      buildTrack({
+        name: `Jour ${k + 1}`,
+        source: 'gpx',
+        segments: [{ points: [0, 1, 2, 3].map((i) => ({ lon: 6.8 + i * 0.01, lat: 45.9 + k * 0.1, ele: 1000 + i * 10 })) }],
+      }),
+    )
+    useExportStore.setState({ phase: 'idle' })
+    useAppStore.setState({ tracks, filmSelection: null })
+    const { settings, setSetting } = useAppStore.getState()
+    await act(async () => setSetting('film', DEFAULT_FILM))
+    await act(async () => setSetting('race', { ...settings.race, enabled: false, sequence }))
+    await act(async () => setSetting('overlay', { ...DEFAULT_OVERLAY, enabled: false }))
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () =>
+      root.render(
+        <>
+          <Timeline />
+          <FilmInspector />
+        </>,
+      ),
+    )
+    const lane = (name: string) => host.querySelector(`[role="group"][aria-label="${name}"]`)
+    const blocks = (name: string, selector: string) => Array.from(lane(name)?.querySelectorAll<HTMLElement>(selector) ?? [])
+    const press = (el: HTMLElement, key: string) => act(async () => void el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })))
+    return { host, root, tracks, lane, blocks, press }
+  }
+
+  it('an « Étapes » lane above « Plans »: a block per stage and a block per junction between them', async () => {
+    const { host, root, lane, blocks } = await setup(3)
+    expect(Array.from(host.querySelectorAll('.film-tl__lane')).map((l) => l.getAttribute('aria-label'))[0]).toBe('Étapes')
+    expect(Array.from(host.querySelectorAll('.film-tl__head')).map((h) => h.textContent)[1]).toBe('Étapes')
+    expect(blocks('Étapes', '.film-tl__block--stage').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual(['Étape 1 : Jour 1', 'Étape 2 : Jour 2', 'Étape 3 : Jour 3'])
+    expect(blocks('Étapes', '.film-tl__block--junction').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
+      'Jonction 1 : Fondu au noir · 1,5 s (par défaut)',
+      'Jonction 2 : Fondu au noir · 1,5 s (par défaut)',
+    ])
+    // the card of each stage is a block of « Textes »: the first with the flight, the others inside their junction
+    expect(blocks('Textes', '.film-tl__block--card').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
+      'Carton : Étape 1 · Jour 1',
+      'Carton : Étape 2 · Jour 2',
+      'Carton : Étape 3 · Jour 3',
+    ])
+    expect(lane('Plans')).not.toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('no lane for one track, nor for the first track alone', async () => {
+    const one = await setup(1)
+    expect(one.lane('Étapes')).toBeNull()
+    act(() => one.root.unmount())
+    const alone = await setup(3, false)
+    expect(alone.lane('Étapes')).toBeNull()
+    expect(alone.blocks('Textes', '.film-tl__block--card')).toEqual([])
+    act(() => alone.root.unmount())
+  })
+
+  it('selecting a junction opens its inspector; its hold is stretched from the keyboard and the film gets longer by as much', async () => {
+    const { host, root, blocks, press, tracks } = await setup(2)
+    const total = () => Number(host.querySelector('.film-tl__ruler')?.getAttribute('aria-valuemax'))
+    const before = total()
+    const junction = () => blocks('Étapes', '.film-tl__block--junction')[0]
+    await act(async () => junction().focus())
+    expect(useAppStore.getState().filmSelection).toBe(`junction-${tracks[0].id}`)
+    expect(host.querySelector('.film-inspector h2')?.textContent).toBe('Jonction 1')
+    expect(host.querySelector('.film-inspector')?.textContent).toContain('Entre « Jour 1 » et « Jour 2 »')
+    // a nudge by one second: the junction is now the film's own, held 1 s longer
+    await press(junction(), 'ArrowRight')
+    expect(useAppStore.getState().settings.film.junctions).toEqual([{ id: `junction-${tracks[0].id}`, afterTrackId: tracks[0].id, kind: 'fondu-noir', holdS: expect.closeTo(2.5, 1) }])
+    expect(total()).toBeGreaterThanOrEqual(before + 1)
+    expect(junction().getAttribute('aria-label')).toContain('Fondu au noir · 2,5 s')
+    expect(junction().getAttribute('aria-label')).not.toContain('par défaut')
+    // back to the default transition from the inspector (the selection stays)
+    const reset = Array.from(host.querySelectorAll<HTMLButtonElement>('.film-inspector__remove')).find((b) => b.textContent === 'Transition par défaut')!
+    await act(async () => reset.click())
+    expect(useAppStore.getState().settings.film.junctions).toEqual([])
+    expect(useAppStore.getState().filmSelection).toBe(`junction-${tracks[0].id}`)
+    act(() => root.unmount())
+  })
+
+  it('a cut is a thin block that holds nothing; the transition is changed from the inspector, « Appliquer à toutes » reaches every junction', async () => {
+    const { host, root, blocks, tracks } = await setup(3)
+    await act(async () => useAppStore.getState().setFilmSelection(`junction-${tracks[0].id}`))
+    const kind = host.querySelector<HTMLSelectElement>('.film-inspector select')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(kind, 'coupe')
+      kind.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(blocks('Étapes', '.film-tl__block--junction-coupe')).toHaveLength(1)
+    expect(host.querySelector('.film-inspector input[type="range"]')).toBeNull()
+    const all = Array.from(host.querySelectorAll<HTMLButtonElement>('.film-inspector__remove')).find((b) => b.textContent === 'Appliquer à toutes les jonctions')!
+    await act(async () => all.click())
+    expect(blocks('Étapes', '.film-tl__block--junction-coupe')).toHaveLength(2)
+    expect(useAppStore.getState().settings.film.junctionDefault).toMatchObject({ kind: 'coupe', holdS: 0 })
+    act(() => root.unmount())
+  })
+
+  it('a stage card is deleted by switching it off, and comes back from the junction’s inspector', async () => {
+    const { host, root, blocks, press, tracks } = await setup(2)
+    const second = () => blocks('Textes', '.film-tl__block--card')[1]
+    await act(async () => second().focus())
+    expect(useAppStore.getState().filmSelection).toBe(`card-stage-${tracks[0].id}`)
+    expect(host.querySelector('.film-inspector h2')?.textContent).toBe('Carton de l’étape 2')
+    await press(second(), 'Delete')
+    expect(blocks('Textes', '.film-tl__block--card')).toHaveLength(1)
+    expect(useAppStore.getState().settings.film.junctions).toMatchObject([{ afterTrackId: tracks[0].id, card: { enabled: false } }])
+    await act(async () => useAppStore.getState().setFilmSelection(`junction-${tracks[0].id}`))
+    const switchOn = Array.from(host.querySelectorAll<HTMLInputElement>('.film-inspector input[type="checkbox"]')).find((i) => i.labels?.[0]?.textContent === 'Carton de l’étape 2')!
+    await act(async () => switchOn.click())
+    expect(blocks('Textes', '.film-tl__block--card')).toHaveLength(2)
+    act(() => root.unmount())
+  })
+
+  it('the first stage card gives way to the opening title when it is on', async () => {
+    const { root, blocks } = await setup(2)
+    await act(async () => useAppStore.getState().setSetting('overlay', { ...DEFAULT_OVERLAY, enabled: true }))
+    expect(blocks('Textes', '.film-tl__block--card').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
+      "Titre d'ouverture",
+      'Carte de clôture',
+      'Carton : Étape 2 · Jour 2',
+    ])
+    act(() => root.unmount())
+  })
+})

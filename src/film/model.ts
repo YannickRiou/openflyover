@@ -358,6 +358,63 @@ export interface FilmNights {
 export const NIGHT_PART_RANGE = { min: 0, max: 20, step: 0.5 } as const
 export const DEFAULT_NIGHTS: FilmNights = { enabled: true, duskS: 3, nightS: 2, dawnS: 3 }
 
+export const JUNCTION_KINDS = ['coupe', 'fondu-noir', 'fondu-blanc', 'nuit'] as const
+/**
+ * How the film passes from a stage to the next one « À la suite » (`FilmJunction`): 'coupe', a hard cut (no time);
+ * 'fondu-noir' / 'fondu-blanc', a dip held on the film clock for `holdS` seconds (the stage card lives inside it);
+ * 'nuit', the night the recording rests through (dusk, night, dawn of `film.nights`), a dip to black without a night.
+ */
+export type JunctionKind = (typeof JUNCTION_KINDS)[number]
+export const JUNCTION_KIND_LABELS: Record<JunctionKind, string> = {
+  coupe: 'Coupe',
+  'fondu-noir': 'Fondu au noir',
+  'fondu-blanc': 'Fondu au blanc',
+  nuit: 'Nuit',
+}
+/** Time a junction is held on the clock (seconds; also its validity range in a loaded project, 0 is « Coupe »). */
+export const JUNCTION_HOLD_RANGE = { min: 0.5, max: 10, step: 0.1 } as const
+/** Length of a stage card (seconds; also its validity range in a loaded project) and its default. */
+export const JUNCTION_CARD_RANGE = { min: 1, max: 15, step: 0.5 } as const
+export const JUNCTION_CARD_DEFAULT_S = 5
+
+/**
+ * The card of a stage « À la suite »: shown from the middle of the junction before it (the start of the flight for the
+ * first stage) for `durationS`. Without `text` it shows what the stage is (name, « Étape 2 sur 3 · date », distance,
+ * D+); with it, `text` and `subtitle` where `{name} {n} {count} {date} {distance} {ascent}` are filled in. Placement and
+ * style as a `FilmText`.
+ */
+export interface JunctionCard {
+  enabled: boolean
+  durationS: number
+  text?: string
+  subtitle?: string
+  anchor: OverlayAnchor
+  size: number
+  color?: string
+  font?: OverlayFontId
+}
+
+/**
+ * The junction after the stage of track `afterTrackId` (keyed by the track, so it survives a reorder). A field it does
+ * not set is the default one (`Film.junctionDefault`; `junctionOf` reads them all).
+ */
+export interface FilmJunction {
+  id: string
+  afterTrackId: string
+  kind?: JunctionKind
+  /** seconds held on the clock: 0 for 'coupe' */
+  holdS?: number
+  /** the card of the stage that follows */
+  card?: JunctionCard
+}
+
+/** Transition and card of the junctions without a `FilmJunction` of their own (`card`: the stage cards are shown). */
+export interface JunctionDefault {
+  kind: JunctionKind
+  holdS: number
+  card: boolean
+}
+
 export interface Film {
   opening: FilmShot
   closing: FilmShot
@@ -383,6 +440,12 @@ export interface Film {
   pois: FilmPoi[]
   /** nights of a multi-day track shown as pauses; off for the films saved before it (their timing stays) */
   nights: FilmNights
+  /** junctions between the stages « À la suite » that differ from the default (`junctionOf` reads them), by track */
+  junctions?: FilmJunction[]
+  /** default transition and card of the junctions (absent: `DEFAULT_JUNCTION`, or what `race.stageTransition` said) */
+  junctionDefault?: JunctionDefault
+  /** card of the first stage (absent: the default card, `junctionCardOf`) */
+  firstCard?: JunctionCard
 }
 
 /** Slider ranges (also the validity ranges of a loaded project), seconds. */
@@ -678,6 +741,52 @@ export function isValidNights(nights: FilmNights): boolean {
   return typeof nights.enabled === 'boolean' && part(nights.duskS) && part(nights.nightS) && part(nights.dawnS)
 }
 
+export function isValidJunctionCard(card: unknown): card is JunctionCard {
+  return (
+    isRecord(card) &&
+    typeof card.enabled === 'boolean' &&
+    within(card.durationS, JUNCTION_CARD_RANGE.min, JUNCTION_CARD_RANGE.max) &&
+    optionalString(card.text) &&
+    optionalString(card.subtitle) &&
+    oneOf(OVERLAY_ANCHORS, card.anchor) &&
+    within(card.size, WIDGET_SIZE_MIN, WIDGET_SIZE_MAX) &&
+    (card.color === undefined || isHexColor(card.color)) &&
+    (card.font === undefined || oneOf(OVERLAY_FONT_IDS, card.font))
+  )
+}
+
+export function isValidJunction(junction: unknown): junction is FilmJunction {
+  return (
+    isRecord(junction) &&
+    isId(junction.id) &&
+    isId(junction.afterTrackId) &&
+    (junction.kind === undefined || oneOf(JUNCTION_KINDS, junction.kind)) &&
+    (junction.holdS === undefined || junction.holdS === 0 || within(junction.holdS, JUNCTION_HOLD_RANGE.min, JUNCTION_HOLD_RANGE.max)) &&
+    (junction.card === undefined || isValidJunctionCard(junction.card))
+  )
+}
+
+function isValidJunctionDefault(d: unknown): d is JunctionDefault {
+  return (
+    isRecord(d) &&
+    oneOf(JUNCTION_KINDS, d.kind) &&
+    (d.holdS === 0 || within(d.holdS, JUNCTION_HOLD_RANGE.min, JUNCTION_HOLD_RANGE.max)) &&
+    typeof d.card === 'boolean'
+  )
+}
+
+/** The optional junction fields, when present: valid, one junction per track. */
+function hasValidJunctions(film: Film): boolean {
+  if (film.junctions !== undefined) {
+    if (!Array.isArray(film.junctions) || !film.junctions.every(isValidJunction)) return false
+    if (new Set(film.junctions.map((j) => j.afterTrackId)).size !== film.junctions.length) return false
+  }
+  return (
+    (film.junctionDefault === undefined || isValidJunctionDefault(film.junctionDefault)) &&
+    (film.firstCard === undefined || isValidJunctionCard(film.firstCard))
+  )
+}
+
 /**
  * Value checks of a film whose top-level shape already matches `DEFAULT_FILM` (see `SETTING_CHECKS` in the
  * project document): shots, every item of every lane, speed portions apart, ids unique across the film.
@@ -690,6 +799,7 @@ export function isValidFilm(film: Film): boolean {
   if (!film.speeds.every(isValidSpeed) || !apart(film.speeds) || !film.audio.every(isValidAudio)) return false
   if (!film.cameraKeys.every(isValidCameraKey) || !film.pois.every(isValidPoi) || !isValidNights(film.nights)) return false
   if (!film.paramKeys.every(isValidParamKey) || !film.markerKeys.every(isValidMarkerKey)) return false
+  if (!hasValidJunctions(film)) return false
   const ids = [...film.stops, ...film.speeds, ...film.cameraKeys, ...film.paramKeys, ...film.markerKeys, ...film.texts, ...film.media, ...film.audio, ...film.pois].map((item) => item.id)
   return new Set(ids).size === ids.length
 }

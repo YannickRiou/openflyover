@@ -217,9 +217,30 @@ describe('serializeProject / parseProject', () => {
     const settings = d.settings as Record<string, unknown>
     const race = { enabled: false, sync: 'elapsed', sequence: true, stageCards: false, stageTransition: 'fondu-blanc', camera: 'ensemble' }
     settings.race = race
-    expect(parseProject(JSON.stringify(d)).settings.race).toEqual(race)
+    // saved before the junctions: the transition and the cards of its stages become the film's default junction
+    const loaded = parseProject(JSON.stringify(d)).settings
+    expect(loaded.race).toEqual({ enabled: false, sync: 'elapsed', sequence: true, camera: 'ensemble' })
+    expect(loaded.film.junctionDefault).toEqual({ kind: 'fondu-blanc', holdS: 1.5, card: false })
     expect(sanitizeSettings({ race: { ...race, stageTransition: 'enchaine' } }).invalid).toEqual(['race'])
     expect(sanitizeSettings({ race: { ...race, camera: 'drone' } }).invalid).toEqual(['race'])
+  })
+
+  it('migrates the transition of « À la suite » into the film’s default junction, once', () => {
+    const migrated = (race: object, film?: object) => sanitizeSettings({ race: { enabled: false, sync: 'elapsed', sequence: true, ...race }, ...(film && { film }) }).settings
+    // a cut holds nothing, a fade the default hold; absent = the default (no junction default to store)
+    expect(migrated({ stageTransition: 'coupe' }).film.junctionDefault).toEqual({ kind: 'coupe', holdS: 0, card: true })
+    expect(migrated({ stageTransition: 'fondu-noir' }).film.junctionDefault).toEqual({ kind: 'fondu-noir', holdS: 1.5, card: true })
+    expect(migrated({ stageCards: false }).film.junctionDefault).toEqual({ kind: 'fondu-noir', holdS: 1.5, card: false })
+    expect(migrated({}).film.junctionDefault).toBeUndefined()
+    // a film that already chose keeps its choice; the old fields are dropped either way
+    const chosen = { ...DEFAULT_SETTINGS.film, junctionDefault: { kind: 'nuit', holdS: 2, card: true } }
+    const both = migrated({ stageTransition: 'coupe' }, chosen)
+    expect(both.film.junctionDefault).toEqual({ kind: 'nuit', holdS: 2, card: true })
+    expect(both.race).not.toHaveProperty('stageTransition')
+    // junctions of a film are loaded as saved, invalid ones refuse the film
+    const own = { ...DEFAULT_SETTINGS.film, junctions: [{ id: 'junction-a', afterTrackId: 'a', kind: 'fondu-blanc', holdS: 3 }] }
+    expect(sanitizeSettings({ film: own }).settings.film.junctions).toEqual(own.junctions)
+    expect(sanitizeSettings({ film: { ...own, junctions: [{ ...own.junctions[0], holdS: 99 }] } }).invalid).toEqual(['film'])
   })
 
   it('loads the fixed video formats of older projects as aspect × resolution', () => {
