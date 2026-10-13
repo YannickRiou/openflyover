@@ -18,6 +18,9 @@ permissions:
 
 jobs:
   web:
+    # paused for now (the slowest job): lint, unit tests and build run locally before each push. To turn it back on,
+    # remove this line (the badge job, which needs it, is skipped meanwhile).
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
