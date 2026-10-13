@@ -239,6 +239,18 @@ describe('serializeProject / parseProject', () => {
     expect(sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, hiddenIds: [1] } }).invalid).toEqual(['landmarks'])
   })
 
+  it('loads the landmarks of older projects without cap or pinned ids, and rejects invalid ones', () => {
+    const { maxCount: _count, pinnedIds: _pinned, ...older } = DEFAULT_SETTINGS.landmarks
+    const { settings, invalid } = sanitizeSettings({ landmarks: older })
+    expect(invalid).toEqual([])
+    expect(settings.landmarks).toEqual({ ...older, maxCount: 40, pinnedIds: [] })
+    const kept = sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, maxCount: 20, pinnedIds: ['node/1'] } })
+    expect(kept.settings.landmarks).toMatchObject({ maxCount: 20, pinnedIds: ['node/1'] })
+    for (const bad of [{ maxCount: 0 }, { maxCount: 500 }, { maxCount: 'x' }, { pinnedIds: [1] }, { pinnedIds: 'x' }]) {
+      expect(sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, ...bad } }).invalid).toEqual(['landmarks'])
+    }
+  })
+
   it('loads older projects with the manual haze setting, since removed, without a warning', () => {
     const d = doc()
     d.settings = { ...(d.settings as object), haze: 0.6 }

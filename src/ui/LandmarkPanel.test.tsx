@@ -113,6 +113,59 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
     act(() => root.unmount())
   })
 
+  it('the pin keeps a landmark; « Garder les épinglés » dismisses the others and their stops in one step', async () => {
+    const lakeStop = { id: 'stop-1', atM: 3000, durationS: 4, camera: 'orbite' as const, source: { kind: 'landmark' as const, ref: 'way/2' } }
+    const { host, root, button } = await mount({ ...DEFAULT_FILM, autoStops: false, stops: [lakeStop], pois: [POI] })
+    const pin = (name: string) => host.querySelector<HTMLButtonElement>(`button[aria-label$="pingler « ${name} »"]`)!
+    const names = () => [...host.querySelectorAll('.place .landmark__name')].map((n) => n.textContent)
+    expect(button('Garder les épinglés').disabled).toBe(true)
+    expect(pin('Col de Voza').getAttribute('aria-label')).toBe('Épingler « Col de Voza »')
+    expect(pin('Col de Voza').getAttribute('aria-pressed')).toBe('false')
+
+    await act(async () => pin('Col de Voza').click())
+    expect(useAppStore.getState().settings.landmarks.pinnedIds).toEqual(['node/1'])
+    expect(pin('Col de Voza').getAttribute('aria-label')).toBe('Désépingler « Col de Voza »')
+    expect(pin('Col de Voza').getAttribute('aria-pressed')).toBe('true')
+    expect(button('Garder les épinglés').disabled).toBe(false)
+
+    await act(async () => button('Garder les épinglés').click())
+    const { landmarks, film } = useAppStore.getState().settings
+    expect(landmarks).toMatchObject({ pinnedIds: ['node/1'], dismissedIds: ['way/2'] })
+    expect(film.stops).toEqual([])
+    expect(names()).toEqual(['Col de Voza'])
+    // the point of interest is not a landmark: left alone
+    expect(film.pois).toEqual([POI])
+
+    act(() => getSettingsHistory().undo())
+    expect(useAppStore.getState().settings.landmarks.dismissedIds).toEqual([])
+    expect(useAppStore.getState().settings.film.stops).toEqual([lakeStop])
+    expect(useAppStore.getState().settings.landmarks.pinnedIds).toEqual(['node/1'])
+    act(() => root.unmount())
+  })
+
+  it('the cross of a pinned landmark unpins it', async () => {
+    const { host, root } = await mount({ ...DEFAULT_FILM })
+    const click = (label: string) => act(async () => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click())
+    await click('Épingler « Lac Vert »')
+    await click('Masquer « Lac Vert »')
+    await click('Écarter « Lac Vert »')
+    expect(useAppStore.getState().settings.landmarks).toMatchObject({ pinnedIds: [], dismissedIds: ['way/2'] })
+    act(() => root.unmount())
+  })
+
+  it('« Nombre maximal » sets the cap of the landmarks', async () => {
+    const { host, root } = await mount({ ...DEFAULT_FILM })
+    const slider = host.querySelector<HTMLInputElement>('input[type="range"][id$="-count"]')!
+    expect(slider.value).toBe('40')
+    expect(host.textContent).toContain('Nombre maximal')
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(slider, '15')
+      slider.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(useAppStore.getState().settings.landmarks.maxCount).toBe(15)
+    act(() => root.unmount())
+  })
+
   it('« Tout masquer » hides every label with its stop in one step; landmarks found later are shown as new', async () => {
     const lakeStop = { id: 'stop-1', atM: 3000, durationS: 4, camera: 'orbite' as const, source: { kind: 'landmark' as const, ref: 'way/2' } }
     const before: Film = { ...DEFAULT_FILM, autoStops: false, stops: [lakeStop], pois: [POI] }
