@@ -11,9 +11,10 @@
 import { smootherstep } from '../core/math'
 import { nightPauseS } from '../flyover/nights'
 import type { FlightNight } from '../flyover/nights'
+import type { FlightStage } from '../flyover/pacing'
 import type { RaceSettings } from '../flyover/race'
 import type { ClockJunction, FilmClock } from './clock'
-import { JUNCTION_CARD_DEFAULT_S, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE } from './model'
+import { JUNCTION_CARD_DEFAULT_S, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, STAGE_DURATION_RANGE } from './model'
 import type { Film, FilmJunction, JunctionCard, JunctionDefault, JunctionKind, TransitionDip } from './model'
 
 /** Default junction of a film that never chose: a dip to black held for 1.5 s, a card for every stage. */
@@ -185,6 +186,47 @@ export function resetJunction(film: Film, afterTrackId: string): Film {
     return rest.card ? [rest] : []
   })
   return { ...film, junctions }
+}
+
+// ---------------------------------------------------------------------------
+// Duration of a stage
+// ---------------------------------------------------------------------------
+
+/**
+ * The stages of a sequence (track ids `stageIds`, starting at the cuts `cutsM`, `lengthM` long in all) for the clock:
+ * each with the flight time the film sets for it. None when no stage sets one, or without a sequence: the film then
+ * flies as it always did, the stages sharing the flyover duration in proportion to their distance.
+ */
+export function stageSpansOf(film: Pick<Film, 'stageDurations'>, stageIds: readonly string[], cutsM: readonly number[] | undefined, lengthM: number): FlightStage[] {
+  const set = film.stageDurations
+  if (!set || !cutsM || cutsM.length !== stageIds.length - 1 || !stageIds.some((id) => set[id] !== undefined)) return []
+  return stageIds.map((id, k) => {
+    const span = { fromM: k === 0 ? 0 : cutsM[k - 1], toM: k < cutsM.length ? cutsM[k] : lengthM }
+    return set[id] === undefined ? span : { ...span, durationS: set[id] }
+  })
+}
+
+/** The film with the flight time of the stage of track `trackId` set (kept in `STAGE_DURATION_RANGE`), or back to its share of the duration (`null`). */
+export function withStageDuration(film: Film, trackId: string, durationS: number | null): Film {
+  const { [trackId]: _was, ...rest } = film.stageDurations ?? {}
+  const stageDurations = durationS === null ? rest : { ...rest, [trackId]: roundS(Math.min(STAGE_DURATION_RANGE.max, Math.max(STAGE_DURATION_RANGE.min, durationS))) }
+  const { stageDurations: _old, ...others } = film
+  return Object.keys(stageDurations).length === 0 ? others : { ...others, stageDurations }
+}
+
+/**
+ * Seconds the marker takes over stage `k` on the clock: from the end of the junction before it (the start of the flight)
+ * to the start of the one after it (the end of the flight), without the time the junctions and the nights inside hold the
+ * film, as a duration set for the stage is meant. A junction is a pause centred on its cut, so its hold is taken off each side.
+ */
+export function stageFlightS(clock: Pick<FilmClock, 'openingS' | 'flightS' | 'junctions' | 'nights'>, k: number): number {
+  const before = clock.junctions[k - 1]
+  const after = clock.junctions[k]
+  const startS = before ? (before.startS + before.endS + before.holdS) / 2 : clock.openingS
+  const endS = after ? (after.startS + after.endS - after.holdS) / 2 : clock.openingS + clock.flightS
+  const atCut = new Set(clock.junctions.map((j) => j.holdStartS))
+  const nightsS = clock.nights.reduce((sum, n) => (n.holdStartS > startS && n.holdStartS < endS && !atCut.has(n.holdStartS) ? sum + nightPauseS(n) : sum), 0)
+  return endS - startS - nightsS
 }
 
 // ---------------------------------------------------------------------------

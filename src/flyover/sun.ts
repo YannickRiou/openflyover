@@ -4,7 +4,8 @@
  *
  * Pure functions (no DOM, no React, no Three).
  */
-import type { ClockNight, FilmClock } from '../film/clock'
+import { smootherstep } from '../core/math'
+import type { ClockJunction, ClockNight, FilmClock } from '../film/clock'
 import { shotSunOf } from '../film/model'
 import { recordedTimeAt, type TrackPath } from './path'
 
@@ -134,6 +135,41 @@ export function nightSunDate(
   if (timeS < darkS) return new Date(lerp(night.startS, darkS, from, dark))
   if (timeS < lightS) return new Date(lerp(darkS, lightS, dark, light))
   return new Date(lerp(lightS, night.endS, light, to))
+}
+
+/** The fade of the clock (a dip to black or white held for a time) the film is in at `timeS`, from the start of its ease in to the end of its ease out, else null. */
+export function junctionBlendAt(clock: Pick<FilmClock, 'junctions'>, timeS: number): ClockJunction | null {
+  return clock.junctions.find((j) => (j.kind === 'fondu-noir' || j.kind === 'fondu-blanc') && j.holdS > 0 && timeS >= j.startS && timeS < j.endS) ?? null
+}
+
+/**
+ * Sun date `u` (0..1) of the way from `a`, the sun at the end of a stage, to `b`, the sun at the start of the next: the time
+ * of day runs from one to the other the way the film goes (forward when `b` is later, so an evening into a morning passes
+ * dusk, night and dawn; backward when it is earlier), eased at both ends, and the whole days between are taken at once
+ * half-way, since the sun hardly moves in a day. Same sun on both sides: the same date throughout.
+ */
+export function blendSunDates(a: Date, b: Date, u: number): Date {
+  const delta = b.getTime() - a.getTime()
+  const days = Math.trunc(delta / DAY_MS)
+  const rest = delta - days * DAY_MS
+  return new Date(a.getTime() + rest * smootherstep(u) + (u >= 0.5 ? days * DAY_MS : 0))
+}
+
+/**
+ * Sun date at film time `timeS` across a fade between two stages « À la suite »: `sunDate` (the flight's) outside it; during
+ * the pause of the junction, from the end of the stage before (`ends(j).before`) to the start of the one after
+ * (`.after`), over the whole pause, so the light changes smoothly with the dip instead of switching at the cut (a
+ * night junction has its own dusk, night and dawn: `nightSunDate`). A pure function of the film time.
+ */
+export function junctionSunDate(
+  clock: Pick<FilmClock, 'junctions'>,
+  timeS: number,
+  sunDate: Date,
+  ends: (junction: ClockJunction) => { before: Date; after: Date } | null,
+): Date {
+  const j = junctionBlendAt(clock, timeS)
+  const at = j && ends(j)
+  return j && at ? blendSunDates(at.before, at.after, (timeS - j.startS) / (j.endS - j.startS)) : sunDate
 }
 
 /** Local mean solar time (hours) at `lon` of `date`, counted from the UTC day containing `dayMs` (inverse of `solarHourToDate`). */

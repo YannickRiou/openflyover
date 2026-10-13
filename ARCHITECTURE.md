@@ -59,10 +59,10 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
-| `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
+| `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `FlightStage` (a stage with its own flight time, the 8th argument `stages`), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
 | `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, ; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`junctions`, `nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `junctions.ts`: `junctionOf`, `junctionCardOf`, `withJunction`, `withJunctionCard`, `applyToAllJunctions`, `junctionPlan`, `junctionDipAt`, `stageCardWindow`, `fillTemplate`, `withStageSettingsMigrated`; `timeline.ts`: scale, ruler, snapping (`SnapTarget`, `snapTargets`, `snapTime`, `snapper`), `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
 | `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime`; keyframes: `keyView`, `keyFramingFrom`, `keyFramingAt`, `keyReferenceAt` (`cameraKeys.ts`, no three.js: `keyPoseAt`, `keyedCamera`, `registerKeyCapture`, `captureKey`) |
-| `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)`, `nightAt`, `nightSunDate`, `NIGHT_DARK_MARGIN_MS` |
+| `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)`, `nightAt`, `nightSunDate`, `NIGHT_DARK_MARGIN_MS`, `junctionBlendAt`, `blendSunDates`, `junctionSunDate` (the light across a fade between two stages) |
 | `src/flyover/nights.ts` | nights of a multi-day track (see "Sun at the time of the outing") | `trackNights`, `flightNights`, `nightPauseS`, `TrackNight`, `FlightNight` |
 | `src/flyover/trackColor.ts` | track colored by a metric | `TRACK_COLOR_MODES`, `TrackColorBy`, `TRACK_METRICS` (label, unit, palette), `metricValues`, `trackMetricValues`, `hasMetric`, `robustRange`, `resampleValues`, `colorizeValues`, `VIRIDIS`, `MAGMA`, `MISSING_COLOR` |
 | `src/scene/exposure.ts` | exposure under the atmosphere | `DAYLIGHT_EXPOSURE`, `sunElevation`, `autoExposureEv`, `sceneExposure(elevation, ev)`, `nightFillIntensity` |
@@ -565,8 +565,11 @@ pointer (`appearance.css`).
   The default project (« Moyenne », no lens effect, 1080p 30) has no tier 3, so no dot. Bloom, flare and shadows are not shown (one
   cheap pass per render). These weights are estimates derived from the code, to recalibrate on a real GPU (never measure the export
   speed on SwiftShader).
-- **Lumière**: toggle "Suivre la trace" (follow the track; = `sunFromTrack`, disabled with an explanation without timestamps) / "Heure
-  fixe" (fixed time). In fixed time: solar-hour slider above a night / dawn / day / dusk bar with the
+- **Lumière**: « Source de la lumière »: « Heure de la trace » (follow the track; = `sunFromTrack`, disabled with an explanation
+  without timestamps; « À la suite »: every stage at its own recorded hour, the light blending across the fade junctions, see
+  "Several tracks") / « Heure fixe » (one fixed time and day for the whole film, every stage included). The film track
+  (`useFilmTrack`: the sequence for « À la suite ») gives the day bar and the start time. « Jours et nuits » is one switch
+  (the seconds move to the inspector of a `nuit` junction in a sequence, and « Cartes de jour » is hidden there: the stage cards do it). In fixed time: solar-hour slider above a night / dawn / day / dusk bar with the
   sunrise and sunset marks (`solarDay` at the origin of the local frame and on the UTC day of the start of the first track, like the
   scene; standard 6 am – 6 pm day without a track); the text under the bar gives sunrise and sunset in local time when the
   first track knows its UTC offset (`Track.utcOffsetMin`, `clockHourOfSolar`), with the solar hour in the ⓘ,
@@ -744,7 +747,7 @@ pointer (`appearance.css`).
   whatever « Garder la durée », never shortened; `clock.nights`, phase 'flight', marker held). During it `nightSunDate` runs
   the sun date from the flight's sun to sunset + 1 h (dusk), to sunrise − 1 h (night), then to the flight's sun (dawn),
   linearly over parts proportional to their seconds: continuous, never backwards, a pure function of the film time. The
-  export re-renders those frames (`nightAt` in the held-frame test). « Ajouter les cartes de jour » (`src/film/days.ts`)
+  export re-renders those frames (`nightAt` in the held-frame test). **Across a fade between two stages « À la suite »** (a junction `fondu-noir` / `fondu-blanc` with a hold; `junctionSunDate`, applied by `AtmosphereLayer` after the nights): over the whole pause of the junction (`startS` to `endS`, the same window as its dip) the sun date runs from the end of the stage before (`sunAt` just short of the cut) to the start of the next, with `blendSunDates`: the time of day runs the way the film goes (forward when the next stage is later, so an evening into a morning passes dusk, night and dawn; backward when it is earlier), eased by `smootherstep`, and the whole days between are taken at once half-way, under the dip. Both ends are the stages' own suns, so nothing jumps; the same sun on both sides (« Heure fixe », or one day) stays still. Keys on the sun hour (`sunKeyed`) replace the blend, a `nuit` junction keeps its own `nightSunDate`, a cut has no pause. A pure function of the film time; the export's held-frame test also re-renders the frames of the blend (`junctionBlendAt`). Clouds, weather and the sun-less settings still switch at the cut, under the dip. « Ajouter les cartes de jour » (`src/film/days.ts`)
   adds texts `day-n` « Jour n » at the start of each local calendar day (recording clock when `utcOffsetMin` is known,
   device clock otherwise), with the day and / or cumulative distance; a new click replaces only the `day-` texts. Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
   (browser time zone).
@@ -1033,7 +1036,7 @@ pointer (`appearance.css`).
   of interest placed by hand, see "Points of interest"; a film saved earlier receives `[]`); `nights` `{ enabled, duskS, nightS, dawnS }`
   (« Jours et nuits », 0–20 s each, `NIGHT_PART_RANGE`; on, 3 / 2 / 3 s by default; off for a film saved earlier, so its
   timing stays); `junctions[]`, `junctionDefault` and `firstCard`, optional and absent from a film saved earlier: the
-  junctions between the stages « À la suite » and their cards, see "Several tracks"; ids unique within the film
+  junctions between the stages « À la suite » and their cards, and `stageDurations` (flight time in seconds, 5–600, by track id, of the stages that set one), see "Several tracks"; ids unique within the film
   (`stop-3`, `text-1`, `media-2`, `music-1`, `poi-2`, `nextFilmId`).
 - **Automatic assembly** (`src/film/assemble.ts`): as long as `autoStops` is true, stops are generated on every computation
   (`autoStops`) at the highlights (`stopCandidates`: passes crossed and summits nearby among the landmarks shown, `pacing.landmarks`; climb tops are no
@@ -1065,7 +1068,8 @@ pointer (`appearance.css`).
   [0, O) opening (progress 0), [O, O + F) flight, [O + F, total] closing (progress 1). The flight is `flightPacing`:
   pacing slow-downs at highlights, film speed sections, film stops inserted with raised-cosine entry and
   exit (≤ 1.5 s), each with its own duration; `keepDuration` keeps F = `flyoverDurationS` (stops ≤ 50%, shortened
-  proportionally; a sped-up section slows the rest down by as much). **Speed sections** (`flightPacing(…, speeds)`): the
+  proportionally; a sped-up section slows the rest down by as much; a stage « À la suite » with its own duration flies that long, see
+  "Several tracks"). **Speed sections** (`flightPacing(…, speeds)`): the
   local speed (slow-downs included) is multiplied by m(x) = factor^w(x) over [fromM, toM], w rising from 0 to 1 as a raised
   cosine over `pacing.transitionS` ("Transitions", 0.5–4 s, default `SPEED_EASE_S` = 1.5 s; the same length bounds the
   ease into and out of pauses and stops) at base speed, inside the section (at most half of it), and
@@ -2441,6 +2445,22 @@ exports) gets it from the terrain source of the settings.
   without a night to pass, a fade to black held `holdS`), any other kind replaces it. Nights inside a stage stay automatic.
   Migration: a transition other than `coupe` holds `DEFAULT_JUNCTION.holdS` (1.5 s), so an old project with a dip grows by
   the holds only; with `coupe` its film is identical.
+- **Duration per stage** (`film.stageDurations?: Record<trackId, seconds>`, `STAGE_DURATION_RANGE` 5–600 s; absent = the stage's share
+  of `flyoverDurationS` proportional to its distance, i.e. today's film exactly): `stageSpansOf(film, stageIds, cutsM, lengthM)` →
+  `FilmClockInput.stages` (`FlightStage` `{ fromM, toM, durationS? }`, none unless a stage of the sequence sets one; `junctionInputsFor`
+  carries them with the junctions) → `flightPacing(…, stages)`. A stage that sets a duration flies **exactly** that long: its moving
+  time is scaled (`stagedMovingTime`) so that moving time + its own pauses (stops: shortened as ever with « Garder la durée »;
+  not the extra pauses, junction holds and nights) = `durationS`; the unset stages share `flyoverDurationS × their length / total
+  length`, with « Garder la durée » scaling their moving time to it (without it, as before), so the flight is the sum of the set
+  durations and the shares (+ holds). Stops are kept in the stage they are in (a stop on a cut belongs to the next one). The scaling is
+  piecewise per grid step (the stage edges are grid nodes), so the speed jumps at a cut, which is a junction hold anyway. Not a
+  sequence, or no stage set: the code path is the one of before. The clock needs no new field: `stageFlightS(clock, k)` gives the flight
+  time of stage k (the junctions are pauses centred on their cut, so their `holdS` is taken off each side; nights inside are taken off),
+  what the stage inspector shows. Keyed by track id, so a reorder (`reorderStages`) needs nothing. UI: « Durée du vol » in the stage
+  inspector (slider, « Durée automatique »), the right edge of the stage block (`dragStage` in `film/timeline.ts`, found on the clock of
+  the film with the duration changed like `dragJunction`; the body of the block still reorders), arrows ±1 s (Shift ±0.1 s), Delete =
+  automatic; « Survol » › « Durée et rythme » says how many stages have their own. Not covered: `flightNights` still decides which nights
+  the flight crosses faster than they last from the shared duration.
 - **Stage card**: `JunctionCard` `{ enabled, durationS (1–15 s, 5), text?, subtitle?, anchor, size, color?, font? }` stored on
   the junction before its stage (`firstCard` for the first stage); without `text` the automatic card (name,
   « Étape 2 sur 3 · date », distance, D+), with it the film's own words (`fillTemplate`: `{name} {n} {count} {date}
@@ -2494,13 +2514,16 @@ exports) gets it from the terrain source of the settings.
   Both enter the export's held-frame key (dip alpha and card opacity), a pure function of the film time.
 - Drawn lines with « trace qui se dessine » (`drawOnDistances(…, sequence)`): stages flown whole, the current one to the
   marker, the next ones not yet. Start and finish labels name every stage's ends.
+- **Light across the junctions**: see "Sun at the time of the outing" (`junctionSunDate`): a fade blends the stages' suns over its pause, a
+  `nuit` junction is dusk, night and dawn (`nightSunDate`), a cut and the sun keys switch or rule as before. « Lumière »: « Source de la
+  lumière » (« Heure de la trace » / « Heure fixe » for all stages), « Jours et nuits » a single switch.
 - Sun, clouds and weather: `trackUnderMarker(tracks, race, progress)` gives the track under the marker and the
   progress along it (the stage « À la suite », else the first track at the film progress), resolved once per frame by
   `AtmosphereLayer` and shared with `CloudsLayer` and `CloudSeaSurface` (`MarkerTrack`): sun date from the stage's own
   timestamps (`sunDateAt` on its path), weather in the scene, cloud cover, cloud base and wind from its own series. The
   weather store fetches the later stages too (`syncStageWeather`, `stages` by track id, driven by the weather panel;
   `weatherSeriesOf(state, track)`), and each stage gets its own series in the overlay (`prepareOverlayFilm`). A pure
-  function of the progress: everything changes on the cut, nothing is interpolated across it.
+  function of the progress: clouds and weather change on the cut, nothing is interpolated across it (the sun is, over a fade).
 - Limits: time smoothing of the camera must not average across a stage cut (as for a shot that cuts); the weather
   panel, the poster and the « Lumière » sunrise and sunset still show the first track.
 
