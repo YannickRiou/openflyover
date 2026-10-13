@@ -9,12 +9,14 @@ import { samplePath, trackPathOf } from '../flyover/path'
 import {
   KIND_BADGES,
   KIND_LABELS,
+  LANDMARK_COUNT_RANGE,
   LANDMARK_DISTANCE_RANGE,
   PLACE_SIZES,
   PLACE_SIZE_LABELS,
   newLandmarkIds,
   movedInRank,
   withHidden,
+  withPinnedOnly,
   withPlaceSize,
 } from '../osm/landmarks'
 import type { Landmark, LandmarkSettings } from '../osm/landmarks'
@@ -56,6 +58,21 @@ function setRowsHidden(rows: readonly PlaceRow[], hide: boolean, extraIds: reado
     if (hide) editFilm((film) => ({ film: withoutPlaceItems(film, rows) }))
     const { settings, setSetting } = useAppStore.getState()
     setSetting('landmarks', withHidden(settings.landmarks, [...rows.map((r) => r.id), ...extraIds], hide, listed))
+  })
+}
+
+/**
+ * « Garder les épinglés »: every landmark of every track but the pinned ones is dismissed, in one undo step; the stops
+ * of the dismissed `rows` go with them (`withoutPlaceItems`).
+ */
+function keepPinnedOnly(rows: readonly PlaceRow[]): void {
+  const listed = [...listedIds(false), ...listedIds(true)]
+  getSettingsHistory().transaction(() => {
+    const { settings, setSetting } = useAppStore.getState()
+    const pinned = new Set(settings.landmarks.pinnedIds)
+    const dismissed = rows.filter((r) => !r.hidden && !pinned.has(r.id))
+    if (dismissed.length > 0) editFilm((film) => ({ film: withoutPlaceItems(film, dismissed) }))
+    setSetting('landmarks', withPinnedOnly(useAppStore.getState().settings.landmarks, listed))
   })
 }
 
@@ -112,6 +129,23 @@ function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; o
   )
 }
 
+/** The pin of a row: pinned landmarks are kept whatever the cap and by « Garder les épinglés ». */
+function PinButton({ name, pinned, onClick }: { name: string; pinned: boolean; onClick(): void }) {
+  return (
+    <button
+      type="button"
+      className={pinned ? 'icon-btn icon-btn--on' : 'icon-btn'}
+      aria-label={pinned ? `Désépingler « ${name} »` : `Épingler « ${name} »`}
+      aria-pressed={pinned}
+      data-tip={pinned ? 'Désépingler' : 'Épingler : toujours gardé'}
+      data-tip-side="left"
+      onClick={onClick}
+    >
+      <Icon name="pin" size={16} />
+    </button>
+  )
+}
+
 /**
  * « Repères et points d'intérêt » (foldable section of the Carte tab): the OSM landmarks (kinds and corridor width,
  * status, ODbL attribution) and the points of interest placed by hand, in one list
@@ -119,7 +153,8 @@ function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; o
  * arrows change (`settings.landmarks.rank`; the label of the higher one wins when two overlap). Each row: click = seek the flyover there; the eye shows or hides its label
  * (`settings.landmarks.hiddenIds`; hiding also removes its stop); « Arrêt » makes or removes a stop there,
  * its duration beside it. The cross of a hidden landmark dismisses it (`dismissedIds`) until « Relancer la recherche » asks
- * OpenStreetMap again. « Tout afficher » / « Tout masquer » for every label; landmarks found later (wider distance,
+ * OpenStreetMap again (a dismissed landmark frees no slot under « Nombre maximal »). The pin keeps a landmark whatever the
+ * cap; « Garder les épinglés » dismisses all the others. « Tout afficher » / « Tout masquer » for every label; landmarks found later (wider distance,
  * another type) are shown, marked « nouveau » until the user shows or hides labels again.
  * Also drives the landmark store, and keeps what is attached to a stop in step when the landmarks of the first track are
  * published again (`followLandmarks`).
@@ -153,6 +188,7 @@ export function LandmarkPanel() {
   const path = trackPathOf(first)
   const lengthM = first.stats.distanceM
   const hiddenIds = new Set(settings.hiddenIds)
+  const pinnedIds = new Set(settings.pinnedIds)
   const list = settings.enabled ? (landmarks ?? []) : []
   const hiddenList = settings.enabled ? (hidden ?? []) : []
   const fresh = newLandmarkIds(settings, list.map((l) => l.id))
@@ -192,7 +228,13 @@ export function LandmarkPanel() {
       ...settings,
       hiddenIds: settings.hiddenIds.filter((hiddenId) => hiddenId !== row.id),
       rank: settings.rank.filter((rankedId) => rankedId !== row.id),
+      pinnedIds: settings.pinnedIds.filter((pinnedId) => pinnedId !== row.id),
       dismissedIds: [...settings.dismissedIds, row.id],
+    })
+  const togglePin = (row: PlaceRow) =>
+    setSetting('landmarks', {
+      ...settings,
+      pinnedIds: pinnedIds.has(row.id) ? settings.pinnedIds.filter((pinnedId) => pinnedId !== row.id) : [...settings.pinnedIds, row.id],
     })
   const searchAgain = () => {
     const next = { ...settings, dismissedIds: [] }
@@ -285,6 +327,32 @@ export function LandmarkPanel() {
         </SettingRow>
       )}
 
+      {settings.enabled && (
+        <SettingRow label="Nombre maximal" value={String(settings.maxCount)} paths={['landmarks.maxCount']}>
+          <div className="field">
+            <label className="field__label" htmlFor={`${id}-count`}>
+              Nombre maximal
+            </label>
+            <div className="range-row">
+              <input
+                id={`${id}-count`}
+                className="range"
+                type="range"
+                min={LANDMARK_COUNT_RANGE.min}
+                max={LANDMARK_COUNT_RANGE.max}
+                step={LANDMARK_COUNT_RANGE.step}
+                value={settings.maxCount}
+                onChange={(e) => setSetting('landmarks', { ...settings, maxCount: Number(e.currentTarget.value) })}
+              />
+              <output className="range-row__value" htmlFor={`${id}-count`}>
+                {settings.maxCount}
+              </output>
+            </div>
+            <p className="field__hint">Par trace. Les repères épinglés y comptent et sont toujours gardés.</p>
+          </div>
+        </SettingRow>
+      )}
+
       <p className="field__hint" role="status" aria-live="polite">
         {!settings.enabled && 'Repères désactivés : aucune requête envoyée.'}
         {settings.enabled && status === 'loading' && 'Recherche des repères…'}
@@ -348,6 +416,16 @@ export function LandmarkPanel() {
             <Icon name="eye-off" size={16} />
             Tout masquer
           </button>
+          <button
+            type="button"
+            className="btn btn--secondary btn--small"
+            disabled={settings.pinnedIds.length === 0}
+            data-tip="Écarte tous les autres repères, sans en proposer de nouveaux"
+            onClick={() => keepPinnedOnly(ranked)}
+          >
+            <Icon name="pin" size={16} />
+            Garder les épinglés
+          </button>
         </div>
       )}
 
@@ -392,6 +470,7 @@ export function LandmarkPanel() {
                     >
                       <Icon name="chevron-down" size={16} />
                     </button>
+                    <PinButton name={landmark.name} pinned={pinnedIds.has(row.id)} onClick={() => togglePin(row)} />
                     <EyeButton name={landmark.name} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
                     {row.hidden && (
                       <button
