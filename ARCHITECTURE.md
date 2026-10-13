@@ -583,7 +583,8 @@ pointer (`appearance.css`).
   in `PanelSection`: "Habillage" (switch, style, "Couleurs et polices" (colors and fonts) collapsed; the only "modifié / Par défaut",
   for all of `overlay`), "Titres" (titles), "Compteurs" (counters; and "Classement (course fantôme)" (ghost race ranking) from two tracks), "Profil et mini-carte" (profile and mini-map), "Météo, logo et texte" (weather, logo and text; absent when the overlay is off), "Crédits des
   sources" (source credits; always). Each element (`WidgetGroup`) has its switch, then its position (`WidgetPosition`: 3 × 3
-  grid `AnchorPicker`, then "Position libre" with two offsets in pixels of the exported film, labelled from the anchor),
+  grid `AnchorPicker`, then "Position libre" with two offsets in pixels of the exported film, labelled from the anchor; `OffsetField` keeps a draft
+  while focused, one undo step per edit),
   then up to three tabs, only those it has: "Contenu" (content: `children`), "Style" (`style`: size, the logo's opacity,
   then its own colors and fonts) and
   "Visibilité" (visibility: `visibility`, e.g. the display time of the opening card). `PanelSection` accepts sections
