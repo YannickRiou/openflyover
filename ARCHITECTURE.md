@@ -2654,7 +2654,7 @@ differs goes through `src/platform/`.
   licences grouped by licence from `THIRD_PARTY_NOTICES.md`, data-service attributions from `docs/sources.md`; RTF for the
   Windows installers and the DMG, plain text for the Debian copyright file). `tauri.conf.json` references them through
   `bundle.licenseFile`, `bundle.windows.nsis` / `wix`, `bundle.macOS.dmg` and `bundle.linux.deb.files`.
-  `.github/workflows/ci.yml`, on pull requests and on master: types, lint, unit tests and build (`web` job); `cargo test` only when `src-tauri/` or the workflow changed (`rust` job, against a placeholder `dist/`).
+  `.github/workflows/ci.yml`, on pull requests and on master: types, lint, unit tests and build (`lint`, `test` and `build` jobs, in parallel); `cargo test` only when `src-tauri/` or the workflow changed (`rust` job, against a placeholder `dist/`).
 
 ### Video export without WebCodecs (Linux)
 
