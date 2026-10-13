@@ -21,8 +21,11 @@ import {
   lensActive,
   previewShutterWeight,
   radialBlurLength,
+  radialMask,
   sameShot,
   setShutterSubFrame,
+  shutterCentreWeights,
+  shutterHistoryWeight,
   shutterSamples,
   shutterSubFrame,
   subFrameCount,
@@ -109,6 +112,66 @@ describe('preview trail', () => {
     }
     expect(previewShutterWeight(0, 30, 1 / 60)).toBe(0)
     expect(previewShutterWeight(1, 30, 0)).toBe(0)
+  })
+})
+
+describe('radial mask and sub-frame weights', () => {
+  it('the mask is sharp in the centre, full in the corner, smooth and monotonic between', () => {
+    expect(radialMask(0)).toBe(0)
+    expect(radialMask(0.3)).toBe(0)
+    expect(radialMask(1)).toBe(1)
+    expect(radialMask(1.4)).toBe(1)
+    expect(radialMask(0.65)).toBeCloseTo(0.5)
+    let last = 0
+    for (let r = 0; r <= 1; r += 0.05) {
+      expect(radialMask(r)).toBeGreaterThanOrEqual(last)
+      last = radialMask(r)
+    }
+  })
+
+  it('the centre of the frame is made of the sub-frames nearest to the frame instant', () => {
+    expect(shutterCentreWeights(1)).toEqual([1])
+    for (const count of [2, 3, 4, 5, 6, 7, 8]) {
+      const w = shutterCentreWeights(count)
+      expect(w).toHaveLength(count)
+      // symmetric around the frame instant, peaking at the middle one(s), never above 1
+      w.forEach((v, j) => expect(v).toBeCloseTo(w[count - 1 - j]))
+      expect(Math.max(...w)).toBeCloseTo(w[Math.floor(count / 2)])
+      expect(Math.max(...w)).toBeLessThanOrEqual(1)
+      // the middle ones carry most of the weight of the centre, the first and the last (count > 2) almost none
+      const middle = count % 2 === 0 ? w[count / 2 - 1] + w[count / 2] : w[(count - 1) / 2]
+      expect(middle / w.reduce((a, b) => a + b, 0)).toBeGreaterThan(0.5)
+      if (count > 2) expect(w[0]).toBeLessThan(0.05)
+    }
+    // with an even count the two middle sub-frames weigh the same
+    const even = shutterCentreWeights(8)
+    expect(even[3]).toBeCloseTo(even[4])
+    expect(even[3]).toBeGreaterThan(4 * even[2])
+  })
+
+  it('the running mean with these weights is the weighted mean, per pixel, without a buffer of weights', () => {
+    const values = [3, 1, 4, 1, 5, 9, 2, 6]
+    for (const count of [1, 2, 5, 8]) {
+      const centre = shutterCentreWeights(count)
+      for (const mask of [0, 0.25, 1]) {
+        const w = centre.map((c) => c + (1 - c) * mask)
+        let mean = 0
+        for (let k = 0; k < count; k++) mean = mean + (values[k] - mean) * (1 - shutterHistoryWeight(centre, k, mask))
+        const exact = w.reduce((a, wk, k) => a + wk * values[k], 0) / w.reduce((a, b) => a + b, 0)
+        expect(mean).toBeCloseTo(exact)
+      }
+    }
+  })
+
+  it('in the corner every sub-frame counts the same (the plain mean), in the centre the middle ones dominate', () => {
+    const centre = shutterCentreWeights(8)
+    for (let k = 0; k < 8; k++) expect(shutterHistoryWeight(centre, k, 1)).toBeCloseTo(k / (k + 1))
+    expect(shutterHistoryWeight(centre, 0, 0)).toBe(0)
+    // the early sub-frames weigh little at the centre: the history is worth less than in the plain mean
+    expect(shutterHistoryWeight(centre, 1, 0)).toBeLessThan(shutterHistoryWeight(centre, 1, 1))
+    expect(shutterHistoryWeight(centre, 4, 0)).toBeCloseTo(0.5, 1)
+    // and the last ones hardly move it
+    expect(shutterHistoryWeight(centre, 7, 0)).toBeGreaterThan(0.99)
   })
 })
 

@@ -838,7 +838,11 @@ pointer (`appearance.css`).
   interpolated between neighbouring frames of the schedule; an instant in another clock phase, i.e. across the cut of
   an opening or closing shot, is replaced by the frame itself). `ExportController` sets the sub-frame
   (`setShutterSubFrame`) and renders each with `renderSettledFrame`; `ShutterEffect` keeps the running mean in half
-  floats (weight 1/(k+1); a sub-frame rendered again while tiles load restarts from the previous mean); the canvas
+  floats, **weighted per pixel by the radial mask** (below): sub-frame k weighs mix(c_k, 1, m(r)), c_k a narrow bell of
+  its offset in the shutter (`shutterCentreWeights`, σ = 0.05 of the window: in the centre only the sub-frames nearest to
+  the frame instant, the two middle ones for an even count; in the corners the plain mean). The weights are a function
+  of (k, r), so the shader sums them (uniform array of c_k) and updates the mean by w_k / W_k, with no weight buffer
+  and nothing in the alpha channel (a sub-frame rendered again while tiles load restarts from the previous mean); the canvas
   then holds the mean and is composed as usual (overlay sharp, on top). Same capture for WebCodecs and the desktop's
   native encoder. Held frames are reused when the progress of every sub-frame is unchanged. The volumetric clouds do
   not average their 16/24/32 noise slices on every sub-frame: `subFrameSlices` gives each sub-frame its own share
@@ -858,11 +862,12 @@ pointer (`appearance.css`).
     ripples of the water (a figurine's legs are sharp while the camera stands still). Fast, low flights stay at 8; slow
     ones, stops and high cameras (« Satellite », « Avion », « Montgolfière ») fall to 1–4. 4K counts twice the pixels.
 - **Radial speed blur** (same "Flou de bougé" slider, preview and export alike): the speed effect of the user's
-  request, edges streaked and centre sharp. The shutter blur alone only gives it for a camera flying straight towards
+  request, edges streaked and centre sharp. The same mask serves the three parts of the motion blur (streaks, export
+  sub-frames, preview trail): `radialMask` in `lens.ts`, one GLSL helper in `shutterEffect.ts`. The shutter blur alone only gives it for a camera flying straight towards
   its aim (focus of expansion on the aim point); in chase it mostly shifts the whole frame. So `ShutterEffect` first
   blurs each render along the ray to a centre, in the same blend draw (10 fixed taps). Centre: the direction of
   travel projected on the frame (camera placements of the film at t and t − 1/fps, `filmViewAt`) when it lies ahead
-  and inside the central 70%, else the frame centre (the aim). Profile: streak = length × smoothstep(0.3, 1, r), r
+  and inside the central 70%, else the frame centre (the aim). Profile (the mask m(r) = smoothstep(0.3, 1, r)): streak = length × m, r
   the distance to the centre in frame units over the distance to the farthest corner (sharp inside 0.3, full in the
   corners); taps from the pixel towards the centre. Length = shutter × min(0.15, 0.1 s × relative speed), relative
   speed = distance the camera moved / aim distance / interval (1/s), 0 below 0.02/s: nothing during stops and held
@@ -871,14 +876,14 @@ pointer (`appearance.css`).
   than 5% of the aim distance from the film's placement (moved by hand, poster overview; the rig's own camera drifts
   by metres from a placement recomputed later, ground lift and finer tiles). Cost: two
   `computeFilmView` per frame on the CPU, 10 texture reads per pixel outside the central zone.
-- **Motion blur**, preview: no motion vectors; while the film plays, `ShutterEffect` keeps a weight w of the previous
+- **Motion blur**, preview: no motion vectors; while the film plays, `ShutterEffect` keeps a weight w · m(r) of the previous
   output (`previewShutterWeight`: the lag Δt·w/(1−w) of the trail equals half the exported shutter time, at any
-  preview frame rate). Paused or scrubbing: the image as is. An approximation (a trailing smear, not the centred
+  preview frame rate; no trail in the sharp centre, full towards the sides). Paused or scrubbing: the image as is. An approximation (a trailing smear, not the centred
   blur of the export). Cost: one blend per frame.
 - **Field of view**: left fixed (`CAMERA_FOV_DEG` = 50°). It enters the framing of the film camera (situation
   distances, region fit, headroom), the overview of the poster, the offline tile plan and the LOD; making it a setting
   means threading it through all of these and through the export, not a small change.
-- Verified: unit tests (setting, sub-frame instants, trail weight, slice sharing) and SwiftShader screenshots;
+- Verified: unit tests (setting, sub-frame instants, trail weight, mask and sub-frame weights, slice sharing) and SwiftShader screenshots;
   inferred: the cost and the look on a real GPU (`docs/tests-gpu.md`).
 
 ## Track color
@@ -2672,7 +2677,7 @@ differs goes through `src/platform/`.
   licences grouped by licence from `THIRD_PARTY_NOTICES.md`, data-service attributions from `docs/sources.md`; RTF for the
   Windows installers and the DMG, plain text for the Debian copyright file). `tauri.conf.json` references them through
   `bundle.licenseFile`, `bundle.windows.nsis` / `wix`, `bundle.macOS.dmg` and `bundle.linux.deb.files`.
-  `.github/workflows/ci.yml`, on pull requests and on master: types, lint, unit tests and build (`web` job); `cargo test` only when `src-tauri/` or the workflow changed (`rust` job, against a placeholder `dist/`).
+  `.github/workflows/ci.yml`, on pull requests and on master: types, lint, unit tests and build (`lint`, `test` and `build` jobs, in parallel); `cargo test` only when `src-tauri/` or the workflow changed (`rust` job, against a placeholder `dist/`).
 
 ### Video export without WebCodecs (Linux)
 

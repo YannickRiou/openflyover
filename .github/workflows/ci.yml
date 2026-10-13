@@ -1,5 +1,5 @@
-# Checks on pull requests and on master: lint, unit tests with coverage and production build with its type check (web
-# job), and the Rust tests of the desktop app only when src-tauri or this file changed (rust job: its Linux libraries
+# Checks on pull requests and on master: lint, unit tests with coverage and production build with its type check (lint,
+# test and build jobs, in parallel), and the Rust tests of the desktop app only when src-tauri or this file changed (rust job: its Linux libraries
 # alone take minutes to install). The Rust tests do not use the site, so they build against a placeholder dist/. No
 # end-to-end tests. On master, the line coverage feeds the README badge (badge job, `badges` branch).
 name: CI
@@ -17,7 +17,8 @@ permissions:
   contents: read
 
 jobs:
-  web:
+  # lint, unit tests and build in parallel (each installs the dependencies from the npm cache)
+  lint:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -28,12 +29,35 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: npm run coverage
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # coverage only on master, for the badge: it makes the run about 60 % longer (35 s → 56 s on 4 cores)
+      - run: npm run ${{ github.event_name == 'push' && 'coverage' || 'test' }}
       - if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage/coverage-summary.json
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       # `tsc -b` type checks both projects (tsconfig.app.json, tsconfig.node.json) before the Vite build: no separate typecheck step
       - run: npm run build
 
@@ -70,7 +94,7 @@ jobs:
 
   badge:
     if: github.event_name == 'push'
-    needs: web
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

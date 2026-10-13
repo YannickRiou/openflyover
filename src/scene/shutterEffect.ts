@@ -5,7 +5,7 @@
 import { BlendFunction, Effect, ShaderPass } from 'postprocessing'
 import { HalfFloatType, NoBlending, ShaderMaterial, Uniform, Vector2, WebGLRenderTarget } from 'three'
 import type { Texture, WebGLRenderer } from 'three'
-import { previewShutterWeight, shutterSubFrame } from './lens'
+import { previewShutterWeight, RADIAL_MASK_START, SHUTTER_SUBFRAMES, shutterCentreWeights, shutterSubFrame } from './lens'
 
 const fragmentShader = /* glsl */ `
 uniform sampler2D shutterAverage;
@@ -18,30 +18,48 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 
 const blendShader = /* glsl */ `
 #define RADIAL_TAPS 10
+#define SUBFRAMES ${SHUTTER_SUBFRAMES}
 uniform sampler2D inputBuffer;
 uniform sampler2D historyBuffer;
 uniform float historyWeight;
+uniform int subFrame;
+uniform float centreWeight[SUBFRAMES];
 uniform vec2 radialCentre;
 uniform float radialLength;
 uniform float radialAspect;
 varying vec2 vUv;
 
+// 0 in the centre of travel (sharp inside the start), 1 in the farthest corner (twin of radialMask in lens.ts)
+float radialMask(vec2 offset) {
+  vec2 corner = (0.5 + abs(radialCentre - 0.5)) * vec2(radialAspect, 1.0);
+  return smoothstep(${RADIAL_MASK_START.toFixed(2)}, 1.0, length(offset * vec2(radialAspect, 1.0)) / length(corner));
+}
+
 void main() {
+  vec2 offset = vUv - radialCentre;
+  float mask = radialMask(offset);
   vec4 color = texture2D(inputBuffer, vUv);
-  if (radialLength > 0.0) {
-    // 0 at the centre, 1 in the farthest corner; sharp inside 0.3
-    vec2 offset = vUv - radialCentre;
-    vec2 frame = offset * vec2(radialAspect, 1.0);
-    vec2 corner = (0.5 + abs(radialCentre - 0.5)) * vec2(radialAspect, 1.0);
-    float streak = radialLength * smoothstep(0.3, 1.0, length(frame) / length(corner));
-    if (streak > 0.0) {
-      for (int i = 1; i < RADIAL_TAPS; i++) {
-        color += texture2D(inputBuffer, vUv - offset * streak * float(i) / float(RADIAL_TAPS - 1));
-      }
-      color /= float(RADIAL_TAPS);
+  float streak = radialLength * mask;
+  if (streak > 0.0) {
+    for (int i = 1; i < RADIAL_TAPS; i++) {
+      color += texture2D(inputBuffer, vUv - offset * streak * float(i) / float(RADIAL_TAPS - 1));
     }
+    color /= float(RADIAL_TAPS);
   }
-  gl_FragColor = mix(color, texture2D(historyBuffer, vUv), historyWeight);
+  float history = historyWeight * mask;
+  if (subFrame >= 0) {
+    // export: weighted running mean, W = cumulative sum of mix(centre, 1, mask) over the sub-frames so far
+    float before = 0.0;
+    float total = 0.0;
+    for (int i = 0; i < SUBFRAMES; i++) {
+      if (i > subFrame) break;
+      float w = mix(centreWeight[i], 1.0, mask);
+      if (i < subFrame) before += w;
+      total += w;
+    }
+    history = before / total;
+  }
+  gl_FragColor = mix(color, texture2D(historyBuffer, vUv), history);
 }
 `
 
@@ -67,6 +85,8 @@ export class ShutterEffect extends Effect {
   /** a sub-frame rendered again (waiting for tiles) restarts from the same history */
   private lastIndex = -1
   private trail = false
+  /** sub-frame count the centre weights were last uploaded for */
+  private centreCount = 0
 
   constructor() {
     super('ShutterEffect', fragmentShader, {
@@ -87,6 +107,8 @@ export class ShutterEffect extends Effect {
           inputBuffer: new Uniform(null),
           historyBuffer: new Uniform(null),
           historyWeight: new Uniform(0),
+          subFrame: new Uniform(-1),
+          centreWeight: new Uniform<number[]>(new Array<number>(SHUTTER_SUBFRAMES).fill(1)),
           radialCentre: new Uniform(new Vector2()),
           radialLength: new Uniform(0),
           radialAspect: new Uniform(1),
@@ -109,11 +131,13 @@ export class ShutterEffect extends Effect {
     const { index, count } = shutterSubFrame()
     const active = this.uniforms.get('shutterActive')!
     let weight: number
+    let subFrameIndex = -1
     if (count > 1) {
+      subFrameIndex = index
       if (index > 0 && index !== this.lastIndex) this.swap()
       this.lastIndex = index
       this.trail = false
-      weight = index / (index + 1)
+      weight = 0
     } else {
       this.lastIndex = -1
       weight = this.playing ? previewShutterWeight(this.shutter, this.fps, deltaTime) : 0
@@ -132,6 +156,12 @@ export class ShutterEffect extends Effect {
     const uniforms = (this.blend.fullscreenMaterial as ShaderMaterial).uniforms
     uniforms.historyBuffer.value = this.history.texture
     uniforms.historyWeight.value = weight
+    uniforms.subFrame.value = subFrameIndex
+    if (subFrameIndex >= 0 && this.centreCount !== count) {
+      this.centreCount = count
+      const centre = shutterCentreWeights(count)
+      uniforms.centreWeight.value = Array.from({ length: SHUTTER_SUBFRAMES }, (_, i) => centre[i] ?? 1)
+    }
     uniforms.radialCentre.value.copy(this.radialCentre)
     uniforms.radialLength.value = this.radialLength
     uniforms.radialAspect.value = inputBuffer.width / Math.max(1, inputBuffer.height)
