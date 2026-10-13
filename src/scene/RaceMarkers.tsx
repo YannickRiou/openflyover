@@ -15,7 +15,7 @@ import { raceAt } from '../flyover/race'
 import { useAppStore } from '../state/store'
 import { headsLeft, markerLook, occludeMarker, placeMarker, racerMarkerColors, reliefClearance, releaseMarkerTexture } from './markerSprite'
 import { useTerrainContext } from './TerrainLayer'
-import { LINE_LIFT_M } from './TrackLines'
+import { LINE_LIFT_M } from './trackLineSet'
 import { useFilmClock } from './usePacing'
 import { useRace } from './useRace'
 

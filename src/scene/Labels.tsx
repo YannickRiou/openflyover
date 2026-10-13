@@ -51,7 +51,7 @@ import {
   computeDrapedPositions,
   type DrapeBuffer,
   type HeightSampler,
-} from './TrackLines'
+} from './trackLineSet'
 import { useDebouncedCallback } from './useDebouncedCallback'
 
 /** Label text size and panel geometry (CSS pixels). */

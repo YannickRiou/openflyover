@@ -38,7 +38,7 @@ import {
 } from './markerSprite'
 import type { MarkerSettings } from './markerSettings'
 import { useFilmClock, useFilmTrack } from './usePacing'
-import type { HeightSampler } from './TrackLines'
+import type { HeightSampler } from './trackLineSet'
 
 // ---------------------------------------------------------------------------
 // Component
