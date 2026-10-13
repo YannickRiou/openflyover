@@ -42,7 +42,7 @@ import {
 import { externalLabels, useLabelSources } from './labelSources'
 import { reliefClearance } from './markerSprite'
 import { useFilmTrack } from './usePacing'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 import { wakeScene } from './renderOnDemand'
 import {
   REDRAPE_DEBOUNCE_MS,
