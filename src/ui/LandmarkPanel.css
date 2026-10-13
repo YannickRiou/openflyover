@@ -69,6 +69,16 @@
   min-width: 0;
 }
 
+/* the name wraps over two lines rather than being cut: the four row buttons leave it little width */
+.place .landmark__name {
+  display: -webkit-box;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
 @media (hover: hover) {
   button.place__go:hover .landmark__name {
     text-decoration: underline;
