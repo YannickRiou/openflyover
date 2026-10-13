@@ -18,6 +18,8 @@ palette, same fonts, same layout (rail, scene, timeline, export drawer), same Fr
 - Build-time only: the `@tailwindcss/vite` plugin (supports Vite 8) emits a static CSS file. No runtime, no
   network, nothing added to the Tauri shell; the hosted static site and the desktop app keep the same build.
 - No content from a CDN: everything is bundled, offline use is unchanged.
+- Free and open only: the MIT `tailwindcss` packages; no paid kit (Tailwind Plus or similar), no hosted service.
+  Every token and utility is defined in the repository and can be changed there.
 
 ## Rules
 
