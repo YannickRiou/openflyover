@@ -9,9 +9,11 @@ import { junctionsM, markerKeyLook, sortedMarkerKeys } from '../film/markerKeys'
 import type { Film } from '../film/model'
 import { paramAt, paramBase } from '../film/paramKeys'
 import type { FilmParam } from '../film/paramKeys'
+import { idsByDate, movedIds, reorderStages } from '../film/reorder'
+import type { StageSpan } from '../film/reorder'
 import { addCameraKey, addMarkerKey, addMarkerKeysAt, addParamKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
 import { captureKey } from '../flyover/cameraKeys'
-import { filmSequenceOf, filmTrackOf, sequenceLandmarks } from '../flyover/sequence'
+import { buildSequence, filmSequenceOf, filmTrackOf, orderedTracks, sequenceLandmarks } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import type { Landmark } from '../osm/landmarks'
 import { useLandmarkStore } from '../osm/store'
@@ -211,6 +213,51 @@ export function followFlightTiming(before: Pick<Settings, 'flyoverDurationS' | '
     (f) => filmClockFor({ ...source, durationS: before.flyoverDurationS, pacing: before.pacing, film: f }),
   )
   if (film !== source.film) useAppStore.getState().setSetting('film', film)
+}
+
+const spansOf = (sequence: Sequence): StageSpan[] => sequence.stages.map((s) => ({ trackId: s.track.id, startM: s.startM, endM: s.endM }))
+
+/**
+ * « À la suite »: the stages in the order of `ids` (every track id once). The order (`race.order`) and the film remapped
+ * with it (`reorderStages`: what is anchored in metres follows its stage; the texts and media attached to a stop follow
+ * it) are one undo step. The playhead stays where it is. False when there is no sequence, `ids` are not its stages or
+ * the order does not change.
+ */
+export function setStageOrder(ids: readonly string[]): boolean {
+  const { tracks, settings, playback } = useAppStore.getState()
+  const sequence = filmSequenceOf(tracks, settings.race)
+  const same = (list: readonly string[]) => list.length === ids.length && list.every((id, k) => id === ids[k])
+  if (!sequence || ids.length !== sequence.stageIds.length || new Set(ids).size !== ids.length || same(sequence.stageIds) || !ids.every((id) => sequence.stageIds.includes(id))) return false
+  const byId = new Map(tracks.map((t) => [t.id, t]))
+  const next = buildSequence(ids.map((id) => byId.get(id)!))
+  const source = getFilmSource()
+  const nextSource = { ...source, track: next.track, cutsM: next.cutsM, stageIds: next.stageIds, landmarks: sequenceLandmarks(next, useLandmarkStore.getState().landmarks) }
+  const remapped = reorderStages(settings.film, spansOf(sequence), spansOf(next))
+  const film = followStops(
+    settings.film,
+    remapped,
+    (f) => filmClockFor({ ...nextSource, film: f }),
+    (f) => filmClockFor({ ...source, film: f }),
+  )
+  const { order: _order, ...race } = settings.race
+  getSettingsHistory().transaction(() =>
+    useAppStore.setState({ settings: { ...settings, race: same(tracks.map((t) => t.id)) ? race : { ...race, order: [...ids] }, film } }),
+  )
+  useAppStore.getState().setProgress(playback.progress)
+  return true
+}
+
+/** « À la suite »: the stage of track `trackId` moved to place `toIndex` (clamped), one undo step (`setStageOrder`). */
+export function reorderTracks(trackId: string, toIndex: number): boolean {
+  const { tracks, settings } = useAppStore.getState()
+  const ids = orderedTracks(tracks, settings.race).map((t) => t.id)
+  return setStageOrder(movedIds(ids, trackId, toIndex))
+}
+
+/** « Ordonner par date »: the stages by departure time, those without a time last (`idsByDate`), one undo step. */
+export function orderTracksByDate(): boolean {
+  const { tracks, settings } = useAppStore.getState()
+  return setStageOrder(idsByDate(orderedTracks(tracks, settings.race)))
 }
 
 /** Landmarks of the first track the film was last in line with (null: none published for that track yet). */

@@ -7,6 +7,8 @@ import { buildTrack } from '../import/stats'
 import { END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { DEFAULT_FILM } from '../film/model'
 import { removeFilmItem, updateMarkerKey } from '../film/timeline'
+import { filmSequenceOf } from '../flyover/sequence'
+import { getSettingsHistory } from '../project/history'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
 import { addMarkerKeyHere, addParamKeyHere } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -409,5 +411,70 @@ describe('Timeline — stages « À la suite »', () => {
       'Carton : Étape 2 · Jour 2',
     ])
     act(() => root.unmount())
+  })
+
+  describe('reordering the stages', () => {
+    const labels = (blocks: (name: string, selector: string) => HTMLElement[]) =>
+      blocks('Étapes', '.film-tl__block--stage').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])
+    const order = () => {
+      const { tracks, settings } = useAppStore.getState()
+      return filmSequenceOf(tracks, settings.race)!.stages.map((s) => s.track.name)
+    }
+    const pointer = (type: string, clientX: number) =>
+      Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX }), { pointerId: 1, isPrimary: true, pointerType: 'mouse' })
+
+    it('Alt + → moves a stage one place later, says so, and the lane, the cards and the order follow', async () => {
+      const { host, root, blocks, press } = await setup(3)
+      const first = () => blocks('Étapes', '.film-tl__block--stage')[0]
+      await act(async () => first().focus())
+      await act(async () => void first().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true })))
+      expect(order()).toEqual(['Jour 2', 'Jour 1', 'Jour 3'])
+      expect(labels(blocks)).toEqual(['Étape 1 : Jour 2', 'Étape 2 : Jour 1', 'Étape 3 : Jour 3'])
+      expect(host.querySelector('.film-tl [role="status"]')!.textContent).toBe('Étape « Jour 1 » déplacée en position 2 sur 3')
+      // the block that moved keeps the focus, and Alt + ← brings it back
+      expect(document.activeElement).toBe(blocks('Étapes', '.film-tl__block--stage')[1])
+      await press(document.activeElement as HTMLElement, 'ArrowLeft')
+      expect(order()).toEqual(['Jour 2', 'Jour 1', 'Jour 3'])
+      await act(async () => void (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true, bubbles: true, cancelable: true })))
+      expect(order()).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
+      act(() => root.unmount())
+    })
+
+    it('a stage dragged past the others lands after them: one undo step, the insertion line shown meanwhile, Escape cancels', async () => {
+      HTMLElement.prototype.setPointerCapture ??= () => {}
+      getSettingsHistory().clear()
+      const { host, root, blocks } = await setup(3)
+      getSettingsHistory().clear()
+      const first = () => blocks('Étapes', '.film-tl__block--stage')[0]
+      await act(async () => void first().dispatchEvent(pointer('pointerdown', 0)))
+      await act(async () => void first().dispatchEvent(pointer('pointermove', 1e6)))
+      expect(first().classList.contains('film-tl__block--lifted')).toBe(true)
+      expect(host.querySelector('.film-tl__guide-tag')!.textContent).toBe('Étape 3')
+      // Escape: nothing moves
+      await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
+      expect(host.querySelector('.film-tl__block--lifted')).toBeNull()
+      await act(async () => void first().dispatchEvent(pointer('pointerup', 1e6)))
+      expect(order()).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
+      // again, released: Jour 1 last
+      await act(async () => void first().dispatchEvent(pointer('pointerdown', 0)))
+      await act(async () => void first().dispatchEvent(pointer('pointermove', 1e6)))
+      await act(async () => void first().dispatchEvent(pointer('pointerup', 1e6)))
+      expect(order()).toEqual(['Jour 2', 'Jour 3', 'Jour 1'])
+      expect(host.querySelector('.film-tl__block--lifted')).toBeNull()
+      await act(async () => getSettingsHistory().undo())
+      expect(order()).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
+      expect(getSettingsHistory().getState().canUndo).toBe(false)
+      act(() => root.unmount())
+    })
+
+    it('a press on a stage without a drag only selects it', async () => {
+      const { root, blocks, tracks } = await setup(3)
+      const block = () => blocks('Étapes', '.film-tl__block--stage')[1]
+      await act(async () => void block().dispatchEvent(pointer('pointerdown', 10)))
+      await act(async () => void block().dispatchEvent(pointer('pointerup', 10)))
+      expect(useAppStore.getState().filmSelection).toBe(`stage-${tracks[1].id}`)
+      expect(order()).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
+      act(() => root.unmount())
+    })
   })
 })

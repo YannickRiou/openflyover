@@ -6,7 +6,8 @@ import type { Film } from '../film/model'
 import { buildTrack } from '../import/stats'
 import type { Landmark } from '../osm/landmarks'
 import { resetLandmarkStore, useLandmarkStore } from '../osm/store'
-import { followLandmarks, getFilmSource } from '../scene/usePacing'
+import { filmSequenceOf } from '../flyover/sequence'
+import { followLandmarks, getFilmSource, orderTracksByDate, reorderTracks, setStageOrder } from '../scene/usePacing'
 import { DEFAULT_SETTINGS, resetAppStore, useAppStore } from '../state/store'
 import { createHistory, getSettingsHistory, installHistoryShortcuts, installSliderGestures, resetSettings } from './history'
 import type { History } from './history'
@@ -312,6 +313,105 @@ describe('getSettingsHistory (app store)', () => {
       expect(textStartS() - holdStartS()).toBeCloseTo(1, 1)
       expect(getSettingsHistory().getState().canUndo).toBe(false)
     })
+  })
+})
+
+describe('reordering the stages « À la suite »', () => {
+  /** a northward line of `n` points (111 m apart) whose recording starts on `day` */
+  const line = (name: string, n: number, day: number) =>
+    buildTrack({
+      name,
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: n }, (_, i) => ({ lon: 6.86, lat: 45.9 + i * 0.001, ele: 1000, time: Date.UTC(2026, 6, day, 8) + i * 60_000 })) }],
+    })
+  const day2 = line('Jour 2', 11, 2)
+  const day3 = line('Jour 3', 16, 3)
+  const day1 = line('Jour 1', 21, 1)
+  const names = () => filmSequenceOf(useAppStore.getState().tracks, useAppStore.getState().settings.race)!.stages.map((s) => s.track.name)
+  const stages = () => filmSequenceOf(useAppStore.getState().tracks, useAppStore.getState().settings.race)!.stages
+  const film = () => useAppStore.getState().settings.film
+  let before: Film
+
+  beforeEach(() => {
+    resetAppStore()
+    useAppStore.getState().addTracks([day2, day3, day1])
+    useAppStore.getState().setSetting('race', { ...DEFAULT_SETTINGS.race, sequence: true })
+    // a stop 500 m into the 2nd stage, a camera key 100 m into the 1st, a text attached to the stop
+    const [first, second] = stages()
+    before = {
+      ...DEFAULT_FILM,
+      autoStops: false,
+      stops: [{ id: 'stop-1', atM: second.startM + 500, durationS: 4, camera: 'orbite' }],
+      cameraKeys: [{ id: 'camera-1', atM: first.startM + 100, distance: 1, pitchDeg: 40, headingOffsetDeg: 0 }],
+      texts: [{ id: 'text-1', startS: 0, durationS: 4, text: 'Jour 3', anchor: 'bottom-center', size: 1, stopId: 'stop-1' }],
+    }
+    useAppStore.getState().setSetting('film', before)
+    useAppStore.getState().setSetting('film', {
+      ...before,
+      texts: [{ ...before.texts[0], startS: Math.round((filmClockFor(getFilmSource()).stops[0].holdStartS + 1) * 100) / 100 }],
+    })
+    before = film()
+    getSettingsHistory().clear()
+  })
+
+  it('« Ordonner par date »: the order is chronological, what is anchored in metres follows its stage, in one undo step', () => {
+    const d3 = stages()[1]
+    const stopOffset = film().stops[0].atM - d3.startM
+    expect(orderTracksByDate()).toBe(true)
+    expect(names()).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
+    expect(useAppStore.getState().settings.race.order).toEqual([day1.id, day2.id, day3.id])
+    // the tracks of the list keep their order
+    expect(useAppStore.getState().tracks.map((t) => t.name)).toEqual(['Jour 2', 'Jour 3', 'Jour 1'])
+    const [n1, n2, n3] = stages()
+    expect(n1.track.name).toBe('Jour 1')
+    expect(film().stops[0].atM).toBeCloseTo(n3.startM + stopOffset, 6)
+    expect(film().cameraKeys[0].atM).toBeCloseTo(n2.startM + 100, 6)
+    // the text attached to the stop is still one second into its hold
+    const hold = filmClockFor(getFilmSource()).stops[0].holdStartS
+    expect(film().texts[0].startS - hold).toBeCloseTo(1, 1)
+    expect(n1.startM).toBe(0)
+
+    getSettingsHistory().undo()
+    expect(useAppStore.getState().settings.race.order).toBeUndefined()
+    expect(film()).toBe(before)
+    expect(names()).toEqual(['Jour 2', 'Jour 3', 'Jour 1'])
+    expect(getSettingsHistory().getState().canUndo).toBe(false)
+    getSettingsHistory().redo()
+    expect(names()).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
+    expect(film().stops[0].atM).toBeCloseTo(n3.startM + stopOffset, 6)
+  })
+
+  it('moves one stage to a place; back in the list order the order is not stored', () => {
+    expect(reorderTracks(day1.id, 0)).toBe(true)
+    expect(useAppStore.getState().settings.race.order).toEqual([day1.id, day2.id, day3.id])
+    expect(reorderTracks(day1.id, 2)).toBe(true)
+    expect(names()).toEqual(['Jour 2', 'Jour 3', 'Jour 1'])
+    expect(useAppStore.getState().settings.race).not.toHaveProperty('order')
+    expect(film().stops[0].atM).toBeCloseTo(before.stops[0].atM, 6)
+    // two steps
+    getSettingsHistory().undo()
+    expect(names()).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
+    getSettingsHistory().undo()
+    expect(film()).toBe(before)
+  })
+
+  it('does nothing when nothing moves, for a stage that is not one, outside « À la suite » or with ids that are not the stages', () => {
+    expect(reorderTracks(day2.id, 0)).toBe(false)
+    expect(reorderTracks('nope', 0)).toBe(false)
+    expect(setStageOrder([day1.id, day2.id])).toBe(false)
+    expect(setStageOrder([day1.id, day1.id, day2.id])).toBe(false)
+    expect(setStageOrder([day1.id, day2.id, 'x'])).toBe(false)
+    useAppStore.getState().setSetting('race', { ...DEFAULT_SETTINGS.race })
+    getSettingsHistory().clear()
+    expect(reorderTracks(day1.id, 0)).toBe(false)
+    expect(getSettingsHistory().getState().canUndo).toBe(false)
+  })
+
+  it('« Ordonner par date » on a list already in date order changes nothing', () => {
+    orderTracksByDate()
+    getSettingsHistory().clear()
+    expect(orderTracksByDate()).toBe(false)
+    expect(getSettingsHistory().getState().canUndo).toBe(false)
   })
 })
 

@@ -212,6 +212,16 @@ const PATHS = {
       <circle cx="5" cy="12" r="1" />
     </>
   ),
+  'grip-vertical': (
+    <>
+      <circle cx="9" cy="12" r="1" />
+      <circle cx="9" cy="5" r="1" />
+      <circle cx="9" cy="19" r="1" />
+      <circle cx="15" cy="12" r="1" />
+      <circle cx="15" cy="5" r="1" />
+      <circle cx="15" cy="19" r="1" />
+    </>
+  ),
   'rotate-cw': (
     <>
       <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
