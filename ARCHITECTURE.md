@@ -1240,8 +1240,9 @@ pointer (`appearance.css`).
   played, as a symmetric band, scaled to the loudest passage); when empty, it says where to drop a file.
 - **Gestures** (`dragFilm`, pure): dragging a stop moves it along the track — the start of its hold follows the pointer,
   position found by bisection on the clock (`stopPositionAt`, 32 steps); its right edge lengthens it (proportionally to the
-  `keepDuration` cap); a text or a photo moves or stretches by either edge; the inner edge of the opening / the
-  closing changes its duration; the left edge of a video also moves its start in the file (`inS`, never before the
+  `keepDuration` cap); a text or a photo moves or stretches by either edge; the inner edge of the opening changes its duration; the inner edge of the
+  closing is a roll edit (`rollClosing`): the end of the film stays, the closing starts at the pointer and the flight
+  duration (`flyoverDurationS`, one undo step with the film) takes the difference; the left edge of a video also moves its start in the file (`inS`, never before the
   start of the file: the frames stay in place); a music track moves, its right edge never goes past the end of the
   file (`DragContext.audioFileS`), its left edge moves its start in the file like a video; a speed section moves (length in meters kept) or
   stretches by either edge, the held edge follows the pointer in film time, position found in meters by bisection

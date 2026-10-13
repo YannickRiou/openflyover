@@ -42,6 +42,7 @@ import {
   centredTime,
   clipSyncOffsetS,
   dragFilm,
+  rollClosing,
   edgeScrollSpeed,
   fitPxPerS,
   followStops,
@@ -118,7 +119,8 @@ type Gesture =
   | { kind: 'scrub' }
   /** centred timeline: a press that selects `item` (or seeks, on nothing) if released without sliding */
   | { kind: 'tap'; item: TimelineItem | null; x0: number }
-  | { kind: 'edit'; item: TimelineItem; grip: Grip; x0: number; scroll0: number; start: Film; ctx: DragContext; result: Film | null }
+  /** `flightS`: the flight duration of a roll edit (start of the closing dragged) */
+  | { kind: 'edit'; item: TimelineItem; grip: Grip; x0: number; scroll0: number; start: Film; ctx: DragContext; result: Film | null; flightS?: number }
   /** the edge of an opening title or closing card: it edits the overlay settings, not the film */
   | { kind: 'card'; item: CardId; grip: Grip; x0: number; scroll0: number; start: OverlaySettings; ctx: DragContext; result: OverlaySettings | null }
 
@@ -334,6 +336,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const setSelected = useAppStore((s) => s.setFilmSelection)
   /** film being dragged (shown on the timeline only), committed on release */
   const [draft, setDraft] = useState<Film | null>(null)
+  /** flight duration while the start of the closing is dragged (a roll edit: the end of the film stays) */
+  const [draftFlightS, setDraftFlightS] = useState<number | null>(null)
   const overlay = useAppStore((s) => s.settings.overlay)
   /** overlay being dragged (the edge of a card), shown on the timeline only */
   const [cardDraft, setCardDraft] = useState<OverlaySettings | null>(null)
@@ -361,7 +365,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   const shownFilm = draft ?? film
   const shownOverlay = cardDraft ?? overlay
-  const shownClock = useMemo(() => (draft ? clockOfFilm(clockSource, input, draft) : clock), [draft, clockSource, input, clock])
+  const shownClock = useMemo(() => {
+    if (!draft) return clock
+    if (draftFlightS === null) return clockOfFilm(clockSource, input, draft)
+    const rolled = { ...clockSource, durationS: draftFlightS }
+    return clockOfFilm(rolled, filmClockInputFor(rolled), draft)
+  }, [draft, draftFlightS, clockSource, input, clock])
   const flightXs = useMemo(() => {
     const n = profile?.ele.length ?? 0
     return Array.from({ length: n }, (_, i) => shownClock.timeAtProgress(i / Math.max(1, n - 1)) - shownClock.openingS)
@@ -722,7 +731,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       g.result = dragCard(g.start, g.item, g.grip, dx / pxPerS, clock, snapper(ctx))
       setCardDraft(g.result)
     } else {
-      const dragged = dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      let dragged = dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      if (g.item === 'closing' && g.grip === 'start') {
+        const rolled = rollClosing(g.start, dragged, durationS)
+        dragged = rolled.film
+        g.flightS = rolled.flightS
+        setDraftFlightS(rolled.flightS)
+      }
       g.result = followStops(g.start, dragged, clockOf)
       setDraft(g.result)
     }
@@ -777,9 +792,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     cancelAnimationFrame(edgeRef.current?.frame ?? 0)
     edgeRef.current = null
     if (g?.kind === 'edit' && e.type === 'pointerup') {
-      if (g.result) commit(g.result)
+      const flightS = g.flightS
+      if (g.result && flightS !== undefined && flightS !== durationS) {
+        const result = g.result
+        // one undo step for the flight and the film
+        getSettingsHistory().transaction(() => {
+          setSetting('flyoverDurationS', flightS)
+          setSetting('film', followStops(film, result, clockOf))
+        })
+      } else if (g.result) commit(g.result)
       else jumpToKey(g.item)
     }
+    setDraftFlightS(null)
     if (g?.kind === 'card' && e.type === 'pointerup' && g.result && g.result !== g.start) {
       const result = g.result
       getSettingsHistory().transaction(() => setSetting('overlay', result))
