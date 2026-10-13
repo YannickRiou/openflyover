@@ -646,8 +646,14 @@ const SCENARIOS = [
     async run({ page }) {
       const before = { texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       const since = Date.now() - 1000
+      // headless Chromium cannot answer the File System Access pickers: without them the project is downloaded, and opened
+      // through a file input
+      await page.evaluate(() => {
+        delete window.showSaveFilePicker
+        delete window.showOpenFilePicker
+      })
       await page.click('.topbar__save')
-      await page.waitForSelector('.toast::-p-text(Projet enregistré)', { visible: true, timeout: STEP_MS })
+      // no toast since the top bar shows the saved state on its icon: the file itself is the proof
       const file = await waitForDownload('.opnflvr', since)
       // 8 bytes: the signature « OPNFLVR » and the version byte, then the gzip of the JSON text
       const project = JSON.parse(gunzipSync(readFileSync(file.path).subarray(8)).toString('utf8'))
@@ -687,7 +693,8 @@ const SCENARIOS = [
         `projet rouvert différent : avant ${JSON.stringify({ exposure: changed, ...before })}, après ${JSON.stringify(reopened)}`,
       )
 
-      // « Ouvrir » of the top bar: the file saved before the change
+      // « Ouvrir » of the top bar: the file saved before the change (the reload brought the picker back)
+      await page.evaluate(() => delete window.showOpenFilePicker)
       const [chooser] = await Promise.all([page.waitForFileChooser({ timeout: STEP_MS }), page.click('.topbar button[aria-label="Ouvrir"]')])
       await chooser.accept([file.path])
       await page.waitForSelector('.toast::-p-text(» ouvert)', { visible: true, timeout: STEP_MS })
