@@ -7,9 +7,13 @@ import { filmClockFor } from '../film/clock'
 import { DEFAULT_PACING } from '../flyover/pacing'
 import type { WritableFile } from '../platform/platform'
 import type { TerrainEngine } from '../core/types'
+import { createLocalFrame } from '../geo/ellipsoid'
+import { buildTrack } from '../import/stats'
+import { useAppStore } from '../state/store'
 import { runExport } from './ExportController'
 import { NO_ENCODING_KEY } from './diagnostic'
 import { renderSettledFrame } from './capture'
+import type { RenderFrameDeps } from './capture'
 import { readBreadcrumbs } from './guard'
 import { createExportEncoder } from './nativeEncoder'
 import { buildFrameSchedule } from './schedule'
@@ -203,5 +207,40 @@ describe('runExport', () => {
     const setRetention = vi.fn()
     await exportFilm(destination(), { engine: () => ({ setRetention }) as unknown as TerrainEngine, budget: DESKTOP_BUDGET })
     expect(setRetention.mock.calls).toEqual([[null]])
+  })
+
+  it('prefetches the upcoming frames while a frame waits for its tiles, at most every 100 ms', async () => {
+    const track = buildTrack({
+      name: 'test',
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 12 }, (_, i) => ({ lon: 6.78, lat: 45.9 - i * 0.009, ele: 1000 })) }],
+    })
+    const tracks = useAppStore.getState().tracks
+    useAppStore.setState({ tracks: [track] })
+    const prefetch = vi.fn(() => 0)
+    const engine = { prefetch, update: vi.fn(), sampleHeight: () => 0, stats: { pendingTiles: 0, pendingVisibleTiles: 0 } }
+    const during: number[] = []
+    vi.mocked(renderSettledFrame)
+      .mockResolvedValueOnce('complete')
+      .mockImplementationOnce(async (_progress: number, deps: RenderFrameDeps) => {
+        // two polls within 100 ms: one round of prefetches
+        const before = prefetch.mock.calls.length
+        await deps.wait(16)
+        during.push(prefetch.mock.calls.length - before)
+        await deps.wait(16)
+        during.push(prefetch.mock.calls.length - before)
+        return 'complete'
+      })
+    try {
+      await exportFilm(destination(), {
+        engine: () => engine as unknown as TerrainEngine,
+        frame: () => createLocalFrame(6.78, 45.85),
+        budget: DESKTOP_BUDGET,
+      })
+    } finally {
+      useAppStore.setState({ tracks })
+    }
+    expect(during[0]).toBeGreaterThan(0)
+    expect(during[1]).toBe(during[0])
   })
 })
