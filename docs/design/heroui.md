@@ -1,7 +1,7 @@
 # Design: interactive components on HeroUI
 
-Status: proposed. Target: v2.0.0 (after v1.0.0). Requires [tailwind.md](tailwind.md) step 1.
-If accepted, replaces [base-ui-migration.md](base-ui-migration.md).
+Status: accepted. Target: v2.0.0 (after v1.0.0). Requires [tailwind.md](tailwind.md) step 1.
+Replaces [base-ui-migration.md](base-ui-migration.md).
 
 ## Why
 
