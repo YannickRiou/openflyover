@@ -1074,6 +1074,11 @@ pointer (`appearance.css`).
   distance 1.6 × diagonal (terrain included, × height / width for a frame taller than wide: 9:16 keeps the whole
   track), 40° above the horizon, on the side the flight camera looks from at the cut (no turn during the transition).
   Transition: interpolated target, normalized direction (nlerp), geometric distance, smootherstep, 80 m above the ground;
+  in between (not at the wide view nor at the flight view, eased in over the first and last 10% of the blend) the camera is
+  also raised (`clearOnTheWay`, pure: sampled terrain only, so preview and export agree) to a glide slope of
+  `SHOT_GLIDE_DEG` = 15° over the flight camera (no dive far from the start of the track), to `SHOT_CLEARANCE_SHARE` = 8% of its
+  distance (at least 80 m) above the ground under it, and so that the line to the aim clears the relief (16 samples up to 90%
+  of the way, the clearance tapering to 20 m): the straight blend knows nothing of the ridges between the two views;
   `descente` over the whole shot duration, `saut` holds the overview then moves in 0.6 s. `balayage`: the
   overview turns by `SWEEP_DEG` = 75° around its target (`turnedView`, `sweepRad`) during the first 60% of the opening
   shot and ends on the flight side, then glides like `descente` (closing: the reverse). `situation` ("Depuis la
