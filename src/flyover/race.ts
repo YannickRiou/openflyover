@@ -25,7 +25,7 @@ export type RaceSync = (typeof RACE_SYNC_MODES)[number]
 export const RACE_CAMERAS = ['premiere', 'tete', 'ensemble'] as const
 export type RaceCamera = (typeof RACE_CAMERAS)[number]
 
-/** Transition between two stages « À la suite »: a plain cut, or the cut at the darkest (lightest) point of a dip. */
+/** Transition between two stages « À la suite » of a project saved before the junctions (`withStageSettingsMigrated`). */
 export const STAGE_TRANSITIONS = ['coupe', 'fondu-noir', 'fondu-blanc'] as const
 export type StageTransition = (typeof STAGE_TRANSITIONS)[number]
 
@@ -43,9 +43,11 @@ export interface RaceSettings {
   camera?: RaceCamera
   /** « À la suite »: the tracks flown one after the other in list order (ignored while `enabled`) */
   sequence?: boolean
-  /** « À la suite »: a card with the name and figures of each stage as it starts (absent = true) */
+  /**
+   * Projects saved before the junctions only: the cards and the transition of every stage, which the film's
+   * junctions (`film.junctionDefault`) took over when the project was opened; never written any more.
+   */
   stageCards?: boolean
-  /** « À la suite »: how one stage cuts to the next (absent = 'fondu-noir') */
   stageTransition?: StageTransition
 }
 
@@ -55,12 +57,6 @@ export const RACE_CAMERA_LABELS: Record<RaceCamera, string> = {
   premiere: 'Première trace',
   tete: 'Celle en tête',
   ensemble: 'Toutes les traces',
-}
-
-export const STAGE_TRANSITION_LABELS: Record<StageTransition, string> = {
-  coupe: 'Coupe',
-  'fondu-noir': 'Fondu au noir',
-  'fondu-blanc': 'Fondu au blanc',
 }
 
 export const RACE_SYNC_LABELS: Record<RaceSync, string> = {

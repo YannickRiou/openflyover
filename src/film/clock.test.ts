@@ -5,8 +5,11 @@ import { DEFAULT_PACING, flightPacing, PAUSE_EASE_S } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { buildTrack } from '../import/stats'
 import type { Landmark } from '../osm/landmarks'
+import { buildSequence } from '../flyover/sequence'
 import { buildFilmClock, filmClockFor } from './clock'
 import type { FilmClock, FilmClockInput } from './clock'
+import { withJunction } from './junctions'
+import type { JunctionInput } from './junctions'
 import { DEFAULT_FILM } from './model'
 import type { Film, FilmShot, FilmStop } from './model'
 
@@ -176,5 +179,127 @@ describe('film clock — equivalence with the pacing', () => {
     const empty = filmClockFor({ track: undefined, film: DEFAULT_FILM, durationS: D, pacing })
     expect(empty.stops).toEqual([])
     expect(empty.totalTime()).toBe(D + 11)
+  })
+})
+
+describe('film clock — junctions between stages « À la suite »', () => {
+  const junction = (atM: number, holdS: number, kind: JunctionInput['kind'] = 'fondu-noir', id = 'a'): JunctionInput => ({
+    id: `junction-${id}`,
+    afterTrackId: id,
+    atM,
+    kind,
+    holdS,
+  })
+  const bare = clockOf({ cutsM: [4000] })
+
+  it('a fade holds the film for its time on the clock: the pause of the cut, added to the film', () => {
+    const clock = clockOf({ cutsM: [4000], junctions: [junction(4000, 2)] })
+    expect(clock.totalTime()).toBeCloseTo(bare.totalTime() + 2, 9)
+    const [j] = clock.junctions
+    expect(j).toMatchObject({ id: 'junction-a', afterTrackId: 'a', atM: 4000, kind: 'fondu-noir', holdS: 2 })
+    expect(j.startS).toBeLessThan(j.holdStartS)
+    expect(j.holdStartS).toBeLessThanOrEqual(j.holdEndS)
+    expect(j.holdEndS).toBeLessThan(j.endS)
+    // the stage changes when the marker reaches the cut: that is the start of the hold
+    expect(clock.cuts[0].timeS).toBe(j.holdStartS)
+    expect(clock.progressAtTime(j.holdStartS)).toBeCloseTo(0.4, 12)
+    expect(clock.progressAtTime((j.holdStartS + j.holdEndS) / 2)).toBeCloseTo(0.4, 12)
+    expect(clock.progressAtTime(j.endS + 1)).toBeGreaterThan(0.4)
+  })
+
+  it('a plain cut holds nothing: no time, one point on the clock', () => {
+    const clock = clockOf({ cutsM: [4000], junctions: [junction(4000, 0, 'coupe')] })
+    expect(clock.totalTime()).toBe(bare.totalTime())
+    const [j] = clock.junctions
+    expect(new Set([j.startS, j.holdStartS, j.holdEndS, j.endS]).size).toBe(1)
+    expect(j.holdStartS).toBe(clock.cuts[0].timeS)
+    // the cuts without junctions (no film) hold nothing either
+    expect(bare.junctions).toEqual([])
+    expect(clockOf({ junctions: [junction(4000, 2)], lengthM: 0 }).junctions).toEqual([])
+  })
+
+  it('« Garder la durée »: the holds come on top of the flight, as the nights do', () => {
+    const keep = { ...DEFAULT_PACING, keepDuration: true }
+    const plain = clockOf({ pacing: keep, cutsM: [4000] })
+    const held = clockOf({ pacing: keep, cutsM: [4000, 7000], junctions: [junction(4000, 2), junction(7000, 1.5, 'fondu-blanc', 'b')] })
+    expect(plain.flightS).toBeCloseTo(D, 9)
+    expect(held.flightS).toBeCloseTo(D + 3.5, 9)
+    expect(held.junctions.map((j) => j.kind)).toEqual(['fondu-noir', 'fondu-blanc'])
+  })
+
+  it('a stop at the cut starts after the fade, on the next stage', () => {
+    const clock = clockOf({ stops: [stop('s', 4000, 3)], cutsM: [4000], junctions: [junction(4000, 2)] })
+    const [j] = clock.junctions
+    expect(clock.stops[0].holdStartS).toBeGreaterThanOrEqual(j.holdEndS - 1e-9)
+    expect(clock.totalTime()).toBeCloseTo(bare.totalTime() + 2 + 3, 9)
+  })
+
+  it('a junction that passes a night is the night’s pause: its length, and the night stays on the clock', () => {
+    const night = { atM: 4000, fromMs: 0, toMs: 1, sunsetMs: 0, sunriseMs: 1, nightM: 0, duskS: 3, nightS: 2, dawnS: 3 }
+    const clock = clockOf({ cutsM: [4000], junctions: [{ ...junction(4000, 8, 'nuit'), night }] })
+    expect(clock.totalTime()).toBeCloseTo(bare.totalTime() + 8, 9)
+    expect(clock.nights).toHaveLength(1)
+    expect(clock.nights[0].holdStartS).toBe(clock.junctions[0].holdStartS)
+    expect(clock.junctions[0].kind).toBe('nuit')
+  })
+
+  it('the film clock of a sequence places the junctions of the film: default, own, and none for a cut', () => {
+    const line = (name: string, lat: number): Track =>
+      buildTrack({ name, source: 'gpx', segments: [{ points: [0, 1, 2].map((k) => ({ lon: 6.8 + k * 0.01, lat, ele: 1000 })) }] })
+    const sequence = buildSequence([line('a', 45), line('b', 45.1), line('c', 45.2)])
+    const source = { track: sequence.track, durationS: D, pacing: OFF, cutsM: sequence.cutsM, stageIds: sequence.stageIds }
+    const withFilm = (film: Film) => filmClockFor({ ...source, film })
+    const none = withFilm({ ...DEFAULT_FILM, junctionDefault: { kind: 'coupe', holdS: 0, card: true } })
+    const byDefault = withFilm(DEFAULT_FILM)
+    expect(byDefault.junctions.map((j) => j.afterTrackId)).toEqual(sequence.stageIds.slice(0, 2))
+    expect(byDefault.junctions.every((j) => j.kind === 'fondu-noir' && j.holdS === 1.5)).toBe(true)
+    expect(byDefault.totalTime()).toBeCloseTo(none.totalTime() + 3, 9)
+    // the second junction its own: a longer white fade; the first still the default
+    const own = withFilm(withJunction(DEFAULT_FILM, sequence.stageIds[1], { kind: 'fondu-blanc', holdS: 4 }))
+    expect(own.junctions.map((j) => [j.kind, j.holdS])).toEqual([
+      ['fondu-noir', 1.5],
+      ['fondu-blanc', 4],
+    ])
+    expect(own.totalTime()).toBeCloseTo(none.totalTime() + 5.5, 9)
+    // not a sequence: no cut, no junction
+    expect(filmClockFor({ track: sequence.track, film: DEFAULT_FILM, durationS: D, pacing: OFF }).junctions).toEqual([])
+  })
+})
+
+describe('film clock — three days À la suite with nights', () => {
+  const HOUR = 3600 * 1000
+  const day = (name: string, lat: number, startMs: number): Track =>
+    buildTrack({
+      name,
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 5 }, (_, i) => ({ lon: 6.8 + i * 0.01, lat, ele: 1000, time: startMs + i * 10 * 60 * 1000 })) }],
+    })
+  const start = Date.UTC(2026, 6, 1, 8)
+  const sequence = buildSequence([day('a', 45, start), day('b', 45.1, start + 24 * HOUR), day('c', 45.2, start + 48 * HOUR)])
+  const clockOfFilm = (film: Film) =>
+    filmClockFor({ track: sequence.track, film, durationS: D, pacing: OFF, cutsM: sequence.cutsM, stageIds: sequence.stageIds })
+  const nightsOn: Film = { ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, enabled: true } }
+  const nightsOff: Film = { ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, enabled: false } }
+  const parts = DEFAULT_FILM.nights.duskS + DEFAULT_FILM.nights.nightS + DEFAULT_FILM.nights.dawnS
+
+  it('the night between two days is at the cut: the junction passes it, once (the film is as long as before the junctions)', () => {
+    const clock = clockOfFilm(nightsOn)
+    expect(clock.junctions.map((j) => [j.kind, j.holdS])).toEqual([['nuit', parts], ['nuit', parts]])
+    expect(clock.nights.map((n) => n.holdStartS)).toEqual(clock.junctions.map((j) => j.holdStartS))
+    // a cut as the default does not suppress the night either: the junction left to the default keeps it
+    const cut = { kind: 'coupe' as const, holdS: 0, card: true }
+    expect(clockOfFilm({ ...nightsOn, junctionDefault: cut }).junctions.map((j) => j.kind)).toEqual(['nuit', 'nuit'])
+    expect(clock.totalTime()).toBeCloseTo(clockOfFilm({ ...nightsOff, junctionDefault: cut }).totalTime() + 2 * parts, 9)
+  })
+
+  it('a junction that chose another transition replaces the night; the nights off, the default fade', () => {
+    const chosen = clockOfFilm(withJunction(nightsOn, sequence.stageIds[0], { kind: 'fondu-blanc', holdS: 2 }))
+    expect(chosen.junctions.map((j) => [j.kind, j.holdS])).toEqual([['fondu-blanc', 2], ['nuit', parts]])
+    expect(chosen.nights).toHaveLength(1)
+    const off = clockOfFilm(nightsOff)
+    expect(off.junctions.map((j) => [j.kind, j.holdS])).toEqual([['fondu-noir', 1.5], ['fondu-noir', 1.5]])
+    expect(off.nights).toEqual([])
+    // « Nuit » asked for with the nights off: the junction passes the night all the same
+    expect(clockOfFilm(withJunction(nightsOff, sequence.stageIds[1], { kind: 'nuit' })).junctions.map((j) => j.kind)).toEqual(['fondu-noir', 'nuit'])
   })
 })

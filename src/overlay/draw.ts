@@ -7,6 +7,8 @@
  * the film time of the frame (`OverlayTime`); the live values follow the progress (`OverlayFrame`).
  * Photos and video clips of the timeline are drawn even while the rest of the overlay is off.
  */
+import type { ClockJunction } from '../film/clock'
+import { fillTemplate } from '../film/junctions'
 import { clipTimeS } from '../film/model'
 import type { FilmMedia, FilmText, TransitionDip } from '../film/model'
 import { formatDistance, formatDuration, formatNumber } from '../ui/format'
@@ -14,7 +16,7 @@ import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
-import type { CounterId, CreditsPosition, LaidOutWidget, OverlayAnchor, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
+import type { CounterId, CreditsPosition, LaidOutWidget, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
 import { COUNTER_IDS, DEFAULT_TEXT_BACKING, inStyleSlot, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
@@ -56,7 +58,12 @@ export interface OverlayTime {
   totalS: number
   /** film times of the cuts between stages « À la suite » (none otherwise) */
   cutsS?: readonly number[]
+  /** the junctions at those cuts, in the same order: the dip of a held transition, the end of a stage card */
+  junctions?: readonly OverlayJunction[]
 }
+
+/** What the overlay reads of a junction placed on the clock (`ClockJunction`). */
+export type OverlayJunction = Pick<ClockJunction, 'kind' | 'startS' | 'holdStartS' | 'holdEndS' | 'endS'>
 
 /** What the overlay reads from the film clock (`FilmClock`). */
 export interface OverlayClock {
@@ -65,12 +72,14 @@ export interface OverlayClock {
   totalTime(): number
   timeAtProgress(progress: number): number
   cuts?: readonly { timeS: number }[]
+  junctions?: readonly OverlayJunction[]
 }
 
 /** Film time of a frame shown at `progress` and film time `timeS` (null: set from the progress, as the playback does). */
 export function overlayTime(clock: OverlayClock, progress: number, timeS: number | null): OverlayTime {
   const time: OverlayTime = { timeS: timeS ?? clock.timeAtProgress(progress), openingS: clock.openingS, flightS: clock.flightS, totalS: clock.totalTime() }
   if (clock.cuts && clock.cuts.length > 0) time.cutsS = clock.cuts.map((c) => c.timeS)
+  if (clock.junctions && clock.junctions.length > 0) time.junctions = clock.junctions
   return time
 }
 
@@ -93,7 +102,7 @@ export interface OverlayExtras {
   leaderboard?: readonly LeaderboardRow[]
   /** dip to black or white of a shot transition at the frame's time (`transitionDipAt`), drawn even while the overlay is off */
   dip?: TransitionDip | null
-  /** card of the stage starting « À la suite » (`stageCardAt`), drawn inside its window even while the overlay is off */
+  /** card of the stage starting « À la suite » (`stageCardAt`), drawn inside its window, over the dip, even while the overlay is off */
   stage?: StageCard | null
   /** size of the exported film, which the free offsets of the widgets are measured in; default: the drawn frame */
   exportSize?: OverlaySize
@@ -101,7 +110,10 @@ export interface OverlayExtras {
   markerColor?: string
 }
 
-/** Card of a stage « À la suite »: name, number, date and figures of its track, shown from `startS` for `durationS`. */
+/**
+ * Card of a stage « À la suite »: name, number, date and figures of its track, shown from `startS` for `durationS`,
+ * as the automatic card, or as `text` and `subtitle` (`fillTemplate`) when the film gives them.
+ */
 export interface StageCard {
   name: string
   /** 0 for the first stage */
@@ -113,6 +125,12 @@ export interface StageCard {
   ascentM?: number
   startS: number
   durationS: number
+  anchor: OverlayAnchor
+  size: number
+  text?: string
+  subtitle?: string
+  color?: string
+  font?: OverlayFontId
 }
 
 /** Safe area: 5 % of the frame on each side. */
@@ -1054,9 +1072,42 @@ function titleWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings,
   return cardWidget(p, { ...openingText(frame, settings), titleScale: 1, cells: [] }, settings.title.anchor, settings.title.size, opacity)
 }
 
-/** Card of a stage « À la suite »: its name, « Étape 2 sur 3 · date », its distance and D+ (centred, closing-card size). */
-function stageWidget(p: Painter, card: StageCard, opacity: number): Widget {
-  const m = cellMetrics(p, 1)
+/** Size of the text of a stage card the film words itself, relative to a timeline text: the title size of the automatic card. */
+const STAGE_TEXT_SCALE = 1.65
+
+/** What `{name} {n} {count} {date} {distance} {ascent}` stand for in the text of a stage card. */
+function stageVariables(card: StageCard): Record<string, string> {
+  return {
+    name: card.name,
+    n: String(card.index + 1),
+    count: String(card.count),
+    date: card.startTime !== undefined ? formatDateFr(card.startTime) : '',
+    distance: formatDistance(card.distanceM),
+    ascent: card.ascentM === undefined ? '' : `${formatNumber(card.ascentM)} m`,
+  }
+}
+
+/**
+ * Card of a stage « À la suite »: its name, « Étape 2 sur 3 · date », its distance and D+ (closing-card title size),
+ * or the film's own text and subtitle with the stage's figures filled in.
+ */
+function stageWidget(p: Painter, card: StageCard, opacity: number, maxWidth: number): Widget | null {
+  if (card.text !== undefined) {
+    const vars = stageVariables(card)
+    const item: FilmText = {
+      id: '',
+      startS: card.startS,
+      durationS: card.durationS,
+      text: fillTemplate(card.text, vars),
+      subtitle: card.subtitle === undefined ? undefined : fillTemplate(card.subtitle, vars),
+      anchor: card.anchor,
+      size: card.size * STAGE_TEXT_SCALE,
+      color: card.color,
+      font: card.font,
+    }
+    return filmTextWidget(p, item, opacity, maxWidth)
+  }
+  const m = cellMetrics(p, card.size)
   const stats: [string, CounterText | null][] = [
     ['Distance', splitUnit(formatDistance(card.distanceM))],
     ['Dénivelé +', card.ascentM === undefined ? null : { value: formatNumber(card.ascentM), unit: 'm' }],
@@ -1064,7 +1115,7 @@ function stageWidget(p: Painter, card: StageCard, opacity: number): Widget {
   const cells = stats.flatMap(([label, text]) => (text ? [makeCell(p, m, label, text, text)] : []))
   const date = card.startTime !== undefined ? formatDateFr(card.startTime) : ''
   const subtitle = [`Étape ${card.index + 1} sur ${card.count}`, date].filter(Boolean).join(' · ')
-  return cardWidget(p, { title: card.name, subtitle, titleScale: 0.6, cells }, 'center', 1, opacity, m)
+  return cardWidget(p, { title: card.name, subtitle, titleScale: 0.6, cells }, card.anchor, card.size, opacity, m)
 }
 
 /** Figures of the closing card (the ones the track records), label and text. */
@@ -1450,7 +1501,6 @@ export function drawOverlay(
       if (opacity > 0.001) texts.push({ item, opacity })
     }
   }
-  if (stage && stageOpacity > 0.001) add(stageWidget(p, stage, stageOpacity))
   // photo cards after the widgets of their anchor; the caption of a full-screen photo is drawn like a text
   for (const { item, opacity, image } of photos) {
     const caption = item.caption?.trim()
@@ -1476,6 +1526,17 @@ export function drawOverlay(
   })
   roll?.()
   if (dip) drawDip(p, dip)
+  // the card of a stage over the dip, which it lives in: laid out on its own
+  if (stage && stageOpacity > 0.001) {
+    const card = stageWidget(p, stage, stageOpacity, filmTextMaxWidths([stage.anchor], structure ? structure.area.w : size.width * (1 - 2 * SAFE_MARGIN), 2 * p.u)[0])
+    if (card && card.opacity > 0.001) {
+      const [at] = layoutWidgets([card], size, 2 * p.u, structure?.area)
+      ctx.save()
+      ctx.globalAlpha = card.opacity
+      card.draw(at.x, at.y)
+      ctx.restore()
+    }
+  }
   if (weatherShown || (endOpacity > 0 && settings.end.showWeather && frame.track.stats.weather)) {
     // required by the Open-Meteo licence: with the other credits when they are drawn, else on its own
     if (!settings.credits.enabled) drawWeatherCredit(p)

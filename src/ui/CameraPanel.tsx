@@ -339,7 +339,7 @@ export function CameraPanel() {
             <label className="field__label" htmlFor={`${id}-duration`}>
               Durée du survol
             </label>
-            <InfoTip text="Durée du trajet à la vitesse ×1, sans les arrêts de la timeline." />
+            <InfoTip text="Durée du trajet à la vitesse ×1, sans les arrêts de la timeline ni les transitions entre étapes." />
           </div>
           <div className="range-row">
             <button

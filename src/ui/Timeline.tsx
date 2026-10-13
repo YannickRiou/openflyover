@@ -19,12 +19,13 @@ import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readA
 import { beatTicksPath } from '../film/beats'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards } from '../film/cards'
 import type { CardId } from '../film/cards'
-import { buildFilmClock, filmClockFor, filmClockInputFor } from '../film/clock'
-import type { FilmClockInput } from '../film/clock'
+import { buildFilmClock, filmClockFor, filmClockInputFor, junctionInputsFor } from '../film/clock'
+import type { FilmClock, FilmClockFor, FilmClockInput } from '../film/clock'
+import { hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, stageCardAfterOf, stageCardId, stageCardWindow, stageItemId, stageTrackOf, junctionTrackOf } from '../film/junctions'
 import { photoTimeMs } from '../film/exif'
 import { useMediaStore } from '../film/media'
 import { isMediaFile, readMedia } from '../film/video'
-import { STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
+import { JUNCTION_KIND_LABELS, STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
 import { PARAM_LANE_LABELS, PARAM_SPECS, keysOfParam, paramLanes } from '../film/paramKeys'
 import type { FilmParamKey } from '../film/paramKeys'
 import { MARKER_FIGURE_LABELS, MARKER_KIND_LABELS } from '../scene/markerSettings'
@@ -52,12 +53,12 @@ import {
   removeFilmItem,
   rulerTicks,
   snapTargets,
-  snapTime,
+  snapper,
   syncClip,
   updateMedia,
   zoomAt,
 } from '../film/timeline'
-import type { DragContext, Grip, TimelineItem } from '../film/timeline'
+import type { DragContext, Grip, SnapBlock, SnapTarget, TimelineItem } from '../film/timeline'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
@@ -71,7 +72,7 @@ import type { IconName } from './icons'
 import { KeyGroup } from './KeyControls'
 import type { KeyTarget } from './KeyControls'
 import { ModifiedMarker } from './ModifiedMarker'
-import { usePreferences } from './preferences'
+import { setPreferences, usePreferences } from './preferences'
 import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
 import { spacePlays, withShortcut } from './shortcuts'
@@ -91,6 +92,10 @@ const PROFILE_MIN_SPAN_M = 100
 /** Blank space at both ends of the lanes, so that the edges of the first and last blocks can be grabbed. */
 const PAD_PX = 10
 const SNAP_PX = 8
+/** Distance at which a caught target is let go (hysteresis: it does not flicker at the edge of its pull). */
+const RELEASE_PX = 14
+/** Narrowest a junction block is drawn, so that a plain cut can still be grabbed. */
+const JUNCTION_MIN_PX = 10
 /** Pointer travel before a press on a block becomes a drag (a shorter one only selects). */
 const DRAG_THRESHOLD_PX = 3
 /** Centred timeline (phone): finger travel beyond which a press is a slide (the browser scrolls), not a tap. */
@@ -128,10 +133,11 @@ interface EdgeScroll {
   carry: number
 }
 
-/** Clock of `film`, a retouch of the film whose clock input is `input` (same track, pacing and landmarks). */
-const clockOfFilm = (input: FilmClockInput, film: Film) =>
+/** Clock of `film`, a retouch of the film of `source` whose clock input is `input` (same track, pacing and landmarks). */
+const clockOfFilm = (source: FilmClockFor, input: FilmClockInput, film: Film) =>
   buildFilmClock({
     ...input,
+    ...junctionInputsFor({ ...source, film }),
     opening: film.opening,
     closing: film.closing,
     stops: film.autoStops ? input.stops : film.stops,
@@ -291,8 +297,7 @@ function FilmOptions({
  * selected block drags as usual, two fingers zoom around the playhead.
  */
 export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { sheetOpen?: boolean; centred?: boolean; onUnfold?(): void }) {
-  const source = useFilmSource()
-  const { track, film, durationS, pacing, landmarks, cutsM } = source
+  const { track, film, durationS, pacing, landmarks, cutsM, stageIds } = useFilmSource()
   const sequence = useFilmSequence()
   const tracks = useAppStore((s) => s.tracks)
   const clock = useFilmClock()
@@ -304,6 +309,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   else if (!livePlayback && !frozenPlayback) setFrozenPlayback(useAppStore.getState().playback)
   const { playing, progress, timeS: storedTimeS, speed } = livePlayback ?? frozenPlayback ?? useAppStore.getState().playback
   const timelineClock = usePreferences((s) => s.timelineClock)
+  const magnet = usePreferences((s) => s.timelineMagnet)
   const setPlaying = useAppStore((s) => s.setPlaying)
   const setProgress = useAppStore((s) => s.setProgress)
   const setSpeed = useAppStore((s) => s.setSpeed)
@@ -315,10 +321,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
   const profile = useMemo(() => (path ? elevationProfile(path, PROFILE_SAMPLES) : undefined), [path])
-  const input = useMemo(
-    () => filmClockInputFor({ track, film, durationS, pacing, landmarks, cutsM }),
-    [track, film, durationS, pacing, landmarks, cutsM],
+  const clockSource = useMemo<FilmClockFor>(
+    () => ({ track, film, durationS, pacing, landmarks, cutsM, stageIds }),
+    [track, film, durationS, pacing, landmarks, cutsM, stageIds],
   )
+  const input = useMemo(() => filmClockInputFor(clockSource), [clockSource])
   const candidates = useMemo(() => (track ? stopCandidates({ track, landmarks, pacing }) : []), [track, landmarks, pacing])
 
   const selected = useAppStore((s) => s.filmSelection)
@@ -328,6 +335,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const overlay = useAppStore((s) => s.settings.overlay)
   /** overlay being dragged (the edge of a card), shown on the timeline only */
   const [cardDraft, setCardDraft] = useState<OverlaySettings | null>(null)
+  /** the targets the gesture in progress has caught, named on the alignment guide */
+  const [guides, setGuides] = useState<readonly SnapTarget[]>([])
   const [zoom, setZoom] = useState<number>(centred ? CENTRED_ZOOM : ZOOM_RANGE.min)
   const [collapsed, setCollapsed] = useState(() => matchesQuery(COMPACT_QUERY) && !centred)
   const [shownSheet, setShownSheet] = useState(sheetOpen)
@@ -350,7 +359,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   const shownFilm = draft ?? film
   const shownOverlay = cardDraft ?? overlay
-  const shownClock = useMemo(() => (draft ? clockOfFilm(input, draft) : clock), [draft, input, clock])
+  const shownClock = useMemo(() => (draft ? clockOfFilm(clockSource, input, draft) : clock), [draft, clockSource, input, clock])
   const flightXs = useMemo(() => {
     const n = profile?.ele.length ?? 0
     return Array.from({ length: n }, (_, i) => shownClock.timeAtProgress(i / Math.max(1, n - 1)) - shownClock.openingS)
@@ -361,8 +370,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // the selected block went away (undo, other track, generated stops moved): nothing selected
   const cardGone = isCardItem(selected) && !cardShown(overlay, selected)
   useEffect(() => {
-    if (selected !== null && (!track || (isCardItem(selected) ? cardGone : !hasFilmItem(film, clock.stops, selected)))) setSelected(null)
-  }, [selected, track, film, clock, cardGone, setSelected])
+    if (selected !== null && (!track || (isCardItem(selected) ? cardGone : !hasFilmItem(film, clock.stops, selected, stageIds)))) setSelected(null)
+  }, [selected, track, film, clock, cardGone, stageIds, setSelected])
 
   useEffect(() => {
     const el = scrollerRef.current
@@ -474,8 +483,22 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   // --- edits -------------------------------------------------------------------------------------------------
   const isStop = (item: TimelineItem) => clock.stops.some((s) => s.id === item)
+  /** the cards of the stages « À la suite » that are shown, with their window (the first one gives way to the opening title) */
+  const stageCardsOf = (clk: FilmClock, f: Film, ov: OverlaySettings) =>
+    !sequence
+      ? []
+      : [null, ...clk.junctions.map((j) => j.afterTrackId)].flatMap((after, k) => {
+          const window = stageCardWindow(clk, f, after)
+          if (!window || !junctionCardOf(f, after).enabled || (after === null && cardShown(ov, TITLE_CARD_ID))) return []
+          return [{ id: stageCardId(after), ...window, label: `Étape ${k + 1} · ${sequence.stages[k]?.track.name ?? ''}` }]
+        })
+  /** the cards and junctions as blocks, for the targets only the component knows */
+  const snapBlocks: SnapBlock[] = [
+    ...shownCards(overlay).map((card) => ({ id: card, ...cardWindow(overlay, card, clock), label: CARD_LABELS[card] })),
+    ...stageCardsOf(clock, film, overlay),
+  ]
   const withOwnStops = (f: Film) => materializeStops(f, { track, landmarks, pacing })
-  const clockOf = (f: Film) => clockOfFilm(input, f)
+  const clockOf = (f: Film) => clockOfFilm(clockSource, input, f)
   /** one undo step; the texts and media attached to a stop follow it (as in `editFilm`) */
   const commit = (edited: Film) => {
     const next = followStops(film, edited, clockOf)
@@ -492,9 +515,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     clockOf: (stops: readonly FilmStop[]) => buildFilmClock({ ...input, stops }),
     clockOfSpeeds: (speeds: readonly FilmSpeed[]) => buildFilmClock({ ...input, speeds }),
     lengthM,
-    targets: snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item),
+    targets: snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }),
     targetsM: candidates.map((c) => c.atM),
     snapS: SNAP_PX / pxPerS,
+    releaseS: RELEASE_PX / pxPerS,
+    snapState: { held: [], hits: [] },
+    clockOfFilm: clockOf,
     audioFileS: (src) => pictures[src]?.durationS,
   })
   const remove = (item: TimelineItem) => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop(item) }))
@@ -625,7 +651,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   /** a keyframe pressed and released without dragging: the playhead jumps to it */
   const jumpToKey = (item: TimelineItem) => {
     const key = clock.cameraKeys.find((k) => k.id === item) ?? clock.paramKeys.find((k) => k.id === item) ?? clock.markerKeys.find((k) => k.id === item)
-    if (key) seek(key.timeS)
+    if (key) return seek(key.timeS)
+    // a stage, a junction or a stage card: its start (the cut for a junction)
+    if (isStageItem(item)) {
+      const k = sequence?.stages.findIndex((s) => s.track.id === stageTrackOf(item)) ?? -1
+      if (k >= 0) seek(k === 0 ? clock.openingS : clock.junctions[k - 1].endS)
+    } else if (isJunctionItem(item)) {
+      const junction = clock.junctions.find((j) => j.afterTrackId === junctionTrackOf(item))
+      if (junction) seek(junction.holdStartS)
+    } else if (isStageCardItem(item)) {
+      const window = stageCardWindow(clock, film, stageCardAfterOf(item))
+      if (window) seek(window.startS)
+    }
   }
   /** centred: a press that becomes a tap on release (no capture: a slide scrolls the lanes, the browser cancels it) */
   const startTap = (e: PointerEvent<HTMLElement>, item: TimelineItem | null) => {
@@ -672,15 +709,23 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     }
     const dx = clientX - g.x0 + (scrollerRef.current?.scrollLeft ?? 0) - g.scroll0
     if (!g.result && Math.abs(dx) < DRAG_THRESHOLD_PX) return
-    if (g.kind === 'card') {
-      const snapS = altKey ? 0 : g.ctx.snapS
-      g.result = dragCard(g.start, g.item, g.grip, dx / pxPerS, clock, (t) => snapTime(t, g.ctx.targets, snapS))
-      setCardDraft(g.result)
-      return
+    // the magnet, inverted while Alt is held; what the last move caught is held a little longer, this one's is shown
+    const ctx = magnet !== altKey ? g.ctx : { ...g.ctx, snapS: 0 }
+    const state = g.ctx.snapState
+    if (state) {
+      state.held = state.hits
+      state.hits = []
     }
-    const dragged = dragFilm(g.start, g.item, g.grip, dx / pxPerS, altKey ? { ...g.ctx, snapS: 0 } : g.ctx)
-    g.result = followStops(g.start, dragged, clockOf)
-    setDraft(g.result)
+    if (g.kind === 'card') {
+      g.result = dragCard(g.start, g.item, g.grip, dx / pxPerS, clock, snapper(ctx))
+      setCardDraft(g.result)
+    } else {
+      const dragged = dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      g.result = followStops(g.start, dragged, clockOf)
+      setDraft(g.result)
+    }
+    const hits = state?.hits ?? []
+    setGuides((was) => (was.length === hits.length && was.every((t, i) => t === hits[i]) ? was : hits))
   }
   /**
    * Keeps the pointer of the gesture for the edge auto-scroll: near an edge of the zoomed timeline it scrolls (faster
@@ -746,6 +791,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     }
     setDraft(null)
     setCardDraft(null)
+    setGuides([])
   }
   /** centred: a scroll by the finger (or the wheel) moves the film time; the one that follows the playhead does not */
   const onScroll = (e: UIEvent<HTMLDivElement>) => {
@@ -761,7 +807,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       remove(item)
     } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
       const step = (e.shiftKey ? FINE_NUDGE_S : NUDGE_S) * (e.key === 'ArrowLeft' ? -1 : 1)
-      const grip: Grip = item === 'closing' || item === END_CARD_ID ? 'start' : item === 'opening' || item === TITLE_CARD_ID ? 'end' : 'move'
+      const grip: Grip =
+        item === 'closing' || item === END_CARD_ID
+          ? 'start'
+          : item === 'opening' || item === TITLE_CARD_ID || isJunctionItem(item) || isStageCardItem(item)
+            ? 'end'
+            : 'move'
       if (isCardItem(item)) {
         const next = dragCard(overlay, item, grip, step, clock)
         if (next !== overlay) setSetting('overlay', next)
@@ -806,6 +857,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     thumb?: string,
     icon?: IconName,
     extra?: ReactNode,
+    minPx = 0,
   ) => (
     <div
       key={item}
@@ -815,7 +867,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       aria-label={`${description}, de ${formatFilmTime(startS)} à ${formatFilmTime(endS)}`}
       title={label}
       className={`film-tl__block ${className}${selected === item ? ' film-tl__block--selected' : ''}`}
-      style={{ left: xOf(startS), width: Math.max(0, (endS - startS) * pxPerS) }}
+      style={{ left: xOf(startS) - Math.max(0, minPx - (endS - startS) * pxPerS) / 2, width: Math.max(minPx, (endS - startS) * pxPerS) }}
       onPointerDown={(e) => {
         if (centred && selected !== item) return startTap(e, item)
         if (grips.includes('move')) return startEdit(e, item, 'move')
@@ -846,12 +898,56 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const ticks = rulerTicks(total, pxPerS)
   /** the lanes: always « Plans » and « Vitesse », a lane per keyed parameter, « Marqueur » with marker keys, the rest */
   const lanes: { name: string; keys?: KeyTarget }[] = [
+    ...(sequence ? [{ name: 'Étapes' }] : []),
     { name: 'Plans', keys: { kind: 'camera' } },
     { name: PARAM_LANE_LABELS.speed, keys: { kind: 'param', param: 'speed' } },
     ...paramLanes(shownClock).map((param) => ({ name: PARAM_LANE_LABELS[param] })),
     ...(shownClock.markerKeys.length > 0 ? [{ name: 'Marqueur' }] : []),
     ...['Arrêts', 'Textes', 'Médias', 'Musique'].map((name) => ({ name })),
   ]
+  /** « Étapes »: a block per stage, between them the junction (a cut, a fade held for its hold, a night) */
+  const stageBlocks = () =>
+    (sequence?.stages ?? []).flatMap((stage, k) => {
+      const before = shownClock.junctions[k - 1]
+      const after = shownClock.junctions[k]
+      const color = tracks.find((t) => t.id === stage.track.id)?.color ?? stage.track.color
+      const name = `Étape ${k + 1} · ${stage.track.name} · ${formatDistance(stage.endM - stage.startM)}`
+      const blocks = [
+        block(
+          stageItemId(stage.track.id),
+          before ? before.endS : flightStart,
+          after ? after.startS : flightEnd,
+          name,
+          `Étape ${k + 1} : ${stage.track.name}`,
+          'film-tl__block--stage',
+          ['move'],
+          undefined,
+          undefined,
+          <span className="film-tl__stage-band" style={{ background: color }} />,
+        ),
+      ]
+      if (after) {
+        const fade = after.kind === 'fondu-noir' || after.kind === 'fondu-blanc'
+        const label = fade ? `${JUNCTION_KIND_LABELS[after.kind]} · ${formatNumber(after.holdS, 1)} s` : JUNCTION_KIND_LABELS[after.kind]
+        const own = hasOwnTransition(shownFilm, after.afterTrackId) ? '' : ' (par défaut)'
+        blocks.push(
+          block(
+            after.id,
+            after.startS,
+            after.endS,
+            label,
+            `Jonction ${k + 1} : ${label}${own}`,
+            `film-tl__block--junction film-tl__block--junction-${after.kind}`,
+            fade ? ['move', 'end'] : ['move'],
+            undefined,
+            undefined,
+            undefined,
+            JUNCTION_MIN_PX,
+          ),
+        )
+      }
+      return blocks
+    })
   /** a parameter key ◆ on its lane: click goes to it, drag moves it, Delete removes it */
   const paramKeyDot = (k: FilmParamKey & { timeS: number }) => {
     const spec = PARAM_SPECS[k.param]
@@ -1049,6 +1145,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             />
             <BarButton icon="move-horizontal" name="Ajuster : voir tout le film" tip="Voir tout le film" onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
           </div>
+          <BarButton
+            icon="magnet"
+            name={magnet ? 'Désactiver l’aimantation' : 'Activer l’aimantation'}
+            tip={`${magnet ? 'Aimantation : les blocs s’alignent sur les bords, les centres, la tête de lecture… (Alt pendant un glissement : l’inverse)' : 'Aimantation désactivée (Alt pendant un glissement : l’activer)'}`}
+            on={magnet}
+            onClick={() => setPreferences({ timelineMagnet: !magnet })}
+          />
           <FilmOptions autoStops={film.autoStops} onAutoStops={setAutoStops} onAddMusic={pickMusic} reading={reading} />
         </div>
         <button
@@ -1121,6 +1224,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 ))}
               </div>
 
+              {sequence && (
+                <div className="film-tl__lane" role="group" aria-label="Étapes">
+                  {stageBlocks()}
+                </div>
+              )}
+
               <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label="Plans">
                 {block(
                   'opening',
@@ -1155,16 +1264,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                       const startS = k === 0 ? flightStart : (shownClock.cuts[k - 1]?.timeS ?? flightStart)
                       const endS = shownClock.cuts[k]?.timeS ?? flightEnd
                       const color = tracks.find((t) => t.id === stage.track.id)?.color ?? stage.track.color
-                      const name = `Étape ${k + 1} · ${stage.track.name} · ${formatDistance(stage.endM - stage.startM)}`
                       return (
                         <span
                           key={stage.track.id}
                           className="film-tl__stage"
                           style={{ left: (startS - flightStart) * pxPerS, width: (endS - startS) * pxPerS, ['--stage-color' as string]: color }}
-                          title={name}
-                        >
-                          {name}
-                        </span>
+                        />
                       )
                     })
                   ) : (
@@ -1274,6 +1379,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     'type',
                   )
                 })}
+                {/* the card of each stage « À la suite »: only its end edge moves (its duration) */}
+                {stageCardsOf(shownClock, shownFilm, shownOverlay).map((c) =>
+                  block(c.id, c.startS, c.endS, c.label, `Carton : ${c.label}`, 'film-tl__block--card', ['move', 'end'], undefined, 'type'),
+                )}
                 {shownFilm.texts.map((t) =>
                   block(t.id, t.startS, t.startS + t.durationS, t.text || 'Texte', `Texte : ${t.text}`, 'film-tl__block--text', [
                     'start',
@@ -1330,6 +1439,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 })}
               </div>
 
+              {/* what the dragged block is aligned with: a line across the lanes and the names of the targets */}
+              {guides.length > 0 && (
+                <div className="film-tl__guide" style={{ left: xOf(guides[0].timeS) }} aria-hidden="true">
+                  <span className="film-tl__guide-tags">
+                    {guides.slice(0, 4).map((g, i) => (
+                      <span key={`${g.label}-${i}`} className="film-tl__guide-tag">
+                        {g.label}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              )}
               <div className="film-tl__playhead" style={{ left: xOf(playheadS) }} aria-hidden="true" />
             </div>
           </div>

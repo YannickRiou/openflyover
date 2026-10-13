@@ -43,7 +43,7 @@ export function useFilmSource(): FilmClockFor {
   const pacing = useAppStore((s) => s.settings.pacing)
   const film = useAppStore((s) => s.settings.film)
   const landmarks = useLandmarkStore((s) => filmLandmarks(track, sequence, s.landmarks))
-  return { track, film, durationS, pacing, landmarks, cutsM: sequence?.cutsM }
+  return { track, film, durationS, pacing, landmarks, cutsM: sequence?.cutsM, stageIds: sequence?.stageIds }
 }
 
 /** The film source read from the stores outside React (event handlers, shortcuts). */
@@ -52,7 +52,7 @@ export function getFilmSource(): FilmClockFor {
   const sequence = filmSequenceOf(tracks, settings.race)
   const track = sequence?.track ?? tracks[0]
   const landmarks = filmLandmarks(track, sequence, useLandmarkStore.getState().landmarks)
-  return { track, film: settings.film, durationS: settings.flyoverDurationS, pacing: settings.pacing, landmarks, cutsM: sequence?.cutsM }
+  return { track, film: settings.film, durationS: settings.flyoverDurationS, pacing: settings.pacing, landmarks, cutsM: sequence?.cutsM, stageIds: sequence?.stageIds }
 }
 
 /**
@@ -251,9 +251,9 @@ export function followLandmarks(): void {
  * and the panels (film duration, highlights).
  */
 export function useFilmClock(): FilmClock {
-  const { track, film, durationS, pacing, landmarks, cutsM } = useFilmSource()
+  const { track, film, durationS, pacing, landmarks, cutsM, stageIds } = useFilmSource()
   return useMemo(
-    () => filmClockFor({ track, film, durationS, pacing, landmarks, cutsM }),
-    [track, film, durationS, pacing, landmarks, cutsM],
+    () => filmClockFor({ track, film, durationS, pacing, landmarks, cutsM, stageIds }),
+    [track, film, durationS, pacing, landmarks, cutsM, stageIds],
   )
 }

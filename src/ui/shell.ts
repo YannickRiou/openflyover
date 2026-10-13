@@ -281,6 +281,8 @@ export interface Preferences {
   performance: Record<PerfItem, boolean>
   /** recorded clock time of the marker on the timeline bar, after the timecode */
   timelineClock: boolean
+  /** the timeline's magnet: blocks dragged snap to the edges, centres and marks of the others */
+  timelineMagnet: boolean
   /** look of the interface (`appearance.ts`) */
   appearance: Appearance
 }
@@ -289,6 +291,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   status: { weather: true, landmarks: true, region: true, water: true },
   performance: { fps: true, gpu: false, tiles: true, memory: true, system: true },
   timelineClock: false,
+  timelineMagnet: true,
   appearance: DEFAULT_APPEARANCE,
 }
 
@@ -311,6 +314,7 @@ export function parsePreferences(raw: string | null): Preferences {
     status: booleans(STATUS_CHIPS, v.status, DEFAULT_PREFERENCES.status),
     performance: booleans(PERF_ITEMS, v.performance, DEFAULT_PREFERENCES.performance),
     timelineClock: typeof v.timelineClock === 'boolean' ? v.timelineClock : DEFAULT_PREFERENCES.timelineClock,
+    timelineMagnet: typeof v.timelineMagnet === 'boolean' ? v.timelineMagnet : DEFAULT_PREFERENCES.timelineMagnet,
     appearance: parseAppearance(v.appearance),
   }
 }

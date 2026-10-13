@@ -23,7 +23,7 @@ import {
   progressTime,
   titleCardOpacity,
 } from './draw'
-import type { OverlayContext2D, OverlayExtras } from './draw'
+import type { OverlayContext2D, OverlayExtras, StageCard } from './draw'
 import { MEDIA_DEFAULTS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
 import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, withStyleLayout } from './settings'
@@ -716,22 +716,54 @@ describe('dip of a shot transition', () => {
 
 describe('stage card « À la suite »', () => {
   const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } }
-  const stage = { name: 'Jour 2', index: 1, count: 3, startTime: Date.UTC(2026, 6, 2, 8), distanceM: 18_400, ascentM: 1250, startS: 40, durationS: 5 }
-  const render = (settings: OverlaySettings, timeS: number, card = stage) => {
-    const drawn = fakeContext()
-    drawOverlay(drawn.ctx, overlayFrameAt(track, 0.5), settings, SIZE, {}, { time: { timeS, openingS: 0, flightS: 100, totalS: 100 }, stage: card })
-    return drawn.texts.map((t) => t.text).join(' ')
+  const stage: StageCard = {
+    name: 'Jour 2',
+    index: 1,
+    count: 3,
+    startTime: Date.UTC(2026, 6, 2, 8),
+    distanceM: 18_400,
+    ascentM: 1250,
+    startS: 40,
+    durationS: 5,
+    anchor: 'center',
+    size: 1,
   }
+  const draw = (settings: OverlaySettings, timeS: number, card = stage, dip: OverlayExtras['dip'] = null) => {
+    const drawn = fakeContext()
+    drawOverlay(drawn.ctx, overlayFrameAt(track, 0.5), settings, SIZE, {}, { time: { timeS, openingS: 0, flightS: 100, totalS: 100 }, stage: card, dip })
+    return drawn
+  }
+  const render = (settings: OverlaySettings, timeS: number, card = stage) =>
+    draw(settings, timeS, card)
+      .texts.map((t) => t.text)
+      .join(' ')
 
   it('name, number, date, distance and D+ inside its window, even without the overlay', () => {
     const shown = render(off, 42)
     expect(shown).toContain('Jour 2')
     expect(shown).toMatch(/Étape 2 sur 3/i)
-    expect(shown.toLowerCase()).toContain(formatDateFr(stage.startTime))
+    expect(shown.toLowerCase()).toContain(formatDateFr(stage.startTime!))
     expect(shown).toContain('18,4')
     expect(shown).toMatch(/1\s250/)
     expect(render(off, 39)).toBe('')
     expect(render(off, 45)).toBe('')
+  })
+
+  it('the film can word its own card: its text and subtitle with the stage’s figures filled in', () => {
+    const own = { ...stage, text: '{name} — jour {n}', subtitle: '{distance} · {ascent}' }
+    const shown = render(off, 42, own)
+    expect(shown).toContain('Jour 2 — jour 2')
+    expect(shown).toContain('18,4')
+    expect(shown).toMatch(/1\s250 m/i)
+    expect(shown).not.toMatch(/Étape 2 sur 3/i)
+    expect(render(off, 42, { ...own, text: '', subtitle: undefined })).toBe('')
+  })
+
+  it('drawn over the dip it lives in, not under it', () => {
+    const { order } = draw(off, 42, stage, { color: 'black', alpha: 1 })
+    expect(order.indexOf('rect black 1')).toBeGreaterThanOrEqual(0)
+    expect(order.slice(order.indexOf('rect black 1') + 1)).toContain('text')
+    expect(order.slice(0, order.indexOf('rect black 1'))).not.toContain('text')
   })
 
   it('the first stage gives way to the title card of the film', () => {

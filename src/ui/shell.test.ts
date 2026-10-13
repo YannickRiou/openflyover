@@ -285,8 +285,11 @@ describe('parsePreferences', () => {
       status: { ...DEFAULT_PREFERENCES.status, water: false },
       performance: { ...DEFAULT_PREFERENCES.performance, gpu: true },
       timelineClock: true,
+      timelineMagnet: true,
       appearance: DEFAULT_PREFERENCES.appearance,
     })
+    expect(parsePreferences('{"timelineMagnet":false}').timelineMagnet).toBe(false)
+    expect(parsePreferences('{"timelineMagnet":"non"}').timelineMagnet).toBe(true)
   })
 
   it('reads the appearance, the defaults for preferences stored before it existed', () => {

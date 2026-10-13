@@ -60,7 +60,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
-| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, ; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `timeline.ts`: scale, ruler, snapping, `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
+| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, ; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`junctions`, `nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `junctions.ts`: `junctionOf`, `junctionCardOf`, `withJunction`, `withJunctionCard`, `applyToAllJunctions`, `junctionPlan`, `junctionDipAt`, `stageCardWindow`, `fillTemplate`, `withStageSettingsMigrated`; `timeline.ts`: scale, ruler, snapping (`SnapTarget`, `snapTargets`, `snapTime`, `snapper`), `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
 | `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime`; keyframes: `keyView`, `keyFramingFrom`, `keyFramingAt`, `keyReferenceAt` (`cameraKeys.ts`, no three.js: `keyPoseAt`, `keyedCamera`, `registerKeyCapture`, `captureKey`) |
 | `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)`, `nightAt`, `nightSunDate`, `NIGHT_DARK_MARGIN_MS` |
 | `src/flyover/nights.ts` | nights of a multi-day track (see "Sun at the time of the outing") | `trackNights`, `flightNights`, `nightPauseS`, `TrackNight`, `FlightNight` |
@@ -1027,7 +1027,8 @@ pointer (`appearance.css`).
   musique sous les vidéos" (lower the music under the videos), false by default and for a film saved earlier); `pois[]` `{ id, lon, lat, name }` (points
   of interest placed by hand, see "Points of interest"; a film saved earlier receives `[]`); `nights` `{ enabled, duskS, nightS, dawnS }`
   (« Jours et nuits », 0–20 s each, `NIGHT_PART_RANGE`; on, 3 / 2 / 3 s by default; off for a film saved earlier, so its
-  timing stays); ids unique within the film
+  timing stays); `junctions[]`, `junctionDefault` and `firstCard`, optional and absent from a film saved earlier: the
+  junctions between the stages « À la suite » and their cards, see "Several tracks"; ids unique within the film
   (`stop-3`, `text-1`, `media-2`, `music-1`, `poi-2`, `nextFilmId`).
 - **Automatic assembly** (`src/film/assemble.ts`): as long as `autoStops` is true, stops are generated on every computation
   (`autoStops`) at the highlights (`stopCandidates`: passes crossed and summits nearby among the landmarks shown, `pacing.landmarks`; climb tops are no
@@ -1231,8 +1232,14 @@ pointer (`appearance.css`).
   stretches by either edge, the held edge follows the pointer in film time, position found in meters by bisection
   on the clock of the edited section (`DragContext.clockOfSpeeds`, like a stop), never on its neighbors, 50 m at
   least (`MIN_SPEED_SPAN_M`), to the meter; a framing moves: its place is that of the marker at the target time
-  (`clock.progressAtTime`, to the meter). Snapping at 8 px (`snapTargets`: start and end of the film, edges of shots, stops,
-  texts and photos, highlights, playhead; a moved stop snaps to highlights in meters); Alt disables it. Values
+  (`clock.progressAtTime`, to the meter). The **magnet**: `snapTargets` returns named targets (`SnapTarget` `{ timeS, label, kind }`:
+  start and end of the film, edges and centres of shots, stops, speed portions, texts, photos, music, junctions and the
+  cards, the camera, parameter and marker keys, highlights, ruler ticks, playhead; the dragged item left out); `snapTime`
+  catches the nearest within 8 px and lets go beyond 14 px (hysteresis: `SnapState.held`, the targets caught by the previous pointer move),
+  `hits` being every target at the time it lands on; `snapper(ctx)` is the `snap` of a gesture and records the hits in
+  `ctx.snapState`, which the component draws as an alignment guide (`.film-tl__guide`: a line across the lanes and the
+  names of the targets). A moved stop snaps to highlights in meters (`snapValue`). The magnet button of the bar
+  (`Preferences.timelineMagnet`, per device, on by default) turns it off, Alt inverts it while dragging. Values
   bounded to the model ranges, rounded to the hundredth of a second (moved stop: to the meter). A press without moving
   3 px only selects. On a block that moves, an edge grip only takes a press in the outer third of its side
   (`pressedGrip`): a narrow block (a 4 s stop on a phone) is moved, not stretched, although the 16 px touch grips or
@@ -2379,9 +2386,10 @@ exports) gets it from the terrain source of the settings.
 
 - Block of the track list from two tracks: « La première » (default, nothing changes: the first track is flown, the
   others drawn), « À la suite », « En parallèle » (the ghost race). Stored in `settings.race`, no migration: « En
-  parallèle » is `enabled` (as before), « À la suite » the optional `sequence` flag (ignored while `enabled`), with
-  `stageCards` (absent = on) and `stageTransition` (`'coupe'`, `'fondu-noir'` (absent), `'fondu-blanc'`); a project
-  saved before has neither, so its film is unchanged; one track is never a sequence (`playsInSequence`).
+  parallèle » is `enabled` (as before), « À la suite » the optional `sequence` flag (ignored while `enabled`); one track is
+  never a sequence (`playsInSequence`). The transition and the cards between the stages are the film's **junctions**
+  (below); `race.stageCards` and `race.stageTransition` of a project saved before them are read once, by
+  `withStageSettingsMigrated` (in `sanitizeSettings`), into `film.junctionDefault` and dropped from `race`.
 - À la suite: each stage can have its own marker through marker keys at the stage cuts (« Un marqueur par étape »,
   Marqueur section).
 - « À la suite » (`src/flyover/sequence.ts`, pure): the film flies a **sequence track** (`buildSequence`: the tracks'
@@ -2395,19 +2403,51 @@ exports) gets it from the terrain source of the settings.
   kilometre labels, landmark, climb, highlight and point-of-interest panels (seeking in metres along the film), region
   highlight, water. Stops, speed sections and camera keys are anchored in metres along the sequence:
   the first stage keeps the first track's metres, so switching mode keeps what was placed on it.
-- Clock: `FilmClockFor.cutsM` (the stages' starts) → `clock.cuts` (`{ atM, timeS }`, like the camera keys), read by
-  the timeline (one segment per stage in the « Plans » lane, `.film-tl__stage`: name and a band in the track's colour)
-  and the overlay (`overlayTime` copies them into `OverlayTime.cutsS`).
+- Clock: `FilmClockFor.cutsM` (the stages' starts) and `stageIds` (their track ids) → `clock.cuts` (`{ atM, timeS }`, like
+  the camera keys), read by the overlay (`overlayTime` copies them into `OverlayTime.cutsS`) and the motion blur, and
+  `clock.junctions` (below). The « Plans » lane keeps a thin band in each stage's colour (`.film-tl__stage`).
+- **Junctions** (`src/film/junctions.ts`, `film.junctions[]`): the junction after the stage of track `afterTrackId` (derived id
+  `junction-<trackId>`, so it survives a reorder), `{ kind, holdS, card? }`, every field optional: what it does not set is
+  `film.junctionDefault` `{ kind, holdS, card }` (absent = `DEFAULT_JUNCTION`: a fade to black held 1.5 s, cards on).
+  `junctionOf` / `junctionCardOf` are the only readers. Kinds (`JunctionKind`): `coupe` (hold 0), `fondu-noir`,
+  `fondu-blanc` (`holdS` 0.5–10 s), `nuit` (the night between two days). A junction is a **pause of the film clock** at the
+  cut (`extra`: added to the film whatever « Garder la durée », like a night; `junctionPlan` → `FilmClockInput.junctions`):
+  `clock.junctions[k]` `{ id, afterTrackId, atM, kind, holdS, startS, holdStartS, holdEndS, endS }` (one per cut, a cut
+  has all four times equal), `holdStartS` being the film time the marker reaches the cut, so `cuts[k].timeS`, the time the
+  stage changes. At the same place a junction comes before a stop, which comes before a night. `junctionInputsFor` computes
+  the plan for a film being edited (the timeline's draft). **Nights**: a night found at a cut (`NIGHT_AT_CUT_M`) is the
+  junction's: left to the default with « Jours et nuits » on, the junction is a `nuit` (the night pause as before the
+  junctions, no extra hold); a junction that stores its transition decides: `nuit` keeps the night (even with the nights off;
+  without a night to pass, a fade to black held `holdS`), any other kind replaces it. Nights inside a stage stay automatic.
+  Migration: a transition other than `coupe` holds `DEFAULT_JUNCTION.holdS` (1.5 s), so an old project with a dip grows by
+  the holds only; with `coupe` its film is identical.
+- **Stage card**: `JunctionCard` `{ enabled, durationS (1–15 s, 5), text?, subtitle?, anchor, size, color?, font? }` stored on
+  the junction before its stage (`firstCard` for the first stage); without `text` the automatic card (name,
+  « Étape 2 sur 3 · date », distance, D+), with it the film's own words (`fillTemplate`: `{name} {n} {count} {date}
+  {distance} {ascent}`, drawn like a timeline text, `STAGE_TEXT_SCALE`). Window (`stageCardWindow`): from `holdStartS` of the
+  junction before it (the start of the flight for the first stage) for `durationS`, not past the start of the next junction.
+- **Timeline**: an « Étapes » lane above « Plans » in a sequence: a block per stage (`stage-<trackId>`, track colour, selects and
+  seeks) and between two of them the junction block (`junction-<trackId>`, `[startS, endS]` of its pause, at least
+  `JUNCTION_MIN_PX` wide); the right edge of a fade stretches `holdS` (`dragJunction`, found on the clock of the film with the
+  hold changed, `DragContext.clockOfFilm`, so the film ripples), arrows ±1 s (Shift ±0.1 s), Delete goes back to the default
+  transition. The cards are blocks of « Textes » (`card-stage-<trackId>`, `card-stage-first`; their right edge sets
+  `durationS`, Delete switches the card off; the first one is not shown while the opening title is). Inspector
+  (`FilmInspector`, `JunctionFields.tsx`): transition and « Durée », « Appliquer à toutes les jonctions »
+  (`applyToAllJunctions`), the card (« Contenu » automatic or « Mon texte », position, size, colours, duration); the stage:
+  colour, « Aller au début ». The panel « Plusieurs traces » (`StageDefaults`) sets the default transition and cards.
+  Edits are `editFilm` calls: one undo step, texts attached to a stop follow a changed hold (`followStops`).
 - Camera (`src/flyover/follow.ts`, `filmFollowOf` → `FilmViewOptions.follow`): the flight camera flies the stage under
   the marker on its own smoothed path at its own progress (`stageAt`), so it never glides across the jump between two
   stages: a cut at the film time the marker reaches it. The shots still frame the whole sequence. A pure function of
   the progress, passed by FlyoverRig and by the export's prefetch (`filmViewAt`): preview and export agree.
 - Overlay: `prepareOverlayFilm` / `overlayFilmFrameAt`: the live widgets show the stage under the marker (its distance,
   D+, time, profile, mini-map), the opening and closing cards the name and totals of the sequence. A stage card
-  (`stageCardAt`, `StageCard`: name, « Étape 2 sur 3 · date », distance, D+; centred, `STAGE_CARD_S` = 5 s from the
-  flight start for the first, from its cut for the others) drawn even while the overlay is off, the live widgets
-  giving way to it; the first stage's card gives way to the title card when that is on. Dip of the cut
-  (`stageDipAt`, `DIP_DEFAULT_S` centred on it) merged with the shot dips; both enter the export's held-frame key.
+  (`stageCardAt(sequence, time, film)`, `StageCard`: the automatic name, « Étape 2 sur 3 · date », distance, D+, or the film's
+  own text; its own anchor, size and duration, `STAGE_CARD_S` = 5 s by default, from the flight start for the first, from its
+  cut for the others) drawn even while the overlay is off, the live widgets giving way to it; the first stage's card gives way to the title card when that is on. Dip of the junction
+  (`junctionsDipAt`, from `OverlayTime.junctions`, i.e. from the clock: covered at `holdStartS` and until `holdEndS`, `JUNCTION_FADE_S`
+  0.8 s each side; a night: only around `holdStartS`) merged with the shot dips; the card is drawn **over** the dip it lives in.
+  Both enter the export's held-frame key (dip alpha and card opacity), a pure function of the film time.
 - Drawn lines with « trace qui se dessine » (`drawOnDistances(…, sequence)`): stages flown whole, the current one to the
   marker, the next ones not yet. Start and finish labels name every stage's ends.
 - Sun, clouds and weather: `trackUnderMarker(tracks, race, progress)` gives the track under the marker and the

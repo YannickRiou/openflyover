@@ -40,6 +40,8 @@ import {
   rulerTicks,
   snapTargets,
   snapTime,
+  snapValue,
+  snapper,
   stopPositionAt,
   syncClip,
   syncClipPlacement,
@@ -53,10 +55,12 @@ import {
   updateText,
   zoomAt,
 } from './timeline'
-import type { DragContext } from './timeline'
+import type { DragContext, SnapTarget } from './timeline'
 
 const L = 10_000
 const D = 60
+/** targets at these times */
+const at = (...times: number[]): SnapTarget[] => times.map((timeS) => ({ timeS, label: `t${timeS}`, kind: 'edge' }))
 const stop = (id: string, atM: number, durationS = 4): FilmStop => ({ id, atM, durationS, camera: 'orbite' })
 const text = (id: string, startS: number, durationS = 4): FilmText => ({ id, startS, durationS, text: id, anchor: 'center', size: 1 })
 const photo = (id: string, startS: number, durationS = 5): FilmMedia => ({ id, startS, durationS, kind: 'image', src: 'photo-1', ...MEDIA_DEFAULTS })
@@ -149,19 +153,67 @@ describe('timeline scale', () => {
 
 describe('snapping', () => {
   it('nearest target within the distance', () => {
-    expect(snapTime(10.2, [5, 10, 10.5], 0.4)).toBe(10)
-    expect(snapTime(10.2, [5, 10.5], 0.4)).toBe(10.5)
-    expect(snapTime(10.2, [5, 11], 0.4)).toBe(10.2)
-    expect(snapTime(10.2, [10], 0)).toBe(10.2)
+    expect(snapTime(10.2, at(5, 10, 10.5), 0.4).timeS).toBe(10)
+    expect(snapTime(10.2, at(5, 10.5), 0.4).timeS).toBe(10.5)
+    expect(snapTime(10.2, at(5, 11), 0.4)).toEqual({ timeS: 10.2, hits: [] })
+    expect(snapTime(10.2, at(10), 0).timeS).toBe(10.2)
+    expect(snapValue(10.2, [5, 10, 10.5], 0.4)).toBe(10)
+  })
+
+  it('every target at the time it lands on is a hit', () => {
+    const targets: SnapTarget[] = [
+      { timeS: 10, label: 'Fin : A', kind: 'edge' },
+      { timeS: 10.0004, label: 'Début : B', kind: 'edge' },
+      { timeS: 10.5, label: 'Tête de lecture', kind: 'playhead' },
+    ]
+    const { timeS, hits } = snapTime(9.9, targets, 0.4)
+    expect(timeS).toBe(10)
+    expect(hits.map((h) => h.label)).toEqual(['Fin : A', 'Début : B'])
+  })
+
+  it('hysteresis: a caught target is held until the release distance, a new one needs the pull distance', () => {
+    const targets = at(10, 20)
+    const first = snapTime(10.2, targets, 0.3)
+    // 0.5 away: beyond the pull, within the release
+    expect(snapTime(10.5, targets, 0.3).timeS).toBe(10.5)
+    expect(snapTime(10.5, targets, 0.3, first.hits, 0.6).timeS).toBe(10)
+    expect(snapTime(10.7, targets, 0.3, first.hits, 0.6).timeS).toBe(10.7)
+  })
+
+  it('a gesture records what it caught (alignment guides) and remembers it', () => {
+    const state = { held: [] as SnapTarget[], hits: [] as SnapTarget[] }
+    const snap = snapper({ targets: at(10), snapS: 0.3, releaseS: 0.6, snapState: state })
+    expect(snap(10.2)).toBe(10)
+    expect(state.hits.map((h) => h.timeS)).toEqual([10])
+    state.held = state.hits
+    state.hits = []
+    expect(snap(10.5)).toBe(10)
+    state.held = []
+    expect(snap(10.5)).toBe(10.5)
   })
 
   it('targets: film ends, shot edges, other blocks, highlights, playhead', () => {
     const { clock } = contextOf(film)
     const targets = snapTargets(clock, film, [0.5], 12.3, 'text-1')
     const total = clock.totalTime()
-    expect(targets).toEqual(expect.arrayContaining([0, total, 6, total - 5, 12.3, 30, 32, clock.stops[0].startS, clock.timeAtProgress(0.5)]))
-    expect(targets).not.toContain(10)
-    expect(snapTargets(clock, film, [], 0, 'stop-1')).not.toContain(clock.stops[0].startS)
+    const times = targets.map((t) => t.timeS)
+    expect(times).toEqual(expect.arrayContaining([0, total, 6, total - 5, 12.3, 30, 32, clock.stops[0].startS, clock.timeAtProgress(0.5)]))
+    expect(times).not.toContain(10)
+    expect(snapTargets(clock, film, [], 0, 'stop-1').map((t) => t.timeS)).not.toContain(clock.stops[0].startS)
+  })
+
+  it('targets are named, centres and ruler ticks included', () => {
+    const { clock } = contextOf(film)
+    const targets = snapTargets(clock, film, [], 12.3, 'text-1', { ticks: [20], blocks: [{ id: 'card-title', startS: 0, endS: 8, label: 'Titre' }] })
+    const stopA = clock.stops[0]
+    expect(targets).toContainEqual({ timeS: stopA.startS, label: 'Début : Arrêt', kind: 'edge' })
+    expect(targets).toContainEqual({ timeS: (stopA.startS + stopA.endS) / 2, label: 'Milieu : Arrêt', kind: 'centre' })
+    expect(targets).toContainEqual({ timeS: 12.3, label: 'Tête de lecture', kind: 'playhead' })
+    expect(targets).toContainEqual({ timeS: 20, label: '0:20', kind: 'ruler' })
+    expect(targets).toContainEqual({ timeS: 4, label: 'Milieu : Titre', kind: 'centre' })
+    // the dragged item is left out, centre included
+    expect(targets.some((t) => t.label.endsWith('text-1'))).toBe(false)
+    expect(targets.some((t) => t.timeS === 12)).toBe(false)
   })
 
   it('targets: the cuts between the stages of « À la suite »', () => {
@@ -178,7 +230,7 @@ describe('snapping', () => {
       cutsM: [4000],
     })
     expect(withCuts.cuts).toHaveLength(1)
-    expect(snapTargets(withCuts, film, [], 0)).toContain(withCuts.cuts[0].timeS)
+    expect(snapTargets(withCuts, film, [], 0)).toContainEqual({ timeS: withCuts.cuts[0].timeS, label: 'Jonction 1', kind: 'junction' })
     expect(clock.cuts).toEqual([])
   })
 })
@@ -205,7 +257,7 @@ describe('dragFilm', () => {
     expect(dragFilm(film, 'opening', 'end', 100, ctx).opening.durationS).toBe(30)
     expect(dragFilm(film, 'closing', 'start', -1.5, ctx).closing.durationS).toBe(6.5)
     expect(dragFilm(film, 'closing', 'start', 10, ctx).closing.durationS).toBe(1)
-    expect(dragFilm(film, 'opening', 'end', 1.8, { ...ctx, targets: [8], snapS: 0.5 }).opening.durationS).toBe(8)
+    expect(dragFilm(film, 'opening', 'end', 1.8, { ...ctx, targets: at(8), snapS: 0.5 }).opening.durationS).toBe(8)
     const none = { ...film, opening: { style: 'aucune' as const, durationS: 6 } }
     expect(dragFilm(none, 'opening', 'end', 2, contextOf(none))).toBe(none)
   })
@@ -256,7 +308,7 @@ describe('dragFilm', () => {
     expect(dragFilm(film, 'text-1', 'move', 2.5, ctx).texts[0]).toMatchObject({ startS: 12.5, durationS: 4 })
     expect(dragFilm(film, 'text-1', 'move', -20, ctx).texts[0].startS).toBe(0)
     // the end (14 + 1.9) snaps to 16
-    expect(dragFilm(film, 'text-1', 'move', 1.9, { ...ctx, targets: [16], snapS: 0.3 }).texts[0].startS).toBe(12)
+    expect(dragFilm(film, 'text-1', 'move', 1.9, { ...ctx, targets: at(16), snapS: 0.3 }).texts[0].startS).toBe(12)
     expect(dragFilm(film, 'text-1', 'start', -3, ctx).texts[0]).toMatchObject({ startS: 7, durationS: 7 })
     expect(dragFilm(film, 'text-1', 'start', 10, ctx).texts[0]).toMatchObject({ startS: 13.5, durationS: 0.5 })
     expect(dragFilm(film, 'text-1', 'end', 1.234, ctx).texts[0]).toMatchObject({ startS: 10, durationS: 5.23 })
@@ -268,7 +320,7 @@ describe('dragFilm', () => {
     const ctx = contextOf(film)
     expect(dragFilm(film, 'media-1', 'move', 2.5, ctx).media[0]).toMatchObject({ startS: 42.5, durationS: 5 })
     expect(dragFilm(film, 'media-1', 'start', -3, ctx).media[0]).toMatchObject({ startS: 37, durationS: 8 })
-    expect(dragFilm(film, 'media-1', 'end', 1, { ...ctx, targets: [46.1], snapS: 0.3 }).media[0]).toMatchObject({ startS: 40, durationS: 6.1 })
+    expect(dragFilm(film, 'media-1', 'end', 1, { ...ctx, targets: at(46.1), snapS: 0.3 }).media[0]).toMatchObject({ startS: 40, durationS: 6.1 })
     expect(dragFilm(film, 'media-1', 'move', 1, ctx).texts).toBe(film.texts)
   })
 
@@ -312,7 +364,7 @@ describe('edits', () => {
       { id: 'media-3', startS: 17.35, durationS: NEW_MEDIA_S, kind: 'image', src: 'photo-5', ...MEDIA_DEFAULTS },
     ])
     expect(isValidFilm(next)).toBe(true)
-    expect(snapTargets(contextOf(next).clock, next, [], 0)).toEqual(expect.arrayContaining([40, 45, 17.35]))
+    expect(snapTargets(contextOf(next).clock, next, [], 0).map((t) => t.timeS)).toEqual(expect.arrayContaining([40, 45, 17.35]))
     expect(removeFilmItem(next, 'media-2').media.map((m) => m.id)).toEqual(['media-1', 'media-3'])
     expect(updateMedia(next, 'media-1', { startS: -1, durationS: 900, layout: 'carte', caption: 'Lac' }).media[0]).toMatchObject({
       startS: 0,
@@ -445,7 +497,7 @@ describe('speed portions', () => {
     expect(dragFilm(withSpeeds, 'speed-2', 'start', 100, ctx).speeds[1]).toMatchObject({ fromM: 6000 - MIN_SPEED_SPAN_M, toM: 6000 })
     expect(dragFilm(withSpeeds, 'speed-2', 'start', -100, ctx).speeds[1].fromM).toBe(4000)
     // the end edge snaps to a target time (the playhead)
-    const snapped = dragFilm(withSpeeds, 'speed-2', 'end', 3.2, speedContext(withSpeeds, { targets: [before.endS + 3], snapS: 0.5 }))
+    const snapped = dragFilm(withSpeeds, 'speed-2', 'end', 3.2, speedContext(withSpeeds, { targets: at(before.endS + 3), snapS: 0.5 }))
     expect(Math.abs(placed(snapped, 'speed-2').endS - (before.endS + 3))).toBeLessThanOrEqual(METRE_S / 0.5)
     // without the clock of the speeds, nothing moves
     expect(dragFilm(withSpeeds, 'speed-2', 'move', 3, contextOf(withSpeeds))).toBe(withSpeeds)
@@ -462,7 +514,7 @@ describe('speed portions', () => {
     expect(hasFilmItem(withSpeeds, [], 'speed-2')).toBe(true)
     expect(hasFilmItem(removeFilmItem(withSpeeds, 'speed-2'), [], 'speed-2')).toBe(false)
     const { clock } = speedContext(withSpeeds)
-    const targets = snapTargets(clock, withSpeeds, [], 0, 'speed-1')
+    const targets = snapTargets(clock, withSpeeds, [], 0, 'speed-1').map((t) => t.timeS)
     expect(targets).toContain(clock.speeds[1].startS)
     expect(targets).not.toContain(clock.speeds[0].startS)
     expect([0.25, 2, 1.5].map(formatSpeedFactor)).toEqual(['×0,25', '×2', '×1,5'])
@@ -629,8 +681,8 @@ describe('music', () => {
       inS: 0,
     })
     // snaps to the other blocks, which also snap to it
-    expect(dragFilm(withMusic, 'music-1', 'move', 4.6, ctx({ targets: [10], snapS: 0.5 })).audio[0].startS).toBe(10)
-    expect(snapTargets(ctx().clock, withMusic, [], 0)).toEqual(expect.arrayContaining([5, 25]))
+    expect(dragFilm(withMusic, 'music-1', 'move', 4.6, ctx({ targets: at(10), snapS: 0.5 })).audio[0].startS).toBe(10)
+    expect(snapTargets(ctx().clock, withMusic, [], 0).map((t) => t.timeS)).toEqual(expect.arrayContaining([5, 25]))
   })
 
   it('updates clamp volume, fades, start in the file and duration; removed like any block', () => {

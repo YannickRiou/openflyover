@@ -997,6 +997,74 @@
   border-left: 2px solid var(--color-white);
 }
 
+/* « Étapes » lane: a band per stage with its track's colour, a block per junction between two stages */
+.film-tl__block--stage {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--color-white);
+  cursor: pointer;
+}
+
+.film-tl__stage-band {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  pointer-events: none;
+}
+
+.film-tl__block--junction {
+  border: 1px solid var(--color-glacier);
+  background: var(--color-ink);
+  color: var(--color-white);
+  font-size: 11px;
+}
+
+.film-tl__block--junction-fondu-blanc {
+  background: var(--color-white);
+  color: var(--color-ink);
+}
+
+.film-tl__block--junction-nuit {
+  background: rgb(63 107 74 / 0.6);
+}
+
+/* a plain cut: a thin mark between the two stages */
+.film-tl__block--junction-coupe {
+  border-color: var(--color-white);
+  background: var(--color-white);
+  color: transparent;
+}
+
+/* alignment guide of a dragged block: a line across the lanes and what it is aligned with */
+.film-tl__guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 1px;
+  background: var(--color-accent-light);
+  pointer-events: none;
+}
+
+.film-tl__guide-tags {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.film-tl__guide-tag {
+  padding: 0 4px;
+  border-radius: 2px;
+  background: var(--color-accent-light);
+  color: var(--color-ink);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
 /* camera keys: small diamonds over the flight */
 .film-tl__key {
   position: absolute;

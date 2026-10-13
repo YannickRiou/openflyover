@@ -2,6 +2,7 @@ import { useId, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
 import { CARD_LABELS, TITLE_CARD_ID, cardShown, isCardItem } from '../film/cards'
+import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageTrackOf, withJunction, withJunctionCard } from '../film/junctions'
 import { useMediaStore } from '../film/media'
 import {
   AUDIO_DURATION_RANGE,
@@ -79,7 +80,7 @@ const SHOT_SUN_HINTS: Record<ShotSun, readonly [string, string]> = {
 import { REGION_KIND_LABELS, candidateId, captureFraming, useRegionStore } from '../osm/region'
 import { WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
 import type { OverlayAnchor } from '../overlay/settings'
-import { disableCard, editFilm, useFilmClock, useFilmSource } from '../scene/usePacing'
+import { disableCard, editFilm, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { AnchorPicker } from './AnchorPicker'
 import { CardFields } from './CardFields'
@@ -88,6 +89,7 @@ import { Icon } from './icons'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
+import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
 
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
@@ -346,11 +348,13 @@ export function FilmInspector() {
   const id = useId()
   const pictures = useMediaStore((s) => s.table)
   const item = useAppStore((s) => s.filmSelection)
-  const { track, film, pacing } = useFilmSource()
+  const { track, film, pacing, stageIds } = useFilmSource()
+  const sequence = useFilmSequence()
   const clock = useFilmClock()
   const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const overlay = useAppStore((s) => s.settings.overlay)
+  const tracks = useAppStore((s) => s.tracks)
   if (!item || !track || !path) return null
   const lengthM = track.stats.distanceM
   const change = (fn: (f: Film) => Film, stops: boolean) => editFilm((f) => ({ film: fn(f) }), { stops, step: false })
@@ -583,7 +587,62 @@ export function FilmInspector() {
     const cameraKey = clock.cameraKeys.find((k) => k.id === item)
     const paramKey = clock.paramKeys.find((k) => k.id === item)
     const markerKey = clock.markerKeys.find((k) => k.id === item)
-    if (stop) {
+    const junction = clock.junctions.find((j) => j.id === item)
+    if (junction) {
+      // the transition between two stages « À la suite »: its own, or the default one until it is changed
+      const k = clock.junctions.indexOf(junction)
+      const stored = junctionOf(film, junction.afterTrackId)
+      const own = hasOwnTransition(film, junction.afterTrackId)
+      // a junction left to the default shows what passes there (a night when the tracks rest overnight)
+      const kind = own ? stored.kind : junction.kind
+      const afterIds = (stageIds ?? []).slice(0, -1)
+      const card = junctionCardOf(film, junction.afterTrackId)
+      title = `Jonction ${k + 1}`
+      removeLabel = 'Transition par défaut'
+      removable = own
+      body = (
+        <>
+          <p className="field__hint">
+            Entre « {sequence?.stages[k]?.track.name} » et « {sequence?.stages[k + 1]?.track.name} »
+            {junction.kind !== 'coupe' && ` : de ${formatFilmTime(junction.startS, true)} à ${formatFilmTime(junction.endS, true)} dans le film`}.
+          </p>
+          <JunctionTransitionFields
+            kind={kind}
+            holdS={stored.holdS || DEFAULT_JUNCTION.holdS}
+            onChange={(patch) => change((f) => withJunction(f, junction.afterTrackId, { kind, holdS: stored.holdS, ...patch }), false)}
+          />
+          <button
+            type="button"
+            className="btn btn--secondary film-inspector__remove"
+            onClick={() => editFilm((f) => ({ film: applyToAllJunctions(f, afterIds, { kind, holdS: stored.holdS }) }))}
+          >
+            Appliquer à toutes les jonctions
+          </button>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={card.enabled}
+              onChange={(e) => {
+                const enabled = e.currentTarget.checked
+                editFilm((f) => ({ film: withJunctionCard(f, junction.afterTrackId, { enabled }) }))
+              }}
+            />
+            Carton de l’étape {k + 2}
+          </label>
+          <button
+            type="button"
+            className="btn btn--secondary film-inspector__remove"
+            onClick={() => useAppStore.getState().setFilmSelection(stageCardId(junction.afterTrackId))}
+          >
+            Régler le carton
+          </button>
+          <p className="field__hint">
+            Le film s’arrête ici le temps de la transition : la durée du vol ne change pas, le film dure d’autant plus longtemps. Étirez le bord droit
+            du bloc dans la timeline pour la régler.
+          </p>
+        </>
+      )
+    } else if (stop) {
       isStop = true
       title = 'Arrêt'
       const set = (patch: Parameters<typeof updateStop>[2]) => change((f) => updateStop(f, item, patch), true)
@@ -952,6 +1011,55 @@ export function FilmInspector() {
           </p>
         </>
       )
+    } else if (isStageItem(item) && sequence) {
+      const k = sequence.stages.findIndex((s) => s.track.id === stageTrackOf(item))
+      const stage = sequence.stages[k]
+      title = `Étape ${k + 1}`
+      removable = false
+      const startS = k <= 0 ? clock.openingS : (clock.junctions[k - 1]?.endS ?? clock.openingS)
+      body = stage && (
+        <>
+          <p className="field__hint">
+            {stage.track.name} · {formatDistance(stage.endM - stage.startM)}
+            {stage.track.stats.ascentM > 0 && ` · D+ ${formatNumber(stage.track.stats.ascentM)} m`}
+          </p>
+          <label className="field">
+            <span className="field__label">Couleur de la trace</span>
+            <input
+              type="color"
+              value={tracks.find((t) => t.id === stage.track.id)?.color ?? stage.track.color}
+              onChange={(e) => useAppStore.getState().setTrackColor(stage.track.id, e.currentTarget.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn btn--secondary film-inspector__remove"
+            onClick={() => useAppStore.getState().setProgress(clock.progressAtTime(startS), startS < clock.totalTime() ? startS : null)}
+          >
+            Aller au début
+          </button>
+          <p className="field__hint">Le nom est celui de la trace ; l’ordre des étapes est celui de la liste des traces.</p>
+        </>
+      )
+    } else if (isStageCardItem(item) && stageIds && stageIds.length > 1) {
+      const after = stageCardAfterOf(item)
+      const k = after === null ? 0 : stageIds.indexOf(after) + 1
+      const card = junctionCardOf(film, after)
+      const window = stageCardWindow(clock, film, after)
+      title = `Carton de l’étape ${k + 1}`
+      removeLabel = 'Supprimer le carton'
+      removable = card.enabled
+      body = (
+        <>
+          <StageCardFields card={card} onChange={(patch) => change((f) => withJunctionCard(f, after, patch), false)} />
+          <p className="field__hint">
+            {window && `Affiché de ${formatFilmTime(window.startS, true)} à ${formatFilmTime(window.endS, true)}, au milieu de la transition qui le précède. `}
+            Étirez le bord droit du bloc dans la timeline pour régler sa durée. Supprimer le désactive : le réglage de la jonction ou du panneau Plusieurs
+            traces le rétablit.
+            {k === 0 && ' Le carton de la première étape cède la place au titre d’ouverture quand il est affiché.'}
+          </p>
+        </>
+      )
     } else if (isCardItem(item) && cardShown(overlay, item)) {
       // the card's own settings (overlay.title / overlay.end), switched off by deleting its block
       title = CARD_LABELS[item]
@@ -969,7 +1077,12 @@ export function FilmInspector() {
     }
   }
 
-  const remove = () => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop }))
+  const remove = () =>
+    isCardItem(item)
+      ? disableCard(item)
+      : isJunctionItem(item)
+        ? editFilm((f) => ({ film: resetJunction(f, junctionTrackOf(item)) }))
+        : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop })
 
   return (
     <section

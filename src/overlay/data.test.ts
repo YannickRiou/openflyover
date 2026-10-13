@@ -9,6 +9,8 @@ import { OSM_ATTRIBUTION } from '../osm/overpass'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
 import type { Racer } from '../flyover/race'
+import { DEFAULT_FILM } from '../film/model'
+import { withDefaultCard, withJunctionCard } from '../film/junctions'
 import { buildSequence } from '../flyover/sequence'
 import {
   cumulativeAscent,
@@ -275,5 +277,29 @@ describe('« À la suite »', () => {
     expect(second).toMatchObject({ name: 'J2', index: 1, startS: 30, ascentM: b.stats.ascentM })
     expect(second?.distanceM).toBeCloseTo(sequence.stages[1].endM - sequence.stages[1].startM, 6)
     expect(second?.startTime).toBeUndefined()
+  })
+
+  it('the card of the film: its own duration, placement and text, off when switched off, not past the next junction', () => {
+    const time = (timeS: number) => ({
+      timeS,
+      openingS: 6,
+      flightS: 60,
+      totalS: 70,
+      cutsS: [30],
+      junctions: [{ kind: 'fondu-noir' as const, startS: 12, holdStartS: 30, holdEndS: 32, endS: 33 }],
+    })
+    const own = withJunctionCard(withJunctionCard(DEFAULT_FILM, null, { durationS: 3, anchor: 'top-left', size: 1.4, text: '{name}' }), a.id, { enabled: false })
+    expect(stageCardAt(sequence, time(8), own)).toMatchObject({ durationS: 3, anchor: 'top-left', size: 1.4, text: '{name}' })
+    expect(stageCardAt(sequence, time(9), own)).toBeNull()
+    // the junction after the first stage is the one keyed by its track; its card is the second stage's
+    expect(stageCardAt(sequence, time(31), own)).toBeNull()
+    expect(stageCardAt(sequence, time(31), withJunctionCard(DEFAULT_FILM, a.id, { durationS: 2 }))).toMatchObject({ name: 'J2', durationS: 2 })
+    // the junction starts to fade at 12 s: the first card is gone by then
+    expect(stageCardAt(sequence, time(11), withJunctionCard(DEFAULT_FILM, null, { durationS: 15 }))?.durationS).toBe(6)
+    expect(stageCardAt(sequence, time(12), withJunctionCard(DEFAULT_FILM, null, { durationS: 15 }))).toBeNull()
+    // the default junction hides every card, a card of its own brings its stage's back
+    const hidden = withDefaultCard(DEFAULT_FILM, false)
+    expect(stageCardAt(sequence, time(8), hidden)).toBeNull()
+    expect(stageCardAt(sequence, time(31), withJunctionCard(hidden, a.id, { enabled: true }))).toMatchObject({ name: 'J2' })
   })
 })

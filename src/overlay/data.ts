@@ -8,6 +8,9 @@
  * compute any frame on its own. Pure functions (no DOM, no React, no Three).
  */
 import type { Track } from '../core/types'
+import { junctionCardOf } from '../film/junctions'
+import { JUNCTION_CARD_DEFAULT_S } from '../film/model'
+import type { Film } from '../film/model'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath } from '../flyover/path'
 import type { ElevationProfile, TrackPath } from '../flyover/path'
 import { rankRacers } from '../flyover/race'
@@ -319,19 +322,25 @@ export function overlayFilmFrameAt(film: OverlayFilm, progress: number): Overlay
   return { ...frame, track: { ...frame.track, name: film.whole.name, stats: film.whole.stats } }
 }
 
-/** How long the card of a stage stays (seconds at ×1). */
-export const STAGE_CARD_S = 5
+/** How long the card of a stage stays by default (seconds at ×1). */
+export const STAGE_CARD_S = JUNCTION_CARD_DEFAULT_S
 
 /**
  * Card of the stage starting at film time `time.timeS` « À la suite »: the first one with the flight, each other at
- * its cut (`time.cutsS`), for STAGE_CARD_S; null outside these windows.
+ * its cut (`time.cutsS`, the middle of the junction before it), for the card's own duration (`film`: `junctionCardOf`,
+ * STAGE_CARD_S by default) but not past the start of the junction that follows; null outside these windows or when the
+ * card is switched off.
  */
-export function stageCardAt(sequence: Sequence, time: OverlayTime): StageCard | null {
+export function stageCardAt(sequence: Sequence, time: OverlayTime, film: Pick<Film, 'junctions' | 'junctionDefault' | 'firstCard'> = {}): StageCard | null {
   const starts = [time.openingS, ...(time.cutsS ?? [])]
   let k = starts.length - 1
   while (k >= 0 && time.timeS < starts[k]) k--
   const stage = sequence.stages[k]
-  if (!stage || time.timeS >= starts[k] + STAGE_CARD_S) return null
+  if (!stage) return null
+  const own = junctionCardOf(film, k === 0 ? null : sequence.stages[k - 1].track.id)
+  if (!own.enabled) return null
+  const durationS = Math.min(own.durationS, (time.junctions?.[k]?.startS ?? Infinity) - starts[k])
+  if (!(durationS > 0) || time.timeS >= starts[k] + durationS) return null
   const { stats } = stage.track
   const card: StageCard = {
     name: stage.track.name,
@@ -339,10 +348,16 @@ export function stageCardAt(sequence: Sequence, time: OverlayTime): StageCard | 
     count: sequence.stages.length,
     distanceM: stage.endM - stage.startM,
     startS: starts[k],
-    durationS: STAGE_CARD_S,
+    durationS,
+    anchor: own.anchor,
+    size: own.size,
   }
   if (stats.startTime !== undefined) card.startTime = stats.startTime
   if (stats.maxEle !== undefined) card.ascentM = stats.ascentM
+  if (own.text !== undefined) card.text = own.text
+  if (own.subtitle !== undefined) card.subtitle = own.subtitle
+  if (own.color !== undefined) card.color = own.color
+  if (own.font !== undefined) card.font = own.font
   return card
 }
 
