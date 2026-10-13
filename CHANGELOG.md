@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Landmarks under control**: « Nombre maximal » (5 to 80, 40 by default) caps the landmarks per track and the 3D labels; the pin of a row keeps a landmark whatever the cap, and « Garder les épinglés » dismisses all the others at once (one undo step). Dismissing a landmark with the cross no longer brings another one in its place.
 - **Timeline, « À la suite »**: the stage blocks keep their place while a block is being dragged (they collapsed during the drag), and the junctions between stages are snap targets.
 - **Smaller cards and widgets**: the size of the opening title, the closing card and the other widgets can go down to ×0.2 (it was ×0.5), so a card no longer has to hide the start of the track.
 - **Landmarks: one way to pause the film**: « Ralentir et titrer aux repères » is removed from « Repères et points d'intérêt » (it overlapped « Arrêt »): the film no longer slows down or adds a title card at landmarks by itself; use « Arrêt » (or « Arrêts automatiques »). A project saved with the option still opens as it was: the slow-downs and titles it had written stay on the timeline as ordinary sections and texts, which you can edit or delete.
