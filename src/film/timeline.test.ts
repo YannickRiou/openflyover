@@ -36,6 +36,7 @@ import {
   pressedGrip,
   recordedAtFilmTime,
   removeFilmItem,
+  rollClosing,
   rulerStep,
   rulerTicks,
   snapTargets,
@@ -251,6 +252,19 @@ describe('placing a stop in time', () => {
 })
 
 describe('dragFilm', () => {
+  it('closing start: a roll edit, the end of the film stays and the flight takes the difference', () => {
+    const ctx = contextOf(film)
+    // the start of the closing dragged 2 s later: 2 s shorter closing, 2 s longer flight, same end
+    const later = rollClosing(film, dragFilm(film, 'closing', 'start', 2, ctx), D)
+    expect(later.film.closing.durationS).toBe(film.closing.durationS - 2)
+    expect(later.flightS).toBe(D + 2)
+    expect(later.flightS + later.film.closing.durationS).toBe(D + film.closing.durationS)
+    // earlier: a longer closing, a shorter flight, down to the shortest flight
+    expect(rollClosing(film, dragFilm(film, 'closing', 'start', -1.5, ctx), D)).toMatchObject({ flightS: D - 1.5 })
+    const capped = rollClosing(film, dragFilm(film, 'closing', 'start', -20, ctx), 16)
+    expect(capped).toMatchObject({ flightS: 15, film: { closing: { durationS: film.closing.durationS + 1 } } })
+  })
+
   it('opening end and closing start, clamped, snapped; « aucune » stays', () => {
     const ctx = contextOf(film)
     expect(dragFilm(film, 'opening', 'end', 2, ctx).opening.durationS).toBe(8)
