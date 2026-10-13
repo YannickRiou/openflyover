@@ -3,7 +3,8 @@
  * Each feature is projected on the track (distance and position along it, on the scale of `buildTrackPath`, so
  * `alongM / lengthM` is a playback progress), filtered by kind and `maxDistanceM`, deduplicated by name within
  * `DEDUPE_RADIUS_M` and the best `maxCount` kept by `landmarkPriority` (a share of them kept for places, `PLACE_SHARE`),
- * ordered along the track.
+ * ordered along the track. The pinned ones (`pinnedIds`) are exempt from the cap and the deduplication; the dismissed ones
+ * are left out after the cap, so they do not free a slot for another.
  * See ARCHITECTURE.md "OpenStreetMap landmarks".
  *
  * Priority range [0, 50): below the GPX waypoints and the climbs of the 3D labels. Peaks rank by elevation (a proxy for
@@ -27,6 +28,9 @@ export function placeSizeOf(detail: string | undefined): PlaceSize {
   return detail === 'city' || detail === 'town' ? 'city' : detail === 'village' ? 'village' : 'hamlet'
 }
 
+/** Most landmarks kept per track by default (the scene stays readable). */
+export const MAX_LANDMARKS = 40
+
 export interface LandmarkSettings {
   enabled: boolean
   kinds: Record<OsmKind, boolean>
@@ -45,6 +49,10 @@ export interface LandmarkSettings {
   rank: string[]
   /** OSM ids the user dismissed with the cross: left out of the list and the labels until « Relancer la recherche » */
   dismissedIds: string[]
+  /** most landmarks kept per track and in the 3D labels, the pinned ones included (they are always kept, even beyond it) */
+  maxCount: number
+  /** OSM ids the user pinned: kept whatever the cap and the deduplication (« Garder les épinglés » dismisses the others) */
+  pinnedIds: string[]
 }
 
 export const DEFAULT_LANDMARK_SETTINGS: LandmarkSettings = {
@@ -66,11 +74,13 @@ export const DEFAULT_LANDMARK_SETTINGS: LandmarkSettings = {
   seenIds: [],
   rank: [],
   dismissedIds: [],
+  maxCount: MAX_LANDMARKS,
+  pinnedIds: [],
 }
 
 /**
  * The settings of an older project with the kinds added since set to their default (« Points d'eau »), every place
- * size, no hidden landmark and none seen. A saved `kinds.place` is kept (off for most older projects: their landmarks
+ * size, no hidden or pinned landmark, none seen and the default count. A saved `kinds.place` is kept (off for most older projects: their landmarks
  * do not change). Seen ids that are not strings are dropped (only the « nouveau » badges depend on them).
  */
 export function withLandmarkDefaults(raw: unknown): unknown {
@@ -84,7 +94,7 @@ export function withLandmarkDefaults(raw: unknown): unknown {
         ? { ...DEFAULT_LANDMARK_SETTINGS.places, ...settings.places }
         : settings.places
   const seenIds = Array.isArray(settings.seenIds) ? settings.seenIds.filter((id) => typeof id === 'string') : []
-  return { hiddenIds: [], rank: [], dismissedIds: [], ...settings, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, ...settings.kinds }, places, seenIds }
+  return { hiddenIds: [], rank: [], dismissedIds: [], pinnedIds: [], maxCount: MAX_LANDMARKS, ...settings, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, ...settings.kinds }, places, seenIds }
 }
 
 /**
@@ -95,6 +105,21 @@ export function withHidden(settings: LandmarkSettings, ids: readonly string[], h
   const changed = new Set(ids)
   const rest = settings.hiddenIds.filter((id) => !changed.has(id))
   return { ...settings, hiddenIds: hide ? [...rest, ...changed] : rest, seenIds: [...new Set([...settings.seenIds, ...listed])] }
+}
+
+/**
+ * The settings with every landmark of `listed` (OSM ids, every track, shown or hidden) dismissed but the pinned ones
+ * (« Garder les épinglés »); the dismissed ones leave the hidden and ranked ids, as with the cross.
+ */
+export function withPinnedOnly(settings: LandmarkSettings, listed: readonly string[]): LandmarkSettings {
+  const pinned = new Set(settings.pinnedIds)
+  const dismissed = new Set(listed.filter((id) => !pinned.has(id)))
+  return {
+    ...settings,
+    hiddenIds: settings.hiddenIds.filter((id) => !dismissed.has(id)),
+    rank: settings.rank.filter((id) => !dismissed.has(id)),
+    dismissedIds: [...new Set([...settings.dismissedIds, ...dismissed])],
+  }
 }
 
 /**
@@ -143,6 +168,9 @@ export function withPlaceSize<T extends Pick<LandmarkSettings, 'kinds' | 'places
 /** Allowed `maxDistanceM` (metres); the upper bound is what one query covers. */
 export const LANDMARK_DISTANCE_RANGE = { min: 100, max: MAX_LANDMARK_DISTANCE_M, step: 100 } as const
 
+/** Allowed `maxCount` (landmarks). */
+export const LANDMARK_COUNT_RANGE = { min: 5, max: 80, step: 5 } as const
+
 export const KIND_LABELS: Readonly<Record<OsmKind, string>> = {
   peak: 'Sommets',
   pass: 'Cols',
@@ -168,8 +196,6 @@ export const KIND_BADGES: Readonly<Record<OsmKind, string>> = {
   waterPoint: 'Eau',
 }
 
-/** Most landmarks kept per track (the scene stays readable). */
-export const MAX_LANDMARKS = 40
 /** Share of `MAX_LANDMARKS` kept for places when there are enough of them (they rank below every other kind). */
 export const PLACE_SHARE = 0.25
 /** Two features with the same name closer than this are one landmark (metres). */
@@ -410,14 +436,16 @@ function capWithPlaces<T extends { kind: OsmKind }>(sorted: readonly T[], maxCou
 export function buildLandmarks(
   features: readonly OsmFeature[],
   path: TrackPath,
-  settings: Pick<LandmarkSettings, 'kinds' | 'places' | 'maxDistanceM'> & { dismissedIds?: readonly string[] },
-  maxCount = MAX_LANDMARKS,
+  settings: Pick<LandmarkSettings, 'kinds' | 'places' | 'maxDistanceM'> &
+    Partial<Pick<LandmarkSettings, 'maxCount' | 'pinnedIds' | 'dismissedIds'>>,
 ): Landmark[] {
+  const maxCount = settings.maxCount ?? MAX_LANDMARKS
+  const pinned = new Set(settings.pinnedIds)
   const dismissed = new Set(settings.dismissedIds)
   const candidates: Landmark[] = []
   const areas = new Map<Landmark, LonLatBounds>()
   for (const f of features) {
-    if (!settings.kinds[f.kind] || dismissed.has(f.id)) continue
+    if (!settings.kinds[f.kind]) continue
     if (f.kind === 'place' && !settings.places[placeSizeOf(f.detail)]) continue
     const projected = projectOnPath(path, f.lon, f.lat)
     const distanceM = f.area ? Math.min(projected.distanceM, pathBoxDistanceM(path, f.area)) : projected.distanceM
@@ -453,15 +481,23 @@ export function buildLandmarks(
       a.distanceM - b.distanceM ||
       (a.id < b.id ? -1 : 1),
   )
-  const unique: Landmark[] = []
-  const names: string[] = []
+  // the pinned ones first: never dropped as duplicates, they win over an unpinned duplicate
+  const keptPinned = candidates.filter((c) => pinned.has(c.id))
+  const unique: Landmark[] = [...keptPinned]
+  const names: string[] = unique.map((c) => normaliseName(c.name))
+  const others: Landmark[] = []
   for (const c of candidates) {
+    if (pinned.has(c.id)) continue
     const name = normaliseName(c.name)
     if (unique.some((k, i) => names[i] === name && gapM(k, c) < DEDUPE_RADIUS_M)) continue
     unique.push(c)
     names.push(name)
+    others.push(c)
   }
-  return capWithPlaces(unique, maxCount).sort((a, b) => a.alongM - b.alongM || b.priority - a.priority)
+  // the dismissed ones count under the cap (they do not free a slot for another), then leave
+  return [...keptPinned, ...capWithPlaces(others, Math.max(0, maxCount - keptPinned.length))]
+    .filter((l) => !dismissed.has(l.id))
+    .sort((a, b) => a.alongM - b.alongM || b.priority - a.priority)
 }
 
 /** The landmarks the user left visible and those hidden by id, both in the incoming order. */
@@ -494,9 +530,13 @@ const LABEL_KINDS: Readonly<Record<OsmKind, LabelKind>> = {
 
 /**
  * Labels of the landmarks of every track: one per OSM element (highest priority kept), at most `maxCount` (a share
- * kept for places, as in `buildLandmarks`).
+ * kept for places, as in `buildLandmarks`) besides the pinned ones, which are always kept.
  */
-export function landmarkLabels(perTrack: readonly (readonly Landmark[])[], maxCount = MAX_LANDMARKS): LandmarkLabel[] {
+export function landmarkLabels(
+  perTrack: readonly (readonly Landmark[])[],
+  maxCount = MAX_LANDMARKS,
+  pinnedIds: readonly string[] = [],
+): LandmarkLabel[] {
   const byId = new Map<string, Landmark>()
   for (const list of perTrack) {
     for (const l of list) {
@@ -504,10 +544,14 @@ export function landmarkLabels(perTrack: readonly (readonly Landmark[])[], maxCo
       if (!seen || l.priority > seen.priority) byId.set(l.id, l)
     }
   }
-  return capWithPlaces(
-    [...byId.values()].sort((a, b) => b.priority - a.priority),
-    maxCount,
-  ).map((l) => {
+  const pinned = new Set(pinnedIds)
+  const sorted = [...byId.values()].sort((a, b) => b.priority - a.priority)
+  const keptPinned = sorted.filter((l) => pinned.has(l.id))
+  const others = capWithPlaces(
+    sorted.filter((l) => !pinned.has(l.id)),
+    Math.max(0, maxCount - keptPinned.length),
+  )
+  return [...keptPinned, ...others].sort((a, b) => b.priority - a.priority).map((l) => {
       const label: LandmarkLabel = {
         id: `osm:${l.id}`,
         lon: l.lon,

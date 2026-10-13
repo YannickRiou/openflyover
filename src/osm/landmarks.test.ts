@@ -17,6 +17,7 @@ import {
   splitHidden,
   withHidden,
   withLandmarkDefaults,
+  withPinnedOnly,
   withPlaceSize,
   withRank,
 } from './landmarks'
@@ -164,13 +165,35 @@ describe('buildLandmarks', () => {
     expect(out[1].alongM).toBeLessThan(out[2].alongM)
   })
 
-  it('leaves out the dismissed ones, others take their place under the cap', () => {
+  it('leaves out the dismissed ones, which free no slot for another under the cap', () => {
     const features = [
       feature({ id: 'node/1', kind: 'peak', name: 'Mont A', lat: 45.9 - 1 * 0.009, lon: 6.785 }),
       feature({ id: 'node/2', kind: 'peak', name: 'Mont B', lat: 45.9 - 3 * 0.009, lon: 6.785 }),
       feature({ id: 'node/3', kind: 'peak', name: 'Mont C', lat: 45.9 - 5 * 0.009, lon: 6.785 }),
     ]
-    expect(buildLandmarks(features, PATH, { ...noPlaces, dismissedIds: ['node/2'] }, 2).map((l) => l.id)).toEqual(['node/1', 'node/3'])
+    expect(buildLandmarks(features, PATH, { ...noPlaces, maxCount: 2 }).map((l) => l.id)).toEqual(['node/1', 'node/2'])
+    expect(buildLandmarks(features, PATH, { ...noPlaces, maxCount: 2, dismissedIds: ['node/2'] }).map((l) => l.id)).toEqual(['node/1'])
+    expect(buildLandmarks(features, PATH, { ...noPlaces, dismissedIds: ['node/2'] }).map((l) => l.id)).toEqual(['node/1', 'node/3'])
+  })
+
+  it('keeps the pinned ones whatever the cap and the name deduplication', () => {
+    const features = [
+      ...Array.from({ length: 5 }, (_, i) =>
+        feature({ id: `node/${i}`, kind: 'peak', name: `Pic ${i}`, ele: String(2000 + i * 100), lat: 45.9 - i * 0.009 }),
+      ),
+      feature({ id: 'node/9', kind: 'hut', name: 'Pic 4', lat: 45.9 - 4 * 0.009, lon: 6.7805 }),
+    ]
+    // the cap leaves the less important peak out; the pinned one stays, the others share the rest
+    expect(buildLandmarks(features, PATH, { ...noPlaces, maxCount: 2 }).map((l) => l.id)).toEqual(['node/3', 'node/4'])
+    expect(buildLandmarks(features, PATH, { ...noPlaces, maxCount: 2, pinnedIds: ['node/0'] }).map((l) => l.id)).toEqual(['node/0', 'node/4'])
+    // a pinned duplicate is not dropped, and wins over an unpinned one with the same name
+    expect(buildLandmarks(features, PATH, { ...noPlaces, pinnedIds: ['node/9'] }).map((l) => l.id)).toContain('node/9')
+    expect(buildLandmarks(features, PATH, { ...noPlaces, pinnedIds: ['node/9'] }).map((l) => l.id)).not.toContain('node/4')
+    // pinned ones beyond the cap are all kept, an id absent from the answer is ignored
+    expect(buildLandmarks(features, PATH, { ...noPlaces, maxCount: 1, pinnedIds: ['node/0', 'node/1', 'way/404'] }).map((l) => l.id)).toEqual(['node/0', 'node/1'])
+    // a pinned one still follows the filters, and the dismissal
+    expect(buildLandmarks(features, PATH, { ...noPlaces, kinds: { ...noPlaces.kinds, hut: false }, pinnedIds: ['node/9'] }).map((l) => l.id)).not.toContain('node/9')
+    expect(buildLandmarks(features, PATH, { ...noPlaces, pinnedIds: ['node/0'], dismissedIds: ['node/0'] }).map((l) => l.id)).not.toContain('node/0')
   })
 
   it('keeps one landmark per name nearby, the most important one', () => {
@@ -188,7 +211,7 @@ describe('buildLandmarks', () => {
     const features = Array.from({ length: 10 }, (_, i) =>
       feature({ id: `node/${i}`, kind: 'peak', name: `Pic ${i}`, ele: String(1000 + i * 100), lat: 45.9 - i * 0.009 }),
     )
-    const out = buildLandmarks(features, PATH, settings, 3)
+    const out = buildLandmarks(features, PATH, { ...settings, maxCount: 3 })
     expect(out.map((l) => l.name)).toEqual(['Pic 7', 'Pic 8', 'Pic 9'])
   })
 
@@ -227,11 +250,11 @@ describe('buildLandmarks', () => {
     const places = Array.from({ length: 4 }, (_, i) =>
       feature({ id: `node/v${i}`, kind: 'place', name: `Village ${i}`, detail: 'village', lat: 45.9 - i * 0.009 }),
     )
-    const out = buildLandmarks([...peaks, ...places], PATH, settings, 8)
+    const out = buildLandmarks([...peaks, ...places], PATH, { ...settings, maxCount: 8 })
     expect(out.filter((l) => l.kind === 'place')).toHaveLength(2)
     expect(out).toHaveLength(8)
     // fewer places than the share: the other kinds take the rest
-    expect(buildLandmarks([...peaks, places[0]], PATH, settings, 8).filter((l) => l.kind === 'peak')).toHaveLength(7)
+    expect(buildLandmarks([...peaks, places[0]], PATH, { ...settings, maxCount: 8 }).filter((l) => l.kind === 'peak')).toHaveLength(7)
   })
 })
 
@@ -256,6 +279,11 @@ describe('landmarkLabels', () => {
     const place = { ...base, id: 'node/4', kind: 'place' as const, name: 'Village', priority: 8, text: 'Village' }
     expect(landmarkLabels([a, b, [place]], 4).map((l) => l.id)).toEqual(['osm:node/1', 'osm:way/2', 'osm:node/3', 'osm:node/4'])
     expect(landmarkLabels([a, b, [place]], 3).map((l) => l.id)).toEqual(['osm:node/1', 'osm:way/2', 'osm:node/4'])
+    // the cap is global over the tracks; the pinned ones count in it and are always kept
+    expect(landmarkLabels([a, b], 2).map((l) => l.id)).toEqual(['osm:node/1', 'osm:way/2'])
+    expect(landmarkLabels([a, b], 2, ['node/3']).map((l) => l.id)).toEqual(['osm:node/1', 'osm:node/3'])
+    expect(landmarkLabels([a, b], 1, ['node/3', 'way/2']).map((l) => l.id)).toEqual(['osm:way/2', 'osm:node/3'])
+    expect(landmarkLabels([a, b], 1, ['way/404']).map((l) => l.id)).toEqual(['osm:node/1'])
   })
 })
 
@@ -271,6 +299,8 @@ describe('withLandmarkDefaults', () => {
       seenIds: [],
       rank: [],
       dismissedIds: [],
+      pinnedIds: [],
+      maxCount: 40,
     })
     expect(withLandmarkDefaults({ ...older, hiddenIds: ['node/1'] })).toMatchObject({ hiddenIds: ['node/1'] })
     expect(withLandmarkDefaults({ ...older, seenIds: ['node/1', 2] })).toMatchObject({ seenIds: ['node/1'] })
@@ -342,6 +372,21 @@ describe('withRank / movedInRank', () => {
     expect(movedInRank(['a', 'b', 'c'], 'a', true)).toEqual(['a', 'b', 'c'])
     expect(movedInRank(['a', 'b', 'c'], 'c', false)).toEqual(['a', 'b', 'c'])
     expect(movedInRank(['a', 'b'], 'z', true)).toEqual(['a', 'b'])
+  })
+})
+
+describe('withPinnedOnly', () => {
+  it('dismisses every listed landmark but the pinned ones, dropping them from the hidden and ranked ids', () => {
+    const settings = {
+      ...DEFAULT_LANDMARK_SETTINGS,
+      pinnedIds: ['node/1', 'node/9'],
+      hiddenIds: ['node/2', 'node/1', 'poi-1'],
+      rank: ['node/3', 'node/1', 'node/2'],
+      dismissedIds: ['node/7'],
+    }
+    const out = withPinnedOnly(settings, ['node/1', 'node/2', 'node/3', 'node/7'])
+    expect(out).toMatchObject({ pinnedIds: ['node/1', 'node/9'], hiddenIds: ['node/1', 'poi-1'], rank: ['node/1'] })
+    expect(out.dismissedIds).toEqual(['node/7', 'node/2', 'node/3'])
   })
 })
 
