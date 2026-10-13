@@ -6,6 +6,7 @@ import {
   DEFAULT_FILM,
   DIP_DEFAULT_S,
   MEDIA_DEFAULTS,
+  SHOT_DURATION_RANGE,
   VIDEO_SOUND_DEFAULTS,
   clipHasSound,
   clipTimeS,
@@ -158,6 +159,12 @@ describe('film model', () => {
     expect(transitionDipAt(shots, time(6.2))?.color).toBe('black')
     expect(transitionDipAt(shots, time(30))).toBeNull()
     expect(transitionDipAt(shots, time(66))).toEqual({ color: 'white', alpha: 1 })
+    // a shortest shot with a dip: the dip is still centred on the cut and stays within [0, 1]
+    const brief = film({ opening: { style: 'saut', durationS: SHOT_DURATION_RANGE.min, transition: 'fondu-noir', dipS: 2 } })
+    expect(isValidFilm(brief)).toBe(true)
+    const briefAt = (timeS: number) => transitionDipAt(brief, { timeS, openingS: SHOT_DURATION_RANGE.min, flightS: 60 })
+    expect(briefAt(SHOT_DURATION_RANGE.min)).toEqual({ color: 'black', alpha: 1 })
+    expect(briefAt(0)?.alpha).toBeGreaterThan(0)
     expect(transitionDipAt(shots, time(65.5))?.alpha).toBeCloseTo(0.5, 12)
     expect(transitionDipAt(film({ opening: { style: 'descente', durationS: 6, transition: 'coupe' } }), time(6))).toBeNull()
     expect(transitionDipAt(film({ opening: { style: 'aucune', durationS: 6, transition: 'fondu-noir' } }), time(0))).toBeNull()
@@ -267,10 +274,13 @@ describe('film model', () => {
   })
 
   it('rejects bad shots, items and duplicate ids', () => {
+    expect(isValidFilm(film({ opening: { style: 'saut', durationS: SHOT_DURATION_RANGE.min } }))).toBe(true)
+    expect(isValidFilm(film({ closing: { style: 'saut', durationS: SHOT_DURATION_RANGE.max + 1 } }))).toBe(false)
     expect(isValidFilm(film({ opening: { style: 'situation', durationS: 8 }, closing: { style: 'situation', durationS: 6 } }))).toBe(true)
     const bad: Film[] = [
       film({ opening: { style: 'tourbillon' as 'saut', durationS: 5 } }),
       film({ closing: { style: 'saut', durationS: 0 } }),
+      film({ opening: { style: 'saut', durationS: 0.4 } }),
       film({ stops: [stop('stop-1', { camera: 'drone' as 'fixe' })] }),
       film({ stops: [stop('stop-1', { atM: -1 })] }),
       film({ stops: [stop('stop-1', { durationS: 120 })] }),

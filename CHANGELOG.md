@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Shorter opening and closing**: the opening and closing shots can go down to 0.5 s (it was 1 s), and the opening title can end at 1 % of the flight (it was 3 %) and the closing card appear at 99 % (it was 97 %), so the film can open and close quickly without a card hiding the start of the track.
 - **« Position libre » typed digit by digit**: the pixel fields of a widget can be cleared and a negative number typed (they jumped back while typing); a value in range applies at once, Enter or leaving the field rounds and clamps it, an empty entry or Escape puts the previous value back, and a whole edit is one undo step.
 - **Opening and closing shots: no dive, no skimming the relief** (#106): between the wide view and the flight view the camera stays on a glide slope over the flight camera (it no longer drops far from the start of the track) and clears the ground under it, and the line to its aim, by a share of its distance instead of 80 m under the camera only, so it no longer flies just over a ridge on the way in.
 - **Landmarks under control**: « Nombre maximal » (5 to 80, 40 by default) caps the landmarks per track and the 3D labels; the pin of a row keeps a landmark whatever the cap, and « Garder les épinglés » dismisses all the others at once (one undo step). Dismissing a landmark with the cross no longer brings another one in its place.

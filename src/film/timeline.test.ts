@@ -204,7 +204,7 @@ describe('dragFilm', () => {
     expect(dragFilm(film, 'opening', 'end', 2, ctx).opening.durationS).toBe(8)
     expect(dragFilm(film, 'opening', 'end', 100, ctx).opening.durationS).toBe(30)
     expect(dragFilm(film, 'closing', 'start', -1.5, ctx).closing.durationS).toBe(6.5)
-    expect(dragFilm(film, 'closing', 'start', 10, ctx).closing.durationS).toBe(1)
+    expect(dragFilm(film, 'closing', 'start', 10, ctx).closing.durationS).toBe(0.5)
     expect(dragFilm(film, 'opening', 'end', 1.8, { ...ctx, targets: [8], snapS: 0.5 }).opening.durationS).toBe(8)
     const none = { ...film, opening: { style: 'aucune' as const, durationS: 6 } }
     expect(dragFilm(none, 'opening', 'end', 2, contextOf(none))).toBe(none)
@@ -351,7 +351,9 @@ describe('edits', () => {
       durationS: 0.5,
       text: 'Titre',
     })
-    expect(updateShot(film, 'closing', { style: 'saut', durationS: 0 }).closing).toEqual({ style: 'saut', durationS: 1 })
+    expect(updateShot(film, 'closing', { style: 'saut', durationS: 0 }).closing).toEqual({ style: 'saut', durationS: 0.5 })
+    expect(updateShot(film, 'opening', { durationS: 0.5 }).opening.durationS).toBe(0.5)
+    expect(updateShot(film, 'opening', { durationS: 0.7 }).opening.durationS).toBe(0.7)
   })
 
   it('lengthens a shot switched to « Depuis la région » only while it has its default duration', () => {
