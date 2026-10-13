@@ -33,12 +33,13 @@ import type { AppState, Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { isValidClouds, withCloudDefaults } from '../weather/sceneClouds'
 import { PROJECT_EXTENSION } from './file'
+import { t } from '../i18n'
 
 export const PROJECT_FORMAT = 'openflyover-project'
 export const PROJECT_VERSION = 2
 /** Suffix of saved project files (`<name>.opnflvr`, see `file.ts`). */
 export const PROJECT_FILE_SUFFIX = `.${PROJECT_EXTENSION}`
-export const DEFAULT_PROJECT_NAME = 'Sans titre'
+export const defaultProjectName = (): string => t('project.doc.defaultName')
 
 /** Optional per-point values, stored as columns (null where a point has no value). */
 const OPTIONAL_FIELDS = ['ele', 'time', 'hr', 'cad', 'power', 'temp'] as const
@@ -236,7 +237,7 @@ export function toProjectDocument(state: ProjectSource, name: string, media: Med
   const doc: ProjectDocument = {
     format: PROJECT_FORMAT,
     version: PROJECT_VERSION,
-    name: name.trim() || DEFAULT_PROJECT_NAME,
+    name: name.trim() || defaultProjectName(),
     settings: { ...state.settings },
     playback: { speed: state.playback.speed },
     tracks: state.tracks.map((track) => {
@@ -323,18 +324,15 @@ export function migrateProject(
 ): Record<string, unknown> {
   const version = doc.version
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
-    throw new Error('Projet invalide : numéro de version (« version ») absent ou incorrect.')
+    throw new Error(t('project.doc.versionInvalid'))
   }
   if (version > target) {
-    throw new Error(
-      `Ce projet utilise le format v${version}, plus récent que celui de cette version d'OpenFlyover (v${target}). ` +
-        "Mettez l'application à jour pour l'ouvrir.",
-    )
+    throw new Error(t('project.doc.versionNewer', { version, target }))
   }
   let current = doc
   for (let v = version; v < target; v++) {
     const migrate = migrations[v]
-    if (!migrate) throw new Error(`Impossible de convertir ce projet du format v${v} vers v${v + 1}.`)
+    if (!migrate) throw new Error(t('project.doc.migrateFailed', { from: v, to: v + 1 }))
     current = { ...migrate(current), version: v + 1 }
   }
   return current
@@ -345,17 +343,17 @@ export function migrateProject(
 // ---------------------------------------------------------------------------
 
 function decodeSegment(raw: unknown, where: string): TrackSegment {
-  if (!isRecord(raw)) throw new Error(`${where} : segment invalide.`)
+  if (!isRecord(raw)) throw new Error(t('project.doc.segmentInvalid', { where }))
   const { lon, lat } = raw
   if (!Array.isArray(lon) || !Array.isArray(lat) || lon.length !== lat.length) {
-    throw new Error(`${where} : colonnes « lon » et « lat » absentes ou de longueurs différentes.`)
+    throw new Error(t('project.doc.columnsMissing', { where }))
   }
   const points: TrackPoint[] = []
   for (let i = 0; i < lon.length; i++) {
     const x = lon[i]
     const y = lat[i]
     if (typeof x !== 'number' || typeof y !== 'number' || !(Math.abs(x) <= 180) || !(Math.abs(y) <= 90)) {
-      throw new Error(`${where} : coordonnées invalides au point ${i + 1}.`)
+      throw new Error(t('project.doc.pointInvalid', { where, n: i + 1 }))
     }
     points.push({ lon: x, lat: y })
   }
@@ -363,12 +361,12 @@ function decodeSegment(raw: unknown, where: string): TrackSegment {
     const column = raw[field]
     if (column === undefined) continue
     if (!Array.isArray(column) || column.length !== points.length) {
-      throw new Error(`${where} : colonne « ${field} » invalide (${points.length} valeurs attendues).`)
+      throw new Error(t('project.doc.columnInvalid', { where, field, count: points.length }))
     }
     column.forEach((v: unknown, i) => {
       if (v === null) return
       if (typeof v !== 'number' || !Number.isFinite(v)) {
-        throw new Error(`${where} : valeur « ${field} » invalide au point ${i + 1}.`)
+        throw new Error(t('project.doc.valueInvalid', { where, field, n: i + 1 }))
       }
       points[i][field] = v
     })
@@ -377,10 +375,10 @@ function decodeSegment(raw: unknown, where: string): TrackSegment {
 }
 
 function decodeWaypoint(raw: unknown, where: string): Waypoint {
-  if (!isRecord(raw)) throw new Error(`${where} : description invalide.`)
+  if (!isRecord(raw)) throw new Error(t('project.doc.descriptionInvalid', { where }))
   const { lon, lat, ele, name } = raw
   if (typeof lon !== 'number' || typeof lat !== 'number' || !(Math.abs(lon) <= 180) || !(Math.abs(lat) <= 90)) {
-    throw new Error(`${where} : coordonnées invalides.`)
+    throw new Error(t('project.doc.coordsInvalid', { where }))
   }
   const waypoint: Waypoint = { lon, lat, name: typeof name === 'string' ? name : '' }
   if (typeof ele === 'number' && Number.isFinite(ele)) waypoint.ele = ele
@@ -388,20 +386,20 @@ function decodeWaypoint(raw: unknown, where: string): Waypoint {
 }
 
 function decodeTrack(raw: unknown, index: number): Track {
-  const label = `Trace n°${index + 1}`
-  if (!isRecord(raw)) throw new Error(`${label} : description invalide.`)
-  if (typeof raw.id !== 'string' || raw.id === '') throw new Error(`${label} : identifiant (« id ») manquant.`)
-  if (raw.source !== 'gpx' && raw.source !== 'fit' && raw.source !== 'strava') throw new Error(`${label} : origine (« source ») inconnue.`)
-  if (!Array.isArray(raw.segments)) throw new Error(`${label} : segments manquants.`)
-  const segments = raw.segments.map((s, i) => decodeSegment(s, `${label}, segment ${i + 1}`))
-  if (!segments.some((s) => s.points.length > 0)) throw new Error(`${label} : aucun point.`)
+  const label = t('project.doc.trackLabel', { n: index + 1 })
+  if (!isRecord(raw)) throw new Error(t('project.doc.descriptionInvalid', { where: label }))
+  if (typeof raw.id !== 'string' || raw.id === '') throw new Error(t('project.doc.idMissing', { label }))
+  if (raw.source !== 'gpx' && raw.source !== 'fit' && raw.source !== 'strava') throw new Error(t('project.doc.sourceUnknown', { label }))
+  if (!Array.isArray(raw.segments)) throw new Error(t('project.doc.segmentsMissing', { label }))
+  const segments = raw.segments.map((s, i) => decodeSegment(s, t('project.doc.segmentOf', { label, n: i + 1 })))
+  if (!segments.some((s) => s.points.length > 0)) throw new Error(t('project.doc.noPoint', { label }))
 
   const name = typeof raw.name === 'string' && raw.name.trim() ? raw.name : label
   const activityType = typeof raw.activityType === 'string' ? raw.activityType : undefined
   const track = buildTrack({ name, source: raw.source, segments, activityType })
   if (raw.waypoints !== undefined) {
-    if (!Array.isArray(raw.waypoints)) throw new Error(`${label} : liste des points (« waypoints ») invalide.`)
-    if (raw.waypoints.length > 0) track.waypoints = raw.waypoints.map((w, i) => decodeWaypoint(w, `${label}, point ${i + 1}`))
+    if (!Array.isArray(raw.waypoints)) throw new Error(t('project.doc.waypointsInvalid', { label }))
+    if (raw.waypoints.length > 0) track.waypoints = raw.waypoints.map((w, i) => decodeWaypoint(w, t('project.doc.pointOf', { label, n: i + 1 })))
   }
   if (isUtcOffsetMin(raw.utcOffsetMin)) track.utcOffsetMin = raw.utcOffsetMin
   // estimated only means something on a timed track
@@ -421,12 +419,12 @@ function dropMissingMedia(film: Settings['film'], media: MediaTable, warnings: s
   const kept = film.media.filter((m) => media[m.src])
   const removed = film.media.length - kept.length
   if (removed > 0) {
-    warnings.push(`${removed} média${removed > 1 ? 's' : ''} sans fichier lisible dans le projet, retiré${removed > 1 ? 's' : ''} du film.`)
+    warnings.push(t('project.doc.mediaDropped', { count: removed }))
   }
   const music = film.audio.filter((a) => media[a.src])
   const silenced = film.audio.length - music.length
   if (silenced > 0) {
-    warnings.push(`${silenced} musique${silenced > 1 ? 's' : ''} sans fichier lisible dans le projet, retirée${silenced > 1 ? 's' : ''} du film.`)
+    warnings.push(t('project.doc.musicDropped', { count: silenced }))
   }
   return removed > 0 || silenced > 0 ? { ...film, media: kept, audio: music } : film
 }
@@ -437,34 +435,34 @@ export function parseProject(text: string): LoadedProject {
   try {
     raw = JSON.parse(text)
   } catch {
-    throw new Error("Fichier de projet illisible : ce n'est pas du JSON valide.")
+    throw new Error(t('project.doc.notJson'))
   }
   if (!isRecord(raw) || raw.format !== PROJECT_FORMAT) {
-    throw new Error("Ce fichier n'est pas un projet OpenFlyover (champ « format » absent ou inconnu).")
+    throw new Error(t('project.doc.notProject'))
   }
   const doc = migrateProject(raw)
 
-  if (!Array.isArray(doc.tracks)) throw new Error('Projet invalide : liste des traces (« tracks ») manquante.')
+  if (!Array.isArray(doc.tracks)) throw new Error(t('project.doc.tracksMissing'))
   const tracks = doc.tracks.map(decodeTrack)
   const ids = new Set<string>()
   for (const track of tracks) {
-    if (ids.has(track.id)) throw new Error(`Projet invalide : deux traces portent l'identifiant « ${track.id} ».`)
+    if (ids.has(track.id)) throw new Error(t('project.doc.duplicateId', { id: track.id }))
     ids.add(track.id)
   }
 
   const warnings: string[] = []
   const { settings, invalid } = sanitizeSettings(doc.settings)
   if (invalid.length > 0) {
-    warnings.push(`Réglages invalides remplacés par leur valeur par défaut : ${invalid.join(', ')}.`)
+    warnings.push(t('project.doc.settingsReplaced', { list: invalid.join(', ') }))
   }
   const media = sanitizeMediaTable(doc.media)
   settings.film = dropMissingMedia(settings.film, media, warnings)
   const rawSpeed = isRecord(doc.playback) ? doc.playback.speed : undefined
   const speedValid = typeof rawSpeed === 'number' && PLAYBACK_SPEEDS.includes(rawSpeed)
-  if (rawSpeed !== undefined && !speedValid) warnings.push('Vitesse de lecture invalide : vitesse ×1 utilisée.')
+  if (rawSpeed !== undefined && !speedValid) warnings.push(t('project.doc.speedInvalid'))
 
   return {
-    name: typeof doc.name === 'string' && doc.name.trim() ? doc.name.trim() : DEFAULT_PROJECT_NAME,
+    name: typeof doc.name === 'string' && doc.name.trim() ? doc.name.trim() : defaultProjectName(),
     settings,
     speed: speedValid ? rawSpeed : DEFAULT_PLAYBACK.speed,
     tracks,

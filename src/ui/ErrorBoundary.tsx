@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { errorMessage } from '../core/errors'
+import { t } from '../i18n'
 import { saveProject } from './projectActions'
 import { Toaster } from './Toaster'
 import { showToast } from './toast'
@@ -12,7 +13,7 @@ interface State {
 function save(): void {
   // the project state may be the very thing that broke: say so instead of failing silently
   saveProject().catch((err: unknown) =>
-    showToast({ kind: 'error', text: `Impossible d’enregistrer le projet : ${errorMessage(err)}` }),
+    showToast({ kind: 'error', text: t('errors.boundary.saveFailed', { error: errorMessage(err) }) }),
   )
 }
 
@@ -21,7 +22,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   override state: State = { error: null }
 
   static getDerivedStateFromError(error: unknown): State {
-    return { error: error ?? new Error('Erreur inconnue') }
+    return { error: error ?? new Error(t('errors.boundary.unknown')) }
   }
 
   override componentDidCatch(error: unknown, info: ErrorInfo): void {
@@ -33,17 +34,17 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     return (
       <>
         <div className="empty" role="alert">
-          <h1 className="empty__title">Une erreur inattendue a interrompu OpenFlyover.</h1>
+          <h1 className="empty__title">{t('errors.boundary.title')}</h1>
           <details style={{ width: '100%', textAlign: 'left', fontSize: 12 }}>
-            <summary>Détails</summary>
+            <summary>{t('errors.boundary.details')}</summary>
             <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{errorMessage(this.state.error)}</pre>
           </details>
           <div className="empty__actions">
             <button type="button" className="btn btn--secondary" onClick={save}>
-              Enregistrer le projet
+              {t('errors.boundary.save')}
             </button>
             <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>
-              Recharger
+              {t('errors.boundary.reload')}
             </button>
           </div>
         </div>

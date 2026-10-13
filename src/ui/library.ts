@@ -10,6 +10,7 @@ import { errorMessage } from '../core/errors'
 import { create } from 'zustand'
 import type { Track } from '../core/types'
 import { useMediaStore } from '../film/media'
+import { t } from '../i18n'
 import { getPlatform } from '../platform'
 import type { KeyValueStore, Platform, ProjectEntry, ProjectLibrary } from '../platform'
 import { sortProjectEntries } from '../platform/projectLibrary'
@@ -29,15 +30,15 @@ export const LAST_PROJECT_KEY = 'openflyover.lastProject.v1'
 /** "Tour du Mont-Blanc · 42,3 km", "… · 3 traces" when there are several; the track name only when the project has another. */
 export function projectSummary(tracks: readonly Track[], projectName = ''): string {
   const first = tracks[0]
-  if (!first) return 'Aucune trace'
+  if (!first) return t('project.library.noTrack')
   const distance = formatDistance(first.stats.distanceM)
   const summary = first.name === projectName ? distance : `${first.name} · ${distance}`
-  return tracks.length > 1 ? `${summary} · ${tracks.length} traces` : summary
+  return tracks.length > 1 ? t('project.library.summaryMany', { summary, count: tracks.length }) : summary
 }
 
 /** 12 300 -> "12 Ko", 4 500 000 -> "4,5 Mo". */
 export function formatProjectSize(bytes: number): string {
-  return bytes < 1e6 ? `${formatNumber(Math.max(1, bytes / 1e3))} Ko` : `${formatNumber(bytes / 1e6, 1)} Mo`
+  return bytes < 1e6 ? t('format.kilobytes', { value: formatNumber(Math.max(1, bytes / 1e3)) }) : t('format.megabytes', { value: formatNumber(bytes / 1e6, 1) })
 }
 
 export interface AutosaveOptions {
@@ -181,7 +182,7 @@ export async function refreshLibrary(): Promise<void> {
   try {
     useLibraryStore.setState({ entries: await library.list() })
   } catch (err) {
-    showToast({ kind: 'error', text: `Impossible de lire « Mes projets » : ${errorMessage(err)}` })
+    showToast({ kind: 'error', text: t('project.library.readFailed', { error: errorMessage(err) }) })
   }
 }
 
@@ -199,9 +200,9 @@ export async function keepOpenProject(): Promise<void> {
     await flushAutosave()
     const { currentId, entries } = useLibraryStore.getState()
     const entry = entries.find((e) => e.id === currentId) ?? (await writeOpenProject(library, null))
-    showToast({ kind: 'success', text: `Projet « ${entry.name} » gardé dans Mes projets` })
+    showToast({ kind: 'success', text: t('project.library.kept', { name: entry.name }) })
   } catch (err) {
-    showToast({ kind: 'error', text: `Impossible de garder le projet : ${errorMessage(err)}` })
+    showToast({ kind: 'error', text: t('project.library.keepFailed', { error: errorMessage(err) }) })
   } finally {
     keeping = false
   }
@@ -214,7 +215,7 @@ export async function libraryFile(entry: ProjectEntry): Promise<File | null> {
   try {
     return new File([await library.load(entry.id)], projectFileName(entry.name), { type: 'application/json' })
   } catch (err) {
-    showToast({ kind: 'error', text: `Impossible d'ouvrir « ${entry.name} » : ${errorMessage(err)}` })
+    showToast({ kind: 'error', text: t('project.actions.openFailed', { fileName: entry.name, reason: errorMessage(err) }) })
     return null
   }
 }
@@ -228,7 +229,7 @@ export async function renameEntry(entry: ProjectEntry, name: string): Promise<vo
     putEntry(renamed)
     if (useLibraryStore.getState().currentId === entry.id) useAppStore.getState().setProjectName(renamed.name)
   } catch (err) {
-    showToast({ kind: 'error', text: `Impossible de renommer « ${entry.name} » : ${errorMessage(err)}` })
+    showToast({ kind: 'error', text: t('project.library.renameFailed', { name: entry.name, error: errorMessage(err) }) })
   }
 }
 
@@ -245,9 +246,9 @@ export async function deleteEntry(entry: ProjectEntry): Promise<void> {
     }
     await library.remove(entry.id)
     useLibraryStore.setState({ entries: useLibraryStore.getState().entries.filter((e) => e.id !== entry.id) })
-    showToast({ kind: 'success', text: `Projet « ${entry.name} » supprimé de Mes projets` })
+    showToast({ kind: 'success', text: t('project.library.removed', { name: entry.name }) })
   } catch (err) {
-    showToast({ kind: 'error', text: `Impossible de supprimer « ${entry.name} » : ${errorMessage(err)}` })
+    showToast({ kind: 'error', text: t('project.library.deleteFailed', { name: entry.name, error: errorMessage(err) }) })
   }
 }
 
@@ -308,7 +309,7 @@ export function installLibraryAutosave(canSave: () => boolean): () => void {
       const id = useLibraryStore.getState().currentId
       if (autosaveWrites(projectOf(useAppStore.getState()), id, kept, !leftOut && !keeping)) await writeOpenProject(library, id)
     },
-    onError: (err) => showToast({ kind: 'error', text: `Enregistrement automatique dans Mes projets impossible : ${errorMessage(err)}` }),
+    onError: (err) => showToast({ kind: 'error', text: t('project.library.autosaveFailed', { error: errorMessage(err) }) }),
   })
   autosave = saver
   const unsubscribe = useAppStore.subscribe((state, previous) => {
@@ -393,26 +394,26 @@ export function projectCloseLoss(): CloseLoss {
 /** The question asked before closing the open project or the window when its changes would be lost. */
 export function unsavedChangesText(): string {
   const state = useAppStore.getState()
-  return `Les changements de « ${effectiveProjectName(state.projectName, state.tracks[0]?.name)} » ne sont pas enregistrés.`
+  return t('project.library.unsaved', { name: effectiveProjectName(state.projectName, state.tracks[0]?.name) })
 }
 
 /** The question of the desktop window, answered with the step of `confirmClose`. */
 async function askBeforeClose(ask: NonNullable<Platform['ask']>, loss: 'export' | 'changes'): Promise<'save' | 'close' | 'cancel'> {
   if (loss === 'export') {
     const answer = await ask({
-      title: "Fermer pendant l'export ?",
-      text: "Le film en cours d'export sera perdu.",
-      yes: 'Fermer quand même',
-      cancel: 'Annuler',
+      title: t('project.library.closeDuringExport'),
+      text: t('project.library.exportLost'),
+      yes: t('project.library.closeAnyway'),
+      cancel: t('common.cancel'),
     })
     return answer === 'yes' ? 'close' : 'cancel'
   }
   const answer = await ask({
-    title: 'Fermer sans enregistrer ?',
+    title: t('project.library.closeQuestion'),
     text: unsavedChangesText(),
-    yes: 'Enregistrer',
-    no: 'Fermer sans enregistrer',
-    cancel: 'Annuler',
+    yes: t('common.save'),
+    no: t('project.library.closeNoSave'),
+    cancel: t('common.cancel'),
   })
   return answer === 'yes' ? 'save' : answer === 'no' ? 'close' : 'cancel'
 }

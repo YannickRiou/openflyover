@@ -11,13 +11,27 @@
       // Redirect of a connection (Strava…) opened by OpenFlyover in a popup: hand the query (?state=…&code=… or
       // ?error=…) to the OpenFlyover window (src/platform/oauthRedirect.ts), keep the single-use code out of the
       // history, then close. A window the browser will not let a script close says so instead.
+      // The two messages follow the language chosen in the application (same origin), else the browser's.
+      let english = /^en\b/i.test(navigator.language)
+      try {
+        const stored = JSON.parse(localStorage.getItem('openflyover.preferences.v1') || 'null')
+        if (stored && (stored.language === 'en' || stored.language === 'fr')) english = stored.language === 'en'
+      } catch {
+        // storage unavailable: the browser's language
+      }
+      const message = document.getElementById('message')
+      if (english) {
+        document.documentElement.lang = 'en'
+        message.textContent = 'Connecting…'
+      }
       const channel = new BroadcastChannel('openflyover-oauth')
       channel.postMessage(location.search)
       channel.close()
       history.replaceState(null, '', location.pathname)
       window.close()
-      document.getElementById('message').textContent =
-        'Connexion transmise à OpenFlyover : vous pouvez fermer cette fenêtre.'
+      message.textContent = english
+        ? 'Connection passed on to OpenFlyover: you can close this window.'
+        : 'Connexion transmise à OpenFlyover : vous pouvez fermer cette fenêtre.'
     </script>
   </body>
 </html>

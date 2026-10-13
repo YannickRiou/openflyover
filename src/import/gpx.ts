@@ -5,6 +5,7 @@
 import { errorMessage } from '../core/errors'
 import type { Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
 import { buildTrack, isUtcOffsetMin, stripExtension } from './stats'
+import { t } from '../i18n'
 
 type ExtensionField = 'hr' | 'cad' | 'power' | 'temp'
 
@@ -21,22 +22,22 @@ const EXTENSION_FIELDS: Readonly<Record<string, ExtensionField>> = {
 }
 
 function invalid(reason: string): Error {
-  return new Error(`Fichier GPX invalide : ${reason}`)
+  return new Error(t('imports.gpx.invalid', { reason }))
 }
 
 function parseXml(text: string): Document {
   const source = text.replace(/^﻿/, '')
-  if (source.trim() === '') throw invalid('fichier vide')
+  if (source.trim() === '') throw invalid(t('imports.gpx.empty'))
   let doc: Document
   try {
     doc = new DOMParser().parseFromString(source, 'application/xml')
   } catch (error) {
-    throw invalid(`XML mal formé (${errorMessage(error)})`)
+    throw invalid(t('imports.gpx.xmlMalformed', { detail: errorMessage(error) }))
   }
   const parserError = doc.getElementsByTagName('parsererror')[0]
   if (parserError) {
     const detail = (parserError.textContent ?? '').trim().split('\n')[0]
-    throw invalid(`XML mal formé${detail ? ` (${detail})` : ''}`)
+    throw invalid(detail ? t('imports.gpx.xmlMalformed', { detail }) : t('imports.gpx.xmlMalformedPlain'))
   }
   return doc
 }
@@ -146,10 +147,10 @@ interface TrackCandidate {
 export function parseGpx(text: string, fileName: string): Track[] {
   const doc = parseXml(text)
   const root = doc.documentElement
-  if (!root || root.localName !== 'gpx') throw invalid("l'élément racine n'est pas <gpx>")
+  if (!root || root.localName !== 'gpx') throw invalid(t('imports.gpx.notGpx'))
 
   const metadataName = textOf(firstChildNamed(firstChildNamed(root, 'metadata'), 'name'))
-  const fallbackName = metadataName || stripExtension(fileName) || 'Trace'
+  const fallbackName = metadataName || stripExtension(fileName) || t('imports.gpx.defaultName')
 
   const candidates: TrackCandidate[] = []
 
@@ -176,7 +177,7 @@ export function parseGpx(text: string, fileName: string): Track[] {
     }
   }
 
-  if (candidates.length === 0) throw invalid('aucun point trouvé')
+  if (candidates.length === 0) throw invalid(t('imports.gpx.noPoint'))
 
   const waypoints = parseWaypoints(childrenNamed(root, 'wpt'))
   // the first time of the file (metadata or point) tells the local clock when it carries an offset
@@ -198,7 +199,7 @@ function parseWaypoints(elements: Element[]): Waypoint[] {
   elements.forEach((element, index) => {
     const point = parseGpxPoint(element)
     if (!point) return
-    const name = textOf(firstChildNamed(element, 'name')) || `Point ${index + 1}`
+    const name = textOf(firstChildNamed(element, 'name')) || t('imports.gpx.defaultPoint', { n: index + 1 })
     const waypoint: Waypoint = { lon: point.lon, lat: point.lat, name }
     if (point.ele !== undefined) waypoint.ele = point.ele
     waypoints.push(waypoint)

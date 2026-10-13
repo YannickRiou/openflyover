@@ -12,11 +12,13 @@ import { buildTrackPath, elevationProfile } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import { miniMapOutline } from '../overlay/data'
 import type { MiniMapOutline } from '../overlay/data'
-import { formatDateFr, weatherSummaryLine } from '../overlay/draw'
+import { formatLongDate, weatherSummaryLine } from '../overlay/draw'
 import { formatDistance, formatDuration, formatNumber } from '../ui/format'
 import type { WeatherSummary } from '../weather/series'
 import { POSTER_FIGURES, POSTER_FIGURE_LABELS } from './settings'
 import type { PosterFigureId, PosterSettings } from './settings'
+import { t } from '../i18n'
+import { formatDate } from '../i18n/format'
 
 /** Samples of the poster's elevation profile. */
 export const POSTER_PROFILE_SAMPLES = 400
@@ -105,7 +107,7 @@ export function posterFigure(id: PosterFigureId, stats: TrackStats, climbs: numb
     case 'maxAltitude':
       return hasEle ? { id, label, value: formatNumber(stats.maxEle ?? 0), unit: 'm' } : null
     case 'climbs':
-      return hasEle ? { id, label: climbs === 1 ? 'Montée' : label, value: formatNumber(climbs), unit: '' } : null
+      return hasEle ? { id, label: climbs === 1 ? t('poster.figure.climb') : label, value: formatNumber(climbs), unit: '' } : null
   }
 }
 
@@ -142,16 +144,14 @@ export function posterStats(tracks: readonly Track[], race: boolean): TrackStats
 function dateSpan(tracks: readonly Track[]): string {
   const times = tracks.flatMap((t) => (t.stats.startTime === undefined ? [] : [t.stats.startTime]))
   if (times.length === 0) return ''
-  const first = formatDateFr(Math.min(...times))
-  const last = formatDateFr(Math.max(...times))
+  const first = formatLongDate(Math.min(...times))
+  const last = formatLongDate(Math.max(...times))
   return first === last ? first : `${first} – ${last}`
 }
 
 /** « 12/07/2026 »: short enough for a column of the list. */
-export function shortDateFr(ms: number): string {
-  const date = new Date(ms)
-  const two = (n: number) => String(n).padStart(2, '0')
-  return `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear()}`
+export function shortDate(ms: number): string {
+  return formatDate(ms, { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 /** The line of a track in the list. */
@@ -162,7 +162,7 @@ export function trackLine(track: Track): PosterTrackLine {
     color: track.color,
     distance: formatDistance(stats.distanceM),
     ascent: stats.maxEle === undefined ? '' : `D+ ${formatNumber(Math.max(0, stats.ascentM))} m`,
-    date: stats.startTime === undefined ? '' : shortDateFr(stats.startTime),
+    date: stats.startTime === undefined ? '' : shortDate(stats.startTime),
   }
 }
 

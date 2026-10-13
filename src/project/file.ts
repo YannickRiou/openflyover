@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 /**
  * Project file on disk (`<name>.opnflvr`): a signature, then the exact JSON text of `serializeProject`, gzip-compressed.
  * Eight bytes of header: the ASCII signature `OPNFLVR` and one version byte, 1 = gzip stream follows, 2 = the JSON text
@@ -87,21 +88,21 @@ function hasSignature(head: Uint8Array): boolean {
 
 /** JSON text of a project file; throws an Error with a French message when `file` is not a project. */
 export async function decodeProjectFile(file: Blob, scope: CompressionScope = globalThis): Promise<string> {
-  if (file.size === 0) throw new Error('Le fichier est vide.')
+  if (file.size === 0) throw new Error(t('project.file.empty'))
   const head = new Uint8Array(await file.slice(0, HEADER_LENGTH).arrayBuffer())
   if (!hasSignature(head)) {
     // a project saved before the .opnflvr format: JSON text
     const text = await file.text()
-    if (!/^﻿?\s*\{/.test(text)) throw new Error("Ce n'est pas un projet OpenFlyover (ni un fichier .opnflvr, ni un ancien projet JSON).")
+    if (!/^﻿?\s*\{/.test(text)) throw new Error(t('project.file.notProject'))
     return text
   }
   const version = head[HEADER_LENGTH - 1]
   if (version === FILE_VERSION_PLAIN) return file.slice(HEADER_LENGTH).text()
   if (version !== FILE_VERSION_GZIP) {
-    throw new Error("Ce projet a été enregistré par une version plus récente d'OpenFlyover : mettez l'application à jour pour l'ouvrir.")
+    throw new Error(t('project.file.newer'))
   }
   const decompress = scope.DecompressionStream
-  if (typeof decompress !== 'function') throw new Error("Ce navigateur ne sait pas décompresser les projets : ouvrez-le dans un navigateur récent ou dans l'application.")
+  if (typeof decompress !== 'function') throw new Error(t('project.file.noDecompress'))
   try {
     const chunks = await drain(blobStream(file.slice(HEADER_LENGTH)).pipeThrough(new decompress('gzip') as ReadableWritablePair<Uint8Array, Uint8Array>))
     const decoder = new TextDecoder()
@@ -109,6 +110,6 @@ export async function decodeProjectFile(file: Blob, scope: CompressionScope = gl
     for (const chunk of chunks) text += decoder.decode(chunk, { stream: true })
     return text + decoder.decode()
   } catch {
-    throw new Error('Fichier de projet endommagé : les données compressées sont illisibles.')
+    throw new Error(t('project.file.damaged'))
   }
 }

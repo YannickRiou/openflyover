@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { TRACK_METRICS, robustRange, trackMetricValues } from '../flyover/trackColor'
+import { useT } from '../i18n'
 import { useAppStore } from '../state/store'
 import { formatNumber } from './format'
 
@@ -8,6 +9,7 @@ import { formatNumber } from './format'
  * (2nd–98th percentile: values beyond saturate at the ends), and the grey of the points without a value.
  */
 export function TrackLegend() {
+  const t = useT()
   const tracks = useAppStore((s) => s.tracks)
   const colorBy = useAppStore((s) => s.settings.trackColorBy)
   const { range, missing } = useMemo(() => {
@@ -21,14 +23,14 @@ export function TrackLegend() {
   const format = (value: number) => `${formatNumber(value, fractionDigits)} ${unit}`
 
   return (
-    <div className="track-legend" role="group" aria-label={`Légende : ${label}`}>
+    <div className="track-legend" role="group" aria-label={t('track.legend.aria', { label })}>
       <span className="track-legend__title">{label}</span>
       {range ? (
         <>
           <span
             className="track-legend__bar"
             style={{ backgroundImage: `linear-gradient(to right, ${colormap.join(', ')})` }}
-            title="Les valeurs extrêmes (2 % de chaque côté) prennent la couleur des bornes"
+            title={t('track.legend.extremes')}
           />
           <span className="track-legend__range">
             <span>{format(range.min)}</span>
@@ -39,7 +41,7 @@ export function TrackLegend() {
       {missing && (
         <span className="track-legend__missing">
           <span className="track-legend__swatch" />
-          {range ? 'Sans donnée' : 'Aucune donnée sur ces traces'}
+          {range ? t('track.legend.noValue') : t('track.legend.noData')}
         </span>
       )}
     </div>

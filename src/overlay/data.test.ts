@@ -5,9 +5,9 @@ import type { TrackPoint } from '../core/types'
 import { parseGpx } from '../import/gpx'
 import { buildTrack } from '../import/stats'
 import { buildTrackPath } from '../flyover/path'
-import { OSM_ATTRIBUTION } from '../osm/overpass'
+import { osmAttribution } from '../osm/overpass'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
-import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
+import { openMeteoAttribution } from '../weather/openMeteo'
 import type { Racer } from '../flyover/race'
 import { DEFAULT_FILM } from '../film/model'
 import { withDefaultCard, withJunctionCard } from '../film/junctions'
@@ -168,7 +168,7 @@ describe('overlayCredits', () => {
       `Relief : ${getTerrainSource('mapterhorn').attribution}`,
       `Imagerie : ${getImagerySource('opentopomap').attribution}`,
     ])
-    expect(overlayCredits({ ...sources, weather: true, landmarks: true }).slice(2)).toEqual([OPEN_METEO_ATTRIBUTION, `Repères : ${OSM_ATTRIBUTION}`])
+    expect(overlayCredits({ ...sources, weather: true, landmarks: true }).slice(2)).toEqual([openMeteoAttribution(), `Repères : ${osmAttribution()}`])
     // unknown ids fall back to the default sources, like the scene
     expect(overlayCredits({ ...sources, imagerySourceId: 'nope' })[1]).toBe(`Imagerie : ${getImagerySource('nope').attribution}`)
   })

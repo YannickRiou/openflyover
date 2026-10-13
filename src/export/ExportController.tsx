@@ -71,6 +71,7 @@ import {
   type ExportRequest,
   type ExportTimings,
 } from './store'
+import { t } from '../i18n'
 
 export interface ExportControllerProps {
   /** 2D overlay drawn over every frame (titles, widgets) */
@@ -172,7 +173,7 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
     useAppStore.getState().setPlaying(false)
     const compositor = new OffscreenCanvas(width, height)
     const ctx = compositor.getContext('2d', compositorAttributes())
-    if (!ctx) throw new Error("Impossible de créer l'image de composition.")
+    if (!ctx) throw new Error(t('export.controller.noCompositor'))
     if (drawOverlay) await loadOverlayFonts()
     session = await createExportEncoder(compositor, { ...request, transparent: true })
     for (let i = 0; i < schedule.length; i++) {
@@ -196,7 +197,7 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
       codec: `${session.codec.container}/${session.codec.codec}`,
       hardware: session.codec.hardware,
       incompleteFrames: 0,
-      note: 'fond transparent, sans le son',
+      note: t('export.controller.noteTransparent'),
     })
   } catch (error) {
     await abandon(error, request, session, isCanceled())
@@ -215,7 +216,7 @@ function noEncodingSession(rendered: () => number): VideoEncodeSession {
     extension: '',
     addFrame: async () => undefined,
     finish: async () => {
-      throw new Error(`Export de test terminé sans fichier (${rendered()} images rendues)`)
+      throw new Error(t('export.controller.testNoFile', { n: rendered() }))
     },
     cancel: async () => undefined,
   }
@@ -476,7 +477,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
 
     const compositor = new OffscreenCanvas(width, height)
     const ctx = compositor.getContext('2d', { alpha: false, ...compositorAttributes() })
-    if (!ctx) throw new Error("Impossible de créer l'image de composition.")
+    if (!ctx) throw new Error(t('export.controller.noCompositor'))
     // a canvas never downloads web fonts by itself: the overlay faces must be ready before the first frame
     if (deps.overlay()) await loadOverlayFonts()
 
@@ -654,7 +655,11 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       codec: `${container}/${codec}`,
       hardware,
       incompleteFrames: timings.timeouts + timings.givenUp,
-      note: audio ? (session.audioCodec ? `avec le son (${session.audioCodec === 'aac' ? 'AAC' : 'Opus'})` : 'sans le son : ce navigateur ne sait pas l’encoder') : undefined,
+      note: audio
+        ? session.audioCodec
+          ? t('export.controller.noteSound', { codec: session.audioCodec === 'aac' ? 'AAC' : 'Opus' })
+          : t('export.controller.noteNoSound')
+        : undefined,
     })
   } catch (error) {
     // the frame in flight is dropped with the session; the history reads the timings of the store

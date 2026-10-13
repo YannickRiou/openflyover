@@ -45,6 +45,7 @@ import { TerrainLayer } from './TerrainLayer'
 import { TrackLines } from './TrackLines'
 import { WaterLayer } from './WaterLayer'
 import { TrackMenu, TrackPicker } from './TrackPicker'
+import { t } from '../i18n'
 
 // sky, clouds, post-processing and the geoid grid (~550 KB): loaded with the first track, not at startup
 const AtmosphereLayer = lazy(() => import('./AtmosphereLayer').then((m) => ({ default: m.AtmosphereLayer })))
@@ -119,7 +120,7 @@ function watchContextLoss({ gl, invalidate }: RootState) {
   gl.domElement.addEventListener('webglcontextlost', (e) => {
     e.preventDefault() // lets the browser restore it
     writeBreadcrumb('webglcontextlost')
-    toast = showToast({ kind: 'info', text: 'Affichage 3D interrompu (carte graphique). Il reprendra automatiquement…' })
+    toast = showToast({ kind: 'info', text: t('scene.canvas.contextLost') })
   })
   gl.domElement.addEventListener('webglcontextrestored', () => {
     dismissToast(toast)
@@ -143,7 +144,7 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
     return (
       <div className={className} style={style ? { ...wrapperStyle, ...style } : wrapperStyle} role="alert">
         <p style={{ margin: 0, padding: 24, textAlign: 'center', color: 'var(--text-1)' }}>
-          La 3D n’est pas disponible : la carte graphique ou le navigateur ne prend pas en charge WebGL 2.
+          {t('scene.canvas.noWebgl')}
         </p>
       </div>
     )

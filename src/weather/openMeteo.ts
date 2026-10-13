@@ -9,10 +9,13 @@
 import { samplePath, type TrackPath } from '../flyover/path'
 import { getPlatform } from '../platform'
 import { WEATHER_VARIABLES, type WeatherSeries, type WeatherStation, type WeatherVariable } from './series'
+import { t } from '../i18n'
 
 export const OPEN_METEO_ARCHIVE_URL = 'https://archive-api.open-meteo.com/v1/archive'
 export const OPEN_METEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
-export const OPEN_METEO_ATTRIBUTION = 'Données météo : Open-Meteo.com (CC BY 4.0)'
+export function openMeteoAttribution(): string {
+  return t('weather.attribution')
+}
 
 /** Open-Meteo hourly variable of each series variable, the same in the archive and the forecast. */
 const API_VARIABLES: Record<WeatherVariable, string> = {
@@ -140,13 +143,13 @@ export function outingDays(startMs: number, endMs: number, nowMs: number): { sou
   const startDay = utcDay(startMs - HOUR_MS)
   let endDay = utcDay(endMs + HOUR_MS)
   if (startDay > lastForecastDay) {
-    throw new WeatherError('unavailable', `Sortie dans plus de ${FORECAST_DAYS} jours : pas encore de prévision météo.`)
+    throw new WeatherError('unavailable', t('weather.err.tooFar', { days: FORECAST_DAYS }))
   }
-  if (startDay < ARCHIVE_FIRST_DAY) throw new WeatherError('unavailable', 'Pas d’archive météo avant 1940.')
+  if (startDay < ARCHIVE_FIRST_DAY) throw new WeatherError('unavailable', t('weather.err.before1940'))
   const source: WeatherSource = endDay > today ? 'forecast' : 'archive'
   if (endDay > lastForecastDay) endDay = lastForecastDay
   if ((dayStartMs(endDay) - dayStartMs(startDay)) / DAY_MS + 1 > MAX_SPAN_DAYS) {
-    throw new WeatherError('unavailable', `Sortie de plus de ${MAX_SPAN_DAYS} jours : météo non chargée.`)
+    throw new WeatherError('unavailable', t('weather.err.tooLong', { days: MAX_SPAN_DAYS }))
   }
   return { source, startDay, endDay }
 }
@@ -183,7 +186,7 @@ export function buildArchiveUrl(
 /** 24 hourly values of each variable for one place and UTC day (null = missing), as cached. */
 export type WeatherDay = Record<WeatherVariable, (number | null)[]>
 
-const BAD_RESPONSE = 'Réponse météo illisible.'
+const badResponse = () => t('weather.err.badResponse')
 
 /**
  * Split an archive response (one object per place, or a bare object for a single place) into
@@ -191,19 +194,19 @@ const BAD_RESPONSE = 'Réponse météo illisible.'
  */
 export function parseArchiveResponse(json: unknown, placeCount: number, startDay: string, endDay: string): WeatherDay[][] {
   const list = Array.isArray(json) ? json : [json]
-  if (list.length !== placeCount) throw new WeatherError('error', BAD_RESPONSE)
+  if (list.length !== placeCount) throw new WeatherError('error', badResponse())
   const dayCount = (dayStartMs(endDay) - dayStartMs(startDay)) / DAY_MS + 1
   const firstHour = dayStartMs(startDay) / 1000
   return list.map((entry) => {
     const hourly = (entry as { hourly?: Record<string, unknown> } | null)?.hourly
     const time = hourly?.time
     if (!Array.isArray(time) || time.length !== dayCount * 24 || time[0] !== firstHour) {
-      throw new WeatherError('error', BAD_RESPONSE)
+      throw new WeatherError('error', badResponse())
     }
     const columns = {} as Record<WeatherVariable, (number | null)[]>
     for (const v of WEATHER_VARIABLES) {
       const column = hourly?.[API_VARIABLES[v]]
-      if (!Array.isArray(column) || column.length !== time.length) throw new WeatherError('error', BAD_RESPONSE)
+      if (!Array.isArray(column) || column.length !== time.length) throw new WeatherError('error', badResponse())
       columns[v] = column.map((x) => (typeof x === 'number' && Number.isFinite(x) ? x : null))
     }
     const days: WeatherDay[] = []
@@ -344,22 +347,22 @@ async function requestArchive(fetchFn: typeof fetch, url: string, signal?: Abort
     response = await fetchFn(url, { signal })
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') throw e
-    throw new WeatherError('error', 'Impossible de joindre Open-Meteo : vérifiez la connexion.')
+    throw new WeatherError('error', t('weather.err.network'))
   }
   if (response.status === 429) {
-    throw new WeatherError('error', 'Trop de requêtes vers Open-Meteo : réessayez dans quelques minutes.')
+    throw new WeatherError('error', t('weather.err.tooMany'))
   }
   let body: unknown
   try {
     body = await response.json()
   } catch {
-    throw new WeatherError('error', response.ok ? BAD_RESPONSE : `Open-Meteo a répondu par une erreur ${response.status}.`)
+    throw new WeatherError('error', response.ok ? badResponse() : t('weather.err.http', { status: response.status }))
   }
   if (!response.ok) {
     const reason = (body as { reason?: unknown } | null)?.reason
     throw new WeatherError(
       'error',
-      typeof reason === 'string' ? `Open-Meteo a refusé la requête (${reason}).` : `Open-Meteo a répondu par une erreur ${response.status}.`,
+      typeof reason === 'string' ? t('weather.err.refused', { reason }) : t('weather.err.http', { status: response.status }),
     )
   }
   return body
@@ -372,7 +375,7 @@ async function requestArchive(fetchFn: typeof fetch, url: string, signal?: Abort
  */
 export async function fetchOutingWeather(path: TrackPath, opts: FetchWeatherOptions = {}): Promise<WeatherSeries> {
   const span = recordedSpan(path)
-  if (!span) throw new WeatherError('unavailable', 'Trace sans horodatage : impossible de dater la météo.')
+  if (!span) throw new WeatherError('unavailable', t('weather.err.untimed'))
   const now = opts.now ?? Date.now()
   const { source, startDay, endDay } = outingDays(span.startMs, span.endMs, now)
   const forecast = source === 'forecast'
@@ -409,7 +412,7 @@ function cachedStation(
   for (const v of WEATHER_VARIABLES) values[v] = []
   for (const day of days) {
     const cached = cachedDay(day)
-    if (!cached) throw new WeatherError('error', BAD_RESPONSE)
+    if (!cached) throw new WeatherError('error', badResponse())
     for (const v of WEATHER_VARIABLES) for (const x of cached[v]) values[v].push(x ?? Number.NaN)
   }
   const station: WeatherStation = { lon: location.lon, lat: location.lat, values }

@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { clamp } from '../core/math'
+import { t, useT } from '../i18n'
 import {
   CAMERA_PRESETS,
   CAMERA_RANGES,
@@ -25,25 +26,28 @@ import type { RegionStatus } from '../osm/region'
 
 /** « Mettre en avant la région »: what it does, then how the search for the region went (found: after its name). */
 const REGION_HINTS: Record<RegionStatus, string> = {
-  idle: 'Assombrit les alentours de la région administrative de la sortie (OpenStreetMap) et la cadre en entier.',
-  loading: 'Recherche de la région…',
-  ready: 'les alentours sont assombris, la vue cadre la région entière.',
-  none: 'Aucune région administrative ne contient toute la trace : le plan reste sans mise en avant.',
-  error: 'Région indisponible pour le moment (hors ligne ?) : le plan reste sans mise en avant.',
+  get idle() { return t('camera.region.idle') },
+  get loading() { return t('camera.region.loading') },
+  get ready() { return t('camera.region.ready') },
+  get none() { return t('camera.region.none') },
+  get error() { return t('camera.region.error') },
 }
 /** Hint under « Mettre en avant la région » (`highlight` on: how the search for the region went). Shared with FilmInspector. */
 export function RegionHint({ id, highlight }: { id: string; highlight: boolean }) {
+  const t = useT()
   const regionStatus = useRegionStore((s) => s.status)
   const regionName = useRegionStore((s) => s.region?.name)
   return (
     <>
       <p id={id} className="field__hint">
-        {highlight && regionStatus === 'ready' && regionName ? `${regionName} : ` : ''}
-        {REGION_HINTS[highlight ? regionStatus : 'idle']}
+        {(() => {
+          const hint = REGION_HINTS[highlight ? regionStatus : 'idle']
+          return highlight && regionStatus === 'ready' && regionName ? t('camera.region.named', { name: regionName, hint }) : hint
+        })()}
       </p>
       {highlight && regionStatus === 'error' && (
         <button type="button" className="btn btn--secondary btn--block" onClick={retryRegion}>
-          Réessayer
+          {t('common.retry')}
         </button>
       )}
     </>
@@ -51,22 +55,22 @@ export function RegionHint({ id, highlight }: { id: string; highlight: boolean }
 }
 
 const PRESET_ICONS: Record<string, IconName> = {
-  Poursuite: 'navigation',
-  'Drone rapide': 'drone',
-  Oiseau: 'bird',
-  Hélicoptère: 'wind',
-  Orbite: 'orbit',
-  Cinéma: 'clapperboard',
-  'Drone haut': 'eye',
-  Planeur: 'feather',
-  Montgolfière: 'cloud',
-  Avion: 'plane',
-  'Vue du dessus': 'locate-fixed',
-  Satellite: 'satellite',
+  chase: 'navigation',
+  'fast-drone': 'drone',
+  bird: 'bird',
+  helicopter: 'wind',
+  orbit: 'orbit',
+  cinema: 'clapperboard',
+  'high-drone': 'eye',
+  glider: 'feather',
+  balloon: 'cloud',
+  plane: 'plane',
+  'top-view': 'locate-fixed',
+  satellite: 'satellite',
 }
 
 /** Shown first: one preset per style plus a high view, from close to far; the others under « Plus de préréglages ». */
-const MAIN_PRESETS = new Set(['Poursuite', 'Oiseau', 'Orbite', 'Cinéma', 'Drone haut', 'Satellite'])
+const MAIN_PRESETS = new Set(['chase', 'bird', 'orbit', 'cinema', 'high-drone', 'satellite'])
 
 /** Key figures of a preset tile: distance multiplier and tilt. */
 function presetFigures(camera: CameraSettings): string {
@@ -93,36 +97,36 @@ interface Slider {
   format(value: number, autoM?: number): string
 }
 
-/** 0 -> `none`, else "2,5 s" */
-const formatSmoothingS = (none: string) => (v: number) => (v === 0 ? none : formatSecondsShort(v))
+/** 0 -> the message `none`, else "2,5 s" */
+const formatSmoothingS = (none: 'camera.slider.noneMasc' | 'camera.slider.noneFem') => (v: number) => (v === 0 ? t(none) : formatSecondsShort(v))
 
 const SLIDERS: Slider[] = [
-  { key: 'distance', label: 'Distance', tip: 'Multiple de la distance automatique, choisie selon la longueur de la trace.', format: (v) => `×${formatNumber(v, 1)}` },
-  { key: 'pitchDeg', label: 'Inclinaison', tip: 'Angle de la caméra au-dessus de l’horizon.', format: formatDegrees },
-  { key: 'headingOffsetDeg', label: 'Visée', tip: 'Direction de la caméra par rapport au trajet ; positive = vers la droite.', format: formatDegrees },
+  { key: 'distance', get label() { return t('camera.slider.distance') }, get tip() { return t('camera.slider.distanceTip') }, format: (v) => `×${formatNumber(v, 1)}` },
+  { key: 'pitchDeg', get label() { return t('camera.slider.pitch') }, get tip() { return t('camera.slider.pitchTip') }, format: formatDegrees },
+  { key: 'headingOffsetDeg', get label() { return t('camera.slider.heading') }, get tip() { return t('camera.slider.headingTip') }, format: formatDegrees },
   {
     key: 'turnSmoothingM',
-    label: 'Lissage des virages',
-    tip: 'Longueur de trace sur laquelle se mesure la direction du trajet : plus longue, la caméra tourne plus calmement dans les virages. Auto : selon la longueur de la trace.',
-    format: (v, autoM) => (v > 0 ? formatDistance(v) : autoM === undefined ? 'Auto' : `Auto · ${formatDistance(autoM)}`),
+    get label() { return t('camera.slider.turn') },
+    get tip() { return t('camera.slider.turnTip') },
+    format: (v, autoM) => (v > 0 ? formatDistance(v) : autoM === undefined ? t('camera.slider.auto') : t('camera.slider.autoDistance', { distance: formatDistance(autoM) })),
   },
   {
     key: 'aimSmoothingS',
-    label: 'Lissage de la visée',
-    tip: 'Le point visé suit le marqueur en moyenne sur cette durée : arrêts et changements de vitesse ne secouent pas l’image.',
-    format: formatSmoothingS('Aucun'),
+    get label() { return t('camera.slider.aim') },
+    get tip() { return t('camera.slider.aimTip') },
+    format: formatSmoothingS('camera.slider.noneMasc'),
   },
   {
     key: 'cameraSmoothingS',
-    label: 'Lissage de la caméra',
-    tip: 'La caméra suit le marqueur en moyenne sur cette durée : elle anticipe arrêts, changements de vitesse et virages au lieu de freiner ou de pivoter sec.',
-    format: formatSmoothingS('Aucun'),
+    get label() { return t('camera.slider.cameraSmoothing') },
+    get tip() { return t('camera.slider.cameraSmoothingTip') },
+    format: formatSmoothingS('camera.slider.noneMasc'),
   },
   {
     key: 'endingS',
-    label: 'Fin en douceur',
-    tip: 'Pendant ces dernières secondes du survol, la caméra ralentit jusqu’à s’arrêter et regarde le marqueur finir.',
-    format: formatSmoothingS('Aucune'),
+    get label() { return t('camera.slider.ending') },
+    get tip() { return t('camera.slider.endingTip') },
+    format: formatSmoothingS('camera.slider.noneFem'),
   },
 ]
 
@@ -135,35 +139,35 @@ interface PacingSlider {
 }
 
 const PACING_SLIDERS: PacingSlider[] = [
-  { key: 'slowFactor', label: 'Vitesse aux temps forts', format: formatPercent },
+  { key: 'slowFactor', get label() { return t('camera.pacing.slowFactor') }, format: formatPercent },
   {
     key: 'windowM',
-    label: 'Longueur du ralenti',
+    get label() { return t('camera.pacing.window') },
     format: (v) => `±${formatDistance(v)}`,
-    spoken: (v) => `${formatDistance(v)} de chaque côté`,
+    spoken: (v) => t('camera.pacing.windowSpoken', { distance: formatDistance(v) }),
   },
-  { key: 'pauseS', label: 'Pause aux temps forts', format: (v) => (v === 0 ? 'Aucune' : `${formatNumber(v, 1)} s`) },
+  { key: 'pauseS', get label() { return t('camera.pacing.pause') }, format: (v) => (v === 0 ? t('camera.slider.noneFem') : `${formatNumber(v, 1)} s`) },
 ]
 
 /** What « Ralentir aux temps forts » slows down on, in a few words. */
 function slowOnLabel(pacing: PacingSettings): string {
-  if (pacing.climbs && pacing.landmarks) return 'Montées et repères'
-  return pacing.climbs ? 'Montées' : pacing.landmarks ? 'Repères' : 'Rien'
+  if (pacing.climbs && pacing.landmarks) return t('camera.pacing.slowOnBoth')
+  return pacing.climbs ? t('camera.pacing.slowOnClimbs') : pacing.landmarks ? t('camera.pacing.slowOnLandmarks') : t('camera.pacing.slowOnNothing')
 }
 
 /** One-line description of each style (hint under the preset tiles). */
 const STYLE_HINTS: Record<CameraStyle, string> = {
-  chase: 'Derrière le marqueur, dans la direction du trajet.',
-  sway: 'Se balance vers l’extérieur des virages, comme un hélicoptère.',
-  orbit: 'Tourne lentement autour du marqueur (6° par seconde).',
-  top: 'Haute et presque verticale (inclinaison d’au moins 70°).',
-  cinematic: 'Plus loin et plus bas, avec un lent mouvement latéral.',
+  get chase() { return t('camera.styleHint.chase') },
+  get sway() { return t('camera.styleHint.sway') },
+  get orbit() { return t('camera.styleHint.orbit') },
+  get top() { return t('camera.styleHint.top') },
+  get cinematic() { return t('camera.styleHint.cinematic') },
 }
 
 /** Tips of the « Plan de situation » switches. */
 const SITUATION_TIPS = {
-  opening: 'Vue de très haut sur la région, alentours assombris et nom affiché, puis plongée vers la trace.',
-  closing: 'À la fin, la caméra remonte jusqu’à la vue de très haut sur la région, alentours assombris et nom affiché.',
+  get opening() { return t('camera.situationTip.opening') },
+  get closing() { return t('camera.situationTip.closing') },
 }
 
 /**
@@ -171,6 +175,7 @@ const SITUATION_TIPS = {
  * inspector); off: the default style back (and its duration, when the shot still has the one 'situation' gave it).
  */
 function SituationShotSwitches() {
+  const t = useT()
   const film = useAppStore((s) => s.settings.film)
   const id = useId()
   const isOn = (key: 'opening' | 'closing') => film[key].style === 'situation' && film[key].highlight === true
@@ -192,7 +197,7 @@ function SituationShotSwitches() {
               aria-describedby={any ? `${id}-region-hint` : undefined}
               onChange={(e) => toggle(key, e.currentTarget.checked)}
             />
-            {key === 'opening' ? 'Plan de situation à l’ouverture' : 'Plan de situation à la clôture'}
+            {key === 'opening' ? t('camera.situation.opening') : t('camera.situation.closing')}
           </label>
           <InfoTip text={SITUATION_TIPS[key]} />
         </div>
@@ -208,6 +213,7 @@ function SituationShotSwitches() {
  * and value, its control on demand. Stops are chosen on the timeline and in « Repères et points d'intérêt » (Carte).
  */
 export function CameraPanel() {
+  const t = useT()
   const camera = useAppStore((s) => s.settings.camera)
   const durationS = useAppStore((s) => s.settings.flyoverDurationS)
   const pacing = useAppStore((s) => s.settings.pacing)
@@ -225,12 +231,12 @@ export function CameraPanel() {
     setFlightTiming({ durationS: clamp(durationS + direction * FLYOVER_DURATION_RANGE.step, FLYOVER_DURATION_RANGE.min, FLYOVER_DURATION_RANGE.max) })
   const preset = findCameraPreset(camera)
   // the current preset stays in the main grid when it is a folded one
-  const mainPresets = CAMERA_PRESETS.filter((p) => MAIN_PRESETS.has(p.name) || p === preset)
+  const mainPresets = CAMERA_PRESETS.filter((p) => MAIN_PRESETS.has(p.id) || p === preset)
   const morePresets = CAMERA_PRESETS.filter((p) => !mainPresets.includes(p))
   const presetTile = (p: CameraPreset) => (
-    <label key={p.name} className="format-tile style-tile" title={CAMERA_STYLE_LABELS[p.camera.style]}>
+    <label key={p.id} className="format-tile style-tile" title={CAMERA_STYLE_LABELS[p.camera.style]}>
       <input type="radio" name={`${id}-preset`} value={p.name} checked={preset === p} onChange={() => setSetting('camera', { ...p.camera })} />
-      <Icon name={PRESET_ICONS[p.name]} size={20} />
+      <Icon name={PRESET_ICONS[p.id]} size={20} />
       <span className="format-tile__label">{p.name}</span>
       <span className="preset-tile__figures">{presetFigures(p.camera)}</span>
     </label>
@@ -243,23 +249,23 @@ export function CameraPanel() {
 
   return (
     <>
-      <PanelSection title="Caméra" keys={['camera']}>
+      <PanelSection title={t('camera.panel.camera')} keys={['camera']}>
         <fieldset className="field fieldset">
-          <legend className="field__label">Préréglage</legend>
+          <legend className="field__label">{t('camera.panel.preset')}</legend>
           <div className="style-tiles">
             {mainPresets.map(presetTile)}
             {!preset && (
-              <label className="format-tile style-tile" title="Réglages modifiés à la main">
+              <label className="format-tile style-tile" title={t('camera.panel.customTip')}>
                 <input type="radio" name={`${id}-preset`} checked readOnly />
                 <Icon name="sliders-horizontal" size={20} />
-                <span className="format-tile__label">Personnalisé</span>
+                <span className="format-tile__label">{t('camera.panel.custom')}</span>
                 <span className="preset-tile__figures">{presetFigures(camera)}</span>
               </label>
             )}
           </div>
           <details className="preset-more">
             <summary className="preset-more__summary">
-              <span className="preset-more__label">Plus de préréglages</span>
+              <span className="preset-more__label">{t('camera.panel.morePresets')}</span>
               <Icon name="chevron-down" size={16} />
             </summary>
             <div className="style-tiles">{morePresets.map(presetTile)}</div>
@@ -277,14 +283,14 @@ export function CameraPanel() {
               checked={camera.northUp}
               onChange={(e) => update({ northUp: e.currentTarget.checked })}
             />
-            Nord en haut
+            {t('camera.panel.northUp')}
           </label>
         )}
 
-        <SettingRow label="Style" value={CAMERA_STYLE_LABELS[camera.style]} paths={['camera.style']}>
+        <SettingRow label={t('camera.panel.style')} value={CAMERA_STYLE_LABELS[camera.style]} paths={['camera.style']}>
           <div className="field">
             <label className="field__label" htmlFor={`${id}-style`}>
-              Style
+              {t('camera.panel.style')}
             </label>
             <select
               id={`${id}-style`}
@@ -336,19 +342,19 @@ export function CameraPanel() {
         })}
       </PanelSection>
 
-      <PanelSection title="Durée et rythme" keys={['flyoverDurationS', 'pacing']}>
+      <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
         <div className="field">
           <div className="field__label-row">
             <label className="field__label" htmlFor={`${id}-duration`}>
-              Durée du survol
+              {t('camera.duration.label')}
             </label>
-            <InfoTip text="Durée du trajet à la vitesse ×1, sans les arrêts de la timeline ni les transitions entre étapes." />
+            <InfoTip text={t('camera.duration.tip')} />
           </div>
           <div className="range-row">
             <button
               type="button"
               className="step-btn"
-              aria-label="Réduire la durée du survol"
+              aria-label={t('camera.duration.shorten')}
               disabled={durationS <= FLYOVER_DURATION_RANGE.min}
               onClick={() => stepDuration(-1)}
             >
@@ -368,7 +374,7 @@ export function CameraPanel() {
             <button
               type="button"
               className="step-btn"
-              aria-label="Allonger la durée du survol"
+              aria-label={t('camera.duration.lengthen')}
               disabled={durationS >= FLYOVER_DURATION_RANGE.max}
               onClick={() => stepDuration(1)}
             >
@@ -379,10 +385,13 @@ export function CameraPanel() {
             </output>
           </div>
           <p className="field__hint">
-            Film : {formatSeconds(Math.round(film.totalTime()))} ·{' '}
-            {stopCount === 0 ? 'aucun arrêt' : `${stopCount} arrêt${stopCount > 1 ? 's' : ''}`}
-            {speedUp && ` · accélération ${speedUp} (sortie de ${formatDuration(recordedS ?? 0)})`}
-            {timedStages > 0 && ` · ${timedStages} étape${timedStages > 1 ? 's' : ''} à durée fixée (inspecteur de l’étape) : la durée du survol se répartit sur les autres`}
+            {t(speedUp ? 'camera.duration.filmSpeedUp' : 'camera.duration.film', {
+              duration: formatSeconds(Math.round(film.totalTime())),
+              stops: stopCount === 0 ? t('camera.duration.noStops') : t('camera.duration.stops', { count: stopCount }),
+              speedUp: speedUp ?? '',
+              recorded: formatDuration(recordedS ?? 0),
+            })}
+            {timedStages > 0 && ` · ${t('camera.duration.timedStages', { count: timedStages })}`}
           </p>
         </div>
 
@@ -391,23 +400,23 @@ export function CameraPanel() {
         <div className="field__label-row">
           <label className="checkbox checkbox--switch">
             <input type="checkbox" checked={pacing.enabled} onChange={(e) => updatePacing({ enabled: e.currentTarget.checked })} />
-            Ralentir aux temps forts
+            {t('camera.pacing.enable')}
           </label>
-          <InfoTip text="Temps forts : sommets des montées, cols franchis et sommets proches de la trace." />
+          <InfoTip text={t('camera.pacing.enableTip')} />
         </div>
 
         {pacing.enabled && (
           <>
-            <SettingRow label="Ralentir sur" value={slowOnLabel(pacing)} paths={['pacing.climbs', 'pacing.landmarks']}>
+            <SettingRow label={t('camera.pacing.slowOn')} value={slowOnLabel(pacing)} paths={['pacing.climbs', 'pacing.landmarks']}>
               <fieldset className="field fieldset">
-                <legend className="field__label">Ralentir sur</legend>
+                <legend className="field__label">{t('camera.pacing.slowOn')}</legend>
                 <label className="checkbox">
                   <input type="checkbox" checked={pacing.climbs} onChange={(e) => updatePacing({ climbs: e.currentTarget.checked })} />
-                  Sommets des montées
+                  {t('camera.pacing.climbTops')}
                 </label>
                 <label className="checkbox">
                   <input type="checkbox" checked={pacing.landmarks} onChange={(e) => updatePacing({ landmarks: e.currentTarget.checked })} />
-                  Repères (cols, sommets)
+                  {t('camera.pacing.landmarks')}
                 </label>
               </fieldset>
             </SettingRow>
@@ -442,24 +451,24 @@ export function CameraPanel() {
               )
             })}
 
-            <SettingRow label="Garder la durée du survol" value={pacing.keepDuration ? 'Oui' : 'Non'} paths={['pacing.keepDuration']}>
+            <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']}>
               <label className="checkbox">
                 <input
                   type="checkbox"
                   checked={pacing.keepDuration}
                   onChange={(e) => updatePacing({ keepDuration: e.currentTarget.checked })}
                 />
-                Garder la durée du survol
+                {t('camera.pacing.keep')}
               </label>
-              <p className="field__hint">Le reste du trajet accélère pour compenser ralentis et pauses.</p>
+              <p className="field__hint">{t('camera.pacing.keepHint')}</p>
             </SettingRow>
           </>
         )}
 
-        <SettingRow label="Transitions" value={formatSecondsShort(pacing.transitionS)} paths={['pacing.transitionS']}>
+        <SettingRow label={t('camera.pacing.transitions')} value={formatSecondsShort(pacing.transitionS)} paths={['pacing.transitionS']}>
           <RangeField
-            label="Transitions"
-            tip="Durée des changements de vitesse : entrée et sortie des arrêts, des pauses et des portions de vitesse."
+            label={t('camera.pacing.transitions')}
+            tip={t('camera.pacing.transitionsTip')}
             {...PACING_RANGES.transitionS}
             value={pacing.transitionS}
             format={formatSecondsShort}

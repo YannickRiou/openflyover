@@ -3,13 +3,16 @@
  * Every value was verified empirically (HTTP status, CORS, tile size, max zoom; log in docs/sources.md). All sources
  * send `Access-Control-Allow-Origin`, so no Vite proxy entry is needed today (see TILE_PROXIES in vite.config.ts).
  */
+import { t } from '../i18n'
 import type { ImagerySource, LonLat, LonLatBounds, TerrainSource, TileKey, TileSourceBase } from '../core/types'
 
 export const TERRAIN_SOURCES: TerrainSource[] = [
   {
     kind: 'terrain',
     id: 'mapterhorn',
-    name: 'Mapterhorn (mondial, haute résolution)',
+    get name() {
+      return t('terrain.sources.mapterhorn.name')
+    },
     // tiles.json: scheme xyz, encoding "terrarium", tileSize 512, lossless WebP (VP8L).
     urlTemplate: 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp',
     minZoom: 0,
@@ -19,7 +22,9 @@ export const TERRAIN_SOURCES: TerrainSource[] = [
     maxZoom: 17,
     tileSize: 512,
     encoding: 'terrarium',
-    attribution: '© Mapterhorn (données ouvertes, liste des sources : mapterhorn.com/attribution)',
+    get attribution() {
+      return t('terrain.sources.mapterhorn.attribution')
+    },
   },
   {
     kind: 'terrain',
@@ -31,8 +36,9 @@ export const TERRAIN_SOURCES: TerrainSource[] = [
     maxZoom: 15,
     tileSize: 256,
     encoding: 'terrarium',
-    attribution:
-      'Terrain Tiles (Mapzen / AWS Open Data) — SRTM, GMTED2010, ETOPO1 courtesy of USGS/NOAA, EU-DEM © Copernicus, ArcticDEM et autres sources ouvertes',
+    get attribution() {
+      return t('terrain.sources.aws-terrarium.attribution')
+    },
   },
 ]
 
@@ -50,7 +56,9 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
     minZoom: 0,
     maxZoom: 19,
     tileSize: 256,
-    attribution: '© IGN — Géoplateforme (BD ORTHO, licence ouverte Etalab 2.0)',
+    get attribution() {
+      return t('terrain.sources.ign-ortho.attribution')
+    },
     // Bounding box of metropolitan France + Corsica: it OVER-approximates the real coverage
     // (Italy, Switzerland, Belgium... inside the box have no data). Tiles at z <= 12 exist
     // worldwide (low-res global mosaic); from z13 the server answers either 404 or HTTP 200 with
@@ -61,7 +69,9 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'swisstopo',
-    name: 'swisstopo SWISSIMAGE (Suisse)',
+    get name() {
+      return t('terrain.sources.swisstopo.name')
+    },
     // RESTful WMTS, TileMatrixSet 3857_20 -> z0-20, JPEG 256 px. HTTP 400 "Tile out of bounds" outside the box.
     urlTemplate: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
     minZoom: 0,
@@ -76,7 +86,9 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'arcgis-world-imagery',
-    name: 'Esri World Imagery (mondial)',
+    get name() {
+      return t('terrain.sources.arcgis-world-imagery.name')
+    },
     // Path order is {z}/{y}/{x} (row before column). 24 LODs are advertised (z0-23) but real
     // imagery stops at z19 almost everywhere; beyond that the server returns HTTP 200 with a 2.5 KB
     // "no data" placeholder instead of 404, so the catalogue caps at 19.
@@ -90,7 +102,9 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'eox-s2cloudless',
-    name: 'Sentinel-2 cloudless 2025 (EOX, mondial, 10 m)',
+    get name() {
+      return t('terrain.sources.eox-s2cloudless.name')
+    },
     // WMTS REST path: {TileMatrix}/{TileRow}/{TileCol} = {z}/{y}/{x}; TileMatrixSet "g" (EPSG:900913).
     // Native resolution is ~10 m (z14); the server upsamples up to z18 at Chamonix and answers 404 above.
     // Capped at 16: finer requests cost bandwidth without adding detail.
@@ -105,21 +119,27 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'ign-plan',
-    name: 'IGN — carte Plan IGN (France)',
+    get name() {
+      return t('terrain.sources.ign-plan.name')
+    },
     // Same Géoplateforme WMTS as ign-ortho; PNG RGB 256 px, PM_0_19. z20 -> 404.
     urlTemplate:
       'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png',
     minZoom: 0,
     maxZoom: 19,
     tileSize: 256,
-    attribution: '© IGN — Géoplateforme (Plan IGN, licence ouverte Etalab 2.0)',
+    get attribution() {
+      return t('terrain.sources.ign-plan.attribution')
+    },
     // Detailed map over France only: 404 from z13 at Zermatt, 404 everywhere around New York.
     coverage: FRANCE_BOX,
   },
   {
     kind: 'imagery',
     id: 'swisstopo-carte',
-    name: 'swisstopo — carte nationale (Suisse)',
+    get name() {
+      return t('terrain.sources.swisstopo-carte.name')
+    },
     // Layer ch.swisstopo.pixelkarte-farbe, TileMatrixSet 3857_19 -> z0-19 (z20 -> 400), JPEG 256 px.
     urlTemplate: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',
     minZoom: 0,
@@ -133,7 +153,9 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'opentopomap',
-    name: 'OpenTopoMap — carte topo (mondial)',
+    get name() {
+      return t('terrain.sources.opentopomap.name')
+    },
     // PNG 256 px, z0-17. z18 answers 200 with a "max zoom layer = 17" image and no CORS header.
     // Volunteer server: usage in apps is welcome as long as it is not overloaded (no bulk download).
     urlTemplate: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
@@ -141,7 +163,9 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
     minZoom: 0,
     maxZoom: 17,
     tileSize: 256,
-    attribution: 'Données : © contributeurs OpenStreetMap, SRTM | Rendu : © OpenTopoMap (CC BY-SA)',
+    get attribution() {
+      return t('terrain.sources.opentopomap.attribution')
+    },
   },
   // --- Dated / historical orthophotos, IGN Géoplateforme (verified 2026-10-07) ---
   // Never picked automatically (see AUTO_IMAGERY_IDS in src/state/store.ts). Same France box as
@@ -149,20 +173,26 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'ign-ortho-2000-2005',
-    name: 'IGN — photos 2000–2005 (France)',
+    get name() {
+      return t('terrain.sources.ign-ortho-2000-2005.name')
+    },
     // JPEG 256 px, PM_6_18: 404 below z6 and at z19.
     urlTemplate:
       'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS2000-2005&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg',
     minZoom: 6,
     maxZoom: 18,
     tileSize: 256,
-    attribution: '© IGN — Géoplateforme (BD ORTHO 2000–2005, licence ouverte Etalab 2.0)',
+    get attribution() {
+      return t('terrain.sources.ign-ortho-2000-2005.attribution')
+    },
     coverage: FRANCE_BOX,
   },
   {
     kind: 'imagery',
     id: 'ign-ortho-1965-1980',
-    name: 'IGN — photos 1965–1980 (France, partiel)',
+    get name() {
+      return t('terrain.sources.ign-ortho-1965-1980.name')
+    },
     // Greyscale palette PNG, PM_3_18. Only style BDORTHOHISTORIQUE exists ("normal" -> HTTP 400);
     // it makes the no-data black transparent, so gaps show the neutral fallback grey.
     // Incomplete coverage (still being built by IGN): Alps, south and west yes, much of the
@@ -172,13 +202,17 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
     minZoom: 3,
     maxZoom: 18,
     tileSize: 256,
-    attribution: '© IGN — Géoplateforme (BD ORTHO historique 1965–1980, licence ouverte Etalab 2.0)',
+    get attribution() {
+      return t('terrain.sources.ign-ortho-1965-1980.attribution')
+    },
     coverage: FRANCE_BOX,
   },
   {
     kind: 'imagery',
     id: 'ign-ortho-1950-1965',
-    name: 'IGN — photos 1950–1965 (France)',
+    get name() {
+      return t('terrain.sources.ign-ortho-1950-1965.name')
+    },
     // Greyscale PNG 256 px, PM_0_18 (z19 -> 404). The only historical vintage complete over France
     // (IGN metadata); real tiles even across the border at Geneva and Courmayeur, 404 at Zermatt.
     urlTemplate:
@@ -186,7 +220,9 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
     minZoom: 0,
     maxZoom: 18,
     tileSize: 256,
-    attribution: '© IGN — Géoplateforme (BD ORTHO historique 1950–1965, licence ouverte Etalab 2.0)',
+    get attribution() {
+      return t('terrain.sources.ign-ortho-1950-1965.attribution')
+    },
     coverage: FRANCE_BOX,
   },
 ]

@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { closeDiagnostic, copyText, noEncodingTest, setNoEncodingTest, showDiagnostic, useDiagnosticStore } from '../export/diagnostic'
 import { currentReport } from '../export/guard'
+import { useT } from '../i18n'
 import { Icon } from './icons'
 import { SettingRow } from './PanelSection'
 
 /** « Diagnostic », last row of the Réglages tab: the report made now, with the last export's (« mode debug »). */
 export function DiagnosticRow() {
+  const t = useT()
   // debug only: kept in the tab's sessionStorage, never in the project
   const [noEncoding, setNoEncoding] = useState(noEncodingTest)
   return (
-    <section className="settings project" aria-label="Diagnostic">
-      <SettingRow label="Diagnostic" value="Rapport">
-        <p className="field__hint">Appareil, réglages et dernier export, à joindre à un signalement. Sans position ni nom.</p>
+    <section className="settings project" aria-label={t('settings.diagnostic.title')}>
+      <SettingRow label={t('settings.diagnostic.title')} value={t('settings.diagnostic.value')}>
+        <p className="field__hint">{t('settings.diagnostic.hint')}</p>
         <button type="button" className="btn btn--secondary" onClick={() => showDiagnostic(currentReport())}>
-          Afficher le rapport
+          {t('settings.diagnostic.show')}
         </button>
         <label className="checkbox">
           <input
@@ -24,7 +26,7 @@ export function DiagnosticRow() {
               setNoEncoding(e.currentTarget.checked)
             }}
           />
-          Export de test sans encodage
+          {t('settings.diagnostic.noEncoding')}
         </label>
       </SettingRow>
     </section>
@@ -36,6 +38,7 @@ export function DiagnosticRow() {
  * « Afficher le rapport » (Projet tab). Mounted once in App.
  */
 export function DiagnosticDialog() {
+  const t = useT()
   const text = useDiagnosticStore((s) => s.text)
   const dialog = useRef<HTMLDialogElement>(null)
   const report = useRef<HTMLPreElement>(null)
@@ -74,25 +77,22 @@ export function DiagnosticDialog() {
     >
       <div className="sources__head">
         <h2 id="diagnostic-title" className="sources__title">
-          Rapport de diagnostic
+          {t('settings.diagnostic.dialogTitle')}
         </h2>
-        <button type="button" className="icon-btn" aria-label="Fermer" data-tip="Fermer (Échap)" data-tip-side="left" onClick={() => dialog.current?.close()}>
+        <button type="button" className="icon-btn" aria-label={t('common.close')} data-tip={t('common.closeEsc')} data-tip-side="left" onClick={() => dialog.current?.close()}>
           <Icon name="x" size={18} />
         </button>
       </div>
-      <p className="field__hint">
-        Réglages, appareil et dernières étapes de l’export, sans position, nom de trace ni de projet. Copiez-le dans votre
-        signalement.
-      </p>
-      <pre ref={report} className="diagnostic__text" tabIndex={0} aria-label="Rapport">
+      <p className="field__hint">{t('settings.diagnostic.dialogHint')}</p>
+      <pre ref={report} className="diagnostic__text" tabIndex={0} aria-label={t('settings.diagnostic.report')}>
         {text}
       </pre>
       <div className="diagnostic__actions">
         <button type="button" className="btn btn--primary" onClick={() => void onCopy()}>
-          {copy === 'copied' ? 'Copié' : 'Copier le rapport'}
+          {copy === 'copied' ? t('settings.diagnostic.copied') : t('settings.diagnostic.copy')}
         </button>
         <p className="field__hint" role="status">
-          {copy === 'selected' ? 'Copie refusée par le navigateur : le texte est sélectionné, copiez-le.' : ''}
+          {copy === 'selected' ? t('settings.diagnostic.copyRefused') : ''}
         </p>
       </div>
     </dialog>

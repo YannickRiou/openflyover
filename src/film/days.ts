@@ -7,6 +7,7 @@ import type { TrackPath } from '../flyover/path'
 import { formatDistance } from '../ui/format'
 import type { FilmClock } from './clock'
 import type { Film, FilmText } from './model'
+import { t } from '../i18n'
 
 /** A day of the track: from its first recorded point to the first point of the next day (metres along the path). */
 export interface TrackDay {
@@ -77,8 +78,8 @@ export function withDayCards(film: Film, track: DayCardTrack, clock: Pick<FilmCl
   const cards = days.map((day, k): FilmText => {
     let startS = clock.timeAtProgress(k === 0 ? 0 : day.startM / lengthM)
     for (const night of clock.nights) if (k > 0 && localDate(night.sunriseMs, utcOffsetMin) === day.date) startS = Math.max(startS, night.holdEndS)
-    const lines = [...(content.day ? [formatDistance(day.endM - day.startM)] : []), ...(content.total ? [`${formatDistance(day.endM)} au total`] : [])]
-    const card: FilmText = { id: `day-${k + 1}`, startS: Math.round(startS * 10) / 10, durationS: DAY_CARD_S, text: `Jour ${k + 1}`, anchor: 'center', size: 1.25 }
+    const lines = [...(content.day ? [formatDistance(day.endM - day.startM)] : []), ...(content.total ? [t('film.dayTotal', { distance: formatDistance(day.endM) })] : [])]
+    const card: FilmText = { id: `day-${k + 1}`, startS: Math.round(startS * 10) / 10, durationS: DAY_CARD_S, text: t('film.defaultDay', { n: k + 1 }), anchor: 'center', size: 1.25 }
     if (lines.length > 0) card.subtitle = lines.join(' · ')
     return card
   })

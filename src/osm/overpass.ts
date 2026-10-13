@@ -12,6 +12,7 @@
 import { cyrb53 } from '../core/math'
 import type { LonLat, LonLatBounds, Track } from '../core/types'
 import { getPlatform, type KeyValueStore } from '../platform'
+import { t } from '../i18n'
 
 /** Main public instance, then VK Maps (no rate limit stated, listed on the OSM wiki); both send CORS headers. */
 export const OVERPASS_ENDPOINTS = [
@@ -19,7 +20,9 @@ export const OVERPASS_ENDPOINTS = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ] as const
 
-export const OSM_ATTRIBUTION = '© contributeurs OpenStreetMap (ODbL)'
+export function osmAttribution(): string {
+  return t('landmarks.attribution')
+}
 
 /** Largest landmark distance offered by the UI (metres): the query covers it once and for all. */
 export const MAX_LANDMARK_DISTANCE_M = 3000
@@ -51,7 +54,7 @@ export const OSM_KINDS: readonly OsmKind[] = [
 ]
 
 /** Name of a drinking water point without one (most fountains and taps have none). */
-export const UNNAMED_DRINKING_WATER = 'Eau potable'
+export const unnamedDrinkingWater = (): string => t('landmarks.overpass.drinkingWater')
 
 /** A named OSM element, reduced to what the landmarks need. */
 export interface OsmFeature {
@@ -251,7 +254,7 @@ function classify(tags: Record<string, string>): { kind: OsmKind; detail?: strin
 export function overpassElements(json: unknown): unknown[] {
   const record = json as { elements?: unknown; remark?: unknown }
   if (typeof record?.remark === 'string' && /error/i.test(record.remark)) throw new OverpassError(record.remark, 0)
-  if (!Array.isArray(record?.elements)) throw new OverpassError('réponse Overpass inattendue', 0)
+  if (!Array.isArray(record?.elements)) throw new OverpassError(t('landmarks.overpass.unexpected'), 0)
   return record.elements
 }
 
@@ -264,7 +267,7 @@ export function parseOverpass(json: unknown): OsmFeature[] {
     const type = classify(tags)
     if (!type) continue
     const tagged = (tags['name:fr'] ?? tags.name ?? '').trim()
-    const name = tagged || (type.detail === 'drinking_water' ? UNNAMED_DRINKING_WATER : '')
+    const name = tagged || (type.detail === 'drinking_water' ? unnamedDrinkingWater() : '')
     const b = element.bounds
     // `out bb` gives ways and relations their bounding box; its middle is what `out center` gave
     const lat = element.lat ?? element.center?.lat ?? (b && (b.minlat + b.maxlat) / 2)
@@ -347,7 +350,7 @@ export async function runOverpassQuery<T = OsmFeature[]>(
   endpoints: readonly string[] = OVERPASS_ENDPOINTS,
   parse: (json: unknown) => T = parseOverpass as unknown as (json: unknown) => T,
 ): Promise<T> {
-  let lastError: unknown = new OverpassError('aucun serveur Overpass', 0)
+  let lastError: unknown = new OverpassError(t('landmarks.overpass.noServer'), 0)
   for (const endpoint of endpoints) {
     for (let attempt = 0; attempt < 2; attempt++) {
       if (signal?.aborted) throw abortError()

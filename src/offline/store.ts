@@ -11,6 +11,7 @@ import type { DownloadProgress, PackDownload } from './download'
 import { createPackRegistry, createStoredTileReader, packIdFor, sourcePrefixes } from './packs'
 import type { PackInfo, PackRegistry } from './packs'
 import type { OfflinePlan } from './plan'
+import { t } from '../i18n'
 
 interface OfflineState {
   packs: PackInfo[]
@@ -55,8 +56,8 @@ export interface PrepareRequest {
 export async function preparePack({ plan, name, terrain, imagery, corridorM }: PrepareRequest): Promise<DownloadProgress> {
   const platform = getPlatform()
   const cache = platform.tileCache
-  if (!cache) throw new Error('Ce navigateur ne peut pas garder de tuiles.')
-  if (running) throw new Error('Une préparation est déjà en cours.')
+  if (!cache) throw new Error(t('offline.error.noStorage'))
+  if (running) throw new Error(t('offline.error.running'))
   const reg = getRegistry()
   const id = packIdFor(plan.tiles)
   const previous = reg.list().find((p) => p.id === id)

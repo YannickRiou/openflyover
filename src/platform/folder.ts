@@ -8,6 +8,7 @@ import { openWritablePath } from './desktop'
 import { fileNameOf } from './platform'
 import type { Capabilities, WritableFile } from './platform'
 import { writableOf } from './web'
+import { t } from '../i18n'
 
 export interface WritableFolder {
   /** name of the folder, for the messages */
@@ -58,7 +59,7 @@ export async function pickFolder(
     return dir ? writableFolderAt(dir) : null
   }
   const picker = (scope as { showDirectoryPicker?: DirectoryPicker }).showDirectoryPicker
-  if (!picker) throw new Error('Ce navigateur ne sait pas écrire dans un dossier.')
+  if (!picker) throw new Error(t('platform.error.folderWrite'))
   let dir: Awaited<ReturnType<DirectoryPicker>>
   try {
     dir = await picker.call(scope, { id: 'openflyover-export', mode: 'readwrite' })
@@ -108,7 +109,7 @@ export async function pickReadableFolder(
     return dir ? readableFolderAt(dir, fs) : null
   }
   const picker = (scope as { showDirectoryPicker?: ReadDirectoryPicker }).showDirectoryPicker
-  if (!picker) throw new Error('Ce navigateur ne sait pas lire un dossier.')
+  if (!picker) throw new Error(t('platform.error.folderRead'))
   let dir: Awaited<ReturnType<ReadDirectoryPicker>>
   try {
     dir = await picker.call(scope, { id: 'openflyover-traces', mode: 'read' })

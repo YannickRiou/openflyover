@@ -7,18 +7,19 @@
  * Pure module (no DOM, no React).
  */
 import { isRecord } from '../core/guards'
+import { t } from '../i18n'
 
 export const OVERLAY_STYLES = ['editorial', 'broadcast', 'app', 'neon', 'cinema', 'journal', 'tableau'] as const
 export type OverlayStyleId = (typeof OVERLAY_STYLES)[number]
 
 export const OVERLAY_STYLE_LABELS: Record<OverlayStyleId, string> = {
-  editorial: 'Éditorial',
-  broadcast: 'Diffusion',
-  app: 'Application',
-  neon: 'Néon nuit',
-  cinema: 'Cinéma',
-  journal: 'Journal de bord',
-  tableau: 'Tableau sportif',
+  get editorial() { return t('overlay.style.editorial') },
+  get broadcast() { return t('overlay.style.broadcast') },
+  get app() { return t('overlay.style.app') },
+  get neon() { return t('overlay.style.neon') },
+  get cinema() { return t('overlay.style.cinema') },
+  get journal() { return t('overlay.style.journal') },
+  get tableau() { return t('overlay.style.tableau') },
 }
 
 /** Styles that existed for a short while and were dropped, each with the style an old project is opened in. */
@@ -37,9 +38,9 @@ export type TextBacking = (typeof TEXT_BACKINGS)[number]
 export const DEFAULT_TEXT_BACKING: TextBacking = 'blur'
 
 export const TEXT_BACKING_LABELS: Record<TextBacking, string> = {
-  blur: 'Rectangle arrondi flouté',
-  shadow: 'Ombre du texte seulement',
-  outline: 'Contour du texte seulement',
+  get blur() { return t('overlay.backing.blur') },
+  get shadow() { return t('overlay.backing.shadow') },
+  get outline() { return t('overlay.backing.outline') },
 }
 
 /** Kinds of 3D label, each with its own colour (the stripe, the dot and the pin of the label; same ids as `LandmarkKind`). */
@@ -47,17 +48,17 @@ export const LABEL_KINDS = ['climb', 'pass', 'peak', 'waypoint', 'water', 'hut',
 export type LabelKind = (typeof LABEL_KINDS)[number]
 
 export const LABEL_KIND_LABELS: Record<LabelKind, string> = {
-  climb: 'Montée',
-  pass: 'Col',
-  peak: 'Sommet',
-  waypoint: 'Point de passage',
-  water: 'Eau',
-  hut: 'Refuge',
-  place: 'Lieu',
-  other: 'Autre',
-  poi: "Point d'intérêt",
-  km: 'Kilomètre',
-  endpoint: 'Départ et arrivée',
+  get climb() { return t('overlay.labelKind.climb') },
+  get pass() { return t('overlay.labelKind.pass') },
+  get peak() { return t('overlay.labelKind.peak') },
+  get waypoint() { return t('overlay.labelKind.waypoint') },
+  get water() { return t('overlay.labelKind.water') },
+  get hut() { return t('overlay.labelKind.hut') },
+  get place() { return t('overlay.labelKind.place') },
+  get other() { return t('overlay.labelKind.other') },
+  get poi() { return t('overlay.labelKind.poi') },
+  get km() { return t('overlay.labelKind.km') },
+  get endpoint() { return t('overlay.labelKind.endpoint') },
 }
 
 /** The nine anchors of the safe area. */
@@ -75,15 +76,15 @@ export const OVERLAY_ANCHORS = [
 export type OverlayAnchor = (typeof OVERLAY_ANCHORS)[number]
 
 export const OVERLAY_ANCHOR_LABELS: Record<OverlayAnchor, string> = {
-  'top-left': 'En haut à gauche',
-  'top-center': 'En haut au centre',
-  'top-right': 'En haut à droite',
-  'middle-left': 'Au milieu à gauche',
-  center: 'Au centre',
-  'middle-right': 'Au milieu à droite',
-  'bottom-left': 'En bas à gauche',
-  'bottom-center': 'En bas au centre',
-  'bottom-right': 'En bas à droite',
+  get 'top-left'() { return t('overlay.anchor.top-left') },
+  get 'top-center'() { return t('overlay.anchor.top-center') },
+  get 'top-right'() { return t('overlay.anchor.top-right') },
+  get 'middle-left'() { return t('overlay.anchor.middle-left') },
+  get center() { return t('overlay.anchor.center') },
+  get 'middle-right'() { return t('overlay.anchor.middle-right') },
+  get 'bottom-left'() { return t('overlay.anchor.bottom-left') },
+  get 'bottom-center'() { return t('overlay.anchor.bottom-center') },
+  get 'bottom-right'() { return t('overlay.anchor.bottom-right') },
 }
 
 export const COUNTER_IDS = ['distance', 'altitude', 'ascent', 'time', 'speed', 'heartRate'] as const
@@ -116,12 +117,12 @@ export const OVERLAY_FONT_IDS = ['fraunces', 'plex', 'plex-condensed', 'georgia'
 export type OverlayFontId = (typeof OVERLAY_FONT_IDS)[number]
 
 export const OVERLAY_FONT_LABELS: Record<OverlayFontId, string> = {
-  fraunces: 'Fraunces',
-  plex: 'IBM Plex Sans',
-  'plex-condensed': 'IBM Plex Sans Condensed',
-  georgia: 'Georgia (système)',
-  system: 'Police du système',
-  mono: 'Chasse fixe (système)',
+  get fraunces() { return t('overlay.font.fraunces') },
+  get plex() { return t('overlay.font.plex') },
+  get 'plex-condensed'() { return t('overlay.font.plex-condensed') },
+  get georgia() { return t('overlay.font.georgia') },
+  get system() { return t('overlay.font.system') },
+  get mono() { return t('overlay.font.mono') },
 }
 
 /**

@@ -70,6 +70,8 @@ import { disableCard, editFilm, getFilmSource, reorderTracks, setAutoStops, useF
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
 import { formatClock, formatDistance, formatNumber, formatShort } from './format'
+import { formatList } from '../i18n/format'
+import { t as translate, useT } from '../i18n'
 import { Icon } from './icons'
 import type { IconName } from './icons'
 import { KeyGroup } from './KeyControls'
@@ -85,8 +87,22 @@ import './markerKeys.css'
 
 const SPEEDS = PLAYBACK_SPEEDS
 /** « Média » picker: pictures and videos recognised on both targets (the desktop types a file by `mimeTypeOf`). */
-const MEDIA_FILTERS = [{ name: 'Photos et vidéos', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'mp4', 'm4v', 'mov', 'webm'] }]
-const MUSIC_FILTERS = [{ name: 'Musique', extensions: AUDIO_FILE_EXTENSIONS }]
+const MEDIA_FILTERS = [
+  {
+    get name() {
+      return translate('timeline.filter.media')
+    },
+    extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'mp4', 'm4v', 'mov', 'webm'],
+  },
+]
+const MUSIC_FILTERS = [
+  {
+    get name() {
+      return translate('timeline.filter.music')
+    },
+    extensions: AUDIO_FILE_EXTENSIONS,
+  },
+]
 /** Profile resolution (samples over the track) and drawing height in viewBox units. */
 const PROFILE_SAMPLES = 400
 const PROFILE_HEIGHT = 100
@@ -116,7 +132,6 @@ const sliderToZoom = (v: number) => ZOOM_RANGE.min * (ZOOM_RANGE.max / ZOOM_RANG
 
 const ARROWS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
 
-const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`
 
 type Gesture =
   | { kind: 'scrub' }
@@ -219,6 +234,7 @@ function FilmOptions({
   onAddMusic(): void
   reading: boolean
 }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
@@ -254,8 +270,8 @@ function FilmOptions({
         className="icon-btn"
         aria-expanded={open}
         aria-controls={`${id}-menu`}
-        aria-label="Options du film"
-        data-tip="Options du film"
+        aria-label={t('timeline.options.title')}
+        data-tip={t('timeline.options.title')}
         data-tip-side="top"
         data-tip-align="end"
         onClick={() => setOpen(!open)}
@@ -264,13 +280,13 @@ function FilmOptions({
         {modified && (
           <>
             <span className="film-tl__dot" />
-            <span className="visually-hidden"> (modifié)</span>
+            <span className="visually-hidden">{t('common.modified.srOnly')}</span>
           </>
         )}
       </button>
       {open && (
-        <div id={`${id}-menu`} className="film-tl__menu" role="group" aria-label="Options du film">
-          <p className="film-tl__menu-title">Options du film</p>
+        <div id={`${id}-menu`} className="film-tl__menu" role="group" aria-label={t('timeline.options.title')}>
+          <p className="film-tl__menu-title">{t('timeline.options.title')}</p>
           <button
             type="button"
             className="btn btn--secondary btn--small"
@@ -281,17 +297,15 @@ function FilmOptions({
             }}
           >
             <Icon name="music" size={16} />
-            Ajouter une musique…
+            {t('timeline.options.addMusic')}
           </button>
-          <p className="film-tl__menu-hint">MP3, M4A, OGG, WAV ou FLAC, 30 Mo au plus. Ou glissez le fichier sur la timeline.</p>
+          <p className="film-tl__menu-hint">{t('timeline.options.musicHint')}</p>
           <label className="film-tl__check">
             <input type="checkbox" checked={autoStops} onChange={(e) => onAutoStops(e.currentTarget.checked)} />
-            Arrêts automatiques
+            {t('timeline.options.autoStops')}
           </label>
-          <p className="film-tl__menu-hint">
-            Un arrêt à chaque col franchi et sommet proche (Repères, onglet Carte). Retoucher un arrêt les fige.
-          </p>
-          <ModifiedMarker keys={['film']} label="Film" />
+          <p className="film-tl__menu-hint">{t('timeline.options.autoStopsHint')}</p>
+          <ModifiedMarker keys={['film']} label={t('timeline.film')} />
         </div>
       )}
     </div>
@@ -305,6 +319,7 @@ function FilmOptions({
  * selected block drags as usual, two fingers zoom around the playhead.
  */
 export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { sheetOpen?: boolean; centred?: boolean; onUnfold?(): void }) {
+  const t = useT()
   const { track, film, durationS, pacing, landmarks, cutsM, stageIds } = useFilmSource()
   const sequence = useFilmSequence()
   const tracks = useAppStore((s) => s.tracks)
@@ -530,7 +545,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       : [null, ...clk.junctions.map((j) => j.afterTrackId)].flatMap((after, k) => {
           const window = stageCardWindow(clk, f, after)
           if (!window || !junctionCardOf(f, after).enabled || (after === null && cardShown(ov, TITLE_CARD_ID))) return []
-          return [{ id: stageCardId(after), ...window, label: `Étape ${k + 1} · ${sequence.stages[k]?.track.name ?? ''}` }]
+          return [{ id: stageCardId(after), ...window, label: t('timeline.stage.label', { n: k + 1, track: sequence.stages[k]?.track.name ?? '' }) }]
         })
   /** the cards and junctions as blocks, for the targets only the component knows */
   const snapBlocks: SnapBlock[] = [
@@ -569,13 +584,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const addSpeedAt = (atM: number) => {
     const added = addSpeed(film, atM, lengthM)
     if (added) editFilm(() => added)
-    else showToast({ kind: 'error', text: 'Pas de place ici : le marqueur est dans une portion de vitesse ou trop près d’une autre.' })
+    else showToast({ kind: 'error', text: t('timeline.noRoom') })
   }
   /** photos and clips added at the playhead, one after the other (one undo step); offers to place photos on the track */
   const addMediaFiles = async (files: readonly File[]) => {
     const images = files.filter(isMediaFile)
     const others = files.length - images.length
-    const unsupported = others > 0 ? ` ${plural(others, 'fichier ignoré', 'fichiers ignorés')} : seules les photos et les vidéos sont prises en charge.` : ''
+    const unsupported = others > 0 ? ` ${t('timeline.unsupported', { count: others })}` : ''
     if (images.length === 0) {
       showToast({ kind: 'error', text: unsupported.trim() })
       return
@@ -588,11 +603,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       try {
         read.push(await readMedia(file, file.name))
       } catch (err) {
-        failed.push(`« ${file.name} » : ${errorMessage(err)}`)
+        failed.push(t('timeline.fileFailed', { name: file.name, error: errorMessage(err) }))
       }
     }
     setReading(false)
-    const errors = failed.length > 0 ? ` Non ajouté : ${failed.join(' ; ')}` : ''
+    const errors = failed.length > 0 ? ` ${t('timeline.notAdded', { files: failed.join(' ; ') })}` : ''
     if (read.length === 0) {
       showToast({ kind: 'error', text: `${errors}${unsupported}`.trim() })
       return
@@ -623,14 +638,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       n === 0
         ? ''
         : n === 1
-          ? ` ${photos === 1 ? 'La photo' : "L'une des photos"} a été prise le long du parcours : la placer au moment où le marqueur y passe ?`
-          : ` ${n} photos ont été prises le long du parcours : les placer au moment où le marqueur y passe ?`
+          ? ` ${t(photos === 1 ? 'timeline.located.single' : 'timeline.located.oneOf')}`
+          : ` ${t('timeline.located.many', { count: n })}`
     const filmed =
       syncs.length === 0
         ? ''
         : syncs.length === 1
-          ? ` ${videos === 1 ? 'La vidéo' : "L'une des vidéos"} a été filmée pendant la sortie : la caler sur le parcours ?`
-          : ` ${syncs.length} vidéos ont été filmées pendant la sortie : les caler sur le parcours ?`
+          ? ` ${t(videos === 1 ? 'timeline.filmed.single' : 'timeline.filmed.oneOf')}`
+          : ` ${t('timeline.filmed.many', { count: syncs.length })}`
     /** photos placed, clips synced with the film clock of the moment (one undo step) */
     const place = () =>
       editFilm((f) => {
@@ -638,11 +653,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         const placed = placements.reduce((g, p) => updateMedia(g, p.id, { startS: p.startS }), f)
         return { film: syncs.reduce((g, c) => syncClip(g, c.id, c.sync, path, clockNow, c.fileS) ?? g, placed) }
       })
-    const what = [photos > 0 ? plural(photos, 'photo', 'photos') : '', videos > 0 ? plural(videos, 'vidéo', 'vidéos') : ''].filter(Boolean).join(' et ')
+    const what = formatList([photos > 0 ? t('timeline.photoCount', { count: photos }) : '', videos > 0 ? t('timeline.videoCount', { count: videos }) : ''].filter(Boolean))
     showToast({
       kind: errors || unsupported ? 'info' : 'success',
-      text: `${what} ${read.length > 1 ? 'ajoutées' : 'ajoutée'} à la tête de lecture.${located}${filmed}${errors}${unsupported}`,
-      action: n + syncs.length > 0 ? { label: n > 0 ? 'Placer sur le parcours' : 'Caler sur le parcours', run: place } : undefined,
+      text: `${t('timeline.mediaAdded', { count: read.length, what })}${located}${filmed}${errors}${unsupported}`,
+      action: n + syncs.length > 0 ? { label: n > 0 ? t('timeline.placeOnRoute') : t('timeline.syncWithRoute'), run: place } : undefined,
     })
   }
   /** sound files added after the music already there (one undo step); offers to fit the film to the music */
@@ -654,11 +669,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       try {
         read.push(await readAudio(file, file.name))
       } catch (err) {
-        failed.push(`« ${file.name} » : ${errorMessage(err)}`)
+        failed.push(t('timeline.fileFailed', { name: file.name, error: errorMessage(err) }))
       }
     }
     setReading(false)
-    const errors = failed.length > 0 ? ` Non ajouté : ${failed.join(' ; ')}` : ''
+    const errors = failed.length > 0 ? ` ${t('timeline.notAdded', { files: failed.join(' ; ') })}` : ''
     if (read.length === 0) {
       showToast({ kind: 'error', text: errors.trim() })
       return
@@ -671,11 +686,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     )
     commit(added.film)
     setSelected(added.ids[0])
-    const what = read.length > 1 ? `${read.length} musiques ajoutées` : 'Musique ajoutée'
     showToast({
       kind: errors ? 'info' : 'success',
-      text: `${what} ${first ? 'au début du film' : 'à la suite'}. ${read.length > 1 ? 'Elles sont jouées' : 'Elle est jouée'} pendant la lecture et ajoutée${read.length > 1 ? 's' : ''} au film exporté.${errors}`,
-      action: { label: 'Caler la durée du film', run: () => showToast(fitFilmToMusic()) },
+      text: `${t(first ? 'timeline.musicAdded.first' : 'timeline.musicAdded.after', { count: read.length })}${errors}`,
+      action: { label: t('timeline.fitFilm'), run: () => showToast(fitFilmToMusic()) },
     })
   }
   const pickMusic = () =>
@@ -891,7 +905,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       const k = sequence?.stages.findIndex((stage) => stage.track.id === stageTrackOf(item)) ?? -1
       const to = k + (e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1)
       if (k >= 0 && reorderTracks(stageTrackOf(item), to)) {
-        setAnnouncement(`Étape « ${sequence!.stages[k].track.name} » déplacée en position ${to + 1} sur ${sequence!.stages.length}`)
+        setAnnouncement(t('timeline.announce.stageMoved', { name: sequence!.stages[k].track.name, position: to + 1, total: sequence!.stages.length }))
         focusStageRef.current = item
       }
       e.preventDefault()
@@ -959,7 +973,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       role="button"
       tabIndex={0}
       aria-pressed={selected === item}
-      aria-label={`${description}, de ${formatFilmTime(startS)} à ${formatFilmTime(endS)}`}
+      aria-label={t('timeline.blockRange', { description, from: formatFilmTime(startS), to: formatFilmTime(endS) })}
       title={label}
       data-item={item}
       className={`film-tl__block ${className}${selected === item ? ' film-tl__block--selected' : ''}${item === liftedItem ? ' film-tl__block--lifted' : ''}`}
@@ -998,12 +1012,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const ticks = rulerTicks(total, pxPerS)
   /** the lanes: always « Plans » and « Vitesse », a lane per keyed parameter, « Marqueur » with marker keys, the rest */
   const lanes: { name: string; keys?: KeyTarget }[] = [
-    ...(sequence ? [{ name: 'Étapes' }] : []),
-    { name: 'Plans', keys: { kind: 'camera' } },
+    ...(sequence ? [{ name: t('timeline.lane.stages') }] : []),
+    { name: t('timeline.lane.shots'), keys: { kind: 'camera' } },
     { name: PARAM_LANE_LABELS.speed, keys: { kind: 'param', param: 'speed' } },
     ...paramLanes(shownClock).map((param) => ({ name: PARAM_LANE_LABELS[param] })),
-    ...(shownClock.markerKeys.length > 0 ? [{ name: 'Marqueur' }] : []),
-    ...['Arrêts', 'Textes', 'Médias', 'Musique'].map((name) => ({ name })),
+    ...(shownClock.markerKeys.length > 0 ? [{ name: t('timeline.lane.marker') }] : []),
+    ...[t('timeline.lane.holds'), t('timeline.lane.texts'), t('timeline.lane.media'), t('timeline.lane.music')].map((name) => ({ name })),
   ]
   /** « Étapes »: a block per stage, between them the junction (a cut, a fade held for its hold, a night) */
   const stageBlocks = () =>
@@ -1011,14 +1025,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       const before = shownClock.junctions[k - 1]
       const after = shownClock.junctions[k]
       const color = tracks.find((t) => t.id === stage.track.id)?.color ?? stage.track.color
-      const name = `Étape ${k + 1} · ${stage.track.name} · ${formatDistance(stage.endM - stage.startM)}`
+      const name = t('timeline.stage.name', { n: k + 1, track: stage.track.name, distance: formatDistance(stage.endM - stage.startM) })
       const blocks = [
         block(
           stageItemId(stage.track.id),
           before ? before.endS : flightStart,
           after ? after.startS : flightEnd,
           name,
-          `Étape ${k + 1} : ${stage.track.name}`,
+          t('timeline.stage.description', { n: k + 1, track: stage.track.name }),
           'film-tl__block--stage',
           ['move', 'end'],
           undefined,
@@ -1029,14 +1043,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       if (after) {
         const fade = after.kind === 'fondu-noir' || after.kind === 'fondu-blanc'
         const label = fade ? `${JUNCTION_KIND_LABELS[after.kind]} · ${formatNumber(after.holdS, 1)} s` : JUNCTION_KIND_LABELS[after.kind]
-        const own = hasOwnTransition(shownFilm, after.afterTrackId) ? '' : ' (par défaut)'
+        const own = hasOwnTransition(shownFilm, after.afterTrackId) ? '' : t('timeline.junction.byDefault')
         blocks.push(
           block(
             after.id,
             after.startS,
             after.endS,
             label,
-            `Jonction ${k + 1} : ${label}${own}`,
+            t('timeline.junction.description', { n: k + 1, label, own }),
             `film-tl__block--junction film-tl__block--junction-${after.kind}`,
             fade ? ['move', 'end'] : ['move'],
             undefined,
@@ -1058,8 +1072,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         role="button"
         tabIndex={0}
         aria-pressed={selected === k.id}
-        aria-label={`Réglage : ${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
-        title={`${what} (clic : y aller, glisser : le déplacer)`}
+        aria-label={t('timeline.key.settingAria', { what, distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
+        title={t('timeline.key.hint', { what })}
         className={`film-tl__key${selected === k.id ? ' film-tl__key--selected' : ''}`}
         style={{ left: xOf(k.timeS) }}
         onPointerDown={(e) => startEdit(e, k.id, 'move')}
@@ -1068,13 +1082,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       />
     )
   }
-  const mediaLabel = (m: FilmMedia) => m.caption?.trim() || pictures[m.src]?.name || (m.kind === 'video' ? 'Vidéo' : 'Photo')
+  const mediaLabel = (m: FilmMedia) => m.caption?.trim() || pictures[m.src]?.name || (m.kind === 'video' ? t('film.snap.video') : t('film.snap.photo'))
 
   return (
     <div
       className={`film-tl${collapsed ? ' film-tl--folded' : ''}${centred ? ' film-tl--centred' : ''}`}
       role="group"
-      aria-label={`Timeline du film : ${track.name}`}
+      aria-label={t('timeline.aria', { name: track.name })}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return
         e.preventDefault()
@@ -1098,8 +1112,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           type="button"
           className="icon-btn film-tl__play"
           onClick={() => setPlaying(!playing)}
-          aria-label={playing ? 'Mettre en pause' : 'Lancer le film'}
-          data-tip={withShortcut(playing ? 'Pause' : 'Lecture', 'play')}
+          aria-label={playing ? t('timeline.bar.pause') : t('timeline.bar.play')}
+          data-tip={withShortcut(playing ? t('timeline.bar.pauseTip') : t('timeline.bar.playTip'), 'play')}
           data-tip-side="top"
           data-tip-align="start"
         >
@@ -1107,7 +1121,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         </button>
         <BarButton
           icon="square"
-          name="Arrêter et revenir au début"
+          name={t('timeline.bar.stop')}
           onClick={() => {
             setPlaying(false)
             seek(0)
@@ -1125,7 +1139,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           {ele !== undefined && profile && (
             <>
               {' · '}
-              <span className="visually-hidden">Altitude : </span>
+              <span className="visually-hidden">{t('timeline.bar.elevation')}</span>
               <span className="film-tl__value" style={{ minWidth: `${formatNumber(profile.maxEle).length + 1}ch` }}>
                 {formatNumber(ele)}
               </span>{' '}
@@ -1136,7 +1150,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         {/* apart from the readout, which a narrow timeline hides: the clock was asked for in « Réglages » */}
         {time !== undefined && (
           <span className="film-tl__clockout">
-            <span className="visually-hidden">Heure enregistrée : </span>
+            <span className="visually-hidden">{t('timeline.bar.recordedTime')}</span>
             <time className="film-tl__value film-tl__clock" dateTime={new Date(time).toISOString()}>
               {formatClock(time)}
             </time>
@@ -1148,22 +1162,22 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           {/* no lane headers on a centred timeline: the groups of the camera and speed keys lead the row */}
           {centred && (
             <>
-              <span className="film-tl__keys-label">Plans</span>
+              <span className="film-tl__keys-label">{t('timeline.lane.shots')}</span>
               <KeyGroup target={{ kind: 'camera' }} clock={clock} timeS={playheadS} disabled={!hasTrack} />
-              <span className="film-tl__keys-label">Vitesse</span>
+              <span className="film-tl__keys-label">{PARAM_LANE_LABELS.speed}</span>
               <KeyGroup target={{ kind: 'param', param: 'speed' }} clock={clock} timeS={playheadS} disabled={!hasTrack} />
             </>
           )}
           <BarButton
             icon="map-pin"
-            name="Ajouter un arrêt à la position du marqueur"
-            tip={withShortcut('Ajouter un arrêt à la position du marqueur', 'add-stop')}
+            name={t('timeline.bar.addHold')}
+            tip={withShortcut(t('timeline.bar.addHold'), 'add-stop')}
             onClick={() => addStopAt(Math.round(progress * lengthM))}
           />
           {freeCandidates.length > 0 && (
             <select
               className="film-tl__select"
-              aria-label="Ajouter un arrêt à un temps fort"
+              aria-label={t('timeline.bar.addHoldAtHighlight')}
               value=""
               onChange={(e) => {
                 const c = freeCandidates[Number(e.currentTarget.value)]
@@ -1171,7 +1185,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               }}
             >
               <option value="" disabled>
-                Arrêt à un temps fort…
+                {t('timeline.bar.holdAtHighlight')}
               </option>
               {freeCandidates.map((c, i) => (
                 <option key={`${c.source.kind}-${c.source.ref}`} value={i}>
@@ -1182,20 +1196,20 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           )}
           <BarButton
             icon="gauge"
-            name="Accélérer ou ralentir une portion à partir du marqueur"
-            tip="Accélérer ou ralentir une portion (1 km à ×2) à partir du marqueur"
+            name={t('timeline.bar.addSpeed')}
+            tip={t('timeline.bar.addSpeedTip')}
             onClick={() => addSpeedAt(Math.round(progress * lengthM))}
           />
           <BarButton
             icon="type"
-            name="Ajouter un texte à la tête de lecture"
-            tip={withShortcut('Ajouter un texte à la tête de lecture', 'add-text')}
+            name={t('timeline.bar.addText')}
+            tip={withShortcut(t('timeline.bar.addText'), 'add-text')}
             onClick={() => editFilm((f) => addText(f, playheadS))}
           />
           <BarButton
             icon="image"
-            name={reading ? 'Lecture des fichiers…' : 'Ajouter des photos ou des vidéos à la tête de lecture'}
-            tip="Ajouter des photos ou des vidéos (MP4, WebM, MOV ; sans le son) à la tête de lecture, ou les glisser sur la timeline"
+            name={reading ? t('timeline.bar.readingFiles') : t('timeline.bar.addMedia')}
+            tip={t('timeline.bar.addMediaTip')}
             onClick={() =>
               void pickFiles({ filters: MEDIA_FILTERS, multiple: true }).then((files) => (files.length > 0 ? addMediaFiles(files) : undefined))
             }
@@ -1205,23 +1219,23 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           {(film.audio.length > 0 || film.media.some(clipHasSound)) && (
             <BarButton
               icon={muted ? 'volume-x' : 'volume-2'}
-              name={muted ? 'Remettre le son' : 'Couper le son'}
-              tip={muted ? 'Remettre le son de la lecture' : 'Couper le son de la musique et des vidéos pendant la lecture (le film exporté le garde)'}
+              name={muted ? t('timeline.bar.unmute') : t('timeline.bar.mute')}
+              tip={muted ? t('timeline.bar.unmuteTip') : t('timeline.bar.muteTip')}
               onClick={() => useMusicPreview.getState().setMuted(!muted)}
             />
           )}
-          <select className="film-tl__select" aria-label="Vitesse de lecture" value={speed} onChange={(e) => setSpeed(Number(e.currentTarget.value))}>
+          <select className="film-tl__select" aria-label={t('timeline.bar.speed')} value={speed} onChange={(e) => setSpeed(Number(e.currentTarget.value))}>
             {SPEEDS.map((value) => (
               <option key={value} value={value}>
                 ×{formatNumber(value, value % 1 === 0 ? 0 : 1)}
               </option>
             ))}
           </select>
-          <div className="film-tl__zoom" role="group" aria-label="Zoom de la timeline">
+          <div className="film-tl__zoom" role="group" aria-label={t('timeline.zoom.group')}>
             <BarButton
               icon="zoom-out"
-              name="Zoom arrière"
-              tip={withShortcut('Zoom arrière', 'zoom')}
+              name={t('timeline.zoom.out')}
+              tip={withShortcut(t('timeline.zoom.out'), 'zoom')}
               onClick={() => zoomBy(1 / BUTTON_ZOOM)}
               disabled={zoom <= ZOOM_RANGE.min}
             />
@@ -1232,23 +1246,23 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               max={ZOOM_SLIDER_STEPS}
               step={1}
               value={zoomToSlider(zoom)}
-              aria-label="Zoom"
+              aria-label={t('timeline.zoom.slider')}
               aria-valuetext={`×${formatNumber(zoom, 1)}`}
               onChange={(e) => zoomBy(sliderToZoom(Number(e.currentTarget.value)) / zoom)}
             />
             <BarButton
               icon="zoom-in"
-              name="Zoom avant"
-              tip={withShortcut('Zoom avant', 'zoom')}
+              name={t('timeline.zoom.in')}
+              tip={withShortcut(t('timeline.zoom.in'), 'zoom')}
               onClick={() => zoomBy(BUTTON_ZOOM)}
               disabled={zoom >= ZOOM_RANGE.max}
             />
-            <BarButton icon="move-horizontal" name="Ajuster : voir tout le film" tip="Voir tout le film" onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
+            <BarButton icon="move-horizontal" name={t('timeline.zoom.fit')} tip={t('timeline.zoom.fitTip')} onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
           </div>
           <BarButton
             icon="magnet"
-            name={magnet ? 'Désactiver l’aimantation' : 'Activer l’aimantation'}
-            tip={`${magnet ? 'Aimantation : les blocs s’alignent sur les bords, les centres, la tête de lecture… (Alt pendant un glissement : l’inverse)' : 'Aimantation désactivée (Alt pendant un glissement : l’activer)'}`}
+            name={magnet ? t('timeline.magnet.off') : t('timeline.magnet.on')}
+            tip={magnet ? t('timeline.magnet.onTip') : t('timeline.magnet.offTip')}
             on={magnet}
             onClick={() => setPreferences({ timelineMagnet: !magnet })}
           />
@@ -1263,8 +1277,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           }}
           aria-expanded={!collapsed}
           aria-controls={`${id}-lanes`}
-          aria-label={collapsed ? 'Déplier les pistes' : 'Replier les pistes'}
-          data-tip={collapsed ? 'Déplier les pistes' : 'Replier les pistes'}
+          aria-label={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')}
+          data-tip={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')}
           data-tip-side="top"
           data-tip-align="end"
         >
@@ -1310,11 +1324,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 className="film-tl__ruler"
                 role="slider"
                 tabIndex={0}
-                aria-label="Position dans le film"
+                aria-label={t('timeline.ruler.label')}
                 aria-valuemin={0}
                 aria-valuemax={Math.round(clock.totalTime())}
                 aria-valuenow={Math.round(playheadS)}
-                aria-valuetext={`${formatFilmTime(playheadS)} sur ${formatFilmTime(clock.totalTime())}`}
+                aria-valuetext={t('timeline.ruler.valueText', { time: formatFilmTime(playheadS), total: formatFilmTime(clock.totalTime()) })}
                 onKeyDown={onRulerKeyDown}
               >
                 {ticks.map((t) => (
@@ -1325,18 +1339,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               {sequence && (
-                <div className="film-tl__lane" role="group" aria-label="Étapes">
+                <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.stages')}>
                   {stageBlocks()}
                 </div>
               )}
 
-              <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label="Plans">
+              <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label={t('timeline.lane.shots')}>
                 {block(
                   'opening',
                   0,
                   flightStart,
-                  opening.style === 'aucune' ? '' : 'Ouverture',
-                  opening.style === 'aucune' ? 'Ouverture : aucune' : 'Ouverture',
+                  opening.style === 'aucune' ? '' : t('timeline.shot.opening'),
+                  opening.style === 'aucune' ? t('timeline.shot.openingNone') : t('timeline.shot.opening'),
                   `film-tl__block--shot${opening.style === 'aucune' ? ' film-tl__block--none' : ''}`,
                   opening.style === 'aucune' ? [] : ['end'],
                 )}
@@ -1373,7 +1387,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                       )
                     })
                   ) : (
-                    <span className="film-tl__label">Survol · {formatDistance(lengthM)}</span>
+                    <span className="film-tl__label">{t('timeline.flight.label', { distance: formatDistance(lengthM) })}</span>
                   )}
                 </div>
                 {shownClock.cameraKeys.map((k) => (
@@ -1382,8 +1396,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     role="button"
                     tabIndex={0}
                     aria-pressed={selected === k.id}
-                    aria-label={`Image clé à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
-                    title="Image clé (clic : y aller, glisser : la déplacer)"
+                    aria-label={t('timeline.key.shotAria', { distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
+                    title={t('timeline.key.shotHint')}
                     className={`film-tl__key${selected === k.id ? ' film-tl__key--selected' : ''}`}
                     style={{ left: xOf(k.timeS) }}
                     onPointerDown={(e) => startEdit(e, k.id, 'move')}
@@ -1395,23 +1409,23 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   'closing',
                   flightEnd,
                   total,
-                  closing.style === 'aucune' ? '' : 'Clôture',
-                  closing.style === 'aucune' ? 'Clôture : aucune' : 'Clôture',
+                  closing.style === 'aucune' ? '' : t('timeline.shot.closing'),
+                  closing.style === 'aucune' ? t('timeline.shot.closingNone') : t('timeline.shot.closing'),
                   `film-tl__block--shot${closing.style === 'aucune' ? ' film-tl__block--none' : ''}`,
                   closing.style === 'aucune' ? [] : ['start'],
                 )}
               </div>
 
-              <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label="Vitesse">
+              <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label={PARAM_LANE_LABELS.speed}>
                 {shownClock.speeds.map((s) => {
                   const label = formatSpeedFactor(s.factor)
-                  const how = s.factor > 1 ? 'accélérée' : s.factor < 1 ? 'ralentie' : 'à vitesse normale'
+                  const speedKey = s.factor > 1 ? 'timeline.speed.fast' : s.factor < 1 ? 'timeline.speed.slow' : 'timeline.speed.normal'
                   return block(
                     s.id,
                     s.startS,
                     s.endS,
                     label,
-                    `Portion ${how} ${label}, de ${formatDistance(s.fromM)} à ${formatDistance(s.toM)}`,
+                    t(speedKey, { label, from: formatDistance(s.fromM), to: formatDistance(s.toM) }),
                     `film-tl__block--speed${s.factor < 1 ? ' film-tl__block--slow' : ''}`,
                     ['start', 'move', 'end'],
                   )
@@ -1426,22 +1440,25 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               ))}
 
               {shownClock.markerKeys.length > 0 && (
-                <div className="film-tl__lane" role="group" aria-label="Marqueur">
+                <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.marker')}>
                   {shownClock.markerKeys.map((k) => {
                     // what the marker looks like from this key on: its own colours and size, else those of the Trace panel
                     const look = withKey(settingsMarker, k, () => '')
                     const dot = (k.kind === 'figurine' ? look.figureColor : look.color) || track?.color
-                    const what = `Marqueur : ${MARKER_KIND_LABELS[k.kind].toLowerCase()}${k.kind === 'figurine' ? ` (${MARKER_FIGURE_LABELS[k.figure].toLowerCase()})` : ''}, ${
-                      dot ? `couleur ${dot}` : 'couleur de la trace'
-                    }, taille ×${formatShort(look.size)}`
+                    const kind = MARKER_KIND_LABELS[k.kind].toLowerCase()
+                    const what = t('timeline.key.marker', {
+                      kind: k.kind === 'figurine' ? t('timeline.key.markerFigure', { kind, figure: MARKER_FIGURE_LABELS[k.figure].toLowerCase() }) : kind,
+                      color: dot ? t('timeline.key.markerColor', { color: dot }) : t('timeline.key.markerTrackColor'),
+                      size: formatShort(look.size),
+                    })
                     return (
                       <div
                         key={k.id}
                         role="button"
                         tabIndex={0}
                         aria-pressed={selected === k.id}
-                        aria-label={`${what}, à ${formatDistance(k.atM)}, à ${formatFilmTime(k.timeS)}`}
-                        title={`${what} (clic : y aller, glisser : le déplacer)`}
+                        aria-label={t('timeline.key.markerAria', { what, distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
+                        title={t('timeline.key.hint', { what })}
                         className={`film-tl__key film-tl__key--marker${selected === k.id ? ' film-tl__key--selected' : ''}`}
                         style={{ left: xOf(k.timeS), ...(dot ? { '--key-color': dot } : {}) } as CSSProperties}
                         onPointerDown={(e) => startEdit(e, k.id, 'move')}
@@ -1453,22 +1470,22 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
 
-              <div className="film-tl__lane" role="group" aria-label="Arrêts">
+              <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.holds')}>
                 {shownClock.stops.map((s) => {
-                  const label = s.label || 'Arrêt'
+                  const label = s.label || t('film.snap.hold')
                   return block(
                     s.id,
                     s.startS,
                     s.endS,
                     label,
-                    `Arrêt (caméra : ${STOP_CAMERA_LABELS[s.camera].toLowerCase()}) : ${label}${shownFilm.autoStops ? ' (automatique)' : ''}`,
+                    t('timeline.hold.description', { camera: STOP_CAMERA_LABELS[s.camera].toLowerCase(), label, auto: shownFilm.autoStops ? t('timeline.hold.auto') : '' }),
                     `film-tl__block--stop${shownFilm.autoStops ? ' film-tl__block--auto' : ''}`,
                     ['move', 'end'],
                   )
                 })}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label="Textes">
+              <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.texts')}>
                 {/* the opening title and the closing card (overlay settings): only their inner edge moves */}
                 {shownCards(shownOverlay).map((card) => {
                   const { startS, endS } = cardWindow(shownOverlay, card, shownClock)
@@ -1486,10 +1503,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 })}
                 {/* the card of each stage « À la suite »: only its end edge moves (its duration) */}
                 {stageCardsOf(shownClock, shownFilm, shownOverlay).map((c) =>
-                  block(c.id, c.startS, c.endS, c.label, `Carton : ${c.label}`, 'film-tl__block--card', ['move', 'end'], undefined, 'type'),
+                  block(c.id, c.startS, c.endS, c.label, t('timeline.card.description', { label: c.label }), 'film-tl__block--card', ['move', 'end'], undefined, 'type'),
                 )}
-                {shownFilm.texts.map((t) =>
-                  block(t.id, t.startS, t.startS + t.durationS, t.text || 'Texte', `Texte : ${t.text}`, 'film-tl__block--text', [
+                {shownFilm.texts.map((item) =>
+                  block(item.id, item.startS, item.startS + item.durationS, item.text || t('film.snap.text'), t('timeline.text.description', { text: item.text }), 'film-tl__block--text', [
                     'start',
                     'move',
                     'end',
@@ -1497,14 +1514,16 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label="Médias">
+              <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.media')}>
                 {shownFilm.media.map((m) =>
                   block(
                     m.id,
                     m.startS,
                     m.startS + m.durationS,
                     mediaLabel(m),
-                    `${m.kind === 'video' ? 'Vidéo' : 'Photo'} ${m.layout === 'carte' ? 'en carte' : 'plein écran'} : ${mediaLabel(m)}`,
+                    t(m.kind === 'video' ? (m.layout === 'carte' ? 'timeline.media.videoCard' : 'timeline.media.videoFull') : m.layout === 'carte' ? 'timeline.media.photoCard' : 'timeline.media.photoFull', {
+                      label: mediaLabel(m),
+                    }),
                     'film-tl__block--media',
                     ['start', 'move', 'end'],
                     pictures[m.src]?.thumb,
@@ -1513,23 +1532,23 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label="Musique">
+              <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.music')}>
                 {shownFilm.audio.length === 0 && (
                   <span className="film-tl__empty" style={{ left: xOf(0) }}>
-                    Glissez un fichier audio ici, ou Options › Ajouter une musique
+                    {t('timeline.music.empty')}
                   </span>
                 )}
                 {shownFilm.audio.map((a) => {
                   const sound = pictures[a.src]
                   const lengthS = musicLengthS(a, sound?.durationS)
-                  const label = sound?.name ?? 'Musique'
+                  const label = sound?.name ?? t('film.snap.music')
                   const wave = sound?.peaks && sound.durationS ? waveformPath(sound.peaks, sound.durationS, a.inS, lengthS) : ''
                   return block(
                     a.id,
                     a.startS,
                     a.startS + a.durationS,
                     label,
-                    `Musique : ${label}, volume ${Math.round(a.volume * 100)} %`,
+                    t('timeline.music.description', { label, volume: Math.round(a.volume * 100) }),
                     'film-tl__block--music',
                     ['start', 'move', 'end'],
                     undefined,
@@ -1551,7 +1570,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 return (
                   <div className="film-tl__guide" style={{ left: xOf(atS) }} aria-hidden="true">
                     <span className="film-tl__guide-tags">
-                      <span className="film-tl__guide-tag">Étape {stageDrag.to + 1}</span>
+                      <span className="film-tl__guide-tag">{t('timeline.stage.short', { n: stageDrag.to + 1 })}</span>
                     </span>
                   </div>
                 )

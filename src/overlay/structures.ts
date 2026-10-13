@@ -12,6 +12,7 @@ import type { Painter, TextStyle, Widget } from './draw'
 import { COUNTER_IDS } from './settings'
 import type { CounterId, LaidOutWidget, OverlaySettings, StyledWidget } from './settings'
 import { JOURNAL_PAPER } from './themes'
+import { t } from '../i18n'
 
 export interface Rect {
   x: number
@@ -178,7 +179,7 @@ function drawProfileChart(p: Painter, frame: OverlayFrame, box: Rect, look: Prof
 function weatherWords(frame: OverlayFrame): string {
   const w = frame.weather
   if (!w) return ''
-  return `${w.condition.label} · ${formatNumber(w.temperatureC)} °C · vent ${formatNumber(w.windSpeedKmh)} km/h ${w.windFrom}`.trim()
+  return t('overlay.draw.weatherWords', { condition: w.condition.label, temperature: formatNumber(w.temperatureC), speed: formatNumber(w.windSpeedKmh), dir: w.windFrom }).trim()
 }
 
 /** Cap height centred on a line: the baseline for a text of `px` whose caps are centred on `middle`. */
@@ -386,9 +387,9 @@ function journal(i: StructureInput): Structure {
     const w = frame.weather
     return w
       ? [
-          { label: 'Météo', value: w.condition.label },
-          { label: 'Température', value: `${formatNumber(w.temperatureC)} °C` },
-          { label: 'Vent', value: `${formatNumber(w.windSpeedKmh)} km/h ${w.windFrom}`.trim() },
+          { label: t('overlay.draw.weatherRow.weather'), value: w.condition.label },
+          { label: t('overlay.draw.weatherRow.temperature'), value: `${formatNumber(w.temperatureC)} °C` },
+          { label: t('overlay.draw.weatherRow.wind'), value: `${formatNumber(w.windSpeedKmh)} km/h ${w.windFrom}`.trim() },
         ]
       : []
   }

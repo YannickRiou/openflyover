@@ -1,3 +1,4 @@
+import { t, useT } from '../i18n'
 import { modifiedSettings } from '../project/apply'
 import { resetSettings } from '../project/history'
 import { useAppStore } from '../state/store'
@@ -19,7 +20,7 @@ interface Props {
 function resetWithUndo(keys: readonly (keyof Settings)[]): void {
   const undo = resetSettings(keys)
   const settings = useAppStore.getState().settings
-  const id = showToast({ kind: 'success', text: 'Réglages remis par défaut', action: { label: 'Annuler', run: undo } })
+  const id = showToast({ kind: 'success', text: t('common.modified.toast'), action: { label: t('common.undo'), run: undo } })
   const stop = useAppStore.subscribe((state) => {
     if (state.settings === settings) return
     stop()
@@ -32,20 +33,21 @@ function resetWithUndo(keys: readonly (keyof Settings)[]): void {
  * puts `keys` back to their defaults in one undo step. Renders nothing while every key has its default value.
  */
 export function ModifiedMarker({ keys, label, disabled = false }: Props) {
+  const tr = useT()
   const modified = useAppStore((s) => modifiedSettings(s.settings, keys).length > 0)
   if (!modified) return null
   return (
     <div className="modified">
-      <span className="modified__badge">modifié</span>
+      <span className="modified__badge">{tr('common.modified.badge')}</span>
       <button
         type="button"
         className="modified__reset"
-        aria-label={`Rétablir les réglages par défaut : ${label}`}
-        title="Revenir aux réglages par défaut (Ctrl+Z pour annuler)"
+        aria-label={tr('common.modified.resetAria', { label })}
+        title={tr('common.modified.resetTip')}
         disabled={disabled}
         onClick={() => resetWithUndo(keys)}
       >
-        Par défaut
+        {tr('common.modified.reset')}
       </button>
     </div>
   )

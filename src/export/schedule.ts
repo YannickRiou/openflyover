@@ -8,17 +8,18 @@
  */
 import { deviceBudget } from '../core/deviceBudget'
 import { isRecord } from '../core/guards'
+import { t } from '../i18n'
 
 /**
  * Film aspect ratios (`x:y` = width:height). The size is the aspect × a resolution class defined by the short
  * side, so a vertical 4K film is 2160 × 3840 and a square 1440p film 1440 × 1440.
  */
 export const VIDEO_ASPECTS = [
-  { id: '16:9', label: 'Paysage 16:9', x: 16, y: 9 },
-  { id: '9:16', label: 'Vertical 9:16', x: 9, y: 16 },
-  { id: '1:1', label: 'Carré 1:1', x: 1, y: 1 },
-  { id: '4:5', label: 'Portrait 4:5', x: 4, y: 5 },
-  { id: '21:9', label: 'Cinéma 21:9', x: 21, y: 9 },
+  { id: '16:9', get label() { return t('video.aspect.16:9') }, x: 16, y: 9 },
+  { id: '9:16', get label() { return t('video.aspect.9:16') }, x: 9, y: 16 },
+  { id: '1:1', get label() { return t('video.aspect.1:1') }, x: 1, y: 1 },
+  { id: '4:5', get label() { return t('video.aspect.4:5') }, x: 4, y: 5 },
+  { id: '21:9', get label() { return t('video.aspect.21:9') }, x: 21, y: 9 },
 ] as const satisfies readonly { id: string; label: string; x: number; y: number }[]
 
 export type VideoAspect = (typeof VIDEO_ASPECTS)[number]['id']
@@ -109,7 +110,7 @@ export function exportResolutionNote(resolution: VideoResolution, maxShortSide =
   const shortSide = (VIDEO_RESOLUTIONS.find((r) => r.id === resolution) ?? VIDEO_RESOLUTIONS[1]).shortSide
   if (shortSide <= maxShortSide) return null
   const cap = VIDEO_RESOLUTIONS.find((r) => r.shortSide === maxShortSide)?.label ?? `${maxShortSide}p`
-  return `Sur cet appareil, l'export est limité à ${cap} (mémoire de la carte graphique) : le film sort en ${cap}.`
+  return t('export.resolutionNote', { cap })
 }
 
 /** Viewport height the terrain LOD is evaluated at for a film `heightPx` tall: its own, except on a phone (fewer tiles in memory). */

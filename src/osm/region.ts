@@ -12,6 +12,7 @@ import { create } from 'zustand'
 import type { LonLat, LonLatBounds } from '../core/types'
 import { M_PER_DEG, QUERY_TIMEOUT_S, cachedOverpassQuery, overpassElements, simplifyLine, type OverpassDeps } from './overpass'
 import { stitchRings } from './water'
+import { t } from '../i18n'
 
 /** The chosen region's box diagonal is at least this × the track's (when one is that large). */
 export const REGION_MIN_RATIO = 5
@@ -24,11 +25,11 @@ export const REGION_MAX_POINTS = 2000
  */
 export type RegionKind = 'admin' | 'parc' | 'protege' | 'ile' | 'massif'
 export const REGION_KIND_LABELS: Record<RegionKind, string> = {
-  admin: 'limite administrative',
-  parc: 'parc national',
-  protege: 'espace protégé',
-  ile: 'île',
-  massif: 'massif',
+  get admin() { return t('landmarks.regionKind.admin') },
+  get parc() { return t('landmarks.regionKind.parc') },
+  get protege() { return t('landmarks.regionKind.protege') },
+  get ile() { return t('landmarks.regionKind.ile') },
+  get massif() { return t('landmarks.regionKind.massif') },
 }
 
 /** An area containing the centre of the track: OSM element, kind, admin_level (NaN when not administrative), name and box. */

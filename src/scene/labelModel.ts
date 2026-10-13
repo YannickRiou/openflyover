@@ -12,6 +12,7 @@ import type { Climb } from '../flyover/climbs'
 import { samplePath, trackPathOf } from '../flyover/path'
 import { haversineM } from '../geo/lonLat'
 import { formatNumber } from '../ui/format'
+import { t } from '../i18n'
 
 /**
  * 'poi': a point of interest placed by hand (drawn with a pin instead of the stripe); 'km': a kilometre marker;
@@ -68,8 +69,8 @@ export const KM_MARKER_STEPS = [0, 1, 2, 5, 10] as const
 export const POI_PRIORITY = 200
 /** « Montée 2 · cat. 3 · 1 653 m » (no category below catégorie 4); `index` starts at 0. */
 export function climbLabelText(climb: Climb, index: number): string {
-  const parts = [`Montée ${index + 1}`]
-  if (climb.category) parts.push(climb.category === 'HC' ? 'HC' : `cat. ${climb.category}`)
+  const parts = [t('scene.label.climb', { n: index + 1 })]
+  if (climb.category) parts.push(climb.category === 'HC' ? 'HC' : t('scene.label.category', { category: climb.category }))
   parts.push(`${formatNumber(climb.topEleM)} m`)
   return parts.join(' · ')
 }
@@ -105,8 +106,8 @@ export function endpointLabels(track: Track, withText = true): LandmarkLabel[] {
     priority: ENDPOINT_PRIORITY,
     icon: 'drapeau',
   })
-  if (haversineM(start, end) < LOOP_GAP_M) return [label('loop', start, 'Départ et arrivée')]
-  return [label('start', start, 'Départ'), label('finish', end, 'Arrivée')]
+  if (haversineM(start, end) < LOOP_GAP_M) return [label('loop', start, t('scene.label.loop'))]
+  return [label('start', start, t('scene.label.start')), label('finish', end, t('scene.label.finish'))]
 }
 
 /** « Étiquettes dans la vue » (`settings.labels`): waypoints on, the rest off, size ×1, range 70 km (`LABEL_FADE_END_M`). */
@@ -148,7 +149,7 @@ export function photoLabels(media: readonly FilmMedia[], table: MediaTable): Lan
   return media.flatMap((item) => {
     const asset = table[item.src]
     if (item.kind !== 'image' || asset?.lon === undefined || asset.lat === undefined) return []
-    const text = item.caption?.trim() || 'Photo'
+    const text = item.caption?.trim() || t('film.snap.photo')
     return [{ id: `photo:${item.id}`, lon: asset.lon, lat: asset.lat, text, kind: 'poi', priority: PHOTO_PRIORITY, icon: 'photo' } satisfies LandmarkLabel]
   })
 }

@@ -1,27 +1,30 @@
+import { t, useT } from '../i18n'
 import { KM_MARKER_STEPS, LABEL_RANGE_KM, LABEL_SIZE_RANGE } from '../scene/labelModel'
 import { useAppStore } from '../state/store'
 import { formatNumber } from './format'
 import { RangeField, SettingRow } from './PanelSection'
 
 /** 0 -> "Aucune", 1 -> "Tous les kilomètres", 5 -> "Tous les 5 km" */
-const kmStepLabel = (step: number) => (step === 0 ? 'Aucune' : step === 1 ? 'Tous les kilomètres' : `Tous les ${step} km`)
+const kmStepLabel = (step: number) =>
+  step === 0 ? t('track.labels.kmStepNone') : step === 1 ? t('track.labels.kmStepOne') : t('track.labels.kmStepMany', { step })
 
 /** « Étiquettes » section of the Trace tab: which 3D labels are shown in the view, the kilometre markers, size and range. */
 export function LabelSettings() {
+  const tr = useT()
   const labels = useAppStore((s) => s.settings.labels)
   const setSetting = useAppStore((s) => s.setSetting)
 
   return (
     <>
       <fieldset className="field fieldset">
-        <legend className="field__label">Étiquettes dans la vue</legend>
+        <legend className="field__label">{tr('track.labels.legend')}</legend>
         <label className="checkbox">
           <input
             type="checkbox"
             checked={labels.waypoints}
             onChange={(e) => setSetting('labels', { ...labels, waypoints: e.currentTarget.checked })}
           />
-          Points nommés du fichier GPX
+          {tr('track.labels.waypoints')}
         </label>
         <label className="checkbox">
           <input
@@ -29,16 +32,16 @@ export function LabelSettings() {
             checked={labels.endpoints}
             onChange={(e) => setSetting('labels', { ...labels, endpoints: e.currentTarget.checked })}
           />
-          Départ et arrivée
+          {tr('track.labels.endpoints')}
         </label>
         <label className="checkbox">
           <input type="checkbox" checked={labels.photos} onChange={(e) => setSetting('labels', { ...labels, photos: e.currentTarget.checked })} />
-          Photos, là où elles ont été prises
+          {tr('track.labels.photos')}
         </label>
       </fieldset>
-      <SettingRow label="Bornes kilométriques" value={kmStepLabel(labels.kmStep)} paths={['labels.kmStep']}>
+      <SettingRow label={tr('track.labels.kmMarkers')} value={kmStepLabel(labels.kmStep)} paths={['labels.kmStep']}>
         <label className="field">
-          <span className="field__label">Bornes kilométriques</span>
+          <span className="field__label">{tr('track.labels.kmMarkers')}</span>
           <select
             className="select"
             value={labels.kmStep}
@@ -52,18 +55,18 @@ export function LabelSettings() {
           </select>
         </label>
       </SettingRow>
-      <SettingRow label="Taille des étiquettes" value={`×${formatNumber(labels.size, 1)}`} paths={['labels.size']}>
+      <SettingRow label={tr('track.labels.size')} value={`×${formatNumber(labels.size, 1)}`} paths={['labels.size']}>
         <RangeField
-          label="Taille"
+          label={tr('track.labels.sizeShort')}
           {...LABEL_SIZE_RANGE}
           value={labels.size}
           format={(v) => `×${formatNumber(v, 1)}`}
           onChange={(size) => setSetting('labels', { ...labels, size })}
         />
       </SettingRow>
-      <SettingRow label="Portée des étiquettes" value={`${formatNumber(labels.rangeKm)} km`} paths={['labels.rangeKm']}>
+      <SettingRow label={tr('track.labels.range')} value={`${formatNumber(labels.rangeKm)} km`} paths={['labels.rangeKm']}>
         <RangeField
-          label="Portée"
+          label={tr('track.labels.rangeShort')}
           {...LABEL_RANGE_KM}
           value={labels.rangeKm}
           format={(v) => `${formatNumber(v)} km`}

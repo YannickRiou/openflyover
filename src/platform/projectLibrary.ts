@@ -7,6 +7,7 @@
  */
 import type * as TauriFs from '@tauri-apps/plugin-fs'
 import type { ProjectEntry, ProjectLibrary } from './platform'
+import { currentLocale, t } from '../i18n'
 
 /** Named text files in one folder. */
 export interface LibraryFiles {
@@ -34,14 +35,14 @@ const THUMBNAIL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/
 
 /** File names of a project; the id is checked first, so a path never comes from outside. */
 export function projectFileNames(id: string): { document: string; entry: string } {
-  if (!PROJECT_ID.test(id)) throw new Error(`Identifiant de projet invalide : ${id}`)
+  if (!PROJECT_ID.test(id)) throw new Error(t('platform.library.invalidId', { id }))
   return { document: `${id}${DOCUMENT_SUFFIX}`, entry: `${id}${ENTRY_SUFFIX}` }
 }
 
 /** Name of an entry: trimmed, spaces collapsed, 120 characters at most. */
 export function cleanProjectName(name: string): string {
   const clean = name.trim().replace(/\s+/g, ' ').slice(0, MAX_NAME_LENGTH).trim()
-  if (!clean) throw new Error('Le nom du projet est vide.')
+  if (!clean) throw new Error(t('platform.library.emptyName'))
   return clean
 }
 
@@ -52,7 +53,7 @@ export function isProjectThumbnail(value: unknown): value is string {
 
 /** Most recent first, then by name. */
 export function sortProjectEntries(entries: readonly ProjectEntry[]): ProjectEntry[] {
-  return [...entries].sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name, 'fr'))
+  return [...entries].sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name, currentLocale()))
 }
 
 /** The entry stored in `text` for project `id`, null when it is not one (damaged or foreign file). */
@@ -82,7 +83,7 @@ export function createProjectLibrary(
   const readEntry = async (id: string) => {
     const blob = await files.read(projectFileNames(id).entry)
     const entry = blob === null ? null : parseProjectEntry(await blob.text(), id)
-    if (!entry) throw new Error('Ce projet n’est plus dans « Mes projets ».')
+    if (!entry) throw new Error(t('platform.library.gone'))
     return entry
   }
   const writeEntry = (entry: ProjectEntry) => files.write(projectFileNames(entry.id).entry, JSON.stringify(entry))
@@ -111,7 +112,7 @@ export function createProjectLibrary(
     },
     async load(id) {
       const document = await files.read(projectFileNames(id).document)
-      if (document === null) throw new Error('Ce projet n’est plus dans « Mes projets ».')
+      if (document === null) throw new Error(t('platform.library.gone'))
       return document
     },
     async rename(id, name) {

@@ -7,6 +7,7 @@
  * parameters derived from them (`gradingUniforms`). « Naturel » is the identity: no effect is mounted at all.
  */
 import { clamp } from '../core/math'
+import { t } from '../i18n'
 
 /** The four sliders, each 0 when neutral. */
 export interface GradingValues {
@@ -21,13 +22,13 @@ export interface GradingValues {
 }
 
 export const GRADING_PRESETS = [
-  { id: 'naturel', label: 'Naturel', values: { contrast: 0, saturation: 0, warmth: 0, vignette: 0 } },
-  { id: 'lumineux', label: 'Lumineux', values: { contrast: 0.15, saturation: 0.25, warmth: 0.08, vignette: 0 } },
-  { id: 'doux', label: 'Doux', values: { contrast: -0.3, saturation: -0.15, warmth: 0.05, vignette: 0.1 } },
-  { id: 'contraste', label: 'Contrasté', values: { contrast: 0.4, saturation: 0.1, warmth: 0, vignette: 0.25 } },
-  { id: 'chaud-du-soir', label: 'Chaud du soir', values: { contrast: 0.1, saturation: 0.1, warmth: 0.55, vignette: 0.3 } },
-  { id: 'froid-altitude', label: 'Froid d’altitude', values: { contrast: 0.1, saturation: -0.1, warmth: -0.5, vignette: 0.15 } },
-  { id: 'noir-et-blanc', label: 'Noir et blanc', values: { contrast: 0.3, saturation: -1, warmth: 0, vignette: 0.3 } },
+  { id: 'naturel', get label() { return t('scene.grading.naturel') }, values: { contrast: 0, saturation: 0, warmth: 0, vignette: 0 } },
+  { id: 'lumineux', get label() { return t('scene.grading.lumineux') }, values: { contrast: 0.15, saturation: 0.25, warmth: 0.08, vignette: 0 } },
+  { id: 'doux', get label() { return t('scene.grading.doux') }, values: { contrast: -0.3, saturation: -0.15, warmth: 0.05, vignette: 0.1 } },
+  { id: 'contraste', get label() { return t('scene.grading.contraste') }, values: { contrast: 0.4, saturation: 0.1, warmth: 0, vignette: 0.25 } },
+  { id: 'chaud-du-soir', get label() { return t('scene.grading.chaud-du-soir') }, values: { contrast: 0.1, saturation: 0.1, warmth: 0.55, vignette: 0.3 } },
+  { id: 'froid-altitude', get label() { return t('scene.grading.froid-altitude') }, values: { contrast: 0.1, saturation: -0.1, warmth: -0.5, vignette: 0.15 } },
+  { id: 'noir-et-blanc', get label() { return t('scene.grading.noir-et-blanc') }, values: { contrast: 0.3, saturation: -1, warmth: 0, vignette: 0.3 } },
 ] as const satisfies readonly { id: string; label: string; values: GradingValues }[]
 
 export type GradingPresetId = (typeof GRADING_PRESETS)[number]['id']

@@ -8,17 +8,18 @@
  * are invoked directly (what their small JS packages do), so no package is added for three calls.
  */
 import type { Capabilities } from './platform'
+import { getLanguage, t } from '../i18n'
 
 /** Static page of `public/` that receives the redirect on the web. */
 const WEB_CALLBACK_PATH = `${import.meta.env.BASE_URL}oauth-callback.html`
 const CHANNEL = 'openflyover-oauth'
 /** Page the desktop listener answers the browser with. */
-const DESKTOP_RESPONSE =
-  '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>OpenFlyover</title></head><body style="font-family:system-ui;margin:3rem">' +
-  '<p>Connexion transmise à OpenFlyover : vous pouvez fermer cet onglet.</p></body></html>'
+const desktopResponse = (): string =>
+  `<!doctype html><html lang="${getLanguage()}"><head><meta charset="utf-8"><title>OpenFlyover</title></head><body style="font-family:system-ui;margin:3rem">` +
+  `<p>${t('platform.oauth.desktopDone')}</p></body></html>`
 
 function abortError(): DOMException {
-  return new DOMException('Connexion annulée', 'AbortError')
+  return new DOMException(t('platform.oauth.cancelled'), 'AbortError')
 }
 
 /**
@@ -36,7 +37,7 @@ export function authorizeInBrowser(
 function authorizeInPopup(urlFor: (redirectUri: string) => string, signal: AbortSignal): Promise<URLSearchParams> {
   const redirectUri = new URL(WEB_CALLBACK_PATH, location.origin).href
   const popup = window.open(urlFor(redirectUri), CHANNEL, 'popup,width=560,height=760')
-  if (!popup) return Promise.reject(new Error('Fenêtre de connexion bloquée : autorisez les fenêtres surgissantes pour ce site.'))
+  if (!popup) return Promise.reject(new Error(t('platform.oauth.popupBlocked')))
   return new Promise((resolve, reject) => {
     const channel = new BroadcastChannel(CHANNEL)
     const finish = () => {
@@ -61,7 +62,7 @@ async function authorizeOnDesktop(urlFor: (redirectUri: string) => string, signa
   let received: (url: string) => void = () => undefined
   const redirect = new Promise<string>((resolve) => (received = resolve))
   const unlisten = await listen<string>('oauth://url', (event) => received(event.payload))
-  const port = await invoke<number>('plugin:oauth|start', { config: { response: DESKTOP_RESPONSE } })
+  const port = await invoke<number>('plugin:oauth|start', { config: { response: desktopResponse() } })
   const aborted = new Promise<never>((_, reject) => {
     if (signal.aborted) reject(abortError())
     signal.addEventListener('abort', () => reject(abortError()), { once: true })

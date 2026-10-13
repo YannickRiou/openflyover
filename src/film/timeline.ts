@@ -38,6 +38,8 @@ import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, Fi
 import { clampParamValue } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
 import type { FilmMarkerKey, MarkerKeyLook } from './markerKeys'
+import { t } from '../i18n'
+import { decimalSeparator, formatNumberIntl } from '../i18n/format'
 
 export type TimelineItem = 'opening' | 'closing' | string
 /** part of a block a gesture holds: its body (move) or one of its edges */
@@ -111,7 +113,7 @@ export function formatFilmTime(seconds: number, tenths = false): string {
   const units = tenths ? Math.round(t * 10) : Math.floor(t + 1e-6) * 10
   const m = Math.floor(units / 600)
   const s = String(Math.floor((units % 600) / 10)).padStart(2, '0')
-  return tenths ? `${m}:${s},${units % 10}` : `${m}:${s}`
+  return tenths ? `${m}:${s}${decimalSeparator()}${units % 10}` : `${m}:${s}`
 }
 
 /** Timecode of the timeline bar, minutes on two digits at least: 75.4 -> "01:15,4", so its width stays the same while it plays. */
@@ -215,40 +217,40 @@ export function snapTargets(
 ): SnapTarget[] {
   const total = clock.totalTime()
   const out: SnapTarget[] = [
-    { timeS: 0, label: 'Début du film', kind: 'end' },
-    { timeS: total, label: 'Fin du film', kind: 'end' },
-    { timeS: clock.openingS, label: 'Début du survol', kind: 'edge' },
-    { timeS: total - clock.closingS, label: 'Fin du survol', kind: 'edge' },
-    { timeS: playheadS, label: 'Tête de lecture', kind: 'playhead' },
+    { timeS: 0, label: t('film.snap.filmStart'), kind: 'end' },
+    { timeS: total, label: t('film.snap.filmEnd'), kind: 'end' },
+    { timeS: clock.openingS, label: t('film.snap.flyoverStart'), kind: 'edge' },
+    { timeS: total - clock.closingS, label: t('film.snap.flyoverEnd'), kind: 'edge' },
+    { timeS: playheadS, label: t('film.snap.playhead'), kind: 'playhead' },
   ]
   /** both edges and the middle of a block */
   const block = (name: string, startS: number, endS: number) => {
-    out.push({ timeS: startS, label: `Début : ${name}`, kind: 'edge' }, { timeS: endS, label: `Fin : ${name}`, kind: 'edge' })
-    if (endS > startS) out.push({ timeS: (startS + endS) / 2, label: `Milieu : ${name}`, kind: 'centre' })
+    out.push({ timeS: startS, label: t('film.snap.start', { name }), kind: 'edge' }, { timeS: endS, label: t('film.snap.end', { name }), kind: 'edge' })
+    if (endS > startS) out.push({ timeS: (startS + endS) / 2, label: t('film.snap.middle', { name }), kind: 'centre' })
   }
   clock.junctions.forEach((j, k) => {
     if (j.id === except) return
-    const name = `jonction ${k + 1}`
+    const name = t('film.snap.junctionLower', { n: k + 1 })
     if (j.endS > j.startS) block(name, j.startS, j.endS)
-    out.push({ timeS: j.holdStartS, label: `Jonction ${k + 1}`, kind: 'junction' })
+    out.push({ timeS: j.holdStartS, label: t('film.snap.junction', { n: k + 1 }), kind: 'junction' })
   })
   // a cut of a clock built without junctions
-  if (clock.junctions.length === 0) clock.cuts.forEach((c, k) => out.push({ timeS: c.timeS, label: `Jonction ${k + 1}`, kind: 'junction' }))
-  for (const s of clock.stops) if (s.id !== except) block(s.label || 'Arrêt', s.startS, s.endS)
-  for (const s of clock.speeds) if (s.id !== except) block(`portion ${formatSpeedFactor(s.factor)}`, s.startS, s.endS)
-  for (const t of film.texts) if (t.id !== except) block(t.text.trim().slice(0, 24) || 'Texte', t.startS, t.startS + t.durationS)
-  for (const m of film.media) if (m.id !== except) block(m.kind === 'video' ? 'Vidéo' : 'Photo', m.startS, m.startS + m.durationS)
-  for (const a of film.audio) if (a.id !== except) block('Musique', a.startS, a.startS + a.durationS)
+  if (clock.junctions.length === 0) clock.cuts.forEach((c, k) => out.push({ timeS: c.timeS, label: t('film.snap.junction', { n: k + 1 }), kind: 'junction' }))
+  for (const s of clock.stops) if (s.id !== except) block(s.label || t('film.snap.hold'), s.startS, s.endS)
+  for (const s of clock.speeds) if (s.id !== except) block(t('film.snap.speedSection', { factor: formatSpeedFactor(s.factor) }), s.startS, s.endS)
+  for (const text of film.texts) if (text.id !== except) block(text.text.trim().slice(0, 24) || t('film.snap.text'), text.startS, text.startS + text.durationS)
+  for (const m of film.media) if (m.id !== except) block(m.kind === 'video' ? t('film.snap.video') : t('film.snap.photo'), m.startS, m.startS + m.durationS)
+  for (const a of film.audio) if (a.id !== except) block(t('film.snap.music'), a.startS, a.startS + a.durationS)
   for (const b of extra.blocks ?? []) if (b.id !== except) block(b.label, b.startS, b.endS)
   for (const [keys, name] of [
-    [clock.cameraKeys, 'Image clé'],
-    [clock.paramKeys, 'Réglage'],
-    [clock.markerKeys, 'Marqueur'],
+    [clock.cameraKeys, t('film.snap.keyframe')],
+    [clock.paramKeys, t('film.snap.setting')],
+    [clock.markerKeys, t('film.snap.marker')],
   ] as const) {
     for (const k of keys) if (k.id !== except) out.push({ timeS: k.timeS, label: name, kind: 'edge' })
   }
-  for (const h of highlights) out.push({ timeS: clock.timeAtProgress(h), label: 'Temps fort', kind: 'highlight' })
-  for (const t of extra.ticks ?? []) out.push({ timeS: t, label: formatFilmTime(t), kind: 'ruler' })
+  for (const h of highlights) out.push({ timeS: clock.timeAtProgress(h), label: t('film.snap.highlight'), kind: 'highlight' })
+  for (const tick of extra.ticks ?? []) out.push({ timeS: tick, label: formatFilmTime(tick), kind: 'ruler' })
   return out
 }
 
@@ -584,7 +586,7 @@ function dragStageCard(film: Film, afterTrackId: string | null, grip: Grip, delt
 /** A stop added at `atM` (manual unless a source is given), orbiting, `AUTO_STOP_S`; with its new id. */
 export function addStop(film: Film, atM: number, patch: Partial<Omit<FilmStop, 'id' | 'atM'>> = {}): { film: Film; id: string } {
   const id = nextFilmId(film, 'stop')
-  const label = patch.label ?? `Arrêt ${id.slice('stop-'.length)}`
+  const label = patch.label ?? t('film.defaultHold', { n: id.slice('stop-'.length) })
   const stop: FilmStop = { durationS: AUTO_STOP_S, camera: 'orbite', source: { kind: 'manual' }, ...patch, id, atM: Math.max(0, atM), label }
   return { film: { ...film, stops: [...film.stops, stop] }, id }
 }
@@ -725,7 +727,7 @@ export const NEW_TEXT_S = 4
 /** A text added at film time `startS`, centred low, normal size, or attached to `stop` (`attachToStop`); with its new id. */
 export function addText(film: Film, startS: number, stop: ClockStop | null = null): { film: Film; id: string } {
   const id = nextFilmId(film, 'text')
-  const text: FilmText = { id, startS: roundS(Math.max(0, startS)), durationS: NEW_TEXT_S, text: 'Nouveau texte', anchor: 'bottom-center', size: 1 }
+  const text: FilmText = { id, startS: roundS(Math.max(0, startS)), durationS: NEW_TEXT_S, text: t('film.defaultText'), anchor: 'bottom-center', size: 1 }
   const next = { ...film, texts: [...film.texts, text] }
   return { film: stop ? attachToStop(next, id, stop) : next, id }
 }
@@ -932,7 +934,7 @@ export function updateStop(film: Film, id: string, patch: Partial<Omit<FilmStop,
 export const speedFactor = (f: number) => Math.round(clamp(f, SPEED_FACTOR_RANGE.min, SPEED_FACTOR_RANGE.max) * 100) / 100
 
 /** 2 -> "×2", 0.25 -> "×0,25". */
-export const formatSpeedFactor = (f: number) => `×${String(Math.round(f * 100) / 100).replace('.', ',')}`
+export const formatSpeedFactor = (f: number) => `×${formatNumberIntl(Math.round(f * 100) / 100, 2, 0)}`
 
 /**
  * Speed portion `id` with `patch`: factor clamped to its range, edges rounded to the metre and kept on the track,

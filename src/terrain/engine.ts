@@ -44,6 +44,7 @@ import {
   type TileFailureCause,
 } from './quadtree'
 import { buildTileUrl } from './sources'
+import { t } from '../i18n'
 
 // ---------------------------------------------------------------------------
 // Dependencies and tuning
@@ -356,7 +357,7 @@ export function createTerrainEngine(
           })
       : Promise.resolve(undefined)
     const imageryFailure = () =>
-      describeTileError(imageryError ?? new Error('imagerie incomplète'), buildTileUrl(imagery, node.key), 'imagerie')
+      describeTileError(imageryError ?? new Error(t('terrain.cause.incompleteImagery')), buildTileUrl(imagery, node.key), t('terrain.layer.imagery'))
 
     Promise.all([demPromise, texturePromise]).then(
       ([grid, texture]) => {
@@ -380,7 +381,7 @@ export function createTerrainEngine(
         } catch (error) {
           // A grid the mesh builder rejects must not leave the node 'loading' forever.
           if (texture) disposeTexture(texture)
-          markFailed(node, false, error, describeTileError(error, buildTileUrl(terrain, node.key), 'élévation'))
+          markFailed(node, false, error, describeTileError(error, buildTileUrl(terrain, node.key), t('terrain.layer.elevation')))
         }
       },
       (error: unknown) => {
@@ -396,7 +397,7 @@ export function createTerrainEngine(
           node.state = 'empty'
           return
         }
-        markFailed(node, isNoDataError(error), error, describeTileError(error, buildTileUrl(terrain, node.key), 'élévation'))
+        markFailed(node, isNoDataError(error), error, describeTileError(error, buildTileUrl(terrain, node.key), t('terrain.layer.elevation')))
       },
     )
   }
@@ -942,7 +943,7 @@ export function createTerrainEngine(
       tile: node.id,
       attempts: node.state === 'ready' ? attemptLimit() : node.failedAttempts,
       givenUp,
-      ...(node.failure ?? { host: hostOf(buildTileUrl(opts.terrain, node.key)), layer: 'élévation', cause: 'cause inconnue' }),
+      ...(node.failure ?? { host: hostOf(buildTileUrl(opts.terrain, node.key)), layer: t('terrain.layer.elevation'), cause: t('terrain.cause.unknown') }),
     })
     return [...selection.missing.map((node) => describe(node, true)), ...selection.retrying.map((node) => describe(node, false))]
   }
@@ -999,6 +1000,6 @@ export function describeTileError(error: unknown, url: string, layer: string): T
   // the imagery wraps the error of its sub-tile
   while (!(cause instanceof TileFetchError) && cause instanceof Error && cause.cause !== undefined) cause = cause.cause
   if (cause instanceof TileFetchError) return { host: hostOf(cause.url), layer, cause: `HTTP ${cause.status}` }
-  if (cause instanceof TypeError) return { host: hostOf(url), layer, cause: `erreur réseau (${cause.message.slice(0, MAX_CAUSE)})` }
+  if (cause instanceof TypeError) return { host: hostOf(url), layer, cause: t('terrain.cause.network', { detail: cause.message.slice(0, MAX_CAUSE) }) }
   return { host: hostOf(url), layer, cause: errorMessage(cause).slice(0, MAX_CAUSE) }
 }

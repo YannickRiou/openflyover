@@ -19,6 +19,7 @@ import { MAX_VIDEO_BYTES, THUMB_JPEG_QUALITY, THUMB_MAX_SIDE_PX, dataUrlToBlob, 
 import type { MediaAsset } from './media'
 import { clipHasSound, clipTimeS } from './model'
 import type { FilmMedia } from './model'
+import { t } from '../i18n'
 
 /** The demuxer (mediabunny, ~700 KB) is loaded on the first clip read or exported, not at startup. */
 const mediabunny = () => import('mediabunny')
@@ -44,7 +45,7 @@ export function blobToDataUrl(blob: Blob, type: string): Promise<string> {
       const url = String(reader.result)
       resolve(`data:${type};base64,${url.slice(url.indexOf(',') + 1)}`)
     }
-    reader.onerror = () => reject(new Error('fichier illisible.'))
+    reader.onerror = () => reject(new Error(t('film.error.unreadableFile')))
     reader.readAsDataURL(blob)
   })
 }
@@ -71,24 +72,22 @@ async function recordingStart(input: Input, file: Blob, mp4: boolean, durationS:
  */
 export async function readVideo(file: Blob, name?: string): Promise<{ asset: MediaAsset }> {
   if (file.size > MAX_VIDEO_BYTES) {
-    throw new Error(
-      `vidéo trop lourde (${megabytes(file.size)} Mo) : ${megabytes(MAX_VIDEO_BYTES)} Mo au plus, car elle est enregistrée dans le projet. Raccourcissez-la avant de l'ajouter.`,
-    )
+    throw new Error(t('film.error.videoTooBig', { size: megabytes(file.size), max: megabytes(MAX_VIDEO_BYTES) }))
   }
   const { BlobSource, CanvasSink, Input, MP4, QTFF, WEBM } = await mediabunny()
   const input = new Input({ source: new BlobSource(file), formats: [MP4, QTFF, WEBM] })
   try {
     const format = await input.getFormat().catch(() => null)
-    if (!format) throw new Error('format non pris en charge (MP4, WebM ou MOV).')
+    if (!format) throw new Error(t('film.error.videoFormat'))
     const track = await input.getPrimaryVideoTrack()
-    if (!track) throw new Error('aucune image dans ce fichier.')
-    if (!(await track.canDecode())) throw new Error('ce navigateur ne sait pas lire cette vidéo (essayez un MP4 en H.264).')
+    if (!track) throw new Error(t('film.error.videoNoFrame'))
+    if (!(await track.canDecode())) throw new Error(t('film.error.videoCannotPlay'))
     const width = await track.getDisplayWidth()
     const height = await track.getDisplayHeight()
     const durationS = Math.round((await track.computeDuration()) * 1000) / 1000
     const size = fitWithin(width, height, THUMB_MAX_SIDE_PX)
     const first = await new CanvasSink(track, { ...size, fit: 'fill' }).getCanvas(await track.getFirstTimestamp())
-    if (!first || !(durationS > 0)) throw new Error('vidéo vide ou illisible.')
+    if (!first || !(durationS > 0)) throw new Error(t('film.error.videoEmpty'))
     const thumb = encodeJpeg(first.canvas, first.canvas.width, first.canvas.height, THUMB_MAX_SIDE_PX, THUMB_JPEG_QUALITY).data
     const type = format === WEBM ? 'video/webm' : format === QTFF ? 'video/quicktime' : 'video/mp4'
     const recorded = await recordingStart(input, file, format !== WEBM, durationS)
@@ -186,7 +185,7 @@ function openClip(asset: MediaAsset): OpenedClip {
   const opened = mediabunny().then(({ BlobSource, CanvasSink, Input, MP4, QTFF, WEBM }) => {
     const input = new Input({ source: new BlobSource(clipBlob(asset)), formats: [MP4, QTFF, WEBM] })
     const sink = input.getPrimaryVideoTrack().then((track) => {
-      if (!track) throw new Error('aucune image')
+      if (!track) throw new Error(t('film.error.noFrame'))
       // a frame shown and the one after it are held, and mediabunny reuses its canvases in turn
       return new CanvasSink(track, { poolSize: 3 })
     })
@@ -235,7 +234,7 @@ export function createExportVideos(source: (src: string) => MediaAsset | undefin
         try {
           shown.set(item.id, { clipS, frame: await entry.reader.frameAt(clipS) })
         } catch {
-          throw new Error(`Vidéo « ${asset.name ?? item.src} » illisible pendant l'export.`)
+          throw new Error(t('film.error.videoUnreadableExport', { name: asset.name ?? item.src }))
         }
       }
     },
@@ -297,7 +296,7 @@ export async function decodeClipSound(asset: MediaAsset, fromS: number, lengthS:
   try {
     const track = await input.getPrimaryAudioTrack()
     if (!track) return null
-    if (!(await track.canDecode())) throw new Error('son illisible')
+    if (!(await track.canDecode())) throw new Error(t('film.error.unreadableSound'))
     const chunks: SoundChunk[] = []
     let sampleRate = 0
     for await (const { buffer, timestamp } of new AudioBufferSink(track).buffers(fromS, fromS + lengthS)) {

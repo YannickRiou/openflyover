@@ -18,6 +18,7 @@ import type { MusicBeats } from './beats'
 import { EXIF_SCAN_BYTES, parseExif } from './exif'
 import type { PhotoExif } from './exif'
 import type { Film, FilmMedia } from './model'
+import { t } from '../i18n'
 
 /** A picture, a video clip or a sound file of the media table, as saved in the project document. */
 export interface MediaAsset {
@@ -210,7 +211,7 @@ export function encodeJpeg(image: CanvasImageSource, iw: number, ih: number, max
   canvas.width = width
   canvas.height = height
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Image illisible.')
+  if (!ctx) throw new Error(t('film.error.imageUnreadable'))
   ctx.fillStyle = '#FFFFFF'
   ctx.fillRect(0, 0, width, height)
   ctx.imageSmoothingQuality = 'high'
@@ -228,7 +229,7 @@ export async function readPhoto(file: Blob, name?: string): Promise<{ asset: Med
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch {
-    throw new Error('image illisible ou format non pris en charge (JPEG, PNG ou WebP).')
+    throw new Error(t('film.error.imageFormat'))
   }
   try {
     const photo = encodeJpeg(bitmap, bitmap.width, bitmap.height, PHOTO_MAX_SIDE_PX, PHOTO_JPEG_QUALITY)

@@ -5,7 +5,7 @@ import { parseGpx } from '../import/gpx'
 import { buildTrack } from '../import/stats'
 import type { WeatherSummary } from '../weather/series'
 import type { Track } from '../core/types'
-import { POSTER_LIST_MAX, availableFigures, posterContent, shortDateFr, totalStats } from './content'
+import { POSTER_LIST_MAX, availableFigures, posterContent, shortDate, totalStats } from './content'
 import { DEFAULT_POSTER } from './settings'
 
 const sample = parseGpx(sampleGpx, 'tour-du-mont-blanc-j1.gpx')[0]
@@ -104,8 +104,8 @@ describe('posterContent of several tracks', () => {
     expect(list.map((l) => [l.name, l.color])).toEqual([[sample.name, sample.color], ['Jour 2', '#2266aa']])
     expect(list[0].distance).toMatch(/ km$/)
     expect(list[0].ascent).toMatch(/^D\+ [\d\s\u202f]+ m$/u)
-    expect(list[1].date).toBe(shortDateFr(second.stats.startTime ?? 0))
-    expect(shortDateFr(new Date(2026, 6, 3).getTime())).toBe('03/07/2026')
+    expect(list[1].date).toBe(shortDate(second.stats.startTime ?? 0))
+    expect(shortDate(new Date(2026, 6, 3).getTime())).toBe('03/07/2026')
     const many = Array.from({ length: POSTER_LIST_MAX + 1 }, (_, i) => outing(`Jour ${i + 1}`, '#000000', i))
     const summed = posterContent({ ...input, tracks: many, climbs: many.map(() => 1) })
     expect(summed.tracks).toEqual([])

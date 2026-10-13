@@ -11,8 +11,10 @@ import type { ClockJunction } from '../film/clock'
 import { fillTemplate } from '../film/junctions'
 import { clipTimeS } from '../film/model'
 import type { FilmMedia, FilmText, TransitionDip } from '../film/model'
+import { getLanguage, t } from '../i18n'
+import { formatDate } from '../i18n/format'
 import { formatDistance, formatDuration, formatNumber } from '../ui/format'
-import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
+import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
@@ -151,12 +153,12 @@ const MINIMAP_MAX_RATIO = 1.6
 
 /** Short labels drawn in the film. */
 export const COUNTER_LABELS: Record<CounterId, string> = {
-  distance: 'Distance',
-  altitude: 'Altitude',
-  ascent: 'D+',
-  time: 'Temps',
-  speed: 'Vitesse',
-  heartRate: 'FC',
+  get distance() { return t('overlay.draw.counter.distance') },
+  get altitude() { return t('overlay.draw.counter.altitude') },
+  get ascent() { return t('overlay.draw.counter.ascent') },
+  get time() { return t('overlay.draw.counter.time') },
+  get speed() { return t('overlay.draw.counter.speed') },
+  get heartRate() { return t('overlay.draw.counter.heartRate') },
 }
 
 // ---------------------------------------------------------------------------
@@ -293,16 +295,11 @@ export function formatElapsed(seconds: number): string {
   return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
-const MONTHS = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-]
-
-/** Recorded instant -> "12 juillet 2025" ("1er" for the first day), browser time zone. */
-export function formatDateFr(ms: number): string {
+/** Recorded instant -> "12 juillet 2025" ("1er" for the first day) or "12 July 2025", browser time zone. */
+export function formatLongDate(ms: number): string {
   const date = new Date(ms)
   const day = date.getDate()
-  return `${day === 1 ? '1er' : day} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`
+  return t('overlay.draw.date', { day: day === 1 ? t('overlay.draw.firstDay') : day, month: formatDate(ms, { month: 'long' }), year: date.getFullYear() })
 }
 
 export interface CounterText {
@@ -451,7 +448,7 @@ function applyFont(p: Painter, style: TextStyle): void {
   if ('letterSpacing' in p.ctx) p.ctx.letterSpacing = `${(style.tracking ?? 0) * style.sizePx}px`
 }
 
-const caseOf = (text: string, style: TextStyle) => (style.uppercase ? text.toLocaleUpperCase('fr') : text)
+const caseOf = (text: string, style: TextStyle) => (style.uppercase ? text.toLocaleUpperCase(getLanguage()) : text)
 
 export function measure(p: Painter, text: string, style: TextStyle): number {
   applyFont(p, style)
@@ -650,7 +647,7 @@ function weatherWidget(p: Painter, frame: OverlayFrame, settings: OverlaySetting
   const cells = [
     // the longest condition label sets the width: the panel does not jump when the sky changes
     makeCell(p, m, w.condition.label, { value: formatNumber(w.temperatureC), unit: '°C' }, { value: '-00', unit: '°C' }),
-    makeCell(p, m, `Vent ${w.windFrom}`.trim(), { value: formatNumber(w.windSpeedKmh), unit: 'km/h' }, { value: '000', unit: 'km/h' }),
+    makeCell(p, m, t('overlay.draw.wind', { dir: w.windFrom }).trim(), { value: formatNumber(w.windSpeedKmh), unit: 'km/h' }, { value: '000', unit: 'km/h' }),
   ]
   return cellsWidget(p, m, cells, weather.anchor, weather.size, opacity)
 }
@@ -894,7 +891,7 @@ export function minimapWidget(p: Painter, frame: OverlayFrame, settings: Overlay
   }
 }
 
-const LEADERBOARD_TITLE = 'Classement'
+const leaderboardTitle = () => t('overlay.draw.leaderboard')
 /** Gap column wide enough for the usual gaps, so the panel keeps its width as they change. */
 const LEADERBOARD_GAP_TEMPLATE = '+00 min 00'
 
@@ -922,7 +919,7 @@ function leaderboardWidget(p: Painter, rows: readonly LeaderboardRow[], settings
   const colGap = 1.2 * u * s
   const lineH = 3.2 * u * s
   const headingH = heading.sizePx * 0.74 + 1.4 * u * s
-  const innerW = Math.max(measure(p, LEADERBOARD_TITLE, heading), rankW + colGap + dot + colGap + nameW + 2 * colGap + gapW)
+  const innerW = Math.max(measure(p, leaderboardTitle(), heading), rankW + colGap + dot + colGap + nameW + 2 * colGap + gapW)
   const innerH = headingH + rows.length * lineH
   const pad = (theme.panel ? 1.6 : 0.5) * u * s
   const bar = theme.panel ? theme.accentBar * u : 0
@@ -936,7 +933,7 @@ function leaderboardWidget(p: Painter, rows: readonly LeaderboardRow[], settings
     draw(x, y) {
       drawPanel(p, x, y, innerW + 2 * pad + bar, innerH + 2 * pad, align)
       const ix = x + pad + (align === 'right' ? 0 : bar)
-      fillText(p, LEADERBOARD_TITLE, ix, y + pad + heading.sizePx * 0.74, heading)
+      fillText(p, leaderboardTitle(), ix, y + pad + heading.sizePx * 0.74, heading)
       rows.forEach((row, i) => {
         const middle = y + pad + headingH + (i + 0.5) * lineH
         // cap height centred on the row
@@ -1062,10 +1059,10 @@ function cardWidget(
 
 /** Text of the opening card: its title (the track's name by default) and the date and subtitle line. */
 export function openingText(frame: OverlayFrame, settings: OverlaySettings): { title: string; subtitle: string } {
-  const t = settings.title
+  const card = settings.title
   const start = frame.track.stats.startTime
-  const date = t.showDate && start !== undefined ? formatDateFr(start) : ''
-  return { title: t.title.trim() || frame.track.name, subtitle: [date, t.subtitle.trim()].filter(Boolean).join(' · ') }
+  const date = card.showDate && start !== undefined ? formatLongDate(start) : ''
+  return { title: card.title.trim() || frame.track.name, subtitle: [date, card.subtitle.trim()].filter(Boolean).join(' · ') }
 }
 
 function titleWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget {
@@ -1081,7 +1078,7 @@ function stageVariables(card: StageCard): Record<string, string> {
     name: card.name,
     n: String(card.index + 1),
     count: String(card.count),
-    date: card.startTime !== undefined ? formatDateFr(card.startTime) : '',
+    date: card.startTime !== undefined ? formatLongDate(card.startTime) : '',
     distance: formatDistance(card.distanceM),
     ascent: card.ascentM === undefined ? '' : `${formatNumber(card.ascentM)} m`,
   }
@@ -1109,23 +1106,23 @@ function stageWidget(p: Painter, card: StageCard, opacity: number, maxWidth: num
   }
   const m = cellMetrics(p, card.size)
   const stats: [string, CounterText | null][] = [
-    ['Distance', splitUnit(formatDistance(card.distanceM))],
-    ['Dénivelé +', card.ascentM === undefined ? null : { value: formatNumber(card.ascentM), unit: 'm' }],
+    [t('overlay.draw.stat.distance'), splitUnit(formatDistance(card.distanceM))],
+    [t('overlay.draw.stat.ascent'), card.ascentM === undefined ? null : { value: formatNumber(card.ascentM), unit: 'm' }],
   ]
   const cells = stats.flatMap(([label, text]) => (text ? [makeCell(p, m, label, text, text)] : []))
-  const date = card.startTime !== undefined ? formatDateFr(card.startTime) : ''
-  const subtitle = [`Étape ${card.index + 1} sur ${card.count}`, date].filter(Boolean).join(' · ')
+  const date = card.startTime !== undefined ? formatLongDate(card.startTime) : ''
+  const subtitle = [t('overlay.draw.stageOf', { n: card.index + 1, count: card.count }), date].filter(Boolean).join(' · ')
   return cardWidget(p, { title: card.name, subtitle, titleScale: 0.6, cells }, card.anchor, card.size, opacity, m)
 }
 
 /** Figures of the closing card (the ones the track records), label and text. */
 export function endStats(s: OverlayTrack['stats']): { label: string; text: CounterText }[] {
   const stats: [string, CounterText | null][] = [
-    ['Distance', splitUnit(formatDistance(s.distanceM))],
-    ['Dénivelé +', s.ascentM === undefined ? null : { value: formatNumber(s.ascentM), unit: 'm' }],
-    ['Altitude max', s.maxEleM === undefined ? null : { value: formatNumber(s.maxEleM), unit: 'm' }],
-    ['Durée', s.durationS === undefined || s.durationS <= 0 ? null : { value: formatDuration(s.durationS), unit: '' }],
-    ['Vitesse max', s.maxSpeedKmh === undefined ? null : { value: formatNumber(s.maxSpeedKmh, 1), unit: 'km/h' }],
+    [t('overlay.draw.stat.distance'), splitUnit(formatDistance(s.distanceM))],
+    [t('overlay.draw.stat.ascent'), s.ascentM === undefined ? null : { value: formatNumber(s.ascentM), unit: 'm' }],
+    [t('overlay.draw.stat.maxAltitude'), s.maxEleM === undefined ? null : { value: formatNumber(s.maxEleM), unit: 'm' }],
+    [t('overlay.draw.stat.duration'), s.durationS === undefined || s.durationS <= 0 ? null : { value: formatDuration(s.durationS), unit: '' }],
+    [t('overlay.draw.stat.maxSpeed'), s.maxSpeedKmh === undefined ? null : { value: formatNumber(s.maxSpeedKmh, 1), unit: 'km/h' }],
   ]
   return stats.flatMap(([label, text]) => (text ? [{ label, text }] : []))
 }
@@ -1165,8 +1162,8 @@ export function weatherSummaryLine(summary: WeatherSummary | undefined): string 
   if (!summary) return ''
   const min = Math.round(summary.minTemperatureC)
   const max = Math.round(summary.maxTemperatureC)
-  const temperature = min === max ? `${formatNumber(min)} °C` : `${formatNumber(min)} à ${formatNumber(max)} °C`
-  return `${summary.dominant.label} · ${temperature} · vent jusqu'à ${formatNumber(summary.maxWindKmh)} km/h`
+  const temperature = min === max ? `${formatNumber(min)} °C` : t('overlay.draw.temperatureRange', { min: formatNumber(min), max: formatNumber(max) })
+  return t('overlay.draw.weatherLine', { condition: summary.dominant.label, temperature, wind: formatNumber(summary.maxWindKmh) })
 }
 
 /** Source credit of the weather, small along the bottom edge (required by the Open-Meteo licence). */
@@ -1176,7 +1173,7 @@ function drawWeatherCredit(p: Painter): void {
   const shadowed = { ...p, theme: { ...p.theme, textShadow: { color: 'rgba(0, 0, 0, 0.8)', blur: 0.5 } } }
   p.ctx.save()
   p.ctx.globalAlpha = 0.85
-  fillText(shadowed, OPEN_METEO_ATTRIBUTION, size.width * (1 - SAFE_MARGIN), size.height - 1.4 * u, style, 'right')
+  fillText(shadowed, openMeteoAttribution(), size.width * (1 - SAFE_MARGIN), size.height - 1.4 * u, style, 'right')
   p.ctx.restore()
 }
 
@@ -1540,7 +1537,7 @@ export function drawOverlay(
   if (weatherShown || (endOpacity > 0 && settings.end.showWeather && frame.track.stats.weather)) {
     // required by the Open-Meteo licence: with the other credits when they are drawn, else on its own
     if (!settings.credits.enabled) drawWeatherCredit(p)
-    else if (!credits.includes(OPEN_METEO_ATTRIBUTION)) credits.push(OPEN_METEO_ATTRIBUTION)
+    else if (!credits.includes(openMeteoAttribution())) credits.push(openMeteoAttribution())
   }
   if (credits.length > 0) drawCredits(p, credits, settings.credits.position, structure?.area)
   ctx.restore()

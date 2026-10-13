@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent } from 'react'
+import { useT } from '../i18n'
 import { getPlatform } from '../platform'
 import { TIMELINE_HEIGHT_KEY, TIMELINE_STEP_LARGE_PX, TIMELINE_STEP_PX, clampTimelineHeight, parseTimelineHeight, timelineHeightRange } from './layoutSize'
 import './timelineResizer.css'
@@ -35,6 +36,7 @@ interface Drag {
  * height is remembered on this device, not in the project, and kept within the window again when it is resized.
  */
 export function TimelineResizer({ disabled = false }: { disabled?: boolean }) {
+  const t = useT()
   const handle = useRef<HTMLDivElement>(null)
   const drag = useRef<Drag | null>(null)
   /** the chosen height, null = the timeline's own height (default) */
@@ -112,7 +114,7 @@ export function TimelineResizer({ disabled = false }: { disabled?: boolean }) {
       className={dragging ? 'timeline-resizer timeline-resizer--dragging' : 'timeline-resizer'}
       role="separator"
       aria-orientation="horizontal"
-      aria-label="Taille de la timeline"
+      aria-label={t('timeline.resizer.label')}
       aria-valuenow={shown.now}
       aria-valuemin={shown.min}
       aria-valuemax={shown.max}

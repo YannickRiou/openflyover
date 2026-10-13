@@ -11,13 +11,17 @@ import { END_START_MAX, END_START_MIN, TITLE_END_MAX, TITLE_END_MIN } from '../o
 import type { OverlaySettings } from '../overlay/settings'
 import type { FilmClock } from './clock'
 import type { Grip } from './timeline'
+import { t } from '../i18n'
 
 export const TITLE_CARD_ID = 'card-title'
 export const END_CARD_ID = 'card-end'
 export type CardId = typeof TITLE_CARD_ID | typeof END_CARD_ID
 
 /** Name of each card on its block, in the inspector and in the panel. */
-export const CARD_LABELS: Record<CardId, string> = { [TITLE_CARD_ID]: "Titre d'ouverture", [END_CARD_ID]: 'Carte de clôture' }
+export const CARD_LABELS: Record<CardId, string> = {
+  get [TITLE_CARD_ID]() { return t('film.card.opening') },
+  get [END_CARD_ID]() { return t('film.card.closing') },
+}
 
 /** The part of the film clock the cards are placed on. */
 export type CardClock = Pick<FilmClock, 'openingS' | 'flightS' | 'totalTime'>

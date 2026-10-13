@@ -17,6 +17,7 @@ import type { VideoAspect, VideoResolution } from './schedule'
 import { isExportBusy, useExportStore, videoFileName } from './store'
 import type { ExportRequest, ExportResult, ExportState, StillType } from './store'
 import { beginTrackFilms, shownFilm } from './trackFilms'
+import { currentLocale, t } from '../i18n'
 
 export interface BatchFormat {
   aspect: VideoAspect
@@ -76,15 +77,15 @@ export function buildBatchJobs(selection: BatchSelection, stillFormat: BatchForm
     for (const r of VIDEO_RESOLUTIONS) if (ticked.has(formatKey(a.id, r.id))) jobs.push({ kind: 'video', ...sized(a.id, r.id) })
   if (selection.still) {
     const job = sized(stillFormat.aspect, stillFormat.resolution)
-    jobs.push({ kind: 'still', ...job, key: `still@${job.key}`, label: `Image fixe ${job.label}` })
+    jobs.push({ kind: 'still', ...job, key: `still@${job.key}`, label: t('export.batch.still', { label: job.label }) })
   }
-  if (selection.poster) jobs.push({ kind: 'poster', key: 'poster', label: 'Affiche', tag: 'affiche' })
+  if (selection.poster) jobs.push({ kind: 'poster', key: 'poster', label: t('export.batch.poster'), tag: t('export.batch.posterTag') })
   return jobs
 }
 
 /** File name without extension: « <projet> – 16x9-1080p », « <projet> – image 16x9-1080p », « <projet> – affiche ». */
 export function batchBaseName(projectName: string, job: BatchJob): string {
-  return `${projectName} – ${job.kind === 'still' ? `image ${job.tag}` : job.tag}`
+  return `${projectName} – ${job.kind === 'still' ? t('export.batch.stillFile', { tag: job.tag }) : job.tag}`
 }
 
 export interface BatchEstimate {
@@ -191,7 +192,7 @@ export function batchProgressLabel(jobs: readonly BatchJobState[], fraction: num
   const index = jobs.findIndex((s) => s.status === 'running')
   if (index < 0) return ''
   const percent = Math.round(Math.min(1, Math.max(0, fraction)) * 100)
-  return `${index + 1} / ${jobs.length} · ${jobs[index].job.label} · ${percent} %`
+  return t('export.batch.progress', { index: index + 1, total: jobs.length, label: jobs[index].job.label, percent })
 }
 
 /** Counts of a finished run (jobs or tracks), for its message. */
@@ -209,7 +210,7 @@ export function batchSummary(jobs: readonly { status: BatchStatus }[]): { done: 
 
 /** The GPX and FIT files of a folder, sorted by name as a file browser does (« Sortie 2 » before « Sortie 10 »). */
 export function trackFiles<F extends { name: string }>(files: readonly F[]): F[] {
-  return files.filter((f) => supportedExtension(f.name)).sort((a, b) => a.name.localeCompare(b.name, 'fr', { numeric: true }))
+  return files.filter((f) => supportedExtension(f.name)).sort((a, b) => a.name.localeCompare(b.name, currentLocale(), { numeric: true }))
 }
 
 const stemOf = (fileName: string) => fileName.replace(/\.[^.]+$/, '')
@@ -312,7 +313,7 @@ export function trackProgressLabel(tracks: readonly TrackRunState[], fraction: n
   const index = tracks.findIndex((s) => s.status === 'running')
   if (index < 0) return ''
   const percent = Math.round(trackFraction(tracks[index], fraction) * 100)
-  return `${index + 1} / ${tracks.length} · ${tracks[index].name} · ${percent} %`
+  return t('export.batch.progress', { index: index + 1, total: tracks.length, label: tracks[index].name, percent })
 }
 
 // ---------------------------------------------------------------------------
@@ -368,14 +369,14 @@ async function writeToFolder(folder: WritableFolder, result: ExportResult & { ur
 /** Hand one job to the export store (or the poster to `startPoster`); the reason when it cannot start. */
 async function startJob(job: BatchJob, ctx: BatchContext): Promise<string | null> {
   const store = useExportStore.getState()
-  if (job.kind === 'poster') return (await ctx.startPoster()) ? null : 'aucune trace chargée'
+  if (job.kind === 'poster') return (await ctx.startPoster()) ? null : t('export.batch.noTrack')
   const request = { ...ctx.film, width: job.width, height: job.height, baseName: batchBaseName(ctx.projectName, job) }
   if (job.kind === 'still') {
     store.start({ ...request, still: ctx.still })
     return null
   }
   const container = await ctx.containerOf(job)
-  if (!container) return `ce navigateur ne sait pas encoder une vidéo de ${job.width} × ${job.height} pixels`
+  if (!container) return t('export.batch.unencodable', { width: job.width, height: job.height })
   const destination = ctx.folder ? await ctx.folder.createFile(videoFileName(request.baseName, `.${container}`)) : undefined
   store.start({ ...request, destination })
   return null
@@ -384,13 +385,13 @@ async function startJob(job: BatchJob, ctx: BatchContext): Promise<string | null
 /** Export one job through the export store and its controller; resolves once it has settled. */
 export async function exportJob(job: BatchJob, ctx: BatchContext): Promise<JobOutcome> {
   const store = useExportStore.getState
-  if (isExportBusy(store().phase)) return { status: 'error', error: 'un autre export est en cours' }
+  if (isExportBusy(store().phase)) return { status: 'error', error: t('export.batch.busy') }
   const failure = await startJob(job, ctx)
   if (failure) return { status: 'error', error: failure }
   // asked while the request was being prepared
   if (ctx.canceled()) store().cancel()
   const settled = await settledExport()
-  if (settled.phase === 'error') return { status: 'error', error: settled.error ?? 'échec' }
+  if (settled.phase === 'error') return { status: 'error', error: settled.error ?? t('export.batch.failed') }
   const result = settled.phase === 'done' ? store().takeResult() : null
   if (!result) return { status: 'canceled' }
   // a film streamed to disk is already in place
@@ -401,7 +402,7 @@ export async function exportJob(job: BatchJob, ctx: BatchContext): Promise<JobOu
     } catch (error) {
       // the image is not lost: saved like a file kept in memory
       console.warn("[export] écriture dans le dossier impossible, image enregistrée autrement :", error)
-      showToast({ kind: 'info', text: 'Écriture dans le dossier impossible : le fichier sera téléchargé.' })
+      showToast({ kind: 'info', text: t('export.batch.folderFailed') })
     }
   }
   ctx.save(result)

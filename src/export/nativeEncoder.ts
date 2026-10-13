@@ -24,6 +24,7 @@ import {
   type VideoEncodeSession,
 } from './encoder'
 import { DEFAULT_ENCODING, VIDEO_CODEC_CHOICES, type VideoCodecChoice } from './schedule'
+import { t } from '../i18n'
 
 export type Invoke = (command: string, args?: InvokeArgs, options?: InvokeOptions) => Promise<unknown>
 
@@ -145,10 +146,10 @@ export async function createNativeVideoEncoder(
   invoke: Invoke = tauriInvoke,
 ): Promise<VideoEncodeSession> {
   const { width, height, fps, destination, audio, encoding, transparent = false } = options
-  if (!destination?.path) throw new Error("Le film doit être écrit sur le disque : choisissez où l'enregistrer.")
+  if (!destination?.path) throw new Error(t('export.native.needsDisk'))
   // created with `compositorAttributes` by the export: this returns that context
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error("Impossible de lire l'image de composition.")
+  if (!ctx) throw new Error(t('errors.compositionImage'))
   // the overlay alone is always WebM (video.rs), whatever the name
   const codec = transparent ? NATIVE_WEBM_CODEC : nativeCodecFor(destination.path)
   // ffmpeg aims at the same target bitrate as WebCodecs (`-b:v`, with a ceiling), so a setting means the same everywhere

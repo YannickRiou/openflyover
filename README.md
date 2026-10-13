@@ -38,6 +38,10 @@ Strava import goes through your own Strava application). Your files stay on your
 terrain, imagery, weather and landmarks from open services. It runs as a **static website** or as a Windows, macOS or
 Linux **desktop application** (Tauri), from the same code.
 
+The interface and the texts of the films are available in **French** and **English**: pick the language with the flag
+button of the top bar (next to « ? »). The first run follows the browser's language (English, else French) and the choice is
+remembered on the device. The [user guide](docs/user-guide.html) is in French.
+
 ![The interface: top bar, tabs on the left, 3D view of the Tour du Mont-Blanc, timeline at the bottom](docs/images/interface.jpg)
 
 | Area | Features |
@@ -84,7 +88,7 @@ npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:5173> and click "Essayer avec l'exemple" (try with the sample).
+Open <http://127.0.0.1:5173> and click "Try the sample" ("Essayer avec l'exemple" in French).
 
 To test the production build: `npm run build`, then `npm run preview` (<http://localhost:4173>).
 
@@ -200,7 +204,7 @@ video description.
 Conventions:
 
 - Strict TypeScript, with `import type` and no `enum`.
-- Interface in French.
+- Interface in French and English (`src/i18n`, see "Internationalisation" in [`ARCHITECTURE.md`](ARCHITECTURE.md)): no text in the code, every string goes through `t('domain.key')` and has a French and an English message.
 - Visual identity in [`src/ui/theme.css`](src/ui/theme.css).
 - Open, keyless sources only; any new source goes into `src/terrain/sources.ts` and `docs/sources.md`.
 - Types, lint and tests green before each commit, one commit per feature.

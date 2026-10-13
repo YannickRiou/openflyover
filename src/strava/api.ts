@@ -8,6 +8,7 @@
  * calls `fetch`.
  */
 import { getPlatform } from '../platform'
+import { t } from '../i18n'
 
 export const STRAVA_AUTHORIZE_URL = 'https://www.strava.com/oauth/authorize'
 export const STRAVA_TOKEN_URL = 'https://www.strava.com/oauth/token'
@@ -115,13 +116,13 @@ export function callbackDomain(hostname: string, isDesktop: boolean): string {
 
 /** The authorization code of Strava's redirect (`?state=…&code=…&scope=…`, or `?error=access_denied`). */
 export function parseCallback(params: URLSearchParams, expectedState: string): string {
-  if (params.get('state') !== expectedState) throw new Error('Réponse de Strava inattendue : recommencez la connexion.')
-  if (params.get('error') === 'access_denied') throw new Error('Autorisation refusée sur Strava.')
+  if (params.get('state') !== expectedState) throw new Error(t('strava.error.unexpected'))
+  if (params.get('error') === 'access_denied') throw new Error(t('strava.error.denied'))
   const code = params.get('code')
-  if (!code) throw new Error('Réponse de Strava inattendue : recommencez la connexion.')
+  if (!code) throw new Error(t('strava.error.unexpected'))
   const scopes = (params.get('scope') ?? '').split(/[ ,]/)
   if (!scopes.includes('activity:read_all') && !scopes.includes('activity:read')) {
-    throw new Error('Strava n’autorise pas la lecture de vos activités : reconnectez-vous en la laissant cochée.')
+    throw new Error(t('strava.error.scope'))
   }
   return code
 }
@@ -134,7 +135,7 @@ export function needsRefresh(tokens: Pick<StravaTokens, 'expiresAt'>, nowMs: num
 export function tokensFromResponse(json: unknown, previousAthlete = ''): StravaTokens {
   const r = (json ?? {}) as { access_token?: unknown; refresh_token?: unknown; expires_at?: unknown; athlete?: { firstname?: unknown; lastname?: unknown } }
   if (typeof r.access_token !== 'string' || typeof r.refresh_token !== 'string' || typeof r.expires_at !== 'number') {
-    throw new Error('Réponse de Strava incomplète.')
+    throw new Error(t('strava.error.incomplete'))
   }
   const names = [r.athlete?.firstname, r.athlete?.lastname].filter((n): n is string => typeof n === 'string' && n !== '')
   return {
@@ -151,17 +152,17 @@ export function tokensFromResponse(json: unknown, previousAthlete = ''): StravaT
  */
 export function stravaError(status: number, body: unknown, endpoint: 'token' | 'api'): Error {
   if (status === 429) {
-    return new Error('Strava limite les requêtes (100 par quart d’heure, 1 000 par jour) : réessayez dans un quart d’heure.')
+    return new Error(t('strava.error.limit'))
   }
   if (endpoint === 'token' && (status === 400 || status === 401)) {
     const resource = (body as { errors?: { resource?: unknown }[] } | null)?.errors?.[0]?.resource
-    if (resource === 'Application') return new Error('Client ID ou Client Secret refusé par Strava : vérifiez-les sur strava.com/settings/api.')
-    return new StravaAuthError('Autorisation Strava expirée : reconnectez-vous.')
+    if (resource === 'Application') return new Error(t('strava.error.application'))
+    return new StravaAuthError(t('strava.error.expired'))
   }
-  if (status === 401) return new StravaAuthError('Accès à Strava refusé ou retiré : reconnectez-vous.')
-  if (status === 403) return new Error('Strava refuse l’accès à cette activité.')
-  if (status === 404) return new Error('Activité introuvable sur Strava.')
-  return new Error(`Strava ne répond pas comme prévu (HTTP ${status}).`)
+  if (status === 401) return new StravaAuthError(t('strava.error.revoked'))
+  if (status === 403) return new Error(t('strava.error.forbidden'))
+  if (status === 404) return new Error(t('strava.error.notFound'))
+  return new Error(t('strava.error.http', { status }))
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +213,7 @@ async function request(url: string, init: RequestInit, endpoint: 'token' | 'api'
     response = await fetch(url, init)
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new Error('Strava est injoignable : vérifiez la connexion internet.')
+    throw new Error(t('strava.error.unreachable'))
   }
   const body: unknown = await response.json().catch(() => null)
   if (response.ok) return body
@@ -236,7 +237,7 @@ export async function connect(app: StravaApp, code: string): Promise<StravaToken
 async function accessToken(): Promise<string> {
   const tokens = loadTokens()
   const app = loadApp()
-  if (!tokens || !app) throw new StravaAuthError('Connectez-vous à Strava.')
+  if (!tokens || !app) throw new StravaAuthError(t('strava.error.connect'))
   if (!needsRefresh(tokens, Date.now())) return tokens.accessToken
   const renewed = tokensFromResponse(await requestTokens(app, { refreshToken: tokens.refreshToken }), tokens.athlete)
   saveTokens(renewed)

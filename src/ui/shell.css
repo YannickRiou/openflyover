@@ -1369,6 +1369,37 @@
   opacity: 0.45;
 }
 
+/* Language picker, after « ? » (LanguageMenu.tsx): flag and code, then the list of the languages */
+.lang-menu {
+  position: relative;
+}
+
+.lang-menu__button {
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.lang-menu__flag {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.lang-menu__list {
+  min-width: 160px;
+}
+
+.lang-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lang-menu__item[aria-checked='true'] {
+  background: rgb(255 255 255 / 0.16);
+}
+
 /* Status strip --------------------------------------------------------------- */
 .status {
   display: flex;

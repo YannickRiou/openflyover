@@ -276,6 +276,13 @@ describe('parseShellPrefs', () => {
 })
 
 describe('parsePreferences', () => {
+  it('reads the language, French for anything that is not a known one', () => {
+    expect(parsePreferences('{"language":"en"}').language).toBe('en')
+    expect(parsePreferences('{"language":"de"}').language).toBe('fr')
+    expect(parsePreferences('{"language":3}').language).toBe('fr')
+    expect(parsePreferences('{}').language).toBe('fr')
+  })
+
   it('reads each preference, defaults for anything missing, unknown or malformed', () => {
     expect(parsePreferences(null)).toEqual(DEFAULT_PREFERENCES)
     expect(parsePreferences('{')).toEqual(DEFAULT_PREFERENCES)
@@ -287,6 +294,7 @@ describe('parsePreferences', () => {
       timelineClock: true,
       timelineMagnet: true,
       appearance: DEFAULT_PREFERENCES.appearance,
+      language: 'fr',
     })
     expect(parsePreferences('{"timelineMagnet":false}').timelineMagnet).toBe(false)
     expect(parsePreferences('{"timelineMagnet":"non"}').timelineMagnet).toBe(true)

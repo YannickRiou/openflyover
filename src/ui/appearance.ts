@@ -5,6 +5,7 @@
  * variants themselves are in `theme.css` and `appearance.css`. The 3D view and the film overlay are not concerned.
  */
 import { isRecord } from '../core/guards'
+import { t } from '../i18n'
 
 export const THEMES = ['light', 'dark', 'system'] as const
 export type Theme = (typeof THEMES)[number]
@@ -25,23 +26,23 @@ export const DEFAULT_APPEARANCE: Appearance = { theme: 'light', accent: '#b9391f
 
 /** Accent colours offered beside the free picker; each keeps white text at 4.5:1 or more as it is. */
 export const ACCENT_PRESETS: readonly { color: string; label: string }[] = [
-  { color: '#b9391f', label: 'Rouge balisage' },
-  { color: '#2f6a8a', label: 'Bleu glacier' },
-  { color: '#3a6446', label: 'Mousse' },
-  { color: '#8a5700', label: 'Ambre' },
-  { color: '#7a3b69', label: 'Prune' },
-  { color: '#4a55b8', label: 'Indigo' },
-  { color: '#00766f', label: 'Turquoise' },
-  { color: '#4e5c65', label: 'Ardoise' },
+  { color: '#b9391f', get label() { return t('settings.preferences.accent.red') } },
+  { color: '#2f6a8a', get label() { return t('settings.preferences.accent.blue') } },
+  { color: '#3a6446', get label() { return t('settings.preferences.accent.green') } },
+  { color: '#8a5700', get label() { return t('settings.preferences.accent.amber') } },
+  { color: '#7a3b69', get label() { return t('settings.preferences.accent.plum') } },
+  { color: '#4a55b8', get label() { return t('settings.preferences.accent.indigo') } },
+  { color: '#00766f', get label() { return t('settings.preferences.accent.turquoise') } },
+  { color: '#4e5c65', get label() { return t('settings.preferences.accent.slate') } },
 ]
 
 /** Colours offered for the bar and the rail; the secondary text of the bar keeps 4.5:1 on each. */
 export const CHROME_PRESETS: readonly { color: string; label: string }[] = [
-  { color: '#1b2832', label: 'Encre' },
-  { color: '#113b54', label: 'Bleu marine' },
-  { color: '#024442', label: 'Vert sapin' },
-  { color: '#3b1d38', label: 'Prune' },
-  { color: '#2b2f33', label: 'Graphite' },
+  { color: '#1b2832', get label() { return t('settings.preferences.chrome.ink') } },
+  { color: '#113b54', get label() { return t('settings.preferences.chrome.navy') } },
+  { color: '#024442', get label() { return t('settings.preferences.chrome.pine') } },
+  { color: '#3b1d38', get label() { return t('settings.preferences.chrome.plum') } },
+  { color: '#2b2f33', get label() { return t('settings.preferences.chrome.graphite') } },
 ]
 
 // ---------------------------------------------------------------------------

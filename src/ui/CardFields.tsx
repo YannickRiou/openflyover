@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { TITLE_CARD_ID } from '../film/cards'
+import { useT } from '../i18n'
 import type { CardId } from '../film/cards'
 import { END_CREDITS_MAX, END_START_MAX, END_START_MIN, TITLE_END_MAX, TITLE_END_MIN } from '../overlay/settings'
 import type { EndCardSettings, TitleCardSettings } from '../overlay/settings'
@@ -15,6 +16,7 @@ import { RangeField, TextField } from './PanelSection'
  * They are the settings of the overlay (`overlay.title`, `overlay.end`): the switch is the panel's.
  */
 export function CardFields({ card }: { card: CardId }) {
+  const t = useT()
   const id = useId()
   const overlay = useAppStore((s) => s.settings.overlay)
   const trackName = useAppStore((s) => s.tracks[0]?.name)
@@ -22,27 +24,27 @@ export function CardFields({ card }: { card: CardId }) {
   const hasWeather = useWeatherStore((s) => s.series !== null)
   const setTitle = (patch: Partial<TitleCardSettings>) => useAppStore.getState().setSetting('overlay', { ...overlay, title: { ...overlay.title, ...patch } })
   const setEnd = (patch: Partial<EndCardSettings>) => useAppStore.getState().setSetting('overlay', { ...overlay, end: { ...overlay.end, ...patch } })
-  const placeholder = trackName ?? 'Nom de la trace'
+  const placeholder = trackName ?? t('inspector.card.trackName')
 
   if (card === TITLE_CARD_ID) {
     const { title } = overlay
     return (
       <>
-        <TextField label="Titre" value={title.title} placeholder={placeholder} onChange={(value) => setTitle({ title: value })} />
-        <TextField label="Sous-titre" value={title.subtitle} placeholder="Lieu, occasion…" onChange={(subtitle) => setTitle({ subtitle })} />
+        <TextField label={t('inspector.card.title')} value={title.title} placeholder={placeholder} onChange={(value) => setTitle({ title: value })} />
+        <TextField label={t('inspector.card.subtitle')} value={title.subtitle} placeholder={t('inspector.card.subtitlePlaceholder')} onChange={(subtitle) => setTitle({ subtitle })} />
         <label className="checkbox">
           <input type="checkbox" checked={title.showDate && hasTime} disabled={!hasTime} onChange={(e) => setTitle({ showDate: e.currentTarget.checked })} />
-          Date de la sortie
+          {t('inspector.card.showDate')}
         </label>
         <WidgetPosition widget="title" />
         <SizeField value={title.size} onChange={(size) => setTitle({ size })} />
         <RangeField
-          label="Durée d'affichage"
+          label={t('inspector.card.duration')}
           min={TITLE_END_MIN}
           max={TITLE_END_MAX}
           step={0.01}
           value={title.end}
-          format={(v) => `${formatPercent(v)} du survol`}
+          format={(v) => t('inspector.card.ofFlyover', { value: formatPercent(v) })}
           onChange={(end) => setTitle({ end })}
         />
         <WidgetStyleOverrides widget="title" />
@@ -53,35 +55,35 @@ export function CardFields({ card }: { card: CardId }) {
   const { end } = overlay
   return (
     <>
-      <TextField label="Titre" value={end.title} placeholder={placeholder} onChange={(title) => setEnd({ title })} />
+      <TextField label={t('inspector.card.title')} value={end.title} placeholder={placeholder} onChange={(title) => setEnd({ title })} />
       <label className="checkbox">
         <input type="checkbox" checked={end.showWeather && hasWeather} disabled={!hasWeather} onChange={(e) => setEnd({ showWeather: e.currentTarget.checked })} />
-        Météo de la sortie
+        {t('inspector.card.showWeather')}
       </label>
       <div className="field">
         <label className="field__label" htmlFor={`${id}-credits`}>
-          Générique
+          {t('inspector.card.credits')}
         </label>
         <textarea
           id={`${id}-credits`}
           className="input input--multiline"
           rows={4}
           maxLength={END_CREDITS_MAX}
-          placeholder={'Une ligne par nom\nMusique : …'}
+          placeholder={t('inspector.card.creditsPlaceholder')}
           value={end.credits ?? ''}
           onChange={(e) => setEnd({ credits: e.currentTarget.value || undefined })}
         />
-        <p className="field__hint">Rempli, il défile sous la carte jusqu’à la fin du film, centré.</p>
+        <p className="field__hint">{t('inspector.card.creditsHint')}</p>
       </div>
       <WidgetPosition widget="end" />
       <SizeField value={end.size} onChange={(size) => setEnd({ size })} />
       <RangeField
-        label="Apparition"
+        label={t('inspector.card.appearance')}
         min={END_START_MIN}
         max={END_START_MAX}
         step={0.01}
         value={end.start}
-        format={(v) => `à ${formatPercent(v)} du survol`}
+        format={(v) => t('inspector.card.atOfFlyover', { value: formatPercent(v) })}
         onChange={(start) => setEnd({ start })}
       />
       <WidgetStyleOverrides widget="end" />

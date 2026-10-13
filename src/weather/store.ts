@@ -9,6 +9,7 @@ import type { Track } from '../core/types'
 import { buildTrackPath } from '../flyover/path'
 import { WeatherError, fetchOutingWeather } from './openMeteo'
 import type { WeatherSeries } from './series'
+import { t } from '../i18n'
 
 export type WeatherStatus = 'idle' | 'loading' | 'ready' | 'unavailable' | 'error'
 
@@ -69,7 +70,7 @@ export function syncWeather(
   if (startTime === null) {
     useWeatherStore.setState({
       status: 'unavailable',
-      message: 'Trace non horodatée : prévoyez la sortie (liste des traces) pour dater la météo.',
+      message: t('weather.store.untimed'),
       series: null,
       trackId: track.id,
       startTime,
@@ -90,7 +91,7 @@ export function syncWeather(
       if (controller !== ctrl) return
       controller = null
       if (e instanceof WeatherError) useWeatherStore.setState({ status: e.kind, message: e.message })
-      else useWeatherStore.setState({ status: 'error', message: 'Erreur inattendue en chargeant la météo.' })
+      else useWeatherStore.setState({ status: 'error', message: t('weather.store.unexpected') })
     },
   )
 }
