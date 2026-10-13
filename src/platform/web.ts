@@ -7,6 +7,7 @@ import { droppedFiles, isAppleMobile, keyValueStore, mimeTypeOf, pickerAccept, p
 import type { Capabilities, DocumentOutcome, FileTarget, OpenFilesOptions, Platform, SaveDocumentOptions, SaveFileOptions, SaveOutcome, WritableFile } from './platform'
 import { createProjectLibrary, createWebLibraryFiles } from './projectLibrary'
 import { createWebTileCache } from './tileCache'
+import { t } from '../i18n'
 
 /** The part of File System Access used here (not in the DOM typings yet). */
 type SaveFilePicker = (options: {
@@ -111,7 +112,7 @@ async function openWithHandles(picker: OpenFilePicker, { filters, multiple = fal
 /** Save picker, then a writable stream: Chrome writes to a temporary file, moved in place on close. */
 async function createWritableFile(options: SaveFileOptions): Promise<WritableFile | null> {
   const picker = (globalThis as { showSaveFilePicker?: SaveFilePicker }).showSaveFilePicker
-  if (!picker) throw new Error("Ce navigateur ne sait pas écrire directement sur le disque.")
+  if (!picker) throw new Error(t('platform.error.diskWrite'))
   let handle: Awaited<ReturnType<SaveFilePicker>>
   try {
     // called before any await: the picker needs the user's click

@@ -16,6 +16,7 @@ import { isValidMarkerLook } from './markerKeys'
 import type { FilmMarkerKey } from './markerKeys'
 import { FILM_PARAMS, PARAM_SPECS } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
+import { t } from '../i18n'
 
 export const SHOT_STYLES = ['aucune', 'descente', 'saut', 'situation', 'balayage'] as const
 /**
@@ -33,10 +34,10 @@ export const SHOT_TRANSITIONS = ['enchaine', 'coupe', 'fondu-noir', 'fondu-blanc
  */
 export type ShotTransition = (typeof SHOT_TRANSITIONS)[number]
 export const SHOT_TRANSITION_LABELS: Record<ShotTransition, string> = {
-  enchaine: 'Enchaîné',
-  coupe: 'Coupe',
-  'fondu-noir': 'Fondu au noir',
-  'fondu-blanc': 'Fondu au blanc',
+  get enchaine() { return t('film.shotTransition.enchaine') },
+  get coupe() { return t('film.shotTransition.coupe') },
+  get 'fondu-noir'() { return t('film.shotTransition.fondu-noir') },
+  get 'fondu-blanc'() { return t('film.shotTransition.fondu-blanc') },
 }
 
 export interface FilmShot {
@@ -97,7 +98,10 @@ export const SITUATION_HEADINGS = ['libre', 'boussole'] as const
  * during the move); 'boussole', looking toward `bearingDeg` (0: north up).
  */
 export type SituationHeading = (typeof SITUATION_HEADINGS)[number]
-export const SITUATION_HEADING_LABELS: Record<SituationHeading, string> = { libre: 'Libre', boussole: 'Boussole' }
+export const SITUATION_HEADING_LABELS: Record<SituationHeading, string> = {
+  get libre() { return t('film.situationHeading.libre') },
+  get boussole() { return t('film.situationHeading.boussole') },
+}
 /**
  * Framing of the region view of a 'situation' shot (flyover/filmCamera.ts `regionView`): tilt from the vertical
  * (default 90° − REGION_PITCH_DEG), distance in km (default: fitted to the region or the track, see « Hauteur »),
@@ -115,7 +119,10 @@ export const SITUATION_HEADROOM_RANGE = { min: 0, max: 30, step: 1 } as const
 export const START_HEIGHTS = ['region', 'pays'] as const
 /** Height of the region view of a 'situation' shot (flyover/filmCamera.ts `regionDistanceM`). */
 export type StartHeight = (typeof START_HEIGHTS)[number]
-export const START_HEIGHT_LABELS: Record<StartHeight, string> = { region: 'Région', pays: 'Pays' }
+export const START_HEIGHT_LABELS: Record<StartHeight, string> = {
+  get region() { return t('film.startHeight.region') },
+  get pays() { return t('film.startHeight.pays') },
+}
 
 /** The film opens or closes on a 'situation' shot that highlights the region (osm/region.ts is then asked for it). */
 export function highlightsRegion(film: Pick<Film, 'opening' | 'closing'>): boolean {
@@ -150,7 +157,12 @@ export const STOP_CAMERAS = ['film', 'orbite', 'large', 'fixe'] as const
  * up and comes back; 'fixe': the framing holds, the motion of the orbit and cinema styles too.
  */
 export type StopCamera = (typeof STOP_CAMERAS)[number]
-export const STOP_CAMERA_LABELS: Record<StopCamera, string> = { film: 'Comme le film', orbite: 'Tour lent', large: 'Vue large', fixe: 'Fixe' }
+export const STOP_CAMERA_LABELS: Record<StopCamera, string> = {
+  get film() { return t('film.stopCamera.film') },
+  get orbite() { return t('film.stopCamera.orbite') },
+  get large() { return t('film.stopCamera.large') },
+  get fixe() { return t('film.stopCamera.fixe') },
+}
 
 export const STOP_SOURCES = ['climb', 'landmark', 'waypoint', 'manual'] as const
 export type StopSourceKind = (typeof STOP_SOURCES)[number]
@@ -282,15 +294,15 @@ export const FADE_RANGE = { min: 0, max: 30, step: 0.5 } as const
 export const POI_ICONS = ['epingle', 'refuge', 'bivouac', 'sommet', 'vue', 'photo', 'drapeau', 'eau', 'repas'] as const
 export type PoiIcon = (typeof POI_ICONS)[number]
 export const POI_ICON_LABELS: Record<PoiIcon, string> = {
-  epingle: 'Épingle',
-  refuge: 'Refuge',
-  bivouac: 'Bivouac',
-  sommet: 'Sommet',
-  vue: 'Point de vue',
-  photo: 'Photo',
-  drapeau: 'Drapeau',
-  eau: 'Eau',
-  repas: 'Repas',
+  get epingle() { return t('landmarks.poiIcon.epingle') },
+  get refuge() { return t('landmarks.poiIcon.refuge') },
+  get bivouac() { return t('landmarks.poiIcon.bivouac') },
+  get sommet() { return t('landmarks.poiIcon.sommet') },
+  get vue() { return t('landmarks.poiIcon.vue') },
+  get photo() { return t('landmarks.poiIcon.photo') },
+  get drapeau() { return t('landmarks.poiIcon.drapeau') },
+  get eau() { return t('landmarks.poiIcon.eau') },
+  get repas() { return t('landmarks.poiIcon.repas') },
 }
 
 export interface FilmPoi {
@@ -366,10 +378,10 @@ export const JUNCTION_KINDS = ['coupe', 'fondu-noir', 'fondu-blanc', 'nuit'] as 
  */
 export type JunctionKind = (typeof JUNCTION_KINDS)[number]
 export const JUNCTION_KIND_LABELS: Record<JunctionKind, string> = {
-  coupe: 'Coupe',
-  'fondu-noir': 'Fondu au noir',
-  'fondu-blanc': 'Fondu au blanc',
-  nuit: 'Nuit',
+  get coupe() { return t('film.junctionKind.coupe') },
+  get 'fondu-noir'() { return t('film.junctionKind.fondu-noir') },
+  get 'fondu-blanc'() { return t('film.junctionKind.fondu-blanc') },
+  get nuit() { return t('film.junctionKind.nuit') },
 }
 /** Time a junction is held on the clock (seconds; also its validity range in a loaded project, 0 is « Coupe »). */
 export const JUNCTION_HOLD_RANGE = { min: 0.5, max: 10, step: 0.1 } as const

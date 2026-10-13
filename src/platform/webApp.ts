@@ -6,6 +6,7 @@
 import { showToast } from '../ui/toast'
 import { getPlatform } from './index'
 import { isAppleMobile, isTauriRuntime } from './platform'
+import { t } from '../i18n'
 
 /** cache where the service worker keeps the files of a share (serviceWorker.js) */
 const SHARE_CACHE = 'openflyover-share'
@@ -17,8 +18,7 @@ const IOS_HINT_DELAY_MS = 4000
 export const UPDATE_CHECK_MS = 60 * 60 * 1000
 export const UPDATE_MIN_GAP_MS = 10 * 60 * 1000
 
-export const UPDATE_TEXT = 'Nouvelle version disponible'
-export const IOS_INSTALL_TEXT = "Pour installer OpenFlyover : touchez Partager, puis « Sur l'écran d'accueil »."
+
 
 /** The service worker runs on the built website over HTTPS (or localhost), never inside Tauri nor in development. */
 export function shouldRegisterServiceWorker(scope: object, production: boolean): boolean {
@@ -42,9 +42,9 @@ function offerUpdate(registration: ServiceWorkerRegistration): void {
   if (!waiting || !navigator.serviceWorker.controller) return
   showToast({
     kind: 'info',
-    text: UPDATE_TEXT,
+    text: t('platform.app.updateAvailable'),
     action: {
-      label: 'Recharger',
+      label: t('platform.app.reload'),
       run: () => {
         navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true })
         waiting.postMessage({ type: 'SKIP_WAITING' })
@@ -134,6 +134,6 @@ export function installWebApp(openShared: (files: File[]) => void): void {
   if (!wantsIosInstallHint(navigator) || storage.get(IOS_HINT_KEY)) return
   setTimeout(() => {
     storage.set(IOS_HINT_KEY, '1')
-    showToast({ kind: 'info', text: IOS_INSTALL_TEXT, action: { label: 'Compris', run: () => undefined } })
+    showToast({ kind: 'info', text: t('platform.app.iosInstall'), action: { label: t('platform.app.gotIt'), run: () => undefined } })
   }, IOS_HINT_DELAY_MS)
 }

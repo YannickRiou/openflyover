@@ -254,6 +254,33 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'langue',
+    title: 'Langue : sélecteur de la barre du haut, anglais, mémorisé, retour au français',
+    async run({ page, url, newPage }) {
+      const pick = async (name) => {
+        await page.click('.lang-menu__button')
+        await page.waitForSelector('[role="menuitemradio"]', { visible: true, timeout: STEP_MS })
+        await page.evaluate((n) => [...document.querySelectorAll('[role="menuitemradio"]')].find((i) => i.textContent.includes(n))?.click(), name)
+      }
+      assert(await page.$eval('html', (el) => el.lang === 'fr'), "la page n'est pas en français au départ")
+      await pick('English')
+      await until(page, () => document.documentElement.lang === 'en' && document.querySelector('[role="group"][aria-label="Shots"]'))
+      const tabs = await page.$$eval('.rail [role="tab"]', (all) => all.map((t) => t.textContent.trim()))
+      assert(tabs.join() === 'Track,Map,Weather,Light,Flyover,Lens,Overlay,Project,Settings', `onglets en anglais : ${tabs.join(', ')}`)
+      assert(await page.$('button.topbar__export::-p-text(Export)'), '« Export » manque dans la barre du haut')
+      // remembered on the device: another page of the same browser starts in English
+      const second = await newPage()
+      try {
+        await second.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
+        await second.waitForSelector('html[lang="en"]', { timeout: STEP_MS })
+      } finally {
+        await second.close()
+      }
+      await pick('Français')
+      await until(page, () => document.documentElement.lang === 'fr' && document.querySelector('[role="group"][aria-label="Plans"]'))
+    },
+  },
+  {
     id: 'diagnostic',
     title: 'Rapport de diagnostic (onglet Réglages) : appareil et réglages, sans nom de trace',
     async run({ page }) {
@@ -998,7 +1025,7 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: 'shell',
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--window-size=1440,900'],
+    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
     defaultViewport: { width: 1440, height: 900 },
     protocolTimeout: EXPORT_MS,
   })
@@ -1014,6 +1041,8 @@ async function main() {
     const newPage = async () => {
       const page = await browser.newPage()
       page.setDefaultTimeout(STEP_MS)
+      // a first run follows the browser's language: the scenarios read the French interface (the headless browser may ignore --lang)
+      await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, 'languages', { get: () => ['fr-FR', 'fr'] }))
       page.on('console', (msg) => {
         // export timings (rendering, waiting for tiles, encoding)
         if (msg.text().startsWith('[export]')) log(`    ${msg.text()}`)

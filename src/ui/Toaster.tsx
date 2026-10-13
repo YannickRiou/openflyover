@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useT } from '../i18n'
 import { Icon } from './icons'
 import type { IconName } from './icons'
 import { dismissToast, toastDuration, useToastStore } from './toast'
@@ -8,6 +9,7 @@ const ICONS: Record<Toast['kind'], IconName> = { success: 'circle-check', info: 
 
 /** One message; success and info close on their own, the timer restarts after hover or focus. */
 function ToastItem({ toast }: { toast: Toast }) {
+  const t = useT()
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
   const sticky = toast.kind === 'error'
@@ -47,8 +49,8 @@ function ToastItem({ toast }: { toast: Toast }) {
       <button
         type="button"
         className="icon-btn toast__close"
-        aria-label="Fermer le message"
-        data-tip="Fermer"
+        aria-label={t('common.closeMessage')}
+        data-tip={t('common.close')}
         data-tip-side="top"
         onClick={() => dismissToast(toast.id)}
       >

@@ -24,6 +24,7 @@ import type { MediaAsset } from './media'
 import { clipHasSound } from './model'
 import type { Film, FilmAudio, FilmMedia, FilmSpeed, FilmStop } from './model'
 import { blobToDataUrl, decodeClipSound } from './video'
+import { t } from '../i18n'
 
 type AudioType = (typeof AUDIO_TYPES)[number]
 
@@ -367,15 +368,15 @@ export function fitFilmToMusic(): { kind: 'success' | 'info'; text: string } {
   const source = getFilmSource()
   const table = useMediaStore.getState().table
   const endS = musicEndS(source.film.audio, (src) => table[src]?.durationS)
-  if (!source.track || !(endS > 0)) return { kind: 'info', text: 'Pas de musique dans le film.' }
+  if (!source.track || !(endS > 0)) return { kind: 'info', text: t('film.audio.noMusic') }
   const totalFor = (durationS: number) => filmClockFor({ ...source, durationS }).totalTime()
   const durationS = durationForFilmEnd(endS, totalFor, source.durationS, FLYOVER_DURATION_RANGE)
   if (durationS !== source.durationS) getSettingsHistory().transaction(() => setFlightTiming({ durationS }))
   const total = totalFor(durationS)
-  if (Math.abs(total - endS) < 0.5) return { kind: 'success', text: `Le film dure maintenant ${formatFilmTime(total)} : il finit avec la musique.` }
+  if (Math.abs(total - endS) < 0.5) return { kind: 'success', text: t('film.audio.fitted', { film: formatFilmTime(total) }) }
   return {
     kind: 'info',
-    text: `Le film dure ${formatFilmTime(total)} et la musique ${formatFilmTime(endS)} : la durée du survol va de ${FLYOVER_DURATION_RANGE.min} s à ${FLYOVER_DURATION_RANGE.max / 60} min.`,
+    text: t('film.error.musicFit', { film: formatFilmTime(total), music: formatFilmTime(endS), min: FLYOVER_DURATION_RANGE.min, max: FLYOVER_DURATION_RANGE.max / 60 }),
   }
 }
 
@@ -394,20 +395,18 @@ const megabytes = (bytes: number) => Math.ceil(bytes / (1024 * 1024))
  */
 export async function readAudio(file: Blob & { name?: string }, name = file.name): Promise<{ asset: MediaAsset }> {
   const type = audioTypeOf({ type: file.type, name })
-  if (!type) throw new Error('format non pris en charge (MP3, M4A, AAC, OGG, Opus, WAV ou FLAC).')
+  if (!type) throw new Error(t('film.error.audioFormat'))
   if (file.size > MAX_AUDIO_BYTES) {
-    throw new Error(
-      `fichier audio trop lourd (${megabytes(file.size)} Mo) : ${megabytes(MAX_AUDIO_BYTES)} Mo au plus, car il est enregistré dans le projet. Préférez un MP3 ou un M4A à un WAV ou un FLAC.`,
-    )
+    throw new Error(t('film.error.audioTooBig', { size: megabytes(file.size), max: megabytes(MAX_AUDIO_BYTES) }))
   }
   let decoded: AudioBuffer
   try {
     decoded = await decodeForAnalysis(await file.arrayBuffer())
   } catch {
-    throw new Error('ce navigateur ne sait pas lire ce fichier audio (essayez un MP3).')
+    throw new Error(t('film.error.audioCannotPlay'))
   }
   const durationS = Math.round(decoded.duration * 1000) / 1000
-  if (!(durationS > 0)) throw new Error('fichier audio vide.')
+  if (!(durationS > 0)) throw new Error(t('film.error.audioEmpty'))
   const channels = channelsOf(decoded)
   const peaks = computePeaks(channels, peakCount(durationS))
   const beats = detectBeats(channels, decoded.sampleRate)
@@ -447,7 +446,7 @@ async function musicBeats(src: string): Promise<MusicBeats | undefined> {
  */
 export async function snapFilmToMusic(): Promise<{ kind: 'success' | 'info'; text: string }> {
   const files = [...new Set(getFilmSource().film.audio.map((a) => a.src))]
-  if (files.length === 0) return { kind: 'info', text: 'Pas de musique dans le film.' }
+  if (files.length === 0) return { kind: 'info', text: t('film.audio.noMusic') }
   const found = new Map<string, MusicBeats | undefined>()
   for (const src of files) found.set(src, await musicBeats(src))
 
@@ -455,7 +454,7 @@ export async function snapFilmToMusic(): Promise<{ kind: 'success' | 'info'; tex
   const source = getFilmSource()
   const table = useMediaStore.getState().table
   const beats = filmBeats(source.film.audio, (src) => found.get(src), (clip) => musicLengthS(clip, table[clip.src]?.durationS))
-  if (beats.length === 0) return { kind: 'info', text: 'Rythme de la musique trop incertain : rien n’a été calé.' }
+  if (beats.length === 0) return { kind: 'info', text: t('film.beats.uncertain') }
   const tempos = [...found.values()].flatMap((b) => (b && b.times.length > 0 ? [Math.round(b.bpm)] : []))
   const tempo = `≈ ${[...new Set(tempos)].join(' / ')} BPM`
 
@@ -465,10 +464,10 @@ export async function snapFilmToMusic(): Promise<{ kind: 'success' | 'info'; tex
   const clockOf = (stops: readonly FilmStop[]) => buildFilmClock({ ...input, stops })
   const clockOfSpeeds = (stops: readonly FilmStop[], speeds: readonly FilmSpeed[]) => buildFilmClock({ ...input, stops, speeds })
   const snapped = snapFilmToBeats(film, beats, { clockOf, clockOfSpeeds, lengthM: input.lengthM })
-  if (snapped.moved === 0) return { kind: 'info', text: `Arrêts, titres et portions de vitesse déjà sur le rythme, ou trop loin d’un temps (${tempo}).` }
+  if (snapped.moved === 0) return { kind: 'info', text: t('film.beats.nothingMoved', { tempo }) }
   editFilm(() => ({ film: snapped.film }))
   const n = snapped.moved
-  return { kind: 'success', text: `${n} élément${n > 1 ? 's' : ''} calé${n > 1 ? 's' : ''} sur le rythme (${tempo}).` }
+  return { kind: 'success', text: t('film.beats.aligned', { count: n, tempo }) }
 }
 
 // ---------------------------------------------------------------------------
@@ -538,7 +537,7 @@ export async function mixFilmAudio(
     try {
       buffer = await pending
     } catch {
-      throw new Error(`Musique « ${asset.name ?? entry.src} » illisible pendant l'export.`)
+      throw new Error(t('film.error.musicUnreadableExport', { name: asset.name ?? entry.src }))
     }
     schedule(ctx, musicBus, buffer, entry, entry.fromS)
     heard++
@@ -549,7 +548,7 @@ export async function mixFilmAudio(
     try {
       buffer = await decodeClipSound(asset, entry.fromS, entry.lengthS)
     } catch {
-      throw new Error(`Son de la vidéo « ${asset.name ?? entry.src} » illisible pendant l'export : coupez-le dans l'inspecteur de la vidéo.`)
+      throw new Error(t('film.error.videoSoundUnreadableExport', { name: asset.name ?? entry.src }))
     }
     // a clip without sound track stays silent; its buffer starts at its trim already
     if (!buffer) continue

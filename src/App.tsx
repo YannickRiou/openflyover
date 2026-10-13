@@ -48,6 +48,7 @@ import { StatusBar } from './ui/StatusBar'
 import { Timeline } from './ui/Timeline'
 import { TimelineResizer } from './ui/TimelineResizer'
 import { Toaster } from './ui/Toaster'
+import { t as translate, useT } from './i18n'
 import { showToast } from './ui/toast'
 import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
@@ -65,15 +66,15 @@ const OfflinePanel = lazy(() => import('./ui/OfflinePanel').then((m) => ({ defau
 const FilmInspector = lazy(() => import('./ui/FilmInspector').then((m) => ({ default: m.FilmInspector })))
 
 const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
-  trace: { label: 'Trace', icon: 'route' },
-  carte: { label: 'Carte', icon: 'map' },
-  meteo: { label: 'Météo', icon: 'cloud-sun' },
-  lumiere: { label: 'Lumière', icon: 'sun' },
-  survol: { label: 'Survol', icon: 'video' },
-  objectif: { label: 'Objectif', icon: 'aperture' },
-  habillage: { label: 'Habillage', icon: 'layers' },
-  projet: { label: 'Projet', icon: 'folder' },
-  reglages: { label: 'Réglages', icon: 'sliders-horizontal' },
+  trace: { get label() { return translate('shell.tab.trace') }, icon: 'route' },
+  carte: { get label() { return translate('shell.tab.carte') }, icon: 'map' },
+  meteo: { get label() { return translate('shell.tab.meteo') }, icon: 'cloud-sun' },
+  lumiere: { get label() { return translate('shell.tab.lumiere') }, icon: 'sun' },
+  survol: { get label() { return translate('shell.tab.survol') }, icon: 'video' },
+  objectif: { get label() { return translate('shell.tab.objectif') }, icon: 'aperture' },
+  habillage: { get label() { return translate('shell.tab.habillage') }, icon: 'layers' },
+  projet: { get label() { return translate('shell.tab.projet') }, icon: 'folder' },
+  reglages: { get label() { return translate('shell.tab.reglages') }, icon: 'sliders-horizontal' },
 }
 
 const PREFS_KEY = 'openflyover.shell.v1'
@@ -160,20 +161,21 @@ function SeekShortcuts() {
  * « Modifier » opens its inspector in the half sheet).
  */
 function BlockTools({ onEdit, disabled }: { onEdit(): void; disabled: boolean }) {
+  const t = useT()
   const item = useAppStore((s) => s.filmSelection)
   const shot = useAppStore((s) => (item === 'opening' || item === 'closing' ? s.settings.film[item] : null))
   const clock = useFilmClock()
   if (item === null) return null
   const isStop = clock.stops.some((s) => s.id === item)
   return (
-    <div className="rail block-tools" role="toolbar" aria-label="Élément sélectionné">
+    <div className="rail block-tools" role="toolbar" aria-label={t('shell.blockTools.aria')}>
       <button type="button" className="rail__tab block-tools__done" onClick={() => useAppStore.getState().setFilmSelection(null)}>
         <Icon name="check" size={22} />
-        <span className="rail__label">Terminé</span>
+        <span className="rail__label">{t('common.done')}</span>
       </button>
       <button type="button" className="rail__tab" onClick={onEdit} disabled={disabled}>
         <Icon name="sliders-horizontal" size={22} />
-        <span className="rail__label">Modifier</span>
+        <span className="rail__label">{t('shell.blockTools.edit')}</span>
       </button>
       <button
         type="button"
@@ -182,13 +184,14 @@ function BlockTools({ onEdit, disabled }: { onEdit(): void; disabled: boolean })
         onClick={() => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop }))}
       >
         <Icon name="trash-2" size={22} />
-        <span className="rail__label">{shot ? 'Sans plan' : 'Supprimer'}</span>
+        <span className="rail__label">{shot ? t('inspector.noShot') : t('inspector.remove')}</span>
       </button>
     </div>
   )
 }
 
 export default function App() {
+  const t = useT()
   const hasTracks = useAppStore((s) => s.tracks.length > 0)
   const exportBusy = useExportStore((s) => isExportBusy(s.phase))
   const batchRunning = useBatchStore((s) => s.phase === 'running')
@@ -224,7 +227,7 @@ export default function App() {
   useEffect(
     () =>
       watchOpenedFiles((files) => {
-        if (isExporting()) showToast({ kind: 'info', text: "Un export est en cours : le fichier n'a pas été ouvert." })
+        if (isExporting()) showToast({ kind: 'info', text: translate('shell.exportBusy') })
         else void openFiles(files)
       }, reportOpenFailure),
     [],
@@ -425,7 +428,7 @@ export default function App() {
           <TrackList />
           <TrackStyleSection hidden={!hasTracks} />
           <MarkerSection hidden={!hasTracks} />
-          <PanelSection title="Étiquettes" keys={['labels']} hidden={!hasTracks}>
+          <PanelSection title={t('shell.section.labels')} keys={['labels']} hidden={!hasTracks}>
             <LabelSettings />
           </PanelSection>
         </>
@@ -438,7 +441,7 @@ export default function App() {
       ),
       meteo: (
         <>
-          <PanelSection title="Météo de la sortie" keys={['weather']} hidden={!hasTracks}>
+          <PanelSection title={t('shell.section.weather')} keys={['weather']} hidden={!hasTracks}>
             <WeatherPanel />
           </PanelSection>
           <WeatherSettings />
@@ -456,7 +459,7 @@ export default function App() {
       projet: (
         <>
           <ProjectPanel />
-          <PanelSection title="Hors ligne" hidden={!hasTracks}>
+          <PanelSection title={t('shell.section.offline')} hidden={!hasTracks}>
             <Suspense>
               <OfflinePanel />
             </Suspense>
@@ -471,7 +474,8 @@ export default function App() {
         </Stage>
       ),
     }),
-    [hasTracks],
+    // `t`: the titles passed down are worded here, the panels render again on their own
+    [hasTracks, t],
   )
   // the landscape phone timeline folds under a sheet; the portrait one stays (the sheet lies over it)
   const sheetOpen = (!shell.collapsed || shell.dockOpen) && !phone
@@ -499,8 +503,8 @@ export default function App() {
 
       <div className={shell.collapsed ? 'shell__body shell__body--collapsed' : 'shell__body'}>
         {/* portrait phone: a selected block's actions take the place of the tab bar */}
-        <nav className="rail" aria-label="Panneaux" hidden={phone && shell.inspecting}>
-          <div className="rail__tabs" role="tablist" aria-label="Panneaux de réglages" aria-orientation="vertical">
+        <nav className="rail" aria-label={t('shell.rail.aria')} hidden={phone && shell.inspecting}>
+          <div className="rail__tabs" role="tablist" aria-label={t('shell.rail.tablist')} aria-orientation="vertical">
             {tabs.map((tab, i) => {
               const selected = shell.tab === tab
               return (
@@ -536,8 +540,8 @@ export default function App() {
             disabled={exporting}
             aria-expanded={!shell.collapsed}
             aria-controls="side-panel"
-            aria-label={shell.collapsed ? 'Déplier le panneau' : 'Replier le panneau'}
-            data-tip={withShortcut(shell.collapsed ? 'Déplier le panneau' : 'Replier le panneau', 'toggle-panel')}
+            aria-label={shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse')}
+            data-tip={withShortcut(shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse'), 'toggle-panel')}
             data-tip-side="right"
           >
             <Icon name={shell.collapsed ? 'panel-left-open' : 'panel-left-close'} />
@@ -546,7 +550,7 @@ export default function App() {
 
         {/* every tab stays mounted: weather, landmarks and export have side effects */}
         {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
-        <aside id="side-panel" className="panel" aria-label="Réglages" hidden={shell.collapsed} inert={exporting}>
+        <aside id="side-panel" className="panel" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
           <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
           {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
         </aside>
@@ -557,15 +561,15 @@ export default function App() {
           {timeline}
         </main>
 
-        <aside id="export-dock" className="dock" aria-label="Export" hidden={!shell.dockOpen}>
+        <aside id="export-dock" className="dock" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
           <SheetHandle onClose={() => !exporting && dispatch({ type: 'close-dock' })} />
-          <Suspense fallback={<p className="field__hint">Chargement…</p>}>
+          <Suspense fallback={<p className="field__hint">{t('shell.loading')}</p>}>
             {dockMounted && <ExportPanel onClose={exporting ? undefined : () => dispatch({ type: 'close-dock' })} />}
           </Suspense>
         </aside>
         {phone && shell.inspecting && <BlockTools disabled={exporting} onEdit={() => dispatch({ type: 'edit', open: true })} />}
         {/* the export drawer goes first; on a portrait phone the inspector waits for « Modifier » */}
-        <aside className="dock" aria-label="Inspecteur" hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
+        <aside className="dock" aria-label={t('shell.dock.inspector')} hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
           <SheetHandle onClose={() => dispatch({ type: 'edit', open: false })} />
           {shell.inspecting && !shell.dockOpen && (!phone || shell.editing) && (
             <Suspense>
@@ -583,8 +587,8 @@ export default function App() {
         <div className="drop-veil" aria-hidden="true">
           <div className="drop-veil__box">
             <Icon name="upload" size={32} />
-            <p className="drop-veil__title">Déposez vos traces GPX ou FIT</p>
-            <p className="drop-veil__hint">ou un projet .opnflvr</p>
+            <p className="drop-veil__title">{t('shell.drop.title')}</p>
+            <p className="drop-veil__hint">{t('shell.drop.hint')}</p>
           </div>
         </div>
       )}

@@ -7,6 +7,8 @@
 import { smootherstep } from '../core/math'
 import { GRADING_RANGES, type GradingValues } from '../scene/grading'
 import type { Film } from './model'
+import { t } from '../i18n'
+import { formatNumberIntl } from '../i18n/format'
 
 /** The parameters a key can drive (closed list). */
 export const FILM_PARAMS = ['speed', 'exposure', 'sunHour', 'saturation', 'contrast', 'warmth', 'vignette', 'labels'] as const
@@ -30,42 +32,75 @@ export interface ParamSpec {
   format(value: number): string
 }
 
-const comma = (n: number, digits: number) => n.toFixed(digits).replace('.', ',')
-const signed = (n: number) => `${n > 0 ? '+' : ''}${comma(n, 2)}`
-const gradingSpec = (label: string, key: keyof GradingValues): ParamSpec => ({ label, ...GRADING_RANGES[key], format: signed })
+const signed = (n: number, digits = 2) => `${n > 0 ? '+' : ''}${formatNumberIntl(n, digits)}`
+const gradingSpec = (label: () => string, key: keyof GradingValues): ParamSpec => ({
+  get label() {
+    return label()
+  },
+  ...GRADING_RANGES[key],
+  format: signed,
+})
 
 /**
  * Label, range (also the validity range of a loaded project) and display of each parameter. The ranges of the
  * settings they replace: `exposureEv` ±4 EV, `sunHour` 0–24 h of solar time, the grading sliders, `SPEED_FACTOR_RANGE`.
  */
 export const PARAM_SPECS: Record<FilmParam, ParamSpec> = {
-  speed: { label: 'Vitesse', min: 0.25, max: 4, step: 0.05, log: true, format: (v) => `×${comma(v, 2).replace(/,?0+$/, '')}` },
-  exposure: { label: 'Exposition', min: -4, max: 4, step: 0.1, format: (v) => `${v > 0 ? '+' : ''}${comma(v, 1)} IL` },
+  speed: {
+    get label() {
+      return t('film.param.speed')
+    },
+    min: 0.25,
+    max: 4,
+    step: 0.05,
+    log: true,
+    format: (v) => `×${formatNumberIntl(v, 2, 0)}`,
+  },
+  exposure: {
+    get label() {
+      return t('film.param.exposure')
+    },
+    min: -4,
+    max: 4,
+    step: 0.1,
+    format: (v) => t('film.param.exposureValue', { value: signed(v, 1) }),
+  },
   sunHour: {
-    label: 'Soleil (heure)',
+    get label() {
+      return t('film.param.sunHour')
+    },
     min: 0,
     max: 24,
     step: 0.25,
-    format: (v) => `${Math.floor(Math.round(v * 60) / 60)} h ${String(Math.round(v * 60) % 60).padStart(2, '0')}`,
+    format: (v) =>
+      t('film.param.sunHourValue', { hours: Math.floor(Math.round(v * 60) / 60), minutes: String(Math.round(v * 60) % 60).padStart(2, '0') }),
   },
-  saturation: gradingSpec('Saturation', 'saturation'),
-  contrast: gradingSpec('Contraste', 'contrast'),
-  warmth: gradingSpec('Température', 'warmth'),
-  vignette: gradingSpec('Vignettage', 'vignette'),
+  saturation: gradingSpec(() => t('film.param.saturation'), 'saturation'),
+  contrast: gradingSpec(() => t('film.param.contrast'), 'contrast'),
+  warmth: gradingSpec(() => t('film.param.warmth'), 'warmth'),
+  vignette: gradingSpec(() => t('film.param.vignette'), 'vignette'),
   // opacity of the 3D labels: 0 hides them, 1 shows them (what they are without a key)
-  labels: { label: 'Étiquettes', min: 0, max: 1, step: 0.05, format: (v) => `${Math.round(v * 100)} %` },
+  labels: {
+    get label() {
+      return t('film.param.labels')
+    },
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => t('film.param.percentValue', { value: Math.round(v * 100) }),
+  },
 }
 
 /** Names of the timeline lanes, one per keyed parameter (shorter than the labels of `PARAM_SPECS`). */
 export const PARAM_LANE_LABELS: Record<FilmParam, string> = {
-  speed: 'Vitesse',
-  exposure: 'Exposition',
-  sunHour: 'Soleil',
-  saturation: 'Saturation',
-  contrast: 'Contraste',
-  warmth: 'Température',
-  vignette: 'Vignettage',
-  labels: 'Étiquettes',
+  get speed() { return t('film.lane.speed') },
+  get exposure() { return t('film.lane.exposure') },
+  get sunHour() { return t('film.lane.sunHour') },
+  get saturation() { return t('film.lane.saturation') },
+  get contrast() { return t('film.lane.contrast') },
+  get warmth() { return t('film.lane.warmth') },
+  get vignette() { return t('film.lane.vignette') },
+  get labels() { return t('film.lane.labels') },
 }
 
 /** The keys of one parameter among `keys` (the film's or the clock's: any key with a `param`), in their order. */

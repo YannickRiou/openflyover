@@ -7,6 +7,7 @@
  */
 import type { Track, TrackPoint } from '../core/types'
 import { cumulativeDistances } from '../geo/lonLat'
+import { t } from '../i18n'
 
 export const TRACK_COLOR_MODES = [
   'none',
@@ -51,13 +52,13 @@ export interface MetricInfo {
 }
 
 export const TRACK_METRICS: Record<TrackMetric, MetricInfo> = {
-  speed: { label: 'Vitesse', unit: 'km/h', fractionDigits: 1, colormap: VIRIDIS },
-  slope: { label: 'Pente', unit: '%', fractionDigits: 0, colormap: VIRIDIS },
-  elevation: { label: 'Altitude', unit: 'm', fractionDigits: 0, colormap: VIRIDIS },
-  heartRate: { label: 'Fréquence cardiaque', unit: 'bpm', fractionDigits: 0, colormap: MAGMA },
-  cadence: { label: 'Cadence', unit: 'tr/min', fractionDigits: 0, colormap: VIRIDIS },
-  power: { label: 'Puissance', unit: 'W', fractionDigits: 0, colormap: MAGMA },
-  temperature: { label: 'Température', unit: '°C', fractionDigits: 0, colormap: MAGMA },
+  speed: { get label() { return t('track.metric.speed') }, unit: 'km/h', fractionDigits: 1, colormap: VIRIDIS },
+  slope: { get label() { return t('track.metric.slope') }, unit: '%', fractionDigits: 0, colormap: VIRIDIS },
+  elevation: { get label() { return t('track.metric.elevation') }, unit: 'm', fractionDigits: 0, colormap: VIRIDIS },
+  heartRate: { get label() { return t('track.metric.heartRate') }, unit: 'bpm', fractionDigits: 0, colormap: MAGMA },
+  cadence: { get label() { return t('track.metric.cadence') }, get unit() { return t('track.metric.cadenceUnit') }, fractionDigits: 0, colormap: VIRIDIS },
+  power: { get label() { return t('track.metric.power') }, unit: 'W', fractionDigits: 0, colormap: MAGMA },
+  temperature: { get label() { return t('track.metric.temperature') }, unit: '°C', fractionDigits: 0, colormap: MAGMA },
 }
 
 /**

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { _roots, addAfterEffect } from '@react-three/fiber'
+import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
 import { useLandmarkStore, useWaterStore } from '../osm/store'
 import { overlayCredits } from '../overlay/data'
@@ -29,11 +30,6 @@ import type { PerfItem } from './shell'
 
 /** Performance readout refresh. */
 const PERF_INTERVAL_MS = 1000
-
-/** French plural: zero and one take the singular. */
-function plural(count: number, singular: string, pluralForm: string): string {
-  return count > 1 ? pluralForm : singular
-}
 
 /** Map state from the terrain stats, re-read when a load reaches its display delay. */
 function useMapStatus(): MapStatus {
@@ -132,6 +128,7 @@ function ProgressRing({ value }: { value: number }) {
 
 /** One fetch: spinner while loading, check once loaded, attention colour (focusable, for its message) on error. */
 function Chip({ chip }: { chip: FetchChip }) {
+  const t = useT()
   const attention = chip.tone === 'attention'
   return (
     <span className={`status__chip status__chip--${chip.tone}`} data-tip={chip.tip} data-tip-side="top" tabIndex={attention ? 0 : undefined}>
@@ -141,13 +138,14 @@ function Chip({ chip }: { chip: FetchChip }) {
         <Icon name={chip.tone === 'ready' ? 'circle-check' : 'circle-alert'} size={12} />
       )}
       {chip.label}
-      <span className="visually-hidden"> : {chip.tip}</span>
+      <span className="visually-hidden">{t('status.chipSr', { tip: chip.tip })}</span>
     </span>
   )
 }
 
 /** Weather, landmarks, region and water fetches, as chosen in « Réglages » (nothing while idle). */
 function FetchChips() {
+  useT()
   const shown = usePreferences((s) => s.status)
   // primitives only: a selector returning a new object on every call makes the store re-render forever
   const weatherStatus = useWeatherStore((s) => s.status)
@@ -179,6 +177,7 @@ function FetchChips() {
  * be announced by screen readers.
  */
 export function StatusBar() {
+  const t = useT()
   const map = useMapStatus()
   const loading = useAppStore((s) => s.loading)
   const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
@@ -209,31 +208,31 @@ export function StatusBar() {
           {map.shown === 'loading' ? (
             <span
               className="status__map-state status__map-state--loading"
-              title="Relief et imagerie de la vue actuelle"
+              title={t('status.mapTip')}
               role="progressbar"
-              aria-label="Chargement de la carte"
+              aria-label={t('status.mapLoading')}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(map.progress * 100)}
             >
               <ProgressRing value={map.progress} />
-              Carte · {formatPercent(map.progress)}
+              {t('status.map', { value: formatPercent(map.progress) })}
             </span>
           ) : (
-            <span className="status__map-state status__map-state--ready" title="Toutes les tuiles de la vue actuelle sont chargées">
+            <span className="status__map-state status__map-state--ready" title={t('status.mapReadyTip')}>
               <Icon name="circle-check" size={12} />
-              Carte prête
+              {t('status.mapReady')}
             </span>
           )}
           {map.failed > 0 && (
             <span
               className="status__failed"
               tabIndex={0}
-              data-tip="Réseau ou serveur : nouvel essai automatique"
+              data-tip={t('status.failedTip')}
               data-tip-side="top"
               data-tip-align="start"
             >
-              {map.failed} {plural(map.failed, 'tuile', 'tuiles')} en erreur
+              {t('status.failedTiles', { count: map.failed })}
             </span>
           )}
         </p>
@@ -241,11 +240,11 @@ export function StatusBar() {
       {/* always mounted so that assistive tech sees the text change */}
       <p className="status__line" role="status" aria-live="polite" hidden={!loading}>
         <span className="status__spinner" aria-hidden="true" />
-        Import en cours…
+        {t('status.importing')}
       </p>
       <FetchChips />
       {perfText && (
-        <p className="status__perf" title="Performances (choix dans « Réglages »)">
+        <p className="status__perf" title={t('status.perfTip')}>
           {perfText}
         </p>
       )}
@@ -265,7 +264,7 @@ export function StatusBar() {
                 <span className="status__credit-more"> — {item.more}</span>
                 {/* narrow status bar: the providers behind a button, above the bar when open */}
                 <details className="status__credit-fold">
-                  <summary aria-label={`Sources ${item.text}`}>…</summary>
+                  <summary aria-label={t('status.creditSources', { name: item.text })}>…</summary>
                   <span className="status__credit-pop">{item.more}</span>
                 </details>
               </>
@@ -276,8 +275,8 @@ export function StatusBar() {
       <button
         type="button"
         className="status__info"
-        aria-label="Sources et licences"
-        data-tip="Sources et licences"
+        aria-label={t('status.sources')}
+        data-tip={t('status.sources')}
         data-tip-side="top"
         data-tip-align="end"
         onClick={() => dialog.current?.showModal()}
@@ -288,9 +287,9 @@ export function StatusBar() {
       <dialog ref={dialog} className="sources" aria-labelledby="sources-title">
         <div className="sources__head">
           <h2 id="sources-title" className="sources__title">
-            Sources et licences
+            {t('status.sources')}
           </h2>
-          <button type="button" className="icon-btn" aria-label="Fermer" data-tip="Fermer (Échap)" data-tip-side="left" onClick={() => dialog.current?.close()}>
+          <button type="button" className="icon-btn" aria-label={t('common.close')} data-tip={t('common.closeEsc')} data-tip-side="left" onClick={() => dialog.current?.close()}>
             <Icon name="x" size={18} />
           </button>
         </div>
@@ -314,10 +313,7 @@ export function StatusBar() {
               </span>
             ))}
         </p>
-        <p className="field__hint">
-          Ces mentions sont incrustées dans les films exportés (Habillage, « Crédits des sources »). Polices : Fraunces et
-          IBM Plex (SIL Open Font License 1.1). Icônes : Lucide (licence ISC). OpenFlyover est publié sous licence MIT.
-        </p>
+        <p className="field__hint">{t('status.sourcesNote')}</p>
       </dialog>
     </footer>
   )

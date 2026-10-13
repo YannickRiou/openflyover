@@ -6,9 +6,11 @@
  */
 import { QUALITY_NAMES, effectiveRender, presetBadge } from '../export/qualityTier'
 import { videoSize } from '../export/schedule'
+import { t } from '../i18n'
 import { SHUTTER_SUBFRAMES } from '../scene/lens'
 import type { Settings } from '../state/store'
 import { EXPORT_SAMPLES } from '../weather/sceneClouds'
+import { formatShort } from './format'
 import type { ShellTab } from './shell'
 
 export type WeightKey = 'clouds' | 'shutter' | 'depthOfField' | 'resolution' | 'fps'
@@ -22,14 +24,14 @@ export interface Weight {
 type Input = Pick<Settings, 'atmosphere' | 'clouds' | 'lens' | 'video'>
 
 /** Spoken name of a tier (« Poids de rendu : lourd »). */
-export const TIER_NAMES = ['aucun', 'léger', 'moyen', 'lourd'] as const
+export function tierName(tier: WeightTier): string {
+  return t(`export.weight.tier.${tier}`)
+}
 
-const LEAD = ['', 'Allonge un peu le rendu', 'Allonge le rendu', 'Allonge beaucoup le rendu'] as const
 const weight = (tier: WeightTier, detail: string): Weight => ({
   tier,
-  tip: tier ? `${LEAD[tier]} : ${detail}` : '',
+  tip: tier ? t('export.weight.tip', { lead: t(`export.weight.lead.${tier as 1 | 2 | 3}`), detail }) : '',
 })
-const comma = (n: number) => String(n).replace('.', ',')
 
 /** Clouds quality of the export: 16 / 24 / 32 noise slices per frame (`EXPORT_SAMPLES`). */
 const CLOUD_QUALITY_TIER = { low: 1, medium: 2, high: 3 } as const
@@ -38,11 +40,11 @@ function cloudsWeight(input: Input): Weight {
   const { atmosphere, clouds, video } = input
   if (!atmosphere || clouds.mode === 'aucun') return weight(0, '')
   // the lit surface (« Nappe ») is one draw call
-  if (clouds.mode === 'mer' && clouds.seaRender === 'surface') return weight(1, 'une seule surface à dessiner')
+  if (clouds.mode === 'mer' && clouds.seaRender === 'surface') return weight(1, t('export.weight.surface'))
   const { cloudsQuality } = effectiveRender(video.quality, clouds)
   const n = EXPORT_SAMPLES[cloudsQuality]
-  const from = presetBadge(input, 'clouds')?.kind === 'preset' ? `, imposé par la qualité ${QUALITY_NAMES[video.quality]}` : ''
-  return weight(CLOUD_QUALITY_TIER[cloudsQuality], `≈ ×${n} sur les nuages (${n} passes par image${from})`)
+  const from = presetBadge(input, 'clouds')?.kind === 'preset' ? t('export.weight.imposed', { quality: QUALITY_NAMES[video.quality] }) : ''
+  return weight(CLOUD_QUALITY_TIER[cloudsQuality], t('export.weight.clouds', { n, from }))
 }
 
 /** An open shutter renders every frame up to `maxSubFrames` times (8, fewer in a lighter quality), whatever its amount. */
@@ -50,8 +52,8 @@ function shutterWeight(input: Input): Weight {
   const { lens, clouds, video } = input
   const { maxSubFrames: n } = effectiveRender(video.quality, clouds)
   const lowered = presetBadge(input, 'shutter') !== null
-  const detail = lowered ? `${n} rendus par image au plus, imposé par la qualité ${QUALITY_NAMES[video.quality]}` : `${n} rendus par image`
-  return weight(lens.shutter > 0 ? (n >= SHUTTER_SUBFRAMES ? 3 : 2) : 0, `≈ ×${n} (${detail})`)
+  const detail = lowered ? t('export.weight.shutterLowered', { n, quality: QUALITY_NAMES[video.quality] }) : t('export.weight.shutterRenders', { n })
+  return weight(lens.shutter > 0 ? (n >= SHUTTER_SUBFRAMES ? 3 : 2) : 0, t('export.weight.shutter', { n, detail }))
 }
 
 /** One more full-frame blur per render; repeated at each sub-frame of the open shutter, so one tier higher. */
@@ -59,8 +61,8 @@ function depthOfFieldWeight({ lens, clouds, video }: Input): Weight {
   if (lens.depthOfField <= 0) return weight(0, '')
   const { maxSubFrames: n } = effectiveRender(video.quality, clouds)
   return lens.shutter > 0
-    ? weight(2, `refait à chacun des ${n} rendus de l’image (flou de bougé)`)
-    : weight(1, 'un passage de flou en plus par rendu')
+    ? weight(2, t('export.weight.dofShutter', { n }))
+    : weight(1, t('export.weight.dofOnly'))
 }
 
 /** Pixels per frame against 720p (short side squared): 1, 2.25, 4, 9; a phone's smaller cap is applied. */
@@ -69,14 +71,14 @@ function resolutionWeight({ video }: Input): Weight {
   const short = Math.min(width, height)
   const ratio = Math.round((short / 720) ** 2 * 100) / 100
   const tier = short <= 720 ? 1 : short <= 1080 ? 2 : 3
-  return weight(tier, ratio === 1 ? 'le moins de pixels (référence ×1)' : `≈ ×${comma(ratio)} de pixels par rapport au 720p`)
+  return weight(tier, ratio === 1 ? t('export.weight.resolutionRef') : t('export.weight.resolution', { ratio: formatShort(ratio) }))
 }
 
 /** Frames to render against 30 fps: ×0.8, ×1, ×2. */
 function fpsWeight({ video }: Input): Weight {
   return weight(
     video.fps >= 60 ? 2 : 1,
-    video.fps === 30 ? 'référence ×1 (30 i/s)' : `≈ ×${comma(video.fps / 30)} d’images par rapport à 30 i/s`,
+    video.fps === 30 ? t('export.weight.fpsRef') : t('export.weight.fps', { ratio: formatShort(video.fps / 30) }),
   )
 }
 

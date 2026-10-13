@@ -6,6 +6,9 @@
  *
  * Small on purpose: no track, no coordinate, no project, only values of the settings (`RenderSettings`).
  */
+import { t } from '../i18n'
+import { formatDate } from '../i18n/format'
+import { formatNumber, formatPercent } from '../ui/format'
 import type { CameraStyle } from '../flyover/cameraSettings'
 import { CAMERA_STYLES, CAMERA_STYLE_LABELS } from '../flyover/cameraSettings'
 import { SHUTTER_SUBFRAMES, isValidLens } from '../scene/lens'
@@ -15,7 +18,7 @@ import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { CLOUD_MODES, CLOUD_QUALITIES, SEA_RENDERS } from '../weather/sceneClouds'
 import type { CloudMode, CloudQuality, SeaRender } from '../weather/sceneClouds'
-import { effectiveRender } from './qualityTier'
+import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender } from './qualityTier'
 import { VIDEO_ASPECTS, VIDEO_FPS, VIDEO_QUALITIES, VIDEO_RESOLUTIONS, videoSize } from './schedule'
 import type { VideoAspect, VideoQuality, VideoResolution } from './schedule'
 import type { ExportRequest, ExportResult, ExportTimings } from './store'
@@ -389,7 +392,7 @@ function same(a: object, b: object, keys: string[] = Object.keys(a)): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Formatting (French, no Intl: same output on every ICU build)
+// Formatting (in the language of the interface)
 // ---------------------------------------------------------------------------
 
 /** 92 s -> « 1:32 », 3 725 s -> « 1:02:05 ». */
@@ -400,7 +403,7 @@ export function formatWall(ms: number): string {
   return h > 0 ? `${h}:${two(m)}:${two(s)}` : `${m}:${two(s)}`
 }
 
-const comma = (n: number, digits = 1) => n.toFixed(digits).replace('.', ',')
+const comma = (n: number, digits = 1) => formatNumber(n, digits)
 
 /** Seconds per distinct image rendered (held frames are free), null when nothing was rendered. */
 export function secondsPerImage(entry: Pick<HistoryEntry, 'wallMs' | 'rendered'>): number | null {
@@ -417,75 +420,91 @@ export function secondsPerMegapixel(entry: Pick<HistoryEntry, 'wallMs' | 'render
 export function formatSpeed(entry: HistoryEntry): string {
   const perImage = secondsPerImage(entry)
   // no-break spaces: the figure and its unit never wrap apart
-  return perImage === null ? '' : `${comma(perImage)}\u00a0s\u00a0/\u00a0image`
+  return perImage === null ? '' : t('export.history.speedPerImage', { value: comma(perImage) })
 }
 
 /** « 14/10/2026 18:32 » */
 export function formatWhen(at: number): string {
-  const d = new Date(at)
-  const two = (n: number) => String(n).padStart(2, '0')
-  return `${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`
+  return formatDate(at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 }
 
-export const OUTCOME_LABELS: Record<RenderOutcome, string> = { done: 'réussi', canceled: 'annulé', error: 'échoué' }
-const QUALITY_LABELS: Record<VideoQuality, string> = { standard: 'Standard', high: 'Haute', max: 'Maximale' }
-const MODE_LABELS: Record<CloudMode, string> = { meteo: 'météo', manuel: 'manuel', mer: 'mer de nuages', aucun: 'aucun' }
-const CLOUD_QUALITY_LABELS: Record<CloudQuality, string> = { low: 'rapide', medium: 'moyenne', high: 'fine' }
-const ZOOM_LABELS = ['normal', 'fin', 'très fin'] as const
-const ENCODER_LABELS = { webcodecs: 'WebCodecs (navigateur)', native: 'ffmpeg du système' } as const
+export const OUTCOME_LABELS: Record<RenderOutcome, string> = {
+  get done() { return t('export.history.outcome.done') },
+  get canceled() { return t('export.history.outcome.canceled') },
+  get error() { return t('export.history.outcome.error') },
+}
+const MODE_LABELS: Record<CloudMode, string> = {
+  get meteo() { return t('export.history.mode.meteo') },
+  get manuel() { return t('export.history.mode.manuel') },
+  get mer() { return t('export.history.mode.mer') },
+  get aucun() { return t('export.history.mode.aucun') },
+}
+/** « rapide », « moyenne », « fine » (the names of the export panel in lower case) */
+const cloudQualityLabel = (quality: CloudQuality) => CLOUD_QUALITY_NAMES[quality].toLowerCase()
+const ZOOM_KEYS = ['export.history.zoom.0', 'export.history.zoom.1', 'export.history.zoom.2'] as const
+const ENCODER_KEYS = { webcodecs: 'export.history.encoder.webcodecs', native: 'export.history.encoder.native' } as const
 const CODEC_LABELS: Record<string, string> = { 'mp4/avc': 'MP4 (H.264)', 'mp4/hevc': 'MP4 (HEVC)', 'webm/vp9': 'WebM (VP9)', 'webm/vp8': 'WebM (VP8)' }
 
-const percent = (v: number) => `${Math.round(v * 100)} %`
-const hour = (h: number) => `${Math.floor(Math.round(h * 60) / 60)} h ${String(Math.round(h * 60) % 60).padStart(2, '0')}`
+const percent = (v: number) => formatPercent(Math.round(v * 100) / 100)
+const hour = (h: number) => t('format.clock', { hours: Math.floor(Math.round(h * 60) / 60), minutes: String(Math.round(h * 60) % 60).padStart(2, '0') })
 
 /** « 1920 × 1080, 30 i/s, Haute » */
 export function formatOutput(entry: HistoryEntry): string {
-  return `${entry.width} × ${entry.height}, ${entry.fps} i/s, ${QUALITY_LABELS[entry.quality]}`
+  return t('export.history.output', { width: entry.width, height: entry.height, fps: entry.fps, quality: QUALITY_NAMES[entry.quality] })
 }
 
 /** The costly options on one line: « Nuages fins · Ombres · Flou de bougé 50 % ». « Réglages de base » when none. */
 export function settingsSummary(settings: RenderSettings): string {
   const { atmosphere, shadows, clouds, lens } = settings
   const parts: string[] = []
-  if (atmosphere === false) parts.push('Sans atmosphère')
+  if (atmosphere === false) parts.push(t('export.history.summary.noAtmosphere'))
   else {
-    if (clouds && clouds.mode !== 'aucun') parts.push(`Nuages ${CLOUD_QUALITY_LABELS[clouds.quality]}`)
-    if (shadows) parts.push('Ombres')
+    if (clouds && clouds.mode !== 'aucun') parts.push(t('export.history.summary.clouds', { quality: cloudQualityLabel(clouds.quality) }))
+    if (shadows) parts.push(t('export.history.summary.shadows'))
   }
   if (lens) {
-    if (lens.shutter > 0) parts.push(`Flou de bougé ${percent(lens.shutter)}`)
-    if (lens.depthOfField > 0) parts.push('Profondeur de champ')
-    if (lens.bloom > 0) parts.push('Halo')
-    if (lens.flare > 0 && atmosphere !== false) parts.push('Reflet d’objectif')
+    if (lens.shutter > 0) parts.push(t('export.history.summary.shutter', { percent: percent(lens.shutter) }))
+    if (lens.depthOfField > 0) parts.push(t('export.history.summary.dof'))
+    if (lens.bloom > 0) parts.push(t('export.history.summary.bloom'))
+    if (lens.flare > 0 && atmosphere !== false) parts.push(t('export.history.summary.flare'))
   }
-  return parts.join(' · ') || 'Réglages de base'
+  return parts.join(' · ') || t('export.history.summary.basic')
 }
 
 /** Every recorded setting as label / value rows (the expandable detail). */
 export function settingsDetails(settings: RenderSettings): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = []
-  const yes = (v: boolean) => (v ? 'oui' : 'non')
+  const yes = (v: boolean) => (v ? t('export.history.yes') : t('export.history.no'))
+  const no = t('export.history.no')
   const { atmosphere, shadows, clouds, lens, tier, sunHour, sunDate, sunFromTrack, imagery, imageryZoom, terrain, water, camera } = settings
-  if (atmosphere !== undefined) rows.push({ label: 'Atmosphère', value: yes(atmosphere) })
-  if (shadows !== undefined) rows.push({ label: 'Ombres', value: yes(shadows) })
-  if (clouds) rows.push({ label: 'Nuages', value: clouds.mode === 'aucun' ? 'aucun' : `${MODE_LABELS[clouds.mode]}, qualité ${CLOUD_QUALITY_LABELS[clouds.quality]}${tier?.cloudsByHand ? ' (choisie)' : ''}` })
+  if (atmosphere !== undefined) rows.push({ label: t('export.history.detail.atmosphere'), value: yes(atmosphere) })
+  if (shadows !== undefined) rows.push({ label: t('export.history.detail.shadows'), value: yes(shadows) })
+  if (clouds) {
+    const cloudsText = t(tier?.cloudsByHand ? 'export.history.detail.cloudsValueChosen' : 'export.history.detail.cloudsValue', {
+      mode: MODE_LABELS[clouds.mode],
+      quality: cloudQualityLabel(clouds.quality),
+    })
+    rows.push({ label: t('export.history.detail.clouds'), value: clouds.mode === 'aucun' ? MODE_LABELS.aucun : cloudsText })
+  }
   if (lens) {
-    rows.push({ label: 'Flou de bougé', value: lens.shutter > 0 ? `${percent(lens.shutter)}${tier ? `, ${tier.subFrames} rendus par image au plus` : ''}` : 'non' })
-    rows.push({ label: 'Profondeur de champ', value: lens.depthOfField > 0 ? percent(lens.depthOfField) : 'non' })
-    rows.push({ label: 'Halo lumineux', value: lens.bloom > 0 ? `${percent(lens.bloom)}, rayon ${percent(lens.bloomRadius)}` : 'non' })
-    rows.push({ label: 'Reflet d’objectif', value: lens.flare > 0 ? percent(lens.flare) : 'non' })
+    const shutter = tier ? t('export.history.detail.shutterTier', { percent: percent(lens.shutter), n: tier.subFrames }) : percent(lens.shutter)
+    rows.push({ label: t('export.history.detail.shutter'), value: lens.shutter > 0 ? shutter : no })
+    rows.push({ label: t('export.history.detail.dof'), value: lens.depthOfField > 0 ? percent(lens.depthOfField) : no })
+    rows.push({ label: t('export.history.detail.bloom'), value: lens.bloom > 0 ? t('export.history.detail.bloomValue', { percent: percent(lens.bloom), radius: percent(lens.bloomRadius) }) : no })
+    rows.push({ label: t('export.history.detail.flare'), value: lens.flare > 0 ? percent(lens.flare) : no })
   }
   if (sunFromTrack !== undefined || sunHour !== undefined || sunDate !== undefined) {
-    const when = sunFromTrack ? 'heure de la sortie' : sunHour === undefined ? '' : `${hour(sunHour)} solaire`
-    rows.push({ label: 'Soleil', value: [when, sunDate ? `le ${sunDate}` : sunFromTrack ? '' : 'jour de la sortie'].filter(Boolean).join(', ') })
+    const when = sunFromTrack ? t('export.history.detail.sunOuting') : sunHour === undefined ? '' : t('export.history.detail.sunSolar', { hour: hour(sunHour) })
+    const day = sunDate ? t('export.history.detail.sunDate', { date: sunDate }) : sunFromTrack ? '' : t('export.history.detail.sunDay')
+    rows.push({ label: t('export.history.detail.sun'), value: [when, day].filter(Boolean).join(', ') })
   }
   if (imagery !== undefined) {
     const name = IMAGERY_SOURCES.find((s) => s.id === imagery)?.name ?? imagery
-    rows.push({ label: 'Fond de carte', value: imageryZoom === undefined ? name : `${name}, détail ${ZOOM_LABELS[imageryZoom]}` })
+    rows.push({ label: t('export.history.detail.imagery'), value: imageryZoom === undefined ? name : t('export.history.detail.imageryZoom', { name, zoom: t(ZOOM_KEYS[imageryZoom]) }) })
   }
-  if (terrain !== undefined) rows.push({ label: 'Relief', value: TERRAIN_SOURCES.find((s) => s.id === terrain)?.name ?? terrain })
-  if (water !== undefined) rows.push({ label: 'Plans d’eau', value: yes(water) })
-  if (camera) rows.push({ label: 'Caméra', value: CAMERA_STYLE_LABELS[camera] })
+  if (terrain !== undefined) rows.push({ label: t('export.history.detail.terrain'), value: TERRAIN_SOURCES.find((s) => s.id === terrain)?.name ?? terrain })
+  if (water !== undefined) rows.push({ label: t('export.history.detail.water'), value: yes(water) })
+  if (camera) rows.push({ label: t('export.history.detail.camera'), value: CAMERA_STYLE_LABELS[camera] })
   return rows
 }
 
@@ -500,16 +519,29 @@ type TimingSplit = Pick<
  * composition also holds the wait for the GPU to finish the render (it reads the WebGL image). A split recorded before
  * the composition was measured apart gives « composition et encodage ».
  */
-export function timingsSummary(t: TimingSplit): string {
-  const s = (ms: number) => `${comma(ms / 1000)} s`
+export function timingsSummary(timings: TimingSplit): string {
+  const s = (ms: number) => t('format.seconds', { value: comma(ms / 1000) })
   // a few queries may be lost (GPU reset, the last ones): the measured average over every render
-  const gpu = t.gpuRenders > 0 ? ` (GPU ${t.gpuRenders < t.renders ? '≈ ' : ''}${s((t.gpuMs * Math.max(t.renders, t.gpuRenders)) / t.gpuRenders)})` : ''
-  const parts = [`rendu ${s(t.renderMs)}${gpu}`]
-  if (t.renders > 0 && t.rendered > 0) parts.push(`${comma(t.renders / t.rendered)} rendu${t.renders >= 2 * t.rendered ? 's' : ''} par image`)
-  parts.push(`tuiles ${s(t.waitMs)}`)
-  if (t.composeMs + t.frameMs + t.encodeWaitMs > 0) {
-    parts.push(`composition ${s(t.composeMs)}`, `image vidéo ${s(t.frameMs)}`, `attente de l'encodeur ${s(t.encodeWaitMs)}`)
-  } else parts.push(`composition et encodage ${s(t.encodeMs)}`)
+  const gpu =
+    timings.gpuRenders > 0
+      ? t('export.history.timings.gpu', {
+          approx: timings.gpuRenders < timings.renders ? '≈ ' : '',
+          time: s((timings.gpuMs * Math.max(timings.renders, timings.gpuRenders)) / timings.gpuRenders),
+        })
+      : ''
+  const parts = [t('export.history.timings.render', { time: s(timings.renderMs), gpu })]
+  if (timings.renders > 0 && timings.rendered > 0) {
+    const ratio = timings.renders / timings.rendered
+    parts.push(t('export.history.timings.perImage', { count: ratio, ratio: comma(ratio) }))
+  }
+  parts.push(t('export.history.timings.tiles', { time: s(timings.waitMs) }))
+  if (timings.composeMs + timings.frameMs + timings.encodeWaitMs > 0) {
+    parts.push(
+      t('export.history.timings.compose', { time: s(timings.composeMs) }),
+      t('export.history.timings.videoFrame', { time: s(timings.frameMs) }),
+      t('export.history.timings.encoderWait', { time: s(timings.encodeWaitMs) }),
+    )
+  } else parts.push(t('export.history.timings.composeEncode', { time: s(timings.encodeMs) }))
   return parts.join(', ')
 }
 
@@ -518,26 +550,38 @@ export function timingsSummary(t: TimingSplit): string {
  * champ) par rendu ». Empty when no shadow was drawn.
  */
 export function shadowSummary(
-  t: Pick<ExportTimings, 'renders' | 'shadowTiles' | 'shadowTriangles' | 'shadowOffscreenTiles' | 'shadowOffscreenTriangles'>,
+  timings: Pick<ExportTimings, 'renders' | 'shadowTiles' | 'shadowTriangles' | 'shadowOffscreenTiles' | 'shadowOffscreenTriangles'>,
 ): string {
-  if (t.renders === 0 || t.shadowTiles === 0) return ''
-  const per = (n: number) => Math.round(n / t.renders)
+  if (timings.renders === 0 || timings.shadowTiles === 0) return ''
+  const per = (n: number) => Math.round(n / timings.renders)
   const k = (n: number) => `${Math.round(per(n) / 1000)}\u00a0k`
-  return `ombres : ${per(t.shadowTiles)} tuiles (${per(t.shadowOffscreenTiles)} hors champ), ${k(t.shadowTriangles)} triangles (${k(t.shadowOffscreenTriangles)} hors champ) par rendu`
+  return t('export.history.shadows', {
+    tiles: per(timings.shadowTiles),
+    offTiles: per(timings.shadowOffscreenTiles),
+    triangles: k(timings.shadowTriangles),
+    offTriangles: k(timings.shadowOffscreenTriangles),
+  })
 }
 
 /** Rows of the technical detail of a render: output, film, speed, encoder. */
 export function entryDetails(entry: HistoryEntry): { label: string; value: string }[] {
   const rows: { label: string; value: string }[] = []
-  rows.push({ label: 'Sortie', value: `${formatOutput(entry)}${entry.overlayOnly ? ', habillage seul' : ''}` })
-  if (entry.codec) rows.push({ label: 'Format', value: CODEC_LABELS[entry.codec] ?? entry.codec })
-  if (entry.bytes !== undefined) rows.push({ label: 'Taille', value: `${comma(entry.bytes / 1e6)} Mo` })
-  rows.push({ label: 'Film', value: `${comma(entry.filmS)} s, ${entry.frames} images (${entry.rendered} rendues)` })
+  const output = formatOutput(entry)
+  rows.push({ label: t('export.history.row.output'), value: entry.overlayOnly ? t('export.history.row.outputOverlay', { output }) : output })
+  if (entry.codec) rows.push({ label: t('export.history.row.format'), value: CODEC_LABELS[entry.codec] ?? entry.codec })
+  if (entry.bytes !== undefined) rows.push({ label: t('export.history.row.size'), value: t('export.history.row.sizeValue', { value: comma(entry.bytes / 1e6) }) })
+  rows.push({
+    label: t('export.history.row.film'),
+    value: t('export.history.row.filmValue', { duration: comma(entry.filmS), frames: entry.frames, rendered: entry.rendered }),
+  })
   const mp = secondsPerMegapixel(entry)
-  if (mp !== null) rows.push({ label: 'Vitesse', value: `${formatSpeed(entry)}, ${comma(mp)}\u00a0s\u00a0/\u00a0Mpx` })
-  if (entry.renderMs + entry.waitMs + entry.encodeMs > 0) rows.push({ label: 'Répartition', value: timingsSummary(entry) })
-  if (entry.timeouts > 0) rows.push({ label: 'Tuiles encore en chargement au délai', value: `${entry.timeouts} image(s)` })
-  if (entry.givenUp > 0) rows.push({ label: 'Tuiles abandonnées', value: `${entry.givenUp} image(s)` })
-  if (entry.encoder) rows.push({ label: 'Encodeur', value: `${ENCODER_LABELS[entry.encoder]}${entry.hardware ? ', encodeur matériel' : ''}` })
+  if (mp !== null) rows.push({ label: t('export.history.row.speed'), value: t('export.history.speedMp', { speed: formatSpeed(entry), value: comma(mp) }) })
+  if (entry.renderMs + entry.waitMs + entry.encodeMs > 0) rows.push({ label: t('export.history.row.breakdown'), value: timingsSummary(entry) })
+  if (entry.timeouts > 0) rows.push({ label: t('export.history.row.timeouts'), value: t('export.history.row.frames', { count: entry.timeouts }) })
+  if (entry.givenUp > 0) rows.push({ label: t('export.history.row.givenUp'), value: t('export.history.row.frames', { count: entry.givenUp }) })
+  if (entry.encoder) {
+    const encoder = t(ENCODER_KEYS[entry.encoder])
+    rows.push({ label: t('export.history.row.encoder'), value: entry.hardware ? t('export.history.row.encoderHardware', { encoder }) : encoder })
+  }
   return rows
 }

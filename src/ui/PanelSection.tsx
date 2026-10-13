@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { presetBadge } from '../export/qualityTier'
+import { useT } from '../i18n'
 import type { PresetKnob } from '../export/qualityTier'
 import { getPlatform } from '../platform'
 import { modifiedPaths } from '../project/apply'
@@ -9,7 +10,7 @@ import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { Icon } from './icons'
 import { ModifiedMarker } from './ModifiedMarker'
-import { TIER_NAMES, tabHasHeavySetting, weightOf } from './renderCost'
+import { tabHasHeavySetting, tierName, weightOf } from './renderCost'
 import type { WeightKey } from './renderCost'
 import { FOLDS_KEY, parseFoldPrefs } from './shell'
 import type { ShellTab } from './shell'
@@ -73,6 +74,7 @@ export function PanelSection({
  * nothing at weight 0. It reads the store itself, so the memoised panels do not render again with the settings.
  */
 export function RenderWeight({ weight }: { weight: WeightKey }) {
+  const t = useT()
   const tier = useAppStore((s) => weightOf(s.settings, weight).tier)
   const tip = useAppStore((s) => weightOf(s.settings, weight).tip)
   if (tier === 0) return null
@@ -81,7 +83,7 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
       {[1, 2, 3].map((bar) => (
         <i key={bar} className={bar <= tier ? 'render-weight__bar render-weight__bar--on' : 'render-weight__bar'} aria-hidden="true" />
       ))}
-      <span className="visually-hidden">Poids de rendu : {TIER_NAMES[tier]}</span>
+      <span className="visually-hidden">{t('export.weight.label', { tier: tierName(tier) })}</span>
     </span>
   )
 }
@@ -91,6 +93,7 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
  * Periwinkle while the quality decides, chartreuse once the value was chosen by hand over it.
  */
 export function PresetBadge({ knob }: { knob: PresetKnob }) {
+  useT()
   const kind = useAppStore((s) => presetBadge(s.settings, knob)?.kind)
   const text = useAppStore((s) => presetBadge(s.settings, knob)?.text)
   if (!kind) return null
@@ -103,12 +106,13 @@ export function PresetBadge({ knob }: { knob: PresetKnob }) {
 
 /** Dot on a tab of the rail or the phone bar while one of its settings is at the heaviest weight. */
 export function TabWeightDot({ tab }: { tab: ShellTab }) {
+  const t = useT()
   const heavy = useAppStore((s) => tabHasHeavySetting(s.settings, tab))
   if (!heavy) return null
   return (
     <>
       <span className="rail__weight" aria-hidden="true" />
-      <span className="visually-hidden">, réglage lourd actif</span>
+      <span className="visually-hidden">{t('export.weight.heavyActive')}</span>
     </>
   )
 }
@@ -141,6 +145,7 @@ export function SettingRow({
   preset?: PresetKnob
   children: ReactNode
 }) {
+  const t = useT()
   const id = useId()
   const [open, setOpen] = useState(false)
   const body = useRef<HTMLDivElement>(null)
@@ -163,7 +168,7 @@ export function SettingRow({
         </span>
         <span className={modified ? 'setting-row__value setting-row__value--modified' : 'setting-row__value'}>
           {value}
-          {modified && <span className="visually-hidden"> (modifié)</span>}
+          {modified && <span className="visually-hidden">{t('common.modified.srOnly')}</span>}
         </span>
         <Icon name="chevron-down" size={16} />
       </button>

@@ -4,6 +4,7 @@
  */
 import { useId, useMemo, useState } from 'react'
 import { isDayCard, trackDays, withDayCards } from '../film/days'
+import { t, useT } from '../i18n'
 import { NIGHT_PART_RANGE } from '../film/model'
 import type { FilmNights } from '../film/model'
 import { nightPauseS } from '../flyover/nights'
@@ -13,12 +14,13 @@ import { formatSecondsShort } from './format'
 import { PanelSection, RangeField, SettingRow } from './PanelSection'
 
 const PARTS: { key: 'duskS' | 'nightS' | 'dawnS'; label: string; tip: string }[] = [
-  { key: 'duskS', label: 'Crépuscule', tip: 'Le soleil se couche : de l’arrivée du soir à la nuit noire.' },
-  { key: 'nightS', label: 'Nuit', tip: 'La nuit passe, éclairée par la lune.' },
-  { key: 'dawnS', label: 'Aube', tip: 'Le soleil se lève, jusqu’au départ du matin.' },
+  { key: 'duskS', get label() { return t('light.nights.dusk') }, get tip() { return t('light.nights.duskTip') } },
+  { key: 'nightS', get label() { return t('light.nights.night') }, get tip() { return t('light.nights.nightTip') } },
+  { key: 'dawnS', get label() { return t('light.nights.dawn') }, get tip() { return t('light.nights.dawnTip') } },
 ]
 
 export function NightSettings() {
+  const tr = useT()
   const id = useId()
   const { track, film } = useFilmSource()
   const clock = useFilmClock()
@@ -30,11 +32,11 @@ export function NightSettings() {
   const shown = clock.nights.length
   const nightsHint =
     shown === 0
-      ? 'Aucune nuit de repos sur cette trace.'
-      : `${shown} nuit${shown > 1 ? 's' : ''} : le film s’arrête ${formatSecondsShort(nightPauseS(nights))} à chaque fois.`
+      ? tr('light.nights.none')
+      : tr('light.nights.hint', { count: shown, pause: formatSecondsShort(nightPauseS(nights)) })
 
   return (
-    <PanelSection title="Jours et nuits">
+    <PanelSection title={tr('light.nights.title')}>
       <label className="checkbox checkbox--switch" htmlFor={`${id}-nights`}>
         <input
           id={`${id}-nights`}
@@ -43,10 +45,10 @@ export function NightSettings() {
           aria-describedby={`${id}-nights-hint`}
           onChange={(e) => setNights({ enabled: e.currentTarget.checked })}
         />
-        Montrer les nuits
+        {tr('light.nights.show')}
       </label>
       <p id={`${id}-nights-hint`} className="field__hint">
-        {nights.enabled ? nightsHint : 'La nuit passe en un instant entre deux jours.'}
+        {nights.enabled ? nightsHint : tr('light.nights.instant')}
       </p>
       {nights.enabled &&
         PARTS.map(({ key, label, tip }) => (
@@ -56,14 +58,14 @@ export function NightSettings() {
         ))}
 
       <fieldset className="field fieldset" disabled={days.length < 2}>
-        <legend className="field__label">Cartes de jour</legend>
+        <legend className="field__label">{tr('light.days.legend')}</legend>
         <label className="checkbox">
           <input type="checkbox" checked={content.day} onChange={(e) => setContent({ ...content, day: e.currentTarget.checked })} />
-          Distance du jour
+          {tr('light.days.dayDistance')}
         </label>
         <label className="checkbox">
           <input type="checkbox" checked={content.total} onChange={(e) => setContent({ ...content, total: e.currentTarget.checked })} />
-          Distance cumulée
+          {tr('light.days.totalDistance')}
         </label>
         <button
           type="button"
@@ -74,12 +76,12 @@ export function NightSettings() {
             editFilm((f) => ({ film: withDayCards(f, { days, lengthM, utcOffsetMin: track?.utcOffsetMin }, clock, content) }))
           }}
         >
-          {hasCards ? 'Remplacer les cartes de jour' : 'Ajouter les cartes de jour'}
+          {hasCards ? tr('light.days.replace') : tr('light.days.add')}
         </button>
         <p id={`${id}-cards-hint`} className="field__hint">
           {days.length < 2
-            ? 'Pour une trace enregistrée sur plusieurs jours.'
-            : `Une carte « Jour 1 », « Jour 2 »… au début de chacun des ${days.length} jours, à retoucher sur la frise.`}
+            ? tr('light.days.single')
+            : tr('light.days.hint', { count: days.length })}
         </p>
       </fieldset>
     </PanelSection>

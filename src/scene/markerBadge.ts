@@ -7,6 +7,7 @@
  */
 import { FIGURE_GRID, MARKER_FIGURE_PATHS } from './markerFigures'
 import type { MarkerBallStyle, MarkerFigure, MarkerShape } from './markerSettings'
+import { t } from '../i18n'
 
 /** `--color-ink` and white of the « Carte alpine » theme. */
 export const BADGE_INK = '#1C2A33'
@@ -376,7 +377,7 @@ export function loadMarkerImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('Image illisible.'))
+    image.onerror = () => reject(new Error(t('film.error.imageUnreadable')))
     image.src = src
   })
 }
@@ -392,7 +393,7 @@ export async function fileToAvatarDataUrl(file: Blob, size = AVATAR_SIZE_PX): Pr
     canvas.width = size
     canvas.height = size
     const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Image illisible.')
+    if (!ctx) throw new Error(t('film.error.imageUnreadable'))
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(image, crop.x, crop.y, crop.side, crop.side, 0, 0, size, size)
     return canvas.toDataURL('image/png')

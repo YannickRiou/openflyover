@@ -3,7 +3,7 @@ import { useToastStore } from '../ui/toast'
 import { REPORT_KEY, parseReport, useDiagnosticStore } from './diagnostic'
 import {
   BREADCRUMB_KEY,
-  EXPORT_INTERRUPTED_TEXT,
+  exportInterruptedText,
   EXPORT_RUNNING_KEY,
   MAX_STEPS,
   createScreenWakeLock,
@@ -227,7 +227,7 @@ describe('interrupted export', () => {
     writeBreadcrumb('pagehide', storage, Date.UTC(2026, 9, 11, 12, 3, 44))
     expect(reportInterruptedExport(storage)).toBe(true)
     const [toast] = useToastStore.getState().toasts
-    expect(toast).toMatchObject({ kind: 'error', text: EXPORT_INTERRUPTED_TEXT, action: { label: 'Détails' } })
+    expect(toast).toMatchObject({ kind: 'error', text: exportInterruptedText(), action: { label: 'Détails' } })
     toast.action!.run()
     const text = useDiagnosticStore.getState().text!
     expect(text).toMatch(/\[Étapes\]\n1 : export : démarrage à .*\n2 : pagehide à /)

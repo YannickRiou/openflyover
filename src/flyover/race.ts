@@ -14,6 +14,7 @@ import { firstIndexAtOrAbove, lastIndexAtOrBelow } from '../core/math'
 import type { Track } from '../core/types'
 import { samplePath, type TrackPath } from './path'
 import { smoothedTrackPath } from './smooth'
+import { t } from '../i18n'
 
 export const RACE_SYNC_MODES = ['elapsed', 'clock', 'distance'] as const
 export type RaceSync = (typeof RACE_SYNC_MODES)[number]
@@ -59,15 +60,15 @@ export interface RaceSettings {
 export const DEFAULT_RACE: RaceSettings = { enabled: false, sync: 'elapsed' }
 
 export const RACE_CAMERA_LABELS: Record<RaceCamera, string> = {
-  premiere: 'Première trace',
-  tete: 'Celle en tête',
-  ensemble: 'Toutes les traces',
+  get premiere() { return t('track.camera.premiere') },
+  get tete() { return t('track.camera.tete') },
+  get ensemble() { return t('track.camera.ensemble') },
 }
 
 export const RACE_SYNC_LABELS: Record<RaceSync, string> = {
-  elapsed: 'Temps écoulé',
-  clock: 'Heure réelle',
-  distance: 'Même distance',
+  get elapsed() { return t('track.sync.elapsed') },
+  get clock() { return t('track.sync.clock') },
+  get distance() { return t('track.sync.distance') },
 }
 
 /** Modes that need timestamps on every track. */

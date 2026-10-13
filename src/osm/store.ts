@@ -14,6 +14,7 @@ import { DEFAULT_LANDMARK_SETTINGS, buildLandmarks, landmarkLabels, splitHidden,
 import type { Landmark, LandmarkSettings } from './landmarks'
 import { OverpassError, fetchTrackFeatures } from './overpass'
 import type { OsmFeature } from './overpass'
+import { t } from '../i18n'
 
 export type LandmarkStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -46,9 +47,9 @@ let latest: { tracks: readonly Track[]; settings: LandmarkSettings } = { tracks:
 
 function errorMessage(e: unknown): string {
   if (e instanceof OverpassError && (e.status === 429 || e.status === 504)) {
-    return 'Serveur OpenStreetMap saturé : réessayez dans quelques instants.'
+    return t('landmarks.store.overloaded')
   }
-  return 'Impossible de charger les repères OpenStreetMap.'
+  return t('landmarks.store.failed')
 }
 
 /** Recompute the landmarks of every track from the stored features, the status, and publish the labels. */

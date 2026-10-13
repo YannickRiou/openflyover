@@ -19,13 +19,14 @@ import { stageAt } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import { metricValues } from '../flyover/trackColor'
 import { ELEVATION_HYSTERESIS_M, smoothElevations } from '../import/stats'
-import { OSM_ATTRIBUTION } from '../osm/overpass'
+import { osmAttribution } from '../osm/overpass'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { formatDistanceGap, formatTimeGap } from '../ui/format'
-import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
+import { openMeteoAttribution } from '../weather/openMeteo'
 import { summarizeOuting, weatherWidgetData } from '../weather/series'
 import type { WeatherSeries, WeatherSummary, WeatherWidgetData } from '../weather/series'
 import type { OverlayTime, StageCard } from './draw'
+import { t } from '../i18n'
 
 /** Samples of the overlay elevation profile over the track. */
 export const OVERLAY_PROFILE_SAMPLES = 240
@@ -380,10 +381,10 @@ export interface CreditSources {
  */
 export function overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks }: CreditSources): string[] {
   return [
-    `Relief : ${getTerrainSource(terrainSourceId).attribution}`,
-    `Imagerie : ${getImagerySource(imagerySourceId).attribution}`,
-    ...(weather ? [OPEN_METEO_ATTRIBUTION] : []),
-    ...(landmarks ? [`Repères : ${OSM_ATTRIBUTION}`] : []),
+    t('overlay.draw.credits.relief', { source: getTerrainSource(terrainSourceId).attribution }),
+    t('overlay.draw.credits.imagery', { source: getImagerySource(imagerySourceId).attribution }),
+    ...(weather ? [openMeteoAttribution()] : []),
+    ...(landmarks ? [t('overlay.draw.credits.landmarks', { source: osmAttribution() })] : []),
   ]
 }
 
@@ -420,6 +421,6 @@ export function leaderboardRows(racers: readonly Racer[], tracks: readonly Pick<
     if (!tied) rank = i + 1
     const { name, color } = tracks[racer.index]
     const gapText = timed ? formatTimeGap(gap) : formatDistanceGap(gap)
-    return { rank, name, color, gap: rank === 1 ? (racer.finished ? 'Arrivée' : 'Tête') : gapText }
+    return { rank, name, color, gap: rank === 1 ? (racer.finished ? t('overlay.draw.race.finished') : t('overlay.draw.race.lead')) : gapText }
   })
 }

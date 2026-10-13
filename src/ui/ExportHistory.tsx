@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { useBatchStore } from '../export/batch'
+import { useT, t } from '../i18n'
 import {
   OUTCOME_LABELS,
   entryDetails,
@@ -24,13 +25,13 @@ function reuse(entry: HistoryEntry): void {
   const { settings, setFreeFraming } = useAppStore.getState()
   const next = reuseSettings(entry, settings)
   if ((Object.keys(next) as (keyof typeof next)[]).every((key) => Object.is(next[key], settings[key]))) {
-    showToast({ kind: 'info', text: 'Ces réglages sont déjà en place.' })
+    showToast({ kind: 'info', text: t('export.history.reuseNoop') })
     return
   }
   const history = getSettingsHistory()
   history.transaction(() => applySettings(next))
   if (next.video.aspect !== settings.video.aspect) setFreeFraming(false)
-  showToast({ kind: 'success', text: `Réglages de « ${entry.name} » rétablis`, action: { label: 'Annuler', run: () => history.undo() } })
+  showToast({ kind: 'success', text: t('export.history.reused', { name: entry.name }), action: { label: t('common.undo'), run: () => history.undo() } })
 }
 
 function Rows({ rows }: { rows: { label: string; value: string }[] }) {
@@ -47,10 +48,11 @@ function Rows({ rows }: { rows: { label: string; value: string }[] }) {
 }
 
 function Entry({ entry, busy }: { entry: HistoryEntry; busy: boolean }) {
+  const t = useT()
   const id = useId()
   const [open, setOpen] = useState(false)
   const remove = useExportHistory((s) => s.remove)
-  const outcome = entry.outcome === 'error' && entry.error ? `${OUTCOME_LABELS.error} : ${entry.error}` : OUTCOME_LABELS[entry.outcome]
+  const outcome = entry.outcome === 'error' && entry.error ? t('export.history.outcomeError', { outcome: OUTCOME_LABELS.error, error: entry.error }) : OUTCOME_LABELS[entry.outcome]
   const speed = formatSpeed(entry)
   return (
     <li className="setting-row history__item">
@@ -62,7 +64,7 @@ function Entry({ entry, busy }: { entry: HistoryEntry; busy: boolean }) {
             {speed && ` · ${speed}`}
           </span>
           <span className="history__meta">
-            {entry.width} × {entry.height} · {entry.fps} i/s · {settingsSummary(entry.settings)}
+            {entry.width} × {entry.height} · {t('export.history.fps', { fps: entry.fps })} · {settingsSummary(entry.settings)}
           </span>
         </span>
         <Icon name="chevron-down" size={16} />
@@ -72,10 +74,10 @@ function Entry({ entry, busy }: { entry: HistoryEntry; busy: boolean }) {
         <Rows rows={settingsDetails(entry.settings)} />
         <div className="project__row">
           <button type="button" className="btn btn--secondary" onClick={() => reuse(entry)} disabled={busy}>
-            Réutiliser ces réglages
+            {t('export.history.reuse')}
           </button>
           <button type="button" className="btn btn--secondary" onClick={() => remove(entry.id)}>
-            Supprimer
+            {t('export.history.delete')}
           </button>
         </div>
       </div>
@@ -89,6 +91,7 @@ function Entry({ entry, busy }: { entry: HistoryEntry; busy: boolean }) {
  * « Vidéo » and « Plusieurs formats » panels (on a phone each child of the sheet scrolls on its own).
  */
 export function ExportHistory() {
+  const t = useT()
   const entries = useExportHistory((s) => s.entries)
   const clear = useExportHistory((s) => s.clear)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
@@ -100,13 +103,13 @@ export function ExportHistory() {
   return (
     <details className="fold panel-section export-history" open={open}>
       <summary className="fold__summary">
-        <h2 className="section-title fold__title">Historique des rendus</h2>
+        <h2 className="section-title fold__title">{t('export.history.title')}</h2>
         {entries.length > 0 && <span className="field__hint">{entries.length}</span>}
         <Icon name="chevron-down" size={16} />
       </summary>
       <div className="panel-section__body">
         {entries.length === 0 ? (
-          <p className="field__hint">Aucun rendu pour l’instant. Les films exportés (réussis, annulés ou échoués) apparaîtront ici avec leur durée et leurs réglages.</p>
+          <p className="field__hint">{t('export.history.empty')}</p>
         ) : (
           <>
             <ul className="history">
@@ -114,7 +117,7 @@ export function ExportHistory() {
                 <Entry key={entry.id} entry={entry} busy={busy} />
               ))}
             </ul>
-            <p className="field__hint">Gardé sur cet appareil : durées et réglages, ni trace, ni position, ni vidéo.</p>
+            <p className="field__hint">{t('export.history.privacy')}</p>
             {confirming ? (
               <div className="project__row">
                 <button
@@ -125,15 +128,15 @@ export function ExportHistory() {
                     clear()
                   }}
                 >
-                  Vider définitivement
+                  {t('export.history.clearConfirm')}
                 </button>
                 <button type="button" className="btn btn--secondary" onClick={() => setConfirming(false)}>
-                  Annuler
+                  {t('common.cancel')}
                 </button>
               </div>
             ) : (
               <button type="button" className="btn btn--secondary" onClick={() => setConfirming(true)}>
-                Vider l’historique
+                {t('export.history.clear')}
               </button>
             )}
           </>

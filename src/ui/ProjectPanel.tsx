@@ -1,4 +1,6 @@
 import { errorMessage } from '../core/errors'
+import { t as translate, useT } from '../i18n'
+import { formatDate } from '../i18n/format'
 import { useEffect, useId, useState } from 'react'
 import { getPlatform } from '../platform'
 import type { ProjectEntry } from '../platform'
@@ -41,6 +43,7 @@ export function ProjectPanel() {
 
 /** The open project: new, open, save as a file, close; « Fermer sans enregistrer ? » in place when changes would be lost. */
 function ProjectSection() {
+  const t = useT()
   const hasTracks = useAppStore((s) => s.tracks.length > 0)
   const named = useAppStore((s) => s.projectName !== '')
   const kept = useLibraryStore((s) => s.currentId !== null)
@@ -91,27 +94,27 @@ function ProjectSection() {
   return (
     <section className="settings project" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`} className="section-title settings__title">
-        Projet
+        {t('project.panel.title')}
       </h2>
 
       {question ? (
         <>
           <p className="field__hint" role="alert">
-            <strong>Fermer sans enregistrer ?</strong> {question.text}
+            <strong>{t('project.library.closeQuestion')}</strong> {question.text}
           </p>
           <div className="project__row">
             <button type="button" className="btn btn--secondary" autoFocus onClick={() => question.answer('save')}>
-              Enregistrer
+              {t('common.save')}
             </button>
           </div>
           <div className="project__row">
             <button type="button" className="btn btn--secondary" onClick={() => question.answer('close')}>
-              Fermer sans enregistrer
+              {t('project.library.closeNoSave')}
             </button>
           </div>
           <div className="project__row">
             <button type="button" className="btn btn--secondary" onClick={() => question.answer('cancel')}>
-              Annuler
+              {t('common.cancel')}
             </button>
           </div>
         </>
@@ -120,7 +123,7 @@ function ProjectSection() {
           <div className="project__row">
             <button type="button" className="btn btn--secondary" onClick={() => void run(newProject)} disabled={busy || closing}>
               <Icon name="plus" size={18} />
-              Nouveau projet
+              {t('project.panel.new')}
             </button>
           </div>
           <div className="project__row">
@@ -129,10 +132,10 @@ function ProjectSection() {
               className="btn btn--secondary"
               onClick={() => void chooseFilesToOpen()}
               disabled={busy || closing}
-              data-tip={withShortcut('Ouvrir une trace ou un projet', 'open')}
+              data-tip={withShortcut(t('topbar.openTip'), 'open')}
             >
               <Icon name="folder-open" size={18} />
-              Ouvrir…
+              {t('project.panel.open')}
             </button>
           </div>
           <div className="project__row">
@@ -141,10 +144,10 @@ function ProjectSection() {
               className="btn btn--secondary"
               onClick={() => void saveProject()}
               disabled={busy || closing}
-              data-tip={withShortcut('Enregistrer le projet (dans le même fichier une fois enregistré)', 'save')}
+              data-tip={withShortcut(t('project.panel.saveTip'), 'save')}
             >
               <Icon name="save" size={18} />
-              Enregistrer
+              {t('common.save')}
             </button>
           </div>
           <div className="project__row">
@@ -153,19 +156,19 @@ function ProjectSection() {
               className="btn btn--secondary"
               onClick={() => void saveProjectAs()}
               disabled={busy || closing}
-              data-tip={withShortcut('Enregistrer le projet sous un autre nom ou à un autre endroit', 'save-as')}
+              data-tip={withShortcut(t('project.panel.saveAsTip'), 'save-as')}
             >
               <Icon name="save" size={18} />
-              Enregistrer sous…
+              {t('project.panel.saveAs')}
             </button>
           </div>
           <div className="project__row">
             <button type="button" className="btn btn--secondary" onClick={() => void run(closeProject)} disabled={busy || closing || !open}>
               <Icon name="x" size={18} />
-              Fermer le projet
+              {t('project.panel.close')}
             </button>
           </div>
-          <p className="field__hint">Fermer revient à l’écran d’accueil ; un projet gardé reste dans Mes projets.</p>
+          <p className="field__hint">{t('project.panel.closeHint')}</p>
         </>
       )}
     </section>
@@ -174,6 +177,7 @@ function ProjectSection() {
 
 /** « Mes projets »: the projects kept by the app, most recent first; the open one is highlighted and saved automatically. */
 function LibrarySection() {
+  const t = useT()
   const platform = getPlatform()
   const entries = useLibraryStore((s) => s.entries)
   const currentId = useLibraryStore((s) => s.currentId)
@@ -203,27 +207,24 @@ function LibrarySection() {
   return (
     <section className="settings project" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`} className="section-title settings__title">
-        Mes projets
+        {t('project.panel.library')}
       </h2>
 
       {!platform.projectLibrary ? (
-        <p className="tracks__empty">Ce navigateur ne peut pas garder de projets (page non sécurisée, sans HTTPS).</p>
+        <p className="tracks__empty">{t('project.panel.noLibrary')}</p>
       ) : (
         <>
-          <p className="field__hint">
-            Gardés {platform.capabilities.isDesktop ? 'sur cet ordinateur' : 'dans ce navigateur'}, enregistrés automatiquement à
-            chaque changement.
-          </p>
+          <p className="field__hint">{t(platform.capabilities.isDesktop ? 'project.panel.keptDesktop' : 'project.panel.keptBrowser')}</p>
           {currentId === null ? (
             <button type="button" className="btn btn--secondary" onClick={() => void keepOpenProject()} disabled={!hasTracks}>
-              Garder dans Mes projets
+              {t('project.panel.keep')}
             </button>
           ) : (
-            <p className="field__hint">Le projet ouvert est gardé dans Mes projets.</p>
+            <p className="field__hint">{t('project.panel.keepOpen')}</p>
           )}
 
           {entries.length === 0 ? (
-            <p className="tracks__empty">Aucun projet gardé pour l’instant.</p>
+            <p className="tracks__empty">{t('project.panel.empty')}</p>
           ) : (
             <ul className="library">
               {entries.map((entry) => {
@@ -247,7 +248,7 @@ function LibrarySection() {
                         <input
                           className="input"
                           type="text"
-                          aria-label="Nouveau nom du projet"
+                          aria-label={t('project.panel.newName')}
                           value={renaming.name}
                           maxLength={120}
                           autoFocus
@@ -255,19 +256,18 @@ function LibrarySection() {
                           onKeyDown={(e) => e.key === 'Escape' && setRenaming(null)}
                         />
                         <button type="submit" className="btn btn--secondary" disabled={!renaming.name.trim()}>
-                          Renommer
+                          {t('project.panel.rename')}
                         </button>
                       </form>
                     ) : (
                       <span className="library__name">
                         {entry.name}
-                        {current && <span className="library__badge">ouvert</span>}
+                        {current && <span className="library__badge">{t('project.panel.badgeOpen')}</span>}
                       </span>
                     )}
                     <span className="field__hint">{entry.summary}</span>
                     <span className="field__hint">
-                      {new Date(entry.updatedAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })} ·{' '}
-                      {formatProjectSize(entry.sizeBytes)}
+                      {formatDate(entry.updatedAt, { dateStyle: 'medium', timeStyle: 'short' })} · {formatProjectSize(entry.sizeBytes)}
                     </span>
                     {confirmingId === entry.id ? (
                       <div className="project__row">
@@ -279,22 +279,22 @@ function LibrarySection() {
                             void deleteEntry(entry)
                           }}
                         >
-                          Supprimer définitivement
+                          {t('project.panel.deleteForever')}
                         </button>
                         <button type="button" className="btn btn--secondary" onClick={() => setConfirmingId(null)}>
-                          Annuler
+                          {t('common.cancel')}
                         </button>
                       </div>
                     ) : (
                       <div className="project__row">
                         <button type="button" className="btn btn--secondary" onClick={() => void open(entry)} disabled={current}>
-                          Ouvrir
+                          {t('project.panel.openEntry')}
                         </button>
                         <button type="button" className="btn btn--secondary" onClick={() => setRenaming({ id: entry.id, name: entry.name })}>
-                          Renommer
+                          {t('project.panel.rename')}
                         </button>
                         <button type="button" className="btn btn--secondary" onClick={() => setConfirmingId(entry.id)}>
-                          Supprimer
+                          {t('common.delete')}
                         </button>
                       </div>
                     )}
@@ -311,6 +311,7 @@ function LibrarySection() {
 
 /** Presets of the settings. */
 function PresetSection() {
+  const t = useT()
   const history = getSettingsHistory()
   const presetStore = getPresetStore()
   const [presets, setPresets] = useState(() => presetStore.list())
@@ -324,7 +325,7 @@ function PresetSection() {
   const applyPreset = () => {
     if (!selected) return
     history.transaction(() => applySettings(presetSettings(selected, useAppStore.getState().settings)))
-    showToast({ kind: 'success', text: `Préréglage appliqué : ${selected.name}` })
+    showToast({ kind: 'success', text: translate('project.panel.presetApplied', { name: selected.name }) })
   }
 
   const savePreset = () => {
@@ -336,8 +337,8 @@ function PresetSection() {
       setPresetName('')
       showToast(
         stored
-          ? { kind: 'success', text: `Préréglage « ${name} » enregistré` }
-          : { kind: 'error', text: 'Préréglage non enregistré : stockage du navigateur plein. Il reste utilisable jusqu’à la fermeture de la page.' },
+          ? { kind: 'success', text: translate('project.panel.presetSaved', { name }) }
+          : { kind: 'error', text: translate('project.panel.presetFull') },
       )
     } catch (err) {
       showToast({ kind: 'error', text: errorMessage(err) })
@@ -354,36 +355,34 @@ function PresetSection() {
   return (
     <section className="settings project" aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`} className="section-title settings__title">
-        Préréglages
+        {t('project.panel.presets')}
       </h2>
 
-      <p className="field__hint">
-        Tous les réglages ou une seule famille (carte, trace, habillage, prise de vue), sans traces, arrêts, textes ni photos. Gardés {getPlatform().capabilities.isDesktop ? 'sur cet ordinateur' : 'dans ce navigateur'}.
-      </p>
+      <p className="field__hint">{t(getPlatform().capabilities.isDesktop ? 'project.panel.presetsHintDesktop' : 'project.panel.presetsHintBrowser')}</p>
 
       {presets.length === 0 ? (
-        <p className="tracks__empty">Aucun préréglage. Donnez un nom ci-dessous pour garder les réglages actuels.</p>
+        <p className="tracks__empty">{t('project.panel.noPreset')}</p>
       ) : (
         <>
           <div className="field">
             <label className="field__label" htmlFor={`${id}-preset`}>
-              Préréglage
+              {t('project.panel.preset')}
             </label>
             <select id={`${id}-preset`} className="select" value={selectedPreset} onChange={(e) => setSelectedPreset(e.currentTarget.value)}>
-              <option value="">Choisir…</option>
+              <option value="">{t('project.panel.choose')}</option>
               {presets.map((preset) => (
                 <option key={preset.name} value={preset.name}>
-                  {preset.scope && preset.scope !== 'tout' ? `${preset.name} · ${PRESET_SCOPE_LABELS[preset.scope]}` : preset.name}
+                  {preset.scope && preset.scope !== 'tout' ? t('project.panel.presetOption', { name: preset.name, scope: PRESET_SCOPE_LABELS[preset.scope] }) : preset.name}
                 </option>
               ))}
             </select>
           </div>
           <div className="project__row">
             <button type="button" className="btn btn--secondary" onClick={applyPreset} disabled={!selected}>
-              Appliquer
+              {t('project.panel.apply')}
             </button>
             <button type="button" className="btn btn--secondary" onClick={deletePreset} disabled={!selected}>
-              Supprimer
+              {t('common.delete')}
             </button>
           </div>
         </>
@@ -397,7 +396,7 @@ function PresetSection() {
         }}
       >
         <label className="field__label" htmlFor={`${id}-preset-scope`}>
-          Nouveau préréglage
+          {t('project.panel.newPreset')}
         </label>
         <select
           id={`${id}-preset-scope`}
@@ -414,16 +413,16 @@ function PresetSection() {
         <div className="project__row">
           <input
             id={`${id}-preset-name`}
-            aria-label="Nom du préréglage"
+            aria-label={t('project.panel.presetName')}
             className="input"
             type="text"
             value={presetName}
-            placeholder="Nom du préréglage"
+            placeholder={t('project.panel.presetName')}
             maxLength={PRESET_NAME_MAX}
             onChange={(e) => setPresetName(e.currentTarget.value)}
           />
           <button type="submit" className="btn btn--secondary" disabled={!presetName.trim()}>
-            Enregistrer
+            {t('common.save')}
           </button>
         </div>
       </form>

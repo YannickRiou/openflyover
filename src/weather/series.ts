@@ -7,6 +7,7 @@
 import type { LonLat } from '../core/types'
 import { recordedTimeAt, samplePath, type TrackPath } from '../flyover/path'
 import { haversineM } from '../geo/lonLat'
+import { t } from '../i18n'
 
 export const WEATHER_VARIABLES = [
   'temperature',
@@ -167,49 +168,49 @@ export interface WeatherCondition {
 }
 
 const WMO_CONDITIONS: Record<number, WeatherCondition> = {
-  0: { label: 'Ciel dégagé', icon: 'clear' },
-  1: { label: 'Plutôt dégagé', icon: 'mostly-clear' },
-  2: { label: 'Partiellement nuageux', icon: 'partly-cloudy' },
-  3: { label: 'Couvert', icon: 'overcast' },
-  45: { label: 'Brouillard', icon: 'fog' },
-  48: { label: 'Brouillard givrant', icon: 'fog' },
-  51: { label: 'Bruine faible', icon: 'drizzle' },
-  53: { label: 'Bruine', icon: 'drizzle' },
-  55: { label: 'Bruine dense', icon: 'drizzle' },
-  56: { label: 'Bruine verglaçante', icon: 'freezing-rain' },
-  57: { label: 'Bruine verglaçante dense', icon: 'freezing-rain' },
-  61: { label: 'Pluie faible', icon: 'rain' },
-  63: { label: 'Pluie modérée', icon: 'rain' },
-  65: { label: 'Pluie forte', icon: 'rain' },
-  66: { label: 'Pluie verglaçante', icon: 'freezing-rain' },
-  67: { label: 'Pluie verglaçante forte', icon: 'freezing-rain' },
-  71: { label: 'Neige faible', icon: 'snow' },
-  73: { label: 'Neige modérée', icon: 'snow' },
-  75: { label: 'Neige forte', icon: 'snow' },
-  77: { label: 'Grains de neige', icon: 'snow' },
-  80: { label: 'Averses faibles', icon: 'showers' },
-  81: { label: 'Averses', icon: 'showers' },
-  82: { label: 'Averses violentes', icon: 'showers' },
-  85: { label: 'Averses de neige', icon: 'snow' },
-  86: { label: 'Fortes averses de neige', icon: 'snow' },
-  95: { label: 'Orage', icon: 'thunderstorm' },
-  96: { label: 'Orage avec grêle', icon: 'thunderstorm' },
-  99: { label: 'Orage avec forte grêle', icon: 'thunderstorm' },
+  0: { get label() { return t('weather.wmo.0') }, icon: 'clear' },
+  1: { get label() { return t('weather.wmo.1') }, icon: 'mostly-clear' },
+  2: { get label() { return t('weather.wmo.2') }, icon: 'partly-cloudy' },
+  3: { get label() { return t('weather.wmo.3') }, icon: 'overcast' },
+  45: { get label() { return t('weather.wmo.45') }, icon: 'fog' },
+  48: { get label() { return t('weather.wmo.48') }, icon: 'fog' },
+  51: { get label() { return t('weather.wmo.51') }, icon: 'drizzle' },
+  53: { get label() { return t('weather.wmo.53') }, icon: 'drizzle' },
+  55: { get label() { return t('weather.wmo.55') }, icon: 'drizzle' },
+  56: { get label() { return t('weather.wmo.56') }, icon: 'freezing-rain' },
+  57: { get label() { return t('weather.wmo.57') }, icon: 'freezing-rain' },
+  61: { get label() { return t('weather.wmo.61') }, icon: 'rain' },
+  63: { get label() { return t('weather.wmo.63') }, icon: 'rain' },
+  65: { get label() { return t('weather.wmo.65') }, icon: 'rain' },
+  66: { get label() { return t('weather.wmo.66') }, icon: 'freezing-rain' },
+  67: { get label() { return t('weather.wmo.67') }, icon: 'freezing-rain' },
+  71: { get label() { return t('weather.wmo.71') }, icon: 'snow' },
+  73: { get label() { return t('weather.wmo.73') }, icon: 'snow' },
+  75: { get label() { return t('weather.wmo.75') }, icon: 'snow' },
+  77: { get label() { return t('weather.wmo.77') }, icon: 'snow' },
+  80: { get label() { return t('weather.wmo.80') }, icon: 'showers' },
+  81: { get label() { return t('weather.wmo.81') }, icon: 'showers' },
+  82: { get label() { return t('weather.wmo.82') }, icon: 'showers' },
+  85: { get label() { return t('weather.wmo.85') }, icon: 'snow' },
+  86: { get label() { return t('weather.wmo.86') }, icon: 'snow' },
+  95: { get label() { return t('weather.wmo.95') }, icon: 'thunderstorm' },
+  96: { get label() { return t('weather.wmo.96') }, icon: 'thunderstorm' },
+  99: { get label() { return t('weather.wmo.99') }, icon: 'thunderstorm' },
 }
 
-const UNKNOWN_CONDITION: WeatherCondition = { label: 'Conditions inconnues', icon: 'unknown' }
+const UNKNOWN_CONDITION: WeatherCondition = { get label() { return t('weather.wmo.unknown') }, icon: 'unknown' }
 
 /** French label and icon id of a WMO weather code (Open-Meteo `weather_code`). */
 export function describeWeatherCode(code: number): WeatherCondition {
   return WMO_CONDITIONS[code] ?? UNKNOWN_CONDITION
 }
 
-const WIND_SECTORS = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'] as const
+const WIND_SECTORS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const
 
-/** Direction the wind blows from (degrees) -> "NO"; empty when unknown. */
+/** Direction the wind blows from (degrees) -> "NO" in French, "NW" in English; empty when unknown. */
 export function windFromLabel(deg: number): string {
   if (!Number.isFinite(deg)) return ''
-  return WIND_SECTORS[Math.round(normalizeDeg(deg) / 45) % 8]
+  return t(`weather.wind.${WIND_SECTORS[Math.round(normalizeDeg(deg) / 45) % 8]}`)
 }
 
 // ---------------------------------------------------------------------------

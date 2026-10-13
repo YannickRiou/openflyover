@@ -16,6 +16,7 @@ import { useAppStore } from '../state/store'
 import { syncWeather, useWeatherStore } from '../weather/store'
 import type { BatchContext } from './batch'
 import { EXPORT_HOLD_END_S, EXPORT_HOLD_START_S, videoEncoding } from './schedule'
+import { t } from '../i18n'
 
 /** Longest wait for the landmarks and the weather of a track (ms): past it, its film is rendered without them. */
 export const TRACK_DATA_WAIT_MS = 30_000
@@ -71,7 +72,7 @@ export function beginTrackFilms(canceled: () => boolean): TrackFilmsSession {
   return {
     async show(file) {
       const imported = await importFile(file, 0)
-      if (imported.length === 0) throw new Error('aucune trace dans ce fichier')
+      if (imported.length === 0) throw new Error(t('errors.noTrackInFile'))
       const store = useAppStore.getState()
       // all synchronous, as when a project is opened: the scene never sees the empty list
       store.clearTracks()

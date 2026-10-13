@@ -19,6 +19,7 @@ import { filmClockFor } from '../film/clock'
 import { POI_NAME_MAX, addPoi, defaultPoiName } from '../film/pois'
 import { addSpeed, addStop, addText } from '../film/timeline'
 import { buildTrackPath, pickProjectedPath, samplePath } from '../flyover/path'
+import { useT } from '../i18n'
 import { useAppStore } from '../state/store'
 import { useTerrainContext } from './TerrainLayer'
 import { LINE_LIFT_M } from './TrackLines'
@@ -231,6 +232,7 @@ type Item = 'stop' | 'text' | 'speed' | 'poi'
 
 /** The name of a point of interest added from the menu at `at`: Enter adds it (one undo step), empty = default name. */
 function PoiNameForm({ at }: { at: LonLat }) {
+  const t = useT()
   const placeholder = useAppStore((s) => defaultPoiName(s.settings.film))
   return (
     <form
@@ -243,17 +245,18 @@ function PoiNameForm({ at }: { at: LonLat }) {
       }}
     >
       <label className="track-menu__label">
-        Nom du point d'intérêt
+        {t('scene.menu.poiName')}
         <input name="name" className="input" placeholder={placeholder} maxLength={POI_NAME_MAX} autoComplete="off" />
       </label>
       <button type="submit" className="track-menu__item">
-        Ajouter
+        {t('scene.menu.add')}
       </button>
     </form>
   )
 }
 
 export function TrackMenu() {
+  const t = useT()
   const menu = useTrackMenu((s) => s.menu)
   const busy = useExportStore((s) => isExportBusy(s.phase))
   const ref = useRef<HTMLDivElement>(null)
@@ -294,19 +297,19 @@ export function TrackMenu() {
   const items: { what: Item; label: string }[] = []
   if (menu.atM !== undefined) {
     items.push(
-      { what: 'stop', label: 'Ajouter un arrêt ici' },
-      { what: 'text', label: 'Ajouter un texte ici' },
-      { what: 'speed', label: 'Accélérer / ralentir ici' },
+      { what: 'stop', label: t('scene.menu.addHold') },
+      { what: 'text', label: t('scene.menu.addText') },
+      { what: 'speed', label: t('scene.menu.speed') },
     )
   }
-  if (menu.ground) items.push({ what: 'poi', label: "Point d'intérêt ici" })
+  if (menu.ground) items.push({ what: 'poi', label: t('scene.menu.poiHere') })
 
   return (
     <div
       ref={ref}
       className="track-menu"
       role={menu.naming ? 'dialog' : 'menu'}
-      aria-label={menu.naming ? "Point d'intérêt" : 'Ajouter ici'}
+      aria-label={menu.naming ? t('scene.menu.poi') : t('scene.menu.addHere')}
       data-local-escape=""
       style={{ left: menu.x, top: menu.y, transform: `translate(${menu.left ? '-100%' : '0'}, ${menu.up ? '-100%' : '0'})` }}
       onKeyDown={(e) => {

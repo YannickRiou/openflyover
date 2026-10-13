@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import type { PointerEvent } from 'react'
+import { useT } from '../i18n'
 import { Icon } from './icons'
 import { dismissSheet } from './shell'
 
@@ -21,6 +22,7 @@ interface Drag {
  * which closes it; dragging the head down past a third of the sheet (or a flick down) closes it too.
  */
 export function SheetHandle({ title, onClose }: { title?: string; onClose(): void }) {
+  const t = useT()
   const drag = useRef<Drag | null>(null)
 
   const release = (sheet: HTMLElement) => {
@@ -66,7 +68,7 @@ export function SheetHandle({ title, onClose }: { title?: string; onClose(): voi
     <div className="sheet-handle" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
       <span className="sheet-handle__bar" aria-hidden="true" />
       {title && <span className="sheet-handle__title">{title}</span>}
-      <button type="button" className="icon-btn sheet-handle__done" onClick={onClose} aria-label="Terminé" data-tip="Terminé" data-tip-align="end">
+      <button type="button" className="icon-btn sheet-handle__done" onClick={onClose} aria-label={t('common.done')} data-tip={t('common.done')} data-tip-align="end">
         <Icon name="check" size={22} />
       </button>
     </div>

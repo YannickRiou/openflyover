@@ -6,8 +6,10 @@
 import { isRecord } from '../core/guards'
 import { DEFAULT_APPEARANCE, parseAppearance } from './appearance'
 import type { Appearance } from './appearance'
+import { DEFAULT_LANGUAGE, isLanguageCode } from '../i18n/languages'
+import type { LanguageCode } from '../i18n/languages'
 import type { Track } from '../core/types'
-import { DEFAULT_PROJECT_NAME } from '../project/document'
+import { defaultProjectName } from '../project/document'
 import type { Settings } from '../state/store'
 
 export interface Rect {
@@ -84,7 +86,7 @@ export function nextGridIndex(current: number, key: string, columns: number, cou
 
 /** Name used for the project file: the typed name, else the first track's, else « Sans titre ». */
 export function effectiveProjectName(name: string, firstTrackName: string | undefined): string {
-  return name.trim() || firstTrackName || DEFAULT_PROJECT_NAME
+  return name.trim() || firstTrackName || defaultProjectName()
 }
 
 /** What a saved project contains, as compared by reference with the last save or open. */
@@ -285,6 +287,8 @@ export interface Preferences {
   timelineMagnet: boolean
   /** look of the interface (`appearance.ts`) */
   appearance: Appearance
+  /** language of the interface and of the film overlay (`i18n/`) */
+  language: LanguageCode
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -293,6 +297,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   timelineClock: false,
   timelineMagnet: true,
   appearance: DEFAULT_APPEARANCE,
+  language: DEFAULT_LANGUAGE,
 }
 
 /** The booleans of `raw` for `keys`, the defaults for anything missing or not a boolean. */
@@ -316,6 +321,7 @@ export function parsePreferences(raw: string | null): Preferences {
     timelineClock: typeof v.timelineClock === 'boolean' ? v.timelineClock : DEFAULT_PREFERENCES.timelineClock,
     timelineMagnet: typeof v.timelineMagnet === 'boolean' ? v.timelineMagnet : DEFAULT_PREFERENCES.timelineMagnet,
     appearance: parseAppearance(v.appearance),
+    language: isLanguageCode(v.language) ? v.language : DEFAULT_PREFERENCES.language,
   }
 }
 

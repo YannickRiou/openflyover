@@ -1,3 +1,4 @@
+import { useT } from '../i18n'
 import type { ProjectEntry } from '../platform'
 import { useAppStore } from '../state/store'
 import { libraryFile, useLibraryStore } from './library'
@@ -12,6 +13,7 @@ const RECENT_COUNT = 3
  * sample, open a project, and the latest projects of « Mes projets ».
  */
 export function EmptyState() {
+  const t = useT()
   const loading = useAppStore((s) => s.loading)
   // the list is read by the « Projet » tab, always mounted; the open entry (emptied of its tracks) is not offered
   const entries = useLibraryStore((s) => s.entries)
@@ -28,26 +30,26 @@ export function EmptyState() {
       <div className="empty__inner">
         <img className="empty__logo" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={64} height={64} />
         <h2 id="empty-title" className="empty__title">
-          Votre sortie, vue du ciel
+          {t('home.empty.title')}
         </h2>
-        <p className="empty__hint">Glissez une ou plusieurs traces GPX ou FIT n’importe où dans la fenêtre.</p>
+        <p className="empty__hint">{t('home.empty.hint')}</p>
         <button type="button" className="btn btn--primary empty__primary" onClick={() => void chooseTracksToImport()} disabled={loading}>
-          {loading ? 'Import en cours…' : 'Choisir un fichier'}
+          {loading ? t('home.empty.importing') : t('home.empty.chooseFile')}
         </button>
         <div className="empty__actions">
           <StravaImport />
           <button type="button" className="btn btn--secondary" onClick={loadSample} disabled={loading}>
-            Essayer avec l'exemple
+            {t('home.empty.sample')}
           </button>
         </div>
         <button type="button" className="empty__link" onClick={() => void chooseProjectToOpen()} disabled={loading}>
-          Ouvrir un projet…
+          {t('home.empty.openProject')}
         </button>
 
         {recent.length > 0 && (
           <section className="empty__recent" aria-labelledby="empty-recent">
             <h3 id="empty-recent" className="empty__recent-title">
-              Récents
+              {t('home.empty.recent')}
             </h3>
             <ul>
               {recent.map((entry) => (

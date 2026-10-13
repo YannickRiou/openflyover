@@ -1,5 +1,7 @@
 import { useId, useMemo, useState } from 'react'
-import { effectiveRender } from '../export/qualityTier'
+import { CLOUD_QUALITY_NAMES, effectiveRender } from '../export/qualityTier'
+import { t, useT } from '../i18n'
+import { formatDate } from '../i18n/format'
 import { hasParamKeys } from '../film/paramKeys'
 import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
@@ -15,9 +17,9 @@ import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
 
 const ZOOM_OFFSETS: { value: Settings['imageryZoomOffset']; label: string }[] = [
-  { value: 0, label: 'Normal' },
-  { value: 1, label: 'Fin' },
-  { value: 2, label: 'Très fin' },
+  { value: 0, get label() { return t('offline.level.0') } },
+  { value: 1, get label() { return t('offline.level.1') } },
+  { value: 2, get label() { return t('offline.level.2') } },
 ]
 
 const EXAGGERATION_MIN = 1
@@ -32,19 +34,19 @@ const WEATHER_STRENGTH_STEP = 0.05
 
 /** 0.5 -> "+0,5 IL" */
 function formatEv(ev: number): string {
-  return `${ev > 0 ? '+' : ev < 0 ? '−' : ''}${formatNumber(Math.abs(ev), 1)} IL`
+  return t('light.ev', { value: `${ev > 0 ? '+' : ev < 0 ? '−' : ''}${formatNumber(Math.abs(ev), 1)}` })
 }
 
 /** 10.5 -> "10 h 30" */
 function formatHour(hour: number): string {
   const minutes = Math.round(hour * 60)
-  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')}`
+  return t('format.clock', { hours: Math.floor(minutes / 60), minutes: String(minutes % 60).padStart(2, '0') })
 }
 
 /** "2024-07-14" -> "14 juil. 2024" */
 function formatDay(date: string): string {
   const ms = Date.parse(`${date}T12:00:00Z`)
-  return Number.isNaN(ms) ? date : new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  return Number.isNaN(ms) ? date : formatDate(ms, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
 
 /** Day used for the chips and the day bar before a track is loaded. */
@@ -77,6 +79,7 @@ function dayGradient(day: SolarDay): string {
  * sunrise, day, sunset at the place and on the day of the first track) or with a chip (one undo step per chip).
  */
 function SunTimeControl() {
+  const t = useT()
   const id = useId()
   const sunHour = useAppStore((s) => s.settings.sunHour)
   const sunFromTrack = useAppStore((s) => s.settings.sunFromTrack)
@@ -99,25 +102,25 @@ function SunTimeControl() {
   const shown = day ?? PLAIN_DAY
   const setHour = (hour: number) => getSettingsHistory().transaction(() => setSetting('sunHour', hour))
 
-  let dayHint = 'Lever et coucher calculés une fois la trace chargée.'
-  let solarTip = 'Heure du soleil au lieu de la sortie : à midi, il est au plus haut.'
-  if (day?.polar === 'day') dayHint = 'Jour polaire : le soleil ne se couche pas ce jour-là.'
-  else if (day?.polar === 'night') dayHint = 'Nuit polaire : le soleil ne se lève pas ce jour-là.'
+  let dayHint = t('light.sun.dayUnknown')
+  let solarTip = t('light.sun.solarTip')
+  if (day?.polar === 'day') dayHint = t('light.sun.polarDay')
+  else if (day?.polar === 'night') dayHint = t('light.sun.polarNight')
   else if (day && day.sunrise !== null && day.sunset !== null && lon !== undefined) {
-    const solar = `lever ${formatHour(day.sunrise)} · coucher ${formatHour(day.sunset)}`
+    const solar = t('light.sun.span', { rise: formatHour(day.sunrise), set: formatHour(day.sunset) })
     // clock time of the place only when the track gives its UTC offset (no time zone database)
-    if (utcOffsetMin === undefined) dayHint = `Lever ${formatHour(day.sunrise)} · coucher ${formatHour(day.sunset)} (heure solaire)`
+    if (utcOffsetMin === undefined) dayHint = t('light.sun.daySolar', { rise: formatHour(day.sunrise), set: formatHour(day.sunset) })
     else {
       const clock = (hour: number) => formatHour(clockHourOfSolar(hour, lon, utcOffsetMin))
-      dayHint = `Lever ${clock(day.sunrise)} · coucher ${clock(day.sunset)} (heure locale)`
-      solarTip = `${solarTip} Ce jour-là, en heure solaire : ${solar}.`
+      dayHint = t('light.sun.dayLocal', { rise: clock(day.sunrise), set: clock(day.sunset) })
+      solarTip = t('light.sun.solarTipDay', { solar })
     }
   }
 
   return (
     <>
       <fieldset className="field fieldset">
-        <legend className="field__label">Heure du soleil</legend>
+        <legend className="field__label">{t('light.sun.legend')}</legend>
         <div className="segmented">
           <label className="segmented__option">
             <input
@@ -128,7 +131,7 @@ function SunTimeControl() {
               aria-describedby={`${id}-sun-mode-hint`}
               onChange={() => setSetting('sunFromTrack', true)}
             />
-            Suivre la trace
+            {t('light.sun.follow')}
           </label>
           <label className="segmented__option">
             <input
@@ -137,22 +140,20 @@ function SunTimeControl() {
               checked={!follows}
               onChange={() => setSetting('sunFromTrack', false)}
             />
-            Heure fixe
+            {t('light.sun.fixed')}
           </label>
         </div>
         <p id={`${id}-sun-mode-hint`} className="field__hint">
           {!trackHasTime
-            ? '« Suivre la trace » demande une trace horodatée.'
+            ? t('light.sun.needsTime')
             : follows
-              ? 'Le soleil suit l’heure enregistrée au marqueur.'
-              : 'Le soleil reste à la même heure tout le film.'}
+              ? t('light.sun.followHint')
+              : t('light.sun.fixedHint')}
         </p>
       </fieldset>
 
       {sunKeyed && (
-        <p className="field__hint">
-          Des clés de la ligne « Soleil » de la timeline pilotent l’heure du soleil le long du parcours : {follows ? 'elles remplacent l’heure enregistrée' : 'le curseur ne sert alors plus'}.
-        </p>
+        <p className="field__hint">{t(follows ? 'light.sun.keyedFollow' : 'light.sun.keyedFixed')}</p>
       )}
       {follows && sunKeyed && <PanelKeys target={{ kind: 'param', param: 'sunHour' }} />}
 
@@ -160,7 +161,7 @@ function SunTimeControl() {
         <div className="field">
           <div className="field__label-row">
             <label className="field__label" htmlFor={`${id}-sun-hour`}>
-              Heure solaire
+              {t('light.sun.solarHour')}
             </label>
             <InfoTip text={solarTip} />
           </div>
@@ -191,7 +192,7 @@ function SunTimeControl() {
           <p id={`${id}-sun-day`} className="field__hint">
             {dayHint}
           </p>
-          <div className="sun-chips" role="group" aria-label="Moments de la journée">
+          <div className="sun-chips" role="group" aria-label={t('light.sun.moments')}>
             {SUN_CHIPS.map((chip) => {
               const hour = sunChipHour(chip, shown)
               return (
@@ -201,7 +202,7 @@ function SunTimeControl() {
                   className="sun-chip"
                   aria-pressed={hour !== null && hour === sunHour}
                   disabled={hour === null}
-                  title={hour === null ? 'Pas ce jour-là' : formatHour(hour)}
+                  title={hour === null ? t('light.sun.notThatDay') : formatHour(hour)}
                   onClick={() => hour !== null && setHour(hour)}
                 >
                   {SUN_CHIP_LABELS[chip]}
@@ -213,13 +214,13 @@ function SunTimeControl() {
       )}
 
       {!follows && (
-        <SettingRow label="Jour" value={sunDate ? formatDay(sunDate) : 'Jour de la sortie'} paths={['sunDate']}>
+        <SettingRow label={t('light.sun.day')} value={sunDate ? formatDay(sunDate) : t('light.sun.dayOfOuting')} paths={['sunDate']}>
           <div className="field">
             <div className="field__label-row">
               <label className="field__label" htmlFor={`${id}-sun-date`}>
-                Jour
+                {t('light.sun.day')}
               </label>
-              <InfoTip text="Vide : le jour de la sortie (aujourd’hui pour une trace sans heure). Une autre saison change la hauteur du soleil et l’heure du lever." />
+              <InfoTip text={t('light.sun.dayTip')} />
             </div>
             <div className="sun-date">
               <input
@@ -231,7 +232,7 @@ function SunTimeControl() {
               />
               {sunDate && (
                 <button type="button" className="btn btn--secondary" onClick={() => setSetting('sunDate', '')}>
-                  Jour de la sortie
+                  {t('light.sun.dayOfOuting')}
                 </button>
               )}
             </div>
@@ -243,19 +244,19 @@ function SunTimeControl() {
 }
 
 const CLOUD_MODE_OPTIONS: { value: CloudMode; label: string }[] = [
-  { value: 'meteo', label: 'Météo' },
-  { value: 'manuel', label: 'Manuel' },
-  { value: 'mer', label: 'Mer de nuages' },
-  { value: 'aucun', label: 'Aucun' },
+  { value: 'meteo', get label() { return t('light.clouds.mode.meteo') } },
+  { value: 'manuel', get label() { return t('light.clouds.mode.manuel') } },
+  { value: 'mer', get label() { return t('light.clouds.mode.mer') } },
+  { value: 'aucun', get label() { return t('light.clouds.mode.aucun') } },
 ]
 const SEA_RENDER_OPTIONS: { value: SeaRender; label: string }[] = [
-  { value: 'volume', label: 'Volumétrique' },
-  { value: 'surface', label: 'Nappe' },
+  { value: 'volume', get label() { return t('light.clouds.render.volume') } },
+  { value: 'surface', get label() { return t('light.clouds.render.surface') } },
 ]
 const CLOUD_QUALITY_OPTIONS: { value: CloudQuality; label: string }[] = [
-  { value: 'low', label: 'Rapide' },
-  { value: 'medium', label: 'Moyenne' },
-  { value: 'high', label: 'Fine' },
+  { value: 'low', get label() { return CLOUD_QUALITY_NAMES.low } },
+  { value: 'medium', get label() { return CLOUD_QUALITY_NAMES.medium } },
+  { value: 'high', get label() { return CLOUD_QUALITY_NAMES.high } },
 ]
 
 /**
@@ -263,6 +264,7 @@ const CLOUD_QUALITY_OPTIONS: { value: CloudQuality; label: string }[] = [
  * top proposed from the first track when chosen), or none.
  */
 function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
+  const t = useT()
   const id = useId()
   const clouds = useAppStore((s) => s.settings.clouds)
   const stats = useAppStore((s) => s.tracks[0]?.stats)
@@ -276,7 +278,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
     <>
       <fieldset className="field fieldset">
         {/* the section is titled « Nuages » */}
-        <legend className="visually-hidden">Nuages</legend>
+        <legend className="visually-hidden">{t('light.clouds.legend')}</legend>
         <div className="segmented">
           {CLOUD_MODE_OPTIONS.map((option) => (
             <label key={option.value} className="segmented__option">
@@ -298,20 +300,20 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
         </div>
         <p className="field__hint">
           {clouds.mode === 'aucun'
-            ? 'Pas de nuages en volume.'
+            ? t('light.clouds.hintNone')
             : clouds.mode === 'manuel'
-              ? 'Couverture choisie ci-dessous, la même tout le film.'
+              ? t('light.clouds.hintManual')
               : clouds.mode === 'mer'
-                ? 'Une couche de nuages bas, dense et plate, dont émergent les sommets.'
+                ? t('light.clouds.hintSea')
                 : weatherReady
-                ? 'Nuages bas, moyens et hauts de la météo au marqueur.'
-                : 'Ciel dégagé tant que la météo de la sortie n’est pas chargée.'}
+                ? t('light.clouds.hintWeather')
+                : t('light.clouds.hintWaiting')}
         </p>
       </fieldset>
 
       {clouds.mode === 'manuel' && (
         <RangeField
-          label="Couverture nuageuse"
+          label={t('light.clouds.cover')}
           min={0}
           max={1}
           step={0.05}
@@ -323,8 +325,8 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
 
       {clouds.mode === 'mer' && (
         <RangeField
-          label="Sommet de la mer de nuages"
-          tip="Altitude du dessus des nuages : les sommets plus hauts en émergent. Proposée aux trois quarts entre le point le plus bas et le plus haut de la trace."
+          label={t('light.clouds.seaTop')}
+          tip={t('light.clouds.seaTopTip')}
           {...SEA_TOP_RANGE}
           value={clouds.seaTopM}
           format={(v) => `${formatNumber(v)} m`}
@@ -334,13 +336,13 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
 
       {clouds.mode === 'mer' && (
         <SettingRow
-          label="Rendu de la mer de nuages"
+          label={t('light.clouds.seaRender')}
           value={SEA_RENDER_OPTIONS.find((o) => o.value === clouds.seaRender)?.label}
           paths={['clouds.seaRender']}
           weight="clouds"
         >
           <fieldset className="field fieldset">
-            <legend className="field__label">Rendu de la mer de nuages</legend>
+            <legend className="field__label">{t('light.clouds.seaRender')}</legend>
             <div className="segmented">
               {SEA_RENDER_OPTIONS.map((option) => (
                 <label key={option.value} className="segmented__option">
@@ -356,18 +358,18 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
             </div>
             <p className="field__hint">
               {clouds.seaRender === 'surface'
-                ? 'Une nappe de nuages éclairée, sans grain, plus légère à calculer.'
-                : 'Des nuages en volume, plus coûteux.'}
+                ? t('light.clouds.hintSurface')
+                : t('light.clouds.hintVolume')}
             </p>
           </fieldset>
         </SettingRow>
       )}
 
       {clouds.mode !== 'aucun' && clouds.mode !== 'mer' && (
-        <SettingRow label="Base des nuages bas" value={`${formatNumber(clouds.altitudeM)} m`} paths={['clouds.altitudeM']}>
+        <SettingRow label={t('light.clouds.base')} value={`${formatNumber(clouds.altitudeM)} m`} paths={['clouds.altitudeM']}>
           <RangeField
-            label="Base des nuages bas"
-            tip="Hauteur au-dessus du point le plus bas de la trace. Les nuages moyens sont 2 km plus haut."
+            label={t('light.clouds.base')}
+            tip={t('light.clouds.baseTip')}
             {...CLOUD_ALTITUDE_RANGE}
             value={clouds.altitudeM}
             format={(v) => `${formatNumber(v)} m`}
@@ -378,7 +380,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
 
       {clouds.mode !== 'aucun' && (
         <SettingRow
-          label="Qualité des nuages à l’export"
+          label={t('light.clouds.quality')}
           value={qualityLabel}
           paths={['clouds.quality']}
           weight="clouds"
@@ -387,9 +389,9 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
           <div className="field">
             <div className="field__label-row">
               <label className="field__label" htmlFor={`${id}-clouds-quality`}>
-                Qualité des nuages à l’export
+                {t('light.clouds.quality')}
               </label>
-              <InfoTip text="L’aperçu reste en qualité rapide. Une qualité fine allonge l’export. Par défaut, elle suit la qualité de l’export (Standard : rapide, Haute : moyenne, Maximale : fine)." />
+              <InfoTip text={t('light.clouds.qualityTip')} />
             </div>
             <select
               id={`${id}-clouds-quality`}
@@ -397,7 +399,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
               value={clouds.quality}
               onChange={(e) => set({ quality: e.currentTarget.value as CloudQualitySetting })}
             >
-              <option value="auto">Selon la qualité de l’export ({qualityLabel})</option>
+              <option value="auto">{t('light.clouds.qualityAuto', { quality: qualityLabel ?? '' })}</option>
               {CLOUD_QUALITY_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -406,7 +408,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
             </select>
             {clouds.quality !== 'auto' && (
               <button type="button" className="btn btn--secondary" onClick={() => set({ quality: 'auto' })}>
-                Revenir au préréglage
+                {t('light.clouds.backToPreset')}
               </button>
             )}
           </div>
@@ -418,6 +420,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
 
 /** « Plans d'eau »: lakes and rivers of OpenStreetMap drawn as reflective water, and their strength. */
 function WaterControl() {
+  const t = useT()
   const id = useId()
   const water = useAppStore((s) => s.settings.water)
   const setSetting = useAppStore((s) => s.setSetting)
@@ -431,14 +434,14 @@ function WaterControl() {
             checked={water.enabled}
             onChange={(e) => setSetting('water', { ...water, enabled: e.currentTarget.checked })}
           />
-          Lacs et rivières reflétants
+          {t('light.water.enable')}
         </label>
-        <InfoTip text="Plans d’eau d’OpenStreetMap autour de la trace : reflets du ciel et du soleil, vaguelettes." />
+        <InfoTip text={t('light.water.tip')} />
       </div>
       {water.enabled && (
-        <SettingRow label="Intensité de l’eau" value={formatPercent(water.strength)} paths={['water.strength']}>
+        <SettingRow label={t('light.water.strength')} value={formatPercent(water.strength)} paths={['water.strength']}>
           <RangeField
-            label="Intensité de l’eau"
+            label={t('light.water.strength')}
             min={0}
             max={1}
             step={0.05}
@@ -454,6 +457,7 @@ function WaterControl() {
 
 /** « Nettoyer le relief en mer »: spikes of the elevation data over the sea, and the sea brought to 0 m. */
 function DemCleanControl() {
+  const t = useT()
   const id = useId()
   const demClean = useAppStore((s) => s.settings.demClean)
   const setSetting = useAppStore((s) => s.setSetting)
@@ -467,9 +471,9 @@ function DemCleanControl() {
             checked={demClean.enabled}
             onChange={(e) => setSetting('demClean', { ...demClean, enabled: e.currentTarget.checked })}
           />
-          Nettoyer le relief en mer
+          {t('light.demClean.enable')}
         </label>
-        <InfoTip text="Supprime les pics isolés que les données d’altitude laissent parfois au-dessus de la mer (la trace 3D suit ce relief). Les montagnes et les côtes ne sont pas touchées." />
+        <InfoTip text={t('light.demClean.tip')} />
       </div>
       {demClean.enabled && (
         <div className="field__label-row">
@@ -480,9 +484,9 @@ function DemCleanControl() {
               checked={demClean.seaToZero}
               onChange={(e) => setSetting('demClean', { ...demClean, seaToZero: e.currentTarget.checked })}
             />
-            Ramener la mer à 0 m
+            {t('light.demClean.seaToZero')}
           </label>
-          <InfoTip text="Remonte à 0 m tout ce qui est sous le niveau de la mer. Aplatit aussi les vraies dépressions (mer Morte, polders)." />
+          <InfoTip text={t('light.demClean.seaToZeroTip')} />
         </div>
       )}
     </>
@@ -491,6 +495,7 @@ function DemCleanControl() {
 
 /** « Carte » tab, before the track and the landmarks: sections Fond de carte and Relief. */
 export function MapSettings() {
+  const t = useT()
   const settings = useAppStore((s) => s.settings)
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
@@ -503,10 +508,10 @@ export function MapSettings() {
   return (
     <>
       {/* the imagery source is left out of the marker: the import picks it per region (IGN, swisstopo) */}
-      <PanelSection title="Fond de carte" keys={['terrainSourceId', 'imageryZoomOffset', 'water']}>
+      <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'water']}>
         <div className="field">
           <label className="field__label" htmlFor={imageryId}>
-            Imagerie
+            {t('light.map.imagery')}
           </label>
           <select
             id={imageryId}
@@ -524,9 +529,9 @@ export function MapSettings() {
 
         <WaterControl />
 
-        <SettingRow label="Détail de l’imagerie" value={zoomLabel} paths={['imageryZoomOffset']}>
+        <SettingRow label={t('light.map.imageryDetail')} value={zoomLabel} paths={['imageryZoomOffset']}>
           <fieldset className="field fieldset">
-            <legend className="field__label">Détail de l’imagerie</legend>
+            <legend className="field__label">{t('light.map.imageryDetail')}</legend>
             <div className="segmented">
               {ZOOM_OFFSETS.map((option) => (
                 <label key={option.value} className="segmented__option">
@@ -544,10 +549,10 @@ export function MapSettings() {
           </fieldset>
         </SettingRow>
 
-        <SettingRow label="Source du relief" value={terrainName} paths={['terrainSourceId']}>
+        <SettingRow label={t('light.map.terrainSource')} value={terrainName} paths={['terrainSourceId']}>
           <div className="field">
             <label className="field__label" htmlFor={terrainId}>
-              Source du relief
+              {t('light.map.terrainSource')}
             </label>
             <select
               id={terrainId}
@@ -565,10 +570,10 @@ export function MapSettings() {
         </SettingRow>
       </PanelSection>
 
-      <PanelSection title="Relief" keys={['exaggeration', 'demClean', 'wireframe']}>
+      <PanelSection title={t('light.map.terrain')} keys={['exaggeration', 'demClean', 'wireframe']}>
         <RangeField
-          label="Exagération du relief"
-          tip="Multiplie les hauteurs pour accentuer les montagnes (×1 = relief réel)."
+          label={t('light.map.exaggeration')}
+          tip={t('light.map.exaggerationTip')}
           min={EXAGGERATION_MIN}
           max={EXAGGERATION_MAX}
           step={EXAGGERATION_STEP}
@@ -580,7 +585,7 @@ export function MapSettings() {
 
         <DemCleanControl />
 
-        <SettingRow label="Filaire" value={settings.wireframe ? 'Oui' : 'Non'} paths={['wireframe']}>
+        <SettingRow label={t('light.map.wireframe')} value={settings.wireframe ? t('common.yes') : t('common.no')} paths={['wireframe']}>
           <div className="field__label-row">
             <label className="checkbox" htmlFor={wireframeId}>
               <input
@@ -589,9 +594,9 @@ export function MapSettings() {
                 checked={settings.wireframe}
                 onChange={(e) => setSetting('wireframe', e.currentTarget.checked)}
               />
-              Filaire
+              {t('light.map.wireframe')}
             </label>
-            <InfoTip text="Dessine le relief en triangles, pour voir le détail chargé." />
+            <InfoTip text={t('light.map.wireframeTip')} />
           </div>
         </SettingRow>
       </PanelSection>
@@ -606,12 +611,14 @@ function useWeatherReady(): boolean {
 }
 
 /** In place of what needs the atmosphere (sky, clouds, sun) while it is off. */
-function AtmosphereOffHint({ what }: { what: string }) {
-  return <p className="field__hint">Activez l’atmosphère (onglet Lumière) pour {what}.</p>
+function AtmosphereOffHint({ what }: { what: 'clouds' | 'scene' }) {
+  const t = useT()
+  return <p className="field__hint">{t(what === 'clouds' ? 'light.weather.offClouds' : 'light.weather.offScene')}</p>
 }
 
 /** « Météo » tab, after the weather of the outing: sections Nuages and Pluie et brume (the weather in the image). */
 export function WeatherSettings() {
+  const t = useT()
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const weatherScene = useAppStore((s) => s.settings.weatherScene)
   const setSetting = useAppStore((s) => s.setSetting)
@@ -620,15 +627,15 @@ export function WeatherSettings() {
 
   return (
     <>
-      <PanelSection title="Nuages" keys={['clouds']}>
-        {atmosphere ? <CloudsControl weatherReady={weatherReady} /> : <AtmosphereOffHint what="voir les nuages" />}
+      <PanelSection title={t('light.weather.clouds')} keys={['clouds']}>
+        {atmosphere ? <CloudsControl weatherReady={weatherReady} /> : <AtmosphereOffHint what="clouds" />}
       </PanelSection>
 
-      <PanelSection title="Pluie et brume" keys={['weatherScene']}>
+      <PanelSection title={t('light.weather.rainMist')} keys={['weatherScene']}>
         {!atmosphere ? (
-          <AtmosphereOffHint what="voir la météo dans l’image" />
+          <AtmosphereOffHint what="scene" />
         ) : !weatherReady ? (
-          <p className="field__hint">Ciel gris, pluie et brume suivent la météo de la sortie, une fois chargée.</p>
+          <p className="field__hint">{t('light.weather.waiting')}</p>
         ) : (
           <>
             <label className="checkbox checkbox--switch" htmlFor={`${id}-weather-scene`}>
@@ -638,12 +645,12 @@ export function WeatherSettings() {
                 checked={weatherScene.enabled}
                 onChange={(e) => setSetting('weatherScene', { ...weatherScene, enabled: e.currentTarget.checked })}
               />
-              Météo dans la scène
+              {t('light.weather.scene')}
             </label>
             {weatherScene.enabled && (
-              <SettingRow label="Intensité de la météo" value={formatPercent(weatherScene.strength)} paths={['weatherScene.strength']}>
+              <SettingRow label={t('light.weather.strength')} value={formatPercent(weatherScene.strength)} paths={['weatherScene.strength']}>
                 <RangeField
-                  label="Intensité de la météo"
+                  label={t('light.weather.strength')}
                   min={0}
                   max={1}
                   step={WEATHER_STRENGTH_STEP}
@@ -662,6 +669,7 @@ export function WeatherSettings() {
 
 /** « Lumière » tab, before the colours (`GradingPanel`): sections Atmosphère (sky, shadows, exposure) and Soleil. */
 export function LightSettings() {
+  const t = useT()
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const shadows = useAppStore((s) => s.settings.shadows)
   const exposureEv = useAppStore((s) => s.settings.exposureEv)
@@ -671,7 +679,7 @@ export function LightSettings() {
 
   return (
     <>
-      <PanelSection title="Atmosphère" keys={['atmosphere', 'shadows', 'exposureEv']}>
+      <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'exposureEv']}>
         <label className="checkbox checkbox--switch" htmlFor={`${id}-atmosphere`}>
           <input
             id={`${id}-atmosphere`}
@@ -679,21 +687,21 @@ export function LightSettings() {
             checked={atmosphere}
             onChange={(e) => setSetting('atmosphere', e.currentTarget.checked)}
           />
-          Atmosphère : ciel, soleil et brume
+          {t('light.atmosphere.enable')}
         </label>
 
         {atmosphere && (
           <label className="checkbox" htmlFor={`${id}-shadows`}>
             <input id={`${id}-shadows`} type="checkbox" checked={shadows} onChange={(e) => setSetting('shadows', e.currentTarget.checked)} />
-            Ombres du relief
+            {t('light.atmosphere.shadows')}
           </label>
         )}
 
         {atmosphere && (
-          <SettingRow label="Exposition" value={formatEv(exposureEv)} paths={['exposureEv']}>
+          <SettingRow label={t('light.atmosphere.exposure')} value={formatEv(exposureEv)} paths={['exposureEv']}>
             <RangeField
-              label="Exposition"
-              tip="Éclaircit ou assombrit l’image, en plus du réglage automatique selon le soleil."
+              label={t('light.atmosphere.exposure')}
+              tip={t('light.atmosphere.exposureTip')}
               min={EXPOSURE_EV_MIN}
               max={EXPOSURE_EV_MAX}
               step={EXPOSURE_EV_STEP}
@@ -702,18 +710,18 @@ export function LightSettings() {
               onChange={(ev) => setSetting('exposureEv', ev)}
             />
             {exposureKeyed && (
-              <p className="field__hint">Des clés de la ligne « Exposition » de la timeline pilotent cette valeur le long du parcours : le curseur ne sert alors plus.</p>
+              <p className="field__hint">{t('light.atmosphere.exposureKeyed')}</p>
             )}
             <PanelKeys target={{ kind: 'param', param: 'exposure' }} />
           </SettingRow>
         )}
       </PanelSection>
 
-      <PanelSection title="Soleil" keys={['sunFromTrack', 'sunHour', 'sunDate']}>
+      <PanelSection title={t('light.atmosphere.sun')} keys={['sunFromTrack', 'sunHour', 'sunDate']}>
         {atmosphere ? (
           <SunTimeControl />
         ) : (
-          <p className="field__hint">Activez l’atmosphère (section précédente) pour régler l’heure du soleil.</p>
+          <p className="field__hint">{t('light.atmosphere.sunOff')}</p>
         )}
       </PanelSection>
 

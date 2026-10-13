@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { create } from 'zustand'
 import type { VideoAspect } from '../export/schedule'
+import { useLanguage } from '../i18n'
 import { safeZones } from './safeZoneLayout'
 import type { FrameBox } from './safeZoneLayout'
 
@@ -22,6 +23,7 @@ const percent = (box: FrameBox): CSSProperties => ({
  * the vertical video apps (geometry in safeZones.ts). DOM over the canvas: the export never sees it.
  */
 export function SafeZones({ aspect }: { aspect: VideoAspect }) {
+  useLanguage()
   const { guides, covered } = safeZones(aspect)
   return (
     <div className="safe-zones" aria-hidden="true">

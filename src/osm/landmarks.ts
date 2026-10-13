@@ -15,13 +15,18 @@ import type { TrackPath } from '../flyover/path'
 import type { LandmarkKind as LabelKind, LandmarkLabel } from '../scene/labelModel'
 import { formatNumber } from '../ui/format'
 import { MAX_LANDMARK_DISTANCE_M, M_PER_DEG, planarDistanceM, type OsmFeature, type OsmKind } from './overpass'
+import { t } from '../i18n'
 
 /** Sizes of the places offered apart (« Villes » holds the OSM cities and towns). */
 export type PlaceSize = 'city' | 'village' | 'hamlet'
 
 export const PLACE_SIZES: readonly PlaceSize[] = ['city', 'village', 'hamlet']
 
-export const PLACE_SIZE_LABELS: Readonly<Record<PlaceSize, string>> = { city: 'Villes', village: 'Villages', hamlet: 'Hameaux' }
+export const PLACE_SIZE_LABELS: Readonly<Record<PlaceSize, string>> = {
+  get city() { return t('landmarks.placeSize.city') },
+  get village() { return t('landmarks.placeSize.village') },
+  get hamlet() { return t('landmarks.placeSize.hamlet') },
+}
 
 /** Size of a place from its OSM `place` value (`OsmFeature.detail`). */
 export function placeSizeOf(detail: string | undefined): PlaceSize {
@@ -172,28 +177,28 @@ export const LANDMARK_DISTANCE_RANGE = { min: 100, max: MAX_LANDMARK_DISTANCE_M,
 export const LANDMARK_COUNT_RANGE = { min: 5, max: 80, step: 5 } as const
 
 export const KIND_LABELS: Readonly<Record<OsmKind, string>> = {
-  peak: 'Sommets',
-  pass: 'Cols',
-  hut: 'Refuges',
-  lake: 'Lacs',
-  waterfall: 'Cascades',
-  place: 'Villes, villages et hameaux',
-  viewpoint: 'Points de vue',
-  glacier: 'Glaciers',
-  waterPoint: "Points d'eau",
+  get peak() { return t('landmarks.kind.peak') },
+  get pass() { return t('landmarks.kind.pass') },
+  get hut() { return t('landmarks.kind.hut') },
+  get lake() { return t('landmarks.kind.lake') },
+  get waterfall() { return t('landmarks.kind.waterfall') },
+  get place() { return t('landmarks.kind.place') },
+  get viewpoint() { return t('landmarks.kind.viewpoint') },
+  get glacier() { return t('landmarks.kind.glacier') },
+  get waterPoint() { return t('landmarks.kind.waterPoint') },
 }
 
 /** Name of one landmark of each kind (badge of the lists). */
 export const KIND_BADGES: Readonly<Record<OsmKind, string>> = {
-  peak: 'Sommet',
-  pass: 'Col',
-  hut: 'Refuge',
-  lake: 'Lac',
-  waterfall: 'Cascade',
-  place: 'Lieu',
-  viewpoint: 'Vue',
-  glacier: 'Glacier',
-  waterPoint: 'Eau',
+  get peak() { return t('landmarks.badge.peak') },
+  get pass() { return t('landmarks.badge.pass') },
+  get hut() { return t('landmarks.badge.hut') },
+  get lake() { return t('landmarks.badge.lake') },
+  get waterfall() { return t('landmarks.badge.waterfall') },
+  get place() { return t('landmarks.badge.place') },
+  get viewpoint() { return t('landmarks.badge.viewpoint') },
+  get glacier() { return t('landmarks.badge.glacier') },
+  get waterPoint() { return t('landmarks.badge.waterPoint') },
 }
 
 /** Share of `MAX_LANDMARKS` kept for places when there are enough of them (they rank below every other kind). */
@@ -460,7 +465,10 @@ export function buildLandmarks(
       distanceM,
       alongM: projected.alongM,
       priority: landmarkPriority(f.kind, ele, distanceM, f.detail, parsePopulation(f.population)),
-      text: landmarkText(f.kind, f.name, ele),
+      // read when shown: the elevation follows the number format of the language
+      get text() {
+        return landmarkText(f.kind, f.name, ele)
+      },
     }
     if (ele !== undefined) landmark.ele = ele
     if (f.area) areas.set(landmark, f.area)

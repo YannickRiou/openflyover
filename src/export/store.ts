@@ -13,6 +13,7 @@ import type { TrackPath } from '../flyover/path'
 import type { Platform, WritableFile } from '../platform'
 import { showToast } from '../ui/toast'
 import type { VideoEncoding, VideoQuality } from './schedule'
+import { t } from '../i18n'
 
 export type ExportPhase = 'idle' | 'starting' | 'rendering' | 'finalizing' | 'done' | 'error' | 'canceled'
 
@@ -260,7 +261,7 @@ export async function chooseVideoDestination(
     return destination ? { start: true, destination } : { start: false }
   } catch (error) {
     console.warn("[export] écriture directe impossible, film gardé en mémoire :", error)
-    showToast({ kind: 'info', text: 'Écriture directe impossible : le film sera téléchargé à la fin.' })
+    showToast({ kind: 'info', text: t('export.store.directFailed') })
     return { start: true }
   }
 }

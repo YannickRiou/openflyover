@@ -22,6 +22,7 @@ import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpen
 import { effectiveProjectName, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
 import type { ToastInput } from './toast'
+import { t } from '../i18n'
 
 /**
  * Write the project file and mark the project saved. `ask`: always through the dialog (« Enregistrer sous… »), else
@@ -36,17 +37,17 @@ async function writeProject(ask: boolean): Promise<void> {
   try {
     const outcome = await getPlatform().saveDocument(() => encodeProjectFile(text), {
       fileName: projectFileName(name),
-      filters: [{ name: 'Projet OpenFlyover', extensions: [PROJECT_EXTENSION] }],
+      filters: [{ name: t('project.actions.filterProject'), extensions: [PROJECT_EXTENSION] }],
       target: state.projectFile,
       ask,
     })
     if (!outcome.saved) return
     state.setProjectFile(outcome.target ?? null)
     state.markProjectSaved()
-    showToast({ kind: 'success', text: `Projet enregistré : ${outcome.fileName}` })
+    showToast({ kind: 'success', text: t('project.actions.saved', { fileName: outcome.fileName }) })
   } catch (err) {
     const reason = errorMessage(err)
-    showToast({ kind: 'error', text: `Impossible d'enregistrer le projet : ${reason}` })
+    showToast({ kind: 'error', text: t('project.actions.saveFailed', { reason }) })
   }
 }
 
@@ -64,10 +65,10 @@ export function saveProjectAs(): Promise<void> {
 export async function saveExportedFile(url: string, fileName: string): Promise<void> {
   try {
     const outcome = await getPlatform().saveUrl(url, { fileName })
-    if (outcome.saved) showToast({ kind: 'success', text: `Enregistré : ${outcome.fileName}` })
+    if (outcome.saved) showToast({ kind: 'success', text: t('project.actions.fileSaved', { fileName: outcome.fileName }) })
   } catch (err) {
     const reason = errorMessage(err)
-    showToast({ kind: 'error', text: `Impossible d'enregistrer « ${fileName} » : ${reason}` })
+    showToast({ kind: 'error', text: t('project.actions.fileSaveFailed', { fileName, reason }) })
   }
 }
 
@@ -89,18 +90,18 @@ export async function openProject(file: File, entry: ProjectEntry | null = null,
     // a file opened from disk is written again by « Enregistrer » where the platform kept its place
     store.setProjectFile(entry ? null : fileTargetOf(file))
     setOpenEntry(entry?.id ?? null)
-    const opened = `Projet « ${effectiveProjectName(name, store.tracks[0]?.name)} » ${reopened ? 'rouvert' : 'ouvert'}`
-    if (project.warnings.length > 0) showToast({ kind: 'info', text: `${opened}.\n${project.warnings.join('\n')}` })
+    const opened = t(reopened ? 'project.actions.reopened' : 'project.actions.opened', { name: effectiveProjectName(name, store.tracks[0]?.name) })
+    if (project.warnings.length > 0) showToast({ kind: 'info', text: t('project.actions.openedWarnings', { opened, warnings: project.warnings.join('\n') }) })
     else showToast({ kind: 'success', text: opened })
   } catch (err) {
     const reason = errorMessage(err)
-    showToast({ kind: 'error', text: `Impossible d'ouvrir « ${file.name} » : ${reason}` })
+    showToast({ kind: 'error', text: t('project.actions.openFailed', { fileName: file.name, reason }) })
   }
 }
 
 /** A file the system asked the app to open (double-click on a project) that could not be read. */
 export function reportOpenFailure(fileName: string, reason: string): void {
-  showToast({ kind: 'error', text: `Impossible d'ouvrir « ${fileName} » : ${reason}` })
+  showToast({ kind: 'error', text: t('project.actions.openFailed', { fileName, reason }) })
 }
 
 /** The answer to « Fermer sans enregistrer ? »: save the file first, close anyway, or keep the project open. */
@@ -127,7 +128,7 @@ async function closeOpenProject(ask: () => Promise<CloseAnswer>): Promise<boolea
 export async function closeProject(ask: () => Promise<CloseAnswer>): Promise<void> {
   const { projectName, tracks } = useAppStore.getState()
   const name = effectiveProjectName(projectName, tracks[0]?.name)
-  if (await closeOpenProject(ask)) showToast({ kind: 'success', text: `Projet « ${name} » fermé` })
+  if (await closeOpenProject(ask)) showToast({ kind: 'success', text: t('project.actions.closed', { name }) })
 }
 
 /** « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import. */
@@ -162,7 +163,7 @@ export async function openFiles(files: readonly File[]): Promise<void> {
   if (project) await openProject(project)
   if (tracks.length > 0) importTrackFiles(tracks)
   if (extraProjects.length > 0) {
-    showToast({ kind: 'info', text: `Un seul projet à la fois : ${extraProjects.map((f) => `« ${f.name} »`).join(', ')} non ouvert(s).` })
+    showToast({ kind: 'info', text: t('project.actions.extraProjects', { names: extraProjects.map((f) => t('common.quoted', { text: f.name })).join(', ') }) })
   }
 }
 
@@ -171,26 +172,26 @@ export async function pickFiles(options: OpenFilesOptions): Promise<File[]> {
   try {
     return await getPlatform().openFiles(options)
   } catch (err) {
-    showToast({ kind: 'error', text: `Impossible de lire le fichier choisi : ${errorMessage(err)}` })
+    showToast({ kind: 'error', text: t('project.actions.readFailed', { error: errorMessage(err) }) })
     return []
   }
 }
 
 /** « Choisir un fichier », « Ajouter » : GPX / FIT files to import (dialog on the desktop). */
 export async function chooseTracksToImport(): Promise<void> {
-  importTrackFiles(await pickFiles({ filters: [{ name: 'Traces GPX ou FIT', extensions: ['gpx', 'fit'] }], multiple: true }))
+  importTrackFiles(await pickFiles({ filters: [{ name: t('project.actions.filterTracks'), extensions: ['gpx', 'fit'] }], multiple: true }))
 }
 
 /** « Ouvrir un projet… » : one project file (dialog on the desktop). */
 export async function chooseProjectToOpen(): Promise<void> {
-  const files = await pickFiles({ filters: [{ name: 'Projet OpenFlyover', extensions: [PROJECT_EXTENSION, 'json'] }], rewritable: true })
+  const files = await pickFiles({ filters: [{ name: t('project.actions.filterProject'), extensions: [PROJECT_EXTENSION, 'json'] }], rewritable: true })
   if (files.length > 0) await openFiles(files)
 }
 
 /** « Ouvrir » : file picker (dialog on the desktop) for tracks and a project. */
 export async function chooseFilesToOpen(): Promise<void> {
   const files = await pickFiles({
-    filters: [{ name: 'Traces et projets', extensions: ['gpx', 'fit', PROJECT_EXTENSION, 'json'] }],
+    filters: [{ name: t('project.actions.filterBoth'), extensions: ['gpx', 'fit', PROJECT_EXTENSION, 'json'] }],
     multiple: true,
     rewritable: true,
   })
@@ -213,8 +214,8 @@ export async function runImport(jobs: ImportJob[]): Promise<void> {
   if (followEachOther(imported)) {
     showUntilTracksChange({
       kind: 'info',
-      text: `Enchaîner ces ${imported.length} traces ?`,
-      action: { label: 'Enchaîner', run: () => chainLoadedTracks(imported) },
+      text: t('project.actions.chainQuestion', { count: imported.length }),
+      action: { label: t('project.actions.chain'), run: () => chainLoadedTracks(imported) },
     })
   }
 }
@@ -244,8 +245,8 @@ export function chainLoadedTracks(chained: readonly Track[]): void {
   store.replaceTracks(replaceByChain(separate, chained, merged))
   showUntilTracksChange({
     kind: 'success',
-    text: `Traces enchaînées : « ${merged.name} »`,
-    action: { label: 'Annuler', run: () => useAppStore.getState().replaceTracks(separate) },
+    text: t('project.actions.chained', { name: merged.name }),
+    action: { label: t('common.undo'), run: () => useAppStore.getState().replaceTracks(separate) },
   })
 }
 
@@ -258,10 +259,10 @@ export function importTrackFiles(files: readonly File[]): void {
 export function loadSample(): void {
   void runImport([
     {
-      label: "l'exemple",
+      get label() { return t('project.actions.sample') },
       async run(colorIndex) {
         const response = await fetch(SAMPLE_URL)
-        if (!response.ok) throw new Error(`fichier indisponible (HTTP ${response.status})`)
+        if (!response.ok) throw new Error(t('project.actions.sampleUnavailable', { status: response.status }))
         return importText(await response.text(), SAMPLE_NAME, colorIndex)
       },
     },

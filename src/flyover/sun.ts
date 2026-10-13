@@ -7,6 +7,7 @@
 import type { ClockNight, FilmClock } from '../film/clock'
 import { shotSunOf } from '../film/model'
 import { recordedTimeAt, type TrackPath } from './path'
+import { t } from '../i18n'
 
 const DAY_MS = 86_400_000
 const HOUR_MS = 3_600_000
@@ -224,12 +225,12 @@ export const SUN_CHIPS = ['lever', 'matin', 'midi', 'heure-doree', 'coucher', 'n
 export type SunChip = (typeof SUN_CHIPS)[number]
 
 export const SUN_CHIP_LABELS: Readonly<Record<SunChip, string>> = {
-  lever: 'Lever',
-  matin: 'Matin',
-  midi: 'Midi',
-  'heure-doree': 'Heure dorée',
-  coucher: 'Coucher',
-  nuit: 'Nuit',
+  get lever() { return t('light.chip.lever') },
+  get matin() { return t('light.chip.matin') },
+  get midi() { return t('light.chip.midi') },
+  get 'heure-doree'() { return t('light.chip.heure-doree') },
+  get coucher() { return t('light.chip.coucher') },
+  get nuit() { return t('light.chip.nuit') },
 }
 
 /** Range and step of the solar hour slider (also the hours given by the chips). */

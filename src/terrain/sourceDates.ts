@@ -5,6 +5,8 @@
  * the service does not send it (« Sources et licences » says so, no date is made up).
  */
 import { create } from 'zustand'
+import { t } from '../i18n'
+import { formatDate } from '../i18n/format'
 
 /** Last-Modified (ms since 1970) per IGN layer name (`LAYER` of the WMTS request). */
 export const useSourceDates = create<{ dates: Readonly<Record<string, number>> }>()(() => ({ dates: {} }))
@@ -30,9 +32,7 @@ export function noteTileLastModified(url: string, lastModified: string | null | 
 
 /** 12/03/2026: the day of the HTTP date (UTC, as sent). */
 export function formatUpdateDate(time: number): string {
-  const d = new Date(time)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`
+  return formatDate(time, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
 }
 
 /** What « Sources et licences » adds after the line of an IGN source (`urlTemplate`); null for other sources. */
@@ -40,5 +40,5 @@ export function updateDateNote(urlTemplate: string, dates: Readonly<Record<strin
   const layer = ignLayerOf(urlTemplate)
   if (layer === null) return null
   const time = dates[layer]
-  return time === undefined ? 'date de mise à jour non communiquée par le service' : `données mises à jour le ${formatUpdateDate(time)}`
+  return time === undefined ? t('terrain.dates.unknown') : t('terrain.dates.updated', { date: formatUpdateDate(time) })
 }

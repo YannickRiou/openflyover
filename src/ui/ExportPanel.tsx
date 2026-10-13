@@ -21,7 +21,8 @@ import { currentReport } from '../export/guard'
 import { showDiagnostic } from '../export/diagnostic'
 import { targetBitrate, type CodecCandidate } from '../export/encoder'
 import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
-import { CLOUD_QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
+import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
+import { t, t as translate, useT } from '../i18n'
 import {
   AUDIO_BITRATES_KBPS,
   BITRATE_RANGE_MBPS,
@@ -50,7 +51,7 @@ import {
   type ExportResult,
 } from '../export/store'
 import { getPlatform, videoEncoderMissingHint } from '../platform'
-import { SHARE_SAVE_LABEL } from '../platform/platform'
+import { shareSaveLabel } from '../platform/platform'
 import { canPickFolder, pickFolder, pickReadableFolder, type ReadableFolder, type WritableFolder } from '../platform/folder'
 import { startPoster } from '../poster/export'
 import { PosterPanel } from '../poster/PosterPanel'
@@ -59,7 +60,7 @@ import { useAppStore } from '../state/store'
 import { ExportHistory } from './ExportHistory'
 import { ModifiedMarker } from './ModifiedMarker'
 import { RangeField, RenderWeight, SettingRow } from './PanelSection'
-import { formatNumber } from './format'
+import { formatBytes, formatNumber } from './format'
 import { saveExportedFile } from './projectActions'
 import { effectiveProjectName } from './shell'
 import { AspectIcon, Icon } from './icons'
@@ -68,9 +69,9 @@ import { showToast } from './toast'
 import './exportPanel.css'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
-  { value: 'standard', label: 'Standard' },
-  { value: 'high', label: 'Haute' },
-  { value: 'max', label: 'Maximale' },
+  { value: 'standard', get label() { return QUALITY_NAMES.standard } },
+  { value: 'high', get label() { return QUALITY_NAMES.high } },
+  { value: 'max', get label() { return QUALITY_NAMES.max } },
 ]
 
 const CODEC_LABELS: Record<string, string> = {
@@ -89,15 +90,13 @@ function formatClock(seconds: number): string {
   return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s`
 }
 
-/** bytes -> "12,3 Mo" */
+/** bytes -> "12,3 Mo" ("12.3 MB") */
 function formatMegabytes(bytes: number): string {
-  return `${formatNumber(bytes / 1e6, 1)} Mo`
+  return t('format.megabytes', { value: formatNumber(bytes / 1e6, 1) })
 }
 
 /** bytes -> "1,5 Go" or "250 Mo" (limit of the in-memory warning) */
-function formatLimit(bytes: number): string {
-  return bytes >= 1e9 ? `${formatNumber(bytes / 1e9, 1)} Go` : `${formatNumber(bytes / 1e6)} Mo`
-}
+const formatLimit = formatBytes
 
 /** Phones without a save picker hand the file to the share sheet, which needs a tap: no automatic download there. */
 function sharesFiles(): boolean {
@@ -124,7 +123,7 @@ interface CodecProbe {
 }
 
 const CODEC_CHOICE_LABELS: Record<VideoCodecChoice, string> = {
-  auto: 'Automatique',
+  get auto() { return t('export.panel.codec.auto') },
   avc: 'H.264 (MP4)',
   hevc: 'HEVC (MP4)',
   vp9: 'VP9 (WebM)',
@@ -140,6 +139,7 @@ const seconds = (s: number) => `${formatNumber(s, s % 1 === 0 ? 0 : 1)} s`
  * « Affiche » mode.
  */
 function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; modes: ReactNode; hidden: boolean }) {
+  const t = useT()
   const video = useAppStore((s) => s.settings.video)
   const clouds = useAppStore((s) => s.settings.clouds)
   const customised = useAppStore((s) => isCustomised(s.settings))
@@ -215,20 +215,20 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
     if (useBatchStore.getState().phase === 'running') return
     const { url, fileName } = result
     // written straight to disk: already saved
-    if (url === null) return void showToast({ kind: 'success', text: `Vidéo enregistrée dans ${fileName}` })
+    if (url === null) return void showToast({ kind: 'success', text: translate('export.panel.readyDisk', { fileName }) })
     const share = sharesFiles()
     if (!share) download(url, fileName)
     const image = result.mimeType.startsWith('image/')
-    const label = share ? SHARE_SAVE_LABEL : getPlatform().capabilities.isDesktop ? 'Enregistrer…' : 'Télécharger à nouveau'
+    const label = share ? shareSaveLabel() : getPlatform().capabilities.isDesktop ? translate('export.panel.save') : translate('export.panel.downloadAgain')
     const action = { label, run: () => download(url, fileName) }
-    if (image && !share) showToast({ kind: 'success', text: 'Image prête' })
-    else showToast({ kind: 'success', text: image ? 'Image prête' : 'Vidéo prête', action })
+    if (image && !share) showToast({ kind: 'success', text: translate('export.panel.imageReady') })
+    else showToast({ kind: 'success', text: image ? translate('export.panel.imageReady') : translate('export.panel.videoReady'), action })
   }, [result])
 
   useEffect(() => {
     if (useBatchStore.getState().phase === 'running') return
-    if (phase === 'error' && error) showToast({ kind: 'error', text: `Échec de l'export : ${error}` })
-    else if (phase === 'canceled') showToast({ kind: 'info', text: 'Export annulé' })
+    if (phase === 'error' && error) showToast({ kind: 'error', text: translate('export.panel.failed', { error }) })
+    else if (phase === 'canceled') showToast({ kind: 'info', text: translate('export.panel.canceled') })
   }, [phase, error])
 
   const update = (patch: Partial<VideoSettings>) => setSetting('video', { ...video, ...patch })
@@ -261,24 +261,24 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
   const announcement =
     phase === 'starting' || phase === 'rendering'
-      ? 'Export en cours…'
+      ? t('export.panel.announceRunning')
       : phase === 'finalizing'
-        ? 'Finalisation du fichier…'
+        ? t('export.panel.announceFinalizing')
         : ''
 
   return (
     <section className="settings export" aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
       <h2 id={`${id}-title`} className="section-title settings__title">
-        Exporter
+        {t('export.panel.title')}
       </h2>
-      <ModifiedMarker keys={['video']} label="Exporter" disabled={busy} />
+      <ModifiedMarker keys={['video']} label={t('export.panel.title')} disabled={busy} />
       {onClose && (
         <button
           type="button"
           className="icon-btn settings__close"
           onClick={onClose}
-          aria-label="Fermer le panneau d'export"
-          data-tip={withShortcut('Fermer', 'export')}
+          aria-label={t('export.panel.close')}
+          data-tip={withShortcut(t('common.close'), 'export')}
           data-tip-align="end"
         >
           <Icon name="x" size={18} />
@@ -286,9 +286,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
       {modes}
 
-      <h3 className="export__group">Format</h3>
+      <h3 className="export__group">{t('export.panel.formatGroup')}</h3>
       <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">Proportions</legend>
+        <legend className="field__label">{t('export.panel.proportions')}</legend>
         <div className="format-tiles">
           {VIDEO_ASPECTS.map((a) => (
             <label key={a.id} className="format-tile" title={a.label}>
@@ -312,7 +312,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       <div className="field">
         <div className="field__label-row">
           <label className="field__label" htmlFor={`${id}-resolution`}>
-            Résolution
+            {t('export.panel.resolution')}
           </label>
           <RenderWeight weight="resolution" />
         </div>
@@ -334,14 +334,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           ))}
         </select>
         <p id={`${id}-size`} className="field__hint">
-          {formatNumber(width)} × {formatNumber(height)} px
-          {resolutionNote && ` · ${resolutionNote}`}
+          {[t('export.panel.size', { width: formatNumber(width), height: formatNumber(height) }), resolutionNote].filter(Boolean).join(' · ')}
         </p>
       </div>
 
       <fieldset className="field fieldset" disabled={busy}>
         <legend className="field__label">
-          Images par seconde <RenderWeight weight="fps" />
+          {t('export.panel.fps')} <RenderWeight weight="fps" />
         </legend>
         <div className="segmented">
           {VIDEO_FPS.map((fps) => (
@@ -353,13 +352,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </div>
       </fieldset>
 
-      <h3 className="export__group">Encodage</h3>
+      <h3 className="export__group">{t('export.panel.encodingGroup')}</h3>
       <fieldset className="field fieldset" disabled={busy || overlayOnly}>
-        <legend className="field__label">Débit vidéo</legend>
+        <legend className="field__label">{t('export.panel.bitrate')}</legend>
         <div className="segmented">
           <label className="segmented__option">
             <input type="radio" name={`${id}-bitrate`} checked={!video.manualBitrate} onChange={() => update({ manualBitrate: false })} />
-            Selon la qualité
+            {t('export.panel.byQuality')}
           </label>
           <label className="segmented__option">
             <input
@@ -369,13 +368,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               // starts from the quality's bitrate, on the slider's steps
               onChange={() => update({ manualBitrate: true, bitrateMbps: snapBitrate(presetBitrate / 1e6) })}
             />
-            Manuel
+            {t('export.panel.manual')}
           </label>
         </div>
       </fieldset>
       {video.manualBitrate && !overlayOnly && (
         <RangeField
-          label="Débit manuel"
+          label={t('export.panel.manualBitrate')}
           min={BITRATE_RANGE_MBPS.min}
           max={BITRATE_RANGE_MBPS.max}
           step={BITRATE_RANGE_MBPS.step}
@@ -387,17 +386,21 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
       {!overlayOnly && (
         <p className="field__hint">
-          {video.manualBitrate
-            ? `La qualité suggère ${formatNumber(presetBitrate / 1e6, 1)} Mbit/s à cette taille.`
-            : `${formatNumber(bitrate / 1e6, 1)} Mbit/s, d'après la qualité (section « Rendu »).`}
-          {bitrateCapped && ` Plafonné à ${formatNumber(bitrate / 1e6, 1)} Mbit/s : le film reste en mémoire sur cet appareil.`}
+          {[
+            video.manualBitrate
+              ? t('export.panel.bitrateSuggest', { value: formatNumber(presetBitrate / 1e6, 1) })
+              : t('export.panel.bitrateFromQuality', { value: formatNumber(bitrate / 1e6, 1) }),
+            bitrateCapped && t('export.panel.bitrateCapped', { value: formatNumber(bitrate / 1e6, 1) }),
+          ]
+            .filter(Boolean)
+            .join(' ')}
         </p>
       )}
 
-      <SettingRow label="Codec" value={overlayOnly ? 'VP9 (WebM)' : CODEC_CHOICE_LABELS[video.codec]} paths={['video.codec']}>
+      <SettingRow label={t('export.panel.codec')} value={overlayOnly ? 'VP9 (WebM)' : CODEC_CHOICE_LABELS[video.codec]} paths={['video.codec']}>
         <div className="field">
           <label className="field__label" htmlFor={`${id}-codec`}>
-            Codec et conteneur
+            {t('export.panel.codecContainer')}
           </label>
           <select
             id={`${id}-codec`}
@@ -417,15 +420,15 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           </select>
           <p className="field__hint">
             {overlayOnly
-              ? "L'habillage seul est toujours en VP9 (WebM), pour garder la transparence."
-              : 'Seuls les codecs que cet appareil sait encoder à cette taille sont proposés. Automatique : H.264 d’abord, lu partout.'}
+              ? t('export.panel.codecOverlay')
+              : t('export.panel.codecHint')}
           </p>
         </div>
       </SettingRow>
-      <SettingRow label="Images clés" value={`toutes les ${seconds(video.keyframeIntervalS)}`} paths={['video.keyframeIntervalS']}>
+      <SettingRow label={t('export.panel.keyframes')} value={t('export.panel.keyframesValue', { value: seconds(video.keyframeIntervalS) })} paths={['video.keyframeIntervalS']}>
         <div className="field">
           <label className="field__label" htmlFor={`${id}-keyframes`}>
-            Une image clé toutes les
+            {t('export.panel.keyframesLabel')}
           </label>
           <select
             id={`${id}-keyframes`}
@@ -440,13 +443,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               </option>
             ))}
           </select>
-          <p className="field__hint">Plus rapprochées : navigation plus précise au montage, fichier un peu plus lourd.</p>
+          <p className="field__hint">{t('export.panel.keyframesHint')}</p>
         </div>
       </SettingRow>
-      <SettingRow label="Son" value={`${video.audioKbps} kbit/s`} paths={['video.audioKbps']}>
+      <SettingRow label={t('export.panel.sound')} value={`${video.audioKbps} kbit/s`} paths={['video.audioKbps']}>
         <div className="field">
           <label className="field__label" htmlFor={`${id}-audio`}>
-            Débit du son
+            {t('export.panel.audioBitrate')}
           </label>
           <select
             id={`${id}-audio`}
@@ -461,15 +464,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               </option>
             ))}
           </select>
-          <p className="field__hint">Musique et son des vidéos du film (AAC en MP4, Opus en WebM).</p>
+          <p className="field__hint">{t('export.panel.audioHint')}</p>
         </div>
       </SettingRow>
 
-      <h3 className="export__group">Rendu</h3>
+      <h3 className="export__group">{t('export.panel.renderGroup')}</h3>
       <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">
-          Qualité de rendu{customised ? ' · Personnalisé' : ''}
-        </legend>
+        <legend className="field__label">{customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}</legend>
         <div className="segmented">
           {QUALITIES.map((q) => (
             <label key={q.value} className="segmented__option">
@@ -485,12 +486,14 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           ))}
         </div>
         <p className="field__hint">
-          Nuages {CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase()}, flou de bougé {tier.maxSubFrames} rendus par image au plus
-          {video.manualBitrate ? '' : ', et le débit vidéo'}. Le projet et l’aperçu ne changent pas.
+          {t(video.manualBitrate ? 'export.panel.tierHint' : 'export.panel.tierHintBitrate', {
+            clouds: CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase(),
+            n: tier.maxSubFrames,
+          })}
         </p>
         {customised && (
           <button type="button" className="btn btn--secondary" onClick={() => setSetting('clouds', { ...clouds, quality: 'auto' })}>
-            Revenir au préréglage
+            {t('light.clouds.backToPreset')}
           </button>
         )}
       </fieldset>
@@ -498,42 +501,44 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       <div className="field">
         <label className="checkbox">
           <input type="checkbox" checked={overlayOnly} disabled={busy} onChange={(e) => setOverlayOnly(e.currentTarget.checked)} />
-          Habillage seul (fond transparent)
+          {t('export.panel.overlayOnly')}
         </label>
-        {overlayOnly && (
-          <p className="field__hint">
-            Compteurs, profil, carte, titres et crédits sans la vue 3D, en WebM transparent, à poser sur vos propres images
-            dans un logiciel de montage. Mêmes images que la vidéo, sans le son.
-          </p>
-        )}
+        {overlayOnly && <p className="field__hint">{t('export.panel.overlayOnlyHint')}</p>}
       </div>
 
-      <p className="export__summary" title="Chaque image est rendue une fois le relief visible chargé.">
-        {formatClock(totalFrames / video.fps)} · {formatNumber(totalFrames)} images
-        {codec && ` · ${CODEC_LABELS[`${codec.container}/${codec.codec}`]}`}
-        {estimatedBytes > 0 && ` · ≈ ${formatMegabytes(estimatedBytes)}`}
+      <p className="export__summary" title={t('export.panel.summaryTip')}>
+        {[
+          t('export.panel.summary', { duration: formatClock(totalFrames / video.fps), frames: formatNumber(totalFrames) }),
+          codec && CODEC_LABELS[`${codec.container}/${codec.codec}`],
+          estimatedBytes > 0 && `≈ ${formatMegabytes(estimatedBytes)}`,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
       </p>
-      {codec && streams && <p className="field__hint">Enregistrement direct sur le disque</p>}
+      {codec && streams && <p className="field__hint">{t('export.panel.direct')}</p>}
       {codec && warnsInMemory(estimatedBytes, streams) && (
         <p className="field__hint">
-          Au-delà de {formatLimit(deviceBudget().memoryWarnBytes)}, le film gardé en mémoire peut saturer l'onglet :{' '}
-          {deviceBudget().kind === 'desktop'
-            ? "Chrome et Edge l'écrivent directement sur le disque."
-            : 'essayez 720p ou un film plus court.'}
+          {t(deviceBudget().kind === 'desktop' ? 'export.panel.memoryDesktop' : 'export.panel.memoryOther', { limit: formatLimit(deviceBudget().memoryWarnBytes) })}
         </p>
       )}
       {codec === null && overlayOnly && (
         <p className="field__hint" role="alert">
-          Ce navigateur ne sait pas encoder une vidéo WebM (VP9) de {formatNumber(width)} × {formatNumber(height)} pixels,
-          nécessaire à l'habillage transparent :{' '}
-          {videoEncoderMissingHint() ?? 'exportez-le depuis Chrome ou Edge, ou choisissez une résolution plus petite.'}
+          {t('export.panel.noWebm', {
+            width: formatNumber(width),
+            height: formatNumber(height),
+            hint: videoEncoderMissingHint() ?? t('export.panel.noWebmHint'),
+          })}
         </p>
       )}
       {codec === null && !overlayOnly && (
         <p className="field__hint" role="alert">
           {video.codec === 'auto'
-            ? `Ce navigateur ne sait pas encoder une vidéo de ${formatNumber(width)} × ${formatNumber(height)} pixels : ${videoEncoderMissingHint() ?? 'choisissez une résolution plus petite.'}`
-            : `Cet appareil ne sait pas encoder en ${CODEC_CHOICE_LABELS[video.codec]} à ${formatNumber(width)} × ${formatNumber(height)} pixels : choisissez le codec « Automatique ».`}
+            ? t('export.panel.noCodecAuto', {
+                width: formatNumber(width),
+                height: formatNumber(height),
+                hint: videoEncoderMissingHint() ?? t('export.panel.noCodecAutoHint'),
+              })
+            : t('export.panel.noCodecChosen', { codec: CODEC_CHOICE_LABELS[video.codec], width: formatNumber(width), height: formatNumber(height) })}
         </p>
       )}
 
@@ -541,7 +546,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         <div className="export__actions">
           <button type="button" className="btn btn--primary" onClick={start} disabled={!trackName || !codec}>
             <Icon name="download" size={18} />
-            {overlayOnly ? "Exporter l'habillage" : 'Exporter la vidéo'}
+            {overlayOnly ? t('export.panel.exportOverlay') : t('export.panel.exportVideo')}
           </button>
         </div>
       )}
@@ -550,36 +555,40 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         <div className="field">
           <progress
             className="export__progress"
-            aria-label="Progression de l'export"
+            aria-label={t('export.panel.progressAria')}
             max={Math.max(1, frameCount)}
             value={phase === 'finalizing' ? frameCount : frame}
           />
           <p className="field__hint">
             {phase === 'finalizing'
-              ? 'Finalisation du fichier…'
+              ? t('export.panel.announceFinalizing')
               : phase === 'starting'
-                ? 'Préparation…'
-                : `Image ${formatNumber(frame)} / ${formatNumber(frameCount)}${
-                    secondsPerImage === null ? '' : ` · ≈ ${formatNumber(secondsPerImage, 1)} s / image`
-                  }${etaS === null ? '' : ` · reste environ ${formatClock(etaS)}`}`}
+                ? t('export.panel.preparing')
+                : [
+                    t('export.panel.progress', { frame: formatNumber(frame), total: formatNumber(frameCount) }),
+                    secondsPerImage !== null && t('export.panel.speedPerImage', { value: formatNumber(secondsPerImage, 1) }),
+                    etaS !== null && t('export.panel.eta', { time: formatClock(etaS) }),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
           </p>
-          <p className="field__hint">L'aperçu reste figé pendant l'export ; chaque image attend que ses tuiles soient chargées.</p>
+          <p className="field__hint">{t('export.panel.frozen')}</p>
           <button
             type="button"
             className="btn btn--secondary btn--block"
             onClick={() => useExportStore.getState().cancel()}
             disabled={phase === 'finalizing'}
           >
-            Annuler l'export
+            {t('export.panel.cancel')}
           </button>
         </div>
       )}
 
       {phase === 'error' && error && (
         <div className="field export__error" role="alert">
-          <p className="field__hint">Échec de l'export : {error}</p>
+          <p className="field__hint">{t('export.panel.failed', { error })}</p>
           <button type="button" className="btn btn--secondary btn--small" onClick={() => showDiagnostic(currentReport())}>
-            Rapport de diagnostic
+            {t('export.panel.diagnostic')}
           </button>
         </div>
       )}
@@ -587,19 +596,21 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       {phase === 'done' && result && (
         <p className="field__hint">
           {result.url === null ? (
-            `Enregistrée dans ${result.fileName}`
+            t('export.panel.savedTo', { fileName: result.fileName })
           ) : getPlatform().capabilities.isDesktop || sharesFiles() ? (
             <button type="button" className="btn btn--secondary btn--small" onClick={() => result.url && download(result.url, result.fileName)}>
-              {sharesFiles() ? `${SHARE_SAVE_LABEL} ${result.fileName}` : `Enregistrer ${result.fileName}…`}
+              {sharesFiles() ? t('export.panel.shareFile', { label: shareSaveLabel(), fileName: result.fileName }) : t('export.panel.saveFile', { fileName: result.fileName })}
             </button>
           ) : (
             <a href={result.url} download={result.fileName}>
-              Télécharger {result.fileName}
+              {t('export.panel.downloadFile', { fileName: result.fileName })}
             </a>
           )}{' '}
-          ({formatMegabytes(result.sizeBytes)}, {CODEC_LABELS[result.codec] ?? result.codec}
-          {result.hardware && ', encodeur matériel'}
-          {result.note && `, ${result.note}`})
+          {t('export.panel.resultInfo', {
+            parts: [formatMegabytes(result.sizeBytes), CODEC_LABELS[result.codec] ?? result.codec, result.hardware && t('export.panel.hardwareEncoder'), result.note]
+              .filter(Boolean)
+              .join(', '),
+          })}
         </p>
       )}
 
@@ -621,47 +632,55 @@ function snapBitrate(mbps: number): number {
 /** Line of a job in the result list of a batch. */
 function jobStatusText(state: BatchJobState): string {
   const { status, result, error } = state
-  if (status === 'pending') return 'en attente'
-  if (status === 'running') return 'en cours…'
-  if (status === 'canceled') return 'annulé'
-  if (status === 'error') return `échec : ${error ?? 'inconnu'}`
-  if (!result) return 'fait'
-  return `${result.url === null ? 'enregistré : ' : ''}${result.fileName} (${formatMegabytes(result.sizeBytes)})`
+  if (status === 'pending') return t('export.panel.status.pending')
+  if (status === 'running') return t('export.panel.status.running')
+  if (status === 'canceled') return t('export.panel.status.canceled')
+  if (status === 'error') return t('export.panel.status.failed', { error: error ?? t('export.panel.status.unknown') })
+  if (!result) return t('export.panel.status.done')
+  return t(result.url === null ? 'export.panel.status.savedFile' : 'export.panel.status.file', { fileName: result.fileName, size: formatMegabytes(result.sizeBytes) })
 }
 
 /** Message at the end of a batch. */
 function announceBatch(states: readonly BatchJobState[], folderName: string | null): void {
   const { done, failed, canceled } = batchSummary(states)
-  const files = `${done} fichier${done > 1 ? 's' : ''}`
-  if (failed > 0) showToast({ kind: 'error', text: `Export en lot : ${files} sur ${states.length}, ${failed} échec${failed > 1 ? 's' : ''}` })
-  else if (canceled > 0) showToast({ kind: 'info', text: `Export en lot annulé (${files} prêt${done > 1 ? 's' : ''})` })
-  else showToast({ kind: 'success', text: `${files} exporté${done > 1 ? 's' : ''}${folderName ? ` dans ${folderName}` : ''}` })
+  if (failed > 0) {
+    showToast({
+      kind: 'error',
+      text: t('export.panel.batchFailed', { files: t('export.panel.filesCount', { count: done }), total: states.length, failed: t('export.panel.failureCount', { count: failed }) }),
+    })
+  } else if (canceled > 0) showToast({ kind: 'info', text: t('export.panel.batchCanceled', { ready: t('export.panel.readyCount', { count: done }) }) })
+  else {
+    const exported = t('export.panel.batchDone', { count: done })
+    showToast({ kind: 'success', text: folderName ? t('export.panel.batchDoneIn', { done: exported, folder: folderName }) : exported })
+  }
 }
 
 /** Line of a track in the result list of « Un film par trace ». */
 function trackStatusText({ status, error, jobs }: TrackRunState): string {
-  if (status === 'pending') return 'en attente'
-  if (status === 'running') return 'en cours…'
-  if (status === 'canceled') return 'annulé'
-  if (status === 'error') return `échec : ${error ?? 'inconnu'}`
-  return `enregistré : ${jobs.map((j) => j.result?.fileName).join(', ')}`
+  if (status === 'pending') return t('export.panel.status.pending')
+  if (status === 'running') return t('export.panel.status.running')
+  if (status === 'canceled') return t('export.panel.status.canceled')
+  if (status === 'error') return t('export.panel.status.failed', { error: error ?? t('export.panel.status.unknown') })
+  return t('export.panel.status.savedTracks', { files: jobs.map((j) => j.result?.fileName).join(', ') })
 }
 
 /** Message at the end of « Un film par trace ». */
 function announceTrackFilms(tracks: readonly TrackRunState[], folderName: string): void {
   const { done, failed, canceled } = batchSummary(tracks)
-  const plural = (n: number) => (n > 1 ? 's' : '')
   if (failed > 0) {
-    showToast({ kind: 'error', text: `Un film par trace : ${done} trace${plural(done)} sur ${tracks.length}, ${failed} échec${plural(failed)}` })
-  } else if (canceled > 0) showToast({ kind: 'info', text: `Un film par trace annulé (${done} trace${plural(done)} faite${plural(done)})` })
-  else showToast({ kind: 'success', text: `Films de ${done} trace${plural(done)} exportés dans ${folderName}` })
+    showToast({
+      kind: 'error',
+      text: t('export.panel.tracksFailed', { tracks: t('export.panel.tracksCount', { count: done }), total: tracks.length, failed: t('export.panel.failureCount', { count: failed }) }),
+    })
+  } else if (canceled > 0) showToast({ kind: 'info', text: t('export.panel.tracksCanceled', { done: t('export.panel.madeCount', { count: done }) }) })
+  else showToast({ kind: 'success', text: t('export.panel.tracksDone', { count: done, folder: folderName }) })
 }
 
 /** « 3 traces dans « Saison » : a.gpx, b.fit, c.gpx… » */
 function trackFolderText(folder: ReadableFolder, files: readonly { name: string }[]): string {
-  if (files.length === 0) return `Aucun fichier GPX ou FIT dans « ${folder.name} ».`
+  if (files.length === 0) return t('export.panel.folderEmpty', { folder: folder.name })
   const names = files.slice(0, 3).map((f) => f.name).join(', ')
-  return `${files.length} trace${files.length > 1 ? 's' : ''} dans « ${folder.name} » : ${names}${files.length > 3 ? '…' : ''}`
+  return t('export.panel.folderTracks', { count: files.length, folder: folder.name, names: `${names}${files.length > 3 ? '…' : ''}` })
 }
 
 /**
@@ -670,6 +689,7 @@ function trackFolderText(folder: ReadableFolder, files: readonly { name: string 
  * Source « Un film par trace »: the films ticked for each GPX / FIT file of a folder, into an output folder.
  */
 function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; modes: ReactNode; hidden: boolean }) {
+  const t = useT()
   const video = useAppStore((s) => s.settings.video)
   const pacing = useFilmClock()
   const durationS = pacing.totalTime()
@@ -728,6 +748,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const unencodable = codecs ? films.filter((j) => codecs[j.key] === null) : []
   const finished = states.filter((s) => s.status !== 'pending' && s.status !== 'running').length
   const stillLabel = `${video.aspect} ${VIDEO_RESOLUTIONS.find((r) => r.id === video.resolution)?.label ?? ''}`
+  const filesCount = (count: number) => t('export.panel.filesCount', { count })
 
   const toggle = (key: string, on: boolean) =>
     select({ formats: on ? [...selection.formats, key] : selection.formats.filter((k) => k !== key) })
@@ -774,7 +795,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
     // called from the click: the browser's folder picker needs it
     void pickReadableFolder(capabilities).then(
       (folder) => folder && setTrackFolder(folder),
-      (error: unknown) => showToast({ kind: 'error', text: `Impossible de lire ce dossier : ${errorMessage(error)}` }),
+      (error: unknown) => showToast({ kind: 'error', text: t('export.panel.folderReadFailed', { error: errorMessage(error) }) }),
     )
   }
 
@@ -787,22 +808,22 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         const tracks = await useBatchStore.getState().runTracks(sources, jobs, { ...shared(), folder })
         announceTrackFilms(tracks, folder.name)
       },
-      (error: unknown) => showToast({ kind: 'error', text: `Impossible d'écrire dans ce dossier : ${errorMessage(error)}` }),
+      (error: unknown) => showToast({ kind: 'error', text: t('export.panel.folderWriteFailed', { error: errorMessage(error) }) }),
     )
   }
 
   return (
     <section className="settings export" aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
       <h2 id={`${id}-title`} className="section-title settings__title">
-        Exporter
+        {t('export.panel.title')}
       </h2>
       {onClose && (
         <button
           type="button"
           className="icon-btn settings__close"
           onClick={onClose}
-          aria-label="Fermer le panneau d'export"
-          data-tip={withShortcut('Fermer', 'export')}
+          aria-label={t('export.panel.close')}
+          data-tip={withShortcut(t('common.close'), 'export')}
           data-tip-align="end"
         >
           <Icon name="x" size={18} />
@@ -811,15 +832,15 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       {modes}
 
       <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">Source</legend>
+        <legend className="field__label">{t('export.panel.source')}</legend>
         <div className="segmented">
           <label className="segmented__option">
             <input type="radio" name={`${id}-source`} checked={!perTrack} onChange={() => setPerTrack(false)} />
-            Ce film
+            {t('export.panel.thisFilm')}
           </label>
-          <label className="segmented__option" title={toFolder ? undefined : "Avec Chrome, Edge ou l'application de bureau"}>
+          <label className="segmented__option" title={toFolder ? undefined : t('export.panel.browsersTip')}>
             <input type="radio" name={`${id}-source`} checked={perTrack} disabled={!toFolder} onChange={() => setPerTrack(true)} />
-            Un film par trace
+            {t('export.panel.perTrack')}
           </label>
         </div>
       </fieldset>
@@ -827,18 +848,14 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         <div className="field">
           <button type="button" className="btn btn--secondary btn--block" onClick={chooseTrackFolder} disabled={busy}>
             <Icon name="folder-open" size={18} />
-            {trackFolder ? 'Changer de dossier…' : 'Choisir le dossier des traces…'}
+            {trackFolder ? t('export.panel.changeFolder') : t('export.panel.chooseFolder')}
           </button>
-          <p className="field__hint">
-            {trackFolder
-              ? trackFolderText(trackFolder, sources)
-              : "Les fichiers cochés, pour chaque fichier GPX ou FIT du dossier, avec les réglages actuels. Les arrêts sont refaits pour chaque trace ; textes, photos, vidéos et points d'intérêt posés à la main ne sont pas repris, la musique l'est. Vos traces reviennent à la fin."}
-          </p>
+          <p className="field__hint">{trackFolder ? trackFolderText(trackFolder, sources) : t('export.panel.perTrackHint')}</p>
         </div>
       )}
 
       <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">Formats</legend>
+        <legend className="field__label">{t('export.panel.formats')}</legend>
         <div className="batch-formats">
           {VIDEO_ASPECTS.map((a) => (
             <div key={a.id} className="batch-formats__row" role="group" aria-label={a.label}>
@@ -867,45 +884,51 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </fieldset>
 
       <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">Aussi</legend>
+        <legend className="field__label">{t('export.panel.also')}</legend>
         <label className="checkbox">
           <input type="checkbox" checked={selection.still} onChange={(e) => select({ still: e.currentTarget.checked })} />
-          Image fixe ({stillLabel}, position de lecture)
+          {t('export.panel.still', { label: stillLabel })}
         </label>
         <label className="checkbox">
           <input type="checkbox" checked={selection.poster} onChange={(e) => select({ poster: e.currentTarget.checked })} />
-          Affiche (réglages du mode « Affiche »)
+          {t('export.panel.poster')}
         </label>
       </fieldset>
 
       {perTrack ? (
         <p className="export__summary">
-          {sources.length} trace{sources.length > 1 ? 's' : ''} × {jobs.length} fichier{jobs.length > 1 ? 's' : ''} ·{' '}
-          {sources.length * jobs.length} fichier{sources.length * jobs.length > 1 ? 's' : ''} en tout
+          {t('export.panel.perTrackSummary', {
+            tracks: t('export.panel.tracksCount', { count: sources.length }),
+            files: filesCount(jobs.length),
+            total: filesCount(sources.length * jobs.length),
+          })}
         </p>
       ) : (
         <p className="export__summary">
-          {estimate.files} fichier{estimate.files > 1 ? 's' : ''} · {formatNumber(estimate.frames)} images
-          {estimate.bytes > 0 && ` · ≈ ${formatMegabytes(estimate.bytes)}`}
-          {estimate.seconds !== null && ` · ≈ ${formatClock(estimate.seconds)} de rendu`}
+          {[
+            `${filesCount(estimate.files)} · ${t('export.panel.framesCount', { count: formatNumber(estimate.frames) })}`,
+            estimate.bytes > 0 && `≈ ${formatMegabytes(estimate.bytes)}`,
+            estimate.seconds !== null && t('export.panel.renderTime', { time: formatClock(estimate.seconds) }),
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
       )}
       <p className="field__hint">
-        {video.fps} i/s, qualité {QUALITIES.find((q) => q.value === video.quality)?.label.toLowerCase()} (mode « Vidéo »).{' '}
-        {toFolder
-          ? 'Un dossier vous est demandé : chaque fichier y est écrit au fur et à mesure.'
-          : "Chaque fichier se télécharge dès qu'il est prêt."}
-        {!perTrack && estimate.seconds === null && films.length > 0 && ' Durée estimée après un premier film exporté.'}
+        {[
+          t('export.panel.batchHint', { fps: video.fps, quality: QUALITIES.find((q) => q.value === video.quality)?.label.toLowerCase() ?? '' }),
+          t(toFolder ? 'export.panel.folderAsked' : 'export.panel.downloadEach'),
+          !perTrack && estimate.seconds === null && films.length > 0 && t('export.panel.estimateLater'),
+        ]
+          .filter(Boolean)
+          .join(' ')}
       </p>
       {warnsInMemory(estimate.bytes, toFolder) && (
-        <p className="field__hint">
-          Au-delà de {formatLimit(deviceBudget().memoryWarnBytes)} en tout, les films gardés en mémoire peuvent saturer l'onglet.
-        </p>
+        <p className="field__hint">{t('export.panel.memoryBatch', { limit: formatLimit(deviceBudget().memoryWarnBytes) })}</p>
       )}
       {unencodable.length > 0 && (
         <p className="field__hint" role="alert">
-          Ce navigateur ne sait pas encoder {unencodable.map((j) => j.label).join(', ')} : ces formats échoueront.{' '}
-          {videoEncoderMissingHint() ?? ''}
+          {t('export.panel.unencodable', { formats: unencodable.map((j) => j.label).join(', ') })} {videoEncoderMissingHint() ?? ''}
         </p>
       )}
 
@@ -918,7 +941,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             disabled={jobs.length === 0 || (perTrack ? sources.length === 0 : !track)}
           >
             <Icon name="download" size={18} />
-            Tout exporter
+            {t('export.panel.exportAll')}
           </button>
         </div>
       )}
@@ -929,7 +952,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             <>
               <progress
                 className="export__progress"
-                aria-label="Progression de l'export par trace"
+                aria-label={t('export.panel.perTrackProgress')}
                 max={trackRuns.length}
                 value={tracksFinished + (runningTrack ? trackFraction(runningTrack, fraction) : 0)}
               />
@@ -939,11 +962,11 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             <>
               <progress
                 className="export__progress"
-                aria-label="Progression de l'export en lot"
+                aria-label={t('export.panel.batchProgress')}
                 max={Math.max(1, states.length)}
                 value={finished + (states.some((s) => s.status === 'running') ? fraction : 0)}
               />
-              <p className="field__hint">{batchProgressLabel(states, fraction) || 'Préparation…'}</p>
+              <p className="field__hint">{batchProgressLabel(states, fraction) || t('export.panel.preparing')}</p>
             </>
           )}
           <button
@@ -952,14 +975,14 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             onClick={() => useBatchStore.getState().cancel()}
             disabled={cancelRequested}
           >
-            Tout annuler
+            {t('export.panel.cancelAll')}
           </button>
         </div>
       )}
 
       {trackRuns.length > 0 && (
         <div className="field">
-          {folderName && <p className="field__hint">Dossier : {folderName}</p>}
+          {folderName && <p className="field__hint">{t('export.panel.folderName', { folder: folderName })}</p>}
           <ul className="batch-results">
             {trackRuns.map((t, i) => (
               <li key={i} className="batch-results__item">
@@ -973,7 +996,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       {states.length > 0 && (
         <div className="field">
-          {folderName && <p className="field__hint">Dossier : {folderName}</p>}
+          {folderName && <p className="field__hint">{t('export.panel.folderName', { folder: folderName })}</p>}
           <ul className="batch-results">
             {states.map((s) => (
               <li key={s.job.key} className="batch-results__item">
@@ -985,7 +1008,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                     className="btn btn--secondary btn--small"
                     onClick={() => s.result?.url && download(s.result.url, s.result.fileName)}
                   >
-                    Enregistrer à nouveau
+                    {t('export.panel.saveAgain')}
                   </button>
                 )}
               </li>
@@ -1011,6 +1034,7 @@ type ExportMode = 'video' | 'batch' | 'poster'
  * (download, toast); a batch saves and announces its own files.
  */
 export function ExportPanel({ onClose }: { onClose?: () => void }) {
+  const t = useT()
   const [mode, setMode] = useState<ExportMode>('video')
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const batching = useBatchStore((s) => s.phase === 'running')
@@ -1018,13 +1042,13 @@ export function ExportPanel({ onClose }: { onClose?: () => void }) {
   const id = useId()
   const modes = (
     <fieldset className="field fieldset" disabled={busy}>
-      <legend className="visually-hidden">Type d'export</legend>
+      <legend className="visually-hidden">{t('export.panel.modeType')}</legend>
       <div className="segmented">
         {(
           [
-            ['video', 'Vidéo'],
-            ['batch', 'Plusieurs formats'],
-            ['poster', 'Affiche'],
+            ['video', t('export.panel.modeVideo')],
+            ['batch', t('export.panel.modeBatch')],
+            ['poster', t('export.panel.modePoster')],
           ] as const
         ).map(([value, label]) => (
           <label key={value} className="segmented__option">

@@ -6,6 +6,7 @@
  */
 import { errorMessage } from '../core/errors'
 import type { Track } from '../core/types'
+import { t } from '../i18n'
 import { useAppStore } from '../state/store'
 import { completeImportedElevations } from '../terrain/elevation'
 import { getTerrainSource } from '../terrain/sources'
@@ -36,7 +37,7 @@ export async function runImportJobs(jobs: readonly ImportJob[], trackCount: () =
     try {
       tracks.push(...(await job.run(trackCount() + tracks.length)))
     } catch (error) {
-      failures.push(`${job.label} : ${errorMessage(error)}`)
+      failures.push(t('imports.failure', { label: job.label, message: errorMessage(error) }))
     }
   }
   return { tracks, failures }
@@ -45,14 +46,14 @@ export async function runImportJobs(jobs: readonly ImportJob[], trackCount: () =
 /** Banner text for the failures of a batch, or null when everything succeeded. */
 export function formatImportError(failures: readonly string[]): string | null {
   if (failures.length === 0) return null
-  if (failures.length === 1) return `Import impossible — ${failures[0]}`
-  return `Imports impossibles :\n${failures.join('\n')}`
+  if (failures.length === 1) return t('imports.failedOne', { failure: failures[0] })
+  return t('imports.failedMany', { failures: failures.join('\n') })
 }
 
 /** Message after a successful import: the track name for one track, the count otherwise; says when elevation was computed. */
 export function importedMessage(tracks: readonly Pick<Track, 'name' | 'elevationEstimated'>[]): string {
-  const text = tracks.length === 1 ? `Trace « ${tracks[0].name} » importée` : `${tracks.length} traces importées`
-  return tracks.some((t) => t.elevationEstimated) ? `${text}, altitude calculée d’après le relief` : text
+  const text = tracks.length === 1 ? t('imports.oneTrack', { name: tracks[0].name }) : t('imports.tracks', { count: tracks.length })
+  return tracks.some((track) => track.elevationEstimated) ? t('imports.elevationComputed', { text }) : text
 }
 
 /** The elevation of the tracks that have none, from the terrain source of the settings (`completeImportedElevations`). */

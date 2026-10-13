@@ -2,6 +2,7 @@
  * Contract of the platform layer (see index.ts) and its pure helpers, shared by the web and desktop implementations.
  */
 import { cyrb53 } from '../core/math'
+import { t } from '../i18n'
 
 /** One line of a file dialog's type list: extensions without the dot. */
 export interface FileFilter {
@@ -156,7 +157,9 @@ export interface Capabilities {
 }
 
 /** Label of the save button where files go through the share sheet. */
-export const SHARE_SAVE_LABEL = 'Partager / Enregistrer'
+export function shareSaveLabel(): string {
+  return t('platform.shareSave')
+}
 
 /** Touch screen as the main pointer (phones, tablets). */
 export function touchScreen(scope: object): boolean {

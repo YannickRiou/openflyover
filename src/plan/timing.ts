@@ -8,14 +8,15 @@
 import type { Track, TrackPoint, TrackSegment } from '../core/types'
 import { haversineM } from '../geo/lonLat'
 import { computeStats, smoothElevations } from '../import/stats'
+import { t } from '../i18n'
 
 export const PLAN_ACTIVITIES = ['hiking', 'trail', 'cycling'] as const
 export type PlanActivity = (typeof PLAN_ACTIVITIES)[number]
 
 export const PLAN_ACTIVITY_LABELS: Readonly<Record<PlanActivity, string>> = {
-  hiking: 'Randonnée',
-  trail: 'Trail',
-  cycling: 'Vélo',
+  get hiking() { return t('track.plan.hiking') },
+  get trail() { return t('track.plan.trail') },
+  get cycling() { return t('track.plan.cycling') },
 }
 
 /** « Rythme »: factor on every duration (1 = the model, 1.2 = 20 % more time, 0.8 = 20 % less). */

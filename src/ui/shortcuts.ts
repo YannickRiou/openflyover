@@ -4,51 +4,74 @@
  * `Timeline.tsx`; they are listed here for the help. No digit shortcuts: AZERTY types them with Shift. No Ctrl+N for
  * « Nouveau projet »: browsers keep it for a new window, a page cannot take it.
  */
+import { t } from '../i18n'
+import type { MessageKey } from '../i18n'
 import { isTextEntry } from '../project/history'
 
-export const SHORTCUT_GROUPS = ['Lecture', 'Montage', 'Projet', 'Vue'] as const
+export const SHORTCUT_GROUPS = ['playback', 'editing', 'project', 'view'] as const
 export type ShortcutGroup = (typeof SHORTCUT_GROUPS)[number]
 
 export interface Shortcut {
   id: string
-  /** key combinations as shown, alternatives in order (the first one goes into the tooltips) */
+  /** key combinations, alternatives in order (the first one goes into the tooltips); the words of a key are `KEY_WORDS`, shown by `keyLabel` */
   keys: readonly string[]
   label: string
   group: ShortcutGroup
 }
 
 export const SHORTCUTS = [
-  { id: 'play', keys: ['Espace'], label: 'Lancer ou mettre en pause', group: 'Lecture' },
-  { id: 'seek', keys: ['←', '→'], label: 'Reculer ou avancer d’une seconde', group: 'Lecture' },
-  { id: 'seek-long', keys: ['Maj+←', 'Maj+→'], label: 'Reculer ou avancer de 5 secondes', group: 'Lecture' },
-  { id: 'seek-ends', keys: ['Début', 'Fin'], label: 'Aller au début ou à la fin du film', group: 'Lecture' },
-  { id: 'seek-key', keys: ['Alt+←', 'Alt+→'], label: 'Aller à l’image clé précédente ou suivante', group: 'Lecture' },
-  { id: 'undo', keys: ['Ctrl+Z'], label: 'Annuler', group: 'Montage' },
-  { id: 'redo', keys: ['Ctrl+Maj+Z', 'Ctrl+Y'], label: 'Rétablir', group: 'Montage' },
-  { id: 'nudge', keys: ['←', '→'], label: 'Décaler le bloc sélectionné d’une seconde (Maj : d’un dixième)', group: 'Montage' },
-  { id: 'magnet', keys: ['Alt+glisser'], label: 'Inverser l’aimantation de la timeline pendant un glissement', group: 'Montage' },
-  { id: 'add-stop', keys: ['S'], label: 'Ajouter un arrêt à la position du marqueur', group: 'Montage' },
-  { id: 'add-text', keys: ['T'], label: 'Ajouter un texte à la tête de lecture', group: 'Montage' },
-  { id: 'remove', keys: ['Suppr'], label: 'Supprimer le bloc sélectionné', group: 'Montage' },
-  { id: 'zoom', keys: ['Ctrl+molette'], label: 'Zoomer dans la timeline (écran tactile : pincer)', group: 'Montage' },
-  { id: 'pick', keys: ['Clic sur la trace'], label: 'Placer la tête de lecture à cet endroit (clic droit ou appui long : ajouter un arrêt ou un texte)', group: 'Montage' },
-  { id: 'open', keys: ['Ctrl+O'], label: 'Ouvrir une trace ou un projet', group: 'Projet' },
-  { id: 'save', keys: ['Ctrl+S'], label: 'Enregistrer le projet', group: 'Projet' },
-  { id: 'save-as', keys: ['Ctrl+Maj+S'], label: 'Enregistrer le projet sous…', group: 'Projet' },
-  { id: 'export', keys: ['Ctrl+E'], label: 'Ouvrir ou fermer le tiroir d’export', group: 'Projet' },
-  { id: 'fit', keys: ['F'], label: 'Recadrer la vue sur la trace', group: 'Vue' },
-  { id: 'safe-zones', keys: ['G'], label: 'Afficher ou masquer les zones de sécurité du format (aperçu seulement)', group: 'Vue' },
-  { id: 'toggle-panel', keys: ['['], label: 'Replier ou déplier le panneau', group: 'Vue' },
-  { id: 'help', keys: ['?'], label: 'Afficher les raccourcis', group: 'Vue' },
-  { id: 'close', keys: ['Échap'], label: 'Fermer la fenêtre, puis le tiroir d’export, puis la sélection', group: 'Vue' },
+  { id: 'play', keys: ['Space'], get label() { return t('shortcuts.label.play') }, group: 'playback' },
+  { id: 'seek', keys: ['←', '→'], get label() { return t('shortcuts.label.seek') }, group: 'playback' },
+  { id: 'seek-long', keys: ['Shift+←', 'Shift+→'], get label() { return t('shortcuts.label.seek-long') }, group: 'playback' },
+  { id: 'seek-ends', keys: ['Home', 'End'], get label() { return t('shortcuts.label.seek-ends') }, group: 'playback' },
+  { id: 'seek-key', keys: ['Alt+←', 'Alt+→'], get label() { return t('shortcuts.label.seek-key') }, group: 'playback' },
+  { id: 'undo', keys: ['Ctrl+Z'], get label() { return t('shortcuts.label.undo') }, group: 'editing' },
+  { id: 'redo', keys: ['Ctrl+Shift+Z', 'Ctrl+Y'], get label() { return t('shortcuts.label.redo') }, group: 'editing' },
+  { id: 'nudge', keys: ['←', '→'], get label() { return t('shortcuts.label.nudge') }, group: 'editing' },
+  { id: 'magnet', keys: ['Alt+drag'], get label() { return t('shortcuts.label.magnet') }, group: 'editing' },
+  { id: 'add-stop', keys: ['S'], get label() { return t('shortcuts.label.add-stop') }, group: 'editing' },
+  { id: 'add-text', keys: ['T'], get label() { return t('shortcuts.label.add-text') }, group: 'editing' },
+  { id: 'remove', keys: ['Del'], get label() { return t('shortcuts.label.remove') }, group: 'editing' },
+  { id: 'zoom', keys: ['Ctrl+wheel'], get label() { return t('shortcuts.label.zoom') }, group: 'editing' },
+  { id: 'pick', keys: ['clickTrack'], get label() { return t('shortcuts.label.pick') }, group: 'editing' },
+  { id: 'open', keys: ['Ctrl+O'], get label() { return t('shortcuts.label.open') }, group: 'project' },
+  { id: 'save', keys: ['Ctrl+S'], get label() { return t('shortcuts.label.save') }, group: 'project' },
+  { id: 'save-as', keys: ['Ctrl+Shift+S'], get label() { return t('shortcuts.label.save-as') }, group: 'project' },
+  { id: 'export', keys: ['Ctrl+E'], get label() { return t('shortcuts.label.export') }, group: 'project' },
+  { id: 'fit', keys: ['F'], get label() { return t('shortcuts.label.fit') }, group: 'view' },
+  { id: 'safe-zones', keys: ['G'], get label() { return t('shortcuts.label.safe-zones') }, group: 'view' },
+  { id: 'toggle-panel', keys: ['['], get label() { return t('shortcuts.label.toggle-panel') }, group: 'view' },
+  { id: 'help', keys: ['?'], get label() { return t('shortcuts.label.help') }, group: 'view' },
+  { id: 'close', keys: ['Esc'], get label() { return t('shortcuts.label.close') }, group: 'view' },
 ] as const satisfies readonly Shortcut[]
+
+/** Words of the keys in `keys` (symbols and letters are the same in every language). */
+const KEY_WORDS = {
+  Space: 'shortcuts.key.Space',
+  Home: 'shortcuts.key.Home',
+  End: 'shortcuts.key.End',
+  Shift: 'shortcuts.key.Shift',
+  Del: 'shortcuts.key.Del',
+  Esc: 'shortcuts.key.Esc',
+  drag: 'shortcuts.key.drag',
+  wheel: 'shortcuts.key.wheel',
+  clickTrack: 'shortcuts.key.clickTrack',
+} as const satisfies Record<string, MessageKey>
+
+/** A key combination as shown in the current language: « Ctrl+Shift+Z » is « Ctrl+Maj+Z » in French. */
+export function keyLabel(keys: string): string {
+  return keys
+    .split('+')
+    .map((part) => (part in KEY_WORDS ? t(KEY_WORDS[part as keyof typeof KEY_WORDS]) : part))
+    .join('+')
+}
 
 export type ShortcutId = (typeof SHORTCUTS)[number]['id']
 
 /** Tooltip text: `label` followed by key combination `index` (the first by default) of `id`, « Annuler (Ctrl+Z) ». */
 export function withShortcut(label: string, id: ShortcutId, index = 0): string {
   const shortcut: Shortcut | undefined = SHORTCUTS.find((s) => s.id === id)
-  return shortcut ? `${label} (${shortcut.keys[index] ?? shortcut.keys[0]})` : label
+  return shortcut ? `${label} (${keyLabel(shortcut.keys[index] ?? shortcut.keys[0])})` : label
 }
 
 export type ShortcutAction =

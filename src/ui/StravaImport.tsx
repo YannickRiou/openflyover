@@ -6,6 +6,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { errorMessage } from '../core/errors'
+import { t as translate, useT } from '../i18n'
+import { formatDate } from '../i18n/format'
+import { tRich } from '../i18n/rich'
 import { assignColors } from '../import'
 import { getPlatform } from '../platform'
 import { authorizeInBrowser } from '../platform/oauthRedirect'
@@ -33,12 +36,13 @@ import { runImport } from './projectActions'
 
 /** « Importer depuis Strava » of the welcome card. */
 export function StravaImport() {
+  const t = useT()
   const loading = useAppStore((s) => s.loading)
   const [open, setOpen] = useState(false)
   return (
     <>
       <button type="button" className="btn btn--secondary" onClick={() => setOpen(true)} disabled={loading}>
-        Importer depuis Strava
+        {t('strava.import')}
       </button>
       <StravaDialog open={open} onClose={() => setOpen(false)} />
     </>
@@ -47,6 +51,7 @@ export function StravaImport() {
 
 /** The Strava dialog, drawn in the page body (« + Ajouter » of the track list, welcome card). */
 export function StravaDialog({ open, onClose }: { open: boolean; onClose(): void }) {
+  const t = useT()
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId()
 
@@ -59,9 +64,9 @@ export function StravaDialog({ open, onClose }: { open: boolean; onClose(): void
     <dialog ref={dialog} className="sources strava" aria-labelledby={titleId} onClose={onClose}>
       <div className="sources__head">
         <h2 id={titleId} className="sources__title">
-          Importer depuis Strava
+          {t('strava.import')}
         </h2>
-        <button type="button" className="icon-btn" aria-label="Fermer" data-tip="Fermer (Échap)" data-tip-side="left" onClick={onClose}>
+        <button type="button" className="icon-btn" aria-label={t('common.close')} data-tip={t('common.closeEsc')} data-tip-side="left" onClick={onClose}>
           <Icon name="x" size={18} />
         </button>
       </div>
@@ -94,6 +99,7 @@ function StravaBody({ onImported }: { onImported(): void }) {
 
 /** « Connecter Strava » : how to create the Strava application, its Client ID and Secret, « Se connecter ». */
 function ConnectForm({ notice, onConnected }: { notice: string | null; onConnected(): void }) {
+  const t = useT()
   const id = useId()
   const [saved] = useState(loadApp)
   const [clientId, setClientId] = useState(saved?.clientId ?? '')
@@ -142,15 +148,14 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
     >
       <ol className="strava__steps">
         <li>
-          Sur <b>strava.com/settings/api</b>, créez votre application Strava (gratuite) : nom et site au choix,
-          « Authorization Callback Domain » : <code>{callbackDomain(location.hostname, capabilities.isDesktop)}</code>.
+          {tRich('strava.step1', {
+            link: <b>strava.com/settings/api</b>,
+            domain: <code>{callbackDomain(location.hostname, capabilities.isDesktop)}</code>,
+          })}
         </li>
-        <li>Copiez ici son Client ID et son Client Secret.</li>
-        <li>
-          « Se connecter » ouvre Strava {capabilities.isDesktop ? 'dans votre navigateur' : 'dans une fenêtre'} : autorisez
-          la lecture de vos activités.
-        </li>
-        <li>Choisissez les activités à importer.</li>
+        <li>{t('strava.step2')}</li>
+        <li>{t(capabilities.isDesktop ? 'strava.step3Browser' : 'strava.step3Window')}</li>
+        <li>{t('strava.step4')}</li>
       </ol>
       <div className="field">
         <label className="field__label" htmlFor={`${id}-client`}>
@@ -164,11 +169,7 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
         </label>
         <input id={`${id}-secret`} className="input" type="password" autoComplete="off" value={clientSecret} disabled={waiting} onChange={(e) => setClientSecret(e.currentTarget.value)} />
       </div>
-      <p className="field__hint">
-        Ils restent sur cet appareil et ne sont envoyés qu’à Strava. Lecture seule de vos activités, privées comprises, trace
-        entière (zones de confidentialité comprises). Les conditions de l’API Strava réservent l’affichage de vos données
-        à vous seul : ne diffusez pas un film tiré d’une activité Strava sans y avoir réfléchi.
-      </p>
+      <p className="field__hint">{t('strava.privacy')}</p>
       <p className="field__hint">Powered by Strava</p>
       {error && (
         <p className="field__hint" role="alert">
@@ -177,20 +178,20 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
       )}
       {waiting ? (
         <div className="strava__actions">
-          <p className="field__hint">En attente de votre autorisation sur Strava…</p>
+          <p className="field__hint">{t('strava.waiting')}</p>
           <button type="button" className="btn btn--secondary" onClick={() => pending.current?.abort()}>
-            Annuler
+            {t('common.cancel')}
           </button>
         </div>
       ) : (
         <div className="strava__actions">
           {hasSaved && (
             <button type="button" className="btn btn--secondary" onClick={forget}>
-              Oublier ces identifiants
+              {t('strava.forget')}
             </button>
           )}
           <button type="submit" className="btn btn--primary" disabled={!clientId.trim() || !clientSecret.trim()}>
-            Se connecter
+            {t('strava.connect')}
           </button>
         </div>
       )}
@@ -200,6 +201,7 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
 
 /** The athlete's activities, 30 at a time (« Plus »), filtered by name; the ticked ones are imported. */
 function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: string | null): void; onImported(): void }) {
+  const t = useT()
   const id = useId()
   const [athlete] = useState(() => loadTokens()?.athlete ?? '')
   // a new object loads its page again (« Réessayer » after an error)
@@ -260,7 +262,7 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
   return (
     <div className="strava__body">
       <div className="strava__actions">
-        <p className="field__hint">Connecté à Strava{athlete ? ` : ${athlete}` : ''}</p>
+        <p className="field__hint">{athlete ? t('strava.connectedAs', { athlete }) : t('strava.connected')}</p>
         <button
           type="button"
           className="btn btn--secondary btn--small"
@@ -269,14 +271,14 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
             onSignedOut(null)
           }}
         >
-          Déconnecter Strava
+          {t('strava.disconnect')}
         </button>
       </div>
       <input
         className="input"
         type="search"
-        aria-label="Rechercher une activité par son nom"
-        placeholder="Rechercher par nom (activités affichées)"
+        aria-label={t('strava.searchAria')}
+        placeholder={t('strava.search')}
         value={query}
         onChange={(e) => setQuery(e.currentTarget.value)}
       />
@@ -288,10 +290,10 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
               <span className="strava__name">{activity.name}</span>
               <span className="strava__meta">
                 {[
-                  new Date(activity.start_date_local).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
+                  formatDate(new Date(activity.start_date_local), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
                   stravaSportLabel(activity),
                   formatDistance(activity.distance),
-                  `D+ ${formatAscent(activity.total_elevation_gain)}`,
+                  translate('format.ascent', { value: formatAscent(activity.total_elevation_gain) }),
                 ]
                   .filter(Boolean)
                   .join(' · ')}
@@ -301,7 +303,7 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
         ))}
       </ul>
       <p id={`${id}-status`} className="field__hint">
-        {busy ? 'Chargement des activités…' : shown.length === 0 ? 'Aucune activité.' : 'Activités lues sur Strava, affichées à vous seul.'}
+        {busy ? t('strava.loading') : shown.length === 0 ? t('strava.none') : t('strava.shownToYou')}
         {' '}Powered by Strava
       </p>
       {error && (
@@ -312,11 +314,11 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
       <div className="strava__actions">
         {(more || error) && (
           <button type="button" className="btn btn--secondary" onClick={loadNext} disabled={busy}>
-            {error ? 'Réessayer' : 'Plus'}
+            {error ? t('common.retry') : t('strava.more')}
           </button>
         )}
         <button type="button" className="btn btn--primary" onClick={importSelected} disabled={selected.size === 0}>
-          Importer{selected.size > 0 ? ` (${selected.size})` : ''}
+          {selected.size > 0 ? t('strava.importCount', { count: selected.size }) : t('strava.importButton')}
         </button>
       </div>
     </div>

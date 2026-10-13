@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react'
 import type { FilmClock } from '../film/clock'
 import { PARAM_LANE_LABELS, keysOfParam } from '../film/paramKeys'
+import { t, useT } from '../i18n'
 import type { FilmParam } from '../film/paramKeys'
 import { keyState } from '../film/timeline'
 import { addMarkerKeyHere, addParamKeyHere, seekKeyframe, toggleKeyframe, useFilmClock, useFilmTrack } from '../scene/usePacing'
@@ -53,39 +54,36 @@ interface Texts {
 function textsOf(target: KeyTarget, on: boolean): Texts {
   if (target.kind === 'camera') {
     return {
-      group: 'Images clés',
-      prev: { name: 'Image clé précédente', tip: withShortcut('Image clé précédente', 'seek-key') },
+      group: t('keys.camera.group'),
+      prev: { name: t('keys.camera.prev'), tip: withShortcut(t('keys.camera.prev'), 'seek-key') },
       add: {
-        name: on ? 'Supprimer l’image clé' : 'Ajouter une image clé',
-        tip: on ? 'Supprimer l’image clé sous la tête de lecture' : 'Ajouter une image clé : garde la vue 3D cadrée à la position du marqueur',
+        name: on ? t('keys.camera.remove') : t('keys.camera.add'),
+        tip: on ? t('keys.camera.removeTip') : t('keys.camera.addTip'),
       },
-      next: { name: 'Image clé suivante', tip: withShortcut('Image clé suivante', 'seek-key', 1) },
+      next: { name: t('keys.camera.next'), tip: withShortcut(t('keys.camera.next'), 'seek-key', 1) },
     }
   }
   if (target.kind === 'marker') {
     return {
-      group: 'Clés du marqueur',
-      prev: { name: 'Marqueur : clé précédente', tip: 'Aller à la clé de marqueur précédente' },
+      group: t('keys.marker.group'),
+      prev: { name: t('keys.marker.prev'), tip: t('keys.marker.prevTip') },
       add: {
-        name: on ? 'Marqueur : sélectionner la clé' : 'Marqueur : ajouter une clé',
-        tip: on
-          ? 'Ouvrir la clé de marqueur sous la tête de lecture dans l’inspecteur'
-          : 'Ajouter une clé de marqueur : à cet endroit, le marqueur change d’aspect (boule, figurine, image) en fondu',
+        name: on ? t('keys.marker.select') : t('keys.marker.add'),
+        tip: on ? t('keys.marker.selectTip') : t('keys.marker.addTip'),
       },
-      next: { name: 'Marqueur : clé suivante', tip: 'Aller à la clé de marqueur suivante' },
+      next: { name: t('keys.marker.next'), tip: t('keys.marker.nextTip') },
     }
   }
   const label = PARAM_LANE_LABELS[target.param]
+  const lower = label.toLowerCase()
   return {
-    group: `Clés : ${label}`,
-    prev: { name: `${label} : clé précédente`, tip: `Aller à la clé précédente (${label.toLowerCase()})` },
+    group: t('keys.param.group', { label }),
+    prev: { name: t('keys.param.prev', { label }), tip: t('keys.param.prevTip', { label: lower }) },
     add: {
-      name: on ? `${label} : sélectionner la clé` : `${label} : ajouter une clé`,
-      tip: on
-        ? `Ouvrir la clé sous la tête de lecture dans l’inspecteur`
-        : `Ajouter une clé à la position du marqueur, avec la valeur actuelle (${label.toLowerCase()})`,
+      name: on ? t('keys.param.select', { label }) : t('keys.param.add', { label }),
+      tip: on ? t('keys.param.selectTip') : t('keys.param.addTip', { label: lower }),
     },
-    next: { name: `${label} : clé suivante`, tip: `Aller à la clé suivante (${label.toLowerCase()})` },
+    next: { name: t('keys.param.next', { label }), tip: t('keys.param.nextTip', { label: lower }) },
   }
 }
 
@@ -107,6 +105,7 @@ export function KeyGroup({
   disabled?: boolean
   tipSide?: 'top' | 'bottom'
 }) {
+  useT()
   const keys = keysOf(clock, target)
   const { prev, next, on } = keyState(keys, timeS)
   return <KeyButtons target={target} keys={keys} clock={clock} state={{ prev, next, on }} disabled={disabled} tipSide={tipSide} />
@@ -127,6 +126,7 @@ function KeyButtons({
   disabled: boolean
   tipSide: 'top' | 'bottom'
 }) {
+  useT()
   const texts = textsOf(target, state.on)
   const add = () => {
     if (target.kind === 'camera') toggleKeyframe(clock)

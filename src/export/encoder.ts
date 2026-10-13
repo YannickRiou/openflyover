@@ -14,6 +14,7 @@ import type { MixedAudio } from '../film/audio'
 import { getPlatform, type WritableFile } from '../platform'
 import type { AudioCodec, StreamTargetChunk, VideoCodec, canEncodeAudio, canEncodeVideo } from 'mediabunny'
 import type { VideoCodecChoice, VideoEncoding, VideoQuality } from './schedule'
+import { t } from '../i18n'
 
 /** The muxer (mediabunny, ~700 KB) is loaded on the first export or codec check, not at startup. */
 const mediabunny = () => import('mediabunny')
@@ -178,12 +179,12 @@ export function candidatesFor(fileName: string | undefined, choice: VideoCodecCh
 }
 
 /** Names of the codecs of « Encodage » (export panel, messages). */
-export const CODEC_NAMES: Record<VideoCodecChoice, string> = { auto: 'Automatique', avc: 'H.264', hevc: 'HEVC', vp9: 'VP9' }
+export const CODEC_NAMES: Record<VideoCodecChoice, string> = { get auto() { return t('export.panel.codec.auto') }, avc: 'H.264', hevc: 'HEVC', vp9: 'VP9' }
 
 /** Thrown by a session used after `cancel()`. */
 export class ExportCanceledError extends Error {
   constructor() {
-    super('Export annulé')
+    super(t('export.encoder.canceled'))
     this.name = 'ExportCanceledError'
   }
 }
@@ -279,9 +280,9 @@ export async function createVideoEncoder(
   const choice = transparent ? 'auto' : (encoding?.codec ?? 'auto')
   const codec = await pickCodec(options, canEncode, transparent ? ALPHA_CANDIDATES : candidatesFor(destination?.fileName, choice))
   if (!codec && choice !== 'auto') {
-    throw new Error(`Ce navigateur ne sait pas encoder la vidéo en ${CODEC_NAMES[choice]} à cette taille : choisissez le codec « Automatique ».`)
+    throw new Error(t('export.encoder.noCodecChosen', { codec: CODEC_NAMES[choice] }))
   }
-  if (!codec) throw new Error("Ce navigateur ne sait encoder la vidéo dans aucun format (WebCodecs indisponible).")
+  if (!codec) throw new Error(t('export.encoder.noCodec'))
 
   const bitrate = targetBitrate(options, codec.codec)
   const audioBitrate = encoding ? encoding.audioKbps * 1000 : AUDIO_BITRATE
@@ -370,7 +371,7 @@ export async function createVideoEncoder(
       await output.finalize()
       if (!memory) return { blob: null, sizeBytes }
       const blob = memory.take(mimeType)
-      if (!blob) throw new Error('Le fichier vidéo est vide.')
+      if (!blob) throw new Error(t('export.encoder.empty'))
       return { blob, sizeBytes: blob.size }
     },
     async cancel() {

@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { VIDEO_ASPECTS } from '../export/schedule'
 import { useBatchStore } from '../export/batch'
 import { isExportBusy, useExportStore } from '../export/store'
+import { useT } from '../i18n'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { AspectIcon, Icon } from './icons'
+import { LanguageMenu } from './LanguageMenu'
 import type { IconName } from './icons'
 import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
@@ -15,6 +17,7 @@ const SAVED_FLASH_MS = 3000
 
 /** Output format of the preview and of the export: « Libre » (preview only) or one of the video aspects. */
 function FormatSwitcher({ disabled }: { disabled: boolean }) {
+  const t = useT()
   const aspect = useAppStore((s) => s.settings.video.aspect)
   const free = useAppStore((s) => s.freeFraming)
   const pick = (id: string | null) => {
@@ -25,11 +28,11 @@ function FormatSwitcher({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <div className="format-switch" role="radiogroup" aria-label="Format de sortie">
-      <label className="format-switch__option" data-tip="Libre : la vue remplit l'écran (aperçu)">
+    <div className="format-switch" role="radiogroup" aria-label={t('topbar.format.aria')}>
+      <label className="format-switch__option" data-tip={t('topbar.format.freeTip')}>
         <input type="radio" name="output-format" checked={free} disabled={disabled} onChange={() => pick(null)} />
         <Icon name="maximize" size={18} />
-        <span className="visually-hidden">Libre</span>
+        <span className="visually-hidden">{t('topbar.format.free')}</span>
       </label>
       {VIDEO_ASPECTS.map((a) => (
         <label key={a.id} className="format-switch__option" data-tip={a.label}>
@@ -51,6 +54,7 @@ interface MoreItem {
 
 /** « Plus d'actions » (phone only, shown by shell.css): the actions of the bar that do not fit. */
 function MoreMenu({ items }: { items: MoreItem[] }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -73,11 +77,11 @@ function MoreMenu({ items }: { items: MoreItem[] }) {
         e.stopPropagation()
       }}
     >
-      <button type="button" className="icon-btn" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <button type="button" className="icon-btn" aria-label={t('topbar.more')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         <Icon name="ellipsis" />
       </button>
       {open && (
-        <div className="track-menu topbar__menu" role="menu" aria-label="Plus d'actions">
+        <div className="track-menu topbar__menu" role="menu" aria-label={t('topbar.more')}>
           {items.map((item) => (
             <button
               key={item.label}
@@ -114,6 +118,7 @@ interface TopBarProps {
  * shortcuts (« ? »), « Exporter » (the export drawer; « 42 % · Annuler » while exporting).
  */
 export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarProps) {
+  const t = useT()
   const history = getSettingsHistory()
   const { canUndo, canRedo } = useSyncExternalStore(history.subscribe, history.getState)
   const name = useAppStore((s) => s.projectName)
@@ -152,18 +157,18 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
           value={name}
           placeholder={placeholder}
           maxLength={120}
-          aria-label="Nom du projet"
-          title="Nom du projet : cliquez pour le modifier"
+          aria-label={t('topbar.projectName')}
+          title={t('topbar.projectNameTip')}
           onChange={(e) => useAppStore.getState().setProjectName(e.currentTarget.value)}
         />
         <span className="topbar__sep" aria-hidden="true" />
-        <button type="button" className="icon-btn" onClick={history.undo} disabled={!canUndo || busy} aria-label="Annuler" data-tip={withShortcut('Annuler', 'undo')}>
+        <button type="button" className="icon-btn" onClick={history.undo} disabled={!canUndo || busy} aria-label={t('topbar.undo')} data-tip={withShortcut(t('topbar.undo'), 'undo')}>
           <Icon name="undo" />
         </button>
-        <button type="button" className="icon-btn" onClick={history.redo} disabled={!canRedo || busy} aria-label="Rétablir" data-tip={withShortcut('Rétablir', 'redo')}>
+        <button type="button" className="icon-btn" onClick={history.redo} disabled={!canRedo || busy} aria-label={t('topbar.redo')} data-tip={withShortcut(t('topbar.redo'), 'redo')}>
           <Icon name="redo" />
         </button>
-        <button type="button" className="icon-btn" onClick={onOpen} disabled={busy} aria-label="Ouvrir" data-tip={withShortcut('Ouvrir une trace ou un projet', 'open')}>
+        <button type="button" className="icon-btn" onClick={onOpen} disabled={busy} aria-label={t('topbar.open')} data-tip={withShortcut(t('topbar.openTip'), 'open')}>
           <Icon name="folder-open" />
         </button>
         <button
@@ -171,8 +176,8 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
           className={`icon-btn topbar__save${unsaved ? ' topbar__save--unsaved' : ''}${justSaved ? ' topbar__save--saved' : ''}`}
           onClick={saveProject}
           disabled={busy}
-          aria-label={unsaved ? 'Enregistrer (modifications non enregistrées)' : 'Enregistrer'}
-          data-tip={withShortcut(unsaved ? 'Enregistrer : modifications non enregistrées' : 'Enregistrer le projet', 'save')}
+          aria-label={unsaved ? t('topbar.saveUnsavedAria') : t('topbar.save')}
+          data-tip={withShortcut(unsaved ? t('topbar.saveUnsavedTip') : t('topbar.saveTip'), 'save')}
         >
           <Icon name="save" />
         </button>
@@ -181,15 +186,16 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
       <FormatSwitcher disabled={busy} />
 
       <div className="topbar__end">
-        <button type="button" className="icon-btn" onClick={onHelp} aria-label="Raccourcis clavier" data-tip={withShortcut('Raccourcis clavier', 'help')}>
+        <button type="button" className="icon-btn" onClick={onHelp} aria-label={t('topbar.shortcuts')} data-tip={withShortcut(t('topbar.shortcuts'), 'help')}>
           <Icon name="circle-help" />
         </button>
+        <LanguageMenu />
         <MoreMenu
           items={[
-            { label: 'Annuler', icon: 'undo', onClick: history.undo, disabled: !canUndo || busy },
-            { label: 'Rétablir', icon: 'redo', onClick: history.redo, disabled: !canRedo || busy },
-            { label: 'Ouvrir…', icon: 'folder-open', onClick: onOpen, disabled: busy },
-            { label: 'Enregistrer', icon: 'save', onClick: saveProject, disabled: busy },
+            { label: t('topbar.undo'), icon: 'undo', onClick: history.undo, disabled: !canUndo || busy },
+            { label: t('topbar.redo'), icon: 'redo', onClick: history.redo, disabled: !canRedo || busy },
+            { label: t('topbar.openMore'), icon: 'folder-open', onClick: onOpen, disabled: busy },
+            { label: t('topbar.save'), icon: 'save', onClick: saveProject, disabled: busy },
           ]}
         />
         {busy ? (
@@ -199,9 +205,9 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
             // between two films of a batch the export store is idle: the batch takes the cancel
             onClick={() => (batchRunning ? useBatchStore.getState().cancel() : useExportStore.getState().cancel())}
             disabled={phase === 'finalizing'}
-            aria-label={phase === 'finalizing' ? 'Finalisation du fichier' : `Annuler l'export (${percent} %)`}
+            aria-label={phase === 'finalizing' ? t('topbar.finalizingAria') : t('topbar.cancelExportAria', { percent })}
           >
-            {phase === 'finalizing' ? 'Finalisation…' : `${percent} % · Annuler`}
+            {phase === 'finalizing' ? t('topbar.finalizing') : t('topbar.cancelExport', { percent })}
           </button>
         ) : (
           // nothing to export before the first track
@@ -212,10 +218,10 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
               onClick={onToggleExport}
               aria-expanded={exportOpen}
               aria-controls="export-dock"
-              data-tip={withShortcut('Exporter une vidéo ou une image', 'export')}
+              data-tip={withShortcut(t('topbar.exportTip'), 'export')}
             >
               <Icon name="download" size={18} />
-              <span className="icon-btn__text">Exporter</span>
+              <span className="icon-btn__text">{t('topbar.export')}</span>
             </button>
           )
         )}
