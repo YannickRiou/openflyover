@@ -103,11 +103,18 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 /**
- * Download one tile as a Blob. Rejects with `TileFetchError` on HTTP errors, with the fetch error otherwise.
- * `reload` skips the HTTP cache (a retry must not get a cached error back).
+ * Requests queued at this priority or later (lower numbers go first) are background work, the prefetches and the
+ * retries of the terrain engine: the browser fetches them at a low network priority (Priority Hints, ignored where
+ * unsupported), after the tiles the view is waiting for.
  */
-export async function fetchTileBlob(url: string, signal?: AbortSignal, reload = false): Promise<Blob> {
-  const response = await fetch(url, reload ? { signal, cache: 'reload' } : { signal })
+export const BACKGROUND_PRIORITY = 1_000_000
+
+/**
+ * Download one tile as a Blob. Rejects with `TileFetchError` on HTTP errors, with the fetch error otherwise.
+ * `reload` skips the HTTP cache (a retry must not get a cached error back); `priority` is the network priority hint.
+ */
+export async function fetchTileBlob(url: string, signal?: AbortSignal, reload = false, priority: RequestPriority = 'auto'): Promise<Blob> {
+  const response = await fetch(url, reload ? { signal, cache: 'reload', priority } : { signal, priority })
   if (!response.ok) throw new TileFetchError(url, response.status)
   // update date of the IGN layers (Etalab licence), shown in « Sources et licences »
   noteTileLastModified(url, response.headers?.get('Last-Modified'))
@@ -118,10 +125,10 @@ export async function fetchTileBlob(url: string, signal?: AbortSignal, reload = 
  * `fetchTileBlob` with the retry policy of the fetcher (network errors, 5xx, 429, 400; 3 retries after
  * `retryDelayMs`, ×4 each time, outside the HTTP cache). Shared by the fetcher and the offline packs.
  */
-export async function downloadTile(url: string, signal?: AbortSignal, retryDelayMs = 250): Promise<Blob> {
+export async function downloadTile(url: string, signal?: AbortSignal, retryDelayMs = 250, priority: RequestPriority = 'auto'): Promise<Blob> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return await fetchTileBlob(url, signal, attempt > 0)
+      return await fetchTileBlob(url, signal, attempt > 0, priority)
     } catch (error) {
       if (signal?.aborted || attempt >= MAX_RETRIES || !isRetryable(error)) throw error
       if (retryDelayMs > 0) await delay(retryDelayMs * 4 ** attempt, signal)
@@ -323,7 +330,8 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
         // unreadable stored copy: the network below
       }
     }
-    return decodeBlob(await downloadTile(request.url, signal, retryDelayMs))
+    const priority = request.priority >= BACKGROUND_PRIORITY ? 'low' : 'auto'
+    return decodeBlob(await downloadTile(request.url, signal, retryDelayMs, priority))
   }
 
   async function run(request: PendingRequest): Promise<void> {

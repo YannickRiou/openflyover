@@ -15,7 +15,7 @@ import { useRegionStore } from '../osm/region'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
 import { useLabelSources } from './labelSources'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 
 /** Frames drawn after a change (~0.5 s at 60 frames per second). */
 export const WAKE_FRAMES = 30

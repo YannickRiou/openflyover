@@ -24,7 +24,7 @@ const {
   statsEqual,
   engineOptionsFromSettings,
   diffEngineOptions,
-} = await import('./TerrainLayer')
+} = await import('./terrainLayerSetup')
 
 const outer: LonLatBounds = { west: 6, south: 45, east: 7, north: 46 }
 

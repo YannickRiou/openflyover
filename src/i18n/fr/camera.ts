@@ -73,6 +73,7 @@ export default {
   'duration.stops': { one: '{count} arrêt', other: '{count} arrêts' },
   'duration.film': 'Film : {duration} · {stops}',
   'duration.filmSpeedUp': 'Film : {duration} · {stops} · accélération {speedUp} (sortie de {recorded})',
+  'duration.timedStages': { one: '{count} étape à durée fixée (inspecteur de l’étape) : la durée du survol se répartit sur les autres', other: '{count} étapes à durée fixée (inspecteur de l’étape) : la durée du survol se répartit sur les autres' },
   'pacing.enable': 'Ralentir aux temps forts',
   'pacing.enableTip': 'Temps forts : sommets des montées, cols franchis et sommets proches de la trace.',
   'pacing.slowOn': 'Ralentir sur',

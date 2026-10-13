@@ -4,7 +4,7 @@ import { t, useT } from '../i18n'
 import { formatDate } from '../i18n/format'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
 import { CARD_LABELS, TITLE_CARD_ID, cardShown, isCardItem } from '../film/cards'
-import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageTrackOf, withJunction, withJunctionCard } from '../film/junctions'
+import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageFlightS, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from '../film/junctions'
 import { useMediaStore } from '../film/media'
 import {
   AUDIO_DURATION_RANGE,
@@ -13,6 +13,8 @@ import {
   FADE_RANGE,
   ITEM_DURATION_RANGE,
   MEDIA_LAYOUTS,
+  NIGHT_PARTS,
+  NIGHT_PART_RANGE,
   SHOT_DURATION_RANGE,
   SHOT_STYLES,
   SHOT_TRANSITIONS,
@@ -25,6 +27,7 @@ import {
   SITUATION_HOLD_RANGE,
   SITUATION_TILT_DEFAULT_DEG,
   SITUATION_TILT_RANGE,
+  STAGE_DURATION_RANGE,
   START_HEIGHTS,
   START_HEIGHT_LABELS,
   STOP_CAMERAS,
@@ -89,7 +92,7 @@ import { disableCard, editFilm, useFilmClock, useFilmSequence, useFilmSource } f
 import { useAppStore } from '../state/store'
 import { AnchorPicker } from './AnchorPicker'
 import { CardFields } from './CardFields'
-import { formatDegrees, formatDistance, formatNumber, formatPercent, formatShort } from './format'
+import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort, formatShort } from './format'
 import { Icon } from './icons'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RegionHint } from './CameraPanel'
@@ -670,6 +673,14 @@ export function FilmInspector() {
             holdS={stored.holdS || DEFAULT_JUNCTION.holdS}
             onChange={(patch) => change((f) => withJunction(f, junction.afterTrackId, { kind, holdS: stored.holdS, ...patch }), false)}
           />
+          {kind === 'nuit' && (
+            <>
+              {NIGHT_PARTS.map(({ key, label }) =>
+                range(`night-${key}`, label, film.nights[key], NIGHT_PART_RANGE, formatSecondsShort, (v) => change((f) => ({ ...f, nights: { ...f.nights, [key]: v } }), false)),
+              )}
+              <p className="field__hint">{t('inspector.junction.nightsHint')}</p>
+            </>
+          )}
           <button
             type="button"
             className="btn btn--secondary film-inspector__remove"
@@ -1117,13 +1128,29 @@ export function FilmInspector() {
       const k = sequence.stages.findIndex((s) => s.track.id === stageTrackOf(item))
       const stage = sequence.stages[k]
       title = t('timeline.stage.short', { n: k + 1 })
-      removable = false
       const startS = k <= 0 ? clock.openingS : (clock.junctions[k - 1]?.endS ?? clock.openingS)
+      const own = film.stageDurations?.[stageTrackOf(item)]
+      removeLabel = t('inspector.stage.autoDuration')
+      removable = own !== undefined
       body = stage && (
         <>
           <p className="field__hint">
             {stage.track.name} · {formatDistance(stage.endM - stage.startM)}
             {stage.track.stats.ascentM > 0 && t('inspector.stage.gain', { gain: formatNumber(stage.track.stats.ascentM) })}
+          </p>
+          {range(
+            'stage-duration',
+            t('inspector.stage.flightDuration'),
+            Math.round(stageFlightS(clock, k) * 10) / 10,
+            { ...STAGE_DURATION_RANGE, step: 1 },
+            (v) => formatFilmTime(v),
+            (v) => change((f) => withStageDuration(f, stage.track.id, v), false),
+          )}
+          <p className="field__hint">
+            {own === undefined
+              ? t('inspector.stage.autoHint')
+              : t('inspector.stage.fixedHint')}{' '}
+            {t('inspector.stage.dragHint')}
           </p>
           <label className="field">
             <span className="field__label">{t('inspector.stage.trackColor')}</span>

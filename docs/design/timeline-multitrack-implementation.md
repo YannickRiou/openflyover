@@ -2,7 +2,7 @@
 
 **Status: phase 1 (junctions, sections 2.1 to 2.9, slices 1a + 1b + 1c with the magnet of section 6) is implemented.** Left for later in
 phase 1: the card's start offset relative to the dip, the ease into a caught target, drops of new items on the magnet, the « Survol »
-kind. **Phase 2 (reorder, section 3: `race.order` + `orderedTracks`, `reorderStages`, drag in the list and on the « Étapes » lane, Alt+arrows, « Ordonner par date », one undo step) is implemented.** Phases 3 and 4 are not started.
+kind. **Phase 2 (reorder, section 3: `race.order` + `orderedTracks`, `reorderStages`, drag in the list and on the « Étapes » lane, Alt+arrows, « Ordonner par date », one undo step) is implemented.** **Phase 3 (section 4: a duration per stage, `film.stageDurations` + `stageSpansOf` / `flightPacing(…, stages)` / `stageFlightS`, stage inspector and right edge of the stage block; the light blend across the fades, `junctionSunDate`; « Lumière » reduced to « Source de la lumière » and one « Jours et nuits » switch) is implemented.** Left for later in phase 3: a per-stage light source (« Continue »), the `lightBlend` toggle (the blend is always on with « Heure de la trace »). Phase 4 is not started.
 
 Companion of [`timeline-multitrack.md`](timeline-multitrack.md) (the *why* and the decisions). This file is the *how*: it is written so
 that you can implement the work yourself, phase by phase, without rediscovering the code. File and function names are real (checked on
@@ -292,6 +292,7 @@ For every item anchored in metres, find the stage it belongs to **before** (`atM
 
 ### 4.1 Duration per stage
 
+- *Implemented as*: the base speed is scaled per stage inside `flightPacing` (`stages` argument, `stagedMovingTime`) rather than through a `SpeedCurve` weight, so a set stage lasts exactly its duration (its own stops included, junction holds and nights not) with or without « Garder la durée ».
 - Model: `film.stageDurations?: Record<trackId, number>` (seconds of flight for that stage, 5–600). Unset ⇒ proportional share (today).
 - Clock: today `flightPacing(lengthM, …, durationS, …)` spreads `durationS` over the whole length. With per-stage durations the base speed is piecewise: stage k flies `L_k` metres in `D_k` s.
   Implement as a **per-metre base-speed weight** passed to `flightPacing`: weight `w(x) = (L_k / D_k) / (L / D)` on stage k (so a stage given 2× its proportional time flies at half speed), with eased
@@ -304,7 +305,7 @@ For every item anchored in metres, find the stage it belongs to **before** (`atM
 
 - Today: `trackUnderMarker(tracks, race, progress)` returns the stage under the marker; the sun hour/date comes from `settings.sunHour/sunDate/sunFromTrack` and that stage's recorded time;
   nights add pauses. Sun is evaluated per frame from `(progress)` in `AtmosphereLayer` / `FlyoverRig` / `SunLight` (**verify** the exact hooks: grep `sunFromTrack`, `sunDateAt`, `trackUnderMarker`).
-- Add `film.lightBlend?: boolean` (default on in sequence mode) and compute the **sun state during a junction hold as a blend** of the previous stage's end sun and the next stage's start sun:
+- *Implemented as*: no `lightBlend` flag (always on with « Heure de la trace »; keys on the sun hour override), and the blend runs the time of day forward / backward (`blendSunDates`) rather than slerping a direction. Original sketch: add `film.lightBlend?: boolean` (default on in sequence mode) and compute the **sun state during a junction hold as a blend** of the previous stage's end sun and the next stage's start sun:
   `sunDirection = slerp(sunA, sunB, smoothstep(startS, endS, timeS))`, hour-angle interpolated the **short way** (a day→night change must pass through dusk, not flip), colour/intensity from the interpolated elevation.
   The pure function lives next to `src/flyover/sun.ts` (`blendSun(a, b, t)`), tested (noon→midnight passes the horizon; same sun ⇒ identity). The scene reads `clock.junctions` + `timeS` (deterministic).
 - « Lumière » tab simplification (`src/ui/GradingPanel.tsx` / `NightSettings.tsx` / `SettingsPanel.tsx` — **verify the right panel**): a single « Source de la lumière » (*Heure de la trace* / *Heure fixe*), « Heure » + « Date » only

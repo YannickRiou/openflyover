@@ -11,7 +11,7 @@ import { filmViewAt } from './filmView'
 import { FlareEffect } from './flareEffect'
 import { BLOOM_SMOOTHING, BLOOM_THRESHOLD, bloomParams, depthOfFieldParams, radialBlurLength } from './lens'
 import { ShutterEffect } from './shutterEffect'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 import { useFilmClock } from './usePacing'
 
 /** After the sun (-1) and the camera and marker (0), before the composer (1). */

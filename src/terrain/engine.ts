@@ -26,7 +26,7 @@ import { boundsIntersect, lonLatToTileFrac, tileGroundSizeM } from '../geo/merca
 import { decodeDem as defaultDecodeDem } from './dem'
 import { DEFAULT_DEM_CLEAN, sameDemClean } from './demClean'
 import { errorMessage } from '../core/errors'
-import { TileFetchError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
+import { BACKGROUND_PRIORITY, TileFetchError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
 import { buildTileGeometry, sampleTileMesh } from './mesh'
@@ -803,8 +803,11 @@ export function createTerrainEngine(
     flushChange()
   }
 
-  /** Fetch ranks of prefetches start here: after any request of the current view (lower rank = sooner). */
-  const PREFETCH_RANK = 1_000_000
+  /**
+   * Fetch ranks of prefetches start here: after any request of the current view (lower rank = sooner), and fetched
+   * at a low network priority (`BACKGROUND_PRIORITY`).
+   */
+  const PREFETCH_RANK = BACKGROUND_PRIORITY
   /** Fetch ranks of retries start here: after the prefetches. */
   const RETRY_RANK = 2 * PREFETCH_RANK
 

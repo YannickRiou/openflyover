@@ -21,8 +21,8 @@ import { addSpeed, addStop, addText } from '../film/timeline'
 import { buildTrackPath, pickProjectedPath, samplePath } from '../flyover/path'
 import { useT } from '../i18n'
 import { useAppStore } from '../state/store'
-import { useTerrainContext } from './TerrainLayer'
-import { LINE_LIFT_M } from './TrackLines'
+import { useTerrainContext } from './terrainContext'
+import { LINE_LIFT_M } from './trackLineSet'
 import { editFilm, getFilmSource, useFilmClock, useFilmTrack } from './usePacing'
 
 /** Pointer distance to the line that still picks it (CSS pixels). */

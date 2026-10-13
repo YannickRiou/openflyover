@@ -75,6 +75,7 @@ const messages: Messages['camera'] = {
   'duration.stops': { one: '{count} hold', other: '{count} holds' },
   'duration.film': 'Film: {duration} · {stops}',
   'duration.filmSpeedUp': 'Film: {duration} · {stops} · speed-up {speedUp} (outing of {recorded})',
+  'duration.timedStages': { one: '{count} stage with a fixed duration (stage inspector): the flyover duration is shared among the others', other: '{count} stages with a fixed duration (stage inspector): the flyover duration is shared among the others' },
   'pacing.enable': 'Slow down at highlights',
   'pacing.enableTip': 'Highlights: tops of climbs, passes crossed and summits near the track.',
   'pacing.slowOn': 'Slow down on',

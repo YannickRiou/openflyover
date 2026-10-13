@@ -15,7 +15,7 @@ import { DEFAULT_FILM, SITUATION_DURATION_S } from '../film/model'
 import { updateShot } from '../film/timeline'
 import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
-import { editFilm, setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
+import { editFilm, setFlightTiming, useFilmClock, useFilmSource, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { formatDegrees, formatDistance, formatDuration, formatNumber, formatPercent, formatSecondsShort, formatSpeedUp } from './format'
 import { Icon } from './icons'
@@ -219,6 +219,9 @@ export function CameraPanel() {
   const pacing = useAppStore((s) => s.settings.pacing)
   const film = useFilmClock()
   const stopCount = film.stops.length
+  // « À la suite »: the stages whose flight time is set on the timeline take theirs out of the duration
+  const { stageIds, film: filmSettings } = useFilmSource()
+  const timedStages = stageIds?.filter((id) => filmSettings.stageDurations?.[id] !== undefined).length ?? 0
   const recordedS = useFilmTrack()?.stats.durationS
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
@@ -388,6 +391,7 @@ export function CameraPanel() {
               speedUp: speedUp ?? '',
               recorded: formatDuration(recordedS ?? 0),
             })}
+            {timedStages > 0 && ` · ${t('camera.duration.timedStages', { count: timedStages })}`}
           </p>
         </div>
 

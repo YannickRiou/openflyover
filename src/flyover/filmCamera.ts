@@ -17,7 +17,7 @@ import type { LocalFrame, LonLat } from '../core/types'
 import type { ClockStop, FilmClock, FilmState } from '../film/clock'
 import { CAMERA_KEY_RANGES, SITUATION_DISTANCE_KM_RANGE, SITUATION_TILT_DEFAULT_DEG, SITUATION_TILT_RANGE, shotCuts, situationTiming } from '../film/model'
 import type { FilmShot, ShotStyle, SituationFraming, StartHeight } from '../film/model'
-import type { HeightSampler } from '../scene/TrackLines'
+import type { HeightSampler } from '../scene/trackLineSet'
 import {
   LINE_OF_SIGHT_MIN_CLEARANCE_M,
   MIN_GROUND_CLEARANCE_M,
