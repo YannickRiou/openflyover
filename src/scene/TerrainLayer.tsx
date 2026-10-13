@@ -87,6 +87,7 @@ export function TerrainLayer({ children }: TerrainLayerProps) {
     appliedRef.current = { engine: created, options }
     lastStatsRef.current = null
     statsClockRef.current = 0
+    // oxlint-disable-next-line react/set-state-in-effect -- publishes the engine this effect creates (a WebGL resource disposed in the cleanup below)
     setEngine(created)
 
     return () => {

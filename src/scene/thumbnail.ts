@@ -7,7 +7,7 @@
  * no extra render pass, no buffer kept.
  */
 import { addAfterEffect, invalidate } from '@react-three/fiber'
-import { SKY_HORIZON_COLOR, SKY_TOP_COLOR } from './FlyoverCanvas'
+import { SKY_HORIZON_COLOR, SKY_TOP_COLOR } from './sceneLighting'
 
 /** Longest side of a thumbnail (px): twice its size in the list. */
 export const THUMBNAIL_MAX_SIDE = 240

@@ -113,7 +113,7 @@ export function FlyoverRig() {
     })
   }, [path, frame, engine, camera, controls, clock, follow])
 
-  useFrame(({ camera, size, gl }, delta) => {
+  useFrame(({ camera, size, gl, controls: orbit }, delta) => {
     const store = useAppStore.getState()
     const { playing, speed } = store.playback
     const { settings } = store
@@ -137,7 +137,8 @@ export function FlyoverRig() {
     const { progress, timeS: storedTimeS } = useAppStore.getState().playback
     const timeS = storedTimeS ?? clock.timeAtProgress(progress)
 
-    if (controls) controls.enabled = !playing
+    const orbitControls = orbit as unknown as DefaultControls | null
+    if (orbitControls) orbitControls.enabled = !playing
     const marker = markerRef.current
     const leaving = fadeRef.current
     if (!marker || !leaving) return
@@ -169,7 +170,7 @@ export function FlyoverRig() {
       appliedRegionRef.current = region
       camera.position.copy(view.position)
       camera.lookAt(view.target)
-      controls?.target.copy(view.target)
+      orbitControls?.target.copy(view.target)
     }
     // after the camera move: the figure faces the way the track runs in this very frame; the colour, figure and name
     // of the track under the marker (the stage « À la suite »)
