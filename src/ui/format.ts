@@ -17,6 +17,11 @@ export function formatNumber(value: number, fractionDigits = 0): string {
   return fracPart ? `${sign}${grouped},${fracPart}` : `${sign}${grouped}`
 }
 
+/** 4 -> "4", 4.5 -> "4,5", 1.25 -> "1,25" */
+export function formatShort(value: number): string {
+  return formatNumber(value, Number.isInteger(value) ? 0 : Number.isInteger(value * 10) ? 1 : 2)
+}
+
 /** 0.35 -> "35 %" (a share in [0, 1], French number format). */
 export function formatPercent(share: number): string {
   return `${formatNumber(share * 100)} %`

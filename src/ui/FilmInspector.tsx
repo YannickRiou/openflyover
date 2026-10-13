@@ -36,7 +36,7 @@ import type { Film, FilmShot, MediaLayout, MediaSync, ShotStyle, ShotSun, ShotTr
 import { FILM_PARAMS, PARAM_SPECS, paramAt, paramBase } from '../film/paramKeys'
 import { getPlatform } from '../platform'
 import { AVATAR_SIZE_PX, fileToAvatarDataUrl } from '../scene/markerBadge'
-import { MARKER_FIGURE_CHOICES, MARKER_FIGURE_LABELS, MARKER_KIND_LABELS, MARKER_KINDS } from '../scene/markerSettings'
+import { MARKER_FIGURE_CHOICES, MARKER_FIGURE_LABELS, MARKER_KIND_LABELS, MARKER_KINDS, MARKER_LABEL_MODE_LABELS, MARKER_SIZE_RANGE } from '../scene/markerSettings'
 import type { MarkerFigureChoice, MarkerKind } from '../scene/markerSettings'
 import type { FilmParam } from '../film/paramKeys'
 import {
@@ -83,7 +83,7 @@ import { disableCard, editFilm, useFilmClock, useFilmSource } from '../scene/use
 import { useAppStore } from '../state/store'
 import { AnchorPicker } from './AnchorPicker'
 import { CardFields } from './CardFields'
-import { formatDegrees, formatDistance, formatNumber, formatPercent } from './format'
+import { formatDegrees, formatDistance, formatNumber, formatPercent, formatShort } from './format'
 import { Icon } from './icons'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RegionHint } from './CameraPanel'
@@ -350,6 +350,7 @@ export function FilmInspector() {
   const clock = useFilmClock()
   const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
+  const marker = useAppStore((s) => s.settings.marker)
   const overlay = useAppStore((s) => s.settings.overlay)
   if (!item || !track || !path) return null
   const lengthM = track.stats.distanceM
@@ -724,6 +725,27 @@ export function FilmInspector() {
           showToast({ kind: 'error', text: 'Cette image n’a pas pu être lue.' })
         }
       }
+      /** a colour of its own for this look, '' = the track's; the picker starts from the colour in effect */
+      const colorField = (field: 'color' | 'figureColor', label: string) => (
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-marker-${field}`}>
+            {label}
+          </label>
+          <div className="color-row">
+            <input
+              id={`${id}-marker-${field}`}
+              className="color-row__input"
+              type="color"
+              value={(markerKey[field] ?? marker[field]) || track.color}
+              onChange={(e) => set({ [field]: e.currentTarget.value })}
+            />
+            <button type="button" className="btn btn--secondary" disabled={markerKey[field] === ''} onClick={() => set({ [field]: '' })}>
+              Celle de la trace
+            </button>
+          </div>
+        </div>
+      )
+      const inherits = markerKey.color === undefined && markerKey.figureColor === undefined && markerKey.size === undefined
       body = (
         <>
           <div className="field">
@@ -772,11 +794,25 @@ export function FilmInspector() {
               <p className="field__hint">Sans image propre, le marqueur reprend celle du panneau Trace.</p>
             </div>
           )}
+          {markerKey.kind === 'figurine' && colorField('figureColor', 'Couleur du disque')}
+          {colorField('color', markerKey.kind === 'boule' ? 'Couleur' : 'Couleur du bord')}
+          {range('size', 'Taille', markerKey.size ?? marker.size, MARKER_SIZE_RANGE, (v) => `×${formatShort(v)}`, (size) => set({ size }))}
+          <div className="field">
+            <button
+              type="button"
+              className="btn btn--secondary"
+              disabled={inherits}
+              onClick={() => set({ color: undefined, figureColor: undefined, size: undefined })}
+            >
+              Reprendre couleurs et taille du panneau
+            </button>
+          </div>
           {number('at', 'À (km)', km(markerKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
           <p className="field__hint">
             À {formatDistance(markerKey.atM)}, {formatFilmTime(markerKey.timeS)} dans le film : le marqueur prend cet aspect, en fondu sur
-            une courte portion autour de ce point (moins d’une seconde de film). Avant la première clé, il a l’aspect du panneau Trace ;
-            taille, couleurs et étiquette restent ceux du panneau.
+            une courte portion autour de ce point (moins d’une seconde de film). Avant la première clé, il a l’aspect du panneau Trace.
+            Restent ceux du panneau : étiquette ({MARKER_LABEL_MODE_LABELS[marker.label].toLowerCase()}), tige ({marker.stick ? 'oui' : 'non'})
+            {markerKey.kind === 'figurine' && `, animation (${marker.animated ? 'oui' : 'non'})`}.
           </p>
         </>
       )

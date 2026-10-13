@@ -31,17 +31,12 @@ import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
-import { formatDistance, formatNumber, formatPercent } from './format'
+import { formatDistance, formatPercent, formatShort } from './format'
 import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 import { showToast } from './toast'
 import './markerSection.css'
-
-/** 4 -> "4", 4.5 -> "4,5", 1.25 -> "1,25" */
-function formatShort(value: number): string {
-  return formatNumber(value, Number.isInteger(value) ? 0 : Number.isInteger(value * 10) ? 1 : 2)
-}
 
 /** 0 -> "Aucun", else the distance */
 const formatSmoothing = (metres: number) => (metres === 0 ? 'Aucun' : formatDistance(metres))

@@ -32,7 +32,7 @@ import {
 import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText, MediaSync } from './model'
 import { clampParamValue } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
-import type { FilmMarkerKey } from './markerKeys'
+import type { FilmMarkerKey, MarkerKeyLook } from './markerKeys'
 
 export type TimelineItem = 'opening' | 'closing' | string
 /** part of a block a gesture holds: its body (move) or one of its edges */
@@ -483,7 +483,7 @@ export function updateParamKey(film: Film, id: string, patch: Partial<Omit<FilmP
  * A marker key at `atM` with the look `look`, and its id. A key already at that metre takes the look instead (one key
  * per place).
  */
-export function addMarkerKey(film: Film, atM: number, look: Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId'>): { film: Film; id: string } {
+export function addMarkerKey(film: Film, atM: number, look: MarkerKeyLook): { film: Film; id: string } {
   const at = Math.max(0, Math.round(atM))
   const there = film.markerKeys.find((k) => Math.round(k.atM) === at)
   if (there) return { film: updateMarkerKey(film, there.id, look), id: there.id }
@@ -492,7 +492,7 @@ export function addMarkerKey(film: Film, atM: number, look: Pick<FilmMarkerKey, 
 }
 
 /** Marker keys at each of `placesM` that has none, with the look `look` (the junctions of a chained or sequenced track). */
-export function addMarkerKeysAt(film: Film, placesM: readonly number[], look: Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId'>): Film {
+export function addMarkerKeysAt(film: Film, placesM: readonly number[], look: MarkerKeyLook): Film {
   return placesM.reduce((f, atM) => (f.markerKeys.some((k) => Math.round(k.atM) === Math.round(atM)) ? f : addMarkerKey(f, atM, look).film), film)
 }
 
