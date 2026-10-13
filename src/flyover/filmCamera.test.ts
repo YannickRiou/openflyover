@@ -6,7 +6,7 @@ import type { FilmCameraKey, FilmShot, FilmStop, SituationFraming } from '../fil
 import { situationTiming } from '../film/model'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { buildTrack } from '../import/stats'
-import type { HeightSampler } from '../scene/TrackLines'
+import type { HeightSampler } from '../scene/trackLineSet'
 import { computeCameraView, MIN_GROUND_CLEARANCE_M } from './camera'
 import { DEFAULT_CAMERA, type CameraStyle } from './cameraSettings'
 import {
