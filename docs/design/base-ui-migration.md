@@ -1,6 +1,6 @@
 # Design: interactive UI primitives on Base UI
 
-Status: accepted, to be implemented after the internationalisation change. Target: v1.0.0.
+Status: accepted. Target: v2.0.0 (after v1.0.0).
 
 ## Why
 
