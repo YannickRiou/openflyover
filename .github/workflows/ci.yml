@@ -40,7 +40,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run coverage
+      # coverage only on master, for the badge: it makes the run about 60 % longer (35 s → 56 s on 4 cores)
+      - run: npm run ${{ github.event_name == 'push' && 'coverage' || 'test' }}
       - if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
