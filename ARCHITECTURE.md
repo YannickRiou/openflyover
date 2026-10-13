@@ -1615,9 +1615,18 @@ it, know at what time you will pass each point, where the sun will be and what t
   ranked ones back in that order (strictly decreasing), so the list and the label overlap (`resolveOverlaps`) follow it;
   applied in `publish` (`osm/store.ts`) after `buildLandmarks`, before `splitHidden`.
 - **Cross and « Relancer la recherche »**: the cross of a hidden landmark puts its id in `settings.landmarks.dismissedIds`
-  (`buildLandmarks` skips it before the cap, so another takes its place); the button empties `dismissedIds` and calls
+  (`buildLandmarks` leaves it out after the cap and the deduplication, so it frees no slot and no other landmark pops up in its place); the button empties `dismissedIds` and calls
   `syncLandmarks(…, { refresh: true })`, which asks Overpass again for every track (the known landmarks stay until the answer, and if it fails; « Réessayer » does the same; `fetchTrackFeatures(…, refresh)`
   skips the memory and the persistent cache, then caches the answer). `withLandmarkDefaults` gives `[]` to both lists.
+- **Cap and pins**: `settings.landmarks.maxCount` (slider « Nombre maximal », `LANDMARK_COUNT_RANGE` 5-80, default
+  `MAX_LANDMARKS` = 40) caps the landmarks of each track in `buildLandmarks` and, globally over the tracks, the 3D labels
+  in `landmarkLabels`. `settings.landmarks.pinnedIds` (pin button of a row): a pinned landmark that passes the filters
+  is exempt from the cap and from the name deduplication (it wins over an unpinned duplicate), counts in `maxCount`, and
+  the others share what is left (`maxCount` − pinned); a pinned id absent from the Overpass answer is ignored.
+  « Garder les épinglés » (`withPinnedOnly`, one undo step with the stops of the shown ones) dismisses every landmark of
+  every track that is not pinned; since a dismissed landmark frees no slot, nothing new appears. The cross of a pinned
+  landmark unpins it. An old project receives `maxCount` 40 and `pinnedIds` `[]` (`withLandmarkDefaults`); a count out of
+  range or ids that are not strings invalidate the setting.
 - **Eye**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids. Hiding removes, in the same undo step,
   the row's own stop (`placeStop`: the stop whose `source.ref` is the landmark, else a stop placed by hand within 1 m)
   (`withoutPlaceItems`). Generated stops follow `splitHidden`; a hidden point of interest gets no label. Deleting a point of interest drops its id
@@ -1709,7 +1718,7 @@ exports) gets it from the terrain source of the settings.
   (free formats), priority in [0, 50) below waypoints and climbs (pass crossed > high and nearby summit > neighboring pass > hut >
   lake > waterfall / viewpoint / glacier > place). A place mapped as an area is measured to its bounding box (0 when crossed);
   places rank by `population` when tagged (3·log10 − 6, in [0, 10]), else city 9 > town 6 > village 3 > hamlet 0.
-  Deduplication by name within 1 km or inside the other's box, cap of 40 landmarks with `PLACE_SHARE` (25 %) of them kept for
+  Deduplication by name within 1 km or inside the other's box, cap of `maxCount` landmarks (40 by default) with `PLACE_SHARE` (25 %) of them kept for
   places when there are enough (also for the 3D labels), label "Nom · 1 653 m" for summits and passes.
 - **State** (`src/osm/store.ts`): `useLandmarkStore` driven by `syncLandmarks` from `LandmarkPanel`; the landmarks of all
   tracks are published to the 3D labels through `setLabelSource('osm', …)` (empty list when disabled). The panel list follows

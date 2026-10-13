@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## Unreleased
 
 - **Marker keys carry their colours and size**: a key of the « Marqueur » lane can have its own ball / badge colours and size (inspector: « Couleur », « Taille », « Reprendre couleurs et taille du panneau »), cross-faded with the look; a new key takes those of the key before it (the first one keeps following the panel), so adding it changes nothing on screen. Its dot on the timeline is drawn in its colour (title: shape, colour, size), and the inspector recalls what stays the panel's (label, stick, animation). Older projects open unchanged.
+- **Landmarks under control**: « Nombre maximal » (5 to 80, 40 by default) caps the landmarks per track and the 3D labels; the pin of a row keeps a landmark whatever the cap, and « Garder les épinglés » dismisses all the others at once (one undo step). Dismissing a landmark with the cross no longer brings another one in its place.
 - **Faster video export**: while a frame waits for its terrain tiles, the tiles of the next frames are now requested too (before, only once every 5 frames), so the network no longer sits mostly idle during the export.
 - **Timeline, « À la suite »**: the stage blocks keep their place while a block is being dragged (they collapsed during the drag), and the junctions between stages are snap targets.
 - **Smaller cards and widgets**: the size of the opening title, the closing card and the other widgets can go down to ×0.2 (it was ×0.5), so a card no longer has to hide the start of the track.
