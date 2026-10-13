@@ -7,6 +7,7 @@
  * clip (unique across the film), or of a junction, stage or stage card of « À la suite » (`film/junctions.ts`). Times are film times (seconds at x1 from the first frame, opening included).
  */
 import { clamp } from '../core/math'
+import { FLYOVER_DURATION_RANGE } from '../flyover/cameraSettings'
 import type { CameraSettings } from '../flyover/cameraSettings'
 import { distanceAtTime, nearestOnPath, recordedTimeAt } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
@@ -384,6 +385,19 @@ function dragMusic(own: FilmAudio, grip: Grip, deltaS: number, fileS: number | u
 function withShot(film: Film, key: 'opening' | 'closing', durationS: number): Film {
   const shot: FilmShot = film[key]
   return shot.style === 'aucune' ? film : { ...film, [key]: { ...shot, durationS: shotDuration(durationS) } }
+}
+
+/**
+ * Dragging the start of the closing is a roll edit between the flight and the closing: the end of the film stays
+ * where it is, the closing starts where the pointer is and the flight takes (or gives back) the difference.
+ * `dragged` is `dragFilm` of `start` for that grip; returns it with the closing the flight could absorb and the new
+ * flight duration (FLYOVER_DURATION_RANGE).
+ */
+export function rollClosing(start: Film, dragged: Film, flightS: number): { film: Film; flightS: number } {
+  const deltaS = start.closing.durationS - dragged.closing.durationS
+  const flight = clamp(flightS + deltaS, FLYOVER_DURATION_RANGE.min, FLYOVER_DURATION_RANGE.max)
+  if (flight - flightS === deltaS) return { film: dragged, flightS: flight }
+  return { film: withShot(start, 'closing', start.closing.durationS - (flight - flightS)), flightS: flight }
 }
 
 /** Move the stop so that its hold starts `deltaS` later; snaps to a highlight (by position). */
