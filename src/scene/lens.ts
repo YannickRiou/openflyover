@@ -235,6 +235,48 @@ export function previewShutterWeight(shutter: number, fps: number, deltaS: numbe
   return lagS / (deltaS + lagS)
 }
 
+/**
+ * Radial mask shared by the three parts of the motion blur (radial streaks, export sub-frames, preview trail): 0 in
+ * the centre (sharp inside `RADIAL_MASK_START`), 1 in the farthest corner; `r` is the distance to the centre of
+ * travel over the distance to the farthest corner. `shutterEffect.ts` has the GLSL twin.
+ */
+export const RADIAL_MASK_START = 0.3
+export function radialMask(r: number): number {
+  const t = clamp((r - RADIAL_MASK_START) / (1 - RADIAL_MASK_START), 0, 1)
+  return t * t * (3 - 2 * t)
+}
+
+/** Spread (fraction of the shutter window) of the sub-frames that make up the centre of the export frame. */
+export const SHUTTER_CENTRE_SIGMA = 0.05
+
+/**
+ * Weight of each of the `count` sub-frames at the centre of the frame (where the mask is 0): a narrow bell around the
+ * frame instant, so the centre is the frame itself (the two middle sub-frames when `count` is even). Further out the
+ * weight goes to 1 with the mask: `mix(weight, 1, mask)`.
+ */
+export function shutterCentreWeights(count: number): number[] {
+  if (count <= 1) return [1]
+  return Array.from({ length: count }, (_, j) => {
+    const offset = (j + 0.5) / count - 0.5
+    return Math.exp(-0.5 * (offset / SHUTTER_CENTRE_SIGMA) ** 2)
+  })
+}
+
+/**
+ * Weight of the running mean when sub-frame `index` joins it, where the mask is `mask`: W(index - 1) / W(index), W the
+ * cumulative sum of `mix(centre[i], 1, mask)`. CPU twin of the shader's loop, which cannot be unit tested.
+ */
+export function shutterHistoryWeight(centre: readonly number[], index: number, mask: number): number {
+  let before = 0
+  let total = 0
+  for (let i = 0; i <= index; i++) {
+    const w = centre[i] + (1 - centre[i]) * mask
+    if (i < index) before += w
+    total += w
+  }
+  return before / total
+}
+
 /** Radial speed blur: streak length (fraction of the distance to the centre) per unit of relative speed (1/s). */
 const RADIAL_GAIN_S = 0.1
 const RADIAL_MAX = 0.15

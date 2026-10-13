@@ -120,6 +120,7 @@ export function useLensEffects(atmosphere?: RefObject<AtmosphereApi | null>): Le
         shutterEffect.shutter = lens.shutter
         shutterEffect.fps = settings.video.fps
         shutterEffect.radialLength = 0
+        shutterEffect.radialCentre.set(0.5, 0.5)
         if (path && path.count > 0 && frame && camera instanceof PerspectiveCamera) {
           // radial speed blur from the film's camera one video frame earlier: the same in the preview and the export
           const aspect = size.height > 0 ? size.width / size.height : 1
