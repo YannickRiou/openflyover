@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TileFetchError, createTileFetcher, downloadTile, fetchTileBlob, setStoredTileReader } from './fetch'
+import { BACKGROUND_PRIORITY, TileFetchError, createTileFetcher, downloadTile, fetchTileBlob, setStoredTileReader } from './fetch'
 import type { StoredTileReader } from './fetch'
 
 interface Deferred<T> {
@@ -82,7 +82,7 @@ describe('fetchTileBlob', () => {
     const promise = fetchTileBlob('https://tiles.test/1/2/3.png')
     pending[0].d.resolve(okResponse())
     await expect(promise).resolves.toBeInstanceOf(Blob)
-    expect(fetchMock).toHaveBeenCalledWith('https://tiles.test/1/2/3.png', { signal: undefined })
+    expect(fetchMock).toHaveBeenCalledWith('https://tiles.test/1/2/3.png', { signal: undefined, priority: 'auto' })
   })
 
   it('throws a TileFetchError carrying status and url on HTTP errors', async () => {
@@ -134,6 +134,16 @@ describe('createTileFetcher', () => {
       expect(pending[pending.length - 1].url).toBe(expected)
     }
     expect(fetchMock).toHaveBeenCalledTimes(4)
+  })
+
+  it('asks the browser for a low network priority for background requests (prefetches, retries)', async () => {
+    const fetcher = createTileFetcher({ concurrency: 2, retryDelayMs: 0 })
+    void fetcher.fetchBitmap('view', { priority: 3 })
+    void fetcher.fetchBitmap('ahead', { priority: BACKGROUND_PRIORITY + 3 })
+    await flush()
+    const init = (url: string) => fetchMock.mock.calls.find(([u]) => u === url)?.[1]
+    expect(init('view')).toMatchObject({ priority: 'auto' })
+    expect(init('ahead')).toMatchObject({ priority: 'low' })
   })
 
   it('de-duplicates concurrent requests for the same URL', async () => {
