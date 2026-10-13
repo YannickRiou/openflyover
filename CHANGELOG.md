@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **« Flou de bougé » only on the sides**: the blur no longer shows in the middle of the image. One radial mask (sharp around the centre of travel, full in the corners, the profile of the speed streaks) now rules the three parts: the export averages its sub-frames with a weight that, in the middle, keeps only the ones nearest to the frame instant (so the centre is the frame itself and the sides the full blur), and the preview trail fades out towards the centre. Stills and stops are unchanged.
 - **Timeline, « À la suite »: reorder the stages**: drag a track by its handle in « Traces » (mouse, or a finger after a short press; the panel scrolls at its edges), move it with Alt+↑ / Alt+↓ (announced to screen readers), drag a stage block of the « Étapes » lane, or press « Ordonner par date ». Everything placed on a stage follows it (stops, speed sections, camera, parameter and marker keys, its junction settings, its card; texts attached to a stop too), and one undo puts the order and all of it back. The order is saved in the project (`race.order`); older projects open unchanged.
 - **No text highlighting**: dragging in the interface (timeline, panels, sliders) no longer selects text; fields, the diagnostic report and the other texts meant to be copied stay selectable.
 - **Timeline, closing**: dragging the start of « Clôture » now moves its start (the end of the film stays and the flight takes the difference) instead of pulling its end back.
