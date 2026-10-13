@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { videoSize } from '../export/schedule'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
@@ -35,6 +35,7 @@ import {
 import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, TextBacking, WidgetOffset } from '../overlay/settings'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
+import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
 import { AnchorPicker } from './AnchorPicker'
@@ -60,6 +61,71 @@ const OFFSET_X_LABELS: Record<string, string> = { left: 'Depuis la gauche (px)',
 const OFFSET_Y_LABELS: Record<string, string> = { top: 'Depuis le haut (px)', middle: 'Vers le bas (px)', bottom: 'Depuis le bas (px)' }
 
 /**
+ * A pixel offset typed digit by digit: while focused, the field keeps what is typed (empty, a lone « - »); a value in
+ * range is applied at once, Enter or leaving the field rounds and clamps it, an empty or invalid entry (or Escape)
+ * puts the stored value back. One undo step per edit (focus to blur).
+ */
+function OffsetField({ id, label, value, onCommit }: { id: string; label: string; value: number; onCommit(px: number): void }) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const endGesture = useRef<(() => void) | null>(null)
+  const stop = () => {
+    endGesture.current?.()
+    endGesture.current = null
+  }
+  useEffect(() => stop, [])
+  const parse = (text: string) => {
+    const v = text.trim() === '' ? Number.NaN : Number(text)
+    return Number.isFinite(v) ? Math.round(v) : null
+  }
+  const apply = (px: number) => {
+    if (px !== value) onCommit(px)
+  }
+  /** Enter or blur: the entry rounded and clamped; null when there is none. */
+  const settle = (text: string) => {
+    const px = parse(text)
+    if (px === null) return null
+    const clamped = Math.max(-OFFSET_MAX_PX, Math.min(OFFSET_MAX_PX, px))
+    apply(clamped)
+    return clamped
+  }
+  return (
+    <div className="field">
+      <label className="field__label" htmlFor={id}>
+        {label}
+      </label>
+      <input
+        id={id}
+        className="input"
+        type="number"
+        min={-OFFSET_MAX_PX}
+        max={OFFSET_MAX_PX}
+        step={1}
+        value={draft ?? value}
+        onFocus={() => {
+          setDraft(String(value))
+          endGesture.current ??= getSettingsHistory().beginGesture()
+        }}
+        onChange={(e) => {
+          const text = e.currentTarget.value
+          setDraft(text)
+          const px = parse(text)
+          if (px !== null && Math.abs(px) <= OFFSET_MAX_PX) apply(px)
+        }}
+        onBlur={(e) => {
+          settle(e.currentTarget.value)
+          setDraft(null)
+          stop()
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') setDraft(String(settle(e.currentTarget.value) ?? value))
+          else if (e.key === 'Escape') setDraft(String(value))
+        }}
+      />
+    </div>
+  )
+}
+
+/**
  * Where a widget sits: its anchor on the 3 × 3 grid, then « Position libre », an offset in pixels of the exported film
  * from that corner of the safe area (the widget leaves its anchor's stack).
  */
@@ -72,26 +138,12 @@ export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
   const [row, column] = anchor === 'center' ? ['middle', 'center'] : anchor.split('-')
   const film = videoSize(video.aspect, video.resolution, Number.POSITIVE_INFINITY)
   const axis = (key: keyof WidgetOffset, label: string, current: WidgetOffset) => (
-    <div className="field">
-      <label className="field__label" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
-      <input
-        id={`${id}-${key}`}
-        className="input"
-        type="number"
-        min={-OFFSET_MAX_PX}
-        max={OFFSET_MAX_PX}
-        step={1}
-        value={current[key]}
-        onChange={(e) => {
-          const v = e.currentTarget.valueAsNumber
-          if (!Number.isFinite(v)) return
-          const px = Math.max(-OFFSET_MAX_PX, Math.min(OFFSET_MAX_PX, Math.round(v)))
-          set(withWidgetOffset(overlay, widget, { ...current, [key]: px }))
-        }}
-      />
-    </div>
+    <OffsetField
+      id={`${id}-${key}`}
+      label={label}
+      value={current[key]}
+      onCommit={(px) => set(withWidgetOffset(overlay, widget, { ...current, [key]: px }))}
+    />
   )
   return (
     <>
