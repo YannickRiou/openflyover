@@ -128,13 +128,13 @@ export function createOverlayFilmCache(): () => OverlayFilm | null {
     const nextSequence = filmSequenceOf(tracks, settings.race)
     const next = nextSequence?.track ?? tracks[0]
     if (!next) return null
-    const { series: weather, stages } = useWeatherStore.getState()
+    const { series: weather, stages, trackId } = useWeatherStore.getState()
     if (next !== track || nextSequence !== sequence || weather !== series || stages !== stageSeries || !data) {
       track = next
       sequence = nextSequence
       series = weather
       stageSeries = stages
-      data = prepareOverlayFilm(next, nextSequence, weather, stages)
+      data = prepareOverlayFilm(next, nextSequence, weather, stages, trackId)
     }
     return data
   }

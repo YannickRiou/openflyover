@@ -223,6 +223,11 @@ describe('serializeProject / parseProject', () => {
     expect(loaded.film.junctionDefault).toEqual({ kind: 'fondu-blanc', holdS: 1.5, card: false })
     expect(sanitizeSettings({ race: { ...race, stageTransition: 'enchaine' } }).invalid).toEqual(['race'])
     expect(sanitizeSettings({ race: { ...race, camera: 'drone' } }).invalid).toEqual(['race'])
+    // the order of the stages is saved with the project; a project without it keeps the list order
+    const ordered = { ...SETTINGS, race: { ...SETTINGS.race, sequence: true, order: ['b', 'a'] } }
+    expect(parseProject(serializeProject({ ...STATE, settings: ordered }, 'x')).settings.race.order).toEqual(['b', 'a'])
+    expect(sanitizeSettings({ race: { ...race, order: [1] } }).invalid).toEqual(['race'])
+    expect(sanitizeSettings({ race: { enabled: false, sync: 'elapsed', sequence: true } }).settings.race).not.toHaveProperty('order')
   })
 
   it('migrates the transition of « À la suite » into the film’s default junction, once', () => {

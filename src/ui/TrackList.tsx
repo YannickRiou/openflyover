@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { Track } from '../core/types'
 import { isExportBusy, useExportStore } from '../export/store'
 import {
@@ -12,9 +12,12 @@ import {
   syncNeedsTime,
 } from '../flyover/race'
 import type { Race, RaceCamera, RaceSettings, RaceSync, Racer } from '../flyover/race'
-import { playsInSequence } from '../flyover/sequence'
+import { orderedTracks, playsInSequence } from '../flyover/sequence'
 import { DEFAULT_JUNCTION, junctionDefaultOf, withDefaultCard, withDefaultJunction } from '../film/junctions'
-import { editFilm } from '../scene/usePacing'
+import { dropIndexAt, idsByDate } from '../film/reorder'
+import { edgeScrollSpeed } from '../film/timeline'
+import { isTextEntry } from '../project/history'
+import { editFilm, orderTracksByDate, reorderTracks } from '../scene/usePacing'
 import {
   PACE_RANGE,
   PLAN_ACTIVITIES,
@@ -126,7 +129,7 @@ function StageDefaults() {
       <p className="field__hint">
         Par défaut : la transition garde le film ici le temps indiqué ; le carton donne le nom, la date, la distance et le dénivelé de l’étape. Chaque
         jonction et chaque carton se règlent sur la timeline (ligne « Étapes », bloc de la jonction, bloc du carton dans « Textes »). L’ordre est celui
-        de la liste (flèche pour monter une trace).
+        de la liste : glissez une trace par sa poignée (ou Alt + ↑ ↓ au clavier), ou « Ordonner par date ». Ce qui est calé sur une étape la suit.
       </p>
     </>
   )
@@ -524,15 +527,173 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
   )
 }
 
-/** One card per imported track, with a delete button; chaining and « Plusieurs traces » from two tracks. */
+/** Touch: the handle is held this long before the card lifts (a shorter touch scrolls the panel). */
+const LONG_PRESS_MS = 350
+/** Travel of the pointer (px) that starts a drag with a mouse, and that cancels a long press on touch. */
+const MOUSE_SLOP_PX = 4
+const TOUCH_SLOP_PX = 8
+/** The panel scrolls by itself when the pointer is this close to its top or bottom (px). */
+const EDGE_SCROLL_PX = 40
+
+/** A drag of a card in progress: `to` is the place it would take (among the others) if released now. */
+interface ListDrag {
+  id: string
+  touch: boolean
+  startY: number
+  scroll0: number
+  y: number
+  to: number
+  active: boolean
+  timer: number
+  frame: number
+  timeMs: number
+}
+
+/** The nearest ancestor that scrolls vertically. */
+function scrollParentOf(el: HTMLElement | null): HTMLElement | null {
+  for (let node = el?.parentElement ?? null; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node)
+    if (overflowY === 'auto' || overflowY === 'scroll') return node
+  }
+  return null
+}
+
+/**
+ * One card per imported track, with a delete button; « À la suite »: the cards are the stages in order, moved by their
+ * handle (mouse, or touch after a long press), by Alt + ↑ ↓, or sorted by date. Chaining and « Plusieurs traces » from
+ * two tracks.
+ */
 export function TrackList() {
   const tracks = useAppStore((s) => s.tracks)
+  const race = useAppStore((s) => s.settings.race)
   const removeTrack = useAppStore((s) => s.removeTrack)
   const setTrackColor = useAppStore((s) => s.setTrackColor)
   const flyTrack = useAppStore((s) => s.flyTrack)
-  const moveTrack = useAppStore((s) => s.moveTrack)
   const inSequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length))
   const busy = useExportStore((s) => isExportBusy(s.phase))
+  /** the list in the order of the stages « À la suite », the list order otherwise */
+  const shown = useMemo(() => orderedTracks(tracks, race), [tracks, race])
+  const listRef = useRef<HTMLUListElement>(null)
+  const dragRef = useRef<ListDrag | null>(null)
+  /** the card lifted, how far the pointer took it, and the place it would take */
+  const [drag, setDrag] = useState<{ id: string; dy: number; to: number } | null>(null)
+  const [announcement, setAnnouncement] = useState('')
+  /** the handle to focus again once the list is drawn in its new order (a moved node loses the focus) */
+  const focusRef = useRef<string | null>(null)
+  useEffect(() => {
+    const id = focusRef.current
+    focusRef.current = null
+    if (id) [...(listRef.current?.querySelectorAll<HTMLElement>('.track__handle') ?? [])].find((h) => h.dataset.id === id)?.focus()
+  })
+
+  const endDrag = () => {
+    const d = dragRef.current
+    dragRef.current = null
+    if (d) {
+      clearTimeout(d.timer)
+      cancelAnimationFrame(d.frame)
+    }
+    setDrag(null)
+    return d
+  }
+  useEffect(() => () => void endDrag(), [])
+  const lifted = drag !== null
+  useEffect(() => {
+    if (!lifted) return
+    // Escape puts the lifted card back
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') endDrag()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lifted])
+
+  const move = (track: Track, to: number) => {
+    if (!reorderTracks(track.id, to)) return
+    focusRef.current = track.id
+    setAnnouncement(`Trace « ${track.name} » déplacée en position ${Math.min(shown.length, Math.max(1, to + 1))} sur ${shown.length}`)
+  }
+
+  /** the pointer is at `clientY`: the place it leaves the lifted card, and how far it has taken it (the panel may have scrolled) */
+  const follow = (clientY: number) => {
+    const d = dragRef.current
+    const list = listRef.current
+    if (!d?.active || !list) return
+    d.y = clientY
+    const centres = [...list.children]
+      .filter((li) => (li as HTMLElement).dataset.id !== d.id)
+      .map((li) => {
+        const r = li.getBoundingClientRect()
+        return r.top + r.height / 2
+      })
+    d.to = dropIndexAt(centres, clientY)
+    const dy = clientY - d.startY + ((scrollParentOf(list)?.scrollTop ?? 0) - d.scroll0)
+    setDrag((was) => (was && was.dy === dy && was.to === d.to ? was : { id: d.id, dy, to: d.to }))
+  }
+  /** the card is lifted: the pointer moves it, and the panel scrolls by itself while the pointer is at its edge */
+  const lift = () => {
+    const d = dragRef.current
+    if (!d || d.active) return
+    d.active = true
+    navigator.vibrate?.(15)
+    const tick = (now: number) => {
+      const current = dragRef.current
+      if (!current?.active) return
+      const scroller = scrollParentOf(listRef.current)
+      const dt = current.timeMs > 0 ? Math.min(0.05, (now - current.timeMs) / 1000) : 0
+      current.timeMs = now
+      if (scroller) {
+        const rect = scroller.getBoundingClientRect()
+        const speed = edgeScrollSpeed(current.y, rect.top, rect.bottom, EDGE_SCROLL_PX, 600)
+        const before = scroller.scrollTop
+        if (speed !== 0) scroller.scrollTop += speed * dt
+        if (scroller.scrollTop !== before) follow(current.y)
+      }
+      current.frame = requestAnimationFrame(tick)
+    }
+    d.frame = requestAnimationFrame(tick)
+    follow(d.y)
+  }
+  const onHandleDown = (e: ReactPointerEvent<HTMLButtonElement>, track: Track) => {
+    if (e.button !== 0 || !e.isPrimary || busy || dragRef.current) return
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    const touch = e.pointerType === 'touch'
+    const scroll0 = scrollParentOf(listRef.current)?.scrollTop ?? 0
+    const d: ListDrag = { id: track.id, touch, startY: e.clientY, scroll0, y: e.clientY, to: shown.indexOf(track), active: false, timer: 0, frame: 0, timeMs: 0 }
+    dragRef.current = d
+    // a finger has to hold: a slide is the scroll of the panel
+    if (touch) d.timer = window.setTimeout(lift, LONG_PRESS_MS)
+  }
+  const onHandleMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current
+    if (!d) return
+    d.y = e.clientY
+    if (d.active) return follow(e.clientY)
+    if (Math.abs(e.clientY - d.startY) <= (d.touch ? TOUCH_SLOP_PX : MOUSE_SLOP_PX)) return
+    if (d.touch) endDrag()
+    else lift()
+  }
+  const onHandleUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = endDrag()
+    if (!d?.active || e.type !== 'pointerup') return
+    const track = shown.find((t) => t.id === d.id)
+    if (track) move(track, d.to)
+  }
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLLIElement>, track: Track, index: number) => {
+    if (!inSequence || busy || !e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || isTextEntry(e.target)) return
+    e.preventDefault()
+    move(track, index + (e.key === 'ArrowUp' ? -1 : 1))
+  }
+
+  const others = drag ? shown.filter((t) => t.id !== drag.id) : []
+  /** the card the insertion line is drawn against, and on which side */
+  const dropMark =
+    drag && others.length > 0 && drag.to !== shown.findIndex((t) => t.id === drag.id)
+      ? drag.to < others.length
+        ? { id: others[drag.to].id, side: 'before' }
+        : { id: others[others.length - 1].id, side: 'after' }
+      : null
+  const sortedByDate = idsByDate(shown).every((id, k) => id === shown[k].id)
 
   return (
     <section aria-labelledby="tracks-title">
@@ -547,9 +708,34 @@ export function TrackList() {
       {tracks.length === 0 ? (
         <p className="tracks__empty">Aucune trace. Glissez un fichier GPX ou FIT dans la fenêtre, ou cliquez sur « Ajouter ».</p>
       ) : (
-        <ul className="tracks">
-          {tracks.map((track, index) => (
-            <li key={track.id} className="track">
+        <ul className="tracks" ref={listRef}>
+          {shown.map((track, index) => (
+            <li
+              key={track.id}
+              data-id={track.id}
+              className={`track${inSequence ? ' track--sortable' : ''}${drag?.id === track.id ? ' track--lifted' : ''}${dropMark?.id === track.id ? ` track--drop-${dropMark.side}` : ''}`}
+              style={drag?.id === track.id ? { transform: `translateY(${drag.dy}px)` } : undefined}
+              onKeyDown={(e) => onKeyDown(e, track, index)}
+            >
+              {inSequence && (
+                <button
+                  type="button"
+                  className="track__handle"
+                  data-id={track.id}
+                  aria-label={`Déplacer la trace ${track.name}`}
+                  aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+                  data-tip="Glisser pour changer l’ordre des étapes (Alt + ↑ ↓ au clavier)"
+                  data-tip-side="right"
+                  disabled={busy}
+                  onPointerDown={(e) => onHandleDown(e, track)}
+                  onPointerMove={onHandleMove}
+                  onPointerUp={onHandleUp}
+                  onPointerCancel={onHandleUp}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <Icon name="grip-vertical" size={16} />
+                </button>
+              )}
               <label className="track__swatch" style={{ background: track.color }} data-tip="Couleur de la trace">
                 <input
                   type="color"
@@ -570,7 +756,7 @@ export function TrackList() {
                   data-tip="Monter d’une étape"
                   data-tip-side="left"
                   disabled={busy}
-                  onClick={() => moveTrack(track.id, index - 1)}
+                  onClick={() => move(track, index - 1)}
                 >
                   <Icon name="chevron-up" size={16} />
                 </button>
@@ -614,6 +800,22 @@ export function TrackList() {
           ))}
         </ul>
       )}
+      {inSequence && (
+        <button
+          type="button"
+          className="btn btn--secondary btn--small tracks__sort"
+          data-tip="Les étapes par heure de départ ; celles sans horaire à la fin"
+          disabled={busy || sortedByDate}
+          onClick={() => {
+            if (orderTracksByDate()) setAnnouncement('Étapes ordonnées par date de départ')
+          }}
+        >
+          Ordonner par date
+        </button>
+      )}
+      <p className="visually-hidden" role="status" aria-live="polite">
+        {announcement}
+      </p>
       {tracks.length >= 2 && <ChainTracks tracks={tracks} />}
       {tracks.length >= 2 && <RacePanel tracks={tracks} />}
     </section>

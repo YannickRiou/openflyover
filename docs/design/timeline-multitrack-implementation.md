@@ -2,7 +2,7 @@
 
 **Status: phase 1 (junctions, sections 2.1 to 2.9, slices 1a + 1b + 1c with the magnet of section 6) is implemented.** Left for later in
 phase 1: the card's start offset relative to the dip, the ease into a caught target, drops of new items on the magnet, the « Survol »
-kind. Phases 2 to 4 are not started.
+kind. **Phase 2 (reorder, section 3: `race.order` + `orderedTracks`, `reorderStages`, drag in the list and on the « Étapes » lane, Alt+arrows, « Ordonner par date », one undo step) is implemented.** Phases 3 and 4 are not started.
 
 Companion of [`timeline-multitrack.md`](timeline-multitrack.md) (the *why* and the decisions). This file is the *how*: it is written so
 that you can implement the work yourself, phase by phase, without rediscovering the code. File and function names are real (checked on

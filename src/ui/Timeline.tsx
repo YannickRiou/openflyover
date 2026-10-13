@@ -24,6 +24,7 @@ import type { FilmClock, FilmClockFor, FilmClockInput } from '../film/clock'
 import { hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, stageCardAfterOf, stageCardId, stageCardWindow, stageItemId, stageTrackOf, junctionTrackOf } from '../film/junctions'
 import { photoTimeMs } from '../film/exif'
 import { withKey } from '../film/markerKeys'
+import { dropIndexAt } from '../film/reorder'
 import { useMediaStore } from '../film/media'
 import { isMediaFile, readMedia } from '../film/video'
 import { JUNCTION_KIND_LABELS, STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
@@ -65,7 +66,7 @@ import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type Elev
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
 import type { OverlaySettings } from '../overlay/settings'
-import { disableCard, editFilm, getFilmSource, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { disableCard, editFilm, getFilmSource, reorderTracks, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
 import { formatClock, formatDistance, formatNumber, formatShort } from './format'
@@ -113,6 +114,8 @@ const ZOOM_SLIDER_STEPS = 100
 const zoomToSlider = (zoom: number) => Math.round((ZOOM_SLIDER_STEPS * Math.log(zoom / ZOOM_RANGE.min)) / Math.log(ZOOM_RANGE.max / ZOOM_RANGE.min))
 const sliderToZoom = (v: number) => ZOOM_RANGE.min * (ZOOM_RANGE.max / ZOOM_RANGE.min) ** (v / ZOOM_SLIDER_STEPS)
 
+const ARROWS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+
 const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`
 
 type Gesture =
@@ -123,6 +126,8 @@ type Gesture =
   | { kind: 'edit'; item: TimelineItem; grip: Grip; x0: number; scroll0: number; start: Film; ctx: DragContext; result: Film | null; flightS?: number }
   /** the edge of an opening title or closing card: it edits the overlay settings, not the film */
   | { kind: 'card'; item: CardId; grip: Grip; x0: number; scroll0: number; start: OverlaySettings; ctx: DragContext; result: OverlaySettings | null }
+  /** a stage block of the « Étapes » lane: lifted and dropped between the others (`to`: its new place), the film is remapped on release */
+  | { kind: 'reorder'; item: TimelineItem; x0: number; scroll0: number; to: number; moved: boolean }
 
 /** Edge auto-scroll of a gesture: last pointer position, the handler that replays it, animation frame. */
 interface EdgeScroll {
@@ -343,6 +348,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const [cardDraft, setCardDraft] = useState<OverlaySettings | null>(null)
   /** the targets the gesture in progress has caught, named on the alignment guide */
   const [guides, setGuides] = useState<readonly SnapTarget[]>([])
+  /** the stage block being lifted on the « Étapes » lane, how far the pointer took it and the place it would take */
+  const [stageDrag, setStageDrag] = useState<{ id: string; dx: number; to: number } | null>(null)
+  /** what the screen reader hears when a stage is moved with the keyboard */
+  const [announcement, setAnnouncement] = useState('')
   const [zoom, setZoom] = useState<number>(centred ? CENTRED_ZOOM : ZOOM_RANGE.min)
   const [collapsed, setCollapsed] = useState(() => matchesQuery(COMPACT_QUERY) && !centred)
   const [shownSheet, setShownSheet] = useState(sheetOpen)
@@ -355,6 +364,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const scrollerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const gestureRef = useRef<Gesture | null>(null)
+  /** the stage block to focus again once the lane is drawn in its new order (a moved node loses the focus) */
+  const focusStageRef = useRef<string | null>(null)
+  useEffect(() => {
+    const item = focusStageRef.current
+    focusStageRef.current = null
+    if (item) [...(contentRef.current?.querySelectorAll<HTMLElement>('.film-tl__block--stage') ?? [])].find((b) => b.dataset.item === item)?.focus()
+  })
   const edgeRef = useRef<EdgeScroll | null>(null)
   /** zoom for the wheel listener */
   const zoomRef = useRef(zoom)
@@ -460,6 +476,19 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   // the music plays along the preview
   useEffect(() => startMusicPreview(), [])
+
+  // Escape drops a lifted stage block back where it was
+  const stageLifted = stageDrag !== null
+  useEffect(() => {
+    if (!stageLifted) return
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      gestureRef.current = null
+      setStageDrag(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [stageLifted])
 
   // no edge auto-scroll left running once the timeline is gone
   useEffect(() => () => cancelAnimationFrame(edgeRef.current?.frame ?? 0), [])
@@ -659,6 +688,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const c = Math.min(end, Math.max(0, t))
     setProgress(clock.progressAtTime(c), c < end ? c : null)
   }
+  /** where each stage stands on the clock (from the end of the junction before it to the start of the one after it) */
+  const stageSpans = (clk: FilmClock) =>
+    (sequence?.stages ?? []).map((stage, k) => ({
+      id: stage.track.id,
+      startS: k === 0 ? clk.openingS : (clk.junctions[k - 1]?.endS ?? clk.openingS),
+      endS: clk.junctions[k]?.startS ?? clk.openingS + clk.flightS,
+    }))
   /** a keyframe pressed and released without dragging: the playhead jumps to it */
   const jumpToKey = (item: TimelineItem) => {
     const key = clock.cameraKeys.find((k) => k.id === item) ?? clock.paramKeys.find((k) => k.id === item) ?? clock.markerKeys.find((k) => k.id === item)
@@ -690,13 +726,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     seek(timeAt(e.clientX))
   }
   const startEdit = (e: PointerEvent<HTMLElement>, item: TimelineItem, grip: Grip) => {
-    // centred: a block is selected by a tap first, a slide over it scrolls the lanes
-    if (centred && selected !== item) return startTap(e, item)
+    // centred: a block is selected by a tap first, a slide over it scrolls the lanes (a stage is never dragged there: the list reorders)
+    if (centred && (selected !== item || isStageItem(item))) return startTap(e, item)
     if (e.button !== 0 || !e.isPrimary) return
     e.stopPropagation()
     setSelected(item)
     contentRef.current?.setPointerCapture(e.pointerId)
     const scroll0 = scrollerRef.current?.scrollLeft ?? 0
+    if (isStageItem(item)) {
+      gestureRef.current = { kind: 'reorder', item, x0: e.clientX, scroll0, to: -1, moved: false }
+      return
+    }
     if (isCardItem(item)) {
       gestureRef.current = { kind: 'card', item, grip, x0: e.clientX, scroll0, start: overlay, ctx: dragContext(item), result: null }
       return
@@ -719,6 +759,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       return
     }
     const dx = clientX - g.x0 + (scrollerRef.current?.scrollLeft ?? 0) - g.scroll0
+    if (g.kind === 'reorder') {
+      if (!g.moved && Math.abs(dx) < DRAG_THRESHOLD_PX) return
+      g.moved = true
+      // the place among the other stages: how many of them the pointer has passed
+      const spans = stageSpans(clock).filter((span) => span.id !== stageTrackOf(g.item))
+      g.to = dropIndexAt(
+        spans.map((span) => (span.startS + span.endS) / 2),
+        timeAt(clientX),
+      )
+      setStageDrag((was) => (was && was.dx === dx && was.to === g.to ? was : { id: stageTrackOf(g.item), dx, to: g.to }))
+      return
+    }
     if (!g.result && Math.abs(dx) < DRAG_THRESHOLD_PX) return
     // the magnet, inverted while Alt is held; what the last move caught is held a little longer, this one's is shown
     const ctx = magnet !== altKey ? g.ctx : { ...g.ctx, snapS: 0 }
@@ -784,7 +836,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (!g) return
     applyPointer(e.clientX, e.altKey)
     // a press that only selects a block (not dragged yet) does not scroll
-    if (g.kind === 'scrub' || ((g.kind === 'edit' || g.kind === 'card') && g.result)) followEdge(e.clientX, e.altKey)
+    if (g.kind === 'scrub' || ((g.kind === 'edit' || g.kind === 'card') && g.result) || (g.kind === 'reorder' && g.moved)) followEdge(e.clientX, e.altKey)
   }
   const endGesture = (e: PointerEvent<HTMLDivElement>) => {
     const g = gestureRef.current
@@ -803,6 +855,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       } else if (g.result) commit(g.result)
       else jumpToKey(g.item)
     }
+    if (g?.kind === 'reorder' && e.type === 'pointerup') {
+      if (!g.moved) jumpToKey(g.item)
+      else if (reorderTracks(stageTrackOf(g.item), g.to)) setSelected(g.item)
+    }
     setDraftFlightS(null)
     if (g?.kind === 'card' && e.type === 'pointerup' && g.result && g.result !== g.start) {
       const result = g.result
@@ -818,6 +874,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     setDraft(null)
     setCardDraft(null)
     setGuides([])
+    setStageDrag(null)
   }
   /** centred: a scroll by the finger (or the wheel) moves the film time; the one that follows the playhead does not */
   const onScroll = (e: UIEvent<HTMLDivElement>) => {
@@ -829,6 +886,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   // --- keyboard ----------------------------------------------------------------------------------------------
   const onBlockKeyDown = (e: KeyboardEvent<HTMLElement>, item: TimelineItem) => {
+    if (isStageItem(item) && e.altKey && !e.ctrlKey && !e.metaKey && ARROWS.includes(e.key)) {
+      // Alt + arrows: the stage one place earlier or later
+      const k = sequence?.stages.findIndex((stage) => stage.track.id === stageTrackOf(item)) ?? -1
+      const to = k + (e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1)
+      if (k >= 0 && reorderTracks(stageTrackOf(item), to)) {
+        setAnnouncement(`Étape « ${sequence!.stages[k].track.name} » déplacée en position ${to + 1} sur ${sequence!.stages.length}`)
+        focusStageRef.current = item
+      }
+      e.preventDefault()
+      return
+    }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       remove(item)
     } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
@@ -872,6 +940,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   }
 
   // --- blocks ------------------------------------------------------------------------------------------------
+  const liftedItem = stageDrag ? stageItemId(stageDrag.id) : null
   const block = (
     item: TimelineItem,
     startS: number,
@@ -892,8 +961,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       aria-pressed={selected === item}
       aria-label={`${description}, de ${formatFilmTime(startS)} à ${formatFilmTime(endS)}`}
       title={label}
-      className={`film-tl__block ${className}${selected === item ? ' film-tl__block--selected' : ''}`}
-      style={{ left: xOf(startS) - Math.max(0, minPx - (endS - startS) * pxPerS) / 2, width: Math.max(minPx, (endS - startS) * pxPerS) }}
+      data-item={item}
+      className={`film-tl__block ${className}${selected === item ? ' film-tl__block--selected' : ''}${item === liftedItem ? ' film-tl__block--lifted' : ''}`}
+      style={{
+        left: xOf(startS) - Math.max(0, minPx - (endS - startS) * pxPerS) / 2,
+        width: Math.max(minPx, (endS - startS) * pxPerS),
+        ...(item === liftedItem && stageDrag ? { transform: `translateX(${stageDrag.dx}px)` } : {}),
+      }}
       onPointerDown={(e) => {
         if (centred && selected !== item) return startTap(e, item)
         if (grips.includes('move')) return startEdit(e, item, 'move')
@@ -1470,6 +1544,21 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 })}
               </div>
 
+              {/* a lifted stage: a line across the lanes where it would land */}
+              {stageDrag && sequence && (() => {
+                const others = stageSpans(clock).filter((span) => span.id !== stageDrag.id)
+                const atS = others[stageDrag.to]?.startS ?? others[others.length - 1]?.endS ?? 0
+                return (
+                  <div className="film-tl__guide" style={{ left: xOf(atS) }} aria-hidden="true">
+                    <span className="film-tl__guide-tags">
+                      <span className="film-tl__guide-tag">Étape {stageDrag.to + 1}</span>
+                    </span>
+                  </div>
+                )
+              })()}
+              <span className="visually-hidden" role="status" aria-live="polite">
+                {announcement}
+              </span>
               {/* what the dragged block is aligned with: a line across the lanes and the names of the targets */}
               {guides.length > 0 && (
                 <div className="film-tl__guide" style={{ left: xOf(guides[0].timeS) }} aria-hidden="true">
