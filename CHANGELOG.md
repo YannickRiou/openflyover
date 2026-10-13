@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## Unreleased
 
 - **Shorter opening and closing**: the opening and closing shots can go down to 0.5 s (it was 1 s), and the opening title can end at 1 % of the flight (it was 3 %) and the closing card appear at 99 % (it was 97 %), so the film can open and close quickly without a card hiding the start of the track.
+- **Faster video export**: while a frame waits for its terrain tiles, the tiles of the next frames are now requested too (before, only once every 5 frames), so the network no longer sits mostly idle during the export.
 - **Timeline, « À la suite »**: the stage blocks keep their place while a block is being dragged (they collapsed during the drag), and the junctions between stages are snap targets.
 - **Smaller cards and widgets**: the size of the opening title, the closing card and the other widgets can go down to ×0.2 (it was ×0.5), so a card no longer has to hide the start of the track.
 - **Landmarks: one way to pause the film**: « Ralentir et titrer aux repères » is removed from « Repères et points d'intérêt » (it overlapped « Arrêt »): the film no longer slows down or adds a title card at landmarks by itself; use « Arrêt » (or « Arrêts automatiques »). A project saved with the option still opens as it was: the slow-downs and titles it had written stay on the timeline as ordinary sections and texts, which you can edit or delete.

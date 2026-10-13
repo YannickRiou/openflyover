@@ -79,6 +79,11 @@ export interface ExportControllerProps {
 
 /** Upcoming frames are prefetched (offsets in the device budget) every PREFETCH_EVERY rendered frames. */
 const PREFETCH_EVERY = 5
+/**
+ * And at most this often (ms) while a frame waits for its tiles: the network is mostly idle then, and each prefetch
+ * only reaches one level deeper (the children of a tile are selected once it is loaded).
+ */
+const PREFETCH_WAIT_MS = 100
 /** JPEG quality of still images (PNG is lossless) */
 const STILL_JPEG_QUALITY = 0.92
 /** Overview still (poster): the whole track seen from the south, north up like a map. */
@@ -345,9 +350,16 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   /** a still reports its tiles: the most pending seen, and how many of them came */
   let peakPending = 0
   let tilesReportedAt = -Infinity
+  /** frame whose tiles are waited for: the prefetches of its waits look ahead of it */
+  let waitingFrame = 0
+  let prefetchedAt = -Infinity
   const timedWait = async (ms: number) => {
     const t0 = performance.now()
     waits++
+    if (t0 - prefetchedAt >= PREFETCH_WAIT_MS) {
+      prefetchedAt = t0
+      prefetchAhead(waitingFrame)
+    }
     if (request.still && t0 - tilesReportedAt >= REPORT_INTERVAL_MS) {
       tilesReportedAt = t0
       const pending = frameDeps.pendingTiles()
@@ -584,6 +596,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         if (isExportStep(timings.rendered)) writeBreadcrumb(`export : image ${i + 1} / ${schedule.length}`)
         // pictures and video frames decoded before the render: composing must follow it in the same task
         await loadFrameMedia(frameTimeS, progress)
+        waitingFrame = i
         for (let j = 0; j < renders.length; j++) {
           setShutterSubFrame(j, renders.length)
           frameTimeS = renders[j].timeS
