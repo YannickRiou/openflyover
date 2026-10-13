@@ -268,6 +268,16 @@ describe('« À la suite »', () => {
     expect(prepareOverlayFilm(sequence.track, sequence, first).stages?.[1].weatherSeries).toBeUndefined()
   })
 
+  it('the series of the first track of the list goes to its stage wherever it flies (stages reordered)', () => {
+    const first = { time: [T0], stations: [] }
+    const second = { time: [T0 + 86_400_000], stations: [] }
+    const reordered = buildSequence([b, a])
+    const out = prepareOverlayFilm(reordered.track, reordered, first, { [b.id]: { series: second } }, a.id)
+    expect(out.stages?.map((s) => s.weatherSeries)).toEqual([second, first])
+    // none loaded yet for the track the series is for
+    expect(prepareOverlayFilm(reordered.track, reordered, first, {}, null).stages?.map((s) => s.weatherSeries)).toEqual([undefined, undefined])
+  })
+
   it('a card for each stage as it starts: the first with the flight, the others at their cut', () => {
     const time = (timeS: number) => ({ timeS, openingS: 6, flightS: 60, totalS: 70, cutsS: [30] })
     expect(stageCardAt(sequence, time(5))).toBeNull()

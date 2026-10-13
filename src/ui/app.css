@@ -123,6 +123,67 @@
   }
 }
 
+/* « À la suite »: the cards are the stages, moved by their handle (the only part that does not scroll on touch) */
+.track--sortable {
+  position: relative;
+  padding-left: calc(var(--space-3) + 20px);
+}
+
+.track__handle {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--space-3) + 16px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  background: transparent;
+  color: var(--text-2);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.track__handle:disabled {
+  cursor: not-allowed;
+}
+
+.track--lifted {
+  z-index: 2;
+  box-shadow: var(--shadow-pop);
+  cursor: grabbing;
+}
+
+.track--lifted .track__handle {
+  cursor: grabbing;
+}
+
+/* the insertion line: where the lifted card lands, in the gap before or after this one */
+.track--drop-before::before,
+.track--drop-after::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.track--drop-before::before {
+  top: calc(var(--space-2) / -2 - 2px);
+}
+
+.track--drop-after::after {
+  bottom: calc(var(--space-2) / -2 - 2px);
+}
+
+.tracks__sort {
+  margin-top: var(--space-2);
+}
+
 .track__badge {
   margin-left: var(--space-2);
   font-weight: 600;
@@ -1001,7 +1062,15 @@
 .film-tl__block--stage {
   background: rgb(255 255 255 / 0.1);
   color: var(--color-white);
-  cursor: pointer;
+  cursor: grab;
+}
+
+/* a stage lifted to be reordered follows the pointer over the others */
+.film-tl__block--lifted {
+  z-index: 2;
+  background: rgb(255 255 255 / 0.3);
+  box-shadow: var(--shadow-pop);
+  cursor: grabbing;
 }
 
 .film-tl__stage-band {

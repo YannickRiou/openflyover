@@ -44,6 +44,11 @@ export interface RaceSettings {
   /** « À la suite »: the tracks flown one after the other in list order (ignored while `enabled`) */
   sequence?: boolean
   /**
+   * « À la suite »: the track ids in the order of the stages (`orderedTracks`); absent = the list order. Ids that are no
+   * longer tracks are ignored, tracks it lacks come last. Reordering the stages writes it (`reorderStages` remaps the film).
+   */
+  order?: string[]
+  /**
    * Projects saved before the junctions only: the cards and the transition of every stage, which the film's
    * junctions (`film.junctionDefault`) took over when the project was opened; never written any more.
    */
@@ -75,6 +80,7 @@ export function isValidRace(race: RaceSettings): boolean {
     (RACE_SYNC_MODES as readonly string[]).includes(race.sync) &&
     (race.camera === undefined || oneOf(RACE_CAMERAS, race.camera)) &&
     (race.sequence === undefined || typeof race.sequence === 'boolean') &&
+    (race.order === undefined || (Array.isArray(race.order) && race.order.every((id) => typeof id === 'string'))) &&
     (race.stageCards === undefined || typeof race.stageCards === 'boolean') &&
     (race.stageTransition === undefined || oneOf(STAGE_TRANSITIONS, race.stageTransition))
   )

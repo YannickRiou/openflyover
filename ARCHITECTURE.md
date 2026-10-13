@@ -74,7 +74,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/export/*` | video export | `buildFrameSchedule`, `VIDEO_ASPECTS`, `VIDEO_RESOLUTIONS`, `videoSize`, `createVideoEncoder(canvas, options)`, `ExportCanceledError`, `nativeEncoder.ts` (desktop ffmpeg): `exportCodec`, `createExportEncoder`, `createNativeVideoEncoder`, `wavFile`, `settle`, `renderSettledFrame`, `composeFrame`, `composeOverlayFrame`, `fillSky` (export sky, reused by the poster), `useExportStore`, `videoFileName`, `overlayBaseName`, `ALPHA_CANDIDATES`, `chooseVideoDestination`, `warnsInMemory`, `filmRate`, `ExportController`; `batch.ts` (batch rendering): pure, tested: `buildBatchJobs`, `formatKey`, `batchBaseName`, `estimateBatch`, `runBatch`, `batchProgressLabel`, `batchSummary`; `exportJob`, `useBatchStore` |
 | `src/poster/*` | poster (see "Poster") | pure, tested: `PosterSettings`, `DEFAULT_POSTER`, `POSTER_FORMATS`, `posterSize`, `isValidPoster`, `withPosterDefaults`; `posterContent`, `posterFigure`, `availableFigures`, `posterStats`, `totalStats`, `trackLine`, `POSTER_LIST_MAX`; `posterLayout` (boxes), `fitText`, `fitLines`, `fitTrackList`, `wrapText`, `truncate`; `drawPoster`, `coverCrop`, `POSTER_THEMES`, `POSTER_FONTS`; `framingPath`, `planFlatMap` (`view.ts`); not pure: `renderFlatMap` (`view.ts`), `currentPosterContent`, `startPoster`, `usePosterPreview`, `previewKey` (`export.ts`), `PosterPanel` |
 | `src/flyover/race.ts` | ghost race | `RACE_SYNC_MODES`, `RACE_CAMERAS`, `STAGE_TRANSITIONS`, `DEFAULT_RACE`, `isValidRace`, `prepareRaceTrack`, `raceTrackOf`, `positionAtTime`, `positionAtDistance`, `arrivalTime`, `buildRace`, `raceAt(race, progress)`, `rankRacers`; `useRace`, `RaceMarkers` |
-| `src/flyover/sequence.ts` + `follow.ts` | several tracks (see "Several tracks") | `Stage`, `Sequence`, `playsInSequence`, `buildSequence`, `sequenceOf`, `filmSequenceOf`, `filmTrackOf`, `stageAt`, `trackUnderMarker`, `sequenceLandmarks`; `filmFollowOf(tracks, race, smoothingM)`; hooks `useFilmTrack`, `useFilmSequence` (`scene/usePacing.ts`) |
+| `src/flyover/sequence.ts` + `follow.ts` | several tracks (see "Several tracks") | `Stage`, `Sequence`, `playsInSequence`, `orderedTracks`, `buildSequence`, `sequenceOf`, `filmSequenceOf`, `filmTrackOf`, `stageAt`, `trackUnderMarker`, `sequenceLandmarks`; `filmFollowOf(tracks, race, smoothingM)`; hooks `useFilmTrack`, `useFilmSequence` (`scene/usePacing.ts`) |
 | `src/weather/sceneWeather.ts` + `src/scene/weatherEffect.ts` | weather in the scene | `sceneConditionsAt`, `sceneWeatherAt`, `sceneWeatherFrom`, `CLEAR_SCENE_WEATHER`, `hazeExtinction`; `WeatherEffect` |
 | `src/osm/water.ts` + `src/scene/waterMesh.ts` + `src/scene/WaterLayer.tsx` | reflective water | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`) |
 | `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`) |
@@ -2421,7 +2421,7 @@ exports) gets it from the terrain source of the settings.
   segments one after the other in list order, id `suite:<ids>`, name `chainName`, never stored), cached on the tracks'
   ids, points and names (`sequenceOf`) so it keeps its identity. Unlike « Enchaîner en un seul parcours », nothing is
   merged: each track stays a stage (`Stage`: `startM` / `endM` along the sequence, `from` / `to` fractions of the
-  progress) with its colour, name and stats; the stage order is the list order (up arrow on a track: `moveTrack`).
+  progress) with its colour, name and stats; the stage order is the list order, or `race.order` (**Reordering**, below).
   `filmTrackOf(tracks, race)` (hook `useFilmTrack`) replaces `tracks[0]` wherever the film is concerned: film source
   and clock (`useFilmSource`, `getFilmSource`: landmarks of every stage along the sequence, `sequenceLandmarks`, a
   landmark near two stages once), FlyoverRig and the export, timeline, track picker, climbs and their labels,
@@ -2461,6 +2461,30 @@ exports) gets it from the terrain source of the settings.
   (`applyToAllJunctions`), the card (« Contenu » automatic or « Mon texte », position, size, colours, duration); the stage:
   colour, « Aller au début ». The panel « Plusieurs traces » (`StageDefaults`) sets the default transition and cards.
   Edits are `editFilm` calls: one undo step, texts attached to a stop follow a changed hold (`followStops`).
+- **Reordering the stages** (`src/film/reorder.ts`, pure): the order of the stages « À la suite » is `settings.race.order`
+  (optional track ids, absent = the list order; ids that are not tracks any more are ignored, tracks it lacks come last), so a
+  reorder is a **settings change**, inside the settings history, and `tracks[]` keeps its order (`moveTrack` and « Survoler
+  celle-ci » still reorder `tracks[]` in the other modes, where `orderedTracks` is the identity). `orderedTracks(tracks, race)`
+  (`flyover/sequence.ts`) is the only reader of the order: `filmSequenceOf` (so `filmTrackOf`, `useFilmSource`, the overlay,
+  `filmFollowOf`), `trackUnderMarker` (the store's track of the stage, by position in the ordered list), the drawn lines
+  (`refreshDrawOn`) and the track list go through it; the overlay's per-stage weather is matched by track id
+  (`prepareOverlayFilm(…, weatherTrackId)`). Weather, sunrise / sunset, the poster and the batch still read `tracks[0]` (documented
+  limit). `reorderStages(film, before, after)` (`before` / `after`: `StageSpan[]` `{ trackId, startM, endM }` of the sequence
+  before and after the move) shifts by `newStartM − oldStartM` of its stage every stop, camera / parameter / marker key and speed
+  portion (an item on a boundary belongs to the stage that starts there; a portion across a boundary is split in two, same factor,
+  the pieces under `MIN_SPEED_SPAN_M` dropped; the second piece is `speed-<n+1>`); texts, media and music keep their film seconds
+  (those attached to a stop follow it through `followStops`, run by the caller with the clocks of both orders); a junction keeps
+  its transition only between the two stages it was between, in that order, else it is the default one (a junction after the new
+  last stage is dropped), and the card of a stage stays with its stage (`firstCard` included); pois, landmarks and nights need
+  nothing (lon/lat, ids, computed from the sequence). The store action `setStageOrder(ids)` (`scene/usePacing.ts`, with
+  `reorderTracks(trackId, toIndex)` and `orderTracksByDate()` = `idsByDate`) builds both span lists (`buildSequence` of the new
+  order), writes `race.order` (dropped when it equals the list order) and the remapped film in **one** `setState` inside
+  `getSettingsHistory().transaction`: one undo step restores the order and every remapped item; the playhead keeps its progress.
+  UI: the track list has a handle (`.track__handle`: mouse drag after 4 px, touch long press 350 ms with `navigator.vibrate`,
+  `touch-action: none` on the handle only, auto-scroll of the panel within 40 px of its edges, insertion line, Escape cancels),
+  Alt+↑ / Alt+↓ on a card with an `aria-live` announcement, the ▲ button and « Ordonner par date » (`dropIndexAt` finds the place
+  from the centres of the other cards); the « Étapes » lane's stage blocks drag the same way (gesture kind `reorder`, a line across
+  the lanes where it lands, Alt+←/→/↑/↓ on a focused block; not in the centred phone layout, where a tap selects).
 - Camera (`src/flyover/follow.ts`, `filmFollowOf` → `FilmViewOptions.follow`): the flight camera flies the stage under
   the marker on its own smoothed path at its own progress (`stageAt`), so it never glides across the jump between two
   stages: a cut at the film time the marker reaches it. The shots still frame the whole sequence. A pure function of

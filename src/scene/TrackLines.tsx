@@ -35,7 +35,7 @@ import {
 import { smoothPoints } from '../flyover/smooth'
 import { raceAt } from '../flyover/race'
 import type { Race } from '../flyover/race'
-import { filmSequenceOf } from '../flyover/sequence'
+import { filmSequenceOf, orderedTracks } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import { densify } from '../import/stats'
 import { useAppStore } from '../state/store'
@@ -513,10 +513,12 @@ export function TrackLines() {
   // « Trace qui se dessine »: each set cut at its marker (cutTrackLineSet does nothing when unchanged).
   const refreshDrawOn = useCallback(() => {
     const { tracks: current, playback, settings } = useAppStore.getState()
+    // the distances are in the order of the stages « À la suite »
+    const flown = orderedTracks(current, settings.race)
     const distances = settings.trackStyle.drawOn
-      ? drawOnDistances(current, playback.progress, settings.race.enabled ? raceRef.current : null, filmSequenceOf(current, settings.race))
+      ? drawOnDistances(flown, playback.progress, settings.race.enabled ? raceRef.current : null, filmSequenceOf(current, settings.race))
       : null
-    current.forEach((track, i) => {
+    flown.forEach((track, i) => {
       const set = setsRef.current.get(track.id)
       if (set) cutTrackLineSet(set, distances?.[i] ?? Infinity)
     })
