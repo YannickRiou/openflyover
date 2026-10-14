@@ -348,7 +348,7 @@ classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Menu`
 `point` for the right-click menu of the 3D view; `sheet` makes it a bottom sheet on a phone) and `Popover` (panel with its own
 controls, same two modes). Both are portalled out of their container (into the open `<dialog>`, if any) and carry
 `data-local-escape`, so an open one closes before the app's own Escape; their skin (`overlay.css`, `menu.css`, `popover.css`) is
-self-contained, HeroUI's CSS for them is not imported. HeroUI's styles are imported in `theme.css`
+self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the third primitive of that kind. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,
@@ -437,11 +437,12 @@ pointer (`appearance.css`).
   1080 × 1920 screen, rounded to the safest value: top bar 220 px, buttons on the right 160 × 720 px, caption at the bottom 440 px),
   hatched; a 4:5 is placed full width in the middle of this screen and only the parts that cover it remain
   (`phoneInterfaceOver`).
-- **Messages** (`toast.ts`, `Toaster.tsx`): small zustand store (`showToast`, `dismissToast`, pure `pushToast`: the same
-  message replaces the old one, 4 at most, the oldest error leaves last), shown at the bottom center of the view,
+- **Messages** (`toast.ts`, `Toaster.tsx`, `primitives/Toast.tsx`): small zustand store (`showToast`, `dismissToast`, pure
+  `pushToast`: the same message replaces the old one, 4 at most, the oldest error leaves last), the list of which the
+  `Toast` primitive (HeroUI Toast, its queue kept in step with the list) shows at the bottom center of the view,
   above the timeline, in a single always-mounted `aria-live` region. Success and info disappear after
-  `toastDuration` (5 s, up to 12 s for a long text), timer paused on hover or focus; errors as
-  `role="alert"`, until closed; optional action button. Sources: import (`importFiles` from `importFlow.ts`, bound
+  `toastDuration` (5 s, up to 12 s for a long text), timers paused while the pointer or the focus is on the messages;
+  errors as `role="alert"`, until closed; optional action button. Sources: import (`importFiles` from `importFlow.ts`, bound
   to the store by `projectActions.ts`: "Trace « … » importée", failures), project opened / saved / file
   warnings, presets (saved, "Préréglage appliqué : …"), export ("Vidéo prête · Télécharger à nouveau", "Image
   prête", failure, "Export annulé"), "Réglages remis par

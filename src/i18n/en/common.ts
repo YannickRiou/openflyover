@@ -13,6 +13,7 @@ const messages: Messages['common'] = {
   'modified.resetAria': 'Reset to default settings: {label}',
   'modified.resetTip': 'Go back to the default settings (Ctrl+Z to undo)',
   'modified.toast': 'Settings reset to default',
+  messages: 'Messages',
   closeMessage: 'Dismiss message',
   done: 'Done',
   save: 'Save',

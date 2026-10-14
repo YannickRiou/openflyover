@@ -11,6 +11,7 @@ export default {
   'modified.resetAria': 'Rétablir les réglages par défaut : {label}',
   'modified.resetTip': 'Revenir aux réglages par défaut (Ctrl+Z pour annuler)',
   'modified.toast': 'Réglages remis par défaut',
+  messages: 'Messages',
   closeMessage: 'Fermer le message',
   done: 'Terminé',
   save: 'Enregistrer',
