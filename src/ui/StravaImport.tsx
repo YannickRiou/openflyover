@@ -33,6 +33,14 @@ import { formatAscent, formatDistance } from './format'
 import { runImport } from './projectActions'
 import { Button, Checkbox, Modal } from './primitives'
 
+/** A column of the dialog, and a line of its buttons (the hint, if any, takes the room on the left). */
+const BODY = 'flex flex-col gap-3'
+const ACTIONS = 'flex items-center justify-end gap-2 [&>.type-hint]:mr-auto'
+/** An activity: the tick, then its name over its details (HeroUI's label text is the last child of the checkbox's content). */
+const ITEM =
+  'flex w-full border-b border-edge px-1 py-2 [&_.checkbox__content]:min-w-0 [&_.checkbox__content]:flex-auto ' +
+  '[&_.checkbox__content>:last-child]:grid [&_.checkbox__content>:last-child]:min-w-0 [&_.checkbox__content>:last-child]:flex-auto [&_.checkbox__content>:last-child]:gap-0.5'
+
 /** « Importer depuis Strava » of the welcome card. */
 export function StravaImport() {
   const t = useT()
@@ -122,13 +130,13 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
 
   return (
     <form
-      className="strava__body"
+      className={BODY}
       onSubmit={(e) => {
         e.preventDefault()
         signIn()
       }}
     >
-      <ol className="strava__steps">
+      <ol className="flex list-decimal flex-col gap-1 pl-5">
         <li>
           {tRich('strava.step1', {
             link: <b>strava.com/settings/api</b>,
@@ -139,34 +147,34 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
         <li>{t(capabilities.isDesktop ? 'strava.step3Browser' : 'strava.step3Window')}</li>
         <li>{t('strava.step4')}</li>
       </ol>
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-client`}>
+      <div className="flex flex-col gap-1">
+        <label className="type-label" htmlFor={`${id}-client`}>
           Client ID
         </label>
         <input id={`${id}-client`} className="input" inputMode="numeric" autoComplete="off" value={clientId} disabled={waiting} onChange={(e) => setClientId(e.currentTarget.value)} />
       </div>
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-secret`}>
+      <div className="flex flex-col gap-1">
+        <label className="type-label" htmlFor={`${id}-secret`}>
           Client Secret
         </label>
         <input id={`${id}-secret`} className="input" type="password" autoComplete="off" value={clientSecret} disabled={waiting} onChange={(e) => setClientSecret(e.currentTarget.value)} />
       </div>
-      <p className="field__hint">{t('strava.privacy')}</p>
-      <p className="field__hint">Powered by Strava</p>
+      <p className="type-hint">{t('strava.privacy')}</p>
+      <p className="type-hint">Powered by Strava</p>
       {error && (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {error}
         </p>
       )}
       {waiting ? (
-        <div className="strava__actions">
-          <p className="field__hint">{t('strava.waiting')}</p>
+        <div className={ACTIONS}>
+          <p className="type-hint">{t('strava.waiting')}</p>
           <Button onClick={() => pending.current?.abort()}>
             {t('common.cancel')}
           </Button>
         </div>
       ) : (
-        <div className="strava__actions">
+        <div className={ACTIONS}>
           {hasSaved && (
             <Button onClick={forget}>
               {t('strava.forget')}
@@ -242,9 +250,9 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
   const shown = needle ? activities.filter((a) => a.name.toLowerCase().includes(needle)) : activities
 
   return (
-    <div className="strava__body">
-      <div className="strava__actions">
-        <p className="field__hint">{athlete ? t('strava.connectedAs', { athlete }) : t('strava.connected')}</p>
+    <div className={BODY}>
+      <div className={ACTIONS}>
+        <p className="type-hint">{athlete ? t('strava.connectedAs', { athlete }) : t('strava.connected')}</p>
         <Button
           size="sm"
           onClick={() => {
@@ -263,12 +271,12 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
         value={query}
         onChange={(e) => setQuery(e.currentTarget.value)}
       />
-      <ul className="strava__list" aria-describedby={`${id}-status`}>
+      <ul className="max-h-[min(360px,45vh)] overflow-y-auto phone-any:max-h-none" aria-describedby={`${id}-status`}>
         {shown.map((activity) => (
           <li key={activity.id}>
-            <Checkbox className="strava__item" checked={selected.has(activity.id)} onChange={() => toggle(activity.id)}>
-              <span className="strava__name">{activity.name}</span>
-              <span className="strava__meta">
+            <Checkbox className={ITEM} checked={selected.has(activity.id)} onChange={() => toggle(activity.id)}>
+              <span className="truncate font-semibold">{activity.name}</span>
+              <span className="type-hint">
                 {[
                   formatDate(new Date(activity.start_date_local), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
                   stravaSportLabel(activity),
@@ -282,16 +290,16 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
           </li>
         ))}
       </ul>
-      <p id={`${id}-status`} className="field__hint">
+      <p id={`${id}-status`} className="type-hint">
         {busy ? t('strava.loading') : shown.length === 0 ? t('strava.none') : t('strava.shownToYou')}
         {' '}Powered by Strava
       </p>
       {error && (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {error}
         </p>
       )}
-      <div className="strava__actions">
+      <div className={ACTIONS}>
         {(more || error) && (
           <Button onClick={loadNext} disabled={busy}>
             {error ? t('common.retry') : t('strava.more')}

@@ -4,6 +4,9 @@ import type { ReactElement, ReactNode } from 'react'
 import { openDialog, panelClass, useNoBrowserMenu } from './overlay'
 import type { OverlayPlacement, OverlayPoint } from './overlay'
 
+/** The panel: scrolls when the window is shorter; its dialog takes no focus ring of its own. */
+const PANEL = 'overflow-auto overscroll-contain [&_[role=dialog]]:outline-none'
+
 export interface PopoverProps {
   /** The name of the panel for a screen reader (already translated). */
   label: string
@@ -42,7 +45,7 @@ export function Popover({ label, trigger, point, onClose, placement = 'bottom en
     placement,
     offset: 6,
     containerPadding: 8,
-    className: panelClass('popover-panel', sheet),
+    className: panelClass(PANEL, sheet),
     style: width ? { width } : undefined,
     'data-local-escape': '',
   }

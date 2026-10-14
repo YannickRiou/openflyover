@@ -26,11 +26,9 @@
 }
 
 /* Focus on the ink chrome */
-.status :focus-visible,
 .view__fit:focus-visible,
 .view__safe-zones:focus-visible,
-.film-tl__bar :focus-visible,
-.track-menu :focus-visible {
+.film-tl__bar :focus-visible {
   outline: var(--focus-ring-on-dark);
   outline-offset: 2px;
   box-shadow: none;
@@ -309,173 +307,6 @@
   bottom: 2px;
   left: auto;
   right: 4px;
-}
-
-/* Home screen (no track yet): a paper page over the whole view, one centred column */
-.empty {
-  position: absolute;
-  z-index: 5;
-  inset: 0;
-  display: flex;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: var(--space-6) var(--space-4);
-  background: var(--surface-panel);
-  color: var(--text-1);
-  text-align: center;
-}
-
-.empty__inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  width: min(400px, 100%);
-  /* centred when it fits, scrolls from the top when it does not */
-  margin: auto;
-}
-
-.empty__logo {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--space-2);
-  border-radius: 14px;
-  box-shadow: var(--shadow-pop);
-}
-
-.empty__title {
-  font-size: 30px;
-  font-weight: 600;
-  line-height: 1.15;
-}
-
-.empty__hint {
-  max-width: 32ch;
-  margin: 0 0 var(--space-3);
-  color: var(--text-2);
-  font-size: 15px;
-  line-height: 1.45;
-}
-
-.empty__primary {
-  width: 100%;
-  min-height: 48px;
-  font-size: 16px;
-}
-
-/* Strava and the sample side by side, stacked on a phone */
-.empty__actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-  width: 100%;
-}
-
-@media (max-width: 699px) {
-  .empty__actions {
-    grid-template-columns: 1fr;
-  }
-}
-
-.empty__link {
-  padding: var(--space-1) var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-1);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .empty__link:hover:not(:disabled) {
-    color: var(--accent-hover);
-  }
-}
-
-.empty__link:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-/* latest projects of « Mes projets » */
-.empty__recent {
-  width: 100%;
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--line);
-  text-align: left;
-}
-
-.empty__recent-title {
-  margin-bottom: var(--space-2);
-  color: var(--text-2);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.empty__recent ul {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.empty__project {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  column-gap: var(--space-3);
-  align-items: center;
-  width: 100%;
-  padding: var(--space-2);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: none;
-  color: var(--text-1);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .empty__project:hover:not(:disabled) {
-    background: var(--surface-card);
-  }
-}
-
-.empty__project:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.empty__project > .library__thumb {
-  grid-row: 1 / span 2;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-card);
-}
-
-.empty__project-name {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.empty__project-summary {
-  overflow: hidden;
-  color: var(--text-2);
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Veil while files are dragged over the window (lets the drag reach the timeline under it) */
@@ -826,22 +657,7 @@ fieldset:disabled .format-tile .option__label {
   border-top-color: var(--color-white);
 }
 
-/* Menu of the language picker (LanguageMenu.tsx; the other menus are the Menu and Popover primitives) and the form of a point of interest (TrackPicker.tsx) */
-.track-menu {
-  position: absolute;
-  z-index: 7;
-  display: flex;
-  flex-direction: column;
-  min-width: 200px;
-  padding: var(--space-1);
-  border: 1px solid var(--color-ink-soft);
-  border-radius: var(--radius-md);
-  background: var(--surface-chrome-raised);
-  color: var(--color-white);
-  box-shadow: var(--shadow-pop);
-  animation: tip-in 120ms ease both;
-}
-
+/* The form of a point of interest (TrackPicker.tsx), in a Popover */
 .track-menu__item {
   height: 32px;
   padding: 0 var(--space-3);
@@ -882,418 +698,8 @@ fieldset:disabled .format-tile .option__label {
   font: 600 12px/1.2 var(--font-body);
 }
 
-/* Phone only (see the media queries at the end): grip of a bottom sheet */
-.sheet-handle {
-  display: none;
-}
-
-/* Language picker, after « ? » (LanguageMenu.tsx): the list of the languages, under its button */
-.lang-menu__list {
-  min-width: 160px;
-}
-
-.lang-menu__item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.lang-menu__item[aria-checked='true'] {
-  background: rgb(255 255 255 / 0.16);
-}
-
-/* Status strip --------------------------------------------------------------- */
-.status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-  padding: 0 var(--space-2) 0 var(--space-3);
-  border-top: 1px solid var(--color-ink-soft);
-  background: var(--surface-chrome);
-  color: var(--color-glacier);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.status__map,
-.status__line {
-  flex: none;
-}
-
-.status__map {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.status__map-state {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* brighter while loading, back to the calm strip colour once ready */
-.status__map-state--loading {
-  color: var(--text-on-dark);
-}
-
-.status__map-state--ready .icon {
-  color: var(--status-ok-on-dark);
-}
-
-/* determinate ring (track + arc from 12 o'clock), turning slowly while the view waits for tiles */
-.status__ring {
-  flex: none;
-  fill: none;
-  stroke-width: 2;
-  animation: status-spin 2.4s linear infinite;
-}
-
-.status__ring circle:first-child {
-  stroke: var(--color-ink-soft);
-}
-
-.status__ring circle:last-child {
-  stroke: var(--accent-on-dark);
-  stroke-linecap: round;
-  transform: rotate(-90deg);
-  transform-origin: center;
-  transition: stroke-dashoffset 400ms ease-out;
-}
-
-/* tiles in error: attention colour (9:1 on the ink) */
-.status__failed {
-  color: var(--status-attention-on-dark);
-}
-
-.status__line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.status__spinner {
-  width: 10px;
-  height: 10px;
-  flex: none;
-  border: 2px solid var(--color-ink-soft);
-  border-top-color: var(--color-accent-light);
-  border-radius: 50%;
-  animation: status-spin 0.8s linear infinite;
-}
-
-@keyframes status-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* weather, landmarks, region, water: spinner while loading, check once loaded, attention colour on error */
-.status__chips {
-  display: flex;
-  flex: 0 1 auto;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  overflow: hidden;
-}
-
-.status__chip {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 4px;
-}
-
-.status__chip--loading {
-  color: var(--text-on-dark);
-}
-
-.status__chip--ready .icon {
-  color: var(--status-ok-on-dark);
-}
-
-.status__chip--attention {
-  color: var(--status-attention-on-dark);
-}
-
-.status__chip--muted {
-  opacity: 0.75;
-}
-
-/* performance readout: only when the strip has room (it gives way to the credits, which must stay visible) */
-.status__perf {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* short credits of the active sources, always visible; the full lines are behind ⓘ */
-.status__credits {
-  flex: 1 0 auto;
-  margin-left: auto;
-  text-align: right;
-}
-
-.status__credits a {
-  color: inherit;
-}
-
-@media (hover: hover) {
-  .status__credits a:hover {
-    color: var(--color-white);
-  }
-}
-
-/* Esri's data providers: in full, or behind « … » on a narrow strip (the popover opens above it) */
-.status__credit-fold {
-  display: none;
-  position: relative;
-}
-
-.status__credit-fold > summary {
-  padding: 0 4px;
-  list-style: none;
-  cursor: pointer;
-}
-
-.status__credit-fold > summary::-webkit-details-marker {
-  display: none;
-}
-
-.status__credit-pop {
-  position: absolute;
-  z-index: 9;
-  right: 0;
-  bottom: calc(100% + 6px);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--surface-chrome);
-  box-shadow: var(--shadow-pop);
-  color: var(--color-white);
-}
-
-.status {
-  container: status / inline-size;
-}
-
-@container status (max-width: 900px) {
-  .status__perf {
-    display: none;
-  }
-}
-
-@container status (max-width: 560px) {
-  .status__chip {
-    font-size: 0;
-  }
-
-  .status__credit-more {
-    display: none;
-  }
-
-  .status__credit-fold {
-    display: inline-block;
-  }
-}
-
-.status__info {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--color-glacier);
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .status__info:hover {
-    color: var(--color-white);
-  }
-}
-
-/* « Sources et licences »: the frame is the Modal's (primitives/modal.css) */
-.sources__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-/* « Importer depuis Strava » (in the Modal) */
-.strava__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.strava__steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0;
-  padding-left: var(--space-5);
-}
-
-.strava__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-.strava__actions > .field__hint {
-  margin-right: auto;
-}
-
-.strava__list {
-  max-height: min(360px, 45vh);
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  list-style: none;
-}
-
-.strava__item {
-  display: flex;
-  width: 100%;
-  padding: var(--space-2) var(--space-1);
-  border-bottom: 1px solid var(--line);
-}
-
-/* the checkbox, then the name over the details (the label text of the Checkbox) */
-.strava__item .checkbox__content {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.strava__item .checkbox__content > :last-child {
-  display: grid;
-  flex: 1 1 auto;
-  gap: 2px;
-  min-width: 0;
-}
-
-.strava__name {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.strava__meta {
-  color: var(--text-2);
-  font-size: 12px;
-}
-
-/* « Raccourcis clavier » */
-.help__drop {
-  margin: 0 0 var(--space-4);
-}
-
-.help__groups {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4) var(--space-5);
-}
-
-.help__group-title {
-  margin: 0 0 var(--space-2);
-  font-size: 14px;
-}
-
-.help__list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-}
-
-.help__row {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  gap: var(--space-2);
-  align-items: baseline;
-}
-
-.help__keys,
-.help__label {
-  margin: 0;
-}
-
-.help__or {
-  color: var(--text-2);
-  font-size: 12px;
-}
-
-.help__keys kbd {
-  display: inline-block;
-  min-width: 22px;
-  padding: 0 6px;
-  border: 1px solid var(--line);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  background: var(--surface-control);
-  color: var(--text-1);
-  font: 600 12px/1.5 var(--font-body);
-  text-align: center;
-  white-space: nowrap;
-}
-
-/* « Rapport de diagnostic » */
-.diagnostic__text {
-  max-height: min(55vh, 520px);
-  margin: var(--space-3) 0;
-  padding: var(--space-3);
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-control);
-  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.diagnostic__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: center;
-}
-
-.diagnostic__actions .field__hint {
-  margin: 0;
-}
-
-@media (max-width: 599px) {
-  .help__groups {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .status__spinner,
-  .status__ring {
-    animation: none;
-  }
-
-  .status__ring circle:last-child {
-    transition: none;
-  }
-
-  .drop-veil,
-  .track-menu {
+  .drop-veil {
     animation: none;
   }
 }
@@ -1372,13 +778,11 @@ fieldset:disabled .format-tile .option__label {
   }
 
   /* small glyphs: a wider invisible hit area around them */
-  .render-weight,
-  .status__info {
+  .render-weight {
     position: relative;
   }
 
-  .render-weight::before,
-  .status__info::before {
+  .render-weight::before {
     content: '';
     position: absolute;
     inset: -14px;
@@ -1422,7 +826,7 @@ fieldset:disabled .format-tile .option__label {
   }
 }
 
-/* Phone, either way up: the essentials in the top bar, the timeline folded into a strip, dialogs full screen (primitives/modal.css) */
+/* Phone, either way up: the essentials in the top bar, the timeline folded into a strip, dialogs full screen (`Modal`) */
 @media (max-width: 699px), (max-height: 499px) {
   :root {
     /* no pull-to-refresh or bounce of the page behind the sheets */
@@ -1435,10 +839,6 @@ fieldset:disabled .format-tile .option__label {
       calc(var(--statusbar-h) + env(safe-area-inset-bottom));
     height: 100dvh;
     padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
-  }
-
-  .status {
-    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .view {
@@ -1462,22 +862,6 @@ fieldset:disabled .format-tile .option__label {
     box-shadow: var(--shadow-pop);
   }
 
-  .strava__list {
-    max-height: none;
-  }
-
-  /* the language menu: at the bottom of the screen, never clipped by a short framed view */
-  .track-menu {
-    position: fixed;
-    z-index: 30;
-    top: auto !important;
-    right: 0;
-    bottom: 0;
-    left: 0 !important;
-    padding-bottom: calc(var(--space-1) + env(safe-area-inset-bottom));
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
-    transform: none !important;
-  }
 }
 
 /*
@@ -1525,49 +909,12 @@ fieldset:disabled .format-tile .option__label {
     animation: sheet-in 160ms ease-out;
   }
 
-  .panel > :not(.sheet-handle),
-  .dock > :not(.sheet-handle) {
+  .panel > :not([data-sheet-handle]),
+  .dock > :not([data-sheet-handle]) {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-  }
-
-  /* head of a half sheet (`SheetHandle`): grip, title, « Terminé »; dragged down, it closes the sheet */
-  .sheet-handle,
-  .dock > .sheet-handle {
-    position: relative;
-    display: flex;
-    flex: none;
-    align-items: center;
-    gap: var(--space-2);
-    height: 52px;
-    padding: 0 var(--space-2) 0 var(--space-4);
-    border-bottom: 1px solid var(--line);
-    background: var(--surface-panel);
-    cursor: grab;
-    touch-action: none;
-  }
-
-  .sheet-handle__bar {
-    position: absolute;
-    top: 6px;
-    left: calc(50% - 20px);
-    width: 40px;
-    height: 5px;
-    border-radius: 3px;
-    background: var(--line-strong);
-  }
-
-  .sheet-handle__title {
-    font: 600 16px/1.2 var(--font-heading);
-  }
-
-  .sheet-handle__done {
-    width: 44px;
-    height: 44px;
-    margin-left: auto;
-    color: var(--text-1);
   }
 
   /* the ✓ of the head closes: no second close button in the export drawer or the inspector */

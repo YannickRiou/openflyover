@@ -35,6 +35,9 @@ const DENSITY_LABELS: Record<Density, string> = {
   get compact() { return t('settings.preferences.density.compact') },
 }
 
+/** A label (or a legend) over its control. */
+const GROUP = 'm-0 flex min-w-0 flex-col gap-1 border-0 p-0'
+
 /** Exclusive choice among `keys`, as a segmented control. */
 function Choice<K extends string>({ legend, labels, keys, value, onChange }: {
   legend: string
@@ -44,8 +47,8 @@ function Choice<K extends string>({ legend, labels, keys, value, onChange }: {
   onChange(value: K): void
 }) {
   return (
-    <fieldset className="field fieldset">
-      <legend className="field__label">{legend}</legend>
+    <fieldset className={GROUP}>
+      <legend className="type-label">{legend}</legend>
       <RadioGroup aria-label={legend} value={value} onChange={onChange}>
         {keys.map((key) => (
           <Radio key={key} value={key}>
@@ -69,8 +72,8 @@ function AppearanceColor({ label, presets, value, clamp, hint, onChange }: {
   const t = useT()
   const id = useId()
   return (
-    <div className="field">
-      <label className="field__label" htmlFor={id}>
+    <div className={GROUP}>
+      <label className="type-label" htmlFor={id}>
         {label}
       </label>
       <ColorField
@@ -84,7 +87,7 @@ function AppearanceColor({ label, presets, value, clamp, hint, onChange }: {
           aria: t('settings.preferences.swatchAria', { label, preset: preset.label }),
         }))}
       />
-      {clamp(value) !== value && <p className="field__hint">{hint}</p>}
+      {clamp(value) !== value && <p className="type-hint">{hint}</p>}
     </div>
   )
 }
@@ -98,8 +101,8 @@ function Chips<K extends string>({ legend, labels, keys, value, onChange }: {
   onChange(value: Record<K, boolean>): void
 }) {
   return (
-    <fieldset className="field fieldset">
-      <legend className="field__label">{legend}</legend>
+    <fieldset className={GROUP}>
+      <legend className="type-label">{legend}</legend>
       <div className="chips">
         {keys.map((key) => (
           <Chip key={key} checked={value[key]} onChange={(on) => onChange({ ...value, [key]: on })}>{labels[key]}</Chip>
@@ -127,7 +130,7 @@ export function PreferencesPanel() {
 
   return (
     <>
-      <p className="field__hint prefs__intro">{t('settings.preferences.intro')}</p>
+      <p className="type-hint pt-3">{t('settings.preferences.intro')}</p>
       <PanelSection title={t('settings.preferences.appearance.title')}>
         <Choice legend={t('settings.preferences.appearance.theme')} labels={THEME_LABELS} keys={THEMES} value={appearance.theme} onChange={(theme) => setAppearance({ theme })} />
         <AppearanceColor
@@ -160,7 +163,7 @@ export function PreferencesPanel() {
           onChange={(status) => setPreferences({ status })}
         />
         <Chips legend={t('settings.preferences.statusBar.performance')} labels={PERF_LABELS} keys={perfKeys} value={prefs.performance} onChange={(performance) => setPreferences({ performance })} />
-        <p className="field__hint">{t('settings.preferences.statusBar.hint')}</p>
+        <p className="type-hint">{t('settings.preferences.statusBar.hint')}</p>
       </PanelSection>
       <PanelSection title={t('settings.preferences.timeline.title')}>
         <Switch
@@ -169,7 +172,7 @@ export function PreferencesPanel() {
         >
           {t('settings.preferences.timeline.clock')}
         </Switch>
-        <p className="field__hint">{t('settings.preferences.timeline.clockHint')}</p>
+        <p className="type-hint">{t('settings.preferences.timeline.clockHint')}</p>
       </PanelSection>
       <DiagnosticRow />
     </>

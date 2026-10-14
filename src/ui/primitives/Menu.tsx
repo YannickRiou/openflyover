@@ -4,6 +4,9 @@ import type { ReactElement, ReactNode } from 'react'
 import { openDialog, panelClass, useNoBrowserMenu } from './overlay'
 import type { OverlayPlacement, OverlayPoint } from './overlay'
 
+/** The panel of the menu: a width to read the rows in, and a scroll when the window is shorter. */
+const PANEL = 'min-w-50 overflow-auto overscroll-contain'
+
 export interface MenuItem {
   /** unique in the menu */
   id: string
@@ -46,16 +49,16 @@ export function Menu({ label, items, trigger, point, onClose, placement = 'botto
   if (!trigger && !point) return null
 
   const menu = (
-    <Dropdown.Menu aria-label={label} autoFocus={point ? 'first' : undefined} className="menu" onAction={point ? () => onClose?.() : undefined}>
+    <Dropdown.Menu aria-label={label} autoFocus={point ? 'first' : undefined} className="flex flex-col p-1 outline-none" onAction={point ? () => onClose?.() : undefined}>
       {items.map((item) => (
-        <Dropdown.Item key={item.id} id={item.id} textValue={item.label} isDisabled={item.disabled} className="menu__item" onAction={item.onSelect}>
+        <Dropdown.Item key={item.id} id={item.id} textValue={item.label} isDisabled={item.disabled} className="overlay-item" onAction={item.onSelect}>
           {item.icon}
           {item.label}
         </Dropdown.Item>
       ))}
     </Dropdown.Menu>
   )
-  const popover = { placement, offset: 6, containerPadding: 8, className: panelClass('menu-panel', sheet), 'data-local-escape': '' }
+  const popover = { placement, offset: 6, containerPadding: 8, className: panelClass(PANEL, sheet), 'data-local-escape': '' }
 
   if (point) {
     return (

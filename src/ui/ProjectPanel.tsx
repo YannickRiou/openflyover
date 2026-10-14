@@ -28,6 +28,16 @@ import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import { Button, Select, TextField, Tip } from './primitives'
 
+/** A section's body under its sticky header; a stack of buttons; a row of equal buttons; a field and its button. */
+const BODY = 'flex flex-col gap-3'
+const STACK = 'flex flex-col gap-2'
+const ROW = 'flex gap-2 [&>*]:min-w-0 [&>*]:flex-1'
+const FIELD_ROW = 'flex gap-2'
+const THUMB = 'library-thumb col-start-1 row-span-3 row-start-1 self-start'
+const EMPTY = 'rounded-md bg-surface-card p-3 text-center text-hint text-text-2'
+/** « Mes projets »: a card per project, the view on the left of its name, summary and date, the buttons under both; the open one is outlined. */
+const CARD = 'grid grid-cols-[96px_minmax(0,1fr)] gap-x-2 gap-y-0.5 rounded-md border p-2'
+
 /**
  * "Projet" tab: the actions on the open project (new, open, save as a file, close), « Mes projets », then the presets
  * of the settings. Open and save are also in the top bar, with their shortcuts.
@@ -93,82 +103,73 @@ function ProjectSection() {
   }
 
   return (
-    <section className="settings project" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} className="section-title settings__title">
-        {t('project.panel.title')}
-      </h2>
-
-      {question ? (
-        <>
-          <p className="field__hint" role="alert">
-            <strong>{t('project.library.closeQuestion')}</strong> {question.text}
-          </p>
-          <div className="project__row">
-            <Button autoFocus onClick={() => question.answer('save')}>
-              {t('common.save')}
-            </Button>
-          </div>
-          <div className="project__row">
-            <Button onClick={() => question.answer('close')}>
-              {t('project.library.closeNoSave')}
-            </Button>
-          </div>
-          <div className="project__row">
-            <Button onClick={() => question.answer('cancel')}>
-              {t('common.cancel')}
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="project__row">
-            <Button onClick={() => void run(newProject)} disabled={busy || closing}>
-              <Icon name="plus" size={18} />
-              {t('project.panel.new')}
-            </Button>
-          </div>
-          <div className="project__row">
-            <Tip text={withShortcut(t('topbar.openTip'), 'open')}>
-              <Button
-                onClick={() => void chooseFilesToOpen()}
-                disabled={busy || closing}
-              >
-                <Icon name="folder-open" size={18} />
-                {t('project.panel.open')}
-              </Button>
-            </Tip>
-          </div>
-          <div className="project__row">
-            <Tip text={withShortcut(t('project.panel.saveTip'), 'save')}>
-              <Button
-                onClick={() => void saveProject()}
-                disabled={busy || closing}
-              >
-                <Icon name="save" size={18} />
+    <section aria-labelledby={`${id}-title`}>
+      <div className="panel-head">
+        <h2 id={`${id}-title`} className="panel-title">
+          {t('project.panel.title')}
+        </h2>
+      </div>
+      <div className={BODY}>
+        {question ? (
+          <>
+            <p className="type-hint" role="alert">
+              <strong>{t('project.library.closeQuestion')}</strong> {question.text}
+            </p>
+            <div className={STACK}>
+              <Button autoFocus onClick={() => question.answer('save')}>
                 {t('common.save')}
               </Button>
-            </Tip>
-          </div>
-          <div className="project__row">
-            <Tip text={withShortcut(t('project.panel.saveAsTip'), 'save-as')}>
-              <Button
-                onClick={() => void saveProjectAs()}
-                disabled={busy || closing}
-              >
-                <Icon name="save" size={18} />
-                {t('project.panel.saveAs')}
+              <Button onClick={() => question.answer('close')}>
+                {t('project.library.closeNoSave')}
               </Button>
-            </Tip>
-          </div>
-          <div className="project__row">
-            <Button onClick={() => void run(closeProject)} disabled={busy || closing || !open}>
-              <Icon name="x" size={18} />
-              {t('project.panel.close')}
-            </Button>
-          </div>
-          <p className="field__hint">{t('project.panel.closeHint')}</p>
-        </>
-      )}
+              <Button onClick={() => question.answer('cancel')}>
+                {t('common.cancel')}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={STACK}>
+              <Button onClick={() => void run(newProject)} disabled={busy || closing}>
+                <Icon name="plus" size={18} />
+                {t('project.panel.new')}
+              </Button>
+              <Tip text={withShortcut(t('topbar.openTip'), 'open')}>
+                <Button
+                  onClick={() => void chooseFilesToOpen()}
+                  disabled={busy || closing}
+                >
+                  <Icon name="folder-open" size={18} />
+                  {t('project.panel.open')}
+                </Button>
+              </Tip>
+              <Tip text={withShortcut(t('project.panel.saveTip'), 'save')}>
+                <Button
+                  onClick={() => void saveProject()}
+                  disabled={busy || closing}
+                >
+                  <Icon name="save" size={18} />
+                  {t('common.save')}
+                </Button>
+              </Tip>
+              <Tip text={withShortcut(t('project.panel.saveAsTip'), 'save-as')}>
+                <Button
+                  onClick={() => void saveProjectAs()}
+                  disabled={busy || closing}
+                >
+                  <Icon name="save" size={18} />
+                  {t('project.panel.saveAs')}
+                </Button>
+              </Tip>
+              <Button onClick={() => void run(closeProject)} disabled={busy || closing || !open}>
+                <Icon name="x" size={18} />
+                {t('project.panel.close')}
+              </Button>
+            </div>
+            <p className="type-hint">{t('project.panel.closeHint')}</p>
+          </>
+        )}
+      </div>
     </section>
   )
 }
@@ -203,102 +204,108 @@ function LibrarySection() {
   }
 
   return (
-    <section className="settings project" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} className="section-title settings__title">
-        {t('project.panel.library')}
-      </h2>
+    <section aria-labelledby={`${id}-title`}>
+      <div className="panel-head">
+        <h2 id={`${id}-title`} className="panel-title">
+          {t('project.panel.library')}
+        </h2>
+      </div>
+      <div className={BODY}>
+        {!platform.projectLibrary ? (
+          <p className={EMPTY}>{t('project.panel.noLibrary')}</p>
+        ) : (
+          <>
+            <p className="type-hint">{t(platform.capabilities.isDesktop ? 'project.panel.keptDesktop' : 'project.panel.keptBrowser')}</p>
+            {currentId === null ? (
+              <Button onClick={() => void keepOpenProject()} disabled={!hasTracks}>
+                {t('project.panel.keep')}
+              </Button>
+            ) : (
+              <p className="type-hint">{t('project.panel.keepOpen')}</p>
+            )}
 
-      {!platform.projectLibrary ? (
-        <p className="tracks__empty">{t('project.panel.noLibrary')}</p>
-      ) : (
-        <>
-          <p className="field__hint">{t(platform.capabilities.isDesktop ? 'project.panel.keptDesktop' : 'project.panel.keptBrowser')}</p>
-          {currentId === null ? (
-            <Button onClick={() => void keepOpenProject()} disabled={!hasTracks}>
-              {t('project.panel.keep')}
-            </Button>
-          ) : (
-            <p className="field__hint">{t('project.panel.keepOpen')}</p>
-          )}
-
-          {entries.length === 0 ? (
-            <p className="tracks__empty">{t('project.panel.empty')}</p>
-          ) : (
-            <ul className="library">
-              {entries.map((entry) => {
-                const current = entry.id === currentId
-                return (
-                  <li key={entry.id} className={current ? 'library__item library__item--current' : 'library__item'} aria-current={current || undefined}>
-                    {/* the view at the last save; an empty frame for older entries */}
-                    {entry.thumbnail ? (
-                      <img className="library__thumb" src={entry.thumbnail} alt="" />
-                    ) : (
-                      <span className="library__thumb" aria-hidden="true" />
-                    )}
-                    {renaming?.id === entry.id ? (
-                      <form
-                        className="project__row"
-                        onSubmit={(e) => {
-                          e.preventDefault()
-                          void rename()
-                        }}
-                      >
-                        <TextField
-                          aria-label={t('project.panel.newName')}
-                          value={renaming.name}
-                          maxLength={120}
-                          autoFocus
-                          onChange={(name) => setRenaming({ id: entry.id, name })}
-                          onKeyDown={(e) => e.key === 'Escape' && setRenaming(null)}
-                        />
-                        <Button type="submit" disabled={!renaming.name.trim()}>
-                          {t('project.panel.rename')}
-                        </Button>
-                      </form>
-                    ) : (
-                      <span className="library__name">
-                        {entry.name}
-                        {current && <span className="library__badge">{t('project.panel.badgeOpen')}</span>}
-                      </span>
-                    )}
-                    <span className="field__hint">{entry.summary}</span>
-                    <span className="field__hint">
-                      {formatDate(entry.updatedAt, { dateStyle: 'medium', timeStyle: 'short' })} · {formatProjectSize(entry.sizeBytes)}
-                    </span>
-                    {confirmingId === entry.id ? (
-                      <div className="project__row">
-                        <Button
-                          onClick={() => {
-                            setConfirmingId(null)
-                            void deleteEntry(entry)
+            {entries.length === 0 ? (
+              <p className={EMPTY}>{t('project.panel.empty')}</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {entries.map((entry) => {
+                  const current = entry.id === currentId
+                  return (
+                    <li key={entry.id} className={`${CARD} ${current ? 'border-brand bg-accent-tint' : 'border-edge'}`} aria-current={current || undefined}>
+                      {/* the view at the last save; an empty frame for older entries */}
+                      {entry.thumbnail ? (
+                        <img className={THUMB} src={entry.thumbnail} alt="" />
+                      ) : (
+                        <span className={THUMB} aria-hidden="true" />
+                      )}
+                      {renaming?.id === entry.id ? (
+                        <form
+                          className={`${FIELD_ROW} col-start-2`}
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            void rename()
                           }}
                         >
-                          {t('project.panel.deleteForever')}
-                        </Button>
-                        <Button onClick={() => setConfirmingId(null)}>
-                          {t('common.cancel')}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="project__row">
-                        <Button onClick={() => void open(entry)} disabled={current}>
-                          {t('project.panel.openEntry')}
-                        </Button>
-                        <Button onClick={() => setRenaming({ id: entry.id, name: entry.name })}>
-                          {t('project.panel.rename')}
-                        </Button>
-                        <Button onClick={() => setConfirmingId(entry.id)}>
-                          {t('common.delete')}
-                        </Button>
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </>
-      )}
+                          <TextField
+                            className="min-w-0 flex-1"
+                            aria-label={t('project.panel.newName')}
+                            value={renaming.name}
+                            maxLength={120}
+                            autoFocus
+                            onChange={(name) => setRenaming({ id: entry.id, name })}
+                            onKeyDown={(e) => e.key === 'Escape' && setRenaming(null)}
+                          />
+                          <Button type="submit" className="flex-none" disabled={!renaming.name.trim()}>
+                            {t('project.panel.rename')}
+                          </Button>
+                        </form>
+                      ) : (
+                        <span className="col-start-2 font-semibold wrap-anywhere">
+                          {entry.name}
+                          {current && <span className="ml-2 text-hint font-normal text-(--text-info)">{t('project.panel.badgeOpen')}</span>}
+                        </span>
+                      )}
+                      <span className="type-hint col-start-2">{entry.summary}</span>
+                      <span className="type-hint col-start-2">
+                        {formatDate(entry.updatedAt, { dateStyle: 'medium', timeStyle: 'short' })} · {formatProjectSize(entry.sizeBytes)}
+                      </span>
+                      {confirmingId === entry.id ? (
+                        <div className={`${ROW} col-span-full mt-1`}>
+                          <Button
+                            size="sm"
+                            className="px-2"
+                            onClick={() => {
+                              setConfirmingId(null)
+                              void deleteEntry(entry)
+                            }}
+                          >
+                            {t('project.panel.deleteForever')}
+                          </Button>
+                          <Button size="sm" className="px-2" onClick={() => setConfirmingId(null)}>
+                            {t('common.cancel')}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className={`${ROW} col-span-full mt-1`}>
+                          <Button size="sm" className="px-2" onClick={() => void open(entry)} disabled={current}>
+                            {t('project.panel.openEntry')}
+                          </Button>
+                          <Button size="sm" className="px-2" onClick={() => setRenaming({ id: entry.id, name: entry.name })}>
+                            {t('project.panel.rename')}
+                          </Button>
+                          <Button size="sm" className="px-2" onClick={() => setConfirmingId(entry.id)}>
+                            {t('common.delete')}
+                          </Button>
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
     </section>
   )
 }
@@ -347,76 +354,79 @@ function PresetSection() {
   }
 
   return (
-    <section className="settings project" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} className="section-title settings__title">
-        {t('project.panel.presets')}
-      </h2>
+    <section aria-labelledby={`${id}-title`}>
+      <div className="panel-head">
+        <h2 id={`${id}-title`} className="panel-title">
+          {t('project.panel.presets')}
+        </h2>
+      </div>
+      <div className={BODY}>
+        <p className="type-hint">{t(getPlatform().capabilities.isDesktop ? 'project.panel.presetsHintDesktop' : 'project.panel.presetsHintBrowser')}</p>
 
-      <p className="field__hint">{t(getPlatform().capabilities.isDesktop ? 'project.panel.presetsHintDesktop' : 'project.panel.presetsHintBrowser')}</p>
+        {presets.length === 0 ? (
+          <p className={EMPTY}>{t('project.panel.noPreset')}</p>
+        ) : (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="type-label" htmlFor={`${id}-preset`}>
+                {t('project.panel.preset')}
+              </label>
+              <Select
+                id={`${id}-preset`}
+                value={selectedPreset}
+                options={[
+                  { value: '', label: t('project.panel.choose') },
+                  ...presets.map((preset) => ({
+                    value: preset.name,
+                    label: preset.scope && preset.scope !== 'tout' ? t('project.panel.presetOption', { name: preset.name, scope: PRESET_SCOPE_LABELS[preset.scope] }) : preset.name,
+                  })),
+                ]}
+                onChange={(name) => setSelectedPreset(name)}
+              />
+            </div>
+            <div className={ROW}>
+              <Button onClick={applyPreset} disabled={!selected}>
+                {t('project.panel.apply')}
+              </Button>
+              <Button onClick={deletePreset} disabled={!selected}>
+                {t('common.delete')}
+              </Button>
+            </div>
+          </>
+        )}
 
-      {presets.length === 0 ? (
-        <p className="tracks__empty">{t('project.panel.noPreset')}</p>
-      ) : (
-        <>
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-preset`}>
-              {t('project.panel.preset')}
-            </label>
-            <Select
-              id={`${id}-preset`}
-              value={selectedPreset}
-              options={[
-                { value: '', label: t('project.panel.choose') },
-                ...presets.map((preset) => ({
-                  value: preset.name,
-                  label: preset.scope && preset.scope !== 'tout' ? t('project.panel.presetOption', { name: preset.name, scope: PRESET_SCOPE_LABELS[preset.scope] }) : preset.name,
-                })),
-              ]}
-              onChange={(name) => setSelectedPreset(name)}
-            />
-          </div>
-          <div className="project__row">
-            <Button onClick={applyPreset} disabled={!selected}>
-              {t('project.panel.apply')}
-            </Button>
-            <Button onClick={deletePreset} disabled={!selected}>
-              {t('common.delete')}
-            </Button>
-          </div>
-        </>
-      )}
-
-      <form
-        className="field"
-        onSubmit={(e) => {
-          e.preventDefault()
-          savePreset()
-        }}
-      >
-        <label className="field__label" htmlFor={`${id}-preset-scope`}>
-          {t('project.panel.newPreset')}
-        </label>
-        <Select
-          id={`${id}-preset-scope`}
-          className="project__scope"
-          value={presetScope}
-          options={PRESET_SCOPES.map((scope) => ({ value: scope, label: PRESET_SCOPE_LABELS[scope] }))}
-          onChange={(scope) => setPresetScope(scope)}
-        />
-        <div className="project__row">
-          <TextField
-            id={`${id}-preset-name`}
-            aria-label={t('project.panel.presetName')}
-            value={presetName}
-            placeholder={t('project.panel.presetName')}
-            maxLength={PRESET_NAME_MAX}
-            onChange={setPresetName}
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            savePreset()
+          }}
+        >
+          <label className="type-label" htmlFor={`${id}-preset-scope`}>
+            {t('project.panel.newPreset')}
+          </label>
+          <Select
+            id={`${id}-preset-scope`}
+            value={presetScope}
+            options={PRESET_SCOPES.map((scope) => ({ value: scope, label: PRESET_SCOPE_LABELS[scope] }))}
+            onChange={(scope) => setPresetScope(scope)}
           />
-          <Button type="submit" disabled={!presetName.trim()}>
-            {t('common.save')}
-          </Button>
-        </div>
-      </form>
+          <div className={FIELD_ROW}>
+            <TextField
+              className="min-w-0 flex-1"
+              id={`${id}-preset-name`}
+              aria-label={t('project.panel.presetName')}
+              value={presetName}
+              placeholder={t('project.panel.presetName')}
+              maxLength={PRESET_NAME_MAX}
+              onChange={setPresetName}
+            />
+            <Button type="submit" className="flex-none" disabled={!presetName.trim()}>
+              {t('common.save')}
+            </Button>
+          </div>
+        </form>
+      </div>
     </section>
   )
 }

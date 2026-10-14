@@ -134,3 +134,117 @@
     @apply hidden;
   }
 }
+
+/* A fade of 120 ms for what opens over the page (tooltips, menus, dialogs); `tip-in` is declared in shell.css. */
+@utility fade-in {
+  animation: tip-in 120ms ease both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* A turn per second (spinner) or in 2.4 s (progress ring); still when motion is reduced. */
+@keyframes ui-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@utility spin-fast {
+  animation: ui-turn 0.8s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility spin-slow {
+  animation: ui-turn 2.4s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/*
+ * Floating panels (menus, popovers, the list of a select, the language list): the ink chrome in both themes, a hairline, the
+ * light focus ring. The panel's own size and scroll go next to it in the `className`.
+ */
+@utility overlay-frame {
+  @apply fade-in chrome-focus max-w-[calc(100vw_-_16px)] rounded-md border border-ink-soft bg-chrome-raised font-body text-white shadow-pop;
+}
+
+/* On a phone, either way up, a floating panel becomes a bottom sheet over the whole width (React Aria's own position is overridden). */
+@utility overlay-sheet {
+  @variant phone-any {
+    position: fixed !important;
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+    transform: none !important;
+  }
+}
+
+/* A row of a floating panel (menu, language list): lit under the pointer, on the arrows' focus and when it is the checked one. */
+@utility overlay-item {
+  @apply flex min-h-control cursor-pointer items-center gap-2 rounded-sm px-3 text-left text-body font-medium whitespace-nowrap text-white select-none;
+
+  &:hover:not(:disabled, [data-disabled]) {
+    @media (hover: hover) {
+      @apply bg-white/10;
+    }
+  }
+
+  &:focus-visible,
+  &[data-focused],
+  &[data-focus-visible='true'] {
+    @apply bg-white/10;
+  }
+
+  &[data-focus-visible='true'] {
+    outline: var(--focus-ring-on-dark);
+    outline-offset: 2px;
+  }
+
+  &[aria-checked='true'] {
+    @apply bg-white/16;
+  }
+
+  &:disabled,
+  &[data-disabled] {
+    @apply cursor-not-allowed opacity-45;
+  }
+}
+
+/* What a point overlay (right click, long press) is positioned against: an empty box at that point. */
+@utility overlay-anchor {
+  @apply pointer-events-none absolute size-0;
+}
+
+/* The picture of a saved project (« Mes projets », the home screen): a 16:9 frame, a sky-to-paper placeholder when there is none. */
+@utility library-thumb {
+  @apply aspect-video w-full rounded-sm border border-edge bg-linear-to-b from-glacier to-paper object-cover;
+}
+
+/* The home screen: a paper page over the whole view with one centred column (also the card of the error screen). */
+@utility home-page {
+  @apply absolute inset-0 z-5 flex overflow-y-auto overscroll-contain bg-surface-panel px-4 py-6 text-center text-text-1;
+}
+
+@utility home-column {
+  @apply m-auto flex w-[min(400px,100%)] flex-col items-center gap-3;
+}
+
+@utility home-title {
+  @apply text-3xl leading-[1.15] font-semibold;
+}
+
+@utility home-actions {
+  @apply grid w-full grid-cols-2 gap-2 phone:grid-cols-1;
+}

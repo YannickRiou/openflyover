@@ -18,8 +18,13 @@ interface Drag {
   moved: boolean
 }
 
+/** The head: a bar across the sheet (portrait phone only); `data-sheet-handle` is how shell.css keeps it out of the scrolling content. */
+const HEAD =
+  'hidden phone:relative phone:flex phone:h-13 phone:flex-none phone:cursor-grab phone:touch-none phone:items-center phone:gap-2 ' +
+  'phone:border-b phone:border-edge phone:bg-surface-panel phone:pr-2 phone:pl-4'
+
 /**
- * Head of a half sheet (portrait phone only, hidden by shell.css otherwise): grip, optional title and « Terminé » (✓),
+ * Head of a half sheet (portrait phone only, hidden otherwise): grip, optional title and « Terminé » (✓),
  * which closes it; dragging the head down past a third of the sheet (or a flick down) closes it too.
  */
 export function SheetHandle({ title, onClose }: { title?: string; onClose(): void }) {
@@ -66,11 +71,11 @@ export function SheetHandle({ title, onClose }: { title?: string; onClose(): voi
   }
 
   return (
-    <div className="sheet-handle" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
-      <span className="sheet-handle__bar" aria-hidden="true" />
-      {title && <span className="sheet-handle__title">{title}</span>}
+    <div className={HEAD} data-sheet-handle="" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
+      <span className="absolute top-1.5 left-1/2 h-[5px] w-10 -translate-x-1/2 rounded-full bg-edge-strong" aria-hidden="true" />
+      {title && <span className="panel-title">{title}</span>}
       <Tip text={t('common.done')} align="end">
-        <Button variant="icon" className="sheet-handle__done" onClick={onClose} aria-label={t('common.done')}>
+        <Button variant="icon" className="ml-auto size-11 text-text-1" onClick={onClose} aria-label={t('common.done')}>
           <Icon name="check" size={22} />
         </Button>
       </Tip>

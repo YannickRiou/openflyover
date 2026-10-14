@@ -347,8 +347,8 @@ themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under 
 classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Menu` (list of actions: opened by a trigger, or at a
 `point` for the right-click menu of the 3D view; `sheet` makes it a bottom sheet on a phone) and `Popover` (panel with its own
 controls, same two modes). Both are portalled out of their container (into the open `Modal`, if any) and carry
-`data-local-escape`, so an open one closes before the app's own Escape; their skin (`overlay.css`, `menu.css`, `popover.css`) is
-self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
+`data-local-escape`, so an open one closes before the app's own Escape; their skin is utilities (`overlay-frame`, `overlay-sheet`, `overlay-item` in
+`utilities.css`), HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
 or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen), `RadioGroup` with `Radio` (`look` `segmented`,
 `chips`, or `plain` for options the screen draws: the 3 × 3 `AnchorPicker`, the output-format buttons, the proportion and camera-preset tiles; the arrows move and choose, the screens' CSS keys on
 `.option__label`; a `Radio` forwards its `ref` for a `Tip`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
@@ -512,7 +512,7 @@ pointer (`appearance.css`).
     project name, « Plus d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: undo, redo, open, save) and « Exporter » with its
     label; no format picker (the drawer tiles) nor « ? »; in landscape the timeline starts folded (`Timeline`: strip
     with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
-    unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`, `modal.css`) are full screen. Safe areas
+    unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`) are full screen. Safe areas
     (`viewport-fit=cover` in `index.html`, `env(safe-area-inset-*)` on the shell rows and sides), `100dvh`, no page
     overscroll. A touch tablet in portrait (`max-width: 1023px` and `pointer: coarse`) also takes the « Plus d'actions »
     menu.

@@ -92,15 +92,9 @@
 @import '@heroui/styles/components/slider.css' layer(components);
 /* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
 @import './primitives/button.css';
-@import './primitives/tip.css';
 @import './primitives/tabs.css';
 @import './primitives/disclosure.css';
-@import './primitives/overlay.css';
-@import './primitives/menu.css';
-@import './primitives/popover.css';
-@import './primitives/modal.css';
 @import './primitives/color-field.css';
-@import './primitives/toast.css';
 @import './primitives/switch.css';
 @import './primitives/checkbox.css';
 @import './primitives/radio-group.css';
@@ -148,9 +142,18 @@
 @custom-variant touch (@media (pointer: coarse));
 @custom-variant drawer (@media (max-width: 1023px));
 @custom-variant phone (@media (max-width: 699px));
-@custom-variant phone-any (@media (max-width: 699px), (max-height: 499px));
+/* (the block form: the shorthand splits a list of queries at the comma and keeps only the first) */
+@custom-variant phone-any {
+  @media (max-width: 699px), (max-height: 499px) {
+    @slot;
+  }
+}
 @custom-variant phone-landscape (@media (max-height: 499px) and (min-width: 700px));
-@custom-variant bar-condensed (@media (max-width: 1023px) and (pointer: coarse), (max-width: 699px), (max-height: 499px));
+@custom-variant bar-condensed {
+  @media (max-width: 1023px) and (pointer: coarse), (max-width: 699px), (max-height: 499px) {
+    @slot;
+  }
+}
 
 /*
  * Variables that are not Tailwind tokens. In `base`, so the `:root` rules of the components override them; the dark theme
