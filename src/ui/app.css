@@ -512,11 +512,4 @@
 }
 
 /* ============================== fin Clarté =============================== */
-
-/* « Historique des rendus »: one row per render (the look of the setting rows), name and facts stacked, details unfolded */
-.history {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
 }
