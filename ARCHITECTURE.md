@@ -353,7 +353,7 @@ or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen),
 `chips`, or `plain` for a grid the screen draws, as the 3 × 3 `AnchorPicker`; the arrows move and choose, the screens' CSS keys on
 `.option__label`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
 `value` / `onChange` take the values, not events; a `title` is a native tooltip over the whole control; a `<fieldset disabled>`
-around them dims them. HeroUI's styles are imported in `theme.css`
+around them dims them. `Select` (`options` of `{ value, label, disabled? }` or groups of them, `value` / `onChange` on the value, `look` `field` or `bar`) is the browser's own `<select>` on a touch screen (`pointer: coarse`, for its native picker) and a button that opens a list (typed letters, arrows, own Escape, portalled like the menus) elsewhere; one list of options feeds both, and a `<label htmlFor={id}>` names either. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,

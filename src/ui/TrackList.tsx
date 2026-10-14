@@ -41,7 +41,7 @@ import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import './trackElevation.css'
-import { Button, Menu, Tip } from './primitives'
+import { Button, Menu, Select, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -196,19 +196,13 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
         <label className="field__label" htmlFor={`${id}-sync`}>
           {t('track.race.sync')}
         </label>
-        <select
+        <Select
           id={`${id}-sync`}
-          className="select"
           value={race.sync}
           aria-describedby={`${id}-sync-hint`}
-          onChange={(e) => setSetting('race', { ...settings, sync: e.currentTarget.value as RaceSync })}
-        >
-          {RACE_SYNC_MODES.map((mode) => (
-            <option key={mode} value={mode} disabled={syncNeedsTime(mode) && !race.timed}>
-              {RACE_SYNC_LABELS[mode]}
-            </option>
-          ))}
-        </select>
+          options={RACE_SYNC_MODES.map((mode) => ({ value: mode, label: RACE_SYNC_LABELS[mode], disabled: syncNeedsTime(mode) && !race.timed }))}
+          onChange={(sync) => setSetting('race', { ...settings, sync })}
+        />
         <p id={`${id}-sync-hint`} className="field__hint">
           {race.timed
             ? SYNC_HINTS[race.sync]
@@ -222,19 +216,17 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
             <label className="field__label" htmlFor={`${id}-camera`}>
               {t('track.race.cameraOn')}
             </label>
-            <select id={`${id}-camera`} className="select" value={camera} disabled={busy} onChange={(e) => followCamera(e.currentTarget.value)}>
-              <option value="premiere">{tracks[0].name}</option>
-              {tracks.slice(1).map((other) => (
-                <option key={other.id} value={other.id}>
-                  {other.name}
-                </option>
-              ))}
-              {RACE_CAMERAS.filter((c) => c !== 'premiere').map((c) => (
-                <option key={c} value={c}>
-                  {RACE_CAMERA_LABELS[c]}
-                </option>
-              ))}
-            </select>
+            <Select
+              id={`${id}-camera`}
+              value={camera}
+              disabled={busy}
+              options={[
+                { value: 'premiere', label: tracks[0].name },
+                ...tracks.slice(1).map((other) => ({ value: other.id, label: other.name })),
+                ...RACE_CAMERAS.filter((c) => c !== 'premiere').map((c) => ({ value: c, label: RACE_CAMERA_LABELS[c] })),
+              ]}
+              onChange={followCamera}
+            />
           </div>
           <label className="checkbox checkbox--switch" htmlFor={`${id}-board`}>
             <input
@@ -378,18 +370,12 @@ function OutingPlanForm({ track }: { track: Track }) {
           <label className="field__label" htmlFor={`${id}-activity`}>
             {t('track.plan.activity')}
           </label>
-          <select
+          <Select
             id={`${id}-activity`}
-            className="select"
             value={activity}
-            onChange={(e) => setActivity(e.currentTarget.value as PlanActivity)}
-          >
-            {PLAN_ACTIVITIES.map((a) => (
-              <option key={a} value={a}>
-                {PLAN_ACTIVITY_LABELS[a]}
-              </option>
-            ))}
-          </select>
+            options={PLAN_ACTIVITIES.map((a) => ({ value: a, label: PLAN_ACTIVITY_LABELS[a] }))}
+            onChange={(a) => setActivity(a)}
+          />
         </div>
         <div className="field">
           <label className="field__label" htmlFor={`${id}-pace`}>

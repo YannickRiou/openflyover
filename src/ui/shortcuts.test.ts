@@ -106,6 +106,7 @@ describe('keyFocus', () => {
     }
     expect(keyFocus(el('<input type="text">'))).toBe('text')
     expect(keyFocus(el('<select></select>'))).toBe('text')
+    expect(keyFocus(el('<button aria-haspopup="listbox"></button>'))).toBe('text')
     expect(keyFocus(el('<input type="range">'))).toBe('arrows')
     expect(keyFocus(el('<button role="tab"></button>'))).toBe('arrows')
     expect(keyFocus(el('<div role="slider"></div>'))).toBe('arrows')
@@ -167,6 +168,7 @@ describe('spacePlays', () => {
     expect(spacePlays(el('<input type="text" />'), clicked)).toBe(false)
     expect(spacePlays(el('<textarea></textarea>'), clicked)).toBe(false)
     expect(spacePlays(el('<select><option>a</option></select>'), clicked)).toBe(false)
+    expect(spacePlays(el('<button aria-haspopup="listbox">a</button>'), clicked)).toBe(false)
     expect(spacePlays(el('<div role="listbox"></div>'), clicked)).toBe(false)
   })
 })
