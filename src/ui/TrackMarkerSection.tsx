@@ -31,14 +31,13 @@ import type { MarkerFigure, MarkerSettings, TrackStyle } from '../scene/markerSe
 import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
-import type { Settings } from '../state/store'
 import { formatDistance, formatPercent, formatShort } from './format'
 import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 import { showToast } from './toast'
 import './markerSection.css'
-import { Button, Checkbox, ColorField, Radio, RadioGroup, Switch } from './primitives'
+import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch } from './primitives'
 
 /** 0 -> "Aucun", else the distance */
 const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.slider.noneMasc') : formatDistance(metres))
@@ -211,18 +210,12 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           <label className="field__label" htmlFor={`${id}-color`}>
             {t('marker.track.colorBy')}
           </label>
-          <select
+          <Select
             id={`${id}-color`}
-            className="select"
             value={trackColorBy}
-            onChange={(e) => setSetting('trackColorBy', e.currentTarget.value as Settings['trackColorBy'])}
-          >
-            {colorModes.map(({ mode, label, available }) => (
-              <option key={mode} value={mode} disabled={!available}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={colorModes.map(({ mode, label, available }) => ({ value: mode, label, disabled: !available }))}
+            onChange={(mode) => setSetting('trackColorBy', mode)}
+          />
         </div>
       </SettingRow>
       <SettingRow label={t('marker.track.smoothing')} value={formatSmoothing(style.smoothingM)} paths={['trackStyle.smoothingM']}>

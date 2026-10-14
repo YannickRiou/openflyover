@@ -34,7 +34,7 @@ import { posterLayout } from './layout'
 import { POSTER_FIGURES, POSTER_FIGURE_LABELS, POSTER_FORMATS, POSTER_STYLES, POSTER_VIEWS, POSTER_VIEW_LABELS, posterSize } from './settings'
 import type { PosterSettings, PosterType } from './settings'
 import './poster.css'
-import { Button, Checkbox, Chip, Radio, RadioGroup, Tip } from '../ui/primitives'
+import { Button, Checkbox, Chip, Radio, RadioGroup, Select, Tip } from '../ui/primitives'
 
 /** Largest size of the thumbnail in the drawer (CSS px). */
 const PREVIEW_MAX_W = 260
@@ -239,23 +239,14 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
         <label className="field__label" htmlFor={`${id}-format`}>
           {t('poster.panel.format')}
         </label>
-        <select
+        <Select
           id={`${id}-format`}
-          className="select"
           value={poster.format}
           disabled={busy}
           aria-describedby={`${id}-size`}
-          onChange={(e) => {
-            const format = POSTER_FORMATS.find((f) => f.id === e.currentTarget.value)
-            if (format) set({ format: format.id })
-          }}
-        >
-          {POSTER_FORMATS.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.label}
-            </option>
-          ))}
-        </select>
+          options={POSTER_FORMATS.map((f) => ({ value: f.id, label: f.label }))}
+          onChange={(format) => set({ format })}
+        />
         <p id={`${id}-size`} className="field__hint">
           {t(poster.format === 'square' ? 'poster.panel.size' : 'poster.panel.sizeDpi', { width: formatNumber(width), height: formatNumber(height) })}
         </p>

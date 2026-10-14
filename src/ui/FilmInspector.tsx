@@ -38,12 +38,11 @@ import {
   situationTiming,
   shotSunOf,
 } from '../film/model'
-import type { Film, FilmShot, MediaLayout, MediaSync, ShotStyle, ShotSun, ShotTransition, StartHeight, StopCamera } from '../film/model'
+import type { Film, FilmShot, MediaLayout, MediaSync, ShotStyle, ShotSun, ShotTransition, StopCamera } from '../film/model'
 import { FILM_PARAMS, PARAM_SPECS, paramAt, paramBase } from '../film/paramKeys'
 import { getPlatform } from '../platform'
 import { AVATAR_SIZE_PX, fileToAvatarDataUrl } from '../scene/markerBadge'
 import { MARKER_FIGURE_CHOICES, MARKER_FIGURE_LABELS, MARKER_KIND_LABELS, MARKER_KINDS, MARKER_LABEL_MODE_LABELS, MARKER_SIZE_RANGE } from '../scene/markerSettings'
-import type { MarkerFigureChoice, MarkerKind } from '../scene/markerSettings'
 import type { FilmParam } from '../film/paramKeys'
 import {
   addItemCamera,
@@ -99,7 +98,7 @@ import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
-import { Button, Checkbox, ColorField, Radio, RadioGroup, Switch, Tip } from './primitives'
+import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch, Tip } from './primitives'
 
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
   get aucune() {
@@ -249,19 +248,13 @@ function SituationFramingFields({
         <label className="field__label" htmlFor={`${id}-height`}>
           {phase === 'opening' ? t('inspector.framing.startHeight') : t('inspector.framing.endHeight')}
         </label>
-        <select
+        <Select
           id={`${id}-height`}
-          className="select"
           value={shot.startHeight ?? 'region'}
           disabled={shot.distanceKm !== undefined}
-          onChange={(e) => onChange({ startHeight: e.currentTarget.value as StartHeight })}
-        >
-          {START_HEIGHTS.map((height) => (
-            <option key={height} value={height}>
-              {START_HEIGHT_LABELS[height]}
-            </option>
-          ))}
-        </select>
+          options={START_HEIGHTS.map((height) => ({ value: height, label: START_HEIGHT_LABELS[height] }))}
+          onChange={(startHeight) => onChange({ startHeight })}
+        />
       </div>
       <RangeField
         label={t('inspector.framing.distance')}
@@ -350,15 +343,16 @@ function PlaceSelect({ value, onChange }: { value: string | null; onChange(regio
         </label>
         <InfoTip text={t('inspector.place.tip')} />
       </div>
-      <select id={id} className="select" value={value ?? ''} onChange={(e) => onChange(e.currentTarget.value || null)}>
-        <option value="">{auto ? t('inspector.place.autoNamed', { name: auto.name }) : t('inspector.place.auto')}</option>
-        {candidates.map((c) => (
-          <option key={candidateId(c)} value={candidateId(c)}>
-            {c.name} · {REGION_KIND_LABELS[c.kind]}
-          </option>
-        ))}
-        {!known && <option value={value ?? ''}>{loading ? t('inspector.place.searching') : t('inspector.place.missing')}</option>}
-      </select>
+      <Select
+        id={id}
+        value={value ?? ''}
+        options={[
+          { value: '', label: auto ? t('inspector.place.autoNamed', { name: auto.name }) : t('inspector.place.auto') },
+          ...candidates.map((c) => ({ value: candidateId(c), label: `${c.name} · ${REGION_KIND_LABELS[c.kind]}` })),
+          ...(known ? [] : [{ value: value ?? '', label: loading ? t('inspector.place.searching') : t('inspector.place.missing') }]),
+        ]}
+        onChange={(next) => onChange(next || null)}
+      />
     </div>
   )
 }
@@ -471,23 +465,19 @@ export function FilmInspector() {
       <label className="field__label" htmlFor={`${id}-stop`}>
         {t('inspector.attach.label')}
       </label>
-      <select
+      <Select
         id={`${id}-stop`}
-        className="select"
         value={stopId ?? ''}
         aria-describedby={`${id}-stop-hint`}
-        onChange={(e) => {
-          const stop = clock.stops.find((s) => s.id === e.currentTarget.value) ?? null
+        options={[
+          { value: '', label: t('inspector.attach.none') },
+          ...clock.stops.map((s) => ({ value: s.id, label: `${s.label || t('film.snap.hold')} · ${formatDistance(s.atM)}` })),
+        ]}
+        onChange={(next) => {
+          const stop = clock.stops.find((s) => s.id === next) ?? null
           editFilm((f) => ({ film: attachToStop(f, item, stop) }), { stops: stop !== null })
         }}
-      >
-        <option value="">{t('inspector.attach.none')}</option>
-        {clock.stops.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.label || t('film.snap.hold')} · {formatDistance(s.atM)}
-          </option>
-        ))}
-      </select>
+      />
       <p id={`${id}-stop-hint`} className="field__hint">
         {stopId ? t('inspector.attach.hintAttached') : t('inspector.attach.hintFree')}
       </p>
@@ -535,19 +525,13 @@ export function FilmInspector() {
           <label className="field__label" htmlFor={`${id}-style`}>
             {t('inspector.shot.styleLabel')}
           </label>
-          <select
+          <Select
             id={`${id}-style`}
-            className="select"
             value={shot.style}
             aria-describedby={`${id}-style-hint`}
-            onChange={(e) => change((f) => updateShot(f, item, { style: e.currentTarget.value as ShotStyle }), false)}
-          >
-            {SHOT_STYLES.map((style) => (
-              <option key={style} value={style}>
-                {SHOT_STYLE_LABELS[style]}
-              </option>
-            ))}
-          </select>
+            options={SHOT_STYLES.map((style) => ({ value: style, label: SHOT_STYLE_LABELS[style] }))}
+            onChange={(style) => change((f) => updateShot(f, item, { style }), false)}
+          />
           <p id={`${id}-style-hint`} className="field__hint">
             {SHOT_HINTS[shot.style]}
           </p>
@@ -588,17 +572,17 @@ export function FilmInspector() {
           )}
         {shot.style !== 'aucune' && (
           <InspectorGroup title={t('inspector.shot.sun')}>
-            <select
-              className="select"
+            <Select
               aria-label={t('inspector.shot.sunOfShot')}
               aria-describedby={`${id}-sun-hint`}
               value={shotSunOf(shot)}
-              onChange={(e) => change((f) => updateShot(f, item, { sun: e.currentTarget.value as ShotSun, moveSun: undefined }), false)}
-            >
-              <option value="jour">{t('inspector.shot.sun.day')}</option>
-              <option value="survol">{t('inspector.shot.sun.flyover')}</option>
-              <option value="accelere">{t('inspector.shot.sun.accelerated', { hours: SHOT_SUN_HOURS })}</option>
-            </select>
+              options={[
+                { value: 'jour', label: t('inspector.shot.sun.day') },
+                { value: 'survol', label: t('inspector.shot.sun.flyover') },
+                { value: 'accelere', label: t('inspector.shot.sun.accelerated', { hours: SHOT_SUN_HOURS }) },
+              ]}
+              onChange={(sun) => change((f) => updateShot(f, item, { sun, moveSun: undefined }), false)}
+            />
             <p id={`${id}-sun-hint`} className="field__hint">
               {SHOT_SUN_HINTS[shotSunOf(shot)][item === 'opening' ? 0 : 1]}
               {!atmosphere && t('inspector.shot.sunNeedsAtmosphere')}
@@ -609,20 +593,14 @@ export function FilmInspector() {
           <label className="field__label" htmlFor={`${id}-transition`}>
             {t('inspector.shot.transition')}
           </label>
-          <select
+          <Select
             id={`${id}-transition`}
-            className="select"
             value={shot.transition ?? 'enchaine'}
             disabled={shot.style === 'aucune'}
             aria-describedby={`${id}-transition-hint`}
-            onChange={(e) => change((f) => updateShot(f, item, { transition: e.currentTarget.value as ShotTransition }), false)}
-          >
-            {SHOT_TRANSITIONS.map((transition) => (
-              <option key={transition} value={transition}>
-                {SHOT_TRANSITION_LABELS[transition]}
-              </option>
-            ))}
-          </select>
+            options={SHOT_TRANSITIONS.map((transition) => ({ value: transition, label: SHOT_TRANSITION_LABELS[transition] }))}
+            onChange={(transition) => change((f) => updateShot(f, item, { transition }), false)}
+          />
           <p id={`${id}-transition-hint`} className="field__hint">
             {TRANSITION_HINTS[shot.transition ?? 'enchaine']}
           </p>
@@ -716,19 +694,13 @@ export function FilmInspector() {
             <label className="field__label" htmlFor={`${id}-camera`}>
               {t('inspector.hold.camera')}
             </label>
-            <select
+            <Select
               id={`${id}-camera`}
-              className="select"
               value={stop.camera}
               aria-describedby={`${id}-camera-hint`}
-              onChange={(e) => set({ camera: e.currentTarget.value as StopCamera })}
-            >
-              {STOP_CAMERAS.map((camera) => (
-                <option key={camera} value={camera}>
-                  {STOP_CAMERA_LABELS[camera]}
-                </option>
-              ))}
-            </select>
+              options={STOP_CAMERAS.map((camera) => ({ value: camera, label: STOP_CAMERA_LABELS[camera] }))}
+              onChange={(camera) => set({ camera })}
+            />
             <p id={`${id}-camera-hint`} className="field__hint">
               {STOP_CAMERA_HINTS[stop.camera]}
             </p>
@@ -812,13 +784,12 @@ export function FilmInspector() {
             <label className="field__label" htmlFor={`${id}-param`}>
               {t('inspector.paramKey.label')}
             </label>
-            <select id={`${id}-param`} className="select" value={paramKey.param} onChange={(e) => switchTo(e.currentTarget.value as FilmParam)}>
-              {FILM_PARAMS.map((param) => (
-                <option key={param} value={param}>
-                  {PARAM_SPECS[param].label}
-                </option>
-              ))}
-            </select>
+            <Select
+              id={`${id}-param`}
+              value={paramKey.param}
+              options={FILM_PARAMS.map((param) => ({ value: param, label: PARAM_SPECS[param].label }))}
+              onChange={switchTo}
+            />
           </div>
           {range('value', t('inspector.paramKey.value'), paramKey.value, spec, spec.format, (value) => set({ value }))}
           {number('at', t('inspector.field.kmAt'), km(paramKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
@@ -876,31 +847,24 @@ export function FilmInspector() {
             <label className="field__label" htmlFor={`${id}-marker-kind`}>
               {t('inspector.markerKey.shape')}
             </label>
-            <select id={`${id}-marker-kind`} className="select" value={markerKey.kind} onChange={(e) => set({ kind: e.currentTarget.value as MarkerKind })}>
-              {MARKER_KINDS.map((kind) => (
-                <option key={kind} value={kind}>
-                  {MARKER_KIND_LABELS[kind]}
-                </option>
-              ))}
-            </select>
+            <Select
+              id={`${id}-marker-kind`}
+              value={markerKey.kind}
+              options={MARKER_KINDS.map((kind) => ({ value: kind, label: MARKER_KIND_LABELS[kind] }))}
+              onChange={(kind) => set({ kind })}
+            />
           </div>
           {markerKey.kind === 'figurine' && (
             <div className="field">
               <label className="field__label" htmlFor={`${id}-marker-figure`}>
                 {t('inspector.markerKey.figure')}
               </label>
-              <select
+              <Select
                 id={`${id}-marker-figure`}
-                className="select"
                 value={markerKey.figure}
-                onChange={(e) => set({ figure: e.currentTarget.value as MarkerFigureChoice })}
-              >
-                {MARKER_FIGURE_CHOICES.map((figure) => (
-                  <option key={figure} value={figure}>
-                    {MARKER_FIGURE_LABELS[figure]}
-                  </option>
-                ))}
-              </select>
+                options={MARKER_FIGURE_CHOICES.map((figure) => ({ value: figure, label: MARKER_FIGURE_LABELS[figure] }))}
+                onChange={(figure) => set({ figure })}
+              />
             </div>
           )}
           {markerKey.kind === 'image' && (
