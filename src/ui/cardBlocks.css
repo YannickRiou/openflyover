@@ -1,3 +1,4 @@
+@layer components {
 /*
  * Opening title and closing card on the « Textes » lane: the moss of a text, framed, so that it reads as a longer span
  * that only its inner edge stretches (a click on its body selects it, nothing moves it as a whole).
@@ -12,4 +13,5 @@
 
 .film-tl__block--card .film-tl__icon {
   position: relative;
+}
 }

@@ -1,3 +1,4 @@
+@layer components {
 /* ◀ ◇ ▶ key buttons (KeyControls): in a lane header of the timeline (light on dark) and under a slider of a panel */
 .key-group {
   display: inline-flex;
@@ -126,4 +127,5 @@
 
 .film-tl--centred .key-btn--on {
   color: var(--color-accent-light);
+}
 }

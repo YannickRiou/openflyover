@@ -1,5 +1,24 @@
 /* OpenFlyover — charte graphique (variables, typographie, focus). */
-:root {
+
+/*
+ * Tailwind CSS: theme, Preflight (the reset) and utilities, in the layer order theme < base < components < utilities.
+ * The hand-written CSS of the app lives in `base` and `components`, so a utility class wins where both apply.
+ */
+@import 'tailwindcss';
+
+/* dark utilities (`dark:*`) follow the theme attribute set by `applyAppearance`, not the system scheme */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * Palette, fonts, radii and shadows as Tailwind tokens (`bg-ink`, `text-accent`, `font-heading`, `rounded-md`,
+ * `shadow-pop`...). `static` emits every variable even when no utility uses it: the CSS below reads them directly.
+ * Nothing of Tailwind's default palette, radii or shadows is kept.
+ */
+@theme static {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+
   /* « Carte alpine » : papier de carte topographique, encre, rouge de balisage, glacier, mousse. */
   --color-paper: #f6f3ec;
   --color-card: #ece7da;
@@ -29,6 +48,17 @@
 
   --radius-sm: 6px;
   --radius-md: 10px;
+
+  --shadow-card: 0 1px 2px rgb(27 40 50 / 0.08);
+  --shadow-pop: 0 2px 6px rgb(27 40 50 / 0.12), 0 12px 32px rgb(27 40 50 / 0.18);
+}
+
+/*
+ * Variables that are not Tailwind tokens. In `base`, so the `:root` rules of the components override them; the dark theme
+ * and the density below stay outside the layers (their higher specificity wins over both).
+ */
+@layer base {
+:root {
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -72,14 +102,13 @@
   --dock-w: 300px;
   --statusbar-h: 24px;
   --control-h: 32px;
-  --shadow-card: 0 1px 2px rgb(27 40 50 / 0.08);
-  --shadow-pop: 0 2px 6px rgb(27 40 50 / 0.12), 0 12px 32px rgb(27 40 50 / 0.18);
   /* rim of a colour swatch, visible on the panel */
   --swatch-border: rgb(28 42 51 / 0.35);
 
   --focus-ring: 2px solid var(--accent);
   /* on the ink chrome: 7.3:1 against --color-ink */
   --focus-ring-on-dark: 2px solid var(--accent-on-dark);
+}
 }
 
 /*
@@ -109,6 +138,7 @@
   --swatch-border: rgb(255 255 255 / 0.4);
 }
 
+@layer base {
 h1,
 h2,
 h3,
@@ -135,6 +165,9 @@ select {
   box-shadow: 0 0 0 1px var(--color-white);
 }
 
+}
+
+@layer components {
 /* Buttons --------------------------------------------------------------- */
 .btn {
   display: inline-flex;
@@ -219,4 +252,5 @@ select {
   font: inherit;
   line-height: 1.4;
   resize: vertical;
+}
 }

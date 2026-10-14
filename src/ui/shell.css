@@ -1,3 +1,4 @@
+@layer components {
 /*
  * Application shell: top bar, icon rail + one panel, framed 3D stage, right dock, timeline, status strip.
  * Dark chrome (ink) around light panels (paper). Colours from theme.css only.
@@ -2420,4 +2421,5 @@
   .film-tl__zoom-range {
     width: 64px;
   }
+}
 }

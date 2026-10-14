@@ -2,9 +2,11 @@
    The dark theme and the accent colours are in theme.css; the attributes are set by `applyAppearance` (appearance.ts). */
 
 /* the page behind the panels follows the theme (index.css paints it with the palette) */
-body {
-  background: var(--surface-panel);
-  color: var(--text-1);
+@layer base {
+  body {
+    background: var(--surface-panel);
+    color: var(--text-1);
+  }
 }
 
 /* compact: the spacing scale about 15 % tighter, 28 px controls for a mouse (touch screens keep their 44 px targets) */

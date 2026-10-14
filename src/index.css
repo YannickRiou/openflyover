@@ -1,3 +1,4 @@
+@layer base {
 *,
 *::before,
 *::after {
@@ -39,4 +40,43 @@ ul {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/*
+ * Preflight (Tailwind's reset) removes what the browser's own style sheet gives. The few pieces the existing screens
+ * rely on are put back here, so the move to Tailwind changes no pixel.
+ */
+a {
+  color: -webkit-link;
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font-weight: normal;
+  font-variant: normal;
+  line-height: normal;
+}
+
+button {
+  padding: 1px 6px;
+}
+
+legend {
+  padding-inline: 2px;
+}
+
+dialog {
+  margin: auto;
+}
+
+input[type='range'] {
+  background-color: Field;
+}
+
+input[type='color'] {
+  background-color: ButtonFace;
+}
 }
