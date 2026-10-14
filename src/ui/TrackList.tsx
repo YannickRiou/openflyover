@@ -41,7 +41,7 @@ import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import './trackElevation.css'
-import { Button, Menu, Select, Tip } from './primitives'
+import { Button, Menu, Radio, RadioGroup, Select, Switch, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -121,7 +121,6 @@ function withMultiMode(race: RaceSettings, mode: MultiMode): RaceSettings {
 function StageDefaults() {
   const t = useT()
   const film = useAppStore((s) => s.settings.film)
-  const id = useId()
   const { kind, holdS, card } = junctionDefaultOf(film)
   return (
     <>
@@ -130,10 +129,9 @@ function StageDefaults() {
         holdS={holdS || DEFAULT_JUNCTION.holdS}
         onChange={(patch) => editFilm((f) => ({ film: withDefaultJunction(f, patch) }), { step: patch.kind !== undefined })}
       />
-      <label className="checkbox checkbox--switch" htmlFor={`${id}-cards`}>
-        <input id={`${id}-cards`} type="checkbox" checked={card} onChange={(e) => editFilm((f) => ({ film: withDefaultCard(f, e.currentTarget.checked) }))} />
+      <Switch checked={card} onChange={(on) => editFilm((f) => ({ film: withDefaultCard(f, on) }))}>
         {t('track.stageCard')}
-      </label>
+      </Switch>
       <p className="field__hint">{t('track.stageHint')}</p>
     </>
   )
@@ -171,21 +169,19 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
       <h3 id={`${id}-title`} className="field__label">
         {t('track.race.title')}
       </h3>
-      <div className="segmented" role="radiogroup" aria-labelledby={`${id}-title`} aria-describedby={`${id}-mode-hint`}>
+      <RadioGroup
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-mode-hint`}
+        value={mode}
+        disabled={busy}
+        onChange={(m) => setSetting('race', withMultiMode(settings, m))}
+      >
         {MULTI_MODES.map((m) => (
-          <label key={m} className="segmented__option">
-            <input
-              type="radio"
-              name={`${id}-mode`}
-              value={m}
-              checked={mode === m}
-              disabled={busy}
-              onChange={() => setSetting('race', withMultiMode(settings, m))}
-            />
+          <Radio key={m} value={m}>
             {MULTI_MODE_LABELS[m]}
-          </label>
+          </Radio>
         ))}
-      </div>
+      </RadioGroup>
       <p id={`${id}-mode-hint`} className="field__hint">
         {MULTI_MODE_HINTS[mode]}
       </p>
@@ -228,18 +224,15 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
               onChange={followCamera}
             />
           </div>
-          <label className="checkbox checkbox--switch" htmlFor={`${id}-board`}>
-            <input
-              id={`${id}-board`}
-              type="checkbox"
-              checked={leaderboard.enabled}
-              onChange={(e) => {
-                const { overlay } = useAppStore.getState().settings
-                setSetting('overlay', { ...overlay, leaderboard: { ...overlay.leaderboard, enabled: e.currentTarget.checked } })
-              }}
-            />
+          <Switch
+            checked={leaderboard.enabled}
+            onChange={(on) => {
+              const { overlay } = useAppStore.getState().settings
+              setSetting('overlay', { ...overlay, leaderboard: { ...overlay.leaderboard, enabled: on } })
+            }}
+          >
             {t('track.race.board')}
-          </label>
+          </Switch>
           {leaderboard.enabled && !overlayOn && <p className="field__hint">{t('track.race.boardNeedsOverlay')}</p>}
           <RaceBoard race={race} tracks={tracks} />
           <p className="field__hint">{t('track.race.gap')}</p>

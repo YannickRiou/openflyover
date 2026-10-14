@@ -722,19 +722,19 @@ export function FilmInspector() {
             <span id={`${id}-factor-label`} className="field__label">
               {PARAM_SPECS.speed.label}
             </span>
-            <div className="sun-chips" role="group" aria-labelledby={`${id}-factor-label`}>
+            <RadioGroup
+              look="chips"
+              className="sun-chips"
+              aria-labelledby={`${id}-factor-label`}
+              value={speed.factor}
+              onChange={(f) => editFilm((g) => ({ film: updateSpeed(g, item, { factor: f }, lengthM) }))}
+            >
               {SPEED_CHIPS.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  className="sun-chip"
-                  aria-pressed={speed.factor === f}
-                  onClick={() => editFilm((g) => ({ film: updateSpeed(g, item, { factor: f }, lengthM) }))}
-                >
+                <Radio key={f} value={f}>
                   {formatSpeedFactor(f)}
-                </button>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </div>
           {range('factor', t('inspector.speed.label'), Math.log2(speed.factor), SPEED_SLIDER, (v) => formatSpeedFactor(2 ** v), (v) => set({ factor: 2 ** v }))}
           <div className="film-inspector__row">

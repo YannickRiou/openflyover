@@ -33,7 +33,7 @@ import { useAppStore } from '../state/store'
 import { formatAscent, formatDistance } from './format'
 import { Icon } from './icons'
 import { runImport } from './projectActions'
-import { Button, Tip } from './primitives'
+import { Button, Checkbox, Tip } from './primitives'
 
 /** « Importer depuis Strava » of the welcome card. */
 export function StravaImport() {
@@ -287,8 +287,7 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
       <ul className="strava__list" aria-describedby={`${id}-status`}>
         {shown.map((activity) => (
           <li key={activity.id}>
-            <label className="strava__item">
-              <input type="checkbox" checked={selected.has(activity.id)} onChange={() => toggle(activity.id)} />
+            <Checkbox className="strava__item" checked={selected.has(activity.id)} onChange={() => toggle(activity.id)}>
               <span className="strava__name">{activity.name}</span>
               <span className="strava__meta">
                 {[
@@ -300,7 +299,7 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
                   .filter(Boolean)
                   .join(' · ')}
               </span>
-            </label>
+            </Checkbox>
           </li>
         ))}
       </ul>
