@@ -26,16 +26,6 @@
   border: 0;
 }
 
-/* the empty-list line of the « Projet » panel */
-.tracks__empty {
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--surface-card);
-  font-size: 13px;
-  color: var(--text-2);
-  text-align: center;
-}
-
 /* Settings ---------------------------------------------------------------- */
 .settings {
   position: relative;
@@ -86,46 +76,6 @@
   min-width: 7ch;
 }
 
-.field__hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-2);
-}
-
-/* Project ----------------------------------------------------------------- */
-.project__row {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.project__row > * {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-/* text field + submit button: the field takes the remaining width */
-.project__row > .field {
-  flex: 1 1 100%;
-}
-
-.project__row > [type='submit'] {
-  flex: none;
-}
-
-/* « Hors ligne » packs: name and figures, then « Supprimer » */
-.offline__packs {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-2);
-}
-
-.offline__packs > li > button {
-  flex: none;
-  align-self: center;
-}
-
 /* Film overlay (« habillage ») ------------------------------------------- */
 /* 2D canvas over the 3D view; never catches the pointer */
 .view__stage > .overlay-canvas {
@@ -134,7 +84,6 @@
   pointer-events: none;
 }
 
-/* Track colour legend (bottom left of the 3D view) ----------------------- */
 /* Video export ------------------------------------------------------------ */
 /* video export + still image buttons, side by side */
 .export__actions {
@@ -161,56 +110,4 @@
   flex-direction: column;
   gap: var(--space-3);
 }
-
-/* label + ⓘ on one line */
-.field__label-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.sun-chips {
-  margin-top: var(--space-2);
-}
-
-/* « Plus de préréglages »: the folded presets, right under the main grid */
-.preset-more__summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--control-h);
-  color: var(--text-2);
-  font-size: 13px;
-  font-weight: 600;
-  list-style: none;
-  cursor: pointer;
-}
-
-.preset-more__summary::-webkit-details-marker {
-  display: none;
-}
-
-.preset-more[open] > .preset-more__summary {
-  color: var(--text-1);
-}
-@media (hover: hover) {
-  .preset-more__summary:hover {
-    color: var(--text-1);
-  }
-}
-
-.preset-more__summary:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.preset-more__label {
-  flex: 1 1 auto;
-}
-
-.preset-more:not([open]) > .preset-more__summary > .icon:last-child {
-  transform: rotate(-90deg);
-}
-
-/* ======================== fin Carte et Survol ============================ */
 }
