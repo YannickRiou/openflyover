@@ -289,25 +289,27 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       <h3 className="export__group">{t('export.panel.formatGroup')}</h3>
       <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{t('export.panel.proportions')}</legend>
-        <div className="format-tiles">
+        <legend id={`${id}-proportions`} className="field__label">
+          {t('export.panel.proportions')}
+        </legend>
+        <RadioGroup
+          look="plain"
+          className="format-tiles"
+          aria-labelledby={`${id}-proportions`}
+          value={video.aspect}
+          disabled={busy}
+          onChange={(aspect) => {
+            update({ aspect })
+            useAppStore.getState().setFreeFraming(false)
+          }}
+        >
           {VIDEO_ASPECTS.map((a) => (
-            <label key={a.id} className="format-tile" title={a.label}>
-              <input
-                type="radio"
-                name={`${id}-aspect`}
-                value={a.id}
-                checked={video.aspect === a.id}
-                onChange={() => {
-                  update({ aspect: a.id })
-                  useAppStore.getState().setFreeFraming(false)
-                }}
-              />
+            <Radio key={a.id} value={a.id} className="format-tile" title={a.label}>
               <AspectIcon x={a.x} y={a.y} size={28} />
               <span className="format-tile__label">{a.id}</span>
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </fieldset>
 
       <div className="field">

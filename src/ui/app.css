@@ -321,52 +321,6 @@
   min-width: 0;
 }
 
-/*
- * Hand-made radio buttons in `.segmented` (`<label className="segmented__option">`), kept for TrackList.tsx until it takes
- * `RadioGroup`; the frame itself is `primitives/radio-group.css`. This block and the `label.checkbox` ones below go then.
- */
-label.segmented__option {
-  flex: 1 1 0;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 5px var(--space-2);
-  border-radius: 4px;
-  font-size: 13px;
-  line-height: 1.2;
-  font-weight: 600;
-  color: var(--text-2);
-  cursor: pointer;
-  user-select: none;
-}
-
-@media (hover: hover) {
-  label.segmented__option:hover {
-    color: var(--text-1);
-  }
-}
-
-label.segmented__option:has(input:checked) {
-  background: var(--surface-control);
-  color: var(--text-1);
-  box-shadow: var(--shadow-card);
-}
-
-label.segmented__option:has(input:focus-visible) {
-  outline: var(--focus-ring);
-  outline-offset: -2px;
-}
-
-label.segmented__option input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  margin: 0;
-}
-
 .range-row {
   display: flex;
   align-items: center;
@@ -423,27 +377,6 @@ label.segmented__option input {
     width: 44px;
     height: 44px;
   }
-}
-
-label.checkbox {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-label.checkbox input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--accent);
-}
-
-label.checkbox:has(input:disabled) {
-  cursor: default;
-  color: var(--text-2);
 }
 
 .field__hint {
@@ -622,20 +555,6 @@ label.checkbox:has(input:disabled) {
 
 .film-tl__spacer {
   flex: 1 1 0;
-}
-
-.film-tl__check {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.film-tl__check input {
-  margin: 0;
-  accent-color: var(--color-accent-light);
 }
 
 /* « modifié » marker of the film, inline in the bar, light on ink */
@@ -1602,12 +1521,6 @@ label.checkbox:has(input:disabled) {
   outline-offset: 1px;
 }
 
-label.segmented__option:has(input:disabled) {
-  color: var(--text-2);
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 /* solar hour slider over the night / day bar (marks: sunrise and sunset) */
 .sun-day {
   display: flex;
@@ -1652,49 +1565,11 @@ label.segmented__option:has(input:disabled) {
 }
 
 .sun-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
   margin-top: var(--space-2);
 }
 
-.sun-chip {
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-control);
-  color: var(--text-1);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .sun-chip:hover:not(:disabled) {
-    border-color: var(--text-1);
-  }
-}
-
-.sun-chip[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: var(--accent-tint);
-  color: var(--text-1);
-}
-
-.sun-chip:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.sun-chip:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
 /* camera style tiles (look of the export format tiles) */
-.style-tiles {
+.style-tiles[data-orientation] {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
@@ -1760,59 +1635,8 @@ label.segmented__option:has(input:disabled) {
 /* ======================== fin Carte et Survol ============================ */
 
 /* ==========================================================================
- * Clarté : interrupteurs, puces à cocher, message sans trace, météo en une ligne, résumé d'export
+ * Clarté : message sans trace, météo en une ligne, résumé d'export
  * ========================================================================== */
-/* option text lighter than the field labels (600): the labels lead, the options follow */
-label.checkbox {
-  font-weight: 500;
-  color: var(--text-1);
-}
-
-/* on / off of a whole feature (habillage, a widget, météo, repères…): a switch, the label in bold */
-label.checkbox--switch {
-  font-weight: 600;
-}
-
-label.checkbox.checkbox--switch input {
-  position: relative;
-  flex: none;
-  width: 30px;
-  height: 18px;
-  border: 1px solid var(--text-2);
-  border-radius: 999px;
-  background: var(--surface-control);
-  appearance: none;
-  cursor: pointer;
-  transition: background-color 120ms ease;
-}
-
-label.checkbox.checkbox--switch input::before {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--text-2);
-  transition: transform 120ms ease;
-}
-
-label.checkbox.checkbox--switch input:checked {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-
-label.checkbox.checkbox--switch input:checked::before {
-  background: var(--surface-control);
-  transform: translateX(12px);
-}
-
-label.checkbox.checkbox--switch input:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
 /* track delete: Lucide cross, centred */
 .track__delete {
   display: inline-flex;
@@ -1909,12 +1733,6 @@ label.checkbox.checkbox--switch input:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  label.checkbox.checkbox--switch input,
-  label.checkbox.checkbox--switch input::before {
-    transition: none;
-  }
-}
 /* ============================== fin Clarté =============================== */
 
 /* « Mes projets »: the view at the last save on the left of the name, summary and date; the buttons under both */

@@ -70,3 +70,24 @@ describe('CameraPanel: duration of the flyover', () => {
     act(() => without.root.unmount())
   })
 })
+
+describe('CameraPanel: the presets', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('are a radio group of tiles: the current one is checked, choosing another sets the camera', async () => {
+    const { host, root } = await mount(timed, 60)
+    const group = host.querySelector('[role="radiogroup"][aria-labelledby]')!
+    const tile = (name: string) => [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find((r) => r.labels?.[0]?.textContent?.startsWith(name))!
+    expect(tile('Poursuite').checked).toBe(true)
+    expect(tile('Oiseau').checked).toBe(false)
+    await act(async () => tile('Oiseau').click())
+    expect(useAppStore.getState().settings.camera.style).toBe('sway')
+    expect(tile('Oiseau').checked).toBe(true)
+    // settings that match no preset show a tile of their own, which is already chosen
+    await act(async () => useAppStore.getState().setSetting('camera', { ...useAppStore.getState().settings.camera, distance: 1.11 }))
+    expect(tile('Personnalisé').checked).toBe(true)
+    act(() => root.unmount())
+  })
+})

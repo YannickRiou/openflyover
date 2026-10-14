@@ -277,11 +277,10 @@ const SCENARIOS = [
         const overlaySwitch = tab === 'habillage' ? await switchOf(page, 'habillage', "Afficher l'habillage") : null
         if (overlaySwitch && !(await overlaySwitch.evaluate((el) => el.checked))) await overlaySwitch.evaluate((el) => el.click())
         else if (overlaySwitch) await overlaySwitch.dispose()
-        // a group of choices: its radio group, else the parent of the labels of its radio buttons
+        // a group of choices: its radio group
         const overflowing = await page.$$eval(
-          `[data-testid="tab-panel-${tab}"] input[type="radio"]`,
-          (radios) =>
-            [...new Set(radios.map((r) => r.closest('[role="radiogroup"]') ?? r.closest('label')?.parentElement))].filter((g) => g && g.scrollWidth > g.clientWidth + 1).length,
+          `[data-testid="tab-panel-${tab}"] [role="radiogroup"]`,
+          (groups) => groups.filter((g) => g.scrollWidth > g.clientWidth + 1).length,
         )
         if (overlaySwitch) await overlaySwitch.evaluate((el) => el.checked && el.click())
         assert(overflowing === 0, `onglet ${tab} : ${overflowing} choix qui débordent sur le côté`)
@@ -710,6 +709,7 @@ const SCENARIOS = [
       assert(await page.$eval(options, (b) => b.getAttribute('aria-expanded') === 'true'), '« Options du film » ne dit pas que son panneau est ouvert')
       assert(await page.$(`${panel} button::-p-text(Ajouter une musique)`), 'bouton « Ajouter une musique… » du panneau')
       assert(await page.$(`${panel} input[type="checkbox"]`), 'case « Arrêts automatiques » du panneau')
+      assert(await page.$eval(`${panel} input[type="checkbox"]`, (i) => i.labels?.[0]?.textContent.trim() === 'Arrêts automatiques'), 'la case du panneau ne s’appelle pas « Arrêts automatiques »')
       await page.keyboard.press('Escape')
       await gone(panel)
       assert(await inspectorShown(), 'Échap sur les options du film a aussi désélectionné le bloc')
@@ -1195,8 +1195,12 @@ const SCENARIOS = [
             tab,
           )
         }
-        await tap('[data-testid="tab-panel-survol"] label:has(input[value="Oiseau"])')
-        await until(page, () => document.querySelector('[data-testid="tab-panel-survol"] input[value="Oiseau"]')?.checked === true)
+        const tile = (text) => `[data-testid="tab-panel-survol"] [role="radiogroup"] label::-p-text(${text})`
+        const tileChecked = (text) =>
+          page.evaluate((t) => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].find((i) => i.labels?.[0]?.textContent.startsWith(t))?.checked === true, text)
+        await tap(tile('Oiseau'))
+        await until(page, () => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].some((i) => i.labels?.[0]?.textContent.startsWith('Oiseau') && i.checked))
+        assert(await tileChecked('Oiseau'), 'le préréglage « Oiseau » n’est pas choisi')
         await tap('[data-testid="side-panel"] button[aria-label="Terminé"]')
         await until(page, () => document.querySelector('[data-testid="side-panel"]').hidden)
         // the sample has no stop of its own: one at the marker

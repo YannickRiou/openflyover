@@ -238,3 +238,35 @@ describe('TrackList, ordering the stages « À la suite »', () => {
     act(() => root.unmount())
   })
 })
+
+describe('TrackList, « Plusieurs traces »', () => {
+  afterEach(() => {
+    resetAppStore()
+    document.body.innerHTML = ''
+  })
+
+  it('is a radio group of three modes, and « À la suite » shows the stage card switch', async () => {
+    resetAppStore()
+    useAppStore.getState().replaceTracks([drawnTrack(), { ...drawnTrack(), id: 'other', name: 'Autre' }])
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TrackList />))
+    const group = host.querySelector('[role="radiogroup"][aria-labelledby]')!
+    expect(group.getAttribute('aria-describedby')).toBeTruthy()
+    const radios = [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')]
+    expect(radios.map((r) => [r.labels?.[0]?.textContent, r.checked])).toEqual([
+      ['La première', true],
+      ['À la suite', false],
+      ['En parallèle', false],
+    ])
+    expect(host.querySelector('input[role="switch"]')).toBeNull()
+    await act(async () => radios[1].click())
+    expect(useAppStore.getState().settings.race.sequence).toBe(true)
+    const card = host.querySelector<HTMLInputElement>('input[role="switch"]')!
+    expect(card.labels?.[0]?.textContent).toBe('Carton au début de chaque étape')
+    const before = card.checked
+    await act(async () => card.click())
+    expect(host.querySelector<HTMLInputElement>('input[role="switch"]')!.checked).toBe(!before)
+    act(() => root.unmount())
+  })
+})

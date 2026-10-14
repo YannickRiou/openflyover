@@ -195,47 +195,52 @@
   border-radius: var(--radius-md);
 }
 
+.format-switch[data-orientation] {
+  flex-flow: row nowrap;
+  gap: 2px;
+}
+
+/* an option is a Radio of a `look="plain"` group: its label is the button, the native radio in it is hidden */
 .format-switch__option {
-  position: relative;
+  display: block;
+}
+
+.format-switch__option .option__label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 34px;
   height: 28px;
+  padding: 0;
+  gap: 0;
   border-radius: var(--radius-sm);
   color: var(--color-glacier);
   cursor: pointer;
 }
 
 @media (hover: hover) {
-  .format-switch__option:hover {
+  .format-switch__option .option__label:hover {
     background: rgb(255 255 255 / 0.1);
     color: var(--color-white);
   }
 }
 
-.format-switch__option:has(input:checked) {
+.format-switch__option .option__label[data-selected='true'] {
   background: var(--color-white);
   color: var(--color-ink);
 }
 
-.format-switch__option:has(input:focus-visible) {
+.format-switch__option .option__label[data-focus-visible='true'] {
   outline: var(--focus-ring-on-dark);
   outline-offset: 1px;
 }
 
-.format-switch__option:has(input:disabled) {
-  cursor: not-allowed;
+.format-switch__option[data-disabled='true'] {
   opacity: 0.4;
 }
 
-.format-switch__option input,
-.format-tile input {
-  position: absolute;
-  width: 0;
-  height: 0;
-  margin: 0;
-  opacity: 0;
+.format-switch__option[data-disabled='true'] .option__label {
+  cursor: not-allowed;
 }
 
 /* Rail (tabs) -------------------------------------------------------------- */
@@ -829,17 +834,27 @@
   flex-direction: column;
 }
 
-.format-tiles {
+/* (the group is a horizontal RadioGroup: `[data-orientation]` comes after HeroUI's rule, a flex row with a 16 px gap) */
+.format-tiles[data-orientation] {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
 }
 
+/* a tile is a Radio of a `look="plain"` group: its label is the tile, the native radio in it is hidden */
 .format-tile {
-  position: relative;
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.format-tile .option__label {
+  position: relative;
+  flex: 1 1 auto;
   flex-direction: column;
-  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
   gap: 2px;
   padding: var(--space-2) var(--space-1) 6px;
   border: 1px solid var(--line);
@@ -850,26 +865,31 @@
 }
 
 @media (hover: hover) {
-  .format-tile:hover {
+  .format-tile .option__label:hover {
     border-color: var(--text-1);
   }
 }
 
-.format-tile:has(input:checked) {
+.format-tile .option__label[data-selected='true'] {
   border-color: var(--accent);
   background: var(--accent-tint);
   color: var(--text-1);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-.format-tile:has(input:focus-visible) {
+.format-tile .option__label[data-focus-visible='true'] {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
-.format-tile:has(input:disabled) {
-  cursor: not-allowed;
+.format-tile[data-disabled='true'],
+fieldset:disabled .format-tile {
   opacity: 0.45;
+}
+
+.format-tile[data-disabled='true'] .option__label,
+fieldset:disabled .format-tile .option__label {
+  cursor: not-allowed;
 }
 
 .format-tile__label {
@@ -1052,6 +1072,33 @@
   margin: 0;
   color: var(--color-glacier);
   font-size: 12px;
+}
+
+/* the panel is dark: its checkbox is light on ink, bold like the title */
+.film-tl__menu .checkbox__content {
+  color: var(--text-on-dark);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.film-tl__menu .checkbox__control {
+  border-color: var(--text-on-dark-2);
+  background: transparent;
+}
+
+.film-tl__menu .checkbox[data-selected='true'] .checkbox__control {
+  border-color: var(--accent-on-dark);
+}
+
+.film-tl__menu .checkbox__control::before,
+.film-tl__menu .checkbox:hover .checkbox__control::before,
+.film-tl__menu .checkbox [data-slot='checkbox-content'][data-hovered='true'] .checkbox__control::before {
+  background: var(--accent-on-dark);
+}
+
+.film-tl__menu .checkbox [data-slot='checkbox-content'][data-focus-visible='true'] .checkbox__control {
+  outline: var(--focus-ring-on-dark);
+  box-shadow: none;
 }
 
 /* stops inside the flight bar of the « Plans » lane: a tinted window with an accent edge on top */
@@ -1445,13 +1492,23 @@
 }
 
 .strava__item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px var(--space-2);
-  align-items: center;
+  display: flex;
+  width: 100%;
   padding: var(--space-2) var(--space-1);
   border-bottom: 1px solid var(--line);
-  cursor: pointer;
+}
+
+/* the checkbox, then the name over the details (the label text of the Checkbox) */
+.strava__item .checkbox__content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.strava__item .checkbox__content > :last-child {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
 }
 
 .strava__name {
@@ -1462,7 +1519,6 @@
 }
 
 .strava__meta {
-  grid-column: 2;
   color: var(--text-2);
   font-size: 12px;
 }
@@ -1613,9 +1669,6 @@
   .select-field,
   .input,
   .select-bar,
-  .sun-chip,
-  label.segmented__option,
-  label.checkbox,
   .fold__summary,
   .track-menu__item {
     min-height: 44px;
@@ -1627,11 +1680,6 @@
 
   .shell :is(input:not([type='range'], [type='checkbox'], [type='radio'], [type='color']), select, textarea) {
     font-size: 16px;
-  }
-
-  label.checkbox input {
-    width: 22px;
-    height: 22px;
   }
 
   .range {
