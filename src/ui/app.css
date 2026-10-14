@@ -25,173 +25,7 @@
   border: 0;
 }
 
-/* Track list -------------------------------------------------------------- */
-.tracks {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.track {
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto auto;
-  grid-template-rows: auto auto;
-  column-gap: var(--space-2);
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--surface-card);
-}
-
-.track__swatch {
-  grid-row: 1 / span 2;
-}
-
-.track__fly {
-  grid-column: 3;
-  grid-row: 1 / span 2;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-2);
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .track__fly:hover:not(:disabled) {
-    background: var(--line);
-  }
-}
-
-.track__name {
-  grid-column: 2;
-  font-weight: 700;
-  color: var(--text-1);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.track__meta {
-  grid-column: 2;
-  font-size: 12px;
-  color: var(--text-2);
-}
-
-.track__delete {
-  grid-column: 4;
-  grid-row: 1 / span 2;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-2);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .track__delete:hover {
-    background: var(--line);
-  }
-}
-
-/* « À la suite »: the cards are the stages, moved by their handle (the only part that does not scroll on touch) */
-.track--sortable {
-  position: relative;
-  padding-left: calc(var(--space-3) + 20px);
-}
-
-.track__handle {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: calc(var(--space-3) + 16px);
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-  background: transparent;
-  color: var(--text-2);
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-.track__handle:disabled {
-  cursor: not-allowed;
-}
-
-.track--lifted {
-  z-index: 2;
-  box-shadow: var(--shadow-pop);
-  cursor: grabbing;
-}
-
-.track--lifted .track__handle {
-  cursor: grabbing;
-}
-
-/* the insertion line: where the lifted card lands, in the gap before or after this one */
-.track--drop-before::before,
-.track--drop-after::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  left: 0;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
-.track--drop-before::before {
-  top: calc(var(--space-2) / -2 - 2px);
-}
-
-.track--drop-after::after {
-  bottom: calc(var(--space-2) / -2 - 2px);
-}
-
-.tracks__sort {
-  margin-top: var(--space-2);
-}
-
-.track__badge {
-  margin-left: var(--space-2);
-  font-weight: 600;
-  color: var(--text-info);
-}
-
-/* « Prévoir la sortie »: folded under the card, date and departure side by side */
-.track__plan {
-  grid-column: 2 / span 2;
-  margin-top: var(--space-2);
-}
-
-.track__plan-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-bottom: var(--space-1);
-}
-
-.track__plan-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.tracks__chain {
-  margin-top: var(--space-3);
-}
-
+/* the empty-list line of the « Projet » panel */
 .tracks__empty {
   padding: var(--space-3);
   border-radius: var(--radius-md);
@@ -199,59 +33,6 @@
   font-size: 13px;
   color: var(--text-2);
   text-align: center;
-}
-
-/* Ghost race -------------------------------------------------------------- */
-.race {
-  margin-top: var(--space-3);
-}
-
-.race__board {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.race__row {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto auto;
-  column-gap: var(--space-2);
-  align-items: center;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--surface-panel);
-  font-size: 13px;
-}
-
-.race__swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1px solid var(--swatch-border);
-}
-
-.race__name {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-weight: 600;
-  color: var(--text-1);
-}
-
-.race__distance {
-  font-variant-numeric: tabular-nums;
-  color: var(--text-2);
-}
-
-.race__gap {
-  min-width: 8ch;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--text-1);
 }
 
 /* Settings ---------------------------------------------------------------- */
@@ -1014,49 +795,6 @@
 }
 
 /* Track colour legend (bottom left of the 3D view) ----------------------- */
-.view__stage > .track-legend {
-  inset: auto auto var(--space-4) var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  width: 220px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--color-ink);
-  color: var(--color-white);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-
-.track-legend__title {
-  font-weight: 600;
-}
-
-.track-legend__bar {
-  height: 10px;
-  border-radius: 2px;
-}
-
-.track-legend__range {
-  display: flex;
-  justify-content: space-between;
-}
-
-.track-legend__missing {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.track-legend__swatch {
-  width: 16px;
-  height: 6px;
-  border: 1px solid var(--color-white);
-  border-radius: 2px;
-  background: var(--color-ink-soft);
-}
-
 /* Video export ------------------------------------------------------------ */
 /* video export + still image buttons, side by side */
 .export__actions {
@@ -1073,47 +811,6 @@
   width: 100%;
   height: 10px;
   accent-color: var(--accent);
-}
-
-/* batch export: one row of resolution chips per aspect, then the list of the files */
-.batch-formats {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.batch-formats__row {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.batch-formats__aspect {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.batch-results {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.batch-results__item {
-  display: grid;
-  justify-items: start;
-  gap: 2px;
-  overflow-wrap: anywhere;
-}
-
-.batch-results__label {
-  font-size: 13px;
-  font-weight: 600;
 }
 
 /* Weather of the outing --------------------------------------------------- */
@@ -1326,130 +1023,10 @@
 /* ==========================================================================
  * Panel tabs: foldable sections, setting rows, ⓘ, day of the sun, moments, style tiles
  * ========================================================================== */
-.panel-section__body,
 .panel-section__body > section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-/* a secondary setting (SettingRow): name and value on one line, a list of rows separated by rules; its control unfolds under it */
-.setting-row {
-  border-top: 1px solid var(--line);
-}
-
-.setting-row + .setting-row {
-  margin-top: calc(-1 * var(--space-3));
-}
-
-.setting-row__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  min-height: var(--control-h);
-  padding: var(--space-2) 0;
-  border: 0;
-  background: none;
-  color: var(--text-1);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-}
-
-.setting-row__head:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.setting-row__head > .icon {
-  flex: none;
-  color: var(--text-2);
-  transform: rotate(-90deg);
-}
-
-.setting-row__head[aria-expanded='true'] > .icon {
-  transform: none;
-}
-
-@media (hover: hover) {
-  .setting-row__head:hover > .icon {
-    color: var(--text-1);
-  }
-}
-
-.setting-row__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding-bottom: var(--space-3);
-}
-
-/* « Poids de rendu »: three bars like a signal icon, filled in navy, the rest periwinkle; the heaviest in chartreuse on a navy chip */
-.render-weight {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 16px;
-  padding: 2px 3px;
-  margin-left: var(--space-2);
-  border-radius: 4px;
-  vertical-align: middle;
-  cursor: help;
-}
-
-.render-weight__bar {
-  width: 3px;
-  border-radius: 1px;
-  background: var(--color-periwinkle);
-}
-
-.render-weight__bar:nth-child(1) {
-  height: 4px;
-}
-
-.render-weight__bar:nth-child(2) {
-  height: 8px;
-}
-
-.render-weight__bar:nth-child(3) {
-  height: 12px;
-}
-
-.render-weight__bar--on {
-  background: var(--color-navy);
-}
-
-.render-weight--3 {
-  background: var(--color-navy);
-}
-
-.render-weight--3 .render-weight__bar--on {
-  background: var(--color-chartreuse);
-}
-
-/* « Imposé par Haute » / « Personnalisé » after the name of a row the export quality drives */
-.preset-badge {
-  display: inline-block;
-  margin-left: var(--space-2);
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  color: var(--color-navy);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-.preset-badge--preset {
-  background: var(--color-periwinkle);
-}
-
-.preset-badge--custom {
-  background: var(--color-chartreuse);
 }
 
 /* label + ⓘ on one line */
@@ -1563,19 +1140,6 @@
 /* ==========================================================================
  * Clarté : message sans trace, météo en une ligne, résumé d'export
  * ========================================================================== */
-/* track delete: Lucide cross, centred */
-.track__delete {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-@media (hover: hover) {
-  .track__delete:hover {
-    color: var(--text-1);
-  }
-}
-
 /* widget options: nested under their switch by a rule, the first widget of a section without its top rule */
 .overlay-widget__body {
   margin-left: 14px;
@@ -1647,18 +1211,6 @@
   font-family: var(--font-body);
 }
 
-/* export: duration, images, codec and size on one tinted line */
-.export__summary {
-  margin: 0;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--surface-card);
-  color: var(--text-1);
-  font-size: 13px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ============================== fin Clarté =============================== */
 
 /* « Mes projets »: the view at the last save on the left of the name, summary and date; the buttons under both */
@@ -1685,85 +1237,6 @@
 
 .library__item > .project__row:last-child {
   grid-column: 1 / -1;
-}
-
-/* « Historique des rendus »: one row per render (the look of the setting rows), name and facts stacked, details unfolded */
-.history {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.history__item + .history__item {
-  margin-top: 0;
-}
-
-/* the panel's own title stays sticky: this header scrolls with its section */
-.export-history > .fold__summary {
-  position: static;
-}
-
-.history__head {
-  align-items: flex-start;
-}
-
-.history__main {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.history__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.history__meta {
-  color: var(--text-2);
-  font-size: 12px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.history__head > .icon {
-  margin-top: 4px;
-}
-
-.history__rows {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0;
-  font-size: 12px;
-}
-
-.history__rows + .history__rows {
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--line);
-}
-
-.history__row {
-  display: flex;
-  gap: var(--space-3);
-  justify-content: space-between;
-}
-
-.history__row dt {
-  flex: none;
-  color: var(--text-2);
-}
-
-.history__row dd {
-  margin: 0;
-  min-width: 0;
-  color: var(--text-1);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  overflow-wrap: anywhere;
 }
 
 /* « Réglages »: the line that says these preferences belong to the device */

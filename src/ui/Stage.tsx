@@ -15,6 +15,11 @@ import { Button, Tip } from './primitives'
 const FlyoverCanvas = lazy(() => import('../scene/FlyoverCanvas').then((m) => ({ default: m.FlyoverCanvas })))
 const OverlayCanvas = lazy(() => import('../overlay/OverlayCanvas').then((m) => ({ default: m.OverlayCanvas })))
 
+/** Pale sky behind the transparent canvas of a view that fills the stage. */
+const SKY = 'bg-[linear-gradient(180deg,var(--color-glacier)_0%,var(--color-paper)_100%)]'
+/** A button floating over the view, at its right edge (the top is set per button). */
+const FLOAT = 'btn-float absolute right-3 z-4'
+
 /**
  * Centre of the shell: the 3D view and its overlay framed to the output format (letterbox in ink, the export
  * renders exactly this area), or filling the stage with « Libre » or without a track; the « Recadrer » and « Zones de
@@ -49,9 +54,14 @@ export function Stage({ children }: { children?: ReactNode }) {
   const rect = size && aspect !== null ? frameRect(size.width, size.height, aspect) : null
 
   return (
-    <div ref={viewport} className={aspect === null ? 'view__viewport' : 'view__viewport view__viewport--framed'} role="region" aria-label={t('stage.view')}>
-      {/* .view__stage keeps its name: the overlay canvas and the legend are laid out against it */}
-      <div className="view__stage" style={rect ?? undefined}>
+    <div
+      ref={viewport}
+      className={`relative min-h-0 flex-1 overflow-hidden ${aspect === null ? SKY : 'bg-chrome'} ${hasTracks ? 'phone:h-(--phone-preview-h) phone:flex-none' : ''}`}
+      role="region"
+      aria-label={t('stage.view')}
+    >
+      {/* .view__stage keeps its name: the canvases are positioned against it (app.css) and the thumbnail looks for it */}
+      <div className="view__stage absolute inset-0 overflow-hidden" style={rect ?? undefined}>
         <Suspense>
           <FlyoverCanvas />
         </Suspense>
@@ -65,7 +75,7 @@ export function Stage({ children }: { children?: ReactNode }) {
         <Tip text={withShortcut(t('stage.fit'), 'fit')} side="left">
           <Button
             variant="icon"
-            className="icon-btn--float view__fit"
+            className={`${FLOAT} top-3`}
             onClick={() => useAppStore.getState().requestFit()}
             disabled={exporting}
             aria-label={t('stage.fit')}
@@ -78,7 +88,7 @@ export function Stage({ children }: { children?: ReactNode }) {
         <Tip text={withShortcut(t('stage.safeZonesTip'), 'safe-zones')} side="left">
           <Button
             variant="icon"
-            className="icon-btn--float view__safe-zones"
+            className={`${FLOAT} top-14 touch:top-16`}
             onClick={() => useSafeZonesStore.getState().toggle()}
             aria-pressed={safeZones}
             aria-label={t('stage.safeZones')}
