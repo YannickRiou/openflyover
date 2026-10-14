@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Tailwind CSS under the interface**: Tailwind 4 (MIT, build time only, nothing downloaded or added at run time) is set up with the same palette, fonts, radii and shadows, a `dark` variant that follows the theme setting, and its reset; the existing styles move into a lower layer so utility classes win. The interface looks the same.
+
 ## 1.0.0 (October 2026)
 
 - **English interface, and a language selector**: the whole interface, the texts drawn into the films and posters (counter labels, units, card wording, weather words, dates, credits), the messages and the errors now exist in French and English. A flag button in the top bar, between « ? » and « Exporter », opens the list of languages (arrows and Escape work); the choice is a device preference kept with the appearance. A first run follows the browser's language (English, else French). The French interface is unchanged. No text is left in the code any more: everything goes through `t('domain.key')` with one file per domain and language in `src/i18n` (a missing key in a language fails the build, a test checks that both languages use the same placeholders); numbers and dates follow the language (« 1 234,5 » / « 1,234.5 »). The diagnostic report stays in French (it is pasted into bug reports), the user guide stays in French.

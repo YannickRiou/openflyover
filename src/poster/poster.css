@@ -1,3 +1,4 @@
+@layer components {
 /* « Affiche » mode of the export drawer (PosterPanel). Colours from theme.css only. */
 
 /* live thumbnail of the layout, like a print laid on the panel */
@@ -27,4 +28,5 @@
   .poster__again:hover {
     color: var(--color-ink);
   }
+}
 }

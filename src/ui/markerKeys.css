@@ -1,3 +1,4 @@
+@layer components {
 /*
  * marker keys of the timeline (« Marqueur » lane): a round dot, where the other keys are diamonds, in the colour of the
  * marker from that key on (--key-color, set by the timeline); a thin white edge keeps a dark colour readable, and the
@@ -14,4 +15,5 @@
   background: var(--key-color, var(--color-chartreuse));
   outline: 2px solid var(--color-white);
   outline-offset: 2px;
+}
 }

@@ -1,3 +1,4 @@
+@layer components {
 /* « Repères et points d'intérêt » (LandmarkPanel): one list of OSM landmarks and points of interest, each row with its
    eye (label shown / hidden) and its « Arrêt » (stop in the film, duration beside it) */
 .places__tools {
@@ -163,4 +164,5 @@ button.landmark__kind {
 .place__actions {
   display: flex;
   align-items: center;
+}
 }

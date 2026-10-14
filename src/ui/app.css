@@ -1,3 +1,4 @@
+@layer components {
 /* Components of the panels and the view (layout of the shell: shell.css). Colours come from theme.css only. */
 
 /* 3D view and its overlays (the stage is laid out by shell.css) */
@@ -2224,4 +2225,5 @@
 /* « Réglages »: the line that says these preferences belong to the device */
 .prefs__intro {
   padding-top: var(--space-3);
+}
 }

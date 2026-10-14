@@ -1,3 +1,4 @@
+@layer components {
 /* Export drawer: section headings of « Vidéo », error and warning lines (Vidéo and Affiche). Colours from theme.css only. */
 
 /* « Format », « Encodage », « Rendu »: a small caps heading over a hairline, the fields of the section under it */
@@ -31,4 +32,5 @@
 .export__warning {
   color: var(--status-attention);
   font-weight: 600;
+}
 }
