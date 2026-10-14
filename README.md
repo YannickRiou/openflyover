@@ -104,6 +104,7 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 |---|---|
 | [User guide](docs/user-guide.html) | using the app: import, planning, editing, export, offline, shortcuts |
 | [Knowledge base](docs/how-it-works.html) | how the app is built, explained for newcomers to web development |
+| [Developer handbook](docs/handbook/index.html) | how the project was built and how to change it (history, web and Rust notions explained, repository tour, recipes, release), to maintain it without help |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | coordinates, shared contracts, modules: read it before coding |
 | [Deploying and building](docs/deploying.md) | web server setup (HTTPS, nginx, Apache), desktop application build |
 | [Desktop installers](docs/installers.md) | installers built on GitHub, signing |
