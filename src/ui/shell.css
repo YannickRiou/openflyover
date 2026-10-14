@@ -133,9 +133,7 @@
 }
 
 /* readouts */
-.panel output,
-.climb__meta,
-.dock .field__hint {
+.panel output {
   font-variant-numeric: tabular-nums;
 }
 
@@ -195,62 +193,6 @@
 
 .dock .export__actions {
   flex-direction: column;
-}
-
-/* a tile is a Radio of a `look="plain"` group: its label is the tile, the native radio in it is hidden */
-.format-tile {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  min-width: 0;
-}
-
-.format-tile .option__label {
-  position: relative;
-  flex: 1 1 auto;
-  flex-direction: column;
-  justify-content: flex-start;
-  min-width: 0;
-  gap: 2px;
-  padding: var(--space-2) var(--space-1) 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-control);
-  color: var(--text-1);
-  cursor: pointer;
-}
-@media (hover: hover) {
-  .format-tile .option__label:hover {
-    border-color: var(--text-1);
-  }
-}
-
-.format-tile .option__label[data-selected='true'] {
-  border-color: var(--accent);
-  background: var(--accent-tint);
-  color: var(--text-1);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-
-.format-tile .option__label[data-focus-visible='true'] {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.format-tile[data-disabled='true'],
-fieldset:disabled .format-tile {
-  opacity: 0.45;
-}
-
-.format-tile[data-disabled='true'] .option__label,
-fieldset:disabled .format-tile .option__label {
-  cursor: not-allowed;
-}
-
-.format-tile__label {
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* The form of a point of interest (TrackPicker.tsx), in a Popover */
@@ -389,12 +331,6 @@ fieldset:disabled .format-tile .option__label {
 
   .view {
     order: 1;
-  }
-
-  /* with a film: the preview at a fixed height, the timeline takes the rest */
-  .view:has(> [data-timeline]) > .view__viewport {
-    flex: none;
-    height: var(--phone-preview-h);
   }
 
   /* half sheets: from under the transport row down to the bottom, over the timeline and the tab bar (the dock: `dock-frame`) */
