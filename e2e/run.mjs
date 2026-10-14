@@ -752,8 +752,19 @@ const SCENARIOS = [
         await page.mouse.click(spot.x, spot.y, { button: 'right' })
       }
       const trackMenu = '[role="menu"][aria-label="Ajouter ici"]'
-      await rightClickTrack()
-      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      // the view keeps moving while the spot is scanned: when the click misses the track, look for a spot again
+      const openTrackMenu = async () => {
+        for (let attempt = 1; ; attempt++) {
+          await rightClickTrack()
+          try {
+            await page.waitForSelector(trackMenu, { visible: true, timeout: 5000 })
+            return
+          } catch (error) {
+            if (attempt === 4) throw error
+          }
+        }
+      }
+      await openTrackMenu()
       const rows = await page.$$eval(`${trackMenu} [role="menuitem"]`, (all) => all.map((r) => r.textContent.trim()))
       assert(rows.slice(0, 3).join() === 'Ajouter un arrêt ici,Ajouter un texte ici,Accélérer / ralentir ici', `lignes du menu du clic droit : ${rows.join(', ')}`)
       assert((await focusedText()) === 'Ajouter un arrêt ici', `première ligne du menu du clic droit : ${await focusedText()}`)
@@ -762,8 +773,7 @@ const SCENARIOS = [
       await page.keyboard.press('Escape')
       await gone(trackMenu)
       const stops = await laneCount(page, 'Arrêts')
-      await rightClickTrack()
-      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      await openTrackMenu()
       await page.click(`${trackMenu} [role="menuitem"]::-p-text(Ajouter un arrêt ici)`)
       await gone(trackMenu)
       await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
