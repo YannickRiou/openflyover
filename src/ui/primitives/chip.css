@@ -26,21 +26,25 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface-control);
   color: var(--text-1);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 16px;
   cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out;
 }
 
 @media (hover: hover) {
   .chip .checkbox__content:hover,
   .chip .radio__content:hover {
-    border-color: var(--text-1);
+    border-color: var(--line-strong);
   }
 }
 
@@ -78,6 +82,13 @@ fieldset:disabled .chip .radio__content {
   background: transparent;
   color: var(--text-2);
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip .checkbox__content,
+  .chip .radio__content {
+    transition: none;
+  }
 }
 
 @media (pointer: coarse) {

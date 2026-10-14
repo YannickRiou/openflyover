@@ -20,6 +20,8 @@ export interface TextFieldProps {
   id?: string
   /** Layout of the screen around it (margin, flex share): never colours or sizes of the field itself. */
   className?: string
+  /** Classes of the input itself, for a field that does not take the app's `.input` look (the project name on the top bar). */
+  inputClassName?: string
   'aria-label'?: string
   'aria-describedby'?: string
   onFocus?(event: FocusEvent<HTMLInputElement>): void
@@ -28,12 +30,12 @@ export interface TextFieldProps {
 }
 
 /** A line of text, with its label above it when it has one. HeroUI's `.input` is the project's `.input` (theme.css): the look is the app's. */
-export function TextField({ value, onChange, label, placeholder, disabled, maxLength, title, className, ...rest }: TextFieldProps) {
+export function TextField({ value, onChange, label, placeholder, disabled, maxLength, title, className, inputClassName, ...rest }: TextFieldProps) {
   return (
     <Titled title={title}>
       <HeroTextField {...rest} className={['field', className].filter(Boolean).join(' ')} value={value} onChange={onChange} isDisabled={disabled}>
         {label !== undefined && <HeroLabel className="field__label">{label}</HeroLabel>}
-        <HeroInput placeholder={placeholder} maxLength={maxLength} />
+        <HeroInput className={inputClassName} placeholder={placeholder} maxLength={maxLength} />
       </HeroTextField>
     </Titled>
   )

@@ -26,8 +26,6 @@
 }
 
 /* Focus on the ink chrome */
-.topbar :focus-visible,
-.rail :focus-visible,
 .status :focus-visible,
 .view__fit:focus-visible,
 .view__safe-zones:focus-visible,
@@ -39,12 +37,6 @@
 }
 
 /* Icon buttons (their look is `primitives/button.css`; the contexts below) ---------------- */
-@media (hover: hover) {
-  .topbar .icon-btn:hover:not(:disabled) {
-    background: rgb(255 255 255 / 0.1);
-  }
-}
-
 .icon-btn--on {
   color: var(--color-accent-light);
 }
@@ -79,277 +71,6 @@
   to {
     opacity: 1;
   }
-}
-
-/* Top bar ------------------------------------------------------------------ */
-.topbar {
-  position: relative;
-  z-index: 10;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-2) 0 var(--space-3);
-  border-bottom: 1px solid var(--color-ink-soft);
-  background: var(--surface-chrome);
-  color: var(--color-white);
-}
-
-.topbar__start {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.topbar__logo {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  margin-right: var(--space-1);
-}
-
-.topbar__name {
-  flex: 0 1 220px;
-  min-width: 64px;
-}
-
-/* the field (TextField primitive) drawn as plain text on the bar, a field once focused */
-.topbar__name .input {
-  height: var(--control-h);
-  padding: 0 var(--space-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-white);
-  font-weight: 600;
-  text-overflow: ellipsis;
-}
-
-.topbar__name .input::placeholder {
-  color: var(--color-glacier);
-  opacity: 1;
-}
-
-@media (hover: hover) {
-  .topbar__name .input:hover {
-    border-color: var(--color-ink-soft);
-  }
-}
-
-.topbar__name .input:focus {
-  background: var(--color-white);
-  color: var(--color-ink);
-}
-
-.topbar__name .input:focus::placeholder {
-  color: var(--color-ink-soft);
-}
-
-.topbar__save {
-  position: relative;
-}
-
-/* changes not saved yet: a small dot on the icon */
-.topbar__save--unsaved::after {
-  content: '';
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--status-attention-on-dark);
-}
-
-/* just saved: the accent colour for a few seconds */
-.topbar__save--saved {
-  color: var(--accent-on-dark);
-}
-
-.topbar__sep {
-  flex: none;
-  width: 1px;
-  height: 20px;
-  margin: 0 var(--space-1);
-  background: var(--color-ink-soft);
-}
-
-.topbar__end {
-  display: flex;
-  justify-self: end;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.topbar__export {
-  min-height: var(--control-h);
-  padding: 0 14px 0 10px;
-  font-size: 14px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Output format switcher (centre of the bar) */
-.format-switch {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--color-ink-soft);
-  border-radius: var(--radius-md);
-}
-
-.format-switch[data-orientation] {
-  flex-flow: row nowrap;
-  gap: 2px;
-}
-
-/* an option is a Radio of a `look="plain"` group: its label is the button, the native radio in it is hidden */
-.format-switch__option {
-  display: block;
-}
-
-.format-switch__option .option__label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 28px;
-  padding: 0;
-  gap: 0;
-  border-radius: var(--radius-sm);
-  color: var(--color-glacier);
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .format-switch__option .option__label:hover {
-    background: rgb(255 255 255 / 0.1);
-    color: var(--color-white);
-  }
-}
-
-.format-switch__option .option__label[data-selected='true'] {
-  background: var(--color-white);
-  color: var(--color-ink);
-}
-
-.format-switch__option .option__label[data-focus-visible='true'] {
-  outline: var(--focus-ring-on-dark);
-  outline-offset: 1px;
-}
-
-.format-switch__option[data-disabled='true'] {
-  opacity: 0.4;
-}
-
-.format-switch__option[data-disabled='true'] .option__label {
-  cursor: not-allowed;
-}
-
-/* Rail (tabs) -------------------------------------------------------------- */
-.rail {
-  position: relative;
-  z-index: 9;
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  justify-content: space-between;
-  width: var(--rail-w);
-  padding: var(--space-2) 0;
-  border-right: 1px solid var(--color-ink-soft);
-  background: var(--surface-chrome);
-  color: var(--color-glacier);
-}
-
-/* eight tabs: they scroll when the window is too short (landscape phone) or, as a bottom bar, too narrow */
-.rail__tabs {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.rail__tab,
-.rail__toggle {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: 56px;
-  height: 50px;
-  margin: 0 auto;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .rail__tab:hover:not(:disabled, [aria-disabled='true']),
-  .rail__toggle:hover:not(:disabled) {
-    background: rgb(255 255 255 / 0.1);
-    color: var(--color-white);
-  }
-}
-
-.rail__tab[aria-selected='true'] {
-  color: var(--color-white);
-}
-
-.rail__toggle {
-  width: 40px;
-  height: 40px;
-}
-
-/* a setting of the tab is at its heaviest render weight: chartreuse dot on a navy ring, over the icon's corner */
-.rail__weight {
-  position: absolute;
-  top: 5px;
-  left: calc(50% + 6px);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-chartreuse);
-  box-shadow: 0 0 0 2px var(--color-navy);
-  pointer-events: none;
-}
-
-/* open tab: a bar of the accent against the panel side of the rail */
-.rail__tab[aria-selected='true']::before {
-  content: '';
-  position: absolute;
-  left: -4px;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-  background: var(--color-accent-light);
-}
-
-.shell__body--collapsed .rail__tab[aria-selected='true']::before {
-  display: none;
-}
-
-.rail__tab:disabled,
-.rail__tab[aria-disabled='true'],
-.rail__toggle:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.rail__label {
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
 }
 
 /* Panel (one tab at a time) ------------------------------------------------ */
@@ -396,7 +117,6 @@
 .tabpanel > .settings > .modified,
 .dock > .settings > .modified,
 .dock > .settings > .settings__close,
-.section-head,
 .fold__summary {
   position: sticky;
   top: 0;
@@ -427,24 +147,6 @@
   margin: var(--space-1) -6px 0 var(--space-1);
 }
 
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-  padding: var(--space-3) 0 var(--space-2);
-}
-
-.section-head > .section-title {
-  margin: 0;
-}
-
-.section-head__actions {
-  display: flex;
-  gap: var(--space-2);
-}
-
 /* foldable sections (PanelSection) */
 .fold__summary {
   display: flex;
@@ -463,10 +165,6 @@
 .fold__title {
   flex: 1 1 auto;
   margin: 0;
-}
-
-.fold__marker .modified {
-  position: static;
 }
 
 .fold:not([open]) {
@@ -1184,42 +882,12 @@ fieldset:disabled .format-tile .option__label {
   font: 600 12px/1.2 var(--font-body);
 }
 
-/* Phone only (see the media queries at the end): grip of a bottom sheet, « Plus d'actions » of the top bar */
-.sheet-handle,
-.topbar__more {
+/* Phone only (see the media queries at the end): grip of a bottom sheet */
+.sheet-handle {
   display: none;
 }
 
-/* the language menu, under its button */
-.topbar__menu {
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-}
-
-.topbar__menu .track-menu__item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* Language picker, after « ? » (LanguageMenu.tsx): flag and code, then the list of the languages */
-.lang-menu {
-  position: relative;
-}
-
-.lang-menu__button {
-  gap: 5px;
-  padding: 0 8px;
-  font-size: 12px;
-  letter-spacing: 0.03em;
-}
-
-.lang-menu__flag {
-  font-size: 16px;
-  line-height: 1;
-}
-
+/* Language picker, after « ? » (LanguageMenu.tsx): the list of the languages, under its button */
 .lang-menu__list {
   min-width: 160px;
 }
@@ -1666,6 +1334,7 @@ fieldset:disabled .format-tile .option__label {
   :root {
     --topbar-h: 56px;
     --control-h: 44px;
+    --control-h-lg: 44px;
   }
 
   .btn,
@@ -1686,13 +1355,7 @@ fieldset:disabled .format-tile .option__label {
     font-size: 16px;
   }
 
-  .format-switch__option {
-    width: 44px;
-    height: 44px;
-  }
-
   .icon-btn--float,
-  .rail__toggle,
   .track__fly,
   .track__delete {
     width: 44px;
@@ -1709,13 +1372,11 @@ fieldset:disabled .format-tile .option__label {
   }
 
   /* small glyphs: a wider invisible hit area around them */
-  .info-tip,
   .render-weight,
   .status__info {
     position: relative;
   }
 
-  .info-tip::before,
   .render-weight::before,
   .status__info::before {
     content: '';
@@ -1761,32 +1422,6 @@ fieldset:disabled .format-tile .option__label {
   }
 }
 
-/* Phone, and touch tablet in portrait: undo / redo, open and save in « Plus d'actions » */
-@media (max-width: 1023px) and (pointer: coarse), (max-width: 699px), (max-height: 499px) {
-  .topbar {
-    display: flex;
-    gap: var(--space-2);
-  }
-
-  .topbar__start {
-    flex: 1 1 auto;
-  }
-
-  .topbar__name {
-    flex: 1 1 auto;
-  }
-
-  .topbar__sep,
-  .topbar__start > .icon-btn {
-    display: none;
-  }
-
-  .topbar__more {
-    display: inline-flex;
-    width: var(--control-h);
-  }
-}
-
 /* Phone, either way up: the essentials in the top bar, the timeline folded into a strip, dialogs full screen (primitives/modal.css) */
 @media (max-width: 699px), (max-height: 499px) {
   :root {
@@ -1800,16 +1435,6 @@ fieldset:disabled .format-tile .option__label {
       calc(var(--statusbar-h) + env(safe-area-inset-bottom));
     height: 100dvh;
     padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
-  }
-
-  .topbar {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  /* no format picker (the export drawer has it) nor shortcuts */
-  .format-switch,
-  .topbar__end > .icon-btn:not(.topbar__more) {
-    display: none;
   }
 
   .status {
@@ -1855,17 +1480,6 @@ fieldset:disabled .format-tile .option__label {
   }
 }
 
-/* Landscape phone: the rail stays on the side, without its fold button (a tap on the open tab folds) */
-@media (max-height: 499px) and (min-width: 700px) {
-  .rail__toggle {
-    display: none;
-  }
-
-  .rail__tab {
-    height: 46px;
-  }
-}
-
 /*
  * Portrait phone (after CapCut): the preview keeps the top of the screen, the transport row and the timeline sit under
  * it, the tabs in a bottom bar; panel, export drawer and inspector are half sheets over the timeline and the tab bar,
@@ -1881,55 +1495,6 @@ fieldset:disabled .format-tile .option__label {
     flex-direction: column;
   }
 
-  .rail {
-    order: 3;
-    flex-direction: row;
-    width: auto;
-    height: 56px;
-    padding: 0;
-    border-top: 1px solid var(--color-ink-soft);
-    border-right: 0;
-  }
-
-  /* all eight tabs in a bar that scrolls sideways (App keeps the open one in sight) */
-  .rail__tabs {
-    flex: 1 1 auto;
-    flex-direction: row;
-    gap: 0;
-    padding: 0 var(--space-1);
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-  }
-
-  .rail__tab {
-    flex: none;
-    width: auto;
-    /* a part of the next tab shows past the edge: the bar reads as scrollable */
-    min-width: 72px;
-    height: 52px;
-    margin: 0;
-    padding: 0 var(--space-1);
-  }
-
-  .rail__tab[aria-selected='true']::before {
-    left: 12px;
-    right: 12px;
-    top: -2px;
-    bottom: auto;
-    width: auto;
-    height: 3px;
-    border-radius: 0 0 2px 2px;
-  }
-
-  .rail__label {
-    font-size: 11px;
-  }
-
-  .rail__toggle {
-    display: none;
-  }
-
   .view {
     order: 1;
   }
@@ -1938,20 +1503,6 @@ fieldset:disabled .format-tile .option__label {
   .view:has(> .film-tl) > .view__viewport {
     flex: none;
     height: var(--phone-preview-h);
-  }
-
-  /* the actions of a selected block in the place of the tab bar (App `BlockTools`) */
-  .block-tools {
-    justify-content: flex-start;
-    align-items: center;
-    gap: var(--space-1);
-    padding: 0 var(--space-1);
-  }
-
-  .block-tools__done {
-    border-right: 1px solid var(--color-ink-soft);
-    border-radius: 0;
-    color: var(--color-white);
   }
 
   /* half sheets: from under the transport row down to the bottom, over the timeline and the tab bar */

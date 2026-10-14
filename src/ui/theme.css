@@ -45,6 +45,24 @@
   --font-heading: 'Fraunces', Georgia, serif;
   --font-body: 'IBM Plex Sans', system-ui, sans-serif;
 
+  /*
+   * One type scale (size / line height, on a 4 px grid) and three weights: 400 text and hints, 500 labels and controls,
+   * 600 headings. `text-caption` rail labels and badges, `text-hint` hints and units, `text-body` rows, labels, controls,
+   * `text-title` section titles (in the heading font). Tailwind's own sizes stay for HeroUI's stylesheets.
+   */
+  --text-caption: 11px;
+  --text-caption--line-height: 16px;
+  --text-hint: 12px;
+  --text-hint--line-height: 16px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-title: 16px;
+  --text-title--line-height: 24px;
+
+  /* control heights: `h-control` compact (32 px), `h-control-lg` comfortable (40 px); 44 px on a touch screen, see `--control-h` */
+  --spacing-control: var(--control-h);
+  --spacing-control-lg: var(--control-h-lg);
+
   --radius-sm: 6px;
   --radius-md: 10px;
 
@@ -89,6 +107,8 @@
 @import './primitives/chip.css';
 @import './primitives/slider.css';
 @import './primitives/select.css';
+/* the `@utility` classes the shell is built from (top bar, rail, panels); they use the variants declared below */
+@import './utilities.css';
 
 /* the project's own `dark:` variant (the theme attribute, never the system scheme) and the values HeroUI's theme overrode */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
@@ -98,6 +118,39 @@
   --radius-sm: 6px;
   --radius-md: 10px;
 }
+
+/*
+ * Semantic roles as utilities (`bg-surface-card`, `text-text-2`, `border-edge`, `bg-brand`): `inline` reads the role
+ * variables of `:root` below at use, so the dark theme remaps them without a `dark:` variant. `brand` is the accent as
+ * text, border or mark on a panel (light in the dark theme); the filled accent is `bg-accent-fill`.
+ */
+@theme inline {
+  --color-chrome: var(--surface-chrome);
+  --color-chrome-raised: var(--surface-chrome-raised);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-card: var(--surface-card);
+  --color-surface-control: var(--surface-control);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-edge: var(--line);
+  --color-edge-strong: var(--line-strong);
+  --color-brand: var(--accent);
+  --color-accent-fill: var(--accent-fill);
+  --color-accent-fill-hover: var(--accent-fill-hover);
+}
+
+/*
+ * The breakpoints of the shell (shell.css) as variants. `touch`: finger, 44 px targets. `drawer`: the panel floats over the
+ * view. `phone`: the portrait phone layout (tab bar at the bottom, half sheets). `phone-any`: a phone either way up.
+ * `phone-landscape`: a phone on its side. `bar-condensed`: the top bar keeps the essentials (undo, redo, open, save move
+ * into « Plus d'actions »).
+ */
+@custom-variant touch (@media (pointer: coarse));
+@custom-variant drawer (@media (max-width: 1023px));
+@custom-variant phone (@media (max-width: 699px));
+@custom-variant phone-any (@media (max-width: 699px), (max-height: 499px));
+@custom-variant phone-landscape (@media (max-height: 499px) and (min-width: 700px));
+@custom-variant bar-condensed (@media (max-width: 1023px) and (pointer: coarse), (max-width: 699px), (max-height: 499px));
 
 /*
  * Variables that are not Tailwind tokens. In `base`, so the `:root` rules of the components override them; the dark theme
@@ -148,6 +201,7 @@
   --dock-w: 300px;
   --statusbar-h: 24px;
   --control-h: 32px;
+  --control-h-lg: 40px;
   /* rim of a colour swatch, visible on the panel */
   --swatch-border: rgb(28 42 51 / 0.35);
 
@@ -280,8 +334,9 @@ select {
 }
 
 .field__label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   color: var(--text-1);
 }
 

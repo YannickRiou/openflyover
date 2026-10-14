@@ -11,7 +11,7 @@ full customization through a single project document, WebCodecs video export, Ta
 - Vite 8 + React 19 + TypeScript (strict), oxlint.
 - three + @react-three/fiber + @react-three/drei, zustand.
 - Tests: vitest (node environment; jsdom in the files that need the DOM, `// @vitest-environment jsdom`). `*.test.ts` files sit next to their modules.
-- Tailwind CSS 4 (build-time Vite plugin, Preflight on) over the CSS variables of the design system in `src/ui/theme.css` (`@theme` block, `dark` variant on `[data-theme='dark']`). The hand-written CSS sits in `@layer base` / `@layer components`, so utilities win; plan in `docs/design/tailwind.md`.
+- Tailwind CSS 4 (build-time Vite plugin, Preflight on) over the CSS variables of the design system in `src/ui/theme.css` (`@theme` block, `dark` variant on `[data-theme='dark']`). The hand-written CSS sits in `@layer base` / `@layer components`, so utilities win; shared `@utility` classes and the type, spacing and control-height scales in `src/ui/utilities.css` and `theme.css` (see « Pilot » in `docs/design/tailwind.md`); plan in `docs/design/tailwind.md`.
 - HeroUI 3 (MIT, React Aria inside) for the interactive components, wrapped one by one in `src/ui/primitives/` (see "Primitives"); plan in `docs/design/heroui.md`.
 
 ## Coordinate conventions (see `src/core/types.ts`)

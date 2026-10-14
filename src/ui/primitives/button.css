@@ -8,20 +8,29 @@
 .button {
   width: auto;
   height: auto;
-  min-height: 40px;
+  /* comfortable (40 px; 44 on a touch screen); `--sm` and the icon button are the compact 32 px */
+  min-height: var(--control-h-lg);
   gap: var(--space-2);
   padding: 0 var(--space-4);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-family: var(--font-body);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: normal;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   white-space: normal;
   transform: none;
   transition:
-    background-color 120ms ease,
-    transform 80ms ease;
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    color 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
 }
 
 .button--full-width {
@@ -29,10 +38,9 @@
 }
 
 .button--sm {
-  min-height: 28px;
+  min-height: var(--control-h);
   gap: var(--space-1);
-  padding: 0 10px 0 6px;
-  font-size: 13px;
+  padding: 0 var(--space-3);
 }
 
 /* the icons keep the size they are drawn with (HeroUI would resize them) */
@@ -43,30 +51,32 @@
   align-self: auto;
 }
 
-/* colours: HeroUI's variables per variant (the pressed colour is the resting one, as it always was) */
+/* colours: HeroUI's variables per variant; hover and pressed each have their own step */
 .button--primary {
   --button-bg: var(--accent-fill);
   --button-bg-hover: var(--accent-fill-hover);
-  --button-bg-pressed: var(--button-bg);
+  --button-bg-pressed: var(--accent-fill-hover);
   --button-fg: var(--color-white);
+  font-weight: 600;
 }
 
 .button--outline {
   --button-bg: var(--surface-control);
   --button-bg-hover: var(--surface-control);
-  --button-bg-pressed: var(--button-bg);
+  --button-bg-pressed: var(--surface-card);
   --button-fg: var(--text-1);
   border-color: var(--line);
+  box-shadow: var(--shadow-card);
 }
 
 @media (hover: hover) {
   .button--outline:hover:not(:disabled) {
-    border-color: var(--text-1);
+    border-color: var(--line-strong);
   }
 }
 
 .button--ghost {
-  --button-bg-pressed: var(--button-bg);
+  --button-bg-pressed: var(--surface-tertiary);
   --button-fg: currentColor;
   --disabled-opacity: 0.4;
   min-width: var(--control-h);
@@ -78,7 +88,6 @@
   border-radius: var(--radius-sm);
   font-size: 13px;
   white-space: nowrap;
-  transition: none;
 }
 
 .icon-btn {

@@ -54,6 +54,8 @@ export interface RadioProps {
   title?: string
   /** Layout of the screen around it: never colours or sizes of the option. */
   className?: string
+  /** Look of the clickable label of a `plain` option (the screen draws it; `data-selected`, `data-hovered`, `data-focus-visible` tell its state). */
+  labelClassName?: string
   'aria-label'?: string
   'aria-describedby'?: string
   /** The label of the option; without it, `aria-label` names it. */
@@ -65,13 +67,13 @@ export interface RadioProps {
 /** The classes the look of the group gives each option (`.option__label` is the clickable label, a hook for the screens' CSS). */
 const OPTION_CLASS: Record<RadioLook, string> = { segmented: 'segmented__option', chips: 'chip', plain: '' }
 
-export function Radio({ value, disabled, title, className, children, ref, ...rest }: RadioProps) {
+export function Radio({ value, disabled, title, className, labelClassName, children, ref, ...rest }: RadioProps) {
   const look = use(LookContext)
   const classes = [OPTION_CLASS[look], className].filter(Boolean).join(' ')
   return (
     <Titled title={title}>
       <HeroRadio {...rest} ref={ref} className={classes} value={String(value)} isDisabled={disabled}>
-        <HeroRadio.Content className="option__label">{children}</HeroRadio.Content>
+        <HeroRadio.Content className={['option__label', labelClassName].filter(Boolean).join(' ')}>{children}</HeroRadio.Content>
       </HeroRadio>
     </Titled>
   )
