@@ -31,7 +31,7 @@ import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
 import './LandmarkPanel.css'
-import { Button, Checkbox, Chip, Switch, Tip } from './primitives'
+import { Button, Checkbox, Chip, NumberField, Slider, Switch, TextField, Tip } from './primitives'
 
 /** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
 function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'>): string {
@@ -93,18 +93,16 @@ function StopToggle({ name, stop, disabled, onToggle }: { name: string; stop?: F
       </Checkbox>
       {stop && (
         <label className="place__duration">
-          <input
-            className="input"
-            type="number"
+          <NumberField
             aria-label={t('landmarks.stopDurationAria', { name })}
             min={STOP_DURATION_RANGE.min}
             max={STOP_DURATION_RANGE.max}
             step={STOP_DURATION_RANGE.step}
             value={stop.durationS}
-            onChange={(e) => {
-              const durationS = e.currentTarget.valueAsNumber
+            live
+            onChange={(durationS) => {
               const id = stop.id
-              if (Number.isFinite(durationS)) editFilm((f) => ({ film: updateStop(f, id, { durationS }) }), { stops: true, step: false })
+              editFilm((f) => ({ film: updateStop(f, id, { durationS }) }), { stops: true, step: false })
             }}
           />
           s
@@ -303,24 +301,18 @@ export function LandmarkPanel() {
       {settings.enabled && (
         <SettingRow label={t('landmarks.distance')} value={formatDistance(settings.maxDistanceM)} paths={['landmarks.maxDistanceM']}>
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-distance`}>
+            <span className="field__label">
               {t('landmarks.distance')}
-            </label>
-            <div className="range-row">
-              <input
-                id={`${id}-distance`}
-                className="range"
-                type="range"
-                min={LANDMARK_DISTANCE_RANGE.min}
-                max={LANDMARK_DISTANCE_RANGE.max}
-                step={LANDMARK_DISTANCE_RANGE.step}
-                value={settings.maxDistanceM}
-                onChange={(e) => setSetting('landmarks', { ...settings, maxDistanceM: Number(e.currentTarget.value) })}
-              />
-              <output className="range-row__value range-row__value--wide" htmlFor={`${id}-distance`}>
-                {formatDistance(settings.maxDistanceM)}
-              </output>
-            </div>
+            </span>
+            <Slider
+              aria-label={t('landmarks.distance')}
+              min={LANDMARK_DISTANCE_RANGE.min}
+              max={LANDMARK_DISTANCE_RANGE.max}
+              step={LANDMARK_DISTANCE_RANGE.step}
+              value={settings.maxDistanceM}
+              onChange={(v) => setSetting('landmarks', { ...settings, maxDistanceM: v })}
+              format={formatDistance}
+            />
           </div>
         </SettingRow>
       )}
@@ -328,24 +320,19 @@ export function LandmarkPanel() {
       {settings.enabled && (
         <SettingRow label={t('landmarks.maxCount')} value={String(settings.maxCount)} paths={['landmarks.maxCount']}>
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-count`}>
+            <span className="field__label">
               {t('landmarks.maxCount')}
-            </label>
-            <div className="range-row">
-              <input
-                id={`${id}-count`}
-                className="range"
-                type="range"
-                min={LANDMARK_COUNT_RANGE.min}
-                max={LANDMARK_COUNT_RANGE.max}
-                step={LANDMARK_COUNT_RANGE.step}
-                value={settings.maxCount}
-                onChange={(e) => setSetting('landmarks', { ...settings, maxCount: Number(e.currentTarget.value) })}
-              />
-              <output className="range-row__value" htmlFor={`${id}-count`}>
-                {settings.maxCount}
-              </output>
-            </div>
+            </span>
+            <Slider
+              aria-label={t('landmarks.maxCount')}
+              min={LANDMARK_COUNT_RANGE.min}
+              max={LANDMARK_COUNT_RANGE.max}
+              step={LANDMARK_COUNT_RANGE.step}
+              value={settings.maxCount}
+              onChange={(v) => setSetting('landmarks', { ...settings, maxCount: v })}
+              format={String}
+              wide={false}
+            />
             <p className="field__hint">{t('landmarks.maxCountHint')}</p>
           </div>
         </SettingRow>
@@ -501,8 +488,7 @@ export function LandmarkPanel() {
                   <button type="button" className="landmark__kind landmark__kind--poi" title={t('landmarks.poiGo')} onClick={() => seek(row.atM)}>
                     {t('landmarks.poiBadge')}
                   </button>
-                  <input
-                    className="input"
+                  <TextField
                     aria-label={t('landmarks.poiNameAria')}
                     placeholder={t('landmarks.poiNamePlaceholder')}
                     value={poi.name}
@@ -512,10 +498,7 @@ export function LandmarkPanel() {
                       if (poi.id === added) e.currentTarget.select()
                     }}
                     onBlur={() => setAdded(null)}
-                    onChange={(e) => {
-                      const value = e.currentTarget.value
-                      editFilm((f) => ({ film: renamePoi(f, poi.id, value) }), { step: false })
-                    }}
+                    onChange={(value) => editFilm((f) => ({ film: renamePoi(f, poi.id, value) }), { step: false })}
                   />
                 </div>
                 <EyeButton name={name || t('landmarks.poiThis')} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />

@@ -7,8 +7,8 @@ import { WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
 import { AnchorPicker } from './AnchorPicker'
 import { formatNumber } from './format'
 import { FilmTextStyleFields } from './OverlayPanel'
-import { RangeField, TextField } from './PanelSection'
-import { Checkbox, Radio, RadioGroup } from './primitives'
+import { RangeField } from './PanelSection'
+import { Checkbox, Radio, RadioGroup, TextField } from './primitives'
 
 /** What each transition does, under its choice. */
 const JUNCTION_KIND_HINTS: Record<JunctionKind, string> = {

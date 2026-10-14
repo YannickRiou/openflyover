@@ -1,0 +1,123 @@
+/*
+ * Slider (Slider.tsx): HeroUI's `.slider` (imported in theme.css) skinned with the tokens of theme.css: a thin rail with the
+ * accent filling it up to a round thumb, the written value (`.range-row__value`, app.css) on its right and the optional
+ * `below` slot under the rail. The track keeps 8 px of transparent border on each side (half a thumb), so the thumb at either
+ * end stays inside the box and the rail, drawn from its `::before`, spans the whole width. `--slider-accent` lets a screen
+ * recolour the fill and the thumb (the dark timeline bar). HeroUI's selectors carry `[data-orientation]` and the fill
+ * attributes, hence the longer ones below.
+ */
+@layer components {
+.slider.slider--field {
+  display: grid;
+  grid-template-areas:
+    'track output'
+    'below .';
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 var(--space-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.slider--field[data-orientation] .slider__track[data-slot] {
+  grid-area: track;
+  height: 20px;
+  border-width: 0 8px;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider--field .slider__track::before {
+  content: '';
+  position: absolute;
+  inset: 50% -8px auto;
+  height: 6px;
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-control);
+}
+
+/* the fill starts at the rail's end, under the first half thumb (its inline `left` and `width` are the thumb's) */
+.slider--field[data-orientation] .slider__fill {
+  top: 50%;
+  height: 6px;
+  box-sizing: content-box;
+  margin-inline-start: -8px;
+  padding-inline-start: 8px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--slider-accent, var(--accent));
+}
+
+.slider--field[data-orientation] .slider__thumb {
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--slider-accent, var(--accent));
+  box-shadow: none;
+  cursor: grab;
+  transition: none;
+}
+
+.slider--field .slider__thumb::after {
+  display: none;
+}
+
+/* a wider target for a finger than the 16 px dot */
+.slider--field .slider__thumb::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+}
+
+.slider--field .slider__thumb[data-dragging='true'] {
+  cursor: grabbing;
+}
+
+.slider--field .slider__thumb[data-focus-visible='true'] {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px var(--color-white);
+}
+
+.slider--field .slider__output.range-row__value {
+  grid-area: output;
+  font-size: inherit;
+  font-weight: 600;
+  line-height: inherit;
+  color: var(--text-1);
+}
+
+.slider--field .slider__below {
+  grid-area: below;
+  margin-top: var(--space-1);
+  min-width: 0;
+}
+
+.slider--field[data-disabled='true'] {
+  opacity: 1;
+}
+
+.slider--field[data-disabled='true'] .slider__fill,
+.slider--field[data-disabled='true'] .slider__thumb {
+  background: var(--line-strong);
+}
+
+.slider--field[data-disabled='true'] .slider__track {
+  cursor: default;
+}
+
+/* touch screens: a rail of 44 px at least to put a finger on */
+@media (pointer: coarse) {
+  .slider--field[data-orientation] .slider__track[data-slot] {
+    height: 44px;
+  }
+}
+}

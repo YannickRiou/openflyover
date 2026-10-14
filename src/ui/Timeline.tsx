@@ -84,7 +84,7 @@ import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import './cardBlocks.css'
 import './markerKeys.css'
-import { Button, Popover, Tip } from './primitives'
+import { Button, Popover, Slider, Tip } from './primitives'
 
 const SPEEDS = PLAYBACK_SPEEDS
 /** « Média » picker: pictures and videos recognised on both targets (the desktop types a file by `mimeTypeOf`). */
@@ -1211,16 +1211,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onClick={() => zoomBy(1 / BUTTON_ZOOM)}
               disabled={zoom <= ZOOM_RANGE.min}
             />
-            <input
+            <Slider
               className="film-tl__zoom-range"
-              type="range"
               min={0}
               max={ZOOM_SLIDER_STEPS}
               step={1}
               value={zoomToSlider(zoom)}
               aria-label={t('timeline.zoom.slider')}
-              aria-valuetext={`×${formatNumber(zoom, 1)}`}
-              onChange={(e) => zoomBy(sliderToZoom(Number(e.currentTarget.value)) / zoom)}
+              spoken={() => `×${formatNumber(zoom, 1)}`}
+              onChange={(v) => zoomBy(sliderToZoom(v) / zoom)}
             />
             <BarButton
               icon="zoom-in"

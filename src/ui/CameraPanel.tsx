@@ -23,7 +23,7 @@ import type { IconName } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
-import { Button, Checkbox, Switch } from './primitives'
+import { Button, Checkbox, Slider, Switch } from './primitives'
 
 /** « Mettre en avant la région »: what it does, then how the search for the region went (found: after its name). */
 const REGION_HINTS: Record<RegionStatus, string> = {
@@ -300,33 +300,25 @@ export function CameraPanel() {
         </SettingRow>
         {SLIDERS.map(({ key, label, tip, format }) => {
           const range = CAMERA_RANGES[key]
-          const inputId = `${id}-${key}`
           const value = format(camera[key], autoTurnM)
           return (
             <SettingRow key={key} label={label} value={value} paths={[`camera.${key}`]}>
               <div className="field">
                 <div className="field__label-row">
-                  <label className="field__label" htmlFor={inputId}>
+                  <span className="field__label">
                     {label}
-                  </label>
+                  </span>
                   <InfoTip text={tip} />
                 </div>
-                <div className="range-row">
-                  <input
-                    id={inputId}
-                    className="range"
-                    type="range"
-                    min={range.min}
-                    max={range.max}
-                    step={range.step}
-                    value={camera[key]}
-                    onChange={(e) => update({ [key]: Number(e.currentTarget.value) })}
-                    aria-valuetext={value}
-                  />
-                  <output className="range-row__value range-row__value--wide" htmlFor={inputId}>
-                    {value}
-                  </output>
-                </div>
+                <Slider
+                  aria-label={label}
+                  min={range.min}
+                  max={range.max}
+                  step={range.step}
+                  value={camera[key]}
+                  onChange={(v) => update({ [key]: v })}
+                  format={() => value}
+                />
               </div>
             </SettingRow>
           )
@@ -336,9 +328,9 @@ export function CameraPanel() {
       <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
         <div className="field">
           <div className="field__label-row">
-            <label className="field__label" htmlFor={`${id}-duration`}>
+            <span className="field__label">
               {t('camera.duration.label')}
-            </label>
+            </span>
             <InfoTip text={t('camera.duration.tip')} />
           </div>
           <div className="range-row">
@@ -351,16 +343,14 @@ export function CameraPanel() {
             >
               −
             </button>
-            <input
-              id={`${id}-duration`}
-              className="range"
-              type="range"
+            <Slider
+              aria-label={t('camera.duration.label')}
               min={FLYOVER_DURATION_RANGE.min}
               max={FLYOVER_DURATION_RANGE.max}
               step={FLYOVER_DURATION_RANGE.step}
               value={durationS}
-              onChange={(e) => setFlightTiming({ durationS: Number(e.currentTarget.value) })}
-              aria-valuetext={formatSeconds(durationS)}
+              onChange={(v) => setFlightTiming({ durationS: v })}
+              spoken={formatSeconds}
             />
             <button
               type="button"
@@ -371,7 +361,7 @@ export function CameraPanel() {
             >
               +
             </button>
-            <output className="range-row__value range-row__value--wide" htmlFor={`${id}-duration`}>
+            <output className="range-row__value range-row__value--wide">
               {formatSeconds(durationS)}
             </output>
           </div>
@@ -405,29 +395,22 @@ export function CameraPanel() {
 
             {PACING_SLIDERS.map(({ key, label, format, spoken = format }) => {
               const range = PACING_RANGES[key]
-              const inputId = `${id}-pacing-${key}`
               return (
                 <SettingRow key={key} label={label} value={format(pacing[key])} paths={[`pacing.${key}`]}>
                   <div className="field">
-                    <label className="field__label" htmlFor={inputId}>
+                    <span className="field__label">
                       {label}
-                    </label>
-                    <div className="range-row">
-                      <input
-                        id={inputId}
-                        className="range"
-                        type="range"
-                        min={range.min}
-                        max={range.max}
-                        step={range.step}
-                        value={pacing[key]}
-                        onChange={(e) => updatePacing({ [key]: Number(e.currentTarget.value) })}
-                        aria-valuetext={spoken(pacing[key])}
-                      />
-                      <output className="range-row__value range-row__value--wide" htmlFor={inputId}>
-                        {format(pacing[key])}
-                      </output>
-                    </div>
+                    </span>
+                    <Slider
+                      aria-label={label}
+                      min={range.min}
+                      max={range.max}
+                      step={range.step}
+                      value={pacing[key]}
+                      onChange={(v) => updatePacing({ [key]: v })}
+                      format={format}
+                      spoken={spoken}
+                    />
                   </div>
                 </SettingRow>
               )

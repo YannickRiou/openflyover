@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { presetBadge } from '../export/qualityTier'
 import { useT } from '../i18n'
@@ -14,7 +14,7 @@ import { tabHasHeavySetting, tierName, weightOf } from './renderCost'
 import type { WeightKey } from './renderCost'
 import { FOLDS_KEY, parseFoldPrefs } from './shell'
 import type { ShellTab } from './shell'
-import { Disclosure, Tip } from './primitives'
+import { Disclosure, Slider, Tip } from './primitives'
 
 /** The fold states remembered by the browser (none when its storage cannot be read). */
 function loadFolds(): Record<string, boolean> {
@@ -234,11 +234,10 @@ export function RangeField({
   /** value read by screen readers, when it differs from the displayed one */
   spoken?(value: number): string
 }) {
-  const id = useId()
   const labelEl = (
-    <label className="field__label" htmlFor={id}>
+    <span className="field__label">
       {label}
-    </label>
+    </span>
   )
   return (
     <div className="field">
@@ -252,55 +251,7 @@ export function RangeField({
       ) : (
         labelEl
       )}
-      <div className="range-row">
-        <input
-          id={id}
-          className="range"
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          disabled={disabled}
-          onChange={(e) => onChange(Number(e.currentTarget.value))}
-          aria-valuetext={spoken(value)}
-        />
-        <output className={wide ? 'range-row__value range-row__value--wide' : 'range-row__value'} htmlFor={id}>
-          {format(value)}
-        </output>
-      </div>
-    </div>
-  )
-}
-
-export function TextField({
-  label,
-  value,
-  placeholder,
-  disabled = false,
-  onChange,
-}: {
-  label: string
-  value: string
-  placeholder?: string
-  disabled?: boolean
-  onChange(value: string): void
-}) {
-  const id = useId()
-  return (
-    <div className="field">
-      <label className="field__label" htmlFor={id}>
-        {label}
-      </label>
-      <input
-        id={id}
-        className="input"
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        disabled={disabled}
-        onChange={(e) => onChange(e.currentTarget.value)}
-      />
+      <Slider aria-label={label} min={min} max={max} step={step} value={value} disabled={disabled} wide={wide} format={format} spoken={spoken} onChange={onChange} />
     </div>
   )
 }

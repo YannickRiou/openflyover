@@ -42,8 +42,8 @@ import { useWeatherStore } from '../weather/store'
 import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
-import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
-import { Button, Checkbox, Chip, Radio, RadioGroup, Switch, ToggleButton, ToggleButtonGroup } from './primitives'
+import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { Button, Checkbox, Chip, NumberField, Radio, RadioGroup, Switch, TextField, ToggleButton, ToggleButtonGroup } from './primitives'
 
 const COUNTER_LABELS: Record<CounterId, string> = {
   get distance() { return t('overlay.counter.distance') },
@@ -71,67 +71,31 @@ const OFFSET_Y_LABELS: Record<string, string> = {
 }
 
 /**
- * A pixel offset typed digit by digit: while focused, the field keeps what is typed (empty, a lone « - »); a value in
- * range is applied at once, Enter or leaving the field rounds and clamps it, an empty or invalid entry (or Escape)
- * puts the stored value back. One undo step per edit (focus to blur).
+ * A pixel offset typed digit by digit: a value in range is applied at once, Enter or leaving the field rounds and clamps
+ * it, an empty or invalid entry puts the stored value back. One undo step per edit (focus to blur).
  */
 function OffsetField({ id, label, value, onCommit }: { id: string; label: string; value: number; onCommit(px: number): void }) {
-  const [draft, setDraft] = useState<string | null>(null)
   const endGesture = useRef<(() => void) | null>(null)
   const stop = () => {
     endGesture.current?.()
     endGesture.current = null
   }
   useEffect(() => stop, [])
-  const parse = (text: string) => {
-    const v = text.trim() === '' ? Number.NaN : Number(text)
-    return Number.isFinite(v) ? Math.round(v) : null
-  }
-  const apply = (px: number) => {
-    if (px !== value) onCommit(px)
-  }
-  /** Enter or blur: the entry rounded and clamped; null when there is none. */
-  const settle = (text: string) => {
-    const px = parse(text)
-    if (px === null) return null
-    const clamped = Math.max(-OFFSET_MAX_PX, Math.min(OFFSET_MAX_PX, px))
-    apply(clamped)
-    return clamped
-  }
   return (
-    <div className="field">
-      <label className="field__label" htmlFor={id}>
-        {label}
-      </label>
-      <input
-        id={id}
-        className="input"
-        type="number"
-        min={-OFFSET_MAX_PX}
-        max={OFFSET_MAX_PX}
-        step={1}
-        value={draft ?? value}
-        onFocus={() => {
-          setDraft(String(value))
-          endGesture.current ??= getSettingsHistory().beginGesture()
-        }}
-        onChange={(e) => {
-          const text = e.currentTarget.value
-          setDraft(text)
-          const px = parse(text)
-          if (px !== null && Math.abs(px) <= OFFSET_MAX_PX) apply(px)
-        }}
-        onBlur={(e) => {
-          settle(e.currentTarget.value)
-          setDraft(null)
-          stop()
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') setDraft(String(settle(e.currentTarget.value) ?? value))
-          else if (e.key === 'Escape') setDraft(String(value))
-        }}
-      />
-    </div>
+    <NumberField
+      id={id}
+      label={label}
+      min={-OFFSET_MAX_PX}
+      max={OFFSET_MAX_PX}
+      step={1}
+      live
+      value={value}
+      onFocus={() => {
+        endGesture.current ??= getSettingsHistory().beginGesture()
+      }}
+      onChange={(px) => onCommit(Math.round(px))}
+      onBlur={stop}
+    />
   )
 }
 

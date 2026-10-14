@@ -8,6 +8,7 @@ import { useAppStore } from '../state/store'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
+import { Slider } from './primitives'
 
 const SLIDERS: { key: keyof GradingValues; label: string; tip?: string }[] = [
   { key: 'contrast', get label() { return t('light.grading.contrast') } },
@@ -61,33 +62,26 @@ export function GradingPanel() {
 
       {SLIDERS.map(({ key, label, tip }) => {
         const range = GRADING_RANGES[key]
-        const inputId = `${id}-${key}`
         const text = key === 'vignette' ? formatPercent(grading[key]) : formatSigned(grading[key])
         return (
           <SettingRow key={key} label={label} value={text} paths={[`grading.${key}`]}>
             <div className="field">
               <div className="field__label-row">
-                <label className="field__label" htmlFor={inputId}>
+                <span className="field__label">
                   {label}
-                </label>
+                </span>
                 {tip && <InfoTip text={tip} />}
               </div>
-              <div className="range-row">
-                <input
-                  id={inputId}
-                  className="range"
-                  type="range"
-                  min={range.min}
-                  max={range.max}
-                  step={range.step}
-                  value={grading[key]}
-                  onChange={(e) => setSetting('grading', withGradingValue(grading, key, Number(e.currentTarget.value)))}
-                  aria-valuetext={text}
-                />
-                <output className="range-row__value" htmlFor={inputId}>
-                  {text}
-                </output>
-              </div>
+              <Slider
+                aria-label={label}
+                min={range.min}
+                max={range.max}
+                step={range.step}
+                value={grading[key]}
+                onChange={(v) => setSetting('grading', withGradingValue(grading, key, v))}
+                format={() => text}
+                wide={false}
+              />
             </div>
             <PanelKeys target={{ kind: 'param', param: key }} />
           </SettingRow>

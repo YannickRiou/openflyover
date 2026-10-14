@@ -41,7 +41,7 @@ import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import './trackElevation.css'
-import { Button, Menu, Tip } from './primitives'
+import { Button, Menu, Slider, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -392,25 +392,20 @@ function OutingPlanForm({ track }: { track: Track }) {
           </select>
         </div>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-pace`}>
+          <span className="field__label">
             {t('track.plan.pace')}
-          </label>
-          <div className="range-row">
-            <input
-              id={`${id}-pace`}
-              className="range"
-              type="range"
-              min={PACE_RANGE.min}
-              max={PACE_RANGE.max}
-              step={PACE_RANGE.step}
-              value={pace}
-              aria-describedby={`${id}-pace-hint`}
-              onChange={(e) => setPace(Number(e.currentTarget.value))}
-            />
-            <output className="range-row__value" htmlFor={`${id}-pace`}>
-              ×{formatNumber(pace, 2)}
-            </output>
-          </div>
+          </span>
+          <Slider
+            aria-label={t('track.plan.pace')}
+            aria-describedby={`${id}-pace-hint`}
+            min={PACE_RANGE.min}
+            max={PACE_RANGE.max}
+            step={PACE_RANGE.step}
+            value={pace}
+            onChange={setPace}
+            format={(v) => `×${formatNumber(v, 2)}`}
+            wide={false}
+          />
           <p id={`${id}-pace-hint`} className="field__hint">
             {t('track.plan.paceHint')}
           </p>

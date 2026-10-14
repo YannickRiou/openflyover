@@ -112,6 +112,10 @@
 .topbar__name {
   flex: 0 1 220px;
   min-width: 64px;
+}
+
+/* the field (TextField primitive) drawn as plain text on the bar, a field once focused */
+.topbar__name .input {
   height: var(--control-h);
   padding: 0 var(--space-2);
   border: 1px solid transparent;
@@ -122,23 +126,23 @@
   text-overflow: ellipsis;
 }
 
-.topbar__name::placeholder {
+.topbar__name .input::placeholder {
   color: var(--color-glacier);
   opacity: 1;
 }
 
 @media (hover: hover) {
-  .topbar__name:hover {
+  .topbar__name .input:hover {
     border-color: var(--color-ink-soft);
   }
 }
 
-.topbar__name:focus {
+.topbar__name .input:focus {
   background: var(--color-white);
   color: var(--color-ink);
 }
 
-.topbar__name:focus::placeholder {
+.topbar__name .input:focus::placeholder {
   color: var(--color-ink-soft);
 }
 
@@ -1016,10 +1020,10 @@
   gap: 2px;
 }
 
-.film-tl__zoom-range {
+.slider.film-tl__zoom-range {
+  --slider-accent: var(--color-accent-light);
   width: 88px;
   margin: 0 2px;
-  accent-color: var(--color-accent-light);
 }
 
 /* the film differs from its defaults (the « modifié » marker is in the menu) */
@@ -1669,10 +1673,6 @@
     height: 22px;
   }
 
-  .range {
-    height: 44px;
-  }
-
   .format-switch__option {
     width: 44px;
     height: 44px;
@@ -2148,7 +2148,7 @@
     display: none;
   }
 
-  .film-tl__zoom-range {
+  .slider.film-tl__zoom-range {
     width: 64px;
   }
 }

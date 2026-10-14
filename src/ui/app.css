@@ -396,10 +396,10 @@ label.segmented__option input {
   gap: var(--space-2);
 }
 
-.range {
+/* the slider between « − » and « + » takes what the buttons leave */
+.range-row > .slider--field {
   flex: 1 1 auto;
-  accent-color: var(--accent);
-  margin: 0;
+  width: auto;
 }
 
 .range-row__value {
@@ -491,8 +491,8 @@ label.checkbox:has(input:disabled) {
 }
 
 /* text field + submit button: the field takes the remaining width */
-.project__row > .input {
-  flex: 1 1 auto;
+.project__row > .field {
+  flex: 1 1 100%;
 }
 
 .project__row > [type='submit'] {
@@ -1696,18 +1696,6 @@ label.segmented__option:has(input:disabled) {
 }
 
 /* solar hour slider over the night / day bar (marks: sunrise and sunset) */
-.sun-day {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.sun-day > .range {
-  width: 100%;
-}
-
 /* inset by half a slider thumb: the bar lines up with the thumb's centre */
 .sun-day__bar {
   position: relative;

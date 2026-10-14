@@ -353,7 +353,12 @@ or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen),
 `chips`, or `plain` for a grid the screen draws, as the 3 × 3 `AnchorPicker`; the arrows move and choose, the screens' CSS keys on
 `.option__label`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
 `value` / `onChange` take the values, not events; a `title` is a native tooltip over the whole control; a `<fieldset disabled>`
-around them dims them. HeroUI's styles are imported in `theme.css`
+around them dims them. The fields: `Slider` (a track and thumb with the value written out in an `<output>`; the range input inside keeps
+the arrows, Page Up / Down, Home and End and the screen-reader name, taken from `aria-labelledby` / `aria-label`; a drag on the thumb is
+one undo step through `[data-slider]` in `installSliderGestures`, a vertical swipe from the rail scrolls the panel, and `onChange` is
+never called twice with one value), `NumberField` (React Aria's, so the entry is settled on Enter or leaving the field, within `min` / `max`
+and on the `step`; `live` also applies each number typed in range; Escape puts the stored value back) and `TextField` (`label` above, or
+`aria-label`); `NumberField` and `TextField` take the project's `.input` look and no HeroUI CSS. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,

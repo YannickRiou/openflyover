@@ -35,10 +35,10 @@ import type { Settings } from '../state/store'
 import { formatDistance, formatPercent, formatShort } from './format'
 import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
-import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
+import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { showToast } from './toast'
 import './markerSection.css'
-import { Button, Checkbox, Radio, RadioGroup, Switch } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Switch, TextField } from './primitives'
 
 /** 0 -> "Aucun", else the distance */
 const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.slider.noneMasc') : formatDistance(metres))

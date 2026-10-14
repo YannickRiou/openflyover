@@ -11,7 +11,7 @@ import type { IconName } from './icons'
 import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
 import { withShortcut } from './shortcuts'
-import { Button, Menu, Tip } from './primitives'
+import { Button, Menu, TextField, Tip } from './primitives'
 
 /** How long the save icon keeps the accent colour once the project is saved (ms). */
 const SAVED_FLASH_MS = 3000
@@ -127,15 +127,14 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
       <div className="topbar__start">
         <img className="topbar__logo" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
         <h1 className="visually-hidden">OpenFlyover</h1>
-        <input
+        <TextField
           className="topbar__name"
-          type="text"
           value={name}
           placeholder={placeholder}
           maxLength={120}
           aria-label={t('topbar.projectName')}
           title={t('topbar.projectNameTip')}
-          onChange={(e) => useAppStore.getState().setProjectName(e.currentTarget.value)}
+          onChange={(value) => useAppStore.getState().setProjectName(value)}
         />
         <span className="topbar__sep" aria-hidden="true" />
         <Tip text={withShortcut(t('topbar.undo'), 'undo')}>
