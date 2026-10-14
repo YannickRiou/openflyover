@@ -84,6 +84,7 @@ import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import './cardBlocks.css'
 import './markerKeys.css'
+import { Button, Tip } from './primitives'
 
 const SPEEDS = PLAYBACK_SPEEDS
 /** « Média » picker: pictures and videos recognised on both targets (the desktop types a file by `mimeTypeOf`). */
@@ -205,17 +206,11 @@ interface BarButtonProps {
 /** Icon button of the bar: icon only, its name as tooltip and accessible name. */
 function BarButton({ icon, name, tip = name, onClick, disabled, on }: BarButtonProps) {
   return (
-    <button
-      type="button"
-      className={on ? 'icon-btn icon-btn--on' : 'icon-btn'}
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={name}
-      data-tip={tip}
-      data-tip-side="top"
-    >
-      <Icon name={icon} size={18} />
-    </button>
+    <Tip text={tip} side="top">
+      <Button variant="icon" className={on ? 'icon-btn--on' : undefined} onClick={onClick} disabled={disabled} aria-label={name}>
+        <Icon name={icon} size={18} />
+      </Button>
+    </Tip>
   )
 }
 
@@ -264,32 +259,29 @@ function FilmOptions({
         if (open && e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false)
       }}
     >
-      <button
-        ref={toggleRef}
-        type="button"
-        className="icon-btn"
-        aria-expanded={open}
-        aria-controls={`${id}-menu`}
-        aria-label={t('timeline.options.title')}
-        data-tip={t('timeline.options.title')}
-        data-tip-side="top"
-        data-tip-align="end"
-        onClick={() => setOpen(!open)}
-      >
-        <Icon name="ellipsis" size={18} />
-        {modified && (
-          <>
-            <span className="film-tl__dot" />
-            <span className="visually-hidden">{t('common.modified.srOnly')}</span>
-          </>
-        )}
-      </button>
+      <Tip text={t('timeline.options.title')} side="top" align="end">
+        <Button
+          variant="icon"
+          ref={toggleRef}
+          aria-expanded={open}
+          aria-controls={`${id}-menu`}
+          aria-label={t('timeline.options.title')}
+          onClick={() => setOpen(!open)}
+        >
+          <Icon name="ellipsis" size={18} />
+          {modified && (
+            <>
+              <span className="film-tl__dot" />
+              <span className="visually-hidden">{t('common.modified.srOnly')}</span>
+            </>
+          )}
+        </Button>
+      </Tip>
       {open && (
         <div id={`${id}-menu`} className="film-tl__menu" role="group" aria-label={t('timeline.options.title')}>
           <p className="film-tl__menu-title">{t('timeline.options.title')}</p>
-          <button
-            type="button"
-            className="btn btn--secondary btn--small"
+          <Button
+            size="sm"
             disabled={reading}
             onClick={() => {
               setOpen(false)
@@ -298,7 +290,7 @@ function FilmOptions({
           >
             <Icon name="music" size={16} />
             {t('timeline.options.addMusic')}
-          </button>
+          </Button>
           <p className="film-tl__menu-hint">{t('timeline.options.musicHint')}</p>
           <label className="film-tl__check">
             <input type="checkbox" checked={autoStops} onChange={(e) => onAutoStops(e.currentTarget.checked)} />
@@ -1113,17 +1105,16 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       }}
     >
       <div className="film-tl__bar" data-testid="timeline-bar">
-        <button
-          type="button"
-          className="icon-btn film-tl__play"
-          onClick={() => setPlaying(!playing)}
-          aria-label={playing ? t('timeline.bar.pause') : t('timeline.bar.play')}
-          data-tip={withShortcut(playing ? t('timeline.bar.pauseTip') : t('timeline.bar.playTip'), 'play')}
-          data-tip-side="top"
-          data-tip-align="start"
-        >
-          <Icon name={playing ? 'pause' : 'play'} size={16} />
-        </button>
+        <Tip text={withShortcut(playing ? t('timeline.bar.pauseTip') : t('timeline.bar.playTip'), 'play')} side="top" align="start">
+          <Button
+            variant="icon"
+            className="film-tl__play"
+            onClick={() => setPlaying(!playing)}
+            aria-label={playing ? t('timeline.bar.pause') : t('timeline.bar.play')}
+          >
+            <Icon name={playing ? 'pause' : 'play'} size={16} />
+          </Button>
+        </Tip>
         <BarButton
           icon="square"
           name={t('timeline.bar.stop')}
@@ -1273,22 +1264,21 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           />
           <FilmOptions autoStops={film.autoStops} onAutoStops={setAutoStops} onAddMusic={pickMusic} reading={reading} />
         </div>
-        <button
-          type="button"
-          className="icon-btn film-tl__fold"
-          onClick={() => {
-            if (collapsed) onUnfold?.()
-            setCollapsed(!collapsed)
-          }}
-          aria-expanded={!collapsed}
-          aria-controls={`${id}-lanes`}
-          aria-label={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')}
-          data-tip={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')}
-          data-tip-side="top"
-          data-tip-align="end"
-        >
-          <Icon name={collapsed ? 'panel-bottom-open' : 'panel-bottom-close'} size={18} />
-        </button>
+        <Tip text={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')} side="top" align="end">
+          <Button
+            variant="icon"
+            className="film-tl__fold"
+            onClick={() => {
+              if (collapsed) onUnfold?.()
+              setCollapsed(!collapsed)
+            }}
+            aria-expanded={!collapsed}
+            aria-controls={`${id}-lanes`}
+            aria-label={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')}
+          >
+            <Icon name={collapsed ? 'panel-bottom-open' : 'panel-bottom-close'} size={18} />
+          </Button>
+        </Tip>
       </div>
 
       {!collapsed && (

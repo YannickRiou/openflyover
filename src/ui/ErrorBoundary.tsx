@@ -5,6 +5,7 @@ import { t } from '../i18n'
 import { saveProject } from './projectActions'
 import { Toaster } from './Toaster'
 import { showToast } from './toast'
+import { Button } from './primitives'
 
 interface State {
   error: unknown
@@ -40,12 +41,12 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
             <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{errorMessage(this.state.error)}</pre>
           </details>
           <div className="empty__actions">
-            <button type="button" className="btn btn--secondary" onClick={save}>
+            <Button onClick={save}>
               {t('errors.boundary.save')}
-            </button>
-            <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>
+            </Button>
+            <Button variant="primary" onClick={() => window.location.reload()}>
               {t('errors.boundary.reload')}
-            </button>
+            </Button>
           </div>
         </div>
         <Toaster />

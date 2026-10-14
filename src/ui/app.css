@@ -1665,14 +1665,6 @@
   background: var(--color-chartreuse);
 }
 
-/* one sentence: wraps inside the panel */
-.render-weight[data-tip]:hover::after,
-.render-weight[data-tip]:focus-visible::after {
-  width: max-content;
-  max-width: 220px;
-  white-space: normal;
-}
-
 /* « Imposé par Haute » / « Personnalisé » after the name of a row the export quality drives */
 .preset-badge {
   display: inline-block;
@@ -1730,14 +1722,6 @@
 .info-tip:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
-}
-
-/* one sentence: wraps inside the panel */
-.info-tip[data-tip]:hover::after,
-.info-tip[data-tip]:focus-visible::after {
-  width: max-content;
-  max-width: 200px;
-  white-space: normal;
 }
 
 .segmented__option:has(input:disabled) {

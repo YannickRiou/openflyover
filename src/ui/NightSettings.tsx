@@ -14,6 +14,7 @@ import { trackPathOf } from '../flyover/path'
 import { editFilm, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { formatSecondsShort } from './format'
 import { PanelSection, RangeField, SettingRow } from './PanelSection'
+import { Button } from './primitives'
 
 export function NightSettings() {
   const tr = useT()
@@ -69,9 +70,8 @@ export function NightSettings() {
             <input type="checkbox" checked={content.total} onChange={(e) => setContent({ ...content, total: e.currentTarget.checked })} />
             {tr('light.days.totalDistance')}
           </label>
-          <button
-            type="button"
-            className="btn btn--secondary btn--block"
+          <Button
+            block
             aria-describedby={`${id}-cards-hint`}
             onClick={() => {
               const lengthM = track?.stats.distanceM ?? 0
@@ -79,7 +79,7 @@ export function NightSettings() {
             }}
           >
             {hasCards ? tr('light.days.replace') : tr('light.days.add')}
-          </button>
+          </Button>
           <p id={`${id}-cards-hint`} className="field__hint">
             {days.length < 2
               ? tr('light.days.single')

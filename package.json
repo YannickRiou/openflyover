@@ -19,6 +19,11 @@
     "installer-assets": "node scripts/installer-assets.mjs"
   },
   "dependencies": {
+    "@heroui/react": "^3.2.6",
+    "@heroui/styles": "^3.2.6",
+    "@internationalized/date": "^3.12.4",
+    "@react-aria/ssr": "^3.10.1",
+    "@react-aria/utils": "^3.34.1",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "@react-three/postprocessing": "^3.1.3",
@@ -30,6 +35,8 @@
     "mediabunny": "^1.61.3",
     "postprocessing": "^6.39.5",
     "react": "^19.2.8",
+    "react-aria": "^3.53.1",
+    "react-aria-components": "^1.22.1",
     "react-dom": "^19.2.8",
     "three": "^0.186.1",
     "zustand": "^5.0.15"

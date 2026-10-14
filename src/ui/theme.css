@@ -6,9 +6,6 @@
  */
 @import 'tailwindcss';
 
-/* dark utilities (`dark:*`) follow the theme attribute set by `applyAppearance`, not the system scheme */
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
-
 /*
  * Palette, fonts, radii and shadows as Tailwind tokens (`bg-ink`, `text-accent`, `font-heading`, `rounded-md`,
  * `shadow-pop`...). `static` emits every variable even when no utility uses it: the CSS below reads them directly.
@@ -51,6 +48,31 @@
 
   --shadow-card: 0 1px 2px rgb(27 40 50 / 0.08);
   --shadow-pop: 0 2px 6px rgb(27 40 50 / 0.12), 0 12px 32px rgb(27 40 50 / 0.18);
+}
+
+/*
+ * HeroUI (React Aria components, MIT): the pieces the primitives in `src/ui/primitives/` use, imported one by one so the
+ * CSS holds only what is in use (add the `components/<name>.css` of a primitive when it is added). Its theme variables
+ * are mapped to the tokens of this file below; no HeroUI colour, radius or font is kept. Its tokens come after the
+ * palette above (`--color-*: initial`), and the few names both define keep the project's value (second `@theme`).
+ */
+@import '@heroui/styles/base' layer(base);
+@import '@heroui/styles/themes/shared/theme.css';
+@import '@heroui/styles/themes/default/variables.css' layer(theme);
+@import '@heroui/styles/utilities';
+@import '@heroui/styles/variants';
+@import '@heroui/styles/components/button.css' layer(components);
+/* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
+@import './primitives/button.css';
+@import './primitives/tip.css';
+
+/* the project's own `dark:` variant (the theme attribute, never the system scheme) and the values HeroUI's theme overrode */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme static {
+  --color-accent: #b9391f;
+  --radius-sm: 6px;
+  --radius-md: 10px;
 }
 
 /*
@@ -112,6 +134,56 @@
 }
 
 /*
+ * HeroUI theme variables, set from the roles above (light theme here, its few dark-only values in the dark block below).
+ * Outside the layers, so they win over HeroUI's default theme. HeroUI's `--accent` / `--accent-hover` are the project's
+ * own (same names, defined above: accent as text and border on a panel, light in the dark theme); a filled accent
+ * surface (the primary button) reads `--accent-fill` instead, see `primitives/primitives.css`.
+ */
+:root {
+  --background: var(--surface-panel);
+  --foreground: var(--text-1);
+  --surface: var(--surface-card);
+  --surface-foreground: var(--text-1);
+  --surface-secondary: var(--surface-control);
+  --surface-secondary-foreground: var(--text-1);
+  --surface-tertiary: color-mix(in srgb, var(--surface-card) 92%, var(--text-1));
+  --surface-tertiary-foreground: var(--text-1);
+  /* overlays (tooltips, menus, toasts) are the dark chrome in both themes, like the app's own */
+  --overlay: var(--surface-chrome-raised);
+  --overlay-foreground: var(--text-on-dark);
+  --muted: var(--text-2);
+  --default: var(--surface-card);
+  --default-foreground: var(--text-1);
+  --field-background: var(--surface-control);
+  --field-foreground: var(--text-1);
+  --field-placeholder: var(--text-2);
+  --field-border: var(--line-strong);
+  --field-border-width: 1px;
+  --segment: var(--surface-control);
+  --segment-foreground: var(--text-1);
+  --accent-foreground: var(--color-white);
+  --success: var(--status-ok);
+  --success-foreground: var(--color-white);
+  --warning: var(--status-attention);
+  --warning-foreground: var(--color-white);
+  --danger: var(--status-error);
+  --danger-foreground: var(--color-white);
+  --border: var(--line);
+  --separator: var(--line);
+  --focus: var(--accent);
+  --link: var(--text-1);
+  --backdrop: rgb(28 42 51 / 0.6);
+  --surface-shadow: var(--shadow-card);
+  --overlay-shadow: var(--shadow-pop);
+  --field-shadow: none;
+  --radius: var(--radius-md);
+  --field-radius: var(--radius-sm);
+  --disabled-opacity: 0.45;
+  --tooltip-delay: 450ms;
+  --tooltip-close-delay: 0ms;
+}
+
+/*
  * Dark theme (`data-theme="dark"` on <html>, set by `applyAppearance`): remaps the roles of the panels; the bar, the rail
  * and the status bar are dark in both themes. Contrast: text 1 on panel / card / control 14.1 / 12.0 / 15.0, text 2 on
  * them 8.0 / 6.8 / 8.6, accent on tint 7.2, field borders 3.3 to 4.2 (all computed on the values below).
@@ -136,6 +208,12 @@
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-pop: 0 2px 6px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.5);
   --swatch-border: rgb(255 255 255 / 0.4);
+  /* ink text on the light accent and status colours of the dark theme */
+  --accent-foreground: var(--color-ink);
+  --success-foreground: var(--color-ink);
+  --warning-foreground: var(--color-ink);
+  --danger-foreground: var(--color-ink);
+  --backdrop: rgb(0 0 0 / 0.6);
 }
 
 @layer base {
@@ -168,60 +246,7 @@ select {
 }
 
 @layer components {
-/* Buttons --------------------------------------------------------------- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 40px;
-  padding: 0 var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 15px;
-  cursor: pointer;
-  transition:
-    background-color 120ms ease,
-    transform 80ms ease;
-}
-
-.btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.btn--primary {
-  background: var(--accent-fill);
-  color: var(--color-white);
-}
-
-@media (hover: hover) {
-  .btn--primary:hover:not(:disabled) {
-    background: var(--accent-fill-hover);
-  }
-}
-
-.btn--secondary {
-  background: var(--surface-control);
-  border-color: var(--line);
-  color: var(--text-1);
-}
-
-@media (hover: hover) {
-  .btn--secondary:hover:not(:disabled) {
-    border-color: var(--text-1);
-  }
-}
-
-.btn--block {
-  width: 100%;
-}
+/* Buttons: `src/ui/primitives/button.css` */
 
 /* Form controls --------------------------------------------------------- */
 .field {

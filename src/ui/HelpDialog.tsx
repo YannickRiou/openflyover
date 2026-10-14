@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import { useT } from '../i18n'
 import { Icon } from './icons'
 import { SHORTCUTS, SHORTCUT_GROUPS, keyLabel } from './shortcuts'
+import { Button, Tip } from './primitives'
 
 /** « Raccourcis clavier » (native modal dialog, Escape closes it), opened by « ? » or the button of the top bar. */
 export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
@@ -12,9 +13,11 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
         <h2 id="help-title" className="sources__title">
           {t('shortcuts.title')}
         </h2>
-        <button type="button" className="icon-btn" aria-label={t('common.close')} data-tip={t('common.closeEsc')} data-tip-side="left" onClick={() => dialogRef.current?.close()}>
-          <Icon name="x" size={18} />
-        </button>
+        <Tip text={t('common.closeEsc')} side="left">
+          <Button variant="icon" aria-label={t('common.close')} onClick={() => dialogRef.current?.close()}>
+            <Icon name="x" size={18} />
+          </Button>
+        </Tip>
       </div>
       <p className="field__hint help__drop">{t('shortcuts.drop')}</p>
       <div className="help__groups">

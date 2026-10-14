@@ -11,6 +11,7 @@ import type { IconName } from './icons'
 import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
 import { withShortcut } from './shortcuts'
+import { Button, Tip } from './primitives'
 
 /** How long the save icon keeps the accent colour once the project is saved (ms). */
 const SAVED_FLASH_MS = 3000
@@ -29,17 +30,21 @@ function FormatSwitcher({ disabled }: { disabled: boolean }) {
 
   return (
     <div className="format-switch" role="radiogroup" aria-label={t('topbar.format.aria')}>
-      <label className="format-switch__option" data-tip={t('topbar.format.freeTip')}>
-        <input type="radio" name="output-format" checked={free} disabled={disabled} onChange={() => pick(null)} />
-        <Icon name="maximize" size={18} />
-        <span className="visually-hidden">{t('topbar.format.free')}</span>
-      </label>
-      {VIDEO_ASPECTS.map((a) => (
-        <label key={a.id} className="format-switch__option" data-tip={a.label}>
-          <input type="radio" name="output-format" checked={!free && aspect === a.id} disabled={disabled} onChange={() => pick(a.id)} />
-          <AspectIcon x={a.x} y={a.y} size={18} />
-          <span className="visually-hidden">{a.label}</span>
+      <Tip text={t('topbar.format.freeTip')}>
+        <label className="format-switch__option">
+          <input type="radio" name="output-format" checked={free} disabled={disabled} onChange={() => pick(null)} />
+          <Icon name="maximize" size={18} />
+          <span className="visually-hidden">{t('topbar.format.free')}</span>
         </label>
+      </Tip>
+      {VIDEO_ASPECTS.map((a) => (
+        <Tip key={a.id} text={a.label}>
+          <label className="format-switch__option">
+            <input type="radio" name="output-format" checked={!free && aspect === a.id} disabled={disabled} onChange={() => pick(a.id)} />
+            <AspectIcon x={a.x} y={a.y} size={18} />
+            <span className="visually-hidden">{a.label}</span>
+          </label>
+        </Tip>
       ))}
     </div>
   )
@@ -77,9 +82,9 @@ function MoreMenu({ items }: { items: MoreItem[] }) {
         e.stopPropagation()
       }}
     >
-      <button type="button" className="icon-btn" aria-label={t('topbar.more')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <Button variant="icon" aria-label={t('topbar.more')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         <Icon name="ellipsis" />
-      </button>
+      </Button>
       {open && (
         <div className="track-menu topbar__menu" role="menu" aria-label={t('topbar.more')}>
           {items.map((item) => (
@@ -162,35 +167,44 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
           onChange={(e) => useAppStore.getState().setProjectName(e.currentTarget.value)}
         />
         <span className="topbar__sep" aria-hidden="true" />
-        <button type="button" className="icon-btn" onClick={history.undo} disabled={!canUndo || busy} aria-label={t('topbar.undo')} data-tip={withShortcut(t('topbar.undo'), 'undo')}>
-          <Icon name="undo" />
-        </button>
-        <button type="button" className="icon-btn" onClick={history.redo} disabled={!canRedo || busy} aria-label={t('topbar.redo')} data-tip={withShortcut(t('topbar.redo'), 'redo')}>
-          <Icon name="redo" />
-        </button>
-        <button type="button" className="icon-btn" onClick={onOpen} disabled={busy} aria-label={t('topbar.open')} data-tip={withShortcut(t('topbar.openTip'), 'open')}>
-          <Icon name="folder-open" />
-        </button>
-        <button
-          type="button"
-          className={`icon-btn topbar__save${unsaved ? ' topbar__save--unsaved' : ''}${justSaved ? ' topbar__save--saved' : ''}`}
-          data-testid="topbar-save"
-          data-save-state={unsaved ? 'unsaved' : justSaved ? 'saved' : undefined}
-          onClick={saveProject}
-          disabled={busy}
-          aria-label={unsaved ? t('topbar.saveUnsavedAria') : t('topbar.save')}
-          data-tip={withShortcut(unsaved ? t('topbar.saveUnsavedTip') : t('topbar.saveTip'), 'save')}
-        >
-          <Icon name="save" />
-        </button>
+        <Tip text={withShortcut(t('topbar.undo'), 'undo')}>
+          <Button variant="icon" onClick={history.undo} disabled={!canUndo || busy} aria-label={t('topbar.undo')}>
+            <Icon name="undo" />
+          </Button>
+        </Tip>
+        <Tip text={withShortcut(t('topbar.redo'), 'redo')}>
+          <Button variant="icon" onClick={history.redo} disabled={!canRedo || busy} aria-label={t('topbar.redo')}>
+            <Icon name="redo" />
+          </Button>
+        </Tip>
+        <Tip text={withShortcut(t('topbar.openTip'), 'open')}>
+          <Button variant="icon" onClick={onOpen} disabled={busy} aria-label={t('topbar.open')}>
+            <Icon name="folder-open" />
+          </Button>
+        </Tip>
+        <Tip text={withShortcut(unsaved ? t('topbar.saveUnsavedTip') : t('topbar.saveTip'), 'save')}>
+          <Button
+            variant="icon"
+            className={`topbar__save${unsaved ? ' topbar__save--unsaved' : ''}${justSaved ? ' topbar__save--saved' : ''}`}
+            data-testid="topbar-save"
+            data-save-state={unsaved ? 'unsaved' : justSaved ? 'saved' : undefined}
+            onClick={saveProject}
+            disabled={busy}
+            aria-label={unsaved ? t('topbar.saveUnsavedAria') : t('topbar.save')}
+          >
+            <Icon name="save" />
+          </Button>
+        </Tip>
       </div>
 
       <FormatSwitcher disabled={busy} />
 
       <div className="topbar__end">
-        <button type="button" className="icon-btn" onClick={onHelp} aria-label={t('topbar.shortcuts')} data-tip={withShortcut(t('topbar.shortcuts'), 'help')}>
-          <Icon name="circle-help" />
-        </button>
+        <Tip text={withShortcut(t('topbar.shortcuts'), 'help')}>
+          <Button variant="icon" onClick={onHelp} aria-label={t('topbar.shortcuts')}>
+            <Icon name="circle-help" />
+          </Button>
+        </Tip>
         <LanguageMenu />
         <MoreMenu
           items={[
@@ -201,9 +215,9 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
           ]}
         />
         {busy ? (
-          <button
-            type="button"
-            className="btn btn--primary topbar__export"
+          <Button
+            variant="primary"
+            className="topbar__export"
             data-testid="topbar-export"
             // between two films of a batch the export store is idle: the batch takes the cancel
             onClick={() => (batchRunning ? useBatchStore.getState().cancel() : useExportStore.getState().cancel())}
@@ -211,22 +225,23 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
             aria-label={phase === 'finalizing' ? t('topbar.finalizingAria') : t('topbar.cancelExportAria', { percent })}
           >
             {phase === 'finalizing' ? t('topbar.finalizing') : t('topbar.cancelExport', { percent })}
-          </button>
+          </Button>
         ) : (
           // nothing to export before the first track
           hasTracks && (
-            <button
-              type="button"
-              className="btn btn--primary topbar__export"
-              data-testid="topbar-export"
-              onClick={onToggleExport}
-              aria-expanded={exportOpen}
-              aria-controls="export-dock"
-              data-tip={withShortcut(t('topbar.exportTip'), 'export')}
-            >
-              <Icon name="download" size={18} />
-              <span className="icon-btn__text">{t('topbar.export')}</span>
-            </button>
+            <Tip text={withShortcut(t('topbar.exportTip'), 'export')}>
+              <Button
+                variant="primary"
+                className="topbar__export"
+                data-testid="topbar-export"
+                onClick={onToggleExport}
+                aria-expanded={exportOpen}
+                aria-controls="export-dock"
+              >
+                <Icon name="download" size={18} />
+                <span className="icon-btn__text">{t('topbar.export')}</span>
+              </Button>
+            </Tip>
           )
         )}
       </div>

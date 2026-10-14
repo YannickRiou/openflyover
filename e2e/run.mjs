@@ -403,7 +403,11 @@ const SCENARIOS = [
         await openTab('meteo')
         await until(page, () => document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="preset-badge-clouds"]')?.textContent === 'Imposé par Standard')
         // the pictogram weighs the export that will really run: « Rapide » = one bar
-        const tip = await page.$eval('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"]', (el) => el.dataset.tip)
+        // (the tooltip of the pictogram opens after a short pause under the pointer)
+        await (await page.$('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"]')).hover()
+        const tip = await (await page.waitForSelector('[role="tooltip"]', { visible: true, timeout: 10_000 })).evaluate((el) => el.textContent)
+        await page.mouse.move(0, 0)
+        await page.waitForSelector('[role="tooltip"]', { hidden: true, timeout: 10_000 })
         assert(tip.includes('×16') && tip.includes('imposé par la qualité Standard'), `info-bulle du pictogramme : ${tip}`)
         // another quality in the export settings: the badge follows
         await set('video', { quality: 'max' })

@@ -33,6 +33,7 @@ import { useAppStore } from '../state/store'
 import { formatAscent, formatDistance } from './format'
 import { Icon } from './icons'
 import { runImport } from './projectActions'
+import { Button, Tip } from './primitives'
 
 /** « Importer depuis Strava » of the welcome card. */
 export function StravaImport() {
@@ -41,9 +42,9 @@ export function StravaImport() {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn--secondary" onClick={() => setOpen(true)} disabled={loading}>
+      <Button onClick={() => setOpen(true)} disabled={loading}>
         {t('strava.import')}
-      </button>
+      </Button>
       <StravaDialog open={open} onClose={() => setOpen(false)} />
     </>
   )
@@ -66,9 +67,11 @@ export function StravaDialog({ open, onClose }: { open: boolean; onClose(): void
         <h2 id={titleId} className="sources__title">
           {t('strava.import')}
         </h2>
-        <button type="button" className="icon-btn" aria-label={t('common.close')} data-tip={t('common.closeEsc')} data-tip-side="left" onClick={onClose}>
-          <Icon name="x" size={18} />
-        </button>
+        <Tip text={t('common.closeEsc')} side="left">
+          <Button variant="icon" aria-label={t('common.close')} onClick={onClose}>
+            <Icon name="x" size={18} />
+          </Button>
+        </Tip>
       </div>
       {/* mounted while open only: every opening starts again from the stored connection */}
       {open && <StravaBody onImported={onClose} />}
@@ -179,20 +182,20 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
       {waiting ? (
         <div className="strava__actions">
           <p className="field__hint">{t('strava.waiting')}</p>
-          <button type="button" className="btn btn--secondary" onClick={() => pending.current?.abort()}>
+          <Button onClick={() => pending.current?.abort()}>
             {t('common.cancel')}
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="strava__actions">
           {hasSaved && (
-            <button type="button" className="btn btn--secondary" onClick={forget}>
+            <Button onClick={forget}>
               {t('strava.forget')}
-            </button>
+            </Button>
           )}
-          <button type="submit" className="btn btn--primary" disabled={!clientId.trim() || !clientSecret.trim()}>
+          <Button variant="primary" type="submit" disabled={!clientId.trim() || !clientSecret.trim()}>
             {t('strava.connect')}
-          </button>
+          </Button>
         </div>
       )}
     </form>
@@ -263,16 +266,15 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
     <div className="strava__body">
       <div className="strava__actions">
         <p className="field__hint">{athlete ? t('strava.connectedAs', { athlete }) : t('strava.connected')}</p>
-        <button
-          type="button"
-          className="btn btn--secondary btn--small"
+        <Button
+          size="sm"
           onClick={() => {
             disconnect()
             onSignedOut(null)
           }}
         >
           {t('strava.disconnect')}
-        </button>
+        </Button>
       </div>
       <input
         className="input"
@@ -313,13 +315,13 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
       )}
       <div className="strava__actions">
         {(more || error) && (
-          <button type="button" className="btn btn--secondary" onClick={loadNext} disabled={busy}>
+          <Button onClick={loadNext} disabled={busy}>
             {error ? t('common.retry') : t('strava.more')}
-          </button>
+          </Button>
         )}
-        <button type="button" className="btn btn--primary" onClick={importSelected} disabled={selected.size === 0}>
+        <Button variant="primary" onClick={importSelected} disabled={selected.size === 0}>
           {selected.size > 0 ? t('strava.importCount', { count: selected.size }) : t('strava.importButton')}
-        </button>
+        </Button>
       </div>
     </div>
   )
