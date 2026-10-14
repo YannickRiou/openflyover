@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Desktop installers at every push**: each push to `master` builds the Windows, macOS and Linux installers (*Actions* › "Desktop installers" › *Artifacts*); see `docs/installers.md`.
+
 ## 2.0.0 (October 2026)
 
 - **A new interface: Tailwind 4 and HeroUI 3, same identity and same features**: every panel, the top bar, the rail, the timeline, the inspector, the export drawer, the dialogs and the menus are rebuilt on Tailwind utilities (one type scale, one 4 px spacing scale, one focus ring) and, for buttons, fields, sliders, switches, tabs, menus, pop-overs, dialogs, toasts and tooltips, on HeroUI 3 components (MIT, build time only, nothing downloaded at run time). The hand-written CSS shrinks from about 5,500 to about 2,400 lines. The detail by area follows.
