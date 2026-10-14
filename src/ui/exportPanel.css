@@ -27,10 +27,4 @@
   margin: 0 0 var(--space-2);
   color: var(--text-1);
 }
-
-/* tiles of a flat map that never came */
-.export__warning {
-  color: var(--status-attention);
-  font-weight: 600;
-}
 }
