@@ -17,8 +17,8 @@ export function LabelSettings() {
 
   return (
     <>
-      <fieldset className="field fieldset">
-        <legend className="field__label">{tr('track.labels.legend')}</legend>
+      <fieldset className="field min-w-0">
+        <legend className="type-label mb-1">{tr('track.labels.legend')}</legend>
         <Checkbox
           checked={labels.waypoints}
           onChange={(on) => setSetting('labels', { ...labels, waypoints: on })}
@@ -35,7 +35,7 @@ export function LabelSettings() {
       </fieldset>
       <SettingRow label={tr('track.labels.kmMarkers')} value={kmStepLabel(labels.kmStep)} paths={['labels.kmStep']}>
         <div className="field">
-          <span className="field__label">{tr('track.labels.kmMarkers')}</span>
+          <span className="type-label">{tr('track.labels.kmMarkers')}</span>
           <Select
             aria-label={tr('track.labels.kmMarkers')}
             value={labels.kmStep}

@@ -68,19 +68,19 @@ export function CardFields({ card }: { card: CardId }) {
         {t('inspector.card.showWeather')}
       </Checkbox>
       <div className="field">
-        <label className="field__label" htmlFor={`${id}-credits`}>
+        <label className="type-label" htmlFor={`${id}-credits`}>
           {t('inspector.card.credits')}
         </label>
         <textarea
           id={`${id}-credits`}
-          className="input input--multiline"
+          className="input resize-y px-3 py-2 leading-[1.4]"
           rows={4}
           maxLength={END_CREDITS_MAX}
           placeholder={t('inspector.card.creditsPlaceholder')}
           value={end.credits ?? ''}
           onChange={(e) => setEnd({ credits: e.currentTarget.value || undefined })}
         />
-        <p className="field__hint">{t('inspector.card.creditsHint')}</p>
+        <p className="type-hint">{t('inspector.card.creditsHint')}</p>
       </div>
       <WidgetPosition widget="end" />
       <SizeField value={end.size} onChange={(size) => setEnd({ size })} />

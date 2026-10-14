@@ -1,18 +1,5 @@
 @layer components {
-/* Export drawer: section headings of « Vidéo », error and warning lines (Vidéo and Affiche). Colours from theme.css only. */
-
-/* « Format », « Encodage », « Rendu »: a small caps heading over a hairline, the fields of the section under it */
-.export__group {
-  margin: var(--space-3) 0 0;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--line);
-  color: var(--text-2);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
+/* Export drawer: error and warning lines still used by the « Affiche » panel (src/poster). Colours from theme.css only. */
 
 /* the export stopped (tiles missing, encoder): kept in view with its report, not only in a toast */
 .export__error {
@@ -26,11 +13,5 @@
 .export__error .field__hint {
   margin: 0 0 var(--space-2);
   color: var(--text-1);
-}
-
-/* tiles of a flat map that never came */
-.export__warning {
-  color: var(--status-attention);
-  font-weight: 600;
 }
 }
