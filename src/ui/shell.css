@@ -780,95 +780,6 @@
   white-space: nowrap;
 }
 
-/* Messages (toasts), at the bottom of the view above the timeline */
-.toaster {
-  position: absolute;
-  z-index: 6;
-  bottom: var(--space-4);
-  left: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  width: min(460px, calc(100% - 32px));
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.toast {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  max-width: 100%;
-  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
-  border: 1px solid var(--color-ink-soft);
-  border-radius: var(--radius-md);
-  background: var(--surface-chrome-raised);
-  color: var(--text-on-dark);
-  font-size: 13px;
-  box-shadow: var(--shadow-pop);
-  pointer-events: auto;
-  animation: tip-in 160ms ease both;
-}
-
-.toast > .icon {
-  margin-top: 7px;
-  color: var(--color-glacier);
-}
-
-.toast--error {
-  border-left: 4px solid var(--status-error-on-dark);
-}
-
-.toast--error > .icon {
-  color: var(--status-error-on-dark);
-}
-
-.toast__text {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  padding: 6px 0;
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-}
-
-.toast__action {
-  flex: none;
-  height: 28px;
-  margin-top: 2px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-accent-light);
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.toast .icon-btn {
-  min-width: 28px;
-  height: 28px;
-  margin-top: 2px;
-  color: var(--color-glacier);
-}
-
-@media (hover: hover) {
-  .toast__action:hover,
-  .toast .icon-btn:hover:not(:disabled) {
-    background: rgb(255 255 255 / 0.1);
-    color: var(--color-white);
-  }
-}
-
-.toast :focus-visible {
-  outline: var(--focus-ring-on-dark);
-  outline-offset: 1px;
-  box-shadow: none;
-}
-
 /* Veil while files are dragged over the window (lets the drag reach the timeline under it) */
 .drop-veil {
   position: fixed;
@@ -1708,7 +1619,6 @@
     transition: none;
   }
 
-  .toast,
   .drop-veil,
   .film-tl__menu,
   .track-menu {
@@ -1800,13 +1710,6 @@
 
   .view__safe-zones {
     top: calc(var(--space-3) + 44px + var(--space-2));
-  }
-
-  .toast__action,
-  .toast .icon-btn {
-    min-width: 44px;
-    height: 44px;
-    margin-top: 0;
   }
 
   .anchor-picker__grid {
