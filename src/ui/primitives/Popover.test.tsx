@@ -54,7 +54,7 @@ describe('Popover with a trigger', () => {
     expect(panel()?.getAttribute('aria-label')).toBe('Options du film')
     expect(panel()?.textContent).toBe('Arrêts automatiques')
     expect(host.contains(panel())).toBe(false)
-    expect(panel()?.closest<HTMLElement>('.popover-panel')?.style.width).toBe('260px')
+    expect(panel()?.closest<HTMLElement>('[data-local-escape]')?.style.width).toBe('260px')
     // `handlesOwnEscape` (App.tsx) looks for this attribute above the target of the key: the app's Escape comes after
     expect(panel()?.closest('[data-local-escape]')).not.toBeNull()
   })

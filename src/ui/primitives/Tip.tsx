@@ -22,6 +22,10 @@ export interface TipProps {
   children: ReactElement<{ ref?: Ref<HTMLElement> }>
 }
 
+/** The tooltip: the ink chrome in both themes (the overlay colours of theme.css), a short text, never in the way of the pointer. */
+const TIP =
+  'fade-in pointer-events-none rounded-sm border border-ink-soft bg-chrome-raised px-2 py-1 text-hint font-medium text-white shadow-pop'
+
 /** Pause before it opens, on hover, keyboard focus and a held touch. */
 const DELAY_MS = 450
 
@@ -113,7 +117,7 @@ export function Tip({ text, side = 'bottom', align, wrap, tap, disabled, childre
             offset={side === 'left' || side === 'right' ? 10 : 8}
             containerPadding={8}
             UNSTABLE_portalContainer={container}
-            className={wrap ? 'tip tip--wrap' : 'tip'}
+            className={wrap ? `${TIP} w-max whitespace-normal` : `${TIP} whitespace-nowrap`}
             style={wrap ? { maxWidth: wrap } : undefined}
           >
             {text}

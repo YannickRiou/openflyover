@@ -159,7 +159,6 @@ describe('Tip', () => {
     await pointer(trigger(), 'pointerenter')
     await wait(500)
     expect(tooltip()?.style.maxWidth).toBe('200px')
-    expect(tooltip()?.classList.contains('tip--wrap')).toBe(true)
   })
 
   it('opens inside the modal dialog that holds the element (the page behind it is inert, it would be hidden otherwise)', async () => {

@@ -108,7 +108,7 @@ describe('Modal', () => {
       })
     await press(dialog()!.querySelector('p')!)
     expect(onClose).not.toHaveBeenCalled()
-    await press(document.querySelector('.modal__backdrop')!)
+    await press(document.querySelector('[data-testid="modal-backdrop"]')!)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 

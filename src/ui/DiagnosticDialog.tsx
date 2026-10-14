@@ -5,15 +5,19 @@ import { useT } from '../i18n'
 import { SettingRow } from './PanelSection'
 import { Button, Checkbox, Modal } from './primitives'
 
+/** The report: monospace text on a field background, selectable and wrapped (it is read, then copied). */
+const REPORT =
+  'my-3 max-h-[min(55vh,520px)] overflow-auto rounded-sm border border-edge bg-surface-control p-3 font-mono text-hint leading-normal whitespace-pre-wrap select-text wrap-anywhere'
+
 /** « Diagnostic », last row of the Réglages tab: the report made now, with the last export's (« mode debug »). */
 export function DiagnosticRow() {
   const t = useT()
   // debug only: kept in the tab's sessionStorage, never in the project
   const [noEncoding, setNoEncoding] = useState(noEncodingTest)
   return (
-    <section className="settings project" aria-label={t('settings.diagnostic.title')}>
+    <section aria-label={t('settings.diagnostic.title')}>
       <SettingRow label={t('settings.diagnostic.title')} value={t('settings.diagnostic.value')}>
-        <p className="field__hint">{t('settings.diagnostic.hint')}</p>
+        <p className="type-hint">{t('settings.diagnostic.hint')}</p>
         <Button onClick={() => showDiagnostic(currentReport())}>
           {t('settings.diagnostic.show')}
         </Button>
@@ -68,15 +72,15 @@ export function DiagnosticDialog() {
       closeTip={t('common.closeEsc')}
       width={720}
     >
-      <p className="field__hint">{t('settings.diagnostic.dialogHint')}</p>
-      <pre ref={report} className="diagnostic__text" tabIndex={0} aria-label={t('settings.diagnostic.report')}>
+      <p className="type-hint">{t('settings.diagnostic.dialogHint')}</p>
+      <pre ref={report} className={REPORT} tabIndex={0} aria-label={t('settings.diagnostic.report')}>
         {text}
       </pre>
-      <div className="diagnostic__actions">
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="primary" onClick={() => void onCopy()}>
           {copy === 'copied' ? t('settings.diagnostic.copied') : t('settings.diagnostic.copy')}
         </Button>
-        <p className="field__hint" role="status">
+        <p className="type-hint" role="status">
           {copy === 'selected' ? t('settings.diagnostic.copyRefused') : ''}
         </p>
       </div>

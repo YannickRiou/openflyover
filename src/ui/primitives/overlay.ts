@@ -15,8 +15,8 @@ export const openDialog = (): Element | undefined => document.querySelector('[da
 /** A modal dialog is open: it takes the keyboard (the application's own shortcuts wait). */
 export const isModalOpen = (): boolean => document.querySelector('[data-modal]') !== null
 
-/** The classes of the panel of an overlay (`overlay.css`). */
-export const panelClass = (kind: string, sheet?: boolean) => ['overlay', kind, sheet && 'overlay--sheet'].filter(Boolean).join(' ')
+/** The classes of the panel of an overlay: the frame they share (`overlay-frame`, `overlay-sheet`: utilities.css) and the panel's own `kind`. */
+export const panelClass = (kind: string, sheet?: boolean) => ['overlay-frame', kind, sheet && 'overlay-sheet'].filter(Boolean).join(' ')
 
 /** While a point overlay is open, a right click elsewhere closes it without the browser's own menu opening over the page. */
 export function useNoBrowserMenu(active: boolean) {

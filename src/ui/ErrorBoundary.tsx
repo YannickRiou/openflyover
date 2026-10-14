@@ -34,19 +34,21 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     if (this.state.error === null) return this.props.children
     return (
       <>
-        <div className="empty" role="alert">
-          <h1 className="empty__title">{t('errors.boundary.title')}</h1>
-          <details style={{ width: '100%', textAlign: 'left', fontSize: 12 }}>
-            <summary>{t('errors.boundary.details')}</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{errorMessage(this.state.error)}</pre>
-          </details>
-          <div className="empty__actions">
-            <Button onClick={save}>
-              {t('errors.boundary.save')}
-            </Button>
-            <Button variant="primary" onClick={() => window.location.reload()}>
-              {t('errors.boundary.reload')}
-            </Button>
+        <div className="home-page" role="alert">
+          <div className="home-column">
+            <h1 className="home-title">{t('errors.boundary.title')}</h1>
+            <details className="type-hint w-full text-left">
+              <summary>{t('errors.boundary.details')}</summary>
+              <pre className="whitespace-pre-wrap wrap-anywhere">{errorMessage(this.state.error)}</pre>
+            </details>
+            <div className="home-actions">
+              <Button onClick={save}>
+                {t('errors.boundary.save')}
+              </Button>
+              <Button variant="primary" onClick={() => window.location.reload()}>
+                {t('errors.boundary.reload')}
+              </Button>
+            </div>
           </div>
         </div>
         <Toaster />

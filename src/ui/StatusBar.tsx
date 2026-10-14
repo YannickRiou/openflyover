@@ -29,6 +29,23 @@ import { PERF_ITEMS } from './shell'
 import type { PerfItem } from './shell'
 import { Modal, Tip } from './primitives'
 
+/*
+ * The strip's classes. It is a container (`@container/status`): narrower than 900 px the performance readout goes, narrower
+ * than 560 px the chips keep their icon only and the providers behind the credits fold into « … ».
+ */
+const BAR =
+  '@container/status chrome-focus flex min-w-0 items-center gap-3 border-t border-ink-soft bg-chrome pr-2 pl-3 text-caption whitespace-nowrap text-glacier tabular-nums phone-any:pb-[env(safe-area-inset-bottom)]'
+/** The spinner: a ring with its light-accent arc. */
+const SPINNER = 'spin-fast size-2.5 flex-none rounded-full border-2 border-ink-soft border-t-accent-light'
+/** The colour of a chip by tone: white while loading, the attention colour on error, dimmed when there is nothing to show. */
+const CHIP_TONE: Record<FetchChip['tone'], string> = {
+  loading: 'text-white',
+  ready: '',
+  attention: 'text-amber-light',
+  muted: 'opacity-75',
+}
+const CREDIT_LINK = 'text-inherit underline hover:text-white'
+
 /** Performance readout refresh. */
 const PERF_INTERVAL_MS = 1000
 
@@ -120,9 +137,16 @@ function usePerformance(shown: Record<PerfItem, boolean>): PerfSample | null {
 function ProgressRing({ value }: { value: number }) {
   const circumference = 2 * Math.PI * 5
   return (
-    <svg className="status__ring" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-      <circle cx="6" cy="6" r="5" />
-      <circle cx="6" cy="6" r="5" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - value)} />
+    <svg className="spin-slow size-3 flex-none fill-none stroke-2" viewBox="0 0 12 12" aria-hidden="true">
+      <circle className="stroke-ink-soft" cx="6" cy="6" r="5" />
+      <circle
+        className="origin-center -rotate-90 stroke-accent-light transition-[stroke-dashoffset] duration-400 ease-out [stroke-linecap:round] motion-reduce:transition-none"
+        cx="6"
+        cy="6"
+        r="5"
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference * (1 - value)}
+      />
     </svg>
   )
 }
@@ -133,11 +157,13 @@ function Chip({ chip }: { chip: FetchChip }) {
   const attention = chip.tone === 'attention'
   return (
     <Tip text={chip.tip} side="top">
-      <span className={`status__chip status__chip--${chip.tone}`} tabIndex={attention ? 0 : undefined}>
+      <span className={`inline-flex flex-none items-center gap-1 @max-[560px]/status:text-[0px] ${CHIP_TONE[chip.tone]}`} tabIndex={attention ? 0 : undefined}>
         {chip.tone === 'loading' ? (
-          <span className="status__spinner" aria-hidden="true" />
+          <span className={SPINNER} aria-hidden="true" />
         ) : (
-          <Icon name={chip.tone === 'ready' ? 'circle-check' : 'circle-alert'} size={12} />
+          <span className={chip.tone === 'ready' ? 'flex text-moss-light' : 'flex'}>
+            <Icon name={chip.tone === 'ready' ? 'circle-check' : 'circle-alert'} size={12} />
+          </span>
         )}
         {chip.label}
         <span className="visually-hidden">{t('status.chipSr', { tip: chip.tip })}</span>
@@ -164,7 +190,7 @@ function FetchChips() {
   const chips = [shown.weather && weather, shown.landmarks && landmarks, shown.region && region, shown.water && water].filter((c) => !!c)
   if (chips.length === 0) return null
   return (
-    <p className="status__chips">
+    <p className="flex min-w-0 items-center gap-2 overflow-hidden">
       {chips.map((chip) => (
         <Chip key={chip.label} chip={chip} />
       ))}
@@ -204,13 +230,13 @@ export function StatusBar() {
   const perfText = perf ? perfParts(perf, perfShown).join(' · ') : ''
 
   return (
-    <footer className="status">
+    <footer className={BAR}>
       {/* calm: nothing before the first tile, a short load (small camera move) does not show */}
       {map.shown !== 'idle' && (
-        <p className="status__map">
+        <p className="flex flex-none items-center gap-2">
           {map.shown === 'loading' ? (
             <span
-              className="status__map-state status__map-state--loading"
+              className="flex items-center gap-1.5 text-white"
               title={t('status.mapTip')}
               role="progressbar"
               aria-label={t('status.mapLoading')}
@@ -222,17 +248,16 @@ export function StatusBar() {
               {t('status.map', { value: formatPercent(map.progress) })}
             </span>
           ) : (
-            <span className="status__map-state status__map-state--ready" title={t('status.mapReadyTip')}>
-              <Icon name="circle-check" size={12} />
+            <span className="flex items-center gap-1.5" title={t('status.mapReadyTip')}>
+              <span className="flex text-moss-light">
+                <Icon name="circle-check" size={12} />
+              </span>
               {t('status.mapReady')}
             </span>
           )}
           {map.failed > 0 && (
             <Tip text={t('status.failedTip')} side="top" align="start">
-              <span
-                className="status__failed"
-                tabIndex={0}
-              >
+              <span className="text-amber-light" tabIndex={0}>
                 {t('status.failedTiles', { count: map.failed })}
               </span>
             </Tip>
@@ -240,22 +265,22 @@ export function StatusBar() {
         </p>
       )}
       {/* always mounted so that assistive tech sees the text change */}
-      <p className="status__line" role="status" aria-live="polite" hidden={!loading}>
-        <span className="status__spinner" aria-hidden="true" />
+      <p className="flex flex-none items-center gap-1.5" role="status" aria-live="polite" hidden={!loading}>
+        <span className={SPINNER} aria-hidden="true" />
         {t('status.importing')}
       </p>
       <FetchChips />
       {perfText && (
-        <p className="status__perf" title={t('status.perfTip')}>
+        <p className="min-w-0 truncate @max-[900px]/status:hidden" title={t('status.perfTip')}>
           {perfText}
         </p>
       )}
-      <p className="status__credits">
+      <p className="ml-auto shrink-0 grow text-right">
         {short.map((item, i) => (
-          <span key={item.text} className="status__credit">
+          <span key={item.text}>
             {i > 0 && ' · '}
             {item.href ? (
-              <a href={item.href} target="_blank" rel="noreferrer">
+              <a className={CREDIT_LINK} href={item.href} target="_blank" rel="noreferrer">
                 {item.text}
               </a>
             ) : (
@@ -263,11 +288,11 @@ export function StatusBar() {
             )}
             {item.more && (
               <>
-                <span className="status__credit-more"> — {item.more}</span>
+                <span className="@max-[560px]/status:hidden"> — {item.more}</span>
                 {/* narrow status bar: the providers behind a button, above the bar when open */}
-                <details className="status__credit-fold">
-                  <summary aria-label={t('status.creditSources', { name: item.text })}>…</summary>
-                  <span className="status__credit-pop">{item.more}</span>
+                <details className="relative hidden @max-[560px]/status:inline-block">
+                  <summary className="cursor-pointer list-none px-1 [&::-webkit-details-marker]:hidden" aria-label={t('status.creditSources', { name: item.text })}>…</summary>
+                  <span className="absolute right-0 bottom-[calc(100%+6px)] z-9 rounded-sm bg-chrome px-2 py-1 text-white shadow-pop">{item.more}</span>
                 </details>
               </>
             )}
@@ -277,7 +302,7 @@ export function StatusBar() {
       <Tip text={t('status.sources')} side="top" align="end">
         <button
           type="button"
-          className="status__info"
+          className="relative inline-flex size-5 flex-none cursor-pointer items-center justify-center rounded-full p-0 text-glacier transition-ui hover:text-white touch:before:absolute touch:before:-inset-3.5 touch:before:content-['']"
           aria-label={t('status.sources')}
           onClick={() => setSourcesOpen(true)}
         >
@@ -286,7 +311,7 @@ export function StatusBar() {
       </Tip>
 
       <Modal open={sourcesOpen} onClose={() => setSourcesOpen(false)} title={t('status.sources')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
-        <ul className="sources__list">
+        <ul className="mb-3 flex flex-col gap-2">
           {credits.map((line) => (
             <li key={line}>
               {line}
@@ -294,19 +319,19 @@ export function StatusBar() {
             </li>
           ))}
         </ul>
-        <p className="sources__links">
+        <p>
           {short
             .filter((item) => item.href)
             .map((item, i) => (
               <span key={item.text}>
                 {i > 0 && ' · '}
-                <a href={item.href} target="_blank" rel="noreferrer">
+                <a className="underline" href={item.href} target="_blank" rel="noreferrer">
                   {item.text.replace('© ', '')}
                 </a>
               </span>
             ))}
         </p>
-        <p className="field__hint">{t('status.sourcesNote')}</p>
+        <p className="type-hint">{t('status.sourcesNote')}</p>
       </Modal>
     </footer>
   )

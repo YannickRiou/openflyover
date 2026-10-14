@@ -1,3 +1,4 @@
+
 @layer components {
 /* Components of the panels and the view (layout of the shell: shell.css). Colours come from theme.css only. */
 
@@ -97,10 +98,6 @@
   gap: var(--space-2);
 }
 
-.project__scope {
-  margin-bottom: var(--space-2);
-}
-
 .project__row > * {
   flex: 1 1 0;
   min-width: 0;
@@ -113,50 +110,6 @@
 
 .project__row > [type='submit'] {
   flex: none;
-}
-
-/* « Mes projets »: one card per project, the open one outlined */
-.library {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-2);
-}
-
-.library__item {
-  display: grid;
-  /* the card never grows past the panel (long names, three buttons) */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 2px;
-  padding: var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-}
-
-.library__item--current {
-  border-color: var(--accent);
-  background: var(--accent-tint);
-}
-
-.library__item > .project__row {
-  margin-top: var(--space-1);
-}
-
-.library__item > .project__row > .btn {
-  padding-inline: var(--space-2);
-}
-
-.library__name {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.library__badge {
-  margin-left: var(--space-2);
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-info);
 }
 
 /* « Hors ligne » packs: name and figures, then « Supprimer » */
@@ -240,7 +193,6 @@
 .preset-more[open] > .preset-more__summary {
   color: var(--text-1);
 }
-
 @media (hover: hover) {
   .preset-more__summary:hover {
     color: var(--text-1);
@@ -261,35 +213,4 @@
 }
 
 /* ======================== fin Carte et Survol ============================ */
-
-/* « Mes projets »: the view at the last save on the left of the name, summary and date; the buttons under both */
-.library__item {
-  grid-template-columns: 96px minmax(0, 1fr);
-  column-gap: var(--space-2);
-}
-
-.library__item > * {
-  grid-column: 2;
-}
-
-.library__item > .library__thumb {
-  grid-column: 1;
-  grid-row: 1 / span 3;
-  align-self: start;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, var(--color-glacier), var(--color-paper));
-}
-
-.library__item > .project__row:last-child {
-  grid-column: 1 / -1;
-}
-
-/* « Réglages »: the line that says these preferences belong to the device */
-.prefs__intro {
-  padding-top: var(--space-3);
-}
 }

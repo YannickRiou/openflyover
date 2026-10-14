@@ -64,7 +64,7 @@ export function LanguageMenu() {
         </Button>
       </Tip>
       {open && (
-        <div className="track-menu lang-menu__list top-[calc(100%+6px)] right-0 z-20" role="menu" aria-label={t('topbar.language.menu')}>
+        <div className="overlay-frame overlay-sheet absolute top-[calc(100%+6px)] right-0 z-20 flex min-w-40 flex-col p-1" role="menu" aria-label={t('topbar.language.menu')}>
           {LANGUAGES.map((l) => (
             <button
               key={l.code}
@@ -72,7 +72,7 @@ export function LanguageMenu() {
               role="menuitemradio"
               aria-checked={l.code === language}
               lang={l.code}
-              className="track-menu__item lang-menu__item"
+              className="overlay-item"
               onClick={() => {
                 setPreferences({ language: l.code })
                 setOpen(false)
