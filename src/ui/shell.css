@@ -599,95 +599,6 @@ fieldset:disabled .format-tile .option__label {
   font-variant-numeric: tabular-nums;
 }
 
-/* position in the frame: 3 × 3 radio buttons drawn as a small frame */
-.anchor-picker {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-/* (two classes: the group is a RadioGroup, HeroUI's `.radio-group[data-orientation]` is a flex row) */
-.anchor-picker .anchor-picker__grid {
-  display: grid;
-  flex: none;
-  grid-template-columns: repeat(3, 28px);
-  grid-auto-rows: 18px;
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-control);
-}
-
-/* a cell is a Radio: its label is stretched over it, the native radio inside is hidden */
-.anchor-picker__cell {
-  position: relative;
-  display: block;
-  padding: 0;
-  border: 0;
-  border-radius: 2px;
-  background: var(--surface-panel);
-  cursor: pointer;
-}
-
-.anchor-picker__cell .option__label {
-  position: absolute;
-  inset: 0;
-  display: block;
-  border-radius: inherit;
-}
-
-.anchor-picker__cell::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  border-radius: 50%;
-  background: var(--color-line);
-}
-
-@media (hover: hover) {
-  .anchor-picker__cell:hover:not([data-disabled='true'])::before {
-    background: var(--text-2);
-  }
-}
-
-.anchor-picker__cell[data-selected='true'] {
-  background: var(--accent);
-}
-
-.anchor-picker__cell[data-selected='true']::before {
-  background: var(--surface-control);
-}
-
-.anchor-picker__cell[data-disabled='true'] {
-  background: transparent;
-  opacity: 1;
-  cursor: default;
-}
-
-.anchor-picker__cell[data-disabled='true']::before {
-  opacity: 0.4;
-}
-
-.anchor-picker__cell .option__label[data-focus-visible='true'] {
-  outline: var(--focus-ring);
-  outline-offset: 1px;
-}
-
-.anchor-picker__value {
-  color: var(--text-2);
-  font-size: 12px;
-}
-
-/* « Position libre » of an overlay widget: the two offsets side by side */
-.position-offset {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
 }
 
 /* Menu of the language picker (LanguageMenu.tsx; the other menus are the Menu and Popover primitives) and the form of a point of interest (TrackPicker.tsx) */
@@ -1228,11 +1139,6 @@ fieldset:disabled .format-tile .option__label {
 
   .view__safe-zones {
     top: calc(var(--space-3) + 44px + var(--space-2));
-  }
-
-  .anchor-picker .anchor-picker__grid {
-    grid-template-columns: repeat(3, 44px);
-    grid-auto-rows: 44px;
   }
 
   /* small glyphs: a wider invisible hit area around them */

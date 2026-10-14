@@ -131,11 +131,11 @@ export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
       </Checkbox>
       {offset && (
         <>
-          <div className="position-offset">
+          <div className="grid grid-cols-2 gap-2">
             {axis('x', OFFSET_X_LABELS[column], offset)}
             {axis('y', OFFSET_Y_LABELS[row], offset)}
           </div>
-          <p className="field__hint">{t('overlay.freePositionHint', { width: film.width, height: film.height })}</p>
+          <p className="type-hint">{t('overlay.freePositionHint', { width: film.width, height: film.height })}</p>
         </>
       )}
     </>
@@ -145,6 +145,10 @@ export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
 export const SizeField = ({ value, onChange }: { value: number; onChange(v: number): void }) => (
   <RangeField label={t('overlay.size')} min={WIDGET_SIZE_MIN} max={WIDGET_SIZE_MAX} step={0.1} value={value} format={(v) => `×${formatNumber(v, 1)}`} onChange={onChange} />
 )
+
+/** A widget of the overlay: its switch under a hairline (none above the first of a section), its options nested under a rule. */
+const WIDGET = 'flex flex-col gap-2 border-t border-edge pt-3 first:border-t-0 first:pt-0'
+const WIDGET_BODY = 'ml-3.5 flex flex-col gap-3 border-l-2 border-edge pl-3'
 
 /** One widget: a checkbox that shows its options while it is enabled, its position first (out of the tabs). */
 function WidgetGroup({
@@ -177,10 +181,10 @@ function WidgetGroup({
   const [tab, setTab] = useState<WidgetTab>(tabs[0] ?? 'contenu')
   const shown = tabs.includes(tab) ? tab : tabs[0]
   return (
-    <div className="overlay-widget" role="group" aria-labelledby={id}>
+    <div className={WIDGET} role="group" aria-labelledby={id}>
       <Switch id={id} checked={enabled} onChange={(on) => onToggle(on)}>{label}</Switch>
       {enabled && (
-        <div className="overlay-widget__body">
+        <div className={WIDGET_BODY}>
           {position && <WidgetPosition widget={position} />}
           {tabs.length > 1 && (
             <ToggleButtonGroup aria-label={tr('overlay.widgetSettings', { label })} value={shown} onChange={(next) => setTab(next)}>
@@ -215,9 +219,9 @@ function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolea
   const hasTrack = useAppStore((s) => s.tracks.length > 0)
   const label = CARD_LABELS[card]
   return (
-    <div className="overlay-widget" role="group" aria-labelledby={id}>
+    <div className={WIDGET} role="group" aria-labelledby={id}>
       <Switch id={id} checked={enabled} onChange={(on) => onToggle(on)}>{label}</Switch>
-      <p className="field__hint">{t('overlay.card.hint')}</p>
+      <p className="type-hint">{t('overlay.card.hint')}</p>
       {enabled && (
         <Button
           disabled={!hasTrack}
@@ -275,7 +279,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   const id = useId()
   return (
     <div className="field">
-      <label className="field__label" htmlFor={id}>
+      <label className="type-label" htmlFor={id}>
         {label}
       </label>
       <ColorFieldControl
@@ -305,7 +309,7 @@ function FontField({
   const id = useId()
   return (
     <div className="field">
-      <label className="field__label" htmlFor={id}>
+      <label className="type-label" htmlFor={id}>
         {label}
       </label>
       <Select
@@ -396,7 +400,7 @@ function StyleOverrides({
         </>
       ) : (
         <div className="field">
-          <label className="field__label" htmlFor={backingId}>
+          <label className="type-label" htmlFor={backingId}>
             {t('overlay.overrides.backing')}
           </label>
           <Select
@@ -405,7 +409,7 @@ function StyleOverrides({
             options={TEXT_BACKINGS.map((backing) => ({ value: backing, label: TEXT_BACKING_LABELS[backing] }))}
             onChange={(textBacking) => onChange({ textBacking })}
           />
-          <p className="field__hint">{t('overlay.overrides.backingHint')}</p>
+          <p className="type-hint">{t('overlay.overrides.backingHint')}</p>
         </div>
       )}
       <FontField label={t('overlay.overrides.titleFont')} value={own.titleFont} inherit={inherit} onChange={(titleFont) => onChange({ titleFont })} />
@@ -437,7 +441,7 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
       paths={['overlay.labelColors']}
     >
       <div className="field">
-        <label className="field__label" htmlFor={kindId}>
+        <label className="type-label" htmlFor={kindId}>
           {t('overlay.labelColors.type')}
         </label>
         <Select
@@ -448,7 +452,7 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
         />
       </div>
       <ColorField label={t('overlay.color')} value={toHex(look.accents[kind])} onChange={(color) => onChange(withLabelColor(overlay, kind, color))} />
-      <p className="field__hint">{t('overlay.labelColors.hint')}</p>
+      <p className="type-hint">{t('overlay.labelColors.hint')}</p>
       <Button
         disabled={Object.keys(own).length === 0}
         onClick={() => {
@@ -508,11 +512,11 @@ export function OverlayPanel() {
     <>
       <PanelSection title={t('overlay.panel.title')} keys={['overlay']}>
         <Switch checked={overlay.enabled} onChange={(on) => set({ enabled: on })}>{t('overlay.panel.show')}</Switch>
-        <p className="field__hint">{t('overlay.panel.showHint')}</p>
+        <p className="type-hint">{t('overlay.panel.showHint')}</p>
 
         {overlay.enabled && (
-          <fieldset className="field fieldset">
-            <legend className="field__label">{t('overlay.panel.style')}</legend>
+          <fieldset className="field min-w-0">
+            <legend className="type-label mb-1">{t('overlay.panel.style')}</legend>
             <RadioGroup wrap aria-label={t('overlay.panel.style')} value={overlay.style} onChange={(style) => set(withStyleLayout(overlay, style))}>
               {OVERLAY_STYLES.map((style) => (
                 <Radio key={style} value={style}>
@@ -527,7 +531,7 @@ export function OverlayPanel() {
       </PanelSection>
 
       <PanelSection title={t('overlay.panel.labels3d')}>
-        <p className="field__hint">{t('overlay.panel.labels3dHint')}</p>
+        <p className="type-hint">{t('overlay.panel.labels3dHint')}</p>
         <PanelKeys target={{ kind: 'param', param: 'labels' }} />
       </PanelSection>
 
@@ -547,8 +551,8 @@ export function OverlayPanel() {
               styled="counters"
               style={<SizeField value={overlay.counters.size} onChange={(size) => setWidget('counters', { size })} />}
             >
-              <fieldset className="field fieldset">
-                <legend className="field__label">{t('overlay.panel.values')}</legend>
+              <fieldset className="field min-w-0">
+                <legend className="type-label mb-1">{t('overlay.panel.values')}</legend>
                 <div className="chips">
                   {COUNTER_IDS.map((counter) => (
                     <Chip
@@ -574,7 +578,7 @@ export function OverlayPanel() {
                 styled="leaderboard"
                 style={<SizeField value={overlay.leaderboard.size} onChange={(size) => setWidget('leaderboard', { size })} />}
               >
-                <p className="field__hint">
+                <p className="type-hint">
                   {raceOn
                     ? t('overlay.panel.leaderboardRace')
                     : t('overlay.panel.leaderboardOff')}
@@ -614,7 +618,7 @@ export function OverlayPanel() {
                 </>
               }
             >
-              {!hasEle && track && <p className="field__hint">{t('overlay.panel.noElevation')}</p>}
+              {!hasEle && track && <p className="type-hint">{t('overlay.panel.noElevation')}</p>}
             </WidgetGroup>
 
             <WidgetGroup
@@ -630,7 +634,7 @@ export function OverlayPanel() {
                 </>
               }
             >
-              <p className="field__hint">{t('overlay.panel.minimapHint')}</p>
+              <p className="type-hint">{t('overlay.panel.minimapHint')}</p>
               <Checkbox
                 checked={overlay.minimap.northArrow}
                 onChange={(on) => setWidget('minimap', { northArrow: on })}
@@ -649,7 +653,7 @@ export function OverlayPanel() {
               styled="weather"
               style={<SizeField value={overlay.weather.size} onChange={(size) => setWidget('weather', { size })} />}
             >
-              <p className="field__hint">
+              <p className="type-hint">
                 {hasWeather
                   ? t('overlay.panel.weatherReady')
                   : t('overlay.panel.weatherWaiting')}
@@ -676,7 +680,7 @@ export function OverlayPanel() {
                 </>
               }
             >
-              <div className="project__row">
+              <div className="flex gap-2 *:min-w-0 *:flex-1">
                 <Button onClick={() => void chooseLogo()}>
                   {overlay.logo.image ? t('marker.image.change') : t('marker.image.choose')}
                 </Button>
@@ -687,7 +691,7 @@ export function OverlayPanel() {
                 )}
               </div>
               {logoError && (
-                <p className="field__hint" role="alert">
+                <p className="type-hint" role="alert">
                   {logoError}
                 </p>
               )}
@@ -708,7 +712,7 @@ export function OverlayPanel() {
       )}
 
       <PanelSection title={t('overlay.panel.credits')}>
-        <div className="field__label-row">
+        <div className="flex items-center gap-1">
           <Switch checked={overlay.credits.enabled} onChange={(on) => setWidget('credits', { enabled: on })}>{t('overlay.panel.burnCredits')}</Switch>
           <InfoTip text={t('overlay.panel.creditsTip')} />
         </div>
@@ -720,10 +724,10 @@ export function OverlayPanel() {
               allowed={CREDITS_POSITIONS}
               onChange={(position) => setWidget('credits', { position })}
             />
-            <p className="field__hint">{t('overlay.panel.creditsHint')}</p>
+            <p className="type-hint">{t('overlay.panel.creditsHint')}</p>
           </>
         ) : (
-          <p className="field__hint">{t('overlay.panel.creditsOff')}</p>
+          <p className="type-hint">{t('overlay.panel.creditsOff')}</p>
         )}
       </PanelSection>
     </>

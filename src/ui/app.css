@@ -291,18 +291,6 @@
   min-width: 0;
 }
 
-.range-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* the slider between « − » and « + » takes what the buttons leave */
-.range-row > .slider--field {
-  flex: 1 1 auto;
-  width: auto;
-}
-
 .range-row__value {
   flex: none;
   min-width: 3.5ch;
@@ -314,39 +302,6 @@
 
 .range-row__value--wide {
   min-width: 7ch;
-}
-
-/* « − » and « + » around a slider: the fine adjustment of a value the slider only roughly reaches */
-.step-btn {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-control);
-  color: var(--text-1);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.step-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-@media (hover: hover) {
-  .step-btn:hover:not(:disabled) {
-    border-color: var(--text-1);
-  }
-}
-
-@media (pointer: coarse) {
-  .step-btn {
-    width: 44px;
-    height: 44px;
-  }
 }
 
 .field__hint {
@@ -443,29 +398,6 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-}
-
-.overlay-widget {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-}
-
-.overlay-widget__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding-left: var(--space-5);
-}
-
-/* « Couleurs et polices »: the colour field is a primitive (primitives/color-field.css) */
-
-/* file input hidden inside a button-like label: show the focus on the label */
-.overlay-widget .btn:has(input:focus-visible) {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
 }
 
 /* Track colour legend (bottom left of the 3D view) ----------------------- */
@@ -949,27 +881,6 @@
   margin-top: var(--space-2);
 }
 
-/* camera style tiles (look of the export format tiles) */
-.style-tiles[data-orientation] {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.style-tile .format-tile__label {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.preset-tile__figures {
-  font-size: 11px;
-  opacity: 0.75;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 /* « Plus de préréglages »: the folded presets, right under the main grid */
 .preset-more__summary {
   display: flex;
@@ -1010,9 +921,6 @@
   transform: rotate(-90deg);
 }
 
-.preset-more > .style-tiles {
-  margin-top: var(--space-1);
-}
 /* ======================== fin Carte et Survol ============================ */
 
 /* ==========================================================================
@@ -1029,18 +937,6 @@
   .track__delete:hover {
     color: var(--text-1);
   }
-}
-
-/* widget options: nested under their switch by a rule, the first widget of a section without its top rule */
-.overlay-widget__body {
-  margin-left: 14px;
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--line);
-}
-
-.panel-section__body > .overlay-widget:first-child {
-  padding-top: 0;
-  border-top: 0;
 }
 
 /* weather: the outing and the marker in one line each, the tables folded under « Détails » */

@@ -32,7 +32,6 @@ import { currentPosterContent, posterRows, previewKey, previewMap, startPoster, 
 import { posterLayout } from './layout'
 import { POSTER_FIGURES, POSTER_FIGURE_LABELS, POSTER_FORMATS, POSTER_STYLES, POSTER_VIEWS, POSTER_VIEW_LABELS, posterSize } from './settings'
 import type { PosterSettings, PosterType } from './settings'
-import './poster.css'
 import { Button, Checkbox, Chip, Radio, RadioGroup, Select, TextField, Tip } from '../ui/primitives'
 
 /** Largest size of the thumbnail in the drawer (CSS px). */
@@ -124,13 +123,13 @@ function PosterPreview({ poster }: { poster: PosterSettings }) {
     <>
       <canvas
         ref={canvasRef}
-        className="poster__preview"
+        className="mx-auto block justify-self-center rounded-[2px] border border-edge bg-paper shadow-[0_2px_8px_rgb(28_42_51/0.18)]"
         style={{ width: cssW, height: cssH }}
         role="img"
         aria-label={t('poster.preview.aria')}
       />
       {!exact && (
-        <p className="field__hint">
+        <p className="type-hint">
           {shownApprox ? t('poster.preview.approxFlat') : t('poster.preview.approx')} {poster.flat ? t('poster.preview.flatLoaded') : t('poster.preview.rendered')}
         </p>
       )}
@@ -232,10 +231,10 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
       )}
       {modes}
 
-      {track ? <PosterPreview poster={poster} /> : <p className="field__hint">{t('poster.panel.addTrack')}</p>}
+      {track ? <PosterPreview poster={poster} /> : <p className="type-hint">{t('poster.panel.addTrack')}</p>}
 
       <div className="field">
-        <label className="field__label" htmlFor={`${id}-format`}>
+        <label className="type-label" htmlFor={`${id}-format`}>
           {t('poster.panel.format')}
         </label>
         <Select
@@ -246,13 +245,13 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
           options={POSTER_FORMATS.map((f) => ({ value: f.id, label: f.label }))}
           onChange={(format) => set({ format })}
         />
-        <p id={`${id}-size`} className="field__hint">
+        <p id={`${id}-size`} className="type-hint">
           {t(poster.format === 'square' ? 'poster.panel.size' : 'poster.panel.sizeDpi', { width: formatNumber(width), height: formatNumber(height) })}
         </p>
       </div>
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{t('poster.panel.style')}</legend>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label mb-1">{t('poster.panel.style')}</legend>
         <RadioGroup wrap aria-label={t('poster.panel.style')} value={poster.style} onChange={(style) => set({ style })}>
           {POSTER_STYLES.map((style) => (
             <Radio key={style} value={style}>
@@ -265,8 +264,8 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
       <TextField label={t('poster.panel.title')} value={poster.title} placeholder={defaultTitle} disabled={busy} onChange={(title) => set({ title })} />
       <TextField label={t('poster.panel.subtitle')} value={poster.subtitle} placeholder={t('poster.panel.subtitlePlaceholder')} disabled={busy} onChange={(subtitle) => set({ subtitle })} />
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{t('poster.panel.figures')}</legend>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label mb-1">{t('poster.panel.figures')}</legend>
         <div className="chips">
           {POSTER_FIGURES.map((figure) => {
             const present = available?.[figure] ?? false
@@ -294,8 +293,8 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
         {t('poster.panel.weather')}
       </Checkbox>
       <Checkbox checked={poster.flat} disabled={busy} onChange={(on) => set({ flat: on })}>{t('poster.panel.flat')}</Checkbox>
-      <fieldset className="field fieldset" disabled={busy || poster.flat}>
-        <legend className="field__label">{t('poster.panel.view3d')}</legend>
+      <fieldset className="field min-w-0" disabled={busy || poster.flat}>
+        <legend className="type-label mb-1">{t('poster.panel.view3d')}</legend>
         <RadioGroup aria-label={t('poster.panel.view3d')} value={poster.view} onChange={(view) => set({ view })}>
           {POSTER_VIEWS.map((view) => (
             <Radio key={view} value={view}>
@@ -304,7 +303,7 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
           ))}
         </RadioGroup>
       </fieldset>
-      <p className="field__hint">
+      <p className="type-hint">
         {poster.flat
           ? t('poster.panel.flatHint', { scope: tracks.length > 1 ? t('poster.panel.scopeAll') : t('poster.panel.scopeOne') })
           : poster.view === 'camera'
@@ -313,8 +312,8 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
         {t('poster.panel.credits')}
       </p>
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{t('poster.panel.imageType')}</legend>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label mb-1">{t('poster.panel.imageType')}</legend>
         <RadioGroup aria-label={t('poster.panel.imageType')} value={poster.type} onChange={(type) => set({ type })}>
           {IMAGE_TYPES.map((type) => (
             <Radio key={type.value} value={type.value}>
@@ -322,7 +321,7 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
             </Radio>
           ))}
         </RadioGroup>
-        <p className="field__hint">{t('poster.panel.imageTypeHint')}</p>
+        <p className="type-hint">{t('poster.panel.imageTypeHint')}</p>
       </fieldset>
 
       {!busy && (
@@ -348,7 +347,7 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
             aria-label={t('poster.progress.aria')}
             {...(tiles && tiles.total > 0 && { max: tiles.total, value: phase === 'finalizing' ? tiles.total : tiles.done })}
           />
-          <p className="field__hint" role="status">
+          <p className="type-hint tabular-nums" role="status">
             {progressLabel}
           </p>
           <Button
@@ -361,18 +360,22 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
         </div>
       )}
       {!busy && failed && (
-        <p className="field__hint export__error" role="alert">
+        <p className="text-hint export__error" role="alert">
           {t('poster.panel.failed', { error: failed })}
         </p>
       )}
       {!busy && done && done === result && (
-        <p className="field__hint">
+        <p className="type-hint tabular-nums">
           {t('poster.panel.done', { file: done.fileName, size: t('format.megabytes', { value: formatNumber(done.sizeBytes / 1e6, 1) }) })}{' '}
-          <button type="button" className="poster__again" onClick={() => saveAgain(done)}>
+          <button
+            type="button"
+            className="cursor-pointer border-0 bg-transparent p-0 font-[inherit] font-medium text-accent-strong underline hover:text-ink"
+            onClick={() => saveAgain(done)}
+          >
             {t('poster.panel.saveAgain')}
           </button>
           {done.missingTiles !== undefined && done.missingTiles > 0 && (
-            <span className="export__warning">
+            <span className="font-medium text-(--status-attention)">
               {' '}
               {t('poster.panel.missingTiles', { count: done.missingTiles, n: formatNumber(done.missingTiles) })}
             </span>
