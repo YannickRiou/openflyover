@@ -44,29 +44,6 @@
 
 .track__swatch {
   grid-row: 1 / span 2;
-  position: relative;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid var(--swatch-border);
-  cursor: pointer;
-}
-
-/* the native colour picker, invisible over the swatch: a click on the swatch opens it */
-.track__color {
-  position: absolute;
-  inset: -4px;
-  width: calc(100% + 8px);
-  height: calc(100% + 8px);
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.track__swatch:focus-within {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
 }
 
 .track__fly {
@@ -580,48 +557,7 @@ label.checkbox:has(input:disabled) {
   padding-left: var(--space-5);
 }
 
-/* « Couleurs et polices »: native colour picker, then round swatches */
-.color-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.color-row__input {
-  width: 40px;
-  height: 28px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-control);
-  cursor: pointer;
-}
-
-.color-row__swatch {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--swatch-border);
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.color-row__swatch[aria-pressed='true'] {
-  box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--text-1);
-}
-
-@media (hover: hover) {
-  .color-row__swatch:hover {
-    box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--text-1);
-  }
-}
-
-.color-row__input:focus-visible,
-.color-row__swatch:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
+/* « Couleurs et polices »: the colour field is a primitive (primitives/color-field.css) */
 
 /* file input hidden inside a button-like label: show the focus on the label */
 .overlay-widget .btn:has(input:focus-visible) {

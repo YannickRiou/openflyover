@@ -41,7 +41,7 @@ import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import './trackElevation.css'
-import { Button, Menu, Tip } from './primitives'
+import { Button, ColorField, Menu, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -708,15 +708,13 @@ export function TrackList() {
                 </Tip>
               )}
               <Tip text={t('track.list.colorTip')}>
-                <label className="track__swatch" style={{ background: track.color }}>
-                  <input
-                    type="color"
-                    className="track__color"
-                    value={track.color}
-                    aria-label={t('track.list.colorAria', { name: track.name })}
-                    onChange={(e) => setTrackColor(track.id, e.currentTarget.value)}
-                  />
-                </label>
+                <ColorField
+                  dot
+                  className="track__swatch"
+                  label={t('track.list.colorAria', { name: track.name })}
+                  value={track.color}
+                  onChange={(color) => setTrackColor(track.id, color)}
+                />
               </Tip>
               <span className="track__name" data-testid="track-name" title={track.name}>
                 {track.name}

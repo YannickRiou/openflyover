@@ -2,7 +2,7 @@
  * Primitives: one file per HeroUI component, wrapped with the project's own props and exported here; screens never import `@heroui/react`.
  * Styles: HeroUI's `components/<name>.css`, then the app's skin `primitives/<name>.css` (tokens only), both imported in `src/ui/theme.css`
  * (Tabs and Disclosure take no HeroUI CSS: their look is the screen's, see their skin).
- * Overlays keep the app's Escape order (`data-local-escape`, `handlesOwnEscape` in App.tsx) and open inside a `<dialog>` that holds them.
+ * Overlays keep the app's Escape order (`data-local-escape`, `handlesOwnEscape` in App.tsx) and open inside the `Modal` that holds them.
  */
 export { Button } from './Button'
 export type { ButtonProps, ButtonVariant } from './Button'
@@ -11,6 +11,9 @@ export type { MenuItem, MenuProps } from './Menu'
 export { Popover } from './Popover'
 export type { PopoverProps } from './Popover'
 export type { OverlayPlacement, OverlayPoint } from './overlay'
+export { isModalOpen } from './overlay'
+export { Modal } from './Modal'
+export type { ModalProps } from './Modal'
 export { Tip } from './Tip'
 export type { TipProps, TipSide } from './Tip'
 export { Disclosure } from './Disclosure'
@@ -29,3 +32,5 @@ export { Radio, RadioGroup } from './RadioGroup'
 export type { RadioGroupProps, RadioLook, RadioProps } from './RadioGroup'
 export { ToggleButton, ToggleButtonGroup } from './ToggleButtonGroup'
 export type { ToggleButtonGroupProps, ToggleButtonProps } from './ToggleButtonGroup'
+export { ColorField } from './ColorField'
+export type { ColorFieldProps, ColorPreset } from './ColorField'

@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { closeDiagnostic, copyText, noEncodingTest, setNoEncodingTest, showDiagnostic, useDiagnosticStore } from '../export/diagnostic'
 import { currentReport } from '../export/guard'
 import { useT } from '../i18n'
-import { Icon } from './icons'
 import { SettingRow } from './PanelSection'
-import { Button, Checkbox, Tip } from './primitives'
+import { Button, Checkbox, Modal } from './primitives'
 
 /** « Diagnostic », last row of the Réglages tab: the report made now, with the last export's (« mode debug »). */
 export function DiagnosticRow() {
@@ -33,21 +32,14 @@ export function DiagnosticRow() {
 }
 
 /**
- * « Rapport de diagnostic » (native modal dialog, Escape closes it), opened by « Détails » of an interrupted export or
+ * « Rapport de diagnostic » (modal dialog, Escape closes it), opened by « Détails » of an interrupted export or
  * « Afficher le rapport » (Projet tab). Mounted once in App.
  */
 export function DiagnosticDialog() {
   const t = useT()
   const text = useDiagnosticStore((s) => s.text)
-  const dialog = useRef<HTMLDialogElement>(null)
   const report = useRef<HTMLPreElement>(null)
   const [copy, setCopy] = useState<'idle' | 'copied' | 'selected'>('idle')
-
-  useEffect(() => {
-    const el = dialog.current
-    if (text !== null && el && !el.open) el.showModal()
-    else if (text === null && el?.open) el.close()
-  }, [text])
 
   useEffect(() => {
     if (copy !== 'copied') return undefined
@@ -65,25 +57,17 @@ export function DiagnosticDialog() {
   }
 
   return (
-    <dialog
-      ref={dialog}
-      className="sources diagnostic"
-      aria-labelledby="diagnostic-title"
+    <Modal
+      open={text !== null}
       onClose={() => {
         setCopy('idle')
         closeDiagnostic()
       }}
+      title={t('settings.diagnostic.dialogTitle')}
+      closeLabel={t('common.close')}
+      closeTip={t('common.closeEsc')}
+      width={720}
     >
-      <div className="sources__head">
-        <h2 id="diagnostic-title" className="sources__title">
-          {t('settings.diagnostic.dialogTitle')}
-        </h2>
-        <Tip text={t('common.closeEsc')} side="left">
-          <Button variant="icon" aria-label={t('common.close')} onClick={() => dialog.current?.close()}>
-            <Icon name="x" size={18} />
-          </Button>
-        </Tip>
-      </div>
       <p className="field__hint">{t('settings.diagnostic.dialogHint')}</p>
       <pre ref={report} className="diagnostic__text" tabIndex={0} aria-label={t('settings.diagnostic.report')}>
         {text}
@@ -96,6 +80,6 @@ export function DiagnosticDialog() {
           {copy === 'selected' ? t('settings.diagnostic.copyRefused') : ''}
         </p>
       </div>
-    </dialog>
+    </Modal>
   )
 }

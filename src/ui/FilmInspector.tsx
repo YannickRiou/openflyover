@@ -99,7 +99,7 @@ import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
-import { Button, Checkbox, Radio, RadioGroup, Switch, Tip } from './primitives'
+import { Button, Checkbox, ColorField, Radio, RadioGroup, Switch, Tip } from './primitives'
 
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
   get aucune() {
@@ -857,18 +857,16 @@ export function FilmInspector() {
           <label className="field__label" htmlFor={`${id}-marker-${field}`}>
             {label}
           </label>
-          <div className="color-row">
-            <input
-              id={`${id}-marker-${field}`}
-              className="color-row__input"
-              type="color"
-              value={(markerKey[field] ?? marker[field]) || track.color}
-              onChange={(e) => set({ [field]: e.currentTarget.value })}
-            />
+          <ColorField
+            id={`${id}-marker-${field}`}
+            label={label}
+            value={(markerKey[field] ?? marker[field]) || track.color}
+            onChange={(color) => set({ [field]: color })}
+          >
             <Button disabled={markerKey[field] === ''} onClick={() => set({ [field]: '' })}>
               {t('inspector.markerKey.trackColor')}
             </Button>
-          </div>
+          </ColorField>
         </div>
       )
       const inherits = markerKey.color === undefined && markerKey.figureColor === undefined && markerKey.size === undefined
@@ -1138,10 +1136,10 @@ export function FilmInspector() {
           </p>
           <label className="field">
             <span className="field__label">{t('inspector.stage.trackColor')}</span>
-            <input
-              type="color"
+            <ColorField
+              label={t('inspector.stage.trackColor')}
               value={tracks.find((tr) => tr.id === stage.track.id)?.color ?? stage.track.color}
-              onChange={(e) => useAppStore.getState().setTrackColor(stage.track.id, e.currentTarget.value)}
+              onChange={(color) => useAppStore.getState().setTrackColor(stage.track.id, color)}
             />
           </label>
           <Button

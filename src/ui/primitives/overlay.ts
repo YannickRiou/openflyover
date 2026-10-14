@@ -9,8 +9,11 @@ export interface OverlayPoint {
   y: number
 }
 
-/** The `<dialog>` that is open (it holds the page's top layer): an overlay is portalled into it, else it would be hidden behind. */
-export const openDialog = (): Element | undefined => document.querySelector('dialog[open]') ?? undefined
+/** The modal dialog (`Modal`) that is open: an overlay is portalled into it, else the page's inert state would hide it behind. */
+export const openDialog = (): Element | undefined => document.querySelector('[data-modal]') ?? undefined
+
+/** A modal dialog is open: it takes the keyboard (the application's own shortcuts wait). */
+export const isModalOpen = (): boolean => document.querySelector('[data-modal]') !== null
 
 /** The classes of the panel of an overlay (`overlay.css`). */
 export const panelClass = (kind: string, sheet?: boolean) => ['overlay', kind, sheet && 'overlay--sheet'].filter(Boolean).join(' ')

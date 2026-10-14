@@ -37,7 +37,7 @@ export interface MenuProps {
 /**
  * A menu of actions: arrows, Home / End and typed letters move in it, Enter or Space picks, Escape closes it and gives the
  * focus back. Escape stays the menu's own while it is open (`data-local-escape`: the app's own Escape comes after).
- * It is portalled out of its container, so a scrolling panel does not clip it, into the open `<dialog>` if there is one.
+ * It is portalled out of its container, so a scrolling panel does not clip it, into the open `Modal` if there is one.
  */
 export function Menu({ label, items, trigger, point, onClose, placement = 'bottom end', sheet }: MenuProps) {
   const anchor = useRef<HTMLSpanElement>(null)

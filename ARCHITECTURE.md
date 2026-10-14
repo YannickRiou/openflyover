@@ -346,14 +346,14 @@ themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under 
 `@heroui/react`): `Button` (`variant` primary / secondary / icon, `size="sm"`, `block`; it keeps the `.btn` / `.icon-btn`
 classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Menu` (list of actions: opened by a trigger, or at a
 `point` for the right-click menu of the 3D view; `sheet` makes it a bottom sheet on a phone) and `Popover` (panel with its own
-controls, same two modes). Both are portalled out of their container (into the open `<dialog>`, if any) and carry
+controls, same two modes). Both are portalled out of their container (into the open `Modal`, if any) and carry
 `data-local-escape`, so an open one closes before the app's own Escape; their skin (`overlay.css`, `menu.css`, `popover.css`) is
 self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
 or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen), `RadioGroup` with `Radio` (`look` `segmented`,
 `chips`, or `plain` for a grid the screen draws, as the 3 × 3 `AnchorPicker`; the arrows move and choose, the screens' CSS keys on
 `.option__label`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
 `value` / `onChange` take the values, not events; a `title` is a native tooltip over the whole control; a `<fieldset disabled>`
-around them dims them. HeroUI's styles are imported in `theme.css`
+around them dims them. `Modal` (the dialogs: shortcuts, sources, Strava, diagnostic report; `open` / `onClose` / `title`, the heading is the dialog's name; modal, focus kept inside and given back, Escape and a click on the backdrop close it, it scrolls, full screen on a phone) marks its dialog `data-modal`: `openDialog()` / `isModalOpen()` (`overlay.ts`) find it, so menus, popovers and tooltips opened from inside are portalled into it and the app's own shortcuts wait. `ColorField` (the colour: a button showing it that opens a panel, area / hue slider / hex field, for any colour, bottom sheet on a phone, plus optional `presets` to pick in one tap; the value is a lowercase `#rrggbb`, `onChange` is called while dragging like the native input it replaces; `dot` is the button alone, `children` follow it). Modal and ColorField, like the overlays, import no HeroUI CSS. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,
@@ -474,12 +474,12 @@ pointer (`appearance.css`).
   command `system_stats`), each part chosen in « Réglages »; then the short credits of the active sources, always
   visible (`compactCredits`, `SOURCE_CREDITS`; OpenStreetMap first and linked to its copyright page; OpenTopoMap and
   Esri never collapsed, Esri's providers behind « … » below 560 px: OSMF, OpenTopoMap and Esri ask for a credit visible
-  without interaction), and ⓘ, which opens "Sources et licences" (sources and licenses) (`<dialog>`) with the full lines
+  without interaction), and ⓘ, which opens "Sources et licences" (sources and licenses) (`Modal`) with the full lines
   (`overlayCredits`, same strings as in the film), licence links, and for IGN layers the update date of the data read
   from the tiles' `Last-Modified` (`terrain/sourceDates.ts`, Licence Ouverte Etalab 2.0) or « date de mise à jour non
   communiquée par le service ».
 - **Shortcuts** (`src/ui/shortcuts.ts`): `SHORTCUTS` registry (id, keys, label, group Lecture / Montage / Projet /
-  Vue (playback / editing / project / view)) shown by the "Raccourcis clavier" (keyboard shortcuts) box (`HelpDialog.tsx`, native `<dialog>`, "?" or the bar button)
+  Vue (playback / editing / project / view)) shown by the "Raccourcis clavier" (keyboard shortcuts) box (`HelpDialog.tsx`, `Modal`, "?" or the bar button)
   and reused in tooltips (`withShortcut`). `matchShortcut(key, keyFocus(target))`, pure: Ctrl/Cmd+S save,
   Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer, F reframe, G safe zones, S stop at the marker, T text at the playhead, `[` collapse
   and `?` help (AltGr / Shift accepted), Esc, ← / →
@@ -493,7 +493,7 @@ pointer (`appearance.css`).
   block keeps its arrows).
   `installHistoryShortcuts` (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y) and Space (timeline) stay where they are.
 - **Tooltips**: the `Tip` primitive (`src/ui/primitives/Tip.tsx`, HeroUI Tooltip), after 450 ms, on hover and keyboard focus,
-  on every icon-only button; it wraps no element (its listeners sit on the child, the text is portalled, into the `<dialog>` that holds
+  on every icon-only button; it wraps no element (its listeners sit on the child, the text is portalled, into the `Modal` that holds
   the child). `side` (`top`, `left`, `right`) and `align` (`start`, `end`) near the edges of the window; any other tip is
   shifted inside the window or flipped by React Aria's positioning. A long press shows it on a touch screen (`tap`: a tap too, for
   an ⓘ), any key (Escape included, which the app still gets) or a press closes it, no tooltip on the phone's tab bar. Timeline blocks
@@ -507,7 +507,7 @@ pointer (`appearance.css`).
     project name, « Plus d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: undo, redo, open, save) and « Exporter » with its
     label; no format picker (the drawer tiles) nor « ? »; in landscape the timeline starts folded (`Timeline`: strip
     with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
-    unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`.sources`) are full screen. Safe areas
+    unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`, `modal.css`) are full screen. Safe areas
     (`viewport-fit=cover` in `index.html`, `env(safe-area-inset-*)` on the shell rows and sides), `100dvh`, no page
     overscroll. A touch tablet in portrait (`max-width: 1023px` and `pointer: coarse`) also takes the « Plus d'actions »
     menu.
