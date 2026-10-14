@@ -542,15 +542,15 @@ export default function App() {
           {timeline}
         </main>
 
-        <aside id="export-dock" data-testid="export-dock" className="dock" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
+        <aside id="export-dock" data-testid="export-dock" className="dock dock-frame" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
           <SheetHandle onClose={() => !exporting && dispatch({ type: 'close-dock' })} />
-          <Suspense fallback={<p className="field__hint">{t('shell.loading')}</p>}>
+          <Suspense fallback={<p className="type-hint px-4">{t('shell.loading')}</p>}>
             {dockMounted && <ExportPanel onClose={exporting ? undefined : () => dispatch({ type: 'close-dock' })} />}
           </Suspense>
         </aside>
         {phone && shell.inspecting && <BlockTools disabled={exporting} onEdit={() => dispatch({ type: 'edit', open: true })} />}
         {/* the export drawer goes first; on a portrait phone the inspector waits for « Modifier » */}
-        <aside className="dock" aria-label={t('shell.dock.inspector')} hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
+        <aside className="dock dock-frame" aria-label={t('shell.dock.inspector')} hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
           <SheetHandle onClose={() => dispatch({ type: 'edit', open: false })} />
           {shell.inspecting && !shell.dockOpen && (!phone || shell.editing) && (
             <Suspense>

@@ -350,11 +350,4 @@ select {
   background: var(--surface-control);
   color: var(--text-1);
 }
-
-.input--multiline {
-  padding: var(--space-2) var(--space-3);
-  font: inherit;
-  line-height: 1.4;
-  resize: vertical;
-}
 }

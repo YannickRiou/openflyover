@@ -80,7 +80,7 @@ function ChipChoice<T extends string>({
 }) {
   return (
     <fieldset className="field m-0 min-w-0 border-0 p-0">
-      <legend className="field__label mb-1 p-0">{label}</legend>
+      <legend className="type-label mb-1 p-0">{label}</legend>
       <RadioGroup look="chips" aria-label={label} value={value} onChange={onChange}>
         {options.map((option) => (
           <Radio key={option} value={option}>
@@ -187,7 +187,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
             paths={['trackStyle.glowColor']}
           >
             <div className="field">
-              <label className="field__label" htmlFor={`${id}-glow-color`}>
+              <label className="type-label" htmlFor={`${id}-glow-color`}>
                 {t('marker.track.glowColor')}
               </label>
               <ColorField
@@ -206,7 +206,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
       )}
       <SettingRow label={t('marker.track.colorBy')} value={colorModes.find((m) => m.mode === trackColorBy)?.label} paths={['trackColorBy']}>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-color`}>
+          <label className="type-label" htmlFor={`${id}-color`}>
             {t('marker.track.colorBy')}
           </label>
           <Select
@@ -268,7 +268,7 @@ function MarkerColorRow({
   return (
     <SettingRow label={label} value={value ? t('marker.track.custom') : t('marker.track.sameAsTrack')} paths={[path]}>
       <div className="field">
-        <label className="field__label" htmlFor={id}>
+        <label className="type-label" htmlFor={id}>
           {label}
         </label>
         <ColorField id={id} label={label} value={value || trackColor} onChange={onChange}>
@@ -380,9 +380,9 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           <p className="type-hint">{t('marker.section.junctionHint')}</p>
         </div>
       )}
-      <details className="preset-more">
-        <summary className="preset-more__summary">
-          <span className="preset-more__label">{t('marker.section.more')}</span>
+      <details>
+        <summary className="fold-head">
+          {t('marker.section.more')}
           <Icon name="chevron-down" size={16} />
         </summary>
         <div className="mt-1 flex flex-col gap-3">

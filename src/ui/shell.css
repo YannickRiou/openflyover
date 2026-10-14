@@ -27,9 +27,6 @@
 
 /* Focus on the ink chrome */
 .status :focus-visible,
-.view__fit:focus-visible,
-.view__safe-zones:focus-visible,
-.film-tl__bar :focus-visible,
 .track-menu :focus-visible {
   outline: var(--focus-ring-on-dark);
   outline-offset: 2px;
@@ -43,21 +40,6 @@
 
 .icon-btn--on svg {
   fill: currentColor;
-}
-
-.icon-btn--float {
-  --button-bg: var(--surface-chrome);
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  color: var(--color-white);
-  box-shadow: var(--shadow-pop);
-}
-
-@media (hover: hover) {
-  .icon-btn--float:hover:not(:disabled) {
-    background: var(--color-ink-soft);
-  }
 }
 
 .icon {
@@ -116,8 +98,7 @@
 .dock > .settings > .settings__title,
 .tabpanel > .settings > .modified,
 .dock > .settings > .modified,
-.dock > .settings > .settings__close,
-.fold__summary {
+.dock > .settings > .settings__close {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -147,34 +128,6 @@
   margin: var(--space-1) -6px 0 var(--space-1);
 }
 
-/* foldable sections (PanelSection) */
-.fold__summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-  padding: var(--space-3) 0 var(--space-2);
-  list-style: none;
-  cursor: pointer;
-}
-
-.fold__summary::-webkit-details-marker {
-  display: none;
-}
-
-.fold__title {
-  flex: 1 1 auto;
-  margin: 0;
-}
-
-.fold:not([open]) {
-  padding-bottom: var(--space-1);
-}
-
-.fold:not([open]) > .fold__summary .icon {
-  transform: rotate(-90deg);
-}
-
 /* the foldable section brings its own title and marker: the summary shows them, no section in a section */
 .panel-section__body > section > .section-title,
 .panel-section__body > .settings > .modified {
@@ -187,17 +140,8 @@
   background: none;
 }
 
-/* nested group (ghost race in the track list): a rule, not a card in a card */
-.tabpanel .race {
-  padding: var(--space-3) 0 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  background: none;
-}
-
 /* readouts */
 .panel output,
-.track__meta,
 .climb__meta,
 .dock .field__hint {
   font-variant-numeric: tabular-nums;
@@ -211,102 +155,6 @@
   min-width: 0;
   min-height: 0;
   background: var(--surface-chrome);
-}
-
-.view__viewport {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-  /* pale sky behind the transparent canvas */
-  background: linear-gradient(180deg, var(--color-glacier) 0%, var(--color-paper) 100%);
-}
-
-/* letterbox bands in ink around the exported area */
-.view__viewport--framed {
-  background: var(--surface-chrome);
-}
-
-.view__stage {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-
-.view__fit {
-  position: absolute;
-  z-index: 4;
-  top: var(--space-3);
-  right: var(--space-3);
-}
-
-/* « Zones de sécurité » toggle, under « Recadrer » */
-.view__safe-zones {
-  position: absolute;
-  z-index: 4;
-  top: calc(var(--space-3) + 36px + var(--space-2));
-  right: var(--space-3);
-}
-
-.view__safe-zones[aria-pressed='true'] {
-  background: var(--color-white);
-  color: var(--color-ink);
-}
-
-@media (hover: hover) {
-  .view__safe-zones[aria-pressed='true']:hover:not(:disabled) {
-    background: var(--color-glacier);
-  }
-}
-
-/* Safe zones over the framed preview (never exported): shaded hidden areas, outlined margins, tiny labels */
-.view__stage > .safe-zones {
-  z-index: 3;
-  pointer-events: none;
-}
-
-.safe-zones__covered,
-.safe-zones__guide {
-  position: absolute;
-  box-sizing: border-box;
-}
-
-.safe-zones__covered {
-  background: repeating-linear-gradient(135deg, rgb(28 42 51 / 0.42) 0 6px, rgb(28 42 51 / 0.3) 6px 12px);
-  outline: 1px solid rgb(255 255 255 / 0.5);
-  outline-offset: -1px;
-}
-
-.safe-zones__guide {
-  border: 1px dashed rgb(255 255 255 / 0.85);
-  box-shadow: 0 0 0 1px rgb(28 42 51 / 0.35);
-}
-
-.safe-zones__label {
-  position: absolute;
-  top: 2px;
-  left: 4px;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: rgb(28 42 51 / 0.72);
-  color: var(--color-white);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 14px;
-  white-space: nowrap;
-}
-
-/* right-aligned: the narrow band of the buttons is on the right edge, its label may overhang to the left */
-.safe-zones__covered > .safe-zones__label {
-  left: auto;
-  right: 4px;
-}
-
-.safe-zones__guide--inner > .safe-zones__label {
-  top: auto;
-  bottom: 2px;
-  left: auto;
-  right: 4px;
 }
 
 /* Home screen (no track yet): a paper page over the whole view, one centred column */
@@ -516,29 +364,12 @@
 }
 
 /* Right dock (export drawer) ----------------------------------------------- */
-.dock {
-  flex: none;
-  width: var(--dock-w);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  border-left: 1px solid var(--line);
-  background: var(--surface-panel);
-  color: var(--text-1);
-}
-
 .dock > * {
   border-bottom: 0;
 }
 
 .dock .export__actions {
   flex-direction: column;
-}
-
-/* (the group is a horizontal RadioGroup: `[data-orientation]` comes after HeroUI's rule, a flex row with a 16 px gap) */
-.format-tiles[data-orientation] {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
 }
 
 /* a tile is a Radio of a `look="plain"` group: its label is the tile, the native radio in it is hidden */
@@ -596,232 +427,6 @@ fieldset:disabled .format-tile .option__label {
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-/* Inspector of the selected timeline block, in the dock (header and close as the export drawer) ------- */
-.dock > .film-inspector {
-  font-size: 13px;
-}
-
-/* position in the frame: 3 × 3 radio buttons drawn as a small frame */
-.anchor-picker {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-/* (two classes: the group is a RadioGroup, HeroUI's `.radio-group[data-orientation]` is a flex row) */
-.anchor-picker .anchor-picker__grid {
-  display: grid;
-  flex: none;
-  grid-template-columns: repeat(3, 28px);
-  grid-auto-rows: 18px;
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-control);
-}
-
-/* a cell is a Radio: its label is stretched over it, the native radio inside is hidden */
-.anchor-picker__cell {
-  position: relative;
-  display: block;
-  padding: 0;
-  border: 0;
-  border-radius: 2px;
-  background: var(--surface-panel);
-  cursor: pointer;
-}
-
-.anchor-picker__cell .option__label {
-  position: absolute;
-  inset: 0;
-  display: block;
-  border-radius: inherit;
-}
-
-.anchor-picker__cell::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  border-radius: 50%;
-  background: var(--color-line);
-}
-
-@media (hover: hover) {
-  .anchor-picker__cell:hover:not([data-disabled='true'])::before {
-    background: var(--text-2);
-  }
-}
-
-.anchor-picker__cell[data-selected='true'] {
-  background: var(--accent);
-}
-
-.anchor-picker__cell[data-selected='true']::before {
-  background: var(--surface-control);
-}
-
-.anchor-picker__cell[data-disabled='true'] {
-  background: transparent;
-  opacity: 1;
-  cursor: default;
-}
-
-.anchor-picker__cell[data-disabled='true']::before {
-  opacity: 0.4;
-}
-
-.anchor-picker__cell .option__label[data-focus-visible='true'] {
-  outline: var(--focus-ring);
-  outline-offset: 1px;
-}
-
-.anchor-picker__value {
-  color: var(--text-2);
-  font-size: 12px;
-}
-
-/* « Position libre » of an overlay widget: the two offsets side by side */
-.position-offset {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-}
-
-/* Timeline bar (lanes and blocks in app.css): icon buttons on the ink, zoom, « Options » menu ------------ */
-.film-tl__bar .icon-btn {
-  height: 28px;
-  min-width: 28px;
-  color: var(--color-white);
-  font-size: 12px;
-}
-
-@media (hover: hover) {
-  .film-tl__bar .icon-btn:hover:not(:disabled) {
-    background: rgb(255 255 255 / 0.1);
-  }
-}
-
-.film-tl__bar .film-tl__play {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: rgb(255 255 255 / 0.12);
-}
-
-@media (hover: hover) {
-  .film-tl__bar .film-tl__play:hover:not(:disabled) {
-    background: rgb(255 255 255 / 0.22);
-  }
-}
-
-.film-tl__sep {
-  flex: none;
-  width: 1px;
-  height: 20px;
-  background: var(--color-ink-soft);
-}
-
-.film-tl__zoom {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.slider.film-tl__zoom-range {
-  --slider-accent: var(--color-accent-light);
-  width: 88px;
-  margin: 0 2px;
-}
-
-/* the film differs from its defaults (the « modifié » marker is in the menu) */
-.film-tl__dot {
-  position: absolute;
-  top: 3px;
-  right: 2px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--status-attention-on-dark);
-}
-
-/* the content of the options panel (Popover): the frame is the primitive's */
-.film-tl__menu {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  font-size: 13px;
-}
-
-.film-tl__menu-title {
-  margin: 0;
-  font: 600 13px/1.3 var(--font-heading);
-}
-
-.film-tl__menu-hint {
-  margin: 0;
-  color: var(--color-glacier);
-  font-size: 12px;
-}
-
-/* the panel is dark: its checkbox is light on ink, bold like the title */
-.film-tl__menu .checkbox__content {
-  color: var(--text-on-dark);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.film-tl__menu .checkbox__control {
-  border-color: var(--text-on-dark-2);
-  background: transparent;
-}
-
-.film-tl__menu .checkbox[data-selected='true'] .checkbox__control {
-  border-color: var(--accent-on-dark);
-}
-
-.film-tl__menu .checkbox__control::before,
-.film-tl__menu .checkbox:hover .checkbox__control::before,
-.film-tl__menu .checkbox [data-slot='checkbox-content'][data-hovered='true'] .checkbox__control::before {
-  background: var(--accent-on-dark);
-}
-
-.film-tl__menu .checkbox [data-slot='checkbox-content'][data-focus-visible='true'] .checkbox__control {
-  outline: var(--focus-ring-on-dark);
-  box-shadow: none;
-}
-
-/* stops inside the flight bar of the « Plans » lane: a tinted window with an accent edge on top */
-.film-tl__flight-stop {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  box-sizing: border-box;
-  min-width: 3px;
-  border-top: 3px solid var(--color-accent-light);
-  pointer-events: none;
-}
-
-.film-tl__flight-stop::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--color-accent-light);
-  opacity: 0.2;
-}
-
-.film-tl__flight-stop--selected {
-  border-top-color: var(--color-white);
 }
 
 /* Menu of the language picker (LanguageMenu.tsx; the other menus are the Menu and Popover primitives) and the form of a point of interest (TrackPicker.tsx) */
@@ -1315,16 +920,6 @@ fieldset:disabled .format-tile .option__label {
     width: min(var(--panel-w), calc(100% - var(--rail-w) - 16px));
     box-shadow: var(--shadow-pop);
   }
-
-  .dock {
-    position: absolute;
-    z-index: 8;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(var(--dock-w), calc(100% - var(--rail-w) - 16px));
-    box-shadow: var(--shadow-pop);
-  }
 }
 
 /* Touch screens (phone, tablet): targets of 44 px at least (Apple HIG), 16 px text in fields (no zoom on focus in iOS) */
@@ -1340,7 +935,6 @@ fieldset:disabled .format-tile .option__label {
   .select-field,
   .input,
   .select-bar,
-  .fold__summary,
   .track-menu__item {
     min-height: 44px;
   }
@@ -1353,63 +947,15 @@ fieldset:disabled .format-tile .option__label {
     font-size: 16px;
   }
 
-  .icon-btn--float,
-  .track__fly,
-  .track__delete {
-    width: 44px;
-    height: 44px;
-  }
-
-  .view__safe-zones {
-    top: calc(var(--space-3) + 44px + var(--space-2));
-  }
-
-  .anchor-picker .anchor-picker__grid {
-    grid-template-columns: repeat(3, 44px);
-    grid-auto-rows: 44px;
-  }
-
   /* small glyphs: a wider invisible hit area around them */
-  .render-weight,
   .status__info {
     position: relative;
   }
 
-  .render-weight::before,
   .status__info::before {
     content: '';
     position: absolute;
     inset: -14px;
-  }
-
-  .film-tl__bar .icon-btn,
-  .film-tl__bar .film-tl__play {
-    min-width: 44px;
-    height: 44px;
-  }
-
-  .film-tl__head,
-  .film-tl__lane {
-    height: 40px;
-  }
-
-  .film-tl__head--ruler,
-  .film-tl__ruler {
-    height: 28px;
-  }
-
-  .film-tl__tick {
-    line-height: 28px;
-  }
-
-  .film-tl__grip {
-    width: 16px;
-  }
-
-  .film-tl__key {
-    width: 16px;
-    height: 16px;
-    margin: -9px 0 0 -9px;
   }
 
   /* the 3D view: no callout or text selection under a long press */
@@ -1441,23 +987,6 @@ fieldset:disabled .format-tile .option__label {
 
   .view {
     position: relative;
-  }
-
-  .film-tl--folded .film-tl__bar > :not(.film-tl__play, .film-tl__time, .film-tl__spacer, .film-tl__fold) {
-    display: none;
-  }
-
-  .film-tl:not(.film-tl--folded, .film-tl--centred) {
-    position: absolute;
-    z-index: 7;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    max-height: 85%;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    border-top: 1px solid var(--color-ink-soft);
-    box-shadow: var(--shadow-pop);
   }
 
   .strava__list {
@@ -1498,14 +1027,13 @@ fieldset:disabled .format-tile .option__label {
   }
 
   /* with a film: the preview at a fixed height, the timeline takes the rest */
-  .view:has(> .film-tl) > .view__viewport {
+  .view:has(> [data-timeline]) > .view__viewport {
     flex: none;
     height: var(--phone-preview-h);
   }
 
-  /* half sheets: from under the transport row down to the bottom, over the timeline and the tab bar */
-  .panel,
-  .dock {
+  /* half sheets: from under the transport row down to the bottom, over the timeline and the tab bar (the dock: `dock-frame`) */
+  .panel {
     position: absolute;
     z-index: 10;
     top: calc(var(--phone-preview-h) + var(--phone-transport-h));
@@ -1523,8 +1051,7 @@ fieldset:disabled .format-tile .option__label {
     animation: sheet-in 160ms ease-out;
   }
 
-  .panel > :not(.sheet-handle),
-  .dock > :not(.sheet-handle) {
+  .panel > :not(.sheet-handle) {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -1574,8 +1101,7 @@ fieldset:disabled .format-tile .option__label {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .panel,
-    .dock {
+    .panel {
       animation: none;
     }
   }
@@ -1585,119 +1111,6 @@ fieldset:disabled .format-tile .option__label {
   from {
     opacity: 0;
     transform: translateY(24px);
-  }
-}
-
-/* Portrait phone timeline (`Timeline` centred): slim transport row, lanes scrolling under a playhead fixed in the middle */
-.film-tl--centred {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.film-tl--centred .film-tl__bar {
-  flex-wrap: nowrap;
-  height: var(--phone-transport-h, 52px);
-  padding-block: 0;
-}
-
-.film-tl__tools {
-  display: contents;
-}
-
-/* add, speed and options: one row that scrolls sideways after the play button and the time */
-.film-tl--centred .film-tl__tools {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--space-1);
-  min-width: 0;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-
-/* stop button, readout and clock, zoom (pinch instead) and fold: not on a phone */
-.film-tl--centred .film-tl__bar > :is(.icon-btn:not(.film-tl__play), .film-tl__readout, .film-tl__clockout, .film-tl__spacer),
-.film-tl--centred :is(.film-tl__sep, .film-tl__zoom) {
-  display: none;
-}
-
-.film-tl--centred .film-tl__body {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.film-tl--centred .film-tl__heads,
-.film-tl--centred .film-tl__playhead {
-  display: none;
-}
-
-.film-tl--centred .film-tl__scroller {
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-
-/* a slide scrolls the lanes; the selected block takes the finger to move or stretch */
-.film-tl--centred .film-tl__content {
-  touch-action: pan-x pan-y;
-}
-
-.film-tl--centred :is(.film-tl__block--selected, .film-tl__key--selected) {
-  touch-action: none;
-}
-
-.film-tl--centred .film-tl__head--ruler,
-.film-tl--centred .film-tl__ruler {
-  height: 24px;
-}
-
-.film-tl--centred .film-tl__tick {
-  line-height: 24px;
-}
-
-.film-tl--centred .film-tl__lane {
-  height: 36px;
-}
-
-/* the playhead, fixed in the middle of the lanes */
-.film-tl--centred .film-tl__body::after {
-  content: '';
-  position: absolute;
-  z-index: 3;
-  top: 0;
-  bottom: 0;
-  left: calc(50% - 1px);
-  width: 2px;
-  background: var(--color-white);
-  pointer-events: none;
-}
-
-.film-tl--centred .film-tl__body::before {
-  content: '';
-  position: absolute;
-  z-index: 4;
-  top: 0;
-  left: calc(50% - 5px);
-  border: 5px solid transparent;
-  border-top: 6px solid var(--color-accent-light);
-  pointer-events: none;
-}
-
-/* Timeline bar: lighter when the timeline itself is narrow (side columns open), not only the window */
-.film-tl {
-  container: film-tl / inline-size;
-}
-
-@container film-tl (max-width: 1200px) {
-  /* distance / altitude / hour of the marker: shown again when the timeline is wide */
-  .film-tl__readout {
-    display: none;
-  }
-
-  .slider.film-tl__zoom-range {
-    width: 64px;
   }
 }
 }
