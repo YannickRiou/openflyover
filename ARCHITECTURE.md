@@ -344,7 +344,11 @@ themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under 
 `--status-error*` are fixed reds (they no longer follow the accent).
 **Primitives** (`src/ui/primitives/`, one file per component and its CSS, exported from `index.ts`; screens never import
 `@heroui/react`): `Button` (`variant` primary / secondary / icon, `size="sm"`, `block`; it keeps the `.btn` / `.icon-btn`
-classes the CSS of the screens keys on) `Tip` (tooltip, see "Tooltips") and `Toast` (the messages, see "Messages"). HeroUI's styles are imported in `theme.css`
+classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Menu` (list of actions: opened by a trigger, or at a
+`point` for the right-click menu of the 3D view; `sheet` makes it a bottom sheet on a phone) and `Popover` (panel with its own
+controls, same two modes). Both are portalled out of their container (into the open `<dialog>`, if any) and carry
+`data-local-escape`, so an open one closes before the app's own Escape; their skin (`overlay.css`, `menu.css`, `popover.css`) is
+self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,
@@ -1402,7 +1406,7 @@ The interface and the texts drawn into the films and posters exist in **French**
 - **On the track** (`src/scene/TrackPicker.tsx`, mounted in `FlyoverCanvas`): a click on the first track places the
   playhead at the target point (`setProgress(p, clock.timeAtProgress(p))`); a right-click opens "Ajouter un arrêt ici" (add a stop here) /
   "Ajouter un texte ici" (add a text here) / "Accélérer / ralentir ici" (speed up / slow down here; ×2 section from the point; inside a section, it
-  selects it) (`TrackMenu`, DOM above the canvas, `role="menu"`, arrows, Esc, click outside; each addition
+  selects it) (`TrackMenu`, a `Menu` of the primitives anchored at the pointer, `role="menu"`, arrows, Esc, click outside; each addition
   through `editFilm`: one undo step, block selected); hand cursor when hovering the track. Click = press and release of the
   same button within 4 px (an OrbitControls drag is not a click; the menu opens on release, not on
   `contextmenu`, which fires on press under Linux and macOS). Picking in screen space (`pickProjectedPath`, pure): 1,500

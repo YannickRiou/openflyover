@@ -5,6 +5,11 @@
  */
 export { Button } from './Button'
 export type { ButtonProps, ButtonVariant } from './Button'
+export { Menu } from './Menu'
+export type { MenuItem, MenuProps } from './Menu'
+export { Popover } from './Popover'
+export type { PopoverProps } from './Popover'
+export type { OverlayPlacement, OverlayPoint } from './overlay'
 export { Tip } from './Tip'
 export type { TipProps, TipSide } from './Tip'
 export { Toast } from './Toast'

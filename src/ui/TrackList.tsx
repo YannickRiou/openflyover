@@ -41,7 +41,7 @@ import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import './trackElevation.css'
-import { Button, Tip } from './primitives'
+import { Button, Menu, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -261,64 +261,25 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
 function AddTracksMenu() {
   const t = useT()
   const loading = useAppStore((s) => s.loading)
-  const [open, setOpen] = useState(false)
   const [strava, setStrava] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: PointerEvent) => {
-      if (!(e.target instanceof Node) || !ref.current?.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', onDown, true)
-    return () => document.removeEventListener('pointerdown', onDown, true)
-  }, [open])
-  const items = [
-    { label: t('track.add.files'), icon: 'upload', onClick: () => void chooseTracksToImport() },
-    { label: t('track.add.strava'), icon: 'route', onClick: () => setStrava(true) },
-  ] as const
 
   return (
-    <div
-      ref={ref}
-      className="tracks__add"
-      data-local-escape=""
-      onKeyDown={(e) => {
-        if (e.key !== 'Escape' || !open) return
-        setOpen(false)
-        e.stopPropagation()
-      }}
-    >
-      <Button
-        size="sm"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-        disabled={loading}
-      >
-        <Icon name="plus" size={16} />
-        {t('track.add.button')}
-      </Button>
-      {open && (
-        <div className="track-menu topbar__menu" role="menu" aria-label={t('track.add.menu')}>
-          {items.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              role="menuitem"
-              className="track-menu__item"
-              onClick={() => {
-                setOpen(false)
-                item.onClick()
-              }}
-            >
-              <Icon name={item.icon} size={18} />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+    <>
+      <Menu
+        label={t('track.add.menu')}
+        items={[
+          { id: 'files', label: t('track.add.files'), icon: <Icon name="upload" size={18} />, onSelect: () => void chooseTracksToImport() },
+          { id: 'strava', label: t('track.add.strava'), icon: <Icon name="route" size={18} />, onSelect: () => setStrava(true) },
+        ]}
+        trigger={
+          <Button size="sm" disabled={loading}>
+            <Icon name="plus" size={16} />
+            {t('track.add.button')}
+          </Button>
+        }
+      />
       <StravaDialog open={strava} onClose={() => setStrava(false)} />
-    </div>
+    </>
   )
 }
 
