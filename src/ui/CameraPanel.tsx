@@ -23,7 +23,7 @@ import type { IconName } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
-import { Button } from './primitives'
+import { Button, Checkbox, Switch } from './primitives'
 
 /** « Mettre en avant la région »: what it does, then how the search for the region went (found: after its name). */
 const REGION_HINTS: Record<RegionStatus, string> = {
@@ -191,15 +191,13 @@ function SituationShotSwitches() {
     <>
       {(['opening', 'closing'] as const).map((key) => (
         <div key={key} className="field__label-row">
-          <label className="checkbox checkbox--switch">
-            <input
-              type="checkbox"
-              checked={isOn(key)}
-              aria-describedby={any ? `${id}-region-hint` : undefined}
-              onChange={(e) => toggle(key, e.currentTarget.checked)}
-            />
+          <Switch
+            checked={isOn(key)}
+            aria-describedby={any ? `${id}-region-hint` : undefined}
+            onChange={(on) => toggle(key, on)}
+          >
             {key === 'opening' ? t('camera.situation.opening') : t('camera.situation.closing')}
-          </label>
+          </Switch>
           <InfoTip text={SITUATION_TIPS[key]} />
         </div>
       ))}
@@ -277,15 +275,7 @@ export function CameraPanel() {
         </fieldset>
 
         {camera.style === 'top' && (
-          <label className="checkbox" htmlFor={`${id}-north-up`}>
-            <input
-              id={`${id}-north-up`}
-              type="checkbox"
-              checked={camera.northUp}
-              onChange={(e) => update({ northUp: e.currentTarget.checked })}
-            />
-            {t('camera.panel.northUp')}
-          </label>
+          <Checkbox id={`${id}-north-up`} checked={camera.northUp} onChange={(on) => update({ northUp: on })}>{t('camera.panel.northUp')}</Checkbox>
         )}
 
         <SettingRow label={t('camera.panel.style')} value={CAMERA_STYLE_LABELS[camera.style]} paths={['camera.style']}>
@@ -399,10 +389,7 @@ export function CameraPanel() {
         <SituationShotSwitches />
 
         <div className="field__label-row">
-          <label className="checkbox checkbox--switch">
-            <input type="checkbox" checked={pacing.enabled} onChange={(e) => updatePacing({ enabled: e.currentTarget.checked })} />
-            {t('camera.pacing.enable')}
-          </label>
+          <Switch checked={pacing.enabled} onChange={(on) => updatePacing({ enabled: on })}>{t('camera.pacing.enable')}</Switch>
           <InfoTip text={t('camera.pacing.enableTip')} />
         </div>
 
@@ -411,14 +398,8 @@ export function CameraPanel() {
             <SettingRow label={t('camera.pacing.slowOn')} value={slowOnLabel(pacing)} paths={['pacing.climbs', 'pacing.landmarks']}>
               <fieldset className="field fieldset">
                 <legend className="field__label">{t('camera.pacing.slowOn')}</legend>
-                <label className="checkbox">
-                  <input type="checkbox" checked={pacing.climbs} onChange={(e) => updatePacing({ climbs: e.currentTarget.checked })} />
-                  {t('camera.pacing.climbTops')}
-                </label>
-                <label className="checkbox">
-                  <input type="checkbox" checked={pacing.landmarks} onChange={(e) => updatePacing({ landmarks: e.currentTarget.checked })} />
-                  {t('camera.pacing.landmarks')}
-                </label>
+                <Checkbox checked={pacing.climbs} onChange={(on) => updatePacing({ climbs: on })}>{t('camera.pacing.climbTops')}</Checkbox>
+                <Checkbox checked={pacing.landmarks} onChange={(on) => updatePacing({ landmarks: on })}>{t('camera.pacing.landmarks')}</Checkbox>
               </fieldset>
             </SettingRow>
 
@@ -453,14 +434,7 @@ export function CameraPanel() {
             })}
 
             <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']}>
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={pacing.keepDuration}
-                  onChange={(e) => updatePacing({ keepDuration: e.currentTarget.checked })}
-                />
-                {t('camera.pacing.keep')}
-              </label>
+              <Checkbox checked={pacing.keepDuration} onChange={(on) => updatePacing({ keepDuration: on })}>{t('camera.pacing.keep')}</Checkbox>
               <p className="field__hint">{t('camera.pacing.keepHint')}</p>
             </SettingRow>
           </>

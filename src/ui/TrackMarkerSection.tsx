@@ -38,7 +38,7 @@ import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 import { showToast } from './toast'
 import './markerSection.css'
-import { Button } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Switch } from './primitives'
 
 /** 0 -> "Aucun", else the distance */
 const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.slider.noneMasc') : formatDistance(metres))
@@ -67,7 +67,6 @@ function FigureIcon({ figure }: { figure: MarkerFigure }) {
 /** One choice among `options`, as chips (radio buttons). */
 function ChipChoice<T extends string>({
   label,
-  name,
   options,
   value,
   labels,
@@ -75,7 +74,6 @@ function ChipChoice<T extends string>({
   onChange,
 }: {
   label: string
-  name: string
   options: readonly T[]
   value: T
   labels: Record<T, string>
@@ -85,15 +83,14 @@ function ChipChoice<T extends string>({
   return (
     <fieldset className="field fieldset">
       <legend className="field__label">{label}</legend>
-      <div className="chips">
+      <RadioGroup look="chips" aria-label={label} value={value} onChange={onChange}>
         {options.map((option) => (
-          <label key={option} className="chip">
-            <input type="radio" name={name} checked={value === option} onChange={() => onChange(option)} />
+          <Radio key={option} value={option}>
             {icon?.(option)}
             {labels[option]}
-          </label>
+          </Radio>
         ))}
-      </div>
+      </RadioGroup>
     </fieldset>
   )
 }
@@ -162,16 +159,10 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   return (
     <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackStyle']} hidden={hidden}>
       <div className="field__label-row">
-        <label className="checkbox checkbox--switch">
-          <input type="checkbox" checked={style.drawOn} onChange={(e) => updateStyle({ drawOn: e.currentTarget.checked })} />
-          {t('marker.track.drawOn')}
-        </label>
+        <Switch checked={style.drawOn} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
         <InfoTip text={t('marker.track.drawOnTip')} />
       </div>
-      <label className="checkbox checkbox--switch">
-        <input type="checkbox" checked={style.glow} onChange={(e) => updateStyle({ glow: e.currentTarget.checked })} />
-        {t('marker.track.glow')}
-      </label>
+      <Switch checked={style.glow} onChange={(on) => updateStyle({ glow: on })}>{t('marker.track.glow')}</Switch>
       {style.glow && (
         <>
           <SettingRow label={t('marker.track.glowIntensity')} value={formatPercent(style.glowIntensity)} paths={['trackStyle.glowIntensity']}>
@@ -258,7 +249,6 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
       <SettingRow label={t('marker.track.dash')} value={TRACK_DASH_LABELS[style.dash]} paths={['trackStyle.dash']}>
         <ChipChoice
           label={t('marker.track.dash')}
-          name={`${id}-dash`}
           options={TRACK_DASHES}
           value={style.dash}
           labels={TRACK_DASH_LABELS}
@@ -321,7 +311,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const filmTrack = useFilmTrack()
   const sequence = useFilmSequence()
   const junctions = useMemo(() => junctionsM(filmTrack, sequence?.cutsM).length, [filmTrack, sequence])
-  const id = useId()
   const updateMarker = (patch: Partial<MarkerSettings>) => setSetting('marker', { ...marker, ...patch })
   const trackColor = firstTrack?.color ?? '#ffffff'
   const activityFigure = figureOfActivity(firstTrack?.activityType)
@@ -332,7 +321,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
     <PanelSection title={t('marker.section.title')} keys={['marker']} hidden={hidden}>
       <ChipChoice
         label={t('marker.section.shape')}
-        name={`${id}-kind`}
         options={MARKER_KINDS}
         value={marker.kind}
         labels={MARKER_KIND_LABELS}
@@ -341,7 +329,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       {marker.kind === 'boule' && (
         <ChipChoice
           label={t('marker.section.style')}
-          name={`${id}-ball`}
           options={MARKER_BALL_STYLES}
           value={marker.ballStyle}
           labels={MARKER_BALL_STYLE_LABELS}
@@ -351,7 +338,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       {figurine && (
         <ChipChoice
           label={t('marker.section.figurine')}
-          name={`${id}-figure`}
           options={MARKER_FIGURE_CHOICES}
           value={marker.figure}
           labels={MARKER_FIGURE_LABELS}
@@ -360,10 +346,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         />
       )}
       {figurine && (
-        <label className="checkbox">
-          <input type="checkbox" checked={marker.animated} onChange={(e) => updateMarker({ animated: e.currentTarget.checked })} />
-          {t('marker.section.animate')}
-        </label>
+        <Checkbox checked={marker.animated} onChange={(on) => updateMarker({ animated: on })}>{t('marker.section.animate')}</Checkbox>
       )}
       {marker.kind === 'image' && <MarkerImageField marker={marker} update={updateMarker} />}
       {marker.kind === 'boule' && (
@@ -423,7 +406,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           {figurine && (
             <ChipChoice
               label={t('marker.section.badge')}
-              name={`${id}-shape`}
               options={MARKER_SHAPES}
               value={marker.shape}
               labels={MARKER_SHAPE_LABELS}
@@ -441,7 +423,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           )}
           <ChipChoice
             label={t('marker.section.label')}
-            name={`${id}-label`}
             options={MARKER_LABEL_MODES}
             value={marker.label}
             labels={MARKER_LABEL_MODE_LABELS}
@@ -457,10 +438,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           )}
           {marker.label !== 'aucune' && racing && <p className="field__hint">{t('marker.section.otherLabels')}</p>}
           <div className="field__label-row">
-            <label className="checkbox checkbox--switch">
-              <input type="checkbox" checked={marker.stick} onChange={(e) => updateMarker({ stick: e.currentTarget.checked })} />
-              {t('marker.section.stick')}
-            </label>
+            <Switch checked={marker.stick} onChange={(on) => updateMarker({ stick: on })}>{t('marker.section.stick')}</Switch>
             <InfoTip text={t('marker.section.stickTip')} />
           </div>
         </div>

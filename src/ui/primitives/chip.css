@@ -1,0 +1,89 @@
+/*
+ * Chip (Chip.tsx) and `RadioGroup look="chips"`: pills that wrap onto several rows, filled with a tick when chosen. They sit
+ * on HeroUI's `.checkbox` and `.radio` (imported in theme.css) without their round or square control; their label is the pill.
+ */
+@layer components {
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chips[data-orientation] {
+  flex-flow: row wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+}
+
+.chip .checkbox__content,
+.chip .radio__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-control);
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .chip .checkbox__content:hover,
+  .chip .radio__content:hover {
+    border-color: var(--text-1);
+  }
+}
+
+.chip .checkbox__content[data-selected='true'],
+.chip .radio__content[data-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--text-1);
+}
+
+.chip .checkbox__content[data-selected='true']::before,
+.chip .radio__content[data-selected='true']::before {
+  content: '✓';
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.chip .checkbox__content[data-focus-visible='true'],
+.chip .radio__content[data-focus-visible='true'] {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* a disabled pill is still hovered (its `title` says why) */
+.chip[data-disabled='true'] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chip[data-disabled='true'] .checkbox__content,
+.chip[data-disabled='true'] .radio__content,
+fieldset:disabled .chip .checkbox__content,
+fieldset:disabled .chip .radio__content {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+
+@media (pointer: coarse) {
+  .chip .checkbox__content,
+  .chip .radio__content {
+    min-height: 44px;
+  }
+}
+}

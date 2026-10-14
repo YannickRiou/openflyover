@@ -344,25 +344,11 @@
   min-width: 0;
 }
 
-.segmented {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-card);
-}
-
-/* many options (the eight overlay styles): they wrap onto several rows instead of overflowing sideways */
-.segmented--wrap {
-  flex-wrap: wrap;
-}
-
-.segmented--wrap .segmented__option {
-  flex: 1 1 auto;
-}
-
-.segmented__option {
+/*
+ * Hand-made radio buttons in `.segmented` (`<label className="segmented__option">`), kept for TrackList.tsx until it takes
+ * `RadioGroup`; the frame itself is `primitives/radio-group.css`. This block and the `label.checkbox` ones below go then.
+ */
+label.segmented__option {
   flex: 1 1 0;
   position: relative;
   display: flex;
@@ -380,23 +366,23 @@
 }
 
 @media (hover: hover) {
-  .segmented__option:hover {
+  label.segmented__option:hover {
     color: var(--text-1);
   }
 }
 
-.segmented__option:has(input:checked) {
+label.segmented__option:has(input:checked) {
   background: var(--surface-control);
   color: var(--text-1);
   box-shadow: var(--shadow-card);
 }
 
-.segmented__option:has(input:focus-visible) {
+label.segmented__option:has(input:focus-visible) {
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
 
-.segmented__option input {
+label.segmented__option input {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -462,7 +448,7 @@
   }
 }
 
-.checkbox {
+label.checkbox {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -471,14 +457,14 @@
   cursor: pointer;
 }
 
-.checkbox input {
+label.checkbox input {
   width: 16px;
   height: 16px;
   margin: 0;
   accent-color: var(--accent);
 }
 
-.checkbox:has(input:disabled) {
+label.checkbox:has(input:disabled) {
   cursor: default;
   color: var(--text-2);
 }
@@ -592,27 +578,6 @@
   flex-direction: column;
   gap: var(--space-3);
   padding-left: var(--space-5);
-}
-
-/* « Contenu / Style / Visibilité » of an overlay element: buttons in the segmented control */
-.overlay-widget__tabs .segmented__option {
-  border: 0;
-  background: transparent;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px var(--space-2);
-}
-
-.overlay-widget__tabs .segmented__option[aria-pressed='true'] {
-  background: var(--surface-control);
-  color: var(--text-1);
-  box-shadow: var(--shadow-card);
-}
-
-.overlay-widget__tabs .segmented__option:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: -2px;
 }
 
 /* « Couleurs et polices »: native colour picker, then round swatches */
@@ -1724,7 +1689,7 @@
   outline-offset: 1px;
 }
 
-.segmented__option:has(input:disabled) {
+label.segmented__option:has(input:disabled) {
   color: var(--text-2);
   opacity: 0.6;
   cursor: not-allowed;
@@ -1885,17 +1850,17 @@
  * Clarté : interrupteurs, puces à cocher, message sans trace, météo en une ligne, résumé d'export
  * ========================================================================== */
 /* option text lighter than the field labels (600): the labels lead, the options follow */
-.checkbox {
+label.checkbox {
   font-weight: 500;
   color: var(--text-1);
 }
 
 /* on / off of a whole feature (habillage, a widget, météo, repères…): a switch, the label in bold */
-.checkbox--switch {
+label.checkbox--switch {
   font-weight: 600;
 }
 
-.checkbox.checkbox--switch input {
+label.checkbox.checkbox--switch input {
   position: relative;
   flex: none;
   width: 30px;
@@ -1908,7 +1873,7 @@
   transition: background-color 120ms ease;
 }
 
-.checkbox.checkbox--switch input::before {
+label.checkbox.checkbox--switch input::before {
   content: '';
   position: absolute;
   top: 2px;
@@ -1920,81 +1885,19 @@
   transition: transform 120ms ease;
 }
 
-.checkbox.checkbox--switch input:checked {
+label.checkbox.checkbox--switch input:checked {
   border-color: var(--accent);
   background: var(--accent);
 }
 
-.checkbox.checkbox--switch input:checked::before {
+label.checkbox.checkbox--switch input:checked::before {
   background: var(--surface-control);
   transform: translateX(12px);
 }
 
-.checkbox.checkbox--switch input:disabled {
+label.checkbox.checkbox--switch input:disabled {
   cursor: not-allowed;
   opacity: 0.45;
-}
-
-/* several choices at once (landmark kinds, counters): wrapping chips, filled with a tick when chosen */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.chip {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-control);
-  color: var(--text-1);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  user-select: none;
-}
-
-.chip input {
-  position: absolute;
-  width: 0;
-  height: 0;
-  margin: 0;
-  opacity: 0;
-}
-
-@media (hover: hover) {
-  .chip:hover {
-    border-color: var(--text-1);
-  }
-}
-
-.chip:has(input:checked) {
-  border-color: var(--accent);
-  background: var(--accent-tint);
-  color: var(--text-1);
-}
-
-.chip:has(input:checked)::before {
-  content: '✓';
-  color: var(--accent);
-  font-size: 11px;
-}
-
-.chip:has(input:focus-visible) {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.chip:has(input:disabled) {
-  border-style: dashed;
-  background: transparent;
-  color: var(--text-2);
-  cursor: not-allowed;
 }
 
 /* track delete: Lucide cross, centred */
@@ -2094,8 +1997,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .checkbox.checkbox--switch input,
-  .checkbox.checkbox--switch input::before {
+  label.checkbox.checkbox--switch input,
+  label.checkbox.checkbox--switch input::before {
     transition: none;
   }
 }

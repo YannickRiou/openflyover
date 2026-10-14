@@ -348,7 +348,12 @@ classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Menu`
 `point` for the right-click menu of the 3D view; `sheet` makes it a bottom sheet on a phone) and `Popover` (panel with its own
 controls, same two modes). Both are portalled out of their container (into the open `<dialog>`, if any) and carry
 `data-local-escape`, so an open one closes before the app's own Escape; their skin (`overlay.css`, `menu.css`, `popover.css`) is
-self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. HeroUI's styles are imported in `theme.css`
+self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
+or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen), `RadioGroup` with `Radio` (`look` `segmented`,
+`chips`, or `plain` for a grid the screen draws, as the 3 × 3 `AnchorPicker`; the arrows move and choose, the screens' CSS keys on
+`.option__label`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
+`value` / `onChange` take the values, not events; a `title` is a native tooltip over the whole control; a `<fieldset disabled>`
+around them dims them. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,

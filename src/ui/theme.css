@@ -35,6 +35,8 @@
   --color-amber: #7a5200;
   --color-amber-light: #f0c35e;
   --color-white: #ffffff;
+  /* named for HeroUI's Switch stylesheet (`text-black` on its thumb); no skin of the app shows it */
+  --color-black: #000000;
   /* poids de rendu (RenderWeight): project palette, navy / periwinkle bars, chartreuse on navy for the heaviest */
   --color-navy: #113b54;
   --color-periwinkle: #bbd1ff;
@@ -62,6 +64,12 @@
 @import '@heroui/styles/utilities';
 @import '@heroui/styles/variants';
 @import '@heroui/styles/components/button.css' layer(components);
+@import '@heroui/styles/components/switch.css' layer(components);
+@import '@heroui/styles/components/checkbox.css' layer(components);
+@import '@heroui/styles/components/radio.css' layer(components);
+@import '@heroui/styles/components/radio-group.css' layer(components);
+@import '@heroui/styles/components/toggle-button.css' layer(components);
+@import '@heroui/styles/components/toggle-button-group.css' layer(components);
 @import '@heroui/styles/components/toast.css' layer(components);
 /* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
 @import './primitives/button.css';
@@ -72,6 +80,10 @@
 @import './primitives/menu.css';
 @import './primitives/popover.css';
 @import './primitives/toast.css';
+@import './primitives/switch.css';
+@import './primitives/checkbox.css';
+@import './primitives/radio-group.css';
+@import './primitives/chip.css';
 
 /* the project's own `dark:` variant (the theme attribute, never the system scheme) and the values HeroUI's theme overrode */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));

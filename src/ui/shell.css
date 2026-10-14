@@ -890,7 +890,8 @@
   gap: var(--space-3);
 }
 
-.anchor-picker__grid {
+/* (two classes: the group is a RadioGroup, HeroUI's `.radio-group[data-orientation]` is a flex row) */
+.anchor-picker .anchor-picker__grid {
   display: grid;
   flex: none;
   grid-template-columns: repeat(3, 28px);
@@ -902,13 +903,22 @@
   background: var(--surface-control);
 }
 
+/* a cell is a Radio: its label is stretched over it, the native radio inside is hidden */
 .anchor-picker__cell {
   position: relative;
+  display: block;
   padding: 0;
   border: 0;
   border-radius: 2px;
   background: var(--surface-panel);
   cursor: pointer;
+}
+
+.anchor-picker__cell .option__label {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: inherit;
 }
 
 .anchor-picker__cell::before {
@@ -924,29 +934,30 @@
 }
 
 @media (hover: hover) {
-  .anchor-picker__cell:hover:enabled::before {
+  .anchor-picker__cell:hover:not([data-disabled='true'])::before {
     background: var(--text-2);
   }
 }
 
-.anchor-picker__cell[aria-checked='true'] {
+.anchor-picker__cell[data-selected='true'] {
   background: var(--accent);
 }
 
-.anchor-picker__cell[aria-checked='true']::before {
+.anchor-picker__cell[data-selected='true']::before {
   background: var(--surface-control);
 }
 
-.anchor-picker__cell:disabled {
+.anchor-picker__cell[data-disabled='true'] {
   background: transparent;
+  opacity: 1;
   cursor: default;
 }
 
-.anchor-picker__cell:disabled::before {
+.anchor-picker__cell[data-disabled='true']::before {
   opacity: 0.4;
 }
 
-.anchor-picker__cell:focus-visible {
+.anchor-picker__cell .option__label[data-focus-visible='true'] {
   outline: var(--focus-ring);
   outline-offset: 1px;
 }
@@ -1638,9 +1649,8 @@
   .input,
   .film-tl__select,
   .sun-chip,
-  .chip,
-  .segmented__option,
-  .checkbox,
+  label.segmented__option,
+  label.checkbox,
   .fold__summary,
   .track-menu__item {
     min-height: 44px;
@@ -1654,7 +1664,7 @@
     font-size: 16px;
   }
 
-  .checkbox input {
+  label.checkbox input {
     width: 22px;
     height: 22px;
   }
@@ -1680,7 +1690,7 @@
     top: calc(var(--space-3) + 44px + var(--space-2));
   }
 
-  .anchor-picker__grid {
+  .anchor-picker .anchor-picker__grid {
     grid-template-columns: repeat(3, 44px);
     grid-auto-rows: 44px;
   }

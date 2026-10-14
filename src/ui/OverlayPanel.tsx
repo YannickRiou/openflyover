@@ -43,7 +43,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
-import { Button } from './primitives'
+import { Button, Checkbox, Chip, Radio, RadioGroup, Switch, ToggleButton, ToggleButtonGroup } from './primitives'
 
 const COUNTER_LABELS: Record<CounterId, string> = {
   get distance() { return t('overlay.counter.distance') },
@@ -159,14 +159,12 @@ export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
   return (
     <>
       <AnchorPicker label={t('overlay.position')} value={anchor} onChange={(next) => set({ ...overlay, [widget]: { ...overlay[widget], anchor: next } })} />
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          checked={offset !== undefined}
-          onChange={(e) => set(withWidgetOffset(overlay, widget, e.currentTarget.checked ? { x: 0, y: 0 } : null))}
-        />
+      <Checkbox
+        checked={offset !== undefined}
+        onChange={(on) => set(withWidgetOffset(overlay, widget, on ? { x: 0, y: 0 } : null))}
+      >
         {t('overlay.freePosition')}
-      </label>
+      </Checkbox>
       {offset && (
         <>
           <div className="position-offset">
@@ -216,27 +214,18 @@ function WidgetGroup({
   const shown = tabs.includes(tab) ? tab : tabs[0]
   return (
     <div className="overlay-widget" role="group" aria-labelledby={id}>
-      <label className="checkbox checkbox--switch" id={id}>
-        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.currentTarget.checked)} />
-        {label}
-      </label>
+      <Switch id={id} checked={enabled} onChange={(on) => onToggle(on)}>{label}</Switch>
       {enabled && (
         <div className="overlay-widget__body">
           {position && <WidgetPosition widget={position} />}
           {tabs.length > 1 && (
-            <div className="overlay-widget__tabs segmented" role="group" aria-label={tr('overlay.widgetSettings', { label })}>
+            <ToggleButtonGroup aria-label={tr('overlay.widgetSettings', { label })} value={shown} onChange={(next) => setTab(next)}>
               {tabs.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className="segmented__option"
-                  aria-pressed={t === shown}
-                  onClick={() => setTab(t)}
-                >
+                <ToggleButton key={t} value={t}>
                   {WIDGET_TAB_LABELS[t]}
-                </button>
+                </ToggleButton>
               ))}
-            </div>
+            </ToggleButtonGroup>
           )}
           {shown === 'contenu' && children}
           {shown === 'style' && (
@@ -263,10 +252,7 @@ function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolea
   const label = CARD_LABELS[card]
   return (
     <div className="overlay-widget" role="group" aria-labelledby={id}>
-      <label className="checkbox checkbox--switch" id={id}>
-        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.currentTarget.checked)} />
-        {label}
-      </label>
+      <Switch id={id} checked={enabled} onChange={(on) => onToggle(on)}>{label}</Switch>
       <p className="field__hint">{t('overlay.card.hint')}</p>
       {enabled && (
         <Button
@@ -548,7 +534,6 @@ export function OverlayPanel() {
   const raceOn = useAppStore((s) => s.settings.race.enabled)
   const hasWeather = useWeatherStore((s) => s.series !== null)
   const [logoError, setLogoError] = useState<string | null>(null)
-  const id = useId()
 
   const set = (patch: Partial<OverlaySettings>) => setSetting('overlay', { ...overlay, ...patch })
   const setWidget = <K extends WidgetKey>(key: K, patch: Partial<OverlaySettings[K]>) => set({ [key]: { ...overlay[key], ...patch } })
@@ -581,29 +566,19 @@ export function OverlayPanel() {
   return (
     <>
       <PanelSection title={t('overlay.panel.title')} keys={['overlay']}>
-        <label className="checkbox checkbox--switch">
-          <input type="checkbox" checked={overlay.enabled} onChange={(e) => set({ enabled: e.currentTarget.checked })} />
-          {t('overlay.panel.show')}
-        </label>
+        <Switch checked={overlay.enabled} onChange={(on) => set({ enabled: on })}>{t('overlay.panel.show')}</Switch>
         <p className="field__hint">{t('overlay.panel.showHint')}</p>
 
         {overlay.enabled && (
           <fieldset className="field fieldset">
             <legend className="field__label">{t('overlay.panel.style')}</legend>
-            <div className="segmented segmented--wrap">
+            <RadioGroup wrap aria-label={t('overlay.panel.style')} value={overlay.style} onChange={(style) => set(withStyleLayout(overlay, style))}>
               {OVERLAY_STYLES.map((style) => (
-                <label key={style} className="segmented__option">
-                  <input
-                    type="radio"
-                    name={`${id}-style`}
-                    value={style}
-                    checked={overlay.style === style}
-                    onChange={() => set(withStyleLayout(overlay, style))}
-                  />
+                <Radio key={style} value={style}>
                   {OVERLAY_STYLE_LABELS[style]}
-                </label>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </fieldset>
         )}
         {overlay.enabled && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}
@@ -635,15 +610,15 @@ export function OverlayPanel() {
                 <legend className="field__label">{t('overlay.panel.values')}</legend>
                 <div className="chips">
                   {COUNTER_IDS.map((counter) => (
-                    <label key={counter} className="chip" title={available[counter] ? undefined : t('overlay.panel.missing')}>
-                      <input
-                        type="checkbox"
-                        checked={overlay.counters.fields[counter] && available[counter]}
-                        disabled={!available[counter]}
-                        onChange={(e) => setWidget('counters', { fields: { ...overlay.counters.fields, [counter]: e.currentTarget.checked } })}
-                      />
+                    <Chip
+                      key={counter}
+                      checked={overlay.counters.fields[counter] && available[counter]}
+                      disabled={!available[counter]}
+                      title={available[counter] ? undefined : t('overlay.panel.missing')}
+                      onChange={(on) => setWidget('counters', { fields: { ...overlay.counters.fields, [counter]: on } })}
+                    >
                       {COUNTER_LABELS[counter]}
-                    </label>
+                    </Chip>
                   ))}
                 </div>
               </fieldset>
@@ -715,14 +690,12 @@ export function OverlayPanel() {
               }
             >
               <p className="field__hint">{t('overlay.panel.minimapHint')}</p>
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={overlay.minimap.northArrow}
-                  onChange={(e) => setWidget('minimap', { northArrow: e.currentTarget.checked })}
-                />
+              <Checkbox
+                checked={overlay.minimap.northArrow}
+                onChange={(on) => setWidget('minimap', { northArrow: on })}
+              >
                 {t('overlay.panel.northArrow')}
-              </label>
+              </Checkbox>
             </WidgetGroup>
           </PanelSection>
 
@@ -795,10 +768,7 @@ export function OverlayPanel() {
 
       <PanelSection title={t('overlay.panel.credits')}>
         <div className="field__label-row">
-          <label className="checkbox checkbox--switch">
-            <input type="checkbox" checked={overlay.credits.enabled} onChange={(e) => setWidget('credits', { enabled: e.currentTarget.checked })} />
-            {t('overlay.panel.burnCredits')}
-          </label>
+          <Switch checked={overlay.credits.enabled} onChange={(on) => setWidget('credits', { enabled: on })}>{t('overlay.panel.burnCredits')}</Switch>
           <InfoTip text={t('overlay.panel.creditsTip')} />
         </div>
         {overlay.credits.enabled ? (

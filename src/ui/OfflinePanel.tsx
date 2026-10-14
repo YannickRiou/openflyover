@@ -12,7 +12,7 @@ import { useAppStore } from '../state/store'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { formatBytes, formatNumber } from './format'
 import { showToast } from './toast'
-import { Button } from './primitives'
+import { Button, Radio, RadioGroup } from './primitives'
 
 const formatSize = formatBytes
 
@@ -86,20 +86,13 @@ export function OfflinePanel() {
         <>
           <fieldset className="field fieldset" disabled={job !== null}>
             <legend className="field__label">{t('offline.panel.corridor')}</legend>
-            <div className="segmented">
+            <RadioGroup aria-label={t('offline.panel.corridor')} value={corridorM} onChange={(width) => setCorridorM(width)}>
               {CORRIDOR_WIDTHS_M.map((width) => (
-                <label key={width} className="segmented__option">
-                  <input
-                    type="radio"
-                    name={`${id}-corridor`}
-                    value={width}
-                    checked={corridorM === width}
-                    onChange={() => setCorridorM(width)}
-                  />
+                <Radio key={width} value={width}>
                   {width / 1000} km
-                </label>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </fieldset>
 
           <p className="field__hint">

@@ -1,0 +1,83 @@
+/*
+ * Checkbox (Checkbox.tsx, and the pills of Chip.tsx): HeroUI's `.checkbox` (imported in theme.css) skinned with the tokens
+ * of theme.css: a 16 px box that fills with the accent and a tick, the label in regular weight, the whole row is the
+ * target. Disabled (its own prop, or the `<fieldset>` around it): the label turns to text 2 and the box fades; it still
+ * takes the pointer so a `title` can say why.
+ */
+@layer components {
+.checkbox {
+  align-items: stretch;
+  gap: 0;
+}
+
+.checkbox__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-1);
+  line-height: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.checkbox__control {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--surface-control);
+  box-shadow: none;
+}
+
+.checkbox__control::before {
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+/* the box does not change colour under the pointer (the accent does not either) */
+.checkbox:hover .checkbox__control::before,
+.checkbox [data-slot='checkbox-content'][data-hovered='true'] .checkbox__control::before {
+  background: var(--accent);
+}
+
+.checkbox[data-selected='true'] .checkbox__control {
+  border-color: var(--accent);
+}
+
+/* focus: the accent outline of the whole app */
+.checkbox [data-slot='checkbox-content'][data-focus-visible='true'] .checkbox__control {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px var(--color-white);
+}
+
+.checkbox[data-disabled='true'] {
+  opacity: 1;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.checkbox[data-disabled='true'] .checkbox__content,
+fieldset:disabled .checkbox__content {
+  color: var(--text-2);
+  cursor: default;
+}
+
+.checkbox[data-disabled='true'] .checkbox__control,
+fieldset:disabled .checkbox__control {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* touch screens: a box of 22 px, a row of 44 px at least */
+@media (pointer: coarse) {
+  .checkbox__control {
+    width: 22px;
+    height: 22px;
+  }
+
+  .checkbox__content {
+    min-height: 44px;
+  }
+}
+}

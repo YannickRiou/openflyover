@@ -3,6 +3,7 @@ import { KM_MARKER_STEPS, LABEL_RANGE_KM, LABEL_SIZE_RANGE } from '../scene/labe
 import { useAppStore } from '../state/store'
 import { formatNumber } from './format'
 import { RangeField, SettingRow } from './PanelSection'
+import { Checkbox } from './primitives'
 
 /** 0 -> "Aucune", 1 -> "Tous les kilomètres", 5 -> "Tous les 5 km" */
 const kmStepLabel = (step: number) =>
@@ -18,26 +19,19 @@ export function LabelSettings() {
     <>
       <fieldset className="field fieldset">
         <legend className="field__label">{tr('track.labels.legend')}</legend>
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={labels.waypoints}
-            onChange={(e) => setSetting('labels', { ...labels, waypoints: e.currentTarget.checked })}
-          />
+        <Checkbox
+          checked={labels.waypoints}
+          onChange={(on) => setSetting('labels', { ...labels, waypoints: on })}
+        >
           {tr('track.labels.waypoints')}
-        </label>
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={labels.endpoints}
-            onChange={(e) => setSetting('labels', { ...labels, endpoints: e.currentTarget.checked })}
-          />
+        </Checkbox>
+        <Checkbox
+          checked={labels.endpoints}
+          onChange={(on) => setSetting('labels', { ...labels, endpoints: on })}
+        >
           {tr('track.labels.endpoints')}
-        </label>
-        <label className="checkbox">
-          <input type="checkbox" checked={labels.photos} onChange={(e) => setSetting('labels', { ...labels, photos: e.currentTarget.checked })} />
-          {tr('track.labels.photos')}
-        </label>
+        </Checkbox>
+        <Checkbox checked={labels.photos} onChange={(on) => setSetting('labels', { ...labels, photos: on })}>{tr('track.labels.photos')}</Checkbox>
       </fieldset>
       <SettingRow label={tr('track.labels.kmMarkers')} value={kmStepLabel(labels.kmStep)} paths={['labels.kmStep']}>
         <label className="field">

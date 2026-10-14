@@ -1,0 +1,108 @@
+/*
+ * Switch (Switch.tsx): HeroUI's `.switch` (imported in theme.css) skinned with the tokens of theme.css: a 30 × 18 track
+ * with a round thumb, the label in bold, the whole row is the target. Disabled (its own prop, or the `<fieldset>` around
+ * it): the label turns to text 2 and the track fades; it still takes the pointer so a `title` can say why.
+ */
+@layer components {
+.switch {
+  align-items: stretch;
+  gap: 0;
+  --switch-control-bg: var(--surface-control);
+  --switch-control-bg-hover: var(--surface-control);
+  --switch-control-bg-pressed: var(--surface-control);
+  --switch-control-bg-checked: var(--accent);
+  --switch-control-bg-checked-hover: var(--accent);
+}
+
+.switch__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-1);
+  line-height: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.switch__control {
+  flex: none;
+  width: 30px;
+  height: 18px;
+  border: 1px solid var(--text-2);
+  border-radius: 999px;
+  transition: background-color 120ms ease;
+}
+
+.switch[data-selected='true'] .switch__control {
+  border-color: var(--accent);
+}
+
+.switch__thumb {
+  width: 12px;
+  height: 12px;
+  margin-inline-start: 2px;
+  border-radius: 50%;
+  background: var(--text-2);
+  box-shadow: none;
+  transition: transform 120ms ease;
+}
+
+.switch[data-selected='true'] .switch__thumb {
+  margin-inline-start: 2px;
+  background: var(--surface-control);
+  box-shadow: none;
+  transform: translateX(12px);
+}
+
+/* focus: the accent outline of the whole app */
+.switch [data-slot='switch-content'][data-focus-visible='true'] .switch__control {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px var(--color-white);
+}
+
+.switch[data-disabled='true'] {
+  opacity: 1;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.switch[data-disabled='true'] .switch__content,
+fieldset:disabled .switch__content {
+  color: var(--text-2);
+  cursor: default;
+}
+
+.switch[data-disabled='true'] .switch__control,
+fieldset:disabled .switch__control {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.switch[data-disabled='true'] .switch__thumb,
+.switch[data-disabled='true'][data-selected='true'] .switch__thumb {
+  opacity: 1;
+}
+
+.switch[data-disabled='true'] .switch__thumb {
+  background: var(--text-2);
+}
+
+.switch[data-disabled='true'][data-selected='true'] .switch__thumb {
+  background: var(--surface-control);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch__control,
+  .switch__thumb {
+    transition: none;
+  }
+}
+
+/* touch screens: a row of 44 px at least */
+@media (pointer: coarse) {
+  .switch__content {
+    min-height: 44px;
+  }
+}
+}

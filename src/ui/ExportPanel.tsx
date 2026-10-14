@@ -67,7 +67,7 @@ import { AspectIcon, Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import './exportPanel.css'
-import { Button, Tip } from './primitives'
+import { Button, Checkbox, Chip, Radio, RadioGroup, Tip } from './primitives'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
   { value: 'standard', get label() { return QUALITY_NAMES.standard } },
@@ -343,35 +343,27 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         <legend className="field__label">
           {t('export.panel.fps')} <RenderWeight weight="fps" />
         </legend>
-        <div className="segmented">
+        <RadioGroup aria-label={t('export.panel.fps')} value={video.fps} onChange={(fps) => update({ fps })}>
           {VIDEO_FPS.map((fps) => (
-            <label key={fps} className="segmented__option">
-              <input type="radio" name={`${id}-fps`} value={fps} checked={video.fps === fps} onChange={() => update({ fps })} />
+            <Radio key={fps} value={fps}>
               {fps}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </fieldset>
 
       <h3 className="export__group">{t('export.panel.encodingGroup')}</h3>
       <fieldset className="field fieldset" disabled={busy || overlayOnly}>
         <legend className="field__label">{t('export.panel.bitrate')}</legend>
-        <div className="segmented">
-          <label className="segmented__option">
-            <input type="radio" name={`${id}-bitrate`} checked={!video.manualBitrate} onChange={() => update({ manualBitrate: false })} />
-            {t('export.panel.byQuality')}
-          </label>
-          <label className="segmented__option">
-            <input
-              type="radio"
-              name={`${id}-bitrate`}
-              checked={video.manualBitrate}
-              // starts from the quality's bitrate, on the slider's steps
-              onChange={() => update({ manualBitrate: true, bitrateMbps: snapBitrate(presetBitrate / 1e6) })}
-            />
-            {t('export.panel.manual')}
-          </label>
-        </div>
+        <RadioGroup
+          aria-label={t('export.panel.bitrate')}
+          value={video.manualBitrate ? 'manual' : 'quality'}
+          // the manual one starts from the quality's bitrate, on the slider's steps
+          onChange={(by) => update(by === 'manual' ? { manualBitrate: true, bitrateMbps: snapBitrate(presetBitrate / 1e6) } : { manualBitrate: false })}
+        >
+          <Radio value="quality">{t('export.panel.byQuality')}</Radio>
+          <Radio value="manual">{t('export.panel.manual')}</Radio>
+        </RadioGroup>
       </fieldset>
       {video.manualBitrate && !overlayOnly && (
         <RangeField
@@ -472,20 +464,17 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       <h3 className="export__group">{t('export.panel.renderGroup')}</h3>
       <fieldset className="field fieldset" disabled={busy}>
         <legend className="field__label">{customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}</legend>
-        <div className="segmented">
+        <RadioGroup
+          aria-label={customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}
+          value={video.quality}
+          onChange={(quality) => update({ quality })}
+        >
           {QUALITIES.map((q) => (
-            <label key={q.value} className="segmented__option">
-              <input
-                type="radio"
-                name={`${id}-quality`}
-                value={q.value}
-                checked={video.quality === q.value}
-                onChange={() => update({ quality: q.value })}
-              />
+            <Radio key={q.value} value={q.value}>
               {q.label}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
         <p className="field__hint">
           {t(video.manualBitrate ? 'export.panel.tierHint' : 'export.panel.tierHintBitrate', {
             clouds: CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase(),
@@ -500,10 +489,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </fieldset>
 
       <div className="field">
-        <label className="checkbox">
-          <input type="checkbox" checked={overlayOnly} disabled={busy} onChange={(e) => setOverlayOnly(e.currentTarget.checked)} />
-          {t('export.panel.overlayOnly')}
-        </label>
+        <Checkbox checked={overlayOnly} disabled={busy} onChange={(on) => setOverlayOnly(on)}>{t('export.panel.overlayOnly')}</Checkbox>
         {overlayOnly && <p className="field__hint">{t('export.panel.overlayOnlyHint')}</p>}
       </div>
 
@@ -833,16 +819,12 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       <fieldset className="field fieldset" disabled={busy}>
         <legend className="field__label">{t('export.panel.source')}</legend>
-        <div className="segmented">
-          <label className="segmented__option">
-            <input type="radio" name={`${id}-source`} checked={!perTrack} onChange={() => setPerTrack(false)} />
-            {t('export.panel.thisFilm')}
-          </label>
-          <label className="segmented__option" title={toFolder ? undefined : t('export.panel.browsersTip')}>
-            <input type="radio" name={`${id}-source`} checked={perTrack} disabled={!toFolder} onChange={() => setPerTrack(true)} />
+        <RadioGroup aria-label={t('export.panel.source')} value={perTrack ? 'tracks' : 'film'} onChange={(source) => setPerTrack(source === 'tracks')}>
+          <Radio value="film">{t('export.panel.thisFilm')}</Radio>
+          <Radio value="tracks" disabled={!toFolder} title={toFolder ? undefined : t('export.panel.browsersTip')}>
             {t('export.panel.perTrack')}
-          </label>
-        </div>
+          </Radio>
+        </RadioGroup>
       </fieldset>
       {perTrack && (
         <div className="field">
@@ -867,14 +849,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                 {VIDEO_RESOLUTIONS.map((r) => {
                   const key = formatKey(a.id, r.id)
                   return (
-                    <label key={r.id} className="chip">
-                      <input
-                        type="checkbox"
-                        checked={selection.formats.includes(key)}
-                        onChange={(e) => toggle(key, e.currentTarget.checked)}
-                      />
-                      {r.label}
-                    </label>
+                    <Chip key={r.id} checked={selection.formats.includes(key)} onChange={(on) => toggle(key, on)}>{r.label}</Chip>
                   )
                 })}
               </div>
@@ -885,14 +860,8 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       <fieldset className="field fieldset" disabled={busy}>
         <legend className="field__label">{t('export.panel.also')}</legend>
-        <label className="checkbox">
-          <input type="checkbox" checked={selection.still} onChange={(e) => select({ still: e.currentTarget.checked })} />
-          {t('export.panel.still', { label: stillLabel })}
-        </label>
-        <label className="checkbox">
-          <input type="checkbox" checked={selection.poster} onChange={(e) => select({ poster: e.currentTarget.checked })} />
-          {t('export.panel.poster')}
-        </label>
+        <Checkbox checked={selection.still} onChange={(on) => select({ still: on })}>{t('export.panel.still', { label: stillLabel })}</Checkbox>
+        <Checkbox checked={selection.poster} onChange={(on) => select({ poster: on })}>{t('export.panel.poster')}</Checkbox>
       </fieldset>
 
       {perTrack ? (
@@ -1036,11 +1005,10 @@ export function ExportPanel({ onClose }: { onClose?: () => void }) {
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const batching = useBatchStore((s) => s.phase === 'running')
   const busy = exporting || batching
-  const id = useId()
   const modes = (
     <fieldset className="field fieldset" disabled={busy}>
       <legend className="visually-hidden">{t('export.panel.modeType')}</legend>
-      <div className="segmented">
+      <RadioGroup aria-label={t('export.panel.modeType')} value={mode} onChange={(next) => setMode(next)}>
         {(
           [
             ['video', t('export.panel.modeVideo')],
@@ -1048,12 +1016,11 @@ export function ExportPanel({ onClose }: { onClose?: () => void }) {
             ['poster', t('export.panel.modePoster')],
           ] as const
         ).map(([value, label]) => (
-          <label key={value} className="segmented__option">
-            <input type="radio" name={`${id}-mode`} value={value} checked={mode === value} onChange={() => setMode(value)} />
+          <Radio key={value} value={value}>
             {label}
-          </label>
+          </Radio>
         ))}
-      </div>
+      </RadioGroup>
     </fieldset>
   )
   return (
