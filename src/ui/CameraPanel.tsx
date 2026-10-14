@@ -20,7 +20,7 @@ import { useAppStore } from '../state/store'
 import { formatDegrees, formatDistance, formatDuration, formatNumber, formatPercent, formatSecondsShort, formatSpeedUp } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
-import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { InfoTip, MoreOptions, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
 import { Button, Checkbox, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
@@ -40,7 +40,7 @@ export function RegionHint({ id, highlight }: { id: string; highlight: boolean }
   const regionName = useRegionStore((s) => s.region?.name)
   return (
     <>
-      <p id={id} className="field__hint">
+      <p id={id} className="type-hint">
         {(() => {
           const hint = REGION_HINTS[highlight ? regionStatus : 'idle']
           return highlight && regionStatus === 'ready' && regionName ? t('camera.region.named', { name: regionName, hint }) : hint
@@ -75,6 +75,18 @@ const MAIN_PRESETS = new Set(['chase', 'bird', 'orbit', 'cinema', 'high-drone', 
 
 /** `value` of the tile that shows the settings when they match no preset. */
 const CUSTOM_PRESET = 'custom'
+
+/** A preset tile is a Radio of a `plain` group: the label is the tile, framed, tinted and ringed with the accent once chosen. */
+const TILE = 'group flex min-w-0 flex-row items-stretch'
+const TILE_LABEL =
+  'relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-start gap-0.5 rounded-sm border border-edge bg-surface-control px-1 pt-2 pb-1.5 text-center transition-ui hover:border-text-1 ' +
+  'data-[selected=true]:border-brand data-[selected=true]:bg-accent-tint data-[selected=true]:ring-1 data-[selected=true]:ring-brand data-[selected=true]:ring-inset ' +
+  'data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-offset-2 data-[focus-visible=true]:outline-brand'
+/** « − » and « + » around the duration slider: the fine adjustment the slider only roughly reaches (a square the height of a control). */
+const STEP_BUTTON = 'w-control flex-none px-0'
+const TILE_GRID ='grid grid-cols-3 gap-2'
+const TILE_NAME = 'max-w-full truncate text-hint font-medium'
+const TILE_FIGURES = 'text-caption whitespace-nowrap text-text-2 tabular-nums'
 
 /** Key figures of a preset tile: distance multiplier and tilt. */
 function presetFigures(camera: CameraSettings): string {
@@ -193,7 +205,7 @@ function SituationShotSwitches() {
   return (
     <>
       {(['opening', 'closing'] as const).map((key) => (
-        <div key={key} className="field__label-row">
+        <div key={key} className="flex items-center gap-1">
           <Switch
             checked={isOn(key)}
             aria-describedby={any ? `${id}-region-hint` : undefined}
@@ -236,10 +248,10 @@ export function CameraPanel() {
   const mainPresets = CAMERA_PRESETS.filter((p) => MAIN_PRESETS.has(p.id) || p === preset)
   const morePresets = CAMERA_PRESETS.filter((p) => !mainPresets.includes(p))
   const presetTile = (p: CameraPreset) => (
-    <Radio key={p.id} value={p.id} className="format-tile style-tile" title={CAMERA_STYLE_LABELS[p.camera.style]}>
+    <Radio key={p.id} value={p.id} className={TILE} labelClassName={TILE_LABEL} title={CAMERA_STYLE_LABELS[p.camera.style]}>
       <Icon name={PRESET_ICONS[p.id]} size={20} />
-      <span className="format-tile__label">{p.name}</span>
-      <span className="preset-tile__figures">{presetFigures(p.camera)}</span>
+      <span className={TILE_NAME}>{p.name}</span>
+      <span className={TILE_FIGURES}>{presetFigures(p.camera)}</span>
     </Radio>
   )
   const pickPreset = (presetId: string) => {
@@ -255,30 +267,26 @@ export function CameraPanel() {
   return (
     <>
       <PanelSection title={t('camera.panel.camera')} keys={['camera']}>
-        <fieldset className="field fieldset">
-          <legend id={`${id}-preset`} className="field__label">
+        <fieldset className="field min-w-0">
+          <legend id={`${id}-preset`} className="type-label mb-1">
             {t('camera.panel.preset')}
           </legend>
-          <RadioGroup look="plain" className="style-tiles" aria-labelledby={`${id}-preset`} value={preset?.id ?? CUSTOM_PRESET} onChange={pickPreset}>
+          <RadioGroup look="plain" className={TILE_GRID} aria-labelledby={`${id}-preset`} value={preset?.id ?? CUSTOM_PRESET} onChange={pickPreset}>
             {mainPresets.map(presetTile)}
             {!preset && (
-              <Radio value={CUSTOM_PRESET} className="format-tile style-tile" title={t('camera.panel.customTip')}>
+              <Radio value={CUSTOM_PRESET} className={TILE} labelClassName={TILE_LABEL} title={t('camera.panel.customTip')}>
                 <Icon name="sliders-horizontal" size={20} />
-                <span className="format-tile__label">{t('camera.panel.custom')}</span>
-                <span className="preset-tile__figures">{presetFigures(camera)}</span>
+                <span className={TILE_NAME}>{t('camera.panel.custom')}</span>
+                <span className={TILE_FIGURES}>{presetFigures(camera)}</span>
               </Radio>
             )}
           </RadioGroup>
-          <details className="preset-more">
-            <summary className="preset-more__summary">
-              <span className="preset-more__label">{t('camera.panel.morePresets')}</span>
-              <Icon name="chevron-down" size={16} />
-            </summary>
-            <RadioGroup look="plain" className="style-tiles" aria-label={t('camera.panel.morePresets')} value="" onChange={pickPreset}>
+          <MoreOptions label={t('camera.panel.morePresets')}>
+            <RadioGroup look="plain" className={TILE_GRID} aria-label={t('camera.panel.morePresets')} value="" onChange={pickPreset}>
               {morePresets.map(presetTile)}
             </RadioGroup>
-          </details>
-          <p id={`${id}-style-hint`} className="field__hint">
+          </MoreOptions>
+          <p id={`${id}-style-hint`} className="type-hint">
             {STYLE_HINTS[camera.style]}
           </p>
         </fieldset>
@@ -289,7 +297,7 @@ export function CameraPanel() {
 
         <SettingRow label={t('camera.panel.style')} value={CAMERA_STYLE_LABELS[camera.style]} paths={['camera.style']}>
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-style`}>
+            <label className="type-label" htmlFor={`${id}-style`}>
               {t('camera.panel.style')}
             </label>
             <Select
@@ -306,23 +314,7 @@ export function CameraPanel() {
           const value = format(camera[key], autoTurnM)
           return (
             <SettingRow key={key} label={label} value={value} paths={[`camera.${key}`]}>
-              <div className="field">
-                <div className="field__label-row">
-                  <span className="field__label">
-                    {label}
-                  </span>
-                  <InfoTip text={tip} />
-                </div>
-                <Slider
-                  aria-label={label}
-                  min={range.min}
-                  max={range.max}
-                  step={range.step}
-                  value={camera[key]}
-                  onChange={(v) => update({ [key]: v })}
-                  format={() => value}
-                />
-              </div>
+              <RangeField label={label} tip={tip} {...range} value={camera[key]} format={() => value} onChange={(v) => update({ [key]: v })} />
             </SettingRow>
           )
         })}
@@ -330,23 +322,22 @@ export function CameraPanel() {
 
       <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
         <div className="field">
-          <div className="field__label-row">
-            <span className="field__label">
-              {t('camera.duration.label')}
-            </span>
+          <div className="flex items-center gap-1">
+            <span className="type-label">{t('camera.duration.label')}</span>
             <InfoTip text={t('camera.duration.tip')} />
           </div>
-          <div className="range-row">
-            <button
-              type="button"
-              className="step-btn"
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className={STEP_BUTTON}
               aria-label={t('camera.duration.shorten')}
               disabled={durationS <= FLYOVER_DURATION_RANGE.min}
               onClick={() => stepDuration(-1)}
             >
               −
-            </button>
+            </Button>
             <Slider
+              className="w-auto flex-auto"
               aria-label={t('camera.duration.label')}
               min={FLYOVER_DURATION_RANGE.min}
               max={FLYOVER_DURATION_RANGE.max}
@@ -355,20 +346,20 @@ export function CameraPanel() {
               onChange={(v) => setFlightTiming({ durationS: v })}
               spoken={formatSeconds}
             />
-            <button
-              type="button"
-              className="step-btn"
+            <Button
+              size="sm"
+              className={STEP_BUTTON}
               aria-label={t('camera.duration.lengthen')}
               disabled={durationS >= FLYOVER_DURATION_RANGE.max}
               onClick={() => stepDuration(1)}
             >
               +
-            </button>
+            </Button>
             <output className="range-row__value range-row__value--wide">
               {formatSeconds(durationS)}
             </output>
           </div>
-          <p className="field__hint">
+          <p className="type-hint">
             {t(speedUp ? 'camera.duration.filmSpeedUp' : 'camera.duration.film', {
               duration: formatSeconds(Math.round(film.totalTime())),
               stops: stopCount === 0 ? t('camera.duration.noStops') : t('camera.duration.stops', { count: stopCount }),
@@ -381,7 +372,7 @@ export function CameraPanel() {
 
         <SituationShotSwitches />
 
-        <div className="field__label-row">
+        <div className="flex items-center gap-1">
           <Switch checked={pacing.enabled} onChange={(on) => updatePacing({ enabled: on })}>{t('camera.pacing.enable')}</Switch>
           <InfoTip text={t('camera.pacing.enableTip')} />
         </div>
@@ -389,8 +380,8 @@ export function CameraPanel() {
         {pacing.enabled && (
           <>
             <SettingRow label={t('camera.pacing.slowOn')} value={slowOnLabel(pacing)} paths={['pacing.climbs', 'pacing.landmarks']}>
-              <fieldset className="field fieldset">
-                <legend className="field__label">{t('camera.pacing.slowOn')}</legend>
+              <fieldset className="field min-w-0">
+                <legend className="type-label mb-1">{t('camera.pacing.slowOn')}</legend>
                 <Checkbox checked={pacing.climbs} onChange={(on) => updatePacing({ climbs: on })}>{t('camera.pacing.climbTops')}</Checkbox>
                 <Checkbox checked={pacing.landmarks} onChange={(on) => updatePacing({ landmarks: on })}>{t('camera.pacing.landmarks')}</Checkbox>
               </fieldset>
@@ -400,28 +391,14 @@ export function CameraPanel() {
               const range = PACING_RANGES[key]
               return (
                 <SettingRow key={key} label={label} value={format(pacing[key])} paths={[`pacing.${key}`]}>
-                  <div className="field">
-                    <span className="field__label">
-                      {label}
-                    </span>
-                    <Slider
-                      aria-label={label}
-                      min={range.min}
-                      max={range.max}
-                      step={range.step}
-                      value={pacing[key]}
-                      onChange={(v) => updatePacing({ [key]: v })}
-                      format={format}
-                      spoken={spoken}
-                    />
-                  </div>
+                  <RangeField label={label} {...range} value={pacing[key]} format={format} spoken={spoken} onChange={(v) => updatePacing({ [key]: v })} />
                 </SettingRow>
               )
             })}
 
             <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']}>
               <Checkbox checked={pacing.keepDuration} onChange={(on) => updatePacing({ keepDuration: on })}>{t('camera.pacing.keep')}</Checkbox>
-              <p className="field__hint">{t('camera.pacing.keepHint')}</p>
+              <p className="type-hint">{t('camera.pacing.keepHint')}</p>
             </SettingRow>
           </>
         )}
