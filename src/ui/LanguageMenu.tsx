@@ -49,6 +49,7 @@ export function LanguageMenu() {
         ref={button}
         type="button"
         className="icon-btn lang-menu__button"
+        data-testid="language-button"
         aria-label={t('topbar.language.aria', { name: current.name })}
         aria-haspopup="menu"
         aria-expanded={open}

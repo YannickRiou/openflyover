@@ -451,10 +451,10 @@ export function LandmarkPanel() {
             if (row.landmark) {
               const { landmark } = row
               return (
-                <li key={row.id} className={className}>
+                <li key={row.id} className={className} data-testid="place" data-hidden={row.hidden || undefined}>
                   <button type="button" className="place__go" title={row.hidden ? t('landmarks.goHidden') : t('landmarks.go')} onClick={() => seek(row.atM)}>
                     <span className={landmark.kind === 'pass' ? 'landmark__kind landmark__kind--pass' : 'landmark__kind'}>{KIND_BADGES[landmark.kind]}</span>
-                    <span className="landmark__name">{landmark.text}</span>
+                    <span className="landmark__name" data-testid="landmark-name">{landmark.text}</span>
                   </button>
                   <div className="place__actions">
                     <button
@@ -494,7 +494,7 @@ export function LandmarkPanel() {
                   <div className="place__line">
                     <span className="place__meta">
                       {t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}
-                      {fresh.has(row.id) && <span className="place__new">{t('landmarks.isNew')}</span>}
+                      {fresh.has(row.id) && <span className="place__new" data-testid="place-new">{t('landmarks.isNew')}</span>}
                     </span>
                     <StopToggle name={landmark.name} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, landmark.name, on)} />
                   </div>
@@ -504,7 +504,7 @@ export function LandmarkPanel() {
             const { poi } = row
             const name = poi.name.trim()
             return (
-              <li key={row.id} className={className}>
+              <li key={row.id} className={className} data-testid="place" data-hidden={row.hidden || undefined}>
                 <div className="place__go place__go--poi">
                   <button type="button" className="landmark__kind landmark__kind--poi" title={t('landmarks.poiGo')} onClick={() => seek(row.atM)}>
                     {t('landmarks.poiBadge')}

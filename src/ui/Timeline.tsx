@@ -976,6 +976,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       aria-label={t('timeline.blockRange', { description, from: formatFilmTime(startS), to: formatFilmTime(endS) })}
       title={label}
       data-item={item}
+      data-testid="timeline-block"
+      data-lifted={item === liftedItem ? '' : undefined}
       className={`film-tl__block ${className}${selected === item ? ' film-tl__block--selected' : ''}${item === liftedItem ? ' film-tl__block--lifted' : ''}`}
       style={{
         left: xOf(startS) - Math.max(0, minPx - (endS - startS) * pxPerS) / 2,
@@ -1074,6 +1076,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         aria-pressed={selected === k.id}
         aria-label={t('timeline.key.settingAria', { what, distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
         title={t('timeline.key.hint', { what })}
+        data-testid="timeline-key"
         className={`film-tl__key${selected === k.id ? ' film-tl__key--selected' : ''}`}
         style={{ left: xOf(k.timeS) }}
         onPointerDown={(e) => startEdit(e, k.id, 'move')}
@@ -1086,6 +1089,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   return (
     <div
+      data-testid="timeline"
+      data-centred={centred || undefined}
       className={`film-tl${collapsed ? ' film-tl--folded' : ''}${centred ? ' film-tl--centred' : ''}`}
       role="group"
       aria-label={t('timeline.aria', { name: track.name })}
@@ -1107,7 +1112,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         })()
       }}
     >
-      <div className="film-tl__bar">
+      <div className="film-tl__bar" data-testid="timeline-bar">
         <button
           type="button"
           className="icon-btn film-tl__play"
@@ -1129,7 +1134,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         />
         {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
         <span className="film-tl__time">
-          <strong>{formatTimecode(playheadS, true)}</strong> / {formatTimecode(clock.totalTime())}
+          <strong data-testid="timeline-time">{formatTimecode(playheadS, true)}</strong> / {formatTimecode(clock.totalTime())}
         </span>
         <span className="film-tl__readout">
           <span className="film-tl__value" style={{ minWidth: `${formatDistance(lengthM).length + 1}ch` }}>
@@ -1151,14 +1156,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         {time !== undefined && (
           <span className="film-tl__clockout">
             <span className="visually-hidden">{t('timeline.bar.recordedTime')}</span>
-            <time className="film-tl__value film-tl__clock" dateTime={new Date(time).toISOString()}>
+            <time className="film-tl__value film-tl__clock" data-testid="timeline-clock" dateTime={new Date(time).toISOString()}>
               {formatClock(time)}
             </time>
           </span>
         )}
         <span className="film-tl__spacer" />
         {/* a row of its own on a phone, which scrolls sideways */}
-        <div className="film-tl__tools">
+        <div className="film-tl__tools" data-testid="timeline-tools">
           {/* no lane headers on a centred timeline: the groups of the camera and speed keys lead the row */}
           {centred && (
             <>
@@ -1288,17 +1293,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
       {!collapsed && (
         <div className="film-tl__body" id={`${id}-lanes`}>
-          <div className="film-tl__heads">
-            <div className="film-tl__head film-tl__head--ruler" />
+          <div className="film-tl__heads" data-testid="timeline-heads">
+            <div className="film-tl__head film-tl__head--ruler" data-testid="timeline-head" />
             {/* the lanes carry the same names; the camera and speed keys have their ◀ ◇ ▶ under theirs */}
             {lanes.map((lane) =>
               lane.keys ? (
-                <div key={lane.name} className="film-tl__head film-tl__head--keyed">
+                <div key={lane.name} className="film-tl__head film-tl__head--keyed" data-testid="timeline-head">
                   <span>{lane.name}</span>
                   <KeyGroup target={lane.keys} clock={clock} timeS={playheadS} disabled={!hasTrack} />
                 </div>
               ) : (
-                <div key={lane.name} className="film-tl__head" aria-hidden="true">
+                <div key={lane.name} className="film-tl__head" data-testid="timeline-head" aria-hidden="true">
                   <span>{lane.name}</span>
                 </div>
               ),
@@ -1306,6 +1311,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           </div>
           <div
             className="film-tl__scroller"
+            data-testid="timeline-scroller"
             ref={scrollerRef}
             onScroll={centred ? onScroll : undefined}
             // centred: a touch stops the playback, else the lanes would follow the playhead under the finger
@@ -1339,12 +1345,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               {sequence && (
-                <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.stages')}>
+                <div data-testid="timeline-lane" className="film-tl__lane" role="group" aria-label={t('timeline.lane.stages')}>
                   {stageBlocks()}
                 </div>
               )}
 
-              <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label={t('timeline.lane.shots')}>
+              <div data-testid="timeline-lane" className="film-tl__lane film-tl__lane--keyed" role="group" aria-label={t('timeline.lane.shots')}>
                 {block(
                   'opening',
                   0,
@@ -1398,6 +1404,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     aria-pressed={selected === k.id}
                     aria-label={t('timeline.key.shotAria', { distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
                     title={t('timeline.key.shotHint')}
+                    data-testid="timeline-key"
                     className={`film-tl__key${selected === k.id ? ' film-tl__key--selected' : ''}`}
                     style={{ left: xOf(k.timeS) }}
                     onPointerDown={(e) => startEdit(e, k.id, 'move')}
@@ -1416,7 +1423,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div className="film-tl__lane film-tl__lane--keyed" role="group" aria-label={PARAM_LANE_LABELS.speed}>
+              <div data-testid="timeline-lane" className="film-tl__lane film-tl__lane--keyed" role="group" aria-label={PARAM_LANE_LABELS.speed}>
                 {shownClock.speeds.map((s) => {
                   const label = formatSpeedFactor(s.factor)
                   const speedKey = s.factor > 1 ? 'timeline.speed.fast' : s.factor < 1 ? 'timeline.speed.slow' : 'timeline.speed.normal'
@@ -1434,13 +1441,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               {paramLanes(shownClock).map((param) => (
-                <div key={param} className="film-tl__lane" role="group" aria-label={PARAM_LANE_LABELS[param]}>
+                <div key={param} data-testid="timeline-lane" className="film-tl__lane" role="group" aria-label={PARAM_LANE_LABELS[param]}>
                   {keysOfParam(shownClock.paramKeys, param).map(paramKeyDot)}
                 </div>
               ))}
 
               {shownClock.markerKeys.length > 0 && (
-                <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.marker')}>
+                <div data-testid="timeline-lane" className="film-tl__lane" role="group" aria-label={t('timeline.lane.marker')}>
                   {shownClock.markerKeys.map((k) => {
                     // what the marker looks like from this key on: its own colours and size, else those of the Trace panel
                     const look = withKey(settingsMarker, k, () => '')
@@ -1459,6 +1466,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                         aria-pressed={selected === k.id}
                         aria-label={t('timeline.key.markerAria', { what, distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
                         title={t('timeline.key.hint', { what })}
+                        data-testid="timeline-key"
                         className={`film-tl__key film-tl__key--marker${selected === k.id ? ' film-tl__key--selected' : ''}`}
                         style={{ left: xOf(k.timeS), ...(dot ? { '--key-color': dot } : {}) } as CSSProperties}
                         onPointerDown={(e) => startEdit(e, k.id, 'move')}
@@ -1470,7 +1478,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
 
-              <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.holds')}>
+              <div data-testid="timeline-lane" className="film-tl__lane" role="group" aria-label={t('timeline.lane.holds')}>
                 {shownClock.stops.map((s) => {
                   const label = s.label || t('film.snap.hold')
                   return block(
@@ -1485,7 +1493,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 })}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.texts')}>
+              <div data-testid="timeline-lane" className="film-tl__lane" role="group" aria-label={t('timeline.lane.texts')}>
                 {/* the opening title and the closing card (overlay settings): only their inner edge moves */}
                 {shownCards(shownOverlay).map((card) => {
                   const { startS, endS } = cardWindow(shownOverlay, card, shownClock)
@@ -1514,7 +1522,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.media')}>
+              <div data-testid="timeline-lane" className="film-tl__lane" role="group" aria-label={t('timeline.lane.media')}>
                 {shownFilm.media.map((m) =>
                   block(
                     m.id,
@@ -1532,7 +1540,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div className="film-tl__lane" role="group" aria-label={t('timeline.lane.music')}>
+              <div data-testid="timeline-lane" className="film-tl__lane" role="group" aria-label={t('timeline.lane.music')}>
                 {shownFilm.audio.length === 0 && (
                   <span className="film-tl__empty" style={{ left: xOf(0) }}>
                     {t('timeline.music.empty')}
@@ -1570,7 +1578,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 return (
                   <div className="film-tl__guide" style={{ left: xOf(atS) }} aria-hidden="true">
                     <span className="film-tl__guide-tags">
-                      <span className="film-tl__guide-tag">{t('timeline.stage.short', { n: stageDrag.to + 1 })}</span>
+                      <span className="film-tl__guide-tag" data-testid="timeline-guide-tag">{t('timeline.stage.short', { n: stageDrag.to + 1 })}</span>
                     </span>
                   </div>
                 )
@@ -1583,7 +1591,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 <div className="film-tl__guide" style={{ left: xOf(guides[0].timeS) }} aria-hidden="true">
                   <span className="film-tl__guide-tags">
                     {guides.slice(0, 4).map((g, i) => (
-                      <span key={`${g.label}-${i}`} className="film-tl__guide-tag">
+                      <span key={`${g.label}-${i}`} className="film-tl__guide-tag" data-testid="timeline-guide-tag">
                         {g.label}
                       </span>
                     ))}

@@ -722,6 +722,9 @@ export function TrackList() {
             <li
               key={track.id}
               data-id={track.id}
+              data-testid="track-card"
+              data-lifted={drag?.id === track.id ? '' : undefined}
+              data-drop={dropMark?.id === track.id ? dropMark.side : undefined}
               className={`track${inSequence ? ' track--sortable' : ''}${drag?.id === track.id ? ' track--lifted' : ''}${dropMark?.id === track.id ? ` track--drop-${dropMark.side}` : ''}`}
               style={drag?.id === track.id ? { transform: `translateY(${drag.dy}px)` } : undefined}
               onKeyDown={(e) => onKeyDown(e, track, index)}
@@ -754,7 +757,7 @@ export function TrackList() {
                   onChange={(e) => setTrackColor(track.id, e.currentTarget.value)}
                 />
               </label>
-              <span className="track__name" title={track.name}>
+              <span className="track__name" data-testid="track-name" title={track.name}>
                 {track.name}
               </span>
               {index > 0 && inSequence && (
@@ -796,9 +799,9 @@ export function TrackList() {
               </button>
               <span className="track__meta">
                 {formatTrackSummary(track.stats)}
-                {track.timesEstimated && <span className="track__badge">{t('track.list.timesEstimated')}</span>}
+                {track.timesEstimated && <span className="track__badge" data-testid="track-badge">{t('track.list.timesEstimated')}</span>}
                 {track.elevationEstimated && (
-                  <span className="track__badge" title={t('track.list.elevationTip')}>
+                  <span className="track__badge" data-testid="track-badge" title={t('track.list.elevationTip')}>
                     {track.elevationEstimated === 'all' ? t('track.list.elevationAll') : t('track.list.elevationSome')}
                   </span>
                 )}
