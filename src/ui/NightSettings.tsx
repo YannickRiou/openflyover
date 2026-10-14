@@ -43,11 +43,11 @@ export function NightSettings() {
       >
         {tr('light.nights.show')}
       </Switch>
-      <p id={`${id}-nights-hint`} className="field__hint">
+      <p id={`${id}-nights-hint`} className="type-hint">
         {nights.enabled ? nightsHint : tr('light.nights.instant')}
       </p>
       {nights.enabled && sequence && (
-        <p className="field__hint">{tr('light.nights.sequenceHint')}</p>
+        <p className="type-hint">{tr('light.nights.sequenceHint')}</p>
       )}
       {nights.enabled &&
         !sequence &&
@@ -58,8 +58,8 @@ export function NightSettings() {
         ))}
 
       {!sequence && (
-        <fieldset className="field fieldset" disabled={days.length < 2}>
-          <legend className="field__label">{tr('light.days.legend')}</legend>
+        <fieldset className="field min-w-0" disabled={days.length < 2}>
+          <legend className="type-label mb-1">{tr('light.days.legend')}</legend>
           <Checkbox checked={content.day} onChange={(on) => setContent({ ...content, day: on })}>{tr('light.days.dayDistance')}</Checkbox>
           <Checkbox checked={content.total} onChange={(on) => setContent({ ...content, total: on })}>{tr('light.days.totalDistance')}</Checkbox>
           <Button
@@ -72,7 +72,7 @@ export function NightSettings() {
           >
             {hasCards ? tr('light.days.replace') : tr('light.days.add')}
           </Button>
-          <p id={`${id}-cards-hint`} className="field__hint">
+          <p id={`${id}-cards-hint`} className="type-hint">
             {days.length < 2
               ? tr('light.days.single')
               : tr('light.days.hint', { count: days.length })}
