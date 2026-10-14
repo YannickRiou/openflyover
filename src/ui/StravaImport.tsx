@@ -31,7 +31,7 @@ import { stravaSportLabel, streamsToTrack } from '../strava/track'
 import { useAppStore } from '../state/store'
 import { formatAscent, formatDistance } from './format'
 import { runImport } from './projectActions'
-import { Button, Checkbox, Modal, Tip } from './primitives'
+import { Button, Checkbox, Modal } from './primitives'
 
 /** « Importer depuis Strava » of the welcome card. */
 export function StravaImport() {

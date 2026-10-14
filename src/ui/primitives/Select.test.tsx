@@ -171,6 +171,7 @@ describe('Select as a list (a pointer that is not coarse)', () => {
   it('opens inside the open dialog, so that it is not hidden behind it', async () => {
     const dialog = document.body.appendChild(document.createElement('dialog'))
     dialog.setAttribute('open', '')
+    dialog.setAttribute('data-modal', '')
     const inner = dialog.appendChild(document.createElement('div'))
     const dialogRoot = createRoot(inner)
     await act(async () => dialogRoot.render(<Select aria-label="Vitesse" value={1} options={SPEEDS} onChange={() => undefined} />))
