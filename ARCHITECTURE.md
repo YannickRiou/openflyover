@@ -348,7 +348,7 @@ classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Menu`
 `point` for the right-click menu of the 3D view; `sheet` makes it a bottom sheet on a phone) and `Popover` (panel with its own
 controls, same two modes). Both are portalled out of their container (into the open `<dialog>`, if any) and carry
 `data-local-escape`, so an open one closes before the app's own Escape; their skin (`overlay.css`, `menu.css`, `popover.css`) is
-self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the third primitive of that kind. HeroUI's styles are imported in `theme.css`
+self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,
