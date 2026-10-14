@@ -62,6 +62,10 @@ const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habil
 /** Waits until `fn` (run in the page) returns a truthy value. */
 const until = (page, fn, arg, timeout = STEP_MS) => page.waitForFunction(fn, { timeout, polling: 250 }, arg)
 
+/** A modal dialog (shortcuts, sources, Strava, diagnostic report): the page behind it is inert while it is open. */
+const MODAL = '[role="dialog"][data-modal]'
+const modalClosed = (page) => until(page, (selector) => !document.querySelector(selector), MODAL)
+
 /** Clicks the first visible button whose text contains `text`. */
 async function clickButton(page, text, timeout = STEP_MS) {
   const button = await page.waitForSelector(`button::-p-text(${text})`, { visible: true, timeout })
@@ -306,14 +310,14 @@ const SCENARIOS = [
       await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
       // the « ? » button, then the « ? » key; Escape closes the dialog both times
       await page.click('button[aria-label="Raccourcis clavier"]')
-      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog[open]'))
+      await modalClosed(page)
       await blur(page)
       await page.keyboard.press('?')
-      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog[open]'))
+      await modalClosed(page)
     },
   },
   {
@@ -350,14 +354,47 @@ const SCENARIOS = [
       if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
       await page.click('[data-testid="tab-panel-reglages"] [data-testid="setting-row-head"]::-p-text(Diagnostic)')
       await clickButton(page, 'Afficher le rapport')
-      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
-      const text = await page.$eval('dialog[open] pre', (pre) => pre.textContent)
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
+      const text = await page.$eval(`${MODAL} pre`, (pre) => pre.textContent)
       for (const part of ['[Appareil]', '[Export]', '[Réglages]', 'Traces : 1,', 'budget.kind : desktop']) {
         assert(text.includes(part), `le rapport ne contient pas « ${part} »`)
       }
       assert(!/Mont-Blanc|Chamonix/i.test(text), 'le rapport contient le nom de la trace')
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog[open]'))
+      await modalClosed(page)
+    },
+  },
+  {
+    id: 'couleur',
+    title: 'Couleur (onglet Réglages) : préréglage en un geste, panneau pour une couleur libre, Échap rend le focus',
+    async run({ page }) {
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      // a preset: one tap, the choice announced as selected
+      const indigo = await page.waitForSelector('[role="option"][aria-label="Couleur d\'accentuation : Indigo"]', { visible: true, timeout: STEP_MS })
+      await indigo.click()
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '#4a55b8')
+      assert(await indigo.evaluate((el) => el.getAttribute('aria-selected') === 'true'), 'le préréglage choisi n’est pas annoncé comme sélectionné')
+      // any other colour: the button opens a panel, a hex colour typed there is applied
+      const button = await page.waitForSelector('button[aria-label="Couleur d\'accentuation"]', { visible: true, timeout: STEP_MS })
+      await button.click()
+      const panel = '[role="dialog"][aria-label="Couleur d\'accentuation"]'
+      await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
+      const field = await page.waitForSelector(`${panel} input[aria-label="Code couleur (hexadécimal)"]`, { visible: true, timeout: STEP_MS })
+      await field.click()
+      await page.keyboard.down('Control')
+      await page.keyboard.press('KeyA')
+      await page.keyboard.up('Control')
+      await page.keyboard.type('#2f4f6f')
+      await page.keyboard.press('Enter')
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '#2f4f6f')
+      // Escape closes the panel first (not the side panel), and the focus goes back to the button
+      await page.keyboard.press('Escape')
+      await until(page, (selector) => !document.querySelector(selector), panel)
+      await until(page, () => document.activeElement?.getAttribute('aria-label') === "Couleur d'accentuation")
+      assert(!(await page.$eval('[data-testid="side-panel"]', (el) => el.hidden)), 'Échap sur le panneau de couleur a replié le panneau latéral')
+      // back to the default
+      await clickButton(page, "Rétablir l'apparence par défaut")
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '')
     },
   },
   {
@@ -658,10 +695,10 @@ const SCENARIOS = [
       await page.click(add)
       await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
       await page.click(`${addMenu} [role="menuitem"]::-p-text(Strava)`)
-      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await gone(addMenu)
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog[open]'))
+      await modalClosed(page)
 
       // « Options du film »: a panel above the bar with its own controls, Escape closes it before the selection
       const options = 'button[aria-label="Options du film"]'

@@ -37,8 +37,8 @@ asked for, while its theme is CSS variables that we set from our own palette.
 | Sliders (`RangeField`) | native range + output | Slider (touch and keyboard checked on phone) |
 | Selects (33) | native `<select>` | Select, **only where it stays usable on phones**; otherwise native |
 | Number and text fields | native inputs | NumberField, TextField |
-| Colour | native colour input + swatches | ColorSwatchPicker + ColorPicker |
-| Dialogs (help, diagnostic, Strava, sources) | native `<dialog>` | Modal / AlertDialog |
+| Colour | native colour input + swatches | ColorSwatchPicker + ColorArea / ColorSlider / ColorField in a Popover (`ColorField` primitive, step 6c; the panel is a bottom sheet on a phone, no native input kept: touch-checked) |
+| Dialogs (help, diagnostic, Strava, sources) | native `<dialog>` | Modal (`Modal` primitive, step 6c) |
 | Export drawer | CSS dock / bottom sheet | Drawer, if it keeps the non-modal dock; otherwise kept |
 | Scene, timeline canvas, 3D picking | custom | **kept** (not form controls) |
 

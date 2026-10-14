@@ -4,6 +4,7 @@ const messages: Messages['common'] = {
   close: 'Close',
   delete: 'Delete',
   closeEsc: 'Close (Esc)',
+  colorHex: 'Colour code (hex)',
   undo: 'Undo',
   retry: 'Retry',
   cancel: 'Cancel',

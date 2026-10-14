@@ -162,16 +162,16 @@ describe('Tip', () => {
     expect(tooltip()?.classList.contains('tip--wrap')).toBe(true)
   })
 
-  it('opens inside the dialog that holds the element (the top layer would hide it otherwise)', async () => {
+  it('opens inside the modal dialog that holds the element (the page behind it is inert, it would be hidden otherwise)', async () => {
     await render(
-      <dialog open>
+      <div role="dialog" data-modal="">
         <Tip text="Fermer (Échap)" side="left">
           <button type="button">x</button>
         </Tip>
-      </dialog>,
+      </div>,
     )
     await pointer(trigger(), 'pointerenter')
     await wait(500)
-    expect(host.querySelector('dialog [role="tooltip"]')?.textContent).toBe('Fermer (Échap)')
+    expect(host.querySelector('[data-modal] [role="tooltip"]')?.textContent).toBe('Fermer (Échap)')
   })
 })

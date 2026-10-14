@@ -43,7 +43,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
-import { Button, Checkbox, Chip, Radio, RadioGroup, Select, Switch, ToggleButton, ToggleButtonGroup } from './primitives'
+import { Button, Checkbox, Chip, ColorField as ColorFieldControl, Radio, RadioGroup, Select, Switch, ToggleButton, ToggleButtonGroup } from './primitives'
 
 const COUNTER_LABELS: Record<CounterId, string> = {
   get distance() { return t('overlay.counter.distance') },
@@ -305,7 +305,7 @@ function DotColor({ value, onChange }: { value: string | undefined; onChange(v: 
   )
 }
 
-/** Native colour picker followed by the swatches; `value` is '#rrggbb'. */
+/** The colour button followed by the swatches; `value` is '#rrggbb'. */
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange(v: string): void }) {
   const t = useT()
   const id = useId()
@@ -314,21 +314,13 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
       <label className="field__label" htmlFor={id}>
         {label}
       </label>
-      <div className="color-row">
-        <input id={id} className="color-row__input" type="color" value={value} onChange={(e) => onChange(e.currentTarget.value)} />
-        {SWATCHES.map((swatch) => (
-          <button
-            key={swatch.color}
-            type="button"
-            className="color-row__swatch"
-            style={{ background: swatch.color }}
-            aria-label={t('overlay.swatchAria', { label, swatch: swatch.label })}
-            aria-pressed={value === swatch.color}
-            title={swatch.label}
-            onClick={() => onChange(swatch.color)}
-          />
-        ))}
-      </div>
+      <ColorFieldControl
+        id={id}
+        label={label}
+        value={value}
+        onChange={onChange}
+        presets={SWATCHES.map((swatch) => ({ color: swatch.color, label: swatch.label, aria: t('overlay.swatchAria', { label, swatch: swatch.label }) }))}
+      />
     </div>
   )
 }

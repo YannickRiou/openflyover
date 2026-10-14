@@ -132,11 +132,17 @@ describe('Timeline', () => {
     await act(async () => addMarkerKeyHere())
     const keys = () => useAppStore.getState().settings.film.markerKeys
     const button = (label: string) => Array.from(host.querySelectorAll('button')).find((b) => b.textContent === label)!
-    const colour = () => host.querySelector<HTMLInputElement>('input[type="color"]')!
+    // the colour is read in the panel its button opens
+    const colour = async () => {
+      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Couleur"]')!.click())
+      const value = document.querySelector<HTMLInputElement>('input[aria-label="Code couleur (hexadécimal)"]')!.value
+      await act(async () => void document.querySelector('[role="dialog"][aria-label="Couleur"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      return value.toLowerCase()
+    }
     // a new key follows the panel's colours and size until it is given its own
     expect(keys()[0].color).toBeUndefined()
     expect(keys()[0].size).toBeUndefined()
-    expect(colour().value).toBe('#ffffff')
+    expect(await colour()).toBe('#ffffff')
     expect(host.textContent).toContain('Restent ceux du panneau : étiquette (aucune), tige (non)')
     expect(button('Reprendre couleurs et taille du panneau').disabled).toBe(true)
 

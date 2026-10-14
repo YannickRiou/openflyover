@@ -79,6 +79,8 @@
 @import './primitives/overlay.css';
 @import './primitives/menu.css';
 @import './primitives/popover.css';
+@import './primitives/modal.css';
+@import './primitives/color-field.css';
 @import './primitives/toast.css';
 @import './primitives/switch.css';
 @import './primitives/checkbox.css';

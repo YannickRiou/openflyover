@@ -47,7 +47,7 @@ function mergeRefs(...refs: (Ref<HTMLElement | null> | undefined)[]): RefCallbac
  * A tooltip on `children`, opened by the mouse after a short pause, by keyboard focus (not by a click's focus), by a
  * long press on a touch screen, and closed by leaving, pressing, blurring or any key (Escape is not taken: the app
  * closes what it closes). It does not wrap the element: its listeners sit on it and the text is portalled (into the
- * `<dialog>` that holds it, which would hide it otherwise).
+ * modal dialog that holds it, which would hide it otherwise).
  */
 export function Tip({ text, side = 'bottom', align, wrap, tap, disabled, children }: TipProps) {
   const [node, setNode] = useState<HTMLElement | null>(null)
@@ -61,7 +61,7 @@ export function Tip({ text, side = 'bottom', align, wrap, tap, disabled, childre
     if (!el || !active) return
     let timer = 0
     const reveal = () => {
-      setContainer(el.closest('dialog') ?? undefined)
+      setContainer(el.closest('[data-modal]') ?? undefined)
       setOpen(true)
     }
     const show = (delay: number) => {

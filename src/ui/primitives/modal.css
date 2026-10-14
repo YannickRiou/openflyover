@@ -1,0 +1,85 @@
+/*
+ * Modal (Modal.tsx): the frame of the app's dialogs (shortcuts, sources, Strava, report). Self-contained: HeroUI's own CSS
+ * for the component is not imported, only its behaviour (React Aria) is used.
+ */
+@layer components {
+.modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--visual-viewport-height, 100dvh);
+  padding: var(--space-4);
+  background: var(--backdrop);
+}
+
+.modal__backdrop[data-entering] {
+  animation: tip-in 120ms ease both;
+}
+
+/* around the dialog the pointer falls through to the backdrop (a click there is outside the modal: it closes) */
+.modal__container {
+  display: flex;
+  max-width: 100%;
+  max-height: 100%;
+  pointer-events: none;
+}
+
+.modal {
+  position: relative;
+  width: min(var(--modal-w, 560px), calc(100vw - 2 * var(--space-4)));
+  max-height: 100%;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  color: var(--text-1);
+  font-size: 13px;
+  white-space: normal;
+  box-shadow: var(--shadow-pop);
+  outline: none;
+  pointer-events: auto;
+}
+
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.modal__title {
+  font-size: 17px;
+}
+
+/* phone, either way up: full screen */
+@media (max-width: 699px), (max-height: 499px) {
+  .modal__backdrop {
+    padding: 0;
+  }
+
+  .modal__container {
+    width: 100%;
+    height: 100%;
+  }
+
+  .modal {
+    width: 100%;
+    height: 100%;
+    padding: calc(var(--space-3) + env(safe-area-inset-top)) calc(var(--space-4) + env(safe-area-inset-right))
+      calc(var(--space-5) + env(safe-area-inset-bottom)) calc(var(--space-4) + env(safe-area-inset-left));
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal__backdrop[data-entering] {
+    animation: none;
+  }
+}
+}
