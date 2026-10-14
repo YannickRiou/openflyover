@@ -26,7 +26,7 @@ export function EmptyState() {
   }
 
   return (
-    <section className="empty" aria-labelledby="empty-title" aria-busy={loading}>
+    <section className="empty" data-testid="empty-state" aria-labelledby="empty-title" aria-busy={loading}>
       <div className="empty__inner">
         <img className="empty__logo" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={64} height={64} />
         <h2 id="empty-title" className="empty__title">

@@ -36,7 +36,7 @@ function reuse(entry: HistoryEntry): void {
 
 function Rows({ rows }: { rows: { label: string; value: string }[] }) {
   return (
-    <dl className="history__rows">
+    <dl className="history__rows" data-testid="history-rows">
       {rows.map(({ label, value }) => (
         <div key={label} className="history__row">
           <dt>{label}</dt>
@@ -55,21 +55,21 @@ function Entry({ entry, busy }: { entry: HistoryEntry; busy: boolean }) {
   const outcome = entry.outcome === 'error' && entry.error ? t('export.history.outcomeError', { outcome: OUTCOME_LABELS.error, error: entry.error }) : OUTCOME_LABELS[entry.outcome]
   const speed = formatSpeed(entry)
   return (
-    <li className="setting-row history__item">
-      <button type="button" className="setting-row__head history__head" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+    <li className="setting-row history__item" data-testid="history-item">
+      <button type="button" className="setting-row__head history__head" data-testid="history-head" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
         <span className="history__main">
-          <span className="history__name">{entry.name}</span>
-          <span className="history__meta">
+          <span className="history__name" data-testid="history-name">{entry.name}</span>
+          <span className="history__meta" data-testid="history-meta">
             {formatWhen(entry.at)} · {outcome} · {formatWall(entry.wallMs)}
             {speed && ` · ${speed}`}
           </span>
-          <span className="history__meta">
+          <span className="history__meta" data-testid="history-meta">
             {entry.width} × {entry.height} · {t('export.history.fps', { fps: entry.fps })} · {settingsSummary(entry.settings)}
           </span>
         </span>
         <Icon name="chevron-down" size={16} />
       </button>
-      <div id={id} className="setting-row__body" hidden={!open}>
+      <div id={id} className="setting-row__body" data-testid="history-body" hidden={!open}>
         <Rows rows={entryDetails(entry)} />
         <Rows rows={settingsDetails(entry.settings)} />
         <div className="project__row">
@@ -101,7 +101,7 @@ export function ExportHistory() {
   const [open] = useState(() => entries.length > 0)
   const [confirming, setConfirming] = useState(false)
   return (
-    <details className="fold panel-section export-history" open={open}>
+    <details className="fold panel-section export-history" data-testid="export-history" open={open}>
       <summary className="fold__summary">
         <h2 className="section-title fold__title">{t('export.history.title')}</h2>
         {entries.length > 0 && <span className="field__hint">{entries.length}</span>}

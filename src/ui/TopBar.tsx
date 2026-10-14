@@ -174,6 +174,8 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
         <button
           type="button"
           className={`icon-btn topbar__save${unsaved ? ' topbar__save--unsaved' : ''}${justSaved ? ' topbar__save--saved' : ''}`}
+          data-testid="topbar-save"
+          data-save-state={unsaved ? 'unsaved' : justSaved ? 'saved' : undefined}
           onClick={saveProject}
           disabled={busy}
           aria-label={unsaved ? t('topbar.saveUnsavedAria') : t('topbar.save')}
@@ -202,6 +204,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
           <button
             type="button"
             className="btn btn--primary topbar__export"
+            data-testid="topbar-export"
             // between two films of a batch the export store is idle: the batch takes the cancel
             onClick={() => (batchRunning ? useBatchStore.getState().cancel() : useExportStore.getState().cancel())}
             disabled={phase === 'finalizing'}
@@ -215,6 +218,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
             <button
               type="button"
               className="btn btn--primary topbar__export"
+              data-testid="topbar-export"
               onClick={onToggleExport}
               aria-expanded={exportOpen}
               aria-controls="export-dock"

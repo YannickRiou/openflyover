@@ -36,7 +36,7 @@ afterEach(async () => {
   document.documentElement.removeAttribute('lang')
 })
 
-const button = () => host.querySelector<HTMLButtonElement>('.lang-menu__button')!
+const button = () => host.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')!
 const items = () => [...host.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')]
 const key = (target: Element, name: string) => act(async () => void target.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true })))
 const open = () => act(async () => button().click())
