@@ -31,26 +31,26 @@ import { Labels } from './Labels'
 import { RaceMarkers } from './RaceMarkers'
 import { RegionHighlight } from './RegionHighlight'
 import { useRenderOnDemand } from './renderOnDemand'
+import {
+  HEMISPHERE_GROUND,
+  HEMISPHERE_INTENSITY,
+  HEMISPHERE_SKY,
+  SKY_HORIZON_COLOR,
+  SKY_TOP_COLOR,
+  SUN_INTENSITY,
+  SUN_POSITION,
+} from './sceneLighting'
 import { watchTouchGesture } from './touchGesture'
 import { TerrainLayer } from './TerrainLayer'
 import { TrackLines } from './TrackLines'
 import { WaterLayer } from './WaterLayer'
 import { TrackMenu, TrackPicker } from './TrackPicker'
+import { t } from '../i18n'
 
 // sky, clouds, post-processing and the geoid grid (~550 KB): loaded with the first track, not at startup
 const AtmosphereLayer = lazy(() => import('./AtmosphereLayer').then((m) => ({ default: m.AtmosphereLayer })))
 // post-processing without the atmosphere: only once a colour grading other than « Naturel » or a lens effect is chosen
 const GradingComposer = lazy(() => import('./GradingComposer').then((m) => ({ default: m.GradingComposer })))
-
-export const SKY_TOP_COLOR = '#A9CCD9'
-export const SKY_HORIZON_COLOR = '#F5F2EA'
-
-const HEMISPHERE_SKY = '#ffffff'
-const HEMISPHERE_GROUND = '#6b7a8f'
-export const HEMISPHERE_INTENSITY = 1.2
-/** Sun direction: south-east (+X east, +Z south), ~52° above the horizon; far enough to behave as a directional light. */
-export const SUN_POSITION: readonly [number, number, number] = [0.6e5, 1e5, 0.5e5]
-export const SUN_INTENSITY = 2.0
 
 /** Camera spot before the first fit (the rig snaps to the tracks as soon as they exist). */
 const CAMERA = { fov: CAMERA_FOV_DEG, near: 1, far: 5e6, position: [0, 2000, 3000] as [number, number, number] }
@@ -120,7 +120,7 @@ function watchContextLoss({ gl, invalidate }: RootState) {
   gl.domElement.addEventListener('webglcontextlost', (e) => {
     e.preventDefault() // lets the browser restore it
     writeBreadcrumb('webglcontextlost')
-    toast = showToast({ kind: 'info', text: 'Affichage 3D interrompu (carte graphique). Il reprendra automatiquement…' })
+    toast = showToast({ kind: 'info', text: t('scene.canvas.contextLost') })
   })
   gl.domElement.addEventListener('webglcontextrestored', () => {
     dismissToast(toast)
@@ -137,14 +137,14 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
     (s) => !isIdentityGrading(s.settings.grading) || hasGradingKeys(s.settings.film) || lensActive(s.settings.lens, false),
   )
   // the video export draws the film overlay through the same code as the preview
-  const overlayDrawer = useMemo(createOverlayDrawer, [])
+  const overlayDrawer = useMemo(() => createOverlayDrawer(), [])
   useEffect(() => () => overlayDrawer.dispose(), [overlayDrawer])
 
   if (!webgl2Supported()) {
     return (
       <div className={className} style={style ? { ...wrapperStyle, ...style } : wrapperStyle} role="alert">
         <p style={{ margin: 0, padding: 24, textAlign: 'center', color: 'var(--text-1)' }}>
-          La 3D n’est pas disponible : la carte graphique ou le navigateur ne prend pas en charge WebGL 2.
+          {t('scene.canvas.noWebgl')}
         </p>
       </div>
     )

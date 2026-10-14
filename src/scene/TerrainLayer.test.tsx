@@ -24,7 +24,7 @@ const {
   statsEqual,
   engineOptionsFromSettings,
   diffEngineOptions,
-} = await import('./TerrainLayer')
+} = await import('./terrainLayerSetup')
 
 const outer: LonLatBounds = { west: 6, south: 45, east: 7, north: 46 }
 
@@ -138,6 +138,8 @@ describe('engine options from settings', () => {
       seenIds: [],
       rank: [],
       dismissedIds: [],
+      pinnedIds: [],
+      maxCount: 40,
     },
     race: { enabled: false, sync: 'elapsed' as const },
     trackStyle: DEFAULT_TRACK_STYLE,

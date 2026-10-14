@@ -11,6 +11,7 @@ import { createDesktopPlatform } from './desktop'
 import { detectCapabilities, touchScreen } from './platform'
 import type { Capabilities, Platform } from './platform'
 import { createWebPlatform } from './web'
+import { t } from '../i18n'
 
 export * from './platform'
 
@@ -39,10 +40,10 @@ export function videoEncoderMissingHint(
     case 'webcodecs':
       return null
     case 'native':
-      return "installez ffmpeg (sudo apt install ffmpeg), qui encode la vidéo sur ce système, puis relancez l'application ; l'image fixe reste disponible ici."
+      return t('platform.encoderNative')
     default:
       // Firefox for Android has no WebCodecs (MDN browser-compat-data 8.1.5)
-      if (touch) return "ce navigateur n'encode pas la vidéo (WebCodecs). Sur téléphone ou tablette, exportez depuis Chrome (Android) ou Safari 16.4 ou plus récent (iPhone, iPad) ; l'image fixe reste disponible ici."
-      return "l'encodage vidéo (WebCodecs) manque. Exportez depuis Chrome, Edge ou un Firefox récent ; l'image fixe reste disponible ici."
+      if (touch) return t('platform.encoderTouch')
+      return t('platform.encoderMissing')
   }
 }

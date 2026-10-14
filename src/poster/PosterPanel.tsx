@@ -6,6 +6,7 @@
  * `getPlatform().saveUrl`).
  */
 import { errorMessage } from '../core/errors'
+import { useLanguage, useT } from '../i18n'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -21,7 +22,6 @@ import { useAppStore } from '../state/store'
 import { ModifiedMarker } from '../ui/ModifiedMarker'
 import { formatNumber } from '../ui/format'
 import { Icon } from '../ui/icons'
-import { TextField } from '../ui/PanelSection'
 import { withShortcut } from '../ui/shortcuts'
 import { effectiveProjectName } from '../ui/shell'
 import { showToast } from '../ui/toast'
@@ -32,7 +32,7 @@ import { currentPosterContent, posterRows, previewKey, previewMap, startPoster, 
 import { posterLayout } from './layout'
 import { POSTER_FIGURES, POSTER_FIGURE_LABELS, POSTER_FORMATS, POSTER_STYLES, POSTER_VIEWS, POSTER_VIEW_LABELS, posterSize } from './settings'
 import type { PosterSettings, PosterType } from './settings'
-import './poster.css'
+import { Button, Checkbox, Chip, Radio, RadioGroup, Select, TextField, Tip } from '../ui/primitives'
 
 /** Largest size of the thumbnail in the drawer (CSS px). */
 const PREVIEW_MAX_W = 260
@@ -50,6 +50,8 @@ const IMAGE_TYPES: { value: PosterType; label: string }[] = [
  * the last one rendered for these tracks and this view, else a flat map at a low zoom (debounced), else the placeholder.
  */
 function PosterPreview({ poster }: { poster: PosterSettings }) {
+  const t = useT()
+  const language = useLanguage()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tracks = useAppStore((s) => s.tracks)
   const track = tracks[0]
@@ -82,7 +84,7 @@ function PosterPreview({ poster }: { poster: PosterSettings }) {
   const cssH = Math.round(height * scale)
   const exact = view && view.key === previewKey(tracks, poster) ? view : null
   // the approximate view of these tracks, this imagery, this box and this page colour (the casing of the lines)
-  const approxKey = viewBox ? `${tracks.map((t) => t.id).join()}|${imagery}|${poster.style}|${viewBox.w}x${viewBox.h}` : ''
+  const approxKey = viewBox ? `${tracks.map((tr) => tr.id).join()}|${imagery}|${poster.style}|${viewBox.w}x${viewBox.h}` : ''
   const shownApprox = !exact && approx?.key === approxKey ? approx : null
 
   useEffect(() => {
@@ -115,21 +117,20 @@ function PosterPreview({ poster }: { poster: PosterSettings }) {
     setViewBox((box) => (box?.w === layout.view.w && box.h === layout.view.h ? box : { w: layout.view.w, h: layout.view.h }))
     const image = exact ?? (shownApprox && { image: shownApprox.image, width: shownApprox.image.width, height: shownApprox.image.height })
     drawPoster(ctx, layout, content, poster.style, image ? { image: image.image, width: image.width, height: image.height } : null, outline)
-  }, [poster, tracks, race, projectName, terrain, imagery, weather, landmarks, exact, shownApprox, fontsReady, outline, width, height, cssW, cssH])
+  }, [poster, tracks, race, projectName, terrain, imagery, weather, landmarks, exact, shownApprox, fontsReady, outline, width, height, cssW, cssH, language])
 
   return (
     <>
       <canvas
         ref={canvasRef}
-        className="poster__preview"
+        className="mx-auto block justify-self-center rounded-[2px] border border-edge bg-paper shadow-[0_2px_8px_rgb(28_42_51/0.18)]"
         style={{ width: cssW, height: cssH }}
         role="img"
-        aria-label="Aperçu de l'affiche"
+        aria-label={t('poster.preview.aria')}
       />
       {!exact && (
-        <p className="field__hint">
-          Aperçu approximatif{shownApprox ? ' : carte à plat en basse résolution' : ''}.{' '}
-          {poster.flat ? 'La carte est chargée en détail' : 'La vue 3D est rendue'} à la création de l'affiche.
+        <p className="type-hint">
+          {shownApprox ? t('poster.preview.approxFlat') : t('poster.preview.approx')} {poster.flat ? t('poster.preview.flatLoaded') : t('poster.preview.rendered')}
         </p>
       )}
     </>
@@ -140,6 +141,7 @@ function PosterPreview({ poster }: { poster: PosterSettings }) {
  * The poster settings and its export. `modes` is the « Vidéo / Affiche » switch of the drawer, shown under the title.
  */
 export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onClose?: () => void; hidden: boolean }) {
+  const t = useT()
   const id = useId()
   const poster = useAppStore((s) => s.settings.poster)
   const setSetting = useAppStore((s) => s.setSetting)
@@ -194,204 +196,188 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
     if (!r.url) return
     void getPlatform()
       .saveUrl(r.url, { fileName: r.fileName })
-      .catch((err: unknown) => showToast({ kind: 'error', text: `Impossible d'enregistrer « ${r.fileName} » : ${errorMessage(err)}` }))
+      .catch((err: unknown) => showToast({ kind: 'error', text: t('poster.saveFailed', { file: r.fileName, error: errorMessage(err) }) }))
   }
 
   const flatMap = Boolean(still?.drawView)
   const progressLabel =
     phase === 'finalizing'
       ? still?.compose
-        ? "Composition de l'affiche…"
-        : "Enregistrement de l'image…"
+        ? t('poster.progress.compose')
+        : t('poster.progress.save')
       : tiles && tiles.total > 0
-        ? `${flatMap ? 'Tuiles de la carte' : 'Tuiles de la vue 3D'} : ${formatNumber(tiles.done)} / ${formatNumber(tiles.total)}`
+        ? t(flatMap ? 'poster.progress.tilesMap' : 'poster.progress.tiles3d', { done: formatNumber(tiles.done), total: formatNumber(tiles.total) })
         : flatMap
-          ? 'Chargement de la carte…'
-          : 'Rendu de la vue 3D…'
+          ? t('poster.progress.loadingMap')
+          : t('poster.progress.rendering')
 
   return (
     <section className="settings export poster" aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
       <h2 id={`${id}-title`} className="section-title settings__title">
-        Exporter
+        {t('export.panel.title')}
       </h2>
-      <ModifiedMarker keys={['poster']} label="Affiche" disabled={busy} />
+      <ModifiedMarker keys={['poster']} label={t('poster.panel.modified')} disabled={busy} />
       {onClose && (
-        <button
-          type="button"
-          className="icon-btn settings__close"
-          onClick={onClose}
-          aria-label="Fermer le panneau d'export"
-          data-tip={withShortcut('Fermer', 'export')}
-          data-tip-align="end"
-        >
-          <Icon name="x" size={18} />
-        </button>
+        <Tip text={withShortcut(t('common.close'), 'export')} align="end">
+          <Button
+            variant="icon"
+            className="settings__close"
+            onClick={onClose}
+            aria-label={t('poster.panel.closeAria')}
+          >
+            <Icon name="x" size={18} />
+          </Button>
+        </Tip>
       )}
       {modes}
 
-      {track ? <PosterPreview poster={poster} /> : <p className="field__hint">Ajoutez une trace pour composer l'affiche.</p>}
+      {track ? <PosterPreview poster={poster} /> : <p className="type-hint">{t('poster.panel.addTrack')}</p>}
 
       <div className="field">
-        <label className="field__label" htmlFor={`${id}-format`}>
-          Format
+        <label className="type-label" htmlFor={`${id}-format`}>
+          {t('poster.panel.format')}
         </label>
-        <select
+        <Select
           id={`${id}-format`}
-          className="select"
           value={poster.format}
           disabled={busy}
           aria-describedby={`${id}-size`}
-          onChange={(e) => {
-            const format = POSTER_FORMATS.find((f) => f.id === e.currentTarget.value)
-            if (format) set({ format: format.id })
-          }}
-        >
-          {POSTER_FORMATS.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-        <p id={`${id}-size`} className="field__hint">
-          {formatNumber(width)} × {formatNumber(height)} px{poster.format === 'square' ? '' : ' · 300 dpi'}
+          options={POSTER_FORMATS.map((f) => ({ value: f.id, label: f.label }))}
+          onChange={(format) => set({ format })}
+        />
+        <p id={`${id}-size`} className="type-hint">
+          {t(poster.format === 'square' ? 'poster.panel.size' : 'poster.panel.sizeDpi', { width: formatNumber(width), height: formatNumber(height) })}
         </p>
       </div>
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">Style</legend>
-        <div className="segmented segmented--wrap">
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label mb-1">{t('poster.panel.style')}</legend>
+        <RadioGroup wrap aria-label={t('poster.panel.style')} value={poster.style} onChange={(style) => set({ style })}>
           {POSTER_STYLES.map((style) => (
-            <label key={style} className="segmented__option">
-              <input type="radio" name={`${id}-style`} value={style} checked={poster.style === style} onChange={() => set({ style })} />
+            <Radio key={style} value={style}>
               {OVERLAY_STYLE_LABELS[style]}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </fieldset>
 
-      <TextField label="Titre" value={poster.title} placeholder={defaultTitle} disabled={busy} onChange={(title) => set({ title })} />
-      <TextField label="Sous-titre" value={poster.subtitle} placeholder="Avant la date de la sortie" disabled={busy} onChange={(subtitle) => set({ subtitle })} />
+      <TextField label={t('poster.panel.title')} value={poster.title} placeholder={defaultTitle} disabled={busy} onChange={(title) => set({ title })} />
+      <TextField label={t('poster.panel.subtitle')} value={poster.subtitle} placeholder={t('poster.panel.subtitlePlaceholder')} disabled={busy} onChange={(subtitle) => set({ subtitle })} />
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">Chiffres clés</legend>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label mb-1">{t('poster.panel.figures')}</legend>
         <div className="chips">
           {POSTER_FIGURES.map((figure) => {
             const present = available?.[figure] ?? false
             return (
-              <label key={figure} className="chip" title={present ? undefined : 'Absent de cette trace'}>
-                <input
-                  type="checkbox"
-                  checked={poster.figures[figure] && present}
-                  disabled={!present}
-                  onChange={(e) => set({ figures: { ...poster.figures, [figure]: e.currentTarget.checked } })}
-                />
+              <Chip
+                key={figure}
+                checked={poster.figures[figure] && present}
+                disabled={!present}
+                title={present ? undefined : t('poster.panel.figureAbsent')}
+                onChange={(on) => set({ figures: { ...poster.figures, [figure]: on } })}
+              >
                 {POSTER_FIGURE_LABELS[figure]}
-              </label>
+              </Chip>
             )
           })}
         </div>
       </fieldset>
 
-      <label className="checkbox" title={hasWeather ? undefined : outings ? 'Plusieurs sorties : pas de météo du jour' : 'Météo de la sortie non chargée'}>
-        <input
-          type="checkbox"
-          checked={poster.weather && hasWeather}
-          disabled={busy || !hasWeather}
-          onChange={(e) => set({ weather: e.currentTarget.checked })}
-        />
-        Météo du jour
-      </label>
-      <label className="checkbox">
-        <input type="checkbox" checked={poster.flat} disabled={busy} onChange={(e) => set({ flat: e.currentTarget.checked })} />
-        Carte à plat
-      </label>
-      <fieldset className="field fieldset" disabled={busy || poster.flat}>
-        <legend className="field__label">Vue 3D</legend>
-        <div className="segmented">
+      <Checkbox
+        checked={poster.weather && hasWeather}
+        disabled={busy || !hasWeather}
+        title={hasWeather ? undefined : outings ? t('poster.panel.weatherOutings') : t('poster.panel.weatherNotLoaded')}
+        onChange={(on) => set({ weather: on })}
+      >
+        {t('poster.panel.weather')}
+      </Checkbox>
+      <Checkbox checked={poster.flat} disabled={busy} onChange={(on) => set({ flat: on })}>{t('poster.panel.flat')}</Checkbox>
+      <fieldset className="field min-w-0" disabled={busy || poster.flat}>
+        <legend className="type-label mb-1">{t('poster.panel.view3d')}</legend>
+        <RadioGroup aria-label={t('poster.panel.view3d')} value={poster.view} onChange={(view) => set({ view })}>
           {POSTER_VIEWS.map((view) => (
-            <label key={view} className="segmented__option">
-              <input type="radio" name={`${id}-view`} value={view} checked={poster.view === view} onChange={() => set({ view })} />
+            <Radio key={view} value={view}>
               {POSTER_VIEW_LABELS[view]}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </fieldset>
-      <p className="field__hint">
+      <p className="type-hint">
         {poster.flat
-          ? `Carte vue d'en haut, tirée de l'imagerie choisie, ${tracks.length > 1 ? 'de toutes les traces' : 'de toute la trace'}, nord en haut.`
+          ? t('poster.panel.flatHint', { scope: tracks.length > 1 ? t('poster.panel.scopeAll') : t('poster.panel.scopeOne') })
           : poster.view === 'camera'
-            ? 'La vue 3D telle que la caméra la montre maintenant : placez-la à la main avant de créer l’affiche.'
-            : `Vue 3D ${tracks.length > 1 ? 'de toutes les traces' : 'de toute la trace'}, nord en haut.`}{' '}
-        Les crédits des sources figurent en petit au bas de l'affiche.
+            ? t('poster.panel.cameraHint')
+            : t('poster.panel.overviewHint', { scope: tracks.length > 1 ? t('poster.panel.scopeAll') : t('poster.panel.scopeOne') })}{' '}
+        {t('poster.panel.credits')}
       </p>
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">Type d'image</legend>
-        <div className="segmented">
-          {IMAGE_TYPES.map((t) => (
-            <label key={t.value} className="segmented__option">
-              <input type="radio" name={`${id}-type`} value={t.value} checked={poster.type === t.value} onChange={() => set({ type: t.value })} />
-              {t.label}
-            </label>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label mb-1">{t('poster.panel.imageType')}</legend>
+        <RadioGroup aria-label={t('poster.panel.imageType')} value={poster.type} onChange={(type) => set({ type })}>
+          {IMAGE_TYPES.map((type) => (
+            <Radio key={type.value} value={type.value}>
+              {type.label}
+            </Radio>
           ))}
-        </div>
-        <p className="field__hint">Pour l'affiche et l'image fixe. PNG sans perte, JPEG plus léger.</p>
+        </RadioGroup>
+        <p className="type-hint">{t('poster.panel.imageTypeHint')}</p>
       </fieldset>
 
       {!busy && (
         <div className="export__actions">
-          <button type="button" className="btn btn--primary" onClick={create} disabled={!track}>
+          <Button variant="primary" onClick={create} disabled={!track}>
             <Icon name="map" size={18} />
-            Créer l'affiche
-          </button>
-          <button
-            type="button"
-            className="btn btn--secondary"
+            {t('poster.panel.create')}
+          </Button>
+          <Button
             onClick={createStill}
             disabled={!track}
-            title="La vue du film à la position de lecture, à la taille de la vidéo (mode « Vidéo »), avec l'habillage"
+            title={t('poster.panel.stillTip')}
           >
             <Icon name="image" size={18} />
-            Image fixe
-          </button>
+            {t('poster.panel.still')}
+          </Button>
         </div>
       )}
       {busy && running && still && (
         <div className="field">
           <progress
             className="export__progress"
-            aria-label="Progression de l'image"
+            aria-label={t('poster.progress.aria')}
             {...(tiles && tiles.total > 0 && { max: tiles.total, value: phase === 'finalizing' ? tiles.total : tiles.done })}
           />
-          <p className="field__hint" role="status">
+          <p className="type-hint tabular-nums" role="status">
             {progressLabel}
           </p>
-          <button
-            type="button"
-            className="btn btn--secondary btn--block"
+          <Button
+            block
             onClick={() => useExportStore.getState().cancel()}
             disabled={phase === 'finalizing'}
           >
-            Annuler
-          </button>
+            {t('common.cancel')}
+          </Button>
         </div>
       )}
       {!busy && failed && (
-        <p className="field__hint export__error" role="alert">
-          Échec : {failed}
+        <p className="text-hint export__error" role="alert">
+          {t('poster.panel.failed', { error: failed })}
         </p>
       )}
       {!busy && done && done === result && (
-        <p className="field__hint">
-          {done.fileName} ({formatNumber(done.sizeBytes / 1e6, 1)} Mo){' '}
-          <button type="button" className="poster__again" onClick={() => saveAgain(done)}>
-            Enregistrer à nouveau…
+        <p className="type-hint tabular-nums">
+          {t('poster.panel.done', { file: done.fileName, size: t('format.megabytes', { value: formatNumber(done.sizeBytes / 1e6, 1) }) })}{' '}
+          <button
+            type="button"
+            className="cursor-pointer border-0 bg-transparent p-0 font-[inherit] font-medium text-accent-strong underline hover:text-ink"
+            onClick={() => saveAgain(done)}
+          >
+            {t('poster.panel.saveAgain')}
           </button>
           {done.missingTiles !== undefined && done.missingTiles > 0 && (
-            <span className="export__warning">
+            <span className="font-medium text-(--status-attention)">
               {' '}
-              — {formatNumber(done.missingTiles)} tuile{done.missingTiles > 1 ? 's' : ''} de la carte jamais reçue
-              {done.missingTiles > 1 ? 's' : ''} (en gris) : réessayez plus tard ou changez de fond de carte.
+              {t('poster.panel.missingTiles', { count: done.missingTiles, n: formatNumber(done.missingTiles) })}
             </span>
           )}
         </p>

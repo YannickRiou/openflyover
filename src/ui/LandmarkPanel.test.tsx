@@ -72,7 +72,7 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
 
   it('lists both, points of interest first; « Arrêt » makes and removes a stop there', async () => {
     const { host, root, stopBox } = await mount({ ...DEFAULT_FILM, pois: [POI] })
-    const names = [...host.querySelectorAll('.place')].map((li) => li.querySelector('.landmark__name')?.textContent ?? li.querySelector('input')?.value)
+    const names = [...host.querySelectorAll('[data-testid="place"]')].map((li) => li.querySelector('[data-testid="landmark-name"]')?.textContent ?? li.querySelector('input')?.value)
     // the points of interest first, then the landmarks by importance (equal here: along the track)
     expect(names).toEqual(['Pique-nique', 'Col de Voza', 'Lac Vert'])
     // the pass has its automatic stop
@@ -90,7 +90,7 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
 
   it('the arrows rank the landmarks; the cross of a hidden one dismisses it until « Relancer la recherche »', async () => {
     const { host, root, button } = await mount({ ...DEFAULT_FILM })
-    const names = () => [...host.querySelectorAll('.place .landmark__name')].map((n) => n.textContent)
+    const names = () => [...host.querySelectorAll('[data-testid="place"] [data-testid="landmark-name"]')].map((n) => n.textContent)
     const click = (label: string) => act(async () => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click())
     expect(names()).toEqual(['Col de Voza', 'Lac Vert'])
     expect(host.querySelector<HTMLButtonElement>('button[aria-label="Monter « Col de Voza » dans le classement"]')!.disabled).toBe(true)
@@ -113,6 +113,59 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
     act(() => root.unmount())
   })
 
+  it('the pin keeps a landmark; « Garder les épinglés » dismisses the others and their stops in one step', async () => {
+    const lakeStop = { id: 'stop-1', atM: 3000, durationS: 4, camera: 'orbite' as const, source: { kind: 'landmark' as const, ref: 'way/2' } }
+    const { host, root, button } = await mount({ ...DEFAULT_FILM, autoStops: false, stops: [lakeStop], pois: [POI] })
+    const pin = (name: string) => host.querySelector<HTMLButtonElement>(`button[aria-label$="pingler « ${name} »"]`)!
+    const names = () => [...host.querySelectorAll('[data-testid="place"] [data-testid="landmark-name"]')].map((n) => n.textContent)
+    expect(button('Garder les épinglés').disabled).toBe(true)
+    expect(pin('Col de Voza').getAttribute('aria-label')).toBe('Épingler « Col de Voza »')
+    expect(pin('Col de Voza').getAttribute('aria-pressed')).toBe('false')
+
+    await act(async () => pin('Col de Voza').click())
+    expect(useAppStore.getState().settings.landmarks.pinnedIds).toEqual(['node/1'])
+    expect(pin('Col de Voza').getAttribute('aria-label')).toBe('Désépingler « Col de Voza »')
+    expect(pin('Col de Voza').getAttribute('aria-pressed')).toBe('true')
+    expect(button('Garder les épinglés').disabled).toBe(false)
+
+    await act(async () => button('Garder les épinglés').click())
+    const { landmarks, film } = useAppStore.getState().settings
+    expect(landmarks).toMatchObject({ pinnedIds: ['node/1'], dismissedIds: ['way/2'] })
+    expect(film.stops).toEqual([])
+    expect(names()).toEqual(['Col de Voza'])
+    // the point of interest is not a landmark: left alone
+    expect(film.pois).toEqual([POI])
+
+    act(() => getSettingsHistory().undo())
+    expect(useAppStore.getState().settings.landmarks.dismissedIds).toEqual([])
+    expect(useAppStore.getState().settings.film.stops).toEqual([lakeStop])
+    expect(useAppStore.getState().settings.landmarks.pinnedIds).toEqual(['node/1'])
+    act(() => root.unmount())
+  })
+
+  it('the cross of a pinned landmark unpins it', async () => {
+    const { host, root } = await mount({ ...DEFAULT_FILM })
+    const click = (label: string) => act(async () => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click())
+    await click('Épingler « Lac Vert »')
+    await click('Masquer « Lac Vert »')
+    await click('Écarter « Lac Vert »')
+    expect(useAppStore.getState().settings.landmarks).toMatchObject({ pinnedIds: [], dismissedIds: ['way/2'] })
+    act(() => root.unmount())
+  })
+
+  it('« Nombre maximal » sets the cap of the landmarks', async () => {
+    const { host, root } = await mount({ ...DEFAULT_FILM })
+    const slider = host.querySelector<HTMLInputElement>('[role="group"][aria-label="Nombre maximal"] input[type="range"]')!
+    expect(slider.value).toBe('40')
+    expect(host.textContent).toContain('Nombre maximal')
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(slider, '15')
+      slider.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(useAppStore.getState().settings.landmarks.maxCount).toBe(15)
+    act(() => root.unmount())
+  })
+
   it('« Tout masquer » hides every label with its stop in one step; landmarks found later are shown as new', async () => {
     const lakeStop = { id: 'stop-1', atM: 3000, durationS: 4, camera: 'orbite' as const, source: { kind: 'landmark' as const, ref: 'way/2' } }
     const before: Film = { ...DEFAULT_FILM, autoStops: false, stops: [lakeStop], pois: [POI] }
@@ -121,16 +174,16 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
     const { landmarks, film } = useAppStore.getState().settings
     expect(new Set(landmarks.hiddenIds)).toEqual(new Set(['node/1', 'way/2', 'poi-1']))
     expect(film.stops).toEqual([])
-    expect(host.querySelectorAll('.place--hidden')).toHaveLength(3)
+    expect(host.querySelectorAll('[data-testid="place"][data-hidden]')).toHaveLength(3)
     expect(button('Tout masquer').disabled).toBe(true)
 
     // a wider corridor finds one more: shown, marked new
     found.list = [PASS, LAKE, landmark('node/3', 'peak', 'Mont Lachat', 4500, 1200)]
     await act(async () => useAppStore.getState().setSetting('landmarks', { ...useAppStore.getState().settings.landmarks, maxDistanceM: 2000 }))
-    expect(host.querySelector('.place:not(.place--hidden) .landmark__name')?.textContent).toBe('Mont Lachat')
-    expect(host.querySelector('.place__new')).not.toBeNull()
+    expect(host.querySelector('[data-testid="place"]:not([data-hidden]) [data-testid="landmark-name"]')?.textContent).toBe('Mont Lachat')
+    expect(host.querySelector('[data-testid="place-new"]')).not.toBeNull()
     await act(async () => button('1 nouveau').click())
-    expect(host.querySelector('.place__new')).toBeNull()
+    expect(host.querySelector('[data-testid="place-new"]')).toBeNull()
 
     // undone step by step: the corridor, then everything hidden with the stop
     act(() => getSettingsHistory().undo())

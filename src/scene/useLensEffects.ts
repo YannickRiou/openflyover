@@ -11,7 +11,7 @@ import { filmViewAt } from './filmView'
 import { FlareEffect } from './flareEffect'
 import { BLOOM_SMOOTHING, BLOOM_THRESHOLD, bloomParams, depthOfFieldParams, radialBlurLength } from './lens'
 import { ShutterEffect } from './shutterEffect'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 import { useFilmClock } from './usePacing'
 
 /** After the sun (-1) and the camera and marker (0), before the composer (1). */
@@ -120,6 +120,7 @@ export function useLensEffects(atmosphere?: RefObject<AtmosphereApi | null>): Le
         shutterEffect.shutter = lens.shutter
         shutterEffect.fps = settings.video.fps
         shutterEffect.radialLength = 0
+        shutterEffect.radialCentre.set(0.5, 0.5)
         if (path && path.count > 0 && frame && camera instanceof PerspectiveCamera) {
           // radial speed blur from the film's camera one video frame earlier: the same in the preview and the export
           const aspect = size.height > 0 ? size.width / size.height : 1

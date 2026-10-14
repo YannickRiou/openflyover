@@ -1,8 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './ui/fonts.css'
-import './index.css'
 import './ui/theme.css'
+import './index.css'
 import './ui/appearance.css'
 import App from './App.tsx'
 import { installExportGuard, reportInterruptedExport } from './export/guard'
@@ -11,11 +11,13 @@ import { installOfflineTiles } from './offline/store'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 import { installExternalLinks } from './platform/externalLinks'
 import { installWebApp } from './platform/webApp'
-import { installAppearance } from './ui/preferences'
+import { installAppearance, installLanguage } from './ui/preferences'
 import { openFiles } from './ui/projectActions'
 
 // theme, accent and density of the stored preferences, before anything is drawn
 installAppearance()
+// language of the stored preferences (the browser's on a first run)
+installLanguage()
 // offline packs: the tile fetcher reads them before the network
 installOfflineTiles()
 installExternalLinks()

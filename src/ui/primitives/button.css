@@ -1,0 +1,122 @@
+/*
+ * Button (Button.tsx): HeroUI's `.button` (imported in theme.css) skinned with the tokens of theme.css, so the look is the
+ * one of the app's own buttons. Its variants: `primary`, `secondary` (HeroUI `outline`), `icon` (HeroUI `ghost`); the
+ * small size is `.button--sm`, the full width `.button--full-width`. `.btn` and `.icon-btn` are hooks for the CSS of the
+ * screens (position in the top bar, in a toast, in the timeline bar; size on a touch screen).
+ */
+@layer components {
+.button {
+  width: auto;
+  height: auto;
+  /* comfortable (40 px; 44 on a touch screen); `--sm` and the icon button are the compact 32 px */
+  min-height: var(--control-h-lg);
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: normal;
+  transform: none;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    color 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}
+
+.button--full-width {
+  width: 100%;
+}
+
+.button--sm {
+  min-height: var(--control-h);
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+}
+
+/* the icons keep the size they are drawn with (HeroUI would resize them) */
+.button svg:not([data-slot='spinner'] svg, [data-slot='link-icon'] svg) {
+  width: revert-layer;
+  height: revert-layer;
+  margin: 0;
+  align-self: auto;
+}
+
+/* colours: HeroUI's variables per variant; hover and pressed each have their own step */
+.button--primary {
+  --button-bg: var(--accent-fill);
+  --button-bg-hover: var(--accent-fill-hover);
+  --button-bg-pressed: var(--accent-fill-hover);
+  --button-fg: var(--color-white);
+  font-weight: 600;
+}
+
+.button--outline {
+  --button-bg: var(--surface-control);
+  --button-bg-hover: var(--surface-control);
+  --button-bg-pressed: var(--surface-card);
+  --button-fg: var(--text-1);
+  border-color: var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+@media (hover: hover) {
+  .button--outline:hover:not(:disabled) {
+    border-color: var(--line-strong);
+  }
+}
+
+.button--ghost {
+  --button-bg-pressed: var(--surface-tertiary);
+  --button-fg: currentColor;
+  --disabled-opacity: 0.4;
+  min-width: var(--control-h);
+  height: var(--control-h);
+  min-height: auto;
+  gap: 6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.icon-btn {
+  flex: none;
+}
+
+/* pressed: a push of one pixel on text buttons, nothing on icons */
+.button:active,
+.button[data-pressed='true'] {
+  transform: none;
+}
+
+.btn:active:not(:disabled),
+.btn[data-pressed='true']:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* disabled: still hovered, so its tooltip can say why; no hover colour */
+.button:disabled,
+.button[aria-disabled='true'] {
+  --button-bg-hover: var(--button-bg);
+  pointer-events: auto;
+}
+
+/* focus: the accent outline of the whole app (the contexts on the ink chrome, in shell.css, come after and win) */
+.button:focus-visible:not([data-focused]),
+.button[data-focus-visible='true'] {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px var(--color-white);
+}
+}

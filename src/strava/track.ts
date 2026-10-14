@@ -4,23 +4,24 @@
 import type { Track, TrackPoint } from '../core/types'
 import { buildTrack, isUtcOffsetMin } from '../import/stats'
 import type { StravaActivity, StravaStreams } from './api'
+import { t } from '../i18n'
 
 /** Strava sport type -> the app's activity (the FIT sport names) and its label in the list. */
 const SPORTS: Record<string, { activity: string; label: string }> = {
-  Ride: { activity: 'cycling', label: 'Vélo' },
-  GravelRide: { activity: 'cycling', label: 'Gravel' },
-  MountainBikeRide: { activity: 'cycling', label: 'VTT' },
-  VirtualRide: { activity: 'cycling', label: 'Vélo virtuel' },
-  EBikeRide: { activity: 'e_biking', label: 'Vélo électrique' },
-  EMountainBikeRide: { activity: 'e_biking', label: 'VTT électrique' },
-  Run: { activity: 'running', label: 'Course à pied' },
-  TrailRun: { activity: 'trail_running', label: 'Trail' },
-  Hike: { activity: 'hiking', label: 'Randonnée' },
-  Walk: { activity: 'walking', label: 'Marche' },
-  AlpineSki: { activity: 'alpine_skiing', label: 'Ski alpin' },
-  BackcountrySki: { activity: 'backcountry_skiing', label: 'Ski de randonnée' },
-  NordicSki: { activity: 'cross_country_skiing', label: 'Ski de fond' },
-  Snowshoe: { activity: 'snowshoeing', label: 'Raquettes' },
+  Ride: { activity: 'cycling', get label() { return t('strava.sport.Ride') } },
+  GravelRide: { activity: 'cycling', get label() { return t('strava.sport.GravelRide') } },
+  MountainBikeRide: { activity: 'cycling', get label() { return t('strava.sport.MountainBikeRide') } },
+  VirtualRide: { activity: 'cycling', get label() { return t('strava.sport.VirtualRide') } },
+  EBikeRide: { activity: 'e_biking', get label() { return t('strava.sport.EBikeRide') } },
+  EMountainBikeRide: { activity: 'e_biking', get label() { return t('strava.sport.EMountainBikeRide') } },
+  Run: { activity: 'running', get label() { return t('strava.sport.Run') } },
+  TrailRun: { activity: 'trail_running', get label() { return t('strava.sport.TrailRun') } },
+  Hike: { activity: 'hiking', get label() { return t('strava.sport.Hike') } },
+  Walk: { activity: 'walking', get label() { return t('strava.sport.Walk') } },
+  AlpineSki: { activity: 'alpine_skiing', get label() { return t('strava.sport.AlpineSki') } },
+  BackcountrySki: { activity: 'backcountry_skiing', get label() { return t('strava.sport.BackcountrySki') } },
+  NordicSki: { activity: 'cross_country_skiing', get label() { return t('strava.sport.NordicSki') } },
+  Snowshoe: { activity: 'snowshoeing', get label() { return t('strava.sport.Snowshoe') } },
 }
 
 /** The sport type (`sport_type`, else the older `type`) of an activity. */
@@ -67,10 +68,10 @@ export function streamsToTrack(activity: StravaActivity, streams: StravaStreams)
     if (power !== undefined) point.power = power
     points.push(point)
   }
-  if (points.length === 0) throw new Error('aucune position GPS dans cette activité')
+  if (points.length === 0) throw new Error(t('strava.noPosition'))
 
   const track = buildTrack({
-    name: activity.name.trim() || 'Activité Strava',
+    name: activity.name.trim() || t('strava.defaultName'),
     source: 'strava',
     segments: [{ points }],
     activityType: stravaActivityType(sportOf(activity)),

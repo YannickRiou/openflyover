@@ -1,13 +1,14 @@
 /**
  * Pure logic of the application shell (no React, no DOM): framing of the 3D preview to the output format,
- * routing of the opened or dropped files, roving focus of the tabs, project name and save state (shortcuts: `shortcuts.ts`),
- * tooltip placement (its DOM listener `installTipPlacement` aside).
+ * routing of the opened or dropped files, project name and save state (shortcuts: `shortcuts.ts`).
  */
 import { isRecord } from '../core/guards'
 import { DEFAULT_APPEARANCE, parseAppearance } from './appearance'
 import type { Appearance } from './appearance'
+import { DEFAULT_LANGUAGE, isLanguageCode } from '../i18n/languages'
+import type { LanguageCode } from '../i18n/languages'
 import type { Track } from '../core/types'
-import { DEFAULT_PROJECT_NAME } from '../project/document'
+import { defaultProjectName } from '../project/document'
 import type { Settings } from '../state/store'
 
 export interface Rect {
@@ -54,19 +55,6 @@ export function isFileDrag(types: readonly string[] | null | undefined): boolean
 }
 
 /**
- * Index of the tab that takes the focus after `key` in a tab list of `count` tabs (wrapping), null for any
- * other key. Both axes are accepted (vertical rail, horizontal bar on small screens); Home / End.
- */
-export function nextTabIndex(current: number, key: string, count: number): number | null {
-  if (count <= 0) return null
-  if (key === 'ArrowUp' || key === 'ArrowLeft') return (current - 1 + count) % count
-  if (key === 'ArrowDown' || key === 'ArrowRight') return (current + 1) % count
-  if (key === 'Home') return 0
-  if (key === 'End') return count - 1
-  return null
-}
-
-/**
  * Index of the cell that takes the focus after `key` in a grid of `count` cells, `columns` per row (row by row), null
  * for any other key: the arrows move one cell and stop at the edges, Home / End go to the first / last cell.
  */
@@ -84,7 +72,7 @@ export function nextGridIndex(current: number, key: string, columns: number, cou
 
 /** Name used for the project file: the typed name, else the first track's, else « Sans titre ». */
 export function effectiveProjectName(name: string, firstTrackName: string | undefined): string {
-  return name.trim() || firstTrackName || DEFAULT_PROJECT_NAME
+  return name.trim() || firstTrackName || defaultProjectName()
 }
 
 /** What a saved project contains, as compared by reference with the last save or open. */
@@ -281,15 +269,21 @@ export interface Preferences {
   performance: Record<PerfItem, boolean>
   /** recorded clock time of the marker on the timeline bar, after the timecode */
   timelineClock: boolean
+  /** the timeline's magnet: blocks dragged snap to the edges, centres and marks of the others */
+  timelineMagnet: boolean
   /** look of the interface (`appearance.ts`) */
   appearance: Appearance
+  /** language of the interface and of the film overlay (`i18n/`) */
+  language: LanguageCode
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   status: { weather: true, landmarks: true, region: true, water: true },
   performance: { fps: true, gpu: false, tiles: true, memory: true, system: true },
   timelineClock: false,
+  timelineMagnet: true,
   appearance: DEFAULT_APPEARANCE,
+  language: DEFAULT_LANGUAGE,
 }
 
 /** The booleans of `raw` for `keys`, the defaults for anything missing or not a boolean. */
@@ -311,7 +305,9 @@ export function parsePreferences(raw: string | null): Preferences {
     status: booleans(STATUS_CHIPS, v.status, DEFAULT_PREFERENCES.status),
     performance: booleans(PERF_ITEMS, v.performance, DEFAULT_PREFERENCES.performance),
     timelineClock: typeof v.timelineClock === 'boolean' ? v.timelineClock : DEFAULT_PREFERENCES.timelineClock,
+    timelineMagnet: typeof v.timelineMagnet === 'boolean' ? v.timelineMagnet : DEFAULT_PREFERENCES.timelineMagnet,
     appearance: parseAppearance(v.appearance),
+    language: isLanguageCode(v.language) ? v.language : DEFAULT_PREFERENCES.language,
   }
 }
 
@@ -334,82 +330,4 @@ const SHEET_DISMISS = 0.3
 /** A half sheet released `dragPx` below its place (`heightPx` tall), moving down at `velocity` px/s, closes. */
 export function dismissSheet(dragPx: number, heightPx: number, velocity: number): boolean {
   return dragPx + velocity * SHEET_FLICK_S > heightPx * SHEET_DISMISS
-}
-
-// ---------------------------------------------------------------------------
-// Tooltips (data-tip)
-// ---------------------------------------------------------------------------
-
-/** A box in window pixels. */
-export interface Box {
-  left: number
-  top: number
-  right: number
-  bottom: number
-}
-
-/** Room kept between a tooltip and the edge it is pushed against; gap under its element (shell.css). */
-const TIP_MARGIN = 8
-const TIP_GAP = 8
-
-/**
- * Where a tooltip of `width` × `height`, centred under its `anchor`, fits inside `clip` (the window and the scrolling
- * columns around it): `shift` sideways from centred (px), `above` when there is no room below but there is above.
- */
-export function tipPlacement(anchor: Box, width: number, height: number, clip: Box): { shift: number; above: boolean } {
-  const left = (anchor.left + anchor.right) / 2 - width / 2
-  const min = clip.left + TIP_MARGIN
-  const max = clip.right - TIP_MARGIN - width
-  // wider than the room: from its left edge
-  const shift = (max < min ? min : Math.min(Math.max(left, min), max)) - left
-  const below = anchor.bottom + TIP_GAP + height <= clip.bottom - TIP_MARGIN
-  const above = !below && anchor.top - TIP_GAP - height >= clip.top + TIP_MARGIN
-  return { shift: Math.round(shift), above }
-}
-
-/** The window cut by every ancestor of `el` that clips its overflow (a scrolling panel). */
-function clipBox(el: Element): Box {
-  const root = document.documentElement
-  const box: Box = { left: 0, top: 0, right: root.clientWidth, bottom: root.clientHeight }
-  for (let p = el.parentElement; p && p !== root; p = p.parentElement) {
-    const style = getComputedStyle(p)
-    if (style.overflowX === 'visible' && style.overflowY === 'visible') continue
-    const r = p.getBoundingClientRect()
-    box.left = Math.max(box.left, r.left)
-    box.top = Math.max(box.top, r.top)
-    box.right = Math.min(box.right, r.right)
-    box.bottom = Math.min(box.bottom, r.bottom)
-  }
-  return box
-}
-
-/**
- * Keeps the centred `data-tip` tooltips whole (`tipPlacement`): when one shows (hover, focus, tap), its shift goes into
- * `--tip-shift` and `data-tip-flip` puts it above. Tips placed by hand (`data-tip-side`, `data-tip-align`) are left alone.
- */
-export function installTipPlacement(): () => void {
-  // measured once laid out, before it fades in (450 ms): a tap shows it a few frames after the pointer events
-  const measure = (el: HTMLElement, frames: number) =>
-    requestAnimationFrame(() => {
-      const tip = getComputedStyle(el, '::after')
-      const width = parseFloat(tip.width)
-      const height = parseFloat(tip.height)
-      if (!(width > 0 && height > 0)) {
-        if (frames > 0) measure(el, frames - 1)
-        return
-      }
-      const { shift, above } = tipPlacement(el.getBoundingClientRect(), width, height, clipBox(el))
-      el.style.setProperty('--tip-shift', `${shift}px`)
-      el.toggleAttribute('data-tip-flip', above)
-    })
-  const place = (e: Event) => {
-    const el = e.target instanceof Element ? e.target.closest('[data-tip]') : null
-    if (el instanceof HTMLElement && !el.dataset.tipSide && !el.dataset.tipAlign) measure(el, 20)
-  }
-  document.addEventListener('pointerover', place)
-  document.addEventListener('focusin', place)
-  return () => {
-    document.removeEventListener('pointerover', place)
-    document.removeEventListener('focusin', place)
-  }
 }

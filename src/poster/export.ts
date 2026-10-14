@@ -29,6 +29,7 @@ import type { Box, PosterRows } from './layout'
 import { posterSize } from './settings'
 import type { PosterSettings } from './settings'
 import { framingPath, renderFlatMap, type FlatMap } from './view'
+import { t } from '../i18n'
 
 /** Longest side of the view kept for the preview (px). */
 const PREVIEW_VIEW_PX = 480
@@ -121,7 +122,7 @@ async function drawFlatView(
   onProgress?: (done: number, total: number) => void,
   shared?: TileFetcher,
 ): Promise<FlatMap> {
-  if (!bounds) throw new Error('Aucune trace à dessiner.')
+  if (!bounds) throw new Error(t('poster.error.noTrack'))
   const fetcher = shared ?? createTileFetcher({ concurrency: FLAT_MAP_CONCURRENCY, maxEntries: 32 })
   try {
     return await renderFlatMap({
@@ -188,7 +189,7 @@ export async function startPoster(): Promise<boolean> {
       async compose(view) {
         const poster = new OffscreenCanvas(width, height)
         const ctx = poster.getContext('2d', { alpha: false })
-        if (!ctx) throw new Error("Impossible de créer l'image de l'affiche.")
+        if (!ctx) throw new Error(t('poster.error.posterImage'))
         drawPoster(ctx, layout, content, style, { image: view, width: view.width, height: view.height })
         await rememberView(previewKey(tracks, settings.poster), view)
         return poster

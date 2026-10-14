@@ -30,6 +30,7 @@ import { CREDIT_LINES, FIGURE_VALUE_SHARE, fitLines, fitText, fitTrackList, trun
 import type { Box, Measure, PosterLayout } from './layout'
 import { POSTER_LAYOUTS } from './settings'
 import type { PosterLayoutId, PosterStyleId } from './settings'
+import { getLanguage, t } from '../i18n'
 
 export type PosterContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 
@@ -216,7 +217,7 @@ function setFont(ctx: PosterContext, font: Font, px: number): void {
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${(font.tracking ?? 0) * px}px`
 }
 
-const caseOf = (text: string, font: Font) => (font.uppercase ? text.toLocaleUpperCase('fr') : text)
+const caseOf = (text: string, font: Font) => (font.uppercase ? text.toLocaleUpperCase(getLanguage()) : text)
 
 function measurer(ctx: PosterContext, font: Font): Measure {
   return (text, px) => {
@@ -273,7 +274,7 @@ function drawProfile(ctx: PosterContext, box: Box, profile: PosterProfile, theme
   const range = `${formatNumber(profile.minEle)} – ${formatNumber(profile.maxEle)} m`
   const length = formatDistance(profile.lengthM)
   const right = fitText(label, length, box.w / 3, labelPx, labelPx * 0.6)
-  const left = fitText(label, `Profil · ${range}`, box.w - label(right.text, right.px) - labelPx * 2, labelPx, labelPx * 0.6)
+  const left = fitText(label, t('poster.draw.profile', { range }), box.w - label(right.text, right.px) - labelPx * 2, labelPx, labelPx * 0.6)
   text(ctx, left.text, box.x, box.y + captionH / 2, theme.label, left.px, theme.textSoft)
   text(ctx, right.text, box.x + box.w, box.y + captionH / 2, theme.label, right.px, theme.textSoft, 'right')
 

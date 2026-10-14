@@ -76,18 +76,25 @@ describe('createOverlayDrawer', () => {
     const { settings, setSetting } = useAppStore.getState()
     setSetting('race', { ...settings.race, sequence: true })
     const drawer = createOverlayDrawer()
-    // the cut about halfway (two stages of nearly the same length), at film time 5
-    const time = (timeS: number) => ({ timeS, openingS: 0, flightS: 10, totalS: 10, cutsS: [5] })
+    // the cut about halfway (two stages of nearly the same length), at film time 5, held from 4 to 7 (the junction after t)
+    const junction = { kind: 'fondu-noir' as const, startS: 4, holdStartS: 5, holdEndS: 6.5, endS: 7 }
+    const time = (timeS: number) => ({ timeS, openingS: 0, flightS: 10, totalS: 10, cutsS: [5], junctions: [junction] })
     drawer.draw(ctx, { progress: 0.75, time: time(7.5) }, 1920, 1080)
     const [, frame, , , , extras] = vi.mocked(drawOverlay).mock.lastCall!
     expect(frame.progress).toBeCloseTo(0.5, 3)
     expect(frame.track.name).toBe('t → u')
     expect(extras?.stage).toMatchObject({ name: 'u', index: 1, count: 2, startS: 5 })
     expect(extras?.dip).toBeNull()
+    // the dip comes from the clock's junction: covered from the cut to the end of the hold, clear before and after
     drawer.draw(ctx, { progress: 0.5, time: time(5) }, 1920, 1080)
     expect(vi.mocked(drawOverlay).mock.lastCall?.[5]?.dip).toEqual({ color: 'black', alpha: 1 })
-    setSetting('race', { ...settings.race, sequence: true, stageTransition: 'coupe', stageCards: false })
-    drawer.draw(ctx, { progress: 0.5, time: time(5) }, 1920, 1080)
+    drawer.draw(ctx, { progress: 0.5, time: time(6) }, 1920, 1080)
+    expect(vi.mocked(drawOverlay).mock.lastCall?.[5]?.dip).toEqual({ color: 'black', alpha: 1 })
+    drawer.draw(ctx, { progress: 0.5, time: time(8) }, 1920, 1080)
+    expect(vi.mocked(drawOverlay).mock.lastCall?.[5]?.dip).toBeNull()
+    // the film's default junction decides the cards, a cut has no dip
+    setSetting('film', { ...useAppStore.getState().settings.film, junctionDefault: { kind: 'coupe', holdS: 0, card: false } })
+    drawer.draw(ctx, { progress: 0.5, time: { ...time(5), junctions: [{ ...junction, kind: 'coupe' as const }] } }, 1920, 1080)
     expect(vi.mocked(drawOverlay).mock.lastCall?.[5]).toMatchObject({ dip: null, stage: null })
     drawer.dispose()
   })

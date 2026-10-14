@@ -4,13 +4,15 @@
  * turns pointer and keyboard events into these calls and commits the result as one undo step.
  *
  * Items are selected by id: 'opening', 'closing', or the id of a stop, speed portion, camera key, text, medium or music
- * clip (unique across the film). Times are film times (seconds at x1 from the first frame, opening included).
+ * clip (unique across the film), or of a junction, stage or stage card of « À la suite » (`film/junctions.ts`). Times are film times (seconds at x1 from the first frame, opening included).
  */
 import { clamp } from '../core/math'
+import { FLYOVER_DURATION_RANGE } from '../flyover/cameraSettings'
 import type { CameraSettings } from '../flyover/cameraSettings'
 import { distanceAtTime, nearestOnPath, recordedTimeAt } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import type { ClockStop, FilmClock } from './clock'
+import { hasStageItem, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from './junctions'
 import {
   AUDIO_DEFAULTS,
   AUDIO_DURATION_RANGE,
@@ -19,11 +21,14 @@ import {
   DEFAULT_FILM,
   FADE_RANGE,
   ITEM_DURATION_RANGE,
+  JUNCTION_CARD_RANGE,
+  JUNCTION_HOLD_RANGE,
   MEDIA_DEFAULTS,
   MIN_SPEED_SPAN_M,
   SHOT_DURATION_RANGE,
   SITUATION_DURATION_S,
   SPEED_FACTOR_RANGE,
+  STAGE_DURATION_RANGE,
   STOP_DURATION_RANGE,
   VIDEO_SOUND_DEFAULTS,
   clipTimeS,
@@ -32,7 +37,9 @@ import {
 import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText, MediaSync } from './model'
 import { clampParamValue } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
-import type { FilmMarkerKey } from './markerKeys'
+import type { FilmMarkerKey, MarkerKeyLook } from './markerKeys'
+import { t } from '../i18n'
+import { decimalSeparator, formatNumberIntl } from '../i18n/format'
 
 export type TimelineItem = 'opening' | 'closing' | string
 /** part of a block a gesture holds: its body (move) or one of its edges */
@@ -106,7 +113,7 @@ export function formatFilmTime(seconds: number, tenths = false): string {
   const units = tenths ? Math.round(t * 10) : Math.floor(t + 1e-6) * 10
   const m = Math.floor(units / 600)
   const s = String(Math.floor((units % 600) / 10)).padStart(2, '0')
-  return tenths ? `${m}:${s},${units % 10}` : `${m}:${s}`
+  return tenths ? `${m}:${s}${decimalSeparator()}${units % 10}` : `${m}:${s}`
 }
 
 /** Timecode of the timeline bar, minutes on two digits at least: 75.4 -> "01:15,4", so its width stays the same while it plays. */
@@ -119,8 +126,8 @@ export function formatTimecode(seconds: number, tenths = false): string {
 // Snapping
 // ---------------------------------------------------------------------------
 
-/** The nearest target within `thresholdS` of `t`, else `t`. */
-export function snapTime(t: number, targets: readonly number[], thresholdS: number): number {
+/** The nearest target within `thresholdS` of `t`, else `t` (positions along the track as well as times). */
+export function snapValue(t: number, targets: readonly number[], thresholdS: number): number {
   let best = t
   let bestD = thresholdS
   for (const target of targets) {
@@ -133,9 +140,72 @@ export function snapTime(t: number, targets: readonly number[], thresholdS: numb
   return best
 }
 
+/** A time a dragged edge or block catches, and what it is (named on the alignment guide). */
+export interface SnapTarget {
+  timeS: number
+  label: string
+  kind: 'edge' | 'centre' | 'playhead' | 'junction' | 'ruler' | 'highlight' | 'end'
+}
+
+/** What a gesture remembers between two pointer moves: the targets caught by the previous one, those caught by this one. */
+export interface SnapState {
+  held: readonly SnapTarget[]
+  hits: SnapTarget[]
+}
+
+/** Targets at the same time (within a millisecond) are caught together. */
+const SAME_TIME_S = 1e-3
+
 /**
- * Times a dragged edge snaps to: start and end of the film, edges of the shots, of the stops, speed portions, texts,
- * media and music clips (but those of `except`), the cuts between the stages of « À la suite », highlights (progress values), playhead.
+ * `t` caught by the nearest target within `pullS` (none when `pullS` is 0), else `t`; `hits` are all the targets at the
+ * time it lands on. A target in `held` (caught a moment ago) is let go only when `t` is `releaseS` away, so that the
+ * magnet does not flicker at its edge.
+ */
+export function snapTime(
+  t: number,
+  targets: readonly SnapTarget[],
+  pullS: number,
+  held: readonly SnapTarget[] = [],
+  releaseS = pullS,
+): { timeS: number; hits: SnapTarget[] } {
+  if (!(pullS > 0)) return { timeS: t, hits: [] }
+  let best: SnapTarget | undefined
+  let bestD = releaseS
+  for (const target of held) {
+    const d = Math.abs(target.timeS - t)
+    if (d <= bestD) {
+      best = target
+      bestD = d
+    }
+  }
+  if (!best) {
+    bestD = pullS
+    for (const target of targets) {
+      const d = Math.abs(target.timeS - t)
+      if (d <= bestD) {
+        best = target
+        bestD = d
+      }
+    }
+  }
+  if (!best) return { timeS: t, hits: [] }
+  const at = best.timeS
+  return { timeS: at, hits: targets.filter((x) => Math.abs(x.timeS - at) <= SAME_TIME_S) }
+}
+
+/** A block of the timeline, for the targets that only the component knows (cards, junctions). */
+export interface SnapBlock {
+  id: string
+  startS: number
+  endS: number
+  label: string
+}
+
+/**
+ * Times a dragged edge or block snaps to, named: start and end of the film, edges of the shots, edges and centres of the
+ * stops, speed portions, texts, media and music clips and of the `blocks` (cards, junctions) but those of `except`,
+ * the camera, parameter and marker keys, the junctions between the stages of « À la suite », highlights (progress
+ * values), the ruler's `ticks` and the playhead.
  */
 export function snapTargets(
   clock: FilmClock,
@@ -143,13 +213,57 @@ export function snapTargets(
   highlights: readonly number[],
   playheadS: number,
   except?: TimelineItem,
-): number[] {
+  extra: { ticks?: readonly number[]; blocks?: readonly SnapBlock[] } = {},
+): SnapTarget[] {
   const total = clock.totalTime()
-  const out = [0, total, clock.openingS, total - clock.closingS, playheadS, ...clock.cuts.map((c) => c.timeS)]
-  for (const s of [...clock.stops, ...clock.speeds]) if (s.id !== except) out.push(s.startS, s.endS)
-  for (const t of [...film.texts, ...film.media, ...film.audio]) if (t.id !== except) out.push(t.startS, t.startS + t.durationS)
-  for (const h of highlights) out.push(clock.timeAtProgress(h))
+  const out: SnapTarget[] = [
+    { timeS: 0, label: t('film.snap.filmStart'), kind: 'end' },
+    { timeS: total, label: t('film.snap.filmEnd'), kind: 'end' },
+    { timeS: clock.openingS, label: t('film.snap.flyoverStart'), kind: 'edge' },
+    { timeS: total - clock.closingS, label: t('film.snap.flyoverEnd'), kind: 'edge' },
+    { timeS: playheadS, label: t('film.snap.playhead'), kind: 'playhead' },
+  ]
+  /** both edges and the middle of a block */
+  const block = (name: string, startS: number, endS: number) => {
+    out.push({ timeS: startS, label: t('film.snap.start', { name }), kind: 'edge' }, { timeS: endS, label: t('film.snap.end', { name }), kind: 'edge' })
+    if (endS > startS) out.push({ timeS: (startS + endS) / 2, label: t('film.snap.middle', { name }), kind: 'centre' })
+  }
+  clock.junctions.forEach((j, k) => {
+    if (j.id === except) return
+    const name = t('film.snap.junctionLower', { n: k + 1 })
+    if (j.endS > j.startS) block(name, j.startS, j.endS)
+    out.push({ timeS: j.holdStartS, label: t('film.snap.junction', { n: k + 1 }), kind: 'junction' })
+  })
+  // a cut of a clock built without junctions
+  if (clock.junctions.length === 0) clock.cuts.forEach((c, k) => out.push({ timeS: c.timeS, label: t('film.snap.junction', { n: k + 1 }), kind: 'junction' }))
+  for (const s of clock.stops) if (s.id !== except) block(s.label || t('film.snap.hold'), s.startS, s.endS)
+  for (const s of clock.speeds) if (s.id !== except) block(t('film.snap.speedSection', { factor: formatSpeedFactor(s.factor) }), s.startS, s.endS)
+  for (const text of film.texts) if (text.id !== except) block(text.text.trim().slice(0, 24) || t('film.snap.text'), text.startS, text.startS + text.durationS)
+  for (const m of film.media) if (m.id !== except) block(m.kind === 'video' ? t('film.snap.video') : t('film.snap.photo'), m.startS, m.startS + m.durationS)
+  for (const a of film.audio) if (a.id !== except) block(t('film.snap.music'), a.startS, a.startS + a.durationS)
+  for (const b of extra.blocks ?? []) if (b.id !== except) block(b.label, b.startS, b.endS)
+  for (const [keys, name] of [
+    [clock.cameraKeys, t('film.snap.keyframe')],
+    [clock.paramKeys, t('film.snap.setting')],
+    [clock.markerKeys, t('film.snap.marker')],
+  ] as const) {
+    for (const k of keys) if (k.id !== except) out.push({ timeS: k.timeS, label: name, kind: 'edge' })
+  }
+  for (const h of highlights) out.push({ timeS: clock.timeAtProgress(h), label: t('film.snap.highlight'), kind: 'highlight' })
+  for (const tick of extra.ticks ?? []) out.push({ timeS: tick, label: formatFilmTime(tick), kind: 'ruler' })
   return out
+}
+
+/**
+ * `snap` of a gesture: the time caught by `ctx.targets` within `ctx.snapS` (kept until `ctx.releaseS`), the targets
+ * caught recorded in `ctx.snapState` for the alignment guides.
+ */
+export function snapper(ctx: Pick<DragContext, 'targets' | 'snapS' | 'releaseS' | 'snapState'>): (t: number) => number {
+  return (t) => {
+    const { timeS, hits } = snapTime(t, ctx.targets, ctx.snapS, ctx.snapState?.held, ctx.releaseS ?? ctx.snapS)
+    if (hits.length > 0) ctx.snapState?.hits.push(...hits)
+    return timeS
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -227,11 +341,17 @@ export interface DragContext {
   /** length of the first track (metres) */
   lengthM: number
   /** times an edge snaps to (`snapTargets`) */
-  targets: readonly number[]
+  targets: readonly SnapTarget[]
   /** positions a moved stop snaps to (metres along the track: the highlights) */
   targetsM: readonly number[]
   /** snapping distance (seconds; 0 = no snapping) */
   snapS: number
+  /** distance at which a caught target is let go (seconds; default `snapS`) */
+  releaseS?: number
+  /** what the gesture remembers of its snaps (alignment guides, hysteresis) */
+  snapState?: SnapState
+  /** clock of a film retouched (a junction's hold moves what comes after it) */
+  clockOfFilm?: (film: Film) => FilmClock
   /** clock with other speed portions (speed portions are left as they are without it) */
   clockOfSpeeds?: ClockOfSpeeds
   /** length of a sound file of the media table (a music clip never plays past the end of its file) */
@@ -270,13 +390,26 @@ function withShot(film: Film, key: 'opening' | 'closing', durationS: number): Fi
   return shot.style === 'aucune' ? film : { ...film, [key]: { ...shot, durationS: shotDuration(durationS) } }
 }
 
+/**
+ * Dragging the start of the closing is a roll edit between the flight and the closing: the end of the film stays
+ * where it is, the closing starts where the pointer is and the flight takes (or gives back) the difference.
+ * `dragged` is `dragFilm` of `start` for that grip; returns it with the closing the flight could absorb and the new
+ * flight duration (FLYOVER_DURATION_RANGE).
+ */
+export function rollClosing(start: Film, dragged: Film, flightS: number): { film: Film; flightS: number } {
+  const deltaS = start.closing.durationS - dragged.closing.durationS
+  const flight = clamp(flightS + deltaS, FLYOVER_DURATION_RANGE.min, FLYOVER_DURATION_RANGE.max)
+  if (flight - flightS === deltaS) return { film: dragged, flightS: flight }
+  return { film: withShot(start, 'closing', start.closing.durationS - (flight - flightS)), flightS: flight }
+}
+
 /** Move the stop so that its hold starts `deltaS` later; snaps to a highlight (by position). */
 function moveStop(film: Film, stop: ClockStop, deltaS: number, ctx: DragContext): number {
   const { clock, lengthM } = ctx
   const atM = stopPositionAt(ctx.clockOf, film.stops, stop.id, stop.holdStartS + deltaS, lengthM)
   // snapping distance in metres at the mean speed of the flight
   const snapM = clock.flightS > 0 ? (ctx.snapS * lengthM) / clock.flightS : 0
-  const snapped = snapTime(atM, ctx.targetsM, snapM)
+  const snapped = snapValue(atM, ctx.targetsM, snapM)
   return snapped === atM ? Math.round(atM) : snapped
 }
 
@@ -324,13 +457,17 @@ function dragSpeed(film: Film, own: FilmSpeed, grip: Grip, deltaS: number, ctx: 
  * to the model ranges. Unknown items and grips leave the film as is.
  */
 export function dragFilm(film: Film, item: TimelineItem, grip: Grip, deltaS: number, ctx: DragContext): Film {
-  const snap = (t: number) => snapTime(t, ctx.targets, ctx.snapS)
+  const snap = snapper(ctx)
   const { clock } = ctx
   if (item === 'opening') return withShot(film, 'opening', snap(clock.openingS + deltaS))
   if (item === 'closing') {
     const end = clock.totalTime()
     return withShot(film, 'closing', end - snap(end - clock.closingS + deltaS))
   }
+
+  if (isJunctionItem(item)) return dragJunction(film, junctionTrackOf(item), grip, deltaS, ctx, snap)
+  if (isStageCardItem(item)) return dragStageCard(film, stageCardAfterOf(item), grip, deltaS, ctx, snap)
+  if (isStageItem(item)) return dragStage(film, stageTrackOf(item), grip, deltaS, ctx, snap)
 
   const stop = clock.stops.find((s) => s.id === item)
   if (stop && film.stops.some((s) => s.id === item)) {
@@ -406,6 +543,42 @@ export function dragFilm(film: Film, item: TimelineItem, grip: Grip, deltaS: num
 /** What a gesture changes on a text or a medium (and the start in the file of a video). */
 type Timed = Pick<FilmMedia, 'startS' | 'durationS' | 'inS'>
 
+/**
+ * The film after dragging the right edge of the junction after `afterTrackId` by `deltaS`: its hold follows the
+ * pointer (the end of its pause, found on the clock of the film with the hold changed: `ctx.clockOfFilm`), within
+ * `JUNCTION_HOLD_RANGE`. A cut and a night (its length is the night's) do not stretch.
+ */
+function dragJunction(film: Film, afterTrackId: string, grip: Grip, deltaS: number, ctx: DragContext, snap: (t: number) => number): Film {
+  const placed = ctx.clock.junctions.find((j) => j.afterTrackId === afterTrackId)
+  const clockOfFilm = ctx.clockOfFilm
+  if (grip !== 'end' || !placed || !clockOfFilm || placed.kind === 'coupe' || placed.kind === 'nuit') return film
+  const endAt = (holdS: number) => clockOfFilm(withJunction(film, afterTrackId, { holdS })).junctions.find((j) => j.afterTrackId === afterTrackId)?.endS ?? placed.endS
+  const holdS = positionAtTime(endAt, snap(placed.endS + deltaS), JUNCTION_HOLD_RANGE.min, JUNCTION_HOLD_RANGE.max)
+  return withJunction(film, afterTrackId, { holdS })
+}
+
+/**
+ * The film after dragging the right edge of the stage of track `trackId` by `deltaS`: its flight time follows the pointer
+ * (the end of the stage, found on the clock of the film with the duration changed: `ctx.clockOfFilm`, so what comes after
+ * ripples), within `STAGE_DURATION_RANGE`. The stage is the one before the junction after that track, the last one without.
+ */
+function dragStage(film: Film, trackId: string, grip: Grip, deltaS: number, ctx: DragContext, snap: (t: number) => number): Film {
+  const clockOfFilm = ctx.clockOfFilm
+  if (grip !== 'end' || !clockOfFilm) return film
+  const endOf = (clock: FilmClock) => clock.junctions.find((j) => j.afterTrackId === trackId)?.startS ?? clock.openingS + clock.flightS
+  const durationS = positionAtTime((d) => endOf(clockOfFilm(withStageDuration(film, trackId, d))), snap(endOf(ctx.clock) + deltaS), STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max)
+  return withStageDuration(film, trackId, durationS)
+}
+
+/** The card after junction `afterTrackId` (null: the first stage) with its end edge dragged by `deltaS`: its duration. */
+function dragStageCard(film: Film, afterTrackId: string | null, grip: Grip, deltaS: number, ctx: DragContext, snap: (t: number) => number): Film {
+  const startS = afterTrackId === null ? ctx.clock.openingS : ctx.clock.junctions.find((j) => j.afterTrackId === afterTrackId)?.holdStartS
+  if (grip !== 'end' || startS === undefined) return film
+  const own = junctionCardOf(film, afterTrackId)
+  const durationS = clamp(snap(startS + own.durationS + deltaS) - startS, JUNCTION_CARD_RANGE.min, JUNCTION_CARD_RANGE.max)
+  return withJunctionCard(film, afterTrackId, { durationS })
+}
+
 // ---------------------------------------------------------------------------
 // Edits
 // ---------------------------------------------------------------------------
@@ -413,7 +586,7 @@ type Timed = Pick<FilmMedia, 'startS' | 'durationS' | 'inS'>
 /** A stop added at `atM` (manual unless a source is given), orbiting, `AUTO_STOP_S`; with its new id. */
 export function addStop(film: Film, atM: number, patch: Partial<Omit<FilmStop, 'id' | 'atM'>> = {}): { film: Film; id: string } {
   const id = nextFilmId(film, 'stop')
-  const label = patch.label ?? `Arrêt ${id.slice('stop-'.length)}`
+  const label = patch.label ?? t('film.defaultHold', { n: id.slice('stop-'.length) })
   const stop: FilmStop = { durationS: AUTO_STOP_S, camera: 'orbite', source: { kind: 'manual' }, ...patch, id, atM: Math.max(0, atM), label }
   return { film: { ...film, stops: [...film.stops, stop] }, id }
 }
@@ -483,7 +656,7 @@ export function updateParamKey(film: Film, id: string, patch: Partial<Omit<FilmP
  * A marker key at `atM` with the look `look`, and its id. A key already at that metre takes the look instead (one key
  * per place).
  */
-export function addMarkerKey(film: Film, atM: number, look: Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId'>): { film: Film; id: string } {
+export function addMarkerKey(film: Film, atM: number, look: MarkerKeyLook): { film: Film; id: string } {
   const at = Math.max(0, Math.round(atM))
   const there = film.markerKeys.find((k) => Math.round(k.atM) === at)
   if (there) return { film: updateMarkerKey(film, there.id, look), id: there.id }
@@ -492,7 +665,7 @@ export function addMarkerKey(film: Film, atM: number, look: Pick<FilmMarkerKey, 
 }
 
 /** Marker keys at each of `placesM` that has none, with the look `look` (the junctions of a chained or sequenced track). */
-export function addMarkerKeysAt(film: Film, placesM: readonly number[], look: Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId'>): Film {
+export function addMarkerKeysAt(film: Film, placesM: readonly number[], look: MarkerKeyLook): Film {
   return placesM.reduce((f, atM) => (f.markerKeys.some((k) => Math.round(k.atM) === Math.round(atM)) ? f : addMarkerKey(f, atM, look).film), film)
 }
 
@@ -554,7 +727,7 @@ export const NEW_TEXT_S = 4
 /** A text added at film time `startS`, centred low, normal size, or attached to `stop` (`attachToStop`); with its new id. */
 export function addText(film: Film, startS: number, stop: ClockStop | null = null): { film: Film; id: string } {
   const id = nextFilmId(film, 'text')
-  const text: FilmText = { id, startS: roundS(Math.max(0, startS)), durationS: NEW_TEXT_S, text: 'Nouveau texte', anchor: 'bottom-center', size: 1 }
+  const text: FilmText = { id, startS: roundS(Math.max(0, startS)), durationS: NEW_TEXT_S, text: t('film.defaultText'), anchor: 'bottom-center', size: 1 }
   const next = { ...film, texts: [...film.texts, text] }
   return { film: stop ? attachToStop(next, id, stop) : next, id }
 }
@@ -717,6 +890,11 @@ export function clipRateAt(media: FilmMedia, path: TrackPath, clock: Pick<FilmCl
 /** `film` without the stop, speed portion, camera, parameter or marker key, text, medium or music clip `id`; a shot cannot be removed: it goes to style 'aucune'. */
 export function removeFilmItem(film: Film, id: TimelineItem): Film {
   if (id === 'opening' || id === 'closing') return updateShot(film, id, { style: 'aucune' })
+  // a junction goes back to the default one, a stage card is switched off (its settings are kept)
+  if (isJunctionItem(id)) return resetJunction(film, junctionTrackOf(id))
+  if (isStageCardItem(id)) return withJunctionCard(film, stageCardAfterOf(id), { enabled: false })
+  // a stage goes back to its share of the flyover duration
+  if (isStageItem(id)) return withStageDuration(film, stageTrackOf(id), null)
   return {
     ...film,
     stops: film.stops.filter((s) => s.id !== id),
@@ -734,8 +912,9 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
  * `item` is in the film: a shot (always there), one of the clock's `stops` (generated ones included), a speed portion,
  * a camera, parameter or marker key, a text, a medium or a music clip.
  */
-export function hasFilmItem(film: Film, stops: readonly { id: string }[], item: TimelineItem): boolean {
+export function hasFilmItem(film: Film, stops: readonly { id: string }[], item: TimelineItem, stageIds: readonly string[] = []): boolean {
   if (item === 'opening' || item === 'closing') return true
+  if (hasStageItem(item, stageIds)) return true
   return [stops, film.speeds, film.cameraKeys, film.paramKeys, film.markerKeys, film.texts, film.media, film.audio].some((lane) => lane.some((s) => s.id === item))
 }
 
@@ -755,7 +934,7 @@ export function updateStop(film: Film, id: string, patch: Partial<Omit<FilmStop,
 export const speedFactor = (f: number) => Math.round(clamp(f, SPEED_FACTOR_RANGE.min, SPEED_FACTOR_RANGE.max) * 100) / 100
 
 /** 2 -> "×2", 0.25 -> "×0,25". */
-export const formatSpeedFactor = (f: number) => `×${String(Math.round(f * 100) / 100).replace('.', ',')}`
+export const formatSpeedFactor = (f: number) => `×${formatNumberIntl(Math.round(f * 100) / 100, 2, 0)}`
 
 /**
  * Speed portion `id` with `patch`: factor clamped to its range, edges rounded to the metre and kept on the track,
@@ -921,7 +1100,10 @@ export function followStops(
     before.speeds !== after.speeds ||
     before.opening !== after.opening ||
     before.closing !== after.closing ||
-    before.autoStops !== after.autoStops
+    before.autoStops !== after.autoStops ||
+    before.junctions !== after.junctions ||
+    before.junctionDefault !== after.junctionDefault ||
+    before.stageDurations !== after.stageDurations
   let clocks: { from: FilmClock; to: FilmClock } | undefined
   let changed = false
   const follow = <T extends Attachable>(item: T, previous: readonly T[]): T => {

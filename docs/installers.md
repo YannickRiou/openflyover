@@ -36,17 +36,17 @@ The images and licence pages are build inputs committed in `src-tauri/installer/
 
 **For a release**:
 
-1. Put the same number in `src-tauri/tauri.conf.json` (`version`) and `src-tauri/Cargo.toml` (`version`), for example
-   `0.2.0`. This is the number that appears in the file names.
+1. Put the same number in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` (`version`), for example
+   `2.1.0`. The one in `tauri.conf.json` appears in the file names; the one in `package.json` is shown by the diagnostic report.
 2. Regenerate the third-party licenses with `npm run notices` (after `npm ci`; the first run takes about 8 minutes because
    of the crates.io rate limit) and commit `THIRD_PARTY_NOTICES.md` and `src-tauri/installer/license.rtf` / `license.txt`: they are shipped with the installers.
-3. Create and push the tag: `git tag v0.2.0`, then `git push origin v0.2.0`.
+3. Create and push the tag: `git tag v2.1.0`, then `git push origin v2.1.0` (any tag starting with `v` starts the workflow).
 
 ## Where to download them
 
 - After a push to `master`, *Run workflow* or a tag: *Actions* › the workflow run › at the bottom, *Artifacts* (one zip file per
   installer, kept 90 days).
-- After a tag, in addition: *Releases*, the release `OpenFlyover v0.2.0` with all the installers, **published
+- After a tag, in addition: *Releases*, the release `OpenFlyover v2.1.0` with all the installers, **published
   automatically** once the three systems are built (public on a public repository). While the builds run, it stays
   a draft that only the repository owner can see; if one system fails, it stays a draft: re-run the failed job
   (*Re-run failed jobs*), which publishes it at the end, or publish it by hand (*Edit* › *Publish release*).

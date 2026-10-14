@@ -24,22 +24,42 @@ describe('TopBar: the save icon', () => {
     const host = document.body.appendChild(document.createElement('div'))
     const root = createRoot(host)
     await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={() => {}} />))
-    const save = () => host.querySelector<HTMLButtonElement>('.topbar__save')!
+    const save = () => host.querySelector<HTMLButtonElement>('[data-testid="topbar-save"]')!
 
     // open and save are icons with their name as label, and no « Enregistré » text
     expect(host.querySelector('button[aria-label="Ouvrir"]')?.textContent).toBe('')
     expect(save().getAttribute('aria-label')).toBe('Enregistrer')
-    expect(save().className).not.toMatch(/--unsaved|--saved/)
+    expect(save().dataset.saveState).toBeUndefined()
 
     await act(async () => useAppStore.getState().setProjectName('Autre nom'))
-    expect(save().className).toContain('topbar__save--unsaved')
+    expect(save().dataset.saveState).toBe('unsaved')
     expect(save().getAttribute('aria-label')).toMatch(/non enregistrées/)
 
     await act(async () => useAppStore.getState().markProjectSaved())
-    expect(save().className).toContain('topbar__save--saved')
-    expect(save().className).not.toContain('--unsaved')
+    expect(save().dataset.saveState).toBe('saved')
     await act(async () => void vi.advanceTimersByTime(3100))
-    expect(save().className).not.toMatch(/--unsaved|--saved/)
+    expect(save().dataset.saveState).toBeUndefined()
+    act(() => root.unmount())
+  })
+})
+
+describe('TopBar: the output format', () => {
+  it('is a radio group named « Format de sortie »: an aspect sets the video, « Libre » frees the framing', async () => {
+    useAppStore.getState().setFreeFraming(false)
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={() => {}} />))
+    const group = host.querySelector('[role="radiogroup"][aria-label="Format de sortie"]')!
+    const radios = [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')]
+    expect(radios[0].labels?.[0]?.textContent).toBe('Libre')
+    expect(radios.filter((r) => r.checked)).toHaveLength(1)
+    await act(async () => radios[2].click())
+    expect(useAppStore.getState().settings.video.aspect).toBe('9:16')
+    expect(radios[2].checked).toBe(true)
+    await act(async () => radios[0].click())
+    expect(useAppStore.getState().freeFraming).toBe(true)
+    expect(useAppStore.getState().settings.video.aspect).toBe('9:16')
+    expect(radios[0].checked).toBe(true)
     act(() => root.unmount())
   })
 })

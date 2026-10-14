@@ -5,6 +5,7 @@
  * once at start-up. Parsing and defaults: `parsePreferences` in `shell.ts`.
  */
 import { create } from 'zustand'
+import { detectLanguage, setLanguage } from '../i18n'
 import { getPlatform } from '../platform'
 import { applyAppearance } from './appearance'
 import { DEFAULT_PREFERENCES, parsePreferences } from './shell'
@@ -30,6 +31,34 @@ export function setPreferences(patch: Partial<Preferences>): void {
   } catch {
     // storage unavailable: the choice lasts for the session
   }
+}
+
+/** Whether a language was ever chosen on this device (the stored preferences carry one). */
+function hasStoredLanguage(): boolean {
+  try {
+    const stored: unknown = JSON.parse(getPlatform().storage.get(PREFERENCES_KEY) ?? 'null')
+    return typeof stored === 'object' && stored !== null && 'language' in stored
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Put the language of the preferences on the interface now and whenever it changes (`<html lang>` too). First run, with
+ * no choice stored: the browser's language when the app has it (English), French otherwise; it is only remembered once
+ * the person picks one. Returns the function that stops it.
+ */
+export function installLanguage(root: HTMLElement = document.documentElement): () => void {
+  if (!hasStoredLanguage()) usePreferences.setState({ language: detectLanguage(navigator.languages ?? [navigator.language]) })
+  const apply = () => {
+    const { language } = usePreferences.getState()
+    setLanguage(language)
+    root.lang = language
+  }
+  apply()
+  return usePreferences.subscribe((state, previous) => {
+    if (state.language !== previous.language) apply()
+  })
 }
 
 const DARK_SCHEME = '(prefers-color-scheme: dark)'

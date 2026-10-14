@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent } from 'react'
+import { useT } from '../i18n'
 import { getPlatform } from '../platform'
 import { TIMELINE_HEIGHT_KEY, TIMELINE_STEP_LARGE_PX, TIMELINE_STEP_PX, clampTimelineHeight, parseTimelineHeight, timelineHeightRange } from './layoutSize'
-import './timelineResizer.css'
 
 function load(): number | null {
   try {
@@ -22,6 +22,16 @@ function save(height: number | null): void {
   }
 }
 
+const HANDLE = [
+  'relative z-3 block h-0 flex-none cursor-row-resize touch-none phone-any:hidden [:has(>[data-timeline][data-folded])>&]:hidden',
+  'aria-disabled:pointer-events-none aria-disabled:cursor-default focus-visible:outline-none',
+  // the strip that takes the pointer, and the grip
+  'before:absolute before:inset-x-0 before:top-[-5px] before:h-2.5',
+  'hover:before:bg-accent-light/60 focus-visible:before:bg-accent-light/60 data-[dragging]:before:bg-accent-light/60',
+  'after:absolute after:top-[-2px] after:left-[calc(50%-20px)] after:h-1 after:w-10 after:rounded-full after:bg-glacier after:opacity-50',
+  'hover:after:opacity-100 focus-visible:after:opacity-100 data-[dragging]:after:opacity-100',
+].join(' ')
+
 interface Drag {
   y0: number
   height0: number
@@ -29,12 +39,15 @@ interface Drag {
 }
 
 /**
- * Separator between the 3D view and the timeline (wide layouts only, shown by `timelineResizer.css`): drag it, or use
- * Up / Down (Shift: larger steps), Home / End (smallest / largest), double-click to go back to the default layout. Must
- * be a child of `.view`, just above the timeline; the view carries the height (`--timeline-h`, only once sized). The
+ * Separator between the 3D view and the timeline (wide layouts only; the phone layouts size their own rows): drag it, or
+ * use Up / Down (Shift: larger steps), Home / End (smallest / largest), double-click to go back to the default layout. It
+ * takes no room (height 0): its strip straddles the edge, lit on hover, focus and drag, so the default layout is unchanged;
+ * it is gone while the timeline is folded. Must be a child of `.view`, just above the timeline; the view carries the height
+ * (`--timeline-h`, only once sized) and the timeline reads it through the `timeline-sized` variants (utilities.css). The
  * height is remembered on this device, not in the project, and kept within the window again when it is resized.
  */
 export function TimelineResizer({ disabled = false }: { disabled?: boolean }) {
+  const t = useT()
   const handle = useRef<HTMLDivElement>(null)
   const drag = useRef<Drag | null>(null)
   /** the chosen height, null = the timeline's own height (default) */
@@ -47,7 +60,7 @@ export function TimelineResizer({ disabled = false }: { disabled?: boolean }) {
     const view = handle.current?.parentElement
     if (!view) return
     const apply = () => {
-      const barPx = view.querySelector<HTMLElement>('.film-tl__bar')?.offsetHeight
+      const barPx = view.querySelector<HTMLElement>('[data-timeline-bar]')?.offsetHeight
       const { min, max } = timelineHeightRange(view.clientHeight, barPx)
       const height = chosen === null ? null : clampTimelineHeight(chosen, view.clientHeight, barPx)
       if (height === null) {
@@ -57,7 +70,7 @@ export function TimelineResizer({ disabled = false }: { disabled?: boolean }) {
         view.setAttribute('data-timeline-sized', '')
         view.style.setProperty('--timeline-h', `${height}px`)
       }
-      const now = height ?? view.querySelector<HTMLElement>('.film-tl')?.offsetHeight ?? min
+      const now = height ?? view.querySelector<HTMLElement>('[data-timeline]')?.offsetHeight ?? min
       setShown((s) => (s.now === now && s.min === min && s.max === max ? s : { now, min, max }))
     }
     apply()
@@ -109,10 +122,11 @@ export function TimelineResizer({ disabled = false }: { disabled?: boolean }) {
   return (
     <div
       ref={handle}
-      className={dragging ? 'timeline-resizer timeline-resizer--dragging' : 'timeline-resizer'}
+      className={HANDLE}
+      data-dragging={dragging || undefined}
       role="separator"
       aria-orientation="horizontal"
-      aria-label="Taille de la timeline"
+      aria-label={t('timeline.resizer.label')}
       aria-valuenow={shown.now}
       aria-valuemin={shown.min}
       aria-valuemax={shown.max}

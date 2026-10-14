@@ -19,9 +19,12 @@ import { filmClockFor } from '../film/clock'
 import { POI_NAME_MAX, addPoi, defaultPoiName } from '../film/pois'
 import { addSpeed, addStop, addText } from '../film/timeline'
 import { buildTrackPath, pickProjectedPath, samplePath } from '../flyover/path'
+import { useT } from '../i18n'
 import { useAppStore } from '../state/store'
-import { useTerrainContext } from './TerrainLayer'
-import { LINE_LIFT_M } from './TrackLines'
+import { Menu, Popover } from '../ui/primitives'
+import type { MenuItem } from '../ui/primitives'
+import { useTerrainContext } from './terrainContext'
+import { LINE_LIFT_M } from './trackLineSet'
 import { editFilm, getFilmSource, useFilmClock, useFilmTrack } from './usePacing'
 
 /** Pointer distance to the line that still picks it (CSS pixels). */
@@ -35,15 +38,13 @@ const LONG_PRESS_SLOP_PX = 10
 const PICK_SAMPLES = 1500
 /** Draped positions are recomputed after this delay (the terrain keeps loading finer tiles). */
 const DRAPE_TTL_MS = 1000
-/** Room the menu needs before it opens on the other side of the pointer (CSS pixels). */
-const MENU_ROOM = { width: 220, height: 168 }
 
 interface TrackMenuState {
   /**
    * position in the canvas (CSS pixels), distance along the first track (off the line: none), place on the ground,
-   * open towards the left / the top, and whether it now asks for the name of a point of interest
+   * and whether it now asks for the name of a point of interest
    */
-  menu: { x: number; y: number; atM?: number; ground?: LonLat; left: boolean; up: boolean; naming?: boolean } | null
+  menu: { x: number; y: number; atM?: number; ground?: LonLat; naming?: boolean } | null
 }
 
 /** a pointer position (event or remembered press) */
@@ -140,9 +141,7 @@ export function TrackPicker() {
       const ground = pickGround(e) ?? (atM === undefined ? undefined : samplePath(samples.path, atM))
       if (atM === undefined && !ground) return
       const rect = canvas.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      useTrackMenu.setState({ menu: { x, y, atM, ground, left: x > rect.width - MENU_ROOM.width, up: y > rect.height - MENU_ROOM.height } })
+      useTrackMenu.setState({ menu: { x: e.clientX - rect.left, y: e.clientY - rect.top, atM, ground } })
     }
 
     let press: { x: number; y: number; button: number } | null = null
@@ -224,13 +223,14 @@ export function TrackPicker() {
 /**
  * Menu of a right-click on the track (DOM, positioned in the canvas wrapper): add a stop, a text or a speed portion
  * there (×2 from that point; inside a portion, that portion is selected), one undo step each, the new block selected;
- * on the relief, on the track or off it, a point of interest (`PoiNameForm`). Closes on Escape, on a click
- * elsewhere, when the focus leaves it and on export.
+ * on the relief, on the track or off it, a point of interest (`PoiNameForm`). Anchored at the pointer (`Menu`, `Popover`
+ * of the primitives), it closes like any overlay (Escape, a click elsewhere, a pick), on a resize and on export.
  */
 type Item = 'stop' | 'text' | 'speed' | 'poi'
 
 /** The name of a point of interest added from the menu at `at`: Enter adds it (one undo step), empty = default name. */
 function PoiNameForm({ at }: { at: LonLat }) {
+  const t = useT()
   const placeholder = useAppStore((s) => defaultPoiName(s.settings.film))
   return (
     <form
@@ -243,33 +243,25 @@ function PoiNameForm({ at }: { at: LonLat }) {
       }}
     >
       <label className="track-menu__label">
-        Nom du point d'intérêt
-        <input name="name" className="input" placeholder={placeholder} maxLength={POI_NAME_MAX} autoComplete="off" />
+        {t('scene.menu.poiName')}
+        <input name="name" className="input" autoFocus placeholder={placeholder} maxLength={POI_NAME_MAX} autoComplete="off" />
       </label>
       <button type="submit" className="track-menu__item">
-        Ajouter
+        {t('scene.menu.add')}
       </button>
     </form>
   )
 }
 
 export function TrackMenu() {
+  const t = useT()
   const menu = useTrackMenu((s) => s.menu)
   const busy = useExportStore((s) => isExportBusy(s.phase))
-  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!menu) return
-    ref.current?.querySelector<HTMLElement>('input, button')?.focus()
-    const onDown = (e: PointerEvent) => {
-      if (!(e.target instanceof Node) || !ref.current?.contains(e.target)) closeMenu()
-    }
-    document.addEventListener('pointerdown', onDown, true)
     window.addEventListener('resize', closeMenu)
-    return () => {
-      document.removeEventListener('pointerdown', onDown, true)
-      window.removeEventListener('resize', closeMenu)
-    }
+    return () => window.removeEventListener('resize', closeMenu)
   }, [menu])
   useEffect(() => {
     if (busy) closeMenu()
@@ -281,7 +273,6 @@ export function TrackMenu() {
       useTrackMenu.setState({ menu: { ...menu, naming: true } })
       return
     }
-    closeMenu()
     const source = getFilmSource()
     const lengthM = source.track?.stats.distanceM ?? 0
     if (lengthM <= 0 || menu.atM === undefined) return
@@ -291,49 +282,23 @@ export function TrackMenu() {
     else if (what === 'text') editFilm((f) => addText(f, filmClockFor(source).timeAtProgress(progress)))
     else editFilm((f) => addSpeed(f, atM, lengthM) ?? { film: f, id: f.speeds.find((s) => atM >= s.fromM && atM < s.toM)?.id })
   }
-  const items: { what: Item; label: string }[] = []
+  const items: MenuItem[] = []
   if (menu.atM !== undefined) {
     items.push(
-      { what: 'stop', label: 'Ajouter un arrêt ici' },
-      { what: 'text', label: 'Ajouter un texte ici' },
-      { what: 'speed', label: 'Accélérer / ralentir ici' },
+      { id: 'stop', label: t('scene.menu.addHold'), onSelect: () => add('stop') },
+      { id: 'text', label: t('scene.menu.addText'), onSelect: () => add('text') },
+      { id: 'speed', label: t('scene.menu.speed'), onSelect: () => add('speed') },
     )
   }
-  if (menu.ground) items.push({ what: 'poi', label: "Point d'intérêt ici" })
+  if (menu.ground) items.push({ id: 'poi', label: t('scene.menu.poiHere'), onSelect: () => add('poi') })
 
-  return (
-    <div
-      ref={ref}
-      className="track-menu"
-      role={menu.naming ? 'dialog' : 'menu'}
-      aria-label={menu.naming ? "Point d'intérêt" : 'Ajouter ici'}
-      data-local-escape=""
-      style={{ left: menu.x, top: menu.y, transform: `translate(${menu.left ? '-100%' : '0'}, ${menu.up ? '-100%' : '0'})` }}
-      onKeyDown={(e) => {
-        const buttons = Array.from(ref.current?.querySelectorAll('button') ?? [])
-        const index = buttons.findIndex((b) => b === document.activeElement)
-        if (e.key === 'Escape') closeMenu()
-        else if (!menu.naming && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-          const step = e.key === 'ArrowDown' ? 1 : -1
-          buttons[(index + step + buttons.length) % buttons.length]?.focus()
-        } else return
-        e.preventDefault()
-        e.stopPropagation()
-      }}
-      onBlur={(e) => {
-        // the focus went elsewhere (Tab); a click outside is caught by the pointer listener
-        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) closeMenu()
-      }}
-    >
-      {menu.naming && menu.ground ? (
-        <PoiNameForm at={menu.ground} />
-      ) : (
-        items.map((item) => (
-          <button key={item.what} type="button" role="menuitem" className="track-menu__item" tabIndex={-1} onClick={() => add(item.what)}>
-            {item.label}
-          </button>
-        ))
-      )}
-    </div>
+  const point = { x: menu.x, y: menu.y }
+  return menu.naming && menu.ground ? (
+    <Popover label={t('scene.menu.poi')} point={point} onClose={closeMenu} placement="bottom start" sheet>
+      <PoiNameForm at={menu.ground} />
+    </Popover>
+  ) : (
+    // (picking a point of interest turns the menu into the name form: it is not closed then)
+    <Menu label={t('scene.menu.addHere')} items={items} point={point} onClose={() => !useTrackMenu.getState().menu?.naming && closeMenu()} placement="bottom start" sheet />
   )
 }

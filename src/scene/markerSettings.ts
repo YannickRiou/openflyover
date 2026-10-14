@@ -5,6 +5,7 @@
  */
 import { inRange, oneOf, withDefaults } from '../core/guards'
 import { isHexColor } from '../overlay/settings'
+import { t } from '../i18n'
 
 // ---------------------------------------------------------------------------
 // Track style
@@ -47,7 +48,11 @@ export const DEFAULT_TRACK_STYLE: TrackStyle = {
   smoothingM: 0,
 }
 
-export const TRACK_DASH_LABELS: Record<TrackDash, string> = { plein: 'Plein', tirets: 'Tirets', points: 'Points' }
+export const TRACK_DASH_LABELS: Record<TrackDash, string> = {
+  get plein() { return t('marker.dash.plein') },
+  get tirets() { return t('marker.dash.tirets') },
+  get points() { return t('marker.dash.points') },
+}
 
 // ---------------------------------------------------------------------------
 // Marker
@@ -197,47 +202,51 @@ export function figureOfActivity(activityType: string | undefined): MarkerFigure
   return ACTIVITY_FIGURES.find(([pattern]) => pattern.test(type))?.[1] ?? 'randonneur'
 }
 
-export const MARKER_KIND_LABELS: Record<MarkerKind, string> = { boule: 'Boule', figurine: 'Figurine', image: 'Image' }
+export const MARKER_KIND_LABELS: Record<MarkerKind, string> = {
+  get boule() { return t('marker.kind.boule') },
+  get figurine() { return t('marker.kind.figurine') },
+  get image() { return t('marker.kind.image') },
+}
 
 export const MARKER_FIGURE_LABELS: Record<MarkerFigureChoice, string> = {
-  auto: "Selon l'activité",
-  randonneur: 'Randonneur',
-  alpiniste: 'Alpiniste',
-  coureur: 'Coureur',
-  traileur: 'Traileur',
-  cycliste: 'Cycliste',
-  vae: 'Vélo électrique',
-  bikepacking: 'Bikepacking',
-  vtt: 'VTT',
-  skieur: 'Skieur',
-  'ski-rando': 'Ski de rando',
-  nageur: 'Nageur',
-  kayak: 'Kayak',
-  cavalier: 'Cavalier',
-  parapente: 'Parapente',
-  moto: 'Moto',
-  voiture: 'Voiture',
-  avion: 'Avion léger',
+  get auto() { return t('marker.figure.auto') },
+  get randonneur() { return t('marker.figure.randonneur') },
+  get alpiniste() { return t('marker.figure.alpiniste') },
+  get coureur() { return t('marker.figure.coureur') },
+  get traileur() { return t('marker.figure.traileur') },
+  get cycliste() { return t('marker.figure.cycliste') },
+  get vae() { return t('marker.figure.vae') },
+  get bikepacking() { return t('marker.figure.bikepacking') },
+  get vtt() { return t('marker.figure.vtt') },
+  get skieur() { return t('marker.figure.skieur') },
+  get 'ski-rando'() { return t('marker.figure.ski-rando') },
+  get nageur() { return t('marker.figure.nageur') },
+  get kayak() { return t('marker.figure.kayak') },
+  get cavalier() { return t('marker.figure.cavalier') },
+  get parapente() { return t('marker.figure.parapente') },
+  get moto() { return t('marker.figure.moto') },
+  get voiture() { return t('marker.figure.voiture') },
+  get avion() { return t('marker.figure.avion') },
 }
 
 export const MARKER_BALL_STYLE_LABELS: Record<MarkerBallStyle, string> = {
-  plat: 'Disque',
-  anneau: 'Anneau',
-  halo: 'Halo',
-  pulsation: 'Pulsation',
+  get plat() { return t('marker.ball.plat') },
+  get anneau() { return t('marker.ball.anneau') },
+  get halo() { return t('marker.ball.halo') },
+  get pulsation() { return t('marker.ball.pulsation') },
 }
 
 export const MARKER_SHAPE_LABELS: Record<MarkerShape, string> = {
-  rond: 'Rond',
-  epingle: 'Épingle',
-  carre: 'Carré arrondi',
-  contour: 'Silhouette',
+  get rond() { return t('marker.shape.rond') },
+  get epingle() { return t('marker.shape.epingle') },
+  get carre() { return t('marker.shape.carre') },
+  get contour() { return t('marker.shape.contour') },
 }
 
 export const MARKER_LABEL_MODE_LABELS: Record<MarkerLabelMode, string> = {
-  aucune: 'Aucune',
-  nom: 'Nom de la trace',
-  texte: 'Texte libre',
+  get aucune() { return t('marker.labelMode.aucune') },
+  get nom() { return t('marker.labelMode.nom') },
+  get texte() { return t('marker.labelMode.texte') },
 }
 
 // ---------------------------------------------------------------------------

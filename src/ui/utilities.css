@@ -1,0 +1,353 @@
+/*
+ * `@utility` classes of the shell: the few combinations of Tailwind utilities that repeat (top bar, rail, panels).
+ * Imported by theme.css, after the tokens and the variants (`touch`, `phone`...) they use. Conventions: layout and spacing
+ * go in the `className` of the component, a state or a context that several components share goes here.
+ */
+
+/* The one transition of the interface: colour, border, shadow and opacity changes in 150 ms; none when motion is reduced. */
+@utility transition-ui {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* Text roles: a label (a row, a field, a control) and a hint under it. */
+@utility type-label {
+  @apply text-body font-medium text-text-1;
+}
+
+@utility type-hint {
+  @apply text-hint text-text-2;
+}
+
+/* Header of a section of a panel (title, marker, chevron): a 48 px bar, sticky (`panel-head`) while the section scrolls under it. */
+@utility panel-bar {
+  @apply flex h-12 items-center gap-2;
+}
+
+@utility panel-head {
+  @apply panel-bar sticky top-0 z-2 bg-surface-panel;
+}
+
+/* The summary of a folded block inside a section (« Plus de réglages », « Prévoir la sortie »): name left, chevron right. */
+@utility fold-head {
+  @apply flex min-h-control-lg cursor-pointer list-none items-center justify-between gap-2 text-body font-medium text-text-2 transition-ui hover:text-text-1;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  details[open] > & {
+    @apply text-text-1;
+  }
+
+  details:not([open]) > & > svg:last-child {
+    @apply -rotate-90;
+  }
+}
+
+/* A native <progress> (export, offline packs): the width of its column, 10 px high, in the accent. */
+@utility progress-bar {
+  @apply h-2.5 w-full;
+  accent-color: var(--accent);
+}
+
+@utility panel-title {
+  @apply font-heading text-title font-semibold text-text-1;
+}
+
+/* On the ink chrome (top bar, rail): the focus ring is the light accent, which reads on ink (7.3:1). */
+@utility chrome-focus {
+  & :focus-visible {
+    outline: var(--focus-ring-on-dark);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+/*
+ * A bare icon button (`<Button variant="icon">`) on the ink chrome: glacier icon, white on hover, a veil for hover and
+ * pressed. HeroUI's button reads these variables; a disabled button keeps its resting colours.
+ */
+@utility btn-chrome {
+  --button-fg: var(--color-glacier);
+
+  &:not(:disabled, [aria-disabled='true']) {
+    --button-bg-hover: rgb(255 255 255 / 0.1);
+    --button-bg-pressed: rgb(255 255 255 / 0.16);
+  }
+
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled='true']) {
+      --button-fg: var(--color-white);
+    }
+  }
+}
+
+/* The rail: a column of tabs on the side; on a portrait phone, the bar under the timeline. */
+@utility rail-frame {
+  @apply relative z-9 flex w-(--rail-w) flex-none flex-col border-r border-white/10 bg-chrome py-2 text-glacier;
+
+  @variant phone {
+    @apply order-3 h-14 w-auto flex-row border-t border-r-0 py-0;
+  }
+}
+
+/* Any button of the rail. */
+@utility rail-button {
+  @apply relative flex flex-none cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-glacier transition-ui;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled='true']) {
+      @apply bg-white/10 text-white;
+    }
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    @apply cursor-not-allowed opacity-40;
+  }
+}
+
+/* A tab of the rail (or a button of the bar that takes its place): icon over its label; the open one is lit and marked. */
+@utility rail-tab {
+  @apply rail-button h-13 w-14 flex-col gap-0.5;
+
+  &[aria-selected='true'] {
+    @apply bg-white/10 text-white;
+  }
+
+  /* the open tab: a bar of the accent against the panel side of the rail (not while the panel is folded) */
+  &[aria-selected='true']::before {
+    content: '';
+    @apply absolute top-2 bottom-2 -left-1 w-[3px] rounded-r-full bg-accent-light;
+  }
+
+  .shell__body--collapsed &[aria-selected='true']::before {
+    display: none;
+  }
+
+  @variant phone {
+    @apply w-auto min-w-18 px-1;
+
+    /* a part of the next tab shows past the edge: the bar reads as scrollable; the mark moves to the top edge */
+    &[aria-selected='true']::before {
+      @apply top-0 right-3 bottom-auto left-3 h-[3px] w-auto rounded-t-none rounded-b-full;
+    }
+  }
+
+  @variant phone-landscape {
+    @apply h-[46px];
+  }
+}
+
+@utility rail-label {
+  @apply text-caption font-medium whitespace-nowrap;
+}
+
+/* « Replier / Déplier le panneau » under the tabs; a tap on the open tab does it on a phone. */
+@utility rail-toggle {
+  @apply rail-button size-10 self-center;
+
+  @variant phone {
+    @apply hidden;
+  }
+
+  @variant phone-landscape {
+    @apply hidden;
+  }
+}
+
+/*
+ * The right dock (export drawer, inspector): beside the view; a drawer over it below 1024 px; a half sheet under the
+ * preview on a portrait phone, where each child but the sheet handle scrolls on its own.
+ */
+@utility dock-frame {
+  @apply w-(--dock-w) flex-none overflow-y-auto overscroll-contain border-l border-edge bg-surface-panel text-text-1;
+
+  @variant drawer {
+    @apply absolute top-0 right-0 bottom-0 z-8 w-[min(var(--dock-w),calc(100%-var(--rail-w)-16px))] shadow-pop;
+  }
+
+  @variant phone {
+    @apply absolute inset-x-0 top-[calc(var(--phone-preview-h)+var(--phone-transport-h))] bottom-0 z-10 flex w-auto flex-col overflow-hidden rounded-t-md border-t border-l-0 shadow-pop;
+    animation: sheet-in 160ms ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+
+    & > :not(.sheet-handle) {
+      @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
+    }
+  }
+}
+
+/*
+ * A bare icon button floating over the view (`<Button variant="icon">`): ink square, white glyph; lit white while pressed
+ * (a toggle). The focus ring is the light accent, which reads on ink.
+ */
+@utility btn-float {
+  @apply size-9 rounded-md shadow-pop touch:size-11;
+  --button-bg: var(--surface-chrome);
+  --button-bg-pressed: var(--color-ink-soft);
+  --button-fg: var(--color-white);
+
+  &:not(:disabled, [aria-disabled='true']) {
+    --button-bg-hover: var(--color-ink-soft);
+  }
+
+  &[aria-pressed='true'] {
+    --button-bg: var(--color-white);
+    --button-fg: var(--color-ink);
+  }
+
+  &[aria-pressed='true']:not(:disabled, [aria-disabled='true']) {
+    --button-bg-hover: var(--color-glacier);
+  }
+
+  &:focus-visible,
+  &[data-focus-visible='true'] {
+    outline: var(--focus-ring-on-dark);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+/*
+ * The film timeline once its height was dragged (`TimelineResizer` sets `data-timeline-sized` on the view, wide layouts only):
+ * the timeline itself takes the height, its lanes scroll inside it. Never while it is folded.
+ */
+@custom-variant timeline-sized {
+  @media (min-width: 700px) and (min-height: 500px) {
+    [data-timeline-sized] > &:not([data-folded]) {
+      @slot;
+    }
+  }
+}
+
+@custom-variant timeline-sized-body {
+  @media (min-width: 700px) and (min-height: 500px) {
+    [data-timeline-sized] > :not([data-folded]) > & {
+      @slot;
+    }
+  }
+}
+
+/* A fade of 120 ms for what opens over the page (tooltips, menus, dialogs); `tip-in` is declared in shell.css. */
+@utility fade-in {
+  animation: tip-in 120ms ease both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* A turn per second (spinner) or in 2.4 s (progress ring); still when motion is reduced. */
+@keyframes ui-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@utility spin-fast {
+  animation: ui-turn 0.8s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility spin-slow {
+  animation: ui-turn 2.4s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/*
+ * Floating panels (menus, popovers, the list of a select, the language list): the ink chrome in both themes, a hairline, the
+ * light focus ring. The panel's own size and scroll go next to it in the `className`.
+ */
+@utility overlay-frame {
+  @apply fade-in chrome-focus max-w-[calc(100vw_-_16px)] rounded-md border border-ink-soft bg-chrome-raised font-body text-white shadow-pop;
+}
+
+/* On a phone, either way up, a floating panel becomes a bottom sheet over the whole width (React Aria's own position is overridden). */
+@utility overlay-sheet {
+  @variant phone-any {
+    position: fixed !important;
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+    transform: none !important;
+  }
+}
+
+/* A row of a floating panel (menu, language list): lit under the pointer, on the arrows' focus and when it is the checked one. */
+@utility overlay-item {
+  @apply flex min-h-control cursor-pointer items-center gap-2 rounded-sm px-3 text-left text-body font-medium whitespace-nowrap text-white select-none;
+
+  &:hover:not(:disabled, [data-disabled]) {
+    @media (hover: hover) {
+      @apply bg-white/10;
+    }
+  }
+
+  &:focus-visible,
+  &[data-focused],
+  &[data-focus-visible='true'] {
+    @apply bg-white/10;
+  }
+
+  &[data-focus-visible='true'] {
+    outline: var(--focus-ring-on-dark);
+    outline-offset: 2px;
+  }
+
+  &[aria-checked='true'] {
+    @apply bg-white/16;
+  }
+
+  &:disabled,
+  &[data-disabled] {
+    @apply cursor-not-allowed opacity-45;
+  }
+}
+
+/* What a point overlay (right click, long press) is positioned against: an empty box at that point. */
+@utility overlay-anchor {
+  @apply pointer-events-none absolute size-0;
+}
+
+/* The picture of a saved project (« Mes projets », the home screen): a 16:9 frame, a sky-to-paper placeholder when there is none. */
+@utility library-thumb {
+  @apply aspect-video w-full rounded-sm border border-edge bg-linear-to-b from-glacier to-paper object-cover;
+}
+
+/* The home screen: a paper page over the whole view with one centred column (also the card of the error screen). */
+@utility home-page {
+  @apply absolute inset-0 z-5 flex overflow-y-auto overscroll-contain bg-surface-panel px-4 py-6 text-center text-text-1;
+}
+
+@utility home-column {
+  @apply m-auto flex w-[min(400px,100%)] flex-col items-center gap-3;
+}
+
+@utility home-title {
+  @apply text-3xl leading-[1.15] font-semibold;
+}
+
+@utility home-actions {
+  @apply grid w-full grid-cols-2 gap-2 phone:grid-cols-1;
+}

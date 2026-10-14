@@ -6,17 +6,18 @@
  */
 import { clamp } from '../core/math'
 import { withDefaults } from '../core/guards'
+import { t } from '../i18n'
 
 export const CAMERA_STYLES = ['chase', 'sway', 'orbit', 'top', 'cinematic'] as const
 export type CameraStyle = (typeof CAMERA_STYLES)[number]
 
-/** French labels (style select). */
+/** Labels of the styles (style select). */
 export const CAMERA_STYLE_LABELS: Record<CameraStyle, string> = {
-  chase: 'Poursuite',
-  sway: 'Balancement (extérieur des virages)',
-  orbit: 'Orbite autour du marqueur',
-  top: 'Vue du dessus',
-  cinematic: 'Plan cinématique',
+  get chase() { return t('camera.style.chase') },
+  get sway() { return t('camera.style.sway') },
+  get orbit() { return t('camera.style.orbit') },
+  get top() { return t('camera.style.top') },
+  get cinematic() { return t('camera.style.cinematic') },
 }
 
 export interface CameraSettings {
@@ -85,27 +86,30 @@ export function turnSmoothingM(camera: Pick<CameraSettings, 'turnSmoothingM' | '
 }
 
 export interface CameraPreset {
+  /** stable id (the name is shown, in the language of the interface) */
+  id: string
   name: string
   camera: CameraSettings
 }
 
 /** The default first, then from the lowest and closest to the highest. */
 export const CAMERA_PRESETS: readonly CameraPreset[] = [
-  { name: 'Poursuite', camera: DEFAULT_CAMERA },
-  { name: 'Drone rapide', camera: { ...DEFAULT_CAMERA, distance: 0.5, pitchDeg: 20, smoothing: 0.75, cameraSmoothingS: 1.5 } },
-  { name: 'Oiseau', camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 0.8, pitchDeg: 35, smoothing: 0.5, cameraSmoothingS: 1 } },
-  { name: 'Hélicoptère', camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 1.3, pitchDeg: 25, smoothing: 1.5 } },
-  { name: 'Orbite', camera: { ...DEFAULT_CAMERA, style: 'orbit', distance: 1.2 } },
-  { name: 'Cinéma', camera: { ...DEFAULT_CAMERA, style: 'cinematic', smoothing: 2 } },
-  { name: 'Drone haut', camera: { ...DEFAULT_CAMERA, distance: 1.8, pitchDeg: 55, smoothing: 1.5 } },
-  { name: 'Planeur', camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 2, pitchDeg: 15, smoothing: 2.5, cameraSmoothingS: 5 } },
+  { id: 'chase', get name() { return t('camera.preset.chase') }, camera: DEFAULT_CAMERA },
+  { id: 'fast-drone', get name() { return t('camera.preset.fast-drone') }, camera: { ...DEFAULT_CAMERA, distance: 0.5, pitchDeg: 20, smoothing: 0.75, cameraSmoothingS: 1.5 } },
+  { id: 'bird', get name() { return t('camera.preset.bird') }, camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 0.8, pitchDeg: 35, smoothing: 0.5, cameraSmoothingS: 1 } },
+  { id: 'helicopter', get name() { return t('camera.preset.helicopter') }, camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 1.3, pitchDeg: 25, smoothing: 1.5 } },
+  { id: 'orbit', get name() { return t('camera.preset.orbit') }, camera: { ...DEFAULT_CAMERA, style: 'orbit', distance: 1.2 } },
+  { id: 'cinema', get name() { return t('camera.preset.cinema') }, camera: { ...DEFAULT_CAMERA, style: 'cinematic', smoothing: 2 } },
+  { id: 'high-drone', get name() { return t('camera.preset.high-drone') }, camera: { ...DEFAULT_CAMERA, distance: 1.8, pitchDeg: 55, smoothing: 1.5 } },
+  { id: 'glider', get name() { return t('camera.preset.glider') }, camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 2, pitchDeg: 15, smoothing: 2.5, cameraSmoothingS: 5 } },
   {
-    name: 'Montgolfière',
+    id: 'balloon',
+    get name() { return t('camera.preset.balloon') },
     camera: { ...DEFAULT_CAMERA, style: 'cinematic', distance: 2.5, pitchDeg: 40, smoothing: 4, aimSmoothingS: 2, cameraSmoothingS: 7.5 },
   },
-  { name: 'Avion', camera: { ...DEFAULT_CAMERA, distance: 3, pitchDeg: 35, smoothing: 3, cameraSmoothingS: 4 } },
-  { name: 'Vue du dessus', camera: { ...DEFAULT_CAMERA, style: 'top', distance: 1.5, pitchDeg: 85, smoothing: 2, northUp: true } },
-  { name: 'Satellite', camera: { ...DEFAULT_CAMERA, style: 'top', distance: 4, pitchDeg: 85, smoothing: 4, northUp: true, cameraSmoothingS: 5 } },
+  { id: 'plane', get name() { return t('camera.preset.plane') }, camera: { ...DEFAULT_CAMERA, distance: 3, pitchDeg: 35, smoothing: 3, cameraSmoothingS: 4 } },
+  { id: 'top-view', get name() { return t('camera.preset.top-view') }, camera: { ...DEFAULT_CAMERA, style: 'top', distance: 1.5, pitchDeg: 85, smoothing: 2, northUp: true } },
+  { id: 'satellite', get name() { return t('camera.preset.satellite') }, camera: { ...DEFAULT_CAMERA, style: 'top', distance: 4, pitchDeg: 85, smoothing: 4, northUp: true, cameraSmoothingS: 5 } },
 ]
 
 /** The preset whose camera equals `camera`, if any. */

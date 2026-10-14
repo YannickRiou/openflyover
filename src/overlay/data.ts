@@ -8,6 +8,9 @@
  * compute any frame on its own. Pure functions (no DOM, no React, no Three).
  */
 import type { Track } from '../core/types'
+import { junctionCardOf } from '../film/junctions'
+import { JUNCTION_CARD_DEFAULT_S } from '../film/model'
+import type { Film } from '../film/model'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath } from '../flyover/path'
 import type { ElevationProfile, TrackPath } from '../flyover/path'
 import { rankRacers } from '../flyover/race'
@@ -16,13 +19,14 @@ import { stageAt } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import { metricValues } from '../flyover/trackColor'
 import { ELEVATION_HYSTERESIS_M, smoothElevations } from '../import/stats'
-import { OSM_ATTRIBUTION } from '../osm/overpass'
+import { osmAttribution } from '../osm/overpass'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { formatDistanceGap, formatTimeGap } from '../ui/format'
-import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
+import { openMeteoAttribution } from '../weather/openMeteo'
 import { summarizeOuting, weatherWidgetData } from '../weather/series'
 import type { WeatherSeries, WeatherSummary, WeatherWidgetData } from '../weather/series'
 import type { OverlayTime, StageCard } from './draw'
+import { t } from '../i18n'
 
 /** Samples of the overlay elevation profile over the track. */
 export const OVERLAY_PROFILE_SAMPLES = 240
@@ -293,17 +297,21 @@ export interface OverlayFilm {
 }
 
 /**
- * `prepareOverlayTrack` of the film track, and of every stage of a sequence « À la suite ». `weather` is the first
- * track's series, `stageWeather` those of the later stages by track id (weather store).
+ * `prepareOverlayTrack` of the film track, and of every stage of a sequence « À la suite ». `weather` is the series of
+ * the track `weatherTrackId` (the first track of the list; absent: the first stage's), `stageWeather` those of the
+ * others by track id (weather store).
  */
 export function prepareOverlayFilm(
   track: Track,
   sequence: Sequence | null,
   weather?: WeatherSeries | null,
   stageWeather?: Readonly<Record<string, { series: WeatherSeries | null }>>,
+  weatherTrackId?: string | null,
 ): OverlayFilm {
   if (!sequence) return { whole: prepareOverlayTrack(track, weather) }
-  const stages = sequence.stages.map((s) => prepareOverlayTrack(s.track, s.index === 0 ? weather : stageWeather?.[s.track.id]?.series))
+  const stages = sequence.stages.map((s) =>
+    prepareOverlayTrack(s.track, (weatherTrackId === undefined ? s.index === 0 : s.track.id === weatherTrackId) ? weather : stageWeather?.[s.track.id]?.series),
+  )
   return { whole: prepareOverlayTrack(track), sequence, stages }
 }
 
@@ -319,19 +327,25 @@ export function overlayFilmFrameAt(film: OverlayFilm, progress: number): Overlay
   return { ...frame, track: { ...frame.track, name: film.whole.name, stats: film.whole.stats } }
 }
 
-/** How long the card of a stage stays (seconds at ×1). */
-export const STAGE_CARD_S = 5
+/** How long the card of a stage stays by default (seconds at ×1). */
+export const STAGE_CARD_S = JUNCTION_CARD_DEFAULT_S
 
 /**
  * Card of the stage starting at film time `time.timeS` « À la suite »: the first one with the flight, each other at
- * its cut (`time.cutsS`), for STAGE_CARD_S; null outside these windows.
+ * its cut (`time.cutsS`, the middle of the junction before it), for the card's own duration (`film`: `junctionCardOf`,
+ * STAGE_CARD_S by default) but not past the start of the junction that follows; null outside these windows or when the
+ * card is switched off.
  */
-export function stageCardAt(sequence: Sequence, time: OverlayTime): StageCard | null {
+export function stageCardAt(sequence: Sequence, time: OverlayTime, film: Pick<Film, 'junctions' | 'junctionDefault' | 'firstCard'> = {}): StageCard | null {
   const starts = [time.openingS, ...(time.cutsS ?? [])]
   let k = starts.length - 1
   while (k >= 0 && time.timeS < starts[k]) k--
   const stage = sequence.stages[k]
-  if (!stage || time.timeS >= starts[k] + STAGE_CARD_S) return null
+  if (!stage) return null
+  const own = junctionCardOf(film, k === 0 ? null : sequence.stages[k - 1].track.id)
+  if (!own.enabled) return null
+  const durationS = Math.min(own.durationS, (time.junctions?.[k]?.startS ?? Infinity) - starts[k])
+  if (!(durationS > 0) || time.timeS >= starts[k] + durationS) return null
   const { stats } = stage.track
   const card: StageCard = {
     name: stage.track.name,
@@ -339,10 +353,16 @@ export function stageCardAt(sequence: Sequence, time: OverlayTime): StageCard | 
     count: sequence.stages.length,
     distanceM: stage.endM - stage.startM,
     startS: starts[k],
-    durationS: STAGE_CARD_S,
+    durationS,
+    anchor: own.anchor,
+    size: own.size,
   }
   if (stats.startTime !== undefined) card.startTime = stats.startTime
   if (stats.maxEle !== undefined) card.ascentM = stats.ascentM
+  if (own.text !== undefined) card.text = own.text
+  if (own.subtitle !== undefined) card.subtitle = own.subtitle
+  if (own.color !== undefined) card.color = own.color
+  if (own.font !== undefined) card.font = own.font
   return card
 }
 
@@ -361,10 +381,10 @@ export interface CreditSources {
  */
 export function overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks }: CreditSources): string[] {
   return [
-    `Relief : ${getTerrainSource(terrainSourceId).attribution}`,
-    `Imagerie : ${getImagerySource(imagerySourceId).attribution}`,
-    ...(weather ? [OPEN_METEO_ATTRIBUTION] : []),
-    ...(landmarks ? [`Repères : ${OSM_ATTRIBUTION}`] : []),
+    t('overlay.draw.credits.relief', { source: getTerrainSource(terrainSourceId).attribution }),
+    t('overlay.draw.credits.imagery', { source: getImagerySource(imagerySourceId).attribution }),
+    ...(weather ? [openMeteoAttribution()] : []),
+    ...(landmarks ? [t('overlay.draw.credits.landmarks', { source: osmAttribution() })] : []),
   ]
 }
 
@@ -401,6 +421,6 @@ export function leaderboardRows(racers: readonly Racer[], tracks: readonly Pick<
     if (!tied) rank = i + 1
     const { name, color } = tracks[racer.index]
     const gapText = timed ? formatTimeGap(gap) : formatDistanceGap(gap)
-    return { rank, name, color, gap: rank === 1 ? (racer.finished ? 'Arrivée' : 'Tête') : gapText }
+    return { rank, name, color, gap: rank === 1 ? (racer.finished ? t('overlay.draw.race.finished') : t('overlay.draw.race.lead')) : gapText }
   })
 }

@@ -99,10 +99,10 @@ AddType application/manifest+json .webmanifest
 
 ### Known limitations
 
-- The site must be served **at the root of the domain**. A few paths are hard-coded: `/samples/` in
-  `src/ui/projectActions.ts`, `/favicon.svg` in `src/ui/TopBar.tsx` and `index.html`, `/fonts/` in `src/ui/fonts.css`,
-  and `/oauth-callback.html` in `src/platform/oauthRedirect.ts` (Strava import). For a subfolder,
-  you must build with `vite build --base=/subfolder/` and prefix these paths with `import.meta.env.BASE_URL`.
+- The build is made for the **root of the domain** by default. To serve it from a subfolder, build with the base path in the
+  environment (`BASE_PATH=/subfolder/ npm run build`, which is what the GitHub Pages workflow does): the app builds its
+  public URLs (`/samples/`, `/favicon.svg`, textures, `/oauth-callback.html`) from `import.meta.env.BASE_URL`, and Vite
+  rewrites the others (`/fonts/` in `src/ui/fonts.css`, `index.html`).
 - A public site remains subject to the terms of the sources ([README, "Data sources"](../README.md#data-sources)).
 - A long video takes a lot of memory (about twice its size) where it cannot be written directly to disk (Firefox,
   Safari); Chrome, Edge and the desktop application write it as the export progresses.
@@ -113,7 +113,8 @@ AddType application/manifest+json .webmanifest
 It is the same code as the website, in a native [Tauri 2](https://v2.tauri.app/) window (`src-tauri/` folder). The
 "Ouvrir" and "Enregistrer" buttons and the end of an export open the system file dialogs. The application reads and
 writes only the files chosen in these dialogs, its offline packs and "Mes projets" in its own folder (`tiles/` and
-`projects/` in the application data folder), and the two folders given on the command line (`--rendu`, `--sortie`).
+`projects/` in the application data folder), the project files the system opens with it (double-click on a `.opnflvr`
+file), and the two folders given on the command line (`--rendu`, `--sortie`).
 Tiles, weather and landmarks come from the same sources as online: an Internet connection is required, except for a
 track prepared for offline use.
 
@@ -150,7 +151,7 @@ macOS show a warning on first launch.
 Command-line batch rendering (one film per track in a folder) is described in the
 [user guide](user-guide.html#desktop).
 
-GitHub also builds the installers for the three systems (*Actions* › "Desktop installers" › *Run workflow*, or a `v0.x.y`
+GitHub also builds the installers for the three systems (*Actions* › "Desktop installers" › *Run workflow*, or a `v*`
 tag, which publishes a release with the installers), signed as soon as the certificates are added to the repository secrets: see
 [`installers.md`](installers.md).
 

@@ -23,6 +23,7 @@ import { filmTrackOf } from '../flyover/sequence'
 import type { PoiIcon } from '../film/model'
 import { OVERLAY_THEMES, resolveLabelStyle } from '../overlay/themes'
 import type { LabelStyle } from '../overlay/themes'
+import { useLanguage, withLanguage } from '../i18n'
 import { useAppStore } from '../state/store'
 import {
   kmLabels,
@@ -42,7 +43,7 @@ import {
 import { externalLabels, useLabelSources } from './labelSources'
 import { reliefClearance } from './markerSprite'
 import { useFilmTrack } from './usePacing'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 import { wakeScene } from './renderOnDemand'
 import {
   REDRAPE_DEBOUNCE_MS,
@@ -51,7 +52,7 @@ import {
   computeDrapedPositions,
   type DrapeBuffer,
   type HeightSampler,
-} from './TrackLines'
+} from './trackLineSet'
 import { useDebouncedCallback } from './useDebouncedCallback'
 
 /** Label text size and panel geometry (CSS pixels). */
@@ -263,6 +264,8 @@ function updateLabelSet(
 }
 
 export function Labels() {
+  // the texts of the labels are worded when they are made
+  const language = useLanguage()
   const tracks = useAppStore((s) => s.tracks)
   // climbs and kilometres along the film: the first track, or the tracks « À la suite »
   const filmTrack = useFilmTrack()
@@ -286,7 +289,7 @@ export function Labels() {
   const family = (OVERLAY_THEMES[overlayStyle] ?? OVERLAY_THEMES.editorial).bodyFamily
   const texturesLookRef = useRef<unknown>(null)
 
-  const labels = useMemo(() => {
+  const labels = useMemo(() => withLanguage(language, () => {
     const out: LandmarkLabel[] = []
     const first = filmTrack
     if (show.waypoints) out.push(...waypointLabels(tracks))
@@ -299,7 +302,7 @@ export function Labels() {
     out.push(...poiLabels(pois.filter((poi) => !hiddenIds.includes(poi.id))))
     out.push(...externalLabels(sources))
     return out
-  }, [tracks, filmTrack, show, pois, hiddenIds, media, table, sources])
+  }), [tracks, filmTrack, show, pois, hiddenIds, media, table, sources, language])
 
   // Redraw the textures once the web font is available (the first ones may use the fallback font).
   useEffect(() => {

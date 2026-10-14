@@ -1,5 +1,21 @@
 /* OpenFlyover — charte graphique (variables, typographie, focus). */
-:root {
+
+/*
+ * Tailwind CSS: theme, Preflight (the reset) and utilities, in the layer order theme < base < components < utilities.
+ * The hand-written CSS of the app lives in `base` and `components`, so a utility class wins where both apply.
+ */
+@import 'tailwindcss';
+
+/*
+ * Palette, fonts, radii and shadows as Tailwind tokens (`bg-ink`, `text-accent`, `font-heading`, `rounded-md`,
+ * `shadow-pop`...). `static` emits every variable even when no utility uses it: the CSS below reads them directly.
+ * Nothing of Tailwind's default palette, radii or shadows is kept.
+ */
+@theme static {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+
   /* « Carte alpine » : papier de carte topographique, encre, rouge de balisage, glacier, mousse. */
   --color-paper: #f6f3ec;
   --color-card: #ece7da;
@@ -19,6 +35,8 @@
   --color-amber: #7a5200;
   --color-amber-light: #f0c35e;
   --color-white: #ffffff;
+  /* named for HeroUI's Switch stylesheet (`text-black` on its thumb); no skin of the app shows it */
+  --color-black: #000000;
   /* poids de rendu (RenderWeight): project palette, navy / periwinkle bars, chartreuse on navy for the heaviest */
   --color-navy: #113b54;
   --color-periwinkle: #bbd1ff;
@@ -27,8 +45,122 @@
   --font-heading: 'Fraunces', Georgia, serif;
   --font-body: 'IBM Plex Sans', system-ui, sans-serif;
 
+  /*
+   * One type scale (size / line height, on a 4 px grid) and three weights: 400 text and hints, 500 labels and controls,
+   * 600 headings. `text-caption` rail labels and badges, `text-hint` hints and units, `text-body` rows, labels, controls,
+   * `text-title` section titles (in the heading font). Tailwind's own sizes stay for HeroUI's stylesheets.
+   */
+  --text-caption: 11px;
+  --text-caption--line-height: 16px;
+  --text-hint: 12px;
+  --text-hint--line-height: 16px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-title: 16px;
+  --text-title--line-height: 24px;
+
+  /* control heights: `h-control` compact (32 px), `h-control-lg` comfortable (40 px); 44 px on a touch screen, see `--control-h` */
+  --spacing-control: var(--control-h);
+  --spacing-control-lg: var(--control-h-lg);
+
   --radius-sm: 6px;
   --radius-md: 10px;
+
+  --shadow-card: 0 1px 2px rgb(27 40 50 / 0.08);
+  --shadow-pop: 0 2px 6px rgb(27 40 50 / 0.12), 0 12px 32px rgb(27 40 50 / 0.18);
+}
+
+/*
+ * HeroUI (React Aria components, MIT): the pieces the primitives in `src/ui/primitives/` use, imported one by one so the
+ * CSS holds only what is in use (add the `components/<name>.css` of a primitive when it is added). Its theme variables
+ * are mapped to the tokens of this file below; no HeroUI colour, radius or font is kept. Its tokens come after the
+ * palette above (`--color-*: initial`), and the few names both define keep the project's value (second `@theme`).
+ */
+@import '@heroui/styles/base' layer(base);
+@import '@heroui/styles/themes/shared/theme.css';
+@import '@heroui/styles/themes/default/variables.css' layer(theme);
+@import '@heroui/styles/utilities';
+@import '@heroui/styles/variants';
+@import '@heroui/styles/components/button.css' layer(components);
+@import '@heroui/styles/components/switch.css' layer(components);
+@import '@heroui/styles/components/checkbox.css' layer(components);
+@import '@heroui/styles/components/radio.css' layer(components);
+@import '@heroui/styles/components/radio-group.css' layer(components);
+@import '@heroui/styles/components/toggle-button.css' layer(components);
+@import '@heroui/styles/components/toggle-button-group.css' layer(components);
+@import '@heroui/styles/components/toast.css' layer(components);
+@import '@heroui/styles/components/slider.css' layer(components);
+/* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
+@import './primitives/button.css';
+@import './primitives/tabs.css';
+@import './primitives/disclosure.css';
+@import './primitives/color-field.css';
+@import './primitives/switch.css';
+@import './primitives/checkbox.css';
+@import './primitives/radio-group.css';
+@import './primitives/chip.css';
+@import './primitives/slider.css';
+@import './primitives/select.css';
+/* the `@utility` classes the shell is built from (top bar, rail, panels); they use the variants declared below */
+@import './utilities.css';
+
+/* the project's own `dark:` variant (the theme attribute, never the system scheme) and the values HeroUI's theme overrode */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme static {
+  --color-accent: #b9391f;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+}
+
+/*
+ * Semantic roles as utilities (`bg-surface-card`, `text-text-2`, `border-edge`, `bg-brand`): `inline` reads the role
+ * variables of `:root` below at use, so the dark theme remaps them without a `dark:` variant. `brand` is the accent as
+ * text, border or mark on a panel (light in the dark theme); the filled accent is `bg-accent-fill`.
+ */
+@theme inline {
+  --color-chrome: var(--surface-chrome);
+  --color-chrome-raised: var(--surface-chrome-raised);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-card: var(--surface-card);
+  --color-surface-control: var(--surface-control);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-edge: var(--line);
+  --color-edge-strong: var(--line-strong);
+  --color-brand: var(--accent);
+  --color-accent-fill: var(--accent-fill);
+  --color-accent-fill-hover: var(--accent-fill-hover);
+}
+
+/*
+ * The breakpoints of the shell (shell.css) as variants. `touch`: finger, 44 px targets. `drawer`: the panel floats over the
+ * view. `phone`: the portrait phone layout (tab bar at the bottom, half sheets). `phone-any`: a phone either way up.
+ * `phone-landscape`: a phone on its side. `bar-condensed`: the top bar keeps the essentials (undo, redo, open, save move
+ * into « Plus d'actions »).
+ */
+@custom-variant touch (@media (pointer: coarse));
+@custom-variant drawer (@media (max-width: 1023px));
+@custom-variant phone (@media (max-width: 699px));
+/* (the block form: the shorthand splits a list of queries at the comma and keeps only the first) */
+@custom-variant phone-any {
+  @media (max-width: 699px), (max-height: 499px) {
+    @slot;
+  }
+}
+@custom-variant phone-landscape (@media (max-height: 499px) and (min-width: 700px));
+@custom-variant bar-condensed {
+  @media (max-width: 1023px) and (pointer: coarse), (max-width: 699px), (max-height: 499px) {
+    @slot;
+  }
+}
+
+/*
+ * Variables that are not Tailwind tokens. In `base`, so the `:root` rules of the components override them; the dark theme
+ * and the density below stay outside the layers (their higher specificity wins over both).
+ */
+@layer base {
+:root {
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -72,14 +204,64 @@
   --dock-w: 300px;
   --statusbar-h: 24px;
   --control-h: 32px;
-  --shadow-card: 0 1px 2px rgb(27 40 50 / 0.08);
-  --shadow-pop: 0 2px 6px rgb(27 40 50 / 0.12), 0 12px 32px rgb(27 40 50 / 0.18);
+  --control-h-lg: 40px;
   /* rim of a colour swatch, visible on the panel */
   --swatch-border: rgb(28 42 51 / 0.35);
 
   --focus-ring: 2px solid var(--accent);
   /* on the ink chrome: 7.3:1 against --color-ink */
   --focus-ring-on-dark: 2px solid var(--accent-on-dark);
+}
+}
+
+/*
+ * HeroUI theme variables, set from the roles above (light theme here, its few dark-only values in the dark block below).
+ * Outside the layers, so they win over HeroUI's default theme. HeroUI's `--accent` / `--accent-hover` are the project's
+ * own (same names, defined above: accent as text and border on a panel, light in the dark theme); a filled accent
+ * surface (the primary button) reads `--accent-fill` instead, see `primitives/primitives.css`.
+ */
+:root {
+  --background: var(--surface-panel);
+  --foreground: var(--text-1);
+  --surface: var(--surface-card);
+  --surface-foreground: var(--text-1);
+  --surface-secondary: var(--surface-control);
+  --surface-secondary-foreground: var(--text-1);
+  --surface-tertiary: color-mix(in srgb, var(--surface-card) 92%, var(--text-1));
+  --surface-tertiary-foreground: var(--text-1);
+  /* overlays (tooltips, menus, toasts) are the dark chrome in both themes, like the app's own */
+  --overlay: var(--surface-chrome-raised);
+  --overlay-foreground: var(--text-on-dark);
+  --muted: var(--text-2);
+  --default: var(--surface-card);
+  --default-foreground: var(--text-1);
+  --field-background: var(--surface-control);
+  --field-foreground: var(--text-1);
+  --field-placeholder: var(--text-2);
+  --field-border: var(--line-strong);
+  --field-border-width: 1px;
+  --segment: var(--surface-control);
+  --segment-foreground: var(--text-1);
+  --accent-foreground: var(--color-white);
+  --success: var(--status-ok);
+  --success-foreground: var(--color-white);
+  --warning: var(--status-attention);
+  --warning-foreground: var(--color-white);
+  --danger: var(--status-error);
+  --danger-foreground: var(--color-white);
+  --border: var(--line);
+  --separator: var(--line);
+  --focus: var(--accent);
+  --link: var(--text-1);
+  --backdrop: rgb(28 42 51 / 0.6);
+  --surface-shadow: var(--shadow-card);
+  --overlay-shadow: var(--shadow-pop);
+  --field-shadow: none;
+  --radius: var(--radius-md);
+  --field-radius: var(--radius-sm);
+  --disabled-opacity: 0.45;
+  --tooltip-delay: 450ms;
+  --tooltip-close-delay: 0ms;
 }
 
 /*
@@ -107,8 +289,15 @@
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-pop: 0 2px 6px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.5);
   --swatch-border: rgb(255 255 255 / 0.4);
+  /* ink text on the light accent and status colours of the dark theme */
+  --accent-foreground: var(--color-ink);
+  --success-foreground: var(--color-ink);
+  --warning-foreground: var(--color-ink);
+  --danger-foreground: var(--color-ink);
+  --backdrop: rgb(0 0 0 / 0.6);
 }
 
+@layer base {
 h1,
 h2,
 h3,
@@ -135,60 +324,10 @@ select {
   box-shadow: 0 0 0 1px var(--color-white);
 }
 
-/* Buttons --------------------------------------------------------------- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 40px;
-  padding: 0 var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 15px;
-  cursor: pointer;
-  transition:
-    background-color 120ms ease,
-    transform 80ms ease;
 }
 
-.btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.btn--primary {
-  background: var(--accent-fill);
-  color: var(--color-white);
-}
-
-@media (hover: hover) {
-  .btn--primary:hover:not(:disabled) {
-    background: var(--accent-fill-hover);
-  }
-}
-
-.btn--secondary {
-  background: var(--surface-control);
-  border-color: var(--line);
-  color: var(--text-1);
-}
-
-@media (hover: hover) {
-  .btn--secondary:hover:not(:disabled) {
-    border-color: var(--text-1);
-  }
-}
-
-.btn--block {
-  width: 100%;
-}
+@layer components {
+/* Buttons: `src/ui/primitives/button.css` */
 
 /* Form controls --------------------------------------------------------- */
 .field {
@@ -198,12 +337,13 @@ select {
 }
 
 .field__label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   color: var(--text-1);
 }
 
-.select,
+.select-field,
 .input {
   width: 100%;
   min-height: 36px;
@@ -213,10 +353,4 @@ select {
   background: var(--surface-control);
   color: var(--text-1);
 }
-
-.input--multiline {
-  padding: var(--space-2) var(--space-3);
-  font: inherit;
-  line-height: 1.4;
-  resize: vertical;
 }

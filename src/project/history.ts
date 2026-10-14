@@ -228,8 +228,8 @@ export function resetSettings(keys: readonly (keyof Settings)[], history: Histor
 }
 
 /**
- * A slider dragged with the pointer is a single undo step from pointer down to pointer up, however slow; keyboard
- * changes keep the usual grouping. Returns the function that removes the listeners.
+ * A slider (a range input, or a `Slider` primitive: `[data-slider]`) dragged with the pointer is a single undo step from
+ * pointer down to pointer up, however slow; keyboard changes keep the usual grouping. Returns the function that removes the listeners.
  */
 export function installSliderGestures(history: History, target: Window = window): () => void {
   let end: (() => void) | null = null
@@ -238,7 +238,9 @@ export function installSliderGestures(history: History, target: Window = window)
     end = null
   }
   const onDown = (e: Event) => {
-    if (!(e.target instanceof HTMLInputElement) || e.target.type !== 'range') return
+    const slider = e.target instanceof HTMLInputElement && e.target.type === 'range'
+    // the thumb and the rail of a `Slider` primitive take the pointer, not the range input inside
+    if (!slider && !(e.target instanceof Element && e.target.closest('[data-slider]'))) return
     release()
     end = history.beginGesture()
   }

@@ -1,24 +1,27 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { filmStops, placeStop, withoutPlaceItems } from '../film/assemble'
+import { t, useT } from '../i18n'
 import type { StopPlace } from '../film/assemble'
 import { POI_ICONS, POI_ICON_LABELS, STOP_DURATION_RANGE, nextFilmId } from '../film/model'
-import type { FilmPoi, FilmStop, PoiIcon } from '../film/model'
+import type { FilmPoi, FilmStop } from '../film/model'
 import { POI_NAME_MAX, addPoi, poiStopAtM, removePoi, renamePoi, setPoiIcon } from '../film/pois'
 import { addStop, removeFilmItem, updateStop } from '../film/timeline'
 import { samplePath, trackPathOf } from '../flyover/path'
 import {
   KIND_BADGES,
   KIND_LABELS,
+  LANDMARK_COUNT_RANGE,
   LANDMARK_DISTANCE_RANGE,
   PLACE_SIZES,
   PLACE_SIZE_LABELS,
   newLandmarkIds,
   movedInRank,
   withHidden,
+  withPinnedOnly,
   withPlaceSize,
 } from '../osm/landmarks'
 import type { Landmark, LandmarkSettings } from '../osm/landmarks'
-import { OSM_ATTRIBUTION, OSM_KINDS } from '../osm/overpass'
+import { osmAttribution, OSM_KINDS } from '../osm/overpass'
 import { syncLandmarks, useLandmarkStore } from '../osm/store'
 import { sequenceLandmarks } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
@@ -27,18 +30,35 @@ import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
-import './LandmarkPanel.css'
+import { Button, Checkbox, Chip, NumberField, Select, Slider, Switch, TextField, Tip } from './primitives'
 
 /** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
 function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'>): string {
   const total = OSM_KINDS.length - 1 + PLACE_SIZES.length
   const on =
     OSM_KINDS.filter((kind) => kind !== 'place' && kinds[kind]).length + (kinds.place ? PLACE_SIZES.filter((s) => places[s]).length : 0)
-  return on === total ? 'Tous' : on === 0 ? 'Aucun' : `${on} sur ${total}`
+  return on === total ? t('landmarks.kindsAll') : on === 0 ? t('landmarks.kindsNone') : t('landmarks.kindsSome', { on, total })
 }
 
 /** A row of the list: an OSM landmark of the film track or a point of interest, where its stop goes (`atM`). */
 type PlaceRow = StopPlace & { hidden: boolean } & ({ landmark: Landmark; poi?: undefined } | { poi: FilmPoi; landmark?: undefined })
+
+/*
+ * A row of the list: a card of the control colour; a hidden one is a dashed outline whose name is struck out (`data-hidden`).
+ * `group/place` lets its name and field read that state.
+ */
+const PLACE =
+  'group/place grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1 rounded-sm bg-surface-control py-0.5 pl-1 data-hidden:bg-transparent data-hidden:outline data-hidden:-outline-offset-1 data-hidden:outline-dashed data-hidden:outline-edge-strong'
+/** The kind badge at the start of a row (a landmark's, or the point of interest's own button). */
+const PLACE_BADGE = 'min-w-14 flex-none rounded-sm px-1 py-0.5 text-center text-caption font-semibold text-white'
+/** The area of a row that seeks the flyover there: badge and name; the name wraps over two lines rather than being cut. */
+const PLACE_GO = 'flex min-h-control min-w-0 items-center gap-2 text-left text-text-1'
+const PLACE_NAME =
+  'line-clamp-2 text-body font-medium break-words group-data-hidden/place:line-through group-data-hidden/place:opacity-60 group-hover/go:underline'
+/** Second line of a row: place or pictogram, then the stop. */
+const PLACE_LINE = 'col-span-full flex flex-wrap items-center gap-x-2 gap-y-1 pr-1'
+/** A small button of the tools bar above the list. */
+const TOOL = 'px-2'
 
 /** OSM ids of the landmarks of every track, shown ones and hidden ones (the 3D labels of all tracks). */
 function listedIds(hidden: boolean): string[] {
@@ -59,34 +79,47 @@ function setRowsHidden(rows: readonly PlaceRow[], hide: boolean, extraIds: reado
   })
 }
 
+/**
+ * « Garder les épinglés »: every landmark of every track but the pinned ones is dismissed, in one undo step; the stops
+ * of the dismissed `rows` go with them (`withoutPlaceItems`).
+ */
+function keepPinnedOnly(rows: readonly PlaceRow[]): void {
+  const listed = [...listedIds(false), ...listedIds(true)]
+  getSettingsHistory().transaction(() => {
+    const { settings, setSetting } = useAppStore.getState()
+    const pinned = new Set(settings.landmarks.pinnedIds)
+    const dismissed = rows.filter((r) => !r.hidden && !pinned.has(r.id))
+    if (dismissed.length > 0) editFilm((film) => ({ film: withoutPlaceItems(film, dismissed) }))
+    setSetting('landmarks', withPinnedOnly(useAppStore.getState().settings.landmarks, listed))
+  })
+}
+
 /** « Arrêt » of a row: the film stops there (checked) and for how long. */
 function StopToggle({ name, stop, disabled, onToggle }: { name: string; stop?: FilmStop; disabled: boolean; onToggle(on: boolean): void }) {
+  const t = useT()
   return (
-    <div className="place__stop">
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          aria-label={`Arrêt dans le film à « ${name} »`}
-          checked={stop !== undefined}
-          disabled={disabled}
-          onChange={(e) => onToggle(e.currentTarget.checked)}
-        />
-        Arrêt
-      </label>
+    <div className="ml-auto flex items-center gap-1 text-body">
+      <Checkbox
+        checked={stop !== undefined}
+        disabled={disabled}
+        aria-label={t('landmarks.stopAria', { name })}
+        onChange={(on) => onToggle(on)}
+      >
+        {t('landmarks.stop')}
+      </Checkbox>
       {stop && (
-        <label className="place__duration">
-          <input
-            className="input"
-            type="number"
-            aria-label={`Durée de l'arrêt « ${name} » (secondes)`}
+        <label className="flex items-center gap-0.5">
+          <NumberField
+            className="w-[3.75rem]"
+            aria-label={t('landmarks.stopDurationAria', { name })}
             min={STOP_DURATION_RANGE.min}
             max={STOP_DURATION_RANGE.max}
             step={STOP_DURATION_RANGE.step}
             value={stop.durationS}
-            onChange={(e) => {
-              const durationS = e.currentTarget.valueAsNumber
+            live
+            onChange={(durationS) => {
               const id = stop.id
-              if (Number.isFinite(durationS)) editFilm((f) => ({ film: updateStop(f, id, { durationS }) }), { stops: true, step: false })
+              editFilm((f) => ({ film: updateStop(f, id, { durationS }) }), { stops: true, step: false })
             }}
           />
           s
@@ -98,17 +131,35 @@ function StopToggle({ name, stop, disabled, onToggle }: { name: string; stop?: F
 
 /** The eye of a row: shows or hides its label. */
 function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; onClick(): void }) {
+  const t = useT()
   return (
-    <button
-      type="button"
-      className="icon-btn"
-      aria-label={hidden ? `Afficher « ${name} »` : `Masquer « ${name} »`}
-      data-tip={hidden ? "Afficher l'étiquette" : "Masquer l'étiquette et son arrêt"}
-      data-tip-side="left"
-      onClick={onClick}
-    >
-      <Icon name={hidden ? 'eye-off' : 'eye'} size={16} />
-    </button>
+    <Tip text={hidden ? t('landmarks.showTip') : t('landmarks.hideTip')} side="left">
+      <Button
+        variant="icon"
+        aria-label={hidden ? t('landmarks.show', { name }) : t('landmarks.hide', { name })}
+        onClick={onClick}
+      >
+        <Icon name={hidden ? 'eye-off' : 'eye'} size={16} />
+      </Button>
+    </Tip>
+  )
+}
+
+/** The pin of a row: pinned landmarks are kept whatever the cap and by « Garder les épinglés ». */
+function PinButton({ name, pinned, onClick }: { name: string; pinned: boolean; onClick(): void }) {
+  const t = useT()
+  return (
+    <Tip text={pinned ? t('landmarks.unpinTip') : t('landmarks.pinTip')} side="left">
+      <Button
+        variant="icon"
+        className="aria-pressed:text-brand aria-pressed:[&_svg]:fill-current"
+        aria-label={pinned ? t('landmarks.unpin', { name }) : t('landmarks.pin', { name })}
+        aria-pressed={pinned}
+        onClick={onClick}
+      >
+        <Icon name="pin" size={16} />
+      </Button>
+    </Tip>
   )
 }
 
@@ -119,12 +170,14 @@ function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; o
  * arrows change (`settings.landmarks.rank`; the label of the higher one wins when two overlap). Each row: click = seek the flyover there; the eye shows or hides its label
  * (`settings.landmarks.hiddenIds`; hiding also removes its stop); « Arrêt » makes or removes a stop there,
  * its duration beside it. The cross of a hidden landmark dismisses it (`dismissedIds`) until « Relancer la recherche » asks
- * OpenStreetMap again. « Tout afficher » / « Tout masquer » for every label; landmarks found later (wider distance,
+ * OpenStreetMap again (a dismissed landmark frees no slot under « Nombre maximal »). The pin keeps a landmark whatever the
+ * cap; « Garder les épinglés » dismisses all the others. « Tout afficher » / « Tout masquer » for every label; landmarks found later (wider distance,
  * another type) are shown, marked « nouveau » until the user shows or hides labels again.
  * Also drives the landmark store, and keeps what is attached to a stop in step when the landmarks of the first track are
  * published again (`followLandmarks`).
  */
 export function LandmarkPanel() {
+  const t = useT()
   const id = useId()
   const tracks = useAppStore((s) => s.tracks)
   const settings = useAppStore((s) => s.settings.landmarks)
@@ -153,6 +206,7 @@ export function LandmarkPanel() {
   const path = trackPathOf(first)
   const lengthM = first.stats.distanceM
   const hiddenIds = new Set(settings.hiddenIds)
+  const pinnedIds = new Set(settings.pinnedIds)
   const list = settings.enabled ? (landmarks ?? []) : []
   const hiddenList = settings.enabled ? (hidden ?? []) : []
   const fresh = newLandmarkIds(settings, list.map((l) => l.id))
@@ -192,7 +246,13 @@ export function LandmarkPanel() {
       ...settings,
       hiddenIds: settings.hiddenIds.filter((hiddenId) => hiddenId !== row.id),
       rank: settings.rank.filter((rankedId) => rankedId !== row.id),
+      pinnedIds: settings.pinnedIds.filter((pinnedId) => pinnedId !== row.id),
       dismissedIds: [...settings.dismissedIds, row.id],
+    })
+  const togglePin = (row: PlaceRow) =>
+    setSetting('landmarks', {
+      ...settings,
+      pinnedIds: pinnedIds.has(row.id) ? settings.pinnedIds.filter((pinnedId) => pinnedId !== row.id) : [...settings.pinnedIds, row.id],
     })
   const searchAgain = () => {
     const next = { ...settings, dismissedIds: [] }
@@ -213,46 +273,41 @@ export function LandmarkPanel() {
     })
 
   return (
-    <PanelSection title="Repères et points d'intérêt" keys={['landmarks']}>
-      <label className="checkbox checkbox--switch" htmlFor={`${id}-enabled`}>
-        <input
-          id={`${id}-enabled`}
-          type="checkbox"
-          checked={settings.enabled}
-          onChange={(e) => setSetting('landmarks', { ...settings, enabled: e.currentTarget.checked })}
-        />
-        Sommets, cols, refuges… autour de la trace
-      </label>
+    <PanelSection title={t('landmarks.title')} keys={['landmarks']}>
+      <Switch
+        id={`${id}-enabled`}
+        checked={settings.enabled}
+        onChange={(on) => setSetting('landmarks', { ...settings, enabled: on })}
+      >
+        {t('landmarks.enable')}
+      </Switch>
 
       {settings.enabled && (
-        <SettingRow label="Types" value={kindsLabel(settings)} paths={['landmarks.kinds', 'landmarks.places']}>
-          <fieldset className="field fieldset">
-            <legend className="field__label">Types</legend>
+        <SettingRow label={t('landmarks.types')} value={kindsLabel(settings)} paths={['landmarks.kinds', 'landmarks.places']}>
+          <fieldset className="field min-w-0">
+            <legend className="type-label mb-1">{t('landmarks.types')}</legend>
             <div className="chips">
               {OSM_KINDS.map((kind) =>
                 kind === 'place' ? (
                   // places as three chips, by size
                   PLACE_SIZES.map((size) => (
-                    <label key={size} className="chip">
-                      <input
-                        type="checkbox"
-                        checked={settings.kinds.place && settings.places[size]}
-                        onChange={(e) => setSetting('landmarks', withPlaceSize(settings, size, e.currentTarget.checked))}
-                      />
+                    <Chip
+                      key={size}
+                      checked={settings.kinds.place && settings.places[size]}
+                      onChange={(on) => setSetting('landmarks', withPlaceSize(settings, size, on))}
+                    >
                       {PLACE_SIZE_LABELS[size]}
-                    </label>
+                    </Chip>
                   ))
                 ) : (
-                  <label key={kind} className="chip">
-                    <input
-                      type="checkbox"
-                      checked={settings.kinds[kind]}
-                      onChange={(e) =>
-                        setSetting('landmarks', { ...settings, kinds: { ...settings.kinds, [kind]: e.currentTarget.checked } })
+                  <Chip
+                    key={kind}
+                    checked={settings.kinds[kind]}
+                    onChange={(on) => setSetting('landmarks', { ...settings, kinds: { ...settings.kinds, [kind]: on } })
                       }
-                    />
+                  >
                     {KIND_LABELS[kind]}
-                  </label>
+                  </Chip>
                 ),
               )}
             </div>
@@ -261,154 +316,183 @@ export function LandmarkPanel() {
       )}
 
       {settings.enabled && (
-        <SettingRow label="Distance à la trace" value={formatDistance(settings.maxDistanceM)} paths={['landmarks.maxDistanceM']}>
+        <SettingRow label={t('landmarks.distance')} value={formatDistance(settings.maxDistanceM)} paths={['landmarks.maxDistanceM']}>
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-distance`}>
-              Distance à la trace
-            </label>
-            <div className="range-row">
-              <input
-                id={`${id}-distance`}
-                className="range"
-                type="range"
-                min={LANDMARK_DISTANCE_RANGE.min}
-                max={LANDMARK_DISTANCE_RANGE.max}
-                step={LANDMARK_DISTANCE_RANGE.step}
-                value={settings.maxDistanceM}
-                onChange={(e) => setSetting('landmarks', { ...settings, maxDistanceM: Number(e.currentTarget.value) })}
-              />
-              <output className="range-row__value range-row__value--wide" htmlFor={`${id}-distance`}>
-                {formatDistance(settings.maxDistanceM)}
-              </output>
-            </div>
+            <span className="type-label">
+              {t('landmarks.distance')}
+            </span>
+            <Slider
+              aria-label={t('landmarks.distance')}
+              min={LANDMARK_DISTANCE_RANGE.min}
+              max={LANDMARK_DISTANCE_RANGE.max}
+              step={LANDMARK_DISTANCE_RANGE.step}
+              value={settings.maxDistanceM}
+              onChange={(v) => setSetting('landmarks', { ...settings, maxDistanceM: v })}
+              format={formatDistance}
+            />
           </div>
         </SettingRow>
       )}
 
-      <p className="field__hint" role="status" aria-live="polite">
-        {!settings.enabled && 'Repères désactivés : aucune requête envoyée.'}
-        {settings.enabled && status === 'loading' && 'Recherche des repères…'}
+      {settings.enabled && (
+        <SettingRow label={t('landmarks.maxCount')} value={String(settings.maxCount)} paths={['landmarks.maxCount']}>
+          <div className="field">
+            <span className="type-label">
+              {t('landmarks.maxCount')}
+            </span>
+            <Slider
+              aria-label={t('landmarks.maxCount')}
+              min={LANDMARK_COUNT_RANGE.min}
+              max={LANDMARK_COUNT_RANGE.max}
+              step={LANDMARK_COUNT_RANGE.step}
+              value={settings.maxCount}
+              onChange={(v) => setSetting('landmarks', { ...settings, maxCount: v })}
+              format={String}
+              wide={false}
+            />
+            <p className="type-hint">{t('landmarks.maxCountHint')}</p>
+          </div>
+        </SettingRow>
+      )}
+
+      <p className="type-hint" role="status" aria-live="polite">
+        {!settings.enabled && t('landmarks.status.off')}
+        {settings.enabled && status === 'loading' && t('landmarks.status.loading')}
         {settings.enabled && status === 'error' && message}
         {settings.enabled &&
           status === 'ready' &&
           (list.length + hiddenList.length === 0
-            ? 'Aucun repère de ces types près de la trace.'
-            : `${list.length} ${list.length > 1 ? 'repères' : 'repère'} le long de la trace` +
-              (hiddenList.length > 0 ? ` · ${hiddenList.length} ${hiddenList.length > 1 ? 'masqués' : 'masqué'}` : '') +
-              (settings.dismissedIds.length > 0 ? ` · ${settings.dismissedIds.length} ${settings.dismissedIds.length > 1 ? 'écartés' : 'écarté'}` : '') +
-              '.')}
+            ? t('landmarks.status.none')
+            : t('landmarks.status.sentence', {
+                parts: [
+                  t('landmarks.status.along', { count: list.length }),
+                  hiddenList.length > 0 && t('landmarks.status.hidden', { count: hiddenList.length }),
+                  settings.dismissedIds.length > 0 && t('landmarks.status.dismissed', { count: settings.dismissedIds.length }),
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
+              }))}
       </p>
 
       {settings.enabled && status === 'error' && (
-        <button type="button" className="btn btn--secondary btn--block" onClick={() => syncLandmarks(tracks, settings, { refresh: true })}>
-          Réessayer
-        </button>
+        <Button block onClick={() => syncLandmarks(tracks, settings, { refresh: true })}>
+          {t('common.retry')}
+        </Button>
       )}
 
       {settings.enabled && status !== 'error' && (
-        <button
-          type="button"
-          className="btn btn--secondary btn--block"
-          disabled={status === 'loading'}
-          data-tip="Interroge de nouveau OpenStreetMap et rend les repères écartés avec la croix"
-          onClick={searchAgain}
-        >
-          <Icon name="rotate-cw" size={16} />
-          Relancer la recherche
-        </button>
+        <Tip text={t('landmarks.searchAgainTip')}>
+          <Button
+            block
+            disabled={status === 'loading'}
+            onClick={searchAgain}
+          >
+            <Icon name="rotate-cw" size={16} />
+            {t('landmarks.searchAgain')}
+          </Button>
+        </Tip>
       )}
 
       {rows.length > 0 && (
-        <div className="places__tools">
+        <div className="flex flex-wrap items-center justify-end gap-1">
           {fresh.size > 0 && (
-            <button
-              type="button"
-              className="places__fresh"
-              data-tip="Trouvés depuis votre dernier choix : les marquer comme vus"
-              onClick={() => setSetting('landmarks', withHidden(settings, [], false, listedIds(false)))}
-            >
-              {fresh.size} {fresh.size > 1 ? 'nouveaux' : 'nouveau'}
-            </button>
+            <Tip text={t('landmarks.freshTip')}>
+              <button
+                type="button"
+                className="mr-auto cursor-pointer rounded-full bg-accent-tint px-2 py-0.5 text-hint font-semibold text-brand"
+                onClick={() => setSetting('landmarks', withHidden(settings, [], false, listedIds(false)))}
+              >
+                {t('landmarks.fresh', { count: fresh.size })}
+              </button>
+            </Tip>
           )}
-          <button
-            type="button"
-            className="btn btn--secondary btn--small"
+          <Button
+            size="sm"
+            className={TOOL}
             disabled={settings.hiddenIds.length === 0}
             onClick={() => setRowsHidden(rows.filter((r) => r.hidden), false, settings.hiddenIds)}
           >
             <Icon name="eye" size={16} />
-            Tout afficher
-          </button>
-          <button
-            type="button"
-            className="btn btn--secondary btn--small"
+            {t('landmarks.showAll')}
+          </Button>
+          <Button
+            size="sm"
+            className={TOOL}
             disabled={shownRows.length === 0}
             onClick={() => setRowsHidden(shownRows, true, listedIds(false))}
           >
             <Icon name="eye-off" size={16} />
-            Tout masquer
-          </button>
+            {t('landmarks.hideAll')}
+          </Button>
+          <Tip text={t('landmarks.keepPinnedTip')}>
+            <Button
+              size="sm"
+              className={TOOL}
+              disabled={settings.pinnedIds.length === 0}
+              onClick={() => keepPinnedOnly(ranked)}
+            >
+              <Icon name="pin" size={16} />
+              {t('landmarks.keepPinned')}
+            </Button>
+          </Tip>
         </div>
       )}
 
       {rows.length > 0 && (
-        <p className="field__hint">
-          Un clic sur un nom y mène. « Arrêt » : le film s'y arrête le temps indiqué. Masquer une étiquette retire aussi son arrêt.
-          {film.autoStops && ' Arrêts automatiques (Options de la timeline) : en changer un les fige.'}
-        </p>
+        <p className="type-hint">{[t('landmarks.hint'), film.autoStops && t('landmarks.hintAuto')].filter(Boolean).join(' ')}</p>
       )}
 
       {rows.length > 0 && (
-        <ul className="places">
+        <ul className="flex max-h-90 flex-col gap-1 overflow-y-auto">
           {rows.map((row) => {
             const stop = row.hidden ? undefined : placeStop(stops, row)
-            const className = row.hidden ? 'place place--hidden' : 'place'
             if (row.landmark) {
               const { landmark } = row
               return (
-                <li key={row.id} className={className}>
-                  <button type="button" className="place__go" title={row.hidden ? 'Repère masqué · y aller' : 'Aller à ce repère'} onClick={() => seek(row.atM)}>
-                    <span className={landmark.kind === 'pass' ? 'landmark__kind landmark__kind--pass' : 'landmark__kind'}>{KIND_BADGES[landmark.kind]}</span>
-                    <span className="landmark__name">{landmark.text}</span>
+                <li key={row.id} className={PLACE} data-testid="place" data-hidden={row.hidden || undefined}>
+                  <button type="button" className={`group/go cursor-pointer p-0 ${PLACE_GO}`} title={row.hidden ? t('landmarks.goHidden') : t('landmarks.go')} onClick={() => seek(row.atM)}>
+                    <span className={`${PLACE_BADGE} ${landmark.kind === 'pass' ? 'bg-accent-fill' : 'bg-chrome'}`}>{KIND_BADGES[landmark.kind]}</span>
+                    <span className={PLACE_NAME} data-testid="landmark-name">{landmark.text}</span>
                   </button>
-                  <div className="place__actions">
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      aria-label={`Monter « ${landmark.name} » dans le classement`}
-                      data-tip="Plus important"
-                      disabled={ranked[0] === row}
-                      onClick={() => moveInRank(row, true)}
-                    >
-                      <Icon name="chevron-up" size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      aria-label={`Descendre « ${landmark.name} » dans le classement`}
-                      data-tip="Moins important"
-                      disabled={ranked[ranked.length - 1] === row}
-                      onClick={() => moveInRank(row, false)}
-                    >
-                      <Icon name="chevron-down" size={16} />
-                    </button>
+                  <div className="flex items-center">
+                    <Tip text={t('landmarks.moreImportant')}>
+                      <Button
+                        variant="icon"
+                        aria-label={t('landmarks.moveUp', { name: landmark.name })}
+                        disabled={ranked[0] === row}
+                        onClick={() => moveInRank(row, true)}
+                      >
+                        <Icon name="chevron-up" size={16} />
+                      </Button>
+                    </Tip>
+                    <Tip text={t('landmarks.lessImportant')}>
+                      <Button
+                        variant="icon"
+                        aria-label={t('landmarks.moveDown', { name: landmark.name })}
+                        disabled={ranked[ranked.length - 1] === row}
+                        onClick={() => moveInRank(row, false)}
+                      >
+                        <Icon name="chevron-down" size={16} />
+                      </Button>
+                    </Tip>
+                    <PinButton name={landmark.name} pinned={pinnedIds.has(row.id)} onClick={() => togglePin(row)} />
                     <EyeButton name={landmark.name} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
                     {row.hidden && (
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        aria-label={`Écarter « ${landmark.name} »`}
-                        data-tip="Ne plus le proposer"
-                        onClick={() => dismiss(row)}
-                      >
-                        <Icon name="x" size={16} />
-                      </button>
+                      <Tip text={t('landmarks.dismissTip')}>
+                        <Button
+                          variant="icon"
+                          aria-label={t('landmarks.dismiss', { name: landmark.name })}
+                          onClick={() => dismiss(row)}
+                        >
+                          <Icon name="x" size={16} />
+                        </Button>
+                      </Tip>
                     )}
                   </div>
-                  <div className="place__line">
-                    <span className="place__meta">
-                      km {formatNumber(row.atM / 1000, 1)} · à {formatDistance(landmark.distanceM)}
-                      {fresh.has(row.id) && <span className="place__new">nouveau</span>}
+                  <div className={PLACE_LINE}>
+                    <span className="flex-auto text-hint text-text-2 tabular-nums">
+                      {t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}
+                      {fresh.has(row.id) && <span className="ml-1 rounded-sm bg-accent-tint px-1 font-semibold text-brand" data-testid="place-new">{t('landmarks.isNew')}</span>}
                     </span>
                     <StopToggle name={landmark.name} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, landmark.name, on)} />
                   </div>
@@ -418,15 +502,14 @@ export function LandmarkPanel() {
             const { poi } = row
             const name = poi.name.trim()
             return (
-              <li key={row.id} className={className}>
-                <div className="place__go place__go--poi">
-                  <button type="button" className="landmark__kind landmark__kind--poi" title="Aller à ce point d'intérêt" onClick={() => seek(row.atM)}>
-                    Point
+              <li key={row.id} className={PLACE} data-testid="place" data-hidden={row.hidden || undefined}>
+                <div className={`${PLACE_GO} [&>.field]:min-w-0 [&>.field]:flex-1`}>
+                  <button type="button" className={`cursor-pointer bg-chrome ${PLACE_BADGE}`} title={t('landmarks.poiGo')} onClick={() => seek(row.atM)}>
+                    {t('landmarks.poiBadge')}
                   </button>
-                  <input
-                    className="input"
-                    aria-label="Nom du point d'intérêt"
-                    placeholder="Sans nom : pas d'étiquette"
+                  <TextField
+                    aria-label={t('landmarks.poiNameAria')}
+                    placeholder={t('landmarks.poiNamePlaceholder')}
                     value={poi.name}
                     maxLength={POI_NAME_MAX}
                     autoFocus={poi.id === added}
@@ -434,39 +517,28 @@ export function LandmarkPanel() {
                       if (poi.id === added) e.currentTarget.select()
                     }}
                     onBlur={() => setAdded(null)}
-                    onChange={(e) => {
-                      const value = e.currentTarget.value
-                      editFilm((f) => ({ film: renamePoi(f, poi.id, value) }), { step: false })
-                    }}
+                    onChange={(value) => editFilm((f) => ({ film: renamePoi(f, poi.id, value) }), { step: false })}
                   />
                 </div>
-                <EyeButton name={name || "ce point d'intérêt"} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
-                <div className="place__line">
-                  <select
-                    className="select place__icon"
-                    aria-label={`Pictogramme de ${name || "ce point d'intérêt"}`}
+                <EyeButton name={name || t('landmarks.poiThis')} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
+                <div className={PLACE_LINE}>
+                  <Select
+                    className="min-w-0 flex-[0_1_6.5rem]"
+                    aria-label={t('landmarks.poiIconAria', { name: name || t('landmarks.poiThis') })}
                     value={poi.icon ?? 'epingle'}
-                    onChange={(e) => {
-                      const icon = e.currentTarget.value as PoiIcon
-                      editFilm((f) => ({ film: setPoiIcon(f, poi.id, icon) }))
-                    }}
-                  >
-                    {POI_ICONS.map((icon) => (
-                      <option key={icon} value={icon}>
-                        {POI_ICON_LABELS[icon]}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    aria-label={`Supprimer le point d'intérêt ${name}`}
-                    data-tip="Supprimer"
-                    onClick={() => deletePoi(poi)}
-                  >
-                    <Icon name="x" size={16} />
-                  </button>
-                  <StopToggle name={name || "Point d'intérêt"} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, name, on)} />
+                    options={POI_ICONS.map((icon) => ({ value: icon, label: POI_ICON_LABELS[icon] }))}
+                    onChange={(icon) => editFilm((f) => ({ film: setPoiIcon(f, poi.id, icon) }))}
+                  />
+                  <Tip text={t('common.delete')}>
+                    <Button
+                      variant="icon"
+                      aria-label={t('landmarks.poiDeleteAria', { name })}
+                      onClick={() => deletePoi(poi)}
+                    >
+                      <Icon name="x" size={16} />
+                    </Button>
+                  </Tip>
+                  <StopToggle name={name || t('landmarks.poiDefaultName')} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, name, on)} />
                 </div>
               </li>
             )
@@ -474,16 +546,16 @@ export function LandmarkPanel() {
         </ul>
       )}
 
-      <button type="button" className="btn btn--secondary btn--block" onClick={addAtMarker}>
+      <Button block onClick={addAtMarker}>
         <Icon name="plus" size={16} />
-        Point d'intérêt au marqueur
-      </button>
-      <p className="field__hint">Vos lieux à vous, aussi par un clic droit sur le relief.</p>
+        {t('landmarks.poiAdd')}
+      </Button>
+      <p className="type-hint">{t('landmarks.poiHint')}</p>
 
       {settings.enabled && status !== 'idle' && (
-        <p className="field__hint">
+        <p className="type-hint">
           <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
-            {OSM_ATTRIBUTION}
+            {osmAttribution()}
           </a>
         </p>
       )}

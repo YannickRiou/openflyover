@@ -11,6 +11,7 @@ import { buildTrackPath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import { boundsIntersect, lonLatToTileFrac, tileBounds } from '../geo/mercator'
 import { buildTileUrl } from '../terrain/sources'
+import { t } from '../i18n'
 
 /** Share of the view's width and height left free around the tracks, on each side. */
 export const FLAT_MAP_MARGIN = 0.08
@@ -149,7 +150,7 @@ export async function renderFlatMap(input: FlatMapInput): Promise<FlatMap> {
   const { width, height, source, fetcher, signal, onProgress } = input
   const canvas = new OffscreenCanvas(width, height)
   const ctx = canvas.getContext('2d', { alpha: false })
-  if (!ctx) throw new Error("Impossible de créer l'image de la carte.")
+  if (!ctx) throw new Error(t('poster.error.mapImage'))
   ctx.fillStyle = MISSING_TILE
   ctx.fillRect(0, 0, width, height)
   const plan = planFlatMap(input.bounds, width, height, source)
@@ -168,7 +169,7 @@ export async function renderFlatMap(input: FlatMapInput): Promise<FlatMap> {
   signal.throwIfAborted()
   const missingTiles = loaded.filter((r) => r.status === 'rejected').length
   if (plan.tiles.length > 0 && missingTiles === plan.tiles.length) {
-    throw new Error(`Impossible de charger la carte : aucune tuile de « ${source.name} » reçue.`)
+    throw new Error(t('poster.error.noTile', { name: source.name }))
   }
   drawTracks(ctx, plan, input)
   return { view: canvas, missingTiles }

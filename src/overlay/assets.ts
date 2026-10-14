@@ -6,6 +6,7 @@
 import type { OverlayAssets } from './draw'
 import { LOGO_MAX_SIZE_PX } from './settings'
 import { OVERLAY_FONTS } from './themes'
+import { t } from '../i18n'
 
 /**
  * Resolve once the overlay fonts can be drawn. A canvas never triggers a web font download by itself, so
@@ -28,7 +29,7 @@ function decode(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('Image illisible.'))
+    image.onerror = () => reject(new Error(t('film.error.imageUnreadable')))
     image.src = src
   })
 }
@@ -51,7 +52,7 @@ export async function fileToLogoDataUrl(file: Blob, max = LOGO_MAX_SIZE_PX): Pro
     canvas.width = width
     canvas.height = height
     const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Image illisible.')
+    if (!ctx) throw new Error(t('film.error.imageUnreadable'))
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(image, 0, 0, width, height)
     return canvas.toDataURL('image/png')

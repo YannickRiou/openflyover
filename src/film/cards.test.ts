@@ -32,6 +32,8 @@ describe('cards on the timeline', () => {
     expect(cardFraction(END_CARD_ID, 6 + 0.75 * 60, clock)).toBe(0.75)
     expect(cardFraction(END_CARD_ID, 10, clock)).toBe(END_START_MIN)
     expect(cardFraction(END_CARD_ID, 71, clock)).toBe(END_START_MAX)
+    expect(TITLE_END_MIN).toBe(0.01)
+    expect(END_START_MAX).toBe(0.99)
     // no flight: the lower bound, never NaN
     expect(cardFraction(TITLE_CARD_ID, 3, { openingS: 3, flightS: 0 })).toBe(TITLE_END_MIN)
   })

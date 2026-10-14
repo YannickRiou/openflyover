@@ -1,4 +1,6 @@
 import { errorMessage } from '../core/errors'
+import { useT } from '../i18n'
+import { formatDate } from '../i18n/format'
 import { useId, useMemo, useState } from 'react'
 import { trackPathOf } from '../flyover/path'
 import { autoDistanceM } from '../flyover/camera'
@@ -8,16 +10,15 @@ import { cancelPack, deletePack, pausePack, preparePack, resumePack, useOfflineS
 import { getPlatform } from '../platform'
 import { useAppStore } from '../state/store'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
-import { formatNumber } from './format'
+import { formatBytes, formatNumber } from './format'
 import { showToast } from './toast'
+import { Button, Radio, RadioGroup } from './primitives'
 
-/** bytes -> "420 Mo", "1,2 Go" */
-function formatSize(bytes: number): string {
-  return bytes >= 1e9 ? `${formatNumber(bytes / 1e9, 1)} Go` : `${formatNumber(Math.max(bytes, 0) / 1e6)} Mo`
-}
+const formatSize = formatBytes
 
 /** « Hors ligne » (Projet tab): estimate, download and list of the offline tile packs. */
 export function OfflinePanel() {
+  const t = useT()
   const id = useId()
   const tracks = useAppStore((s) => s.tracks)
   const bounds = useAppStore((s) => s.bounds)
@@ -54,19 +55,19 @@ export function OfflinePanel() {
 
   const prepare = async () => {
     if (!plan) return
-    const name = tracks.length === 1 ? tracks[0].name : `${tracks[0].name} et ${tracks.length - 1} autre(s)`
+    const name = tracks.length === 1 ? tracks[0].name : t('offline.panel.packName', { name: tracks[0].name, count: tracks.length - 1 })
     try {
       const result = await preparePack({ plan, name, terrain, imagery: imageryPolicy.allowed ? imagery : null, corridorM })
       if (result.state === 'done') {
         showToast(
           result.failed > 0
-            ? { kind: 'error', text: `Hors ligne : ${formatNumber(result.failed)} tuiles en échec. Relancez pour les reprendre.` }
-            : { kind: 'success', text: `Prêt hors ligne : ${name}` },
+            ? { kind: 'error', text: t('offline.panel.failed', { count: result.failed, value: formatNumber(result.failed) }) }
+            : { kind: 'success', text: t('offline.panel.ready', { name }) },
         )
       } else if (result.state === 'limited') {
-        showToast({ kind: 'error', text: 'Limite du jour atteinte pour cette source. Relancez demain pour finir.' })
+        showToast({ kind: 'error', text: t('offline.panel.limited') })
       } else if (result.state === 'failed') {
-        showToast({ kind: 'error', text: `Préparation arrêtée. ${result.error ?? ''}` })
+        showToast({ kind: 'error', text: t('offline.panel.stopped', { error: result.error ?? '' }) })
       }
     } catch (err) {
       showToast({ kind: 'error', text: errorMessage(err) })
@@ -74,117 +75,114 @@ export function OfflinePanel() {
   }
 
   return (
-    <section className="settings offline" aria-labelledby={`${id}-title`}>
-      <p id={`${id}-title`} className="field__hint">
-        Téléchargez une fois les tuiles de la trace : la vue et l’export marchent ensuite sans connexion.
+    <section className="flex flex-col gap-3" aria-labelledby={`${id}-title`}>
+      <p id={`${id}-title`} className="type-hint">
+        {t('offline.panel.intro')}
       </p>
 
       {!canStore ? (
-        <p className="tracks__empty">Ce navigateur ne peut pas garder de tuiles (page non sécurisée, sans HTTPS).</p>
+        <p className="rounded-md bg-surface-card p-3 text-center type-hint">{t('offline.panel.noStorage')}</p>
       ) : (
         <>
-          <fieldset className="field fieldset" disabled={job !== null}>
-            <legend className="field__label">Largeur du couloir</legend>
-            <div className="segmented">
+          <fieldset className="field min-w-0" disabled={job !== null}>
+            <legend className="type-label mb-1">{t('offline.panel.corridor')}</legend>
+            <RadioGroup aria-label={t('offline.panel.corridor')} value={corridorM} onChange={(width) => setCorridorM(width)}>
               {CORRIDOR_WIDTHS_M.map((width) => (
-                <label key={width} className="segmented__option">
-                  <input
-                    type="radio"
-                    name={`${id}-corridor`}
-                    value={width}
-                    checked={corridorM === width}
-                    onChange={() => setCorridorM(width)}
-                  />
+                <Radio key={width} value={width}>
                   {width / 1000} km
-                </label>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </fieldset>
 
-          <p className="field__hint">
-            Relief : {terrain.name}
+          <p className="type-hint">
             {terrainPolicy.allowed
               ? terrainPolicy.personalUse
-                ? ` — ${terrainPolicy.reason}`
-                : ''
-              : ` — non téléchargeable. ${terrainPolicy.reason}`}
+                ? t('offline.panel.terrainReason', { name: terrain.name, reason: terrainPolicy.reason })
+                : t('offline.panel.terrain', { name: terrain.name })
+              : t('offline.panel.terrainBlocked', { name: terrain.name, reason: terrainPolicy.reason })}
             <br />
-            Imagerie : {imagery.name}
             {imageryPolicy.allowed
               ? imageryPolicy.personalUse
-                ? ` — ${imageryPolicy.reason}`
-                : ''
-              : ` — non incluse, elle restera en ligne. ${imageryPolicy.reason} Pour l’inclure : IGN ou Sentinel-2 (EOX), onglet Carte.`}
+                ? t('offline.panel.imageryReason', { name: imagery.name, reason: imageryPolicy.reason })
+                : t('offline.panel.imagery', { name: imagery.name })
+              : t('offline.panel.imageryBlocked', { name: imagery.name, reason: imageryPolicy.reason })}
           </p>
 
           {plan && (
-            <p className="field__hint">
-              Estimation : {formatNumber(plan.tiles.length)} tuiles, environ {formatSize(plan.estimatedBytes)} (détail fin
-              jusqu’au niveau {plan.maxTerrainZoom}, pour une vidéo 1080p).
-              {imageryPolicy.allowed && imageryLevel.note && ` ${imageryLevel.note}`}
-              {tooBig && ' Trop de tuiles : choisissez un couloir plus étroit.'}
+            <p className="type-hint">
+              {[
+                t('offline.panel.estimate', { tiles: formatNumber(plan.tiles.length), size: formatSize(plan.estimatedBytes), zoom: plan.maxTerrainZoom }),
+                imageryPolicy.allowed && imageryLevel.note,
+                tooBig && t('offline.panel.tooBig'),
+              ]
+                .filter(Boolean)
+                .join(' ')}
             </p>
           )}
 
           {job ? (
             <div className="field">
-              <progress className="export__progress" value={job.progress.done} max={Math.max(1, job.progress.total)} />
-              <p className="field__hint">
-                {formatNumber(job.progress.done)} / {formatNumber(job.progress.total)} tuiles · {formatSize(job.progress.bytes)}
-                {job.progress.state === 'paused' ? ' · en pause' : ''}
+              <progress className="h-2.5 w-full accent-brand" value={job.progress.done} max={Math.max(1, job.progress.total)} />
+              <p className="type-hint">
+                {t(job.progress.state === 'paused' ? 'offline.panel.progressPaused' : 'offline.panel.progress', {
+                  done: formatNumber(job.progress.done),
+                  total: formatNumber(job.progress.total),
+                  size: formatSize(job.progress.bytes),
+                })}
               </p>
-              <div className="project__row">
+              <div className="grid grid-cols-2 gap-2">
                 {job.progress.state === 'paused' ? (
-                  <button type="button" className="btn btn--secondary" onClick={resumePack}>
-                    Reprendre
-                  </button>
+                  <Button block onClick={resumePack}>
+                    {t('offline.panel.resume')}
+                  </Button>
                 ) : (
-                  <button type="button" className="btn btn--secondary" onClick={pausePack}>
-                    Pause
-                  </button>
+                  <Button block onClick={pausePack}>
+                    {t('offline.panel.pause')}
+                  </Button>
                 )}
-                <button type="button" className="btn btn--secondary" onClick={cancelPack}>
-                  Annuler
-                </button>
+                <Button block onClick={cancelPack}>
+                  {t('common.cancel')}
+                </Button>
               </div>
             </div>
           ) : (
-            <button type="button" className="btn btn--primary" onClick={() => void prepare()} disabled={!plan || tooBig}>
-              Préparer hors ligne
-            </button>
+            <Button variant="primary" onClick={() => void prepare()} disabled={!plan || tooBig}>
+              {t('offline.panel.prepare')}
+            </Button>
           )}
 
           {packs.length > 0 && (
-            <ul className="offline__packs">
+            <ul className="grid gap-2">
               {packs.map((pack) => (
-                <li key={pack.id} className="project__row">
-                  <span>
-                    {pack.name}
-                    <br />
-                    <span className="field__hint">
-                      {new Date(pack.createdAt).toLocaleDateString('fr-FR')} · {formatNumber(pack.tiles)} tuiles ·{' '}
-                      {formatSize(pack.bytes)}
-                      {pack.complete ? '' : ' · incomplet'}
+                <li key={pack.id} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="type-label block break-words">{pack.name}</span>
+                    <span className="type-hint block">
+                      {t(pack.complete ? 'offline.panel.pack' : 'offline.panel.packIncomplete', {
+                        date: formatDate(pack.createdAt, { year: 'numeric', month: 'numeric', day: 'numeric' }),
+                        tiles: formatNumber(pack.tiles),
+                        size: formatSize(pack.bytes),
+                      })}
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    className="btn btn--secondary"
+                  <Button
+                    className="flex-none"
                     onClick={() => void deletePack(pack.id)}
                     disabled={job?.packId === pack.id}
                   >
-                    Supprimer
-                  </button>
+                    {t('common.delete')}
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
           {packs.some((p) => !p.complete) && (
-            <p className="field__hint">Un pack incomplet se termine en relançant « Préparer hors ligne » avec la même trace et les mêmes réglages.</p>
+            <p className="type-hint">{t('offline.panel.incompleteHint')}</p>
           )}
           {usage && usage.quotaBytes > 0 && (
-            <p className="field__hint">
-              Espace utilisé par le site : {formatSize(usage.usedBytes)} sur {formatSize(usage.quotaBytes)} permis par le navigateur.
+            <p className="type-hint">
+              {t('offline.panel.usage', { used: formatSize(usage.usedBytes), quota: formatSize(usage.quotaBytes) })}
             </p>
           )}
         </>

@@ -217,9 +217,40 @@ describe('serializeProject / parseProject', () => {
     const settings = d.settings as Record<string, unknown>
     const race = { enabled: false, sync: 'elapsed', sequence: true, stageCards: false, stageTransition: 'fondu-blanc', camera: 'ensemble' }
     settings.race = race
-    expect(parseProject(JSON.stringify(d)).settings.race).toEqual(race)
+    // saved before the junctions: the transition and the cards of its stages become the film's default junction
+    const loaded = parseProject(JSON.stringify(d)).settings
+    expect(loaded.race).toEqual({ enabled: false, sync: 'elapsed', sequence: true, camera: 'ensemble' })
+    expect(loaded.film.junctionDefault).toEqual({ kind: 'fondu-blanc', holdS: 1.5, card: false })
     expect(sanitizeSettings({ race: { ...race, stageTransition: 'enchaine' } }).invalid).toEqual(['race'])
     expect(sanitizeSettings({ race: { ...race, camera: 'drone' } }).invalid).toEqual(['race'])
+    // the order of the stages is saved with the project; a project without it keeps the list order
+    const ordered = { ...SETTINGS, race: { ...SETTINGS.race, sequence: true, order: ['b', 'a'] } }
+    expect(parseProject(serializeProject({ ...STATE, settings: ordered }, 'x')).settings.race.order).toEqual(['b', 'a'])
+    expect(sanitizeSettings({ race: { ...race, order: [1] } }).invalid).toEqual(['race'])
+    expect(sanitizeSettings({ race: { enabled: false, sync: 'elapsed', sequence: true } }).settings.race).not.toHaveProperty('order')
+    // the flight time of a stage is saved with the film; a project without any, or with one out of range, is the film as ever
+    const timed = { ...SETTINGS, film: { ...SETTINGS.film, stageDurations: { a: 42.5 } } }
+    expect(parseProject(serializeProject({ ...STATE, settings: timed }, 'x')).settings.film.stageDurations).toEqual({ a: 42.5 })
+    expect(parseProject(serializeProject(STATE, 'x')).settings.film).not.toHaveProperty('stageDurations')
+    expect(sanitizeSettings({ film: { ...SETTINGS.film, stageDurations: { a: 2 } } }).invalid).toEqual(['film'])
+  })
+
+  it('migrates the transition of « À la suite » into the film’s default junction, once', () => {
+    const migrated = (race: object, film?: object) => sanitizeSettings({ race: { enabled: false, sync: 'elapsed', sequence: true, ...race }, ...(film && { film }) }).settings
+    // a cut holds nothing, a fade the default hold; absent = the default (no junction default to store)
+    expect(migrated({ stageTransition: 'coupe' }).film.junctionDefault).toEqual({ kind: 'coupe', holdS: 0, card: true })
+    expect(migrated({ stageTransition: 'fondu-noir' }).film.junctionDefault).toEqual({ kind: 'fondu-noir', holdS: 1.5, card: true })
+    expect(migrated({ stageCards: false }).film.junctionDefault).toEqual({ kind: 'fondu-noir', holdS: 1.5, card: false })
+    expect(migrated({}).film.junctionDefault).toBeUndefined()
+    // a film that already chose keeps its choice; the old fields are dropped either way
+    const chosen = { ...DEFAULT_SETTINGS.film, junctionDefault: { kind: 'nuit', holdS: 2, card: true } }
+    const both = migrated({ stageTransition: 'coupe' }, chosen)
+    expect(both.film.junctionDefault).toEqual({ kind: 'nuit', holdS: 2, card: true })
+    expect(both.race).not.toHaveProperty('stageTransition')
+    // junctions of a film are loaded as saved, invalid ones refuse the film
+    const own = { ...DEFAULT_SETTINGS.film, junctions: [{ id: 'junction-a', afterTrackId: 'a', kind: 'fondu-blanc', holdS: 3 }] }
+    expect(sanitizeSettings({ film: own }).settings.film.junctions).toEqual(own.junctions)
+    expect(sanitizeSettings({ film: { ...own, junctions: [{ ...own.junctions[0], holdS: 99 }] } }).invalid).toEqual(['film'])
   })
 
   it('loads the fixed video formats of older projects as aspect × resolution', () => {
@@ -237,6 +268,18 @@ describe('serializeProject / parseProject', () => {
     const kept = sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, hiddenIds: ['node/1'] } })
     expect(kept.settings.landmarks.hiddenIds).toEqual(['node/1'])
     expect(sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, hiddenIds: [1] } }).invalid).toEqual(['landmarks'])
+  })
+
+  it('loads the landmarks of older projects without cap or pinned ids, and rejects invalid ones', () => {
+    const { maxCount: _count, pinnedIds: _pinned, ...older } = DEFAULT_SETTINGS.landmarks
+    const { settings, invalid } = sanitizeSettings({ landmarks: older })
+    expect(invalid).toEqual([])
+    expect(settings.landmarks).toEqual({ ...older, maxCount: 40, pinnedIds: [] })
+    const kept = sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, maxCount: 20, pinnedIds: ['node/1'] } })
+    expect(kept.settings.landmarks).toMatchObject({ maxCount: 20, pinnedIds: ['node/1'] })
+    for (const bad of [{ maxCount: 0 }, { maxCount: 500 }, { maxCount: 'x' }, { pinnedIds: [1] }, { pinnedIds: 'x' }]) {
+      expect(sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, ...bad } }).invalid).toEqual(['landmarks'])
+    }
   })
 
   it('loads older projects with the manual haze setting, since removed, without a warning', () => {

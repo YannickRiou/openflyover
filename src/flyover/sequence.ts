@@ -1,5 +1,5 @@
 /**
- * « À la suite » (`settings.race.sequence`): the film flies the tracks one after the other, in list order, without
+ * « À la suite » (`settings.race.sequence`): the film flies the tracks one after the other, in list order (or `race.order`), without
  * merging them. The film runs along a sequence track (never stored), so the clock, the stops, the camera keys and the
  * landmarks work in metres along it; each track stays a stage with its own colour, name and figures, and the camera
  * flies each stage on its own path (`flyover/follow.ts`). See ARCHITECTURE.md "Several tracks".
@@ -31,6 +31,8 @@ export interface Sequence {
   stages: readonly Stage[]
   /** where a stage starts, every one but the first (metres along the sequence) */
   cutsM: readonly number[]
+  /** the stages' track ids in order: the junction k (after the stage k, at `cutsM[k]`) is keyed by the id k */
+  stageIds: readonly string[]
 }
 
 /** The tracks are flown one after the other: « À la suite » chosen (the ghost race wins when both are set), 2+ tracks. */
@@ -38,7 +40,26 @@ export function playsInSequence(race: Pick<RaceSettings, 'enabled' | 'sequence'>
   return race.sequence === true && !race.enabled && trackCount >= 2
 }
 
-/** Sequence of `tracks` in list order (at least one track). */
+/**
+ * The tracks in the order of the stages: « À la suite » `race.order` (ids that are no longer tracks are ignored, tracks
+ * it lacks come last, in list order), else the list itself. Every reader of the order of the stages goes through here.
+ */
+export function orderedTracks(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>): readonly Track[] {
+  if (!race.order || race.order.length === 0 || !playsInSequence(race, tracks.length)) return tracks
+  const byId = new Map(tracks.map((t) => [t.id, t]))
+  const out: Track[] = []
+  for (const id of race.order) {
+    const track = byId.get(id)
+    if (track) {
+      out.push(track)
+      byId.delete(id)
+    }
+  }
+  for (const track of tracks) if (byId.has(track.id)) out.push(track)
+  return out
+}
+
+/** Sequence of `tracks` in the order given (at least one track). */
 export function buildSequence(tracks: readonly Track[]): Sequence {
   const segments = tracks.flatMap((t) => t.segments)
   const first = tracks[0]
@@ -65,7 +86,7 @@ export function buildSequence(tracks: readonly Track[]): Sequence {
     startM = endM
     return stage
   })
-  return { track, stages, cutsM: stages.slice(1).map((s) => s.startM) }
+  return { track, stages, cutsM: stages.slice(1).map((s) => s.startM), stageIds: tracks.map((t) => t.id) }
 }
 
 /** Last sequence built, with the tracks it was built from. */
@@ -85,12 +106,12 @@ export function sequenceOf(tracks: readonly Track[]): Sequence {
 }
 
 /** The sequence the film flies, null unless the tracks play « À la suite ». */
-export function filmSequenceOf(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence'>): Sequence | null {
-  return playsInSequence(race, tracks.length) ? sequenceOf(tracks) : null
+export function filmSequenceOf(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>): Sequence | null {
+  return playsInSequence(race, tracks.length) ? sequenceOf(orderedTracks(tracks, race)) : null
 }
 
 /** The track the film flies: the sequence « À la suite », else the first track (undefined without tracks). */
-export function filmTrackOf(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence'>): Track | undefined {
+export function filmTrackOf(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>): Track | undefined {
   return filmSequenceOf(tracks, race)?.track ?? tracks[0]
 }
 
@@ -113,13 +134,13 @@ export function stageAt(sequence: Sequence, progress: number): { stage: Stage; p
  */
 export function trackUnderMarker(
   tracks: readonly Track[],
-  race: Pick<RaceSettings, 'enabled' | 'sequence'>,
+  race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>,
   progress: number,
 ): { track: Track; progress: number } | undefined {
   const sequence = filmSequenceOf(tracks, race)
   if (!sequence) return tracks[0] && { track: tracks[0], progress }
   const at = stageAt(sequence, progress)
-  return { track: tracks[at.stage.index], progress: at.progress }
+  return { track: orderedTracks(tracks, race)[at.stage.index], progress: at.progress }
 }
 
 type LandmarkEntry ={ inputs: (readonly Landmark[] | undefined)[]; out: Landmark[] | undefined }

@@ -7,7 +7,8 @@
  * `overlayExtras` reads what both draw beyond the track (timeline texts and photos, credits, leaderboard, dips, cards).
  */
 import type { Track } from '../core/types'
-import { DIP_DEFAULT_S, dipAlpha, transitionDipAt } from '../film/model'
+import { junctionsDipAt } from '../film/junctions'
+import { transitionDipAt } from '../film/model'
 import type { FilmMedia, TransitionDip } from '../film/model'
 import type { DrawOverlay } from '../export/capture'
 import { videoSize } from '../export/schedule'
@@ -22,7 +23,6 @@ import { useWeatherStore, weatherShown, type StageWeather } from '../weather/sto
 import type { WeatherSeries } from '../weather/series'
 import { trackPathOf } from '../flyover/path'
 import { buildRace, raceAt, raceTrackOf } from '../flyover/race'
-import type { RaceSettings } from '../flyover/race'
 import { filmSequenceOf, filmTrackOf, trackUnderMarker } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import { loadLogo } from './assets'
@@ -43,22 +43,14 @@ function leaderboardAt(progress: number): LeaderboardRow[] | undefined {
   return leaderboardRows(raceAt(race, progress), tracks)
 }
 
-/** Dip of the cut between two stages « À la suite » at the frame's time, null without one (or with a plain cut). */
-export function stageDipAt(race: Pick<RaceSettings, 'stageTransition'>, time: OverlayTime): TransitionDip | null {
-  const transition = race.stageTransition ?? 'fondu-noir'
-  if (transition === 'coupe') return null
-  const alpha = Math.max(0, ...(time.cutsS ?? []).map((cutS) => dipAlpha(time.timeS, cutS, DIP_DEFAULT_S)))
-  return alpha > 0 ? { color: transition === 'fondu-blanc' ? 'white' : 'black', alpha } : null
-}
-
 /** The stronger of two dips. */
 const strongerDip = (a: TransitionDip | null, b: TransitionDip | null) => (b && b.alpha > (a?.alpha ?? 0) ? b : a)
 
 /**
  * What the overlay draws beyond the track at film time `time` and `progress`, from the stores: the texts and photos
  * of the timeline, the credits of the sources in use (as the status bar: relief, imagery, weather and OpenStreetMap
- * once loaded), the ghost-race leaderboard, the dip of a shot transition, « À la suite » the card and the dip of
- * each stage, and the size of the film chosen for the project (the free offsets of the widgets are its pixels, whatever
+ * once loaded), the ghost-race leaderboard, the dip of a shot transition, « À la suite » the card of each stage and the
+ * dip of each junction (from the film clock: `time.junctions`), and the size of the film chosen for the project (the free offsets of the widgets are its pixels, whatever
  * the device caps it to).
  */
 export function overlayExtras(time: OverlayTime, progress: number): OverlayExtras {
@@ -69,8 +61,8 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     leaderboard: leaderboardAt(progress),
     texts: settings.film.texts,
     media: settings.film.media,
-    dip: strongerDip(transitionDipAt(settings.film, time), sequence ? stageDipAt(settings.race, time) : null),
-    stage: sequence && settings.race.stageCards !== false ? stageCardAt(sequence, time) : null,
+    dip: strongerDip(transitionDipAt(settings.film, time), sequence && time.junctions ? junctionsDipAt(time.junctions, time.timeS) : null),
+    stage: sequence ? stageCardAt(sequence, time, settings.film) : null,
     exportSize: videoSize(settings.video.aspect, settings.video.resolution, Number.POSITIVE_INFINITY),
     markerColor: leadMarkerColors(settings.marker, (trackUnderMarker(tracks, settings.race, progress)?.track ?? filmTrackOf(tracks, settings.race))?.color ?? '#FFFFFF').ball,
     credits: overlayCredits({
@@ -136,13 +128,13 @@ export function createOverlayFilmCache(): () => OverlayFilm | null {
     const nextSequence = filmSequenceOf(tracks, settings.race)
     const next = nextSequence?.track ?? tracks[0]
     if (!next) return null
-    const { series: weather, stages } = useWeatherStore.getState()
+    const { series: weather, stages, trackId } = useWeatherStore.getState()
     if (next !== track || nextSequence !== sequence || weather !== series || stages !== stageSeries || !data) {
       track = next
       sequence = nextSequence
       series = weather
       stageSeries = stages
-      data = prepareOverlayFilm(next, nextSequence, weather, stages)
+      data = prepareOverlayFilm(next, nextSequence, weather, stages, trackId)
     }
     return data
   }

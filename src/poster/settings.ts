@@ -4,6 +4,7 @@
  * style (the title belongs to the project). Pure module (no DOM, no React).
  */
 import { withDefaults } from '../core/guards'
+import { t } from '../i18n'
 import type { OverlayStyleId } from '../overlay/settings'
 
 /**
@@ -11,11 +12,11 @@ import type { OverlayStyleId } from '../overlay/settings'
  * picture for social networks.
  */
 export const POSTER_FORMATS = [
-  { id: 'a4-portrait', label: 'A4 portrait', width: 2480, height: 3508 },
-  { id: 'a4-landscape', label: 'A4 paysage', width: 3508, height: 2480 },
-  { id: 'a3-portrait', label: 'A3 portrait', width: 3508, height: 4960 },
-  { id: 'a3-landscape', label: 'A3 paysage', width: 4960, height: 3508 },
-  { id: 'square', label: 'Carré (réseaux sociaux)', width: 2160, height: 2160 },
+  { id: 'a4-portrait', get label() { return t('poster.format.a4-portrait') }, width: 2480, height: 3508 },
+  { id: 'a4-landscape', get label() { return t('poster.format.a4-landscape') }, width: 3508, height: 2480 },
+  { id: 'a3-portrait', get label() { return t('poster.format.a3-portrait') }, width: 3508, height: 4960 },
+  { id: 'a3-landscape', get label() { return t('poster.format.a3-landscape') }, width: 4960, height: 3508 },
+  { id: 'square', get label() { return t('poster.format.square') }, width: 2160, height: 2160 },
 ] as const
 export type PosterFormatId = (typeof POSTER_FORMATS)[number]['id']
 
@@ -42,7 +43,10 @@ export const POSTER_LAYOUTS: Record<PosterStyleId, PosterLayoutId> = {
 /** The 3D view of the poster: every track framed from the south (« Vue d'ensemble »), or the camera as it is now. */
 export const POSTER_VIEWS = ['overview', 'camera'] as const
 export type PosterView = (typeof POSTER_VIEWS)[number]
-export const POSTER_VIEW_LABELS: Record<PosterView, string> = { overview: "Vue d'ensemble", camera: 'Vue actuelle de la caméra' }
+export const POSTER_VIEW_LABELS: Record<PosterView, string> = {
+  get overview() { return t('poster.view.overview') },
+  get camera() { return t('poster.view.camera') },
+}
 
 /** File type of the poster and of the still image (« Image fixe »). */
 export const POSTER_TYPES = ['image/png', 'image/jpeg'] as const
@@ -52,11 +56,11 @@ export const POSTER_FIGURES = ['distance', 'ascent', 'time', 'maxAltitude', 'cli
 export type PosterFigureId = (typeof POSTER_FIGURES)[number]
 
 export const POSTER_FIGURE_LABELS: Record<PosterFigureId, string> = {
-  distance: 'Distance',
-  ascent: 'Dénivelé +',
-  time: 'Durée',
-  maxAltitude: 'Altitude max.',
-  climbs: 'Montées',
+  get distance() { return t('poster.figure.distance') },
+  get ascent() { return t('poster.figure.ascent') },
+  get time() { return t('poster.figure.time') },
+  get maxAltitude() { return t('poster.figure.maxAltitude') },
+  get climbs() { return t('poster.figure.climbs') },
 }
 
 export interface PosterSettings {

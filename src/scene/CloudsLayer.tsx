@@ -37,7 +37,7 @@ import type { MarkerTrack } from './AtmosphereLayer'
 import { shutterSubFrame, subFrameSlices } from './lens'
 import { previewCloudPass } from './renderOnDemand'
 import { useFilmClock } from './usePacing'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 
 const CLOUD_TEXTURES_URL = `${import.meta.env.BASE_URL}clouds/`
 /**

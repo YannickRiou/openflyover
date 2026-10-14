@@ -10,6 +10,7 @@ import { SHUTTER_SUBFRAMES } from '../scene/lens'
 import type { Settings } from '../state/store'
 import type { CloudQuality } from '../weather/sceneClouds'
 import type { VideoQuality } from './schedule'
+import { t } from '../i18n'
 
 export interface QualityTier {
   /** export quality of the clouds (`EXPORT_SAMPLES` slices per frame) */
@@ -25,10 +26,18 @@ export const QUALITY_TIERS: Record<VideoQuality, QualityTier> = {
 }
 
 /** Name of each quality in the UI (the badge « Imposé par Haute »). */
-export const QUALITY_NAMES: Record<VideoQuality, string> = { standard: 'Standard', high: 'Haute', max: 'Maximale' }
+export const QUALITY_NAMES: Record<VideoQuality, string> = {
+  get standard() { return t('export.quality.standard') },
+  get high() { return t('export.quality.high') },
+  get max() { return t('export.quality.max') },
+}
 
 /** Name of each clouds quality in the UI. */
-export const CLOUD_QUALITY_NAMES: Record<CloudQuality, string> = { low: 'Rapide', medium: 'Moyenne', high: 'Fine' }
+export const CLOUD_QUALITY_NAMES: Record<CloudQuality, string> = {
+  get low() { return t('export.cloudQuality.low') },
+  get medium() { return t('export.cloudQuality.medium') },
+  get high() { return t('export.cloudQuality.high') },
+}
 
 export const qualityTier = (quality: VideoQuality): QualityTier => QUALITY_TIERS[quality] ?? QUALITY_TIERS.high
 
@@ -58,10 +67,10 @@ export function presetBadge(settings: Input, knob: PresetKnob): PresetBadge | nu
   const name = QUALITY_NAMES[settings.video.quality] ?? QUALITY_NAMES.high
   if (knob === 'shutter') {
     const lowered = settings.lens.shutter > 0 && qualityTier(settings.video.quality).maxSubFrames < SHUTTER_SUBFRAMES
-    return lowered ? { kind: 'preset', text: `Imposé par ${name}` } : null
+    return lowered ? { kind: 'preset', text: t('export.preset.imposed', { name }) } : null
   }
   if (!settings.atmosphere || settings.clouds.mode === 'aucun') return null
-  return settings.clouds.quality === 'auto' ? { kind: 'preset', text: `Imposé par ${name}` } : { kind: 'custom', text: 'Personnalisé' }
+  return settings.clouds.quality === 'auto' ? { kind: 'preset', text: t('export.preset.imposed', { name }) } : { kind: 'custom', text: t('export.preset.custom') }
 }
 
 /** A row driven by the quality was set by hand: the quality selector reads « Personnalisé ». */

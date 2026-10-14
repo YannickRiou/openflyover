@@ -1,7 +1,10 @@
 import { useId, useMemo } from 'react'
 import type { ReactNode } from 'react'
+import { t, useT } from '../i18n'
+import { formatDate } from '../i18n/format'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
 import { CARD_LABELS, TITLE_CARD_ID, cardShown, isCardItem } from '../film/cards'
+import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageFlightS, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from '../film/junctions'
 import { useMediaStore } from '../film/media'
 import {
   AUDIO_DURATION_RANGE,
@@ -10,6 +13,8 @@ import {
   FADE_RANGE,
   ITEM_DURATION_RANGE,
   MEDIA_LAYOUTS,
+  NIGHT_PARTS,
+  NIGHT_PART_RANGE,
   SHOT_DURATION_RANGE,
   SHOT_STYLES,
   SHOT_TRANSITIONS,
@@ -22,6 +27,7 @@ import {
   SITUATION_HOLD_RANGE,
   SITUATION_TILT_DEFAULT_DEG,
   SITUATION_TILT_RANGE,
+  STAGE_DURATION_RANGE,
   START_HEIGHTS,
   START_HEIGHT_LABELS,
   STOP_CAMERAS,
@@ -32,12 +38,11 @@ import {
   situationTiming,
   shotSunOf,
 } from '../film/model'
-import type { Film, FilmShot, MediaLayout, MediaSync, ShotStyle, ShotSun, ShotTransition, StartHeight, StopCamera } from '../film/model'
+import type { Film, FilmShot, MediaLayout, MediaSync, ShotStyle, ShotSun, ShotTransition, StopCamera } from '../film/model'
 import { FILM_PARAMS, PARAM_SPECS, paramAt, paramBase } from '../film/paramKeys'
 import { getPlatform } from '../platform'
 import { AVATAR_SIZE_PX, fileToAvatarDataUrl } from '../scene/markerBadge'
-import { MARKER_FIGURE_CHOICES, MARKER_FIGURE_LABELS, MARKER_KIND_LABELS, MARKER_KINDS } from '../scene/markerSettings'
-import type { MarkerFigureChoice, MarkerKind } from '../scene/markerSettings'
+import { MARKER_FIGURE_CHOICES, MARKER_FIGURE_LABELS, MARKER_KIND_LABELS, MARKER_KINDS, MARKER_LABEL_MODE_LABELS, MARKER_SIZE_RANGE } from '../scene/markerSettings'
 import type { FilmParam } from '../film/paramKeys'
 import {
   addItemCamera,
@@ -66,57 +71,98 @@ import { SHOT_SUN_HOURS } from '../flyover/sun'
 
 /** Hint of each « Soleil » choice, [opening, closing]. */
 const SHOT_SUN_HINTS: Record<ShotSun, readonly [string, string]> = {
-  jour: [
-    'La vue de départ est en plein jour, puis le soleil rejoint l’heure du départ pendant le plan.',
-    'Le soleil quitte l’heure de l’arrivée pour le plein jour pendant le plan.',
-  ],
-  survol: ['Le soleil de l’heure du départ, comme le survol.', 'Le soleil de l’heure de l’arrivée, comme le survol.'],
-  accelere: [
-    `Accéléré : le soleil part de ${SHOT_SUN_HOURS} h avant le départ et ralentit jusqu’à l’heure du survol ; les ombres balaient le relief.`,
-    `Accéléré : le soleil repart de l’heure de l’arrivée et avance de ${SHOT_SUN_HOURS} h ; les ombres balaient le relief.`,
-  ],
+  get jour() {
+    return [t('inspector.shot.sunHint.day.opening'), t('inspector.shot.sunHint.day.closing')] as const
+  },
+  get survol() {
+    return [t('inspector.shot.sunHint.flyover.opening'), t('inspector.shot.sunHint.flyover.closing')] as const
+  },
+  get accelere() {
+    return [
+      t('inspector.shot.sunHint.accelerated.opening', { hours: SHOT_SUN_HOURS }),
+      t('inspector.shot.sunHint.accelerated.closing', { hours: SHOT_SUN_HOURS }),
+    ] as const
+  },
 }
 import { REGION_KIND_LABELS, candidateId, captureFraming, useRegionStore } from '../osm/region'
 import { WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
 import type { OverlayAnchor } from '../overlay/settings'
-import { disableCard, editFilm, useFilmClock, useFilmSource } from '../scene/usePacing'
+import { disableCard, editFilm, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { AnchorPicker } from './AnchorPicker'
 import { CardFields } from './CardFields'
-import { formatDegrees, formatDistance, formatNumber, formatPercent } from './format'
+import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort, formatShort } from './format'
 import { Icon } from './icons'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
+import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
+import { Button, Checkbox, ColorField, NumberField, Radio, RadioGroup, Select, Switch, TextField, Tip } from './primitives'
+
+/** The inspector's own layout strings (labels are `type-label`, hints `type-hint`): a field, a group of fields, a label and its tip, two fields side by side, a secondary button. */
+const FIELD = 'flex flex-col gap-1'
+const FIELDSET = `${FIELD} min-w-0`
+const LABEL_ROW = 'flex items-center gap-1'
+const HINT = 'type-hint tabular-nums'
+const ROW = 'grid grid-cols-2 gap-2'
+const REMOVE = 'min-h-control justify-self-start'
 
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
-  aucune: 'Aucune',
-  descente: 'Descente',
-  saut: 'Saut',
-  situation: 'Depuis la région',
-  balayage: 'Balayage',
+  get aucune() {
+    return t('inspector.shot.style.aucune')
+  },
+  get descente() {
+    return t('inspector.shot.style.descente')
+  },
+  get saut() {
+    return t('inspector.shot.style.saut')
+  },
+  get situation() {
+    return t('inspector.shot.style.situation')
+  },
+  get balayage() {
+    return t('inspector.shot.style.balayage')
+  },
 }
 const SHOT_HINTS: Record<ShotStyle, string> = {
-  aucune: 'Le film commence ou finit directement sur le survol.',
-  descente: "La caméra glisse entre la vue d'ensemble de la trace et le survol.",
-  saut: "La vue d'ensemble est tenue, puis la caméra rejoint vite le survol.",
-  situation: 'La caméra glisse entre une vue de très haut sur la région et le survol.',
-  balayage: "La vue d'ensemble tourne lentement autour de la trace, puis la caméra glisse vers le survol (à la fin : l'inverse).",
+  get aucune() {
+    return t('inspector.shot.styleHint.aucune')
+  },
+  get descente() {
+    return t('inspector.shot.styleHint.descente')
+  },
+  get saut() {
+    return t('inspector.shot.styleHint.saut')
+  },
+  get situation() {
+    return t('inspector.shot.styleHint.situation')
+  },
+  get balayage() {
+    return t('inspector.shot.styleHint.balayage')
+  },
 }
 const TRANSITION_HINTS: Record<ShotTransition, string> = {
-  enchaine: 'La caméra passe du plan au survol en un seul mouvement.',
-  coupe: 'Le plan reste fixe ; l’image passe d’un coup entre le plan et le survol.',
-  'fondu-noir': 'Le plan reste fixe ; l’image passe par le noir entre le plan et le survol.',
-  'fondu-blanc': 'Le plan reste fixe ; l’image passe par le blanc entre le plan et le survol.',
+  get enchaine() {
+    return t('inspector.shot.transitionHint.enchaine')
+  },
+  get coupe() {
+    return t('inspector.shot.transitionHint.coupe')
+  },
+  get 'fondu-noir'() {
+    return t('inspector.shot.transitionHint.fondu-noir')
+  },
+  get 'fondu-blanc'() {
+    return t('inspector.shot.transitionHint.fondu-blanc')
+  },
 }
 
 /** Titled group of fields of a shot (« Lieu », « Durées », « Cadrage » of a 'situation' shot; « Soleil »). */
 function InspectorGroup({ title, children }: { title: string; children: ReactNode }) {
   const id = useId()
   return (
-    <section className="film-inspector__group" aria-labelledby={id}>
-      <h3 id={id} className="film-inspector__group-title">
+    <section className="flex flex-col gap-3 border-t border-edge pt-3" aria-labelledby={id}>
+      <h3 id={id} className="type-hint font-semibold tracking-wider uppercase">
         {title}
       </h3>
       {children}
@@ -140,6 +186,7 @@ function SituationTimings({
   holdS: number | undefined
   onChange(patch: { durationS: number; holdS: number | undefined }): void
 }) {
+  const t = useT()
   const timing = situationTiming({ durationS, holdS })
   const max = SHOT_DURATION_RANGE.max
   const set = (hold: number, move: number) => {
@@ -148,9 +195,9 @@ function SituationTimings({
     onChange({ durationS: kept + moveS, holdS: kept > 0 ? kept : undefined })
   }
   return (
-    <InspectorGroup title="Durées">
+    <InspectorGroup title={t('inspector.timings.title')}>
       <RangeField
-        label="Maintien"
+        label={t('inspector.timings.hold')}
         {...SITUATION_HOLD_RANGE}
         value={timing.holdS}
         format={seconds}
@@ -158,12 +205,12 @@ function SituationTimings({
         wide={false}
         tip={
           phase === 'opening'
-            ? 'Temps passé immobile sur la vue de la région, région en pleine lumière, avant la plongée.'
-            : 'Temps passé immobile sur la vue de la région à la fin du film.'
+            ? t('inspector.timings.holdTipOpening')
+            : t('inspector.timings.holdTipClosing')
         }
       />
       <RangeField
-        label={phase === 'opening' ? 'Plongée' : 'Remontée'}
+        label={phase === 'opening' ? t('inspector.timings.moveOpening') : t('inspector.timings.moveClosing')}
         {...SHOT_DURATION_RANGE}
         value={timing.moveS}
         format={seconds}
@@ -171,11 +218,11 @@ function SituationTimings({
         wide={false}
         tip={
           phase === 'opening'
-            ? 'Durée du mouvement de la vue de la région jusqu’au survol ; la mise en avant s’efface pendant ce temps.'
-            : 'Durée du mouvement du survol jusqu’à la vue de la région ; la mise en avant apparaît pendant ce temps.'
+            ? t('inspector.timings.moveTipOpening')
+            : t('inspector.timings.moveTipClosing')
         }
       />
-      <p className="field__hint">Durée du plan : {seconds(durationS)}</p>
+      <p className={HINT}>{t('inspector.timings.shotDuration', { duration: seconds(durationS) })}</p>
     </InspectorGroup>
   )
 }
@@ -194,95 +241,91 @@ function SituationFramingFields({
   shot: FilmShot
   onChange(patch: Partial<FilmShot>): void
 }) {
+  const t = useT()
   const id = useId()
   const heading = shot.heading ?? 'libre'
   const capture = () => {
     const framing = captureFraming(shot.highlight === true)
-    if (!framing) return void showToast({ kind: 'error', text: 'Vue 3D indisponible : rien à capturer.' })
+    if (!framing) return void showToast({ kind: 'error', text: t('inspector.framing.unavailable') })
     onChange({ ...framing, heading: 'boussole' })
-    showToast({ kind: 'success', text: 'Cadrage repris de la vue 3D' })
+    showToast({ kind: 'success', text: t('inspector.framing.captured') })
   }
   return (
-    <InspectorGroup title="Cadrage">
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-height`}>
-          {phase === 'opening' ? 'Hauteur de départ' : 'Hauteur de fin'}
+    <InspectorGroup title={t('inspector.framing.title')}>
+      <div className={FIELD}>
+        <label className="type-label" htmlFor={`${id}-height`}>
+          {phase === 'opening' ? t('inspector.framing.startHeight') : t('inspector.framing.endHeight')}
         </label>
-        <select
+        <Select
           id={`${id}-height`}
-          className="select"
           value={shot.startHeight ?? 'region'}
           disabled={shot.distanceKm !== undefined}
-          onChange={(e) => onChange({ startHeight: e.currentTarget.value as StartHeight })}
-        >
-          {START_HEIGHTS.map((height) => (
-            <option key={height} value={height}>
-              {START_HEIGHT_LABELS[height]}
-            </option>
-          ))}
-        </select>
+          options={START_HEIGHTS.map((height) => ({ value: height, label: START_HEIGHT_LABELS[height] }))}
+          onChange={(startHeight) => onChange({ startHeight })}
+        />
       </div>
       <RangeField
-        label="Distance"
+        label={t('inspector.framing.distance')}
         min={0}
         max={SITUATION_DISTANCE_KM_RANGE.max}
         step={SITUATION_DISTANCE_KM_RANGE.step}
         value={shot.distanceKm ?? 0}
-        format={(km) => (km === 0 ? 'Auto' : `${formatNumber(km)} km`)}
+        format={(km) => (km === 0 ? t('inspector.framing.auto') : `${formatNumber(km)} km`)}
         onChange={(km) => onChange({ distanceKm: km === 0 ? undefined : Math.max(km, SITUATION_DISTANCE_KM_RANGE.min) })}
-        tip="Distance de la caméra au centre de la vue. Tout à gauche : automatique (la région entière, ou selon la hauteur de départ)."
+        tip={t('inspector.framing.distanceTip')}
       />
       <RangeField
-        label="Inclinaison"
+        label={t('inspector.framing.tilt')}
         {...SITUATION_TILT_RANGE}
         value={shot.tiltDeg ?? SITUATION_TILT_DEFAULT_DEG}
         format={formatDegrees}
         onChange={(tiltDeg) => onChange({ tiltDeg })}
         wide={false}
-        tip="Écart de la caméra par rapport à la verticale : petit, la carte vue d’au-dessus ; grand, la vue rasante."
+        tip={t('inspector.framing.tiltTip')}
       />
-      <div className="field">
-        <div className="field__label-row">
-          <span id={`${id}-heading`} className="field__label">
-            Cap
+      <div className={FIELD}>
+        <div className={LABEL_ROW}>
+          <span id={`${id}-heading`} className="type-label">
+            {t('inspector.framing.heading')}
           </span>
-          <InfoTip text="Libre : la vue de la région regarde dans le sens du survol, sans tourner pendant le mouvement. Boussole : le nord en haut, tourné de l’orientation." />
+          <InfoTip text={t('inspector.framing.headingTip')} />
         </div>
-        <div className="segmented" role="radiogroup" aria-labelledby={`${id}-heading`}>
+        <RadioGroup aria-labelledby={`${id}-heading`} value={heading} onChange={(h) => onChange({ heading: h === 'libre' ? undefined : h })}>
           {SITUATION_HEADINGS.map((h) => (
-            <label key={h} className="segmented__option">
-              <input type="radio" name={`${id}-heading`} value={h} checked={heading === h} onChange={() => onChange({ heading: h === 'libre' ? undefined : h })} />
+            <Radio key={h} value={h}>
               {SITUATION_HEADING_LABELS[h]}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </div>
       {heading === 'boussole' && (
         <RangeField
-          label="Orientation"
+          label={t('inspector.framing.bearing')}
           {...SITUATION_BEARING_RANGE}
           value={shot.bearingDeg ?? 0}
           format={formatDegrees}
           onChange={(bearingDeg) => onChange({ bearingDeg: bearingDeg === 0 ? undefined : bearingDeg })}
           wide={false}
-          tip="Direction regardée par la caméra : 0° le nord en haut, 90° l’est en haut."
+          tip={t('inspector.framing.bearingTip')}
         />
       )}
-      <SettingRow label="Marge" value={`${formatNumber(shot.headroomPct ?? 0)} %`}>
+      <SettingRow label={t('inspector.framing.headroom')} value={t('inspector.framing.headroomValue', { value: formatNumber(shot.headroomPct ?? 0) })}>
         <RangeField
-          label="Marge"
+          label={t('inspector.framing.headroom')}
           {...SITUATION_HEADROOM_RANGE}
           value={shot.headroomPct ?? 0}
-          format={(pct) => `${formatNumber(pct)} %`}
+          format={(pct) => t('inspector.framing.headroomValue', { value: formatNumber(pct) })}
           onChange={(pct) => onChange({ headroomPct: pct === 0 ? undefined : pct })}
           wide={false}
-          tip="Place laissée au-dessus du centre de la vue (titre, ciel) : le centre descend de cette part de la hauteur de l’image."
+          tip={t('inspector.framing.headroomTip')}
         />
       </SettingRow>
-      <button type="button" className="btn btn--secondary" onClick={capture} data-tip="Reprend l’inclinaison, la distance et l’orientation de la vue 3D actuelle (cap Boussole)">
-        <Icon name="crosshair" size={16} />
-        Capturer la vue actuelle
-      </button>
+      <Tip text={t('inspector.framing.captureTip')}>
+        <Button onClick={capture}>
+          <Icon name="crosshair" size={16} />
+          {t('inspector.framing.capture')}
+        </Button>
+      </Tip>
     </InspectorGroup>
   )
 }
@@ -293,6 +336,7 @@ function SituationFramingFields({
  * stays selected; the highlight then falls back to the automatic one.
  */
 function PlaceSelect({ value, onChange }: { value: string | null; onChange(regionId: string | null): void }) {
+  const t = useT()
   const id = useId()
   const candidates = useRegionStore((s) => s.candidates)
   const autoId = useRegionStore((s) => s.autoId)
@@ -300,32 +344,48 @@ function PlaceSelect({ value, onChange }: { value: string | null; onChange(regio
   const auto = candidates.find((c) => candidateId(c) === autoId)
   const known = value === null || candidates.some((c) => candidateId(c) === value)
   return (
-    <div className="field">
-      <div className="field__label-row">
-        <label className="field__label" htmlFor={id}>
-          Lieu
+    <div className={FIELD}>
+      <div className={LABEL_ROW}>
+        <label className="type-label" htmlFor={id}>
+          {t('inspector.place.label')}
         </label>
-        <InfoTip text="La zone mise en avant et cadrée : région administrative, parc, espace protégé, île ou massif qui contient toute la trace (OpenStreetMap), du plus petit au plus grand." />
+        <InfoTip text={t('inspector.place.tip')} />
       </div>
-      <select id={id} className="select" value={value ?? ''} onChange={(e) => onChange(e.currentTarget.value || null)}>
-        <option value="">{auto ? `Automatique (${auto.name})` : 'Automatique'}</option>
-        {candidates.map((c) => (
-          <option key={candidateId(c)} value={candidateId(c)}>
-            {c.name} · {REGION_KIND_LABELS[c.kind]}
-          </option>
-        ))}
-        {!known && <option value={value ?? ''}>{loading ? 'Recherche des lieux…' : 'Lieu enregistré (introuvable)'}</option>}
-      </select>
+      <Select
+        id={id}
+        value={value ?? ''}
+        options={[
+          { value: '', label: auto ? t('inspector.place.autoNamed', { name: auto.name }) : t('inspector.place.auto') },
+          ...candidates.map((c) => ({ value: candidateId(c), label: `${c.name} · ${REGION_KIND_LABELS[c.kind]}` })),
+          ...(known ? [] : [{ value: value ?? '', label: loading ? t('inspector.place.searching') : t('inspector.place.missing') }]),
+        ]}
+        onChange={(next) => onChange(next || null)}
+      />
     </div>
   )
 }
 const STOP_CAMERA_HINTS: Record<StopCamera, string> = {
-  film: 'La caméra du survol continue, sans mouvement ajouté.',
-  orbite: 'La caméra tourne lentement autour du point, puis revient.',
-  large: 'La caméra recule et monte pour une vue large, puis revient.',
-  fixe: 'Le cadrage reste immobile pendant l’arrêt.',
+  get film() {
+    return t('inspector.holdCamera.film')
+  },
+  get orbite() {
+    return t('inspector.holdCamera.orbite')
+  },
+  get large() {
+    return t('inspector.holdCamera.large')
+  },
+  get fixe() {
+    return t('inspector.holdCamera.fixe')
+  },
 }
-const LAYOUT_LABELS: Record<MediaLayout, string> = { 'plein-ecran': 'Plein écran', carte: 'Carte' }
+const LAYOUT_LABELS: Record<MediaLayout, string> = {
+  get 'plein-ecran'() {
+    return t('inspector.layout.plein-ecran')
+  },
+  get carte() {
+    return t('inspector.layout.carte')
+  },
+}
 const SIZE_RANGE = { min: WIDGET_SIZE_MIN, max: WIDGET_SIZE_MAX, step: 0.1 }
 /** Quick choices of a speed portion, and its slider in powers of two (×0,25 to ×4). */
 const SPEED_CHIPS = [0.25, 0.5, 1.5, 2, 3, 4]
@@ -343,14 +403,18 @@ const FADE_SLIDER = { min: FADE_RANGE.min, max: 10, step: FADE_RANGE.step }
  * speed portion, text, photo or video. Typing is merged into one undo step; editing a generated stop writes the stops out first.
  */
 export function FilmInspector() {
+  const t = useT()
   const id = useId()
   const pictures = useMediaStore((s) => s.table)
   const item = useAppStore((s) => s.filmSelection)
-  const { track, film, pacing } = useFilmSource()
+  const { track, film, pacing, stageIds } = useFilmSource()
+  const sequence = useFilmSequence()
   const clock = useFilmClock()
   const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
+  const marker = useAppStore((s) => s.settings.marker)
   const overlay = useAppStore((s) => s.settings.overlay)
+  const tracks = useAppStore((s) => s.tracks)
   if (!item || !track || !path) return null
   const lengthM = track.stats.distanceM
   const change = (fn: (f: Film) => Film, stops: boolean) => editFilm((f) => ({ film: fn(f) }), { stops, step: false })
@@ -365,144 +429,109 @@ export function FilmInspector() {
     disabled = false,
   ) => <RangeField key={key} label={label} {...r} value={value} format={format} onChange={set} disabled={disabled} wide={false} />
   const text = (key: string, label: string, value: string, set: (v: string) => void) => (
-    <div className="field">
-      <label className="field__label" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
-      <input id={`${id}-${key}`} className="input" type="text" value={value} onChange={(e) => set(e.currentTarget.value)} />
-    </div>
+    <TextField id={`${id}-${key}`} label={label} value={value} onChange={set} />
   )
   const number = (key: string, label: string, value: number, min: number, max: number, set: (v: number) => void) => (
-    <div className="field">
-      <label className="field__label" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
-      <input
-        id={`${id}-${key}`}
-        className="input"
-        type="number"
-        min={min}
-        max={max}
-        step={0.1}
-        value={value}
-        onChange={(e) => {
-          const v = e.currentTarget.valueAsNumber
-          if (Number.isFinite(v)) set(v)
-        }}
-      />
-    </div>
+    <NumberField id={`${id}-${key}`} label={label} min={min} max={max} step={0.1} live value={value} onChange={set} />
   )
 
   const anchorSelect = (label: string, value: OverlayAnchor, set: (anchor: OverlayAnchor) => void) => (
     <AnchorPicker label={label} value={value} onChange={set} />
   )
   const timing = (startS: number, durationS: number, set: (patch: { startS?: number; durationS?: number }) => void) => (
-    <div className="film-inspector__row">
-      {number('start', 'Début (s)', startS, 0, clock.totalTime(), (v) => set({ startS: v }))}
-      {number('length', 'Durée (s)', durationS, ITEM_DURATION_RANGE.min, ITEM_DURATION_RANGE.max, (v) => set({ durationS: v }))}
+    <div className={ROW}>
+      {number('start', t('inspector.field.start'), startS, 0, clock.totalTime(), (v) => set({ startS: v }))}
+      {number('length', t('inspector.field.length'), durationS, ITEM_DURATION_RANGE.min, ITEM_DURATION_RANGE.max, (v) => set({ durationS: v }))}
     </div>
   )
 
   /** « Attaché à » a stop of the film (generated stops are written out first), or to none */
   const attachSelect = (stopId: string | undefined) => (
-    <div className="field">
-      <label className="field__label" htmlFor={`${id}-stop`}>
-        Attaché à
+    <div className={FIELD}>
+      <label className="type-label" htmlFor={`${id}-stop`}>
+        {t('inspector.attach.label')}
       </label>
-      <select
+      <Select
         id={`${id}-stop`}
-        className="select"
         value={stopId ?? ''}
         aria-describedby={`${id}-stop-hint`}
-        onChange={(e) => {
-          const stop = clock.stops.find((s) => s.id === e.currentTarget.value) ?? null
+        options={[
+          { value: '', label: t('inspector.attach.none') },
+          ...clock.stops.map((s) => ({ value: s.id, label: `${s.label || t('film.snap.hold')} · ${formatDistance(s.atM)}` })),
+        ]}
+        onChange={(next) => {
+          const stop = clock.stops.find((s) => s.id === next) ?? null
           editFilm((f) => ({ film: attachToStop(f, item, stop) }), { stops: stop !== null })
         }}
-      >
-        <option value="">Aucun arrêt</option>
-        {clock.stops.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.label || 'Arrêt'} · {formatDistance(s.atM)}
-          </option>
-        ))}
-      </select>
-      <p id={`${id}-stop-hint`} className="field__hint">
-        {stopId ? 'Suit l’arrêt quand il se déplace ; redevient libre si l’arrêt est supprimé.' : 'Attaché, il suit l’arrêt quand on le déplace.'}
+      />
+      <p id={`${id}-stop-hint`} className={HINT}>
+        {stopId ? t('inspector.attach.hintAttached') : t('inspector.attach.hintFree')}
       </p>
     </div>
   )
 
   /** « Cadrer la caméra ici »: a camera key of its own while the item shows (`addItemCamera`), selected to adjust */
   const itemCamera = (startS: number, durationS: number) => (
-    <button
-      type="button"
-      className="btn btn--secondary"
-      data-tip="Pose une image clé au début (à régler) et une à la fin qui rend la vue d'avant"
-      onClick={() => {
-        const { camera, flyoverDurationS } = useAppStore.getState().settings
-        const easeM = cameraKeyEaseM(lengthM, flyoverDurationS)
-        editFilm((f) =>
-          addItemCamera(
-            f,
-            startS,
-            startS + durationS,
-            (t) => clock.progressAtTime(t) * lengthM,
-            // keyedCamera reads the keys in order along the track; the film keeps them in any order
-            (atM) => keyedCamera(camera, [...f.cameraKeys].sort((a, b) => a.atM - b.atM), atM, easeM),
-          ),
-        )
-      }}
-    >
-      <Icon name="locate-fixed" size={16} />
-      Cadrer la caméra pendant cet élément
-    </button>
+    <Tip text={t('inspector.itemCamera.tip')}>
+      <Button
+        onClick={() => {
+          const { camera, flyoverDurationS } = useAppStore.getState().settings
+          const easeM = cameraKeyEaseM(lengthM, flyoverDurationS)
+          editFilm((f) =>
+            addItemCamera(
+              f,
+              startS,
+              startS + durationS,
+              (timeS) => clock.progressAtTime(timeS) * lengthM,
+              // keyedCamera reads the keys in order along the track; the film keeps them in any order
+              (atM) => keyedCamera(camera, [...f.cameraKeys].sort((a, b) => a.atM - b.atM), atM, easeM),
+            ),
+          )
+        }}
+      >
+        <Icon name="locate-fixed" size={16} />
+        {t('inspector.itemCamera.label')}
+      </Button>
+    </Tip>
   )
 
   let title: string
   let body: ReactNode
-  let removeLabel = 'Supprimer'
+  let removeLabel = t('inspector.remove')
   let removable = true
   let isStop = false
   if (item === 'opening' || item === 'closing') {
     const shot = film[item]
-    title = item === 'opening' ? 'Ouverture' : 'Clôture'
-    removeLabel = 'Sans plan'
+    title = item === 'opening' ? t('timeline.shot.opening') : t('timeline.shot.closing')
+    removeLabel = t('inspector.noShot')
     removable = shot.style !== 'aucune'
     body = (
       <>
-        <div className="field">
-          <label className="field__label" htmlFor={`${id}-style`}>
-            Style
+        <div className={FIELD}>
+          <label className="type-label" htmlFor={`${id}-style`}>
+            {t('inspector.shot.styleLabel')}
           </label>
-          <select
+          <Select
             id={`${id}-style`}
-            className="select"
             value={shot.style}
             aria-describedby={`${id}-style-hint`}
-            onChange={(e) => change((f) => updateShot(f, item, { style: e.currentTarget.value as ShotStyle }), false)}
-          >
-            {SHOT_STYLES.map((style) => (
-              <option key={style} value={style}>
-                {SHOT_STYLE_LABELS[style]}
-              </option>
-            ))}
-          </select>
-          <p id={`${id}-style-hint`} className="field__hint">
+            options={SHOT_STYLES.map((style) => ({ value: style, label: SHOT_STYLE_LABELS[style] }))}
+            onChange={(style) => change((f) => updateShot(f, item, { style }), false)}
+          />
+          <p id={`${id}-style-hint`} className={HINT}>
             {SHOT_HINTS[shot.style]}
           </p>
         </div>
         {shot.style === 'situation' && (
           <>
-            <InspectorGroup title="Lieu">
-              <label className="checkbox checkbox--switch">
-                <input
-                  type="checkbox"
-                  checked={shot.highlight === true}
-                  aria-describedby={`${id}-highlight-hint`}
-                  onChange={(e) => change((f) => updateShot(f, item, { highlight: e.currentTarget.checked }), false)}
-                />
-                Mettre en avant la région
-              </label>
+            <InspectorGroup title={t('inspector.place.label')}>
+              <Switch
+                checked={shot.highlight === true}
+                aria-describedby={`${id}-highlight-hint`}
+                onChange={(on) => change((f) => updateShot(f, item, { highlight: on }), false)}
+              >
+                {t('inspector.place.highlight')}
+              </Switch>
               <RegionHint id={`${id}-highlight-hint`} highlight={shot.highlight === true} />
               {shot.highlight === true && (
                 <PlaceSelect value={shot.regionId ?? null} onChange={(regionId) => change((f) => setFilmPlace(f, regionId), false)} />
@@ -520,7 +549,7 @@ export function FilmInspector() {
         {shot.style !== 'situation' &&
           range(
             'duration',
-            'Durée',
+            t('inspector.shot.duration'),
             shot.durationS,
             SHOT_DURATION_RANGE,
             seconds,
@@ -528,48 +557,42 @@ export function FilmInspector() {
             shot.style === 'aucune',
           )}
         {shot.style !== 'aucune' && (
-          <InspectorGroup title="Soleil">
-            <select
-              className="select"
-              aria-label="Soleil du plan"
+          <InspectorGroup title={t('inspector.shot.sun')}>
+            <Select
+              aria-label={t('inspector.shot.sunOfShot')}
               aria-describedby={`${id}-sun-hint`}
               value={shotSunOf(shot)}
-              onChange={(e) => change((f) => updateShot(f, item, { sun: e.currentTarget.value as ShotSun, moveSun: undefined }), false)}
-            >
-              <option value="jour">Plein jour</option>
-              <option value="survol">Heure du survol</option>
-              <option value="accelere">Accéléré ({SHOT_SUN_HOURS} h)</option>
-            </select>
-            <p id={`${id}-sun-hint`} className="field__hint">
+              options={[
+                { value: 'jour', label: t('inspector.shot.sun.day') },
+                { value: 'survol', label: t('inspector.shot.sun.flyover') },
+                { value: 'accelere', label: t('inspector.shot.sun.accelerated', { hours: SHOT_SUN_HOURS }) },
+              ]}
+              onChange={(sun) => change((f) => updateShot(f, item, { sun, moveSun: undefined }), false)}
+            />
+            <p id={`${id}-sun-hint`} className={HINT}>
               {SHOT_SUN_HINTS[shotSunOf(shot)][item === 'opening' ? 0 : 1]}
-              {!atmosphere && ' Avec l’atmosphère seulement.'}
+              {!atmosphere && t('inspector.shot.sunNeedsAtmosphere')}
             </p>
           </InspectorGroup>
         )}
-        <div className="field">
-          <label className="field__label" htmlFor={`${id}-transition`}>
-            Transition
+        <div className={FIELD}>
+          <label className="type-label" htmlFor={`${id}-transition`}>
+            {t('inspector.shot.transition')}
           </label>
-          <select
+          <Select
             id={`${id}-transition`}
-            className="select"
             value={shot.transition ?? 'enchaine'}
             disabled={shot.style === 'aucune'}
             aria-describedby={`${id}-transition-hint`}
-            onChange={(e) => change((f) => updateShot(f, item, { transition: e.currentTarget.value as ShotTransition }), false)}
-          >
-            {SHOT_TRANSITIONS.map((transition) => (
-              <option key={transition} value={transition}>
-                {SHOT_TRANSITION_LABELS[transition]}
-              </option>
-            ))}
-          </select>
-          <p id={`${id}-transition-hint`} className="field__hint">
+            options={SHOT_TRANSITIONS.map((transition) => ({ value: transition, label: SHOT_TRANSITION_LABELS[transition] }))}
+            onChange={(transition) => change((f) => updateShot(f, item, { transition }), false)}
+          />
+          <p id={`${id}-transition-hint`} className={HINT}>
             {TRANSITION_HINTS[shot.transition ?? 'enchaine']}
           </p>
         </div>
         {shotDipColor(shot) &&
-          range('dip', 'Durée du fondu', shot.dipS ?? DIP_DEFAULT_S, DIP_DURATION_RANGE, seconds, (dipS) =>
+          range('dip', t('inspector.shot.dipDuration'), shot.dipS ?? DIP_DEFAULT_S, DIP_DURATION_RANGE, seconds, (dipS) =>
             change((f) => updateShot(f, item, { dipS }), false),
           )}
       </>
@@ -577,104 +600,163 @@ export function FilmInspector() {
   } else {
     const stop = clock.stops.find((s) => s.id === item)
     const speed = clock.speeds.find((s) => s.id === item)
-    const filmText = film.texts.find((t) => t.id === item)
+    const filmText = film.texts.find((x) => x.id === item)
     const media = film.media.find((m) => m.id === item)
     const music = film.audio.find((a) => a.id === item)
     const cameraKey = clock.cameraKeys.find((k) => k.id === item)
     const paramKey = clock.paramKeys.find((k) => k.id === item)
     const markerKey = clock.markerKeys.find((k) => k.id === item)
-    if (stop) {
+    const junction = clock.junctions.find((j) => j.id === item)
+    if (junction) {
+      // the transition between two stages « À la suite »: its own, or the default one until it is changed
+      const k = clock.junctions.indexOf(junction)
+      const stored = junctionOf(film, junction.afterTrackId)
+      const own = hasOwnTransition(film, junction.afterTrackId)
+      // a junction left to the default shows what passes there (a night when the tracks rest overnight)
+      const kind = own ? stored.kind : junction.kind
+      const afterIds = (stageIds ?? []).slice(0, -1)
+      const card = junctionCardOf(film, junction.afterTrackId)
+      title = t('inspector.junction.title', { n: k + 1 })
+      removeLabel = t('inspector.junction.defaultTransition')
+      removable = own
+      body = (
+        <>
+          <p className={HINT}>
+            {junction.kind !== 'coupe'
+              ? t('inspector.junction.betweenTimed', {
+                  from: sequence?.stages[k]?.track.name ?? '',
+                  to: sequence?.stages[k + 1]?.track.name ?? '',
+                  start: formatFilmTime(junction.startS, true),
+                  end: formatFilmTime(junction.endS, true),
+                })
+              : t('inspector.junction.between', { from: sequence?.stages[k]?.track.name ?? '', to: sequence?.stages[k + 1]?.track.name ?? '' })}
+          </p>
+          <JunctionTransitionFields
+            kind={kind}
+            holdS={stored.holdS || DEFAULT_JUNCTION.holdS}
+            onChange={(patch) => change((f) => withJunction(f, junction.afterTrackId, { kind, holdS: stored.holdS, ...patch }), false)}
+          />
+          {kind === 'nuit' && (
+            <>
+              {NIGHT_PARTS.map(({ key, label }) =>
+                range(`night-${key}`, label, film.nights[key], NIGHT_PART_RANGE, formatSecondsShort, (v) => change((f) => ({ ...f, nights: { ...f.nights, [key]: v } }), false)),
+              )}
+              <p className={HINT}>{t('inspector.junction.nightsHint')}</p>
+            </>
+          )}
+          <Button
+            className={REMOVE}
+            onClick={() => editFilm((f) => ({ film: applyToAllJunctions(f, afterIds, { kind, holdS: stored.holdS }) }))}
+          >
+            {t('inspector.junction.applyToAll')}
+          </Button>
+          <Checkbox
+            checked={card.enabled}
+            onChange={(on) => {
+                const enabled = on
+                editFilm((f) => ({ film: withJunctionCard(f, junction.afterTrackId, { enabled }) }))
+              }}
+          >
+            {t('inspector.junction.stageCard', { n: k + 2 })}
+          </Checkbox>
+          <Button
+            className={REMOVE}
+            onClick={() => useAppStore.getState().setFilmSelection(stageCardId(junction.afterTrackId))}
+          >
+            {t('inspector.junction.adjustCard')}
+          </Button>
+          <p className={HINT}>{t('inspector.junction.blockHint')}</p>
+        </>
+      )
+    } else if (stop) {
       isStop = true
-      title = 'Arrêt'
+      title = t('film.snap.hold')
       const set = (patch: Parameters<typeof updateStop>[2]) => change((f) => updateStop(f, item, patch), true)
       body = (
         <>
-          {text('label', 'Libellé', stop.label ?? '', (label) => set({ label }))}
-          {range('duration', 'Durée', stop.durationS, STOP_DURATION_RANGE, seconds, (durationS) => set({ durationS }))}
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-camera`}>
-              Caméra pendant l’arrêt
+          {text('label', t('inspector.hold.label'), stop.label ?? '', (label) => set({ label }))}
+          {range('duration', t('inspector.hold.duration'), stop.durationS, STOP_DURATION_RANGE, seconds, (durationS) => set({ durationS }))}
+          <div className={FIELD}>
+            <label className="type-label" htmlFor={`${id}-camera`}>
+              {t('inspector.hold.camera')}
             </label>
-            <select
+            <Select
               id={`${id}-camera`}
-              className="select"
               value={stop.camera}
               aria-describedby={`${id}-camera-hint`}
-              onChange={(e) => set({ camera: e.currentTarget.value as StopCamera })}
-            >
-              {STOP_CAMERAS.map((camera) => (
-                <option key={camera} value={camera}>
-                  {STOP_CAMERA_LABELS[camera]}
-                </option>
-              ))}
-            </select>
-            <p id={`${id}-camera-hint`} className="field__hint">
+              options={STOP_CAMERAS.map((camera) => ({ value: camera, label: STOP_CAMERA_LABELS[camera] }))}
+              onChange={(camera) => set({ camera })}
+            />
+            <p id={`${id}-camera-hint`} className={HINT}>
               {STOP_CAMERA_HINTS[stop.camera]}
             </p>
           </div>
-          <p className="field__hint">
-            À {formatDistance(stop.atM)} sur {formatDistance(lengthM)}, de {formatFilmTime(stop.startS)} à {formatFilmTime(stop.endS)}
-            {film.autoStops && ' · arrêt automatique : le retoucher fige les arrêts'}
+          <p className={HINT}>
+            {t('inspector.hold.info', { at: formatDistance(stop.atM), length: formatDistance(lengthM), start: formatFilmTime(stop.startS), end: formatFilmTime(stop.endS) })}
+            {film.autoStops && t('inspector.hold.auto')}
           </p>
         </>
       )
     } else if (speed) {
-      title = 'Vitesse'
+      title = PARAM_SPECS.speed.label
       const set = (patch: Parameters<typeof updateSpeed>[2]) => change((f) => updateSpeed(f, item, patch, lengthM), false)
       const factor = formatSpeedFactor(speed.factor)
-      const how = speed.factor > 1 ? `accéléré (${factor})` : speed.factor < 1 ? `ralenti (${factor})` : 'à vitesse normale'
+      const hintKey = speed.factor > 1 ? 'inspector.speed.hintFast' : speed.factor < 1 ? 'inspector.speed.hintSlow' : 'inspector.speed.hintNormal'
       body = (
         <>
-          <div className="field">
-            <span id={`${id}-factor-label`} className="field__label">
-              Vitesse
+          <div className={FIELD}>
+            <span id={`${id}-factor-label`} className="type-label">
+              {PARAM_SPECS.speed.label}
             </span>
-            <div className="sun-chips" role="group" aria-labelledby={`${id}-factor-label`}>
+            <RadioGroup
+              look="chips"
+              className="mt-2"
+              aria-labelledby={`${id}-factor-label`}
+              value={speed.factor}
+              onChange={(f) => editFilm((g) => ({ film: updateSpeed(g, item, { factor: f }, lengthM) }))}
+            >
               {SPEED_CHIPS.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  className="sun-chip"
-                  aria-pressed={speed.factor === f}
-                  onClick={() => editFilm((g) => ({ film: updateSpeed(g, item, { factor: f }, lengthM) }))}
-                >
+                <Radio key={f} value={f}>
                   {formatSpeedFactor(f)}
-                </button>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </div>
-          {range('factor', 'Réglage fin', Math.log2(speed.factor), SPEED_SLIDER, (v) => formatSpeedFactor(2 ** v), (v) => set({ factor: 2 ** v }))}
-          <div className="film-inspector__row">
-            {number('from', 'De (km)', km(speed.fromM), 0, km(lengthM), (v) => set({ fromM: v * 1000 }))}
-            {number('to', 'À (km)', km(speed.toM), 0, km(lengthM), (v) => set({ toM: v * 1000 }))}
+          {range('factor', t('inspector.speed.label'), Math.log2(speed.factor), SPEED_SLIDER, (v) => formatSpeedFactor(2 ** v), (v) => set({ factor: 2 ** v }))}
+          <div className={ROW}>
+            {number('from', t('inspector.field.kmFrom'), km(speed.fromM), 0, km(lengthM), (v) => set({ fromM: v * 1000 }))}
+            {number('to', t('inspector.field.kmTo'), km(speed.toM), 0, km(lengthM), (v) => set({ toM: v * 1000 }))}
           </div>
-          <p className="field__hint">
-            Survol {how} de {formatDistance(speed.fromM)} à {formatDistance(speed.toM)}, de {formatFilmTime(speed.startS)} à{' '}
-            {formatFilmTime(speed.endS)} dans le film. La vitesse change en douceur aux bords.
-            {pacing.keepDuration ? ' La durée du survol ne change pas : le reste du parcours s’adapte.' : ' La durée du film change d’autant.'}
+          <p className={HINT}>
+            {t(hintKey, {
+              factor,
+              from: formatDistance(speed.fromM),
+              to: formatDistance(speed.toM),
+              start: formatFilmTime(speed.startS),
+              end: formatFilmTime(speed.endS),
+            })}
+            {pacing.keepDuration ? t('inspector.speed.keepDuration') : t('inspector.speed.filmChanges')}
           </p>
         </>
       )
     } else if (cameraKey) {
-      title = 'Image clé'
+      title = t('film.snap.keyframe')
       const set = (patch: Parameters<typeof updateCameraKey>[2]) => change((f) => updateCameraKey(f, item, patch), false)
       // a view taken in 3D may lie beyond the slider ranges: they widen to show it
       const span = (r: { min: number; max: number; step: number }, v: number) => ({ ...r, min: Math.min(r.min, v), max: Math.max(r.max, v) })
       body = (
         <>
-          {range('distance', 'Distance', cameraKey.distance, span(CAMERA_RANGES.distance, cameraKey.distance), (v) => `×${formatNumber(v, 1)}`, (distance) => set({ distance }))}
-          {range('pitch', 'Inclinaison', cameraKey.pitchDeg, span(CAMERA_RANGES.pitchDeg, cameraKey.pitchDeg), formatDegrees, (pitchDeg) => set({ pitchDeg }))}
-          {range('heading', 'Visée', cameraKey.headingOffsetDeg, CAMERA_RANGES.headingOffsetDeg, formatDegrees, (headingOffsetDeg) => set({ headingOffsetDeg }))}
-          {number('at', 'À (km)', km(cameraKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
-          <p className="field__hint">
-            À {formatDistance(cameraKey.atM)}, {formatFilmTime(cameraKey.timeS)} dans le film : la vue cadrée en 3D, retouchable ici. La
-            caméra passe en douceur d’une image clé à la suivante ; avant la première et après la dernière, elle reprend les réglages de
-            l’onglet Survol. Pour reprendre la vue, cadrez-la puis appuyez sur ◆ au même endroit.
+          {range('distance', t('inspector.camKey.distance'), cameraKey.distance, span(CAMERA_RANGES.distance, cameraKey.distance), (v) => `×${formatNumber(v, 1)}`, (distance) => set({ distance }))}
+          {range('pitch', t('inspector.camKey.pitch'), cameraKey.pitchDeg, span(CAMERA_RANGES.pitchDeg, cameraKey.pitchDeg), formatDegrees, (pitchDeg) => set({ pitchDeg }))}
+          {range('heading', t('inspector.camKey.heading'), cameraKey.headingOffsetDeg, CAMERA_RANGES.headingOffsetDeg, formatDegrees, (headingOffsetDeg) => set({ headingOffsetDeg }))}
+          {number('at', t('inspector.field.kmAt'), km(cameraKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
+          <p className={HINT}>
+            {t('inspector.camKey.hint', { distance: formatDistance(cameraKey.atM), time: formatFilmTime(cameraKey.timeS) })}
           </p>
         </>
       )
     } else if (paramKey) {
-      title = 'Réglage'
+      title = t('film.snap.setting')
       const spec = PARAM_SPECS[paramKey.param]
       const set = (patch: Parameters<typeof updateParamKey>[2]) => change((f) => updateParamKey(f, item, patch), false)
       /** another parameter starts from what the film shows there without this key */
@@ -684,121 +766,151 @@ export function FilmInspector() {
       }
       body = (
         <>
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-param`}>
-              Réglage
+          <div className={FIELD}>
+            <label className="type-label" htmlFor={`${id}-param`}>
+              {t('inspector.paramKey.label')}
             </label>
-            <select id={`${id}-param`} className="select" value={paramKey.param} onChange={(e) => switchTo(e.currentTarget.value as FilmParam)}>
-              {FILM_PARAMS.map((param) => (
-                <option key={param} value={param}>
-                  {PARAM_SPECS[param].label}
-                </option>
-              ))}
-            </select>
+            <Select
+              id={`${id}-param`}
+              value={paramKey.param}
+              options={FILM_PARAMS.map((param) => ({ value: param, label: PARAM_SPECS[param].label }))}
+              onChange={switchTo}
+            />
           </div>
-          {range('value', 'Valeur', paramKey.value, spec, spec.format, (value) => set({ value }))}
-          {number('at', 'À (km)', km(paramKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
-          <p className="field__hint">
-            À {formatDistance(paramKey.atM)}, {formatFilmTime(paramKey.timeS)} dans le film : {spec.label.toLowerCase()} {spec.format(paramKey.value)}.
-            La valeur passe en douceur d’une clé à la suivante et reste celle de la première clé avant elle, de la dernière après elle, y
-            compris pendant les arrêts. Dès qu’une clé existe, le curseur de ce réglage dans les panneaux ne sert plus.
+          {range('value', t('inspector.paramKey.value'), paramKey.value, spec, spec.format, (value) => set({ value }))}
+          {number('at', t('inspector.field.kmAt'), km(paramKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
+          <p className={HINT}>
+            {t('inspector.paramKey.hint', {
+              distance: formatDistance(paramKey.atM),
+              time: formatFilmTime(paramKey.timeS),
+              label: spec.label.toLowerCase(),
+              value: spec.format(paramKey.value),
+            })}
             {paramKey.param === 'speed' &&
-              ` Se combine avec les portions de vitesse et les ralentissements aux temps forts.${pacing.keepDuration ? ' La durée du survol ne change pas : le reste du parcours s’adapte.' : ' La durée du film change d’autant.'}`}
-            {paramKey.param === 'sunHour' && ' Le soleil suit les clés au lieu de l’heure enregistrée de la sortie.'}
-            {!atmosphere && (paramKey.param === 'sunHour' || paramKey.param === 'exposure') && ' Sans atmosphère, ce réglage est sans effet.'}
+              `${t('inspector.paramKey.speedExtra')}${pacing.keepDuration ? t('inspector.speed.keepDuration') : t('inspector.speed.filmChanges')}`}
+            {paramKey.param === 'sunHour' && t('inspector.paramKey.sunExtra')}
+            {!atmosphere && (paramKey.param === 'sunHour' || paramKey.param === 'exposure') && t('inspector.paramKey.noAtmosphere')}
           </p>
         </>
       )
     } else if (markerKey) {
-      title = 'Marqueur'
+      title = t('timeline.lane.marker')
       const set = (patch: Parameters<typeof updateMarkerKey>[2]) => change((f) => updateMarkerKey(f, item, patch), false)
       /** a picture of its own for this look: kept in the project's media table, by id */
       const choosePicture = async () => {
         try {
-          const [file] = await getPlatform().openFiles({ filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] })
+          const [file] = await getPlatform().openFiles({ filters: [{ name: t('inspector.markerKey.imageFilter'), extensions: ['png', 'jpg', 'jpeg', 'webp'] }] })
           if (!file) return
           const data = await fileToAvatarDataUrl(file)
           const [imageId] = useMediaStore.getState().add([{ data, thumb: data, width: AVATAR_SIZE_PX, height: AVATAR_SIZE_PX, name: file.name }])
           set({ kind: 'image', imageId })
         } catch {
-          showToast({ kind: 'error', text: 'Cette image n’a pas pu être lue.' })
+          showToast({ kind: 'error', text: t('inspector.markerKey.imageError') })
         }
       }
+      /** a colour of its own for this look, '' = the track's; the picker starts from the colour in effect */
+      const colorField = (field: 'color' | 'figureColor', label: string) => (
+        <div className={FIELD}>
+          <label className="type-label" htmlFor={`${id}-marker-${field}`}>
+            {label}
+          </label>
+          <ColorField
+            id={`${id}-marker-${field}`}
+            label={label}
+            value={(markerKey[field] ?? marker[field]) || track.color}
+            onChange={(color) => set({ [field]: color })}
+          >
+            <Button disabled={markerKey[field] === ''} onClick={() => set({ [field]: '' })}>
+              {t('inspector.markerKey.trackColor')}
+            </Button>
+          </ColorField>
+        </div>
+      )
+      const inherits = markerKey.color === undefined && markerKey.figureColor === undefined && markerKey.size === undefined
       body = (
         <>
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-marker-kind`}>
-              Forme
+          <div className={FIELD}>
+            <label className="type-label" htmlFor={`${id}-marker-kind`}>
+              {t('inspector.markerKey.shape')}
             </label>
-            <select id={`${id}-marker-kind`} className="select" value={markerKey.kind} onChange={(e) => set({ kind: e.currentTarget.value as MarkerKind })}>
-              {MARKER_KINDS.map((kind) => (
-                <option key={kind} value={kind}>
-                  {MARKER_KIND_LABELS[kind]}
-                </option>
-              ))}
-            </select>
+            <Select
+              id={`${id}-marker-kind`}
+              value={markerKey.kind}
+              options={MARKER_KINDS.map((kind) => ({ value: kind, label: MARKER_KIND_LABELS[kind] }))}
+              onChange={(kind) => set({ kind })}
+            />
           </div>
           {markerKey.kind === 'figurine' && (
-            <div className="field">
-              <label className="field__label" htmlFor={`${id}-marker-figure`}>
-                Figurine
+            <div className={FIELD}>
+              <label className="type-label" htmlFor={`${id}-marker-figure`}>
+                {t('inspector.markerKey.figure')}
               </label>
-              <select
+              <Select
                 id={`${id}-marker-figure`}
-                className="select"
                 value={markerKey.figure}
-                onChange={(e) => set({ figure: e.currentTarget.value as MarkerFigureChoice })}
-              >
-                {MARKER_FIGURE_CHOICES.map((figure) => (
-                  <option key={figure} value={figure}>
-                    {MARKER_FIGURE_LABELS[figure]}
-                  </option>
-                ))}
-              </select>
+                options={MARKER_FIGURE_CHOICES.map((figure) => ({ value: figure, label: MARKER_FIGURE_LABELS[figure] }))}
+                onChange={(figure) => set({ figure })}
+              />
             </div>
           )}
           {markerKey.kind === 'image' && (
-            <div className="field">
-              <div className="field__label-row">
-                <button type="button" className="btn btn--secondary" onClick={() => void choosePicture()}>
-                  {markerKey.imageId ? 'Changer l’image' : 'Choisir une image'}
-                </button>
+            <div className={FIELD}>
+              <div className={LABEL_ROW}>
+                <Button onClick={() => void choosePicture()}>
+                  {markerKey.imageId ? t('inspector.markerKey.changeImage') : t('inspector.markerKey.chooseImage')}
+                </Button>
                 {markerKey.imageId && (
-                  <button type="button" className="btn btn--secondary" onClick={() => set({ imageId: undefined })}>
-                    Retirer
-                  </button>
+                  <Button onClick={() => set({ imageId: undefined })}>
+                    {t('inspector.markerKey.removeImage')}
+                  </Button>
                 )}
               </div>
-              <p className="field__hint">Sans image propre, le marqueur reprend celle du panneau Trace.</p>
+              <p className={HINT}>{t('inspector.markerKey.noOwnImage')}</p>
             </div>
           )}
-          {number('at', 'À (km)', km(markerKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
-          <p className="field__hint">
-            À {formatDistance(markerKey.atM)}, {formatFilmTime(markerKey.timeS)} dans le film : le marqueur prend cet aspect, en fondu sur
-            une courte portion autour de ce point (moins d’une seconde de film). Avant la première clé, il a l’aspect du panneau Trace ;
-            taille, couleurs et étiquette restent ceux du panneau.
+          {markerKey.kind === 'figurine' && colorField('figureColor', t('inspector.markerKey.discColor'))}
+          {colorField('color', markerKey.kind === 'boule' ? t('inspector.markerKey.color') : t('inspector.markerKey.edgeColor'))}
+          {range('size', t('inspector.markerKey.size'), markerKey.size ?? marker.size, MARKER_SIZE_RANGE, (v) => `×${formatShort(v)}`, (size) => set({ size }))}
+          <div className={FIELD}>
+            <Button
+              disabled={inherits}
+              onClick={() => set({ color: undefined, figureColor: undefined, size: undefined })}
+            >
+              {t('inspector.markerKey.resetLook')}
+            </Button>
+          </div>
+          {number('at', t('inspector.field.kmAt'), km(markerKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
+          <p className={HINT}>
+            {t('inspector.markerKey.hint', {
+              distance: formatDistance(markerKey.atM),
+              time: formatFilmTime(markerKey.timeS),
+              label: MARKER_LABEL_MODE_LABELS[marker.label].toLowerCase(),
+              stick: (marker.stick ? t('common.yes') : t('common.no')).toLowerCase(),
+              animation:
+                markerKey.kind === 'figurine' ? t('inspector.markerKey.hintAnimation', { animated: (marker.animated ? t('common.yes') : t('common.no')).toLowerCase() }) : '',
+            })}
           </p>
         </>
       )
     } else if (filmText) {
-      title = 'Texte'
+      title = t('film.snap.text')
       const set = (patch: Parameters<typeof updateText>[2]) => change((f) => updateText(f, item, patch), false)
       body = (
         <>
-          {text('text', 'Texte', filmText.text, (value) => set({ text: value }))}
-          {text('subtitle', 'Sous-titre', filmText.subtitle ?? '', (subtitle) => set({ subtitle: subtitle || undefined }))}
-          {anchorSelect('Position', filmText.anchor, (anchor) => set({ anchor }))}
-          {range('size', 'Taille', filmText.size, SIZE_RANGE, (v) => `×${formatNumber(v, 1)}`, (size) => set({ size }))}
+          {text('text', t('inspector.text.text'), filmText.text, (value) => set({ text: value }))}
+          {text('subtitle', t('inspector.text.subtitle'), filmText.subtitle ?? '', (subtitle) => set({ subtitle: subtitle || undefined }))}
+          {anchorSelect(t('inspector.text.position'), filmText.anchor, (anchor) => set({ anchor }))}
+          {range('size', t('inspector.text.size'), filmText.size, SIZE_RANGE, (v) => `×${formatNumber(v, 1)}`, (size) => set({ size }))}
           <FilmTextStyleFields color={filmText.color} font={filmText.font} onChange={({ color, font }) => set({ color, font })} />
           {timing(filmText.startS, filmText.durationS, set)}
           {attachSelect(filmText.stopId)}
           {itemCamera(filmText.startS, filmText.durationS)}
-          <p className="field__hint">Le texte s'affichera dans l'habillage du film.</p>
+          <p className={HINT}>{t('inspector.text.hint')}</p>
         </>
       )
     } else if (media) {
       const video = media.kind === 'video'
-      title = video ? 'Vidéo' : 'Photo'
+      title = video ? t('film.snap.video') : t('film.snap.photo')
       const set = (patch: Parameters<typeof updateMedia>[2]) => change((f) => updateMedia(f, item, patch), false)
       const picture = pictures[media.src]
       const card = media.layout === 'carte'
@@ -816,40 +928,34 @@ export function FilmInspector() {
         const syncNow = () => {
           const offsetS = media.sync?.offsetS ?? clipSyncOffsetS(path, recordedMs, lengthS)
           if (offsetS === undefined || !syncClipPlacement({ ...media, sync: { ...current, offsetS } }, path, clock, lengthS)) {
-            showToast({ kind: 'error', text: 'Vidéo filmée en dehors de la sortie : corrigez l’heure de la caméra avec le décalage.' })
+            showToast({ kind: 'error', text: t('inspector.media.sync.outside') })
             return
           }
           apply({ offsetS }, true)
-          showToast({ kind: 'success', text: 'Vidéo calée : elle passe quand le marqueur arrive là où elle a été filmée.' })
+          showToast({ kind: 'success', text: t('inspector.media.sync.done') })
         }
         const hours = current.offsetS !== 0 && current.offsetS % 3600 === 0 ? Math.abs(current.offsetS / 3600) : 0
-        const filmedAt = new Date(recordedMs + current.offsetS * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' })
+        const filmedAt = formatDate(recordedMs + current.offsetS * 1000, { dateStyle: 'short', timeStyle: 'medium' })
         return (
-          <fieldset className="field fieldset">
-            <legend className="field__label">Calage sur le parcours</legend>
-            <p className="field__hint">
-              Filmée le {filmedAt}
-              {approx && ' (heure approximative, d’après la date du fichier)'}.
-              {!timed && ' La trace n’a pas d’heures : la vidéo ne peut pas être calée.'}
-              {timed && media.sync && !placeable && ' Cette heure est en dehors de la sortie : ajustez le décalage.'}
-              {hours > 0 && ` Décalage de ${hours} h : la caméra était sans doute à l’heure locale.`}
+          <fieldset className={FIELDSET}>
+            <legend className="type-label">{t('inspector.media.sync.legend')}</legend>
+            <p className={HINT}>
+              {t('inspector.media.sync.filmedAt', { date: filmedAt })}
+              {approx && t('inspector.media.sync.approx')}.
+              {!timed && t('inspector.media.sync.noTimes')}
+              {timed && media.sync && !placeable && t('inspector.media.sync.outsideTime')}
+              {hours > 0 && t('inspector.media.sync.hoursOffset', { hours })}
             </p>
             {timed && (
               <>
-                <button type="button" className="btn btn--secondary" onClick={syncNow}>
-                  {media.sync ? 'Recaler sur le parcours' : 'Caler sur le parcours'}
-                </button>
-                {number('offset', 'Décalage de l’horloge (s)', current.offsetS, SYNC_OFFSET_RANGE.min, SYNC_OFFSET_RANGE.max, (offsetS) =>
+                <Button onClick={syncNow}>
+                  {media.sync ? t('inspector.media.sync.resync') : t('timeline.syncWithRoute')}
+                </Button>
+                {number('offset', t('inspector.media.sync.offset'), current.offsetS, SYNC_OFFSET_RANGE.min, SYNC_OFFSET_RANGE.max, (offsetS) =>
                   apply({ offsetS: Math.round(Math.min(SYNC_OFFSET_RANGE.max, Math.max(SYNC_OFFSET_RANGE.min, offsetS)) * 10) / 10 }, false),
                 )}
-                <label className="checkbox">
-                  <input type="checkbox" checked={current.follow} onChange={(e) => apply({ follow: e.currentTarget.checked }, true)} />
-                  Suivre la vitesse du survol
-                </label>
-                <p className="field__hint">
-                  Décalage positif : la vidéo passe plus tard. En suivant la vitesse du survol, l’image montre toujours l’endroit où
-                  est le marqueur (ralentis et portions de vitesse compris) ; pendant un arrêt, elle reste figée.
-                </p>
+                <Checkbox checked={current.follow} onChange={(on) => apply({ follow: on }, true)}>{t('inspector.media.sync.follow')}</Checkbox>
+                <p className={HINT}>{t('inspector.media.sync.offsetHint')}</p>
               </>
             )}
           </fieldset>
@@ -860,95 +966,156 @@ export function FilmInspector() {
         const following = media.sync?.follow === true
         const heard = media.muted === false && !following
         return (
-          <fieldset className="field fieldset">
-            <legend className="field__label">Son</legend>
-            <label className="checkbox">
-              <input type="checkbox" checked={heard} disabled={following} onChange={(e) => set({ muted: !e.currentTarget.checked })} />
-              Son de la vidéo
-            </label>
-            {range('clip-volume', 'Volume', media.volume ?? 1, VOLUME_RANGE, percent, (volume) => set({ volume }), !heard)}
-            <p className="field__hint">
+          <fieldset className={FIELDSET}>
+            <legend className="type-label">{t('inspector.media.sound.legend')}</legend>
+            <Checkbox checked={heard} disabled={following} onChange={(on) => set({ muted: !on })}>{t('inspector.media.sound.label')}</Checkbox>
+            {range('clip-volume', t('inspector.media.sound.volume'), media.volume ?? 1, VOLUME_RANGE, percent, (volume) => set({ volume }), !heard)}
+            <p className={HINT}>
               {following
-                ? 'Muette tant qu’elle suit la vitesse du survol : elle n’est pas lue à son rythme, le son serait déformé.'
-                : 'Entendu en lecture à ×1 et dans le film exporté, muet aux autres vitesses.'}
+                ? t('inspector.media.sound.mutedFollowing')
+                : t('inspector.media.sound.heard')}
             </p>
           </fieldset>
         )
       }
       body = (
         <>
-          {picture && <img className="film-inspector__thumb" src={picture.thumb} alt={picture.name ?? title} />}
-          <fieldset className="field fieldset">
-            <legend className="field__label">Affichage</legend>
-            <div className="segmented">
+          {picture && <img className="max-h-24 max-w-full justify-self-start rounded-sm" src={picture.thumb} alt={picture.name ?? title} />}
+          <fieldset className={FIELDSET}>
+            <legend className="type-label">{t('inspector.media.display')}</legend>
+            <RadioGroup aria-label={t('inspector.media.display')} value={media.layout} onChange={(layout) => set({ layout })}>
               {MEDIA_LAYOUTS.map((layout) => (
-                <label key={layout} className="segmented__option">
-                  <input type="radio" name={`${id}-layout`} value={layout} checked={media.layout === layout} onChange={() => set({ layout })} />
+                <Radio key={layout} value={layout}>
                   {LAYOUT_LABELS[layout]}
-                </label>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </fieldset>
           {!video && (
-            <label className="checkbox">
-              <input type="checkbox" checked={media.kenBurns} disabled={card} onChange={(e) => set({ kenBurns: e.currentTarget.checked })} />
-              Mouvement lent (Ken Burns)
-            </label>
+            <Checkbox checked={media.kenBurns} disabled={card} onChange={(on) => set({ kenBurns: on })}>{t('inspector.media.kenBurns')}</Checkbox>
           )}
-          {text('caption', 'Légende', media.caption ?? '', (caption) => set({ caption: caption || undefined }))}
-          {anchorSelect(card ? 'Position' : 'Position de la légende', media.anchor, (anchor) => set({ anchor }))}
-          {range('size', 'Taille', media.size, SIZE_RANGE, (v) => `×${formatNumber(v, 1)}`, (size) => set({ size }))}
+          {text('caption', t('inspector.media.caption'), media.caption ?? '', (caption) => set({ caption: caption || undefined }))}
+          {anchorSelect(card ? t('inspector.text.position') : t('inspector.media.captionPosition'), media.anchor, (anchor) => set({ anchor }))}
+          {range('size', t('inspector.text.size'), media.size, SIZE_RANGE, (v) => `×${formatNumber(v, 1)}`, (size) => set({ size }))}
           {timing(media.startS, media.durationS, set)}
           {attachSelect(media.stopId)}
           {itemCamera(media.startS, media.durationS)}
-          {video && number('in', 'Début dans la vidéo (s)', media.inS ?? 0, 0, fileS, (inS) => set({ inS: Math.min(inS, fileS) }))}
+          {video && number('in', t('inspector.media.startInVideo'), media.inS ?? 0, 0, fileS, (inS) => set({ inS: Math.min(inS, fileS) }))}
           {video && clipSound()}
           {video && picture?.recordedMs !== undefined && clipSync(picture.recordedMs, picture.recordedApprox === true, fileS)}
-          <p className="field__hint">
-            {card ? `La ${title.toLowerCase()} s’affiche encadrée, au style de l’habillage.` : `La ${title.toLowerCase()} couvre la vue 3D, en fondu.`}
-            {video && picture?.durationS !== undefined && ` Vidéo de ${formatFilmTime(fileS)} ; au-delà de sa fin, la dernière image reste affichée.`}
-
+          <p className={HINT}>
+            {card ? t('inspector.media.hintCard', { kind: title.toLowerCase() }) : t('inspector.media.hintFull', { kind: title.toLowerCase() })}
+            {video && picture?.durationS !== undefined && t('inspector.media.videoLength', { length: formatFilmTime(fileS) })}
           </p>
         </>
       )
     } else if (music) {
-      title = 'Musique'
+      title = t('film.snap.music')
       const sound = pictures[music.src]
       const fileS = sound?.durationS
       const set = (patch: Parameters<typeof updateMusic>[2]) => change((f) => updateMusic(f, item, patch, fileS), false)
       const lengthS = musicLengthS(music, fileS)
       body = (
         <>
-          {sound?.name && <p className="field__hint">{sound.name}</p>}
-          {range('volume', 'Volume', music.volume, VOLUME_RANGE, percent, (volume) => set({ volume }))}
-          {range('fade-in', 'Fondu d’entrée', Math.min(music.fadeInS, FADE_SLIDER.max), FADE_SLIDER, seconds, (fadeInS) => set({ fadeInS }))}
-          {range('fade-out', 'Fondu de sortie', Math.min(music.fadeOutS, FADE_SLIDER.max), FADE_SLIDER, seconds, (fadeOutS) => set({ fadeOutS }))}
-          <div className="film-inspector__row">
-            {number('start', 'Début (s)', music.startS, 0, clock.totalTime(), (startS) => set({ startS }))}
-            {number('length', 'Durée (s)', music.durationS, AUDIO_DURATION_RANGE.min, fileS ?? AUDIO_DURATION_RANGE.max, (durationS) => set({ durationS }))}
+          {sound?.name && <p className={HINT}>{sound.name}</p>}
+          {range('volume', t('inspector.music.volume'), music.volume, VOLUME_RANGE, percent, (volume) => set({ volume }))}
+          {range('fade-in', t('inspector.music.fadeIn'), Math.min(music.fadeInS, FADE_SLIDER.max), FADE_SLIDER, seconds, (fadeInS) => set({ fadeInS }))}
+          {range('fade-out', t('inspector.music.fadeOut'), Math.min(music.fadeOutS, FADE_SLIDER.max), FADE_SLIDER, seconds, (fadeOutS) => set({ fadeOutS }))}
+          <div className={ROW}>
+            {number('start', t('inspector.field.start'), music.startS, 0, clock.totalTime(), (startS) => set({ startS }))}
+            {number('length', t('inspector.field.length'), music.durationS, AUDIO_DURATION_RANGE.min, fileS ?? AUDIO_DURATION_RANGE.max, (durationS) => set({ durationS }))}
           </div>
-          {number('in', 'Début dans le fichier (s)', music.inS, 0, fileS ?? AUDIO_DURATION_RANGE.max, (inS) => set({ inS }))}
-          <label className="checkbox">
-            <input type="checkbox" checked={film.duckMusic} onChange={(e) => {
-                const duckMusic = e.currentTarget.checked
+          {number('in', t('inspector.music.startInFile'), music.inS, 0, fileS ?? AUDIO_DURATION_RANGE.max, (inS) => set({ inS }))}
+          <Checkbox
+            checked={film.duckMusic}
+            onChange={(on) => {
+                const duckMusic = on
                 editFilm((f) => ({ film: { ...f, duckMusic } }))
               }}
+          >
+            {t('inspector.music.duck')}
+          </Checkbox>
+          <Button className={REMOVE} onClick={() => showToast(fitFilmToMusic())}>
+            {t('inspector.music.fit')}
+          </Button>
+          <Button className={REMOVE} onClick={() => void snapFilmToMusic().then(showToast)}>
+            {t('inspector.music.snapBeat')}
+          </Button>
+          <p className={HINT}>
+            {t('inspector.music.hint', {
+              start: formatFilmTime(music.startS),
+              end: formatFilmTime(music.startS + lengthS),
+              file: fileS !== undefined ? t('inspector.music.file', { length: formatFilmTime(fileS) }) : '',
+              db: -DUCK_DB,
+              tempo: sound?.beats
+                ? sound.beats.times.length > 0
+                  ? t('inspector.music.tempo', { bpm: Math.round(sound.beats.bpm) })
+                  : t('inspector.music.tempoUncertain')
+                : '',
+            })}
+          </p>
+        </>
+      )
+    } else if (isStageItem(item) && sequence) {
+      const k = sequence.stages.findIndex((s) => s.track.id === stageTrackOf(item))
+      const stage = sequence.stages[k]
+      title = t('timeline.stage.short', { n: k + 1 })
+      const startS = k <= 0 ? clock.openingS : (clock.junctions[k - 1]?.endS ?? clock.openingS)
+      const own = film.stageDurations?.[stageTrackOf(item)]
+      removeLabel = t('inspector.stage.autoDuration')
+      removable = own !== undefined
+      body = stage && (
+        <>
+          <p className={HINT}>
+            {stage.track.name} · {formatDistance(stage.endM - stage.startM)}
+            {stage.track.stats.ascentM > 0 && t('inspector.stage.gain', { gain: formatNumber(stage.track.stats.ascentM) })}
+          </p>
+          {range(
+            'stage-duration',
+            t('inspector.stage.flightDuration'),
+            Math.round(stageFlightS(clock, k) * 10) / 10,
+            { ...STAGE_DURATION_RANGE, step: 1 },
+            (v) => formatFilmTime(v),
+            (v) => change((f) => withStageDuration(f, stage.track.id, v), false),
+          )}
+          <p className={HINT}>
+            {own === undefined
+              ? t('inspector.stage.autoHint')
+              : t('inspector.stage.fixedHint')}{' '}
+            {t('inspector.stage.dragHint')}
+          </p>
+          <label className={FIELD}>
+            <span className="type-label">{t('inspector.stage.trackColor')}</span>
+            <ColorField
+              label={t('inspector.stage.trackColor')}
+              value={tracks.find((tr) => tr.id === stage.track.id)?.color ?? stage.track.color}
+              onChange={(color) => useAppStore.getState().setTrackColor(stage.track.id, color)}
             />
-            Baisser la musique sous les vidéos
           </label>
-          <button type="button" className="btn btn--secondary film-inspector__remove" onClick={() => showToast(fitFilmToMusic())}>
-            Caler la durée du film sur la musique
-          </button>
-          <button type="button" className="btn btn--secondary film-inspector__remove" onClick={() => void snapFilmToMusic().then(showToast)}>
-            Caler sur le rythme
-          </button>
-          <p className="field__hint">
-            Jouée de {formatFilmTime(music.startS)} à {formatFilmTime(music.startS + lengthS)} dans le film
-            {fileS !== undefined && ` (fichier de ${formatFilmTime(fileS)})`}, pendant la lecture et dans le film exporté. Caler la durée
-            change la durée du survol pour que le film finisse avec la musique. Baisser la musique : toutes les musiques
-            baissent de {-DUCK_DB} dB pendant les vidéos avec du son. Caler sur le rythme : les arrêts, les titres et les débuts
-            des portions de vitesse à moins de 0,4 s d’un temps de la musique s’y posent, sur un début de mesure s’il y en a un aussi près
-            {sound?.beats && (sound.beats.times.length > 0 ? ` (≈ ${Math.round(sound.beats.bpm)} BPM)` : ' (tempo de ce fichier incertain)')}.
+          <Button
+            className={REMOVE}
+            onClick={() => useAppStore.getState().setProgress(clock.progressAtTime(startS), startS < clock.totalTime() ? startS : null)}
+          >
+            {t('inspector.stage.goToStart')}
+          </Button>
+          <p className={HINT}>{t('inspector.stage.nameHint')}</p>
+        </>
+      )
+    } else if (isStageCardItem(item) && stageIds && stageIds.length > 1) {
+      const after = stageCardAfterOf(item)
+      const k = after === null ? 0 : stageIds.indexOf(after) + 1
+      const card = junctionCardOf(film, after)
+      const window = stageCardWindow(clock, film, after)
+      title = t('inspector.stageCard.title', { n: k + 1 })
+      removeLabel = t('inspector.stageCard.remove')
+      removable = card.enabled
+      body = (
+        <>
+          <StageCardFields card={card} onChange={(patch) => change((f) => withJunctionCard(f, after, patch), false)} />
+          <p className={HINT}>
+            {window && t('inspector.stageCard.window', { start: formatFilmTime(window.startS, true), end: formatFilmTime(window.endS, true) })}
+            {t('inspector.stageCard.hint')}
+            {k === 0 && t('inspector.stageCard.first')}
           </p>
         </>
       )
@@ -958,9 +1125,8 @@ export function FilmInspector() {
       body = (
         <>
           <CardFields card={item} />
-          <p className="field__hint">
-            Glissez {item === TITLE_CARD_ID ? 'le bord droit' : 'le bord gauche'} du bloc dans la timeline pour régler sa durée. Supprimer désactive la carte : l’option du panneau
-            Habillage la rétablit avec ses réglages.
+          <p className={HINT}>
+            {item === TITLE_CARD_ID ? t('inspector.card.hintRight') : t('inspector.card.hintLeft')}
           </p>
         </>
       )
@@ -969,11 +1135,17 @@ export function FilmInspector() {
     }
   }
 
-  const remove = () => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop }))
+  const remove = () =>
+    isCardItem(item)
+      ? disableCard(item)
+      : isJunctionItem(item)
+        ? editFilm((f) => ({ film: resetJunction(f, junctionTrackOf(item)) }))
+        : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop })
 
   return (
     <section
-      className="settings film-inspector"
+      className="settings"
+      data-testid="film-inspector"
       aria-labelledby={`${id}-title`}
       onKeyDown={(e) => {
         // Escape in a field (the shell's shortcuts leave text entries alone)
@@ -983,13 +1155,15 @@ export function FilmInspector() {
       <h2 id={`${id}-title`} className="section-title settings__title">
         {title}
       </h2>
-      <button type="button" className="icon-btn settings__close" onClick={close} aria-label="Fermer l'inspecteur" data-tip="Fermer (Échap)" data-tip-align="end">
-        <Icon name="x" size={18} />
-      </button>
+      <Tip text={t('inspector.close.tip')} align="end">
+        <Button variant="icon" className="settings__close" onClick={close} aria-label={t('inspector.close.aria')}>
+          <Icon name="x" size={18} />
+        </Button>
+      </Tip>
       {body}
-      <button type="button" className="btn btn--secondary film-inspector__remove" onClick={remove} disabled={!removable}>
+      <Button className={REMOVE} onClick={remove} disabled={!removable}>
         {removeLabel}
-      </button>
+      </Button>
     </section>
   )
 }

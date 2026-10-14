@@ -8,7 +8,6 @@ import {
   isFileDrag,
   isProjectDirty,
   nextGridIndex,
-  nextTabIndex,
   DEFAULT_PREFERENCES,
   parseFoldPrefs,
   parsePreferences,
@@ -17,7 +16,6 @@ import {
   shellReducer,
   shownTabs,
   SHELL_TABS,
-  tipPlacement,
 } from './shell'
 import type { ShellState } from './shell'
 
@@ -81,18 +79,6 @@ describe('isFileDrag', () => {
     expect(isFileDrag(['Files', 'application/x-moz-file'])).toBe(true)
     expect(isFileDrag(['text/plain', 'text/uri-list'])).toBe(false)
     expect(isFileDrag(undefined)).toBe(false)
-  })
-})
-
-describe('nextTabIndex', () => {
-  it('wraps on both axes and jumps with Home / End', () => {
-    expect(nextTabIndex(0, 'ArrowUp', 5)).toBe(4)
-    expect(nextTabIndex(4, 'ArrowDown', 5)).toBe(0)
-    expect(nextTabIndex(2, 'ArrowLeft', 5)).toBe(1)
-    expect(nextTabIndex(2, 'ArrowRight', 5)).toBe(3)
-    expect(nextTabIndex(3, 'Home', 5)).toBe(0)
-    expect(nextTabIndex(1, 'End', 5)).toBe(4)
-    expect(nextTabIndex(1, 'Enter', 5)).toBeNull()
   })
 })
 
@@ -276,6 +262,13 @@ describe('parseShellPrefs', () => {
 })
 
 describe('parsePreferences', () => {
+  it('reads the language, French for anything that is not a known one', () => {
+    expect(parsePreferences('{"language":"en"}').language).toBe('en')
+    expect(parsePreferences('{"language":"de"}').language).toBe('fr')
+    expect(parsePreferences('{"language":3}').language).toBe('fr')
+    expect(parsePreferences('{}').language).toBe('fr')
+  })
+
   it('reads each preference, defaults for anything missing, unknown or malformed', () => {
     expect(parsePreferences(null)).toEqual(DEFAULT_PREFERENCES)
     expect(parsePreferences('{')).toEqual(DEFAULT_PREFERENCES)
@@ -285,8 +278,12 @@ describe('parsePreferences', () => {
       status: { ...DEFAULT_PREFERENCES.status, water: false },
       performance: { ...DEFAULT_PREFERENCES.performance, gpu: true },
       timelineClock: true,
+      timelineMagnet: true,
       appearance: DEFAULT_PREFERENCES.appearance,
+      language: 'fr',
     })
+    expect(parsePreferences('{"timelineMagnet":false}').timelineMagnet).toBe(false)
+    expect(parsePreferences('{"timelineMagnet":"non"}').timelineMagnet).toBe(true)
   })
 
   it('reads the appearance, the defaults for preferences stored before it existed', () => {
@@ -320,28 +317,5 @@ describe('dismissSheet', () => {
   it('a flick down closes from a short drag, a move back up keeps it', () => {
     expect(dismissSheet(40, 400, 1000)).toBe(true)
     expect(dismissSheet(150, 400, -800)).toBe(false)
-  })
-})
-
-describe('tipPlacement', () => {
-  // the inspector column of a 1440 px window, from 1140 px
-  const column = { left: 1140, top: 48, right: 1440, bottom: 876 }
-  const icon = (left: number, top: number) => ({ left, top, right: left + 14, bottom: top + 14 })
-
-  it('keeps a tip centred when it fits', () => {
-    expect(tipPlacement(icon(1283, 300), 200, 100, column)).toEqual({ shift: 0, above: false })
-  })
-
-  it('shifts a tip clipped by the column into it, on either side', () => {
-    // « Lieu » ⓘ near the left edge: centred, the tip would start 47 px out
-    expect(tipPlacement(icon(1186, 327), 200, 104, column)).toEqual({ shift: 55, above: false })
-    expect(tipPlacement(icon(1420, 327), 200, 104, column)).toEqual({ shift: -95, above: false })
-  })
-
-  it('puts it above without room below, and starts it at the left edge when wider than the room', () => {
-    expect(tipPlacement(icon(1283, 800), 200, 100, column).above).toBe(true)
-    // no room either way: stays below
-    expect(tipPlacement(icon(1283, 400), 200, 900, column).above).toBe(false)
-    expect(tipPlacement(icon(1283, 300), 400, 50, column).shift).toBe(1148 - (1290 - 200))
   })
 })

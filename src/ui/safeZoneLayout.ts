@@ -7,6 +7,7 @@
  */
 import type { VideoAspect } from '../export/schedule'
 import { VIDEO_ASPECTS } from '../export/schedule'
+import { t } from '../i18n'
 
 /** A rectangle in fractions of the frame, from its top left corner. */
 export interface FrameBox {
@@ -25,8 +26,8 @@ export interface SafeZoneLayout {
 
 /** EBU R 95: share of the width and height kept by each margin. */
 const TV_MARGINS = [
-  { label: 'Action 93 %', keep: 0.93 },
-  { label: 'Titres 90 %', keep: 0.9 },
+  { get label() { return t('safezones.action') }, keep: 0.93 },
+  { get label() { return t('safezones.titles') }, keep: 0.9 },
 ] as const
 
 /** Reference phone screen of the vertical feeds, pixels. */
@@ -34,9 +35,9 @@ const PHONE = { width: 1080, height: 1920 } as const
 
 /** Union of the Reels / TikTok / Shorts overlays on the phone screen, pixels (rounded up to the safest value). */
 const PHONE_INTERFACE = [
-  { label: 'Interface du haut', left: 0, top: 0, width: 1080, height: 220 },
-  { label: 'Boutons', left: 920, top: 760, width: 160, height: 720 },
-  { label: 'Légende et musique', left: 0, top: 1480, width: 1080, height: 440 },
+  { get label() { return t('safezones.top') }, left: 0, top: 0, width: 1080, height: 220 },
+  { get label() { return t('safezones.buttons') }, left: 920, top: 760, width: 160, height: 720 },
+  { get label() { return t('safezones.caption') }, left: 0, top: 1480, width: 1080, height: 440 },
 ] as const
 
 function inset(keep: number): FrameBox {

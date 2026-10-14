@@ -7,6 +7,7 @@ import { nearestOnPath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import { nextFilmId } from './model'
 import type { Film, PoiIcon } from './model'
+import { t } from '../i18n'
 
 /** Longest name kept (the 3D label shows at most its first 40 characters). */
 export const POI_NAME_MAX = 60
@@ -16,7 +17,7 @@ const roundDeg = (deg: number) => Math.round(deg * 1e6) / 1e6
 
 /** « Point d'intérêt 3 »: the name given to the next point when none is typed. */
 export function defaultPoiName(film: Film): string {
-  return `Point d'intérêt ${nextFilmId(film, 'poi').slice('poi-'.length)}`
+  return t('film.defaultPoi', { n: nextFilmId(film, 'poi').slice('poi-'.length) })
 }
 
 /** The film with a new point of interest at `at`, named `name` (trimmed; `defaultPoiName` when empty). */

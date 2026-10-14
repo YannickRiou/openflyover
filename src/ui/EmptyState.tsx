@@ -1,8 +1,21 @@
+import { useT } from '../i18n'
 import type { ProjectEntry } from '../platform'
 import { useAppStore } from '../state/store'
 import { libraryFile, useLibraryStore } from './library'
 import { chooseProjectToOpen, chooseTracksToImport, loadSample, openProject } from './projectActions'
 import { StravaImport } from './StravaImport'
+import { Button } from './primitives'
+
+/** The thumbnail of a project of the list, an empty frame for an older entry that has none. */
+const THUMB = 'library-thumb row-span-2'
+/** A project of the list: its view, then its name over its summary. */
+const PROJECT =
+  'grid w-full cursor-pointer grid-cols-[64px_minmax(0,1fr)] items-center gap-x-3 rounded-md p-2 text-left text-text-1 transition-ui ' +
+  'enabled:hover:bg-surface-card disabled:cursor-not-allowed disabled:opacity-45'
+/** « Ouvrir un projet… »: a link-like button under the actions. */
+const LINK =
+  'cursor-pointer rounded-sm px-2 py-1 text-body font-semibold text-text-1 underline underline-offset-[3px] transition-ui ' +
+  'enabled:hover:text-(--accent-hover) disabled:cursor-not-allowed disabled:opacity-45'
 
 /** Projects of « Mes projets » offered on the home screen, most recent first. */
 const RECENT_COUNT = 3
@@ -12,6 +25,7 @@ const RECENT_COUNT = 3
  * sample, open a project, and the latest projects of « Mes projets ».
  */
 export function EmptyState() {
+  const t = useT()
   const loading = useAppStore((s) => s.loading)
   // the list is read by the « Projet » tab, always mounted; the open entry (emptied of its tracks) is not offered
   const entries = useLibraryStore((s) => s.entries)
@@ -24,38 +38,38 @@ export function EmptyState() {
   }
 
   return (
-    <section className="empty" aria-labelledby="empty-title" aria-busy={loading}>
-      <div className="empty__inner">
-        <img className="empty__logo" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={64} height={64} />
-        <h2 id="empty-title" className="empty__title">
-          Votre sortie, vue du ciel
+    <section className="home-page" data-testid="empty-state" aria-labelledby="empty-title" aria-busy={loading}>
+      <div className="home-column">
+        <img className="mb-2 size-16 rounded-[14px] shadow-pop" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={64} height={64} />
+        <h2 id="empty-title" className="home-title">
+          {t('home.empty.title')}
         </h2>
-        <p className="empty__hint">Glissez une ou plusieurs traces GPX ou FIT n’importe où dans la fenêtre.</p>
-        <button type="button" className="btn btn--primary empty__primary" onClick={() => void chooseTracksToImport()} disabled={loading}>
-          {loading ? 'Import en cours…' : 'Choisir un fichier'}
-        </button>
-        <div className="empty__actions">
+        <p className="mb-3 max-w-[32ch] text-title text-text-2">{t('home.empty.hint')}</p>
+        <Button variant="primary" block className="min-h-12 text-title" onClick={() => void chooseTracksToImport()} disabled={loading}>
+          {loading ? t('home.empty.importing') : t('home.empty.chooseFile')}
+        </Button>
+        <div className="home-actions">
           <StravaImport />
-          <button type="button" className="btn btn--secondary" onClick={loadSample} disabled={loading}>
-            Essayer avec l'exemple
-          </button>
+          <Button onClick={loadSample} disabled={loading}>
+            {t('home.empty.sample')}
+          </Button>
         </div>
-        <button type="button" className="empty__link" onClick={() => void chooseProjectToOpen()} disabled={loading}>
-          Ouvrir un projet…
+        <button type="button" className={LINK} onClick={() => void chooseProjectToOpen()} disabled={loading}>
+          {t('home.empty.openProject')}
         </button>
 
         {recent.length > 0 && (
-          <section className="empty__recent" aria-labelledby="empty-recent">
-            <h3 id="empty-recent" className="empty__recent-title">
-              Récents
+          <section className="mt-6 w-full border-t border-edge pt-4 text-left" aria-labelledby="empty-recent">
+            <h3 id="empty-recent" className="mb-2 font-body text-body font-semibold text-text-2">
+              {t('home.empty.recent')}
             </h3>
-            <ul>
+            <ul className="grid gap-1">
               {recent.map((entry) => (
                 <li key={entry.id}>
-                  <button type="button" className="empty__project" onClick={() => void open(entry)} disabled={loading}>
-                    {entry.thumbnail ? <img className="library__thumb" src={entry.thumbnail} alt="" /> : <span className="library__thumb" aria-hidden="true" />}
-                    <span className="empty__project-name">{entry.name}</span>
-                    <span className="empty__project-summary">{entry.summary}</span>
+                  <button type="button" className={PROJECT} onClick={() => void open(entry)} disabled={loading}>
+                    {entry.thumbnail ? <img className={THUMB} src={entry.thumbnail} alt="" /> : <span className={THUMB} aria-hidden="true" />}
+                    <span className="truncate font-semibold">{entry.name}</span>
+                    <span className="type-hint truncate">{entry.summary}</span>
                   </button>
                 </li>
               ))}

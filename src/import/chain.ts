@@ -5,6 +5,7 @@
  */
 import type { Track } from '../core/types'
 import { buildTrack } from './stats'
+import { t } from '../i18n'
 
 /** Longest pause between two recordings of one import for which the import offers to chain them (ms). */
 export const CHAIN_OFFER_MAX_GAP_MS = 24 * 3600 * 1000
@@ -64,13 +65,11 @@ export function chainName(names: readonly string[]): string {
  * for the user below two tracks, or when two timed recordings overlap (a group outing: a ghost race, not a chain).
  */
 export function chainTracks(tracks: readonly Track[]): Track {
-  if (tracks.length < 2) throw new Error('Il faut au moins deux traces à enchaîner.')
+  if (tracks.length < 2) throw new Error(t('imports.chainError.needTwo'))
   const ordered = chainOrder(tracks)
   const overlap = ordered.every(isTimed) ? firstOverlap(ordered) : undefined
   if (overlap) {
-    throw new Error(
-      `« ${overlap[0].name} » et « ${overlap[1].name} » ont été enregistrées en même temps : impossible de les enchaîner.`,
-    )
+    throw new Error(t('imports.chainError.overlap', { a: overlap[0].name, b: overlap[1].name }))
   }
   const first = ordered[0]
   const track = buildTrack({

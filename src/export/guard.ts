@@ -10,6 +10,9 @@ import { showToast } from '../ui/toast'
 import { REPORT_KEY, collectDiagnostic, formatReport, parseReport, resultSection, showDiagnostic, withLastExport, withResult } from './diagnostic'
 import type { DiagnosticReport } from './diagnostic'
 import { isExportBusy, useExportStore } from './store'
+import { t, withLanguage } from '../i18n'
+import { formatDate } from '../i18n/format'
+import { formatNumber } from '../ui/format'
 
 export const EXPORT_RUNNING_KEY = 'openflyover.export.running'
 export const BREADCRUMB_KEY = 'openflyover.breadcrumb'
@@ -21,8 +24,9 @@ export function isExportStep(rendered: number): boolean {
   return rendered < 3 || rendered % (rendered >= 50 && rendered <= 200 ? 10 : 25) === 0
 }
 
-export const EXPORT_INTERRUPTED_TEXT =
-  'Le dernier export a été interrompu (mémoire insuffisante ou écran verrouillé). Essayez 720p, sans nuages, ou gardez l’écran allumé.'
+export function exportInterruptedText(): string {
+  return t('export.guard.interrupted')
+}
 
 export type FlagStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
@@ -166,24 +170,29 @@ export function writeBreadcrumb(event: string, storage: FlagStorage | undefined 
  * 4 en vol, file 2, 37 re-drapages, 310 Mo de tas JS, +11,0 s » (the time since `previous`)
  */
 export function describeBreadcrumb(crumb: Breadcrumb, previous?: Breadcrumb): string {
-  const time = new Date(crumb.at).toLocaleTimeString('fr-FR')
+  // a line of the diagnostic report: French whatever the language of the interface
+  return withLanguage('fr', () => describeFrenchBreadcrumb(crumb, previous))
+}
+
+function describeFrenchBreadcrumb(crumb: Breadcrumb, previous?: Breadcrumb): string {
+  const time = formatDate(crumb.at, { hour: 'numeric', minute: '2-digit', second: '2-digit' })
   const has = (n: number | undefined): n is number => n !== undefined
   const elapsedS = previous ? (crumb.at - previous.at) / 1000 : undefined
   const counts = [
     has(crumb.textures) && `${crumb.textures} tex`,
-    has(crumb.geometries) && `${crumb.geometries} géo`,
-    has(crumb.tiles) && `${crumb.tiles} tuiles${has(crumb.pending) ? ` (${crumb.pending} en attente)` : ''}`,
-    !has(crumb.tiles) && has(crumb.pending) && `${crumb.pending} en attente`,
-    has(crumb.lod) && crumb.lod !== 1 && `détail ÷${crumb.lod.toFixed(1).replace('.', ',')}`,
-    has(crumb.bitmaps) && `${crumb.bitmaps} bitmaps${has(crumb.bitmapMb) ? ` ~${crumb.bitmapMb} Mo` : ''}`,
-    has(crumb.grids) && `${crumb.grids} grilles`,
-    has(crumb.inFlight) && `${crumb.inFlight} en vol`,
-    has(crumb.queue) && `file ${crumb.queue}`,
-    has(crumb.drapes) && `${crumb.drapes} re-drapages`,
-    has(crumb.heapMb) && `${crumb.heapMb} Mo de tas JS`,
-    has(elapsedS) && `+${elapsedS.toFixed(1).replace('.', ',')} s`,
+    has(crumb.geometries) && t('export.crumb.geometries', { n: crumb.geometries }),
+    has(crumb.tiles) && (has(crumb.pending) ? t('export.crumb.tilesPending', { n: crumb.tiles, pending: crumb.pending }) : t('export.crumb.tiles', { n: crumb.tiles })),
+    !has(crumb.tiles) && has(crumb.pending) && t('export.crumb.pending', { n: crumb.pending }),
+    has(crumb.lod) && crumb.lod !== 1 && t('export.crumb.lod', { value: formatNumber(crumb.lod, 1) }),
+    has(crumb.bitmaps) && (has(crumb.bitmapMb) ? t('export.crumb.bitmapsSize', { n: crumb.bitmaps, mb: crumb.bitmapMb }) : t('export.crumb.bitmaps', { n: crumb.bitmaps })),
+    has(crumb.grids) && t('export.crumb.grids', { n: crumb.grids }),
+    has(crumb.inFlight) && t('export.crumb.inFlight', { n: crumb.inFlight }),
+    has(crumb.queue) && t('export.crumb.queue', { n: crumb.queue }),
+    has(crumb.drapes) && t('export.crumb.drapes', { n: crumb.drapes }),
+    has(crumb.heapMb) && t('export.crumb.heap', { mb: crumb.heapMb }),
+    has(elapsedS) && `+${formatNumber(elapsedS, 1)} s`,
   ].filter(Boolean)
-  return `${crumb.event} à ${time}${counts.length > 0 ? ` · ${counts.join(', ')}` : ''}`
+  return `${t('export.crumb.line', { event: crumb.event, time })}${counts.length > 0 ? ` · ${counts.join(', ')}` : ''}`
 }
 
 /** The breadcrumbs worded, each with the time since the one before. */
@@ -245,8 +254,8 @@ export function reportInterruptedExport(storage: FlagStorage | undefined = tabSt
   }
   showToast({
     kind: 'error',
-    text: EXPORT_INTERRUPTED_TEXT,
-    ...(report !== null && { action: { label: 'Détails', run: () => showDiagnostic(report) } }),
+    text: exportInterruptedText(),
+    ...(report !== null && { action: { label: t('export.guard.details'), run: () => showDiagnostic(report) } }),
   })
   return true
 }

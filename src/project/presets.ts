@@ -11,6 +11,7 @@ import { getPlatform } from '../platform'
 import type { PosterSettings } from '../poster/settings'
 import type { Settings } from '../state/store'
 import { sanitizeSettings } from './document'
+import { currentLocale, t } from '../i18n'
 
 export const PRESETS_STORAGE_KEY = 'openflyover.presets.v1'
 export const PRESET_NAME_MAX = 60
@@ -29,11 +30,11 @@ export const PRESET_SCOPES = ['tout', 'carte', 'trace', 'habillage', 'prise-de-v
 export type PresetScope = (typeof PRESET_SCOPES)[number]
 
 export const PRESET_SCOPE_LABELS: Record<PresetScope, string> = {
-  tout: 'Tous les réglages',
-  carte: 'Style de carte',
-  trace: 'Trace, marqueur et étiquettes',
-  habillage: 'Habillage',
-  'prise-de-vue': 'Prise de vue (caméra, cadrage, lumière)',
+  get tout() { return t('project.presets.scope.tout') },
+  get carte() { return t('project.presets.scope.carte') },
+  get trace() { return t('project.presets.scope.trace') },
+  get habillage() { return t('project.presets.scope.habillage') },
+  get 'prise-de-vue'() { return t('project.presets.scope.prise-de-vue') },
 }
 
 /** Settings of each family ('tout': every setting). */
@@ -117,10 +118,10 @@ export function createPresetStore(storage: StorageLike | null): PresetStore {
     }
   }
   return {
-    list: () => [...presets].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+    list: () => [...presets].sort((a, b) => a.name.localeCompare(b.name, currentLocale())),
     save(name, settings, scope = 'tout') {
       const clean = normalizePresetName(name)
-      if (!clean) throw new Error('Donnez un nom au préréglage.')
+      if (!clean) throw new Error(t('project.presets.nameRequired'))
       const preset: Preset =
         scope === 'tout'
           ? { name: clean, settings: { ...settings, film: { opening: settings.film.opening, closing: settings.film.closing }, poster: { style: settings.poster.style } } }

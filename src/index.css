@@ -1,3 +1,4 @@
+@layer base {
 *,
 *::before,
 *::after {
@@ -18,6 +19,17 @@ body {
   color: var(--color-ink, #1c2a33);
   background: var(--color-paper, #f5f2ea);
   -webkit-font-smoothing: antialiased;
+  /* an application, not a page: a drag never highlights the interface */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* what is typed stays selectable (the diagnostic report, meant to be copied, sets it too: shell.css) */
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 p {
@@ -28,4 +40,39 @@ ul {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/*
+ * Preflight (Tailwind's reset) removes what the browser's own style sheet gives. The few pieces the existing screens
+ * rely on are put back here, so the move to Tailwind changes no pixel.
+ */
+a {
+  color: -webkit-link;
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font-weight: normal;
+  font-variant: normal;
+  line-height: normal;
+}
+
+button {
+  padding: 1px 6px;
+}
+
+legend {
+  padding-inline: 2px;
+}
+
+dialog {
+  margin: auto;
+}
+
+input[type='color'] {
+  background-color: ButtonFace;
+}
 }

@@ -6,6 +6,7 @@ import type { FilmCameraKey, FilmShot, FilmStop, SituationFraming } from '../fil
 import { situationTiming } from '../film/model'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { buildTrack } from '../import/stats'
+import type { HeightSampler } from '../scene/trackLineSet'
 import { computeCameraView, MIN_GROUND_CLEARANCE_M } from './camera'
 import { DEFAULT_CAMERA, type CameraStyle } from './cameraSettings'
 import {
@@ -38,6 +39,7 @@ import {
   regionHighlightOpacity,
   regionView,
   shotBlend,
+  SHOT_GLIDE_DEG,
   shotWeight,
   situationFramingOf,
   smootherstep,
@@ -399,6 +401,53 @@ describe('computeFilmView', () => {
       // the fastest motion: the 0.6 s jump from a ~7 km overview
       expect(view.position.distanceTo(previous.position)).toBeLessThan(1000)
       previous = view
+    }
+  })
+
+  it('shots clear the relief on the way: a high ridge on the approach, never a skim over it, nor a hidden aim', () => {
+    // E-W ridge 1.2 km behind the start of the track (the camera comes in from the south over it), 2500 m above the valley
+    const ridge: HeightSampler = (lon, lat) => 1000 + 2500 * Math.exp(-(((frame.toLocal(lon, lat, 0).z - 3400) / 400) ** 2) / 2)
+    const clock = clockOf({ style: 'descente', durationS: 6 }, { style: 'descente', durationS: 6 })
+    const groundY = (p: Vector3) => {
+      const at = frame.toLonLat(p)
+      return frame.toLocal(at.lon, at.lat, ridge(at.lon, at.lat) ?? 0).y
+    }
+    const shots: [number, number][] = [[0, 6], [clock.openingS + clock.flightS, clock.totalTime()]]
+    for (const [from, to] of shots) {
+      for (let t = from + 0.6; t < to - 0.6; t += 0.1) {
+        const view = computeFilmView(path, clock, t, clock.progressAtTime(t), frame, ridge, options)
+        const d = view.position.distanceTo(view.target)
+        // above the ground under it by a share of its distance, not only by the flight's 80 m
+        expect(view.position.y - groundY(view.position)).toBeGreaterThanOrEqual(Math.min(0.05 * d, 300))
+        // and the aim is not hidden behind the ridge
+        for (let f = 0.1; f <= 0.9; f += 0.1) {
+          const p = view.position.clone().lerp(view.target, f)
+          expect(p.y - groundY(p)).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
+  it('shots never dive far from the other view: no lower than a glide slope above it', () => {
+    // a 220 km track: the overview is hundreds of km up, the flight view a few km from the start
+    const long = buildTrackPath(
+      buildTrack({ name: 'l', source: 'gpx', segments: [{ points: [{ lon: 5, lat: 45, ele: 1000 }, { lon: 7.8, lat: 45, ele: 1000 }] }] }),
+    )
+    const clock = buildFilmClock({
+      opening: { style: 'descente', durationS: 6 },
+      closing: { style: 'descente', durationS: 6 },
+      stops: [],
+      cameraKeys: [],
+      lengthM: long.lengthM,
+      highlightsM: [],
+      durationS: 60,
+      pacing: { ...DEFAULT_PACING, keepDuration: false },
+    })
+    const flight = computeFilmView(long, clock, 6, 0, frame, flat, options)
+    for (let t = 1; t <= 4.5; t += 0.25) {
+      const view = computeFilmView(long, clock, t, 0, frame, flat, options)
+      const away = Math.hypot(view.position.x - flight.position.x, view.position.z - flight.position.z)
+      expect(view.position.y - flight.position.y).toBeGreaterThanOrEqual(away * Math.tan(SHOT_GLIDE_DEG * (Math.PI / 180)) - 1e-6)
     }
   })
 

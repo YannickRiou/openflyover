@@ -17,6 +17,7 @@ import { AREA_MARGIN_M, AREA_MIN_SIZE_M, DEFAULT_ERROR_TARGET_PX, DEFAULT_SEGMEN
 import { planImagerySubtiles } from '../terrain/imagery'
 import { buildTileUrl } from '../terrain/sources'
 import { offlinePolicy } from './policy'
+import { t } from '../i18n'
 
 /** levels below the roots kept over the whole area, whatever the corridor */
 export const LANDSCAPE_LEVELS = 2
@@ -26,7 +27,7 @@ export const CORRIDOR_WIDTHS_M = [2_000, 5_000, 10_000] as const
 export const MAX_PACK_TILES = 150_000
 
 /** « Détail de l'imagerie » levels, by zoom offset */
-const IMAGERY_LEVELS = ['Normal', 'Fin', 'Très fin']
+const IMAGERY_LEVELS = ['offline.level.0', 'offline.level.1', 'offline.level.2'] as const
 
 /**
  * Imagery zoom offset of a pack: the setting, never finer than this device shows (core/deviceBudget.ts, as the view);
@@ -39,7 +40,7 @@ export function packImageryLevel(
   if (setting <= maxShown) return { zoomOffset: setting, note: null }
   return {
     zoomOffset: maxShown,
-    note: `Imagerie au niveau « ${IMAGERY_LEVELS[maxShown]} » : cet appareil n’affiche pas le niveau « ${IMAGERY_LEVELS[setting]} ».`,
+    note: t('offline.levelNote', { level: t(IMAGERY_LEVELS[maxShown]), wanted: t(IMAGERY_LEVELS[setting]) }),
   }
 }
 

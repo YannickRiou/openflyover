@@ -2,16 +2,23 @@ import { Suspense, lazy, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { VIDEO_ASPECTS } from '../export/schedule'
 import { isExportBusy, useExportStore } from '../export/store'
+import { useT } from '../i18n'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { SafeZones, useSafeZonesStore } from './SafeZones'
 import { frameRect } from './shell'
 import { withShortcut } from './shortcuts'
 import { TrackLegend } from './TrackLegend'
+import { Button, Tip } from './primitives'
 
 // the 3D scene (three.js, atmosphere, clouds, terrain) is its own chunk: the shell and the welcome card paint first
 const FlyoverCanvas = lazy(() => import('../scene/FlyoverCanvas').then((m) => ({ default: m.FlyoverCanvas })))
 const OverlayCanvas = lazy(() => import('../overlay/OverlayCanvas').then((m) => ({ default: m.OverlayCanvas })))
+
+/** Pale sky behind the transparent canvas of a view that fills the stage. */
+const SKY = 'bg-[linear-gradient(180deg,var(--color-glacier)_0%,var(--color-paper)_100%)]'
+/** A button floating over the view, at its right edge (the top is set per button). */
+const FLOAT = 'btn-float absolute right-3 z-4'
 
 /**
  * Centre of the shell: the 3D view and its overlay framed to the output format (letterbox in ink, the export
@@ -19,6 +26,7 @@ const OverlayCanvas = lazy(() => import('../overlay/OverlayCanvas').then((m) => 
  * sécurité » buttons, the welcome card and the messages (`children`) float over it.
  */
 export function Stage({ children }: { children?: ReactNode }) {
+  const t = useT()
   const aspect = useAppStore((s) => {
     // nothing to frame before the first track: the welcome card sits on the whole stage
     if (s.freeFraming || s.tracks.length === 0) return null
@@ -46,9 +54,14 @@ export function Stage({ children }: { children?: ReactNode }) {
   const rect = size && aspect !== null ? frameRect(size.width, size.height, aspect) : null
 
   return (
-    <div ref={viewport} className={aspect === null ? 'view__viewport' : 'view__viewport view__viewport--framed'} role="region" aria-label="Vue 3D">
-      {/* .view__stage keeps its name: the overlay canvas and the legend are laid out against it */}
-      <div className="view__stage" style={rect ?? undefined}>
+    <div
+      ref={viewport}
+      className={`relative min-h-0 flex-1 overflow-hidden ${aspect === null ? SKY : 'bg-chrome'} ${hasTracks ? 'phone:h-(--phone-preview-h) phone:flex-none' : ''}`}
+      role="region"
+      aria-label={t('stage.view')}
+    >
+      {/* .view__stage keeps its name: the canvases are positioned against it (app.css) and the thumbnail looks for it */}
+      <div className="view__stage absolute inset-0 overflow-hidden" style={rect ?? undefined}>
         <Suspense>
           <FlyoverCanvas />
         </Suspense>
@@ -59,30 +72,30 @@ export function Stage({ children }: { children?: ReactNode }) {
         {rect && safeZones && <SafeZones aspect={aspectId} />}
       </div>
       {hasTracks && (
-        <button
-          type="button"
-          className="icon-btn icon-btn--float view__fit"
-          onClick={() => useAppStore.getState().requestFit()}
-          disabled={exporting}
-          aria-label="Recadrer la vue"
-          data-tip={withShortcut('Recadrer la vue', 'fit')}
-          data-tip-side="left"
-        >
-          <Icon name="crosshair" />
-        </button>
+        <Tip text={withShortcut(t('stage.fit'), 'fit')} side="left">
+          <Button
+            variant="icon"
+            className={`${FLOAT} top-3`}
+            onClick={() => useAppStore.getState().requestFit()}
+            disabled={exporting}
+            aria-label={t('stage.fit')}
+          >
+            <Icon name="crosshair" />
+          </Button>
+        </Tip>
       )}
       {aspect !== null && (
-        <button
-          type="button"
-          className="icon-btn icon-btn--float view__safe-zones"
-          onClick={() => useSafeZonesStore.getState().toggle()}
-          aria-pressed={safeZones}
-          aria-label="Zones de sécurité"
-          data-tip={withShortcut('Zones de sécurité (aperçu seulement)', 'safe-zones')}
-          data-tip-side="left"
-        >
-          <Icon name="square-dashed" />
-        </button>
+        <Tip text={withShortcut(t('stage.safeZonesTip'), 'safe-zones')} side="left">
+          <Button
+            variant="icon"
+            className={`${FLOAT} top-14 touch:top-16`}
+            onClick={() => useSafeZonesStore.getState().toggle()}
+            aria-pressed={safeZones}
+            aria-label={t('stage.safeZones')}
+          >
+            <Icon name="square-dashed" />
+          </Button>
+        </Tip>
       )}
       {children}
     </div>

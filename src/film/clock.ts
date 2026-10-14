@@ -16,12 +16,14 @@ import type { Track } from '../core/types'
 import { flightNights, nightPauseS } from '../flyover/nights'
 import type { FlightNight } from '../flyover/nights'
 import { flightPacing, pacingHighlights } from '../flyover/pacing'
-import type { FlightStop, Pacing, PacingPosition, PacingSettings, SpeedCurve } from '../flyover/pacing'
+import type { FlightStage, FlightStop, Pacing, PacingPosition, PacingSettings, SpeedCurve } from '../flyover/pacing'
 import { trackPathOf } from '../flyover/path'
 import type { Landmark } from '../osm/landmarks'
 import { filmStops } from './assemble'
+import { junctionPlan, stageSpansOf } from './junctions'
+import type { JunctionInput } from './junctions'
 import { shotDurationS } from './model'
-import type { Film, FilmCameraKey, FilmShot, FilmSpeed, FilmStop } from './model'
+import type { Film, FilmCameraKey, FilmShot, FilmSpeed, FilmStop, JunctionKind } from './model'
 import { sortedParamKeys, valueAtKeys } from './paramKeys'
 import type { FilmParamKey } from './paramKeys'
 import type { FilmMarkerKey } from './markerKeys'
@@ -77,6 +79,26 @@ export interface ClockCut {
   timeS: number
 }
 
+/**
+ * A junction between two stages « À la suite » placed on the clock: the pause the film holds at the cut. `startS` to
+ * `holdStartS` is the ease in (the stage ends), `holdStartS` the film time the marker reaches the cut (the stage
+ * changes), `holdEndS` to `endS` the ease out; all four are the film time of the cut for a plain cut ('coupe').
+ */
+export interface ClockJunction {
+  id: string
+  /** the junction follows the stage of this track */
+  afterTrackId: string
+  atM: number
+  kind: JunctionKind
+  /** time added to the film (seconds): 0 for a cut; for a night, its dusk, night and dawn */
+  holdS: number
+  progress: number
+  startS: number
+  holdStartS: number
+  holdEndS: number
+  endS: number
+}
+
 /** What the film shows at a film time. */
 export interface FilmState {
   phase: FilmPhase
@@ -115,6 +137,8 @@ export interface FilmClock {
   markerKeys: readonly ClockMarkerKey[]
   /** cuts between stages « À la suite », by position (none otherwise) */
   cuts: readonly ClockCut[]
+  /** junctions between the stages « À la suite », one per cut and in its order (none otherwise); `cuts[k].timeS` is `junctions[k].holdStartS` */
+  junctions: readonly ClockJunction[]
   /** nights shown as pauses, by position (none by default) */
   nights: readonly ClockNight[]
   /** film length at ×1 (seconds) */
@@ -146,8 +170,12 @@ export interface FilmClockInput {
   markerKeys?: readonly FilmMarkerKey[]
   /** cuts between stages « À la suite » (metres, none by default) */
   cutsM?: readonly number[]
+  /** the junctions at the cuts, in their order (`junctionPlan`; none by default: the cuts hold nothing) */
+  junctions?: readonly JunctionInput[]
   /** nights shown as pauses (none by default) */
   nights?: readonly FlightNight[]
+  /** the stages « À la suite » with a flight time of their own (`stageSpansOf`; none by default: the length shares the duration) */
+  stages?: readonly FlightStage[]
   /** length of the first track (metres), 0 without track */
   lengthM: number
   /** pacing highlights (metres along the track), slowed down when `pacing.enabled` */
@@ -157,19 +185,36 @@ export interface FilmClockInput {
   pacing: PacingSettings
 }
 
+/** A junction of the input, to be placed on the clock. */
+const clockJunction = (j: JunctionInput): ClockJunction => ({
+  id: j.id,
+  afterTrackId: j.afterTrackId,
+  atM: j.atM,
+  kind: j.kind,
+  holdS: j.holdS,
+  progress: 0,
+  startS: 0,
+  holdStartS: 0,
+  holdEndS: 0,
+  endS: 0,
+})
+
 /** Clock of a film whose stops are known. */
 export function buildFilmClock(input: FilmClockInput): FilmClock {
-  // the film's stops and the nights, one pause each, by position (a stop first at the same place)
-  const pauses: (FlightStop & { stop?: FilmStop; night?: FlightNight })[] = [
+  // the film's stops, the junctions held and the nights, one pause each, by position (a junction first at the same
+  // place: the stage ends before a stop starts on the next one; then a stop, then a night)
+  const pauses: (FlightStop & { stop?: FilmStop; night?: FlightNight; junction?: JunctionInput })[] = [
     ...input.stops.map((stop) => ({ atM: stop.atM, durationS: stop.durationS, stop })),
     ...(input.nights ?? []).map((night) => ({ atM: night.atM, durationS: nightPauseS(night), extra: true, night })),
+    ...(input.junctions ?? []).filter((j) => j.holdS > 0).map((junction) => ({ atM: junction.atM, durationS: junction.holdS, extra: true, junction, night: junction.night })),
   ]
-  pauses.sort((a, b) => a.atM - b.atM || (a.stop ? 0 : 1) - (b.stop ? 0 : 1))
+  const rank = (p: (typeof pauses)[number]) => (p.junction ? 0 : p.stop ? 1 : 2)
+  pauses.sort((a, b) => a.atM - b.atM || rank(a) - rank(b))
   const speeds = [...(input.speeds ?? [])].sort((a, b) => a.fromM - b.fromM)
   const speedKeys = sortedParamKeys(input.paramKeys ?? [], 'speed')
   const curve: SpeedCurve | undefined =
     speedKeys.length > 0 ? { knotsM: speedKeys.map((k) => k.atM), at: (x) => valueAtKeys(speedKeys, 1, x, true) } : undefined
-  const flight: Pacing = flightPacing(input.lengthM, input.highlightsM, input.durationS, input.pacing, pauses, speeds, curve)
+  const flight: Pacing = flightPacing(input.lengthM, input.highlightsM, input.durationS, input.pacing, pauses, speeds, curve, input.stages)
   const openingS = shotDurationS(input.opening)
   const closingS = shotDurationS(input.closing)
   const flightS = flight.totalTime()
@@ -177,6 +222,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
   // the identity flight (no track) has no pause: no stop either
   const stops: ClockStop[] = []
   const nights: ClockNight[] = []
+  const held = new Map<JunctionInput, ClockJunction>()
   flight.pauses.forEach((pause, k) => {
     const times = {
       progress: pause.progress,
@@ -185,9 +231,10 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
       holdEndS: openingS + pause.holdEndS,
       endS: openingS + pause.endS,
     }
-    const { stop, night } = pauses[k]
+    const { stop, night, junction } = pauses[k]
     if (stop) stops.push({ ...stop, ...times, addedS: pause.durationS })
     else if (night) nights.push({ ...night, ...times })
+    if (junction) held.set(junction, { ...clockJunction(junction), ...times })
   })
 
   // without track (no length) the portions have no place in the flight
@@ -201,6 +248,15 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
   const markerKeys: ClockMarkerKey[] =
     input.lengthM > 0 ? [...(input.markerKeys ?? [])].sort((a, b) => a.atM - b.atM).map((k) => ({ ...k, timeS: flightTimeOf(k.atM) })) : []
   const cuts: ClockCut[] = input.lengthM > 0 ? [...(input.cutsM ?? [])].sort((a, b) => a - b).map((atM) => ({ atM, timeS: flightTimeOf(atM) })) : []
+  // a plain cut holds nothing: all its times are the film time of the cut
+  const junctions: ClockJunction[] =
+    input.lengthM > 0
+      ? (input.junctions ?? []).map((j) => {
+          const timeS = flightTimeOf(j.atM)
+          const progress = Math.min(1, j.atM / input.lengthM)
+          return held.get(j) ?? { ...clockJunction(j), progress, startS: timeS, holdStartS: timeS, holdEndS: timeS, endS: timeS }
+        })
+      : []
 
   const progressAtTime = (tS: number) => flight.progressAtTime(tS - openingS)
   const timeAtProgress = (progress: number) => (progress >= 1 ? total : openingS + flight.timeAtProgress(progress))
@@ -245,6 +301,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
     paramKeys,
     markerKeys,
     cuts,
+    junctions,
     nights,
     totalTime: () => total,
     progressAtTime,
@@ -268,10 +325,28 @@ export interface FilmClockFor {
   landmarks?: readonly Landmark[]
   /** cuts between stages when the track is a sequence « À la suite » (metres) */
   cutsM?: readonly number[]
+  /** ids of the tracks of the stages when the track is a sequence, in order: the junction k follows the stage k */
+  stageIds?: readonly string[]
+}
+
+/**
+ * The junctions at the cuts of `source` for its film and the nights left to the flight (`junctionPlan`), and the stages
+ * with a flight time of their own: the part of the clock input that follows the film's stages and junctions, to place
+ * those of a film being edited.
+ */
+export function junctionInputsFor({ track, film, durationS, cutsM, stageIds }: FilmClockFor): Pick<FilmClockInput, 'junctions' | 'nights' | 'stages'> {
+  if (!track) return { junctions: [], nights: [], stages: [] }
+  const path = trackPathOf(track)
+  // not a sequence: the nights of the flight, as ever
+  if (!cutsM?.length) return { junctions: [], nights: flightNights(path, film.nights, durationS), stages: [] }
+  // with « Jours et nuits » off, the night a junction of kind 'nuit' passes is looked for as if it were on
+  const plan = junctionPlan(film, stageIds ?? [], cutsM, flightNights(path, { ...film.nights, enabled: true }, durationS))
+  return { ...plan, stages: stageSpansOf(film, stageIds ?? [], cutsM, track.stats.distanceM) }
 }
 
 /** Input of the clock of the film of `track`: highlights and generated stops from the pacing settings and the landmarks. */
-export function filmClockInputFor({ track, film, durationS, pacing, landmarks = [], cutsM }: FilmClockFor): FilmClockInput {
+export function filmClockInputFor(source: FilmClockFor): FilmClockInput {
+  const { track, film, durationS, pacing, landmarks = [], cutsM } = source
   return {
     opening: film.opening,
     closing: film.closing,
@@ -281,7 +356,7 @@ export function filmClockInputFor({ track, film, durationS, pacing, landmarks = 
     paramKeys: track ? film.paramKeys : [],
     markerKeys: track ? film.markerKeys : [],
     cutsM: track ? cutsM : [],
-    nights: track ? flightNights(trackPathOf(track), film.nights, durationS) : [],
+    ...junctionInputsFor(source),
     lengthM: track?.stats.distanceM ?? 0,
     highlightsM: track && pacing.enabled ? pacingHighlights(track, pacing, landmarks) : [],
     durationS,

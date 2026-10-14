@@ -4,8 +4,10 @@
  * list, welcome card) has its own dialog, drawn in the page body so a hidden panel never hides it.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { errorMessage } from '../core/errors'
+import { t as translate, useT } from '../i18n'
+import { formatDate } from '../i18n/format'
+import { tRich } from '../i18n/rich'
 import { assignColors } from '../import'
 import { getPlatform } from '../platform'
 import { authorizeInBrowser } from '../platform/oauthRedirect'
@@ -28,18 +30,27 @@ import type { StravaActivity } from '../strava/api'
 import { stravaSportLabel, streamsToTrack } from '../strava/track'
 import { useAppStore } from '../state/store'
 import { formatAscent, formatDistance } from './format'
-import { Icon } from './icons'
 import { runImport } from './projectActions'
+import { Button, Checkbox, Modal } from './primitives'
+
+/** A column of the dialog, and a line of its buttons (the hint, if any, takes the room on the left). */
+const BODY = 'flex flex-col gap-3'
+const ACTIONS = 'flex items-center justify-end gap-2 [&>.type-hint]:mr-auto'
+/** An activity: the tick, then its name over its details (HeroUI's label text is the last child of the checkbox's content). */
+const ITEM =
+  'flex w-full border-b border-edge px-1 py-2 [&_.checkbox__content]:min-w-0 [&_.checkbox__content]:flex-auto ' +
+  '[&_.checkbox__content>:last-child]:grid [&_.checkbox__content>:last-child]:min-w-0 [&_.checkbox__content>:last-child]:flex-auto [&_.checkbox__content>:last-child]:gap-0.5'
 
 /** « Importer depuis Strava » of the welcome card. */
 export function StravaImport() {
+  const t = useT()
   const loading = useAppStore((s) => s.loading)
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn--secondary" onClick={() => setOpen(true)} disabled={loading}>
-        Importer depuis Strava
-      </button>
+      <Button onClick={() => setOpen(true)} disabled={loading}>
+        {t('strava.import')}
+      </Button>
       <StravaDialog open={open} onClose={() => setOpen(false)} />
     </>
   )
@@ -47,28 +58,12 @@ export function StravaImport() {
 
 /** The Strava dialog, drawn in the page body (« + Ajouter » of the track list, welcome card). */
 export function StravaDialog({ open, onClose }: { open: boolean; onClose(): void }) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const titleId = useId()
-
-  useEffect(() => {
-    if (open) dialog.current?.showModal()
-    else dialog.current?.close()
-  }, [open])
-
-  return createPortal(
-    <dialog ref={dialog} className="sources strava" aria-labelledby={titleId} onClose={onClose}>
-      <div className="sources__head">
-        <h2 id={titleId} className="sources__title">
-          Importer depuis Strava
-        </h2>
-        <button type="button" className="icon-btn" aria-label="Fermer" data-tip="Fermer (Échap)" data-tip-side="left" onClick={onClose}>
-          <Icon name="x" size={18} />
-        </button>
-      </div>
-      {/* mounted while open only: every opening starts again from the stored connection */}
-      {open && <StravaBody onImported={onClose} />}
-    </dialog>,
-    document.body,
+  const t = useT()
+  // the body is mounted while open only: every opening starts again from the stored connection
+  return (
+    <Modal open={open} onClose={onClose} title={t('strava.import')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
+      <StravaBody onImported={onClose} />
+    </Modal>
   )
 }
 
@@ -94,6 +89,7 @@ function StravaBody({ onImported }: { onImported(): void }) {
 
 /** « Connecter Strava » : how to create the Strava application, its Client ID and Secret, « Se connecter ». */
 function ConnectForm({ notice, onConnected }: { notice: string | null; onConnected(): void }) {
+  const t = useT()
   const id = useId()
   const [saved] = useState(loadApp)
   const [clientId, setClientId] = useState(saved?.clientId ?? '')
@@ -134,64 +130,59 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
 
   return (
     <form
-      className="strava__body"
+      className={BODY}
       onSubmit={(e) => {
         e.preventDefault()
         signIn()
       }}
     >
-      <ol className="strava__steps">
+      <ol className="flex list-decimal flex-col gap-1 pl-5">
         <li>
-          Sur <b>strava.com/settings/api</b>, créez votre application Strava (gratuite) : nom et site au choix,
-          « Authorization Callback Domain » : <code>{callbackDomain(location.hostname, capabilities.isDesktop)}</code>.
+          {tRich('strava.step1', {
+            link: <b>strava.com/settings/api</b>,
+            domain: <code>{callbackDomain(location.hostname, capabilities.isDesktop)}</code>,
+          })}
         </li>
-        <li>Copiez ici son Client ID et son Client Secret.</li>
-        <li>
-          « Se connecter » ouvre Strava {capabilities.isDesktop ? 'dans votre navigateur' : 'dans une fenêtre'} : autorisez
-          la lecture de vos activités.
-        </li>
-        <li>Choisissez les activités à importer.</li>
+        <li>{t('strava.step2')}</li>
+        <li>{t(capabilities.isDesktop ? 'strava.step3Browser' : 'strava.step3Window')}</li>
+        <li>{t('strava.step4')}</li>
       </ol>
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-client`}>
+      <div className="flex flex-col gap-1">
+        <label className="type-label" htmlFor={`${id}-client`}>
           Client ID
         </label>
         <input id={`${id}-client`} className="input" inputMode="numeric" autoComplete="off" value={clientId} disabled={waiting} onChange={(e) => setClientId(e.currentTarget.value)} />
       </div>
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-secret`}>
+      <div className="flex flex-col gap-1">
+        <label className="type-label" htmlFor={`${id}-secret`}>
           Client Secret
         </label>
         <input id={`${id}-secret`} className="input" type="password" autoComplete="off" value={clientSecret} disabled={waiting} onChange={(e) => setClientSecret(e.currentTarget.value)} />
       </div>
-      <p className="field__hint">
-        Ils restent sur cet appareil et ne sont envoyés qu’à Strava. Lecture seule de vos activités, privées comprises, trace
-        entière (zones de confidentialité comprises). Les conditions de l’API Strava réservent l’affichage de vos données
-        à vous seul : ne diffusez pas un film tiré d’une activité Strava sans y avoir réfléchi.
-      </p>
-      <p className="field__hint">Powered by Strava</p>
+      <p className="type-hint">{t('strava.privacy')}</p>
+      <p className="type-hint">Powered by Strava</p>
       {error && (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {error}
         </p>
       )}
       {waiting ? (
-        <div className="strava__actions">
-          <p className="field__hint">En attente de votre autorisation sur Strava…</p>
-          <button type="button" className="btn btn--secondary" onClick={() => pending.current?.abort()}>
-            Annuler
-          </button>
+        <div className={ACTIONS}>
+          <p className="type-hint">{t('strava.waiting')}</p>
+          <Button onClick={() => pending.current?.abort()}>
+            {t('common.cancel')}
+          </Button>
         </div>
       ) : (
-        <div className="strava__actions">
+        <div className={ACTIONS}>
           {hasSaved && (
-            <button type="button" className="btn btn--secondary" onClick={forget}>
-              Oublier ces identifiants
-            </button>
+            <Button onClick={forget}>
+              {t('strava.forget')}
+            </Button>
           )}
-          <button type="submit" className="btn btn--primary" disabled={!clientId.trim() || !clientSecret.trim()}>
-            Se connecter
-          </button>
+          <Button variant="primary" type="submit" disabled={!clientId.trim() || !clientSecret.trim()}>
+            {t('strava.connect')}
+          </Button>
         </div>
       )}
     </form>
@@ -200,6 +191,7 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
 
 /** The athlete's activities, 30 at a time (« Plus »), filtered by name; the ticked ones are imported. */
 function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: string | null): void; onImported(): void }) {
+  const t = useT()
   const id = useId()
   const [athlete] = useState(() => loadTokens()?.athlete ?? '')
   // a new object loads its page again (« Réessayer » after an error)
@@ -258,66 +250,64 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
   const shown = needle ? activities.filter((a) => a.name.toLowerCase().includes(needle)) : activities
 
   return (
-    <div className="strava__body">
-      <div className="strava__actions">
-        <p className="field__hint">Connecté à Strava{athlete ? ` : ${athlete}` : ''}</p>
-        <button
-          type="button"
-          className="btn btn--secondary btn--small"
+    <div className={BODY}>
+      <div className={ACTIONS}>
+        <p className="type-hint">{athlete ? t('strava.connectedAs', { athlete }) : t('strava.connected')}</p>
+        <Button
+          size="sm"
           onClick={() => {
             disconnect()
             onSignedOut(null)
           }}
         >
-          Déconnecter Strava
-        </button>
+          {t('strava.disconnect')}
+        </Button>
       </div>
       <input
         className="input"
         type="search"
-        aria-label="Rechercher une activité par son nom"
-        placeholder="Rechercher par nom (activités affichées)"
+        aria-label={t('strava.searchAria')}
+        placeholder={t('strava.search')}
         value={query}
         onChange={(e) => setQuery(e.currentTarget.value)}
       />
-      <ul className="strava__list" aria-describedby={`${id}-status`}>
+      <ul className="max-h-[min(360px,45vh)] overflow-y-auto phone-any:max-h-none" aria-describedby={`${id}-status`}>
         {shown.map((activity) => (
           <li key={activity.id}>
-            <label className="strava__item">
-              <input type="checkbox" checked={selected.has(activity.id)} onChange={() => toggle(activity.id)} />
-              <span className="strava__name">{activity.name}</span>
-              <span className="strava__meta">
+            <Checkbox className={ITEM} checked={selected.has(activity.id)} onChange={() => toggle(activity.id)}>
+              <span className="truncate font-semibold">{activity.name}</span>
+              <span className="type-hint">
                 {[
-                  new Date(activity.start_date_local).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
+                  formatDate(new Date(activity.start_date_local), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
                   stravaSportLabel(activity),
                   formatDistance(activity.distance),
-                  `D+ ${formatAscent(activity.total_elevation_gain)}`,
+                  translate('format.ascent', { value: formatAscent(activity.total_elevation_gain) }),
                 ]
                   .filter(Boolean)
                   .join(' · ')}
               </span>
-            </label>
+            </Checkbox>
           </li>
         ))}
       </ul>
-      <p id={`${id}-status`} className="field__hint">
-        {busy ? 'Chargement des activités…' : shown.length === 0 ? 'Aucune activité.' : 'Activités lues sur Strava, affichées à vous seul.'}
+      <p id={`${id}-status`} className="type-hint">
+        {busy ? t('strava.loading') : shown.length === 0 ? t('strava.none') : t('strava.shownToYou')}
         {' '}Powered by Strava
       </p>
       {error && (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {error}
         </p>
       )}
-      <div className="strava__actions">
+      <div className={ACTIONS}>
         {(more || error) && (
-          <button type="button" className="btn btn--secondary" onClick={loadNext} disabled={busy}>
-            {error ? 'Réessayer' : 'Plus'}
-          </button>
+          <Button onClick={loadNext} disabled={busy}>
+            {error ? t('common.retry') : t('strava.more')}
+          </Button>
         )}
-        <button type="button" className="btn btn--primary" onClick={importSelected} disabled={selected.size === 0}>
-          Importer{selected.size > 0 ? ` (${selected.size})` : ''}
-        </button>
+        <Button variant="primary" onClick={importSelected} disabled={selected.size === 0}>
+          {selected.size > 0 ? t('strava.importCount', { count: selected.size }) : t('strava.importButton')}
+        </Button>
       </div>
     </div>
   )

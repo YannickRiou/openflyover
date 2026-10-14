@@ -5,13 +5,15 @@ import { withoutCard } from '../film/cards'
 import type { CardId } from '../film/cards'
 import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
-import { junctionsM, sortedMarkerKeys } from '../film/markerKeys'
+import { junctionsM, markerKeyLook, sortedMarkerKeys } from '../film/markerKeys'
 import type { Film } from '../film/model'
 import { paramAt, paramBase } from '../film/paramKeys'
 import type { FilmParam } from '../film/paramKeys'
+import { idsByDate, movedIds, reorderStages } from '../film/reorder'
+import type { StageSpan } from '../film/reorder'
 import { addCameraKey, addMarkerKey, addMarkerKeysAt, addParamKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
 import { captureKey } from '../flyover/cameraKeys'
-import { filmSequenceOf, filmTrackOf, sequenceLandmarks } from '../flyover/sequence'
+import { buildSequence, filmSequenceOf, filmTrackOf, orderedTracks, sequenceLandmarks } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import type { Landmark } from '../osm/landmarks'
 import { useLandmarkStore } from '../osm/store'
@@ -43,7 +45,7 @@ export function useFilmSource(): FilmClockFor {
   const pacing = useAppStore((s) => s.settings.pacing)
   const film = useAppStore((s) => s.settings.film)
   const landmarks = useLandmarkStore((s) => filmLandmarks(track, sequence, s.landmarks))
-  return { track, film, durationS, pacing, landmarks, cutsM: sequence?.cutsM }
+  return { track, film, durationS, pacing, landmarks, cutsM: sequence?.cutsM, stageIds: sequence?.stageIds }
 }
 
 /** The film source read from the stores outside React (event handlers, shortcuts). */
@@ -52,7 +54,7 @@ export function getFilmSource(): FilmClockFor {
   const sequence = filmSequenceOf(tracks, settings.race)
   const track = sequence?.track ?? tracks[0]
   const landmarks = filmLandmarks(track, sequence, useLandmarkStore.getState().landmarks)
-  return { track, film: settings.film, durationS: settings.flyoverDurationS, pacing: settings.pacing, landmarks, cutsM: sequence?.cutsM }
+  return { track, film: settings.film, durationS: settings.flyoverDurationS, pacing: settings.pacing, landmarks, cutsM: sequence?.cutsM, stageIds: sequence?.stageIds }
 }
 
 /**
@@ -129,22 +131,21 @@ export function addMarkerKeyHere(): void {
   const atM = Math.round(playback.progress * (track?.stats.distanceM ?? 0))
   editFilm((f) => {
     const before = sortedMarkerKeys(f.markerKeys).filter((k) => k.atM <= atM).pop()
-    const { kind, figure } = settings.marker
-    return addMarkerKey(f, atM, before ? { kind: before.kind, figure: before.figure, imageId: before.imageId } : { kind, figure })
+    return addMarkerKey(f, atM, markerKeyLook(before, settings.marker))
   })
   parkOnSelectedKey()
 }
 
 /**
- * « Un marqueur par étape ou par jour »: a marker key with the look of the settings at each junction of the film
+ * « Un marqueur par étape ou par jour »: a marker key with the look (shape, colours, size) of the settings at each junction of the film
  * track (stages « À la suite », days of a chained track) that has none, to give each its own look in the inspector.
  * Returns the number of keys added (one undo step).
  */
 export function addJunctionMarkerKeys(): number {
   const { track, cutsM, film } = getFilmSource()
-  const { kind, figure } = useAppStore.getState().settings.marker
+  const look = markerKeyLook(undefined, useAppStore.getState().settings.marker)
   const places = junctionsM(track, cutsM).filter((m) => !film.markerKeys.some((k) => Math.round(k.atM) === Math.round(m)))
-  if (places.length > 0) editFilm((f) => ({ film: addMarkerKeysAt(f, places, { kind, figure }), id: null }))
+  if (places.length > 0) editFilm((f) => ({ film: addMarkerKeysAt(f, places, look), id: null }))
   return places.length
 }
 
@@ -214,6 +215,51 @@ export function followFlightTiming(before: Pick<Settings, 'flyoverDurationS' | '
   if (film !== source.film) useAppStore.getState().setSetting('film', film)
 }
 
+const spansOf = (sequence: Sequence): StageSpan[] => sequence.stages.map((s) => ({ trackId: s.track.id, startM: s.startM, endM: s.endM }))
+
+/**
+ * « À la suite »: the stages in the order of `ids` (every track id once). The order (`race.order`) and the film remapped
+ * with it (`reorderStages`: what is anchored in metres follows its stage; the texts and media attached to a stop follow
+ * it) are one undo step. The playhead stays where it is. False when there is no sequence, `ids` are not its stages or
+ * the order does not change.
+ */
+export function setStageOrder(ids: readonly string[]): boolean {
+  const { tracks, settings, playback } = useAppStore.getState()
+  const sequence = filmSequenceOf(tracks, settings.race)
+  const same = (list: readonly string[]) => list.length === ids.length && list.every((id, k) => id === ids[k])
+  if (!sequence || ids.length !== sequence.stageIds.length || new Set(ids).size !== ids.length || same(sequence.stageIds) || !ids.every((id) => sequence.stageIds.includes(id))) return false
+  const byId = new Map(tracks.map((t) => [t.id, t]))
+  const next = buildSequence(ids.map((id) => byId.get(id)!))
+  const source = getFilmSource()
+  const nextSource = { ...source, track: next.track, cutsM: next.cutsM, stageIds: next.stageIds, landmarks: sequenceLandmarks(next, useLandmarkStore.getState().landmarks) }
+  const remapped = reorderStages(settings.film, spansOf(sequence), spansOf(next))
+  const film = followStops(
+    settings.film,
+    remapped,
+    (f) => filmClockFor({ ...nextSource, film: f }),
+    (f) => filmClockFor({ ...source, film: f }),
+  )
+  const { order: _order, ...race } = settings.race
+  getSettingsHistory().transaction(() =>
+    useAppStore.setState({ settings: { ...settings, race: same(tracks.map((t) => t.id)) ? race : { ...race, order: [...ids] }, film } }),
+  )
+  useAppStore.getState().setProgress(playback.progress)
+  return true
+}
+
+/** « À la suite »: the stage of track `trackId` moved to place `toIndex` (clamped), one undo step (`setStageOrder`). */
+export function reorderTracks(trackId: string, toIndex: number): boolean {
+  const { tracks, settings } = useAppStore.getState()
+  const ids = orderedTracks(tracks, settings.race).map((t) => t.id)
+  return setStageOrder(movedIds(ids, trackId, toIndex))
+}
+
+/** « Ordonner par date »: the stages by departure time, those without a time last (`idsByDate`), one undo step. */
+export function orderTracksByDate(): boolean {
+  const { tracks, settings } = useAppStore.getState()
+  return setStageOrder(idsByDate(orderedTracks(tracks, settings.race)))
+}
+
 /** Landmarks of the first track the film was last in line with (null: none published for that track yet). */
 let followedLandmarks: { trackId: string | undefined; landmarks: readonly Landmark[] | null } = { trackId: undefined, landmarks: null }
 
@@ -251,9 +297,9 @@ export function followLandmarks(): void {
  * and the panels (film duration, highlights).
  */
 export function useFilmClock(): FilmClock {
-  const { track, film, durationS, pacing, landmarks, cutsM } = useFilmSource()
+  const { track, film, durationS, pacing, landmarks, cutsM, stageIds } = useFilmSource()
   return useMemo(
-    () => filmClockFor({ track, film, durationS, pacing, landmarks, cutsM }),
-    [track, film, durationS, pacing, landmarks, cutsM],
+    () => filmClockFor({ track, film, durationS, pacing, landmarks, cutsM, stageIds }),
+    [track, film, durationS, pacing, landmarks, cutsM, stageIds],
   )
 }

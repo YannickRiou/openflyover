@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 /**
  * Which tile sources may be downloaded ahead for offline use, read from each provider's terms (October 2026, links
  * and reasons in docs/sources.md, « Attributions, licenses and offline use »). A source missing from this table is refused.
@@ -17,56 +18,64 @@ export interface OfflinePolicy {
   typicalTileBytes: number
 }
 
-const IGN = { provider: 'ign', allowed: true, reason: 'Licence ouverte Etalab 2.0', dailyLimit: 50_000 } as const
+// The reasons are read when shown (getters), so they follow the language of the interface
+const ign = (typicalTileBytes: number): OfflinePolicy => ({
+  provider: 'ign',
+  allowed: true,
+  get reason() { return t('offline.policy.ign') },
+  dailyLimit: 50_000,
+  typicalTileBytes,
+})
 // Personal, non-commercial project: these providers discourage bulk downloads, so they are allowed with a low daily
 // cap (a short corridor, once) and the caution is shown in the panel.
-const SWISSTOPO = {
+const swisstopo = (typicalTileBytes: number): OfflinePolicy => ({
   provider: 'swisstopo',
   allowed: true,
   personalUse: true,
-  reason: 'Usage personnel : swisstopo préfère son service de téléchargement pour le hors ligne, gardez un couloir court.',
+  get reason() { return t('offline.policy.swisstopo') },
   dailyLimit: 10_000,
-} as const
+  typicalTileBytes,
+})
 
 export const OFFLINE_POLICIES: Readonly<Record<string, OfflinePolicy>> = {
   mapterhorn: {
     provider: 'mapterhorn',
     allowed: true,
-    reason: 'Données ouvertes ; Mapterhorn propose lui-même le téléchargement de zones',
+    get reason() { return t('offline.policy.mapterhorn') },
     dailyLimit: 20_000,
     typicalTileBytes: 150_000,
   },
   'aws-terrarium': {
     provider: 'aws',
     allowed: true,
-    reason: 'Archive publique AWS Open Data, faite pour être téléchargée',
+    get reason() { return t('offline.policy.aws') },
     typicalTileBytes: 105_000,
   },
-  'ign-ortho': { ...IGN, typicalTileBytes: 16_000 },
-  'ign-plan': { ...IGN, typicalTileBytes: 45_000 },
-  'ign-ortho-2000-2005': { ...IGN, typicalTileBytes: 16_000 },
-  'ign-ortho-1965-1980': { ...IGN, typicalTileBytes: 40_000 },
-  'ign-ortho-1950-1965': { ...IGN, typicalTileBytes: 40_000 },
+  'ign-ortho': ign(16_000),
+  'ign-plan': ign(45_000),
+  'ign-ortho-2000-2005': ign(16_000),
+  'ign-ortho-1965-1980': ign(40_000),
+  'ign-ortho-1950-1965': ign(40_000),
   'eox-s2cloudless': {
     provider: 'eox',
     allowed: true,
-    reason: 'CC BY-NC-SA 4.0 : copie permise pour un usage non commercial',
+    get reason() { return t('offline.policy.eox') },
     dailyLimit: 20_000,
     typicalTileBytes: 10_000,
   },
-  swisstopo: { ...SWISSTOPO, typicalTileBytes: 20_000 },
-  'swisstopo-carte': { ...SWISSTOPO, typicalTileBytes: 30_000 },
+  swisstopo: swisstopo(20_000),
+  'swisstopo-carte': swisstopo(30_000),
   'arcgis-world-imagery': {
     provider: 'esri',
     allowed: false,
-    reason: 'Les conditions d’Esri interdisent de télécharger ses tuiles en dehors de ses propres outils.',
+    get reason() { return t('offline.policy.esri') },
     typicalTileBytes: 14_000,
   },
   opentopomap: {
     provider: 'opentopomap',
     allowed: true,
     personalUse: true,
-    reason: 'Usage personnel : serveur bénévole, téléchargement plafonné à 2 000 tuiles par jour.',
+    get reason() { return t('offline.policy.opentopomap') },
     dailyLimit: 2_000,
     typicalTileBytes: 30_000,
   },
@@ -77,7 +86,7 @@ export function offlinePolicy(sourceId: string): OfflinePolicy {
     OFFLINE_POLICIES[sourceId] ?? {
       provider: sourceId,
       allowed: false,
-      reason: 'Conditions de cette source non vérifiées pour le hors ligne.',
+      get reason() { return t('offline.policy.unknown') },
       typicalTileBytes: 30_000,
     }
   )

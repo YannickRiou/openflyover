@@ -18,9 +18,9 @@ import type { LocalFrame, LonLatBounds, Track } from '../core/types'
 import { isExportBusy, useExportStore } from '../export/store'
 import { centroid } from '../geo/ellipsoid'
 import { useAppStore } from '../state/store'
-import { useTerrainContext } from './TerrainLayer'
+import { useTerrainContext } from './terrainContext'
 import { frameDelta, wakeScene } from './renderOnDemand'
-import type { HeightSampler } from './TrackLines'
+import type { HeightSampler } from './trackLineSet'
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 

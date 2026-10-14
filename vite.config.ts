@@ -5,6 +5,7 @@ import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 /**
  * Takram's precomputed atmosphere textures (EXR, ~9.5 MB), star catalogue and cloud textures (weather, shapes,
@@ -120,7 +121,7 @@ export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(version) },
   // GitHub Pages serves the site under /openflyover/ (pages.yml); '/' everywhere else, desktop app included
   base: process.env.BASE_PATH ?? '/',
-  plugins: [react(), atmosphereAssets(), serviceWorker()],
+  plugins: [react(), tailwindcss(), atmosphereAssets(), serviceWorker()],
   // src-tauri/target (Rust build of the desktop app) is not watched
   server: { port: 5173, proxy, watch: { ignored: ['**/src-tauri/**'] } },
   build: {

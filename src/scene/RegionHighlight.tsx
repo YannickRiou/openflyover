@@ -39,8 +39,8 @@ import { useAppStore } from '../state/store'
 import { LABEL_KIND_ACCENTS, LABEL_PANEL_COLOR, spriteScaleForPixels } from './labelModel'
 import { buildRegionMesh, ringSegments } from './regionMesh'
 import { wakeScene } from './renderOnDemand'
-import { useTerrainContext } from './TerrainLayer'
-import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, buildDrapeBuffer, computeDrapedPositions } from './TrackLines'
+import { useTerrainContext } from './terrainContext'
+import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, buildDrapeBuffer, computeDrapedPositions } from './trackLineSet'
 import { createGlowMaterial } from './trackLineStyle'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { useFilmClock, useFilmTrack } from './usePacing'
@@ -166,6 +166,11 @@ export function RegionHighlight() {
     },
     [parts],
   )
+  // the effects and the frame callback mutate the objects through this ref, not through the memoised value
+  const partsRef = useRef(parts)
+  useEffect(() => {
+    partsRef.current = parts
+  })
 
   // the name, redrawn once the web font is there
   const [fontVersion, setFontVersion] = useState(0)
@@ -185,8 +190,9 @@ export function RegionHighlight() {
   useEffect(() => {
     const drawn = nameText ? drawNameTexture(nameText) : null
     nameSizeRef.current = drawn
-    parts.name.material.map = drawn?.texture ?? null
-    parts.name.material.needsUpdate = true
+    const { name } = partsRef.current
+    name.material.map = drawn?.texture ?? null
+    name.material.needsUpdate = true
     wakeScene()
     return () => drawn?.texture.dispose()
   }, [parts, nameText, fontVersion])
@@ -208,7 +214,7 @@ export function RegionHighlight() {
   }, [region, frame, track])
   useEffect(() => {
     if (!built) return
-    const { dark, glow, line } = parts
+    const { dark, glow, line } = partsRef.current
     const previous = [dark.geometry, glow.geometry]
     dark.geometry = built.darkGeometry
     glow.geometry = line.geometry = built.lineGeometry
@@ -257,7 +263,7 @@ export function RegionHighlight() {
   )
 
   useFrame(({ camera, gl, size }) => {
-    const { group, dark, glow, line, dot, name } = parts
+    const { group, dark, glow, line, dot, name } = partsRef.current
     const { playback } = useAppStore.getState()
     const { phase, request, renderScale } = useExportStore.getState()
     const c = clockRef.current

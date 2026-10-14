@@ -38,31 +38,35 @@ Strava import goes through your own Strava application). Your files stay on your
 terrain, imagery, weather and landmarks from open services. It runs as a **static website** or as a Windows, macOS or
 Linux **desktop application** (Tauri), from the same code.
 
+The interface and the texts of the films are available in **French** and **English**: pick the language with the flag
+button of the top bar (next to « ? »). The first run follows the browser's language (English, else French) and the choice is
+remembered on the device. The documentation is in English; the [user guide](docs/user-guide.html) quotes the interface labels in French (the reference language).
+
 ![The interface: top bar, tabs on the left, 3D view of the Tour du Mont-Blanc, timeline at the bottom](docs/images/interface.jpg)
 
 | Area | Features |
 |---|---|
 | Import | GPX and FIT, several tracks at once, or Strava activities; heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
 | Terrain and imagery | Mapterhorn or AWS Terrain Tiles terrain; IGN orthophotos in France and swisstopo in Switzerland, chosen automatically; Esri and Sentinel-2 elsewhere; topographic maps; historical IGN photos (1950–2005); terrain exaggeration; OpenStreetMap lakes and rivers rendered as water that reflects the sky and the sun, with ripples |
-| Flyover | five camera styles (chase, sway, orbit, top-down view, cinematic shot), six presets, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
+| Flyover | five camera styles (chase, sway, orbit, top-down view, cinematic shot), twelve presets, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
 | Pacing | slow-motion and pauses at highlights: tops of climbs, passes, nearby summits |
 | Light | physically based sky and haze, sun at the actual time of the outing, terrain shadows, starry night, automatic exposure |
 | Weather | historical weather for the day of the outing (Open-Meteo), or the forecast for an upcoming outing (up to 16 days), shown in a panel and in the scene; volumetric clouds derived from low, mid and high cloud cover (or set by hand), pushed by the wind; a sea of clouds filling the valleys, as volumetric clouds or as a lit surface |
 | Look | color grading presets; lens effects, all off by default: speed blur, bloom, lens flare, depth of field |
-| Landmarks | summits, passes, huts, lakes… from OpenStreetMap; climbs detected and categorized (cat. 4 to HC); 3D labels; the movie slows down at passes, summits and huts on the track and shows their name; any landmark can be hidden one by one |
+| Landmarks | summits, passes, huts, lakes… from OpenStreetMap; climbs detected and categorized (cat. 4 to HC); 3D labels; automatic stops in the movie at the passes crossed and the summits near the track; any landmark can be hidden, ranked or pinned |
 | Planned outing | for a route without times (Komoot, Visorando, IGNrando…): date, start time, activity and pace give the estimated passing time at each point, the sun and the weather forecast of the day |
 | Landmarks and points of interest | one list along the track: show or hide each label (or all at once), a stop in the film at any of them with its duration |
 | Points of interest | your own places ("Picnic", "Paul's chalet"), placed with a right-click on the terrain or at the marker, with an icon (hut, bivouac, summit…), shown like landmarks in the view and in the movie |
 | Track | colored by speed, slope, elevation, heart rate, cadence, power or temperature; width, dashes or dots, glow, track that draws itself as the marker passes; smoothing of GPS jitter |
-| Marker | ball, figurine (hiker, mountaineer, runner, cyclist, bikepacking, mountain bike, skier, paraglider, motorbike, car, light aircraft) facing the direction of travel, or your photo in a circle; adjustable size |
+| Marker | ball, figurine (hiker, mountaineer, runner, trail runner, cyclist, e-bike, bikepacking, mountain bike, skier, ski touring, swimmer, kayak, rider, paraglider, motorbike, car, light aircraft) facing the direction of travel, or your photo in a circle; adjustable size |
 | Ghost race | several tracks replayed together, with a live leaderboard |
 | Stages | several tracks flown one after the other, each stage with its own color, name, figures, sun and weather |
 | Chaining | several tracks (one per day, or one outing recorded in two files) merged into a single route, flown over in one go |
-| Overlay | titles, counters, profile, mini-map, weather, logo, text, ghost race leaderboard, texts, photos and videos from the timeline burned into the movie, source credits; three styles whose colors and fonts can be changed, for the whole overlay or element by element |
+| Overlay | titles, counters, profile, mini-map, weather, logo, text, ghost race leaderboard, texts, photos and videos from the timeline burned into the movie, source credits; seven styles whose colors and fonts can be changed, for the whole overlay or element by element |
 | Music | one or more music tracks on the timeline (MP3, M4A, OGG, WAV, FLAC), with volume and fades; played during playback and mixed into the exported video, with the sound of the videos; music optionally lowered under the videos |
 | Export | MP4 or WebM video in 16:9, 9:16, 1:1, 4:5 or 21:9, from 720p to 4K, at 24, 30 or 60 frames per second, with the music and the sound of the videos; PNG or JPEG still image; the overlay alone on a transparent background (WebM); several formats in one go; on the desktop, one film per track of a folder, also from the command line |
 | Offline | tiles of the track downloaded once, along a corridor of 2, 5 or 10 km: the view and the export then work without a connection |
-| Poster | printable poster of the outing in A4 or A3 (300 dpi, portrait or landscape) or square: 3D view of the whole track, title, date, key figures, profile, weather of the day, credits; three styles; several tracks on the same poster, each in its color, with their list or their total; "Carte à plat" (flat map) for a map seen from above |
+| Poster | printable poster of the outing in A4 or A3 (300 dpi, portrait or landscape) or square: 3D view of the whole track, title, date, key figures, profile, weather of the day, credits; the same seven styles; several tracks on the same poster, each in its color, with their list or their total; "Carte à plat" (flat map) for a map seen from above |
 | Project | project file to save and reopen, undo / redo, presets |
 
 How to use each of these: the [user guide](docs/user-guide.html).
@@ -84,7 +88,7 @@ npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:5173> and click "Essayer avec l'exemple" (try with the sample).
+Open <http://127.0.0.1:5173> and click "Try the sample" ("Essayer avec l'exemple" in French).
 
 To test the production build: `npm run build`, then `npm run preview` (<http://localhost:4173>).
 
@@ -100,9 +104,11 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 |---|---|
 | [User guide](docs/user-guide.html) | using the app: import, planning, editing, export, offline, shortcuts |
 | [Knowledge base](docs/how-it-works.html) | how the app is built, explained for newcomers to web development |
+| [Developer handbook](docs/handbook/index.html) | how the project was built and how to change it (history, web and Rust notions explained, repository tour, recipes, release), to maintain it without help |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | coordinates, shared contracts, modules: read it before coding |
 | [Deploying and building](docs/deploying.md) | web server setup (HTTPS, nginx, Apache), desktop application build |
 | [Desktop installers](docs/installers.md) | installers built on GitHub, signing |
+| [Design notes](docs/design/) | decisions behind the interface: styling on Tailwind ([`tailwind.md`](docs/design/tailwind.md)), components on HeroUI ([`heroui.md`](docs/design/heroui.md)), the multi-track timeline |
 | [Data sources](docs/sources.md) | attributions, licenses, offline rules and how each source was checked |
 | [GPU tests](docs/tests-gpu.md) | manual checks on a machine with a real graphics card |
 | [Changelog](CHANGELOG.md) | what each version brings |
@@ -114,7 +120,7 @@ The HTML pages are standalone: open them in a browser from a clone, or through a
 OpenFlyover is a static site: build it with `npm ci && npm run build`, copy `dist/` to the root of a domain and serve
 it over **HTTPS** (the video encoder and track import need a secure context outside `localhost`). The desktop
 application is built with `npm run tauri:build`; installers for the three systems are also built on GitHub
-(*Actions* › "Desktop installers"). Details, server configuration and limitations: [`docs/deploying.md`](docs/deploying.md).
+(*Actions* › "Desktop installers"), and published as a release when a `v*` tag is pushed. Details, server configuration and limitations: [`docs/deploying.md`](docs/deploying.md).
 
 ## Tests and quality
 
@@ -130,9 +136,10 @@ application is built with `npm run tauri:build`; installers for the three system
 | `npm run lint` | code analysis (oxlint) |
 | `npm run e2e` | end-to-end tests in a real browser (see below) |
 
-The suite has **about 1,590 tests** (10 October 2026), each file next to its module (`src/**/*.test.ts`); network calls
-and the video encoder are mocked. `npm run e2e` drives the app in a headless Chromium through six scenarios (home,
-tabs, timeline, project, export, phone); its options are documented at the top of `e2e/run.mjs`. The rendering
+The suite has **about 2,600 tests** in 159 files (14 October 2026), each file next to its module (`src/**/*.test.ts`,
+`*.test.tsx` for the components); network calls and the video encoder are mocked. `npm run e2e` drives the app in a headless Chromium
+through 21 scenarios (home, tabs, language, timeline, project, export, phone…); its options (`OPENFLYOVER_CHROME`,
+`OPENFLYOVER_E2E_SKIP_EXPORT`, `OPENFLYOVER_E2E_ONLY`) are documented at the top of `e2e/run.mjs`. The rendering
 quality is checked by eye ([`docs/tests-gpu.md`](docs/tests-gpu.md)).
 
 ## Data sources
@@ -168,14 +175,16 @@ generated by `npm run notices`.
 | @takram/three-atmosphere, three-clouds, three-geospatial | 0.19.1, 0.7.6, 0.9.1 | MIT |
 | mediabunny | 1.61.3 | MPL-2.0: usable as is; a modification of its files must be published |
 | zustand | 5.0.15 | MIT |
+| @heroui/react, @heroui/styles | 3.2.6 | MIT |
+| react-aria, react-aria-components | 3.53.1, 1.22.1 | Apache-2.0 |
 | react, react-dom | 19.3.0 | MIT |
 
 **FIT files.** They are read by a small decoder of the project (`src/import/fit.ts`, MIT), written from the public
 description of the FIT protocol. The Garmin FIT SDK is not used: its license forbids redistributing it, and the published
 site would have contained it.
 
-The development tools are not shipped with the site: Vite, vitest, oxlint and jsdom are under MIT, TypeScript
-under Apache-2.0.
+The development tools are not shipped with the site: Vite, vitest, oxlint, jsdom and Tailwind CSS (build time only) are under
+MIT, TypeScript and puppeteer-core (end-to-end tests) under Apache-2.0.
 
 Embedded files:
 
@@ -200,7 +209,7 @@ video description.
 Conventions:
 
 - Strict TypeScript, with `import type` and no `enum`.
-- Interface in French.
-- Visual identity in [`src/ui/theme.css`](src/ui/theme.css).
+- Interface in French and English (`src/i18n`, see "Internationalisation" in [`ARCHITECTURE.md`](ARCHITECTURE.md)): no text in the code, every string goes through `t('domain.key')` and has a French and an English message.
+- Visual identity in [`src/ui/theme.css`](src/ui/theme.css). Styling in Tailwind utilities (shared `@utility` classes in `src/ui/utilities.css`), interactive components on HeroUI behind the wrappers of `src/ui/primitives/` (screens never import `@heroui/react`): see [`tailwind.md`](docs/design/tailwind.md) and [`heroui.md`](docs/design/heroui.md).
 - Open, keyless sources only; any new source goes into `src/terrain/sources.ts` and `docs/sources.md`.
 - Types, lint and tests green before each commit, one commit per feature.

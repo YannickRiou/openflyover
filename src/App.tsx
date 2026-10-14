@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react'
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useBatchStore } from './export/batch'
 import { isExportBusy, useExportStore } from './export/store'
 import { isCardItem } from './film/cards'
@@ -32,10 +32,8 @@ import {
   COMPACT_QUERY,
   ONE_SIDE_MAX_WIDTH,
   SHELL_TABS,
-  installTipPlacement,
   isFileDrag,
   matchesQuery,
-  nextTabIndex,
   parseShellPrefs,
   shellReducer,
   shownTabs,
@@ -48,6 +46,7 @@ import { StatusBar } from './ui/StatusBar'
 import { Timeline } from './ui/Timeline'
 import { TimelineResizer } from './ui/TimelineResizer'
 import { Toaster } from './ui/Toaster'
+import { t as translate, useT } from './i18n'
 import { showToast } from './ui/toast'
 import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
@@ -55,6 +54,7 @@ import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
 import { WeatherPanel } from './ui/WeatherPanel'
 import './ui/app.css'
 import './ui/shell.css'
+import { Tab, TabList, TabPanel, Tabs, Tip, isModalOpen } from './ui/primitives'
 
 // Loaded in their own chunks: the offline packs right after the first paint, the export drawer (video, batch,
 // poster) when it is first opened, as its codec check pulls mediabunny (~700 kB). They stay mounted once loaded
@@ -65,16 +65,21 @@ const OfflinePanel = lazy(() => import('./ui/OfflinePanel').then((m) => ({ defau
 const FilmInspector = lazy(() => import('./ui/FilmInspector').then((m) => ({ default: m.FilmInspector })))
 
 const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
-  trace: { label: 'Trace', icon: 'route' },
-  carte: { label: 'Carte', icon: 'map' },
-  meteo: { label: 'Météo', icon: 'cloud-sun' },
-  lumiere: { label: 'Lumière', icon: 'sun' },
-  survol: { label: 'Survol', icon: 'video' },
-  objectif: { label: 'Objectif', icon: 'aperture' },
-  habillage: { label: 'Habillage', icon: 'layers' },
-  projet: { label: 'Projet', icon: 'folder' },
-  reglages: { label: 'Réglages', icon: 'sliders-horizontal' },
+  trace: { get label() { return translate('shell.tab.trace') }, icon: 'route' },
+  carte: { get label() { return translate('shell.tab.carte') }, icon: 'map' },
+  meteo: { get label() { return translate('shell.tab.meteo') }, icon: 'cloud-sun' },
+  lumiere: { get label() { return translate('shell.tab.lumiere') }, icon: 'sun' },
+  survol: { get label() { return translate('shell.tab.survol') }, icon: 'video' },
+  objectif: { get label() { return translate('shell.tab.objectif') }, icon: 'aperture' },
+  habillage: { get label() { return translate('shell.tab.habillage') }, icon: 'layers' },
+  projet: { get label() { return translate('shell.tab.projet') }, icon: 'folder' },
+  reglages: { get label() { return translate('shell.tab.reglages') }, icon: 'sliders-horizontal' },
 }
+
+/** The tabs of the rail: a column on the side, a row that scrolls sideways in the phone bar (eight tabs do not fit; App keeps the open one in sight). */
+const TAB_LIST =
+  'flex min-h-0 flex-col items-center gap-1 overflow-y-auto [scrollbar-width:none] ' +
+  'phone:flex-1 phone:flex-row phone:gap-0 phone:overflow-x-auto phone:overflow-y-hidden phone:overscroll-x-contain phone:px-1'
 
 const PREFS_KEY = 'openflyover.shell.v1'
 
@@ -92,8 +97,6 @@ const DRAWER_MAX_WIDTH = 1024
 const isDrawer = () => window.innerWidth < DRAWER_MAX_WIDTH
 // a batch keeps the shell locked between its jobs too (the export store is idle for a moment between two)
 const isExporting = () => isExportBusy(useExportStore.getState().phase) || useBatchStore.getState().phase === 'running'
-/** a modal dialog (help, sources) is open: it takes the keyboard, Escape closes it */
-const isDialogOpen = () => document.querySelector('dialog[open]') !== null
 
 /** The portrait phone layout (`BOTTOM_SHEET_QUERY`): preview on top, timeline, tab bar, half sheets. */
 const subscribePhone = (onChange: () => void) => {
@@ -121,7 +124,7 @@ function SeekShortcuts() {
 
   useEffect(() => {
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.isComposing || e.defaultPrevented || isDialogOpen()) return
+      if (e.isComposing || e.defaultPrevented || isModalOpen()) return
       const action = matchShortcut(e, keyFocus(e.target))
       const store = useAppStore.getState()
       if (!action || store.tracks.length === 0 || isExporting()) return
@@ -160,35 +163,38 @@ function SeekShortcuts() {
  * « Modifier » opens its inspector in the half sheet).
  */
 function BlockTools({ onEdit, disabled }: { onEdit(): void; disabled: boolean }) {
+  const t = useT()
   const item = useAppStore((s) => s.filmSelection)
   const shot = useAppStore((s) => (item === 'opening' || item === 'closing' ? s.settings.film[item] : null))
   const clock = useFilmClock()
   if (item === null) return null
   const isStop = clock.stops.some((s) => s.id === item)
   return (
-    <div className="rail block-tools" role="toolbar" aria-label="Élément sélectionné">
-      <button type="button" className="rail__tab block-tools__done" onClick={() => useAppStore.getState().setFilmSelection(null)}>
-        <Icon name="check" size={22} />
-        <span className="rail__label">Terminé</span>
+    <div className="rail-frame chrome-focus items-center gap-1 px-1" data-rail="" role="toolbar" aria-label={t('shell.blockTools.aria')}>
+      <button type="button" className="rail-tab" onClick={() => useAppStore.getState().setFilmSelection(null)}>
+        <Icon name="check" />
+        <span className="rail-label">{t('common.done')}</span>
       </button>
-      <button type="button" className="rail__tab" onClick={onEdit} disabled={disabled}>
-        <Icon name="sliders-horizontal" size={22} />
-        <span className="rail__label">Modifier</span>
+      <span className="mx-1 h-8 w-px flex-none bg-white/15" aria-hidden="true" />
+      <button type="button" className="rail-tab" onClick={onEdit} disabled={disabled}>
+        <Icon name="sliders-horizontal" />
+        <span className="rail-label">{t('shell.blockTools.edit')}</span>
       </button>
       <button
         type="button"
-        className="rail__tab"
+        className="rail-tab"
         disabled={disabled || shot?.style === 'aucune'}
         onClick={() => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop }))}
       >
-        <Icon name="trash-2" size={22} />
-        <span className="rail__label">{shot ? 'Sans plan' : 'Supprimer'}</span>
+        <Icon name="trash-2" />
+        <span className="rail-label">{shot ? t('inspector.noShot') : t('inspector.remove')}</span>
       </button>
     </div>
   )
 }
 
 export default function App() {
+  const t = useT()
   const hasTracks = useAppStore((s) => s.tracks.length > 0)
   const exportBusy = useExportStore((s) => isExportBusy(s.phase))
   const batchRunning = useBatchStore((s) => s.phase === 'running')
@@ -208,10 +214,10 @@ export default function App() {
   // the export drawer is mounted on its first opening and kept (export progress, result, batch)
   const [dockMounted, setDockMounted] = useState(false)
   if (shell.dockOpen && !dockMounted) setDockMounted(true)
-  const helpDialog = useRef<HTMLDialogElement>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
   const dockOpen = useRef(shell.dockOpen)
   const collapsedRef = useRef(shell.collapsed)
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const tabList = useRef<HTMLDivElement>(null)
 
   // desktop: a batch asked on the command line runs once the app is up, then the app quits (export/cliRender.ts);
   // otherwise the project open when the app was last left comes back
@@ -224,7 +230,7 @@ export default function App() {
   useEffect(
     () =>
       watchOpenedFiles((files) => {
-        if (isExporting()) showToast({ kind: 'info', text: "Un export est en cours : le fichier n'a pas été ouvert." })
+        if (isExporting()) showToast({ kind: 'info', text: translate('shell.exportBusy') })
         else void openFiles(files)
       }, reportOpenFailure),
     [],
@@ -253,7 +259,7 @@ export default function App() {
 
   // the phone tab bar scrolls: the open tab stays in sight (also when restored at startup)
   useEffect(() => {
-    tabRefs.current[tabs.indexOf(shell.tab)]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    tabList.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [shell.tab, tabs])
 
   useEffect(() => {
@@ -262,7 +268,7 @@ export default function App() {
     // drawer mode: a press outside the panel and its rail closes it (a bottom sheet leaves the view usable)
     const onPointerDown = (e: PointerEvent) => {
       if (!isDrawer() || matchesQuery(BOTTOM_SHEET_QUERY) || !(e.target instanceof Element)) return
-      if (e.target.closest('#side-panel, .rail')) return
+      if (e.target.closest('#side-panel, [data-rail]')) return
       dispatch({ type: 'toggle-panel', narrow: true })
     }
     document.addEventListener('pointerdown', onPointerDown, true)
@@ -274,7 +280,6 @@ export default function App() {
   useEffect(() => installSliderGestures(getSettingsHistory()), [])
   // a project emptied of its tracks is not written over the kept one (it waits for a track)
   useEffect(() => installLibraryAutosave(() => !isExporting() && useAppStore.getState().tracks.length > 0), [])
-  useEffect(() => installTipPlacement(), [])
   useEffect(() => installCloseGuard(isExporting, saveProject), [])
 
   /** a pointer button is down */
@@ -328,7 +333,7 @@ export default function App() {
   useEffect(() => {
     // capture phase: Escape closes the export drawer, else deselects the timeline block (the dialogs close themselves)
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.isComposing || isDialogOpen()) return
+      if (e.isComposing || isModalOpen()) return
       const action = matchShortcut(e, keyFocus(e.target))
       if (!action || action.startsWith('seek') || action.startsWith('add-')) return
       if (action === 'close') {
@@ -340,7 +345,7 @@ export default function App() {
         else return
         e.stopPropagation()
       } else if (action === 'help') {
-        helpDialog.current?.showModal()
+        setHelpOpen(true)
       } else if (action === 'save') {
         if (!isExporting()) saveProject()
       } else if (action === 'save-as') {
@@ -402,18 +407,10 @@ export default function App() {
     }
   }, [])
 
-  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const next = nextTabIndex(index, e.key, tabs.length)
-    if (next === null) return
-    e.preventDefault()
-    dispatch({ type: 'select-tab', tab: tabs[next], narrow: isNarrow() })
-    tabRefs.current[next]?.focus()
-  }
-
   const panel = (tab: ShellTab, children: ReactNode) => (
-    <div key={tab} id={`tab-panel-${tab}`} className="tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} hidden={shell.tab !== tab}>
+    <TabPanel key={tab} id={tab} data-testid={`tab-panel-${tab}`} className="tabpanel">
       {children}
-    </div>
+    </TabPanel>
   )
 
   // the tab contents, the stage and the timeline are built once per track state: React skips the same elements when
@@ -425,7 +422,7 @@ export default function App() {
           <TrackList />
           <TrackStyleSection hidden={!hasTracks} />
           <MarkerSection hidden={!hasTracks} />
-          <PanelSection title="Étiquettes" keys={['labels']} hidden={!hasTracks}>
+          <PanelSection title={t('shell.section.labels')} keys={['labels']} hidden={!hasTracks}>
             <LabelSettings />
           </PanelSection>
         </>
@@ -438,7 +435,7 @@ export default function App() {
       ),
       meteo: (
         <>
-          <PanelSection title="Météo de la sortie" keys={['weather']} hidden={!hasTracks}>
+          <PanelSection title={t('shell.section.weather')} keys={['weather']} hidden={!hasTracks}>
             <WeatherPanel />
           </PanelSection>
           <WeatherSettings />
@@ -456,7 +453,7 @@ export default function App() {
       projet: (
         <>
           <ProjectPanel />
-          <PanelSection title="Hors ligne" hidden={!hasTracks}>
+          <PanelSection title={t('shell.section.offline')} hidden={!hasTracks}>
             <Suspense>
               <OfflinePanel />
             </Suspense>
@@ -471,7 +468,8 @@ export default function App() {
         </Stage>
       ),
     }),
-    [hasTracks],
+    // `t`: the titles passed down are worded here, the panels render again on their own
+    [hasTracks, t],
   )
   // the landscape phone timeline folds under a sheet; the portrait one stays (the sheet lies over it)
   const sheetOpen = (!shell.collapsed || shell.dockOpen) && !phone
@@ -494,62 +492,49 @@ export default function App() {
         onOpen={() => void chooseFilesToOpen()}
         exportOpen={shell.dockOpen}
         onToggleExport={() => dispatch({ type: 'toggle-dock', narrow: isNarrow() })}
-        onHelp={() => helpDialog.current?.showModal()}
+        onHelp={() => setHelpOpen(true)}
       />
 
       <div className={shell.collapsed ? 'shell__body shell__body--collapsed' : 'shell__body'}>
-        {/* portrait phone: a selected block's actions take the place of the tab bar */}
-        <nav className="rail" aria-label="Panneaux" hidden={phone && shell.inspecting}>
-          <div className="rail__tabs" role="tablist" aria-label="Panneaux de réglages" aria-orientation="vertical">
-            {tabs.map((tab, i) => {
-              const selected = shell.tab === tab
-              return (
-                <button
-                  key={tab}
-                  ref={(el) => {
-                    tabRefs.current[i] = el
-                  }}
-                  id={`tab-${tab}`}
-                  type="button"
-                  role="tab"
-                  className="rail__tab"
-                  aria-selected={selected}
-                  aria-controls={`tab-panel-${tab}`}
-                  tabIndex={selected ? 0 : -1}
-                  disabled={exporting}
-                  data-tip={TAB_LABELS[tab].label}
-                  data-tip-side="right"
-                  onClick={() => dispatch({ type: 'click-tab', tab, narrow: isNarrow() })}
-                  onKeyDown={(e) => onTabKeyDown(e, i)}
-                >
-                  <Icon name={TAB_LABELS[tab].icon} size={22} />
-                  <span className="rail__label">{TAB_LABELS[tab].label}</span>
+        <Tabs
+          value={shell.tab}
+          onChange={(tab) => dispatch({ type: 'select-tab', tab: tab as ShellTab, narrow: isNarrow() })}
+          onReselect={(tab) => dispatch({ type: 'click-tab', tab: tab as ShellTab, narrow: isNarrow() })}
+          orientation={phone ? 'horizontal' : 'vertical'}
+        >
+          {/* portrait phone: a selected block's actions take the place of the tab bar */}
+          <nav className="rail-frame chrome-focus justify-between" data-rail="" aria-label={t('shell.rail.aria')} hidden={phone && shell.inspecting}>
+            <TabList label={t('shell.rail.tablist')} className={TAB_LIST} ref={tabList}>
+              {tabs.map((tab) => (
+                <Tab key={tab} id={tab} data-testid={`tab-${tab}`} className="rail-tab" disabled={exporting} tip={TAB_LABELS[tab].label} tipDisabled={phone}>
+                  <Icon name={TAB_LABELS[tab].icon} />
+                  <span className="rail-label">{TAB_LABELS[tab].label}</span>
                   <TabWeightDot tab={tab} />
-                </button>
-              )
-            })}
-          </div>
-          <button
-            type="button"
-            className="rail__toggle"
-            onClick={() => dispatch({ type: 'toggle-panel', narrow: isNarrow() })}
-            disabled={exporting}
-            aria-expanded={!shell.collapsed}
-            aria-controls="side-panel"
-            aria-label={shell.collapsed ? 'Déplier le panneau' : 'Replier le panneau'}
-            data-tip={withShortcut(shell.collapsed ? 'Déplier le panneau' : 'Replier le panneau', 'toggle-panel')}
-            data-tip-side="right"
-          >
-            <Icon name={shell.collapsed ? 'panel-left-open' : 'panel-left-close'} />
-          </button>
-        </nav>
+                </Tab>
+              ))}
+            </TabList>
+            <Tip text={withShortcut(shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse'), 'toggle-panel')} side="right">
+              <button
+                type="button"
+                className="rail-toggle"
+                onClick={() => dispatch({ type: 'toggle-panel', narrow: isNarrow() })}
+                disabled={exporting}
+                aria-expanded={!shell.collapsed}
+                aria-controls="side-panel"
+                aria-label={shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse')}
+              >
+                <Icon name={shell.collapsed ? 'panel-left-open' : 'panel-left-close'} />
+              </button>
+            </Tip>
+          </nav>
 
-        {/* every tab stays mounted: weather, landmarks and export have side effects */}
-        {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
-        <aside id="side-panel" className="panel" aria-label="Réglages" hidden={shell.collapsed} inert={exporting}>
-          <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
-          {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
-        </aside>
+          {/* every tab stays mounted: weather, landmarks and export have side effects */}
+          {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
+          <aside id="side-panel" data-testid="side-panel" className="panel" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
+            <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
+            {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
+          </aside>
+        </Tabs>
 
         <main className="view">
           {contents.stage}
@@ -557,15 +542,15 @@ export default function App() {
           {timeline}
         </main>
 
-        <aside id="export-dock" className="dock" aria-label="Export" hidden={!shell.dockOpen}>
+        <aside id="export-dock" data-testid="export-dock" className="dock dock-frame" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
           <SheetHandle onClose={() => !exporting && dispatch({ type: 'close-dock' })} />
-          <Suspense fallback={<p className="field__hint">Chargement…</p>}>
+          <Suspense fallback={<p className="type-hint px-4">{t('shell.loading')}</p>}>
             {dockMounted && <ExportPanel onClose={exporting ? undefined : () => dispatch({ type: 'close-dock' })} />}
           </Suspense>
         </aside>
         {phone && shell.inspecting && <BlockTools disabled={exporting} onEdit={() => dispatch({ type: 'edit', open: true })} />}
         {/* the export drawer goes first; on a portrait phone the inspector waits for « Modifier » */}
-        <aside className="dock" aria-label="Inspecteur" hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
+        <aside className="dock dock-frame" aria-label={t('shell.dock.inspector')} hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
           <SheetHandle onClose={() => dispatch({ type: 'edit', open: false })} />
           {shell.inspecting && !shell.dockOpen && (!phone || shell.editing) && (
             <Suspense>
@@ -576,15 +561,15 @@ export default function App() {
       </div>
 
       <StatusBar />
-      <HelpDialog dialogRef={helpDialog} />
+      <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       <DiagnosticDialog />
       <SeekShortcuts />
       {dragging && (
         <div className="drop-veil" aria-hidden="true">
           <div className="drop-veil__box">
             <Icon name="upload" size={32} />
-            <p className="drop-veil__title">Déposez vos traces GPX ou FIT</p>
-            <p className="drop-veil__hint">ou un projet .opnflvr</p>
+            <p className="drop-veil__title">{t('shell.drop.title')}</p>
+            <p className="drop-veil__hint">{t('shell.drop.hint')}</p>
           </div>
         </div>
       )}

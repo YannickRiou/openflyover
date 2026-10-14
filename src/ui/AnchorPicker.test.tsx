@@ -25,8 +25,8 @@ function mount(value: OverlayAnchor, allowed?: readonly OverlayAnchor[]) {
   host = document.body.appendChild(document.createElement('div'))
   root = createRoot(host)
   act(() => root?.render(<AnchorPicker label="Position" value={value} allowed={allowed} onChange={onChange} />))
-  const cells = [...host.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
-  const press = (cell: HTMLButtonElement, key: string) => act(() => void cell.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true })))
+  const cells = [...host.querySelectorAll<HTMLInputElement>('input[type="radio"]')]
+  const press = (cell: HTMLInputElement, key: string) => act(() => void cell.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true })))
   return { cells, onChange, press }
 }
 
@@ -35,7 +35,7 @@ describe('AnchorPicker', () => {
     const { cells, onChange, press } = mount('top-left')
     expect(cells).toHaveLength(9)
     expect(cells.every((cell) => !cell.disabled)).toBe(true)
-    expect(cells[0].getAttribute('aria-checked')).toBe('true')
+    expect(cells[0].checked).toBe(true)
     press(cells[0], 'ArrowRight')
     expect(onChange).toHaveBeenLastCalledWith('top-center')
     act(() => cells[8].click())

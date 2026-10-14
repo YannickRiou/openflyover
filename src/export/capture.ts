@@ -6,6 +6,7 @@
 import type { OverlayTime } from '../overlay/draw'
 import type { TileFailure } from '../terrain/engine'
 import { ExportCanceledError } from './encoder'
+import { t } from '../i18n'
 
 /** Where a composed frame is: its progress and its place in the film (film time, clock lengths). */
 export interface FrameAt {
@@ -157,16 +158,14 @@ export function tileFailureMessage(
   pending: number,
   timeoutMs: number,
 ): string {
-  const named = failures.slice(0, NAMED_TILES).map(
-    (f) => `${f.host}, tuile ${f.tile} (${f.layer}) : ${f.cause}, ${f.attempts} essai${f.attempts > 1 ? 's' : ''}`,
-  )
+  const named = failures.slice(0, NAMED_TILES).map((f) => t('export.capture.failure', { count: f.attempts, host: f.host, tile: f.tile, layer: f.layer, cause: f.cause, attempts: f.attempts }))
   const more = failures.length - named.length
-  const list = named.join(' ; ') + (more > 0 ? ` ; et ${more} autre${more > 1 ? 's' : ''}` : '')
+  const list = [...named, ...(more > 0 ? [t('export.capture.more', { count: more })] : [])].join(' ; ')
   const head =
     outcome === 'missing'
-      ? `Tuiles introuvables pour l'image ${frame}`
-      : `Tuiles toujours en chargement après ${Math.round(timeoutMs / 60_000)} min pour l'image ${frame} (${pending} en attente)`
-  return `${head}${list ? ` : ${list}` : ''}. Export arrêté pour ne pas livrer d'images incomplètes : réessayez plus tard ou changez de fond de carte.`
+      ? t('export.capture.missing', { frame })
+      : t('export.capture.timeout', { min: Math.round(timeoutMs / 60_000), frame, pending })
+  return list ? t('export.capture.stoppedList', { head, list }) : t('export.capture.stopped', { head })
 }
 
 /** Sky gradient behind a transparent canvas (mirrors the CSS background of FlyoverCanvas: glacier → paper). */

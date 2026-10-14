@@ -9,6 +9,7 @@ import {
   buildSequence,
   filmSequenceOf,
   filmTrackOf,
+  orderedTracks,
   playsInSequence,
   sequenceLandmarks,
   sequenceOf,
@@ -87,6 +88,41 @@ describe('playsInSequence / filmTrackOf', () => {
   })
 })
 
+describe('orderedTracks (race.order)', () => {
+  const a = track('A', 45, null)
+  const b = track('B', 45.1, null)
+  const c = track('C', 45.2, null)
+  const ids = (tracks: readonly Track[]) => tracks.map((t) => t.name)
+
+  it('is the list itself without an order, outside « À la suite » and for one track', () => {
+    const tracks = [a, b, c]
+    expect(orderedTracks(tracks, SUITE)).toBe(tracks)
+    expect(orderedTracks(tracks, { ...DEFAULT_RACE, order: [c.id, a.id, b.id] })).toBe(tracks)
+    expect(orderedTracks(tracks, { ...SUITE, enabled: true, order: [c.id] })).toBe(tracks)
+    expect(orderedTracks([a], { ...SUITE, order: [a.id] })).toEqual([a])
+  })
+
+  it('follows the order, ignores ids that are no longer tracks and appends the tracks it lacks, in list order', () => {
+    expect(ids(orderedTracks([a, b, c], { ...SUITE, order: [c.id, a.id, b.id] }))).toEqual(['C', 'A', 'B'])
+    expect(ids(orderedTracks([a, b, c], { ...SUITE, order: ['gone', c.id, c.id] }))).toEqual(['C', 'A', 'B'])
+    expect(ids(orderedTracks([a, b, c], { ...SUITE, order: [] }))).toEqual(['A', 'B', 'C'])
+  })
+
+  it('is what the film flies: the sequence, the film track and the stage under the marker', () => {
+    const race = { ...SUITE, order: [c.id, a.id, b.id] }
+    const tracks = [a, b, c]
+    const sequence = filmSequenceOf(tracks, race)!
+    expect(sequence.stageIds).toEqual([c.id, a.id, b.id])
+    expect(filmTrackOf(tracks, race)).toBe(sequence.track)
+    expect(trackUnderMarker(tracks, race, 0)?.track).toBe(c)
+    expect(trackUnderMarker(tracks, race, 0.5)?.track).toBe(a)
+    expect(trackUnderMarker(tracks, race, 1)?.track).toBe(b)
+    // without an order, the list order as before
+    expect(trackUnderMarker(tracks, SUITE, 0)?.track).toBe(a)
+    expect(filmSequenceOf(tracks, SUITE)!.stageIds).toEqual([a.id, b.id, c.id])
+  })
+})
+
 describe('stageAt', () => {
   const sequence = buildSequence([track('A', 45, null), track('B', 45.1, null, 5)])
   const cut = sequence.stages[1].from
@@ -157,6 +193,9 @@ describe('race settings « Plusieurs traces »', () => {
     expect(isValidRace({ ...DEFAULT_RACE, camera: 'drone' as never })).toBe(false)
     expect(isValidRace({ ...DEFAULT_RACE, stageTransition: 'enchaine' as never })).toBe(false)
     expect(isValidRace({ ...DEFAULT_RACE, sequence: 'yes' as never })).toBe(false)
+    expect(isValidRace({ ...DEFAULT_RACE, sequence: true, order: ['a', 'b'] })).toBe(true)
+    expect(isValidRace({ ...DEFAULT_RACE, order: [1] as never })).toBe(false)
+    expect(isValidRace({ ...DEFAULT_RACE, order: 'a' as never })).toBe(false)
   })
 })
 

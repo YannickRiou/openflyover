@@ -25,7 +25,7 @@ async function mount(disabled = false) {
   root = createRoot(host)
   await act(async () => root.render(<TimelineResizer disabled={disabled} />))
   const timeline = host.appendChild(document.createElement('div'))
-  timeline.className = 'film-tl'
+  timeline.setAttribute('data-timeline', '')
   Object.defineProperty(timeline, 'offsetHeight', { value: NATURAL_H })
   await act(async () => window.dispatchEvent(new Event('resize')))
   return host.querySelector<HTMLElement>('[role="separator"]')!
@@ -93,7 +93,7 @@ describe('TimelineResizer', () => {
   it('follows a drag (up makes the timeline taller), within the limits, and remembers the end of it', async () => {
     const handle = await mount()
     await pointer(handle, 'pointerdown', 500)
-    expect(handle.className).toContain('timeline-resizer--dragging')
+    expect(handle.dataset.dragging).toBeDefined()
     await pointer(handle, 'pointermove', 450)
     expect(now(handle)).toBe(NATURAL_H + 50)
     expect(stored()).toBeNull() // only at the end
@@ -102,7 +102,7 @@ describe('TimelineResizer', () => {
     await pointer(handle, 'pointermove', -5000)
     expect(now(handle)).toBe(max)
     await pointer(handle, 'pointerup', -5000)
-    expect(handle.className).not.toContain('dragging')
+    expect(handle.dataset.dragging).toBeUndefined()
     expect(stored()).toBe(`{"timelineH":${max}}`)
   })
 

@@ -25,28 +25,33 @@ OTHER DEALINGS IN THE SOFTWARE.
 LICENCES DES COMPOSANTS UTILISÉS
 ================================
 
-OpenFlyover redistribue 85 paquets npm et 474 bibliothèques Rust, ainsi que des polices
+OpenFlyover redistribue 137 paquets npm et 474 bibliothèques Rust, ainsi que des polices
 et des icônes, chacun sous sa propre licence. Les composants sont regroupés ci-dessous
 par licence ; une double licence est classée dans le premier des groupes ci-dessous
 qu’elle propose.
 
-MIT (seule, ou au choix avec une autre licence permissive) : 465 composants
+MIT (seule, ou au choix avec une autre licence permissive) : 490 composants
 
-npm : @babel/runtime, @monogrid/gainmap-js, @petamoriken/float16, @react-three/drei,
-@react-three/fiber, @react-three/postprocessing, @takram/three-atmosphere,
-@takram/three-clouds, @takram/three-geospatial, @tauri-apps/api,
-@tauri-apps/plugin-dialog, @tauri-apps/plugin-fs, @tweenjs/tween.js,
-@types/dom-mediacapture-transform, @types/dom-webcodecs, @types/draco3d,
-@types/offscreencanvas, @types/react, @types/react-reconciler, @types/stats.js,
-@types/three, @types/webxr, @use-gesture/core, @use-gesture/react, astronomy-engine,
-base64-js, bidi-js, buffer, camera-controls, cross-env, cross-spawn, csstype,
-detect-gpu, fflate, glsl-noise, immediate, is-promise, its-fine, lie, maath, meshline,
-meshoptimizer, path-key, react, react-dom, react-merge-refs, react-use-measure,
+npm : @babel/runtime, @heroui/react, @heroui/styles, @monogrid/gainmap-js,
+@petamoriken/float16, @radix-ui/primitive, @radix-ui/react-avatar,
+@radix-ui/react-compose-refs, @radix-ui/react-context, @radix-ui/react-primitive,
+@radix-ui/react-slot, @radix-ui/react-use-callback-ref, @radix-ui/react-use-is-hydrated,
+@radix-ui/react-use-layout-effect, @react-three/drei, @react-three/fiber,
+@react-three/postprocessing, @takram/three-atmosphere, @takram/three-clouds,
+@takram/three-geospatial, @tauri-apps/api, @tauri-apps/plugin-dialog,
+@tauri-apps/plugin-fs, @tweenjs/tween.js, @types/dom-mediacapture-transform,
+@types/dom-webcodecs, @types/draco3d, @types/offscreencanvas, @types/react,
+@types/react-dom, @types/react-reconciler, @types/stats.js, @types/three, @types/webxr,
+@use-gesture/core, @use-gesture/react, aria-hidden, astronomy-engine, base64-js,
+bidi-js, buffer, camera-controls, client-only, clsx, cross-env, cross-spawn, csstype,
+detect-gpu, dom-helpers, fflate, glsl-noise, immediate, input-otp, is-promise, its-fine,
+js-tokens, lie, loose-envify, maath, meshline, meshoptimizer, object-assign, path-key,
+prop-types, react, react-dom, react-is, react-merge-refs, react-use-measure,
 require-from-string, scheduler, shebang-command, shebang-regex, stats-gl, stats.js,
-suspend-react, tagged-tag, three, three-mesh-bvh, three-stdlib, tiny-invariant,
-troika-three-text, troika-three-utils, troika-worker-utils, tunnel-rat, type-fest,
-url-join, use-sync-external-store, utility-types, webgl-constants, webgl-sdf-generator,
-zustand.
+suspend-react, tagged-tag, tailwind-variants, tailwindcss, three, three-mesh-bvh,
+three-stdlib, tiny-invariant, troika-three-text, troika-three-utils,
+troika-worker-utils, tunnel-rat, tw-animate-css, type-fest, url-join,
+use-sync-external-store, utility-types, webgl-constants, webgl-sdf-generator, zustand.
 
 Rust : adler2, aho-corasick, android_system_properties, anyhow, async-broadcast,
 async-channel, async-executor, async-io, async-lock, async-process, async-recursion,
@@ -111,10 +116,15 @@ windows-numerics, windows-result, windows-strings, windows-sys, windows-targets,
 windows-threading, windows-version, winnow, winreg, wit-bindgen, wry, x11, x11-dl, zbus,
 zbus_macros, zbus_names, zcheapstr, zmij, zvariant, zvariant_derive, zvariant_utils.
 
-Apache-2.0 : 9 composants
+Apache-2.0 : 30 composants
 
-npm : @dimforge/rapier3d-compat, @mediapipe/tasks-vision, draco3d, hls.js,
-promise-worker-transferable.
+npm : @adobe/react-spectrum, @adobe/react-spectrum-ui, @adobe/react-spectrum-workflow,
+@dimforge/rapier3d-compat, @internationalized/date, @internationalized/number,
+@internationalized/string, @mediapipe/tasks-vision, @react-aria/color, @react-aria/ssr,
+@react-aria/utils, @react-spectrum/color, @react-spectrum/provider,
+@react-stately/color, @react-stately/utils, @react-types/color, @react-types/shared,
+@spectrum-icons/ui, @spectrum-icons/workflow, @swc/helpers, draco3d, hls.js,
+promise-worker-transferable, react-aria, react-aria-components, react-stately.
 
 Rust : dunce, sync_wrapper, tao, target-lexicon.
 
@@ -126,9 +136,9 @@ npm : isexe, n8ao, potpack, which.
 
 Rust : libloading.
 
-BSD (2 ou 3 clauses) : 3 composants
+BSD (2 ou 3 clauses) : 4 composants
 
-npm : ieee754.
+npm : ieee754, react-transition-group.
 
 Rust : alloc-no-stdlib, alloc-stdlib.
 
@@ -148,6 +158,10 @@ Rust : cssparser, cssparser-macros, dtoa-short, option-ext, selectors.
 Autres : (MIT OR Apache-2.0) AND Unicode-3.0 : 1 composant
 
 Rust : unicode-ident.
+
+Autres : 0BSD : 1 composant
+
+npm : tslib.
 
 Autres : Apache-2.0 AND MIT : 1 composant
 

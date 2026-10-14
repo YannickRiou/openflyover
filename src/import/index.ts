@@ -3,6 +3,7 @@
  */
 import type { Track } from '../core/types'
 import { parseGpx } from './gpx'
+import { t } from '../i18n'
 
 /** Palette for track lines and UI swatches: bright enough to read over orthophotos (balise red first). */
 export const TRACK_COLORS: readonly string[] = ['#FF5A36', '#FFC53D', '#5BC0EB', '#FFFFFF', '#B79CFF', '#7AD9A0']
@@ -46,7 +47,7 @@ export async function importFile(file: File, colorIndex = 0): Promise<Track[]> {
     }
     default: {
       const shown = /\.[^.]+$/.exec(file.name)?.[0] ?? file.name
-      throw new Error(`Format non supporté : ${shown} (formats acceptés : .gpx, .fit)`)
+      throw new Error(t('imports.unsupported', { shown }))
     }
   }
 }

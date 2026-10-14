@@ -1,7 +1,8 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { videoSize } from '../export/schedule'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
+import { t, useT } from '../i18n'
 import type { CardId } from '../film/cards'
 import { filmTrackOf } from '../flyover/sequence'
 import { hasMetric } from '../flyover/trackColor'
@@ -32,23 +33,25 @@ import {
   withWidgetOverrides,
   widgetOverrides,
 } from '../overlay/settings'
-import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, TextBacking, WidgetOffset } from '../overlay/settings'
+import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
+import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
 import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
-import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
+import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { Button, Checkbox, Chip, ColorField as ColorFieldControl, NumberField, Radio, RadioGroup, Select, Switch, TextField, ToggleButton, ToggleButtonGroup } from './primitives'
 
 const COUNTER_LABELS: Record<CounterId, string> = {
-  distance: 'Distance',
-  altitude: 'Altitude',
-  ascent: 'Dénivelé positif',
-  time: 'Temps écoulé',
-  speed: 'Vitesse',
-  heartRate: 'Fréquence cardiaque',
+  get distance() { return t('overlay.counter.distance') },
+  get altitude() { return t('overlay.counter.altitude') },
+  get ascent() { return t('overlay.counter.ascent') },
+  get time() { return t('overlay.counter.time') },
+  get speed() { return t('overlay.counter.speed') },
+  get heartRate() { return t('overlay.counter.heartRate') },
 }
 
 type WidgetKey = Exclude<keyof OverlaySettings, 'enabled' | 'style' | 'overrides'>
@@ -56,14 +59,52 @@ type WidgetKey = Exclude<keyof OverlaySettings, 'enabled' | 'style' | 'overrides
 const percent = formatPercent
 
 /** Names of the offset fields, by column and by row of the anchor (from the edge, or from the middle). */
-const OFFSET_X_LABELS: Record<string, string> = { left: 'Depuis la gauche (px)', center: 'Vers la droite (px)', right: 'Depuis la droite (px)' }
-const OFFSET_Y_LABELS: Record<string, string> = { top: 'Depuis le haut (px)', middle: 'Vers le bas (px)', bottom: 'Depuis le bas (px)' }
+const OFFSET_X_LABELS: Record<string, string> = {
+  get left() { return t('overlay.offset.left') },
+  get center() { return t('overlay.offset.center') },
+  get right() { return t('overlay.offset.right') },
+}
+const OFFSET_Y_LABELS: Record<string, string> = {
+  get top() { return t('overlay.offset.top') },
+  get middle() { return t('overlay.offset.middle') },
+  get bottom() { return t('overlay.offset.bottom') },
+}
+
+/**
+ * A pixel offset typed digit by digit: a value in range is applied at once, Enter or leaving the field rounds and clamps
+ * it, an empty or invalid entry puts the stored value back. One undo step per edit (focus to blur).
+ */
+function OffsetField({ id, label, value, onCommit }: { id: string; label: string; value: number; onCommit(px: number): void }) {
+  const endGesture = useRef<(() => void) | null>(null)
+  const stop = () => {
+    endGesture.current?.()
+    endGesture.current = null
+  }
+  useEffect(() => stop, [])
+  return (
+    <NumberField
+      id={id}
+      label={label}
+      min={-OFFSET_MAX_PX}
+      max={OFFSET_MAX_PX}
+      step={1}
+      live
+      value={value}
+      onFocus={() => {
+        endGesture.current ??= getSettingsHistory().beginGesture()
+      }}
+      onChange={(px) => onCommit(Math.round(px))}
+      onBlur={stop}
+    />
+  )
+}
 
 /**
  * Where a widget sits: its anchor on the 3 × 3 grid, then « Position libre », an offset in pixels of the exported film
  * from that corner of the safe area (the widget leaves its anchor's stack).
  */
 export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
+  const t = useT()
   const id = useId()
   const overlay = useAppStore((s) => s.settings.overlay)
   const video = useAppStore((s) => s.settings.video)
@@ -72,48 +113,29 @@ export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
   const [row, column] = anchor === 'center' ? ['middle', 'center'] : anchor.split('-')
   const film = videoSize(video.aspect, video.resolution, Number.POSITIVE_INFINITY)
   const axis = (key: keyof WidgetOffset, label: string, current: WidgetOffset) => (
-    <div className="field">
-      <label className="field__label" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
-      <input
-        id={`${id}-${key}`}
-        className="input"
-        type="number"
-        min={-OFFSET_MAX_PX}
-        max={OFFSET_MAX_PX}
-        step={1}
-        value={current[key]}
-        onChange={(e) => {
-          const v = e.currentTarget.valueAsNumber
-          if (!Number.isFinite(v)) return
-          const px = Math.max(-OFFSET_MAX_PX, Math.min(OFFSET_MAX_PX, Math.round(v)))
-          set(withWidgetOffset(overlay, widget, { ...current, [key]: px }))
-        }}
-      />
-    </div>
+    <OffsetField
+      id={`${id}-${key}`}
+      label={label}
+      value={current[key]}
+      onCommit={(px) => set(withWidgetOffset(overlay, widget, { ...current, [key]: px }))}
+    />
   )
   return (
     <>
-      <AnchorPicker label="Position" value={anchor} onChange={(next) => set({ ...overlay, [widget]: { ...overlay[widget], anchor: next } })} />
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          checked={offset !== undefined}
-          onChange={(e) => set(withWidgetOffset(overlay, widget, e.currentTarget.checked ? { x: 0, y: 0 } : null))}
-        />
-        Position libre
-      </label>
+      <AnchorPicker label={t('overlay.position')} value={anchor} onChange={(next) => set({ ...overlay, [widget]: { ...overlay[widget], anchor: next } })} />
+      <Checkbox
+        checked={offset !== undefined}
+        onChange={(on) => set(withWidgetOffset(overlay, widget, on ? { x: 0, y: 0 } : null))}
+      >
+        {t('overlay.freePosition')}
+      </Checkbox>
       {offset && (
         <>
-          <div className="position-offset">
+          <div className="grid grid-cols-2 gap-2">
             {axis('x', OFFSET_X_LABELS[column], offset)}
             {axis('y', OFFSET_Y_LABELS[row], offset)}
           </div>
-          <p className="field__hint">
-            En pixels du film exporté ({film.width} × {film.height}), depuis la marge de sécurité ; l'aperçu suit à l'échelle. Hors de la pile de sa
-            position, l'élément peut chevaucher les autres.
-          </p>
+          <p className="type-hint">{t('overlay.freePositionHint', { width: film.width, height: film.height })}</p>
         </>
       )}
     </>
@@ -121,8 +143,12 @@ export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
 }
 
 export const SizeField = ({ value, onChange }: { value: number; onChange(v: number): void }) => (
-  <RangeField label="Taille" min={WIDGET_SIZE_MIN} max={WIDGET_SIZE_MAX} step={0.1} value={value} format={(v) => `×${formatNumber(v, 1)}`} onChange={onChange} />
+  <RangeField label={t('overlay.size')} min={WIDGET_SIZE_MIN} max={WIDGET_SIZE_MAX} step={0.1} value={value} format={(v) => `×${formatNumber(v, 1)}`} onChange={onChange} />
 )
+
+/** A widget of the overlay: its switch under a hairline (none above the first of a section), its options nested under a rule. */
+const WIDGET = 'flex flex-col gap-2 border-t border-edge pt-3 first:border-t-0 first:pt-0'
+const WIDGET_BODY = 'ml-3.5 flex flex-col gap-3 border-l-2 border-edge pl-3'
 
 /** One widget: a checkbox that shows its options while it is enabled, its position first (out of the tabs). */
 function WidgetGroup({
@@ -149,33 +175,25 @@ function WidgetGroup({
   /** « Contenu » tab: what it says */
   children?: ReactNode
 }) {
+  const tr = useT()
   const id = useId()
   const tabs = WIDGET_TABS.filter((tab) => (tab === 'contenu' ? children : tab === 'style' ? style || styled : visibility))
   const [tab, setTab] = useState<WidgetTab>(tabs[0] ?? 'contenu')
   const shown = tabs.includes(tab) ? tab : tabs[0]
   return (
-    <div className="overlay-widget" role="group" aria-labelledby={id}>
-      <label className="checkbox checkbox--switch" id={id}>
-        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.currentTarget.checked)} />
-        {label}
-      </label>
+    <div className={WIDGET} role="group" aria-labelledby={id}>
+      <Switch id={id} checked={enabled} onChange={(on) => onToggle(on)}>{label}</Switch>
       {enabled && (
-        <div className="overlay-widget__body">
+        <div className={WIDGET_BODY}>
           {position && <WidgetPosition widget={position} />}
           {tabs.length > 1 && (
-            <div className="overlay-widget__tabs segmented" role="group" aria-label={`Réglages de ${label}`}>
+            <ToggleButtonGroup aria-label={tr('overlay.widgetSettings', { label })} value={shown} onChange={(next) => setTab(next)}>
               {tabs.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className="segmented__option"
-                  aria-pressed={t === shown}
-                  onClick={() => setTab(t)}
-                >
+                <ToggleButton key={t} value={t}>
                   {WIDGET_TAB_LABELS[t]}
-                </button>
+                </ToggleButton>
               ))}
-            </div>
+            </ToggleButtonGroup>
           )}
           {shown === 'contenu' && children}
           {shown === 'style' && (
@@ -196,26 +214,22 @@ function WidgetGroup({
  * « Textes » lane (`CardFields`, in the inspector), which « Modifier » selects.
  */
 function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolean; onToggle(v: boolean): void }) {
+  const t = useT()
   const id = useId()
   const hasTrack = useAppStore((s) => s.tracks.length > 0)
   const label = CARD_LABELS[card]
   return (
-    <div className="overlay-widget" role="group" aria-labelledby={id}>
-      <label className="checkbox checkbox--switch" id={id}>
-        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.currentTarget.checked)} />
-        {label}
-      </label>
-      <p className="field__hint">Réglages : cliquez le bloc dans la timeline.</p>
+    <div className={WIDGET} role="group" aria-labelledby={id}>
+      <Switch id={id} checked={enabled} onChange={(on) => onToggle(on)}>{label}</Switch>
+      <p className="type-hint">{t('overlay.card.hint')}</p>
       {enabled && (
-        <button
-          type="button"
-          className="btn btn--secondary"
+        <Button
           disabled={!hasTrack}
-          aria-label={`Modifier : ${label}`}
+          aria-label={t('overlay.card.editAria', { label })}
           onClick={() => useAppStore.getState().setFilmSelection(card)}
         >
-          Modifier
-        </button>
+          {t('overlay.card.edit')}
+        </Button>
       )}
     </div>
   )
@@ -224,17 +238,21 @@ function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolea
 /** Tabs of the settings of an overlay element (only those it has). */
 const WIDGET_TABS = ['contenu', 'style', 'visibilite'] as const
 type WidgetTab = (typeof WIDGET_TABS)[number]
-const WIDGET_TAB_LABELS: Record<WidgetTab, string> = { contenu: 'Contenu', style: 'Style', visibilite: 'Visibilité' }
+const WIDGET_TAB_LABELS: Record<WidgetTab, string> = {
+  get contenu() { return t('overlay.tab.contenu') },
+  get style() { return t('overlay.tab.style') },
+  get visibilite() { return t('overlay.tab.visibilite') },
+}
 
 /** A few colours of the film palette offered beside the colour picker. */
 const SWATCHES: readonly { color: string; label: string }[] = [
-  { color: '#ffffff', label: 'Blanc' },
-  { color: '#f5f2ea', label: 'Papier' },
-  { color: '#1c2a33', label: 'Encre' },
-  { color: '#ff8a5c', label: 'Rouge clair' },
-  { color: '#c23b22', label: 'Rouge' },
-  { color: '#a9ccd9', label: 'Glacier' },
-  { color: '#3f6b4a', label: 'Mousse' },
+  { color: '#ffffff', get label() { return t('overlay.swatch.white') } },
+  { color: '#f5f2ea', get label() { return t('overlay.swatch.paper') } },
+  { color: '#1c2a33', get label() { return t('overlay.swatch.ink') } },
+  { color: '#ff8a5c', get label() { return t('overlay.swatch.lightRed') } },
+  { color: '#c23b22', get label() { return t('overlay.swatch.red') } },
+  { color: '#a9ccd9', get label() { return t('overlay.swatch.glacier') } },
+  { color: '#3f6b4a', get label() { return t('overlay.swatch.moss') } },
 ]
 
 /**
@@ -242,41 +260,35 @@ const SWATCHES: readonly { color: string; label: string }[] = [
  * absent), « Comme le marqueur » gives it back.
  */
 function DotColor({ value, onChange }: { value: string | undefined; onChange(v: string): void }) {
+  const t = useT()
   // '' of the marker settings: the colour of the track flown
   const marker = useAppStore((s) => s.settings.marker.color || filmTrackOf(s.tracks, s.settings.race)?.color || '#ffffff')
   return (
     <>
-      <ColorField label="Point de position" value={value || marker} onChange={onChange} />
-      <button type="button" className="btn btn--secondary" disabled={!value} onClick={() => onChange('')}>
-        Comme le marqueur
-      </button>
+      <ColorField label={t('overlay.dotColor')} value={value || marker} onChange={onChange} />
+      <Button disabled={!value} onClick={() => onChange('')}>
+        {t('overlay.sameAsMarker')}
+      </Button>
     </>
   )
 }
 
-/** Native colour picker followed by the swatches; `value` is '#rrggbb'. */
+/** The colour button followed by the swatches; `value` is '#rrggbb'. */
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange(v: string): void }) {
+  const t = useT()
   const id = useId()
   return (
     <div className="field">
-      <label className="field__label" htmlFor={id}>
+      <label className="type-label" htmlFor={id}>
         {label}
       </label>
-      <div className="color-row">
-        <input id={id} className="color-row__input" type="color" value={value} onChange={(e) => onChange(e.currentTarget.value)} />
-        {SWATCHES.map((swatch) => (
-          <button
-            key={swatch.color}
-            type="button"
-            className="color-row__swatch"
-            style={{ background: swatch.color }}
-            aria-label={`${label} : ${swatch.label}`}
-            aria-pressed={value === swatch.color}
-            title={swatch.label}
-            onClick={() => onChange(swatch.color)}
-          />
-        ))}
-      </div>
+      <ColorFieldControl
+        id={id}
+        label={label}
+        value={value}
+        onChange={onChange}
+        presets={SWATCHES.map((swatch) => ({ color: swatch.color, label: swatch.label, aria: t('overlay.swatchAria', { label, swatch: swatch.label }) }))}
+      />
     </div>
   )
 }
@@ -285,7 +297,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 function FontField({
   label,
   value,
-  inherit = 'Celle du style',
+  inherit,
   onChange,
 }: {
   label: string
@@ -293,25 +305,19 @@ function FontField({
   inherit?: string
   onChange(v: OverlayFontId | undefined): void
 }) {
+  const t = useT()
   const id = useId()
   return (
     <div className="field">
-      <label className="field__label" htmlFor={id}>
+      <label className="type-label" htmlFor={id}>
         {label}
       </label>
-      <select
+      <Select
         id={id}
-        className="select"
         value={value ?? ''}
-        onChange={(e) => onChange((e.currentTarget.value || undefined) as OverlayFontId | undefined)}
-      >
-        <option value="">{inherit}</option>
-        {OVERLAY_FONT_IDS.map((font) => (
-          <option key={font} value={font}>
-            {OVERLAY_FONT_LABELS[font]}
-          </option>
-        ))}
-      </select>
+        options={[{ value: '', label: inherit ?? t('overlay.font.style') }, ...OVERLAY_FONT_IDS.map((font) => ({ value: font, label: OVERLAY_FONT_LABELS[font] }))]}
+        onChange={(font) => onChange(font || undefined)}
+      />
     </div>
   )
 }
@@ -329,16 +335,17 @@ export function FilmTextStyleFields({
   font: OverlayFontId | undefined
   onChange(patch: { color?: string; font?: OverlayFontId }): void
 }) {
+  const t = useT()
   const style = useAppStore((s) => s.settings.overlay.style)
   const overrides = useAppStore((s) => s.settings.overlay.overrides)
   const shown = color ?? toHex(resolveOverlayTheme(style, overrides).text)
   return (
-    <SettingRow label="Couleur et police" value={color || font ? 'Personnalisées' : 'Comme l’habillage'}>
-      <ColorField label="Couleur" value={shown} onChange={(c) => onChange({ color: c, font })} />
-      <FontField label="Police" value={font} inherit="Celle de l'habillage" onChange={(f) => onChange({ color, font: f })} />
-      <button type="button" className="btn btn--secondary" disabled={!color && !font} onClick={() => onChange({})}>
-        Comme l'habillage
-      </button>
+    <SettingRow label={t('overlay.textStyle.title')} value={color || font ? t('overlay.custom') : t('overlay.sameAsOverlay')}>
+      <ColorField label={t('overlay.color')} value={shown} onChange={(c) => onChange({ color: c, font })} />
+      <FontField label={t('overlay.font')} value={font} inherit={t('overlay.font.overlay')} onChange={(f) => onChange({ color, font: f })} />
+      <Button disabled={!color && !font} onClick={() => onChange({})}>
+        {t('overlay.sameAsOverlayButton')}
+      </Button>
     </SettingRow>
   )
 }
@@ -363,25 +370,26 @@ function StyleOverrides({
   widget?: StyledWidget
   onChange(patch: OverlayOverrides | null): void
 }) {
+  const t = useT()
   const theme = resolveOverlayTheme(overlay.style, widget ? widgetOverrides(overlay, widget) : overlay.overrides)
   const panel = panelColorOf(theme)
   const own = (widget ? overlay[widget].overrides : overlay.overrides) ?? {}
-  const inherit = widget ? "Celle de l'habillage" : 'Celle du style'
+  const inherit = widget ? t('overlay.font.overlay') : t('overlay.font.style')
   const backingId = useId()
   return (
     // a widget's own changes: no « modifié » badge (the paths stop at the widget, which has its other settings)
     <SettingRow
-      label="Couleurs et polices"
-      value={Object.keys(own).length > 0 ? 'Personnalisées' : widget ? 'Comme l’habillage' : 'Celles du style'}
+      label={t('overlay.overrides.title')}
+      value={Object.keys(own).length > 0 ? t('overlay.custom') : widget ? t('overlay.sameAsOverlay') : t('overlay.overrides.style')}
       paths={widget ? [] : ['overlay.overrides']}
     >
-      <ColorField label="Accent" value={toHex(theme.accent)} onChange={(accent) => onChange({ accent })} />
-      <ColorField label="Texte" value={toHex(theme.text)} onChange={(text) => onChange({ text })} />
+      <ColorField label={t('overlay.overrides.accent')} value={toHex(theme.accent)} onChange={(accent) => onChange({ accent })} />
+      <ColorField label={t('overlay.overrides.text')} value={toHex(theme.text)} onChange={(text) => onChange({ text })} />
       {panel ? (
         <>
-          <ColorField label="Fond des encarts" value={panel.color} onChange={(color) => onChange({ panel: color })} />
+          <ColorField label={t('overlay.overrides.panel')} value={panel.color} onChange={(color) => onChange({ panel: color })} />
           <RangeField
-            label="Opacité du fond"
+            label={t('overlay.overrides.panelOpacity')}
             min={0}
             max={1}
             step={0.05}
@@ -392,29 +400,23 @@ function StyleOverrides({
         </>
       ) : (
         <div className="field">
-          <label className="field__label" htmlFor={backingId}>
-            Fond du texte
+          <label className="type-label" htmlFor={backingId}>
+            {t('overlay.overrides.backing')}
           </label>
-          <select
+          <Select
             id={backingId}
-            className="select"
             value={theme.textBacking ?? DEFAULT_TEXT_BACKING}
-            onChange={(e) => onChange({ textBacking: e.currentTarget.value as TextBacking })}
-          >
-            {TEXT_BACKINGS.map((backing) => (
-              <option key={backing} value={backing}>
-                {TEXT_BACKING_LABELS[backing]}
-              </option>
-            ))}
-          </select>
-          <p className="field__hint">Ce style pose le texte sur l'image, sans fond d'encart.</p>
+            options={TEXT_BACKINGS.map((backing) => ({ value: backing, label: TEXT_BACKING_LABELS[backing] }))}
+            onChange={(textBacking) => onChange({ textBacking })}
+          />
+          <p className="type-hint">{t('overlay.overrides.backingHint')}</p>
         </div>
       )}
-      <FontField label="Police des titres" value={own.titleFont} inherit={inherit} onChange={(titleFont) => onChange({ titleFont })} />
-      <FontField label="Police des chiffres" value={own.numberFont} inherit={inherit} onChange={(numberFont) => onChange({ numberFont })} />
-      <button type="button" className="btn btn--secondary" disabled={Object.keys(own).length === 0} onClick={() => onChange(null)}>
-        {widget ? "Comme le reste de l'habillage" : 'Revenir au style'}
-      </button>
+      <FontField label={t('overlay.overrides.titleFont')} value={own.titleFont} inherit={inherit} onChange={(titleFont) => onChange({ titleFont })} />
+      <FontField label={t('overlay.overrides.numberFont')} value={own.numberFont} inherit={inherit} onChange={(numberFont) => onChange({ numberFont })} />
+      <Button disabled={Object.keys(own).length === 0} onClick={() => onChange(null)}>
+        {widget ? t('overlay.overrides.restOfOverlay') : t('overlay.overrides.backToStyle')}
+      </Button>
     </SettingRow>
   )
 }
@@ -427,42 +429,39 @@ const COLOURED_LABEL_KINDS = LABEL_KINDS.filter((kind) => kind !== 'climb')
  * style's until changed). The labels also take the style's font and panel.
  */
 function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange(next: OverlaySettings): void }) {
+  const t = useT()
   const kindId = useId()
   const [kind, setKind] = useState<LabelKind>(COLOURED_LABEL_KINDS[0] ?? 'pass')
   const look = resolveLabelStyle(overlay.style, overlay.labelColors)
   const own = overlay.labelColors ?? {}
   return (
     <SettingRow
-      label="Couleurs des étiquettes"
-      value={Object.keys(own).length > 0 ? 'Personnalisées' : 'Celles du style'}
+      label={t('overlay.labelColors.title')}
+      value={Object.keys(own).length > 0 ? t('overlay.custom') : t('overlay.overrides.style')}
       paths={['overlay.labelColors']}
     >
       <div className="field">
-        <label className="field__label" htmlFor={kindId}>
-          Type d'étiquette
+        <label className="type-label" htmlFor={kindId}>
+          {t('overlay.labelColors.type')}
         </label>
-        <select id={kindId} className="select" value={kind} onChange={(e) => setKind(e.currentTarget.value as LabelKind)}>
-          {COLOURED_LABEL_KINDS.map((k) => (
-            <option key={k} value={k}>
-              {LABEL_KIND_LABELS[k]}
-              {own[k] ? ' (modifiée)' : ''}
-            </option>
-          ))}
-        </select>
+        <Select
+          id={kindId}
+          value={kind}
+          options={COLOURED_LABEL_KINDS.map((k) => ({ value: k, label: `${LABEL_KIND_LABELS[k]}${own[k] ? t('overlay.labelColors.changed') : ''}` }))}
+          onChange={(k) => setKind(k)}
+        />
       </div>
-      <ColorField label="Couleur" value={toHex(look.accents[kind])} onChange={(color) => onChange(withLabelColor(overlay, kind, color))} />
-      <p className="field__hint">La police et le fond des étiquettes suivent le style.</p>
-      <button
-        type="button"
-        className="btn btn--secondary"
+      <ColorField label={t('overlay.color')} value={toHex(look.accents[kind])} onChange={(color) => onChange(withLabelColor(overlay, kind, color))} />
+      <p className="type-hint">{t('overlay.labelColors.hint')}</p>
+      <Button
         disabled={Object.keys(own).length === 0}
         onClick={() => {
           const { labelColors: _labelColors, ...rest } = overlay
           onChange(rest)
         }}
       >
-        Revenir aux couleurs du style
-      </button>
+        {t('overlay.labelColors.back')}
+      </Button>
     </SettingRow>
   )
 }
@@ -472,6 +471,7 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
  * overlay), Titres, Compteurs (and the ghost-race leaderboard, 2+ tracks), Profil et mini-carte, Météo, logo et texte, and Crédits des sources (burned in even without the rest).
  */
 export function OverlayPanel() {
+  const t = useT()
   const overlay = useAppStore((s) => s.settings.overlay)
   const setSetting = useAppStore((s) => s.setSetting)
   const track = useAppStore((s) => s.tracks[0])
@@ -479,7 +479,6 @@ export function OverlayPanel() {
   const raceOn = useAppStore((s) => s.settings.race.enabled)
   const hasWeather = useWeatherStore((s) => s.series !== null)
   const [logoError, setLogoError] = useState<string | null>(null)
-  const id = useId()
 
   const set = (patch: Partial<OverlaySettings>) => setSetting('overlay', { ...overlay, ...patch })
   const setWidget = <K extends WidgetKey>(key: K, patch: Partial<OverlaySettings[K]>) => set({ [key]: { ...overlay[key], ...patch } })
@@ -497,7 +496,7 @@ export function OverlayPanel() {
 
   const chooseLogo = async () => {
     try {
-      const [file] = await getPlatform().openFiles({ filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'] }] })
+      const [file] = await getPlatform().openFiles({ filters: [{ name: t('marker.image.filter'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'] }] })
       if (!file) return
       setLogoError(null)
       const image = await fileToLogoDataUrl(file)
@@ -505,76 +504,66 @@ export function OverlayPanel() {
       const now = useAppStore.getState().settings.overlay
       setSetting('overlay', { ...now, logo: { ...now.logo, image } })
     } catch {
-      setLogoError("Cette image n'a pas pu être lue.")
+      setLogoError(t('marker.image.error'))
     }
   }
 
   return (
     <>
-      <PanelSection title="Habillage" keys={['overlay']}>
-        <label className="checkbox checkbox--switch">
-          <input type="checkbox" checked={overlay.enabled} onChange={(e) => set({ enabled: e.currentTarget.checked })} />
-          Afficher l'habillage
-        </label>
-        <p className="field__hint">Titres, compteurs et profil incrustés dans le film, tels qu'exportés.</p>
+      <PanelSection title={t('overlay.panel.title')} keys={['overlay']}>
+        <Switch checked={overlay.enabled} onChange={(on) => set({ enabled: on })}>{t('overlay.panel.show')}</Switch>
+        <p className="type-hint">{t('overlay.panel.showHint')}</p>
 
         {overlay.enabled && (
-          <fieldset className="field fieldset">
-            <legend className="field__label">Style</legend>
-            <div className="segmented segmented--wrap">
+          <fieldset className="field min-w-0">
+            <legend className="type-label mb-1">{t('overlay.panel.style')}</legend>
+            <RadioGroup wrap aria-label={t('overlay.panel.style')} value={overlay.style} onChange={(style) => set(withStyleLayout(overlay, style))}>
               {OVERLAY_STYLES.map((style) => (
-                <label key={style} className="segmented__option">
-                  <input
-                    type="radio"
-                    name={`${id}-style`}
-                    value={style}
-                    checked={overlay.style === style}
-                    onChange={() => set(withStyleLayout(overlay, style))}
-                  />
+                <Radio key={style} value={style}>
                   {OVERLAY_STYLE_LABELS[style]}
-                </label>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </fieldset>
         )}
         {overlay.enabled && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}
         {overlay.enabled && <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />}
       </PanelSection>
 
-      <PanelSection title="Étiquettes 3D">
-        <p className="field__hint">Toujours affichées. Posez des clés pour les masquer puis les faire revenir en fondu le long du parcours : une clé à 100 % les affiche, à 0 % les masque (deux clés proches font un changement rapide).</p>
+      <PanelSection title={t('overlay.panel.labels3d')}>
+        <p className="type-hint">{t('overlay.panel.labels3dHint')}</p>
         <PanelKeys target={{ kind: 'param', param: 'labels' }} />
       </PanelSection>
 
       {overlay.enabled && (
         <>
-          <PanelSection title="Titres">
+          <PanelSection title={t('overlay.panel.titles')}>
             <CardSwitch card={TITLE_CARD_ID} enabled={overlay.title.enabled} onToggle={(enabled) => setWidget('title', { enabled })} />
             <CardSwitch card={END_CARD_ID} enabled={overlay.end.enabled} onToggle={(enabled) => setWidget('end', { enabled })} />
           </PanelSection>
 
-          <PanelSection title="Compteurs">
+          <PanelSection title={t('overlay.panel.counters')}>
             <WidgetGroup
-              label="Afficher les compteurs"
+              label={t('overlay.panel.showCounters')}
               enabled={overlay.counters.enabled}
               onToggle={(enabled) => setWidget('counters', { enabled })}
               position="counters"
               styled="counters"
               style={<SizeField value={overlay.counters.size} onChange={(size) => setWidget('counters', { size })} />}
             >
-              <fieldset className="field fieldset">
-                <legend className="field__label">Valeurs</legend>
+              <fieldset className="field min-w-0">
+                <legend className="type-label mb-1">{t('overlay.panel.values')}</legend>
                 <div className="chips">
                   {COUNTER_IDS.map((counter) => (
-                    <label key={counter} className="chip" title={available[counter] ? undefined : 'Absent de cette trace'}>
-                      <input
-                        type="checkbox"
-                        checked={overlay.counters.fields[counter] && available[counter]}
-                        disabled={!available[counter]}
-                        onChange={(e) => setWidget('counters', { fields: { ...overlay.counters.fields, [counter]: e.currentTarget.checked } })}
-                      />
+                    <Chip
+                      key={counter}
+                      checked={overlay.counters.fields[counter] && available[counter]}
+                      disabled={!available[counter]}
+                      title={available[counter] ? undefined : t('overlay.panel.missing')}
+                      onChange={(on) => setWidget('counters', { fields: { ...overlay.counters.fields, [counter]: on } })}
+                    >
                       {COUNTER_LABELS[counter]}
-                    </label>
+                    </Chip>
                   ))}
                 </div>
               </fieldset>
@@ -582,25 +571,25 @@ export function OverlayPanel() {
 
             {severalTracks && (
               <WidgetGroup
-                label="Classement (course fantôme)"
+                label={t('overlay.panel.leaderboard')}
                 enabled={overlay.leaderboard.enabled}
                 onToggle={(enabled) => setWidget('leaderboard', { enabled })}
                 position="leaderboard"
                 styled="leaderboard"
                 style={<SizeField value={overlay.leaderboard.size} onChange={(size) => setWidget('leaderboard', { size })} />}
               >
-                <p className="field__hint">
+                <p className="type-hint">
                   {raceOn
-                    ? 'Rang, nom et écart au premier de chaque trace, au marqueur.'
-                    : 'Visible quand les traces sont rejouées « En parallèle » (onglet Trace, « Plusieurs traces »).'}
+                    ? t('overlay.panel.leaderboardRace')
+                    : t('overlay.panel.leaderboardOff')}
                 </p>
               </WidgetGroup>
             )}
           </PanelSection>
 
-          <PanelSection title="Profil et mini-carte">
+          <PanelSection title={t('overlay.panel.profileMinimap')}>
             <WidgetGroup
-              label="Profil altimétrique"
+              label={t('overlay.panel.profile')}
               enabled={overlay.profile.enabled}
               onToggle={(enabled) => setWidget('profile', { enabled })}
               position="profile"
@@ -608,7 +597,7 @@ export function OverlayPanel() {
               style={
                 <>
                   <RangeField
-                    label="Largeur (% de l'image)"
+                    label={t('overlay.panel.profileWidth')}
                     min={PROFILE_WIDTH_MIN}
                     max={PROFILE_WIDTH_MAX}
                     step={0.01}
@@ -617,7 +606,7 @@ export function OverlayPanel() {
                     onChange={(width) => setWidget('profile', { width })}
                   />
                   <RangeField
-                    label="Hauteur (% de l'image)"
+                    label={t('overlay.panel.profileHeight')}
                     min={PROFILE_HEIGHT_MIN}
                     max={PROFILE_HEIGHT_MAX}
                     step={0.01}
@@ -629,11 +618,11 @@ export function OverlayPanel() {
                 </>
               }
             >
-              {!hasEle && track && <p className="field__hint">Cette trace n'a pas d'altitude enregistrée.</p>}
+              {!hasEle && track && <p className="type-hint">{t('overlay.panel.noElevation')}</p>}
             </WidgetGroup>
 
             <WidgetGroup
-              label="Mini-carte"
+              label={t('overlay.panel.minimap')}
               enabled={overlay.minimap.enabled}
               onToggle={(enabled) => setWidget('minimap', { enabled })}
               position="minimap"
@@ -645,36 +634,34 @@ export function OverlayPanel() {
                 </>
               }
             >
-              <p className="field__hint">Tout le tracé vu de dessus, nord en haut, avec la position.</p>
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={overlay.minimap.northArrow}
-                  onChange={(e) => setWidget('minimap', { northArrow: e.currentTarget.checked })}
-                />
-                Flèche du nord
-              </label>
+              <p className="type-hint">{t('overlay.panel.minimapHint')}</p>
+              <Checkbox
+                checked={overlay.minimap.northArrow}
+                onChange={(on) => setWidget('minimap', { northArrow: on })}
+              >
+                {t('overlay.panel.northArrow')}
+              </Checkbox>
             </WidgetGroup>
           </PanelSection>
 
-          <PanelSection title="Météo, logo et texte">
+          <PanelSection title={t('overlay.panel.weatherLogoText')}>
             <WidgetGroup
-              label="Météo"
+              label={t('overlay.panel.weather')}
               enabled={overlay.weather.enabled}
               onToggle={(enabled) => setWidget('weather', { enabled })}
               position="weather"
               styled="weather"
               style={<SizeField value={overlay.weather.size} onChange={(size) => setWidget('weather', { size })} />}
             >
-              <p className="field__hint">
+              <p className="type-hint">
                 {hasWeather
-                  ? 'Ciel, température et vent au marqueur.'
-                  : 'Disponible quand la météo de la sortie est chargée (onglet Trace).'}
+                  ? t('overlay.panel.weatherReady')
+                  : t('overlay.panel.weatherWaiting')}
               </p>
             </WidgetGroup>
 
             <WidgetGroup
-              label="Logo"
+              label={t('overlay.panel.logo')}
               enabled={overlay.logo.enabled}
               onToggle={(enabled) => setWidget('logo', { enabled })}
               position="logo"
@@ -682,7 +669,7 @@ export function OverlayPanel() {
                 <>
                   <SizeField value={overlay.logo.size} onChange={(size) => setWidget('logo', { size })} />
                   <RangeField
-                    label="Opacité"
+                    label={t('overlay.panel.opacity')}
                     min={0}
                     max={1}
                     step={0.05}
@@ -693,57 +680,54 @@ export function OverlayPanel() {
                 </>
               }
             >
-              <div className="project__row">
-                <button type="button" className="btn btn--secondary" onClick={() => void chooseLogo()}>
-                  {overlay.logo.image ? "Changer l'image" : 'Choisir une image'}
-                </button>
+              <div className="flex gap-2 *:min-w-0 *:flex-1">
+                <Button onClick={() => void chooseLogo()}>
+                  {overlay.logo.image ? t('marker.image.change') : t('marker.image.choose')}
+                </Button>
                 {overlay.logo.image && (
-                  <button type="button" className="btn btn--secondary" onClick={() => setWidget('logo', { image: '' })}>
-                    Retirer
-                  </button>
+                  <Button onClick={() => setWidget('logo', { image: '' })}>
+                    {t('marker.image.remove')}
+                  </Button>
                 )}
               </div>
               {logoError && (
-                <p className="field__hint" role="alert">
+                <p className="type-hint" role="alert">
                   {logoError}
                 </p>
               )}
             </WidgetGroup>
 
             <WidgetGroup
-              label="Texte libre"
+              label={t('overlay.panel.freeText')}
               enabled={overlay.text.enabled}
               onToggle={(enabled) => setWidget('text', { enabled })}
               position="text"
               styled="text"
               style={<SizeField value={overlay.text.size} onChange={(size) => setWidget('text', { size })} />}
             >
-              <TextField label="Texte" value={overlay.text.text} placeholder="Ex. : avec Marie et Paul" onChange={(text) => setWidget('text', { text })} />
+              <TextField label={t('overlay.panel.text')} value={overlay.text.text} placeholder={t('overlay.panel.textPlaceholder')} onChange={(text) => setWidget('text', { text })} />
             </WidgetGroup>
           </PanelSection>
         </>
       )}
 
-      <PanelSection title="Crédits des sources">
-        <div className="field__label-row">
-          <label className="checkbox checkbox--switch">
-            <input type="checkbox" checked={overlay.credits.enabled} onChange={(e) => setWidget('credits', { enabled: e.currentTarget.checked })} />
-            Incruster les crédits
-          </label>
-          <InfoTip text="Les licences du relief, de l'imagerie, de la météo et d'OpenStreetMap demandent de citer les sources dans le film publié." />
+      <PanelSection title={t('overlay.panel.credits')}>
+        <div className="flex items-center gap-1">
+          <Switch checked={overlay.credits.enabled} onChange={(on) => setWidget('credits', { enabled: on })}>{t('overlay.panel.burnCredits')}</Switch>
+          <InfoTip text={t('overlay.panel.creditsTip')} />
         </div>
         {overlay.credits.enabled ? (
           <>
             <AnchorPicker
-              label="Position"
+              label={t('overlay.position')}
               value={overlay.credits.position}
               allowed={CREDITS_POSITIONS}
               onChange={(position) => setWidget('credits', { position })}
             />
-            <p className="field__hint">En petit, dans un coin de chaque image exportée, même sans le reste de l'habillage.</p>
+            <p className="type-hint">{t('overlay.panel.creditsHint')}</p>
           </>
         ) : (
-          <p className="field__hint">Citez alors les sources ailleurs (description de la vidéo, générique).</p>
+          <p className="type-hint">{t('overlay.panel.creditsOff')}</p>
         )}
       </PanelSection>
     </>

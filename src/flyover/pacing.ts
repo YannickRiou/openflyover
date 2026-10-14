@@ -155,6 +155,17 @@ export interface SpeedCurve {
   at(xM: number): number
 }
 
+/**
+ * A stage of a sequence « À la suite » (metres along it, the stages one after the other over the whole length): with
+ * `durationS` it flies that long (its moving time plus its own pauses, not the held junctions or nights), without it
+ * its share of the duration as ever.
+ */
+export interface FlightStage {
+  fromM: number
+  toM: number
+  durationS?: number
+}
+
 /** Speed portion clamped to the track, with the length of its transitions (metres). */
 interface SpeedRamp extends FlightSpeed {
   rampM: number
@@ -305,8 +316,9 @@ function distanceGrid(
   ramps: readonly SpeedRamp[],
   slowWindowM: number | null,
   curve?: SpeedCurve,
+  stageEdgesM: readonly number[] = [],
 ): number[] {
-  const nodes = [0, lengthM, ...highlights, ...pauseAt]
+  const nodes = [0, lengthM, ...highlights, ...pauseAt, ...stageEdgesM.map((x) => clamp(x, 0, lengthM))]
   const knots = curve?.knotsM ?? []
   for (let i = 0; i < knots.length; i++) {
     nodes.push(clamp(knots[i], 0, lengthM))
@@ -330,10 +342,54 @@ function distanceGrid(
   return xs
 }
 
+/** Share of the stage's time its pauses may not leave to the flight: the moving time keeps at least this part of it. */
+const MIN_STAGE_MOVING_SHARE = 0.1
+
+/**
+ * Moving time (`raw` scaled) along the grid `xs` of a sequence whose stages `stages` (sorted, one after the other over
+ * `lengthM`) have durations of their own: a stage that sets one flies exactly that long, its own pauses (`squeezedS`, by
+ * pause position `pauseAt`) included; the others share `durationS` in proportion to their length, with `keepDuration`
+ * keeping them to it (otherwise their moving time is left as it is). A stage over zero metres has no time.
+ */
+function stagedMovingTime(
+  stages: readonly FlightStage[],
+  xs: readonly number[],
+  raw: Float64Array,
+  lengthM: number,
+  durationS: number,
+  keepDuration: boolean,
+  pauseAt: readonly number[],
+  squeezedS: readonly number[],
+): Float64Array {
+  const stageOf = (x: number) => {
+    let k = 0
+    for (let j = 1; j < stages.length; j++) if (x >= stages[j].fromM) k = j
+    return k
+  }
+  const moving = stages.map(() => 0)
+  const stepStage = xs.map((x, i) => (i > 0 ? stageOf((xs[i - 1] + x) / 2) : 0))
+  for (let i = 1; i < xs.length; i++) moving[stepStage[i]] += raw[i] - raw[i - 1]
+  const paused = stages.map(() => 0)
+  pauseAt.forEach((x, k) => (paused[stageOf(x)] += squeezedS[k]))
+  const keep = (target: number, pausedS: number, movingS: number) => (movingS > 0 ? Math.max(target - pausedS, MIN_STAGE_MOVING_SHARE * target) / movingS : 1)
+  const unset = stages.flatMap((s, k) => (s.durationS === undefined ? [k] : []))
+  const sum = (ks: readonly number[], of: readonly number[]) => ks.reduce((t, k) => t + of[k], 0)
+  const share = (durationS * unset.reduce((t, k) => t + stages[k].toM - stages[k].fromM, 0)) / lengthM
+  const unsetScale = keepDuration ? keep(share, sum(unset, paused), sum(unset, moving)) : 1
+  const scales = stages.map((s, k) => (s.durationS === undefined ? unsetScale : keep(s.durationS, paused[k], moving[k])))
+  const u = new Float64Array(xs.length)
+  for (let i = 1; i < xs.length; i++) u[i] = u[i - 1] + (raw[i] - raw[i - 1]) * scales[stepStage[i]]
+  return u
+}
+
 /**
  * Pacing of the flight with the slow-downs at `highlightsM` (when `settings.enabled`), the given pauses
  * (`stops`, sorted by position), speed portions (`speeds`, not overlapping) and speed keys (`curve`); pauses, portions
  * and keys apply whatever `settings.enabled`. The identity pacing without length, or without slow-down, pause nor portion.
+ *
+ * `stages` with a `durationS` give those stages a duration of their own: each flies that long (with `keepDuration`, as the
+ * others share `durationS` in proportion to their length), and the film grows or shrinks by the difference. Without one
+ * stage set, nothing changes.
  */
 export function flightPacing(
   lengthM: number,
@@ -343,16 +399,18 @@ export function flightPacing(
   stops: readonly FlightStop[],
   speeds: readonly FlightSpeed[] = [],
   curve?: SpeedCurve,
+  stages: readonly FlightStage[] = [],
 ): Pacing {
   const L = lengthM
   if (!(L > 0) || !(durationS > 0)) return identityPacing(durationS > 0 ? durationS : 1)
   const highlights = settings.enabled ? normalizeHighlights(highlightsM, L) : []
   const slows = highlights.length > 0 && settings.slowFactor < 1
   const ramps = speedRamps(speeds, L, (settings.transitionS * L) / durationS)
-  if (!slows && stops.length === 0 && ramps.length === 0 && !curve) return identityPacing(durationS)
+  const timed = stages.length > 0 && stages.some((s) => s.durationS !== undefined)
+  if (!slows && stops.length === 0 && ramps.length === 0 && !curve && !timed) return identityPacing(durationS)
   const W = settings.windowM
   const pauseAt = stops.map((s) => clamp(s.atM, 0, L))
-  const xs = distanceGrid(L, highlights, pauseAt, ramps, slows ? W : null, curve)
+  const xs = distanceGrid(L, highlights, pauseAt, ramps, slows ? W : null, curve, timed ? stages.map((s) => s.fromM) : [])
 
   // moving time at ×1 before scaling: speed v0 · r · m (midpoint) on each step
   const n = xs.length
@@ -379,7 +437,7 @@ export function flightPacing(
   const scale = settings.keepDuration ? (durationS - squeezed) / moving : 1
 
   const xTable = Float64Array.from(xs)
-  const uTable = raw.map((u) => u * scale)
+  const uTable = timed ? stagedMovingTime(stages, xs, raw, L, durationS, settings.keepDuration, pauseAt, stops.map((s, k) => (s.extra ? 0 : pauseS[k]))) : raw.map((u) => u * scale)
   const U = uTable[n - 1]
 
   // pauses: moving time of the paused node, eases limited by the neighbours and the ends

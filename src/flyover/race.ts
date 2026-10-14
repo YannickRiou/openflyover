@@ -14,6 +14,7 @@ import { firstIndexAtOrAbove, lastIndexAtOrBelow } from '../core/math'
 import type { Track } from '../core/types'
 import { samplePath, type TrackPath } from './path'
 import { smoothedTrackPath } from './smooth'
+import { t } from '../i18n'
 
 export const RACE_SYNC_MODES = ['elapsed', 'clock', 'distance'] as const
 export type RaceSync = (typeof RACE_SYNC_MODES)[number]
@@ -25,7 +26,7 @@ export type RaceSync = (typeof RACE_SYNC_MODES)[number]
 export const RACE_CAMERAS = ['premiere', 'tete', 'ensemble'] as const
 export type RaceCamera = (typeof RACE_CAMERAS)[number]
 
-/** Transition between two stages « À la suite »: a plain cut, or the cut at the darkest (lightest) point of a dip. */
+/** Transition between two stages « À la suite » of a project saved before the junctions (`withStageSettingsMigrated`). */
 export const STAGE_TRANSITIONS = ['coupe', 'fondu-noir', 'fondu-blanc'] as const
 export type StageTransition = (typeof STAGE_TRANSITIONS)[number]
 
@@ -43,30 +44,31 @@ export interface RaceSettings {
   camera?: RaceCamera
   /** « À la suite »: the tracks flown one after the other in list order (ignored while `enabled`) */
   sequence?: boolean
-  /** « À la suite »: a card with the name and figures of each stage as it starts (absent = true) */
+  /**
+   * « À la suite »: the track ids in the order of the stages (`orderedTracks`); absent = the list order. Ids that are no
+   * longer tracks are ignored, tracks it lacks come last. Reordering the stages writes it (`reorderStages` remaps the film).
+   */
+  order?: string[]
+  /**
+   * Projects saved before the junctions only: the cards and the transition of every stage, which the film's
+   * junctions (`film.junctionDefault`) took over when the project was opened; never written any more.
+   */
   stageCards?: boolean
-  /** « À la suite »: how one stage cuts to the next (absent = 'fondu-noir') */
   stageTransition?: StageTransition
 }
 
 export const DEFAULT_RACE: RaceSettings = { enabled: false, sync: 'elapsed' }
 
 export const RACE_CAMERA_LABELS: Record<RaceCamera, string> = {
-  premiere: 'Première trace',
-  tete: 'Celle en tête',
-  ensemble: 'Toutes les traces',
-}
-
-export const STAGE_TRANSITION_LABELS: Record<StageTransition, string> = {
-  coupe: 'Coupe',
-  'fondu-noir': 'Fondu au noir',
-  'fondu-blanc': 'Fondu au blanc',
+  get premiere() { return t('track.camera.premiere') },
+  get tete() { return t('track.camera.tete') },
+  get ensemble() { return t('track.camera.ensemble') },
 }
 
 export const RACE_SYNC_LABELS: Record<RaceSync, string> = {
-  elapsed: 'Temps écoulé',
-  clock: 'Heure réelle',
-  distance: 'Même distance',
+  get elapsed() { return t('track.sync.elapsed') },
+  get clock() { return t('track.sync.clock') },
+  get distance() { return t('track.sync.distance') },
 }
 
 /** Modes that need timestamps on every track. */
@@ -79,6 +81,7 @@ export function isValidRace(race: RaceSettings): boolean {
     (RACE_SYNC_MODES as readonly string[]).includes(race.sync) &&
     (race.camera === undefined || oneOf(RACE_CAMERAS, race.camera)) &&
     (race.sequence === undefined || typeof race.sequence === 'boolean') &&
+    (race.order === undefined || (Array.isArray(race.order) && race.order.every((id) => typeof id === 'string'))) &&
     (race.stageCards === undefined || typeof race.stageCards === 'boolean') &&
     (race.stageTransition === undefined || oneOf(STAGE_TRANSITIONS, race.stageTransition))
   )

@@ -62,16 +62,56 @@ const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habil
 /** Waits until `fn` (run in the page) returns a truthy value. */
 const until = (page, fn, arg, timeout = STEP_MS) => page.waitForFunction(fn, { timeout, polling: 250 }, arg)
 
+/** A modal dialog (shortcuts, sources, Strava, diagnostic report): the page behind it is inert while it is open. */
+const MODAL = '[role="dialog"][data-modal]'
+const modalClosed = (page) => until(page, (selector) => !document.querySelector(selector), MODAL)
+
 /** Clicks the first visible button whose text contains `text`. */
 async function clickButton(page, text, timeout = STEP_MS) {
   const button = await page.waitForSelector(`button::-p-text(${text})`, { visible: true, timeout })
   await button.click()
 }
 
+/** The input of the switch labelled `text` in the tab panel `data-testid="tab-panel-<tab>"`. */
+async function switchOf(page, tab, text) {
+  const handle = await page.evaluateHandle(
+    (t, label) => [...document.querySelectorAll(`[data-testid="tab-panel-${t}"] input[role="switch"]`)].find((i) => i.labels?.[0]?.textContent.trim() === label) ?? null,
+    tab,
+    text,
+  )
+  const element = handle.asElement()
+  assert(element, `interrupteur « ${text} » introuvable dans l'onglet ${tab}`)
+  return element
+}
+
+/**
+ * Picks the option `text` of the select named `label` (its `<label>`, or its `aria-label`) inside `scope`. Desktop Chromium
+ * gets the list renderer of the Select primitive: a button that opens a list over the page (the phone's native select is
+ * covered by the unit tests).
+ */
+async function selectOption(page, scope, label, text) {
+  const handle = await page.evaluateHandle(
+    (s, name) =>
+      [...document.querySelectorAll(`${s} button[aria-haspopup="listbox"]`)].find(
+        (b) =>
+          b.getAttribute('aria-label') === name ||
+          (b.getAttribute('aria-labelledby') ?? '').split(' ').some((id) => document.getElementById(id)?.textContent.trim() === name),
+      ) ?? null,
+    scope,
+    label,
+  )
+  const trigger = handle.asElement()
+  assert(trigger, `liste « ${label} » introuvable dans ${scope}`)
+  await trigger.click()
+  const option = await page.waitForSelector(`[role="listbox"] [role="option"]::-p-text(${text})`, { visible: true, timeout: STEP_MS })
+  await option.click()
+  await page.waitForSelector('[role="listbox"]', { hidden: true, timeout: STEP_MS })
+}
+
 /** Number of blocks in a timeline lane (« Plans », « Arrêts », « Textes »…). */
 const laneCount = (page, lane) =>
   page.evaluate(
-    (name) => document.querySelectorAll(`[role="group"][aria-label="${name}"] .film-tl__block`).length,
+    (name) => document.querySelectorAll(`[role="group"][aria-label="${name}"] [data-testid="timeline-block"]`).length,
     lane,
   )
 
@@ -192,22 +232,28 @@ const SCENARIOS = [
     title: "Accueil vide, puis l'exemple chargé",
     async run({ page, url }) {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
-      await page.waitForSelector('#empty-title::-p-text(Votre sortie)', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector('[data-testid="empty-state"]::-p-text(Votre sortie)', { visible: true, timeout: STEP_MS })
       // the home screen: « Projet » alone in the rail, no export
-      const homeTabs = await page.$$eval('.rail [role="tab"]', (tabs) => tabs.map((t) => t.id.replace('tab-', '')))
+      const homeTabs = await page.$$eval('[role="tablist"] [role="tab"]', (tabs) => tabs.map((t) => t.dataset.testid.replace('tab-', '')))
       assert(homeTabs.join() === 'projet', `onglets de l'accueil : ${homeTabs.join(', ')}`)
-      assert(!(await page.$('.topbar__export')), '« Exporter » est affiché sans trace')
+      assert(!(await page.$('[data-testid="topbar-export"]')), '« Exporter » est affiché sans trace')
       await clickButton(page, "Essayer avec l'exemple")
       await until(page, () => {
         const lane = document.querySelector('[role="group"][aria-label="Plans"]')
         const text = lane?.textContent ?? ''
         return text.includes('Ouverture') && text.includes('Survol') && text.includes('Clôture')
       })
-      assert(!(await page.$('#empty-title')), "l'accueil est resté affiché après le chargement de l'exemple")
+      assert(!(await page.$('[data-testid="empty-state"]')), "l'accueil est resté affiché après le chargement de l'exemple")
       // the tabs come back, on « Trace »
-      await until(page, (all) => [...document.querySelectorAll('.rail [role="tab"]')].map((t) => t.id.replace('tab-', '')).join() === all, TABS.join())
-      assert(await page.$eval('#tab-trace', (t) => t.getAttribute('aria-selected') === 'true'), "l'onglet Trace n'est pas ouvert après l'exemple")
-      assert(await page.$('.topbar__export'), "« Exporter » manque après l'exemple")
+      await until(page, (all) => [...document.querySelectorAll('[role="tablist"] [role="tab"]')].map((t) => t.dataset.testid.replace('tab-', '')).join() === all, TABS.join())
+      assert(await page.$eval('[data-testid="tab-trace"]', (t) => t.getAttribute('aria-selected') === 'true'), "l'onglet Trace n'est pas ouvert après l'exemple")
+      assert(await page.$('[data-testid="topbar-export"]'), "« Exporter » manque après l'exemple")
+      // the project name is a text field named by its label: typing renames the project
+      const name = await page.waitForSelector('::-p-aria([name="Nom du projet"])', { visible: true })
+      await name.click({ count: 3 })
+      await page.keyboard.type('Sortie de test')
+      await until(page, () => document.querySelector('header input')?.value === 'Sortie de test')
+      await blur(page)
       await waitForScene(page)
     },
   },
@@ -215,88 +261,182 @@ const SCENARIOS = [
     id: 'onglets',
     title: 'Onglets du rail et aide des raccourcis',
     async run({ page }) {
-      const shown = await page.$$eval('.rail [role="tab"]', (tabs) => tabs.map((t) => t.id.replace('tab-', '')))
+      const shown = await page.$$eval('[role="tablist"] [role="tab"]', (tabs) => tabs.map((t) => t.dataset.testid.replace('tab-', '')))
       assert(shown.join() === TABS.join(), `onglets du rail : ${shown.join(', ')}`)
       for (const tab of TABS) {
         const open = await page.evaluate(
-          (t) => document.getElementById(`tab-${t}`)?.getAttribute('aria-selected') === 'true' && !document.getElementById('side-panel')?.hidden,
+          (t) => document.querySelector(`[data-testid="tab-${t}"]`)?.getAttribute('aria-selected') === 'true' && !document.querySelector('[data-testid="side-panel"]')?.hidden,
           tab,
         )
         // a click on the open tab folds the panel
-        if (!open) await page.click(`#tab-${tab}`)
+        if (!open) await page.click(`[data-testid="tab-${tab}"]`)
         await until(
           page,
           (t) => {
-            const panel = document.getElementById(`tab-panel-${t}`)
-            return panel && !panel.hidden && !document.getElementById('side-panel')?.hidden && panel.getBoundingClientRect().width > 100
+            const panel = document.querySelector(`[data-testid="tab-panel-${t}"]`)
+            return panel?.getAttribute('role') === 'tabpanel' && !document.querySelector('[data-testid="side-panel"]')?.hidden && panel.getBoundingClientRect().width > 100
           },
           tab,
         )
         // a choice with many options wraps onto rows, it never scrolls sideways (the overlay styles, #61): shown by turning
         // the overlay on for the check
-        const overlaySwitch = tab === 'habillage' ? await page.$('#tab-panel-habillage .checkbox--switch input') : null
+        const overlaySwitch = tab === 'habillage' ? await switchOf(page, 'habillage', "Afficher l'habillage") : null
         if (overlaySwitch && !(await overlaySwitch.evaluate((el) => el.checked))) await overlaySwitch.evaluate((el) => el.click())
         else if (overlaySwitch) await overlaySwitch.dispose()
-        const overflowing = await page.$$eval(`#tab-panel-${tab} .segmented`, (groups) => groups.filter((g) => g.scrollWidth > g.clientWidth + 1).length)
-        if (overlaySwitch) await page.$eval('#tab-panel-habillage .checkbox--switch input', (el) => el.checked && el.click())
+        // a group of choices: its radio group
+        const overflowing = await page.$$eval(
+          `[data-testid="tab-panel-${tab}"] [role="radiogroup"]`,
+          (groups) => groups.filter((g) => g.scrollWidth > g.clientWidth + 1).length,
+        )
+        if (overlaySwitch) await overlaySwitch.evaluate((el) => el.checked && el.click())
         assert(overflowing === 0, `onglet ${tab} : ${overflowing} choix qui débordent sur le côté`)
       }
+      // the rail is one tab stop: the arrows (vertical), Home and End move the focus and show the tab, wrapping at the ends
+      const press = async (key, expected) => {
+        await page.keyboard.press(key)
+        await until(page, (t) => document.activeElement?.dataset.testid === t && document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.testid === t, expected)
+      }
+      await page.focus('[data-testid="tab-reglages"]')
+      assert(await page.$eval('[data-testid="side-panel"]', (el) => !el.hidden), 'le focus clavier sur l’onglet ouvert replie le panneau')
+      await press('Home', 'tab-trace')
+      await press('ArrowDown', 'tab-carte')
+      await press('End', 'tab-reglages')
+      await press('ArrowDown', 'tab-trace')
+      await press('ArrowUp', 'tab-reglages')
+      const tabStops = await page.$$eval('[role="tablist"] [role="tab"]', (all) => all.filter((t) => t.tabIndex === 0).map((t) => t.dataset.testid))
+      assert(tabStops.join() === 'tab-reglages', `un seul onglet dans l'ordre de tabulation : ${tabStops.join(', ')}`)
+      // the open tab pressed again folds the panel (with the mouse, with Enter), pressed once more shows it
+      await page.click('[data-testid="tab-reglages"]')
+      await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.click('[data-testid="tab-reglages"]')
+      await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.keyboard.press('Enter')
+      await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.keyboard.press('Enter')
+      await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
       // the « ? » button, then the « ? » key; Escape closes the dialog both times
       await page.click('button[aria-label="Raccourcis clavier"]')
-      await page.waitForSelector('dialog.help[open]', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog.help[open]'))
+      await modalClosed(page)
       await blur(page)
       await page.keyboard.press('?')
-      await page.waitForSelector('dialog.help[open]', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog.help[open]'))
+      await modalClosed(page)
+    },
+  },
+  {
+    id: 'langue',
+    title: 'Langue : sélecteur de la barre du haut, anglais, mémorisé, retour au français',
+    async run({ page, url, newPage }) {
+      const pick = async (name) => {
+        await page.click('[data-testid="language-button"]')
+        await page.waitForSelector('[role="menuitemradio"]', { visible: true, timeout: STEP_MS })
+        await page.evaluate((n) => [...document.querySelectorAll('[role="menuitemradio"]')].find((i) => i.textContent.includes(n))?.click(), name)
+      }
+      assert(await page.$eval('html', (el) => el.lang === 'fr'), "la page n'est pas en français au départ")
+      await pick('English')
+      await until(page, () => document.documentElement.lang === 'en' && document.querySelector('[role="group"][aria-label="Shots"]'))
+      const tabs = await page.$$eval('[role="tablist"] [role="tab"]', (all) => all.map((t) => t.textContent.trim()))
+      assert(tabs.join() === 'Track,Map,Weather,Light,Flyover,Lens,Overlay,Project,Settings', `onglets en anglais : ${tabs.join(', ')}`)
+      assert(await page.$('button[data-testid="topbar-export"]::-p-text(Export)'), '« Export » manque dans la barre du haut')
+      // remembered on the device: another page of the same browser starts in English
+      const second = await newPage()
+      try {
+        await second.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
+        await second.waitForSelector('html[lang="en"]', { timeout: STEP_MS })
+      } finally {
+        await second.close()
+      }
+      await pick('Français')
+      await until(page, () => document.documentElement.lang === 'fr' && document.querySelector('[role="group"][aria-label="Plans"]'))
     },
   },
   {
     id: 'diagnostic',
     title: 'Rapport de diagnostic (onglet Réglages) : appareil et réglages, sans nom de trace',
     async run({ page }) {
-      if (await page.evaluate(() => document.getElementById('tab-reglages')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-reglages')
-      await page.click('#tab-panel-reglages .setting-row__head::-p-text(Diagnostic)')
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      await page.click('[data-testid="tab-panel-reglages"] [data-testid="setting-row-head"]::-p-text(Diagnostic)')
       await clickButton(page, 'Afficher le rapport')
-      await page.waitForSelector('dialog.diagnostic[open]', { visible: true, timeout: STEP_MS })
-      const text = await page.$eval('dialog.diagnostic pre', (pre) => pre.textContent)
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
+      const text = await page.$eval(`${MODAL} pre`, (pre) => pre.textContent)
       for (const part of ['[Appareil]', '[Export]', '[Réglages]', 'Traces : 1,', 'budget.kind : desktop']) {
         assert(text.includes(part), `le rapport ne contient pas « ${part} »`)
       }
       assert(!/Mont-Blanc|Chamonix/i.test(text), 'le rapport contient le nom de la trace')
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog.diagnostic[open]'))
+      await modalClosed(page)
+    },
+  },
+  {
+    id: 'couleur',
+    title: 'Couleur (onglet Réglages) : préréglage en un geste, panneau pour une couleur libre, Échap rend le focus',
+    async run({ page }) {
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      // a preset: one tap, the choice announced as selected
+      const indigo = await page.waitForSelector('[role="option"][aria-label="Couleur d\'accentuation : Indigo"]', { visible: true, timeout: STEP_MS })
+      await indigo.click()
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '#4a55b8')
+      assert(await indigo.evaluate((el) => el.getAttribute('aria-selected') === 'true'), 'le préréglage choisi n’est pas annoncé comme sélectionné')
+      // any other colour: the button opens a panel, a hex colour typed there is applied
+      const button = await page.waitForSelector('button[aria-label="Couleur d\'accentuation"]', { visible: true, timeout: STEP_MS })
+      await button.click()
+      const panel = '[role="dialog"][aria-label="Couleur d\'accentuation"]'
+      await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
+      const field = await page.waitForSelector(`${panel} input[aria-label="Code couleur (hexadécimal)"]`, { visible: true, timeout: STEP_MS })
+      await field.click()
+      await page.keyboard.down('Control')
+      await page.keyboard.press('KeyA')
+      await page.keyboard.up('Control')
+      await page.keyboard.type('#2f4f6f')
+      await page.keyboard.press('Enter')
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '#2f4f6f')
+      // Escape closes the panel first (not the side panel), and the focus goes back to the button
+      await page.keyboard.press('Escape')
+      await until(page, (selector) => !document.querySelector(selector), panel)
+      await until(page, () => document.activeElement?.getAttribute('aria-label') === "Couleur d'accentuation")
+      assert(!(await page.$eval('[data-testid="side-panel"]', (el) => el.hidden)), 'Échap sur le panneau de couleur a replié le panneau latéral')
+      // back to the default
+      await clickButton(page, "Rétablir l'apparence par défaut")
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '')
     },
   },
   {
     id: 'reglage-repli',
     title: 'Réglage replié (onglet Lumière) : nom et valeur, curseur au clavier, Par défaut',
     async run({ page }) {
-      if (await page.evaluate(() => document.getElementById('tab-lumiere')?.getAttribute('aria-selected') !== 'true')) {
-        await page.click('#tab-lumiere')
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-lumiere"]')?.getAttribute('aria-selected') !== 'true')) {
+        await page.click('[data-testid="tab-lumiere"]')
       }
-      const head = '#tab-panel-lumiere .setting-row__head::-p-text(Exposition)'
+      const head = '[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)'
       const rowState = () =>
         page.evaluate(() => {
-          const button = [...document.querySelectorAll('#tab-panel-lumiere .setting-row__head')].find((b) => b.textContent.startsWith('Exposition'))
+          const button = [...document.querySelectorAll('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]')].find((b) => b.textContent.startsWith('Exposition'))
           const body = button && document.getElementById(button.getAttribute('aria-controls'))
-          return button && { expanded: button.getAttribute('aria-expanded'), value: button.querySelector('.setting-row__value').textContent, hidden: body.hidden }
+          return button && { expanded: button.getAttribute('aria-expanded'), value: button.querySelector('[data-testid="setting-row-value"]').textContent, hidden: body.hidden }
         })
       const before = await rowState()
       assert(before && before.expanded === 'false' && before.hidden && before.value.startsWith('0'), `ligne Exposition au départ : ${JSON.stringify(before)}`)
       // pressed: the slider shows under the row and takes the focus; the arrows move it, the row says the new value
       await page.click(head)
-      await until(page, () => document.activeElement?.matches('#tab-panel-lumiere .setting-row__body input[type="range"]'))
+      await until(page, () => document.activeElement?.matches('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-body"] input[type="range"]'))
+      // the slider is named by its label (role + name, not a class), and the arrows move it by one step
+      assert(await page.$('::-p-aria([name="Exposition"][role="slider"])'), 'curseur « Exposition » introuvable par son rôle et son nom')
       await page.keyboard.press('ArrowRight')
-      await until(page, () => document.querySelector('#tab-panel-lumiere .setting-row__value--modified')?.textContent.startsWith('+0,5'))
+      await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('+0,5'))
+      // End and Home go to the ends of the range
+      await page.keyboard.press('End')
+      await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('+2,0'))
+      await page.keyboard.press('Home')
+      await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('−2,0'))
       // the section's « Par défaut » puts it back
-      await page.click('#tab-panel-lumiere button[aria-label="Rétablir les réglages par défaut : Atmosphère"]')
-      await until(page, () => !document.querySelector('#tab-panel-lumiere .setting-row__value--modified'))
+      await page.click('[data-testid="tab-panel-lumiere"] button[aria-label="Rétablir les réglages par défaut : Atmosphère"]')
+      await until(page, () => !document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]'))
       // Enter on the row folds it again
       await page.evaluate(() =>
-        [...document.querySelectorAll('#tab-panel-lumiere .setting-row__head')].find((b) => b.textContent.startsWith('Exposition')).focus(),
+        [...document.querySelectorAll('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]')].find((b) => b.textContent.startsWith('Exposition')).focus(),
       )
       await page.keyboard.press('Enter')
       const after = await rowState()
@@ -314,23 +454,23 @@ const SCENARIOS = [
           const { settings, setSetting } = window.__e2e.appStore.getState()
           setSetting(k, { ...settings[k], ...p })
         }, key, patch)
-      const dot = (tab) => page.evaluate((t) => !!document.querySelector(`#tab-${t} .rail__weight`), tab)
+      const dot = (tab) => page.evaluate((t) => !!document.querySelector(`[data-testid="tab-${t}"] [data-testid="tab-weight"]`), tab)
       try {
         // clouds « Fine »: three bars, « lourd », and the dot on « Météo »
         await set('clouds', { mode: 'meteo', quality: 'high' })
-        await page.click('#tab-meteo')
-        await page.waitForSelector('#tab-panel-meteo .setting-row__label .render-weight--3', { timeout: STEP_MS })
-        const name = await page.$eval('#tab-panel-meteo .setting-row__label .render-weight .visually-hidden', (el) => el.textContent)
+        await page.click('[data-testid="tab-meteo"]')
+        await page.waitForSelector('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"][data-tier="3"]', { timeout: STEP_MS })
+        const name = await page.$eval('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"]', (el) => el.textContent)
         assert(name === 'Poids de rendu : lourd', `nom accessible du pictogramme : ${name}`)
-        await until(page, () => !!document.querySelector('#tab-meteo .rail__weight'))
+        await until(page, () => !!document.querySelector('[data-testid="tab-meteo"] [data-testid="tab-weight"]'))
         // « Aucun »: no pictogram, no dot
         await set('clouds', { mode: 'aucun' })
-        await until(page, () => !document.querySelector('#tab-panel-meteo .render-weight') && !document.querySelector('#tab-meteo .rail__weight'))
+        await until(page, () => !document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="render-weight"]') && !document.querySelector('[data-testid="tab-meteo"] [data-testid="tab-weight"]'))
         // « Moyenne » with the motion blur: the dot moves to « Objectif »
         await set('clouds', { mode: 'meteo', quality: 'medium' })
         assert(!(await dot('meteo')) && !(await dot('objectif')), 'point sur un onglet avec les réglages par défaut')
         await set('lens', { shutter: 0.5 })
-        await until(page, () => !!document.querySelector('#tab-objectif .rail__weight'))
+        await until(page, () => !!document.querySelector('[data-testid="tab-objectif"] [data-testid="tab-weight"]'))
         assert(!(await dot('meteo')), 'point sur Météo avec des nuages « Moyenne »')
       } finally {
         await set('clouds', { mode: 'meteo', quality: 'medium' })
@@ -350,27 +490,31 @@ const SCENARIOS = [
         }, key, patch)
       // a click on the open tab folds the panel
       const openTab = async (tab) => {
-        const shown = await page.evaluate((t) => document.getElementById(`tab-panel-${t}`)?.offsetParent !== null, tab)
-        if (!shown) await page.click(`#tab-${tab}`)
+        const shown = await page.evaluate((t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.offsetParent !== null, tab)
+        if (!shown) await page.click(`[data-testid="tab-${tab}"]`)
       }
-      const badge = (tab, knob) => page.evaluate((t, k) => document.querySelector(`#tab-panel-${t} [data-testid="preset-badge-${k}"]`)?.textContent ?? null, tab, knob)
+      const badge = (tab, knob) => page.evaluate((t, k) => document.querySelector(`[data-testid="tab-panel-${t}"] [data-testid="preset-badge-${k}"]`)?.textContent ?? null, tab, knob)
       try {
         await set('clouds', { mode: 'meteo', quality: 'auto' })
         await set('video', { quality: 'standard' })
         await openTab('meteo')
-        await until(page, () => document.querySelector('#tab-panel-meteo [data-testid="preset-badge-clouds"]')?.textContent === 'Imposé par Standard')
+        await until(page, () => document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="preset-badge-clouds"]')?.textContent === 'Imposé par Standard')
         // the pictogram weighs the export that will really run: « Rapide » = one bar
-        const tip = await page.$eval('#tab-panel-meteo .setting-row__label .render-weight', (el) => el.dataset.tip)
+        // (the tooltip of the pictogram opens after a short pause under the pointer)
+        await (await page.$('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"]')).hover()
+        const tip = await (await page.waitForSelector('[role="tooltip"]', { visible: true, timeout: 10_000 })).evaluate((el) => el.textContent)
+        await page.mouse.move(0, 0)
+        await page.waitForSelector('[role="tooltip"]', { hidden: true, timeout: 10_000 })
         assert(tip.includes('×16') && tip.includes('imposé par la qualité Standard'), `info-bulle du pictogramme : ${tip}`)
         // another quality in the export settings: the badge follows
         await set('video', { quality: 'max' })
-        await until(page, () => document.querySelector('#tab-panel-meteo [data-testid="preset-badge-clouds"]')?.textContent === 'Imposé par Maximale')
-        assert(await page.$('#tab-panel-meteo .render-weight--3'), 'pictogramme « lourd » avec des nuages « Fine » imposés')
+        await until(page, () => document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="preset-badge-clouds"]')?.textContent === 'Imposé par Maximale')
+        assert(await page.$('[data-testid="tab-panel-meteo"] [data-testid="render-weight"][data-tier="3"]'), 'pictogramme « lourd » avec des nuages « Fine » imposés')
         // chosen by hand: « Personnalisé », and the project keeps the choice
         await set('clouds', { quality: 'low' })
-        await until(page, () => document.querySelector('#tab-panel-meteo [data-testid="preset-badge-clouds"]')?.textContent === 'Personnalisé')
+        await until(page, () => document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="preset-badge-clouds"]')?.textContent === 'Personnalisé')
         // the way back: the row's button
-        await page.click('#tab-panel-meteo .setting-row__head[aria-expanded]:has([data-testid="preset-badge-clouds"])')
+        await page.click('[data-testid="tab-panel-meteo"] [data-testid="setting-row-head"]:has([data-testid="preset-badge-clouds"])')
         await clickButton(page, 'Revenir au préréglage')
         await until(page, () => window.__e2e.appStore.getState().settings.clouds.quality === 'auto')
         assert((await badge('meteo', 'clouds')) === 'Imposé par Maximale', `pastille après le retour : ${await badge('meteo', 'clouds')}`)
@@ -379,7 +523,7 @@ const SCENARIOS = [
         await openTab('objectif')
         assert((await badge('objectif', 'shutter')) === null, 'pastille sur le flou de bougé en qualité Maximale')
         await set('video', { quality: 'standard' })
-        await until(page, () => document.querySelector('#tab-panel-objectif [data-testid="preset-badge-shutter"]')?.textContent === 'Imposé par Standard')
+        await until(page, () => document.querySelector('[data-testid="tab-panel-objectif"] [data-testid="preset-badge-shutter"]')?.textContent === 'Imposé par Standard')
       } finally {
         await set('clouds', { mode: 'meteo', quality: 'medium' })
         await set('video', { quality: 'high' })
@@ -424,7 +568,7 @@ const SCENARIOS = [
       try {
         await page.click('button[aria-label="Ajouter une image clé"]')
         await until(page, () => window.__e2e.appStore.getState().settings.film.cameraKeys.length === 1)
-        await page.waitForSelector('.film-tl__key[aria-label^="Image clé"]', { visible: true, timeout: STEP_MS })
+        await page.waitForSelector('[data-testid="timeline-key"][aria-label^="Image clé"]', { visible: true, timeout: STEP_MS })
         // the view stays as it was framed
         await expectPose(page, orbited, 20, 'après « Ajouter une image clé »')
 
@@ -452,7 +596,7 @@ const SCENARIOS = [
         await expectPose(page, orbited, 20, 'Alt+←')
         // a click on its diamond on the « Plans » track
         await page.keyboard.press('Home')
-        await page.click('.film-tl__key')
+        await page.click('[data-testid="timeline-key"]')
         await expectPose(page, orbited, 20, 'clic sur le losange')
         assert(await page.evaluate(() => document.querySelector('button[aria-label="Image clé suivante"]').disabled), '« Image clé suivante » active après la dernière')
         // the ◆ between the arrows removes the keyframe under the playhead
@@ -480,23 +624,23 @@ const SCENARIOS = [
 
       const texts = await laneCount(page, 'Textes')
       await page.keyboard.press('t')
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block').length === n + 1, [texts])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-testid="timeline-block"]').length === n + 1, [texts])
       await page.keyboard.press('Escape')
       await blur(page)
       await page.keyboard.down('Control')
       await page.keyboard.press('z')
       await page.keyboard.up('Control')
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block').length === n, [texts])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-testid="timeline-block"]').length === n, [texts])
 
       const stops = await laneCount(page, 'Arrêts')
       await blur(page)
       await page.keyboard.press('s')
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] .film-tl__block').length === n + 1, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
       await page.keyboard.press('Escape')
       await blur(page)
       // one text kept for the project round trip
       await page.keyboard.press('t')
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block').length === n + 1, [texts])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-testid="timeline-block"]').length === n + 1, [texts])
       await page.keyboard.press('Escape')
     },
   },
@@ -505,12 +649,152 @@ const SCENARIOS = [
     title: 'Un bloc de la timeline choisi : son inspecteur prend la place du tiroir d’export',
     async run({ page }) {
       await clickButton(page, 'Exporter')
-      await page.waitForSelector('#export-dock:not([hidden])', { timeout: STEP_MS })
-      await page.click('[role="group"][aria-label="Plans"] .film-tl__block')
+      await page.waitForSelector('[data-testid="export-dock"]:not([hidden])', { timeout: STEP_MS })
+      await page.click('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]')
       await page.waitForSelector('aside[aria-label="Inspecteur"]:not([hidden])', { visible: true, timeout: STEP_MS })
-      assert(await page.$eval('#export-dock', (el) => el.hidden), 'le tiroir d’export reste affiché sur l’inspecteur')
+      assert(await page.$eval('[data-testid="export-dock"]', (el) => el.hidden), 'le tiroir d’export reste affiché sur l’inspecteur')
       await page.keyboard.press('Escape')
       await until(page, () => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === true)
+      await blur(page)
+    },
+  },
+  {
+    id: 'menus',
+    title: 'Menus et panneau (« + Ajouter », options du film, clic droit sur la trace) : flèches, Échap avant celui de l’application, clic à côté, actions',
+    async run({ page }) {
+      await exposeStores(page)
+      await waitForScene(page)
+      const traceOpen = () =>
+        page.evaluate(() => document.querySelector('[data-testid="tab-trace"]')?.getAttribute('aria-selected') === 'true' && !document.querySelector('[data-testid="side-panel"]')?.hidden)
+      if (!(await traceOpen())) await page.click('[data-testid="tab-trace"]')
+      await until(page, () => !document.querySelector('[data-testid="tab-panel-trace"]')?.hidden)
+      const inspectorShown = () => page.evaluate(() => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === false)
+      const focusedText = () => page.evaluate(() => document.activeElement?.textContent.trim())
+      const gone = (selector) => until(page, (s) => !document.querySelector(s), selector)
+      const selectBlock = async () => {
+        await page.click('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]')
+        await page.waitForSelector('aside[aria-label="Inspecteur"]:not([hidden])', { visible: true, timeout: STEP_MS })
+      }
+
+      // « + Ajouter »: a menu of two rows under the button, the arrows move in it
+      const add = '[data-testid="tab-panel-trace"] button[aria-haspopup]::-p-text(Ajouter)'
+      const addMenu = '[role="menu"][aria-label="Ajouter des traces"]'
+      await page.click(add)
+      await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
+      assert((await page.$$eval(`${addMenu} [role="menuitem"]`, (rows) => rows.map((r) => r.textContent.trim()))).join() === 'Fichiers GPX ou FIT…,Activités Strava…', 'lignes du menu « Ajouter »')
+      assert(await page.$eval(add, (b) => b.getAttribute('aria-expanded') === 'true'), '« Ajouter » ne dit pas que son menu est ouvert')
+      await page.keyboard.press('ArrowDown')
+      assert((await focusedText()) === 'Fichiers GPX ou FIT…', `flèche bas : ${await focusedText()}`)
+      await page.keyboard.press('ArrowDown')
+      assert((await focusedText()) === 'Activités Strava…', `flèche bas : ${await focusedText()}`)
+      await page.keyboard.press('ArrowUp')
+      assert((await focusedText()) === 'Fichiers GPX ou FIT…', `flèche haut : ${await focusedText()}`)
+      // Escape closes the menu first, then the block selected on the timeline (the application's own Escape)
+      await page.keyboard.press('Escape')
+      await gone(addMenu)
+      await selectBlock()
+      await page.click(add)
+      await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
+      await page.keyboard.press('Escape')
+      await gone(addMenu)
+      assert(await inspectorShown(), 'Échap sur le menu « Ajouter » a aussi désélectionné le bloc')
+      await page.keyboard.press('Escape')
+      await until(page, () => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === true)
+      // a click beside it closes it; « Activités Strava… » opens its dialog
+      await page.click(add)
+      await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
+      await page.mouse.click(700, 890)
+      await gone(addMenu)
+      await page.click(add)
+      await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
+      await page.click(`${addMenu} [role="menuitem"]::-p-text(Strava)`)
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
+      await gone(addMenu)
+      await page.keyboard.press('Escape')
+      await modalClosed(page)
+
+      // « Options du film »: a panel above the bar with its own controls, Escape closes it before the selection
+      const options = 'button[aria-label="Options du film"]'
+      const panel = '[role="dialog"][aria-label="Options du film"]'
+      await selectBlock()
+      await page.click(options)
+      await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
+      assert(await page.$eval(options, (b) => b.getAttribute('aria-expanded') === 'true'), '« Options du film » ne dit pas que son panneau est ouvert')
+      assert(await page.$(`${panel} button::-p-text(Ajouter une musique)`), 'bouton « Ajouter une musique… » du panneau')
+      assert(await page.$(`${panel} input[type="checkbox"]`), 'case « Arrêts automatiques » du panneau')
+      assert(await page.$eval(`${panel} input[type="checkbox"]`, (i) => i.labels?.[0]?.textContent.trim() === 'Arrêts automatiques'), 'la case du panneau ne s’appelle pas « Arrêts automatiques »')
+      await page.keyboard.press('Escape')
+      await gone(panel)
+      assert(await inspectorShown(), 'Échap sur les options du film a aussi désélectionné le bloc')
+      await page.keyboard.press('Escape')
+      await until(page, () => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === true)
+      await page.click(options)
+      await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
+      await page.mouse.click(700, 890)
+      await gone(panel)
+      await blur(page)
+
+      // right click on the track: a menu at the pointer (the first row focused), a stop added from it, one undo step
+      // (the view moves with the playhead: the spot is looked for again each time)
+      const rightClickTrack = async () => {
+        const spot = await page.evaluate(() => {
+          const canvas = document.querySelector('canvas[data-engine^="three.js"]')
+          const r = canvas.getBoundingClientRect()
+          for (let y = r.top + 4; y < r.bottom; y += 6) {
+            for (let x = r.left + 4; x < r.right; x += 6) {
+              canvas.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true, buttons: 0, pointerType: 'mouse' }))
+              if (canvas.style.cursor === 'pointer') return { x, y }
+            }
+          }
+          return null
+        })
+        assert(spot, 'aucun point de la trace sous le pointeur dans la vue 3D')
+        await page.mouse.click(spot.x, spot.y, { button: 'right' })
+      }
+      const trackMenu = '[role="menu"][aria-label="Ajouter ici"]'
+      // the view keeps moving while the spot is scanned: when the click misses the track, look for a spot again
+      const openTrackMenu = async () => {
+        for (let attempt = 1; ; attempt++) {
+          await rightClickTrack()
+          try {
+            await page.waitForSelector(trackMenu, { visible: true, timeout: 5000 })
+            return
+          } catch (error) {
+            if (attempt === 4) throw error
+          }
+        }
+      }
+      await openTrackMenu()
+      const rows = await page.$$eval(`${trackMenu} [role="menuitem"]`, (all) => all.map((r) => r.textContent.trim()))
+      assert(rows.slice(0, 3).join() === 'Ajouter un arrêt ici,Ajouter un texte ici,Accélérer / ralentir ici', `lignes du menu du clic droit : ${rows.join(', ')}`)
+      assert((await focusedText()) === 'Ajouter un arrêt ici', `première ligne du menu du clic droit : ${await focusedText()}`)
+      await page.keyboard.press('ArrowDown')
+      assert((await focusedText()) === 'Ajouter un texte ici', 'flèche bas dans le menu du clic droit')
+      await page.keyboard.press('Escape')
+      await gone(trackMenu)
+      const stops = await laneCount(page, 'Arrêts')
+      await openTrackMenu()
+      await page.click(`${trackMenu} [role="menuitem"]::-p-text(Ajouter un arrêt ici)`)
+      await gone(trackMenu)
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
+      await blur(page)
+      await page.keyboard.down('Control')
+      await page.keyboard.press('z')
+      await page.keyboard.up('Control')
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n, [stops])
+      // « Point d'intérêt ici » turns the menu into the form that names it, its field focused; Escape closes it
+      await rightClickTrack()
+      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      await page.click(`${trackMenu} [role="menuitem"]::-p-text(Point d'intérêt ici)`)
+      await page.waitForSelector('[role="dialog"][aria-label="Point d\'intérêt"] input', { visible: true, timeout: STEP_MS })
+      assert(await page.evaluate(() => document.activeElement?.matches('[role="dialog"] input[name="name"]')), 'le champ du nom du point d’intérêt n’a pas le focus')
+      await page.keyboard.press('Escape')
+      await gone('[role="dialog"][aria-label="Point d\'intérêt"]')
+      // a click beside the menu closes it
+      await rightClickTrack()
+      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      await page.mouse.click(700, 890)
+      await gone(trackMenu)
       await blur(page)
     },
   },
@@ -518,14 +802,13 @@ const SCENARIOS = [
     id: 'heure',
     title: 'Réglages › Timeline : « Afficher l’heure enregistrée » montre l’heure de la trace dans la barre de la timeline',
     async run({ page }) {
-      if (await page.evaluate(() => document.getElementById('tab-reglages')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-reglages')
-      const toggle = '#tab-panel-reglages .checkbox--switch input'
-      await page.waitForSelector(toggle, { timeout: STEP_MS })
-      assert(!(await page.$('.film-tl__clock')), 'l’heure est affichée avant d’avoir été demandée')
-      await page.$eval(toggle, (el) => el.click())
-      await page.waitForSelector('.film-tl__clock', { visible: true, timeout: STEP_MS })
-      await page.$eval(toggle, (el) => el.click())
-      await until(page, () => !document.querySelector('.film-tl__clock'))
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      const toggle = await switchOf(page, 'reglages', "Afficher l'heure enregistrée")
+      assert(!(await page.$('[data-testid="timeline-clock"]')), 'l’heure est affichée avant d’avoir été demandée')
+      await toggle.evaluate((el) => el.click())
+      await page.waitForSelector('[data-testid="timeline-clock"]', { visible: true, timeout: STEP_MS })
+      await toggle.evaluate((el) => el.click())
+      await until(page, () => !document.querySelector('[data-testid="timeline-clock"]'))
       await blur(page)
     },
   },
@@ -533,23 +816,22 @@ const SCENARIOS = [
     id: 'cartes',
     title: 'Titre d’ouverture et carte de clôture : blocs de la piste Textes, inspecteur, Suppr les désactive',
     async run({ page }) {
-      if (await page.evaluate(() => document.getElementById('tab-habillage')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-habillage')
-      const overlay = '#tab-panel-habillage .checkbox--switch input'
-      await page.waitForSelector(overlay, { timeout: STEP_MS })
-      const cards = () => page.$$eval('[role="group"][aria-label="Textes"] .film-tl__block--card', (blocks) => blocks.map((b) => b.getAttribute('title')))
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-habillage"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-habillage"]')
+      const overlay = await switchOf(page, 'habillage', "Afficher l'habillage")
+      const cards = () => page.$$eval('[role="group"][aria-label="Textes"] [data-item^="card-"]', (blocks) => blocks.map((b) => b.getAttribute('title')))
       assert((await cards()).length === 0, 'des cartes sont affichées sans habillage')
-      await page.$eval(overlay, (el) => el.click())
-      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block--card').length === 2)
+      await overlay.evaluate((el) => el.click())
+      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 2)
       assert((await cards()).join() === "Titre d'ouverture,Carte de clôture", `blocs de cartes : ${(await cards()).join()}`)
-      await page.click('[role="group"][aria-label="Textes"] .film-tl__block--card')
-      await page.waitForSelector('.film-inspector', { visible: true, timeout: STEP_MS })
-      assert((await page.$eval('.film-inspector h2', (h) => h.textContent)).includes("Titre d'ouverture"), 'l’inspecteur n’est pas celui du titre')
+      await page.click('[role="group"][aria-label="Textes"] [data-item^="card-"]')
+      await page.waitForSelector('[data-testid="film-inspector"]', { visible: true, timeout: STEP_MS })
+      assert((await page.$eval('[data-testid="film-inspector"] h2', (h) => h.textContent)).includes("Titre d'ouverture"), 'l’inspecteur n’est pas celui du titre')
       await page.keyboard.press('Delete')
-      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block--card').length === 1)
+      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 1)
       // back as it was: the title on again, the overlay off
       await page.keyboard.press('Escape')
-      await page.$eval(overlay, (el) => el.click())
-      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] .film-tl__block--card').length === 0)
+      await overlay.evaluate((el) => el.click())
+      await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 0)
       await blur(page)
     },
   },
@@ -557,12 +839,12 @@ const SCENARIOS = [
     id: 'cles-etiquettes',
     title: 'Habillage › Étiquettes 3D : une clé crée la piste « Étiquettes », Suppr la retire',
     async run({ page }) {
-      if (await page.evaluate(() => document.getElementById('tab-habillage')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-habillage')
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-habillage"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-habillage"]')
       const lane = '[role="group"][aria-label="Étiquettes"]'
       assert(!(await page.$(lane)), 'la piste Étiquettes existe sans clé')
       await page.click('button[aria-label="Étiquettes : ajouter une clé"]')
-      await page.waitForSelector(`${lane} .film-tl__key`, { visible: true, timeout: STEP_MS })
-      await page.click(`${lane} .film-tl__key`)
+      await page.waitForSelector(`${lane} [data-testid="timeline-key"]`, { visible: true, timeout: STEP_MS })
+      await page.click(`${lane} [data-testid="timeline-key"]`)
       await page.keyboard.press('Delete')
       await until(page, () => !document.querySelector('[role="group"][aria-label="Étiquettes"]'))
       await blur(page)
@@ -572,16 +854,16 @@ const SCENARIOS = [
     id: 'reperes',
     title: 'Repères et points d’intérêt (onglet Carte) : un point au marqueur, son arrêt coché puis décoché, vu sur la timeline',
     async run({ page }) {
-      if (await page.evaluate(() => document.getElementById('tab-carte')?.getAttribute('aria-selected') !== 'true')) await page.click('#tab-carte')
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-carte"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-carte"]')
       const stops = await laneCount(page, 'Arrêts')
       await clickButton(page, "Point d'intérêt au marqueur")
-      const box = '#tab-panel-carte .place input[aria-label^="Arrêt dans le film à « Point d"]'
+      const box = '[data-testid="tab-panel-carte"] [data-testid="place"] input[aria-label^="Arrêt dans le film à « Point d"]'
       await page.waitForSelector(box, { timeout: STEP_MS })
       await page.click(box)
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] .film-tl__block').length === n + 1, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
       await page.click(box)
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] .film-tl__block').length === n, [stops])
-      await page.click('#tab-panel-carte button[aria-label^="Supprimer le point d\'intérêt"]')
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n, [stops])
+      await page.click('[data-testid="tab-panel-carte"] button[aria-label^="Supprimer le point d\'intérêt"]')
       await blur(page)
     },
   },
@@ -612,16 +894,12 @@ const SCENARIOS = [
         }
       })
       try {
-        await page.click('[role="group"][aria-label="Plans"] .film-tl__block')
-        await until(page, () => [...document.querySelectorAll('select')].some((s) => [...s.options].some((o) => o.value === 'situation')))
-        await page.evaluate(() => {
-          const select = [...document.querySelectorAll('select')].find((s) => [...s.options].some((o) => o.value === 'situation'))
-          Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'situation')
-          select.dispatchEvent(new Event('change', { bubbles: true }))
-        })
+        await page.click('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]')
+        await page.waitForSelector('aside[aria-label="Inspecteur"] button[aria-haspopup="listbox"]', { visible: true, timeout: STEP_MS })
+        await selectOption(page, 'aside[aria-label="Inspecteur"]', 'Style', 'Depuis la région')
         await page.click('label::-p-text(Mettre en avant la région)')
         // asked at once, without touching « Lieu »; the failure says so and offers to retry
-        const retry = await page.waitForSelector('.dock button::-p-text(Réessayer)', { visible: true, timeout: STEP_MS })
+        const retry = await page.waitForSelector('aside[aria-label="Inspecteur"] button::-p-text(Réessayer)', { visible: true, timeout: STEP_MS })
         assert((await page.evaluate(() => window.__e2e.overpass.isIn)) === 1, 'la région n’a pas été cherchée une seule fois')
         await page.evaluate(() => (window.__e2e.overpass.fail = false))
         await retry.click()
@@ -646,8 +924,14 @@ const SCENARIOS = [
     async run({ page }) {
       const before = { texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       const since = Date.now() - 1000
-      await page.click('.topbar__save')
-      await page.waitForSelector('.toast::-p-text(Projet enregistré)', { visible: true, timeout: STEP_MS })
+      // headless Chromium cannot answer the File System Access pickers: without them the project is downloaded, and opened
+      // through a file input
+      await page.evaluate(() => {
+        delete window.showSaveFilePicker
+        delete window.showOpenFilePicker
+      })
+      await page.click('[data-testid="topbar-save"]')
+      // no toast since the top bar shows the saved state on its icon: the file itself is the proof
       const file = await waitForDownload('.opnflvr', since)
       // 8 bytes: the signature « OPNFLVR » and the version byte, then the gzip of the JSON text
       const project = JSON.parse(gunzipSync(readFileSync(file.path).subarray(8)).toString('utf8'))
@@ -657,29 +941,33 @@ const SCENARIOS = [
       const exposure = () =>
         page.evaluate(
           () =>
-            [...document.querySelectorAll('#tab-panel-lumiere .setting-row__head')]
+            [...document.querySelectorAll('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]')]
               .find((b) => b.textContent.startsWith('Exposition'))
-              ?.querySelector('.setting-row__value').textContent ?? '',
+              ?.querySelector('[data-testid="setting-row-value"]').textContent ?? '',
         )
       // the sample is kept in « Mes projets » by itself: a change is written by the autosave (« Enregistré » again)
-      if (await page.evaluate(() => document.getElementById('tab-lumiere')?.getAttribute('aria-selected') !== 'true')) {
-        await page.click('#tab-lumiere')
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-lumiere"]')?.getAttribute('aria-selected') !== 'true')) {
+        await page.click('[data-testid="tab-lumiere"]')
       }
       // centred first: scrolled to the top edge, the row would sit under the sticky section title and the click hit it
-      await page.$eval('#tab-panel-lumiere .setting-row__head::-p-text(Exposition)', (el) => el.scrollIntoView({ block: 'center' }))
-      await page.click('#tab-panel-lumiere .setting-row__head::-p-text(Exposition)')
-      await until(page, () => document.activeElement?.matches('#tab-panel-lumiere .setting-row__body input[type="range"]'))
+      await page.$eval('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)', (el) => el.scrollIntoView({ block: 'center' }))
+      await page.click('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)')
+      await until(page, () => document.activeElement?.matches('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-body"] input[type="range"]'))
       await page.keyboard.press('ArrowRight')
       // the save icon: a dot while the change is not saved, then the accent colour once the autosave wrote it
-      await until(page, () => document.querySelector('.topbar__save--unsaved'))
-      await until(page, () => !document.querySelector('.topbar__save--unsaved') && document.querySelector('.topbar__save--saved'))
+      await until(page, () => document.querySelector('[data-testid="topbar-save"][data-save-state="unsaved"]'))
+      await until(page, () => !document.querySelector('[data-testid="topbar-save"][data-save-state="unsaved"]') && document.querySelector('[data-testid="topbar-save"][data-save-state="saved"]'))
       const changed = await exposure()
       assert(changed.startsWith('+0,5'), `exposition après le changement : ${changed}`)
       await blur(page)
 
       // the page reloaded (a phone discarding the tab in the background): the project comes back with the change
       await page.reload({ waitUntil: 'domcontentloaded', timeout: STEP_MS })
-      await page.waitForSelector('.toast::-p-text(rouvert)', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector('[data-testid="toast"]::-p-text(rouvert)', { visible: true, timeout: STEP_MS })
+      // the message closes on its button, inside the one live region
+      assert(await page.$('[aria-live] [data-testid="toast"]'), 'message hors de la région live')
+      await page.click('[data-testid="toast"] button[aria-label="Fermer le message"]')
+      await until(page, () => ![...document.querySelectorAll('[data-testid="toast"]')].some((el) => el.textContent.includes('rouvert') && el.dataset.exiting !== 'true'))
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
       const reopened = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       assert(
@@ -687,10 +975,11 @@ const SCENARIOS = [
         `projet rouvert différent : avant ${JSON.stringify({ exposure: changed, ...before })}, après ${JSON.stringify(reopened)}`,
       )
 
-      // « Ouvrir » of the top bar: the file saved before the change
-      const [chooser] = await Promise.all([page.waitForFileChooser({ timeout: STEP_MS }), page.click('.topbar button[aria-label="Ouvrir"]')])
+      // « Ouvrir » of the top bar: the file saved before the change (the reload brought the picker back)
+      await page.evaluate(() => delete window.showOpenFilePicker)
+      const [chooser] = await Promise.all([page.waitForFileChooser({ timeout: STEP_MS }), page.click('header button[aria-label="Ouvrir"]')])
       await chooser.accept([file.path])
-      await page.waitForSelector('.toast::-p-text(» ouvert)', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector('[data-testid="toast"]::-p-text(» ouvert)', { visible: true, timeout: STEP_MS })
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
       const after = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       assert(
@@ -726,8 +1015,8 @@ const SCENARIOS = [
         setSetting('clouds', { ...settings.clouds, mode: 'aucun' })
       })
       // the export drawer, loaded on its first opening, downloads the finished films: open it first
-      await page.click('button.topbar__export')
-      await page.waitForSelector('#export-dock:not([hidden]) button::-p-text(Exporter la vidéo)', { visible: true, timeout: STEP_MS })
+      await page.click('button[data-testid="topbar-export"]')
+      await page.waitForSelector('[data-testid="export-dock"]:not([hidden]) button::-p-text(Exporter la vidéo)', { visible: true, timeout: STEP_MS })
       // the film: straight into the export store (the panel's sizes start at 720p)
       let since = Date.now() - 1000
       await page.evaluate(() => {
@@ -758,17 +1047,11 @@ const SCENARIOS = [
       assert(recorded.wallMs > 0 && recorded.frames === 20 && recorded.width === 320, `historique : durée ou images : ${JSON.stringify(recorded)}`)
 
       // the still image: from the export drawer (still open), at its smallest size
-      await page.evaluate(() => {
-        const select = [...document.querySelectorAll('#export-dock select')].find((s) => [...s.options].some((o) => o.value === '720p'))
-        if (!select) throw new Error('sélecteur de résolution introuvable')
-        const setValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set
-        setValue.call(select, '720p')
-        select.dispatchEvent(new Event('change', { bubbles: true }))
-      })
+      await selectOption(page, '[data-testid="export-dock"]', 'Résolution', '720p')
       // « Image fixe » is in the « Affiche » mode of the drawer; back to « Vidéo » afterwards (the history is there)
       const exportMode = (label) =>
         page.evaluate((text) => {
-          const option = [...document.querySelectorAll('#export-dock label.segmented__option')].find((l) => l.textContent.trim() === text && l.offsetParent)
+          const option = [...document.querySelectorAll('[data-testid="export-dock"] label:has(input[type="radio"])')].find((l) => l.textContent.trim() === text && l.offsetParent)
           if (!option) throw new Error(`mode d'export « ${text} » introuvable`)
           option.querySelector('input').click()
         }, label)
@@ -789,9 +1072,9 @@ const SCENARIOS = [
     async run({ page }) {
       await until(page, () => !!document.querySelector('[role="group"][aria-label="Plans"]'))
       await exposeStores(page)
-      if (!(await page.$('#export-dock:not([hidden])'))) await page.click('button.topbar__export')
+      if (!(await page.$('[data-testid="export-dock"]:not([hidden])'))) await page.click('button[data-testid="topbar-export"]')
       // « Vidéo » mode: the history is the last child of the panel shown (the batch panel has its own, hidden)
-      const H = '#export-dock section:not([hidden]) .export-history'
+      const H = '[data-testid="export-dock"] section:not([hidden]) [data-testid="export-history"]'
       await page.waitForSelector(H, { timeout: STEP_MS })
       // two renders as the recorder writes them: an old one with other settings, a failed one
       const before = await page.evaluate(async () => {
@@ -809,17 +1092,17 @@ const SCENARIOS = [
         return { fps: settings.video.fps, quality: settings.video.quality, style: settings.camera.style }
       })
       if (!(await page.$eval(H, (d) => d.open))) await page.click(`${H} > summary`)
-      await page.waitForSelector(`${H} .history__item`, { visible: true })
-      const names = await page.$$eval(`${H} .history__name`, (els) => els.map((e) => e.textContent))
+      await page.waitForSelector(`${H} [data-testid="history-item"]`, { visible: true })
+      const names = await page.$$eval(`${H} [data-testid="history-name"]`, (els) => els.map((e) => e.textContent))
       assert(names.join() === 'Film B,Film A', `ordre de l’historique : ${names.join()}`)
-      const meta = await page.$eval(`${H} .history__item:last-child .history__meta`, (e) => e.textContent)
+      const meta = await page.$eval(`${H} [data-testid="history-item"]:last-child [data-testid="history-meta"]`, (e) => e.textContent)
       assert(meta.includes('réussi') && meta.includes('1:32') && meta.includes('0,3\u00a0s\u00a0/\u00a0image'), `ligne de l’historique : ${meta}`)
-      assert((await page.$eval(`${H} .history__item:first-child .history__meta`, (e) => e.textContent)).includes('échoué : WebGL perdu'), 'erreur absente de la ligne')
+      assert((await page.$eval(`${H} [data-testid="history-item"]:first-child [data-testid="history-meta"]`, (e) => e.textContent)).includes('échoué : WebGL perdu'), 'erreur absente de la ligne')
       // detail of the old render, then its settings put back as one step
-      await page.click(`${H} .history__item:last-child .history__head`)
-      await page.waitForSelector(`${H} .history__item:last-child .history__rows`, { visible: true })
-      assert((await page.$eval(`${H} .history__item:last-child .setting-row__body`, (e) => e.textContent)).includes('Vue du dessus'), 'détail : style de caméra absent')
-      await page.click(`${H} .history__item:last-child .setting-row__body button.btn`)
+      await page.click(`${H} [data-testid="history-item"]:last-child [data-testid="history-head"]`)
+      await page.waitForSelector(`${H} [data-testid="history-item"]:last-child [data-testid="history-rows"]`, { visible: true })
+      assert((await page.$eval(`${H} [data-testid="history-item"]:last-child [data-testid="history-body"]`, (e) => e.textContent)).includes('Vue du dessus'), 'détail : style de caméra absent')
+      await page.click(`${H} [data-testid="history-item"]:last-child [data-testid="history-body"] button::-p-text(Réutiliser ces réglages)`)
       const reused = await page.evaluate(() => {
         const { settings } = window.__e2e.appStore.getState()
         return { fps: settings.video.fps, quality: settings.video.quality, style: settings.camera.style, shutter: settings.lens.shutter }
@@ -832,17 +1115,17 @@ const SCENARIOS = [
       })
       assert(JSON.stringify(undone) === JSON.stringify(before), `annulation d’un coup : ${JSON.stringify(undone)} au lieu de ${JSON.stringify(before)}`)
       // delete one, then clear (confirmed)
-      await page.click(`${H} .history__item:first-child .history__head`)
-      await page.click(`${H} .history__item:first-child .setting-row__body .project__row .btn:last-child`)
-      await until(page, () => document.querySelectorAll('#export-dock section:not([hidden]) .history__item').length === 1)
+      await page.click(`${H} [data-testid="history-item"]:first-child [data-testid="history-head"]`)
+      await page.click(`${H} [data-testid="history-item"]:first-child [data-testid="history-body"] button::-p-text(Supprimer)`)
+      await until(page, () => document.querySelectorAll('[data-testid="export-dock"] section:not([hidden]) [data-testid="history-item"]').length === 1)
       // inside the section: a toast has its own « Annuler »
       const inHistory = async (text) => (await page.waitForSelector(`${H} button::-p-text(${text})`, { visible: true })).click()
       await inHistory('Vider l’historique')
       await inHistory('Annuler')
-      assert((await page.$$(`${H} .history__item`)).length === 1, 'l’historique est vidé sans confirmation')
+      assert((await page.$$(`${H} [data-testid="history-item"]`)).length === 1, 'l’historique est vidé sans confirmation')
       await inHistory('Vider l’historique')
       await inHistory('Vider définitivement')
-      await until(page, () => document.querySelectorAll('#export-dock section:not([hidden]) .history__item').length === 0 && !!document.querySelector('#export-dock section:not([hidden]) .export-history .field__hint'))
+      await until(page, () => document.querySelectorAll('[data-testid="export-dock"] section:not([hidden]) [data-testid="history-item"]').length === 0 && document.querySelector('[data-testid="export-dock"] section:not([hidden]) [data-testid="export-history"]')?.textContent.includes('Aucun rendu pour l’instant'))
       assert(await page.evaluate(() => localStorage.getItem('openflyover.exportHistory.v1') === null), 'le stockage n’est pas vidé')
     },
   },
@@ -863,11 +1146,11 @@ const SCENARIOS = [
         const tap = async (selector) => (await page.waitForSelector(selector, { visible: true, timeout: STEP_MS })).tap()
         await tap("button::-p-text(Essayer avec l'exemple)")
         // the timeline is open under the preview, its playhead in the middle
-        await page.waitForSelector('.film-tl--centred [role="group"][aria-label="Plans"] .film-tl__block', { visible: true, timeout: STEP_MS })
+        await page.waitForSelector('[data-testid="timeline"][data-centred] [role="group"][aria-label="Plans"] [data-testid="timeline-block"]', { visible: true, timeout: STEP_MS })
         /** the preview is whole on screen, at least a third of its height */
         const previewShown = () =>
           page.evaluate(() => {
-            const r = document.querySelector('.view__viewport').getBoundingClientRect()
+            const r = document.querySelector('[role="region"][aria-label="Vue 3D"]').getBoundingClientRect()
             return r.top >= 0 && r.height > innerHeight / 3 && r.width === innerWidth
           })
         assert(await previewShown(), 'l’aperçu n’occupe pas le haut de l’écran')
@@ -877,8 +1160,8 @@ const SCENARIOS = [
             page,
             (sel) => {
               const sheet = document.querySelector(sel)
-              const preview = document.querySelector('.view__viewport')?.getBoundingClientRect()
-              const status = document.querySelector('.status')?.getBoundingClientRect()
+              const preview = document.querySelector('[role="region"][aria-label="Vue 3D"]')?.getBoundingClientRect()
+              const status = document.querySelector('footer')?.getBoundingClientRect()
               if (!sheet || sheet.hidden || !preview || !status) return false
               const r = sheet.getBoundingClientRect()
               return r.width === innerWidth && r.top >= preview.bottom && Math.abs(r.bottom - status.top) < 2 && r.height > 150
@@ -888,11 +1171,11 @@ const SCENARIOS = [
         /** film time of the playhead, read from the transport row (m:ss,d) */
         const playhead = () =>
           page.evaluate(() => {
-            const [m, s] = document.querySelector('.film-tl__time strong').textContent.split(':')
+            const [m, s] = document.querySelector('[data-testid="timeline-time"]').textContent.split(':')
             return Number(m) * 60 + Number(s.replace(',', '.'))
           })
         // previous / add / next keyframe leading the tool row, on screen
-        const keyNav = await page.$$eval('.film-tl__tools [aria-label="Images clés"] button', (buttons) =>
+        const keyNav = await page.$$eval('[data-testid="timeline-tools"] [aria-label="Images clés"] button', (buttons) =>
           buttons.map((b) => {
             const r = b.getBoundingClientRect()
             return r.width >= 44 && r.left >= 0 && r.right <= innerWidth
@@ -901,7 +1184,7 @@ const SCENARIOS = [
         assert(keyNav.length === 3 && keyNav.every(Boolean), `boutons image clé précédente / ◆ / suivante : ${JSON.stringify(keyNav)}`)
         // a slide on the lanes scrolls them under the playhead: the film time follows
         const before = await playhead()
-        const lanes = await page.$eval('.film-tl__scroller', (el) => {
+        const lanes = await page.$eval('[data-testid="timeline-scroller"]', (el) => {
           const r = el.getBoundingClientRect()
           return { x: r.left + r.width * 0.75, y: r.top + r.height * 0.6 }
         })
@@ -909,55 +1192,59 @@ const SCENARIOS = [
         for (let i = 1; i <= 10; i++) await page.touchscreen.touchMove(lanes.x - i * 15, lanes.y)
         await page.touchscreen.touchEnd()
         await until(page, (t) => {
-          const [m, s] = document.querySelector('.film-tl__time strong').textContent.split(':')
+          const [m, s] = document.querySelector('[data-testid="timeline-time"]').textContent.split(':')
           return Number(m) * 60 + Number(s.replace(',', '.')) > t + 1
         }, before)
         // the eight tabs do not fit: the bar scrolls, and the open tab is brought into sight
         assert(await page.evaluate(() => {
-          const bar = document.querySelector('.rail__tabs')
+          const bar = document.querySelector('[role="tablist"]')
           return bar.scrollWidth > bar.clientWidth
         }), 'la barre d’onglets ne défile pas')
         for (const tab of ['carte', 'projet', 'survol']) {
-          await tap(`#tab-${tab}`)
-          await until(page, (t) => !document.getElementById(`tab-panel-${t}`)?.hidden, tab)
-          await isHalfSheet('#side-panel')
+          await tap(`[data-testid="tab-${tab}"]`)
+          await until(page, (t) => !document.querySelector(`[data-testid="tab-panel-${t}"]`)?.hidden, tab)
+          await isHalfSheet('[data-testid="side-panel"]')
           assert(await previewShown(), `l’onglet ${tab} couvre l’aperçu`)
           if (tab === 'survol') break
           // « Terminé » gives the timeline and the tab bar back
-          await tap('#side-panel .sheet-handle__done')
-          await until(page, () => document.getElementById('side-panel').hidden)
+          await tap('[data-testid="side-panel"] button[aria-label="Terminé"]')
+          await until(page, () => document.querySelector('[data-testid="side-panel"]').hidden)
           await until(
             page,
             (t) => {
-              const r = document.getElementById(`tab-${t}`).getBoundingClientRect()
+              const r = document.querySelector(`[data-testid="tab-${t}"]`).getBoundingClientRect()
               return r.left >= 0 && r.right <= innerWidth && r.height >= 44
             },
             tab,
           )
         }
-        await tap('#tab-panel-survol label:has(input[value="Oiseau"])')
-        await until(page, () => document.querySelector('#tab-panel-survol input[value="Oiseau"]')?.checked === true)
-        await tap('#side-panel .sheet-handle__done')
-        await until(page, () => document.getElementById('side-panel').hidden)
+        const tile = (text) => `[data-testid="tab-panel-survol"] [role="radiogroup"] label::-p-text(${text})`
+        const tileChecked = (text) =>
+          page.evaluate((t) => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].find((i) => i.labels?.[0]?.textContent.startsWith(t))?.checked === true, text)
+        await tap(tile('Oiseau'))
+        await until(page, () => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].some((i) => i.labels?.[0]?.textContent.startsWith('Oiseau') && i.checked))
+        assert(await tileChecked('Oiseau'), 'le préréglage « Oiseau » n’est pas choisi')
+        await tap('[data-testid="side-panel"] button[aria-label="Terminé"]')
+        await until(page, () => document.querySelector('[data-testid="side-panel"]').hidden)
         // the sample has no stop of its own: one at the marker
         await tap('button[aria-label="Ajouter un arrêt à la position du marqueur"]')
-        await page.waitForSelector('.film-tl__block--stop', { timeout: STEP_MS })
+        await page.waitForSelector('[data-item^="stop-"]', { timeout: STEP_MS })
         // a tap on a stop selects it: its actions take the place of the tab bar; « Modifier » opens its inspector
-        await page.$eval('.film-tl__block--stop', (el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }))
-        await tap('.film-tl__block--stop')
-        await page.waitForSelector('.block-tools button::-p-text(Modifier)', { visible: true, timeout: STEP_MS })
-        assert(await page.evaluate(() => document.querySelector('nav.rail').hidden), 'la barre d’onglets est restée sous la barre contextuelle')
-        await tap('.block-tools button::-p-text(Modifier)')
-        await isHalfSheet('.dock[aria-label="Inspecteur"]')
+        await page.$eval('[data-item^="stop-"]', (el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }))
+        await tap('[data-item^="stop-"]')
+        await page.waitForSelector('[role="toolbar"][aria-label="Élément sélectionné"] button::-p-text(Modifier)', { visible: true, timeout: STEP_MS })
+        assert(await page.evaluate(() => document.querySelector('nav[aria-label="Panneaux"]').hidden), 'la barre d’onglets est restée sous la barre contextuelle')
+        await tap('[role="toolbar"][aria-label="Élément sélectionné"] button::-p-text(Modifier)')
+        await isHalfSheet('aside[aria-label="Inspecteur"]')
         assert(await previewShown(), 'l’inspecteur couvre l’aperçu')
-        await tap('.dock[aria-label="Inspecteur"] .sheet-handle__done')
-        await until(page, () => document.querySelector('.dock[aria-label="Inspecteur"]').hidden && document.querySelector('.block-tools'))
-        await tap('.block-tools button::-p-text(Terminé)')
-        await until(page, () => !document.querySelector('.block-tools') && !document.querySelector('nav.rail').hidden)
-        await tap('button.topbar__export')
-        await page.waitForSelector('#export-dock:not([hidden]) button::-p-text(Exporter la vidéo)', { timeout: STEP_MS })
-        await isHalfSheet('#export-dock')
-        assert(await page.evaluate(() => document.getElementById('side-panel')?.hidden), 'le panneau est resté ouvert sous la feuille d’export')
+        await tap('aside[aria-label="Inspecteur"] button[aria-label="Terminé"]')
+        await until(page, () => document.querySelector('aside[aria-label="Inspecteur"]').hidden && document.querySelector('[role="toolbar"][aria-label="Élément sélectionné"]'))
+        await tap('[role="toolbar"][aria-label="Élément sélectionné"] button::-p-text(Terminé)')
+        await until(page, () => !document.querySelector('[role="toolbar"][aria-label="Élément sélectionné"]') && !document.querySelector('nav[aria-label="Panneaux"]').hidden)
+        await tap('button[data-testid="topbar-export"]')
+        await page.waitForSelector('[data-testid="export-dock"]:not([hidden]) button::-p-text(Exporter la vidéo)', { timeout: STEP_MS })
+        await isHalfSheet('[data-testid="export-dock"]')
+        assert(await page.evaluate(() => document.querySelector('[data-testid="side-panel"]')?.hidden), 'le panneau est resté ouvert sous la feuille d’export')
         const width = await page.evaluate(() => document.documentElement.scrollWidth)
         assert(width === 390, `la page défile horizontalement (${width} px)`)
       } finally {
@@ -991,7 +1278,7 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: 'shell',
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--window-size=1440,900'],
+    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
     defaultViewport: { width: 1440, height: 900 },
     protocolTimeout: EXPORT_MS,
   })
@@ -1007,6 +1294,8 @@ async function main() {
     const newPage = async () => {
       const page = await browser.newPage()
       page.setDefaultTimeout(STEP_MS)
+      // a first run follows the browser's language: the scenarios read the French interface (the headless browser may ignore --lang)
+      await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, 'languages', { get: () => ['fr-FR', 'fr'] }))
       page.on('console', (msg) => {
         // export timings (rendering, waiting for tiles, encoding)
         if (msg.text().startsWith('[export]')) log(`    ${msg.text()}`)

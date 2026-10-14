@@ -35,8 +35,8 @@ afterEach(async () => {
   getPlatform().storage.remove(PREFERENCES_KEY)
 })
 
-const radio = (label: string) => [...host.querySelectorAll<HTMLInputElement>('.segmented__option input')].find((i) => i.parentElement!.textContent === label)!
-const swatch = (label: string) => host.querySelector<HTMLButtonElement>(`.color-row__swatch[aria-label="${label}"]`)!
+const radio = (label: string) => [...host.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find((i) => i.labels?.[0]?.textContent === label)!
+const swatch = (label: string) => host.querySelector<HTMLElement>(`[role="option"][aria-label="${label}"]`)!
 const reset = () => [...host.querySelectorAll('button')].find((b) => b.textContent === "Rétablir l'apparence par défaut")!
 const stored = () => JSON.parse(getPlatform().storage.get(PREFERENCES_KEY)!).appearance
 
@@ -45,8 +45,8 @@ describe('PreferencesPanel, « Apparence »', () => {
     expect(host.textContent).toContain('Apparence')
     expect(radio('Clair').checked).toBe(true)
     expect(radio('Confortable').checked).toBe(true)
-    expect(swatch("Couleur d'accentuation : Rouge balisage").getAttribute('aria-pressed')).toBe('true')
-    expect(swatch('Couleur de la barre et du rail : Encre').getAttribute('aria-pressed')).toBe('true')
+    expect(swatch("Couleur d'accentuation : Rouge balisage").getAttribute('aria-selected')).toBe('true')
+    expect(swatch('Couleur de la barre et du rail : Encre').getAttribute('aria-selected')).toBe('true')
     expect(reset().hasAttribute('disabled')).toBe(true)
     expect(document.documentElement.dataset.theme).toBe('light')
   })

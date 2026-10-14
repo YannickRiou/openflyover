@@ -8,6 +8,7 @@ import type { KeyValueStore, TileCache } from '../platform/platform'
 import { TileFetchError, downloadTile, isNoDataError } from '../terrain/fetch'
 import type { PlannedTile } from './plan'
 import { offlinePolicy } from './policy'
+import { t } from '../i18n'
 
 export const DOWNLOAD_CONCURRENCY = 4
 /** failures in a row after which the download stops (network gone) */
@@ -118,7 +119,7 @@ export function startPackDownload(pack: string, tiles: readonly PlannedTile[], d
         return true
       }
       progress.failed++
-      if (++failuresInARow >= MAX_FAILURES_IN_A_ROW) stop('failed', { error: 'Le réseau ne répond plus.' })
+      if (++failuresInARow >= MAX_FAILURES_IN_A_ROW) stop('failed', { error: t('offline.error.network') })
       return true
     }
     if (controller.signal.aborted) throw new DOMException('Canceled', 'AbortError')
@@ -126,7 +127,7 @@ export function startPackDownload(pack: string, tiles: readonly PlannedTile[], d
     try {
       await deps.cache.put(pack, tile.url, blob)
     } catch (error) {
-      stop('failed', { error: `Tuiles non enregistrées : ${errorMessage(error)}` })
+      stop('failed', { error: t('offline.error.notSaved', { error: errorMessage(error) }) })
       return false
     }
     progress.bytes += blob.size
@@ -142,7 +143,7 @@ export function startPackDownload(pack: string, tiles: readonly PlannedTile[], d
         counted = await handle(tiles[next++])
       } catch (error) {
         // aborted, or the storage failed (`has`): the pack is not complete
-        if (!controller.signal.aborted) stop('failed', { error: `Tuiles non lues : ${errorMessage(error)}` })
+        if (!controller.signal.aborted) stop('failed', { error: t('offline.error.tilesUnread', { error: errorMessage(error) }) })
         return
       }
       if (!counted) return

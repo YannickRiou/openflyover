@@ -3,6 +3,7 @@
  * paste in a bug report. Snapshot taken when an export starts (guard.ts, tab's sessionStorage), shown by « Détails » of
  * an interrupted export and by « Afficher le rapport » (Projet tab) with the steps of the export.
  * Building and formatting are pure (tested). No coordinate, no track, place, project or file name: the user pastes it.
+ * The report stays in French whatever the language of the interface: it is read by the maintainers (`withLanguage`).
  */
 import { create } from 'zustand'
 import { deviceBudget } from '../core/deviceBudget'
@@ -11,6 +12,7 @@ import type { Track } from '../core/types'
 import { isAudioAsset, isVideoAsset, useMediaStore, usedMedia } from '../film/media'
 import type { MediaTable } from '../film/media'
 import { getPlatform } from '../platform'
+import { withLanguage } from '../i18n'
 import type { VideoEncoderKind } from '../platform'
 import { isIdentityGrading } from '../scene/grading'
 import { useAppStore } from '../state/store'
@@ -232,6 +234,10 @@ function settingsRows({ settings, tracks, media, request }: DiagnosticInput): Re
 
 /** The report of `input`, without the steps. */
 export function buildReport(input: DiagnosticInput): DiagnosticReport {
+  return withLanguage('fr', () => buildFrenchReport(input))
+}
+
+function buildFrenchReport(input: DiagnosticInput): DiagnosticReport {
   const sections: ReportSection[] = [
     { title: 'Appareil', rows: deviceRows(input) },
     { title: 'Export', rows: exportRows(input) },
@@ -253,6 +259,10 @@ const MAX_ERROR = 600
  * tiles failed), frames, where the time went (GPU, composing, video frame, encoder wait), the encoder.
  */
 export function resultSection(state: Pick<ExportState, 'phase' | 'error' | 'frame' | 'frameCount' | 'timings' | 'result'>): ReportSection {
+  return withLanguage('fr', () => frenchResultSection(state))
+}
+
+function frenchResultSection(state: Pick<ExportState, 'phase' | 'error' | 'frame' | 'frameCount' | 'timings' | 'result'>): ReportSection {
   const { phase, error, timings, result } = state
   const outcome = phase === 'done' || phase === 'error' || phase === 'canceled' ? OUTCOME_LABELS[phase] : phase
   const rows: ReportRow[] = [['Issue', outcome]]

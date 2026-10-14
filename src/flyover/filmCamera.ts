@@ -7,7 +7,8 @@
  * Overview: target = centre of the track's box, distance = OVERVIEW_DISTANCE_FACTOR x box diagonal (more for a frame
  * taller than wide, so 9:16 keeps the whole track), on the side the flight camera looks from where the shot joins
  * the flight (no turn during the transition). The transition lerps the target, nlerps the direction, interpolates the
- * distance geometrically (smootherstep) and stays MIN_GROUND_CLEARANCE_M above the ground. A shot that cuts ('coupe',
+ * distance geometrically (smootherstep), stays MIN_GROUND_CLEARANCE_M above the ground and, in between, on a glide
+ * slope over the flight camera and clear of the relief on the way (`clearOnTheWay`). A shot that cuts ('coupe',
  * dips to black or white) holds its wide view and cuts at the boundary with the flight (`shotWeight`).
  */
 import { Vector3 } from 'three'
@@ -16,8 +17,9 @@ import type { LocalFrame, LonLat } from '../core/types'
 import type { ClockStop, FilmClock, FilmState } from '../film/clock'
 import { CAMERA_KEY_RANGES, SITUATION_DISTANCE_KM_RANGE, SITUATION_TILT_DEFAULT_DEG, SITUATION_TILT_RANGE, shotCuts, situationTiming } from '../film/model'
 import type { FilmShot, ShotStyle, SituationFraming, StartHeight } from '../film/model'
-import type { HeightSampler } from '../scene/TrackLines'
+import type { HeightSampler } from '../scene/trackLineSet'
 import {
+  LINE_OF_SIGHT_MIN_CLEARANCE_M,
   MIN_GROUND_CLEARANCE_M,
   autoDistanceM,
   computeCameraView,
@@ -63,6 +65,14 @@ export const CAMERA_FOV_DEG = 50
 /** 'balayage' shot: turn of the overview around its target (degrees), share of the shot it takes. */
 export const SWEEP_DEG = 75
 export const SWEEP_SHARE = 0.6
+/** Glide slope (degrees above the horizon) a shot's camera keeps over the flight view it moves to or from. */
+export const SHOT_GLIDE_DEG = 15
+/** A shot's camera clears the ground under it, and the line to its aim, by this share of its distance (at least the flight's). */
+export const SHOT_CLEARANCE_SHARE = 0.08
+/** Samples of the relief along the line of sight of a shot's camera, up to 90% of the way to its aim. */
+const SHOT_SIGHT_SAMPLES = 16
+/** The glide and the clearances ease in over this share of the shot's blend at each end (the end views are untouched). */
+const SHOT_EASE_SHARE = 0.1
 /** Length of the quick move of a 'saut' shot (seconds). */
 export const JUMP_S = 0.6
 /** 'orbite' stop: the camera turns out by STOP_ORBIT_DEG_PER_S × stop duration (at most STOP_ORBIT_MAX_DEG) and back. */
@@ -434,6 +444,41 @@ export function blendViews(
   return { target, position: keepAboveGround(position, frame, sample, exaggeration) }
 }
 
+/**
+ * `view`, a blend `k` (0..1, exclusive) of the way between a wide view and the `flight` view, raised so that its
+ * camera stays on a glide slope of SHOT_GLIDE_DEG over the flight camera (no dive far from it), clears the ground
+ * under it by SHOT_CLEARANCE_SHARE of its distance and does not hide its aim behind the relief (the straight line of
+ * the blend knows nothing of the terrain between the two views). Eased in and out over SHOT_EASE_SHARE of the blend.
+ */
+function clearOnTheWay(
+  view: CameraView,
+  flight: CameraView,
+  k: number,
+  frame: LocalFrame,
+  sample: HeightSampler | null,
+  exaggeration: number,
+): CameraView {
+  const share = smootherstep(Math.min(k, 1 - k) / SHOT_EASE_SHARE)
+  if (share <= 0) return view
+  const { position, target } = view
+  let floorY = flight.position.y + Math.hypot(position.x - flight.position.x, position.z - flight.position.z) * Math.tan(SHOT_GLIDE_DEG * DEG)
+  if (sample) {
+    const clearance = Math.max(MIN_GROUND_CLEARANCE_M, SHOT_CLEARANCE_SHARE * position.distanceTo(target))
+    const point = new Vector3()
+    for (let i = 0; i <= SHOT_SIGHT_SAMPLES; i++) {
+      const f = (0.9 * i) / SHOT_SIGHT_SAMPLES
+      const at = frame.toLonLat(point.lerpVectors(position, target, f))
+      const ground = sample(at.lon, at.lat)
+      if (ground === undefined) continue
+      // the line from the camera to the aim, at f of the way, must pass `clearance · (1 − f)` over the ground there
+      const need = frame.toLocal(at.lon, at.lat, ground * exaggeration).y + Math.max(clearance * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
+      floorY = Math.max(floorY, (need - target.y * f) / (1 - f))
+    }
+  }
+  if (floorY <= position.y) return view
+  return { target, position: position.clone().setY(position.y + (floorY - position.y) * share) }
+}
+
 /** Marker position on the draped track at `progress` (as `computeCameraView` places it). */
 export function markerAt(path: TrackPath, progress: number, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number, liftM: number): Vector3 {
   const at = samplePath(path, clamp(progress, 0, 1) * path.lengthM)
@@ -666,9 +711,10 @@ export function computeFilmView(
   const wide =
     turned === overview ? overview : { target: turned.target, position: keepAboveGround(turned.position, frame, sample, options.exaggeration) }
   const k = shotWeight(shot, state.phase, state.localS, state.lengthS)
-  const view =
+  const blended =
     state.phase === 'opening'
       ? blendViews(wide, flight, k, frame, sample, options.exaggeration)
       : blendViews(flight, wide, k, frame, sample, options.exaggeration)
+  const view = k > 0 && k < 1 ? clearOnTheWay(blended, flight, k, frame, sample, options.exaggeration) : blended
   return { ...view, marker: flight.marker }
 }

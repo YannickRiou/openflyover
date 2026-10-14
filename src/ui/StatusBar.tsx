@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { _roots, addAfterEffect } from '@react-three/fiber'
+import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
 import { useLandmarkStore, useWaterStore } from '../osm/store'
 import { overlayCredits } from '../overlay/data'
@@ -26,14 +27,27 @@ import {
 import { usePreferences } from './preferences'
 import { PERF_ITEMS } from './shell'
 import type { PerfItem } from './shell'
+import { Modal, Tip } from './primitives'
+
+/*
+ * The strip's classes. It is a container (`@container/status`): narrower than 900 px the performance readout goes, narrower
+ * than 560 px the chips keep their icon only and the providers behind the credits fold into « … ».
+ */
+const BAR =
+  '@container/status chrome-focus flex min-w-0 items-center gap-3 border-t border-ink-soft bg-chrome pr-2 pl-3 text-caption whitespace-nowrap text-glacier tabular-nums phone-any:pb-[env(safe-area-inset-bottom)]'
+/** The spinner: a ring with its light-accent arc. */
+const SPINNER = 'spin-fast size-2.5 flex-none rounded-full border-2 border-ink-soft border-t-accent-light'
+/** The colour of a chip by tone: white while loading, the attention colour on error, dimmed when there is nothing to show. */
+const CHIP_TONE: Record<FetchChip['tone'], string> = {
+  loading: 'text-white',
+  ready: '',
+  attention: 'text-amber-light',
+  muted: 'opacity-75',
+}
+const CREDIT_LINK = 'text-inherit underline hover:text-white'
 
 /** Performance readout refresh. */
 const PERF_INTERVAL_MS = 1000
-
-/** French plural: zero and one take the singular. */
-function plural(count: number, singular: string, pluralForm: string): string {
-  return count > 1 ? pluralForm : singular
-}
 
 /** Map state from the terrain stats, re-read when a load reaches its display delay. */
 function useMapStatus(): MapStatus {
@@ -123,31 +137,44 @@ function usePerformance(shown: Record<PerfItem, boolean>): PerfSample | null {
 function ProgressRing({ value }: { value: number }) {
   const circumference = 2 * Math.PI * 5
   return (
-    <svg className="status__ring" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-      <circle cx="6" cy="6" r="5" />
-      <circle cx="6" cy="6" r="5" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - value)} />
+    <svg className="spin-slow size-3 flex-none fill-none stroke-2" viewBox="0 0 12 12" aria-hidden="true">
+      <circle className="stroke-ink-soft" cx="6" cy="6" r="5" />
+      <circle
+        className="origin-center -rotate-90 stroke-accent-light transition-[stroke-dashoffset] duration-400 ease-out [stroke-linecap:round] motion-reduce:transition-none"
+        cx="6"
+        cy="6"
+        r="5"
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference * (1 - value)}
+      />
     </svg>
   )
 }
 
 /** One fetch: spinner while loading, check once loaded, attention colour (focusable, for its message) on error. */
 function Chip({ chip }: { chip: FetchChip }) {
+  const t = useT()
   const attention = chip.tone === 'attention'
   return (
-    <span className={`status__chip status__chip--${chip.tone}`} data-tip={chip.tip} data-tip-side="top" tabIndex={attention ? 0 : undefined}>
-      {chip.tone === 'loading' ? (
-        <span className="status__spinner" aria-hidden="true" />
-      ) : (
-        <Icon name={chip.tone === 'ready' ? 'circle-check' : 'circle-alert'} size={12} />
-      )}
-      {chip.label}
-      <span className="visually-hidden"> : {chip.tip}</span>
-    </span>
+    <Tip text={chip.tip} side="top">
+      <span className={`inline-flex flex-none items-center gap-1 @max-[560px]/status:text-[0px] ${CHIP_TONE[chip.tone]}`} tabIndex={attention ? 0 : undefined}>
+        {chip.tone === 'loading' ? (
+          <span className={SPINNER} aria-hidden="true" />
+        ) : (
+          <span className={chip.tone === 'ready' ? 'flex text-moss-light' : 'flex'}>
+            <Icon name={chip.tone === 'ready' ? 'circle-check' : 'circle-alert'} size={12} />
+          </span>
+        )}
+        {chip.label}
+        <span className="visually-hidden">{t('status.chipSr', { tip: chip.tip })}</span>
+      </span>
+    </Tip>
   )
 }
 
 /** Weather, landmarks, region and water fetches, as chosen in « Réglages » (nothing while idle). */
 function FetchChips() {
+  useT()
   const shown = usePreferences((s) => s.status)
   // primitives only: a selector returning a new object on every call makes the store re-render forever
   const weatherStatus = useWeatherStore((s) => s.status)
@@ -163,7 +190,7 @@ function FetchChips() {
   const chips = [shown.weather && weather, shown.landmarks && landmarks, shown.region && region, shown.water && water].filter((c) => !!c)
   if (chips.length === 0) return null
   return (
-    <p className="status__chips">
+    <p className="flex min-w-0 items-center gap-2 overflow-hidden">
       {chips.map((chip) => (
         <Chip key={chip.label} chip={chip} />
       ))}
@@ -179,6 +206,7 @@ function FetchChips() {
  * be announced by screen readers.
  */
 export function StatusBar() {
+  const t = useT()
   const map = useMapStatus()
   const loading = useAppStore((s) => s.loading)
   const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
@@ -191,7 +219,7 @@ export function StatusBar() {
   const perfShown = usePreferences((s) => s.performance)
   const perf = usePerformance(perfShown)
   const sourceDates = useSourceDates((s) => s.dates)
-  const dialog = useRef<HTMLDialogElement>(null)
+  const [sourcesOpen, setSourcesOpen] = useState(false)
 
   const imagery = getImagerySource(imagerySourceId)
   // IGN layers: the update date of the data (Etalab licence), as the service sends it
@@ -202,59 +230,57 @@ export function StatusBar() {
   const perfText = perf ? perfParts(perf, perfShown).join(' · ') : ''
 
   return (
-    <footer className="status">
+    <footer className={BAR}>
       {/* calm: nothing before the first tile, a short load (small camera move) does not show */}
       {map.shown !== 'idle' && (
-        <p className="status__map">
+        <p className="flex flex-none items-center gap-2">
           {map.shown === 'loading' ? (
             <span
-              className="status__map-state status__map-state--loading"
-              title="Relief et imagerie de la vue actuelle"
+              className="flex items-center gap-1.5 text-white"
+              title={t('status.mapTip')}
               role="progressbar"
-              aria-label="Chargement de la carte"
+              aria-label={t('status.mapLoading')}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(map.progress * 100)}
             >
               <ProgressRing value={map.progress} />
-              Carte · {formatPercent(map.progress)}
+              {t('status.map', { value: formatPercent(map.progress) })}
             </span>
           ) : (
-            <span className="status__map-state status__map-state--ready" title="Toutes les tuiles de la vue actuelle sont chargées">
-              <Icon name="circle-check" size={12} />
-              Carte prête
+            <span className="flex items-center gap-1.5" title={t('status.mapReadyTip')}>
+              <span className="flex text-moss-light">
+                <Icon name="circle-check" size={12} />
+              </span>
+              {t('status.mapReady')}
             </span>
           )}
           {map.failed > 0 && (
-            <span
-              className="status__failed"
-              tabIndex={0}
-              data-tip="Réseau ou serveur : nouvel essai automatique"
-              data-tip-side="top"
-              data-tip-align="start"
-            >
-              {map.failed} {plural(map.failed, 'tuile', 'tuiles')} en erreur
-            </span>
+            <Tip text={t('status.failedTip')} side="top" align="start">
+              <span className="text-amber-light" tabIndex={0}>
+                {t('status.failedTiles', { count: map.failed })}
+              </span>
+            </Tip>
           )}
         </p>
       )}
       {/* always mounted so that assistive tech sees the text change */}
-      <p className="status__line" role="status" aria-live="polite" hidden={!loading}>
-        <span className="status__spinner" aria-hidden="true" />
-        Import en cours…
+      <p className="flex flex-none items-center gap-1.5" role="status" aria-live="polite" hidden={!loading}>
+        <span className={SPINNER} aria-hidden="true" />
+        {t('status.importing')}
       </p>
       <FetchChips />
       {perfText && (
-        <p className="status__perf" title="Performances (choix dans « Réglages »)">
+        <p className="min-w-0 truncate @max-[900px]/status:hidden" title={t('status.perfTip')}>
           {perfText}
         </p>
       )}
-      <p className="status__credits">
+      <p className="ml-auto shrink-0 grow text-right">
         {short.map((item, i) => (
-          <span key={item.text} className="status__credit">
+          <span key={item.text}>
             {i > 0 && ' · '}
             {item.href ? (
-              <a href={item.href} target="_blank" rel="noreferrer">
+              <a className={CREDIT_LINK} href={item.href} target="_blank" rel="noreferrer">
                 {item.text}
               </a>
             ) : (
@@ -262,39 +288,30 @@ export function StatusBar() {
             )}
             {item.more && (
               <>
-                <span className="status__credit-more"> — {item.more}</span>
+                <span className="@max-[560px]/status:hidden"> — {item.more}</span>
                 {/* narrow status bar: the providers behind a button, above the bar when open */}
-                <details className="status__credit-fold">
-                  <summary aria-label={`Sources ${item.text}`}>…</summary>
-                  <span className="status__credit-pop">{item.more}</span>
+                <details className="relative hidden @max-[560px]/status:inline-block">
+                  <summary className="cursor-pointer list-none px-1 [&::-webkit-details-marker]:hidden" aria-label={t('status.creditSources', { name: item.text })}>…</summary>
+                  <span className="absolute right-0 bottom-[calc(100%+6px)] z-9 rounded-sm bg-chrome px-2 py-1 text-white shadow-pop">{item.more}</span>
                 </details>
               </>
             )}
           </span>
         ))}
       </p>
-      <button
-        type="button"
-        className="status__info"
-        aria-label="Sources et licences"
-        data-tip="Sources et licences"
-        data-tip-side="top"
-        data-tip-align="end"
-        onClick={() => dialog.current?.showModal()}
-      >
-        <Icon name="info" size={14} />
-      </button>
+      <Tip text={t('status.sources')} side="top" align="end">
+        <button
+          type="button"
+          className="relative inline-flex size-5 flex-none cursor-pointer items-center justify-center rounded-full p-0 text-glacier transition-ui hover:text-white touch:before:absolute touch:before:-inset-3.5 touch:before:content-['']"
+          aria-label={t('status.sources')}
+          onClick={() => setSourcesOpen(true)}
+        >
+          <Icon name="info" size={14} />
+        </button>
+      </Tip>
 
-      <dialog ref={dialog} className="sources" aria-labelledby="sources-title">
-        <div className="sources__head">
-          <h2 id="sources-title" className="sources__title">
-            Sources et licences
-          </h2>
-          <button type="button" className="icon-btn" aria-label="Fermer" data-tip="Fermer (Échap)" data-tip-side="left" onClick={() => dialog.current?.close()}>
-            <Icon name="x" size={18} />
-          </button>
-        </div>
-        <ul className="sources__list">
+      <Modal open={sourcesOpen} onClose={() => setSourcesOpen(false)} title={t('status.sources')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
+        <ul className="mb-3 flex flex-col gap-2">
           {credits.map((line) => (
             <li key={line}>
               {line}
@@ -302,23 +319,20 @@ export function StatusBar() {
             </li>
           ))}
         </ul>
-        <p className="sources__links">
+        <p>
           {short
             .filter((item) => item.href)
             .map((item, i) => (
               <span key={item.text}>
                 {i > 0 && ' · '}
-                <a href={item.href} target="_blank" rel="noreferrer">
+                <a className="underline" href={item.href} target="_blank" rel="noreferrer">
                   {item.text.replace('© ', '')}
                 </a>
               </span>
             ))}
         </p>
-        <p className="field__hint">
-          Ces mentions sont incrustées dans les films exportés (Habillage, « Crédits des sources »). Polices : Fraunces et
-          IBM Plex (SIL Open Font License 1.1). Icônes : Lucide (licence ISC). OpenFlyover est publié sous licence MIT.
-        </p>
-      </dialog>
+        <p className="type-hint">{t('status.sourcesNote')}</p>
+      </Modal>
     </footer>
   )
 }

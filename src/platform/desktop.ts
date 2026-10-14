@@ -11,6 +11,7 @@ import { droppedFiles, fileNameOf, keyValueStore, mimeTypeOf, rememberFileTarget
 import type { Capabilities, DocumentOutcome, FileFilter, FileTarget, Platform, SaveDocumentOptions, SaveFileOptions, SaveOutcome, WritableFile } from './platform'
 import { createDesktopLibraryFiles, createProjectLibrary } from './projectLibrary'
 import { createDesktopTileCache } from './tileCache'
+import { t } from '../i18n'
 
 const dialogFilters = (filters: readonly FileFilter[]) => filters.map((f) => ({ name: f.name, extensions: [...f.extensions] }))
 
@@ -90,7 +91,7 @@ export async function openWritablePath(path: string): Promise<WritableFile> {
       if (position !== cursor) await file.seek(position, fs.SeekMode.Start)
       for (let offset = 0; offset < data.length; ) {
         const written = await file.write(data.subarray(offset))
-        if (written <= 0) throw new Error("L'écriture du fichier s'est arrêtée.")
+        if (written <= 0) throw new Error(t('platform.error.writeStopped'))
         offset += written
       }
       cursor = position + data.length

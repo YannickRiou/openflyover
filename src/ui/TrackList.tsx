@@ -1,20 +1,24 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { Track } from '../core/types'
 import { isExportBusy, useExportStore } from '../export/store'
+import { t, useT } from '../i18n'
 import {
   RACE_CAMERA_LABELS,
   RACE_CAMERAS,
   RACE_SYNC_LABELS,
   RACE_SYNC_MODES,
-  STAGE_TRANSITION_LABELS,
-  STAGE_TRANSITIONS,
   raceAt,
   rankRacers,
   syncNeedsTime,
 } from '../flyover/race'
-import type { Race, RaceCamera, RaceSettings, RaceSync, Racer, StageTransition } from '../flyover/race'
-import { playsInSequence } from '../flyover/sequence'
+import type { Race, RaceCamera, RaceSettings, RaceSync, Racer } from '../flyover/race'
+import { orderedTracks, playsInSequence } from '../flyover/sequence'
+import { DEFAULT_JUNCTION, junctionDefaultOf, withDefaultCard, withDefaultJunction } from '../film/junctions'
+import { dropIndexAt, idsByDate } from '../film/reorder'
+import { edgeScrollSpeed } from '../film/timeline'
+import { isTextEntry } from '../project/history'
+import { editFilm, orderTracksByDate, reorderTracks } from '../scene/usePacing'
 import {
   PACE_RANGE,
   PLAN_ACTIVITIES,
@@ -33,44 +37,46 @@ import { computeTrackElevation, hasMissingElevation, withoutTerrainElevation } f
 import { getTerrainSource } from '../terrain/sources'
 import { formatClock, formatDistance, formatDistanceGap, formatNumber, formatTimeGap, formatTrackSummary } from './format'
 import { Icon } from './icons'
+import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
-import './trackElevation.css'
+import { Button, ColorField, Menu, Radio, RadioGroup, Select, Slider, Switch, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
 
 /** Hint under the sync select. */
 const SYNC_HINTS: Record<RaceSync, string> = {
-  elapsed: 'Chaque trace depuis son propre départ : sorties successives sur un même parcours.',
-  clock: 'À la même heure enregistrée : sortie en groupe le même jour.',
-  distance: 'Au même pourcentage de chaque trace, sans tenir compte du temps.',
+  get elapsed() { return t('track.syncHint.elapsed') },
+  get clock() { return t('track.syncHint.clock') },
+  get distance() { return t('track.syncHint.distance') },
 }
 
 function gapLabel(racer: Racer): string {
   if (racer.gapMs !== undefined) return formatTimeGap(racer.gapMs)
   if (racer.gapM !== undefined) return formatDistanceGap(racer.gapM)
-  return 'réf.'
+  return t('track.gapRef')
 }
 
 /** Live leaderboard: subscribes to the (quantised) playback progress on its own. */
 function RaceBoard({ race, tracks }: { race: Race; tracks: readonly Track[] }) {
+  const t = useT()
   const progress = useAppStore((s) => Math.round(s.playback.progress * PROGRESS_STEPS) / PROGRESS_STEPS)
   const racers = rankRacers(raceAt(race, progress))
 
   return (
-    <ol className="race__board" aria-label="Classement au marqueur">
+    <ol className="flex flex-col gap-1" aria-label={t('track.board')}>
       {racers.map((racer) => {
         const track = tracks[racer.index]
         if (!track) return null
         return (
-          <li key={track.id} className="race__row">
-            <span className="race__swatch" style={{ background: track.color }} aria-hidden="true" />
-            <span className="race__name" title={track.name}>
+          <li key={track.id} className="grid grid-cols-[10px_minmax(0,1fr)_auto_auto] items-center gap-x-2 rounded-sm bg-surface-panel px-2 py-1 text-hint">
+            <span className="size-2.5 rounded-full border border-(--swatch-border)" style={{ background: track.color }} aria-hidden="true" />
+            <span className="truncate font-semibold text-text-1" title={track.name}>
               {track.name}
             </span>
-            <span className="race__distance">{formatDistance(racer.distanceM)}</span>
-            <span className="race__gap" title={racer.index === 0 ? 'Trace de référence, suivie par la caméra' : undefined}>
+            <span className="text-text-2 tabular-nums">{formatDistance(racer.distanceM)}</span>
+            <span className="min-w-[8ch] text-right font-semibold text-text-1 tabular-nums" title={racer.index === 0 ? t('track.boardRef') : undefined}>
               {gapLabel(racer)}
             </span>
           </li>
@@ -83,11 +89,15 @@ function RaceBoard({ race, tracks }: { race: Race; tracks: readonly Track[] }) {
 /** « Plusieurs traces »: how the film plays two tracks or more. */
 const MULTI_MODES = ['une', 'suite', 'parallele'] as const
 type MultiMode = (typeof MULTI_MODES)[number]
-const MULTI_MODE_LABELS: Record<MultiMode, string> = { une: 'La première', suite: 'À la suite', parallele: 'En parallèle' }
+const MULTI_MODE_LABELS: Record<MultiMode, string> = {
+  get une() { return t('track.mode.une') },
+  get suite() { return t('track.mode.suite') },
+  get parallele() { return t('track.mode.parallele') },
+}
 const MULTI_MODE_HINTS: Record<MultiMode, string> = {
-  une: 'Le film survole la première trace, les autres sont seulement dessinées.',
-  suite: 'Le film survole les traces l’une après l’autre, dans l’ordre de la liste : chacune garde sa couleur, son nom et ses chiffres.',
-  parallele: 'Course fantôme : toutes les traces rejouées ensemble.',
+  get une() { return t('track.mode.une') },
+  get suite() { return t('track.mode.suite') },
+  get parallele() { return t('track.mode.parallele') },
 }
 
 function multiModeOf(race: RaceSettings, count: number): MultiMode {
@@ -104,10 +114,34 @@ function withMultiMode(race: RaceSettings, mode: MultiMode): RaceSettings {
 }
 
 /**
+ * « À la suite »: the transition between two stages and the card of each stage as the film makes them by default
+ * (`film.junctionDefault`); each junction and each card is set on the timeline (« Étapes » lane), where it keeps its own.
+ */
+function StageDefaults() {
+  const t = useT()
+  const film = useAppStore((s) => s.settings.film)
+  const { kind, holdS, card } = junctionDefaultOf(film)
+  return (
+    <>
+      <JunctionTransitionFields
+        kind={kind}
+        holdS={holdS || DEFAULT_JUNCTION.holdS}
+        onChange={(patch) => editFilm((f) => ({ film: withDefaultJunction(f, patch) }), { step: patch.kind !== undefined })}
+      />
+      <Switch checked={card} onChange={(on) => editFilm((f) => ({ film: withDefaultCard(f, on) }))}>
+        {t('track.stageCard')}
+      </Switch>
+      <p className="type-hint">{t('track.stageHint')}</p>
+    </>
+  )
+}
+
+/**
  * « Plusieurs traces » (2+ tracks): the first one alone, « À la suite » (stages, their transition and cards) or
  * « En parallèle » (the ghost race: sync, what the camera follows, leaderboard).
  */
 function RacePanel({ tracks }: { tracks: readonly Track[] }) {
+  const t = useT()
   const id = useId()
   const settings = useAppStore((s) => s.settings.race)
   const leaderboard = useAppStore((s) => s.settings.overlay.leaderboard)
@@ -130,120 +164,77 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
   const camera = settings.camera ?? 'premiere'
 
   return (
-    <div className="settings race" role="group" aria-labelledby={`${id}-title`}>
-      <h3 id={`${id}-title`} className="field__label">
-        Plusieurs traces
+    <div className="mt-3 flex flex-col gap-3 border-t border-edge pt-3" role="group" aria-labelledby={`${id}-title`}>
+      <h3 id={`${id}-title`} className="panel-title">
+        {t('track.race.title')}
       </h3>
-      <div className="segmented" role="radiogroup" aria-labelledby={`${id}-title`} aria-describedby={`${id}-mode-hint`}>
+      <RadioGroup
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-mode-hint`}
+        value={mode}
+        disabled={busy}
+        onChange={(m) => setSetting('race', withMultiMode(settings, m))}
+      >
         {MULTI_MODES.map((m) => (
-          <label key={m} className="segmented__option">
-            <input
-              type="radio"
-              name={`${id}-mode`}
-              value={m}
-              checked={mode === m}
-              disabled={busy}
-              onChange={() => setSetting('race', withMultiMode(settings, m))}
-            />
+          <Radio key={m} value={m}>
             {MULTI_MODE_LABELS[m]}
-          </label>
+          </Radio>
         ))}
-      </div>
-      <p id={`${id}-mode-hint`} className="field__hint">
+      </RadioGroup>
+      <p id={`${id}-mode-hint`} className="type-hint">
         {MULTI_MODE_HINTS[mode]}
       </p>
 
-      {mode === 'suite' && (
-        <>
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-transition`}>
-              Entre deux étapes
-            </label>
-            <select
-              id={`${id}-transition`}
-              className="select"
-              value={settings.stageTransition ?? 'fondu-noir'}
-              onChange={(e) => set({ stageTransition: e.currentTarget.value as StageTransition })}
-            >
-              {STAGE_TRANSITIONS.map((t) => (
-                <option key={t} value={t}>
-                  {STAGE_TRANSITION_LABELS[t]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="checkbox checkbox--switch" htmlFor={`${id}-cards`}>
-            <input
-              id={`${id}-cards`}
-              type="checkbox"
-              checked={settings.stageCards !== false}
-              onChange={(e) => set({ stageCards: e.currentTarget.checked })}
-            />
-            Carton au début de chaque étape
-          </label>
-          <p className="field__hint">Nom, date, distance et dénivelé de l’étape. L’ordre est celui de la liste (flèche pour monter une trace).</p>
-        </>
-      )}
+      {mode === 'suite' && <StageDefaults />}
 
       <div className="field" hidden={mode !== 'parallele'}>
-        <label className="field__label" htmlFor={`${id}-sync`}>
-          Synchronisation
+        <label className="type-label" htmlFor={`${id}-sync`}>
+          {t('track.race.sync')}
         </label>
-        <select
+        <Select
           id={`${id}-sync`}
-          className="select"
           value={race.sync}
           aria-describedby={`${id}-sync-hint`}
-          onChange={(e) => setSetting('race', { ...settings, sync: e.currentTarget.value as RaceSync })}
-        >
-          {RACE_SYNC_MODES.map((mode) => (
-            <option key={mode} value={mode} disabled={syncNeedsTime(mode) && !race.timed}>
-              {RACE_SYNC_LABELS[mode]}
-            </option>
-          ))}
-        </select>
-        <p id={`${id}-sync-hint`} className="field__hint">
+          options={RACE_SYNC_MODES.map((mode) => ({ value: mode, label: RACE_SYNC_LABELS[mode], disabled: syncNeedsTime(mode) && !race.timed }))}
+          onChange={(sync) => setSetting('race', { ...settings, sync })}
+        />
+        <p id={`${id}-sync-hint`} className="type-hint">
           {race.timed
             ? SYNC_HINTS[race.sync]
-            : 'Une trace n’est pas horodatée : seule « même distance » est possible.'}
+            : t('track.race.untimed')}
         </p>
       </div>
 
       {settings.enabled && (
         <>
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-camera`}>
-              Caméra sur
+            <label className="type-label" htmlFor={`${id}-camera`}>
+              {t('track.race.cameraOn')}
             </label>
-            <select id={`${id}-camera`} className="select" value={camera} disabled={busy} onChange={(e) => followCamera(e.currentTarget.value)}>
-              <option value="premiere">{tracks[0].name}</option>
-              {tracks.slice(1).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-              {RACE_CAMERAS.filter((c) => c !== 'premiere').map((c) => (
-                <option key={c} value={c}>
-                  {RACE_CAMERA_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="checkbox checkbox--switch" htmlFor={`${id}-board`}>
-            <input
-              id={`${id}-board`}
-              type="checkbox"
-              checked={leaderboard.enabled}
-              onChange={(e) => {
-                const { overlay } = useAppStore.getState().settings
-                setSetting('overlay', { ...overlay, leaderboard: { ...overlay.leaderboard, enabled: e.currentTarget.checked } })
-              }}
+            <Select
+              id={`${id}-camera`}
+              value={camera}
+              disabled={busy}
+              options={[
+                { value: 'premiere', label: tracks[0].name },
+                ...tracks.slice(1).map((other) => ({ value: other.id, label: other.name })),
+                ...RACE_CAMERAS.filter((c) => c !== 'premiere').map((c) => ({ value: c, label: RACE_CAMERA_LABELS[c] })),
+              ]}
+              onChange={followCamera}
             />
-            Classement à l’image
-          </label>
-          {leaderboard.enabled && !overlayOn && <p className="field__hint">Visible une fois l’habillage activé.</p>}
+          </div>
+          <Switch
+            checked={leaderboard.enabled}
+            onChange={(on) => {
+              const { overlay } = useAppStore.getState().settings
+              setSetting('overlay', { ...overlay, leaderboard: { ...overlay.leaderboard, enabled: on } })
+            }}
+          >
+            {t('track.race.board')}
+          </Switch>
+          {leaderboard.enabled && !overlayOn && <p className="type-hint">{t('track.race.boardNeedsOverlay')}</p>}
           <RaceBoard race={race} tracks={tracks} />
-          <p className="field__hint">Écart avec la première trace, au même pourcentage du parcours.</p>
+          <p className="type-hint">{t('track.race.gap')}</p>
         </>
       )}
     </div>
@@ -252,87 +243,48 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
 
 /** « + Ajouter »: a menu to pick more GPX / FIT files or import Strava activities. */
 function AddTracksMenu() {
+  const t = useT()
   const loading = useAppStore((s) => s.loading)
-  const [open, setOpen] = useState(false)
   const [strava, setStrava] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: PointerEvent) => {
-      if (!(e.target instanceof Node) || !ref.current?.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', onDown, true)
-    return () => document.removeEventListener('pointerdown', onDown, true)
-  }, [open])
-  const items = [
-    { label: 'Fichiers GPX ou FIT…', icon: 'upload', onClick: () => void chooseTracksToImport() },
-    { label: 'Activités Strava…', icon: 'route', onClick: () => setStrava(true) },
-  ] as const
 
   return (
-    <div
-      ref={ref}
-      className="tracks__add"
-      data-local-escape=""
-      onKeyDown={(e) => {
-        if (e.key !== 'Escape' || !open) return
-        setOpen(false)
-        e.stopPropagation()
-      }}
-    >
-      <button
-        type="button"
-        className="btn btn--secondary btn--small"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-        disabled={loading}
-      >
-        <Icon name="plus" size={16} />
-        Ajouter
-      </button>
-      {open && (
-        <div className="track-menu topbar__menu" role="menu" aria-label="Ajouter des traces">
-          {items.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              role="menuitem"
-              className="track-menu__item"
-              onClick={() => {
-                setOpen(false)
-                item.onClick()
-              }}
-            >
-              <Icon name={item.icon} size={18} />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+    <>
+      <Menu
+        label={t('track.add.menu')}
+        items={[
+          { id: 'files', label: t('track.add.files'), icon: <Icon name="upload" size={18} />, onSelect: () => void chooseTracksToImport() },
+          { id: 'strava', label: t('track.add.strava'), icon: <Icon name="route" size={18} />, onSelect: () => setStrava(true) },
+        ]}
+        trigger={
+          <Button size="sm" disabled={loading}>
+            <Icon name="plus" size={16} />
+            {t('track.add.button')}
+          </Button>
+        }
+      />
       <StravaDialog open={strava} onClose={() => setStrava(false)} />
-    </div>
+    </>
   )
 }
 
 /** « Enchaîner en un seul parcours » (2+ tracks): one continuous film instead of a ghost race. */
 function ChainTracks({ tracks }: { tracks: readonly Track[] }) {
+  const t = useT()
   const id = useId()
   const loading = useAppStore((s) => s.loading)
   return (
-    <div className="field tracks__chain">
-      <button
-        type="button"
-        className="btn btn--secondary btn--block"
+    <div className="field mt-3">
+      <Button
+        block
         onClick={() => chainLoadedTracks(tracks)}
         disabled={loading}
         aria-describedby={`${id}-hint`}
       >
         <Icon name="spline" size={16} />
-        Enchaîner en un seul parcours
-      </button>
-      <p id={`${id}-hint`} className="field__hint">
-        Dans l’ordre des heures de départ, ou de la liste si une trace n’est pas horodatée.
+        {t('track.chain.button')}
+      </Button>
+      <p id={`${id}-hint`} className="type-hint">
+        {t('track.chain.hint')}
       </p>
     </div>
   )
@@ -357,6 +309,7 @@ function initialDeparture(track: Track): { day: string; time: string } {
  * every point, so the sun, the counters and the weather forecast follow the planned outing.
  */
 function OutingPlanForm({ track }: { track: Track }) {
+  const t = useT()
   const id = useId()
   const [departure, setDeparture] = useState(() => initialDeparture(track))
   const [activity, setActivity] = useState<PlanActivity>(() => planActivityOf(track.activityType))
@@ -371,16 +324,16 @@ function OutingPlanForm({ track }: { track: Track }) {
   }
 
   return (
-    <details className="track__plan weather__details">
-      <summary className="weather__details-summary">
-        Prévoir la sortie
+    <details className="col-span-2 col-start-2 mt-2 border-t border-edge">
+      <summary className="fold-head">
+        {t('track.plan.title')}
         <Icon name="chevron-down" size={16} />
       </summary>
-      <form className="track__plan-form" onSubmit={apply}>
-        <div className="track__plan-row">
+      <form className="flex flex-col gap-2 pb-1" onSubmit={apply}>
+        <div className="grid grid-cols-2 gap-2">
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-day`}>
-              Date
+            <label className="type-label" htmlFor={`${id}-day`}>
+              {t('track.plan.date')}
             </label>
             <input
               id={`${id}-day`}
@@ -392,8 +345,8 @@ function OutingPlanForm({ track }: { track: Track }) {
             />
           </div>
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-time`}>
-              Départ
+            <label className="type-label" htmlFor={`${id}-time`}>
+              {t('track.plan.departure')}
             </label>
             <input
               id={`${id}-time`}
@@ -406,57 +359,46 @@ function OutingPlanForm({ track }: { track: Track }) {
           </div>
         </div>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-activity`}>
-            Activité
+          <label className="type-label" htmlFor={`${id}-activity`}>
+            {t('track.plan.activity')}
           </label>
-          <select
+          <Select
             id={`${id}-activity`}
-            className="select"
             value={activity}
-            onChange={(e) => setActivity(e.currentTarget.value as PlanActivity)}
-          >
-            {PLAN_ACTIVITIES.map((a) => (
-              <option key={a} value={a}>
-                {PLAN_ACTIVITY_LABELS[a]}
-              </option>
-            ))}
-          </select>
+            options={PLAN_ACTIVITIES.map((a) => ({ value: a, label: PLAN_ACTIVITY_LABELS[a] }))}
+            onChange={(a) => setActivity(a)}
+          />
         </div>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-pace`}>
-            Rythme
-          </label>
-          <div className="range-row">
-            <input
-              id={`${id}-pace`}
-              className="range"
-              type="range"
-              min={PACE_RANGE.min}
-              max={PACE_RANGE.max}
-              step={PACE_RANGE.step}
-              value={pace}
-              aria-describedby={`${id}-pace-hint`}
-              onChange={(e) => setPace(Number(e.currentTarget.value))}
-            />
-            <output className="range-row__value" htmlFor={`${id}-pace`}>
-              ×{formatNumber(pace, 2)}
-            </output>
-          </div>
-          <p id={`${id}-pace-hint`} className="field__hint">
-            Durée multipliée : 1,2 = 20 % plus long. Sans pauses, heure de cet appareil.
+          <span className="type-label">
+            {t('track.plan.pace')}
+          </span>
+          <Slider
+            aria-label={t('track.plan.pace')}
+            aria-describedby={`${id}-pace-hint`}
+            min={PACE_RANGE.min}
+            max={PACE_RANGE.max}
+            step={PACE_RANGE.step}
+            value={pace}
+            onChange={setPace}
+            format={(v) => `×${formatNumber(v, 2)}`}
+            wide={false}
+          />
+          <p id={`${id}-pace-hint`} className="type-hint">
+            {t('track.plan.paceHint')}
           </p>
         </div>
-        <button type="submit" className="btn btn--primary btn--block" disabled={departureMs === undefined}>
-          Calculer les horaires
-        </button>
+        <Button variant="primary" block type="submit" disabled={departureMs === undefined}>
+          {t('track.plan.compute')}
+        </Button>
         {track.timesEstimated && startTime !== undefined && endTime !== undefined && (
           <>
-            <p className="field__hint">
-              Départ {formatClock(startTime)} · arrivée ≈ {formatClock(endTime)}
+            <p className="type-hint">
+              {t('track.plan.times', { start: formatClock(startTime), end: formatClock(endTime) })}
             </p>
-            <button type="button" className="btn btn--secondary btn--block" onClick={() => replaceTrack(withoutTimes(track))}>
-              Effacer les horaires
-            </button>
+            <Button block onClick={() => replaceTrack(withoutTimes(track))}>
+              {t('track.plan.clear')}
+            </Button>
           </>
         )}
       </form>
@@ -470,6 +412,7 @@ function OutingPlanForm({ track }: { track: Track }) {
  * elevation was computed.
  */
 function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
+  const t = useT()
   const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
   const missing = useMemo(() => hasMissingElevation(track), [track])
   const [computing, setComputing] = useState(false)
@@ -480,11 +423,11 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
     setNote(null)
     try {
       const next = await computeTrackElevation(track, getTerrainSource(terrainSourceId))
-      if (next === track) setNote('Aucun relief connu sous cette trace.')
+      if (next === track) setNote(t('track.elevation.none'))
       // the track may have been removed or replaced meanwhile, or an export started
       else if (useAppStore.getState().tracks.includes(track) && !isExportBusy(useExportStore.getState().phase)) replaceTrack(next)
     } catch {
-      setNote('Relief injoignable (hors ligne ?). Réessayez plus tard.')
+      setNote(t('track.elevation.offline'))
     } finally {
       setComputing(false)
     }
@@ -492,32 +435,31 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
 
   if (track.elevationEstimated === 'all') {
     return (
-      <div className="track__elevation">
-        <button
-          type="button"
-          className="btn btn--secondary btn--small"
+      <div className={ELEVATION}>
+        <Button
+          size="sm"
           disabled={busy}
           onClick={() => replaceTrack(withoutTerrainElevation(track))}
         >
-          Effacer l’altitude
-        </button>
+          {t('track.elevation.clear')}
+        </Button>
       </div>
     )
   }
   if (track.elevationEstimated || !missing) return null
   return (
-    <div className="track__elevation">
-      <button
-        type="button"
-        className="btn btn--secondary btn--small"
-        data-tip="D’après la source du relief (Carte › Fond de carte) : profil, D+ et compteurs d’altitude"
-        disabled={busy || computing}
-        onClick={() => void compute()}
-      >
-        {computing ? 'Calcul de l’altitude…' : 'Calculer l’altitude'}
-      </button>
+    <div className={ELEVATION}>
+      <Tip text={t('track.elevation.tip')}>
+        <Button
+          size="sm"
+          disabled={busy || computing}
+          onClick={() => void compute()}
+        >
+          {computing ? t('track.elevation.computing') : t('track.elevation.compute')}
+        </Button>
+      </Tip>
       {note && (
-        <p className="field__hint" role="status">
+        <p className="type-hint" role="status">
           {note}
         </p>
       )}
@@ -525,87 +467,293 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
   )
 }
 
-/** One card per imported track, with a delete button; chaining and « Plusieurs traces » from two tracks. */
+/** « Calculer l'altitude » / « Effacer l'altitude » under a track card. */
+const ELEVATION = 'col-span-2 col-start-2 mt-2 flex flex-wrap items-center gap-2'
+
+/** Touch: the handle is held this long before the card lifts (a shorter touch scrolls the panel). */
+const LONG_PRESS_MS = 350
+/** Travel of the pointer (px) that starts a drag with a mouse, and that cancels a long press on touch. */
+const MOUSE_SLOP_PX = 4
+const TOUCH_SLOP_PX = 8
+/** The panel scrolls by itself when the pointer is this close to its top or bottom (px). */
+const EDGE_SCROLL_PX = 40
+
+/** A drag of a card in progress: `to` is the place it would take (among the others) if released now. */
+interface ListDrag {
+  id: string
+  touch: boolean
+  startY: number
+  scroll0: number
+  y: number
+  to: number
+  active: boolean
+  timer: number
+  frame: number
+  timeMs: number
+}
+
+/** The nearest ancestor that scrolls vertically. */
+function scrollParentOf(el: HTMLElement | null): HTMLElement | null {
+  for (let node = el?.parentElement ?? null; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node)
+    if (overflowY === 'auto' || overflowY === 'scroll') return node
+  }
+  return null
+}
+
+/*
+ * A card per track: colour dot, name and facts on the left, the actions on the right (a grid of four columns, the dot and the
+ * buttons over both lines). « À la suite »: `data-sortable` makes room for the handle; a lifted card (`data-lifted`) floats
+ * above the others, and `data-drop` draws the insertion line in the gap before or after it.
+ */
+const CARD =
+  'group relative grid grid-cols-[12px_minmax(0,1fr)_auto_auto] grid-rows-[auto_auto] items-center gap-x-2 rounded-md bg-surface-card px-3 py-2 data-[sortable]:pl-8 ' +
+  'data-[lifted]:z-2 data-[lifted]:cursor-grabbing data-[lifted]:shadow-pop ' +
+  'data-[drop=after]:after:absolute data-[drop=after]:after:inset-x-0 data-[drop=after]:after:-bottom-1.5 data-[drop=after]:after:h-[3px] data-[drop=after]:after:rounded-[2px] data-[drop=after]:after:bg-brand ' +
+  'data-[drop=before]:before:absolute data-[drop=before]:before:inset-x-0 data-[drop=before]:before:-top-1.5 data-[drop=before]:before:h-[3px] data-[drop=before]:before:rounded-[2px] data-[drop=before]:before:bg-brand'
+/** The handle: the only part of a card that does not scroll the panel under a finger. */
+const HANDLE =
+  'absolute inset-y-0 left-0 grid w-7 cursor-grab touch-none place-items-center rounded-l-md p-0 text-text-2 select-none [-webkit-touch-callout:none] ' +
+  'group-data-[lifted]:cursor-grabbing disabled:cursor-not-allowed'
+const CARD_BUTTON = 'row-span-2 row-start-1 size-7 min-w-7 text-text-2 enabled:hover:text-text-1 enabled:[--button-bg-hover:var(--line)] touch:size-11'
+
+/**
+ * One card per imported track, with a delete button; « À la suite »: the cards are the stages in order, moved by their
+ * handle (mouse, or touch after a long press), by Alt + ↑ ↓, or sorted by date. Chaining and « Plusieurs traces » from
+ * two tracks.
+ */
 export function TrackList() {
+  const t = useT()
   const tracks = useAppStore((s) => s.tracks)
+  const race = useAppStore((s) => s.settings.race)
   const removeTrack = useAppStore((s) => s.removeTrack)
   const setTrackColor = useAppStore((s) => s.setTrackColor)
   const flyTrack = useAppStore((s) => s.flyTrack)
-  const moveTrack = useAppStore((s) => s.moveTrack)
   const inSequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length))
   const busy = useExportStore((s) => isExportBusy(s.phase))
+  /** the list in the order of the stages « À la suite », the list order otherwise */
+  const shown = useMemo(() => orderedTracks(tracks, race), [tracks, race])
+  const listRef = useRef<HTMLUListElement>(null)
+  const dragRef = useRef<ListDrag | null>(null)
+  /** the card lifted, how far the pointer took it, and the place it would take */
+  const [drag, setDrag] = useState<{ id: string; dy: number; to: number } | null>(null)
+  const [announcement, setAnnouncement] = useState('')
+  /** the handle to focus again once the list is drawn in its new order (a moved node loses the focus) */
+  const focusRef = useRef<string | null>(null)
+  useEffect(() => {
+    const id = focusRef.current
+    focusRef.current = null
+    if (id) [...(listRef.current?.querySelectorAll<HTMLElement>('[data-handle]') ?? [])].find((h) => h.dataset.id === id)?.focus()
+  })
+
+  const endDrag = () => {
+    const d = dragRef.current
+    dragRef.current = null
+    if (d) {
+      clearTimeout(d.timer)
+      cancelAnimationFrame(d.frame)
+    }
+    setDrag(null)
+    return d
+  }
+  useEffect(() => () => void endDrag(), [])
+  const lifted = drag !== null
+  useEffect(() => {
+    if (!lifted) return
+    // Escape puts the lifted card back
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') endDrag()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lifted])
+
+  const move = (track: Track, to: number) => {
+    if (!reorderTracks(track.id, to)) return
+    focusRef.current = track.id
+    setAnnouncement(t('track.list.moved', { name: track.name, position: Math.min(shown.length, Math.max(1, to + 1)), total: shown.length }))
+  }
+
+  /** the pointer is at `clientY`: the place it leaves the lifted card, and how far it has taken it (the panel may have scrolled) */
+  const follow = (clientY: number) => {
+    const d = dragRef.current
+    const list = listRef.current
+    if (!d?.active || !list) return
+    d.y = clientY
+    const centres = [...list.children]
+      .filter((li) => (li as HTMLElement).dataset.id !== d.id)
+      .map((li) => {
+        const r = li.getBoundingClientRect()
+        return r.top + r.height / 2
+      })
+    d.to = dropIndexAt(centres, clientY)
+    const dy = clientY - d.startY + ((scrollParentOf(list)?.scrollTop ?? 0) - d.scroll0)
+    setDrag((was) => (was && was.dy === dy && was.to === d.to ? was : { id: d.id, dy, to: d.to }))
+  }
+  /** the card is lifted: the pointer moves it, and the panel scrolls by itself while the pointer is at its edge */
+  const lift = () => {
+    const d = dragRef.current
+    if (!d || d.active) return
+    d.active = true
+    navigator.vibrate?.(15)
+    const tick = (now: number) => {
+      const current = dragRef.current
+      if (!current?.active) return
+      const scroller = scrollParentOf(listRef.current)
+      const dt = current.timeMs > 0 ? Math.min(0.05, (now - current.timeMs) / 1000) : 0
+      current.timeMs = now
+      if (scroller) {
+        const rect = scroller.getBoundingClientRect()
+        const speed = edgeScrollSpeed(current.y, rect.top, rect.bottom, EDGE_SCROLL_PX, 600)
+        const before = scroller.scrollTop
+        if (speed !== 0) scroller.scrollTop += speed * dt
+        if (scroller.scrollTop !== before) follow(current.y)
+      }
+      current.frame = requestAnimationFrame(tick)
+    }
+    d.frame = requestAnimationFrame(tick)
+    follow(d.y)
+  }
+  const onHandleDown = (e: ReactPointerEvent<HTMLButtonElement>, track: Track) => {
+    if (e.button !== 0 || !e.isPrimary || busy || dragRef.current) return
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    const touch = e.pointerType === 'touch'
+    const scroll0 = scrollParentOf(listRef.current)?.scrollTop ?? 0
+    const d: ListDrag = { id: track.id, touch, startY: e.clientY, scroll0, y: e.clientY, to: shown.indexOf(track), active: false, timer: 0, frame: 0, timeMs: 0 }
+    dragRef.current = d
+    // a finger has to hold: a slide is the scroll of the panel
+    if (touch) d.timer = window.setTimeout(lift, LONG_PRESS_MS)
+  }
+  const onHandleMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current
+    if (!d) return
+    d.y = e.clientY
+    if (d.active) return follow(e.clientY)
+    if (Math.abs(e.clientY - d.startY) <= (d.touch ? TOUCH_SLOP_PX : MOUSE_SLOP_PX)) return
+    if (d.touch) endDrag()
+    else lift()
+  }
+  const onHandleUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = endDrag()
+    if (!d?.active || e.type !== 'pointerup') return
+    const track = shown.find((other) => other.id === d.id)
+    if (track) move(track, d.to)
+  }
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLLIElement>, track: Track, index: number) => {
+    if (!inSequence || busy || !e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || isTextEntry(e.target)) return
+    e.preventDefault()
+    move(track, index + (e.key === 'ArrowUp' ? -1 : 1))
+  }
+
+  const others = drag ? shown.filter((other) => other.id !== drag.id) : []
+  /** the card the insertion line is drawn against, and on which side */
+  const dropMark =
+    drag && others.length > 0 && drag.to !== shown.findIndex((other) => other.id === drag.id)
+      ? drag.to < others.length
+        ? { id: others[drag.to].id, side: 'before' }
+        : { id: others[others.length - 1].id, side: 'after' }
+      : null
+  const sortedByDate = idsByDate(shown).every((id, k) => id === shown[k].id)
 
   return (
     <section aria-labelledby="tracks-title">
-      <div className="section-head">
-        <h2 id="tracks-title" className="section-title">
-          Traces
+      <div className="panel-head mb-1 justify-between">
+        <h2 id="tracks-title" className="panel-title">
+          {t('track.list.title')}
         </h2>
-        <div className="section-head__actions">
-          <AddTracksMenu />
-        </div>
+        <AddTracksMenu />
       </div>
       {tracks.length === 0 ? (
-        <p className="tracks__empty">Aucune trace. Glissez un fichier GPX ou FIT dans la fenêtre, ou cliquez sur « Ajouter ».</p>
+        <p className="rounded-md bg-surface-card p-3 text-center text-body text-text-2">{t('track.list.empty')}</p>
       ) : (
-        <ul className="tracks">
-          {tracks.map((track, index) => (
-            <li key={track.id} className="track">
-              <label className="track__swatch" style={{ background: track.color }} data-tip="Couleur de la trace">
-                <input
-                  type="color"
-                  className="track__color"
+        <ul className="flex flex-col gap-2" ref={listRef}>
+          {shown.map((track, index) => (
+            <li
+              key={track.id}
+              data-id={track.id}
+              data-testid="track-card"
+              data-sortable={inSequence ? '' : undefined}
+              data-lifted={drag?.id === track.id ? '' : undefined}
+              data-drop={dropMark?.id === track.id ? dropMark.side : undefined}
+              className={CARD}
+              style={drag?.id === track.id ? { transform: `translateY(${drag.dy}px)` } : undefined}
+              onKeyDown={(e) => onKeyDown(e, track, index)}
+            >
+              {inSequence && (
+                <Tip text={t('track.list.moveTip')} side="right">
+                  <button
+                    type="button"
+                    className={HANDLE}
+                    data-handle=""
+                    data-id={track.id}
+                    aria-label={t('track.list.moveAria', { name: track.name })}
+                    aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+                    disabled={busy}
+                    onPointerDown={(e) => onHandleDown(e, track)}
+                    onPointerMove={onHandleMove}
+                    onPointerUp={onHandleUp}
+                    onPointerCancel={onHandleUp}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
+                    <Icon name="grip-vertical" size={16} />
+                  </button>
+                </Tip>
+              )}
+              <Tip text={t('track.list.colorTip')}>
+                <ColorField
+                  dot
+                  className="row-span-2"
+                  label={t('track.list.colorAria', { name: track.name })}
                   value={track.color}
-                  aria-label={`Couleur de la trace ${track.name}`}
-                  onChange={(e) => setTrackColor(track.id, e.currentTarget.value)}
+                  onChange={(color) => setTrackColor(track.id, color)}
                 />
-              </label>
-              <span className="track__name" title={track.name}>
+              </Tip>
+              <span className="col-start-2 truncate text-body font-semibold text-text-1" data-testid="track-name" title={track.name}>
                 {track.name}
               </span>
               {index > 0 && inSequence && (
-                <button
-                  type="button"
-                  className="track__fly"
-                  aria-label={`Monter la trace ${track.name} d’une étape`}
-                  data-tip="Monter d’une étape"
-                  data-tip-side="left"
-                  disabled={busy}
-                  onClick={() => moveTrack(track.id, index - 1)}
-                >
-                  <Icon name="chevron-up" size={16} />
-                </button>
+                <Tip text={t('track.list.upTip')} side="left">
+                  <Button
+                    variant="icon"
+                    className={`${CARD_BUTTON} col-start-3`}
+                    aria-label={t('track.list.upAria', { name: track.name })}
+                    disabled={busy}
+                    onClick={() => move(track, index - 1)}
+                  >
+                    <Icon name="chevron-up" size={16} />
+                  </Button>
+                </Tip>
               )}
               {index > 0 && !inSequence && (
-                <button
-                  type="button"
-                  className="track__fly"
-                  aria-label={`Survoler la trace ${track.name}`}
-                  data-tip="Survoler celle-ci (elle passe en tête)"
-                  data-tip-side="left"
-                  disabled={busy}
-                  onClick={() => flyTrack(track.id)}
-                >
-                  <Icon name="navigation" size={16} />
-                </button>
+                <Tip text={t('track.list.flyTip')} side="left">
+                  <Button
+                    variant="icon"
+                    className={`${CARD_BUTTON} col-start-3`}
+                    aria-label={t('track.list.flyAria', { name: track.name })}
+                    disabled={busy}
+                    onClick={() => flyTrack(track.id)}
+                  >
+                    <Icon name="navigation" size={16} />
+                  </Button>
+                </Tip>
               )}
-              <button
-                type="button"
-                className="track__delete"
-                aria-label={`Supprimer la trace ${track.name}`}
-                data-tip="Supprimer"
-                data-tip-side="left"
-                disabled={busy}
-                onClick={() => removeTrack(track.id)}
-              >
-                <Icon name="x" size={16} />
-              </button>
-              <span className="track__meta">
+              <Tip text={t('common.delete')} side="left">
+                <Button
+                  variant="icon"
+                  className={`${CARD_BUTTON} col-start-4`}
+                  aria-label={t('track.list.deleteAria', { name: track.name })}
+                  disabled={busy}
+                  onClick={() => removeTrack(track.id)}
+                >
+                  <Icon name="x" size={16} />
+                </Button>
+              </Tip>
+              <span className="col-start-2 type-hint tabular-nums">
                 {formatTrackSummary(track.stats)}
-                {track.timesEstimated && <span className="track__badge">horaires estimés</span>}
+                {track.timesEstimated && <span className="ml-2 font-semibold text-(--text-info)" data-testid="track-badge">{t('track.list.timesEstimated')}</span>}
                 {track.elevationEstimated && (
-                  <span className="track__badge" title="Altitude lue sur le relief : ponts et tunnels suivent le sol">
-                    {track.elevationEstimated === 'all' ? 'altitude calculée' : 'altitude complétée'}
+                  <span className="ml-2 font-semibold text-(--text-info)" data-testid="track-badge" title={t('track.list.elevationTip')}>
+                    {track.elevationEstimated === 'all' ? t('track.list.elevationAll') : t('track.list.elevationSome')}
                   </span>
                 )}
               </span>
@@ -615,6 +763,23 @@ export function TrackList() {
           ))}
         </ul>
       )}
+      {inSequence && (
+        <Tip text={t('track.list.sortTip')}>
+          <Button
+            size="sm"
+            className="mt-2"
+            disabled={busy || sortedByDate}
+            onClick={() => {
+              if (orderTracksByDate()) setAnnouncement(t('track.list.sorted'))
+            }}
+          >
+            {t('track.list.sort')}
+          </Button>
+        </Tip>
+      )}
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
       {tracks.length >= 2 && <ChainTracks tracks={tracks} />}
       {tracks.length >= 2 && <RacePanel tracks={tracks} />}
     </section>

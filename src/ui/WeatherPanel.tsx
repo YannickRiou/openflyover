@@ -1,13 +1,14 @@
 import { useEffect, useId, useMemo } from 'react'
 import { buildTrackPath } from '../flyover/path'
+import { useT } from '../i18n'
 import { playsInSequence } from '../flyover/sequence'
 import { useAppStore } from '../state/store'
-import { OPEN_METEO_ATTRIBUTION } from '../weather/openMeteo'
+import { openMeteoAttribution } from '../weather/openMeteo'
 import { summarizeOuting, weatherWidgetData } from '../weather/series'
 import { syncStageWeather, syncWeather, useWeatherStore } from '../weather/store'
-import { ModifiedMarker } from './ModifiedMarker'
 import { formatClock, formatNumber } from './format'
 import { Icon } from './icons'
+import { Button, Switch } from './primitives'
 
 function formatTemperature(c: number): string {
   return `${formatNumber(c)} °C`
@@ -16,12 +17,23 @@ function formatTemperature(c: number): string {
 /** Progress steps the marker conditions follow: enough for hourly data, without a render per frame. */
 const PROGRESS_STEPS = 1000
 
+/** The outing and the marker, one line each: a short name, then the sentence. */
+const LINE = 'grid grid-cols-[5.5em_minmax(0,1fr)] gap-2 text-body text-text-1 tabular-nums'
+const LINE_LABEL = 'type-hint font-medium'
+/** « Détails »: a folded row under a hairline, its chevron turns when it is folded. */
+const DETAILS_HEAD =
+  'flex min-h-control-lg cursor-pointer list-none items-center justify-between text-body font-medium text-text-2 transition-ui group-open:text-text-1 hover:text-text-1 [&::-webkit-details-marker]:hidden'
+/** The figures of the outing and of the marker: names on the left, values on the right. */
+const FACTS_TITLE = 'type-label mt-2 mb-1 font-body'
+const FACTS = 'grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-body tabular-nums [&>dd]:text-text-1 [&>dt]:text-text-2'
+
 /**
  * "Météo de la sortie": weather of the first track (Open-Meteo archive, or forecast for a planned outing), outing
  * summary and the conditions under the flyover marker. Also drives the weather store (`syncWeather`, and « À la suite »
  * `syncStageWeather` for the later stages).
  */
 export function WeatherPanel() {
+  const t = useT()
   const id = useId()
   const track = useAppStore((s) => s.tracks[0])
   const enabled = useAppStore((s) => s.settings.weather.enabled)
@@ -51,96 +63,92 @@ export function WeatherPanel() {
   if (!track) return null
 
   return (
-    <section className="settings weather" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} className="section-title settings__title">
-        Météo de la sortie
-      </h2>
-      <ModifiedMarker keys={['weather']} label="Météo de la sortie" />
+    <section className="flex flex-col gap-3" aria-label={t('weather.panel.title')}>
+      <Switch id={`${id}-enabled`} checked={enabled} onChange={(on) => setSetting('weather', { enabled: on })}>{t('weather.panel.enable')}</Switch>
 
-      <label className="checkbox checkbox--switch" htmlFor={`${id}-enabled`}>
-        <input
-          id={`${id}-enabled`}
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setSetting('weather', { enabled: e.currentTarget.checked })}
-        />
-        Météo du jour de la sortie (Open-Meteo)
-      </label>
-
-      <p className="field__hint" role="status" aria-live="polite">
-        {!enabled && 'Désactivée : aucune requête envoyée.'}
-        {enabled && status === 'loading' && 'Chargement de la météo…'}
+      <p className="type-hint" role="status" aria-live="polite">
+        {!enabled && t('weather.panel.off')}
+        {enabled && status === 'loading' && t('weather.panel.loading')}
         {enabled && (status === 'unavailable' || status === 'error') && message}
       </p>
 
       {enabled && status === 'error' && (
-        <button type="button" className="btn btn--secondary btn--block" onClick={() => syncWeather(track, enabled, { retry: true })}>
-          Réessayer
-        </button>
+        <Button block onClick={() => syncWeather(track, enabled, { retry: true })}>
+          {t('common.retry')}
+        </Button>
       )}
 
       {summary && (
-        <p className="weather__line">
-          <span className="weather__line-label">{forecast ? 'Prévision' : 'Sortie'}</span>
+        <p className={LINE}>
+          <span className={LINE_LABEL}>{forecast ? t('weather.panel.forecast') : t('weather.panel.outing')}</span>
           <span>
-            {summary.dominant.label} · {formatNumber(summary.minTemperatureC)} à {formatTemperature(summary.maxTemperatureC)} ·{' '}
-            {summary.precipitationMm < 0.05 ? 'sans pluie' : `${formatNumber(summary.precipitationMm, 1)} mm`} · vent{' '}
-            {formatNumber(summary.maxWindKmh)} km/h
+            {t('weather.panel.summary', {
+              condition: summary.dominant.label,
+              min: formatNumber(summary.minTemperatureC),
+              max: formatTemperature(summary.maxTemperatureC),
+              rain: summary.precipitationMm < 0.05 ? t('weather.panel.noRain') : `${formatNumber(summary.precipitationMm, 1)} mm`,
+              wind: formatNumber(summary.maxWindKmh),
+            })}
           </span>
         </p>
       )}
       {now && (
-        <p className="weather__line">
-          <span className="weather__line-label">À {formatClock(now.timeMs)}</span>
+        <p className={LINE}>
+          <span className={LINE_LABEL}>{t('weather.panel.at', { time: formatClock(now.timeMs) })}</span>
           <span>
-            {now.condition.label} · {formatTemperature(now.temperatureC)} · vent {formatNumber(now.windSpeedKmh)} km/h
-            {now.windFrom && ` de ${now.windFrom}`}
+            {t(now.windFrom ? 'weather.panel.nowFrom' : 'weather.panel.now', {
+              condition: now.condition.label,
+              temp: formatTemperature(now.temperatureC),
+              wind: formatNumber(now.windSpeedKmh),
+              dir: now.windFrom,
+            })}
           </span>
         </p>
       )}
 
       {summary && (
-        <details className="weather__details">
-          <summary className="weather__details-summary">
-            Détails
-            <Icon name="chevron-down" size={16} />
+        <details className="group border-t border-edge">
+          <summary className={DETAILS_HEAD}>
+            {t('weather.panel.details')}
+            <span className="flex text-text-2 transition-ui group-[:not([open])]:-rotate-90">
+              <Icon name="chevron-down" size={16} />
+            </span>
           </summary>
-          <h3 className="field__label">Sur la sortie</h3>
-          <dl className="weather__list">
-            <dt>Conditions</dt>
+          <h3 className={FACTS_TITLE}>{t('weather.panel.duringOuting')}</h3>
+          <dl className={FACTS}>
+            <dt>{t('weather.panel.conditions')}</dt>
             <dd>{summary.dominant.label}</dd>
-            <dt>Température</dt>
+            <dt>{t('weather.panel.temperature')}</dt>
             <dd>
-              {formatTemperature(summary.minTemperatureC)} à {formatTemperature(summary.maxTemperatureC)}
+              {t('weather.panel.temperatureRange', { min: formatTemperature(summary.minTemperatureC), max: formatTemperature(summary.maxTemperatureC) })}
             </dd>
-            <dt>Précipitations</dt>
+            <dt>{t('weather.panel.precipitation')}</dt>
             <dd>
-              {summary.precipitationMm < 0.05 ? 'aucune' : `${formatNumber(summary.precipitationMm, 1)} mm`}
-              {summary.snowfallCm >= 0.05 && ` dont ${formatNumber(summary.snowfallCm, 1)} cm de neige`}
+              {(() => {
+                const rain = summary.precipitationMm < 0.05 ? t('weather.panel.none') : `${formatNumber(summary.precipitationMm, 1)} mm`
+                return summary.snowfallCm >= 0.05 ? t('weather.panel.withSnow', { rain, snow: formatNumber(summary.snowfallCm, 1) }) : rain
+              })()}
             </dd>
-            <dt>Vent max</dt>
-            <dd>
-              {formatNumber(summary.maxWindKmh)} km/h, rafales {formatNumber(summary.maxGustsKmh)} km/h
-            </dd>
+            <dt>{t('weather.panel.maxWind')}</dt>
+            <dd>{t('weather.panel.maxWindValue', { wind: formatNumber(summary.maxWindKmh), gusts: formatNumber(summary.maxGustsKmh) })}</dd>
           </dl>
           {now && (
             <>
-              <h3 className="field__label">Au marqueur · {formatClock(now.timeMs)}</h3>
-              <dl className="weather__list">
-                <dt>Ciel</dt>
+              <h3 className={FACTS_TITLE}>{t('weather.panel.atMarker', { time: formatClock(now.timeMs) })}</h3>
+              <dl className={FACTS}>
+                <dt>{t('weather.panel.sky')}</dt>
+                <dd>{t('weather.panel.skyValue', { condition: now.condition.label, cover: formatNumber(now.cloudCover) })}</dd>
+                <dt>{t('weather.panel.temperature')}</dt>
+                <dd>{t('weather.panel.feelsLike', { temp: formatTemperature(now.temperatureC), apparent: formatTemperature(now.apparentTemperatureC) })}</dd>
+                <dt>{t('weather.panel.wind')}</dt>
                 <dd>
-                  {now.condition.label} · nuages {formatNumber(now.cloudCover)} %
+                  {t(now.windFrom ? 'weather.panel.windValueFrom' : 'weather.panel.windValue', {
+                    wind: formatNumber(now.windSpeedKmh),
+                    dir: now.windFrom,
+                    gusts: formatNumber(now.windGustsKmh),
+                  })}
                 </dd>
-                <dt>Température</dt>
-                <dd>
-                  {formatTemperature(now.temperatureC)} (ressenti {formatTemperature(now.apparentTemperatureC)})
-                </dd>
-                <dt>Vent</dt>
-                <dd>
-                  {formatNumber(now.windSpeedKmh)} km/h{now.windFrom && ` de ${now.windFrom}`}, rafales{' '}
-                  {formatNumber(now.windGustsKmh)} km/h
-                </dd>
-                <dt>Pluie</dt>
+                <dt>{t('weather.panel.rain')}</dt>
                 <dd>{formatNumber(now.precipitationMm, 1)} mm/h</dd>
               </dl>
             </>
@@ -148,11 +156,11 @@ export function WeatherPanel() {
         </details>
       )}
 
-      {forecast && <p className="field__hint">Prévision, pas une mesure : à revoir la veille du départ.</p>}
+      {forecast && <p className="type-hint">{t('weather.panel.forecastNote')}</p>}
       {ready && (
-        <p className="field__hint">
+        <p className="type-hint">
           <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">
-            {OPEN_METEO_ATTRIBUTION}
+            {openMeteoAttribution()}
           </a>
         </p>
       )}

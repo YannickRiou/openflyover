@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { junctionsM } from '../film/markerKeys'
+import { t as translate, useT } from '../i18n'
 import { TRACK_COLOR_MODES, TRACK_METRICS, hasMetric } from '../flyover/trackColor'
 import { getPlatform } from '../platform'
 import { fileToAvatarDataUrl } from '../scene/markerBadge'
@@ -30,21 +31,15 @@ import type { MarkerFigure, MarkerSettings, TrackStyle } from '../scene/markerSe
 import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
-import type { Settings } from '../state/store'
-import { formatDistance, formatNumber, formatPercent } from './format'
+import { formatDistance, formatPercent, formatShort } from './format'
 import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
-import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
+import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { showToast } from './toast'
-import './markerSection.css'
-
-/** 4 -> "4", 4.5 -> "4,5", 1.25 -> "1,25" */
-function formatShort(value: number): string {
-  return formatNumber(value, Number.isInteger(value) ? 0 : Number.isInteger(value * 10) ? 1 : 2)
-}
+import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch, TextField } from './primitives'
 
 /** 0 -> "Aucun", else the distance */
-const formatSmoothing = (metres: number) => (metres === 0 ? 'Aucun' : formatDistance(metres))
+const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.slider.noneMasc') : formatDistance(metres))
 
 /** Pictogram of a figure, drawn from the same paths as the marker badge. */
 function FigureIcon({ figure }: { figure: MarkerFigure }) {
@@ -70,7 +65,6 @@ function FigureIcon({ figure }: { figure: MarkerFigure }) {
 /** One choice among `options`, as chips (radio buttons). */
 function ChipChoice<T extends string>({
   label,
-  name,
   options,
   value,
   labels,
@@ -78,7 +72,6 @@ function ChipChoice<T extends string>({
   onChange,
 }: {
   label: string
-  name: string
   options: readonly T[]
   value: T
   labels: Record<T, string>
@@ -86,54 +79,54 @@ function ChipChoice<T extends string>({
   onChange(value: T): void
 }) {
   return (
-    <fieldset className="field fieldset">
-      <legend className="field__label">{label}</legend>
-      <div className="chips">
+    <fieldset className="field m-0 min-w-0 border-0 p-0">
+      <legend className="type-label mb-1 p-0">{label}</legend>
+      <RadioGroup look="chips" aria-label={label} value={value} onChange={onChange}>
         {options.map((option) => (
-          <label key={option} className="chip">
-            <input type="radio" name={name} checked={value === option} onChange={() => onChange(option)} />
+          <Radio key={option} value={option}>
             {icon?.(option)}
             {labels[option]}
-          </label>
+          </Radio>
         ))}
-      </div>
+      </RadioGroup>
     </fieldset>
   )
 }
 
 /** « Choisir une image » for a picture marker, through the platform file picker. */
 function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(patch: Partial<MarkerSettings>): void }) {
+  const t = useT()
   const [error, setError] = useState<string | null>(null)
   const choose = async () => {
     try {
-      const [file] = await getPlatform().openFiles({ filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] })
+      const [file] = await getPlatform().openFiles({ filters: [{ name: t('marker.image.filter'), extensions: ['png', 'jpg', 'jpeg', 'webp'] }] })
       if (!file) return
       setError(null)
       const image = await fileToAvatarDataUrl(file)
       // the marker as it is now (another change or an undo may have happened during the decoding)
       useAppStore.getState().setSetting('marker', { ...useAppStore.getState().settings.marker, image })
     } catch {
-      setError("Cette image n'a pas pu être lue.")
+      setError(t('marker.image.error'))
     }
   }
   return (
     <div className="field">
-      <div className="field__label-row">
-        <button type="button" className="btn btn--secondary" onClick={() => void choose()}>
-          {marker.image ? "Changer l'image" : 'Choisir une image'}
-        </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button onClick={() => void choose()}>
+          {marker.image ? t('marker.image.change') : t('marker.image.choose')}
+        </Button>
         {marker.image && (
-          <button type="button" className="btn btn--secondary" onClick={() => update({ image: '' })}>
-            Retirer
-          </button>
+          <Button onClick={() => update({ image: '' })}>
+            {t('marker.image.remove')}
+          </Button>
         )}
       </div>
       {error ? (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {error}
         </p>
       ) : (
-        <p className="field__hint">Photo ou avatar, recadré en rond. Les autres traces gardent leur boule.</p>
+        <p className="type-hint">{t('marker.image.hint')}</p>
       )}
     </div>
   )
@@ -144,6 +137,7 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
  * rows (name and value, control on demand).
  */
 export function TrackStyleSection({ hidden }: { hidden: boolean }) {
+  const t = useT()
   const style = useAppStore((s) => s.settings.trackStyle)
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
@@ -154,39 +148,33 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
     () =>
       TRACK_COLOR_MODES.map((mode) =>
         mode === 'none'
-          ? { mode, label: 'Unie', available: true }
+          ? { mode, label: t('marker.track.solid'), available: true }
           : { mode, label: TRACK_METRICS[mode].label, available: !!firstTrack && hasMetric(firstTrack, mode) },
       ),
-    [firstTrack],
+    [firstTrack, t],
   )
 
   return (
-    <PanelSection title="Trace" keys={['trackColorBy', 'trackStyle']} hidden={hidden}>
-      <div className="field__label-row">
-        <label className="checkbox checkbox--switch">
-          <input type="checkbox" checked={style.drawOn} onChange={(e) => updateStyle({ drawOn: e.currentTarget.checked })} />
-          Trace qui se dessine
-        </label>
-        <InfoTip text="Seule la partie déjà parcourue est tracée ; le reste apparaît au passage du marqueur." />
+    <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackStyle']} hidden={hidden}>
+      <div className="flex items-center gap-1">
+        <Switch checked={style.drawOn} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
+        <InfoTip text={t('marker.track.drawOnTip')} />
       </div>
-      <label className="checkbox checkbox--switch">
-        <input type="checkbox" checked={style.glow} onChange={(e) => updateStyle({ glow: e.currentTarget.checked })} />
-        Halo de la trace
-      </label>
+      <Switch checked={style.glow} onChange={(on) => updateStyle({ glow: on })}>{t('marker.track.glow')}</Switch>
       {style.glow && (
         <>
-          <SettingRow label="Intensité du halo" value={formatPercent(style.glowIntensity)} paths={['trackStyle.glowIntensity']}>
+          <SettingRow label={t('marker.track.glowIntensity')} value={formatPercent(style.glowIntensity)} paths={['trackStyle.glowIntensity']}>
             <RangeField
-              label="Intensité du halo"
+              label={t('marker.track.glowIntensity')}
               {...TRACK_GLOW_INTENSITY_RANGE}
               value={style.glowIntensity}
               format={formatPercent}
               onChange={(glowIntensity) => updateStyle({ glowIntensity })}
             />
           </SettingRow>
-          <SettingRow label="Largeur du halo" value={`${formatShort(style.glowWidth)} px`} paths={['trackStyle.glowWidth']}>
+          <SettingRow label={t('marker.track.glowWidth')} value={`${formatShort(style.glowWidth)} px`} paths={['trackStyle.glowWidth']}>
             <RangeField
-              label="Largeur du halo"
+              label={t('marker.track.glowWidth')}
               {...TRACK_GLOW_WIDTH_RANGE}
               value={style.glowWidth}
               format={(v) => `${formatShort(v)} px`}
@@ -194,72 +182,63 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
             />
           </SettingRow>
           <SettingRow
-            label="Couleur du halo"
-            value={style.glowColor ? 'Personnalisée' : 'Celle de la trace'}
+            label={t('marker.track.glowColor')}
+            value={style.glowColor ? t('marker.track.custom') : t('marker.track.sameAsTrack')}
             paths={['trackStyle.glowColor']}
           >
             <div className="field">
-              <label className="field__label" htmlFor={`${id}-glow-color`}>
-                Couleur du halo
+              <label className="type-label" htmlFor={`${id}-glow-color`}>
+                {t('marker.track.glowColor')}
               </label>
-              <div className="color-row">
-                <input
-                  id={`${id}-glow-color`}
-                  className="color-row__input"
-                  type="color"
-                  value={style.glowColor || firstTrack?.color || '#ffffff'}
-                  onChange={(e) => updateStyle({ glowColor: e.currentTarget.value })}
-                />
-                <button type="button" className="btn btn--secondary" disabled={!style.glowColor} onClick={() => updateStyle({ glowColor: '' })}>
-                  Celle de la trace
-                </button>
-              </div>
+              <ColorField
+                id={`${id}-glow-color`}
+                label={t('marker.track.glowColor')}
+                value={style.glowColor || firstTrack?.color || '#ffffff'}
+                onChange={(color) => updateStyle({ glowColor: color })}
+              >
+                <Button disabled={!style.glowColor} onClick={() => updateStyle({ glowColor: '' })}>
+                  {t('marker.track.sameAsTrack')}
+                </Button>
+              </ColorField>
             </div>
           </SettingRow>
         </>
       )}
-      <SettingRow label="Colorer selon" value={colorModes.find((m) => m.mode === trackColorBy)?.label} paths={['trackColorBy']}>
+      <SettingRow label={t('marker.track.colorBy')} value={colorModes.find((m) => m.mode === trackColorBy)?.label} paths={['trackColorBy']}>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-color`}>
-            Colorer selon
+          <label className="type-label" htmlFor={`${id}-color`}>
+            {t('marker.track.colorBy')}
           </label>
-          <select
+          <Select
             id={`${id}-color`}
-            className="select"
             value={trackColorBy}
-            onChange={(e) => setSetting('trackColorBy', e.currentTarget.value as Settings['trackColorBy'])}
-          >
-            {colorModes.map(({ mode, label, available }) => (
-              <option key={mode} value={mode} disabled={!available}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={colorModes.map(({ mode, label, available }) => ({ value: mode, label, disabled: !available }))}
+            onChange={(mode) => setSetting('trackColorBy', mode)}
+          />
         </div>
       </SettingRow>
-      <SettingRow label="Lissage de la trace" value={formatSmoothing(style.smoothingM)} paths={['trackStyle.smoothingM']}>
+      <SettingRow label={t('marker.track.smoothing')} value={formatSmoothing(style.smoothingM)} paths={['trackStyle.smoothingM']}>
         <RangeField
-          label="Lissage de la trace"
-          tip="Trace en zigzag ou caméra qui tremble ? Le lissage moyenne les positions GPS sur cette distance : la trace et la caméra suivent une ligne calme."
+          label={t('marker.track.smoothing')}
+          tip={t('marker.track.smoothingTip')}
           {...TRACK_SMOOTHING_RANGE}
           value={style.smoothingM}
           format={formatSmoothing}
           onChange={(smoothingM) => updateStyle({ smoothingM })}
         />
       </SettingRow>
-      <SettingRow label="Épaisseur de la trace" value={`${formatShort(style.width)} px`} paths={['trackStyle.width']}>
+      <SettingRow label={t('marker.track.width')} value={`${formatShort(style.width)} px`} paths={['trackStyle.width']}>
         <RangeField
-          label="Épaisseur de la trace"
+          label={t('marker.track.width')}
           {...TRACK_WIDTH_RANGE}
           value={style.width}
           format={(v) => `${formatShort(v)} px`}
           onChange={(width) => updateStyle({ width })}
         />
       </SettingRow>
-      <SettingRow label="Trait" value={TRACK_DASH_LABELS[style.dash]} paths={['trackStyle.dash']}>
+      <SettingRow label={t('marker.track.dash')} value={TRACK_DASH_LABELS[style.dash]} paths={['trackStyle.dash']}>
         <ChipChoice
-          label="Trait"
-          name={`${id}-dash`}
+          label={t('marker.track.dash')}
           options={TRACK_DASHES}
           value={style.dash}
           labels={TRACK_DASH_LABELS}
@@ -284,25 +263,19 @@ function MarkerColorRow({
   trackColor: string
   onChange(color: string): void
 }) {
+  const t = useT()
   const id = useId()
   return (
-    <SettingRow label={label} value={value ? 'Personnalisée' : 'Celle de la trace'} paths={[path]}>
+    <SettingRow label={label} value={value ? t('marker.track.custom') : t('marker.track.sameAsTrack')} paths={[path]}>
       <div className="field">
-        <label className="field__label" htmlFor={id}>
+        <label className="type-label" htmlFor={id}>
           {label}
         </label>
-        <div className="color-row">
-          <input
-            id={id}
-            className="color-row__input"
-            type="color"
-            value={value || trackColor}
-            onChange={(e) => onChange(e.currentTarget.value)}
-          />
-          <button type="button" className="btn btn--secondary" disabled={!value} onClick={() => onChange('')}>
-            Celle de la trace
-          </button>
-        </div>
+        <ColorField id={id} label={label} value={value || trackColor} onChange={onChange}>
+          <Button disabled={!value} onClick={() => onChange('')}>
+            {t('marker.track.sameAsTrack')}
+          </Button>
+        </ColorField>
       </div>
     </SettingRow>
   )
@@ -313,6 +286,7 @@ function MarkerColorRow({
  * the badge shape, the edge colour, the label and the stick folded under « Plus d'options ».
  */
 export function MarkerSection({ hidden }: { hidden: boolean }) {
+  const t = useT()
   const marker = useAppStore((s) => s.settings.marker)
   const setSetting = useAppStore((s) => s.setSetting)
   const firstTrack = useAppStore((s) => s.tracks[0])
@@ -320,7 +294,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const filmTrack = useFilmTrack()
   const sequence = useFilmSequence()
   const junctions = useMemo(() => junctionsM(filmTrack, sequence?.cutsM).length, [filmTrack, sequence])
-  const id = useId()
   const updateMarker = (patch: Partial<MarkerSettings>) => setSetting('marker', { ...marker, ...patch })
   const trackColor = firstTrack?.color ?? '#ffffff'
   const activityFigure = figureOfActivity(firstTrack?.activityType)
@@ -328,10 +301,9 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const alone = figurine && marker.shape === 'contour'
 
   return (
-    <PanelSection title="Marqueur" keys={['marker']} hidden={hidden}>
+    <PanelSection title={t('marker.section.title')} keys={['marker']} hidden={hidden}>
       <ChipChoice
-        label="Forme"
-        name={`${id}-kind`}
+        label={t('marker.section.shape')}
         options={MARKER_KINDS}
         value={marker.kind}
         labels={MARKER_KIND_LABELS}
@@ -339,8 +311,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       />
       {marker.kind === 'boule' && (
         <ChipChoice
-          label="Style"
-          name={`${id}-ball`}
+          label={t('marker.section.style')}
           options={MARKER_BALL_STYLES}
           value={marker.ballStyle}
           labels={MARKER_BALL_STYLE_LABELS}
@@ -349,8 +320,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       )}
       {figurine && (
         <ChipChoice
-          label="Figurine"
-          name={`${id}-figure`}
+          label={t('marker.section.figurine')}
           options={MARKER_FIGURE_CHOICES}
           value={marker.figure}
           labels={MARKER_FIGURE_LABELS}
@@ -359,15 +329,12 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         />
       )}
       {figurine && (
-        <label className="checkbox">
-          <input type="checkbox" checked={marker.animated} onChange={(e) => updateMarker({ animated: e.currentTarget.checked })} />
-          Animer la figurine (pas et balancement)
-        </label>
+        <Checkbox checked={marker.animated} onChange={(on) => updateMarker({ animated: on })}>{t('marker.section.animate')}</Checkbox>
       )}
       {marker.kind === 'image' && <MarkerImageField marker={marker} update={updateMarker} />}
       {marker.kind === 'boule' && (
         <MarkerColorRow
-          label="Couleur"
+          label={t('marker.section.color')}
           path="marker.color"
           value={marker.color}
           trackColor={trackColor}
@@ -376,17 +343,17 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       )}
       {figurine && (
         <MarkerColorRow
-          label={alone ? 'Couleur de la figurine' : 'Couleur du disque'}
+          label={alone ? t('marker.section.figureColor') : t('marker.section.discColor')}
           path="marker.figureColor"
           value={marker.figureColor}
           trackColor={trackColor}
           onChange={(figureColor) => updateMarker({ figureColor })}
         />
       )}
-      {racing && marker.kind !== 'image' && <p className="field__hint">En parallèle, chaque marqueur garde la couleur de sa trace.</p>}
-      <SettingRow label="Taille du marqueur" value={`×${formatShort(marker.size)}`} paths={['marker.size']}>
+      {racing && marker.kind !== 'image' && <p className="type-hint">{t('marker.section.racing')}</p>}
+      <SettingRow label={t('marker.section.size')} value={`×${formatShort(marker.size)}`} paths={['marker.size']}>
         <RangeField
-          label="Taille du marqueur"
+          label={t('marker.section.size')}
           {...MARKER_SIZE_RANGE}
           value={marker.size}
           format={(v) => `×${formatShort(v)}`}
@@ -394,39 +361,34 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         />
       </SettingRow>
       <div className="field">
-        <div className="field__label-row">
-          <span className="field__label">Changements de marqueur</span>
-          <InfoTip text="Ajoute une clé à la position du marqueur : à cet endroit, il change d’aspect (boule, figurine, image) en fondu. L’aspect de chaque clé se règle dans l’inspecteur, sur la voie « Marqueur » de la timeline." />
+        <div className="flex items-center gap-1">
+          <span className="type-label">{t('marker.section.changes')}</span>
+          <InfoTip text={t('marker.section.changesTip')} />
         </div>
         <PanelKeys target={{ kind: 'marker' }} />
       </div>
       {junctions > 0 && (
         <div className="field">
-          <button
-            type="button"
-            className="btn btn--secondary"
+          <Button
             onClick={() => {
               const added = addJunctionMarkerKeys()
-              showToast({ kind: 'success', text: added > 0 ? `${added} clé${added > 1 ? 's' : ''} de marqueur ajoutée${added > 1 ? 's' : ''}` : 'Chaque jonction a déjà sa clé.' })
+              showToast({ kind: 'success', text: added > 0 ? t('marker.section.added', { count: added }) : t('marker.section.allKeyed') })
             }}
           >
-            {sequence ? 'Un marqueur par étape' : 'Un marqueur par jour'} ({junctions})
-          </button>
-          <p className="field__hint">
-            Place une clé de marqueur à chaque jonction ; réglez l'aspect de chacune dans la voie « Marqueur » de la timeline.
-          </p>
+            {t(sequence ? 'marker.section.perStage' : 'marker.section.perDay', { count: junctions })}
+          </Button>
+          <p className="type-hint">{t('marker.section.junctionHint')}</p>
         </div>
       )}
-      <details className="preset-more">
-        <summary className="preset-more__summary">
-          <span className="preset-more__label">Plus d'options</span>
+      <details>
+        <summary className="fold-head">
+          {t('marker.section.more')}
           <Icon name="chevron-down" size={16} />
         </summary>
-        <div className="marker-more__body">
+        <div className="mt-1 flex flex-col gap-3">
           {figurine && (
             <ChipChoice
-              label="Badge"
-              name={`${id}-shape`}
+              label={t('marker.section.badge')}
               options={MARKER_SHAPES}
               value={marker.shape}
               labels={MARKER_SHAPE_LABELS}
@@ -435,7 +397,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           )}
           {marker.kind !== 'boule' && (
             <MarkerColorRow
-              label={alone ? 'Couleur du contour' : 'Couleur du bord'}
+              label={alone ? t('marker.section.outlineColor') : t('marker.section.edgeColor')}
               path="marker.color"
               value={marker.color}
               trackColor={trackColor}
@@ -443,8 +405,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
             />
           )}
           <ChipChoice
-            label="Étiquette"
-            name={`${id}-label`}
+            label={t('marker.section.label')}
             options={MARKER_LABEL_MODES}
             value={marker.label}
             labels={MARKER_LABEL_MODE_LABELS}
@@ -452,19 +413,16 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           />
           {marker.label === 'texte' && (
             <TextField
-              label="Texte de l'étiquette"
+              label={t('marker.section.labelText')}
               value={marker.labelText}
               placeholder={firstTrack?.name}
               onChange={(labelText) => updateMarker({ labelText: labelText.slice(0, MARKER_LABEL_MAX_CHARS) })}
             />
           )}
-          {marker.label !== 'aucune' && racing && <p className="field__hint">Les autres marqueurs portent le nom de leur trace.</p>}
-          <div className="field__label-row">
-            <label className="checkbox checkbox--switch">
-              <input type="checkbox" checked={marker.stick} onChange={(e) => updateMarker({ stick: e.currentTarget.checked })} />
-              Tige et ombre au sol
-            </label>
-            <InfoTip text="Le marqueur se dresse sur une tige au-dessus de la trace, son ombre posée au sol." />
+          {marker.label !== 'aucune' && racing && <p className="type-hint">{t('marker.section.otherLabels')}</p>}
+          <div className="flex items-center gap-1">
+            <Switch checked={marker.stick} onChange={(on) => updateMarker({ stick: on })}>{t('marker.section.stick')}</Switch>
+            <InfoTip text={t('marker.section.stickTip')} />
           </div>
         </div>
       </details>

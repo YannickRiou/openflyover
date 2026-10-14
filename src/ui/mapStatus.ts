@@ -4,8 +4,9 @@
  * and the short credits of the active sources.
  */
 import type { TerrainStats } from '../core/types'
+import { t } from '../i18n'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
-import { formatNumber } from './format'
+import { formatBytes, formatNumber } from './format'
 import type { PerfItem, StatusChip } from './shell'
 
 /** A load shorter than this never shows: a small camera move stays « Carte prête ». */
@@ -64,12 +65,17 @@ export interface FetchChip {
   tip: string
 }
 
-const CHIP_LABELS: Record<StatusChip, string> = { weather: 'Météo', landmarks: 'Repères', region: 'Région', water: 'Eau' }
+const CHIP_LABELS: Record<StatusChip, string> = {
+  get weather() { return t('settings.preferences.status.weather') },
+  get landmarks() { return t('settings.preferences.status.landmarks') },
+  get region() { return t('settings.preferences.status.region') },
+  get water() { return t('settings.preferences.status.water') },
+}
 const CHIP_SOURCES: Record<StatusChip, string> = {
-  weather: 'Météo de la sortie (Open-Meteo)',
-  landmarks: 'Repères (OpenStreetMap)',
-  region: 'Région du plan de situation (OpenStreetMap)',
-  water: 'Eau (OpenStreetMap)',
+  get weather() { return t('status.source.weather') },
+  get landmarks() { return t('status.source.landmarks') },
+  get region() { return t('status.source.region') },
+  get water() { return t('status.source.water') },
 }
 
 /**
@@ -81,14 +87,14 @@ export function fetchChip(chip: StatusChip, status: string, message: string | nu
   const source = CHIP_SOURCES[chip]
   switch (status) {
     case 'loading':
-      return { label, tone: 'loading', tip: `${source} : chargement…` }
+      return { label, tone: 'loading', tip: t('status.chip.loading', { source }) }
     case 'ready':
-      return { label, tone: 'ready', tip: `${source} : chargement terminé` }
+      return { label, tone: 'ready', tip: t('status.chip.ready', { source }) }
     case 'error':
-      return { label, tone: 'attention', tip: message ?? `${source} : échec du chargement` }
+      return { label, tone: 'attention', tip: message ?? t('status.chip.error', { source }) }
     case 'unavailable':
     case 'none':
-      return { label, tone: 'muted', tip: message ?? `${source} : rien autour de la trace` }
+      return { label, tone: 'muted', tip: message ?? t('status.chip.none', { source }) }
     default:
       return null
   }
@@ -117,23 +123,21 @@ export interface PerfSample {
   system?: SystemStats
 }
 
-/** 312 Mo, 8,2 Go */
-export function formatMemory(bytes: number): string {
-  return bytes >= 1e9 ? `${formatNumber(bytes / 1e9, 1)} Go` : `${formatNumber(bytes / 1e6)} Mo`
-}
+/** 312 Mo, 8,2 Go (312 MB, 8.2 GB) */
+export const formatMemory = formatBytes
 
 /** The parts of the readout `shown` asks for and `sample` knows, in a fixed order. */
 export function perfParts(sample: PerfSample, shown: Record<PerfItem, boolean>): string[] {
   const parts: string[] = []
-  if (shown.fps && sample.fps !== undefined) parts.push(sample.fps > 0 ? `${formatNumber(sample.fps)} i/s` : '3D au repos')
+  if (shown.fps && sample.fps !== undefined) parts.push(sample.fps > 0 ? t('status.perf.fps', { value: formatNumber(sample.fps) }) : t('status.perf.idle'))
   if (shown.gpu && sample.textures !== undefined && sample.geometries !== undefined) {
-    parts.push(`${formatNumber(sample.textures)} textures · ${formatNumber(sample.geometries)} géométries`)
+    parts.push(t('status.perf.gpu', { textures: formatNumber(sample.textures), geometries: formatNumber(sample.geometries) }))
   }
-  if (shown.tiles && sample.tiles !== undefined) parts.push(`${formatNumber(sample.tiles)} tuiles`)
-  if (shown.memory && sample.heapBytes !== undefined) parts.push(`JS ${formatMemory(sample.heapBytes)}`)
+  if (shown.tiles && sample.tiles !== undefined) parts.push(t('status.perf.tiles', { value: formatNumber(sample.tiles) }))
+  if (shown.memory && sample.heapBytes !== undefined) parts.push(t('status.perf.js', { value: formatMemory(sample.heapBytes) }))
   if (shown.system && sample.system) {
     const { usedMemoryBytes, totalMemoryBytes, cpuPercent } = sample.system
-    parts.push(`RAM ${formatMemory(usedMemoryBytes)} / ${formatMemory(totalMemoryBytes)}`, `CPU ${formatNumber(cpuPercent)} %`)
+    parts.push(t('status.perf.ram', { used: formatMemory(usedMemoryBytes), total: formatMemory(totalMemoryBytes) }), t('status.perf.cpu', { value: formatNumber(cpuPercent) }))
   }
   return parts
 }

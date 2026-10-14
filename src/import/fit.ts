@@ -6,6 +6,7 @@
  */
 import type { Track, TrackPoint } from '../core/types'
 import { buildTrack, isUtcOffsetMin, stripExtension } from './stats'
+import { t } from '../i18n'
 
 /** Origin of FIT timestamps, 1989-12-31T00:00:00Z. */
 export const FIT_EPOCH_MS = Date.UTC(1989, 11, 31)
@@ -178,7 +179,7 @@ function decodeFit(buffer: ArrayBuffer): { messages: FitMessages; error?: string
   let pos = 0
   try {
     while (pos < view.byteLength) {
-      if (!isFitHeader(view, pos)) throw new Error('en-tête « .FIT » absent')
+      if (!isFitHeader(view, pos)) throw new Error(t('imports.fit.noHeader'))
       const end = pos + view.getUint8(pos) + view.getUint32(pos + 4, true)
       pos += view.getUint8(pos)
       const definitions: Definition[] = []
@@ -203,7 +204,7 @@ function decodeFit(buffer: ArrayBuffer): { messages: FitMessages; error?: string
         }
         const compressed = (header & 0x80) !== 0
         const definition = definitions[compressed ? (header >> 5) & 0x03 : header & 0x0f]
-        if (!definition) throw new Error('message sans définition')
+        if (!definition) throw new Error(t('imports.fit.noDefinition'))
         if (pos + definition.size > view.byteLength) throw new RangeError()
         const decoded = MESSAGES[definition.global]
         const mesg: Record<string, number | number[]> = {}
@@ -236,7 +237,7 @@ function decodeFit(buffer: ArrayBuffer): { messages: FitMessages; error?: string
     }
     return { messages }
   } catch (error) {
-    return { messages, error: error instanceof RangeError ? 'fichier tronqué' : (error as Error).message }
+    return { messages, error: error instanceof RangeError ? t('imports.fit.truncated') : (error as Error).message }
   }
 }
 
@@ -248,7 +249,7 @@ export function semicirclesToDegrees(semicircles: number): number {
 }
 
 function invalid(reason: string): Error {
-  return new Error(`Fichier FIT invalide : ${reason}`)
+  return new Error(t('imports.fit.invalid', { reason }))
 }
 
 function finite(value: unknown): number | undefined {
@@ -357,8 +358,8 @@ export function readUtcOffset(messages: FitMessages): number | undefined {
  * Throws `Error('Fichier FIT invalide : …')` when the header is not FIT or no positioned record exists.
  */
 export async function parseFit(buffer: ArrayBuffer, fileName: string): Promise<Track[]> {
-  if (buffer.byteLength < 14) throw invalid('fichier trop court')
-  if (!isFitHeader(new DataView(buffer), 0)) throw invalid('en-tête « .FIT » absent')
+  if (buffer.byteLength < 14) throw invalid(t('imports.fit.tooShort'))
+  if (!isFitHeader(new DataView(buffer), 0)) throw invalid(t('imports.fit.noHeader'))
   const { messages, error } = decodeFit(buffer)
   mergeHeartRates(messages.recordMesgs ?? [], expandHeartRates(messages.hrMesgs ?? []))
 
@@ -368,11 +369,11 @@ export async function parseFit(buffer: ArrayBuffer, fileName: string): Promise<T
     if (point) points.push(point)
   }
   if (points.length === 0) {
-    throw invalid(error ? `aucun point et erreur de décodage (${error})` : 'aucun enregistrement avec position')
+    throw invalid(error ? t('imports.fit.decodeError', { error }) : t('imports.fit.noPosition'))
   }
 
   const track = buildTrack({
-    name: stripExtension(fileName) || 'Activité FIT',
+    name: stripExtension(fileName) || t('imports.fit.defaultName'),
     source: 'fit',
     segments: [{ points }],
     activityType: readSport(messages),
