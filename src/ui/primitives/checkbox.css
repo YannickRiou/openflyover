@@ -16,8 +16,9 @@
   gap: var(--space-2);
   color: var(--text-1);
   line-height: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 20px;
 }
 
 .checkbox__control {

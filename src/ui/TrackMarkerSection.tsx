@@ -36,7 +36,6 @@ import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 import { showToast } from './toast'
-import './markerSection.css'
 import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch } from './primitives'
 
 /** 0 -> "Aucun", else the distance */
@@ -80,8 +79,8 @@ function ChipChoice<T extends string>({
   onChange(value: T): void
 }) {
   return (
-    <fieldset className="field fieldset">
-      <legend className="field__label">{label}</legend>
+    <fieldset className="field m-0 min-w-0 border-0 p-0">
+      <legend className="field__label mb-1 p-0">{label}</legend>
       <RadioGroup look="chips" aria-label={label} value={value} onChange={onChange}>
         {options.map((option) => (
           <Radio key={option} value={option}>
@@ -112,7 +111,7 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
   }
   return (
     <div className="field">
-      <div className="field__label-row">
+      <div className="flex flex-wrap items-center gap-2">
         <Button onClick={() => void choose()}>
           {marker.image ? t('marker.image.change') : t('marker.image.choose')}
         </Button>
@@ -123,11 +122,11 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
         )}
       </div>
       {error ? (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {error}
         </p>
       ) : (
-        <p className="field__hint">{t('marker.image.hint')}</p>
+        <p className="type-hint">{t('marker.image.hint')}</p>
       )}
     </div>
   )
@@ -157,7 +156,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
 
   return (
     <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackStyle']} hidden={hidden}>
-      <div className="field__label-row">
+      <div className="flex items-center gap-1">
         <Switch checked={style.drawOn} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
         <InfoTip text={t('marker.track.drawOnTip')} />
       </div>
@@ -351,7 +350,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(figureColor) => updateMarker({ figureColor })}
         />
       )}
-      {racing && marker.kind !== 'image' && <p className="field__hint">{t('marker.section.racing')}</p>}
+      {racing && marker.kind !== 'image' && <p className="type-hint">{t('marker.section.racing')}</p>}
       <SettingRow label={t('marker.section.size')} value={`×${formatShort(marker.size)}`} paths={['marker.size']}>
         <RangeField
           label={t('marker.section.size')}
@@ -362,8 +361,8 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         />
       </SettingRow>
       <div className="field">
-        <div className="field__label-row">
-          <span className="field__label">{t('marker.section.changes')}</span>
+        <div className="flex items-center gap-1">
+          <span className="type-label">{t('marker.section.changes')}</span>
           <InfoTip text={t('marker.section.changesTip')} />
         </div>
         <PanelKeys target={{ kind: 'marker' }} />
@@ -378,7 +377,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           >
             {t(sequence ? 'marker.section.perStage' : 'marker.section.perDay', { count: junctions })}
           </Button>
-          <p className="field__hint">{t('marker.section.junctionHint')}</p>
+          <p className="type-hint">{t('marker.section.junctionHint')}</p>
         </div>
       )}
       <details className="preset-more">
@@ -386,7 +385,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           <span className="preset-more__label">{t('marker.section.more')}</span>
           <Icon name="chevron-down" size={16} />
         </summary>
-        <div className="marker-more__body">
+        <div className="mt-1 flex flex-col gap-3">
           {figurine && (
             <ChipChoice
               label={t('marker.section.badge')}
@@ -420,8 +419,8 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
               onChange={(labelText) => updateMarker({ labelText: labelText.slice(0, MARKER_LABEL_MAX_CHARS) })}
             />
           )}
-          {marker.label !== 'aucune' && racing && <p className="field__hint">{t('marker.section.otherLabels')}</p>}
-          <div className="field__label-row">
+          {marker.label !== 'aucune' && racing && <p className="type-hint">{t('marker.section.otherLabels')}</p>}
+          <div className="flex items-center gap-1">
             <Switch checked={marker.stick} onChange={(on) => updateMarker({ stick: on })}>{t('marker.section.stick')}</Switch>
             <InfoTip text={t('marker.section.stickTip')} />
           </div>

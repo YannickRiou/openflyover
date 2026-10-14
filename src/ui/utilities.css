@@ -1,0 +1,136 @@
+/*
+ * `@utility` classes of the shell: the few combinations of Tailwind utilities that repeat (top bar, rail, panels).
+ * Imported by theme.css, after the tokens and the variants (`touch`, `phone`...) they use. Conventions: layout and spacing
+ * go in the `className` of the component, a state or a context that several components share goes here.
+ */
+
+/* The one transition of the interface: colour, border, shadow and opacity changes in 150 ms; none when motion is reduced. */
+@utility transition-ui {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* Text roles: a label (a row, a field, a control) and a hint under it. */
+@utility type-label {
+  @apply text-body font-medium text-text-1;
+}
+
+@utility type-hint {
+  @apply text-hint text-text-2;
+}
+
+/* Header of a section of a panel (title, marker, chevron), sticky while the section scrolls under it. */
+@utility panel-head {
+  @apply sticky top-0 z-2 flex h-12 items-center gap-2 bg-surface-panel;
+}
+
+@utility panel-title {
+  @apply font-heading text-title font-semibold text-text-1;
+}
+
+/* On the ink chrome (top bar, rail): the focus ring is the light accent, which reads on ink (7.3:1). */
+@utility chrome-focus {
+  & :focus-visible {
+    outline: var(--focus-ring-on-dark);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+/*
+ * A bare icon button (`<Button variant="icon">`) on the ink chrome: glacier icon, white on hover, a veil for hover and
+ * pressed. HeroUI's button reads these variables; a disabled button keeps its resting colours.
+ */
+@utility btn-chrome {
+  --button-fg: var(--color-glacier);
+
+  &:not(:disabled, [aria-disabled='true']) {
+    --button-bg-hover: rgb(255 255 255 / 0.1);
+    --button-bg-pressed: rgb(255 255 255 / 0.16);
+  }
+
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled='true']) {
+      --button-fg: var(--color-white);
+    }
+  }
+}
+
+/* The rail: a column of tabs on the side; on a portrait phone, the bar under the timeline. */
+@utility rail-frame {
+  @apply relative z-9 flex w-(--rail-w) flex-none flex-col border-r border-white/10 bg-chrome py-2 text-glacier;
+
+  @variant phone {
+    @apply order-3 h-14 w-auto flex-row border-t border-r-0 py-0;
+  }
+}
+
+/* Any button of the rail. */
+@utility rail-button {
+  @apply relative flex flex-none cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-glacier transition-ui;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled='true']) {
+      @apply bg-white/10 text-white;
+    }
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    @apply cursor-not-allowed opacity-40;
+  }
+}
+
+/* A tab of the rail (or a button of the bar that takes its place): icon over its label; the open one is lit and marked. */
+@utility rail-tab {
+  @apply rail-button h-13 w-14 flex-col gap-0.5;
+
+  &[aria-selected='true'] {
+    @apply bg-white/10 text-white;
+  }
+
+  /* the open tab: a bar of the accent against the panel side of the rail (not while the panel is folded) */
+  &[aria-selected='true']::before {
+    content: '';
+    @apply absolute top-2 bottom-2 -left-1 w-[3px] rounded-r-full bg-accent-light;
+  }
+
+  .shell__body--collapsed &[aria-selected='true']::before {
+    display: none;
+  }
+
+  @variant phone {
+    @apply w-auto min-w-18 px-1;
+
+    /* a part of the next tab shows past the edge: the bar reads as scrollable; the mark moves to the top edge */
+    &[aria-selected='true']::before {
+      @apply top-0 right-3 bottom-auto left-3 h-[3px] w-auto rounded-t-none rounded-b-full;
+    }
+  }
+
+  @variant phone-landscape {
+    @apply h-[46px];
+  }
+}
+
+@utility rail-label {
+  @apply text-caption font-medium whitespace-nowrap;
+}
+
+/* « Replier / Déplier le panneau » under the tabs; a tap on the open tab does it on a phone. */
+@utility rail-toggle {
+  @apply rail-button size-10 self-center;
+
+  @variant phone {
+    @apply hidden;
+  }
+
+  @variant phone-landscape {
+    @apply hidden;
+  }
+}

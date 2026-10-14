@@ -14,7 +14,7 @@ export interface ButtonProps {
   type?: 'button' | 'submit'
   disabled?: boolean
   autoFocus?: boolean
-  /** Layout of the screen around it (margin, position): never colours or sizes of the button itself. */
+  /** Layout of the screen around it (margin, position, the height of a bar) and the `@utility` of its context (`btn-chrome`): no other colours. */
   className?: string
   onClick?: (event: MouseEvent<Element>) => void
   title?: string

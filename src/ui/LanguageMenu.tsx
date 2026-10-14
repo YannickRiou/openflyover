@@ -45,11 +45,11 @@ export function LanguageMenu() {
   }
 
   return (
-    <div ref={ref} className="lang-menu" data-local-escape="" onKeyDown={onKeyDown}>
+    <div ref={ref} className="relative" data-local-escape="" onKeyDown={onKeyDown}>
       <Tip text={t('topbar.language.label')}>
         <Button
           variant="icon"
-          className="lang-menu__button"
+          className="btn-chrome gap-1.5 px-2 text-hint font-medium tracking-wide"
           ref={button}
           data-testid="language-button"
           aria-label={t('topbar.language.aria', { name: current.name })}
@@ -57,14 +57,14 @@ export function LanguageMenu() {
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          <span className="lang-menu__flag" aria-hidden="true">
+          <span className="text-title leading-none" aria-hidden="true">
             {current.flag}
           </span>
           {current.code.toUpperCase()}
         </Button>
       </Tip>
       {open && (
-        <div className="track-menu topbar__menu lang-menu__list" role="menu" aria-label={t('topbar.language.menu')}>
+        <div className="track-menu lang-menu__list top-[calc(100%+6px)] right-0 z-20" role="menu" aria-label={t('topbar.language.menu')}>
           {LANGUAGES.map((l) => (
             <button
               key={l.code}

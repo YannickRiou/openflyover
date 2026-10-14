@@ -12,12 +12,38 @@ import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
 import { withShortcut } from './shortcuts'
 import { Button, Menu, Radio, RadioGroup, Tip } from './primitives'
+import type { ButtonProps } from './primitives'
+
+/** Project name field: reads as text on the bar, a frame on hover, a light field while edited. */
+const NAME_FIELD =
+  'h-control min-w-16 flex-[0_1_220px] rounded-sm border border-transparent bg-transparent px-2 text-body font-medium text-ellipsis text-white transition-ui ' +
+  'placeholder:text-glacier hover:border-white/20 focus:bg-white focus:text-ink focus:placeholder:text-ink-soft bar-condensed:flex-auto'
+
+/** The save icon: a dot while changes are not saved, the light accent for a few seconds once they are (`data-save-state`). */
+const SAVE_STATE =
+  'relative data-[save-state=unsaved]:after:absolute data-[save-state=unsaved]:after:top-1.5 data-[save-state=unsaved]:after:right-1.5 ' +
+  'data-[save-state=unsaved]:after:size-1.5 data-[save-state=unsaved]:after:rounded-full data-[save-state=unsaved]:after:bg-amber-light ' +
+  'data-[save-state=saved]:[--button-fg:var(--color-accent-light)]'
+
+/** « Exporter »: the one primary action of the bar, as high as the icon buttons. */
+const EXPORT_BUTTON = 'h-control min-h-0 px-3 whitespace-nowrap tabular-nums'
 
 /** How long the save icon keeps the accent colour once the project is saved (ms). */
 const SAVED_FLASH_MS = 3000
 
 /** `value` of the « Libre » option (no video aspect). */
 const FREE = 'free'
+
+/** A bare icon button of the bar, on the ink chrome (`btn-chrome`, utilities.css). */
+function BarButton({ className, ...props }: ButtonProps) {
+  return <Button variant="icon" className={`btn-chrome ${className ?? ''}`} {...props} />
+}
+
+/** Label of a format of the switch: a framed icon, lit when chosen, with the focus ring of the ink chrome. */
+const FORMAT_LABEL =
+  'inline-flex h-7 w-9 cursor-pointer items-center justify-center gap-0 rounded-sm p-0 text-glacier transition-ui touch:h-11 touch:w-11 ' +
+  'group-data-[disabled=true]:cursor-not-allowed hover:bg-white/10 hover:text-white data-[selected=true]:bg-white data-[selected=true]:text-ink ' +
+  'data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-offset-1 data-[focus-visible=true]:outline-accent-light'
 
 /** Output format of the preview and of the export: « Libre » (preview only) or one of the video aspects. */
 function FormatSwitcher({ disabled }: { disabled: boolean }) {
@@ -34,22 +60,22 @@ function FormatSwitcher({ disabled }: { disabled: boolean }) {
   return (
     <RadioGroup
       look="plain"
-      className="format-switch"
+      className="flex flex-row flex-nowrap gap-0.5 rounded-md border border-white/15 p-0.5 phone-any:hidden"
       aria-label={t('topbar.format.aria')}
       value={free ? FREE : aspect}
       disabled={disabled}
       onChange={(id) => pick(id === FREE ? null : id)}
     >
       <Tip text={t('topbar.format.freeTip')}>
-        <Radio value={FREE} className="format-switch__option">
-          <Icon name="maximize" size={18} />
+        <Radio value={FREE} className="group block data-[disabled=true]:opacity-40" labelClassName={FORMAT_LABEL}>
+          <Icon name="maximize" />
           <span className="visually-hidden">{t('topbar.format.free')}</span>
         </Radio>
       </Tip>
       {VIDEO_ASPECTS.map((a) => (
         <Tip key={a.id} text={a.label}>
-          <Radio value={a.id} className="format-switch__option">
-            <AspectIcon x={a.x} y={a.y} size={18} />
+          <Radio value={a.id} className="group block data-[disabled=true]:opacity-40" labelClassName={FORMAT_LABEL}>
+            <AspectIcon x={a.x} y={a.y} />
             <span className="visually-hidden">{a.label}</span>
           </Radio>
         </Tip>
@@ -65,7 +91,7 @@ interface MoreItem {
   disabled: boolean
 }
 
-/** « Plus d'actions » (phone only, shown by shell.css): the actions of the bar that do not fit. */
+/** « Plus d'actions » (condensed bar only): the actions of the bar that do not fit. */
 function MoreMenu({ items }: { items: MoreItem[] }) {
   const t = useT()
   return (
@@ -80,7 +106,7 @@ function MoreMenu({ items }: { items: MoreItem[] }) {
         onSelect: item.onClick,
       }))}
       trigger={
-        <Button variant="icon" className="topbar__more" aria-label={t('topbar.more')}>
+        <Button variant="icon" className="btn-chrome hidden w-control bar-condensed:inline-flex" aria-label={t('topbar.more')}>
           <Icon name="ellipsis" />
         </Button>
       }
@@ -131,12 +157,12 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
   }, [unsaved])
 
   return (
-    <header className="topbar">
-      <div className="topbar__start">
-        <img className="topbar__logo" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
+    <header className="chrome-focus relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 bg-chrome pr-2 pl-3 text-white bar-condensed:flex bar-condensed:gap-2 phone-any:pt-[env(safe-area-inset-top)]">
+      <div className="flex min-w-0 items-center gap-1 bar-condensed:flex-auto">
+        <img className="mr-1 size-7 flex-none" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
         <h1 className="visually-hidden">OpenFlyover</h1>
         <input
-          className="topbar__name"
+          className={NAME_FIELD}
           type="text"
           value={name}
           placeholder={placeholder}
@@ -145,26 +171,25 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
           title={t('topbar.projectNameTip')}
           onChange={(e) => useAppStore.getState().setProjectName(e.currentTarget.value)}
         />
-        <span className="topbar__sep" aria-hidden="true" />
+        <span className="mx-1 h-5 w-px flex-none bg-white/15 bar-condensed:hidden" aria-hidden="true" />
         <Tip text={withShortcut(t('topbar.undo'), 'undo')}>
-          <Button variant="icon" onClick={history.undo} disabled={!canUndo || busy} aria-label={t('topbar.undo')}>
+          <BarButton className="bar-condensed:hidden" onClick={history.undo} disabled={!canUndo || busy} aria-label={t('topbar.undo')}>
             <Icon name="undo" />
-          </Button>
+          </BarButton>
         </Tip>
         <Tip text={withShortcut(t('topbar.redo'), 'redo')}>
-          <Button variant="icon" onClick={history.redo} disabled={!canRedo || busy} aria-label={t('topbar.redo')}>
+          <BarButton className="bar-condensed:hidden" onClick={history.redo} disabled={!canRedo || busy} aria-label={t('topbar.redo')}>
             <Icon name="redo" />
-          </Button>
+          </BarButton>
         </Tip>
         <Tip text={withShortcut(t('topbar.openTip'), 'open')}>
-          <Button variant="icon" onClick={onOpen} disabled={busy} aria-label={t('topbar.open')}>
+          <BarButton className="bar-condensed:hidden" onClick={onOpen} disabled={busy} aria-label={t('topbar.open')}>
             <Icon name="folder-open" />
-          </Button>
+          </BarButton>
         </Tip>
         <Tip text={withShortcut(unsaved ? t('topbar.saveUnsavedTip') : t('topbar.saveTip'), 'save')}>
-          <Button
-            variant="icon"
-            className={`topbar__save${unsaved ? ' topbar__save--unsaved' : ''}${justSaved ? ' topbar__save--saved' : ''}`}
+          <BarButton
+            className={`${SAVE_STATE} bar-condensed:hidden`}
             data-testid="topbar-save"
             data-save-state={unsaved ? 'unsaved' : justSaved ? 'saved' : undefined}
             onClick={saveProject}
@@ -172,17 +197,17 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
             aria-label={unsaved ? t('topbar.saveUnsavedAria') : t('topbar.save')}
           >
             <Icon name="save" />
-          </Button>
+          </BarButton>
         </Tip>
       </div>
 
       <FormatSwitcher disabled={busy} />
 
-      <div className="topbar__end">
+      <div className="flex items-center justify-self-end gap-2">
         <Tip text={withShortcut(t('topbar.shortcuts'), 'help')}>
-          <Button variant="icon" onClick={onHelp} aria-label={t('topbar.shortcuts')}>
+          <BarButton className="phone-any:hidden" onClick={onHelp} aria-label={t('topbar.shortcuts')}>
             <Icon name="circle-help" />
-          </Button>
+          </BarButton>
         </Tip>
         <LanguageMenu />
         <MoreMenu
@@ -196,7 +221,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
         {busy ? (
           <Button
             variant="primary"
-            className="topbar__export"
+            className={EXPORT_BUTTON}
             data-testid="topbar-export"
             // between two films of a batch the export store is idle: the batch takes the cancel
             onClick={() => (batchRunning ? useBatchStore.getState().cancel() : useExportStore.getState().cancel())}
@@ -211,14 +236,14 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
             <Tip text={withShortcut(t('topbar.exportTip'), 'export')}>
               <Button
                 variant="primary"
-                className="topbar__export"
+                className={EXPORT_BUTTON}
                 data-testid="topbar-export"
                 onClick={onToggleExport}
                 aria-expanded={exportOpen}
                 aria-controls="export-dock"
               >
-                <Icon name="download" size={18} />
-                <span className="icon-btn__text">{t('topbar.export')}</span>
+                <Icon name="download" size={16} />
+                {t('topbar.export')}
               </Button>
             </Tip>
           )

@@ -8,7 +8,8 @@
 }
 
 .section-title {
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 24px;
   margin-bottom: var(--space-2);
 }
 
@@ -1363,27 +1364,6 @@
   outline-offset: 2px;
 }
 
-.setting-row__label {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.setting-row__value {
-  max-width: 55%;
-  overflow: hidden;
-  color: var(--text-2);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* departs from the default (the section's « modifié / Par défaut » resets it) */
-.setting-row__value--modified {
-  color: var(--text-1);
-  font-weight: 700;
-}
-
 .setting-row__head > .icon {
   flex: none;
   color: var(--text-2);
@@ -1395,7 +1375,6 @@
 }
 
 @media (hover: hover) {
-  .setting-row__head:hover > .setting-row__value,
   .setting-row__head:hover > .icon {
     color: var(--text-1);
   }
@@ -1406,17 +1385,6 @@
   flex-direction: column;
   gap: var(--space-3);
   padding-bottom: var(--space-3);
-}
-
-/* the row names its setting: a lone field does not repeat its plain label (screen readers still get it) */
-.setting-row__body > .field:only-child > .field__label,
-.setting-row__body > .fieldset:only-child > legend.field__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 /* « Poids de rendu »: three bars like a signal icon, filled in navy, the rest periwinkle; the heaviest in chartreuse on a navy chip */
@@ -1476,13 +1444,6 @@
   white-space: nowrap;
 }
 
-/* in a row: under the name, so the value keeps its room */
-.setting-row__label .preset-badge {
-  display: block;
-  width: fit-content;
-  margin: 2px 0 0;
-}
-
 .preset-badge--preset {
   background: var(--color-periwinkle);
 }
@@ -1496,29 +1457,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-}
-
-.info-tip {
-  display: inline-flex;
-  flex: none;
-  border-radius: 50%;
-  color: var(--text-2);
-  cursor: help;
-}
-
-.info-tip:focus-visible {
-  color: var(--text-1);
-}
-
-@media (hover: hover) {
-  .info-tip:hover {
-    color: var(--text-1);
-  }
-}
-
-.info-tip:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 1px;
 }
 
 /* solar hour slider over the night / day bar (marks: sunrise and sunset) */

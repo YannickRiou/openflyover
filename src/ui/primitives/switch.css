@@ -20,8 +20,9 @@
   gap: var(--space-2);
   color: var(--text-1);
   line-height: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
 }
 
 .switch__control {
@@ -30,7 +31,7 @@
   height: 18px;
   border: 1px solid var(--text-2);
   border-radius: 999px;
-  transition: background-color 120ms ease;
+  transition: background-color 150ms ease-out;
 }
 
 .switch[data-selected='true'] .switch__control {
@@ -44,7 +45,7 @@
   border-radius: 50%;
   background: var(--text-2);
   box-shadow: none;
-  transition: transform 120ms ease;
+  transition: transform 150ms ease-out;
 }
 
 .switch[data-selected='true'] .switch__thumb {

@@ -644,13 +644,11 @@ export function TrackList() {
 
   return (
     <section aria-labelledby="tracks-title">
-      <div className="section-head">
-        <h2 id="tracks-title" className="section-title">
+      <div className="panel-head mb-1 justify-between">
+        <h2 id="tracks-title" className="panel-title">
           {t('track.list.title')}
         </h2>
-        <div className="section-head__actions">
-          <AddTracksMenu />
-        </div>
+        <AddTracksMenu />
       </div>
       {tracks.length === 0 ? (
         <p className="tracks__empty">{t('track.list.empty')}</p>

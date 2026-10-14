@@ -54,16 +54,18 @@ export function PanelSection({
   // read once: the element then keeps its own state
   const [open] = useState(() => loadFolds()[title] ?? true)
   return (
-    <details className="fold panel-section" open={open} hidden={hidden} onToggle={(e) => saveFold(title, e.currentTarget.open)}>
-      <summary className="fold__summary">
-        <h2 className="section-title fold__title">{title}</h2>
-        {/* the marker's button must not fold the section */}
+    <details className="group" open={open} hidden={hidden} onToggle={(e) => saveFold(title, e.currentTarget.open)}>
+      <summary className="panel-head cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <h2 className="panel-title flex-1">{title}</h2>
+        {/* the marker's button must not fold the section; its box is in the flow here, not at the corner of a card */}
         {keys && (
-          <span className="fold__marker" onClick={(e) => e.preventDefault()}>
+          <span className="[&_.modified]:static" onClick={(e) => e.preventDefault()}>
             <ModifiedMarker keys={keys} label={title} />
           </span>
         )}
-        <Icon name="chevron-down" size={16} />
+        <span className="flex text-text-2 transition-ui group-hover:text-text-1 group-[:not([open])]:-rotate-90">
+          <Icon name="chevron-down" size={16} />
+        </span>
       </summary>
       <div className="panel-section__body">{children}</div>
     </details>
@@ -114,7 +116,11 @@ export function TabWeightDot({ tab }: { tab: ShellTab }) {
   if (!heavy) return null
   return (
     <>
-      <span className="rail__weight" data-testid="tab-weight" aria-hidden="true" />
+      <span
+        className="pointer-events-none absolute top-1 left-[calc(50%+6px)] size-2 rounded-full bg-chartreuse ring-2 ring-navy"
+        data-testid="tab-weight"
+        aria-hidden="true"
+      />
       <span className="visually-hidden">{t('export.weight.heavyActive')}</span>
     </>
   )
@@ -126,6 +132,21 @@ const FOCUS_ORDER = [
   'input:not([type="hidden"]):enabled, select:enabled, textarea:enabled',
   'button:enabled, [tabindex]:not([tabindex="-1"])',
 ]
+
+/*
+ * A row of settings: a hairline above it, the name on the left and the value on the right (secondary text; once changed,
+ * primary text with an accent dot). The head's hover and focus bleed 8 px past the hairline.
+ */
+const ROW = 'border-t border-edge [&+&]:-mt-3'
+const ROW_HEAD =
+  'group -mx-2 flex min-h-control-lg w-[calc(100%+16px)] cursor-pointer items-center gap-2 rounded-sm px-2 text-left transition-ui hover:bg-surface-card'
+/** The name, then its render weight; the badge of the export quality goes under it so the value keeps its room. */
+const ROW_LABEL = 'type-label block min-w-0 flex-1 [&_.preset-badge]:mt-0.5 [&_.preset-badge]:ml-0 [&_.preset-badge]:block [&_.preset-badge]:w-fit'
+const ROW_VALUE = 'max-w-[55%] truncate text-body text-text-2 tabular-nums'
+const ROW_VALUE_MODIFIED = 'max-w-[55%] truncate text-body font-medium text-text-1 tabular-nums before:mr-2 before:inline-block before:size-1.5 before:rounded-full before:bg-brand before:align-middle'
+/** The control unfolds under the head; a lone field does not repeat the name of its row (screen readers still read it). */
+const ROW_BODY =
+  'flex flex-col gap-3 pb-3 [&>.field:only-child>label]:sr-only [&>fieldset:only-child>legend]:sr-only'
 
 /**
  * A secondary setting on one row: its name and current value (`value`), its control hidden until the row is pressed,
@@ -162,25 +183,27 @@ export function SettingRow({
   }, [open])
   return (
     <Disclosure
-      className="setting-row"
-      headClassName="setting-row__head"
-      bodyClassName="setting-row__body"
+      className={ROW}
+      headClassName={ROW_HEAD}
+      bodyClassName={ROW_BODY}
       headTestId="setting-row-head"
       bodyTestId="setting-row-body"
       bodyRef={body}
       onOpenChange={setOpen}
       head={
         <>
-          <span className="setting-row__label" data-testid="setting-row-label">
+          <span className={ROW_LABEL} data-testid="setting-row-label">
             {label}
             {weight && <RenderWeight weight={weight} />}
             {preset && <PresetBadge knob={preset} />}
           </span>
-          <span className={modified ? 'setting-row__value setting-row__value--modified' : 'setting-row__value'} data-testid="setting-row-value" data-modified={modified || undefined}>
+          <span className={modified ? ROW_VALUE_MODIFIED : ROW_VALUE} data-testid="setting-row-value" data-modified={modified || undefined}>
             {value}
             {modified && <span className="visually-hidden">{t('common.modified.srOnly')}</span>}
           </span>
-          <Icon name="chevron-down" size={16} />
+          <span className="flex flex-none text-text-2 transition-ui group-hover:text-text-1 group-aria-[expanded=false]:-rotate-90">
+            <Icon name="chevron-down" size={16} />
+          </span>
         </>
       }
     >
@@ -193,7 +216,12 @@ export function SettingRow({
 export function InfoTip({ text }: { text: string }) {
   return (
     <Tip text={text} wrap={200} tap>
-      <span className="info-tip" tabIndex={0} role="img" aria-label={text}>
+      <span
+        className="relative inline-flex flex-none cursor-help rounded-full text-text-2 transition-ui hover:text-text-1 focus-visible:text-text-1 touch:before:absolute touch:before:-inset-3.5 touch:before:content-['']"
+        tabIndex={0}
+        role="img"
+        aria-label={text}
+      >
         <Icon name="info" size={14} />
       </span>
     </Tip>
@@ -243,7 +271,7 @@ export function RangeField({
   return (
     <div className="field">
       {tip || weight || preset ? (
-        <div className="field__label-row">
+        <div className="flex items-center gap-1">
           {labelEl}
           {tip && <InfoTip text={tip} />}
           {weight && <RenderWeight weight={weight} />}
@@ -252,10 +280,10 @@ export function RangeField({
       ) : (
         labelEl
       )}
-      <div className="range-row">
+      <div className="flex items-center gap-2">
         <input
           id={id}
-          className="range"
+          className="m-0 flex-auto accent-brand touch:h-11"
           type="range"
           min={min}
           max={max}
@@ -265,7 +293,7 @@ export function RangeField({
           onChange={(e) => onChange(Number(e.currentTarget.value))}
           aria-valuetext={spoken(value)}
         />
-        <output className={wide ? 'range-row__value range-row__value--wide' : 'range-row__value'} htmlFor={id}>
+        <output className={`type-label flex-none text-right tabular-nums ${wide ? 'min-w-[7ch]' : 'min-w-[3.5ch]'}`} htmlFor={id}>
           {format(value)}
         </output>
       </div>

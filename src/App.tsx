@@ -76,6 +76,11 @@ const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
   reglages: { get label() { return translate('shell.tab.reglages') }, icon: 'sliders-horizontal' },
 }
 
+/** The tabs of the rail: a column on the side, a row that scrolls sideways in the phone bar (eight tabs do not fit; App keeps the open one in sight). */
+const TAB_LIST =
+  'flex min-h-0 flex-col items-center gap-1 overflow-y-auto [scrollbar-width:none] ' +
+  'phone:flex-1 phone:flex-row phone:gap-0 phone:overflow-x-auto phone:overflow-y-hidden phone:overscroll-x-contain phone:px-1'
+
 const PREFS_KEY = 'openflyover.shell.v1'
 
 function loadPrefs() {
@@ -165,23 +170,24 @@ function BlockTools({ onEdit, disabled }: { onEdit(): void; disabled: boolean })
   if (item === null) return null
   const isStop = clock.stops.some((s) => s.id === item)
   return (
-    <div className="rail block-tools" role="toolbar" aria-label={t('shell.blockTools.aria')}>
-      <button type="button" className="rail__tab block-tools__done" onClick={() => useAppStore.getState().setFilmSelection(null)}>
-        <Icon name="check" size={22} />
-        <span className="rail__label">{t('common.done')}</span>
+    <div className="rail-frame chrome-focus items-center gap-1 px-1" data-rail="" role="toolbar" aria-label={t('shell.blockTools.aria')}>
+      <button type="button" className="rail-tab" onClick={() => useAppStore.getState().setFilmSelection(null)}>
+        <Icon name="check" />
+        <span className="rail-label">{t('common.done')}</span>
       </button>
-      <button type="button" className="rail__tab" onClick={onEdit} disabled={disabled}>
-        <Icon name="sliders-horizontal" size={22} />
-        <span className="rail__label">{t('shell.blockTools.edit')}</span>
+      <span className="mx-1 h-8 w-px flex-none bg-white/15" aria-hidden="true" />
+      <button type="button" className="rail-tab" onClick={onEdit} disabled={disabled}>
+        <Icon name="sliders-horizontal" />
+        <span className="rail-label">{t('shell.blockTools.edit')}</span>
       </button>
       <button
         type="button"
-        className="rail__tab"
+        className="rail-tab"
         disabled={disabled || shot?.style === 'aucune'}
         onClick={() => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop }))}
       >
-        <Icon name="trash-2" size={22} />
-        <span className="rail__label">{shot ? t('inspector.noShot') : t('inspector.remove')}</span>
+        <Icon name="trash-2" />
+        <span className="rail-label">{shot ? t('inspector.noShot') : t('inspector.remove')}</span>
       </button>
     </div>
   )
@@ -262,7 +268,7 @@ export default function App() {
     // drawer mode: a press outside the panel and its rail closes it (a bottom sheet leaves the view usable)
     const onPointerDown = (e: PointerEvent) => {
       if (!isDrawer() || matchesQuery(BOTTOM_SHEET_QUERY) || !(e.target instanceof Element)) return
-      if (e.target.closest('#side-panel, .rail')) return
+      if (e.target.closest('#side-panel, [data-rail]')) return
       dispatch({ type: 'toggle-panel', narrow: true })
     }
     document.addEventListener('pointerdown', onPointerDown, true)
@@ -497,12 +503,12 @@ export default function App() {
           orientation={phone ? 'horizontal' : 'vertical'}
         >
           {/* portrait phone: a selected block's actions take the place of the tab bar */}
-          <nav className="rail" aria-label={t('shell.rail.aria')} hidden={phone && shell.inspecting}>
-            <TabList label={t('shell.rail.tablist')} className="rail__tabs" ref={tabList}>
+          <nav className="rail-frame chrome-focus justify-between" data-rail="" aria-label={t('shell.rail.aria')} hidden={phone && shell.inspecting}>
+            <TabList label={t('shell.rail.tablist')} className={TAB_LIST} ref={tabList}>
               {tabs.map((tab) => (
-                <Tab key={tab} id={tab} data-testid={`tab-${tab}`} className="rail__tab" disabled={exporting} tip={TAB_LABELS[tab].label} tipDisabled={phone}>
-                  <Icon name={TAB_LABELS[tab].icon} size={22} />
-                  <span className="rail__label">{TAB_LABELS[tab].label}</span>
+                <Tab key={tab} id={tab} data-testid={`tab-${tab}`} className="rail-tab" disabled={exporting} tip={TAB_LABELS[tab].label} tipDisabled={phone}>
+                  <Icon name={TAB_LABELS[tab].icon} />
+                  <span className="rail-label">{TAB_LABELS[tab].label}</span>
                   <TabWeightDot tab={tab} />
                 </Tab>
               ))}
@@ -510,7 +516,7 @@ export default function App() {
             <Tip text={withShortcut(shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse'), 'toggle-panel')} side="right">
               <button
                 type="button"
-                className="rail__toggle"
+                className="rail-toggle"
                 onClick={() => dispatch({ type: 'toggle-panel', narrow: isNarrow() })}
                 disabled={exporting}
                 aria-expanded={!shell.collapsed}

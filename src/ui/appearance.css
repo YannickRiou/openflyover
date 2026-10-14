@@ -9,7 +9,7 @@
   }
 }
 
-/* compact: the spacing scale about 15 % tighter, 28 px controls for a mouse (touch screens keep their 44 px targets) */
+/* compact: the spacing scale about 15 % tighter, 28 and 36 px controls for a mouse (touch screens keep their 44 px targets) */
 :root[data-density='compact'] {
   --space-1: 3px;
   --space-2: 7px;
@@ -17,10 +17,13 @@
   --space-4: 14px;
   --space-5: 20px;
   --space-6: 27px;
+  /* Tailwind's spacing unit (`p-4`, `gap-2`...): the same scale, so the utilities follow the density too */
+  --spacing: 3.5px;
 }
 
 @media (pointer: fine) {
   :root[data-density='compact'] {
     --control-h: 28px;
+    --control-h-lg: 36px;
   }
 }
