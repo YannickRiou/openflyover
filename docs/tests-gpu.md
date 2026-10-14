@@ -7,7 +7,7 @@ reproduce it next to the box.
 ## Preparation
 
 - Recent Chrome or Edge (WebCodecs), then Firefox for the fallbacks. Speakers or headphones.
-- `npm ci`, then `npm run dev`; for the desktop application (Windows): Tauri prerequisites from the README, `npm run tauri:dev`.
+- `npm ci`, then `npm run dev`; for the desktop application (Windows): Tauri prerequisites in [`deploying.md`](deploying.md#desktop-application), `npm run tauri:dev`.
 - Automated checks first: `npm run typecheck`, `npm run lint`, `npx vitest run`, `npm run build`, then
   `npm run e2e` (end-to-end tests; faster with a real GPU).
 - Useful files: a **timestamped** GPX or FIT track, a track without times, JPEG photos with GPS, an MP4 video from a
@@ -82,7 +82,7 @@ reproduce it next to the box.
       Throttled or flaky network (DevTools › Network › Slow 3G / Fast 3G, or an offline period of 10 s during the export,
       or a firewall dropping the IGN host for a few seconds): the export slows down (« attente des tuiles » grows) instead of
       capturing half-loaded views; images still captured before the end of the loading are counted while it runs and in the
-      result and history (« Images avant la fin du chargement »), and their number matches the coarse or grey tiles seen.
+      result and history (« Tuiles encore en chargement au délai »), and their number matches the coarse or grey tiles seen.
       Before the change (commit `a3de51e`) the same film shows the coarse then fine image and the pale tiles.
 - [ ] PNG and JPEG still image, with and without overlay.
 - [ ] Render history (export drawer): after a film, a canceled one and a failed one, each entry shows the real wall-clock time
@@ -186,7 +186,7 @@ reproduce it next to the box.
 - [ ] Keyframes (◆ in the transport row after orbiting the view, a second press on the keyframe removes it, diamonds on the "Plans" (shots) track): the view kept as framed,
       found again with ◁◆ / ◆▷ and Alt+← / Alt+→; high, wide view over a long section, smooth transition from one keyframe to another
       and back to the film setting, without stutter at the edges; dragged diamond; export identical to the preview.
-- [ ] Photos: adding, thumbnails, "Placer sur le parcours" (place on the route) (GPS), full screen with slow zoom, map in the 3 styles.
+- [ ] Photos: adding, thumbnails, "Placer sur le parcours" (place on the route) (GPS), full screen with slow zoom, map in every style.
 - [ ] Videos: MP4, WebM, MOV; rejection above 50 MB; playback in sync from ×0.5 to ×4; left edge (start within the
       video); video during a stop; frame-by-frame export.
 - [ ] Video placed on the route, with the files from the same outing: iPhone, Android, GoPro (local time), DJI —
@@ -196,7 +196,7 @@ reproduce it next to the box.
       triggers nothing; Firefox (browser menu properly replaced).
 - [ ] Points of interest: right-click on the terrain off the track, then on the track › "Point d'intérêt ici" (point of interest here), typed name;
       pin label at the right place, hidden behind a ridge and under the intro cards, present in the export;
-      "Ajouter au marqueur" (add to the marker), rename, "Arrêt" (stop), ✕ and Ctrl+Z in the "Carte" tab.
+      "Point d'intérêt au marqueur" (add at the marker), rename, "Arrêt" (stop), ✕ and Ctrl+Z in the "Carte" tab.
 - [ ] Slow down and show titles at landmarks: new Alpine track, landmarks loaded → titles "Col … · altitude" at the top center
       when passing, smooth slow-down without stutter, no slow-down on a stop (title only); uncheck / recheck, Ctrl+Z;
       moving a title unchecks the box; old project reopened unchanged; export identical to the preview.
@@ -236,16 +236,16 @@ reproduce it next to the box.
       without a hard line, the sea fading into the haze at the horizon; under the sea, a grey ceiling; frames per
       second against the volumetric sea; drifting with the wind, identical in the export.
 - [ ] "Générique" (credits) of the closing card: the card holds, then card and lines roll up and leave the frame on the
-      last frame, in 16:9 and 9:16, in the 3 overlay styles; readable on snow.
+      last frame, in 16:9 and 9:16, in every overlay style; readable on snow.
 - [ ] "Transitions" (Survol tab) at 0.5 s then 4 s: easing into a stop, a pause and a "Vitesse" section shorter / longer,
       never a jump.
 - [ ] Presets by family: save a "Style de carte" preset, change the camera, apply it: only the map changes; same for
       "Prise de vue" (camera and light only), "Habillage", "Trace, marqueur et étiquettes".
 - [ ] "Contenu / Style / Visibilité" tabs of each overlay element: every former setting found in one of them.
-- [ ] Ghost race (two tracks), mini-map in the 3 overlay styles, labels hidden under the cards.
+- [ ] Ghost race (two tracks), mini-map in every overlay style, labels hidden under the cards.
 - [ ] "Habillage" › "Couleurs et polices" (colors and fonts): swatches in the 320 px panel, accent, text and background applied to
       the preview and to the export, "Revenir au style" (back to the style); a single Ctrl+Z after a drag in the color picker.
-- [ ] Ghost race ranking in the 3 styles: color dots and gaps aligned, no width jump,
+- [ ] Ghost race ranking in every style: color dots and gaps aligned, no width jump,
       "Tête" (lead), then "Arrivée" (finish).
 - [ ] "Plusieurs traces" › "À la suite" with two days of a hike: the film flies day 1 then day 2, a clean cut at the
       darkest point of the dip (no camera glide between the two days), the stage card (name, « Étape 2 sur 2 », date,
@@ -270,10 +270,11 @@ reproduce it next to the box.
       "Prévision" (forecast) weather in the panel and in the scene, "Temps" (time) counter preceded by "≈"; a start 20 days
       ahead has no weather and says so; "Effacer les horaires" (clear the times) returns to the track without times;
       project reopened: times and chip kept.
-- [ ] Highlights ("Temps forts", "Survol" tab): Alpine route, "Repères" (landmarks) on; climb tops, passes and summits
-      in order; click on a row = marker and camera at the right place; "Arrêt dans le film" off then on, duration
-      changed: the "Arrêts" lane of the timeline follows, "Arrêts automatiques" goes off; "Ajouter à la position du
-      marqueur" then its ×; a stop moved or deleted on the timeline shows in the panel; phone: rows usable in the sheet.
+- [ ] Landmarks and stops ("Repères et points d'intérêt", "Carte" tab): Alpine route, landmarks on; passes and summits
+      listed from the most to the least important; click on a row = marker and camera at the right place; "Arrêt" off
+      then on, duration changed: the "Arrêts" lane of the timeline follows, "Arrêts automatiques" goes off; "Point
+      d'intérêt au marqueur" then its ×; a stop moved or deleted on the timeline shows in the panel; phone: rows usable
+      in the sheet.
 
 ## 6. Offline
 
