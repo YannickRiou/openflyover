@@ -25,7 +25,7 @@ async function mount(disabled = false) {
   root = createRoot(host)
   await act(async () => root.render(<TimelineResizer disabled={disabled} />))
   const timeline = host.appendChild(document.createElement('div'))
-  timeline.className = 'film-tl'
+  timeline.setAttribute('data-timeline', '')
   Object.defineProperty(timeline, 'offsetHeight', { value: NATURAL_H })
   await act(async () => window.dispatchEvent(new Event('resize')))
   return host.querySelector<HTMLElement>('[role="separator"]')!
