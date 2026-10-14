@@ -14,7 +14,7 @@ import { tabHasHeavySetting, tierName, weightOf } from './renderCost'
 import type { WeightKey } from './renderCost'
 import { FOLDS_KEY, parseFoldPrefs } from './shell'
 import type { ShellTab } from './shell'
-import { Tip } from './primitives'
+import { Disclosure, Tip } from './primitives'
 
 /** The fold states remembered by the browser (none when its storage cannot be read). */
 function loadFolds(): Record<string, boolean> {
@@ -149,7 +149,6 @@ export function SettingRow({
   children: ReactNode
 }) {
   const t = useT()
-  const id = useId()
   const [open, setOpen] = useState(false)
   const body = useRef<HTMLDivElement>(null)
   const modified = useAppStore((s) => modifiedPaths(s.settings, paths).length > 0)
@@ -162,23 +161,31 @@ export function SettingRow({
     }
   }, [open])
   return (
-    <div className="setting-row">
-      <button type="button" className="setting-row__head" data-testid="setting-row-head" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
-        <span className="setting-row__label" data-testid="setting-row-label">
-          {label}
-          {weight && <RenderWeight weight={weight} />}
-          {preset && <PresetBadge knob={preset} />}
-        </span>
-        <span className={modified ? 'setting-row__value setting-row__value--modified' : 'setting-row__value'} data-testid="setting-row-value" data-modified={modified || undefined}>
-          {value}
-          {modified && <span className="visually-hidden">{t('common.modified.srOnly')}</span>}
-        </span>
-        <Icon name="chevron-down" size={16} />
-      </button>
-      <div id={id} ref={body} className="setting-row__body" data-testid="setting-row-body" hidden={!open}>
-        {children}
-      </div>
-    </div>
+    <Disclosure
+      className="setting-row"
+      headClassName="setting-row__head"
+      bodyClassName="setting-row__body"
+      headTestId="setting-row-head"
+      bodyTestId="setting-row-body"
+      bodyRef={body}
+      onOpenChange={setOpen}
+      head={
+        <>
+          <span className="setting-row__label" data-testid="setting-row-label">
+            {label}
+            {weight && <RenderWeight weight={weight} />}
+            {preset && <PresetBadge knob={preset} />}
+          </span>
+          <span className={modified ? 'setting-row__value setting-row__value--modified' : 'setting-row__value'} data-testid="setting-row-value" data-modified={modified || undefined}>
+            {value}
+            {modified && <span className="visually-hidden">{t('common.modified.srOnly')}</span>}
+          </span>
+          <Icon name="chevron-down" size={16} />
+        </>
+      }
+    >
+      {children}
+    </Disclosure>
   )
 }
 

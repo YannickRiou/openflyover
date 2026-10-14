@@ -240,7 +240,7 @@ const SCENARIOS = [
           page,
           (t) => {
             const panel = document.querySelector(`[data-testid="tab-panel-${t}"]`)
-            return panel && !panel.hidden && !document.querySelector('[data-testid="side-panel"]')?.hidden && panel.getBoundingClientRect().width > 100
+            return panel?.getAttribute('role') === 'tabpanel' && !document.querySelector('[data-testid="side-panel"]')?.hidden && panel.getBoundingClientRect().width > 100
           },
           tab,
         )
@@ -258,6 +258,29 @@ const SCENARIOS = [
         if (overlaySwitch) await overlaySwitch.evaluate((el) => el.checked && el.click())
         assert(overflowing === 0, `onglet ${tab} : ${overflowing} choix qui débordent sur le côté`)
       }
+      // the rail is one tab stop: the arrows (vertical), Home and End move the focus and show the tab, wrapping at the ends
+      const press = async (key, expected) => {
+        await page.keyboard.press(key)
+        await until(page, (t) => document.activeElement?.dataset.testid === t && document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.testid === t, expected)
+      }
+      await page.focus('[data-testid="tab-reglages"]')
+      assert(await page.$eval('[data-testid="side-panel"]', (el) => !el.hidden), 'le focus clavier sur l’onglet ouvert replie le panneau')
+      await press('Home', 'tab-trace')
+      await press('ArrowDown', 'tab-carte')
+      await press('End', 'tab-reglages')
+      await press('ArrowDown', 'tab-trace')
+      await press('ArrowUp', 'tab-reglages')
+      const tabStops = await page.$$eval('[role="tablist"] [role="tab"]', (all) => all.filter((t) => t.tabIndex === 0).map((t) => t.dataset.testid))
+      assert(tabStops.join() === 'tab-reglages', `un seul onglet dans l'ordre de tabulation : ${tabStops.join(', ')}`)
+      // the open tab pressed again folds the panel (with the mouse, with Enter), pressed once more shows it
+      await page.click('[data-testid="tab-reglages"]')
+      await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.click('[data-testid="tab-reglages"]')
+      await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.keyboard.press('Enter')
+      await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.keyboard.press('Enter')
+      await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
       // the « ? » button, then the « ? » key; Escape closes the dialog both times
       await page.click('button[aria-label="Raccourcis clavier"]')
       await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
@@ -563,6 +586,135 @@ const SCENARIOS = [
     },
   },
   {
+    id: 'menus',
+    title: 'Menus et panneau (« + Ajouter », options du film, clic droit sur la trace) : flèches, Échap avant celui de l’application, clic à côté, actions',
+    async run({ page }) {
+      await exposeStores(page)
+      await waitForScene(page)
+      const traceOpen = () =>
+        page.evaluate(() => document.querySelector('[data-testid="tab-trace"]')?.getAttribute('aria-selected') === 'true' && !document.querySelector('[data-testid="side-panel"]')?.hidden)
+      if (!(await traceOpen())) await page.click('[data-testid="tab-trace"]')
+      await until(page, () => !document.querySelector('[data-testid="tab-panel-trace"]')?.hidden)
+      const inspectorShown = () => page.evaluate(() => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === false)
+      const focusedText = () => page.evaluate(() => document.activeElement?.textContent.trim())
+      const gone = (selector) => until(page, (s) => !document.querySelector(s), selector)
+      const selectBlock = async () => {
+        await page.click('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]')
+        await page.waitForSelector('aside[aria-label="Inspecteur"]:not([hidden])', { visible: true, timeout: STEP_MS })
+      }
+
+      // « + Ajouter »: a menu of two rows under the button, the arrows move in it
+      const add = '[data-testid="tab-panel-trace"] button[aria-haspopup]::-p-text(Ajouter)'
+      const addMenu = '[role="menu"][aria-label="Ajouter des traces"]'
+      await page.click(add)
+      await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
+      assert((await page.$$eval(`${addMenu} [role="menuitem"]`, (rows) => rows.map((r) => r.textContent.trim()))).join() === 'Fichiers GPX ou FIT…,Activités Strava…', 'lignes du menu « Ajouter »')
+      assert(await page.$eval(add, (b) => b.getAttribute('aria-expanded') === 'true'), '« Ajouter » ne dit pas que son menu est ouvert')
+      await page.keyboard.press('ArrowDown')
+      assert((await focusedText()) === 'Fichiers GPX ou FIT…', `flèche bas : ${await focusedText()}`)
+      await page.keyboard.press('ArrowDown')
+      assert((await focusedText()) === 'Activités Strava…', `flèche bas : ${await focusedText()}`)
+      await page.keyboard.press('ArrowUp')
+      assert((await focusedText()) === 'Fichiers GPX ou FIT…', `flèche haut : ${await focusedText()}`)
+      // Escape closes the menu first, then the block selected on the timeline (the application's own Escape)
+      await page.keyboard.press('Escape')
+      await gone(addMenu)
+      await selectBlock()
+      await page.click(add)
+      await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
+      await page.keyboard.press('Escape')
+      await gone(addMenu)
+      assert(await inspectorShown(), 'Échap sur le menu « Ajouter » a aussi désélectionné le bloc')
+      await page.keyboard.press('Escape')
+      await until(page, () => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === true)
+      // a click beside it closes it; « Activités Strava… » opens its dialog
+      await page.click(add)
+      await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
+      await page.mouse.click(700, 890)
+      await gone(addMenu)
+      await page.click(add)
+      await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
+      await page.click(`${addMenu} [role="menuitem"]::-p-text(Strava)`)
+      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
+      await gone(addMenu)
+      await page.keyboard.press('Escape')
+      await until(page, () => !document.querySelector('dialog[open]'))
+
+      // « Options du film »: a panel above the bar with its own controls, Escape closes it before the selection
+      const options = 'button[aria-label="Options du film"]'
+      const panel = '[role="dialog"][aria-label="Options du film"]'
+      await selectBlock()
+      await page.click(options)
+      await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
+      assert(await page.$eval(options, (b) => b.getAttribute('aria-expanded') === 'true'), '« Options du film » ne dit pas que son panneau est ouvert')
+      assert(await page.$(`${panel} button::-p-text(Ajouter une musique)`), 'bouton « Ajouter une musique… » du panneau')
+      assert(await page.$(`${panel} input[type="checkbox"]`), 'case « Arrêts automatiques » du panneau')
+      await page.keyboard.press('Escape')
+      await gone(panel)
+      assert(await inspectorShown(), 'Échap sur les options du film a aussi désélectionné le bloc')
+      await page.keyboard.press('Escape')
+      await until(page, () => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === true)
+      await page.click(options)
+      await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
+      await page.mouse.click(700, 890)
+      await gone(panel)
+      await blur(page)
+
+      // right click on the track: a menu at the pointer (the first row focused), a stop added from it, one undo step
+      // (the view moves with the playhead: the spot is looked for again each time)
+      const rightClickTrack = async () => {
+        const spot = await page.evaluate(() => {
+          const canvas = document.querySelector('canvas[data-engine^="three.js"]')
+          const r = canvas.getBoundingClientRect()
+          for (let y = r.top + 4; y < r.bottom; y += 6) {
+            for (let x = r.left + 4; x < r.right; x += 6) {
+              canvas.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true, buttons: 0, pointerType: 'mouse' }))
+              if (canvas.style.cursor === 'pointer') return { x, y }
+            }
+          }
+          return null
+        })
+        assert(spot, 'aucun point de la trace sous le pointeur dans la vue 3D')
+        await page.mouse.click(spot.x, spot.y, { button: 'right' })
+      }
+      const trackMenu = '[role="menu"][aria-label="Ajouter ici"]'
+      await rightClickTrack()
+      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      const rows = await page.$$eval(`${trackMenu} [role="menuitem"]`, (all) => all.map((r) => r.textContent.trim()))
+      assert(rows.slice(0, 3).join() === 'Ajouter un arrêt ici,Ajouter un texte ici,Accélérer / ralentir ici', `lignes du menu du clic droit : ${rows.join(', ')}`)
+      assert((await focusedText()) === 'Ajouter un arrêt ici', `première ligne du menu du clic droit : ${await focusedText()}`)
+      await page.keyboard.press('ArrowDown')
+      assert((await focusedText()) === 'Ajouter un texte ici', 'flèche bas dans le menu du clic droit')
+      await page.keyboard.press('Escape')
+      await gone(trackMenu)
+      const stops = await laneCount(page, 'Arrêts')
+      await rightClickTrack()
+      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      await page.click(`${trackMenu} [role="menuitem"]::-p-text(Ajouter un arrêt ici)`)
+      await gone(trackMenu)
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
+      await blur(page)
+      await page.keyboard.down('Control')
+      await page.keyboard.press('z')
+      await page.keyboard.up('Control')
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n, [stops])
+      // « Point d'intérêt ici » turns the menu into the form that names it, its field focused; Escape closes it
+      await rightClickTrack()
+      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      await page.click(`${trackMenu} [role="menuitem"]::-p-text(Point d'intérêt ici)`)
+      await page.waitForSelector('[role="dialog"][aria-label="Point d\'intérêt"] input', { visible: true, timeout: STEP_MS })
+      assert(await page.evaluate(() => document.activeElement?.matches('[role="dialog"] input[name="name"]')), 'le champ du nom du point d’intérêt n’a pas le focus')
+      await page.keyboard.press('Escape')
+      await gone('[role="dialog"][aria-label="Point d\'intérêt"]')
+      // a click beside the menu closes it
+      await rightClickTrack()
+      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      await page.mouse.click(700, 890)
+      await gone(trackMenu)
+      await blur(page)
+    },
+  },
+  {
     id: 'heure',
     title: 'Réglages › Timeline : « Afficher l’heure enregistrée » montre l’heure de la trace dans la barre de la timeline',
     async run({ page }) {
@@ -732,6 +884,10 @@ const SCENARIOS = [
       // the page reloaded (a phone discarding the tab in the background): the project comes back with the change
       await page.reload({ waitUntil: 'domcontentloaded', timeout: STEP_MS })
       await page.waitForSelector('[data-testid="toast"]::-p-text(rouvert)', { visible: true, timeout: STEP_MS })
+      // the message closes on its button, inside the one live region
+      assert(await page.$('[aria-live] [data-testid="toast"]'), 'message hors de la région live')
+      await page.click('[data-testid="toast"] button[aria-label="Fermer le message"]')
+      await until(page, () => ![...document.querySelectorAll('[data-testid="toast"]')].some((el) => el.textContent.includes('rouvert') && el.dataset.exiting !== 'true'))
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
       const reopened = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       assert(

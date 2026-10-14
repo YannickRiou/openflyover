@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react'
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useBatchStore } from './export/batch'
 import { isExportBusy, useExportStore } from './export/store'
 import { isCardItem } from './film/cards'
@@ -34,7 +34,6 @@ import {
   SHELL_TABS,
   isFileDrag,
   matchesQuery,
-  nextTabIndex,
   parseShellPrefs,
   shellReducer,
   shownTabs,
@@ -55,7 +54,7 @@ import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
 import { WeatherPanel } from './ui/WeatherPanel'
 import './ui/app.css'
 import './ui/shell.css'
-import { Tip } from './ui/primitives'
+import { Tab, TabList, TabPanel, Tabs, Tip } from './ui/primitives'
 
 // Loaded in their own chunks: the offline packs right after the first paint, the export drawer (video, batch,
 // poster) when it is first opened, as its codec check pulls mediabunny (~700 kB). They stay mounted once loaded
@@ -214,7 +213,7 @@ export default function App() {
   const helpDialog = useRef<HTMLDialogElement>(null)
   const dockOpen = useRef(shell.dockOpen)
   const collapsedRef = useRef(shell.collapsed)
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const tabList = useRef<HTMLDivElement>(null)
 
   // desktop: a batch asked on the command line runs once the app is up, then the app quits (export/cliRender.ts);
   // otherwise the project open when the app was last left comes back
@@ -256,7 +255,7 @@ export default function App() {
 
   // the phone tab bar scrolls: the open tab stays in sight (also when restored at startup)
   useEffect(() => {
-    tabRefs.current[tabs.indexOf(shell.tab)]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    tabList.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [shell.tab, tabs])
 
   useEffect(() => {
@@ -404,18 +403,10 @@ export default function App() {
     }
   }, [])
 
-  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const next = nextTabIndex(index, e.key, tabs.length)
-    if (next === null) return
-    e.preventDefault()
-    dispatch({ type: 'select-tab', tab: tabs[next], narrow: isNarrow() })
-    tabRefs.current[next]?.focus()
-  }
-
   const panel = (tab: ShellTab, children: ReactNode) => (
-    <div key={tab} id={`tab-panel-${tab}`} data-testid={`tab-panel-${tab}`} className="tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} hidden={shell.tab !== tab}>
+    <TabPanel key={tab} id={tab} data-testid={`tab-panel-${tab}`} className="tabpanel">
       {children}
-    </div>
+    </TabPanel>
   )
 
   // the tab contents, the stage and the timeline are built once per track state: React skips the same elements when
@@ -501,58 +492,45 @@ export default function App() {
       />
 
       <div className={shell.collapsed ? 'shell__body shell__body--collapsed' : 'shell__body'}>
-        {/* portrait phone: a selected block's actions take the place of the tab bar */}
-        <nav className="rail" aria-label={t('shell.rail.aria')} hidden={phone && shell.inspecting}>
-          <div className="rail__tabs" role="tablist" aria-label={t('shell.rail.tablist')} aria-orientation="vertical">
-            {tabs.map((tab, i) => {
-              const selected = shell.tab === tab
-              return (
-                <Tip key={tab} text={TAB_LABELS[tab].label} side="right" disabled={phone}>
-                  <button
-                    ref={(el) => {
-                      tabRefs.current[i] = el
-                    }}
-                    id={`tab-${tab}`}
-                    data-testid={`tab-${tab}`}
-                    type="button"
-                    role="tab"
-                    className="rail__tab"
-                    aria-selected={selected}
-                    aria-controls={`tab-panel-${tab}`}
-                    tabIndex={selected ? 0 : -1}
-                    disabled={exporting}
-                    onClick={() => dispatch({ type: 'click-tab', tab, narrow: isNarrow() })}
-                    onKeyDown={(e) => onTabKeyDown(e, i)}
-                  >
-                    <Icon name={TAB_LABELS[tab].icon} size={22} />
-                    <span className="rail__label">{TAB_LABELS[tab].label}</span>
-                    <TabWeightDot tab={tab} />
-                  </button>
-                </Tip>
-              )
-            })}
-          </div>
-          <Tip text={withShortcut(shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse'), 'toggle-panel')} side="right">
-            <button
-              type="button"
-              className="rail__toggle"
-              onClick={() => dispatch({ type: 'toggle-panel', narrow: isNarrow() })}
-              disabled={exporting}
-              aria-expanded={!shell.collapsed}
-              aria-controls="side-panel"
-              aria-label={shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse')}
-            >
-              <Icon name={shell.collapsed ? 'panel-left-open' : 'panel-left-close'} />
-            </button>
-          </Tip>
-        </nav>
+        <Tabs
+          value={shell.tab}
+          onChange={(tab) => dispatch({ type: 'select-tab', tab: tab as ShellTab, narrow: isNarrow() })}
+          onReselect={(tab) => dispatch({ type: 'click-tab', tab: tab as ShellTab, narrow: isNarrow() })}
+          orientation={phone ? 'horizontal' : 'vertical'}
+        >
+          {/* portrait phone: a selected block's actions take the place of the tab bar */}
+          <nav className="rail" aria-label={t('shell.rail.aria')} hidden={phone && shell.inspecting}>
+            <TabList label={t('shell.rail.tablist')} className="rail__tabs" ref={tabList}>
+              {tabs.map((tab) => (
+                <Tab key={tab} id={tab} data-testid={`tab-${tab}`} className="rail__tab" disabled={exporting} tip={TAB_LABELS[tab].label} tipDisabled={phone}>
+                  <Icon name={TAB_LABELS[tab].icon} size={22} />
+                  <span className="rail__label">{TAB_LABELS[tab].label}</span>
+                  <TabWeightDot tab={tab} />
+                </Tab>
+              ))}
+            </TabList>
+            <Tip text={withShortcut(shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse'), 'toggle-panel')} side="right">
+              <button
+                type="button"
+                className="rail__toggle"
+                onClick={() => dispatch({ type: 'toggle-panel', narrow: isNarrow() })}
+                disabled={exporting}
+                aria-expanded={!shell.collapsed}
+                aria-controls="side-panel"
+                aria-label={shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse')}
+              >
+                <Icon name={shell.collapsed ? 'panel-left-open' : 'panel-left-close'} />
+              </button>
+            </Tip>
+          </nav>
 
-        {/* every tab stays mounted: weather, landmarks and export have side effects */}
-        {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
-        <aside id="side-panel" data-testid="side-panel" className="panel" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
-          <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
-          {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
-        </aside>
+          {/* every tab stays mounted: weather, landmarks and export have side effects */}
+          {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
+          <aside id="side-panel" data-testid="side-panel" className="panel" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
+            <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
+            {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
+          </aside>
+        </Tabs>
 
         <main className="view">
           {contents.stage}

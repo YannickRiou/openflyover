@@ -46,7 +46,10 @@ describe('App shell', () => {
 
     for (const tab of ['carte', 'survol', 'projet', 'reglages']) {
       await act(async () => document.querySelector<HTMLElement>(`[role="tab"][data-testid="tab-${tab}"]`)!.click())
-      expect(document.querySelector<HTMLElement>(`[role="tabpanel"][data-testid="tab-panel-${tab}"]`)!.hidden).toBe(false)
+      // the shown panel is the only tab panel; the other eight stay mounted, inert
+      expect([...document.querySelectorAll('[role="tabpanel"]')].map((el) => el.getAttribute('data-testid'))).toEqual([`tab-panel-${tab}`])
+      expect(document.querySelectorAll('[data-testid^="tab-panel-"][data-inert="true"]')).toHaveLength(8)
+      expect(document.querySelector(`[data-testid="tab-${tab}"]`)!.getAttribute('aria-selected')).toBe('true')
     }
     expect(renders).toEqual(before)
 

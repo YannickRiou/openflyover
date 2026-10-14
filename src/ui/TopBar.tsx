@@ -11,7 +11,7 @@ import type { IconName } from './icons'
 import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
 import { withShortcut } from './shortcuts'
-import { Button, Tip } from './primitives'
+import { Button, Menu, Tip } from './primitives'
 
 /** How long the save icon keeps the accent colour once the project is saved (ms). */
 const SAVED_FLASH_MS = 3000
@@ -60,52 +60,23 @@ interface MoreItem {
 /** « Plus d'actions » (phone only, shown by shell.css): the actions of the bar that do not fit. */
 function MoreMenu({ items }: { items: MoreItem[] }) {
   const t = useT()
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: PointerEvent) => {
-      if (!(e.target instanceof Node) || !ref.current?.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', onDown, true)
-    return () => document.removeEventListener('pointerdown', onDown, true)
-  }, [open])
-
   return (
-    <div
-      ref={ref}
-      className="topbar__more"
-      data-local-escape=""
-      onKeyDown={(e) => {
-        if (e.key !== 'Escape' || !open) return
-        setOpen(false)
-        e.stopPropagation()
-      }}
-    >
-      <Button variant="icon" aria-label={t('topbar.more')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon name="ellipsis" />
-      </Button>
-      {open && (
-        <div className="track-menu topbar__menu" role="menu" aria-label={t('topbar.more')}>
-          {items.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              role="menuitem"
-              className="track-menu__item"
-              disabled={item.disabled}
-              onClick={() => {
-                setOpen(false)
-                item.onClick()
-              }}
-            >
-              <Icon name={item.icon} size={18} />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <Menu
+      label={t('topbar.more')}
+      sheet
+      items={items.map((item) => ({
+        id: item.label,
+        label: item.label,
+        icon: <Icon name={item.icon} size={18} />,
+        disabled: item.disabled,
+        onSelect: item.onClick,
+      }))}
+      trigger={
+        <Button variant="icon" className="topbar__more" aria-label={t('topbar.more')}>
+          <Icon name="ellipsis" />
+        </Button>
+      }
+    />
   )
 }
 

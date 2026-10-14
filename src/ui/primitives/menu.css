@@ -1,0 +1,48 @@
+/* Menu (Menu.tsx): the list of actions and its rows, over the frame of overlay.css. */
+@layer components {
+.menu-panel {
+  min-width: 200px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1);
+  outline: none;
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font: 600 13px/1 var(--font-body);
+  text-align: left;
+  white-space: nowrap;
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* hovered, or moved to by the arrows (React Aria focuses the row under the mouse too) */
+.menu__item[data-focused],
+.menu__item[data-focus-visible='true'] {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.menu__item[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* touch: rows as tall as the other controls */
+@media (pointer: coarse) {
+  .menu__item {
+    min-height: 44px;
+  }
+}
+}

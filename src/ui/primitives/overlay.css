@@ -1,0 +1,59 @@
+/*
+ * Overlays (overlay.tsx; Menu.tsx and Popover.tsx): the frame they share, the dark chrome of the tooltips and of the app's own
+ * menus in both themes (HeroUI's `--overlay` variables, set in theme.css). Self-contained: HeroUI's own CSS for these
+ * components is not imported, only its behaviour (React Aria) is used.
+ */
+@layer components {
+.overlay {
+  max-width: calc(100vw - 2 * var(--space-2));
+  border: 1px solid var(--color-ink-soft);
+  border-radius: var(--radius-md);
+  background: var(--overlay);
+  color: var(--overlay-foreground);
+  font-family: var(--font-body);
+  box-shadow: var(--overlay-shadow);
+  animation: tip-in 120ms ease both;
+}
+
+.overlay[data-exiting] {
+  animation: none;
+}
+
+/* focus: the accent ring of the ink chrome (it comes after the buttons' own, same specificity) */
+.overlay :focus-visible,
+.overlay [data-focus-visible='true'] {
+  outline: var(--focus-ring-on-dark);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* what a point overlay (right click, long press) is positioned against */
+.overlay-anchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* phone: a bottom sheet over the whole width, never clipped by a short framed view (the positions React Aria computes are overridden) */
+@media (max-width: 699px), (max-height: 499px) {
+  .overlay--sheet {
+    position: fixed !important;
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: auto !important;
+    max-width: none;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    animation: none;
+  }
+}
+}

@@ -84,7 +84,7 @@ import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import './cardBlocks.css'
 import './markerKeys.css'
-import { Button, Tip } from './primitives'
+import { Button, Popover, Tip } from './primitives'
 
 const SPEEDS = PLAYBACK_SPEEDS
 /** « Média » picker: pictures and videos recognised on both targets (the desktop types a file by `mimeTypeOf`). */
@@ -215,76 +215,52 @@ function BarButton({ icon, name, tip = name, onClick, disabled, on }: BarButtonP
 }
 
 /**
- * « Options » of the film, in a small menu over the bar: automatic stops, « modifié » marker of the film. Closes on
- * Escape (before the shell deselects anything), on a click outside and when the focus leaves it.
+ * « Options » of the film, in a small panel over the bar: automatic stops, « modifié » marker of the film. `sheet`: a
+ * bottom sheet (the centred timeline of a phone).
  */
 function FilmOptions({
   autoStops,
   onAutoStops,
   onAddMusic,
   reading,
+  sheet,
 }: {
   autoStops: boolean
   onAutoStops(on: boolean): void
   onAddMusic(): void
   reading: boolean
+  sheet: boolean
 }) {
   const t = useT()
-  const [open, setOpen] = useState(false)
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const toggleRef = useRef<HTMLButtonElement>(null)
-  const id = useId()
   const modified = useAppStore((s) => modifiedSettings(s.settings, ['film']).length > 0)
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: globalThis.PointerEvent) => {
-      if (!(e.target instanceof Node) || !wrapRef.current?.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', onDown)
-    return () => document.removeEventListener('pointerdown', onDown)
-  }, [open])
   return (
-    <div
-      ref={wrapRef}
-      className="film-tl__options"
-      data-local-escape={open ? '' : undefined}
-      onKeyDown={(e) => {
-        if (e.key !== 'Escape' || !open) return
-        e.stopPropagation()
-        setOpen(false)
-        toggleRef.current?.focus()
-      }}
-      onBlur={(e) => {
-        // the focus went elsewhere (Tab); a click outside is caught by the pointer listener
-        if (open && e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false)
-      }}
+    <Popover
+      label={t('timeline.options.title')}
+      placement="top end"
+      width={260}
+      sheet={sheet}
+      trigger={
+        <Tip text={t('timeline.options.title')} side="top" align="end">
+          <Button variant="icon" aria-label={t('timeline.options.title')}>
+            <Icon name="ellipsis" size={18} />
+            {modified && (
+              <>
+                <span className="film-tl__dot" />
+                <span className="visually-hidden">{t('common.modified.srOnly')}</span>
+              </>
+            )}
+          </Button>
+        </Tip>
+      }
     >
-      <Tip text={t('timeline.options.title')} side="top" align="end">
-        <Button
-          variant="icon"
-          ref={toggleRef}
-          aria-expanded={open}
-          aria-controls={`${id}-menu`}
-          aria-label={t('timeline.options.title')}
-          onClick={() => setOpen(!open)}
-        >
-          <Icon name="ellipsis" size={18} />
-          {modified && (
-            <>
-              <span className="film-tl__dot" />
-              <span className="visually-hidden">{t('common.modified.srOnly')}</span>
-            </>
-          )}
-        </Button>
-      </Tip>
-      {open && (
-        <div id={`${id}-menu`} className="film-tl__menu" role="group" aria-label={t('timeline.options.title')}>
+      {(close) => (
+        <div className="film-tl__menu">
           <p className="film-tl__menu-title">{t('timeline.options.title')}</p>
           <Button
             size="sm"
             disabled={reading}
             onClick={() => {
-              setOpen(false)
+              close()
               onAddMusic()
             }}
           >
@@ -300,7 +276,7 @@ function FilmOptions({
           <ModifiedMarker keys={['film']} label={t('timeline.film')} />
         </div>
       )}
-    </div>
+    </Popover>
   )
 }
 
@@ -1262,7 +1238,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             on={magnet}
             onClick={() => setPreferences({ timelineMagnet: !magnet })}
           />
-          <FilmOptions autoStops={film.autoStops} onAutoStops={setAutoStops} onAddMusic={pickMusic} reading={reading} />
+          <FilmOptions autoStops={film.autoStops} onAutoStops={setAutoStops} onAddMusic={pickMusic} reading={reading} sheet={centred} />
         </div>
         <Tip text={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')} side="top" align="end">
           <Button

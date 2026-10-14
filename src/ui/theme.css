@@ -70,9 +70,16 @@
 @import '@heroui/styles/components/radio-group.css' layer(components);
 @import '@heroui/styles/components/toggle-button.css' layer(components);
 @import '@heroui/styles/components/toggle-button-group.css' layer(components);
+@import '@heroui/styles/components/toast.css' layer(components);
 /* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
 @import './primitives/button.css';
 @import './primitives/tip.css';
+@import './primitives/tabs.css';
+@import './primitives/disclosure.css';
+@import './primitives/overlay.css';
+@import './primitives/menu.css';
+@import './primitives/popover.css';
+@import './primitives/toast.css';
 @import './primitives/switch.css';
 @import './primitives/checkbox.css';
 @import './primitives/radio-group.css';

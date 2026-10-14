@@ -284,7 +284,7 @@
 }
 
 @media (hover: hover) {
-  .rail__tab:hover:not(:disabled),
+  .rail__tab:hover:not(:disabled, [aria-disabled='true']),
   .rail__toggle:hover:not(:disabled) {
     background: rgb(255 255 255 / 0.1);
     color: var(--color-white);
@@ -330,6 +330,7 @@
 }
 
 .rail__tab:disabled,
+.rail__tab[aria-disabled='true'],
 .rail__toggle:disabled {
   cursor: not-allowed;
   opacity: 0.4;
@@ -433,16 +434,6 @@
 .section-head__actions {
   display: flex;
   gap: var(--space-2);
-}
-
-/* « + Ajouter » of the track list: its menu (the look of « Plus d'actions ») under the button */
-.tracks__add {
-  position: relative;
-}
-
-/* its head above the next sticky section header while the menu is open */
-.section-head:has(.tracks__add .track-menu) {
-  z-index: 3;
 }
 
 /* foldable sections (PanelSection) */
@@ -780,95 +771,6 @@
   white-space: nowrap;
 }
 
-/* Messages (toasts), at the bottom of the view above the timeline */
-.toaster {
-  position: absolute;
-  z-index: 6;
-  bottom: var(--space-4);
-  left: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  width: min(460px, calc(100% - 32px));
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.toast {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  max-width: 100%;
-  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
-  border: 1px solid var(--color-ink-soft);
-  border-radius: var(--radius-md);
-  background: var(--surface-chrome-raised);
-  color: var(--text-on-dark);
-  font-size: 13px;
-  box-shadow: var(--shadow-pop);
-  pointer-events: auto;
-  animation: tip-in 160ms ease both;
-}
-
-.toast > .icon {
-  margin-top: 7px;
-  color: var(--color-glacier);
-}
-
-.toast--error {
-  border-left: 4px solid var(--status-error-on-dark);
-}
-
-.toast--error > .icon {
-  color: var(--status-error-on-dark);
-}
-
-.toast__text {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  padding: 6px 0;
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-}
-
-.toast__action {
-  flex: none;
-  height: 28px;
-  margin-top: 2px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-accent-light);
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.toast .icon-btn {
-  min-width: 28px;
-  height: 28px;
-  margin-top: 2px;
-  color: var(--color-glacier);
-}
-
-@media (hover: hover) {
-  .toast__action:hover,
-  .toast .icon-btn:hover:not(:disabled) {
-    background: rgb(255 255 255 / 0.1);
-    color: var(--color-white);
-  }
-}
-
-.toast :focus-visible {
-  outline: var(--focus-ring-on-dark);
-  outline-offset: 1px;
-  box-shadow: none;
-}
-
 /* Veil while files are dragged over the window (lets the drag reach the timeline under it) */
 .drop-veil {
   position: fixed;
@@ -1120,15 +1022,6 @@
   accent-color: var(--color-accent-light);
 }
 
-.film-tl__options {
-  position: relative;
-}
-
-/* the menu opens above its button: no tooltip over it */
-.film-tl__options [aria-expanded='true']::after {
-  display: none;
-}
-
 /* the film differs from its defaults (the « modifié » marker is in the menu) */
 .film-tl__dot {
   position: absolute;
@@ -1140,24 +1033,14 @@
   background: var(--status-attention-on-dark);
 }
 
+/* the content of the options panel (Popover): the frame is the primitive's */
 .film-tl__menu {
-  position: absolute;
-  z-index: 20;
-  right: 0;
-  bottom: calc(100% + 6px);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
-  width: 260px;
   padding: var(--space-3);
-  border: 1px solid var(--color-ink-soft);
-  border-radius: var(--radius-md);
-  background: var(--surface-chrome-raised);
-  color: var(--color-white);
   font-size: 13px;
-  box-shadow: var(--shadow-pop);
-  animation: tip-in 120ms ease both;
 }
 
 .film-tl__menu-title {
@@ -1194,7 +1077,7 @@
   border-top-color: var(--color-white);
 }
 
-/* Right-click menu on the track, over the 3D view (TrackPicker.tsx) ------------------------------------ */
+/* Menu of the language picker (LanguageMenu.tsx; the other menus are the Menu and Popover primitives) and the form of a point of interest (TrackPicker.tsx) */
 .track-menu {
   position: absolute;
   z-index: 7;
@@ -1233,11 +1116,13 @@
   }
 }
 
-/* « Point d'intérêt ici »: the name, then « Ajouter » */
+/* « Point d'intérêt ici »: the name, then « Ajouter » (in a Popover) */
 .track-menu__form {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  min-width: 200px;
+  padding: var(--space-1);
 }
 
 .track-menu__label {
@@ -1254,7 +1139,7 @@
   display: none;
 }
 
-/* the menu of « Plus d'actions », under its button (the look of the track menu) */
+/* the language menu, under its button */
 .topbar__menu {
   top: calc(100% + 6px);
   right: 0;
@@ -1265,11 +1150,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.topbar__menu .track-menu__item:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 /* Language picker, after « ? » (LanguageMenu.tsx): flag and code, then the list of the languages */
@@ -1719,9 +1599,7 @@
     transition: none;
   }
 
-  .toast,
   .drop-veil,
-  .film-tl__menu,
   .track-menu {
     animation: none;
   }
@@ -1812,13 +1690,6 @@
     top: calc(var(--space-3) + 44px + var(--space-2));
   }
 
-  .toast__action,
-  .toast .icon-btn {
-    min-width: 44px;
-    height: 44px;
-    margin-top: 0;
-  }
-
   .anchor-picker .anchor-picker__grid {
     grid-template-columns: repeat(3, 44px);
     grid-auto-rows: 44px;
@@ -1898,11 +1769,7 @@
   }
 
   .topbar__more {
-    position: relative;
-    display: block;
-  }
-
-  .topbar__more > .icon-btn {
+    display: inline-flex;
     width: var(--control-h);
   }
 }
@@ -1928,7 +1795,7 @@
 
   /* no format picker (the export drawer has it) nor shortcuts */
   .format-switch,
-  .topbar__end > .icon-btn {
+  .topbar__end > .icon-btn:not(.topbar__more) {
     display: none;
   }
 
@@ -1975,7 +1842,7 @@
     max-height: none;
   }
 
-  /* the menu of a long press on the track: at the bottom of the screen, never clipped by a short framed view */
+  /* the language menu: at the bottom of the screen, never clipped by a short framed view */
   .track-menu {
     position: fixed;
     z-index: 30;
@@ -1986,16 +1853,6 @@
     padding-bottom: calc(var(--space-1) + env(safe-area-inset-bottom));
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     transform: none !important;
-  }
-
-  /* « + Ajouter » of the track list: under its button, inside the sheet (fixed, it would sit under the tab bar) */
-  .tracks__add .track-menu {
-    position: absolute;
-    top: calc(100% + 6px) !important;
-    bottom: auto;
-    left: auto !important;
-    padding-bottom: var(--space-1);
-    border-radius: var(--radius-md);
   }
 }
 
@@ -2216,17 +2073,6 @@
 .film-tl--centred .film-tl__bar > :is(.icon-btn:not(.film-tl__play), .film-tl__readout, .film-tl__clockout, .film-tl__spacer),
 .film-tl--centred :is(.film-tl__sep, .film-tl__zoom) {
   display: none;
-}
-
-/* the options menu over the lanes, full width (the row that holds its button scrolls and would clip it) */
-.film-tl--centred .film-tl__menu {
-  position: fixed;
-  top: auto;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  width: auto;
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .film-tl--centred .film-tl__body {

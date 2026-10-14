@@ -89,7 +89,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/scene/touchGesture.ts` | fingers moving the 3D view (lower pixel ratio, see "Device budget") | tested: `watchTouchGesture`, `TOUCH_SETTLE_MS` |
 | `src/offline/*` | offline tile packs (see "Offline packs") | pure, tested: `planOfflineTiles`, `packImageryLevel`, `splitDistanceM`, `CORRIDOR_WIDTHS_M`, `MAX_PACK_TILES` (`plan.ts`); `offlinePolicy`, `OFFLINE_POLICIES` (`policy.ts`); `startPackDownload`, `createDailyQuota` (`download.ts`); `createPackRegistry`, `createStoredTileReader`, `packIdFor`, `sourcePrefixes` (`packs.ts`); not pure: `useOfflineStore`, `installOfflineTiles`, `preparePack`, `pausePack`, `resumePack`, `cancelPack`, `deletePack` (`store.ts`), `OfflinePanel` (`src/ui`) |
 | `src/state/store.ts` | zustand state | `useAppStore`, `Settings`, `Playback`, `AppState`, `resetAppStore` |
-| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextTabIndex`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested) |
+| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested) |
 
 ### Development rules
 
@@ -344,7 +344,11 @@ themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under 
 `--status-error*` are fixed reds (they no longer follow the accent).
 **Primitives** (`src/ui/primitives/`, one file per component and its CSS, exported from `index.ts`; screens never import
 `@heroui/react`): `Button` (`variant` primary / secondary / icon, `size="sm"`, `block`; it keeps the `.btn` / `.icon-btn`
-classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips") and the choice controls: `Switch` (a whole feature on
+classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Menu` (list of actions: opened by a trigger, or at a
+`point` for the right-click menu of the 3D view; `sheet` makes it a bottom sheet on a phone) and `Popover` (panel with its own
+controls, same two modes). Both are portalled out of their container (into the open `<dialog>`, if any) and carry
+`data-local-escape`, so an open one closes before the app's own Escape; their skin (`overlay.css`, `menu.css`, `popover.css`) is
+self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
 or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen), `RadioGroup` with `Radio` (`look` `segmented`,
 `chips`, or `plain` for a grid the screen draws, as the 3 × 3 `AnchorPicker`; the arrows move and choose, the screens' CSS keys on
 `.option__label`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
@@ -381,7 +385,7 @@ pointer (`appearance.css`).
   one centred column: "Choisir un fichier" (choose a file), "Importer depuis Strava", "Essayer avec l'exemple" (try the
   sample), "Ouvrir un projet…" (open a project; a single picker whose `accept` changes), then "Récents": the three latest
   entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab).
-- **Rail and panel**: vertical rail of icon + label tabs (64 px; `tablist`, roving focus, arrows / Home / End) and a
+- **Rail and panel**: vertical rail of icon + label tabs (64 px; `Tabs` primitive: `tablist`, one tab stop, arrows (up / down in the rail, left / right in the phone's bar) and Home / End, a press on the open tab folds the panel) and a
   320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Étiquettes », hidden without a track),
   **Carte** (map; base map and water, relief, OSM landmarks and points of interest),
   **Météo** (weather; weather of the outing, clouds, weather in the image), **Lumière** (light; atmosphere, shadows,
@@ -438,11 +442,12 @@ pointer (`appearance.css`).
   1080 × 1920 screen, rounded to the safest value: top bar 220 px, buttons on the right 160 × 720 px, caption at the bottom 440 px),
   hatched; a 4:5 is placed full width in the middle of this screen and only the parts that cover it remain
   (`phoneInterfaceOver`).
-- **Messages** (`toast.ts`, `Toaster.tsx`): small zustand store (`showToast`, `dismissToast`, pure `pushToast`: the same
-  message replaces the old one, 4 at most, the oldest error leaves last), shown at the bottom center of the view,
+- **Messages** (`toast.ts`, `Toaster.tsx`, `primitives/Toast.tsx`): small zustand store (`showToast`, `dismissToast`, pure
+  `pushToast`: the same message replaces the old one, 4 at most, the oldest error leaves last), the list of which the
+  `Toast` primitive (HeroUI Toast, its queue kept in step with the list) shows at the bottom center of the view,
   above the timeline, in a single always-mounted `aria-live` region. Success and info disappear after
-  `toastDuration` (5 s, up to 12 s for a long text), timer paused on hover or focus; errors as
-  `role="alert"`, until closed; optional action button. Sources: import (`importFiles` from `importFlow.ts`, bound
+  `toastDuration` (5 s, up to 12 s for a long text), timers paused while the pointer or the focus is on the messages;
+  errors as `role="alert"`, until closed; optional action button. Sources: import (`importFiles` from `importFlow.ts`, bound
   to the store by `projectActions.ts`: "Trace « … » importée", failures), project opened / saved / file
   warnings, presets (saved, "Préréglage appliqué : …"), export ("Vidéo prête · Télécharger à nouveau", "Image
   prête", failure, "Export annulé"), "Réglages remis par
@@ -1406,7 +1411,7 @@ The interface and the texts drawn into the films and posters exist in **French**
 - **On the track** (`src/scene/TrackPicker.tsx`, mounted in `FlyoverCanvas`): a click on the first track places the
   playhead at the target point (`setProgress(p, clock.timeAtProgress(p))`); a right-click opens "Ajouter un arrêt ici" (add a stop here) /
   "Ajouter un texte ici" (add a text here) / "Accélérer / ralentir ici" (speed up / slow down here; ×2 section from the point; inside a section, it
-  selects it) (`TrackMenu`, DOM above the canvas, `role="menu"`, arrows, Esc, click outside; each addition
+  selects it) (`TrackMenu`, a `Menu` of the primitives anchored at the pointer, `role="menu"`, arrows, Esc, click outside; each addition
   through `editFilm`: one undo step, block selected); hand cursor when hovering the track. Click = press and release of the
   same button within 4 px (an OrbitControls drag is not a click; the menu opens on release, not on
   `contextmenu`, which fires on press under Linux and macOS). Picking in screen space (`pickProjectedPath`, pure): 1,500
