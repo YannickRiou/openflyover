@@ -66,6 +66,8 @@
 /* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
 @import './primitives/button.css';
 @import './primitives/tip.css';
+@import './primitives/tabs.css';
+@import './primitives/disclosure.css';
 @import './primitives/overlay.css';
 @import './primitives/menu.css';
 @import './primitives/popover.css';

@@ -1,0 +1,14 @@
+/*
+ * Tabs (Tabs.tsx): the behaviour is HeroUI's (roles, roving tab stop, arrows, Home / End); its own `tabs.css` (pill and
+ * underline designs) is not imported, the screen skins the list and the tabs (the rail: shell.css). What the primitive
+ * needs itself: the wrapper adds no box, and the panels of the other tabs, kept mounted, are not shown.
+ */
+@layer components {
+.tabs {
+  display: contents;
+}
+
+[data-slot='tabs-panel'][data-inert='true'] {
+  display: none;
+}
+}

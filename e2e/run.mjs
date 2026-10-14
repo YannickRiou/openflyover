@@ -240,7 +240,7 @@ const SCENARIOS = [
           page,
           (t) => {
             const panel = document.querySelector(`[data-testid="tab-panel-${t}"]`)
-            return panel && !panel.hidden && !document.querySelector('[data-testid="side-panel"]')?.hidden && panel.getBoundingClientRect().width > 100
+            return panel?.getAttribute('role') === 'tabpanel' && !document.querySelector('[data-testid="side-panel"]')?.hidden && panel.getBoundingClientRect().width > 100
           },
           tab,
         )
@@ -257,6 +257,29 @@ const SCENARIOS = [
         if (overlaySwitch) await overlaySwitch.evaluate((el) => el.checked && el.click())
         assert(overflowing === 0, `onglet ${tab} : ${overflowing} choix qui débordent sur le côté`)
       }
+      // the rail is one tab stop: the arrows (vertical), Home and End move the focus and show the tab, wrapping at the ends
+      const press = async (key, expected) => {
+        await page.keyboard.press(key)
+        await until(page, (t) => document.activeElement?.dataset.testid === t && document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.testid === t, expected)
+      }
+      await page.focus('[data-testid="tab-reglages"]')
+      assert(await page.$eval('[data-testid="side-panel"]', (el) => !el.hidden), 'le focus clavier sur l’onglet ouvert replie le panneau')
+      await press('Home', 'tab-trace')
+      await press('ArrowDown', 'tab-carte')
+      await press('End', 'tab-reglages')
+      await press('ArrowDown', 'tab-trace')
+      await press('ArrowUp', 'tab-reglages')
+      const tabStops = await page.$$eval('[role="tablist"] [role="tab"]', (all) => all.filter((t) => t.tabIndex === 0).map((t) => t.dataset.testid))
+      assert(tabStops.join() === 'tab-reglages', `un seul onglet dans l'ordre de tabulation : ${tabStops.join(', ')}`)
+      // the open tab pressed again folds the panel (with the mouse, with Enter), pressed once more shows it
+      await page.click('[data-testid="tab-reglages"]')
+      await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.click('[data-testid="tab-reglages"]')
+      await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.keyboard.press('Enter')
+      await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
+      await page.keyboard.press('Enter')
+      await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
       // the « ? » button, then the « ? » key; Escape closes the dialog both times
       await page.click('button[aria-label="Raccourcis clavier"]')
       await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
