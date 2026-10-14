@@ -11,13 +11,13 @@ import type { IconName } from './icons'
 import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
 import { withShortcut } from './shortcuts'
-import { Button, Menu, Radio, RadioGroup, Tip } from './primitives'
+import { Button, Menu, Radio, RadioGroup, TextField, Tip } from './primitives'
 import type { ButtonProps } from './primitives'
 
-/** Project name field: reads as text on the bar, a frame on hover, a light field while edited. */
-const NAME_FIELD =
-  'h-control min-w-16 flex-[0_1_220px] rounded-sm border border-transparent bg-transparent px-2 text-body font-medium text-ellipsis text-white transition-ui ' +
-  'placeholder:text-glacier hover:border-white/20 focus:bg-white focus:text-ink focus:placeholder:text-ink-soft bar-condensed:flex-auto'
+/** Project name input: reads as text on the bar, a frame on hover, a light field while edited. */
+const NAME_INPUT =
+  'h-control w-full rounded-sm border border-transparent bg-transparent px-2 text-body font-medium text-ellipsis text-white transition-ui ' +
+  'placeholder:text-glacier hover:border-white/20 focus:bg-white focus:text-ink focus:placeholder:text-ink-soft'
 
 /** The save icon: a dot while changes are not saved, the light accent for a few seconds once they are (`data-save-state`). */
 const SAVE_STATE =
@@ -161,15 +161,15 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
       <div className="flex min-w-0 items-center gap-1 bar-condensed:flex-auto">
         <img className="mr-1 size-7 flex-none" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
         <h1 className="visually-hidden">OpenFlyover</h1>
-        <input
-          className={NAME_FIELD}
-          type="text"
+        <TextField
+          className="min-w-16 flex-[0_1_220px] bar-condensed:flex-auto"
+          inputClassName={NAME_INPUT}
           value={name}
           placeholder={placeholder}
           maxLength={120}
           aria-label={t('topbar.projectName')}
           title={t('topbar.projectNameTip')}
-          onChange={(e) => useAppStore.getState().setProjectName(e.currentTarget.value)}
+          onChange={(value) => useAppStore.getState().setProjectName(value)}
         />
         <span className="mx-1 h-5 w-px flex-none bg-white/15 bar-condensed:hidden" aria-hidden="true" />
         <Tip text={withShortcut(t('topbar.undo'), 'undo')}>

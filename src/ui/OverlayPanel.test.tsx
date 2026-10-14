@@ -21,7 +21,7 @@ async function mount() {
   const host = document.body.appendChild(document.createElement('div'))
   root = createRoot(host)
   await act(async () => root!.render(<WidgetPosition widget="logo" />))
-  const x = host.querySelector<HTMLInputElement>('input[type="number"]')!
+  const x = host.querySelector<HTMLInputElement>('input[aria-roledescription="Number field"]')!
   const offsetX = () => useAppStore.getState().settings.overlay.logo.offset?.x
   return { x, offsetX }
 }
@@ -56,8 +56,9 @@ describe('WidgetPosition: free position typed in pixels', () => {
     await type(x, '')
     expect(x.value).toBe('')
     expect(offsetX()).toBe(10)
-    await type(x, '-') // a number field reads a lone « - » as empty
-    expect(x.value).toBe('')
+    await type(x, '-') // a lone « - » is kept in the text, not applied
+    expect(x.value).toBe('-')
+    expect(offsetX()).toBe(10)
     await type(x, '-5')
     expect(x.value).toBe('-5')
     expect(offsetX()).toBe(-5)

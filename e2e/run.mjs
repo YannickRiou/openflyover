@@ -248,6 +248,12 @@ const SCENARIOS = [
       await until(page, (all) => [...document.querySelectorAll('[role="tablist"] [role="tab"]')].map((t) => t.dataset.testid.replace('tab-', '')).join() === all, TABS.join())
       assert(await page.$eval('[data-testid="tab-trace"]', (t) => t.getAttribute('aria-selected') === 'true'), "l'onglet Trace n'est pas ouvert après l'exemple")
       assert(await page.$('[data-testid="topbar-export"]'), "« Exporter » manque après l'exemple")
+      // the project name is a text field named by its label: typing renames the project
+      const name = await page.waitForSelector('::-p-aria([name="Nom du projet"])', { visible: true })
+      await name.click({ count: 3 })
+      await page.keyboard.type('Sortie de test')
+      await until(page, () => document.querySelector('header input')?.value === 'Sortie de test')
+      await blur(page)
       await waitForScene(page)
     },
   },
@@ -416,8 +422,15 @@ const SCENARIOS = [
       // pressed: the slider shows under the row and takes the focus; the arrows move it, the row says the new value
       await page.click(head)
       await until(page, () => document.activeElement?.matches('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-body"] input[type="range"]'))
+      // the slider is named by its label (role + name, not a class), and the arrows move it by one step
+      assert(await page.$('::-p-aria([name="Exposition"][role="slider"])'), 'curseur « Exposition » introuvable par son rôle et son nom')
       await page.keyboard.press('ArrowRight')
       await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('+0,5'))
+      // End and Home go to the ends of the range
+      await page.keyboard.press('End')
+      await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('+2,0'))
+      await page.keyboard.press('Home')
+      await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('−2,0'))
       // the section's « Par défaut » puts it back
       await page.click('[data-testid="tab-panel-lumiere"] button[aria-label="Rétablir les réglages par défaut : Atmosphère"]')
       await until(page, () => !document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]'))
@@ -739,8 +752,19 @@ const SCENARIOS = [
         await page.mouse.click(spot.x, spot.y, { button: 'right' })
       }
       const trackMenu = '[role="menu"][aria-label="Ajouter ici"]'
-      await rightClickTrack()
-      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      // the view keeps moving while the spot is scanned: when the click misses the track, look for a spot again
+      const openTrackMenu = async () => {
+        for (let attempt = 1; ; attempt++) {
+          await rightClickTrack()
+          try {
+            await page.waitForSelector(trackMenu, { visible: true, timeout: 5000 })
+            return
+          } catch (error) {
+            if (attempt === 4) throw error
+          }
+        }
+      }
+      await openTrackMenu()
       const rows = await page.$$eval(`${trackMenu} [role="menuitem"]`, (all) => all.map((r) => r.textContent.trim()))
       assert(rows.slice(0, 3).join() === 'Ajouter un arrêt ici,Ajouter un texte ici,Accélérer / ralentir ici', `lignes du menu du clic droit : ${rows.join(', ')}`)
       assert((await focusedText()) === 'Ajouter un arrêt ici', `première ligne du menu du clic droit : ${await focusedText()}`)
@@ -749,8 +773,7 @@ const SCENARIOS = [
       await page.keyboard.press('Escape')
       await gone(trackMenu)
       const stops = await laneCount(page, 'Arrêts')
-      await rightClickTrack()
-      await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
+      await openTrackMenu()
       await page.click(`${trackMenu} [role="menuitem"]::-p-text(Ajouter un arrêt ici)`)
       await gone(trackMenu)
       await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])

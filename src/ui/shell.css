@@ -738,10 +738,10 @@ fieldset:disabled .format-tile .option__label {
   gap: 2px;
 }
 
-.film-tl__zoom-range {
+.slider.film-tl__zoom-range {
+  --slider-accent: var(--color-accent-light);
   width: 88px;
   margin: 0 2px;
-  accent-color: var(--color-accent-light);
 }
 
 /* the film differs from its defaults (the « modifié » marker is in the menu) */
@@ -1355,10 +1355,6 @@ fieldset:disabled .format-tile .option__label {
     font-size: 16px;
   }
 
-  .range {
-    height: 44px;
-  }
-
   .icon-btn--float,
   .track__fly,
   .track__delete {
@@ -1702,7 +1698,7 @@ fieldset:disabled .format-tile .option__label {
     display: none;
   }
 
-  .film-tl__zoom-range {
+  .slider.film-tl__zoom-range {
     width: 64px;
   }
 }

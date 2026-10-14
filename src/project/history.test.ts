@@ -509,4 +509,19 @@ describe('installSliderGestures', () => {
     pointer('pointerdown', range)
     expect(beginGesture).toHaveBeenCalledTimes(3)
   })
+
+  it('also opens one on the thumb or the rail of a Slider primitive, where the pointer lands instead of the input', () => {
+    const end = vi.fn()
+    const beginGesture = vi.fn(() => end)
+    const history = { ...setup().history, beginGesture }
+    const uninstall = installSliderGestures(history)
+    const slider = document.body.appendChild(document.createElement('div'))
+    slider.setAttribute('data-slider', '')
+    const thumb = slider.appendChild(document.createElement('div'))
+    pointer('pointerdown', thumb)
+    expect(beginGesture).toHaveBeenCalledTimes(1)
+    pointer('pointerup', thumb)
+    expect(end).toHaveBeenCalledTimes(1)
+    uninstall()
+  })
 })

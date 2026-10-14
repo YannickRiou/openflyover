@@ -8,8 +8,8 @@ import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
 import { formatPercent } from './format'
 import { SizeField, WidgetPosition, WidgetStyleOverrides } from './OverlayPanel'
-import { RangeField, TextField } from './PanelSection'
-import { Checkbox } from './primitives'
+import { RangeField } from './PanelSection'
+import { Checkbox, TextField } from './primitives'
 
 /**
  * Settings of the opening title or of the closing card, in the inspector of its block on the timeline: what it says,

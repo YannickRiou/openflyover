@@ -89,6 +89,7 @@
 @import '@heroui/styles/components/toggle-button.css' layer(components);
 @import '@heroui/styles/components/toggle-button-group.css' layer(components);
 @import '@heroui/styles/components/toast.css' layer(components);
+@import '@heroui/styles/components/slider.css' layer(components);
 /* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
 @import './primitives/button.css';
 @import './primitives/tip.css';
@@ -104,6 +105,7 @@
 @import './primitives/checkbox.css';
 @import './primitives/radio-group.css';
 @import './primitives/chip.css';
+@import './primitives/slider.css';
 @import './primitives/select.css';
 /* the `@utility` classes the shell is built from (top bar, rail, panels); they use the variants declared below */
 @import './utilities.css';
