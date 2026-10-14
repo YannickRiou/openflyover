@@ -11,7 +11,7 @@
  * demand only (`renderOnDemand.ts`).
  */
 import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, addAfterEffect, useThree } from '@react-three/fiber'
 import type { RootState } from '@react-three/fiber'
 import { canvasAntialias, deviceBudget } from '../core/deviceBudget'
 import { useAppStore } from '../state/store'
@@ -30,6 +30,7 @@ import { lensActive } from './lens'
 import { Labels } from './Labels'
 import { RaceMarkers } from './RaceMarkers'
 import { RegionHighlight } from './RegionHighlight'
+import { setPerfProbe } from './perfProbe'
 import { useRenderOnDemand } from './renderOnDemand'
 import {
   HEMISPHERE_GROUND,
@@ -115,6 +116,8 @@ function watchContextLoss({ gl, invalidate }: RootState) {
     tiles: useAppStore.getState().terrainStats.loadedTiles,
     pending: useAppStore.getState().terrainStats.pendingTiles,
   }))
+  // frame counter and renderer memory of the status bar's performance readout (ui/StatusBar.tsx)
+  setPerfProbe({ onFrame: (count) => addAfterEffect(count), memory: () => gl.info.memory })
   // GPU of the diagnostic report (export/diagnostic.ts)
   setGpuProbe(() => readGpuInfo(gl.getContext()))
   gl.domElement.addEventListener('webglcontextlost', (e) => {

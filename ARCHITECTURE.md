@@ -111,10 +111,11 @@ full customization through a single project document, WebCodecs video export, Ta
 
 ## Loading (bundle splitting)
 
-The first screen (shell, panels, welcome card) is meant to load only the app and React (~510 kB, ~170 kB gzip at the first measurement,
-instead of a single 3.1 MB file, 930 kB gzip). Measured at v2.0.0 it is ~1.4 MB, ~390 kB gzip (the app 1.18 MB, React 219 kB):
-`ui/StatusBar.tsx` imports `@react-three/fiber` statically (frame counter and renderer counts of its performance readout), which pulls
-three.js and fiber into the entry file; an on-demand import there would take them out again. The rest arrives through dynamic `import()` calls, each in its own file:
+The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
+about 1.5 MB, 470 kB gzip over 16 files (the app 328 kB, `primitives` 515 kB, React 219 kB), instead of a single 3.1 MB file, 930 kB gzip.
+Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
+`scene/perfProbe.ts` (a plain module the scene fills when its canvas is created), and the build prints no chunk-size warning.
+The rest arrives through dynamic `import()` calls, each in its own file:
 
 - right after the first paint: the 3D scene (`FlyoverCanvas`, three.js + fiber, `React.lazy` in `Stage`) and the
   "Hors ligne" (offline) panel (`React.lazy` in `App`). They stay mounted;
