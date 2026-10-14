@@ -57,6 +57,10 @@ const PLAIN_DAY: SolarDay = { sunrise: 6, sunset: 18, noon: 12, polar: null }
 /** Position of a solar hour along the slider. */
 const hourAt = (hour: number) => `${(Math.min(Math.max(hour, 0), SUN_HOUR_RANGE.max) / SUN_HOUR_RANGE.max) * 100}%`
 
+/** The bar under the slider is inset by half a thumb (8 px) so it lines up with the thumb's centre; the marks are sunrise and sunset. */
+const DAY_BAR = 'relative mx-[8px] h-2 rounded-full border border-edge'
+const DAY_MARK = 'absolute -top-1 -bottom-1 -ml-px w-0.5 rounded-[1px] bg-text-2'
+
 /** Night / twilight / day colours under the solar hour slider. */
 function dayGradient(day: SolarDay): string {
   const { sunrise, sunset, noon } = day
@@ -124,8 +128,8 @@ function SunTimeControl() {
 
   return (
     <>
-      <fieldset className="field fieldset">
-        <legend className="field__label">{t('light.sun.legend')}</legend>
+      <fieldset className="field min-w-0">
+        <legend className="type-label mb-1">{t('light.sun.legend')}</legend>
         <RadioGroup
           aria-label={t('light.sun.legend')}
           value={follows ? 'follow' : 'fixed'}
@@ -136,7 +140,7 @@ function SunTimeControl() {
           </Radio>
           <Radio value="fixed">{t('light.sun.fixed')}</Radio>
         </RadioGroup>
-        <p id={`${id}-sun-mode-hint`} className="field__hint">
+        <p id={`${id}-sun-mode-hint`} className="type-hint">
           {!trackHasTime
             ? t('light.sun.needsTime')
             : follows
@@ -150,14 +154,14 @@ function SunTimeControl() {
       </fieldset>
 
       {sunKeyed && (
-        <p className="field__hint">{t(follows ? 'light.sun.keyedFollow' : 'light.sun.keyedFixed')}</p>
+        <p className="type-hint">{t(follows ? 'light.sun.keyedFollow' : 'light.sun.keyedFixed')}</p>
       )}
       {follows && sunKeyed && <PanelKeys target={{ kind: 'param', param: 'sunHour' }} />}
 
       {!follows && (
         <div className="field">
-          <div className="field__label-row">
-            <span className="field__label">
+          <div className="flex items-center gap-1">
+            <span className="type-label">
               {t('light.sun.solarHour')}
             </span>
             <InfoTip text={solarTip} />
@@ -172,19 +176,19 @@ function SunTimeControl() {
             onChange={(v) => setSetting('sunHour', v)}
             format={formatHour}
             below={
-              <div className="sun-day__bar" style={{ background: dayGradient(shown) }} aria-hidden="true">
-                {shown.sunrise !== null && <span className="sun-day__mark" style={{ left: hourAt(shown.sunrise) }} />}
-                {shown.sunset !== null && <span className="sun-day__mark" style={{ left: hourAt(shown.sunset) }} />}
+              <div className={DAY_BAR} style={{ background: dayGradient(shown) }} aria-hidden="true">
+                {shown.sunrise !== null && <span className={DAY_MARK} style={{ left: hourAt(shown.sunrise) }} />}
+                {shown.sunset !== null && <span className={DAY_MARK} style={{ left: hourAt(shown.sunset) }} />}
               </div>
             }
           />
           <PanelKeys target={{ kind: 'param', param: 'sunHour' }} />
-          <p id={`${id}-sun-day`} className="field__hint">
+          <p id={`${id}-sun-day`} className="type-hint">
             {dayHint}
           </p>
           <RadioGroup
             look="chips"
-            className="sun-chips"
+            className="mt-2"
             aria-label={t('light.sun.moments')}
             value={SUN_CHIPS.find((chip) => sunChipHour(chip, shown) === sunHour) ?? ''}
             onChange={(chip) => {
@@ -207,16 +211,16 @@ function SunTimeControl() {
       {!follows && (
         <SettingRow label={t('light.sun.day')} value={sunDate ? formatDay(sunDate) : t('light.sun.dayOfOuting')} paths={['sunDate']}>
           <div className="field">
-            <div className="field__label-row">
-              <label className="field__label" htmlFor={`${id}-sun-date`}>
+            <div className="flex items-center gap-1">
+              <label className="type-label" htmlFor={`${id}-sun-date`}>
                 {t('light.sun.day')}
               </label>
               <InfoTip text={t('light.sun.dayTip')} />
             </div>
-            <div className="sun-date">
+            <div className="flex gap-2">
               <input
                 id={`${id}-sun-date`}
-                className="input"
+                className="input min-w-0 flex-1"
                 type="date"
                 value={sunDate}
                 onChange={(e) => setSetting('sunDate', e.currentTarget.value)}
@@ -267,9 +271,9 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
   const qualityLabel = CLOUD_QUALITY_OPTIONS.find((o) => o.value === effectiveQuality)?.label
   return (
     <>
-      <fieldset className="field fieldset">
+      <fieldset className="field min-w-0">
         {/* the section is titled « Nuages » */}
-        <legend className="visually-hidden">{t('light.clouds.legend')}</legend>
+        <legend className="sr-only">{t('light.clouds.legend')}</legend>
         <RadioGroup
           aria-label={t('light.clouds.legend')}
           value={clouds.mode}
@@ -281,7 +285,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
             </Radio>
           ))}
         </RadioGroup>
-        <p className="field__hint">
+        <p className="type-hint">
           {clouds.mode === 'aucun'
             ? t('light.clouds.hintNone')
             : clouds.mode === 'manuel'
@@ -324,8 +328,8 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
           paths={['clouds.seaRender']}
           weight="clouds"
         >
-          <fieldset className="field fieldset">
-            <legend className="field__label">{t('light.clouds.seaRender')}</legend>
+          <fieldset className="field min-w-0">
+            <legend className="type-label mb-1">{t('light.clouds.seaRender')}</legend>
             <RadioGroup aria-label={t('light.clouds.seaRender')} value={clouds.seaRender} onChange={(seaRender) => set({ seaRender })}>
               {SEA_RENDER_OPTIONS.map((option) => (
                 <Radio key={option.value} value={option.value}>
@@ -333,7 +337,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
                 </Radio>
               ))}
             </RadioGroup>
-            <p className="field__hint">
+            <p className="type-hint">
               {clouds.seaRender === 'surface'
                 ? t('light.clouds.hintSurface')
                 : t('light.clouds.hintVolume')}
@@ -364,8 +368,8 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
           preset="clouds"
         >
           <div className="field">
-            <div className="field__label-row">
-              <label className="field__label" htmlFor={`${id}-clouds-quality`}>
+            <div className="flex items-center gap-1">
+              <label className="type-label" htmlFor={`${id}-clouds-quality`}>
                 {t('light.clouds.quality')}
               </label>
               <InfoTip text={t('light.clouds.qualityTip')} />
@@ -396,7 +400,7 @@ function WaterControl() {
   const setSetting = useAppStore((s) => s.setSetting)
   return (
     <>
-      <div className="field__label-row">
+      <div className="flex items-center gap-1">
         <Checkbox
           id={`${id}-water`}
           checked={water.enabled}
@@ -431,7 +435,7 @@ function DemCleanControl() {
   const setSetting = useAppStore((s) => s.setSetting)
   return (
     <>
-      <div className="field__label-row">
+      <div className="flex items-center gap-1">
         <Checkbox
           id={`${id}-clean`}
           checked={demClean.enabled}
@@ -442,7 +446,7 @@ function DemCleanControl() {
         <InfoTip text={t('light.demClean.tip')} />
       </div>
       {demClean.enabled && (
-        <div className="field__label-row">
+        <div className="flex items-center gap-1">
           <Checkbox
             id={`${id}-sea`}
             checked={demClean.seaToZero}
@@ -474,7 +478,7 @@ export function MapSettings() {
       {/* the imagery source is left out of the marker: the import picks it per region (IGN, swisstopo) */}
       <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'water']}>
         <div className="field">
-          <label className="field__label" htmlFor={imageryId}>
+          <label className="type-label" htmlFor={imageryId}>
             {t('light.map.imagery')}
           </label>
           <Select
@@ -488,8 +492,8 @@ export function MapSettings() {
         <WaterControl />
 
         <SettingRow label={t('light.map.imageryDetail')} value={zoomLabel} paths={['imageryZoomOffset']}>
-          <fieldset className="field fieldset">
-            <legend className="field__label">{t('light.map.imageryDetail')}</legend>
+          <fieldset className="field min-w-0">
+            <legend className="type-label mb-1">{t('light.map.imageryDetail')}</legend>
             <RadioGroup
               aria-label={t('light.map.imageryDetail')}
               value={settings.imageryZoomOffset}
@@ -506,7 +510,7 @@ export function MapSettings() {
 
         <SettingRow label={t('light.map.terrainSource')} value={terrainName} paths={['terrainSourceId']}>
           <div className="field">
-            <label className="field__label" htmlFor={terrainId}>
+            <label className="type-label" htmlFor={terrainId}>
               {t('light.map.terrainSource')}
             </label>
             <Select
@@ -535,7 +539,7 @@ export function MapSettings() {
         <DemCleanControl />
 
         <SettingRow label={t('light.map.wireframe')} value={settings.wireframe ? t('common.yes') : t('common.no')} paths={['wireframe']}>
-          <div className="field__label-row">
+          <div className="flex items-center gap-1">
             <Checkbox
               id={wireframeId}
               checked={settings.wireframe}
@@ -560,7 +564,7 @@ function useWeatherReady(): boolean {
 /** In place of what needs the atmosphere (sky, clouds, sun) while it is off. */
 function AtmosphereOffHint({ what }: { what: 'clouds' | 'scene' }) {
   const t = useT()
-  return <p className="field__hint">{t(what === 'clouds' ? 'light.weather.offClouds' : 'light.weather.offScene')}</p>
+  return <p className="type-hint">{t(what === 'clouds' ? 'light.weather.offClouds' : 'light.weather.offScene')}</p>
 }
 
 /** « Météo » tab, after the weather of the outing: sections Nuages and Pluie et brume (the weather in the image). */
@@ -582,7 +586,7 @@ export function WeatherSettings() {
         {!atmosphere ? (
           <AtmosphereOffHint what="scene" />
         ) : !weatherReady ? (
-          <p className="field__hint">{t('light.weather.waiting')}</p>
+          <p className="type-hint">{t('light.weather.waiting')}</p>
         ) : (
           <>
             <Switch
@@ -644,7 +648,7 @@ export function LightSettings() {
               onChange={(ev) => setSetting('exposureEv', ev)}
             />
             {exposureKeyed && (
-              <p className="field__hint">{t('light.atmosphere.exposureKeyed')}</p>
+              <p className="type-hint">{t('light.atmosphere.exposureKeyed')}</p>
             )}
             <PanelKeys target={{ kind: 'param', param: 'exposure' }} />
           </SettingRow>
@@ -655,7 +659,7 @@ export function LightSettings() {
         {atmosphere ? (
           <SunTimeControl />
         ) : (
-          <p className="field__hint">{t('light.atmosphere.sunOff')}</p>
+          <p className="type-hint">{t('light.atmosphere.sunOff')}</p>
         )}
       </PanelSection>
 

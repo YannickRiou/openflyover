@@ -37,12 +37,12 @@ export function GradingPanel() {
   return (
     <PanelSection title={t('light.grading.title')} keys={['grading']}>
       <div className="field">
-        <span id={`${id}-presets`} className="field__label">
+        <span id={`${id}-presets`} className="type-label">
           {t('light.grading.preset')}
         </span>
         <RadioGroup
           look="chips"
-          className="sun-chips"
+          className="mt-2"
           aria-labelledby={`${id}-presets`}
           value={grading.preset}
           onChange={(preset) => preset !== 'personnalise' && getSettingsHistory().transaction(() => setSetting('grading', gradingOfPreset(preset)))}
@@ -53,11 +53,11 @@ export function GradingPanel() {
             </Radio>
           ))}
         </RadioGroup>
-        {grading.preset === 'personnalise' && <p className="field__hint">{t('light.grading.custom')}</p>}
+        {grading.preset === 'personnalise' && <p className="type-hint">{t('light.grading.custom')}</p>}
       </div>
 
       {keyed && (
-        <p className="field__hint">{t('light.grading.keyed')}</p>
+        <p className="type-hint">{t('light.grading.keyed')}</p>
       )}
 
       {SLIDERS.map(({ key, label, tip }) => {
@@ -66,8 +66,8 @@ export function GradingPanel() {
         return (
           <SettingRow key={key} label={label} value={text} paths={[`grading.${key}`]}>
             <div className="field">
-              <div className="field__label-row">
-                <span className="field__label">
+              <div className="flex items-center gap-1">
+                <span className="type-label">
                   {label}
                 </span>
                 {tip && <InfoTip text={tip} />}
