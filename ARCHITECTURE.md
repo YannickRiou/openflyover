@@ -10,7 +10,8 @@ full customization through a single project document, WebCodecs video export, Ta
 
 - Vite 8 + React 19 + TypeScript (strict), oxlint.
 - three + @react-three/fiber + @react-three/drei, zustand.
-- Tests: vitest (node environment; jsdom in the files that need the DOM, `// @vitest-environment jsdom`). `*.test.ts` files sit next to their modules.
+- Tests: vitest (node environment; jsdom in the files that need the DOM, `// @vitest-environment jsdom`). `*.test.ts` / `*.test.tsx` files sit next to their modules (about 2,600 tests in 159 files). End-to-end: `npm run e2e` (`e2e/run.mjs`, see "Development rules").
+- Texts: in-house French / English runtime, no dependency (`src/i18n`, see "Internationalisation").
 - Tailwind CSS 4 (build-time Vite plugin, Preflight on) over the CSS variables of the design system in `src/ui/theme.css` (`@theme` block, `dark` variant on `[data-theme='dark']`). The hand-written CSS sits in `@layer base` / `@layer components`, so utilities win; shared `@utility` classes and the type, spacing and control-height scales in `src/ui/utilities.css` and `theme.css` (see « Pilot » in `docs/design/tailwind.md`); plan in `docs/design/tailwind.md`.
 - HeroUI 3 (MIT, React Aria inside) for the interactive components, wrapped one by one in `src/ui/primitives/` (see "Primitives"); plan in `docs/design/heroui.md`.
 
@@ -31,6 +32,7 @@ full customization through a single project document, WebCodecs video export, Ta
 |---|---|---|
 | `src/core/types.ts` | shared contracts | (frozen) |
 | `src/core/math.ts` | small numeric helpers | `clamp(value, min, max)`, `lastIndexAtOrBelow(sorted, value)`, `firstIndexAtOrAbove(sorted, value)` (binary searches on ascending arrays) |
+| `src/core/guards.ts` | checks shared by the validation of projects and presets | `isRecord`, `inRange`, `oneOf`, `withDefaults` |
 | `src/core/errors.ts` | error message shown to the user | `errorMessage(error)`: message of an `Error` (already in the interface language), a known browser or system error as a short sentence, otherwise "Erreur inattendue (…)" / "Unexpected error (…)" |
 | `src/i18n/*` | French and English texts, `t`, number and date formats (see "Internationalisation") | `t`, `useT`, `useLanguage`, `getLanguage`, `setLanguage`, `withLanguage`, `template`, `tRich`, `currentLocale`, `LANGUAGES`, `detectLanguage`, `MessageKey`; `format.ts`: `formatNumberIntl`, `decimalSeparator`, `formatDate`, `formatList`; `fr/<domain>.ts`, `en/<domain>.ts` |
 | `src/geo/ellipsoid.ts` | WGS84 ↔ ECEF, local frame | `WGS84`, `lonLatToEcef(lon,lat,h,target?)`, `ecefToLonLat(v)`, `createLocalFrame(lon,lat): LocalFrame`; `lonLat.ts` (no three.js, imported by the rest of the app): `haversineM(a: LonLat, b: LonLat)`, `centroid(bounds)`, `expandBounds(bounds, marginM, minSizeM?)` (re-exported by `ellipsoid.ts`) |
@@ -51,7 +53,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/terrain/mesh.ts` | tile geometry | `buildTileGeometry(key, grid, frame, opts: BuildTileGeometryOptions): TileGeometryResult`, `sampleTileMesh(key, grid, segments, lon, lat)` (height of that mesh) |
 | `src/terrain/quadtree.ts` + `engine.ts` | LOD, loading, Three group | `createTerrainEngine(options: TerrainEngineOptions, deps?: Partial<EngineDeps>, tuning?: Partial<EngineTuning>): TerrainEngine` (deps injectable for tests) |
 | `src/scene/*.tsx` | R3F components | `FlyoverCanvas`, `TerrainLayer` (+ `useTerrainContext` in `terrainContext.ts`, its pure setup in `terrainLayerSetup.ts`), `TrackLines` (+ `trackLineSet.ts`), `TrackPicker` (+ `TrackMenu`, DOM), `CameraRig`, `FlyoverRig`, `useDebouncedCallback` |
-| `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImage`, `MARKER_SCREEN_FACTOR` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine` (`trackLineStyle.ts`); `TrackStyleSection`, `MarkerSection` (`src/ui/TrackMarkerSection.tsx`) |
+| `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImages`, `MARKER_SCREEN_FACTOR` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine` (`trackLineStyle.ts`); `TrackStyleSection`, `MarkerSection` (`src/ui/TrackMarkerSection.tsx`) |
 | `src/flyover/path.ts` | flyover path | `buildTrackPath(track): TrackPath` (concatenated segments, cumulative distances, `time` in ms or NaN), `trackPathOf(track)` (same path, cached per track), `samplePath(path, distanceM): PathSample` (`ele` and `time` interpolated only if both neighbors have them), `recordedTimeAt(path, distanceM)` (fills points without a time), `elevationProfile(path, samples)`, `nearestOnPath(path, lonLat, timeMs?)`, `distanceAtTime(path, timeMs, toleranceMs?)`, `pickProjectedPath(screen, distM, px, py, maxPx)` (point of the projected track closest to the pointer) |
 | `src/flyover/smooth.ts` | track smoothing (see "Track and marker") | `smoothPoints(points, windowM)`, `smoothTrack(track, windowM)`, `smoothedTrackPath(track, windowM)` (smoothed positions, recorded distances and times) |
 | `src/flyover/camera.ts` | flyover camera | `computeCameraView(path, progress, frame, sampler, { exaggeration, liftM, camera?, durationS?, timeS?, orbitRad?, aimProgress?, cameraProgress? })` → `{ target, position, marker }`, `autoDistanceM`, `smoothedTurn`, `smoothHeadingAt`, `movesWithTime` |
@@ -68,12 +70,12 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/nights.ts` | nights of a multi-day track (see "Sun at the time of the outing") | `trackNights`, `flightNights`, `nightPauseS`, `TrackNight`, `FlightNight` |
 | `src/flyover/trackColor.ts` | track colored by a metric | `TRACK_COLOR_MODES`, `TrackColorBy`, `TRACK_METRICS` (label, unit, palette), `metricValues`, `trackMetricValues`, `hasMetric`, `robustRange`, `resampleValues`, `colorizeValues`, `VIRIDIS`, `MAGMA`, `MISSING_COLOR` |
 | `src/scene/exposure.ts` | exposure under the atmosphere | `DAYLIGHT_EXPOSURE`, `sunElevation`, `autoExposureEv`, `sceneExposure(elevation, ev)`, `nightFillIntensity` |
-| `src/weather/*` | weather of the outing (archive, or forecast for a planned outing) | `fetchOutingWeather(path, opts)`, `sampleLocations`, `outingDays` (source and days), `forecastCacheKey`, `createWeatherCache`, `WeatherError`, `OPEN_METEO_ATTRIBUTION`; `weatherAt(series, timeMs, lon, lat)`, `weatherAtTimes(series, timesMs, lon, lat)`, `weatherWidgetData(series, path, progress)`, `summarizeOuting`, `describeWeatherCode`, `windFromLabel`; `useWeatherStore`, `syncWeather` |
+| `src/weather/*` | weather of the outing (archive, or forecast for a planned outing) | `fetchOutingWeather(path, opts)`, `sampleLocations`, `outingDays` (source and days), `forecastCacheKey`, `createWeatherCache`, `WeatherError`, `openMeteoAttribution()`; `weatherAt(series, timeMs, lon, lat)`, `weatherAtTimes(series, timesMs, lon, lat)`, `weatherWidgetData(series, path, progress)`, `summarizeOuting`, `describeWeatherCode`, `windFromLabel`; `useWeatherStore`, `syncWeather` |
 | `src/plan/timing.ts` | estimated times of a planned outing (see "Planned outing") | `PLAN_ACTIVITIES`, `PLAN_ACTIVITY_LABELS`, `PACE_RANGE`, `OutingPlan`, `stretchHours`, `estimateElapsedS`, `withEstimatedTimes`, `withoutTimes`, `planActivityOf`, `localDepartureMs`, `localDayAndTime`, `localUtcOffsetMin` |
 | `src/osm/region.ts` + `src/scene/regionMesh.ts` + `src/scene/RegionHighlight.tsx` | administrative region of the outing, framed and highlighted by the region view (see "Film and timeline", Camera) | `regionName`, `regionCandidatesQuery`, `regionKind`, `REGION_KIND_LABELS`, `parseRegionCandidates`, `containingRegions`, `chooseRegion`, `candidateId`, `regionGeometryQuery`, `parseRegionGeometry`, `simplifyRings`, `fetchRegion`, `regionFrame`, `REGION_MIN_RATIO`, `REGION_MAX_POINTS`; `useRegionStore`, `syncRegion`, `holdRegion`; pure, tested: `buildRegionMesh`, `ringDepths`, `labelPoint`, `ringSegments`, `LABEL_GRID`; `RegionHighlight` |
-| `src/osm/*` | OpenStreetMap landmarks | `OVERPASS_ENDPOINTS`, `OSM_ATTRIBUTION`, `corridorBoxes`, `buildOverpassQuery`, `trackQuery`, `parseOverpass`, `runOverpassQuery`, `fetchTrackFeatures`; `parseEle`, `projectOnPath`, `landmarkPriority`, `landmarkText`, `buildLandmarks`, `landmarkLabels`, `splitHidden`, `DEFAULT_LANDMARK_SETTINGS`, `withLandmarkDefaults`, `withHidden`, `newLandmarkIds`, `PLACE_SIZES`, `PLACE_SIZE_LABELS`, `placeSizeOf`, `withPlaceSize`, `parsePopulation`, `pathBoxDistanceM`, `PLACE_SHARE`, `LANDMARK_DISTANCE_RANGE`, `KIND_LABELS`, `KIND_BADGES`; `useLandmarkStore`, `syncLandmarks`, `resetLandmarkStore` |
-| `src/overlay/*` | film overlay | `drawOverlay(ctx, frame, settings, size, assets)`, `prepareOverlayTrack(track, weather?)`, `overlayFrameAt(data, progress)`, `prepareOverlayFilm`, `overlayFilmFrameAt`, `stageCardAt`, `stageDipAt`, `createOverlayFilmCache`, `miniMapOutline`, `DEFAULT_OVERLAY`, `isValidOverlay`, `withOverlayDefaults`, `withOverrides`, `resolveOverlayTheme`, `leaderboardRows`, `loadLogo`, `loadOverlayFonts`, `createOverlayDrawer` (bridge to the export), `OverlayCanvas` |
-| `src/export/*` | video export | `buildFrameSchedule`, `VIDEO_ASPECTS`, `VIDEO_RESOLUTIONS`, `videoSize`, `createVideoEncoder(canvas, options)`, `ExportCanceledError`, `nativeEncoder.ts` (desktop ffmpeg): `exportCodec`, `createExportEncoder`, `createNativeVideoEncoder`, `wavFile`, `settle`, `renderSettledFrame`, `composeFrame`, `composeOverlayFrame`, `fillSky` (export sky, reused by the poster), `useExportStore`, `videoFileName`, `overlayBaseName`, `ALPHA_CANDIDATES`, `chooseVideoDestination`, `warnsInMemory`, `filmRate`, `ExportController`; `batch.ts` (batch rendering): pure, tested: `buildBatchJobs`, `formatKey`, `batchBaseName`, `estimateBatch`, `runBatch`, `batchProgressLabel`, `batchSummary`; `exportJob`, `useBatchStore` |
+| `src/osm/*` | OpenStreetMap landmarks | `OVERPASS_ENDPOINTS`, `osmAttribution()`, `corridorBoxes`, `buildOverpassQuery`, `trackQuery`, `parseOverpass`, `runOverpassQuery`, `fetchTrackFeatures`; `parseEle`, `projectOnPath`, `landmarkPriority`, `landmarkText`, `buildLandmarks`, `landmarkLabels`, `splitHidden`, `DEFAULT_LANDMARK_SETTINGS`, `withLandmarkDefaults`, `withHidden`, `newLandmarkIds`, `PLACE_SIZES`, `PLACE_SIZE_LABELS`, `placeSizeOf`, `withPlaceSize`, `parsePopulation`, `pathBoxDistanceM`, `PLACE_SHARE`, `LANDMARK_DISTANCE_RANGE`, `KIND_LABELS`, `KIND_BADGES`; `useLandmarkStore`, `syncLandmarks`, `resetLandmarkStore` |
+| `src/overlay/*` | film overlay | `drawOverlay(ctx, frame, settings, size, assets)`, `prepareOverlayTrack(track, weather?)`, `overlayFrameAt(data, progress)`, `prepareOverlayFilm`, `overlayFilmFrameAt`, `stageCardAt`, `createOverlayFilmCache`, `miniMapOutline`, `DEFAULT_OVERLAY`, `isValidOverlay`, `withOverlayDefaults`, `withOverrides`, `resolveOverlayTheme`, `leaderboardRows`, `loadLogo`, `loadOverlayFonts`, `createOverlayDrawer` (bridge to the export), `OverlayCanvas` |
+| `src/export/*` | video export | `buildFrameSchedule`, `VIDEO_ASPECTS`, `VIDEO_RESOLUTIONS`, `videoSize`, `createVideoEncoder(canvas, options)`, `ExportCanceledError`, `nativeEncoder.ts` (desktop ffmpeg): `exportCodec`, `createExportEncoder`, `createNativeVideoEncoder`, `wavFile`, `settle`, `renderSettledFrame`, `composeFrame`, `composeOverlayFrame`, `fillSky` (export sky, reused by the poster), `useExportStore`, `videoFileName`, `overlayBaseName`, `ALPHA_CANDIDATES`, `chooseVideoDestination`, `warnsInMemory`, `filmRate`, `ExportController`; `trackFilms.ts` (« Un film par trace », app side: `beginTrackFilms`, `trackFilm`, `shownFilm`); `batch.ts` (batch rendering): pure, tested: `buildBatchJobs`, `formatKey`, `batchBaseName`, `estimateBatch`, `runBatch`, `batchProgressLabel`, `batchSummary`; `exportJob`, `useBatchStore` |
 | `src/poster/*` | poster (see "Poster") | pure, tested: `PosterSettings`, `DEFAULT_POSTER`, `POSTER_FORMATS`, `posterSize`, `isValidPoster`, `withPosterDefaults`; `posterContent`, `posterFigure`, `availableFigures`, `posterStats`, `totalStats`, `trackLine`, `POSTER_LIST_MAX`; `posterLayout` (boxes), `fitText`, `fitLines`, `fitTrackList`, `wrapText`, `truncate`; `drawPoster`, `coverCrop`, `POSTER_THEMES`, `POSTER_FONTS`; `framingPath`, `planFlatMap` (`view.ts`); not pure: `renderFlatMap` (`view.ts`), `currentPosterContent`, `startPoster`, `usePosterPreview`, `previewKey` (`export.ts`), `PosterPanel` |
 | `src/flyover/race.ts` | ghost race | `RACE_SYNC_MODES`, `RACE_CAMERAS`, `STAGE_TRANSITIONS`, `DEFAULT_RACE`, `isValidRace`, `prepareRaceTrack`, `raceTrackOf`, `positionAtTime`, `positionAtDistance`, `arrivalTime`, `buildRace`, `raceAt(race, progress)`, `rankRacers`; `useRace`, `RaceMarkers` |
 | `src/flyover/sequence.ts` + `follow.ts` | several tracks (see "Several tracks") | `Stage`, `Sequence`, `playsInSequence`, `orderedTracks`, `buildSequence`, `sequenceOf`, `filmSequenceOf`, `filmTrackOf`, `stageAt`, `trackUnderMarker`, `sequenceLandmarks`; `filmFollowOf(tracks, race, smoothingM)`; hooks `useFilmTrack`, `useFilmSequence` (`scene/usePacing.ts`) |
@@ -84,12 +86,15 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/scene/grading.ts` + `gradingEffect.ts` + `GradingComposer.tsx` | color grading | `GradingSettings`, `DEFAULT_GRADING`, `GRADING_PRESETS`, `GRADING_RANGES`, `isValidGrading`, `isIdentityGrading`, `matchingPreset`, `gradingOfPreset`, `withGradingValue`, `gradingUniforms`; `GradingEffect`; `useGradingEffect`, `GradingComposer` |
 | `src/scene/lens.ts` + `useLensEffects.ts` + `flareEffect.ts` + `shutterEffect.ts` | « Objectif » lens effects (see "Lens") | pure, tested: `LensSettings`, `DEFAULT_LENS`, `LENS_RANGES`, `isValidLens`, `withLensDefaults`, `lensActive`, `bloomParams`, `depthOfFieldParams`, `SHUTTER_SUBFRAMES`, `SHUTTER_STEP_PX`, `shutterSamples`, `adaptiveShutterSamples`, `viewMotionPx`, `subFrameCount`, `previewShutterWeight`, `radialBlurLength`, `setShutterSubFrame`, `shutterSubFrame`, `subFrameSlices`; `useLensEffects`, `FlareEffect`, `ShutterEffect`; `filmViewAt` (`filmView.ts`: the camera placement of `FlyoverRig` at a progress and film time, shared with the export); `LensPanel` (`src/ui`) |
 | `src/project/*` | project document, history, presets | `serializeProject(state, name)`, `parseProject(text): LoadedProject`, `sanitizeSettings(raw, base)`, `SETTING_CHECKS`, `migrateProject`, `MIGRATIONS`, `applyProject`, `applySettings`, `createHistory`, `getSettingsHistory`, `installHistoryShortcuts`, `installSliderGestures`, `createPresetStore`, `getPresetStore`, `presetSettings` |
-| `src/platform/*` | website / desktop (see "Desktop application") | `getPlatform()` → `Platform` (`capabilities`, `storage`, `openFiles`, `saveFile`, `saveUrl`, `createWritableFile`, `droppedFiles`, `tileCache`, `projectLibrary`), `selectPlatform(scope)`, `videoEncoderMissingHint`; pure, tested: `isTauriRuntime`, `detectCapabilities`, `acceptAttribute`, `fileNameOf`, `extensionOf`, `mimeTypeOf`, `saveFilters`, `pickerTypes`, `keyValueStore`, `tileFileName`, `imageTypeOf`; `tileCache.ts`: `TileCache` (`get`, `has`, `put`, `deletePack`, `packs`, `size`), `createWebTileCache`, `createDesktopTileCache`; `projectLibrary.ts`: `ProjectLibrary` (`list`, `save`, `load`, `rename`, `remove`), `createProjectLibrary`, `createWebLibraryFiles`, `createDesktopLibraryFiles`, `projectFileNames`, `cleanProjectName`, `sortProjectEntries`, `parseProjectEntry`, `isProjectThumbnail`; `folder.ts`: `WritableFolder`, `canPickFolder`, `pickFolder`, `joinPath`; `oauthRedirect.ts`: `authorizeInBrowser` (see "Strava import"); `webApp.ts`: `installWebApp`, pure, tested: `shouldRegisterServiceWorker`, `wantsIosInstallHint`, `sharedFileName`, `watchForUpdates`; `serviceWorker.js` (see "Installable web app and mobile"); `isAppleMobile`, `pickerAccept`, `touchScreen`, `SHARE_SAVE_LABEL` |
+| `src/platform/*` | website / desktop (see "Desktop application") | `getPlatform()` → `Platform` (`capabilities`, `storage`, `openFiles`, `saveFile`, `saveUrl`, `saveDocument`, `createWritableFile`, `droppedFiles`, `tileCache`, `projectLibrary`), `selectPlatform(scope)`, `videoEncoderMissingHint`; pure, tested: `isTauriRuntime`, `detectCapabilities`, `acceptAttribute`, `fileNameOf`, `extensionOf`, `mimeTypeOf`, `saveFilters`, `pickerTypes`, `keyValueStore`, `tileFileName`, `imageTypeOf`; `tileCache.ts`: `TileCache` (`get`, `has`, `put`, `deletePack`, `packs`, `size`), `createWebTileCache`, `createDesktopTileCache`; `projectLibrary.ts`: `ProjectLibrary` (`list`, `save`, `load`, `rename`, `remove`), `createProjectLibrary`, `createWebLibraryFiles`, `createDesktopLibraryFiles`, `projectFileNames`, `cleanProjectName`, `sortProjectEntries`, `parseProjectEntry`, `isProjectThumbnail`; `folder.ts`: `WritableFolder`, `canPickFolder`, `pickFolder`, `joinPath`; `oauthRedirect.ts`: `authorizeInBrowser` (see "Strava import"); `webApp.ts`: `installWebApp`, pure, tested: `shouldRegisterServiceWorker`, `wantsIosInstallHint`, `sharedFileName`, `watchForUpdates`; `serviceWorker.js` (see "Installable web app and mobile"); `isAppleMobile`, `pickerAccept`, `touchScreen`, `shareSaveLabel()`; `externalLinks.ts`: `externalLinkOf`, `installExternalLinks` (desktop: links that open a new tab go to the system browser) |
 | `src/core/deviceBudget.ts` | GPU and memory budget of the device (see "Device budget") | `deviceBudget()`, pure, tested: `budgetFor`, `readDeviceTraits`, `DESKTOP_BUDGET`, `PHONE_MAX_SHORT_SIDE`, `LOW_MEMORY_GB` |
+| `src/scene/sceneLighting.ts` | sky and light constants of the viewer without the atmosphere (kept out of `FlyoverCanvas.tsx` for fast refresh, shared with the thumbnail) | `SKY_TOP_COLOR`, `SKY_HORIZON_COLOR`, `HEMISPHERE_*`, `SUN_POSITION`, `SUN_INTENSITY` |
 | `src/scene/touchGesture.ts` | fingers moving the 3D view (lower pixel ratio, see "Device budget") | tested: `watchTouchGesture`, `TOUCH_SETTLE_MS` |
 | `src/offline/*` | offline tile packs (see "Offline packs") | pure, tested: `planOfflineTiles`, `packImageryLevel`, `splitDistanceM`, `CORRIDOR_WIDTHS_M`, `MAX_PACK_TILES` (`plan.ts`); `offlinePolicy`, `OFFLINE_POLICIES` (`policy.ts`); `startPackDownload`, `createDailyQuota` (`download.ts`); `createPackRegistry`, `createStoredTileReader`, `packIdFor`, `sourcePrefixes` (`packs.ts`); not pure: `useOfflineStore`, `installOfflineTiles`, `preparePack`, `pausePack`, `resumePack`, `cancelPack`, `deletePack` (`store.ts`), `OfflinePanel` (`src/ui`) |
 | `src/state/store.ts` | zustand state | `useAppStore`, `Settings`, `Playback`, `AppState`, `resetAppStore` |
-| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested) |
+| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested); `StatusBar.tsx` (see "Status bar"), `ErrorBoundary.tsx` |
+| `src/ui/primitives/*` | HeroUI wrappers: the only place that imports `@heroui/react` (see "Interface", « Primitives ») | `Button`, `Tip`, `Menu`, `Popover`, `Modal`, `Toast`, `Tabs` / `TabList` / `Tab` / `TabPanel`, `Disclosure`, `Switch`, `Checkbox`, `Chip`, `RadioGroup` / `Radio`, `ToggleButtonGroup`, `ColorField`, `Select`, `Slider`, `NumberField`, `TextField`, `Titled`; `overlay.ts` (`isModalOpen`, `openDialog`, panel classes); `index.ts` exports them; the skins are `<name>.css` |
+| `src/ui/theme.css` + `utilities.css` + `src/index.css` | styling (see "Interface", « Styling ») | Tailwind setup, tokens (`@theme`), named variants and HeroUI imports (`theme.css`); `@utility` classes (`utilities.css`); reset and page base (`index.css`); `fonts.css`, `shell.css`, `app.css`, `appearance.css`, `exportPanel.css` |
 
 ### Development rules
 
@@ -100,12 +105,16 @@ full customization through a single project document, WebCodecs video export, Ta
   directly.
 - Node 24 is installed with fnm and may not be in the global PATH. Run `fnm use 24` (or prepend the fnm installation
   folder of Node 24 to PATH) before `npm`.
-- Scripts: `npm run dev` (port 5173), `npm run build`, `npm test` (vitest run), `npm run coverage` (same with coverage), `npm run typecheck` (tsc --noEmit).
+- Scripts (`package.json`): `npm run dev` (port 5173), `npm run build` (`tsc -b`, then Vite), `npm run preview`, `npm test` (vitest run; `npx vitest run --maxWorkers=1` on a busy machine), `npm run coverage` (same with coverage), `npm run typecheck` (`tsc --noEmit -p tsconfig.app.json`), `npm run lint` (oxlint), `npm run e2e`, `npm run tauri:dev` / `tauri:build`, `npm run notices` (regenerates `THIRD_PARTY_NOTICES.md` and the installers' licence pages), `npm run installer-assets` (installer images).
+- `npm run e2e` (`e2e/run.mjs`): starts its own Vite server and drives the app in a headless Chromium (puppeteer-core, software GPU) through 21 scenarios run one after the other in the same page (`accueil`, `onglets`, `langue`, `diagnostic`, `couleur`, `reglage-repli`, `poids-de-rendu`, `qualite-export`, `image-cle`, `timeline`, `inspecteur`, `menus`, `heure`, `cartes`, `cles-etiquettes`, `reperes`, `region`, `projet`, `export`, `historique`, `mobile`); any console or page error that is not network noise fails the scenario. Environment: `OPENFLYOVER_CHROME` (Chromium / Chrome executable), `OPENFLYOVER_E2E_SKIP_EXPORT=1` (skips `export`, the slowest, which needs the tile servers), `OPENFLYOVER_E2E_ONLY=a,b` (only those scenario ids). The scenarios read the French interface; they find controls by role, label or `data-testid`, never by styling class.
+- CI (`.github/workflows/`): `ci.yml` (pull requests and master: `lint`, `test`, `build` in parallel, `rust` only when `src-tauri/` or the workflow changed, `badge` on master for the README coverage badge), `pages.yml` (website on GitHub Pages), `desktop.yml` (installers; a `v*` tag also publishes a release, see "Desktop application"). No end-to-end tests in CI.
 
 ## Loading (bundle splitting)
 
-The first screen (shell, panels, welcome card) loads only the app and React: ~510 kB, ~170 kB gzip, instead of a
-single 3.1 MB file (930 kB gzip). The rest arrives through dynamic `import()` calls, each in its own file:
+The first screen (shell, panels, welcome card) is meant to load only the app and React (~510 kB, ~170 kB gzip at the first measurement,
+instead of a single 3.1 MB file, 930 kB gzip). Measured at v2.0.0 it is ~1.4 MB, ~390 kB gzip (the app 1.18 MB, React 219 kB):
+`ui/StatusBar.tsx` imports `@react-three/fiber` statically (frame counter and renderer counts of its performance readout), which pulls
+three.js and fiber into the entry file; an on-demand import there would take them out again. The rest arrives through dynamic `import()` calls, each in its own file:
 
 - right after the first paint: the 3D scene (`FlyoverCanvas`, three.js + fiber, `React.lazy` in `Stage`) and the
   "Hors ligne" (offline) panel (`React.lazy` in `App`). They stay mounted;
@@ -119,7 +128,7 @@ single 3.1 MB file (930 kB gzip). The rest arrives through dynamic `import()` ca
 
 To keep three.js out of the first screen, the app imports lon/lat distances and boxes from `geo/lonLat.ts`, not from
 `geo/ellipsoid.ts`. React has its own file (`codeSplitting.groups` in `vite.config.ts`), kept in cache from one version to
-the next. Lazy files over 500 kB (three + fiber, Takram, mediabunny) are expected: the warning threshold is 800 kB.
+the next. Lazy files over 500 kB (three + fiber, Takram, mediabunny) are expected: the warning threshold is 800 kB, which the entry file (1.18 MB at v2.0.0) now exceeds, so `vite build` prints its chunk size warning (not an error).
 
 ## On-demand rendering
 
@@ -286,7 +295,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      Also when the ground changes under a camera sitting still: on `engine.onChange` (finer tiles, at most once per frame) and on
      a change of the exaggeration, one sample, `wakeScene` only if the camera was lifted (same conditions).
 8. **State** (`store.ts`): `tracks: Track[]`, `addTracks`, `removeTrack`, `clearTracks`, `settings { terrainSourceId, imagerySourceId,
-   imageryZoomOffset, exaggeration, wireframe }`, `setSetting`, `terrainStats`, `bounds` (union of the tracks) and `frameOrigin` (centroid of the
+   imageryZoomOffset, exaggeration, wireframe, … }` (the terrain keys; the other groups are described in their own sections), `setSetting`, `terrainStats`, `bounds` (union of the tracks) and `frameOrigin` (centroid of the
    first batch rounded to 0.01°, fixed as long as a track remains); the engine `area` is derived in the scene (`TerrainLayer`).
    `fitRequest` (counter incremented to request a reframing), `loading` (import failures go through the messages, see "Interface"). On import, the imagery switches automatically to
    IGN then swisstopo if the track lies entirely within their footprint, unless the user has already picked a source by hand.
@@ -334,21 +343,21 @@ Track colors (`TRACK_COLORS`) are chosen for legibility over orthophotos, not fr
 
 ## Interface
 
-Dark shell (ink) around light panels (paper), in the "Carte alpine" tokens. Layout: `src/ui/shell.css`
-(panel components: `app.css`). Tokens in `theme.css`: the semantic roles listed above (aliases of the palette; the dark theme
+Dark shell (ink) around light panels (paper), in the "Carte alpine" tokens. Styling: Tailwind utilities in the components, the shared `@utility` classes of
+`src/ui/utilities.css` and a little hand-written CSS, see « Styling » below. Tokens in `theme.css`: the semantic roles listed above (aliases of the palette; the dark theme
 only remaps them), sizes (`--topbar-h` 48, `--rail-w` 64, `--panel-w` 320, `--dock-w` 300,
 `--statusbar-h` 24, `--control-h` 32, `--space-6`), `--shadow-card`, `--shadow-pop`, `--focus-ring-on-dark` (accent on
 ink, 7.3:1). Dark theme: `:root[data-theme='dark']` in `theme.css` remaps the panel roles (`--surface-panel/card/control`,
 `--text-1/2`, `--text-info`, `--line`, `--line-strong`, status and shadows); the bar, rail and status bar are dark in both
 themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under white text), `--text-info`, `--swatch-border`;
 `--status-error*` are fixed reds (they no longer follow the accent).
-**Primitives** (`src/ui/primitives/`, one file per component and its CSS, exported from `index.ts`; screens never import
-`@heroui/react`): `Button` (`variant` primary / secondary / icon, `size="sm"`, `block`; it keeps the `.btn` / `.icon-btn`
+**Primitives** (`src/ui/primitives/`, one file per component, exported from `index.ts`, with a `<name>.css` skin only where the component
+needs one; screens never import `@heroui/react`; the rules are in `docs/design/heroui.md`): `Button` (`variant` primary / secondary / icon, `size="sm"`, `block`; it keeps the `.btn` / `.icon-btn`
 classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Menu` (list of actions: opened by a trigger, or at a
 `point` for the right-click menu of the 3D view; `sheet` makes it a bottom sheet on a phone) and `Popover` (panel with its own
 controls, same two modes). Both are portalled out of their container (into the open `Modal`, if any) and carry
 `data-local-escape`, so an open one closes before the app's own Escape; their skin is utilities (`overlay-frame`, `overlay-sheet`, `overlay-item` in
-`utilities.css`), HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
+`utilities.css`), HeroUI's CSS for them is not imported. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`), `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
 or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen), `RadioGroup` with `Radio` (`look` `segmented`,
 `chips`, or `plain` for options the screen draws: the 3 × 3 `AnchorPicker`, the output-format buttons, the proportion and camera-preset tiles; the arrows move and choose, the screens' CSS keys on
 `.option__label`; a `Radio` forwards its `ref` for a `Tip`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
@@ -358,13 +367,26 @@ the arrows, Page Up / Down, Home and End and the screen-reader name, taken from 
 one undo step through `[data-slider]` in `installSliderGestures`, a vertical swipe from the rail scrolls the panel, and `onChange` is
 never called twice with one value), `NumberField` (React Aria's, so the entry is settled on Enter or leaving the field, within `min` / `max`
 and on the `step`; `live` also applies each number typed in range; Escape puts the stored value back) and `TextField` (`label` above, or
-`aria-label`); `NumberField` and `TextField` take the project's `.input` look and no HeroUI CSS. HeroUI's styles are imported in `theme.css` `Modal` (the dialogs: shortcuts, sources, Strava, diagnostic report; `open` / `onClose` / `title`, the heading is the dialog's name; modal, focus kept inside and given back, Escape and a click on the backdrop close it, it scrolls, full screen on a phone) marks its dialog `data-modal`: `openDialog()` / `isModalOpen()` (`overlay.ts`) find it, so menus, popovers and tooltips opened from inside are portalled into it and the app's own shortcuts wait. `ColorField` (the colour: a button showing it that opens a panel, area / hue slider / hex field, for any colour, bottom sheet on a phone, plus optional `presets` to pick in one tap; the value is a lowercase `#rrggbb`, `onChange` is called while dragging like the native input it replaces; `dot` is the button alone, `children` follow it). Modal and ColorField, like the overlays, import no HeroUI CSS. HeroUI's styles are imported in `theme.css`
+`aria-label`); `NumberField` and `TextField` take the project's `.input` look and no HeroUI CSS. `Modal` (the dialogs: shortcuts, sources, Strava, diagnostic report; `open` / `onClose` / `title`, the heading is the dialog's name; modal, focus kept inside and given back, Escape and a click on the backdrop close it, it scrolls, full screen on a phone) marks its dialog `data-modal`: `openDialog()` / `isModalOpen()` (`overlay.ts`) find it, so menus, popovers and tooltips opened from inside are portalled into it and the app's own shortcuts wait. `ColorField` (the colour: a button showing it that opens a panel, area / hue slider / hex field, for any colour, bottom sheet on a phone, plus optional `presets` to pick in one tap; the value is a lowercase `#rrggbb`, `onChange` is called while dragging like the native input it replaces; `dot` is the button alone, `children` follow it). Modal and ColorField, like the overlays, import no HeroUI CSS. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,
 `--field-*` = the control surface and `--line-strong`, `--radius` = `--radius-md`; `--accent` and `--accent-hover` are the
 app's own, so a filled accent surface uses `--accent-fill`); `--color-accent` and the radii stay the app's (second `@theme`
 block). A Tailwind `@theme` token of HeroUI that the app also defines must keep the app's value.
+**Styling** (rules and reasons: `docs/design/tailwind.md`, read it before touching a screen). Tailwind CSS 4 runs at build time only
+(`@tailwindcss/vite`, nothing at run time). `theme.css` imports it and declares the palette, fonts, type and spacing scales, radii and
+shadows as `@theme` tokens (`bg-ink`, `text-accent`, `font-heading`, `text-body`, `h-control`…), the semantic roles above, the `dark`
+variant (the theme attribute, never the system scheme) and the named variants `touch`, `drawer`, `phone`, `phone-any`,
+`phone-landscape` and `bar-condensed` (the media queries of `shell.css`, named once). `utilities.css` holds the `@utility` classes
+several components share (`type-label`, `type-hint`, `panel-head`, `rail-tab`, `btn-chrome`, `overlay-frame`…) and the
+`timeline-sized` variants. A component carries its layout, spacing and type as utilities in its `className` (a string too long for the
+JSX is a `const` above it with a comment) and reads the state attributes of the components (`aria-selected`, `data-selected`,
+`data-focus-visible`…), never extra state classes; tests and the end-to-end scenarios find controls by role, label or `data-testid`,
+never by a styling class. What stays hand-written (about 2,400 lines, in `@layer base` / `@layer components` so that a utility wins):
+`src/index.css` (reset and page base), `theme.css` (focus ring, form controls, the dark theme), `shell.css` (shell layout and the
+responsive rules of « Widths » and « Phone and tablet »), `app.css` (settings blocks, overlay canvas, export buttons),
+`appearance.css` (density), `exportPanel.css`, `fonts.css` and the skins `primitives/<name>.css`.
 **Appearance** (« Réglages » › « Apparence », `PreferencesPanel`): theme Clair / Sombre / Système, accent colour, bar and rail
 colour, density, reset. Device preferences in `Preferences.appearance` (`openflyover.preferences.v1`, `parseAppearance` in
 `appearance.ts`). `applyAppearance(root, appearance, systemDark)` sets `data-theme` and `data-density` on `<html>` and the
@@ -375,8 +397,8 @@ keeps 4.5:1, the bar for its secondary text (hint in the panel). Compact: spacin
 pointer (`appearance.css`).
 
 - **Top bar** (`TopBar.tsx`): logo, project name editable in place (`projectName` in the store, empty = name of the
-  first track, `effectiveProjectName`) and the saved state, told by the save icon (a dot while modified, the accent colour for 3 s once saved: `topbar__save--unsaved` /
-  `--saved`; `savedProject`: settings, tracks and name at the
+  first track, `effectiveProjectName`) and the saved state, told by the save icon (a dot while modified, the accent colour for 3 s once saved: `data-save-state` `unsaved` /
+  `saved` on the button; `savedProject`: settings, tracks and name at the
   last save or the last open, compared by reference, `isProjectDirty`; a project with a track is saved
   automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open, icon only; a single picker: `.opnflvr` / `.json` → project, anything else → track import,
   `routeOpenedFiles`; opening a project clears the history), "Enregistrer" (save); in the center the **output format** ("Libre" (free),
@@ -419,14 +441,14 @@ pointer (`appearance.css`).
   time: whatever fills the dock (drawer or inspector) collapses the panel, which comes back when the dock empties; expanding the
   panel empties the dock and deselects the block (`shellReducer`: `inspecting`, `inspect` event, which `App` sends when
   `filmSelection` changes, after a press is released: the timeline does not change scale during a drag).
-- **Timeline size** (`TimelineResizer.tsx`, `timelineResizer.css`, pure and tested `layoutSize.ts`: `TIMELINE_HEIGHT_KEY`,
+- **Timeline size** (`TimelineResizer.tsx`, pure and tested `layoutSize.ts`: `TIMELINE_HEIGHT_KEY`,
   `parseTimelineHeight`, `timelineHeightRange`, `clampTimelineHeight`): on wide layouts (not the phone layouts), a thin
   separator (`role="separator"`, « Taille de la timeline ») between the 3D view and the timeline. Pointer drag (capture),
   Up / Down (Shift: larger), Home / End (smallest / largest), double-click = default layout. The height is clamped
   (transport row + ruler + « Plans » lane at least; the view keeps at least 35 % of the shared height) and re-clamped on
   window resize. Remembered per device (`getPlatform().storage`, `openflyover.layout.v1`, `{"timelineH": px}`), not in the
   project nor in `preferences.ts`; absent = the timeline takes the height of its content. The handle sets
-  `data-timeline-sized` and `--timeline-h` on `.view`; the stage resizes through its `ResizeObserver` and R3F invalidates on
+  `data-timeline-sized` and `--timeline-h` on `.view`, which the timeline reads through the `timeline-sized` variants (`utilities.css`); the stage resizes through its `ResizeObserver` and R3F invalidates on
   size changes; the export renders its own size. Disabled during an export.
 - **During an export**: tabs, panel collapse, format, "Ouvrir", "Recadrer" (reframe), undo / redo (buttons) and
   closing the drawer are disabled (resizing the scene would resize the canvas).
@@ -459,7 +481,7 @@ pointer (`appearance.css`).
   défaut · Annuler" (`resetSettings` returns a guarded undo: it only acts if the settings are still those it
   returned, so never on a later or earlier step; the message disappears on the next settings change).
   Also photos added to the timeline ("Placer sur le parcours" (place on the route) as the action).
-- **Drop anywhere**: `dragover` / `drop` on `window` (in `App`): `.gpx` / `.fit` files imported, `.json` opened
+- **Drop anywhere**: `dragover` / `drop` on `window` (in `App`): `.gpx` / `.fit` files imported, `.opnflvr` (or an older `.json`) opened
   as a project (`openFiles`, routing `routeOpenedFiles`), full-screen veil "Déposez vos traces GPX ou FIT" (drop your GPX or FIT tracks)
   (`pointer-events: none`) during the drag (`isFileDrag`). A drop already handled (`defaultPrevented`: the timeline
   takes photos) is left as is, and the veil fades out over the timeline; nothing is accepted during an export.
@@ -517,9 +539,9 @@ pointer (`appearance.css`).
     overscroll. A touch tablet in portrait (`max-width: 1023px` and `pointer: coarse`) also takes the « Plus d'actions »
     menu.
   - *Portrait phone* (`max-width: 699px`, after CapCut; `App` reads it with `usePhone`): from top to bottom the top
-    bar, the 3D preview (`--phone-preview-h` 42dvh, only with a film: `.view:has(> .film-tl)`), the timeline's bar as a
+    bar, the 3D preview (`--phone-preview-h` 42dvh, `Stage.tsx`, only with a track), the timeline's bar as a
     slim transport row (play and time, then the « Arrêt », « Vitesse », « Texte », « Média », speed and « Options » icons in a row
-    that scrolls sideways, `.film-tl__tools`; no ■, readout, zoom nor fold), the timeline (`Timeline` `centred`, below),
+    that scrolls sideways, `data-testid="timeline-tools"`; no ■, readout, zoom nor fold), the timeline (`Timeline` `centred`, below),
     the bottom tab bar (all nine tabs, 72 px wide at least so the next one peeks past the edge, scrolling sideways),
     the status bar. Panel, export drawer and inspector are half sheets from under the transport row to the status bar,
     over the timeline and the tab bar, never over the preview (sliding in, not under `prefers-reduced-motion`). Their
@@ -531,7 +553,7 @@ pointer (`appearance.css`).
     and keeps the selection), « Supprimer », « Sans plan » for the opening and the closing, `removeFilmItem`).
     Landscape phone: the rail stays on the side, without its fold button; the timeline strip as above.
   - *Centred timeline* (`Timeline` `centred`, portrait phone): the lanes carry half their width of blank at both
-    ends, the playhead is a line fixed in the middle (`.film-tl__body::after`), so the horizontal scroll is the film
+    ends, the playhead is a line fixed in the middle (drawn on the body of the lanes), so the horizontal scroll is the film
     time (`centredScrollLeft`, `centredTime` in `film/timeline.ts`): a layout effect after every render scrolls to the
     playhead (and remembers it), any other scroll (finger, momentum, wheel) seeks. The content takes `touch-action:
     pan-x pan-y`, so the browser scrolls under the finger; a press is a tap if released within 8 px (a tap on a block
@@ -551,7 +573,7 @@ pointer (`appearance.css`).
   - *No hover* (`hover: none`): tooltips do not stick after a tap (`Tip` ignores touch hover); an ⓘ shows its sentence when tapped
     (`tap`), a long press shows any other tip. Every other `:hover` style sits in `@media (hover: hover)`,
     in place (same cascade on a computer): no grey background or border left on a button after a tap.
-- **Sections of the tabs** (`PanelSection.tsx`): `PanelSection` = flat collapsible section (`fold` classes,
+- **Sections of the tabs** (`PanelSection.tsx`): `PanelSection` = flat collapsible section (`fold-head` utility,
   sticky header: title, "modifié / Par défaut" of its keys, chevron), open initially, then as last left: open / folded
   state remembered by title in the platform storage (`FOLDS_KEY` `openflyover.folds.v1`, `parseFoldPrefs` in `shell.ts`,
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
@@ -570,7 +592,7 @@ pointer (`appearance.css`).
   dash, marker size, km markers, label size and range, landmark kinds and distance, sea render, low cloud base, cloud quality, weather intensity, exposure, sun date,
   the four grading sliders, flare, bloom radius, camera style, distance / tilt / aim / smoothing, pacing parameters, transitions; export frame rate, quality, still type. Setting
   keys and behavior unchanged. `InfoTip` (ⓘ, one-sentence `Tip`, focusable, `aria-label`) only
-  on jargon: exaggeration, wireframe, exposure, highlights. Styles: delimited block at the end of `app.css`.
+  on jargon: exaggeration, wireframe, exposure, highlights.
 - **Render weight** (`src/ui/renderCost.ts`, pure, tested; `RenderWeight` and `TabWeightDot` in `PanelSection.tsx`): which settings lengthen
   the export, as a pictogram (three bars like a signal icon: filled navy, the rest periwinkle; the heaviest tier in chartreuse on a navy
   chip; `--color-navy` / `--color-periwinkle` / `--color-chartreuse` in `theme.css`) after the name of the setting (`weight` prop of
@@ -605,7 +627,7 @@ pointer (`appearance.css`).
   (halfway to noon), "Midi" (noon), "Heure dorée" (golden hour; 1 h before sunset), "Coucher" (sunset; last quarter hour before),
   "Nuit" (night; solar midnight), grayed out when the moment does not exist (polar day or night). Each shortcut is one undo
   step (`transaction`); a slider drag is one too (see "History").
-- **Panel clarity** ("Clarté" block at the end of `app.css`): `Switch` to turn on a whole feature (overlay and each of its elements, atmosphere, weather, landmarks, ghost
+- **Panel clarity**: `Switch` to turn on a whole feature (overlay and each of its elements, atmosphere, weather, landmarks, ghost
   race, slow-downs, credits); checkable chips (`Chip`: check mark and tinted background once
   selected, dotted if unavailable) for multiple choices (landmark types, counters); option text at weight 500,
   labels at 600. Météo: weather on two lines (outing; marker instant), tables collapsed under
@@ -649,7 +671,7 @@ The interface and the texts drawn into the films and posters exist in **French**
     with React nodes in it.
   - Non-React code (film overlay, poster, export, import errors, film model) calls `t` directly: the current language lives in
     this module, set from the preferences.
-- **Numbers, dates, lists** (`format.ts`, `Intl` formats cached per language): `formatNumberIntl(value, digits, minDigits)` (« 1 234,5 »
+- **Numbers, dates, lists** (`format.ts`, `Intl` formats cached per language): `formatNumberIntl(value, fractionDigits, minFractionDigits)` (« 1 234,5 »
   / « 1,234.5 », no sign on a zero), `decimalSeparator()`, `formatDate(value, options)` (any `Intl.DateTimeFormat` options),
   `formatList(items)` (« a, b et c » / « a, b and c »). `src/ui/format.ts` (`formatNumber`, `formatDistance`, `formatDuration`,
   `formatBytes`, `formatClock`…) builds on them and on the `format.*` messages (units: « Mo » / « MB », « D+ » / « Gain »).
@@ -681,7 +703,7 @@ The interface and the texts drawn into the films and posters exist in **French**
     developer: `console` messages, internal assertion errors, the breadcrumbs and the **diagnostic report** (kept in French on purpose,
     `withLanguage('fr', …)`: it is pasted into bug reports, the dialog around it is translated), the command-line output of the
     batch render, the sample GPX, `public/manifest.webmanifest` and the service worker.
-  - The user guide (`docs/user-guide.html`) stays in French; the README and this file are the English documentation.
+  - The documentation (README, this file, `docs/`, the user guide included) is in English and quotes the French labels of the interface (the reference language); the interface itself is available in both languages.
 - **Terminology** (English): Shot (« Plan »), Fade to black / white, Cut (« Coupe »), Hold (« Arrêt »), Keyframe (« Image clé »),
   Timeline, Lane (« Piste / ligne »), Opening / Closing card, Export, Render; Elevation gain (« D+ »), Pass (« Col »), Peak / Summit
   (« Sommet »), Hut (« Refuge »), Stage (« Étape »), Route (« Parcours »). The French wording is the reference and does not change.
@@ -1080,8 +1102,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   `stops[]` `{ id, atM, durationS (0.5–60 s), camera: 'film' | 'orbite' | 'large' | 'fixe', label?, source?: { kind, ref? } }`
   (`STOP_CAMERA_LABELS`: "Comme le film" (like the film), "Tour lent" (slow orbit), "Vue large" (wide view), "Fixe" (fixed));
   `markerKeys[]` `{ id, atM, kind, figure, imageId?, color?, figureColor?, size? }` (places along the film track where the marker changes its look:
-  ball, figure or picture, with its own colours and size; anchored in metres like the camera keys, round dots on the « Marqueur » lane,
-  `.film-tl__key--marker`; added from the « Marqueur » section of the Trace tab with ◀ ◉ ▶, `addMarkerKeyHere`). `markerAt(film, settings.marker, atM, fadeM, imageOf)`, pure: the marker of the settings
+  ball, figure or picture, with its own colours and size; anchored in metres like the camera keys, round dots on the « Marqueur » lane
+  (`data-testid="timeline-key"`); added from the « Marqueur » section of the Trace tab with ◀ ◉ ▶, `addMarkerKeyHere`). `markerAt(film, settings.marker, atM, fadeM, imageOf)`, pure: the marker of the settings
   before the first key; around a key a smootherstep cross-fade of `fadeM = MARKER_FADE_S (0.8 s) × length / flightS`
   metres centred on the key, from the previous look; a key replaces kind, figure and picture, and `color` / `figureColor` ('' = the track's) / `size`
   where set (`withKey`; unset = the settings', same rules as `isValidMarker`, no version bump), while label, stick and animation stay those of
@@ -1349,8 +1371,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   cards, the camera, parameter and marker keys, highlights, ruler ticks, playhead; the dragged item left out); `snapTime`
   catches the nearest within 8 px and lets go beyond 14 px (hysteresis: `SnapState.held`, the targets caught by the previous pointer move),
   `hits` being every target at the time it lands on; `snapper(ctx)` is the `snap` of a gesture and records the hits in
-  `ctx.snapState`, which the component draws as an alignment guide (`.film-tl__guide`: a line across the lanes and the
-  names of the targets). A moved stop snaps to highlights in meters (`snapValue`). The magnet button of the bar
+  `ctx.snapState`, which the component draws as an alignment guide (a line across the lanes and the
+  names of the targets, `data-testid="timeline-guide-tag"`). A moved stop snaps to highlights in meters (`snapValue`). The magnet button of the bar
   (`Preferences.timelineMagnet`, per device, on by default) turns it off, Alt inverts it while dragging. Values
   bounded to the model ranges, rounded to the hundredth of a second (moved stop: to the meter). A press without moving
   3 px only selects. On a block that moves, an edge grip only takes a press in the outer third of its side
@@ -1571,7 +1593,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   when needed, a refused permission or a vanished file falls back to the picker, other errors throw); on the desktop the path (in the
   fs scope: dialog plugin, or added in Rust for files opened by the OS); Firefox, Safari and iOS download or share, with no
   target (nothing is overwritten). The target lives in `useAppStore.projectFile` (session only, not in the file); it is set by a
-  save, « Enregistrer sous… » or « Ouvrir » and forgotten by `closeProject` / `newProject`. « Enregistrer » (`topbar__save`,
+  save, « Enregistrer sous… » or « Ouvrir » and forgotten by `closeProject` / `newProject`. « Enregistrer » (the save icon of the top bar,
   Ctrl+S) = `saveProject`, « Enregistrer sous… » (Projet tab, Ctrl+Maj+S) = `saveProjectAs`; a failed write keeps the project
   « Modifié »; the autosave to « Mes projets » is unchanged (plain JSON).
 - **Desktop opening** (`src-tauri/src/opened.rs`, `src/platform/openedFiles.ts`): a `.opnflvr` or `.json` argv path (Windows and
@@ -1600,7 +1622,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   is not recorded; nothing is recorded during "Un film par trace" (one film per track; `suspend`); opening a project clears the history. Shortcuts Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y (ignored in
   text fields), installed once by `App`. The project name, save and open are in the top bar
   (with Ctrl/Cmd+S, Ctrl/Cmd+O); the "Projet" panel is the complete place for project actions: a « Projet » section
-  (« Nouveau projet », « Ouvrir… », « Enregistrer un fichier… », « Fermer le projet »), then "Mes projets" and the presets.
+  (« Nouveau projet », « Ouvrir… », « Enregistrer », « Enregistrer sous… », « Fermer le projet »), then "Mes projets" and the presets.
 - **Closing the project / a new one** (`closeProject`, `newProject` in `ui/projectActions.ts`, « Projet » section of
   `ProjectPanel.tsx`): through `confirmClose` like the desktop window: the change waiting for the autosave is written
   first (`flushAutosave`), then a question only when changes would still be lost (`projectCloseLoss` in `ui/library.ts`:
@@ -1620,7 +1642,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   panel: add its key to the marker's `keys` list.
 - **Mes projets** (`platform/projectLibrary.ts`, `ui/library.ts`, "Projet" tab): `getPlatform().projectLibrary`
   (null on the website without Cache Storage). Two text files per project, named by a checked id (`[a-z0-9-]`, never a
-  path coming from elsewhere): the document `<id>.openflyover.json` (the one from "Enregistrer", media included) then the entry
+  path coming from elsewhere): the document `<id>.openflyover.json` (plain JSON, media included) then the entry
   `<id>.entry.json` (`ProjectEntry { id, name, updatedAt, summary, sizeBytes, thumbnail? }`, the only one read for the list; an unreadable
   entry is discarded). `ProjectLibrary.load` returns the document as a `Blob` (`LibraryFiles.read`: `Response.blob()` over the cache entry on the
   web, one `Blob` over the bytes on the desktop); only the small entry files are read as text. `lastOpenProject` / `libraryFile` wrap it in a
@@ -1841,7 +1863,7 @@ exports) gets it from the terrain source of the settings.
 - **Hiding one by one**: the eye button of a landmark adds its OSM id to `settings.landmarks.hiddenIds` (project document,
   undoable, "modifié" chip). After filter and cap, `splitHidden` separates the shown landmarks (`landmarks`: labels, automatic
   stops, titles) from the hidden ones (`hidden`, listed greyed out and struck through in the panel so they can be shown again;
-  "Réafficher tous les repères masqués" empties the list), without a new request. Projects saved without `hiddenIds` are
+  « Tout afficher » empties the list), without a new request. Projects saved without `hiddenIds` are
   completed on load (`withLandmarkDefaults`); ids that are not strings invalidate the setting.
   Projects saved without `places` get every size (`withLandmarkDefaults`); a saved `kinds.place` is kept.
 
@@ -1856,7 +1878,7 @@ exports) gets it from the terrain source of the settings.
   places of the outing, are there, and an old project receives `[]` from `withFilmDefaults` without migration. OSM landmarks, on the other hand,
   are not saved (re-read from Overpass); only their settings are.
 - **Adding**: right-click on the terrain › "Point d'intérêt ici" › name typed in the menu (empty: "Point d'intérêt 3",
-  `defaultPoiName`), or "Ajouter au marqueur" (add at the marker) in the "Points d'intérêt" section of the Carte tab (`PoiPanel`, name
+  `defaultPoiName`), or « Point d'intérêt au marqueur » (add at the marker) in the « Repères et points d'intérêt » section of the Carte tab (`LandmarkPanel`, name
   field selected immediately). Each addition, removal and rename (keystrokes merged) goes through `editFilm`: one
   undo step, without selection on the timeline.
 - **List**: name editable in place (an empty name has no label), "Arrêt" = 4 s stop at the recorded point of
@@ -2215,7 +2237,7 @@ exports) gets it from the terrain source of the settings.
   max. elevation, number of climbs), `weather`, `flat` ("Carte à plat" (flat map), missing from an old project: `false` through
   `withPosterDefaults`, `SETTING_UPGRADES`). Validation `isValidPoster` (`SETTING_CHECKS`). A preset keeps only
   its style (`presetSettings`, like the film reduced to its shots): the title belongs to the project.
-- **Content** (`content.ts`, pure): title, "sous-titre · date" (subtitle · date) line (`formatDateFr`), figures that the track records
+- **Content** (`content.ts`, pure): title, "sous-titre · date" (subtitle · date) line (`formatDate`, `i18n/format.ts`), figures that the track records
   (a missing figure is not drawn, its chip is grayed out), 400-point profile (`elevationProfile`), weather line
   (`weatherSummaryLine`, only if the weather of the first track is loaded), credits (`overlayCredits`, the same
   strings as the status bar), read from the stores by `currentPosterContent` (`export.ts`). Several tracks: a series of
@@ -2526,7 +2548,7 @@ exports) gets it from the terrain source of the settings.
   the first stage keeps the first track's metres, so switching mode keeps what was placed on it.
 - Clock: `FilmClockFor.cutsM` (the stages' starts) and `stageIds` (their track ids) → `clock.cuts` (`{ atM, timeS }`, like
   the camera keys), read by the overlay (`overlayTime` copies them into `OverlayTime.cutsS`) and the motion blur, and
-  `clock.junctions` (below). The « Plans » lane keeps a thin band in each stage's colour (`.film-tl__stage`).
+  `clock.junctions` (below). The « Plans » lane keeps a thin band in each stage's colour.
 - **Junctions** (`src/film/junctions.ts`, `film.junctions[]`): the junction after the stage of track `afterTrackId` (derived id
   `junction-<trackId>`, so it survives a reorder), `{ kind, holdS, card? }`, every field optional: what it does not set is
   `film.junctionDefault` `{ kind, holdS, card }` (absent = `DEFAULT_JUNCTION`: a fade to black held 1.5 s, cards on).
@@ -2592,7 +2614,7 @@ exports) gets it from the terrain source of the settings.
   `reorderTracks(trackId, toIndex)` and `orderTracksByDate()` = `idsByDate`) builds both span lists (`buildSequence` of the new
   order), writes `race.order` (dropped when it equals the list order) and the remapped film in **one** `setState` inside
   `getSettingsHistory().transaction`: one undo step restores the order and every remapped item; the playhead keeps its progress.
-  UI: the track list has a handle (`.track__handle`: mouse drag after 4 px, touch long press 350 ms with `navigator.vibrate`,
+  UI: the track list has a handle (`data-handle`: mouse drag after 4 px, touch long press 350 ms with `navigator.vibrate`,
   `touch-action: none` on the handle only, auto-scroll of the panel within 40 px of its edges, insertion line, Escape cancels),
   Alt+↑ / Alt+↓ on a card with an `aria-live` announcement, the ▲ button and « Ordonner par date » (`dropIndexAt` finds the place
   from the centres of the other cards); the « Étapes » lane's stage blocks drag the same way (gesture kind `reorder`, a line across
@@ -2692,10 +2714,10 @@ ticked ones.
 Two targets, one codebase: the static website and the Tauri 2 application (`src-tauri/`), which loads the same `dist/`. What
 differs goes through `src/platform/`.
 
-- **Contract** (`platform.ts`): `Platform` = `capabilities { isDesktop, videoEncoder, canStreamToDisk }`, `storage` (synchronous
+- **Contract** (`platform.ts`): `Platform` = `capabilities { isDesktop, videoEncoder, canStreamToDisk, sharesFiles? }`, `storage` (synchronous
   key / value: `get`, `set` → false when the storage refuses (full, blocked; the value then stays in memory for the
   session and `get` returns it), `remove`, `keys(prefix)`, which lists the keys stored or kept in memory), `openFiles({ filters, multiple })` → `File[]` (empty if the dialog is closed),
-  `saveFile(blob, { fileName, filters? })` and `saveUrl(objectUrl, …)` → `{ saved: true, fileName } | { saved: false }`,
+  `saveFile(blob, { fileName, filters? })` and `saveUrl(objectUrl, …)` → `{ saved: true, fileName } | { saved: false }`, `saveDocument` (save in place, see "Project (phase 4)"),
   `createWritableFile({ fileName, filters? })` → `WritableFile { fileName, path?, write(data, position), close, discard }` or null
   (dialog closed; `discard` stops and deletes the partial file, no effect after `close`, can be called several times),
   `droppedFiles(dataTransfer)`. Filters are those of native dialogs (`{ name, extensions }` without a dot); the website
@@ -2735,17 +2757,19 @@ differs goes through `src/platform/`.
   `openflyover.osm.v1.<fingerprint>`): when `set` returns false, it deletes its own entries (`keys(CACHE_PREFIX)`,
   never the other keys) and retries once; otherwise the memory cache avoids repeated requests within the session.
 - **Tauri** (`src-tauri/`): `lib.rs` registers the dialog, fs, oauth and opener plugins (the last two for the Strava
-  import), the six native encoder commands
-  (`video.rs`) and the two command-line commands (`cli.rs`), all declared in `build.rs` (`AppManifest::commands`):
+  import, and for the links of the app that open in a new tab), the six native encoder commands
+  (`video.rs`), the two command-line commands (`cli.rs`), `opened_files` (`opened.rs`) and `system_stats` (`system.rs`), ten in all,
+  declared in `build.rs` (`AppManifest::commands`):
   a command missing from this list or from `capabilities/default.json` is refused. `main` window
   1440 × 900 (at least 1024 × 700). `dragDropEnabled: false`: otherwise Tauri intercepts drops and the HTML no longer receives
   `drop`. Permissions (`capabilities/default.json`): `core:window:allow-destroy` and `dialog:allow-message` (closing, see
   "Mes projets"), `dialog:allow-open`, `dialog:allow-save`, `fs:allow-read-file`,
   `fs:allow-write-file`, `fs:allow-open`, `fs:allow-seek`, `fs:allow-write`, `fs:allow-remove` (film streamed
-  to disk), `fs:allow-mkdir`, `fs:allow-read-dir`, `fs:allow-exists` (offline packs, "Mes projets"), `allow-video-available`, `allow-video-sound`, `allow-video-open`,
+  to disk), `fs:allow-mkdir`, `fs:allow-read-dir`, `fs:allow-exists`, `fs:allow-rename` (offline packs, "Mes projets": a project is written to a `.tmp` file, then renamed), `allow-video-available`, `allow-video-sound`, `allow-video-open`,
   `allow-video-frame`, `allow-video-finish`, `allow-video-cancel` (native encoder), `allow-cli-render`, `allow-cli-exit`
-  (command line), `oauth:allow-start`, `oauth:allow-cancel` and `opener:allow-open-url` limited to
-  `https://www.strava.com/oauth/authorize*` (Strava import); two fixed
+  (command line), `allow-opened-files` (project files opened by the system), `allow-system-stats` (status bar), `oauth:allow-start`,
+  `oauth:allow-cancel` and `opener:allow-open-url` limited to `https://*` (the Strava authorization page, and the links of the app
+  that open in a new tab, `src/platform/externalLinks.ts`); two fixed
   scopes, `$APPDATA/tiles` and `$APPDATA/projects` with their contents (`fs:scope`), in addition to the paths the dialog plugin adds for each
   chosen file and the two folders of a command-line render: nothing else is readable. CSP: `connect-src` /
   `img-src` list the tile hosts (`src/terrain/sources.ts`), Open-Meteo (archive and forecast), the two Overpass servers,
@@ -2769,7 +2793,7 @@ differs goes through `src/platform/`.
   licences grouped by licence from `THIRD_PARTY_NOTICES.md`, data-service attributions from `docs/sources.md`; RTF for the
   Windows installers and the DMG, plain text for the Debian copyright file). `tauri.conf.json` references them through
   `bundle.licenseFile`, `bundle.windows.nsis` / `wix`, `bundle.macOS.dmg` and `bundle.linux.deb.files`.
-  `.github/workflows/ci.yml`, on pull requests and on master: types, lint, unit tests and build (`lint`, `test` and `build` jobs, in parallel); `cargo test` only when `src-tauri/` or the workflow changed (`rust` job, against a placeholder `dist/`).
+  `.github/workflows/ci.yml`, on pull requests and on master: `lint`, `test` (with coverage on master) and `build` jobs, in parallel (`build` runs `tsc -b`, which type checks both projects, then Vite); `cargo test` only when `src-tauri/` or the workflow changed (`rust` job, against a placeholder `dist/`); on master, a `badge` job publishes the line coverage on the `badges` branch for the README badge. `.github/workflows/pages.yml` rebuilds the website for GitHub Pages on every push to master (`BASE_PATH=/<repository>/`, see `docs/deploying.md`). Release: the same number in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`, `npm run notices`, then a `v*` tag (`docs/installers.md`).
 
 ### Video export without WebCodecs (Linux)
 
@@ -2952,7 +2976,7 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
   takes it (iOS: « Enregistrer la vidéo » into Photos, « Enregistrer dans Fichiers »); the sheet closed = nothing
   saved; a file the sheet does not take (Chrome Android refuses `.json`) or a refusal (no user gesture left) =
   the download as before. The share sheet needs the click: called from a button (« Enregistrer », « Enregistrer à
-  nouveau… », the toast action), never at the end of an export. Label: `SHARE_SAVE_LABEL` (« Partager /
+  nouveau… », the toast action), never at the end of an export. Label: `shareSaveLabel()` (« Partager /
   Enregistrer »). Computers keep the download. Sound: without `AudioEncoder` (iOS before 26) the film is exported
   without sound and the result says « sans le son : ce navigateur ne sait pas l'encoder » (existing path). No
   WebCodecs (Firefox Android): `videoEncoderMissingHint` points to Chrome (Android) or Safari 16.4+ on a touch screen.
