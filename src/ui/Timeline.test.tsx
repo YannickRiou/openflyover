@@ -393,11 +393,9 @@ describe('Timeline — stages « À la suite »', () => {
   it('a cut is a thin block that holds nothing; the transition is changed from the inspector, « Appliquer à toutes » reaches every junction', async () => {
     const { host, root, blocks, tracks } = await setup(3)
     await act(async () => useAppStore.getState().setFilmSelection(`junction-${tracks[0].id}`))
-    const kind = host.querySelector<HTMLSelectElement>('[data-testid="film-inspector"] select')!
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(kind, 'coupe')
-      kind.dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    const kind = host.querySelector<HTMLButtonElement>('[data-testid="film-inspector"] button[aria-haspopup="listbox"]')!
+    await act(async () => kind.click())
+    await act(async () => [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((o) => o.textContent === 'Coupe')!.click())
     expect(blocks('Étapes', '[data-item^="junction-"][aria-label*=": Coupe"]')).toHaveLength(1)
     expect(host.querySelector('[data-testid="film-inspector"] input[type="range"]')).toBeNull()
     const all = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Appliquer à toutes les jonctions')!

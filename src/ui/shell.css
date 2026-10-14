@@ -1701,9 +1701,9 @@ fieldset:disabled .format-tile .option__label {
 
   .btn,
   .btn--small,
-  .select,
+  .select-field,
   .input,
-  .film-tl__select,
+  .select-bar,
   .fold__summary,
   .track-menu__item {
     min-height: 44px;

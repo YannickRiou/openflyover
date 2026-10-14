@@ -3,7 +3,7 @@ import { filmStops, placeStop, withoutPlaceItems } from '../film/assemble'
 import { t, useT } from '../i18n'
 import type { StopPlace } from '../film/assemble'
 import { POI_ICONS, POI_ICON_LABELS, STOP_DURATION_RANGE, nextFilmId } from '../film/model'
-import type { FilmPoi, FilmStop, PoiIcon } from '../film/model'
+import type { FilmPoi, FilmStop } from '../film/model'
 import { POI_NAME_MAX, addPoi, poiStopAtM, removePoi, renamePoi, setPoiIcon } from '../film/pois'
 import { addStop, removeFilmItem, updateStop } from '../film/timeline'
 import { samplePath, trackPathOf } from '../flyover/path'
@@ -31,7 +31,7 @@ import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
 import './LandmarkPanel.css'
-import { Button, Checkbox, Chip, Switch, Tip } from './primitives'
+import { Button, Checkbox, Chip, Select, Switch, Tip } from './primitives'
 
 /** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
 function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'>): string {
@@ -520,21 +520,13 @@ export function LandmarkPanel() {
                 </div>
                 <EyeButton name={name || t('landmarks.poiThis')} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
                 <div className="place__line">
-                  <select
-                    className="select place__icon"
+                  <Select
+                    className="place__icon"
                     aria-label={t('landmarks.poiIconAria', { name: name || t('landmarks.poiThis') })}
                     value={poi.icon ?? 'epingle'}
-                    onChange={(e) => {
-                      const icon = e.currentTarget.value as PoiIcon
-                      editFilm((f) => ({ film: setPoiIcon(f, poi.id, icon) }))
-                    }}
-                  >
-                    {POI_ICONS.map((icon) => (
-                      <option key={icon} value={icon}>
-                        {POI_ICON_LABELS[icon]}
-                      </option>
-                    ))}
-                  </select>
+                    options={POI_ICONS.map((icon) => ({ value: icon, label: POI_ICON_LABELS[icon] }))}
+                    onChange={(icon) => editFilm((f) => ({ film: setPoiIcon(f, poi.id, icon) }))}
+                  />
                   <Tip text={t('common.delete')}>
                     <Button
                       variant="icon"
