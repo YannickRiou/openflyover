@@ -34,8 +34,8 @@ export function JunctionTransitionFields({
   const id = useId()
   return (
     <>
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-kind`}>
+      <div className="flex flex-col gap-1">
+        <label className="type-label" htmlFor={`${id}-kind`}>
           {t('inspector.junction.transition')}
         </label>
         <Select
@@ -45,7 +45,7 @@ export function JunctionTransitionFields({
           options={JUNCTION_KINDS.map((k) => ({ value: k, label: JUNCTION_KIND_LABELS[k] }))}
           onChange={(next) => onChange({ kind: next })}
         />
-        <p id={`${id}-hint`} className="field__hint">
+        <p id={`${id}-hint`} className="type-hint">
           {JUNCTION_KIND_HINTS[kind]}
         </p>
       </div>
@@ -69,8 +69,8 @@ export function StageCardFields({ card, onChange }: { card: JunctionCard; onChan
   return (
     <>
       <Checkbox checked={card.enabled} onChange={(on) => onChange({ enabled: on })}>{t('inspector.junction.show')}</Checkbox>
-      <fieldset className="field fieldset">
-        <legend className="field__label">{t('inspector.junction.content')}</legend>
+      <fieldset className="flex min-w-0 flex-col gap-1">
+        <legend className="type-label">{t('inspector.junction.content')}</legend>
         <RadioGroup
           aria-label={t('inspector.junction.content')}
           value={custom ? 'custom' : 'auto'}
@@ -84,10 +84,10 @@ export function StageCardFields({ card, onChange }: { card: JunctionCard; onChan
         <>
           <TextField label={t('inspector.junction.text')} value={card.text ?? ''} onChange={(text) => onChange({ text })} />
           <TextField label={t('inspector.junction.subtitle')} value={card.subtitle ?? ''} onChange={(subtitle) => onChange({ subtitle: subtitle || undefined })} />
-          <p className="field__hint">{t('inspector.junction.variables', { list: STAGE_CARD_VARIABLES.map((v) => `{${v}}`).join(' ') })}</p>
+          <p className="type-hint">{t('inspector.junction.variables', { list: STAGE_CARD_VARIABLES.map((v) => `{${v}}`).join(' ') })}</p>
         </>
       ) : (
-        <p className="field__hint">{t('inspector.junction.autoHint')}</p>
+        <p className="type-hint">{t('inspector.junction.autoHint')}</p>
       )}
       <AnchorPicker label={t('inspector.junction.position')} value={card.anchor} onChange={(anchor) => onChange({ anchor })} />
       <RangeField label={t('inspector.junction.size')} {...SIZE_RANGE} value={card.size} format={(v) => `×${formatNumber(v, 1)}`} onChange={(size) => onChange({ size })} wide={false} />

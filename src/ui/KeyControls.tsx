@@ -15,8 +15,29 @@ import { useAppStore } from '../state/store'
 import type { AppState } from '../state/store'
 import { Icon } from './icons'
 import { withShortcut } from './shortcuts'
-import './keyControls.css'
 import { Tip } from './primitives'
+
+/**
+ * Where the group is, which sizes its buttons and gives them their colours: `lane` in the header of a timeline lane (light
+ * on the dark chrome, small), `bar` in the tool row of the centred timeline (44 px targets), `panel` under a slider.
+ */
+export type KeyLook = 'lane' | 'bar' | 'panel'
+
+const KEY_BUTTON = 'inline-flex flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent p-0 transition-ui disabled:cursor-not-allowed disabled:opacity-40'
+const KEY_LOOKS: Record<KeyLook, { resting: string; on: string }> = {
+  lane: {
+    resting: `${KEY_BUTTON} h-5.5 w-6 text-glacier hover:enabled:bg-white/10 hover:enabled:text-white touch:h-7.5 touch:w-8 [&_svg]:size-4`,
+    on: `${KEY_BUTTON} h-5.5 w-6 text-accent-light hover:enabled:bg-white/10 touch:h-7.5 touch:w-8 [&_svg]:size-4 [&_svg]:fill-current`,
+  },
+  bar: {
+    resting: `${KEY_BUTTON} size-11 text-white hover:enabled:bg-white/10`,
+    on: `${KEY_BUTTON} size-11 text-accent-light hover:enabled:bg-white/10 [&_svg]:fill-current`,
+  },
+  panel: {
+    resting: `${KEY_BUTTON} size-7 text-text-2 hover:enabled:bg-surface-card`,
+    on: `${KEY_BUTTON} size-7 text-brand hover:enabled:bg-surface-card [&_svg]:fill-current`,
+  },
+}
 
 /** The keys a group drives: the camera keys, the keys of one parameter, or the marker keys. */
 export type KeyTarget = { kind: 'camera' } | { kind: 'param'; param: FilmParam } | { kind: 'marker' }
@@ -98,6 +119,7 @@ export function KeyGroup({
   timeS,
   disabled = false,
   tipSide = 'top',
+  look = 'lane',
 }: {
   target: KeyTarget
   clock: FilmClock
@@ -105,11 +127,12 @@ export function KeyGroup({
   /** no track to put a key on */
   disabled?: boolean
   tipSide?: 'top' | 'bottom'
+  look?: KeyLook
 }) {
   useT()
   const keys = keysOf(clock, target)
   const { prev, next, on } = keyState(keys, timeS)
-  return <KeyButtons target={target} keys={keys} clock={clock} state={{ prev, next, on }} disabled={disabled} tipSide={tipSide} />
+  return <KeyButtons target={target} keys={keys} clock={clock} state={{ prev, next, on }} disabled={disabled} tipSide={tipSide} look={look} />
 }
 
 function KeyButtons({
@@ -119,6 +142,7 @@ function KeyButtons({
   state,
   disabled,
   tipSide,
+  look,
 }: {
   target: KeyTarget
   keys: readonly { id: string; timeS: number }[]
@@ -126,6 +150,7 @@ function KeyButtons({
   state: { prev: boolean; next: boolean; on: boolean }
   disabled: boolean
   tipSide: 'top' | 'bottom'
+  look: KeyLook
 }) {
   useT()
   const texts = textsOf(target, state.on)
@@ -138,7 +163,7 @@ function KeyButtons({
     <Tip text={text.tip} side={tipSide === 'top' ? 'top' : undefined}>
       <button
         type="button"
-        className={on ? 'key-btn key-btn--on' : 'key-btn'}
+        className={on ? KEY_LOOKS[look].on : KEY_LOOKS[look].resting}
         onClick={onClick}
         disabled={off}
         aria-label={text.name}
@@ -148,7 +173,7 @@ function KeyButtons({
     </Tip>
   )
   return (
-    <span className="key-group" role="group" aria-label={texts.group}>
+    <span className="inline-flex items-center gap-0.5" role="group" aria-label={texts.group}>
       {button('prev', texts.prev, () => seekKeyframe(clock, -1, keys), !state.prev)}
       {button('add', texts.add, add, disabled, state.on)}
       {button('next', texts.next, () => seekKeyframe(clock, 1, keys), !state.next)}
@@ -169,8 +194,8 @@ export function PanelKeys({ target }: { target: KeyTarget }) {
   const next = useAppStore((s) => keyState(keys, timeOf(s)).next)
   const on = useAppStore((s) => keyState(keys, timeOf(s)).on)
   return (
-    <div className="key-field">
-      <KeyButtons target={target} keys={keys} clock={clock} state={{ prev, next, on }} disabled={!track} tipSide="bottom" />
+    <div className="mt-0.5 flex justify-end">
+      <KeyButtons target={target} keys={keys} clock={clock} state={{ prev, next, on }} disabled={!track} tipSide="bottom" look="panel" />
     </div>
   )
 }
