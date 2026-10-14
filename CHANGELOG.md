@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## Unreleased
 
 - **Desktop installers at every push**: each push to `master` builds the Windows, macOS and Linux installers (*Actions* › "Desktop installers" › *Artifacts*); see `docs/installers.md`.
+- **A lighter first screen**: the status bar no longer pulls three.js and React Three Fiber into the first file (the performance readout reads the 3D view through a small probe it registers when its canvas exists), so the app starts with about 850 kB less to download and parse (the first screen goes from about 2.4 MB to about 1.5 MB, 470 kB gzip) and the build no longer warns about a chunk over 800 kB. The readout shows the same figures.
 
 ## 2.0.0 (October 2026)
 

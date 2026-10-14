@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { _roots, addAfterEffect } from '@react-three/fiber'
 import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
 import { useLandmarkStore, useWaterStore } from '../osm/store'
 import { overlayCredits } from '../overlay/data'
 import { getPlatform } from '../platform'
+import { getPerfProbe } from '../scene/perfProbe'
 import { useWaterStatusStore } from '../scene/waterStatus'
 import { updateDateNote, useSourceDates } from '../terrain/sourceDates'
 import { getImagerySource } from '../terrain/sources'
@@ -100,19 +100,25 @@ function usePerformance(shown: Record<PerfItem, boolean>): PerfSample | null {
     let since = performance.now()
     let machine: SystemStats | undefined
     let alive = true
-    const stopCounting = addAfterEffect(() => {
-      frames++
-    })
+    // the 3D view registers its probe once its chunk is loaded: counting starts then
+    let stopCounting: (() => void) | undefined
     const timer = window.setInterval(() => {
       const now = performance.now()
-      // the 3D view of the app (the only R3F root)
-      const renderer = _roots.values().next().value?.store.getState().gl
+      const probe = getPerfProbe()
+      // no frame rate on the tick that starts the count
+      const starting = !!probe && !stopCounting
+      if (probe && !stopCounting) {
+        stopCounting = probe.onFrame(() => {
+          frames++
+        })
+      }
+      const memory = probe?.memory()
       const heap = (performance as { memory?: { usedJSHeapSize?: number } }).memory?.usedJSHeapSize
       setSample({
-        fps: renderer ? (frames * 1000) / (now - since) : undefined,
-        textures: renderer?.info.memory.textures,
-        geometries: renderer?.info.memory.geometries,
-        tiles: renderer ? useAppStore.getState().terrainStats.loadedTiles : undefined,
+        fps: memory && !starting ? (frames * 1000) / (now - since) : undefined,
+        textures: memory?.textures,
+        geometries: memory?.geometries,
+        tiles: memory ? useAppStore.getState().terrainStats.loadedTiles : undefined,
         heapBytes: heap,
         system: machine,
       })
@@ -127,7 +133,7 @@ function usePerformance(shown: Record<PerfItem, boolean>): PerfSample | null {
     return () => {
       alive = false
       window.clearInterval(timer)
-      stopCounting()
+      stopCounting?.()
     }
   }, [wanted, system])
   return wanted ? sample : null
