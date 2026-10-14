@@ -8,7 +8,7 @@ import { useAppStore } from '../state/store'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
-import { Slider } from './primitives'
+import { Radio, RadioGroup, Slider } from './primitives'
 
 const SLIDERS: { key: keyof GradingValues; label: string; tip?: string }[] = [
   { key: 'contrast', get label() { return t('light.grading.contrast') } },
@@ -40,19 +40,19 @@ export function GradingPanel() {
         <span id={`${id}-presets`} className="field__label">
           {t('light.grading.preset')}
         </span>
-        <div className="sun-chips" role="group" aria-labelledby={`${id}-presets`}>
+        <RadioGroup
+          look="chips"
+          className="sun-chips"
+          aria-labelledby={`${id}-presets`}
+          value={grading.preset}
+          onChange={(preset) => preset !== 'personnalise' && getSettingsHistory().transaction(() => setSetting('grading', gradingOfPreset(preset)))}
+        >
           {GRADING_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              className="sun-chip"
-              aria-pressed={grading.preset === preset.id}
-              onClick={() => getSettingsHistory().transaction(() => setSetting('grading', gradingOfPreset(preset.id)))}
-            >
+            <Radio key={preset.id} value={preset.id}>
               {preset.label}
-            </button>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
         {grading.preset === 'personnalise' && <p className="field__hint">{t('light.grading.custom')}</p>}
       </div>
 

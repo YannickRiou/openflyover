@@ -1,24 +1,12 @@
-import type { RefObject } from 'react'
 import { useT } from '../i18n'
-import { Icon } from './icons'
 import { SHORTCUTS, SHORTCUT_GROUPS, keyLabel } from './shortcuts'
-import { Button, Tip } from './primitives'
+import { Modal } from './primitives'
 
-/** « Raccourcis clavier » (native modal dialog, Escape closes it), opened by « ? » or the button of the top bar. */
-export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
+/** « Raccourcis clavier » (modal dialog, Escape closes it), opened by « ? » or the button of the top bar. */
+export function HelpDialog({ open, onClose }: { open: boolean; onClose(): void }) {
   const t = useT()
   return (
-    <dialog ref={dialogRef} className="sources help" aria-labelledby="help-title">
-      <div className="sources__head">
-        <h2 id="help-title" className="sources__title">
-          {t('shortcuts.title')}
-        </h2>
-        <Tip text={t('common.closeEsc')} side="left">
-          <Button variant="icon" aria-label={t('common.close')} onClick={() => dialogRef.current?.close()}>
-            <Icon name="x" size={18} />
-          </Button>
-        </Tip>
-      </div>
+    <Modal open={open} onClose={onClose} title={t('shortcuts.title')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')} width={680}>
       <p className="field__hint help__drop">{t('shortcuts.drop')}</p>
       <div className="help__groups">
         {SHORTCUT_GROUPS.map((group) => (
@@ -44,6 +32,6 @@ export function HelpDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogEleme
           </section>
         ))}
       </div>
-    </dialog>
+    </Modal>
   )
 }

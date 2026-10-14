@@ -54,7 +54,7 @@ import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
 import { WeatherPanel } from './ui/WeatherPanel'
 import './ui/app.css'
 import './ui/shell.css'
-import { Tab, TabList, TabPanel, Tabs, Tip } from './ui/primitives'
+import { Tab, TabList, TabPanel, Tabs, Tip, isModalOpen } from './ui/primitives'
 
 // Loaded in their own chunks: the offline packs right after the first paint, the export drawer (video, batch,
 // poster) when it is first opened, as its codec check pulls mediabunny (~700 kB). They stay mounted once loaded
@@ -92,8 +92,6 @@ const DRAWER_MAX_WIDTH = 1024
 const isDrawer = () => window.innerWidth < DRAWER_MAX_WIDTH
 // a batch keeps the shell locked between its jobs too (the export store is idle for a moment between two)
 const isExporting = () => isExportBusy(useExportStore.getState().phase) || useBatchStore.getState().phase === 'running'
-/** a modal dialog (help, sources) is open: it takes the keyboard, Escape closes it */
-const isDialogOpen = () => document.querySelector('dialog[open]') !== null
 
 /** The portrait phone layout (`BOTTOM_SHEET_QUERY`): preview on top, timeline, tab bar, half sheets. */
 const subscribePhone = (onChange: () => void) => {
@@ -121,7 +119,7 @@ function SeekShortcuts() {
 
   useEffect(() => {
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.isComposing || e.defaultPrevented || isDialogOpen()) return
+      if (e.isComposing || e.defaultPrevented || isModalOpen()) return
       const action = matchShortcut(e, keyFocus(e.target))
       const store = useAppStore.getState()
       if (!action || store.tracks.length === 0 || isExporting()) return
@@ -210,7 +208,7 @@ export default function App() {
   // the export drawer is mounted on its first opening and kept (export progress, result, batch)
   const [dockMounted, setDockMounted] = useState(false)
   if (shell.dockOpen && !dockMounted) setDockMounted(true)
-  const helpDialog = useRef<HTMLDialogElement>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
   const dockOpen = useRef(shell.dockOpen)
   const collapsedRef = useRef(shell.collapsed)
   const tabList = useRef<HTMLDivElement>(null)
@@ -329,7 +327,7 @@ export default function App() {
   useEffect(() => {
     // capture phase: Escape closes the export drawer, else deselects the timeline block (the dialogs close themselves)
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.isComposing || isDialogOpen()) return
+      if (e.isComposing || isModalOpen()) return
       const action = matchShortcut(e, keyFocus(e.target))
       if (!action || action.startsWith('seek') || action.startsWith('add-')) return
       if (action === 'close') {
@@ -341,7 +339,7 @@ export default function App() {
         else return
         e.stopPropagation()
       } else if (action === 'help') {
-        helpDialog.current?.showModal()
+        setHelpOpen(true)
       } else if (action === 'save') {
         if (!isExporting()) saveProject()
       } else if (action === 'save-as') {
@@ -488,7 +486,7 @@ export default function App() {
         onOpen={() => void chooseFilesToOpen()}
         exportOpen={shell.dockOpen}
         onToggleExport={() => dispatch({ type: 'toggle-dock', narrow: isNarrow() })}
-        onHelp={() => helpDialog.current?.showModal()}
+        onHelp={() => setHelpOpen(true)}
       />
 
       <div className={shell.collapsed ? 'shell__body shell__body--collapsed' : 'shell__body'}>
@@ -557,7 +555,7 @@ export default function App() {
       </div>
 
       <StatusBar />
-      <HelpDialog dialogRef={helpDialog} />
+      <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       <DiagnosticDialog />
       <SeekShortcuts />
       {dragging && (

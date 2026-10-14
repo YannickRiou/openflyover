@@ -84,7 +84,7 @@ import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import './cardBlocks.css'
 import './markerKeys.css'
-import { Button, Popover, Slider, Tip } from './primitives'
+import { Button, Checkbox, Popover, Select, Slider, Tip } from './primitives'
 
 const SPEEDS = PLAYBACK_SPEEDS
 /** « Média » picker: pictures and videos recognised on both targets (the desktop types a file by `mimeTypeOf`). */
@@ -268,10 +268,9 @@ function FilmOptions({
             {t('timeline.options.addMusic')}
           </Button>
           <p className="film-tl__menu-hint">{t('timeline.options.musicHint')}</p>
-          <label className="film-tl__check">
-            <input type="checkbox" checked={autoStops} onChange={(e) => onAutoStops(e.currentTarget.checked)} />
+          <Checkbox checked={autoStops} onChange={onAutoStops}>
             {t('timeline.options.autoStops')}
-          </label>
+          </Checkbox>
           <p className="film-tl__menu-hint">{t('timeline.options.autoStopsHint')}</p>
           <ModifiedMarker keys={['film']} label={t('timeline.film')} />
         </div>
@@ -1147,24 +1146,19 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             onClick={() => addStopAt(Math.round(progress * lengthM))}
           />
           {freeCandidates.length > 0 && (
-            <select
-              className="film-tl__select"
+            <Select
+              look="bar"
               aria-label={t('timeline.bar.addHoldAtHighlight')}
               value=""
-              onChange={(e) => {
-                const c = freeCandidates[Number(e.currentTarget.value)]
+              options={[
+                { value: '', label: t('timeline.bar.holdAtHighlight'), disabled: true },
+                ...freeCandidates.map((c, i) => ({ value: String(i), label: `${c.label} · ${formatDistance(c.atM)}` })),
+              ]}
+              onChange={(index) => {
+                const c = freeCandidates[Number(index)]
                 if (c) addStopAt(c.atM, { label: c.label, source: c.source })
               }}
-            >
-              <option value="" disabled>
-                {t('timeline.bar.holdAtHighlight')}
-              </option>
-              {freeCandidates.map((c, i) => (
-                <option key={`${c.source.kind}-${c.source.ref}`} value={i}>
-                  {c.label} · {formatDistance(c.atM)}
-                </option>
-              ))}
-            </select>
+            />
           )}
           <BarButton
             icon="gauge"
@@ -1196,13 +1190,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onClick={() => useMusicPreview.getState().setMuted(!muted)}
             />
           )}
-          <select className="film-tl__select" aria-label={t('timeline.bar.speed')} value={speed} onChange={(e) => setSpeed(Number(e.currentTarget.value))}>
-            {SPEEDS.map((value) => (
-              <option key={value} value={value}>
-                ×{formatNumber(value, value % 1 === 0 ? 0 : 1)}
-              </option>
-            ))}
-          </select>
+          <Select
+            look="bar"
+            aria-label={t('timeline.bar.speed')}
+            value={speed}
+            options={SPEEDS.map((value) => ({ value, label: `×${formatNumber(value, value % 1 === 0 ? 0 : 1)}` }))}
+            onChange={setSpeed}
+          />
           <div className="film-tl__zoom" role="group" aria-label={t('timeline.zoom.group')}>
             <BarButton
               icon="zoom-out"

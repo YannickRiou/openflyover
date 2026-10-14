@@ -8,7 +8,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber } from './format'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RangeField } from './PanelSection'
-import { Checkbox, Radio, RadioGroup, TextField } from './primitives'
+import { Checkbox, Radio, RadioGroup, Select, TextField } from './primitives'
 
 /** What each transition does, under its choice. */
 const JUNCTION_KIND_HINTS: Record<JunctionKind, string> = {
@@ -38,13 +38,13 @@ export function JunctionTransitionFields({
         <label className="field__label" htmlFor={`${id}-kind`}>
           {t('inspector.junction.transition')}
         </label>
-        <select id={`${id}-kind`} className="select" value={kind} aria-describedby={`${id}-hint`} onChange={(e) => onChange({ kind: e.currentTarget.value as JunctionKind })}>
-          {JUNCTION_KINDS.map((k) => (
-            <option key={k} value={k}>
-              {JUNCTION_KIND_LABELS[k]}
-            </option>
-          ))}
-        </select>
+        <Select
+          id={`${id}-kind`}
+          value={kind}
+          aria-describedby={`${id}-hint`}
+          options={JUNCTION_KINDS.map((k) => ({ value: k, label: JUNCTION_KIND_LABELS[k] }))}
+          onChange={(next) => onChange({ kind: next })}
+        />
         <p id={`${id}-hint`} className="field__hint">
           {JUNCTION_KIND_HINTS[kind]}
         </p>

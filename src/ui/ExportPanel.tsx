@@ -67,7 +67,7 @@ import { AspectIcon, Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import './exportPanel.css'
-import { Button, Checkbox, Chip, Radio, RadioGroup, Tip } from './primitives'
+import { Button, Checkbox, Chip, Radio, RadioGroup, Select, Tip } from './primitives'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
   { value: 'standard', get label() { return QUALITY_NAMES.standard } },
@@ -289,25 +289,27 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       <h3 className="export__group">{t('export.panel.formatGroup')}</h3>
       <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{t('export.panel.proportions')}</legend>
-        <div className="format-tiles">
+        <legend id={`${id}-proportions`} className="field__label">
+          {t('export.panel.proportions')}
+        </legend>
+        <RadioGroup
+          look="plain"
+          className="format-tiles"
+          aria-labelledby={`${id}-proportions`}
+          value={video.aspect}
+          disabled={busy}
+          onChange={(aspect) => {
+            update({ aspect })
+            useAppStore.getState().setFreeFraming(false)
+          }}
+        >
           {VIDEO_ASPECTS.map((a) => (
-            <label key={a.id} className="format-tile" title={a.label}>
-              <input
-                type="radio"
-                name={`${id}-aspect`}
-                value={a.id}
-                checked={video.aspect === a.id}
-                onChange={() => {
-                  update({ aspect: a.id })
-                  useAppStore.getState().setFreeFraming(false)
-                }}
-              />
+            <Radio key={a.id} value={a.id} className="format-tile" title={a.label}>
               <AspectIcon x={a.x} y={a.y} size={28} />
               <span className="format-tile__label">{a.id}</span>
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </fieldset>
 
       <div className="field">
@@ -317,23 +319,14 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           </label>
           <RenderWeight weight="resolution" />
         </div>
-        <select
+        <Select
           id={`${id}-resolution`}
-          className="select"
           value={video.resolution}
           disabled={busy}
           aria-describedby={`${id}-size`}
-          onChange={(e) => {
-            const resolution = VIDEO_RESOLUTIONS.find((r) => r.id === e.currentTarget.value)
-            if (resolution) update({ resolution: resolution.id })
-          }}
-        >
-          {VIDEO_RESOLUTIONS.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.label}
-            </option>
-          ))}
-        </select>
+          options={VIDEO_RESOLUTIONS.map((r) => ({ value: r.id, label: r.label }))}
+          onChange={(resolution) => update({ resolution })}
+        />
         <p id={`${id}-size`} className="field__hint">
           {[t('export.panel.size', { width: formatNumber(width), height: formatNumber(height) }), resolutionNote].filter(Boolean).join(' · ')}
         </p>
@@ -395,22 +388,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <label className="field__label" htmlFor={`${id}-codec`}>
             {t('export.panel.codecContainer')}
           </label>
-          <select
+          <Select
             id={`${id}-codec`}
-            className="select"
             value={video.codec}
             disabled={busy || overlayOnly}
-            onChange={(e) => {
-              const choice = VIDEO_CODEC_CHOICES.find((c) => c === e.currentTarget.value)
-              if (choice) update({ codec: choice })
-            }}
-          >
-            {VIDEO_CODEC_CHOICES.filter((c) => offered.includes(c) || c === video.codec).map((c) => (
-              <option key={c} value={c}>
-                {CODEC_CHOICE_LABELS[c]}
-              </option>
-            ))}
-          </select>
+            options={VIDEO_CODEC_CHOICES.filter((c) => offered.includes(c) || c === video.codec).map((c) => ({ value: c, label: CODEC_CHOICE_LABELS[c] }))}
+            onChange={(codec) => update({ codec })}
+          />
           <p className="field__hint">
             {overlayOnly
               ? t('export.panel.codecOverlay')
@@ -423,19 +407,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <label className="field__label" htmlFor={`${id}-keyframes`}>
             {t('export.panel.keyframesLabel')}
           </label>
-          <select
+          <Select
             id={`${id}-keyframes`}
-            className="select"
             value={video.keyframeIntervalS}
             disabled={busy}
-            onChange={(e) => update({ keyframeIntervalS: Number(e.currentTarget.value) })}
-          >
-            {KEYFRAME_INTERVALS_S.map((s) => (
-              <option key={s} value={s}>
-                {seconds(s)}
-              </option>
-            ))}
-          </select>
+            options={KEYFRAME_INTERVALS_S.map((s) => ({ value: s, label: seconds(s) }))}
+            onChange={(keyframeIntervalS) => update({ keyframeIntervalS })}
+          />
           <p className="field__hint">{t('export.panel.keyframesHint')}</p>
         </div>
       </SettingRow>
@@ -444,19 +422,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <label className="field__label" htmlFor={`${id}-audio`}>
             {t('export.panel.audioBitrate')}
           </label>
-          <select
+          <Select
             id={`${id}-audio`}
-            className="select"
             value={video.audioKbps}
             disabled={busy}
-            onChange={(e) => update({ audioKbps: Number(e.currentTarget.value) })}
-          >
-            {AUDIO_BITRATES_KBPS.map((k) => (
-              <option key={k} value={k}>
-                {k} kbit/s
-              </option>
-            ))}
-          </select>
+            options={AUDIO_BITRATES_KBPS.map((k) => ({ value: k, label: `${k} kbit/s` }))}
+            onChange={(audioKbps) => update({ audioKbps })}
+          />
           <p className="field__hint">{t('export.panel.audioHint')}</p>
         </div>
       </SettingRow>

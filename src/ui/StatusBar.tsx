@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { _roots, addAfterEffect } from '@react-three/fiber'
 import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
@@ -27,7 +27,7 @@ import {
 import { usePreferences } from './preferences'
 import { PERF_ITEMS } from './shell'
 import type { PerfItem } from './shell'
-import { Button, Tip } from './primitives'
+import { Modal, Tip } from './primitives'
 
 /** Performance readout refresh. */
 const PERF_INTERVAL_MS = 1000
@@ -193,7 +193,7 @@ export function StatusBar() {
   const perfShown = usePreferences((s) => s.performance)
   const perf = usePerformance(perfShown)
   const sourceDates = useSourceDates((s) => s.dates)
-  const dialog = useRef<HTMLDialogElement>(null)
+  const [sourcesOpen, setSourcesOpen] = useState(false)
 
   const imagery = getImagerySource(imagerySourceId)
   // IGN layers: the update date of the data (Etalab licence), as the service sends it
@@ -279,23 +279,13 @@ export function StatusBar() {
           type="button"
           className="status__info"
           aria-label={t('status.sources')}
-          onClick={() => dialog.current?.showModal()}
+          onClick={() => setSourcesOpen(true)}
         >
           <Icon name="info" size={14} />
         </button>
       </Tip>
 
-      <dialog ref={dialog} className="sources" aria-labelledby="sources-title">
-        <div className="sources__head">
-          <h2 id="sources-title" className="sources__title">
-            {t('status.sources')}
-          </h2>
-          <Tip text={t('common.closeEsc')} side="left">
-            <Button variant="icon" aria-label={t('common.close')} onClick={() => dialog.current?.close()}>
-              <Icon name="x" size={18} />
-            </Button>
-          </Tip>
-        </div>
+      <Modal open={sourcesOpen} onClose={() => setSourcesOpen(false)} title={t('status.sources')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
         <ul className="sources__list">
           {credits.map((line) => (
             <li key={line}>
@@ -317,7 +307,7 @@ export function StatusBar() {
             ))}
         </p>
         <p className="field__hint">{t('status.sourcesNote')}</p>
-      </dialog>
+      </Modal>
     </footer>
   )
 }

@@ -8,7 +8,7 @@ import { PanelSection } from './PanelSection'
 import { setPreferences, usePreferences } from './preferences'
 import { PERF_ITEMS, STATUS_CHIPS } from './shell'
 import type { PerfItem, StatusChip } from './shell'
-import { Button, Chip, Radio, RadioGroup, Switch } from './primitives'
+import { Button, Chip, ColorField, Radio, RadioGroup, Switch } from './primitives'
 
 const STATUS_LABELS: Record<StatusChip, string> = {
   get weather() { return t('settings.preferences.status.weather') },
@@ -73,21 +73,17 @@ function AppearanceColor({ label, presets, value, clamp, hint, onChange }: {
       <label className="field__label" htmlFor={id}>
         {label}
       </label>
-      <div className="color-row">
-        <input id={id} className="color-row__input" type="color" value={value} onChange={(e) => onChange(e.currentTarget.value)} />
-        {presets.map((preset) => (
-          <button
-            key={preset.color}
-            type="button"
-            className="color-row__swatch"
-            style={{ background: preset.color }}
-            aria-label={t('settings.preferences.swatchAria', { label, preset: preset.label })}
-            aria-pressed={value === preset.color}
-            title={preset.label}
-            onClick={() => onChange(preset.color)}
-          />
-        ))}
-      </div>
+      <ColorField
+        id={id}
+        label={label}
+        value={value}
+        onChange={onChange}
+        presets={presets.map((preset) => ({
+          color: preset.color,
+          label: preset.label,
+          aria: t('settings.preferences.swatchAria', { label, preset: preset.label }),
+        }))}
+      />
       {clamp(value) !== value && <p className="field__hint">{hint}</p>}
     </div>
   )

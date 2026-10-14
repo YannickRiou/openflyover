@@ -1,7 +1,7 @@
 import { Radio as HeroRadio } from '@heroui/react/radio'
 import { RadioGroup as HeroRadioGroup } from '@heroui/react/radio-group'
 import { createContext, use } from 'react'
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { Titled } from './Titled'
 
 /** `segmented`: options side by side in one frame; `chips`: separate pills (one choice among them); `plain`: no frame, the screen draws the options. */
@@ -58,17 +58,19 @@ export interface RadioProps {
   'aria-describedby'?: string
   /** The label of the option; without it, `aria-label` names it. */
   children?: ReactNode
+  /** The option's own element (its wrapper), for a `Tip` around it. */
+  ref?: Ref<HTMLDivElement>
 }
 
 /** The classes the look of the group gives each option (`.option__label` is the clickable label, a hook for the screens' CSS). */
 const OPTION_CLASS: Record<RadioLook, string> = { segmented: 'segmented__option', chips: 'chip', plain: '' }
 
-export function Radio({ value, disabled, title, className, children, ...rest }: RadioProps) {
+export function Radio({ value, disabled, title, className, children, ref, ...rest }: RadioProps) {
   const look = use(LookContext)
   const classes = [OPTION_CLASS[look], className].filter(Boolean).join(' ')
   return (
     <Titled title={title}>
-      <HeroRadio {...rest} className={classes} value={String(value)} isDisabled={disabled}>
+      <HeroRadio {...rest} ref={ref} className={classes} value={String(value)} isDisabled={disabled}>
         <HeroRadio.Content className="option__label">{children}</HeroRadio.Content>
       </HeroRadio>
     </Titled>

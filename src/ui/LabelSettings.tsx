@@ -3,7 +3,7 @@ import { KM_MARKER_STEPS, LABEL_RANGE_KM, LABEL_SIZE_RANGE } from '../scene/labe
 import { useAppStore } from '../state/store'
 import { formatNumber } from './format'
 import { RangeField, SettingRow } from './PanelSection'
-import { Checkbox } from './primitives'
+import { Checkbox, Select } from './primitives'
 
 /** 0 -> "Aucune", 1 -> "Tous les kilomètres", 5 -> "Tous les 5 km" */
 const kmStepLabel = (step: number) =>
@@ -34,20 +34,15 @@ export function LabelSettings() {
         <Checkbox checked={labels.photos} onChange={(on) => setSetting('labels', { ...labels, photos: on })}>{tr('track.labels.photos')}</Checkbox>
       </fieldset>
       <SettingRow label={tr('track.labels.kmMarkers')} value={kmStepLabel(labels.kmStep)} paths={['labels.kmStep']}>
-        <label className="field">
+        <div className="field">
           <span className="field__label">{tr('track.labels.kmMarkers')}</span>
-          <select
-            className="select"
+          <Select
+            aria-label={tr('track.labels.kmMarkers')}
             value={labels.kmStep}
-            onChange={(e) => setSetting('labels', { ...labels, kmStep: Number(e.currentTarget.value) })}
-          >
-            {KM_MARKER_STEPS.map((step) => (
-              <option key={step} value={step}>
-                {kmStepLabel(step)}
-              </option>
-            ))}
-          </select>
-        </label>
+            options={KM_MARKER_STEPS.map((step) => ({ value: step, label: kmStepLabel(step) }))}
+            onChange={(kmStep) => setSetting('labels', { ...labels, kmStep })}
+          />
+        </div>
       </SettingRow>
       <SettingRow label={tr('track.labels.size')} value={`×${formatNumber(labels.size, 1)}`} paths={['labels.size']}>
         <RangeField

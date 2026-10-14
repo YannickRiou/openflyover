@@ -10,13 +10,13 @@ import { useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
-import { CLOUD_ALTITUDE_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type CloudQualitySetting, type SeaRender } from '../weather/sceneClouds'
+import { CLOUD_ALTITUDE_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
-import { Button, Checkbox, Radio, RadioGroup, Slider, Switch } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
 
 const ZOOM_OFFSETS: { value: Settings['imageryZoomOffset']; label: string }[] = [
   { value: 0, get label() { return t('offline.level.0') } },
@@ -182,24 +182,25 @@ function SunTimeControl() {
           <p id={`${id}-sun-day`} className="field__hint">
             {dayHint}
           </p>
-          <div className="sun-chips" role="group" aria-label={t('light.sun.moments')}>
+          <RadioGroup
+            look="chips"
+            className="sun-chips"
+            aria-label={t('light.sun.moments')}
+            value={SUN_CHIPS.find((chip) => sunChipHour(chip, shown) === sunHour) ?? ''}
+            onChange={(chip) => {
+              const hour = chip && sunChipHour(chip, shown)
+              if (typeof hour === 'number') setHour(hour)
+            }}
+          >
             {SUN_CHIPS.map((chip) => {
               const hour = sunChipHour(chip, shown)
               return (
-                <button
-                  key={chip}
-                  type="button"
-                  className="sun-chip"
-                  aria-pressed={hour !== null && hour === sunHour}
-                  disabled={hour === null}
-                  title={hour === null ? t('light.sun.notThatDay') : formatHour(hour)}
-                  onClick={() => hour !== null && setHour(hour)}
-                >
+                <Radio key={chip} value={chip} disabled={hour === null} title={hour === null ? t('light.sun.notThatDay') : formatHour(hour)}>
                   {SUN_CHIP_LABELS[chip]}
-                </button>
+                </Radio>
               )
             })}
-          </div>
+          </RadioGroup>
         </div>
       )}
 
@@ -369,19 +370,12 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
               </label>
               <InfoTip text={t('light.clouds.qualityTip')} />
             </div>
-            <select
+            <Select
               id={`${id}-clouds-quality`}
-              className="select"
               value={clouds.quality}
-              onChange={(e) => set({ quality: e.currentTarget.value as CloudQualitySetting })}
-            >
-              <option value="auto">{t('light.clouds.qualityAuto', { quality: qualityLabel ?? '' })}</option>
-              {CLOUD_QUALITY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={[{ value: 'auto', label: t('light.clouds.qualityAuto', { quality: qualityLabel ?? '' }) }, ...CLOUD_QUALITY_OPTIONS]}
+              onChange={(quality) => set({ quality })}
+            />
             {clouds.quality !== 'auto' && (
               <Button onClick={() => set({ quality: 'auto' })}>
                 {t('light.clouds.backToPreset')}
@@ -483,18 +477,12 @@ export function MapSettings() {
           <label className="field__label" htmlFor={imageryId}>
             {t('light.map.imagery')}
           </label>
-          <select
+          <Select
             id={imageryId}
-            className="select"
             value={settings.imagerySourceId}
-            onChange={(e) => setSetting('imagerySourceId', e.currentTarget.value)}
-          >
-            {IMAGERY_SOURCES.map((source) => (
-              <option key={source.id} value={source.id}>
-                {source.name}
-              </option>
-            ))}
-          </select>
+            options={IMAGERY_SOURCES.map((source) => ({ value: source.id, label: source.name }))}
+            onChange={(source) => setSetting('imagerySourceId', source)}
+          />
         </div>
 
         <WaterControl />
@@ -521,18 +509,12 @@ export function MapSettings() {
             <label className="field__label" htmlFor={terrainId}>
               {t('light.map.terrainSource')}
             </label>
-            <select
+            <Select
               id={terrainId}
-              className="select"
               value={settings.terrainSourceId}
-              onChange={(e) => setSetting('terrainSourceId', e.currentTarget.value)}
-            >
-              {TERRAIN_SOURCES.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.name}
-                </option>
-              ))}
-            </select>
+              options={TERRAIN_SOURCES.map((source) => ({ value: source.id, label: source.name }))}
+              onChange={(source) => setSetting('terrainSourceId', source)}
+            />
           </div>
         </SettingRow>
       </PanelSection>

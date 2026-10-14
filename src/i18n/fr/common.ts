@@ -2,6 +2,7 @@ export default {
   close: 'Fermer',
   delete: 'Supprimer',
   closeEsc: 'Fermer (Échap)',
+  colorHex: 'Code couleur (hexadécimal)',
   undo: 'Annuler',
   retry: 'Réessayer',
   cancel: 'Annuler',

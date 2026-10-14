@@ -80,12 +80,15 @@
 @import './primitives/overlay.css';
 @import './primitives/menu.css';
 @import './primitives/popover.css';
+@import './primitives/modal.css';
+@import './primitives/color-field.css';
 @import './primitives/toast.css';
 @import './primitives/switch.css';
 @import './primitives/checkbox.css';
 @import './primitives/radio-group.css';
 @import './primitives/chip.css';
 @import './primitives/slider.css';
+@import './primitives/select.css';
 
 /* the project's own `dark:` variant (the theme attribute, never the system scheme) and the values HeroUI's theme overrode */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
@@ -282,7 +285,7 @@ select {
   color: var(--text-1);
 }
 
-.select,
+.select-field,
 .input {
   width: 100%;
   min-height: 36px;

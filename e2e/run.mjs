@@ -62,6 +62,10 @@ const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habil
 /** Waits until `fn` (run in the page) returns a truthy value. */
 const until = (page, fn, arg, timeout = STEP_MS) => page.waitForFunction(fn, { timeout, polling: 250 }, arg)
 
+/** A modal dialog (shortcuts, sources, Strava, diagnostic report): the page behind it is inert while it is open. */
+const MODAL = '[role="dialog"][data-modal]'
+const modalClosed = (page) => until(page, (selector) => !document.querySelector(selector), MODAL)
+
 /** Clicks the first visible button whose text contains `text`. */
 async function clickButton(page, text, timeout = STEP_MS) {
   const button = await page.waitForSelector(`button::-p-text(${text})`, { visible: true, timeout })
@@ -78,6 +82,30 @@ async function switchOf(page, tab, text) {
   const element = handle.asElement()
   assert(element, `interrupteur « ${text} » introuvable dans l'onglet ${tab}`)
   return element
+}
+
+/**
+ * Picks the option `text` of the select named `label` (its `<label>`, or its `aria-label`) inside `scope`. Desktop Chromium
+ * gets the list renderer of the Select primitive: a button that opens a list over the page (the phone's native select is
+ * covered by the unit tests).
+ */
+async function selectOption(page, scope, label, text) {
+  const handle = await page.evaluateHandle(
+    (s, name) =>
+      [...document.querySelectorAll(`${s} button[aria-haspopup="listbox"]`)].find(
+        (b) =>
+          b.getAttribute('aria-label') === name ||
+          (b.getAttribute('aria-labelledby') ?? '').split(' ').some((id) => document.getElementById(id)?.textContent.trim() === name),
+      ) ?? null,
+    scope,
+    label,
+  )
+  const trigger = handle.asElement()
+  assert(trigger, `liste « ${label} » introuvable dans ${scope}`)
+  await trigger.click()
+  const option = await page.waitForSelector(`[role="listbox"] [role="option"]::-p-text(${text})`, { visible: true, timeout: STEP_MS })
+  await option.click()
+  await page.waitForSelector('[role="listbox"]', { hidden: true, timeout: STEP_MS })
 }
 
 /** Number of blocks in a timeline lane (« Plans », « Arrêts », « Textes »…). */
@@ -255,11 +283,10 @@ const SCENARIOS = [
         const overlaySwitch = tab === 'habillage' ? await switchOf(page, 'habillage', "Afficher l'habillage") : null
         if (overlaySwitch && !(await overlaySwitch.evaluate((el) => el.checked))) await overlaySwitch.evaluate((el) => el.click())
         else if (overlaySwitch) await overlaySwitch.dispose()
-        // a group of choices: its radio group, else the parent of the labels of its radio buttons
+        // a group of choices: its radio group
         const overflowing = await page.$$eval(
-          `[data-testid="tab-panel-${tab}"] input[type="radio"]`,
-          (radios) =>
-            [...new Set(radios.map((r) => r.closest('[role="radiogroup"]') ?? r.closest('label')?.parentElement))].filter((g) => g && g.scrollWidth > g.clientWidth + 1).length,
+          `[data-testid="tab-panel-${tab}"] [role="radiogroup"]`,
+          (groups) => groups.filter((g) => g.scrollWidth > g.clientWidth + 1).length,
         )
         if (overlaySwitch) await overlaySwitch.evaluate((el) => el.checked && el.click())
         assert(overflowing === 0, `onglet ${tab} : ${overflowing} choix qui débordent sur le côté`)
@@ -289,14 +316,14 @@ const SCENARIOS = [
       await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
       // the « ? » button, then the « ? » key; Escape closes the dialog both times
       await page.click('button[aria-label="Raccourcis clavier"]')
-      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog[open]'))
+      await modalClosed(page)
       await blur(page)
       await page.keyboard.press('?')
-      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog[open]'))
+      await modalClosed(page)
     },
   },
   {
@@ -333,14 +360,47 @@ const SCENARIOS = [
       if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
       await page.click('[data-testid="tab-panel-reglages"] [data-testid="setting-row-head"]::-p-text(Diagnostic)')
       await clickButton(page, 'Afficher le rapport')
-      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
-      const text = await page.$eval('dialog[open] pre', (pre) => pre.textContent)
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
+      const text = await page.$eval(`${MODAL} pre`, (pre) => pre.textContent)
       for (const part of ['[Appareil]', '[Export]', '[Réglages]', 'Traces : 1,', 'budget.kind : desktop']) {
         assert(text.includes(part), `le rapport ne contient pas « ${part} »`)
       }
       assert(!/Mont-Blanc|Chamonix/i.test(text), 'le rapport contient le nom de la trace')
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog[open]'))
+      await modalClosed(page)
+    },
+  },
+  {
+    id: 'couleur',
+    title: 'Couleur (onglet Réglages) : préréglage en un geste, panneau pour une couleur libre, Échap rend le focus',
+    async run({ page }) {
+      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      // a preset: one tap, the choice announced as selected
+      const indigo = await page.waitForSelector('[role="option"][aria-label="Couleur d\'accentuation : Indigo"]', { visible: true, timeout: STEP_MS })
+      await indigo.click()
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '#4a55b8')
+      assert(await indigo.evaluate((el) => el.getAttribute('aria-selected') === 'true'), 'le préréglage choisi n’est pas annoncé comme sélectionné')
+      // any other colour: the button opens a panel, a hex colour typed there is applied
+      const button = await page.waitForSelector('button[aria-label="Couleur d\'accentuation"]', { visible: true, timeout: STEP_MS })
+      await button.click()
+      const panel = '[role="dialog"][aria-label="Couleur d\'accentuation"]'
+      await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
+      const field = await page.waitForSelector(`${panel} input[aria-label="Code couleur (hexadécimal)"]`, { visible: true, timeout: STEP_MS })
+      await field.click()
+      await page.keyboard.down('Control')
+      await page.keyboard.press('KeyA')
+      await page.keyboard.up('Control')
+      await page.keyboard.type('#2f4f6f')
+      await page.keyboard.press('Enter')
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '#2f4f6f')
+      // Escape closes the panel first (not the side panel), and the focus goes back to the button
+      await page.keyboard.press('Escape')
+      await until(page, (selector) => !document.querySelector(selector), panel)
+      await until(page, () => document.activeElement?.getAttribute('aria-label') === "Couleur d'accentuation")
+      assert(!(await page.$eval('[data-testid="side-panel"]', (el) => el.hidden)), 'Échap sur le panneau de couleur a replié le panneau latéral')
+      // back to the default
+      await clickButton(page, "Rétablir l'apparence par défaut")
+      await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '')
     },
   },
   {
@@ -648,10 +708,10 @@ const SCENARIOS = [
       await page.click(add)
       await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
       await page.click(`${addMenu} [role="menuitem"]::-p-text(Strava)`)
-      await page.waitForSelector('dialog[open]', { visible: true, timeout: STEP_MS })
+      await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await gone(addMenu)
       await page.keyboard.press('Escape')
-      await until(page, () => !document.querySelector('dialog[open]'))
+      await modalClosed(page)
 
       // « Options du film »: a panel above the bar with its own controls, Escape closes it before the selection
       const options = 'button[aria-label="Options du film"]'
@@ -662,6 +722,7 @@ const SCENARIOS = [
       assert(await page.$eval(options, (b) => b.getAttribute('aria-expanded') === 'true'), '« Options du film » ne dit pas que son panneau est ouvert')
       assert(await page.$(`${panel} button::-p-text(Ajouter une musique)`), 'bouton « Ajouter une musique… » du panneau')
       assert(await page.$(`${panel} input[type="checkbox"]`), 'case « Arrêts automatiques » du panneau')
+      assert(await page.$eval(`${panel} input[type="checkbox"]`, (i) => i.labels?.[0]?.textContent.trim() === 'Arrêts automatiques'), 'la case du panneau ne s’appelle pas « Arrêts automatiques »')
       await page.keyboard.press('Escape')
       await gone(panel)
       assert(await inspectorShown(), 'Échap sur les options du film a aussi désélectionné le bloc')
@@ -824,12 +885,8 @@ const SCENARIOS = [
       })
       try {
         await page.click('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]')
-        await until(page, () => [...document.querySelectorAll('select')].some((s) => [...s.options].some((o) => o.value === 'situation')))
-        await page.evaluate(() => {
-          const select = [...document.querySelectorAll('select')].find((s) => [...s.options].some((o) => o.value === 'situation'))
-          Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'situation')
-          select.dispatchEvent(new Event('change', { bubbles: true }))
-        })
+        await page.waitForSelector('aside[aria-label="Inspecteur"] button[aria-haspopup="listbox"]', { visible: true, timeout: STEP_MS })
+        await selectOption(page, 'aside[aria-label="Inspecteur"]', 'Style', 'Depuis la région')
         await page.click('label::-p-text(Mettre en avant la région)')
         // asked at once, without touching « Lieu »; the failure says so and offers to retry
         const retry = await page.waitForSelector('aside[aria-label="Inspecteur"] button::-p-text(Réessayer)', { visible: true, timeout: STEP_MS })
@@ -980,13 +1037,7 @@ const SCENARIOS = [
       assert(recorded.wallMs > 0 && recorded.frames === 20 && recorded.width === 320, `historique : durée ou images : ${JSON.stringify(recorded)}`)
 
       // the still image: from the export drawer (still open), at its smallest size
-      await page.evaluate(() => {
-        const select = [...document.querySelectorAll('[data-testid="export-dock"] select')].find((s) => [...s.options].some((o) => o.value === '720p'))
-        if (!select) throw new Error('sélecteur de résolution introuvable')
-        const setValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set
-        setValue.call(select, '720p')
-        select.dispatchEvent(new Event('change', { bubbles: true }))
-      })
+      await selectOption(page, '[data-testid="export-dock"]', 'Résolution', '720p')
       // « Image fixe » is in the « Affiche » mode of the drawer; back to « Vidéo » afterwards (the history is there)
       const exportMode = (label) =>
         page.evaluate((text) => {
@@ -1157,8 +1208,12 @@ const SCENARIOS = [
             tab,
           )
         }
-        await tap('[data-testid="tab-panel-survol"] label:has(input[value="Oiseau"])')
-        await until(page, () => document.querySelector('[data-testid="tab-panel-survol"] input[value="Oiseau"]')?.checked === true)
+        const tile = (text) => `[data-testid="tab-panel-survol"] [role="radiogroup"] label::-p-text(${text})`
+        const tileChecked = (text) =>
+          page.evaluate((t) => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].find((i) => i.labels?.[0]?.textContent.startsWith(t))?.checked === true, text)
+        await tap(tile('Oiseau'))
+        await until(page, () => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].some((i) => i.labels?.[0]?.textContent.startsWith('Oiseau') && i.checked))
+        assert(await tileChecked('Oiseau'), 'le préréglage « Oiseau » n’est pas choisi')
         await tap('[data-testid="side-panel"] button[aria-label="Terminé"]')
         await until(page, () => document.querySelector('[data-testid="side-panel"]').hidden)
         // the sample has no stop of its own: one at the marker

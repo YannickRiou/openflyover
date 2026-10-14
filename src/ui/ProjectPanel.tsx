@@ -26,7 +26,7 @@ import { chooseFilesToOpen, closeProject, newProject, openProject, saveProject, 
 import type { CloseAnswer } from './projectActions'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
-import { Button, TextField, Tip } from './primitives'
+import { Button, Select, TextField, Tip } from './primitives'
 
 /**
  * "Projet" tab: the actions on the open project (new, open, save as a file, close), « Mes projets », then the presets
@@ -362,14 +362,18 @@ function PresetSection() {
             <label className="field__label" htmlFor={`${id}-preset`}>
               {t('project.panel.preset')}
             </label>
-            <select id={`${id}-preset`} className="select" value={selectedPreset} onChange={(e) => setSelectedPreset(e.currentTarget.value)}>
-              <option value="">{t('project.panel.choose')}</option>
-              {presets.map((preset) => (
-                <option key={preset.name} value={preset.name}>
-                  {preset.scope && preset.scope !== 'tout' ? t('project.panel.presetOption', { name: preset.name, scope: PRESET_SCOPE_LABELS[preset.scope] }) : preset.name}
-                </option>
-              ))}
-            </select>
+            <Select
+              id={`${id}-preset`}
+              value={selectedPreset}
+              options={[
+                { value: '', label: t('project.panel.choose') },
+                ...presets.map((preset) => ({
+                  value: preset.name,
+                  label: preset.scope && preset.scope !== 'tout' ? t('project.panel.presetOption', { name: preset.name, scope: PRESET_SCOPE_LABELS[preset.scope] }) : preset.name,
+                })),
+              ]}
+              onChange={(name) => setSelectedPreset(name)}
+            />
           </div>
           <div className="project__row">
             <Button onClick={applyPreset} disabled={!selected}>
@@ -392,18 +396,13 @@ function PresetSection() {
         <label className="field__label" htmlFor={`${id}-preset-scope`}>
           {t('project.panel.newPreset')}
         </label>
-        <select
+        <Select
           id={`${id}-preset-scope`}
-          className="select project__scope"
+          className="project__scope"
           value={presetScope}
-          onChange={(e) => setPresetScope(e.currentTarget.value as PresetScope)}
-        >
-          {PRESET_SCOPES.map((scope) => (
-            <option key={scope} value={scope}>
-              {PRESET_SCOPE_LABELS[scope]}
-            </option>
-          ))}
-        </select>
+          options={PRESET_SCOPES.map((scope) => ({ value: scope, label: PRESET_SCOPE_LABELS[scope] }))}
+          onChange={(scope) => setPresetScope(scope)}
+        />
         <div className="project__row">
           <TextField
             id={`${id}-preset-name`}

@@ -132,11 +132,17 @@ describe('Timeline', () => {
     await act(async () => addMarkerKeyHere())
     const keys = () => useAppStore.getState().settings.film.markerKeys
     const button = (label: string) => Array.from(host.querySelectorAll('button')).find((b) => b.textContent === label)!
-    const colour = () => host.querySelector<HTMLInputElement>('input[type="color"]')!
+    // the colour is read in the panel its button opens
+    const colour = async () => {
+      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Couleur"]')!.click())
+      const value = document.querySelector<HTMLInputElement>('input[aria-label="Code couleur (hexadécimal)"]')!.value
+      await act(async () => void document.querySelector('[role="dialog"][aria-label="Couleur"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      return value.toLowerCase()
+    }
     // a new key follows the panel's colours and size until it is given its own
     expect(keys()[0].color).toBeUndefined()
     expect(keys()[0].size).toBeUndefined()
-    expect(colour().value).toBe('#ffffff')
+    expect(await colour()).toBe('#ffffff')
     expect(host.textContent).toContain('Restent ceux du panneau : étiquette (aucune), tige (non)')
     expect(button('Reprendre couleurs et taille du panneau').disabled).toBe(true)
 
@@ -393,11 +399,9 @@ describe('Timeline — stages « À la suite »', () => {
   it('a cut is a thin block that holds nothing; the transition is changed from the inspector, « Appliquer à toutes » reaches every junction', async () => {
     const { host, root, blocks, tracks } = await setup(3)
     await act(async () => useAppStore.getState().setFilmSelection(`junction-${tracks[0].id}`))
-    const kind = host.querySelector<HTMLSelectElement>('[data-testid="film-inspector"] select')!
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(kind, 'coupe')
-      kind.dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    const kind = host.querySelector<HTMLButtonElement>('[data-testid="film-inspector"] button[aria-haspopup="listbox"]')!
+    await act(async () => kind.click())
+    await act(async () => [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((o) => o.textContent === 'Coupe')!.click())
     expect(blocks('Étapes', '[data-item^="junction-"][aria-label*=": Coupe"]')).toHaveLength(1)
     expect(host.querySelector('[data-testid="film-inspector"] input[type="range"]')).toBeNull()
     const all = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Appliquer à toutes les jonctions')!

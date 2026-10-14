@@ -4,7 +4,6 @@
  * list, welcome card) has its own dialog, drawn in the page body so a hidden panel never hides it.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { errorMessage } from '../core/errors'
 import { t as translate, useT } from '../i18n'
 import { formatDate } from '../i18n/format'
@@ -31,9 +30,8 @@ import type { StravaActivity } from '../strava/api'
 import { stravaSportLabel, streamsToTrack } from '../strava/track'
 import { useAppStore } from '../state/store'
 import { formatAscent, formatDistance } from './format'
-import { Icon } from './icons'
 import { runImport } from './projectActions'
-import { Button, Tip } from './primitives'
+import { Button, Checkbox, Modal } from './primitives'
 
 /** « Importer depuis Strava » of the welcome card. */
 export function StravaImport() {
@@ -53,30 +51,11 @@ export function StravaImport() {
 /** The Strava dialog, drawn in the page body (« + Ajouter » of the track list, welcome card). */
 export function StravaDialog({ open, onClose }: { open: boolean; onClose(): void }) {
   const t = useT()
-  const dialog = useRef<HTMLDialogElement>(null)
-  const titleId = useId()
-
-  useEffect(() => {
-    if (open) dialog.current?.showModal()
-    else dialog.current?.close()
-  }, [open])
-
-  return createPortal(
-    <dialog ref={dialog} className="sources strava" aria-labelledby={titleId} onClose={onClose}>
-      <div className="sources__head">
-        <h2 id={titleId} className="sources__title">
-          {t('strava.import')}
-        </h2>
-        <Tip text={t('common.closeEsc')} side="left">
-          <Button variant="icon" aria-label={t('common.close')} onClick={onClose}>
-            <Icon name="x" size={18} />
-          </Button>
-        </Tip>
-      </div>
-      {/* mounted while open only: every opening starts again from the stored connection */}
-      {open && <StravaBody onImported={onClose} />}
-    </dialog>,
-    document.body,
+  // the body is mounted while open only: every opening starts again from the stored connection
+  return (
+    <Modal open={open} onClose={onClose} title={t('strava.import')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
+      <StravaBody onImported={onClose} />
+    </Modal>
   )
 }
 
@@ -287,8 +266,7 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
       <ul className="strava__list" aria-describedby={`${id}-status`}>
         {shown.map((activity) => (
           <li key={activity.id}>
-            <label className="strava__item">
-              <input type="checkbox" checked={selected.has(activity.id)} onChange={() => toggle(activity.id)} />
+            <Checkbox className="strava__item" checked={selected.has(activity.id)} onChange={() => toggle(activity.id)}>
               <span className="strava__name">{activity.name}</span>
               <span className="strava__meta">
                 {[
@@ -300,7 +278,7 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
                   .filter(Boolean)
                   .join(' · ')}
               </span>
-            </label>
+            </Checkbox>
           </li>
         ))}
       </ul>

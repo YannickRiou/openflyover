@@ -25,7 +25,7 @@ export interface PopoverProps {
 /**
  * A small panel over the screen with its own controls: Tab moves in it, Escape closes it and gives the focus back (it stays the
  * panel's own while it is open, `data-local-escape`: the app's own Escape comes after), a click or tap outside closes it. It is
- * portalled out of its container, so a scrolling panel does not clip it, into the open `<dialog>` if there is one.
+ * portalled out of its container, so a scrolling panel does not clip it, into the open `Modal` if there is one.
  */
 export function Popover({ label, trigger, point, onClose, placement = 'bottom end', sheet, width, children }: PopoverProps) {
   const anchor = useRef<HTMLSpanElement>(null)

@@ -112,7 +112,8 @@ export type KeyFocus = 'text' | 'arrows' | 'other'
 const ARROW_CONTROLS = 'input[type="range"], input[type="radio"], [role="slider"], [role="tab"], [role="radio"], [role="listbox"], [role="menu"]'
 
 export function keyFocus(target: EventTarget | null): KeyFocus {
-  if (isTextEntry(target) || target instanceof HTMLSelectElement) return 'text'
+  // a select, native or the button that opens its list (letters jump to an option, the arrows change it)
+  if (isTextEntry(target) || target instanceof HTMLSelectElement || (target instanceof Element && target.closest('[aria-haspopup="listbox"]'))) return 'text'
   if (target instanceof Element && target.closest(ARROW_CONTROLS)) return 'arrows'
   return 'other'
 }

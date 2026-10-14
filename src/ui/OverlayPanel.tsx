@@ -33,7 +33,7 @@ import {
   withWidgetOverrides,
   widgetOverrides,
 } from '../overlay/settings'
-import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, TextBacking, WidgetOffset } from '../overlay/settings'
+import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
 import { getSettingsHistory } from '../project/history'
@@ -43,7 +43,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
-import { Button, Checkbox, Chip, NumberField, Radio, RadioGroup, Switch, TextField, ToggleButton, ToggleButtonGroup } from './primitives'
+import { Button, Checkbox, Chip, ColorField as ColorFieldControl, NumberField, Radio, RadioGroup, Select, Switch, TextField, ToggleButton, ToggleButtonGroup } from './primitives'
 
 const COUNTER_LABELS: Record<CounterId, string> = {
   get distance() { return t('overlay.counter.distance') },
@@ -269,7 +269,7 @@ function DotColor({ value, onChange }: { value: string | undefined; onChange(v: 
   )
 }
 
-/** Native colour picker followed by the swatches; `value` is '#rrggbb'. */
+/** The colour button followed by the swatches; `value` is '#rrggbb'. */
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange(v: string): void }) {
   const t = useT()
   const id = useId()
@@ -278,21 +278,13 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
       <label className="field__label" htmlFor={id}>
         {label}
       </label>
-      <div className="color-row">
-        <input id={id} className="color-row__input" type="color" value={value} onChange={(e) => onChange(e.currentTarget.value)} />
-        {SWATCHES.map((swatch) => (
-          <button
-            key={swatch.color}
-            type="button"
-            className="color-row__swatch"
-            style={{ background: swatch.color }}
-            aria-label={t('overlay.swatchAria', { label, swatch: swatch.label })}
-            aria-pressed={value === swatch.color}
-            title={swatch.label}
-            onClick={() => onChange(swatch.color)}
-          />
-        ))}
-      </div>
+      <ColorFieldControl
+        id={id}
+        label={label}
+        value={value}
+        onChange={onChange}
+        presets={SWATCHES.map((swatch) => ({ color: swatch.color, label: swatch.label, aria: t('overlay.swatchAria', { label, swatch: swatch.label }) }))}
+      />
     </div>
   )
 }
@@ -316,19 +308,12 @@ function FontField({
       <label className="field__label" htmlFor={id}>
         {label}
       </label>
-      <select
+      <Select
         id={id}
-        className="select"
         value={value ?? ''}
-        onChange={(e) => onChange((e.currentTarget.value || undefined) as OverlayFontId | undefined)}
-      >
-        <option value="">{inherit ?? t('overlay.font.style')}</option>
-        {OVERLAY_FONT_IDS.map((font) => (
-          <option key={font} value={font}>
-            {OVERLAY_FONT_LABELS[font]}
-          </option>
-        ))}
-      </select>
+        options={[{ value: '', label: inherit ?? t('overlay.font.style') }, ...OVERLAY_FONT_IDS.map((font) => ({ value: font, label: OVERLAY_FONT_LABELS[font] }))]}
+        onChange={(font) => onChange(font || undefined)}
+      />
     </div>
   )
 }
@@ -414,18 +399,12 @@ function StyleOverrides({
           <label className="field__label" htmlFor={backingId}>
             {t('overlay.overrides.backing')}
           </label>
-          <select
+          <Select
             id={backingId}
-            className="select"
             value={theme.textBacking ?? DEFAULT_TEXT_BACKING}
-            onChange={(e) => onChange({ textBacking: e.currentTarget.value as TextBacking })}
-          >
-            {TEXT_BACKINGS.map((backing) => (
-              <option key={backing} value={backing}>
-                {TEXT_BACKING_LABELS[backing]}
-              </option>
-            ))}
-          </select>
+            options={TEXT_BACKINGS.map((backing) => ({ value: backing, label: TEXT_BACKING_LABELS[backing] }))}
+            onChange={(textBacking) => onChange({ textBacking })}
+          />
           <p className="field__hint">{t('overlay.overrides.backingHint')}</p>
         </div>
       )}
@@ -461,14 +440,12 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
         <label className="field__label" htmlFor={kindId}>
           {t('overlay.labelColors.type')}
         </label>
-        <select id={kindId} className="select" value={kind} onChange={(e) => setKind(e.currentTarget.value as LabelKind)}>
-          {COLOURED_LABEL_KINDS.map((k) => (
-            <option key={k} value={k}>
-              {LABEL_KIND_LABELS[k]}
-              {own[k] ? t('overlay.labelColors.changed') : ''}
-            </option>
-          ))}
-        </select>
+        <Select
+          id={kindId}
+          value={kind}
+          options={COLOURED_LABEL_KINDS.map((k) => ({ value: k, label: `${LABEL_KIND_LABELS[k]}${own[k] ? t('overlay.labelColors.changed') : ''}` }))}
+          onChange={(k) => setKind(k)}
+        />
       </div>
       <ColorField label={t('overlay.color')} value={toHex(look.accents[kind])} onChange={(color) => onChange(withLabelColor(overlay, kind, color))} />
       <p className="field__hint">{t('overlay.labelColors.hint')}</p>

@@ -11,10 +11,13 @@ import type { IconName } from './icons'
 import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
 import { withShortcut } from './shortcuts'
-import { Button, Menu, TextField, Tip } from './primitives'
+import { Button, Menu, Radio, RadioGroup, TextField, Tip } from './primitives'
 
 /** How long the save icon keeps the accent colour once the project is saved (ms). */
 const SAVED_FLASH_MS = 3000
+
+/** `value` of the « Libre » option (no video aspect). */
+const FREE = 'free'
 
 /** Output format of the preview and of the export: « Libre » (preview only) or one of the video aspects. */
 function FormatSwitcher({ disabled }: { disabled: boolean }) {
@@ -29,24 +32,29 @@ function FormatSwitcher({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <div className="format-switch" role="radiogroup" aria-label={t('topbar.format.aria')}>
+    <RadioGroup
+      look="plain"
+      className="format-switch"
+      aria-label={t('topbar.format.aria')}
+      value={free ? FREE : aspect}
+      disabled={disabled}
+      onChange={(id) => pick(id === FREE ? null : id)}
+    >
       <Tip text={t('topbar.format.freeTip')}>
-        <label className="format-switch__option">
-          <input type="radio" name="output-format" checked={free} disabled={disabled} onChange={() => pick(null)} />
+        <Radio value={FREE} className="format-switch__option">
           <Icon name="maximize" size={18} />
           <span className="visually-hidden">{t('topbar.format.free')}</span>
-        </label>
+        </Radio>
       </Tip>
       {VIDEO_ASPECTS.map((a) => (
         <Tip key={a.id} text={a.label}>
-          <label className="format-switch__option">
-            <input type="radio" name="output-format" checked={!free && aspect === a.id} disabled={disabled} onChange={() => pick(a.id)} />
+          <Radio value={a.id} className="format-switch__option">
             <AspectIcon x={a.x} y={a.y} size={18} />
             <span className="visually-hidden">{a.label}</span>
-          </label>
+          </Radio>
         </Tip>
       ))}
-    </div>
+    </RadioGroup>
   )
 }
 

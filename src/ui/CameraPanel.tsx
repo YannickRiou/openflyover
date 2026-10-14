@@ -23,7 +23,7 @@ import type { IconName } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
-import { Button, Checkbox, Slider, Switch } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
 
 /** « Mettre en avant la région »: what it does, then how the search for the region went (found: after its name). */
 const REGION_HINTS: Record<RegionStatus, string> = {
@@ -72,6 +72,9 @@ const PRESET_ICONS: Record<string, IconName> = {
 
 /** Shown first: one preset per style plus a high view, from close to far; the others under « Plus de préréglages ». */
 const MAIN_PRESETS = new Set(['chase', 'bird', 'orbit', 'cinema', 'high-drone', 'satellite'])
+
+/** `value` of the tile that shows the settings when they match no preset. */
+const CUSTOM_PRESET = 'custom'
 
 /** Key figures of a preset tile: distance multiplier and tilt. */
 function presetFigures(camera: CameraSettings): string {
@@ -233,13 +236,16 @@ export function CameraPanel() {
   const mainPresets = CAMERA_PRESETS.filter((p) => MAIN_PRESETS.has(p.id) || p === preset)
   const morePresets = CAMERA_PRESETS.filter((p) => !mainPresets.includes(p))
   const presetTile = (p: CameraPreset) => (
-    <label key={p.id} className="format-tile style-tile" title={CAMERA_STYLE_LABELS[p.camera.style]}>
-      <input type="radio" name={`${id}-preset`} value={p.name} checked={preset === p} onChange={() => setSetting('camera', { ...p.camera })} />
+    <Radio key={p.id} value={p.id} className="format-tile style-tile" title={CAMERA_STYLE_LABELS[p.camera.style]}>
       <Icon name={PRESET_ICONS[p.id]} size={20} />
       <span className="format-tile__label">{p.name}</span>
       <span className="preset-tile__figures">{presetFigures(p.camera)}</span>
-    </label>
+    </Radio>
   )
+  const pickPreset = (presetId: string) => {
+    const picked = CAMERA_PRESETS.find((p) => p.id === presetId)
+    if (picked) setSetting('camera', { ...picked.camera })
+  }
   const update = (patch: Partial<CameraSettings>) => setSetting('camera', { ...camera, ...patch })
   const updatePacing = (patch: Partial<PacingSettings>) => setFlightTiming({ pacing: { ...pacing, ...patch } })
   const lengthM = useFilmTrack()?.stats.distanceM ?? 0
@@ -250,24 +256,27 @@ export function CameraPanel() {
     <>
       <PanelSection title={t('camera.panel.camera')} keys={['camera']}>
         <fieldset className="field fieldset">
-          <legend className="field__label">{t('camera.panel.preset')}</legend>
-          <div className="style-tiles">
+          <legend id={`${id}-preset`} className="field__label">
+            {t('camera.panel.preset')}
+          </legend>
+          <RadioGroup look="plain" className="style-tiles" aria-labelledby={`${id}-preset`} value={preset?.id ?? CUSTOM_PRESET} onChange={pickPreset}>
             {mainPresets.map(presetTile)}
             {!preset && (
-              <label className="format-tile style-tile" title={t('camera.panel.customTip')}>
-                <input type="radio" name={`${id}-preset`} checked readOnly />
+              <Radio value={CUSTOM_PRESET} className="format-tile style-tile" title={t('camera.panel.customTip')}>
                 <Icon name="sliders-horizontal" size={20} />
                 <span className="format-tile__label">{t('camera.panel.custom')}</span>
                 <span className="preset-tile__figures">{presetFigures(camera)}</span>
-              </label>
+              </Radio>
             )}
-          </div>
+          </RadioGroup>
           <details className="preset-more">
             <summary className="preset-more__summary">
               <span className="preset-more__label">{t('camera.panel.morePresets')}</span>
               <Icon name="chevron-down" size={16} />
             </summary>
-            <div className="style-tiles">{morePresets.map(presetTile)}</div>
+            <RadioGroup look="plain" className="style-tiles" aria-label={t('camera.panel.morePresets')} value="" onChange={pickPreset}>
+              {morePresets.map(presetTile)}
+            </RadioGroup>
           </details>
           <p id={`${id}-style-hint`} className="field__hint">
             {STYLE_HINTS[camera.style]}
@@ -283,19 +292,13 @@ export function CameraPanel() {
             <label className="field__label" htmlFor={`${id}-style`}>
               {t('camera.panel.style')}
             </label>
-            <select
+            <Select
               id={`${id}-style`}
-              className="select"
               value={camera.style}
               aria-describedby={`${id}-style-hint`}
-              onChange={(e) => update({ style: e.currentTarget.value as CameraStyle })}
-            >
-              {CAMERA_STYLES.map((style) => (
-                <option key={style} value={style}>
-                  {CAMERA_STYLE_LABELS[style]}
-                </option>
-              ))}
-            </select>
+              options={CAMERA_STYLES.map((style) => ({ value: style, label: CAMERA_STYLE_LABELS[style] }))}
+              onChange={(style) => update({ style })}
+            />
           </div>
         </SettingRow>
         {SLIDERS.map(({ key, label, tip, format }) => {

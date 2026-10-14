@@ -31,14 +31,13 @@ import type { MarkerFigure, MarkerSettings, TrackStyle } from '../scene/markerSe
 import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
-import type { Settings } from '../state/store'
 import { formatDistance, formatPercent, formatShort } from './format'
 import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { showToast } from './toast'
 import './markerSection.css'
-import { Button, Checkbox, Radio, RadioGroup, Switch, TextField } from './primitives'
+import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch, TextField } from './primitives'
 
 /** 0 -> "Aucun", else the distance */
 const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.slider.noneMasc') : formatDistance(metres))
@@ -192,18 +191,16 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
               <label className="field__label" htmlFor={`${id}-glow-color`}>
                 {t('marker.track.glowColor')}
               </label>
-              <div className="color-row">
-                <input
-                  id={`${id}-glow-color`}
-                  className="color-row__input"
-                  type="color"
-                  value={style.glowColor || firstTrack?.color || '#ffffff'}
-                  onChange={(e) => updateStyle({ glowColor: e.currentTarget.value })}
-                />
+              <ColorField
+                id={`${id}-glow-color`}
+                label={t('marker.track.glowColor')}
+                value={style.glowColor || firstTrack?.color || '#ffffff'}
+                onChange={(color) => updateStyle({ glowColor: color })}
+              >
                 <Button disabled={!style.glowColor} onClick={() => updateStyle({ glowColor: '' })}>
                   {t('marker.track.sameAsTrack')}
                 </Button>
-              </div>
+              </ColorField>
             </div>
           </SettingRow>
         </>
@@ -213,18 +210,12 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           <label className="field__label" htmlFor={`${id}-color`}>
             {t('marker.track.colorBy')}
           </label>
-          <select
+          <Select
             id={`${id}-color`}
-            className="select"
             value={trackColorBy}
-            onChange={(e) => setSetting('trackColorBy', e.currentTarget.value as Settings['trackColorBy'])}
-          >
-            {colorModes.map(({ mode, label, available }) => (
-              <option key={mode} value={mode} disabled={!available}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={colorModes.map(({ mode, label, available }) => ({ value: mode, label, disabled: !available }))}
+            onChange={(mode) => setSetting('trackColorBy', mode)}
+          />
         </div>
       </SettingRow>
       <SettingRow label={t('marker.track.smoothing')} value={formatSmoothing(style.smoothingM)} paths={['trackStyle.smoothingM']}>
@@ -281,18 +272,11 @@ function MarkerColorRow({
         <label className="field__label" htmlFor={id}>
           {label}
         </label>
-        <div className="color-row">
-          <input
-            id={id}
-            className="color-row__input"
-            type="color"
-            value={value || trackColor}
-            onChange={(e) => onChange(e.currentTarget.value)}
-          />
+        <ColorField id={id} label={label} value={value || trackColor} onChange={onChange}>
           <Button disabled={!value} onClick={() => onChange('')}>
             {t('marker.track.sameAsTrack')}
           </Button>
-        </div>
+        </ColorField>
       </div>
     </SettingRow>
   )

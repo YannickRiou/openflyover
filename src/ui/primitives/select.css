@@ -1,0 +1,129 @@
+/*
+ * Select (Select.tsx): the look of both its renderers, the native `<select>` (touch screens) and the button that opens the list,
+ * so they are the same control. `.select-field` (a panel's form control, with `.input`) is in theme.css; `.select-bar` is
+ * the small one of the dark timeline bar. The list is the dark chrome of overlay.css, as the menus. HeroUI's own CSS for
+ * the component is not imported, only its behaviour (React Aria) is used.
+ */
+@layer components {
+.select-bar {
+  min-height: 26px;
+  max-width: 190px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-ink-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-chrome);
+  color: var(--color-white);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .select-bar:hover {
+    border-color: var(--color-white);
+  }
+}
+
+/* the button that opens the list: laid out as the native control, with the chevron at its end */
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* the text of a native select sits 4px in from its padding */
+.select-trigger.select-field {
+  padding-inline-start: calc(var(--space-3) + 4px);
+}
+
+.select-trigger[data-disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-trigger svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text-2);
+  transition: transform 120ms ease;
+}
+
+.select-bar svg {
+  color: currentColor;
+}
+
+.select-trigger svg[data-open] {
+  transform: rotate(180deg);
+}
+
+.select-panel {
+  min-width: var(--trigger-width);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.select-list {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1);
+  outline: none;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font: 600 13px/1 var(--font-body);
+  white-space: nowrap;
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* hovered, or moved to by the arrows (React Aria focuses the row under the mouse too) */
+.select-option[data-focused],
+.select-option[data-focus-visible='true'] {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.select-option[data-selected] {
+  color: var(--accent-on-dark);
+}
+
+.select-option[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.select-check {
+  display: flex;
+  flex: none;
+}
+
+.select-check svg {
+  width: 12px;
+  height: 12px;
+}
+
+.select-group {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  color: var(--text-on-dark-2);
+  font: 700 11px/1 var(--font-body);
+}
+}

@@ -41,7 +41,7 @@ import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import './trackElevation.css'
-import { Button, Menu, Slider, Tip } from './primitives'
+import { Button, ColorField, Menu, Radio, RadioGroup, Select, Slider, Switch, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -121,7 +121,6 @@ function withMultiMode(race: RaceSettings, mode: MultiMode): RaceSettings {
 function StageDefaults() {
   const t = useT()
   const film = useAppStore((s) => s.settings.film)
-  const id = useId()
   const { kind, holdS, card } = junctionDefaultOf(film)
   return (
     <>
@@ -130,10 +129,9 @@ function StageDefaults() {
         holdS={holdS || DEFAULT_JUNCTION.holdS}
         onChange={(patch) => editFilm((f) => ({ film: withDefaultJunction(f, patch) }), { step: patch.kind !== undefined })}
       />
-      <label className="checkbox checkbox--switch" htmlFor={`${id}-cards`}>
-        <input id={`${id}-cards`} type="checkbox" checked={card} onChange={(e) => editFilm((f) => ({ film: withDefaultCard(f, e.currentTarget.checked) }))} />
+      <Switch checked={card} onChange={(on) => editFilm((f) => ({ film: withDefaultCard(f, on) }))}>
         {t('track.stageCard')}
-      </label>
+      </Switch>
       <p className="field__hint">{t('track.stageHint')}</p>
     </>
   )
@@ -171,21 +169,19 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
       <h3 id={`${id}-title`} className="field__label">
         {t('track.race.title')}
       </h3>
-      <div className="segmented" role="radiogroup" aria-labelledby={`${id}-title`} aria-describedby={`${id}-mode-hint`}>
+      <RadioGroup
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-mode-hint`}
+        value={mode}
+        disabled={busy}
+        onChange={(m) => setSetting('race', withMultiMode(settings, m))}
+      >
         {MULTI_MODES.map((m) => (
-          <label key={m} className="segmented__option">
-            <input
-              type="radio"
-              name={`${id}-mode`}
-              value={m}
-              checked={mode === m}
-              disabled={busy}
-              onChange={() => setSetting('race', withMultiMode(settings, m))}
-            />
+          <Radio key={m} value={m}>
             {MULTI_MODE_LABELS[m]}
-          </label>
+          </Radio>
         ))}
-      </div>
+      </RadioGroup>
       <p id={`${id}-mode-hint`} className="field__hint">
         {MULTI_MODE_HINTS[mode]}
       </p>
@@ -196,19 +192,13 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
         <label className="field__label" htmlFor={`${id}-sync`}>
           {t('track.race.sync')}
         </label>
-        <select
+        <Select
           id={`${id}-sync`}
-          className="select"
           value={race.sync}
           aria-describedby={`${id}-sync-hint`}
-          onChange={(e) => setSetting('race', { ...settings, sync: e.currentTarget.value as RaceSync })}
-        >
-          {RACE_SYNC_MODES.map((mode) => (
-            <option key={mode} value={mode} disabled={syncNeedsTime(mode) && !race.timed}>
-              {RACE_SYNC_LABELS[mode]}
-            </option>
-          ))}
-        </select>
+          options={RACE_SYNC_MODES.map((mode) => ({ value: mode, label: RACE_SYNC_LABELS[mode], disabled: syncNeedsTime(mode) && !race.timed }))}
+          onChange={(sync) => setSetting('race', { ...settings, sync })}
+        />
         <p id={`${id}-sync-hint`} className="field__hint">
           {race.timed
             ? SYNC_HINTS[race.sync]
@@ -222,32 +212,27 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
             <label className="field__label" htmlFor={`${id}-camera`}>
               {t('track.race.cameraOn')}
             </label>
-            <select id={`${id}-camera`} className="select" value={camera} disabled={busy} onChange={(e) => followCamera(e.currentTarget.value)}>
-              <option value="premiere">{tracks[0].name}</option>
-              {tracks.slice(1).map((other) => (
-                <option key={other.id} value={other.id}>
-                  {other.name}
-                </option>
-              ))}
-              {RACE_CAMERAS.filter((c) => c !== 'premiere').map((c) => (
-                <option key={c} value={c}>
-                  {RACE_CAMERA_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="checkbox checkbox--switch" htmlFor={`${id}-board`}>
-            <input
-              id={`${id}-board`}
-              type="checkbox"
-              checked={leaderboard.enabled}
-              onChange={(e) => {
-                const { overlay } = useAppStore.getState().settings
-                setSetting('overlay', { ...overlay, leaderboard: { ...overlay.leaderboard, enabled: e.currentTarget.checked } })
-              }}
+            <Select
+              id={`${id}-camera`}
+              value={camera}
+              disabled={busy}
+              options={[
+                { value: 'premiere', label: tracks[0].name },
+                ...tracks.slice(1).map((other) => ({ value: other.id, label: other.name })),
+                ...RACE_CAMERAS.filter((c) => c !== 'premiere').map((c) => ({ value: c, label: RACE_CAMERA_LABELS[c] })),
+              ]}
+              onChange={followCamera}
             />
+          </div>
+          <Switch
+            checked={leaderboard.enabled}
+            onChange={(on) => {
+              const { overlay } = useAppStore.getState().settings
+              setSetting('overlay', { ...overlay, leaderboard: { ...overlay.leaderboard, enabled: on } })
+            }}
+          >
             {t('track.race.board')}
-          </label>
+          </Switch>
           {leaderboard.enabled && !overlayOn && <p className="field__hint">{t('track.race.boardNeedsOverlay')}</p>}
           <RaceBoard race={race} tracks={tracks} />
           <p className="field__hint">{t('track.race.gap')}</p>
@@ -378,18 +363,12 @@ function OutingPlanForm({ track }: { track: Track }) {
           <label className="field__label" htmlFor={`${id}-activity`}>
             {t('track.plan.activity')}
           </label>
-          <select
+          <Select
             id={`${id}-activity`}
-            className="select"
             value={activity}
-            onChange={(e) => setActivity(e.currentTarget.value as PlanActivity)}
-          >
-            {PLAN_ACTIVITIES.map((a) => (
-              <option key={a} value={a}>
-                {PLAN_ACTIVITY_LABELS[a]}
-              </option>
-            ))}
-          </select>
+            options={PLAN_ACTIVITIES.map((a) => ({ value: a, label: PLAN_ACTIVITY_LABELS[a] }))}
+            onChange={(a) => setActivity(a)}
+          />
         </div>
         <div className="field">
           <span className="field__label">
@@ -703,15 +682,13 @@ export function TrackList() {
                 </Tip>
               )}
               <Tip text={t('track.list.colorTip')}>
-                <label className="track__swatch" style={{ background: track.color }}>
-                  <input
-                    type="color"
-                    className="track__color"
-                    value={track.color}
-                    aria-label={t('track.list.colorAria', { name: track.name })}
-                    onChange={(e) => setTrackColor(track.id, e.currentTarget.value)}
-                  />
-                </label>
+                <ColorField
+                  dot
+                  className="track__swatch"
+                  label={t('track.list.colorAria', { name: track.name })}
+                  value={track.color}
+                  onChange={(color) => setTrackColor(track.id, color)}
+                />
               </Tip>
               <span className="track__name" data-testid="track-name" title={track.name}>
                 {track.name}
