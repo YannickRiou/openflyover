@@ -213,13 +213,4 @@
 }
 
 /* ======================== fin Carte et Survol ============================ */
-
-/* « Mes projets »: the view at the last save on the left of the name, summary and date; the buttons under both */
-.library__item {
-  grid-template-columns: 96px minmax(0, 1fr);
-  column-gap: var(--space-2);
-}
-
-/* ============================== fin Clarté =============================== */
-
 }
