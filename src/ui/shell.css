@@ -199,8 +199,6 @@
 .panel output,
 .track__meta,
 .climb__meta,
-.landmark__meta,
-.weather__list,
 .dock .field__hint {
   font-variant-numeric: tabular-nums;
 }

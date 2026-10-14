@@ -75,17 +75,17 @@ export function OfflinePanel() {
   }
 
   return (
-    <section className="settings offline" aria-labelledby={`${id}-title`}>
-      <p id={`${id}-title`} className="field__hint">
+    <section className="flex flex-col gap-3" aria-labelledby={`${id}-title`}>
+      <p id={`${id}-title`} className="type-hint">
         {t('offline.panel.intro')}
       </p>
 
       {!canStore ? (
-        <p className="tracks__empty">{t('offline.panel.noStorage')}</p>
+        <p className="rounded-md bg-surface-card p-3 text-center type-hint">{t('offline.panel.noStorage')}</p>
       ) : (
         <>
-          <fieldset className="field fieldset" disabled={job !== null}>
-            <legend className="field__label">{t('offline.panel.corridor')}</legend>
+          <fieldset className="field min-w-0" disabled={job !== null}>
+            <legend className="type-label mb-1">{t('offline.panel.corridor')}</legend>
             <RadioGroup aria-label={t('offline.panel.corridor')} value={corridorM} onChange={(width) => setCorridorM(width)}>
               {CORRIDOR_WIDTHS_M.map((width) => (
                 <Radio key={width} value={width}>
@@ -95,7 +95,7 @@ export function OfflinePanel() {
             </RadioGroup>
           </fieldset>
 
-          <p className="field__hint">
+          <p className="type-hint">
             {terrainPolicy.allowed
               ? terrainPolicy.personalUse
                 ? t('offline.panel.terrainReason', { name: terrain.name, reason: terrainPolicy.reason })
@@ -110,7 +110,7 @@ export function OfflinePanel() {
           </p>
 
           {plan && (
-            <p className="field__hint">
+            <p className="type-hint">
               {[
                 t('offline.panel.estimate', { tiles: formatNumber(plan.tiles.length), size: formatSize(plan.estimatedBytes), zoom: plan.maxTerrainZoom }),
                 imageryPolicy.allowed && imageryLevel.note,
@@ -123,25 +123,25 @@ export function OfflinePanel() {
 
           {job ? (
             <div className="field">
-              <progress className="export__progress" value={job.progress.done} max={Math.max(1, job.progress.total)} />
-              <p className="field__hint">
+              <progress className="h-2.5 w-full accent-brand" value={job.progress.done} max={Math.max(1, job.progress.total)} />
+              <p className="type-hint">
                 {t(job.progress.state === 'paused' ? 'offline.panel.progressPaused' : 'offline.panel.progress', {
                   done: formatNumber(job.progress.done),
                   total: formatNumber(job.progress.total),
                   size: formatSize(job.progress.bytes),
                 })}
               </p>
-              <div className="project__row">
+              <div className="grid grid-cols-2 gap-2">
                 {job.progress.state === 'paused' ? (
-                  <Button onClick={resumePack}>
+                  <Button block onClick={resumePack}>
                     {t('offline.panel.resume')}
                   </Button>
                 ) : (
-                  <Button onClick={pausePack}>
+                  <Button block onClick={pausePack}>
                     {t('offline.panel.pause')}
                   </Button>
                 )}
-                <Button onClick={cancelPack}>
+                <Button block onClick={cancelPack}>
                   {t('common.cancel')}
                 </Button>
               </div>
@@ -153,13 +153,12 @@ export function OfflinePanel() {
           )}
 
           {packs.length > 0 && (
-            <ul className="offline__packs">
+            <ul className="grid gap-2">
               {packs.map((pack) => (
-                <li key={pack.id} className="project__row">
-                  <span>
-                    {pack.name}
-                    <br />
-                    <span className="field__hint">
+                <li key={pack.id} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="type-label block break-words">{pack.name}</span>
+                    <span className="type-hint block">
                       {t(pack.complete ? 'offline.panel.pack' : 'offline.panel.packIncomplete', {
                         date: formatDate(pack.createdAt, { year: 'numeric', month: 'numeric', day: 'numeric' }),
                         tiles: formatNumber(pack.tiles),
@@ -168,6 +167,7 @@ export function OfflinePanel() {
                     </span>
                   </span>
                   <Button
+                    className="flex-none"
                     onClick={() => void deletePack(pack.id)}
                     disabled={job?.packId === pack.id}
                   >
@@ -178,10 +178,10 @@ export function OfflinePanel() {
             </ul>
           )}
           {packs.some((p) => !p.complete) && (
-            <p className="field__hint">{t('offline.panel.incompleteHint')}</p>
+            <p className="type-hint">{t('offline.panel.incompleteHint')}</p>
           )}
           {usage && usage.quotaBytes > 0 && (
-            <p className="field__hint">
+            <p className="type-hint">
               {t('offline.panel.usage', { used: formatSize(usage.usedBytes), quota: formatSize(usage.quotaBytes) })}
             </p>
           )}
