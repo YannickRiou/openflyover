@@ -284,7 +284,7 @@
 }
 
 @media (hover: hover) {
-  .rail__tab:hover:not(:disabled),
+  .rail__tab:hover:not(:disabled, [aria-disabled='true']),
   .rail__toggle:hover:not(:disabled) {
     background: rgb(255 255 255 / 0.1);
     color: var(--color-white);
@@ -330,6 +330,7 @@
 }
 
 .rail__tab:disabled,
+.rail__tab[aria-disabled='true'],
 .rail__toggle:disabled {
   cursor: not-allowed;
   opacity: 0.4;

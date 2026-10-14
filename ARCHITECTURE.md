@@ -89,7 +89,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/scene/touchGesture.ts` | fingers moving the 3D view (lower pixel ratio, see "Device budget") | tested: `watchTouchGesture`, `TOUCH_SETTLE_MS` |
 | `src/offline/*` | offline tile packs (see "Offline packs") | pure, tested: `planOfflineTiles`, `packImageryLevel`, `splitDistanceM`, `CORRIDOR_WIDTHS_M`, `MAX_PACK_TILES` (`plan.ts`); `offlinePolicy`, `OFFLINE_POLICIES` (`policy.ts`); `startPackDownload`, `createDailyQuota` (`download.ts`); `createPackRegistry`, `createStoredTileReader`, `packIdFor`, `sourcePrefixes` (`packs.ts`); not pure: `useOfflineStore`, `installOfflineTiles`, `preparePack`, `pausePack`, `resumePack`, `cancelPack`, `deletePack` (`store.ts`), `OfflinePanel` (`src/ui`) |
 | `src/state/store.ts` | zustand state | `useAppStore`, `Settings`, `Playback`, `AppState`, `resetAppStore` |
-| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextTabIndex`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested) |
+| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested) |
 
 ### Development rules
 
@@ -344,7 +344,7 @@ themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under 
 `--status-error*` are fixed reds (they no longer follow the accent).
 **Primitives** (`src/ui/primitives/`, one file per component and its CSS, exported from `index.ts`; screens never import
 `@heroui/react`): `Button` (`variant` primary / secondary / icon, `size="sm"`, `block`; it keeps the `.btn` / `.icon-btn`
-classes the CSS of the screens keys on) and `Tip` (tooltip, see "Tooltips"). HeroUI's styles are imported in `theme.css`
+classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips"), `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,
@@ -376,7 +376,7 @@ pointer (`appearance.css`).
   one centred column: "Choisir un fichier" (choose a file), "Importer depuis Strava", "Essayer avec l'exemple" (try the
   sample), "Ouvrir un projet…" (open a project; a single picker whose `accept` changes), then "Récents": the three latest
   entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab).
-- **Rail and panel**: vertical rail of icon + label tabs (64 px; `tablist`, roving focus, arrows / Home / End) and a
+- **Rail and panel**: vertical rail of icon + label tabs (64 px; `Tabs` primitive: `tablist`, one tab stop, arrows (up / down in the rail, left / right in the phone's bar) and Home / End, a press on the open tab folds the panel) and a
   320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Étiquettes », hidden without a track),
   **Carte** (map; base map and water, relief, OSM landmarks and points of interest),
   **Météo** (weather; weather of the outing, clouds, weather in the image), **Lumière** (light; atmosphere, shadows,

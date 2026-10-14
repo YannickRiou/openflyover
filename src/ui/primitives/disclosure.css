@@ -1,0 +1,10 @@
+/*
+ * Disclosure (Disclosure.tsx): the behaviour is HeroUI's (`aria-expanded`, `aria-controls`, the body kept mounted); its own
+ * `disclosure.css` (an animated height and a chevron) is not imported, the screen skins the head and the body (the setting
+ * rows: app.css). A folded body takes no room, whatever display the screen gives it.
+ */
+@layer components {
+[data-slot='disclosure-content'][hidden] {
+  display: none;
+}
+}

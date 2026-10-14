@@ -1,6 +1,6 @@
 /**
  * Pure logic of the application shell (no React, no DOM): framing of the 3D preview to the output format,
- * routing of the opened or dropped files, roving focus of the tabs, project name and save state (shortcuts: `shortcuts.ts`).
+ * routing of the opened or dropped files, project name and save state (shortcuts: `shortcuts.ts`).
  */
 import { isRecord } from '../core/guards'
 import { DEFAULT_APPEARANCE, parseAppearance } from './appearance'
@@ -52,19 +52,6 @@ export function routeOpenedFiles<F extends { name: string }>(files: readonly F[]
 /** A drag carries files (not text or a link): the window offers to import them. */
 export function isFileDrag(types: readonly string[] | null | undefined): boolean {
   return types?.includes('Files') ?? false
-}
-
-/**
- * Index of the tab that takes the focus after `key` in a tab list of `count` tabs (wrapping), null for any
- * other key. Both axes are accepted (vertical rail, horizontal bar on small screens); Home / End.
- */
-export function nextTabIndex(current: number, key: string, count: number): number | null {
-  if (count <= 0) return null
-  if (key === 'ArrowUp' || key === 'ArrowLeft') return (current - 1 + count) % count
-  if (key === 'ArrowDown' || key === 'ArrowRight') return (current + 1) % count
-  if (key === 'Home') return 0
-  if (key === 'End') return count - 1
-  return null
 }
 
 /**

@@ -8,7 +8,6 @@ import {
   isFileDrag,
   isProjectDirty,
   nextGridIndex,
-  nextTabIndex,
   DEFAULT_PREFERENCES,
   parseFoldPrefs,
   parsePreferences,
@@ -80,18 +79,6 @@ describe('isFileDrag', () => {
     expect(isFileDrag(['Files', 'application/x-moz-file'])).toBe(true)
     expect(isFileDrag(['text/plain', 'text/uri-list'])).toBe(false)
     expect(isFileDrag(undefined)).toBe(false)
-  })
-})
-
-describe('nextTabIndex', () => {
-  it('wraps on both axes and jumps with Home / End', () => {
-    expect(nextTabIndex(0, 'ArrowUp', 5)).toBe(4)
-    expect(nextTabIndex(4, 'ArrowDown', 5)).toBe(0)
-    expect(nextTabIndex(2, 'ArrowLeft', 5)).toBe(1)
-    expect(nextTabIndex(2, 'ArrowRight', 5)).toBe(3)
-    expect(nextTabIndex(3, 'Home', 5)).toBe(0)
-    expect(nextTabIndex(1, 'End', 5)).toBe(4)
-    expect(nextTabIndex(1, 'Enter', 5)).toBeNull()
   })
 })
 
