@@ -1,0 +1,138 @@
+/*
+ * RadioGroup / Radio (RadioGroup.tsx): HeroUI's `.radio-group` and `.radio` (imported in theme.css) skinned with the tokens
+ * of theme.css, without the round control: the option itself is what is drawn. `look="segmented"`: options side by side
+ * in one frame, the chosen one raised; `look="chips"`: see chip.css; `look="plain"`: the CSS of the screen draws them
+ * (its hook is `.option__label`, the clickable label of an option, which holds the hidden native radio).
+ * The group is horizontal, so its selectors carry `[data-orientation]` to come after HeroUI's.
+ */
+@layer components {
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+}
+
+.segmented[data-orientation] {
+  flex-flow: row nowrap;
+  gap: 2px;
+}
+
+/* many options (the eight overlay styles): they wrap onto several rows instead of overflowing sideways */
+.segmented--wrap[data-orientation] {
+  flex-wrap: wrap;
+}
+
+.segmented__option {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: stretch;
+  gap: 0;
+}
+
+.segmented--wrap .segmented__option {
+  flex: 1 1 auto;
+}
+
+.segmented__option .radio__content {
+  flex: 1 1 auto;
+  justify-content: center;
+  gap: 0;
+  padding: 5px var(--space-2);
+  border-radius: 4px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+
+@media (hover: hover) {
+  .segmented__option .radio__content:hover {
+    color: var(--text-1);
+  }
+}
+
+.segmented__option .radio__content[data-selected='true'] {
+  background: var(--surface-control);
+  color: var(--text-1);
+  box-shadow: var(--shadow-card);
+}
+
+.segmented__option .radio__content[data-focus-visible='true'] {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* a disabled option is still hovered (its `title` says why) and keeps its place */
+.segmented__option[data-disabled='true'],
+fieldset:disabled .segmented__option {
+  opacity: 0.6;
+  pointer-events: auto;
+}
+
+.segmented__option[data-disabled='true'] .radio__content,
+fieldset:disabled .segmented__option .radio__content {
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+
+/* touch screens: a target of 44 px at least */
+@media (pointer: coarse) {
+  .segmented__option {
+    min-height: 44px;
+  }
+}
+
+/*
+ * ToggleButtonGroup (ToggleButtonGroup.tsx): the same frame, its buttons are the options. HeroUI sets the corners of
+ * the first and last button with a selector as specific as these, hence the doubled class.
+ */
+.segmented .toggle-button.toggle-button {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  padding: 5px var(--space-2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: inherit;
+  transform: none;
+  transition: none;
+}
+
+@media (hover: hover) {
+  .segmented .toggle-button.toggle-button:hover {
+    background: transparent;
+    color: var(--text-1);
+  }
+}
+
+.segmented .toggle-button.toggle-button[data-selected='true'] {
+  background: var(--surface-control);
+  color: var(--text-1);
+  box-shadow: var(--shadow-card);
+}
+
+.segmented .toggle-button.toggle-button:focus-visible:not([data-focused]),
+.segmented .toggle-button.toggle-button[data-focus-visible='true'] {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.segmented .toggle-button.toggle-button[data-selected='true'][data-focus-visible='true'] {
+  box-shadow: var(--shadow-card);
+}
+
+@media (pointer: coarse) {
+  .segmented .toggle-button.toggle-button {
+    min-height: 44px;
+  }
+}
+}

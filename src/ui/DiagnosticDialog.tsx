@@ -4,7 +4,7 @@ import { currentReport } from '../export/guard'
 import { useT } from '../i18n'
 import { Icon } from './icons'
 import { SettingRow } from './PanelSection'
-import { Button, Tip } from './primitives'
+import { Button, Checkbox, Tip } from './primitives'
 
 /** « Diagnostic », last row of the Réglages tab: the report made now, with the last export's (« mode debug »). */
 export function DiagnosticRow() {
@@ -18,17 +18,15 @@ export function DiagnosticRow() {
         <Button onClick={() => showDiagnostic(currentReport())}>
           {t('settings.diagnostic.show')}
         </Button>
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={noEncoding}
-            onChange={(e) => {
-              setNoEncodingTest(e.currentTarget.checked)
-              setNoEncoding(e.currentTarget.checked)
+        <Checkbox
+          checked={noEncoding}
+          onChange={(on) => {
+              setNoEncodingTest(on)
+              setNoEncoding(on)
             }}
-          />
+        >
           {t('settings.diagnostic.noEncoding')}
-        </label>
+        </Checkbox>
       </SettingRow>
     </section>
   )

@@ -31,7 +31,7 @@ import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
 import './LandmarkPanel.css'
-import { Button, Tip } from './primitives'
+import { Button, Checkbox, Chip, Switch, Tip } from './primitives'
 
 /** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
 function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'>): string {
@@ -83,16 +83,14 @@ function StopToggle({ name, stop, disabled, onToggle }: { name: string; stop?: F
   const t = useT()
   return (
     <div className="place__stop">
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          aria-label={t('landmarks.stopAria', { name })}
-          checked={stop !== undefined}
-          disabled={disabled}
-          onChange={(e) => onToggle(e.currentTarget.checked)}
-        />
+      <Checkbox
+        checked={stop !== undefined}
+        disabled={disabled}
+        aria-label={t('landmarks.stopAria', { name })}
+        onChange={(on) => onToggle(on)}
+      >
         {t('landmarks.stop')}
-      </label>
+      </Checkbox>
       {stop && (
         <label className="place__duration">
           <input
@@ -261,15 +259,13 @@ export function LandmarkPanel() {
 
   return (
     <PanelSection title={t('landmarks.title')} keys={['landmarks']}>
-      <label className="checkbox checkbox--switch" htmlFor={`${id}-enabled`}>
-        <input
-          id={`${id}-enabled`}
-          type="checkbox"
-          checked={settings.enabled}
-          onChange={(e) => setSetting('landmarks', { ...settings, enabled: e.currentTarget.checked })}
-        />
+      <Switch
+        id={`${id}-enabled`}
+        checked={settings.enabled}
+        onChange={(on) => setSetting('landmarks', { ...settings, enabled: on })}
+      >
         {t('landmarks.enable')}
-      </label>
+      </Switch>
 
       {settings.enabled && (
         <SettingRow label={t('landmarks.types')} value={kindsLabel(settings)} paths={['landmarks.kinds', 'landmarks.places']}>
@@ -280,26 +276,23 @@ export function LandmarkPanel() {
                 kind === 'place' ? (
                   // places as three chips, by size
                   PLACE_SIZES.map((size) => (
-                    <label key={size} className="chip">
-                      <input
-                        type="checkbox"
-                        checked={settings.kinds.place && settings.places[size]}
-                        onChange={(e) => setSetting('landmarks', withPlaceSize(settings, size, e.currentTarget.checked))}
-                      />
+                    <Chip
+                      key={size}
+                      checked={settings.kinds.place && settings.places[size]}
+                      onChange={(on) => setSetting('landmarks', withPlaceSize(settings, size, on))}
+                    >
                       {PLACE_SIZE_LABELS[size]}
-                    </label>
+                    </Chip>
                   ))
                 ) : (
-                  <label key={kind} className="chip">
-                    <input
-                      type="checkbox"
-                      checked={settings.kinds[kind]}
-                      onChange={(e) =>
-                        setSetting('landmarks', { ...settings, kinds: { ...settings.kinds, [kind]: e.currentTarget.checked } })
+                  <Chip
+                    key={kind}
+                    checked={settings.kinds[kind]}
+                    onChange={(on) => setSetting('landmarks', { ...settings, kinds: { ...settings.kinds, [kind]: on } })
                       }
-                    />
+                  >
                     {KIND_LABELS[kind]}
-                  </label>
+                  </Chip>
                 ),
               )}
             </div>

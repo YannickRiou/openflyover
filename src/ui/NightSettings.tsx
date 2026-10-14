@@ -14,7 +14,7 @@ import { trackPathOf } from '../flyover/path'
 import { editFilm, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { formatSecondsShort } from './format'
 import { PanelSection, RangeField, SettingRow } from './PanelSection'
-import { Button } from './primitives'
+import { Button, Checkbox, Switch } from './primitives'
 
 export function NightSettings() {
   const tr = useT()
@@ -35,16 +35,14 @@ export function NightSettings() {
 
   return (
     <PanelSection title={tr('light.nights.title')}>
-      <label className="checkbox checkbox--switch" htmlFor={`${id}-nights`}>
-        <input
-          id={`${id}-nights`}
-          type="checkbox"
-          checked={nights.enabled}
-          aria-describedby={`${id}-nights-hint`}
-          onChange={(e) => setNights({ enabled: e.currentTarget.checked })}
-        />
+      <Switch
+        id={`${id}-nights`}
+        checked={nights.enabled}
+        aria-describedby={`${id}-nights-hint`}
+        onChange={(on) => setNights({ enabled: on })}
+      >
         {tr('light.nights.show')}
-      </label>
+      </Switch>
       <p id={`${id}-nights-hint`} className="field__hint">
         {nights.enabled ? nightsHint : tr('light.nights.instant')}
       </p>
@@ -62,14 +60,8 @@ export function NightSettings() {
       {!sequence && (
         <fieldset className="field fieldset" disabled={days.length < 2}>
           <legend className="field__label">{tr('light.days.legend')}</legend>
-          <label className="checkbox">
-            <input type="checkbox" checked={content.day} onChange={(e) => setContent({ ...content, day: e.currentTarget.checked })} />
-            {tr('light.days.dayDistance')}
-          </label>
-          <label className="checkbox">
-            <input type="checkbox" checked={content.total} onChange={(e) => setContent({ ...content, total: e.currentTarget.checked })} />
-            {tr('light.days.totalDistance')}
-          </label>
+          <Checkbox checked={content.day} onChange={(on) => setContent({ ...content, day: on })}>{tr('light.days.dayDistance')}</Checkbox>
+          <Checkbox checked={content.total} onChange={(on) => setContent({ ...content, total: on })}>{tr('light.days.totalDistance')}</Checkbox>
           <Button
             block
             aria-describedby={`${id}-cards-hint`}

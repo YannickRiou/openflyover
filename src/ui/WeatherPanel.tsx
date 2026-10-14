@@ -9,7 +9,7 @@ import { syncStageWeather, syncWeather, useWeatherStore } from '../weather/store
 import { ModifiedMarker } from './ModifiedMarker'
 import { formatClock, formatNumber } from './format'
 import { Icon } from './icons'
-import { Button } from './primitives'
+import { Button, Switch } from './primitives'
 
 function formatTemperature(c: number): string {
   return `${formatNumber(c)} °C`
@@ -60,15 +60,7 @@ export function WeatherPanel() {
       </h2>
       <ModifiedMarker keys={['weather']} label={t('weather.panel.title')} />
 
-      <label className="checkbox checkbox--switch" htmlFor={`${id}-enabled`}>
-        <input
-          id={`${id}-enabled`}
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setSetting('weather', { enabled: e.currentTarget.checked })}
-        />
-        {t('weather.panel.enable')}
-      </label>
+      <Switch id={`${id}-enabled`} checked={enabled} onChange={(on) => setSetting('weather', { enabled: on })}>{t('weather.panel.enable')}</Switch>
 
       <p className="field__hint" role="status" aria-live="polite">
         {!enabled && t('weather.panel.off')}

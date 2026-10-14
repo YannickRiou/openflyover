@@ -9,6 +9,7 @@ import { useWeatherStore } from '../weather/store'
 import { formatPercent } from './format'
 import { SizeField, WidgetPosition, WidgetStyleOverrides } from './OverlayPanel'
 import { RangeField, TextField } from './PanelSection'
+import { Checkbox } from './primitives'
 
 /**
  * Settings of the opening title or of the closing card, in the inspector of its block on the timeline: what it says,
@@ -32,10 +33,13 @@ export function CardFields({ card }: { card: CardId }) {
       <>
         <TextField label={t('inspector.card.title')} value={title.title} placeholder={placeholder} onChange={(value) => setTitle({ title: value })} />
         <TextField label={t('inspector.card.subtitle')} value={title.subtitle} placeholder={t('inspector.card.subtitlePlaceholder')} onChange={(subtitle) => setTitle({ subtitle })} />
-        <label className="checkbox">
-          <input type="checkbox" checked={title.showDate && hasTime} disabled={!hasTime} onChange={(e) => setTitle({ showDate: e.currentTarget.checked })} />
+        <Checkbox
+          checked={title.showDate && hasTime}
+          disabled={!hasTime}
+          onChange={(on) => setTitle({ showDate: on })}
+        >
           {t('inspector.card.showDate')}
-        </label>
+        </Checkbox>
         <WidgetPosition widget="title" />
         <SizeField value={title.size} onChange={(size) => setTitle({ size })} />
         <RangeField
@@ -56,10 +60,13 @@ export function CardFields({ card }: { card: CardId }) {
   return (
     <>
       <TextField label={t('inspector.card.title')} value={end.title} placeholder={placeholder} onChange={(title) => setEnd({ title })} />
-      <label className="checkbox">
-        <input type="checkbox" checked={end.showWeather && hasWeather} disabled={!hasWeather} onChange={(e) => setEnd({ showWeather: e.currentTarget.checked })} />
+      <Checkbox
+        checked={end.showWeather && hasWeather}
+        disabled={!hasWeather}
+        onChange={(on) => setEnd({ showWeather: on })}
+      >
         {t('inspector.card.showWeather')}
-      </label>
+      </Checkbox>
       <div className="field">
         <label className="field__label" htmlFor={`${id}-credits`}>
           {t('inspector.card.credits')}

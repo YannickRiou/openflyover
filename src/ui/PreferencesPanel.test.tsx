@@ -35,7 +35,7 @@ afterEach(async () => {
   getPlatform().storage.remove(PREFERENCES_KEY)
 })
 
-const radio = (label: string) => [...host.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find((i) => i.parentElement!.textContent === label)!
+const radio = (label: string) => [...host.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find((i) => i.labels?.[0]?.textContent === label)!
 const swatch = (label: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!
 const reset = () => [...host.querySelectorAll('button')].find((b) => b.textContent === "Rétablir l'apparence par défaut")!
 const stored = () => JSON.parse(getPlatform().storage.get(PREFERENCES_KEY)!).appearance

@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **HeroUI under the switches, tick boxes, choices and pills**: the on / off switches, the tick boxes, the « segmented » choices (one among a few, side by side), the pills (landmark kinds, counters, poster figures, export resolutions) and the 3 × 3 position picker of the panels, the export drawer and the poster now come from HeroUI 3 (React Aria inside), themed with the same palette. Same labels and look; the arrows still move and choose in a group, a disabled choice still says why in its tooltip, and the options of a group are announced as a radio group to screen readers. A disabled ticked box is now faded instead of grey.
 - **HeroUI under the buttons and tooltips**: the interface now uses HeroUI 3 (MIT, build time only, nothing downloaded at run time) for its buttons and tooltips, themed with the same palette in the light and dark themes, through wrappers in `src/ui/primitives/`. Tooltips keep their texts and the 450 ms pause, are no longer cut off by a scrolling panel and still open on a long press on a touch screen. The interface looks the same.
 - **Tailwind CSS under the interface**: Tailwind 4 (MIT, build time only, nothing downloaded or added at run time) is set up with the same palette, fonts, radii and shadows, a `dark` variant that follows the theme setting, and its reset; the existing styles move into a lower layer so utility classes win. The interface looks the same.
 

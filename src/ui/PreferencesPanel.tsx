@@ -8,7 +8,7 @@ import { PanelSection } from './PanelSection'
 import { setPreferences, usePreferences } from './preferences'
 import { PERF_ITEMS, STATUS_CHIPS } from './shell'
 import type { PerfItem, StatusChip } from './shell'
-import { Button } from './primitives'
+import { Button, Chip, Radio, RadioGroup, Switch } from './primitives'
 
 const STATUS_LABELS: Record<StatusChip, string> = {
   get weather() { return t('settings.preferences.status.weather') },
@@ -43,18 +43,16 @@ function Choice<K extends string>({ legend, labels, keys, value, onChange }: {
   value: K
   onChange(value: K): void
 }) {
-  const name = useId()
   return (
     <fieldset className="field fieldset">
       <legend className="field__label">{legend}</legend>
-      <div className="segmented">
+      <RadioGroup aria-label={legend} value={value} onChange={onChange}>
         {keys.map((key) => (
-          <label key={key} className="segmented__option">
-            <input type="radio" name={name} checked={value === key} onChange={() => onChange(key)} />
+          <Radio key={key} value={key}>
             {labels[key]}
-          </label>
+          </Radio>
         ))}
-      </div>
+      </RadioGroup>
     </fieldset>
   )
 }
@@ -108,10 +106,7 @@ function Chips<K extends string>({ legend, labels, keys, value, onChange }: {
       <legend className="field__label">{legend}</legend>
       <div className="chips">
         {keys.map((key) => (
-          <label key={key} className="chip">
-            <input type="checkbox" checked={value[key]} onChange={(e) => onChange({ ...value, [key]: e.currentTarget.checked })} />
-            {labels[key]}
-          </label>
+          <Chip key={key} checked={value[key]} onChange={(on) => onChange({ ...value, [key]: on })}>{labels[key]}</Chip>
         ))}
       </div>
     </fieldset>
@@ -172,10 +167,12 @@ export function PreferencesPanel() {
         <p className="field__hint">{t('settings.preferences.statusBar.hint')}</p>
       </PanelSection>
       <PanelSection title={t('settings.preferences.timeline.title')}>
-        <label className="checkbox checkbox--switch">
-          <input type="checkbox" checked={prefs.timelineClock} onChange={(e) => setPreferences({ timelineClock: e.currentTarget.checked })} />
+        <Switch
+          checked={prefs.timelineClock}
+          onChange={(on) => setPreferences({ timelineClock: on })}
+        >
           {t('settings.preferences.timeline.clock')}
-        </label>
+        </Switch>
         <p className="field__hint">{t('settings.preferences.timeline.clockHint')}</p>
       </PanelSection>
       <DiagnosticRow />

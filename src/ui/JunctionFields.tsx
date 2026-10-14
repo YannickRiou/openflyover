@@ -8,6 +8,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber } from './format'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RangeField, TextField } from './PanelSection'
+import { Checkbox, Radio, RadioGroup } from './primitives'
 
 /** What each transition does, under its choice. */
 const JUNCTION_KIND_HINTS: Record<JunctionKind, string> = {
@@ -64,26 +65,20 @@ const SIZE_RANGE = { min: WIDGET_SIZE_MIN, max: WIDGET_SIZE_MAX, step: 0.1 }
  */
 export function StageCardFields({ card, onChange }: { card: JunctionCard; onChange(patch: Partial<JunctionCard>): void }) {
   const t = useT()
-  const id = useId()
   const custom = card.text !== undefined
   return (
     <>
-      <label className="checkbox">
-        <input type="checkbox" checked={card.enabled} onChange={(e) => onChange({ enabled: e.currentTarget.checked })} />
-        {t('inspector.junction.show')}
-      </label>
+      <Checkbox checked={card.enabled} onChange={(on) => onChange({ enabled: on })}>{t('inspector.junction.show')}</Checkbox>
       <fieldset className="field fieldset">
         <legend className="field__label">{t('inspector.junction.content')}</legend>
-        <div className="segmented">
-          <label className="segmented__option">
-            <input type="radio" name={`${id}-content`} checked={!custom} onChange={() => onChange({ text: undefined, subtitle: undefined })} />
-            {t('inspector.junction.auto')}
-          </label>
-          <label className="segmented__option">
-            <input type="radio" name={`${id}-content`} checked={custom} onChange={() => onChange({ text: '{name}', subtitle: t('inspector.junction.defaultSubtitle') })} />
-            {t('inspector.junction.custom')}
-          </label>
-        </div>
+        <RadioGroup
+          aria-label={t('inspector.junction.content')}
+          value={custom ? 'custom' : 'auto'}
+          onChange={(content) => onChange(content === 'custom' ? { text: '{name}', subtitle: t('inspector.junction.defaultSubtitle') } : { text: undefined, subtitle: undefined })}
+        >
+          <Radio value="auto">{t('inspector.junction.auto')}</Radio>
+          <Radio value="custom">{t('inspector.junction.custom')}</Radio>
+        </RadioGroup>
       </fieldset>
       {custom ? (
         <>

@@ -344,7 +344,12 @@ themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under 
 `--status-error*` are fixed reds (they no longer follow the accent).
 **Primitives** (`src/ui/primitives/`, one file per component and its CSS, exported from `index.ts`; screens never import
 `@heroui/react`): `Button` (`variant` primary / secondary / icon, `size="sm"`, `block`; it keeps the `.btn` / `.icon-btn`
-classes the CSS of the screens keys on) and `Tip` (tooltip, see "Tooltips"). HeroUI's styles are imported in `theme.css`
+classes the CSS of the screens keys on), `Tip` (tooltip, see "Tooltips") and the choice controls: `Switch` (a whole feature on
+or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen), `RadioGroup` with `Radio` (`look` `segmented`,
+`chips`, or `plain` for a grid the screen draws, as the 3 × 3 `AnchorPicker`; the arrows move and choose, the screens' CSS keys on
+`.option__label`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
+`value` / `onChange` take the values, not events; a `title` is a native tooltip over the whole control; a `<fieldset disabled>`
+around them dims them. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,

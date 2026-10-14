@@ -34,7 +34,7 @@ import { posterLayout } from './layout'
 import { POSTER_FIGURES, POSTER_FIGURE_LABELS, POSTER_FORMATS, POSTER_STYLES, POSTER_VIEWS, POSTER_VIEW_LABELS, posterSize } from './settings'
 import type { PosterSettings, PosterType } from './settings'
 import './poster.css'
-import { Button, Tip } from '../ui/primitives'
+import { Button, Checkbox, Chip, Radio, RadioGroup, Tip } from '../ui/primitives'
 
 /** Largest size of the thumbnail in the drawer (CSS px). */
 const PREVIEW_MAX_W = 260
@@ -263,14 +263,13 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
 
       <fieldset className="field fieldset" disabled={busy}>
         <legend className="field__label">{t('poster.panel.style')}</legend>
-        <div className="segmented segmented--wrap">
+        <RadioGroup wrap aria-label={t('poster.panel.style')} value={poster.style} onChange={(style) => set({ style })}>
           {POSTER_STYLES.map((style) => (
-            <label key={style} className="segmented__option">
-              <input type="radio" name={`${id}-style`} value={style} checked={poster.style === style} onChange={() => set({ style })} />
+            <Radio key={style} value={style}>
               {OVERLAY_STYLE_LABELS[style]}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </fieldset>
 
       <TextField label={t('poster.panel.title')} value={poster.title} placeholder={defaultTitle} disabled={busy} onChange={(title) => set({ title })} />
@@ -282,43 +281,38 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
           {POSTER_FIGURES.map((figure) => {
             const present = available?.[figure] ?? false
             return (
-              <label key={figure} className="chip" title={present ? undefined : t('poster.panel.figureAbsent')}>
-                <input
-                  type="checkbox"
-                  checked={poster.figures[figure] && present}
-                  disabled={!present}
-                  onChange={(e) => set({ figures: { ...poster.figures, [figure]: e.currentTarget.checked } })}
-                />
+              <Chip
+                key={figure}
+                checked={poster.figures[figure] && present}
+                disabled={!present}
+                title={present ? undefined : t('poster.panel.figureAbsent')}
+                onChange={(on) => set({ figures: { ...poster.figures, [figure]: on } })}
+              >
                 {POSTER_FIGURE_LABELS[figure]}
-              </label>
+              </Chip>
             )
           })}
         </div>
       </fieldset>
 
-      <label className="checkbox" title={hasWeather ? undefined : outings ? t('poster.panel.weatherOutings') : t('poster.panel.weatherNotLoaded')}>
-        <input
-          type="checkbox"
-          checked={poster.weather && hasWeather}
-          disabled={busy || !hasWeather}
-          onChange={(e) => set({ weather: e.currentTarget.checked })}
-        />
+      <Checkbox
+        checked={poster.weather && hasWeather}
+        disabled={busy || !hasWeather}
+        title={hasWeather ? undefined : outings ? t('poster.panel.weatherOutings') : t('poster.panel.weatherNotLoaded')}
+        onChange={(on) => set({ weather: on })}
+      >
         {t('poster.panel.weather')}
-      </label>
-      <label className="checkbox">
-        <input type="checkbox" checked={poster.flat} disabled={busy} onChange={(e) => set({ flat: e.currentTarget.checked })} />
-        {t('poster.panel.flat')}
-      </label>
+      </Checkbox>
+      <Checkbox checked={poster.flat} disabled={busy} onChange={(on) => set({ flat: on })}>{t('poster.panel.flat')}</Checkbox>
       <fieldset className="field fieldset" disabled={busy || poster.flat}>
         <legend className="field__label">{t('poster.panel.view3d')}</legend>
-        <div className="segmented">
+        <RadioGroup aria-label={t('poster.panel.view3d')} value={poster.view} onChange={(view) => set({ view })}>
           {POSTER_VIEWS.map((view) => (
-            <label key={view} className="segmented__option">
-              <input type="radio" name={`${id}-view`} value={view} checked={poster.view === view} onChange={() => set({ view })} />
+            <Radio key={view} value={view}>
               {POSTER_VIEW_LABELS[view]}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </fieldset>
       <p className="field__hint">
         {poster.flat
@@ -331,14 +325,13 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
 
       <fieldset className="field fieldset" disabled={busy}>
         <legend className="field__label">{t('poster.panel.imageType')}</legend>
-        <div className="segmented">
+        <RadioGroup aria-label={t('poster.panel.imageType')} value={poster.type} onChange={(type) => set({ type })}>
           {IMAGE_TYPES.map((type) => (
-            <label key={type.value} className="segmented__option">
-              <input type="radio" name={`${id}-type`} value={type.value} checked={poster.type === type.value} onChange={() => set({ type: type.value })} />
+            <Radio key={type.value} value={type.value}>
               {type.label}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
         <p className="field__hint">{t('poster.panel.imageTypeHint')}</p>
       </fieldset>
 

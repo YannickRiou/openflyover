@@ -99,7 +99,7 @@ import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
-import { Button, Tip } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Switch, Tip } from './primitives'
 
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
   get aucune() {
@@ -289,14 +289,13 @@ function SituationFramingFields({
           </span>
           <InfoTip text={t('inspector.framing.headingTip')} />
         </div>
-        <div className="segmented" role="radiogroup" aria-labelledby={`${id}-heading`}>
+        <RadioGroup aria-labelledby={`${id}-heading`} value={heading} onChange={(h) => onChange({ heading: h === 'libre' ? undefined : h })}>
           {SITUATION_HEADINGS.map((h) => (
-            <label key={h} className="segmented__option">
-              <input type="radio" name={`${id}-heading`} value={h} checked={heading === h} onChange={() => onChange({ heading: h === 'libre' ? undefined : h })} />
+            <Radio key={h} value={h}>
               {SITUATION_HEADING_LABELS[h]}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </div>
       {heading === 'boussole' && (
         <RangeField
@@ -556,15 +555,13 @@ export function FilmInspector() {
         {shot.style === 'situation' && (
           <>
             <InspectorGroup title={t('inspector.place.label')}>
-              <label className="checkbox checkbox--switch">
-                <input
-                  type="checkbox"
-                  checked={shot.highlight === true}
-                  aria-describedby={`${id}-highlight-hint`}
-                  onChange={(e) => change((f) => updateShot(f, item, { highlight: e.currentTarget.checked }), false)}
-                />
+              <Switch
+                checked={shot.highlight === true}
+                aria-describedby={`${id}-highlight-hint`}
+                onChange={(on) => change((f) => updateShot(f, item, { highlight: on }), false)}
+              >
                 {t('inspector.place.highlight')}
-              </label>
+              </Switch>
               <RegionHint id={`${id}-highlight-hint`} highlight={shot.highlight === true} />
               {shot.highlight === true && (
                 <PlaceSelect value={shot.regionId ?? null} onChange={(regionId) => change((f) => setFilmPlace(f, regionId), false)} />
@@ -689,17 +686,15 @@ export function FilmInspector() {
           >
             {t('inspector.junction.applyToAll')}
           </Button>
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={card.enabled}
-              onChange={(e) => {
-                const enabled = e.currentTarget.checked
+          <Checkbox
+            checked={card.enabled}
+            onChange={(on) => {
+                const enabled = on
                 editFilm((f) => ({ film: withJunctionCard(f, junction.afterTrackId, { enabled }) }))
               }}
-            />
+          >
             {t('inspector.junction.stageCard', { n: k + 2 })}
-          </label>
+          </Checkbox>
           <Button
             className="film-inspector__remove"
             onClick={() => useAppStore.getState().setFilmSelection(stageCardId(junction.afterTrackId))}
@@ -1011,10 +1006,7 @@ export function FilmInspector() {
                 {number('offset', t('inspector.media.sync.offset'), current.offsetS, SYNC_OFFSET_RANGE.min, SYNC_OFFSET_RANGE.max, (offsetS) =>
                   apply({ offsetS: Math.round(Math.min(SYNC_OFFSET_RANGE.max, Math.max(SYNC_OFFSET_RANGE.min, offsetS)) * 10) / 10 }, false),
                 )}
-                <label className="checkbox">
-                  <input type="checkbox" checked={current.follow} onChange={(e) => apply({ follow: e.currentTarget.checked }, true)} />
-                  {t('inspector.media.sync.follow')}
-                </label>
+                <Checkbox checked={current.follow} onChange={(on) => apply({ follow: on }, true)}>{t('inspector.media.sync.follow')}</Checkbox>
                 <p className="field__hint">{t('inspector.media.sync.offsetHint')}</p>
               </>
             )}
@@ -1028,10 +1020,7 @@ export function FilmInspector() {
         return (
           <fieldset className="field fieldset">
             <legend className="field__label">{t('inspector.media.sound.legend')}</legend>
-            <label className="checkbox">
-              <input type="checkbox" checked={heard} disabled={following} onChange={(e) => set({ muted: !e.currentTarget.checked })} />
-              {t('inspector.media.sound.label')}
-            </label>
+            <Checkbox checked={heard} disabled={following} onChange={(on) => set({ muted: !on })}>{t('inspector.media.sound.label')}</Checkbox>
             {range('clip-volume', t('inspector.media.sound.volume'), media.volume ?? 1, VOLUME_RANGE, percent, (volume) => set({ volume }), !heard)}
             <p className="field__hint">
               {following
@@ -1046,20 +1035,16 @@ export function FilmInspector() {
           {picture && <img className="film-inspector__thumb" src={picture.thumb} alt={picture.name ?? title} />}
           <fieldset className="field fieldset">
             <legend className="field__label">{t('inspector.media.display')}</legend>
-            <div className="segmented">
+            <RadioGroup aria-label={t('inspector.media.display')} value={media.layout} onChange={(layout) => set({ layout })}>
               {MEDIA_LAYOUTS.map((layout) => (
-                <label key={layout} className="segmented__option">
-                  <input type="radio" name={`${id}-layout`} value={layout} checked={media.layout === layout} onChange={() => set({ layout })} />
+                <Radio key={layout} value={layout}>
                   {LAYOUT_LABELS[layout]}
-                </label>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </fieldset>
           {!video && (
-            <label className="checkbox">
-              <input type="checkbox" checked={media.kenBurns} disabled={card} onChange={(e) => set({ kenBurns: e.currentTarget.checked })} />
-              {t('inspector.media.kenBurns')}
-            </label>
+            <Checkbox checked={media.kenBurns} disabled={card} onChange={(on) => set({ kenBurns: on })}>{t('inspector.media.kenBurns')}</Checkbox>
           )}
           {text('caption', t('inspector.media.caption'), media.caption ?? '', (caption) => set({ caption: caption || undefined }))}
           {anchorSelect(card ? t('inspector.text.position') : t('inspector.media.captionPosition'), media.anchor, (anchor) => set({ anchor }))}
@@ -1093,14 +1078,15 @@ export function FilmInspector() {
             {number('length', t('inspector.field.length'), music.durationS, AUDIO_DURATION_RANGE.min, fileS ?? AUDIO_DURATION_RANGE.max, (durationS) => set({ durationS }))}
           </div>
           {number('in', t('inspector.music.startInFile'), music.inS, 0, fileS ?? AUDIO_DURATION_RANGE.max, (inS) => set({ inS }))}
-          <label className="checkbox">
-            <input type="checkbox" checked={film.duckMusic} onChange={(e) => {
-                const duckMusic = e.currentTarget.checked
+          <Checkbox
+            checked={film.duckMusic}
+            onChange={(on) => {
+                const duckMusic = on
                 editFilm((f) => ({ film: { ...f, duckMusic } }))
               }}
-            />
+          >
             {t('inspector.music.duck')}
-          </label>
+          </Checkbox>
           <Button className="film-inspector__remove" onClick={() => showToast(fitFilmToMusic())}>
             {t('inspector.music.fit')}
           </Button>

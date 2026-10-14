@@ -68,10 +68,10 @@ async function clickButton(page, text, timeout = STEP_MS) {
   await button.click()
 }
 
-/** The checkbox of the switch labelled `text` in the tab panel `data-testid="tab-panel-<tab>"`. */
+/** The input of the switch labelled `text` in the tab panel `data-testid="tab-panel-<tab>"`. */
 async function switchOf(page, tab, text) {
   const handle = await page.evaluateHandle(
-    (t, label) => [...document.querySelectorAll(`[data-testid="tab-panel-${t}"] input[type="checkbox"]`)].find((i) => i.labels?.[0]?.textContent.trim() === label) ?? null,
+    (t, label) => [...document.querySelectorAll(`[data-testid="tab-panel-${t}"] input[role="switch"]`)].find((i) => i.labels?.[0]?.textContent.trim() === label) ?? null,
     tab,
     text,
   )
@@ -249,10 +249,11 @@ const SCENARIOS = [
         const overlaySwitch = tab === 'habillage' ? await switchOf(page, 'habillage', "Afficher l'habillage") : null
         if (overlaySwitch && !(await overlaySwitch.evaluate((el) => el.checked))) await overlaySwitch.evaluate((el) => el.click())
         else if (overlaySwitch) await overlaySwitch.dispose()
-        // a group of choices is the parent of the labels of its radio buttons
+        // a group of choices: its radio group, else the parent of the labels of its radio buttons
         const overflowing = await page.$$eval(
           `[data-testid="tab-panel-${tab}"] input[type="radio"]`,
-          (radios) => [...new Set(radios.map((r) => r.closest('label')?.parentElement))].filter((g) => g && g.scrollWidth > g.clientWidth + 1).length,
+          (radios) =>
+            [...new Set(radios.map((r) => r.closest('[role="radiogroup"]') ?? r.closest('label')?.parentElement))].filter((g) => g && g.scrollWidth > g.clientWidth + 1).length,
         )
         if (overlaySwitch) await overlaySwitch.evaluate((el) => el.checked && el.click())
         assert(overflowing === 0, `onglet ${tab} : ${overflowing} choix qui débordent sur le côté`)

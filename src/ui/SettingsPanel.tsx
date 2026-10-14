@@ -16,7 +16,7 @@ import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
-import { Button } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Switch } from './primitives'
 
 const ZOOM_OFFSETS: { value: Settings['imageryZoomOffset']; label: string }[] = [
   { value: 0, get label() { return t('offline.level.0') } },
@@ -126,28 +126,16 @@ function SunTimeControl() {
     <>
       <fieldset className="field fieldset">
         <legend className="field__label">{t('light.sun.legend')}</legend>
-        <div className="segmented">
-          <label className="segmented__option">
-            <input
-              type="radio"
-              name={`${id}-sun-mode`}
-              checked={follows}
-              disabled={!trackHasTime}
-              aria-describedby={`${id}-sun-mode-hint`}
-              onChange={() => setSetting('sunFromTrack', true)}
-            />
+        <RadioGroup
+          aria-label={t('light.sun.legend')}
+          value={follows ? 'follow' : 'fixed'}
+          onChange={(mode) => setSetting('sunFromTrack', mode === 'follow')}
+        >
+          <Radio value="follow" disabled={!trackHasTime} aria-describedby={`${id}-sun-mode-hint`}>
             {t('light.sun.follow')}
-          </label>
-          <label className="segmented__option">
-            <input
-              type="radio"
-              name={`${id}-sun-mode`}
-              checked={!follows}
-              onChange={() => setSetting('sunFromTrack', false)}
-            />
-            {t('light.sun.fixed')}
-          </label>
-        </div>
+          </Radio>
+          <Radio value="fixed">{t('light.sun.fixed')}</Radio>
+        </RadioGroup>
         <p id={`${id}-sun-mode-hint`} className="field__hint">
           {!trackHasTime
             ? t('light.sun.needsTime')
@@ -288,25 +276,17 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
       <fieldset className="field fieldset">
         {/* the section is titled « Nuages » */}
         <legend className="visually-hidden">{t('light.clouds.legend')}</legend>
-        <div className="segmented">
+        <RadioGroup
+          aria-label={t('light.clouds.legend')}
+          value={clouds.mode}
+          onChange={(mode) => set(mode === 'mer' ? { mode, seaTopM: seaTopFor(stats?.minEle, stats?.maxEle) } : { mode })}
+        >
           {CLOUD_MODE_OPTIONS.map((option) => (
-            <label key={option.value} className="segmented__option">
-              <input
-                type="radio"
-                name={`${id}-clouds-mode`}
-                checked={clouds.mode === option.value}
-                onChange={() =>
-                  set(
-                    option.value === 'mer'
-                      ? { mode: 'mer', seaTopM: seaTopFor(stats?.minEle, stats?.maxEle) }
-                      : { mode: option.value },
-                  )
-                }
-              />
+            <Radio key={option.value} value={option.value}>
               {option.label}
-            </label>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
         <p className="field__hint">
           {clouds.mode === 'aucun'
             ? t('light.clouds.hintNone')
@@ -352,19 +332,13 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
         >
           <fieldset className="field fieldset">
             <legend className="field__label">{t('light.clouds.seaRender')}</legend>
-            <div className="segmented">
+            <RadioGroup aria-label={t('light.clouds.seaRender')} value={clouds.seaRender} onChange={(seaRender) => set({ seaRender })}>
               {SEA_RENDER_OPTIONS.map((option) => (
-                <label key={option.value} className="segmented__option">
-                  <input
-                    type="radio"
-                    name={`${id}-sea-render`}
-                    checked={clouds.seaRender === option.value}
-                    onChange={() => set({ seaRender: option.value })}
-                  />
+                <Radio key={option.value} value={option.value}>
                   {option.label}
-                </label>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
             <p className="field__hint">
               {clouds.seaRender === 'surface'
                 ? t('light.clouds.hintSurface')
@@ -436,15 +410,13 @@ function WaterControl() {
   return (
     <>
       <div className="field__label-row">
-        <label className="checkbox" htmlFor={`${id}-water`}>
-          <input
-            id={`${id}-water`}
-            type="checkbox"
-            checked={water.enabled}
-            onChange={(e) => setSetting('water', { ...water, enabled: e.currentTarget.checked })}
-          />
+        <Checkbox
+          id={`${id}-water`}
+          checked={water.enabled}
+          onChange={(on) => setSetting('water', { ...water, enabled: on })}
+        >
           {t('light.water.enable')}
-        </label>
+        </Checkbox>
         <InfoTip text={t('light.water.tip')} />
       </div>
       {water.enabled && (
@@ -473,28 +445,24 @@ function DemCleanControl() {
   return (
     <>
       <div className="field__label-row">
-        <label className="checkbox" htmlFor={`${id}-clean`}>
-          <input
-            id={`${id}-clean`}
-            type="checkbox"
-            checked={demClean.enabled}
-            onChange={(e) => setSetting('demClean', { ...demClean, enabled: e.currentTarget.checked })}
-          />
+        <Checkbox
+          id={`${id}-clean`}
+          checked={demClean.enabled}
+          onChange={(on) => setSetting('demClean', { ...demClean, enabled: on })}
+        >
           {t('light.demClean.enable')}
-        </label>
+        </Checkbox>
         <InfoTip text={t('light.demClean.tip')} />
       </div>
       {demClean.enabled && (
         <div className="field__label-row">
-          <label className="checkbox" htmlFor={`${id}-sea`}>
-            <input
-              id={`${id}-sea`}
-              type="checkbox"
-              checked={demClean.seaToZero}
-              onChange={(e) => setSetting('demClean', { ...demClean, seaToZero: e.currentTarget.checked })}
-            />
+          <Checkbox
+            id={`${id}-sea`}
+            checked={demClean.seaToZero}
+            onChange={(on) => setSetting('demClean', { ...demClean, seaToZero: on })}
+          >
             {t('light.demClean.seaToZero')}
-          </label>
+          </Checkbox>
           <InfoTip text={t('light.demClean.seaToZeroTip')} />
         </div>
       )}
@@ -541,20 +509,17 @@ export function MapSettings() {
         <SettingRow label={t('light.map.imageryDetail')} value={zoomLabel} paths={['imageryZoomOffset']}>
           <fieldset className="field fieldset">
             <legend className="field__label">{t('light.map.imageryDetail')}</legend>
-            <div className="segmented">
+            <RadioGroup
+              aria-label={t('light.map.imageryDetail')}
+              value={settings.imageryZoomOffset}
+              onChange={(offset) => setSetting('imageryZoomOffset', offset)}
+            >
               {ZOOM_OFFSETS.map((option) => (
-                <label key={option.value} className="segmented__option">
-                  <input
-                    type="radio"
-                    name={`${id}-zoom-offset`}
-                    value={option.value}
-                    checked={settings.imageryZoomOffset === option.value}
-                    onChange={() => setSetting('imageryZoomOffset', option.value)}
-                  />
+                <Radio key={option.value} value={option.value}>
                   {option.label}
-                </label>
+                </Radio>
               ))}
-            </div>
+            </RadioGroup>
           </fieldset>
         </SettingRow>
 
@@ -596,15 +561,13 @@ export function MapSettings() {
 
         <SettingRow label={t('light.map.wireframe')} value={settings.wireframe ? t('common.yes') : t('common.no')} paths={['wireframe']}>
           <div className="field__label-row">
-            <label className="checkbox" htmlFor={wireframeId}>
-              <input
-                id={wireframeId}
-                type="checkbox"
-                checked={settings.wireframe}
-                onChange={(e) => setSetting('wireframe', e.currentTarget.checked)}
-              />
+            <Checkbox
+              id={wireframeId}
+              checked={settings.wireframe}
+              onChange={(on) => setSetting('wireframe', on)}
+            >
               {t('light.map.wireframe')}
-            </label>
+            </Checkbox>
             <InfoTip text={t('light.map.wireframeTip')} />
           </div>
         </SettingRow>
@@ -647,15 +610,13 @@ export function WeatherSettings() {
           <p className="field__hint">{t('light.weather.waiting')}</p>
         ) : (
           <>
-            <label className="checkbox checkbox--switch" htmlFor={`${id}-weather-scene`}>
-              <input
-                id={`${id}-weather-scene`}
-                type="checkbox"
-                checked={weatherScene.enabled}
-                onChange={(e) => setSetting('weatherScene', { ...weatherScene, enabled: e.currentTarget.checked })}
-              />
+            <Switch
+              id={`${id}-weather-scene`}
+              checked={weatherScene.enabled}
+              onChange={(on) => setSetting('weatherScene', { ...weatherScene, enabled: on })}
+            >
               {t('light.weather.scene')}
-            </label>
+            </Switch>
             {weatherScene.enabled && (
               <SettingRow label={t('light.weather.strength')} value={formatPercent(weatherScene.strength)} paths={['weatherScene.strength']}>
                 <RangeField
@@ -689,21 +650,10 @@ export function LightSettings() {
   return (
     <>
       <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'exposureEv']}>
-        <label className="checkbox checkbox--switch" htmlFor={`${id}-atmosphere`}>
-          <input
-            id={`${id}-atmosphere`}
-            type="checkbox"
-            checked={atmosphere}
-            onChange={(e) => setSetting('atmosphere', e.currentTarget.checked)}
-          />
-          {t('light.atmosphere.enable')}
-        </label>
+        <Switch id={`${id}-atmosphere`} checked={atmosphere} onChange={(on) => setSetting('atmosphere', on)}>{t('light.atmosphere.enable')}</Switch>
 
         {atmosphere && (
-          <label className="checkbox" htmlFor={`${id}-shadows`}>
-            <input id={`${id}-shadows`} type="checkbox" checked={shadows} onChange={(e) => setSetting('shadows', e.currentTarget.checked)} />
-            {t('light.atmosphere.shadows')}
-          </label>
+          <Checkbox id={`${id}-shadows`} checked={shadows} onChange={(on) => setSetting('shadows', on)}>{t('light.atmosphere.shadows')}</Checkbox>
         )}
 
         {atmosphere && (
