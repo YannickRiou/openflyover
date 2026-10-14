@@ -100,6 +100,14 @@ import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
 import { Button, Checkbox, ColorField, NumberField, Radio, RadioGroup, Select, Switch, TextField, Tip } from './primitives'
 
+/** The inspector's own layout strings (labels are `type-label`, hints `type-hint`): a field, a group of fields, a label and its tip, two fields side by side, a secondary button. */
+const FIELD = 'flex flex-col gap-1'
+const FIELDSET = `${FIELD} min-w-0`
+const LABEL_ROW = 'flex items-center gap-1'
+const HINT = 'type-hint tabular-nums'
+const ROW = 'grid grid-cols-2 gap-2'
+const REMOVE = 'min-h-control justify-self-start'
+
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
   get aucune() {
     return t('inspector.shot.style.aucune')
@@ -153,8 +161,8 @@ const TRANSITION_HINTS: Record<ShotTransition, string> = {
 function InspectorGroup({ title, children }: { title: string; children: ReactNode }) {
   const id = useId()
   return (
-    <section className="film-inspector__group" aria-labelledby={id}>
-      <h3 id={id} className="film-inspector__group-title">
+    <section className="flex flex-col gap-3 border-t border-edge pt-3" aria-labelledby={id}>
+      <h3 id={id} className="type-hint font-semibold tracking-wider uppercase">
         {title}
       </h3>
       {children}
@@ -214,7 +222,7 @@ function SituationTimings({
             : t('inspector.timings.moveTipClosing')
         }
       />
-      <p className="field__hint">{t('inspector.timings.shotDuration', { duration: seconds(durationS) })}</p>
+      <p className={HINT}>{t('inspector.timings.shotDuration', { duration: seconds(durationS) })}</p>
     </InspectorGroup>
   )
 }
@@ -244,8 +252,8 @@ function SituationFramingFields({
   }
   return (
     <InspectorGroup title={t('inspector.framing.title')}>
-      <div className="field">
-        <label className="field__label" htmlFor={`${id}-height`}>
+      <div className={FIELD}>
+        <label className="type-label" htmlFor={`${id}-height`}>
           {phase === 'opening' ? t('inspector.framing.startHeight') : t('inspector.framing.endHeight')}
         </label>
         <Select
@@ -275,9 +283,9 @@ function SituationFramingFields({
         wide={false}
         tip={t('inspector.framing.tiltTip')}
       />
-      <div className="field">
-        <div className="field__label-row">
-          <span id={`${id}-heading`} className="field__label">
+      <div className={FIELD}>
+        <div className={LABEL_ROW}>
+          <span id={`${id}-heading`} className="type-label">
             {t('inspector.framing.heading')}
           </span>
           <InfoTip text={t('inspector.framing.headingTip')} />
@@ -336,9 +344,9 @@ function PlaceSelect({ value, onChange }: { value: string | null; onChange(regio
   const auto = candidates.find((c) => candidateId(c) === autoId)
   const known = value === null || candidates.some((c) => candidateId(c) === value)
   return (
-    <div className="field">
-      <div className="field__label-row">
-        <label className="field__label" htmlFor={id}>
+    <div className={FIELD}>
+      <div className={LABEL_ROW}>
+        <label className="type-label" htmlFor={id}>
           {t('inspector.place.label')}
         </label>
         <InfoTip text={t('inspector.place.tip')} />
@@ -431,7 +439,7 @@ export function FilmInspector() {
     <AnchorPicker label={label} value={value} onChange={set} />
   )
   const timing = (startS: number, durationS: number, set: (patch: { startS?: number; durationS?: number }) => void) => (
-    <div className="film-inspector__row">
+    <div className={ROW}>
       {number('start', t('inspector.field.start'), startS, 0, clock.totalTime(), (v) => set({ startS: v }))}
       {number('length', t('inspector.field.length'), durationS, ITEM_DURATION_RANGE.min, ITEM_DURATION_RANGE.max, (v) => set({ durationS: v }))}
     </div>
@@ -439,8 +447,8 @@ export function FilmInspector() {
 
   /** « Attaché à » a stop of the film (generated stops are written out first), or to none */
   const attachSelect = (stopId: string | undefined) => (
-    <div className="field">
-      <label className="field__label" htmlFor={`${id}-stop`}>
+    <div className={FIELD}>
+      <label className="type-label" htmlFor={`${id}-stop`}>
         {t('inspector.attach.label')}
       </label>
       <Select
@@ -456,7 +464,7 @@ export function FilmInspector() {
           editFilm((f) => ({ film: attachToStop(f, item, stop) }), { stops: stop !== null })
         }}
       />
-      <p id={`${id}-stop-hint`} className="field__hint">
+      <p id={`${id}-stop-hint`} className={HINT}>
         {stopId ? t('inspector.attach.hintAttached') : t('inspector.attach.hintFree')}
       </p>
     </div>
@@ -499,8 +507,8 @@ export function FilmInspector() {
     removable = shot.style !== 'aucune'
     body = (
       <>
-        <div className="field">
-          <label className="field__label" htmlFor={`${id}-style`}>
+        <div className={FIELD}>
+          <label className="type-label" htmlFor={`${id}-style`}>
             {t('inspector.shot.styleLabel')}
           </label>
           <Select
@@ -510,7 +518,7 @@ export function FilmInspector() {
             options={SHOT_STYLES.map((style) => ({ value: style, label: SHOT_STYLE_LABELS[style] }))}
             onChange={(style) => change((f) => updateShot(f, item, { style }), false)}
           />
-          <p id={`${id}-style-hint`} className="field__hint">
+          <p id={`${id}-style-hint`} className={HINT}>
             {SHOT_HINTS[shot.style]}
           </p>
         </div>
@@ -561,14 +569,14 @@ export function FilmInspector() {
               ]}
               onChange={(sun) => change((f) => updateShot(f, item, { sun, moveSun: undefined }), false)}
             />
-            <p id={`${id}-sun-hint`} className="field__hint">
+            <p id={`${id}-sun-hint`} className={HINT}>
               {SHOT_SUN_HINTS[shotSunOf(shot)][item === 'opening' ? 0 : 1]}
               {!atmosphere && t('inspector.shot.sunNeedsAtmosphere')}
             </p>
           </InspectorGroup>
         )}
-        <div className="field">
-          <label className="field__label" htmlFor={`${id}-transition`}>
+        <div className={FIELD}>
+          <label className="type-label" htmlFor={`${id}-transition`}>
             {t('inspector.shot.transition')}
           </label>
           <Select
@@ -579,7 +587,7 @@ export function FilmInspector() {
             options={SHOT_TRANSITIONS.map((transition) => ({ value: transition, label: SHOT_TRANSITION_LABELS[transition] }))}
             onChange={(transition) => change((f) => updateShot(f, item, { transition }), false)}
           />
-          <p id={`${id}-transition-hint`} className="field__hint">
+          <p id={`${id}-transition-hint`} className={HINT}>
             {TRANSITION_HINTS[shot.transition ?? 'enchaine']}
           </p>
         </div>
@@ -613,7 +621,7 @@ export function FilmInspector() {
       removable = own
       body = (
         <>
-          <p className="field__hint">
+          <p className={HINT}>
             {junction.kind !== 'coupe'
               ? t('inspector.junction.betweenTimed', {
                   from: sequence?.stages[k]?.track.name ?? '',
@@ -633,11 +641,11 @@ export function FilmInspector() {
               {NIGHT_PARTS.map(({ key, label }) =>
                 range(`night-${key}`, label, film.nights[key], NIGHT_PART_RANGE, formatSecondsShort, (v) => change((f) => ({ ...f, nights: { ...f.nights, [key]: v } }), false)),
               )}
-              <p className="field__hint">{t('inspector.junction.nightsHint')}</p>
+              <p className={HINT}>{t('inspector.junction.nightsHint')}</p>
             </>
           )}
           <Button
-            className="film-inspector__remove"
+            className={REMOVE}
             onClick={() => editFilm((f) => ({ film: applyToAllJunctions(f, afterIds, { kind, holdS: stored.holdS }) }))}
           >
             {t('inspector.junction.applyToAll')}
@@ -652,12 +660,12 @@ export function FilmInspector() {
             {t('inspector.junction.stageCard', { n: k + 2 })}
           </Checkbox>
           <Button
-            className="film-inspector__remove"
+            className={REMOVE}
             onClick={() => useAppStore.getState().setFilmSelection(stageCardId(junction.afterTrackId))}
           >
             {t('inspector.junction.adjustCard')}
           </Button>
-          <p className="field__hint">{t('inspector.junction.blockHint')}</p>
+          <p className={HINT}>{t('inspector.junction.blockHint')}</p>
         </>
       )
     } else if (stop) {
@@ -668,8 +676,8 @@ export function FilmInspector() {
         <>
           {text('label', t('inspector.hold.label'), stop.label ?? '', (label) => set({ label }))}
           {range('duration', t('inspector.hold.duration'), stop.durationS, STOP_DURATION_RANGE, seconds, (durationS) => set({ durationS }))}
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-camera`}>
+          <div className={FIELD}>
+            <label className="type-label" htmlFor={`${id}-camera`}>
               {t('inspector.hold.camera')}
             </label>
             <Select
@@ -679,11 +687,11 @@ export function FilmInspector() {
               options={STOP_CAMERAS.map((camera) => ({ value: camera, label: STOP_CAMERA_LABELS[camera] }))}
               onChange={(camera) => set({ camera })}
             />
-            <p id={`${id}-camera-hint`} className="field__hint">
+            <p id={`${id}-camera-hint`} className={HINT}>
               {STOP_CAMERA_HINTS[stop.camera]}
             </p>
           </div>
-          <p className="field__hint">
+          <p className={HINT}>
             {t('inspector.hold.info', { at: formatDistance(stop.atM), length: formatDistance(lengthM), start: formatFilmTime(stop.startS), end: formatFilmTime(stop.endS) })}
             {film.autoStops && t('inspector.hold.auto')}
           </p>
@@ -696,13 +704,13 @@ export function FilmInspector() {
       const hintKey = speed.factor > 1 ? 'inspector.speed.hintFast' : speed.factor < 1 ? 'inspector.speed.hintSlow' : 'inspector.speed.hintNormal'
       body = (
         <>
-          <div className="field">
-            <span id={`${id}-factor-label`} className="field__label">
+          <div className={FIELD}>
+            <span id={`${id}-factor-label`} className="type-label">
               {PARAM_SPECS.speed.label}
             </span>
             <RadioGroup
               look="chips"
-              className="sun-chips"
+              className="mt-2"
               aria-labelledby={`${id}-factor-label`}
               value={speed.factor}
               onChange={(f) => editFilm((g) => ({ film: updateSpeed(g, item, { factor: f }, lengthM) }))}
@@ -715,11 +723,11 @@ export function FilmInspector() {
             </RadioGroup>
           </div>
           {range('factor', t('inspector.speed.label'), Math.log2(speed.factor), SPEED_SLIDER, (v) => formatSpeedFactor(2 ** v), (v) => set({ factor: 2 ** v }))}
-          <div className="film-inspector__row">
+          <div className={ROW}>
             {number('from', t('inspector.field.kmFrom'), km(speed.fromM), 0, km(lengthM), (v) => set({ fromM: v * 1000 }))}
             {number('to', t('inspector.field.kmTo'), km(speed.toM), 0, km(lengthM), (v) => set({ toM: v * 1000 }))}
           </div>
-          <p className="field__hint">
+          <p className={HINT}>
             {t(hintKey, {
               factor,
               from: formatDistance(speed.fromM),
@@ -742,7 +750,7 @@ export function FilmInspector() {
           {range('pitch', t('inspector.camKey.pitch'), cameraKey.pitchDeg, span(CAMERA_RANGES.pitchDeg, cameraKey.pitchDeg), formatDegrees, (pitchDeg) => set({ pitchDeg }))}
           {range('heading', t('inspector.camKey.heading'), cameraKey.headingOffsetDeg, CAMERA_RANGES.headingOffsetDeg, formatDegrees, (headingOffsetDeg) => set({ headingOffsetDeg }))}
           {number('at', t('inspector.field.kmAt'), km(cameraKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
-          <p className="field__hint">
+          <p className={HINT}>
             {t('inspector.camKey.hint', { distance: formatDistance(cameraKey.atM), time: formatFilmTime(cameraKey.timeS) })}
           </p>
         </>
@@ -758,8 +766,8 @@ export function FilmInspector() {
       }
       body = (
         <>
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-param`}>
+          <div className={FIELD}>
+            <label className="type-label" htmlFor={`${id}-param`}>
               {t('inspector.paramKey.label')}
             </label>
             <Select
@@ -771,7 +779,7 @@ export function FilmInspector() {
           </div>
           {range('value', t('inspector.paramKey.value'), paramKey.value, spec, spec.format, (value) => set({ value }))}
           {number('at', t('inspector.field.kmAt'), km(paramKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
-          <p className="field__hint">
+          <p className={HINT}>
             {t('inspector.paramKey.hint', {
               distance: formatDistance(paramKey.atM),
               time: formatFilmTime(paramKey.timeS),
@@ -802,8 +810,8 @@ export function FilmInspector() {
       }
       /** a colour of its own for this look, '' = the track's; the picker starts from the colour in effect */
       const colorField = (field: 'color' | 'figureColor', label: string) => (
-        <div className="field">
-          <label className="field__label" htmlFor={`${id}-marker-${field}`}>
+        <div className={FIELD}>
+          <label className="type-label" htmlFor={`${id}-marker-${field}`}>
             {label}
           </label>
           <ColorField
@@ -821,8 +829,8 @@ export function FilmInspector() {
       const inherits = markerKey.color === undefined && markerKey.figureColor === undefined && markerKey.size === undefined
       body = (
         <>
-          <div className="field">
-            <label className="field__label" htmlFor={`${id}-marker-kind`}>
+          <div className={FIELD}>
+            <label className="type-label" htmlFor={`${id}-marker-kind`}>
               {t('inspector.markerKey.shape')}
             </label>
             <Select
@@ -833,8 +841,8 @@ export function FilmInspector() {
             />
           </div>
           {markerKey.kind === 'figurine' && (
-            <div className="field">
-              <label className="field__label" htmlFor={`${id}-marker-figure`}>
+            <div className={FIELD}>
+              <label className="type-label" htmlFor={`${id}-marker-figure`}>
                 {t('inspector.markerKey.figure')}
               </label>
               <Select
@@ -846,8 +854,8 @@ export function FilmInspector() {
             </div>
           )}
           {markerKey.kind === 'image' && (
-            <div className="field">
-              <div className="field__label-row">
+            <div className={FIELD}>
+              <div className={LABEL_ROW}>
                 <Button onClick={() => void choosePicture()}>
                   {markerKey.imageId ? t('inspector.markerKey.changeImage') : t('inspector.markerKey.chooseImage')}
                 </Button>
@@ -857,13 +865,13 @@ export function FilmInspector() {
                   </Button>
                 )}
               </div>
-              <p className="field__hint">{t('inspector.markerKey.noOwnImage')}</p>
+              <p className={HINT}>{t('inspector.markerKey.noOwnImage')}</p>
             </div>
           )}
           {markerKey.kind === 'figurine' && colorField('figureColor', t('inspector.markerKey.discColor'))}
           {colorField('color', markerKey.kind === 'boule' ? t('inspector.markerKey.color') : t('inspector.markerKey.edgeColor'))}
           {range('size', t('inspector.markerKey.size'), markerKey.size ?? marker.size, MARKER_SIZE_RANGE, (v) => `×${formatShort(v)}`, (size) => set({ size }))}
-          <div className="field">
+          <div className={FIELD}>
             <Button
               disabled={inherits}
               onClick={() => set({ color: undefined, figureColor: undefined, size: undefined })}
@@ -872,7 +880,7 @@ export function FilmInspector() {
             </Button>
           </div>
           {number('at', t('inspector.field.kmAt'), km(markerKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
-          <p className="field__hint">
+          <p className={HINT}>
             {t('inspector.markerKey.hint', {
               distance: formatDistance(markerKey.atM),
               time: formatFilmTime(markerKey.timeS),
@@ -897,7 +905,7 @@ export function FilmInspector() {
           {timing(filmText.startS, filmText.durationS, set)}
           {attachSelect(filmText.stopId)}
           {itemCamera(filmText.startS, filmText.durationS)}
-          <p className="field__hint">{t('inspector.text.hint')}</p>
+          <p className={HINT}>{t('inspector.text.hint')}</p>
         </>
       )
     } else if (media) {
@@ -929,9 +937,9 @@ export function FilmInspector() {
         const hours = current.offsetS !== 0 && current.offsetS % 3600 === 0 ? Math.abs(current.offsetS / 3600) : 0
         const filmedAt = formatDate(recordedMs + current.offsetS * 1000, { dateStyle: 'short', timeStyle: 'medium' })
         return (
-          <fieldset className="field fieldset">
-            <legend className="field__label">{t('inspector.media.sync.legend')}</legend>
-            <p className="field__hint">
+          <fieldset className={FIELDSET}>
+            <legend className="type-label">{t('inspector.media.sync.legend')}</legend>
+            <p className={HINT}>
               {t('inspector.media.sync.filmedAt', { date: filmedAt })}
               {approx && t('inspector.media.sync.approx')}.
               {!timed && t('inspector.media.sync.noTimes')}
@@ -947,7 +955,7 @@ export function FilmInspector() {
                   apply({ offsetS: Math.round(Math.min(SYNC_OFFSET_RANGE.max, Math.max(SYNC_OFFSET_RANGE.min, offsetS)) * 10) / 10 }, false),
                 )}
                 <Checkbox checked={current.follow} onChange={(on) => apply({ follow: on }, true)}>{t('inspector.media.sync.follow')}</Checkbox>
-                <p className="field__hint">{t('inspector.media.sync.offsetHint')}</p>
+                <p className={HINT}>{t('inspector.media.sync.offsetHint')}</p>
               </>
             )}
           </fieldset>
@@ -958,11 +966,11 @@ export function FilmInspector() {
         const following = media.sync?.follow === true
         const heard = media.muted === false && !following
         return (
-          <fieldset className="field fieldset">
-            <legend className="field__label">{t('inspector.media.sound.legend')}</legend>
+          <fieldset className={FIELDSET}>
+            <legend className="type-label">{t('inspector.media.sound.legend')}</legend>
             <Checkbox checked={heard} disabled={following} onChange={(on) => set({ muted: !on })}>{t('inspector.media.sound.label')}</Checkbox>
             {range('clip-volume', t('inspector.media.sound.volume'), media.volume ?? 1, VOLUME_RANGE, percent, (volume) => set({ volume }), !heard)}
-            <p className="field__hint">
+            <p className={HINT}>
               {following
                 ? t('inspector.media.sound.mutedFollowing')
                 : t('inspector.media.sound.heard')}
@@ -972,9 +980,9 @@ export function FilmInspector() {
       }
       body = (
         <>
-          {picture && <img className="film-inspector__thumb" src={picture.thumb} alt={picture.name ?? title} />}
-          <fieldset className="field fieldset">
-            <legend className="field__label">{t('inspector.media.display')}</legend>
+          {picture && <img className="max-h-24 max-w-full justify-self-start rounded-sm" src={picture.thumb} alt={picture.name ?? title} />}
+          <fieldset className={FIELDSET}>
+            <legend className="type-label">{t('inspector.media.display')}</legend>
             <RadioGroup aria-label={t('inspector.media.display')} value={media.layout} onChange={(layout) => set({ layout })}>
               {MEDIA_LAYOUTS.map((layout) => (
                 <Radio key={layout} value={layout}>
@@ -995,7 +1003,7 @@ export function FilmInspector() {
           {video && number('in', t('inspector.media.startInVideo'), media.inS ?? 0, 0, fileS, (inS) => set({ inS: Math.min(inS, fileS) }))}
           {video && clipSound()}
           {video && picture?.recordedMs !== undefined && clipSync(picture.recordedMs, picture.recordedApprox === true, fileS)}
-          <p className="field__hint">
+          <p className={HINT}>
             {card ? t('inspector.media.hintCard', { kind: title.toLowerCase() }) : t('inspector.media.hintFull', { kind: title.toLowerCase() })}
             {video && picture?.durationS !== undefined && t('inspector.media.videoLength', { length: formatFilmTime(fileS) })}
           </p>
@@ -1009,11 +1017,11 @@ export function FilmInspector() {
       const lengthS = musicLengthS(music, fileS)
       body = (
         <>
-          {sound?.name && <p className="field__hint">{sound.name}</p>}
+          {sound?.name && <p className={HINT}>{sound.name}</p>}
           {range('volume', t('inspector.music.volume'), music.volume, VOLUME_RANGE, percent, (volume) => set({ volume }))}
           {range('fade-in', t('inspector.music.fadeIn'), Math.min(music.fadeInS, FADE_SLIDER.max), FADE_SLIDER, seconds, (fadeInS) => set({ fadeInS }))}
           {range('fade-out', t('inspector.music.fadeOut'), Math.min(music.fadeOutS, FADE_SLIDER.max), FADE_SLIDER, seconds, (fadeOutS) => set({ fadeOutS }))}
-          <div className="film-inspector__row">
+          <div className={ROW}>
             {number('start', t('inspector.field.start'), music.startS, 0, clock.totalTime(), (startS) => set({ startS }))}
             {number('length', t('inspector.field.length'), music.durationS, AUDIO_DURATION_RANGE.min, fileS ?? AUDIO_DURATION_RANGE.max, (durationS) => set({ durationS }))}
           </div>
@@ -1027,13 +1035,13 @@ export function FilmInspector() {
           >
             {t('inspector.music.duck')}
           </Checkbox>
-          <Button className="film-inspector__remove" onClick={() => showToast(fitFilmToMusic())}>
+          <Button className={REMOVE} onClick={() => showToast(fitFilmToMusic())}>
             {t('inspector.music.fit')}
           </Button>
-          <Button className="film-inspector__remove" onClick={() => void snapFilmToMusic().then(showToast)}>
+          <Button className={REMOVE} onClick={() => void snapFilmToMusic().then(showToast)}>
             {t('inspector.music.snapBeat')}
           </Button>
-          <p className="field__hint">
+          <p className={HINT}>
             {t('inspector.music.hint', {
               start: formatFilmTime(music.startS),
               end: formatFilmTime(music.startS + lengthS),
@@ -1058,7 +1066,7 @@ export function FilmInspector() {
       removable = own !== undefined
       body = stage && (
         <>
-          <p className="field__hint">
+          <p className={HINT}>
             {stage.track.name} · {formatDistance(stage.endM - stage.startM)}
             {stage.track.stats.ascentM > 0 && t('inspector.stage.gain', { gain: formatNumber(stage.track.stats.ascentM) })}
           </p>
@@ -1070,14 +1078,14 @@ export function FilmInspector() {
             (v) => formatFilmTime(v),
             (v) => change((f) => withStageDuration(f, stage.track.id, v), false),
           )}
-          <p className="field__hint">
+          <p className={HINT}>
             {own === undefined
               ? t('inspector.stage.autoHint')
               : t('inspector.stage.fixedHint')}{' '}
             {t('inspector.stage.dragHint')}
           </p>
-          <label className="field">
-            <span className="field__label">{t('inspector.stage.trackColor')}</span>
+          <label className={FIELD}>
+            <span className="type-label">{t('inspector.stage.trackColor')}</span>
             <ColorField
               label={t('inspector.stage.trackColor')}
               value={tracks.find((tr) => tr.id === stage.track.id)?.color ?? stage.track.color}
@@ -1085,12 +1093,12 @@ export function FilmInspector() {
             />
           </label>
           <Button
-            className="film-inspector__remove"
+            className={REMOVE}
             onClick={() => useAppStore.getState().setProgress(clock.progressAtTime(startS), startS < clock.totalTime() ? startS : null)}
           >
             {t('inspector.stage.goToStart')}
           </Button>
-          <p className="field__hint">{t('inspector.stage.nameHint')}</p>
+          <p className={HINT}>{t('inspector.stage.nameHint')}</p>
         </>
       )
     } else if (isStageCardItem(item) && stageIds && stageIds.length > 1) {
@@ -1104,7 +1112,7 @@ export function FilmInspector() {
       body = (
         <>
           <StageCardFields card={card} onChange={(patch) => change((f) => withJunctionCard(f, after, patch), false)} />
-          <p className="field__hint">
+          <p className={HINT}>
             {window && t('inspector.stageCard.window', { start: formatFilmTime(window.startS, true), end: formatFilmTime(window.endS, true) })}
             {t('inspector.stageCard.hint')}
             {k === 0 && t('inspector.stageCard.first')}
@@ -1117,7 +1125,7 @@ export function FilmInspector() {
       body = (
         <>
           <CardFields card={item} />
-          <p className="field__hint">
+          <p className={HINT}>
             {item === TITLE_CARD_ID ? t('inspector.card.hintRight') : t('inspector.card.hintLeft')}
           </p>
         </>
@@ -1136,7 +1144,7 @@ export function FilmInspector() {
 
   return (
     <section
-      className="settings film-inspector"
+      className="settings"
       data-testid="film-inspector"
       aria-labelledby={`${id}-title`}
       onKeyDown={(e) => {
@@ -1153,7 +1161,7 @@ export function FilmInspector() {
         </Button>
       </Tip>
       {body}
-      <Button className="film-inspector__remove" onClick={remove} disabled={!removable}>
+      <Button className={REMOVE} onClick={remove} disabled={!removable}>
         {removeLabel}
       </Button>
     </section>

@@ -217,3 +217,23 @@
     box-shadow: none;
   }
 }
+
+/*
+ * The film timeline once its height was dragged (`TimelineResizer` sets `data-timeline-sized` on the view, wide layouts only):
+ * the timeline itself takes the height, its lanes scroll inside it. Never while it is folded.
+ */
+@custom-variant timeline-sized {
+  @media (min-width: 700px) and (min-height: 500px) {
+    [data-timeline-sized] > &:not([data-folded]) {
+      @slot;
+    }
+  }
+}
+
+@custom-variant timeline-sized-body {
+  @media (min-width: 700px) and (min-height: 500px) {
+    [data-timeline-sized] > :not([data-folded]) > & {
+      @slot;
+    }
+  }
+}
