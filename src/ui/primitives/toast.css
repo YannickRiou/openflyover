@@ -1,0 +1,106 @@
+/*
+ * Toast (Toast.tsx): HeroUI's `.toast-region` and `.toast` (imported in theme.css) skinned with the tokens of theme.css:
+ * the dark chrome in both themes, like the tooltips and menus. `.toaster` is the always-present live region at the
+ * bottom of the view, above the timeline; HeroUI's region is placed inside it and its messages stack upwards from it.
+ */
+@layer components {
+.toaster {
+  position: absolute;
+  z-index: 6;
+  bottom: var(--space-4);
+  left: 50%;
+  width: min(460px, calc(100% - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* HeroUI's region sits at the foot of the live region instead of the window */
+.toaster .toast-region {
+  position: absolute;
+  inset: auto 0 0;
+  translate: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.toast {
+  inset-inline: 0;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border: 1px solid var(--color-ink-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-chrome-raised);
+  color: var(--text-on-dark);
+  font-size: 13px;
+  box-shadow: var(--shadow-pop);
+}
+
+.toast--danger {
+  border-left: 4px solid var(--status-error-on-dark);
+}
+
+.toast .toast__indicator {
+  margin-top: 7px;
+  padding: 0;
+  color: var(--color-glacier);
+}
+
+.toast--danger .toast__indicator {
+  color: var(--status-error-on-dark);
+}
+
+.toast .toast__content {
+  flex: 1 1 auto;
+  align-self: flex-start;
+  min-width: 0;
+}
+
+.toast .toast__title {
+  display: block;
+  margin: 0;
+  padding: 6px 0;
+  color: var(--text-on-dark);
+  font: inherit;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.toast .icon-btn {
+  min-width: 28px;
+  height: 28px;
+  margin-top: 2px;
+  color: var(--color-glacier);
+}
+
+.toast .toast__act {
+  padding: 0 var(--space-2);
+  color: var(--color-accent-light);
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .toast .icon-btn:hover:not(:disabled) {
+    background: rgb(255 255 255 / 0.1);
+    color: var(--color-white);
+  }
+}
+
+.toast:focus-visible,
+.toast :focus-visible {
+  outline: var(--focus-ring-on-dark);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+@media (pointer: coarse) {
+  .toast .icon-btn {
+    min-width: 44px;
+    height: 44px;
+    margin-top: 0;
+  }
+}
+}

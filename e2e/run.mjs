@@ -754,6 +754,10 @@ const SCENARIOS = [
       // the page reloaded (a phone discarding the tab in the background): the project comes back with the change
       await page.reload({ waitUntil: 'domcontentloaded', timeout: STEP_MS })
       await page.waitForSelector('[data-testid="toast"]::-p-text(rouvert)', { visible: true, timeout: STEP_MS })
+      // the message closes on its button, inside the one live region
+      assert(await page.$('[aria-live] [data-testid="toast"]'), 'message hors de la région live')
+      await page.click('[data-testid="toast"] button[aria-label="Fermer le message"]')
+      await until(page, () => ![...document.querySelectorAll('[data-testid="toast"]')].some((el) => el.textContent.includes('rouvert') && el.dataset.exiting !== 'true'))
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
       const reopened = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
       assert(
