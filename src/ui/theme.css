@@ -68,6 +68,9 @@
 @import './primitives/tip.css';
 @import './primitives/tabs.css';
 @import './primitives/disclosure.css';
+@import './primitives/overlay.css';
+@import './primitives/menu.css';
+@import './primitives/popover.css';
 @import './primitives/toast.css';
 
 /* the project's own `dark:` variant (the theme attribute, never the system scheme) and the values HeroUI's theme overrode */
