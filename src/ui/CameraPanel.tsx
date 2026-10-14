@@ -23,7 +23,7 @@ import type { IconName } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
-import { Button, Checkbox, Switch } from './primitives'
+import { Button, Checkbox, Select, Switch } from './primitives'
 
 /** « Mettre en avant la région »: what it does, then how the search for the region went (found: after its name). */
 const REGION_HINTS: Record<RegionStatus, string> = {
@@ -283,19 +283,13 @@ export function CameraPanel() {
             <label className="field__label" htmlFor={`${id}-style`}>
               {t('camera.panel.style')}
             </label>
-            <select
+            <Select
               id={`${id}-style`}
-              className="select"
               value={camera.style}
               aria-describedby={`${id}-style-hint`}
-              onChange={(e) => update({ style: e.currentTarget.value as CameraStyle })}
-            >
-              {CAMERA_STYLES.map((style) => (
-                <option key={style} value={style}>
-                  {CAMERA_STYLE_LABELS[style]}
-                </option>
-              ))}
-            </select>
+              options={CAMERA_STYLES.map((style) => ({ value: style, label: CAMERA_STYLE_LABELS[style] }))}
+              onChange={(style) => update({ style })}
+            />
           </div>
         </SettingRow>
         {SLIDERS.map(({ key, label, tip, format }) => {

@@ -80,6 +80,30 @@ async function switchOf(page, tab, text) {
   return element
 }
 
+/**
+ * Picks the option `text` of the select named `label` (its `<label>`, or its `aria-label`) inside `scope`. Desktop Chromium
+ * gets the list renderer of the Select primitive: a button that opens a list over the page (the phone's native select is
+ * covered by the unit tests).
+ */
+async function selectOption(page, scope, label, text) {
+  const handle = await page.evaluateHandle(
+    (s, name) =>
+      [...document.querySelectorAll(`${s} button[aria-haspopup="listbox"]`)].find(
+        (b) =>
+          b.getAttribute('aria-label') === name ||
+          (b.getAttribute('aria-labelledby') ?? '').split(' ').some((id) => document.getElementById(id)?.textContent.trim() === name),
+      ) ?? null,
+    scope,
+    label,
+  )
+  const trigger = handle.asElement()
+  assert(trigger, `liste « ${label} » introuvable dans ${scope}`)
+  await trigger.click()
+  const option = await page.waitForSelector(`[role="listbox"] [role="option"]::-p-text(${text})`, { visible: true, timeout: STEP_MS })
+  await option.click()
+  await page.waitForSelector('[role="listbox"]', { hidden: true, timeout: STEP_MS })
+}
+
 /** Number of blocks in a timeline lane (« Plans », « Arrêts », « Textes »…). */
 const laneCount = (page, lane) =>
   page.evaluate(
@@ -811,12 +835,8 @@ const SCENARIOS = [
       })
       try {
         await page.click('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]')
-        await until(page, () => [...document.querySelectorAll('select')].some((s) => [...s.options].some((o) => o.value === 'situation')))
-        await page.evaluate(() => {
-          const select = [...document.querySelectorAll('select')].find((s) => [...s.options].some((o) => o.value === 'situation'))
-          Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'situation')
-          select.dispatchEvent(new Event('change', { bubbles: true }))
-        })
+        await page.waitForSelector('aside[aria-label="Inspecteur"] button[aria-haspopup="listbox"]', { visible: true, timeout: STEP_MS })
+        await selectOption(page, 'aside[aria-label="Inspecteur"]', 'Style', 'Depuis la région')
         await page.click('label::-p-text(Mettre en avant la région)')
         // asked at once, without touching « Lieu »; the failure says so and offers to retry
         const retry = await page.waitForSelector('aside[aria-label="Inspecteur"] button::-p-text(Réessayer)', { visible: true, timeout: STEP_MS })
@@ -967,13 +987,7 @@ const SCENARIOS = [
       assert(recorded.wallMs > 0 && recorded.frames === 20 && recorded.width === 320, `historique : durée ou images : ${JSON.stringify(recorded)}`)
 
       // the still image: from the export drawer (still open), at its smallest size
-      await page.evaluate(() => {
-        const select = [...document.querySelectorAll('[data-testid="export-dock"] select')].find((s) => [...s.options].some((o) => o.value === '720p'))
-        if (!select) throw new Error('sélecteur de résolution introuvable')
-        const setValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set
-        setValue.call(select, '720p')
-        select.dispatchEvent(new Event('change', { bubbles: true }))
-      })
+      await selectOption(page, '[data-testid="export-dock"]', 'Résolution', '720p')
       // « Image fixe » is in the « Affiche » mode of the drawer; back to « Vidéo » afterwards (the history is there)
       const exportMode = (label) =>
         page.evaluate((text) => {

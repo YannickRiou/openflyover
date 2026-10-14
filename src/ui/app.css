@@ -688,29 +688,6 @@ label.checkbox:has(input:disabled) {
   flex: 1 1 0;
 }
 
-.film-tl__select {
-  min-height: 26px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--color-ink-soft);
-  border-radius: var(--radius-sm);
-  background: var(--surface-chrome);
-  color: var(--color-white);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.film-tl__select {
-  max-width: 190px;
-  padding: 0 var(--space-1);
-}
-
-@media (hover: hover) {
-  .film-tl__select:hover {
-    border-color: var(--color-white);
-  }
-}
-
 .film-tl__check {
   display: flex;
   align-items: center;
