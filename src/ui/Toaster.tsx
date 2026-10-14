@@ -4,6 +4,7 @@ import { Icon } from './icons'
 import type { IconName } from './icons'
 import { dismissToast, toastDuration, useToastStore } from './toast'
 import type { Toast } from './toast'
+import { Button, Tip } from './primitives'
 
 const ICONS: Record<Toast['kind'], IconName> = { success: 'circle-check', info: 'info', error: 'circle-alert' }
 
@@ -47,16 +48,16 @@ function ToastItem({ toast }: { toast: Toast }) {
           {toast.action.label}
         </button>
       )}
-      <button
-        type="button"
-        className="icon-btn toast__close"
-        aria-label={t('common.closeMessage')}
-        data-tip={t('common.close')}
-        data-tip-side="top"
-        onClick={() => dismissToast(toast.id)}
-      >
-        <Icon name="x" size={16} />
-      </button>
+      <Tip text={t('common.close')} side="top">
+        <Button
+          variant="icon"
+          className="toast__close"
+          aria-label={t('common.closeMessage')}
+          onClick={() => dismissToast(toast.id)}
+        >
+          <Icon name="x" size={16} />
+        </Button>
+      </Tip>
     </div>
   )
 }

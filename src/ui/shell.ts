@@ -1,7 +1,6 @@
 /**
  * Pure logic of the application shell (no React, no DOM): framing of the 3D preview to the output format,
- * routing of the opened or dropped files, roving focus of the tabs, project name and save state (shortcuts: `shortcuts.ts`),
- * tooltip placement (its DOM listener `installTipPlacement` aside).
+ * routing of the opened or dropped files, roving focus of the tabs, project name and save state (shortcuts: `shortcuts.ts`).
  */
 import { isRecord } from '../core/guards'
 import { DEFAULT_APPEARANCE, parseAppearance } from './appearance'
@@ -344,82 +343,4 @@ const SHEET_DISMISS = 0.3
 /** A half sheet released `dragPx` below its place (`heightPx` tall), moving down at `velocity` px/s, closes. */
 export function dismissSheet(dragPx: number, heightPx: number, velocity: number): boolean {
   return dragPx + velocity * SHEET_FLICK_S > heightPx * SHEET_DISMISS
-}
-
-// ---------------------------------------------------------------------------
-// Tooltips (data-tip)
-// ---------------------------------------------------------------------------
-
-/** A box in window pixels. */
-export interface Box {
-  left: number
-  top: number
-  right: number
-  bottom: number
-}
-
-/** Room kept between a tooltip and the edge it is pushed against; gap under its element (shell.css). */
-const TIP_MARGIN = 8
-const TIP_GAP = 8
-
-/**
- * Where a tooltip of `width` × `height`, centred under its `anchor`, fits inside `clip` (the window and the scrolling
- * columns around it): `shift` sideways from centred (px), `above` when there is no room below but there is above.
- */
-export function tipPlacement(anchor: Box, width: number, height: number, clip: Box): { shift: number; above: boolean } {
-  const left = (anchor.left + anchor.right) / 2 - width / 2
-  const min = clip.left + TIP_MARGIN
-  const max = clip.right - TIP_MARGIN - width
-  // wider than the room: from its left edge
-  const shift = (max < min ? min : Math.min(Math.max(left, min), max)) - left
-  const below = anchor.bottom + TIP_GAP + height <= clip.bottom - TIP_MARGIN
-  const above = !below && anchor.top - TIP_GAP - height >= clip.top + TIP_MARGIN
-  return { shift: Math.round(shift), above }
-}
-
-/** The window cut by every ancestor of `el` that clips its overflow (a scrolling panel). */
-function clipBox(el: Element): Box {
-  const root = document.documentElement
-  const box: Box = { left: 0, top: 0, right: root.clientWidth, bottom: root.clientHeight }
-  for (let p = el.parentElement; p && p !== root; p = p.parentElement) {
-    const style = getComputedStyle(p)
-    if (style.overflowX === 'visible' && style.overflowY === 'visible') continue
-    const r = p.getBoundingClientRect()
-    box.left = Math.max(box.left, r.left)
-    box.top = Math.max(box.top, r.top)
-    box.right = Math.min(box.right, r.right)
-    box.bottom = Math.min(box.bottom, r.bottom)
-  }
-  return box
-}
-
-/**
- * Keeps the centred `data-tip` tooltips whole (`tipPlacement`): when one shows (hover, focus, tap), its shift goes into
- * `--tip-shift` and `data-tip-flip` puts it above. Tips placed by hand (`data-tip-side`, `data-tip-align`) are left alone.
- */
-export function installTipPlacement(): () => void {
-  // measured once laid out, before it fades in (450 ms): a tap shows it a few frames after the pointer events
-  const measure = (el: HTMLElement, frames: number) =>
-    requestAnimationFrame(() => {
-      const tip = getComputedStyle(el, '::after')
-      const width = parseFloat(tip.width)
-      const height = parseFloat(tip.height)
-      if (!(width > 0 && height > 0)) {
-        if (frames > 0) measure(el, frames - 1)
-        return
-      }
-      const { shift, above } = tipPlacement(el.getBoundingClientRect(), width, height, clipBox(el))
-      el.style.setProperty('--tip-shift', `${shift}px`)
-      el.toggleAttribute('data-tip-flip', above)
-    })
-  const place = (e: Event) => {
-    const el = e.target instanceof Element ? e.target.closest('[data-tip]') : null
-    if (el instanceof HTMLElement && !el.dataset.tipSide && !el.dataset.tipAlign) measure(el, 20)
-  }
-  document.addEventListener('pointerover', place)
-  document.addEventListener('focusin', place)
-  return () => {
-    document.removeEventListener('pointerover', place)
-    document.removeEventListener('focusin', place)
-  }
 }

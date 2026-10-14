@@ -8,6 +8,7 @@ import { PanelSection } from './PanelSection'
 import { setPreferences, usePreferences } from './preferences'
 import { PERF_ITEMS, STATUS_CHIPS } from './shell'
 import type { PerfItem, StatusChip } from './shell'
+import { Button } from './primitives'
 
 const STATUS_LABELS: Record<StatusChip, string> = {
   get weather() { return t('settings.preferences.status.weather') },
@@ -155,9 +156,9 @@ export function PreferencesPanel() {
           onChange={(chrome) => setAppearance({ chrome })}
         />
         <Choice legend={t('settings.preferences.appearance.density')} labels={DENSITY_LABELS} keys={DENSITIES} value={appearance.density} onChange={(density) => setAppearance({ density })} />
-        <button type="button" className="btn btn--secondary" disabled={isDefault} onClick={() => setPreferences({ appearance: DEFAULT_APPEARANCE })}>
+        <Button disabled={isDefault} onClick={() => setPreferences({ appearance: DEFAULT_APPEARANCE })}>
           {t('settings.preferences.appearance.reset')}
-        </button>
+        </Button>
       </PanelSection>
       <PanelSection title={t('settings.preferences.statusBar.title')}>
         <Chips

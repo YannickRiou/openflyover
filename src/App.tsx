@@ -32,7 +32,6 @@ import {
   COMPACT_QUERY,
   ONE_SIDE_MAX_WIDTH,
   SHELL_TABS,
-  installTipPlacement,
   isFileDrag,
   matchesQuery,
   nextTabIndex,
@@ -56,6 +55,7 @@ import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
 import { WeatherPanel } from './ui/WeatherPanel'
 import './ui/app.css'
 import './ui/shell.css'
+import { Tip } from './ui/primitives'
 
 // Loaded in their own chunks: the offline packs right after the first paint, the export drawer (video, batch,
 // poster) when it is first opened, as its codec check pulls mediabunny (~700 kB). They stay mounted once loaded
@@ -277,7 +277,6 @@ export default function App() {
   useEffect(() => installSliderGestures(getSettingsHistory()), [])
   // a project emptied of its tracks is not written over the kept one (it waits for a track)
   useEffect(() => installLibraryAutosave(() => !isExporting() && useAppStore.getState().tracks.length > 0), [])
-  useEffect(() => installTipPlacement(), [])
   useEffect(() => installCloseGuard(isExporting, saveProject), [])
 
   /** a pointer button is down */
@@ -508,45 +507,44 @@ export default function App() {
             {tabs.map((tab, i) => {
               const selected = shell.tab === tab
               return (
-                <button
-                  key={tab}
-                  ref={(el) => {
-                    tabRefs.current[i] = el
-                  }}
-                  id={`tab-${tab}`}
-                  data-testid={`tab-${tab}`}
-                  type="button"
-                  role="tab"
-                  className="rail__tab"
-                  aria-selected={selected}
-                  aria-controls={`tab-panel-${tab}`}
-                  tabIndex={selected ? 0 : -1}
-                  disabled={exporting}
-                  data-tip={TAB_LABELS[tab].label}
-                  data-tip-side="right"
-                  onClick={() => dispatch({ type: 'click-tab', tab, narrow: isNarrow() })}
-                  onKeyDown={(e) => onTabKeyDown(e, i)}
-                >
-                  <Icon name={TAB_LABELS[tab].icon} size={22} />
-                  <span className="rail__label">{TAB_LABELS[tab].label}</span>
-                  <TabWeightDot tab={tab} />
-                </button>
+                <Tip key={tab} text={TAB_LABELS[tab].label} side="right" disabled={phone}>
+                  <button
+                    ref={(el) => {
+                      tabRefs.current[i] = el
+                    }}
+                    id={`tab-${tab}`}
+                    data-testid={`tab-${tab}`}
+                    type="button"
+                    role="tab"
+                    className="rail__tab"
+                    aria-selected={selected}
+                    aria-controls={`tab-panel-${tab}`}
+                    tabIndex={selected ? 0 : -1}
+                    disabled={exporting}
+                    onClick={() => dispatch({ type: 'click-tab', tab, narrow: isNarrow() })}
+                    onKeyDown={(e) => onTabKeyDown(e, i)}
+                  >
+                    <Icon name={TAB_LABELS[tab].icon} size={22} />
+                    <span className="rail__label">{TAB_LABELS[tab].label}</span>
+                    <TabWeightDot tab={tab} />
+                  </button>
+                </Tip>
               )
             })}
           </div>
-          <button
-            type="button"
-            className="rail__toggle"
-            onClick={() => dispatch({ type: 'toggle-panel', narrow: isNarrow() })}
-            disabled={exporting}
-            aria-expanded={!shell.collapsed}
-            aria-controls="side-panel"
-            aria-label={shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse')}
-            data-tip={withShortcut(shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse'), 'toggle-panel')}
-            data-tip-side="right"
-          >
-            <Icon name={shell.collapsed ? 'panel-left-open' : 'panel-left-close'} />
-          </button>
+          <Tip text={withShortcut(shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse'), 'toggle-panel')} side="right">
+            <button
+              type="button"
+              className="rail__toggle"
+              onClick={() => dispatch({ type: 'toggle-panel', narrow: isNarrow() })}
+              disabled={exporting}
+              aria-expanded={!shell.collapsed}
+              aria-controls="side-panel"
+              aria-label={shell.collapsed ? t('shell.rail.expand') : t('shell.rail.collapse')}
+            >
+              <Icon name={shell.collapsed ? 'panel-left-open' : 'panel-left-close'} />
+            </button>
+          </Tip>
         </nav>
 
         {/* every tab stays mounted: weather, landmarks and export have side effects */}

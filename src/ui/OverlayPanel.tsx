@@ -43,6 +43,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
+import { Button } from './primitives'
 
 const COUNTER_LABELS: Record<CounterId, string> = {
   get distance() { return t('overlay.counter.distance') },
@@ -268,15 +269,13 @@ function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolea
       </label>
       <p className="field__hint">{t('overlay.card.hint')}</p>
       {enabled && (
-        <button
-          type="button"
-          className="btn btn--secondary"
+        <Button
           disabled={!hasTrack}
           aria-label={t('overlay.card.editAria', { label })}
           onClick={() => useAppStore.getState().setFilmSelection(card)}
         >
           {t('overlay.card.edit')}
-        </button>
+        </Button>
       )}
     </div>
   )
@@ -313,9 +312,9 @@ function DotColor({ value, onChange }: { value: string | undefined; onChange(v: 
   return (
     <>
       <ColorField label={t('overlay.dotColor')} value={value || marker} onChange={onChange} />
-      <button type="button" className="btn btn--secondary" disabled={!value} onClick={() => onChange('')}>
+      <Button disabled={!value} onClick={() => onChange('')}>
         {t('overlay.sameAsMarker')}
-      </button>
+      </Button>
     </>
   )
 }
@@ -405,9 +404,9 @@ export function FilmTextStyleFields({
     <SettingRow label={t('overlay.textStyle.title')} value={color || font ? t('overlay.custom') : t('overlay.sameAsOverlay')}>
       <ColorField label={t('overlay.color')} value={shown} onChange={(c) => onChange({ color: c, font })} />
       <FontField label={t('overlay.font')} value={font} inherit={t('overlay.font.overlay')} onChange={(f) => onChange({ color, font: f })} />
-      <button type="button" className="btn btn--secondary" disabled={!color && !font} onClick={() => onChange({})}>
+      <Button disabled={!color && !font} onClick={() => onChange({})}>
         {t('overlay.sameAsOverlayButton')}
-      </button>
+      </Button>
     </SettingRow>
   )
 }
@@ -482,9 +481,9 @@ function StyleOverrides({
       )}
       <FontField label={t('overlay.overrides.titleFont')} value={own.titleFont} inherit={inherit} onChange={(titleFont) => onChange({ titleFont })} />
       <FontField label={t('overlay.overrides.numberFont')} value={own.numberFont} inherit={inherit} onChange={(numberFont) => onChange({ numberFont })} />
-      <button type="button" className="btn btn--secondary" disabled={Object.keys(own).length === 0} onClick={() => onChange(null)}>
+      <Button disabled={Object.keys(own).length === 0} onClick={() => onChange(null)}>
         {widget ? t('overlay.overrides.restOfOverlay') : t('overlay.overrides.backToStyle')}
-      </button>
+      </Button>
     </SettingRow>
   )
 }
@@ -523,9 +522,7 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
       </div>
       <ColorField label={t('overlay.color')} value={toHex(look.accents[kind])} onChange={(color) => onChange(withLabelColor(overlay, kind, color))} />
       <p className="field__hint">{t('overlay.labelColors.hint')}</p>
-      <button
-        type="button"
-        className="btn btn--secondary"
+      <Button
         disabled={Object.keys(own).length === 0}
         onClick={() => {
           const { labelColors: _labelColors, ...rest } = overlay
@@ -533,7 +530,7 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
         }}
       >
         {t('overlay.labelColors.back')}
-      </button>
+      </Button>
     </SettingRow>
   )
 }
@@ -766,13 +763,13 @@ export function OverlayPanel() {
               }
             >
               <div className="project__row">
-                <button type="button" className="btn btn--secondary" onClick={() => void chooseLogo()}>
+                <Button onClick={() => void chooseLogo()}>
                   {overlay.logo.image ? t('marker.image.change') : t('marker.image.choose')}
-                </button>
+                </Button>
                 {overlay.logo.image && (
-                  <button type="button" className="btn btn--secondary" onClick={() => setWidget('logo', { image: '' })}>
+                  <Button onClick={() => setWidget('logo', { image: '' })}>
                     {t('marker.image.remove')}
-                  </button>
+                  </Button>
                 )}
               </div>
               {logoError && (

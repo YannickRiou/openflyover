@@ -16,6 +16,7 @@ import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
+import { Button } from './primitives'
 
 const ZOOM_OFFSETS: { value: Settings['imageryZoomOffset']; label: string }[] = [
   { value: 0, get label() { return t('offline.level.0') } },
@@ -239,9 +240,9 @@ function SunTimeControl() {
                 onChange={(e) => setSetting('sunDate', e.currentTarget.value)}
               />
               {sunDate && (
-                <button type="button" className="btn btn--secondary" onClick={() => setSetting('sunDate', '')}>
+                <Button onClick={() => setSetting('sunDate', '')}>
                   {t('light.sun.dayOfOuting')}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -415,9 +416,9 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
               ))}
             </select>
             {clouds.quality !== 'auto' && (
-              <button type="button" className="btn btn--secondary" onClick={() => set({ quality: 'auto' })}>
+              <Button onClick={() => set({ quality: 'auto' })}>
                 {t('light.clouds.backToPreset')}
-              </button>
+              </Button>
             )}
           </div>
         </SettingRow>

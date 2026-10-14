@@ -67,6 +67,7 @@ import { AspectIcon, Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import './exportPanel.css'
+import { Button, Tip } from './primitives'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
   { value: 'standard', get label() { return QUALITY_NAMES.standard } },
@@ -273,16 +274,16 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </h2>
       <ModifiedMarker keys={['video']} label={t('export.panel.title')} disabled={busy} />
       {onClose && (
-        <button
-          type="button"
-          className="icon-btn settings__close"
-          onClick={onClose}
-          aria-label={t('export.panel.close')}
-          data-tip={withShortcut(t('common.close'), 'export')}
-          data-tip-align="end"
-        >
-          <Icon name="x" size={18} />
-        </button>
+        <Tip text={withShortcut(t('common.close'), 'export')} align="end">
+          <Button
+            variant="icon"
+            className="settings__close"
+            onClick={onClose}
+            aria-label={t('export.panel.close')}
+          >
+            <Icon name="x" size={18} />
+          </Button>
+        </Tip>
       )}
       {modes}
 
@@ -492,9 +493,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           })}
         </p>
         {customised && (
-          <button type="button" className="btn btn--secondary" onClick={() => setSetting('clouds', { ...clouds, quality: 'auto' })}>
+          <Button onClick={() => setSetting('clouds', { ...clouds, quality: 'auto' })}>
             {t('light.clouds.backToPreset')}
-          </button>
+          </Button>
         )}
       </fieldset>
 
@@ -544,10 +545,10 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       {!busy && (
         <div className="export__actions">
-          <button type="button" className="btn btn--primary" onClick={start} disabled={!trackName || !codec}>
+          <Button variant="primary" onClick={start} disabled={!trackName || !codec}>
             <Icon name="download" size={18} />
             {overlayOnly ? t('export.panel.exportOverlay') : t('export.panel.exportVideo')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -573,23 +574,22 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                     .join(' · ')}
           </p>
           <p className="field__hint">{t('export.panel.frozen')}</p>
-          <button
-            type="button"
-            className="btn btn--secondary btn--block"
+          <Button
+            block
             onClick={() => useExportStore.getState().cancel()}
             disabled={phase === 'finalizing'}
           >
             {t('export.panel.cancel')}
-          </button>
+          </Button>
         </div>
       )}
 
       {phase === 'error' && error && (
         <div className="field export__error" role="alert">
           <p className="field__hint">{t('export.panel.failed', { error })}</p>
-          <button type="button" className="btn btn--secondary btn--small" onClick={() => showDiagnostic(currentReport())}>
+          <Button size="sm" onClick={() => showDiagnostic(currentReport())}>
             {t('export.panel.diagnostic')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -598,9 +598,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           {result.url === null ? (
             t('export.panel.savedTo', { fileName: result.fileName })
           ) : getPlatform().capabilities.isDesktop || sharesFiles() ? (
-            <button type="button" className="btn btn--secondary btn--small" onClick={() => result.url && download(result.url, result.fileName)}>
+            <Button size="sm" onClick={() => result.url && download(result.url, result.fileName)}>
               {sharesFiles() ? t('export.panel.shareFile', { label: shareSaveLabel(), fileName: result.fileName }) : t('export.panel.saveFile', { fileName: result.fileName })}
-            </button>
+            </Button>
           ) : (
             <a href={result.url} download={result.fileName}>
               {t('export.panel.downloadFile', { fileName: result.fileName })}
@@ -818,16 +818,16 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         {t('export.panel.title')}
       </h2>
       {onClose && (
-        <button
-          type="button"
-          className="icon-btn settings__close"
-          onClick={onClose}
-          aria-label={t('export.panel.close')}
-          data-tip={withShortcut(t('common.close'), 'export')}
-          data-tip-align="end"
-        >
-          <Icon name="x" size={18} />
-        </button>
+        <Tip text={withShortcut(t('common.close'), 'export')} align="end">
+          <Button
+            variant="icon"
+            className="settings__close"
+            onClick={onClose}
+            aria-label={t('export.panel.close')}
+          >
+            <Icon name="x" size={18} />
+          </Button>
+        </Tip>
       )}
       {modes}
 
@@ -846,10 +846,10 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </fieldset>
       {perTrack && (
         <div className="field">
-          <button type="button" className="btn btn--secondary btn--block" onClick={chooseTrackFolder} disabled={busy}>
+          <Button block onClick={chooseTrackFolder} disabled={busy}>
             <Icon name="folder-open" size={18} />
             {trackFolder ? t('export.panel.changeFolder') : t('export.panel.chooseFolder')}
-          </button>
+          </Button>
           <p className="field__hint">{trackFolder ? trackFolderText(trackFolder, sources) : t('export.panel.perTrackHint')}</p>
         </div>
       )}
@@ -934,15 +934,14 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       {!busy && (
         <div className="export__actions">
-          <button
-            type="button"
-            className="btn btn--primary"
+          <Button
+            variant="primary"
             onClick={perTrack ? startPerTrack : start}
             disabled={jobs.length === 0 || (perTrack ? sources.length === 0 : !track)}
           >
             <Icon name="download" size={18} />
             {t('export.panel.exportAll')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -969,14 +968,13 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               <p className="field__hint">{batchProgressLabel(states, fraction) || t('export.panel.preparing')}</p>
             </>
           )}
-          <button
-            type="button"
-            className="btn btn--secondary btn--block"
+          <Button
+            block
             onClick={() => useBatchStore.getState().cancel()}
             disabled={cancelRequested}
           >
             {t('export.panel.cancelAll')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -1003,13 +1001,12 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                 <span className="batch-results__label">{s.job.label}</span>
                 <span className="field__hint">{jobStatusText(s)}</span>
                 {s.result?.url && (
-                  <button
-                    type="button"
-                    className="btn btn--secondary btn--small"
+                  <Button
+                    size="sm"
                     onClick={() => s.result?.url && download(s.result.url, s.result.fileName)}
                   >
                     {t('export.panel.saveAgain')}
-                  </button>
+                  </Button>
                 )}
               </li>
             ))}

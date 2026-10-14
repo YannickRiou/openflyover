@@ -99,6 +99,7 @@ import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
+import { Button, Tip } from './primitives'
 
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
   get aucune() {
@@ -319,10 +320,12 @@ function SituationFramingFields({
           tip={t('inspector.framing.headroomTip')}
         />
       </SettingRow>
-      <button type="button" className="btn btn--secondary" onClick={capture} data-tip={t('inspector.framing.captureTip')}>
-        <Icon name="crosshair" size={16} />
-        {t('inspector.framing.capture')}
-      </button>
+      <Tip text={t('inspector.framing.captureTip')}>
+        <Button onClick={capture}>
+          <Icon name="crosshair" size={16} />
+          {t('inspector.framing.capture')}
+        </Button>
+      </Tip>
     </InspectorGroup>
   )
 }
@@ -494,28 +497,27 @@ export function FilmInspector() {
 
   /** « Cadrer la caméra ici »: a camera key of its own while the item shows (`addItemCamera`), selected to adjust */
   const itemCamera = (startS: number, durationS: number) => (
-    <button
-      type="button"
-      className="btn btn--secondary"
-      data-tip={t('inspector.itemCamera.tip')}
-      onClick={() => {
-        const { camera, flyoverDurationS } = useAppStore.getState().settings
-        const easeM = cameraKeyEaseM(lengthM, flyoverDurationS)
-        editFilm((f) =>
-          addItemCamera(
-            f,
-            startS,
-            startS + durationS,
-            (timeS) => clock.progressAtTime(timeS) * lengthM,
-            // keyedCamera reads the keys in order along the track; the film keeps them in any order
-            (atM) => keyedCamera(camera, [...f.cameraKeys].sort((a, b) => a.atM - b.atM), atM, easeM),
-          ),
-        )
-      }}
-    >
-      <Icon name="locate-fixed" size={16} />
-      {t('inspector.itemCamera.label')}
-    </button>
+    <Tip text={t('inspector.itemCamera.tip')}>
+      <Button
+        onClick={() => {
+          const { camera, flyoverDurationS } = useAppStore.getState().settings
+          const easeM = cameraKeyEaseM(lengthM, flyoverDurationS)
+          editFilm((f) =>
+            addItemCamera(
+              f,
+              startS,
+              startS + durationS,
+              (timeS) => clock.progressAtTime(timeS) * lengthM,
+              // keyedCamera reads the keys in order along the track; the film keeps them in any order
+              (atM) => keyedCamera(camera, [...f.cameraKeys].sort((a, b) => a.atM - b.atM), atM, easeM),
+            ),
+          )
+        }}
+      >
+        <Icon name="locate-fixed" size={16} />
+        {t('inspector.itemCamera.label')}
+      </Button>
+    </Tip>
   )
 
   let title: string
@@ -681,13 +683,12 @@ export function FilmInspector() {
               <p className="field__hint">{t('inspector.junction.nightsHint')}</p>
             </>
           )}
-          <button
-            type="button"
-            className="btn btn--secondary film-inspector__remove"
+          <Button
+            className="film-inspector__remove"
             onClick={() => editFilm((f) => ({ film: applyToAllJunctions(f, afterIds, { kind, holdS: stored.holdS }) }))}
           >
             {t('inspector.junction.applyToAll')}
-          </button>
+          </Button>
           <label className="checkbox">
             <input
               type="checkbox"
@@ -699,13 +700,12 @@ export function FilmInspector() {
             />
             {t('inspector.junction.stageCard', { n: k + 2 })}
           </label>
-          <button
-            type="button"
-            className="btn btn--secondary film-inspector__remove"
+          <Button
+            className="film-inspector__remove"
             onClick={() => useAppStore.getState().setFilmSelection(stageCardId(junction.afterTrackId))}
           >
             {t('inspector.junction.adjustCard')}
-          </button>
+          </Button>
           <p className="field__hint">{t('inspector.junction.blockHint')}</p>
         </>
       )
@@ -870,9 +870,9 @@ export function FilmInspector() {
               value={(markerKey[field] ?? marker[field]) || track.color}
               onChange={(e) => set({ [field]: e.currentTarget.value })}
             />
-            <button type="button" className="btn btn--secondary" disabled={markerKey[field] === ''} onClick={() => set({ [field]: '' })}>
+            <Button disabled={markerKey[field] === ''} onClick={() => set({ [field]: '' })}>
               {t('inspector.markerKey.trackColor')}
-            </button>
+            </Button>
           </div>
         </div>
       )
@@ -913,13 +913,13 @@ export function FilmInspector() {
           {markerKey.kind === 'image' && (
             <div className="field">
               <div className="field__label-row">
-                <button type="button" className="btn btn--secondary" onClick={() => void choosePicture()}>
+                <Button onClick={() => void choosePicture()}>
                   {markerKey.imageId ? t('inspector.markerKey.changeImage') : t('inspector.markerKey.chooseImage')}
-                </button>
+                </Button>
                 {markerKey.imageId && (
-                  <button type="button" className="btn btn--secondary" onClick={() => set({ imageId: undefined })}>
+                  <Button onClick={() => set({ imageId: undefined })}>
                     {t('inspector.markerKey.removeImage')}
-                  </button>
+                  </Button>
                 )}
               </div>
               <p className="field__hint">{t('inspector.markerKey.noOwnImage')}</p>
@@ -929,14 +929,12 @@ export function FilmInspector() {
           {colorField('color', markerKey.kind === 'boule' ? t('inspector.markerKey.color') : t('inspector.markerKey.edgeColor'))}
           {range('size', t('inspector.markerKey.size'), markerKey.size ?? marker.size, MARKER_SIZE_RANGE, (v) => `×${formatShort(v)}`, (size) => set({ size }))}
           <div className="field">
-            <button
-              type="button"
-              className="btn btn--secondary"
+            <Button
               disabled={inherits}
               onClick={() => set({ color: undefined, figureColor: undefined, size: undefined })}
             >
               {t('inspector.markerKey.resetLook')}
-            </button>
+            </Button>
           </div>
           {number('at', t('inspector.field.kmAt'), km(markerKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
           <p className="field__hint">
@@ -1007,9 +1005,9 @@ export function FilmInspector() {
             </p>
             {timed && (
               <>
-                <button type="button" className="btn btn--secondary" onClick={syncNow}>
+                <Button onClick={syncNow}>
                   {media.sync ? t('inspector.media.sync.resync') : t('timeline.syncWithRoute')}
-                </button>
+                </Button>
                 {number('offset', t('inspector.media.sync.offset'), current.offsetS, SYNC_OFFSET_RANGE.min, SYNC_OFFSET_RANGE.max, (offsetS) =>
                   apply({ offsetS: Math.round(Math.min(SYNC_OFFSET_RANGE.max, Math.max(SYNC_OFFSET_RANGE.min, offsetS)) * 10) / 10 }, false),
                 )}
@@ -1103,12 +1101,12 @@ export function FilmInspector() {
             />
             {t('inspector.music.duck')}
           </label>
-          <button type="button" className="btn btn--secondary film-inspector__remove" onClick={() => showToast(fitFilmToMusic())}>
+          <Button className="film-inspector__remove" onClick={() => showToast(fitFilmToMusic())}>
             {t('inspector.music.fit')}
-          </button>
-          <button type="button" className="btn btn--secondary film-inspector__remove" onClick={() => void snapFilmToMusic().then(showToast)}>
+          </Button>
+          <Button className="film-inspector__remove" onClick={() => void snapFilmToMusic().then(showToast)}>
             {t('inspector.music.snapBeat')}
-          </button>
+          </Button>
           <p className="field__hint">
             {t('inspector.music.hint', {
               start: formatFilmTime(music.startS),
@@ -1160,13 +1158,12 @@ export function FilmInspector() {
               onChange={(e) => useAppStore.getState().setTrackColor(stage.track.id, e.currentTarget.value)}
             />
           </label>
-          <button
-            type="button"
-            className="btn btn--secondary film-inspector__remove"
+          <Button
+            className="film-inspector__remove"
             onClick={() => useAppStore.getState().setProgress(clock.progressAtTime(startS), startS < clock.totalTime() ? startS : null)}
           >
             {t('inspector.stage.goToStart')}
-          </button>
+          </Button>
           <p className="field__hint">{t('inspector.stage.nameHint')}</p>
         </>
       )
@@ -1224,13 +1221,15 @@ export function FilmInspector() {
       <h2 id={`${id}-title`} className="section-title settings__title">
         {title}
       </h2>
-      <button type="button" className="icon-btn settings__close" onClick={close} aria-label={t('inspector.close.aria')} data-tip={t('inspector.close.tip')} data-tip-align="end">
-        <Icon name="x" size={18} />
-      </button>
+      <Tip text={t('inspector.close.tip')} align="end">
+        <Button variant="icon" className="settings__close" onClick={close} aria-label={t('inspector.close.aria')}>
+          <Icon name="x" size={18} />
+        </Button>
+      </Tip>
       {body}
-      <button type="button" className="btn btn--secondary film-inspector__remove" onClick={remove} disabled={!removable}>
+      <Button className="film-inspector__remove" onClick={remove} disabled={!removable}>
         {removeLabel}
-      </button>
+      </Button>
     </section>
   )
 }

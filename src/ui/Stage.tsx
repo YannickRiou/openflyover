@@ -9,6 +9,7 @@ import { SafeZones, useSafeZonesStore } from './SafeZones'
 import { frameRect } from './shell'
 import { withShortcut } from './shortcuts'
 import { TrackLegend } from './TrackLegend'
+import { Button, Tip } from './primitives'
 
 // the 3D scene (three.js, atmosphere, clouds, terrain) is its own chunk: the shell and the welcome card paint first
 const FlyoverCanvas = lazy(() => import('../scene/FlyoverCanvas').then((m) => ({ default: m.FlyoverCanvas })))
@@ -61,30 +62,30 @@ export function Stage({ children }: { children?: ReactNode }) {
         {rect && safeZones && <SafeZones aspect={aspectId} />}
       </div>
       {hasTracks && (
-        <button
-          type="button"
-          className="icon-btn icon-btn--float view__fit"
-          onClick={() => useAppStore.getState().requestFit()}
-          disabled={exporting}
-          aria-label={t('stage.fit')}
-          data-tip={withShortcut(t('stage.fit'), 'fit')}
-          data-tip-side="left"
-        >
-          <Icon name="crosshair" />
-        </button>
+        <Tip text={withShortcut(t('stage.fit'), 'fit')} side="left">
+          <Button
+            variant="icon"
+            className="icon-btn--float view__fit"
+            onClick={() => useAppStore.getState().requestFit()}
+            disabled={exporting}
+            aria-label={t('stage.fit')}
+          >
+            <Icon name="crosshair" />
+          </Button>
+        </Tip>
       )}
       {aspect !== null && (
-        <button
-          type="button"
-          className="icon-btn icon-btn--float view__safe-zones"
-          onClick={() => useSafeZonesStore.getState().toggle()}
-          aria-pressed={safeZones}
-          aria-label={t('stage.safeZones')}
-          data-tip={withShortcut(t('stage.safeZonesTip'), 'safe-zones')}
-          data-tip-side="left"
-        >
-          <Icon name="square-dashed" />
-        </button>
+        <Tip text={withShortcut(t('stage.safeZonesTip'), 'safe-zones')} side="left">
+          <Button
+            variant="icon"
+            className="icon-btn--float view__safe-zones"
+            onClick={() => useSafeZonesStore.getState().toggle()}
+            aria-pressed={safeZones}
+            aria-label={t('stage.safeZones')}
+          >
+            <Icon name="square-dashed" />
+          </Button>
+        </Tip>
       )}
       {children}
     </div>

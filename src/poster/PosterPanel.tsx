@@ -34,6 +34,7 @@ import { posterLayout } from './layout'
 import { POSTER_FIGURES, POSTER_FIGURE_LABELS, POSTER_FORMATS, POSTER_STYLES, POSTER_VIEWS, POSTER_VIEW_LABELS, posterSize } from './settings'
 import type { PosterSettings, PosterType } from './settings'
 import './poster.css'
+import { Button, Tip } from '../ui/primitives'
 
 /** Largest size of the thumbnail in the drawer (CSS px). */
 const PREVIEW_MAX_W = 260
@@ -219,16 +220,16 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
       </h2>
       <ModifiedMarker keys={['poster']} label={t('poster.panel.modified')} disabled={busy} />
       {onClose && (
-        <button
-          type="button"
-          className="icon-btn settings__close"
-          onClick={onClose}
-          aria-label={t('poster.panel.closeAria')}
-          data-tip={withShortcut(t('common.close'), 'export')}
-          data-tip-align="end"
-        >
-          <Icon name="x" size={18} />
-        </button>
+        <Tip text={withShortcut(t('common.close'), 'export')} align="end">
+          <Button
+            variant="icon"
+            className="settings__close"
+            onClick={onClose}
+            aria-label={t('poster.panel.closeAria')}
+          >
+            <Icon name="x" size={18} />
+          </Button>
+        </Tip>
       )}
       {modes}
 
@@ -343,20 +344,18 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
 
       {!busy && (
         <div className="export__actions">
-          <button type="button" className="btn btn--primary" onClick={create} disabled={!track}>
+          <Button variant="primary" onClick={create} disabled={!track}>
             <Icon name="map" size={18} />
             {t('poster.panel.create')}
-          </button>
-          <button
-            type="button"
-            className="btn btn--secondary"
+          </Button>
+          <Button
             onClick={createStill}
             disabled={!track}
             title={t('poster.panel.stillTip')}
           >
             <Icon name="image" size={18} />
             {t('poster.panel.still')}
-          </button>
+          </Button>
         </div>
       )}
       {busy && running && still && (
@@ -369,14 +368,13 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
           <p className="field__hint" role="status">
             {progressLabel}
           </p>
-          <button
-            type="button"
-            className="btn btn--secondary btn--block"
+          <Button
+            block
             onClick={() => useExportStore.getState().cancel()}
             disabled={phase === 'finalizing'}
           >
             {t('common.cancel')}
-          </button>
+          </Button>
         </div>
       )}
       {!busy && failed && (

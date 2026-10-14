@@ -14,6 +14,7 @@ import { tabHasHeavySetting, tierName, weightOf } from './renderCost'
 import type { WeightKey } from './renderCost'
 import { FOLDS_KEY, parseFoldPrefs } from './shell'
 import type { ShellTab } from './shell'
+import { Tip } from './primitives'
 
 /** The fold states remembered by the browser (none when its storage cannot be read). */
 function loadFolds(): Record<string, boolean> {
@@ -79,12 +80,14 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
   const tip = useAppStore((s) => weightOf(s.settings, weight).tip)
   if (tier === 0) return null
   return (
-    <span className={`render-weight render-weight--${tier}`} data-testid="render-weight" data-tier={tier} data-tip={tip}>
-      {[1, 2, 3].map((bar) => (
-        <i key={bar} className={bar <= tier ? 'render-weight__bar render-weight__bar--on' : 'render-weight__bar'} aria-hidden="true" />
-      ))}
-      <span className="visually-hidden">{t('export.weight.label', { tier: tierName(tier) })}</span>
-    </span>
+    <Tip text={tip} wrap={220}>
+      <span className={`render-weight render-weight--${tier}`} data-testid="render-weight" data-tier={tier}>
+        {[1, 2, 3].map((bar) => (
+          <i key={bar} className={bar <= tier ? 'render-weight__bar render-weight__bar--on' : 'render-weight__bar'} aria-hidden="true" />
+        ))}
+        <span className="visually-hidden">{t('export.weight.label', { tier: tierName(tier) })}</span>
+      </span>
+    </Tip>
   )
 }
 
@@ -182,9 +185,11 @@ export function SettingRow({
 /** ⓘ with a one-sentence explanation (tooltip on hover and keyboard focus, read by screen readers). */
 export function InfoTip({ text }: { text: string }) {
   return (
-    <span className="info-tip" tabIndex={0} role="img" aria-label={text} data-tip={text}>
-      <Icon name="info" size={14} />
-    </span>
+    <Tip text={text} wrap={200} tap>
+      <span className="info-tip" tabIndex={0} role="img" aria-label={text}>
+        <Icon name="info" size={14} />
+      </span>
+    </Tip>
   )
 }
 

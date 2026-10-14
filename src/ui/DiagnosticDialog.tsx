@@ -4,6 +4,7 @@ import { currentReport } from '../export/guard'
 import { useT } from '../i18n'
 import { Icon } from './icons'
 import { SettingRow } from './PanelSection'
+import { Button, Tip } from './primitives'
 
 /** « Diagnostic », last row of the Réglages tab: the report made now, with the last export's (« mode debug »). */
 export function DiagnosticRow() {
@@ -14,9 +15,9 @@ export function DiagnosticRow() {
     <section className="settings project" aria-label={t('settings.diagnostic.title')}>
       <SettingRow label={t('settings.diagnostic.title')} value={t('settings.diagnostic.value')}>
         <p className="field__hint">{t('settings.diagnostic.hint')}</p>
-        <button type="button" className="btn btn--secondary" onClick={() => showDiagnostic(currentReport())}>
+        <Button onClick={() => showDiagnostic(currentReport())}>
           {t('settings.diagnostic.show')}
-        </button>
+        </Button>
         <label className="checkbox">
           <input
             type="checkbox"
@@ -79,18 +80,20 @@ export function DiagnosticDialog() {
         <h2 id="diagnostic-title" className="sources__title">
           {t('settings.diagnostic.dialogTitle')}
         </h2>
-        <button type="button" className="icon-btn" aria-label={t('common.close')} data-tip={t('common.closeEsc')} data-tip-side="left" onClick={() => dialog.current?.close()}>
-          <Icon name="x" size={18} />
-        </button>
+        <Tip text={t('common.closeEsc')} side="left">
+          <Button variant="icon" aria-label={t('common.close')} onClick={() => dialog.current?.close()}>
+            <Icon name="x" size={18} />
+          </Button>
+        </Tip>
       </div>
       <p className="field__hint">{t('settings.diagnostic.dialogHint')}</p>
       <pre ref={report} className="diagnostic__text" tabIndex={0} aria-label={t('settings.diagnostic.report')}>
         {text}
       </pre>
       <div className="diagnostic__actions">
-        <button type="button" className="btn btn--primary" onClick={() => void onCopy()}>
+        <Button variant="primary" onClick={() => void onCopy()}>
           {copy === 'copied' ? t('settings.diagnostic.copied') : t('settings.diagnostic.copy')}
-        </button>
+        </Button>
         <p className="field__hint" role="status">
           {copy === 'selected' ? t('settings.diagnostic.copyRefused') : ''}
         </p>

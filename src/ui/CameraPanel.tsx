@@ -23,6 +23,7 @@ import type { IconName } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
+import { Button } from './primitives'
 
 /** « Mettre en avant la région »: what it does, then how the search for the region went (found: after its name). */
 const REGION_HINTS: Record<RegionStatus, string> = {
@@ -46,9 +47,9 @@ export function RegionHint({ id, highlight }: { id: string; highlight: boolean }
         })()}
       </p>
       {highlight && regionStatus === 'error' && (
-        <button type="button" className="btn btn--secondary btn--block" onClick={retryRegion}>
+        <Button block onClick={retryRegion}>
           {t('common.retry')}
-        </button>
+        </Button>
       )}
     </>
   )

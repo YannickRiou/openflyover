@@ -9,6 +9,7 @@ import { syncStageWeather, syncWeather, useWeatherStore } from '../weather/store
 import { ModifiedMarker } from './ModifiedMarker'
 import { formatClock, formatNumber } from './format'
 import { Icon } from './icons'
+import { Button } from './primitives'
 
 function formatTemperature(c: number): string {
   return `${formatNumber(c)} °C`
@@ -76,9 +77,9 @@ export function WeatherPanel() {
       </p>
 
       {enabled && status === 'error' && (
-        <button type="button" className="btn btn--secondary btn--block" onClick={() => syncWeather(track, enabled, { retry: true })}>
+        <Button block onClick={() => syncWeather(track, enabled, { retry: true })}>
           {t('common.retry')}
-        </button>
+        </Button>
       )}
 
       {summary && (

@@ -38,6 +38,7 @@ import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow, TextField } from './PanelSection'
 import { showToast } from './toast'
 import './markerSection.css'
+import { Button } from './primitives'
 
 /** 0 -> "Aucun", else the distance */
 const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.slider.noneMasc') : formatDistance(metres))
@@ -116,13 +117,13 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
   return (
     <div className="field">
       <div className="field__label-row">
-        <button type="button" className="btn btn--secondary" onClick={() => void choose()}>
+        <Button onClick={() => void choose()}>
           {marker.image ? t('marker.image.change') : t('marker.image.choose')}
-        </button>
+        </Button>
         {marker.image && (
-          <button type="button" className="btn btn--secondary" onClick={() => update({ image: '' })}>
+          <Button onClick={() => update({ image: '' })}>
             {t('marker.image.remove')}
-          </button>
+          </Button>
         )}
       </div>
       {error ? (
@@ -208,9 +209,9 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
                   value={style.glowColor || firstTrack?.color || '#ffffff'}
                   onChange={(e) => updateStyle({ glowColor: e.currentTarget.value })}
                 />
-                <button type="button" className="btn btn--secondary" disabled={!style.glowColor} onClick={() => updateStyle({ glowColor: '' })}>
+                <Button disabled={!style.glowColor} onClick={() => updateStyle({ glowColor: '' })}>
                   {t('marker.track.sameAsTrack')}
-                </button>
+                </Button>
               </div>
             </div>
           </SettingRow>
@@ -298,9 +299,9 @@ function MarkerColorRow({
             value={value || trackColor}
             onChange={(e) => onChange(e.currentTarget.value)}
           />
-          <button type="button" className="btn btn--secondary" disabled={!value} onClick={() => onChange('')}>
+          <Button disabled={!value} onClick={() => onChange('')}>
             {t('marker.track.sameAsTrack')}
-          </button>
+          </Button>
         </div>
       </div>
     </SettingRow>
@@ -402,16 +403,14 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       </div>
       {junctions > 0 && (
         <div className="field">
-          <button
-            type="button"
-            className="btn btn--secondary"
+          <Button
             onClick={() => {
               const added = addJunctionMarkerKeys()
               showToast({ kind: 'success', text: added > 0 ? t('marker.section.added', { count: added }) : t('marker.section.allKeyed') })
             }}
           >
             {t(sequence ? 'marker.section.perStage' : 'marker.section.perDay', { count: junctions })}
-          </button>
+          </Button>
           <p className="field__hint">{t('marker.section.junctionHint')}</p>
         </div>
       )}

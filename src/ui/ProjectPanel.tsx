@@ -26,6 +26,7 @@ import { chooseFilesToOpen, closeProject, newProject, openProject, saveProject, 
 import type { CloseAnswer } from './projectActions'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
+import { Button, Tip } from './primitives'
 
 /**
  * "Projet" tab: the actions on the open project (new, open, save as a file, close), « Mes projets », then the presets
@@ -103,70 +104,67 @@ function ProjectSection() {
             <strong>{t('project.library.closeQuestion')}</strong> {question.text}
           </p>
           <div className="project__row">
-            <button type="button" className="btn btn--secondary" autoFocus onClick={() => question.answer('save')}>
+            <Button autoFocus onClick={() => question.answer('save')}>
               {t('common.save')}
-            </button>
+            </Button>
           </div>
           <div className="project__row">
-            <button type="button" className="btn btn--secondary" onClick={() => question.answer('close')}>
+            <Button onClick={() => question.answer('close')}>
               {t('project.library.closeNoSave')}
-            </button>
+            </Button>
           </div>
           <div className="project__row">
-            <button type="button" className="btn btn--secondary" onClick={() => question.answer('cancel')}>
+            <Button onClick={() => question.answer('cancel')}>
               {t('common.cancel')}
-            </button>
+            </Button>
           </div>
         </>
       ) : (
         <>
           <div className="project__row">
-            <button type="button" className="btn btn--secondary" onClick={() => void run(newProject)} disabled={busy || closing}>
+            <Button onClick={() => void run(newProject)} disabled={busy || closing}>
               <Icon name="plus" size={18} />
               {t('project.panel.new')}
-            </button>
+            </Button>
           </div>
           <div className="project__row">
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={() => void chooseFilesToOpen()}
-              disabled={busy || closing}
-              data-tip={withShortcut(t('topbar.openTip'), 'open')}
-            >
-              <Icon name="folder-open" size={18} />
-              {t('project.panel.open')}
-            </button>
+            <Tip text={withShortcut(t('topbar.openTip'), 'open')}>
+              <Button
+                onClick={() => void chooseFilesToOpen()}
+                disabled={busy || closing}
+              >
+                <Icon name="folder-open" size={18} />
+                {t('project.panel.open')}
+              </Button>
+            </Tip>
           </div>
           <div className="project__row">
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={() => void saveProject()}
-              disabled={busy || closing}
-              data-tip={withShortcut(t('project.panel.saveTip'), 'save')}
-            >
-              <Icon name="save" size={18} />
-              {t('common.save')}
-            </button>
+            <Tip text={withShortcut(t('project.panel.saveTip'), 'save')}>
+              <Button
+                onClick={() => void saveProject()}
+                disabled={busy || closing}
+              >
+                <Icon name="save" size={18} />
+                {t('common.save')}
+              </Button>
+            </Tip>
           </div>
           <div className="project__row">
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={() => void saveProjectAs()}
-              disabled={busy || closing}
-              data-tip={withShortcut(t('project.panel.saveAsTip'), 'save-as')}
-            >
-              <Icon name="save" size={18} />
-              {t('project.panel.saveAs')}
-            </button>
+            <Tip text={withShortcut(t('project.panel.saveAsTip'), 'save-as')}>
+              <Button
+                onClick={() => void saveProjectAs()}
+                disabled={busy || closing}
+              >
+                <Icon name="save" size={18} />
+                {t('project.panel.saveAs')}
+              </Button>
+            </Tip>
           </div>
           <div className="project__row">
-            <button type="button" className="btn btn--secondary" onClick={() => void run(closeProject)} disabled={busy || closing || !open}>
+            <Button onClick={() => void run(closeProject)} disabled={busy || closing || !open}>
               <Icon name="x" size={18} />
               {t('project.panel.close')}
-            </button>
+            </Button>
           </div>
           <p className="field__hint">{t('project.panel.closeHint')}</p>
         </>
@@ -216,9 +214,9 @@ function LibrarySection() {
         <>
           <p className="field__hint">{t(platform.capabilities.isDesktop ? 'project.panel.keptDesktop' : 'project.panel.keptBrowser')}</p>
           {currentId === null ? (
-            <button type="button" className="btn btn--secondary" onClick={() => void keepOpenProject()} disabled={!hasTracks}>
+            <Button onClick={() => void keepOpenProject()} disabled={!hasTracks}>
               {t('project.panel.keep')}
-            </button>
+            </Button>
           ) : (
             <p className="field__hint">{t('project.panel.keepOpen')}</p>
           )}
@@ -255,9 +253,9 @@ function LibrarySection() {
                           onChange={(e) => setRenaming({ id: entry.id, name: e.currentTarget.value })}
                           onKeyDown={(e) => e.key === 'Escape' && setRenaming(null)}
                         />
-                        <button type="submit" className="btn btn--secondary" disabled={!renaming.name.trim()}>
+                        <Button type="submit" disabled={!renaming.name.trim()}>
                           {t('project.panel.rename')}
-                        </button>
+                        </Button>
                       </form>
                     ) : (
                       <span className="library__name">
@@ -271,31 +269,29 @@ function LibrarySection() {
                     </span>
                     {confirmingId === entry.id ? (
                       <div className="project__row">
-                        <button
-                          type="button"
-                          className="btn btn--secondary"
+                        <Button
                           onClick={() => {
                             setConfirmingId(null)
                             void deleteEntry(entry)
                           }}
                         >
                           {t('project.panel.deleteForever')}
-                        </button>
-                        <button type="button" className="btn btn--secondary" onClick={() => setConfirmingId(null)}>
+                        </Button>
+                        <Button onClick={() => setConfirmingId(null)}>
                           {t('common.cancel')}
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <div className="project__row">
-                        <button type="button" className="btn btn--secondary" onClick={() => void open(entry)} disabled={current}>
+                        <Button onClick={() => void open(entry)} disabled={current}>
                           {t('project.panel.openEntry')}
-                        </button>
-                        <button type="button" className="btn btn--secondary" onClick={() => setRenaming({ id: entry.id, name: entry.name })}>
+                        </Button>
+                        <Button onClick={() => setRenaming({ id: entry.id, name: entry.name })}>
                           {t('project.panel.rename')}
-                        </button>
-                        <button type="button" className="btn btn--secondary" onClick={() => setConfirmingId(entry.id)}>
+                        </Button>
+                        <Button onClick={() => setConfirmingId(entry.id)}>
                           {t('common.delete')}
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </li>
@@ -378,12 +374,12 @@ function PresetSection() {
             </select>
           </div>
           <div className="project__row">
-            <button type="button" className="btn btn--secondary" onClick={applyPreset} disabled={!selected}>
+            <Button onClick={applyPreset} disabled={!selected}>
               {t('project.panel.apply')}
-            </button>
-            <button type="button" className="btn btn--secondary" onClick={deletePreset} disabled={!selected}>
+            </Button>
+            <Button onClick={deletePreset} disabled={!selected}>
               {t('common.delete')}
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -421,9 +417,9 @@ function PresetSection() {
             maxLength={PRESET_NAME_MAX}
             onChange={(e) => setPresetName(e.currentTarget.value)}
           />
-          <button type="submit" className="btn btn--secondary" disabled={!presetName.trim()}>
+          <Button type="submit" disabled={!presetName.trim()}>
             {t('common.save')}
-          </button>
+          </Button>
         </div>
       </form>
     </section>

@@ -38,37 +38,7 @@
   box-shadow: none;
 }
 
-/* Icon buttons ----------------------------------------------------------- */
-.icon-btn {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: var(--control-h);
-  height: var(--control-h);
-  padding: 0 6px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.icon-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-@media (hover: hover) {
-  .icon-btn:hover:not(:disabled) {
-    background: var(--surface-card);
-  }
-}
-
+/* Icon buttons (their look is `primitives/button.css`; the contexts below) ---------------- */
 @media (hover: hover) {
   .topbar .icon-btn:hover:not(:disabled) {
     background: rgb(255 255 255 / 0.1);
@@ -84,10 +54,10 @@
 }
 
 .icon-btn--float {
+  --button-bg: var(--surface-chrome);
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
-  background: var(--surface-chrome);
   color: var(--color-white);
   box-shadow: var(--shadow-pop);
 }
@@ -100,86 +70,6 @@
 
 .icon {
   flex: none;
-}
-
-.btn--small {
-  min-height: 28px;
-  padding: 0 10px 0 6px;
-  gap: var(--space-1);
-  font-size: 13px;
-}
-
-/* Tooltips (data-tip), after a short delay -------------------------------- */
-[data-tip] {
-  position: relative;
-}
-
-[data-tip]:hover::after,
-[data-tip]:focus-visible::after,
-[data-tip]:has(input:focus-visible)::after {
-  content: attr(data-tip);
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 8px);
-  left: 50%;
-  /* shifted inside the window and its scrolling column (installTipPlacement, shell.ts) */
-  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
-  padding: 4px var(--space-2);
-  border: 1px solid var(--color-ink-soft);
-  border-radius: var(--radius-sm);
-  background: var(--surface-chrome-raised);
-  color: var(--text-on-dark);
-  font: 500 12px/1.3 var(--font-body);
-  white-space: nowrap;
-  pointer-events: none;
-  box-shadow: var(--shadow-pop);
-  animation: tip-in 120ms ease 450ms both;
-}
-
-[data-tip-side='right']:hover::after,
-[data-tip-side='right']:focus-visible::after {
-  top: 50%;
-  left: calc(100% + 10px);
-  transform: translateY(-50%);
-}
-
-[data-tip-side='left']:hover::after,
-[data-tip-side='left']:focus-visible::after {
-  top: 50%;
-  left: auto;
-  right: calc(100% + 10px);
-  transform: translateY(-50%);
-}
-
-[data-tip-side='top']:hover::after,
-[data-tip-side='top']:focus-visible::after,
-[data-tip-flip]:hover::after,
-[data-tip-flip]:focus-visible::after,
-[data-tip-flip]:has(input:focus-visible)::after {
-  top: auto;
-  bottom: calc(100% + 8px);
-}
-
-/* near an edge of the window or of a scrolling column: the tip starts or ends with its button */
-[data-tip-align='start']:hover::after,
-[data-tip-align='start']:focus-visible::after {
-  left: 0;
-  transform: none;
-}
-
-[data-tip-align='end']:hover::after,
-[data-tip-align='end']:focus-visible::after {
-  left: auto;
-  right: 0;
-  transform: none;
-}
-
-/* last button of the bar: keep the tip inside the window */
-.topbar__end [data-tip]:hover::after,
-.topbar__end [data-tip]:focus-visible::after {
-  left: auto;
-  right: 0;
-  transform: none;
 }
 
 @keyframes tip-in {
@@ -306,6 +196,7 @@
 }
 
 .format-switch__option {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1823,11 +1714,6 @@
   .track-menu {
     animation: none;
   }
-
-  [data-tip]:hover::after,
-  [data-tip]:focus-visible::after {
-    animation-duration: 0s;
-  }
 }
 
 /* Responsive ------------------------------------------------------------------ */
@@ -1930,6 +1816,7 @@
 
   /* small glyphs: a wider invisible hit area around them */
   .info-tip,
+  .render-weight,
   .status__info {
     position: relative;
   }
@@ -1977,18 +1864,6 @@
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-  }
-}
-
-/* No hover on touch: a tooltip would stay after a tap. A tap on an ⓘ shows its sentence, a long press any other. */
-@media (hover: none) {
-  [data-tip]:hover::after {
-    content: none;
-  }
-
-  [data-tip]:hover:active::after,
-  .info-tip[data-tip]:hover:focus::after {
-    content: attr(data-tip);
   }
 }
 
@@ -2185,7 +2060,6 @@
     font-size: 11px;
   }
 
-  .rail [data-tip]::after,
   .rail__toggle {
     display: none;
   }

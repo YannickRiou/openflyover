@@ -16,6 +16,7 @@ import type { AppState } from '../state/store'
 import { Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import './keyControls.css'
+import { Tip } from './primitives'
 
 /** The keys a group drives: the camera keys, the keys of one parameter, or the marker keys. */
 export type KeyTarget = { kind: 'camera' } | { kind: 'param'; param: FilmParam } | { kind: 'marker' }
@@ -134,17 +135,17 @@ function KeyButtons({
     else addParamKeyHere(target.param)
   }
   const button = (role: 'prev' | 'add' | 'next', text: { name: string; tip: string }, onClick: () => void, off: boolean, on = false) => (
-    <button
-      type="button"
-      className={on ? 'key-btn key-btn--on' : 'key-btn'}
-      onClick={onClick}
-      disabled={off}
-      aria-label={text.name}
-      data-tip={text.tip}
-      data-tip-side={tipSide === 'top' ? 'top' : undefined}
-    >
-      <KeyIcon target={target} role={role} />
-    </button>
+    <Tip text={text.tip} side={tipSide === 'top' ? 'top' : undefined}>
+      <button
+        type="button"
+        className={on ? 'key-btn key-btn--on' : 'key-btn'}
+        onClick={onClick}
+        disabled={off}
+        aria-label={text.name}
+      >
+        <KeyIcon target={target} role={role} />
+      </button>
+    </Tip>
   )
   return (
     <span className="key-group" role="group" aria-label={texts.group}>

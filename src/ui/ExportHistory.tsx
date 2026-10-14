@@ -19,6 +19,7 @@ import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { showToast } from './toast'
+import { Button } from './primitives'
 
 /** Put the export options and render settings of a past render back, as one undo step. */
 function reuse(entry: HistoryEntry): void {
@@ -73,12 +74,12 @@ function Entry({ entry, busy }: { entry: HistoryEntry; busy: boolean }) {
         <Rows rows={entryDetails(entry)} />
         <Rows rows={settingsDetails(entry.settings)} />
         <div className="project__row">
-          <button type="button" className="btn btn--secondary" onClick={() => reuse(entry)} disabled={busy}>
+          <Button onClick={() => reuse(entry)} disabled={busy}>
             {t('export.history.reuse')}
-          </button>
-          <button type="button" className="btn btn--secondary" onClick={() => remove(entry.id)}>
+          </Button>
+          <Button onClick={() => remove(entry.id)}>
             {t('export.history.delete')}
-          </button>
+          </Button>
         </div>
       </div>
     </li>
@@ -120,24 +121,22 @@ export function ExportHistory() {
             <p className="field__hint">{t('export.history.privacy')}</p>
             {confirming ? (
               <div className="project__row">
-                <button
-                  type="button"
-                  className="btn btn--secondary"
+                <Button
                   onClick={() => {
                     setConfirming(false)
                     clear()
                   }}
                 >
                   {t('export.history.clearConfirm')}
-                </button>
-                <button type="button" className="btn btn--secondary" onClick={() => setConfirming(false)}>
+                </Button>
+                <Button onClick={() => setConfirming(false)}>
                   {t('common.cancel')}
-                </button>
+                </Button>
               </div>
             ) : (
-              <button type="button" className="btn btn--secondary" onClick={() => setConfirming(true)}>
+              <Button onClick={() => setConfirming(true)}>
                 {t('export.history.clear')}
-              </button>
+              </Button>
             )}
           </>
         )}

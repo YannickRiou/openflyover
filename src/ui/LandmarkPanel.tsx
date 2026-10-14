@@ -31,6 +31,7 @@ import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
 import './LandmarkPanel.css'
+import { Button, Tip } from './primitives'
 
 /** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
 function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'>): string {
@@ -119,16 +120,15 @@ function StopToggle({ name, stop, disabled, onToggle }: { name: string; stop?: F
 function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; onClick(): void }) {
   const t = useT()
   return (
-    <button
-      type="button"
-      className="icon-btn"
-      aria-label={hidden ? t('landmarks.show', { name }) : t('landmarks.hide', { name })}
-      data-tip={hidden ? t('landmarks.showTip') : t('landmarks.hideTip')}
-      data-tip-side="left"
-      onClick={onClick}
-    >
-      <Icon name={hidden ? 'eye-off' : 'eye'} size={16} />
-    </button>
+    <Tip text={hidden ? t('landmarks.showTip') : t('landmarks.hideTip')} side="left">
+      <Button
+        variant="icon"
+        aria-label={hidden ? t('landmarks.show', { name }) : t('landmarks.hide', { name })}
+        onClick={onClick}
+      >
+        <Icon name={hidden ? 'eye-off' : 'eye'} size={16} />
+      </Button>
+    </Tip>
   )
 }
 
@@ -136,17 +136,17 @@ function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; o
 function PinButton({ name, pinned, onClick }: { name: string; pinned: boolean; onClick(): void }) {
   const t = useT()
   return (
-    <button
-      type="button"
-      className={pinned ? 'icon-btn icon-btn--on' : 'icon-btn'}
-      aria-label={pinned ? t('landmarks.unpin', { name }) : t('landmarks.pin', { name })}
-      aria-pressed={pinned}
-      data-tip={pinned ? t('landmarks.unpinTip') : t('landmarks.pinTip')}
-      data-tip-side="left"
-      onClick={onClick}
-    >
-      <Icon name="pin" size={16} />
-    </button>
+    <Tip text={pinned ? t('landmarks.unpinTip') : t('landmarks.pinTip')} side="left">
+      <Button
+        variant="icon"
+        className={pinned ? 'icon-btn--on' : undefined}
+        aria-label={pinned ? t('landmarks.unpin', { name }) : t('landmarks.pin', { name })}
+        aria-pressed={pinned}
+        onClick={onClick}
+      >
+        <Icon name="pin" size={16} />
+      </Button>
+    </Tip>
   )
 }
 
@@ -378,64 +378,63 @@ export function LandmarkPanel() {
       </p>
 
       {settings.enabled && status === 'error' && (
-        <button type="button" className="btn btn--secondary btn--block" onClick={() => syncLandmarks(tracks, settings, { refresh: true })}>
+        <Button block onClick={() => syncLandmarks(tracks, settings, { refresh: true })}>
           {t('common.retry')}
-        </button>
+        </Button>
       )}
 
       {settings.enabled && status !== 'error' && (
-        <button
-          type="button"
-          className="btn btn--secondary btn--block"
-          disabled={status === 'loading'}
-          data-tip={t('landmarks.searchAgainTip')}
-          onClick={searchAgain}
-        >
-          <Icon name="rotate-cw" size={16} />
-          {t('landmarks.searchAgain')}
-        </button>
+        <Tip text={t('landmarks.searchAgainTip')}>
+          <Button
+            block
+            disabled={status === 'loading'}
+            onClick={searchAgain}
+          >
+            <Icon name="rotate-cw" size={16} />
+            {t('landmarks.searchAgain')}
+          </Button>
+        </Tip>
       )}
 
       {rows.length > 0 && (
         <div className="places__tools">
           {fresh.size > 0 && (
-            <button
-              type="button"
-              className="places__fresh"
-              data-tip={t('landmarks.freshTip')}
-              onClick={() => setSetting('landmarks', withHidden(settings, [], false, listedIds(false)))}
-            >
-              {t('landmarks.fresh', { count: fresh.size })}
-            </button>
+            <Tip text={t('landmarks.freshTip')}>
+              <button
+                type="button"
+                className="places__fresh"
+                onClick={() => setSetting('landmarks', withHidden(settings, [], false, listedIds(false)))}
+              >
+                {t('landmarks.fresh', { count: fresh.size })}
+              </button>
+            </Tip>
           )}
-          <button
-            type="button"
-            className="btn btn--secondary btn--small"
+          <Button
+            size="sm"
             disabled={settings.hiddenIds.length === 0}
             onClick={() => setRowsHidden(rows.filter((r) => r.hidden), false, settings.hiddenIds)}
           >
             <Icon name="eye" size={16} />
             {t('landmarks.showAll')}
-          </button>
-          <button
-            type="button"
-            className="btn btn--secondary btn--small"
+          </Button>
+          <Button
+            size="sm"
             disabled={shownRows.length === 0}
             onClick={() => setRowsHidden(shownRows, true, listedIds(false))}
           >
             <Icon name="eye-off" size={16} />
             {t('landmarks.hideAll')}
-          </button>
-          <button
-            type="button"
-            className="btn btn--secondary btn--small"
-            disabled={settings.pinnedIds.length === 0}
-            data-tip={t('landmarks.keepPinnedTip')}
-            onClick={() => keepPinnedOnly(ranked)}
-          >
-            <Icon name="pin" size={16} />
-            {t('landmarks.keepPinned')}
-          </button>
+          </Button>
+          <Tip text={t('landmarks.keepPinnedTip')}>
+            <Button
+              size="sm"
+              disabled={settings.pinnedIds.length === 0}
+              onClick={() => keepPinnedOnly(ranked)}
+            >
+              <Icon name="pin" size={16} />
+              {t('landmarks.keepPinned')}
+            </Button>
+          </Tip>
         </div>
       )}
 
@@ -457,38 +456,38 @@ export function LandmarkPanel() {
                     <span className="landmark__name" data-testid="landmark-name">{landmark.text}</span>
                   </button>
                   <div className="place__actions">
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      aria-label={t('landmarks.moveUp', { name: landmark.name })}
-                      data-tip={t('landmarks.moreImportant')}
-                      disabled={ranked[0] === row}
-                      onClick={() => moveInRank(row, true)}
-                    >
-                      <Icon name="chevron-up" size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      aria-label={t('landmarks.moveDown', { name: landmark.name })}
-                      data-tip={t('landmarks.lessImportant')}
-                      disabled={ranked[ranked.length - 1] === row}
-                      onClick={() => moveInRank(row, false)}
-                    >
-                      <Icon name="chevron-down" size={16} />
-                    </button>
+                    <Tip text={t('landmarks.moreImportant')}>
+                      <Button
+                        variant="icon"
+                        aria-label={t('landmarks.moveUp', { name: landmark.name })}
+                        disabled={ranked[0] === row}
+                        onClick={() => moveInRank(row, true)}
+                      >
+                        <Icon name="chevron-up" size={16} />
+                      </Button>
+                    </Tip>
+                    <Tip text={t('landmarks.lessImportant')}>
+                      <Button
+                        variant="icon"
+                        aria-label={t('landmarks.moveDown', { name: landmark.name })}
+                        disabled={ranked[ranked.length - 1] === row}
+                        onClick={() => moveInRank(row, false)}
+                      >
+                        <Icon name="chevron-down" size={16} />
+                      </Button>
+                    </Tip>
                     <PinButton name={landmark.name} pinned={pinnedIds.has(row.id)} onClick={() => togglePin(row)} />
                     <EyeButton name={landmark.name} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
                     {row.hidden && (
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        aria-label={t('landmarks.dismiss', { name: landmark.name })}
-                        data-tip={t('landmarks.dismissTip')}
-                        onClick={() => dismiss(row)}
-                      >
-                        <Icon name="x" size={16} />
-                      </button>
+                      <Tip text={t('landmarks.dismissTip')}>
+                        <Button
+                          variant="icon"
+                          aria-label={t('landmarks.dismiss', { name: landmark.name })}
+                          onClick={() => dismiss(row)}
+                        >
+                          <Icon name="x" size={16} />
+                        </Button>
+                      </Tip>
                     )}
                   </div>
                   <div className="place__line">
@@ -543,15 +542,15 @@ export function LandmarkPanel() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    aria-label={t('landmarks.poiDeleteAria', { name })}
-                    data-tip={t('common.delete')}
-                    onClick={() => deletePoi(poi)}
-                  >
-                    <Icon name="x" size={16} />
-                  </button>
+                  <Tip text={t('common.delete')}>
+                    <Button
+                      variant="icon"
+                      aria-label={t('landmarks.poiDeleteAria', { name })}
+                      onClick={() => deletePoi(poi)}
+                    >
+                      <Icon name="x" size={16} />
+                    </Button>
+                  </Tip>
                   <StopToggle name={name || t('landmarks.poiDefaultName')} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, name, on)} />
                 </div>
               </li>
@@ -560,10 +559,10 @@ export function LandmarkPanel() {
         </ul>
       )}
 
-      <button type="button" className="btn btn--secondary btn--block" onClick={addAtMarker}>
+      <Button block onClick={addAtMarker}>
         <Icon name="plus" size={16} />
         {t('landmarks.poiAdd')}
-      </button>
+      </Button>
       <p className="field__hint">{t('landmarks.poiHint')}</p>
 
       {settings.enabled && status !== 'idle' && (

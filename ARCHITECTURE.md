@@ -12,6 +12,7 @@ full customization through a single project document, WebCodecs video export, Ta
 - three + @react-three/fiber + @react-three/drei, zustand.
 - Tests: vitest (node environment; jsdom in the files that need the DOM, `// @vitest-environment jsdom`). `*.test.ts` files sit next to their modules.
 - Tailwind CSS 4 (build-time Vite plugin, Preflight on) over the CSS variables of the design system in `src/ui/theme.css` (`@theme` block, `dark` variant on `[data-theme='dark']`). The hand-written CSS sits in `@layer base` / `@layer components`, so utilities win; plan in `docs/design/tailwind.md`.
+- HeroUI 3 (MIT, React Aria inside) for the interactive components, wrapped one by one in `src/ui/primitives/` (see "Primitives"); plan in `docs/design/heroui.md`.
 
 ## Coordinate conventions (see `src/core/types.ts`)
 
@@ -341,6 +342,15 @@ ink, 7.3:1). Dark theme: `:root[data-theme='dark']` in `theme.css` remaps the pa
 `--text-1/2`, `--text-info`, `--line`, `--line-strong`, status and shadows); the bar, rail and status bar are dark in both
 themes. Roles added for it: `--accent-fill` / `--accent-fill-hover` (fill under white text), `--text-info`, `--swatch-border`;
 `--status-error*` are fixed reds (they no longer follow the accent).
+**Primitives** (`src/ui/primitives/`, one file per component and its CSS, exported from `index.ts`; screens never import
+`@heroui/react`): `Button` (`variant` primary / secondary / icon, `size="sm"`, `block`; it keeps the `.btn` / `.icon-btn`
+classes the CSS of the screens keys on) and `Tip` (tooltip, see "Tooltips"). HeroUI's styles are imported in `theme.css`
+piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
+app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
+`--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,
+`--field-*` = the control surface and `--line-strong`, `--radius` = `--radius-md`; `--accent` and `--accent-hover` are the
+app's own, so a filled accent surface uses `--accent-fill`); `--color-accent` and the radii stay the app's (second `@theme`
+block). A Tailwind `@theme` token of HeroUI that the app also defines must keep the app's value.
 **Appearance** (« Réglages » › « Apparence », `PreferencesPanel`): theme Clair / Sombre / Système, accent colour, bar and rail
 colour, density, reset. Device preferences in `Preferences.appearance` (`openflyover.preferences.v1`, `parseAppearance` in
 `appearance.ts`). `applyAppearance(root, appearance, systemDark)` sets `data-theme` and `data-density` on `<html>` and the
@@ -472,11 +482,12 @@ pointer (`appearance.css`).
   the playhead and S / T live in `SeekShortcuts` (component with no render output, film clock, bubble phase: a selected
   block keeps its arrows).
   `installHistoryShortcuts` (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y) and Space (timeline) stay where they are.
-- **Tooltips**: `data-tip` in CSS (`shell.css`), after 450 ms, on hover and keyboard focus, on every icon-only
-  button; `data-tip-side` (`top`, `left`, `right`) and `data-tip-align` (`start`, `end`) near the edges of the window or
-  of a scrolling column; any other tip is shifted inside the window and its scrolling column, or put above
-  (`installTipPlacement` / `tipPlacement`, `shell.ts`: `--tip-shift`, `data-tip-flip`). Timeline blocks keep their `title` (full label; a pseudo-element would be clipped
-  by the block).
+- **Tooltips**: the `Tip` primitive (`src/ui/primitives/Tip.tsx`, HeroUI Tooltip), after 450 ms, on hover and keyboard focus,
+  on every icon-only button; it wraps no element (its listeners sit on the child, the text is portalled, into the `<dialog>` that holds
+  the child). `side` (`top`, `left`, `right`) and `align` (`start`, `end`) near the edges of the window; any other tip is
+  shifted inside the window or flipped by React Aria's positioning. A long press shows it on a touch screen (`tap`: a tap too, for
+  an ⓘ), any key (Escape included, which the app still gets) or a press closes it, no tooltip on the phone's tab bar. Timeline blocks
+  keep their `title` (full label).
 - **Widths** (media queries at the end of `shell.css`; the desktop layout from 1100 px up is unchanged by the touch
   rules, which only match a coarse pointer): at 1280 px the panel and dock shrink to 280 px and "Ouvrir / Enregistrer"
   become icon-only; below 1024 px (tablet) the panel, the export drawer and the inspector become side sheets over the view
@@ -522,8 +533,8 @@ pointer (`appearance.css`).
   - *Touch* (`pointer: coarse`, any width): `--topbar-h` 56 px, `--control-h` 44 px and 44 px minimum on buttons, fields, chips, segmented
     options, tiles, menu items and timeline buttons; lanes 40 px, grips 16 px; a larger invisible hit area around ⓘ;
     16 px text in fields (iOS zooms into smaller ones); no callout or selection on the 3D canvas.
-  - *No hover* (`hover: none`): `data-tip` tooltips do not stick after a tap; an ⓘ shows its sentence when tapped
-    (focus), a long press shows any other tip (`:active`). Every other `:hover` style sits in `@media (hover: hover)`,
+  - *No hover* (`hover: none`): tooltips do not stick after a tap (`Tip` ignores touch hover); an ⓘ shows its sentence when tapped
+    (`tap`), a long press shows any other tip. Every other `:hover` style sits in `@media (hover: hover)`,
     in place (same cascade on a computer): no grey background or border left on a button after a tap.
 - **Sections of the tabs** (`PanelSection.tsx`): `PanelSection` = flat collapsible section (`fold` classes,
   sticky header: title, "modifié / Par défaut" of its keys, chevron), open initially, then as last left: open / folded
@@ -543,14 +554,14 @@ pointer (`appearance.css`).
   plain label (the row names it). Rows: imagery detail, terrain source, water strength, wireframe, track colouring, smoothing, width,
   dash, marker size, km markers, label size and range, landmark kinds and distance, sea render, low cloud base, cloud quality, weather intensity, exposure, sun date,
   the four grading sliders, flare, bloom radius, camera style, distance / tilt / aim / smoothing, pacing parameters, transitions; export frame rate, quality, still type. Setting
-  keys and behavior unchanged. `InfoTip` (ⓘ, one-sentence `data-tip` tooltip, focusable, `aria-label`) only
+  keys and behavior unchanged. `InfoTip` (ⓘ, one-sentence `Tip`, focusable, `aria-label`) only
   on jargon: exaggeration, wireframe, exposure, highlights. Styles: delimited block at the end of `app.css`.
 - **Render weight** (`src/ui/renderCost.ts`, pure, tested; `RenderWeight` and `TabWeightDot` in `PanelSection.tsx`): which settings lengthen
   the export, as a pictogram (three bars like a signal icon: filled navy, the rest periwinkle; the heaviest tier in chartreuse on a navy
   chip; `--color-navy` / `--color-periwinkle` / `--color-chartreuse` in `theme.css`) after the name of the setting (`weight` prop of
   `SettingRow` and `RangeField`, export drawer included), and a chartreuse dot on a navy ring on a tab (rail and phone bar) while one
   of its settings is at tier 3 (`tabHasHeavySetting`). Both read the store with their own selector (primitives), so the memoised panels
-  and the 3D scene do not render again; tooltip `data-tip` with the factor, visually hidden « Poids de rendu : léger / moyen / lourd »
+  and the 3D scene do not render again; `Tip` tooltip with the factor, visually hidden « Poids de rendu : léger / moyen / lourd »
   (the dot adds « réglage lourd actif » to the tab's name). Tiers come from the factors of the code; « ≈ ×N » only where N is one:
 
   | Setting | 1 bar | 2 bars | 3 bars |
@@ -640,7 +651,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `catalogs` of `index.ts` and in `LANGUAGES` (`languages.ts`: code, native name, flag, locale). Nothing else: the menu, the
   preference, the plurals and the dates follow.
 - **Rules.**
-  - No displayed text in the code: labels, `aria-label`s, tooltips (`title`, `data-tip`), placeholders, hints, toasts, errors the user
+  - No displayed text in the code: labels, `aria-label`s, tooltips (`title`, `Tip`), placeholders, hints, toasts, errors the user
     sees, dialogs, the shortcuts help, empty states, and the texts drawn into the film (counter labels, units, card wording, credits,
     weather words, dates) all go through `t`.
   - Never build a sentence by concatenation or by a plural suffix (`+ 's'`): one message per sentence, `{count}` plurals, and
@@ -1279,7 +1290,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   and derives the progress from it: an edit while paused does not make the playhead jump.
 - **Timeline** (`src/ui/Timeline.tsx`, pure logic in `src/film/timeline.ts`, inspector `src/ui/FilmInspector.tsx`):
   strip below the 3D view (`.view__stage` above, the view shrinks accordingly; ~150 px, collapsible lanes). Bar, a single
-  control style (Lucide icon buttons, `data-tip` tooltip with the shortcut from the registry, short label hidden at
+  control style (Lucide icon buttons, `Tip` tooltip with the shortcut from the registry, short label hidden at
   1280 px): play, ■ (pause and back to the first frame), time `m:ss,d / m:ss`, distance / elevation / time at the
   marker, "Arrêt" (stop; S: at the marker position, to the meter, source `manual`, 4 s, orbit), "Arrêt à un temps fort…" (stop at a highlight)
   (passes and summits without a stop), "Texte" (text; T: at the playhead, 4 s, bottom center), "Média" (media; see "Photos" and

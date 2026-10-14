@@ -4,6 +4,7 @@ import { useAppStore } from '../state/store'
 import { libraryFile, useLibraryStore } from './library'
 import { chooseProjectToOpen, chooseTracksToImport, loadSample, openProject } from './projectActions'
 import { StravaImport } from './StravaImport'
+import { Button } from './primitives'
 
 /** Projects of « Mes projets » offered on the home screen, most recent first. */
 const RECENT_COUNT = 3
@@ -33,14 +34,14 @@ export function EmptyState() {
           {t('home.empty.title')}
         </h2>
         <p className="empty__hint">{t('home.empty.hint')}</p>
-        <button type="button" className="btn btn--primary empty__primary" onClick={() => void chooseTracksToImport()} disabled={loading}>
+        <Button variant="primary" className="empty__primary" onClick={() => void chooseTracksToImport()} disabled={loading}>
           {loading ? t('home.empty.importing') : t('home.empty.chooseFile')}
-        </button>
+        </Button>
         <div className="empty__actions">
           <StravaImport />
-          <button type="button" className="btn btn--secondary" onClick={loadSample} disabled={loading}>
+          <Button onClick={loadSample} disabled={loading}>
             {t('home.empty.sample')}
-          </button>
+          </Button>
         </div>
         <button type="button" className="empty__link" onClick={() => void chooseProjectToOpen()} disabled={loading}>
           {t('home.empty.openProject')}

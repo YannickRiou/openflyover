@@ -3,6 +3,7 @@ import type { PointerEvent } from 'react'
 import { useT } from '../i18n'
 import { Icon } from './icons'
 import { dismissSheet } from './shell'
+import { Button, Tip } from './primitives'
 
 /** Travel (CSS pixels) beyond which a press on the head is a drag, not a tap. */
 const DRAG_SLOP_PX = 6
@@ -68,9 +69,11 @@ export function SheetHandle({ title, onClose }: { title?: string; onClose(): voi
     <div className="sheet-handle" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
       <span className="sheet-handle__bar" aria-hidden="true" />
       {title && <span className="sheet-handle__title">{title}</span>}
-      <button type="button" className="icon-btn sheet-handle__done" onClick={onClose} aria-label={t('common.done')} data-tip={t('common.done')} data-tip-align="end">
-        <Icon name="check" size={22} />
-      </button>
+      <Tip text={t('common.done')} align="end">
+        <Button variant="icon" className="sheet-handle__done" onClick={onClose} aria-label={t('common.done')}>
+          <Icon name="check" size={22} />
+        </Button>
+      </Tip>
     </div>
   )
 }

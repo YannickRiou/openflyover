@@ -41,6 +41,7 @@ import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import './trackElevation.css'
+import { Button, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -287,9 +288,8 @@ function AddTracksMenu() {
         e.stopPropagation()
       }}
     >
-      <button
-        type="button"
-        className="btn btn--secondary btn--small"
+      <Button
+        size="sm"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
@@ -297,7 +297,7 @@ function AddTracksMenu() {
       >
         <Icon name="plus" size={16} />
         {t('track.add.button')}
-      </button>
+      </Button>
       {open && (
         <div className="track-menu topbar__menu" role="menu" aria-label={t('track.add.menu')}>
           {items.map((item) => (
@@ -329,16 +329,15 @@ function ChainTracks({ tracks }: { tracks: readonly Track[] }) {
   const loading = useAppStore((s) => s.loading)
   return (
     <div className="field tracks__chain">
-      <button
-        type="button"
-        className="btn btn--secondary btn--block"
+      <Button
+        block
         onClick={() => chainLoadedTracks(tracks)}
         disabled={loading}
         aria-describedby={`${id}-hint`}
       >
         <Icon name="spline" size={16} />
         {t('track.chain.button')}
-      </button>
+      </Button>
       <p id={`${id}-hint`} className="field__hint">
         {t('track.chain.hint')}
       </p>
@@ -455,17 +454,17 @@ function OutingPlanForm({ track }: { track: Track }) {
             {t('track.plan.paceHint')}
           </p>
         </div>
-        <button type="submit" className="btn btn--primary btn--block" disabled={departureMs === undefined}>
+        <Button variant="primary" block type="submit" disabled={departureMs === undefined}>
           {t('track.plan.compute')}
-        </button>
+        </Button>
         {track.timesEstimated && startTime !== undefined && endTime !== undefined && (
           <>
             <p className="field__hint">
               {t('track.plan.times', { start: formatClock(startTime), end: formatClock(endTime) })}
             </p>
-            <button type="button" className="btn btn--secondary btn--block" onClick={() => replaceTrack(withoutTimes(track))}>
+            <Button block onClick={() => replaceTrack(withoutTimes(track))}>
               {t('track.plan.clear')}
-            </button>
+            </Button>
           </>
         )}
       </form>
@@ -503,29 +502,28 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
   if (track.elevationEstimated === 'all') {
     return (
       <div className="track__elevation">
-        <button
-          type="button"
-          className="btn btn--secondary btn--small"
+        <Button
+          size="sm"
           disabled={busy}
           onClick={() => replaceTrack(withoutTerrainElevation(track))}
         >
           {t('track.elevation.clear')}
-        </button>
+        </Button>
       </div>
     )
   }
   if (track.elevationEstimated || !missing) return null
   return (
     <div className="track__elevation">
-      <button
-        type="button"
-        className="btn btn--secondary btn--small"
-        data-tip={t('track.elevation.tip')}
-        disabled={busy || computing}
-        onClick={() => void compute()}
-      >
-        {computing ? t('track.elevation.computing') : t('track.elevation.compute')}
-      </button>
+      <Tip text={t('track.elevation.tip')}>
+        <Button
+          size="sm"
+          disabled={busy || computing}
+          onClick={() => void compute()}
+        >
+          {computing ? t('track.elevation.computing') : t('track.elevation.compute')}
+        </Button>
+      </Tip>
       {note && (
         <p className="field__hint" role="status">
           {note}
@@ -730,73 +728,75 @@ export function TrackList() {
               onKeyDown={(e) => onKeyDown(e, track, index)}
             >
               {inSequence && (
-                <button
-                  type="button"
-                  className="track__handle"
-                  data-id={track.id}
-                  aria-label={t('track.list.moveAria', { name: track.name })}
-                  aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
-                  data-tip={t('track.list.moveTip')}
-                  data-tip-side="right"
-                  disabled={busy}
-                  onPointerDown={(e) => onHandleDown(e, track)}
-                  onPointerMove={onHandleMove}
-                  onPointerUp={onHandleUp}
-                  onPointerCancel={onHandleUp}
-                  onContextMenu={(e) => e.preventDefault()}
-                >
-                  <Icon name="grip-vertical" size={16} />
-                </button>
+                <Tip text={t('track.list.moveTip')} side="right">
+                  <button
+                    type="button"
+                    className="track__handle"
+                    data-id={track.id}
+                    aria-label={t('track.list.moveAria', { name: track.name })}
+                    aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+                    disabled={busy}
+                    onPointerDown={(e) => onHandleDown(e, track)}
+                    onPointerMove={onHandleMove}
+                    onPointerUp={onHandleUp}
+                    onPointerCancel={onHandleUp}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
+                    <Icon name="grip-vertical" size={16} />
+                  </button>
+                </Tip>
               )}
-              <label className="track__swatch" style={{ background: track.color }} data-tip={t('track.list.colorTip')}>
-                <input
-                  type="color"
-                  className="track__color"
-                  value={track.color}
-                  aria-label={t('track.list.colorAria', { name: track.name })}
-                  onChange={(e) => setTrackColor(track.id, e.currentTarget.value)}
-                />
-              </label>
+              <Tip text={t('track.list.colorTip')}>
+                <label className="track__swatch" style={{ background: track.color }}>
+                  <input
+                    type="color"
+                    className="track__color"
+                    value={track.color}
+                    aria-label={t('track.list.colorAria', { name: track.name })}
+                    onChange={(e) => setTrackColor(track.id, e.currentTarget.value)}
+                  />
+                </label>
+              </Tip>
               <span className="track__name" data-testid="track-name" title={track.name}>
                 {track.name}
               </span>
               {index > 0 && inSequence && (
-                <button
-                  type="button"
-                  className="track__fly"
-                  aria-label={t('track.list.upAria', { name: track.name })}
-                  data-tip={t('track.list.upTip')}
-                  data-tip-side="left"
-                  disabled={busy}
-                  onClick={() => move(track, index - 1)}
-                >
-                  <Icon name="chevron-up" size={16} />
-                </button>
+                <Tip text={t('track.list.upTip')} side="left">
+                  <button
+                    type="button"
+                    className="track__fly"
+                    aria-label={t('track.list.upAria', { name: track.name })}
+                    disabled={busy}
+                    onClick={() => move(track, index - 1)}
+                  >
+                    <Icon name="chevron-up" size={16} />
+                  </button>
+                </Tip>
               )}
               {index > 0 && !inSequence && (
+                <Tip text={t('track.list.flyTip')} side="left">
+                  <button
+                    type="button"
+                    className="track__fly"
+                    aria-label={t('track.list.flyAria', { name: track.name })}
+                    disabled={busy}
+                    onClick={() => flyTrack(track.id)}
+                  >
+                    <Icon name="navigation" size={16} />
+                  </button>
+                </Tip>
+              )}
+              <Tip text={t('common.delete')} side="left">
                 <button
                   type="button"
-                  className="track__fly"
-                  aria-label={t('track.list.flyAria', { name: track.name })}
-                  data-tip={t('track.list.flyTip')}
-                  data-tip-side="left"
+                  className="track__delete"
+                  aria-label={t('track.list.deleteAria', { name: track.name })}
                   disabled={busy}
-                  onClick={() => flyTrack(track.id)}
+                  onClick={() => removeTrack(track.id)}
                 >
-                  <Icon name="navigation" size={16} />
+                  <Icon name="x" size={16} />
                 </button>
-              )}
-              <button
-                type="button"
-                className="track__delete"
-                aria-label={t('track.list.deleteAria', { name: track.name })}
-                data-tip={t('common.delete')}
-                data-tip-side="left"
-                disabled={busy}
-                onClick={() => removeTrack(track.id)}
-              >
-                <Icon name="x" size={16} />
-              </button>
+              </Tip>
               <span className="track__meta">
                 {formatTrackSummary(track.stats)}
                 {track.timesEstimated && <span className="track__badge" data-testid="track-badge">{t('track.list.timesEstimated')}</span>}
@@ -813,17 +813,18 @@ export function TrackList() {
         </ul>
       )}
       {inSequence && (
-        <button
-          type="button"
-          className="btn btn--secondary btn--small tracks__sort"
-          data-tip={t('track.list.sortTip')}
-          disabled={busy || sortedByDate}
-          onClick={() => {
-            if (orderTracksByDate()) setAnnouncement(t('track.list.sorted'))
-          }}
-        >
-          {t('track.list.sort')}
-        </button>
+        <Tip text={t('track.list.sortTip')}>
+          <Button
+            size="sm"
+            className="tracks__sort"
+            disabled={busy || sortedByDate}
+            onClick={() => {
+              if (orderTracksByDate()) setAnnouncement(t('track.list.sorted'))
+            }}
+          >
+            {t('track.list.sort')}
+          </Button>
+        </Tip>
       )}
       <p className="visually-hidden" role="status" aria-live="polite">
         {announcement}

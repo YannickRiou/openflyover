@@ -27,6 +27,7 @@ import {
 import { usePreferences } from './preferences'
 import { PERF_ITEMS } from './shell'
 import type { PerfItem } from './shell'
+import { Button, Tip } from './primitives'
 
 /** Performance readout refresh. */
 const PERF_INTERVAL_MS = 1000
@@ -131,15 +132,17 @@ function Chip({ chip }: { chip: FetchChip }) {
   const t = useT()
   const attention = chip.tone === 'attention'
   return (
-    <span className={`status__chip status__chip--${chip.tone}`} data-tip={chip.tip} data-tip-side="top" tabIndex={attention ? 0 : undefined}>
-      {chip.tone === 'loading' ? (
-        <span className="status__spinner" aria-hidden="true" />
-      ) : (
-        <Icon name={chip.tone === 'ready' ? 'circle-check' : 'circle-alert'} size={12} />
-      )}
-      {chip.label}
-      <span className="visually-hidden">{t('status.chipSr', { tip: chip.tip })}</span>
-    </span>
+    <Tip text={chip.tip} side="top">
+      <span className={`status__chip status__chip--${chip.tone}`} tabIndex={attention ? 0 : undefined}>
+        {chip.tone === 'loading' ? (
+          <span className="status__spinner" aria-hidden="true" />
+        ) : (
+          <Icon name={chip.tone === 'ready' ? 'circle-check' : 'circle-alert'} size={12} />
+        )}
+        {chip.label}
+        <span className="visually-hidden">{t('status.chipSr', { tip: chip.tip })}</span>
+      </span>
+    </Tip>
   )
 }
 
@@ -225,15 +228,14 @@ export function StatusBar() {
             </span>
           )}
           {map.failed > 0 && (
-            <span
-              className="status__failed"
-              tabIndex={0}
-              data-tip={t('status.failedTip')}
-              data-tip-side="top"
-              data-tip-align="start"
-            >
-              {t('status.failedTiles', { count: map.failed })}
-            </span>
+            <Tip text={t('status.failedTip')} side="top" align="start">
+              <span
+                className="status__failed"
+                tabIndex={0}
+              >
+                {t('status.failedTiles', { count: map.failed })}
+              </span>
+            </Tip>
           )}
         </p>
       )}
@@ -272,26 +274,27 @@ export function StatusBar() {
           </span>
         ))}
       </p>
-      <button
-        type="button"
-        className="status__info"
-        aria-label={t('status.sources')}
-        data-tip={t('status.sources')}
-        data-tip-side="top"
-        data-tip-align="end"
-        onClick={() => dialog.current?.showModal()}
-      >
-        <Icon name="info" size={14} />
-      </button>
+      <Tip text={t('status.sources')} side="top" align="end">
+        <button
+          type="button"
+          className="status__info"
+          aria-label={t('status.sources')}
+          onClick={() => dialog.current?.showModal()}
+        >
+          <Icon name="info" size={14} />
+        </button>
+      </Tip>
 
       <dialog ref={dialog} className="sources" aria-labelledby="sources-title">
         <div className="sources__head">
           <h2 id="sources-title" className="sources__title">
             {t('status.sources')}
           </h2>
-          <button type="button" className="icon-btn" aria-label={t('common.close')} data-tip={t('common.closeEsc')} data-tip-side="left" onClick={() => dialog.current?.close()}>
-            <Icon name="x" size={18} />
-          </button>
+          <Tip text={t('common.closeEsc')} side="left">
+            <Button variant="icon" aria-label={t('common.close')} onClick={() => dialog.current?.close()}>
+              <Icon name="x" size={18} />
+            </Button>
+          </Tip>
         </div>
         <ul className="sources__list">
           {credits.map((line) => (

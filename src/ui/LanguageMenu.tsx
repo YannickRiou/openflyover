@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { LANGUAGES, useLanguage, useT } from '../i18n'
 import { setPreferences } from './preferences'
+import { Button, Tip } from './primitives'
 
 /**
  * Language of the interface, in the top bar after « ? »: a button with the flag and the code of the current language
@@ -45,22 +46,23 @@ export function LanguageMenu() {
 
   return (
     <div ref={ref} className="lang-menu" data-local-escape="" onKeyDown={onKeyDown}>
-      <button
-        ref={button}
-        type="button"
-        className="icon-btn lang-menu__button"
-        data-testid="language-button"
-        aria-label={t('topbar.language.aria', { name: current.name })}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        data-tip={t('topbar.language.label')}
-        onClick={() => setOpen(!open)}
-      >
-        <span className="lang-menu__flag" aria-hidden="true">
-          {current.flag}
-        </span>
-        {current.code.toUpperCase()}
-      </button>
+      <Tip text={t('topbar.language.label')}>
+        <Button
+          variant="icon"
+          className="lang-menu__button"
+          ref={button}
+          data-testid="language-button"
+          aria-label={t('topbar.language.aria', { name: current.name })}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          <span className="lang-menu__flag" aria-hidden="true">
+            {current.flag}
+          </span>
+          {current.code.toUpperCase()}
+        </Button>
+      </Tip>
       {open && (
         <div className="track-menu topbar__menu lang-menu__list" role="menu" aria-label={t('topbar.language.menu')}>
           {LANGUAGES.map((l) => (

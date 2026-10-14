@@ -12,6 +12,7 @@ import { useAppStore } from '../state/store'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { formatBytes, formatNumber } from './format'
 import { showToast } from './toast'
+import { Button } from './primitives'
 
 const formatSize = formatBytes
 
@@ -139,23 +140,23 @@ export function OfflinePanel() {
               </p>
               <div className="project__row">
                 {job.progress.state === 'paused' ? (
-                  <button type="button" className="btn btn--secondary" onClick={resumePack}>
+                  <Button onClick={resumePack}>
                     {t('offline.panel.resume')}
-                  </button>
+                  </Button>
                 ) : (
-                  <button type="button" className="btn btn--secondary" onClick={pausePack}>
+                  <Button onClick={pausePack}>
                     {t('offline.panel.pause')}
-                  </button>
+                  </Button>
                 )}
-                <button type="button" className="btn btn--secondary" onClick={cancelPack}>
+                <Button onClick={cancelPack}>
                   {t('common.cancel')}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <button type="button" className="btn btn--primary" onClick={() => void prepare()} disabled={!plan || tooBig}>
+            <Button variant="primary" onClick={() => void prepare()} disabled={!plan || tooBig}>
               {t('offline.panel.prepare')}
-            </button>
+            </Button>
           )}
 
           {packs.length > 0 && (
@@ -173,14 +174,12 @@ export function OfflinePanel() {
                       })}
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    className="btn btn--secondary"
+                  <Button
                     onClick={() => void deletePack(pack.id)}
                     disabled={job?.packId === pack.id}
                   >
                     {t('common.delete')}
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
