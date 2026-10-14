@@ -155,7 +155,7 @@ describe('LandmarkPanel: one list of landmarks and points of interest', () => {
 
   it('« Nombre maximal » sets the cap of the landmarks', async () => {
     const { host, root } = await mount({ ...DEFAULT_FILM })
-    const slider = host.querySelector<HTMLInputElement>('input[type="range"][id$="-count"]')!
+    const slider = host.querySelector<HTMLInputElement>('[role="group"][aria-label="Nombre maximal"] input[type="range"]')!
     expect(slider.value).toBe('40')
     expect(host.textContent).toContain('Nombre maximal')
     await act(async () => {

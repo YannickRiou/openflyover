@@ -26,7 +26,7 @@ import { chooseFilesToOpen, closeProject, newProject, openProject, saveProject, 
 import type { CloseAnswer } from './projectActions'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
-import { Button, Select, Tip } from './primitives'
+import { Button, Select, TextField, Tip } from './primitives'
 
 /**
  * "Projet" tab: the actions on the open project (new, open, save as a file, close), « Mes projets », then the presets
@@ -243,14 +243,12 @@ function LibrarySection() {
                           void rename()
                         }}
                       >
-                        <input
-                          className="input"
-                          type="text"
+                        <TextField
                           aria-label={t('project.panel.newName')}
                           value={renaming.name}
                           maxLength={120}
                           autoFocus
-                          onChange={(e) => setRenaming({ id: entry.id, name: e.currentTarget.value })}
+                          onChange={(name) => setRenaming({ id: entry.id, name })}
                           onKeyDown={(e) => e.key === 'Escape' && setRenaming(null)}
                         />
                         <Button type="submit" disabled={!renaming.name.trim()}>
@@ -406,15 +404,13 @@ function PresetSection() {
           onChange={(scope) => setPresetScope(scope)}
         />
         <div className="project__row">
-          <input
+          <TextField
             id={`${id}-preset-name`}
             aria-label={t('project.panel.presetName')}
-            className="input"
-            type="text"
             value={presetName}
             placeholder={t('project.panel.presetName')}
             maxLength={PRESET_NAME_MAX}
-            onChange={(e) => setPresetName(e.currentTarget.value)}
+            onChange={setPresetName}
           />
           <Button type="submit" disabled={!presetName.trim()}>
             {t('common.save')}

@@ -16,7 +16,7 @@ import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
-import { Button, Checkbox, Radio, RadioGroup, Select, Switch } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
 
 const ZOOM_OFFSETS: { value: Settings['imageryZoomOffset']; label: string }[] = [
   { value: 0, get label() { return t('offline.level.0') } },
@@ -157,34 +157,27 @@ function SunTimeControl() {
       {!follows && (
         <div className="field">
           <div className="field__label-row">
-            <label className="field__label" htmlFor={`${id}-sun-hour`}>
+            <span className="field__label">
               {t('light.sun.solarHour')}
-            </label>
+            </span>
             <InfoTip text={solarTip} />
           </div>
-          <div className="range-row">
-            <div className="sun-day">
-              <input
-                id={`${id}-sun-hour`}
-                className="range"
-                type="range"
-                min={SUN_HOUR_RANGE.min}
-                max={SUN_HOUR_RANGE.max}
-                step={SUN_HOUR_RANGE.step}
-                value={sunHour}
-                onChange={(e) => setSetting('sunHour', Number(e.currentTarget.value))}
-                aria-valuetext={formatHour(sunHour)}
-                aria-describedby={`${id}-sun-day`}
-              />
+          <Slider
+            aria-label={t('light.sun.solarHour')}
+            aria-describedby={`${id}-sun-day`}
+            min={SUN_HOUR_RANGE.min}
+            max={SUN_HOUR_RANGE.max}
+            step={SUN_HOUR_RANGE.step}
+            value={sunHour}
+            onChange={(v) => setSetting('sunHour', v)}
+            format={formatHour}
+            below={
               <div className="sun-day__bar" style={{ background: dayGradient(shown) }} aria-hidden="true">
                 {shown.sunrise !== null && <span className="sun-day__mark" style={{ left: hourAt(shown.sunrise) }} />}
                 {shown.sunset !== null && <span className="sun-day__mark" style={{ left: hourAt(shown.sunset) }} />}
               </div>
-            </div>
-            <output className="range-row__value range-row__value--wide" htmlFor={`${id}-sun-hour`}>
-              {formatHour(sunHour)}
-            </output>
-          </div>
+            }
+          />
           <PanelKeys target={{ kind: 'param', param: 'sunHour' }} />
           <p id={`${id}-sun-day`} className="field__hint">
             {dayHint}

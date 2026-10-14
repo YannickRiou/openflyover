@@ -98,7 +98,7 @@ import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
-import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch, Tip } from './primitives'
+import { Button, Checkbox, ColorField, NumberField, Radio, RadioGroup, Select, Switch, TextField, Tip } from './primitives'
 
 const SHOT_STYLE_LABELS: Record<ShotStyle, string> = {
   get aucune() {
@@ -421,32 +421,10 @@ export function FilmInspector() {
     disabled = false,
   ) => <RangeField key={key} label={label} {...r} value={value} format={format} onChange={set} disabled={disabled} wide={false} />
   const text = (key: string, label: string, value: string, set: (v: string) => void) => (
-    <div className="field">
-      <label className="field__label" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
-      <input id={`${id}-${key}`} className="input" type="text" value={value} onChange={(e) => set(e.currentTarget.value)} />
-    </div>
+    <TextField id={`${id}-${key}`} label={label} value={value} onChange={set} />
   )
   const number = (key: string, label: string, value: number, min: number, max: number, set: (v: number) => void) => (
-    <div className="field">
-      <label className="field__label" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
-      <input
-        id={`${id}-${key}`}
-        className="input"
-        type="number"
-        min={min}
-        max={max}
-        step={0.1}
-        value={value}
-        onChange={(e) => {
-          const v = e.currentTarget.valueAsNumber
-          if (Number.isFinite(v)) set(v)
-        }}
-      />
-    </div>
+    <NumberField id={`${id}-${key}`} label={label} min={min} max={max} step={0.1} live value={value} onChange={set} />
   )
 
   const anchorSelect = (label: string, value: OverlayAnchor, set: (anchor: OverlayAnchor) => void) => (

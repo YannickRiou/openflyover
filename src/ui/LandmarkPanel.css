@@ -65,8 +65,8 @@
   cursor: auto;
 }
 
-.place__go--poi > .input {
-  flex: 1 1 auto;
+.place__go--poi > .field {
+  flex: 1 1 100%;
   min-width: 0;
 }
 
@@ -131,7 +131,7 @@
   gap: 2px;
 }
 
-.place__duration > .input {
+.place__duration > .field {
   width: 3.75rem;
 }
 
@@ -152,7 +152,7 @@ button.landmark__kind {
 }
 
 .place--hidden .landmark__name,
-.place--hidden .place__go--poi > .input {
+.place--hidden .place__go--poi > .field {
   opacity: 0.6;
 }
 

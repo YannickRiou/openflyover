@@ -22,7 +22,6 @@ import { useAppStore } from '../state/store'
 import { ModifiedMarker } from '../ui/ModifiedMarker'
 import { formatNumber } from '../ui/format'
 import { Icon } from '../ui/icons'
-import { TextField } from '../ui/PanelSection'
 import { withShortcut } from '../ui/shortcuts'
 import { effectiveProjectName } from '../ui/shell'
 import { showToast } from '../ui/toast'
@@ -34,7 +33,7 @@ import { posterLayout } from './layout'
 import { POSTER_FIGURES, POSTER_FIGURE_LABELS, POSTER_FORMATS, POSTER_STYLES, POSTER_VIEWS, POSTER_VIEW_LABELS, posterSize } from './settings'
 import type { PosterSettings, PosterType } from './settings'
 import './poster.css'
-import { Button, Checkbox, Chip, Radio, RadioGroup, Select, Tip } from '../ui/primitives'
+import { Button, Checkbox, Chip, Radio, RadioGroup, Select, TextField, Tip } from '../ui/primitives'
 
 /** Largest size of the thumbnail in the drawer (CSS px). */
 const PREVIEW_MAX_W = 260

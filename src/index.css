@@ -72,10 +72,6 @@ dialog {
   margin: auto;
 }
 
-input[type='range'] {
-  background-color: Field;
-}
-
 input[type='color'] {
   background-color: ButtonFace;
 }
