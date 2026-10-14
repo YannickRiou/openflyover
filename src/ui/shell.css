@@ -599,8 +599,6 @@ fieldset:disabled .format-tile .option__label {
   font-variant-numeric: tabular-nums;
 }
 
-}
-
 /* Menu of the language picker (LanguageMenu.tsx; the other menus are the Menu and Popover primitives) and the form of a point of interest (TrackPicker.tsx) */
 .track-menu {
   position: absolute;
