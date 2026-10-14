@@ -42,3 +42,24 @@ describe('TopBar: the save icon', () => {
     act(() => root.unmount())
   })
 })
+
+describe('TopBar: the output format', () => {
+  it('is a radio group named « Format de sortie »: an aspect sets the video, « Libre » frees the framing', async () => {
+    useAppStore.getState().setFreeFraming(false)
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={() => {}} />))
+    const group = host.querySelector('[role="radiogroup"][aria-label="Format de sortie"]')!
+    const radios = [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')]
+    expect(radios[0].labels?.[0]?.textContent).toBe('Libre')
+    expect(radios.filter((r) => r.checked)).toHaveLength(1)
+    await act(async () => radios[2].click())
+    expect(useAppStore.getState().settings.video.aspect).toBe('9:16')
+    expect(radios[2].checked).toBe(true)
+    await act(async () => radios[0].click())
+    expect(useAppStore.getState().freeFraming).toBe(true)
+    expect(useAppStore.getState().settings.video.aspect).toBe('9:16')
+    expect(radios[0].checked).toBe(true)
+    act(() => root.unmount())
+  })
+})

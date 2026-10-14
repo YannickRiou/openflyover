@@ -350,8 +350,8 @@ controls, same two modes). Both are portalled out of their container (into the o
 `data-local-escape`, so an open one closes before the app's own Escape; their skin (`overlay.css`, `menu.css`, `popover.css`) is
 self-contained, HeroUI's CSS for them is not imported. `Toast` (the messages, see "Messages") is the messages primitive. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`) `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
 or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen), `RadioGroup` with `Radio` (`look` `segmented`,
-`chips`, or `plain` for a grid the screen draws, as the 3 × 3 `AnchorPicker`; the arrows move and choose, the screens' CSS keys on
-`.option__label`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
+`chips`, or `plain` for options the screen draws: the 3 × 3 `AnchorPicker`, the output-format buttons, the proportion and camera-preset tiles; the arrows move and choose, the screens' CSS keys on
+`.option__label`; a `Radio` forwards its `ref` for a `Tip`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
 `value` / `onChange` take the values, not events; a `title` is a native tooltip over the whole control; a `<fieldset disabled>`
 around them dims them. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
@@ -600,9 +600,8 @@ pointer (`appearance.css`).
   (halfway to noon), "Midi" (noon), "Heure dorée" (golden hour; 1 h before sunset), "Coucher" (sunset; last quarter hour before),
   "Nuit" (night; solar midnight), grayed out when the moment does not exist (polar day or night). Each shortcut is one undo
   step (`transaction`); a slider drag is one too (see "History").
-- **Panel clarity** ("Clarté" block at the end of `app.css`): switch (`checkbox checkbox--switch`, styled native
-  checkbox) to turn on a whole feature (overlay and each of its elements, atmosphere, weather, landmarks, ghost
-  race, slow-downs, credits); checkable chips (`chips` / `chip`, hidden native checkbox, check mark and ink background once
+- **Panel clarity** ("Clarté" block at the end of `app.css`): `Switch` to turn on a whole feature (overlay and each of its elements, atmosphere, weather, landmarks, ghost
+  race, slow-downs, credits); checkable chips (`Chip`: check mark and tinted background once
   selected, dotted if unavailable) for multiple choices (landmark types, counters); option text at weight 500,
   labels at 600. Météo: weather on two lines (outing; marker instant), tables collapsed under
   "Détails" (details); ghost race synchronization and ranking only once it is enabled. Habillage (`OverlayPanel`)

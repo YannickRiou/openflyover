@@ -84,7 +84,7 @@ import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import './cardBlocks.css'
 import './markerKeys.css'
-import { Button, Popover, Tip } from './primitives'
+import { Button, Checkbox, Popover, Tip } from './primitives'
 
 const SPEEDS = PLAYBACK_SPEEDS
 /** « Média » picker: pictures and videos recognised on both targets (the desktop types a file by `mimeTypeOf`). */
@@ -268,10 +268,9 @@ function FilmOptions({
             {t('timeline.options.addMusic')}
           </Button>
           <p className="film-tl__menu-hint">{t('timeline.options.musicHint')}</p>
-          <label className="film-tl__check">
-            <input type="checkbox" checked={autoStops} onChange={(e) => onAutoStops(e.currentTarget.checked)} />
+          <Checkbox checked={autoStops} onChange={onAutoStops}>
             {t('timeline.options.autoStops')}
-          </label>
+          </Checkbox>
           <p className="film-tl__menu-hint">{t('timeline.options.autoStopsHint')}</p>
           <ModifiedMarker keys={['film']} label={t('timeline.film')} />
         </div>

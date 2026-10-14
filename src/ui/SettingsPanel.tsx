@@ -189,24 +189,25 @@ function SunTimeControl() {
           <p id={`${id}-sun-day`} className="field__hint">
             {dayHint}
           </p>
-          <div className="sun-chips" role="group" aria-label={t('light.sun.moments')}>
+          <RadioGroup
+            look="chips"
+            className="sun-chips"
+            aria-label={t('light.sun.moments')}
+            value={SUN_CHIPS.find((chip) => sunChipHour(chip, shown) === sunHour) ?? ''}
+            onChange={(chip) => {
+              const hour = chip && sunChipHour(chip, shown)
+              if (typeof hour === 'number') setHour(hour)
+            }}
+          >
             {SUN_CHIPS.map((chip) => {
               const hour = sunChipHour(chip, shown)
               return (
-                <button
-                  key={chip}
-                  type="button"
-                  className="sun-chip"
-                  aria-pressed={hour !== null && hour === sunHour}
-                  disabled={hour === null}
-                  title={hour === null ? t('light.sun.notThatDay') : formatHour(hour)}
-                  onClick={() => hour !== null && setHour(hour)}
-                >
+                <Radio key={chip} value={chip} disabled={hour === null} title={hour === null ? t('light.sun.notThatDay') : formatHour(hour)}>
                   {SUN_CHIP_LABELS[chip]}
-                </button>
+                </Radio>
               )
             })}
-          </div>
+          </RadioGroup>
         </div>
       )}
 
