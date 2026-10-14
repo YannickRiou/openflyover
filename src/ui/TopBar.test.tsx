@@ -24,22 +24,21 @@ describe('TopBar: the save icon', () => {
     const host = document.body.appendChild(document.createElement('div'))
     const root = createRoot(host)
     await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={() => {}} />))
-    const save = () => host.querySelector<HTMLButtonElement>('.topbar__save')!
+    const save = () => host.querySelector<HTMLButtonElement>('[data-testid="topbar-save"]')!
 
     // open and save are icons with their name as label, and no « Enregistré » text
     expect(host.querySelector('button[aria-label="Ouvrir"]')?.textContent).toBe('')
     expect(save().getAttribute('aria-label')).toBe('Enregistrer')
-    expect(save().className).not.toMatch(/--unsaved|--saved/)
+    expect(save().dataset.saveState).toBeUndefined()
 
     await act(async () => useAppStore.getState().setProjectName('Autre nom'))
-    expect(save().className).toContain('topbar__save--unsaved')
+    expect(save().dataset.saveState).toBe('unsaved')
     expect(save().getAttribute('aria-label')).toMatch(/non enregistrées/)
 
     await act(async () => useAppStore.getState().markProjectSaved())
-    expect(save().className).toContain('topbar__save--saved')
-    expect(save().className).not.toContain('--unsaved')
+    expect(save().dataset.saveState).toBe('saved')
     await act(async () => void vi.advanceTimersByTime(3100))
-    expect(save().className).not.toMatch(/--unsaved|--saved/)
+    expect(save().dataset.saveState).toBeUndefined()
     act(() => root.unmount())
   })
 })

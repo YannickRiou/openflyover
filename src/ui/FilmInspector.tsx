@@ -1214,6 +1214,7 @@ export function FilmInspector() {
   return (
     <section
       className="settings film-inspector"
+      data-testid="film-inspector"
       aria-labelledby={`${id}-title`}
       onKeyDown={(e) => {
         // Escape in a field (the shell's shortcuts leave text entries alone)

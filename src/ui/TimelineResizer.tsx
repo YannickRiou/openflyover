@@ -112,6 +112,7 @@ export function TimelineResizer({ disabled = false }: { disabled?: boolean }) {
     <div
       ref={handle}
       className={dragging ? 'timeline-resizer timeline-resizer--dragging' : 'timeline-resizer'}
+      data-dragging={dragging || undefined}
       role="separator"
       aria-orientation="horizontal"
       aria-label={t('timeline.resizer.label')}

@@ -54,11 +54,11 @@ describe('TrackList, elevation computed from the terrain', () => {
     }
     vi.mocked(computeTrackElevation).mockResolvedValueOnce(computed)
     const { host, root, button } = await mount(track)
-    expect(host.querySelector('.track__badge')).toBeNull()
+    expect(host.querySelector('[data-testid="track-badge"]')).toBeNull()
     await act(async () => button('Calculer l’altitude')!.click())
     expect(vi.mocked(computeTrackElevation).mock.calls[0][1].id).toBe(useAppStore.getState().settings.terrainSourceId)
     expect(useAppStore.getState().tracks[0]).toBe(computed)
-    expect(host.querySelector('.track__badge')!.textContent).toBe('altitude calculée')
+    expect(host.querySelector('[data-testid="track-badge"]')!.textContent).toBe('altitude calculée')
     expect(button('Calculer l’altitude')).toBeUndefined()
 
     await act(async () => button('Effacer l’altitude')!.click())
@@ -103,8 +103,8 @@ describe('TrackList, ordering the stages « À la suite »', () => {
     const { tracks: list, settings } = useAppStore.getState()
     return filmSequenceOf(list, settings.race)!.stages.map((s) => s.track.name)
   }
-  const shownNames = (host: HTMLElement) => [...host.querySelectorAll('.track__name')].map((n) => n.textContent)
-  const handle = (host: HTMLElement, name: string) => host.querySelector<HTMLButtonElement>(`.track__handle[aria-label="Déplacer la trace ${name}"]`)!
+  const shownNames = (host: HTMLElement) => [...host.querySelectorAll('[data-testid="track-name"]')].map((n) => n.textContent)
+  const handle = (host: HTMLElement, name: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="Déplacer la trace ${name}"]`)!
   const pointer = (type: string, init: { clientY?: number; pointerType?: string }) =>
     Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientY: init.clientY ?? 0 }), {
       pointerId: 1,
@@ -121,7 +121,7 @@ describe('TrackList, ordering the stages « À la suite »', () => {
     const root = createRoot(host)
     await act(async () => root.render(<TrackList />))
     // one card is 100 px high, the first at the top of the page
-    host.querySelectorAll<HTMLElement>('.track').forEach((li, i) => {
+    host.querySelectorAll<HTMLElement>('[data-testid="track-card"]').forEach((li, i) => {
       li.getBoundingClientRect = () => ({ top: i * 100, height: 100, bottom: i * 100 + 100, left: 0, right: 300, width: 300, x: 0, y: i * 100, toJSON: () => ({}) })
     })
     return { host, root }
@@ -135,12 +135,12 @@ describe('TrackList, ordering the stages « À la suite »', () => {
 
   it('shows the cards in the order of the stages, with a handle each, only « À la suite »', async () => {
     const { host, root } = await mountSequence()
-    expect(host.querySelectorAll('.track__handle')).toHaveLength(3)
+    expect(host.querySelectorAll('button[aria-label^="Déplacer la trace"]')).toHaveLength(3)
     await act(async () => useAppStore.getState().setSetting('race', { ...useAppStore.getState().settings.race, order: [tracks[2].id, tracks[0].id, tracks[1].id] }))
     expect(shownNames(host)).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
     await act(async () => useAppStore.getState().setSetting('race', { ...useAppStore.getState().settings.race, sequence: false }))
     expect(shownNames(host)).toEqual(['Jour 2', 'Jour 3', 'Jour 1'])
-    expect(host.querySelector('.track__handle')).toBeNull()
+    expect(host.querySelector('button[aria-label^="Déplacer la trace"]')).toBeNull()
     act(() => root.unmount())
   })
 
@@ -190,14 +190,14 @@ describe('TrackList, ordering the stages « À la suite »', () => {
     await act(async () => void grip.dispatchEvent(pointer('pointerdown', { clientY: 50 })))
     // under the slop: nothing lifted yet
     await act(async () => void grip.dispatchEvent(pointer('pointermove', { clientY: 52 })))
-    expect(host.querySelector('.track--lifted')).toBeNull()
+    expect(host.querySelector('[data-testid="track-card"][data-lifted]')).toBeNull()
     // past the centre of the 2nd card (150) and the 3rd (250): last place
     await act(async () => void grip.dispatchEvent(pointer('pointermove', { clientY: 260 })))
-    expect(host.querySelector('.track--lifted')!.textContent).toContain('Jour 2')
-    expect(host.querySelector('.track--drop-after')!.textContent).toContain('Jour 1')
+    expect(host.querySelector('[data-testid="track-card"][data-lifted]')!.textContent).toContain('Jour 2')
+    expect(host.querySelector('[data-testid="track-card"][data-drop="after"]')!.textContent).toContain('Jour 1')
     await act(async () => void grip.dispatchEvent(pointer('pointerup', { clientY: 260 })))
     expect(stageNames()).toEqual(['Jour 3', 'Jour 1', 'Jour 2'])
-    expect(host.querySelector('.track--lifted')).toBeNull()
+    expect(host.querySelector('[data-testid="track-card"][data-lifted]')).toBeNull()
     expect(host.querySelector('[role="status"]')!.textContent).toBe('Trace « Jour 2 » déplacée en position 3 sur 3')
     act(() => root.unmount())
   })
@@ -207,9 +207,9 @@ describe('TrackList, ordering the stages « À la suite »', () => {
     const grip = handle(host, 'Jour 2')
     await act(async () => void grip.dispatchEvent(pointer('pointerdown', { clientY: 50 })))
     await act(async () => void grip.dispatchEvent(pointer('pointermove', { clientY: 260 })))
-    expect(host.querySelector('.track--lifted')).not.toBeNull()
+    expect(host.querySelector('[data-testid="track-card"][data-lifted]')).not.toBeNull()
     await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
-    expect(host.querySelector('.track--lifted')).toBeNull()
+    expect(host.querySelector('[data-testid="track-card"][data-lifted]')).toBeNull()
     await act(async () => void grip.dispatchEvent(pointer('pointerup', { clientY: 260 })))
     expect(stageNames()).toEqual(['Jour 2', 'Jour 3', 'Jour 1'])
     act(() => root.unmount())
@@ -223,15 +223,15 @@ describe('TrackList, ordering the stages « À la suite »', () => {
     await act(async () => void grip.dispatchEvent(pointer('pointerdown', { clientY: 50, pointerType: 'touch' })))
     await act(async () => void grip.dispatchEvent(pointer('pointermove', { clientY: 80, pointerType: 'touch' })))
     await act(async () => void vi.advanceTimersByTime(400))
-    expect(host.querySelector('.track--lifted')).toBeNull()
+    expect(host.querySelector('[data-testid="track-card"][data-lifted]')).toBeNull()
     await act(async () => void grip.dispatchEvent(pointer('pointerup', { clientY: 80, pointerType: 'touch' })))
     expect(stageNames()).toEqual(['Jour 2', 'Jour 3', 'Jour 1'])
     // a press held: lifted, then moved
     await act(async () => void grip.dispatchEvent(pointer('pointerdown', { clientY: 50, pointerType: 'touch' })))
     await act(async () => void vi.advanceTimersByTime(349))
-    expect(host.querySelector('.track--lifted')).toBeNull()
+    expect(host.querySelector('[data-testid="track-card"][data-lifted]')).toBeNull()
     await act(async () => void vi.advanceTimersByTime(2))
-    expect(host.querySelector('.track--lifted')).not.toBeNull()
+    expect(host.querySelector('[data-testid="track-card"][data-lifted]')).not.toBeNull()
     await act(async () => void grip.dispatchEvent(pointer('pointermove', { clientY: 160, pointerType: 'touch' })))
     await act(async () => void grip.dispatchEvent(pointer('pointerup', { clientY: 160, pointerType: 'touch' })))
     expect(stageNames()).toEqual(['Jour 3', 'Jour 2', 'Jour 1'])

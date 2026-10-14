@@ -414,7 +414,7 @@ export default function App() {
   }
 
   const panel = (tab: ShellTab, children: ReactNode) => (
-    <div key={tab} id={`tab-panel-${tab}`} className="tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} hidden={shell.tab !== tab}>
+    <div key={tab} id={`tab-panel-${tab}`} data-testid={`tab-panel-${tab}`} className="tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} hidden={shell.tab !== tab}>
       {children}
     </div>
   )
@@ -514,6 +514,7 @@ export default function App() {
                     tabRefs.current[i] = el
                   }}
                   id={`tab-${tab}`}
+                  data-testid={`tab-${tab}`}
                   type="button"
                   role="tab"
                   className="rail__tab"
@@ -550,7 +551,7 @@ export default function App() {
 
         {/* every tab stays mounted: weather, landmarks and export have side effects */}
         {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
-        <aside id="side-panel" className="panel" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
+        <aside id="side-panel" data-testid="side-panel" className="panel" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
           <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
           {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
         </aside>
@@ -561,7 +562,7 @@ export default function App() {
           {timeline}
         </main>
 
-        <aside id="export-dock" className="dock" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
+        <aside id="export-dock" data-testid="export-dock" className="dock" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
           <SheetHandle onClose={() => !exporting && dispatch({ type: 'close-dock' })} />
           <Suspense fallback={<p className="field__hint">{t('shell.loading')}</p>}>
             {dockMounted && <ExportPanel onClose={exporting ? undefined : () => dispatch({ type: 'close-dock' })} />}

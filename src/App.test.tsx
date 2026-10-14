@@ -30,7 +30,7 @@ const { default: App } = await import('./App')
 const { useAppStore } = await import('./state/store')
 
 /** names of the mocked parts shown in tab `tab` */
-const mocksIn = (tab: string) => [...document.querySelectorAll(`#tab-panel-${tab} [data-mock]`)].map((el) => el.getAttribute('data-mock'))
+const mocksIn = (tab: string) => [...document.querySelectorAll(`[data-testid="tab-panel-${tab}"] [data-mock]`)].map((el) => el.getAttribute('data-mock'))
 
 describe('App shell', () => {
   it('switches tabs without rendering the panels, the stage or the timeline again', async () => {
@@ -45,8 +45,8 @@ describe('App shell', () => {
     expect(before.get('CameraPanel')).toBeGreaterThan(0)
 
     for (const tab of ['carte', 'survol', 'projet', 'reglages']) {
-      await act(async () => document.getElementById(`tab-${tab}`)!.click())
-      expect(document.getElementById(`tab-panel-${tab}`)!.hidden).toBe(false)
+      await act(async () => document.querySelector<HTMLElement>(`[role="tab"][data-testid="tab-${tab}"]`)!.click())
+      expect(document.querySelector<HTMLElement>(`[role="tabpanel"][data-testid="tab-panel-${tab}"]`)!.hidden).toBe(false)
     }
     expect(renders).toEqual(before)
 

@@ -24,6 +24,7 @@ function ToastItem({ toast }: { toast: Toast }) {
   return (
     <div
       className={`toast toast--${toast.kind}`}
+      data-testid="toast"
       role={sticky ? 'alert' : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

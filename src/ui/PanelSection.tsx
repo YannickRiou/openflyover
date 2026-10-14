@@ -79,7 +79,7 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
   const tip = useAppStore((s) => weightOf(s.settings, weight).tip)
   if (tier === 0) return null
   return (
-    <span className={`render-weight render-weight--${tier}`} data-tip={tip}>
+    <span className={`render-weight render-weight--${tier}`} data-testid="render-weight" data-tier={tier} data-tip={tip}>
       {[1, 2, 3].map((bar) => (
         <i key={bar} className={bar <= tier ? 'render-weight__bar render-weight__bar--on' : 'render-weight__bar'} aria-hidden="true" />
       ))}
@@ -111,7 +111,7 @@ export function TabWeightDot({ tab }: { tab: ShellTab }) {
   if (!heavy) return null
   return (
     <>
-      <span className="rail__weight" aria-hidden="true" />
+      <span className="rail__weight" data-testid="tab-weight" aria-hidden="true" />
       <span className="visually-hidden">{t('export.weight.heavyActive')}</span>
     </>
   )
@@ -160,19 +160,19 @@ export function SettingRow({
   }, [open])
   return (
     <div className="setting-row">
-      <button type="button" className="setting-row__head" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
-        <span className="setting-row__label">
+      <button type="button" className="setting-row__head" data-testid="setting-row-head" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+        <span className="setting-row__label" data-testid="setting-row-label">
           {label}
           {weight && <RenderWeight weight={weight} />}
           {preset && <PresetBadge knob={preset} />}
         </span>
-        <span className={modified ? 'setting-row__value setting-row__value--modified' : 'setting-row__value'}>
+        <span className={modified ? 'setting-row__value setting-row__value--modified' : 'setting-row__value'} data-testid="setting-row-value" data-modified={modified || undefined}>
           {value}
           {modified && <span className="visually-hidden">{t('common.modified.srOnly')}</span>}
         </span>
         <Icon name="chevron-down" size={16} />
       </button>
-      <div id={id} ref={body} className="setting-row__body" hidden={!open}>
+      <div id={id} ref={body} className="setting-row__body" data-testid="setting-row-body" hidden={!open}>
         {children}
       </div>
     </div>
