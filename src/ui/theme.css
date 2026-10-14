@@ -65,6 +65,9 @@
 /* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
 @import './primitives/button.css';
 @import './primitives/tip.css';
+@import './primitives/overlay.css';
+@import './primitives/menu.css';
+@import './primitives/popover.css';
 
 /* the project's own `dark:` variant (the theme attribute, never the system scheme) and the values HeroUI's theme overrode */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));

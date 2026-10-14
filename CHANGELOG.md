@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **HeroUI under the menus and the options panel**: « Plus d'actions », « + Ajouter », the right-click (or long-press) menu on the track in the 3D view and « Options du film » now rest on HeroUI's menu and popover (wrappers `Menu` and `Popover` in `src/ui/primitives/`): arrow keys, Home / End and typed letters move in a menu, Escape closes the menu first and the app's own Escape comes after, a click or tap outside closes it, and the focus goes back to its button. They open in front of everything, so a scrolling panel no longer clips them. The interface looks the same.
 - **HeroUI under the buttons and tooltips**: the interface now uses HeroUI 3 (MIT, build time only, nothing downloaded at run time) for its buttons and tooltips, themed with the same palette in the light and dark themes, through wrappers in `src/ui/primitives/`. Tooltips keep their texts and the 450 ms pause, are no longer cut off by a scrolling panel and still open on a long press on a touch screen. The interface looks the same.
 - **Tailwind CSS under the interface**: Tailwind 4 (MIT, build time only, nothing downloaded or added at run time) is set up with the same palette, fonts, radii and shadows, a `dark` variant that follows the theme setting, and its reset; the existing styles move into a lower layer so utility classes win. The interface looks the same.
 
