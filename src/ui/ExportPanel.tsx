@@ -57,6 +57,7 @@ import { startPoster } from '../poster/export'
 import { PosterPanel } from '../poster/PosterPanel'
 import { useFilmClock } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
+import type { Settings } from '../state/store'
 import { ExportHistory } from './ExportHistory'
 import { ModifiedMarker } from './ModifiedMarker'
 import { RangeField, RenderWeight, SettingRow } from './PanelSection'
@@ -132,6 +133,47 @@ const CODEC_CHOICE_LABELS: Record<VideoCodecChoice, string> = {
 
 /** « 0,5 s », « 2 s » */
 const seconds = (s: number) => `${formatNumber(s, s % 1 === 0 ? 0 : 1)} s`
+
+/** The panel of a mode in the dock: its fields in a column under a sticky header (the dock scrolls). */
+const PANEL = 'flex flex-col gap-3 px-4 pb-4 *:shrink-0'
+/** « Format », « Encodage », « Rendu »: a small caps heading over a hairline, the fields of the group under it. */
+const GROUP = 'mt-3 border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase'
+/** The buttons of the panel, one per line. */
+const ACTIONS = 'flex flex-col gap-2 *:min-w-0'
+/** Duration, images, codec and size on one tinted line. */
+const SUMMARY = 'rounded-sm bg-surface-card px-3 py-2 text-body font-semibold text-text-1 tabular-nums'
+/** The export stopped (encoder, tiles): kept in view with its report, not only in a toast. */
+const ERROR = 'rounded-sm border-l-[3px] border-brand bg-accent-tint px-3 py-2'
+/** A proportion of the picture: a framed icon over its ratio, tinted when chosen. */
+const TILE = 'group block min-w-0 data-[disabled=true]:opacity-45 in-[fieldset:disabled]:opacity-45'
+const TILE_LABEL =
+  'relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-start gap-0.5 rounded-sm border border-edge bg-surface-control px-1 pt-2 pb-1.5 text-text-1 transition-ui ' +
+  'hover:border-text-1 data-[selected=true]:border-brand data-[selected=true]:bg-accent-tint data-[selected=true]:shadow-[inset_0_0_0_1px_var(--accent)] ' +
+  'data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-offset-2 data-[focus-visible=true]:outline-brand ' +
+  'group-data-[disabled=true]:cursor-not-allowed in-[fieldset:disabled]:cursor-not-allowed'
+
+/**
+ * Header of a mode panel (title, « modifié » marker of `modified` if given, close): the one bar of the drawer that stays
+ * in sight. The close button gives way to the sheet handle's « Terminé » on a phone.
+ */
+function DockHead({ id, modified, busy, onClose }: { id: string; modified?: (keyof Settings)[]; busy: boolean; onClose?: () => void }) {
+  const t = useT()
+  return (
+    <div className="panel-head [&_.modified]:static">
+      <h2 id={id} className="panel-title flex-1">
+        {t('export.panel.title')}
+      </h2>
+      {modified && <ModifiedMarker keys={modified} label={t('export.panel.title')} disabled={busy} />}
+      {onClose && (
+        <Tip text={withShortcut(t('common.close'), 'export')} align="end">
+          <Button variant="icon" className="-mr-1.5 phone:hidden" onClick={onClose} aria-label={t('export.panel.close')}>
+            <Icon name="x" size={18} />
+          </Button>
+        </Tip>
+      )}
+    </div>
+  )
+}
 
 /**
  * "Exporter" drawer, « Vidéo » mode, in sections: « Format » (aspect tiles, resolution, frame rate), « Encodage »
@@ -268,33 +310,18 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         : ''
 
   return (
-    <section className="settings export" aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
-      <h2 id={`${id}-title`} className="section-title settings__title">
-        {t('export.panel.title')}
-      </h2>
-      <ModifiedMarker keys={['video']} label={t('export.panel.title')} disabled={busy} />
-      {onClose && (
-        <Tip text={withShortcut(t('common.close'), 'export')} align="end">
-          <Button
-            variant="icon"
-            className="settings__close"
-            onClick={onClose}
-            aria-label={t('export.panel.close')}
-          >
-            <Icon name="x" size={18} />
-          </Button>
-        </Tip>
-      )}
+    <section className={PANEL} aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
+      <DockHead id={`${id}-title`} modified={['video']} busy={busy} onClose={onClose} />
       {modes}
 
-      <h3 className="export__group">{t('export.panel.formatGroup')}</h3>
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend id={`${id}-proportions`} className="field__label">
+      <h3 className={GROUP}>{t('export.panel.formatGroup')}</h3>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend id={`${id}-proportions`} className="type-label">
           {t('export.panel.proportions')}
         </legend>
         <RadioGroup
           look="plain"
-          className="format-tiles"
+          className="grid grid-cols-3 gap-2"
           aria-labelledby={`${id}-proportions`}
           value={video.aspect}
           disabled={busy}
@@ -304,17 +331,17 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           }}
         >
           {VIDEO_ASPECTS.map((a) => (
-            <Radio key={a.id} value={a.id} className="format-tile" title={a.label}>
+            <Radio key={a.id} value={a.id} className={TILE} labelClassName={TILE_LABEL} title={a.label}>
               <AspectIcon x={a.x} y={a.y} size={28} />
-              <span className="format-tile__label">{a.id}</span>
+              <span className="text-hint font-semibold tabular-nums">{a.id}</span>
             </Radio>
           ))}
         </RadioGroup>
       </fieldset>
 
       <div className="field">
-        <div className="field__label-row">
-          <label className="field__label" htmlFor={`${id}-resolution`}>
+        <div className="flex items-center gap-1">
+          <label className="type-label" htmlFor={`${id}-resolution`}>
             {t('export.panel.resolution')}
           </label>
           <RenderWeight weight="resolution" />
@@ -327,13 +354,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           options={VIDEO_RESOLUTIONS.map((r) => ({ value: r.id, label: r.label }))}
           onChange={(resolution) => update({ resolution })}
         />
-        <p id={`${id}-size`} className="field__hint">
+        <p id={`${id}-size`} className="type-hint">
           {[t('export.panel.size', { width: formatNumber(width), height: formatNumber(height) }), resolutionNote].filter(Boolean).join(' · ')}
         </p>
       </div>
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label">
           {t('export.panel.fps')} <RenderWeight weight="fps" />
         </legend>
         <RadioGroup aria-label={t('export.panel.fps')} value={video.fps} onChange={(fps) => update({ fps })}>
@@ -345,9 +372,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </RadioGroup>
       </fieldset>
 
-      <h3 className="export__group">{t('export.panel.encodingGroup')}</h3>
-      <fieldset className="field fieldset" disabled={busy || overlayOnly}>
-        <legend className="field__label">{t('export.panel.bitrate')}</legend>
+      <h3 className={GROUP}>{t('export.panel.encodingGroup')}</h3>
+      <fieldset className="field min-w-0" disabled={busy || overlayOnly}>
+        <legend className="type-label">{t('export.panel.bitrate')}</legend>
         <RadioGroup
           aria-label={t('export.panel.bitrate')}
           value={video.manualBitrate ? 'manual' : 'quality'}
@@ -371,7 +398,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         />
       )}
       {!overlayOnly && (
-        <p className="field__hint">
+        <p className="type-hint">
           {[
             video.manualBitrate
               ? t('export.panel.bitrateSuggest', { value: formatNumber(presetBitrate / 1e6, 1) })
@@ -385,7 +412,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       <SettingRow label={t('export.panel.codec')} value={overlayOnly ? 'VP9 (WebM)' : CODEC_CHOICE_LABELS[video.codec]} paths={['video.codec']}>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-codec`}>
+          <label className="type-label" htmlFor={`${id}-codec`}>
             {t('export.panel.codecContainer')}
           </label>
           <Select
@@ -395,7 +422,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             options={VIDEO_CODEC_CHOICES.filter((c) => offered.includes(c) || c === video.codec).map((c) => ({ value: c, label: CODEC_CHOICE_LABELS[c] }))}
             onChange={(codec) => update({ codec })}
           />
-          <p className="field__hint">
+          <p className="type-hint">
             {overlayOnly
               ? t('export.panel.codecOverlay')
               : t('export.panel.codecHint')}
@@ -404,7 +431,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </SettingRow>
       <SettingRow label={t('export.panel.keyframes')} value={t('export.panel.keyframesValue', { value: seconds(video.keyframeIntervalS) })} paths={['video.keyframeIntervalS']}>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-keyframes`}>
+          <label className="type-label" htmlFor={`${id}-keyframes`}>
             {t('export.panel.keyframesLabel')}
           </label>
           <Select
@@ -414,12 +441,12 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             options={KEYFRAME_INTERVALS_S.map((s) => ({ value: s, label: seconds(s) }))}
             onChange={(keyframeIntervalS) => update({ keyframeIntervalS })}
           />
-          <p className="field__hint">{t('export.panel.keyframesHint')}</p>
+          <p className="type-hint">{t('export.panel.keyframesHint')}</p>
         </div>
       </SettingRow>
       <SettingRow label={t('export.panel.sound')} value={`${video.audioKbps} kbit/s`} paths={['video.audioKbps']}>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-audio`}>
+          <label className="type-label" htmlFor={`${id}-audio`}>
             {t('export.panel.audioBitrate')}
           </label>
           <Select
@@ -429,13 +456,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             options={AUDIO_BITRATES_KBPS.map((k) => ({ value: k, label: `${k} kbit/s` }))}
             onChange={(audioKbps) => update({ audioKbps })}
           />
-          <p className="field__hint">{t('export.panel.audioHint')}</p>
+          <p className="type-hint">{t('export.panel.audioHint')}</p>
         </div>
       </SettingRow>
 
-      <h3 className="export__group">{t('export.panel.renderGroup')}</h3>
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}</legend>
+      <h3 className={GROUP}>{t('export.panel.renderGroup')}</h3>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label">{customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}</legend>
         <RadioGroup
           aria-label={customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}
           value={video.quality}
@@ -447,7 +474,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             </Radio>
           ))}
         </RadioGroup>
-        <p className="field__hint">
+        <p className="type-hint">
           {t(video.manualBitrate ? 'export.panel.tierHint' : 'export.panel.tierHintBitrate', {
             clouds: CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase(),
             n: tier.maxSubFrames,
@@ -462,10 +489,10 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       <div className="field">
         <Checkbox checked={overlayOnly} disabled={busy} onChange={(on) => setOverlayOnly(on)}>{t('export.panel.overlayOnly')}</Checkbox>
-        {overlayOnly && <p className="field__hint">{t('export.panel.overlayOnlyHint')}</p>}
+        {overlayOnly && <p className="type-hint">{t('export.panel.overlayOnlyHint')}</p>}
       </div>
 
-      <p className="export__summary" title={t('export.panel.summaryTip')}>
+      <p className={SUMMARY} title={t('export.panel.summaryTip')}>
         {[
           t('export.panel.summary', { duration: formatClock(totalFrames / video.fps), frames: formatNumber(totalFrames) }),
           codec && CODEC_LABELS[`${codec.container}/${codec.codec}`],
@@ -474,14 +501,14 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           .filter(Boolean)
           .join(' · ')}
       </p>
-      {codec && streams && <p className="field__hint">{t('export.panel.direct')}</p>}
+      {codec && streams && <p className="type-hint">{t('export.panel.direct')}</p>}
       {codec && warnsInMemory(estimatedBytes, streams) && (
-        <p className="field__hint">
+        <p className="type-hint">
           {t(deviceBudget().kind === 'desktop' ? 'export.panel.memoryDesktop' : 'export.panel.memoryOther', { limit: formatLimit(deviceBudget().memoryWarnBytes) })}
         </p>
       )}
       {codec === null && overlayOnly && (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {t('export.panel.noWebm', {
             width: formatNumber(width),
             height: formatNumber(height),
@@ -490,7 +517,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </p>
       )}
       {codec === null && !overlayOnly && (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {video.codec === 'auto'
             ? t('export.panel.noCodecAuto', {
                 width: formatNumber(width),
@@ -502,7 +529,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
 
       {!busy && (
-        <div className="export__actions">
+        <div className={ACTIONS}>
           <Button variant="primary" onClick={start} disabled={!trackName || !codec}>
             <Icon name="download" size={18} />
             {overlayOnly ? t('export.panel.exportOverlay') : t('export.panel.exportVideo')}
@@ -513,12 +540,12 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       {busy && (
         <div className="field">
           <progress
-            className="export__progress"
+            className="progress-bar"
             aria-label={t('export.panel.progressAria')}
             max={Math.max(1, frameCount)}
             value={phase === 'finalizing' ? frameCount : frame}
           />
-          <p className="field__hint">
+          <p className="type-hint">
             {phase === 'finalizing'
               ? t('export.panel.announceFinalizing')
               : phase === 'starting'
@@ -531,7 +558,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                     .filter(Boolean)
                     .join(' · ')}
           </p>
-          <p className="field__hint">{t('export.panel.frozen')}</p>
+          <p className="type-hint">{t('export.panel.frozen')}</p>
           <Button
             block
             onClick={() => useExportStore.getState().cancel()}
@@ -543,8 +570,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
 
       {phase === 'error' && error && (
-        <div className="field export__error" role="alert">
-          <p className="field__hint">{t('export.panel.failed', { error })}</p>
+        <div className={`field ${ERROR}`} role="alert">
+          <p className="mb-2 text-hint text-text-1">{t('export.panel.failed', { error })}</p>
           <Button size="sm" onClick={() => showDiagnostic(currentReport())}>
             {t('export.panel.diagnostic')}
           </Button>
@@ -552,7 +579,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
 
       {phase === 'done' && result && (
-        <p className="field__hint">
+        <p className="type-hint">
           {result.url === null ? (
             t('export.panel.savedTo', { fileName: result.fileName })
           ) : getPlatform().capabilities.isDesktop || sharesFiles() ? (
@@ -574,7 +601,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       <ExportHistory />
 
-      <p className="visually-hidden" role="status">
+      <p className="sr-only" role="status">
         {announcement}
       </p>
     </section>
@@ -771,26 +798,12 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   }
 
   return (
-    <section className="settings export" aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
-      <h2 id={`${id}-title`} className="section-title settings__title">
-        {t('export.panel.title')}
-      </h2>
-      {onClose && (
-        <Tip text={withShortcut(t('common.close'), 'export')} align="end">
-          <Button
-            variant="icon"
-            className="settings__close"
-            onClick={onClose}
-            aria-label={t('export.panel.close')}
-          >
-            <Icon name="x" size={18} />
-          </Button>
-        </Tip>
-      )}
+    <section className={PANEL} aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
+      <DockHead id={`${id}-title`} busy={busy} onClose={onClose} />
       {modes}
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{t('export.panel.source')}</legend>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label">{t('export.panel.source')}</legend>
         <RadioGroup aria-label={t('export.panel.source')} value={perTrack ? 'tracks' : 'film'} onChange={(source) => setPerTrack(source === 'tracks')}>
           <Radio value="film">{t('export.panel.thisFilm')}</Radio>
           <Radio value="tracks" disabled={!toFolder} title={toFolder ? undefined : t('export.panel.browsersTip')}>
@@ -804,16 +817,16 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             <Icon name="folder-open" size={18} />
             {trackFolder ? t('export.panel.changeFolder') : t('export.panel.chooseFolder')}
           </Button>
-          <p className="field__hint">{trackFolder ? trackFolderText(trackFolder, sources) : t('export.panel.perTrackHint')}</p>
+          <p className="type-hint">{trackFolder ? trackFolderText(trackFolder, sources) : t('export.panel.perTrackHint')}</p>
         </div>
       )}
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{t('export.panel.formats')}</legend>
-        <div className="batch-formats">
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label">{t('export.panel.formats')}</legend>
+        <div className="grid gap-2">
           {VIDEO_ASPECTS.map((a) => (
-            <div key={a.id} className="batch-formats__row" role="group" aria-label={a.label}>
-              <span className="batch-formats__aspect" title={a.label}>
+            <div key={a.id} className="grid grid-cols-[56px_minmax(0,1fr)] items-center gap-2" role="group" aria-label={a.label}>
+              <span className="inline-flex items-center gap-1 text-hint font-semibold" title={a.label}>
                 <AspectIcon x={a.x} y={a.y} size={20} />
                 {a.id}
               </span>
@@ -830,14 +843,14 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </div>
       </fieldset>
 
-      <fieldset className="field fieldset" disabled={busy}>
-        <legend className="field__label">{t('export.panel.also')}</legend>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label">{t('export.panel.also')}</legend>
         <Checkbox checked={selection.still} onChange={(on) => select({ still: on })}>{t('export.panel.still', { label: stillLabel })}</Checkbox>
         <Checkbox checked={selection.poster} onChange={(on) => select({ poster: on })}>{t('export.panel.poster')}</Checkbox>
       </fieldset>
 
       {perTrack ? (
-        <p className="export__summary">
+        <p className={SUMMARY}>
           {t('export.panel.perTrackSummary', {
             tracks: t('export.panel.tracksCount', { count: sources.length }),
             files: filesCount(jobs.length),
@@ -845,7 +858,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           })}
         </p>
       ) : (
-        <p className="export__summary">
+        <p className={SUMMARY}>
           {[
             `${filesCount(estimate.files)} · ${t('export.panel.framesCount', { count: formatNumber(estimate.frames) })}`,
             estimate.bytes > 0 && `≈ ${formatMegabytes(estimate.bytes)}`,
@@ -855,7 +868,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             .join(' · ')}
         </p>
       )}
-      <p className="field__hint">
+      <p className="type-hint">
         {[
           t('export.panel.batchHint', { fps: video.fps, quality: QUALITIES.find((q) => q.value === video.quality)?.label.toLowerCase() ?? '' }),
           t(toFolder ? 'export.panel.folderAsked' : 'export.panel.downloadEach'),
@@ -865,16 +878,16 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           .join(' ')}
       </p>
       {warnsInMemory(estimate.bytes, toFolder) && (
-        <p className="field__hint">{t('export.panel.memoryBatch', { limit: formatLimit(deviceBudget().memoryWarnBytes) })}</p>
+        <p className="type-hint">{t('export.panel.memoryBatch', { limit: formatLimit(deviceBudget().memoryWarnBytes) })}</p>
       )}
       {unencodable.length > 0 && (
-        <p className="field__hint" role="alert">
+        <p className="type-hint" role="alert">
           {t('export.panel.unencodable', { formats: unencodable.map((j) => j.label).join(', ') })} {videoEncoderMissingHint() ?? ''}
         </p>
       )}
 
       {!busy && (
-        <div className="export__actions">
+        <div className={ACTIONS}>
           <Button
             variant="primary"
             onClick={perTrack ? startPerTrack : start}
@@ -891,22 +904,22 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           {trackRuns.length > 0 ? (
             <>
               <progress
-                className="export__progress"
+                className="progress-bar"
                 aria-label={t('export.panel.perTrackProgress')}
                 max={trackRuns.length}
                 value={tracksFinished + (runningTrack ? trackFraction(runningTrack, fraction) : 0)}
               />
-              <p className="field__hint">{trackProgressLabel(trackRuns, fraction)}</p>
+              <p className="type-hint">{trackProgressLabel(trackRuns, fraction)}</p>
             </>
           ) : (
             <>
               <progress
-                className="export__progress"
+                className="progress-bar"
                 aria-label={t('export.panel.batchProgress')}
                 max={Math.max(1, states.length)}
                 value={finished + (states.some((s) => s.status === 'running') ? fraction : 0)}
               />
-              <p className="field__hint">{batchProgressLabel(states, fraction) || t('export.panel.preparing')}</p>
+              <p className="type-hint">{batchProgressLabel(states, fraction) || t('export.panel.preparing')}</p>
             </>
           )}
           <Button
@@ -921,12 +934,12 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       {trackRuns.length > 0 && (
         <div className="field">
-          {folderName && <p className="field__hint">{t('export.panel.folderName', { folder: folderName })}</p>}
-          <ul className="batch-results">
+          {folderName && <p className="type-hint">{t('export.panel.folderName', { folder: folderName })}</p>}
+          <ul className="grid gap-2">
             {trackRuns.map((t, i) => (
-              <li key={i} className="batch-results__item">
-                <span className="batch-results__label">{t.name}</span>
-                <span className="field__hint">{trackStatusText(t)}</span>
+              <li key={i} className="grid justify-items-start gap-0.5 wrap-anywhere">
+                <span className="text-body font-semibold text-text-1">{t.name}</span>
+                <span className="type-hint">{trackStatusText(t)}</span>
               </li>
             ))}
           </ul>
@@ -935,12 +948,12 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       {states.length > 0 && (
         <div className="field">
-          {folderName && <p className="field__hint">{t('export.panel.folderName', { folder: folderName })}</p>}
-          <ul className="batch-results">
+          {folderName && <p className="type-hint">{t('export.panel.folderName', { folder: folderName })}</p>}
+          <ul className="grid gap-2">
             {states.map((s) => (
-              <li key={s.job.key} className="batch-results__item">
-                <span className="batch-results__label">{s.job.label}</span>
-                <span className="field__hint">{jobStatusText(s)}</span>
+              <li key={s.job.key} className="grid justify-items-start gap-0.5 wrap-anywhere">
+                <span className="text-body font-semibold text-text-1">{s.job.label}</span>
+                <span className="type-hint">{jobStatusText(s)}</span>
                 {s.result?.url && (
                   <Button
                     size="sm"
@@ -957,7 +970,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       <ExportHistory />
 
-      <p className="visually-hidden" role="status">
+      <p className="sr-only" role="status">
         {running ? (trackRuns.length > 0 ? trackProgressLabel(trackRuns, 0) : batchProgressLabel(states, 0)) : ''}
       </p>
     </section>
@@ -978,8 +991,8 @@ export function ExportPanel({ onClose }: { onClose?: () => void }) {
   const batching = useBatchStore((s) => s.phase === 'running')
   const busy = exporting || batching
   const modes = (
-    <fieldset className="field fieldset" disabled={busy}>
-      <legend className="visually-hidden">{t('export.panel.modeType')}</legend>
+    <fieldset className="field min-w-0" disabled={busy}>
+      <legend className="sr-only">{t('export.panel.modeType')}</legend>
       <RadioGroup aria-label={t('export.panel.modeType')} value={mode} onChange={(next) => setMode(next)}>
         {(
           [

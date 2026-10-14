@@ -4,6 +4,10 @@ import { useT } from '../i18n'
 import { useAppStore } from '../state/store'
 import { formatNumber } from './format'
 
+/** Over the 3D view, bottom left, on ink: it never takes the pointer. */
+const LEGEND =
+  'pointer-events-none absolute top-auto right-auto bottom-4 left-4 flex w-55 flex-col gap-1 rounded-md bg-chrome px-3 py-2 text-hint tabular-nums text-white'
+
 /**
  * Legend of the track colouring over the 3D view: quantity, colormap, and the shared colour range
  * (2nd–98th percentile: values beyond saturate at the ends), and the grey of the points without a value.
@@ -23,24 +27,24 @@ export function TrackLegend() {
   const format = (value: number) => `${formatNumber(value, fractionDigits)} ${unit}`
 
   return (
-    <div className="track-legend" role="group" aria-label={t('track.legend.aria', { label })}>
-      <span className="track-legend__title">{label}</span>
+    <div className={LEGEND} role="group" aria-label={t('track.legend.aria', { label })}>
+      <span className="font-semibold">{label}</span>
       {range ? (
         <>
           <span
-            className="track-legend__bar"
+            className="h-2.5 rounded-[2px]"
             style={{ backgroundImage: `linear-gradient(to right, ${colormap.join(', ')})` }}
             title={t('track.legend.extremes')}
           />
-          <span className="track-legend__range">
+          <span className="flex justify-between">
             <span>{format(range.min)}</span>
             <span>{format(range.max)}</span>
           </span>
         </>
       ) : null}
       {missing && (
-        <span className="track-legend__missing">
-          <span className="track-legend__swatch" />
+        <span className="flex items-center gap-2">
+          <span className="h-1.5 w-4 rounded-[2px] border border-white bg-ink-soft" />
           {range ? t('track.legend.noValue') : t('track.legend.noData')}
         </span>
       )}

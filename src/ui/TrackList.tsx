@@ -40,7 +40,6 @@ import { Icon } from './icons'
 import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
-import './trackElevation.css'
 import { Button, ColorField, Menu, Radio, RadioGroup, Select, Slider, Switch, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
@@ -66,18 +65,18 @@ function RaceBoard({ race, tracks }: { race: Race; tracks: readonly Track[] }) {
   const racers = rankRacers(raceAt(race, progress))
 
   return (
-    <ol className="race__board" aria-label={t('track.board')}>
+    <ol className="flex flex-col gap-1" aria-label={t('track.board')}>
       {racers.map((racer) => {
         const track = tracks[racer.index]
         if (!track) return null
         return (
-          <li key={track.id} className="race__row">
-            <span className="race__swatch" style={{ background: track.color }} aria-hidden="true" />
-            <span className="race__name" title={track.name}>
+          <li key={track.id} className="grid grid-cols-[10px_minmax(0,1fr)_auto_auto] items-center gap-x-2 rounded-sm bg-surface-panel px-2 py-1 text-hint">
+            <span className="size-2.5 rounded-full border border-(--swatch-border)" style={{ background: track.color }} aria-hidden="true" />
+            <span className="truncate font-semibold text-text-1" title={track.name}>
               {track.name}
             </span>
-            <span className="race__distance">{formatDistance(racer.distanceM)}</span>
-            <span className="race__gap" title={racer.index === 0 ? t('track.boardRef') : undefined}>
+            <span className="text-text-2 tabular-nums">{formatDistance(racer.distanceM)}</span>
+            <span className="min-w-[8ch] text-right font-semibold text-text-1 tabular-nums" title={racer.index === 0 ? t('track.boardRef') : undefined}>
               {gapLabel(racer)}
             </span>
           </li>
@@ -132,7 +131,7 @@ function StageDefaults() {
       <Switch checked={card} onChange={(on) => editFilm((f) => ({ film: withDefaultCard(f, on) }))}>
         {t('track.stageCard')}
       </Switch>
-      <p className="field__hint">{t('track.stageHint')}</p>
+      <p className="type-hint">{t('track.stageHint')}</p>
     </>
   )
 }
@@ -165,8 +164,8 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
   const camera = settings.camera ?? 'premiere'
 
   return (
-    <div className="settings race" role="group" aria-labelledby={`${id}-title`}>
-      <h3 id={`${id}-title`} className="field__label">
+    <div className="mt-3 flex flex-col gap-3 border-t border-edge pt-3" role="group" aria-labelledby={`${id}-title`}>
+      <h3 id={`${id}-title`} className="panel-title">
         {t('track.race.title')}
       </h3>
       <RadioGroup
@@ -182,14 +181,14 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
           </Radio>
         ))}
       </RadioGroup>
-      <p id={`${id}-mode-hint`} className="field__hint">
+      <p id={`${id}-mode-hint`} className="type-hint">
         {MULTI_MODE_HINTS[mode]}
       </p>
 
       {mode === 'suite' && <StageDefaults />}
 
       <div className="field" hidden={mode !== 'parallele'}>
-        <label className="field__label" htmlFor={`${id}-sync`}>
+        <label className="type-label" htmlFor={`${id}-sync`}>
           {t('track.race.sync')}
         </label>
         <Select
@@ -199,7 +198,7 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
           options={RACE_SYNC_MODES.map((mode) => ({ value: mode, label: RACE_SYNC_LABELS[mode], disabled: syncNeedsTime(mode) && !race.timed }))}
           onChange={(sync) => setSetting('race', { ...settings, sync })}
         />
-        <p id={`${id}-sync-hint`} className="field__hint">
+        <p id={`${id}-sync-hint`} className="type-hint">
           {race.timed
             ? SYNC_HINTS[race.sync]
             : t('track.race.untimed')}
@@ -209,7 +208,7 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
       {settings.enabled && (
         <>
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-camera`}>
+            <label className="type-label" htmlFor={`${id}-camera`}>
               {t('track.race.cameraOn')}
             </label>
             <Select
@@ -233,9 +232,9 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
           >
             {t('track.race.board')}
           </Switch>
-          {leaderboard.enabled && !overlayOn && <p className="field__hint">{t('track.race.boardNeedsOverlay')}</p>}
+          {leaderboard.enabled && !overlayOn && <p className="type-hint">{t('track.race.boardNeedsOverlay')}</p>}
           <RaceBoard race={race} tracks={tracks} />
-          <p className="field__hint">{t('track.race.gap')}</p>
+          <p className="type-hint">{t('track.race.gap')}</p>
         </>
       )}
     </div>
@@ -274,7 +273,7 @@ function ChainTracks({ tracks }: { tracks: readonly Track[] }) {
   const id = useId()
   const loading = useAppStore((s) => s.loading)
   return (
-    <div className="field tracks__chain">
+    <div className="field mt-3">
       <Button
         block
         onClick={() => chainLoadedTracks(tracks)}
@@ -284,7 +283,7 @@ function ChainTracks({ tracks }: { tracks: readonly Track[] }) {
         <Icon name="spline" size={16} />
         {t('track.chain.button')}
       </Button>
-      <p id={`${id}-hint`} className="field__hint">
+      <p id={`${id}-hint`} className="type-hint">
         {t('track.chain.hint')}
       </p>
     </div>
@@ -325,15 +324,15 @@ function OutingPlanForm({ track }: { track: Track }) {
   }
 
   return (
-    <details className="track__plan weather__details">
-      <summary className="weather__details-summary">
+    <details className="col-span-2 col-start-2 mt-2 border-t border-edge">
+      <summary className="fold-head">
         {t('track.plan.title')}
         <Icon name="chevron-down" size={16} />
       </summary>
-      <form className="track__plan-form" onSubmit={apply}>
-        <div className="track__plan-row">
+      <form className="flex flex-col gap-2 pb-1" onSubmit={apply}>
+        <div className="grid grid-cols-2 gap-2">
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-day`}>
+            <label className="type-label" htmlFor={`${id}-day`}>
               {t('track.plan.date')}
             </label>
             <input
@@ -346,7 +345,7 @@ function OutingPlanForm({ track }: { track: Track }) {
             />
           </div>
           <div className="field">
-            <label className="field__label" htmlFor={`${id}-time`}>
+            <label className="type-label" htmlFor={`${id}-time`}>
               {t('track.plan.departure')}
             </label>
             <input
@@ -360,7 +359,7 @@ function OutingPlanForm({ track }: { track: Track }) {
           </div>
         </div>
         <div className="field">
-          <label className="field__label" htmlFor={`${id}-activity`}>
+          <label className="type-label" htmlFor={`${id}-activity`}>
             {t('track.plan.activity')}
           </label>
           <Select
@@ -371,7 +370,7 @@ function OutingPlanForm({ track }: { track: Track }) {
           />
         </div>
         <div className="field">
-          <span className="field__label">
+          <span className="type-label">
             {t('track.plan.pace')}
           </span>
           <Slider
@@ -385,7 +384,7 @@ function OutingPlanForm({ track }: { track: Track }) {
             format={(v) => `×${formatNumber(v, 2)}`}
             wide={false}
           />
-          <p id={`${id}-pace-hint`} className="field__hint">
+          <p id={`${id}-pace-hint`} className="type-hint">
             {t('track.plan.paceHint')}
           </p>
         </div>
@@ -394,7 +393,7 @@ function OutingPlanForm({ track }: { track: Track }) {
         </Button>
         {track.timesEstimated && startTime !== undefined && endTime !== undefined && (
           <>
-            <p className="field__hint">
+            <p className="type-hint">
               {t('track.plan.times', { start: formatClock(startTime), end: formatClock(endTime) })}
             </p>
             <Button block onClick={() => replaceTrack(withoutTimes(track))}>
@@ -436,7 +435,7 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
 
   if (track.elevationEstimated === 'all') {
     return (
-      <div className="track__elevation">
+      <div className={ELEVATION}>
         <Button
           size="sm"
           disabled={busy}
@@ -449,7 +448,7 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
   }
   if (track.elevationEstimated || !missing) return null
   return (
-    <div className="track__elevation">
+    <div className={ELEVATION}>
       <Tip text={t('track.elevation.tip')}>
         <Button
           size="sm"
@@ -460,13 +459,16 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
         </Button>
       </Tip>
       {note && (
-        <p className="field__hint" role="status">
+        <p className="type-hint" role="status">
           {note}
         </p>
       )}
     </div>
   )
 }
+
+/** « Calculer l'altitude » / « Effacer l'altitude » under a track card. */
+const ELEVATION = 'col-span-2 col-start-2 mt-2 flex flex-wrap items-center gap-2'
 
 /** Touch: the handle is held this long before the card lifts (a shorter touch scrolls the panel). */
 const LONG_PRESS_MS = 350
@@ -499,6 +501,22 @@ function scrollParentOf(el: HTMLElement | null): HTMLElement | null {
   return null
 }
 
+/*
+ * A card per track: colour dot, name and facts on the left, the actions on the right (a grid of four columns, the dot and the
+ * buttons over both lines). « À la suite »: `data-sortable` makes room for the handle; a lifted card (`data-lifted`) floats
+ * above the others, and `data-drop` draws the insertion line in the gap before or after it.
+ */
+const CARD =
+  'group relative grid grid-cols-[12px_minmax(0,1fr)_auto_auto] grid-rows-[auto_auto] items-center gap-x-2 rounded-md bg-surface-card px-3 py-2 data-[sortable]:pl-8 ' +
+  'data-[lifted]:z-2 data-[lifted]:cursor-grabbing data-[lifted]:shadow-pop ' +
+  'data-[drop=after]:after:absolute data-[drop=after]:after:inset-x-0 data-[drop=after]:after:-bottom-1.5 data-[drop=after]:after:h-[3px] data-[drop=after]:after:rounded-[2px] data-[drop=after]:after:bg-brand ' +
+  'data-[drop=before]:before:absolute data-[drop=before]:before:inset-x-0 data-[drop=before]:before:-top-1.5 data-[drop=before]:before:h-[3px] data-[drop=before]:before:rounded-[2px] data-[drop=before]:before:bg-brand'
+/** The handle: the only part of a card that does not scroll the panel under a finger. */
+const HANDLE =
+  'absolute inset-y-0 left-0 grid w-7 cursor-grab touch-none place-items-center rounded-l-md p-0 text-text-2 select-none [-webkit-touch-callout:none] ' +
+  'group-data-[lifted]:cursor-grabbing disabled:cursor-not-allowed'
+const CARD_BUTTON = 'row-span-2 row-start-1 size-7 min-w-7 text-text-2 enabled:hover:text-text-1 enabled:[--button-bg-hover:var(--line)] touch:size-11'
+
 /**
  * One card per imported track, with a delete button; « À la suite »: the cards are the stages in order, moved by their
  * handle (mouse, or touch after a long press), by Alt + ↑ ↓, or sorted by date. Chaining and « Plusieurs traces » from
@@ -525,7 +543,7 @@ export function TrackList() {
   useEffect(() => {
     const id = focusRef.current
     focusRef.current = null
-    if (id) [...(listRef.current?.querySelectorAll<HTMLElement>('.track__handle') ?? [])].find((h) => h.dataset.id === id)?.focus()
+    if (id) [...(listRef.current?.querySelectorAll<HTMLElement>('[data-handle]') ?? [])].find((h) => h.dataset.id === id)?.focus()
   })
 
   const endDrag = () => {
@@ -646,17 +664,18 @@ export function TrackList() {
         <AddTracksMenu />
       </div>
       {tracks.length === 0 ? (
-        <p className="tracks__empty">{t('track.list.empty')}</p>
+        <p className="rounded-md bg-surface-card p-3 text-center text-body text-text-2">{t('track.list.empty')}</p>
       ) : (
-        <ul className="tracks" ref={listRef}>
+        <ul className="flex flex-col gap-2" ref={listRef}>
           {shown.map((track, index) => (
             <li
               key={track.id}
               data-id={track.id}
               data-testid="track-card"
+              data-sortable={inSequence ? '' : undefined}
               data-lifted={drag?.id === track.id ? '' : undefined}
               data-drop={dropMark?.id === track.id ? dropMark.side : undefined}
-              className={`track${inSequence ? ' track--sortable' : ''}${drag?.id === track.id ? ' track--lifted' : ''}${dropMark?.id === track.id ? ` track--drop-${dropMark.side}` : ''}`}
+              className={CARD}
               style={drag?.id === track.id ? { transform: `translateY(${drag.dy}px)` } : undefined}
               onKeyDown={(e) => onKeyDown(e, track, index)}
             >
@@ -664,7 +683,8 @@ export function TrackList() {
                 <Tip text={t('track.list.moveTip')} side="right">
                   <button
                     type="button"
-                    className="track__handle"
+                    className={HANDLE}
+                    data-handle=""
                     data-id={track.id}
                     aria-label={t('track.list.moveAria', { name: track.name })}
                     aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
@@ -682,57 +702,57 @@ export function TrackList() {
               <Tip text={t('track.list.colorTip')}>
                 <ColorField
                   dot
-                  className="track__swatch"
+                  className="row-span-2"
                   label={t('track.list.colorAria', { name: track.name })}
                   value={track.color}
                   onChange={(color) => setTrackColor(track.id, color)}
                 />
               </Tip>
-              <span className="track__name" data-testid="track-name" title={track.name}>
+              <span className="col-start-2 truncate text-body font-semibold text-text-1" data-testid="track-name" title={track.name}>
                 {track.name}
               </span>
               {index > 0 && inSequence && (
                 <Tip text={t('track.list.upTip')} side="left">
-                  <button
-                    type="button"
-                    className="track__fly"
+                  <Button
+                    variant="icon"
+                    className={`${CARD_BUTTON} col-start-3`}
                     aria-label={t('track.list.upAria', { name: track.name })}
                     disabled={busy}
                     onClick={() => move(track, index - 1)}
                   >
                     <Icon name="chevron-up" size={16} />
-                  </button>
+                  </Button>
                 </Tip>
               )}
               {index > 0 && !inSequence && (
                 <Tip text={t('track.list.flyTip')} side="left">
-                  <button
-                    type="button"
-                    className="track__fly"
+                  <Button
+                    variant="icon"
+                    className={`${CARD_BUTTON} col-start-3`}
                     aria-label={t('track.list.flyAria', { name: track.name })}
                     disabled={busy}
                     onClick={() => flyTrack(track.id)}
                   >
                     <Icon name="navigation" size={16} />
-                  </button>
+                  </Button>
                 </Tip>
               )}
               <Tip text={t('common.delete')} side="left">
-                <button
-                  type="button"
-                  className="track__delete"
+                <Button
+                  variant="icon"
+                  className={`${CARD_BUTTON} col-start-4`}
                   aria-label={t('track.list.deleteAria', { name: track.name })}
                   disabled={busy}
                   onClick={() => removeTrack(track.id)}
                 >
                   <Icon name="x" size={16} />
-                </button>
+                </Button>
               </Tip>
-              <span className="track__meta">
+              <span className="col-start-2 type-hint tabular-nums">
                 {formatTrackSummary(track.stats)}
-                {track.timesEstimated && <span className="track__badge" data-testid="track-badge">{t('track.list.timesEstimated')}</span>}
+                {track.timesEstimated && <span className="ml-2 font-semibold text-(--text-info)" data-testid="track-badge">{t('track.list.timesEstimated')}</span>}
                 {track.elevationEstimated && (
-                  <span className="track__badge" data-testid="track-badge" title={t('track.list.elevationTip')}>
+                  <span className="ml-2 font-semibold text-(--text-info)" data-testid="track-badge" title={t('track.list.elevationTip')}>
                     {track.elevationEstimated === 'all' ? t('track.list.elevationAll') : t('track.list.elevationSome')}
                   </span>
                 )}
@@ -747,7 +767,7 @@ export function TrackList() {
         <Tip text={t('track.list.sortTip')}>
           <Button
             size="sm"
-            className="tracks__sort"
+            className="mt-2"
             disabled={busy || sortedByDate}
             onClick={() => {
               if (orderTracksByDate()) setAnnouncement(t('track.list.sorted'))
@@ -757,7 +777,7 @@ export function TrackList() {
           </Button>
         </Tip>
       )}
-      <p className="visually-hidden" role="status" aria-live="polite">
+      <p className="sr-only" role="status" aria-live="polite">
         {announcement}
       </p>
       {tracks.length >= 2 && <ChainTracks tracks={tracks} />}

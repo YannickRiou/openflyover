@@ -67,14 +67,19 @@ export function PanelSection({
           <Icon name="chevron-down" size={16} />
         </span>
       </summary>
-      <div className="panel-section__body">{children}</div>
+      <div className="panel-section__body flex flex-col gap-3">{children}</div>
     </details>
   )
 }
 
+/** Pictogram of a setting that lengthens the export, small glyph: a wider invisible hit area around it on touch. */
+const WEIGHT = "relative inline-flex h-4 cursor-help items-end gap-0.5 rounded-[4px] px-[3px] py-0.5 align-middle touch:before:absolute touch:before:-inset-3.5 touch:before:content-['']"
+const WEIGHT_BAR = ['h-1', 'h-2', 'h-3']
+
 /**
  * « Poids de rendu »: three bars, as many filled as the setting's current value lengthens the export (renderCost.ts);
- * nothing at weight 0. It reads the store itself, so the memoised panels do not render again with the settings.
+ * nothing at weight 0. It reads the store itself, so the memoised panels do not render again with the settings. Navy
+ * bars on periwinkle; the heaviest in chartreuse on a navy chip.
  */
 export function RenderWeight({ weight }: { weight: WeightKey }) {
   const t = useT()
@@ -83,11 +88,15 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
   if (tier === 0) return null
   return (
     <Tip text={tip} wrap={220}>
-      <span className={`render-weight render-weight--${tier}`} data-testid="render-weight" data-tier={tier}>
-        {[1, 2, 3].map((bar) => (
-          <i key={bar} className={bar <= tier ? 'render-weight__bar render-weight__bar--on' : 'render-weight__bar'} aria-hidden="true" />
+      <span className={`${WEIGHT} ml-2 ${tier === 3 ? 'bg-navy' : ''}`} data-testid="render-weight" data-tier={tier}>
+        {WEIGHT_BAR.map((height, i) => (
+          <i
+            key={height}
+            className={`w-[3px] rounded-[1px] ${height} ${i < tier ? (tier === 3 ? 'bg-chartreuse' : 'bg-navy') : 'bg-periwinkle'}`}
+            aria-hidden="true"
+          />
         ))}
-        <span className="visually-hidden">{t('export.weight.label', { tier: tierName(tier) })}</span>
+        <span className="sr-only">{t('export.weight.label', { tier: tierName(tier) })}</span>
       </span>
     </Tip>
   )
@@ -95,15 +104,19 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
 
 /**
  * « Imposé par Haute » / « Personnalisé »: next to the name of a row that the export quality drives (qualityTier.ts).
- * Periwinkle while the quality decides, chartreuse once the value was chosen by hand over it.
+ * Periwinkle while the quality decides, chartreuse once the value was chosen by hand over it; `stacked` puts it under
+ * the name instead of after it.
  */
-export function PresetBadge({ knob }: { knob: PresetKnob }) {
+export function PresetBadge({ knob, stacked = false }: { knob: PresetKnob; stacked?: boolean }) {
   useT()
   const kind = useAppStore((s) => presetBadge(s.settings, knob)?.kind)
   const text = useAppStore((s) => presetBadge(s.settings, knob)?.text)
   if (!kind) return null
   return (
-    <span className={`preset-badge preset-badge--${kind}`} data-testid={`preset-badge-${knob}`}>
+    <span
+      className={`rounded-full px-2 align-middle text-caption font-semibold whitespace-nowrap text-navy ${stacked ? 'mt-0.5 block w-fit' : 'ml-2 inline-block'} ${kind === 'preset' ? 'bg-periwinkle' : 'bg-chartreuse'}`}
+      data-testid={`preset-badge-${knob}`}
+    >
       {text}
     </span>
   )
@@ -121,7 +134,7 @@ export function TabWeightDot({ tab }: { tab: ShellTab }) {
         data-testid="tab-weight"
         aria-hidden="true"
       />
-      <span className="visually-hidden">{t('export.weight.heavyActive')}</span>
+      <span className="sr-only">{t('export.weight.heavyActive')}</span>
     </>
   )
 }
@@ -141,7 +154,7 @@ const ROW = 'border-t border-edge [&+&]:-mt-3'
 const ROW_HEAD =
   'group -mx-2 flex min-h-control-lg w-[calc(100%+16px)] cursor-pointer items-center gap-2 rounded-sm px-2 text-left transition-ui hover:bg-surface-card'
 /** The name, then its render weight; the badge of the export quality goes under it so the value keeps its room. */
-const ROW_LABEL = 'type-label block min-w-0 flex-1 [&_.preset-badge]:mt-0.5 [&_.preset-badge]:ml-0 [&_.preset-badge]:block [&_.preset-badge]:w-fit'
+const ROW_LABEL = 'type-label block min-w-0 flex-1'
 const ROW_VALUE = 'max-w-[55%] truncate text-body text-text-2 tabular-nums'
 const ROW_VALUE_MODIFIED = 'max-w-[55%] truncate text-body font-medium text-text-1 tabular-nums before:mr-2 before:inline-block before:size-1.5 before:rounded-full before:bg-brand before:align-middle'
 /** The control unfolds under the head; a lone field does not repeat the name of its row (screen readers still read it). */
@@ -195,11 +208,11 @@ export function SettingRow({
           <span className={ROW_LABEL} data-testid="setting-row-label">
             {label}
             {weight && <RenderWeight weight={weight} />}
-            {preset && <PresetBadge knob={preset} />}
+            {preset && <PresetBadge knob={preset} stacked />}
           </span>
           <span className={modified ? ROW_VALUE_MODIFIED : ROW_VALUE} data-testid="setting-row-value" data-modified={modified || undefined}>
             {value}
-            {modified && <span className="visually-hidden">{t('common.modified.srOnly')}</span>}
+            {modified && <span className="sr-only">{t('common.modified.srOnly')}</span>}
           </span>
           <span className="flex flex-none text-text-2 transition-ui group-hover:text-text-1 group-aria-[expanded=false]:-rotate-90">
             <Icon name="chevron-down" size={16} />
@@ -262,11 +275,7 @@ export function RangeField({
   /** value read by screen readers, when it differs from the displayed one */
   spoken?(value: number): string
 }) {
-  const labelEl = (
-    <span className="field__label">
-      {label}
-    </span>
-  )
+  const labelEl = <span className="type-label">{label}</span>
   return (
     <div className="field">
       {tip || weight || preset ? (

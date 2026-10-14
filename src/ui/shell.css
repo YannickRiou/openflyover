@@ -27,8 +27,6 @@
 
 /* Focus on the ink chrome */
 .status :focus-visible,
-.view__fit:focus-visible,
-.view__safe-zones:focus-visible,
 .track-menu :focus-visible {
   outline: var(--focus-ring-on-dark);
   outline-offset: 2px;
@@ -42,21 +40,6 @@
 
 .icon-btn--on svg {
   fill: currentColor;
-}
-
-.icon-btn--float {
-  --button-bg: var(--surface-chrome);
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  color: var(--color-white);
-  box-shadow: var(--shadow-pop);
-}
-
-@media (hover: hover) {
-  .icon-btn--float:hover:not(:disabled) {
-    background: var(--color-ink-soft);
-  }
 }
 
 .icon {
@@ -115,8 +98,7 @@
 .dock > .settings > .settings__title,
 .tabpanel > .settings > .modified,
 .dock > .settings > .modified,
-.dock > .settings > .settings__close,
-.fold__summary {
+.dock > .settings > .settings__close {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -146,34 +128,6 @@
   margin: var(--space-1) -6px 0 var(--space-1);
 }
 
-/* foldable sections (PanelSection) */
-.fold__summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-  padding: var(--space-3) 0 var(--space-2);
-  list-style: none;
-  cursor: pointer;
-}
-
-.fold__summary::-webkit-details-marker {
-  display: none;
-}
-
-.fold__title {
-  flex: 1 1 auto;
-  margin: 0;
-}
-
-.fold:not([open]) {
-  padding-bottom: var(--space-1);
-}
-
-.fold:not([open]) > .fold__summary .icon {
-  transform: rotate(-90deg);
-}
-
 /* the foldable section brings its own title and marker: the summary shows them, no section in a section */
 .panel-section__body > section > .section-title,
 .panel-section__body > .settings > .modified {
@@ -186,17 +140,8 @@
   background: none;
 }
 
-/* nested group (ghost race in the track list): a rule, not a card in a card */
-.tabpanel .race {
-  padding: var(--space-3) 0 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  background: none;
-}
-
 /* readouts */
 .panel output,
-.track__meta,
 .climb__meta,
 .landmark__meta,
 .weather__list,
@@ -212,102 +157,6 @@
   min-width: 0;
   min-height: 0;
   background: var(--surface-chrome);
-}
-
-.view__viewport {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-  /* pale sky behind the transparent canvas */
-  background: linear-gradient(180deg, var(--color-glacier) 0%, var(--color-paper) 100%);
-}
-
-/* letterbox bands in ink around the exported area */
-.view__viewport--framed {
-  background: var(--surface-chrome);
-}
-
-.view__stage {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-
-.view__fit {
-  position: absolute;
-  z-index: 4;
-  top: var(--space-3);
-  right: var(--space-3);
-}
-
-/* « Zones de sécurité » toggle, under « Recadrer » */
-.view__safe-zones {
-  position: absolute;
-  z-index: 4;
-  top: calc(var(--space-3) + 36px + var(--space-2));
-  right: var(--space-3);
-}
-
-.view__safe-zones[aria-pressed='true'] {
-  background: var(--color-white);
-  color: var(--color-ink);
-}
-
-@media (hover: hover) {
-  .view__safe-zones[aria-pressed='true']:hover:not(:disabled) {
-    background: var(--color-glacier);
-  }
-}
-
-/* Safe zones over the framed preview (never exported): shaded hidden areas, outlined margins, tiny labels */
-.view__stage > .safe-zones {
-  z-index: 3;
-  pointer-events: none;
-}
-
-.safe-zones__covered,
-.safe-zones__guide {
-  position: absolute;
-  box-sizing: border-box;
-}
-
-.safe-zones__covered {
-  background: repeating-linear-gradient(135deg, rgb(28 42 51 / 0.42) 0 6px, rgb(28 42 51 / 0.3) 6px 12px);
-  outline: 1px solid rgb(255 255 255 / 0.5);
-  outline-offset: -1px;
-}
-
-.safe-zones__guide {
-  border: 1px dashed rgb(255 255 255 / 0.85);
-  box-shadow: 0 0 0 1px rgb(28 42 51 / 0.35);
-}
-
-.safe-zones__label {
-  position: absolute;
-  top: 2px;
-  left: 4px;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: rgb(28 42 51 / 0.72);
-  color: var(--color-white);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 14px;
-  white-space: nowrap;
-}
-
-/* right-aligned: the narrow band of the buttons is on the right edge, its label may overhang to the left */
-.safe-zones__covered > .safe-zones__label {
-  left: auto;
-  right: 4px;
-}
-
-.safe-zones__guide--inner > .safe-zones__label {
-  top: auto;
-  bottom: 2px;
-  left: auto;
-  right: 4px;
 }
 
 /* Home screen (no track yet): a paper page over the whole view, one centred column */
@@ -517,29 +366,12 @@
 }
 
 /* Right dock (export drawer) ----------------------------------------------- */
-.dock {
-  flex: none;
-  width: var(--dock-w);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  border-left: 1px solid var(--line);
-  background: var(--surface-panel);
-  color: var(--text-1);
-}
-
 .dock > * {
   border-bottom: 0;
 }
 
 .dock .export__actions {
   flex-direction: column;
-}
-
-/* (the group is a horizontal RadioGroup: `[data-orientation]` comes after HeroUI's rule, a flex row with a 16 px gap) */
-.format-tiles[data-orientation] {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
 }
 
 /* a tile is a Radio of a `look="plain"` group: its label is the tile, the native radio in it is hidden */
@@ -1090,16 +922,6 @@ fieldset:disabled .format-tile .option__label {
     width: min(var(--panel-w), calc(100% - var(--rail-w) - 16px));
     box-shadow: var(--shadow-pop);
   }
-
-  .dock {
-    position: absolute;
-    z-index: 8;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(var(--dock-w), calc(100% - var(--rail-w) - 16px));
-    box-shadow: var(--shadow-pop);
-  }
 }
 
 /* Touch screens (phone, tablet): targets of 44 px at least (Apple HIG), 16 px text in fields (no zoom on focus in iOS) */
@@ -1115,7 +937,6 @@ fieldset:disabled .format-tile .option__label {
   .select-field,
   .input,
   .select-bar,
-  .fold__summary,
   .track-menu__item {
     min-height: 44px;
   }
@@ -1128,24 +949,11 @@ fieldset:disabled .format-tile .option__label {
     font-size: 16px;
   }
 
-  .icon-btn--float,
-  .track__fly,
-  .track__delete {
-    width: 44px;
-    height: 44px;
-  }
-
-  .view__safe-zones {
-    top: calc(var(--space-3) + 44px + var(--space-2));
-  }
-
   /* small glyphs: a wider invisible hit area around them */
-  .render-weight,
   .status__info {
     position: relative;
   }
 
-  .render-weight::before,
   .status__info::before {
     content: '';
     position: absolute;
@@ -1226,9 +1034,8 @@ fieldset:disabled .format-tile .option__label {
     height: var(--phone-preview-h);
   }
 
-  /* half sheets: from under the transport row down to the bottom, over the timeline and the tab bar */
-  .panel,
-  .dock {
+  /* half sheets: from under the transport row down to the bottom, over the timeline and the tab bar (the dock: `dock-frame`) */
+  .panel {
     position: absolute;
     z-index: 10;
     top: calc(var(--phone-preview-h) + var(--phone-transport-h));
@@ -1246,8 +1053,7 @@ fieldset:disabled .format-tile .option__label {
     animation: sheet-in 160ms ease-out;
   }
 
-  .panel > :not(.sheet-handle),
-  .dock > :not(.sheet-handle) {
+  .panel > :not(.sheet-handle) {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -1297,8 +1103,7 @@ fieldset:disabled .format-tile .option__label {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .panel,
-    .dock {
+    .panel {
       animation: none;
     }
   }
