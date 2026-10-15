@@ -1407,6 +1407,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   item fitted to the hold stays fitted, stretched with the stop) when the stop moves in film time (drag, position,
   duration, other stop, speed portions, shots); an item whose stop is no longer one of the film's own stops (deleted,
   "Arrêts automatiques" checked again) becomes free where it is; moving the attached item changes its offset.
+  A **free** text or medium (no `stopId`) the edit did not touch keeps its place on the route through the same
+  calls (`routeTime(t, from, to)`): in the opening it keeps its time from the start of the film, in the closing its time
+  from the end of the flight, in a stop or junction hold (same id) its offset to the start of the hold, elsewhere it is at
+  the film time where the marker reaches the position it had (`progressAtTime` of the old clock, `timeAtProgress` of the
+  new); its duration is unchanged. So a slowed or sped-up portion, a stop, a shot or the flyover duration moves what was
+  placed after it with the place it illustrated. The music (`audio`) is not tied to a place and keeps its film seconds,
+  and so does everything when the stages are put in another order (the cuts of the two clocks differ). The speed keys
+  (`paramKeys` of `speed`) count as a change of the film in time.
   Inspector: "Attaché à : Aucun arrêt / <arrêt>" (attached to: no stop / a stop) for a text, a photo or a video
   (attaching to a generated stop writes the stops out first; one undo step); T with a stop selected adds the text
   attached to it (`addText(film, startS, stop)`, same undo step). Landmarks and stops: the generated stops
@@ -2651,7 +2659,8 @@ exports) gets it from the terrain source of the settings.
   before and after the move) shifts by `newStartM − oldStartM` of its stage every stop, camera / parameter / marker key and speed
   portion (an item on a boundary belongs to the stage that starts there; a portion across a boundary is split in two, same factor,
   the pieces under `MIN_SPEED_SPAN_M` dropped; the second piece is `speed-<n+1>`); texts, media and music keep their film seconds
-  (those attached to a stop follow it through `followStops`, run by the caller with the clocks of both orders); a junction keeps
+  (those attached to a stop follow it through `followStops`, run by the caller with the clocks of both orders; the free
+  ones are left on their film seconds by `followStops` when the cuts of the two clocks differ); a junction keeps
   its transition only between the two stages it was between, in that order, else it is the default one (a junction after the new
   last stage is dropped), and the card of a stage stays with its stage (`firstCard` included); pois, landmarks and nights need
   nothing (lon/lat, ids, computed from the sequence). The store action `setStageOrder(ids)` (`scene/usePacing.ts`, with
