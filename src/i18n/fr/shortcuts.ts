@@ -21,6 +21,7 @@ export default {
   'label.redo': 'Rétablir',
   'label.nudge': 'Décaler le bloc sélectionné d’une seconde (Maj : d’un dixième)',
   'label.magnet': 'Inverser l’aimantation de la timeline pendant un glissement',
+  'label.marquee': 'Sélectionner plusieurs images clés : Ctrl + glisser sur le fond des pistes (Ctrl + clic sur une clé : l’ajouter ou la retirer), puis les déplacer ou les supprimer ensemble',
   'label.add-stop': 'Ajouter un arrêt à la position du marqueur',
   'label.add-text': 'Ajouter un texte à la tête de lecture',
   'label.remove': 'Supprimer le bloc sélectionné',

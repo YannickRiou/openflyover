@@ -29,6 +29,7 @@ export const SHORTCUTS = [
   { id: 'redo', keys: ['Ctrl+Shift+Z', 'Ctrl+Y'], get label() { return t('shortcuts.label.redo') }, group: 'editing' },
   { id: 'nudge', keys: ['←', '→'], get label() { return t('shortcuts.label.nudge') }, group: 'editing' },
   { id: 'magnet', keys: ['Alt+drag'], get label() { return t('shortcuts.label.magnet') }, group: 'editing' },
+  { id: 'marquee', keys: ['Ctrl+drag'], get label() { return t('shortcuts.label.marquee') }, group: 'editing' },
   { id: 'add-stop', keys: ['S'], get label() { return t('shortcuts.label.add-stop') }, group: 'editing' },
   { id: 'add-text', keys: ['T'], get label() { return t('shortcuts.label.add-text') }, group: 'editing' },
   { id: 'remove', keys: ['Del'], get label() { return t('shortcuts.label.remove') }, group: 'editing' },

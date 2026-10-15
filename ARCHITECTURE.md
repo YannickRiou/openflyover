@@ -1425,6 +1425,18 @@ The interface and the texts drawn into the films and posters exist in **French**
   focus on a block and by additions (`editFilm` selects the new block), cleared by Esc, closing
   the inspector, a deletion, or when the block no longer exists (undo, other track, generated stops moved:
   `hasFilmItem`, `Timeline` effect).
+- **Several keys** (`filmKeys` in the store, next to `filmSelection`, neither saved nor undoable): the camera, parameter and marker keys can be
+  selected together. Ctrl (Cmd) + drag from the background of the lanes draws a rectangle (gesture `marquee`, in the content's coordinates so that
+  it survives the scroll and the edge auto-scroll; the keys it touches are read from their elements, `data-item`, and shown pressed while it is
+  drawn) and selects them on release; the first one takes the focus. Ctrl + click on a key (Ctrl + Enter or Space on a focused key) adds it or
+  removes it. `setFilmKeys(ids)` keeps the group at two keys or more; one key is the block selected on its own (`filmSelection`, the inspector),
+  none clears both, and `setFilmSelection` replaces any group. A plain drag on the background still moves the playhead (the rectangle needs Ctrl:
+  there is none on a touch screen, whose drag is the playhead's or the scroll's). Pressing a key of the group drags them all (`dragKeys`, pure:
+  the key under the pointer is snapped like a key alone, with the keys that move left out of the magnet's targets, `snapTargets(…, except)` takes
+  several ids; the others keep their gaps in film time; the shift is bounded so that the first and last key stay on the flight; each key goes
+  through `updateCameraKey` / `updateParamKey` / `updateMarkerKey`), released without moving it selects that key alone and goes to it. A drag, the
+  arrows (±1 s, Shift ±0.1 s) and Delete on a key of the group act on all of them, each in one undo step (`removeFilmItem` for each key inside a
+  single `editFilm`). Esc clears the group (`App`'s Escape chain, like `filmSelection`); a key that goes away (undo) leaves it.
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the

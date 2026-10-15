@@ -23,6 +23,7 @@ const messages: Messages['shortcuts'] = {
   'label.redo': 'Rehacer',
   'label.nudge': 'Desplazar el bloque seleccionado un segundo (Mayús: una décima)',
   'label.magnet': 'Invertir el imán de la línea de tiempo durante un arrastre',
+  'label.marquee': 'Seleccionar varios fotogramas clave: Ctrl + arrastrar sobre el fondo de las pistas (Ctrl + clic en una clave: añadirla o quitarla), y moverlos o eliminarlos juntos',
   'label.add-stop': 'Añadir una parada en la posición del marcador',
   'label.add-text': 'Añadir un texto en el cabezal de reproducción',
   'label.remove': 'Eliminar el bloque seleccionado',

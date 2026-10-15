@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Several keyframes at once**: on the timeline, Ctrl (Cmd on a Mac) + drag from the background of the lanes draws a rectangle that selects the camera, parameter and marker keys it touches; Ctrl + click on a key adds it to the selection or removes it (Ctrl + Enter from the keyboard). Dragging one of the selected keys moves them all, keeping their gaps, with the same limits and the same magnet as a key moved alone; Delete removes them all; Esc empties the selection. A group move or deletion is one undo step. A plain drag on the background still moves the playhead.
+
 ## 2.1.1 (October 2026)
 
 - **Keys that follow the sliders and the mouse**: once a parameter has keys (« Soleil », « Exposition », the four grading values), its slider in « Lumière » shows the value the film has at the marker and a change writes it into the key there (a key is made on the first change), where it used to edit a setting the keys ignore, so a second key with another solar hour did nothing. On a camera keyframe the playhead has been moved onto (with the arrows), orbiting or zooming the 3D view with the mouse writes the pose into the key as you move, one undo step per gesture, and the key's inspector shows it live. The ◇ of a parameter or marker key now removes the key under the playhead (as the camera's does) instead of selecting it; click the block on the timeline to open it.

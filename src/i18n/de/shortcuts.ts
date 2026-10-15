@@ -23,6 +23,7 @@ const messages: Messages['shortcuts'] = {
   'label.redo': 'Wiederholen',
   'label.nudge': 'Ausgewählten Block um eine Sekunde verschieben (Umschalt: um eine Zehntelsekunde)',
   'label.magnet': 'Einrasten der Zeitleiste während des Ziehens umkehren',
+  'label.marquee': 'Mehrere Keyframes auswählen: Strg + Ziehen auf dem Hintergrund der Spuren (Strg + Klick auf einen Key: hinzufügen oder entfernen), dann gemeinsam verschieben oder löschen',
   'label.add-stop': 'Stopp an der Position des Markers hinzufügen',
   'label.add-text': 'Text am Abspielkopf hinzufügen',
   'label.remove': 'Ausgewählten Block löschen',
