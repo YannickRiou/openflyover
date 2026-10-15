@@ -24,7 +24,7 @@ body {
   user-select: none;
 }
 
-/* what is typed stays selectable (the diagnostic report, meant to be copied, sets it too: shell.css) */
+/* what is typed stays selectable (the diagnostic report, meant to be copied, sets it too) */
 input,
 textarea,
 [contenteditable='true'] {

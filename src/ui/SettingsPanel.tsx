@@ -16,7 +16,7 @@ import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { formatNumber, formatPercent } from './format'
-import { Button, Checkbox, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
+import { Button, Checkbox, DateField, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
 
 const ZOOM_OFFSETS: { value: Settings['imageryZoomOffset']; label: string }[] = [
   { value: 0, get label() { return t('offline.level.0') } },
@@ -212,18 +212,18 @@ function SunTimeControl() {
         <SettingRow label={t('light.sun.day')} value={sunDate ? formatDay(sunDate) : t('light.sun.dayOfOuting')} paths={['sunDate']}>
           <div className="field">
             <div className="flex items-center gap-1">
-              <label className="type-label" htmlFor={`${id}-sun-date`}>
+              <label className="type-label" id={`${id}-sun-date-label`} htmlFor={`${id}-sun-date`}>
                 {t('light.sun.day')}
               </label>
               <InfoTip text={t('light.sun.dayTip')} />
             </div>
             <div className="flex gap-2">
-              <input
+              <DateField
                 id={`${id}-sun-date`}
-                className="input min-w-0 flex-1"
-                type="date"
+                aria-labelledby={`${id}-sun-date-label`}
+                className="min-w-0 flex-1"
                 value={sunDate}
-                onChange={(e) => setSetting('sunDate', e.currentTarget.value)}
+                onChange={(day) => setSetting('sunDate', day)}
               />
               {sunDate && (
                 <Button onClick={() => setSetting('sunDate', '')}>

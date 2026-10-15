@@ -9,7 +9,7 @@
  * nearest within `PICK_RADIUS_PX`; a part hidden by the relief can be picked too. The relief is picked by a ray on the
  * tiles drawn, only on a right-click.
  */
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Raycaster, Vector2, Vector3 } from 'three'
 import { create } from 'zustand'
@@ -21,7 +21,7 @@ import { addSpeed, addStop, addText } from '../film/timeline'
 import { buildTrackPath, pickProjectedPath, samplePath } from '../flyover/path'
 import { useT } from '../i18n'
 import { useAppStore } from '../state/store'
-import { Menu, Popover } from '../ui/primitives'
+import { Menu, Popover, TextField } from '../ui/primitives'
 import type { MenuItem } from '../ui/primitives'
 import { useTerrainContext } from './terrainContext'
 import { LINE_LIFT_M } from './trackLineSet'
@@ -228,25 +228,37 @@ export function TrackPicker() {
  */
 type Item = 'stop' | 'text' | 'speed' | 'poi'
 
+/** The « Ajouter » button of the form, a row of the popover: 32 px high, 44 px on a touch screen. */
+const ADD =
+  'h-8 cursor-pointer rounded-sm border-0 bg-transparent px-3 text-left font-body text-[13px]/none font-semibold whitespace-nowrap text-inherit touch:h-auto touch:min-h-11 hover:bg-white/10 focus-visible:bg-white/10'
+
 /** The name of a point of interest added from the menu at `at`: Enter adds it (one undo step), empty = default name. */
 function PoiNameForm({ at }: { at: LonLat }) {
   const t = useT()
   const placeholder = useAppStore((s) => defaultPoiName(s.settings.film))
+  const [name, setName] = useState('')
   return (
     <form
-      className="track-menu__form"
+      className="flex min-w-[200px] flex-col gap-1 p-1"
       onSubmit={(e) => {
         e.preventDefault()
-        const name = String(new FormData(e.currentTarget).get('name') ?? '')
         closeMenu()
         editFilm((film) => ({ film: addPoi(film, at, name) }))
       }}
     >
-      <label className="track-menu__label">
-        {t('scene.menu.poiName')}
-        <input name="name" className="input" autoFocus placeholder={placeholder} maxLength={POI_NAME_MAX} autoComplete="off" />
-      </label>
-      <button type="submit" className="track-menu__item">
+      <TextField
+        className="px-2 pt-1"
+        labelClassName="text-[12px]/[1.2] font-semibold text-white"
+        name="name"
+        label={t('scene.menu.poiName')}
+        autoFocus
+        placeholder={placeholder}
+        maxLength={POI_NAME_MAX}
+        autoComplete="off"
+        value={name}
+        onChange={setName}
+      />
+      <button type="submit" className={ADD}>
         {t('scene.menu.add')}
       </button>
     </form>

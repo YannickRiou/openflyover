@@ -90,6 +90,10 @@
 @import '@heroui/styles/components/toggle-button-group.css' layer(components);
 @import '@heroui/styles/components/toast.css' layer(components);
 @import '@heroui/styles/components/slider.css' layer(components);
+@import '@heroui/styles/components/date-input-group.css' layer(components);
+@import '@heroui/styles/components/date-field.css' layer(components);
+@import '@heroui/styles/components/time-field.css' layer(components);
+@import '@heroui/styles/components/calendar.css' layer(components);
 /* the app's skin of each primitive, after HeroUI's own rules of the same layer (one file per primitive in `src/ui/primitives/`) */
 @import './primitives/button.css';
 @import './primitives/tabs.css';
@@ -101,6 +105,7 @@
 @import './primitives/chip.css';
 @import './primitives/slider.css';
 @import './primitives/select.css';
+@import './primitives/date-field.css';
 /* the `@utility` classes the shell is built from (top bar, rail, panels); they use the variants declared below */
 @import './utilities.css';
 
@@ -134,7 +139,7 @@
 }
 
 /*
- * The breakpoints of the shell (shell.css) as variants. `touch`: finger, 44 px targets. `drawer`: the panel floats over the
+ * The breakpoints of the shell as variants. `touch`: finger, 44 px targets. `drawer`: the panel floats over the
  * view. `phone`: the portrait phone layout (tab bar at the bottom, half sheets). `phone-any`: a phone either way up.
  * `phone-landscape`: a phone on its side. `bar-condensed`: the top bar keeps the essentials (undo, redo, open, save move
  * into « Plus d'actions »).
@@ -352,5 +357,54 @@ select {
   border-radius: var(--radius-sm);
   background: var(--surface-control);
   color: var(--text-1);
+}
+}
+
+/*
+ * What the breakpoints change in the variables of `:root` and in the form controls; the rest of the responsive layout is in the
+ * `@utility` classes (`shell-frame`, `panel-frame`, `dock-frame`...) and the named variants above. In `components`, so these
+ * override the `base` defaults. Touch screens (phone, tablet): targets of 44 px at least (Apple HIG), 16 px text in fields (no
+ * zoom on focus in iOS). A phone, either way up: no pull-to-refresh or bounce of the page behind the sheets.
+ */
+@layer components {
+@media (max-width: 1280px) {
+  :root {
+    --panel-w: 280px;
+    --dock-w: 280px;
+  }
+}
+
+@media (pointer: coarse) {
+  :root {
+    --topbar-h: 56px;
+    --control-h: 44px;
+    --control-h-lg: 44px;
+  }
+
+  .btn,
+  .btn--small,
+  .select-field,
+  .input,
+  .select-bar {
+    min-height: 44px;
+  }
+
+  .shell-frame :is(input:not([type='range'], [type='checkbox'], [type='radio'], [type='color']), select, textarea) {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 699px), (max-height: 499px) {
+  :root {
+    overscroll-behavior: none;
+  }
+}
+
+/* the portrait phone: the preview keeps the top of the screen, the transport row sits under it, the sheets start under both */
+@media (max-width: 699px) {
+  :root {
+    --phone-preview-h: 42dvh;
+    --phone-transport-h: 52px;
+  }
 }
 }

@@ -18,7 +18,7 @@ interface Drag {
   moved: boolean
 }
 
-/** The head: a bar across the sheet (portrait phone only); `data-sheet-handle` is how shell.css keeps it out of the scrolling content. */
+/** The head: a bar across the sheet (portrait phone only); `data-sheet-handle` is how `panel-frame` and `dock-frame` keep it out of the scrolling content. */
 const HEAD =
   'hidden phone:relative phone:flex phone:h-13 phone:flex-none phone:cursor-grab phone:touch-none phone:items-center phone:gap-2 ' +
   'phone:border-b phone:border-edge phone:bg-surface-panel phone:pr-2 phone:pl-4'

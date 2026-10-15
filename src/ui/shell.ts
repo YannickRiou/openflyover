@@ -312,7 +312,7 @@ export function parsePreferences(raw: string | null): Preferences {
 }
 
 // ---------------------------------------------------------------------------
-// Phone layouts (media queries of shell.css)
+// Phone layouts (the `phone` variants of theme.css)
 // ---------------------------------------------------------------------------
 
 /** Portrait phone: preview on top, timeline under it, tabs in a bottom bar; panels and drawers as half sheets over the timeline. */

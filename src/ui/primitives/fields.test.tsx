@@ -178,6 +178,23 @@ describe('TextField', () => {
     expect(onChange).toHaveBeenCalledWith('Col de')
   })
 
+  it('takes the type of its input (password, search), the phone keyboard, and classes for a label on a dark panel', async () => {
+    await render(
+      <>
+        <TextField label="Secret" type="password" inputMode="text" autoComplete="off" value="" onChange={() => undefined} />
+        <TextField aria-label="Rechercher" type="search" value="" onChange={() => undefined} />
+        <TextField label="Id" name="client" inputMode="numeric" labelClassName="text-white" value="" onChange={() => undefined} />
+      </>,
+    )
+    const [secret, search, id] = [...host.querySelectorAll<HTMLInputElement>('input')]
+    expect([secret.type, search.type, id.type]).toEqual(['password', 'search', 'text'])
+    expect(secret.autocomplete).toBe('off')
+    expect(id.inputMode).toBe('numeric')
+    expect(id.name).toBe('client')
+    expect(id.labels?.[0]?.classList.contains('text-white')).toBe(true)
+    expect(id.labels?.[0]?.classList.contains('field__label')).toBe(true)
+  })
+
   it('is named by `aria-label` without a label, and a disabled one is disabled', async () => {
     await render(<TextField aria-label="Nom du projet" value="" onChange={() => undefined} disabled title="Renommer" />)
     const input = host.querySelector<HTMLInputElement>('input')!

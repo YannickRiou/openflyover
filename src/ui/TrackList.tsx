@@ -40,7 +40,7 @@ import { Icon } from './icons'
 import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
-import { Button, ColorField, Menu, Radio, RadioGroup, Select, Slider, Switch, Tip } from './primitives'
+import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TimeField, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -330,31 +330,29 @@ function OutingPlanForm({ track }: { track: Track }) {
         <Icon name="chevron-down" size={16} />
       </summary>
       <form className="flex flex-col gap-2 pb-1" onSubmit={apply}>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
           <div className="field">
-            <label className="type-label" htmlFor={`${id}-day`}>
+            <label className="type-label" id={`${id}-day-label`} htmlFor={`${id}-day`}>
               {t('track.plan.date')}
             </label>
-            <input
+            <DateField
               id={`${id}-day`}
-              className="input"
-              type="date"
+              aria-labelledby={`${id}-day-label`}
               required
               value={departure.day}
-              onChange={(e) => setDeparture({ ...departure, day: e.currentTarget.value })}
+              onChange={(day) => setDeparture({ ...departure, day })}
             />
           </div>
           <div className="field">
-            <label className="type-label" htmlFor={`${id}-time`}>
+            <label className="type-label" id={`${id}-time-label`} htmlFor={`${id}-time`}>
               {t('track.plan.departure')}
             </label>
-            <input
+            <TimeField
               id={`${id}-time`}
-              className="input"
-              type="time"
+              aria-labelledby={`${id}-time-label`}
               required
               value={departure.time}
-              onChange={(e) => setDeparture({ ...departure, time: e.currentTarget.value })}
+              onChange={(time) => setDeparture({ ...departure, time })}
             />
           </div>
         </div>

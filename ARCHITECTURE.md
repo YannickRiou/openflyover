@@ -93,8 +93,8 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/offline/*` | offline tile packs (see "Offline packs") | pure, tested: `planOfflineTiles`, `packImageryLevel`, `splitDistanceM`, `CORRIDOR_WIDTHS_M`, `MAX_PACK_TILES` (`plan.ts`); `offlinePolicy`, `OFFLINE_POLICIES` (`policy.ts`); `startPackDownload`, `createDailyQuota` (`download.ts`); `createPackRegistry`, `createStoredTileReader`, `packIdFor`, `sourcePrefixes` (`packs.ts`); not pure: `useOfflineStore`, `installOfflineTiles`, `preparePack`, `pausePack`, `resumePack`, `cancelPack`, `deletePack` (`store.ts`), `OfflinePanel` (`src/ui`) |
 | `src/state/store.ts` | zustand state | `useAppStore`, `Settings`, `Playback`, `AppState`, `resetAppStore` |
 | `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested); `StatusBar.tsx` (see "Status bar"), `ErrorBoundary.tsx` |
-| `src/ui/primitives/*` | HeroUI wrappers: the only place that imports `@heroui/react` (see "Interface", « Primitives ») | `Button`, `Tip`, `Menu`, `Popover`, `Modal`, `Toast`, `Tabs` / `TabList` / `Tab` / `TabPanel`, `Disclosure`, `Switch`, `Checkbox`, `Chip`, `RadioGroup` / `Radio`, `ToggleButtonGroup`, `ColorField`, `Select`, `Slider`, `NumberField`, `TextField`, `Titled`; `overlay.ts` (`isModalOpen`, `openDialog`, panel classes); `index.ts` exports them; the skins are `<name>.css` |
-| `src/ui/theme.css` + `utilities.css` + `src/index.css` | styling (see "Interface", « Styling ») | Tailwind setup, tokens (`@theme`), named variants and HeroUI imports (`theme.css`); `@utility` classes (`utilities.css`); reset and page base (`index.css`); `fonts.css`, `shell.css`, `app.css`, `appearance.css`, `exportPanel.css` |
+| `src/ui/primitives/*` | HeroUI wrappers: the only place that imports `@heroui/react` (see "Interface", « Primitives ») | `Button`, `Tip`, `Menu`, `Popover`, `Modal`, `Toast`, `Tabs` / `TabList` / `Tab` / `TabPanel`, `Disclosure`, `Switch`, `Checkbox`, `Chip`, `RadioGroup` / `Radio`, `ToggleButtonGroup`, `ColorField`, `Select`, `Slider`, `NumberField`, `TextField`, `DateField`, `TimeField`, `Titled`; `overlay.ts` (`isModalOpen`, `openDialog`, panel classes); `coarse.ts` (`useCoarsePointer`); `index.ts` exports them; the skins are `<name>.css` |
+| `src/ui/theme.css` + `utilities.css` + `src/index.css` | styling (see "Interface", « Styling ») | Tailwind setup, tokens (`@theme`), named variants and HeroUI imports (`theme.css`); `@utility` classes (`utilities.css`); reset and page base (`index.css`); `fonts.css`, `appearance.css` |
 
 ### Development rules
 
@@ -112,7 +112,7 @@ full customization through a single project document, WebCodecs video export, Ta
 ## Loading (bundle splitting)
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
-about 1.5 MB, 470 kB gzip over 16 files (the app 328 kB, `primitives` 515 kB, React 219 kB), instead of a single 3.1 MB file, 930 kB gzip.
+about 1.5 MB, 475 kB gzip over 20 files (the app 328 kB, `primitives` 290 kB, React 219 kB, the React Aria code they share in chunks of their own), instead of a single 3.1 MB file, 930 kB gzip.
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
 `scene/perfProbe.ts` (a plain module the scene fills when its canvas is created), and the build prints no chunk-size warning.
 The rest arrives through dynamic `import()` calls, each in its own file:
@@ -125,7 +125,9 @@ The rest arrives through dynamic `import()` calls, each in its own file:
   and, through its codec check, mediabunny (~700 kB, 175 kB gzip). Mounting it at startup used to download both
   before the user had done anything;
 - on demand: the FIT decoder (`import/fit.ts`, on the first .fit, `import/index.ts`), mediabunny (reading a video,
-  export: `film/video.ts`, `export/encoder.ts`).
+  export: `film/video.ts`, `export/encoder.ts`), the segments and calendar of the day and time fields (`DateFieldPicker`,
+  `TimeFieldSegments`: ~66 kB, 19 kB gzip, `lazy` in `DateField` / `TimeField`, when first shown with a mouse; the browser's own
+  input stands in until then and on a touch screen).
 
 To keep three.js out of the first screen, the app imports lon/lat distances and boxes from `geo/lonLat.ts`, not from
 `geo/ellipsoid.ts`. React has its own file (`codeSplitting.groups` in `vite.config.ts`), kept in cache from one version to
@@ -368,7 +370,7 @@ the arrows, Page Up / Down, Home and End and the screen-reader name, taken from 
 one undo step through `[data-slider]` in `installSliderGestures`, a vertical swipe from the rail scrolls the panel, and `onChange` is
 never called twice with one value), `NumberField` (React Aria's, so the entry is settled on Enter or leaving the field, within `min` / `max`
 and on the `step`; `live` also applies each number typed in range; Escape puts the stored value back) and `TextField` (`label` above, or
-`aria-label`); `NumberField` and `TextField` take the project's `.input` look and no HeroUI CSS. `Modal` (the dialogs: shortcuts, sources, Strava, diagnostic report; `open` / `onClose` / `title`, the heading is the dialog's name; modal, focus kept inside and given back, Escape and a click on the backdrop close it, it scrolls, full screen on a phone) marks its dialog `data-modal`: `openDialog()` / `isModalOpen()` (`overlay.ts`) find it, so menus, popovers and tooltips opened from inside are portalled into it and the app's own shortcuts wait. `ColorField` (the colour: a button showing it that opens a panel, area / hue slider / hex field, for any colour, bottom sheet on a phone, plus optional `presets` to pick in one tap; the value is a lowercase `#rrggbb`, `onChange` is called while dragging like the native input it replaces; `dot` is the button alone, `children` follow it). Modal and ColorField, like the overlays, import no HeroUI CSS. HeroUI's styles are imported in `theme.css`
+`aria-label`; `type` `password` / `search`, `inputMode`, `labelClassName` for a label on a dark panel); `NumberField` and `TextField` take the project's `.input` look and no HeroUI CSS. `DateField` (a day as `'YYYY-MM-DD'`, `''` for none) and `TimeField` (a time as `'HH:mm'`) are the browser's own `<input type="date">` / `<input type="time">` on a touch screen (`pointer: coarse`, `useCoarsePointer`: the wheel and calendar of the system are made for a finger, as for `Select`) and, elsewhere, React Aria's segments in HeroUI's date input (typed or changed with the arrows, in the language of the application) with, for the day, a calendar over the page (`DatePicker`, portalled into the open `Modal` like the other overlays, `date-panel` skin in `primitives/date-field.css`); `onChange` is called only with a complete value or `''` once every segment is cleared, and the segments (`DateFieldPicker.tsx`, `TimeFieldSegments.tsx`) are loaded when first shown (`lazy`, the browser's input stands in meanwhile), so the date code stays out of the first screen. `Modal` (the dialogs: shortcuts, sources, Strava, diagnostic report; `open` / `onClose` / `title`, the heading is the dialog's name; modal, focus kept inside and given back, Escape and a click on the backdrop close it, it scrolls, full screen on a phone) marks its dialog `data-modal`: `openDialog()` / `isModalOpen()` (`overlay.ts`) find it, so menus, popovers and tooltips opened from inside are portalled into it and the app's own shortcuts wait. `ColorField` (the colour: a button showing it that opens a panel, area / hue slider / hex field, for any colour, bottom sheet on a phone, plus optional `presets` to pick in one tap; the value is a lowercase `#rrggbb`, `onChange` is called while dragging like the native input it replaces; `dot` is the button alone, `children` follow it). Modal and ColorField, like the overlays, import no HeroUI CSS. HeroUI's styles are imported in `theme.css`
 piece by piece (base, theme, utilities, then `components/<name>.css` of each primitive in use, then `primitives/<name>.css`, the
 app's skin of it), and its theme variables are set there from the roles above (`--background` = `--surface-panel`, `--surface` =
 `--surface-card`, `--overlay` = the raised ink of the bar and tooltips, `--default` = `--surface-card`, `--border` = `--line`,
@@ -379,15 +381,19 @@ block). A Tailwind `@theme` token of HeroUI that the app also defines must keep 
 (`@tailwindcss/vite`, nothing at run time). `theme.css` imports it and declares the palette, fonts, type and spacing scales, radii and
 shadows as `@theme` tokens (`bg-ink`, `text-accent`, `font-heading`, `text-body`, `h-control`…), the semantic roles above, the `dark`
 variant (the theme attribute, never the system scheme) and the named variants `touch`, `drawer`, `phone`, `phone-any`,
-`phone-landscape` and `bar-condensed` (the media queries of `shell.css`, named once). `utilities.css` holds the `@utility` classes
-several components share (`type-label`, `type-hint`, `panel-head`, `rail-tab`, `btn-chrome`, `overlay-frame`…) and the
+`phone-landscape` and `bar-condensed` (the breakpoints of the shell, named once). `utilities.css` holds the `@utility` classes
+several components share (`type-label`, `type-hint`, `panel-head`, `rail-tab`, `btn-chrome`, `overlay-frame`…), the frames of the
+shell (`shell-frame`, `panel-frame`, `dock-frame`, `tabpanel-frame`, `stage-frame`, `dock-section`: a frame that sets defaults for its
+children does it with `:where(&) > *`, so the children's own utilities win), the keyframes `tip-in` and `sheet-in`, and the
 `timeline-sized` variants. A component carries its layout, spacing and type as utilities in its `className` (a string too long for the
 JSX is a `const` above it with a comment) and reads the state attributes of the components (`aria-selected`, `data-selected`,
 `data-focus-visible`…), never extra state classes; tests and the end-to-end scenarios find controls by role, label or `data-testid`,
-never by a styling class. What stays hand-written (about 2,400 lines, in `@layer base` / `@layer components` so that a utility wins):
-`src/index.css` (reset and page base), `theme.css` (focus ring, form controls, the dark theme), `shell.css` (shell layout and the
-responsive rules of « Widths » and « Phone and tablet »), `app.css` (settings blocks, overlay canvas, export buttons),
-`appearance.css` (density), `exportPanel.css`, `fonts.css` and the skins `primitives/<name>.css`.
+never by a styling class. What stays hand-written (about 2,100 lines with `utilities.css`, in `@layer base` / `@layer components` so that a utility wins):
+`src/index.css` (reset and page base), `theme.css` (focus ring, form controls, the dark theme, and at its end what the breakpoints
+change in the `:root` variables and in the form controls of a touch screen), `appearance.css` (density), `fonts.css` and the skins
+`primitives/<name>.css`. `shell.css`, `app.css` and `exportPanel.css` are gone: the shell layout, the panels, the dock, the stage, the
+drop veil and the point-of-interest form are utilities in the components that use them. Hooks the code looks for are data attributes
+(`data-stage` on the 3D view for the thumbnail, `data-sheet-handle`, `data-collapsed` on the shell body, `data-rail`).
 **Appearance** (« Réglages » › « Apparence », `PreferencesPanel`): theme Clair / Sombre / Système, accent colour, bar and rail
 colour, density, reset. Device preferences in `Preferences.appearance` (`openflyover.preferences.v1`, `parseAppearance` in
 `appearance.ts`). `applyAppearance(root, appearance, systemDark)` sets `data-theme` and `data-density` on `<html>` and the
@@ -407,7 +413,7 @@ pointer (`appearance.css`).
   the export drawer and becomes "42 % · Annuler" (cancel) during an export.
 - **Output format**: a format writes `settings.video.aspect` (saved, undoable); "Libre" is a preview
   flag (`freeFraming` in the store, neither saved nor undoable). Outside "Libre", `Stage.tsx` frames the 3D view to the format
-  (`frameRect`, ink bars): `.view__stage`, which holds the 3D canvas, the overlay and the legend, takes the framed
+  (`frameRect`, ink bars): the stage (`stage-frame`, `data-stage`), which holds the 3D canvas, the overlay and the legend, takes the framed
   rectangle; the overlay therefore follows the exported area with no change to `src/overlay`. The export renders into this visible canvas.
   Without a track, no framing: the home screen (`EmptyState.tsx`), a paper page over the whole view (no sky gradient),
   one centred column: "Choisir un fichier" (choose a file), "Importer depuis Strava", "Essayer avec l'exemple" (try the
@@ -449,7 +455,7 @@ pointer (`appearance.css`).
   (transport row + ruler + « Plans » lane at least; the view keeps at least 35 % of the shared height) and re-clamped on
   window resize. Remembered per device (`getPlatform().storage`, `openflyover.layout.v1`, `{"timelineH": px}`), not in the
   project nor in `preferences.ts`; absent = the timeline takes the height of its content. The handle sets
-  `data-timeline-sized` and `--timeline-h` on `.view`, which the timeline reads through the `timeline-sized` variants (`utilities.css`); the stage resizes through its `ResizeObserver` and R3F invalidates on
+  `data-timeline-sized` and `--timeline-h` on the view (`<main>`), which the timeline reads through the `timeline-sized` variants (`utilities.css`); the stage resizes through its `ResizeObserver` and R3F invalidates on
   size changes; the export renders its own size. Disabled during an export.
 - **During an export**: tabs, panel collapse, format, "Ouvrir", "Recadrer" (reframe), undo / redo (buttons) and
   closing the drawer are disabled (resizing the scene would resize the canvas).
@@ -464,7 +470,7 @@ pointer (`appearance.css`).
   middle and scrolls as they slide (touch listeners on the scroller, `zoomAt`).
 - **Safe zones** (`src/ui/SafeZones.tsx`, pure and tested geometry in `src/ui/safeZoneLayout.ts`): floating button below
   "Recadrer" (outside "Libre") or G; preview state (small `useSafeZonesStore` store, neither saved nor undoable, off at
-  startup). DOM layer in the framed `.view__stage`, above the overlay, `pointer-events: none`: the export (canvas)
+  startup). DOM layer in the framed stage (`data-stage`), above the overlay, `pointer-events: none`: the export (canvas)
   never sees it. 16:9, 1:1, 21:9: action safe 93% and title safe 90% (EBU R 95), dotted. 9:16 and 4:5:
   areas hidden by the interface of vertical feeds (union of Instagram Reels / TikTok / YouTube Shorts measured on a
   1080 × 1920 screen, rounded to the safest value: top bar 220 px, buttons on the right 160 × 720 px, caption at the bottom 440 px),
@@ -526,7 +532,7 @@ pointer (`appearance.css`).
   shifted inside the window or flipped by React Aria's positioning. A long press shows it on a touch screen (`tap`: a tap too, for
   an ⓘ), any key (Escape included, which the app still gets) or a press closes it, no tooltip on the phone's tab bar. Timeline blocks
   keep their `title` (full label).
-- **Widths** (media queries at the end of `shell.css`; the desktop layout from 1100 px up is unchanged by the touch
+- **Widths** (the variants of `theme.css` in the `@utility` frames of `utilities.css`, and the media block at the end of `theme.css`; the desktop layout from 1100 px up is unchanged by the touch
   rules, which only match a coarse pointer): at 1280 px the panel and dock shrink to 280 px and "Ouvrir / Enregistrer"
   become icon-only; below 1024 px (tablet) the panel, the export drawer and the inspector become side sheets over the view
   (rail and timeline kept).
@@ -1326,7 +1332,7 @@ The interface and the texts drawn into the films and posters exist in **French**
 - **Film time preserved**: when the clock changes (film edit, duration, pacing), `FlyoverRig` keeps `playback.timeS`
   and derives the progress from it: an edit while paused does not make the playhead jump.
 - **Timeline** (`src/ui/Timeline.tsx`, pure logic in `src/film/timeline.ts`, inspector `src/ui/FilmInspector.tsx`):
-  strip below the 3D view (`.view__stage` above, the view shrinks accordingly; ~150 px, collapsible lanes). Bar, a single
+  strip below the 3D view (the stage above, the view shrinks accordingly; ~150 px, collapsible lanes). Bar, a single
   control style (Lucide icon buttons, `Tip` tooltip with the shortcut from the registry, short label hidden at
   1280 px): play, ■ (pause and back to the first frame), time `m:ss,d / m:ss`, distance / elevation / time at the
   marker, "Arrêt" (stop; S: at the marker position, to the meter, source `manual`, 4 s, orbit), "Arrêt à un temps fort…" (stop at a highlight)

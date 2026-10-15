@@ -60,8 +60,8 @@ export function Stage({ children }: { children?: ReactNode }) {
       role="region"
       aria-label={t('stage.view')}
     >
-      {/* .view__stage keeps its name: the canvases are positioned against it (app.css) and the thumbnail looks for it */}
-      <div className="view__stage absolute inset-0 overflow-hidden" style={rect ?? undefined}>
+      {/* `data-stage`: what the thumbnail looks for; its canvases and overlays fill it (`stage-frame`) */}
+      <div className="stage-frame" data-stage="" style={rect ?? undefined}>
         <Suspense>
           <FlyoverCanvas />
         </Suspense>

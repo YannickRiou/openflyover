@@ -28,7 +28,7 @@ const GUIDE = 'absolute box-border border border-dashed border-white/85 shadow-[
 const LABEL = 'absolute rounded-[3px] bg-ink/70 px-1 text-caption leading-3.5 font-semibold whitespace-nowrap text-white'
 
 /**
- * « Zones de sécurité » over the framed preview (`.view__stage`): margins of the landscape formats, areas hidden by
+ * « Zones de sécurité » over the framed preview (`data-stage`): margins of the landscape formats, areas hidden by
  * the vertical video apps (geometry in safeZones.ts). DOM over the canvas: the export never sees it.
  */
 export function SafeZones({ aspect }: { aspect: VideoAspect }) {

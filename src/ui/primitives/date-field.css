@@ -1,0 +1,71 @@
+/*
+ * DateField and TimeField (DateField.tsx, TimeField.tsx): HeroUI's date input (`date-input-group.css`, `date-field.css`,
+ * `time-field.css`) and calendar (`calendar.css`) read the field tokens of theme.css, so the segments sit in a field of the
+ * `.input` look as they are. HeroUI's `date-picker.css` is not imported (its popover animations need a plugin the project does
+ * not use): the picker's own rules are here. The calendar panel is the dark chrome of the other overlays (overlay-frame), so the
+ * calendar's colours (cell hover, today, selection, weekday names) are remapped to read on it.
+ */
+@layer components {
+.date-input-group__input {
+  padding-inline: var(--space-2) var(--space-1);
+}
+
+.date-input-group__segment {
+  padding-inline: 1px;
+}
+
+.date-input-group__suffix {
+  margin-inline-end: var(--space-1);
+}
+
+/* the calendar's colours: its heading and the weekday names */
+.date-panel .calendar__heading {
+  color: var(--color-white);
+}
+
+.date-picker {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* the calendar button sits inside the field, on the segments' line */
+.date-picker .date-input-group__suffix {
+  pointer-events: auto;
+}
+
+.date-picker__trigger {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-1);
+  border-radius: var(--field-radius);
+  cursor: pointer;
+}
+
+.date-picker__trigger:focus-visible,
+.date-picker__trigger[data-focus-visible='true'] {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.date-picker__trigger-indicator {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+}
+
+.date-panel {
+  --default: rgb(255 255 255 / 0.1);
+  --muted: var(--text-on-dark-2);
+  --accent: var(--accent-on-dark);
+  --accent-hover: var(--accent-on-dark);
+  --accent-foreground: var(--color-ink);
+  --accent-soft: rgb(255 255 255 / 0.1);
+  --accent-soft-hover: rgb(255 255 255 / 0.16);
+  --accent-soft-foreground: var(--color-white);
+}
+}

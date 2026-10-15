@@ -31,7 +31,7 @@ import { stravaSportLabel, streamsToTrack } from '../strava/track'
 import { useAppStore } from '../state/store'
 import { formatAscent, formatDistance } from './format'
 import { runImport } from './projectActions'
-import { Button, Checkbox, Modal } from './primitives'
+import { Button, Checkbox, Modal, TextField } from './primitives'
 
 /** A column of the dialog, and a line of its buttons (the hint, if any, takes the room on the left). */
 const BODY = 'flex flex-col gap-3'
@@ -90,7 +90,6 @@ function StravaBody({ onImported }: { onImported(): void }) {
 /** « Connecter Strava » : how to create the Strava application, its Client ID and Secret, « Se connecter ». */
 function ConnectForm({ notice, onConnected }: { notice: string | null; onConnected(): void }) {
   const t = useT()
-  const id = useId()
   const [saved] = useState(loadApp)
   const [clientId, setClientId] = useState(saved?.clientId ?? '')
   const [clientSecret, setClientSecret] = useState(saved?.clientSecret ?? '')
@@ -147,18 +146,8 @@ function ConnectForm({ notice, onConnected }: { notice: string | null; onConnect
         <li>{t(capabilities.isDesktop ? 'strava.step3Browser' : 'strava.step3Window')}</li>
         <li>{t('strava.step4')}</li>
       </ol>
-      <div className="flex flex-col gap-1">
-        <label className="type-label" htmlFor={`${id}-client`}>
-          Client ID
-        </label>
-        <input id={`${id}-client`} className="input" inputMode="numeric" autoComplete="off" value={clientId} disabled={waiting} onChange={(e) => setClientId(e.currentTarget.value)} />
-      </div>
-      <div className="flex flex-col gap-1">
-        <label className="type-label" htmlFor={`${id}-secret`}>
-          Client Secret
-        </label>
-        <input id={`${id}-secret`} className="input" type="password" autoComplete="off" value={clientSecret} disabled={waiting} onChange={(e) => setClientSecret(e.currentTarget.value)} />
-      </div>
+      <TextField label="Client ID" inputMode="numeric" autoComplete="off" value={clientId} disabled={waiting} onChange={setClientId} />
+      <TextField label="Client Secret" type="password" autoComplete="off" value={clientSecret} disabled={waiting} onChange={setClientSecret} />
       <p className="type-hint">{t('strava.privacy')}</p>
       <p className="type-hint">Powered by Strava</p>
       {error && (
@@ -263,14 +252,7 @@ function ActivityPicker({ onSignedOut, onImported }: { onSignedOut(message: stri
           {t('strava.disconnect')}
         </Button>
       </div>
-      <input
-        className="input"
-        type="search"
-        aria-label={t('strava.searchAria')}
-        placeholder={t('strava.search')}
-        value={query}
-        onChange={(e) => setQuery(e.currentTarget.value)}
-      />
+      <TextField type="search" aria-label={t('strava.searchAria')} placeholder={t('strava.search')} value={query} onChange={setQuery} />
       <ul className="max-h-[min(360px,45vh)] overflow-y-auto phone-any:max-h-none" aria-describedby={`${id}-status`}>
         {shown.map((activity) => (
           <li key={activity.id}>

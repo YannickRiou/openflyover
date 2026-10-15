@@ -1,7 +1,8 @@
 /*
  * Primitives: one file per HeroUI component, wrapped with the project's own props and exported here; screens never import `@heroui/react`.
  * Styles: HeroUI's `components/<name>.css`, then the app's skin `primitives/<name>.css` (tokens only), both imported in `src/ui/theme.css`
- * (Tabs and Disclosure take no HeroUI CSS: their look is the screen's, see their skin; NumberField and TextField neither: their input is the project's `.input`).
+ * (Tabs and Disclosure take no HeroUI CSS: their look is the screen's, see their skin; NumberField and TextField neither: their input is the project's `.input`;
+ * DateField and TimeField use HeroUI's date input and calendar CSS, and keep the browser's own `<input type="date" | "time">` on a touch screen, as Select does).
  * Overlays keep the app's Escape order (`data-local-escape`, `handlesOwnEscape` in App.tsx) and open inside the `Modal` that holds them.
  */
 export { Button } from './Button'
@@ -42,3 +43,7 @@ export { NumberField } from './NumberField'
 export type { NumberFieldProps } from './NumberField'
 export { TextField } from './TextField'
 export type { TextFieldProps } from './TextField'
+export { DateField } from './DateField'
+export type { DateFieldProps } from './DateField'
+export { TimeField } from './TimeField'
+export type { TimeFieldProps } from './TimeField'

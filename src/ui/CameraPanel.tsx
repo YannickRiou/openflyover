@@ -355,7 +355,7 @@ export function CameraPanel() {
             >
               +
             </Button>
-            <output className="range-row__value range-row__value--wide">
+            <output className="range-value-wide">
               {formatSeconds(durationS)}
             </output>
           </div>

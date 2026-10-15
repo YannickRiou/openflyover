@@ -112,7 +112,7 @@
   pointer-events: auto;
 }
 
-/* focus: the accent outline of the whole app (the contexts on the ink chrome, in shell.css, come after and win) */
+/* focus: the accent outline of the whole app (the contexts on the ink chrome, in utilities.css, come after and win) */
 .button:focus-visible:not([data-focused]),
 .button[data-focus-visible='true'] {
   outline: var(--focus-ring);

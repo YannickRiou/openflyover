@@ -13,11 +13,11 @@ interface Props {
   disabled?: boolean
   /** a lighter badge on a dark panel (the film options) */
   onDark?: boolean
-  /** where it sits when it is not at the corner of a card (`static` in a panel's own flow) */
+  /** Where it sits in the head around it. */
   className?: string
 }
 
-/** The badge and the « Par défaut » button; the marker itself (`.modified`, app.css) is placed by the card or the section around it. */
+/** The badge and the « Par défaut » button; the marker takes its place in the head it is put in (`className`: grid cell, padding). */
 const BADGE = 'rounded-full border px-2 py-px text-caption font-semibold'
 const RESET =
   'cursor-pointer rounded-sm border border-edge bg-surface-control px-2 py-px text-hint font-semibold text-text-1 transition-ui hover:enabled:border-text-1 disabled:cursor-not-allowed disabled:opacity-45'
@@ -38,7 +38,7 @@ function resetWithUndo(keys: readonly (keyof Settings)[]): void {
 }
 
 /**
- * « modifié » marker of a settings group (top right of its `.settings` section), with a « Par défaut » button that
+ * « modifié » marker of a settings group (in the head of its section), with a « Par défaut » button that
  * puts `keys` back to their defaults in one undo step. Renders nothing while every key has its default value.
  */
 export function ModifiedMarker({ keys, label, disabled = false, onDark = false, className }: Props) {
@@ -46,7 +46,7 @@ export function ModifiedMarker({ keys, label, disabled = false, onDark = false, 
   const modified = useAppStore((s) => modifiedSettings(s.settings, keys).length > 0)
   if (!modified) return null
   return (
-    <div className={className ? `modified ${className}` : 'modified'}>
+    <div className={className ? `flex items-center gap-1 ${className}` : 'flex items-center gap-1'}>
       <span className={`${BADGE} ${onDark ? 'border-glacier text-glacier' : 'border-text-2 text-text-2'}`}>{tr('common.modified.badge')}</span>
       <button
         type="button"

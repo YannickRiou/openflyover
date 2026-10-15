@@ -176,5 +176,5 @@ function OverlayPreview() {
     }
   }, [])
 
-  return <canvas ref={canvasRef} className="overlay-canvas" aria-hidden="true" />
+  return <canvas ref={canvasRef} className="pointer-events-none size-full" aria-hidden="true" />
 }

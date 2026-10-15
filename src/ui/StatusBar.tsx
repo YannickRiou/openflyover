@@ -172,7 +172,7 @@ function Chip({ chip }: { chip: FetchChip }) {
           </span>
         )}
         {chip.label}
-        <span className="visually-hidden">{t('status.chipSr', { tip: chip.tip })}</span>
+        <span className="sr-only">{t('status.chipSr', { tip: chip.tip })}</span>
       </span>
     </Tip>
   )
