@@ -34,6 +34,8 @@ const SIMPLIFY_TOLERANCE_M = 200
 export const QUERY_TIMEOUT_S = 60
 /** Wait before retrying a busy server when it sends no Retry-After (milliseconds). */
 export const BUSY_RETRY_DELAY_MS = 15_000
+/** HTTP statuses of a busy server: retried, then the next endpoint (a full overpass-api.de answers 502). */
+export const BUSY_STATUSES: readonly number[] = [429, 502, 503, 504]
 /** Persistent cache lifetime (milliseconds): OSM names and summits change slowly. */
 export const CACHE_TTL_MS = 30 * 24 * 3600 * 1000
 
@@ -339,9 +341,9 @@ function retryAfterMs(response: Response): number {
 }
 
 /**
- * POST `query` to the endpoints in turn: a busy answer (429 / 504) is retried once on the same endpoint
- * after the Retry-After delay (else `BUSY_RETRY_DELAY_MS`), then the next endpoint is tried; a network error
- * moves to the next endpoint at once. Other HTTP errors are final.
+ * POST `query` to the endpoints in turn: a busy answer (429, 502, 503, 504: a full server answers 502 too) is
+ * retried once on the same endpoint after the Retry-After delay (else `BUSY_RETRY_DELAY_MS`), then the next
+ * endpoint is tried; a network error moves to the next endpoint at once. Other HTTP errors are final.
  */
 export async function runOverpassQuery<T = OsmFeature[]>(
   query: string,
@@ -364,7 +366,7 @@ export async function runOverpassQuery<T = OsmFeature[]>(
       }
       if (response.ok) return parse(await response.json())
       lastError = new OverpassError(`HTTP ${response.status}`, response.status)
-      if (response.status !== 429 && response.status !== 504) throw lastError
+      if (!BUSY_STATUSES.includes(response.status)) throw lastError
       if (attempt === 0) await deps.sleep(retryAfterMs(response), signal)
     }
   }

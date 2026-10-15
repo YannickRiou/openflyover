@@ -8,36 +8,39 @@
  * export renders any frame independently by setting both.
  *
  * The camera is driven while playing (orbit controls disabled) and whenever the progress, the film time of a view that
- * moves with time, or the camera and film settings change while paused; otherwise the user orbits freely.
+ * moves with time, or the camera and film settings change while paused; otherwise the user orbits freely, and on a
+ * camera keyframe the view moved with the mouse is written into the key.
  */
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Vector3, type Sprite, type SpriteMaterial } from 'three'
 import { markerAt, markerFadeM } from '../film/markerKeys'
 import { useMediaStore } from '../film/media'
-import { registerKeyCapture } from '../flyover/cameraKeys'
+import { keyAt, updateCameraKey } from '../film/timeline'
+import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
 import { filmViewMovesWithTime, situationFramingOf, situationTarget } from '../flyover/filmCamera'
 import { filmFollowOf } from '../flyover/follow'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { registerFramingCapture, useRegionStore } from '../osm/region'
+import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { filmViewAt, keyFramingOfView } from './filmView'
 import { useTerrainContext } from './terrainContext'
 import { frameDelta } from './renderOnDemand'
 import { trackUnderMarker } from '../flyover/sequence'
 import {
-  headsLeft,
   leadMarkerColors,
   markerLook,
   occludeMarker,
   placeMarker,
   reliefClearance,
   releaseMarkerTexture,
+  screenHeading,
   useMarkerImages,
   useMarkerLabelFont,
 } from './markerSprite'
 import type { MarkerSettings } from './markerSettings'
-import { useFilmClock, useFilmTrack } from './usePacing'
+import { editFilm, useFilmClock, useFilmTrack } from './usePacing'
 import type { HeightSampler } from './trackLineSet'
 
 // ---------------------------------------------------------------------------
@@ -48,6 +51,9 @@ import type { HeightSampler } from './trackLineSet'
 interface DefaultControls {
   target: Vector3
   enabled: boolean
+  /** `start` / `end` of a drag, wheel or pinch, `change` at each move of the camera */
+  addEventListener?(type: 'start' | 'end' | 'change', listener: () => void): void
+  removeEventListener?(type: 'start' | 'end' | 'change', listener: () => void): void
 }
 
 export function FlyoverRig() {
@@ -112,6 +118,37 @@ export function FlyoverRig() {
       return { atM: progress * path.lengthM, framing }
     })
   }, [path, frame, engine, camera, controls, clock, follow])
+
+  // The camera keyframe the playhead is on (reached with the arrows) follows the view while it is moved with the mouse:
+  // each move of the camera writes its pose into the key, live, so the inspector shows it; one undo step per gesture.
+  const keyGestureRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    if (!path || path.count === 0 || !frame || !controls?.addEventListener) return
+    const follow = () => {
+      if (!keyGestureRef.current) return
+      const { playback } = useAppStore.getState()
+      const current = clockRef.current
+      const key = keyAt(current.cameraKeys, Math.min(playback.timeS ?? current.timeAtProgress(playback.progress), current.totalTime()))
+      const captured = key && captureKey()
+      if (key && captured) editFilm((f) => ({ film: updateCameraKey(f, key.id, captured.framing) }), { step: false })
+    }
+    const start = () => {
+      keyGestureRef.current ??= getSettingsHistory().beginGesture()
+    }
+    const end = () => {
+      follow()
+      keyGestureRef.current?.()
+      keyGestureRef.current = null
+    }
+    controls.addEventListener?.('start', start)
+    controls.addEventListener?.('change', follow)
+    controls.addEventListener?.('end', end)
+    return () => {
+      controls.removeEventListener?.('start', start)
+      controls.removeEventListener?.('change', follow)
+      controls.removeEventListener?.('end', end)
+    }
+  }, [path, frame, controls])
 
   useFrame(({ camera, size, gl, controls: orbit }, delta) => {
     const store = useAppStore.getState()
@@ -180,9 +217,9 @@ export function FlyoverRig() {
     const clearance = reliefClearance(engine, frame, settings.exaggeration)
     const exposureGain = 1 / gl.toneMappingExposure
     const draw = (sprite: Sprite, look: MarkerSettings, weight: number) => {
-      const mirrored = look.kind === 'figurine' && headsLeft(path, progress * path.lengthM, view.marker, frame, camera)
+      const heading = look.kind === 'figurine' ? screenHeading(path, progress * path.lengthM, view.marker, frame, camera, settings.exaggeration) : null
       const colors = leadMarkerColors(look, under?.color ?? '#FFFFFF')
-      placeMarker(sprite, view.marker, camera, markerLook(look, under, true, markerImages.get(look.image) ?? null), colors, mirrored, exposureGain, timeS)
+      placeMarker(sprite, view.marker, camera, markerLook(look, under, true, markerImages.get(look.image) ?? null), colors, heading?.left ?? false, exposureGain, timeS, heading?.lean)
       occludeMarker(sprite, camera, clearance)
       ;(sprite.material as SpriteMaterial).opacity *= weight
     }

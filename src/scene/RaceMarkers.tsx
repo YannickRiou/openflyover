@@ -13,7 +13,7 @@ import { useFrame } from '@react-three/fiber'
 import type { Group, Sprite } from 'three'
 import { raceAt } from '../flyover/race'
 import { useAppStore } from '../state/store'
-import { headsLeft, markerLook, occludeMarker, placeMarker, racerMarkerColors, reliefClearance, releaseMarkerTexture } from './markerSprite'
+import { markerLook, occludeMarker, placeMarker, racerMarkerColors, reliefClearance, releaseMarkerTexture, screenHeading } from './markerSprite'
 import { useTerrainContext } from './terrainContext'
 import { LINE_LIFT_M } from './trackLineSet'
 import { useFilmClock } from './usePacing'
@@ -50,9 +50,9 @@ export function RaceMarkers() {
       const ground = sampled !== undefined && !Number.isNaN(sampled) ? sampled : (racer.ele ?? 0)
       const position = frame.toLocal(racer.lon, racer.lat, ground * settings.exaggeration + LINE_LIFT_M, marker.position)
       const { path } = race.tracks[racer.index]
-      const mirrored = settings.marker.kind === 'figurine' && headsLeft(path, racer.distanceM, position, frame, camera)
+      const heading = settings.marker.kind === 'figurine' ? screenHeading(path, racer.distanceM, position, frame, camera, settings.exaggeration) : null
       const look = markerLook(settings.marker, track, false)
-      placeMarker(marker, position, camera, look, racerMarkerColors(track.color), mirrored, gain, timeS)
+      placeMarker(marker, position, camera, look, racerMarkerColors(track.color), heading?.left ?? false, gain, timeS, heading?.lean)
       occludeMarker(marker, camera, clearanceAt)
       marker.visible = true
     }

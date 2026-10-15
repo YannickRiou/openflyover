@@ -59,7 +59,7 @@ export function PanelSection({
         <h2 className="panel-title flex-1">{title}</h2>
         {/* the marker's button must not fold the section; its box is in the flow here, not at the corner of a card */}
         {keys && (
-          <span onClick={(e) => e.preventDefault()}>
+          <span className="shrink-0" onClick={(e) => e.preventDefault()}>
             <ModifiedMarker keys={keys} label={title} />
           </span>
         )}

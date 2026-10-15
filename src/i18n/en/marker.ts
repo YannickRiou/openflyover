@@ -20,7 +20,6 @@ const messages: Messages['marker'] = {
   'figure.voiture': 'Car',
   'figure.avion': 'Light aircraft',
   'ball.plat': 'Disc',
-  'ball.anneau': 'Ring',
   'ball.halo': 'Halo',
   'ball.pulsation': 'Pulse',
   'shape.rond': 'Round',

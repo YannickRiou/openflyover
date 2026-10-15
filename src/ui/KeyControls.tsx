@@ -10,7 +10,7 @@ import { PARAM_LANE_LABELS, keysOfParam } from '../film/paramKeys'
 import { t, useT } from '../i18n'
 import type { FilmParam } from '../film/paramKeys'
 import { keyState } from '../film/timeline'
-import { addMarkerKeyHere, addParamKeyHere, seekKeyframe, toggleKeyframe, useFilmClock, useFilmTrack } from '../scene/usePacing'
+import { seekKeyframe, toggleKeyframe, toggleMarkerKeyHere, toggleParamKeyHere, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { AppState } from '../state/store'
 import { Icon } from './icons'
@@ -72,7 +72,7 @@ interface Texts {
   next: { name: string; tip: string }
 }
 
-/** Accessible names and tips of a group; `on`: the playhead is on a key, which the middle button then opens. */
+/** Accessible names and tips of a group; `on`: the playhead is on a key, which the middle button then removes. */
 function textsOf(target: KeyTarget, on: boolean): Texts {
   if (target.kind === 'camera') {
     return {
@@ -90,8 +90,8 @@ function textsOf(target: KeyTarget, on: boolean): Texts {
       group: t('keys.marker.group'),
       prev: { name: t('keys.marker.prev'), tip: t('keys.marker.prevTip') },
       add: {
-        name: on ? t('keys.marker.select') : t('keys.marker.add'),
-        tip: on ? t('keys.marker.selectTip') : t('keys.marker.addTip'),
+        name: on ? t('keys.marker.remove') : t('keys.marker.add'),
+        tip: on ? t('keys.marker.removeTip') : t('keys.marker.addTip'),
       },
       next: { name: t('keys.marker.next'), tip: t('keys.marker.nextTip') },
     }
@@ -102,8 +102,8 @@ function textsOf(target: KeyTarget, on: boolean): Texts {
     group: t('keys.param.group', { label }),
     prev: { name: t('keys.param.prev', { label }), tip: t('keys.param.prevTip', { label: lower }) },
     add: {
-      name: on ? t('keys.param.select', { label }) : t('keys.param.add', { label }),
-      tip: on ? t('keys.param.selectTip') : t('keys.param.addTip', { label: lower }),
+      name: on ? t('keys.param.remove', { label }) : t('keys.param.add', { label }),
+      tip: on ? t('keys.param.removeTip') : t('keys.param.addTip', { label: lower }),
     },
     next: { name: t('keys.param.next', { label }), tip: t('keys.param.nextTip', { label: lower }) },
   }
@@ -156,8 +156,8 @@ function KeyButtons({
   const texts = textsOf(target, state.on)
   const add = () => {
     if (target.kind === 'camera') toggleKeyframe(clock)
-    else if (target.kind === 'marker') addMarkerKeyHere()
-    else addParamKeyHere(target.param)
+    else if (target.kind === 'marker') toggleMarkerKeyHere(clock)
+    else toggleParamKeyHere(clock, target.param)
   }
   const button = (role: 'prev' | 'add' | 'next', text: { name: string; tip: string }, onClick: () => void, off: boolean, on = false) => (
     <Tip text={text.tip} side={tipSide === 'top' ? 'top' : undefined}>

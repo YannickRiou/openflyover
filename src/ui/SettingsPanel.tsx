@@ -6,7 +6,7 @@ import { hasParamKeys } from '../film/paramKeys'
 import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
 import { getSettingsHistory } from '../project/history'
-import { useFilmSequence, useFilmTrack } from '../scene/usePacing'
+import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
@@ -88,10 +88,12 @@ function dayGradient(day: SolarDay): string {
 function SunTimeControl() {
   const t = useT()
   const id = useId()
-  const sunHour = useAppStore((s) => s.settings.sunHour)
+  const sunSetting = useAppStore((s) => s.settings.sunHour)
   const sunFromTrack = useAppStore((s) => s.settings.sunFromTrack)
   const sunDate = useAppStore((s) => s.settings.sunDate)
   const setSetting = useAppStore((s) => s.setSetting)
+  // with keys on the sun hour the slider shows and edits the key at the marker, not the setting they ignore
+  const [sunHour, setSunHour] = useKeyedValue('sunHour', sunSetting, (hour) => setSetting('sunHour', hour))
   const sunKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['sunHour']))
   const stages = useFilmSequence()?.stages.length ?? 0
   const filmTrack = useFilmTrack()
@@ -109,7 +111,7 @@ function SunTimeControl() {
     [lat, lon, sunDate, startTime, today],
   )
   const shown = day ?? PLAIN_DAY
-  const setHour = (hour: number) => getSettingsHistory().transaction(() => setSetting('sunHour', hour))
+  const setHour = (hour: number) => getSettingsHistory().transaction(() => setSunHour(hour))
 
   let dayHint = t('light.sun.dayUnknown')
   let solarTip = t('light.sun.solarTip')
@@ -173,7 +175,7 @@ function SunTimeControl() {
             max={SUN_HOUR_RANGE.max}
             step={SUN_HOUR_RANGE.step}
             value={sunHour}
-            onChange={(v) => setSetting('sunHour', v)}
+            onChange={setSunHour}
             format={formatHour}
             below={
               <div className={DAY_BAR} style={{ background: dayGradient(shown) }} aria-hidden="true">
@@ -622,9 +624,11 @@ export function LightSettings() {
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const shadows = useAppStore((s) => s.settings.shadows)
   const cloudShadows = useAppStore((s) => s.settings.cloudShadows)
-  const exposureEv = useAppStore((s) => s.settings.exposureEv)
+  const exposureSetting = useAppStore((s) => s.settings.exposureEv)
   const exposureKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['exposure']))
   const setSetting = useAppStore((s) => s.setSetting)
+  // with keys on the exposure the slider shows and edits the key at the marker, not the setting they ignore
+  const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (ev) => setSetting('exposureEv', ev))
   const id = useId()
 
   return (
@@ -650,7 +654,7 @@ export function LightSettings() {
               step={EXPOSURE_EV_STEP}
               value={exposureEv}
               format={formatEv}
-              onChange={(ev) => setSetting('exposureEv', ev)}
+              onChange={setExposureEv}
             />
             {exposureKeyed && (
               <p className="type-hint">{t('light.atmosphere.exposureKeyed')}</p>

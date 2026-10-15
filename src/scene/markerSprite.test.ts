@@ -9,6 +9,7 @@ import { markerLayout, PX_PER_BALL } from './markerBadge'
 import {
   BADGE_SCALE,
   headsLeft,
+  screenHeading,
   leadMarkerColors,
   markerBadge,
   markerLook,
@@ -46,9 +47,7 @@ describe('markerBadge', () => {
     expect(own).toEqual({ ball: '#E4572E', ballRing: null, badgeFill: '#FFD23F', badgeRing: '#E4572E' })
   })
 
-  it('rings, haloes or pulses the ball, the pulse following the film time', () => {
-    const ringed = markerBadge(look('boule', true, { ballStyle: 'anneau' }), LEAD, false)
-    expect(ringed.drawing).toMatchObject({ badge: { ring: '#1C2A33' }, diameter: RACE_HALO_SCALE })
+  it('haloes or pulses the ball, the pulse following the film time', () => {
     expect(markerBadge(look('boule', true, { ballStyle: 'halo' }), LEAD, false).drawing.diameter).toBeGreaterThan(2)
     const pulse = look('boule', true, { ballStyle: 'pulsation' })
     const early = markerBadge(pulse, LEAD, false, 0.11)
@@ -120,6 +119,26 @@ describe('headsLeft', () => {
     const fromNorth = cameraLooking(south.clone().multiplyScalar(-0.5).addScaledVector(up, 300))
     expect(headsLeft(path, path.lengthM / 2, at, frame, fromSouth)).toBe(false)
     expect(headsLeft(path, path.lengthM / 2, at, frame, fromNorth)).toBe(true)
+  })
+
+  it('leans with the slope of the track on screen, and not at all for a track that runs along the line of sight', () => {
+    const climbing = {
+      segments: [{ points: [{ lon: 6.49, lat: 45.5, ele: 0 }, { lon: 6.51, lat: 45.5, ele: 600 }] }],
+    } as unknown as Track
+    const up = frame.toLocal(6.5, 45.5, 1).sub(at)
+    const south = frame.toLocal(6.5, 45.49, 0).sub(at)
+    const camera = cameraLooking(south.clone().multiplyScalar(0.5).addScaledVector(up, 100))
+    const rising = screenHeading(buildTrackPath(climbing), buildTrackPath(climbing).lengthM / 2, at, frame, camera)
+    expect(rising.left).toBe(false)
+    // a flat track on screen: no lean; the same track climbing seen from the side leans counter-clockwise, within the cap
+    expect(screenHeading(path, path.lengthM / 2, at, frame, camera).lean).toBeCloseTo(0, 1)
+    const flat = screenHeading(path, path.lengthM / 2, at, frame, camera).lean
+    expect(rising.lean).toBeGreaterThan(flat)
+    expect(rising.lean).toBeLessThanOrEqual((30 * Math.PI) / 180 + 1e-9)
+    // seen from the west the eastward track comes straight at the camera: its screen run is nil
+    const west = frame.toLocal(6.49, 45.5, 0).sub(at)
+    const along = cameraLooking(west.clone().multiplyScalar(0.5).addScaledVector(up, 100))
+    expect(Math.abs(screenHeading(path, path.lengthM / 2, at, frame, along).lean)).toBeLessThan(0.15)
   })
 })
 

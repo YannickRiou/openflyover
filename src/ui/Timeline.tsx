@@ -126,7 +126,7 @@ const BLOCK_KINDS = {
   media: 'cursor-grab gap-1 bg-card pl-0.5 text-ink',
   /** music: moss block, the waveform in glacier behind the icon and the file name */
   music: 'cursor-grab gap-1 bg-moss/60 text-white',
-  /** opening title and closing card: the moss of a text, framed (a click on its body selects it, only its inner edge stretches) */
+  /** opening title and closing card: the moss of a text, framed (its inner edge stretches it, its body drags its shot's edge) */
   card: 'cursor-pointer gap-1 border border-glacier bg-moss/60 text-white',
   /** « Étapes »: a band per stage; one lifted to be reordered follows the pointer over the others */
   stage: 'cursor-grab bg-white/10 text-white data-[lifted]:cursor-grabbing data-[lifted]:bg-white/30',
@@ -1024,6 +1024,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       onPointerDown={(e) => {
         if (centred && selected !== item) return startTap(e, item)
         if (grips.includes('move')) return startEdit(e, item, 'move')
+        // the opening title and the closing card drag the edge of their shot, the card following it
+        if (item === TITLE_CARD_ID && shownFilm.opening.style !== 'aucune') return startEdit(e, 'opening', 'end')
+        if (item === END_CARD_ID && shownFilm.closing.style !== 'aucune') return startEdit(e, 'closing', 'start')
         // a shot: select it and scrub
         e.stopPropagation()
         setSelected(item)
@@ -1545,7 +1548,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               <div data-testid="timeline-lane" className={laneClass()} role="group" aria-label={t('timeline.lane.texts')}>
-                {/* the opening title and the closing card (overlay settings): only their inner edge moves */}
+                {/* the opening title and the closing card (overlay settings): their inner edge moves; their body drags the edge of the opening / closing shot */}
                 {shownCards(shownOverlay).map((card) => {
                   const { startS, endS } = cardWindow(shownOverlay, card, shownClock)
                   return block(

@@ -47,6 +47,10 @@ describe('track style and marker settings', () => {
     expect(invalid).toEqual([])
     expect(settings.marker).toEqual({ ...DEFAULT_MARKER, kind: 'figurine', figure: 'randonneur', size: 2, animated: true })
     expect(settings.marker).toMatchObject({ color: '#FFFFFF', figureColor: '#1C2A33', ballStyle: 'plat', shape: 'rond', label: 'aucune', stick: false })
+    // the 'anneau' style was dropped: such a ball opens plain
+    const ringed = sanitizeSettings({ marker: { ...DEFAULT_MARKER, ballStyle: 'anneau' } })
+    expect(ringed.invalid).toEqual([])
+    expect(ringed.settings.marker.ballStyle).toBe('plat')
   })
 
   it('projects: older ones get the defaults, a partial marker is completed, an invalid one is reported', () => {

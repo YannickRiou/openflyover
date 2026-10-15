@@ -27,7 +27,7 @@ const CONTOUR_SCALE = 0.92
 export const AVATAR_SIZE_PX = 128
 
 /** Size of a ball's drawing relative to its disc: room for the halo or the pulse around it. */
-export const BALL_STYLE_SCALE: Record<MarkerBallStyle, number> = { plat: 1, anneau: 1, halo: 2.2, pulsation: 2.4 }
+export const BALL_STYLE_SCALE: Record<MarkerBallStyle, number> = { plat: 1, halo: 2.2, pulsation: 2.4 }
 /** Height of a map pin relative to the diameter of its head (the tip below the head). */
 export const PIN_HEIGHT = 1.45
 /** Corner radius of a rounded-square badge, fraction of its half side. */

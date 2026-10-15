@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { LANGUAGES, useLanguage, useT } from '../i18n'
+import { Flag } from './Flag'
 import { setPreferences } from './preferences'
 import { Button, Tip } from './primitives'
 
@@ -57,9 +58,7 @@ export function LanguageMenu() {
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          <span className="text-title leading-none" aria-hidden="true">
-            {current.flag}
-          </span>
+          <Flag code={current.code} />
           {current.code.toUpperCase()}
         </Button>
       </Tip>
@@ -79,7 +78,7 @@ export function LanguageMenu() {
                 button.current?.focus()
               }}
             >
-              <span aria-hidden="true">{l.flag}</span>
+              <Flag code={l.code} />
               {l.name}
             </button>
           ))}

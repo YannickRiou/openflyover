@@ -2,20 +2,21 @@
  * Progress markers as camera-facing sprites: the lead marker of FlyoverRig and the ghost racers of RaceMarkers.
  * Each marker is one Sprite showing a texture chosen by `settings.marker` (ball, pictogram or picture, with its
  * optional stick and label), with the constant on-screen size of the original ball. A pictogram is mirrored to
- * move the way its track heads on screen, from the track itself around the marker, and a pulsing ball takes the
+ * move the way its track heads on screen and leans with its slope there (`screenHeading`, from the track itself
+ * around the marker), and a pulsing ball takes the
  * phase of the film time, so every frame of the film gets the same marker whatever frames came before (the export
  * renders any frame on its own).
  */
 import { useEffect, useRef, useState } from 'react'
 import { wakeScene } from './renderOnDemand'
 import { CanvasTexture, SRGBColorSpace, Vector3 } from 'three'
-import type { Camera, Sprite, SpriteMaterial } from 'three'
+import type { Camera, PerspectiveCamera, Sprite, SpriteMaterial } from 'three'
 import type { LocalFrame, TerrainEngine, Track } from '../core/types'
 import { samplePath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import { lineOfSightClearance, occlusionFade } from './labelModel'
 import type { ClearanceAt } from './labelModel'
-import { BADGE_INK, BALL_STYLE_SCALE, drawMarker, loadMarkerImage, markerLabelFont, markerLayout, PIN_HEIGHT, PX_PER_BALL, readableInk } from './markerBadge'
+import { BADGE_INK, BALL_STYLE_SCALE, drawMarker, loadMarkerImage, markerLabelFont, markerLayout, PIN_HEIGHT, PX_PER_BALL } from './markerBadge'
 import type { Badge, MarkerDrawing, MarkerLayout } from './markerBadge'
 import { figureMotion, figureOfActivity, MARKER_LABEL_MAX_CHARS, pulsePhase } from './markerSettings'
 import type { MarkerFigure, MarkerSettings } from './markerSettings'
@@ -100,10 +101,10 @@ export interface MarkerBadge {
   pulsing: boolean
 }
 
-/** Badge of a ball: plain, ringed (contrasting ring), with a halo or a pulse; a racer's disc keeps its ink ring. */
+/** Badge of a ball: plain, with a halo or a pulse; a racer's disc keeps its ink ring. */
 function ballBadge(marker: MarkerSettings, colors: MarkerColors, timeS: number): { badge: Badge; diameter: number } {
   const style = marker.ballStyle
-  const ring = style === 'anneau' ? readableInk(colors.ball) : colors.ballRing
+  const ring = colors.ballRing
   const pulse = style === 'pulsation' ? pulsePhase(timeS) : undefined
   const badge: Badge = ring
     ? { kind: 'disc', fill: colors.ball, ring, ringWidth: 1 - 1 / RACE_HALO_SCALE, style, pulse }
@@ -227,19 +228,47 @@ export function releaseMarkerTexture(sprite: Sprite | null): void {
 
 const behindLocal = new Vector3()
 const aheadLocal = new Vector3()
+/** Steepest lean of a figure on screen (radians): a track climbing or dropping steeply on screen tilts it this far. */
+const MAX_LEAN_RAD = (30 * Math.PI) / 180
+
 /**
- * True when the track runs right to left on screen around `distanceM`: the points HEADING_WINDOW_M behind and
- * ahead of the marker, at the marker's height, projected with the camera of this frame.
+ * Which way the track runs on screen around `distanceM`, from the points HEADING_WINDOW_M behind and ahead of the
+ * marker, at the marker's height, projected with the camera of this frame: `left` when it runs right to left, and
+ * `lean`, the angle of its run above the horizontal (radians, counter-clockwise for a rightward run), which tilts a
+ * figure to stand on the track as it climbs, drops or turns. Zero when the track runs along the line of sight
+ * (straight to or from the camera), where its screen direction means nothing.
  */
-export function headsLeft(path: TrackPath, distanceM: number, at: Vector3, frame: LocalFrame, camera: Camera): boolean {
+export function screenHeading(
+  path: TrackPath,
+  distanceM: number,
+  at: Vector3,
+  frame: LocalFrame,
+  camera: Camera,
+  exaggeration = 1,
+): { left: boolean; lean: number } {
   // the rig may have just moved the camera: project with this frame's view, not the last render's
   camera.updateMatrixWorld()
   const { height } = frame.toLonLat(at)
+  const here = samplePath(path, distanceM)
   const behind = samplePath(path, Math.max(0, distanceM - HEADING_WINDOW_M))
   const ahead = samplePath(path, Math.min(path.lengthM, distanceM + HEADING_WINDOW_M))
-  frame.toLocal(behind.lon, behind.lat, height, behindLocal).project(camera)
-  frame.toLocal(ahead.lon, ahead.lat, height, aheadLocal).project(camera)
-  return aheadLocal.x < behindLocal.x
+  // the neighbours at the marker's height, raised or lowered by the track's own rise (terrain exaggeration included)
+  const heightOf = (p: { ele?: number }) => height + ((p.ele ?? here.ele ?? 0) - (here.ele ?? 0)) * exaggeration
+  frame.toLocal(behind.lon, behind.lat, heightOf(behind), behindLocal).project(camera)
+  frame.toLocal(ahead.lon, ahead.lat, heightOf(ahead), aheadLocal).project(camera)
+  const aspect = 'aspect' in camera ? (camera as PerspectiveCamera).aspect : 1
+  const dx = (aheadLocal.x - behindLocal.x) * aspect
+  const dy = aheadLocal.y - behindLocal.y
+  const length = Math.hypot(dx, dy)
+  const run = Math.abs(dx)
+  // the more the track runs across the screen, the more its slope is read
+  const lean = length > 1e-6 ? Math.atan2(dy, run) * (run / length) : 0
+  return { left: dx < 0, lean: Math.max(-MAX_LEAN_RAD, Math.min(MAX_LEAN_RAD, lean)) }
+}
+
+/** True when the track runs right to left on screen around `distanceM` (`screenHeading`). */
+export function headsLeft(path: TrackPath, distanceM: number, at: Vector3, frame: LocalFrame, camera: Camera): boolean {
+  return screenHeading(path, distanceM, at, frame, camera).left
 }
 
 const NO_MOTION = { lift: 0, tilt: 0 }
@@ -258,6 +287,7 @@ export function placeMarker(
   mirrored: boolean,
   gain: number,
   timeS = 0,
+  lean = 0,
 ): void {
   const badge = markerBadge(look, colors, mirrored, timeS)
   if (!badge.pulsing) releaseMarkerTexture(sprite)
@@ -268,7 +298,9 @@ export function placeMarker(
   const motion = look.animated ? figureMotion(timeS) : NO_MOTION
   const lift = look.marker.stick ? 0 : motion.lift * layout.side
   sprite.center.set(0.5, 1 - (layout.anchorY + lift) / layout.height)
-  material.rotation = mirrored ? motion.tilt : -motion.tilt
+  // a figure alone (no stick, no label drawn with it) also leans with the slope of the track on screen (`lean`)
+  const slope = look.marker.kind === 'figurine' && !look.marker.stick && look.label === '' ? lean : 0
+  material.rotation = mirrored ? motion.tilt - slope : slope - motion.tilt
   if (material.map !== texture) material.map = texture
   material.color.setScalar(gain)
   const radius = Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR) * look.marker.size

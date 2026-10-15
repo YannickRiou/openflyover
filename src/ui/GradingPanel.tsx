@@ -4,6 +4,7 @@ import { t, useT } from '../i18n'
 import { getSettingsHistory } from '../project/history'
 import { GRADING_PRESETS, GRADING_RANGES, gradingOfPreset, withGradingValue } from '../scene/grading'
 import type { GradingValues } from '../scene/grading'
+import { useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, SettingRow } from './PanelSection'
@@ -60,33 +61,32 @@ export function GradingPanel() {
         <p className="type-hint">{t('light.grading.keyed')}</p>
       )}
 
-      {SLIDERS.map(({ key, label, tip }) => {
-        const range = GRADING_RANGES[key]
-        const text = key === 'vignette' ? formatPercent(grading[key]) : formatSigned(grading[key])
-        return (
-          <SettingRow key={key} label={label} value={text} paths={[`grading.${key}`]}>
-            <div className="field">
-              <div className="flex items-center gap-1">
-                <span className="type-label">
-                  {label}
-                </span>
-                {tip && <InfoTip text={tip} />}
-              </div>
-              <Slider
-                aria-label={label}
-                min={range.min}
-                max={range.max}
-                step={range.step}
-                value={grading[key]}
-                onChange={(v) => setSetting('grading', withGradingValue(grading, key, v))}
-                format={() => text}
-                wide={false}
-              />
-            </div>
-            <PanelKeys target={{ kind: 'param', param: key }} />
-          </SettingRow>
-        )
-      })}
+      {SLIDERS.map((slider) => (
+        <GradingSlider key={slider.key} name={slider.key} label={slider.label} tip={slider.tip} />
+      ))}
     </PanelSection>
+  )
+}
+
+/** One grading slider: with keys on its value it shows and edits the key at the marker (`useKeyedValue`), else the setting. */
+function GradingSlider({ name, label, tip }: { name: keyof GradingValues; label: string; tip?: string }) {
+  const grading = useAppStore((s) => s.settings.grading)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const [value, setValue] = useKeyedValue(name, grading[name], (v) => setSetting('grading', withGradingValue(grading, name, v)))
+  const range = GRADING_RANGES[name]
+  const text = name === 'vignette' ? formatPercent(value) : formatSigned(value)
+  return (
+    <SettingRow label={label} value={text} paths={[`grading.${name}`]}>
+      <div className="field">
+        <div className="flex items-center gap-1">
+          <span className="type-label">
+            {label}
+          </span>
+          {tip && <InfoTip text={tip} />}
+        </div>
+        <Slider aria-label={label} min={range.min} max={range.max} step={range.step} value={value} onChange={setValue} format={() => text} wide={false} />
+      </div>
+      <PanelKeys target={{ kind: 'param', param: name }} />
+    </SettingRow>
   )
 }

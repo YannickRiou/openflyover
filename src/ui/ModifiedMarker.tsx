@@ -18,9 +18,9 @@ interface Props {
 }
 
 /** The badge and the « Par défaut » button; the marker takes its place in the head it is put in (`className`: grid cell, padding). */
-const BADGE = 'rounded-full border px-2 py-px text-caption font-semibold'
+const BADGE = 'whitespace-nowrap rounded-full border px-2 py-px text-caption font-semibold'
 const RESET =
-  'cursor-pointer rounded-sm border border-edge bg-surface-control px-2 py-px text-hint font-semibold text-text-1 transition-ui hover:enabled:border-text-1 disabled:cursor-not-allowed disabled:opacity-45'
+  'cursor-pointer whitespace-nowrap rounded-sm border border-edge bg-surface-control px-2 py-px text-hint font-semibold text-text-1 transition-ui hover:enabled:border-text-1 disabled:cursor-not-allowed disabled:opacity-45'
 
 /**
  * Reset `keys` and say so, with « Annuler »; the message goes away at the next change of the settings (or an undo),
