@@ -79,7 +79,7 @@ export function applyEmptyProject(): void {
   useMediaStore.getState().replace({})
   store.clearTracks()
   // the selected block belonged to the film being closed
-  useAppStore.setState({ settings: { ...DEFAULT_SETTINGS }, filmSelection: null })
+  useAppStore.setState({ settings: { ...DEFAULT_SETTINGS }, filmSelection: null, filmKeys: [] })
   store.setSpeed(DEFAULT_PLAYBACK.speed)
   forgetImageryChoice()
 }

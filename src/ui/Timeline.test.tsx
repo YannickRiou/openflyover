@@ -7,12 +7,12 @@ import { buildTrack } from '../import/stats'
 import { END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { filmClockFor } from '../film/clock'
 import { DEFAULT_FILM } from '../film/model'
-import { removeFilmItem, updateMarkerKey } from '../film/timeline'
+import { addCameraKey, addMarkerKey, addParamKey, removeFilmItem, updateMarkerKey } from '../film/timeline'
 import { filmSequenceOf } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
 import { addMarkerKeyHere, addParamKeyHere, getFilmSource } from '../scene/usePacing'
-import { useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { FilmInspector } from './FilmInspector'
 import { OverlayPanel } from './OverlayPanel'
 import { Timeline } from './Timeline'
@@ -520,5 +520,127 @@ describe('Timeline — stages « À la suite »', () => {
       expect(order()).toEqual(['Jour 1', 'Jour 2', 'Jour 3'])
       act(() => root.unmount())
     })
+  })
+})
+
+describe('Timeline — several keys at once', () => {
+  const setup = async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    HTMLElement.prototype.setPointerCapture ??= () => {}
+    useExportStore.setState({ phase: 'idle' })
+    useAppStore.getState().setProgress(0)
+    const segments = [{ points: [0, 1, 2, 3].map((i) => ({ lon: 6.8 + i * 0.01, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })], filmSelection: null, filmKeys: [] })
+    const camera = addCameraKey(DEFAULT_FILM, 200, { distance: 1, pitchDeg: 30, headingOffsetDeg: 0 })
+    const param = addParamKey(camera.film, 600, 'exposure', 0.5)
+    const marker = addMarkerKey(param.film, 1000, { kind: DEFAULT_SETTINGS.marker.kind, figure: DEFAULT_SETTINGS.marker.figure })
+    await act(async () => useAppStore.getState().setSetting('film', marker.film))
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<Timeline />))
+    const keys = () => Array.from(host.querySelectorAll<HTMLElement>('[data-testid="timeline-key"]'))
+    const content = keys()[0].closest('[data-testid="timeline-lane"]')!.parentElement!
+    // jsdom lays nothing out: the keys sit side by side, one lane under the other
+    const rect = (left: number, top: number, width: number, height: number) =>
+      ({ left, top, right: left + width, bottom: top + height, width, height, x: left, y: top, toJSON() {} }) as DOMRect
+    content.getBoundingClientRect = () => rect(0, 0, 1000, 300)
+    keys().forEach((k, i) => (k.getBoundingClientRect = () => rect(10 + i * 100, 20 + i * 30, 10, 10)))
+    const pointer = (type: string, clientX: number, clientY = 0, init: MouseEventInit = {}) =>
+      Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX, clientY, ...init }), { pointerId: 1, isPrimary: true, pointerType: 'mouse' })
+    const fire = (el: Element, event: Event) => act(async () => void el.dispatchEvent(event))
+    const film = () => useAppStore.getState().settings.film
+    return { host, root, keys, content, pointer, fire, film, ids: [camera.id, param.id, marker.id], original: marker.film }
+  }
+
+  it('a Ctrl + drag rectangle on the background selects the keys it touches, Delete removes them in one undo step', async () => {
+    const { root, keys, content, pointer, fire, film, ids, original, host } = await setup()
+    const ctrl = { ctrlKey: true }
+    await fire(content, pointer('pointerdown', 0, 0, ctrl))
+    // the playhead did not move: this press draws a rectangle
+    expect(useAppStore.getState().playback.progress).toBe(0)
+    await fire(content, pointer('pointermove', 150, 100, ctrl))
+    expect(host.querySelector('[data-testid="timeline-marquee"]')).not.toBeNull()
+    expect(keys().map((k) => k.getAttribute('aria-pressed'))).toEqual(['true', 'true', 'false'])
+    await fire(content, pointer('pointerup', 150, 100, ctrl))
+    expect(host.querySelector('[data-testid="timeline-marquee"]')).toBeNull()
+    expect(useAppStore.getState().filmKeys).toEqual([ids[0], ids[1]])
+    expect(useAppStore.getState().filmSelection).toBeNull()
+    expect(keys().map((k) => k.getAttribute('aria-pressed'))).toEqual(['true', 'true', 'false'])
+    expect(document.activeElement).toBe(keys()[0])
+
+    await fire(keys()[0], new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }))
+    expect([film().cameraKeys.length, film().paramKeys.length, film().markerKeys.length]).toEqual([0, 0, 1])
+    expect(useAppStore.getState().filmKeys).toEqual([])
+    await act(async () => getSettingsHistory().undo())
+    expect(film().cameraKeys).toEqual(original.cameraKeys)
+    expect(film().paramKeys).toEqual(original.paramKeys)
+    act(() => root.unmount())
+  })
+
+  it('a plain press on the background still moves the playhead, a rectangle that touches nothing selects nothing', async () => {
+    const { root, content, pointer, fire, ids } = await setup()
+    await fire(content, pointer('pointerdown', 40, 5))
+    expect(useAppStore.getState().playback.progress).toBeGreaterThan(0)
+    await fire(content, pointer('pointerup', 40, 5))
+    await act(async () => useAppStore.getState().setFilmKeys([ids[0], ids[1]]))
+    await fire(content, pointer('pointerdown', 500, 200, { ctrlKey: true }))
+    await fire(content, pointer('pointermove', 600, 250, { ctrlKey: true }))
+    await fire(content, pointer('pointerup', 600, 250, { ctrlKey: true }))
+    expect(useAppStore.getState().filmKeys).toEqual([])
+    expect(useAppStore.getState().filmSelection).toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('dragging a key of the selection moves the whole selection in one undo step, a press without moving selects the key alone', async () => {
+    const { root, keys, content, pointer, fire, film, ids, original } = await setup()
+    await act(async () => useAppStore.getState().setFilmKeys([ids[0], ids[1]]))
+    await fire(keys()[0], pointer('pointerdown', 0))
+    // pressing a key of the group keeps the group
+    expect(useAppStore.getState().filmKeys).toEqual([ids[0], ids[1]])
+    await fire(keys()[0], pointer('pointermove', 20))
+    await fire(keys()[0], pointer('pointerup', 20))
+    expect(film().cameraKeys[0].atM).toBeGreaterThan(original.cameraKeys[0].atM)
+    expect(film().paramKeys[0].atM).toBeGreaterThan(original.paramKeys[0].atM)
+    expect(film().markerKeys).toEqual(original.markerKeys)
+    expect(useAppStore.getState().filmKeys).toEqual([ids[0], ids[1]])
+    await act(async () => getSettingsHistory().undo())
+    expect(film().cameraKeys).toEqual(original.cameraKeys)
+    expect(film().paramKeys).toEqual(original.paramKeys)
+
+    await fire(keys()[1], pointer('pointerdown', 0))
+    await fire(content, pointer('pointerup', 0))
+    expect(useAppStore.getState().filmKeys).toEqual([])
+    expect(useAppStore.getState().filmSelection).toBe(ids[1])
+    act(() => root.unmount())
+  })
+
+  it('Ctrl + click adds a key to the selection or removes it; so do Ctrl + Enter and the arrows move the group from the keyboard', async () => {
+    const { root, keys, content, pointer, fire, film, ids } = await setup()
+    await act(async () => useAppStore.getState().setFilmSelection(ids[0]))
+    await fire(keys()[2], pointer('pointerdown', 0, 0, { ctrlKey: true }))
+    await fire(content, pointer('pointerup', 0, 0, { ctrlKey: true }))
+    expect(useAppStore.getState().filmKeys).toEqual([ids[0], ids[2]])
+    await fire(keys()[1], new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }))
+    expect(useAppStore.getState().filmKeys).toEqual([ids[0], ids[2], ids[1]])
+    await fire(keys()[1], new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }))
+    const before = [film().cameraKeys[0].atM, film().markerKeys[0].atM]
+    await fire(keys()[0], new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }))
+    expect(film().cameraKeys[0].atM).toBeLessThan(before[0])
+    expect(film().markerKeys[0].atM).toBeLessThan(before[1])
+    // one key left in the selection: it is the block selected, the inspector's
+    await fire(keys()[0], pointer('pointerdown', 0, 0, { ctrlKey: true }))
+    await fire(content, pointer('pointerup', 0, 0, { ctrlKey: true }))
+    expect(useAppStore.getState().filmKeys).toEqual([])
+    expect(useAppStore.getState().filmSelection).toBe(ids[2])
+    // a block selected on its own replaces a group
+    await act(async () => useAppStore.getState().setFilmKeys([ids[0], ids[1]]))
+    await act(async () => useAppStore.getState().setFilmSelection('opening'))
+    expect(useAppStore.getState().filmKeys).toEqual([])
+    act(() => root.unmount())
   })
 })

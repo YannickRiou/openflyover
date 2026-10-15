@@ -43,6 +43,7 @@ import {
   centredTime,
   clipSyncOffsetS,
   dragFilm,
+  dragKeys,
   rollClosing,
   edgeScrollSpeed,
   fitPxPerS,
@@ -205,7 +206,9 @@ type Gesture =
   /** centred timeline: a press that selects `item` (or seeks, on nothing) if released without sliding */
   | { kind: 'tap'; item: TimelineItem | null; x0: number }
   /** `flightS`: the flight duration of a roll edit (start of the closing dragged) */
-  | { kind: 'edit'; item: TimelineItem; grip: Grip; x0: number; scroll0: number; start: Film; ctx: DragContext; result: Film | null; flightS?: number }
+  | { kind: 'edit'; item: TimelineItem; grip: Grip; x0: number; scroll0: number; start: Film; ctx: DragContext; result: Film | null; flightS?: number; group?: readonly string[] }
+  /** a rectangle drawn with Ctrl from the background of the lanes (`x0`, `y0` where it started, `x`, `y` where the pointer is: in the content's coordinates), the keys it touches in `ids` */
+  | { kind: 'marquee'; x0: number; y0: number; x: number; y: number; ids: readonly string[] }
   /** the edge of an opening title or closing card: it edits the overlay settings, not the film */
   | { kind: 'card'; item: CardId; grip: Grip; x0: number; scroll0: number; start: OverlaySettings; ctx: DragContext; result: OverlaySettings | null }
   /** a stage block of the « Étapes » lane: lifted and dropped between the others (`to`: its new place), the film is remapped on release */
@@ -389,6 +392,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   const selected = useAppStore((s) => s.filmSelection)
   const setSelected = useAppStore((s) => s.setFilmSelection)
+  const group = useAppStore((s) => s.filmKeys)
+  const setKeys = useAppStore((s) => s.setFilmKeys)
+  /** the rectangle being drawn and the keys it touches, shown on the timeline only */
+  const [marquee, setMarquee] = useState<{ left: number; top: number; width: number; height: number; ids: readonly string[] } | null>(null)
+  /** a key just added to or removed from the selection with Ctrl: the focus that follows its press does not select it alone */
+  const keepGroupRef = useRef(false)
   /** film being dragged (shown on the timeline only), committed on release */
   const [draft, setDraft] = useState<Film | null>(null)
   /** flight duration while the start of the closing is dragged (a roll edit: the end of the film stays) */
@@ -449,6 +458,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   useEffect(() => {
     if (selected !== null && (!track || (isCardItem(selected) ? cardGone : !hasFilmItem(film, clock.stops, selected, stageIds)))) setSelected(null)
   }, [selected, track, film, clock, cardGone, stageIds, setSelected])
+  // a key of the group went away (undo, deleted elsewhere): the others stay selected
+  useEffect(() => {
+    if (group.length > 0 && (!track || group.some((id) => !hasFilmItem(film, clock.stops, id)))) setKeys(track ? group.filter((id) => hasFilmItem(film, clock.stops, id)) : [])
+  }, [group, track, film, clock, setKeys])
 
   useEffect(() => {
     const el = scrollerRef.current
@@ -600,7 +613,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const next = followStops(base, fn(base), clockOf)
     if (next !== film) setSetting('film', next)
   }
-  const dragContext = (item: TimelineItem): DragContext => ({
+  const dragContext = (item: TimelineItem | readonly TimelineItem[]): DragContext => ({
     clock,
     clockOf: (stops: readonly FilmStop[]) => buildFilmClock({ ...input, stops }),
     clockOfSpeeds: (speeds: readonly FilmSpeed[]) => buildFilmClock({ ...input, speeds }),
@@ -613,6 +626,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     clockOfFilm: clockOf,
     audioFileS: (src) => pictures[src]?.durationS,
   })
+  const keyIds = [...clock.cameraKeys, ...clock.paramKeys, ...clock.markerKeys].map((k) => k.id)
+  /** the keys selected together, or the key selected on its own */
+  const pickedKeys = group.length > 0 ? group : selected !== null && keyIds.includes(selected) ? [selected] : []
+  /** a key added to the selection, or left out of it (Ctrl) */
+  const toggleKey = (id: string) => setKeys(pickedKeys.includes(id) ? pickedKeys.filter((k) => k !== id) : [...pickedKeys, id])
+  /** the keys of the group deleted in one undo step */
+  const removeKeys = (ids: readonly string[]) => editFilm((f) => ({ film: ids.reduce(removeFilmItem, f), id: null }))
+  const isPicked = (id: string) => selected === id || group.includes(id) || (marquee?.ids.includes(id) ?? false)
+  /** a key focused (the keyboard, a press) is selected alone, unless it is in the group or was just added to it */
+  const focusKey = (id: string) => {
+    if (!keepGroupRef.current && !useAppStore.getState().filmKeys.includes(id)) setSelected(id)
+  }
   const remove = (item: TimelineItem) => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop(item) }))
   const addStopAt = (atM: number, patch?: Parameters<typeof addStop>[2]) => editFilm((f) => addStop(f, atM, patch), { stops: true })
   /** a portion twice as fast from the marker (one undo step) */
@@ -771,6 +796,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     // a second finger is a pinch (touch listeners above)
     if (e.button !== 0 || !e.isPrimary) return
     e.currentTarget.setPointerCapture(e.pointerId)
+    if (e.ctrlKey || e.metaKey) {
+      // Ctrl: a rectangle that selects the keys it touches, instead of moving the playhead
+      const box = e.currentTarget.getBoundingClientRect()
+      const [x, y] = [e.clientX - box.left, e.clientY - box.top]
+      gestureRef.current = { kind: 'marquee', x0: x, y0: y, x, y, ids: [] }
+      return
+    }
     gestureRef.current = { kind: 'scrub' }
     seek(timeAt(e.clientX))
   }
@@ -779,7 +811,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (centred && (selected !== item || isStageItem(item))) return startTap(e, item)
     if (e.button !== 0 || !e.isPrimary) return
     e.stopPropagation()
-    setSelected(item)
+    if ((e.ctrlKey || e.metaKey) && keyIds.includes(item)) {
+      keepGroupRef.current = true
+      return toggleKey(item)
+    }
+    // pressed in the group, a key drags it whole; released without moving, it is selected alone
+    const together = group.includes(item) ? group : undefined
+    if (!together) setSelected(item)
     contentRef.current?.setPointerCapture(e.pointerId)
     const scroll0 = scrollerRef.current?.scrollLeft ?? 0
     if (isStageItem(item) && grip === 'move') {
@@ -791,7 +829,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       return
     }
     const start = isStop(item) ? withOwnStops(film) : film
-    gestureRef.current = { kind: 'edit', item, grip, x0: e.clientX, scroll0, start, ctx: dragContext(item), result: null }
+    gestureRef.current = { kind: 'edit', item, grip, x0: e.clientX, scroll0, start, ctx: dragContext(together ?? item), result: null, group: together }
   }
   /** a press on an edge grip, or past it on a narrow block (`pressedGrip`) */
   const startGrip = (e: PointerEvent<HTMLElement>, item: TimelineItem, grip: Grip, grips: readonly Grip[]) => {
@@ -805,6 +843,21 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (g.kind === 'scrub') return seek(timeAt(clientX))
     if (g.kind === 'tap') {
       if (Math.abs(clientX - g.x0) > TAP_SLOP_PX) gestureRef.current = null
+      return
+    }
+    if (g.kind === 'marquee') {
+      const box = contentRef.current?.getBoundingClientRect()
+      if (!box) return
+      g.x = clientX - box.left
+      const [left, top, width, height] = [Math.min(g.x0, g.x), Math.min(g.y0, g.y), Math.abs(g.x - g.x0), Math.abs(g.y - g.y0)]
+      if (g.ids.length === 0 && width < DRAG_THRESHOLD_PX && height < DRAG_THRESHOLD_PX) return
+      // the keys it touches, in the coordinates of the content (it scrolls under the pointer)
+      g.ids = [...(contentRef.current?.querySelectorAll<HTMLElement>('[data-testid="timeline-key"]') ?? [])].flatMap((el) => {
+        const r = el.getBoundingClientRect()
+        const inside = r.left - box.left < left + width && r.right - box.left > left && r.top - box.top < top + height && r.bottom - box.top > top
+        return inside && el.dataset.item ? [el.dataset.item] : []
+      })
+      setMarquee({ left, top, width, height, ids: g.ids })
       return
     }
     const dx = clientX - g.x0 + (scrollerRef.current?.scrollLeft ?? 0) - g.scroll0
@@ -832,7 +885,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       g.result = dragCard(g.start, g.item, g.grip, dx / pxPerS, clock, snapper(ctx))
       setCardDraft(g.result)
     } else {
-      let dragged = dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      let dragged = g.group ? dragKeys(g.start, g.group, g.item, dx / pxPerS, ctx) : dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
       if (g.item === 'closing' && g.grip === 'start') {
         const rolled = rollClosing(g.start, dragged, durationS)
         dragged = rolled.film
@@ -883,15 +936,22 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     const g = gestureRef.current
     if (!g) return
+    if (g.kind === 'marquee') g.y = e.clientY - (contentRef.current?.getBoundingClientRect().top ?? 0)
     applyPointer(e.clientX, e.altKey)
     // a press that only selects a block (not dragged yet) does not scroll
-    if (g.kind === 'scrub' || ((g.kind === 'edit' || g.kind === 'card') && g.result) || (g.kind === 'reorder' && g.moved)) followEdge(e.clientX, e.altKey)
+    if (g.kind === 'scrub' || g.kind === 'marquee' || ((g.kind === 'edit' || g.kind === 'card') && g.result) || (g.kind === 'reorder' && g.moved)) followEdge(e.clientX, e.altKey)
   }
   const endGesture = (e: PointerEvent<HTMLDivElement>) => {
     const g = gestureRef.current
     gestureRef.current = null
+    keepGroupRef.current = false
     cancelAnimationFrame(edgeRef.current?.frame ?? 0)
     edgeRef.current = null
+    if (g?.kind === 'marquee' && e.type === 'pointerup') {
+      // the keys it touched are selected, the first one takes the focus (Delete, the arrows and Ctrl+Enter work from there)
+      setKeys(g.ids)
+      if (g.ids.length > 0) [...(contentRef.current?.querySelectorAll<HTMLElement>('[data-item]') ?? [])].find((b) => b.dataset.item === g.ids[0])?.focus({ preventScroll: true })
+    }
     if (g?.kind === 'edit' && e.type === 'pointerup') {
       const flightS = g.flightS
       if (g.result && flightS !== undefined && flightS !== durationS) {
@@ -902,7 +962,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           setSetting('film', followStops(film, result, clockOf))
         })
       } else if (g.result) commit(g.result)
-      else jumpToKey(g.item)
+      else {
+        if (g.group) setSelected(g.item)
+        jumpToKey(g.item)
+      }
     }
     if (g?.kind === 'reorder' && e.type === 'pointerup') {
       if (!g.moved) jumpToKey(g.item)
@@ -924,6 +987,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     setCardDraft(null)
     setGuides([])
     setStageDrag(null)
+    setMarquee(null)
   }
   /** centred: a scroll by the finger (or the wheel) moves the film time; the one that follows the playhead does not */
   const onScroll = (e: UIEvent<HTMLDivElement>) => {
@@ -946,8 +1010,16 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       e.preventDefault()
       return
     }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'Enter' || e.key === ' ') && keyIds.includes(item)) {
+      toggleKey(item)
+      e.preventDefault()
+      return
+    }
+    // a key of the group: Delete and the arrows are for the whole group
+    const together = group.includes(item) ? group : undefined
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      remove(item)
+      if (together) removeKeys(together)
+      else remove(item)
     } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
       const step = (e.shiftKey ? FINE_NUDGE_S : NUDGE_S) * (e.key === 'ArrowLeft' ? -1 : 1)
       const grip: Grip =
@@ -959,6 +1031,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       if (isCardItem(item)) {
         const next = dragCard(overlay, item, grip, step, clock)
         if (next !== overlay) setSetting('overlay', next)
+      } else if (together) {
+        change((f) => dragKeys(f, together, item, step, { ...dragContext(together), snapS: 0 }), false)
       } else {
         change((f) => dragFilm(f, item, grip, step, { ...dragContext(item), snapS: 0 }), isStop(item))
       }
@@ -1113,14 +1187,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         key={k.id}
         role="button"
         tabIndex={0}
-        aria-pressed={selected === k.id}
+        aria-pressed={isPicked(k.id)}
+        data-item={k.id}
         aria-label={t('timeline.key.settingAria', { what, distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
         title={t('timeline.key.hint', { what })}
         data-testid="timeline-key"
         className={`${KEY_DIAMOND}${centred ? ' aria-pressed:touch-none' : ''}`}
         style={{ left: xOf(k.timeS) }}
         onPointerDown={(e) => startEdit(e, k.id, 'move')}
-        onFocus={() => setSelected(k.id)}
+        onFocus={() => focusKey(k.id)}
         onKeyDown={(e) => onBlockKeyDown(e, k.id)}
       />
     )
@@ -1455,14 +1530,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     key={k.id}
                     role="button"
                     tabIndex={0}
-                    aria-pressed={selected === k.id}
+                    aria-pressed={isPicked(k.id)}
+                    data-item={k.id}
                     aria-label={t('timeline.key.shotAria', { distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
                     title={t('timeline.key.shotHint')}
                     data-testid="timeline-key"
                     className={`${KEY_DIAMOND}${centred ? ' aria-pressed:touch-none' : ''}`}
                     style={{ left: xOf(k.timeS) }}
                     onPointerDown={(e) => startEdit(e, k.id, 'move')}
-                    onFocus={() => setSelected(k.id)}
+                    onFocus={() => focusKey(k.id)}
                     onKeyDown={(e) => onBlockKeyDown(e, k.id)}
                   />
                 ))}
@@ -1517,14 +1593,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                         key={k.id}
                         role="button"
                         tabIndex={0}
-                        aria-pressed={selected === k.id}
+                        aria-pressed={isPicked(k.id)}
+                        data-item={k.id}
                         aria-label={t('timeline.key.markerAria', { what, distance: formatDistance(k.atM), time: formatFilmTime(k.timeS) })}
                         title={t('timeline.key.hint', { what })}
                         data-testid="timeline-key"
                         className={`${KEY_DOT}${centred ? ' aria-pressed:touch-none' : ''}`}
                         style={{ left: xOf(k.timeS), ...(dot ? { '--key-color': dot } : {}) } as CSSProperties}
                         onPointerDown={(e) => startEdit(e, k.id, 'move')}
-                        onFocus={() => setSelected(k.id)}
+                        onFocus={() => focusKey(k.id)}
                         onKeyDown={(e) => onBlockKeyDown(e, k.id)}
                       />
                     )
@@ -1653,6 +1730,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
               <div className={centred ? 'hidden' : PLAYHEAD} style={{ left: xOf(playheadS) }} aria-hidden="true" />
+              {marquee && (
+                <div
+                  data-testid="timeline-marquee"
+                  className="pointer-events-none absolute z-3 box-border border border-accent-light bg-accent-light/15"
+                  style={{ left: marquee.left, top: marquee.top, width: marquee.width, height: marquee.height }}
+                  aria-hidden="true"
+                />
+              )}
             </div>
           </div>
         </div>

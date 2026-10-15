@@ -23,6 +23,7 @@ const messages: Messages['shortcuts'] = {
   'label.redo': 'Redo',
   'label.nudge': 'Nudge the selected block by one second (Shift: by a tenth)',
   'label.magnet': 'Invert the timeline magnet while dragging',
+  'label.marquee': 'Select several keyframes: Ctrl + drag on the background of the lanes (Ctrl + click on a key: add or remove it), then move or delete them together',
   'label.add-stop': 'Add a hold at the marker position',
   'label.add-text': 'Add a text at the playhead',
   'label.remove': 'Delete the selected block',

@@ -23,6 +23,7 @@ const messages: Messages['shortcuts'] = {
   'label.redo': 'Ripeti',
   'label.nudge': 'Sposta il blocco selezionato di un secondo (Maiusc: di un decimo)',
   'label.magnet': 'Inverti l’aggancio magnetico della timeline durante un trascinamento',
+  'label.marquee': 'Selezionare più fotogrammi chiave: Ctrl + trascina sullo sfondo delle tracce (Ctrl + clic su una chiave: aggiungerla o toglierla), poi spostarli o eliminarli insieme',
   'label.add-stop': 'Aggiungi una sosta sulla posizione del marcatore',
   'label.add-text': 'Aggiungi un testo sulla testina di lettura',
   'label.remove': 'Elimina il blocco selezionato',

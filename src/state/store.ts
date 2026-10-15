@@ -173,7 +173,12 @@ export interface AppState {
   setProjectFile(target: FileTarget | null): void
   /** block selected on the timeline ('opening', 'closing' or a stop, text or medium id), shown by the inspector of the right dock */
   filmSelection: string | null
+  /** a block selected on its own replaces the group of keys (`setFilmKeys`) */
   setFilmSelection(id: string | null): void
+  /** several keys selected together on the timeline (ids of camera, parameter and marker keys; empty unless two or more: one key is `filmSelection`) */
+  filmKeys: readonly string[]
+  /** the group of keys: two or more make it, one is the block selected (inspector), none clears both */
+  setFilmKeys(ids: readonly string[]): void
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -397,7 +402,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
   filmSelection: null,
   setFilmSelection(id) {
-    if (get().filmSelection !== id) set({ filmSelection: id })
+    if (get().filmSelection !== id || get().filmKeys.length > 0) set({ filmSelection: id, filmKeys: [] })
+  },
+  filmKeys: [],
+  setFilmKeys(ids) {
+    const keys = ids.length > 1 ? ids : []
+    const selection = ids.length === 1 ? ids[0] : null
+    if (get().filmSelection !== selection || get().filmKeys.join() !== keys.join()) set({ filmSelection: selection, filmKeys: keys })
   },
 }))
 
@@ -423,5 +434,6 @@ export function resetAppStore(): void {
     savedProject: { settings: DEFAULT_SETTINGS, tracks: [], name: '' },
     projectFile: null,
     filmSelection: null,
+    filmKeys: [],
   })
 }
