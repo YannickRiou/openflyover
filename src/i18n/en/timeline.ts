@@ -106,6 +106,11 @@ const messages: Messages['timeline'] = {
   'shot.closing': 'Closing',
   'shot.closingNone': 'Closing: none',
   'flight.label': 'Flyover · {distance}',
+  'menu.label': 'Timeline actions',
+  'menu.addKey': 'Add a keyframe here',
+  'menu.remove': 'Delete',
+  'menu.removeKey': 'Delete the keyframe',
+  'menu.removeKeys': { one: 'Delete the selected keyframe', other: 'Delete the {count} selected keyframes' },
 }
 
 export default messages

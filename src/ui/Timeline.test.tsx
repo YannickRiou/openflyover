@@ -251,6 +251,40 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
+    it('have a right-click menu of their own: « Supprimer » on a block, « Ajouter une image clé ici » on a lane, never the browser menu', async () => {
+      HTMLElement.prototype.setPointerCapture ??= () => {}
+      const { host, root, setOverlay, card } = await setup()
+      await act(async () => setOverlay({ enabled: true }))
+      const rightClick = async (el: Element) => {
+        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: 40, clientY: 10 })
+        await act(async () => void el.dispatchEvent(event))
+        return event
+      }
+      const menuItems = () => Array.from(document.querySelectorAll('[role="menuitem"]'))
+
+      // on a block: the browser menu is replaced by the deletion of the block (here the card, switched off)
+      const blocked = await rightClick(card("Titre d'ouverture"))
+      expect(blocked.defaultPrevented).toBe(true)
+      expect(menuItems().map((i) => i.textContent)).toEqual(['Supprimer'])
+      await act(async () => (menuItems()[0] as HTMLElement).click())
+      expect(useAppStore.getState().settings.overlay.title.enabled).toBe(false)
+
+      // on the empty part of a lane that holds keys: a key added there
+      const speedLane = host.querySelector('[data-lane="param:speed"]')!
+      expect(useAppStore.getState().settings.film.paramKeys.filter((k) => k.param === 'speed')).toHaveLength(0)
+      const lane = await rightClick(speedLane)
+      expect(lane.defaultPrevented).toBe(true)
+      expect(menuItems().map((i) => i.textContent)).toEqual(['Ajouter une image clé ici'])
+      await act(async () => (menuItems()[0] as HTMLElement).click())
+      expect(useAppStore.getState().settings.film.paramKeys.filter((k) => k.param === 'speed')).toHaveLength(1)
+
+      // a lane without keys (the texts): nothing to offer, and still not the browser menu
+      const none = await rightClick(host.querySelector('[role="group"][aria-label="Textes"]')!)
+      expect(none.defaultPrevented).toBe(true)
+      expect(menuItems()).toHaveLength(0)
+      act(() => root.unmount())
+    })
+
     it('open the inspector, which edits the overlay settings and deletes by switching the card off', async () => {
       const { host, root, setOverlay } = await setup()
       await act(async () => setOverlay({ enabled: true }))

@@ -106,6 +106,11 @@ const messages: Messages['timeline'] = {
   'shot.closing': 'Abschluss',
   'shot.closingNone': 'Abschluss: keiner',
   'flight.label': 'Überflug · {distance}',
+  'menu.label': 'Aktionen der Zeitleiste',
+  'menu.addKey': 'Hier einen Keyframe hinzufügen',
+  'menu.remove': 'Löschen',
+  'menu.removeKey': 'Keyframe löschen',
+  'menu.removeKeys': { one: 'Ausgewählten Keyframe löschen', other: 'Die {count} ausgewählten Keyframes löschen' },
 }
 
 export default messages
