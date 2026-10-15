@@ -24,10 +24,12 @@ import {
   type PerfSample,
   type SystemStats,
 } from './mapStatus'
-import { usePreferences } from './preferences'
+import { setPreferences, usePreferences } from './preferences'
 import { PERF_ITEMS } from './shell'
 import type { PerfItem } from './shell'
-import { Modal, Tip } from './primitives'
+import { Button, Modal, Tip } from './primitives'
+import { LATEST_NEWS } from './whatsNew'
+import { WhatsNewDialog } from './WhatsNewDialog'
 
 /*
  * The strip's classes. It is a container (`@container/status`): narrower than 900 px the performance readout goes, narrower
@@ -226,6 +228,14 @@ export function StatusBar() {
   const perf = usePerformance(perfShown)
   const sourceDates = useSourceDates((s) => s.dates)
   const [sourcesOpen, setSourcesOpen] = useState(false)
+  const [newsOpen, setNewsOpen] = useState(false)
+  // the dot of the « i » button: the newest « Nouveautés » have not been opened yet
+  const newsUnseen = usePreferences((s) => s.whatsNewSeen !== LATEST_NEWS)
+  const openNews = () => {
+    setSourcesOpen(false)
+    setNewsOpen(true)
+    setPreferences({ whatsNewSeen: LATEST_NEWS })
+  }
 
   const imagery = getImagerySource(imagerySourceId)
   // IGN layers: the update date of the data (Etalab licence), as the service sends it
@@ -309,14 +319,21 @@ export function StatusBar() {
         <button
           type="button"
           className="relative inline-flex size-5 flex-none cursor-pointer items-center justify-center rounded-full p-0 text-glacier transition-ui hover:text-white touch:before:absolute touch:before:-inset-3.5 touch:before:content-['']"
-          aria-label={t('status.sources')}
+          aria-label={newsUnseen ? `${t('status.sources')} · ${t('news.title')}` : t('status.sources')}
           onClick={() => setSourcesOpen(true)}
         >
           <Icon name="info" size={14} />
+          {newsUnseen && <span className="absolute top-0 right-0 size-2 rounded-full bg-accent-light" data-testid="news-dot" aria-hidden="true" />}
         </button>
       </Tip>
 
+      <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
       <Modal open={sourcesOpen} onClose={() => setSourcesOpen(false)} title={t('status.sources')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
+        <Button className="mb-3" onClick={openNews}>
+          <Icon name="sparkles" size={16} />
+          {t('news.button')}
+          {newsUnseen && <span className="size-2 rounded-full bg-accent-light" aria-hidden="true" />}
+        </Button>
         <ul className="mb-3 flex flex-col gap-2">
           {credits.map((line) => (
             <li key={line}>

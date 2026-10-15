@@ -282,7 +282,10 @@ describe('parsePreferences', () => {
       timelineMagnet: true,
       appearance: DEFAULT_PREFERENCES.appearance,
       language: 'fr',
+      whatsNewSeen: '',
     })
+    expect(parsePreferences('{"whatsNewSeen":"2.2"}').whatsNewSeen).toBe('2.2')
+    expect(parsePreferences('{"whatsNewSeen":2}').whatsNewSeen).toBe('')
     expect(parsePreferences('{"timelineMagnet":false}').timelineMagnet).toBe(false)
     expect(parsePreferences('{"timelineMagnet":"non"}').timelineMagnet).toBe(true)
   })
