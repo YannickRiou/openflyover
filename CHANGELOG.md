@@ -12,6 +12,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Opening title and closing card**: dragging the body of their block drags the edge of the opening or closing shot, like the shot's own block.
 - **Flags that show on Windows**: the language button and menu draw SVG flags (Windows shows the flag emoji as two letters).
 - **Section headers**: a title that wraps (« Repères et points d'intérêt ») makes its header taller instead of overlapping the content below, and the « modifié » badge and « Par défaut » button keep their width.
+- **Windows installer: choose where to install**: the `.exe` installer now asks whether to install for the current user (`%LOCALAPPDATA%\OpenFlyover`, as before) or for all users (`Program Files`); it starts with a Windows administrator prompt in both cases. The `.msi` already installed for all users.
 - **Removed**: the « Anneau » ball style, which added nothing; a project that used it opens with « Disque ».
 
 ## 2.1.0 (October 2026)
