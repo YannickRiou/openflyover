@@ -140,7 +140,7 @@ describe('engine options from settings', () => {
       rank: [],
       dismissedIds: [],
       pinnedIds: [],
-      maxCount: 40,
+      density: 'normal' as const,
     },
     race: { enabled: false, sync: 'elapsed' as const },
     trackStyle: DEFAULT_TRACK_STYLE,

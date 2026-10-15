@@ -10,7 +10,7 @@ import { create } from 'zustand'
 import type { Track } from '../core/types'
 import { trackPathOf } from '../flyover/path'
 import { setLabelSource, useLabelSources } from '../scene/labelSources'
-import { DEFAULT_LANDMARK_SETTINGS, buildLandmarks, landmarkLabels, splitHidden, withRank } from './landmarks'
+import { DEFAULT_LANDMARK_SETTINGS, LANDMARK_DENSITY_COUNTS, buildLandmarks, landmarkLabels, splitHidden, withRank } from './landmarks'
 import type { Landmark, LandmarkSettings } from './landmarks'
 import { BUSY_STATUSES, OverpassError, fetchTrackFeatures } from './overpass'
 import type { OsmFeature } from './overpass'
@@ -60,13 +60,14 @@ function publish(tracks: readonly Track[], settings: LandmarkSettings, message: 
   for (const track of tracks) {
     const list = features[track.id]
     if (!list) continue
-    const split = splitHidden(withRank(buildLandmarks(list, trackPathOf(track), settings), settings.rank), settings.hiddenIds)
+    const built = buildLandmarks(list, trackPathOf(track), { ...settings, maxCount: LANDMARK_DENSITY_COUNTS[settings.density] })
+    const split = splitHidden(withRank(built, settings.rank), settings.hiddenIds)
     landmarks[track.id] = split.shown
     hidden[track.id] = split.hidden
   }
   const status: LandmarkStatus = pending.size > 0 ? 'loading' : failed.size > 0 ? 'error' : 'ready'
   useLandmarkStore.setState({ status, message: status === 'error' ? message : null, landmarks, hidden })
-  setLabelSource('osm', landmarkLabels(Object.values(landmarks), settings.maxCount, settings.pinnedIds))
+  setLabelSource('osm', landmarkLabels(Object.values(landmarks), LANDMARK_DENSITY_COUNTS[settings.density], settings.pinnedIds))
 }
 
 /**

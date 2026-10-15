@@ -283,12 +283,18 @@ export interface ScreenRect {
   bottom: number
 }
 
+/** Below this opacity (far away or half hidden by the relief) a label is a ghost: it does not take the place of a clearer one. */
+export const FAINT_OPACITY = 0.35
+
 /**
- * Greedy de-cluttering: visit the candidates by decreasing priority (stable for ties) and keep each one
- * whose rectangle does not intersect an already kept one. Returns one flag per candidate.
+ * Greedy de-cluttering: visit the candidates by decreasing priority (stable for ties), the faint ones (`faint`: too
+ * transparent to read) after all the others, and keep each one whose rectangle does not intersect an already kept one.
+ * Returns one flag per candidate.
  */
-export function resolveOverlaps(candidates: readonly { rect: ScreenRect; priority: number }[]): boolean[] {
-  const order = candidates.map((_, i) => i).sort((a, b) => candidates[b].priority - candidates[a].priority || a - b)
+export function resolveOverlaps(candidates: readonly { rect: ScreenRect; priority: number; faint?: boolean }[]): boolean[] {
+  const order = candidates
+    .map((_, i) => i)
+    .sort((a, b) => Number(candidates[a].faint ?? false) - Number(candidates[b].faint ?? false) || candidates[b].priority - candidates[a].priority || a - b)
   const kept: ScreenRect[] = []
   const visible = new Array<boolean>(candidates.length).fill(false)
   for (const i of order) {
