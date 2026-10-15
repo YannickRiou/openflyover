@@ -1,6 +1,6 @@
 [package]
 name = "openflyover"
-version = "2.1.0"
+version = "2.1.1"
 description = "Films de survol 3D à partir de traces GPX et FIT"
 license = "MIT"
 edition = "2021"

@@ -7,7 +7,7 @@ import { filmClockFor } from '../film/clock'
 import type { FilmClock, FilmClockFor } from '../film/clock'
 import { junctionsM, markerKeyLook, sortedMarkerKeys } from '../film/markerKeys'
 import type { Film } from '../film/model'
-import { paramAt, paramBase } from '../film/paramKeys'
+import { hasParamKeys, keysOfParam, paramAt, paramBase } from '../film/paramKeys'
 import type { FilmParam } from '../film/paramKeys'
 import { idsByDate, movedIds, reorderStages } from '../film/reorder'
 import type { StageSpan } from '../film/reorder'
@@ -109,6 +109,21 @@ function parkOnSelectedKey(): void {
 }
 
 /**
+ * Value and setter of the slider of a parameter that keys can drive. Without a key for `param` it is the setting
+ * (`base`, `setBase`). With keys the setting is ignored, so the slider shows the value the film has at the marker and
+ * a change puts that value on the key there (made on the first change): move the playhead, move the slider, and the
+ * parameter changes from there on.
+ */
+export function useKeyedValue(param: FilmParam, base: number, setBase: (value: number) => void): readonly [number, (value: number) => void] {
+  const track = useFilmTrack()
+  const film = useAppStore((s) => s.settings.film)
+  const keyed = hasParamKeys(film, [param])
+  const atM = useAppStore((s) => (keyed ? Math.round(s.playback.progress * (track?.stats.distanceM ?? 0)) : 0))
+  if (!keyed) return [base, setBase]
+  return [paramAt(film, base, param, atM), (value) => editFilm((f) => ({ film: addParamKey(f, atM, param, value).film }), { step: false })]
+}
+
+/**
  * The ◇ of a parameter (speed on its lane, the others under their slider): a key for `param` at the marker holding the
  * value the film shows there (the speed ×1 or the setting without key), so nothing changes until the inspector edits it;
  * a key already at that place keeps its value. One undo step, selected for the inspector.
@@ -149,14 +164,28 @@ export function addJunctionMarkerKeys(): number {
   return places.length
 }
 
-/** The ◇ of the « Plans » lane: removes the keyframe the playhead is on, else adds one there (one undo step). */
-export function toggleKeyframe(clock: FilmClock): boolean {
+/** The key of `keys` the playhead is on, removed (one undo step, nothing selected); false when it is on none. */
+function removeKeyHere(clock: FilmClock, keys: readonly { id: string; timeS: number }[]): boolean {
   const store = useAppStore.getState()
-  const total = clock.totalTime()
-  const here = keyAt(clock.cameraKeys, Math.min(store.playback.timeS ?? clock.timeAtProgress(store.playback.progress), total))
-  if (!here) return addKeyframe()
+  const here = keyAt(keys, Math.min(store.playback.timeS ?? clock.timeAtProgress(store.playback.progress), clock.totalTime()))
+  if (!here) return false
   editFilm((f) => ({ film: removeFilmItem(f, here.id), id: null }))
   return true
+}
+
+/** The ◇ of the « Plans » lane: removes the keyframe the playhead is on, else adds one there (one undo step). */
+export function toggleKeyframe(clock: FilmClock): boolean {
+  return removeKeyHere(clock, clock.cameraKeys) || addKeyframe()
+}
+
+/** The ◇ of a parameter: removes its key the playhead is on, else adds one there (`addParamKeyHere`). */
+export function toggleParamKeyHere(clock: FilmClock, param: FilmParam): void {
+  if (!removeKeyHere(clock, keysOfParam(clock.paramKeys, param))) addParamKeyHere(param)
+}
+
+/** The ◉ of the « Marqueur » section: removes the marker key the playhead is on, else adds one there (`addMarkerKeyHere`). */
+export function toggleMarkerKeyHere(clock: FilmClock): void {
+  if (!removeKeyHere(clock, clock.markerKeys)) addMarkerKeyHere()
 }
 
 /**

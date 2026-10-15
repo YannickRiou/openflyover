@@ -232,6 +232,25 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
+    it('drag the edge of their shot from their body: the opening title lengthens the opening, the card following', async () => {
+      HTMLElement.prototype.setPointerCapture ??= () => {}
+      const { root, setOverlay, card } = await setup()
+      await act(async () => setOverlay({ enabled: true }))
+      const pointer = (type: string, clientX: number) =>
+        Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX }), { pointerId: 1, isPrimary: true, pointerType: 'mouse' })
+      const opening = () => useAppStore.getState().settings.film.opening.durationS
+      const before = opening()
+      const titleEnd = useAppStore.getState().settings.overlay.title.end
+      const title = card("Titre d'ouverture")
+      await act(async () => void title.dispatchEvent(pointer('pointerdown', 10)))
+      await act(async () => void title.dispatchEvent(pointer('pointermove', 200)))
+      await act(async () => void title.dispatchEvent(pointer('pointerup', 200)))
+      expect(opening()).toBeGreaterThan(before)
+      expect(useAppStore.getState().settings.overlay.title.end).toBe(titleEnd)
+      expect(useAppStore.getState().filmSelection).toBe('opening')
+      act(() => root.unmount())
+    })
+
     it('open the inspector, which edits the overlay settings and deletes by switching the card off', async () => {
       const { host, root, setOverlay } = await setup()
       await act(async () => setOverlay({ enabled: true }))
