@@ -3,6 +3,8 @@ import {
   CLOUD_TIMELAPSE,
   DEFAULT_CLOUDS,
   DEFAULT_WIND,
+  FIELD_SIZE,
+  cloudCoverField,
   cloudCoversAt,
   cloudDrift,
   cubeSphereUv,
@@ -12,6 +14,7 @@ import {
   seaOfClouds,
   seaTopFor,
   weatherOffsetFor,
+  zonedCloudsFrom,
 } from './sceneClouds'
 import type { SceneConditions } from './sceneWeather'
 import { WEATHER_VARIABLES, type WeatherSeries, type WeatherVariable } from './series'
@@ -204,5 +207,84 @@ describe('cubeSphereUv and weatherOffsetFor', () => {
     expect(after[0]).toBeCloseTo(before[0], 3)
     expect(after[1]).toBeCloseTo(before[1], 3)
     expect(weatherOffsetFor(origin, east, north, { east: 0, north: 0 }, repeat).map(Math.abs)).toEqual([0, 0])
+  })
+})
+
+describe('cloudCoverField and zonedCloudsFrom', () => {
+  const lon0 = 6.8
+  const lat0 = 45.9
+  const rad = Math.PI / 180
+  const r = 6_371_000 + 3000
+  const frame = {
+    lon: lon0,
+    lat: lat0,
+    origin: [r * Math.cos(lat0 * rad) * Math.cos(lon0 * rad), r * Math.cos(lat0 * rad) * Math.sin(lon0 * rad), r * Math.sin(lat0 * rad)] as const,
+    east: [-Math.sin(lon0 * rad), Math.cos(lon0 * rad), 0] as const,
+    north: [-Math.sin(lat0 * rad) * Math.cos(lon0 * rad), -Math.sin(lat0 * rad) * Math.sin(lon0 * rad), Math.cos(lat0 * rad)] as const,
+  }
+  const station = (lon: number, lat: number, low: number, mid = low, high = low) => {
+    const values = {} as Record<WeatherVariable, number[]>
+    for (const v of WEATHER_VARIABLES) values[v] = [NaN, NaN]
+    values.cloudCover = [Math.max(low, mid, high), Math.max(low, mid, high)]
+    values.cloudCoverLow = [low, low]
+    values.cloudCoverMid = [mid, mid]
+    values.cloudCoverHigh = [high, high]
+    return { lon, lat, values }
+  }
+  // clear in the west, overcast low clouds 44 km further east
+  const series: WeatherSeries = { time: [0, 3_600_000], stations: [station(6.5, 45.9, 0), station(7.1, 45.9, 100, 0, 0)] }
+  const lowLayer = (field: NonNullable<ReturnType<typeof cloudCoverField>>) =>
+    Array.from({ length: field.size * field.size }, (_, i) => field.data[i * 4])
+
+  it('is clear where the stations are clear and covered where they are covered', () => {
+    const field = cloudCoverField(series, 1_800_000, frame)!
+    expect(field.size).toBe(FIELD_SIZE)
+    expect(field.data).toHaveLength(FIELD_SIZE * FIELD_SIZE * 4)
+    expect(field.covers.low).toBeGreaterThan(0.9)
+    expect(field.covers.mid).toBe(0)
+    expect(Math.min(...lowLayer(field))).toBe(0)
+    expect(Math.max(...lowLayer(field))).toBeGreaterThan(200)
+    // the mid layer and the alpha channel (fog layer) stay empty
+    expect(field.data.every((v, i) => i % 4 === 0 || i % 4 === 2 || v === 0)).toBe(true)
+  })
+
+  it('puts each cover at its place: the centre of the field is the frame, the UV axes of the shaders locate the stations', () => {
+    const field = cloudCoverField(series, 1_800_000, frame)!
+    expect(field.centre).toEqual(cubeSphereUv(frame.origin))
+    // the texel of the shaders' UV for a point 22 km east or west of the frame, which is where the stations are
+    const along = (metres: number) =>
+      cubeSphereUv([frame.origin[0] + frame.east[0] * metres, frame.origin[1] + frame.east[1] * metres, frame.origin[2] + frame.east[2] * metres])
+    const lowAt = ([u, v]: [number, number]) => {
+      const col = Math.floor(((u - field.centre[0]) * field.invSpan + 0.5) * field.size)
+      const row = Math.floor(((v - field.centre[1]) * field.invSpan + 0.5) * field.size)
+      return field.data[(row * field.size + col) * 4]
+    }
+    expect(lowAt(along(-22_000))).toBeLessThan(10)
+    expect(lowAt(along(22_000))).toBeGreaterThan(200)
+  })
+
+  it('is a pure function of the series and the instant', () => {
+    expect(cloudCoverField(series, 1_800_000, frame)).toEqual(cloudCoverField(series, 1_800_000, frame))
+  })
+
+  it('is uniform with a single station, and null without any cloud value', () => {
+    const one = cloudCoverField({ time: series.time, stations: [series.stations[1]] }, 0, frame)!
+    expect(new Set(lowLayer(one)).size).toBe(1)
+    expect(one.covers.low).toBeCloseTo(1, 9)
+    const unknown = station(6.8, 45.9, NaN)
+    unknown.values.cloudCover = [NaN, NaN]
+    expect(cloudCoverField({ time: series.time, stations: [unknown] }, 0, frame)).toBeNull()
+    expect(cloudCoverField({ time: [], stations: series.stations }, 0, frame)).toBeNull()
+  })
+
+  it('keeps the layers as the field needs them: own density, no thinning, off when nowhere covered', () => {
+    const covers = { low: 1, mid: 0.3, high: 0 }
+    const zoned = zonedCloudsFrom(covers, GEOMETRY)!
+    expect(zoned.layers.map((l) => l.weatherExponent)).toEqual([1, 1, 1])
+    expect(zoned.layers[0].densityScale).toBeGreaterThan(0)
+    expect(zoned.layers[1].heightM).toBeGreaterThan(0)
+    expect(zoned.layers[2].heightM).toBe(0)
+    expect(zonedCloudsFrom({ low: 0, mid: 0.01, high: 0 }, GEOMETRY)).toBeNull()
+    expect(zoned.layers.map((l) => l.altitudeM)).toEqual(sceneCloudsFrom(covers, GEOMETRY)!.layers.map((l) => l.altitudeM))
   })
 })

@@ -38,8 +38,8 @@ Strava import goes through your own Strava application). Your files stay on your
 terrain, imagery, weather and landmarks from open services. It runs as a **static website** or as a Windows, macOS or
 Linux **desktop application** (Tauri), from the same code.
 
-The interface and the texts of the films are available in **French** and **English**: pick the language with the flag
-button of the top bar (next to « ? »). The first run follows the browser's language (English, else French) and the choice is
+The interface and the texts of the films are available in **French**, **English**, **Spanish** (Español), **Italian** (Italiano) and **German** (Deutsch): pick the
+language with the flag button of the top bar (next to « ? »). The first run follows the browser's language when the app offers it (else French) and the choice is
 remembered on the device. The documentation is in English; the [user guide](docs/user-guide.html) quotes the interface labels in French (the reference language).
 
 ![The interface: top bar, tabs on the left, 3D view of the Tour du Mont-Blanc, timeline at the bottom](docs/images/interface.jpg)
@@ -107,7 +107,7 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 | [Developer handbook](docs/handbook/index.html) | how the project was built and how to change it (history, web and Rust notions explained, repository tour, recipes, release), to maintain it without help |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | coordinates, shared contracts, modules: read it before coding |
 | [Deploying and building](docs/deploying.md) | web server setup (HTTPS, nginx, Apache), desktop application build |
-| [Desktop installers](docs/installers.md) | installers built on GitHub, signing |
+| [Desktop installers](docs/installers.md) | installers built on GitHub, signing, automatic updates (maintainer setup) |
 | [Design notes](docs/design/) | decisions behind the interface: styling on Tailwind ([`tailwind.md`](docs/design/tailwind.md)), components on HeroUI ([`heroui.md`](docs/design/heroui.md)), the multi-track timeline |
 | [Data sources](docs/sources.md) | attributions, licenses, offline rules and how each source was checked |
 | [GPU tests](docs/tests-gpu.md) | manual checks on a machine with a real graphics card |
@@ -121,6 +121,19 @@ OpenFlyover is a static site: build it with `npm ci && npm run build`, copy `dis
 it over **HTTPS** (the video encoder and track import need a secure context outside `localhost`). The desktop
 application is built with `npm run tauri:build`; installers for the three systems are also built on GitHub
 (*Actions* › "Desktop installers"), and published as a release when a `v*` tag is pushed. Details, server configuration and limitations: [`docs/deploying.md`](docs/deploying.md).
+
+### Automatic updates: maintainer setup
+
+The desktop application has a « Rechercher une mise à jour » button (« Réglages » tab) that reads the latest GitHub release
+**only when pressed** (nothing at start-up, nothing in the background; `github.com` is contacted only then). It needs an
+update signing key, which you create once (full guide, tests and common errors: [`docs/installers.md`](docs/installers.md#automatic-updates-maintainer-setup)):
+
+1. `npx tauri signer generate -w ~/.tauri/openflyover.key` (keep the private key and its password safe, outside the repository);
+2. create the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (content of `~/.tauri/openflyover.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`;
+3. paste the **public** key (`~/.tauri/openflyover.key.pub`) into `plugins.updater.pubkey` of `src-tauri/updater.conf.json` and commit it;
+4. release a version (`v*` tag): the release then carries the signed update packages and `latest.json`. The first version with the updater cannot be reached from older ones.
+
+Without the secret the installers are built as before and the button says that updates are not available in that build.
 
 ## Tests and quality
 
@@ -209,7 +222,7 @@ video description.
 Conventions:
 
 - Strict TypeScript, with `import type` and no `enum`.
-- Interface in French and English (`src/i18n`, see "Internationalisation" in [`ARCHITECTURE.md`](ARCHITECTURE.md)): no text in the code, every string goes through `t('domain.key')` and has a French and an English message.
+- Interface in French, English, Spanish, Italian and German (`src/i18n`, see "Internationalisation" in [`ARCHITECTURE.md`](ARCHITECTURE.md)): no text in the code, every string goes through `t('domain.key')` and has a message in each language.
 - Visual identity in [`src/ui/theme.css`](src/ui/theme.css). Styling in Tailwind utilities (shared `@utility` classes in `src/ui/utilities.css`), interactive components on HeroUI behind the wrappers of `src/ui/primitives/` (screens never import `@heroui/react`): see [`tailwind.md`](docs/design/tailwind.md) and [`heroui.md`](docs/design/heroui.md).
 - Open, keyless sources only; any new source goes into `src/terrain/sources.ts` and `docs/sources.md`.
 - Types, lint and tests green before each commit, one commit per feature.

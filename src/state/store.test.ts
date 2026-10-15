@@ -174,6 +174,7 @@ describe('settings and misc', () => {
       wireframe: true,
       atmosphere: true,
       shadows: true,
+      cloudShadows: true,
       sunHour: 10,
       sunDate: '',
       sunFromTrack: true,

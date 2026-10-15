@@ -621,6 +621,7 @@ export function LightSettings() {
   const t = useT()
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const shadows = useAppStore((s) => s.settings.shadows)
+  const cloudShadows = useAppStore((s) => s.settings.cloudShadows)
   const exposureEv = useAppStore((s) => s.settings.exposureEv)
   const exposureKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['exposure']))
   const setSetting = useAppStore((s) => s.setSetting)
@@ -628,11 +629,15 @@ export function LightSettings() {
 
   return (
     <>
-      <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'exposureEv']}>
+      <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'exposureEv']}>
         <Switch id={`${id}-atmosphere`} checked={atmosphere} onChange={(on) => setSetting('atmosphere', on)}>{t('light.atmosphere.enable')}</Switch>
 
         {atmosphere && (
           <Checkbox id={`${id}-shadows`} checked={shadows} onChange={(on) => setSetting('shadows', on)}>{t('light.atmosphere.shadows')}</Checkbox>
+        )}
+
+        {atmosphere && (
+          <Checkbox id={`${id}-cloud-shadows`} checked={cloudShadows} onChange={(on) => setSetting('cloudShadows', on)}>{t('light.atmosphere.cloudShadows')}</Checkbox>
         )}
 
         {atmosphere && (
