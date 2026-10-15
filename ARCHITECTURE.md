@@ -2491,8 +2491,8 @@ exports) gets it from the terrain source of the settings.
   exp(−optical depth) read from the shadow map by the library's own PCF (8 taps, 4 on a phone or tablet, jittered with the
   noise texture), `sunShare` = share of the sun in the irradiance there (`GetSunAndSkyIrradiance` on the local vertical:
   the shader has no normal of the relief, a horizontal surface is assumed), `strength` = the weather's `shadowStrength`
-  (the sun is already dimmed under an overcast, so the shadows fade there instead of darkening twice), 0 without
-  « Ombres du relief » (`settings.shadows`; no shadow-map read then), without clouds, in « Nappe » mode (no shadow map) and at night
+  (the sun is already dimmed under an overcast, so the shadows fade there instead of darkening twice), 0 with the
+  « Ombres des nuages » checkbox off (`settings.cloudShadows`, default on, Lumière › Atmosphère; no shadow-map read then), without clouds, in « Nappe » mode (no shadow map) and at night
   (the sun share is 0). The shadow map was already rendered for the clouds themselves: the added cost is the per-pixel
   read. The export pins the `frame` uniform of the aerial perspective (the dither slice of its PCF) so the same frame
   gets the same noise whatever the renders before it. Limits: the shadow map covers 50 km from the camera
