@@ -107,7 +107,7 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 | [Developer handbook](docs/handbook/index.html) | how the project was built and how to change it (history, web and Rust notions explained, repository tour, recipes, release), to maintain it without help |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | coordinates, shared contracts, modules: read it before coding |
 | [Deploying and building](docs/deploying.md) | web server setup (HTTPS, nginx, Apache), desktop application build |
-| [Desktop installers](docs/installers.md) | installers built on GitHub, signing |
+| [Desktop installers](docs/installers.md) | installers built on GitHub, signing, automatic updates (maintainer setup) |
 | [Design notes](docs/design/) | decisions behind the interface: styling on Tailwind ([`tailwind.md`](docs/design/tailwind.md)), components on HeroUI ([`heroui.md`](docs/design/heroui.md)), the multi-track timeline |
 | [Data sources](docs/sources.md) | attributions, licenses, offline rules and how each source was checked |
 | [GPU tests](docs/tests-gpu.md) | manual checks on a machine with a real graphics card |
@@ -121,6 +121,19 @@ OpenFlyover is a static site: build it with `npm ci && npm run build`, copy `dis
 it over **HTTPS** (the video encoder and track import need a secure context outside `localhost`). The desktop
 application is built with `npm run tauri:build`; installers for the three systems are also built on GitHub
 (*Actions* › "Desktop installers"), and published as a release when a `v*` tag is pushed. Details, server configuration and limitations: [`docs/deploying.md`](docs/deploying.md).
+
+### Automatic updates: maintainer setup
+
+The desktop application has a « Rechercher une mise à jour » button (« Réglages » tab) that reads the latest GitHub release
+**only when pressed** (nothing at start-up, nothing in the background; `github.com` is contacted only then). It needs an
+update signing key, which you create once (full guide, tests and common errors: [`docs/installers.md`](docs/installers.md#automatic-updates-maintainer-setup)):
+
+1. `npx tauri signer generate -w ~/.tauri/openflyover.key` (keep the private key and its password safe, outside the repository);
+2. create the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (content of `~/.tauri/openflyover.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`;
+3. paste the **public** key (`~/.tauri/openflyover.key.pub`) into `plugins.updater.pubkey` of `src-tauri/updater.conf.json` and commit it;
+4. release a version (`v*` tag): the release then carries the signed update packages and `latest.json`. The first version with the updater cannot be reached from older ones.
+
+Without the secret the installers are built as before and the button says that updates are not available in that build.
 
 ## Tests and quality
 

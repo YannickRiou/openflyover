@@ -153,7 +153,8 @@ Command-line batch rendering (one film per track in a folder) is described in th
 
 GitHub also builds the installers for the three systems (*Actions* › "Desktop installers" › *Run workflow*, or a `v*`
 tag, which publishes a release with the installers), signed as soon as the certificates are added to the repository secrets: see
-[`installers.md`](installers.md).
+[`installers.md`](installers.md), which also explains the update key that enables « Rechercher une mise à jour » in the
+application.
 
 The icons in `src-tauri/icons/` come from `public/favicon.svg`. To regenerate them: `npx tauri icon public/favicon.svg`
 (then keep only the files listed in `src-tauri/tauri.conf.json`).

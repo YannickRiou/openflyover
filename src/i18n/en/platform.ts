@@ -5,6 +5,7 @@ const messages: Messages['platform'] = {
   'error.folderWrite': 'This browser cannot write to a folder.',
   'error.folderRead': 'This browser cannot read a folder.',
   'error.diskWrite': 'This browser cannot write directly to disk.',
+  'error.noUpdate': 'No update to install: run the check first.',
   'oauth.cancelled': 'Connection cancelled',
   'oauth.popupBlocked': 'Connection window blocked: allow pop-ups for this site.',
   'oauth.desktopDone': 'Connection passed on to OpenFlyover: you can close this tab.',

@@ -9,6 +9,7 @@ import { setPreferences, usePreferences } from './preferences'
 import { PERF_ITEMS, STATUS_CHIPS } from './shell'
 import type { PerfItem, StatusChip } from './shell'
 import { Button, Chip, ColorField, Radio, RadioGroup, Switch } from './primitives'
+import { UpdatesSection } from './UpdatesSection'
 
 const STATUS_LABELS: Record<StatusChip, string> = {
   get weather() { return t('settings.preferences.status.weather') },
@@ -174,6 +175,7 @@ export function PreferencesPanel() {
         </Switch>
         <p className="type-hint">{t('settings.preferences.timeline.clockHint')}</p>
       </PanelSection>
+      {getPlatform().checkForUpdate && <UpdatesSection />}
       <DiagnosticRow />
     </>
   )

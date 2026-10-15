@@ -3,6 +3,7 @@ export default {
   'error.folderWrite': 'Ce navigateur ne sait pas écrire dans un dossier.',
   'error.folderRead': 'Ce navigateur ne sait pas lire un dossier.',
   'error.diskWrite': 'Ce navigateur ne sait pas écrire directement sur le disque.',
+  'error.noUpdate': "Aucune mise à jour à installer : lancez d'abord la recherche.",
   'oauth.cancelled': 'Connexion annulée',
   'oauth.popupBlocked': 'Fenêtre de connexion bloquée : autorisez les fenêtres surgissantes pour ce site.',
   'oauth.desktopDone': 'Connexion transmise à OpenFlyover : vous pouvez fermer cet onglet.',

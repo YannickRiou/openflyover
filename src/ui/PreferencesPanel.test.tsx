@@ -51,6 +51,11 @@ describe('PreferencesPanel, « Apparence »', () => {
     expect(document.documentElement.dataset.theme).toBe('light')
   })
 
+  it('has no « Mises à jour » section on the website', () => {
+    expect(host.textContent).not.toContain('Mises à jour')
+    expect(host.textContent).not.toContain('Rechercher une mise à jour')
+  })
+
   it('applies the theme at once to the page and remembers it', async () => {
     await act(async () => radio('Sombre').click())
     expect(document.documentElement.dataset.theme).toBe('dark')

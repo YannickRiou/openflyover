@@ -3,6 +3,8 @@
 # systems are built (created as a draft first, so the jobs upload to one release and it never shows half empty).
 # Push to master: installers as workflow artifacts, like a manual run (pushes that only touch docs are skipped).
 # Signing is optional: without the secrets (see docs/installers.md) the installers are built unsigned.
+# The same goes for the update key (secret TAURI_SIGNING_PRIVATE_KEY): with it the build also makes the signed update
+# packages and latest.json, which « Rechercher une mise à jour » reads; without it the app is built without that feature.
 name: Desktop installers
 
 on:
@@ -137,13 +139,37 @@ jobs:
             echo 'Pas d’identifiant Apple : application signée, non notarisée.'
           fi
 
+      # Update signing (https://v2.tauri.app/plugin/updater/). Tauri reads the key from the environment and, with
+      # src-tauri/updater.conf.json merged (createUpdaterArtifacts, public key, endpoint), also builds the signed update
+      # packages (.sig), which tauri-action uploads with latest.json. Without the secret the overlay is not merged: the
+      # app has no updater plugin entry and starts without one. An empty password would still count as set, so it is
+      # exported only when given.
+      - name: Updater key (optional)
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then echo 'Pas de clé de mise à jour : application sans mise à jour automatique.'; exit 0; fi
+          if grep -q REPLACE_WITH_THE_CONTENT_OF_THE_PUBLIC_KEY_FILE src-tauri/updater.conf.json; then
+            echo '::warning::Clé de mise à jour présente, mais la clé publique de src-tauri/updater.conf.json n’est pas renseignée : les mises à jour seront refusées.'
+          fi
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<UPDATER_KEY_END"
+            echo "$TAURI_SIGNING_PRIVATE_KEY"
+            echo "UPDATER_KEY_END"
+            echo "UPDATER_ARGS=--config src-tauri/updater.conf.json"
+          } >> "$GITHUB_ENV"
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" ]; then echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" >> "$GITHUB_ENV"; fi
+
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           # package.json has no "tauri" script (only tauri:dev / tauri:build)
           tauriScript: npx tauri
-          args: ${{ matrix.args }}
+          # UPDATER_ARGS: set by the step above only when the update key exists
+          args: ${{ matrix.args }} ${{ env.UPDATER_ARGS }}
           uploadWorkflowArtifacts: true
           # tag push only: empty on a manual run, which builds without a release
           releaseId: ${{ needs.release.outputs.id }}

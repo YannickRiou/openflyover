@@ -5,12 +5,16 @@
  * Storage stays localStorage: the webview keeps it in the app data folder. A film is written while it is encoded
  * through a file handle (`open`, `seek`, `write`), removed if the export does not finish. Offline tiles are files
  * under `<app data>/tiles/`, « Mes projets » under `<app data>/projects/` (the only folders the capability adds to the
- * fs scope). Closing the window waits for `guardClose` (last write, question when something would be lost).
+ * fs scope). Closing the window waits for `guardClose` (last write, question when something would be lost). « Rechercher
+ * une mise à jour » goes through the updater and process plugins, when the build has them (src-tauri/updater.conf.json).
  */
 import { droppedFiles, fileNameOf, keyValueStore, mimeTypeOf, rememberFileTarget, saveFilters } from './platform'
 import type { Capabilities, DocumentOutcome, FileFilter, FileTarget, Platform, SaveDocumentOptions, SaveFileOptions, SaveOutcome, WritableFile } from './platform'
 import { createDesktopLibraryFiles, createProjectLibrary } from './projectLibrary'
 import { createDesktopTileCache } from './tileCache'
+import { checkOutcome, downloadProgress, failedCheck } from './updater'
+import type { UpdateProgress } from './updater'
+import type { Update } from '@tauri-apps/plugin-updater'
 import { t } from '../i18n'
 
 const dialogFilters = (filters: readonly FileFilter[]) => filters.map((f) => ({ name: f.name, extensions: [...f.extensions] }))
@@ -109,6 +113,42 @@ export async function openWritablePath(path: string): Promise<WritableFile> {
   }
 }
 
+/**
+ * Look for an update when asked, and install the one found. The plugins are Rust-side and registered only in builds
+ * made with updater.conf.json: without them the commands reject with « plugin updater not found » (`failedCheck`).
+ */
+function desktopUpdater(): Pick<Platform, 'checkForUpdate' | 'installUpdate'> {
+  /** the update the last check found: it holds a resource on the Rust side, which `installUpdate` uses */
+  let found: Update | null = null
+  return {
+    async checkForUpdate() {
+      try {
+        const { check } = await import('@tauri-apps/plugin-updater')
+        await found?.close().catch(() => undefined)
+        found = null
+        found = await check()
+        return checkOutcome(found)
+      } catch (error) {
+        found = null
+        return failedCheck(error, globalThis.navigator?.onLine !== false)
+      }
+    },
+    async installUpdate(onProgress) {
+      const update = found
+      if (!update) throw new Error(t('platform.error.noUpdate'))
+      const { relaunch } = await import('@tauri-apps/plugin-process')
+      let progress: UpdateProgress = { downloadedBytes: 0, totalBytes: null }
+      await update.downloadAndInstall((event) => {
+        progress = downloadProgress(progress, event)
+        onProgress?.(progress)
+      })
+      found = null
+      // Windows: the installer has already closed the app and starts it again, this is not reached
+      await relaunch()
+    },
+  }
+}
+
 export function createDesktopPlatform(capabilities: Capabilities): Platform {
   return {
     capabilities,
@@ -137,6 +177,7 @@ export function createDesktopPlatform(capabilities: Capabilities): Platform {
       )
       return () => void listening.then((unlisten) => unlisten())
     },
+    ...desktopUpdater(),
     async ask({ title, text, yes, no, cancel }) {
       const { message } = await import('@tauri-apps/plugin-dialog')
       const buttons = no === undefined ? { ok: yes, cancel } : { yes, no, cancel }
