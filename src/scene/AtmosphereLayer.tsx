@@ -197,10 +197,10 @@ export function AtmosphereLayer() {
       sun.shadow.intensity = weather.shadowStrength
     }
     if (skyLightRef.current) skyLightRef.current.intensity = weather.skyScale
-    // cloud shadows on the terrain: with the relief's shadows, as strong as the weather lets the shadows be
+    // cloud shadows on the terrain (`cloudShadows` setting): as strong as the weather lets the shadows be
     const aerial = aerialRef.current
     if (aerial && !aerial.uniforms.has('cloudShadowStrength')) addCloudShadow(aerial, cloudShadowRef.current)
-    cloudShadowRef.current.value = cloudsOn && settings.shadows ? weather.shadowStrength : 0
+    cloudShadowRef.current.value = cloudsOn && settings.cloudShadows ? weather.shadowStrength : 0
     // the export renders the same dither for the same frame, whatever the number of renders before it
     if (aerial && isExportBusy(useExportStore.getState().phase)) aerial.uniforms.get('frame').value = 0
     weatherEffect.setParams({

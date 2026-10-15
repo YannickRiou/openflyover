@@ -1,7 +1,6 @@
 # Desktop installers (Tauri) for Windows, macOS and Linux.
 # Manual run: installers as workflow artifacts. Tag v*: the same, plus a GitHub Release published once the three
 # systems are built (created as a draft first, so the jobs upload to one release and it never shows half empty).
-# Push to master: installers as workflow artifacts, like a manual run (pushes that only touch docs are skipped).
 # Signing is optional: without the secrets (see docs/installers.md) the installers are built unsigned.
 # The same goes for the update key (secret TAURI_SIGNING_PRIVATE_KEY): with it the build also makes the signed update
 # packages and latest.json, which « Rechercher une mise à jour » reads; without it the app is built without that feature.
@@ -10,17 +9,10 @@ name: Desktop installers
 on:
   push:
     tags: ['v*']
-    branches: [master]
-    paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
 
 permissions:
   contents: read
-
-# one build of master at a time: a newer push cancels the older build (macOS minutes count tenfold); tags never cancel
-concurrency:
-  group: desktop-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref_type == 'branch' }}
 
 jobs:
   # tag only: one draft release for the three build jobs to upload to

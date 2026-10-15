@@ -109,6 +109,7 @@ describe('engine options from settings', () => {
     wireframe: false,
     atmosphere: true,
     shadows: true,
+    cloudShadows: true,
     sunHour: 10,
     sunDate: '',
     sunFromTrack: true,

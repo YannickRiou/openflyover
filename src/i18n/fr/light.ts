@@ -110,6 +110,7 @@ export default {
   'atmosphere.title': 'Atmosphère',
   'atmosphere.enable': 'Atmosphère : ciel, soleil et brume',
   'atmosphere.shadows': 'Ombres du relief',
+  'atmosphere.cloudShadows': 'Ombres des nuages',
   'atmosphere.exposure': 'Exposition',
   'atmosphere.exposureTip': 'Éclaircit ou assombrit l’image, en plus du réglage automatique selon le soleil.',
   'atmosphere.exposureKeyed': 'Des clés de la ligne « Exposition » de la timeline pilotent cette valeur le long du parcours : le curseur ne sert alors plus.',

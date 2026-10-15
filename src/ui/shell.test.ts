@@ -264,7 +264,8 @@ describe('parseShellPrefs', () => {
 describe('parsePreferences', () => {
   it('reads the language, French for anything that is not a known one', () => {
     expect(parsePreferences('{"language":"en"}').language).toBe('en')
-    expect(parsePreferences('{"language":"de"}').language).toBe('fr')
+    expect(parsePreferences('{"language":"de"}').language).toBe('de')
+    expect(parsePreferences('{"language":"ja"}').language).toBe('fr')
     expect(parsePreferences('{"language":3}').language).toBe('fr')
     expect(parsePreferences('{}').language).toBe('fr')
   })

@@ -38,8 +38,8 @@ Strava import goes through your own Strava application). Your files stay on your
 terrain, imagery, weather and landmarks from open services. It runs as a **static website** or as a Windows, macOS or
 Linux **desktop application** (Tauri), from the same code.
 
-The interface and the texts of the films are available in **French** and **English**: pick the language with the flag
-button of the top bar (next to « ? »). The first run follows the browser's language (English, else French) and the choice is
+The interface and the texts of the films are available in **French**, **English**, **Spanish** (Español), **Italian** (Italiano) and **German** (Deutsch): pick the
+language with the flag button of the top bar (next to « ? »). The first run follows the browser's language when the app offers it (else French) and the choice is
 remembered on the device. The documentation is in English; the [user guide](docs/user-guide.html) quotes the interface labels in French (the reference language).
 
 ![The interface: top bar, tabs on the left, 3D view of the Tour du Mont-Blanc, timeline at the bottom](docs/images/interface.jpg)
@@ -222,7 +222,7 @@ video description.
 Conventions:
 
 - Strict TypeScript, with `import type` and no `enum`.
-- Interface in French and English (`src/i18n`, see "Internationalisation" in [`ARCHITECTURE.md`](ARCHITECTURE.md)): no text in the code, every string goes through `t('domain.key')` and has a French and an English message.
+- Interface in French, English, Spanish, Italian and German (`src/i18n`, see "Internationalisation" in [`ARCHITECTURE.md`](ARCHITECTURE.md)): no text in the code, every string goes through `t('domain.key')` and has a message in each language.
 - Visual identity in [`src/ui/theme.css`](src/ui/theme.css). Styling in Tailwind utilities (shared `@utility` classes in `src/ui/utilities.css`), interactive components on HeroUI behind the wrappers of `src/ui/primitives/` (screens never import `@heroui/react`): see [`tailwind.md`](docs/design/tailwind.md) and [`heroui.md`](docs/design/heroui.md).
 - Open, keyless sources only; any new source goes into `src/terrain/sources.ts` and `docs/sources.md`.
 - Types, lint and tests green before each commit, one commit per feature.

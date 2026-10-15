@@ -1,0 +1,31 @@
+import type { Messages } from '../messages'
+
+const messages: Messages['shell'] = {
+  loading: 'Wird geladen…',
+  'drop.title': 'GPX- oder FIT-Dateien ablegen',
+  'drop.hint': 'oder ein .opnflvr-Projekt',
+  'tab.trace': 'Track',
+  'tab.carte': 'Karte',
+  'tab.meteo': 'Wetter',
+  'tab.lumiere': 'Licht',
+  'tab.survol': 'Überflug',
+  'tab.objectif': 'Objektiv',
+  'tab.habillage': 'Overlay',
+  'tab.projet': 'Projekt',
+  'tab.reglages': 'Einstellungen',
+  'section.labels': 'Beschriftungen',
+  'section.weather': 'Wetter der Tour',
+  'section.offline': 'Offline',
+  'rail.aria': 'Bereiche',
+  'rail.tablist': 'Einstellungsbereiche',
+  'rail.expand': 'Bereich ausklappen',
+  'rail.collapse': 'Bereich einklappen',
+  'panel.aria': 'Einstellungen',
+  'dock.export': 'Export',
+  'dock.inspector': 'Inspektor',
+  'blockTools.aria': 'Ausgewähltes Element',
+  'blockTools.edit': 'Bearbeiten',
+  exportBusy: 'Ein Export läuft: Die Datei wurde nicht geöffnet.',
+}
+
+export default messages

@@ -112,6 +112,7 @@ const messages: Messages['light'] = {
   'atmosphere.title': 'Atmosphere',
   'atmosphere.enable': 'Atmosphere: sky, sun and haze',
   'atmosphere.shadows': 'Terrain shadows',
+  'atmosphere.cloudShadows': 'Cloud shadows',
   'atmosphere.exposure': 'Exposure',
   'atmosphere.exposureTip': 'Brightens or darkens the image, on top of the automatic adjustment based on the sun.',
   'atmosphere.exposureKeyed': 'Keyframes on the “Exposure” lane of the timeline drive this value along the route: the slider then no longer applies.',
