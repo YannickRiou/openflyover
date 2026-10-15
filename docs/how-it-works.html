@@ -1161,7 +1161,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
     <li><span class="tag">hosting</span><span>The website is built for the root of a domain; for a subfolder, build with <code>BASE_PATH=/subfolder/</code> (as the GitHub Pages workflow does).</span></li>
     <li><span class="tag">Linux desktop</span><span>Video export, including the transparent "overlay only" one, needs the system ffmpeg.</span></li>
     <li><span class="tag">media</span><span>Videos up to 50 MB, embedded in the project file (about 1.33 times their size). HEIC photos are refused; photo dates and positions are read only from JPEG files. Videos are synced to the track by time only, not by GPS.</span></li>
-    <li><span class="tag">rendering</span><span>Shadows only from the loaded area; clouds do not shade the terrain; the weather of a single point applies to the whole scene; water reflects an average sky, not the mountains.</span></li>
+    <li><span class="tag">rendering</span><span>Shadows only from the loaded area; the cloud cover follows the weather stations along the track (about one every 10 km, blended smoothly), but light, haze and rain still follow the marker alone; cloud shadows are soft, darken the whole picture under them (track and marker included) and stop 50 km from the camera; water reflects an average sky, not the mountains.</span></li>
     <li><span class="tag">editing</span><span>After chaining tracks, stops and framings placed on the old first track are not moved to the new one.</span></li>
     <li><span class="tag">tests</span><span>Component tests (jsdom) and the e2e scenarios cover behaviour, labels and the main flows, not the look: that is still checked by eye with screenshots.</span></li>
   </ul>

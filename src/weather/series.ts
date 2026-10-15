@@ -50,7 +50,7 @@ export type WeatherSample = Record<WeatherVariable, number>
 
 const HOUR_MS = 3_600_000
 /** Stations closer than this count as "at" the point (avoids an infinite inverse-distance weight). */
-const MIN_STATION_DISTANCE_M = 100
+export const MIN_STATION_DISTANCE_M = 100
 
 /** Values summed or maxed over the preceding hour: taken from the hour that ends at or after the instant. */
 const PERIOD_VARIABLES: ReadonlySet<WeatherVariable> = new Set(['precipitation', 'rain', 'snowfall', 'windGusts', 'weatherCode'])

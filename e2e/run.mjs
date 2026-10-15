@@ -1296,6 +1296,8 @@ async function main() {
       page.setDefaultTimeout(STEP_MS)
       // a first run follows the browser's language: the scenarios read the French interface (the headless browser may ignore --lang)
       await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, 'languages', { get: () => ['fr-FR', 'fr'] }))
+      // the dev server serves hundreds of modules: keep them all in the resource timing list (`exposeScene` reads the fiber module there)
+      await page.evaluateOnNewDocument(() => performance.setResourceTimingBufferSize(5000))
       page.on('console', (msg) => {
         // export timings (rendering, waiting for tiles, encoding)
         if (msg.text().startsWith('[export]')) log(`    ${msg.text()}`)
