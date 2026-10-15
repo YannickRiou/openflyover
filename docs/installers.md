@@ -30,9 +30,7 @@ The images and licence pages are build inputs committed in `src-tauri/installer/
 
 ## Building the installers
 
-**Automatically**: every push to `master` builds them (except a push that only changes Markdown files or `docs/`). A newer push cancels the build still running for an older one. Cost on a private repository: a macOS minute counts as 10 of the included minutes and a Windows minute as 2, so one build uses roughly 200 to 400 of them.
-
-**To try them out on another branch**: on GitHub, *Actions* tab › "Desktop installers" › *Run workflow* (any branch) › *Run workflow*.
+**To try them out**: on GitHub, *Actions* tab › "Desktop installers" › *Run workflow* (any branch) › *Run workflow*.
 
 **For a release**:
 
@@ -44,7 +42,7 @@ The images and licence pages are build inputs committed in `src-tauri/installer/
 
 ## Where to download them
 
-- After a push to `master`, *Run workflow* or a tag: *Actions* › the workflow run › at the bottom, *Artifacts* (one zip file per
+- After *Run workflow* or a tag: *Actions* › the workflow run › at the bottom, *Artifacts* (one zip file per
   installer, kept 90 days).
 - After a tag, in addition: *Releases*, the release `OpenFlyover v2.1.0` with all the installers, **published
   automatically** once the three systems are built (public on a public repository). While the builds run, it stays
