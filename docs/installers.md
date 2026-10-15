@@ -35,17 +35,21 @@ The images and licence pages are build inputs committed in `src-tauri/installer/
 
 **For a release**:
 
-1. Put the same number in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` (`version`), for example
-   `2.1.0`. The one in `tauri.conf.json` appears in the file names; the one in `package.json` is shown by the diagnostic report.
-2. Regenerate the third-party licenses with `npm run notices` (after `npm ci`; the first run takes about 8 minutes because
+1. Put the same number in the five places that carry it, for example `2.2.0`: `package.json` (`version`), `package-lock.json`
+   (the two `version` fields at the top), `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and the `openflyover` entry of
+   `src-tauri/Cargo.lock` (`cargo test --locked` fails if the lock file disagrees). The one in `tauri.conf.json` appears in
+   the file names and the update check; the one in `package.json` is shown by the diagnostic report and « Réglages › Mises à jour ».
+2. Rename the `## Unreleased` heading of `CHANGELOG.md` to the version and month, and add the « Nouveautés » entry of the
+   version (`src/ui/whatsNew.ts` and `news.vNN.*` in each `src/i18n/<language>/news.ts`): the handbook's « Release procedure » has the details.
+3. Only if a dependency changed: regenerate the third-party licenses with `npm run notices` (after `npm ci`; the first run takes about 8 minutes because
    of the crates.io rate limit) and commit `THIRD_PARTY_NOTICES.md` and `src-tauri/installer/license.rtf` / `license.txt`: they are shipped with the installers.
-3. Create and push the tag: `git tag v2.1.0`, then `git push origin v2.1.0` (any tag starting with `v` starts the workflow).
+4. Merge to `master`, then create and push the tag: `git tag -a v2.2.0 -m "OpenFlyover 2.2.0"`, then `git push origin v2.2.0` (any tag starting with `v` starts the workflow).
 
 ## Where to download them
 
 - After *Run workflow* or a tag: *Actions* › the workflow run › at the bottom, *Artifacts* (one zip file per
   installer, kept 90 days).
-- After a tag, in addition: *Releases*, the release `OpenFlyover v2.1.0` with all the installers, **published
+- After a tag, in addition: *Releases*, the release `OpenFlyover v2.2.0` with all the installers, **published
   automatically** once the three systems are built (public on a public repository). While the builds run, it stays
   a draft that only the repository owner can see; if one system fails, it stays a draft: re-run the failed job
   (*Re-run failed jobs*), which publishes it at the end, or publish it by hand (*Edit* › *Publish release*).
@@ -111,9 +115,16 @@ reads the release feed on GitHub **only when pressed** (no check at start-up, no
 installed silently), shows the new version and its notes, then « Installer et redémarrer » downloads it, checks its
 signature, installs it and restarts the app (it asks first, and is refused during an export). The website never shows it.
 
-Updates are signed with a key pair of your own, separate from the Windows and Apple certificates. Until you create it,
-nothing changes: the installers are built as before and the button answers « Les mises à jour ne sont pas disponibles
+Updates are signed with a key pair of your own, separate from the Windows and Apple certificates. Without the key
+secret, nothing changes: the installers are built as before and the button answers « Les mises à jour ne sont pas disponibles
 dans cette version de l'application. » (the updater is only switched on in builds made with `src-tauri/updater.conf.json`).
+
+**Status of this repository**: steps 1 to 3 below are done. The public key is committed in `src-tauri/updater.conf.json`
+(together with `createUpdaterArtifacts`, the endpoint and `windows.installMode: "passive"`, which makes the Windows update
+install without a wizard), and the repository secret `TAURI_SIGNING_PRIVATE_KEY` exists (check with `gh secret list` or *Settings* ›
+*Secrets and variables* › *Actions*; no password secret is set, which is right only if the key was generated with an empty
+password). What a maintainer must keep safe is the **private key file**: lose it and no installed copy can update. Every
+release since 2.1.0 carries the update packages; to add a new maintainer or machine, only the secret matters (the key file is not needed to release).
 
 ### Steps
 
@@ -138,12 +149,12 @@ dans cette version de l'application. » (the updater is only switched on in buil
    As soon as `TAURI_SIGNING_PRIVATE_KEY` exists, the workflow (step « Updater key (optional) ») merges
    `src-tauri/updater.conf.json` into the Tauri configuration (`--config`): the build then also makes the signed update
    packages, and `tauri-action` uploads them to the release with `latest.json`. Without the secret, nothing is merged.
-3. **Put the public key in the repository**: open `src-tauri/updater.conf.json` and replace the value of
-   `plugins.updater.pubkey` (`REPLACE_WITH_THE_CONTENT_OF_THE_PUBLIC_KEY_FILE`) by the content of the public key file
-   (`cat ~/.tauri/openflyover.key.pub`, one line). The public key is not secret: commit it. The endpoint
-   (`https://github.com/YannickRiou/openflyover/releases/latest/download/latest.json`) is already set.
-4. **Release a version** as described above (same number in `package.json`, `src-tauri/tauri.conf.json` and
-   `src-tauri/Cargo.toml`, `npm run notices`, a `v*` tag). The release then holds, besides the installers, the `.sig`
+3. **Put the public key in the repository**: open `src-tauri/updater.conf.json` and set the value of
+   `plugins.updater.pubkey` to the content of the public key file
+   (`cat ~/.tauri/openflyover.key.pub`, one line; done in this repository, the file no longer holds a placeholder). The public key is not secret: commit it. The endpoint
+   (`https://github.com/YannickRiou/openflyover/releases/latest/download/latest.json`) is already set. If you ever generate a new key,
+   replace the secret and this value together, and release a version that users install by hand.
+4. **Release a version** as described above (the five version fields, the changelog, a `v*` tag). The release then holds, besides the installers, the `.sig`
    signature files (next to the Windows installers, the `.AppImage`, and a `.app.tar.gz` on macOS: these are the update
    packages) and `latest.json`.
    **The first version that contains the updater cannot be reached from older ones** (they have no button): its users

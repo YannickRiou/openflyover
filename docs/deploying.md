@@ -13,7 +13,7 @@ is enough. Your server only sends the site files. Each visitor's browser fetches
 landmarks itself.
 
 1. Build the site: `npm ci && npm run build`.
-2. Copy the contents of `dist/` (about 17 MB) to the site root.
+2. Copy the contents of `dist/` (about 18 MB) to the site root.
 3. Serve it over HTTPS.
 
 ### GitHub Pages
@@ -146,6 +146,9 @@ npm run tauri:build   # builds dist/, then the application and its installers
 `src-tauri/target/release/bundle/`: `.msi` and `.exe` (NSIS) on Windows, `.app` and `.dmg` on macOS, `.deb`,
 `.rpm` and `.AppImage` on Linux. Each system builds its own installers. They are not signed: Windows and
 macOS show a warning on first launch.
+A local build has no update button: the update packages are made only when the update key is present and
+`src-tauri/updater.conf.json` is merged (`npm run tauri:build -- --config src-tauri/updater.conf.json`, see
+[`installers.md`](installers.md#automatic-updates-maintainer-setup)).
 
 
 Command-line batch rendering (one film per track in a folder) is described in the
