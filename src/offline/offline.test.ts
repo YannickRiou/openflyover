@@ -58,7 +58,7 @@ describe('offline policy', () => {
       expect(offlinePolicy(id).dailyLimit, id).toBeLessThanOrEqual(10_000)
       expect(offlinePolicy(id).reason).not.toBe('')
     }
-    for (const id of ['mapterhorn', 'aws-terrarium', 'ign-ortho', 'ign-plan', 'eox-s2cloudless']) expect(offlinePolicy(id).allowed, id).toBe(true)
+    for (const id of ['mapterhorn', 'aws-terrarium', 'ign-ortho', 'ign-plan']) expect(offlinePolicy(id).allowed, id).toBe(true)
   })
 
   it('has a decision for every catalogued source and refuses unknown ones', () => {
@@ -69,7 +69,7 @@ describe('offline policy', () => {
   })
 
   it('shares one daily limit between the IGN layers', () => {
-    expect(offlinePolicy('ign-ortho').provider).toBe(offlinePolicy('ign-ortho-1950-1965').provider)
+    expect(offlinePolicy('ign-ortho').provider).toBe(offlinePolicy('ign-plan').provider)
     expect(offlinePolicy('ign-ortho').dailyLimit).toBeGreaterThan(0)
     expect(offlinePolicy('aws-terrarium').dailyLimit).toBeUndefined()
   })
@@ -125,9 +125,9 @@ describe('planOfflineTiles', () => {
       Math.max(...planOfflineTiles(input({ imageryZoomOffset: offset })).tiles.filter((t) => t.sourceId === 'ign-ortho').map((t) => Number(/TILEMATRIX=(\d+)/.exec(t.url)?.[1])))
     expect(imageryZooms(0)).toBe(17)
     expect(imageryZooms(1)).toBe(18)
-    // EOX stops at 16: deeper terrain tiles reuse (crop) the same imagery tiles
-    const eox = planOfflineTiles(input({ imagery: getImagerySource('eox-s2cloudless'), imageryZoomOffset: 2 }))
-    expect(eox.imageryTiles).toBeLessThan(eox.terrainTiles * 16)
+    // OpenTopoMap stops at 17: deeper terrain tiles reuse (crop) the same imagery tiles
+    const topo = planOfflineTiles(input({ imagery: getImagerySource('opentopomap'), imageryZoomOffset: 2 }))
+    expect(topo.imageryTiles).toBeLessThan(topo.terrainTiles * 16)
   })
 
   it('plans the imagery no finer than the device shows, and says so', () => {

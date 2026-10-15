@@ -214,9 +214,7 @@ Data) — SRTM, GMTED2010, ETOPO1 courtesy of USGS/NOAA, EU-DEM © Copernicus, A
 autres sources ouvertes » ; IGN Géoplateforme : « © IGN — Géoplateforme (BD ORTHO,
 licence ouverte Etalab 2.0) » ; swisstopo : « © swisstopo (SWISSIMAGE, OGD) », « ©
 swisstopo (carte nationale, OGD) » ; Esri World Imagery : « Powered by Esri — Source:
-Esri, Vantor, Earthstar Geographics, and the GIS User Community » ; EOX Sentinel-2
-cloudless 2025 : « EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH
-(Contains modified Copernicus Sentinel data 2025) — CC BY-NC-SA 4.0 » ; OpenTopoMap :
+Esri, Vantor, Earthstar Geographics, and the GIS User Community » ; OpenTopoMap :
 « Données : © contributeurs OpenStreetMap, SRTM | Rendu : © OpenTopoMap (CC BY-SA) » ;
 Open-Meteo : « Données météo : Open-Meteo.com (CC BY 4.0) » ; OpenStreetMap (Overpass
 API) : « © contributeurs OpenStreetMap (ODbL) ».

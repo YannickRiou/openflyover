@@ -53,16 +53,6 @@ export const OFFLINE_POLICIES: Readonly<Record<string, OfflinePolicy>> = {
   },
   'ign-ortho': ign(16_000),
   'ign-plan': ign(45_000),
-  'ign-ortho-2000-2005': ign(16_000),
-  'ign-ortho-1965-1980': ign(40_000),
-  'ign-ortho-1950-1965': ign(40_000),
-  'eox-s2cloudless': {
-    provider: 'eox',
-    allowed: true,
-    get reason() { return t('offline.policy.eox') },
-    dailyLimit: 20_000,
-    typicalTileBytes: 10_000,
-  },
   swisstopo: swisstopo(20_000),
   'swisstopo-carte': swisstopo(30_000),
   'arcgis-world-imagery': {

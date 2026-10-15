@@ -501,7 +501,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <article class="term">
         <h4>Elevation tiles and imagery tiles</h4>
         <p>Elevation tiles look like strange colored images, but each pixel's color encodes a height. With the "Terrarium" encoding, height in meters = red × 256 + green + blue / 256 − 32,768. Imagery tiles are ordinary pictures: aerial photos (orthophotos, corrected to line up with the map), satellite images or topographic maps.</p>
-        <p class="here"><b>Here:</b> heights come from Mapterhorn (default) or AWS Terrain Tiles and are decoded in <code>src/terrain/dem.ts</code>. Photos come from IGN in France, swisstopo in Switzerland, Esri or Sentinel-2 elsewhere.</p>
+        <p class="here"><b>Here:</b> heights come from Mapterhorn (default) or AWS Terrain Tiles and are decoded in <code>src/terrain/dem.ts</code>. Photos come from IGN in France, swisstopo in Switzerland, Esri elsewhere.</p>
       </article>
       <article class="term">
         <h4>GPX and FIT files</h4>
@@ -1138,8 +1138,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
         <tr><td>AWS Terrain Tiles</td><td>terrain heights</td><td>open data, public archive</td></tr>
         <tr><td>IGN Géoplateforme</td><td>aerial photos and Plan IGN in France, photos from 1950 to 2005</td><td>Licence Ouverte Etalab 2.0</td></tr>
         <tr><td>swisstopo</td><td>aerial photos and national map in Switzerland</td><td>open data (OGD), reasonable use</td></tr>
-        <tr><td>Esri World Imagery</td><td>world aerial photos (optional)</td><td>Esri terms: « Powered by Esri », never offline; keyless use not covered, hence not the default</td></tr>
-        <tr><td>EOX Sentinel-2 cloudless</td><td>world satellite images, 10 m</td><td>CC BY-NC-SA 4.0, no commercial use</td></tr>
+        <tr><td>Esri World Imagery</td><td>world aerial photos (default outside France and Switzerland)</td><td>Esri terms: « Powered by Esri », never offline; keyless use of the legacy host is not covered by Esri</td></tr>
         <tr><td>OpenTopoMap</td><td>world topographic map</td><td>CC BY-SA, volunteer-run server</td></tr>
         <tr><td>Open-Meteo</td><td>historical weather</td><td>CC BY 4.0, free non-commercial use</td></tr>
         <tr><td>OpenStreetMap (Overpass)</td><td>landmarks, lakes and rivers</td><td>ODbL, moderate use of public servers</td></tr>
@@ -1156,7 +1155,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
   <ul class="limits">
     <li><span class="tag warn">to check</span><span>Never seen on a real graphics card: export speed, smoothness, sound and the final look. Development uses software rendering. The checklist is <a href="tests-gpu.md"><code>docs/tests-gpu.md</code></a>.</span></li>
     <li><span class="tag warn">to check</span><span>The desktop app has been run on Windows only; the macOS and Linux installers, built on GitHub, and command-line rendering have not been run on a real machine. Installers are not signed, so Windows and macOS warn on first launch.</span></li>
-    <li><span class="tag">licenses</span><span>Esri terms to re-read for online use; EOX and Open-Meteo are non-commercial; the license of the star catalog (Yale Bright Star Catalog) is not stated.</span></li>
+    <li><span class="tag">licenses</span><span>Esri terms to re-read for online use (it is the default imagery outside France and Switzerland); Open-Meteo is non-commercial; the license of the star catalog (Yale Bright Star Catalog) is not stated.</span></li>
     <li><span class="tag">browsers</span><span>Export not tested in Firefox or Safari. Without direct writing to disk, the video is built in memory (about twice its size); the drawer warns above an estimated 1.5 GB. HTTPS is required outside <code>localhost</code>.</span></li>
     <li><span class="tag">hosting</span><span>The website is built for the root of a domain; for a subfolder, build with <code>BASE_PATH=/subfolder/</code> (as the GitHub Pages workflow does).</span></li>
     <li><span class="tag">Linux desktop</span><span>Video export, including the transparent "overlay only" one, needs the system ffmpeg.</span></li>
