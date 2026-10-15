@@ -833,8 +833,8 @@ describe('texts and media attached to a stop', () => {
     expect(next.texts[0].startS).toBeCloseTo(attached.texts[0].startS + delta, 1)
     expect(next.texts[0].startS - after.holdStartS).toBeCloseTo(1, 1)
     expect(next.media[0].startS).toBe(round(after.holdStartS))
-    // a free text stays where it is
-    expect(next.texts[1]).toBe(attached.texts[1])
+    // a free text keeps its place on the route
+    expect(clockOfFilm(next).progressAtTime(next.texts[1].startS)).toBeCloseTo(clockOfFilm(attached).progressAtTime(attached.texts[1].startS), 2)
   })
 
   it('an item fitted to the hold stays fitted when the stop is stretched; shots and speed portions move them too', () => {
@@ -843,11 +843,11 @@ describe('texts and media attached to a stop', () => {
     expect(stretched.media[0]).toMatchObject({ startS: round(hold.holdStartS), durationS: round(hold.holdEndS - hold.holdStartS) })
     expect(stretched.media[0].durationS).toBeCloseTo(attached.media[0].durationS + 2, 1)
     expect(stretched.texts[0].startS).toBe(attached.texts[0].startS)
-    // a longer opening delays the stop and what is attached to it, not the free items
+    // a longer opening delays the stop and what is attached to it, and the free items placed on the route
     const later = followStops(attached, updateShot(attached, 'opening', { durationS: attached.opening.durationS + 2 }), clockOfFilm)
     expect(later.texts[0].startS).toBeCloseTo(attached.texts[0].startS + 2, 2)
     expect(later.media[0].startS).toBeCloseTo(attached.media[0].startS + 2, 2)
-    expect(later.texts[1]).toBe(attached.texts[1])
+    expect(later.texts[1].startS).toBeCloseTo(attached.texts[1].startS + 2, 2)
     // a slower portion before the stop delays it as well
     const slowed = followStops(attached, { ...attached, speeds: [{ id: 'speed-1', fromM: 500, toM: 1500, factor: 0.5 }] }, clockOfFilm)
     const delay = holdOf(slowed, 'stop-1').holdStartS - holdOf(attached, 'stop-1').holdStartS
@@ -873,7 +873,9 @@ describe('texts and media attached to a stop', () => {
     expect(after.holdStartS - before.holdStartS).toBeGreaterThan(1)
     expect(next.texts[0].startS - after.holdStartS).toBeCloseTo(1, 1)
     expect(next.media[0]).toMatchObject({ startS: round(after.holdStartS), durationS: round(after.holdEndS - after.holdStartS) })
-    expect(next.texts[1]).toBe(attached.texts[1])
+    // a free text keeps its place on the route in the longer film
+    expect(next.texts[1].startS).toBeGreaterThan(attached.texts[1].startS)
+    expect(longer(next).progressAtTime(next.texts[1].startS)).toBeCloseTo(clockOfFilm(attached).progressAtTime(attached.texts[1].startS), 2)
     // same clock: nothing moves
     expect(followStops(attached, attached, clockOfFilm)).toBe(attached)
   })
@@ -892,10 +894,54 @@ describe('texts and media attached to a stop', () => {
     expect(auto.texts.every((t) => t.stopId === undefined) && auto.media.every((m) => m.stopId === undefined)).toBe(true)
   })
 
-  it('leave the film as is when nothing is attached or nothing moves', () => {
-    const edited = dragFilm(film, 'stop-1', 'move', 5, contextOf(film))
-    expect(followStops(film, edited, clockOfFilm)).toBe(edited)
+  it('leave the film as is when nothing moves in time, or nothing is placed on it', () => {
     const renamed = updateText(attached, 'text-2', { text: 'Titre' })
     expect(followStops(attached, renamed, clockOfFilm)).toBe(renamed)
+    const bare: Film = { ...film, texts: [], media: [] }
+    const edited = dragFilm(bare, 'stop-1', 'move', 5, contextOf(bare))
+    expect(followStops(bare, edited, clockOfFilm)).toBe(edited)
+  })
+})
+
+describe('free texts and media follow their place on the route', () => {
+  const clockOfFilm = (f: Film) =>
+    buildFilmClock({
+      opening: f.opening,
+      closing: f.closing,
+      stops: f.stops,
+      speeds: f.speeds,
+      lengthM: L,
+      highlightsM: [],
+      durationS: D,
+      pacing: { ...DEFAULT_PACING, keepDuration: false },
+    })
+  const progressOf = (f: Film, id: string) => clockOfFilm(f).progressAtTime((f.texts.find((t) => t.id === id) ?? f.media.find((m) => m.id === id)!).startS)
+  const placed: Film = { ...film, texts: [text('in-opening', 2), text('on-route', 30, 2)], media: [photo('photo-on-route', 40)], audio: [{ id: 'audio-1', src: 'song-1', startS: 20, durationS: 10, inS: 0, volume: 1, fadeInS: 0.5, fadeOutS: 2 }] }
+
+  it('a slowed portion before them delays them, their duration and the music unchanged', () => {
+    const slowed = followStops(placed, { ...placed, speeds: [{ id: 'speed-1', fromM: 500, toM: 1500, factor: 0.5 }] }, clockOfFilm)
+    expect(slowed.texts[1].startS).toBeGreaterThan(placed.texts[1].startS + 1)
+    expect(progressOf(slowed, 'on-route')).toBeCloseTo(progressOf(placed, 'on-route'), 2)
+    expect(progressOf(slowed, 'photo-on-route')).toBeCloseTo(progressOf(placed, 'photo-on-route'), 2)
+    expect(slowed.texts[1].durationS).toBe(placed.texts[1].durationS)
+    // placed in the opening, before the flight: its time from the start of the film
+    expect(slowed.texts[0]).toBe(placed.texts[0])
+    // the music keeps its film seconds
+    expect(slowed.audio).toBe(placed.audio)
+  })
+
+  it('a faster portion before them brings them earlier, and a stop added before them delays them', () => {
+    const faster = followStops(placed, { ...placed, speeds: [{ id: 'speed-1', fromM: 500, toM: 1500, factor: 2 }] }, clockOfFilm)
+    expect(faster.texts[1].startS).toBeLessThan(placed.texts[1].startS)
+    expect(progressOf(faster, 'on-route')).toBeCloseTo(progressOf(placed, 'on-route'), 2)
+    const stopped = followStops(placed, { ...placed, stops: [...placed.stops, stop('stop-3', 1000, 5)] }, clockOfFilm)
+    expect(stopped.texts[1].startS).toBeCloseTo(placed.texts[1].startS + 5, 1)
+  })
+
+  it('an item the edit moved itself, or edits that do not move the film in time, are left alone', () => {
+    const moved = dragFilm(placed, 'on-route', 'move', 3, contextOf(placed))
+    expect(followStops(placed, moved, clockOfFilm)).toBe(moved)
+    const keyed = { ...placed, markerKeys: [] }
+    expect(followStops(placed, keyed, clockOfFilm)).toBe(keyed)
   })
 })

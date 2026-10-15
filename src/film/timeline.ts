@@ -1077,13 +1077,36 @@ export function attachToStop(film: Film, id: string, stop: ClockStop | null): Fi
 /** Two film times equal at the rounding of the stored values. */
 const sameTime = (a: number, b: number) => Math.abs(a - b) < 0.015
 
+/** The keys on the speed of a film (the other parameter keys do not move the film in time). */
+const speedKeysOf = (film: Pick<Film, 'paramKeys'>) => film.paramKeys.filter((k) => k.param === 'speed')
+const sameKeys = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((k, i) => k === b[i])
+
+/**
+ * Film time, in the film of clock `to`, of what appeared at `t` in the film of clock `from`, keeping its place on the
+ * route: in the opening it keeps its time from the start of the film, in the closing its time from the end of the
+ * flight; in a stop or a junction hold (the same one, found by its id) its offset to the start of the hold; elsewhere
+ * it is where the marker reaches the position it had.
+ */
+function routeTime(t: number, from: FilmClock, to: FilmClock): number {
+  const flightEnd = from.openingS + from.flightS
+  if (t < from.openingS) return t
+  if (t >= flightEnd) return to.openingS + to.flightS + (t - flightEnd)
+  const hold = [...from.stops, ...from.junctions].find((p) => t >= p.holdStartS && t < p.holdEndS)
+  const same = hold && [...to.stops, ...to.junctions].find((p) => p.id === hold.id)
+  if (hold && same) return same.holdStartS + (t - hold.holdStartS)
+  return to.timeAtProgress(from.progressAtTime(t))
+}
+
 /**
  * `after` (an edit of `before`) with its attached texts and media following their stop: an item the edit did not
  * move or stretch itself keeps its offset to the start of the stop's hold (an item fitted to the hold stays fitted,
  * stretched with it); an item whose stop is not among the film's own stops any more (removed, automatic stops back)
- * becomes free where it is. `clockOf` gives the clock of a film (same track and pacing); `clockBefore` the clock of
- * `before` when the change also moves what the clock is made from (flyover duration, pacing). `after` itself when
- * nothing changes.
+ * becomes free where it is. A free text or medium the edit did not touch keeps its place on the route (`routeTime`):
+ * slowing down or speeding up a portion, adding a stop, lengthening a shot or changing the duration moves it with the
+ * place it illustrated, its own duration unchanged; the music is not tied to a place and keeps its film seconds, and
+ * so do all of them when the order of the stages changes. `clockOf` gives the clock of a film (same track and
+ * pacing); `clockBefore` the clock of `before` when the change also moves what the clock is made from (flyover
+ * duration, pacing). `after` itself when nothing changes.
  */
 export function followStops(
   before: Film,
@@ -1091,7 +1114,7 @@ export function followStops(
   clockOf: (film: Film) => FilmClock,
   clockBefore: (film: Film) => FilmClock = clockOf,
 ): Film {
-  if (!after.texts.some((t) => t.stopId !== undefined) && !after.media.some((m) => m.stopId !== undefined)) return after
+  if (after.texts.length === 0 && after.media.length === 0) return after
   const own = new Set(after.autoStops ? [] : after.stops.map((s) => s.id))
   // only the stops, the speed portions, the shots and the clock (duration, pacing) move a stop in film time
   const moves =
@@ -1103,19 +1126,29 @@ export function followStops(
     before.autoStops !== after.autoStops ||
     before.junctions !== after.junctions ||
     before.junctionDefault !== after.junctionDefault ||
-    before.stageDurations !== after.stageDurations
+    before.stageDurations !== after.stageDurations ||
+    !sameKeys(speedKeysOf(before), speedKeysOf(after))
   let clocks: { from: FilmClock; to: FilmClock } | undefined
   let changed = false
   const follow = <T extends Attachable>(item: T, previous: readonly T[]): T => {
-    if (item.stopId === undefined) return item
-    if (!own.has(item.stopId)) {
+    const { stopId } = item
+    if (stopId !== undefined && !own.has(stopId)) {
       changed = true
       return detach(item)
     }
     const old = previous.find((p) => p.id === item.id)
     if (!moves || !old || old.startS !== item.startS || old.durationS !== item.durationS) return item
     clocks ??= { from: clockBefore(before), to: clockOf(after) }
-    const from = clocks.from.stops.find((s) => s.id === item.stopId)
+    if (stopId === undefined) {
+      // free: it keeps its place on the route, unless the stages were put in another order (then its film seconds)
+      const { from: was, to: now } = clocks
+      if (was.cuts.length !== now.cuts.length || was.cuts.some((c, k) => c.atM !== now.cuts[k].atM)) return item
+      const startS = roundS(Math.max(0, routeTime(item.startS, was, now)))
+      if (startS === item.startS) return item
+      changed = true
+      return { ...item, startS }
+    }
+    const from = clocks.from.stops.find((s) => s.id === stopId)
     const to = clocks.to.stops.find((s) => s.id === item.stopId)
     if (!from || !to) return item
     const fitted = sameTime(item.startS, from.holdStartS) && sameTime(item.startS + item.durationS, from.holdEndS)
