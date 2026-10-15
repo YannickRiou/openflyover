@@ -6,4 +6,5 @@ export default {
   'empty.sample': "Essayer avec l'exemple",
   'empty.openProject': 'Ouvrir un projet…',
   'empty.recent': 'Récents',
+  'empty.github': 'Projet libre sur GitHub',
 }

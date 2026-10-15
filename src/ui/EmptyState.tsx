@@ -1,6 +1,7 @@
 import { useT } from '../i18n'
 import type { ProjectEntry } from '../platform'
 import { useAppStore } from '../state/store'
+import { Icon } from './icons'
 import { libraryFile, useLibraryStore } from './library'
 import { chooseProjectToOpen, chooseTracksToImport, loadSample, openProject } from './projectActions'
 import { StravaImport } from './StravaImport'
@@ -76,6 +77,17 @@ export function EmptyState() {
             </ul>
           </section>
         )}
+
+        <a
+          className="mt-3 inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-hint text-text-2 no-underline underline-offset-[3px] transition-ui hover:text-text-1 hover:underline"
+          href="https://github.com/YannickRiou/openflyover"
+          target="_blank"
+          rel="noreferrer"
+          data-testid="home-github"
+        >
+          <Icon name="github" size={14} />
+          {t('home.empty.github')}
+        </a>
       </div>
     </section>
   )
