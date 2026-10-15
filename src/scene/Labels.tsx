@@ -33,6 +33,7 @@ import {
   lineOfSightClearance,
   occlusionFade,
   poiLabels,
+  FAINT_OPACITY,
   resolveOverlaps,
   spriteScaleForPixels,
   waypointLabels,
@@ -257,7 +258,7 @@ function updateLabelSet(
   const pixel = spriteScaleForPixels(1, size.height, camera.projectionMatrix.elements[5]) * scale
   const clearanceAt = reliefClearance(engine, frame, exaggeration)
 
-  const candidates: { rect: ScreenRect; priority: number }[] = []
+  const candidates: { rect: ScreenRect; priority: number; faint: boolean }[] = []
   const shown: { entry: LabelEntry; opacity: number }[] = []
   for (const entry of set.entries) {
     const { sprite, tex } = entry
@@ -276,6 +277,7 @@ function updateLabelSet(
     candidates.push({
       rect: { left: x - w / 2, right: x + w / 2, top: y - h + below, bottom: y + below },
       priority: entry.label.priority,
+      faint: opacity < FAINT_OPACITY,
     })
     shown.push({ entry, opacity })
   }

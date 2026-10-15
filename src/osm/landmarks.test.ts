@@ -7,16 +7,19 @@ import {
   landmarkLabels,
   landmarkPriority,
   landmarkText,
+  PINNED_LABEL_BOOST,
+  landmarkMode,
   movedInRank,
   newLandmarkIds,
+  nextMode,
   parseEle,
   parsePopulation,
   pathBoxDistanceM,
   placeSizeOf,
   projectOnPath,
   splitHidden,
-  withHidden,
   withLandmarkDefaults,
+  withMode,
   withPinnedOnly,
   withPlaceSize,
   withRank,
@@ -285,6 +288,16 @@ describe('landmarkLabels', () => {
     expect(landmarkLabels([a, b], 1, ['node/3', 'way/2']).map((l) => l.id)).toEqual(['osm:way/2', 'osm:node/3'])
     expect(landmarkLabels([a, b], 1, ['way/404']).map((l) => l.id)).toEqual(['osm:node/1'])
   })
+
+  it('a « Toujours » landmark wins the overlaps: its label priority is raised above the other landmarks', () => {
+    const base = { lon: 6.78, lat: 45.9, distanceM: 10, alongM: 0 }
+    const col = { ...base, id: 'node/1', kind: 'pass' as const, name: 'Col', priority: 40, text: 'Col' }
+    const lake = { ...base, id: 'way/2', kind: 'lake' as const, name: 'Lac', priority: 18, text: 'Lac' }
+    const [first, second] = landmarkLabels([[col, lake]], 5, ['way/2'])
+    expect(first).toMatchObject({ id: 'osm:node/1', priority: 40 })
+    expect(second).toMatchObject({ id: 'osm:way/2', priority: 18 + PINNED_LABEL_BOOST })
+    expect(second.priority).toBeGreaterThan(first.priority)
+  })
 })
 
 describe('withLandmarkDefaults', () => {
@@ -300,9 +313,16 @@ describe('withLandmarkDefaults', () => {
       rank: [],
       dismissedIds: [],
       pinnedIds: [],
-      maxCount: 40,
+      density: 'normal',
     })
     expect(withLandmarkDefaults({ ...older, hiddenIds: ['node/1'] })).toMatchObject({ hiddenIds: ['node/1'] })
+    // the cap of an older project becomes the nearest density; hidden wins over pinned
+    for (const [maxCount, density] of [[10, 'few'], [25, 'few'], [40, 'normal'], [50, 'normal'], [70, 'many'], [80, 'many']] as const) {
+      expect(withLandmarkDefaults({ ...older, maxCount })).toMatchObject({ density })
+      expect(withLandmarkDefaults({ ...older, maxCount })).not.toHaveProperty('maxCount')
+    }
+    expect(withLandmarkDefaults({ ...older, maxCount: 80, density: 'few' })).toMatchObject({ density: 'few' })
+    expect(withLandmarkDefaults({ ...older, hiddenIds: ['node/1'], pinnedIds: ['node/1', 'node/2'] })).toMatchObject({ hiddenIds: ['node/1'], pinnedIds: ['node/2'] })
     expect(withLandmarkDefaults({ ...older, seenIds: ['node/1', 2] })).toMatchObject({ seenIds: ['node/1'] })
     expect(withLandmarkDefaults({ ...older, seenIds: 'x' })).toMatchObject({ seenIds: [] })
     expect(withLandmarkDefaults({ ...older, places: { hamlet: false } })).toMatchObject({ places: { city: true, village: true, hamlet: false } })
@@ -390,16 +410,28 @@ describe('withPinnedOnly', () => {
   })
 })
 
-describe('withHidden / newLandmarkIds', () => {
+describe('withMode / landmarkMode / newLandmarkIds', () => {
   const settings = { ...DEFAULT_LANDMARK_SETTINGS, hiddenIds: ['node/1', 'poi-2'] }
 
-  it('hides or shows labels by id, every landmark listed now seen', () => {
-    const hidden = withHidden(settings, ['node/3', 'node/1'], true, ['node/1', 'node/3', 'node/4'])
+  it('sets labels to Jamais or back to Auto by id, every landmark listed now seen', () => {
+    const hidden = withMode(settings, ['node/3', 'node/1'], 'never', ['node/1', 'node/3', 'node/4'])
     expect(hidden.hiddenIds).toEqual(['poi-2', 'node/3', 'node/1'])
     expect(hidden.seenIds).toEqual(['node/1', 'node/3', 'node/4'])
-    const shown = withHidden(hidden, hidden.hiddenIds, false, ['node/5'])
+    const shown = withMode(hidden, hidden.hiddenIds, 'auto', ['node/5'])
     expect(shown.hiddenIds).toEqual([])
     expect(shown.seenIds).toEqual(['node/1', 'node/3', 'node/4', 'node/5'])
+  })
+
+  it('a landmark has one mode: Toujours leaves the hidden ids, Jamais the pinned ones; the button cycles through them', () => {
+    const always = withMode(settings, ['node/1'], 'always', [])
+    expect(always).toMatchObject({ hiddenIds: ['poi-2'], pinnedIds: ['node/1'] })
+    const never = withMode(always, ['node/1'], 'never', [])
+    expect(never).toMatchObject({ hiddenIds: ['poi-2', 'node/1'], pinnedIds: [] })
+    expect(['node/1', 'node/2'].map((id) => landmarkMode(always, id))).toEqual(['always', 'auto'])
+    expect(landmarkMode(never, 'node/1')).toBe('never')
+    expect(nextMode('auto')).toBe('always')
+    expect(nextMode('always')).toBe('never')
+    expect(nextMode('never')).toBe('auto')
   })
 
   it('the landmarks listed and not seen are new, none before the first choice', () => {

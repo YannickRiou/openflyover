@@ -19,6 +19,7 @@ import {
   isValidLabelSettings,
   lineOfSightClearance,
   occlusionFade,
+  FAINT_OPACITY,
   POI_PRIORITY,
   poiLabels,
   resolveOverlaps,
@@ -214,5 +215,15 @@ describe('screen-space rules', () => {
         { rect: rect(160, 0), priority: 50 },
       ]),
     ).toEqual([false, true, true, true])
+  })
+
+  it('a faint label (far, half hidden by the relief) does not take the place of a clearer one', () => {
+    const rect = (left: number) => ({ left, top: 0, right: left + 100, bottom: 30 })
+    // the faint one has the higher priority but only fills the places the others leave free
+    expect(resolveOverlaps([{ rect: rect(0), priority: 150, faint: true }, { rect: rect(50), priority: 20 }, { rect: rect(300), priority: 10, faint: true }])).toEqual([false, true, true])
+    // two faint ones still resolve between themselves by priority
+    expect(resolveOverlaps([{ rect: rect(0), priority: 20, faint: true }, { rect: rect(50), priority: 30, faint: true }])).toEqual([false, true])
+    expect(FAINT_OPACITY).toBeGreaterThan(0)
+    expect(FAINT_OPACITY).toBeLessThan(1)
   })
 })
