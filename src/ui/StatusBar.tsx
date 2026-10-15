@@ -338,6 +338,7 @@ export function StatusBar() {
             ))}
         </p>
         <p className="type-hint">{t('status.sourcesNote')}</p>
+        {getPlatform().checkForUpdate && <p className="type-hint">{t('status.sourcesUpdates')}</p>}
       </Modal>
     </footer>
   )

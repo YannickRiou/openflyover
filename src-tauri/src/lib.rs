@@ -2,7 +2,8 @@
 //! src/platform/desktop.ts, the oauth and opener plugins of the Strava connection (src/platform/oauthRedirect.ts), the
 //! native video encoder (system ffmpeg) for webviews without WebCodecs (video.rs), batch rendering from the command
 //! line (cli.rs), the project files the system opens with the app (opened.rs) and the load of the machine shown in
-//! the status bar (system.rs).
+//! the status bar (system.rs). The updater and process plugins (« Rechercher une mise à jour ») are registered at
+//! start-up only when `plugins.updater` is configured (updater.conf.json).
 
 mod cli;
 mod opened;
@@ -25,6 +26,15 @@ pub fn run() {
         .setup(|app| {
             cli::setup(app.handle());
             opened::setup(app.handle());
+            // « Rechercher une mise à jour »: the updater plugin reads its `pubkey` from `plugins.updater` and fails to
+            // initialise without it, so both plugins are registered only in a build made with updater.conf.json
+            #[cfg(desktop)]
+            {
+                if app.config().plugins.0.contains_key("updater") {
+                    app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+                    app.handle().plugin(tauri_plugin_process::init())?;
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

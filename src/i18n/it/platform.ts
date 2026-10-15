@@ -19,6 +19,7 @@ const messages: Messages['platform'] = {
   encoderNative: 'installa ffmpeg (sudo apt install ffmpeg), che codifica il video su questo sistema, poi riavvia l’applicazione; l’immagine fissa resta disponibile qui.',
   encoderTouch: 'questo browser non codifica il video (WebCodecs). Su telefono o tablet, esporta da Chrome (Android) o Safari 16.4 o successivo (iPhone, iPad); l’immagine fissa resta disponibile qui.',
   encoderMissing: 'manca la codifica video (WebCodecs). Esporta da Chrome, Edge o un Firefox recente; l’immagine fissa resta disponibile qui.',
+  'error.noUpdate': 'Nessun aggiornamento da installare: esegui prima la ricerca.',
 }
 
 export default messages

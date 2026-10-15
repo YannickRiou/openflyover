@@ -29,6 +29,7 @@ const messages: Messages['status'] = {
   'perf.js': 'JS {value}',
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value}%',
+  sourcesUpdates: 'Applicazione desktop: GitHub (github.com) viene contattato solo quando premi «Cerca aggiornamenti» (Impostazioni), per leggere il file delle versioni.',
 }
 
 export default messages

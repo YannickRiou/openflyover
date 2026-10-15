@@ -3,6 +3,7 @@
  */
 import { cyrb53 } from '../core/math'
 import { t } from '../i18n'
+import type { UpdateCheck, UpdateProgress } from './updater'
 
 /** One line of a file dialog's type list: extensions without the dot. */
 export interface FileFilter {
@@ -201,6 +202,16 @@ export interface Platform {
   guardClose?(beforeClose: () => Promise<boolean>): () => void
   /** Desktop: a native question; the button pressed, 'cancel' also for Escape. */
   ask?(question: Question): Promise<'yes' | 'no' | 'cancel'>
+  /**
+   * Desktop: look for a newer release of the app, only when asked (never at start-up, never in the background); the
+   * website has none (its service worker updates the page, see `webApp.ts`). Never throws: see `UpdateCheck`.
+   */
+  checkForUpdate?(): Promise<UpdateCheck>
+  /**
+   * Desktop: download and install the update the last `checkForUpdate` found, then restart the app (on Windows the
+   * installer closes it and starts it again). `onProgress` gets what is downloaded so far; throws when it fails.
+   */
+  installUpdate?(onProgress?: (progress: UpdateProgress) => void): Promise<void>
 }
 
 /** A question with two buttons, or three with `no` (between the other two). */

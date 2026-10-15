@@ -30,6 +30,7 @@ const messages: Messages['status'] = {
   'perf.js': 'JS {value}',
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
+  sourcesUpdates: 'Aplicación de escritorio: se contacta con GitHub (github.com) solo cuando pulsas «Buscar actualizaciones» (Ajustes), para leer el archivo de versión.',
 }
 
 export default messages

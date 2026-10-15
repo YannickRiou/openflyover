@@ -8,7 +8,8 @@ GitHub builds the desktop application installers (workflow `.github/workflows/de
 | macOS | `OpenFlyover_<version>_universal.dmg` (Apple Silicon and Intel) |
 | Linux | `OpenFlyover_<version>_amd64.AppImage` and `OpenFlyover_<version>_amd64.deb` (Ubuntu 22.04, Debian 12 or newer) |
 
-Allow 15 to 30 minutes per system (the Rust cache shortens later runs).
+Allow 15 to 30 minutes per system (the Rust cache shortens later runs). The application can update itself from these
+releases once the update key is set up: see [Automatic updates](#automatic-updates-maintainer-setup).
 
 ## The project file type (`.opnflvr`)
 
@@ -103,7 +104,87 @@ followed: <https://v2.tauri.app/distribute/sign/macos/>.
 The first three are enough to sign; the last three add notarization, which removes the
 Gatekeeper warning.
 
-### Automatic updates
+## Automatic updates: maintainer setup
 
-The application does not use the Tauri updater plugin: no update signing key is
-needed.
+The desktop application has a **« Rechercher une mise à jour »** button (« Réglages » tab, « Mises à jour » section). It
+reads the release feed on GitHub **only when pressed** (no check at start-up, nothing in the background, nothing
+installed silently), shows the new version and its notes, then « Installer et redémarrer » downloads it, checks its
+signature, installs it and restarts the app (it asks first, and is refused during an export). The website never shows it.
+
+Updates are signed with a key pair of your own, separate from the Windows and Apple certificates. Until you create it,
+nothing changes: the installers are built as before and the button answers « Les mises à jour ne sont pas disponibles
+dans cette version de l'application. » (the updater is only switched on in builds made with `src-tauri/updater.conf.json`).
+
+### Steps
+
+1. **Generate the key pair**, once, on your machine (after `npm ci`):
+
+   ```bash
+   mkdir -p ~/.tauri
+   npx tauri signer generate -w ~/.tauri/openflyover.key
+   ```
+
+   It asks for a password (it may stay empty) and writes two files: `~/.tauri/openflyover.key` (**private**) and
+   `~/.tauri/openflyover.key.pub` (public). Keep the private key and its password in your password manager, outside
+   the repository, and **back them up**: an app can only be updated with a package signed by the key it was built with,
+   so if the key is lost, installed copies can never update and have to be reinstalled by hand.
+2. **Create the two repository secrets** (*Settings* › *Secrets and variables* › *Actions* › *New repository secret*):
+
+   | Secret | Content |
+   |---|---|
+   | `TAURI_SIGNING_PRIVATE_KEY` | the whole content of the private key file: `cat ~/.tauri/openflyover.key` |
+   | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | the password chosen in step 1 (leave this secret out if it was empty) |
+
+   As soon as `TAURI_SIGNING_PRIVATE_KEY` exists, the workflow (step « Updater key (optional) ») merges
+   `src-tauri/updater.conf.json` into the Tauri configuration (`--config`): the build then also makes the signed update
+   packages, and `tauri-action` uploads them to the release with `latest.json`. Without the secret, nothing is merged.
+3. **Put the public key in the repository**: open `src-tauri/updater.conf.json` and replace the value of
+   `plugins.updater.pubkey` (`REPLACE_WITH_THE_CONTENT_OF_THE_PUBLIC_KEY_FILE`) by the content of the public key file
+   (`cat ~/.tauri/openflyover.key.pub`, one line). The public key is not secret: commit it. The endpoint
+   (`https://github.com/YannickRiou/openflyover/releases/latest/download/latest.json`) is already set.
+4. **Release a version** as described above (same number in `package.json`, `src-tauri/tauri.conf.json` and
+   `src-tauri/Cargo.toml`, `npm run notices`, a `v*` tag). The release then holds, besides the installers, the `.sig`
+   signature files (next to the Windows installers, the `.AppImage`, and a `.app.tar.gz` on macOS: these are the update
+   packages) and `latest.json`.
+   **The first version that contains the updater cannot be reached from older ones** (they have no button): its users
+   install it by hand once; later versions are offered from the button.
+
+The release must be **published**: the endpoint is `releases/latest`, which ignores drafts and pre-releases.
+
+### Trying it before announcing it
+
+1. Build a version with the key, to install and keep as the « old » one:
+
+   ```bash
+   export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/openflyover.key)"
+   export TAURI_SIGNING_PRIVATE_KEY_PASSWORD='...'   # omit if the key has no password
+   npm run tauri:build -- --config src-tauri/updater.conf.json
+   ```
+
+   Install it (the `.exe`, the `.dmg`, or run the AppImage), then raise the version in the three files, tag and push to
+   publish a newer release from GitHub.
+2. Start the old build, open « Réglages », press « Rechercher une mise à jour »: the new version and its notes show up;
+   « Installer et redémarrer » asks, installs and restarts on the new version (check « Version installée »).
+
+### Common errors
+
+| What the line under the button says | Cause and fix |
+|---|---|
+| « Les mises à jour ne sont pas disponibles dans cette version de l'application. » | This build was made without `updater.conf.json` (no `TAURI_SIGNING_PRIVATE_KEY` secret when it was built). Create the secret, then release a new version. |
+| « Échec : … signature … » | `pubkey` in `updater.conf.json` is not the public key of the private key in the secret (or still the placeholder): fix it, release again. Copies built with a wrong key cannot update: reinstall by hand. |
+| « Échec : Could not fetch a valid release JSON from the remote » | No `latest.json` in the latest published release: the build ran without the key, the release is still a draft or a pre-release, or an upload failed (see the next row). |
+| `latest.json` lacks a system (the other two update, one says up to date) | The three build jobs upload to the same `latest.json` at about the same time, so a job can overwrite another's entry. Re-run the build job of the missing system (*Re-run job*) and check the file in the release. |
+| No `.sig` file among the release assets | The private key was not in the environment, or `createUpdaterArtifacts` was not merged: check the « Updater key (optional) » step of the run. |
+| « Échec » on Linux after the download | Only the **AppImage** can update itself. A copy installed from the `.deb` has to be updated by installing the new `.deb`. |
+| « GitHub est injoignable » | No network, a proxy or a firewall that blocks `github.com` (the check is made by the application itself, not by the web page). |
+
+Unsigned installers (no Windows or Apple certificate, see above) still update through the button; the system may show
+the same warnings as for a first install (SmartScreen on Windows, Gatekeeper on macOS).
+
+### Privacy
+
+The application contacts `github.com` (the release feed and, if you install, the update package) **only when you press
+« Rechercher une mise à jour »**, and sends nothing but the usual request (no account, no identifier, no track or
+project). The request is made by the Rust side of the application (updater plugin), so the web page's content security
+policy needs no extra host. The same sentence is in « Sources et licences » of the application and in
+[`sources.md`](sources.md).

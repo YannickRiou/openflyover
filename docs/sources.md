@@ -25,6 +25,11 @@ The status bar, at the bottom of the screen, shows the attributions of the curre
 are added when the weather or the landmarks are loaded. The same lines are burned into exported videos and images
 ([README, "Licenses"](../README.md#licenses)).
 
+The desktop application can check for a new version of itself, on demand: it contacts `github.com` (the release feed
+`latest.json`, then the update package if you install it) only when you press « Rechercher une mise à jour »
+(« Réglages »), from its Rust side (the page's content security policy lists no GitHub host). Nothing else is sent; the
+website has no such button. Setup: [`installers.md`](installers.md#automatic-updates-maintainer-setup).
+
 The optional Strava import is not one of these sources: it reads your own activities through your own Strava
 application ([user guide](user-guide.html#import)). No Strava key or account is in the code. It goes through
 `www.strava.com` only (authorization, token, API v3) and falls under the [Strava API Agreement](https://www.strava.com/legal/api)

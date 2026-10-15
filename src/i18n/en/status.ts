@@ -13,6 +13,7 @@ const messages: Messages['status'] = {
   perfTip: 'Performance (choose in “Settings”)',
   creditSources: 'Sources {name}',
   sources: 'Sources and licences',
+  sourcesUpdates: 'Desktop app: GitHub (github.com) is contacted only when you press “Check for updates” (Settings), to read the version file.',
   sourcesNote: 'These credits are burned into the exported films (Overlay, “Source credits”). Fonts: Fraunces and IBM Plex (SIL Open Font License 1.1). Icons: Lucide (ISC licence). OpenFlyover is published under the MIT licence.',
   'source.weather': 'Weather of the outing (Open-Meteo)',
   'source.landmarks': 'Landmarks (OpenStreetMap)',
