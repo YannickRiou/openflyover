@@ -61,6 +61,32 @@ export const OFFLINE_POLICIES: Readonly<Record<string, OfflinePolicy>> = {
     get reason() { return t('offline.policy.esri') },
     typicalTileBytes: 14_000,
   },
+  // CC BY 4.0, and basemap.at itself offers offline products and points to downloaders
+  'basemap-at': {
+    provider: 'basemap-at',
+    allowed: true,
+    get reason() { return t('offline.policy.basemapAt') },
+    dailyLimit: 20_000,
+    typicalTileBytes: 15_000,
+  },
+  // Public Data License 1.0 allows copying; no rule on bulk downloads is published: personal use, short corridor
+  'gsi-photo': {
+    provider: 'gsi',
+    allowed: true,
+    personalUse: true,
+    get reason() { return t('offline.policy.gsi') },
+    dailyLimit: 10_000,
+    typicalTileBytes: 15_000,
+  },
+  // public domain (NAIP) over the States, but the 10 m SPOT imagery of Alaska is viewable only (licence): caution, personal use
+  'usgs-imagery': {
+    provider: 'usgs',
+    allowed: true,
+    personalUse: true,
+    get reason() { return t('offline.policy.usgs') },
+    dailyLimit: 10_000,
+    typicalTileBytes: 22_000,
+  },
   opentopomap: {
     provider: 'opentopomap',
     allowed: true,

@@ -47,7 +47,7 @@ remembered on the device. The documentation is in English; the [user guide](docs
 | Area | Features |
 |---|---|
 | Import | GPX and FIT, several tracks at once, or Strava activities; heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
-| Terrain and imagery | Mapterhorn or AWS Terrain Tiles terrain; IGN orthophotos in France and swisstopo in Switzerland, chosen automatically; Esri World Imagery elsewhere; topographic maps; terrain exaggeration; OpenStreetMap lakes and rivers rendered as water that reflects the sky and the sun, with ripples |
+| Terrain and imagery | Mapterhorn or AWS Terrain Tiles terrain; IGN orthophotos in France and swisstopo in Switzerland, chosen automatically; Esri World Imagery elsewhere, with national aerial photos to pick by hand (Austria, Japan, United States); topographic maps; terrain exaggeration; OpenStreetMap lakes and rivers rendered as water that reflects the sky and the sun, with ripples |
 | Flyover | five camera styles (chase, sway, orbit, top-down view, cinematic shot), twelve presets, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
 | Pacing | slow-motion and pauses at highlights: tops of climbs, passes, nearby summits |
 | Light | physically based sky and haze, sun at the actual time of the outing, terrain shadows, starry night, automatic exposure |
@@ -165,6 +165,9 @@ All sources are open and keyless; the code declares them in `src/terrain/sources
 | IGN Géoplateforme | orthophotos, Plan IGN and historical photos in France | Licence Ouverte Etalab 2.0 |
 | swisstopo | orthophotos and national map in Switzerland | open data (OGD) |
 | Esri World Imagery | world orthophotos (default outside France and Switzerland) | Esri terms: credited "Powered by Esri", never in offline packs; keyless use not covered by Esri, hence not the default ([details](docs/sources.md)) |
+| basemap.at | aerial photos of Austria | CC BY 4.0, credit "Datenquelle: basemap.at" |
+| GSI Japan | aerial photos of Japan | Public Data License 1.0, credit GSI |
+| USGS The National Map | aerial photos of the United States | public domain, credit USGS |
 | OpenTopoMap | world topographic map | CC BY-SA |
 | Open-Meteo | historical weather and forecast | CC BY 4.0, **non-commercial** API |
 | OpenStreetMap (Overpass) | landmarks, water bodies | ODbL |
