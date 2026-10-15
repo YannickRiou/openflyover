@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import sampleGpx from '../../public/samples/tour-du-mont-blanc-j1.gpx?raw'
+import sampleGpx from '../import/__fixtures__/tour-du-mont-blanc-j1.gpx?raw'
 import type { LonLatBounds, TileFetcher, TileSourceBase } from '../core/types'
 import { parseGpx } from '../import/gpx'
 import { buildTrack } from '../import/stats'

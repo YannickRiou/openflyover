@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generates public/samples/tour-du-mont-blanc-j1.gpx: a synthetic but realistic stage 1 of the
+ * Generates src/import/__fixtures__/tour-du-mont-blanc-j1.gpx (the fixture of the tests): a synthetic but realistic stage 1 of the
  * Tour du Mont-Blanc (Les Houches -> Col de Voza -> Bionnassay -> Les Contamines-Montjoie).
  *
  * Hand-placed waypoints are joined by a Catmull-Rom spline in a local metric frame, a smooth
@@ -13,7 +13,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../public/samples/tour-du-mont-blanc-j1.gpx')
+const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/import/__fixtures__/tour-du-mont-blanc-j1.gpx')
 
 const START_TIME = Date.parse('2025-07-12T07:00:00Z')
 const STEP_S = 60
