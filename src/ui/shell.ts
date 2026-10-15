@@ -275,6 +275,8 @@ export interface Preferences {
   appearance: Appearance
   /** language of the interface and of the film overlay (`i18n/`) */
   language: LanguageCode
+  /** version of « Nouveautés » last opened (`whatsNew.ts`), '' when never: the dot of the « i » button shows until then */
+  whatsNewSeen: string
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -284,6 +286,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   timelineMagnet: true,
   appearance: DEFAULT_APPEARANCE,
   language: DEFAULT_LANGUAGE,
+  whatsNewSeen: '',
 }
 
 /** The booleans of `raw` for `keys`, the defaults for anything missing or not a boolean. */
@@ -308,6 +311,7 @@ export function parsePreferences(raw: string | null): Preferences {
     timelineMagnet: typeof v.timelineMagnet === 'boolean' ? v.timelineMagnet : DEFAULT_PREFERENCES.timelineMagnet,
     appearance: parseAppearance(v.appearance),
     language: isLanguageCode(v.language) ? v.language : DEFAULT_PREFERENCES.language,
+    whatsNewSeen: typeof v.whatsNewSeen === 'string' ? v.whatsNewSeen : DEFAULT_PREFERENCES.whatsNewSeen,
   }
 }
 
