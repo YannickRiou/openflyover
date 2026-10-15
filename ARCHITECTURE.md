@@ -81,7 +81,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/sequence.ts` + `follow.ts` | several tracks (see "Several tracks") | `Stage`, `Sequence`, `playsInSequence`, `orderedTracks`, `buildSequence`, `sequenceOf`, `filmSequenceOf`, `filmTrackOf`, `stageAt`, `trackUnderMarker`, `sequenceLandmarks`; `filmFollowOf(tracks, race, smoothingM)`; hooks `useFilmTrack`, `useFilmSequence` (`scene/usePacing.ts`) |
 | `src/weather/sceneWeather.ts` + `src/scene/weatherEffect.ts` | weather in the scene | `sceneConditionsAt`, `sceneWeatherAt`, `sceneWeatherFrom`, `CLEAR_SCENE_WEATHER`, `hazeExtinction`; `WeatherEffect` |
 | `src/osm/water.ts` + `src/scene/waterMesh.ts` + `src/scene/WaterLayer.tsx` | reflective water | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`) |
-| `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`) |
+| `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `cloudCoverField`, `zonedCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`); `patchRegionalCoverage`, `patchCloudShadow` (`scene/cloudShaders.ts`) |
 | `src/scene/cloudSea.ts` + `src/scene/CloudSeaSurface.tsx` | surface sea of clouds | `seaRelief`, `billow`, `gradientNoise`, `octaveWeight`, `seaNoisePoint`, `seaBaseAltitude`, `curvatureDropM`, `edgeFade`, `rimFade`, `buildRadialGrid`, `terrainBoxOf`, `terrainGridCentres`, `seaReliefGlsl`, `glslFloat`; `CloudSeaSurface` |
 | `src/scene/grading.ts` + `gradingEffect.ts` + `GradingComposer.tsx` | color grading | `GradingSettings`, `DEFAULT_GRADING`, `GRADING_PRESETS`, `GRADING_RANGES`, `isValidGrading`, `isIdentityGrading`, `matchingPreset`, `gradingOfPreset`, `withGradingValue`, `gradingUniforms`; `GradingEffect`; `useGradingEffect`, `GradingComposer` |
 | `src/scene/lens.ts` + `useLensEffects.ts` + `flareEffect.ts` + `shutterEffect.ts` | « Objectif » lens effects (see "Lens") | pure, tested: `LensSettings`, `DEFAULT_LENS`, `LENS_RANGES`, `isValidLens`, `withLensDefaults`, `lensActive`, `bloomParams`, `depthOfFieldParams`, `SHUTTER_SUBFRAMES`, `SHUTTER_STEP_PX`, `shutterSamples`, `adaptiveShutterSamples`, `viewMotionPx`, `subFrameCount`, `previewShutterWeight`, `radialBlurLength`, `setShutterSubFrame`, `shutterSubFrame`, `subFrameSlices`; `useLensEffects`, `FlareEffect`, `ShutterEffect`; `filmViewAt` (`filmView.ts`: the camera placement of `FlyoverRig` at a progress and film time, shared with the export); `LensPanel` (`src/ui`) |
@@ -2314,7 +2314,7 @@ exports) gets it from the terrain source of the settings.
   `hazeScale` of the weather, at most 30, analytic integral along the ray; the manual "Brume" slider, a uniform white
   veil, was removed: older projects and presets that still carry `haze` load without it, unknown keys are ignored), veiled sky, distance pulled toward gray under the veil, desaturation; logarithmic
   depth read as in the Takram effect; uniforms prefixed `weather*`.
-- Limits: weather from a single point applied to the whole scene.
+- Limits: the light, the haze, the veil and the precipitation come from the weather under the marker only, applied to the whole scene (the cloud cover alone varies over the scene: "Volumetric clouds", cover field).
 
 ### Export quality tiers (« Qualité d'export »)
 
@@ -2372,6 +2372,25 @@ exports) gets it from the terrain source of the settings.
   cirrus at max(7 km, ground + 5.5 km), × exaggeration (thicknesses unchanged). Layer "a" (fog) and cloud haze
   turned off: the haze remains that of `WeatherEffect`. Under visible clouds, the `WeatherEffect` sky veil is
   reduced to 30%.
+- **Cover that varies over the scene** (`meteo` mode only; v2.1): `cloudCoverField(series, timeMs, frame)` (pure) asks each
+  station of the series for its cloud cover at the sun date (`weatherAt` on a series of that station alone), blends them over a
+  32 × 32 grid by inverse distance weighting (power 2, minimum distance 100 m, as between stations in `series.ts`) and turns the
+  blended cover of each layer into the `coverage` of three-clouds (`coverageFor`, the table above). The grid is a square of the
+  cube-sphere UV space around the scene frame (`uvJacobian` gives UV per metre; the texel centres go back to lon/lat through its
+  inverse), wide enough for the farthest station + 10 km (20 to 250 km), fixed in the world: it is not drifted with the wind, the
+  weather stays where its stations are. It returns RGBA8 bytes (low, mid, high layer, 0; 255 = `MAX_COVERAGE`), the UV centre
+  and 1 / width of the square, and the largest cover of each layer. `zonedCloudsFrom` gives the layers (the bases and
+  thicknesses of `sceneCloudsFrom` for those largest covers, but density and exponent 1: no thinning, the field carries the
+  coverage). A pure function of (series, film time, place): the export renders the same field as the preview (~1.5 ms for
+  12 stations, measured in node). The three-clouds shaders read one global `coverage`, so `patchRegionalCoverage`
+  (`scene/cloudShaders.ts`, text patch of `sampleWeather` like the patches of `CloudsLayer`) replaces
+  `1.0 - coverage * heightScale` by the coverage of each layer from the texture (`regionalCoverage`, bilinear, clamped to its edge;
+  uniforms `regionalFrame`, `regionalAmount`), in the cloud march **and** in the shadow map (both materials, shared uniform
+  objects). `regionalAmount` is 0 outside `meteo` mode, so manual, sea of clouds and no clouds render as before. The texture
+  is refilled every frame only when its bytes change, and a counter joins `cloudInputs` so that a still preview starts averaging
+  again. Without a series or without any cloud value the old uniform path applies (no clouds). A single station gives a uniform
+  field. Not the same look as before for a near-overcast sky with layers of different covers: before, the layers needing less
+  than the dominant one were thinned by density (the shared global coverage); now each is patchy at its own cover.
 - Sea of clouds ("Mer de nuages", `mode: 'mer'`, `seaOfClouds`): a single dense low layer (channel r), mid and high
   layers off, whatever the weather. Its top is `seaTopM`, an altitude above sea level (× exaggeration), the most
   direct reading for a user who knows the altitudes of the route: the summits above it emerge. Choosing the mode
@@ -2449,8 +2468,7 @@ exports) gets it from the terrain source of the settings.
   z × the golden ratio, modulo 1, so that consecutive slices stratify the march start of a pixel), also passed to
   `AerialPerspective` (otherwise it downloads it as soon as the clouds provide their shadow map). Nothing is downloaded
   from GitHub.
-- Limits: the terrain is lit by sources (`SunLight`), so cloud shadows do not reach it (the
-  sun stays dimmed by the weather); layers at a fixed altitude for the whole film; in the preview, temporal upsampling
+- Limits: layers at a fixed altitude for the whole film; in the preview, temporal upsampling
   trails when the camera moves fast, and the moving or playing preview keeps the grain of the upsampling (only a still
   view and the export average); high cost on a weak GPU ("Aucun" (none) mode). The edge of the sea of clouds against
   the relief is where the march stops on the depth of the terrain: three-clouds 0.7.6 has no option to soften it
@@ -2464,6 +2482,23 @@ exports) gets it from the terrain source of the settings.
   towards the sun only. Verified with SwiftShader (golden hour, sea of clouds, with relief): black before, lit and
   self-shadowed after; not yet on a GPU. The resolve also drops a non-finite history or output (`guardResolve`,
   defensive: a single NaN frame would otherwise stay in the history for good).
+- **Cloud shadows on the terrain** (v2.1): the terrain is lit by three's lights (`SunLight`), which know nothing of the clouds,
+  but the cloud shadow map (Beer shadow map, `effect.atmosphereShadow`) already reaches `AerialPerspective`, which only used it to
+  dim its own post-process lighting (`sunLight`, not used here), so its result was never used. `patchCloudShadow`
+  (`scene/cloudShaders.ts`, text patch of its fragment shader, applied on the first frame the effect exists by
+  `addCloudShadow` in `AtmosphereLayer`) multiplies the colour of a terrain pixel (depth < 1, before the clouds are composited
+  over it, so the clouds themselves are not dimmed) by `mix(1, sunTransmittance, strength · sunShare)`: `sunTransmittance` =
+  exp(−optical depth) read from the shadow map by the library's own PCF (8 taps, 4 on a phone or tablet, jittered with the
+  noise texture), `sunShare` = share of the sun in the irradiance there (`GetSunAndSkyIrradiance` on the local vertical:
+  the shader has no normal of the relief, a horizontal surface is assumed), `strength` = the weather's `shadowStrength`
+  (the sun is already dimmed under an overcast, so the shadows fade there instead of darkening twice), 0 without
+  « Ombres du relief » (`settings.shadows`; no shadow-map read then), without clouds, in « Nappe » mode (no shadow map) and at night
+  (the sun share is 0). The shadow map was already rendered for the clouds themselves: the added cost is the per-pixel
+  read. The export pins the `frame` uniform of the aerial perspective (the dither slice of its PCF) so the same frame
+  gets the same noise whatever the renders before it. Limits: the shadow map covers 50 km from the camera
+  (`SHADOW_MAX_FAR_M`) in two cascades of 256² texels in the preview; cirrus (no `shadow` flag in three-clouds) cast none; the
+  shadow darkens everything drawn under it (track, marker, sprites) like the terrain; no relief normal, so the darkening of a
+  slope facing the sun is under-estimated; software GL only (SwiftShader), not seen on a real GPU.
 - **Night**: the atmosphere lights the clouds with the sun and sky only, so they went black at night. `addNightFill`
   patches the march shader (sky-light line) with a `nightIrradiance` uniform set each frame to the terrain's night fill
   (hemisphere sky colour × `nightFillIntensity`): constant moonlight, no moon phase or position. Occlusion unchanged (a

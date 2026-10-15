@@ -11,12 +11,13 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Color, Vector3, type HemisphereLight, type Mesh } from 'three'
+import { Color, Uniform, Vector3, type HemisphereLight, type Mesh } from 'three'
 import { EffectComposer, ToneMapping, disposePassWithoutEffects } from '@react-three/postprocessing'
 import { EffectPass, SMAAEffect, ToneMappingMode } from 'postprocessing'
 import type { AerialPerspectiveEffect, SkyLightProbe, SunDirectionalLight } from '@takram/three-atmosphere'
 import { AerialPerspective, Atmosphere, Sky, SkyLight, Stars, SunLight, type AtmosphereApi } from '@takram/three-atmosphere/r3f'
 import { deviceBudget } from '../core/deviceBudget'
+import { isExportBusy, useExportStore } from '../export/store'
 import type { Track } from '../core/types'
 import { samplePath, trackPathOf, type TrackPath } from '../flyover/path'
 import { filmSequenceOf, filmTrackOf, trackUnderMarker } from '../flyover/sequence'
@@ -29,6 +30,7 @@ import type { SceneWeather } from '../weather/sceneWeather'
 import type { WeatherSeries } from '../weather/series'
 import { useWeatherStore, weatherSeriesOf } from '../weather/store'
 import { createCloudNoiseTexture } from './cloudNoise'
+import { patchCloudShadow } from './cloudShaders'
 import { CloudSeaSurface } from './CloudSeaSurface'
 import { CloudsLayer } from './CloudsLayer'
 import { DEFAULT_GROUND_HEIGHT_M } from './CameraRig'
@@ -57,6 +59,20 @@ const _marker = new Vector3()
 const _irradiance = new Vector3()
 const _grey = new Color()
 
+/**
+ * Cloud shadows on the terrain: the aerial perspective already reads the shadow map of the clouds, its shader patched
+ * (`patchCloudShadow`) to dim the colour of the terrain by `strength`. Done on the first frame the effect exists (the
+ * composer mounts it after this component).
+ */
+function addCloudShadow(effect: AerialPerspectiveEffect, strength: Uniform<number>): void {
+  effect.uniforms.set('cloudShadowStrength', strength)
+  // 8 taps of the shadow map per pixel on a computer, 4 on a phone or tablet
+  effect.shadowSampleCount = deviceBudget().kind === 'desktop' ? 8 : 4
+  // setFragmentShader is protected
+  Reflect.set(effect, 'fragmentShader', patchCloudShadow(effect.getFragmentShader()))
+  effect.dispatchEvent({ type: 'change' })
+}
+
 /** Track under the marker for the current frame (`trackUnderMarker`), its path and weather, read by the clouds. */
 export interface MarkerTrack {
   track: Track
@@ -73,6 +89,8 @@ export function AtmosphereLayer() {
   const camera = useThree((s) => s.camera)
   const atmosphereRef = useRef<AtmosphereApi>(null)
   const aerialRef = useRef<AerialPerspectiveEffect>(null)
+  /** strength of the cloud shadows on the terrain, a uniform of the aerial perspective (`patchCloudShadow`) */
+  const cloudShadowRef = useRef(new Uniform(0))
   const nightFillRef = useRef<HemisphereLight>(null)
   const skyLightRef = useRef<SkyLightProbe>(null)
   const [sun, setSun] = useState<SunDirectionalLight | null>(null)
@@ -179,6 +197,12 @@ export function AtmosphereLayer() {
       sun.shadow.intensity = weather.shadowStrength
     }
     if (skyLightRef.current) skyLightRef.current.intensity = weather.skyScale
+    // cloud shadows on the terrain: with the relief's shadows, as strong as the weather lets the shadows be
+    const aerial = aerialRef.current
+    if (aerial && !aerial.uniforms.has('cloudShadowStrength')) addCloudShadow(aerial, cloudShadowRef.current)
+    cloudShadowRef.current.value = cloudsOn && settings.shadows ? weather.shadowStrength : 0
+    // the export renders the same dither for the same frame, whatever the number of renders before it
+    if (aerial && isExportBusy(useExportStore.getState().phase)) aerial.uniforms.get('frame').value = 0
     weatherEffect.setParams({
       hazeExtinction: hazeExtinction(weather.hazeScale),
       hazeBaseY,

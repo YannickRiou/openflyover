@@ -10,11 +10,24 @@
  * frame never depends on the frames rendered before it. The textures are served locally at /clouds/ (vite.config.ts),
  * with a generated noise instead of the Takram blue noise (cloudNoise.ts): nothing is downloaded from GitHub.
  * At night the clouds get the faint fill light of the terrain (`addNightFill`): the atmosphere only models sunlight.
- * Limit: the terrain is lit by light sources (SunLight), so the cloud shadows do not reach it.
+ * In weather mode the cover varies over the scene (`cloudCoverField`, a small texture read by the patched shaders,
+ * `cloudShaders.ts`); the cloud shadows reach the terrain through the aerial perspective (same file).
  */
 import { useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Uniform, Vector3, type Camera, type Data3DTexture, type HemisphereLight } from 'three'
+import {
+  ClampToEdgeWrapping,
+  DataTexture,
+  LinearFilter,
+  NoColorSpace,
+  RGBAFormat,
+  UnsignedByteType,
+  Uniform,
+  Vector3,
+  type Camera,
+  type Data3DTexture,
+  type HemisphereLight,
+} from 'three'
 import { CloudLayers, type CloudsEffect } from '@takram/three-clouds'
 import { Clouds, type CloudsProps } from '@takram/three-clouds/r3f'
 import { deviceBudget } from '../core/deviceBudget'
@@ -25,15 +38,18 @@ import { geoidUndulation } from '../geo/geoid'
 import { useAppStore } from '../state/store'
 import {
   EXPORT_SAMPLES,
+  FIELD_SIZE,
+  cloudCoverField,
   cloudCoversAt,
   cloudDrift,
   filmWind,
   sceneCloudsFrom,
   seaOfClouds,
   weatherOffsetFor,
+  zonedCloudsFrom,
 } from '../weather/sceneClouds'
-import { sceneConditionsAt } from '../weather/sceneWeather'
 import type { MarkerTrack } from './AtmosphereLayer'
+import { patchRegionalCoverage } from './cloudShaders'
 import { shutterSubFrame, subFrameSlices } from './lens'
 import { previewCloudPass } from './renderOnDemand'
 import { useFilmClock } from './usePacing'
@@ -101,13 +117,35 @@ function addNightFill(effect: CloudsEffect): Uniform<Vector3> {
   return uniform
 }
 
+/**
+ * Cover that varies over the scene: both the cloud march and its shadow map read the coverage of each layer from one
+ * texture (`regionalCoverage`, 8-bit, filled every frame by `cloudCoverField`). `regionalAmount` 0 = the single
+ * `coverage` of the library (manual mode, sea of clouds, no weather).
+ */
+function addRegionalCoverage(effect: CloudsEffect) {
+  const texture = new DataTexture(new Uint8Array(FIELD_SIZE * FIELD_SIZE * 4), FIELD_SIZE, FIELD_SIZE, RGBAFormat, UnsignedByteType)
+  texture.magFilter = LinearFilter
+  texture.minFilter = LinearFilter
+  texture.wrapS = ClampToEdgeWrapping
+  texture.wrapT = ClampToEdgeWrapping
+  texture.colorSpace = NoColorSpace
+  const uniforms = { regionalCoverage: new Uniform(texture), regionalFrame: new Uniform(new Vector3()), regionalAmount: new Uniform(0) }
+  for (const material of [effect.cloudsPass.currentMaterial, effect.shadowPass.currentMaterial]) {
+    Object.assign(material.uniforms, uniforms)
+    material.fragmentShader = patchRegionalCoverage(material.fragmentShader)
+    material.needsUpdate = true
+  }
+  return { ...uniforms, texture }
+}
+
 const _east = new Vector3()
 const _north = new Vector3()
 const _origin = new Vector3()
 
 /** What the clouds of a frame depend on, but the depth of the scene: camera, sun, cover, layers, drift. */
-function cloudInputs(effect: CloudsEffect, camera: Camera): number[] {
+function cloudInputs(effect: CloudsEffect, camera: Camera, fieldVersion: number): number[] {
   return [
+    fieldVersion,
     ...camera.matrixWorld.elements,
     ...camera.projectionMatrix.elements,
     ...effect.sunDirection.toArray(),
@@ -149,6 +187,9 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
   const last = useRef<number[]>([])
   const still = useRef(0)
   const nightIrradiance = useRef<Uniform<Vector3> | null>(null)
+  const regional = useRef<ReturnType<typeof addRegionalCoverage> | null>(null)
+  /** bumped when the cover field changes, so that the preview starts averaging its frames again */
+  const fieldVersion = useRef(0)
   /** cloud altitudes are above the ellipsoid, the scene heights above sea level (geo/geoid.ts) */
   const undulation = useMemo(() => (frame ? geoidUndulation(frame.origin.lon, frame.origin.lat) : 0), [frame])
 
@@ -156,6 +197,9 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     if (!ref.current) return
     guardResolve(ref.current)
     nightIrradiance.current = addNightFill(ref.current)
+    const added = addRegionalCoverage(ref.current)
+    regional.current = added
+    return () => added.texture.dispose()
   }, [])
 
   // Preview: cheap, upscaled until the view is still (useFrame); export: chosen quality, averaged noise slices.
@@ -205,19 +249,40 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     const under = marker.current
     const path = under?.path
     const series = under?.series ?? null
-    let conditions
-    if (settings.clouds.mode === 'meteo' && series && path && path.count > 0 && now) {
-      const at = samplePath(path, Math.min(1, Math.max(0, under.progress)) * path.lengthM)
-      conditions = sceneConditionsAt(series, now.getTime(), at.lon, at.lat)
-    }
+    // the scene frame in ECEF, for the cover field and the drift
+    _origin.setFromMatrixPosition(frame.localToEcef)
+    _east.setFromMatrixColumn(frame.localToEcef, 0).normalize()
+    _north.setFromMatrixColumn(frame.localToEcef, 2).normalize().negate()
+    const sunMs = now?.getTime()
+    const geometry = { groundM: under?.track.stats.minEle ?? 0, altitudeM: settings.clouds.altitudeM, exaggeration: settings.exaggeration }
+    // weather: the cover differs over the scene according to the stations of the series (otherwise one value for all)
+    const field =
+      settings.clouds.mode === 'meteo' && series && sunMs !== undefined
+        ? cloudCoverField(series, sunMs, {
+            lon: frame.origin.lon,
+            lat: frame.origin.lat,
+            origin: _origin.toArray(),
+            east: _east.toArray(),
+            north: _north.toArray(),
+          })
+        : null
     const clouds =
       settings.clouds.mode === 'mer'
         ? seaOfClouds(settings.clouds.seaTopM, settings.exaggeration)
-        : sceneCloudsFrom(cloudCoversAt(settings.clouds, conditions), {
-            groundM: under?.track.stats.minEle ?? 0,
-            altitudeM: settings.clouds.altitudeM,
-            exaggeration: settings.exaggeration,
-          })
+        : field
+          ? zonedCloudsFrom(field.covers, geometry)
+          : sceneCloudsFrom(cloudCoversAt(settings.clouds, undefined), geometry)
+    const target = regional.current
+    if (target) {
+      const data = target.texture.image.data as Uint8Array
+      if (field && (field.data.length !== data.length || field.data.some((v, i) => v !== data[i]))) {
+        data.set(field.data)
+        target.texture.needsUpdate = true
+        ++fieldVersion.current
+      }
+      target.regionalFrame.value.set(field?.centre[0] ?? 0, field?.centre[1] ?? 0, field?.invSpan ?? 0)
+      target.regionalAmount.value = field && clouds ? 1 : 0
+    }
     effect.coverage = clouds?.coverage ?? 0
     for (let i = 0; i < 3; i++) {
       const layer = effect.cloudLayers[i]
@@ -243,9 +308,6 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     const start = path && path.count > 0 ? samplePath(path, 0) : null
     const wind = filmWind(series, under?.track.stats.startTime ?? 0, start?.lon ?? 0, start?.lat ?? 0)
     const drift = cloudDrift(wind, timeS)
-    _origin.setFromMatrixPosition(frame.localToEcef)
-    _east.setFromMatrixColumn(frame.localToEcef, 0).normalize()
-    _north.setFromMatrixColumn(frame.localToEcef, 2).normalize().negate()
     const [du, dv] = weatherOffsetFor(_origin.toArray(), _east.toArray(), _north.toArray(), drift, effect.localWeatherRepeat.x)
     effect.localWeatherOffset.set(du, dv)
     const shift = _east.multiplyScalar(drift.east).addScaledVector(_north, drift.north)
@@ -254,7 +316,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
 
     if (exporting) return
     // preview: upscaled while the view changes, then the average of the still frames
-    const inputs = cloudInputs(effect, camera)
+    const inputs = cloudInputs(effect, camera, fieldVersion.current)
     const changed = inputs.length !== last.current.length || inputs.some((v, i) => v !== last.current[i])
     last.current = inputs
     still.current = changed ? 0 : still.current + 1

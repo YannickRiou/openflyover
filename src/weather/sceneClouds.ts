@@ -9,7 +9,9 @@
 import { deviceBudget } from '../core/deviceBudget'
 import { withDefaults } from '../core/guards'
 import { clamp } from '../core/math'
-import { weatherAt, type WeatherSeries } from './series'
+import type { LonLat } from '../core/types'
+import { haversineM } from '../geo/lonLat'
+import { MIN_STATION_DISTANCE_M, weatherAt, type WeatherSeries } from './series'
 import type { SceneConditions } from './sceneWeather'
 
 export const CLOUD_MODES = ['meteo', 'manuel', 'mer', 'aucun'] as const
@@ -112,7 +114,14 @@ export function cloudCoversAt(settings: CloudSettings, conditions: SceneConditio
     const c = clamp(settings.coverage, 0, 1)
     return { low: c, mid: MANUAL_MID * c, high: MANUAL_HIGH * c }
   }
-  if (!conditions) return null
+  return conditions ? coversOf(conditions) : null
+}
+
+/** The cloud values of the weather at one place (`SceneConditions`, `WeatherSample`). */
+type CoverInputs = Pick<SceneConditions, 'cloudCover' | 'cloudCoverLow' | 'cloudCoverMid' | 'cloudCoverHigh'>
+
+/** Cover of the three layers of the weather: a missing layer counts as the total, null when every value is missing. */
+function coversOf(conditions: CoverInputs): CloudCovers | null {
   const total = conditions.cloudCover
   const layer = (percent: number) => (Number.isNaN(percent) ? total : percent)
   const covers = [layer(conditions.cloudCoverLow), layer(conditions.cloudCoverMid), layer(conditions.cloudCoverHigh)]
@@ -170,7 +179,8 @@ const HIGH_ABOVE_GROUND_M = 5500
 const MAX_EXPONENT = 8
 /** Coverage of three-clouds above which every texel is cloudy (default coverage filter width 0.6). */
 const FULL_COVERAGE = 0.4
-const MAX_COVERAGE = 0.55
+/** Largest `coverage` of three-clouds we use (also the scale of the 8-bit cover field). */
+export const MAX_COVERAGE = 0.55
 /**
  * Sea of clouds (`seaOfClouds`): thickness (metres, not exaggerated), coverage, exponent, density, shape of its layer
  * and period of its shape noise (metres).
@@ -264,6 +274,21 @@ export function seaOfClouds(seaTopM: number, exaggeration: number): SceneClouds 
   }
 }
 
+/**
+ * Layers of the clouds whose cover varies over the scene (`cloudCoverField`): the same bases and thicknesses as
+ * `sceneCloudsFrom` for the largest cover of each layer anywhere, but no thinning: the field gives the coverage of
+ * every layer where it is rendered, so each layer keeps its own density and exponent 1. Null when no layer reaches
+ * MIN_CLOUD_COVER.
+ */
+export function zonedCloudsFrom(covers: CloudCovers, geometry: CloudGeometry): SceneClouds | null {
+  const base = sceneCloudsFrom(covers, geometry)
+  if (!base) return null
+  const layers = base.layers.map((layer, i) =>
+    layer.heightM > 0 ? { ...layer, densityScale: DENSITY[i], weatherExponent: 1 } : layer,
+  )
+  return { ...base, layers: layers as SceneClouds['layers'] }
+}
+
 /** Base of the low, mid and high layers above sea level, before the exaggeration (metres). */
 function layerBasesM(geometry: CloudGeometry): number[] {
   const ground = Number.isFinite(geometry.groundM) ? geometry.groundM : 0
@@ -333,6 +358,20 @@ export function cubeSphereUv(p: Vec3): [number, number] {
 /** Step of the finite differences of the UV Jacobian (metres). */
 const JACOBIAN_STEP_M = 1000
 
+/** UV change per metre towards east (first column) and north (second) at `origin` (ECEF): [[du/dE, du/dN], [dv/dE, dv/dN]]. */
+function uvJacobian(origin: Vec3, east: Vec3, north: Vec3): [[number, number], [number, number]] {
+  const at = (v: Vec3, s: number) => cubeSphereUv([origin[0] + v[0] * s, origin[1] + v[1] * s, origin[2] + v[2] * s])
+  const e1 = at(east, JACOBIAN_STEP_M)
+  const e0 = at(east, -JACOBIAN_STEP_M)
+  const n1 = at(north, JACOBIAN_STEP_M)
+  const n0 = at(north, -JACOBIAN_STEP_M)
+  const s = 2 * JACOBIAN_STEP_M
+  return [
+    [(e1[0] - e0[0]) / s, (n1[0] - n0[0]) / s],
+    [(e1[1] - e0[1]) / s, (n1[1] - n0[1]) / s],
+  ]
+}
+
 /**
  * Offset of the local weather texture (`localWeatherOffset`, in tiles) that moves the cloud cover by `drift`
  * (metres east / north) around `origin` (ECEF), with `east` / `north` the ECEF unit vectors there and `repeat`
@@ -340,14 +379,96 @@ const JACOBIAN_STEP_M = 1000
  * moves by D when offset = −J·D·repeat (J: UV Jacobian at the origin, linear in the drift).
  */
 export function weatherOffsetFor(origin: Vec3, east: Vec3, north: Vec3, drift: Wind, repeat: number): [number, number] {
-  const at = (v: Vec3, s: number) => cubeSphereUv([origin[0] + v[0] * s, origin[1] + v[1] * s, origin[2] + v[2] * s])
-  const e1 = at(east, JACOBIAN_STEP_M)
-  const e0 = at(east, -JACOBIAN_STEP_M)
-  const n1 = at(north, JACOBIAN_STEP_M)
-  const n0 = at(north, -JACOBIAN_STEP_M)
-  const s = repeat / (2 * JACOBIAN_STEP_M)
-  return [
-    -((e1[0] - e0[0]) * drift.east + (n1[0] - n0[0]) * drift.north) * s,
-    -((e1[1] - e0[1]) * drift.east + (n1[1] - n0[1]) * drift.north) * s,
-  ]
+  const [[ue, un], [ve, vn]] = uvJacobian(origin, east, north)
+  return [-(ue * drift.east + un * drift.north) * repeat, -(ve * drift.east + vn * drift.north) * repeat]
+}
+
+// ---------------------------------------------------------------------------
+// Cover that varies over the scene
+// ---------------------------------------------------------------------------
+
+/** Texels per side of the cover field. The stations are ~10 km apart: smoother than this is not worth more. */
+export const FIELD_SIZE = 32
+/** The field spans the stations plus this margin, at least `FIELD_MIN_RADIUS_M` and at most `FIELD_MAX_RADIUS_M` (metres). */
+const FIELD_MARGIN_M = 10_000
+const FIELD_MIN_RADIUS_M = 20_000
+const FIELD_MAX_RADIUS_M = 250_000
+const EARTH_RADIUS_M = 6_371_008.8
+const DEG = Math.PI / 180
+
+/** Where the cover field is: the scene frame (`origin`, `east`, `north` in ECEF) and its place on the globe. */
+export interface FieldFrame extends LonLat {
+  origin: Vec3
+  east: Vec3
+  north: Vec3
+}
+
+/**
+ * Cloud cover over the scene at one instant, as the coverage of each layer in a small texture of the cloud shaders
+ * (patched `sampleWeather`, `scene/cloudShaders.ts`). Not drifted with the wind: the weather stays where its stations are.
+ */
+export interface CloudField {
+  size: number
+  /** RGBA bytes, row r from the lowest v, column c from the lowest u: coverage of the low, mid, high layer (255 = `MAX_COVERAGE`), then 0 */
+  data: Uint8Array
+  /** centre of the square the field spans in the cube-sphere UV of the shaders, and 1 / its width */
+  centre: [number, number]
+  invSpan: number
+  /** the largest cover of each layer anywhere in the field */
+  covers: CloudCovers
+}
+
+/**
+ * Cover of the three layers over the scene: each station of the series gives its cover at `timeMs`
+ * (`weatherAt`), blended over the field by inverse distance weighting (power 2, as between stations in `series.ts`),
+ * then turned into the `coverage` of three-clouds per layer (`coverageFor`). The field is a square of the UV space
+ * around the scene frame, wide enough for every station; outside it the shaders take the edge. A pure function of its
+ * arguments: the export renders the same field as the preview. Null without station or without any cloud value.
+ */
+export function cloudCoverField(series: WeatherSeries, timeMs: number, frame: FieldFrame, size = FIELD_SIZE): CloudField | null {
+  if (series.time.length === 0) return null
+  const stations = series.stations.flatMap((station) => {
+    const sample = weatherAt({ ...series, stations: [station] }, timeMs, station.lon, station.lat)
+    const covers = sample && coversOf(sample)
+    return covers ? [{ station, covers: [covers.low, covers.mid, covers.high] }] : []
+  })
+  if (stations.length === 0) return null
+  const farthest = Math.max(...stations.map((s) => haversineM(frame, s.station)))
+  const radius = clamp(farthest + FIELD_MARGIN_M, FIELD_MIN_RADIUS_M, FIELD_MAX_RADIUS_M)
+  const [[ue, un], [ve, vn]] = uvJacobian(frame.origin, frame.east, frame.north)
+  const halfUv = radius * Math.max(Math.hypot(ue, un), Math.hypot(ve, vn))
+  const det = ue * vn - un * ve
+  const data = new Uint8Array(size * size * 4)
+  const max = [0, 0, 0]
+  const metresPerLon = EARTH_RADIUS_M * Math.cos(frame.lat * DEG) * DEG
+  const metresPerLat = EARTH_RADIUS_M * DEG
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      // UV offset of the texel centre from the centre of the field, then metres towards east / north (inverse Jacobian)
+      const du = ((col + 0.5) / size - 0.5) * 2 * halfUv
+      const dv = ((row + 0.5) / size - 0.5) * 2 * halfUv
+      const place = { lon: frame.lon + ((vn * du - un * dv) / det) / metresPerLon, lat: frame.lat + ((ue * dv - ve * du) / det) / metresPerLat }
+      let wSum = 0
+      const mixed = [0, 0, 0]
+      for (const { station, covers } of stations) {
+        const d = Math.max(MIN_STATION_DISTANCE_M, haversineM(place, station))
+        const w = 1 / (d * d)
+        wSum += w
+        for (let i = 0; i < 3; i++) mixed[i] += covers[i] * w
+      }
+      for (let i = 0; i < 3; i++) {
+        const cover = mixed[i] / wSum
+        max[i] = Math.max(max[i], cover)
+        const needed = cover < MIN_CLOUD_COVER ? 0 : coverageFor(i, cover)
+        data[(row * size + col) * 4 + i] = Math.round((needed / MAX_COVERAGE) * 255)
+      }
+    }
+  }
+  return {
+    size,
+    data,
+    centre: cubeSphereUv(frame.origin),
+    invSpan: 1 / (2 * halfUv),
+    covers: { low: max[0], mid: max[1], high: max[2] },
+  }
 }
