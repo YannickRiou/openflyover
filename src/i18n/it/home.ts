@@ -8,6 +8,7 @@ const messages: Messages['home'] = {
   'empty.sample': 'Prova con l’esempio',
   'empty.openProject': 'Apri un progetto…',
   'empty.recent': 'Recenti',
+  'empty.github': 'Open source su GitHub',
 }
 
 export default messages
