@@ -13,7 +13,7 @@
 import { errorMessage } from '../core/errors'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode, UIEvent } from 'react'
+import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode, UIEvent } from 'react'
 import { materializeStops, stopAt, stopCandidates } from '../film/assemble'
 import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readAudio, startMusicPreview, useMusicPreview, waveformPath } from '../film/audio'
 import { beatTicksPath } from '../film/beats'
@@ -29,7 +29,7 @@ import { useMediaStore } from '../film/media'
 import { isMediaFile, readMedia } from '../film/video'
 import { JUNCTION_KIND_LABELS, STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
 import { PARAM_LANE_LABELS, PARAM_SPECS, keysOfParam, paramLanes } from '../film/paramKeys'
-import type { FilmParamKey } from '../film/paramKeys'
+import type { FilmParam, FilmParamKey } from '../film/paramKeys'
 import { MARKER_FIGURE_LABELS, MARKER_KIND_LABELS } from '../scene/markerSettings'
 import type { Film, FilmMedia, FilmSpeed, FilmStop } from '../film/model'
 import {
@@ -67,7 +67,7 @@ import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type Elev
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
 import type { OverlaySettings } from '../overlay/settings'
-import { disableCard, editFilm, getFilmSource, reorderTracks, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { addKeyframe, addMarkerKeyHere, addParamKeyHere, disableCard, editFilm, getFilmSource, reorderTracks, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
 import { formatClock, formatDistance, formatNumber, formatShort } from './format'
@@ -83,7 +83,8 @@ import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
 import { spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
-import { Button, Checkbox, Popover, Select, Slider, Tip } from './primitives'
+import { Button, Checkbox, Menu, Popover, Select, Slider, Tip } from './primitives'
+import type { MenuItem } from './primitives'
 
 /*
  * Looks of the strip. It is dark chrome in both themes: its root carries `chrome-focus` (the light-accent focus ring), the
@@ -411,6 +412,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const [stageDrag, setStageDrag] = useState<{ id: string; dx: number; to: number } | null>(null)
   /** what the screen reader hears when a stage is moved with the keyboard */
   const [announcement, setAnnouncement] = useState('')
+  /** the right-click menu: where it opens (in the pixels of the lanes) and what it offers */
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null)
   const [zoom, setZoom] = useState<number>(centred ? CENTRED_ZOOM : ZOOM_RANGE.min)
   const [collapsed, setCollapsed] = useState(() => matchesQuery(COMPACT_QUERY) && !centred)
   const [shownSheet, setShownSheet] = useState(sheetOpen)
@@ -639,6 +642,40 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (!keepGroupRef.current && !useAppStore.getState().filmKeys.includes(id)) setSelected(id)
   }
   const remove = (item: TimelineItem) => (isCardItem(item) ? disableCard(item) : editFilm((f) => ({ film: removeFilmItem(f, item), id: null }), { stops: isStop(item) }))
+  /** a key on the lane `lane` (`data-lane`) at film time `timeS`: the playhead goes there first, the key takes what the film shows there */
+  const addKeyAt = (lane: string, timeS: number) => {
+    seek(timeS)
+    if (lane === 'camera') {
+      // the 3D view takes the new place on its next frames, the key reads its pose
+      requestAnimationFrame(() => requestAnimationFrame(() => void addKeyframe()))
+    } else if (lane === 'marker') addMarkerKeyHere()
+    else addParamKeyHere(lane.slice('param:'.length) as FilmParam)
+  }
+  /**
+   * Right click on the lanes, instead of the browser's menu: on a block, to delete it (a key of the selected group:
+   * the whole group, like Delete); on the empty part of a lane that holds keys, to add a key there.
+   */
+  const onContentContextMenu = (e: ReactMouseEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const target = e.target instanceof Element ? e.target : null
+    const item = target?.closest<HTMLElement>('[data-item]')?.dataset.item
+    const lane = target?.closest<HTMLElement>('[data-lane]')?.dataset.lane
+    const items: MenuItem[] = []
+    if (item && !isStageItem(item) && !isJunctionItem(item) && !isStageCardItem(item)) {
+      const together = group.length > 1 && group.includes(item) ? group : null
+      if (!together) setSelected(item)
+      items.push({
+        id: 'remove',
+        label: together ? t('timeline.menu.removeKeys', { count: together.length }) : t(keyIds.includes(item) ? 'timeline.menu.removeKey' : 'timeline.menu.remove'),
+        onSelect: () => (together ? removeKeys(together) : remove(item)),
+      })
+    } else if (!item && lane) {
+      const timeS = Math.max(0, timeAt(e.clientX))
+      items.push({ id: 'add-key', label: t('timeline.menu.addKey'), onSelect: () => addKeyAt(lane, timeS) })
+    }
+    const box = contentRef.current?.getBoundingClientRect()
+    setContextMenu(items.length > 0 && box ? { x: e.clientX - box.left, y: e.clientY - box.top, items } : null)
+  }
   const addStopAt = (atM: number, patch?: Parameters<typeof addStop>[2]) => editFilm((f) => addStop(f, atM, patch), { stops: true })
   /** a portion twice as fast from the marker (one undo step) */
   const addSpeedAt = (atM: number) => {
@@ -1449,6 +1486,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onPointerMove={onPointerMove}
               onPointerUp={endGesture}
               onPointerCancel={endGesture}
+              onContextMenu={onContentContextMenu}
             >
               <div
                 className={`relative cursor-pointer border-b border-white/10 focus-visible:-outline-offset-2! ${centred ? 'h-6' : 'h-5 touch:h-7'}`}
@@ -1474,7 +1512,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
 
-              <div data-testid="timeline-lane" className={laneClass(true)} role="group" aria-label={t('timeline.lane.shots')}>
+              <div data-testid="timeline-lane" data-lane="camera" className={laneClass(true)} role="group" aria-label={t('timeline.lane.shots')}>
                 {block(
                   'opening',
                   0,
@@ -1553,7 +1591,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div data-testid="timeline-lane" className={laneClass(true)} role="group" aria-label={PARAM_LANE_LABELS.speed}>
+              <div data-testid="timeline-lane" data-lane="param:speed" className={laneClass(true)} role="group" aria-label={PARAM_LANE_LABELS.speed}>
                 {shownClock.speeds.map((s) => {
                   const label = formatSpeedFactor(s.factor)
                   const speedKey = s.factor > 1 ? 'timeline.speed.fast' : s.factor < 1 ? 'timeline.speed.slow' : 'timeline.speed.normal'
@@ -1571,13 +1609,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               {paramLanes(shownClock).map((param) => (
-                <div key={param} data-testid="timeline-lane" className={laneClass()} role="group" aria-label={PARAM_LANE_LABELS[param]}>
+                <div key={param} data-testid="timeline-lane" data-lane={`param:${param}`} className={laneClass()} role="group" aria-label={PARAM_LANE_LABELS[param]}>
                   {keysOfParam(shownClock.paramKeys, param).map(paramKeyDot)}
                 </div>
               ))}
 
               {shownClock.markerKeys.length > 0 && (
-                <div data-testid="timeline-lane" className={laneClass()} role="group" aria-label={t('timeline.lane.marker')}>
+                <div data-testid="timeline-lane" data-lane="marker" className={laneClass()} role="group" aria-label={t('timeline.lane.marker')}>
                   {shownClock.markerKeys.map((k) => {
                     // what the marker looks like from this key on: its own colours and size, else those of the Trace panel
                     const look = withKey(settingsMarker, k, () => '')
@@ -1730,6 +1768,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
               <div className={centred ? 'hidden' : PLAYHEAD} style={{ left: xOf(playheadS) }} aria-hidden="true" />
+              {contextMenu && (
+                <Menu label={t('timeline.menu.label')} items={contextMenu.items} point={{ x: contextMenu.x, y: contextMenu.y }} onClose={() => setContextMenu(null)} placement="bottom start" sheet />
+              )}
               {marquee && (
                 <div
                   data-testid="timeline-marquee"

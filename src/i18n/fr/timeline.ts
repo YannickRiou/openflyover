@@ -104,4 +104,9 @@ export default {
   'shot.closing': 'Clôture',
   'shot.closingNone': 'Clôture : aucune',
   'flight.label': 'Survol · {distance}',
+  'menu.label': 'Actions sur la timeline',
+  'menu.addKey': 'Ajouter une image clé ici',
+  'menu.remove': 'Supprimer',
+  'menu.removeKey': 'Supprimer l’image clé',
+  'menu.removeKeys': { one: 'Supprimer l’image clé sélectionnée', other: 'Supprimer les {count} images clés sélectionnées' },
 }
