@@ -45,7 +45,7 @@ function hasStoredLanguage(): boolean {
 
 /**
  * Put the language of the preferences on the interface now and whenever it changes (`<html lang>` too). First run, with
- * no choice stored: the browser's language when the app has it (English), French otherwise; it is only remembered once
+ * no choice stored: the browser's language when the app has it, French otherwise; it is only remembered once
  * the person picks one. Returns the function that stops it.
  */
 export function installLanguage(root: HTMLElement = document.documentElement): () => void {

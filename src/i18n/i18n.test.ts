@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { de } from './de'
 import { en } from './en'
+import { es } from './es'
 import { fr } from './fr'
+import { it as italian } from './it'
 import { LANGUAGES, detectLanguage, getLanguage, setLanguage, subscribeLanguage, t, template, withLanguage } from './index'
 import type { MessageKey } from './index'
 import type { Plural } from './messages'
@@ -9,7 +12,7 @@ import { DEFAULT_LANGUAGE, isLanguageCode, localeOf } from './languages'
 type Entry = string | Plural
 type Catalog = Record<string, Record<string, Entry>>
 
-const catalogs: Record<string, Catalog> = { fr, en }
+const catalogs: Record<string, Catalog> = { fr, en, es, it: italian, de }
 
 /** every `{name}` a message uses, over all its plural forms, sorted */
 function placeholders(entry: Entry): string {
@@ -127,7 +130,10 @@ describe('current language', () => {
   it('accepts the codes of the list only', () => {
     expect(isLanguageCode('fr')).toBe(true)
     expect(isLanguageCode('en')).toBe(true)
-    expect(isLanguageCode('de')).toBe(false)
+    expect(isLanguageCode('es')).toBe(true)
+    expect(isLanguageCode('it')).toBe(true)
+    expect(isLanguageCode('de')).toBe(true)
+    expect(isLanguageCode('ja')).toBe(false)
     expect(isLanguageCode(undefined)).toBe(false)
   })
 })
@@ -135,13 +141,16 @@ describe('current language', () => {
 describe('detectLanguage', () => {
   it('takes the first browser language the app has', () => {
     expect(detectLanguage(['en-US', 'fr'])).toBe('en')
-    expect(detectLanguage(['de-DE', 'en-GB'])).toBe('en')
+    expect(detectLanguage(['de-DE', 'en-GB'])).toBe('de')
+    expect(detectLanguage(['es-MX', 'en'])).toBe('es')
+    expect(detectLanguage(['it', 'fr'])).toBe('it')
+    expect(detectLanguage(['ja', 'en-GB'])).toBe('en')
     expect(detectLanguage(['fr-CA', 'en'])).toBe('fr')
     expect(detectLanguage(['EN'])).toBe('en')
   })
 
   it('falls back to French', () => {
-    expect(detectLanguage(['de', 'es'])).toBe('fr')
+    expect(detectLanguage(['ja', 'zh'])).toBe('fr')
     expect(detectLanguage([])).toBe('fr')
     expect(detectLanguage(undefined)).toBe('fr')
   })

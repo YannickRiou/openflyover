@@ -25,7 +25,7 @@ afterEach(() => {
 
 describe('installLanguage', () => {
   it('starts in French when the browser speaks something else, and says so on the page', () => {
-    browserLanguages(['de-DE'])
+    browserLanguages(['ja-JP'])
     stop = installLanguage()
     expect(getLanguage()).toBe('fr')
     expect(document.documentElement.lang).toBe('fr')
@@ -57,7 +57,7 @@ describe('installLanguage', () => {
   })
 
   it('uses the page it is given, and stops following once stopped', () => {
-    browserLanguages(['de'])
+    browserLanguages(['ja'])
     const page = document.createElement('div')
     const off = installLanguage(page)
     setPreferences({ language: 'en' })
