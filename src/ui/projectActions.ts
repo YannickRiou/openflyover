@@ -198,8 +198,9 @@ export async function chooseFilesToOpen(): Promise<void> {
   if (files.length > 0) await openFiles(files)
 }
 
-const SAMPLE_URL = `${import.meta.env.BASE_URL}samples/tour-du-mont-blanc-j1.gpx`
-const SAMPLE_NAME = 'tour-du-mont-blanc-j1.gpx'
+/** « Essayer avec l'exemple »: a real hike (Étang d'Ayguelongue and Pic de l'Homme, Ariège), every 10th point of the recording. */
+const SAMPLE_URL = `${import.meta.env.BASE_URL}samples/etang-ayguelongue-pic-de-l-homme.gpx`
+const SAMPLE_NAME = 'etang-ayguelongue-pic-de-l-homme.gpx'
 
 /** `importFiles` bound to the app store and the toasts (files, the sample, Strava activities). */
 export async function runImport(jobs: ImportJob[]): Promise<void> {
