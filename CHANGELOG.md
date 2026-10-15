@@ -3,6 +3,17 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 2.1.1 (October 2026)
+
+- **Keys that follow the sliders and the mouse**: once a parameter has keys (« Soleil », « Exposition », the four grading values), its slider in « Lumière » shows the value the film has at the marker and a change writes it into the key there (a key is made on the first change), where it used to edit a setting the keys ignore, so a second key with another solar hour did nothing. On a camera keyframe the playhead has been moved onto (with the arrows), orbiting or zooming the 3D view with the mouse writes the pose into the key as you move, one undo step per gesture, and the key's inspector shows it live. The ◇ of a parameter or marker key now removes the key under the playhead (as the camera's does) instead of selecting it; click the block on the timeline to open it.
+- **Region highlight on a busy Overpass server**: a full public server answers 502 or 503; these are now retried and the next server is tried, so a large region such as Occitanie loads instead of failing; the « Repères » panel names them as a busy server.
+- **Whole label names**: the 3D labels wrap on two lines instead of being cut at 40 characters, and the names of the « Repères » list are no longer cut after two lines.
+- **Figurine leans with the track**: the figure on the marker tilts with the slope of the track on screen (up to 30°) on top of the left / right mirror; with a stick or a label it stays upright. The outline colour of a figurine is now next to its fill colour, no longer under « Plus d'options ».
+- **Opening title and closing card**: dragging the body of their block drags the edge of the opening or closing shot, like the shot's own block.
+- **Flags that show on Windows**: the language button and menu draw SVG flags (Windows shows the flag emoji as two letters).
+- **Section headers**: a title that wraps (« Repères et points d'intérêt ») makes its header taller instead of overlapping the content below, and the « modifié » badge and « Par défaut » button keep their width.
+- **Removed**: the « Anneau » ball style, which added nothing; a project that used it opens with « Disque ».
+
 ## 2.1.0 (October 2026)
 
 - **Date and time fields on HeroUI, last hand-written CSS converted**: the departure day and time of « Prévoir la sortie » and the day of the sun (« Lumière ») are now HeroUI date and time fields (day, month, year and hours, minutes typed or changed with the arrows, in the language of the application, with a calendar for a day); on a touch screen the phone's own date and time pickers stay. The Strava dialog fields and the point-of-interest name use the same text field as the rest of the interface. There was no other file field to replace: files are chosen through the platform layer. The shell layout, the panels, the export drawer's last rules, the drop veil and the point-of-interest form move from `shell.css`, `app.css` and `exportPanel.css` (deleted) to Tailwind utilities, with the same look; the phone's export and inspector sheets no longer give half their height to their header.
