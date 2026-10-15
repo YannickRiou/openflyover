@@ -281,14 +281,19 @@ describe('serializeProject / parseProject', () => {
     expect(sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, hiddenIds: [1] } }).invalid).toEqual(['landmarks'])
   })
 
-  it('loads the landmarks of older projects without cap or pinned ids, and rejects invalid ones', () => {
-    const { maxCount: _count, pinnedIds: _pinned, ...older } = DEFAULT_SETTINGS.landmarks
+  it('loads the landmarks of older projects without density or pinned ids, and rejects invalid ones', () => {
+    const { density: _density, pinnedIds: _pinned, ...older } = DEFAULT_SETTINGS.landmarks
     const { settings, invalid } = sanitizeSettings({ landmarks: older })
     expect(invalid).toEqual([])
-    expect(settings.landmarks).toEqual({ ...older, maxCount: 40, pinnedIds: [] })
-    const kept = sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, maxCount: 20, pinnedIds: ['node/1'] } })
-    expect(kept.settings.landmarks).toMatchObject({ maxCount: 20, pinnedIds: ['node/1'] })
-    for (const bad of [{ maxCount: 0 }, { maxCount: 500 }, { maxCount: 'x' }, { pinnedIds: [1] }, { pinnedIds: 'x' }]) {
+    expect(settings.landmarks).toEqual({ ...older, density: 'normal', pinnedIds: [] })
+    // the cap of the projects saved before the density becomes the nearest one; a pinned and hidden landmark is Jamais
+    const capped = sanitizeSettings({ landmarks: { ...older, maxCount: 20, hiddenIds: ['node/1'], pinnedIds: ['node/1', 'node/2'] } })
+    expect(capped.invalid).toEqual([])
+    expect(capped.settings.landmarks).toMatchObject({ density: 'few', hiddenIds: ['node/1'], pinnedIds: ['node/2'] })
+    expect(capped.settings.landmarks).not.toHaveProperty('maxCount')
+    const kept = sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, density: 'many', pinnedIds: ['node/1'] } })
+    expect(kept.settings.landmarks).toMatchObject({ density: 'many', pinnedIds: ['node/1'] })
+    for (const bad of [{ density: 'lots' }, { density: 40 }, { pinnedIds: [1] }, { pinnedIds: 'x' }]) {
       expect(sanitizeSettings({ landmarks: { ...DEFAULT_SETTINGS.landmarks, ...bad } }).invalid).toEqual(['landmarks'])
     }
   })

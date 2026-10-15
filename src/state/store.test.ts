@@ -262,7 +262,7 @@ describe('settings and misc', () => {
         rank: [],
         dismissedIds: [],
         pinnedIds: [],
-        maxCount: 40,
+        density: 'normal',
       },
       race: { enabled: false, sync: 'elapsed' },
     })

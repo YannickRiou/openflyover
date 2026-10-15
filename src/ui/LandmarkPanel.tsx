@@ -8,19 +8,23 @@ import { POI_NAME_MAX, addPoi, poiStopAtM, removePoi, renamePoi, setPoiIcon } fr
 import { addStop, removeFilmItem, updateStop } from '../film/timeline'
 import { samplePath, trackPathOf } from '../flyover/path'
 import {
+  DENSITY_LABELS,
   KIND_BADGES,
   KIND_LABELS,
-  LANDMARK_COUNT_RANGE,
+  LANDMARK_DENSITIES,
   LANDMARK_DISTANCE_RANGE,
+  MODE_LABELS,
   PLACE_SIZES,
   PLACE_SIZE_LABELS,
+  landmarkMode,
   newLandmarkIds,
   movedInRank,
-  withHidden,
+  nextMode,
+  withMode,
   withPinnedOnly,
   withPlaceSize,
 } from '../osm/landmarks'
-import type { Landmark, LandmarkSettings } from '../osm/landmarks'
+import type { Landmark, LandmarkMode, LandmarkSettings } from '../osm/landmarks'
 import { osmAttribution, OSM_KINDS } from '../osm/overpass'
 import { syncLandmarks, useLandmarkStore } from '../osm/store'
 import { sequenceLandmarks } from '../flyover/sequence'
@@ -30,7 +34,7 @@ import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
-import { Button, Checkbox, Chip, NumberField, Select, Slider, Switch, TextField, Tip } from './primitives'
+import { Button, Checkbox, Chip, NumberField, Radio, RadioGroup, Select, Slider, Switch, TextField, Tip } from './primitives'
 
 /** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
 function kindsLabel({ kinds, places }: Pick<LandmarkSettings, 'kinds' | 'places'>): string {
@@ -67,15 +71,15 @@ function listedIds(hidden: boolean): string[] {
 }
 
 /**
- * Show or hide the labels of `rows` (and `extraIds`, landmarks of the other tracks) in one undo step: hidden, their
+ * Set the labels of `rows` (and `extraIds`, landmarks of the other tracks) to `mode` in one undo step: « Jamais », their
  * stops go with them (`withoutPlaceItems`); every landmark listed now counts as seen.
  */
-function setRowsHidden(rows: readonly PlaceRow[], hide: boolean, extraIds: readonly string[] = []): void {
+function setRowsMode(rows: readonly PlaceRow[], mode: LandmarkMode, extraIds: readonly string[] = []): void {
   const listed = [...listedIds(false), ...listedIds(true)]
   getSettingsHistory().transaction(() => {
-    if (hide) editFilm((film) => ({ film: withoutPlaceItems(film, rows) }))
+    if (mode === 'never') editFilm((film) => ({ film: withoutPlaceItems(film, rows.filter((r) => !r.hidden)) }))
     const { settings, setSetting } = useAppStore.getState()
-    setSetting('landmarks', withHidden(settings.landmarks, [...rows.map((r) => r.id), ...extraIds], hide, listed))
+    setSetting('landmarks', withMode(settings.landmarks, [...rows.map((r) => r.id), ...extraIds], mode, listed))
   })
 }
 
@@ -145,19 +149,22 @@ function EyeButton({ name, hidden, onClick }: { name: string; hidden: boolean; o
   )
 }
 
-/** The pin of a row: pinned landmarks are kept whatever the cap and by « Garder les épinglés ». */
-function PinButton({ name, pinned, onClick }: { name: string; pinned: boolean; onClick(): void }) {
+/**
+ * The button of a landmark row, one for three states: « Auto » (the density decides), « Toujours » (kept whatever the cap,
+ * wins when labels overlap), « Jamais » (no label); each press moves to the next.
+ */
+function ModeButton({ name, mode, onClick }: { name: string; mode: LandmarkMode; onClick(): void }) {
   const t = useT()
   return (
-    <Tip text={pinned ? t('landmarks.unpinTip') : t('landmarks.pinTip')} side="left">
+    <Tip text={t('landmarks.modeTip')} side="left">
       <Button
-        variant="icon"
-        className="aria-pressed:text-brand aria-pressed:[&_svg]:fill-current"
-        aria-label={pinned ? t('landmarks.unpin', { name }) : t('landmarks.pin', { name })}
-        aria-pressed={pinned}
+        size="sm"
+        className={`min-w-18 ${mode === 'always' ? 'text-brand' : ''}`}
+        aria-label={t('landmarks.modeAria', { name, mode: MODE_LABELS[mode] })}
+        data-mode={mode}
         onClick={onClick}
       >
-        <Icon name="pin" size={16} />
+        {MODE_LABELS[mode]}
       </Button>
     </Tip>
   )
@@ -206,9 +213,9 @@ export function LandmarkPanel() {
   const path = trackPathOf(first)
   const lengthM = first.stats.distanceM
   const hiddenIds = new Set(settings.hiddenIds)
-  const pinnedIds = new Set(settings.pinnedIds)
   const list = settings.enabled ? (landmarks ?? []) : []
   const hiddenList = settings.enabled ? (hidden ?? []) : []
+  const always = list.filter((l) => settings.pinnedIds.includes(l.id)).length
   const fresh = newLandmarkIds(settings, list.map((l) => l.id))
   const rows: PlaceRow[] = [
     ...list.map((landmark) => ({ id: landmark.id, atM: landmark.alongM, landmark, hidden: false })),
@@ -241,19 +248,6 @@ export function LandmarkPanel() {
         up,
       ),
     })
-  const dismiss = (row: PlaceRow) =>
-    setSetting('landmarks', {
-      ...settings,
-      hiddenIds: settings.hiddenIds.filter((hiddenId) => hiddenId !== row.id),
-      rank: settings.rank.filter((rankedId) => rankedId !== row.id),
-      pinnedIds: settings.pinnedIds.filter((pinnedId) => pinnedId !== row.id),
-      dismissedIds: [...settings.dismissedIds, row.id],
-    })
-  const togglePin = (row: PlaceRow) =>
-    setSetting('landmarks', {
-      ...settings,
-      pinnedIds: pinnedIds.has(row.id) ? settings.pinnedIds.filter((pinnedId) => pinnedId !== row.id) : [...settings.pinnedIds, row.id],
-    })
   const searchAgain = () => {
     const next = { ...settings, dismissedIds: [] }
     setSetting('landmarks', next)
@@ -269,7 +263,7 @@ export function LandmarkPanel() {
       editFilm((f) => ({ film: removePoi(f, poi.id) }))
       // its id may be given to the next point
       const current = useAppStore.getState().settings.landmarks
-      if (current.hiddenIds.includes(poi.id)) setSetting('landmarks', withHidden(current, [poi.id], false, []))
+      if (current.hiddenIds.includes(poi.id)) setSetting('landmarks', withMode(current, [poi.id], 'auto', []))
     })
 
   return (
@@ -335,22 +329,19 @@ export function LandmarkPanel() {
       )}
 
       {settings.enabled && (
-        <SettingRow label={t('landmarks.maxCount')} value={String(settings.maxCount)} paths={['landmarks.maxCount']}>
+        <SettingRow label={t('landmarks.density')} value={DENSITY_LABELS[settings.density]} paths={['landmarks.density']}>
           <div className="field">
-            <span className="type-label">
-              {t('landmarks.maxCount')}
+            <span id={`${id}-density`} className="type-label">
+              {t('landmarks.density')}
             </span>
-            <Slider
-              aria-label={t('landmarks.maxCount')}
-              min={LANDMARK_COUNT_RANGE.min}
-              max={LANDMARK_COUNT_RANGE.max}
-              step={LANDMARK_COUNT_RANGE.step}
-              value={settings.maxCount}
-              onChange={(v) => setSetting('landmarks', { ...settings, maxCount: v })}
-              format={String}
-              wide={false}
-            />
-            <p className="type-hint">{t('landmarks.maxCountHint')}</p>
+            <RadioGroup aria-labelledby={`${id}-density`} value={settings.density} onChange={(density) => setSetting('landmarks', { ...settings, density })}>
+              {LANDMARK_DENSITIES.map((density) => (
+                <Radio key={density} value={density}>
+                  {DENSITY_LABELS[density]}
+                </Radio>
+              ))}
+            </RadioGroup>
+            <p className="type-hint">{t('landmarks.densityHint')}</p>
           </div>
         </SettingRow>
       )}
@@ -366,6 +357,7 @@ export function LandmarkPanel() {
             : t('landmarks.status.sentence', {
                 parts: [
                   t('landmarks.status.along', { count: list.length }),
+                  always > 0 && t('landmarks.status.always', { count: always }),
                   hiddenList.length > 0 && t('landmarks.status.hidden', { count: hiddenList.length }),
                   settings.dismissedIds.length > 0 && t('landmarks.status.dismissed', { count: settings.dismissedIds.length }),
                 ]
@@ -400,7 +392,7 @@ export function LandmarkPanel() {
               <button
                 type="button"
                 className="mr-auto cursor-pointer rounded-full bg-accent-tint px-2 py-0.5 text-hint font-semibold text-brand"
-                onClick={() => setSetting('landmarks', withHidden(settings, [], false, listedIds(false)))}
+                onClick={() => setSetting('landmarks', withMode(settings, [], 'auto', listedIds(false)))}
               >
                 {t('landmarks.fresh', { count: fresh.size })}
               </button>
@@ -409,17 +401,17 @@ export function LandmarkPanel() {
           <Button
             size="sm"
             className={TOOL}
-            disabled={settings.hiddenIds.length === 0}
-            onClick={() => setRowsHidden(rows.filter((r) => r.hidden), false, settings.hiddenIds)}
+            disabled={settings.hiddenIds.length + settings.pinnedIds.length === 0}
+            onClick={() => setRowsMode([], 'auto', [...settings.hiddenIds, ...settings.pinnedIds])}
           >
-            <Icon name="eye" size={16} />
-            {t('landmarks.showAll')}
+            <Icon name="rotate-cw" size={16} />
+            {t('landmarks.allAuto')}
           </Button>
           <Button
             size="sm"
             className={TOOL}
             disabled={shownRows.length === 0}
-            onClick={() => setRowsHidden(shownRows, true, listedIds(false))}
+            onClick={() => setRowsMode(shownRows, 'never', listedIds(false))}
           >
             <Icon name="eye-off" size={16} />
             {t('landmarks.hideAll')}
@@ -475,25 +467,17 @@ export function LandmarkPanel() {
                         <Icon name="chevron-down" size={16} />
                       </Button>
                     </Tip>
-                    <PinButton name={landmark.name} pinned={pinnedIds.has(row.id)} onClick={() => togglePin(row)} />
-                    <EyeButton name={landmark.name} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
-                    {row.hidden && (
-                      <Tip text={t('landmarks.dismissTip')}>
-                        <Button
-                          variant="icon"
-                          aria-label={t('landmarks.dismiss', { name: landmark.name })}
-                          onClick={() => dismiss(row)}
-                        >
-                          <Icon name="x" size={16} />
-                        </Button>
-                      </Tip>
-                    )}
                   </div>
                   <div className={PLACE_LINE}>
                     <span className="flex-auto text-hint text-text-2 tabular-nums">
                       {t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}
                       {fresh.has(row.id) && <span className="ml-1 rounded-sm bg-accent-tint px-1 font-semibold text-brand" data-testid="place-new">{t('landmarks.isNew')}</span>}
                     </span>
+                    <ModeButton
+                      name={landmark.name}
+                      mode={landmarkMode(settings, row.id)}
+                      onClick={() => setRowsMode([row], nextMode(landmarkMode(settings, row.id)))}
+                    />
                     <StopToggle name={landmark.name} stop={stop} disabled={row.hidden} onToggle={(on) => toggleStop(row, landmark.name, on)} />
                   </div>
                 </li>
@@ -520,7 +504,7 @@ export function LandmarkPanel() {
                     onChange={(value) => editFilm((f) => ({ film: renamePoi(f, poi.id, value) }), { step: false })}
                   />
                 </div>
-                <EyeButton name={name || t('landmarks.poiThis')} hidden={row.hidden} onClick={() => setRowsHidden([row], !row.hidden)} />
+                <EyeButton name={name || t('landmarks.poiThis')} hidden={row.hidden} onClick={() => setRowsMode([row], row.hidden ? 'auto' : 'never')} />
                 <div className={PLACE_LINE}>
                   <Select
                     className="min-w-0 flex-[0_1_6.5rem]"

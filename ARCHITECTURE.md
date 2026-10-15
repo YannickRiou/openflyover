@@ -1784,24 +1784,37 @@ it, know at what time you will pass each point, where the sun will be and what t
   (`buildLandmarks` leaves it out after the cap and the deduplication, so it frees no slot and no other landmark pops up in its place); the button empties `dismissedIds` and calls
   `syncLandmarks(…, { refresh: true })`, which asks Overpass again for every track (the known landmarks stay until the answer, and if it fails; « Réessayer » does the same; `fetchTrackFeatures(…, refresh)`
   skips the memory and the persistent cache, then caches the answer). `withLandmarkDefaults` gives `[]` to both lists.
-- **Cap and pins**: `settings.landmarks.maxCount` (slider « Nombre maximal », `LANDMARK_COUNT_RANGE` 5-80, default
-  `MAX_LANDMARKS` = 40) caps the landmarks of each track in `buildLandmarks` and, globally over the tracks, the 3D labels
-  in `landmarkLabels`. `settings.landmarks.pinnedIds` (pin button of a row): a pinned landmark that passes the filters
-  is exempt from the cap and from the name deduplication (it wins over an unpinned duplicate), counts in `maxCount`, and
-  the others share what is left (`maxCount` − pinned); a pinned id absent from the Overpass answer is ignored.
-  « Garder les épinglés » (`withPinnedOnly`, one undo step with the stops of the shown ones) dismisses every landmark of
-  every track that is not pinned; since a dismissed landmark frees no slot, nothing new appears. The cross of a pinned
-  landmark unpins it. An old project receives `maxCount` 40 and `pinnedIds` `[]` (`withLandmarkDefaults`); a count out of
-  range or ids that are not strings invalidate the setting.
-- **Eye**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids. Hiding removes, in the same undo step,
+- **Density**: `settings.landmarks.density` (`few` / `normal` / `many`, « Peu / Normal / Beaucoup », default `normal`)
+  replaces the former raw `maxCount`: `LANDMARK_DENSITY_COUNTS` (15 / `MAX_LANDMARKS` = 40 / 80) is the cap of each track in
+  `buildLandmarks` (which still takes a `maxCount`, computed by `publish`) and, globally over the tracks, of the 3D labels in
+  `landmarkLabels`. The landmarks kept are the most important ones (`landmarkPriority`: kind, elevation, closeness to the
+  track; the ▲ ▼ ranking below). An old project's `maxCount` becomes the nearest density (< 28 `few`, < 60 `normal`, else `many`)
+  and is dropped (`withLandmarkDefaults`); a `density` that is not one of the three invalidates the setting.
+- **One button, three modes** (`LandmarkMode`, `ModeButton`): a landmark row has one button that cycles « Auto » (the density
+  decides), « Toujours » and « Jamais » (`nextMode`, `withMode`); the model is unchanged, `landmarkMode` reads it:
+  `hiddenIds` = Jamais, `pinnedIds` = Toujours, neither = Auto (a landmark has one mode: `withMode` removes it from the other
+  list; `withLandmarkDefaults` drops from `pinnedIds` an id that an old project also hid, hidden wins). **Toujours**: the
+  landmark is exempt from the cap and from the name deduplication (it wins over an unpinned duplicate), counts in the cap, the others
+  share what is left; a pinned id absent from the Overpass answer is ignored; its 3D label gets `PINNED_LABEL_BOOST` (+100) so
+  it wins every overlap over the other landmarks, the waypoints and the kilometres (ranked among the pinned ones by the arrows).
+  The summary line reads « 14 affichés · 3 toujours · 2 jamais » (Toujours counted among the shown ones); « Tout remettre en auto »
+  empties `hiddenIds` and `pinnedIds` (one undo step); « Tout masquer » sets every shown label to Jamais.
+  « Garder les « Toujours » » (`withPinnedOnly`, one undo step with the stops of the shown ones) dismisses every landmark of
+  every track that is not pinned; since a dismissed landmark frees no slot, nothing new appears (the cross of a row is gone,
+  « Relancer la recherche » brings the dismissed ones back).
+- **Jamais**: `settings.landmarks.hiddenIds` holds OSM ids and point-of-interest ids (a point of interest keeps its eye: no
+  Toujours for a point you placed). Hiding removes, in the same undo step,
   the row's own stop (`placeStop`: the stop whose `source.ref` is the landmark, else a stop placed by hand within 1 m)
   (`withoutPlaceItems`). Generated stops follow `splitHidden`; a hidden point of interest gets no label. Deleting a point of interest drops its id
   (ids are reused).
+- **Overlaps on screen** (`updateLabelSet`, `resolveOverlaps`): the label with the higher priority is drawn, the other is not; a
+  label too transparent to read (`FAINT_OPACITY` 0.35: far away or half hidden by the relief) is visited after all the others, so a ghost
+  never takes the place of a clear label.
 - **« Arrêt »**: `addStop` (landmark: label = name, source `{ kind: 'landmark', ref }`; point of interest: name, nearest
   point of the track); duration with `updateStop`; through `editFilm({ stops: true })`, so the first edit writes the
   generated stops out.
-- **« Tout afficher » / « Tout masquer »**: every label of every track and every point of interest, one undo step
-  (`withHidden`). Landmarks found later stay shown. `settings.landmarks.seenIds` (OSM ids listed at the last show / hide;
+- **« Tout remettre en auto » / « Tout masquer »**: every label of every track and every point of interest, one undo step
+  (`withMode`). Landmarks found later stay shown. `settings.landmarks.seenIds` (OSM ids listed at the last show / hide;
   `withLandmarkDefaults` gives `[]`, keeps strings only) marks the others « nouveau » (`newLandmarkIds`, none before a
   first choice); the « N nouveaux » badge marks them seen.
 - **Water points**: landmark type `waterPoint` (Overpass `amenity=drinking_water`, named "Eau potable" (drinking
@@ -1884,15 +1897,15 @@ exports) gets it from the terrain source of the settings.
   (free formats), priority in [0, 50) below waypoints and climbs (pass crossed > high and nearby summit > neighboring pass > hut >
   lake > waterfall / viewpoint / glacier > place). A place mapped as an area is measured to its bounding box (0 when crossed);
   places rank by `population` when tagged (3·log10 − 6, in [0, 10]), else city 9 > town 6 > village 3 > hamlet 0.
-  Deduplication by name within 1 km or inside the other's box, cap of `maxCount` landmarks (40 by default) with `PLACE_SHARE` (25 %) of them kept for
+  Deduplication by name within 1 km or inside the other's box, cap of the density's count (40 by default, see "Density") with `PLACE_SHARE` (25 %) of them kept for
   places when there are enough (also for the 3D labels), label "Nom · 1 653 m" for summits and passes.
 - **State** (`src/osm/store.ts`): `useLandmarkStore` driven by `syncLandmarks` from `LandmarkPanel`; the landmarks of all
   tracks are published to the 3D labels through `setLabelSource('osm', …)` (empty list when disabled). The panel list follows
   the first track (click = `setProgress`). The same effect calls `followLandmarks` (items attached to a stop follow it when the landmarks are published again).
-- **Hiding one by one**: the eye button of a landmark adds its OSM id to `settings.landmarks.hiddenIds` (project document,
+- **Hiding one by one**: « Jamais » on a landmark adds its OSM id to `settings.landmarks.hiddenIds` (project document,
   undoable, "modifié" chip). After filter and cap, `splitHidden` separates the shown landmarks (`landmarks`: labels, automatic
   stops, titles) from the hidden ones (`hidden`, listed greyed out and struck through in the panel so they can be shown again;
-  « Tout afficher » empties the list), without a new request. Projects saved without `hiddenIds` are
+  « Tout remettre en auto » empties the list), without a new request. Projects saved without `hiddenIds` are
   completed on load (`withLandmarkDefaults`); ids that are not strings invalidate the setting.
   Projects saved without `places` get every size (`withLandmarkDefaults`); a saved `kinds.place` is kept.
 

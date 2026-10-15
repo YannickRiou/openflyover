@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## Unreleased
 
 - **Several keyframes at once**: on the timeline, Ctrl (Cmd on a Mac) + drag from the background of the lanes draws a rectangle that selects the camera, parameter and marker keys it touches; Ctrl + click on a key adds it to the selection or removes it (Ctrl + Enter from the keyboard). Dragging one of the selected keys moves them all, keeping their gaps, with the same limits and the same magnet as a key moved alone; Delete removes them all; Esc empties the selection. A group move or deletion is one undo step. A plain drag on the background still moves the playhead.
+- **Landmarks: a density and one button per row**: « Densité » (« Peu », « Normal », « Beaucoup ») replaces « Nombre maximal » (15, 40 or 80 landmarks per track, the most important ones; a project saved with a count opens on the nearest density). The eye, the pin and the cross of a landmark row give way to one button that moves through « Auto » (the density decides), « Toujours » (always kept, and its label wins when labels overlap) and « Jamais » (no label); a hidden landmark opens as « Jamais », a pinned one as « Toujours ». The panel sums them up (« 14 affichés · 3 toujours · 2 jamais ») and « Tout remettre en auto » clears every choice at once. In the 3D view a label too faint to read (far away or half hidden by the relief) no longer hides a clear one.
 
 ## 2.1.1 (October 2026)
 
