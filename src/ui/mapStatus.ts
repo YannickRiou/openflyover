@@ -165,13 +165,9 @@ export const SOURCE_CREDITS: Readonly<Record<string, readonly CreditItem[]>> = {
   'aws-terrarium': [{ text: 'Mapzen / AWS Terrain Tiles' }],
   'ign-ortho': IGN_CREDIT,
   'ign-plan': IGN_CREDIT,
-  'ign-ortho-2000-2005': IGN_CREDIT,
-  'ign-ortho-1965-1980': IGN_CREDIT,
-  'ign-ortho-1950-1965': IGN_CREDIT,
   swisstopo: SWISSTOPO_CREDIT,
   'swisstopo-carte': SWISSTOPO_CREDIT,
   'arcgis-world-imagery': [{ text: 'Powered by Esri', more: 'Esri, Vantor, Earthstar Geographics, GIS User Community' }],
-  'eox-s2cloudless': [{ text: 'EOX', href: 'https://cloudless.eox.at' }],
   opentopomap: [OSM_CREDIT, { text: '© OpenTopoMap', href: 'https://opentopomap.org/about' }],
 }
 

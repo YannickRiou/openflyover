@@ -99,22 +99,6 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
     // Esri requires "Powered by Esri" plus the data credits (copyrightText of the service).
     attribution: 'Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
   },
-  {
-    kind: 'imagery',
-    id: 'eox-s2cloudless',
-    get name() {
-      return t('terrain.sources.eox-s2cloudless.name')
-    },
-    // WMTS REST path: {TileMatrix}/{TileRow}/{TileCol} = {z}/{y}/{x}; TileMatrixSet "g" (EPSG:900913).
-    // Native resolution is ~10 m (z14); the server upsamples up to z18 at Chamonix and answers 404 above.
-    // Capped at 16: finer requests cost bandwidth without adding detail.
-    urlTemplate: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg',
-    minZoom: 0,
-    maxZoom: 16,
-    tileSize: 256,
-    attribution:
-      'EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025) — CC BY-NC-SA 4.0',
-  },
   // --- Topographic maps (verified 2026-10-07) ---
   {
     kind: 'imagery',
@@ -166,64 +150,6 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
     get attribution() {
       return t('terrain.sources.opentopomap.attribution')
     },
-  },
-  // --- Dated / historical orthophotos, IGN Géoplateforme (verified 2026-10-07) ---
-  // Never picked automatically (see AUTO_IMAGERY_IDS in src/state/store.ts). Same France box as
-  // ign-ortho, which over-approximates the real coverage (404 or blank tiles outside France).
-  {
-    kind: 'imagery',
-    id: 'ign-ortho-2000-2005',
-    get name() {
-      return t('terrain.sources.ign-ortho-2000-2005.name')
-    },
-    // JPEG 256 px, PM_6_18: 404 below z6 and at z19.
-    urlTemplate:
-      'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS2000-2005&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg',
-    minZoom: 6,
-    maxZoom: 18,
-    tileSize: 256,
-    get attribution() {
-      return t('terrain.sources.ign-ortho-2000-2005.attribution')
-    },
-    coverage: FRANCE_BOX,
-  },
-  {
-    kind: 'imagery',
-    id: 'ign-ortho-1965-1980',
-    get name() {
-      return t('terrain.sources.ign-ortho-1965-1980.name')
-    },
-    // Greyscale palette PNG, PM_3_18. Only style BDORTHOHISTORIQUE exists ("normal" -> HTTP 400);
-    // it makes the no-data black transparent, so gaps show the neutral fallback grey.
-    // Incomplete coverage (still being built by IGN): Alps, south and west yes, much of the
-    // Paris basin and north-east no (404).
-    urlTemplate:
-      'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS.1965-1980&STYLE=BDORTHOHISTORIQUE&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png',
-    minZoom: 3,
-    maxZoom: 18,
-    tileSize: 256,
-    get attribution() {
-      return t('terrain.sources.ign-ortho-1965-1980.attribution')
-    },
-    coverage: FRANCE_BOX,
-  },
-  {
-    kind: 'imagery',
-    id: 'ign-ortho-1950-1965',
-    get name() {
-      return t('terrain.sources.ign-ortho-1950-1965.name')
-    },
-    // Greyscale PNG 256 px, PM_0_18 (z19 -> 404). The only historical vintage complete over France
-    // (IGN metadata); real tiles even across the border at Geneva and Courmayeur, 404 at Zermatt.
-    urlTemplate:
-      'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS.1950-1965&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png',
-    minZoom: 0,
-    maxZoom: 18,
-    tileSize: 256,
-    get attribution() {
-      return t('terrain.sources.ign-ortho-1950-1965.attribution')
-    },
-    coverage: FRANCE_BOX,
   },
 ]
 

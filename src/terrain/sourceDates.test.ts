@@ -12,7 +12,7 @@ describe('IGN update dates', () => {
   it('reads the layer of a Géoplateforme URL or template only', () => {
     expect(ignLayerOf(ORTHO)).toBe('ORTHOIMAGERY.ORTHOPHOTOS')
     expect(ignLayerOf(getImagerySource('ign-plan').urlTemplate)).toBe('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2')
-    expect(ignLayerOf(getImagerySource('eox-s2cloudless').urlTemplate)).toBeNull()
+    expect(ignLayerOf(getImagerySource('arcgis-world-imagery').urlTemplate)).toBeNull()
     expect(ignLayerOf('https://example.org/wmts?LAYER=ORTHOIMAGERY.ORTHOPHOTOS')).toBeNull()
   })
 
@@ -20,7 +20,7 @@ describe('IGN update dates', () => {
     noteTileLastModified(ORTHO, 'Thu, 12 Mar 2026 10:00:00 GMT')
     noteTileLastModified(ORTHO, 'Mon, 02 Feb 2026 10:00:00 GMT')
     noteTileLastModified(ORTHO, 'pas une date')
-    noteTileLastModified('https://tiles.maps.eox.at/x.jpg', 'Thu, 12 Mar 2026 10:00:00 GMT')
+    noteTileLastModified('https://services.arcgisonline.com/x.jpg', 'Thu, 12 Mar 2026 10:00:00 GMT')
     expect(useSourceDates.getState().dates).toEqual({ 'ORTHOIMAGERY.ORTHOPHOTOS': Date.UTC(2026, 2, 12, 10) })
   })
 
@@ -35,7 +35,7 @@ describe('IGN update dates', () => {
 
   it('says when the service sent no date, and nothing for other sources', () => {
     expect(updateDateNote(getImagerySource('ign-ortho').urlTemplate, {})).toBe('date de mise à jour non communiquée par le service')
-    expect(updateDateNote(getImagerySource('eox-s2cloudless').urlTemplate, {})).toBeNull()
+    expect(updateDateNote(getImagerySource('arcgis-world-imagery').urlTemplate, {})).toBeNull()
     expect(formatUpdateDate(Date.UTC(2026, 0, 5))).toBe('05/01/2026')
   })
 })

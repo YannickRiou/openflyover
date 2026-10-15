@@ -97,11 +97,11 @@ describe('perfParts', () => {
 })
 
 describe('compactCredits', () => {
-  const ids = { terrainSourceId: 'mapterhorn', imagerySourceId: 'eox-s2cloudless', weather: false, osm: false }
+  const ids = { terrainSourceId: 'mapterhorn', imagerySourceId: 'ign-ortho', weather: false, osm: false }
   const texts = (items: { text: string }[]) => items.map((i) => i.text)
 
   it('short names of the active sources only, OpenStreetMap first and once', () => {
-    expect(texts(compactCredits(ids))).toEqual(['EOX', '© Mapterhorn'])
+    expect(texts(compactCredits(ids))).toEqual(['© IGN', '© Mapterhorn'])
     expect(texts(compactCredits({ ...ids, imagerySourceId: 'opentopomap', osm: true, weather: true }))).toEqual([
       '© OpenStreetMap',
       '© OpenTopoMap',

@@ -14,18 +14,11 @@ const messages: Messages['terrain'] = {
   'sources.ign-ortho.attribution': '© IGN — Géoplateforme (BD ORTHO, Etalab Open Licence 2.0)',
   'sources.swisstopo.name': 'swisstopo SWISSIMAGE (Switzerland)',
   'sources.arcgis-world-imagery.name': 'Esri World Imagery (worldwide)',
-  'sources.eox-s2cloudless.name': 'Sentinel-2 cloudless 2025 (EOX, worldwide, 10 m)',
   'sources.ign-plan.name': 'IGN — Plan IGN map (France)',
   'sources.ign-plan.attribution': '© IGN — Géoplateforme (Plan IGN, Etalab Open Licence 2.0)',
   'sources.swisstopo-carte.name': 'swisstopo — national map (Switzerland)',
   'sources.opentopomap.name': 'OpenTopoMap — topographic map (worldwide)',
   'sources.opentopomap.attribution': 'Data: © OpenStreetMap contributors, SRTM | Rendering: © OpenTopoMap (CC BY-SA)',
-  'sources.ign-ortho-2000-2005.name': 'IGN — 2000–2005 photos (France)',
-  'sources.ign-ortho-2000-2005.attribution': '© IGN — Géoplateforme (BD ORTHO 2000–2005, Etalab Open Licence 2.0)',
-  'sources.ign-ortho-1965-1980.name': 'IGN — 1965–1980 photos (France, partial)',
-  'sources.ign-ortho-1965-1980.attribution': '© IGN — Géoplateforme (historical BD ORTHO 1965–1980, Etalab Open Licence 2.0)',
-  'sources.ign-ortho-1950-1965.name': 'IGN — 1950–1965 photos (France)',
-  'sources.ign-ortho-1950-1965.attribution': '© IGN — Géoplateforme (historical BD ORTHO 1950–1965, Etalab Open Licence 2.0)',
 }
 
 export default messages

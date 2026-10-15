@@ -28,10 +28,10 @@
         "script-src": "'self'",
         "style-src": "'self' 'unsafe-inline'",
         "font-src": "'self' data:",
-        "img-src": "'self' data: blob: https://tiles.mapterhorn.com https://s3.amazonaws.com https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://tiles.maps.eox.at https://*.tile.opentopomap.org",
+        "img-src": "'self' data: blob: https://tiles.mapterhorn.com https://s3.amazonaws.com https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://*.tile.opentopomap.org",
         "media-src": "'self' blob:",
         "worker-src": "'self' blob:",
-        "connect-src": "'self' ipc: http://ipc.localhost blob: data: https://tiles.mapterhorn.com https://s3.amazonaws.com https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://tiles.maps.eox.at https://*.tile.opentopomap.org https://archive-api.open-meteo.com https://api.open-meteo.com https://overpass-api.de https://maps.mail.ru https://www.strava.com"
+        "connect-src": "'self' ipc: http://ipc.localhost blob: data: https://tiles.mapterhorn.com https://s3.amazonaws.com https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://*.tile.opentopomap.org https://archive-api.open-meteo.com https://api.open-meteo.com https://overpass-api.de https://maps.mail.ru https://www.strava.com"
       },
       "dangerousDisableAssetCspModification": ["style-src"]
     }
