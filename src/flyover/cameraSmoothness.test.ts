@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import sampleGpx from '../../public/samples/tour-du-mont-blanc-j1.gpx?raw'
+import sampleGpx from '../import/__fixtures__/tour-du-mont-blanc-j1.gpx?raw'
 import { CAMERA_PRESETS, CAMERA_STYLES, DEFAULT_CAMERA } from './cameraSettings'
 import { curvyOuting, flyFilm, gpxTrack, hillySampler, quantile, zigzagOuting } from './__fixtures__/smoothness'
 

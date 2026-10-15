@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import sampleGpx from '../../public/samples/tour-du-mont-blanc-j1.gpx?raw'
+import sampleGpx from '../import/__fixtures__/tour-du-mont-blanc-j1.gpx?raw'
 import { buildFrameTimes } from '../export/schedule'
 import { filmClockFor, type FilmClock } from '../film/clock'
 import { DEFAULT_FILM } from '../film/model'
