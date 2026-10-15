@@ -253,6 +253,17 @@ describe('serializeProject / parseProject', () => {
     expect(sanitizeSettings({ film: { ...own, junctions: [{ ...own.junctions[0], holdS: 99 }] } }).invalid).toEqual(['film'])
   })
 
+  it('opens a removed imagery source in its successor, without a warning', () => {
+    const opened = (imagerySourceId: string) => sanitizeSettings({ imagerySourceId })
+    expect(opened('eox-s2cloudless')).toMatchObject({ invalid: [], settings: { imagerySourceId: 'arcgis-world-imagery' } })
+    for (const id of ['ign-ortho-1950-1965', 'ign-ortho-1965-1980', 'ign-ortho-2000-2005']) {
+      expect(opened(id)).toMatchObject({ invalid: [], settings: { imagerySourceId: 'ign-ortho' } })
+    }
+    expect(opened('swisstopo').settings.imagerySourceId).toBe('swisstopo')
+    // an id that never existed is still refused
+    expect(opened('nowhere').invalid).toEqual(['imagerySourceId'])
+  })
+
   it('loads the fixed video formats of older projects as aspect × resolution', () => {
     const { settings, invalid } = sanitizeSettings({ video: { format: '1080x1920', fps: 60, quality: 'max' } })
     expect(invalid).toEqual([])

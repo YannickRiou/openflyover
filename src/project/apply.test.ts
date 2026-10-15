@@ -88,10 +88,10 @@ describe('applyProject', () => {
     store.setProgress(0.5)
     const fit = useAppStore.getState().fitRequest
 
-    applyProject(project({ settings: { ...DEFAULT_SETTINGS, wireframe: true, imagerySourceId: 'eox-s2cloudless' } }))
+    applyProject(project({ settings: { ...DEFAULT_SETTINGS, wireframe: true, imagerySourceId: 'opentopomap' } }))
     const state = useAppStore.getState()
     expect(state.tracks.map((t) => t.id)).toEqual(['new'])
-    expect(state.settings).toEqual({ ...DEFAULT_SETTINGS, wireframe: true, imagerySourceId: 'eox-s2cloudless' })
+    expect(state.settings).toEqual({ ...DEFAULT_SETTINGS, wireframe: true, imagerySourceId: 'opentopomap' })
     expect(state.playback).toMatchObject({ speed: 2, progress: 0, playing: false })
     expect(state.fitRequest).toBeGreaterThan(fit)
     expect(state.frameOrigin).toEqual({ lon: 6.87, lat: 45.93 })

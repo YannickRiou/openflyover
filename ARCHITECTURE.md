@@ -158,13 +158,13 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
 
 1. **Sources** (`sources.ts`): Mapterhorn elevation `https://tiles.mapterhorn.com/{z}/{x}/{y}.webp` (Terrarium, webp),
    AWS Terrain Tiles `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png` (Terrarium, z ≤ 15).
-   Imagery: IGN BD ORTHO (Géoplateforme WMTS, PM), EOX Sentinel-2 cloudless, ArcGIS World Imagery, swisstopo SWISSIMAGE.
-   The catalog also holds non-photographic and dated base maps, never picked automatically (`AUTO_IMAGERY_IDS` =
+   Imagery: IGN BD ORTHO (Géoplateforme WMTS, PM), ArcGIS World Imagery (the default outside France and Switzerland), swisstopo SWISSIMAGE.
+   The catalog also holds non-photographic base maps, never picked automatically (`AUTO_IMAGERY_IDS` =
    `ign-ortho`, `swisstopo`): topographic maps `ign-plan` (Plan IGN, France, z19), `swisstopo-carte` (Swiss national
    map, z19; blank outside Switzerland beyond z15) and `opentopomap` (worldwide, z17, CC BY-SA, volunteer server: offline
-   packs allowed for personal use only, capped at 2,000 tiles per day, see "Offline packs"); dated IGN orthophotos:
-   `ign-ortho-1950-1965` (all of France, grayscale), `ign-ortho-1965-1980` (partial, `BDORTHOHISTORIQUE` style, z3–18)
-   and `ign-ortho-2000-2005` (z6–18), on the `FRANCE_BOX` box (over-approximation). Rejected sources (key required: Stadia,
+   packs allowed for personal use only, capped at 2,000 tiles per day, see "Offline packs"). The EOX Sentinel-2 and the three
+   dated IGN orthophotos were removed in 2.1.2 (`REMOVED_IMAGERY_SOURCES` of `project/document.ts` opens a saved project that used one
+   with Esri World Imagery, resp. IGN BD ORTHO). Rejected sources (key required: Stadia,
    Thunderforest, SCAN 25): `docs/sources.md`.
    Exact URLs, max zooms, encoding and CORS support are checked empirically (`docs/sources.md`); `sources.ts` is the single source of truth.
    A source without CORS goes through the Vite proxy (`/tiles/<id>/...`, see `vite.config.ts`).
@@ -2952,7 +2952,7 @@ of a flyover of the loaded tracks; the view and the export then read them withou
   (`personalUse`, warning in the panel) with a low limit. Esri World Imagery is refused (its terms forbid offline
   copies). A refused imagery source does not prevent the pack: it
   then only contains the terrain, and the imagery stays online. Limit per day and per device: Mapterhorn 20,000,
-  IGN 50,000 (all layers), EOX 20,000, swisstopo 10,000, OpenTopoMap 2,000; AWS unlimited.
+  IGN 50,000 (all layers), swisstopo 10,000, OpenTopoMap 2,000; AWS unlimited.
 - **Download** (`download.ts`): 4 requests at a time, `downloadTile` retries (the fetcher's), tiles already
   in the pack skipped, 4xx = "pas de donnée ici" (no data here; Mapterhorn beyond z12 outside fine areas), stop after 20 consecutive network
   failures or if the storage refuses a tile, pause (requests in progress finish), resume, cancel

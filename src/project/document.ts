@@ -142,11 +142,21 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   labels: isValidLabelSettings,
 }
 
+/** Imagery sources taken out of the catalogue, and the source a saved project that used one opens with. */
+const REMOVED_IMAGERY_SOURCES: Readonly<Record<string, string>> = {
+  'eox-s2cloudless': 'arcgis-world-imagery',
+  'ign-ortho-2000-2005': 'ign-ortho',
+  'ign-ortho-1965-1980': 'ign-ortho',
+  'ign-ortho-1950-1965': 'ign-ortho',
+}
+
 /**
  * Fill-ins for settings whose shape grew after projects were saved, applied to the raw value before it is
  * validated (e.g. overlay widgets added since: older projects and presets keep loading).
  */
 export const SETTING_UPGRADES: { [K in keyof Settings]?: (raw: unknown) => unknown } = {
+  // a removed imagery source opens in its successor: Sentinel-2 (EOX) in Esri World Imagery, the historical IGN photos in IGN BD ORTHO
+  imagerySourceId: (raw) => (typeof raw === 'string' ? (REMOVED_IMAGERY_SOURCES[raw] ?? raw) : raw),
   camera: withCameraDefaults,
   // a style id that was dropped (never released) opens in its successor, in the overlay and on the poster
   overlay: (raw) => withOverlayDefaults(withKnownStyle(raw)),

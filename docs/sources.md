@@ -9,10 +9,9 @@ sources were checked.
 |---|---|---|---|
 | Mapterhorn | terrain (default) | `tiles.mapterhorn.com` | "© Mapterhorn (données ouvertes, liste des sources : mapterhorn.com/attribution)" |
 | AWS Terrain Tiles | terrain | `s3.amazonaws.com/elevation-tiles-prod` | "Terrain Tiles (Mapzen / AWS Open Data) — SRTM, GMTED2010, ETOPO1 courtesy of USGS/NOAA, EU-DEM © Copernicus, ArcticDEM et autres sources ouvertes" |
-| IGN Géoplateforme | orthophotos and Plan IGN in France, photos from 1950 to 2005 | `data.geopf.fr/wmts` | "© IGN — Géoplateforme (BD ORTHO, licence ouverte Etalab 2.0)", and variants per layer |
+| IGN Géoplateforme | orthophotos and Plan IGN in France | `data.geopf.fr/wmts` | "© IGN — Géoplateforme (BD ORTHO, licence ouverte Etalab 2.0)", and variants per layer |
 | swisstopo | orthophotos and national map in Switzerland | `wmts.geo.admin.ch` | "© swisstopo (SWISSIMAGE, OGD)", "© swisstopo (carte nationale, OGD)" |
-| Esri World Imagery | world orthophotos (optional) | `services.arcgisonline.com` | "Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community" |
-| EOX Sentinel-2 cloudless 2025 | world satellite images, 10 m (default imagery outside France and Switzerland) | `tiles.maps.eox.at` | "EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025) — CC BY-NC-SA 4.0" |
+| Esri World Imagery | world orthophotos (default imagery outside France and Switzerland) | `services.arcgisonline.com` | "Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community" |
 | OpenTopoMap | world topographic map | `tile.opentopomap.org` | "Données : © contributeurs OpenStreetMap, SRTM \| Rendu : © OpenTopoMap (CC BY-SA)" |
 | Open-Meteo | historical weather, forecast for an upcoming outing | `archive-api.open-meteo.com`, `api.open-meteo.com` | "Données météo : Open-Meteo.com (CC BY 4.0)" |
 | OpenStreetMap (Overpass API) | landmarks, water bodies (reflective lakes and rivers) | `overpass-api.de`, fallback `maps.mail.ru` | "© contributeurs OpenStreetMap (ODbL)" |
@@ -56,7 +55,6 @@ data is the user's own, kept on their device and shown only to them, as with a G
 | IGN | Licence Ouverte Etalab 2.0 | commercial use allowed |
 | swisstopo | open data (OGD) | credit the source, reasonable use |
 | Esri | Esri terms (ArcGIS Online terms of use) | "Powered by Esri" and the data credits are mandatory; **no offline copy** (tiles cannot be harvested outside Esri Content Packages); keyless use in a distributed application is not covered by what Esri publishes: Esri is an **optional source, never the default** |
-| EOX Sentinel-2 cloudless | CC BY-NC-SA 4.0 | **no commercial use** |
 | OpenTopoMap | CC BY-SA | volunteer-run server: moderate use; a video made with this base map must stay under the same license |
 | Open-Meteo | CC BY 4.0 | free **non-commercial** API, 10,000 requests per day max |
 | OpenStreetMap | ODbL | public Overpass server: moderate use |
@@ -68,7 +66,6 @@ OpenFlyover is a personal, non-commercial project: all sources can go into an of
 | Mapterhorn | yes, 20,000 tiles per day | open data; Mapterhorn itself offers area downloads ([data access](https://mapterhorn.com/data-access)) |
 | AWS Terrain Tiles | yes | AWS Open Data public archive, made to be downloaded ([registry](https://registry.opendata.aws/terrain-tiles/)) |
 | IGN Géoplateforme | yes, 50,000 tiles per day (all layers) | Licence Ouverte Etalab 2.0; public service to be used sparingly |
-| EOX Sentinel-2 cloudless | yes, 20,000 tiles per day | CC BY-NC-SA 4.0: copying allowed for non-commercial use ([terms](https://cloudless.eox.at/products/viewing)) |
 | swisstopo | yes, personal use, 10,000 tiles / day | its terms ask to avoid automated bulk downloads ([terms](https://www.geo.admin.ch/en/general-terms-of-use-fsdi)): keep the corridor short |
 | Esri World Imagery | **no**: the imagery stays online, the pack holds the terrain only | basemap tiles may only be taken offline with Esri Content Packages and Esri software; systematic harvesting is prohibited ([terms summary](https://downloads2.esri.com/arcgisonline/docs/tou_summary.pdf)) |
 | OpenTopoMap | yes, personal use, 2,000 tiles / day | volunteer-run server that asks to avoid bulk downloads ([about](https://opentopomap.org/about)) |
@@ -107,13 +104,9 @@ Zermatt (7.75, 46.02) → z12 = 2136/1456, z20 = 546861/372959; New York (−74.
 | `ign-ortho` | `https://data.geopf.fr/wmts?…LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg` | 0–19 (`PM_0_19`) | 256 px | JPEG | `*` | Metropolitan France + Corsica (box −5.6/41.2 → 10.0/51.3, **over-approximation**: the border strip inside the box returns a white 200 tile or a 404); z ≤ 12 available everywhere (low-resolution worldwide mosaic) | Etalab Open Licence 2.0 (BD ORTHO), terms of use `cartes.gouv.fr/cgu`, `Fees: none` | `© IGN — Géoplateforme (BD ORTHO)` |
 | `swisstopo` | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg` | 0–20 (`3857_20`) | 256 px | JPEG | `*` | box 5.140242/45.398181 → 11.47757/48.230651 (WGS84BoundingBox from the GetCapabilities); real tiles up to z20 over the whole box, but **much lower resolution outside Switzerland/Liechtenstein** | swisstopo OGD, free of charge, "fair use" (~20,000 users/day) | `© swisstopo` |
 | `arcgis-world-imagery` | `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` | 0–19 (the service declares 24 LODs, z0–23; above 19, a 200 placeholder is returned where there is no imagery) | 256 px | JPEG | `*` | worldwide | Esri Master Agreement; see § Esri | `Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community` (service `copyrightText` field) |
-| `eox-s2cloudless` | `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg` | 0–16 in the catalog (server: 200 up to z18 at Chamonix, 404 at z19; native ≈ z14 / 10 m) | 256 px | JPEG | reflected origin (`access-control-allow-origin: http://127.0.0.1:5173`) | worldwide | **CC BY-NC-SA 4.0** (commercial use: separate EOX license) | `EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)` |
 | `ign-plan` | `https://data.geopf.fr/wmts?…LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&…&FORMAT=image/png` | 0–19 (`PM_0_19`) | 256 px | RGB PNG | `*` | France (same box as `ign-ortho`); 404 outside France from z13 | Etalab Open Licence 2.0 | `© IGN — Géoplateforme (Plan IGN)` |
 | `swisstopo-carte` | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg` | 0–19 (`3857_19`) | 256 px | JPEG | `*` | swisstopo box; outside Switzerland + border strip, **white tile** (668 B) from z16 | swisstopo OGD, "fair use" | `© swisstopo` |
 | `opentopomap` | `https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png` (`{s}` = a, b, c) | 0–17 (z18: "max zoom layer = 17" image without CORS) | 256 px | palette PNG | `*` | worldwide | ODbL data (OSM) + SRTM, rendering **CC BY-SA**; volunteer-run server, no bulk downloading | `Kartendaten: © OpenStreetMap-Mitwirkende, SRTM \| Kartendarstellung: © OpenTopoMap (CC-BY-SA)` (translated in the UI) |
-| `ign-ortho-2000-2005` | `…LAYER=ORTHOIMAGERY.ORTHOPHOTOS2000-2005&STYLE=normal&…&FORMAT=image/jpeg` | **6**–18 (`PM_6_18`) | 256 px | JPEG | `*` | France (IGN box); white tile of 1,651 B / 404 outside France | Etalab Open Licence 2.0 | `© IGN — Géoplateforme (BD ORTHO 2000–2005)` |
-| `ign-ortho-1965-1980` | `…LAYER=ORTHOIMAGERY.ORTHOPHOTOS.1965-1980&STYLE=BDORTHOHISTORIQUE&…&FORMAT=image/png` | **3**–18 (`PM_3_18`) | 256 px | palette PNG, grayscale, black → transparent | `*` | **partial** (Alps, south, west: yes; Paris Basin, north-east: mostly no → 404) | Etalab Open Licence 2.0 | `© IGN — Géoplateforme (BD ORTHO historique 1965–1980)` |
-| `ign-ortho-1950-1965` | `…LAYER=ORTHOIMAGERY.ORTHOPHOTOS.1950-1965&STYLE=normal&…&FORMAT=image/png` | 0–18 (`PM_0_18`) | 256 px | grayscale PNG | `*` | **complete** metropolitan France (the only complete historical edition); spills over onto Geneva and Courmayeur; 404 at Zermatt | Etalab Open Licence 2.0 | `© IGN — Géoplateforme (BD ORTHO historique 1950–1965)` |
 
 All sources respond with a CORS header for the origin `http://127.0.0.1:5173`: **no Vite proxy is needed**;
 `TILE_PROXIES` stays empty in `vite.config.ts`.
@@ -199,22 +192,14 @@ All sources respond with a CORS header for the origin `http://127.0.0.1:5173`: *
   - keyless use: `services.arcgisonline.com` still answers without a key (checked 2026-10-09), but Esri's current documentation
     sends applications to an ArcGIS Location Platform account and token (`ibasemaps-api.arcgis.com`), and nothing published
     says that anonymous use of the legacy host is granted to a distributed application. Decision (9 October 2026): Esri stays
-    an optional source the user picks; the default imagery is EOX Sentinel-2 cloudless, replaced by IGN or swisstopo when the
-    track lies in France or Switzerland.
+    an optional source the user picks. Revised on 15 October 2026 (the owner's decision): Esri World Imagery is the default imagery
+    outside France and Switzerland (EOX Sentinel-2 cloudless was removed), replaced by IGN or swisstopo when the track lies in
+    France or Switzerland; the licence caveat above (keyless use of the legacy host not granted) stays.
 
-### EOX Sentinel-2 cloudless (imagery)
+### EOX Sentinel-2 cloudless (removed)
 
-- `WMTSCapabilities.xml`: layers `s2cloudless-2017_3857` … `s2cloudless-2025_3857` (+ 4326 versions). **2025 is the most recent.**
-  `ResourceURL template="…/s2cloudless-2025_3857/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.jpg"` → with `TileMatrixSet = g`
-  (EPSG:900913, TileWidth 256, matrices 0–21), path `{z}/{y}/{x}`.
-- Layer abstract: "EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025) released under
-  Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License. For commercial usage please see https://cloudless.eox.at".
-  `AccessConstraints`: "Proper attribution is required for any usage…". License page: same unified attribution since June 2026;
-  commercial use under the "EOX Commercial Attribution-RestrictedUse 1.2" license.
-- Chamonix results: z12–z18 200 `image/jpeg` (12 kB at z14, 3 kB at z18: upsampling); z19 and z20 → 404. Paris and New York z12 200.
-  The 2024 and 2025 tiles differ (md5): the 2025 layer is indeed distinct.
-- The catalog sets `maxZoom: 16`: beyond the native resolution (~10 m ≈ z14), tiles add no detail.
-- CORS: `access-control-allow-origin: http://127.0.0.1:5173` (reflected origin, `allow-credentials: true`).
+Removed from the catalogue on 15 October 2026 (the images were judged not good-looking enough; CC BY-NC-SA 4.0 and no offline
+alternative worldwide were further drawbacks). A saved project that used it opens with Esri World Imagery.
 
 ## Request log (2026-10-05, Origin http://127.0.0.1:5173)
 
@@ -245,10 +230,6 @@ All sources respond with a CORS header for the origin `http://127.0.0.1:5173`: *
 | arcgis-world-imagery | 20, 21 Chamonix | 200 | image/jpeg | 2,521 (identical placeholder) | `*` |
 | arcgis-world-imagery | Zermatt z20 / Paris z20 | 200 / 200 | image/jpeg | 10,851 / 2,521 (placeholder) | |
 | arcgis-world-imagery | Paris z19 / NYC z16 | 200 / 200 | image/jpeg | 16,632 / 8,215 | |
-| eox-s2cloudless (2025) | 12/1458/2126 | 200 | image/jpeg | 21,075 (256×256) | reflected origin |
-| eox-s2cloudless | 14…18 Chamonix | 200 | image/jpeg | 12,313 … 3,034 | reflected origin |
-| eox-s2cloudless | 19, 20 Chamonix | 404 | | 1,225 | — |
-| eox-s2cloudless | Paris z12 / NYC z12 | 200 / 200 | image/jpeg | 23,832 / 26,799 | |
 
 ### Border probes (review, 2026-10-05, z15 unless stated)
 
@@ -276,26 +257,10 @@ Géoplateforme GetCapabilities (`https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST
 Second control region: Paris (IGN), Zermatt and Bern (swisstopo), New York (OpenTopoMap, Plan IGN). Coverage sampling:
 grid of 56 points (7 longitudes −1.5 → 7.0 × 8 latitudes 43.3 → 50.3) at z14.
 
-### IGN — dated orthophotos
+### IGN — dated orthophotos (removed)
 
-- Public layers without a key in the GetCapabilities: `ORTHOIMAGERY.ORTHOPHOTOS.1950-1965`, `.1965-1980`, `.1980-1995`,
-  `ORTHOIMAGERY.ORTHOPHOTOS2000-2005`, `2006-2010`, `2011-2015`, `2016-2020`, `2021-2023`, as well as yearly editions (`ORTHOPHOTOS2000` … `2024`),
-  the IRC (infrared) coverages, yearly Pléiades / SPOT, and local `EDUGEO` extents (cities, years 1950–1990). `IGNF_BD-ORTHO-HISTO` metadata:
-  "Licence Ouverte / Open License", and "Seul un millésime (1950-1965) en niveaux de gris est aujourd'hui complet sur le territoire. D'autres sont en cours de constitution." (Only one edition, 1950–1965 in grayscale, is complete over the territory today. Others are being built.)
-- **1950–1965**: `Format image/png`, `PM_0_18`, styles `BDORTHOHISTORIQUE` (default, "black rendered transparent") and `normal`; the catalog uses `normal`
-  (opaque grayscale PNG, `colorType 0`). Chamonix z10–z18 200 (40–58 kB), z19 404; Paris z12/z16/z18 200. z14 grid: 48/56 at 200
-  (the 404s and 141 B tiles are at sea or in Germany / Switzerland). Real photos at Geneva and Courmayeur (z15), 404 at Zermatt. No transparency and no black pixel
-  on the Alpine tiles tested. z0 and z3 served (low-resolution mosaic).
-- **1965–1980**: only the `BDORTHOHISTORIQUE` style exists (`STYLE=normal` → **400** "Style normal unknown"). Grayscale palette PNG, `PM_3_18`
-  (z2 → 404). Chamonix z12–z18 200, z19 404; Paris z12/z16/z18 200. z14 grid: **39/56** (gaps in the Paris Basin, Champagne, Lorraine).
-  Over the extent of the sample track (49 z14 tiles): full coverage except the Mont Blanc massif (1 tile 404, 2 partial); the black rendered
-  transparent shows the neutral gray of `imagery.ts`. Hence the label "(France, partiel)" (France, partial).
-- **1980–1995**: same format as 1965–1980, but 404 at Chamonix and Paris, 6/56 on the grid (Brittany / Normandy only): **not kept**.
-- **2000–2005** (and 2006–2010, same structure): `Format image/jpeg`, style `normal`, `PM_6_18`: z5 → 404, z6 200, Chamonix z12–z18 200 (13–20 kB), z19 404;
-  Paris z12/z16/z18 200. z14 grid: 48/56, same gaps as BD ORTHO (sea) and **same white 1,651 B tile** outside France (Courmayeur, Geneva).
-  Only 2000–2005 is added (midpoint between the 1950s and today); 2006–2010, 2011–2015, 2016–2020, 2021–2023 and the yearly
-  editions work the same way and can be added identically.
-- CORS `*`, `Fees: none`, terms of use `cartes.gouv.fr/cgu`, as for `ign-ortho`.
+The three historical vintages (`ign-ortho-1950-1965`, `ign-ortho-1965-1980`, `ign-ortho-2000-2005`) were removed from the catalogue on
+15 October 2026. A saved project that used one opens with IGN BD ORTHO (`ign-ortho`).
 
 ### Plan IGN v2
 
@@ -333,23 +298,12 @@ grid of 56 points (7 longitudes −1.5 → 7.0 × 8 latitudes 43.3 → 50.3) at 
 | Thunderforest (Landscape, Outdoors) | 200 but tile crossed out "API Key Required" | key required: **excluded** |
 | IGN SCAN 25 / TOPO 1:25,000 (`GEOGRAPHICALGRIDSYSTEMS.MAPS`) | 400 "Layer unknown" (public), 401 (`/private/wmts`) | key required: **excluded** |
 | IGN photos 1980–1995 | 404 at Chamonix and Paris, 6/56 on the z14 grid | coverage too patchy for now |
-| EOX Sentinel-2 cloudless 2017 (`s2cloudless-2017_3857`) | 200, reflected CORS, **CC BY 4.0** (the only non-NC year); but Europe only at high zoom: transparent 116 B PNG at Denver, Nairobi, Kathmandu, almost empty at New York | coverage hard to bound, little visible difference from 2025 at 10 m: not added (candidate if a non-commercial alternative to `eox-s2cloudless` becomes necessary) |
 | swisstopo SWISSIMAGE HIST 1946 (`ch.swisstopo.swissimage-product_1946`) | JPEG `3857_17`, Zermatt / Bern z8–z17 200, z18 400; Chamonix: white JPEG of 668 B | works without a key; not added to keep the diff small (Swiss equivalent of "photos 1950–1965", to add if needed) |
 
 ### Request log (2026-10-07, Origin http://127.0.0.1:5173)
 
 | Source | Tile | Status | content-type | Size | ACAO |
 |---|---|---|---|---|---|
-| ign-ortho-1950-1965 | Chamonix z10 / 12 / 15 / 17 / 18 | 200 | image/png (256×256, gray) | 55,671 / 57,450 / 58,233 / 52,459 / 40,709 | `*` |
-| ign-ortho-1950-1965 | Chamonix z19 | 404 | text/xml | 137 | `*` |
-| ign-ortho-1950-1965 | Paris z12 / 16 / 18 | 200 | image/png | 54,670 / 60,574 / 52,624 | `*` |
-| ign-ortho-1950-1965 | Geneva z15 / Courmayeur z15 / Zermatt z14 | 200 / 200 / 404 | image/png | 61,311 / 58,252 / — | `*` |
-| ign-ortho-1965-1980 | Chamonix z12 (STYLE=normal) | 400 | text/xml | 156 | `*` |
-| ign-ortho-1965-1980 | Chamonix z12 / 15 / 17 / 18 (BDORTHOHISTORIQUE) | 200 | image/png (palette) | 61,217 / 61,163 / 64,196 / 63,485 | `*` |
-| ign-ortho-1965-1980 | Paris z12 / 16 / 18 | 200 | image/png | 55,359 / 60,732 / 60,527 | `*` |
-| ign-ortho-1965-1980 | Chamonix z2 / z19 | 404 / 404 | text/xml | 137 | `*` |
-| ign-ortho-2000-2005 | Chamonix z5 / z6 / z12 / z15 / z17 / z18 / z19 | 404 / 200 / 200 / 200 / 200 / 200 / 404 | image/jpeg | — / 5,494 / 16,571 / 20,091 / 18,895 / 13,459 / — | `*` |
-| ign-ortho-2000-2005 | Paris z12 / 16 / 18 | 200 | image/jpeg | 22,374 / 22,925 / 13,477 | `*` |
 | ign-plan | Chamonix z0 / 12 / 15 / 18 / 19 / 20 | 200 ×5 / 404 | image/png (RGB) | 37,484 / 100,548 / 60,738 / 22,500 / 27,705 / — | `*` |
 | ign-plan | Paris z12 / z19; Zermatt z12 / z13; NYC z10 | 200 / 200; 200 / 404; 404 | | 48,210 / 26,923; 48,371 | `*` |
 | swisstopo-carte | Zermatt z12 / 15 / 17 / 19 / 20 | 200 ×4 / 400 | image/jpeg | 26,508 / 39,613 / 32,720 / 12,969 / 93 (JSON) | `*` |
@@ -358,16 +312,15 @@ grid of 56 points (7 longitudes −1.5 → 7.0 × 8 latitudes 43.3 → 50.3) at 
 | opentopomap | Chamonix z18 | 200 | image/png (RGBA) | 4,343 "max zoom layer = 17" | **missing** |
 | opentopomap | NYC z12 / z17 | 200 | image/png | 49,182 / 5,617 | `*` |
 
-Visual check (headless Chromium, sample track Les Houches → Les Contamines): `ign-ortho-1950-1965`, `ign-ortho-1965-1980`, `ign-ortho-2000-2005`,
-`ign-plan`, `swisstopo-carte` and `opentopomap` display draped over the terrain, with the correct attribution in the status bar.
+Visual check (headless Chromium, sample track Les Houches → Les Contamines): `ign-plan`, `swisstopo-carte` and `opentopomap` display draped over the terrain, with the correct attribution in the status bar.
 
 ## Integration notes
 
 1. **Mapterhorn 404 = leaf**: the real max zoom varies from 12 to 17 depending on the region. The engine must treat a 404 on a DEM tile
    as "no refinement possible" (keep the parent displayed), not as an error to retry or a blocking "failed" tile.
 2. **Esri placeholder**: beyond z19, Esri returns 200 with a "no data" image; do not exceed the catalog `maxZoom`.
-3. **EOX is NC** (CC BY-NC-SA 4.0): to be removed, or replaced by a commercial EOX license, if the product becomes paid.
-4. **Esri**: never in an offline pack; credit "Powered by Esri" + data credits everywhere the credits are shown; optional, never the default (§ Esri).
+3. **Removed sources**: EOX Sentinel-2 cloudless (CC BY-NC-SA 4.0) and the dated IGN photos were removed on 15 October 2026.
+4. **Esri**: never in an offline pack; credit "Powered by Esri" + data credits everywhere the credits are shown; the default outside France and Switzerland since 15 October 2026 (§ Esri).
 5. **swisstopo**: the coverage box includes a wide strip outside Switzerland where tiles exist up to z20 but are much blurrier;
    at Chamonix the imagery exists but is less detailed than BD ORTHO.
 6. **IGN outside metropolitan France**: the overseas territories (DROM-COM) are not covered by the single `coverage` box; multi-box coverage would require a change to `TileSourceBase` (frozen types).
@@ -380,9 +333,9 @@ Visual check (headless Chromium, sample track Les Houches → Les Contamines): `
    or let the user switch manually.
 8. `sourceCovers(source, bounds | point)` (exported from `sources.ts`) lets the UI propose by default the most detailed imagery source
    that fully covers the track; `true` means "worth trying", `false` "pointless".
-9. **Dated sources / maps are never chosen automatically**: `AUTO_IMAGERY_IDS` in `store.ts` lists only `ign-ortho` and `swisstopo`;
-   the new entries share their coverage boxes, so this list must not be replaced by "any source with `coverage`".
-10. **`minZoom` > 0** (`ign-ortho-2000-2005`: 6, `ign-ortho-1965-1980`: 3): coarser terrain tiles stay gray (documented behavior of `imagery.ts`), invisible in practice during a flyover.
+9. **Maps are never chosen automatically**: `AUTO_IMAGERY_IDS` in `store.ts` lists only `ign-ortho` and `swisstopo`;
+   the maps share their coverage boxes, so this list must not be replaced by "any source with `coverage`".
+10. **`minZoom` > 0** (no source has one since the dated orthophotos were removed; `imagery.ts` still handles it): coarser terrain tiles stay gray (documented behavior of `imagery.ts`), invisible in practice during a flyover.
 11. **OpenTopoMap**: volunteer-run server; no bulk downloading. Offline packs allow it for personal use only, with a warning and a cap of 2,000 tiles per day (`src/offline/policy.ts`).
 12. **CC BY-SA (OpenTopoMap)**: a video exported with this basemap must carry the attribution and may be considered an adaptation (share-alike): to be flagged at export.
 
