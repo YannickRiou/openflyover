@@ -53,6 +53,8 @@ export interface Settings {
   atmosphere: boolean
   /** cast shadows of the relief (atmosphere only) */
   shadows: boolean
+  /** cast shadows of the clouds on the terrain (atmosphere and weather or manual clouds only) */
+  cloudShadows: boolean
   /** local mean solar time (hours, 12 = solar noon) on the day of the first track */
   sunHour: number
   /** day of the fixed solar hour, `YYYY-MM-DD` ('' = the day of the first track, today without time) */
@@ -183,6 +185,7 @@ export const DEFAULT_SETTINGS: Settings = {
   wireframe: false,
   atmosphere: true,
   shadows: true,
+  cloudShadows: true,
   sunHour: 10,
   sunDate: '',
   sunFromTrack: true,
