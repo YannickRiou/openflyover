@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 2.1.0 (October 2026)
 
 - **Date and time fields on HeroUI, last hand-written CSS converted**: the departure day and time of « Prévoir la sortie » and the day of the sun (« Lumière ») are now HeroUI date and time fields (day, month, year and hours, minutes typed or changed with the arrows, in the language of the application, with a calendar for a day); on a touch screen the phone's own date and time pickers stay. The Strava dialog fields and the point-of-interest name use the same text field as the rest of the interface. There was no other file field to replace: files are chosen through the platform layer. The shell layout, the panels, the export drawer's last rules, the drop veil and the point-of-interest form move from `shell.css`, `app.css` and `exportPanel.css` (deleted) to Tailwind utilities, with the same look; the phone's export and inspector sheets no longer give half their height to their header.
 - **Spanish, Italian and German interfaces**: OpenFlyover can now be used in Spanish (Español), Italian (Italiano) and German (Deutsch), including the texts drawn into films and posters; pick the language with the flag button of the top bar (the first run follows the browser when it speaks one of them). The translations have not been reviewed by native speakers yet.
