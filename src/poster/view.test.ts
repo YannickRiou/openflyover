@@ -50,6 +50,18 @@ describe('planFlatMap', () => {
     expect(Math.max((se.x - nw.x) / width, (se.y - nw.y) / height)).toBeCloseTo(1 - 2 * FLAT_MAP_MARGIN, 6)
   })
 
+  it('a margin of 0 fills the view with the bounds, and unproject is the inverse of project (the map of the landmarks)', () => {
+    const plan = planFlatMap(bounds, 800, 600, SOURCE, 30, 0)
+    const [nw, se] = points(bounds).map((p) => plan.project(p.lon, p.lat))
+    expect(Math.max((se.x - nw.x) / 800, (se.y - nw.y) / 600)).toBeCloseTo(1, 6)
+    for (const [x, y] of [[0, 0], [400, 300], [800, 600], [123, 456]]) {
+      const { lon, lat } = plan.unproject(x, y)
+      const back = plan.project(lon, lat)
+      expect(back.x).toBeCloseTo(x, 6)
+      expect(back.y).toBeCloseTo(y, 6)
+    }
+  })
+
   it('covers the whole view with tiles that meet without a gap, near their own size, within the budget', () => {
     const width = 3508
     const height = 2600

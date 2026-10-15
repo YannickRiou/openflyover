@@ -1771,14 +1771,28 @@ it, know at what time you will pass each point, where the sun will be and what t
   reloads when the start time of the same track changes.
 - **Limit**: the start time is read in the device's time zone, not one derived from the coordinates.
 
-### Landmarks and points of interest, one list (« Repères et points d'intérêt »)
+### Landmarks and points of interest (« Repères et points d'intérêt »)
 
-- **Rows** (`LandmarkPanel`, Carte tab): the points of interest (`film.pois`, by position, `poiStopAtM`), then the OSM
-  landmarks of the film track (shown and hidden) from the most to the least important. Climbs are not listed or labelled.
-  Click on the name or badge: seek.
+- **Rows** (`LandmarkPanel`, Carte tab): the panel lists the points of interest (`film.pois`, by position, `poiStopAtM`);
+  the OSM landmarks of the film track (shown and hidden, climbs are not listed or labelled) are chosen in a window, never in
+  a narrow scrolling list (long names stay whole).
+- **Window of the map** (« Choisir sur la carte et le profil », `LandmarkMap` in `src/ui/LandmarkMap.tsx`, a `Modal`):
+  the altitude profile of the film track (`elevationProfile`; a click seeks the flyover, `setProgress`) and a map of the
+  track with a marker per landmark listed (`mapItems`, along the track). A marker is a button on both (profile: at the
+  elevation of the track under it; map: at its lon/lat); its look is its mode (filled accent « Toujours », filled « Auto »,
+  dashed ring « Jamais »); a click on one in either selects it (`selectedId`, local state of the panel), and `SelectedLandmark`
+  shows it in full: kind, name, km, distance from the track, the eye (Auto ⇄ Jamais), the mode button, the ▲ ▼ ranking,
+  « Arrêt » and its duration, « Aller à ce repère », and the arrows to the previous / next landmark along the track. The map
+  is drawn on two canvases: the tiles of OpenTopoMap (`opentopomap`, a topographic map of OpenStreetMap data, already in the
+  catalogue and in the Tauri CSP; its attribution is shown under the map) fetched through `createTileFetcher` (so the offline
+  packs, the retries and the HTTP cache apply; at most 30 tiles a view, a fetcher of its own kept between openings), then the
+  track and a band as wide as « Distance à la trace » (`settings.landmarks.maxDistanceM`) to judge what was found; a failed
+  tile layer leaves the track and the markers. It reuses `planFlatMap` of the poster (`src/poster/view.ts`; `margin` 0 and
+  `unproject` for the views once moved): drag pans, the wheel and the buttons zoom, « Tout voir » refits the track and the
+  landmarks.
 - **Ranking**: ▲ ▼ move a landmark one place (`movedInRank`); `settings.landmarks.rank` holds the OSM ids in that order
   (empty until the first move, then the others keep their own importance). `withRank` hands the importances of the
-  ranked ones back in that order (strictly decreasing), so the list and the label overlap (`resolveOverlaps`) follow it;
+  ranked ones back in that order (strictly decreasing), so the label overlap (`resolveOverlaps`) follows it;
   applied in `publish` (`osm/store.ts`) after `buildLandmarks`, before `splitHidden`.
 - **Cross and « Relancer la recherche »**: the cross of a hidden landmark puts its id in `settings.landmarks.dismissedIds`
   (`buildLandmarks` leaves it out after the cap and the deduplication, so it frees no slot and no other landmark pops up in its place); the button empties `dismissedIds` and calls
@@ -1790,7 +1804,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   `landmarkLabels`. The landmarks kept are the most important ones (`landmarkPriority`: kind, elevation, closeness to the
   track; the ▲ ▼ ranking below). An old project's `maxCount` becomes the nearest density (< 28 `few`, < 60 `normal`, else `many`)
   and is dropped (`withLandmarkDefaults`); a `density` that is not one of the three invalidates the setting.
-- **One button, three modes** (`LandmarkMode`, `ModeButton`): a landmark row has one button that cycles « Auto » (the density
+- **One button, three modes** (`LandmarkMode`, `ModeButton`): the card of the selected landmark has one button that cycles « Auto » (the density
   decides), « Toujours » and « Jamais » (`nextMode`, `withMode`); the model is unchanged, `landmarkMode` reads it:
   `hiddenIds` = Jamais, `pinnedIds` = Toujours, neither = Auto (a landmark has one mode: `withMode` removes it from the other
   list; `withLandmarkDefaults` drops from `pinnedIds` an id that an old project also hid, hidden wins). **Toujours**: the
