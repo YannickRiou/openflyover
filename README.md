@@ -42,7 +42,7 @@ The interface and the texts of the films are available in **French**, **English*
 language with the flag button of the top bar (next to « ? »). The first run follows the browser's language when the app offers it (else French) and the choice is
 remembered on the device. The documentation is in English; the [user guide](docs/user-guide.html) quotes the interface labels in French (the reference language).
 
-![The interface: top bar, tabs on the left, 3D view of the Tour du Mont-Blanc, timeline at the bottom](docs/images/interface.jpg)
+![The interface: top bar, tabs on the left, 3D view, timeline at the bottom](docs/images/interface.jpg)
 
 | Area | Features |
 |---|---|
