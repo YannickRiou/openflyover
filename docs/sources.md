@@ -12,6 +12,9 @@ sources were checked.
 | IGN Géoplateforme | orthophotos and Plan IGN in France | `data.geopf.fr/wmts` | "© IGN — Géoplateforme (BD ORTHO, licence ouverte Etalab 2.0)", and variants per layer |
 | swisstopo | orthophotos and national map in Switzerland | `wmts.geo.admin.ch` | "© swisstopo (SWISSIMAGE, OGD)", "© swisstopo (carte nationale, OGD)" |
 | Esri World Imagery | world orthophotos (default imagery outside France and Switzerland) | `services.arcgisonline.com` | "Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community" |
+| basemap.at | aerial photos of Austria (orthophoto 30 cm) | `mapsneu.wien.gv.at` | "Datenquelle: basemap.at" |
+| GSI Japan | aerial photos of Japan | `cyberjapandata.gsi.go.jp` | "Source: GSI Japan (Geospatial Information Authority of Japan), GSI Tiles" |
+| USGS The National Map | aerial photos of the United States | `basemap.nationalmap.gov` | "USDA, USGS The National Map: Orthoimagery" |
 | OpenTopoMap | world topographic map | `tile.opentopomap.org` | "Données : © contributeurs OpenStreetMap, SRTM \| Rendu : © OpenTopoMap (CC BY-SA)" |
 | Open-Meteo | historical weather, forecast for an upcoming outing | `archive-api.open-meteo.com`, `api.open-meteo.com` | "Données météo : Open-Meteo.com (CC BY 4.0)" |
 | OpenStreetMap (Overpass API) | landmarks, water bodies (reflective lakes and rivers) | `overpass-api.de`, fallback `maps.mail.ru` | "© contributeurs OpenStreetMap (ODbL)" |
@@ -54,6 +57,9 @@ data is the user's own, kept on their device and shown only to them, as with a G
 | Mapterhorn, AWS Terrain Tiles | open data (CC BY 4.0, OGL, public domain…) | credit the sources |
 | IGN | Licence Ouverte Etalab 2.0 | commercial use allowed |
 | swisstopo | open data (OGD) | credit the source, reasonable use |
+| basemap.at | CC BY 4.0 (Open Government Data Österreich) | free for private and commercial use; credit "Datenquelle: basemap.at" with `basemap.at` linked to https://basemap.at/ |
+| GSI Japan | Public Data License 1.0 (compatible with CC BY 4.0) | credit GSI with a link to the tile list; say so when the tiles are edited; the seamless photo is a compilation (Landsat, GRUS pieces: the GRUS credit is only needed around Okinotorishima, outside the catalogue box) |
+| USGS The National Map | public domain (USGS-authored data; the NAIP photos are USDA) | credit "USDA, USGS The National Map"; the 10 m SPOT imagery of Alaska is **viewable only** (its licence forbids downloading it from The National Map) |
 | Esri | Esri terms (ArcGIS Online terms of use) | "Powered by Esri" and the data credits are mandatory; **no offline copy** (tiles cannot be harvested outside Esri Content Packages); keyless use in a distributed application is not covered by what Esri publishes: Esri is an **optional source, never the default** |
 | OpenTopoMap | CC BY-SA | volunteer-run server: moderate use; a video made with this base map must stay under the same license |
 | Open-Meteo | CC BY 4.0 | free **non-commercial** API, 10,000 requests per day max |
@@ -67,6 +73,9 @@ OpenFlyover is a personal, non-commercial project: all sources can go into an of
 | AWS Terrain Tiles | yes | AWS Open Data public archive, made to be downloaded ([registry](https://registry.opendata.aws/terrain-tiles/)) |
 | IGN Géoplateforme | yes, 50,000 tiles per day (all layers) | Licence Ouverte Etalab 2.0; public service to be used sparingly |
 | swisstopo | yes, personal use, 10,000 tiles / day | its terms ask to avoid automated bulk downloads ([terms](https://www.geo.admin.ch/en/general-terms-of-use-fsdi)): keep the corridor short |
+| basemap.at | yes, 20,000 tiles per day | CC BY 4.0; the site offers offline products itself and points to downloaders, the infrastructure is shared: stay reasonable |
+| GSI Japan | yes, personal use, 10,000 tiles / day | Public Data License 1.0 allows copying with credit; no rule on bulk downloads is published ([terms](https://www.gsi.go.jp/ENGLISH/page_e30286.html)): keep the corridor short |
+| USGS The National Map | yes, personal use, 10,000 tiles / day | public domain for the NAIP photos; the 10 m Alaska imagery is viewable only: avoid packing Alaska |
 | Esri World Imagery | **no**: the imagery stays online, the pack holds the terrain only | basemap tiles may only be taken offline with Esri Content Packages and Esri software; systematic harvesting is prohibited ([terms summary](https://downloads2.esri.com/arcgisonline/docs/tou_summary.pdf)) |
 | OpenTopoMap | yes, personal use, 2,000 tiles / day | volunteer-run server that asks to avoid bulk downloads ([about](https://opentopomap.org/about)) |
 
@@ -104,6 +113,9 @@ Zermatt (7.75, 46.02) → z12 = 2136/1456, z20 = 546861/372959; New York (−74.
 | `ign-ortho` | `https://data.geopf.fr/wmts?…LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg` | 0–19 (`PM_0_19`) | 256 px | JPEG | `*` | Metropolitan France + Corsica (box −5.6/41.2 → 10.0/51.3, **over-approximation**: the border strip inside the box returns a white 200 tile or a 404); z ≤ 12 available everywhere (low-resolution worldwide mosaic) | Etalab Open Licence 2.0 (BD ORTHO), terms of use `cartes.gouv.fr/cgu`, `Fees: none` | `© IGN — Géoplateforme (BD ORTHO)` |
 | `swisstopo` | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg` | 0–20 (`3857_20`) | 256 px | JPEG | `*` | box 5.140242/45.398181 → 11.47757/48.230651 (WGS84BoundingBox from the GetCapabilities); real tiles up to z20 over the whole box, but **much lower resolution outside Switzerland/Liechtenstein** | swisstopo OGD, free of charge, "fair use" (~20,000 users/day) | `© swisstopo` |
 | `arcgis-world-imagery` | `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` | 0–19 (the service declares 24 LODs, z0–23; above 19, a 200 placeholder is returned where there is no imagery) | 256 px | JPEG | `*` | worldwide | Esri Master Agreement; see § Esri | `Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community` (service `copyrightText` field) |
+| `basemap-at` | `https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg` | 1–19 (z0 and z20 → 404) | 256 px | JPEG | `*` | Austria (box 9.5–17.2°E, 46.35–49.02°N; the border strips answer too, Italy and France 404) | CC BY 4.0 | `Datenquelle: basemap.at` |
+| `gsi-photo` | `https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg` | 2–18 (z0, z1, z19 → 404; GSI documents z14–18 as the photo, coarser levels are a mosaic) | 256 px | JPEG | `*` | Japan (404 outside, no blank tile) | Public Data License 1.0 | `Source: GSI Japan (Geospatial Information Authority of Japan), GSI Tiles` |
+| `usgs-imagery` | `https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}` | 0–16 (z17 → 404) | 256 px | JPEG (PNG at some low levels) | `*` | the States, Alaska (10 m SPOT), Hawaii, Puerto Rico; Canada answers with a near-blank 200 tile | public domain | `USDA, USGS The National Map: Orthoimagery` |
 | `ign-plan` | `https://data.geopf.fr/wmts?…LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&…&FORMAT=image/png` | 0–19 (`PM_0_19`) | 256 px | RGB PNG | `*` | France (same box as `ign-ortho`); 404 outside France from z13 | Etalab Open Licence 2.0 | `© IGN — Géoplateforme (Plan IGN)` |
 | `swisstopo-carte` | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg` | 0–19 (`3857_19`) | 256 px | JPEG | `*` | swisstopo box; outside Switzerland + border strip, **white tile** (668 B) from z16 | swisstopo OGD, "fair use" | `© swisstopo` |
 | `opentopomap` | `https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png` (`{s}` = a, b, c) | 0–17 (z18: "max zoom layer = 17" image without CORS) | 256 px | palette PNG | `*` | worldwide | ODbL data (OSM) + SRTM, rendering **CC BY-SA**; volunteer-run server, no bulk downloading | `Kartendaten: © OpenStreetMap-Mitwirkende, SRTM \| Kartendarstellung: © OpenTopoMap (CC-BY-SA)` (translated in the UI) |
@@ -196,6 +208,24 @@ All sources respond with a CORS header for the origin `http://127.0.0.1:5173`: *
     outside France and Switzerland (EOX Sentinel-2 cloudless was removed), replaced by IGN or swisstopo when the track lies in
     France or Switzerland; the licence caveat above (keyless use of the legacy host not granted) stays.
 
+### basemap.at, GSI Japan and USGS (imagery, added 2026-10-15)
+
+- **basemap.at**: layer `bmaporthofoto30cm`, WMTS REST `…/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg`. Terms read on
+  https://basemap.at/ (15 October 2026): "Open Government Data Österreich Lizenz CC-BY 4.0", free for private and commercial use;
+  attribution "Datenquelle: basemap.at" (or "Grundkarte: basemap.at"), the name linked to https://basemap.at/. Third-party apps are welcome,
+  no quota or cache rule is published; the site offers offline products and downloaders and notes that the infrastructure is shared.
+  Chamonix and Cortina: 404; Zugspitze (Bavaria): 200, the border strips are served.
+- **GSI Japan**: tile list https://maps.gsi.go.jp/development/ichiran.html, layer `seamlessphoto` (全国最新写真（シームレス）), classified
+  "usable with attribution only". Content terms (https://www.gsi.go.jp/ENGLISH/page_e30286.html): Public Data License 1.0; credit
+  「国土地理院」 or 「地理院タイル」 with a link to the tile list, English example "Source: GSI website (URL)"; say so when the content is edited.
+  The catalogue shows the English form (the Japanese characters would need a font in the films). The GRUS images (© Axelspace) of
+  Okinotorishima (20°24′–20°27′N, 136°04′–136°08′E) need an extra credit: outside the catalogue box (south 24°N). No rule on bulk
+  downloads is published, hence "personal use" in offline packs. Tiles z2–z18; 404 outside Japan (Chamonix, Seoul).
+- **USGS Imagery Only** (The National Map): ArcGIS cache `USGSImageryOnly`, EPSG:3857, 24 levels advertised; NAIP 1 m (2017–2021) over the
+  conterminous States, Blue Marble and Landsat at small scales, 10 m SPOT in Alaska, copyright text "USDA, USGS The National Map: Orthoimagery".
+  Public domain ([USGS policy](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits): credit "U.S. Geological Survey"); the 10 m
+  Alaska imagery is viewable only. Real tiles stop at z16 (z17 and above → 404). Canada (Banff z12): a 2.4 kB near-blank 200 tile.
+
 ### EOX Sentinel-2 cloudless (removed)
 
 Removed from the catalogue on 15 October 2026 (the images were judged not good-looking enough; CC BY-NC-SA 4.0 and no offline
@@ -230,6 +260,12 @@ alternative worldwide were further drawbacks). A saved project that used it open
 | arcgis-world-imagery | 20, 21 Chamonix | 200 | image/jpeg | 2,521 (identical placeholder) | `*` |
 | arcgis-world-imagery | Zermatt z20 / Paris z20 | 200 / 200 | image/jpeg | 10,851 / 2,521 (placeholder) | |
 | arcgis-world-imagery | Paris z19 / NYC z16 | 200 / 200 | image/jpeg | 16,632 / 8,215 | |
+| basemap-at | Grossglockner z0 / 1 / 2 / 5 / 8 / 12 / 17 / 19 / 20 | 404 / 200 ×7 / 404 | image/jpeg | 2,472 / 2,602 / 5,959 / 20,185 / 14,865 / 16,499 / 16,092 | `*` |
+| basemap-at | Zugspitze z12 / 14 / 16; Cortina z14 / 16; Chamonix z12 / 14 | 200 ×3; 404 ×2; 404 ×2 | image/jpeg | 12,530 / 17,253 / 12,612 | `*` |
+| gsi-photo | Fuji z0 / 1 / 2 / 5 / 10 / 13 / 14 / 18 / 19 | 404 ×2 / 200 ×6 / 404 | image/jpeg | 45,183 / 93,812 / 88,583 / 67,620 / 12,832 / 20,596 | `*` |
+| gsi-photo | Chamonix z12 / 14 / 16; Seoul z14 / 16 | 404 ×5 | | | |
+| usgs-imagery | Yosemite z0 / 2 / 5 / 8 / 12 / 16 / 17 / 18 / 19 | 200 ×6 / 404 ×3 | image/jpeg | 24,379 / 17,799 / 23,959 / 20,313 / 23,455 / 21,885 | `*` |
+| usgs-imagery | Banff z12 / 14 / 16; Chamonix z12 / 14; Denali z10 / 13 / 15; Maui z10 / 14 / 16 | 200 / 404 ×2; 404 ×2; 404 / 200 ×2; 200 ×3 | image/jpeg (PNG at Maui z10) | 2,419; 4,381 / 8,955; 95,249 / 11,570 / 13,562 | `*` |
 
 ### Border probes (review, 2026-10-05, z15 unless stated)
 

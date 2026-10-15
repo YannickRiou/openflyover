@@ -99,6 +99,57 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
     // Esri requires "Powered by Esri" plus the data credits (copyrightText of the service).
     attribution: 'Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
   },
+  // --- National aerial photos, never picked automatically (verified 2026-10-15) ---
+  {
+    kind: 'imagery',
+    id: 'basemap-at',
+    get name() {
+      return t('terrain.sources.basemap-at.name')
+    },
+    // WMTS REST, layer bmaporthofoto30cm, style normal, TileMatrixSet google3857: path {z}/{y}/{x}, JPEG 256 px.
+    // z1-z19 answer 200 (z0 and z20 -> 404). CC BY 4.0 ("Datenquelle: basemap.at", linked to https://basemap.at/).
+    urlTemplate: 'https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg',
+    minZoom: 1,
+    maxZoom: 19,
+    tileSize: 256,
+    attribution: 'Datenquelle: basemap.at',
+    // Austria's box; the border strips answer 200 too (Bavaria, Zugspitze), Italy and France answer 404.
+    coverage: { west: 9.5, south: 46.35, east: 17.2, north: 49.02 },
+  },
+  {
+    kind: 'imagery',
+    id: 'gsi-photo',
+    get name() {
+      return t('terrain.sources.gsi-photo.name')
+    },
+    // XYZ {z}/{x}/{y}, JPEG 256 px, layer « seamlessphoto » (全国最新写真): z2-z18 answer 200 (z0, z1 and z19 -> 404;
+    // GSI documents z14-z18 as the photo itself, coarser levels are a compiled mosaic). 404 outside Japan, no blank tile.
+    // Public Data License 1.0 (compatible with CC BY 4.0): credit GSI with a link to the tile list.
+    urlTemplate: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+    minZoom: 2,
+    maxZoom: 18,
+    tileSize: 256,
+    attribution: 'Source: GSI Japan (Geospatial Information Authority of Japan), GSI Tiles',
+    // Japan from Yonaguni to Minamitorishima. The GRUS images of Okinotorishima (20°N), which need a credit of their own, are left out.
+    coverage: { west: 122.9, south: 24.0, east: 154.0, north: 45.6 },
+  },
+  {
+    kind: 'imagery',
+    id: 'usgs-imagery',
+    get name() {
+      return t('terrain.sources.usgs-imagery.name')
+    },
+    // ArcGIS cache `USGSImageryOnly` of The National Map, {z}/{y}/{x} (row first), JPEG 256 px: NAIP 1 m over the conterminous
+    // States, 10 m SPOT in Alaska, z0-z16 (z17 and above -> 404). Public domain (credit: USGS).
+    urlTemplate: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}',
+    minZoom: 0,
+    maxZoom: 16,
+    tileSize: 256,
+    attribution: 'USDA, USGS The National Map: Orthoimagery',
+    // The States, Alaska, Hawaii and Puerto Rico in one box: it over-approximates (Canada, Mexico answer with a
+    // near-blank 200 tile, which the imagery loader detects and replaces by a coarser one).
+    coverage: { west: -171.0, south: 17.5, east: -65.0, north: 72.0 },
+  },
   // --- Topographic maps (verified 2026-10-07) ---
   {
     kind: 'imagery',

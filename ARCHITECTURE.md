@@ -158,7 +158,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
 
 1. **Sources** (`sources.ts`): Mapterhorn elevation `https://tiles.mapterhorn.com/{z}/{x}/{y}.webp` (Terrarium, webp),
    AWS Terrain Tiles `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png` (Terrarium, z ≤ 15).
-   Imagery: IGN BD ORTHO (Géoplateforme WMTS, PM), ArcGIS World Imagery (the default outside France and Switzerland), swisstopo SWISSIMAGE.
+   Imagery: IGN BD ORTHO (Géoplateforme WMTS, PM), ArcGIS World Imagery (the default outside France and Switzerland), swisstopo SWISSIMAGE, and the national aerial photos `basemap-at` (Austria, CC BY 4.0, z1–19), `gsi-photo` (Japan, z2–18) and `usgs-imagery` (United States, z0–16), picked by hand only.
    The catalog also holds non-photographic base maps, never picked automatically (`AUTO_IMAGERY_IDS` =
    `ign-ortho`, `swisstopo`): topographic maps `ign-plan` (Plan IGN, France, z19), `swisstopo-carte` (Swiss national
    map, z19; blank outside Switzerland beyond z15) and `opentopomap` (worldwide, z17, CC BY-SA, volunteer server: offline

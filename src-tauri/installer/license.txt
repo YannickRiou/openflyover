@@ -214,10 +214,12 @@ Data) — SRTM, GMTED2010, ETOPO1 courtesy of USGS/NOAA, EU-DEM © Copernicus, A
 autres sources ouvertes » ; IGN Géoplateforme : « © IGN — Géoplateforme (BD ORTHO,
 licence ouverte Etalab 2.0) » ; swisstopo : « © swisstopo (SWISSIMAGE, OGD) », « ©
 swisstopo (carte nationale, OGD) » ; Esri World Imagery : « Powered by Esri — Source:
-Esri, Vantor, Earthstar Geographics, and the GIS User Community » ; OpenTopoMap :
-« Données : © contributeurs OpenStreetMap, SRTM | Rendu : © OpenTopoMap (CC BY-SA) » ;
-Open-Meteo : « Données météo : Open-Meteo.com (CC BY 4.0) » ; OpenStreetMap (Overpass
-API) : « © contributeurs OpenStreetMap (ODbL) ».
+Esri, Vantor, Earthstar Geographics, and the GIS User Community » ; basemap.at :
+« Datenquelle: basemap.at » ; GSI Japan : « Source: GSI Japan (Geospatial Information
+Authority of Japan), GSI Tiles » ; USGS The National Map : « USDA, USGS The National
+Map: Orthoimagery » ; OpenTopoMap : « Données : © contributeurs OpenStreetMap, SRTM |
+Rendu : © OpenTopoMap (CC BY-SA) » ; Open-Meteo : « Données météo : Open-Meteo.com (CC
+BY 4.0) » ; OpenStreetMap (Overpass API) : « © contributeurs OpenStreetMap (ODbL) ».
 
 Les textes complets des licences sont dans le fichier THIRD_PARTY_NOTICES.md, installé à
 côté de l’application.

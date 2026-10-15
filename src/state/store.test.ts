@@ -41,6 +41,12 @@ describe('helpers', () => {
     // straddling the boxes -> contained by none
     expect(pickRegionalImagery({ west: -10, south: 45, east: 7, north: 46 })).toBeNull()
   })
+
+  it('never picks a national aerial photo by itself (Austria, Japan, United States): only IGN and swisstopo are chosen', () => {
+    expect(pickRegionalImagery({ west: 12.6, south: 47.0, east: 12.8, north: 47.1 })).toBeNull() // Grossglockner
+    expect(pickRegionalImagery({ west: 138.7, south: 35.3, east: 138.8, north: 35.4 })).toBeNull() // Fuji
+    expect(pickRegionalImagery({ west: -119.6, south: 37.7, east: -119.5, north: 37.8 })).toBeNull() // Yosemite
+  })
 })
 
 describe('addTracks', () => {
