@@ -338,6 +338,13 @@ export function StatusBar() {
             ))}
         </p>
         <p className="type-hint">{t('status.sourcesNote')}</p>
+        <p className="type-hint">
+          {t('status.sourcesProject')}{' '}
+          <a className="underline" href="https://github.com/YannickRiou/openflyover" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+          .
+        </p>
         {getPlatform().checkForUpdate && <p className="type-hint">{t('status.sourcesUpdates')}</p>}
       </Modal>
     </footer>
