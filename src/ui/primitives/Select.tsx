@@ -1,8 +1,9 @@
 import { Header } from '@heroui/react/header'
 import { ListBox } from '@heroui/react/list-box'
 import { Select as HeroSelect } from '@heroui/react/select'
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useCoarsePointer } from './coarse'
 import { openDialog, panelClass } from './overlay'
 
 export interface SelectOption<V extends string | number = string> {
@@ -39,14 +40,6 @@ export interface SelectProps<V extends string | number> {
   'data-testid'?: string
 }
 
-const COARSE = '(pointer: coarse)'
-const subscribeCoarse = (onChange: () => void) => {
-  const query = window.matchMedia?.(COARSE)
-  query?.addEventListener('change', onChange)
-  return () => query?.removeEventListener('change', onChange)
-}
-const isCoarse = () => window.matchMedia?.(COARSE).matches ?? false
-
 const isGroup = <V extends string | number>(choice: SelectOption<V> | SelectGroup<V>): choice is SelectGroup<V> => 'options' in choice
 const flatten = <V extends string | number>(choices: SelectProps<V>['options']) => choices.flatMap((choice) => (isGroup(choice) ? choice.options : [choice]))
 
@@ -79,7 +72,7 @@ function useFieldLabel(id: string | undefined, named: boolean) {
  * portalled out of its container, into the open `<dialog>` if there is one.
  */
 export function Select<V extends string | number>(props: SelectProps<V>) {
-  const coarse = useSyncExternalStore(subscribeCoarse, isCoarse, () => false)
+  const coarse = useCoarsePointer()
   return coarse ? <NativeSelect {...props} /> : <ListSelect {...props} />
 }
 

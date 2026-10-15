@@ -69,14 +69,14 @@ function FormatSwitcher({ disabled }: { disabled: boolean }) {
       <Tip text={t('topbar.format.freeTip')}>
         <Radio value={FREE} className="group block data-[disabled=true]:opacity-40" labelClassName={FORMAT_LABEL}>
           <Icon name="maximize" />
-          <span className="visually-hidden">{t('topbar.format.free')}</span>
+          <span className="sr-only">{t('topbar.format.free')}</span>
         </Radio>
       </Tip>
       {VIDEO_ASPECTS.map((a) => (
         <Tip key={a.id} text={a.label}>
           <Radio value={a.id} className="group block data-[disabled=true]:opacity-40" labelClassName={FORMAT_LABEL}>
             <AspectIcon x={a.x} y={a.y} />
-            <span className="visually-hidden">{a.label}</span>
+            <span className="sr-only">{a.label}</span>
           </Radio>
         </Tip>
       ))}
@@ -160,7 +160,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
     <header className="chrome-focus relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 bg-chrome pr-2 pl-3 text-white bar-condensed:flex bar-condensed:gap-2 phone-any:pt-[env(safe-area-inset-top)]">
       <div className="flex min-w-0 items-center gap-1 bar-condensed:flex-auto">
         <img className="mr-1 size-7 flex-none" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
-        <h1 className="visually-hidden">OpenFlyover</h1>
+        <h1 className="sr-only">OpenFlyover</h1>
         <TextField
           className="min-w-16 flex-[0_1_220px] bar-condensed:flex-auto"
           inputClassName={NAME_INPUT}

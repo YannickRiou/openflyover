@@ -314,7 +314,7 @@ function FilmOptions({
             {modified && (
               <>
                 <span className="absolute top-[3px] right-0.5 size-[7px] rounded-full bg-amber-light" />
-                <span className="visually-hidden">{t('common.modified.srOnly')}</span>
+                <span className="sr-only">{t('common.modified.srOnly')}</span>
               </>
             )}
           </Button>
@@ -340,7 +340,7 @@ function FilmOptions({
             {t('timeline.options.autoStops')}
           </Checkbox>
           <p className="text-hint text-glacier">{t('timeline.options.autoStopsHint')}</p>
-          <ModifiedMarker className="static" onDark keys={['film']} label={t('timeline.film')} />
+          <ModifiedMarker onDark keys={['film']} label={t('timeline.film')} />
         </div>
       )}
     </Popover>
@@ -1187,7 +1187,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           {ele !== undefined && profile && (
             <>
               {' · '}
-              <span className="visually-hidden">{t('timeline.bar.elevation')}</span>
+              <span className="sr-only">{t('timeline.bar.elevation')}</span>
               <span className="inline-block text-right" style={{ minWidth: `${formatNumber(profile.maxEle).length + 1}ch` }}>
                 {formatNumber(ele)}
               </span>{' '}
@@ -1198,7 +1198,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         {/* apart from the readout, which a narrow timeline hides: the clock was asked for in « Réglages » */}
         {time !== undefined && (
           <span className={`${READOUT} ${centred ? 'hidden' : collapsed ? 'phone-any:hidden' : ''}`}>
-            <span className="visually-hidden">{t('timeline.bar.recordedTime')}</span>
+            <span className="sr-only">{t('timeline.bar.recordedTime')}</span>
             <time className="inline-block min-w-[7ch] text-right" data-testid="timeline-clock" dateTime={new Date(time).toISOString()}>
               {formatClock(time)}
             </time>
@@ -1634,7 +1634,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   </div>
                 )
               })()}
-              <span className="visually-hidden" role="status" aria-live="polite">
+              <span className="sr-only" role="status" aria-live="polite">
                 {announcement}
               </span>
               {/* what the dragged block is aligned with: a line across the lanes and the names of the targets */}

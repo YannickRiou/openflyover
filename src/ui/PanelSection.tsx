@@ -59,7 +59,7 @@ export function PanelSection({
         <h2 className="panel-title flex-1">{title}</h2>
         {/* the marker's button must not fold the section; its box is in the flow here, not at the corner of a card */}
         {keys && (
-          <span className="[&_.modified]:static" onClick={(e) => e.preventDefault()}>
+          <span onClick={(e) => e.preventDefault()}>
             <ModifiedMarker keys={keys} label={title} />
           </span>
         )}
@@ -67,7 +67,7 @@ export function PanelSection({
           <Icon name="chevron-down" size={16} />
         </span>
       </summary>
-      <div className="panel-section__body flex flex-col gap-3">{children}</div>
+      <div className="flex flex-col gap-3">{children}</div>
     </details>
   )
 }

@@ -71,7 +71,7 @@ export function Slider({ value, onChange, min, max, step, format, spoken = forma
         <HeroSlider.Thumb inputRef={input} />
       </HeroSlider.Track>
       {format && (
-        <HeroSlider.Output className={wide ? 'range-row__value range-row__value--wide' : 'range-row__value'}>{() => format(value)}</HeroSlider.Output>
+        <HeroSlider.Output className={wide ? 'range-value-wide' : 'range-value'}>{() => format(value)}</HeroSlider.Output>
       )}
       {below && <div className="slider__below">{below}</div>}
     </HeroSlider>

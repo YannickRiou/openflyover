@@ -18,7 +18,7 @@ const CAPTURE_TIMEOUT_MS = 2000
 /** The 3D view as a small JPEG data URL; null when it cannot be read (no view, hidden page, no frame, tainted canvas). */
 export function captureThumbnail(
   // the view's WebGL canvas, tagged by three.js
-  canvas = document.querySelector<HTMLCanvasElement>('.view__stage canvas[data-engine^="three.js"]'),
+  canvas = document.querySelector<HTMLCanvasElement>('[data-stage] canvas[data-engine^="three.js"]'),
 ): Promise<string | null> {
   // a hidden page draws no frame: the write that waits for it (page left) goes on at once
   if (!canvas || canvas.width === 0 || canvas.height === 0 || document.visibilityState === 'hidden') return Promise.resolve(null)

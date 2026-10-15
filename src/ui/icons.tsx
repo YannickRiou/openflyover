@@ -476,7 +476,7 @@ export type IconName = keyof typeof PATHS
 function Svg({ size, children }: { size: number; children: ReactNode }) {
   return (
     <svg
-      className="icon"
+      className="flex-none"
       width={size}
       height={size}
       viewBox="0 0 24 24"

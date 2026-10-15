@@ -52,7 +52,7 @@ function keysOf(clock: FilmClock, target: KeyTarget): readonly { id: string; tim
 /** The marker keys are round dots (the lane draws them so), the others diamonds: same shapes on the buttons. */
 function Dot({ children }: { children?: ReactNode }) {
   return (
-    <svg className="icon" width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg className="flex-none" width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       {children}
     </svg>
   )

@@ -1144,7 +1144,7 @@ export function FilmInspector() {
 
   return (
     <section
-      className="settings"
+      className="dock-section"
       data-testid="film-inspector"
       aria-labelledby={`${id}-title`}
       onKeyDown={(e) => {
@@ -1152,11 +1152,11 @@ export function FilmInspector() {
         if (e.key === 'Escape') close()
       }}
     >
-      <h2 id={`${id}-title`} className="section-title settings__title">
+      <h2 id={`${id}-title`} className="panel-title dock-head col-1 m-0 pt-3 pb-2">
         {title}
       </h2>
       <Tip text={t('inspector.close.tip')} align="end">
-        <Button variant="icon" className="settings__close" onClick={close} aria-label={t('inspector.close.aria')}>
+        <Button variant="icon" className="dock-head col-3 mt-1 -mr-1.5 ml-1 self-center phone:hidden" onClick={close} aria-label={t('inspector.close.aria')}>
           <Icon name="x" size={18} />
         </Button>
       </Tip>

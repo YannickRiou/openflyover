@@ -52,8 +52,6 @@ import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
 import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
 import { WeatherPanel } from './ui/WeatherPanel'
-import './ui/app.css'
-import './ui/shell.css'
 import { Tab, TabList, TabPanel, Tabs, Tip, isModalOpen } from './ui/primitives'
 
 // Loaded in their own chunks: the offline packs right after the first paint, the export drawer (video, batch,
@@ -92,7 +90,7 @@ function loadPrefs() {
 }
 
 const isNarrow = () => window.innerWidth < ONE_SIDE_MAX_WIDTH
-/** below this width the panel is a drawer over the view (shell.css): it starts closed and closes on Escape or outside */
+/** below this width the panel is a drawer over the view (`panel-frame`): it starts closed and closes on Escape or outside */
 const DRAWER_MAX_WIDTH = 1024
 const isDrawer = () => window.innerWidth < DRAWER_MAX_WIDTH
 // a batch keeps the shell locked between its jobs too (the export store is idle for a moment between two)
@@ -408,7 +406,7 @@ export default function App() {
   }, [])
 
   const panel = (tab: ShellTab, children: ReactNode) => (
-    <TabPanel key={tab} id={tab} data-testid={`tab-panel-${tab}`} className="tabpanel">
+    <TabPanel key={tab} id={tab} data-testid={`tab-panel-${tab}`} className="tabpanel-frame">
       {children}
     </TabPanel>
   )
@@ -487,7 +485,7 @@ export default function App() {
   )
 
   return (
-    <div className="shell">
+    <div className="shell-frame">
       <TopBar
         onOpen={() => void chooseFilesToOpen()}
         exportOpen={shell.dockOpen}
@@ -495,7 +493,7 @@ export default function App() {
         onHelp={() => setHelpOpen(true)}
       />
 
-      <div className={shell.collapsed ? 'shell__body shell__body--collapsed' : 'shell__body'}>
+      <div className="relative flex min-h-0 phone:flex-col" data-collapsed={shell.collapsed || undefined}>
         <Tabs
           value={shell.tab}
           onChange={(tab) => dispatch({ type: 'select-tab', tab: tab as ShellTab, narrow: isNarrow() })}
@@ -530,19 +528,19 @@ export default function App() {
 
           {/* every tab stays mounted: weather, landmarks and export have side effects */}
           {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
-          <aside id="side-panel" data-testid="side-panel" className="panel" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
+          <aside id="side-panel" data-testid="side-panel" className="panel-frame" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
             <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
             {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
           </aside>
         </Tabs>
 
-        <main className="view">
+        <main className="flex min-h-0 min-w-0 flex-auto flex-col bg-chrome phone:order-1 phone-any:relative">
           {contents.stage}
           {hasTracks && <TimelineResizer disabled={exporting} />}
           {timeline}
         </main>
 
-        <aside id="export-dock" data-testid="export-dock" className="dock dock-frame" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
+        <aside id="export-dock" data-testid="export-dock" className="dock-frame" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
           <SheetHandle onClose={() => !exporting && dispatch({ type: 'close-dock' })} />
           <Suspense fallback={<p className="type-hint px-4">{t('shell.loading')}</p>}>
             {dockMounted && <ExportPanel onClose={exporting ? undefined : () => dispatch({ type: 'close-dock' })} />}
@@ -550,7 +548,7 @@ export default function App() {
         </aside>
         {phone && shell.inspecting && <BlockTools disabled={exporting} onEdit={() => dispatch({ type: 'edit', open: true })} />}
         {/* the export drawer goes first; on a portrait phone the inspector waits for « Modifier » */}
-        <aside className="dock dock-frame" aria-label={t('shell.dock.inspector')} hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
+        <aside className="dock-frame" aria-label={t('shell.dock.inspector')} hidden={shell.dockOpen || !shell.inspecting || (phone && !shell.editing)} inert={exporting}>
           <SheetHandle onClose={() => dispatch({ type: 'edit', open: false })} />
           {shell.inspecting && !shell.dockOpen && (!phone || shell.editing) && (
             <Suspense>
@@ -565,11 +563,11 @@ export default function App() {
       <DiagnosticDialog />
       <SeekShortcuts />
       {dragging && (
-        <div className="drop-veil" aria-hidden="true">
-          <div className="drop-veil__box">
+        <div className="pointer-events-none fixed inset-0 z-100 flex items-center justify-center bg-ink/60 p-8 fade-in" aria-hidden="true">
+          <div className="flex w-[min(520px,100%)] flex-col items-center gap-2 rounded-md border-2 border-dashed border-white bg-chrome px-6 py-8 text-center text-white">
             <Icon name="upload" size={32} />
-            <p className="drop-veil__title">{t('shell.drop.title')}</p>
-            <p className="drop-veil__hint">{t('shell.drop.hint')}</p>
+            <p className="m-0 font-heading text-[20px]/[1.2] font-semibold">{t('shell.drop.title')}</p>
+            <p className="m-0 text-[13px] text-glacier">{t('shell.drop.hint')}</p>
           </div>
         </div>
       )}

@@ -42,7 +42,7 @@ palette, same fonts, same layout (rail, scene, timeline, export drawer), same Fr
 1. Add `tailwindcss` + `@tailwindcss/vite`, map `theme.css` tokens into `@theme`, dark variant, Preflight;
    existing CSS into `@layer components`. No visual change expected beyond reset fixes.
 2. Move test selectors off styling classes.
-3. Shell: top bar, rail, panels (`shell.css`, `PanelSection`, `SettingRow`).
+3. Shell: top bar, rail, panels (the shell layout, `PanelSection`, `SettingRow`).
 4. Inspector panels one by one (track, camera, light, overlay, landmarks, weather…).
 5. Timeline and export drawer.
 6. Dialogs, toasts, home screen; delete the emptied CSS files.
@@ -62,7 +62,8 @@ phone width) and CSS bundle size in the pull request.
 A first vertical slice was redone in utilities to judge the direction before the rest: the top bar (`TopBar.tsx`,
 `LanguageMenu.tsx` button), the rail and the phone bar (`App.tsx`), and the « Trace » tab (`TrackList` header,
 `PanelSection`, `SettingRow`, `InfoTip`, `RangeField`, `TextField`, `TrackMarkerSection`). The shell and panel rules
-those components used are deleted from `shell.css` and `app.css`.
+those components used were deleted from `shell.css` and `app.css`; the last rules of both (the shell grid, the panel, dock and stage frames, the
+settings head of the dock, the drop veil, the point-of-interest form) were converted later and the two files are gone.
 
 ### Scales and tokens (`theme.css`)
 
@@ -86,7 +87,7 @@ those components used are deleted from `shell.css` and `app.css`.
 - **Focus**: one ring, the global `:focus-visible` rule of `theme.css`; on the ink chrome the container carries
   `chrome-focus`, which swaps in the light-accent ring. Components do not draw their own.
 - **Breakpoints as variants**: `touch`, `drawer`, `phone`, `phone-any`, `phone-landscape`, `bar-condensed` (the media
-  queries of `shell.css`, named once in `theme.css`).
+  queries of the shell, named once in `theme.css`).
 
 ### Conventions
 
@@ -101,14 +102,17 @@ those components used are deleted from `shell.css` and `app.css`.
 - The primitives stay the place of their skin (`primitives/*.css`: button, chip, switch got the scales above); a screen
   passes utilities for its context only (`btn-chrome`, `labelClassName` of `Radio` for the format switch).
 - In an arbitrary variant `_` means a space: write selectors with hyphens (`[&>.field:only-child>label]`), never `__`.
-- Test hooks: `data-rail` replaces the `.rail` class where the app looks for the rail; `data-testid`s and labels unchanged.
+- Test hooks: `data-rail` replaces the `.rail` class where the app looks for the rail, `data-stage` the `.view__stage` class (the
+  thumbnail), `data-collapsed` the `.shell__body--collapsed` one; `data-testid`s and labels unchanged.
 
 ### What the next areas should copy
 
 1. Section = `panel-head` + `panel-title` (sticky, 48 px), rows of 40 px with a hairline, name left in `type-label`,
    value right in secondary text (primary text and an accent dot once changed), hints in `type-hint`.
-2. Other panels (`.settings` cards, `.field__label`, `.field__hint`, `.range-row`, `.preset-more`) still use the hand-written
-   classes; `.field__label` and `.section-title` were moved to the new sizes so both look alike meanwhile. Convert them to
-   `type-label`, `type-hint` and the row components, then delete the classes.
-3. Still kept for later steps: `.fold*`, `.setting-row*` (used by `ExportHistory`), `.track*` cards, `.track-menu*`, the
-   render weight and preset badges, `LabelSettings`.
+2. The frames of the shell are `@utility` classes (`shell-frame`, `panel-frame`, `dock-frame`, `tabpanel-frame`, `stage-frame`,
+   `dock-section`). A frame that sets defaults for its children writes them as `:where(&) > *` (no specificity), so a child's own
+   utilities win; a rule that must beat a utility of the same layer (the hidden panels of the tabs, `[hidden]`) is written in the
+   frame itself.
+3. What stays hand-written: `theme.css` (`.field`, `.field__label`, `.input`, `.select-field`, the focus ring, the dark theme, and
+   at its end what the breakpoints change in the `:root` variables and in the form controls of a touch screen), the skins of the
+   primitives (`primitives/*.css`), `appearance.css` (density), `fonts.css` and `index.css`. A new screen has none of its own.

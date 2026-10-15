@@ -1,5 +1,6 @@
 /*
- * `@utility` classes of the shell: the few combinations of Tailwind utilities that repeat (top bar, rail, panels).
+ * `@utility` classes of the shell: the window, the rail, the panels, the stage, and the few combinations of Tailwind utilities
+ * that repeat. A parent that sets defaults for its children (`:where(&) > *`) has no specificity, so the children's own utilities win.
  * Imported by theme.css, after the tokens and the variants (`touch`, `phone`...) they use. Conventions: layout and spacing
  * go in the `className` of the component, a state or a context that several components share goes here.
  */
@@ -54,6 +55,15 @@
 @utility progress-bar {
   @apply h-2.5 w-full;
   accent-color: var(--accent);
+}
+
+/* The written value at the end of a slider row (a number and its unit, kept in place while it changes); `-wide` for the longer ones (« 1 min 20 »). */
+@utility range-value {
+  @apply min-w-[3.5ch] flex-none text-right font-semibold text-text-1 tabular-nums;
+}
+
+@utility range-value-wide {
+  @apply range-value min-w-[7ch];
 }
 
 @utility panel-title {
@@ -127,7 +137,7 @@
     @apply absolute top-2 bottom-2 -left-1 w-[3px] rounded-r-full bg-accent-light;
   }
 
-  .shell__body--collapsed &[aria-selected='true']::before {
+  [data-collapsed] &[aria-selected='true']::before {
     display: none;
   }
 
@@ -162,12 +172,109 @@
   }
 }
 
+/* The window: top bar, body (rail, panel, view, dock), status strip, on one column as wide as the window (the dock shrinks the view, never widens the shell). */
+@utility shell-frame {
+  @apply grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[var(--topbar-h)_minmax(0,1fr)_var(--statusbar-h)] overflow-hidden bg-chrome;
+
+  /* components set their own display: the hidden attribute must still win */
+  & [hidden] {
+    display: none !important;
+  }
+
+  /* a phone, either way up: the notch and the home bar keep their room */
+  @variant phone-any {
+    @apply h-dvh grid-rows-[calc(var(--topbar-h)+env(safe-area-inset-top))_minmax(0,1fr)_calc(var(--statusbar-h)+env(safe-area-inset-bottom))] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)];
+  }
+}
+
+/* The 3D view framed to the output format: its canvases and overlays fill it; no callout or text selection under a long press. */
+@utility stage-frame {
+  @apply absolute inset-0 overflow-hidden;
+
+  :where(&) > * {
+    @apply absolute inset-0;
+  }
+
+  @media (pointer: coarse) {
+    & canvas {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  }
+}
+
+/* A veil in and a sheet up: 120 ms fade of what opens over the page, 160 ms rise of a half sheet. */
+@keyframes tip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+/* The panel of a tab: its sections one under the other, flat, a hairline between them; the panels of the other tabs (kept mounted) are not shown. */
+@utility tabpanel-frame {
+  @apply flex flex-col;
+
+  &[data-inert='true'] {
+    display: none;
+  }
+
+  :where(&) > * {
+    @apply border-b border-edge px-4 pt-0 pb-4;
+  }
+}
+
+/*
+ * The side panel (one tab at a time): beside the view; a drawer over it below 1024 px; a half sheet under the preview on a
+ * portrait phone, where each child but the sheet handle scrolls on its own (like `dock-frame`, on the other side).
+ */
+@utility panel-frame {
+  @apply w-(--panel-w) flex-none overflow-y-auto overscroll-contain border-r border-edge bg-surface-panel text-text-1;
+
+  /* readouts */
+  & output {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @variant drawer {
+    @apply absolute top-0 bottom-0 left-(--rail-w) z-8 w-[min(var(--panel-w),calc(100%-var(--rail-w)-16px))] shadow-pop;
+  }
+
+  @variant phone {
+    @apply absolute inset-x-0 top-[calc(var(--phone-preview-h)+var(--phone-transport-h))] bottom-0 z-10 flex w-auto flex-col overflow-hidden rounded-t-md border-t border-r-0 shadow-pop;
+    animation: sheet-in 160ms ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+
+    & > :not([data-sheet-handle]) {
+      @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
+    }
+  }
+}
+
 /*
  * The right dock (export drawer, inspector): beside the view; a drawer over it below 1024 px; a half sheet under the
  * preview on a portrait phone, where each child but the sheet handle scrolls on its own.
  */
 @utility dock-frame {
   @apply w-(--dock-w) flex-none overflow-y-auto overscroll-contain border-l border-edge bg-surface-panel text-text-1;
+
+  /* its sections, flat (the sheet handle has its own padding) */
+  :where(&) > :where(:not([data-sheet-handle])) {
+    @apply px-4 pt-0 pb-4;
+  }
 
   @variant drawer {
     @apply absolute top-0 right-0 bottom-0 z-8 w-[min(var(--dock-w),calc(100%-var(--rail-w)-16px))] shadow-pop;
@@ -181,10 +288,26 @@
       animation: none;
     }
 
-    & > :not(.sheet-handle) {
+    & > :not([data-sheet-handle]) {
       @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
     }
   }
+}
+
+/*
+ * A section of the dock that brings its own head (the inspector, the poster panel): a grid whose first row is the sticky title,
+ * « modifié » marker and close (`dock-head` + a column), every other child on a full-width row of its own.
+ */
+@utility dock-section {
+  @apply relative grid grid-cols-[minmax(0,1fr)_auto_auto] content-start gap-x-0 gap-y-3;
+
+  :where(&) > * {
+    @apply col-span-full;
+  }
+}
+
+@utility dock-head {
+  @apply sticky top-0 z-2 row-1 bg-surface-panel;
 }
 
 /*
@@ -238,7 +361,7 @@
   }
 }
 
-/* A fade of 120 ms for what opens over the page (tooltips, menus, dialogs); `tip-in` is declared in shell.css. */
+/* A fade of 120 ms for what opens over the page (tooltips, menus, dialogs); `tip-in` is declared above. */
 @utility fade-in {
   animation: tip-in 120ms ease both;
 

@@ -212,16 +212,16 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
           : t('poster.progress.rendering')
 
   return (
-    <section className="settings export poster" aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
-      <h2 id={`${id}-title`} className="section-title settings__title">
+    <section className="dock-section" aria-labelledby={`${id}-title`} aria-busy={busy} hidden={hidden}>
+      <h2 id={`${id}-title`} className="panel-title dock-head col-1 m-0 pt-3 pb-2">
         {t('export.panel.title')}
       </h2>
-      <ModifiedMarker keys={['poster']} label={t('poster.panel.modified')} disabled={busy} />
+      <ModifiedMarker className="dock-head col-2 pt-3 pr-0 pb-2 pl-2" keys={['poster']} label={t('poster.panel.modified')} disabled={busy} />
       {onClose && (
         <Tip text={withShortcut(t('common.close'), 'export')} align="end">
           <Button
             variant="icon"
-            className="settings__close"
+            className="dock-head col-3 mt-1 -mr-1.5 ml-1 self-center phone:hidden"
             onClick={onClose}
             aria-label={t('poster.panel.closeAria')}
           >
@@ -325,7 +325,7 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
       </fieldset>
 
       {!busy && (
-        <div className="export__actions">
+        <div className="flex flex-col gap-2 *:min-w-0">
           <Button variant="primary" onClick={create} disabled={!track}>
             <Icon name="map" size={18} />
             {t('poster.panel.create')}
@@ -343,7 +343,7 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
       {busy && running && still && (
         <div className="field">
           <progress
-            className="export__progress"
+            className="progress-bar"
             aria-label={t('poster.progress.aria')}
             {...(tiles && tiles.total > 0 && { max: tiles.total, value: phase === 'finalizing' ? tiles.total : tiles.done })}
           />
@@ -360,7 +360,7 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
         </div>
       )}
       {!busy && failed && (
-        <p className="text-hint export__error" role="alert">
+        <p className="rounded-sm border-l-[3px] border-brand bg-accent-tint px-3 py-2 text-hint" role="alert">
           {t('poster.panel.failed', { error: failed })}
         </p>
       )}

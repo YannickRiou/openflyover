@@ -67,7 +67,6 @@ import { effectiveProjectName } from './shell'
 import { AspectIcon, Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
-import './exportPanel.css'
 import { Button, Checkbox, Chip, Radio, RadioGroup, Select, Tip } from './primitives'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
@@ -159,7 +158,7 @@ const TILE_LABEL =
 function DockHead({ id, modified, busy, onClose }: { id: string; modified?: (keyof Settings)[]; busy: boolean; onClose?: () => void }) {
   const t = useT()
   return (
-    <div className="panel-head [&_.modified]:static">
+    <div className="panel-head">
       <h2 id={id} className="panel-title flex-1">
         {t('export.panel.title')}
       </h2>

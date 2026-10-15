@@ -1,6 +1,6 @@
 /*
  * Slider (Slider.tsx): HeroUI's `.slider` (imported in theme.css) skinned with the tokens of theme.css: a thin rail with the
- * accent filling it up to a round thumb, the written value (`.range-row__value`, app.css) on its right and the optional
+ * accent filling it up to a round thumb, the written value (`range-value`, utilities.css) on its right and the optional
  * `below` slot under the rail. The track keeps 8 px of transparent border on each side (half a thumb), so the thumb at either
  * end stays inside the box and the rail, drawn from its `::before`, spans the whole width. `--slider-accent` lets a screen
  * recolour the fill and the thumb (the dark timeline bar). HeroUI's selectors carry `[data-orientation]` and the fill
@@ -87,7 +87,7 @@
   box-shadow: 0 0 0 1px var(--color-white);
 }
 
-.slider--field .slider__output.range-row__value {
+.slider--field .slider__output {
   grid-area: output;
   font-size: inherit;
   font-weight: 600;
