@@ -12,6 +12,7 @@ import landmarksMessages from './landmarks'
 import lensMessages from './lens'
 import lightMessages from './light'
 import markerMessages from './marker'
+import newsMessages from './news'
 import offlineMessages from './offline'
 import overlayMessages from './overlay'
 import platformMessages from './platform'
@@ -48,6 +49,7 @@ export const it: Messages = {
   lens: lensMessages,
   light: lightMessages,
   marker: markerMessages,
+  news: newsMessages,
   offline: offlineMessages,
   overlay: overlayMessages,
   platform: platformMessages,

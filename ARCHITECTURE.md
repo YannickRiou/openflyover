@@ -511,7 +511,12 @@ pointer (`appearance.css`).
   without interaction), and ⓘ, which opens "Sources et licences" (sources and licenses) (`Modal`) with the full lines
   (`overlayCredits`, same strings as in the film), licence links, and for IGN layers the update date of the data read
   from the tiles' `Last-Modified` (`terrain/sourceDates.ts`, Licence Ouverte Etalab 2.0) or « date de mise à jour non
-  communiquée par le service ».
+  communiquée par le service ». The window also holds the link to the GitHub repository and the « Voir les nouveautés »
+  button, which opens « Nouveautés » (`WhatsNewDialog`): what changed, in the words of the users and by version, newest
+  first (`ui/whatsNew.ts`: `WHATS_NEW`, an icon, a title and a sentence per item, the texts in the `news` domain of the five
+  languages; a minor version stands for its patches). A dot on the ⓘ button shows until the newest version was opened
+  (`Preferences.whatsNewSeen`, compared with `LATEST_NEWS`): adding a version means its items first in `WHATS_NEW` and
+  its keys in the five `news.ts` files.
 - **Shortcuts** (`src/ui/shortcuts.ts`): `SHORTCUTS` registry (id, keys, label, group Lecture / Montage / Projet /
   Vue (playback / editing / project / view)) shown by the "Raccourcis clavier" (keyboard shortcuts) box (`HelpDialog.tsx`, `Modal`, "?" or the bar button)
   and reused in tooltips (`withShortcut`). `matchShortcut(key, keyFocus(target))`, pure: Ctrl/Cmd+S save,

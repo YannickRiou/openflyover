@@ -1,0 +1,32 @@
+import type { Messages } from '../messages'
+
+const messages: Messages['news'] = {
+  title: 'What’s new',
+  button: 'See what’s new',
+  hint: 'What changed in OpenFlyover, version after version.',
+  version: 'Version {version}',
+  'v22.landmarks.title': 'Landmarks that are simpler to choose',
+  'v22.landmarks.text': 'Set a density (few, normal, many) instead of a number, put each landmark on Auto, Always or Never, and pick them on a map with the altitude profile of the track.',
+  'v22.keys.title': 'Keyframes: select several, and right click',
+  'v22.keys.text': 'Select several keyframes with Ctrl + drag to move or delete them together. A right click on the timeline adds a keyframe or deletes the item you click.',
+  'v22.keysFollow.title': 'Keyframes follow your settings',
+  'v22.keysFollow.text': 'The sliders of the sun, the exposure and the colours now change the keyframe at the playhead. A camera keyframe follows the view you move with the mouse.',
+  'v22.route.title': 'Texts and photos that follow the route',
+  'v22.route.text': 'When you slow down or speed up a stretch, add a stop or change the duration, your texts, photos and videos stay at the same place of the route. Music keeps its time.',
+  'v22.figurine.title': 'A livelier figurine',
+  'v22.figurine.text': 'The figurine leans smoothly with the slope of the track, and the colour of its outline sits next to the colour of its fill.',
+  'v22.imagery.title': 'New aerial photos',
+  'v22.imagery.text': 'Austria (basemap.at), Japan (GSI) and the United States (USGS) join the imagery list. Esri becomes the default imagery outside France and Switzerland; Sentinel-2 and the old IGN photos are gone.',
+  'v22.more.title': 'And also',
+  'v22.more.text': 'Whole label names, flags that show on Windows, a link to GitHub (home screen and the “i” button), a real hike as the home screen example, a choice of the install folder on Windows.',
+  'v21.update.title': 'Check for updates',
+  'v21.update.text': 'In Settings, the desktop application looks for a new version when you ask it to.',
+  'v21.languages.title': 'Spanish, Italian and German',
+  'v21.languages.text': 'The interface and the texts of the films also exist in Spanish, Italian and German: pick the language with the flag button.',
+  'v21.weather.title': 'Weather and clouds along the whole track',
+  'v21.weather.text': 'The sky follows the weather of each area crossed, and clouds cast shadows on the terrain.',
+  'v20.interface.title': 'A redesigned interface',
+  'v20.interface.text': 'A new look for the panels, menus, buttons and windows, with the same functions as before.',
+}
+
+export default messages
