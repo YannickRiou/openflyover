@@ -12,6 +12,7 @@ export default {
   creditSources: 'Sources {name}',
   sources: 'Sources et licences',
   sourcesUpdates: "Application de bureau : GitHub (github.com) n'est contacté que lorsque vous appuyez sur « Rechercher une mise à jour » (Réglages), pour lire le fichier de version.",
+  sourcesProject: 'OpenFlyover est un projet libre : code source, documentation et téléchargements sur',
   sourcesNote: 'Ces mentions sont incrustées dans les films exportés (Habillage, « Crédits des sources »). Polices : Fraunces et IBM Plex (SIL Open Font License 1.1). Icônes : Lucide (licence ISC). OpenFlyover est publié sous licence MIT.',
   'source.weather': 'Météo de la sortie (Open-Meteo)',
   'source.landmarks': 'Repères (OpenStreetMap)',

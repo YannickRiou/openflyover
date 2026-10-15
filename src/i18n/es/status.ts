@@ -13,6 +13,7 @@ const messages: Messages['status'] = {
   perfTip: 'Rendimiento (se elige en «Ajustes»)',
   creditSources: 'Fuentes {name}',
   sources: 'Fuentes y licencias',
+  sourcesProject: 'OpenFlyover es de código abierto: código, documentación y descargas en',
   sourcesNote:
     'Estas menciones se incrustan en las películas exportadas (Gráficos, «Créditos de las fuentes»). Fuentes tipográficas: Fraunces e IBM Plex (SIL Open Font License 1.1). Iconos: Lucide (licencia ISC). OpenFlyover se publica bajo licencia MIT.',
   'source.weather': 'Meteorología de la salida (Open-Meteo)',
