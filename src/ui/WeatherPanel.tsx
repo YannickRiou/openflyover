@@ -41,6 +41,7 @@ export function WeatherPanel() {
   const progress = useAppStore((s) => Math.round(s.playback.progress * PROGRESS_STEPS) / PROGRESS_STEPS)
   const status = useWeatherStore((s) => s.status)
   const message = useWeatherStore((s) => s.message)
+  const stageMessage = useWeatherStore((s) => s.stageMessage)
   const series = useWeatherStore((s) => s.series)
   const weatherTrackId = useWeatherStore((s) => s.trackId)
   const tracks = useAppStore((s) => s.tracks)
@@ -76,6 +77,17 @@ export function WeatherPanel() {
         <Button block onClick={() => syncWeather(track, enabled, { retry: true })}>
           {t('common.retry')}
         </Button>
+      )}
+
+      {enabled && stageMessage && (
+        <>
+          <p className="type-hint" role="status">
+            {t('weather.panel.stageError', { reason: stageMessage })}
+          </p>
+          <Button block onClick={() => syncStageWeather(sequence ? tracks.slice(1) : [], enabled)}>
+            {t('common.retry')}
+          </Button>
+        </>
       )}
 
       {summary && (

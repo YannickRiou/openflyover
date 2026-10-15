@@ -49,13 +49,12 @@ remembered on the device. The documentation is in English; the [user guide](docs
 | Import | GPX and FIT, several tracks at once, or Strava activities; heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
 | Terrain and imagery | Mapterhorn or AWS Terrain Tiles terrain; IGN orthophotos in France and swisstopo in Switzerland, chosen automatically; Esri World Imagery elsewhere, with national aerial photos to pick by hand (Austria, Japan, United States); topographic maps; terrain exaggeration; OpenStreetMap lakes and rivers rendered as water that reflects the sky and the sun, with ripples |
 | Flyover | five camera styles (chase, sway, orbit, top-down view, cinematic shot), twelve presets, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
-| Pacing | slow-motion and pauses at highlights: tops of climbs, passes, nearby summits |
+| Pacing | slow-motion on the climbs and pauses at highlights (passes, nearby summits), speed sections you set on the timeline |
 | Light | physically based sky and haze, sun at the actual time of the outing, terrain shadows, starry night, automatic exposure |
-| Weather | historical weather for the day of the outing (Open-Meteo), or the forecast for an upcoming outing (up to 16 days), shown in a panel and in the scene; volumetric clouds derived from low, mid and high cloud cover (or set by hand), pushed by the wind; a sea of clouds filling the valleys, as volumetric clouds or as a lit surface |
+| Weather | historical weather for the day of the outing (Open-Meteo), or the forecast for an upcoming outing (up to 16 days), shown in a panel and in the scene; volumetric clouds derived from low, mid and high cloud cover (a station about every 10 km, so the sky changes along the track; or set by hand), pushed by the wind, with their shadows on the terrain; a sea of clouds filling the valleys, as volumetric clouds or as a lit surface |
 | Look | color grading presets; lens effects, all off by default: speed blur, bloom, lens flare, depth of field |
-| Landmarks | summits, passes, huts, lakes… from OpenStreetMap; climbs detected and categorized (cat. 4 to HC); 3D labels; automatic stops in the movie at the passes crossed and the summits near the track; any landmark can be hidden, ranked or pinned |
+| Landmarks | summits, passes, huts, lakes… from OpenStreetMap; climbs detected and categorized (cat. 4 to HC); 3D labels; automatic stops in the movie at the passes crossed and the summits near the track; one list along the track where each landmark is Auto, Always or Never shown (a density, few / normal / many, decides the Auto ones), a window with the map and the elevation profile to browse them, and a stop in the film at any of them with its duration |
 | Planned outing | for a route without times (Komoot, Visorando, IGNrando…): date, start time, activity and pace give the estimated passing time at each point, the sun and the weather forecast of the day |
-| Landmarks and points of interest | one list along the track: show or hide each label (or all at once), a stop in the film at any of them with its duration |
 | Points of interest | your own places ("Picnic", "Paul's chalet"), placed with a right-click on the terrain or at the marker, with an icon (hut, bivouac, summit…), shown like landmarks in the view and in the movie |
 | Track | colored by speed, slope, elevation, heart rate, cadence, power or temperature; width, dashes or dots, glow, track that draws itself as the marker passes; smoothing of GPS jitter |
 | Marker | ball, figurine (hiker, mountaineer, runner, trail runner, cyclist, e-bike, bikepacking, mountain bike, skier, ski touring, swimmer, kayak, rider, paraglider, motorbike, car, light aircraft) facing the direction of travel, or your photo in a circle; adjustable size |
@@ -67,7 +66,8 @@ remembered on the device. The documentation is in English; the [user guide](docs
 | Export | MP4 or WebM video in 16:9, 9:16, 1:1, 4:5 or 21:9, from 720p to 4K, at 24, 30 or 60 frames per second, with the music and the sound of the videos; PNG or JPEG still image; the overlay alone on a transparent background (WebM); several formats in one go; on the desktop, one film per track of a folder, also from the command line |
 | Offline | tiles of the track downloaded once, along a corridor of 2, 5 or 10 km: the view and the export then work without a connection |
 | Poster | printable poster of the outing in A4 or A3 (300 dpi, portrait or landscape) or square: 3D view of the whole track, title, date, key figures, profile, weather of the day, credits; the same seven styles; several tracks on the same poster, each in its color, with their list or their total; "Carte à plat" (flat map) for a map seen from above |
-| Project | project file to save and reopen, undo / redo, presets |
+| Timeline editing | keyframes on the camera, on every setting with a slider (sun hour, exposure, grading, speed…) and on the 3D labels, written by the sliders or by moving the view with the mouse; rectangle selection (Ctrl + drag) to move or delete several keys; right-click menu to add or delete a key or an item; texts, photos and videos follow the route when a section is slowed down or sped up |
+| Project | project file to save and reopen, undo / redo, presets; « Nouveautés » window (what each version brings, by feature); on the desktop, a button to check for updates |
 
 How to use each of these: the [user guide](docs/user-guide.html).
 
@@ -108,9 +108,7 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | coordinates, shared contracts, modules: read it before coding |
 | [Deploying and building](docs/deploying.md) | web server setup (HTTPS, nginx, Apache), desktop application build |
 | [Desktop installers](docs/installers.md) | installers built on GitHub, signing, automatic updates (maintainer setup) |
-| [Design notes](docs/design/) | decisions behind the interface: styling on Tailwind ([`tailwind.md`](docs/design/tailwind.md)), components on HeroUI ([`heroui.md`](docs/design/heroui.md)), the multi-track timeline |
 | [Data sources](docs/sources.md) | attributions, licenses, offline rules and how each source was checked |
-| [GPU tests](docs/tests-gpu.md) | manual checks on a machine with a real graphics card |
 | [Changelog](CHANGELOG.md) | what each version brings |
 
 The HTML pages are standalone: open them in a browser from a clone, or through any static host.
@@ -119,19 +117,19 @@ The HTML pages are standalone: open them in a browser from a clone, or through a
 
 OpenFlyover is a static site: build it with `npm ci && npm run build`, copy `dist/` to the root of a domain and serve
 it over **HTTPS** (the video encoder and track import need a secure context outside `localhost`). The desktop
-application is built with `npm run tauri:build`; installers for the three systems are also built on GitHub
+application is built with `npm run tauri:build`; installers for the three systems (on Windows the installer asks whether to install for the current user or for all users) are also built on GitHub
 (*Actions* › "Desktop installers"), and published as a release when a `v*` tag is pushed. Details, server configuration and limitations: [`docs/deploying.md`](docs/deploying.md).
 
 ### Automatic updates: maintainer setup
 
 The desktop application has a « Rechercher une mise à jour » button (« Réglages » tab) that reads the latest GitHub release
 **only when pressed** (nothing at start-up, nothing in the background; `github.com` is contacted only then). It needs an
-update signing key, which you create once (full guide, tests and common errors: [`docs/installers.md`](docs/installers.md#automatic-updates-maintainer-setup)):
-
-1. `npx tauri signer generate -w ~/.tauri/openflyover.key` (keep the private key and its password safe, outside the repository);
-2. create the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (content of `~/.tauri/openflyover.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`;
-3. paste the **public** key (`~/.tauri/openflyover.key.pub`) into `plugins.updater.pubkey` of `src-tauri/updater.conf.json` and commit it;
-4. release a version (`v*` tag): the release then carries the signed update packages and `latest.json`. The first version with the updater cannot be reached from older ones.
+update signing key, created once (full guide, tests and common errors: [`docs/installers.md`](docs/installers.md#automatic-updates-maintainer-setup)).
+**This is already done for this repository**: the public key is committed in `plugins.updater.pubkey` of `src-tauri/updater.conf.json`, and
+the secret `TAURI_SIGNING_PRIVATE_KEY` is set (no `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secret exists, which works only because the key has no password).
+What you must keep: **the private key file** (outside the repository, in a password manager: without it no installed
+copy can be updated, and a new key means a new release that users install by hand). Each `v*` tag then publishes the signed
+update packages and `latest.json` with the release; the release must be published, not a draft, for the button to find it.
 
 Without the secret the installers are built as before and the button says that updates are not available in that build.
 
@@ -148,12 +146,18 @@ Without the secret the installers are built as before and the button says that u
 | `npm run typecheck` | TypeScript type check |
 | `npm run lint` | code analysis (oxlint) |
 | `npm run e2e` | end-to-end tests in a real browser (see below) |
+| `npm run tauri:dev` / `npm run tauri:build` | desktop application in development / installers of your own system (Rust and the Tauri prerequisites needed, see [`docs/deploying.md`](docs/deploying.md)) |
+| `npm run notices` | regenerates `THIRD_PARTY_NOTICES.md` and the installer licence pages; run it when a dependency changes |
+| `npm run installer-assets` | regenerates the installer images (needs Chrome, see `OPENFLYOVER_CHROME` below) |
 
-The suite has **about 2,600 tests** in 159 files (14 October 2026), each file next to its module (`src/**/*.test.ts`,
+The suite has **about 2,700 tests** in 164 files (15 October 2026), each file next to its module (`src/**/*.test.ts`,
 `*.test.tsx` for the components); network calls and the video encoder are mocked. `npm run e2e` drives the app in a headless Chromium
 through 21 scenarios (home, tabs, language, timeline, project, export, phone…); its options (`OPENFLYOVER_CHROME`,
-`OPENFLYOVER_E2E_SKIP_EXPORT`, `OPENFLYOVER_E2E_ONLY`) are documented at the top of `e2e/run.mjs`. The rendering
-quality is checked by eye ([`docs/tests-gpu.md`](docs/tests-gpu.md)).
+`OPENFLYOVER_E2E_SKIP_EXPORT`, `OPENFLYOVER_E2E_ONLY`) are documented at the top of `e2e/run.mjs`. On Windows or macOS
+the default Chromium path (a Linux one) does not exist: point `OPENFLYOVER_CHROME` at your Chrome, for example
+`C:\Program Files\Google\Chrome\Application\chrome.exe` (PowerShell: `$env:OPENFLYOVER_CHROME = '…'`), and use a UTF-8 locale
+(the project scenario checks the name of a downloaded file with accents). The rendering
+quality is checked by eye (the manual checks of the [developer handbook](docs/handbook/index.html#manual-checks)).
 
 ## Data sources
 
@@ -162,9 +166,9 @@ All sources are open and keyless; the code declares them in `src/terrain/sources
 | Source | Used for | License |
 |---|---|---|
 | Mapterhorn, AWS Terrain Tiles | terrain | open data (CC BY 4.0, OGL, public domain…) |
-| IGN Géoplateforme | orthophotos, Plan IGN and historical photos in France | Licence Ouverte Etalab 2.0 |
+| IGN Géoplateforme | orthophotos and Plan IGN in France | Licence Ouverte Etalab 2.0 |
 | swisstopo | orthophotos and national map in Switzerland | open data (OGD) |
-| Esri World Imagery | world orthophotos (default outside France and Switzerland) | Esri terms: credited "Powered by Esri", never in offline packs; keyless use not covered by Esri, hence not the default ([details](docs/sources.md)) |
+| Esri World Imagery | world orthophotos (default outside France and Switzerland) | Esri terms: credited "Powered by Esri", never in offline packs; keyless use is not covered by Esri's terms, a choice made knowingly ([details](docs/sources.md)) |
 | basemap.at | aerial photos of Austria | CC BY 4.0, credit "Datenquelle: basemap.at" |
 | GSI Japan | aerial photos of Japan | Public Data License 1.0, credit GSI |
 | USGS The National Map | aerial photos of the United States | public domain, credit USGS |
@@ -223,8 +227,14 @@ video description.
 
 Conventions:
 
+- Two targets, both always working: the hosted static website (no application server, no Node at run time) and the desktop application (Tauri); disk access and storage go through the common interface of `src/platform` (browser / Tauri).
+- No API key and no paid service: open sources only, cached, with their terms of use respected.
 - Strict TypeScript, with `import type` and no `enum`.
 - Interface in French, English, Spanish, Italian and German (`src/i18n`, see "Internationalisation" in [`ARCHITECTURE.md`](ARCHITECTURE.md)): no text in the code, every string goes through `t('domain.key')` and has a message in each language.
-- Visual identity in [`src/ui/theme.css`](src/ui/theme.css). Styling in Tailwind utilities (shared `@utility` classes in `src/ui/utilities.css`), interactive components on HeroUI behind the wrappers of `src/ui/primitives/` (screens never import `@heroui/react`): see [`tailwind.md`](docs/design/tailwind.md) and [`heroui.md`](docs/design/heroui.md).
+- Visual identity in [`src/ui/theme.css`](src/ui/theme.css). Styling in Tailwind utilities (shared `@utility` classes in `src/ui/utilities.css`), interactive components on HeroUI behind the wrappers of `src/ui/primitives/` (screens never import `@heroui/react`): see "Primitives" and "Styling" in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 - Open, keyless sources only; any new source goes into `src/terrain/sources.ts` and `docs/sources.md`.
-- Types, lint and tests green before each commit, one commit per feature.
+- The documentation (README, `ARCHITECTURE.md`, `docs/`) is written in English; interface labels quoted from the app stay in French.
+- Types, lint and tests green before each commit, one commit per feature (`npm run typecheck`, `npm run lint`, `npx vitest run --maxWorkers=1`).
+
+Read [`ARCHITECTURE.md`](ARCHITECTURE.md) (coordinate conventions, contracts in `src/core/types.ts`, modules) and the
+[developer handbook](docs/handbook/index.html) (recipes, release procedure) before changing the code.

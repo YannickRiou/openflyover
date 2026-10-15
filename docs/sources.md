@@ -60,7 +60,7 @@ data is the user's own, kept on their device and shown only to them, as with a G
 | basemap.at | CC BY 4.0 (Open Government Data Österreich) | free for private and commercial use; credit "Datenquelle: basemap.at" with `basemap.at` linked to https://basemap.at/ |
 | GSI Japan | Public Data License 1.0 (compatible with CC BY 4.0) | credit GSI with a link to the tile list; say so when the tiles are edited; the seamless photo is a compilation (Landsat, GRUS pieces: the GRUS credit is only needed around Okinotorishima, outside the catalogue box) |
 | USGS The National Map | public domain (USGS-authored data; the NAIP photos are USDA) | credit "USDA, USGS The National Map"; the 10 m SPOT imagery of Alaska is **viewable only** (its licence forbids downloading it from The National Map) |
-| Esri | Esri terms (ArcGIS Online terms of use) | "Powered by Esri" and the data credits are mandatory; **no offline copy** (tiles cannot be harvested outside Esri Content Packages); keyless use in a distributed application is not covered by what Esri publishes: Esri is an **optional source, never the default** |
+| Esri | Esri terms (ArcGIS Online terms of use) | "Powered by Esri" and the data credits are mandatory; **no offline copy** (tiles cannot be harvested outside Esri Content Packages); keyless use in a distributed application is not covered by what Esri publishes: the owner nevertheless made it the **default outside France and Switzerland** on 15 October 2026 (§ Esri) |
 | OpenTopoMap | CC BY-SA | volunteer-run server: moderate use; a video made with this base map must stay under the same license |
 | Open-Meteo | CC BY 4.0 | free **non-commercial** API, 10,000 requests per day max |
 | OpenStreetMap | ODbL | public Overpass server: moderate use |
@@ -85,7 +85,11 @@ count per device.
 To spare these services, the application:
 
 - keeps the last ~600 tiles in memory and requests only those in the view;
-- sends **one** weather request per track and keeps it in the browser;
+- sends **one** weather request per track (up to 12 places along it, all its days), and keeps the days older than a week in
+  the browser (the last 7 days and forecasts stay in memory only, forecasts for 3 h at most). One request is not one call
+  for Open-Meteo: its quota counts heavier requests as several calls (more than 10 variables, more than 2 weeks), and the
+  weight of each extra place is not documented, so count one call per place. The stages of « À la suite » are fetched one
+  at a time, and a refusal (HTTP 429) is shown with the quota it names (minute, hour or day) and when to try again;
 - sends **one** landmark request per track, kept for 30 days, and retries only once if the server is overloaded;
 - downloads an offline pack only once, 4 tiles at a time, and never requests a tile that is already stored;
 - sends **one** water body request per track (lakes and rivers in an 8 km corridor), in the same queue and the same
@@ -95,7 +99,8 @@ The track itself is never sent. These services receive only an approximate posit
 points rounded to 1 km with their dates for the weather, the rectangle around the track for the landmarks.
 
 Verification date: **2026-10-05** (independent review the same day: extra probes at the borders, § "Border probes");
-dated topographic maps and orthophotos added on **2026-10-07** (§ "Old maps and photos"). Tools: `curl.exe` with the header `Origin: http://127.0.0.1:5173`
+dated topographic maps and orthophotos added on **2026-10-07** (§ "Old maps and photos"; the dated orthophotos were removed on
+**2026-10-15**); basemap.at, GSI and USGS added on **2026-10-15**, as hand-picked sources only (never chosen automatically). Tools: `curl.exe` with the header `Origin: http://127.0.0.1:5173`
 (status, `content-type`, `access-control-allow-origin`), reading of image headers (IHDR / SOF / VP8L)
 and minimal PNG decoding in Node (zlib) for the Terrarium check, providers' GetCapabilities documents.
 `src/terrain/sources.ts` is the only source of truth for the code; this document justifies it.
