@@ -5,6 +5,9 @@
 export const LANGUAGES = [
   { code: 'fr', name: 'Français', flag: '🇫🇷', locale: 'fr-FR' },
   { code: 'en', name: 'English', flag: '🇬🇧', locale: 'en-GB' },
+  { code: 'es', name: 'Español', flag: '🇪🇸', locale: 'es-ES' },
+  { code: 'it', name: 'Italiano', flag: '🇮🇹', locale: 'it-IT' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪', locale: 'de-DE' },
 ] as const
 
 export type LanguageCode = (typeof LANGUAGES)[number]['code']

@@ -6,8 +6,11 @@
  * components call `useT()` to render again when the language changes.
  */
 import { useMemo, useSyncExternalStore } from 'react'
+import { de } from './de'
 import { en } from './en'
+import { es } from './es'
 import { fr } from './fr'
+import { it } from './it'
 import { DEFAULT_LANGUAGE, localeOf } from './languages'
 import type { LanguageCode } from './languages'
 import type { MessageKey, Messages, Plural } from './messages'
@@ -16,7 +19,7 @@ export { LANGUAGES, detectLanguage } from './languages'
 export type { LanguageCode } from './languages'
 export type { MessageKey, Messages } from './messages'
 
-const catalogs: Record<LanguageCode, Messages> = { fr, en }
+const catalogs: Record<LanguageCode, Messages> = { fr, en, es, it, de }
 
 export type Vars = Record<string, string | number>
 

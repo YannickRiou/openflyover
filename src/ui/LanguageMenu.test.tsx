@@ -54,18 +54,22 @@ describe('LanguageMenu', () => {
     await open()
     expect(button().getAttribute('aria-expanded')).toBe('true')
     expect(items().map((i) => i.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Français'), expect.stringContaining('English')]))
-    expect(items().map((i) => i.getAttribute('aria-checked'))).toEqual(['true', 'false'])
+    expect(items().map((i) => i.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false', 'false', 'false'])
     expect(document.activeElement).toBe(items()[0])
   })
 
   it('moves with the arrows, wrapping around', async () => {
     await open()
-    await key(items()[0], 'ArrowDown')
-    expect(document.activeElement).toBe(items()[1])
-    await key(items()[1], 'ArrowDown')
+    const last = items().length - 1
+    // the key goes to the focused item: step down to the last one, then past it
+    for (let i = 1; i <= last; i++) {
+      await key(document.activeElement as HTMLElement, 'ArrowDown')
+      expect(document.activeElement).toBe(items()[i])
+    }
+    await key(items()[last], 'ArrowDown')
     expect(document.activeElement).toBe(items()[0])
     await key(items()[0], 'ArrowUp')
-    expect(document.activeElement).toBe(items()[1])
+    expect(document.activeElement).toBe(items()[last])
   })
 
   it('closes on Escape and gives the focus back to the button', async () => {
