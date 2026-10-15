@@ -23,6 +23,8 @@ export interface WeatherState {
   startTime: number | null
   /** « À la suite »: weather of the later stages, by track id */
   stages: Readonly<Record<string, StageWeather>>
+  /** why a later stage has no weather (a failed request, in French), null when none failed */
+  stageMessage: string | null
 }
 
 /** Weather of a later stage: the start time it is fetched for, its series once there (null while loading or failed). */
@@ -32,7 +34,7 @@ export interface StageWeather {
 }
 
 const IDLE = { status: 'idle', message: null, series: null, trackId: null, startTime: null } as const
-const INITIAL: WeatherState = { ...IDLE, stages: {} }
+const INITIAL: WeatherState = { ...IDLE, stages: {}, stageMessage: null }
 
 export const useWeatherStore = create<WeatherState>()(() => ({ ...INITIAL }))
 
@@ -43,6 +45,9 @@ export interface SyncWeatherDeps {
 let controller: AbortController | null = null
 /** requests in flight of the later stages, by track id */
 const stageControllers = new Map<string, AbortController>()
+/** Later stages are fetched one at a time: a long « À la suite » must not fire dozens of requests at once. */
+const stageQueue: (() => void)[] = []
+let stageBusy = false
 
 /**
  * Bring the weather in line with the first track and the setting: idle without a track or when disabled,
@@ -119,12 +124,47 @@ export function syncStageWeather(
     const ctrl = new AbortController()
     stageControllers.set(track.id, ctrl)
     stages[track.id] = { startTime, series: null }
-    const settle = (series: WeatherSeries | null) => {
+    const settle = (series: WeatherSeries | null, failure?: unknown) => {
       if (stageControllers.get(track.id) !== ctrl) return
       stageControllers.delete(track.id)
-      if (series) useWeatherStore.setState((s) => ({ stages: { ...s.stages, [track.id]: { startTime, series } } }))
+      if (series) {
+        useWeatherStore.setState((s) => ({ stages: { ...s.stages, [track.id]: { startTime, series } }, stageMessage: null }))
+      } else if (failure instanceof WeatherError) {
+        // `unavailable` (date out of reach) is not a failure worth a message
+        if (failure.kind === 'error') useWeatherStore.setState({ stageMessage: failure.message })
+      } else if (failure !== undefined) {
+        useWeatherStore.setState({ stageMessage: t('weather.store.unexpected') })
+      }
     }
-    deps.fetchWeather(buildTrackPath(track), { signal: ctrl.signal }).then(settle, () => settle(null))
+    const path = buildTrackPath(track)
+    const turn = () => {
+      let released = false
+      // frees the slot once the request ends or is cancelled, and starts the next stage
+      const release = () => {
+        if (released) return
+        released = true
+        stageBusy = false
+        stageQueue.shift()?.()
+      }
+      if (ctrl.signal.aborted) {
+        stageQueue.shift()?.()
+        return
+      }
+      stageBusy = true
+      ctrl.signal.addEventListener('abort', release, { once: true })
+      deps.fetchWeather(path, { signal: ctrl.signal }).then(
+        (series) => {
+          release()
+          settle(series)
+        },
+        (e: unknown) => {
+          release()
+          settle(null, e)
+        },
+      )
+    }
+    if (stageBusy) stageQueue.push(turn)
+    else turn()
   }
   for (const [id, ctrl] of stageControllers) {
     if (stages[id]) continue
@@ -132,7 +172,9 @@ export function syncStageWeather(
     stageControllers.delete(id)
   }
   const ids = Object.keys(stages)
-  if (ids.length !== Object.keys(current).length || ids.some((id) => current[id] !== stages[id])) useWeatherStore.setState({ stages })
+  if (ids.length !== Object.keys(current).length || ids.some((id) => current[id] !== stages[id])) {
+    useWeatherStore.setState(ids.length === 0 ? { stages, stageMessage: null } : { stages })
+  }
 }
 
 /** Series of `track` once fetched: the first track's, or a later stage's « À la suite ». */
@@ -152,5 +194,7 @@ export function resetWeatherStore(): void {
   controller = null
   for (const ctrl of stageControllers.values()) ctrl.abort()
   stageControllers.clear()
+  stageQueue.length = 0
+  stageBusy = false
   useWeatherStore.setState({ ...INITIAL })
 }

@@ -341,6 +341,18 @@ function listDays(startDay: string, endDay: string): string[] {
   return days
 }
 
+/**
+ * The quota Open-Meteo says is used up, from the `reason` of its 429 ("Minutely / Hourly / Daily API request limit
+ * exceeded. Please try again …"): tells when a new request can go through. An unknown wording gives the generic message.
+ */
+function tooManyMessage(reason: unknown): string {
+  const quota = typeof reason === 'string' ? /minut|hour|dail|day/i.exec(reason)?.[0].toLowerCase() : undefined
+  if (quota?.startsWith('minut')) return t('weather.err.tooMany.minute')
+  if (quota?.startsWith('hour')) return t('weather.err.tooMany.hour')
+  if (quota?.startsWith('dail') || quota === 'day') return t('weather.err.tooMany.day')
+  return t('weather.err.tooMany')
+}
+
 async function requestArchive(fetchFn: typeof fetch, url: string, signal?: AbortSignal): Promise<unknown> {
   let response: Response
   try {
@@ -350,7 +362,8 @@ async function requestArchive(fetchFn: typeof fetch, url: string, signal?: Abort
     throw new WeatherError('error', t('weather.err.network'))
   }
   if (response.status === 429) {
-    throw new WeatherError('error', t('weather.err.tooMany'))
+    const reason = await response.json().then((b: { reason?: unknown } | null) => b?.reason, () => undefined)
+    throw new WeatherError('error', tooManyMessage(reason))
   }
   let body: unknown
   try {

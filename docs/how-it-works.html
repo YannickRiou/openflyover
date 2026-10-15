@@ -325,13 +325,13 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
 <div class="page">
 
 <header class="masthead">
-  <p class="eyebrow">Knowledge base · checked against the code on 9 October 2026</p>
+  <p class="eyebrow">Knowledge base · checked against the code on 15 October 2026</p>
   <h1>OpenFlyover, <em>explained</em></h1>
   <p class="lede">How a track recorded on a hike or a ride becomes a 3D flyover film, how the code is organized, and where to look when you want to change something. No prior knowledge of web development is assumed.</p>
   <div class="facts">
     <span><b>2</b> targets: static website, desktop app</span>
     <span><b>0</b> servers or API keys shipped</span>
-    <span><b>2,625</b> unit tests in <b>159</b> files</span>
+    <span><b>2,701</b> unit tests in <b>164</b> files</span>
     <span><b>21</b> end-to-end scenarios</span>
     <span>export up to <b>4K · 60 fps</b></span>
   </div>
@@ -449,7 +449,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <article class="term">
         <h4>Tailwind CSS and HeroUI</h4>
         <p>Tailwind CSS styles an element with small ready-made classes written next to it (<code>flex</code>, <code>gap-2</code>, <code>text-hint</code>) instead of a separate stylesheet; the finished CSS contains only the classes in use. HeroUI is a set of ready-made interface components (buttons, sliders, menus, dialogs) built on React Aria, which handles keyboard use and screen readers.</p>
-        <p class="here"><b>Here:</b> both are used at build time only; nothing is downloaded when the app runs. The colors, fonts, sizes and spacing are tokens in <code>src/ui/theme.css</code>; classes shared by several components are in <code>src/ui/utilities.css</code>. Screens never import HeroUI directly: each component is wrapped once in <code>src/ui/primitives/</code>. The rules are in <code>docs/design/tailwind.md</code> and <code>docs/design/heroui.md</code>.</p>
+        <p class="here"><b>Here:</b> both are used at build time only; nothing is downloaded when the app runs. The colors, fonts, sizes and spacing are tokens in <code>src/ui/theme.css</code>; classes shared by several components are in <code>src/ui/utilities.css</code>. Screens never import HeroUI directly: each component is wrapped once in <code>src/ui/primitives/</code>. The rules are in <code>ARCHITECTURE.md</code> (&laquo; Primitives &raquo; and &laquo; Styling &raquo;).</p>
       </article>
       <article class="term">
         <h4>Store</h4>
@@ -543,7 +543,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <article class="term">
         <h4>Bundler and build (Vite)</h4>
         <p>The source code is hundreds of files written for humans. A bundler turns them into a few optimized files the browser can load quickly; this step is the build. During development, the same tool serves the app and reloads it on every change.</p>
-        <p class="here"><b>Here:</b> Vite 8. <code>npm run dev</code> serves the app at <code>http://127.0.0.1:5173</code>; <code>npm run build</code> writes the finished site to <code>dist/</code> (about 16 MB, mostly sky and cloud textures). The first screen loads about 510 kB; the 3D engine and the rest arrive just after.</p>
+        <p class="here"><b>Here:</b> Vite 8. <code>npm run dev</code> serves the app at <code>http://127.0.0.1:5173</code>; <code>npm run build</code> writes the finished site to <code>dist/</code> (about 18 MB, mostly sky and cloud textures). The first screen loads about 1.5 MB (470 kB compressed); the 3D engine and the rest arrive just after.</p>
       </article>
       <article class="term">
         <h4>Static website</h4>
@@ -558,7 +558,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <article class="term">
         <h4>Tests and end-to-end tests</h4>
         <p>Tests are small programs that check the code automatically. Unit tests call one module with known inputs and compare the answer. End-to-end (e2e) tests start the real app in a browser without a window and click through it like a user.</p>
-        <p class="here"><b>Here:</b> Vitest runs about 2,600 unit tests in 159 files, in Node, with a simulated browser called jsdom for the files that need one (the interface components included). <code>npm run e2e</code> drives the app in headless Chromium with puppeteer-core, through 21 scenarios. <code>cargo test</code> checks the Rust code.</p>
+        <p class="here"><b>Here:</b> Vitest runs about 2,701 unit tests in 164 files, in Node, with a simulated browser called jsdom for the files that need one (the interface components included). <code>npm run e2e</code> drives the app in headless Chromium with puppeteer-core, through 21 scenarios. <code>cargo test</code> checks the Rust code.</p>
       </article>
       <article class="term">
         <h4>Linting</h4>
@@ -730,7 +730,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
 
         <rect class="d-box-cool" x="170" y="225" width="140" height="80" rx="6"/>
         <text class="d-title" x="182" y="248">Project file</text>
-        <text class="d-text" x="182" y="268">.openflyover.json</text>
+        <text class="d-text" x="182" y="268">.opnflvr</text>
         <text class="d-text" x="182" y="286">src/project/</text>
         <path class="d-arrow" d="M290 223 L350 172" marker-end="url(#fh)" marker-start="url(#fh)"/>
 
@@ -763,8 +763,8 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   </div>
 
   <h3 class="sub">The project document</h3>
-  <p>A project is one self-contained JSON text file named <code>&lt;name&gt;.openflyover.json</code>. JSON is a simple text format for structured data. The file holds everything needed to rebuild the film on another computer, including the tracks themselves and the photos, videos and music used:</p>
-  <pre><code>tour-du-mont-blanc-j1.openflyover.json
+  <p>A project is one self-contained file named <code>&lt;name&gt;.opnflvr</code> (JSON, a simple text format for structured data, compressed and signed). The file holds everything needed to rebuild the film on another computer, including the tracks themselves and the photos, videos and music used:</p>
+  <pre><code>etang-ayguelongue-pic-de-l-homme.opnflvr
 ├─ format: "openflyover-project", version: 2
 ├─ name
 ├─ settings        every setting of the app: map sources, light, camera, pacing,
@@ -815,11 +815,11 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
 <!-- ================================================================== 4 -->
 <section id="journey">
   <div class="sec-head"><span class="num">04</span><h2>One track, start to finish</h2></div>
-  <p>Here is what happens, module by module, when you drop <code>tour-du-mont-blanc-j1.gpx</code> on the window and end up with an MP4 file. Each step names the file where the work is done.</p>
+  <p>Here is what happens, module by module, when you drop <code>etang-ayguelongue-pic-de-l-homme.gpx</code> (the sample) on the window and end up with an MP4 file. Each step names the file where the work is done.</p>
   <ol class="steps">
     <li><span><strong>The drop is caught.</strong> The root component listens for files dropped anywhere on the window and asks the platform layer for them. A <code>.gpx</code> or <code>.fit</code> file is sent to the import, a <code>.json</code> file is opened as a project.
       <span class="who">src/App.tsx → getPlatform().droppedFiles → src/ui/projectActions.ts (openFiles, importTrackFiles)</span></span></li>
-    <li><span><strong>The file is read.</strong> The GPX text is parsed into segments of points (longitude, latitude, height, time, and sensor values when present), plus the named waypoints. For the sample: 351 points, with times starting on 12 July 2025.
+    <li><span><strong>The file is read.</strong> The GPX text is parsed into segments of points (longitude, latitude, height, time, and sensor values when present), plus the named waypoints. For the sample: 2,221 points, with times starting on 2 August 2026.
       <span class="who">src/ui/importFlow.ts → src/import/index.ts (importFile) → src/import/gpx.ts (parseGpx)</span></span></li>
     <li><span><strong>A track is built.</strong> Its distance, elevation gain and loss (heights smoothed, 3 m threshold against GPS noise), duration and bounding box are computed, and a color is chosen that stays readable on aerial photos.
       <span class="who">src/import/stats.ts (buildTrack) · src/import/index.ts (assignColors)</span></span></li>
@@ -839,7 +839,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <span class="who">src/scene/FlyoverRig.tsx → src/flyover/filmCamera.ts (computeFilmView) · src/overlay/OverlayCanvas.tsx → draw.ts</span></span></li>
     <li><span><strong>You click "Exporter" (export).</strong> The export drawer opens. You click "Exporter la vidéo" (export the video); in Chrome, Edge and the desktop app a dialog asks where to save the file. The drawer places an export request in the export store.
       <span class="who">src/ui/ExportPanel.tsx → src/export/store.ts</span></span></li>
-    <li><span><strong>The frames are rendered.</strong> The export controller pauses playback and resizes the drawing area to the video size. It lists every frame of the film (with 1 s held at the start and 2 s at the end). For each frame it sets the progress and the film time, waits until the visible tiles are loaded (5 s at most), renders, and composes sky, 3D image and overlay on an off-screen canvas.
+    <li><span><strong>The frames are rendered.</strong> The export controller pauses playback and resizes the drawing area to the video size. It lists every frame of the film (with 1 s held at the start and 2 s at the end). For each frame it sets the progress and the film time, waits until the visible tiles are loaded (up to 5 minutes per image, then the export stops and names the tile), renders, and composes sky, 3D image and overlay on an off-screen canvas.
       <span class="who">src/export/ExportController.tsx · schedule.ts (buildFrameSchedule) · capture.ts (renderSettledFrame, composeFrame)</span></span></li>
     <li><span><strong>The file is written.</strong> Each composed frame goes to the encoder; mediabunny writes the MP4 to disk as it goes, in 4 MiB pieces. Music and video sound are mixed beforehand and added as an AAC or Opus track. At the end, the view is restored and a message says where the file was saved.
       <span class="who">src/export/encoder.ts · src/export/nativeEncoder.ts · src/film/audio.ts (mixFilmAudio)</span></span></li>
@@ -895,7 +895,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
         <text class="d-text" x="22" y="210">+1 s at the start, +2 s at the end</text>
         <rect class="d-box" x="320" y="152" width="320" height="80" rx="6"/>
         <text class="d-title" x="332" y="176">Settled frame</text>
-        <text class="d-text" x="332" y="194">visible tiles ready (5 s at most),</text>
+        <text class="d-text" x="332" y="194">visible tiles ready (5 min at most),</text>
         <text class="d-text" x="332" y="210">track re-draped, then render</text>
         <rect class="d-box" x="660" y="152" width="230" height="80" rx="6"/>
         <text class="d-title" x="672" y="176">Encoding</text>
@@ -957,7 +957,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <header><h3>Labels, landmarks and points of interest</h3><span class="where">src/scene/Labels.tsx · src/osm/ · src/film/pois.ts</span></header>
       <dl>
         <div><dt>Does</dt><dd>Shows names floating over the terrain: tops of climbs, GPX waypoints, OpenStreetMap summits, passes, huts and lakes, kilometer markers, start and finish, your own points of interest ("Pique-nique", "Le chalet de Paul") and photos where they were taken.</dd></div>
-        <div><dt>Key idea</dt><dd>One OpenStreetMap request per track, for the box around it plus 3 km, cached for 30 days. The distance to the track is computed locally, so changing the types or the distance never sends a new request. Labels fade when the terrain hides them or when they are far away; when two overlap, the more important one wins. Their opacity depends only on the current view, so the export matches the preview.</dd></div>
+        <div><dt>Key idea</dt><dd>One OpenStreetMap request per track, for the box around it plus 3 km, cached for 30 days. The distance to the track is computed locally, so changing the types or the distance never sends a new request. Each landmark is shown "Auto" (a density, few to many, decides), "Toujours" or "Jamais", and a window with the map and the elevation profile helps to pick them (<code>src/ui/LandmarkMap.tsx</code>). Labels fade when the terrain hides them or when they are far away; when two overlap, the more important one wins. Their opacity depends only on the current view, so the export matches the preview.</dd></div>
         <div><dt>Where</dt><dd><code>src/osm/overpass.ts</code> (requests), <code>landmarks.ts</code> (filtering, priorities), <code>store.ts</code>; <code>src/scene/Labels.tsx</code>, <code>labelModel.ts</code>, <code>labelSources.ts</code>; panel <code>src/ui/LandmarkPanel.tsx</code>.</dd></div>
         <div><dt>Tested</dt><dd><code>src/osm/*.test.ts</code>, <code>src/scene/labelModel.test.ts</code>, <code>src/film/pois.test.ts</code>.</dd></div>
       </dl>
@@ -967,9 +967,9 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <header><h3>Light, weather and atmosphere</h3><span class="where">src/scene/AtmosphereLayer.tsx · src/weather/ · src/flyover/sun.ts</span></header>
       <dl>
         <div><dt>Does</dt><dd>Gives the scene a physically based sky and haze, the sun at the real time of the outing, terrain shadows, a starry night, automatic exposure, the historical weather of the day, volumetric clouds (or a sea of clouds filling the valleys), reflective lakes and rivers, color grading ("Couleurs") and lens effects ("Objectif": speed blur, bloom, lens flare, depth of field, all off by default).</dd></div>
-        <div><dt>Key idea</dt><dd>The Takram libraries model how sunlight scatters in the air. The sun is placed at the time recorded under the marker, so a sunrise outing is lit like a sunrise. The weather comes from one Open-Meteo request per track (2 to 12 points along it) and drives haze, veiled sun and softer shadows. Clouds come from the recorded low, mid and high cloud cover and drift with the wind according to the film time. In the export, clouds are rendered several times per frame (16, 24 or 32, by quality) so a frame never depends on the previous one. The sea of clouds ("Mer de nuages") can be drawn as volumetric clouds or as a lit surface ("Nappe").</dd></div>
+        <div><dt>Key idea</dt><dd>The Takram libraries model how sunlight scatters in the air. The sun is placed at the time recorded under the marker, so a sunrise outing is lit like a sunrise. The weather comes from one Open-Meteo request per track (2 to 12 points along it) and drives haze, veiled sun and softer shadows. Clouds come from the recorded low, mid and high cloud cover (one station about every 10 km, so the sky changes along the track) and drift with the wind according to the film time; they cast shadows on the terrain ("Ombres des nuages"). In the export, clouds are rendered several times per frame (16, 24 or 32, by quality) so a frame never depends on the previous one. The sea of clouds ("Mer de nuages") can be drawn as volumetric clouds or as a lit surface ("Nappe").</dd></div>
         <div><dt>Where</dt><dd><code>src/scene/AtmosphereLayer.tsx</code>, <code>CloudsLayer.tsx</code>, <code>CloudSeaSurface.tsx</code>, <code>WaterLayer.tsx</code>, <code>weatherEffect.ts</code>, <code>terrainShadow.ts</code>, <code>exposure.ts</code>, <code>grading.ts</code>, <code>lens.ts</code>; <code>src/weather/openMeteo.ts</code>, <code>series.ts</code>, <code>sceneWeather.ts</code>, <code>sceneClouds.ts</code>; <code>src/osm/water.ts</code>.</dd></div>
-        <div><dt>Tested</dt><dd><code>src/weather/*.test.ts</code>, <code>src/scene/exposure.test.ts</code>, <code>grading.test.ts</code>, <code>terrainShadow.test.ts</code>, <code>waterMesh.test.ts</code>, <code>src/flyover/sun.test.ts</code>. The look itself is checked by eye (<a href="tests-gpu.md">tests-gpu.md</a>).</dd></div>
+        <div><dt>Tested</dt><dd><code>src/weather/*.test.ts</code>, <code>src/scene/exposure.test.ts</code>, <code>grading.test.ts</code>, <code>terrainShadow.test.ts</code>, <code>waterMesh.test.ts</code>, <code>src/flyover/sun.test.ts</code>. The look itself is checked by eye (see the manual checks in the <a href="handbook/index.html#manual-checks">developer handbook</a>).</dd></div>
       </dl>
     </article>
 
@@ -1007,7 +1007,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <header><h3>Desktop app and command line</h3><span class="where">src-tauri/ · src/platform/desktop.ts · src/export/cliRender.ts</span></header>
       <dl>
         <div><dt>Does</dt><dd>Runs the same site in a native window for Windows, macOS and Linux, with system dialogs, direct file access, ffmpeg encoding on Linux, and batch rendering from a terminal: <code>openflyover --rendu &lt;tracks folder&gt; --sortie &lt;films folder&gt; --prereglage &lt;preset&gt; --formats 16:9@1080p,9:16@1080p</code>.</dd></div>
-        <div><dt>Key idea</dt><dd>Everything that differs goes through the platform layer. The Rust side is small and locked down: only listed commands can be called (ten of them: six for the ffmpeg encoder, two for the command line, one for the project files the system opens with the app, one for the load of the machine, plus the plugins for dialogs, files, the Strava sign-in and the system browser), and the app can read and write only the files you chose, its own <code>tiles/</code> and <code>projects/</code> folders, and the two folders given on the command line. A security policy lists every server the app may contact. The command line writes a report, <code>rendu-en-lot.txt</code>, and exits with 0 (all films done), 1 (a film failed) or 2 (the command could not run). Closing the window first finishes the last write of "Mes projets" and asks before losing unsaved changes; a running ffmpeg is stopped.</dd></div>
+        <div><dt>Key idea</dt><dd>Everything that differs goes through the platform layer. The Rust side is small and locked down: only listed commands can be called (ten of them: six for the ffmpeg encoder, two for the command line, one for the project files the system opens with the app, one for the load of the machine, plus the plugins for dialogs, files, the Strava sign-in and the system browser, and, in builds made for updates, the updater and process plugins behind « Rechercher une mise à jour »), and the app can read and write only the files you chose, its own <code>tiles/</code> and <code>projects/</code> folders, and the two folders given on the command line. A security policy lists every server the app may contact. The command line writes a report, <code>rendu-en-lot.txt</code>, and exits with 0 (all films done), 1 (a film failed) or 2 (the command could not run). Closing the window first finishes the last write of "Mes projets" and asks before losing unsaved changes; a running ffmpeg is stopped.</dd></div>
         <div><dt>Where</dt><dd><code>src-tauri/src/lib.rs</code> (setup), <code>video.rs</code> (ffmpeg), <code>cli.rs</code> (arguments), <code>opened.rs</code> (project files opened by the system), <code>system.rs</code> (memory and processor load), <code>src-tauri/tauri.conf.json</code> (window, security policy), <code>src-tauri/capabilities/default.json</code> (permissions); <code>src/platform/desktop.ts</code>.</dd></div>
         <div><dt>Tested</dt><dd><code>cargo test</code> in <code>src-tauri/</code> (20 tests: ffmpeg arguments, command-line parsing, opened files), <code>src/platform/platform.test.ts</code>, <code>src/export/nativeEncoder.test.ts</code> (with a fake Rust bridge), <code>src/export/cliRender.test.ts</code>. The app has been run on Windows; the macOS and Linux installers are built on GitHub but have not been run on a real machine.</dd></div>
       </dl>
@@ -1058,7 +1058,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
         <tr><td><code>e2e/</code></td><td>end-to-end tests</td><td><code>run.mjs</code></td></tr>
         <tr><td><code>public/</code></td><td>files served as they are</td><td><code>samples/</code>, <code>fonts/</code>, <code>favicon.svg</code></td></tr>
         <tr><td><code>scripts/</code></td><td>generators for bundled data</td><td><code>gen-sample-gpx.mjs</code>, <code>gen-geoid.mjs</code></td></tr>
-        <tr><td><code>docs/</code></td><td>documentation</td><td><code>sources.md</code>, <code>tests-gpu.md</code>, <code>installers.md</code>, this page</td></tr>
+        <tr><td><code>docs/</code></td><td>documentation</td><td><code>sources.md</code>, <code>installers.md</code>, this page</td></tr>
       </tbody>
     </table>
   </div>
@@ -1100,7 +1100,7 @@ npm run dev       # development server on http://127.0.0.1:5173</code></pre>
       </tbody>
     </table>
   </div>
-  <p>Some things cannot be tested automatically: the look of the 3D rendering, the sound, and export speed. The checklist for a machine with a real graphics card is <a href="tests-gpu.md"><code>docs/tests-gpu.md</code></a>.</p>
+  <p>Some things cannot be tested automatically: the look of the 3D rendering, the sound, and export speed. The checklist for a machine with a real graphics card is in the <a href="handbook/index.html#manual-checks">developer handbook</a>.</p>
 
   <h3 class="sub">Build and release</h3>
   <pre><code>npm run build         # type check, then the finished site in dist/
@@ -1109,7 +1109,7 @@ npm run tauri:dev     # desktop app in development mode
 npm run tauri:build   # desktop app and its installers, in src-tauri/target/release/bundle/</code></pre>
   <ul>
     <li><strong>Website</strong>: copy the content of <code>dist/</code> to the root of a domain served over HTTPS. Outside <code>localhost</code>, browsers allow the video encoder and the creation of track identifiers only on HTTPS pages.</li>
-    <li><strong>Desktop installers</strong>: GitHub builds them for the three systems ("Desktop installers" workflow). For a release, set the same version in <code>package.json</code>, <code>src-tauri/tauri.conf.json</code> and <code>src-tauri/Cargo.toml</code>, run <code>npm run notices</code>, then push a tag such as <code>v2.0.0</code> (<code>v*</code>): a release with the installers is published once the three systems are built. Details and signing: <a href="installers.md"><code>docs/installers.md</code></a>.</li>
+    <li><strong>Desktop installers</strong>: GitHub builds them for the three systems ("Desktop installers" workflow). For a release, set the same version in the five places that carry it (<code>package.json</code> and its lock file, <code>src-tauri/tauri.conf.json</code>, <code>src-tauri/Cargo.toml</code> and its lock file), update the changelog and the « Nouveautés » window, run <code>npm run notices</code> if a dependency changed, then push a tag such as <code>v2.2.0</code> (<code>v*</code>): a release with the installers is published once the three systems are built. Details and signing: <a href="installers.md"><code>docs/installers.md</code></a>.</li>
   </ul>
 
   <h3 class="sub">Conventions</h3>
@@ -1136,7 +1136,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
       <tbody>
         <tr><td>Mapterhorn</td><td>terrain heights (default)</td><td>open data (CC BY 4.0, OGL, public domain…)</td></tr>
         <tr><td>AWS Terrain Tiles</td><td>terrain heights</td><td>open data, public archive</td></tr>
-        <tr><td>IGN Géoplateforme</td><td>aerial photos and Plan IGN in France, photos from 1950 to 2005</td><td>Licence Ouverte Etalab 2.0</td></tr>
+        <tr><td>IGN Géoplateforme</td><td>aerial photos and Plan IGN in France</td><td>Licence Ouverte Etalab 2.0</td></tr>
         <tr><td>swisstopo</td><td>aerial photos and national map in Switzerland</td><td>open data (OGD), reasonable use</td></tr>
         <tr><td>Esri World Imagery</td><td>world aerial photos (default outside France and Switzerland)</td><td>Esri terms: « Powered by Esri », never offline; keyless use of the legacy host is not covered by Esri</td></tr>
         <tr><td>basemap.at</td><td>aerial photos of Austria, 30 cm</td><td>CC BY 4.0, credit « Datenquelle: basemap.at »</td></tr>
@@ -1156,7 +1156,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
   <div class="sec-head"><span class="num">09</span><h2>Known limits and open points</h2></div>
   <p>See also <a href="../ARCHITECTURE.md"><code>ARCHITECTURE.md</code></a>. What remains is mostly checking on real hardware.</p>
   <ul class="limits">
-    <li><span class="tag warn">to check</span><span>Never seen on a real graphics card: export speed, smoothness, sound and the final look. Development uses software rendering. The checklist is <a href="tests-gpu.md"><code>docs/tests-gpu.md</code></a>.</span></li>
+    <li><span class="tag warn">to check</span><span>Never seen on a real graphics card: export speed, smoothness, sound and the final look. Development uses software rendering. The checklist is in the <a href="handbook/index.html#manual-checks">developer handbook</a>.</span></li>
     <li><span class="tag warn">to check</span><span>The desktop app has been run on Windows only; the macOS and Linux installers, built on GitHub, and command-line rendering have not been run on a real machine. Installers are not signed, so Windows and macOS warn on first launch.</span></li>
     <li><span class="tag">licenses</span><span>Esri terms to re-read for online use (it is the default imagery outside France and Switzerland); Open-Meteo is non-commercial; the license of the star catalog (Yale Bright Star Catalog) is not stated.</span></li>
     <li><span class="tag">browsers</span><span>Export not tested in Firefox or Safari. Without direct writing to disk, the video is built in memory (about twice its size); the drawer warns above an estimated 1.5 GB. HTTPS is required outside <code>localhost</code>.</span></li>
@@ -1234,7 +1234,7 @@ npm run tauri:build   # desktop app and its installers, in src-tauri/target/rele
 </main>
 
 <footer>
-  OpenFlyover · code under the MIT license · this page summarizes <code>README.md</code>, <code>ARCHITECTURE.md</code> and the code as of 14 October 2026, version 2.0.0 (React 19, three.js r186, Vite 8, Tailwind CSS 4, HeroUI 3, Vitest 5, TypeScript 6, Tauri 2, Node 24). When in doubt, the code and <code>ARCHITECTURE.md</code> are authoritative.
+  OpenFlyover · code under the MIT license · this page summarizes <code>README.md</code>, <code>ARCHITECTURE.md</code> and the code as of 15 October 2026, version 2.2.0 (React 19, three.js r186, Vite 8, Tailwind CSS 4, HeroUI 3, Vitest 5, TypeScript 6, Tauri 2, Node 24). When in doubt, the code and <code>ARCHITECTURE.md</code> are authoritative.
 </footer>
 
 </div>
