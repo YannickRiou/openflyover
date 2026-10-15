@@ -9,7 +9,7 @@ import { clamp } from '../core/math'
 import type { LonLatBounds, TileFetcher, TileKey, TileSourceBase, Track } from '../core/types'
 import { buildTrackPath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
-import { boundsIntersect, lonLatToTileFrac, tileBounds } from '../geo/mercator'
+import { boundsIntersect, lonLatToTileFrac, tileBounds, tileXToLon, tileYToLat } from '../geo/mercator'
 import { buildTileUrl } from '../terrain/sources'
 import { t } from '../i18n'
 
@@ -39,12 +39,15 @@ export interface FlatMapPlan {
   tiles: FlatMapTile[]
   /** pixel of the view at a lon/lat */
   project(lon: number, lat: number): { x: number; y: number }
+  /** lon/lat at a pixel of the view (the inverse of `project`) */
+  unproject(x: number, y: number): { lon: number; lat: number }
 }
 
 /**
  * Tiles of a `width` × `height` px map of `bounds` (the tracks), centred, inside FLAT_MAP_MARGIN, never more zoomed
  * than the source's deepest tiles. Tiles are drawn near their own size (zoom rounded: × 0.7 to × 1.4), at a lower
- * zoom when they would be more than `maxTiles`; those outside the source's coverage are left out.
+ * zoom when they would be more than `maxTiles`; those outside the source's coverage are left out. `margin` replaces
+ * FLAT_MAP_MARGIN (0: `bounds` is the whole view, as for the map of the landmarks that is panned and zoomed).
  */
 export function planFlatMap(
   bounds: LonLatBounds,
@@ -52,11 +55,12 @@ export function planFlatMap(
   height: number,
   source: Pick<TileSourceBase, 'tileSize' | 'minZoom' | 'maxZoom' | 'coverage'>,
   maxTiles = FLAT_MAP_MAX_TILES,
+  margin = FLAT_MAP_MARGIN,
 ): FlatMapPlan {
   // Web Mercator at zoom 0: the world is the unit square, y down from the north edge
   const nw = lonLatToTileFrac(bounds.west, bounds.north, 0)
   const se = lonLatToTileFrac(bounds.east, bounds.south, 0)
-  const room = 1 - 2 * FLAT_MAP_MARGIN
+  const room = 1 - 2 * margin
   // view pixels per world unit
   const k = Math.min((width * room) / (se.x - nw.x), (height * room) / (se.y - nw.y), source.tileSize * 2 ** source.maxZoom)
   const left = (nw.x + se.x) / 2 - width / (2 * k)
@@ -93,6 +97,9 @@ export function planFlatMap(
     project(lon, lat) {
       const f = lonLatToTileFrac(lon, lat, 0)
       return { x: (f.x - left) * k, y: (f.y - top) * k }
+    },
+    unproject(x, y) {
+      return { lon: tileXToLon(left + x / k, 0), lat: tileYToLat(top + y / k, 0) }
     },
   }
 }
