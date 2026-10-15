@@ -112,6 +112,11 @@ const messages: Messages['timeline'] = {
   'shot.closing': 'Cierre',
   'shot.closingNone': 'Cierre: ninguno',
   'flight.label': 'Sobrevuelo · {distance}',
+  'menu.label': 'Acciones de la línea de tiempo',
+  'menu.addKey': 'Añadir un fotograma clave aquí',
+  'menu.remove': 'Eliminar',
+  'menu.removeKey': 'Eliminar el fotograma clave',
+  'menu.removeKeys': { one: 'Eliminar el fotograma clave seleccionado', other: 'Eliminar los {count} fotogramas clave seleccionados' },
 }
 
 export default messages
