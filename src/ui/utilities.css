@@ -25,9 +25,12 @@
   @apply text-hint text-text-2;
 }
 
-/* Header of a section of a panel (title, marker, chevron): a 48 px bar, sticky (`panel-head`) while the section scrolls under it. */
+/*
+ * Header of a section of a panel (title, marker, chevron): a 48 px bar, sticky (`panel-head`) while the section scrolls
+ * under it; a title that wraps makes it taller instead of spilling over the content.
+ */
 @utility panel-bar {
-  @apply flex h-12 items-center gap-2;
+  @apply flex min-h-12 items-center gap-2 py-2;
 }
 
 @utility panel-head {

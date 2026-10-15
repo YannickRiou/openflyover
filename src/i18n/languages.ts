@@ -3,11 +3,11 @@
  * and to this list (the compiler lists every key left to translate).
  */
 export const LANGUAGES = [
-  { code: 'fr', name: 'Français', flag: '🇫🇷', locale: 'fr-FR' },
-  { code: 'en', name: 'English', flag: '🇬🇧', locale: 'en-GB' },
-  { code: 'es', name: 'Español', flag: '🇪🇸', locale: 'es-ES' },
-  { code: 'it', name: 'Italiano', flag: '🇮🇹', locale: 'it-IT' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪', locale: 'de-DE' },
+  { code: 'fr', name: 'Français', locale: 'fr-FR' },
+  { code: 'en', name: 'English', locale: 'en-GB' },
+  { code: 'es', name: 'Español', locale: 'es-ES' },
+  { code: 'it', name: 'Italiano', locale: 'it-IT' },
+  { code: 'de', name: 'Deutsch', locale: 'de-DE' },
 ] as const
 
 export type LanguageCode = (typeof LANGUAGES)[number]['code']

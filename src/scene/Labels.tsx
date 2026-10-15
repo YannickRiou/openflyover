@@ -81,7 +81,9 @@ const POI_ICON_PATHS: Record<PoiIcon, string> = {
 }
 /** Texture pixels per CSS pixel (sharp on high-density screens). */
 const TEXTURE_SCALE = 2
-const MAX_CHARS = 40
+/** A label's text is wrapped to two lines at most this wide (CSS pixels), then cut with « … ». */
+const MAX_TEXT_PX = 220
+const LINE_H = 16
 /** Drawn after the terrain, the track and the flyover marker. */
 export const LABEL_RENDER_ORDER = 10
 /** Below this opacity a label is not drawn and does not reserve screen space. */
@@ -101,9 +103,29 @@ function labelFont(scale: number, family: string): string {
   return `600 ${LABEL_FONT_PX * scale}px ${family}`
 }
 
+/**
+ * `text` over one line, or two at a word break, none wider than `maxPx` CSS pixels with the font of `ctx` (set at
+ * `scale`); only what still does not fit is cut with « … ».
+ */
+function wrapLabel(ctx: CanvasRenderingContext2D, text: string, maxPx: number, scale: number): string[] {
+  const fits = (s: string) => ctx.measureText(s).width / scale <= maxPx
+  const cut = (s: string) => {
+    let out = s
+    while (out.length > 1 && !fits(`${out}…`)) out = out.slice(0, -1).trimEnd()
+    return `${out}…`
+  }
+  if (fits(text)) return [text]
+  const words = text.split(' ')
+  let first = words[0]
+  let next = 1
+  while (next < words.length && fits(`${first} ${words[next]}`)) first += ` ${words[next++]}`
+  const rest = words.slice(next).join(' ')
+  if (rest === '') return [fits(first) ? first : cut(first)]
+  return [fits(first) ? first : cut(first), fits(rest) ? rest : cut(rest)]
+}
+
 /** Canvas texture of one label, or null where 2D canvases are unavailable (jsdom). */
 function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon, look: LabelStyle, family: string): LabelTexture | null {
-  const text = rawText.length > MAX_CHARS ? `${rawText.slice(0, MAX_CHARS - 1)}…` : rawText
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
@@ -112,9 +134,12 @@ function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon, lo
   const pin = kind === 'poi' || kind === 'endpoint'
   // left of the text: the accent stripe and its padding, or a padding, the pin and a gap
   const lead = pin ? PIN_X + PIN_PX + PIN_GAP : STRIPE_W + PAD_X
+  const lines = rawText ? wrapLabel(ctx, rawText, MAX_TEXT_PX, s) : []
+  const textW = Math.max(0, ...lines.map((line) => ctx.measureText(line).width / s))
   // without text, a square panel around the pin
-  const width = pin && !text ? 2 * PIN_X + PIN_PX : Math.ceil(lead + PAD_X + ctx.measureText(text).width / s)
-  const height = PANEL_H + STEM_H + 2 * DOT_R + 2
+  const width = pin && lines.length === 0 ? 2 * PIN_X + PIN_PX : Math.ceil(lead + PAD_X + textW)
+  const panelH = PANEL_H + Math.max(0, lines.length - 1) * LINE_H
+  const height = panelH + STEM_H + 2 * DOT_R + 2
   canvas.width = width * s
   canvas.height = height * s
   ctx.scale(s, s)
@@ -122,28 +147,29 @@ function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon, lo
 
   ctx.save()
   ctx.beginPath()
-  ctx.roundRect(0, 0, width, PANEL_H, look.radius)
+  ctx.roundRect(0, 0, width, panelH, look.radius)
   ctx.clip()
   ctx.fillStyle = look.panel
   ctx.globalAlpha = 0.9
-  ctx.fillRect(0, 0, width, PANEL_H)
+  ctx.fillRect(0, 0, width, panelH)
   ctx.globalAlpha = 1
   ctx.fillStyle = accent
-  if (!pin) ctx.fillRect(0, 0, STRIPE_W, PANEL_H)
+  if (!pin) ctx.fillRect(0, 0, STRIPE_W, panelH)
   ctx.restore()
-  if (pin) drawPin(ctx, PIN_X, (PANEL_H - PIN_PX) / 2, accent, icon)
+  if (pin) drawPin(ctx, PIN_X, (panelH - PIN_PX) / 2, accent, icon)
 
   ctx.font = labelFont(1, family)
   ctx.fillStyle = look.text
   ctx.textBaseline = 'middle'
-  ctx.fillText(text, lead, PANEL_H / 2 + 0.5)
+  const firstY = panelH / 2 - ((lines.length - 1) * LINE_H) / 2 + 0.5
+  lines.forEach((line, i) => ctx.fillText(line, lead, firstY + i * LINE_H))
 
   const cx = width / 2
-  const dotY = PANEL_H + STEM_H + 1 + DOT_R
+  const dotY = panelH + STEM_H + 1 + DOT_R
   ctx.strokeStyle = look.panel
   ctx.lineWidth = 2
   ctx.beginPath()
-  ctx.moveTo(cx, PANEL_H)
+  ctx.moveTo(cx, panelH)
   ctx.lineTo(cx, dotY)
   ctx.stroke()
   ctx.beginPath()

@@ -12,7 +12,7 @@ import { trackPathOf } from '../flyover/path'
 import { setLabelSource, useLabelSources } from '../scene/labelSources'
 import { DEFAULT_LANDMARK_SETTINGS, buildLandmarks, landmarkLabels, splitHidden, withRank } from './landmarks'
 import type { Landmark, LandmarkSettings } from './landmarks'
-import { OverpassError, fetchTrackFeatures } from './overpass'
+import { BUSY_STATUSES, OverpassError, fetchTrackFeatures } from './overpass'
 import type { OsmFeature } from './overpass'
 import { t } from '../i18n'
 
@@ -46,7 +46,7 @@ const failed = new Set<string>()
 let latest: { tracks: readonly Track[]; settings: LandmarkSettings } = { tracks: [], settings: DEFAULT_LANDMARK_SETTINGS }
 
 function errorMessage(e: unknown): string {
-  if (e instanceof OverpassError && (e.status === 429 || e.status === 504)) {
+  if (e instanceof OverpassError && BUSY_STATUSES.includes(e.status)) {
     return t('landmarks.store.overloaded')
   }
   return t('landmarks.store.failed')

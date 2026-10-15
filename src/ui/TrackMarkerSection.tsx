@@ -282,8 +282,8 @@ function MarkerColorRow({
 }
 
 /**
- * « Marqueur » section of the Trace tab: ball (and its style), figurine or picture, its main colour and its size;
- * the badge shape, the edge colour, the label and the stick folded under « Plus d'options ».
+ * « Marqueur » section of the Trace tab: ball (and its style), figurine or picture, its colours (fill, then edge or
+ * outline) and its size; the badge shape, the label and the stick folded under « Plus d'options ».
  */
 export function MarkerSection({ hidden }: { hidden: boolean }) {
   const t = useT()
@@ -350,6 +350,15 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(figureColor) => updateMarker({ figureColor })}
         />
       )}
+      {marker.kind !== 'boule' && (
+        <MarkerColorRow
+          label={alone ? t('marker.section.outlineColor') : t('marker.section.edgeColor')}
+          path="marker.color"
+          value={marker.color}
+          trackColor={trackColor}
+          onChange={(color) => updateMarker({ color })}
+        />
+      )}
       {racing && marker.kind !== 'image' && <p className="type-hint">{t('marker.section.racing')}</p>}
       <SettingRow label={t('marker.section.size')} value={`×${formatShort(marker.size)}`} paths={['marker.size']}>
         <RangeField
@@ -393,15 +402,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
               value={marker.shape}
               labels={MARKER_SHAPE_LABELS}
               onChange={(shape) => updateMarker({ shape })}
-            />
-          )}
-          {marker.kind !== 'boule' && (
-            <MarkerColorRow
-              label={alone ? t('marker.section.outlineColor') : t('marker.section.edgeColor')}
-              path="marker.color"
-              value={marker.color}
-              trackColor={trackColor}
-              onChange={(color) => updateMarker({ color })}
             />
           )}
           <ChipChoice

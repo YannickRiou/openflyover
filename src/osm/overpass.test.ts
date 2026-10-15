@@ -220,7 +220,7 @@ describe('runOverpassQuery', () => {
   it('retries a busy server once after Retry-After, then moves to the next endpoint', async () => {
     const deps = makeDeps([
       new Response('busy', { status: 429, headers: { 'Retry-After': '2' } }),
-      new Response('busy', { status: 504 }),
+      new Response('busy', { status: 502 }),
       json(RESPONSE),
     ])
     await runOverpassQuery('Q', undefined, deps, ENDPOINTS)

@@ -51,10 +51,10 @@ const PLACE =
   'group/place grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1 rounded-sm bg-surface-control py-0.5 pl-1 data-hidden:bg-transparent data-hidden:outline data-hidden:-outline-offset-1 data-hidden:outline-dashed data-hidden:outline-edge-strong'
 /** The kind badge at the start of a row (a landmark's, or the point of interest's own button). */
 const PLACE_BADGE = 'min-w-14 flex-none rounded-sm px-1 py-0.5 text-center text-caption font-semibold text-white'
-/** The area of a row that seeks the flyover there: badge and name; the name wraps over two lines rather than being cut. */
+/** The area of a row that seeks the flyover there: badge and name; the name wraps over as many lines as it needs rather than being cut. */
 const PLACE_GO = 'flex min-h-control min-w-0 items-center gap-2 text-left text-text-1'
 const PLACE_NAME =
-  'line-clamp-2 text-body font-medium break-words group-data-hidden/place:line-through group-data-hidden/place:opacity-60 group-hover/go:underline'
+  'text-body font-medium break-words group-data-hidden/place:line-through group-data-hidden/place:opacity-60 group-hover/go:underline'
 /** Second line of a row: place or pictogram, then the stop. */
 const PLACE_LINE = 'col-span-full flex flex-wrap items-center gap-x-2 gap-y-1 pr-1'
 /** A small button of the tools bar above the list. */

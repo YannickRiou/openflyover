@@ -3,7 +3,7 @@
  * (the look before these settings existed), ranges, French labels, and the checks and upgrades used by the
  * project document. Pure: no Three.js, no DOM, so the store and the interface can import it cheaply.
  */
-import { inRange, oneOf, withDefaults } from '../core/guards'
+import { inRange, isRecord, oneOf, withDefaults } from '../core/guards'
 import { isHexColor } from '../overlay/settings'
 import { t } from '../i18n'
 
@@ -85,8 +85,8 @@ export type MarkerFigure = (typeof MARKER_FIGURES)[number]
 export const MARKER_FIGURE_CHOICES = ['auto', ...MARKER_FIGURES] as const
 export type MarkerFigureChoice = (typeof MARKER_FIGURE_CHOICES)[number]
 
-/** Look of a ball: plain disc (as before), with a contrasting ring, a soft halo, or a ring pulsing outwards. */
-export const MARKER_BALL_STYLES = ['plat', 'anneau', 'halo', 'pulsation'] as const
+/** Look of a ball: plain disc (as before), a soft halo, or a ring pulsing outwards. */
+export const MARKER_BALL_STYLES = ['plat', 'halo', 'pulsation'] as const
 export type MarkerBallStyle = (typeof MARKER_BALL_STYLES)[number]
 
 /** Outline of a figure badge: disc, map pin (its tip on the track), rounded square, or the figure alone, outlined. */
@@ -231,7 +231,6 @@ export const MARKER_FIGURE_LABELS: Record<MarkerFigureChoice, string> = {
 
 export const MARKER_BALL_STYLE_LABELS: Record<MarkerBallStyle, string> = {
   get plat() { return t('marker.ball.plat') },
-  get anneau() { return t('marker.ball.anneau') },
   get halo() { return t('marker.ball.halo') },
   get pulsation() { return t('marker.ball.pulsation') },
 }
@@ -284,4 +283,10 @@ export function isValidMarker(marker: MarkerSettings): boolean {
 }
 
 export const withTrackStyleDefaults = withDefaults(DEFAULT_TRACK_STYLE)
-export const withMarkerDefaults = withDefaults(DEFAULT_MARKER)
+const withMarkerFields = withDefaults(DEFAULT_MARKER)
+
+/** A saved marker completed with the defaults; the 'anneau' ball style (dropped in 2.1.1) opens as 'plat'. */
+export function withMarkerDefaults(raw: unknown): unknown {
+  const marker = withMarkerFields(raw)
+  return isRecord(marker) && marker.ballStyle === 'anneau' ? { ...marker, ballStyle: 'plat' } : marker
+}

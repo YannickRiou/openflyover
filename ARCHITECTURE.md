@@ -663,7 +663,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `timeline`, `inspector`, `export`, `overlay`, `poster`…), gathered by `fr/index.ts` and `en/index.ts`. A message is
   identified by `domain.key` (`t('timeline.bar.play')`). French defines the shape: `Messages = Widen<typeof fr>`
   (`messages.ts`), English is typed `Messages`, so a missing or an extra key is a compile error, and `MessageKey` is the union
-  of the keys, so a typo in a key is one too. `languages.ts` is the one list of the languages (`code`, native `name`, `flag`,
+  of the keys, so a typo in a key is one too. `languages.ts` is the one list of the languages (`code`, native `name`,
   `locale`), with `detectLanguage` (first browser language the app has, else French).
 - **Runtime** (`index.ts`).
   - `t(key, vars?)`: the message of the current language with its `{name}` placeholders filled. A message written
@@ -683,7 +683,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   `formatList(items)` (« a, b et c » / « a, b and c »). `src/ui/format.ts` (`formatNumber`, `formatDistance`, `formatDuration`,
   `formatBytes`, `formatClock`…) builds on them and on the `format.*` messages (units: « Mo » / « MB », « D+ » / « Gain »).
 - **The language** is a device preference, `Preferences.language` (`ui/shell.ts`, stored with `Preferences.appearance`). The
-  top bar has the selector (`LanguageMenu`, between « ? » and « Exporter »: flag and code, a menu of native names,
+  top bar has the selector (`LanguageMenu`, between « ? » and « Exporter »: flag and code, a menu of native names; the flags are
+  inline SVG, `ui/Flag.tsx`, because Windows draws the flag emoji as two letters;
   `role="menuitemradio"`, arrows, Escape, focus back to the button). `installLanguage()` (`ui/preferences.ts`, called by `main.tsx`
   only, so the tests stay French) applies the preference now and on every change, sets `<html lang>`, and on a first run with nothing
   stored takes the first browser language the app offers (it is remembered only once the person picks one).
@@ -691,7 +692,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   `fr/<domain>.ts` then to the other languages (the compiler lists what is missing), call `t('domain.key', { name })`. The parity test
   (`i18n.test.ts`) also checks that every language uses the same `{placeholders}` for every key and that every plural has `other`.
 - **Adding a language.** Copy `fr/` to a new folder, translate every file (the compiler lists the keys left), register it in the
-  `catalogs` of `index.ts` and in `LANGUAGES` (`languages.ts`: code, native name, flag, locale). Nothing else: the menu, the
+  `catalogs` of `index.ts` and in `LANGUAGES` (`languages.ts`: code, native name, locale) and draw its flag in `ui/Flag.tsx`.
+  Nothing else: the menu, the
   preference, the plurals and the dates follow.
 - **Rules.**
   - No displayed text in the code: labels, `aria-label`s, tooltips (`title`, `Tip`), placeholders, hints, toasts, errors the user
@@ -1030,7 +1032,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   label, labelText, stick }` (`src/scene/markerSettings.ts`, pure). `color` ('#rrggbb', '' = track colour, default
   white): ball, and edge of the figure / picture badges; `figureColor` (default ink): disc of a figure, or the figure
   itself with `shape: 'contour'`. Racers ignore both and keep their track colour (ink edge). `ballStyle`: `plat` (as
-  before), `anneau` (contrasting ring), `halo` (radial glow), `pulsation` (ring widening and fading, period
+  before; a saved `anneau`, dropped in 2.1.1, opens as `plat`), `halo` (radial glow), `pulsation` (ring widening and fading, period
   `PULSE_PERIOD_S` = 1.5 s, phase `pulsePhase(timeS)`: a function of the film time; a pulsing sprite redraws its own
   canvas instead of using the shared cache). `markerMovesWithTime(marker)` tells the export when held frames must be
   rendered again. `figure: 'auto'` (default): `figureOfActivity(track.activityType)` (GPX `<type>`, FIT sport, Strava),

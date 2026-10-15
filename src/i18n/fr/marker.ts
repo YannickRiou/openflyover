@@ -18,7 +18,6 @@ export default {
   'figure.voiture': 'Voiture',
   'figure.avion': 'Avion léger',
   'ball.plat': 'Disque',
-  'ball.anneau': 'Anneau',
   'ball.halo': 'Halo',
   'ball.pulsation': 'Pulsation',
   'shape.rond': 'Rond',
