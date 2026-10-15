@@ -203,7 +203,8 @@ export interface SnapBlock {
 
 /**
  * Times a dragged edge or block snaps to, named: start and end of the film, edges of the shots, edges and centres of the
- * stops, speed portions, texts, media and music clips and of the `blocks` (cards, junctions) but those of `except`,
+ * stops, speed portions, texts, media and music clips and of the `blocks` (cards, junctions) but those of `except` (one
+ * item, or the several that move together),
  * the camera, parameter and marker keys, the junctions between the stages of « À la suite », highlights (progress
  * values), the ruler's `ticks` and the playhead.
  */
@@ -212,10 +213,11 @@ export function snapTargets(
   film: Film,
   highlights: readonly number[],
   playheadS: number,
-  except?: TimelineItem,
+  except?: TimelineItem | readonly TimelineItem[],
   extra: { ticks?: readonly number[]; blocks?: readonly SnapBlock[] } = {},
 ): SnapTarget[] {
   const total = clock.totalTime()
+  const skipped = (id: string) => (typeof except === 'string' ? id === except : (except?.includes(id) ?? false))
   const out: SnapTarget[] = [
     { timeS: 0, label: t('film.snap.filmStart'), kind: 'end' },
     { timeS: total, label: t('film.snap.filmEnd'), kind: 'end' },
@@ -229,25 +231,25 @@ export function snapTargets(
     if (endS > startS) out.push({ timeS: (startS + endS) / 2, label: t('film.snap.middle', { name }), kind: 'centre' })
   }
   clock.junctions.forEach((j, k) => {
-    if (j.id === except) return
+    if (skipped(j.id)) return
     const name = t('film.snap.junctionLower', { n: k + 1 })
     if (j.endS > j.startS) block(name, j.startS, j.endS)
     out.push({ timeS: j.holdStartS, label: t('film.snap.junction', { n: k + 1 }), kind: 'junction' })
   })
   // a cut of a clock built without junctions
   if (clock.junctions.length === 0) clock.cuts.forEach((c, k) => out.push({ timeS: c.timeS, label: t('film.snap.junction', { n: k + 1 }), kind: 'junction' }))
-  for (const s of clock.stops) if (s.id !== except) block(s.label || t('film.snap.hold'), s.startS, s.endS)
-  for (const s of clock.speeds) if (s.id !== except) block(t('film.snap.speedSection', { factor: formatSpeedFactor(s.factor) }), s.startS, s.endS)
-  for (const text of film.texts) if (text.id !== except) block(text.text.trim().slice(0, 24) || t('film.snap.text'), text.startS, text.startS + text.durationS)
-  for (const m of film.media) if (m.id !== except) block(m.kind === 'video' ? t('film.snap.video') : t('film.snap.photo'), m.startS, m.startS + m.durationS)
-  for (const a of film.audio) if (a.id !== except) block(t('film.snap.music'), a.startS, a.startS + a.durationS)
-  for (const b of extra.blocks ?? []) if (b.id !== except) block(b.label, b.startS, b.endS)
+  for (const s of clock.stops) if (!skipped(s.id)) block(s.label || t('film.snap.hold'), s.startS, s.endS)
+  for (const s of clock.speeds) if (!skipped(s.id)) block(t('film.snap.speedSection', { factor: formatSpeedFactor(s.factor) }), s.startS, s.endS)
+  for (const text of film.texts) if (!skipped(text.id)) block(text.text.trim().slice(0, 24) || t('film.snap.text'), text.startS, text.startS + text.durationS)
+  for (const m of film.media) if (!skipped(m.id)) block(m.kind === 'video' ? t('film.snap.video') : t('film.snap.photo'), m.startS, m.startS + m.durationS)
+  for (const a of film.audio) if (!skipped(a.id)) block(t('film.snap.music'), a.startS, a.startS + a.durationS)
+  for (const b of extra.blocks ?? []) if (!skipped(b.id)) block(b.label, b.startS, b.endS)
   for (const [keys, name] of [
     [clock.cameraKeys, t('film.snap.keyframe')],
     [clock.paramKeys, t('film.snap.setting')],
     [clock.markerKeys, t('film.snap.marker')],
   ] as const) {
-    for (const k of keys) if (k.id !== except) out.push({ timeS: k.timeS, label: name, kind: 'edge' })
+    for (const k of keys) if (!skipped(k.id)) out.push({ timeS: k.timeS, label: name, kind: 'edge' })
   }
   for (const h of highlights) out.push({ timeS: clock.timeAtProgress(h), label: t('film.snap.highlight'), kind: 'highlight' })
   for (const tick of extra.ticks ?? []) out.push({ timeS: tick, label: formatFilmTime(tick), kind: 'ruler' })
@@ -538,6 +540,27 @@ export function dragFilm(film: Film, item: TimelineItem, grip: Grip, deltaS: num
   return lane === 'texts'
     ? { ...film, texts: film.texts.map((t) => (t.id === item ? { ...t, ...next } : t)) }
     : { ...film, media: film.media.map((m) => (m.id === item ? { ...m, ...next } : m)) }
+}
+
+/**
+ * Several camera, parameter and marker keys (`ids`) dragged together by `deltaS`, `lead` being the one under the pointer:
+ * its time is snapped like a key dragged alone, the others keep their gaps in film time. The group stays on the flight
+ * (the shift is bounded by its first and last key); each key lands at the metre of the marker at its new time.
+ */
+export function dragKeys(film: Film, ids: readonly string[], lead: string, deltaS: number, ctx: DragContext): Film {
+  const { clock } = ctx
+  const keys = [...clock.cameraKeys, ...clock.paramKeys, ...clock.markerKeys].filter((k) => ids.includes(k.id))
+  const under = keys.find((k) => k.id === lead)
+  if (!under) return film
+  const first = Math.min(...keys.map((k) => k.timeS))
+  const last = Math.max(...keys.map((k) => k.timeS))
+  const shiftS = clamp(snapper(ctx)(under.timeS + deltaS) - under.timeS, clock.timeAtProgress(0) - first, clock.timeAtProgress(1) - last)
+  const atM = (timeS: number) => Math.round(clamp(clock.progressAtTime(timeS + shiftS), 0, 1) * ctx.lengthM)
+  let moved = film
+  for (const k of clock.cameraKeys) if (ids.includes(k.id)) moved = updateCameraKey(moved, k.id, { atM: atM(k.timeS) })
+  for (const k of clock.paramKeys) if (ids.includes(k.id)) moved = updateParamKey(moved, k.id, { atM: atM(k.timeS) })
+  for (const k of clock.markerKeys) if (ids.includes(k.id)) moved = updateMarkerKey(moved, k.id, { atM: atM(k.timeS) })
+  return moved
 }
 
 /** What a gesture changes on a text or a medium (and the start in the file of a video). */

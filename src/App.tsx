@@ -325,7 +325,8 @@ export default function App() {
     }
   }, [selected, selection])
   useEffect(() => {
-    if (!shell.inspecting) useAppStore.getState().setFilmSelection(null)
+    // a group of keys has no inspector: it stays selected
+    if (!shell.inspecting && useAppStore.getState().filmKeys.length === 0) useAppStore.getState().setFilmSelection(null)
   }, [shell.inspecting])
 
   useEffect(() => {
@@ -338,7 +339,7 @@ export default function App() {
         if (handlesOwnEscape(e.target)) return
         const store = useAppStore.getState()
         if (dockOpen.current && !isExporting()) dispatch({ type: 'close-dock' })
-        else if (store.filmSelection !== null) store.setFilmSelection(null)
+        else if (store.filmSelection !== null || store.filmKeys.length > 0) store.setFilmSelection(null)
         else if (isDrawer() && !collapsedRef.current) dispatch({ type: 'toggle-panel', narrow: true })
         else return
         e.stopPropagation()

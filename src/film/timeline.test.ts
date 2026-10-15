@@ -11,6 +11,8 @@ import {
   NEW_VIDEO_MAX_S,
   addCameraKey,
   addItemCamera,
+  addMarkerKey,
+  addParamKey,
   addMedia,
   addMusic,
   addSpeed,
@@ -25,6 +27,7 @@ import {
   clipRateAt,
   clipSyncOffsetS,
   dragFilm,
+  dragKeys,
   edgeScrollSpeed,
   fitPxPerS,
   followStops,
@@ -779,6 +782,38 @@ describe('camera keys', () => {
     expect(dragFilm(keyed, id, 'move', -1000, ctx).cameraKeys[0].atM).toBe(0)
     expect(hasFilmItem(keyed, [], id)).toBe(true)
     expect(removeFilmItem(keyed, id).cameraKeys).toEqual([])
+  })
+
+  it('several keys move together: the gaps in film time are kept, the group stays on the flight, the magnet snaps the one under the pointer', () => {
+    const a = addCameraKey(film, 2000, framing)
+    const b = addParamKey(a.film, 5000, 'exposure', 0.5)
+    const c = addMarkerKey(b.film, 8000, { kind: 'figurine', figure: 'cycliste' })
+    const keyed = c.film
+    const ids = [a.id, b.id, c.id]
+    const clockOf = (f: Film) =>
+      buildFilmClock({ opening: f.opening, closing: f.closing, stops: f.stops, cameraKeys: f.cameraKeys, paramKeys: f.paramKeys, markerKeys: f.markerKeys, lengthM: L, highlightsM: [], durationS: D, pacing: { ...DEFAULT_PACING, keepDuration: false } })
+    const timesOf = (f: Film) => {
+      const clock = clockOf(f)
+      return [...clock.cameraKeys, ...clock.paramKeys, ...clock.markerKeys].map((k) => k.timeS)
+    }
+    const ctx = { ...contextOf(keyed), clock: clockOf(keyed) }
+    const times = timesOf(keyed)
+    const moved = dragKeys(keyed, ids, a.id, 3, ctx)
+    timesOf(moved).forEach((t, i) => expect(t - times[i]).toBeCloseTo(3, 1))
+    expect(moved.stops).toBe(keyed.stops)
+    // against an end of the flight the group stops as a whole: its last (first) key at the end (start), the others keep their gap
+    const end = dragKeys(keyed, ids, a.id, 1000, ctx)
+    expect(Math.max(end.cameraKeys[0].atM, end.paramKeys[0].atM, end.markerKeys[0].atM)).toBe(L)
+    expect(end.cameraKeys[0].atM).toBeGreaterThan(2000)
+    const start = dragKeys(keyed, ids, a.id, -1000, ctx)
+    expect(Math.min(start.cameraKeys[0].atM, start.paramKeys[0].atM, start.markerKeys[0].atM)).toBe(0)
+    // the magnet catches the key under the pointer, the others follow it
+    const target = times[0] + 5
+    const snapped = dragKeys(keyed, ids, a.id, 4.8, { ...ctx, targets: at(target), snapS: 0.5 })
+    expect(snapped.cameraKeys[0].atM).toBe(Math.round(ctx.clock.progressAtTime(target) * L))
+    // a key that is not in the group moves nothing; the keys that move are no targets
+    expect(dragKeys(keyed, ids, 'nope', 3, ctx)).toBe(keyed)
+    expect(snapTargets(ctx.clock, keyed, [], 0).length - snapTargets(ctx.clock, keyed, [], 0, ids).length).toBe(3)
   })
 })
 
