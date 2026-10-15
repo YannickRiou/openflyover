@@ -442,11 +442,17 @@ export function LandmarkPanel() {
               const { landmark } = row
               return (
                 <li key={row.id} className={PLACE} data-testid="place" data-hidden={row.hidden || undefined}>
-                  <button type="button" className={`group/go cursor-pointer p-0 ${PLACE_GO}`} title={row.hidden ? t('landmarks.goHidden') : t('landmarks.go')} onClick={() => seek(row.atM)}>
-                    <span className={`${PLACE_BADGE} ${landmark.kind === 'pass' ? 'bg-accent-fill' : 'bg-chrome'}`}>{KIND_BADGES[landmark.kind]}</span>
+                  {/* the name takes the whole width of the row, the badge flows with it: a long name wraps under it, nothing is squeezed beside it */}
+                  <button type="button" className="group/go col-span-full block min-h-control cursor-pointer p-0 pr-1 text-left text-text-1" title={row.hidden ? t('landmarks.goHidden') : t('landmarks.go')} onClick={() => seek(row.atM)}>
+                    <span className={`mr-2 inline-block align-middle ${PLACE_BADGE} ${landmark.kind === 'pass' ? 'bg-accent-fill' : 'bg-chrome'}`}>{KIND_BADGES[landmark.kind]}</span>
                     <span className={PLACE_NAME} data-testid="landmark-name">{landmark.text}</span>
                   </button>
-                  <div className="flex items-center">
+                  <div className={PLACE_LINE}>
+                    <span className="flex-auto text-hint text-text-2 tabular-nums">
+                      {t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}
+                      {fresh.has(row.id) && <span className="ml-1 rounded-sm bg-accent-tint px-1 font-semibold text-brand" data-testid="place-new">{t('landmarks.isNew')}</span>}
+                    </span>
+                    <div className="flex items-center">
                     <Tip text={t('landmarks.moreImportant')}>
                       <Button
                         variant="icon"
@@ -467,12 +473,7 @@ export function LandmarkPanel() {
                         <Icon name="chevron-down" size={16} />
                       </Button>
                     </Tip>
-                  </div>
-                  <div className={PLACE_LINE}>
-                    <span className="flex-auto text-hint text-text-2 tabular-nums">
-                      {t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}
-                      {fresh.has(row.id) && <span className="ml-1 rounded-sm bg-accent-tint px-1 font-semibold text-brand" data-testid="place-new">{t('landmarks.isNew')}</span>}
-                    </span>
+                    </div>
                     <ModeButton
                       name={landmark.name}
                       mode={landmarkMode(settings, row.id)}
