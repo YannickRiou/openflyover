@@ -51,14 +51,17 @@ describe('offline policy', () => {
   it('refuses the providers whose terms forbid bulk download', () => {
     expect(offlinePolicy('arcgis-world-imagery').allowed).toBe(false)
     expect(offlinePolicy('arcgis-world-imagery').reason).not.toBe('')
-    for (const id of ['opentopomap', 'swisstopo', 'swisstopo-carte']) {
+    for (const id of ['opentopomap', 'swisstopo', 'swisstopo-carte', 'gsi-photo', 'usgs-imagery']) {
       // personal use: allowed with a low daily cap and a caution
       expect(offlinePolicy(id).allowed, id).toBe(true)
       expect(offlinePolicy(id).personalUse, id).toBe(true)
       expect(offlinePolicy(id).dailyLimit, id).toBeLessThanOrEqual(10_000)
       expect(offlinePolicy(id).reason).not.toBe('')
     }
-    for (const id of ['mapterhorn', 'aws-terrarium', 'ign-ortho', 'ign-plan']) expect(offlinePolicy(id).allowed, id).toBe(true)
+    for (const id of ['mapterhorn', 'aws-terrarium', 'ign-ortho', 'ign-plan', 'basemap-at', 'usgs-imagery']) expect(offlinePolicy(id).allowed, id).toBe(true)
+    // an open licence (CC BY 4.0): no personal-use caution, a daily cap of its own
+    expect(offlinePolicy('basemap-at').personalUse).toBeUndefined()
+    expect(offlinePolicy('basemap-at').dailyLimit).toBeGreaterThan(0)
   })
 
   it('has a decision for every catalogued source and refuses unknown ones', () => {

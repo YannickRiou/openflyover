@@ -168,6 +168,9 @@ export const SOURCE_CREDITS: Readonly<Record<string, readonly CreditItem[]>> = {
   swisstopo: SWISSTOPO_CREDIT,
   'swisstopo-carte': SWISSTOPO_CREDIT,
   'arcgis-world-imagery': [{ text: 'Powered by Esri', more: 'Esri, Vantor, Earthstar Geographics, GIS User Community' }],
+  'basemap-at': [{ text: 'basemap.at', href: 'https://basemap.at/' }],
+  'gsi-photo': [{ text: 'GSI Japan', href: 'https://maps.gsi.go.jp/development/ichiran.html' }],
+  'usgs-imagery': [{ text: 'USGS', href: 'https://www.usgs.gov/' }],
   opentopomap: [OSM_CREDIT, { text: '© OpenTopoMap', href: 'https://opentopomap.org/about' }],
 }
 

@@ -160,6 +160,9 @@ describe('catalogue integrity (values verified 2026-10-05, see docs/sources.md)'
         'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX=12&TILEROW=1458&TILECOL=2126&FORMAT=image/png',
       'swisstopo-carte':
         'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/12/2126/1458.jpeg',
+      'basemap-at': 'https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/12/1458/2126.jpeg',
+      'gsi-photo': 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/12/2126/1458.jpg',
+      'usgs-imagery': 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/12/1458/2126',
       // (2126 + 1458) % 3 = 2 -> subdomain 'c'
       opentopomap: 'https://c.tile.opentopomap.org/12/2126/1458.png',
     }
@@ -180,5 +183,20 @@ describe('catalogue integrity (values verified 2026-10-05, see docs/sources.md)'
     expect(byId['ign-plan'].maxZoom).toBe(19)
     expect(byId['swisstopo-carte'].maxZoom).toBe(19)
     expect(byId['opentopomap'].maxZoom).toBe(17)
+    expect(byId['basemap-at']).toMatchObject({ minZoom: 1, maxZoom: 19 })
+    expect(byId['gsi-photo']).toMatchObject({ minZoom: 2, maxZoom: 18 })
+    expect(byId['usgs-imagery']).toMatchObject({ minZoom: 0, maxZoom: 16 })
+  })
+
+  it('the national aerial photos cover their country and not the Alps of the neighbours', () => {
+    const at = (lon: number, lat: number) => ({ lon, lat })
+    expect(sourceCovers(getImagerySource('basemap-at'), at(12.694, 47.074))).toBe(true) // Grossglockner
+    expect(sourceCovers(getImagerySource('basemap-at'), at(6.87, 45.92))).toBe(false) // Chamonix
+    expect(sourceCovers(getImagerySource('gsi-photo'), at(138.731, 35.361))).toBe(true) // Fuji
+    expect(sourceCovers(getImagerySource('gsi-photo'), at(6.87, 45.92))).toBe(false)
+    for (const place of [at(-119.533, 37.746), at(-151.0, 63.07), at(-156.25, 20.71)]) {
+      expect(sourceCovers(getImagerySource('usgs-imagery'), place)).toBe(true) // Yosemite, Denali, Maui
+    }
+    expect(sourceCovers(getImagerySource('usgs-imagery'), at(6.87, 45.92))).toBe(false)
   })
 })

@@ -97,7 +97,7 @@ function serviceWorker(): Plugin {
  */
 const TILE_PROXIES: Record<string, string> = {
   // Empty on purpose: every catalogue source (Mapterhorn, AWS Terrain Tiles, IGN Géoplateforme,
-  // swisstopo, Esri World Imagery, OpenTopoMap) sent Access-Control-Allow-Origin for
+  // swisstopo, Esri World Imagery, basemap.at, GSI, USGS, OpenTopoMap) sent Access-Control-Allow-Origin for
   // http://127.0.0.1:5173 on 2026-10-05 / 2026-10-07 (see docs/sources.md). If a provider drops CORS, add it here, e.g.
   //   'ign-ortho': 'https://data.geopf.fr',
   // and set that source's urlTemplate to '/tiles/ign-ortho/wmts?...' (the query string is preserved).
