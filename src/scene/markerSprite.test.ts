@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { PerspectiveCamera, Sprite, Vector3 } from 'three'
 import { createLocalFrame } from '../geo/ellipsoid'
-import { buildTrackPath } from '../flyover/path'
+import { buildTrackPath, samplePath } from '../flyover/path'
 import type { Track } from '../core/types'
 import { DEFAULT_MARKER } from './markerSettings'
 import type { MarkerSettings } from './markerSettings'
@@ -135,6 +135,27 @@ describe('headsLeft', () => {
     const flat = screenHeading(path, path.lengthM / 2, at, frame, camera).lean
     expect(rising.lean).toBeGreaterThan(flat)
     expect(rising.lean).toBeLessThanOrEqual((30 * Math.PI) / 180 + 1e-9)
+    // an elevation recorded with noise (±4 m every 10 m, pseudo-random) does not make the lean jump from one metre to the next
+    const noise = (i: number) => 4 * ((Math.sin(i * 12.9898) * 43758.5453) % 1) // in (-4, 4)
+    const noisy = {
+      segments: [{ points: Array.from({ length: 220 }, (_, i) => ({ lon: 6.49 + i * 0.00013, lat: 45.5, ele: i * 3 + noise(i) })) }],
+    } as unknown as Track
+    const noisyPath = buildTrackPath(noisy)
+    const side = new PerspectiveCamera(50, 1, 1, 1e6)
+    side.position.copy(frame.toLocal(6.505, 45.495, 600))
+    side.lookAt(frame.toLocal(6.505, 45.5, 400))
+    let worst = 0
+    let previous = 0
+    for (let d = 600; d < 1400; d++) {
+      const here = samplePath(noisyPath, d)
+      const marker = frame.toLocal(here.lon, here.lat, here.ele ?? 0)
+      const { lean } = screenHeading(noisyPath, d, marker, frame, side)
+      if (d > 600) worst = Math.max(worst, Math.abs(lean - previous))
+      previous = lean
+    }
+    expect(worst).toBeLessThan(0.002)
+    // the lean is eased, not clamped: always strictly inside the cap
+    expect(rising.lean).toBeLessThan((30 * Math.PI) / 180)
     // seen from the west the eastward track comes straight at the camera: its screen run is nil
     const west = frame.toLocal(6.49, 45.5, 0).sub(at)
     const along = cameraLooking(west.clone().multiplyScalar(0.5).addScaledVector(up, 100))

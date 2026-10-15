@@ -232,11 +232,20 @@ const aheadLocal = new Vector3()
 const MAX_LEAN_RAD = (30 * Math.PI) / 180
 
 /**
+ * The heading is read at these offsets (metres) around the marker, weighted as `HEADING_WEIGHTS`, and averaged: a
+ * bump or a noisy elevation of the recording then bends the lean gradually instead of jumping it, with no state kept
+ * between frames (every export frame is the same as the preview).
+ */
+const HEADING_OFFSETS_M = [-80, -60, -40, -20, 0, 20, 40, 60, 80] as const
+const HEADING_WEIGHTS = [1, 2, 3, 4, 5, 4, 3, 2, 1] as const
+
+/**
  * Which way the track runs on screen around `distanceM`, from the points HEADING_WINDOW_M behind and ahead of the
- * marker, at the marker's height, projected with the camera of this frame: `left` when it runs right to left, and
- * `lean`, the angle of its run above the horizontal (radians, counter-clockwise for a rightward run), which tilts a
- * figure to stand on the track as it climbs, drops or turns. Zero when the track runs along the line of sight
- * (straight to or from the camera), where its screen direction means nothing.
+ * marker (and of four neighbouring places, averaged: `HEADING_OFFSETS_M`), at the marker's height, projected with the
+ * camera of this frame: `left` when it runs right to left, and `lean`, the angle of its run above the horizontal
+ * (radians, counter-clockwise for a rightward run, eased towards ±MAX_LEAN_RAD), which tilts a figure to stand on
+ * the track as it climbs, drops or turns. Zero when the track runs along the line of sight (straight to or from the
+ * camera), where its screen direction means nothing.
  */
 export function screenHeading(
   path: TrackPath,
@@ -249,21 +258,37 @@ export function screenHeading(
   // the rig may have just moved the camera: project with this frame's view, not the last render's
   camera.updateMatrixWorld()
   const { height } = frame.toLonLat(at)
-  const here = samplePath(path, distanceM)
-  const behind = samplePath(path, Math.max(0, distanceM - HEADING_WINDOW_M))
-  const ahead = samplePath(path, Math.min(path.lengthM, distanceM + HEADING_WINDOW_M))
-  // the neighbours at the marker's height, raised or lowered by the track's own rise (terrain exaggeration included)
-  const heightOf = (p: { ele?: number }) => height + ((p.ele ?? here.ele ?? 0) - (here.ele ?? 0)) * exaggeration
-  frame.toLocal(behind.lon, behind.lat, heightOf(behind), behindLocal).project(camera)
-  frame.toLocal(ahead.lon, ahead.lat, heightOf(ahead), aheadLocal).project(camera)
   const aspect = 'aspect' in camera ? (camera as PerspectiveCamera).aspect : 1
-  const dx = (aheadLocal.x - behindLocal.x) * aspect
-  const dy = aheadLocal.y - behindLocal.y
-  const length = Math.hypot(dx, dy)
-  const run = Math.abs(dx)
-  // the more the track runs across the screen, the more its slope is read
-  const lean = length > 1e-6 ? Math.atan2(dy, run) * (run / length) : 0
-  return { left: dx < 0, lean: Math.max(-MAX_LEAN_RAD, Math.min(MAX_LEAN_RAD, lean)) }
+  let sumDx = 0
+  let sumAbsDx = 0
+  let sumLean = 0
+  let sumWeight = 0
+  HEADING_OFFSETS_M.forEach((offset, i) => {
+    const centre = Math.min(path.lengthM, Math.max(0, distanceM + offset))
+    const here = samplePath(path, centre)
+    const behind = samplePath(path, Math.max(0, centre - HEADING_WINDOW_M))
+    const ahead = samplePath(path, Math.min(path.lengthM, centre + HEADING_WINDOW_M))
+    // the neighbours at the marker's height, raised or lowered by the track's own rise (terrain exaggeration included)
+    const heightOf = (p: { ele?: number }) => height + ((p.ele ?? here.ele ?? 0) - (here.ele ?? 0)) * exaggeration
+    frame.toLocal(behind.lon, behind.lat, heightOf(behind), behindLocal).project(camera)
+    frame.toLocal(ahead.lon, ahead.lat, heightOf(ahead), aheadLocal).project(camera)
+    const dx = (aheadLocal.x - behindLocal.x) * aspect
+    const dy = aheadLocal.y - behindLocal.y
+    const length = Math.hypot(dx, dy)
+    const run = Math.abs(dx)
+    // the more the track runs across the screen, the more its slope is read
+    const lean = length > 1e-6 ? Math.atan2(dy, run) * (run / length) : 0
+    const weight = HEADING_WEIGHTS[i]
+    sumDx += dx * weight
+    sumAbsDx += run * weight
+    sumLean += lean * weight
+    sumWeight += weight
+  })
+  // where the track turns on screen the runs cancel and the figure turns round: the lean fades to nothing there, so it
+  // does not jump with the mirror
+  const coherence = sumAbsDx > 1e-9 ? Math.abs(sumDx) / sumAbsDx : 0
+  const lean = (sumLean / sumWeight) * coherence
+  return { left: sumDx < 0, lean: MAX_LEAN_RAD * Math.tanh(lean / MAX_LEAN_RAD) }
 }
 
 /** True when the track runs right to left on screen around `distanceM` (`screenHeading`). */
