@@ -84,7 +84,7 @@ const TILE_LABEL =
   'data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-offset-2 data-[focus-visible=true]:outline-brand'
 /** « − » and « + » around the duration slider: the fine adjustment the slider only roughly reaches (a square the height of a control). */
 const STEP_BUTTON = 'w-control flex-none px-0'
-const TILE_GRID ='grid grid-cols-3 gap-2'
+const TILE_GRID = 'grid grid-cols-3 gap-2'
 const TILE_NAME = 'max-w-full truncate text-hint font-medium'
 const TILE_FIGURES = 'text-caption whitespace-nowrap text-text-2 tabular-nums'
 
@@ -245,8 +245,8 @@ export function CameraPanel() {
     setFlightTiming({ durationS: clamp(durationS + direction * FLYOVER_DURATION_RANGE.step, FLYOVER_DURATION_RANGE.min, FLYOVER_DURATION_RANGE.max) })
   const preset = findCameraPreset(camera)
   // the current preset stays in the main grid when it is a folded one
-  const mainPresets = CAMERA_PRESETS.filter((p) => MAIN_PRESETS.has(p.id) || p === preset)
-  const morePresets = CAMERA_PRESETS.filter((p) => !mainPresets.includes(p))
+  const mainPresets = CAMERA_PRESETS
+
   const presetTile = (p: CameraPreset) => (
     <Radio key={p.id} value={p.id} className={TILE} labelClassName={TILE_LABEL} title={CAMERA_STYLE_LABELS[p.camera.style]}>
       <Icon name={PRESET_ICONS[p.id]} size={20} />
@@ -281,11 +281,6 @@ export function CameraPanel() {
               </Radio>
             )}
           </RadioGroup>
-          <MoreOptions label={t('camera.panel.morePresets')}>
-            <RadioGroup look="plain" className={TILE_GRID} aria-label={t('camera.panel.morePresets')} value="" onChange={pickPreset}>
-              {morePresets.map(presetTile)}
-            </RadioGroup>
-          </MoreOptions>
           <p id={`${id}-style-hint`} className="type-hint">
             {STYLE_HINTS[camera.style]}
           </p>
