@@ -260,11 +260,8 @@ function cinema(i: StructureInput): Structure {
   const minimap = () => {
     const pm = of('minimap')
     const maxH = barH - 1.6 * u
-    const first = minimapWidget(pm, frame, settings, live, markerColor)
-    if (!first) return
-    const fit = first.height > maxH ? withMinimap(settings, (settings.minimap.size * maxH) / first.height) : settings
-    const map = fit === settings ? first : minimapWidget(pm, frame, fit, live, markerColor)
-    map?.draw(size.width - margin - map.width, topMiddle - map.height / 2)
+    const map = minimapWidget(pm, frame, settings, live, markerColor)
+    map?.draw(size.width - margin - map.width + 2, CINEMA_BAR + map.height / 2 + maxH / 2)
   }
 
   return {
@@ -387,10 +384,10 @@ function journal(i: StructureInput): Structure {
     const w = frame.weather
     return w
       ? [
-          { label: t('overlay.draw.weatherRow.weather'), value: w.condition.label },
-          { label: t('overlay.draw.weatherRow.temperature'), value: `${formatNumber(w.temperatureC)} °C` },
-          { label: t('overlay.draw.weatherRow.wind'), value: `${formatNumber(w.windSpeedKmh)} km/h ${w.windFrom}`.trim() },
-        ]
+        { label: t('overlay.draw.weatherRow.weather'), value: w.condition.label },
+        { label: t('overlay.draw.weatherRow.temperature'), value: `${formatNumber(w.temperatureC)} °C` },
+        { label: t('overlay.draw.weatherRow.wind'), value: `${formatNumber(w.windSpeedKmh)} km/h ${w.windFrom}`.trim() },
+      ]
       : []
   }
 
