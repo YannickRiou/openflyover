@@ -194,7 +194,7 @@ export function PanelKeys({ target }: { target: KeyTarget }) {
   const next = useAppStore((s) => keyState(keys, timeOf(s)).next)
   const on = useAppStore((s) => keyState(keys, timeOf(s)).on)
   return (
-    <div className="mt-0.5 flex justify-end">
+    <div className="mt-0.5 flex justify-center">
       <KeyButtons target={target} keys={keys} clock={clock} state={{ prev, next, on }} disabled={!track} tipSide="bottom" look="panel" />
     </div>
   )
