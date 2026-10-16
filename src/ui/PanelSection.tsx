@@ -159,8 +159,7 @@ const ROW_VALUE = 'max-w-[55%] truncate text-body text-text-2 tabular-nums'
 const ROW_VALUE_MODIFIED = 'max-w-[55%] truncate text-body font-medium text-text-1 tabular-nums before:mr-2 before:inline-block before:size-1.5 before:rounded-full before:bg-brand before:align-middle'
 /** The control unfolds under the head; a lone field does not repeat the name of its row (screen readers still read it). */
 const ROW_BODY =
-  'flex flex-col gap-3 pb-3 [&>.field:only-child>label]:sr-only [&>fieldset:only-child>legend]:sr-only'
-
+  'flex flex-col gap-3 pb-3 [&>.field:only-child_.type-label]:sr-only [&>fieldset:only-child>legend]:sr-only'
 /**
  * A secondary setting on one row: its name and current value (`value`), its control hidden until the row is pressed,
  * then unfolded under it with the focus on it. The value reads as changed when one of `paths` differs from its default.
