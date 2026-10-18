@@ -60,7 +60,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/cameraSettings.ts` | camera styles and presets | `CAMERA_STYLES`, `DEFAULT_CAMERA`, `CAMERA_RANGES`, `CAMERA_PRESETS`, `isValidCamera`, `withCameraDefaults`, `turnSmoothingM(camera, lengthM)`, `advanceProgress(progress, dt, speed, durationS)` |
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
-| `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
+| `src/scene/labelModel.ts` + `labelSources.ts` + `poiIcons.ts` | 3D labels | `POI_ICON_PATHS` (pictograms, also the flags of the poster flat map), `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `FlightStage` (a stage with its own flight time, the 8th argument `stages`), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
@@ -2358,7 +2358,8 @@ exports) gets it from the terrain source of the settings.
   waits for its tiles like a film frame and fails the same way.
 - **Limits**: ghost race markers drawn at the current progress; an A3 view
   in the "Application" style is 17 Mpx in WebGL (GPU size limit not checked). Flat map: no shaded relief,
-  no labels, no start / finish; tiles at other zooms than those of the 3D view, so partly downloaded.
+  no labels except a pin on each start and finish (the 3D one without text, one for a loop, one where racers start
+  together); tiles at other zooms than those of the 3D view, so partly downloaded.
 
 ## Weather in the scene (phase 7)
 
