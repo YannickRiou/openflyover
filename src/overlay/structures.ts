@@ -256,7 +256,7 @@ function cinema(i: StructureInput): Structure {
     fillText(pw, words, margin, baselineAt(topMiddle, style.sizePx), style)
   }
 
-  // small, in the top bar at the right: scaled down to the bar when it would not fit
+  // at the right, just under the top bar, at its own size (#182: squeezed into the bar it was too small to read)
   const minimap = () => {
     const pm = of('minimap')
     const maxH = barH - 1.6 * u
