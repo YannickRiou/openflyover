@@ -1,7 +1,7 @@
 /**
  * The poster's view: what it frames (every loaded track), and the « Carte à plat » map, drawn in 2D from the imagery
  * tiles of the source in use instead of the 3D overview: seen from straight above (Web Mercator, north up), no
- * perspective, no haze, each track in its colour over a casing of the poster's page colour.
+ * perspective, no haze, each track in its colour over a casing of the poster's page colour, a flag at its start and finish.
  *
  * `framingPath` and `planFlatMap` are pure (tested); `renderFlatMap` fetches the tiles and draws.
  */
@@ -10,6 +10,8 @@ import type { LonLatBounds, TileFetcher, TileKey, TileSourceBase, Track } from '
 import { buildTrackPath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import { boundsIntersect, lonLatToTileFrac, tileBounds, tileXToLon, tileYToLat } from '../geo/mercator'
+import { LABEL_KIND_ACCENTS, LABEL_PANEL_COLOR, endpointLabels } from '../scene/labelModel'
+import { POI_ICON_PATHS } from '../scene/poiIcons'
 import { buildTileUrl } from '../terrain/sources'
 import { t } from '../i18n'
 
@@ -149,6 +151,54 @@ function drawTracks(ctx: OffscreenCanvasRenderingContext2D, plan: FlatMapPlan, i
   stroke((track) => track.color, input.lineWidth)
 }
 
+/** The start / finish pin of the 3D labels without text (`Labels.tsx`), px on a 1080 px view: flag, panel, stem, dot. */
+const PIN = { flag: 14, panel: 26, panelH: 24, radius: 5, stem: 10, dot: 4 }
+
+/**
+ * A pin on the start and the finish of each track, one for a loop (`endpointLabels`), on top of the lines; a pin
+ * nearer than its own width to one already drawn is left out (the racers of a ghost race start together).
+ */
+function drawEndpoints(ctx: OffscreenCanvasRenderingContext2D, plan: FlatMapPlan, input: FlatMapInput): void {
+  // sized like the line: on a 1080 px view, the 3D pin's own size
+  const u = Math.min(input.width, input.height) / 1080
+  const accent = LABEL_KIND_ACCENTS.endpoint
+  const flag = new Path2D(POI_ICON_PATHS.drapeau)
+  const drawn: { x: number; y: number }[] = []
+  for (const label of input.tracks.flatMap((track) => endpointLabels(track, false))) {
+    const { x, y } = plan.project(label.lon, label.lat)
+    if (drawn.some((p) => Math.hypot(p.x - x, p.y - y) < PIN.panel * u)) continue
+    drawn.push({ x, y })
+    const bottom = y - (PIN.dot + 1 + PIN.stem) * u
+    const top = bottom - PIN.panelH * u
+    const left = x - (PIN.panel * u) / 2
+    ctx.globalAlpha = 0.9
+    ctx.fillStyle = LABEL_PANEL_COLOR
+    ctx.beginPath()
+    ctx.roundRect(left, top, PIN.panel * u, PIN.panelH * u, PIN.radius * u)
+    ctx.fill()
+    ctx.globalAlpha = 1
+    ctx.save()
+    ctx.translate(left + ((PIN.panel - PIN.flag) / 2) * u, top + ((PIN.panelH - PIN.flag) / 2) * u)
+    ctx.scale((PIN.flag / 24) * u, (PIN.flag / 24) * u)
+    ctx.strokeStyle = accent
+    ctx.lineWidth = 2.5
+    ctx.stroke(flag)
+    ctx.restore()
+    ctx.strokeStyle = LABEL_PANEL_COLOR
+    ctx.lineWidth = 2 * u
+    ctx.beginPath()
+    ctx.moveTo(x, bottom)
+    ctx.lineTo(x, y)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(x, y, PIN.dot * u, 0, Math.PI * 2)
+    ctx.fillStyle = accent
+    ctx.fill()
+    ctx.lineWidth = 1.5 * u
+    ctx.stroke()
+  }
+}
+
 /**
  * The flat map, tiles drawn as they come (grey where one fails), with the count of those that failed. Rejects when not
  * a single tile came.
@@ -179,5 +229,6 @@ export async function renderFlatMap(input: FlatMapInput): Promise<FlatMap> {
     throw new Error(t('poster.error.noTile', { name: source.name }))
   }
   drawTracks(ctx, plan, input)
+  drawEndpoints(ctx, plan, input)
   return { view: canvas, missingTiles }
 }
