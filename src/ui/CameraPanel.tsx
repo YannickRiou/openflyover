@@ -241,8 +241,6 @@ export function CameraPanel() {
   const stepDuration = (direction: 1 | -1) =>
     setFlightTiming({ durationS: clamp(durationS + direction * FLYOVER_DURATION_RANGE.step, FLYOVER_DURATION_RANGE.min, FLYOVER_DURATION_RANGE.max) })
   const preset = findCameraPreset(camera)
-  // the current preset stays in the main grid when it is a folded one
-  const mainPresets = CAMERA_PRESETS
 
   const presetTile = (p: CameraPreset) => (
     <Radio key={p.id} value={p.id} className={TILE} labelClassName={TILE_LABEL} title={CAMERA_STYLE_LABELS[p.camera.style]}>
@@ -269,7 +267,7 @@ export function CameraPanel() {
             {t('camera.panel.preset')}
           </legend>
           <RadioGroup look="plain" className={TILE_GRID} aria-labelledby={`${id}-preset`} value={preset?.id ?? CUSTOM_PRESET} onChange={pickPreset}>
-            {mainPresets.map(presetTile)}
+            {CAMERA_PRESETS.map(presetTile)}
             {!preset && (
               <Radio value={CUSTOM_PRESET} className={TILE} labelClassName={TILE_LABEL} title={t('camera.panel.customTip')}>
                 <Icon name="sliders-horizontal" size={20} />
