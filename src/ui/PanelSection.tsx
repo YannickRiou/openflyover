@@ -291,21 +291,3 @@ export function RangeField({
     </div>
   )
 }
-
-/**
- * The rest of a section, folded under a quiet toggle (« Plus de préréglages », « Plus d'options »). A `details`, so what is
- * folded stays mounted; the group is named so that it ignores the section's own.
- */
-export function MoreOptions({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <details className="group/more">
-      <summary className="flex min-h-control cursor-pointer list-none items-center gap-2 text-body font-medium text-text-2 transition-ui hover:text-text-1 group-open/more:text-text-1 [&::-webkit-details-marker]:hidden">
-        <span className="flex-1">{label}</span>
-        <span className="flex group-[:not([open])]/more:-rotate-90">
-          <Icon name="chevron-down" size={16} />
-        </span>
-      </summary>
-      <div className="mt-1 flex flex-col gap-3">{children}</div>
-    </details>
-  )
-}

@@ -20,7 +20,7 @@ import { useAppStore } from '../state/store'
 import { formatDegrees, formatDistance, formatDuration, formatNumber, formatPercent, formatSecondsShort, formatSpeedUp } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
-import { InfoTip, MoreOptions, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
 import { Button, Checkbox, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
@@ -69,9 +69,6 @@ const PRESET_ICONS: Record<string, IconName> = {
   'top-view': 'locate-fixed',
   satellite: 'satellite',
 }
-
-/** Shown first: one preset per style plus a high view, from close to far; the others under « Plus de préréglages ». */
-const MAIN_PRESETS = new Set(['chase', 'bird', 'orbit', 'cinema', 'high-drone', 'satellite'])
 
 /** `value` of the tile that shows the settings when they match no preset. */
 const CUSTOM_PRESET = 'custom'
