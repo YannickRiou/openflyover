@@ -247,15 +247,16 @@ function TileMap({ track, path, items, progress, selectedId, onSelect, maxDistan
       ctx.strokeStyle = color
       ctx.lineWidth = lineWidth
       ctx.globalAlpha = alpha
+      // one path for every segment: stroked once, overlapping segments do not add up their alpha
+      ctx.beginPath()
       for (const segment of track.segments) {
-        ctx.beginPath()
         segment.points.forEach((p, i) => {
           const { x, y } = plan.project(p.lon, p.lat)
           if (i === 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
         })
-        ctx.stroke()
       }
+      ctx.stroke()
     }
     if (Number.isFinite(metresPerPx) && metresPerPx > 0) stroke(track.color, (2 * maxDistanceM) / metresPerPx, 0.22)
     stroke('#FFFFFF', 6, 1)
