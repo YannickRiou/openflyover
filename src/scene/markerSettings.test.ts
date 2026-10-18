@@ -4,10 +4,12 @@ import { DEFAULT_SETTINGS } from '../state/store'
 import {
   DEFAULT_MARKER,
   DEFAULT_TRACK_STYLE,
+  DEFAULT_TRACK_TAIL,
   figureMotion,
   figureOfActivity,
   isValidMarker,
   isValidTrackStyle,
+  isValidTrackTail,
   MARKER_FIGURES,
   MARKER_IMAGE_MAX_CHARS,
   markerMovesWithTime,
@@ -64,6 +66,18 @@ describe('track style and marker settings', () => {
     expect(older.invalid).toEqual([])
     expect(older.settings.trackStyle).toEqual({ ...DEFAULT_TRACK_STYLE, width: 6, dash: 'tirets', glow: true, drawOn: true, smoothingM: 0 })
     expect(older.settings.trackStyle.glowColor).toBe('')
+  })
+
+  it('« Traînée »: off in a project saved before it, an out-of-range length falls back to the default', () => {
+    expect(isValidTrackTail(DEFAULT_TRACK_TAIL)).toBe(true)
+    expect(isValidTrackTail({ enabled: true, lengthM: 50 })).toBe(false)
+    expect(isValidTrackTail({ enabled: true, lengthM: 30_000 })).toBe(false)
+    expect(sanitizeSettings({ trackStyle: { ...DEFAULT_TRACK_STYLE, drawOn: true } }).settings.trackTail.enabled).toBe(false)
+    const saved = sanitizeSettings({ trackTail: { enabled: true, lengthM: 2500 } })
+    expect(saved.settings.trackTail).toEqual({ enabled: true, lengthM: 2500 })
+    const invalid = sanitizeSettings({ trackTail: { enabled: true, lengthM: -5 } })
+    expect(invalid.invalid).toEqual(['trackTail'])
+    expect(invalid.settings.trackTail).toBe(DEFAULT_TRACK_TAIL)
   })
 
   it('has a pictogram for every figure', () => {

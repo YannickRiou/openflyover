@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { PerspectiveCamera } from 'three'
+import { Color, PerspectiveCamera } from 'three'
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import type { InterleavedBufferAttribute } from 'three'
 import { DEFAULT_TRACK_STYLE } from './markerSettings'
 import { cumulativeDistances } from '../geo/lonLat'
-import { applyDash, cutAt, cutLine, quantizedPixelSize, type CuttableLine } from './trackLineStyle'
+import { addTrailCut, applyDash, createGlowMaterial, cutAt, cutLine, NO_TRAIL, quantizedPixelSize, setTrackDistances, type CuttableLine } from './trackLineStyle'
 
 describe('cutAt', () => {
   const dist = Float64Array.from([100, 110, 120, 130])
@@ -52,6 +52,30 @@ describe('cutLine', () => {
     expect(l.geometry.instanceCount).toBe(2)
     expect(endX(l, 1)).toBe(20)
     expect(l.shortened).toBe(-1)
+  })
+})
+
+describe('trail (« Traînée »)', () => {
+  it('gives each piece the distance of its two ends along the track', () => {
+    const geometry = new LineGeometry()
+    setTrackDistances(geometry, Float64Array.from([100, 110, 125]))
+    const start = geometry.getAttribute('instanceTrackStart')
+    const end = geometry.getAttribute('instanceTrackEnd')
+    expect([start.getX(0), start.getX(1)]).toEqual([100, 110])
+    expect([end.getX(0), end.getX(1)]).toEqual([110, 125])
+  })
+
+  it('makes the painting step skip what lies before the trail, on top of the glow patch', () => {
+    const glow = createGlowMaterial(new Color('#ffffff'), 1, 1)
+    addTrailCut(glow, 'test-glow-trail')
+    expect(glow.uniforms.trailStartM.value).toBe(NO_TRAIL)
+    expect(glow.customProgramCacheKey()).toBe('test-glow-trail')
+    const shader = { vertexShader: 'void main() {\n}', fragmentShader: 'void main() {\ngl_FragColor = vec4( diffuseColor.rgb, alpha );\n}', uniforms: {} }
+    glow.onBeforeCompile(shader as never, null as never)
+    expect(shader.vertexShader).toContain('vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;')
+    expect(shader.fragmentShader).toContain('if ( vTrackM < trailStartM ) discard;')
+    // the glow output is still patched
+    expect(shader.fragmentShader).toContain('glowFade')
   })
 })
 

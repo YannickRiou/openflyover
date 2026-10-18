@@ -27,7 +27,7 @@ import { isValidGrading } from '../scene/grading'
 import { isValidLens, withLensDefaults } from '../scene/lens'
 import { isValidLabelSettings, withLabelDefaults } from '../scene/labelModel'
 import { TRACK_COLOR_MODES } from '../flyover/trackColor'
-import { isValidMarker, isValidTrackStyle, withMarkerDefaults, withTrackStyleDefaults } from '../scene/markerSettings'
+import { isValidMarker, isValidTrackStyle, isValidTrackTail, withMarkerDefaults, withTrackStyleDefaults } from '../scene/markerSettings'
 import { DEFAULT_PLAYBACK, DEFAULT_SETTINGS, PLAYBACK_SPEEDS } from '../state/store'
 import type { AppState, Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
@@ -137,6 +137,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
     v.pinnedIds.every((id) => typeof id === 'string'),
   race: isValidRace,
   trackStyle: isValidTrackStyle,
+  trackTail: isValidTrackTail,
   marker: isValidMarker,
   labels: isValidLabelSettings,
 }
