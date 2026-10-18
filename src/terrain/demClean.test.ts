@@ -5,6 +5,7 @@ import {
   clampSeaToZero,
   cleanDem,
   isValidDemClean,
+  removeSeaPillars,
   removeSeaSpikes,
   sameDemClean,
   withDemCleanDefaults,
@@ -63,6 +64,49 @@ describe('removeSeaSpikes', () => {
   })
 })
 
+describe('removeSeaPillars', () => {
+  /** a cone of `top` m and `radius` px at (cx, cy), over a sea at `sea` m */
+  const cone = (size: number, cx: number, cy: number, top: number, radius: number, sea = 0) =>
+    grid(size, size, (x, y) => Math.max(sea, top * (1 - Math.hypot(x - cx, y - cy) / radius)))
+
+  it('lowers a pillar of many pixels to the sea around it (Mapterhorn, off Scandola: 1556 m, 533 px at z12)', () => {
+    const g = cone(40, 20, 20, 1556, 13, -12) // 525 px above 20 m, 14.1 m per pixel
+    // smooth flanks: the one-pixel filter keeps it whole
+    expect(at(removeSeaSpikes(g), 20, 20)).toBe(1556)
+    const out = removeSeaPillars(g, 14.1)
+    expect(Math.max(...out.data)).toBeLessThanOrEqual(20)
+    expect(at(out, 20, 20)).toBeCloseTo(at(out, 20, 8), 0) // the sea around its foot
+    expect(at(g, 20, 20)).toBe(1556)
+  })
+
+  it('also lowers its part cut by the tile edge, and does not need the whole of it', () => {
+    const out = removeSeaPillars(cone(30, 2, 15, 1100, 12), 14.1)
+    expect(Math.max(...out.data)).toBeLessThanOrEqual(20)
+  })
+
+  it('keeps a real sea stack (Stac Lee, St Kilda: 172 m, 48 m from its heart to the sea)', () => {
+    const g = grid(40, 40, (x, y) => (Math.hypot(x - 20, y - 20) < 14 ? 172 : 0)) // 3.5 m per pixel
+    expect(removeSeaPillars(g, 3.5)).toBe(g)
+  })
+
+  it('keeps islets under the threshold, cliffs and capes, mountains and nodata', () => {
+    // a steep islet of 140 m, a 400 m cliff coast with a narrow 300 m cape
+    const g = grid(40, 40, (x, y) =>
+      Math.hypot(x - 6, y - 6) < 2 ? 140 : x >= 28 ? 400 : y >= 18 && y <= 21 && x >= 12 ? 300 : 0,
+    )
+    g.data[0] = NaN
+    expect(removeSeaPillars(g, 14.1)).toBe(g)
+    const mountain = grid(20, 20, (x, y) => 1800 + 300 * Math.max(0, 3 - Math.hypot(x - 10, y - 10)))
+    expect(removeSeaPillars(mountain, 14.1)).toBe(mountain)
+  })
+
+  it('judges the steepness in metres: the same pixels are a pillar at z12 and a wide island at z8', () => {
+    const g = cone(40, 20, 20, 600, 6)
+    expect(Math.max(...removeSeaPillars(g, 14.1).data)).toBeLessThanOrEqual(20)
+    expect(removeSeaPillars(g, 225)).toBe(g)
+  })
+})
+
 describe('clampSeaToZero and cleanDem', () => {
   it('brings the negative heights to 0 and keeps nodata', () => {
     const g = clampSeaToZero({ width: 4, height: 1, data: Float32Array.of(-30, 0, 12, NaN) })
@@ -78,6 +122,13 @@ describe('clampSeaToZero and cleanDem', () => {
     expect(at(cleanDem(g, { enabled: true, seaToZero: true }), 2, 2)).toBe(0)
     // seaToZero alone does not clean
     expect(cleanDem(g, { enabled: false, seaToZero: true })).toBe(g)
+  })
+
+  it('removes the pillars only when the ground width of the tile is known', () => {
+    const g = grid(40, 40, (x, y) => Math.max(0, 1100 * (1 - Math.hypot(x - 20, y - 20) / 12)))
+    const on = { enabled: true, seaToZero: true }
+    expect(at(cleanDem(g, on), 20, 20)).toBe(1100)
+    expect(at(cleanDem(g, on, 40 * 14.1), 20, 20)).toBe(0)
   })
 })
 

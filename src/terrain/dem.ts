@@ -90,11 +90,14 @@ export function readImagePixels(image: CanvasImageSource, width: number, height:
   return ctx.getImageData(0, 0, width, height).data
 }
 
-/** Decode a bitmap elevation tile into a height grid (NaN = nodata), optionally cleaned of the spikes of the sea. */
-export function decodeDem(bitmap: ImageBitmap, encoding: DemEncoding, clean?: DemCleanOptions): HeightGrid {
+/**
+ * Decode a bitmap elevation tile into a height grid (NaN = nodata), optionally cleaned of the spikes of the sea
+ * (`tileWidthM`, the ground width of the tile, lets the cleaning find the pillars too: see `cleanDem`).
+ */
+export function decodeDem(bitmap: ImageBitmap, encoding: DemEncoding, clean?: DemCleanOptions, tileWidthM?: number): HeightGrid {
   const { width, height } = bitmap
   const grid = decodeDemPixels(readImagePixels(bitmap, width, height), width, height, encoding)
-  return clean ? cleanDem(grid, clean) : grid
+  return clean ? cleanDem(grid, clean, tileWidthM) : grid
 }
 
 // ---------------------------------------------------------------------------

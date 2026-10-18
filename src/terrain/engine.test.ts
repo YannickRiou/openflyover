@@ -595,7 +595,7 @@ describe('createTerrainEngine', () => {
     const camera = cameraAbove(600_000)
     engine.update(camera, 1000)
     await settle()
-    expect(deps.decodeDem).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), { enabled: false, seaToZero: false })
+    expect(deps.decodeDem).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), { enabled: false, seaToZero: false }, expect.any(Number))
 
     // `seaToZero` means nothing while the cleaning is off: nothing to rebuild
     engine.setOptions({ demClean: { enabled: false, seaToZero: true } })
@@ -606,7 +606,7 @@ describe('createTerrainEngine', () => {
     expect(deps.heightField.clear).toHaveBeenCalled()
     engine.update(camera, 1000)
     await settle()
-    expect(deps.decodeDem).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), { enabled: true, seaToZero: false })
+    expect(deps.decodeDem).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), { enabled: true, seaToZero: false }, expect.any(Number))
   })
 
   it('does not refetch when an unrelated option changes', async () => {

@@ -64,7 +64,7 @@ export interface HeightFieldLike {
 
 export interface EngineDeps {
   fetcher: TileFetcher
-  decodeDem: (bitmap: ImageBitmap, encoding: DemEncoding, clean?: DemCleanOptions) => HeightGrid
+  decodeDem: (bitmap: ImageBitmap, encoding: DemEncoding, clean?: DemCleanOptions, tileWidthM?: number) => HeightGrid
   loadImageryTexture: LoadImageryTexture
   heightField: HeightFieldLike
   /** clock (ms) of the retry and unload delays; default `performance.now` */
@@ -339,7 +339,7 @@ export function createTerrainEngine(
 
     const demPromise = io.fetcher
       .fetchBitmap(buildTileUrl(terrain, node.key), { priority: rank, signal })
-      .then((bitmap) => io.decodeDem(bitmap, terrain.encoding, demClean))
+      .then((bitmap) => io.decodeDem(bitmap, terrain.encoding, demClean, tileGroundSizeM(node.key)))
 
     const wantsImagery = !imagery.coverage || boundsIntersect(imagery.coverage, node.bounds)
     // an imagery failure is a transient failure of the node too (below): the parent keeps its imagery meanwhile
