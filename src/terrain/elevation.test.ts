@@ -193,6 +193,23 @@ describe('completeImportedElevations', () => {
     expect(b.stats.maxEle).toBe(800)
   })
 
+  it('finds the flights of a recorded track against the ground under every point', async () => {
+    // on the 800 m ground for 500 m at each end, 500 m above it in between
+    const flown = trackOf(line(5_000, 20).map((p, i, all) => ({ ...p, ele: i * 20 < 500 || (all.length - 1 - i) * 20 < 500 ? 800 : 1300 })))
+    const [out] = await completeImportedElevations([flown], mapterhorn, { load })
+    expect(out.flights).toHaveLength(1)
+    const [flight] = out.flights ?? []
+    expect(flight.startM).toBeGreaterThan(300)
+    expect(flight.startM).toBeLessThan(600)
+    expect(flight.endM).toBeGreaterThan(4_400)
+    expect(flight.endM).toBeLessThan(4_700)
+    expect(flight.offsetM).toBe(0)
+    // too many tiles, or elevations computed from the ground: no flight looked for
+    expect((await completeImportedElevations([flown], mapterhorn, { load, maxTiles: 0 }))[0]).toBe(flown)
+    const computed = { ...flown, elevationEstimated: 'all' as const }
+    expect((await completeImportedElevations([computed], mapterhorn, { load }))[0]).toBe(computed)
+  })
+
   it('leaves a track above the tile threshold for the button', async () => {
     const drawn = trackOf(line(20_000, 500))
     const [out] = await completeImportedElevations([drawn], mapterhorn, { load, maxTiles: 3 })

@@ -5,7 +5,7 @@
  * Pure functions (no DOM, no React, no Three).
  */
 import { lastIndexAtOrBelow } from '../core/math'
-import type { LonLat, Track } from '../core/types'
+import type { Flight, LonLat, Track } from '../core/types'
 import { haversineM } from '../geo/lonLat'
 
 export interface TrackPath {
@@ -20,6 +20,8 @@ export interface TrackPath {
   dist: Float64Array
   /** total length (metres) = dist[count - 1]; equals track.stats.distanceM */
   lengthM: number
+  /** `track.flights`, empty when the track stays on the ground */
+  flights: readonly Flight[]
 }
 
 export interface PathSample {
@@ -46,6 +48,7 @@ export function buildTrackPath(track: Track): TrackPath {
     time: new Float64Array(count),
     dist: new Float64Array(count),
     lengthM: 0,
+    flights: track.flights ?? [],
   }
   let i = 0
   let total = 0

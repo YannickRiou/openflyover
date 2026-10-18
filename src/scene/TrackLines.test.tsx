@@ -68,6 +68,14 @@ describe('buildDrapeBuffer / computeDrapedPositions', () => {
     expectLocal(out, 2, 6.52, 45.51, 2000 * 1.5 + LINE_LIFT_M)
   })
 
+  it('keeps the recorded height in a flight, less the device offset, never under the terrain', () => {
+    const buffer = buildDrapeBuffer(points.slice(0, 2), frame)
+    buffer.flight.fill(20)
+    const out = computeDrapedPositions(buffer, (lon) => (lon > 6.505 ? 1500 : 500), 2, new Float32Array(6))
+    expectLocal(out, 0, 6.5, 45.5, (1000 - 20) * 2 + LINE_LIFT_M)
+    expectLocal(out, 1, 6.51, 45.505, 1500 * 2 + LINE_LIFT_M)
+  })
+
   it('treats a NaN terrain sample as unknown', () => {
     const buffer = buildDrapeBuffer(points.slice(0, 1), frame)
     const out = computeDrapedPositions(buffer, () => Number.NaN, 1, new Float32Array(3))

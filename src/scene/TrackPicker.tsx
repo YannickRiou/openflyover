@@ -18,6 +18,7 @@ import { isExportBusy, useExportStore } from '../export/store'
 import { filmClockFor } from '../film/clock'
 import { POI_NAME_MAX, addPoi, defaultPoiName } from '../film/pois'
 import { addSpeed, addStop, addText } from '../film/timeline'
+import { flightOffsetAt, trackHeightM } from '../flyover/flights'
 import { buildTrackPath, pickProjectedPath, samplePath } from '../flyover/path'
 import { useT } from '../i18n'
 import { useAppStore } from '../state/store'
@@ -99,8 +100,8 @@ export function TrackPicker() {
       if (cached && now - cached.at < DRAPE_TTL_MS) return cached.world
       const world = cached?.world ?? new Float32Array(samples.distM.length * 3)
       for (let k = 0; k < samples.distM.length; k++) {
-        let h = engine?.sampleHeight(samples.lon[k], samples.lat[k])
-        if (h === undefined || Number.isNaN(h)) h = Number.isNaN(samples.ele[k]) ? 0 : samples.ele[k]
+        const flight = flightOffsetAt(samples.path.flights, samples.distM[k])
+        const h = trackHeightM(engine?.sampleHeight(samples.lon[k], samples.lat[k]), samples.ele[k], flight)
         frame.toLocal(samples.lon[k], samples.lat[k], h * exaggeration + LINE_LIFT_M, v)
         world[3 * k] = v.x
         world[3 * k + 1] = v.y

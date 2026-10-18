@@ -121,6 +121,10 @@ describe('figureOfActivity', () => {
     expect(figureOfActivity('horsebackRiding')).toBe('cavalier')
     expect(figureOfActivity('mountaineering')).toBe('alpiniste')
     expect(figureOfActivity('hangGliding')).toBe('parapente')
+    // a person under a wing on its lines: FIT 'kitesurfing', Strava « Kitesurf »
+    expect(figureOfActivity('kitesurfing')).toBe('parapente')
+    expect(figureOfActivity('kitesurf')).toBe('parapente')
+    expect(figureOfActivity('kiteboarding')).toBe('parapente')
     expect(figureOfActivity('flying')).toBe('avion')
     expect(figureOfActivity('driving')).toBe('voiture')
   })

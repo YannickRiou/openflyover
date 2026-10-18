@@ -192,7 +192,8 @@ const ACTIVITY_FIGURES: readonly (readonly [RegExp, MarkerFigure])[] = [
   [/mountain_?bik|mtb|vtt/, 'vtt'],
   [/gravel|cycl|bik|ride|v[ée]lo/, 'cycliste'],
   [/mountaineer|alpinis|climb|escalade/, 'alpiniste'],
-  [/paraglid|parapente|hang_?glid|deltaplane/, 'parapente'],
+  // kite: a rider under a wing on its lines, the nearest figure
+  [/paraglid|parapente|hang_?glid|deltaplane|kite/, 'parapente'],
   [/fly|avion|aviation/, 'avion'],
   [/driv|voiture/, 'voiture'],
 ]
