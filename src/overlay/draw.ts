@@ -8,6 +8,8 @@
  * Photos and video clips of the timeline are drawn even while the rest of the overlay is off.
  */
 import type { ClockJunction } from '../film/clock'
+import { MISSING_COLOR } from '../flyover/trackColor'
+import type { TrackLegend } from '../flyover/trackColor'
 import { fillTemplate } from '../film/junctions'
 import { clipTimeS } from '../film/model'
 import type { FilmMedia, FilmText, TransitionDip } from '../film/model'
@@ -110,6 +112,13 @@ export interface OverlayExtras {
   exportSize?: OverlaySize
   /** colour of the 3D marker ('#rrggbb'): the position dot of the profile and the mini-map, until they have their own */
   markerColor?: string
+  /** legend of the track colouring (`trackLegend`) and its place, drawn even while the overlay is off */
+  trackLegend?: OverlayTrackLegend | null
+}
+
+/** Legend of the track colouring as the overlay draws it: the values, and the anchor chosen for it. */
+export interface OverlayTrackLegend extends TrackLegend {
+  anchor: OverlayAnchor
 }
 
 /**
@@ -891,6 +900,81 @@ export function minimapWidget(p: Painter, frame: OverlayFrame, settings: Overlay
   }
 }
 
+/** Narrowest track legend (u): the colour ramp stays readable. */
+const TRACK_LEGEND_WIDTH_U = 22
+
+/**
+ * Legend of the track colouring: the quantity, its colour ramp over the shared range with the bounds and units
+ * (the 2 % of extreme values on each side take the colour of the bounds), and the grey of the points without a value.
+ */
+function trackLegendWidget(p: Painter, legend: OverlayTrackLegend, opacity: number): Widget {
+  const { theme, u, ctx } = p
+  const { anchor, range } = legend
+  const title: TextStyle = { family: theme.bodyFamily, weight: theme.numberWeight, sizePx: 1.8 * u, color: theme.text }
+  const small: TextStyle = { family: theme.bodyFamily, weight: theme.labelWeight, sizePx: 1.5 * u, color: theme.text }
+  const pad = (theme.panel ? 1.4 : 0.4) * u
+  const bar = theme.panel ? theme.accentBar * u : 0
+  const format = (value: number) => `${formatNumber(value, legend.fractionDigits)} ${legend.unit}`
+  const low = range ? format(range.min) : ''
+  const high = range ? format(range.max) : ''
+  const missing = legend.missing ? t(range ? 'track.legend.noValue' : 'track.legend.noData') : ''
+  const swatchW = 2.4 * u
+  const gap = 0.8 * u
+  const innerW = Math.max(
+    TRACK_LEGEND_WIDTH_U * u,
+    measure(p, legend.label, title),
+    range ? measure(p, low, small) + measure(p, high, small) + 2 * u : 0,
+    missing ? swatchW + gap + measure(p, missing, small) : 0,
+  )
+  const titleH = title.sizePx
+  const rampH = 1.2 * u
+  const lineH = small.sizePx
+  const innerH = titleH + (range ? gap + rampH + gap + lineH : 0) + (missing ? gap + lineH : 0)
+  const w = innerW + 2 * pad + bar
+  const h = innerH + 2 * pad
+
+  return {
+    anchor,
+    width: w,
+    height: h,
+    opacity,
+    draw(x, y) {
+      const align = alignOf(anchor)
+      drawPanel(p, x, y, w, h, align)
+      const ix = x + pad + (align === 'right' ? 0 : bar)
+      let cy = y + pad
+      fillText(p, legend.label, ix, cy + titleH * 0.8, title)
+      cy += titleH
+      if (range) {
+        cy += gap
+        const ramp = ctx.createLinearGradient(ix, 0, ix + innerW, 0)
+        legend.colormap.forEach((color, i) => ramp.addColorStop(i / Math.max(1, legend.colormap.length - 1), color))
+        ctx.save()
+        roundedRect(ctx, ix, cy, innerW, rampH, 0.3 * u)
+        ctx.fillStyle = ramp
+        ctx.fill()
+        ctx.restore()
+        cy += rampH + gap
+        fillText(p, low, ix, cy + lineH * 0.8, small)
+        fillText(p, high, ix + innerW, cy + lineH * 0.8, small, 'right')
+        cy += lineH
+      }
+      if (missing) {
+        cy += gap
+        ctx.save()
+        roundedRect(ctx, ix, cy + 0.2 * lineH, swatchW, 0.6 * lineH, 0.2 * u)
+        ctx.fillStyle = MISSING_COLOR
+        ctx.fill()
+        ctx.lineWidth = Math.max(0.15 * u, 1 / p.px)
+        ctx.strokeStyle = theme.text
+        ctx.stroke()
+        ctx.restore()
+        fillText(p, missing, ix + swatchW + gap, cy + lineH * 0.8, small)
+      }
+    },
+  }
+}
+
 const leaderboardTitle = () => t('overlay.draw.leaderboard')
 /** Gap column wide enough for the usual gaps, so the panel keeps its width as they change. */
 const LEADERBOARD_GAP_TEMPLATE = '+00 min 00'
@@ -1392,8 +1476,8 @@ function logoWidget(p: Painter, settings: OverlaySettings, assets: OverlayAssets
 /**
  * Draw the overlay of one frame. The context's current transform maps `size` (user units) onto the canvas;
  * the caller clears the canvas first (the overlay only adds). Synchronous and deterministic: the same
- * arguments always give the same image. The source credits, the photos of the timeline and the dip of a shot
- * transition are drawn even while the rest of the overlay is off. The dip covers everything but the credits: it is a
+ * arguments always give the same image. The source credits, the photos of the timeline, the legend of the track
+ * colouring and the dip of a shot transition are drawn even while the rest of the overlay is off. The dip covers everything but the credits: it is a
  * transition of the whole picture (widgets left over a black frame would float), short, and the credits the
  * licences require stay legible on top.
  */
@@ -1425,7 +1509,8 @@ export function drawOverlay(
   // the first stage's card gives way to the title card of the film
   const stage = extras.stage && !(extras.stage.index === 0 && settings.enabled && settings.title.enabled) ? extras.stage : null
   const stageOpacity = stage ? filmTextOpacity(stage, time.timeS) : 0
-  if (!settings.enabled && credits.length === 0 && photos.length === 0 && !dip && stageOpacity <= 0.001) return
+  const legend = extras.trackLegend ?? null
+  if (!settings.enabled && credits.length === 0 && photos.length === 0 && !dip && stageOpacity <= 0.001 && !legend) return
   const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
   const p: Painter = {
     ctx,
@@ -1454,15 +1539,16 @@ export function drawOverlay(
   let weatherShown = false
   let endOpacity = 0
   let structure: Structure | null = null
+  // live widgets give way to the full-screen photos and the stage cards (and, with the overlay on, to its cards)
+  let live = 1 - Math.max(cover, stageOpacity)
   if (settings.enabled) {
     const titleOpacity = settings.title.enabled ? titleCardOpacity(time, settings.title.end) : 0
     endOpacity = settings.end.enabled ? endCardOpacity(time, settings.end.start) : 0
     const rolling = creditLines(settings.end.credits).length > 0
     // a widget in a slot of the style's structure is drawn by the structure, the others as ordinary widgets
     const slot = (key: LaidOutWidget) => inStyleSlot(settings, key) && !(key === 'end' && rolling)
-    // live widgets give way to the cards and to the full-screen photos (an opening card that is part of the
-    // structure, a header or a stripe, leaves them as they are)
-    const live = 1 - Math.max(slot('title') ? 0 : titleOpacity, endOpacity, cover, stageOpacity)
+    // an opening card that is part of the structure, a header or a stripe, leaves them as they are
+    live = 1 - Math.max(slot('title') ? 0 : titleOpacity, endOpacity, cover, stageOpacity)
 
     // a widget with its own colours or fonts draws with its own theme
     const of = (key: StyledWidget): Painter =>
@@ -1498,6 +1584,8 @@ export function drawOverlay(
       if (opacity > 0.001) texts.push({ item, opacity })
     }
   }
+  // the legend of the track colouring follows the colouring, overlay on or off
+  if (legend && live > 0) add(trackLegendWidget(p, legend, live))
   // photo cards after the widgets of their anchor; the caption of a full-screen photo is drawn like a text
   for (const { item, opacity, image } of photos) {
     const caption = item.caption?.trim()

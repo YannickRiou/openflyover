@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import sampleGpx from '../import/__fixtures__/tour-du-mont-blanc-j1.gpx?raw'
 import { parseGpx } from '../import/gpx'
+import { trackLegend } from '../flyover/trackColor'
 import { overlayFrameAt, prepareOverlayTrack, recordedAtProgress } from './data'
 import {
   SAFE_MARGIN,
@@ -84,6 +85,7 @@ function fakeContext() {
       calls.push(`drawImage(${args.length + 1})`)
     },
     createRadialGradient: () => ({ addColorStop: () => {} }),
+    createLinearGradient: () => ({ addColorStop: () => {} }),
     getTransform: () => ({ a: 2, b: 0 }),
   }
   const ctx = new Proxy(target, {
@@ -542,6 +544,39 @@ describe('mini-map', () => {
 
   it('draws the north arrow on request only', () => {
     expect(render(0.5, minimapOnly({ northArrow: false })).texts).toEqual([])
+  })
+})
+
+describe('legend of the track colouring', () => {
+  const legend = trackLegend([sampleTrack], 'elevation')!
+  const render = (settings: OverlaySettings, extras: OverlayExtras) => {
+    const { ctx, texts } = fakeContext()
+    drawOverlay(ctx, overlayFrameAt(track, 0.5), settings, SIZE, {}, extras)
+    return texts
+  }
+  const title = (texts: TextCall[]) => texts.find((t) => t.text === legend.label)
+
+  it('is painted while a colouring is on, even with the overlay off, and not without colouring', () => {
+    expect(trackLegend([sampleTrack], 'none')).toBeNull()
+    expect(DEFAULT_OVERLAY.enabled).toBe(false)
+    const texts = render(DEFAULT_OVERLAY, { trackLegend: { ...legend, anchor: 'bottom-left' } })
+    expect(title(texts)).toBeDefined()
+    expect(texts.filter((t) => t.text.endsWith(' m'))).toHaveLength(2)
+    expect(render(DEFAULT_OVERLAY, { trackLegend: null })).toEqual([])
+  })
+
+  it('sits at the chosen anchor inside the safe area, and stacks with the widgets of that anchor', () => {
+    for (const anchor of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
+      const at = title(render(DEFAULT_OVERLAY, { trackLegend: { ...legend, anchor } }))!
+      expect(at.x < SIZE.width / 2).toBe(anchor.endsWith('left'))
+      expect(at.y < SIZE.height / 2).toBe(anchor.startsWith('top'))
+      expect(at.x).toBeGreaterThanOrEqual(SIZE.width * SAFE_MARGIN - 1)
+      expect(at.x).toBeLessThanOrEqual(SIZE.width * (1 - SAFE_MARGIN) + 1)
+    }
+    const extras: OverlayExtras = { trackLegend: { ...legend, anchor: 'top-right' } }
+    const alone = title(render(enabled({ counters: { ...DEFAULT_OVERLAY.counters, enabled: false }, profile: { ...DEFAULT_OVERLAY.profile, enabled: false } }), extras))!
+    const withMap = title(render(enabled({ minimap: { ...DEFAULT_OVERLAY.minimap, enabled: true, anchor: 'top-right' } }), extras))!
+    expect(withMap.y).toBeGreaterThan(alone.y)
   })
 })
 

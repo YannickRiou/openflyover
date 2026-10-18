@@ -24,12 +24,16 @@ import type { WeatherSeries } from '../weather/series'
 import { trackPathOf } from '../flyover/path'
 import { buildRace, raceAt, raceTrackOf } from '../flyover/race'
 import { filmSequenceOf, filmTrackOf, trackUnderMarker } from '../flyover/sequence'
+import { trackLegend } from '../flyover/trackColor'
+import type { TrackColorBy, TrackLegend } from '../flyover/trackColor'
+import { getLanguage } from '../i18n'
 import type { Sequence } from '../flyover/sequence'
 import { loadLogo } from './assets'
 import { leaderboardRows, overlayCredits, overlayFilmFrameAt, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
 import type { LeaderboardRow, OverlayFilm } from './data'
 import { drawOverlay } from './draw'
-import type { OverlayAssets, OverlayExtras, OverlayTime } from './draw'
+import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
+import type { OverlayAnchor } from './settings'
 
 /** Leaderboard of the ghost race at `progress`, while the race and its widget are on (2+ tracks). */
 function leaderboardAt(progress: number): LeaderboardRow[] | undefined {
@@ -43,13 +47,25 @@ function leaderboardAt(progress: number): LeaderboardRow[] | undefined {
   return leaderboardRows(raceAt(race, progress), tracks)
 }
 
+/** Last legend of the track colouring: its values are worked out again only when the tracks, the quantity or the language change. */
+let legendCache: { tracks: readonly Track[]; colorBy: TrackColorBy; language: string; legend: TrackLegend | null } | null = null
+
+/** Legend of the track colouring and its place, while a colouring is on. */
+function trackLegendOf(tracks: readonly Track[], colorBy: TrackColorBy, anchor: OverlayAnchor): OverlayTrackLegend | null {
+  const language = getLanguage()
+  if (!legendCache || legendCache.tracks !== tracks || legendCache.colorBy !== colorBy || legendCache.language !== language) {
+    legendCache = { tracks, colorBy, language, legend: trackLegend(tracks, colorBy) }
+  }
+  return legendCache.legend && { ...legendCache.legend, anchor }
+}
+
 /** The stronger of two dips. */
 const strongerDip = (a: TransitionDip | null, b: TransitionDip | null) => (b && b.alpha > (a?.alpha ?? 0) ? b : a)
 
 /**
  * What the overlay draws beyond the track at film time `time` and `progress`, from the stores: the texts and photos
  * of the timeline, the credits of the sources in use (as the status bar: relief, imagery, weather and OpenStreetMap
- * once loaded), the ghost-race leaderboard, the dip of a shot transition, « À la suite » the card of each stage and the
+ * once loaded), the ghost-race leaderboard, the legend of the track colouring, the dip of a shot transition, « À la suite » the card of each stage and the
  * dip of each junction (from the film clock: `time.junctions`), and the size of the film chosen for the project (the free offsets of the widgets are its pixels, whatever
  * the device caps it to).
  */
@@ -59,6 +75,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
   return {
     time,
     leaderboard: leaderboardAt(progress),
+    trackLegend: trackLegendOf(tracks, settings.trackColorBy, settings.trackLegendAnchor),
     texts: settings.film.texts,
     media: settings.film.media,
     dip: strongerDip(transitionDipAt(settings.film, time), sequence && time.junctions ? junctionsDipAt(time.junctions, time.timeS) : null),

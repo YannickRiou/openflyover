@@ -1026,8 +1026,13 @@ The interface and the texts drawn into the films and posters exist in **French**
 - **TrackLines**: per-vertex colors (`LineGeometry.setColors`, `vertexColors` on the line and glow materials); points
   inserted by `densify` are interpolated (`resampleValues`). Changing the mode only rewrites the color buffer. With
   per-vertex colors, the material color is white divided by the exposure (`applyExposure`).
-- **Legend** `TrackLegend` (bottom left of the 3D view, only if `trackColorBy !== 'none'`): gradient, bounds with units,
-  "Sans donnée" (no data) chip if values are missing.
+- **Legend**: a widget of the film overlay (`trackLegendWidget` in `src/overlay/draw.ts`), so the preview and the
+  export draw the same one: title, gradient, bounds with units, "Sans donnée" (no data) chip if values are missing. Its
+  values come from the pure `trackLegend(tracks, colorBy)` (`trackColor.ts`), handed to `drawOverlay` through
+  `OverlayExtras.trackLegend` (`overlayExtras`, cached per tracks, quantity and language). Drawn while
+  `trackColorBy !== 'none'`, even with the « Habillage » overlay off; it fades with the cards like the live widgets and
+  stacks with the widgets of its anchor `settings.trackLegendAnchor` (one of the nine `OVERLAY_ANCHORS`, default
+  `'bottom-left'`; « Position de la légende » under « Colorer selon », in the « Trace » presets).
 
 ## Track and marker
 

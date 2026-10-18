@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { junctionsM } from '../film/markerKeys'
 import { t as translate, useT } from '../i18n'
 import { TRACK_COLOR_MODES, TRACK_METRICS, hasMetric } from '../flyover/trackColor'
+import { OVERLAY_ANCHOR_LABELS } from '../overlay/settings'
 import { getPlatform } from '../platform'
 import { fileToAvatarDataUrl } from '../scene/markerBadge'
 import { FIGURE_GRID, MARKER_FIGURE_PATHS } from '../scene/markerFigures'
@@ -33,6 +34,7 @@ import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { formatDistance, formatPercent, formatShort } from './format'
+import { AnchorPicker } from './AnchorPicker'
 import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
@@ -146,6 +148,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const tail = useAppStore((s) => s.settings.trackTail)
   const updateTail = (patch: Partial<TrackTailSettings>) => setSetting('trackTail', { ...tail, ...patch })
   const trackColorBy = useAppStore((s) => s.settings.trackColorBy)
+  const legendAnchor = useAppStore((s) => s.settings.trackLegendAnchor)
   const firstTrack = useAppStore((s) => s.tracks[0])
   const colorModes = useMemo(
     () =>
@@ -158,7 +161,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   )
 
   return (
-    <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackStyle', 'trackTail']} hidden={hidden}>
+    <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail']} hidden={hidden}>
       <div className="flex items-center gap-1">
         <Switch checked={style.drawOn} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
         <InfoTip text={t('marker.track.drawOnTip')} />
@@ -239,6 +242,15 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           />
         </div>
       </SettingRow>
+      {trackColorBy !== 'none' && (
+        <SettingRow label={t('marker.track.legendAnchor')} value={OVERLAY_ANCHOR_LABELS[legendAnchor]} paths={['trackLegendAnchor']}>
+          <AnchorPicker
+            label={t('marker.track.legendAnchor')}
+            value={legendAnchor}
+            onChange={(anchor) => setSetting('trackLegendAnchor', anchor)}
+          />
+        </SettingRow>
+      )}
       <SettingRow label={t('marker.track.smoothing')} value={formatSmoothing(style.smoothingM)} paths={['trackStyle.smoothingM']}>
         <RangeField
           label={t('marker.track.smoothing')}

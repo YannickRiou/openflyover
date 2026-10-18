@@ -216,6 +216,26 @@ export function robustRange(
   return { min: at(low), max: at(high) }
 }
 
+/** What the legend of the colouring shows (drawn by the film overlay, the preview and the export alike). */
+export interface TrackLegend {
+  label: string
+  unit: string
+  fractionDigits: number
+  colormap: Colormap
+  /** shared colour range of every track (`robustRange`); null when no point has a value */
+  range: ValueRange | null
+  /** some points have no value (drawn in MISSING_COLOR) */
+  missing: boolean
+}
+
+/** Legend of colouring `tracks` by `colorBy`; null without colouring or without track. */
+export function trackLegend(tracks: readonly Track[], colorBy: TrackColorBy): TrackLegend | null {
+  if (colorBy === 'none' || tracks.length === 0) return null
+  const series = tracks.flatMap((track) => trackMetricValues(track, colorBy))
+  const { label, unit, fractionDigits, colormap } = TRACK_METRICS[colorBy]
+  return { label, unit, fractionDigits, colormap, range: robustRange(series), missing: series.some((values) => values.some(Number.isNaN)) }
+}
+
 /**
  * Values of the original points carried over to their densified copy (see `densify`, which keeps the
  * original points as the same objects, in order): inserted points are linearly interpolated, and stay

@@ -53,6 +53,7 @@ export default {
   'track.custom': 'Personnalisée',
   'track.sameAsTrack': 'Celle de la trace',
   'track.colorBy': 'Colorer selon',
+  'track.legendAnchor': 'Position de la légende',
   'track.smoothing': 'Lissage de la trace',
   'track.smoothingTip': 'Trace en zigzag ou caméra qui tremble ? Le lissage moyenne les positions GPS sur cette distance : la trace et la caméra suivent une ligne calme.',
   'track.width': 'Épaisseur de la trace',

@@ -188,6 +188,7 @@ describe('settings and misc', () => {
       grading: { preset: 'naturel', contrast: 0, saturation: 0, warmth: 0, vignette: 0 },
       lens: { shutter: 0, bloom: 0, bloomRadius: 0.6, flare: 0, depthOfField: 0 },
       trackColorBy: 'none',
+      trackLegendAnchor: 'bottom-left',
       trackStyle: { width: 4, dash: 'plein', glow: false, glowIntensity: 0.75, glowWidth: 24, glowColor: '', drawOn: false, smoothingM: 0 },
       trackTail: { enabled: false, lengthM: 1000 },
       marker: {

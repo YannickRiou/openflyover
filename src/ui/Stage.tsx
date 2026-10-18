@@ -8,7 +8,6 @@ import { Icon } from './icons'
 import { SafeZones, useSafeZonesStore } from './SafeZones'
 import { frameRect } from './shell'
 import { withShortcut } from './shortcuts'
-import { TrackLegend } from './TrackLegend'
 import { Button, Tip } from './primitives'
 
 // the 3D scene (three.js, atmosphere, clouds, terrain) is its own chunk: the shell and the welcome card paint first
@@ -36,7 +35,6 @@ export function Stage({ children }: { children?: ReactNode }) {
   const aspectId = useAppStore((s) => s.settings.video.aspect)
   const safeZones = useSafeZonesStore((s) => s.visible)
   const hasTracks = useAppStore((s) => s.tracks.length > 0)
-  const trackColored = useAppStore((s) => s.settings.trackColorBy !== 'none')
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const viewport = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
@@ -68,7 +66,6 @@ export function Stage({ children }: { children?: ReactNode }) {
         <Suspense>
           <OverlayCanvas />
         </Suspense>
-        {trackColored && <TrackLegend />}
         {rect && safeZones && <SafeZones aspect={aspectId} />}
       </div>
       {hasTracks && (

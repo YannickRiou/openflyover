@@ -55,6 +55,7 @@ const messages: Messages['marker'] = {
   'track.custom': 'Eigene',
   'track.sameAsTrack': 'Wie der Track',
   'track.colorBy': 'Einfärben nach',
+  'track.legendAnchor': 'Position der Legende',
   'track.smoothing': 'Glättung des Tracks',
   'track.smoothingTip': 'Zickzack-Track oder wackelnde Kamera? Die Glättung mittelt die GPS-Positionen über diese Distanz: Track und Kamera folgen einer ruhigen Linie.',
   'track.width': 'Linienstärke des Tracks',
