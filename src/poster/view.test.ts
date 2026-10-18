@@ -101,27 +101,33 @@ describe('planFlatMap', () => {
   })
 })
 
+/** A pretend canvas whose 2D context is `ctx`, and shapes that hold nothing (jsdom has none). */
+function stubCanvas(ctx: object): void {
+  vi.stubGlobal('Path2D', class {})
+  vi.stubGlobal('OffscreenCanvas', class {
+    width: number
+    height: number
+    constructor(w: number, h: number) {
+      this.width = w
+      this.height = h
+    }
+    getContext() {
+      return ctx
+    }
+  })
+}
+
 describe('renderFlatMap', () => {
+  const source = { ...SOURCE, id: 'test', name: 'Test', urlTemplate: 'https://t.test/{z}/{x}/{y}.png' } as unknown as TileSourceBase
+
   it('follows its tiles as they come and counts those that never did', async () => {
-    const ctx = new Proxy({}, { get: () => () => undefined, set: () => true })
-    vi.stubGlobal('OffscreenCanvas', class {
-      width: number
-      height: number
-      constructor(w: number, h: number) {
-        this.width = w
-        this.height = h
-      }
-      getContext() {
-        return ctx
-      }
-    })
+    stubCanvas(new Proxy({}, { get: () => () => undefined, set: () => true }))
     try {
       let n = 0
       // every third tile fails
       const fetcher = { fetchBitmap: vi.fn(async () => (n++ % 3 === 2 ? Promise.reject(new Error('HTTP 503')) : ({} as ImageBitmap))) }
       const progress: [number, number][] = []
       const bounds = { west: 6.8, east: 7.0, south: 45.8, north: 46.0 }
-      const source = { ...SOURCE, id: 'test', name: 'Test', urlTemplate: 'https://t.test/{z}/{x}/{y}.png' } as unknown as TileSourceBase
       const map = await renderFlatMap({
         width: 600,
         height: 400,
@@ -139,6 +145,52 @@ describe('renderFlatMap', () => {
       expect(progress.at(-1)).toEqual([total, total])
       expect(map.missingTiles).toBe(Math.floor(total / 3))
       expect(map.view.width).toBe(600)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('marks the start and the finish of every track on top of the lines: one mark for a loop, one where starts meet', async () => {
+    // every drawing order, in turn: « strokeStyle=#123456 », « arc »…
+    const calls: { name: string; args: unknown[] }[] = []
+    const ctx = new Proxy({}, {
+      get: (_, name) => (...args: unknown[]) => void calls.push({ name: String(name), args }),
+      set: (_, name, value) => {
+        calls.push({ name: `${String(name)}=${String(value)}`, args: [] })
+        return true
+      },
+    })
+    stubCanvas(ctx)
+    try {
+      const line = { ...other, color: '#123456' }
+      // a loop elsewhere, back to where it started
+      const loop = buildTrack({ name: 'boucle', source: 'gpx', segments: [{ points: [{ lon: 6.9, lat: 45.9 }, { lon: 6.95, lat: 45.95 }, { lon: 6.9, lat: 45.9 }] }] })
+      // a ghost racer, starting and finishing where the first track does
+      const ghost = { ...other, id: 'ghost', color: '#654321' }
+      const bounds = unionBounds([line, loop]) as LonLatBounds
+      await renderFlatMap({
+        width: 600,
+        height: 400,
+        bounds,
+        source,
+        tracks: [line, loop, ghost],
+        lineWidth: 2,
+        casing: '#fff',
+        fetcher: { fetchBitmap: async () => ({}) as ImageBitmap } as unknown as TileFetcher,
+        signal: new AbortController().signal,
+      })
+      const plan = planFlatMap(bounds, 600, 400, SOURCE)
+      // the last line, the ghost's, is stroked
+      const linesDrawn = calls.findIndex((c, i) => c.name === 'stroke' && calls.slice(0, i).some((p) => p.name === 'strokeStyle=#654321'))
+      expect(linesDrawn).toBeGreaterThan(0)
+      // each mark is anchored by a dot on the spot
+      const dots = calls.filter((c) => c.name === 'arc')
+      expect(dots).toHaveLength(3)
+      expect(calls.findIndex((c) => c.name === 'arc')).toBeGreaterThan(linesDrawn)
+      for (const at of [line.segments[0].points[0], line.segments[0].points[1], loop.segments[0].points[0]]) {
+        const { x, y } = plan.project(at.lon, at.lat)
+        expect(dots.some(({ args: [dx, dy] }) => Math.hypot(Number(dx) - x, Number(dy) - y) < 1)).toBe(true)
+      }
     } finally {
       vi.unstubAllGlobals()
     }

@@ -8,7 +8,7 @@ import { AREA_MARGIN_M } from '../terrain/engine'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { DEFAULT_GRADING } from './grading'
 import { DEFAULT_LENS } from './lens'
-import { DEFAULT_MARKER, DEFAULT_TRACK_STYLE } from './markerSettings'
+import { DEFAULT_MARKER, DEFAULT_TRACK_STYLE, DEFAULT_TRACK_TAIL } from './markerSettings'
 
 vi.mock('@react-three/fiber', () => ({ useFrame: vi.fn(), useThree: vi.fn() }))
 vi.mock('../terrain/engine', async (importOriginal) => ({
@@ -145,6 +145,7 @@ describe('engine options from settings', () => {
     },
     race: { enabled: false, sync: 'elapsed' as const },
     trackStyle: DEFAULT_TRACK_STYLE,
+    trackTail: DEFAULT_TRACK_TAIL,
     marker: DEFAULT_MARKER,
   }
 

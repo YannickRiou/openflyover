@@ -48,6 +48,21 @@ export const DEFAULT_TRACK_STYLE: TrackStyle = {
   smoothingM: 0,
 }
 
+/**
+ * « Traînée » (with `drawOn`): each track is drawn over the last `lengthM` metres behind its marker only, so a loop
+ * or a track that passes twice the same place stays readable. A distance, like the cut at the marker: the preview and
+ * the export draw the same trail, and nothing moves while the film is paused. Tracks drawn whole stay whole.
+ */
+export interface TrackTailSettings {
+  enabled: boolean
+  /** length of the trail behind the marker, along the track (metres) */
+  lengthM: number
+}
+
+export const TRACK_TAIL_LENGTH_RANGE = { min: 100, max: 20_000, step: 100 } as const
+
+export const DEFAULT_TRACK_TAIL: TrackTailSettings = { enabled: false, lengthM: 1000 }
+
 export const TRACK_DASH_LABELS: Record<TrackDash, string> = {
   get plein() { return t('marker.dash.plein') },
   get tirets() { return t('marker.dash.tirets') },
@@ -262,6 +277,10 @@ export function isValidTrackStyle(style: TrackStyle): boolean {
     inRange(style.glowWidth, TRACK_GLOW_WIDTH_RANGE) &&
     (style.glowColor === '' || isHexColor(style.glowColor))
   )
+}
+
+export function isValidTrackTail(tail: TrackTailSettings): boolean {
+  return inRange(tail.lengthM, TRACK_TAIL_LENGTH_RANGE)
 }
 
 const isTrackOrHexColor = (color: string) => color === '' || isHexColor(color)

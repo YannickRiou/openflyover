@@ -26,9 +26,10 @@ import {
   TRACK_GLOW_INTENSITY_RANGE,
   TRACK_GLOW_WIDTH_RANGE,
   TRACK_SMOOTHING_RANGE,
+  TRACK_TAIL_LENGTH_RANGE,
   TRACK_WIDTH_RANGE,
 } from '../scene/markerSettings'
-import type { MarkerFigure, MarkerSettings, TrackStyle } from '../scene/markerSettings'
+import type { MarkerFigure, MarkerSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
 import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -144,6 +145,8 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
   const updateStyle = (patch: Partial<TrackStyle>) => setSetting('trackStyle', { ...style, ...patch })
+  const tail = useAppStore((s) => s.settings.trackTail)
+  const updateTail = (patch: Partial<TrackTailSettings>) => setSetting('trackTail', { ...tail, ...patch })
   const trackColorBy = useAppStore((s) => s.settings.trackColorBy)
   const legendAnchor = useAppStore((s) => s.settings.trackLegendAnchor)
   const firstTrack = useAppStore((s) => s.tracks[0])
@@ -158,11 +161,30 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   )
 
   return (
-    <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle']} hidden={hidden}>
+    <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail']} hidden={hidden}>
       <div className="flex items-center gap-1">
         <Switch checked={style.drawOn} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
         <InfoTip text={t('marker.track.drawOnTip')} />
       </div>
+      {style.drawOn && (
+        <>
+          <div className="flex items-center gap-1">
+            <Switch checked={tail.enabled} onChange={(enabled) => updateTail({ enabled })}>{t('marker.track.tail')}</Switch>
+            <InfoTip text={t('marker.track.tailTip')} />
+          </div>
+          {tail.enabled && (
+            <SettingRow label={t('marker.track.tailLength')} value={formatDistance(tail.lengthM)} paths={['trackTail.lengthM']}>
+              <RangeField
+                label={t('marker.track.tailLength')}
+                {...TRACK_TAIL_LENGTH_RANGE}
+                value={tail.lengthM}
+                format={formatDistance}
+                onChange={(lengthM) => updateTail({ lengthM })}
+              />
+            </SettingRow>
+          )}
+        </>
+      )}
       <Switch checked={style.glow} onChange={(on) => updateStyle({ glow: on })}>{t('marker.track.glow')}</Switch>
       {style.glow && (
         <>

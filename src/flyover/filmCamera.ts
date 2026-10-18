@@ -6,9 +6,10 @@
  *
  * Overview: target = centre of the track's box, distance = OVERVIEW_DISTANCE_FACTOR x box diagonal (more for a frame
  * taller than wide, so 9:16 keeps the whole track), on the side the flight camera looks from where the shot joins
- * the flight (no turn during the transition). The transition lerps the target, nlerps the direction, interpolates the
- * distance geometrically (smootherstep), stays MIN_GROUND_CLEARANCE_M above the ground and, in between, on a glide
- * slope over the flight camera and clear of the relief on the way (`clearOnTheWay`). A shot that cuts ('coupe',
+ * the flight (no turn during the transition). The transition nlerps the direction, interpolates the distance
+ * geometrically (smootherstep), lerps the target as the distance changes, stays MIN_GROUND_CLEARANCE_M above the ground
+ * and, in between, on a glide slope over the flight camera and clear of the relief on the way (`clearOnTheWay`); the
+ * aim is raised as much as the camera, so the tilt goes from one end view's to the other's. A shot that cuts ('coupe',
  * dips to black or white) holds its wide view and cuts at the boundary with the flight (`shotWeight`).
  */
 import { Vector3 } from 'three'
@@ -421,7 +422,10 @@ export function situationFramingOf(position: Vector3, target: Vector3): Required
   }
 }
 
-/** View `k` of the way from `a` to `b` (exactly `a` at 0 and `b` at 1). */
+/**
+ * View `k` of the way from `a` to `b` (exactly `a` at 0 and `b` at 1). `panWithZoom` (shots): the aim moves as the
+ * distance changes rather than with `k`, so a point framed at both ends (the marker) stays in the frame on the way.
+ */
 export function blendViews(
   a: CameraView,
   b: CameraView,
@@ -429,10 +433,10 @@ export function blendViews(
   frame: LocalFrame,
   sample: HeightSampler | null,
   exaggeration: number,
+  panWithZoom = false,
 ): CameraView {
   if (k <= 0) return a
   if (k >= 1) return b
-  const target = a.target.clone().lerp(b.target, k)
   const fromA = a.position.clone().sub(a.target)
   const fromB = b.position.clone().sub(b.target)
   const da = Math.max(1, fromA.length())
@@ -440,6 +444,7 @@ export function blendViews(
   const direction = fromA.divideScalar(da).lerp(fromB.divideScalar(db), k)
   if (direction.lengthSq() < 1e-12) direction.copy(UP)
   const distance = da ** (1 - k) * db ** k
+  const target = a.target.clone().lerp(b.target, panWithZoom && Math.abs(da - db) > 1 ? (da - distance) / (da - db) : k)
   const position = target.clone().addScaledVector(direction.normalize(), distance)
   return { target, position: keepAboveGround(position, frame, sample, exaggeration) }
 }
@@ -711,10 +716,13 @@ export function computeFilmView(
   const wide =
     turned === overview ? overview : { target: turned.target, position: keepAboveGround(turned.position, frame, sample, options.exaggeration) }
   const k = shotWeight(shot, state.phase, state.localS, state.lengthS)
-  const blended =
-    state.phase === 'opening'
-      ? blendViews(wide, flight, k, frame, sample, options.exaggeration)
-      : blendViews(flight, wide, k, frame, sample, options.exaggeration)
-  const view = k > 0 && k < 1 ? clearOnTheWay(blended, flight, k, frame, sample, options.exaggeration) : blended
-  return { ...view, marker: flight.marker }
+  const [from, to] = state.phase === 'opening' ? [wide, flight] : [flight, wide]
+  const blended = blendViews(from, to, k, frame, sample, options.exaggeration, true)
+  if (!(k > 0 && k < 1)) return { ...blended, marker: flight.marker }
+  const { position } = clearOnTheWay(blended, flight, k, frame, sample, options.exaggeration)
+  // the lifts above the ground raise the camera only: its aim goes up as much, so the tilt eases from one end view's
+  // to the other's instead of tipping down at the ground
+  const free = blendViews(from, to, k, frame, null, options.exaggeration, true)
+  const target = blended.target.clone().setY(blended.target.y + position.y - free.position.y)
+  return { target, position, marker: flight.marker }
 }

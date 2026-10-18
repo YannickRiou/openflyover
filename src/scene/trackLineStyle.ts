@@ -6,10 +6,11 @@
  * follows the camera distance rounded to a power of two: the dashes stay put on the ground while the camera flies.
  * Draw-on: each segment draws its pieces up to the marker (`instanceCount`) and the last one is shortened by moving its
  * end vertex in the shared buffer (restored afterwards). The distance comes from the playback progress, so the preview
- * and the export draw the same line.
+ * and the export draw the same line. The trail (« Traînée ») hides the start the other way: the painting step skips
+ * what lies before a distance (`addTrailCut`), since the pieces drawn always start at the first.
  */
-import { CustomBlending, MaxEquation } from 'three'
-import type { Camera, Color, InterleavedBufferAttribute, Vector3 } from 'three'
+import { CustomBlending, InstancedInterleavedBuffer, InterleavedBufferAttribute, MaxEquation } from 'three'
+import type { Camera, Color, Vector3 } from 'three'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import type { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import type { TrackDash, TrackStyle } from './markerSettings'
@@ -164,6 +165,56 @@ export function cutLine(line: CuttableLine, distanceM: number): void {
   const p = line.positions
   setPieceEnd(line, piece, p[a] + (p[a + 3] - p[a]) * t, p[a + 1] + (p[a + 4] - p[a + 1]) * t, p[a + 2] + (p[a + 5] - p[a + 2]) * t)
   line.shortened = piece
+}
+
+// ---------------------------------------------------------------------------
+// Trail (« Traînée »)
+// ---------------------------------------------------------------------------
+
+/** `trailStartM` when there is no trail: below every distance along a track (they start at 0). */
+export const NO_TRAIL = -1
+
+/**
+ * Store the distance along the track of both ends of every piece (`dist`, one value per point) in the geometry, for
+ * the trail cut of `addTrailCut`. The pieces never change once built: draping moves them, not their distances.
+ */
+export function setTrackDistances(geometry: LineGeometry, dist: Float64Array): void {
+  const pieces = dist.length - 1
+  const array = new Float32Array(Math.max(0, pieces) * 2)
+  for (let i = 0; i < pieces; i++) {
+    array[i * 2] = dist[i]
+    array[i * 2 + 1] = dist[i + 1]
+  }
+  const buffer = new InstancedInterleavedBuffer(array, 2, 1)
+  geometry.setAttribute('instanceTrackStart', new InterleavedBufferAttribute(buffer, 1, 0))
+  geometry.setAttribute('instanceTrackEnd', new InterleavedBufferAttribute(buffer, 1, 1))
+}
+
+/**
+ * Teach a track line material to skip what lies before `trailStartM` along the track (`setTrailStart`): the pieces
+ * stay in place, only the painting skips them, so the colours by metric and the dashes stored piece by piece still
+ * match. `cacheKey` names the patched program (it must differ from the unpatched material's).
+ */
+export function addTrailCut(material: LineMaterial, cacheKey: string): void {
+  material.uniforms.trailStartM = { value: NO_TRAIL }
+  const patch = material.onBeforeCompile.bind(material)
+  material.onBeforeCompile = (shader, renderer) => {
+    patch(shader, renderer)
+    shader.vertexShader = `attribute float instanceTrackStart;\nattribute float instanceTrackEnd;\nvarying float vTrackM;\n${shader.vertexShader.replace(
+      'void main() {',
+      'void main() {\n  vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;',
+    )}`
+    shader.fragmentShader = `uniform float trailStartM;\nvarying float vTrackM;\n${shader.fragmentShader.replace(
+      'void main() {',
+      'void main() {\n  if ( vTrackM < trailStartM ) discard;',
+    )}`
+  }
+  material.customProgramCacheKey = () => cacheKey
+}
+
+/** Hide what lies before `startM` along the track (NO_TRAIL: nothing) on a material patched by `addTrailCut`. */
+export function setTrailStart(material: LineMaterial, startM: number): void {
+  material.uniforms.trailStartM.value = startM
 }
 
 /** Distance from `camera` to what it looks at (`target`), for the dash scale. */

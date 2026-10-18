@@ -190,6 +190,7 @@ describe('settings and misc', () => {
       trackColorBy: 'none',
       trackLegendAnchor: 'bottom-left',
       trackStyle: { width: 4, dash: 'plein', glow: false, glowIntensity: 0.75, glowWidth: 24, glowColor: '', drawOn: false, smoothingM: 0 },
+      trackTail: { enabled: false, lengthM: 1000 },
       marker: {
         kind: 'boule',
         figure: 'auto',

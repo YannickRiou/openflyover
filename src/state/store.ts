@@ -16,8 +16,8 @@ import { DEFAULT_PACING } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { DEFAULT_RACE } from '../flyover/race'
 import type { RaceSettings } from '../flyover/race'
-import { DEFAULT_MARKER, DEFAULT_TRACK_STYLE } from '../scene/markerSettings'
-import type { MarkerSettings, TrackStyle } from '../scene/markerSettings'
+import { DEFAULT_MARKER, DEFAULT_TRACK_STYLE, DEFAULT_TRACK_TAIL } from '../scene/markerSettings'
+import type { MarkerSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
 import type { TrackColorBy } from '../flyover/trackColor'
 import { centroid } from '../geo/lonLat'
 import type { FileTarget } from '../platform/platform'
@@ -75,6 +75,8 @@ export interface Settings {
   trackStyle: TrackStyle
   /** progress marker of the flyover (and of the ghost racers): ball, figurine or picture, size */
   marker: MarkerSettings
+  /** add tail to the tracks: with « trace qui se dessine », only the last metres behind each marker are drawn */
+  trackTail: TrackTailSettings
   /** flyover camera style and parameters (replaced as a whole, e.g. by a camera preset) */
   camera: CameraSettings
   /** flyover duration at speed x1 (seconds), whatever the track length */
@@ -202,6 +204,7 @@ export const DEFAULT_SETTINGS: Settings = {
   trackColorBy: 'none',
   trackLegendAnchor: 'bottom-left',
   trackStyle: DEFAULT_TRACK_STYLE,
+  trackTail: DEFAULT_TRACK_TAIL,
   marker: DEFAULT_MARKER,
   camera: DEFAULT_CAMERA,
   flyoverDurationS: DEFAULT_FLYOVER_DURATION_S,
@@ -430,7 +433,7 @@ export function resetAppStore(): void {
     settings: { ...DEFAULT_SETTINGS },
     terrainStats: { ...EMPTY_STATS },
     fitRequest: 0,
-      loading: false,
+    loading: false,
     playback: { ...DEFAULT_PLAYBACK },
     projectName: '',
     freeFraming: false,
