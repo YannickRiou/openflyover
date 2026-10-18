@@ -33,11 +33,15 @@ import { DEFAULT_TRACK_STYLE } from './markerSettings'
 import type { TrackStyle } from './markerSettings'
 import { cumulativeDistances } from '../geo/lonLat'
 import {
+  addTrailCut,
   applyDash,
   createGlowMaterial,
   cutLine,
   lineWidthPx,
+  NO_TRAIL,
   setGlow,
+  setTrackDistances,
+  setTrailStart,
   TRACK_GLOW_MAX_STRENGTH,
   type CuttableLine,
 } from './trackLineStyle'
@@ -241,6 +245,9 @@ function createLineMaterials(
   const glow = createGlowMaterial(new Color(color), width, height)
   // in the opaque pass (still MAX-blended), after the terrain and before the line: the line covers the glow under it
   glow.transparent = false
+  // each track its own trail: the materials belong to its set
+  addTrailCut(solid, 'track-line-trail')
+  addTrailCut(glow, 'track-glow-trail')
   return { solid, glow }
 }
 
@@ -268,6 +275,7 @@ export function buildTrackLineSet(
     const buffer = buildDrapeBuffer(points, frame)
     const positions = new Float32Array(buffer.count * 3)
     const geometry = new LineGeometry()
+    setTrackDistances(geometry, dist)
     const solid = new Line2(geometry, materials.solid)
     solid.name = 'track-line'
     solid.renderOrder = 2
@@ -401,8 +409,14 @@ export function applyTrackStyle(sets: Iterable<TrackLineSet>, style: TrackStyle,
   }
 }
 
-/** Draw `set` up to `distanceM` along its track (Infinity = whole). */
-export function cutTrackLineSet(set: TrackLineSet, distanceM: number): void {
+/**
+ * Draw `set` up to `distanceM` along its track (Infinity = whole), over the last `trailM` metres only (« Traînée »,
+ * Infinity = from the start). A track drawn whole stays whole.
+ */
+export function cutTrackLineSet(set: TrackLineSet, distanceM: number, trailM = Infinity): void {
+  // set even when the marker has not moved: the trail length may have changed while paused
+  const startM = Number.isFinite(distanceM) && Number.isFinite(trailM) ? distanceM - trailM : NO_TRAIL
+  for (const material of materialsOf(set)) setTrailStart(material, startM)
   if (distanceM === set.drawnM) return
   for (const segment of set.segments) cutLine(segment, distanceM)
   set.drawnM = distanceM
