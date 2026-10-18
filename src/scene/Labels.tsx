@@ -385,8 +385,8 @@ export function Labels() {
         const material = new SpriteMaterial({
           map: tex.texture,
           transparent: true,
-          depthTest: true,         // le test de profondeur doit être actif pour pouvoir écrire…
-          depthFunc: AlwaysDepth,  // …mais il laisse toujours passer le label, qui reste au-dessus du relief
+          depthTest: true,         // must be on for the depth write to happen…
+          depthFunc: AlwaysDepth,  // …but always passes, so the label stays above the relief
           depthWrite: true,
           alphaTest: 0.5,
           sizeAttenuation: false,
