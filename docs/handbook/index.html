@@ -488,6 +488,15 @@ h2[id], h3[id] { scroll-margin-top: 16px; }
 
 table.nowrap td:first-child, table.nowrap td:first-child code { white-space: nowrap; }
 
+/* recipes for newcomers: a step made of several blocks, the handbook's own comments in code, a folded checklist */
+.stack { display: grid; gap: 8px; min-width: 0; }
+pre .why { color: var(--moss); font-style: italic; }
+code .why { color: var(--moss); }
+details.callout > summary { cursor: pointer; }
+details.callout > summary > b { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.06em; text-transform: uppercase; }
+details.callout[open] > summary { margin-bottom: 6px; }
+.callout dl.defs dt { overflow-wrap: anywhere; }
+
 </style>
 </head>
 <body>
@@ -510,7 +519,7 @@ table.nowrap td:first-child, table.nowrap td:first-child code { white-space: now
 <nav class="toc" aria-label="Contents">
 <details id="toc-details" open>
 <summary>Contents</summary>
-<ol><li><a href="#about">How to use this handbook</a><ol><li><a href="#other-docs">The other documents, and what each is for</a></li></ol></li><li><a href="#genesis">Genesis and history</a><ol><li><a href="#timeline-history">Ten days of git history</a></li><li><a href="#phases">The phases, with what each left in the code</a></li><li><a href="#decisions">Key decisions, and the reason the repository gives for each</a></li></ol></li><li><a href="#mental-model">A mental model for a developer new to the web</a><ol><li><a href="#runtime">The browser is the runtime, the web page is the program</a></li><li><a href="#languages">HTML, CSS, JavaScript, TypeScript</a></li><li><a href="#npm-vite">npm, package.json, Vite: the build chain</a></li><li><a href="#react">React: components, props, state, hooks, effects</a></li><li><a href="#state">State management: one store, selectors, pure modules</a></li><li><a href="#mvc">How it maps to model-view-controller</a></li><li><a href="#three">Three.js, react-three-fiber, WebGL, the render loop</a></li><li><a href="#canvas2d">Canvas 2D and OffscreenCanvas</a></li><li><a href="#workers">Web Workers: none, on purpose or by default</a></li><li><a href="#storage">Storage in the browser, and what replaces it on the desktop</a></li><li><a href="#service-worker">The service worker (website only)</a></li><li><a href="#webcodecs">WebCodecs, mediabunny and the audio pipeline</a></li><li><a href="#ui-layer">The UI layer: Tailwind, HeroUI and React Aria</a></li></ol></li><li><a href="#rust-tauri">The Rust and Tauri part</a><ol><li><a href="#tauri-concepts">Tauri in plain terms</a></li><li><a href="#rust-contents">What is in src-tauri/</a></li><li><a href="#platform-abstraction">How the web code talks to it: the platform layer</a></li><li><a href="#rust-commands">The ten commands, and who calls them</a></li><li><a href="#rust-security">Security model, in one paragraph</a></li><li><a href="#rust-build">Building, testing, shipping the desktop app</a></li></ol></li><li><a href="#repo-tour">Repository tour</a><ol><li><a href="#tree">The tree, annotated</a></li><li><a href="#module-map">The module map</a></li><li><a href="#module-table">Who imports whom (computed from the code)</a></li><li><a href="#module-files">Key files of each module</a></li><li><a href="#contracts">The shared contracts: src/core/types.ts</a></li><li><a href="#coordinates">Coordinate systems and units</a></li><li><a href="#data-flow">The data flow, from a GPX file to an exported film</a></li></ol></li><li><a href="#domains">Core domains, one by one</a><ol><li><a href="#d-import">Import and geography</a></li><li><a href="#d-terrain">Terrain and imagery: fetch, cache, level of detail</a></li><li><a href="#d-flyover">Flyover camera and pacing</a></li><li><a href="#d-film">The film and the timeline</a></li><li><a href="#d-overlay">Overlay and widgets</a></li><li><a href="#d-data">Weather and OpenStreetMap data</a></li><li><a href="#d-export">The export pipeline</a></li><li><a href="#d-project">Project persistence and migration</a></li><li><a href="#d-i18n">Internationalisation</a></li><li><a href="#d-state">State management, summarised</a></li></ol></li><li><a href="#day-to-day">Day-to-day: install, run, test, release, debug</a><ol><li><a href="#install">Install the prerequisites</a></li><li><a href="#commands">The commands</a></li><li><a href="#unit-tests">Unit tests (Vitest)</a></li><li><a href="#e2e">End-to-end tests</a></li><li><a href="#ci">Continuous integration</a></li><li><a href="#release">Release procedure</a></li><li><a href="#debug">Debugging and performance</a></li><li><a href="#issue-to-pr">From an issue to a pull request</a></li><li><a href="#pitfalls">Common pitfalls, found in the repository's own history</a></li></ol></li><li><a href="#recipes">Recipes</a><ol><li><a href="#recipe-setting">Add a setting, end to end</a></li><li><a href="#recipe-key">Add a keyframed setting</a></li><li><a href="#recipe-tab">Add a rail panel or tab</a></li><li><a href="#recipe-i18n">Add a translation key, or a language</a></li><li><a href="#recipe-primitive">Add a UI primitive (wrap a HeroUI component)</a></li><li><a href="#recipe-palette">Change the colour palette or the spacing scale</a></li><li><a href="#recipe-widget">Add a film widget (an element of the overlay)</a></li><li><a href="#recipe-export">Add an export format</a></li><li><a href="#recipe-source">Add a data source (tiles, weather, landmarks)</a></li><li><a href="#recipe-e2e">Add an end-to-end scenario</a></li><li><a href="#recipe-upgrade">Upgrade a dependency</a></li><li><a href="#recipe-release">Bump the version and release</a></li></ol></li><li><a href="#glossary">Glossary</a><ol><li><a href="#gl-web">Web and tooling</a></li><li><a href="#gl-react">React and interface</a></li><li><a href="#gl-3d">3D, video and sound</a></li><li><a href="#gl-rust">Rust and Tauri</a></li><li><a href="#gl-project">Project vocabulary (English, with the French UI word)</a></li><li><a href="#where-index">Where do I find …</a></li><li><a href="#unknowns">What the repository does not say</a></li></ol></li></ol>
+<ol><li><a href="#about">How to use this handbook</a><ol><li><a href="#other-docs">The other documents, and what each is for</a></li></ol></li><li><a href="#genesis">Genesis and history</a><ol><li><a href="#timeline-history">Ten days of git history</a></li><li><a href="#phases">The phases, with what each left in the code</a></li><li><a href="#decisions">Key decisions, and the reason the repository gives for each</a></li></ol></li><li><a href="#mental-model">A mental model for a developer new to the web</a><ol><li><a href="#runtime">The browser is the runtime, the web page is the program</a></li><li><a href="#languages">HTML, CSS, JavaScript, TypeScript</a></li><li><a href="#npm-vite">npm, package.json, Vite: the build chain</a></li><li><a href="#react">React: components, props, state, hooks, effects</a></li><li><a href="#state">State management: one store, selectors, pure modules</a></li><li><a href="#mvc">How it maps to model-view-controller</a></li><li><a href="#three">Three.js, react-three-fiber, WebGL, the render loop</a></li><li><a href="#canvas2d">Canvas 2D and OffscreenCanvas</a></li><li><a href="#workers">Web Workers: none, on purpose or by default</a></li><li><a href="#storage">Storage in the browser, and what replaces it on the desktop</a></li><li><a href="#service-worker">The service worker (website only)</a></li><li><a href="#webcodecs">WebCodecs, mediabunny and the audio pipeline</a></li><li><a href="#ui-layer">The UI layer: Tailwind, HeroUI and React Aria</a></li></ol></li><li><a href="#rust-tauri">The Rust and Tauri part</a><ol><li><a href="#tauri-concepts">Tauri in plain terms</a></li><li><a href="#rust-contents">What is in src-tauri/</a></li><li><a href="#platform-abstraction">How the web code talks to it: the platform layer</a></li><li><a href="#rust-commands">The ten commands, and who calls them</a></li><li><a href="#rust-security">Security model, in one paragraph</a></li><li><a href="#rust-build">Building, testing, shipping the desktop app</a></li></ol></li><li><a href="#repo-tour">Repository tour</a><ol><li><a href="#tree">The tree, annotated</a></li><li><a href="#module-map">The module map</a></li><li><a href="#module-table">Who imports whom (computed from the code)</a></li><li><a href="#module-files">Key files of each module</a></li><li><a href="#contracts">The shared contracts: src/core/types.ts</a></li><li><a href="#coordinates">Coordinate systems and units</a></li><li><a href="#data-flow">The data flow, from a GPX file to an exported film</a></li></ol></li><li><a href="#domains">Core domains, one by one</a><ol><li><a href="#d-import">Import and geography</a></li><li><a href="#d-terrain">Terrain and imagery: fetch, cache, level of detail</a></li><li><a href="#d-flyover">Flyover camera and pacing</a></li><li><a href="#d-film">The film and the timeline</a></li><li><a href="#d-overlay">Overlay and widgets</a></li><li><a href="#d-data">Weather and OpenStreetMap data</a></li><li><a href="#d-export">The export pipeline</a></li><li><a href="#d-project">Project persistence and migration</a></li><li><a href="#d-i18n">Internationalisation</a></li><li><a href="#d-state">State management, summarised</a></li></ol></li><li><a href="#day-to-day">Day-to-day: install, run, test, release, debug</a><ol><li><a href="#install">Install the prerequisites</a></li><li><a href="#commands">The commands</a></li><li><a href="#unit-tests">Unit tests (Vitest)</a></li><li><a href="#e2e">End-to-end tests</a></li><li><a href="#ci">Continuous integration</a></li><li><a href="#release">Release procedure</a></li><li><a href="#debug">Debugging and performance</a></li><li><a href="#issue-to-pr">From an issue to a pull request</a></li><li><a href="#pitfalls">Common pitfalls, found in the repository's own history</a></li></ol></li><li><a href="#recipes">Recipes</a><ol><li><a href="#recipe-setting">Add a setting, end to end</a></li><li><a href="#recipe-key">Add a keyframed setting</a></li><li><a href="#recipe-tab">Add a rail panel or tab</a></li><li><a href="#recipe-i18n">Add a translation key, or a language</a></li><li><a href="#recipe-primitive">Add a UI primitive (wrap a HeroUI component)</a></li><li><a href="#recipe-palette">Change the colour palette or the spacing scale</a></li><li><a href="#recipe-widget">Add a film widget (an element of the overlay)</a></li><li><a href="#recipe-export">Add an export format</a></li><li><a href="#recipe-source">Add a data source (tiles, weather, landmarks)</a></li><li><a href="#recipe-e2e">Add an end-to-end scenario</a></li><li><a href="#recipe-upgrade">Upgrade a dependency</a></li><li><a href="#recipe-release">Bump the version and release</a></li></ol></li><li><a href="#glossary">Glossary</a><ol><li><a href="#gl-web">Web and tooling</a></li><li><a href="#gl-react">React and interface</a></li><li><a href="#gl-3d">3D, video and sound</a></li><li><a href="#gl-rust">Rust and Tauri</a></li><li><a href="#gl-project">Project vocabulary (English, with the French UI word)</a></li><li><a href="#gl-recipes">Words used in the recipes</a></li><li><a href="#where-index">Where do I find …</a></li><li><a href="#unknowns">What the repository does not say</a></li></ol></li></ol>
 </details>
 </nav>
 
@@ -1509,15 +1518,32 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </ul>
 
   <h3 class="sub" id="issue-to-pr">From an issue to a pull request</h3>
-  <p>The open issues of the repository carry « Leads to investigate » and « More help — step by step » comments built on one method. It works for any bug or small feature.</p>
+  <p><strong>The words.</strong> An <em>issue</em> is a numbered note on GitHub that describes a bug or a wish (« #188 »). A <em>branch</em> is your own line of commits, separate from <code>master</code> until it is merged. A <a href="#gl-pr"><em>pull request</em></a> (PR) is the request to merge that branch into <code>master</code>: GitHub shows the changes, runs the automatic checks (<a href="#ci">CI</a>) on them, and merges when you press the button. The open issues of the repository carry « Leads to investigate » and « More help — step by step » comments built on the method below. It works for any bug or small feature.</p>
   <ol class="recipe-steps">
+    <li><div class="stack">
+      <p><strong>Start from an up-to-date master, on a new branch.</strong> <code>git switch master</code>, <code>git pull</code>, then <code>git switch -c fix/188-short-name</code> (<code>feat/…</code> for a feature, <code>docs/…</code> for documentation).</p>
+      <p><strong>You should see</strong> <code>Switched to a new branch 'fix/188-short-name'</code>.</p>
+    </div></li>
     <li><div><strong>Reproduce, and write down what you see</strong> before reading code: the exact steps, a screenshot, the style or preset used. Play the film twice: a problem seen only on the first playback comes from tiles still loading (<a href="#d-terrain">level of detail</a>); one that stays is in the logic.</div></li>
-    <li><div><strong>Find the chain</strong> from what you see to the pure function behind it: a French label, its key in <code>src/i18n/fr/</code>, the component in <code>src/ui/</code>, the setting in <code>src/state/store.ts</code>, the module that computes (<a href="#where-index">Where do I find …</a>). Components only wire things together; the decision is almost always in a pure <code>.ts</code> function.</div></li>
-    <li><div><strong>Find its tests</strong> (<a href="#unit-tests">not always under the module's name</a>) and run them alone: <code>npx vitest run path/to/file.test.ts</code>. They tell you what the function promises today.</div></li>
+    <li><div><strong>Find the chain</strong> from what you see to the function behind it: a French label on screen, its key in <code>src/i18n/fr/</code> (search the text), the component in <code>src/ui/</code> that uses the key, the setting in <code>src/state/store.ts</code>, the module that computes (<a href="#where-index">Where do I find …</a>). Components only wire things together; the decision is almost always in a <a href="#gl-pure">pure function</a> of a <code>.ts</code> file.</div></li>
+    <li><div class="stack">
+      <p><strong>Find its tests</strong> (<a href="#unit-tests">not always under the module's name</a>) and run them alone: <code>npx vitest run path/to/file.test.ts</code>. They tell you what the function promises today.</p>
+      <p><strong>You should see</strong> them pass: the bug is a case the tests do not cover yet.</p>
+    </div></li>
     <li><div><strong>Measure before changing</strong>: a throwaway test file that calls the function with your case and prints the values (<code>console.log</code>, <code>console.table</code>; add <code>--silent=false</code> if nothing shows), or a temporary log in the running app. Do not commit it. The numbers choose your thresholds and prove the fix afterwards.</div></li>
-    <li><div><strong>Write the failing test, then the change</strong>, within the repository's rules: no state between frames, a new <code>Track</code> field is optional and handled by both halves of <code>project/document.ts</code>, a new setting follows <a href="#recipe-setting">the recipe</a>.</div></li>
-    <li><div><strong>Check every consumer</strong>: search the function and the pattern it relies on (for heights, <code>?? at.ele</code>); <code>npm run typecheck</code> lists every <code>Record</code> and language file that misses a new id.</div></li>
-    <li><div><strong>Close the loop</strong>: <code>npx vitest run</code>, <code>npm run typecheck</code>, <code>npm run lint</code>, the manual check of the first step, then the docs (<code>CHANGELOG.md</code> if visible, <code>ARCHITECTURE.md</code> if a contract or a documented value changes). If an issue comment pointed to the wrong place, say so in the issue.</div></li>
+    <li><div class="stack">
+      <p><strong>Write the failing test, then the change</strong>, within the repository's rules: no state between frames, a new <code>Track</code> field is optional and handled by both halves of <code>project/document.ts</code>, a new setting follows <a href="#recipe-setting">the recipe</a>.</p>
+      <p><strong>You should see</strong> the new test fail first (a <code>FAIL</code> block with <code>- Expected</code> / <code>+ Received</code>: <a href="#unit-tests">how to read it</a>), then pass after your change.</p>
+    </div></li>
+    <li><div><strong>Check every consumer</strong>: search the function and the pattern it relies on (for heights, <code>?? at.ele</code>); <code>npm run typecheck</code> lists every <code>Record</code> table and language file that misses a new id.</div></li>
+    <li><div class="stack">
+      <p><strong>Close the loop</strong>: <code>npx vitest run</code>, <code>npm run typecheck</code>, <code>npm run lint</code>, the manual check of the second step, then the docs (<code>CHANGELOG.md</code> under <code>## Unreleased</code> if users can see the change, <code>ARCHITECTURE.md</code> if a contract or a documented value changes). If an issue comment pointed to the wrong place, say so in the issue.</p>
+      <p><strong>You should see</strong> all tests pass, no type error, no lint line marked <code>error</code>, and the problem gone in the app.</p>
+    </div></li>
+    <li><div class="stack">
+      <p><strong>Commit, push, open the pull request.</strong> <code>git status</code> (check that only your files changed), <code>git add</code> with those files, <code>git commit -m "fix(scene): fix #188, what changes for the user"</code> (the prefixes are in <a href="#commands">The commands</a>), <code>git push -u origin fix/188-short-name</code>, then open the pull request on GitHub (or <code>gh pr create</code>). Writing <code>Fixes #188</code> in its description closes the issue when it is merged.</p>
+      <p><strong>You should see</strong> the CI checks start on the pull request (<code>lint</code>, <code>test</code>, <code>build</code>, and <code>rust</code> when <code>src-tauri/</code> changed) and turn green. Then merge it; the website updates on its own.</p>
+    </div></li>
   </ol>
 
   <h3 class="sub" id="pitfalls">Common pitfalls, found in the repository's own history</h3>
@@ -1563,7 +1589,8 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
 </section>
 <section>
   <div class="sec-head"><span class="num">08</span><h2 id="recipes">Recipes</h2></div>
-  <p>Each recipe lists the files to touch <em>in order</em>, with the real names, then a checklist of what to verify. Every recipe ends with the same gate: <code>npm run typecheck</code>, <code>npm run lint</code>, <code>npx vitest run --maxWorkers=1</code>, and <code>npm run build</code> when you touched configuration. Keep the change small: do what is needed and note possible extensions separately.</p>
+  <p>A recipe is the list of files to touch for one common change, <em>in order</em>, with the real names, then a checklist of what to verify. If you are new to web code, start with <a href="#recipe-setting">Add a setting, end to end</a>: it is a complete walk-through on a real setting, with the command to run after each step and what you should see. The other recipes assume you have done it once. Unknown words are in the <a href="#glossary">glossary</a>, under <a href="#gl-recipes">Words used in the recipes</a>.</p>
+  <p>Commands are typed in a terminal opened in the repository folder. Every recipe ends with the same gate (the checks that must pass before a commit): <code>npm run typecheck</code> (the compiler checks names and types without running anything), <code>npm run lint</code> (a checker of risky code patterns), <code>npx vitest run --maxWorkers=1</code> (all unit tests), and <code>npm run build</code> when you touched configuration. Keep the change small: do what is needed and note possible extensions separately.</p>
   <div class="cards">
     <div class="card"><h4>Settings and UI</h4><p><a href="#recipe-setting">Add a setting end to end</a> · <a href="#recipe-key">Add a keyframed setting</a> · <a href="#recipe-tab">Add a rail panel or tab</a> · <a href="#recipe-primitive">Add a UI primitive</a> · <a href="#recipe-palette">Change the palette or the spacing scale</a></p></div>
     <div class="card"><h4>Text</h4><p><a href="#recipe-i18n">Add a translation key or a language</a></p></div>
@@ -1572,19 +1599,177 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </div>
 
   <h3 class="sub" id="recipe-setting">Add a setting, end to end</h3>
-  <p>Example: a new on/off or numeric option of the project. Because settings are handled generically, persistence and undo come almost free.</p>
+  <p>This is the recipe you will use most, and the one to read first: the others assume you have done it once. It walks through a real setting of the app, line by line, with the command to run after each step and what you should see. Plan about an hour the first time.</p>
+
+  <h4 class="mini">What a « setting » is in this app</h4>
+  <p>A <a href="#gl-setting">setting</a> is one value of the project that the user chooses in a panel: a checkbox, a slider, a list. Think of the project as a saved form: each setting is one field of that form. Every setting has a name in the code (<code>cloudShadows</code>), a type (here <code>true</code> or <code>false</code>), and a <a href="#gl-default">default value</a>, the value a new project starts with.</p>
+  <p>All the settings live together in one object called <code>Settings</code>, kept in the app's shared memory, the <a href="#gl-store">store</a>. Panels read it and change it; the 3D view and the film read it to draw; « Enregistrer » writes the whole object into the project file; opening a file reads it back and checks every value. Because all of this works over the whole object, a new setting is saved, undone (Ctrl+Z) and checked without writing any code for it. That is why adding one only touches a handful of places.</p>
+
+  <h4 class="mini">The journey of one value, and the places you touch</h4>
+  <p>The life of one value: it starts as a default, is shown as a control in a panel, is read by the code that draws, is saved in the project file and checked when a file is opened, has its label in five languages, and is covered by tests. In files:</p>
+  <div class="table-wrap"><table class="wide">
+    <thead><tr><th>#</th><th>File</th><th>What you change there</th><th>Why this place exists, in one sentence</th></tr></thead>
+    <tbody>
+      <tr><td data-label="#">1</td><td data-label="File"><code>src/state/store.ts</code></td><td data-label="What you change there">Two lines: the name and type in <code>interface Settings</code>, the starting value in <code>DEFAULT_SETTINGS</code>.</td><td data-label="Why this place exists, in one sentence">It is the list of every field of the form, with the value of a blank form.</td></tr>
+      <tr><td data-label="#">2</td><td data-label="File"><code>src/project/document.ts</code></td><td data-label="What you change there">Usually nothing. One line in <code>SETTING_CHECKS</code> if a value of the right type can still be wrong (a number out of range, an unknown name).</td><td data-label="Why this place exists, in one sentence">It writes the project file and checks each value when a file is opened, so a damaged or older file never breaks the app.</td></tr>
+      <tr><td data-label="#">3</td><td data-label="File"><code>src/i18n/fr/&lt;domain&gt;.ts</code> and the same file in <code>en</code>, <code>es</code>, <code>it</code>, <code>de</code></td><td data-label="What you change there">One line per language: the label of the control.</td><td data-label="Why this place exists, in one sentence">The screen never contains a sentence directly: it asks for a text by its name, and gets it in the user's language.</td></tr>
+      <tr><td data-label="#">4</td><td data-label="File">the panel of the right tab, here <code>src/ui/SettingsPanel.tsx</code></td><td data-label="What you change there">Read the value, add its name to the section's list, add the control.</td><td data-label="Why this place exists, in one sentence">It is the screen the user touches; it changes the value in the store and nothing else.</td></tr>
+      <tr><td data-label="#">5</td><td data-label="File">the code that acts, here <code>src/scene/AtmosphereLayer.tsx</code></td><td data-label="What you change there">Read the value where the effect is computed.</td><td data-label="Why this place exists, in one sentence">It is where the value finally changes the picture (or the film, or the export).</td></tr>
+      <tr><td data-label="#">6</td><td data-label="File"><code>src/state/store.test.ts</code>, <code>src/scene/TerrainLayer.test.tsx</code>, optionally <code>src/project/document.test.ts</code></td><td data-label="What you change there">Add the new line to the two full lists of settings; optionally a save-and-reopen test.</td><td data-label="Why this place exists, in one sentence">Two tests spell out every setting on purpose, so that nobody adds one by accident.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Optional extras, after the six: the setting's family of <a href="#gl-preset">presets</a> (<code>src/project/presets.ts</code>), its « poids de rendu » if it slows the export (<code>src/ui/renderCost.ts</code>), and the docs (<code>CHANGELOG.md</code>).</p>
+
+  <div class="callout tip"><b>Before you start</b>
+    <ul>
+      <li>A terminal opened in the repository folder (the one that holds <code>package.json</code>), with Node 24 active (<a href="#install">Install the prerequisites</a>). Every command below is typed there.</li>
+      <li>A branch of your own: <code>git switch -c feat/my-setting</code>. Throw it away afterwards if you only practise.</li>
+      <li>A second terminal with <code>npm run dev</code> running, and <code>http://127.0.0.1:5173</code> open in Chrome or Edge with the sample loaded (« Essayer avec l'exemple »). Saved files reload in the page by themselves.</li>
+      <li>To read the code snippets: <code>Settings</code>, <code>useAppStore</code> and the like are names defined in the code; <code>(s) =&gt; s.settings.cloudShadows</code> is a small function written inline (« given the store <code>s</code>, give back its <code>settings.cloudShadows</code> »). The <a href="#react">React</a> and <a href="#state">store</a> parts of the mental model explain both in more depth.</li>
+    </ul>
+  </div>
+
+  <h4 class="mini">Worked example: « Ombres des nuages » (<code>cloudShadows</code>)</h4>
+  <p>The checkbox « Ombres des nuages », in the « Lumière » tab, section « Atmosphère », turns the shadows that clouds cast on the ground on or off. It is a plain on/off setting that goes through every step, so below are <em>all</em> the lines that make it work, taken from the code as it is today, in the order you would write them if it did not exist yet. To practise, repeat the steps with a name of your own (say <code>demoFlag</code>) next to each line shown.</p>
+  <p class="small">In the code blocks, the coloured comments (<code><span class="why">// like this</span></code>) are this handbook's explanations, not part of the file: do not copy them. A line with <code>...</code> stands for code left out.</p>
+
   <ol class="recipe-steps">
-    <li><div><strong>Type and default</strong> in <code>src/state/store.ts</code>: add the field to <code>interface Settings</code> (with a one-line comment) and to <code>DEFAULT_SETTINGS</code>. If the setting is a structured object, define its type, <code>DEFAULT_X</code>, <code>isValidX</code> and <code>withXDefaults</code> in the module that owns the concept (as <code>scene/lens.ts</code> does for <code>lens</code>) and import them into the store.</div></li>
-    <li><div><strong>Validation</strong> in <code>src/project/document.ts</code>: nothing is needed for a boolean or a free number (the shape is checked against the default). Add an entry to <code>SETTING_CHECKS</code> when a value of the right type can still be invalid (an enum, a catalogue id, a range). If you add <em>fields</em> to an existing object setting, add or extend its entry in <code>SETTING_UPGRADES</code> so older projects and presets still load. Note that an empty array default accepts any array.</div></li>
-    <li><div><strong>Behaviour</strong>: read it where it acts. In the 3D scene, a component under <code>src/scene/</code> selects it (<code>useAppStore((s) =&gt; s.settings.x)</code>); the view wakes on its own, because <code>renderOnDemand.ts</code> reacts to any change of the app store. In a pure module, pass it as a parameter (never import the store). The export reads <code>useAppStore.getState().settings</code> at run time, so check that nothing you added is captured before the export starts.</div></li>
-    <li><div><strong>Control</strong> in the panel of the right tab (see the table in <a href="#recipe-tab">the next recipe</a>): inside a <code>PanelSection title=… keys={[…, 'x']}</code> (the <code>keys</code> drive the « modifié » marker and the per-section reset to defaults), a <code>SettingRow label value paths={['x']}</code> for a secondary setting, or a primitive (<code>Switch</code>, <code>Checkbox</code>, <code>Select</code>, <code>NumberField</code>, <code>RangeField</code> for a slider). Write with <code>setSetting('x', value)</code>. Copy the nearest existing row.</div></li>
-    <li><div><strong>Texts</strong>: add the label, hint and any tooltip to <code>src/i18n/fr/&lt;domain&gt;.ts</code> <em>then</em> to the same file of each other language, and use <code>t('domain.key')</code> from <code>useT()</code>. See <a href="#recipe-i18n">the i18n recipe</a>.</div></li>
-    <li><div><strong>Presets</strong> (optional): to include it in a preset family, add the key to <code>PRESET_SCOPE_KEYS</code> in <code>src/project/presets.ts</code>.</div></li>
-    <li><div><strong>Export cost</strong> (optional): if it lengthens the export, give its row a <code>weight</code> and add it to <code>src/ui/renderCost.ts</code>.</div></li>
-    <li><div><strong>Tests</strong>: the default and any pure logic next to the module (<code>store.test.ts</code> for the store); a round trip in <code>src/project/document.test.ts</code> (saved, loaded, an invalid value falls back to the default with a warning, a project without the key loads); a component test only if the control has logic. The i18n parity test runs by itself.</div></li>
-    <li><div><strong>Docs</strong>: a line in <code>CHANGELOG.md</code> if visible; <code>docs/user-guide.html</code> (French) if users need to know; <code>ARCHITECTURE.md</code> if it is a contract.</div></li>
+    <li><div class="stack">
+      <p><strong>Declare the setting and give it a default</strong> in <code>src/state/store.ts</code>. Add the name, its <a href="#gl-type">type</a> and a one-line comment to <code>interface Settings</code>, then the starting value to <code>DEFAULT_SETTINGS</code>. Put the line next to its neighbours in the panel, so the file reads in the same order as the screen.</p>
+      <div class="code"><figcaption>src/state/store.ts</figcaption><pre><code>export interface Settings {
+  ...
+  /** cast shadows of the clouds on the terrain (atmosphere and weather or manual clouds only) */
+  cloudShadows: boolean   <span class="why">// the field: its name, then its type (true or false)</span>
+  ...
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  ...
+  cloudShadows: true,     <span class="why">// a new project starts with cloud shadows on</span>
+  ...
+}</code></pre></div>
+      <p>Two tests keep a complete copy of the list of settings, so that a setting is never added by mistake. Add the same default there.</p>
+      <div class="code"><figcaption>src/state/store.test.ts, test « setSetting updates one key and keeps the others », inside the expected object</figcaption><pre><code>      cloudShadows: true,</code></pre></div>
+      <div class="code"><figcaption>src/scene/TerrainLayer.test.tsx, block « engine options from settings », inside const settings = { … }</figcaption><pre><code>    cloudShadows: true,</code></pre></div>
+      <p><strong>Run</strong> <code>npm run typecheck</code>, then <code>npx vitest run src/state/store.test.ts src/scene/TerrainLayer.test.tsx</code>.</p>
+      <p><strong>You should see</strong> the type check print its two header lines (<code>&gt; tsc --noEmit -p tsconfig.app.json</code>) and nothing else, and the tests end with <code>Test Files  2 passed (2)</code>. Nothing has changed on screen yet.</p>
+    </div></li>
+
+    <li><div class="stack">
+      <p><strong>Saving and checking: usually nothing to write.</strong> When a project is opened, <code>src/project/document.ts</code> compares each value with the default: a value is accepted when it has the same kind (here a <code>true</code>/<code>false</code>, like the default), otherwise the default is used and the user gets a warning. That check is automatic for every setting. A project saved before your setting existed gets the default. So for <code>cloudShadows</code> this file does not mention it at all.</p>
+      <p>Add a line to <code>SETTING_CHECKS</code> only when a value of the right kind can still be wrong. The real entry for the exposure, a number that must stay between −4 and +4:</p>
+      <div class="code"><figcaption>src/project/document.ts (SETTING_CHECKS, one real entry)</figcaption><pre><code>  exposureEv: (v) =&gt; v &gt;= -4 &amp;&amp; v &lt;= 4,   <span class="why">// accepted only when this answers true</span></code></pre></div>
+      <p>This is <a href="#gl-validation">validation</a>. Its cousin, the upgrade (<code>SETTING_UPGRADES</code>), is only needed when you add fields to an existing group of values; see <a href="#gl-migration">upgrade and migration</a>.</p>
+    </div></li>
+
+    <li><div class="stack">
+      <p><strong>Write the label in the five languages.</strong> Pick the <a href="#gl-i18n-key">domain</a> of the tab (the file named after the area: the « Lumière » tab uses <code>light.ts</code>) and add one line, French first.</p>
+      <div class="code"><figcaption>src/i18n/fr/light.ts, then src/i18n/en/light.ts, es/light.ts, it/light.ts, de/light.ts</figcaption><pre><code>  'atmosphere.cloudShadows': 'Ombres des nuages',      <span class="why">// fr: the reference language</span>
+  'atmosphere.cloudShadows': 'Cloud shadows',          <span class="why">// en</span>
+  'atmosphere.cloudShadows': 'Sombras de las nubes',   <span class="why">// es</span>
+  'atmosphere.cloudShadows': 'Ombre delle nuvole',     <span class="why">// it</span>
+  'atmosphere.cloudShadows': 'Wolkenschatten',         <span class="why">// de</span></code></pre></div>
+      <p>The code will ask for this text as <code>'light.atmosphere.cloudShadows'</code>: the domain, a dot, then the key.</p>
+      <p><strong>Run</strong> <code>npm run typecheck</code> after the French line alone: you should see one error per other language, <code>src/i18n/en/light.ts(3,7): error TS2741: Property ''atmosphere.cloudShadows'' is missing in type …</code>. That is the compiler listing the translations still to write. Add them, run it again, then <code>npx vitest run src/i18n</code>.</p>
+      <p><strong>You should see</strong> no type error, and the i18n tests pass (they check that every language has the same keys and the same <code>{placeholders}</code>).</p>
+    </div></li>
+
+    <li><div class="stack">
+      <p><strong>Show the control in the panel.</strong> Find the panel of the tab in the table of <a href="#recipe-tab">Add a rail panel or tab</a> (« Lumière » is <code>LightSettings</code> in <code>src/ui/SettingsPanel.tsx</code>). Three things to add, each copied from the line next to it:</p>
+      <div class="code"><figcaption>src/ui/SettingsPanel.tsx (LightSettings)</figcaption><pre><code>export function LightSettings() {
+  <span class="why">// t('…') gives a text in the current language</span>
+  const t = useT()
+  const atmosphere = useAppStore((s) =&gt; s.settings.atmosphere)
+  ...
+  <span class="why">// read the value; this panel redraws when it changes</span>
+  const cloudShadows = useAppStore((s) =&gt; s.settings.cloudShadows)
+  ...
+  <span class="why">// the one function that changes a setting</span>
+  const setSetting = useAppStore((s) =&gt; s.setSetting)
+  ...
+  return (
+    &lt;&gt;
+      <span class="why">// keys: the settings this section owns, for « modifié » and « Par défaut »</span>
+      &lt;PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'exposureEv']}&gt;
+        ...
+        <span class="why">// shown only while « Atmosphère » is on</span>
+        {atmosphere &amp;&amp; (
+          <span class="why">// a ticked box shows the value; a click writes the new value; the label comes from step 3</span>
+          &lt;Checkbox id={`${id}-cloud-shadows`} checked={cloudShadows} onChange={(on) =&gt; setSetting('cloudShadows', on)}&gt;{t('light.atmosphere.cloudShadows')}&lt;/Checkbox&gt;
+        )}</code></pre></div>
+      <p>In words: <code>useAppStore(...)</code> is a <a href="#gl-hook">hook</a> that reads one value from the <a href="#gl-store">store</a> through a <a href="#gl-selector">selector</a>; <code>&lt;Checkbox … /&gt;</code> is a <a href="#gl-component">component</a> from <code>src/ui/primitives/</code>, and <code>checked</code>, <code>onChange</code> are its <a href="#gl-props">props</a>; <code>setSetting('cloudShadows', on)</code> is the <a href="#gl-action">action</a> that stores the new value (and makes one undo step). For a number, use <code>RangeField</code> inside a <code>SettingRow</code> instead, as the exposure right below it does (<a href="#react">excerpt in the mental model</a>).</p>
+      <p><strong>Run</strong> <code>npm run typecheck</code>, then look at the app.</p>
+      <p><strong>You should see</strong>, in « Lumière » › « Atmosphère », the box « Ombres des nuages », ticked. Untick it: the section head shows the <a href="#gl-modified">« modifié »</a> badge and a « Par défaut » button; Ctrl+Z ticks it again and the badge goes away. Switch the language to English (top bar): the label reads « Cloud shadows ».</p>
+    </div></li>
+
+    <li><div class="stack">
+      <p><strong>Make it act.</strong> Read the value where the effect is computed. Here, the 3D layer that draws the sky and the light reads the whole store once per drawn image (inside <code>useFrame</code>, the function run for every image) and sets the strength of the cloud shadows to 0 when the box is off:</p>
+      <div class="code"><figcaption>src/scene/AtmosphereLayer.tsx (excerpt)</figcaption><pre><code>  <span class="why">// runs each time the 3D view draws an image</span>
+  useFrame(() =&gt; {
+    ...
+    <span class="why">// read the store as it is now</span>
+    const { playback, settings, tracks } = useAppStore.getState()
+    ...
+    <span class="why">// box off, or no clouds: shadow strength 0</span>
+    cloudShadowRef.current.value = cloudsOn &amp;&amp; settings.cloudShadows ? weather.shadowStrength : 0</code></pre></div>
+      <p>Where to read a value depends on where it acts. In a component of <code>src/scene/</code> or <code>src/ui/</code>: read it from the store, as above. In a <a href="#gl-pure">pure function</a> (the <code>.ts</code> files of <code>flyover/</code>, <code>overlay/</code>, <code>film/</code>…): never import the store; add a parameter and let the caller pass the value. You do not need to tell the 3D view to redraw: <code>src/scene/renderOnDemand.ts</code> wakes it after any change of the settings. You do not need to touch the export either: it reads the same store when it starts.</p>
+      <p><strong>You should see</strong> the effect in the app. For this setting: « Météo » › « Nuages », choose « Manuel » so that there are clouds, then tick and untick « Ombres des nuages »: the dark patches on the ground appear and disappear, also while the film is paused.</p>
+    </div></li>
+
+    <li><div class="stack">
+      <p><strong>Test it, then run the whole gate.</strong> For a plain on/off setting the generic tests already cover saving and checking (« handles any key of DEFAULT_SETTINGS, including keys added later » in <code>src/project/document.test.ts</code>). If your value has rules of its own (a <code>SETTING_CHECKS</code> line, a computation), add a test. A save-and-reopen test for <code>cloudShadows</code> would read like this (it is not in the repository; it passes if you add it inside the <code>describe('serializeProject / parseProject', …)</code> block):</p>
+      <div class="code"><figcaption>src/project/document.test.ts (an example you could add)</figcaption><pre><code>  it('keeps « Ombres des nuages » off after save and reopen, and rejects a value that is not true or false', () =&gt; {
+    <span class="why">// a project with the box unticked</span>
+    const state = { ...STATE, settings: { ...SETTINGS, cloudShadows: false } }
+    <span class="why">// write the file, read it back: still unticked</span>
+    expect(parseProject(serializeProject(state, 'x')).settings.cloudShadows).toBe(false)
+    <span class="why">// a damaged value is refused and reported</span>
+    expect(sanitizeSettings({ cloudShadows: 'oui' }).invalid).toEqual(['cloudShadows'])
+  })</code></pre></div>
+      <p><strong>Run</strong> <code>npx vitest run src/project/document.test.ts</code>, then the gate: <code>npm run typecheck</code>, <code>npm run lint</code>, <code>npx vitest run --maxWorkers=1</code>.</p>
+      <p><strong>You should see</strong> every test file pass (<code>Test Files  … passed</code>, no <code>FAIL</code>; a hint about « Transform … » printed after it is harmless), no type error, and no line marked <code>error</code> from the lint (a few existing <code>warning … only-export-components</code> lines are normal).</p>
+    </div></li>
+
+    <li><div class="stack">
+      <p><strong>Optional extras.</strong> Presets: <code>cloudShadows</code> belongs to the « Style de carte » family, so it is listed in <code>carte</code> of <code>PRESET_SCOPE_KEYS</code> (<code>src/project/presets.ts</code>); add yours to the family it belongs to, or to none (the « Tous les réglages » presets keep every setting anyway). If the setting lengthens the export, see « Export cost » in the checklist below. Then a line in <code>CHANGELOG.md</code> under <code>## Unreleased</code> if users can see the change.</p>
+      <p><strong>Finish</strong> with a commit and a pull request: <a href="#issue-to-pr">From an issue to a pull request</a>, last step.</p>
+    </div></li>
   </ol>
-  <div class="callout"><b>Verify</b>
+
+  <div class="callout warn"><b>If it goes wrong</b>
+    <dl class="defs">
+      <dt><code>error TS2741: Property ''atmosphere.cloudShadows'' is missing in type …</code> in <code>src/i18n/en/light.ts</code> (or <code>es</code>, <code>it</code>, <code>de</code>)</dt>
+      <dd>A language lacks the text. Add the same key, translated, to that file. The two quotes around the name are normal.</dd>
+      <dt><code>error TS2741: Property 'cloudShadows' is missing in type … but required in type 'Settings'</code> in <code>src/state/store.ts</code>, or <code>error TS2345</code> with the same « is missing » in <code>src/scene/TerrainLayer.test.tsx</code></dt>
+      <dd>The name is in <code>interface Settings</code> but not in <code>DEFAULT_SETTINGS</code>, or not in the test's full list of settings. Add the default line there (step 1).</dd>
+      <dt>The test « setSetting updates one key and keeps the others » fails, and its diff shows <code>+   "cloudShadows": true,</code></dt>
+      <dd>Not a bug: <code>src/state/store.test.ts</code> spells out every setting and yours is not in its expected list yet. The <code>+</code> line is what the code has and the test does not expect: add <code>cloudShadows: true,</code> to the expected object.</dd>
+      <dt><code>Property 'cloudShadow' does not exist on type 'Settings'. Did you mean 'cloudShadows'?</code>, or <code>Argument of type '"light.atmosphere.cloudShadow"' is not assignable to parameter of type 'MessageKey'</code></dt>
+      <dd>A typo in a setting name or a text key. The compiler checks both against the real lists; fix the spelling it points to.</dd>
+      <dt>The « modifié » badge does not appear when you change the value</dt>
+      <dd>The name is missing from the <code>keys={[…]}</code> list of its <code>PanelSection</code>. Note that the badge only shows while the value differs from the default: for <code>cloudShadows</code> (default on) it appears when you <em>untick</em> the box.</dd>
+      <dt>The control changes, but the picture does not</dt>
+      <dd>Check that the code of step 5 reads the same name, and the conditions of the effect (cloud shadows need « Atmosphère » on and clouds in the sky). If the picture only changes while the film plays, the value is probably kept somewhere else than <code>useAppStore</code>: <code>renderOnDemand.ts</code> only wakes the paused view for the stores it watches.</dd>
+      <dt>Opening a project shows « Réglages invalides remplacés par leur valeur par défaut : … » with your setting's name</dt>
+      <dd>The file holds a value of another kind than the default, or one that your <code>SETTING_CHECKS</code> line refuses. If you changed the shape of an existing setting, older files need an upgrade (<a href="#d-project">Project persistence and migration</a>).</dd>
+    </dl>
+  </div>
+
+  <details class="callout">
+    <summary><b>Checklist for later, once you have done it once</b></summary>
+    <p>The same recipe in its compact form, with the cases the worked example does not meet (objects, presets, export cost). Because settings are handled generically, persistence and undo come almost free.</p>
+    <ol class="recipe-steps">
+      <li><div><strong>Type and default</strong> in <code>src/state/store.ts</code>: add the field to <code>interface Settings</code> (with a one-line comment) and to <code>DEFAULT_SETTINGS</code>; add it to the full lists of <code>store.test.ts</code> and <code>scene/TerrainLayer.test.tsx</code>. If the setting is a structured object, define its type, <code>DEFAULT_X</code>, <code>isValidX</code> and <code>withXDefaults</code> in the module that owns the concept (as <code>scene/lens.ts</code> does for <code>lens</code>) and import them into the store.</div></li>
+      <li><div><strong>Validation</strong> in <code>src/project/document.ts</code>: nothing is needed for a boolean or a free number (the shape is checked against the default). Add an entry to <code>SETTING_CHECKS</code> when a value of the right type can still be invalid (an enum, a catalogue id, a range). If you add <em>fields</em> to an existing object setting, add or extend its entry in <code>SETTING_UPGRADES</code> so older projects and presets still load. Note that an empty array default accepts any array.</div></li>
+      <li><div><strong>Behaviour</strong>: read it where it acts. In the 3D scene, a component under <code>src/scene/</code> selects it (<code>useAppStore((s) =&gt; s.settings.x)</code>), or reads <code>useAppStore.getState()</code> inside <code>useFrame</code>; the view wakes on its own, because <code>renderOnDemand.ts</code> reacts to any change of the app store. In a pure module, pass it as a parameter (never import the store). The export reads <code>useAppStore.getState().settings</code> at run time, so check that nothing you added is captured before the export starts.</div></li>
+      <li><div><strong>Control</strong> in the panel of the right tab (see the table in <a href="#recipe-tab">Add a rail panel or tab</a>): inside a <code>PanelSection title=… keys={[…, 'x']}</code> (the <code>keys</code> drive the « modifié » marker and the per-section reset to defaults), a <code>SettingRow label value paths={['x']}</code> for a secondary setting, or a primitive (<code>Switch</code>, <code>Checkbox</code>, <code>Select</code>, <code>NumberField</code>, <code>RangeField</code> for a slider). Write with <code>setSetting('x', value)</code>. Copy the nearest existing row.</div></li>
+      <li><div><strong>Texts</strong>: add the label, hint and any tooltip to <code>src/i18n/fr/&lt;domain&gt;.ts</code> <em>then</em> to the same file of each other language, and use <code>t('domain.key')</code> from <code>useT()</code>. See <a href="#recipe-i18n">the i18n recipe</a>.</div></li>
+      <li><div><strong>Presets</strong> (optional): to include it in a preset family, add the key to <code>PRESET_SCOPE_KEYS</code> in <code>src/project/presets.ts</code>.</div></li>
+      <li><div><strong>Export cost</strong> (optional): if it lengthens the export, give its row a <code>weight</code> and add it to <code>src/ui/renderCost.ts</code>.</div></li>
+      <li><div><strong>Tests</strong>: the default and any pure logic next to the module (<code>store.test.ts</code> for the store); a round trip in <code>src/project/document.test.ts</code> (saved, loaded, an invalid value falls back to the default with a warning, a project without the key loads); a component test only if the control has logic. The i18n parity test runs by itself.</div></li>
+      <li><div><strong>Docs</strong>: a line in <code>CHANGELOG.md</code> if visible; <code>docs/user-guide.html</code> (French) if users need to know; <code>ARCHITECTURE.md</code> if it is a contract.</div></li>
+    </ol>
+    <p><strong>Verify</strong></p>
     <ul class="checklist">
       <li>Change it, undo (Ctrl+Z), redo: one step per drag.</li>
       <li>The panel shows « modifié » and the reset puts back the default.</li>
@@ -1592,16 +1777,53 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
       <li>The export looks like the preview. Switch to English: no missing text.</li>
     </ul>
     <p>No migration is needed to <em>add</em> a key: a missing key takes its default. Raise <code>PROJECT_VERSION</code> only if you change the meaning of existing data in a way <code>SETTING_UPGRADES</code> cannot express.</p>
-  </div>
+  </details>
 
   <h3 class="sub" id="recipe-key">Add a keyframed setting</h3>
-  <p>Example: let a film-wide setting vary along the track with keys (like the exposure, the sun hour, the grading or the 3D-label opacity). The keys are generic, you only declare the setting.</p>
+  <p><strong>What it is.</strong> A normal setting has one value for the whole film. A <em>keyframed</em> setting can change along the route: the user pins values at places of the track (<a href="#gl-keyframe">keys</a>, one row of the timeline per setting) and between two keys the value glides from one to the other. The exposure, the sun hour, the four colour-grading values and the opacity of the 3D labels work like this. <strong>When you need it:</strong> when a user would want a film-wide setting to be different at the start and at the end of the film. Do the <a href="#recipe-setting">plain setting recipe</a> first: a keyframed setting is a numeric setting plus the steps below.</p>
+  <p>The keys themselves are generic: saving them, undoing them, drawing their timeline row and their buttons are already written. You only declare the setting in one list and read the « value at this place » instead of the plain value. The real example below is the exposure (« Exposition »).</p>
   <ol class="recipe-steps">
-    <li><div><code>src/film/paramKeys.ts</code>: add the name to <code>FILM_PARAMS</code> and an entry to <code>PARAM_SPECS</code> (label through <code>t()</code>, <code>min</code>, <code>max</code>, <code>step</code>, <code>format</code>; <code>log</code> for a factor), to <code>PARAM_LANE_LABELS</code> and to <code>paramBase</code> (the value the setting has without a key, read from the settings). <code>film/model.ts</code> validates the keys against <code>FILM_PARAMS</code>, so nothing else changes there; the timeline lane, the undo and the project file follow.</div></li>
-    <li><div>Where the setting acts, read the keyed value with the pure <code>paramAt(film, base, param, atM)</code> instead of the setting itself, as the exposure and the 3D labels do (<code>scene/usePacing.ts</code> gives the hooks); keep it a function of the position along the track so the export matches the preview.</div></li>
-    <li><div>The control: write the slider with <code>useKeyedValue(param, base, setBase)</code> (<code>scene/usePacing.ts</code>), which shows the value at the playhead and writes into the key there once the setting has keys, and put <code>&lt;PanelKeys target={{ kind: 'param', param }} /&gt;</code> under it (see <code>GradingPanel.tsx</code> and <code>OverlayPanel.tsx</code>).</div></li>
-    <li><div>Texts: the lane label (<code>PARAM_SPECS</code> getter) in the i18n domain you use, in every language; the key buttons already have their own messages (<code>keys.ts</code>).</div></li>
-    <li><div>Tests: <code>src/film/paramKeys.test.ts</code> (the value between keys), a round trip of a film with such a key in <code>film/model.test.ts</code>, and the control if it has logic.</div></li>
+    <li><div class="stack">
+      <p><strong>Declare it as keyable</strong> in <code>src/film/paramKeys.ts</code>: add the name to <code>FILM_PARAMS</code>, an entry to <code>PARAM_SPECS</code> (label through <code>t()</code>, <code>min</code>, <code>max</code>, <code>step</code>, <code>format</code>; <code>log</code> for a factor), to <code>PARAM_LANE_LABELS</code> and to <code>paramBase</code> (the value the setting has without a key, read from the settings). <code>film/model.ts</code> validates the keys against <code>FILM_PARAMS</code>, so nothing else changes there; the timeline lane, the undo and the project file follow.</p>
+      <div class="code"><figcaption>src/film/paramKeys.ts (the exposure's lines)</figcaption><pre><code>export const FILM_PARAMS = ['speed', 'exposure', 'sunHour', ...] as const   <span class="why">// the closed list of keyable settings</span>
+
+  exposure: {                                          <span class="why">// in PARAM_SPECS: how its slider and its keys behave</span>
+    get label() {
+      return t('film.param.exposure')                  <span class="why">// the label, in the current language</span>
+    },
+    min: -4,
+    max: 4,
+    step: 0.1,
+    format: (v) =&gt; t('film.param.exposureValue', { value: signed(v, 1) }),
+  },
+
+  get exposure() { return t('film.lane.exposure') },   <span class="why">// in PARAM_LANE_LABELS: the name of its timeline row</span>
+
+    case 'exposure':
+      return settings.exposureEv                       <span class="why">// in paramBase: the value where no key drives it</span></code></pre></div>
+      <p>A <code>get label()</code> is a <a href="#gl-getter">getter</a>: the text is looked up each time it is read, so it follows a change of language.</p>
+    </div></li>
+    <li><div class="stack">
+      <p><strong>Read the value at the current place</strong> where the setting acts: call the pure function <code>paramAt(film, base, param, atM)</code> instead of reading the setting itself, as the exposure and the 3D labels do (<code>scene/usePacing.ts</code> gives the hooks); keep it a function of the position along the track so the export matches the preview.</p>
+      <div class="code"><figcaption>src/scene/AtmosphereLayer.tsx (excerpt)</figcaption><pre><code><span class="why">// the keyed exposure at the marker's distance, or exposureEv when there are no keys</span>
+gl.toneMappingExposure = sceneExposure(elevation, paramAt(film, settings.exposureEv, 'exposure', playback.progress * lengthM) + ...)</code></pre></div>
+    </div></li>
+    <li><div class="stack">
+      <p><strong>Make the slider write into the key.</strong> Wrap the setting with <code>useKeyedValue(param, base, setBase)</code> (<code>scene/usePacing.ts</code>): it shows the value at the playhead (the line of the timeline that marks the current moment) and, once the setting has keys, writes into the key there. Put <code>&lt;PanelKeys target={{ kind: 'param', param }} /&gt;</code> under the slider for the key buttons (see <code>GradingPanel.tsx</code> and <code>OverlayPanel.tsx</code>).</p>
+      <div class="code"><figcaption>src/ui/SettingsPanel.tsx (LightSettings, excerpt)</figcaption><pre><code><span class="why">// the value at the playhead, and a writer that knows about keys</span>
+const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (ev) =&gt; setSetting('exposureEv', ev))
+...
+<span class="why">// the « ajouter une clé » and previous / next key buttons</span>
+&lt;PanelKeys target={{ kind: 'param', param: 'exposure' }} /&gt;</code></pre></div>
+    </div></li>
+    <li><div class="stack">
+      <p><strong>Texts</strong>: the label and the lane name (<code>film.param.*</code> and <code>film.lane.*</code> in <code>src/i18n/&lt;lang&gt;/film.ts</code> for the exposure) in every language; the key buttons already have their own messages (<code>keys.ts</code>).</p>
+    </div></li>
+    <li><div class="stack">
+      <p><strong>Tests</strong>: <code>src/film/paramKeys.test.ts</code> (the value between keys), a round trip of a film with such a key in <code>src/film/model.test.ts</code>, and the control if it has logic.</p>
+      <p><strong>Run</strong> <code>npm run typecheck</code>, then <code>npx vitest run src/film/paramKeys.test.ts src/film/model.test.ts</code>.</p>
+      <p><strong>You should see</strong> no type error (a table typed <code>Record&lt;FilmParam, …&gt;</code>, which must have one entry per keyable setting, is reported here when it misses yours: add the entry it names) and both test files pass.</p>
+    </div></li>
   </ol>
   <div class="callout"><b>Verify</b>
     <ul class="checklist">
@@ -1611,7 +1833,8 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </div>
 
   <h3 class="sub" id="recipe-tab">Add a rail panel or tab</h3>
-  <p>Where each current tab's content is built (the <code>contents</code> memo in <code>src/App.tsx</code>):</p>
+  <p><strong>What it is.</strong> The <em>rail</em> is the column of icons on the side of the window (a scrolling bar at the bottom on a phone); each icon is a <em>tab</em> that opens one panel of settings. A panel is made of foldable <em>sections</em> (<code>PanelSection</code>: a title, the « modifié » badge, then the controls). <strong>When you need it:</strong> almost always, you only need a new section in an existing tab, which is a few lines in one file. A new tab is rarer and touches six places, listed below.</p>
+  <p>Where each current tab's content is built (the <code>contents</code> memo in <code>src/App.tsx</code>, a value built once and kept; the French label is what the user sees):</p>
   <div class="table-wrap"><table class="wide nowrap">
     <thead><tr><th>Tab id</th><th>Label</th><th>Content</th></tr></thead>
     <tbody>
@@ -1626,14 +1849,19 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
       <tr><td data-label="Tab id"><code>reglages</code></td><td data-label="Label">Réglages</td><td data-label="Content"><code>PreferencesPanel</code> (device preferences: appearance, status bar, timeline; the diagnostic; on the desktop « Mises à jour », <code>UpdatesSection</code>)</td></tr>
     </tbody>
   </table></div>
-  <p>A <strong>new section in an existing tab</strong> (the usual case) is just a <code>PanelSection</code> in that tab's panel component. A <strong>new tab</strong>:</p>
+  <p><strong>A new section in an existing tab</strong> (the usual case) is one more <code>PanelSection</code> in that tab's panel <a href="#gl-component">component</a>, with its title text and the <code>keys</code> of the settings it shows, exactly like « Atmosphère » in the <a href="#recipe-setting">setting recipe</a>, step 4. Check it in the app: the section appears, folds, and shows « modifié » when one of its settings differs from its default.</p>
+  <p><strong>A new tab</strong>:</p>
   <ol class="recipe-steps">
-    <li><div><code>src/ui/shell.ts</code>: add the id to <code>SHELL_TABS</code> (the array order is the order of the rail: « montage order »); add it to <code>HOME_TABS</code> only if it must show on the home screen (today only <code>projet</code> does).</div></li>
-    <li><div><code>src/App.tsx</code>: add an entry to <code>TAB_LABELS</code> (a getter calling <code>translate('shell.tab.&lt;id&gt;')</code> and an icon name) and to the <code>contents</code> memo (<code>&lt;id&gt;: &lt;NewPanel /&gt;</code>). <code>SHELL_TABS.map(...)</code> renders the panel and the rail button for you. Every tab stays mounted, so effects in a panel run even when it is hidden: keep fetches idempotent.</div></li>
-    <li><div><code>src/ui/icons.tsx</code>: if no existing <code>IconName</code> fits, add a path to <code>PATHS</code> (icons come from Lucide, ISC licence, noted at the top of the file).</div></li>
-    <li><div>the <code>shell.ts</code> of each language in <code>src/i18n/</code>: the key <code>tab.&lt;id&gt;</code> (used as <code>shell.tab.&lt;id&gt;</code>).</div></li>
-    <li><div>The panel component in <code>src/ui/&lt;Name&gt;Panel.tsx</code>, built from <code>PanelSection</code>s.</div></li>
-    <li><div>Tests: <code>src/ui/shell.test.ts</code> (it checks the tab lists), <code>e2e/run.mjs</code> (the <code>TABS</code> constant and the <code>onglets</code> scenario). On a phone the rail becomes a scrolling bar: check it still works with one more tab. Optionally add the tab to <code>TAB_WEIGHTS</code> in <code>ui/renderCost.ts</code>.</div></li>
+    <li><div><strong>Give it an id</strong> in <code>src/ui/shell.ts</code>: add the id to <code>SHELL_TABS</code> (the array order is the order of the rail: « montage order »); add it to <code>HOME_TABS</code> only if it must show on the home screen (today only <code>projet</code> does).</div></li>
+    <li><div><strong>Give it a label, an icon and its content</strong> in <code>src/App.tsx</code>: add an entry to <code>TAB_LABELS</code> (a <a href="#gl-getter">getter</a> calling <code>translate('shell.tab.&lt;id&gt;')</code> and an icon name) and to the <code>contents</code> memo (<code>&lt;id&gt;: &lt;NewPanel /&gt;</code>). <code>SHELL_TABS.map(...)</code> renders the panel and the rail button for you. Every tab stays mounted, so effects in a panel run even when it is hidden: keep fetches idempotent (running them twice does no harm).</div></li>
+    <li><div><strong>An icon</strong>, in <code>src/ui/icons.tsx</code>: if no existing <code>IconName</code> fits, add a path to <code>PATHS</code> (icons come from Lucide, ISC licence, noted at the top of the file).</div></li>
+    <li><div><strong>Its name in five languages</strong>: the <code>shell.ts</code> of each language in <code>src/i18n/</code>, key <code>tab.&lt;id&gt;</code> (used as <code>shell.tab.&lt;id&gt;</code>). See <a href="#recipe-i18n">the translation recipe</a>.</div></li>
+    <li><div><strong>The panel itself</strong>: a component in <code>src/ui/&lt;Name&gt;Panel.tsx</code>, built from <code>PanelSection</code>s.</div></li>
+    <li><div class="stack">
+      <p><strong>Tests</strong>: <code>src/ui/shell.test.ts</code> (it checks the tab lists), <code>e2e/run.mjs</code> (the <code>TABS</code> constant and the <code>onglets</code> scenario). On a phone the rail becomes a scrolling bar: check it still works with one more tab. Optionally add the tab to <code>TAB_WEIGHTS</code> in <code>ui/renderCost.ts</code>.</p>
+      <p><strong>Run</strong> <code>npm run typecheck</code> (a table typed <code>Record&lt;ShellTab, …&gt;</code>, which must have one entry per tab, such as <code>TAB_LABELS</code>, is reported here when it misses the new id), <code>npx vitest run src/ui/shell.test.ts</code>, then <code>OPENFLYOVER_E2E_ONLY=accueil,onglets npm run e2e</code> (<a href="#e2e">end-to-end tests</a>).</p>
+      <p><strong>You should see</strong> no type error, the shell tests pass, and the e2e run print a <code>✓</code> line for each of the two scenarios, then <code>2/2 scénarios sans échec</code>. In the app, the new icon sits in the rail at its place and opens your panel.</p>
+    </div></li>
   </ol>
   <div class="callout"><b>Verify</b>
     <ul class="checklist">
@@ -1644,8 +1872,24 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </div>
 
   <h3 class="sub" id="recipe-i18n">Add a translation key, or a language</h3>
-  <p><strong>A key.</strong> Choose the domain (<code>src/i18n/fr/*.ts</code>, one file per area: <code>topbar</code>, <code>timeline</code>, <code>overlay</code>…). Add the key and its French text to <code>fr/&lt;domain&gt;.ts</code>; the TypeScript compiler now flags the same file of the four other languages as incomplete: add the text in each. Use it with <code>t('domain.key', { name })</code> (<code>useT()</code> in a component). Rules: no sentence built by concatenation; plurals as <code>{ one, other }</code> with <code>{count}</code>; numbers and dates through <code>i18n/format.ts</code>; a module-level table of labels uses getters. Run <code>npx vitest run src/i18n</code> (key and placeholder parity). A new domain is a new file in every language folder and an entry in each <code>index.ts</code>.</p>
-  <p><strong>A language.</strong></p>
+  <p><strong>What it is.</strong> The app speaks five languages (French, the reference, then English, Spanish, Italian, German). No sentence is written inside the screens: a screen asks for a text by its name, the <a href="#gl-i18n-key">translation key</a>, and gets it in the user's language. « i18n » is the usual short name for this (« internationalisation »: an i, 18 letters, an n). The texts live in <code>src/i18n/&lt;language&gt;/&lt;domain&gt;.ts</code>, one file per area of the app (the domain: <code>light</code>, <code>timeline</code>, <code>overlay</code>…). <strong>When you need it:</strong> every time you add or change a text the user can read, including texts drawn into the film. Background: <a href="#d-i18n">Internationalisation</a>.</p>
+  <p>The French files define the list of keys; the compiler then demands the same keys in the four other languages. So the compiler, not your memory, tells you what is left to translate.</p>
+  <p><strong>A key.</strong></p>
+  <ol class="recipe-steps">
+    <li><div><strong>Choose the domain</strong>: the file of the area the text belongs to (<code>src/i18n/fr/*.ts</code>; the « Lumière » tab uses <code>light.ts</code>, the top bar <code>topbar.ts</code>). Inside, keys are grouped by a prefix (<code>'atmosphere.…'</code>): follow the neighbours.</div></li>
+    <li><div class="stack">
+      <p><strong>Add the French text</strong> to <code>src/i18n/fr/&lt;domain&gt;.ts</code>, then <strong>run</strong> <code>npm run typecheck</code>.</p>
+      <p><strong>You should see</strong> one error per other language, such as <code>src/i18n/en/light.ts(3,7): error TS2741: Property ''atmosphere.cloudShadows'' is missing in type …</code>: the list of translations still to write.</p>
+    </div></li>
+    <li><div><strong>Add the same key, translated,</strong> to the same file of <code>en</code>, <code>es</code>, <code>it</code> and <code>de</code>. The <a href="#recipe-setting">setting recipe</a>, step 3, shows the five real lines of one key.</div></li>
+    <li><div class="stack">
+      <p><strong>Use it</strong>: in a component, <code>const t = useT()</code> then <code>t('domain.key')</code>, for example <code>t('light.atmosphere.cloudShadows')</code>; with a value to insert, <code>t('domain.key', { name })</code> and <code>{name}</code> in the text. Outside a component (overlay, export, error messages), import <code>t</code> and call it the same way.</p>
+      <p><strong>Run</strong> <code>npm run typecheck</code> and <code>npx vitest run src/i18n</code>.</p>
+      <p><strong>You should see</strong> no type error (a misspelt key is reported as <code>not assignable to parameter of type 'MessageKey'</code>) and the i18n tests pass: they check that every language has the same keys and the same <code>{placeholders}</code> as French.</p>
+    </div></li>
+  </ol>
+  <p><strong>Rules</strong>: no sentence built by joining pieces (word order differs between languages: write the whole sentence with <code>{placeholders}</code>); plurals as <code>{ one, other }</code> with <code>{count}</code>; numbers and dates through <code>i18n/format.ts</code>; a table of labels written at the top level of a module uses <a href="#gl-getter">getters</a>, so it follows a change of language. Tests run in French, so a test that checks a text checks the French one. A new domain is a new file in every language folder and an entry in each <code>index.ts</code>.</p>
+  <p><strong>A language.</strong> Rare and long: every text of the app (about 1,900 messages in French today) has to be translated. The steps:</p>
   <ol class="recipe-steps">
     <li><div>Copy <code>src/i18n/fr/</code> to <code>src/i18n/&lt;code&gt;/</code>, translate every file (each is typed <code>Messages['domain']</code>; the compiler lists what is left), <code>news.ts</code> included: the « Nouveautés » texts, one block per version.</div></li>
     <li><div>Register it: add it to <code>catalogs</code> in <code>src/i18n/index.ts</code> and to <code>LANGUAGES</code> in <code>src/i18n/languages.ts</code> (<code>code</code>, native <code>name</code>, BCP 47 <code>locale</code>; there is no flag field). Draw its flag in <code>src/ui/Flag.tsx</code> (SVG, one branch per code: Windows does not draw flag emoji) and add its catalog to the <code>catalogs</code> map of <code>src/i18n/i18n.test.ts</code>. The language menu, the preference, plurals, dates and numbers follow.</div></li>
@@ -1654,6 +1898,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </ol>
 
   <h3 class="sub" id="recipe-primitive">Add a UI primitive (wrap a HeroUI component)</h3>
+  <p><strong>What it is.</strong> A <a href="#gl-primitive">primitive</a> is the project's own version of a ready-made control (a button, a switch, a menu) taken from the HeroUI library, wrapped once in <code>src/ui/primitives/</code> so that the screens never depend on the library directly. <strong>When you need it:</strong> only when no existing primitive fits a new kind of control; for an ordinary setting, use <code>Checkbox</code>, <code>Switch</code>, <code>Select</code> or <code>RangeField</code> as they are. Background: <a href="#ui-layer">The UI layer</a>.</p>
   <ol class="recipe-steps">
     <li><div><code>src/ui/primitives/&lt;Name&gt;.tsx</code>: import the component from its own entry (<code>import { Switch as HeroSwitch } from '@heroui/react/switch'</code>, never from the package root, so the bundle stays small), expose <em>the project's props</em> (not HeroUI's: <code>checked</code>/<code>onChange</code>/<code>disabled</code> as in <code>Switch.tsx</code>), and add a short comment saying when to use it. Use the <code>Titled</code> wrapper for a <code>title</code> tooltip, as the other primitives do.</div></li>
     <li><div>Export it and its props type from <code>src/ui/primitives/index.ts</code>.</div></li>
@@ -1670,6 +1915,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </div>
 
   <h3 class="sub" id="recipe-palette">Change the colour palette or the spacing scale</h3>
+  <p><strong>What it is.</strong> The colours, spacings, text sizes and corner radii of the interface are named values (<a href="#gl-token">tokens</a>) written once in <code>src/ui/theme.css</code>; the screens use the names, never the raw values, through <a href="#gl-tailwind">Tailwind classes</a>. <strong>When you need it:</strong> to change the look of the whole app (a new accent colour, a denser layout). Change the token, not the components. The film overlay and the 3D labels have their own colours and are not affected.</p>
   <ol class="recipe-steps">
     <li><div><strong>Palette</strong>: edit the <code>--color-*</code> tokens in the <code>@theme static</code> block at the top of <code>src/ui/theme.css</code>. Roles (<code>--surface-panel</code>, <code>--text-1</code>, <code>--line</code>, <code>--accent</code>…) are mapped to them in <code>:root</code> (layer <code>base</code>); the dark theme remaps only the roles in <code>:root[data-theme='dark']</code>; HeroUI's variables are mapped to the roles just below. The comments of the dark block give the contrast figures: recompute them for a new colour.</div></li>
     <li><div><strong>Places that repeat palette values</strong> (checked by searching the current values): <code>src/ui/appearance.ts</code> (<code>DEFAULT_APPEARANCE</code>, <code>ACCENT_PRESETS</code>, <code>CHROME_PRESETS</code>, and its test), <code>index.html</code> (<code>theme-color</code>), <code>public/manifest.webmanifest</code> (<code>theme_color</code>, <code>background_color</code>), <code>scripts/installer-assets.mjs</code> (then <code>npm run installer-assets</code>), the film overlay's own palette in <code>src/overlay/themes.ts</code> (deliberately independent: it must read over any imagery), the standalone pages <code>docs/*.html</code> (each carries its own copy of the tokens), and the « Carte alpine » section of <code>ARCHITECTURE.md</code>. Search the old hex values across the repository to find the rest.</div></li>
@@ -1685,6 +1931,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </div>
 
   <h3 class="sub" id="recipe-widget">Add a film widget (an element of the overlay)</h3>
+  <p><strong>What it is.</strong> A widget is one element drawn over the 3D image in the film and the preview: the title, the counters, the elevation profile, the mini-map, the credits. All of them are drawn by one function on a 2D canvas (<a href="#canvas2d">Canvas 2D</a>), from the position along the track only, so the export matches the preview. <strong>When you need it:</strong> to show a new piece of information in the film. The settings of the widgets live inside the single <code>overlay</code> setting, so this recipe replaces the <a href="#recipe-setting">setting recipe</a> for them.</p>
   <p>Take <code>minimap</code> as the model: it is a widget with an anchor, a size and options.</p>
   <ol class="recipe-steps">
     <li><div><code>src/overlay/settings.ts</code>: define <code>FooSettings</code> (extend <code>Sized</code> for anchor and size); add <code>foo: FooSettings</code> to <code>OverlaySettings</code> and a default to <code>DEFAULT_OVERLAY</code>; add <code>'foo'</code> to <code>OVERLAY_ADDED_KEYS</code> (so older projects and presets get the default), to <code>PLACED_WIDGETS</code> (anchor and free offset) and to <code>STYLED_WIDGETS</code> (per-widget colours and fonts) as appropriate, and validate it in <code>isValidOverlay</code> (<code>validSized(o.foo)</code>).</div></li>
@@ -1703,6 +1950,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </div>
 
   <h3 class="sub" id="recipe-export">Add an export format</h3>
+  <p><strong>What it is.</strong> The export turns the film into a file: a video (a frame size, an aspect ratio, a <a href="#gl-3d">codec and a container</a>), a still image or a poster. <strong>When you need it:</strong> to offer a new frame shape (3:2), a new video format, a new poster size or a new kind of output. Most lists are declared once and everything else (the menus, the checks of older projects, the command line) follows. Background: <a href="#d-export">The export pipeline</a>.</p>
   <p><strong>A new aspect ratio</strong> (for example 3:2):</p>
   <ol class="recipe-steps">
     <li><div><code>src/export/schedule.ts</code>: add <code>{ id: '3:2', get label() { return t('video.aspect.3:2') }, x: 3, y: 2 }</code> to <code>VIDEO_ASPECTS</code>. <code>VideoAspect</code>, <code>videoSize</code>, <code>isValidVideoSettings</code>, the top-bar selector, the stage framing, the safe zones, the batch formats and the command line (<code>KNOWN_FORMATS</code> in <code>cliRender.ts</code>) all derive from this list.</div></li>
@@ -1721,6 +1969,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </div>
 
   <h3 class="sub" id="recipe-source">Add a data source (tiles, weather, landmarks)</h3>
+  <p><strong>What it is.</strong> A data source is an outside service the app downloads from: map tiles (elevation or aerial photos), the weather, OpenStreetMap landmarks. <strong>When you need it:</strong> to cover a country better or to replace a service that closed. Most of the work is checking the terms and the technical answers of the service before writing one catalogue entry; the desktop app also needs the host in its allow-list, or the source works on the website and fails in the app.</p>
   <ol class="recipe-steps">
     <li><div><strong>Check the terms</strong>: open data, no key, usage allowed here. Verify with a real request (status, CORS header <code>Access-Control-Allow-Origin</code>, tile size, maximum zoom) and write the result in <code>docs/sources.md</code>.</div></li>
     <li><div><code>src/terrain/sources.ts</code>: add a <code>TerrainSource</code> or <code>ImagerySource</code> to <code>TERRAIN_SOURCES</code> or <code>IMAGERY_SOURCES</code> (<code>id</code>, <code>urlTemplate</code> with <code>{z}/{x}/{y}</code>, zoom range, <code>tileSize</code>, attribution through <code>t()</code>, <code>coverage</code> if regional) and its messages in the <code>terrain.ts</code> of each language.</div></li>
@@ -1733,6 +1982,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   <div class="callout"><b>Verify</b> choose it in « Carte », fly a short track, export a still: tiles load on the website <em>and</em> in the desktop app, the credit line shows, the offline policy is respected.</div>
 
   <h3 class="sub" id="recipe-e2e">Add an end-to-end scenario</h3>
+  <p><strong>What it is.</strong> An end-to-end scenario drives the real app in a headless Chrome (no window), as a user would: it clicks, types, waits and checks what the page shows. <strong>When you need it:</strong> to protect a user path that unit tests cannot see (a menu, a dialog, a save and reopen). The suite is not run by CI: run it yourself before a release or a large interface change (<a href="#e2e">End-to-end tests</a>).</p>
   <ol class="recipe-steps">
     <li><div>Read the helpers at the top of <code>e2e/run.mjs</code>: <code>until</code>, <code>clickButton</code>, <code>switchOf</code>, <code>selectOption</code>, <code>laneCount</code>, <code>waitForScene</code>, <code>exposeStores</code>, <code>assert</code>.</div></li>
     <li><div>Add an object to the <code>SCENARIOS</code> array: <code>{ id: 'my-id', title: 'French sentence', async run({ page, url, newPage }) { … } }</code>; optional <code>retries</code>, <code>skip</code>, <code>logLevel</code>. Scenarios run <strong>in order in the same page</strong>, so the state left by the previous ones (the sample loaded by <code>accueil</code>) carries over: put yours after the ones it relies on, or start it with <code>page.goto(url)</code> and a fresh <code>newPage()</code>.</div></li>
@@ -1742,6 +1992,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </ol>
 
   <h3 class="sub" id="recipe-upgrade">Upgrade a dependency</h3>
+  <p><strong>What it is.</strong> The project uses outside libraries (npm packages for the web side, crates for the Rust side) at exact versions written in the <a href="#gl-web">lock files</a>. Upgrading means moving one of them to a newer version. <strong>When you need it:</strong> for a security fix, a bug fixed upstream, or a feature you need; not by habit. Move one package or one family at a time, so that a breakage has one suspect.</p>
   <ol class="recipe-steps">
     <li><div>Look at what is out of date: <code>npm outdated</code>. Ranges in <code>package.json</code> are carets (<code>^</code>), except TypeScript, pinned to <code>~6.0.2</code>. Read the release notes of the package, especially for majors.</div></li>
     <li><div>Change one package or one family at a time: <code>npm install &lt;pkg&gt;@&lt;version&gt;</code> updates <code>package.json</code> and <code>package-lock.json</code>; commit both. Families that move together: <code>three</code>, <code>@types/three</code>, <code>@react-three/fiber</code>, <code>drei</code>, <code>postprocessing</code>, <code>@takram/*</code> (the 3D stack is the fragile one: check peer dependencies); <code>@heroui/react</code>, <code>@heroui/styles</code>, <code>react-aria</code>, <code>react-aria-components</code>; <code>tailwindcss</code> and <code>@tailwindcss/vite</code>; <code>vitest</code> and <code>@vitest/coverage-v8</code>; <code>react</code>, <code>react-dom</code> and their <code>@types</code>.</div></li>
@@ -1751,7 +2002,27 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   </ol>
 
   <h3 class="sub" id="recipe-release">Bump the version and release</h3>
-  <p>The numbered procedure is in <a href="#release">Release procedure</a>. In short: changelog entry, « Nouveautés » entry, five version fields, <code>npm run notices</code> if a dependency changed, pull request, merge (the website deploys), tag <code>vX.Y.Z</code> (the installers build and publish).</p>
+  <p><strong>What it is.</strong> A release is a new version number (<code>2.2.0</code> → <code>2.3.0</code>) given to what is on <code>master</code>, with three results: the website shows the new version, installers for Windows, macOS and Linux are built and published on GitHub, and installed desktop apps can update themselves. <strong>When you need it:</strong> when enough changes have gathered in <code>CHANGELOG.md</code> under <code>## Unreleased</code> for users to benefit. Numbers follow the usual rule: the last digit for fixes only, the middle one for new features. The full procedure, with every detail, is <a href="#release">Release procedure</a>; this is the short path. <code>X.Y.Z</code> below stands for the new number.</p>
+  <ol class="recipe-steps">
+    <li><div class="stack">
+      <p><strong>Check that master is healthy.</strong> <code>git switch master</code>, <code>git pull</code>, then <code>npm ci</code>, <code>npm run typecheck</code>, <code>npm run lint</code>, <code>npx vitest run --maxWorkers=1</code>, <code>npm run build</code> and <code>OPENFLYOVER_E2E_SKIP_EXPORT=1 npm run e2e</code>.</p>
+      <p><strong>You should see</strong> every command finish without an error. Then make the release branch: <code>git switch -c release/X.Y.Z</code>.</p>
+    </div></li>
+    <li><div><strong>Write what changed, for users.</strong> In <code>CHANGELOG.md</code>, rename <code>## Unreleased</code> to <code>## X.Y.Z (Month Year)</code>. Then the « Nouveautés » window (the « what's new » dialog inside the app): a block first in <code>WHATS_NEW</code> (<code>src/ui/whatsNew.ts</code>) and its <code>news.vNN.*</code> texts in the <code>news.ts</code> of each of the five languages. Nothing reminds you of this one: do not forget it.</div></li>
+    <li><div class="stack">
+      <p><strong>Change the number in five places.</strong> <code>npm version X.Y.Z --no-git-tag-version</code> updates <code>package.json</code> and <code>package-lock.json</code>; edit by hand <code>version</code> in <code>src-tauri/Cargo.toml</code> and in <code>src-tauri/tauri.conf.json</code>, and the <code>openflyover</code> entry of <code>src-tauri/Cargo.lock</code> (or let a <code>cargo build</code> in <code>src-tauri/</code> refresh the lock file).</p>
+      <p><strong>Run</strong> <code>git grep -n "X.Y.Z"</code> with the real number. <strong>You should see</strong> the five files and the changelog heading; <code>git grep -n "<em>old number</em>"</code> should only find mentions of the past (older changelog entries, the previous « Nouveautés » block, documents).</p>
+    </div></li>
+    <li><div><strong>Licences</strong>, only if a dependency changed since the last release: <code>npm run notices</code> (about 8 minutes the first time).</div></li>
+    <li><div class="stack">
+      <p><strong>Pull request, then merge.</strong> Commit (<code>chore(release): X.Y.Z</code>), push, open the pull request, wait for CI, merge.</p>
+      <p><strong>You should see</strong> the « Website » workflow run on <code>master</code> in the Actions tab of GitHub, and the site serve the new version a few minutes later.</p>
+    </div></li>
+    <li><div class="stack">
+      <p><strong>Tag the merge commit</strong> to build the installers: <code>git switch master</code>, <code>git pull</code>, <code>git tag -a vX.Y.Z -m "OpenFlyover X.Y.Z"</code>, <code>git push origin vX.Y.Z</code>. A tag is a permanent name on one commit; this one starts the « Desktop installers » workflow.</p>
+      <p><strong>You should see</strong> that workflow run on Windows, macOS and Ubuntu, then the release « OpenFlyover vX.Y.Z » appear on GitHub with the installers. If one system fails, the release stays a draft: re-run the failed job.</p>
+    </div></li>
+  </ol>
   <div class="callout"><b>Verify</b>
     <ul class="checklist">
       <li><code>git grep -n "X.Y.Z"</code> finds the five places and the changelog; nothing still says the old number.</li>
@@ -1785,19 +2056,19 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
 
     <h3 id="gl-react">React and interface</h3>
     <div class="gloss">
-      <div class="term"><h4>Component</h4><p>A function that returns a piece of interface from its props and state.</p></div>
-      <div class="term"><h4>Props</h4><p>The inputs of a component, like function arguments.</p></div>
+      <div class="term" id="gl-component"><h4>Component</h4><p>A piece of the screen written as a function: it receives inputs (props) and returns what to show, in an HTML-like notation. A checkbox with its label is a component; a whole panel (<code>LightSettings</code>) is one too, made of smaller ones.</p></div>
+      <div class="term" id="gl-props"><h4>Props</h4><p>The inputs of a component, written like HTML attributes: in <code>&lt;Checkbox checked={cloudShadows} onChange={…}&gt;</code>, <code>checked</code> and <code>onChange</code> are props. Like the arguments of a function call.</p></div>
       <div class="term"><h4>State</h4><p>Data that, when changed, makes the interface redraw. Local (<code>useState</code>) or shared (a store).</p></div>
-      <div class="term"><h4>Hook</h4><p>A function named <code>use…</code> that gives a component memory or lifecycle. Called unconditionally.</p></div>
+      <div class="term" id="gl-hook"><h4>Hook</h4><p>A function named <code>use…</code> that a component calls to get memory or a connection to the outside: <code>useAppStore(…)</code> reads the store, <code>useT()</code> gives the translation function. Call hooks at the top of the component, never inside an <code>if</code> (the lint checks it).</p></div>
       <div class="term"><h4>Effect</h4><p><code>useEffect</code>: code run after render, with a cleanup, to talk to the outside world.</p></div>
       <div class="term"><h4>JSX / TSX</h4><p>HTML-like notation inside JavaScript / TypeScript; the file extension is <code>.tsx</code>.</p></div>
-      <div class="term"><h4>Selector</h4><p>A function that picks a value out of a store; the component re-renders only when that value changes.</p></div>
-      <div class="term"><h4>Store (zustand)</h4><p>A shared observable state object with actions: <code>useAppStore</code> and about twenty smaller ones.</p></div>
+      <div class="term" id="gl-selector"><h4>Selector</h4><p>The small function you give the store to say which value you want: <code>(s) =&gt; s.settings.cloudShadows</code> reads « given the store <code>s</code>, give back its <code>settings.cloudShadows</code> ». The component is redrawn only when that value changes.</p></div>
+      <div class="term" id="gl-store"><h4>Store (zustand)</h4><p>The app's shared memory: one object holding the tracks, the settings and the playback, plus the functions (actions) that change it. Panels, the 3D view and the export all read the same one, so a change made in a panel is seen everywhere. Here <code>useAppStore</code> (<code>src/state/store.ts</code>, made with the zustand library) and about twenty smaller ones.</p></div>
       <div class="term"><h4>Suspense / lazy</h4><p>On-demand loading of a component with a placeholder while it loads.</p></div>
       <div class="term"><h4>StrictMode</h4><p>A development mode that runs effects twice to expose leaks.</p></div>
-      <div class="term"><h4>Primitive</h4><p>The project's wrapper of a HeroUI component, in <code>src/ui/primitives/</code>.</p></div>
-      <div class="term"><h4>Token</h4><p>A named design value (colour, radius, spacing) in <code>theme.css</code>.</p></div>
-      <div class="term"><h4>Utility class</h4><p>A single-purpose Tailwind class (<code>gap-2</code>); <code>@utility</code> names a repeated combination.</p></div>
+      <div class="term" id="gl-primitive"><h4>Primitive</h4><p>The project's wrapper of a HeroUI component, in <code>src/ui/primitives/</code>.</p></div>
+      <div class="term" id="gl-token"><h4>Token</h4><p>A named design value (colour, radius, spacing) in <code>theme.css</code>.</p></div>
+      <div class="term" id="gl-tailwind"><h4>Utility class (Tailwind class)</h4><p>A short class name that sets one thing of an element's look: <code>gap-2</code> (spacing), <code>text-hint</code> (text size), <code>rounded-sm</code> (corners). The look of a component is the list of such classes in its <code>className</code>. <code>@utility</code> names a repeated combination (<a href="#ui-layer">The UI layer</a>).</p></div>
       <div class="term"><h4>React Aria</h4><p>Adobe's headless components for keyboard, focus and screen-reader behaviour, under HeroUI.</p></div>
     </div>
 
@@ -1849,7 +2120,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
       <div class="term"><h4>Shot (« Plan »)</h4><p>Opening or closing camera move: « Ouverture », « Clôture ».</p></div>
       <div class="term"><h4>Stop / hold (« Arrêt »)</h4><p>A pause of the film at a place, with its own camera; automatic stops at highlights.</p></div>
       <div class="term"><h4>Speed portion</h4><p>A section of the track flown faster or slower (<code>film.speeds</code>).</p></div>
-      <div class="term"><h4>Keyframe (« Image clé »)</h4><p>A saved camera view along the track; also parameter keys (speed, exposure, sun hour, grading, 3D labels) and marker keys.</p></div>
+      <div class="term" id="gl-keyframe"><h4>Keyframe (« Image clé »)</h4><p>A saved camera view along the track; also parameter keys (speed, exposure, sun hour, grading, 3D labels) and marker keys.</p></div>
       <div class="term"><h4>Lane</h4><p>A row of the timeline: « Plans », « Arrêts », « Textes », « Médias », « Musique », « Marqueur », « Étiquettes », « Étapes ».</p></div>
       <div class="term"><h4>Overlay (« Habillage »)</h4><p>Everything drawn over the 3D image; the tab of its settings.</p></div>
       <div class="term"><h4>Landmarks (« Repères »)</h4><p>Summits, passes, huts, lakes and places from OpenStreetMap; « Repères et points d'intérêt » lists them with your own points of interest.</p></div>
@@ -1860,14 +2131,32 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
       <div class="term"><h4>Chaining (« Enchaîner »)</h4><p>Merging several tracks into one route.</p></div>
       <div class="term"><h4>Planned outing (« Prévoir la sortie »)</h4><p>Estimated times for a route without times.</p></div>
       <div class="term"><h4>Offline pack (« Hors ligne »)</h4><p>Tiles of a corridor along the track kept for use without a connection.</p></div>
-      <div class="term"><h4>Presets (« Préréglages »)</h4><p>Named sets of settings, by family (<code>PRESET_SCOPES</code>).</p></div>
+      <div class="term" id="gl-preset"><h4>Presets (« Préréglages »)</h4><p>Named sets of settings the user saves and applies in one click, either all settings or one family (« Style de carte », « Trace, marqueur et étiquettes »…: <code>PRESET_SCOPES</code>; the settings of each family in <code>PRESET_SCOPE_KEYS</code>, <code>src/project/presets.ts</code>).</p></div>
       <div class="term"><h4>My projects (« Mes projets »)</h4><p>Projects kept inside the app, with thumbnails.</p></div>
-      <div class="term"><h4>« Modifié »</h4><p>The marker of a setting or section that differs from its default, with a reset.</p></div>
+      <div class="term" id="gl-modified"><h4>« Modifié »</h4><p>The marker of a setting or section that differs from its default, with a reset.</p></div>
       <div class="term"><h4>Render weight (« poids de rendu »)</h4><p>The pictogram that tells how much a setting lengthens the export (<code>ui/renderCost.ts</code>).</p></div>
       <div class="term"><h4>Export quality</h4><p>« Standard / Haute / Maximale »: bitrate and cost of the effects at export time.</p></div>
       <div class="term"><h4>« Carte alpine »</h4><p>The visual identity of the app: map paper, ink, trail-marker red, glacier, moss (<code>src/ui/theme.css</code>).</p></div>
       <div class="term"><h4>D+, Col, Sommet, Refuge</h4><p>Elevation gain, pass, peak or summit, mountain hut (not a UI mode).</p></div>
       <div class="term"><h4>Safe zones (« Zones de sécurité »)</h4><p>Guides showing the margins of a social-network format; key <kbd>G</kbd>.</p></div>
+    </div>
+
+    <h3 id="gl-recipes">Words used in the recipes</h3>
+    <div class="gloss">
+      <div class="term" id="gl-setting"><h4>Setting (« réglage »)</h4><p>One value of the project chosen by the user in a panel, like one field of a saved form. All of them form the <code>Settings</code> object, saved in the project file.</p><p class="here"><b>Here</b> <code>interface Settings</code> and <code>DEFAULT_SETTINGS</code> in <code>src/state/store.ts</code>; recipe: <a href="#recipe-setting">Add a setting</a>.</p></div>
+      <div class="term" id="gl-default"><h4>Default value</h4><p>The value a setting has in a new project, and the value used when a file lacks the setting or holds a wrong one. « Par défaut » puts it back.</p><p class="here"><b>Here</b> <code>DEFAULT_SETTINGS</code> in <code>src/state/store.ts</code>.</p></div>
+      <div class="term" id="gl-type"><h4>Type, interface</h4><p>A type says what kind of value a name holds (<code>boolean</code>: true or false; <code>number</code>; <code>string</code>: text). An <code>interface</code> lists the fields of an object with their types, like a C struct. TypeScript checks them before the program runs, then removes them.</p><p class="here"><b>Here</b> <code>interface Settings</code>; the checker is <code>npm run typecheck</code>.</p></div>
+      <div class="term" id="gl-typecheck"><h4>Type check</h4><p>The compiler reads every file and reports names and types that do not match (a typo, a missing translation, a missing field), without running anything. Errors look like <code>file(line,column): error TS2741: …</code>.</p><p class="here"><b>Here</b> <code>npm run typecheck</code>.</p></div>
+      <div class="term" id="gl-action"><h4>Action</h4><p>A function of the store that changes it. The panels never edit a value directly; they call an action, which also makes the undo step.</p><p class="here"><b>Here</b> <code>setSetting('cloudShadows', on)</code>.</p></div>
+      <div class="term" id="gl-validation"><h4>Validation</h4><p>Checking a value read from outside (a project file, a preset) before using it. A refused value is replaced by the default, with a warning, never a crash.</p><p class="here"><b>Here</b> <code>sanitizeSettings</code> and <code>SETTING_CHECKS</code> in <code>src/project/document.ts</code>.</p></div>
+      <div class="term" id="gl-migration"><h4>Upgrade and migration</h4><p>Code that turns data saved by an older version into the current shape, so old files keep opening. An <em>upgrade</em> fills in fields added to one setting since; a <em>migration</em> converts a whole file from one format version to the next, and is rare.</p><p class="here"><b>Here</b> <code>SETTING_UPGRADES</code>, <code>MIGRATIONS</code> and <code>PROJECT_VERSION</code> in <code>src/project/document.ts</code> (<a href="#d-project">details</a>).</p></div>
+      <div class="term" id="gl-i18n-key"><h4>Translation key (i18n key), domain</h4><p>The name a screen uses to ask for a text: <code>'light.atmosphere.cloudShadows'</code>. The first part is the domain, the file the text lives in (<code>light.ts</code>); the rest is the key inside it. « i18n » is short for internationalisation.</p><p class="here"><b>Here</b> <code>src/i18n/&lt;language&gt;/&lt;domain&gt;.ts</code>; used with <code>t('…')</code>.</p></div>
+      <div class="term" id="gl-getter"><h4>Getter</h4><p>A field written <code>get label() { return t('…') }</code>: its value is computed each time it is read instead of once. Used for labels kept in tables, so that they follow a change of language.</p></div>
+      <div class="term" id="gl-pure"><h4>Pure function</h4><p>A function whose result depends only on its arguments and which changes nothing else, like a maths function. Easy to test, and what makes the export identical to the preview. Pure modules never read the store; the caller passes the values.</p><p class="here"><b>Here</b> most <code>.ts</code> files of <code>geo/</code>, <code>flyover/</code>, <code>film/</code>, <code>overlay/</code>.</p></div>
+      <div class="term" id="gl-section"><h4>Section (<code>PanelSection</code>)</h4><p>A foldable block of a tab with a title and controls. Its <code>keys</code> list the settings it owns: they drive the « modifié » badge and the « Par défaut » button of its head.</p><p class="here"><b>Here</b> <code>src/ui/PanelSection.tsx</code>.</p></div>
+      <div class="term" id="gl-unit-test"><h4>Unit test, test file</h4><p>A small program that calls one part of the code with known inputs and checks the result. Files end in <code>.test.ts</code> or <code>.test.tsx</code>, next to the code they test.</p><p class="here"><b>Here</b> <code>npx vitest run &lt;file&gt;</code> runs one file (<a href="#unit-tests">Unit tests</a>).</p></div>
+      <div class="term" id="gl-pr"><h4>Branch, commit, pull request</h4><p>A commit is one saved change; a branch is a line of commits apart from <code>master</code>; a pull request asks to merge a branch into <code>master</code>, after the automatic checks (CI) pass.</p><p class="here"><b>Here</b> <a href="#issue-to-pr">From an issue to a pull request</a>.</p></div>
+      <div class="term" id="gl-npx"><h4><code>npm run …</code>, <code>npx …</code></h4><p><code>npm run typecheck</code> runs a command named in the <code>scripts</code> of <code>package.json</code>; <code>npx vitest</code> runs a tool installed in <code>node_modules/</code> by <code>npm ci</code>. Both are typed in a terminal opened in the repository folder.</p></div>
     </div>
   </div>
 
