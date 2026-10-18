@@ -1022,7 +1022,7 @@ describe('styles with a structure', () => {
       expect(calls).toContain('arc(5)')
     })
 
-    it('puts the weather in the top bar at the left and the map in the top bar at the right', () => {
+    it('puts the weather in the top bar at the left and the map just under the top bar at the right', () => {
       const both = cinema({
         counters: off(DEFAULT_OVERLAY.counters),
         profile: off(DEFAULT_OVERLAY.profile),
@@ -1037,10 +1037,11 @@ describe('styles with a structure', () => {
       // the map: what is drawn in the upper half (the weather credit has its box at the foot of the frame)
       const map = points.filter((pt) => (pt.op === 'moveTo' || pt.op === 'lineTo') && pt.y < SIZE.height / 2)
       expect(map.length).toBeGreaterThan(10)
+      // in the picture, not squeezed into the bar (#182)
       for (const pt of map) {
-        expect(pt.y).toBeGreaterThanOrEqual(0)
-        expect(pt.y).toBeLessThanOrEqual(BAR)
+        expect(pt.y).toBeGreaterThan(BAR)
         expect(pt.x).toBeGreaterThan(SIZE.width * 0.8)
+        expect(pt.x).toBeLessThanOrEqual(SIZE.width)
       }
     })
 

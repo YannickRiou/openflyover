@@ -1964,7 +1964,7 @@ exports) gets it from the terrain source of the settings.
   have a structure of their own (`src/overlay/structures.ts`, `styleStructure`, a pure function of the frame like the rest):
   `cinema` (« Cinéma »: two black letterbox bars of 11 % of the height; the counters as one centred subtitle line in the
   bottom bar, « 12,4 km · alt. 2 450 m · D+ 980 m · 4 h 12 », widely spaced, thin dots between; the profile as a thin line
-  along the top edge of the bottom bar; weather and a small map in the top bar; the opening card centred in light Fraunces
+  along the top edge of the bottom bar; weather in the top bar, the map just under it at the right; the opening card centred in light Fraunces
   capitals with wide letter spacing), `journal` (« Journal de bord »: a full-height cream sheet with a thin ink border on
   the left edge, about 24 % of the width; from the top, the title in italic serif, the counters as a list with dotted
   leaders, the weather, the framed map with its north arrow, the profile as an ink line with altitude ticks; the closing
