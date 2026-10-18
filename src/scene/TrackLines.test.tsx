@@ -7,7 +7,7 @@ import type { TerrainEngine, Track, TrackPoint } from '../core/types'
 import { buildSequence } from '../flyover/sequence'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { DEFAULT_TRACK_STYLE } from './markerSettings'
-import { TRACK_GLOW_MAX_STRENGTH } from './trackLineStyle'
+import { NO_TRAIL, TRACK_GLOW_MAX_STRENGTH } from './trackLineStyle'
 import type { TrackLineSet } from './trackLineSet'
 
 vi.mock('@react-three/fiber', () => ({ useFrame: vi.fn(), useThree: vi.fn() }))
@@ -493,5 +493,26 @@ describe('draw-on (« trace qui se dessine »)', () => {
     expect(first.geometry.instanceCount).toBe(pieces)
     expect(second.geometry.instanceCount).toBe(1)
     expect(first.shortened).toBe(-1)
+  })
+
+  it('« Traînée »: the line and its halo skip what lies before the trail, a track drawn whole stays whole', () => {
+    const sets = new Map<string, TrackLineSet>()
+    syncTrackLineSets(new Group(), sets, [makeTrack('a', [segmentA])], frame, 800, 600)
+    const set = sets.get('a')!
+    drapeTrackLineSet(set, null, 1)
+    const trailStart = () => [set.solidMaterial, set.glowMaterial].map((m) => m.uniforms.trailStartM.value as number)
+
+    cutTrackLineSet(set, 500, 200)
+    expect(trailStart()).toEqual([300, 300])
+    const drawn = set.segments[0].geometry.instanceCount
+    // paused (the marker has not moved): a new length still applies
+    cutTrackLineSet(set, 500, 400)
+    expect(trailStart()).toEqual([100, 100])
+    expect(set.segments[0].geometry.instanceCount).toBe(drawn)
+    // whole, or no trail: nothing skipped
+    cutTrackLineSet(set, Infinity, 200)
+    expect(trailStart()).toEqual([NO_TRAIL, NO_TRAIL])
+    cutTrackLineSet(set, 500)
+    expect(trailStart()).toEqual([NO_TRAIL, NO_TRAIL])
   })
 })

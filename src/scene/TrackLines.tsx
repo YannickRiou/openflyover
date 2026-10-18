@@ -6,8 +6,8 @@
  * The line objects, their draping and styles are in `trackLineSet.ts` (no React, so this file only exports the
  * component and keeps fast refresh); they are managed imperatively in one <group> and disposed on unmount.
  *
- * « Trace qui se dessine » cuts each track at its marker through a store subscription, so it applies in the very frame
- * FlyoverRig moves the marker (this component's frame callback runs before the rig's).
+ * « Trace qui se dessine » cuts each track at its marker (and « Traînée » its start) through a store subscription, so
+ * it applies in the very frame FlyoverRig moves the marker (this component's frame callback runs before the rig's).
  */
 import { useCallback, useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
@@ -84,9 +84,11 @@ export function TrackLines() {
     const distances = settings.trackStyle.drawOn
       ? drawOnDistances(flown, playback.progress, settings.race.enabled ? raceRef.current : null, filmSequenceOf(current, settings.race))
       : null
+    // « Traînée »: only with the draw-on
+    const trailM = distances && settings.trackTail.enabled ? settings.trackTail.lengthM : Infinity
     flown.forEach((track, i) => {
       const set = setsRef.current.get(track.id)
-      if (set) cutTrackLineSet(set, distances?.[i] ?? Infinity)
+      if (set) cutTrackLineSet(set, distances?.[i] ?? Infinity, trailM)
     })
   }, [])
 

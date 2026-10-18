@@ -5,6 +5,7 @@ import type { FilmClockInput } from '../film/clock'
 import type { FilmCameraKey, FilmShot, FilmStop, SituationFraming } from '../film/model'
 import { situationTiming } from '../film/model'
 import { createLocalFrame } from '../geo/ellipsoid'
+import { centroid } from '../geo/lonLat'
 import { buildTrack } from '../import/stats'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { computeCameraView, MIN_GROUND_CLEARANCE_M } from './camera'
@@ -51,8 +52,9 @@ import {
   turnedView,
   type FilmViewOptions,
 } from './filmCamera'
+import { hairpins, steepSampler } from './__fixtures__/markerVisible'
 import { DEFAULT_PACING } from './pacing'
-import { buildTrackPath } from './path'
+import { buildTrackPath, trackPathOf } from './path'
 
 const frame = createLocalFrame(6.85, 45.9)
 /** ~4.4 km straight north at 1000 m */
@@ -404,9 +406,10 @@ describe('computeFilmView', () => {
     }
   })
 
+  // E-W ridge 1.2 km behind the start of the track (the camera comes in from the south over it), 2500 m above the valley
+  const ridge: HeightSampler = (lon, lat) => 1000 + 2500 * Math.exp(-(((frame.toLocal(lon, lat, 0).z - 3400) / 400) ** 2) / 2)
+
   it('shots clear the relief on the way: a high ridge on the approach, never a skim over it, nor a hidden aim', () => {
-    // E-W ridge 1.2 km behind the start of the track (the camera comes in from the south over it), 2500 m above the valley
-    const ridge: HeightSampler = (lon, lat) => 1000 + 2500 * Math.exp(-(((frame.toLocal(lon, lat, 0).z - 3400) / 400) ** 2) / 2)
     const clock = clockOf({ style: 'descente', durationS: 6 }, { style: 'descente', durationS: 6 })
     const groundY = (p: Vector3) => {
       const at = frame.toLonLat(p)
@@ -448,6 +451,71 @@ describe('computeFilmView', () => {
       const view = computeFilmView(long, clock, t, 0, frame, flat, options)
       const away = Math.hypot(view.position.x - flight.position.x, view.position.z - flight.position.z)
       expect(view.position.y - flight.position.y).toBeGreaterThanOrEqual(away * Math.tan(SHOT_GLIDE_DEG * (Math.PI / 180)) - 1e-6)
+    }
+  })
+
+  it('opening and closing, all along: above the ground, the tilt going one way between the end views, the marker in the frame', { timeout: 60_000 }, () => {
+    const twisty = hairpins()
+    const centre = centroid(twisty.bounds)
+    const grounds = [
+      { name: 'flat', path, frame, sample: flat as HeightSampler },
+      { name: 'ridge', path, frame, sample: ridge },
+      { name: 'massif', path: trackPathOf(twisty), frame: createLocalFrame(centre.lon, centre.lat), sample: steepSampler },
+    ]
+    const tiltDeg = (v: { position: Vector3; target: Vector3 }) => {
+      const sight = v.target.clone().sub(v.position)
+      return (-Math.asin(sight.y / sight.length()) * 180) / Math.PI
+    }
+    const camera = new PerspectiveCamera(50, 16 / 9)
+    for (const g of grounds) {
+      // « Planeur », « Poursuite », « Drone haut »
+      for (const pitchDeg of [15, 30, 55]) {
+        const opts = { ...options, camera: { ...CAMERA, pitchDeg } }
+        for (const style of ['descente', 'saut', 'situation', 'balayage'] as const) {
+          const shot: FilmShot = { style, durationS: 6 }
+          const clock = buildFilmClock({
+            opening: shot,
+            closing: shot,
+            stops: [],
+            cameraKeys: [],
+            lengthM: g.path.lengthM,
+            highlightsM: [],
+            durationS: 60,
+            pacing: { ...DEFAULT_PACING, keepDuration: false },
+          })
+          const closingS = clock.openingS + clock.flightS
+          for (const [from, to] of [[0, clock.openingS], [closingS, clock.totalTime()]]) {
+            // 10 views a second
+            const views = Array.from({ length: 61 }, (_, i) => {
+              const t = from + ((to - from) * i) / 60
+              return computeFilmView(g.path, clock, t, clock.progressAtTime(t), g.frame, g.sample, opts)
+            })
+            const up = tiltDeg(views[60]) >= tiltDeg(views[0])
+            let lowest = Infinity
+            let steadiest = tiltDeg(views[0])
+            let backtrack = 0
+            let offFrame = 0
+            for (const view of views) {
+              const at = g.frame.toLonLat(view.position)
+              lowest = Math.min(lowest, view.position.y - g.frame.toLocal(at.lon, at.lat, g.sample(at.lon, at.lat) ?? 0).y)
+              // the tilt never goes back: no dip toward the ground then recovery, nothing steeper than the end views
+              const tilt = tiltDeg(view)
+              steadiest = up ? Math.max(steadiest, tilt) : Math.min(steadiest, tilt)
+              backtrack = Math.max(backtrack, Math.abs(tilt - steadiest))
+              camera.position.copy(view.position)
+              camera.lookAt(view.target)
+              camera.updateMatrixWorld()
+              const ndc = view.marker.clone().project(camera)
+              const ahead = view.marker.clone().sub(view.position).dot(view.target.clone().sub(view.position)) > 0
+              offFrame = Math.max(offFrame, ahead ? Math.max(Math.abs(ndc.x), Math.abs(ndc.y)) : Infinity)
+            }
+            const label = `${g.name}, ${pitchDeg}°, ${style}, ${from === 0 ? 'opening' : 'closing'}`
+            expect(lowest, label).toBeGreaterThanOrEqual(MIN_GROUND_CLEARANCE_M - 1)
+            expect(backtrack, label).toBeLessThan(0.1)
+            expect(offFrame, label).toBeLessThan(1)
+          }
+        }
+      }
     }
   })
 

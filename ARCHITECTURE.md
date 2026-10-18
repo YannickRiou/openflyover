@@ -53,7 +53,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/terrain/mesh.ts` | tile geometry | `buildTileGeometry(key, grid, frame, opts: BuildTileGeometryOptions): TileGeometryResult`, `sampleTileMesh(key, grid, segments, lon, lat)` (height of that mesh) |
 | `src/terrain/quadtree.ts` + `engine.ts` | LOD, loading, Three group | `createTerrainEngine(options: TerrainEngineOptions, deps?: Partial<EngineDeps>, tuning?: Partial<EngineTuning>): TerrainEngine` (deps injectable for tests) |
 | `src/scene/*.tsx` | R3F components | `FlyoverCanvas`, `TerrainLayer` (+ `useTerrainContext` in `terrainContext.ts`, its pure setup in `terrainLayerSetup.ts`), `TrackLines` (+ `trackLineSet.ts`), `TrackPicker` (+ `TrackMenu`, DOM), `CameraRig`, `FlyoverRig`, `useDebouncedCallback` |
-| `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImages`, `MARKER_SCREEN_FACTOR` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine` (`trackLineStyle.ts`); `TrackStyleSection`, `MarkerSection` (`src/ui/TrackMarkerSection.tsx`) |
+| `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `TrackTailSettings`, `DEFAULT_TRACK_TAIL`, `isValidTrackTail`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImages`, `MARKER_SCREEN_FACTOR` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine`, `setTrackDistances`, `addTrailCut`, `setTrailStart` (`trackLineStyle.ts`); `TrackStyleSection`, `MarkerSection` (`src/ui/TrackMarkerSection.tsx`) |
 | `src/flyover/path.ts` | flyover path | `buildTrackPath(track): TrackPath` (concatenated segments, cumulative distances, `time` in ms or NaN), `trackPathOf(track)` (same path, cached per track), `samplePath(path, distanceM): PathSample` (`ele` and `time` interpolated only if both neighbors have them), `recordedTimeAt(path, distanceM)` (fills points without a time), `elevationProfile(path, samples)`, `nearestOnPath(path, lonLat, timeMs?)`, `distanceAtTime(path, timeMs, toleranceMs?)`, `pickProjectedPath(screen, distM, px, py, maxPx)` (point of the projected track closest to the pointer) |
 | `src/flyover/smooth.ts` | track smoothing (see "Track and marker") | `smoothPoints(points, windowM)`, `smoothTrack(track, windowM)`, `smoothedTrackPath(track, windowM)` (smoothed positions, recorded distances and times) |
 | `src/flyover/camera.ts` | flyover camera | `computeCameraView(path, progress, frame, sampler, { exaggeration, liftM, camera?, durationS?, timeS?, orbitRad?, aimProgress?, cameraProgress? })` → `{ target, position, marker }`, `autoDistanceM`, `smoothedTurn`, `smoothHeadingAt`, `movesWithTime` |
@@ -61,7 +61,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
 | `src/flyover/flights.ts` | stretches in the air | `detectFlights(path, ground)`, `flightOffsetAt(flights, distanceM)`, `trackHeightM(terrain, ele, flightOffset)`, `pathHeightM(path, distanceM, at, sample)`, exported thresholds |
-| `src/scene/labelModel.ts` + `labelSources.ts` | 3D labels | `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
+| `src/scene/labelModel.ts` + `labelSources.ts` + `poiIcons.ts` | 3D labels | `POI_ICON_PATHS` (pictograms, also the flags of the poster flat map), `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `FlightStage` (a stage with its own flight time, the 8th argument `stages`), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
@@ -1084,6 +1084,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   whole track otherwise. Applied through a store subscription (the progress set by `FlyoverRig` is picked up in the same
   frame, although `TrackLines` runs before it) and on every frame (after a drape); no effect when nothing changes.
   A function of progress alone: preview = export. The part still to come is hidden.
+- **Trail** (« Traînée », `settings.trackTail { enabled, lengthM }`, 100 m–20 km, default off and 1 km; shown with the
+  draw-on only, checked by `isValidTrackTail`): only the last `lengthM` metres behind each marker are drawn. The pieces
+  drawn always start at the first, so the start is hidden by the painting step instead: each piece carries the track
+  distance of its ends (`setTrackDistances`, attributes `instanceTrackStart` / `instanceTrackEnd`) and the line and
+  halo materials of each set discard what lies before the uniform `trailStartM` = cut distance − `lengthM`
+  (`addTrailCut`, own program keys; `NO_TRAIL` = −1 otherwise). Colours by metric and dashes stay on their pieces.
+  Each set its own value: every racer and every stage « À la suite » gets its trail; a track drawn whole stays whole.
+  Set on every cut, even when the marker has not moved (a paused film follows the slider). A sharp cut, no fade yet.
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
   `RaceMarkers`; drawn without depth test so the slope never cuts them, hidden (opacity 0, never half-transparent) behind the relief with the labels'
   line of sight: `reliefClearance`, `occludeMarker`), badge texture drawn on a canvas (`markerBadge.ts`) and cached by key (48 at most). Ball:
@@ -2371,7 +2379,8 @@ exports) gets it from the terrain source of the settings.
   waits for its tiles like a film frame and fails the same way.
 - **Limits**: ghost race markers drawn at the current progress; an A3 view
   in the "Application" style is 17 Mpx in WebGL (GPU size limit not checked). Flat map: no shaded relief,
-  no labels, no start / finish; tiles at other zooms than those of the 3D view, so partly downloaded.
+  no labels except a pin on each start and finish (the 3D one without text, one for a loop, one where racers start
+  together); tiles at other zooms than those of the 3D view, so partly downloaded.
 
 ## Weather in the scene (phase 7)
 
