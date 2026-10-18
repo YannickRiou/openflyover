@@ -312,7 +312,7 @@ export const OVERLAY_THEMES: Record<OverlayStyleId, OverlayTheme> = {
     panel: { fill: 'rgba(12, 18, 23, 0.84)', radius: 0.3 },
     groupedCounters: false,
     accentBar: 0.8,
-    profile: { area: 'rgba(255, 255, 255, 0.14)', played: 'rgba(232, 80, 26, 0.45)', line: 'rgba(255, 255, 255, 0.6)', marker: SCORE_ORANGE, markerRing: '#FFFFFF' },
+    profile: { area: 'rgba(255, 255, 255, 0.14)', played: '#E8501A', line: 'rgba(255, 255, 255, 0.6)', marker: SCORE_ORANGE, markerRing: '#FFFFFF' },
     minimap: { route: 'rgba(255, 255, 255, 0.45)', covered: SCORE_ORANGE, start: MOSS, end: '#FFFFFF' },
     credits: { fill: 'rgba(12, 18, 23, 0.72)', text: '#FFFFFF' },
     photo: { mat: 'rgba(12, 18, 23, 0.84)', pad: 0.6, radius: 0.3, imageRadius: 0, caption: '#FFFFFF' },
@@ -393,11 +393,10 @@ export function resolveOverlayTheme(style: OverlayStyleId, overrides: OverlayOve
   const { accent, text, titleFont, numberFont } = overrides
   const theme: OverlayTheme = { ...base, profile: { ...base.profile }, minimap: { ...base.minimap }, photo: { ...base.photo } }
   if (accent) {
-    const followAccent = (c: string) => (c === base.accent ? accent : c)
     theme.accent = accent
-    theme.profile.played = followAccent(base.profile.played)
-    theme.profile.marker = followAccent(base.profile.marker)
-    theme.minimap.covered = followAccent(base.minimap.covered)
+    theme.profile.played = accent
+    theme.profile.marker = accent
+    theme.minimap.covered = accent
   }
   if (text) {
     theme.text = text

@@ -196,7 +196,6 @@ describe('resolveOverlayTheme', () => {
     expect(theme.minimap.covered).toBe('#00ff00')
     // what was not the accent is kept
     expect(theme.profile.line).toBe(OVERLAY_THEMES.broadcast.profile.line)
-    expect(resolveOverlayTheme('editorial', { accent: '#00ff00' }).profile.played).toBe(OVERLAY_THEMES.editorial.profile.played)
     // the style itself is untouched
     expect(OVERLAY_THEMES.broadcast.accent).not.toBe('#00ff00')
   })
