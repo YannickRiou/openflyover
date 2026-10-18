@@ -13,7 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { CanvasTexture, Group, type Camera, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, Vector3 } from 'three'
+import { AlwaysDepth, CanvasTexture, Group, type Camera, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { registerDrapeFlush, useExportStore } from '../export/store'
 import { useMediaStore } from '../film/media'
@@ -385,8 +385,10 @@ export function Labels() {
         const material = new SpriteMaterial({
           map: tex.texture,
           transparent: true,
-          depthTest: false,
-          depthWrite: false,
+          depthTest: true,         // le test de profondeur doit être actif pour pouvoir écrire…
+          depthFunc: AlwaysDepth,  // …mais il laisse toujours passer le label, qui reste au-dessus du relief
+          depthWrite: true,
+          alphaTest: 0.5,
           sizeAttenuation: false,
         })
         const sprite = new Sprite(material)
