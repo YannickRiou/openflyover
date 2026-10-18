@@ -31,6 +31,7 @@ import {
   type CameraViewOptions,
 } from './camera'
 import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, type CameraSettings } from './cameraSettings'
+import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 import { cameraKeyEaseM, keyPoseAt, type KeyFraming } from './cameraKeys'
 import { smoothsInTime, timeSmoothing } from './timeSmoothing'
@@ -486,8 +487,9 @@ function clearOnTheWay(
 
 /** Marker position on the draped track at `progress` (as `computeCameraView` places it). */
 export function markerAt(path: TrackPath, progress: number, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number, liftM: number): Vector3 {
-  const at = samplePath(path, clamp(progress, 0, 1) * path.lengthM)
-  return frame.toLocal(at.lon, at.lat, (sample?.(at.lon, at.lat) ?? at.ele ?? 0) * exaggeration + liftM)
+  const d = clamp(progress, 0, 1) * path.lengthM
+  const at = samplePath(path, d)
+  return frame.toLocal(at.lon, at.lat, pathHeightM(path, d, at, sample) * exaggeration + liftM)
 }
 
 /**

@@ -13,6 +13,7 @@ import { clamp, lastIndexAtOrBelow } from '../core/math'
 import type { LocalFrame } from '../core/types'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
+import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 
 // ---------------------------------------------------------------------------
@@ -514,8 +515,8 @@ function placement(
  * turned around the marker first when the slope there is too steep to climb over (`swingAngle`).
  * Aim = the track at the aim's progress, smoothed (`cameraLine`, `smoothPointAt` without « Lissage de la caméra »), at
  * the smoothed ground height (`trackGround` eased with `smoothGridGround`) + `liftM`; the camera stands around its own
- * smoothed point of the track. Heights: terrain sample, else recorded elevation, else 0;
- * times `exaggeration`. `aimProgress` / `cameraProgress`: see `timeSmoothing.ts`.
+ * smoothed point of the track. Heights: `trackHeightM` (terrain sample, else recorded elevation, else 0; the recorded
+ * one in a flight); times `exaggeration`. `aimProgress` / `cameraProgress`: see `timeSmoothing.ts`.
  */
 export function computeCameraView(
   path: TrackPath,
@@ -529,9 +530,8 @@ export function computeCameraView(
   const timeS = options.timeS ?? p * durationS
   const d = p * path.lengthM
 
-  const groundAt = (at: { lon: number; lat: number; ele?: number }) => (sample?.(at.lon, at.lat) ?? at.ele ?? 0) * exaggeration
   const at = samplePath(path, d)
-  const marker = frame.toLocal(at.lon, at.lat, groundAt(at) + liftM)
+  const marker = frame.toLocal(at.lon, at.lat, pathHeightM(path, d, at, sample) * exaggeration + liftM)
   // time smoothing: the aim and the camera may follow their own progress along the track
   const dAim = options.aimProgress === undefined ? d : clamp(options.aimProgress, 0, 1) * path.lengthM
   const dCamera = options.cameraProgress === undefined ? d : clamp(options.cameraProgress, 0, 1) * path.lengthM
@@ -585,7 +585,8 @@ export function computeCameraView(
  * Ground height (metres, not exaggerated) under the track around `d`: the `bump`-weighted mean over
  * ]d - radiusM, d + radiusM[ of the terrain at fixed track distances (multiples of radiusM / GROUND_SAMPLES_PER_SIDE).
  * The samples stay put while the marker moves, only their weights slide: the mean follows the relief, not the
- * bumps under the marker, and a finer tile arriving shifts it by a fraction. Terrain, else recorded elevation, else 0.
+ * bumps under the marker, and a finer tile arriving shifts it by a fraction. `trackHeightM`: terrain, else recorded
+ * elevation, else 0 (the recorded one in a flight).
  */
 function trackGround(path: TrackPath, d: number, radiusM: number, sample: HeightSampler | null): number {
   const step = radiusM / GROUND_SAMPLES_PER_SIDE
@@ -593,8 +594,7 @@ function trackGround(path: TrackPath, d: number, radiusM: number, sample: Height
   let weight = 0
   for (let k = Math.floor((d - radiusM) / step) + 1; k * step < d + radiusM; k++) {
     const w = bump(k * step - d, radiusM)
-    const at = samplePath(path, k * step)
-    sum += w * (sample?.(at.lon, at.lat) ?? at.ele ?? 0)
+    sum += w * pathHeightM(path, k * step, samplePath(path, k * step), sample)
     weight += w
   }
   return sum / weight

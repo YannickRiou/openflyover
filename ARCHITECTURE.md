@@ -60,6 +60,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/cameraSettings.ts` | camera styles and presets | `CAMERA_STYLES`, `DEFAULT_CAMERA`, `CAMERA_RANGES`, `CAMERA_PRESETS`, `isValidCamera`, `withCameraDefaults`, `turnSmoothingM(camera, lengthM)`, `advanceProgress(progress, dt, speed, durationS)` |
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
+| `src/flyover/flights.ts` | stretches in the air | `detectFlights(path, ground)`, `flightOffsetAt(flights, distanceM)`, `trackHeightM(terrain, ele, flightOffset)`, `pathHeightM(path, distanceM, at, sample)`, exported thresholds |
 | `src/scene/labelModel.ts` + `labelSources.ts` + `poiIcons.ts` | 3D labels | `POI_ICON_PATHS` (pictograms, also the flags of the poster flat map), `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
@@ -284,7 +285,9 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      Exposes `{ engine, frame }` through a context to `TrackLines` and `CameraRig` (which must be rendered inside it).
    - `TrackLines` (component; the line objects, draping, colours and styles in `trackLineSet.ts`, no React, so the
      component file keeps React fast refresh): for each track, `Line2` (three/addons/lines) 4 px wide, color `track.color`, densified points (step ≤ 10 m),
-     height = `(engine.sampleHeight(lon,lat) ?? pt.ele ?? 0) * exaggeration + 3` (the drawn surface, see above). Re-draped on
+     height = `(engine.sampleHeight(lon,lat) ?? pt.ele ?? 0) * exaggeration + 3` (the drawn surface, see above); on a
+     flight (`track.flights`) `max(terrain, pt.ele − offsetM) * exaggeration + 3` (`trackHeightM`, `src/flyover/flights.ts`,
+     the one rule of the line, the marker, the camera aim, the ghost racers and the track picking). Re-draped on
      `engine.onChange` (150 ms debounce, 600 ms at most while the drawn tiles keep changing).
      Depth-tested only: the relief hides the parts behind it. (A translucent pass without the depth test, meant as a
      faint hint, was dropped: the round caps of the 10 m pieces overlap by several pixels and its alpha piled up into
@@ -1046,7 +1049,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `PULSE_PERIOD_S` = 1.5 s, phase `pulsePhase(timeS)`: a function of the film time; a pulsing sprite redraws its own
   canvas instead of using the shared cache). `markerMovesWithTime(marker)` tells the export when held frames must be
   rendered again. `figure: 'auto'` (default): `figureOfActivity(track.activityType)` (GPX `<type>`, FIT sport, Strava),
-  per track (each racer, each stage « À la suite »; unknown → hiker); 17 figures (+ traileur, vae, ski-rando, nageur,
+  per track (each racer, each stage « À la suite »; kite → paraglider; unknown → hiker); 17 figures (+ traileur, vae, ski-rando, nageur,
   kayak, cavalier). `shape`: `rond`, `epingle` (map pin, anchored at its tip), `carre` (rounded square), `contour`
   (figure alone with an outline). `label`: `aucune` / `nom` (track name) / `texte` (`labelText`, 40 characters, lead only;
   racers show their track name). `stick`: badge raised on a stick with a soft ground shadow, anchored at its foot (bounce
@@ -1493,8 +1496,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   through `editFilm`: one undo step, block selected); hand cursor when hovering the track. Click = press and release of the
   same button within 4 px (an OrbitControls drag is not a click; the menu opens on release, not on
   `contextmenu`, which fires on press under Linux and macOS). Picking in screen space (`pickProjectedPath`, pure): 1,500
-  points spread along the track, draped like the line (loaded terrain, otherwise recorded elevation, × exaggeration +
-  3 m; recomputed at most once per second), projected by the camera, closest segment within 12 px,
+  points spread along the track, draped like the line (`trackHeightM`: loaded terrain, otherwise recorded elevation, the
+  recorded one on a flight, × exaggeration + 3 m; recomputed at most once per second), projected by the camera, closest segment within 12 px,
   interpolated distance. Nothing during an export. Limit: a section hidden by the terrain can also be picked (the line
   shows it through the terrain). Right-clicking on the terrain, on the track or elsewhere adds "Point d'intérêt ici" (point of interest here; the only
   choice off the track): camera ray against the drawn tiles (`Raycaster` on the visible meshes of the engine
@@ -1883,6 +1886,16 @@ exports) gets it from the terrain source of the settings.
   elevation; old projects unchanged. The Habillage altitude and D+ counters turn on by themselves (`stats.maxEle`).
 - **Limits**: bridges and tunnels follow the ground; times estimated before the calculation are not re-estimated;
   « Un film par trace » and chaining do not compute it or keep the flag.
+- **Flights** (`src/flyover/flights.ts`, `withFlights`): at import, within the same 64 tiles and 15 s, the same ground
+  is read under every point of a track with recorded elevation, and `detectFlights` keeps `Track.flights` (from / to
+  metres along the track, device offset), saved with the project (old projects: none, the track stays on the ground).
+  Clearance = recorded − ground, every 20 m, moving average over 100 m, minus the device offset (median, clamped to
+  ±50 m, taken again outside the flights of a first pass: a paraglider is in the air most of the time); a flight is a
+  run above 15 m that reaches 50 m and lasts 300 m. Decided once on a fixed zoom, not on the drawn terrain: it does not
+  change while the tiles load, and the preview and the export agree. Accepted: a cable car, a chairlift high over a
+  gully or a high bridge counts as a flight (drawn where it was recorded); kite jumps (a few metres, below the error of
+  a recorded height) and a paraglider skimming a ridge under 50 m stay on the ground; a track over 64 tiles (raids)
+  is not looked at.
 ## Climbs and labels
 
 - **Climbs** (`src/flyover/climbs.ts`) on the **recorded** elevations of the first track: resampling every 20 m,

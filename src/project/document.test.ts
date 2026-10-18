@@ -414,6 +414,17 @@ describe('serializeProject / parseProject', () => {
     expect(reloaded.tracks[0]).not.toHaveProperty('elevationEstimated')
     expect(reloaded.tracks[1]).not.toHaveProperty('elevationEstimated')
   })
+
+  it('round-trips the flights; an old project or a wrong list leaves the track on the ground', () => {
+    const flights = [{ startM: 100, endM: 900, offsetM: 12.5 }]
+    const text = serializeProject({ ...STATE, tracks: [{ ...makeTrack('a', '#FF5A36'), flights }, makeTrack('b', '#5BC0EB')] }, 'x')
+    const loaded = parseProject(text)
+    expect(loaded.tracks[0].flights).toEqual(flights)
+    expect(loaded.tracks[1]).not.toHaveProperty('flights')
+    const d = JSON.parse(text) as { tracks: { flights?: unknown }[] }
+    d.tracks[0].flights = [{ startM: 900, endM: 100, offsetM: 0 }]
+    expect(parseProject(JSON.stringify(d)).tracks[0]).not.toHaveProperty('flights')
+  })
 })
 
 describe('parseProject errors', () => {

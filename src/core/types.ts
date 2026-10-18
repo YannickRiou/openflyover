@@ -102,6 +102,19 @@ export interface Track {
    * when the file had none, 'gaps' when only the points without one were filled
    */
   elevationEstimated?: 'all' | 'gaps'
+  /** stretches flown above the ground (paragliding…), found at import (src/flyover/flights.ts); absent when none */
+  flights?: Flight[]
+}
+
+/**
+ * A stretch of a track in the air: drawn at its recorded height instead of on the ground. Distances on the scale of
+ * `buildTrackPath` (metres).
+ */
+export interface Flight {
+  startM: number
+  endM: number
+  /** constant error of the device's elevation (recorded minus ground where the track is on the ground), removed in the air */
+  offsetM: number
 }
 
 /** A named point stored with a track (GPX <wpt>), not part of the path. */

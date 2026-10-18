@@ -564,6 +564,19 @@ describe('computeFilmView — several tracks (follow)', () => {
     }),
   )
 
+  it('keeps the marker and the aim of a flight in the air, like the line', () => {
+    const points = [{ lon: 6.85, lat: 45.88, ele: 1600 }, { lon: 6.85, lat: 45.92, ele: 1600 }]
+    const flying = { ...buildTrackPath(buildTrack({ name: 'f', source: 'gpx', segments: [{ points }] })), flights: [{ startM: 0, endM: 5_000, offsetM: 0 }] }
+    const air = frame.toLocal(6.85, 45.9, 1600 * 2 + 3).y
+    expect(markerAt(flying, 0.5, frame, flat, 2, 3).y).toBeCloseTo(air, 3)
+    const view = computeCameraView(flying, 0.5, frame, flat, { ...options, exaggeration: 2, timeS: 10 })
+    expect(view.marker.y).toBeCloseTo(air, 3)
+    expect(view.target.y).toBeGreaterThan(frame.toLocal(6.85, 45.9, 1500 * 2).y)
+    // on the ground, the terrain wins as before
+    const ground = frame.toLocal(6.85, 45.9, 1000 * 2 + 3).y
+    expect(markerAt({ ...flying, flights: [] }, 0.5, frame, flat, 2, 3).y).toBeCloseTo(ground, 3)
+  })
+
   it('flies the path the follow gives, the marker with it (a stage) or left on the film track (a racer)', () => {
     const t = clock.openingS + 10
     const stage = computeFilmView(path, clock, t, 0.3, frame, flat, { ...options, follow: () => ({ path: other, progress: 0.6 }) })

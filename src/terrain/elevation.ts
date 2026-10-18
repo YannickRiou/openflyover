@@ -4,9 +4,12 @@
  * then the network and its HTTP cache), bilinear sampling. Points with a recorded elevation keep it; a gap between two
  * recorded points is shifted onto them, so the device's offset to the terrain makes no step (no false D+).
  * Limit: bridges and tunnels follow the ground (the terrain has no deck nor bore).
+ * The same ground, read under every point of a recorded track, finds its flights at import (`withFlights`).
  */
 import { clamp } from '../core/math'
 import type { HeightGrid, LonLat, TerrainSource, TileFetcher, TileKey, Track, TrackPoint, TrackSegment } from '../core/types'
+import { detectFlights } from '../flyover/flights'
+import { buildTrackPath } from '../flyover/path'
 import { cumulativeDistances } from '../geo/lonLat'
 import { lonLatToTileFrac, lonLatToTileUV, tileKeyString } from '../geo/mercator'
 import { computeStats } from '../import/stats'
@@ -69,17 +72,24 @@ function gapsOf(points: readonly TrackPoint[]): [number, number][] {
   return gaps
 }
 
-/** The points a sampler is asked about, grouped by tile: those without elevation and the recorded one on each side of a gap. */
-function sampledPointsByTile(track: Track, z: number): Map<string, { key: TileKey; points: TrackPoint[] }> {
+/**
+ * The points a sampler is asked about, grouped by tile: those without elevation and the recorded one on each side of a
+ * gap, or every point (`all`, for the flights).
+ */
+function sampledPointsByTile(track: Track, z: number, all = false): Map<string, { key: TileKey; points: TrackPoint[] }> {
   const tiles = new Map<string, { key: TileKey; points: TrackPoint[] }>()
+  const add = (point: TrackPoint) => {
+    const key = tileAt(point, z)
+    const id = tileKeyString(key)
+    const tile = tiles.get(id)
+    if (tile) tile.points.push(point)
+    else tiles.set(id, { key, points: [point] })
+  }
   for (const { points } of track.segments) {
-    for (const [first, last] of gapsOf(points)) {
-      for (let i = Math.max(0, first - 1); i <= Math.min(points.length - 1, last + 1); i++) {
-        const key = tileAt(points[i], z)
-        const id = tileKeyString(key)
-        const tile = tiles.get(id)
-        if (tile) tile.points.push(points[i])
-        else tiles.set(id, { key, points: [points[i]] })
+    if (all) points.forEach(add)
+    else {
+      for (const [first, last] of gapsOf(points)) {
+        for (let i = Math.max(0, first - 1); i <= Math.min(points.length - 1, last + 1); i++) add(points[i])
       }
     }
   }
@@ -169,10 +179,10 @@ export function createGridLoader(source: TerrainSource, fetcher: TileFetcher): G
  * Ground heights under the points the track needs (`withTerrainElevation`), read tile by tile: a grid is dropped once
  * its points are read. Rejects when a tile cannot be loaded (network, abort): nothing is half computed.
  */
-export async function loadTerrainSampler(track: Track, z: number, load: GridLoader, signal?: AbortSignal): Promise<HeightSampler> {
+export async function loadTerrainSampler(track: Track, z: number, load: GridLoader, signal?: AbortSignal, all = false): Promise<HeightSampler> {
   const heights = new Map<LonLat, number>()
   await Promise.all(
-    Array.from(sampledPointsByTile(track, z).values(), async ({ key, points }) => {
+    Array.from(sampledPointsByTile(track, z, all).values(), async ({ key, points }) => {
       const grid = await load(key, signal)
       if (!grid) return
       for (const point of points) {
@@ -182,6 +192,35 @@ export async function loadTerrainSampler(track: Track, z: number, load: GridLoad
     }),
   )
   return (point) => heights.get(point) ?? NaN
+}
+
+/** The track with its flights (`detectFlights`) against the ground `sample` gives under its points; the same track when it has none. */
+export function withFlights(track: Track, sample: HeightSampler): Track {
+  const ground = track.segments.flatMap((segment) => segment.points.map((point) => sample(point)))
+  const flights = detectFlights(buildTrackPath(track), ground)
+  return flights.length > 0 ? { ...track, flights } : track
+}
+
+/**
+ * At import: `withFlights` with the ground of `source` under every point, for a track with recorded elevation that
+ * needs at most `maxTiles` tiles (the same track otherwise). Rejects on a network failure.
+ */
+async function detectTrackFlights(
+  track: Track,
+  source: TerrainSource,
+  maxTiles: number,
+  options: { load?: GridLoader; signal?: AbortSignal },
+): Promise<Track> {
+  const z = elevationZoom(source)
+  if (track.stats.maxEle === undefined || track.elevationEstimated === 'all') return track
+  if (sampledPointsByTile(track, z, true).size > maxTiles) return track
+  if (options.load) return withFlights(track, await loadTerrainSampler(track, z, options.load, options.signal, true))
+  const fetcher = createTileFetcher(FETCHER_OPTIONS)
+  try {
+    return withFlights(track, await loadTerrainSampler(track, z, createGridLoader(source, fetcher), options.signal, true))
+  } finally {
+    fetcher.clear()
+  }
 }
 
 async function fillFromTerrain(track: Track, source: TerrainSource, load: GridLoader, signal?: AbortSignal): Promise<Track> {
@@ -208,9 +247,9 @@ export async function computeTrackElevation(
 }
 
 /**
- * At import: the tracks with the elevation computed where it is missing, for the tracks that need at most `maxTiles`
- * tiles, within `timeoutMs` for the whole batch. Never rejects: a track that fails (offline, too slow) comes as it
- * was, and its card offers « Calculer l'altitude ».
+ * At import: the tracks with the elevation computed where it is missing, then their flights (`withFlights`), for the
+ * tracks that need at most `maxTiles` tiles, within `timeoutMs` for the whole batch. Never rejects: a track that fails
+ * (offline, too slow) comes as it was (stays on the ground), and its card offers « Calculer l'altitude ».
  */
 export async function completeImportedElevations(
   tracks: readonly Track[],
@@ -219,17 +258,18 @@ export async function completeImportedElevations(
 ): Promise<Track[]> {
   const maxTiles = options.maxTiles ?? AUTO_ELEVATION_MAX_TILES
   const todo = new Set(tracks.filter((t) => hasMissingElevation(t) && elevationTileCount(t, source) <= maxTiles))
-  if (todo.size === 0) return [...tracks]
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? AUTO_ELEVATION_TIMEOUT_MS)
   try {
     return await Promise.all(
       tracks.map(async (track) => {
-        if (!todo.has(track)) return track
+        const loading = { load: options.load, signal: controller.signal }
+        let out = track
         try {
-          return await computeTrackElevation(track, source, { load: options.load, signal: controller.signal })
+          if (todo.has(track)) out = await computeTrackElevation(track, source, loading)
+          return await detectTrackFlights(out, source, maxTiles, loading)
         } catch {
-          return track
+          return out
         }
       }),
     )

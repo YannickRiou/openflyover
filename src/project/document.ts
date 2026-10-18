@@ -8,7 +8,7 @@
  * the right type can still be invalid (enum, catalogue id, range).
  */
 import { isRecord } from '../core/guards'
-import type { Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
+import type { Flight, Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
 import { sanitizeMediaTable, usedMedia } from '../film/media'
 import type { MediaAsset, MediaTable } from '../film/media'
 import { withStageSettingsMigrated } from '../film/junctions'
@@ -76,6 +76,8 @@ export interface ProjectTrack {
   timesEstimated?: true
   /** `Track.elevationEstimated`, omitted for recorded elevations */
   elevationEstimated?: 'all' | 'gaps'
+  /** `Track.flights`, omitted when the track stays on the ground */
+  flights?: Flight[]
 }
 
 export interface ProjectDocument {
@@ -259,6 +261,7 @@ export function toProjectDocument(state: ProjectSource, name: string, media: Med
       if (track.utcOffsetMin !== undefined) out.utcOffsetMin = track.utcOffsetMin
       if (track.timesEstimated) out.timesEstimated = true
       if (track.elevationEstimated) out.elevationEstimated = track.elevationEstimated
+      if (track.flights?.length) out.flights = track.flights
       return out
     }),
   }
@@ -396,6 +399,12 @@ function decodeWaypoint(raw: unknown, where: string): Waypoint {
   return waypoint
 }
 
+function isFlight(raw: unknown): raw is Flight {
+  if (!isRecord(raw)) return false
+  const { startM, endM, offsetM } = raw
+  return typeof startM === 'number' && typeof endM === 'number' && typeof offsetM === 'number' && Number.isFinite(startM + endM + offsetM) && startM <= endM
+}
+
 function decodeTrack(raw: unknown, index: number): Track {
   const label = t('project.doc.trackLabel', { n: index + 1 })
   if (!isRecord(raw)) throw new Error(t('project.doc.descriptionInvalid', { where: label }))
@@ -418,6 +427,10 @@ function decodeTrack(raw: unknown, index: number): Track {
   // computed only means something on a track with elevations
   if ((raw.elevationEstimated === 'all' || raw.elevationEstimated === 'gaps') && track.stats.maxEle !== undefined) {
     track.elevationEstimated = raw.elevationEstimated
+  }
+  // flights only mean something on a track with elevations; an invalid list is dropped (the track stays on the ground)
+  if (Array.isArray(raw.flights) && raw.flights.length > 0 && raw.flights.every(isFlight) && track.stats.maxEle !== undefined) {
+    track.flights = raw.flights.map(({ startM, endM, offsetM }) => ({ startM, endM, offsetM }))
   }
   track.id = raw.id
   track.color =

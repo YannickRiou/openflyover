@@ -4,18 +4,19 @@
  * lead (`settings.marker`, see `markerSprite.ts`: style, shape, stick) in the track's colour with an ink ring, the
  * figure of its own activity ('auto') and its own name as label; a picture stays the lead's own, so the racers then
  * show their ball. Same constant screen size as the lead marker, unlit, drawn over
- * the terrain but hidden behind the relief, height = (terrain ?? recorded elevation ?? 0) × exaggeration + LINE_LIFT_M like the lead marker.
+ * the terrain but hidden behind the relief, height = `pathHeightM` × exaggeration + LINE_LIFT_M like the lead marker (in the air on a flight).
  * The camera keeps following the first track (FlyoverRig); mounted after it so the progress and the camera of
  * this frame are used.
  */
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { Group, Sprite } from 'three'
+import { pathHeightM } from '../flyover/flights'
 import { raceAt } from '../flyover/race'
 import { useAppStore } from '../state/store'
 import { markerLook, occludeMarker, placeMarker, racerMarkerColors, reliefClearance, releaseMarkerTexture, screenHeading } from './markerSprite'
 import { useTerrainContext } from './terrainContext'
-import { LINE_LIFT_M } from './trackLineSet'
+import { LINE_LIFT_M, type HeightSampler } from './trackLineSet'
 import { useFilmClock } from './usePacing'
 import { useRace } from './useRace'
 
@@ -41,15 +42,15 @@ export function RaceMarkers() {
     const gain = 1 / gl.toneMappingExposure
     const timeS = playback.timeS ?? clock.timeAtProgress(playback.progress)
     const clearanceAt = reliefClearance(engine, frame, settings.exaggeration)
+    const sampler: HeightSampler | null = engine ? (lon, lat) => engine.sampleHeight(lon, lat) : null
 
     for (const racer of raceAt(race, playback.progress)) {
       const marker = racer.index > 0 ? markers[racer.index - 1] : null
       const track = tracks[racer.index]
       if (!marker || !track) continue
-      const sampled = engine?.sampleHeight(racer.lon, racer.lat)
-      const ground = sampled !== undefined && !Number.isNaN(sampled) ? sampled : (racer.ele ?? 0)
-      const position = frame.toLocal(racer.lon, racer.lat, ground * settings.exaggeration + LINE_LIFT_M, marker.position)
       const { path } = race.tracks[racer.index]
+      const height = pathHeightM(path, racer.distanceM, racer, sampler)
+      const position = frame.toLocal(racer.lon, racer.lat, height * settings.exaggeration + LINE_LIFT_M, marker.position)
       const heading = settings.marker.kind === 'figurine' ? screenHeading(path, racer.distanceM, position, frame, camera, settings.exaggeration) : null
       const look = markerLook(settings.marker, track, false)
       placeMarker(marker, position, camera, look, racerMarkerColors(track.color), heading?.left ?? false, gain, timeS, heading?.lean)

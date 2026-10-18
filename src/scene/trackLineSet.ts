@@ -24,6 +24,7 @@ import {
   trackMetricValues,
   type TrackColorBy,
 } from '../flyover/trackColor'
+import { flightOffsetAt, trackHeightM } from '../flyover/flights'
 import { smoothPoints } from '../flyover/smooth'
 import { raceAt } from '../flyover/race'
 import type { Race } from '../flyover/race'
@@ -83,6 +84,8 @@ export interface DrapeBuffer {
   lat: Float64Array
   /** recorded elevation, NaN when the point has none */
   ele: Float32Array
+  /** device offset of the flight the point is in (`flightOffsetAt`), NaN on the ground (the default) */
+  flight: Float32Array
   /** xyz per point */
   base: Float64Array
   /** xyz per point */
@@ -96,6 +99,7 @@ export function buildDrapeBuffer(points: readonly TrackPoint[], frame: LocalFram
     lon: new Float64Array(count),
     lat: new Float64Array(count),
     ele: new Float32Array(count),
+    flight: new Float32Array(count).fill(Number.NaN),
     base: new Float64Array(count * 3),
     up: new Float64Array(count * 3),
   }
@@ -121,7 +125,7 @@ export function buildDrapeBuffer(points: readonly TrackPoint[], frame: LocalFram
 
 /**
  * Compute the draped local positions (xyz per point) into `out`:
- * height = (terrain ?? recorded elevation ?? 0) * exaggeration + LINE_LIFT_M.
+ * height = `trackHeightM` (terrain ?? recorded elevation ?? 0, the recorded one in a flight) * exaggeration + LINE_LIFT_M.
  */
 export function computeDrapedPositions(
   buffer: DrapeBuffer,
@@ -129,14 +133,9 @@ export function computeDrapedPositions(
   exaggeration: number,
   out: Float32Array,
 ): Float32Array {
-  const { count, lon, lat, ele, base, up } = buffer
+  const { count, lon, lat, ele, flight, base, up } = buffer
   for (let i = 0; i < count; i++) {
-    let h = sample ? sample(lon[i], lat[i]) : undefined
-    if (h === undefined || Number.isNaN(h)) {
-      const recorded = ele[i]
-      h = Number.isNaN(recorded) ? 0 : recorded
-    }
-    const y = h * exaggeration + LINE_LIFT_M
+    const y = trackHeightM(sample?.(lon[i], lat[i]), ele[i], flight[i]) * exaggeration + LINE_LIFT_M
     const o = i * 3
     out[o] = base[o] + up[o] * y
     out[o + 1] = base[o + 1] + up[o + 1] * y
@@ -273,6 +272,7 @@ export function buildTrackLineSet(
     const dist = resampleValues(source, cumulativeDistances(segment.points, startM), points)
     startM = dist[dist.length - 1]
     const buffer = buildDrapeBuffer(points, frame)
+    for (let i = 0; i < buffer.count; i++) buffer.flight[i] = flightOffsetAt(track.flights, dist[i])
     const positions = new Float32Array(buffer.count * 3)
     const geometry = new LineGeometry()
     setTrackDistances(geometry, dist)
