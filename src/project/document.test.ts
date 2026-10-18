@@ -339,6 +339,14 @@ describe('serializeProject / parseProject', () => {
     expect(invalid).toEqual(expect.arrayContaining(['trackColorBy', 'exposureEv']))
   })
 
+  it('keeps the position of the track legend, rejects an unknown one, and puts it bottom left in older projects', () => {
+    expect(sanitizeSettings({ trackLegendAnchor: 'center' }).settings.trackLegendAnchor).toBe('center')
+    const { settings, invalid } = sanitizeSettings({ trackLegendAnchor: 'nowhere' })
+    expect(settings.trackLegendAnchor).toBe('bottom-left')
+    expect(invalid).toEqual(['trackLegendAnchor'])
+    expect(sanitizeSettings({ trackColorBy: 'elevation' }).settings.trackLegendAnchor).toBe('bottom-left')
+  })
+
   it('replaces an invalid colour by the palette and a missing name by a label', () => {
     const d = doc()
     const tracks = d.tracks as Record<string, unknown>[]

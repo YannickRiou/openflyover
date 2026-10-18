@@ -21,7 +21,7 @@ import { TRACK_COLORS } from '../import'
 import { buildTrack, isUtcOffsetMin } from '../import/stats'
 import { isValidVideoSettings, withVideoDefaults } from '../export/schedule'
 import { LANDMARK_DENSITIES, LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } from '../osm/landmarks'
-import { isValidOverlay, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
+import { OVERLAY_ANCHORS, isValidOverlay, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
 import { isValidPoster, withPosterDefaults } from '../poster/settings'
 import { isValidGrading } from '../scene/grading'
 import { isValidLens, withLensDefaults } from '../scene/lens'
@@ -126,6 +126,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   clouds: isValidClouds,
   water: (v) => v.strength >= 0 && v.strength <= 1,
   trackColorBy: (v) => (TRACK_COLOR_MODES as readonly string[]).includes(v),
+  trackLegendAnchor: (v) => (OVERLAY_ANCHORS as readonly string[]).includes(v),
   overlay: isValidOverlay,
   video: isValidVideoSettings,
   poster: isValidPoster,

@@ -7,8 +7,6 @@ export default {
   'metric.cadenceUnit': 'tr/min',
   'metric.power': 'Puissance',
   'metric.temperature': 'Température',
-  'legend.aria': 'Légende : {label}',
-  'legend.extremes': 'Les valeurs extrêmes (2 % de chaque côté) prennent la couleur des bornes',
   'legend.noValue': 'Sans donnée',
   'legend.noData': 'Aucune donnée sur ces traces',
   'labels.legend': 'Étiquettes dans la vue',

@@ -52,6 +52,7 @@ const messages: Messages['marker'] = {
   'track.custom': 'Personalizado',
   'track.sameAsTrack': 'La del track',
   'track.colorBy': 'Colorear según',
+  'track.legendAnchor': 'Posición de la leyenda',
   'track.smoothing': 'Suavizado del track',
   'track.smoothingTip': '¿Track en zigzag o cámara que tiembla? El suavizado promedia las posiciones GPS en esta distancia: el track y la cámara siguen una línea tranquila.',
   'track.width': 'Grosor del track',

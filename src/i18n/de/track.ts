@@ -9,8 +9,6 @@ const messages: Messages['track'] = {
   'metric.cadenceUnit': 'U/min',
   'metric.power': 'Leistung',
   'metric.temperature': 'Temperatur',
-  'legend.aria': 'Legende: {label}',
-  'legend.extremes': 'Die Extremwerte (je 2 % an beiden Enden) nehmen die Farbe der Grenzen an',
   'legend.noValue': 'Ohne Daten',
   'legend.noData': 'Keine Daten für diese Tracks',
   'labels.legend': 'Beschriftungen in der Ansicht',

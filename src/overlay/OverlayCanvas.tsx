@@ -22,7 +22,8 @@ import { createOverlayFilmCache, overlayExtras, photoAssets } from './exportOver
  * Preview of the film overlay: a 2D canvas stacked over the 3D view, redrawn by `drawOverlay` on the next animation
  * frame after any change of what it reads (store subscriptions, no React render per frame). Video clips are video
  * elements playing along during the playback, seeked to the film time when scrubbing (none during an export, which
- * decodes its own frames). Rendered only while something is to draw (overlay or credits on, photos, clips, dips, stages).
+ * decodes its own frames). Rendered only while something is to draw (overlay or credits on, photos, clips, dips, stages,
+ * a track colouring).
  * Frozen during an export (the progress changes every frame there, and the export composes its own overlay).
  */
 export function OverlayCanvas() {
@@ -31,7 +32,8 @@ export function OverlayCanvas() {
       const { overlay, film } = s.settings
       const dips = shotDipColor(film.opening) !== null || shotDipColor(film.closing) !== null
       const stages = playsInSequence(s.settings.race, s.tracks.length)
-      return (overlay.enabled || overlay.credits.enabled || film.media.length > 0 || dips || stages) && s.tracks.length > 0
+      const legend = s.settings.trackColorBy !== 'none'
+      return (overlay.enabled || overlay.credits.enabled || film.media.length > 0 || dips || stages || legend) && s.tracks.length > 0
     },
   )
   return enabled ? <OverlayPreview /> : null

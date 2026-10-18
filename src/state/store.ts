@@ -27,7 +27,7 @@ import { DEFAULT_WATER } from '../osm/water'
 import type { WaterSettings } from '../osm/water'
 import type { LandmarkSettings } from '../osm/landmarks'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
-import type { OverlaySettings } from '../overlay/settings'
+import type { OverlayAnchor, OverlaySettings } from '../overlay/settings'
 import { DEFAULT_POSTER } from '../poster/settings'
 import type { PosterSettings } from '../poster/settings'
 import { DEFAULT_GRADING } from '../scene/grading'
@@ -69,6 +69,8 @@ export interface Settings {
   lens: LensSettings
   /** colour the tracks by a recorded quantity ('none' = each track's own colour) */
   trackColorBy: TrackColorBy
+  /** where the legend of that colouring sits in the film, as an overlay widget (drawn while the colouring is on) */
+  trackLegendAnchor: OverlayAnchor
   /** width, dashes, glow and « trace qui se dessine » of every track (see scene/markerSettings.ts) */
   trackStyle: TrackStyle
   /** progress marker of the flyover (and of the ghost racers): ball, figurine or picture, size */
@@ -198,6 +200,7 @@ export const DEFAULT_SETTINGS: Settings = {
   grading: DEFAULT_GRADING,
   lens: DEFAULT_LENS,
   trackColorBy: 'none',
+  trackLegendAnchor: 'bottom-left',
   trackStyle: DEFAULT_TRACK_STYLE,
   marker: DEFAULT_MARKER,
   camera: DEFAULT_CAMERA,
