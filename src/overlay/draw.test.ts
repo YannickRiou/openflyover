@@ -1255,6 +1255,12 @@ describe('styles with a structure', () => {
       }
     })
 
+    it('fills the map circle once: no rectangle of the panel inside it', () => {
+      const band = 'rgba(12, 18, 23, 0.84)'
+      const count = (settings: OverlaySettings) => render(settings, 0.5).fills.filter((f) => f === band).length
+      expect(count(tableau()) - count(tableau({ minimap: off(DEFAULT_OVERLAY.minimap) }))).toBe(1)
+    })
+
     it('keeps the free widgets above the band, and draws a counter out of its slot as an ordinary widget', () => {
       const texts: FilmText[] = [{ ...FILM_TEXT, startS: 0.4, durationS: 0.4, anchor: 'bottom-left' }]
       expect(render(tableau(), 0.6, { texts }).texts.find((t) => t.text === 'Col de Balme')!.y).toBeLessThan(BAND_Y)
