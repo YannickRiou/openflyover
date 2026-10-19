@@ -577,8 +577,8 @@ function tableau(i: StructureInput): Structure {
   const minimap = () => {
     const pm = of('minimap')
     const s = settings.minimap.size
-    // no accent bar, no rounded corners: the circle clips a flat panel
-    const flat: Painter = { ...pm, theme: { ...pm.theme, accentBar: 0, panel: pm.theme.panel && { ...pm.theme.panel, radius: 0 } } }
+    // no accent bar, no panel of its own: the filled circle is the background (a panel inside showed as a rectangle)
+    const flat: Painter = { ...pm, theme: { ...pm.theme, accentBar: 0, panel: pm.theme.panel && { ...pm.theme.panel, radius: 0, fill: 'transparent', stroke: undefined, shadow: undefined } } }
     const first = minimapWidget(flat, frame, withMinimap(settings, s, false), live, markerColor)
     if (!first) return
     const radius = 10 * u * s
