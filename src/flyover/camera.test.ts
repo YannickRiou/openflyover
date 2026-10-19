@@ -352,3 +352,43 @@ describe('computeCameraView — rough terrain (every style)', () => {
     expect(again.target.equals(view.target)).toBe(true)
   })
 })
+
+describe('computeCameraView — terrain sharpness and cliffs (#186, every style)', () => {
+  /** `sample` as a blurry tile draws it: one height every `cellM` (posts off the frame's grids), blended in between. */
+  const blurred = (sample: (lon: number, lat: number) => number, cellM: number) => (lon: number, lat: number) => {
+    const x = ((lon - 6.85) * M_PER_DEG_LON - 37) / cellM
+    const y = ((lat - 45.9) * M_PER_DEG_LAT - 61) / cellM
+    const i = Math.floor(x)
+    const j = Math.floor(y)
+    const post = (a: number, b: number) => sample(6.85 + (a * cellM + 37) / M_PER_DEG_LON, 45.9 + (b * cellM + 61) / M_PER_DEG_LAT)
+    const tx = x - i
+    const ty = y - j
+    return (1 - ty) * ((1 - tx) * post(i, j) + tx * post(i + 1, j)) + ty * ((1 - tx) * post(i, j + 1) + tx * post(i + 1, j + 1))
+  }
+
+  it.each(CAMERA_STYLES)('%s: a sharper tile moves the camera height at most 3× as far as the aim point', (style) => {
+    // the sight-line lift multiplied the change by up to 20 near the marker: 6.3× (« Cinéma », 88 m for 14 m)
+    const blurry = blurred(hills, 150)
+    for (const path of [twisty(), northbound]) {
+      let aim = 0
+      let height = 0
+      for (let i = 0; i <= 200; i++) {
+        const sharp = computeCameraView(path, i / 200, frame, hills, options({ style }))
+        const soft = computeCameraView(path, i / 200, frame, blurry, options({ style }))
+        aim = Math.max(aim, sharp.target.distanceTo(soft.target))
+        height = Math.max(height, Math.abs(sharp.position.y - soft.position.y))
+      }
+      expect(height).toBeLessThan(3 * aim)
+    }
+  })
+
+  it.each(CAMERA_STYLES)('%s: over 100 m cliffs the camera height changes far more smoothly than the ground', (style) => {
+    // a staircase of 100 m cliffs every 500 m across the track, the marker ~2 m per frame
+    const cliffs = (_lon: number, lat: number) => 1000 + 100 * Math.floor(((lat - 45.9) * M_PER_DEG_LAT) / 500)
+    const FRAMES = 1800
+    const views = Array.from({ length: FRAMES + 1 }, (_, i) => computeCameraView(northbound, 0.1 + (0.8 * i) / FRAMES, frame, cliffs, options({ style })))
+    const jolt = (y: number[]) => Math.max(...y.slice(2).map((v, i) => Math.abs(v - 2 * y[i + 1] + y[i])))
+    // the change of vertical speed per frame: the ground under the marker 100 m, the camera up to 70 m before
+    expect(jolt(views.map((v) => v.position.y))).toBeLessThan(0.3 * jolt(views.map((v) => v.marker.y)))
+  })
+})

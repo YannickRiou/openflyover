@@ -771,12 +771,15 @@ The interface and the texts drawn into the films and posters exist in **French**
   steady ground height) down to 100 m short of it, at most 1/20 of the line, against the grid ground raised by the
   relief its cells miss (`reliefGround`: each corner by the largest rise of its four cell centres above their corners'
   mean: fixed samples, so a crest narrower than a cell is cleared without riding it), tapering to 20 m of clearance;
-  48 samples, each grid corner and centre read once per view. When the ground between the marker and the camera
+  48 samples, each grid corner and centre read once per view. Where a metre of ground lifts the camera by more than
+  3 m (eased out up to 6), the line is checked against a coarse grid instead (cells ≥ 150 m, each corner the mean of
+  2 × 2 samples over a cell when the ground cell is finer), ending on that grid's ground at the marker, never above its
+  steady height (#186, see "Steady heights"). When the ground between the marker and the camera
   (gradient over ± half the camera's ground distance, ≥ 150 m, averaged along the track like the heading) rises faster
   than tan(pitch + 10°) − 0.05, the camera turns around the marker away from uphill (`swingAngle`: odd quintic easing,
   continuous with its slope, eased in over 0.2 of excess steepness; straight uphill it climbs instead of picking a
   side). Hidden frames on the steep synthetic tracks over the 12 presets: 0.3 % (up to 8 % for one flight) → 2 of
-  21,600; at most 4 shown ↔ hidden switches per flight; the marker stays within 0.15 of the half-frame (0.2 through stops). Keyframes
+  21,600 → 0 with the coarse grid near the marker (#186); at most 4 shown ↔ hidden switches per flight; the marker stays within 0.15 of the half-frame (0.2 through stops). Keyframes
   (`keyView`) are untouched.
   **Steady heights** (no frame-to-frame state, so preview and export stay identical): the heights are read from
   terrain samples that stay put while the marker moves, so the camera follows the relief without riding each bump
@@ -793,6 +796,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   then the camera is kept `MIN_TERRAIN_CLEARANCE_M` (40 m) above the actual terrain below it (a bump narrower than a
   cell). About 130 terrain samples per frame. On ±15 m bumps 30 m wide, the frame-to-frame height change drops from
   3–35 m to 0.16 m on flat ground, the change of vertical speed from 1–70 m to under 2.5 m on hills.
+  **Sharper tiles** (#186): the sampler reads the sharpest tile loaded, so a sharper tile arriving changes the ground
+  by a few metres. The camera's own height follows it 1:1 (the aim's mean); the sight-line lift multiplied it by up to
+  1 / (share of the line left), 20 near the marker: on the test hills with one height every 150 m blended, the aim moved
+  14–17 m and the camera height up to 6.3× that (« Cinéma »). Near the marker the line now reads the coarse grid, its
+  end on the same grid, so the change shifts both alike: 2.1× at most (`camera.test.ts`); over 100 m cliffs, the change
+  of vertical speed per frame of « Orbite » / « Cinéma » drops from 43 / 70 m to 23 / 7 m. Left as is: the sideways
+  swing (`swingAngle`, up to ~120 m for « Cinéma » on the hills) and the far presets on the steep massif (« Cinéma »
+  8.9×: there the ground cell is already 150 m, and the change itself varies within 200 m of the marker).
   **Smoothing in film time** (`src/flyover/timeSmoothing.ts`, applied by `computeFilmView`; still no frame-to-frame
   state): the aim point follows the marker's progress averaged over « Lissage de la visée » `aimSmoothingS` (0 by
   default: on the marker), the camera follows it averaged over « Lissage de la caméra » `cameraSmoothingS` (3 s by

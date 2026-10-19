@@ -59,6 +59,17 @@ export const LINE_OF_SIGHT_SAMPLES = 48
 export const LINE_OF_SIGHT_END_M = 100
 export const LINE_OF_SIGHT_MIN_CLEARANCE_M = 20
 export const LINE_OF_SIGHT_MAX_GAIN = 20
+/**
+ * Where a metre of ground lifts the camera by more than LINE_OF_SIGHT_FINE_GAIN metres (eased out up to twice that),
+ * the line is checked against a coarse grid instead: cells of at least LINE_OF_SIGHT_COARSE_CELL_M, each corner the mean
+ * of LINE_OF_SIGHT_COARSE_SAMPLES² terrain samples over a cell (the ground cell's grid when as coarse), the line ending on
+ * that grid's ground at the marker (never above its steady height). A sharper tile arriving near the marker then
+ * shifts the line's ground and its end alike, instead of being multiplied by up to LINE_OF_SIGHT_MAX_GAIN (#186: 6.3×
+ * → 2.1× on the test hills). Nearer the camera, the ground cell's grid still clears a crest narrower than a coarse cell.
+ */
+export const LINE_OF_SIGHT_FINE_GAIN = 3
+export const LINE_OF_SIGHT_COARSE_CELL_M = 150
+export const LINE_OF_SIGHT_COARSE_SAMPLES = 2
 
 /**
  * Smoothing scaled with the ground speed of the film (track length / flyover duration, metres per film second), so a
@@ -576,7 +587,7 @@ export function computeCameraView(
   if (sample) {
     // the sight line ends at the marker, at its steady height (its own rides each bump)
     const endGround = dAim === d && !smoothLine ? aimGround : steadyGround(d, marker)
-    position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM)
+    position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM)
   }
   return { target, position, marker }
 }
@@ -602,7 +613,8 @@ function trackGround(path: TrackPath, d: number, radiusM: number, sample: Height
 
 /**
  * Terrain (metres, not exaggerated) at the corners and the cell centres of a fixed `cellM` grid of the local frame,
- * each read once per view (the sight line crosses the same cells many times). Undefined where the terrain is unknown.
+ * each read once per view (the sight line crosses the same cells many times); with `perSide` > 1, each the mean of
+ * perSide² samples over the cell-sized square around it. Undefined where the terrain is unknown.
  */
 interface TerrainGrid {
   cellM: number
@@ -612,7 +624,7 @@ interface TerrainGrid {
   lift: (i: number, j: number) => number
 }
 
-function terrainGrid(cellM: number, frame: LocalFrame, sample: HeightSampler): TerrainGrid {
+function terrainGrid(cellM: number, frame: LocalFrame, sample: HeightSampler, perSide = 1): TerrainGrid {
   const memo = <T>(compute: (i: number, j: number) => T) => {
     const cache = new Map<number, T>()
     return (i: number, j: number): T => {
@@ -624,9 +636,20 @@ function terrainGrid(cellM: number, frame: LocalFrame, sample: HeightSampler): T
       return value
     }
   }
-  const terrain = (i: number, j: number) => {
+  const point = (i: number, j: number) => {
     const at = frame.toLonLat(_corner.set(i * cellM, 0, j * cellM))
     return sample(at.lon, at.lat)
+  }
+  const terrain = (i: number, j: number) => {
+    let sum = 0
+    for (let a = 0; a < perSide; a++) {
+      for (let b = 0; b < perSide; b++) {
+        const h = point(i + (a + 0.5) / perSide - 0.5, j + (b + 0.5) / perSide - 0.5)
+        if (h === undefined) return undefined
+        sum += h
+      }
+    }
+    return sum / (perSide * perSide)
   }
   const corner = memo(terrain)
   // rise of the terrain at the centre of cell (i, j) above the mean of its corners: what the grid misses (0 for a hollow)
@@ -806,8 +829,9 @@ function positionAround(target: Vector3, { reference, viewAngle, pitchDeg, dista
  * (exaggerated) grid ground with the relief its cells miss (`reliefGround`): the line at fraction f (0 = camera) has
  * height y + (target.y - y) · f
  * and must clear the ground there by MIN_GROUND_CLEARANCE_M · (1 - f), at least LINE_OF_SIGHT_MIN_CLEARANCE_M, up to
- * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN). The floor is eased in (`smoothMax`), then
- * the camera is kept MIN_TERRAIN_CLEARANCE_M above the actual terrain below it.
+ * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN). Where the lift per metre of ground passes
+ * LINE_OF_SIGHT_FINE_GAIN, the line is checked against the coarse grid instead (LINE_OF_SIGHT_COARSE_CELL_M). The floor
+ * is eased in (`smoothMax`), then the camera is kept MIN_TERRAIN_CLEARANCE_M above the actual terrain below it.
  */
 function lowestClearY(
   position: Vector3,
@@ -816,19 +840,35 @@ function lowestClearY(
   sample: HeightSampler,
   exaggeration: number,
   cellM: number,
+  liftM: number,
 ): number {
   let floor = -Infinity
   const grid = terrainGrid(cellM, frame, sample)
+  const coarseM = Math.max(cellM, LINE_OF_SIGHT_COARSE_CELL_M)
+  const coarse = coarseM === cellM ? grid : terrainGrid(coarseM, frame, sample, LINE_OF_SIGHT_COARSE_SAMPLES)
+  // the coarse line ends on the coarse ground at the marker, never above the steady height
+  const endAt = frame.toLonLat(target)
+  const endGround = reliefGround(target.x, target.z, coarse)
+  const end = endGround === undefined ? target : frame.toLocal(endAt.lon, endAt.lat, endGround * exaggeration + liftM)
+  if (end.y > target.y) end.copy(target)
+  // lowest camera height for the line to `to` to clear `ground` + `clearance` at f, `share` of its lift kept
+  const floorAt = (to: Vector3, f: number, g: TerrainGrid, clearance: number, share: number) => {
+    _sight.lerpVectors(position, to, f).setY(to.y)
+    const ground = reliefGround(_sight.x, _sight.z, g)
+    if (ground === undefined) return -Infinity
+    const at = frame.toLonLat(_sight)
+    const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance, _sight).y
+    return to.y + ((floorY - to.y) * share) / (1 - f)
+  }
   const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
   for (let i = 0; i <= LINE_OF_SIGHT_SAMPLES; i++) {
     const f = (i / LINE_OF_SIGHT_SAMPLES) * (1 - Math.min(0.5, left))
-    _sight.lerpVectors(position, target, f).setY(target.y)
-    const ground = reliefGround(_sight.x, _sight.z, grid)
-    if (ground === undefined) continue
-    const at = frame.toLonLat(_sight)
     const clearance = Math.max(MIN_GROUND_CLEARANCE_M * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
-    const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance, _sight).y
-    floor = Math.max(floor, (floorY - target.y * f) / (1 - f))
+    // the fine grid's lift eased out between LINE_OF_SIGHT_FINE_GAIN and twice that
+    const t = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)
+    const share = t * t * (3 - 2 * t)
+    if (share > 0) floor = Math.max(floor, floorAt(target, f, grid, clearance, share))
+    floor = Math.max(floor, floorAt(end, f, coarse, clearance, 1))
   }
   let y = smoothMax(position.y, floor, CLEARANCE_EASE_M)
   // a bump narrower than the grid cell
