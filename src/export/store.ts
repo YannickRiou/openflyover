@@ -64,6 +64,8 @@ export interface ExportResult {
   /** object URL of the video or image blob (revoked by `reset` or the next export); null when written to disk */
   url: string | null
   fileName: string
+  /** desktop: the full path of the file written (« Ouvrir le dossier ») */
+  path?: string
   mimeType: string
   sizeBytes: number
   /** e.g. 'mp4/avc', 'png' */

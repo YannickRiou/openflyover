@@ -417,6 +417,25 @@ export function secondsPerMegapixel(entry: Pick<HistoryEntry, 'wallMs' | 'render
   return perImage === null || mp <= 0 ? null : perImage / mp
 }
 
+/**
+ * Seconds per frame and per megapixel of the last film rendered through to the end (what `filmRate` measures while a film
+ * is exported: render, tile wait and encoding over all its frames), read from the history so that the time of a film is
+ * known from the start of a session; null when no such render is in it. The overlay alone is not a film.
+ */
+export function rateFromHistory(entries: readonly Pick<HistoryEntry, 'at' | 'outcome' | 'overlayOnly' | 'frames' | 'renderMs' | 'waitMs' | 'encodeMs' | 'width' | 'height'>[]): number | null {
+  let last: (typeof entries)[number] | undefined
+  for (const entry of entries) {
+    const spentMs = entry.renderMs + entry.waitMs + entry.encodeMs
+    if (entry.outcome === 'done' && !entry.overlayOnly && entry.frames > 0 && spentMs > 0 && entry.width * entry.height > 0 && (!last || entry.at > last.at)) last = entry
+  }
+  return last ? (last.renderMs + last.waitMs + last.encodeMs) / 1000 / last.frames / ((last.width * last.height) / 1e6) : null
+}
+
+/** Seconds a film of `frames` frames of `width` × `height` takes at `secondsPerMegapixel` per frame (`filmRate`). */
+export function estimateRenderSeconds(secondsPerMegapixel: number, frames: number, width: number, height: number): number {
+  return secondsPerMegapixel * frames * ((width * height) / 1e6)
+}
+
 export function formatSpeed(entry: HistoryEntry): string {
   const perImage = secondsPerImage(entry)
   // no-break spaces: the figure and its unit never wrap apart

@@ -2335,6 +2335,19 @@ exports) gets it from the terrain source of the settings.
   0.5 / 1 / 2 / 5 / 10 s; audio 96–320 kbit/s; passed to the encoder as `request.encoding` (`videoEncoding`). The Vidéo
   panel groups them in « Format », « Encodage » and « Rendu ». formats 16:9, 9:16, 1:1, 4:5, 21:9 × short side 720p, 1080p, 1440p, 4K
   (`videoSize`); 24 / 30 / 60 fps.
+  **Platform presets** (`PLATFORM_PRESETS`, chips above « Format »): YouTube 4K (16:9, 4K, 30 i/s, H.264, 40 Mbit/s), YouTube HD
+  (1080p, 12), Reels / TikTok / Shorts (9:16, 1080p, 10), Instagram / Facebook (4:5, 1080p, 8) and square (1:1, 8): one click sets
+  aspect, resolution, fps, `codec: 'avc'` and a bitrate by hand (`withPlatformPreset`, one undo step; the quality, key frames, sound
+  and name stay; `platformPresetOf` lights the chip the settings match exactly). A phone or tablet still caps the size
+  (`exportResolutionNote`). **File name template** (`video.nameTemplate`, `''` = the track's name, ≤ `NAME_TEMPLATE_MAX` = 120):
+  `expandNameTemplate` with `{project}` `{track}` `{format}` `{resolution}` `{fps}` `{date}` (the recording's date, else today), an
+  unknown word left as typed; for a single film (the batches keep « projet – format »). **Time before the first film**:
+  `rateFromHistory` reads the last film rendered to the end from the history (the same rate as `filmRate`, per frame and
+  megapixel) when none was measured this session, and `estimateRenderSeconds` gives « ≈ … de rendu » in the summary (cold tiles make
+  a first film slower: it is an estimate). **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
+  last folder; the desktop one is opened on the folder of the last film (`openflyover.lastFilmFolder`) and, after the export,
+  « Ouvrir le dossier » shows the file in the system's file manager (`Platform.revealFile`, the opener plugin's
+  `reveal_item_in_dir`, permission `opener:allow-reveal-item-in-dir`; `ExportResult.path`). The website cannot reveal a file.
 - Render scale `exportRenderScale` = short side / 1080 (1 outside export): track width and label size, in
   pixels, are multiplied so that a 4K film looks like the 1080p one. Markers do not need it (size proportional to the
   camera distance, hence a constant screen fraction).

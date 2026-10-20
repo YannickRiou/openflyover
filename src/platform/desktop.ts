@@ -10,6 +10,7 @@
  */
 import { droppedFiles, fileNameOf, keyValueStore, mimeTypeOf, rememberFileTarget, saveFilters } from './platform'
 import type { Capabilities, DocumentOutcome, FileFilter, FileTarget, Platform, SaveDocumentOptions, SaveFileOptions, SaveOutcome, WritableFile } from './platform'
+import { joinPath } from './folder'
 import { createDesktopLibraryFiles, createProjectLibrary } from './projectLibrary'
 import { createDesktopTileCache } from './tileCache'
 import { checkOutcome, downloadProgress, failedCheck } from './updater'
@@ -75,10 +76,23 @@ async function saveDocument(produce: () => Promise<Blob>, options: SaveDocumentO
   return { saved: true, fileName: fileNameOf(path), target: desktopTarget(path) }
 }
 
+/** Where the last film was saved (its folder), to open the dialog there next time. */
+const LAST_FILM_FOLDER_KEY = 'openflyover.lastFilmFolder'
+
 async function createWritableFile(options: SaveFileOptions): Promise<WritableFile | null> {
   const { save } = await import('@tauri-apps/plugin-dialog')
-  const path = await save({ defaultPath: options.fileName, filters: dialogFilters(saveFilters(options)) })
-  return path ? openWritablePath(path) : null
+  const storage = keyValueStore(globalThis.localStorage ?? null)
+  const folder = storage.get(LAST_FILM_FOLDER_KEY)
+  const path = await save({ defaultPath: folder ? joinPath(folder, options.fileName) : options.fileName, filters: dialogFilters(saveFilters(options)) })
+  if (!path) return null
+  storage.set(LAST_FILM_FOLDER_KEY, path.slice(0, path.length - fileNameOf(path).length).replace(/[\\/]+$/, '') || path)
+  return openWritablePath(path)
+}
+
+/** The file `path` shown in the system's file manager (the opener plugin: the file is selected in its folder). */
+async function revealFile(path: string): Promise<void> {
+  const { invoke } = await import('@tauri-apps/api/core')
+  await invoke('plugin:opener|reveal_item_in_dir', { paths: [path] })
 }
 
 /** The file at `path` (created or emptied), open for writing; removed by `discard`. */
@@ -165,6 +179,7 @@ export function createDesktopPlatform(capabilities: Capabilities): Platform {
     },
     saveDocument,
     createWritableFile,
+    revealFile,
     droppedFiles,
     tileCache: createDesktopTileCache(() => import('@tauri-apps/plugin-fs')),
     projectLibrary: createProjectLibrary(createDesktopLibraryFiles(() => import('@tauri-apps/plugin-fs'))),

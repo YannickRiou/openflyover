@@ -45,6 +45,36 @@ export type VideoQuality = (typeof VIDEO_QUALITIES)[number]
 export const VIDEO_CODEC_CHOICES = ['auto', 'avc', 'hevc', 'vp9'] as const
 export type VideoCodecChoice = (typeof VIDEO_CODEC_CHOICES)[number]
 /** Bitrate chosen by hand, Mbit/s (the encoder's bounds, `MIN_BITRATE` / `MAX_BITRATE`). */
+/**
+ * Formats of the platforms people publish to, one click in « Format »: the proportions, the size, the frame rate, H.264
+ * (what they all take) and a bitrate of the order they recommend. They set these fields and nothing else.
+ */
+export const PLATFORM_PRESETS = [
+  { id: 'youtube-4k', get label() { return t('video.platform.youtube-4k') }, video: { aspect: '16:9', resolution: '4k', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 40 } },
+  { id: 'youtube', get label() { return t('video.platform.youtube') }, video: { aspect: '16:9', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 12 } },
+  { id: 'vertical', get label() { return t('video.platform.vertical') }, video: { aspect: '9:16', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 10 } },
+  { id: 'feed', get label() { return t('video.platform.feed') }, video: { aspect: '4:5', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 8 } },
+  { id: 'square', get label() { return t('video.platform.square') }, video: { aspect: '1:1', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 8 } },
+] as const satisfies readonly {
+  id: string
+  label: string
+  video: Pick<VideoSettings, 'aspect' | 'resolution' | 'fps' | 'codec' | 'manualBitrate' | 'bitrateMbps'>
+}[]
+
+export type PlatformPresetId = (typeof PLATFORM_PRESETS)[number]['id']
+
+/** The settings with the format of preset `id` (the quality, key frames, sound and name template stay). */
+export function withPlatformPreset(video: VideoSettings, id: PlatformPresetId): VideoSettings {
+  const preset = PLATFORM_PRESETS.find((p) => p.id === id)
+  return preset ? { ...video, ...preset.video } : video
+}
+
+/** The preset whose fields the settings have exactly (a click on it would change nothing), if any. */
+export function platformPresetOf(video: VideoSettings): PlatformPresetId | null {
+  const found = PLATFORM_PRESETS.find((p) => (Object.keys(p.video) as (keyof typeof p.video)[]).every((key) => video[key] === p.video[key]))
+  return found?.id ?? null
+}
+
 export const BITRATE_RANGE_MBPS = { min: 1, max: 80, step: 0.5 } as const
 export const KEYFRAME_INTERVALS_S = [0.5, 1, 2, 5, 10] as const
 export const AUDIO_BITRATES_KBPS = [96, 128, 192, 256, 320] as const
@@ -63,6 +93,8 @@ export interface VideoSettings {
   keyframeIntervalS: number
   /** bitrate of the soundtrack, kbit/s */
   audioKbps: number
+  /** name of the file from the template (`expandNameTemplate`); '' = the name of the track */
+  nameTemplate: string
 }
 
 /** Encoding fields, also those an older project lacks: it encodes as it did (bitrate of the quality, first codec). */
@@ -72,6 +104,7 @@ const ENCODING_DEFAULTS = {
   codec: 'auto',
   keyframeIntervalS: 2,
   audioKbps: 192,
+  nameTemplate: '',
 } as const satisfies Partial<VideoSettings>
 
 /** A phone starts at 720p (44 % fewer pixels than 1080p); it can still choose up to its cap. */
@@ -139,6 +172,22 @@ export function videoSize(
   return a.x >= a.y ? { width: long, height: short } : { width: short, height: long }
 }
 
+/** Longest file name template kept. */
+export const NAME_TEMPLATE_MAX = 120
+
+/** The words a file name template can use: `{project}`, `{track}`, `{format}`, `{resolution}`, `{fps}`, `{date}`. */
+export const NAME_TEMPLATE_VARIABLES = ['project', 'track', 'format', 'resolution', 'fps', 'date'] as const
+export type NameTemplateVariable = (typeof NAME_TEMPLATE_VARIABLES)[number]
+
+/**
+ * `template` with its `{variables}` replaced (an unknown one is left as typed), the result trimmed; the caller makes it a
+ * file name (`videoFileName` removes what a file system refuses). `fallback` when nothing is left.
+ */
+export function expandNameTemplate(template: string, vars: Readonly<Record<NameTemplateVariable, string>>, fallback: string): string {
+  const name = template.replace(/\{([a-z]+)\}/g, (whole, key: string) => (key in vars ? vars[key as NameTemplateVariable] : whole)).trim()
+  return name === '' ? fallback : name
+}
+
 export function isValidVideoSettings(video: VideoSettings): boolean {
   return (
     VIDEO_ASPECTS.some((a) => a.id === video.aspect) &&
@@ -149,7 +198,9 @@ export function isValidVideoSettings(video: VideoSettings): boolean {
     video.bitrateMbps <= BITRATE_RANGE_MBPS.max &&
     (VIDEO_CODEC_CHOICES as readonly string[]).includes(video.codec) &&
     (KEYFRAME_INTERVALS_S as readonly number[]).includes(video.keyframeIntervalS) &&
-    (AUDIO_BITRATES_KBPS as readonly number[]).includes(video.audioKbps)
+    (AUDIO_BITRATES_KBPS as readonly number[]).includes(video.audioKbps) &&
+    typeof video.nameTemplate === 'string' &&
+    video.nameTemplate.length <= NAME_TEMPLATE_MAX
   )
 }
 
