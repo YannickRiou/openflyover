@@ -126,6 +126,7 @@ const messages: Messages['timeline'] = {
   'menu.addKey': 'Añadir un fotograma clave aquí',
   'menu.remove': 'Eliminar',
   'menu.removeKey': 'Eliminar el fotograma clave',
+  'menu.removeClose': {'one': 'Eliminar y cerrar el hueco', 'other': 'Eliminar los {count} bloques y cerrar el hueco'},
   'menu.removeKeys': { one: 'Eliminar el fotograma clave seleccionado', other: 'Eliminar los {count} fotogramas clave seleccionados' },
 }
 

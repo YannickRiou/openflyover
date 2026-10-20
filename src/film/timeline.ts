@@ -798,6 +798,133 @@ export function addText(film: Film, startS: number, stop: ClockStop | null = nul
   return { film: stop ? attachToStop(next, id, stop) : next, id }
 }
 
+// ---------------------------------------------------------------------------
+// Blocks by film time as a group: move, copy, paste, ripple
+// ---------------------------------------------------------------------------
+
+/** The ids of the items that sit on the timeline by film time and can be picked together, copied and pasted: texts, media and music. */
+export const timedBlockIds = (film: Film): string[] => [...film.texts, ...film.media, ...film.audio].map((item) => item.id)
+
+/** An item of the time-keyed lanes by id, with the lane it is in. */
+function timedItem(film: Film, id: string): { lane: 'texts' | 'media' | 'audio'; item: FilmText | FilmMedia | FilmAudio } | null {
+  const text = film.texts.find((i) => i.id === id)
+  if (text) return { lane: 'texts', item: text }
+  const medium = film.media.find((i) => i.id === id)
+  if (medium) return { lane: 'media', item: medium }
+  const music = film.audio.find((i) => i.id === id)
+  return music ? { lane: 'audio', item: music } : null
+}
+
+/** The film with `shift` added to the start of every item of `lane` that `pick` takes (never before the film's start). */
+function shiftLane(film: Film, lane: 'texts' | 'media' | 'audio', shift: number, pick: (item: FilmText | FilmMedia | FilmAudio) => boolean): Film {
+  const move = <T extends { startS: number }>(items: T[]) => items.map((i) => (pick(i as never) ? { ...i, startS: roundS(Math.max(0, i.startS + shift)) } : i))
+  return lane === 'texts' ? { ...film, texts: move(film.texts) } : lane === 'media' ? { ...film, media: move(film.media) } : { ...film, audio: move(film.audio) }
+}
+
+/**
+ * The blocks `ids` (texts, media, music) moved together by the shift `lead` would get from `dragFilm` (its start or end
+ * caught by the magnet): the same number of seconds for each, none before the start of the film. The film itself when
+ * nothing moves.
+ */
+export function dragBlocks(film: Film, ids: readonly string[], lead: string, deltaS: number, ctx: DragContext): Film {
+  const leadAt = (f: Film) => timedItem(f, lead)?.item.startS
+  const before = leadAt(film)
+  const after = leadAt(dragFilm(film, lead, 'move', deltaS, ctx))
+  if (before === undefined || after === undefined) return film
+  const earliest = Math.min(...ids.flatMap((id) => timedItem(film, id)?.item.startS ?? []))
+  const shift = Math.max(after - before, -earliest)
+  if (!Number.isFinite(shift) || shift === 0) return film
+  const group = new Set(ids)
+  let next = film
+  for (const lane of ['texts', 'media', 'audio'] as const) next = shiftLane(next, lane, shift, (item) => group.has(item.id))
+  return next
+}
+
+/**
+ * The film with the blocks `ids` removed and the gap each leaves closed: in its lane, what starts after it moves earlier
+ * by its length (what is attached to a stop follows the stop, not this). Removing several in one lane closes each gap.
+ */
+export function rippleRemove(film: Film, ids: readonly string[]): Film {
+  const gone = ids.flatMap((id) => timedItem(film, id) ?? []).sort((a, b) => b.item.startS - a.item.startS)
+  let next = film
+  for (const { lane, item } of gone) {
+    const end = item.startS + item.durationS
+    next = shiftLane(removeFilmItem(next, item.id), lane, -item.durationS, (other) => other.startS >= end - 1e-6 && !('stopId' in other && other.stopId))
+  }
+  return next
+}
+
+/**
+ * `dragged`, the film after an edge of block `id` was dragged from `start`, with the blocks that came after it in its lane
+ * moved by as much as its end moved (Shift: « décalage en chaîne »); `dragged` itself when its end did not move or `id` is
+ * not a text, a medium or a music clip.
+ */
+export function rippleDrag(start: Film, dragged: Film, id: string): Film {
+  const was = timedItem(start, id)
+  const now = timedItem(dragged, id)
+  if (!was || !now) return dragged
+  const shift = now.item.startS + now.item.durationS - (was.item.startS + was.item.durationS)
+  if (!shift) return dragged
+  const end = was.item.startS + was.item.durationS
+  const after = new Set(
+    [...start.texts, ...start.media, ...start.audio].filter((i) => i.id !== id && i.startS >= end - 1e-6 && !('stopId' in i && i.stopId)).map((i) => i.id),
+  )
+  return shiftLane(dragged, was.lane, shift, (item) => after.has(item.id))
+}
+
+/** Blocks copied, to be pasted elsewhere. */
+export interface BlockClip {
+  texts: FilmText[]
+  media: FilmMedia[]
+  audio: FilmAudio[]
+}
+
+/** A copy of the blocks `ids` (texts, media, music), null when none of them is one. */
+export function copyBlocks(film: Film, ids: readonly string[]): BlockClip | null {
+  const group = new Set(ids)
+  const clip: BlockClip = {
+    texts: film.texts.filter((i) => group.has(i.id)).map((i) => ({ ...i })),
+    media: film.media.filter((i) => group.has(i.id)).map((i) => ({ ...i })),
+    audio: film.audio.filter((i) => group.has(i.id)).map((i) => ({ ...i })),
+  }
+  return clip.texts.length + clip.media.length + clip.audio.length > 0 ? clip : null
+}
+
+/**
+ * The blocks of `clip` added to the film, the earliest one at film time `atS` and the others keeping their gaps, each with
+ * its own id and attached to no stop. A medium whose file is no longer in the project (`hasMedia`) and a clip synced with the
+ * track are left out. The film and the new ids, null when nothing could be pasted.
+ */
+export function pasteBlocks(film: Film, clip: BlockClip, atS: number, hasMedia: (src: string) => boolean = () => true): { film: Film; ids: string[] } | null {
+  const texts = clip.texts
+  const media = clip.media.filter((m) => hasMedia(m.src) && !m.sync)
+  const audio = clip.audio.filter((a) => hasMedia(a.src))
+  const all = [...texts, ...media, ...audio]
+  if (all.length === 0) return null
+  const origin = Math.min(...all.map((i) => i.startS))
+  const at = (i: { startS: number }) => roundS(Math.max(0, atS) + i.startS - origin)
+  let next = film
+  const ids: string[] = []
+  for (const text of texts) {
+    const copy: FilmText = { ...text, id: nextFilmId(next, 'text'), startS: at(text) }
+    delete copy.stopId
+    next = { ...next, texts: [...next.texts, copy] }
+    ids.push(copy.id)
+  }
+  for (const medium of media) {
+    const copy: FilmMedia = { ...medium, id: nextFilmId(next, 'media'), startS: at(medium) }
+    delete copy.stopId
+    next = { ...next, media: [...next.media, copy] }
+    ids.push(copy.id)
+  }
+  for (const music of audio) {
+    const copy: FilmAudio = { ...music, id: nextFilmId(next, 'music'), startS: at(music) }
+    next = { ...next, audio: [...next.audio, copy] }
+    ids.push(copy.id)
+  }
+  return { film: next, ids }
+}
+
 /** The playhead stays at least this share of the view away from its edges while the film plays on a zoomed timeline. */
 export const FOLLOW_MARGIN = 0.1
 /** When it gets there, the timeline pages: the playhead goes back to this share of the view from its left edge. */
