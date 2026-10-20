@@ -376,6 +376,37 @@ export const NIGHT_PARTS: { key: 'duskS' | 'nightS' | 'dawnS'; label: string; ti
 ]
 export const DEFAULT_NIGHTS: FilmNights = { enabled: true, duskS: 3, nightS: 2, dawnS: 3 }
 
+/** The figures a day card can show under « Jour n »: the date, the day's distance, climb, time on the move, start time and weather. */
+export const DAY_CARD_FIELDS = ['date', 'distance', 'ascent', 'duration', 'start', 'weather'] as const
+export type DayCardField = (typeof DAY_CARD_FIELDS)[number]
+/** How long a day card stays (seconds at ×1; also its validity range in a loaded project). */
+export const DAY_CARD_DURATION_RANGE = { min: 2, max: 15, step: 0.5 } as const
+
+/**
+ * The card that opens each day of a multi-day track (« Cartes de jour »): drawn from the track and the clock at every
+ * frame like the card of a stage « À la suite » (so it follows the track, the nights and the weather), not baked into
+ * the texts. `view`: during the night before the day, the camera rises to a high view of that day's route, holds, and
+ * dives back to the marker at dawn; the card shows over it.
+ */
+export interface FilmDayCards {
+  enabled: boolean
+  durationS: number
+  anchor: OverlayAnchor
+  size: number
+  fields: Record<DayCardField, boolean>
+  /** title with `{n}` (day number), `{count}` (days) and `{date}`; absent: « Jour n »; its look is the overlay's style */
+  title?: string
+  view: boolean
+}
+export const DEFAULT_DAY_CARDS: FilmDayCards = {
+  enabled: false,
+  durationS: 5,
+  anchor: 'center',
+  size: 1,
+  fields: { date: true, distance: true, ascent: true, duration: false, start: false, weather: false },
+  view: false,
+}
+
 export const JUNCTION_KINDS = ['coupe', 'fondu-noir', 'fondu-blanc', 'nuit'] as const
 /**
  * How the film passes from a stage to the next one « À la suite » (`FilmJunction`): 'coupe', a hard cut (no time);
@@ -460,6 +491,8 @@ export interface Film {
   pois: FilmPoi[]
   /** nights of a multi-day track shown as pauses; off for the films saved before it (their timing stays) */
   nights: FilmNights
+  /** the cards of the days of a multi-day track (absent: none, as `DEFAULT_DAY_CARDS`) */
+  dayCards?: FilmDayCards
   /** junctions between the stages « À la suite » that differ from the default (`junctionOf` reads them), by track */
   junctions?: FilmJunction[]
   /** default transition and card of the junctions (absent: `DEFAULT_JUNCTION`, or what `race.stageTransition` said) */
@@ -761,6 +794,20 @@ export function isValidAudio(audio: unknown): audio is FilmAudio {
   )
 }
 
+export function isValidDayCards(cards: unknown): cards is FilmDayCards {
+  return (
+    isRecord(cards) &&
+    typeof cards.enabled === 'boolean' &&
+    within(cards.durationS, DAY_CARD_DURATION_RANGE.min, DAY_CARD_DURATION_RANGE.max) &&
+    oneOf(OVERLAY_ANCHORS, cards.anchor) &&
+    within(cards.size, WIDGET_SIZE_MIN, WIDGET_SIZE_MAX) &&
+    isRecord(cards.fields) &&
+    DAY_CARD_FIELDS.every((field) => typeof (cards.fields as Record<string, unknown>)[field] === 'boolean') &&
+    optionalString(cards.title) &&
+    typeof cards.view === 'boolean'
+  )
+}
+
 export function isValidNights(nights: FilmNights): boolean {
   const part = (v: unknown) => within(v, NIGHT_PART_RANGE.min, NIGHT_PART_RANGE.max)
   return typeof nights.enabled === 'boolean' && part(nights.duskS) && part(nights.nightS) && part(nights.dawnS)
@@ -820,6 +867,7 @@ function hasValidJunctions(film: Film): boolean {
  */
 export function isValidFilm(film: Film): boolean {
   if (!isValidShot(film.opening) || !isValidShot(film.closing) || typeof film.autoStops !== 'boolean') return false
+  if (film.dayCards !== undefined && !isValidDayCards(film.dayCards)) return false
   if (typeof film.duckMusic !== 'boolean') return false
   if (!oneOf(AUTO_STOP_MODES, film.autoMode)) return false
   if (!film.stops.every(isValidStop) || !film.texts.every(isValidText) || !film.media.every(isValidMedia)) return false

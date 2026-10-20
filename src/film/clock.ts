@@ -14,6 +14,7 @@
 import { clamp } from '../core/math'
 import type { Track } from '../core/types'
 import { flightNights, nightPauseS } from '../flyover/nights'
+import { localDate, trackDays } from './days'
 import type { FlightNight } from '../flyover/nights'
 import { flightPacing, pacingHighlights } from '../flyover/pacing'
 import type { FlightStage, FlightStop, Pacing, PacingPosition, PacingSettings, SpeedCurve } from '../flyover/pacing'
@@ -141,6 +142,8 @@ export interface FilmClock {
   junctions: readonly ClockJunction[]
   /** nights shown as pauses, by position (none by default) */
   nights: readonly ClockNight[]
+  /** the days of a multi-day track with cards (none by default), in order */
+  days: readonly ClockDay[]
   /** film length at ×1 (seconds) */
   totalTime(): number
   /** progress at film time `tS` (0 during the opening, 1 during the closing); continuous and non-decreasing */
@@ -174,6 +177,12 @@ export interface FilmClockInput {
   junctions?: readonly JunctionInput[]
   /** nights shown as pauses (none by default) */
   nights?: readonly FlightNight[]
+  /** the days of the track when its days have cards (`filmDays`; none by default) */
+  days?: readonly DayInput[]
+  /** clock of the recording, to date the sunrises of the nights (`TrackDay`); absent: this device's */
+  utcOffsetMin?: number
+  /** the night before each day shows a high view of it, and its card appears as the pause starts, not when it ends */
+  dayView?: boolean
   /** the stages « À la suite » with a flight time of their own (`stageSpansOf`; none by default: the length shares the duration) */
   stages?: readonly FlightStage[]
   /** length of the first track (metres), 0 without track */
@@ -183,6 +192,20 @@ export interface FilmClockInput {
   /** `settings.flyoverDurationS` */
   durationS: number
   pacing: PacingSettings
+}
+
+/** A day of the input: its place on the track and its local date (`trackDays`). */
+export interface DayInput {
+  startM: number
+  endM: number
+  date: string
+}
+
+/** A day on the clock: its place on the track, the night pause that leads into it, the film time its card appears and whether the camera shows it from a high view during that night. */
+export interface ClockDay extends DayInput {
+  night: ClockNight | null
+  cardS: number
+  view: boolean
 }
 
 /** A junction of the input, to be placed on the clock. */
@@ -261,6 +284,19 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
   const progressAtTime = (tS: number) => flight.progressAtTime(tS - openingS)
   const timeAtProgress = (progress: number) => (progress >= 1 ? total : openingS + flight.timeAtProgress(progress))
 
+  // a day's card: with the flight for the first; for the others, once the night pause before it ends (or, over a high
+  // view of the day, as it starts), else where the marker reaches the day's first point
+  const days: ClockDay[] =
+    input.lengthM > 0
+      ? (input.days ?? []).map((day, k) => {
+          const night = k === 0 ? null : nights.find((n) => localDate(n.sunriseMs, input.utcOffsetMin) === day.date) ?? null
+          const reachedS = timeAtProgress(k === 0 ? 0 : day.startM / input.lengthM)
+          const view = night !== null && input.dayView === true
+          const cardS = night ? (view ? night.holdStartS : Math.max(reachedS, night.holdEndS)) : reachedS
+          return { ...day, night, cardS, view }
+        })
+      : []
+
   const stopAt = (t: number): ClockStop | null => {
     let lo = 0
     let hi = stops.length
@@ -303,6 +339,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
     cuts,
     junctions,
     nights,
+    days,
     totalTime: () => total,
     progressAtTime,
     timeAtProgress,
@@ -344,6 +381,13 @@ export function junctionInputsFor({ track, film, durationS, cutsM, stageIds }: F
   return { ...plan, stages: stageSpansOf(film, stageIds ?? [], cutsM, track.stats.distanceM) }
 }
 
+/** The days of the track when their cards are on (« Cartes de jour »), a single track and several days: else none. */
+export function dayInputsFor({ track, film, cutsM }: FilmClockFor): Pick<FilmClockInput, 'days' | 'utcOffsetMin' | 'dayView'> {
+  if (!track || cutsM?.length || !film.dayCards?.enabled) return {}
+  const days = trackDays(trackPathOf(track), track.utcOffsetMin)
+  return days.length < 2 ? {} : { days, utcOffsetMin: track.utcOffsetMin, dayView: film.dayCards.view }
+}
+
 /** Input of the clock of the film of `track`: highlights and generated stops from the pacing settings and the landmarks. */
 export function filmClockInputFor(source: FilmClockFor): FilmClockInput {
   const { track, film, durationS, pacing, landmarks = [], cutsM } = source
@@ -357,6 +401,7 @@ export function filmClockInputFor(source: FilmClockFor): FilmClockInput {
     markerKeys: track ? film.markerKeys : [],
     cutsM: track ? cutsM : [],
     ...junctionInputsFor(source),
+    ...dayInputsFor(source),
     lengthM: track?.stats.distanceM ?? 0,
     highlightsM: track && pacing.enabled ? pacingHighlights(track, pacing, landmarks) : [],
     durationS,

@@ -280,10 +280,13 @@ export interface WeatherSummary {
 /**
  * Outing summary: the weather is sampled where the track was at each moment (`samples` + 1 evenly spaced
  * distances); totals and the dominant condition are weighted by the recorded time between samples, so a long
- * pause counts for its duration. Undefined when the path has no time or the series is empty.
+ * pause counts for its duration. Undefined when the path has no time or the series is empty. `range` (metres along
+ * the path) summarises that stretch only: a day of the outing.
  */
-export function summarizeOuting(series: WeatherSeries, path: TrackPath, samples = 200): WeatherSummary | undefined {
+export function summarizeOuting(series: WeatherSeries, path: TrackPath, samples = 200, range?: { fromM: number; toM: number }): WeatherSummary | undefined {
   if (path.count === 0) return undefined
+  const fromM = range?.fromM ?? 0
+  const spanM = (range?.toM ?? path.lengthM) - fromM
   let minT = Infinity
   let maxT = -Infinity
   let precipitationMm = 0
@@ -294,7 +297,7 @@ export function summarizeOuting(series: WeatherSeries, path: TrackPath, samples 
   let first: WeatherCondition | undefined
   let prevTime: number | undefined
   for (let i = 0; i <= samples; i++) {
-    const d = (i / samples) * path.lengthM
+    const d = fromM + (i / samples) * spanM
     const timeMs = recordedTimeAt(path, d)
     if (timeMs === undefined) return undefined
     const { lon, lat } = samplePath(path, d)

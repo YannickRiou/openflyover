@@ -7,6 +7,8 @@
  * `overlayExtras` reads what both draw beyond the track (timeline texts and photos, credits, leaderboard, dips, cards).
  */
 import type { Track } from '../core/types'
+import { dayFigures, trackDays } from '../film/days'
+import type { DayFigures } from '../film/days'
 import { junctionsDipAt } from '../film/junctions'
 import { transitionDipAt } from '../film/model'
 import type { FilmMedia, TransitionDip } from '../film/model'
@@ -29,7 +31,7 @@ import type { TrackColorBy, TrackLegend } from '../flyover/trackColor'
 import { getLanguage } from '../i18n'
 import type { Sequence } from '../flyover/sequence'
 import { loadLogo } from './assets'
-import { leaderboardRows, overlayCredits, overlayFilmFrameAt, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
+import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
 import type { LeaderboardRow, OverlayFilm } from './data'
 import { drawOverlay } from './draw'
 import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
@@ -59,6 +61,17 @@ function trackLegendOf(tracks: readonly Track[], colorBy: TrackColorBy, anchor: 
   return legendCache.legend && { ...legendCache.legend, anchor }
 }
 
+let dayMemo: { track: Track; series: WeatherSeries | null; figures: DayFigures[] } | null = null
+
+/** Figures of the days of `track` with the weather of its outing (`dayFigures`), made again only when either changes. */
+function dayFiguresOf(track: Track, series: WeatherSeries | null): DayFigures[] {
+  if (dayMemo?.track === track && dayMemo.series === series) return dayMemo.figures
+  const path = trackPathOf(track)
+  const figures = dayFigures(path, trackDays(path, track.utcOffsetMin), track.stats.maxEle === undefined ? undefined : cumulativeAscent(track), series, track.utcOffsetMin)
+  dayMemo = { track, series, figures }
+  return figures
+}
+
 /** The stronger of two dips. */
 const strongerDip = (a: TransitionDip | null, b: TransitionDip | null) => (b && b.alpha > (a?.alpha ?? 0) ? b : a)
 
@@ -80,6 +93,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     media: settings.film.media,
     dip: strongerDip(transitionDipAt(settings.film, time), sequence && time.junctions ? junctionsDipAt(time.junctions, time.timeS) : null),
     stage: sequence ? stageCardAt(sequence, time, settings.film) : null,
+    day: !sequence && settings.film.dayCards?.enabled && time.dayCardsS ? dayCardAt(dayFiguresOf(filmTrackOf(tracks, settings.race) ?? tracks[0], useWeatherStore.getState().series), time, settings.film.dayCards) : null,
     exportSize: videoSize(settings.video.aspect, settings.video.resolution, Number.POSITIVE_INFINITY),
     markerColor: leadMarkerColors(settings.marker, (trackUnderMarker(tracks, settings.race, progress)?.track ?? filmTrackOf(tracks, settings.race))?.color ?? '#FFFFFF').ball,
     credits: overlayCredits({

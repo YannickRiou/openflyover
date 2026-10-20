@@ -3,6 +3,7 @@ import { isValidSetting, parseProject, sanitizeSettings } from '../project/docum
 import { DEFAULT_SETTINGS } from '../state/store'
 import {
   AUDIO_DEFAULTS,
+  DEFAULT_DAY_CARDS,
   DEFAULT_FILM,
   DIP_DEFAULT_S,
   MEDIA_DEFAULTS,
@@ -20,7 +21,7 @@ import {
   situationTiming,
   transitionDipAt,
 } from './model'
-import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText } from './model'
+import type { Film, FilmAudio, FilmCameraKey, FilmDayCards, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText } from './model'
 
 const stop = (id: string, patch: Partial<FilmStop> = {}): FilmStop => ({ id, atM: 1000, durationS: 3, camera: 'orbite', ...patch })
 const text = (id: string, patch: Partial<FilmText> = {}): FilmText => ({
@@ -133,6 +134,24 @@ describe('film model', () => {
       { sun: 'nuit' as never },
     ]
     for (const patch of bad) expect(isValidFilm(film({ opening: { ...framed, ...patch } }))).toBe(false)
+  })
+
+  it('day cards: optional, each field within its range', () => {
+    expect(isValidFilm(film({ dayCards: DEFAULT_DAY_CARDS }))).toBe(true)
+    expect(isValidFilm(film({ dayCards: { ...DEFAULT_DAY_CARDS, enabled: true, view: true, title: 'Jour {n}', durationS: 8 } }))).toBe(true)
+    const bad: Partial<FilmDayCards>[] = [
+      { enabled: 'oui' as never },
+      { durationS: 1 },
+      { durationS: 20 },
+      { anchor: 'milieu' as never },
+      { size: 0 },
+      { size: 9 },
+      { fields: { ...DEFAULT_DAY_CARDS.fields, weather: 'oui' as never } },
+      { fields: { date: true } as never },
+      { title: 3 as never },
+      { view: 1 as never },
+    ]
+    for (const patch of bad) expect(isValidFilm(film({ dayCards: { ...DEFAULT_DAY_CARDS, ...patch } })), JSON.stringify(patch)).toBe(false)
   })
 
   it('dip curve: 0 outside its window, symmetric, 1 at the cut', () => {

@@ -14,6 +14,7 @@ export default {
   'draw.stat.ascent': 'Dénivelé +',
   'draw.stat.maxAltitude': 'Altitude max',
   'draw.stat.duration': 'Durée',
+  'draw.stat.start': 'Départ',
   'draw.stat.maxSpeed': 'Vitesse max',
   'draw.temperatureRange': '{min} à {max} °C',
   'draw.weatherLine': "{condition} · {temperature} · vent jusqu'à {wind} km/h",

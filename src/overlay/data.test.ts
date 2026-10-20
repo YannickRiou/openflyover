@@ -9,11 +9,12 @@ import { osmAttribution } from '../osm/overpass'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import type { Racer } from '../flyover/race'
-import { DEFAULT_FILM } from '../film/model'
+import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from '../film/model'
 import { withDefaultCard, withJunctionCard } from '../film/junctions'
 import { buildSequence } from '../flyover/sequence'
 import {
   cumulativeAscent,
+  dayCardAt,
   leaderboardRows,
   miniMapOutline,
   overlayCredits,
@@ -311,5 +312,35 @@ describe('« À la suite »', () => {
     const hidden = withDefaultCard(DEFAULT_FILM, false)
     expect(stageCardAt(sequence, time(8), hidden)).toBeNull()
     expect(stageCardAt(sequence, time(31), withJunctionCard(hidden, a.id, { enabled: true }))).toMatchObject({ name: 'J2' })
+  })
+})
+
+describe('dayCardAt', () => {
+  const figures = [1, 2, 3].map((n) => ({ n, count: 3, date: `2026-06-0${n}`, distanceM: n * 1000 }))
+  const cards = { enabled: true, durationS: 5, anchor: 'center' as const, size: 1, fields: DEFAULT_DAY_CARDS.fields }
+  const time = (timeS: number) => ({ timeS, openingS: 6, flightS: 60, totalS: 70, dayCardsS: [6, 30, 34] })
+
+  it('the card of the latest day started, for its duration, never past the next day', () => {
+    expect(dayCardAt(figures, time(5), cards)).toBeNull()
+    expect(dayCardAt(figures, time(6), cards)).toMatchObject({ startS: 6, durationS: 5, anchor: 'center' })
+    expect(dayCardAt(figures, time(6), cards)?.figures.n).toBe(1)
+    expect(dayCardAt(figures, time(11), cards)).toBeNull()
+    expect(dayCardAt(figures, time(31), cards)?.figures.n).toBe(2)
+    // the next day starts 4 s later: the card gives way to it
+    expect(dayCardAt(figures, time(34), cards)?.figures.n).toBe(3)
+    expect(dayCardAt(figures, time(33.9), cards)?.durationS).toBe(4)
+  })
+
+  it('nothing while off, without day starts, or when they do not match the days', () => {
+    expect(dayCardAt(figures, time(7), { ...cards, enabled: false })).toBeNull()
+    expect(dayCardAt(figures, time(7), undefined)).toBeNull()
+    expect(dayCardAt(figures, { timeS: 7, openingS: 6, flightS: 60, totalS: 70 }, cards)).toBeNull()
+    expect(dayCardAt(figures.slice(0, 2), time(7), cards)).toBeNull()
+  })
+
+  it('carries the title only when it is worded', () => {
+    expect(dayCardAt(figures, time(7), cards)).not.toHaveProperty('title')
+    expect(dayCardAt(figures, time(7), { ...cards, title: '  ' })).not.toHaveProperty('title')
+    expect(dayCardAt(figures, time(7), { ...cards, title: 'Jour {n}/{count}' })?.title).toBe('Jour {n}/{count}')
   })
 })
