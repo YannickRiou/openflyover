@@ -1,14 +1,16 @@
 /**
  * The opening title and the closing card (`overlay.title`, `overlay.end`) as blocks of the timeline's « Textes » lane.
  * They have no data of their own: the settings of the overlay stay the source of truth and the overlay draws them as it
- * always did; the timeline only shows their real window and turns a drag of an edge into the fraction of the flight the
- * settings keep (`title.end`, `end.start`). Pure module (no DOM, no React).
+ * always did; the timeline shows their window and the user places it freely: a drag of an edge or of the whole block
+ * sets `title.window` / `end.window` (film seconds). Until a card is placed, its window is the one of earlier versions,
+ * from the first frame to a fraction of the flight (`title.end`), or from a fraction of it to the last frame
+ * (`end.start`). Pure module (no DOM, no React).
  *
  * Selected by fixed ids, like any block of the film (`filmSelection`).
  */
 import { clamp } from '../core/math'
-import { END_START_MAX, END_START_MIN, TITLE_END_MAX, TITLE_END_MIN } from '../overlay/settings'
-import type { OverlaySettings } from '../overlay/settings'
+import { CARD_WINDOW_MAX_S } from '../overlay/settings'
+import type { CardWindow, OverlaySettings } from '../overlay/settings'
 import type { FilmClock } from './clock'
 import type { Grip } from './timeline'
 import { t } from '../i18n'
@@ -39,27 +41,25 @@ export function shownCards(overlay: OverlaySettings): CardId[] {
   return cards.filter((card) => cardShown(overlay, card))
 }
 
+/** The shortest a card can be placed for (seconds). */
+export const CARD_MIN_S = 0.5
+
 /**
- * Film times between which the card is on: the opening title from the first frame to `title.end` of the flight, the
- * closing card from `end.start` of the flight to the last frame (the shots included, as `titleCardOpacity` and
- * `endCardOpacity` do).
+ * Film times between which the card is on: where it was placed (`window`), else the opening title from the first frame
+ * to `title.end` of the flight and the closing card from `end.start` of the flight to the last frame (the shots
+ * included, as `titleCardSpan` and `endCardSpan` do).
  */
 export function cardWindow(overlay: OverlaySettings, card: CardId, clock: CardClock): { startS: number; endS: number } {
+  const placed = card === TITLE_CARD_ID ? overlay.title.window : overlay.end.window
+  if (placed) return placed
   if (card === TITLE_CARD_ID) return { startS: 0, endS: clock.openingS + overlay.title.end * clock.flightS }
   return { startS: clock.openingS + overlay.end.start * clock.flightS, endS: clock.totalTime() }
 }
 
-/** Fraction of the flight at film time `timeS` (what the settings keep), within the range of the card, to a thousandth. */
-export function cardFraction(card: CardId, timeS: number, clock: Pick<CardClock, 'openingS' | 'flightS'>): number {
-  const [min, max] = card === TITLE_CARD_ID ? [TITLE_END_MIN, TITLE_END_MAX] : [END_START_MIN, END_START_MAX]
-  const fraction = clock.flightS > 0 ? (timeS - clock.openingS) / clock.flightS : min
-  return Math.round(clamp(fraction, min, max) * 1000) / 1000
-}
-
 /**
- * The overlay after dragging `grip` of `card` by `deltaS` seconds from the window it had: only the edge that moves
- * (the right one of the title, the left one of the closing card), `snap` applied to its time; the result stays in the
- * range of the setting. The overlay itself when nothing changes (other grip, no flight, same value).
+ * The overlay after dragging `grip` of `card` by `deltaS` seconds from the window it had: the start, the end or (`move`)
+ * both together, `snap` applied to the edge that moves (to the start for the whole block); the window stays within the
+ * film and at least CARD_MIN_S long. The overlay itself when nothing changes.
  */
 export function dragCard(
   overlay: OverlaySettings,
@@ -70,14 +70,23 @@ export function dragCard(
   snap: (timeS: number) => number = (t) => t,
 ): OverlaySettings {
   const window = cardWindow(overlay, card, clock)
-  if (card === TITLE_CARD_ID) {
-    if (grip !== 'end') return overlay
-    const end = cardFraction(card, snap(window.endS + deltaS), clock)
-    return end === overlay.title.end ? overlay : { ...overlay, title: { ...overlay.title, end } }
+  const total = Math.min(clock.totalTime(), CARD_WINDOW_MAX_S)
+  const length = window.endS - window.startS
+  let next: CardWindow
+  if (grip === 'start') {
+    const startS = clamp(snap(window.startS + deltaS), 0, window.endS - CARD_MIN_S)
+    next = { startS, endS: window.endS }
+  } else if (grip === 'end') {
+    const endS = clamp(snap(window.endS + deltaS), window.startS + CARD_MIN_S, total)
+    next = { startS: window.startS, endS }
+  } else {
+    const startS = clamp(snap(window.startS + deltaS), 0, Math.max(0, total - length))
+    next = { startS, endS: startS + length }
   }
-  if (grip !== 'start') return overlay
-  const start = cardFraction(card, snap(window.startS + deltaS), clock)
-  return start === overlay.end.start ? overlay : { ...overlay, end: { ...overlay.end, start } }
+  const round = (v: number) => Math.round(v * 1000) / 1000
+  next = { startS: round(next.startS), endS: round(next.endS) }
+  if (next.startS === round(window.startS) && next.endS === round(window.endS)) return overlay
+  return card === TITLE_CARD_ID ? { ...overlay, title: { ...overlay.title, window: next } } : { ...overlay, end: { ...overlay.end, window: next } }
 }
 
 /** The overlay with `card` switched off (its settings are kept: switching it on again brings the block back as it was). */

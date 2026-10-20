@@ -10,6 +10,7 @@ import {
   counterText,
   drawOverlay,
   endCardOpacity,
+  endCardOpacityOf,
   creditLines,
   creditsRollProgress,
   formatLongDate,
@@ -23,6 +24,7 @@ import {
   overlayTimedState,
   progressTime,
   titleCardOpacity,
+  titleCardOpacityOf,
 } from './draw'
 import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw'
 import { MEDIA_DEFAULTS } from '../film/model'
@@ -1321,5 +1323,42 @@ describe('day card of a multi-day track', () => {
 
   it('the film can word the title: {n}, {count} and {date}', () => {
     expect(render(42, { ...day, title: 'Étape {n}/{count}' })).toContain('Étape 2/3')
+
+describe('cards placed on the timeline', () => {
+  // 6 s opening, 60 s flight, 5 s closing
+  const at = (timeS: number) => ({ timeS, openingS: 6, flightS: 60, totalS: 71 })
+
+  it('without a window: as before, from the first frame to a fraction of the flight, and from one to the last frame', () => {
+    expect(titleCardOpacityOf(at(3), { end: 0.1 })).toBe(titleCardOpacity(at(3), 0.1))
+    expect(titleCardOpacityOf(at(20), { end: 0.1 })).toBe(0)
+    expect(endCardOpacityOf(at(70), { start: 0.9 })).toBe(endCardOpacity(at(70), 0.9))
+  })
+
+  it('opening card: fades in and out inside its window, nothing outside', () => {
+    const card = { end: 0.1, window: { startS: 10, endS: 20 } }
+    expect(titleCardOpacityOf(at(9.9), card)).toBe(0)
+    expect(titleCardOpacityOf(at(10), card)).toBe(0)
+    expect(titleCardOpacityOf(at(15), card)).toBe(1)
+    expect(titleCardOpacityOf(at(10.3), card)).toBeGreaterThan(0)
+    expect(titleCardOpacityOf(at(10.3), card)).toBeLessThan(1)
+    expect(titleCardOpacityOf(at(19.7), card)).toBeLessThan(1)
+    expect(titleCardOpacityOf(at(20), card)).toBe(0)
+  })
+
+  it('closing card: from its start to the end of its window; to the last frame it stays whole', () => {
+    expect(endCardOpacityOf(at(50), { start: 0.9, window: { startS: 52, endS: 62 } })).toBe(0)
+    expect(endCardOpacityOf(at(57), { start: 0.9, window: { startS: 52, endS: 62 } })).toBe(1)
+    expect(endCardOpacityOf(at(61.8), { start: 0.9, window: { startS: 52, endS: 62 } })).toBeLessThan(1)
+    expect(endCardOpacityOf(at(62), { start: 0.9, window: { startS: 52, endS: 62 } })).toBe(0)
+    expect(endCardOpacityOf(at(71), { start: 0.9, window: { startS: 52, endS: 71 } })).toBe(1)
+  })
+
+  it('the rolling credits roll inside the window of the card', () => {
+    const time = (timeS: number) => at(timeS)
+    expect(creditsRollProgress(time(52), 0.9, { startS: 52, endS: 62 })).toBe(0)
+    expect(creditsRollProgress(time(62), 0.9, { startS: 52, endS: 62 })).toBe(1)
+    const half = creditsRollProgress(time(58), 0.9, { startS: 52, endS: 62 })
+    expect(half).toBeGreaterThan(0)
+    expect(half).toBeLessThan(1)
   })
 })

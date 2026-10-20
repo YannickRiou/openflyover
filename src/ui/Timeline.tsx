@@ -5,7 +5,8 @@
  * right dock (`FilmInspector`).
  *
  * « Textes » also carries the opening title and the closing card while they are on (`film/cards.ts`: blocks of the
- * overlay settings, whose inner edge sets `title.end` / `end.start`; their settings are in the inspector).
+ * overlay settings, placed freely: their edges and body set `title.window` / `end.window`; their settings are in the
+ * inspector).
  *
  * A gesture is previewed on the timeline only and committed on release as one undo step. Edits are the pure
  * functions of `film/timeline.ts`; editing a stop writes the generated stops out first (`materializeStops`).
@@ -17,7 +18,7 @@ import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, Point
 import { materializeStops, stopAt, stopCandidates } from '../film/assemble'
 import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readAudio, startMusicPreview, useMusicPreview, waveformPath } from '../film/audio'
 import { beatTicksPath } from '../film/beats'
-import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards } from '../film/cards'
+import { CARD_LABELS, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards } from '../film/cards'
 import type { CardId } from '../film/cards'
 import { buildFilmClock, filmClockFor, filmClockInputFor, junctionInputsFor } from '../film/clock'
 import type { FilmClock, FilmClockFor, FilmClockInput } from '../film/clock'
@@ -1148,9 +1149,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
       const step = (e.shiftKey ? FINE_NUDGE_S : NUDGE_S) * (e.key === 'ArrowLeft' ? -1 : 1)
       const grip: Grip =
-        item === 'closing' || item === END_CARD_ID
+        item === 'closing'
           ? 'start'
-          : item === 'opening' || item === TITLE_CARD_ID || isJunctionItem(item) || isStageCardItem(item) || isStageItem(item)
+          : item === 'opening' || isJunctionItem(item) || isStageCardItem(item) || isStageItem(item)
             ? 'end'
             : 'move'
       if (isCardItem(item)) {
@@ -1252,9 +1253,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       onPointerDown={(e) => {
         if (centred && selected !== item) return startTap(e, item)
         if (grips.includes('move')) return startEdit(e, item, 'move')
-        // the opening title and the closing card drag the edge of their shot, the card following it
-        if (item === TITLE_CARD_ID && shownFilm.opening.style !== 'aucune') return startEdit(e, 'opening', 'end')
-        if (item === END_CARD_ID && shownFilm.closing.style !== 'aucune') return startEdit(e, 'closing', 'start')
         // a shot: select it and scrub
         e.stopPropagation()
         setSelected(item)
@@ -1821,7 +1819,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               <div data-testid="timeline-lane" {...laneProps('texts')} role="group" aria-label={t('timeline.lane.texts')}>
-                {/* the opening title and the closing card (overlay settings): their inner edge moves; their body drags the edge of the opening / closing shot */}
+                {/* the opening title and the closing card (overlay settings): placed freely, edges and body */}
                 {shownCards(shownOverlay).map((card) => {
                   const { startS, endS } = cardWindow(shownOverlay, card, shownClock)
                   return block(
@@ -1831,7 +1829,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     CARD_LABELS[card],
                     CARD_LABELS[card],
                     BLOCK_KINDS.card,
-                    card === TITLE_CARD_ID ? ['end'] : ['start'],
+                    ['start', 'move', 'end'],
                     undefined,
                     'type',
                   )

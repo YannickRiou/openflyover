@@ -165,21 +165,33 @@ interface Sized extends Placed {
   size: number
 }
 
+/** Where a card of the film is, in film seconds from the first frame: set by placing its block on the timeline. */
+export interface CardWindow {
+  startS: number
+  endS: number
+}
+/** Longest film time a card window may reach (seconds). */
+export const CARD_WINDOW_MAX_S = 7200
+
 export interface TitleCardSettings extends Sized {
   /** '' = name of the track */
   title: string
   subtitle: string
   /** prefix the subtitle with the date of the track (when it has one) */
   showDate: boolean
-  /** end of the card, fraction of the flight after the opening shot */
+  /** end of the card, fraction of the flight after the opening shot (until its block is placed: `window`) */
   end: number
+  /** where the block is on the timeline; absent: from the first frame to `end` */
+  window?: CardWindow
 }
 
 export interface EndCardSettings extends Sized {
   /** '' = name of the track */
   title: string
-  /** start of the card, fraction of the flight (shown until the end of the film, closing shot included) */
+  /** start of the card, fraction of the flight (shown until the end of the film, closing shot included; until its block is placed: `window`) */
   start: number
+  /** where the block is on the timeline; absent: from `start` to the last frame */
+  window?: CardWindow
   /** weather summary line of the outing (when known) */
   showWeather: boolean
   /** « Générique »: one name or line per line, rolling up under the card to the end of the film; absent or blank = none */
@@ -471,6 +483,10 @@ export function isValidOffset(o: unknown): boolean {
   return isRecord(o) && Object.keys(o).length === 2 && isOffsetValue(o.x) && isOffsetValue(o.y)
 }
 
+const validWindow = (w: CardWindow | undefined) =>
+  w === undefined ||
+  (isRecord(w) && typeof w.startS === 'number' && typeof w.endS === 'number' && within(w.startS, 0, CARD_WINDOW_MAX_S) && within(w.endS, 0, CARD_WINDOW_MAX_S) && w.endS > w.startS)
+
 /**
  * Value checks of overlay settings whose JSON shape is already known to match `DEFAULT_OVERLAY`
  * (see `SETTING_CHECKS` in the project document): enumerations, ranges, logo format, colour and font overrides.
@@ -480,8 +496,10 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     (OVERLAY_STYLES as readonly string[]).includes(o.style) &&
     validSized(o.title) &&
     within(o.title.end, TITLE_END_MIN, TITLE_END_MAX) &&
+    validWindow(o.title.window) &&
     validSized(o.end) &&
     within(o.end.start, END_START_MIN, END_START_MAX) &&
+    validWindow(o.end.window) &&
     (o.end.credits === undefined || (typeof o.end.credits === 'string' && o.end.credits.length <= END_CREDITS_MAX)) &&
     validSized(o.counters) &&
     isAnchor(o.profile.anchor) &&

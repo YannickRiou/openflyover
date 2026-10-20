@@ -21,7 +21,7 @@ import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
-import type { CounterId, CreditsPosition, LaidOutWidget, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
+import type { CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
 import { COUNTER_IDS, DEFAULT_TEXT_BACKING, inStyleSlot, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
@@ -220,6 +220,35 @@ export function endCardOpacity(time: OverlayTime, start: number): number {
   return time.timeS <= startS ? 0 : ramp(time.timeS - startS, CARD_FADE_OUT * time.flightS)
 }
 
+/**
+ * Opacity of the opening card of `card` (its settings): where its block was placed on the timeline (`window`) it fades
+ * in and out inside it; else as `titleCardOpacity`, from the first frame to `end` of the flight.
+ */
+export function titleCardOpacityOf(time: OverlayTime, card: Pick<TitleCardSettings, 'end' | 'window'>): number {
+  const window = card.window
+  if (!window) return titleCardOpacity(time, card.end)
+  const { startS, endS } = window
+  const t = time.timeS
+  if (t < startS || t >= endS) return 0
+  const fadeIn = Math.min(CARD_FADE_IN * time.flightS, (endS - startS) / 4)
+  const fadeOut = Math.min(CARD_FADE_OUT * time.flightS, (endS - startS) / 3)
+  return ramp(t - startS, fadeIn) * ramp(endS - t, fadeOut)
+}
+
+/**
+ * Opacity of the closing card: placed on the timeline (`window`) it fades in and out inside it (it stays to the last
+ * frame when its window ends with the film); else as `endCardOpacity`, from `start` of the flight to the end.
+ */
+export function endCardOpacityOf(time: OverlayTime, card: Pick<EndCardSettings, 'start' | 'window'>): number {
+  const window = card.window
+  if (!window) return endCardOpacity(time, card.start)
+  const { startS, endS } = window
+  const t = time.timeS
+  if (t <= startS || (t >= endS && endS < time.totalS)) return 0
+  const fade = CARD_FADE_OUT * time.flightS
+  return ramp(t - startS, fade) * (endS >= time.totalS ? 1 : ramp(endS - t, fade))
+}
+
 /** Lines of the rolling credits: trimmed, blank ones dropped. */
 export function creditLines(credits: string | undefined): string[] {
   return (credits ?? '').split('\n').map((line) => line.trim()).filter(Boolean)
@@ -229,9 +258,9 @@ export function creditLines(credits: string | undefined): string[] {
  * How far the rolling credits are, 0–1: the card first holds still while it fades in, then card and credits roll
  * up until the end of the film (the last line leaves the frame on the last frame).
  */
-export function creditsRollProgress(time: OverlayTime, start: number): number {
-  const startS = time.openingS + start * time.flightS
-  const rollS = time.totalS - startS
+export function creditsRollProgress(time: OverlayTime, start: number, window?: CardWindow): number {
+  const startS = window ? window.startS : time.openingS + start * time.flightS
+  const rollS = (window ? Math.min(window.endS, time.totalS) : time.totalS) - startS
   const holdS = CARD_FADE_OUT * time.flightS
   if (rollS <= holdS) return 0
   return Math.min(1, Math.max(0, (time.timeS - startS - holdS) / (rollS - holdS)))
@@ -243,8 +272,8 @@ export function creditsRollProgress(time: OverlayTime, start: number): number {
  */
 export function cardOpacityAt(time: OverlayTime, settings: OverlaySettings): number {
   if (!settings.enabled) return 0
-  const title = settings.title.enabled ? titleCardOpacity(time, settings.title.end) : 0
-  const end = settings.end.enabled ? endCardOpacity(time, settings.end.start) : 0
+  const title = settings.title.enabled ? titleCardOpacityOf(time, settings.title) : 0
+  const end = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
   return Math.max(title, end)
 }
 
@@ -275,10 +304,10 @@ export function overlayTimedState(
   })
   const dip = dipAlpha > 0 ? [dipAlpha] : []
   if (!settings.enabled) return [...photos, ...dip]
-  const title = settings.title.enabled ? titleCardOpacity(time, settings.title.end) : 0
-  const end = settings.end.enabled ? endCardOpacity(time, settings.end.start) : 0
+  const title = settings.title.enabled ? titleCardOpacityOf(time, settings.title) : 0
+  const end = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
   // the rolling credits move while the card is on
-  const roll = end > 0 && creditLines(settings.end.credits).length > 0 ? [creditsRollProgress(time, settings.end.start)] : []
+  const roll = end > 0 && creditLines(settings.end.credits).length > 0 ? [creditsRollProgress(time, settings.end.start, settings.end.window)] : []
   return [title, end, ...roll, ...texts.map((text) => filmTextOpacity(text, time.timeS)), ...photos, ...dip]
 }
 
@@ -1583,8 +1612,8 @@ export function drawOverlay(
   // live widgets give way to the full-screen photos and the stage cards (and, with the overlay on, to its cards)
   let live = 1 - Math.max(cover, stageOpacity)
   if (settings.enabled) {
-    const titleOpacity = settings.title.enabled ? titleCardOpacity(time, settings.title.end) : 0
-    endOpacity = settings.end.enabled ? endCardOpacity(time, settings.end.start) : 0
+    const titleOpacity = settings.title.enabled ? titleCardOpacityOf(time, settings.title) : 0
+    endOpacity = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
     const rolling = creditLines(settings.end.credits).length > 0
     // a widget in a slot of the style's structure is drawn by the structure, the others as ordinary widgets
     const slot = (key: LaidOutWidget) => inStyleSlot(settings, key) && !(key === 'end' && rolling)
@@ -1608,7 +1637,7 @@ export function drawOverlay(
       const credits = creditLines(settings.end.credits)
       // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
       if (credits.length === 0) add(placed('end', card))
-      else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start))
+      else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window))
     }
     if (settings.counters.enabled && live > 0 && !slot('counters')) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
     if (settings.profile.enabled && live > 0 && !slot('profile')) add(placed('profile', profileWidget(of('profile'), frame, settings, live, extras.markerColor)))

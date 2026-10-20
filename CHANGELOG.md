@@ -15,6 +15,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Tracks you can fold and lock**: each track of the timeline has a fold button (a thin strip) and a padlock (its blocks no longer move), remembered on your device; wider track names and easier-to-grab edges and keys.
 - **A work area that loops**: I and O mark an in and an out point on the timeline, a band on the ruler shows them (drag either end), and the preview loops between them while you edit; Shift+X or the loop button clears it.
 - **Faster timeline editing**: K plays and pauses, J and L step a frame (Shift: ten), Delete removes the selected block wherever the focus is, Ctrl+D duplicates a text or a photo, X cuts it at the playhead; a zoomed timeline scrolls sideways with the wheel and follows the playhead while the film plays.
+- **The opening title and the closing card go where you put them**: drag the block on the timeline, or either edge, to place it; the « Apparition » slider is gone. Cards of earlier projects play exactly as before until you place them.
 ## 2.4.1 (October 2026)
 
 - **An opening from the region without a jump**: with « Depuis la région » and the region highlighted, the camera no longer stops halfway down, climbs a few hundred metres and dives again when a mountain lies between the region and the start of the track; it glides down in one go.

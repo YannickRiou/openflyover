@@ -1582,12 +1582,16 @@ The interface and the texts drawn into the films and posters exist in **French**
   keys are not copied or rippled (their place is by metres: a stop shifts the whole clock).
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
-  `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the
-  source of truth and `drawOverlay` is unchanged. The title block runs from film time 0 to `openingS + title.end × flightS`; the
-  closing block from `openingS + end.start × flightS` to the last frame (the real windows of `titleCardOpacity` /
-  `endCardOpacity`). The « Ouverture » / « Clôture » shots of « Plans » are separate and unchanged. A card cannot be moved as a
-  whole: dragging the right edge of the title sets `title.end`, dragging the left edge of the closing card sets `end.start`
-  (`dragCard`: seconds back to a fraction of the flight, snapped, clamped to `TITLE_END_*` / `END_START_*`, to a thousandth),
+  `cardWindow`). They are blocks of the overlay settings, not film items: `overlay.title` / `overlay.end` stay the
+  source of truth. Until a card is placed, its window is the one of earlier versions: the title block runs from film time 0 to
+  `openingS + title.end × flightS`, the closing block from `openingS + end.start × flightS` to the last frame. The user then
+  places it freely (there is no « Apparition » slider any more): dragging an edge or the whole block sets `title.window` /
+  `end.window` (`CardWindow`: film seconds, `0 ≤ startS < endS ≤ CARD_WINDOW_MAX_S`, optional; `dragCard`: the edge that moves
+  or, for `move`, the start with the length kept, snapped, inside the film and at least `CARD_MIN_S` = 0.5 s long, to a
+  thousandth) and the card fades in and out inside it (`titleCardOpacityOf`, `endCardOpacityOf`; a closing window that ends
+  with the film stays whole to the last frame; `creditsRollProgress` rolls inside the window). `end` and `start` stay valid
+  and are read while no window exists, so earlier projects play as before. The « Ouverture » / « Clôture » shots of
+  « Plans » are separate and no longer dragged by the card's body. Arrows move the whole block (Shift: 0.1 s),
   committed on release as one undo step through `setSetting('overlay', …)`. Arrows nudge the same edge (Shift: 0.1 s). Delete,
   or « Supprimer » in the inspector (and on the phone's block bar), switches the card off (`disableCard`: `enabled: false`,
   settings kept, one undo step, selection cleared); switching it on again from the panel brings the block back. Selection,
@@ -2179,10 +2183,10 @@ exports) gets it from the terrain source of the settings.
 - **Film time**: `drawOverlay(ctx, frame, settings, size, assets, extras)`; `extras.time` (`OverlayTime`: film time
   of the frame, durations of the opening, the flight and the film, from `overlayTime(clock, progress, timeS)` = `timeS ??
   clock.timeAtProgress(progress)`, like `FlyoverRig`); without a clock, `progressTime(progress)` (one-second flight, time =
-  progress: the tests and the old behavior). The cards are timed on the film time: the opening card
+  progress: the tests and the old behavior). The cards are timed on the film time: by default the opening card
   appears on the first frame (opening shot included) and fades out at `opening + title.end × flight`; the closing card
   appears at `opening + end.start × flight` and stays until the last frame (closing shot included); fades of 1% and
-  2.5% of the flight. Rolling credits
+  2.5% of the flight. A card placed on the timeline (`window`) shows between its two times. Rolling credits
   (`end.credits`, optional, one line per name, `creditLines`): the card leaves the layout and heads a centered roll
   (`drawCreditsRoll`), still while it fades in, then rolling up so the last line leaves the top on the last frame
   (`creditsRollProgress`, also in `overlayTimedState` so the export redraws each frame of the roll).
