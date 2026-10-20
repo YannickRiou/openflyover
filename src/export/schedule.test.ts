@@ -64,6 +64,9 @@ describe('video formats', () => {
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, nameTemplate: '{track} – {format}' })).toBe(true)
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, nameTemplate: 'x'.repeat(NAME_TEMPLATE_MAX + 1) })).toBe(false)
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, nameTemplate: 3 as never })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, normalizeLoudness: true, loudnessLufs: -23 })).toBe(true)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, loudnessLufs: -20 })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, normalizeLoudness: 'oui' as never })).toBe(false)
   })
 
   it('an older project has no name template: the name of the track, as before', () => {
@@ -107,8 +110,17 @@ describe('video formats', () => {
     for (const preset of PLATFORM_PRESETS) expect(platformPresetOf(withPlatformPreset(base, preset.id))).toBe(preset.id)
   })
 
+  it('loudness: off by default (as mixed), the encoder gets the target only when it is on; an older project is off', () => {
+    expect(DEFAULT_VIDEO_SETTINGS.normalizeLoudness).toBe(false)
+    expect(videoEncoding(DEFAULT_VIDEO_SETTINGS).loudnessLufs).toBeNull()
+    expect(videoEncoding({ ...DEFAULT_VIDEO_SETTINGS, normalizeLoudness: true, loudnessLufs: -16 }).loudnessLufs).toBe(-16)
+    const upgraded = withVideoDefaults({ aspect: '16:9', resolution: '1080p', fps: 30, quality: 'high' }) as VideoSettings
+    expect(upgraded).toMatchObject({ normalizeLoudness: false, loudnessLufs: -14 })
+    expect(isValidVideoSettings(upgraded)).toBe(true)
+  })
+
   it('hands the encoder the bitrate by hand only when it is chosen', () => {
-    expect(videoEncoding(DEFAULT_VIDEO_SETTINGS)).toEqual({ bitrateMbps: null, codec: 'auto', keyframeIntervalS: 2, audioKbps: 192 })
+    expect(videoEncoding(DEFAULT_VIDEO_SETTINGS)).toEqual({ bitrateMbps: null, codec: 'auto', keyframeIntervalS: 2, audioKbps: 192, loudnessLufs: null })
     expect(videoEncoding({ ...DEFAULT_VIDEO_SETTINGS, manualBitrate: true, bitrateMbps: 25, codec: 'hevc' })).toMatchObject({ bitrateMbps: 25, codec: 'hevc' })
   })
 

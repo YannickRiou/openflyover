@@ -26,6 +26,8 @@ import { useExportHistory } from '../export/historyStore'
 import { getSettingsHistory } from '../project/history'
 import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
 import { t, t as translate, useT } from '../i18n'
+import type { MessageKey } from '../i18n'
+import { LOUDNESS_TARGETS_LUFS } from '../film/loudness'
 import {
   AUDIO_BITRATES_KBPS,
   BITRATE_RANGE_MBPS,
@@ -512,6 +514,32 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
             onChange={(audioKbps) => update({ audioKbps })}
           />
           <p className="type-hint">{t('export.panel.audioHint')}</p>
+        </div>
+      </SettingRow>
+      <SettingRow
+        label={t('export.panel.loudness')}
+        value={video.normalizeLoudness ? `${video.loudnessLufs} LUFS` : t('export.panel.loudnessOff')}
+        paths={['video.normalizeLoudness', 'video.loudnessLufs']}
+      >
+        <div className="field">
+          <Checkbox checked={video.normalizeLoudness} disabled={busy} onChange={(normalizeLoudness) => update({ normalizeLoudness })}>
+            {t('export.panel.loudnessNormalize')}
+          </Checkbox>
+          {video.normalizeLoudness && (
+            <>
+              <label className="type-label" htmlFor={`${id}-loudness`}>
+                {t('export.panel.loudnessTarget')}
+              </label>
+              <Select
+                id={`${id}-loudness`}
+                value={video.loudnessLufs}
+                disabled={busy}
+                options={LOUDNESS_TARGETS_LUFS.map((lufs) => ({ value: lufs, label: t(`export.panel.loudnessTarget${-lufs}` as MessageKey, { lufs }) }))}
+                onChange={(loudnessLufs) => update({ loudnessLufs })}
+              />
+            </>
+          )}
+          <p className="type-hint">{t('export.panel.loudnessHint')}</p>
         </div>
       </SettingRow>
 

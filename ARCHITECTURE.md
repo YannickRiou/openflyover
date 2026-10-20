@@ -2348,6 +2348,14 @@ exports) gets it from the terrain source of the settings.
   last folder; the desktop one is opened on the folder of the last film (`openflyover.lastFilmFolder`) and, after the export,
   « Ouvrir le dossier » shows the file in the system's file manager (`Platform.revealFile`, the opener plugin's
   `reveal_item_in_dir`, permission `opener:allow-reveal-item-in-dir`; `ExportResult.path`). The website cannot reveal a file.
+  **Loudness** (`src/film/loudness.ts`, « Volume » in « Encodage », `video.normalizeLoudness` off by
+  default and `loudnessLufs` −14 / −16 / −23, → `VideoEncoding.loudnessLufs`, null when off): `ExportController` runs
+  `normaliseLoudness` on the mixed soundtrack in place before the encoder gets it: `measureLoudness` is ITU-R BS.1770-4 (the two
+  K-weighting biquads at 48 kHz, 400 ms blocks at 75 % overlap, absolute gate −70 LUFS, relative gate −10 LU; null for silence or
+  another sample rate), the gain is the target minus it (at most `MAX_GAIN_DB` = +15 dB up) and `limitPeaks` is a look-ahead
+  limiter (5 ms: the minimum gain needed over the next 5 ms, averaged over as long, so it never exceeds what a sample needs) on
+  a 4× oversampled (Catmull-Rom) peak, ceiling −1 dBTP. Pure functions; tests on a 997 Hz stereo sine (−23 dBFS reads −23.0 LUFS,
+  as EBU TECH 3341 gives). The preview is not normalised.
 - Render scale `exportRenderScale` = short side / 1080 (1 outside export): track width and label size, in
   pixels, are multiplied so that a 4K film looks like the 1080p one. Markers do not need it (size proportional to the
   camera distance, hence a constant screen fraction).

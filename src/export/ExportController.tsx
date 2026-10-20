@@ -18,6 +18,7 @@ import { useThree, type RootState } from '@react-three/fiber'
 import { PerspectiveCamera, Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { mixFilmAudio } from '../film/audio'
+import { normaliseLoudness } from '../film/loudness'
 import type { FilmClock } from '../film/clock'
 import { useMediaStore } from '../film/media'
 import { CAMERA_FOV_DEG, filmViewMovesWithTime, overviewView } from '../flyover/filmCamera'
@@ -503,6 +504,11 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       offsetS: Math.round(request.holdStartS * fps) / fps,
       lengthS: schedule.length / fps,
     })
+    // « Normaliser le volume »: the mix brought to the target loudness and kept under the true-peak ceiling
+    if (audio && request.encoding?.loudnessLufs != null) {
+      const { measured, gainDb, limitedDb } = normaliseLoudness(audio, request.encoding.loudnessLufs)
+      writeBreadcrumb(measured === null ? 'export : son silencieux, volume inchangé' : `export : volume ${measured.toFixed(1)} LUFS, gain ${gainDb.toFixed(1)} dB, limiteur ${limitedDb.toFixed(1)} dB`)
+    }
     if (isCanceled()) throw new ExportCanceledError()
     // WebCodecs, else the system's ffmpeg (desktop app on Linux); the test without encoding ends on its message
     session = noEncoding ? noEncodingSession(() => timings.rendered) : await createExportEncoder(compositor, { ...request, audio })

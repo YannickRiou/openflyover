@@ -8,6 +8,7 @@
  */
 import { deviceBudget } from '../core/deviceBudget'
 import { isRecord } from '../core/guards'
+import { DEFAULT_LOUDNESS_LUFS, LOUDNESS_TARGETS_LUFS } from '../film/loudness'
 import { t } from '../i18n'
 
 /**
@@ -95,6 +96,9 @@ export interface VideoSettings {
   audioKbps: number
   /** name of the file from the template (`expandNameTemplate`); '' = the name of the track */
   nameTemplate: string
+  /** the soundtrack brought to `loudnessLufs` (LUFS, one of `LOUDNESS_TARGETS_LUFS`) and kept under -1 dBTP (`film/loudness.ts`) */
+  normalizeLoudness: boolean
+  loudnessLufs: number
 }
 
 /** Encoding fields, also those an older project lacks: it encodes as it did (bitrate of the quality, first codec). */
@@ -105,6 +109,8 @@ const ENCODING_DEFAULTS = {
   keyframeIntervalS: 2,
   audioKbps: 192,
   nameTemplate: '',
+  normalizeLoudness: false,
+  loudnessLufs: DEFAULT_LOUDNESS_LUFS,
 } as const satisfies Partial<VideoSettings>
 
 /** A phone starts at 720p (44 % fewer pixels than 1080p); it can still choose up to its cap. */
@@ -122,6 +128,8 @@ export interface VideoEncoding {
   codec: VideoCodecChoice
   keyframeIntervalS: number
   audioKbps: number
+  /** the soundtrack's target loudness, LUFS; absent or null: as mixed */
+  loudnessLufs?: number | null
 }
 
 export function videoEncoding(video: VideoSettings): VideoEncoding {
@@ -130,6 +138,7 @@ export function videoEncoding(video: VideoSettings): VideoEncoding {
     codec: video.codec,
     keyframeIntervalS: video.keyframeIntervalS,
     audioKbps: video.audioKbps,
+    loudnessLufs: video.normalizeLoudness ? video.loudnessLufs : null,
   }
 }
 
@@ -200,7 +209,9 @@ export function isValidVideoSettings(video: VideoSettings): boolean {
     (KEYFRAME_INTERVALS_S as readonly number[]).includes(video.keyframeIntervalS) &&
     (AUDIO_BITRATES_KBPS as readonly number[]).includes(video.audioKbps) &&
     typeof video.nameTemplate === 'string' &&
-    video.nameTemplate.length <= NAME_TEMPLATE_MAX
+    video.nameTemplate.length <= NAME_TEMPLATE_MAX &&
+    typeof video.normalizeLoudness === 'boolean' &&
+    (LOUDNESS_TARGETS_LUFS as readonly number[]).includes(video.loudnessLufs)
   )
 }
 
