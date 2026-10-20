@@ -24,7 +24,7 @@ import {
   progressTime,
   titleCardOpacity,
 } from './draw'
-import type { OverlayContext2D, OverlayExtras, StageCard } from './draw'
+import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw'
 import { MEDIA_DEFAULTS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
 import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, withStyleLayout } from './settings'
@@ -1277,5 +1277,49 @@ describe('styles with a structure', () => {
       const { texts, points } = render(settings, progress, {}, withWeather)
       for (const pt of [...texts, ...points]) expect(inFrame(pt)).toBe(true)
     }
+  })
+})
+
+describe('day card of a multi-day track', () => {
+  const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } }
+  const day: DayCard = {
+    figures: { n: 2, count: 3, date: '2026-07-02', startTime: Date.UTC(2026, 6, 2, 8), distanceM: 18_400, ascentM: 1250, durationS: 7 * 3600 + 30 * 60 },
+    startS: 40,
+    durationS: 5,
+    anchor: 'center',
+    size: 1,
+    fields: { date: true, distance: true, ascent: true, duration: false, start: false, weather: false },
+  }
+  const render = (timeS: number, card: DayCard = day, settings: OverlaySettings = off) => {
+    const drawn = fakeContext()
+    drawOverlay(drawn.ctx, overlayFrameAt(track, 0.5), settings, SIZE, {}, { time: { timeS, openingS: 0, flightS: 100, totalS: 100 }, day: card })
+    return drawn.texts.map((t) => t.text).join(' ')
+  }
+
+  it('« Jour n », the date and the chosen figures inside its window, even without the overlay', () => {
+    const shown = render(42)
+    expect(shown).toContain('Jour 2')
+    expect(shown.toLowerCase()).toContain(formatLongDate(day.figures.startTime!))
+    expect(shown).toContain('18,4')
+    expect(shown).toMatch(/1\s250/)
+    expect(shown).not.toMatch(/7\s*h/)
+    expect(render(39)).toBe('')
+    expect(render(45)).toBe('')
+  })
+
+  it('each figure only when chosen: duration, start time, weather, date', () => {
+    const all = { ...day.fields, duration: true, start: true }
+    const shown = render(42, { ...day, fields: all })
+    expect(shown).toMatch(/7\s*h\s*30/)
+    expect(shown).toMatch(/départ/i)
+    expect(render(42, { ...day, fields: { ...all, distance: false, ascent: false, date: false } })).not.toContain('18,4')
+    expect(render(42, { ...day, fields: { ...day.fields, date: false } }).toLowerCase()).not.toContain(formatLongDate(day.figures.startTime!))
+    const weather = { minTemperatureC: 8, maxTemperatureC: 17, precipitationMm: 0, snowfallCm: 0, maxWindKmh: 25, maxGustsKmh: 40, dominant: { label: 'Ciel dégagé', icon: 'clear' as const } }
+    expect(render(42, { ...day, figures: { ...day.figures, weather }, fields: { ...day.fields, weather: true } })).toMatch(/ciel dégagé/i)
+    expect(render(42, { ...day, figures: { ...day.figures, weather } })).not.toMatch(/ciel dégagé/i)
+  })
+
+  it('the film can word the title: {n}, {count} and {date}', () => {
+    expect(render(42, { ...day, title: 'Étape {n}/{count}' })).toContain('Étape 2/3')
   })
 })

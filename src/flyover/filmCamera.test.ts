@@ -13,6 +13,7 @@ import { DEFAULT_CAMERA, type CameraStyle } from './cameraSettings'
 import {
   blendViews,
   computeFilmView,
+  dayViewAt,
   filmViewMovesWithTime,
   framedGroup,
   GROUP_FRAMING_MARGIN,
@@ -49,10 +50,14 @@ import {
   SWEEP_DEG,
   SWEEP_SHARE,
   sweepRad,
+  trackBox,
   turnedView,
   type FilmViewOptions,
 } from './filmCamera'
 import { hairpins, steepSampler } from './__fixtures__/markerVisible'
+import { auditFilmCamera } from './filmAudit'
+import { filmClockFor } from '../film/clock'
+import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from '../film/model'
 import { DEFAULT_PACING } from './pacing'
 import { buildTrackPath, trackPathOf } from './path'
 
@@ -879,5 +884,67 @@ describe('balayage shot', () => {
     expect(turned.position.y).toBeCloseTo(105)
     expect(turned.position.x).toBeCloseTo(10)
     expect(turnedView(view, 0)).toBe(view)
+  })
+})
+
+describe('high view of the day during the night', () => {
+  const HOUR = 3_600_000
+  const DAY1 = Date.UTC(2026, 5, 1)
+  // two days on the ridge-free valley: 20 km east in the day, a night, 8 km the next day
+  const ride = (fromH: number, toH: number, lon0: number) => {
+    const points = []
+    for (let t = fromH * HOUR, k = 0; t <= toH * HOUR; t += HOUR / 2, k++) points.push({ lon: lon0 + k / 77.35, lat: 45.92, ele: 1000, time: DAY1 + t })
+    return points
+  }
+  const day1 = ride(8, 18, 6.8)
+  const day2 = ride(30, 34, day1[day1.length - 1].lon)
+  const track = { ...buildTrack({ name: 'deux jours', source: 'gpx', segments: [{ points: day1 }, { points: day2 }] }), utcOffsetMin: 120 }
+  const twoDays = trackPathOf(track)
+  const where = createLocalFrame(6.9, 45.92)
+  const clockOf = (view: boolean) =>
+    filmClockFor({
+      track,
+      film: { ...DEFAULT_FILM, autoStops: false, opening: { style: 'descente', durationS: 6 }, closing: { style: 'descente', durationS: 6 }, dayCards: { ...DEFAULT_DAY_CARDS, enabled: true, view } },
+      durationS: 60,
+      pacing: { ...DEFAULT_PACING, keepDuration: false },
+    })
+  const opts: FilmViewOptions = { ...options, camera: { ...CAMERA, cameraSmoothingS: 0 } }
+
+  it('up over the dusk, held over the night, down over the dawn; none without the option', () => {
+    const clock = clockOf(true)
+    const night = clock.nights[0]
+    expect(dayViewAt(clock, night.startS - 0.1)).toBeNull()
+    expect(dayViewAt(clock, night.endS + 0.1)).toBeNull()
+    expect(dayViewAt(clock, night.startS)?.k).toBe(0)
+    const middle = dayViewAt(clock, (night.startS + night.endS) / 2)
+    expect(middle?.k).toBe(1)
+    expect(middle?.day).toBe(clock.days[1])
+    const up = Array.from({ length: 21 }, (_, i) => dayViewAt(clock, night.startS + ((night.holdStartS - night.startS) * i) / 20)?.k ?? -1)
+    expect(up).toEqual([...up].sort((a, b) => a - b))
+    expect(dayViewAt(clockOf(false), (night.startS + night.endS) / 2)).toBeNull()
+  })
+
+  it('the camera frames the route of the day at the middle of the night, and is the flight camera outside it', () => {
+    const clock = clockOf(true)
+    const night = clock.nights[0]
+    const at = (t: number) => computeFilmView(twoDays, clock, t, clock.progressAtTime(t), where, flat, opts)
+    const flight = at(night.startS - 1)
+    const high = at((night.startS + night.endS) / 2)
+    // far above the flight camera, looking at the middle of the next day's route
+    expect(high.position.y).toBeGreaterThan(flight.position.y + 1500)
+    const second = clock.days[1]
+    const route = trackBox(twoDays, where, { fromM: second.startM, toM: second.endM })
+    expect(high.target.x).toBeGreaterThan(route.minX)
+    expect(high.target.x).toBeLessThan(route.maxX)
+    // the camera before and after the pause is the one without the option
+    const plain = clockOf(false)
+    expectSameView(at(night.startS - 1), computeFilmView(twoDays, plain, night.startS - 1, plain.progressAtTime(night.startS - 1), where, flat, opts))
+  })
+
+  it('no jolt nor loss of the marker through the night, at 30 i/s', () => {
+    const clock = clockOf(true)
+    const night = clock.nights[0]
+    const issues = auditFilmCamera(twoDays, clock, where, flat, opts, { fromS: night.startS - 2, toS: night.endS + 2 })
+    expect(issues).toEqual([])
   })
 })

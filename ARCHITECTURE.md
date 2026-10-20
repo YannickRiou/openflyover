@@ -595,7 +595,7 @@ pointer (`appearance.css`).
   (imagery, water), "Relief" (exaggeration), "Repères et points d'intérêt" (`LandmarkPanel`, absent without a track).
   Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`), "Étiquettes" (`LabelSettings`). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
-  `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »),
+  `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »: switch, informations, titre, position, taille, durée, « Vue haute pendant la nuit »; `film.dayCards`),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
   "Durée et rythme" (duration and pacing; duration with « − » / « + » buttons (one slider notch) around the slider and the acceleration over the recorded time (`formatSpeedUp`: elapsed time start to end, nights included, over the duration; hidden for an untimed track), film duration, slow-downs on / off, « Plan de situation » switches for the opening and the closing). Objectif: "Effets d'objectif" (`LensPanel`).
   The two or three essential settings of a section stay open; every other one is a `SettingRow`: one button row with
@@ -804,6 +804,25 @@ The interface and the texts drawn into the films and posters exist in **French**
   of vertical speed per frame of « Orbite » / « Cinéma » drops from 43 / 70 m to 23 / 7 m. Left as is: the sideways
   swing (`swingAngle`, up to ~120 m for « Cinéma » on the hills) and the far presets on the steep massif (« Cinéma »
   8.9×: there the ground cell is already 150 m, and the change itself varies within 200 m of the marker).
+  **Shots, lift** (#213 follow-up; `shotLift`, `liftedOnTheWay`): the lift a shot's camera needs (glide slope, ground,
+  sight line) is a function of the blend `k` only (the views at the ends are given), read at 40 fixed points of it; the camera
+  takes the largest of the lifts of the points around, each in full within `SHOT_LIFT_HOLD` = 0.06 of the blend and down to
+  nothing at `SHOT_LIFT_REACH` = 0.25 (raised cosine: the same anticipation as the flight's `anticipatedRaise`, in blend
+  units), so a crest passing under the line of sight, which asks 2 km in less than half a second, becomes a gentle hump.
+  The lift fades toward the end views over `SHOT_EASE_SHARE` = 10% of the blend, longer the higher it is (+ lift / (2 ×
+  distance), at most 50%): the glide slope asks 2.5 km above an overview on the steep massif, which a 0.4 s fade dropped at
+  6 km/s. The floor takes over from the blend through a `smoothMax` of 20% of the distance (the plain maximum made the
+  climb change pace at a point). On the closing of « Descente » over the loops: the second difference 127 m → under 30 m a
+  frame; « Balayage » (0.02–0.11 → none), « Satellite » (marker out of the frame by 20% → in).
+  **Audit of the film camera** (`src/flyover/filmAudit.ts`, pure): `replayFilm` places the camera of a film every frame
+  (30 i/s) and `auditPoses` lists, with their time, the **jolts** (second difference of the camera's or the aim's
+  position over the camera's distance, above `AUDIT_JOLT_LIMIT` = 0.025: a calm flight stays under 0.006, #186 / #213
+  reached 0.03–0.11), the camera **low** (under `MIN_TERRAIN_CLEARANCE_M` above the terrain) and the marker **out** of
+  the frame. The frames next to a change of shot or stop are not read (the marker starts or stops, the camera follows
+  at once). `filmAudit.test.ts` holds the guard: the opening and closing of the 12 presets × 4 shot styles on the switchbacks,
+  the loops (steep massif, slope 0.8) and a raid over hills: no jolt (but « Saut », a quick move of 0.6 s on purpose), never
+  low, the marker never out of the frame. No in-app button yet: the audit reads the terrain it is given, and what the
+  engine has loaded is not the terrain of the whole film.
   **Smoothing in film time** (`src/flyover/timeSmoothing.ts`, applied by `computeFilmView`; still no frame-to-frame
   state): the aim point follows the marker's progress averaged over « Lissage de la visée » `aimSmoothingS` (0 by
   default: on the marker), the camera follows it averaged over « Lissage de la caméra » `cameraSmoothingS` (3 s by
@@ -902,9 +921,23 @@ The interface and the texts drawn into the films and posters exist in **French**
   whatever « Garder la durée », never shortened; `clock.nights`, phase 'flight', marker held). During it `nightSunDate` runs
   the sun date from the flight's sun to sunset + 1 h (dusk), to sunrise − 1 h (night), then to the flight's sun (dawn),
   linearly over parts proportional to their seconds: continuous, never backwards, a pure function of the film time. The
-  export re-renders those frames (`nightAt` in the held-frame test). **Across a fade between two stages « À la suite »** (a junction `fondu-noir` / `fondu-blanc` with a hold; `junctionSunDate`, applied by `AtmosphereLayer` after the nights): over the whole pause of the junction (`startS` to `endS`, the same window as its dip) the sun date runs from the end of the stage before (`sunAt` just short of the cut) to the start of the next, with `blendSunDates`: the time of day runs the way the film goes (forward when the next stage is later, so an evening into a morning passes dusk, night and dawn; backward when it is earlier), eased by `smootherstep`, and the whole days between are taken at once half-way, under the dip. Both ends are the stages' own suns, so nothing jumps; the same sun on both sides (« Heure fixe », or one day) stays still. Keys on the sun hour (`sunKeyed`) replace the blend, a `nuit` junction keeps its own `nightSunDate`, a cut has no pause. A pure function of the film time; the export's held-frame test also re-renders the frames of the blend (`junctionBlendAt`). Clouds, weather and the sun-less settings still switch at the cut, under the dip. « Ajouter les cartes de jour » (`src/film/days.ts`)
-  adds texts `day-n` « Jour n » at the start of each local calendar day (recording clock when `utcOffsetMin` is known,
-  device clock otherwise), with the day and / or cumulative distance; a new click replaces only the `day-` texts. Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
+  export re-renders those frames (`nightAt` in the held-frame test). **Across a fade between two stages « À la suite »** (a junction `fondu-noir` / `fondu-blanc` with a hold; `junctionSunDate`, applied by `AtmosphereLayer` after the nights): over the whole pause of the junction (`startS` to `endS`, the same window as its dip) the sun date runs from the end of the stage before (`sunAt` just short of the cut) to the start of the next, with `blendSunDates`: the time of day runs the way the film goes (forward when the next stage is later, so an evening into a morning passes dusk, night and dawn; backward when it is earlier), eased by `smootherstep`, and the whole days between are taken at once half-way, under the dip. Both ends are the stages' own suns, so nothing jumps; the same sun on both sides (« Heure fixe », or one day) stays still. Keys on the sun hour (`sunKeyed`) replace the blend, a `nuit` junction keeps its own `nightSunDate`, a cut has no pause. A pure function of the film time; the export's held-frame test also re-renders the frames of the blend (`junctionBlendAt`). Clouds, weather and the sun-less settings still switch at the cut, under the dip. **Days and their cards** (`src/film/days.ts`, `film.dayCards`: `FilmDayCards`, optional, absent = off): `trackDays` splits the
+  track on the local calendar date of its timed points (recording clock when `utcOffsetMin` is known, device clock
+  otherwise); `dayFigures` gives each day its distance, climb (the cumulative ascent between its first and last point),
+  first recorded time, time to its last point and, with weather loaded, its weather (`summarizeOuting` over the day's
+  stretch). The clock keeps the days (`clock.days`: `startM`, `endM`, the night pause that leads into the day, `cardS`, `view`;
+  none while the cards are off or for a sequence): the card of the first day shows with the flight, the others once the
+  night pause before them ends (`holdEndS`), or, with the high view, as it starts (`holdStartS`). The card is **not**
+  baked into the texts any more: `dayCardAt` (overlay/data.ts) reads the film time (`OverlayTime.dayCardsS`) and the
+  figures every frame and `dayWidget` (overlay/draw.ts) draws « Jour n » (or the title, with `{n}` `{count}` `{date}`),
+  the date and weather line, and the chosen figures as cells, like the card of a stage « À la suite » (the overlay's style
+  decides its look; `fields`, `anchor`, `size`, `durationS` 2–15 s are the film's). The card follows the track, the nights
+  and the weather; the `day-n` texts of earlier versions are removed when the cards are turned on (`withoutDayCards`).
+  **High view** (`dayViewAt`, `computeFilmView`): in the night pause before a day with `view`, the camera blends from the
+  flight view to `overviewView` framing the box of that day's stretch (`trackBox` with a `PathRange`), lifted like a shot
+  (`liftedBlend`): up over the dusk, held over the night, back down over the dawn (the parts of `film.nights`, never under
+  20% of the pause each), a pure function of the film time; the preview re-places the camera during it (`FlyoverRig`
+  asks `dayViewAt`), the export already re-renders the frames of a night. Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
   (browser time zone).
 - **Exposure** (`src/scene/exposure.ts`): `DAYLIGHT_EXPOSURE` (5) × 2^(automatic + `settings.exposureEv`). The automatic part
   opens up as the sun goes down: 0 EV above 10°, +3 EV at civil twilight (−6°), +6 EV at night (−18°). A faint

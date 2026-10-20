@@ -10,7 +10,7 @@
 import type { Track } from '../core/types'
 import { junctionCardOf } from '../film/junctions'
 import { JUNCTION_CARD_DEFAULT_S } from '../film/model'
-import type { Film } from '../film/model'
+import type { Film, FilmDayCards } from '../film/model'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath } from '../flyover/path'
 import type { ElevationProfile, TrackPath } from '../flyover/path'
 import { rankRacers } from '../flyover/race'
@@ -25,7 +25,8 @@ import { formatDistanceGap, formatTimeGap } from '../ui/format'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import { summarizeOuting, weatherWidgetData } from '../weather/series'
 import type { WeatherSeries, WeatherSummary, WeatherWidgetData } from '../weather/series'
-import type { OverlayTime, StageCard } from './draw'
+import type { DayCard, OverlayTime, StageCard } from './draw'
+import type { DayFigures } from '../film/days'
 import { t } from '../i18n'
 
 /** Samples of the overlay elevation profile over the track. */
@@ -363,6 +364,24 @@ export function stageCardAt(sequence: Sequence, time: OverlayTime, film: Pick<Fi
   if (own.subtitle !== undefined) card.subtitle = own.subtitle
   if (own.color !== undefined) card.color = own.color
   if (own.font !== undefined) card.font = own.font
+  return card
+}
+
+/**
+ * Card of the day starting at film time `time.timeS` in a multi-day track: the card of the day whose start
+ * (`time.dayCardsS`) is the latest one passed, for the film's duration, never past the start of the next day; null
+ * outside the window or when the days have no cards. `figures` are those of the days (`dayFigures`).
+ */
+export function dayCardAt(figures: readonly DayFigures[], time: OverlayTime, cards: Pick<FilmDayCards, 'enabled' | 'durationS' | 'anchor' | 'size' | 'fields' | 'title'> | undefined): DayCard | null {
+  const starts = time.dayCardsS
+  if (!cards?.enabled || !starts || starts.length === 0 || figures.length !== starts.length) return null
+  let k = starts.length - 1
+  while (k >= 0 && time.timeS < starts[k]) k--
+  if (k < 0) return null
+  const durationS = Math.min(cards.durationS, (starts[k + 1] ?? Infinity) - starts[k])
+  if (!(durationS > 0) || time.timeS >= starts[k] + durationS) return null
+  const card: DayCard = { figures: figures[k], startS: starts[k], durationS, anchor: cards.anchor, size: cards.size, fields: cards.fields }
+  if (cards.title !== undefined && cards.title.trim() !== '') card.title = cards.title
   return card
 }
 

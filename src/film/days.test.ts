@@ -3,9 +3,10 @@ import type { TrackPoint } from '../core/types'
 import { DEFAULT_PACING } from '../flyover/pacing'
 import { buildTrackPath } from '../flyover/path'
 import { buildTrack } from '../import/stats'
+import { cumulativeAscent } from '../overlay/data'
 import { filmClockFor } from './clock'
-import { DAY_CARD_S, isDayCard, localDate, trackDays, withDayCards } from './days'
-import { DEFAULT_FILM } from './model'
+import { dayFigures, isDayCard, localDate, trackDays, withoutDayCards } from './days'
+import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from './model'
 import type { Film } from './model'
 
 const HOUR = 3_600_000
@@ -45,31 +46,63 @@ describe('days of a track', () => {
   })
 })
 
-describe('withDayCards', () => {
-  const film: Film = { ...DEFAULT_FILM, autoStops: false }
-  const clock = filmClockFor({ track, film, durationS: 60, pacing: DEFAULT_PACING })
+describe('day figures', () => {
   const days = trackDays(path, track.utcOffsetMin)
-  const input = { days, lengthM: path.lengthM, utcOffsetMin: track.utcOffsetMin }
+  const figures = dayFigures(path, days, cumulativeAscent(track), null, track.utcOffsetMin)
 
-  it('one card per day: at the start of the flight, then once the night pause ends', () => {
-    expect(clock.nights).toHaveLength(1)
-    const next = withDayCards(film, input, clock, { day: true, total: true })
-    expect(next.texts.map((t) => t.id)).toEqual(['day-1', 'day-2'])
-    const [first, second] = next.texts
-    expect(first).toMatchObject({ text: 'Jour 1', startS: clock.openingS, durationS: DAY_CARD_S, anchor: 'center' })
-    expect(second.startS).toBeCloseTo(clock.nights[0].holdEndS, 1)
-    expect(first.subtitle).toBe('20,0 km · 20,0 km au total')
-    expect(second.subtitle).toBe('8,0 km · 28,0 km au total')
-    expect(withDayCards(film, input, clock, { day: false, total: true }).texts[1].subtitle).toBe('28,0 km au total')
-    expect(withDayCards(film, input, clock, { day: false, total: false }).texts[1].subtitle).toBeUndefined()
+  it('distance, first recorded time and time of each day', () => {
+    expect(figures.map((f) => [f.n, f.count, f.date])).toEqual([[1, 2, '2026-06-01'], [2, 2, '2026-06-02']])
+    expect(figures[0].distanceM).toBeCloseTo(days[0].endM, 6)
+    expect(figures[1].distanceM).toBeCloseTo(path.lengthM - days[1].startM, 6)
+    expect(figures[0].startTime).toBe(DAY1 + 8 * HOUR)
+    expect(figures[1].startTime).toBe(DAY1 + 30 * HOUR)
+    // 8 h to 18 h, then 30 h to 34 h: from the first to the last point of each day
+    expect(figures[0].durationS).toBeCloseTo(10 * 3600, 0)
+    expect(figures[1].durationS).toBeCloseTo(4 * 3600, 0)
+    expect(figures[0].weather).toBeUndefined()
   })
 
-  it('replaces the cards made before, keeps the other texts; none for a single day', () => {
+  it('climb of a day: the cumulative ascent between its first and last point; none without elevations', () => {
+    const climbing = dayFigures(path, days, Float64Array.from({ length: path.count }, (_, i) => i * 10), null, track.utcOffsetMin)
+    expect(climbing[0].ascentM).toBeCloseTo((day1.length - 1) * 10, 6)
+    expect(climbing[1].ascentM).toBeCloseTo((day2.length - 1) * 10, 6)
+    expect(figures[0].ascentM).toBe(0)
+    expect(dayFigures(path, days, undefined, null, track.utcOffsetMin)[0].ascentM).toBeUndefined()
+  })
+})
+
+describe('days on the film clock', () => {
+  const film: Film = { ...DEFAULT_FILM, autoStops: false, dayCards: { ...DEFAULT_DAY_CARDS, enabled: true } }
+  const clockOf = (f: Film) => filmClockFor({ track, film: f, durationS: 60, pacing: DEFAULT_PACING })
+
+  it('none while the cards are off or for a single day', () => {
+    expect(clockOf({ ...film, dayCards: undefined }).days).toEqual([])
+    expect(clockOf({ ...film, dayCards: { ...DEFAULT_DAY_CARDS, enabled: false } }).days).toEqual([])
+  })
+
+  it('a card with the flight for the first day, once the night pause ends for the next', () => {
+    const clock = clockOf(film)
+    expect(clock.nights).toHaveLength(1)
+    expect(clock.days.map((d) => d.cardS)).toEqual([clock.openingS, clock.nights[0].holdEndS])
+    expect(clock.days[1].night).toBe(clock.nights[0])
+    expect(clock.days.every((d) => !d.view)).toBe(true)
+  })
+
+  it('with the high view, the card of the next day comes as the night pause starts', () => {
+    const clock = clockOf({ ...film, dayCards: { ...DEFAULT_DAY_CARDS, enabled: true, view: true } })
+    expect(clock.days[1].cardS).toBe(clock.nights[0].holdStartS)
+    expect(clock.days.map((d) => d.view)).toEqual([false, true])
+  })
+})
+
+describe('withoutDayCards', () => {
+  it('drops the cards earlier versions baked into the texts, keeps the other texts', () => {
     const own = { id: 'text-1', startS: 2, durationS: 4, text: 'Départ', anchor: 'bottom-left' as const, size: 1 }
-    const once = withDayCards({ ...film, texts: [own] }, input, clock, { day: true, total: false })
-    const twice = withDayCards(once, input, clock, { day: false, total: true })
-    expect(twice.texts.filter(isDayCard)).toHaveLength(2)
-    expect(twice.texts[0]).toBe(own)
-    expect(withDayCards(twice, { ...input, days: days.slice(0, 1) }, clock, { day: true, total: false }).texts).toEqual([own])
+    const baked = { id: 'day-1', startS: 0, durationS: 5, text: 'Jour 1', anchor: 'center' as const, size: 1.25 }
+    expect(isDayCard(baked)).toBe(true)
+    const film: Film = { ...DEFAULT_FILM, texts: [own, baked, { ...baked, id: 'day-2' }] }
+    expect(withoutDayCards(film).texts).toEqual([own])
+    const none: Film = { ...DEFAULT_FILM, texts: [own] }
+    expect(withoutDayCards(none)).toBe(none)
   })
 })

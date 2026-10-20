@@ -12,10 +12,11 @@ import { MISSING_COLOR } from '../flyover/trackColor'
 import type { TrackLegend } from '../flyover/trackColor'
 import { fillTemplate } from '../film/junctions'
 import { clipTimeS } from '../film/model'
-import type { FilmMedia, FilmText, TransitionDip } from '../film/model'
+import type { DayCardField, FilmMedia, FilmText, TransitionDip } from '../film/model'
+import type { DayFigures } from '../film/days'
 import { getLanguage, t } from '../i18n'
 import { formatDate } from '../i18n/format'
-import { formatDistance, formatDuration, formatNumber } from '../ui/format'
+import { formatClock, formatDistance, formatDuration, formatNumber } from '../ui/format'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
@@ -64,6 +65,8 @@ export interface OverlayTime {
   cutsS?: readonly number[]
   /** the junctions at those cuts, in the same order: the dip of a held transition, the end of a stage card */
   junctions?: readonly OverlayJunction[]
+  /** film times the cards of the days of a multi-day track appear (`ClockDay.cardS`; none otherwise) */
+  dayCardsS?: readonly number[]
 }
 
 /** What the overlay reads of a junction placed on the clock (`ClockJunction`). */
@@ -77,6 +80,7 @@ export interface OverlayClock {
   timeAtProgress(progress: number): number
   cuts?: readonly { timeS: number }[]
   junctions?: readonly OverlayJunction[]
+  days?: readonly { cardS: number }[]
 }
 
 /** Film time of a frame shown at `progress` and film time `timeS` (null: set from the progress, as the playback does). */
@@ -84,6 +88,7 @@ export function overlayTime(clock: OverlayClock, progress: number, timeS: number
   const time: OverlayTime = { timeS: timeS ?? clock.timeAtProgress(progress), openingS: clock.openingS, flightS: clock.flightS, totalS: clock.totalTime() }
   if (clock.cuts && clock.cuts.length > 0) time.cutsS = clock.cuts.map((c) => c.timeS)
   if (clock.junctions && clock.junctions.length > 0) time.junctions = clock.junctions
+  if (clock.days && clock.days.length > 0) time.dayCardsS = clock.days.map((d) => d.cardS)
   return time
 }
 
@@ -108,6 +113,8 @@ export interface OverlayExtras {
   dip?: TransitionDip | null
   /** card of the stage starting « À la suite » (`stageCardAt`), drawn inside its window, over the dip, even while the overlay is off */
   stage?: StageCard | null
+  /** card of the day starting in a multi-day track (`dayCardAt`), drawn inside its window */
+  day?: DayCard | null
   /** size of the exported film, which the free offsets of the widgets are measured in; default: the drawn frame */
   exportSize?: OverlaySize
   /** colour of the 3D marker ('#rrggbb'): the position dot of the profile and the mini-map, until they have their own */
@@ -142,6 +149,18 @@ export interface StageCard {
   subtitle?: string
   color?: string
   font?: OverlayFontId
+}
+
+/** Card of a day of a multi-day track (`dayCardAt`): its figures and how the film wants them shown, from `startS` for `durationS`. */
+export interface DayCard {
+  figures: DayFigures
+  startS: number
+  durationS: number
+  anchor: OverlayAnchor
+  size: number
+  fields: Readonly<Record<DayCardField, boolean>>
+  /** title with `{n}`, `{count}` and `{date}` (`fillTemplate`); absent: « Jour n » */
+  title?: string
 }
 
 /** Safe area: 5 % of the frame on each side. */
@@ -1199,6 +1218,26 @@ function stageWidget(p: Painter, card: StageCard, opacity: number, maxWidth: num
   return cardWidget(p, { title: card.name, subtitle, titleScale: 0.6, cells }, card.anchor, card.size, opacity, m)
 }
 
+/**
+ * Card of a day of a multi-day track: « Jour n » (or the film's title), under it the date and the weather of the day,
+ * and the figures of the day the film chose (distance, climb, time, start) as cells.
+ */
+function dayWidget(p: Painter, card: DayCard, opacity: number): Widget {
+  const { figures, fields } = card
+  const date = figures.startTime !== undefined ? formatLongDate(figures.startTime) : ''
+  const title = fillTemplate(card.title ?? t('film.defaultDay'), { n: String(figures.n), count: String(figures.count), date })
+  const m = cellMetrics(p, card.size)
+  const stats: [string, CounterText | null][] = [
+    [t('overlay.draw.stat.distance'), fields.distance ? splitUnit(formatDistance(figures.distanceM)) : null],
+    [t('overlay.draw.stat.ascent'), fields.ascent && figures.ascentM !== undefined ? { value: formatNumber(figures.ascentM), unit: 'm' } : null],
+    [t('overlay.draw.stat.duration'), fields.duration && figures.durationS !== undefined ? { value: formatDuration(figures.durationS), unit: '' } : null],
+    [t('overlay.draw.stat.start'), fields.start && figures.startTime !== undefined ? { value: formatClock(figures.startTime), unit: '' } : null],
+  ]
+  const cells = stats.flatMap(([label, text]) => (text ? [makeCell(p, m, label, text, text)] : []))
+  const subtitle = [fields.date ? date : '', fields.weather ? weatherSummaryLine(figures.weather) : ''].filter(Boolean).join(' · ')
+  return cardWidget(p, { title, subtitle, titleScale: 0.6, cells }, card.anchor, card.size, opacity, m)
+}
+
 /** Figures of the closing card (the ones the track records), label and text. */
 export function endStats(s: OverlayTrack['stats']): { label: string; text: CounterText }[] {
   const stats: [string, CounterText | null][] = [
@@ -1509,8 +1548,10 @@ export function drawOverlay(
   // the first stage's card gives way to the title card of the film
   const stage = extras.stage && !(extras.stage.index === 0 && settings.enabled && settings.title.enabled) ? extras.stage : null
   const stageOpacity = stage ? filmTextOpacity(stage, time.timeS) : 0
+  const day = extras.day ?? null
+  const dayOpacity = day ? filmTextOpacity(day, time.timeS) : 0
   const legend = extras.trackLegend ?? null
-  if (!settings.enabled && credits.length === 0 && photos.length === 0 && !dip && stageOpacity <= 0.001 && !legend) return
+  if (!settings.enabled && credits.length === 0 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return
   const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
   const p: Painter = {
     ctx,
@@ -1621,6 +1662,15 @@ export function drawOverlay(
       card.draw(at.x, at.y)
       ctx.restore()
     }
+  }
+  // the card of a day, laid out on its own like a stage's
+  if (day && dayOpacity > 0.001) {
+    const card = dayWidget(p, day, dayOpacity)
+    const [at] = layoutWidgets([card], size, 2 * p.u, structure?.area)
+    ctx.save()
+    ctx.globalAlpha = card.opacity
+    card.draw(at.x, at.y)
+    ctx.restore()
   }
   if (weatherShown || (endOpacity > 0 && settings.end.showWeather && frame.track.stats.weather)) {
     // required by the Open-Meteo licence: with the other credits when they are drawn, else on its own
