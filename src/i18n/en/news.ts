@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v301.cards.title': 'The closing card follows the end of the film',
+  'v301.cards.text': 'When you change the flyover duration (or a shot or a stop), a closing card placed at the end of the film stays at the end instead of staying where it was, sometimes past the end.',
   'v30.camera.title': 'A camera without jerks over relief',
   'v30.camera.text': 'The opening and closing shots no longer jump over steep slopes or ridges: the camera rises smoothly, and an automatic check replays sample films to make sure of it.',
   'v30.days.title': 'Richer day cards',

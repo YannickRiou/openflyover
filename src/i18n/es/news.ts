@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v301.cards.title': 'La tarjeta de cierre sigue el final de la película',
+  'v301.cards.text': 'Al cambiar la duración del sobrevuelo (o un plano o una parada), una tarjeta de cierre colocada al final de la película se queda al final en lugar de quedarse donde estaba, a veces más allá del final.',
   'v30.camera.title': 'Una cámara sin tirones sobre el relieve',
   'v30.camera.text': 'Los planos de apertura y de cierre ya no saltan sobre pendientes empinadas ni crestas: la cámara sube con suavidad, y una comprobación automática reproduce películas de prueba para asegurarlo.',
   'v30.days.title': 'Tarjetas de día más completas',

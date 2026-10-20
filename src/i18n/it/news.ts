@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v301.cards.title': 'La scheda di chiusura segue la fine del film',
+  'v301.cards.text': 'Quando cambiate la durata del sorvolo (o un’inquadratura o una sosta), una scheda di chiusura messa alla fine del film resta alla fine invece di restare dove era, a volte oltre la fine.',
   'v30.camera.title': 'Una camera senza scatti sul rilievo',
   'v30.camera.text': 'Le inquadrature di apertura e di chiusura non saltano più sopra pendii ripidi o creste: la camera sale con dolcezza, e un controllo automatico riproduce filmati di prova per verificarlo.',
   'v30.days.title': 'Schede di giorno più ricche',

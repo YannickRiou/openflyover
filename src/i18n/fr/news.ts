@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v301.cards.title': 'La carte de clôture suit la fin du film',
+  'v301.cards.text': 'Quand vous changez la durée du survol (ou un plan, ou un arrêt), la carte de clôture placée à la fin du film reste à la fin au lieu de rester à son ancienne place, parfois au-delà de la fin.',
   'v30.camera.title': 'Une caméra sans à-coup sur le relief',
   'v30.camera.text': 'Les plans d’ouverture et de clôture ne sautent plus au-dessus des pentes raides ni des crêtes : la caméra se relève en douceur, et un contrôle automatique rejoue des films types pour le vérifier.',
   'v30.days.title': 'Des cartes de jour plus riches',

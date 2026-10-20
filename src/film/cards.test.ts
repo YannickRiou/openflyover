@@ -40,18 +40,41 @@ describe('cards on the timeline', () => {
     // the closing card: freed from the end of the film
     const closing = dragCard(on, END_CARD_ID, 'end', -5, clock)
     expect(closing.end.window).toEqual({ startS: 60, endS: 66 })
-    expect(dragCard(on, END_CARD_ID, 'start', -20, clock).end.window).toEqual({ startS: 60 - 20 + 0, endS: 71 })
+    expect(dragCard(on, END_CARD_ID, 'start', -20, clock).end.window).toEqual({ startS: 60 - 20 + 0, endS: 71, toEnd: true })
     // the film's edges and a minimum length
     // already at the film's edge: nothing moves
     expect(dragCard(on, TITLE_CARD_ID, 'move', -100, clock)).toBe(on)
     expect(dragCard(on, END_CARD_ID, 'move', 100, clock)).toBe(on)
-    expect(dragCard(dragCard(on, END_CARD_ID, 'end', -5, clock), END_CARD_ID, 'move', 100, clock).end.window).toEqual({ startS: 65, endS: 71 })
+    expect(dragCard(dragCard(on, END_CARD_ID, 'end', -5, clock), END_CARD_ID, 'move', 100, clock).end.window).toEqual({ startS: 65, endS: 71, toEnd: true })
     expect(dragCard(on, TITLE_CARD_ID, 'end', -100, clock).title.window).toEqual({ startS: 0, endS: CARD_MIN_S })
     expect(dragCard(on, TITLE_CARD_ID, 'end', 1000, clock).title.window?.endS).toBe(71)
     expect(dragCard(on, END_CARD_ID, 'start', 1000, clock).end.window?.startS).toBe(71 - CARD_MIN_S)
     // no change, no new overlay
     expect(dragCard(on, TITLE_CARD_ID, 'end', 0, clock)).toBe(on)
     expect(dragCard(on, END_CARD_ID, 'move', 0, clock)).toBe(on)
+  })
+
+  it('a card that reached the end of the film follows it when the film gets shorter or longer', () => {
+    // placed at the end of a 71 s film (as dragged)
+    const placed = dragCard(on, END_CARD_ID, 'start', -5, clock)
+    expect(placed.end.window).toMatchObject({ endS: 71, toEnd: true })
+    const shorter = { ...clock, totalTime: () => 50 }
+    const longer = { ...clock, totalTime: () => 90 }
+    const length = placed.end.window!.endS - placed.end.window!.startS
+    expect(cardWindow(placed, END_CARD_ID, shorter)).toEqual({ startS: 50 - length, endS: 50, toEnd: true })
+    expect(cardWindow(placed, END_CARD_ID, longer)).toEqual({ startS: 90 - length, endS: 90, toEnd: true })
+    // an edge dragged away from the end lets go of it
+    const away = dragCard(placed, END_CARD_ID, 'end', -3, clock)
+    expect(away.end.window?.toEnd).toBeUndefined()
+    expect(cardWindow(away, END_CARD_ID, longer)).toEqual({ startS: 55, endS: 68 })
+  })
+
+  it('a card placed before the end slides back when the film becomes shorter than its window, never longer than the film', () => {
+    const placed = { ...on, end: { ...on.end, window: { startS: 60, endS: 68 } } }
+    expect(cardWindow(placed, END_CARD_ID, { ...clock, totalTime: () => 64 })).toEqual({ startS: 56, endS: 64 })
+    expect(cardWindow(placed, END_CARD_ID, { ...clock, totalTime: () => 5 })).toEqual({ startS: 0, endS: 5 })
+    // a longer film leaves it where it was
+    expect(cardWindow(placed, END_CARD_ID, { ...clock, totalTime: () => 90 })).toEqual({ startS: 60, endS: 68 })
   })
 
   it('snaps the edge like the other blocks (the start of the block when it moves whole)', () => {

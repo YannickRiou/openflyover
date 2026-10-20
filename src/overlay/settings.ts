@@ -169,9 +169,23 @@ interface Sized extends Placed {
 export interface CardWindow {
   startS: number
   endS: number
+  /** the card reaches the end of the film: it keeps its length and stays there when the film gets shorter or longer */
+  toEnd?: boolean
 }
 /** Longest film time a card window may reach (seconds). */
 export const CARD_WINDOW_MAX_S = 7200
+
+/**
+ * The window as it is in a film `totalS` long, which may not be the one it was placed in (the flyover duration, a
+ * shot or a stop changed since): a window that reached the end of the film keeps its length and stays at the end;
+ * any other one that would go past the end slides back to it; it is never longer than the film.
+ */
+export function fitWindow(window: CardWindow, totalS: number): CardWindow {
+  const length = Math.min(window.endS - window.startS, totalS)
+  if (window.toEnd) return { startS: totalS - length, endS: totalS, toEnd: true }
+  if (window.endS <= totalS) return window
+  return { startS: totalS - length, endS: totalS }
+}
 
 export interface TitleCardSettings extends Sized {
   /** '' = name of the track */
@@ -485,7 +499,7 @@ export function isValidOffset(o: unknown): boolean {
 
 const validWindow = (w: CardWindow | undefined) =>
   w === undefined ||
-  (isRecord(w) && typeof w.startS === 'number' && typeof w.endS === 'number' && within(w.startS, 0, CARD_WINDOW_MAX_S) && within(w.endS, 0, CARD_WINDOW_MAX_S) && w.endS > w.startS)
+  (isRecord(w) && typeof w.startS === 'number' && typeof w.endS === 'number' && within(w.startS, 0, CARD_WINDOW_MAX_S) && within(w.endS, 0, CARD_WINDOW_MAX_S) && w.endS > w.startS && (w.toEnd === undefined || typeof w.toEnd === 'boolean'))
 
 /**
  * Value checks of overlay settings whose JSON shape is already known to match `DEFAULT_OVERLAY`

@@ -9,7 +9,7 @@
  * Selected by fixed ids, like any block of the film (`filmSelection`).
  */
 import { clamp } from '../core/math'
-import { CARD_WINDOW_MAX_S } from '../overlay/settings'
+import { CARD_WINDOW_MAX_S, fitWindow } from '../overlay/settings'
 import type { CardWindow, OverlaySettings } from '../overlay/settings'
 import type { FilmClock } from './clock'
 import type { Grip } from './timeline'
@@ -49,9 +49,9 @@ export const CARD_MIN_S = 0.5
  * to `title.end` of the flight and the closing card from `end.start` of the flight to the last frame (the shots
  * included, as `titleCardSpan` and `endCardSpan` do).
  */
-export function cardWindow(overlay: OverlaySettings, card: CardId, clock: CardClock): { startS: number; endS: number } {
+export function cardWindow(overlay: OverlaySettings, card: CardId, clock: CardClock): CardWindow {
   const placed = card === TITLE_CARD_ID ? overlay.title.window : overlay.end.window
-  if (placed) return placed
+  if (placed) return fitWindow(placed, clock.totalTime())
   if (card === TITLE_CARD_ID) return { startS: 0, endS: clock.openingS + overlay.title.end * clock.flightS }
   return { startS: clock.openingS + overlay.end.start * clock.flightS, endS: clock.totalTime() }
 }
@@ -84,8 +84,11 @@ export function dragCard(
     next = { startS, endS: startS + length }
   }
   const round = (v: number) => Math.round(v * 1000) / 1000
-  next = { startS: round(next.startS), endS: round(next.endS) }
-  if (next.startS === round(window.startS) && next.endS === round(window.endS)) return overlay
+  // an end reached stays reached: the card follows the end of the film if its length changes later
+  const toEnd = next.endS >= clock.totalTime() - 1e-6
+  next = { startS: round(next.startS), endS: round(next.endS), ...(toEnd && { toEnd }) }
+  const had = card === TITLE_CARD_ID ? overlay.title.window : overlay.end.window
+  if (next.startS === round(window.startS) && next.endS === round(window.endS) && (!had || toEnd === !!had.toEnd)) return overlay
   return card === TITLE_CARD_ID ? { ...overlay, title: { ...overlay.title, window: next } } : { ...overlay, end: { ...overlay.end, window: next } }
 }
 
