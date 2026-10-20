@@ -15,6 +15,7 @@ import { addMarkerKeyHere, addParamKeyHere, getFilmSource } from '../scene/usePa
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { FilmInspector } from './FilmInspector'
 import { OverlayPanel } from './OverlayPanel'
+import { setPreferences } from './preferences'
 import { Timeline } from './Timeline'
 
 describe('Timeline', () => {
@@ -248,6 +249,96 @@ describe('Timeline', () => {
       expect(opening()).toBeGreaterThan(before)
       expect(useAppStore.getState().settings.overlay.title.end).toBe(titleEnd)
       expect(useAppStore.getState().filmSelection).toBe('opening')
+      act(() => root.unmount())
+    })
+
+    it('the work area shows as a band with its two ends on the ruler, and a button clears it', async () => {
+      const { host, root } = await setup()
+      expect(host.querySelector('[data-testid="work-area-in"]')).toBeNull()
+      await act(async () => useAppStore.getState().setWorkArea({ inS: 0.5, outS: 1.5 }))
+      expect(host.querySelector('[data-testid="work-area-in"]')).not.toBeNull()
+      expect(host.querySelector('[data-testid="work-area-out"]')).not.toBeNull()
+      const clear = host.querySelector<HTMLElement>('[aria-label="Retirer la zone de lecture"]')
+      expect(clear).not.toBeNull()
+      await act(async () => clear!.click())
+      expect(useAppStore.getState().workArea).toBeNull()
+      expect(host.querySelector('[data-testid="work-area-in"]')).toBeNull()
+      act(() => root.unmount())
+    })
+
+    it('a lane folds to a strip and locks against edits, each from the buttons of its head, and the choice is kept for the device', async () => {
+      localStorage.removeItem('openflyover.lanes.v1')
+      const { host, root } = await setup()
+      const lane = () => host.querySelector<HTMLElement>('[role="group"][aria-label="Textes"]')!
+      const tool = (label: string) => host.querySelector<HTMLElement>(`button[aria-label="${label}"]`)
+      expect(lane().hasAttribute('inert')).toBe(false)
+      await act(async () => tool('Verrouiller la piste « Textes » (ses blocs ne bougent plus)')!.click())
+      expect(lane().hasAttribute('inert')).toBe(true)
+      expect(lane().className).toContain('h-7')
+      expect(tool('Déverrouiller la piste « Textes »')!.getAttribute('aria-pressed')).toBe('true')
+      await act(async () => tool('Replier la piste « Textes »')!.click())
+      expect(lane().className).toContain('h-4')
+      expect(lane().className).not.toContain('h-7')
+      // folded, the lock button is gone and the unfold button says so
+      expect(tool('Déverrouiller la piste « Textes »')).toBeNull()
+      expect(JSON.parse(localStorage.getItem('openflyover.lanes.v1')!)).toEqual({ folded: ['texts'], locked: ['texts'] })
+      await act(async () => tool('Déplier la piste « Textes »')!.click())
+      await act(async () => tool('Déverrouiller la piste « Textes »')!.click())
+      expect(lane().hasAttribute('inert')).toBe(false)
+      expect(JSON.parse(localStorage.getItem('openflyover.lanes.v1')!)).toEqual({ folded: [], locked: [] })
+      // the other lanes are not touched, the blocks stay in the page when a lane is folded
+      expect(host.querySelectorAll('[data-testid="timeline-lane"]').length).toBeGreaterThan(5)
+      act(() => root.unmount())
+    })
+
+    it('the timecode of the bar counts frames when asked, and the button to zoom to the selection is there and harmless', async () => {
+      const { host, root } = await setup()
+      const time = () => host.querySelector('[data-testid="timeline-time"]')!.textContent
+      expect(time()).toMatch(/^\d\d:\d\d\.\d$|^\d\d:\d\d,\d$|^\d+:\d\d[.,]\d$/)
+      await act(async () => setPreferences({ timelineFrames: true }))
+      expect(time()).toMatch(/^\d\d:\d\d:\d\d$/)
+      await act(async () => setPreferences({ timelineFrames: false }))
+      const zoom = host.querySelector<HTMLElement>('button[aria-label="Zoomer sur la sélection"]')
+      expect(zoom).not.toBeNull()
+      // nothing selected, no work area: the whole film in the view, as « Ajuster »
+      await act(async () => zoom!.click())
+      expect(host.querySelector('[data-testid="timeline-time"]')).not.toBeNull()
+      act(() => root.unmount())
+    })
+
+    it('Ctrl + click picks texts together, one drag moves them all, Shift + Delete removes them and closes the gaps', async () => {
+      HTMLElement.prototype.setPointerCapture ??= () => {}
+      const { host, root } = await setup()
+      const texts = [
+        { id: 'text-1', startS: 1, durationS: 1, text: 'Un', anchor: 'bottom-center' as const, size: 1 },
+        { id: 'text-2', startS: 3, durationS: 1, text: 'Deux', anchor: 'bottom-center' as const, size: 1 },
+        { id: 'text-3', startS: 6, durationS: 1, text: 'Trois', anchor: 'bottom-center' as const, size: 1 },
+      ]
+      await act(async () => useAppStore.getState().setSetting('film', { ...useAppStore.getState().settings.film, texts }))
+      const block = (id: string) => host.querySelector<HTMLElement>(`[data-item="${id}"]`)!
+      const pointer = (type: string, init: Record<string, unknown> = {}) =>
+        Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, ...init }), { pointerId: 1, isPrimary: true, pointerType: 'mouse' })
+      // Ctrl + click: the first alone is selected, the second joins it
+      await act(async () => void block('text-1').dispatchEvent(pointer('pointerdown', { ctrlKey: true })))
+      await act(async () => void block('text-1').dispatchEvent(pointer('pointerup', { ctrlKey: true })))
+      expect(useAppStore.getState().filmSelection).toBe('text-1')
+      await act(async () => void block('text-2').dispatchEvent(pointer('pointerdown', { ctrlKey: true })))
+      await act(async () => void block('text-2').dispatchEvent(pointer('pointerup', { ctrlKey: true })))
+      expect(useAppStore.getState().filmKeys).toEqual(['text-1', 'text-2'])
+      expect(block('text-1').getAttribute('aria-pressed')).toBe('true')
+      expect(block('text-2').getAttribute('aria-pressed')).toBe('true')
+      expect(block('text-3').getAttribute('aria-pressed')).toBe('false')
+      // Ctrl + click on a picked one takes it out
+      await act(async () => void block('text-2').dispatchEvent(pointer('pointerdown', { ctrlKey: true })))
+      await act(async () => void block('text-2').dispatchEvent(pointer('pointerup', { ctrlKey: true })))
+      expect(useAppStore.getState().filmKeys).toEqual([])
+      expect(useAppStore.getState().filmSelection).toBe('text-1')
+      // two picked again, then Shift + Delete on one: both go and the third comes back by their lengths
+      await act(async () => useAppStore.getState().setFilmKeys(['text-1', 'text-2']))
+      await act(async () => void block('text-1').dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', shiftKey: true, bubbles: true, cancelable: true })))
+      const left = useAppStore.getState().settings.film.texts
+      expect(left.map((t) => [t.id, t.startS])).toEqual([['text-3', 4]])
+      expect(useAppStore.getState().filmKeys).toEqual([])
       act(() => root.unmount())
     })
 

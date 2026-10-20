@@ -346,6 +346,18 @@ const PATHS = {
     </>
   ),
   play: <polygon points="6 3 20 12 6 21 6 3" />,
+  lock: (
+    <>
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </>
+  ),
+  'lock-open': (
+    <>
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+    </>
+  ),
   pause: (
     <>
       <rect x="14" y="4" width="4" height="16" rx="1" />

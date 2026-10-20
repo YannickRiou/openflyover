@@ -47,7 +47,12 @@ import {
   rollClosing,
   edgeScrollSpeed,
   fitPxPerS,
+  dragBlocks,
   followScroll,
+  formatFrameTimecode,
+  snapTargetsOn,
+  timedBlockIds,
+  zoomToSpan,
   followStops,
   formatFilmTime,
   formatSpeedFactor,
@@ -56,6 +61,8 @@ import {
   photoFilmTime,
   pressedGrip,
   removeFilmItem,
+  rippleDrag,
+  rippleRemove,
   rulerTicks,
   snapTargets,
   snapper,
@@ -64,6 +71,9 @@ import {
   zoomAt,
 } from '../film/timeline'
 import type { DragContext, Grip, SnapBlock, SnapTarget, TimelineItem } from '../film/timeline'
+import { clampWorkArea, dragWorkArea } from '../film/workArea'
+import { Filmstrip, filmstripCount } from './Filmstrip'
+import { useLaneState } from './laneState'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
@@ -82,7 +92,7 @@ import { ModifiedMarker } from './ModifiedMarker'
 import { setPreferences, usePreferences } from './preferences'
 import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
-import { spacePlays, withShortcut } from './shortcuts'
+import { keyFocus, spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import { Button, Checkbox, Menu, Popover, Select, Slider, Tip } from './primitives'
 import type { MenuItem } from './primitives'
@@ -110,6 +120,10 @@ const HEAD = 'flex px-2 text-caption font-semibold text-glacier'
 const LANE = 'relative border-b border-chrome bg-white/5'
 /** The lane of the camera and the speed keys, taller by the group under its name in the header. */
 const KEYED_HEIGHT = 'h-11.5 touch:h-13.5'
+/** A folded lane: a thin strip, its name and the button that unfolds it. */
+const FOLDED_HEIGHT = 'h-4'
+/** The fold and lock buttons of a lane's head. */
+const LANE_TOOL = 'inline-flex size-5 items-center justify-center rounded-sm text-glacier hover:bg-white/15 aria-pressed:bg-white/20 aria-pressed:text-white focus-visible:outline-2 focus-visible:outline-white touch:size-8'
 const TICK = 'pointer-events-none absolute top-0 h-full border-l border-white/15 pl-[3px] text-caption tabular-nums whitespace-nowrap text-glacier'
 
 /** A block of a lane: the common part, then its kind (`BLOCK_KINDS`). */
@@ -141,11 +155,11 @@ const JUNCTION_KINDS_LOOK: Record<string, string> = {
   'fondu-blanc': 'cursor-grab border border-glacier bg-white text-ink',
   nuit: 'cursor-grab border border-glacier bg-moss/60 text-white',
 }
-const GRIP = 'absolute inset-y-0 z-1 w-[7px] cursor-ew-resize hover:bg-chrome/30 touch:w-4'
+const GRIP = 'absolute inset-y-0 z-1 w-2.5 cursor-ew-resize hover:bg-chrome/30 touch:w-4'
 const BLOCK_LABEL = 'pointer-events-none relative min-w-0 truncate'
 /** Keys: a diamond on its lane (a dot for the marker keys, in the colour of the marker from there on); a larger target on touch. */
 const KEY =
-  'absolute top-1/2 z-1 -mt-1.5 -ml-1.5 size-2.5 cursor-grab border touch:-mt-[9px] touch:-ml-[9px] touch:size-4'
+  "absolute top-1/2 z-1 -mt-1.5 -ml-1.5 size-2.5 cursor-grab border before:absolute before:-inset-2 before:content-[''] touch:-mt-[9px] touch:-ml-[9px] touch:size-4"
 const KEY_DIAMOND = `${KEY} rotate-45 border-chrome bg-glacier aria-pressed:bg-white`
 const KEY_DOT = `${KEY} rounded-full border-white bg-[var(--key-color,var(--color-chartreuse))] aria-pressed:outline-2 aria-pressed:outline-offset-2 aria-pressed:outline-white`
 /** The playhead: a line across the lanes, a small accent triangle (the `before:` borders) on its top edge. */
@@ -205,6 +219,8 @@ const ARROWS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
 
 type Gesture =
   | { kind: 'scrub' }
+  /** an end of the work area band on the ruler (`film/workArea.ts`) */
+  | { kind: 'range'; end: 'in' | 'out' }
   /** centred timeline: a press that selects `item` (or seeks, on nothing) if released without sliding */
   | { kind: 'tap'; item: TimelineItem | null; x0: number }
   /** `flightS`: the flight duration of a roll edit (start of the closing dragged) */
@@ -365,6 +381,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const tracks = useAppStore((s) => s.tracks)
   const settingsMarker = useAppStore((s) => s.settings.marker)
   const clock = useFilmClock()
+  const workArea = useAppStore((s) => s.workArea)
+  const [laneState, toggleLaneState] = useLaneState()
+  const setWorkArea = useAppStore((s) => s.setWorkArea)
   // the export moves the playhead at every frame: the timeline keeps the playback it had (it would render with each one)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const livePlayback = useAppStore((s) => (exporting ? null : s.playback))
@@ -374,6 +393,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const { playing, progress, timeS: storedTimeS, speed } = livePlayback ?? frozenPlayback ?? useAppStore.getState().playback
   const timelineClock = usePreferences((s) => s.timelineClock)
   const magnet = usePreferences((s) => s.timelineMagnet)
+  const snapOn = usePreferences((s) => s.timelineSnap)
+  const frameTimecode = usePreferences((s) => s.timelineFrames)
+  const fps = useAppStore((s) => s.settings.video.fps)
   const setPlaying = useAppStore((s) => s.setPlaying)
   const setProgress = useAppStore((s) => s.setProgress)
   const setSpeed = useAppStore((s) => s.setSpeed)
@@ -437,6 +459,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const edgeRef = useRef<EdgeScroll | null>(null)
   /** zoom for the wheel listener */
   const zoomRef = useRef(zoom)
+  /** Shift held while an edge is dragged: the blocks after it follow (« décalage en chaîne ») */
+  const rippleRef = useRef(false)
   /** scroll to apply once the zoomed content is laid out */
   const pendingScrollRef = useRef<number | null>(null)
   /** centred timeline: the scroll last set to follow the playhead (its scroll event is not a seek) */
@@ -539,6 +563,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // the scale follows the committed film: it does not change while an edge is dragged
   const pxPerS = fitPxPerS(Math.max(0, width - 2 * PAD_PX), clock.totalTime()) * zoom
   const playheadS = Math.min(storedTimeS ?? clock.timeAtProgress(progress), clock.totalTime())
+  const workSpan = clampWorkArea(workArea, clock.totalTime())
   // centred: the lanes scroll so that the playhead time sits in the middle (after every render: time, zoom, width)
   useLayoutEffect(() => {
     const el = scrollerRef.current
@@ -555,6 +580,19 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const next = followScroll(PAD_PX + playheadS * pxPerS, el.scrollLeft, el.clientWidth, el.scrollWidth)
     if (next !== el.scrollLeft) el.scrollLeft = next
   })
+
+  // Z zooms the timeline to the selected block (or the work area, or the whole film)
+  const zoomSelectionRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'z' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.repeat || e.defaultPrevented) return
+      if (keyFocus(e.target) === 'text') return
+      e.preventDefault()
+      zoomSelectionRef.current()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   // the music plays along the preview
   useEffect(() => startMusicPreview(), [])
@@ -637,7 +675,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     clockOf: (stops: readonly FilmStop[]) => buildFilmClock({ ...input, stops }),
     clockOfSpeeds: (speeds: readonly FilmSpeed[]) => buildFilmClock({ ...input, speeds }),
     lengthM,
-    targets: snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }),
+    targets: snapTargetsOn(snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }), snapOn),
     targetsM: candidates.map((c) => c.atM),
     snapS: SNAP_PX / pxPerS,
     releaseS: RELEASE_PX / pxPerS,
@@ -646,10 +684,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     audioFileS: (src) => pictures[src]?.durationS,
   })
   const keyIds = [...clock.cameraKeys, ...clock.paramKeys, ...clock.markerKeys].map((k) => k.id)
+  /** the texts, media and music: blocks by film time that can be picked together (Ctrl + click), moved, copied and removed as a group */
+  const blockIds = timedBlockIds(film)
   /** the keys selected together, or the key selected on its own */
   const pickedKeys = group.length > 0 ? group : selected !== null && keyIds.includes(selected) ? [selected] : []
   /** a key added to the selection, or left out of it (Ctrl) */
   const toggleKey = (id: string) => setKeys(pickedKeys.includes(id) ? pickedKeys.filter((k) => k !== id) : [...pickedKeys, id])
+  /** a block added to the blocks picked together, or left out of them (Ctrl + click); a group is only of blocks, or only of keys */
+  const toggleBlock = (id: string) => {
+    const picked = group.length > 0 && group.every((g) => blockIds.includes(g)) ? group : selected !== null && blockIds.includes(selected) ? [selected] : []
+    setKeys(picked.includes(id) ? picked.filter((k) => k !== id) : [...picked, id])
+  }
   /** the keys of the group deleted in one undo step */
   const removeKeys = (ids: readonly string[]) => editFilm((f) => ({ film: ids.reduce(removeFilmItem, f), id: null }))
   const isPicked = (id: string) => selected === id || group.includes(id) || (marquee?.ids.includes(id) ?? false)
@@ -685,6 +730,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         label: together ? t('timeline.menu.removeKeys', { count: together.length }) : t(keyIds.includes(item) ? 'timeline.menu.removeKey' : 'timeline.menu.remove'),
         onSelect: () => (together ? removeKeys(together) : remove(item)),
       })
+      const picked = together ?? [item]
+      if (picked.every((id) => blockIds.includes(id))) {
+        items.push({
+          id: 'remove-close',
+          label: t('timeline.menu.removeClose', { count: picked.length }),
+          onSelect: () => editFilm((f) => ({ film: rippleRemove(f, picked), id: null })),
+        })
+      }
     } else if (!item && lane) {
       const timeS = Math.max(0, timeAt(e.clientX))
       items.push({ id: 'add-key', label: t('timeline.menu.addKey'), onSelect: () => addKeyAt(lane, timeS) })
@@ -868,6 +921,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       keepGroupRef.current = true
       return toggleKey(item)
     }
+    if ((e.ctrlKey || e.metaKey) && blockIds.includes(item)) {
+      keepGroupRef.current = true
+      return toggleBlock(item)
+    }
     // pressed in the group, a key drags it whole; released without moving, it is selected alone
     const together = group.includes(item) ? group : undefined
     if (!together) setSelected(item)
@@ -894,6 +951,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const g = gestureRef.current
     if (!g) return
     if (g.kind === 'scrub') return seek(timeAt(clientX))
+    if (g.kind === 'range') {
+      const current = clampWorkArea(useAppStore.getState().workArea, clock.totalTime())
+      if (current) setWorkArea(dragWorkArea(current, g.end, timeAt(clientX), clock.totalTime()))
+      return
+    }
     if (g.kind === 'tap') {
       if (Math.abs(clientX - g.x0) > TAP_SLOP_PX) gestureRef.current = null
       return
@@ -938,7 +1000,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       g.result = dragCard(g.start, g.item, g.grip, dx / pxPerS, clock, snapper(ctx))
       setCardDraft(g.result)
     } else {
-      let dragged = g.group ? dragKeys(g.start, g.group, g.item, dx / pxPerS, ctx) : dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      let dragged = g.group
+        ? g.group.every((id) => blockIds.includes(id))
+          ? dragBlocks(g.start, g.group, g.item, dx / pxPerS, ctx)
+          : dragKeys(g.start, g.group, g.item, dx / pxPerS, ctx)
+        : dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      // Shift on the end of a text, a photo or a clip: what comes after it follows
+      if (!g.group && g.grip === 'end' && rippleRef.current) dragged = rippleDrag(g.start, dragged, g.item)
       if (g.item === 'closing' && g.grip === 'start') {
         const rolled = rollClosing(g.start, dragged, durationS)
         dragged = rolled.film
@@ -990,6 +1058,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const g = gestureRef.current
     if (!g) return
     if (g.kind === 'marquee') g.y = e.clientY - (contentRef.current?.getBoundingClientRect().top ?? 0)
+    rippleRef.current = e.shiftKey
     applyPointer(e.clientX, e.altKey)
     // a press that only selects a block (not dragged yet) does not scroll
     if (g.kind === 'scrub' || g.kind === 'marquee' || ((g.kind === 'edit' || g.kind === 'card') && g.result) || (g.kind === 'reorder' && g.moved)) followEdge(e.clientX, e.altKey)
@@ -1071,7 +1140,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     // a key of the group: Delete and the arrows are for the whole group
     const together = group.includes(item) ? group : undefined
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (together) removeKeys(together)
+      const picked = together ?? [item]
+      // Shift: the gap closes (« décalage en chaîne »)
+      if (e.shiftKey && picked.every((id) => blockIds.includes(id))) editFilm((f) => ({ film: rippleRemove(f, picked), id: null }))
+      else if (together) removeKeys(together)
       else remove(item)
     } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
       const step = (e.shiftKey ? FINE_NUDGE_S : NUDGE_S) * (e.key === 'ArrowLeft' ? -1 : 1)
@@ -1114,11 +1186,40 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     pendingScrollRef.current = 0
     setZoom(ZOOM_RANGE.min)
   }
+  /** The stretch of the block or key `id` on the timeline, in film time (read from where it is drawn). */
+  const spanOfItem = (id: string): { startS: number; endS: number } | null => {
+    const el = contentRef.current ? [...contentRef.current.querySelectorAll<HTMLElement>('[data-item]')].find((b) => b.dataset.item === id) : undefined
+    const left = parseFloat(el?.style.left ?? '')
+    if (!el || !Number.isFinite(left)) return null
+    const width = parseFloat(el.style.width) || 0
+    return { startS: (left - pad) / pxPerS, endS: (left + width - pad) / pxPerS }
+  }
+  /** « Zoom sur la sélection »: the selected block (or the work area, else the whole film) fills the view. */
+  const zoomToSelection = () => {
+    const el = scrollerRef.current
+    if (!el || centred) return
+    const span = (selected !== null ? spanOfItem(selected) : null) ?? (workSpan ? { startS: workSpan.inS, endS: workSpan.outS } : null)
+    if (!span) return fitZoom()
+    const next = zoomToSpan(span.startS, span.endS, el.clientWidth, total, PAD_PX)
+    pendingScrollRef.current = next.scrollLeft
+    zoomRef.current = next.zoom
+    // the scroll is applied once the zoom has changed; with the same zoom it is applied now
+    if (Math.abs(next.zoom - zoom) < 1e-9) el.scrollLeft = next.scrollLeft
+    setZoom(next.zoom)
+  }
+  zoomSelectionRef.current = zoomToSelection
 
   // --- blocks ------------------------------------------------------------------------------------------------
   const liftedItem = stageDrag ? stageItemId(stageDrag.id) : null
   /** a lane: its height is the row of the heads (the camera and speed lanes, with keys, are taller), 36 px on the centred timeline */
-  const laneClass = (keyed = false) => `${LANE} ${centred ? 'h-9' : keyed ? KEYED_HEIGHT : 'h-7 touch:h-10'}`
+  // a lane folded to a strip or locked (per device, `laneState.ts`): its blocks are hidden or untouchable (`inert`: no focus, no pointer, so a press falls through to the scrub); not on the phone's centred timeline
+  const isFolded = (id: string) => !centred && laneState.folded.includes(id)
+  const isLocked = (id: string) => !centred && laneState.locked.includes(id)
+  const laneProps = (id: string, keyed = false) => ({
+    className: `${LANE} ${centred ? 'h-9' : isFolded(id) ? FOLDED_HEIGHT : keyed ? KEYED_HEIGHT : 'h-7 touch:h-10'}${isFolded(id) ? ' [&>*]:invisible' : ''}${isLocked(id) ? ' opacity-60' : ''}`,
+    inert: isFolded(id) || isLocked(id),
+    'data-lane-id': id,
+  })
   const block = (
     item: TimelineItem,
     startS: number,
@@ -1136,7 +1237,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       key={item}
       role="button"
       tabIndex={0}
-      aria-pressed={selected === item}
+      aria-pressed={selected === item || group.includes(item)}
       aria-label={t('timeline.blockRange', { description, from: formatFilmTime(startS), to: formatFilmTime(endS) })}
       title={label}
       data-item={item}
@@ -1159,7 +1260,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         setSelected(item)
         onContentPointerDown(e)
       }}
-      onFocus={() => setSelected(item)}
+      onFocus={() => (blockIds.includes(item) ? focusKey(item) : setSelected(item))}
       onKeyDown={(e) => onBlockKeyDown(e, item)}
     >
       {grips.includes('start') && <span className={`${GRIP} left-0`} onPointerDown={(e) => startGrip(e, item, 'start', grips)} />}
@@ -1180,13 +1281,16 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const flightEnd = flightStart + shownClock.flightS
   const ticks = rulerTicks(total, pxPerS)
   /** the lanes: always « Plans » and « Vitesse », a lane per keyed parameter, « Marqueur » with marker keys, the rest */
-  const lanes: { name: string; keys?: KeyTarget }[] = [
-    ...(sequence ? [{ name: t('timeline.lane.stages') }] : []),
-    { name: t('timeline.lane.shots'), keys: { kind: 'camera' } },
-    { name: PARAM_LANE_LABELS.speed, keys: { kind: 'param', param: 'speed' } },
-    ...paramLanes(shownClock).map((param) => ({ name: PARAM_LANE_LABELS[param] })),
-    ...(shownClock.markerKeys.length > 0 ? [{ name: t('timeline.lane.marker') }] : []),
-    ...[t('timeline.lane.holds'), t('timeline.lane.texts'), t('timeline.lane.media'), t('timeline.lane.music')].map((name) => ({ name })),
+  const lanes: { id: string; name: string; keys?: KeyTarget }[] = [
+    ...(sequence ? [{ id: 'stages', name: t('timeline.lane.stages') }] : []),
+    { id: 'shots', name: t('timeline.lane.shots'), keys: { kind: 'camera' } },
+    { id: 'param:speed', name: PARAM_LANE_LABELS.speed, keys: { kind: 'param', param: 'speed' } },
+    ...paramLanes(shownClock).map((param) => ({ id: `param:${param}`, name: PARAM_LANE_LABELS[param] })),
+    ...(shownClock.markerKeys.length > 0 ? [{ id: 'marker', name: t('timeline.lane.marker') }] : []),
+    { id: 'holds', name: t('timeline.lane.holds') },
+    { id: 'texts', name: t('timeline.lane.texts') },
+    { id: 'media', name: t('timeline.lane.media') },
+    { id: 'music', name: t('timeline.lane.music') },
   ]
   /** « Étapes »: a block per stage, between them the junction (a cut, a fade held for its hold, a night) */
   const stageBlocks = () =>
@@ -1308,7 +1412,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         />
         {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
         <span className={TIME}>
-          <strong className="text-accent-light" data-testid="timeline-time">{formatTimecode(playheadS, true)}</strong> / {formatTimecode(clock.totalTime())}
+          <strong className="text-accent-light" data-testid="timeline-time">{frameTimecode ? formatFrameTimecode(playheadS, fps) : formatTimecode(playheadS, true)}</strong> / {frameTimecode ? formatFrameTimecode(clock.totalTime(), fps) : formatTimecode(clock.totalTime())}
         </span>
         <span className={`${READOUT} ${centred ? 'hidden' : collapsed ? '@max-[1200px]/film-tl:hidden phone-any:hidden' : '@max-[1200px]/film-tl:hidden'}`}>
           <span className="inline-block text-right" style={{ minWidth: `${formatDistance(lengthM).length + 1}ch` }}>
@@ -1437,8 +1541,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onClick={() => zoomBy(BUTTON_ZOOM)}
               disabled={zoom >= ZOOM_RANGE.max}
             />
+            <BarButton icon="maximize" name={t('timeline.zoom.selection')} tip={withShortcut(t('timeline.zoom.selectionTip'), 'zoom-selection')} onClick={zoomToSelection} disabled={!hasTrack} />
             <BarButton icon="move-horizontal" name={t('timeline.zoom.fit')} tip={t('timeline.zoom.fitTip')} onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
           </div>
+          {workSpan && <BarButton icon="rotate-cw" name={t('timeline.workArea.clear')} tip={t('timeline.workArea.clearTip', { from: formatFilmTime(workSpan.inS), to: formatFilmTime(workSpan.outS) })} on onClick={() => setWorkArea(null)} />}
           <BarButton
             icon="magnet"
             name={magnet ? t('timeline.magnet.off') : t('timeline.magnet.on')}
@@ -1470,21 +1576,37 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           className={`flex border-t border-white/10 ${SIZED_BODY}${centred ? ` relative min-h-0 flex-auto ${CENTRE_PLAYHEAD}` : ''}`}
           id={`${id}-lanes`}
         >
-          <div className={`w-24 flex-none border-r border-white/10 touch:w-28 ${centred ? 'hidden' : ''}`} data-testid="timeline-heads">
+          <div className={`w-28 flex-none border-r border-white/10 touch:w-32 ${centred ? 'hidden' : ''}`} data-testid="timeline-heads">
             <div className={`${HEAD} h-5 items-center touch:h-7`} data-testid="timeline-head" />
             {/* the lanes carry the same names; the camera and speed keys have their ◀ ◇ ▶ under theirs */}
-            {lanes.map((lane) =>
-              lane.keys ? (
-                <div key={lane.name} className={`${HEAD} ${KEYED_HEIGHT} flex-col items-start justify-center gap-px`} data-testid="timeline-head">
-                  <span className="max-w-full truncate">{lane.name}</span>
-                  <KeyGroup target={lane.keys} clock={clock} timeS={playheadS} disabled={!hasTrack} />
+            {lanes.map((lane) => {
+              const folded = isFolded(lane.id)
+              const locked = isLocked(lane.id)
+              return (
+                <div
+                  key={lane.id}
+                  className={`${HEAD} group relative ${folded ? `${FOLDED_HEIGHT} items-center` : lane.keys ? `${KEYED_HEIGHT} flex-col items-start justify-center gap-px` : 'h-7 items-center touch:h-10'}`}
+                  data-testid="timeline-head"
+                >
+                  <span className={`max-w-full truncate pr-11 ${folded ? 'text-[10px] leading-none' : ''}`} title={lane.name}>
+                    {lane.name}
+                  </span>
+                  {lane.keys && !folded && <KeyGroup target={lane.keys} clock={clock} timeS={playheadS} disabled={!hasTrack} />}
+                  <span
+                    className={`absolute right-1 ${lane.keys && !folded ? 'top-1' : 'top-1/2 -translate-y-1/2'} flex gap-0.5 ${folded || locked ? '' : 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 touch:opacity-100'}`}
+                  >
+                    <button type="button" className={LANE_TOOL} aria-pressed={folded} aria-label={t(folded ? 'timeline.lane.unfold' : 'timeline.lane.fold', { name: lane.name })} title={t(folded ? 'timeline.lane.unfold' : 'timeline.lane.fold', { name: lane.name })} onClick={() => toggleLaneState('folded', lane.id)}>
+                      <Icon name={folded ? 'chevron-right' : 'chevron-down'} size={14} />
+                    </button>
+                    {!folded && (
+                      <button type="button" className={LANE_TOOL} aria-pressed={locked} aria-label={t(locked ? 'timeline.lane.unlock' : 'timeline.lane.lock', { name: lane.name })} title={t(locked ? 'timeline.lane.unlock' : 'timeline.lane.lock', { name: lane.name })} onClick={() => toggleLaneState('locked', lane.id)}>
+                        <Icon name={locked ? 'lock' : 'lock-open'} size={14} />
+                      </button>
+                    )}
+                  </span>
                 </div>
-              ) : (
-                <div key={lane.name} className={`${HEAD} h-7 items-center touch:h-10`} data-testid="timeline-head" aria-hidden="true">
-                  <span className="max-w-full truncate">{lane.name}</span>
-                </div>
-              ),
-            )}
+              )
+            })}
           </div>
           <div
             className={`min-w-0 flex-auto ${centred ? 'overflow-auto overscroll-contain' : 'overflow-x-auto overflow-y-hidden'}`}
@@ -1515,6 +1637,26 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 aria-valuetext={t('timeline.ruler.valueText', { time: formatFilmTime(playheadS), total: formatFilmTime(clock.totalTime()) })}
                 onKeyDown={onRulerKeyDown}
               >
+                {workSpan && (
+                  <>
+                    {/* the work area: a band over the ruler, an end of it dragged to move that point */}
+                    <span className="pointer-events-none absolute inset-y-0 bg-brand/25" style={{ left: xOf(workSpan.inS), width: (workSpan.outS - workSpan.inS) * pxPerS }} />
+                    {(['in', 'out'] as const).map((end) => (
+                      <span
+                        key={end}
+                        data-testid={`work-area-${end}`}
+                        title={end === 'in' ? t('timeline.workArea.in') : t('timeline.workArea.out')}
+                        className="absolute inset-y-0 z-1 w-1.5 cursor-ew-resize touch-none bg-brand before:absolute before:-inset-x-2 before:inset-y-0 before:content-['']"
+                        style={{ left: xOf(end === 'in' ? workSpan.inS : workSpan.outS) - (end === 'in' ? 0 : 6) }}
+                        onPointerDown={(e) => {
+                          e.stopPropagation()
+                          contentRef.current?.setPointerCapture(e.pointerId)
+                          gestureRef.current = { kind: 'range', end }
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
                 {ticks.map((t) => (
                   <span key={t} className={`${TICK} ${centred ? 'leading-6' : 'leading-5 touch:leading-7'}`} style={{ left: xOf(t) }}>
                     {formatFilmTime(t)}
@@ -1523,12 +1665,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               {sequence && (
-                <div data-testid="timeline-lane" className={laneClass()} role="group" aria-label={t('timeline.lane.stages')}>
+                <div data-testid="timeline-lane" {...laneProps('stages')} role="group" aria-label={t('timeline.lane.stages')}>
                   {stageBlocks()}
                 </div>
               )}
 
-              <div data-testid="timeline-lane" data-lane="camera" className={laneClass(true)} role="group" aria-label={t('timeline.lane.shots')}>
+              <div data-testid="timeline-lane" data-lane="camera" {...laneProps('shots', true)} role="group" aria-label={t('timeline.lane.shots')}>
                 {block(
                   'opening',
                   0,
@@ -1607,7 +1749,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div data-testid="timeline-lane" data-lane="param:speed" className={laneClass(true)} role="group" aria-label={PARAM_LANE_LABELS.speed}>
+              <div data-testid="timeline-lane" data-lane="param:speed" {...laneProps('param:speed', true)} role="group" aria-label={PARAM_LANE_LABELS.speed}>
                 {shownClock.speeds.map((s) => {
                   const label = formatSpeedFactor(s.factor)
                   const speedKey = s.factor > 1 ? 'timeline.speed.fast' : s.factor < 1 ? 'timeline.speed.slow' : 'timeline.speed.normal'
@@ -1625,13 +1767,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               {paramLanes(shownClock).map((param) => (
-                <div key={param} data-testid="timeline-lane" data-lane={`param:${param}`} className={laneClass()} role="group" aria-label={PARAM_LANE_LABELS[param]}>
+                <div key={param} data-testid="timeline-lane" data-lane={`param:${param}`} {...laneProps(`param:${param}`)} role="group" aria-label={PARAM_LANE_LABELS[param]}>
                   {keysOfParam(shownClock.paramKeys, param).map(paramKeyDot)}
                 </div>
               ))}
 
               {shownClock.markerKeys.length > 0 && (
-                <div data-testid="timeline-lane" data-lane="marker" className={laneClass()} role="group" aria-label={t('timeline.lane.marker')}>
+                <div data-testid="timeline-lane" data-lane="marker" {...laneProps('marker')} role="group" aria-label={t('timeline.lane.marker')}>
                   {shownClock.markerKeys.map((k) => {
                     // what the marker looks like from this key on: its own colours and size, else those of the Trace panel
                     const look = withKey(settingsMarker, k, () => '')
@@ -1663,7 +1805,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
 
-              <div data-testid="timeline-lane" className={laneClass()} role="group" aria-label={t('timeline.lane.holds')}>
+              <div data-testid="timeline-lane" {...laneProps('holds')} role="group" aria-label={t('timeline.lane.holds')}>
                 {shownClock.stops.map((s) => {
                   const label = s.label || t('film.snap.hold')
                   return block(
@@ -1678,7 +1820,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 })}
               </div>
 
-              <div data-testid="timeline-lane" className={laneClass()} role="group" aria-label={t('timeline.lane.texts')}>
+              <div data-testid="timeline-lane" {...laneProps('texts')} role="group" aria-label={t('timeline.lane.texts')}>
                 {/* the opening title and the closing card (overlay settings): their inner edge moves; their body drags the edge of the opening / closing shot */}
                 {shownCards(shownOverlay).map((card) => {
                   const { startS, endS } = cardWindow(shownOverlay, card, shownClock)
@@ -1707,7 +1849,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 )}
               </div>
 
-              <div data-testid="timeline-lane" className={laneClass()} role="group" aria-label={t('timeline.lane.media')}>
+              <div data-testid="timeline-lane" {...laneProps('media')} role="group" aria-label={t('timeline.lane.media')}>
                 {shownFilm.media.map((m) =>
                   block(
                     m.id,
@@ -1721,11 +1863,20 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     ['start', 'move', 'end'],
                     pictures[m.src]?.thumb,
                     m.kind === 'video' ? 'video' : undefined,
+                    m.kind === 'video' && !exporting ? (
+                      <Filmstrip
+                        key="filmstrip"
+                        asset={pictures[m.src]}
+                        inS={m.inS ?? 0}
+                        outS={m.outS ?? pictures[m.src]?.durationS ?? 0}
+                        count={filmstripCount(m.durationS * pxPerS)}
+                      />
+                    ) : undefined,
                   ),
                 )}
               </div>
 
-              <div data-testid="timeline-lane" className={laneClass()} role="group" aria-label={t('timeline.lane.music')}>
+              <div data-testid="timeline-lane" {...laneProps('music')} role="group" aria-label={t('timeline.lane.music')}>
                 {shownFilm.audio.length === 0 && (
                   <span className="pointer-events-none absolute inset-y-0 flex items-center pl-1.5 text-caption whitespace-nowrap text-glacier" style={{ left: xOf(0) }}>
                     {t('timeline.music.empty')}
