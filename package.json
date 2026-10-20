@@ -2,7 +2,7 @@
   "name": "openflyover",
   "private": true,
   "license": "MIT",
-  "version": "2.3.2",
+  "version": "2.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
