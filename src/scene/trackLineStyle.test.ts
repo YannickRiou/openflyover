@@ -70,10 +70,12 @@ describe('trail (« Traînée »)', () => {
     addTrailCut(glow, 'test-glow-trail')
     expect(glow.uniforms.trailStartM.value).toBe(NO_TRAIL)
     expect(glow.customProgramCacheKey()).toBe('test-glow-trail')
-    const shader = { vertexShader: 'void main() {\n}', fragmentShader: 'void main() {\ngl_FragColor = vec4( diffuseColor.rgb, alpha );\n}', uniforms: {} }
+    const shader = { vertexShader: 'void main() {\noffset *= linewidth;\n}', fragmentShader: 'void main() {\ngl_FragColor = vec4( diffuseColor.rgb, alpha );\n}', uniforms: {} }
     glow.onBeforeCompile(shader as never, null as never)
     expect(shader.vertexShader).toContain('vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;')
     expect(shader.fragmentShader).toContain('if ( vTrackM < trailStartM ) discard;')
+    // the oldest part thins out instead of ending on a sharp cut
+    expect(shader.vertexShader).toContain('offset *= linewidth * trailWidth;')
     // the glow output is still patched
     expect(shader.fragmentShader).toContain('glowFade')
   })
