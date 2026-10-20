@@ -265,6 +265,31 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
+    it('a lane folds to a strip and locks against edits, each from the buttons of its head, and the choice is kept for the device', async () => {
+      localStorage.removeItem('openflyover.lanes.v1')
+      const { host, root } = await setup()
+      const lane = () => host.querySelector<HTMLElement>('[role="group"][aria-label="Textes"]')!
+      const tool = (label: string) => host.querySelector<HTMLElement>(`button[aria-label="${label}"]`)
+      expect(lane().hasAttribute('inert')).toBe(false)
+      await act(async () => tool('Verrouiller la piste « Textes » (ses blocs ne bougent plus)')!.click())
+      expect(lane().hasAttribute('inert')).toBe(true)
+      expect(lane().className).toContain('h-7')
+      expect(tool('Déverrouiller la piste « Textes »')!.getAttribute('aria-pressed')).toBe('true')
+      await act(async () => tool('Replier la piste « Textes »')!.click())
+      expect(lane().className).toContain('h-4')
+      expect(lane().className).not.toContain('h-7')
+      // folded, the lock button is gone and the unfold button says so
+      expect(tool('Déverrouiller la piste « Textes »')).toBeNull()
+      expect(JSON.parse(localStorage.getItem('openflyover.lanes.v1')!)).toEqual({ folded: ['texts'], locked: ['texts'] })
+      await act(async () => tool('Déplier la piste « Textes »')!.click())
+      await act(async () => tool('Déverrouiller la piste « Textes »')!.click())
+      expect(lane().hasAttribute('inert')).toBe(false)
+      expect(JSON.parse(localStorage.getItem('openflyover.lanes.v1')!)).toEqual({ folded: [], locked: [] })
+      // the other lanes are not touched, the blocks stay in the page when a lane is folded
+      expect(host.querySelectorAll('[data-testid="timeline-lane"]').length).toBeGreaterThan(5)
+      act(() => root.unmount())
+    })
+
     it('have a right-click menu of their own: « Supprimer » on a block, « Ajouter une image clé ici » on a lane, never the browser menu', async () => {
       HTMLElement.prototype.setPointerCapture ??= () => {}
       const { host, root, setOverlay, card } = await setup()

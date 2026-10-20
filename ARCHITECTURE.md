@@ -1514,6 +1514,15 @@ The interface and the texts drawn into the films and posters exist in **French**
   part of the film: not saved, not an undo step, cleared with the tracks and when the project is reset, clamped to the film
   (`clampWorkArea`) when it gets shorter. The export still renders the whole film (a range export would need `fromS` / `toS` in the
   schedule, the request and the audio mix).
+- **Foldable and lockable lanes** (`src/ui/laneState.ts`, `Timeline.tsx` heads): every lane has an id (`stages`, `shots`, `param:<p>`,
+  `marker`, `holds`, `texts`, `media`, `music`) and its head carries two buttons (they show on hover or focus, and always on touch
+  or once used): fold (a strip `FOLDED_HEIGHT` = 16 px, the blocks `invisible`, still in the page: the e2e counts them by label)
+  and lock (the lane dimmed). Both set `inert` on the lane (no focus, no pointer: a press falls through to the scrub, the
+  right-click menu finds no block), through `laneProps(id)`. Kept per device in `localStorage` (`openflyover.lanes.v1`:
+  `{ folded, locked }`, `parseLaneState` drops what is unreadable), not in the project, no undo step; not applied to the phone's
+  centred timeline. A selected block of a locked lane stays selected: Delete / Ctrl+D act on the selection. The head column is
+  wider (112 px, 128 on touch) and shows the full name in a tooltip; edges (`GRIP`) are 10 px wide and keys have an 8 px
+  invisible margin (`before:`) for the mouse.
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the
