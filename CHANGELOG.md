@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 2.3.2 (October 2026)
+
+- **A softer « Traînée »**: the trail behind the marker no longer ends on a sharp cut; over its oldest half the line and its halo narrow down to nothing, in the preview and in the film alike.
+- **A softer track halo**: « Halo de la trace » now fades gently from the edge of the line and stays dimmer than it, so the line keeps a clear edge instead of merging with its halo into a thick band. Projects keep their halo settings.
+
 ## 2.3.0 (October 2026)
 
 - **« Traînée »: only the last stretch of track behind the marker**: with « Trace qui se dessine » on, the new « Traînée » switch and its length (100 m to 20 km, 1 km by default) hide the start of each track, so only the last stretch stays drawn behind each marker, in the preview and in the film alike. Every racer and stage has its own trail; a project saved before opens with the trail off.
