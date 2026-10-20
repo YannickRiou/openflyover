@@ -7,7 +7,8 @@
  * Draw-on: each segment draws its pieces up to the marker (`instanceCount`) and the last one is shortened by moving its
  * end vertex in the shared buffer (restored afterwards). The distance comes from the playback progress, so the preview
  * and the export draw the same line. The trail (« Traînée ») hides the start the other way: the painting step skips
- * what lies before a distance (`addTrailCut`), since the pieces drawn always start at the first.
+ * what lies before a distance (`addTrailCut`), since the pieces drawn always start at the first, and its oldest part
+ * thins out to nothing instead of ending on a sharp cut.
  */
 import { CustomBlending, InstancedInterleavedBuffer, InterleavedBufferAttribute, MaxEquation } from 'three'
 import type { Camera, Color, Vector3 } from 'three'
@@ -173,6 +174,8 @@ export function cutLine(line: CuttableLine, distanceM: number): void {
 
 /** `trailStartM` when there is no trail: below every distance along a track (they start at 0). */
 export const NO_TRAIL = -1
+/** Part of the trail, from its start, over which the line and its halo thin out (0..1). */
+export const TRAIL_FADE_SHARE = 0.5
 
 /**
  * Store the distance along the track of both ends of every piece (`dist`, one value per point) in the geometry, for
@@ -191,19 +194,25 @@ export function setTrackDistances(geometry: LineGeometry, dist: Float64Array): v
 }
 
 /**
- * Teach a track line material to skip what lies before `trailStartM` along the track (`setTrailStart`): the pieces
- * stay in place, only the painting skips them, so the colours by metric and the dashes stored piece by piece still
- * match. `cacheKey` names the patched program (it must differ from the unpatched material's).
+ * Teach a track line material to skip what lies before `trailStartM` along the track (`setTrailStart`), and to thin
+ * out over the next `trailFadeM` metres: the pieces stay in place, only the painting skips them, so the colours by
+ * metric and the dashes stored piece by piece still match. The fade scales the width at each piece end rather than the
+ * opacity: the line is opaque, and a translucent one would darken where neighbouring pieces overlap at a joint. The
+ * whole cross-section shrinks, so a glow keeps bordering its line. `cacheKey` names the patched program (it must
+ * differ from the unpatched material's).
  */
 export function addTrailCut(material: LineMaterial, cacheKey: string): void {
   material.uniforms.trailStartM = { value: NO_TRAIL }
+  material.uniforms.trailFadeM = { value: 0 }
   const patch = material.onBeforeCompile.bind(material)
   material.onBeforeCompile = (shader, renderer) => {
     patch(shader, renderer)
-    shader.vertexShader = `attribute float instanceTrackStart;\nattribute float instanceTrackEnd;\nvarying float vTrackM;\n${shader.vertexShader.replace(
-      'void main() {',
-      'void main() {\n  vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;',
-    )}`
+    shader.vertexShader = `attribute float instanceTrackStart;\nattribute float instanceTrackEnd;\nuniform float trailStartM;\nuniform float trailFadeM;\nvarying float vTrackM;\n${shader.vertexShader
+      .replace(
+        'void main() {',
+        'void main() {\n  vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;\n  float trailWidth = trailFadeM > 0.0 ? smoothstep( trailStartM, trailStartM + trailFadeM, vTrackM ) : 1.0;',
+      )
+      .replace('offset *= linewidth;', 'offset *= linewidth * trailWidth;')}`
     shader.fragmentShader = `uniform float trailStartM;\nvarying float vTrackM;\n${shader.fragmentShader.replace(
       'void main() {',
       'void main() {\n  if ( vTrackM < trailStartM ) discard;',
@@ -212,9 +221,13 @@ export function addTrailCut(material: LineMaterial, cacheKey: string): void {
   material.customProgramCacheKey = () => cacheKey
 }
 
-/** Hide what lies before `startM` along the track (NO_TRAIL: nothing) on a material patched by `addTrailCut`. */
-export function setTrailStart(material: LineMaterial, startM: number): void {
+/**
+ * Hide what lies before `startM` along the track (NO_TRAIL: nothing) on a material patched by `addTrailCut`, and thin
+ * the line out over the `fadeM` metres after it (0: a sharp cut).
+ */
+export function setTrailStart(material: LineMaterial, startM: number, fadeM = 0): void {
   material.uniforms.trailStartM.value = startM
+  material.uniforms.trailFadeM.value = fadeM
 }
 
 /** Distance from `camera` to what it looks at (`target`), for the dash scale. */

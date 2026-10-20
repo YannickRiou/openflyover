@@ -504,6 +504,9 @@ describe('draw-on (« trace qui se dessine »)', () => {
 
     cutTrackLineSet(set, 500, 200)
     expect(trailStart()).toEqual([300, 300])
+    const trailFade = () => [set.solidMaterial, set.glowMaterial].map((m) => m.uniforms.trailFadeM.value as number)
+    // the oldest half thins out
+    expect(trailFade()).toEqual([100, 100])
     const drawn = set.segments[0].geometry.instanceCount
     // paused (the marker has not moved): a new length still applies
     cutTrackLineSet(set, 500, 400)
@@ -514,5 +517,6 @@ describe('draw-on (« trace qui se dessine »)', () => {
     expect(trailStart()).toEqual([NO_TRAIL, NO_TRAIL])
     cutTrackLineSet(set, 500)
     expect(trailStart()).toEqual([NO_TRAIL, NO_TRAIL])
+    expect(trailFade()).toEqual([0, 0])
   })
 })

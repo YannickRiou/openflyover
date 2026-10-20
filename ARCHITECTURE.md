@@ -1107,7 +1107,10 @@ The interface and the texts drawn into the films and posters exist in **French**
   halo materials of each set discard what lies before the uniform `trailStartM` = cut distance − `lengthM`
   (`addTrailCut`, own program keys; `NO_TRAIL` = −1 otherwise). Colours by metric and dashes stay on their pieces.
   Each set its own value: every racer and every stage « À la suite » gets its trail; a track drawn whole stays whole.
-  Set on every cut, even when the marker has not moved (a paused film follows the slider). A sharp cut, no fade yet.
+  Set on every cut, even when the marker has not moved (a paused film follows the slider). The oldest half of the
+  trail (`TRAIL_FADE_SHARE`, uniform `trailFadeM`) thins out to nothing: the vertex shader scales the width of each
+  piece end (smoothstep), the opacity stays whole (a translucent line would darken at the joints where pieces overlap)
+  and the halo shrinks with its line.
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
   `RaceMarkers`; drawn without depth test so the slope never cuts them, hidden (opacity 0, never half-transparent) behind the relief with the labels'
   line of sight: `reliefClearance`, `occludeMarker`), badge texture drawn on a canvas (`markerBadge.ts`) and cached by key (48 at most). Ball:

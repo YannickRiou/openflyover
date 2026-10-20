@@ -44,6 +44,7 @@ import {
   setTrackDistances,
   setTrailStart,
   TRACK_GLOW_MAX_STRENGTH,
+  TRAIL_FADE_SHARE,
   type CuttableLine,
 } from './trackLineStyle'
 
@@ -415,8 +416,10 @@ export function applyTrackStyle(sets: Iterable<TrackLineSet>, style: TrackStyle,
  */
 export function cutTrackLineSet(set: TrackLineSet, distanceM: number, trailM = Infinity): void {
   // set even when the marker has not moved: the trail length may have changed while paused
-  const startM = Number.isFinite(distanceM) && Number.isFinite(trailM) ? distanceM - trailM : NO_TRAIL
-  for (const material of materialsOf(set)) setTrailStart(material, startM)
+  const trail = Number.isFinite(distanceM) && Number.isFinite(trailM)
+  const startM = trail ? distanceM - trailM : NO_TRAIL
+  const fadeM = trail ? trailM * TRAIL_FADE_SHARE : 0
+  for (const material of materialsOf(set)) setTrailStart(material, startM, fadeM)
   if (distanceM === set.drawnM) return
   for (const segment of set.segments) cutLine(segment, distanceM)
   set.drawnM = distanceM
