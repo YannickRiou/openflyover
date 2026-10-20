@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_OVERLAY, END_START_MAX, END_START_MIN, TITLE_END_MAX, TITLE_END_MIN } from '../overlay/settings'
+import { DEFAULT_OVERLAY } from '../overlay/settings'
 import type { OverlaySettings } from '../overlay/settings'
-import { END_CARD_ID, TITLE_CARD_ID, cardFraction, cardShown, cardWindow, dragCard, isCardItem, shownCards, withoutCard } from './cards'
+import { CARD_MIN_S, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards, withoutCard } from './cards'
 
 /** 6 s opening, 60 s flight, 5 s closing */
 const clock = { openingS: 6, flightS: 60, totalTime: () => 71 }
@@ -20,48 +20,45 @@ describe('cards on the timeline', () => {
     expect(isCardItem('text-1') || isCardItem(null) || isCardItem('opening')).toBe(false)
   })
 
-  it('places the title from the first frame to a fraction of the flight, the closing card from a fraction to the last frame', () => {
+  it('places the title from the first frame to a fraction of the flight, the closing card from a fraction to the last frame, until the user places it', () => {
     expect(cardWindow(on, TITLE_CARD_ID, clock)).toEqual({ startS: 0, endS: 6 + 0.1 * 60 })
     expect(cardWindow(on, END_CARD_ID, clock)).toEqual({ startS: 6 + 0.9 * 60, endS: 71 })
+    const placed = { ...on, title: { ...on.title, window: { startS: 2, endS: 5 } }, end: { ...on.end, window: { startS: 60, endS: 70 } } }
+    expect(cardWindow(placed, TITLE_CARD_ID, clock)).toEqual({ startS: 2, endS: 5 })
+    expect(cardWindow(placed, END_CARD_ID, clock)).toEqual({ startS: 60, endS: 70 })
   })
 
-  it('turns a time back into the fraction of the flight, within the range of the setting', () => {
-    expect(cardFraction(TITLE_CARD_ID, 6 + 0.2 * 60, clock)).toBe(0.2)
-    expect(cardFraction(TITLE_CARD_ID, 0, clock)).toBe(TITLE_END_MIN)
-    expect(cardFraction(TITLE_CARD_ID, 71, clock)).toBe(TITLE_END_MAX)
-    expect(cardFraction(END_CARD_ID, 6 + 0.75 * 60, clock)).toBe(0.75)
-    expect(cardFraction(END_CARD_ID, 10, clock)).toBe(END_START_MIN)
-    expect(cardFraction(END_CARD_ID, 71, clock)).toBe(END_START_MAX)
-    expect(TITLE_END_MIN).toBe(0.01)
-    expect(END_START_MAX).toBe(0.99)
-    // no flight: the lower bound, never NaN
-    expect(cardFraction(TITLE_CARD_ID, 3, { openingS: 3, flightS: 0 })).toBe(TITLE_END_MIN)
-  })
-
-  it('drags the right edge of the title and the left edge of the closing card, and nothing else', () => {
-    // 6 s later = a tenth of the flight
-    const longer = dragCard(on, TITLE_CARD_ID, 'end', 6, clock)
-    expect(longer.title.end).toBeCloseTo(0.2, 3)
-    expect(longer.end).toBe(on.end)
-    expect(dragCard(on, TITLE_CARD_ID, 'end', -100, clock).title.end).toBe(TITLE_END_MIN)
-    expect(dragCard(on, TITLE_CARD_ID, 'end', 100, clock).title.end).toBe(TITLE_END_MAX)
-    const earlier = dragCard(on, END_CARD_ID, 'start', -6, clock)
-    expect(earlier.end.start).toBeCloseTo(0.8, 3)
-    expect(earlier.title).toBe(on.title)
-    expect(dragCard(on, END_CARD_ID, 'start', -100, clock).end.start).toBe(END_START_MIN)
-    expect(dragCard(on, END_CARD_ID, 'start', 100, clock).end.start).toBe(END_START_MAX)
-    // the other edge and the body do not move
-    expect(dragCard(on, TITLE_CARD_ID, 'start', 5, clock)).toBe(on)
-    expect(dragCard(on, TITLE_CARD_ID, 'move', 5, clock)).toBe(on)
-    expect(dragCard(on, END_CARD_ID, 'end', 5, clock)).toBe(on)
-    expect(dragCard(on, END_CARD_ID, 'move', 5, clock)).toBe(on)
+  it('drags the start, the end or the whole block, the card staying inside the film', () => {
+    const grown = dragCard(on, TITLE_CARD_ID, 'end', 6, clock)
+    expect(grown.title.window).toEqual({ startS: 0, endS: 18 })
+    expect(grown.end).toBe(on.end)
+    const later = dragCard(grown, TITLE_CARD_ID, 'start', 3, clock)
+    expect(later.title.window).toEqual({ startS: 3, endS: 18 })
+    // the whole block keeps its length
+    const moved = dragCard(later, TITLE_CARD_ID, 'move', 10, clock)
+    expect(moved.title.window).toEqual({ startS: 13, endS: 28 })
+    // the closing card: freed from the end of the film
+    const closing = dragCard(on, END_CARD_ID, 'end', -5, clock)
+    expect(closing.end.window).toEqual({ startS: 60, endS: 66 })
+    expect(dragCard(on, END_CARD_ID, 'start', -20, clock).end.window).toEqual({ startS: 60 - 20 + 0, endS: 71 })
+    // the film's edges and a minimum length
+    // already at the film's edge: nothing moves
+    expect(dragCard(on, TITLE_CARD_ID, 'move', -100, clock)).toBe(on)
+    expect(dragCard(on, END_CARD_ID, 'move', 100, clock)).toBe(on)
+    expect(dragCard(dragCard(on, END_CARD_ID, 'end', -5, clock), END_CARD_ID, 'move', 100, clock).end.window).toEqual({ startS: 65, endS: 71 })
+    expect(dragCard(on, TITLE_CARD_ID, 'end', -100, clock).title.window).toEqual({ startS: 0, endS: CARD_MIN_S })
+    expect(dragCard(on, TITLE_CARD_ID, 'end', 1000, clock).title.window?.endS).toBe(71)
+    expect(dragCard(on, END_CARD_ID, 'start', 1000, clock).end.window?.startS).toBe(71 - CARD_MIN_S)
     // no change, no new overlay
     expect(dragCard(on, TITLE_CARD_ID, 'end', 0, clock)).toBe(on)
+    expect(dragCard(on, END_CARD_ID, 'move', 0, clock)).toBe(on)
   })
 
-  it('snaps the edge like the other blocks', () => {
-    const snapped = dragCard(on, TITLE_CARD_ID, 'end', 3.2, clock, () => 6 + 0.25 * 60)
-    expect(snapped.title.end).toBe(0.25)
+  it('snaps the edge like the other blocks (the start of the block when it moves whole)', () => {
+    const snapped = dragCard(on, TITLE_CARD_ID, 'end', 3.2, clock, () => 20)
+    expect(snapped.title.window).toEqual({ startS: 0, endS: 20 })
+    const moved = dragCard(on, TITLE_CARD_ID, 'move', 3.2, clock, () => 4)
+    expect(moved.title.window).toEqual({ startS: 4, endS: 16 })
   })
 
   it('switches a card off keeping its settings', () => {

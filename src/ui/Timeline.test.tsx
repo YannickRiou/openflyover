@@ -204,51 +204,57 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
-    it('select with the focus, nudge their inner edge with the arrows and are deleted by switching the card off', async () => {
+    it('select with the focus, move whole with the arrows and are deleted by switching the card off', async () => {
       const { root, setOverlay, cards, card, press } = await setup()
       await act(async () => setOverlay({ enabled: true }))
       const title = card("Titre d'ouverture")
       await act(async () => title.focus())
       expect(useAppStore.getState().filmSelection).toBe(TITLE_CARD_ID)
-      const end = useAppStore.getState().settings.overlay.title.end
+      // the arrows place the card: from a window of the first frame to the end of the card
+      const before = useAppStore.getState().settings.overlay.title.window
+      expect(before).toBeUndefined()
       await press(title, 'ArrowRight')
-      expect(useAppStore.getState().settings.overlay.title.end).toBeGreaterThan(end)
+      const moved = useAppStore.getState().settings.overlay.title.window
+      expect(moved?.startS).toBeGreaterThan(0)
       await press(card("Titre d'ouverture"), 'ArrowLeft')
-      expect(useAppStore.getState().settings.overlay.title.end).toBeCloseTo(end, 2)
+      expect(useAppStore.getState().settings.overlay.title.window?.startS ?? 0).toBeCloseTo(0, 2)
 
       const closing = card('Carte de clôture')
       await act(async () => closing.focus())
       expect(useAppStore.getState().filmSelection).toBe(END_CARD_ID)
-      const start = useAppStore.getState().settings.overlay.end.start
       await press(closing, 'ArrowLeft')
-      expect(useAppStore.getState().settings.overlay.end.start).toBeLessThan(start)
+      const closingWindow = useAppStore.getState().settings.overlay.end.window
+      expect(closingWindow).toBeDefined()
 
       await press(card('Carte de clôture'), 'Delete')
       expect(useAppStore.getState().settings.overlay.end).toMatchObject({ enabled: false, start: expect.any(Number) })
       expect(useAppStore.getState().filmSelection).toBeNull()
       expect(cards()).toEqual(["Titre d'ouverture"])
-      // the block goes with the card, not with its settings: switched back on, it comes back
+      // the block goes with the card, not with its settings: switched back on, it comes back where it was
       await act(async () => setOverlay({ end: { ...useAppStore.getState().settings.overlay.end, enabled: true } }))
       expect(cards()).toEqual(["Titre d'ouverture", 'Carte de clôture'])
+      expect(useAppStore.getState().settings.overlay.end.window).toEqual(closingWindow)
       act(() => root.unmount())
     })
 
-    it('drag the edge of their shot from their body: the opening title lengthens the opening, the card following', async () => {
+    it('drag from their body: the card is placed, the shots and the other settings stay', async () => {
       HTMLElement.prototype.setPointerCapture ??= () => {}
       const { root, setOverlay, card } = await setup()
       await act(async () => setOverlay({ enabled: true }))
       const pointer = (type: string, clientX: number) =>
         Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX }), { pointerId: 1, isPrimary: true, pointerType: 'mouse' })
-      const opening = () => useAppStore.getState().settings.film.opening.durationS
-      const before = opening()
+      const opening = useAppStore.getState().settings.film.opening.durationS
       const titleEnd = useAppStore.getState().settings.overlay.title.end
       const title = card("Titre d'ouverture")
       await act(async () => void title.dispatchEvent(pointer('pointerdown', 10)))
       await act(async () => void title.dispatchEvent(pointer('pointermove', 200)))
       await act(async () => void title.dispatchEvent(pointer('pointerup', 200)))
-      expect(opening()).toBeGreaterThan(before)
-      expect(useAppStore.getState().settings.overlay.title.end).toBe(titleEnd)
-      expect(useAppStore.getState().filmSelection).toBe('opening')
+      const { title: placed } = useAppStore.getState().settings.overlay
+      expect(placed.window?.startS).toBeGreaterThan(0)
+      // the shot, the old fraction and the selection are not touched by the drag
+      expect(useAppStore.getState().settings.film.opening.durationS).toBe(opening)
+      expect(placed.end).toBe(titleEnd)
+      expect(useAppStore.getState().filmSelection).toBe(TITLE_CARD_ID)
       act(() => root.unmount())
     })
 

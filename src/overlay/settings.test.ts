@@ -42,6 +42,13 @@ describe('overlay settings', () => {
     expect(isValidOverlay(withPatch((o) => (o.end.start = 0.1)))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.title.end = 0.01)))).toBe(true)
     expect(isValidOverlay(withPatch((o) => (o.title.end = 0.005)))).toBe(false)
+    // a card placed on the timeline: a window of film seconds, forward, within the film
+    expect(isValidOverlay(withPatch((o) => (o.title.window = { startS: 0, endS: 8 })))).toBe(true)
+    expect(isValidOverlay(withPatch((o) => (o.end.window = { startS: 60.5, endS: 71 })))).toBe(true)
+    expect(isValidOverlay(withPatch((o) => (o.title.window = { startS: 5, endS: 5 })))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => (o.title.window = { startS: -1, endS: 5 })))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => (o.end.window = { startS: 10, endS: 99_999 })))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => (o.end.window = { startS: 'a' as never, endS: 9 })))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.end.start = 0.99)))).toBe(true)
     expect(isValidOverlay(withPatch((o) => (o.end.start = 0.995)))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.text.size = 5)))).toBe(false)

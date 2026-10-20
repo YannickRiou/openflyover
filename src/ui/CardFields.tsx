@@ -2,18 +2,17 @@ import { useId } from 'react'
 import { TITLE_CARD_ID } from '../film/cards'
 import { useT } from '../i18n'
 import type { CardId } from '../film/cards'
-import { END_CREDITS_MAX, END_START_MAX, END_START_MIN, TITLE_END_MAX, TITLE_END_MIN } from '../overlay/settings'
+import { END_CREDITS_MAX } from '../overlay/settings'
 import type { EndCardSettings, TitleCardSettings } from '../overlay/settings'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
-import { formatPercent } from './format'
 import { SizeField, WidgetPosition, WidgetStyleOverrides } from './OverlayPanel'
-import { RangeField } from './PanelSection'
 import { Checkbox, TextField } from './primitives'
 
 /**
  * Settings of the opening title or of the closing card, in the inspector of its block on the timeline: what it says,
- * where it sits, its size, when it shows (also set by dragging the edge of its block) and its own colours and fonts.
+ * where it sits, its size and its own colours and fonts. When it shows is where its block is on the timeline: drag the
+ * block, or an edge of it.
  * They are the settings of the overlay (`overlay.title`, `overlay.end`): the switch is the panel's.
  */
 export function CardFields({ card }: { card: CardId }) {
@@ -42,15 +41,6 @@ export function CardFields({ card }: { card: CardId }) {
         </Checkbox>
         <WidgetPosition widget="title" />
         <SizeField value={title.size} onChange={(size) => setTitle({ size })} />
-        <RangeField
-          label={t('inspector.card.duration')}
-          min={TITLE_END_MIN}
-          max={TITLE_END_MAX}
-          step={0.01}
-          value={title.end}
-          format={(v) => t('inspector.card.ofFlyover', { value: formatPercent(v) })}
-          onChange={(end) => setTitle({ end })}
-        />
         <WidgetStyleOverrides widget="title" />
       </>
     )
@@ -84,15 +74,6 @@ export function CardFields({ card }: { card: CardId }) {
       </div>
       <WidgetPosition widget="end" />
       <SizeField value={end.size} onChange={(size) => setEnd({ size })} />
-      <RangeField
-        label={t('inspector.card.appearance')}
-        min={END_START_MIN}
-        max={END_START_MAX}
-        step={0.01}
-        value={end.start}
-        format={(v) => t('inspector.card.atOfFlyover', { value: formatPercent(v) })}
-        onChange={(start) => setEnd({ start })}
-      />
       <WidgetStyleOverrides widget="end" />
     </>
   )
