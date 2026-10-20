@@ -485,6 +485,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   <ul>
     <li>Drag a block to move it, drag its edges to stretch it. The timeline is magnetic: edges and centres of the other blocks, the keys, the junctions, the playhead and the ruler marks attract the block you drag, and a line across the lanes names what it is aligned with. The magnet button in the bar turns it off; hold <kbd>Alt</kbd> while dragging to invert it. <kbd>Del</kbd> removes the selected block.</li>
     <li>The zoom slider and "Ajuster" (fit) set the timeline width; <kbd>Ctrl</kbd> + wheel zooms.</li>
+    <li><strong>Work area (loop)</strong>: <kbd>I</kbd> and <kbd>O</kbd> set an in point and an out point at the playhead; a band shows them on the ruler and the preview loops between them while you edit that stretch. Drag either end of the band to move it; the loop button in the bar (or <kbd>Shift+X</kbd>) clears it. It is not saved in the project and it does not change the export, which renders the whole film.</li>
     <li><strong>Several keys at once</strong>: hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and drag a rectangle on the empty background of a lane to select the keys inside it (camera, setting and marker keys); <kbd>Ctrl</kbd> + click adds a key to the selection or removes it. Dragging one selected key moves them all, <kbd>Del</kbd> deletes them all and <kbd>Esc</kbd> empties the selection.</li>
     <li><strong>Right-click on the timeline</strong> (long press on a touch screen): a menu offers "Ajouter une image clé ici" on a lane that has keys (camera, setting, marker), "Supprimer" on a block, "Supprimer l'image clé" on a key, and "Supprimer les N images clés sélectionnées" on a selection. It replaces the browser's menu; the 3D view has its own menu (stop, text, speed here).</li>
     <li><strong>Texts, photos and videos follow the route</strong>: when you slow down or speed up a section, or move a stop, the texts, photos and videos placed on the route keep their place on it (music stays where it is).</li>
@@ -667,6 +668,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
         <tr><td><kbd>Space</kbd> · <kbd>K</kbd></td><td>Play or pause</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Back or forward one second; with a block selected, nudge it by one second (a tenth with <kbd>Shift</kbd>)</td></tr>
         <tr><td><kbd>Shift+←</kbd> <kbd>Shift+→</kbd></td><td>Back or forward five seconds</td></tr>
+        <tr><td><kbd>I</kbd> · <kbd>O</kbd> · <kbd>Shift+X</kbd></td><td>Set the in point · the out point of the work area (the preview loops between them) · clear it</td></tr>
         <tr><td><kbd>J</kbd> <kbd>L</kbd></td><td>Back or forward one frame (<kbd>Shift</kbd>: ten frames)</td></tr>
         <tr><td><kbd>Home</kbd> <kbd>End</kbd></td><td>Start or end of the film</td></tr>
         <tr><td><kbd>Alt+←</kbd> <kbd>Alt+→</kbd></td><td>Previous or next keyframe</td></tr>

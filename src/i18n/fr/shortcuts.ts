@@ -18,6 +18,7 @@ export default {
   'label.seek-ends': 'Aller au début ou à la fin du film',
   'label.seek-key': 'Aller à l’image clé précédente ou suivante',
   'label.frame': 'Reculer ou avancer d’une image (Maj : de dix images)',
+  'label.work-area': 'Poser le point d’entrée (I) ou de sortie (O) de la zone de lecture, qui tourne en boucle ; Maj + X la retire',
   'label.undo': 'Annuler',
   'label.redo': 'Rétablir',
   'label.nudge': 'Décaler le bloc sélectionné d’une seconde (Maj : d’un dixième)',

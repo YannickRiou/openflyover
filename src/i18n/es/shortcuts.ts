@@ -20,6 +20,7 @@ const messages: Messages['shortcuts'] = {
   'label.seek-ends': 'Ir al principio o al final de la película',
   'label.seek-key': 'Ir al fotograma clave anterior o siguiente',
   'label.frame': 'Retroceder o avanzar un fotograma (Mayús: diez)',
+  'label.work-area': 'Fijar el punto de entrada (I) o de salida (O) de la zona de reproducción, que se repite en bucle; Mayús+X la quita',
   'label.undo': 'Deshacer',
   'label.redo': 'Rehacer',
   'label.nudge': 'Desplazar el bloque seleccionado un segundo (Mayús: una décima)',

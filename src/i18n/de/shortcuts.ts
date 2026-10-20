@@ -20,6 +20,7 @@ const messages: Messages['shortcuts'] = {
   'label.seek-ends': 'Zum Anfang oder Ende des Films',
   'label.seek-key': 'Zum vorherigen oder nächsten Keyframe',
   'label.frame': 'Ein Bild zurück oder vor (Umschalt: zehn Bilder)',
+  'label.work-area': 'Einstiegs- (I) oder Ausstiegspunkt (O) des Wiedergabebereichs setzen, der in einer Schleife läuft; Umschalt+X entfernt ihn',
   'label.undo': 'Rückgängig',
   'label.redo': 'Wiederholen',
   'label.nudge': 'Ausgewählten Block um eine Sekunde verschieben (Umschalt: um eine Zehntelsekunde)',

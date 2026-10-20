@@ -4,6 +4,7 @@ import { useBatchStore } from './export/batch'
 import { isExportBusy, useExportStore } from './export/store'
 import { isCardItem } from './film/cards'
 import { addStop, addText, duplicateFilmItem, removeFilmItem, splitFilmItem } from './film/timeline'
+import { clampWorkArea, markIn, markOut } from './film/workArea'
 import { getPlatform } from './platform'
 import { takeOpenedFiles, watchOpenedFiles } from './platform/openedFiles'
 import { getSettingsHistory, installHistoryShortcuts, installSliderGestures } from './project/history'
@@ -138,6 +139,13 @@ function SeekShortcuts() {
           const selectedStop = c.stops.find((s) => s.id === store.filmSelection) ?? null
           editFilm((f) => addText(f, playhead, selectedStop), { stops: selectedStop !== null })
         }
+        return
+      }
+      if (action === 'mark-in' || action === 'mark-out' || action === 'clear-range') {
+        e.preventDefault()
+        if (e.repeat) return
+        const area = clampWorkArea(store.workArea, total)
+        store.setWorkArea(action === 'clear-range' ? null : action === 'mark-in' ? markIn(area, playhead, total) : markOut(area, playhead, total))
         return
       }
       if (action === 'play-pause') {

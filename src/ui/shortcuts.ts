@@ -24,6 +24,7 @@ export const SHORTCUTS = [
   { id: 'seek', keys: ['←', '→'], get label() { return t('shortcuts.label.seek') }, group: 'playback' },
   { id: 'seek-long', keys: ['Shift+←', 'Shift+→'], get label() { return t('shortcuts.label.seek-long') }, group: 'playback' },
   { id: 'seek-ends', keys: ['Home', 'End'], get label() { return t('shortcuts.label.seek-ends') }, group: 'playback' },
+  { id: 'work-area', keys: ['I', 'O', 'Shift+X'], get label() { return t('shortcuts.label.work-area') }, group: 'playback' },
   { id: 'frame', keys: ['J', 'L'], get label() { return t('shortcuts.label.frame') }, group: 'playback' },
   { id: 'seek-key', keys: ['Alt+←', 'Alt+→'], get label() { return t('shortcuts.label.seek-key') }, group: 'playback' },
   { id: 'undo', keys: ['Ctrl+Z'], get label() { return t('shortcuts.label.undo') }, group: 'editing' },
@@ -100,6 +101,9 @@ export type ShortcutAction =
   | 'seek-prev-key'
   | 'seek-next-key'
   | 'play-pause'
+  | 'mark-in'
+  | 'mark-out'
+  | 'clear-range'
   | 'frame-back'
   | 'frame-forward'
   | 'frame-back-long'
@@ -154,7 +158,7 @@ export function spacePlays(target: EventTarget | null, focusVisible = (el: Eleme
 /**
  * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+Shift+S save as, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer,
  * F fit the view, G the safe zones, [ fold the panel and ? the help (whatever the modifiers that type them: AltGr, Shift), Escape close,
- * S / T add a stop / a text, X cuts the selected text or photo at the playhead, Ctrl/Cmd+D duplicates it, Delete removes the
+ * S / T add a stop / a text, I / O set the in / out point of the work area and Shift+X clears it, X cuts the selected text or photo at the playhead, Ctrl/Cmd+D duplicates it, Delete removes the
  * selected block, K plays / pauses, J / L step a frame back / forward (Shift: ten), ← / → seek (Shift: longer; Alt: to the
  * previous / next keyframe), Home / End.
  */
@@ -182,7 +186,9 @@ export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | nul
   if (key === 's') return e.shiftKey ? null : 'add-stop'
   if (key === 't') return e.shiftKey ? null : 'add-text'
   if (key === 'k') return e.shiftKey ? null : 'play-pause'
-  if (key === 'x') return e.shiftKey ? null : 'split'
+  if (key === 'x') return e.shiftKey ? 'clear-range' : 'split'
+  if (key === 'i') return e.shiftKey ? null : 'mark-in'
+  if (key === 'o') return e.shiftKey ? null : 'mark-out'
   if (key === 'j') return e.shiftKey ? 'frame-back-long' : 'frame-back'
   if (key === 'l') return e.shiftKey ? 'frame-forward-long' : 'frame-forward'
   if (e.key === 'Delete') return focus === 'other' && !e.shiftKey ? 'remove' : null

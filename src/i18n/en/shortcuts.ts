@@ -20,6 +20,7 @@ const messages: Messages['shortcuts'] = {
   'label.seek-ends': 'Go to the start or the end of the film',
   'label.seek-key': 'Go to the previous or next keyframe',
   'label.frame': 'Go back or forward one frame (Shift: ten frames)',
+  'label.work-area': 'Set the in point (I) or out point (O) of the work area, which loops; Shift+X clears it',
   'label.undo': 'Undo',
   'label.redo': 'Redo',
   'label.nudge': 'Nudge the selected block by one second (Shift: by a tenth)',

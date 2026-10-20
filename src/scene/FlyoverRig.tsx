@@ -18,6 +18,7 @@ import { markerAt, markerFadeM } from '../film/markerKeys'
 import { useMediaStore } from '../film/media'
 import { keyAt, updateCameraKey } from '../film/timeline'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
+import { clampWorkArea, loopTime } from '../film/workArea'
 import { filmViewMovesWithTime, situationFramingOf, situationTarget } from '../flyover/filmCamera'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { registerFramingCapture, useRegionStore } from '../osm/region'
@@ -168,8 +169,12 @@ export function FlyoverRig() {
       // resynchronise after a scrub or a change of the film (no film time)
       const from = timeS === null ? clock.positionAt(progress) : { timeS, progress }
       const position = clock.advance(from, frameDelta(delta), speed)
+      // the work area loops: past its out point the playback comes back to the in point
+      const area = clampWorkArea(store.workArea, clock.totalTime())
+      const wrapped = area ? loopTime(from.timeS, position.timeS, area) : null
+      if (wrapped !== null) store.setProgress(clock.progressAtTime(wrapped), wrapped)
       // the film ends at its total time, after the closing: without a film time, progress 1 stops the playback
-      store.setProgress(position.progress, position.timeS < clock.totalTime() ? position.timeS : null)
+      else store.setProgress(position.progress, position.timeS < clock.totalTime() ? position.timeS : null)
     }
     const { progress, timeS: storedTimeS } = useAppStore.getState().playback
     const timeS = storedTimeS ?? clock.timeAtProgress(progress)

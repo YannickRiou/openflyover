@@ -251,6 +251,20 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
+    it('the work area shows as a band with its two ends on the ruler, and a button clears it', async () => {
+      const { host, root } = await setup()
+      expect(host.querySelector('[data-testid="work-area-in"]')).toBeNull()
+      await act(async () => useAppStore.getState().setWorkArea({ inS: 0.5, outS: 1.5 }))
+      expect(host.querySelector('[data-testid="work-area-in"]')).not.toBeNull()
+      expect(host.querySelector('[data-testid="work-area-out"]')).not.toBeNull()
+      const clear = host.querySelector<HTMLElement>('[aria-label="Retirer la zone de lecture"]')
+      expect(clear).not.toBeNull()
+      await act(async () => clear!.click())
+      expect(useAppStore.getState().workArea).toBeNull()
+      expect(host.querySelector('[data-testid="work-area-in"]')).toBeNull()
+      act(() => root.unmount())
+    })
+
     it('have a right-click menu of their own: « Supprimer » on a block, « Ajouter une image clé ici » on a lane, never the browser menu', async () => {
       HTMLElement.prototype.setPointerCapture ??= () => {}
       const { host, root, setOverlay, card } = await setup()

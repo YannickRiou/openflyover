@@ -1506,6 +1506,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   follow); the new item is selected. On a zoomed timeline the plain wheel scrolls sideways (Ctrl+wheel still zooms) and, while
   the film plays, the lanes page to keep the playhead in view (`followScroll`: it stays 10% of the view from the edges, paged
   back to a quarter of it).
+- **Work area** (`src/film/workArea.ts`, `useAppStore.workArea`, `FlyoverRig`, ruler of `Timeline.tsx`): I / O set the in / out point at
+  the playhead (`markIn`, `markOut`: the other end goes to the edge of the film when it would no longer be at least
+  `WORK_AREA_MIN_S` = 0.5 s away), Shift+X clears it, either end of the band on the ruler is dragged (`dragWorkArea`, a `range`
+  gesture). While the film plays, a step that crosses the out point comes back to the in point by as much as it went past
+  (`loopTime`, applied in `FlyoverRig`'s frame loop after `clock.advance`; a playhead already past the out point plays on). Not
+  part of the film: not saved, not an undo step, cleared with the tracks and when the project is reset, clamped to the film
+  (`clampWorkArea`) when it gets shorter. The export still renders the whole film (a range export would need `fromS` / `toS` in the
+  schedule, the request and the audio mix).
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the

@@ -20,6 +20,7 @@ const messages: Messages['shortcuts'] = {
   'label.seek-ends': 'Vai all’inizio o alla fine del film',
   'label.seek-key': 'Vai al keyframe precedente o successivo',
   'label.frame': 'Indietro o avanti di un fotogramma (Maiusc: dieci)',
+  'label.work-area': 'Impostare il punto di ingresso (I) o di uscita (O) dell’area di riproduzione, che va in loop; Maiusc+X la rimuove',
   'label.undo': 'Annulla',
   'label.redo': 'Ripeti',
   'label.nudge': 'Sposta il blocco selezionato di un secondo (Maiusc: di un decimo)',

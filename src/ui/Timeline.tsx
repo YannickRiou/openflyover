@@ -64,6 +64,7 @@ import {
   zoomAt,
 } from '../film/timeline'
 import type { DragContext, Grip, SnapBlock, SnapTarget, TimelineItem } from '../film/timeline'
+import { clampWorkArea, dragWorkArea } from '../film/workArea'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
@@ -205,6 +206,8 @@ const ARROWS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
 
 type Gesture =
   | { kind: 'scrub' }
+  /** an end of the work area band on the ruler (`film/workArea.ts`) */
+  | { kind: 'range'; end: 'in' | 'out' }
   /** centred timeline: a press that selects `item` (or seeks, on nothing) if released without sliding */
   | { kind: 'tap'; item: TimelineItem | null; x0: number }
   /** `flightS`: the flight duration of a roll edit (start of the closing dragged) */
@@ -365,6 +368,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const tracks = useAppStore((s) => s.tracks)
   const settingsMarker = useAppStore((s) => s.settings.marker)
   const clock = useFilmClock()
+  const workArea = useAppStore((s) => s.workArea)
+  const setWorkArea = useAppStore((s) => s.setWorkArea)
   // the export moves the playhead at every frame: the timeline keeps the playback it had (it would render with each one)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const livePlayback = useAppStore((s) => (exporting ? null : s.playback))
@@ -539,6 +544,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // the scale follows the committed film: it does not change while an edge is dragged
   const pxPerS = fitPxPerS(Math.max(0, width - 2 * PAD_PX), clock.totalTime()) * zoom
   const playheadS = Math.min(storedTimeS ?? clock.timeAtProgress(progress), clock.totalTime())
+  const workSpan = clampWorkArea(workArea, clock.totalTime())
   // centred: the lanes scroll so that the playhead time sits in the middle (after every render: time, zoom, width)
   useLayoutEffect(() => {
     const el = scrollerRef.current
@@ -894,6 +900,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const g = gestureRef.current
     if (!g) return
     if (g.kind === 'scrub') return seek(timeAt(clientX))
+    if (g.kind === 'range') {
+      const current = clampWorkArea(useAppStore.getState().workArea, clock.totalTime())
+      if (current) setWorkArea(dragWorkArea(current, g.end, timeAt(clientX), clock.totalTime()))
+      return
+    }
     if (g.kind === 'tap') {
       if (Math.abs(clientX - g.x0) > TAP_SLOP_PX) gestureRef.current = null
       return
@@ -1439,6 +1450,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             />
             <BarButton icon="move-horizontal" name={t('timeline.zoom.fit')} tip={t('timeline.zoom.fitTip')} onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
           </div>
+          {workSpan && <BarButton icon="rotate-cw" name={t('timeline.workArea.clear')} tip={t('timeline.workArea.clearTip', { from: formatFilmTime(workSpan.inS), to: formatFilmTime(workSpan.outS) })} on onClick={() => setWorkArea(null)} />}
           <BarButton
             icon="magnet"
             name={magnet ? t('timeline.magnet.off') : t('timeline.magnet.on')}
@@ -1515,6 +1527,26 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 aria-valuetext={t('timeline.ruler.valueText', { time: formatFilmTime(playheadS), total: formatFilmTime(clock.totalTime()) })}
                 onKeyDown={onRulerKeyDown}
               >
+                {workSpan && (
+                  <>
+                    {/* the work area: a band over the ruler, an end of it dragged to move that point */}
+                    <span className="pointer-events-none absolute inset-y-0 bg-brand/25" style={{ left: xOf(workSpan.inS), width: (workSpan.outS - workSpan.inS) * pxPerS }} />
+                    {(['in', 'out'] as const).map((end) => (
+                      <span
+                        key={end}
+                        data-testid={`work-area-${end}`}
+                        title={end === 'in' ? t('timeline.workArea.in') : t('timeline.workArea.out')}
+                        className="absolute inset-y-0 z-1 w-1.5 cursor-ew-resize touch-none bg-brand before:absolute before:-inset-x-2 before:inset-y-0 before:content-['']"
+                        style={{ left: xOf(end === 'in' ? workSpan.inS : workSpan.outS) - (end === 'in' ? 0 : 6) }}
+                        onPointerDown={(e) => {
+                          e.stopPropagation()
+                          contentRef.current?.setPointerCapture(e.pointerId)
+                          gestureRef.current = { kind: 'range', end }
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
                 {ticks.map((t) => (
                   <span key={t} className={`${TICK} ${centred ? 'leading-6' : 'leading-5 touch:leading-7'}`} style={{ left: xOf(t) }}>
                     {formatFilmTime(t)}
