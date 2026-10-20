@@ -120,6 +120,7 @@ const messages: Messages['timeline'] = {
   'menu.addKey': 'Hier einen Keyframe hinzufügen',
   'menu.remove': 'Löschen',
   'menu.removeKey': 'Keyframe löschen',
+  'menu.removeClose': {'one': 'Entfernen und die Lücke schließen', 'other': 'Die {count} Blöcke entfernen und die Lücke schließen'},
   'menu.removeKeys': { one: 'Ausgewählten Keyframe löschen', other: 'Die {count} ausgewählten Keyframes löschen' },
 }
 

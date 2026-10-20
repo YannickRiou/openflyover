@@ -1531,6 +1531,22 @@ The interface and the texts drawn into the films and posters exist in **French**
   at `settings.video.fps` (`formatFrameTimecode`) instead of seconds and tenths; the ruler keeps seconds. **Magnet by family**
   (`preferences.timelineSnap`: `SNAP_GROUPS` = the playhead, the blocks and keys (`edge`, `centre`, `end`), the ruler's marks, the
   junctions and highlights (`snapGroupOf`, `snapTargetsOn` in `dragContext`)): each can be turned off, Alt still inverts the magnet.
+- **Filmstrip of a video clip** (`src/ui/Filmstrip.tsx`, `readFilmstrip` / `filmstripTimes` in `film/video.ts`): the block of a video on the
+  « Médias » lane gets frames along its length behind its label (`count` tiles of 40 px: `filmstripCount` takes the largest of 2, 4, 8,
+  12 that fits, none under 80 px; 64 px JPEG tiles at the middle of each equal part of the clip's `inS`–`outS`, `CanvasSink.canvasesAtTimestamps`
+  of mediabunny). Read lazily and once per clip, stretch and count (a `WeakMap` per clip, kept for the session, never in the project), one
+  clip at a time (a promise chain: the preview and the export decode too) and not while an export runs; a clip that cannot be read keeps
+  its first-frame thumbnail only.
+- **Blocks picked together, copied and rippled** (`film/timeline.ts`, `Timeline.tsx`, `App.tsx` `SeekShortcuts`, `ui/blockClipboard.ts`): the texts, media and
+  music (`timedBlockIds`, the items placed by film time) can be picked together with Ctrl / Cmd + click (`toggleBlock`; a group is only of blocks or only of
+  keys: `filmKeys` holds either, `focusKey` keeps it when a block is focused), dragged by one of them (`dragBlocks`: the shift `dragFilm` gives the lead, magnet
+  included, applied to all, none before the film's start), removed together (Delete anywhere, `removeFilmItem` for each, one undo step). **Ripple**
+  (« décalage en chaîne »): Shift + Delete, or « Supprimer et fermer l'espace » in the right-click menu, removes blocks and moves what follows in each lane
+  earlier by their length (`rippleRemove`; what is attached to a stop follows the stop, not this); Shift held while an edge is dragged moves the following
+  blocks of the lane by as much as that end moved (`rippleDrag`, `rippleRef`). Ctrl / Cmd + C copies the picked blocks (`copyBlocks`: in memory for the session,
+  `blockClipboard.ts`, not the system clipboard, so a text selected on the page still copies as before), Ctrl / Cmd + V pastes them with their gaps, the earliest at the playhead
+  (`pasteBlocks`: own ids, attached to no stop, a medium whose file is gone and a clip synced with the track left out), the pasted ones left picked. Stops, speeds and
+  keys are not copied or rippled (their place is by metres: a stop shifts the whole clock).
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the

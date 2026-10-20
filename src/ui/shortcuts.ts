@@ -34,6 +34,9 @@ export const SHORTCUTS = [
   { id: 'marquee', keys: ['Ctrl+drag'], get label() { return t('shortcuts.label.marquee') }, group: 'editing' },
   { id: 'add-stop', keys: ['S'], get label() { return t('shortcuts.label.add-stop') }, group: 'editing' },
   { id: 'add-text', keys: ['T'], get label() { return t('shortcuts.label.add-text') }, group: 'editing' },
+  { id: 'pick-blocks', keys: ['Ctrl+click'], get label() { return t('shortcuts.label.pick-blocks') }, group: 'editing' },
+  { id: 'copy-paste', keys: ['Ctrl+C', 'Ctrl+V'], get label() { return t('shortcuts.label.copy-paste') }, group: 'editing' },
+  { id: 'ripple', keys: ['Shift+Del', 'Shift+drag'], get label() { return t('shortcuts.label.ripple') }, group: 'editing' },
   { id: 'remove', keys: ['Del'], get label() { return t('shortcuts.label.remove') }, group: 'editing' },
   { id: 'duplicate', keys: ['Ctrl+D'], get label() { return t('shortcuts.label.duplicate') }, group: 'editing' },
   { id: 'split', keys: ['X'], get label() { return t('shortcuts.label.split') }, group: 'editing' },
@@ -61,6 +64,7 @@ const KEY_WORDS = {
   Del: 'shortcuts.key.Del',
   Esc: 'shortcuts.key.Esc',
   drag: 'shortcuts.key.drag',
+  click: 'shortcuts.key.click',
   wheel: 'shortcuts.key.wheel',
   clickTrack: 'shortcuts.key.clickTrack',
 } as const satisfies Record<string, MessageKey>
@@ -110,6 +114,9 @@ export type ShortcutAction =
   | 'frame-back-long'
   | 'frame-forward-long'
   | 'remove'
+  | 'ripple-remove'
+  | 'copy'
+  | 'paste'
   | 'duplicate'
   | 'split'
 
@@ -160,7 +167,7 @@ export function spacePlays(target: EventTarget | null, focusVisible = (el: Eleme
  * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+Shift+S save as, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer,
  * F fit the view, G the safe zones, [ fold the panel and ? the help (whatever the modifiers that type them: AltGr, Shift), Escape close,
  * S / T add a stop / a text, I / O set the in / out point of the work area and Shift+X clears it, X cuts the selected text or photo at the playhead, Ctrl/Cmd+D duplicates it, Delete removes the
- * selected block, K plays / pauses, J / L step a frame back / forward (Shift: ten), ← / → seek (Shift: longer; Alt: to the
+ * selected block (Shift: the gap closes), Ctrl/Cmd+C and V copy and paste blocks, K plays / pauses, J / L step a frame back / forward (Shift: ten), ← / → seek (Shift: longer; Alt: to the
  * previous / next keyframe), Home / End.
  */
 export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | null {
@@ -179,6 +186,8 @@ export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | nul
     if (key === 'o') return 'open'
     if (key === 'e') return 'export'
     if (key === 'd') return 'duplicate'
+    if (key === 'c') return 'copy'
+    if (key === 'v') return 'paste'
     return null
   }
   if (e.key === 'Escape') return e.shiftKey ? null : 'close'
@@ -192,7 +201,7 @@ export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | nul
   if (key === 'o') return e.shiftKey ? null : 'mark-out'
   if (key === 'j') return e.shiftKey ? 'frame-back-long' : 'frame-back'
   if (key === 'l') return e.shiftKey ? 'frame-forward-long' : 'frame-forward'
-  if (e.key === 'Delete') return focus === 'other' && !e.shiftKey ? 'remove' : null
+  if (e.key === 'Delete') return focus === 'other' ? (e.shiftKey ? 'ripple-remove' : 'remove') : null
   if (focus === 'arrows') return null
   if (e.key === 'ArrowLeft') return e.shiftKey ? 'seek-back-long' : 'seek-back'
   if (e.key === 'ArrowRight') return e.shiftKey ? 'seek-forward-long' : 'seek-forward'

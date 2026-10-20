@@ -47,9 +47,11 @@ import {
   rollClosing,
   edgeScrollSpeed,
   fitPxPerS,
+  dragBlocks,
   followScroll,
   formatFrameTimecode,
   snapTargetsOn,
+  timedBlockIds,
   zoomToSpan,
   followStops,
   formatFilmTime,
@@ -59,6 +61,8 @@ import {
   photoFilmTime,
   pressedGrip,
   removeFilmItem,
+  rippleDrag,
+  rippleRemove,
   rulerTicks,
   snapTargets,
   snapper,
@@ -68,6 +72,7 @@ import {
 } from '../film/timeline'
 import type { DragContext, Grip, SnapBlock, SnapTarget, TimelineItem } from '../film/timeline'
 import { clampWorkArea, dragWorkArea } from '../film/workArea'
+import { Filmstrip, filmstripCount } from './Filmstrip'
 import { useLaneState } from './laneState'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
@@ -454,6 +459,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const edgeRef = useRef<EdgeScroll | null>(null)
   /** zoom for the wheel listener */
   const zoomRef = useRef(zoom)
+  /** Shift held while an edge is dragged: the blocks after it follow (« décalage en chaîne ») */
+  const rippleRef = useRef(false)
   /** scroll to apply once the zoomed content is laid out */
   const pendingScrollRef = useRef<number | null>(null)
   /** centred timeline: the scroll last set to follow the playhead (its scroll event is not a seek) */
@@ -677,10 +684,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     audioFileS: (src) => pictures[src]?.durationS,
   })
   const keyIds = [...clock.cameraKeys, ...clock.paramKeys, ...clock.markerKeys].map((k) => k.id)
+  /** the texts, media and music: blocks by film time that can be picked together (Ctrl + click), moved, copied and removed as a group */
+  const blockIds = timedBlockIds(film)
   /** the keys selected together, or the key selected on its own */
   const pickedKeys = group.length > 0 ? group : selected !== null && keyIds.includes(selected) ? [selected] : []
   /** a key added to the selection, or left out of it (Ctrl) */
   const toggleKey = (id: string) => setKeys(pickedKeys.includes(id) ? pickedKeys.filter((k) => k !== id) : [...pickedKeys, id])
+  /** a block added to the blocks picked together, or left out of them (Ctrl + click); a group is only of blocks, or only of keys */
+  const toggleBlock = (id: string) => {
+    const picked = group.length > 0 && group.every((g) => blockIds.includes(g)) ? group : selected !== null && blockIds.includes(selected) ? [selected] : []
+    setKeys(picked.includes(id) ? picked.filter((k) => k !== id) : [...picked, id])
+  }
   /** the keys of the group deleted in one undo step */
   const removeKeys = (ids: readonly string[]) => editFilm((f) => ({ film: ids.reduce(removeFilmItem, f), id: null }))
   const isPicked = (id: string) => selected === id || group.includes(id) || (marquee?.ids.includes(id) ?? false)
@@ -716,6 +730,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         label: together ? t('timeline.menu.removeKeys', { count: together.length }) : t(keyIds.includes(item) ? 'timeline.menu.removeKey' : 'timeline.menu.remove'),
         onSelect: () => (together ? removeKeys(together) : remove(item)),
       })
+      const picked = together ?? [item]
+      if (picked.every((id) => blockIds.includes(id))) {
+        items.push({
+          id: 'remove-close',
+          label: t('timeline.menu.removeClose', { count: picked.length }),
+          onSelect: () => editFilm((f) => ({ film: rippleRemove(f, picked), id: null })),
+        })
+      }
     } else if (!item && lane) {
       const timeS = Math.max(0, timeAt(e.clientX))
       items.push({ id: 'add-key', label: t('timeline.menu.addKey'), onSelect: () => addKeyAt(lane, timeS) })
@@ -899,6 +921,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       keepGroupRef.current = true
       return toggleKey(item)
     }
+    if ((e.ctrlKey || e.metaKey) && blockIds.includes(item)) {
+      keepGroupRef.current = true
+      return toggleBlock(item)
+    }
     // pressed in the group, a key drags it whole; released without moving, it is selected alone
     const together = group.includes(item) ? group : undefined
     if (!together) setSelected(item)
@@ -974,7 +1000,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       g.result = dragCard(g.start, g.item, g.grip, dx / pxPerS, clock, snapper(ctx))
       setCardDraft(g.result)
     } else {
-      let dragged = g.group ? dragKeys(g.start, g.group, g.item, dx / pxPerS, ctx) : dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      let dragged = g.group
+        ? g.group.every((id) => blockIds.includes(id))
+          ? dragBlocks(g.start, g.group, g.item, dx / pxPerS, ctx)
+          : dragKeys(g.start, g.group, g.item, dx / pxPerS, ctx)
+        : dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      // Shift on the end of a text, a photo or a clip: what comes after it follows
+      if (!g.group && g.grip === 'end' && rippleRef.current) dragged = rippleDrag(g.start, dragged, g.item)
       if (g.item === 'closing' && g.grip === 'start') {
         const rolled = rollClosing(g.start, dragged, durationS)
         dragged = rolled.film
@@ -1026,6 +1058,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const g = gestureRef.current
     if (!g) return
     if (g.kind === 'marquee') g.y = e.clientY - (contentRef.current?.getBoundingClientRect().top ?? 0)
+    rippleRef.current = e.shiftKey
     applyPointer(e.clientX, e.altKey)
     // a press that only selects a block (not dragged yet) does not scroll
     if (g.kind === 'scrub' || g.kind === 'marquee' || ((g.kind === 'edit' || g.kind === 'card') && g.result) || (g.kind === 'reorder' && g.moved)) followEdge(e.clientX, e.altKey)
@@ -1107,7 +1140,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     // a key of the group: Delete and the arrows are for the whole group
     const together = group.includes(item) ? group : undefined
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (together) removeKeys(together)
+      const picked = together ?? [item]
+      // Shift: the gap closes (« décalage en chaîne »)
+      if (e.shiftKey && picked.every((id) => blockIds.includes(id))) editFilm((f) => ({ film: rippleRemove(f, picked), id: null }))
+      else if (together) removeKeys(together)
       else remove(item)
     } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
       const step = (e.shiftKey ? FINE_NUDGE_S : NUDGE_S) * (e.key === 'ArrowLeft' ? -1 : 1)
@@ -1201,7 +1237,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       key={item}
       role="button"
       tabIndex={0}
-      aria-pressed={selected === item}
+      aria-pressed={selected === item || group.includes(item)}
       aria-label={t('timeline.blockRange', { description, from: formatFilmTime(startS), to: formatFilmTime(endS) })}
       title={label}
       data-item={item}
@@ -1224,7 +1260,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         setSelected(item)
         onContentPointerDown(e)
       }}
-      onFocus={() => setSelected(item)}
+      onFocus={() => (blockIds.includes(item) ? focusKey(item) : setSelected(item))}
       onKeyDown={(e) => onBlockKeyDown(e, item)}
     >
       {grips.includes('start') && <span className={`${GRIP} left-0`} onPointerDown={(e) => startGrip(e, item, 'start', grips)} />}
@@ -1827,6 +1863,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     ['start', 'move', 'end'],
                     pictures[m.src]?.thumb,
                     m.kind === 'video' ? 'video' : undefined,
+                    m.kind === 'video' && !exporting ? (
+                      <Filmstrip
+                        key="filmstrip"
+                        asset={pictures[m.src]}
+                        inS={m.inS ?? 0}
+                        outS={m.outS ?? pictures[m.src]?.durationS ?? 0}
+                        count={filmstripCount(m.durationS * pxPerS)}
+                      />
+                    ) : undefined,
                   ),
                 )}
               </div>
