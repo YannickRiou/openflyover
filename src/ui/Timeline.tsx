@@ -47,6 +47,7 @@ import {
   rollClosing,
   edgeScrollSpeed,
   fitPxPerS,
+  followScroll,
   followStops,
   formatFilmTime,
   formatSpeedFactor,
@@ -474,7 +475,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     setWidth(el.clientWidth)
     // Ctrl+wheel zooms around the pointer (a passive React listener could not prevent the page zoom)
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey || e.deltaY === 0) return
+      // a plain mouse wheel scrolls a zoomed timeline sideways (the lanes do not scroll up and down); a trackpad's own sideways swipe is left alone
+      if (!e.ctrlKey) {
+        if (centred || e.deltaY === 0 || Math.abs(e.deltaX) > Math.abs(e.deltaY) || el.scrollWidth <= el.clientWidth) return
+        e.preventDefault()
+        el.scrollLeft += e.deltaY
+        return
+      }
+      if (e.deltaY === 0) return
       e.preventDefault()
       const next = zoomAt(zoomRef.current, e.deltaY < 0 ? WHEEL_ZOOM : 1 / WHEEL_ZOOM, e.clientX - el.getBoundingClientRect().left, el.scrollLeft)
       pendingScrollRef.current = next.scrollLeft
@@ -538,6 +546,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const target = centredScrollLeft(playheadS, pxPerS)
     if (Math.abs(el.scrollLeft - target) > 0.5) el.scrollLeft = target
     syncedScrollRef.current = el.scrollLeft
+  })
+
+  // zoomed in, the lanes follow the playhead while the film plays: it never leaves the view
+  useLayoutEffect(() => {
+    const el = scrollerRef.current
+    if (centred || !el || !playing || gestureRef.current) return
+    const next = followScroll(PAD_PX + playheadS * pxPerS, el.scrollLeft, el.clientWidth, el.scrollWidth)
+    if (next !== el.scrollLeft) el.scrollLeft = next
   })
 
   // the music plays along the preview

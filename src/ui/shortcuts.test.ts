@@ -12,6 +12,39 @@ const key = (k: string, mods: Partial<KeyLike> = {}): KeyLike => ({
   ...mods,
 })
 
+describe('matchShortcut: editing keys', () => {
+  it('K plays, J and L step a frame (Shift: ten), X cuts, Ctrl+D duplicates, Delete removes', () => {
+    expect(matchShortcut(key('k'), 'other')).toBe('play-pause')
+    expect(matchShortcut(key('j'), 'other')).toBe('frame-back')
+    expect(matchShortcut(key('L'), 'other')).toBe('frame-forward')
+    expect(matchShortcut(key('J', { shiftKey: true }), 'other')).toBe('frame-back-long')
+    expect(matchShortcut(key('l', { shiftKey: true }), 'other')).toBe('frame-forward-long')
+    expect(matchShortcut(key('x'), 'other')).toBe('split')
+    expect(matchShortcut(key('d', { ctrlKey: true }), 'other')).toBe('duplicate')
+    expect(matchShortcut(key('D', { metaKey: true }), 'other')).toBe('duplicate')
+    expect(matchShortcut(key('Delete'), 'other')).toBe('remove')
+  })
+
+  it('none in a text field; Delete not on a slider nor with Shift; no letter with a modifier', () => {
+    for (const k of ['k', 'j', 'l', 'x']) expect(matchShortcut(key(k), 'text')).toBeNull()
+    expect(matchShortcut(key('d', { ctrlKey: true }), 'text')).toBeNull()
+    expect(matchShortcut(key('Delete'), 'text')).toBeNull()
+    expect(matchShortcut(key('Delete'), 'arrows')).toBeNull()
+    expect(matchShortcut(key('Delete', { shiftKey: true }), 'other')).toBeNull()
+    expect(matchShortcut(key('x', { ctrlKey: true }), 'other')).toBeNull()
+    expect(matchShortcut(key('k', { altKey: true }), 'other')).toBeNull()
+    expect(matchShortcut(key('k', { shiftKey: true }), 'other')).toBeNull()
+  })
+
+  it('frame steps follow the frame rate of the film, within the film', () => {
+    expect(seekTime('frame-forward', 10, 60, 30)).toBeCloseTo(10 + 1 / 30, 9)
+    expect(seekTime('frame-back', 10, 60, 25)).toBeCloseTo(10 - 1 / 25, 9)
+    expect(seekTime('frame-forward-long', 10, 60, 30)).toBeCloseTo(10 + 10 / 30, 9)
+    expect(seekTime('frame-back', 0, 60, 30)).toBe(0)
+    expect(seekTime('frame-forward', 60, 60, 30)).toBe(60)
+  })
+})
+
 describe('matchShortcut', () => {
   it('maps Ctrl or Cmd + S / O / E', () => {
     expect(matchShortcut(key('s', { ctrlKey: true }), 'other')).toBe('save')

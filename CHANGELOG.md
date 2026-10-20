@@ -3,6 +3,9 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Faster timeline editing**: K plays and pauses, J and L step a frame (Shift: ten), Delete removes the selected block wherever the focus is, Ctrl+D duplicates a text or a photo, X cuts it at the playhead; a zoomed timeline scrolls sideways with the wheel and follows the playhead while the film plays.
 ## 2.4.1 (October 2026)
 
 - **An opening from the region without a jump**: with « Depuis la région » and the region highlighted, the camera no longer stops halfway down, climbs a few hundred metres and dives again when a mountain lies between the region and the start of the track; it glides down in one go.

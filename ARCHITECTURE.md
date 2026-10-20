@@ -1498,6 +1498,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   through `updateCameraKey` / `updateParamKey` / `updateMarkerKey`), released without moving it selects that key alone and goes to it. A drag, the
   arrows (±1 s, Shift ±0.1 s) and Delete on a key of the group act on all of them, each in one undo step (`removeFilmItem` for each key inside a
   single `editFilm`). Esc clears the group (`App`'s Escape chain, like `filmSelection`); a key that goes away (undo) leaves it.
+- **Timeline keys and navigation** (`src/ui/shortcuts.ts`, `App.tsx` `SeekShortcuts`, `film/timeline.ts`): K plays / pauses like Space;
+  J / L step one frame of `settings.video.fps` back / forward (Shift: ten, `FRAME_LONG_STEP`; `seekTime`); Delete removes the
+  selected block whatever the focus (until now only a focused block took it), Ctrl/Cmd+D duplicates a text or a photo just after
+  it (`duplicateFilmItem`: own id, no stop, none for a clip synced with the track), X cuts a text or a photo in two at the
+  playhead (`splitFilmItem`: pieces of at least `SPLIT_MIN_S` = 0.5 s; not videos nor music, whose place in the file would have to
+  follow); the new item is selected. On a zoomed timeline the plain wheel scrolls sideways (Ctrl+wheel still zooms) and, while
+  the film plays, the lanes page to keep the playhead in view (`followScroll`: it stays 10% of the view from the edges, paged
+  back to a quarter of it).
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the
