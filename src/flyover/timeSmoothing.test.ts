@@ -8,7 +8,16 @@ import { DEFAULT_CAMERA, type CameraSettings } from './cameraSettings'
 import { computeFilmView, type FilmViewOptions } from './filmCamera'
 import { DEFAULT_PACING } from './pacing'
 import { buildTrackPath } from './path'
-import { easedEndTimeS, TIME_SMOOTHING_SAMPLES, timeSmoothing, windowAverage } from './timeSmoothing'
+import {
+  ANTICIPATION_HOLD_S,
+  ANTICIPATION_REACH_S,
+  ANTICIPATION_STEP_S,
+  anticipatedRaise,
+  easedEndTimeS,
+  TIME_SMOOTHING_SAMPLES,
+  timeSmoothing,
+  windowAverage,
+} from './timeSmoothing'
 
 const frame = createLocalFrame(6.85, 45.9)
 /** ~4.4 km straight north at 1000 m */
@@ -171,6 +180,40 @@ describe('film camera smoothed in time', () => {
       const view = viewAt(clock, t, DEFAULT_CAMERA)
       expect(range(view)).toBeLessThan(range(previous))
       previous = view
+    }
+  })
+})
+
+describe('anticipated raise', () => {
+  it('the whole raise of an instant within the hold, eased out to the reach, none beyond', () => {
+    const at10 = (s: number) => (s === 10 ? 100 : 0)
+    for (const t of [10, 10 - ANTICIPATION_HOLD_S, 10 + ANTICIPATION_HOLD_S]) expect(anticipatedRaise(at10, t)).toBe(100)
+    // halfway through the ease, half of it: the camera starts climbing ahead and comes down after
+    expect(anticipatedRaise(at10, 10 - (ANTICIPATION_HOLD_S + ANTICIPATION_REACH_S) / 2)).toBeCloseTo(50)
+    expect(anticipatedRaise(at10, 10 + (ANTICIPATION_HOLD_S + ANTICIPATION_REACH_S) / 2)).toBeCloseTo(50)
+    expect(anticipatedRaise(at10, 10 - ANTICIPATION_REACH_S)).toBe(0)
+  })
+
+  it('at least what any instant within the hold needs, at most the largest in reach plus the ease band', () => {
+    // a raise for each instant, from 0 to 500 m
+    const raiseAt = (s: number) => 250 + 250 * Math.sin(s * 7.3) * Math.cos(s * 2.1)
+    for (let t = 20; t < 40; t += 0.37) {
+      const raise = anticipatedRaise(raiseAt, t)
+      const instants = (reach: number) =>
+        Array.from({ length: 200 }, (_, k) => k * ANTICIPATION_STEP_S).filter((s) => Math.abs(s - t) <= reach).map(raiseAt)
+      expect(raise).toBeGreaterThanOrEqual(Math.max(...instants(ANTICIPATION_HOLD_S)) - 1e-9)
+      expect(raise).toBeLessThanOrEqual(Math.max(...instants(ANTICIPATION_REACH_S)) + 80)
+    }
+  })
+
+  it('continuous: from one frame to the next the raise moves little, wherever the raises of the instants jump', () => {
+    const raiseAt = (s: number) => (Math.round(s * 2) % 3 === 0 ? 500 : 0)
+    let before = anticipatedRaise(raiseAt, 20)
+    for (let t = 20 + 1 / 60; t < 40; t += 1 / 60) {
+      const raise = anticipatedRaise(raiseAt, t)
+      // the ease's steepest slope: 500 m × π / (2 × 2 s), about 6.5 m a frame at 60 frames per second
+      expect(Math.abs(raise - before)).toBeLessThan(10)
+      before = raise
     }
   })
 })

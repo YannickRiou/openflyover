@@ -438,6 +438,8 @@ export interface CameraView {
 export interface FlightView extends CameraView {
   /** marker position on the draped track, local frame */
   marker: Vector3
+  /** how far the clearance rules raised the camera (metres; 0 without terrain) */
+  raiseM: number
 }
 
 export interface CameraViewOptions {
@@ -584,12 +586,13 @@ export function computeCameraView(
       ? target
       : smoothPointAt(path, dCamera, pointRadiusM, aimGround + liftM, frame)
   const position = positionAround(from, place)
+  const freeY = position.y
   if (sample) {
     // the sight line ends at the marker, at its steady height (its own rides each bump)
     const endGround = dAim === d && !smoothLine ? aimGround : steadyGround(d, marker)
     position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM)
   }
-  return { target, position, marker }
+  return { target, position, marker, raiseM: position.y - freeY }
 }
 
 /**
@@ -806,7 +809,7 @@ function swingAngle({ reference, viewAngle, pitchDeg }: Placement, slope: Vector
 }
 
 /** max(a, b) eased over a band of `k`: never below the larger, at most k / 4 above it, with no kink. */
-function smoothMax(a: number, b: number, k: number): number {
+export function smoothMax(a: number, b: number, k: number): number {
   const h = Math.max(0, k - Math.abs(a - b)) / k
   return Math.max(a, b) + (h * h * k) / 4
 }

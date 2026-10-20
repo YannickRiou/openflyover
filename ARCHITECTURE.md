@@ -822,6 +822,19 @@ The interface and the texts drawn into the films and posters exist in **French**
   0, held from the end of the flight at half the ease short of it), the time-based motions (orbit, cinema) too; the
   aim keeps following the marker to the finish, so the camera stops and turns to watch it. `filmViewMovesWithTime` is
   true during every stop when one of the three is on (the export then renders those frames instead of repeating one).
+  **Anticipated height** (#211, `anticipatedRaise` in `timeSmoothing.ts`, applied by `flightAt` in `filmCamera.ts`): the
+  clearance rules above raise the camera by what the relief needs at that very instant, and that raise changed fast as
+  the marker and the camera swept the relief (0 → 590 m in half a second down a pass of the sample outing, with a 6 m
+  shake on calmer stretches): the camera jumped and shook. The flight camera now takes the raises of the fixed film
+  instants every `ANTICIPATION_STEP_S` (0.5 s) around now: all of each within `ANTICIPATION_HOLD_S` (1 s), less and less
+  out to `ANTICIPATION_REACH_S` (3 s, raised cosine), the largest counting. The camera starts
+  climbing 3 s before the relief needs it and comes down as gently after; an instant's raise stays the same from frame
+  to frame (its marker and camera stay put), so nothing shakes. The opening and closing shots blend with the flight view
+  of the flight's ends, still as before. Cost: the raise of an instant is kept per terrain sampler (`raiseTable`): a
+  frame computes the instants that came into reach (about one flight camera every 0.5 s of film) and, while tiles
+  arrive (`terrainVersion`, counted by `filmView.ts` from `engine.onChange`), refreshes one instant computed on older
+  terrain, so the height follows sharper tiles an instant at a time. On the sample outing over the 12 presets: change of
+  vertical speed per frame (max) 16,000–155,000 → under 3,000 m/s², shake 8–110 → under 2.5 m, terrain reads +5 %.
 - **Camera settings**: `settings.camera { style, distance, pitchDeg, headingOffsetDeg, smoothing, northUp, turnSmoothingM,
   aimSmoothingS, cameraSmoothingS, endingS }` (a camera saved before the last four gets them from `DEFAULT_CAMERA`,
   `withCameraDefaults` in `SETTING_UPGRADES`: « Auto » keeps its multiplier, so the turns look the same) and named
@@ -1252,7 +1265,7 @@ The interface and the texts drawn into the films and posters exist in **French**
 - **Camera** (`src/flyover/filmCamera.ts`, pure): overview = center of the track's box in the local frame at ground level,
   distance 1.6 × diagonal (terrain included, × height / width for a frame taller than wide: 9:16 keeps the whole
   track), 40° above the horizon, on the side the flight camera looks from at the cut (no turn during the transition).
-  Transition: interpolated target, normalized direction (nlerp), geometric distance, smootherstep, 80 m above the ground;
+  Transition: interpolated target, tilt and heading interpolated apart (`blendDirections`: the heading the short way round, never through the zenith), geometric distance, smootherstep, 80 m above the ground;
   in between (not at the wide view nor at the flight view, eased in over the first and last 10% of the blend) the camera is
   also raised (`clearOnTheWay`, pure: sampled terrain only, so preview and export agree) to a glide slope of
   `SHOT_GLIDE_DEG` = 15° over the flight camera (no dive far from the start of the track), to `SHOT_CLEARANCE_SHARE` = 8% of its
@@ -1285,8 +1298,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   (`registerFramingCapture`, `src/osm/region.ts`, so the UI does not import three.js) a reader of its camera around
   `situationTarget` (region centre when the shot highlights and it is loaded, else the track's), and
   `situationFramingOf` turns it into tilt, distance and bearing, rounded and clamped (heading set to « Boussole »).
-  A compass bearing opposite to the flight's direction makes the camera turn quickly during the push-in (directions
-  are nlerped, as for every shot). **Sun of the shot** (« Soleil », `shotSunOf`, every style but « Aucune », opening and closing): « Plein jour » (default
+  A compass bearing opposite to the flight's direction turns the camera round all along the push-in, its tilt easing
+  from one view's to the other's (`blendDirections`, as for every shot; the 3D direction was nlerped before #211 and
+  went through the zenith there: a nose-down dive spinning 145° in half a second). **Sun of the shot** (« Soleil », `shotSunOf`, every style but « Aucune », opening and closing): « Plein jour » (default
   of a `situation` shot) lights the wide view (overview or region view) at
   `SHOT_DAYLIGHT_HOUR` (13 h solar) on the day of the outing and eases to the flight's sun with the same curve as
   below, so a dawn or evening outing does not open on a dark region; « Heure du survol » keeps the flight's sun (default

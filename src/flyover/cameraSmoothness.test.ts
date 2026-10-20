@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import sampleGpx from '../import/__fixtures__/tour-du-mont-blanc-j1.gpx?raw'
 import { CAMERA_PRESETS, CAMERA_STYLES, DEFAULT_CAMERA } from './cameraSettings'
+import { MARKER_TRACKS, steepSampler } from './__fixtures__/markerVisible'
 import { curvyOuting, flyFilm, gpxTrack, hillySampler, quantile, zigzagOuting } from './__fixtures__/smoothness'
 
 /**
@@ -14,6 +15,7 @@ const FPS = 30
 const raid = curvyOuting()
 const sample = gpxTrack(sampleGpx)
 const zigzag = zigzagOuting()
+const { hairpins } = MARKER_TRACKS
 const max = (values: number[]) => values.reduce((a, b) => Math.max(a, b), 0)
 
 describe('camera smoothness', () => {
@@ -57,6 +59,14 @@ describe('camera smoothness', () => {
     for (const { name, camera } of CAMERA_PRESETS.filter((p) => p.camera.style === 'chase')) {
       const film = flyFilm(zigzag, 60, hillySampler, camera, FPS)
       expect(quantile(film.lateralJerk, 0.99), name).toBeLessThan(1_000)
+    }
+  })
+
+  it('steep hairpins: the far presets climb ahead of the relief instead of jumping (#211)', { timeout: 30_000 }, () => {
+    // each frame's own sight-line raise gave 2.8–6.7 million m/s³ here; the anticipated raise 0.24–0.65 million
+    for (const { id, camera } of CAMERA_PRESETS.filter((p) => ['cinema', 'glider', 'balloon'].includes(p.id))) {
+      const film = flyFilm(hairpins(), 60, steepSampler, camera, FPS)
+      expect(max(film.climbJerk.map(Math.abs)), id).toBeLessThan(1_000_000)
     }
   })
 })

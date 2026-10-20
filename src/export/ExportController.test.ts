@@ -218,7 +218,7 @@ describe('runExport', () => {
     const tracks = useAppStore.getState().tracks
     useAppStore.setState({ tracks: [track] })
     const prefetch = vi.fn(() => 0)
-    const engine = { prefetch, update: vi.fn(), sampleHeight: () => 0, stats: { pendingTiles: 0, pendingVisibleTiles: 0 } }
+    const engine = { prefetch, update: vi.fn(), sampleHeight: () => 0, onChange: () => () => {}, stats: { pendingTiles: 0, pendingVisibleTiles: 0 } }
     const during: number[] = []
     vi.mocked(renderSettledFrame)
       .mockResolvedValueOnce('complete')

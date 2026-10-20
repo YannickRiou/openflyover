@@ -19,12 +19,11 @@ import { useMediaStore } from '../film/media'
 import { keyAt, updateCameraKey } from '../film/timeline'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
 import { filmViewMovesWithTime, situationFramingOf, situationTarget } from '../flyover/filmCamera'
-import { filmFollowOf } from '../flyover/follow'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { registerFramingCapture, useRegionStore } from '../osm/region'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
-import { filmViewAt, keyFramingOfView } from './filmView'
+import { filmFollow, filmViewAt, keyFramingOfView } from './filmView'
 import { useTerrainContext } from './terrainContext'
 import { frameDelta } from './renderOnDemand'
 import { trackUnderMarker } from '../flyover/sequence'
@@ -66,7 +65,8 @@ export function FlyoverRig() {
 
   // the marker and the camera follow the same smoothed positions as the drawn line (TrackLines)
   const path = useMemo(() => (track ? smoothedTrackPath(track, smoothingM) : null), [track, smoothingM])
-  const follow = useMemo(() => filmFollowOf(tracks, race, smoothingM), [tracks, race, smoothingM])
+  // the same function as the other views' (`filmFollow`), so the film camera keeps what it computed (`computeFilmView`)
+  const follow = useMemo(() => filmFollow(tracks, race, smoothingM), [tracks, race, smoothingM])
   const clock = useFilmClock()
   /** clock the store's film time was computed with */
   const clockRef = useRef(clock)

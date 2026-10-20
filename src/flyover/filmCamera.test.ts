@@ -156,6 +156,31 @@ describe('overview', () => {
     const at = frame.toLonLat(clamped.position)
     expect(clamped.position.y).toBeCloseTo(frame.toLocal(at.lon, at.lat, 1e9 + MIN_GROUND_CLEARANCE_M).y, 0)
   })
+
+  it('blend of opposite headings: the tilt goes straight from one to the other, the heading turns all along (no dive)', () => {
+    // a region view from the south at 65°, a flight view from the north at 30°: the 3D blend went through the zenith
+    const tilted = (headingDeg: number, tiltDeg: number, distance: number) => {
+      const h = (headingDeg * Math.PI) / 180
+      const t = (tiltDeg * Math.PI) / 180
+      const back = new Vector3(-Math.sin(h) * Math.cos(t), Math.sin(t), Math.cos(h) * Math.cos(t))
+      return { target: new Vector3(), position: back.multiplyScalar(distance) }
+    }
+    const region = tilted(0, 65, 50_000)
+    const flight = tilted(170, 30, 2_000)
+    let tilt = 65
+    let heading = 0
+    for (let k = 0.05; k < 1; k += 0.05) {
+      const view = blendViews(region, flight, k, frame, null, 1)
+      const back = view.position.clone().sub(view.target).normalize()
+      const nextTilt = (Math.asin(back.y) * 180) / Math.PI
+      const nextHeading = (Math.atan2(-back.x, back.z) * 180) / Math.PI
+      expect(nextTilt).toBeLessThan(tilt)
+      expect(nextHeading).toBeGreaterThan(heading)
+      expect(nextHeading - heading).toBeLessThan(170 * 0.06)
+      tilt = nextTilt
+      heading = nextHeading
+    }
+  })
 })
 
 describe('region view (« Depuis la région »)', () => {
