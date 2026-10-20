@@ -243,6 +243,8 @@ describe('settings and misc', () => {
         keyframeIntervalS: 2,
         audioKbps: 192,
         nameTemplate: '',
+        normalizeLoudness: false,
+        loudnessLufs: -14,
       },
       poster: {
         format: 'a4-portrait',
