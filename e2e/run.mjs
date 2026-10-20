@@ -890,7 +890,7 @@ const SCENARIOS = [
             tags: { boundary: 'administrative', admin_level: level, name },
             bounds: { minlon: w, minlat: s, maxlon: e, maxlat: n },
           })
-          return json([area(1, 'Haute-Savoie', '6', [5.8, 45.6, 7.1, 46.4]), area(2, 'Auvergne-Rhône-Alpes', '4', [2, 44.1, 7.2, 46.8])])
+          return json([area(1, 'Ariège', '6', [0.8, 42.5, 2.2, 43.4]), area(2, 'Occitanie', '4', [-0.4, 42.3, 4.9, 45.1])])
         }
       })
       try {
@@ -904,7 +904,7 @@ const SCENARIOS = [
         await page.evaluate(() => (window.__e2e.overpass.fail = false))
         await retry.click()
         await until(page, () =>
-          [...document.querySelectorAll('select')].some((s) => [...s.options].some((o) => o.textContent.startsWith('Haute-Savoie'))),
+          [...document.querySelectorAll('select')].some((s) => [...s.options].some((o) => o.textContent.startsWith('Ariège'))),
         )
         assert((await page.evaluate(() => window.__e2e.overpass.isIn)) === 2, 'la région a été cherchée plus de deux fois')
       } finally {
