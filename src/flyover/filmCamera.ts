@@ -9,7 +9,7 @@
  * the flight (no turn during the transition). The transition interpolates the tilt and the heading of the direction
  * apart (`blendDirections`), the distance geometrically (smootherstep), lerps the target as the distance changes, stays
  * MIN_GROUND_CLEARANCE_M above the ground and, in between, on a glide slope over the flight camera and clear of the
- * relief on the way (`clearOnTheWay`); the aim is raised as much as the camera, so the tilt goes from one end view's to
+ * relief on the way (`shotLift`); the aim is raised as much as the camera, so the tilt goes from one end view's to
  * the other's. A shot that cuts ('coupe', dips to black or white) holds its wide view and cuts at the boundary with the
  * flight (`shotWeight`).
  */
@@ -25,6 +25,7 @@ import {
   LINE_OF_SIGHT_MIN_CLEARANCE_M,
   MIN_GROUND_CLEARANCE_M,
   autoDistanceM,
+  smoothMax,
   computeCameraView,
   headingWindowM,
   movesWithTime,
@@ -75,8 +76,17 @@ export const SHOT_GLIDE_DEG = 15
 export const SHOT_CLEARANCE_SHARE = 0.08
 /** Samples of the relief along the line of sight of a shot's camera, up to 90% of the way to its aim. */
 const SHOT_SIGHT_SAMPLES = 16
+/** Width (share of its distance) over which the floor of a shot's camera takes over from the blend. */
+const SHOT_SOFT_SHARE = 0.2
 /** The glide and the clearances ease in over this share of the shot's blend at each end (the end views are untouched). */
 const SHOT_EASE_SHARE = 0.1
+/** ... longer by the lift's share of the camera's distance over this much, up to this share of the blend. */
+const SHOT_EASE_LIFT = 2
+/** A shot's lift is read at this many points of the blend, kept in full within HOLD of the blend and down to nothing at REACH. */
+const SHOT_LIFT_POINTS = 40
+const SHOT_LIFT_HOLD = 0.06
+const SHOT_LIFT_REACH = 0.25
+const SHOT_EASE_MAX_SHARE = 0.5
 /** Length of the quick move of a 'saut' shot (seconds). */
 export const JUMP_S = 0.6
 /** 'orbite' stop: the camera turns out by STOP_ORBIT_DEG_PER_S × stop duration (at most STOP_ORBIT_MAX_DEG) and back. */
@@ -470,22 +480,15 @@ export function blendViews(
 }
 
 /**
- * `view`, a blend `k` (0..1, exclusive) of the way between a wide view and the `flight` view, raised so that its
- * camera stays on a glide slope of SHOT_GLIDE_DEG over the flight camera (no dive far from it), clears the ground
- * under it by SHOT_CLEARANCE_SHARE of its distance and does not hide its aim behind the relief (the straight line of
- * the blend knows nothing of the terrain between the two views). Eased in and out over SHOT_EASE_SHARE of the blend.
+ * How much higher (metres, 0 or more) the camera of `view`, a blend of a wide view and the `flight` view, must be so
+ * that it stays on a glide slope of SHOT_GLIDE_DEG over the flight camera (no dive far from it), clears the ground under
+ * it by SHOT_CLEARANCE_SHARE of its distance and does not hide its aim behind the relief (the straight line of the
+ * blend knows nothing of the terrain between the two views).
  */
-function clearOnTheWay(
-  view: CameraView,
-  flight: CameraView,
-  k: number,
-  frame: LocalFrame,
-  sample: HeightSampler | null,
-  exaggeration: number,
-): CameraView {
-  const share = smootherstep(Math.min(k, 1 - k) / SHOT_EASE_SHARE)
-  if (share <= 0) return view
+function shotLift(view: CameraView, flight: CameraView, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number): number {
   const { position, target } = view
+  // where the floor takes over from the blend, the camera's climb changes pace over a stretch, not at a point
+  const softM = SHOT_SOFT_SHARE * position.distanceTo(target)
   let floorY = flight.position.y + Math.hypot(position.x - flight.position.x, position.z - flight.position.z) * Math.tan(SHOT_GLIDE_DEG * DEG)
   if (sample) {
     const clearance = Math.max(MIN_GROUND_CLEARANCE_M, SHOT_CLEARANCE_SHARE * position.distanceTo(target))
@@ -509,8 +512,21 @@ function clearOnTheWay(
       floorY = Math.max(floorY, end.y + ((need - end.y) * u * u * (3 - 2 * u)) / (1 - f))
     }
   }
-  if (floorY <= position.y) return view
-  return { target, position: position.clone().setY(position.y + (floorY - position.y) * share) }
+  return Math.max(0, smoothMax(position.y, floorY, softM) - position.y)
+}
+
+/**
+ * `view` (a blend `k`, 0..1 exclusive, of a wide view and the `flight` view) raised by `liftM`, eased in and out toward
+ * each end view: over SHOT_EASE_SHARE of the blend, and longer the higher the lift is (up to SHOT_EASE_MAX_SHARE), or
+ * the camera would drop kilometres in a fraction of a second where the glide slope asks for more than an end view's height.
+ */
+function liftedOnTheWay(view: CameraView, k: number, liftM: number): CameraView {
+  if (!(liftM > 0)) return view
+  const { position, target } = view
+  const easeShare = Math.min(SHOT_EASE_MAX_SHARE, SHOT_EASE_SHARE + liftM / (SHOT_EASE_LIFT * position.distanceTo(target)))
+  const share = smootherstep(Math.min(k, 1 - k) / easeShare)
+  if (share <= 0) return view
+  return { target, position: position.clone().setY(position.y + liftM * share) }
 }
 
 /** Marker position on the draped track at `progress` (as `computeCameraView` places it). */
@@ -791,7 +807,8 @@ export function computeFilmView(
   }
   if (state.phase !== 'opening' && state.phase !== 'closing') return flight
 
-  const shot = state.phase === 'opening' ? clock.opening : clock.closing
+  const phase = state.phase
+  const shot = phase === 'opening' ? clock.opening : clock.closing
   const overview =
     shot.style === 'situation'
       ? regionView(path, frame, sample, options.exaggeration, aspect, flight, {
@@ -800,15 +817,33 @@ export function computeFilmView(
           framing: shot,
         })
       : overviewView(path, frame, sample, options.exaggeration, aspect, flight)
-  const turned = shot.style === 'balayage' ? turnedView(overview, sweepRad(state.phase, state.localS, state.lengthS)) : overview
-  // turned, the overview may look from behind a slope: kept above the ground like the others
-  const wide =
-    turned === overview ? overview : { target: turned.target, position: keepAboveGround(turned.position, frame, sample, options.exaggeration) }
-  const k = shotWeight(shot, state.phase, state.localS, state.lengthS)
-  const [from, to] = state.phase === 'opening' ? [wide, flight] : [flight, wide]
-  const blended = blendViews(from, to, k, frame, sample, options.exaggeration, true)
+  // the shot `localS` seconds in: the wide view (turned by a 'balayage'), the blend's weight and the blend itself
+  const shotAt = (localS: number) => {
+    const turned = shot.style === 'balayage' ? turnedView(overview, sweepRad(phase, localS, state.lengthS)) : overview
+    // turned, the overview may look from behind a slope: kept above the ground like the others
+    const wide =
+      turned === overview ? overview : { target: turned.target, position: keepAboveGround(turned.position, frame, sample, options.exaggeration) }
+    const k = shotWeight(shot, phase, localS, state.lengthS)
+    const [from, to] = phase === 'opening' ? [wide, flight] : [flight, wide]
+    return { k, from, to, blended: blendViews(from, to, k, frame, sample, options.exaggeration, true) }
+  }
+  const now = shotAt(state.localS)
+  const { k, from, to, blended } = now
   if (!(k > 0 && k < 1)) return { ...blended, marker: flight.marker }
-  const { position } = clearOnTheWay(blended, flight, k, frame, sample, options.exaggeration)
+  // the camera takes ahead the lift the relief will ask for around: a crest passing under the line of sight asks 2 km
+  // in less than half a second. The lift is read at fixed points of the blend, and each point's lift counts in full
+  // within SHOT_LIFT_HOLD of the blend and down to nothing (raised cosine) at SHOT_LIFT_REACH: a smooth function of k
+  let liftM = 0
+  for (let i = 1; i < SHOT_LIFT_POINTS; i++) {
+    const at = i / SHOT_LIFT_POINTS
+    const away = Math.abs(at - k)
+    if (away >= SHOT_LIFT_REACH) continue
+    const weight = away <= SHOT_LIFT_HOLD ? 1 : 0.5 + 0.5 * Math.cos((Math.PI * (away - SHOT_LIFT_HOLD)) / (SHOT_LIFT_REACH - SHOT_LIFT_HOLD))
+    liftM = Math.max(liftM, weight * shotLift(blendViews(from, to, at, frame, sample, options.exaggeration, true), flight, frame, sample, options.exaggeration))
+  }
+  // never less than this very point's lift
+  liftM = Math.max(liftM, shotLift(blended, flight, frame, sample, options.exaggeration))
+  const { position } = liftedOnTheWay(blended, k, liftM)
   // the lifts above the ground raise the camera only: its aim goes up as much, so the tilt eases from one end view's
   // to the other's instead of tipping down at the ground
   const free = blendViews(from, to, k, frame, null, options.exaggeration, true)

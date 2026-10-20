@@ -804,6 +804,25 @@ The interface and the texts drawn into the films and posters exist in **French**
   of vertical speed per frame of « Orbite » / « Cinéma » drops from 43 / 70 m to 23 / 7 m. Left as is: the sideways
   swing (`swingAngle`, up to ~120 m for « Cinéma » on the hills) and the far presets on the steep massif (« Cinéma »
   8.9×: there the ground cell is already 150 m, and the change itself varies within 200 m of the marker).
+  **Shots, lift** (#213 follow-up; `shotLift`, `liftedOnTheWay`): the lift a shot's camera needs (glide slope, ground,
+  sight line) is a function of the blend `k` only (the views at the ends are given), read at 40 fixed points of it; the camera
+  takes the largest of the lifts of the points around, each in full within `SHOT_LIFT_HOLD` = 0.06 of the blend and down to
+  nothing at `SHOT_LIFT_REACH` = 0.25 (raised cosine: the same anticipation as the flight's `anticipatedRaise`, in blend
+  units), so a crest passing under the line of sight, which asks 2 km in less than half a second, becomes a gentle hump.
+  The lift fades toward the end views over `SHOT_EASE_SHARE` = 10% of the blend, longer the higher it is (+ lift / (2 ×
+  distance), at most 50%): the glide slope asks 2.5 km above an overview on the steep massif, which a 0.4 s fade dropped at
+  6 km/s. The floor takes over from the blend through a `smoothMax` of 20% of the distance (the plain maximum made the
+  climb change pace at a point). On the closing of « Descente » over the loops: the second difference 127 m → under 30 m a
+  frame; « Balayage » (0.02–0.11 → none), « Satellite » (marker out of the frame by 20% → in).
+  **Audit of the film camera** (`src/flyover/filmAudit.ts`, pure): `replayFilm` places the camera of a film every frame
+  (30 i/s) and `auditPoses` lists, with their time, the **jolts** (second difference of the camera's or the aim's
+  position over the camera's distance, above `AUDIT_JOLT_LIMIT` = 0.025: a calm flight stays under 0.006, #186 / #213
+  reached 0.03–0.11), the camera **low** (under `MIN_TERRAIN_CLEARANCE_M` above the terrain) and the marker **out** of
+  the frame. The frames next to a change of shot or stop are not read (the marker starts or stops, the camera follows
+  at once). `filmAudit.test.ts` holds the guard: the opening and closing of the 12 presets × 4 shot styles on the switchbacks,
+  the loops (steep massif, slope 0.8) and a raid over hills: no jolt (but « Saut », a quick move of 0.6 s on purpose), never
+  low, the marker never out of the frame. No in-app button yet: the audit reads the terrain it is given, and what the
+  engine has loaded is not the terrain of the whole film.
   **Smoothing in film time** (`src/flyover/timeSmoothing.ts`, applied by `computeFilmView`; still no frame-to-frame
   state): the aim point follows the marker's progress averaged over « Lissage de la visée » `aimSmoothingS` (0 by
   default: on the marker), the camera follows it averaged over « Lissage de la caméra » `cameraSmoothingS` (3 s by
