@@ -89,8 +89,10 @@ const QUALITIES: { value: VideoQuality; label: string }[] = [
 const CODEC_LABELS: Record<string, string> = {
   'mp4/avc': 'MP4 (H.264)',
   'mp4/hevc': 'MP4 (HEVC)',
+  'mp4/av1': 'MP4 (AV1)',
   'webm/vp9': 'WebM (VP9)',
   'webm/vp8': 'WebM (VP8)',
+  'png/png': 'PNG',
   png: 'PNG',
   jpeg: 'JPEG',
 }
@@ -139,6 +141,7 @@ const CODEC_CHOICE_LABELS: Record<VideoCodecChoice, string> = {
   avc: 'H.264 (MP4)',
   hevc: 'HEVC (MP4)',
   vp9: 'VP9 (WebM)',
+  av1: 'AV1 (MP4)',
 }
 
 /** « 0,5 s », « 2 s » */
@@ -210,6 +213,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const id = useId()
   /** « Habillage seul »: the overlay alone, transparent WebM to lay over one's own footage */
   const [overlayOnly, setOverlayOnly] = useState(false)
+  /** « Séquence d'images PNG »: one PNG per frame in a folder, no sound, instead of a video */
+  const [sequence, setSequence] = useState(false)
   const downloadedRef = useRef<ExportResult | null>(null)
   const streams = getPlatform().capabilities.canStreamToDisk
 
@@ -302,7 +307,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const tier = effectiveRender(video.quality, clouds)
 
   const start = () => {
-    if (!trackName || !codec) return
+    const asSequence = sequence && !overlayOnly
+    if (!trackName || (!codec && !asSequence)) return
     const named = expandNameTemplate(
       video.nameTemplate,
       {
@@ -316,8 +322,28 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       trackName,
     )
     const baseName = overlayOnly ? overlayBaseName(named) : named
+    if (asSequence) {
+      // the folder is asked now (the browser's picker needs this click); the frames go straight into it, without the holds
+      void pickFolder(getPlatform().capabilities).then((folder) => {
+        if (!folder) return
+        useExportStore.getState().start({
+          width,
+          height,
+          fps: video.fps,
+          quality: video.quality,
+          encoding,
+          durationS,
+          progressAt: pacing.progressAtTime,
+          holdStartS: 0,
+          holdEndS: 0,
+          baseName: named,
+          sequence: { folder },
+        })
+      })
+      return
+    }
     // asked now: the browser's save picker needs this click
-    const fileName = videoFileName(baseName, `.${codec.container}`)
+    const fileName = videoFileName(baseName, `.${codec!.container}`)
     void chooseVideoDestination(getPlatform(), fileName).then(({ start: go, destination }) => {
       if (!go) return
       useExportStore.getState().start({
@@ -571,6 +597,10 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </fieldset>
 
       <div className="field">
+        <Checkbox checked={sequence && !overlayOnly} disabled={busy || overlayOnly || !canPickFolder(getPlatform().capabilities)} onChange={(on) => setSequence(on)}>
+          {t('export.panel.sequence')}
+        </Checkbox>
+        <p className="type-hint">{canPickFolder(getPlatform().capabilities) ? t('export.panel.sequenceHint') : t('export.panel.sequenceNeedsFolder')}</p>
         <Checkbox checked={overlayOnly} disabled={busy} onChange={(on) => setOverlayOnly(on)}>{t('export.panel.overlayOnly')}</Checkbox>
         {overlayOnly && <p className="type-hint">{t('export.panel.overlayOnlyHint')}</p>}
       </div>
@@ -578,8 +608,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       <p className={SUMMARY} title={t('export.panel.summaryTip')}>
         {[
           t('export.panel.summary', { duration: formatClock(totalFrames / video.fps), frames: formatNumber(totalFrames) }),
-          codec && CODEC_LABELS[`${codec.container}/${codec.codec}`],
-          estimatedBytes > 0 && `≈ ${formatMegabytes(estimatedBytes)}`,
+          sequence && !overlayOnly ? 'PNG' : codec && CODEC_LABELS[`${codec.container}/${codec.codec}`],
+          estimatedBytes > 0 && !(sequence && !overlayOnly) && `≈ ${formatMegabytes(estimatedBytes)}`,
           renderS !== null && t('export.panel.renderTime', { time: formatClock(renderS) }),
         ]
           .filter(Boolean)
@@ -614,7 +644,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       {!busy && (
         <div className={ACTIONS}>
-          <Button variant="primary" onClick={start} disabled={!trackName || !codec}>
+          <Button variant="primary" onClick={start} disabled={!trackName || (!codec && !(sequence && !overlayOnly))}>
             <Icon name="download" size={18} />
             {overlayOnly ? t('export.panel.exportOverlay') : t('export.panel.exportVideo')}
           </Button>

@@ -36,6 +36,9 @@ export const CODEC_CANDIDATES: readonly CodecCandidate[] = [
   { container: 'webm', codec: 'vp8' },
 ]
 
+/** AV1 in MP4: the smallest files at a given quality, offered only when « Encodage » asks for it (software encoders are slow). */
+export const AV1_CANDIDATE: CodecCandidate = { container: 'mp4', codec: 'av1' }
+
 /** Only candidate of a transparent film: VP9 with alpha in WebM, read by the editors that take transparent video. */
 export const ALPHA_CANDIDATES: readonly CodecCandidate[] = [{ container: 'webm', codec: 'vp9' }]
 
@@ -48,7 +51,7 @@ export const REFERENCE_FPS = 24
 /** The bitrate grows with the frame rate to this power: a frame costs less when frames are closer in time. */
 const FPS_BITRATE_EXPONENT = 0.7
 /** Bitrate relative to H.264 for the same visual quality. */
-export const CODEC_BITRATE_FACTOR: Partial<Record<VideoCodec, number>> = { avc: 1, hevc: 0.6, vp9: 0.65, vp8: 1.2 }
+export const CODEC_BITRATE_FACTOR: Partial<Record<VideoCodec, number>> = { avc: 1, hevc: 0.6, vp9: 0.65, av1: 0.5, vp8: 1.2 }
 export const MIN_BITRATE = 1_000_000
 export const MAX_BITRATE = 80_000_000
 /** Seconds between key frames, unless « Encodage » sets them. */
@@ -172,14 +175,14 @@ export async function pickCodec(
  * user may have typed `.webm`), all of them otherwise.
  */
 export function candidatesFor(fileName: string | undefined, choice: VideoCodecChoice = 'auto'): readonly CodecCandidate[] {
-  if (choice !== 'auto') return CODEC_CANDIDATES.filter((c) => c.codec === choice)
+  if (choice !== 'auto') return [...CODEC_CANDIDATES, AV1_CANDIDATE].filter((c) => c.codec === choice)
   const ext = fileName?.match(/\.([^.]+)$/)?.[1].toLowerCase()
   const matching = CODEC_CANDIDATES.filter((c) => c.container === ext)
   return matching.length > 0 ? matching : CODEC_CANDIDATES
 }
 
 /** Names of the codecs of « Encodage » (export panel, messages). */
-export const CODEC_NAMES: Record<VideoCodecChoice, string> = { get auto() { return t('export.panel.codec.auto') }, avc: 'H.264', hevc: 'HEVC', vp9: 'VP9' }
+export const CODEC_NAMES: Record<VideoCodecChoice, string> = { get auto() { return t('export.panel.codec.auto') }, avc: 'H.264', hevc: 'HEVC', vp9: 'VP9', av1: 'AV1' }
 
 /** Thrown by a session used after `cancel()`. */
 export class ExportCanceledError extends Error {
@@ -189,8 +192,15 @@ export class ExportCanceledError extends Error {
   }
 }
 
+/** What a session says of its codec: a container and a codec by name (a PNG sequence has its own). */
+export interface SessionCodec {
+  container: string
+  codec: string
+  hardware?: boolean
+}
+
 export interface VideoEncodeSession {
-  readonly codec: CodecCandidate
+  readonly codec: SessionCodec
   /** codec of the soundtrack; null when none was given or none can be encoded (the film is silent) */
   readonly audioCodec: AudioCodec | null
   readonly bitrate: number

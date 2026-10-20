@@ -2356,6 +2356,16 @@ exports) gets it from the terrain source of the settings.
   limiter (5 ms: the minimum gain needed over the next 5 ms, averaged over as long, so it never exceeds what a sample needs) on
   a 4× oversampled (Catmull-Rom) peak, ceiling −1 dBTP. Pure functions; tests on a 997 Hz stereo sine (−23 dBFS reads −23.0 LUFS,
   as EBU TECH 3341 gives). The preview is not normalised.
+  **AV1** (`video.codec: 'av1'`, MP4): offered only where the device encodes it (`encodableCodecs`)
+  and used only when chosen (`AV1_CANDIDATE` is not in `CODEC_CANDIDATES`, so « Automatique » never lands on a slow software
+  encoder), bitrate factor 0.5 of H.264; the native ffmpeg path does not assume an AV1 encoder (null, like HEVC). **Image
+  sequence** (`src/export/sequenceEncoder.ts`, « Séquence d'images PNG », `ExportRequest.sequence = { folder }`): a
+  `VideoEncodeSession` that writes frame `i` as `<name>_00001.png` through `canvas.convertToBlob` into the folder picked on the
+  click (`pickFolder`: `showDirectoryPicker` on Chrome / Edge, the folder dialog on the desktop; written flat, no subfolder), no
+  sound (`mixFilmAudio` skipped), no held frames (holds 0), `ExportResult.fileName` the pattern `<name>_#####.png`; a cancel keeps
+  the images already written (a closed file cannot be removed through a folder). `VideoEncodeSession.codec` is a `SessionCodec`
+  (container and codec as strings) so that `png/png` fits. **ProRes** is not offered: WebCodecs cannot encode it (mediabunny only
+  muxes it), and the desktop route would be the system's ffmpeg (`prores_ks`, `.mov`) with a new choice of the native encoder.
 - Render scale `exportRenderScale` = short side / 1080 (1 outside export): track width and label size, in
   pixels, are multiplied so that a 4K film looks like the 1080p one. Markers do not need it (size proportional to the
   camera distance, hence a constant screen fraction).

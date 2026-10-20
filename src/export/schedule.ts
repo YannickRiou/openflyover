@@ -42,8 +42,8 @@ export type VideoFps = (typeof VIDEO_FPS)[number]
 export const VIDEO_QUALITIES = ['standard', 'high', 'max'] as const
 export type VideoQuality = (typeof VIDEO_QUALITIES)[number]
 
-/** Codecs of « Encodage »: 'auto' takes the first one the device encodes (H.264, HEVC, VP9, VP8). */
-export const VIDEO_CODEC_CHOICES = ['auto', 'avc', 'hevc', 'vp9'] as const
+/** Codecs of « Encodage »: 'auto' takes the first one the device encodes (H.264, HEVC, VP9, VP8); AV1 only when chosen (slow in software). */
+export const VIDEO_CODEC_CHOICES = ['auto', 'avc', 'hevc', 'vp9', 'av1'] as const
 export type VideoCodecChoice = (typeof VIDEO_CODEC_CHOICES)[number]
 /** Bitrate chosen by hand, Mbit/s (the encoder's bounds, `MIN_BITRATE` / `MAX_BITRATE`). */
 /**

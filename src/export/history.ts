@@ -462,7 +462,7 @@ const MODE_LABELS: Record<CloudMode, string> = {
 const cloudQualityLabel = (quality: CloudQuality) => CLOUD_QUALITY_NAMES[quality].toLowerCase()
 const ZOOM_KEYS = ['export.history.zoom.0', 'export.history.zoom.1', 'export.history.zoom.2'] as const
 const ENCODER_KEYS = { webcodecs: 'export.history.encoder.webcodecs', native: 'export.history.encoder.native' } as const
-const CODEC_LABELS: Record<string, string> = { 'mp4/avc': 'MP4 (H.264)', 'mp4/hevc': 'MP4 (HEVC)', 'webm/vp9': 'WebM (VP9)', 'webm/vp8': 'WebM (VP8)' }
+const CODEC_LABELS: Record<string, string> = { 'mp4/avc': 'MP4 (H.264)', 'mp4/hevc': 'MP4 (HEVC)', 'mp4/av1': 'MP4 (AV1)', 'png/png': 'PNG', 'webm/vp9': 'WebM (VP9)', 'webm/vp8': 'WebM (VP8)' }
 
 const percent = (v: number) => formatPercent(Math.round(v * 100) / 100)
 const hour = (h: number) => t('format.clock', { hours: Math.floor(Math.round(h * 60) / 60), minutes: String(Math.round(h * 60) % 60).padStart(2, '0') })

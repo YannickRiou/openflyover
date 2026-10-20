@@ -174,6 +174,7 @@ import {
   MAX_BITRATE,
   MIN_BITRATE,
   STREAM_CHUNK_BYTES,
+  CODEC_BITRATE_FACTOR,
   candidatesFor,
   createVideoEncoder,
   pickAudioCodec,
@@ -378,6 +379,11 @@ describe('createVideoEncoder', () => {
     expect(fake.sounds[0].config).toMatchObject({ quality: { options: { bitrate: 128_000 } } })
     await expect(createVideoEncoder(canvas, { ...OPTIONS, encoding: { ...encoding, codec: 'hevc' } }, supporting('avc'))).rejects.toThrow(/HEVC/)
     expect(candidatesFor('Tour.mp4', 'vp9')).toEqual([{ container: 'webm', codec: 'vp9' }])
+    // AV1 only when it is chosen: « Automatique » never lands on a slow software encoder
+    expect(candidatesFor('Tour.mp4', 'av1')).toEqual([{ container: 'mp4', codec: 'av1' }])
+    expect(candidatesFor(undefined, 'auto').some((c) => c.codec === 'av1')).toBe(false)
+    expect(candidatesFor('Tour.mp4', 'auto').some((c) => c.codec === 'av1')).toBe(false)
+    expect(CODEC_BITRATE_FACTOR.av1).toBeLessThan(CODEC_BITRATE_FACTOR.hevc!)
   })
 
   it('discards the alpha of an ordinary film', async () => {
