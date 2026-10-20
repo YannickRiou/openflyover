@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v301.cards.title': 'Die Schlusskarte folgt dem Filmende',
+  'v301.cards.text': 'Wenn Sie die Dauer des Überflugs (oder eine Einstellung oder einen Halt) ändern, bleibt eine am Filmende platzierte Schlusskarte am Ende, statt an ihrer alten Stelle zu bleiben, manchmal hinter dem Ende.',
   'v30.camera.title': 'Eine Kamera ohne Ruckler über dem Relief',
   'v30.camera.text': 'Die Eröffnungs- und Schlussaufnahmen springen nicht mehr über steile Hänge oder Grate: Die Kamera steigt sanft auf, und eine automatische Prüfung spielt Beispielfilme ab, um das sicherzustellen.',
   'v30.days.title': 'Reichhaltigere Tageskarten',

@@ -1330,6 +1330,20 @@ describe('cards placed on the timeline', () => {
   // 6 s opening, 60 s flight, 5 s closing
   const at = (timeS: number) => ({ timeS, openingS: 6, flightS: 60, totalS: 71 })
 
+  it('a closing card that reached the end of the film follows it when the film is shorter or longer', () => {
+    const card = { start: 0.9, window: { startS: 61, endS: 71, toEnd: true } }
+    // the same card in a 50 s film: still shown on the last frame, and not before its length
+    const short = (timeS: number) => ({ timeS, openingS: 6, flightS: 39, totalS: 50 })
+    expect(endCardOpacityOf(short(49.9), card)).toBeGreaterThan(0.9)
+    expect(endCardOpacityOf(short(38), card)).toBe(0)
+    // and in a 90 s film it is not cut at the old end
+    const long = (timeS: number) => ({ timeS, openingS: 6, flightS: 79, totalS: 90 })
+    expect(endCardOpacityOf(long(89.9), card)).toBeGreaterThan(0.9)
+    expect(endCardOpacityOf(long(75), card)).toBe(0)
+    // a window that only went past the end slides back instead of vanishing
+    expect(endCardOpacityOf(short(49), { start: 0.9, window: { startS: 61, endS: 71 } })).toBeGreaterThan(0)
+  })
+
   it('without a window: as before, from the first frame to a fraction of the flight, and from one to the last frame', () => {
     expect(titleCardOpacityOf(at(3), { end: 0.1 })).toBe(titleCardOpacity(at(3), 0.1))
     expect(titleCardOpacityOf(at(20), { end: 0.1 })).toBe(0)

@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 3.0.1 (October 2026)
+
+- **The closing card follows the end of the film**: after changing the flyover duration (or a shot or a stop), a closing card placed at the end of the film no longer stays where it was, past the end of the timeline or cut short before the last frame: it keeps its length and stays at the end; a card that would go past the end slides back to it. Fixes a card block drawn outside the film.
+
 ## 3.0.0 (October 2026)
 
 - **« Accéléré » sun, as long as you want**: the sun of an opening or closing shot in « Accéléré » now runs 4 hours by default (2 hours before: too short to see the shadows move), and « Heures de soleil » in the shot's inspector sets it from 1 to 12 hours, shot by shot.

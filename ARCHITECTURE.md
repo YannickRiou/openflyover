@@ -1589,7 +1589,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   `end.window` (`CardWindow`: film seconds, `0 ≤ startS < endS ≤ CARD_WINDOW_MAX_S`, optional; `dragCard`: the edge that moves
   or, for `move`, the start with the length kept, snapped, inside the film and at least `CARD_MIN_S` = 0.5 s long, to a
   thousandth) and the card fades in and out inside it (`titleCardOpacityOf`, `endCardOpacityOf`; a closing window that ends
-  with the film stays whole to the last frame; `creditsRollProgress` rolls inside the window). `end` and `start` stay valid
+  with the film stays whole to the last frame; `creditsRollProgress` rolls inside the window). A window is read through `fitWindow(window, totalS)` (`overlay/settings.ts`, used by `cardWindow`,
+  the two opacity functions and `creditsRollProgress`) because the film may not be the length it was placed in (flyover
+  duration, a shot or a stop changed): `CardWindow.toEnd` (set by `dragCard` when an edge reaches the end of the film) keeps
+  the length and glues the card to the end, any other window that would pass the end slides back to it, none is longer than
+  the film. `end` and `start` stay valid
   and are read while no window exists, so earlier projects play as before. The « Ouverture » / « Clôture » shots of
   « Plans » are separate and no longer dragged by the card's body. Arrows move the whole block (Shift: 0.1 s),
   committed on release as one undo step through `setSetting('overlay', …)`. Arrows nudge the same edge (Shift: 0.1 s). Delete,

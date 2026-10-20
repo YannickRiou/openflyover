@@ -22,7 +22,7 @@ import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
 import type { CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { COUNTER_IDS, DEFAULT_TEXT_BACKING, inStyleSlot, widgetOverrides } from './settings'
+import { COUNTER_IDS, DEFAULT_TEXT_BACKING, fitWindow, inStyleSlot, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 import { styleStructure } from './structures'
@@ -225,9 +225,8 @@ export function endCardOpacity(time: OverlayTime, start: number): number {
  * in and out inside it; else as `titleCardOpacity`, from the first frame to `end` of the flight.
  */
 export function titleCardOpacityOf(time: OverlayTime, card: Pick<TitleCardSettings, 'end' | 'window'>): number {
-  const window = card.window
-  if (!window) return titleCardOpacity(time, card.end)
-  const { startS, endS } = window
+  if (!card.window) return titleCardOpacity(time, card.end)
+  const { startS, endS } = fitWindow(card.window, time.totalS)
   const t = time.timeS
   if (t < startS || t >= endS) return 0
   const fadeIn = Math.min(CARD_FADE_IN * time.flightS, (endS - startS) / 4)
@@ -240,9 +239,8 @@ export function titleCardOpacityOf(time: OverlayTime, card: Pick<TitleCardSettin
  * frame when its window ends with the film); else as `endCardOpacity`, from `start` of the flight to the end.
  */
 export function endCardOpacityOf(time: OverlayTime, card: Pick<EndCardSettings, 'start' | 'window'>): number {
-  const window = card.window
-  if (!window) return endCardOpacity(time, card.start)
-  const { startS, endS } = window
+  if (!card.window) return endCardOpacity(time, card.start)
+  const { startS, endS } = fitWindow(card.window, time.totalS)
   const t = time.timeS
   if (t <= startS || (t >= endS && endS < time.totalS)) return 0
   const fade = CARD_FADE_OUT * time.flightS
@@ -259,8 +257,9 @@ export function creditLines(credits: string | undefined): string[] {
  * up until the end of the film (the last line leaves the frame on the last frame).
  */
 export function creditsRollProgress(time: OverlayTime, start: number, window?: CardWindow): number {
-  const startS = window ? window.startS : time.openingS + start * time.flightS
-  const rollS = (window ? Math.min(window.endS, time.totalS) : time.totalS) - startS
+  const placed = window && fitWindow(window, time.totalS)
+  const startS = placed ? placed.startS : time.openingS + start * time.flightS
+  const rollS = (placed ? Math.min(placed.endS, time.totalS) : time.totalS) - startS
   const holdS = CARD_FADE_OUT * time.flightS
   if (rollS <= holdS) return 0
   return Math.min(1, Math.max(0, (time.timeS - startS - holdS) / (rollS - holdS)))
