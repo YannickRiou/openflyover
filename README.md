@@ -106,12 +106,28 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 | [Knowledge base](docs/how-it-works.html) | how the app is built, explained for newcomers to web development |
 | [Developer handbook](docs/handbook/index.html) | how the project was built and how to change it (history, web and Rust notions explained, repository tour, recipes, release), to maintain it without help |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | coordinates, shared contracts, modules: read it before coding |
+| [Self-hosting](docs/self-hosting.md) | run your own copy of the website: Caddy, Docker or nginx, HTTPS, updates, what leaves the browser, your own map servers |
 | [Deploying and building](docs/deploying.md) | web server setup (HTTPS, nginx, Apache), desktop application build |
 | [Desktop installers](docs/installers.md) | installers built on GitHub, signing, automatic updates (maintainer setup) |
 | [Data sources](docs/sources.md) | attributions, licenses, offline rules and how each source was checked |
 | [Changelog](CHANGELOG.md) | what each version brings |
 
 The HTML pages are standalone: open them in a browser from a clone, or through any static host.
+
+## Self-hosting
+
+You can run your own copy of the website on your own server and domain: it is a folder of static files (no server
+program, no database, nothing stored on the server; the tracks of your visitors never leave their computers). In short:
+
+```bash
+git clone https://github.com/YannickRiou/openflyover.git && cd openflyover
+npm ci && npm run build     # the site is in dist/
+```
+
+then serve `dist/` over **HTTPS** with Caddy (automatic certificate), Docker + nginx, an existing nginx / Apache or any
+static host. The full path (the three ways, updating, a subfolder or your own domain, what the visitors' browsers
+contact, using your own tile / landmark / weather servers, a checklist and fixes) is in
+[`docs/self-hosting.md`](docs/self-hosting.md).
 
 ## Deploying
 
