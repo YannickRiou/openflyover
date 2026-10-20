@@ -21,6 +21,7 @@ import { CAMERA_KEY_RANGES, SITUATION_DISTANCE_KM_RANGE, SITUATION_TILT_DEFAULT_
 import type { FilmShot, ShotStyle, SituationFraming, StartHeight } from '../film/model'
 import type { HeightSampler } from '../scene/trackLineSet'
 import {
+  LINE_OF_SIGHT_FINE_GAIN,
   LINE_OF_SIGHT_MIN_CLEARANCE_M,
   MIN_GROUND_CLEARANCE_M,
   autoDistanceM,
@@ -488,15 +489,24 @@ function clearOnTheWay(
   let floorY = flight.position.y + Math.hypot(position.x - flight.position.x, position.z - flight.position.z) * Math.tan(SHOT_GLIDE_DEG * DEG)
   if (sample) {
     const clearance = Math.max(MIN_GROUND_CLEARANCE_M, SHOT_CLEARANCE_SHARE * position.distanceTo(target))
+    // the blended aim's height knows nothing of the ground under it either: buried in a slope, no line could clear the
+    // relief up to it (the lift would be the depth × 1 / (1 − f), km for a few hundred metres): the line ends on the
+    // ground above it
+    const end = target.clone()
+    const aim = frame.toLonLat(end)
+    const aimGround = sample(aim.lon, aim.lat)
+    if (aimGround !== undefined) end.y = Math.max(end.y, frame.toLocal(aim.lon, aim.lat, aimGround * exaggeration).y)
     const point = new Vector3()
     for (let i = 0; i <= SHOT_SIGHT_SAMPLES; i++) {
       const f = (0.9 * i) / SHOT_SIGHT_SAMPLES
-      const at = frame.toLonLat(point.lerpVectors(position, target, f))
+      const at = frame.toLonLat(point.lerpVectors(position, end, f))
       const ground = sample(at.lon, at.lat)
       if (ground === undefined) continue
       // the line from the camera to the aim, at f of the way, must pass `clearance · (1 − f)` over the ground there
       const need = frame.toLocal(at.lon, at.lat, ground * exaggeration).y + Math.max(clearance * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
-      floorY = Math.max(floorY, (need - target.y * f) / (1 - f))
+      // its lift eased out where a metre of ground lifts the camera by more than LINE_OF_SIGHT_FINE_GAIN (camera.ts)
+      const u = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)
+      floorY = Math.max(floorY, end.y + ((need - end.y) * u * u * (3 - 2 * u)) / (1 - f))
     }
   }
   if (floorY <= position.y) return view
