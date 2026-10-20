@@ -192,6 +192,7 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
     exportStore().complete({
       url: blob && URL.createObjectURL(blob),
       fileName: request.destination?.fileName ?? videoFileName(request.baseName, session.extension),
+      path: request.destination?.path,
       mimeType: session.mimeType,
       sizeBytes,
       codec: `${session.codec.container}/${session.codec.codec}`,
@@ -650,6 +651,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       // null: already written to the chosen file
       url: blob && URL.createObjectURL(blob),
       fileName: request.destination?.fileName ?? videoFileName(request.baseName, session.extension),
+      path: request.destination?.path,
       mimeType: session.mimeType,
       sizeBytes,
       codec: `${container}/${codec}`,

@@ -21,6 +21,9 @@ import { currentReport } from '../export/guard'
 import { showDiagnostic } from '../export/diagnostic'
 import { targetBitrate, type CodecCandidate } from '../export/encoder'
 import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
+import { estimateRenderSeconds, rateFromHistory } from '../export/history'
+import { useExportHistory } from '../export/historyStore'
+import { getSettingsHistory } from '../project/history'
 import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
 import { t, t as translate, useT } from '../i18n'
 import {
@@ -29,14 +32,20 @@ import {
   EXPORT_HOLD_END_S,
   EXPORT_HOLD_START_S,
   KEYFRAME_INTERVALS_S,
+  NAME_TEMPLATE_MAX,
+  PLATFORM_PRESETS,
   VIDEO_ASPECTS,
   VIDEO_CODEC_CHOICES,
   VIDEO_FPS,
   VIDEO_RESOLUTIONS,
   buildFrameSchedule,
   exportResolutionNote,
+  expandNameTemplate,
+  platformPresetOf,
   videoEncoding,
   videoSize,
+  withPlatformPreset,
+  type PlatformPresetId,
   type VideoCodecChoice,
   type VideoQuality,
   type VideoSettings,
@@ -67,7 +76,7 @@ import { effectiveProjectName } from './shell'
 import { AspectIcon, Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
-import { Button, Checkbox, Chip, Radio, RadioGroup, Select, Tip } from './primitives'
+import { Button, Checkbox, Chip, Radio, RadioGroup, Select, TextField, Tip } from './primitives'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
   { value: 'standard', get label() { return QUALITY_NAMES.standard } },
@@ -189,6 +198,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const pacing = useFilmClock()
   const durationS = pacing.totalTime()
   const trackName = useAppStore((s) => s.tracks[0]?.name)
+  const projectName = useAppStore((s) => s.projectName)
+  const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
   const setSetting = useAppStore((s) => s.setSetting)
   // only what the panel draws: `cancelRequested`, `request`, `renderScale`… changing does not redraw it
   const { phase, frame, frameCount, etaS, result, error, timings } = useExportStore(
@@ -210,6 +221,11 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
     holdStartS: EXPORT_HOLD_START_S,
     holdEndS: EXPORT_HOLD_END_S,
   }).length
+  // the time of the film at the speed of the last one rendered (this session's, else the history's): known before the first film of a session
+  const measuredRate = useExportStore((s) => s.secondsPerMegapixel)
+  const history = useExportHistory((s) => s.entries)
+  const rate = measuredRate ?? rateFromHistory(history)
+  const renderS = rate === null || overlayOnly ? null : estimateRenderSeconds(rate, totalFrames, width, height)
 
   // Ask the browser which codec it can use at this size (H.264 may refuse large or tall frames).
   const probeKey = `${width}x${height}@${video.fps}/${video.quality}/${encoding.codec}/${encoding.bitrateMbps ?? ''}${overlayOnly ? '/alpha' : ''}`
@@ -274,12 +290,30 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   }, [phase, error])
 
   const update = (patch: Partial<VideoSettings>) => setSetting('video', { ...video, ...patch })
+  // one click on a platform: its format as one undo step
+  const applyPlatform = (id: PlatformPresetId) => {
+    const next = withPlatformPreset(video, id)
+    getSettingsHistory().transaction(() => setSetting('video', next))
+    if (next.aspect !== video.aspect) useAppStore.getState().setFreeFraming(false)
+  }
   // what the quality makes the export use (the clouds chosen by hand win over it)
   const tier = effectiveRender(video.quality, clouds)
 
   const start = () => {
     if (!trackName || !codec) return
-    const baseName = overlayOnly ? overlayBaseName(trackName) : trackName
+    const named = expandNameTemplate(
+      video.nameTemplate,
+      {
+        project: effectiveProjectName(projectName, trackName),
+        track: trackName,
+        format: video.aspect.replace(':', 'x'),
+        resolution: video.resolution,
+        fps: String(video.fps),
+        date: new Date(startTime ?? Date.now()).toISOString().slice(0, 10),
+      },
+      trackName,
+    )
+    const baseName = overlayOnly ? overlayBaseName(named) : named
     // asked now: the browser's save picker needs this click
     const fileName = videoFileName(baseName, `.${codec.container}`)
     void chooseVideoDestination(getPlatform(), fileName).then(({ start: go, destination }) => {
@@ -314,6 +348,17 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       {modes}
 
       <h3 className={GROUP}>{t('export.panel.formatGroup')}</h3>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label">{t('export.panel.platforms')}</legend>
+        <div className="chips">
+          {PLATFORM_PRESETS.map((preset) => (
+            <Chip key={preset.id} checked={platformPresetOf(video) === preset.id} disabled={busy} onChange={() => applyPlatform(preset.id)}>
+              {preset.label}
+            </Chip>
+          ))}
+        </div>
+        <p className="type-hint">{t('export.panel.platformsHint')}</p>
+      </fieldset>
       <fieldset className="field min-w-0" disabled={busy}>
         <legend id={`${id}-proportions`} className="type-label">
           {t('export.panel.proportions')}
@@ -428,6 +473,17 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           </p>
         </div>
       </SettingRow>
+      <SettingRow label={t('export.panel.nameTemplate')} value={video.nameTemplate === '' ? t('export.panel.nameTemplatePlaceholder') : video.nameTemplate} paths={['video.nameTemplate']}>
+        <TextField
+          label={t('export.panel.nameTemplate')}
+          value={video.nameTemplate}
+          placeholder={t('export.panel.nameTemplatePlaceholder')}
+          maxLength={NAME_TEMPLATE_MAX}
+          disabled={busy}
+          onChange={(nameTemplate) => update({ nameTemplate })}
+        />
+        <p className="type-hint">{t('export.panel.nameTemplateHint')}</p>
+      </SettingRow>
       <SettingRow label={t('export.panel.keyframes')} value={t('export.panel.keyframesValue', { value: seconds(video.keyframeIntervalS) })} paths={['video.keyframeIntervalS']}>
         <div className="field">
           <label className="type-label" htmlFor={`${id}-keyframes`}>
@@ -496,6 +552,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           t('export.panel.summary', { duration: formatClock(totalFrames / video.fps), frames: formatNumber(totalFrames) }),
           codec && CODEC_LABELS[`${codec.container}/${codec.codec}`],
           estimatedBytes > 0 && `≈ ${formatMegabytes(estimatedBytes)}`,
+          renderS !== null && t('export.panel.renderTime', { time: formatClock(renderS) }),
         ]
           .filter(Boolean)
           .join(' · ')}
@@ -595,6 +652,14 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               .filter(Boolean)
               .join(', '),
           })}
+          {result.path && getPlatform().revealFile && (
+            <>
+              {' '}
+              <Button size="sm" onClick={() => void getPlatform().revealFile?.(result.path!).catch(() => undefined)}>
+                {t('export.panel.openFolder')}
+              </Button>
+            </>
+          )}
         </p>
       )}
 

@@ -300,7 +300,8 @@ describe('web platform', () => {
     it('writes at the given positions and closes', async () => {
       const { picker, writable, handle } = fakePicker()
       const file = await selectPlatform({}).createWritableFile({ fileName: 'Tour.mp4' })
-      expect(picker).toHaveBeenCalledWith({ suggestedName: 'Tour.mp4', types: [{ description: 'MP4', accept: { 'video/mp4': ['.mp4'] } }] })
+      // the same `id` every time: the browser opens the dialog on the folder of the last film
+      expect(picker).toHaveBeenCalledWith({ suggestedName: 'Tour.mp4', types: [{ description: 'MP4', accept: { 'video/mp4': ['.mp4'] } }], id: 'openflyover-film' })
       expect(file?.fileName).toBe('Mon film.mp4')
       const data = new Uint8Array([1, 2])
       await file?.write(data, 40)

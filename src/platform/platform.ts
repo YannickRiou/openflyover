@@ -189,6 +189,8 @@ export interface Platform {
    * `capabilities.canStreamToDisk`; on the web it must be called from the user's click (before any await).
    */
   createWritableFile(options: SaveFileOptions): Promise<WritableFile | null>
+  /** show the file `path` in the system's file manager (desktop only; the website cannot) */
+  revealFile?(path: string): Promise<void>
   /** files of an HTML drop (the desktop window keeps HTML drops: `dragDropEnabled: false`) */
   droppedFiles(dataTransfer: DataTransfer | null | undefined): File[]
   /** offline tiles; null when the browser has no Cache Storage (page not served over HTTPS) */

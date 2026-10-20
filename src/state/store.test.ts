@@ -242,6 +242,7 @@ describe('settings and misc', () => {
         codec: 'auto',
         keyframeIntervalS: 2,
         audioKbps: 192,
+        nameTemplate: '',
       },
       poster: {
         format: 'a4-portrait',

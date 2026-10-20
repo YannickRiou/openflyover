@@ -7,7 +7,9 @@ import {
   entryOf,
   formatSpeed,
   formatWall,
+  estimateRenderSeconds,
   parseHistory,
+  rateFromHistory,
   recordEntry,
   reuseSettings,
   secondsPerMegapixel,
@@ -339,5 +341,40 @@ describe('formatting', () => {
       expect.arrayContaining(['Atmosphère', 'Ombres', 'Nuages', 'Flou de bougé', 'Soleil', 'Fond de carte', 'Relief', 'Caméra']),
     )
     expect(rows.every((r) => r.value !== '' && !r.value.includes('undefined'))).toBe(true)
+  })
+})
+
+describe('render time before the first film of a session', () => {
+  const entry = (patch: Partial<HistoryEntry>): Pick<HistoryEntry, 'at' | 'outcome' | 'overlayOnly' | 'frames' | 'renderMs' | 'waitMs' | 'encodeMs' | 'width' | 'height'> => ({
+    at: 100,
+    outcome: 'done',
+    frames: 300,
+    renderMs: 120_000,
+    waitMs: 20_000,
+    encodeMs: 10_000,
+    width: 1920,
+    height: 1080,
+    ...patch,
+  })
+
+  it('the rate of the last film rendered through to the end, per frame and megapixel (as the export measures it)', () => {
+    const rate = rateFromHistory([entry({})])
+    expect(rate).toBeCloseTo(150 / 300 / 2.0736, 9)
+    // the newest one, in any order; not a canceled, failed or overlay-only render
+    expect(rateFromHistory([entry({ at: 50, renderMs: 10_000 }), entry({ at: 300 }), entry({ at: 200, renderMs: 900_000 })])).toBeCloseTo(rate!, 9)
+    expect(rateFromHistory([entry({ at: 400, outcome: 'canceled' }), entry({ at: 450, outcome: 'error' }), entry({ at: 500, overlayOnly: true }), entry({ at: 10 })])).toBeCloseTo(rate!, 9)
+  })
+
+  it('none without a usable render', () => {
+    expect(rateFromHistory([])).toBeNull()
+    expect(rateFromHistory([entry({ outcome: 'canceled' })])).toBeNull()
+    expect(rateFromHistory([entry({ frames: 0 })])).toBeNull()
+    expect(rateFromHistory([entry({ renderMs: 0, waitMs: 0, encodeMs: 0 })])).toBeNull()
+  })
+
+  it('the time of a film: its frames and megapixels at that rate', () => {
+    expect(estimateRenderSeconds(0.25, 1800, 1920, 1080)).toBeCloseTo(0.25 * 1800 * 2.0736, 9)
+    expect(estimateRenderSeconds(0.25, 1800, 3840, 2160)).toBeCloseTo(4 * estimateRenderSeconds(0.25, 1800, 1920, 1080), 9)
+    expect(estimateRenderSeconds(0.25, 0, 1920, 1080)).toBe(0)
   })
 })

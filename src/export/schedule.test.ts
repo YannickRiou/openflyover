@@ -4,13 +4,18 @@ import { DEFAULT_FILM } from '../film/model'
 import { DEFAULT_PACING } from '../flyover/pacing'
 import {
   DEFAULT_VIDEO_SETTINGS,
+  NAME_TEMPLATE_MAX,
+  PLATFORM_PRESETS,
   VIDEO_ASPECTS,
   VIDEO_RESOLUTIONS,
   buildFrameSchedule,
   buildFrameTimes,
+  expandNameTemplate,
   isValidVideoSettings,
+  platformPresetOf,
   videoEncoding,
   videoSize,
+  withPlatformPreset,
   withVideoDefaults,
   type VideoSettings,
 } from './schedule'
@@ -56,6 +61,50 @@ describe('video formats', () => {
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, codec: 'av1' as never })).toBe(false)
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, keyframeIntervalS: 3 })).toBe(false)
     expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, audioKbps: 64 })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, nameTemplate: '{track} – {format}' })).toBe(true)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, nameTemplate: 'x'.repeat(NAME_TEMPLATE_MAX + 1) })).toBe(false)
+    expect(isValidVideoSettings({ ...DEFAULT_VIDEO_SETTINGS, nameTemplate: 3 as never })).toBe(false)
+  })
+
+  it('an older project has no name template: the name of the track, as before', () => {
+    const upgraded = withVideoDefaults({ aspect: '16:9', resolution: '1080p', fps: 30, quality: 'high' }) as VideoSettings
+    expect(upgraded.nameTemplate).toBe('')
+    expect(isValidVideoSettings(upgraded)).toBe(true)
+  })
+
+  it('file name template: its variables, an unknown one left as typed, the fallback when nothing is left', () => {
+    const vars = { project: 'Tour', track: 'Jour 1', format: '16x9', resolution: '4k', fps: '30', date: '2026-07-02' }
+    expect(expandNameTemplate('{project} – {track} – {format}-{resolution}@{fps}', vars, 'x')).toBe('Tour – Jour 1 – 16x9-4k@30')
+    expect(expandNameTemplate('{date} {track}', vars, 'x')).toBe('2026-07-02 Jour 1')
+    expect(expandNameTemplate('{nope} {track}', vars, 'x')).toBe('{nope} Jour 1')
+    expect(expandNameTemplate('', vars, 'Jour 1')).toBe('Jour 1')
+    expect(expandNameTemplate('   ', vars, 'Jour 1')).toBe('Jour 1')
+    expect(expandNameTemplate('{track}', { ...vars, track: '' }, 'repli')).toBe('repli')
+  })
+
+  it('platform presets: their format, H.264 and a bitrate by hand; the quality and the rest stay', () => {
+    const base: VideoSettings = { ...DEFAULT_VIDEO_SETTINGS, quality: 'max', keyframeIntervalS: 5, audioKbps: 256, nameTemplate: '{track}' }
+    for (const preset of PLATFORM_PRESETS) {
+      const next = withPlatformPreset(base, preset.id)
+      expect(next).toMatchObject(preset.video)
+      expect(next).toMatchObject({ quality: 'max', keyframeIntervalS: 5, audioKbps: 256, nameTemplate: '{track}' })
+      expect(isValidVideoSettings(next), preset.id).toBe(true)
+      expect(next.codec).toBe('avc')
+      expect(next.manualBitrate).toBe(true)
+    }
+    expect(withPlatformPreset(base, 'vertical')).toMatchObject({ aspect: '9:16', resolution: '1080p' })
+    expect(withPlatformPreset(base, 'youtube-4k')).toMatchObject({ aspect: '16:9', resolution: '4k', fps: 30 })
+    expect(new Set(PLATFORM_PRESETS.map((p) => p.id)).size).toBe(PLATFORM_PRESETS.length)
+  })
+
+  it('the preset a setting has exactly is the one lit; a changed field lights none', () => {
+    const base: VideoSettings = { ...DEFAULT_VIDEO_SETTINGS }
+    expect(platformPresetOf(base)).toBeNull()
+    const feed = withPlatformPreset(base, 'feed')
+    expect(platformPresetOf(feed)).toBe('feed')
+    expect(platformPresetOf({ ...feed, bitrateMbps: 9 })).toBeNull()
+    expect(platformPresetOf({ ...feed, fps: 60 })).toBeNull()
+    for (const preset of PLATFORM_PRESETS) expect(platformPresetOf(withPlatformPreset(base, preset.id))).toBe(preset.id)
   })
 
   it('hands the encoder the bitrate by hand only when it is chosen', () => {

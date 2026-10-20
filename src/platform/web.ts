@@ -15,6 +15,8 @@ type SaveFilePicker = (options: {
   types: ReturnType<typeof pickerTypes>
   /** the dialog opens on the folder of this file */
   startIn?: FileSystemHandle
+  /** the browser remembers the last folder chosen with this id (Chrome, Edge) */
+  id?: string
 }) => Promise<FileSystemFileHandle & { remove?: () => Promise<void> }>
 
 type OpenFilePicker = (options: { multiple: boolean; types: ReturnType<typeof pickerTypes> }) => Promise<FileSystemFileHandle[]>
@@ -116,7 +118,7 @@ async function createWritableFile(options: SaveFileOptions): Promise<WritableFil
   let handle: Awaited<ReturnType<SaveFilePicker>>
   try {
     // called before any await: the picker needs the user's click
-    handle = await picker({ suggestedName: options.fileName, types: pickerTypes(saveFilters(options)) })
+    handle = await picker({ suggestedName: options.fileName, types: pickerTypes(saveFilters(options)), id: 'openflyover-film' })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return null
     throw error
