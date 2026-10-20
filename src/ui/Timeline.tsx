@@ -47,7 +47,12 @@ import {
   rollClosing,
   edgeScrollSpeed,
   fitPxPerS,
+  dragBlocks,
   followScroll,
+  formatFrameTimecode,
+  snapTargetsOn,
+  timedBlockIds,
+  zoomToSpan,
   followStops,
   formatFilmTime,
   formatSpeedFactor,
@@ -56,6 +61,8 @@ import {
   photoFilmTime,
   pressedGrip,
   removeFilmItem,
+  rippleDrag,
+  rippleRemove,
   rulerTicks,
   snapTargets,
   snapper,
@@ -65,6 +72,7 @@ import {
 } from '../film/timeline'
 import type { DragContext, Grip, SnapBlock, SnapTarget, TimelineItem } from '../film/timeline'
 import { clampWorkArea, dragWorkArea } from '../film/workArea'
+import { Filmstrip, filmstripCount } from './Filmstrip'
 import { useLaneState } from './laneState'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
@@ -84,7 +92,7 @@ import { ModifiedMarker } from './ModifiedMarker'
 import { setPreferences, usePreferences } from './preferences'
 import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
-import { spacePlays, withShortcut } from './shortcuts'
+import { keyFocus, spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import { Button, Checkbox, Menu, Popover, Select, Slider, Tip } from './primitives'
 import type { MenuItem } from './primitives'
@@ -385,6 +393,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const { playing, progress, timeS: storedTimeS, speed } = livePlayback ?? frozenPlayback ?? useAppStore.getState().playback
   const timelineClock = usePreferences((s) => s.timelineClock)
   const magnet = usePreferences((s) => s.timelineMagnet)
+  const snapOn = usePreferences((s) => s.timelineSnap)
+  const frameTimecode = usePreferences((s) => s.timelineFrames)
+  const fps = useAppStore((s) => s.settings.video.fps)
   const setPlaying = useAppStore((s) => s.setPlaying)
   const setProgress = useAppStore((s) => s.setProgress)
   const setSpeed = useAppStore((s) => s.setSpeed)
@@ -448,6 +459,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const edgeRef = useRef<EdgeScroll | null>(null)
   /** zoom for the wheel listener */
   const zoomRef = useRef(zoom)
+  /** Shift held while an edge is dragged: the blocks after it follow (« décalage en chaîne ») */
+  const rippleRef = useRef(false)
   /** scroll to apply once the zoomed content is laid out */
   const pendingScrollRef = useRef<number | null>(null)
   /** centred timeline: the scroll last set to follow the playhead (its scroll event is not a seek) */
@@ -568,6 +581,19 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (next !== el.scrollLeft) el.scrollLeft = next
   })
 
+  // Z zooms the timeline to the selected block (or the work area, or the whole film)
+  const zoomSelectionRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'z' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.repeat || e.defaultPrevented) return
+      if (keyFocus(e.target) === 'text') return
+      e.preventDefault()
+      zoomSelectionRef.current()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   // the music plays along the preview
   useEffect(() => startMusicPreview(), [])
 
@@ -649,7 +675,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     clockOf: (stops: readonly FilmStop[]) => buildFilmClock({ ...input, stops }),
     clockOfSpeeds: (speeds: readonly FilmSpeed[]) => buildFilmClock({ ...input, speeds }),
     lengthM,
-    targets: snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }),
+    targets: snapTargetsOn(snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }), snapOn),
     targetsM: candidates.map((c) => c.atM),
     snapS: SNAP_PX / pxPerS,
     releaseS: RELEASE_PX / pxPerS,
@@ -658,10 +684,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     audioFileS: (src) => pictures[src]?.durationS,
   })
   const keyIds = [...clock.cameraKeys, ...clock.paramKeys, ...clock.markerKeys].map((k) => k.id)
+  /** the texts, media and music: blocks by film time that can be picked together (Ctrl + click), moved, copied and removed as a group */
+  const blockIds = timedBlockIds(film)
   /** the keys selected together, or the key selected on its own */
   const pickedKeys = group.length > 0 ? group : selected !== null && keyIds.includes(selected) ? [selected] : []
   /** a key added to the selection, or left out of it (Ctrl) */
   const toggleKey = (id: string) => setKeys(pickedKeys.includes(id) ? pickedKeys.filter((k) => k !== id) : [...pickedKeys, id])
+  /** a block added to the blocks picked together, or left out of them (Ctrl + click); a group is only of blocks, or only of keys */
+  const toggleBlock = (id: string) => {
+    const picked = group.length > 0 && group.every((g) => blockIds.includes(g)) ? group : selected !== null && blockIds.includes(selected) ? [selected] : []
+    setKeys(picked.includes(id) ? picked.filter((k) => k !== id) : [...picked, id])
+  }
   /** the keys of the group deleted in one undo step */
   const removeKeys = (ids: readonly string[]) => editFilm((f) => ({ film: ids.reduce(removeFilmItem, f), id: null }))
   const isPicked = (id: string) => selected === id || group.includes(id) || (marquee?.ids.includes(id) ?? false)
@@ -697,6 +730,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         label: together ? t('timeline.menu.removeKeys', { count: together.length }) : t(keyIds.includes(item) ? 'timeline.menu.removeKey' : 'timeline.menu.remove'),
         onSelect: () => (together ? removeKeys(together) : remove(item)),
       })
+      const picked = together ?? [item]
+      if (picked.every((id) => blockIds.includes(id))) {
+        items.push({
+          id: 'remove-close',
+          label: t('timeline.menu.removeClose', { count: picked.length }),
+          onSelect: () => editFilm((f) => ({ film: rippleRemove(f, picked), id: null })),
+        })
+      }
     } else if (!item && lane) {
       const timeS = Math.max(0, timeAt(e.clientX))
       items.push({ id: 'add-key', label: t('timeline.menu.addKey'), onSelect: () => addKeyAt(lane, timeS) })
@@ -880,6 +921,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       keepGroupRef.current = true
       return toggleKey(item)
     }
+    if ((e.ctrlKey || e.metaKey) && blockIds.includes(item)) {
+      keepGroupRef.current = true
+      return toggleBlock(item)
+    }
     // pressed in the group, a key drags it whole; released without moving, it is selected alone
     const together = group.includes(item) ? group : undefined
     if (!together) setSelected(item)
@@ -955,7 +1000,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       g.result = dragCard(g.start, g.item, g.grip, dx / pxPerS, clock, snapper(ctx))
       setCardDraft(g.result)
     } else {
-      let dragged = g.group ? dragKeys(g.start, g.group, g.item, dx / pxPerS, ctx) : dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      let dragged = g.group
+        ? g.group.every((id) => blockIds.includes(id))
+          ? dragBlocks(g.start, g.group, g.item, dx / pxPerS, ctx)
+          : dragKeys(g.start, g.group, g.item, dx / pxPerS, ctx)
+        : dragFilm(g.start, g.item, g.grip, dx / pxPerS, ctx)
+      // Shift on the end of a text, a photo or a clip: what comes after it follows
+      if (!g.group && g.grip === 'end' && rippleRef.current) dragged = rippleDrag(g.start, dragged, g.item)
       if (g.item === 'closing' && g.grip === 'start') {
         const rolled = rollClosing(g.start, dragged, durationS)
         dragged = rolled.film
@@ -1007,6 +1058,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const g = gestureRef.current
     if (!g) return
     if (g.kind === 'marquee') g.y = e.clientY - (contentRef.current?.getBoundingClientRect().top ?? 0)
+    rippleRef.current = e.shiftKey
     applyPointer(e.clientX, e.altKey)
     // a press that only selects a block (not dragged yet) does not scroll
     if (g.kind === 'scrub' || g.kind === 'marquee' || ((g.kind === 'edit' || g.kind === 'card') && g.result) || (g.kind === 'reorder' && g.moved)) followEdge(e.clientX, e.altKey)
@@ -1088,7 +1140,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     // a key of the group: Delete and the arrows are for the whole group
     const together = group.includes(item) ? group : undefined
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (together) removeKeys(together)
+      const picked = together ?? [item]
+      // Shift: the gap closes (« décalage en chaîne »)
+      if (e.shiftKey && picked.every((id) => blockIds.includes(id))) editFilm((f) => ({ film: rippleRemove(f, picked), id: null }))
+      else if (together) removeKeys(together)
       else remove(item)
     } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey) {
       const step = (e.shiftKey ? FINE_NUDGE_S : NUDGE_S) * (e.key === 'ArrowLeft' ? -1 : 1)
@@ -1131,6 +1186,28 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     pendingScrollRef.current = 0
     setZoom(ZOOM_RANGE.min)
   }
+  /** The stretch of the block or key `id` on the timeline, in film time (read from where it is drawn). */
+  const spanOfItem = (id: string): { startS: number; endS: number } | null => {
+    const el = contentRef.current ? [...contentRef.current.querySelectorAll<HTMLElement>('[data-item]')].find((b) => b.dataset.item === id) : undefined
+    const left = parseFloat(el?.style.left ?? '')
+    if (!el || !Number.isFinite(left)) return null
+    const width = parseFloat(el.style.width) || 0
+    return { startS: (left - pad) / pxPerS, endS: (left + width - pad) / pxPerS }
+  }
+  /** « Zoom sur la sélection »: the selected block (or the work area, else the whole film) fills the view. */
+  const zoomToSelection = () => {
+    const el = scrollerRef.current
+    if (!el || centred) return
+    const span = (selected !== null ? spanOfItem(selected) : null) ?? (workSpan ? { startS: workSpan.inS, endS: workSpan.outS } : null)
+    if (!span) return fitZoom()
+    const next = zoomToSpan(span.startS, span.endS, el.clientWidth, total, PAD_PX)
+    pendingScrollRef.current = next.scrollLeft
+    zoomRef.current = next.zoom
+    // the scroll is applied once the zoom has changed; with the same zoom it is applied now
+    if (Math.abs(next.zoom - zoom) < 1e-9) el.scrollLeft = next.scrollLeft
+    setZoom(next.zoom)
+  }
+  zoomSelectionRef.current = zoomToSelection
 
   // --- blocks ------------------------------------------------------------------------------------------------
   const liftedItem = stageDrag ? stageItemId(stageDrag.id) : null
@@ -1160,7 +1237,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       key={item}
       role="button"
       tabIndex={0}
-      aria-pressed={selected === item}
+      aria-pressed={selected === item || group.includes(item)}
       aria-label={t('timeline.blockRange', { description, from: formatFilmTime(startS), to: formatFilmTime(endS) })}
       title={label}
       data-item={item}
@@ -1183,7 +1260,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         setSelected(item)
         onContentPointerDown(e)
       }}
-      onFocus={() => setSelected(item)}
+      onFocus={() => (blockIds.includes(item) ? focusKey(item) : setSelected(item))}
       onKeyDown={(e) => onBlockKeyDown(e, item)}
     >
       {grips.includes('start') && <span className={`${GRIP} left-0`} onPointerDown={(e) => startGrip(e, item, 'start', grips)} />}
@@ -1335,7 +1412,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         />
         {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
         <span className={TIME}>
-          <strong className="text-accent-light" data-testid="timeline-time">{formatTimecode(playheadS, true)}</strong> / {formatTimecode(clock.totalTime())}
+          <strong className="text-accent-light" data-testid="timeline-time">{frameTimecode ? formatFrameTimecode(playheadS, fps) : formatTimecode(playheadS, true)}</strong> / {frameTimecode ? formatFrameTimecode(clock.totalTime(), fps) : formatTimecode(clock.totalTime())}
         </span>
         <span className={`${READOUT} ${centred ? 'hidden' : collapsed ? '@max-[1200px]/film-tl:hidden phone-any:hidden' : '@max-[1200px]/film-tl:hidden'}`}>
           <span className="inline-block text-right" style={{ minWidth: `${formatDistance(lengthM).length + 1}ch` }}>
@@ -1464,6 +1541,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onClick={() => zoomBy(BUTTON_ZOOM)}
               disabled={zoom >= ZOOM_RANGE.max}
             />
+            <BarButton icon="maximize" name={t('timeline.zoom.selection')} tip={withShortcut(t('timeline.zoom.selectionTip'), 'zoom-selection')} onClick={zoomToSelection} disabled={!hasTrack} />
             <BarButton icon="move-horizontal" name={t('timeline.zoom.fit')} tip={t('timeline.zoom.fitTip')} onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
           </div>
           {workSpan && <BarButton icon="rotate-cw" name={t('timeline.workArea.clear')} tip={t('timeline.workArea.clearTip', { from: formatFilmTime(workSpan.inS), to: formatFilmTime(workSpan.outS) })} on onClick={() => setWorkArea(null)} />}
@@ -1785,6 +1863,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     ['start', 'move', 'end'],
                     pictures[m.src]?.thumb,
                     m.kind === 'video' ? 'video' : undefined,
+                    m.kind === 'video' && !exporting ? (
+                      <Filmstrip
+                        key="filmstrip"
+                        asset={pictures[m.src]}
+                        inS={m.inS ?? 0}
+                        outS={m.outS ?? pictures[m.src]?.durationS ?? 0}
+                        count={filmstripCount(m.durationS * pxPerS)}
+                      />
+                    ) : undefined,
                   ),
                 )}
               </div>

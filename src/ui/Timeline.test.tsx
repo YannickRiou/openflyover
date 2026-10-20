@@ -15,6 +15,7 @@ import { addMarkerKeyHere, addParamKeyHere, getFilmSource } from '../scene/usePa
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { FilmInspector } from './FilmInspector'
 import { OverlayPanel } from './OverlayPanel'
+import { setPreferences } from './preferences'
 import { Timeline } from './Timeline'
 
 describe('Timeline', () => {
@@ -287,6 +288,57 @@ describe('Timeline', () => {
       expect(JSON.parse(localStorage.getItem('openflyover.lanes.v1')!)).toEqual({ folded: [], locked: [] })
       // the other lanes are not touched, the blocks stay in the page when a lane is folded
       expect(host.querySelectorAll('[data-testid="timeline-lane"]').length).toBeGreaterThan(5)
+      act(() => root.unmount())
+    })
+
+    it('the timecode of the bar counts frames when asked, and the button to zoom to the selection is there and harmless', async () => {
+      const { host, root } = await setup()
+      const time = () => host.querySelector('[data-testid="timeline-time"]')!.textContent
+      expect(time()).toMatch(/^\d\d:\d\d\.\d$|^\d\d:\d\d,\d$|^\d+:\d\d[.,]\d$/)
+      await act(async () => setPreferences({ timelineFrames: true }))
+      expect(time()).toMatch(/^\d\d:\d\d:\d\d$/)
+      await act(async () => setPreferences({ timelineFrames: false }))
+      const zoom = host.querySelector<HTMLElement>('button[aria-label="Zoomer sur la sélection"]')
+      expect(zoom).not.toBeNull()
+      // nothing selected, no work area: the whole film in the view, as « Ajuster »
+      await act(async () => zoom!.click())
+      expect(host.querySelector('[data-testid="timeline-time"]')).not.toBeNull()
+      act(() => root.unmount())
+    })
+
+    it('Ctrl + click picks texts together, one drag moves them all, Shift + Delete removes them and closes the gaps', async () => {
+      HTMLElement.prototype.setPointerCapture ??= () => {}
+      const { host, root } = await setup()
+      const texts = [
+        { id: 'text-1', startS: 1, durationS: 1, text: 'Un', anchor: 'bottom-center' as const, size: 1 },
+        { id: 'text-2', startS: 3, durationS: 1, text: 'Deux', anchor: 'bottom-center' as const, size: 1 },
+        { id: 'text-3', startS: 6, durationS: 1, text: 'Trois', anchor: 'bottom-center' as const, size: 1 },
+      ]
+      await act(async () => useAppStore.getState().setSetting('film', { ...useAppStore.getState().settings.film, texts }))
+      const block = (id: string) => host.querySelector<HTMLElement>(`[data-item="${id}"]`)!
+      const pointer = (type: string, init: Record<string, unknown> = {}) =>
+        Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, ...init }), { pointerId: 1, isPrimary: true, pointerType: 'mouse' })
+      // Ctrl + click: the first alone is selected, the second joins it
+      await act(async () => void block('text-1').dispatchEvent(pointer('pointerdown', { ctrlKey: true })))
+      await act(async () => void block('text-1').dispatchEvent(pointer('pointerup', { ctrlKey: true })))
+      expect(useAppStore.getState().filmSelection).toBe('text-1')
+      await act(async () => void block('text-2').dispatchEvent(pointer('pointerdown', { ctrlKey: true })))
+      await act(async () => void block('text-2').dispatchEvent(pointer('pointerup', { ctrlKey: true })))
+      expect(useAppStore.getState().filmKeys).toEqual(['text-1', 'text-2'])
+      expect(block('text-1').getAttribute('aria-pressed')).toBe('true')
+      expect(block('text-2').getAttribute('aria-pressed')).toBe('true')
+      expect(block('text-3').getAttribute('aria-pressed')).toBe('false')
+      // Ctrl + click on a picked one takes it out
+      await act(async () => void block('text-2').dispatchEvent(pointer('pointerdown', { ctrlKey: true })))
+      await act(async () => void block('text-2').dispatchEvent(pointer('pointerup', { ctrlKey: true })))
+      expect(useAppStore.getState().filmKeys).toEqual([])
+      expect(useAppStore.getState().filmSelection).toBe('text-1')
+      // two picked again, then Shift + Delete on one: both go and the third comes back by their lengths
+      await act(async () => useAppStore.getState().setFilmKeys(['text-1', 'text-2']))
+      await act(async () => void block('text-1').dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', shiftKey: true, bubbles: true, cancelable: true })))
+      const left = useAppStore.getState().settings.film.texts
+      expect(left.map((t) => [t.id, t.startS])).toEqual([['text-3', 4]])
+      expect(useAppStore.getState().filmKeys).toEqual([])
       act(() => root.unmount())
     })
 

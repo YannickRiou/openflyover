@@ -7,9 +7,19 @@ import type { FilmClockInput } from './clock'
 import { AUDIO_DEFAULTS, AUTO_STOP_S, DEFAULT_FILM, MEDIA_DEFAULTS, MIN_SPEED_SPAN_M, SITUATION_DURATION_S, VIDEO_SOUND_DEFAULTS, clipTimeS, isValidFilm } from './model'
 import type { Film, FilmAudio, FilmMedia, FilmSpeed, FilmStop, FilmText } from './model'
 import {
+  copyBlocks,
+  dragBlocks,
   duplicateFilmItem,
   followScroll,
+  formatFrameTimecode,
+  pasteBlocks,
+  rippleDrag,
+  rippleRemove,
+  snapGroupOf,
+  snapTargetsOn,
   splitFilmItem,
+  timedBlockIds,
+  zoomToSpan,
   NEW_MEDIA_S,
   NEW_VIDEO_MAX_S,
   addCameraKey,
@@ -1036,5 +1046,141 @@ describe('duplicate and split', () => {
     expect(splitFilmItem(film, 'text-1', 9)).toBeNull()
     expect(splitFilmItem(film, 'media-2', 22)).toBeNull()
     expect(splitFilmItem(film, 'media-3', 32)).toBeNull()
+  })
+})
+
+describe('timecode in frames', () => {
+  it('minutes, seconds and the frame of the second, at the frame rate of the film', () => {
+    expect(formatFrameTimecode(0, 30)).toBe('00:00:00')
+    expect(formatFrameTimecode(67.4, 30)).toBe('01:07:12')
+    expect(formatFrameTimecode(1.5, 24)).toBe('00:01:12')
+    expect(formatFrameTimecode(59.99, 25)).toBe('01:00:00')
+    expect(formatFrameTimecode(125, 60)).toBe('02:05:00')
+    expect(formatFrameTimecode(-3, 30)).toBe('00:00:00')
+    // a nonsense rate is taken as 1
+    expect(formatFrameTimecode(3, 0)).toBe('00:03:00')
+  })
+})
+
+describe('zoomToSpan', () => {
+  // a 600 px view with 10 px of padding, a 100 s film: 5.8 px a second fitted
+  const fit = 580 / 100
+
+  it('a stretch fills the view with its margin, centred', () => {
+    const { zoom, scrollLeft } = zoomToSpan(40, 50, 600, 100, 10)
+    // 10 s plus 15 % at each side = 13 s over 600 px
+    expect((fit * zoom) * 13).toBeCloseTo(600, 6)
+    // the middle of the stretch (45 s) is the middle of the view
+    expect(10 + 45 * fit * zoom - scrollLeft).toBeCloseTo(300, 6)
+  })
+
+  it('never zooms out past the whole film nor in past the maximum, and a point-like stretch is given a minimum', () => {
+    expect(zoomToSpan(0, 100, 600, 100, 10).zoom).toBe(1)
+    expect(zoomToSpan(10, 10.1, 600, 100, 10).zoom).toBeLessThanOrEqual(50)
+    const point = zoomToSpan(30, 30, 600, 100, 10)
+    expect(point.zoom).toBeCloseTo(600 / (2 * 1.3) / fit, 6)
+    expect(zoomToSpan(0, 1, 600, 100, 10).scrollLeft).toBe(0)
+  })
+})
+
+describe('snap groups', () => {
+  const target = (kind: SnapTarget['kind']): SnapTarget => ({ timeS: 1, label: kind, kind })
+
+  it('each kind of target belongs to one family', () => {
+    expect(snapGroupOf('playhead')).toBe('playhead')
+    expect(snapGroupOf('ruler')).toBe('ruler')
+    expect(snapGroupOf('junction')).toBe('marks')
+    expect(snapGroupOf('highlight')).toBe('marks')
+    for (const kind of ['edge', 'centre', 'end'] as const) expect(snapGroupOf(kind)).toBe('blocks')
+  })
+
+  it('the families switched off leave their targets out, the others stay', () => {
+    const all = (['edge', 'centre', 'end', 'playhead', 'junction', 'ruler', 'highlight'] as const).map(target)
+    const on = { playhead: true, blocks: true, ruler: true, marks: true }
+    expect(snapTargetsOn(all, on)).toHaveLength(7)
+    expect(snapTargetsOn(all, { ...on, blocks: false }).map((t) => t.kind)).toEqual(['playhead', 'junction', 'ruler', 'highlight'])
+    expect(snapTargetsOn(all, { playhead: false, blocks: false, ruler: false, marks: false })).toEqual([])
+    expect(snapTargetsOn(all, { ...on, ruler: false, marks: false }).map((t) => t.kind)).toEqual(['edge', 'centre', 'end', 'playhead'])
+  })
+})
+
+describe('blocks as a group', () => {
+  const text = (id: string, startS: number, durationS: number, extra: Partial<FilmText> = {}): FilmText => ({ id, startS, durationS, text: id, anchor: 'bottom-center', size: 1, ...extra })
+  const photo = (id: string, startS: number, durationS: number): FilmMedia => ({ id, startS, durationS, kind: 'image', src: `src-${id}`, ...MEDIA_DEFAULTS })
+  const music = (id: string, startS: number, durationS: number): FilmAudio => ({ id, startS, durationS, src: `snd-${id}`, ...AUDIO_DEFAULTS, inS: 0 })
+  const film: Film = {
+    ...DEFAULT_FILM,
+    autoStops: false,
+    texts: [text('text-1', 2, 3), text('text-2', 8, 2), text('text-3', 12, 2, { stopId: 'stop-1' })],
+    media: [photo('media-1', 5, 4)],
+    audio: [music('music-1', 0, 30)],
+  }
+  const ctxOf = (snapS = 0): DragContext => contextOf({ ...DEFAULT_FILM, autoStops: false }, { snapS })
+  const startsOf = (f: Film) => Object.fromEntries([...f.texts, ...f.media, ...f.audio].map((i) => [i.id, i.startS]))
+
+  it('lists the ids of the texts, the media and the music', () => {
+    expect(timedBlockIds(film)).toEqual(['text-1', 'text-2', 'text-3', 'media-1', 'music-1'])
+  })
+
+  it('moves the blocks of a group by the same seconds, whichever leads, none before the start', () => {
+    const moved = dragBlocks(film, ['text-1', 'text-2', 'media-1'], 'text-2', 3, ctxOf())
+    expect(startsOf(moved)).toMatchObject({ 'text-1': 5, 'text-2': 11, 'media-1': 8, 'text-3': 12, 'music-1': 0 })
+    // the first of them stops at the start of the film and the others keep their gaps
+    const back = dragBlocks(film, ['text-1', 'text-2', 'media-1'], 'media-1', -20, ctxOf())
+    expect(startsOf(back)).toMatchObject({ 'text-1': 0, 'text-2': 6, 'media-1': 3 })
+    expect(dragBlocks(film, ['text-1'], 'text-1', 0, ctxOf())).toBe(film)
+    expect(dragBlocks(film, ['text-1'], 'nope', 3, ctxOf())).toBe(film)
+  })
+
+  it('a magnet that catches the lead moves the others by what it caught', () => {
+    const moved = dragBlocks(film, ['text-1', 'media-1'], 'text-1', 2.9, ctxOf(1))
+    // text-1 would start at 4.9: the magnet (no targets) leaves it, so everything moves by 2.9
+    expect(startsOf(moved)).toMatchObject({ 'text-1': 4.9, 'media-1': 7.9 })
+  })
+
+  it('ripple delete: what follows in the same lane moves earlier by its length; other lanes and stop-attached items stay', () => {
+    const next = rippleRemove(film, ['text-1'])
+    expect(next.texts.map((t) => [t.id, t.startS])).toEqual([['text-2', 5], ['text-3', 12]])
+    expect(startsOf(next)).toMatchObject({ 'media-1': 5, 'music-1': 0 })
+    // two removed in a lane: each gap is closed
+    const two = rippleRemove({ ...film, texts: [...film.texts, text('text-4', 20, 1)] }, ['text-1', 'text-2'])
+    expect(two.texts.map((t) => [t.id, t.startS])).toEqual([['text-3', 12], ['text-4', 15]])
+    expect(rippleRemove(film, ['nope'])).toBe(film)
+    expect(rippleRemove(film, ['media-1']).media).toEqual([])
+  })
+
+  it('ripple drag of an end: the blocks after it follow the change of its end', () => {
+    const dragged = { ...film, texts: film.texts.map((t) => (t.id === 'text-1' ? { ...t, durationS: 5 } : t)) }
+    const next = rippleDrag(film, dragged, 'text-1')
+    expect(startsOf(next)).toMatchObject({ 'text-1': 2, 'text-2': 10, 'text-3': 12 })
+    // shorter: they come back
+    const shorter = rippleDrag(film, { ...film, texts: film.texts.map((t) => (t.id === 'text-1' ? { ...t, durationS: 1 } : t)) }, 'text-1')
+    expect(startsOf(shorter)).toMatchObject({ 'text-2': 6 })
+    // its end did not move, or it is not a timed block: unchanged
+    expect(rippleDrag(film, film, 'text-1')).toBe(film)
+    expect(rippleDrag(film, dragged, 'nope')).toBe(dragged)
+  })
+
+  it('copies blocks and pastes them at the playhead, keeping their gaps, with new ids and no stop', () => {
+    const clip = copyBlocks(film, ['text-2', 'media-1', 'text-3'])!
+    expect(clip.texts.map((t) => t.id)).toEqual(['text-2', 'text-3'])
+    expect(copyBlocks(film, ['stop-1', 'nope'])).toBeNull()
+    const pasted = pasteBlocks(film, clip, 20)!
+    expect(pasted.ids).toHaveLength(3)
+    expect(new Set([...timedBlockIds(pasted.film)]).size).toBe(timedBlockIds(pasted.film).length)
+    // earliest (media-1 at 5) goes to 20: text-2 (8) to 23, text-3 (12) to 27
+    expect(pasted.ids.map((id) => pasted.film.texts.find((t) => t.id === id)?.startS ?? pasted.film.media.find((m) => m.id === id)?.startS)).toEqual([23, 27, 20])
+    expect(pasted.film.texts.every((t) => t.id === 'text-3' || !t.stopId)).toBe(true)
+    expect(pasted.film.texts.find((t) => t.id === pasted.ids[1])?.stopId).toBeUndefined()
+    // pasting twice does not reuse an id
+    const again = pasteBlocks(pasted.film, clip, 40)!
+    expect(new Set(timedBlockIds(again.film)).size).toBe(timedBlockIds(again.film).length)
+  })
+
+  it('leaves out a medium whose file is gone and a clip synced with the track; nothing left, nothing pasted', () => {
+    const clip = copyBlocks({ ...film, media: [photo('media-1', 5, 4), { ...photo('media-2', 6, 2), sync: { atMs: 0, offsetS: 0, follow: true } as never }] }, ['media-1', 'media-2', 'text-1'])!
+    expect(pasteBlocks(film, clip, 0)!.ids).toHaveLength(2)
+    expect(pasteBlocks(film, clip, 0, (src) => src !== 'src-media-1')!.ids).toHaveLength(1)
+    expect(pasteBlocks(film, copyBlocks(film, ['media-1'])!, 0, () => false)).toBeNull()
   })
 })

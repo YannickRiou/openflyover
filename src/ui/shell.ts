@@ -2,6 +2,8 @@
  * Pure logic of the application shell (no React, no DOM): framing of the 3D preview to the output format,
  * routing of the opened or dropped files, project name and save state (shortcuts: `shortcuts.ts`).
  */
+import { SNAP_GROUPS } from '../film/timeline'
+import type { SnapGroup } from '../film/timeline'
 import { isRecord } from '../core/guards'
 import { DEFAULT_APPEARANCE, parseAppearance } from './appearance'
 import type { Appearance } from './appearance'
@@ -271,6 +273,10 @@ export interface Preferences {
   timelineClock: boolean
   /** the timeline's magnet: blocks dragged snap to the edges, centres and marks of the others */
   timelineMagnet: boolean
+  /** which families of targets the magnet snaps to (`SNAP_GROUPS`) */
+  timelineSnap: Record<SnapGroup, boolean>
+  /** the timecode of the bar in frames (`mm:ss:ff`, at the fps of the export) instead of seconds and tenths */
+  timelineFrames: boolean
   /** look of the interface (`appearance.ts`) */
   appearance: Appearance
   /** language of the interface and of the film overlay (`i18n/`) */
@@ -284,6 +290,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   performance: { fps: true, gpu: false, tiles: true, memory: true, system: true },
   timelineClock: false,
   timelineMagnet: true,
+  timelineSnap: { playhead: true, blocks: true, ruler: true, marks: true },
+  timelineFrames: false,
   appearance: DEFAULT_APPEARANCE,
   language: DEFAULT_LANGUAGE,
   whatsNewSeen: '',
@@ -309,6 +317,8 @@ export function parsePreferences(raw: string | null): Preferences {
     performance: booleans(PERF_ITEMS, v.performance, DEFAULT_PREFERENCES.performance),
     timelineClock: typeof v.timelineClock === 'boolean' ? v.timelineClock : DEFAULT_PREFERENCES.timelineClock,
     timelineMagnet: typeof v.timelineMagnet === 'boolean' ? v.timelineMagnet : DEFAULT_PREFERENCES.timelineMagnet,
+    timelineSnap: booleans(SNAP_GROUPS, v.timelineSnap, DEFAULT_PREFERENCES.timelineSnap),
+    timelineFrames: typeof v.timelineFrames === 'boolean' ? v.timelineFrames : DEFAULT_PREFERENCES.timelineFrames,
     appearance: parseAppearance(v.appearance),
     language: isLanguageCode(v.language) ? v.language : DEFAULT_PREFERENCES.language,
     whatsNewSeen: typeof v.whatsNewSeen === 'string' ? v.whatsNewSeen : DEFAULT_PREFERENCES.whatsNewSeen,

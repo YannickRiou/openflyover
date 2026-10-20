@@ -89,6 +89,8 @@ export default {
   'zoom.out': 'Zoom arrière',
   'zoom.in': 'Zoom avant',
   'zoom.slider': 'Zoom',
+  'zoom.selection': 'Zoomer sur la sélection',
+  'zoom.selectionTip': 'Zoomer sur le bloc sélectionné, ou sur la zone de lecture, sinon voir tout le film',
   'zoom.fit': 'Ajuster : voir tout le film',
   'lane.fold': 'Replier la piste « {name} »',
   'lane.unfold': 'Déplier la piste « {name} »',
@@ -116,5 +118,6 @@ export default {
   'menu.addKey': 'Ajouter une image clé ici',
   'menu.remove': 'Supprimer',
   'menu.removeKey': 'Supprimer l’image clé',
+  'menu.removeClose': {'one': 'Supprimer et fermer l’espace', 'other': 'Supprimer les {count} blocs et fermer l’espace'},
   'menu.removeKeys': { one: 'Supprimer l’image clé sélectionnée', other: 'Supprimer les {count} images clés sélectionnées' },
 }

@@ -280,6 +280,8 @@ describe('parsePreferences', () => {
       performance: { ...DEFAULT_PREFERENCES.performance, gpu: true },
       timelineClock: true,
       timelineMagnet: true,
+      timelineSnap: { playhead: true, blocks: true, ruler: true, marks: true },
+      timelineFrames: false,
       appearance: DEFAULT_PREFERENCES.appearance,
       language: 'fr',
       whatsNewSeen: '',
@@ -288,6 +290,9 @@ describe('parsePreferences', () => {
     expect(parsePreferences('{"whatsNewSeen":2}').whatsNewSeen).toBe('')
     expect(parsePreferences('{"timelineMagnet":false}').timelineMagnet).toBe(false)
     expect(parsePreferences('{"timelineMagnet":"non"}').timelineMagnet).toBe(true)
+    expect(parsePreferences('{"timelineSnap":{"ruler":false,"blocks":"non","x":false}}').timelineSnap).toEqual({ playhead: true, blocks: true, ruler: false, marks: true })
+    expect(parsePreferences('{"timelineFrames":true}').timelineFrames).toBe(true)
+    expect(parsePreferences('{"timelineFrames":1}').timelineFrames).toBe(false)
   })
 
   it('reads the appearance, the defaults for preferences stored before it existed', () => {
