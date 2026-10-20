@@ -23,6 +23,8 @@ const messages: Messages['inspector'] = {
   'shot.sun.day': 'Volles Tageslicht',
   'shot.sun.flyover': 'Uhrzeit des Überflugs',
   'shot.sun.accelerated': 'Beschleunigt ({hours} h)',
+  'shot.sunHours': 'Sonnenstunden',
+  'shot.sunHoursTip': 'Wie viele Stunden des Tages die Sonne während der Einstellung durchläuft: je länger, desto mehr wandern die Schatten.',
   'shot.style.aucune': 'Keine',
   'shot.style.descente': 'Abstieg',
   'shot.style.saut': 'Sprung',

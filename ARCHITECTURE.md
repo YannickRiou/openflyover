@@ -1152,7 +1152,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `relation/<id>` or `way/<id>`, absent = automatic) and `holdS` (« Maintien », 0–10 s, `SITUATION_HOLD_RANGE`,
   absent = 0) and its framing, `tiltDeg` (1–60°), `distanceKm` (5–400 km), `heading` (`'libre'` / `'boussole'`),
   `bearingDeg` (0–359°), `headroomPct` (0–30 %), all absent by default (`SituationFraming`), and `sun` (`'jour'` / `'survol'` /
-  `'accelere'`) for any shot but `aucune`; absent: « Plein jour » for `situation` (« Accéléré » with an old `moveSun`),
+  `'accelere'`) for any shot but `aucune`, with `sunHours` (« Heures de soleil », 1–12 h, `SHOT_SUN_HOURS_RANGE`, absent = `SHOT_SUN_HOURS` = 4 h) for « Accéléré »; absent: « Plein jour » for `situation` (« Accéléré » with an old `moveSun`),
   « Heure du survol » for the other styles,
   see below);
   `autoStops` (generated stops) and `autoMode`: `'temps-forts'` (default for new projects) or `'rythme'` (earlier
@@ -1312,9 +1312,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   below, so a dawn or evening outing does not open on a dark region; « Heure du survol » keeps the flight's sun (default
   of the other styles, so a track ending at night still closes in the dark unless « Plein jour » is chosen);
   « Accéléré » is a time lapse
-  of `SHOT_SUN_HOURS` (2 h) of the day over the whole shot, added to the sun date of the frame
+  of `shotSunHoursOf(shot)` (`sunHours`, 4 h by default; it was a fixed 2 h before, too short to see the shadows move) of the day over the whole shot, added to the sun date of the frame
   (`shotSunShiftMs`; both through `shotSunDate` in `src/flyover/sun.ts`, applied by `AtmosphereLayer`, so the clouds and the
-  weather under the marker follow it): opening −2 h · (1 − u)², closing +2 h · u² (u = share of the shot). Chosen as
+  weather under the marker follow it): opening −H · (1 − u)², closing +H · u² (H = the shot's hours, u = share of the shot). Chosen as
   the simplest that joins the flight: the shot ends (starts) exactly at the flight's own sun, with the sun slowing to
   a stop there, so no jump of light or of shadow speed at the boundary; the shadows sweep the relief seen from above.
   No setting of its own (hours, direction): a start before dawn simply rises the sun. A pure function of the film

@@ -75,10 +75,14 @@ export interface FilmShot {
   sun?: ShotSun
   /** older projects, 'situation' only: « Faire bouger le soleil », read as `sun: 'accelere'` */
   moveSun?: boolean
+  /** hours of daylight the sun runs over the shot in « Accéléré » (`SHOT_SUN_HOURS_RANGE`); absent: `SHOT_SUN_HOURS` (flyover/sun.ts) */
+  sunHours?: number
 }
 
+export const SHOT_SUN_HOURS_RANGE = { min: 1, max: 12, step: 1 } as const
+
 export const SHOT_SUNS = ['jour', 'survol', 'accelere'] as const
-/** « Plein jour » (daylight easing into the flight's sun), « Heure du survol », « Accéléré » (a 2 h time lapse). */
+/** « Plein jour » (daylight easing into the flight's sun), « Heure du survol », « Accéléré » (a time lapse of `sunHours` hours). */
 export type ShotSun = (typeof SHOT_SUNS)[number]
 
 /**
@@ -627,7 +631,8 @@ export function isValidShot(shot: unknown): shot is FilmShot {
     (shot.bearingDeg === undefined || within(shot.bearingDeg, SITUATION_BEARING_RANGE.min, SITUATION_BEARING_RANGE.max)) &&
     (shot.headroomPct === undefined || within(shot.headroomPct, SITUATION_HEADROOM_RANGE.min, SITUATION_HEADROOM_RANGE.max)) &&
     (shot.moveSun === undefined || typeof shot.moveSun === 'boolean') &&
-    (shot.sun === undefined || oneOf(SHOT_SUNS, shot.sun))
+    (shot.sun === undefined || oneOf(SHOT_SUNS, shot.sun)) &&
+    (shot.sunHours === undefined || within(shot.sunHours, SHOT_SUN_HOURS_RANGE.min, SHOT_SUN_HOURS_RANGE.max))
   )
 }
 

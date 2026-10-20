@@ -6,7 +6,7 @@
  */
 import { smootherstep } from '../core/math'
 import type { ClockJunction, ClockNight, FilmClock } from '../film/clock'
-import { shotSunOf } from '../film/model'
+import { shotSunOf, type FilmShot } from '../film/model'
 import { recordedTimeAt, type TrackPath } from './path'
 import { t } from '../i18n'
 
@@ -54,20 +54,23 @@ export function sunDateAt(path: TrackPath | null, progress: number, opts: SunDat
   return solarHourToDate(opts.dayMs, opts.lon, opts.solarHour)
 }
 
-/** Hours of the day the sun runs over a shot in « Accéléré ». */
-export const SHOT_SUN_HOURS = 2
+/** Hours of the day the sun runs over a shot in « Accéléré » unless the shot says otherwise (`FilmShot.sunHours`). */
+export const SHOT_SUN_HOURS = 4
+
+/** Hours the sun runs over `shot` in « Accéléré ». */
+export const shotSunHoursOf = (shot: Pick<FilmShot, 'sunHours'>): number => shot.sunHours ?? SHOT_SUN_HOURS
 
 /**
  * Shift (ms) of the sun date at film time `timeS` during a shot in « Accéléré », 0 anywhere else: a time
- * lapse of SHOT_SUN_HOURS over the whole shot that joins the flight's own sun without a jump. Opening: from
- * SHOT_SUN_HOURS before the time at the start of the flight, slowing down to it (−H·(1 − u)², u = share of the
- * shot); closing: from the time at the end of the flight, speeding up to SHOT_SUN_HOURS after it (H·u²). The sun
+ * lapse of `shotSunHoursOf` hours (H) over the whole shot that joins the flight's own sun without a jump. Opening: from
+ * H before the time at the start of the flight, slowing down to it (−H·(1 − u)², u = share of the
+ * shot); closing: from the time at the end of the flight, speeding up to H after it (H·u²). The sun
  * thus stands still where the shot meets the flight. A pure function of the film time: the preview and the export
  * light the same frames.
  */
 export function shotSunShiftMs(clock: Pick<FilmClock, 'stateAt' | 'opening' | 'closing'>, timeS: number): number {
   const away = shotSunAway(clock, timeS, 'accelere')
-  return away === null ? 0 : (away.opening ? -away.weight : away.weight) * SHOT_SUN_HOURS * HOUR_MS
+  return away === null ? 0 : (away.opening ? -away.weight : away.weight) * shotSunHoursOf(away.opening ? clock.opening : clock.closing) * HOUR_MS
 }
 
 /** Solar hour of « Plein jour »: the wide view is lit whatever the time of the outing. */

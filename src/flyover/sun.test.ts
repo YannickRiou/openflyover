@@ -217,6 +217,13 @@ describe('shotSunShiftMs', () => {
     expect(Math.abs(speed(8 - 0.002))).toBeLessThan((0.01 * SHOT_SUN_HOURS * HOUR) / 8)
   })
 
+  it('« Accéléré »: the hours of the shot (4 h by default), each shot its own', () => {
+    expect(SHOT_SUN_HOURS).toBe(4)
+    const clock = clockOf({ style: 'descente', durationS: 8, sun: 'accelere', sunHours: 8 }, { style: 'descente', durationS: 6, sun: 'accelere' })
+    expect(shotSunShiftMs(clock, 0)).toBe(-8 * HOUR)
+    expect(shotSunShiftMs(clock, clock.totalTime())).toBe(SHOT_SUN_HOURS * HOUR)
+  })
+
   it('« Plein jour » (default): daylight at the region view, easing to the flight\'s sun where the shot meets it', () => {
     const plain = { style: 'situation', durationS: 8 } as const
     const clock = clockOf(plain, { ...plain, durationS: 6 })
