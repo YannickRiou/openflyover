@@ -6,11 +6,12 @@
  *
  * Overview: target = centre of the track's box, distance = OVERVIEW_DISTANCE_FACTOR x box diagonal (more for a frame
  * taller than wide, so 9:16 keeps the whole track), on the side the flight camera looks from where the shot joins
- * the flight (no turn during the transition). The transition nlerps the direction, interpolates the distance
- * geometrically (smootherstep), lerps the target as the distance changes, stays MIN_GROUND_CLEARANCE_M above the ground
- * and, in between, on a glide slope over the flight camera and clear of the relief on the way (`clearOnTheWay`); the
- * aim is raised as much as the camera, so the tilt goes from one end view's to the other's. A shot that cuts ('coupe',
- * dips to black or white) holds its wide view and cuts at the boundary with the flight (`shotWeight`).
+ * the flight (no turn during the transition). The transition interpolates the tilt and the heading of the direction
+ * apart (`blendDirections`), the distance geometrically (smootherstep), lerps the target as the distance changes, stays
+ * MIN_GROUND_CLEARANCE_M above the ground and, in between, on a glide slope over the flight camera and clear of the
+ * relief on the way (`clearOnTheWay`); the aim is raised as much as the camera, so the tilt goes from one end view's to
+ * the other's. A shot that cuts ('coupe', dips to black or white) holds its wide view and cuts at the boundary with the
+ * flight (`shotWeight`).
  */
 import { Vector3 } from 'three'
 import { clamp, smootherstep } from '../core/math'
@@ -34,7 +35,7 @@ import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, type CameraSettings } from 
 import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 import { cameraKeyEaseM, keyPoseAt, type KeyFraming } from './cameraKeys'
-import { smoothsInTime, timeSmoothing } from './timeSmoothing'
+import { anticipatedRaise, smoothsInTime, timeSmoothing } from './timeSmoothing'
 
 export { smootherstep }
 export { CAMERA_KEY_EASE_S, cameraKeyEaseM, keyedCamera } from './cameraKeys'
@@ -424,6 +425,24 @@ export function situationFramingOf(position: Vector3, target: Vector3): Required
 }
 
 /**
+ * Unit direction `k` of the way from `a` to `b` (target → camera): the tilt above the horizon goes from one's to the
+ * other's, the heading turns the short way round. Interpolating the 3D vectors instead went through the zenith when
+ * the two headings were opposite (a region view facing north, a flight view facing south): the camera dived nose
+ * down and spun round in half a second. A vertical direction takes the other's heading.
+ */
+function blendDirections(a: Vector3, b: Vector3, k: number): Vector3 {
+  const tiltA = Math.asin(clamp(a.y, -1, 1))
+  const tiltB = Math.asin(clamp(b.y, -1, 1))
+  const level = (v: Vector3) => Math.hypot(v.x, v.z) > 1e-9
+  const headingA = level(a) ? Math.atan2(a.x, -a.z) : Math.atan2(b.x, -b.z)
+  const headingB = level(b) ? Math.atan2(b.x, -b.z) : headingA
+  const turn = Math.atan2(Math.sin(headingB - headingA), Math.cos(headingB - headingA))
+  const tilt = tiltA + (tiltB - tiltA) * k
+  const heading = headingA + turn * k
+  return new Vector3(Math.cos(tilt) * Math.sin(heading), Math.sin(tilt), -Math.cos(tilt) * Math.cos(heading))
+}
+
+/**
  * View `k` of the way from `a` to `b` (exactly `a` at 0 and `b` at 1). `panWithZoom` (shots): the aim moves as the
  * distance changes rather than with `k`, so a point framed at both ends (the marker) stays in the frame on the way.
  */
@@ -442,8 +461,7 @@ export function blendViews(
   const fromB = b.position.clone().sub(b.target)
   const da = Math.max(1, fromA.length())
   const db = Math.max(1, fromB.length())
-  const direction = fromA.divideScalar(da).lerp(fromB.divideScalar(db), k)
-  if (direction.lengthSq() < 1e-12) direction.copy(UP)
+  const direction = blendDirections(fromA.divideScalar(da), fromB.divideScalar(db), k)
   const distance = da ** (1 - k) * db ** k
   const target = a.target.clone().lerp(b.target, panWithZoom && Math.abs(da - db) > 1 ? (da - distance) / (da - db) : k)
   const position = target.clone().addScaledVector(direction.normalize(), distance)
@@ -537,6 +555,8 @@ export interface FilmViewOptions extends Omit<CameraViewOptions, 'timeS' | 'orbi
   region?: RegionFrame | null
   /** what the flight camera follows at a film progress (null or absent: the film track itself) */
   follow?: ((progress: number) => FollowedFlight | null) | null
+  /** how many times the terrain behind `sample` changed (tiles loaded or dropped): see `raiseTable` */
+  terrainVersion?: number
 }
 
 export interface FilmView extends CameraView {
@@ -609,7 +629,32 @@ export function keyFramingFrom(base: KeyBase, position: Vector3, lookAt: Vector3
   }
 }
 
-/** The flight camera at a film state, before the keyframes, and what a keyframe is placed around there. */
+/**
+ * Raises of the flight camera at the instants of `anticipatedRaise` (film time → raise in metres and the terrain version
+ * it was computed with), one table per terrain sampler, emptied when another input changes. A frame computes only the
+ * instants that came into reach since the frame before (about one flight camera every ANTICIPATION_STEP_S of film) and,
+ * while tiles arrive, refreshes one instant computed on an older terrain: the camera height follows the sharper terrain
+ * an instant at a time, never with a jump, and the anticipation costs about one more flight camera at most per frame.
+ */
+interface RaiseTable {
+  inputs: readonly unknown[]
+  raises: Map<number, { raiseM: number; version: number }>
+}
+
+const raiseTables = new WeakMap<HeightSampler, RaiseTable>()
+
+function raiseTable(sample: HeightSampler, inputs: readonly unknown[]): RaiseTable['raises'] {
+  const table = raiseTables.get(sample)
+  if (table && table.inputs.length === inputs.length && table.inputs.every((input, i) => input === inputs[i])) return table.raises
+  const raises: RaiseTable['raises'] = new Map()
+  raiseTables.set(sample, { inputs, raises })
+  return raises
+}
+
+/**
+ * The flight camera at a film state, before the keyframes, and what a keyframe is placed around there. Its height above
+ * the ground is the anticipated raise of the film instants around (`anticipatedRaise`), not its own.
+ */
 function flightAt(
   path: TrackPath,
   clock: FilmClock,
@@ -619,7 +664,43 @@ function flightAt(
   sample: HeightSampler | null,
   options: FilmViewOptions,
 ): { flight: FilmView; base: KeyBase } {
-  const { aspect, region: _region, follow, ...flightOptions } = options
+  const flown = flownAt(path, clock, state, progress, frame, sample, options)
+  const { followed, flightPath, wide, orbitRad } = flown
+  if (sample) {
+    const { camera, exaggeration, liftM, durationS, aspect, follow, terrainVersion: version = 0 } = options
+    const raises = raiseTable(sample, [path, clock, frame, camera, exaggeration, liftM, durationS, aspect, follow])
+    let refreshed = false
+    const raiseAt = (instantS: number) => {
+      const known = raises.get(instantS)
+      if (known && (known.version === version || refreshed)) return known.raiseM
+      refreshed ||= known !== undefined
+      const raiseM = flownAt(path, clock, clock.stateAt(instantS), clock.progressAtTime(instantS), frame, sample, options).view.raiseM
+      raises.set(instantS, { raiseM, version })
+      return raiseM
+    }
+    // the progress holds still during the opening and closing shots, so does the flight view they blend with
+    const timeS = clamp(state.timeS, clock.openingS, clock.openingS + clock.flightS)
+    flown.view.position.y += anticipatedRaise(raiseAt, timeS) - flown.view.raiseM
+  }
+  const view = flown.view
+  const marker = followed?.markerOnFilm ? markerAt(path, progress, frame, sample, options.exaggeration, options.liftM) : view.marker
+  const framed = followed?.group ? framedGroup(view, followed.group, frame, sample, options.exaggeration, options.aspect) : view
+  const flight = followed ? { ...framed, marker } : view
+  const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame)
+  return { flight, base: { target: flight.target, reference, autoDistanceM: autoDistanceM(flightPath), wide, orbitRad } }
+}
+
+/** The flight camera of `computeCameraView` at a film state (stop cameras, time smoothing, followed track), with its own raise. */
+function flownAt(
+  path: TrackPath,
+  clock: FilmClock,
+  state: FilmState,
+  progress: number,
+  frame: LocalFrame,
+  sample: HeightSampler | null,
+  options: FilmViewOptions,
+) {
+  const { aspect: _aspect, region: _region, follow, terrainVersion: _version, ...flightOptions } = options
   const stop = state.stop
   const settings = options.camera ?? DEFAULT_CAMERA
   const wide = stop?.camera === 'large' ? stopBump(state.localS, state.lengthS) : 0
@@ -635,7 +716,7 @@ function flightAt(
     const other = follow?.(p)
     return other && other.path === followed.path ? other.progress : undefined
   }
-  const flown = computeCameraView(flightPath, followed?.progress ?? progress, frame, sample, {
+  const view = computeCameraView(flightPath, followed?.progress ?? progress, frame, sample, {
     ...flightOptions,
     camera,
     orbitRad,
@@ -643,11 +724,7 @@ function flightAt(
     aimProgress: along(smoothing.aimProgress),
     cameraProgress: along(smoothing.cameraProgress),
   })
-  const marker = followed?.markerOnFilm ? markerAt(path, progress, frame, sample, options.exaggeration, options.liftM) : flown.marker
-  const framed = followed?.group ? framedGroup(flown, followed.group, frame, sample, options.exaggeration, aspect) : flown
-  const flight = followed ? { ...framed, marker } : flown
-  const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame)
-  return { flight, base: { target: flight.target, reference, autoDistanceM: autoDistanceM(flightPath), wide, orbitRad } }
+  return { view, followed, flightPath, wide, orbitRad }
 }
 
 /**
