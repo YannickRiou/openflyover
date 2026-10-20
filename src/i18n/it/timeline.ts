@@ -91,6 +91,8 @@ const messages: Messages['timeline'] = {
   'zoom.out': 'Riduci zoom',
   'zoom.in': 'Aumenta zoom',
   'zoom.slider': 'Zoom',
+  'zoom.selection': 'Ingrandire la selezione',
+  'zoom.selectionTip': 'Ingrandire il blocco selezionato o l’area di riproduzione; altrimenti vedere tutto il film',
   'zoom.fit': 'Adatta: mostra tutto il film',
   'lane.fold': 'Comprimere la traccia «{name}»',
   'lane.unfold': 'Espandere la traccia «{name}»',

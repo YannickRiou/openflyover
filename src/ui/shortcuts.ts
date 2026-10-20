@@ -37,6 +37,7 @@ export const SHORTCUTS = [
   { id: 'remove', keys: ['Del'], get label() { return t('shortcuts.label.remove') }, group: 'editing' },
   { id: 'duplicate', keys: ['Ctrl+D'], get label() { return t('shortcuts.label.duplicate') }, group: 'editing' },
   { id: 'split', keys: ['X'], get label() { return t('shortcuts.label.split') }, group: 'editing' },
+  { id: 'zoom-selection', keys: ['Z'], get label() { return t('shortcuts.label.zoom-selection') }, group: 'editing' },
   { id: 'scroll', keys: ['wheel'], get label() { return t('shortcuts.label.scroll') }, group: 'editing' },
   { id: 'zoom', keys: ['Ctrl+wheel'], get label() { return t('shortcuts.label.zoom') }, group: 'editing' },
   { id: 'pick', keys: ['clickTrack'], get label() { return t('shortcuts.label.pick') }, group: 'editing' },

@@ -48,6 +48,9 @@ import {
   edgeScrollSpeed,
   fitPxPerS,
   followScroll,
+  formatFrameTimecode,
+  snapTargetsOn,
+  zoomToSpan,
   followStops,
   formatFilmTime,
   formatSpeedFactor,
@@ -84,7 +87,7 @@ import { ModifiedMarker } from './ModifiedMarker'
 import { setPreferences, usePreferences } from './preferences'
 import { pickFiles } from './projectActions'
 import { COMPACT_QUERY, matchesQuery } from './shell'
-import { spacePlays, withShortcut } from './shortcuts'
+import { keyFocus, spacePlays, withShortcut } from './shortcuts'
 import { showToast } from './toast'
 import { Button, Checkbox, Menu, Popover, Select, Slider, Tip } from './primitives'
 import type { MenuItem } from './primitives'
@@ -385,6 +388,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const { playing, progress, timeS: storedTimeS, speed } = livePlayback ?? frozenPlayback ?? useAppStore.getState().playback
   const timelineClock = usePreferences((s) => s.timelineClock)
   const magnet = usePreferences((s) => s.timelineMagnet)
+  const snapOn = usePreferences((s) => s.timelineSnap)
+  const frameTimecode = usePreferences((s) => s.timelineFrames)
+  const fps = useAppStore((s) => s.settings.video.fps)
   const setPlaying = useAppStore((s) => s.setPlaying)
   const setProgress = useAppStore((s) => s.setProgress)
   const setSpeed = useAppStore((s) => s.setSpeed)
@@ -568,6 +574,19 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (next !== el.scrollLeft) el.scrollLeft = next
   })
 
+  // Z zooms the timeline to the selected block (or the work area, or the whole film)
+  const zoomSelectionRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'z' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.repeat || e.defaultPrevented) return
+      if (keyFocus(e.target) === 'text') return
+      e.preventDefault()
+      zoomSelectionRef.current()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   // the music plays along the preview
   useEffect(() => startMusicPreview(), [])
 
@@ -649,7 +668,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     clockOf: (stops: readonly FilmStop[]) => buildFilmClock({ ...input, stops }),
     clockOfSpeeds: (speeds: readonly FilmSpeed[]) => buildFilmClock({ ...input, speeds }),
     lengthM,
-    targets: snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }),
+    targets: snapTargetsOn(snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }), snapOn),
     targetsM: candidates.map((c) => c.atM),
     snapS: SNAP_PX / pxPerS,
     releaseS: RELEASE_PX / pxPerS,
@@ -1131,6 +1150,28 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     pendingScrollRef.current = 0
     setZoom(ZOOM_RANGE.min)
   }
+  /** The stretch of the block or key `id` on the timeline, in film time (read from where it is drawn). */
+  const spanOfItem = (id: string): { startS: number; endS: number } | null => {
+    const el = contentRef.current ? [...contentRef.current.querySelectorAll<HTMLElement>('[data-item]')].find((b) => b.dataset.item === id) : undefined
+    const left = parseFloat(el?.style.left ?? '')
+    if (!el || !Number.isFinite(left)) return null
+    const width = parseFloat(el.style.width) || 0
+    return { startS: (left - pad) / pxPerS, endS: (left + width - pad) / pxPerS }
+  }
+  /** « Zoom sur la sélection »: the selected block (or the work area, else the whole film) fills the view. */
+  const zoomToSelection = () => {
+    const el = scrollerRef.current
+    if (!el || centred) return
+    const span = (selected !== null ? spanOfItem(selected) : null) ?? (workSpan ? { startS: workSpan.inS, endS: workSpan.outS } : null)
+    if (!span) return fitZoom()
+    const next = zoomToSpan(span.startS, span.endS, el.clientWidth, total, PAD_PX)
+    pendingScrollRef.current = next.scrollLeft
+    zoomRef.current = next.zoom
+    // the scroll is applied once the zoom has changed; with the same zoom it is applied now
+    if (Math.abs(next.zoom - zoom) < 1e-9) el.scrollLeft = next.scrollLeft
+    setZoom(next.zoom)
+  }
+  zoomSelectionRef.current = zoomToSelection
 
   // --- blocks ------------------------------------------------------------------------------------------------
   const liftedItem = stageDrag ? stageItemId(stageDrag.id) : null
@@ -1335,7 +1376,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         />
         {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
         <span className={TIME}>
-          <strong className="text-accent-light" data-testid="timeline-time">{formatTimecode(playheadS, true)}</strong> / {formatTimecode(clock.totalTime())}
+          <strong className="text-accent-light" data-testid="timeline-time">{frameTimecode ? formatFrameTimecode(playheadS, fps) : formatTimecode(playheadS, true)}</strong> / {frameTimecode ? formatFrameTimecode(clock.totalTime(), fps) : formatTimecode(clock.totalTime())}
         </span>
         <span className={`${READOUT} ${centred ? 'hidden' : collapsed ? '@max-[1200px]/film-tl:hidden phone-any:hidden' : '@max-[1200px]/film-tl:hidden'}`}>
           <span className="inline-block text-right" style={{ minWidth: `${formatDistance(lengthM).length + 1}ch` }}>
@@ -1464,6 +1505,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onClick={() => zoomBy(BUTTON_ZOOM)}
               disabled={zoom >= ZOOM_RANGE.max}
             />
+            <BarButton icon="maximize" name={t('timeline.zoom.selection')} tip={withShortcut(t('timeline.zoom.selectionTip'), 'zoom-selection')} onClick={zoomToSelection} disabled={!hasTrack} />
             <BarButton icon="move-horizontal" name={t('timeline.zoom.fit')} tip={t('timeline.zoom.fitTip')} onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
           </div>
           {workSpan && <BarButton icon="rotate-cw" name={t('timeline.workArea.clear')} tip={t('timeline.workArea.clearTip', { from: formatFilmTime(workSpan.inS), to: formatFilmTime(workSpan.outS) })} on onClick={() => setWorkArea(null)} />}

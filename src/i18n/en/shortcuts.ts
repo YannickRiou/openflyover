@@ -32,6 +32,7 @@ const messages: Messages['shortcuts'] = {
   'label.duplicate': 'Duplicate the selected text or photo, right after it',
   'label.split': 'Cut the selected text or photo at the playhead',
   'label.scroll': 'Scroll the zoomed timeline (the playhead stays in view during playback)',
+  'label.zoom-selection': 'Zoom the timeline to the selected block (or the work area, or the whole film)',
   'label.zoom': 'Zoom the timeline (touch screen: pinch)',
   'label.pick': 'Place the playhead here (right-click or long press: add a hold or a text)',
   'label.open': 'Open a track or a project',

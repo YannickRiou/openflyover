@@ -89,6 +89,8 @@ export default {
   'zoom.out': 'Zoom arrière',
   'zoom.in': 'Zoom avant',
   'zoom.slider': 'Zoom',
+  'zoom.selection': 'Zoomer sur la sélection',
+  'zoom.selectionTip': 'Zoomer sur le bloc sélectionné, ou sur la zone de lecture, sinon voir tout le film',
   'zoom.fit': 'Ajuster : voir tout le film',
   'lane.fold': 'Replier la piste « {name} »',
   'lane.unfold': 'Déplier la piste « {name} »',

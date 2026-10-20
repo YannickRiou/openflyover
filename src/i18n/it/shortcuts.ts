@@ -32,6 +32,7 @@ const messages: Messages['shortcuts'] = {
   'label.duplicate': 'Duplicare il testo o la foto selezionato, subito dopo',
   'label.split': 'Tagliare il testo o la foto selezionato sulla testina',
   'label.scroll': 'Scorrere la timeline ingrandita (la testina resta in vista durante la riproduzione)',
+  'label.zoom-selection': 'Ingrandire la timeline sul blocco selezionato (o l’area di riproduzione, o tutto il film)',
   'label.zoom': 'Zoom nella timeline (touch: pizzica)',
   'label.pick': 'Posiziona la testina di lettura qui (clic destro o pressione prolungata: aggiungi una sosta o un testo)',
   'label.open': 'Apri una traccia o un progetto',

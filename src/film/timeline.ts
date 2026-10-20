@@ -53,6 +53,9 @@ const roundS = (s: number) => Math.round(s * 100) / 100
 // ---------------------------------------------------------------------------
 
 export const ZOOM_RANGE = { min: 1, max: 50 } as const
+/** « Zoom sur la sélection »: the shortest stretch it fits to the view (seconds), and the share of it left blank at each side. */
+export const ZOOM_SPAN_MIN_S = 2
+export const ZOOM_SPAN_MARGIN = 0.15
 
 /** Pixels per second at zoom 1: the whole film fits `widthPx`. */
 export function fitPxPerS(widthPx: number, totalS: number): number {
@@ -117,6 +120,30 @@ export function formatFilmTime(seconds: number, tenths = false): string {
 }
 
 /** Timecode of the timeline bar, minutes on two digits at least: 75.4 -> "01:15,4", so its width stays the same while it plays. */
+/** `mm:ss:ff` at `fps` frames a second (`01:07:12` = 1 min 7 s and 12 frames), the frames counted from the second's start. */
+export function formatFrameTimecode(seconds: number, fps: number): string {
+  const rate = Math.max(1, Math.round(fps))
+  const frames = Math.round(Math.max(0, seconds) * rate)
+  const pad = (n: number, width = 2) => String(n).padStart(width, '0')
+  return `${pad(Math.floor(frames / (60 * rate)))}:${pad(Math.floor(frames / rate) % 60)}:${pad(frames % rate)}`
+}
+
+/** Zoom and scroll that show the stretch `startS`–`endS` filling the view with a margin, within the zoom range. */
+export function zoomToSpan(
+  startS: number,
+  endS: number,
+  viewW: number,
+  totalS: number,
+  pad: number = 10,
+): { zoom: number; scrollLeft: number } {
+  const fit = fitPxPerS(Math.max(0, viewW - 2 * pad), totalS)
+  const spanS = Math.max(endS - startS, ZOOM_SPAN_MIN_S)
+  const pxPerS = viewW / (spanS * (1 + 2 * ZOOM_SPAN_MARGIN))
+  const zoom = clamp(pxPerS / fit, ZOOM_RANGE.min, ZOOM_RANGE.max)
+  const centre = (startS + endS) / 2
+  return { zoom, scrollLeft: Math.max(0, pad + centre * fit * zoom - viewW / 2) }
+}
+
 export function formatTimecode(seconds: number, tenths = false): string {
   const text = formatFilmTime(seconds, tenths)
   return text.indexOf(':') < 2 ? `0${text}` : text
@@ -145,6 +172,22 @@ export interface SnapTarget {
   timeS: number
   label: string
   kind: 'edge' | 'centre' | 'playhead' | 'junction' | 'ruler' | 'highlight' | 'end'
+}
+
+/** The families of snap targets the user can turn off one by one (`SnapTarget.kind`): the playhead, the blocks and keys, the ruler's marks, the junctions and highlights. */
+export const SNAP_GROUPS = ['playhead', 'blocks', 'ruler', 'marks'] as const
+export type SnapGroup = (typeof SNAP_GROUPS)[number]
+
+export function snapGroupOf(kind: SnapTarget['kind']): SnapGroup {
+  if (kind === 'playhead') return 'playhead'
+  if (kind === 'ruler') return 'ruler'
+  if (kind === 'junction' || kind === 'highlight') return 'marks'
+  return 'blocks'
+}
+
+/** `targets` without the families switched off in `on`. */
+export function snapTargetsOn(targets: readonly SnapTarget[], on: Readonly<Record<SnapGroup, boolean>>): SnapTarget[] {
+  return targets.filter((target) => on[snapGroupOf(target.kind)])
 }
 
 /** What a gesture remembers between two pointer moves: the targets caught by the previous one, those caught by this one. */

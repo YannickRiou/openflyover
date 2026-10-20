@@ -91,6 +91,8 @@ const messages: Messages['timeline'] = {
   'zoom.out': 'Zoom out',
   'zoom.in': 'Zoom in',
   'zoom.slider': 'Zoom',
+  'zoom.selection': 'Zoom to the selection',
+  'zoom.selectionTip': 'Zoom to the selected block, or to the work area, else show the whole film',
   'zoom.fit': 'Fit: see the whole film',
   'lane.fold': 'Fold the “{name}” lane',
   'lane.unfold': 'Unfold the “{name}” lane',

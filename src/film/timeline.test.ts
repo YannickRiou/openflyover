@@ -9,7 +9,11 @@ import type { Film, FilmAudio, FilmMedia, FilmSpeed, FilmStop, FilmText } from '
 import {
   duplicateFilmItem,
   followScroll,
+  formatFrameTimecode,
+  snapGroupOf,
+  snapTargetsOn,
   splitFilmItem,
+  zoomToSpan,
   NEW_MEDIA_S,
   NEW_VIDEO_MAX_S,
   addCameraKey,
@@ -1036,5 +1040,60 @@ describe('duplicate and split', () => {
     expect(splitFilmItem(film, 'text-1', 9)).toBeNull()
     expect(splitFilmItem(film, 'media-2', 22)).toBeNull()
     expect(splitFilmItem(film, 'media-3', 32)).toBeNull()
+  })
+})
+
+describe('timecode in frames', () => {
+  it('minutes, seconds and the frame of the second, at the frame rate of the film', () => {
+    expect(formatFrameTimecode(0, 30)).toBe('00:00:00')
+    expect(formatFrameTimecode(67.4, 30)).toBe('01:07:12')
+    expect(formatFrameTimecode(1.5, 24)).toBe('00:01:12')
+    expect(formatFrameTimecode(59.99, 25)).toBe('01:00:00')
+    expect(formatFrameTimecode(125, 60)).toBe('02:05:00')
+    expect(formatFrameTimecode(-3, 30)).toBe('00:00:00')
+    // a nonsense rate is taken as 1
+    expect(formatFrameTimecode(3, 0)).toBe('00:03:00')
+  })
+})
+
+describe('zoomToSpan', () => {
+  // a 600 px view with 10 px of padding, a 100 s film: 5.8 px a second fitted
+  const fit = 580 / 100
+
+  it('a stretch fills the view with its margin, centred', () => {
+    const { zoom, scrollLeft } = zoomToSpan(40, 50, 600, 100, 10)
+    // 10 s plus 15 % at each side = 13 s over 600 px
+    expect((fit * zoom) * 13).toBeCloseTo(600, 6)
+    // the middle of the stretch (45 s) is the middle of the view
+    expect(10 + 45 * fit * zoom - scrollLeft).toBeCloseTo(300, 6)
+  })
+
+  it('never zooms out past the whole film nor in past the maximum, and a point-like stretch is given a minimum', () => {
+    expect(zoomToSpan(0, 100, 600, 100, 10).zoom).toBe(1)
+    expect(zoomToSpan(10, 10.1, 600, 100, 10).zoom).toBeLessThanOrEqual(50)
+    const point = zoomToSpan(30, 30, 600, 100, 10)
+    expect(point.zoom).toBeCloseTo(600 / (2 * 1.3) / fit, 6)
+    expect(zoomToSpan(0, 1, 600, 100, 10).scrollLeft).toBe(0)
+  })
+})
+
+describe('snap groups', () => {
+  const target = (kind: SnapTarget['kind']): SnapTarget => ({ timeS: 1, label: kind, kind })
+
+  it('each kind of target belongs to one family', () => {
+    expect(snapGroupOf('playhead')).toBe('playhead')
+    expect(snapGroupOf('ruler')).toBe('ruler')
+    expect(snapGroupOf('junction')).toBe('marks')
+    expect(snapGroupOf('highlight')).toBe('marks')
+    for (const kind of ['edge', 'centre', 'end'] as const) expect(snapGroupOf(kind)).toBe('blocks')
+  })
+
+  it('the families switched off leave their targets out, the others stay', () => {
+    const all = (['edge', 'centre', 'end', 'playhead', 'junction', 'ruler', 'highlight'] as const).map(target)
+    const on = { playhead: true, blocks: true, ruler: true, marks: true }
+    expect(snapTargetsOn(all, on)).toHaveLength(7)
+    expect(snapTargetsOn(all, { ...on, blocks: false }).map((t) => t.kind)).toEqual(['playhead', 'junction', 'ruler', 'highlight'])
+    expect(snapTargetsOn(all, { playhead: false, blocks: false, ruler: false, marks: false })).toEqual([])
+    expect(snapTargetsOn(all, { ...on, ruler: false, marks: false }).map((t) => t.kind)).toEqual(['edge', 'centre', 'end', 'playhead'])
   })
 })

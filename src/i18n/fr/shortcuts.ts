@@ -30,6 +30,7 @@ export default {
   'label.duplicate': 'Dupliquer le texte ou la photo sélectionné, juste après',
   'label.split': 'Couper le texte ou la photo sélectionné à la tête de lecture',
   'label.scroll': 'Faire défiler la timeline zoomée (la tête de lecture reste en vue pendant la lecture)',
+  'label.zoom-selection': 'Zoomer la timeline sur le bloc sélectionné (ou la zone de lecture, ou tout le film)',
   'label.zoom': 'Zoomer dans la timeline (écran tactile : pincer)',
   'label.pick': 'Placer la tête de lecture à cet endroit (clic droit ou appui long : ajouter un arrêt ou un texte)',
   'label.open': 'Ouvrir une trace ou un projet',

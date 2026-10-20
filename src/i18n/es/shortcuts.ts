@@ -32,6 +32,7 @@ const messages: Messages['shortcuts'] = {
   'label.duplicate': 'Duplicar el texto o la foto seleccionado, justo después',
   'label.split': 'Cortar el texto o la foto seleccionado en el cabezal',
   'label.scroll': 'Desplazar la línea de tiempo ampliada (el cabezal sigue a la vista durante la reproducción)',
+  'label.zoom-selection': 'Ampliar la línea de tiempo al bloque seleccionado (o a la zona de reproducción, o a toda la película)',
   'label.zoom': 'Ampliar la línea de tiempo (pantalla táctil: pellizcar)',
   'label.pick': 'Colocar el cabezal de reproducción aquí (clic derecho o pulsación larga: añadir una parada o un texto)',
   'label.open': 'Abrir un track o un proyecto',

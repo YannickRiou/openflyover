@@ -32,6 +32,7 @@ const messages: Messages['shortcuts'] = {
   'label.duplicate': 'Den gewählten Text oder das gewählte Foto direkt danach duplizieren',
   'label.split': 'Den gewählten Text oder das gewählte Foto am Abspielkopf teilen',
   'label.scroll': 'Die vergrößerte Zeitleiste verschieben (der Abspielkopf bleibt bei der Wiedergabe im Bild)',
+  'label.zoom-selection': 'Die Zeitleiste auf den gewählten Block zoomen (oder den Wiedergabebereich, oder den ganzen Film)',
   'label.zoom': 'In der Zeitleiste zoomen (Touchscreen: Pinch-Geste)',
   'label.pick': 'Abspielkopf an diese Stelle setzen (Rechtsklick oder langes Drücken: Stopp oder Text hinzufügen)',
   'label.open': 'Track oder Projekt öffnen',

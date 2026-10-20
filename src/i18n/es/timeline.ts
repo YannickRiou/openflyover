@@ -97,6 +97,8 @@ const messages: Messages['timeline'] = {
   'zoom.out': 'Alejar',
   'zoom.in': 'Acercar',
   'zoom.slider': 'Zoom',
+  'zoom.selection': 'Ampliar la selección',
+  'zoom.selectionTip': 'Ampliar el bloque seleccionado o la zona de reproducción; si no, ver toda la película',
   'zoom.fit': 'Ajustar: ver toda la película',
   'lane.fold': 'Plegar la pista «{name}»',
   'lane.unfold': 'Desplegar la pista «{name}»',

@@ -15,6 +15,7 @@ import { addMarkerKeyHere, addParamKeyHere, getFilmSource } from '../scene/usePa
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { FilmInspector } from './FilmInspector'
 import { OverlayPanel } from './OverlayPanel'
+import { setPreferences } from './preferences'
 import { Timeline } from './Timeline'
 
 describe('Timeline', () => {
@@ -287,6 +288,21 @@ describe('Timeline', () => {
       expect(JSON.parse(localStorage.getItem('openflyover.lanes.v1')!)).toEqual({ folded: [], locked: [] })
       // the other lanes are not touched, the blocks stay in the page when a lane is folded
       expect(host.querySelectorAll('[data-testid="timeline-lane"]').length).toBeGreaterThan(5)
+      act(() => root.unmount())
+    })
+
+    it('the timecode of the bar counts frames when asked, and the button to zoom to the selection is there and harmless', async () => {
+      const { host, root } = await setup()
+      const time = () => host.querySelector('[data-testid="timeline-time"]')!.textContent
+      expect(time()).toMatch(/^\d\d:\d\d\.\d$|^\d\d:\d\d,\d$|^\d+:\d\d[.,]\d$/)
+      await act(async () => setPreferences({ timelineFrames: true }))
+      expect(time()).toMatch(/^\d\d:\d\d:\d\d$/)
+      await act(async () => setPreferences({ timelineFrames: false }))
+      const zoom = host.querySelector<HTMLElement>('button[aria-label="Zoomer sur la sélection"]')
+      expect(zoom).not.toBeNull()
+      // nothing selected, no work area: the whole film in the view, as « Ajuster »
+      await act(async () => zoom!.click())
+      expect(host.querySelector('[data-testid="timeline-time"]')).not.toBeNull()
       act(() => root.unmount())
     })
 

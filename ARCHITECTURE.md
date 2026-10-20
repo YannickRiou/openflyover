@@ -1523,6 +1523,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   centred timeline. A selected block of a locked lane stays selected: Delete / Ctrl+D act on the selection. The head column is
   wider (112 px, 128 on touch) and shows the full name in a tooltip; edges (`GRIP`) are 10 px wide and keys have an 8 px
   invisible margin (`before:`) for the mouse.
+- **Timeline view helpers** (`film/timeline.ts`, `Timeline.tsx`, « Réglages › Timeline »): **zoom to the selection** (button in the zoom
+  group and the Z key, `zoomToSpan`): the selected block or key (its span read from where it is drawn, `spanOfItem`), else the work
+  area, else the whole film, fills the view with 15 % of margin at each side (`ZOOM_SPAN_MARGIN`, at least `ZOOM_SPAN_MIN_S` =
+  2 s), the zoom within `ZOOM_RANGE`, the stretch centred (the scroll is applied at once when the zoom does not change, else after the
+  zoom through `pendingScrollRef`). **Timecode in frames** (`preferences.timelineFrames`, off by default): the bar shows `mm:ss:ff`
+  at `settings.video.fps` (`formatFrameTimecode`) instead of seconds and tenths; the ruler keeps seconds. **Magnet by family**
+  (`preferences.timelineSnap`: `SNAP_GROUPS` = the playhead, the blocks and keys (`edge`, `centre`, `end`), the ruler's marks, the
+  junctions and highlights (`snapGroupOf`, `snapTargetsOn` in `dragContext`)): each can be turned off, Alt still inverts the magnet.
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the
