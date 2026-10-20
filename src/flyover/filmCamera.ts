@@ -16,7 +16,7 @@
 import { Vector3 } from 'three'
 import { clamp, smootherstep } from '../core/math'
 import type { LocalFrame, LonLat } from '../core/types'
-import type { ClockStop, FilmClock, FilmState } from '../film/clock'
+import type { ClockDay, ClockStop, FilmClock, FilmState } from '../film/clock'
 import { CAMERA_KEY_RANGES, SITUATION_DISTANCE_KM_RANGE, SITUATION_TILT_DEFAULT_DEG, SITUATION_TILT_RANGE, shotCuts, situationTiming } from '../film/model'
 import type { FilmShot, ShotStyle, SituationFraming, StartHeight } from '../film/model'
 import type { HeightSampler } from '../scene/trackLineSet'
@@ -36,6 +36,7 @@ import {
 import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, type CameraSettings } from './cameraSettings'
 import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
+import { nightAt } from './sun'
 import { cameraKeyEaseM, keyPoseAt, type KeyFraming } from './cameraKeys'
 import { anticipatedRaise, smoothsInTime, timeSmoothing } from './timeSmoothing'
 
@@ -82,6 +83,8 @@ const SHOT_SOFT_SHARE = 0.2
 const SHOT_EASE_SHARE = 0.1
 /** ... longer by the lift's share of the camera's distance over this much, up to this share of the blend. */
 const SHOT_EASE_LIFT = 2
+/** The camera takes at least this share of a night pause to rise to the high view of the day, and as much to come back. */
+const DAY_VIEW_MIN_SHARE = 0.2
 /** A shot's lift is read at this many points of the blend, kept in full within HOLD of the blend and down to nothing at REACH. */
 const SHOT_LIFT_POINTS = 40
 const SHOT_LIFT_HOLD = 0.06
@@ -222,17 +225,27 @@ interface TrackBox {
   maxEle: number
 }
 
-const boxes = new WeakMap<TrackPath, WeakMap<LocalFrame, TrackBox>>()
+/** A stretch of the path, in metres along it (a day of a multi-day track). */
+export interface PathRange {
+  fromM: number
+  toM: number
+}
 
-/** Box of the track in the local frame (cached per path and frame). */
-export function trackBox(path: TrackPath, frame: LocalFrame): TrackBox {
+const boxes = new WeakMap<TrackPath, WeakMap<LocalFrame, Map<string, TrackBox>>>()
+
+/** Box of the track, or of its stretch `range`, in the local frame (cached per path, frame and range). */
+export function trackBox(path: TrackPath, frame: LocalFrame, range?: PathRange): TrackBox {
   let perFrame = boxes.get(path)
   if (!perFrame) boxes.set(path, (perFrame = new WeakMap()))
-  const cached = perFrame.get(frame)
+  let perRange = perFrame.get(frame)
+  if (!perRange) perFrame.set(frame, (perRange = new Map()))
+  const key = range ? `${range.fromM}:${range.toM}` : ''
+  const cached = perRange.get(key)
   if (cached) return cached
   const box: TrackBox = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity, minEle: NaN, maxEle: NaN }
   const p = new Vector3()
   for (let i = 0; i < path.count; i++) {
+    if (range && (path.dist[i] < range.fromM || path.dist[i] > range.toM)) continue
     frame.toLocal(path.lon[i], path.lat[i], 0, p)
     box.minX = Math.min(box.minX, p.x)
     box.maxX = Math.max(box.maxX, p.x)
@@ -243,7 +256,7 @@ export function trackBox(path: TrackPath, frame: LocalFrame): TrackBox {
     if (!(ele >= box.minEle)) box.minEle = ele
     if (!(ele <= box.maxEle)) box.maxEle = ele
   }
-  perFrame.set(frame, box)
+  perRange.set(key, box)
   return box
 }
 
@@ -315,8 +328,8 @@ export function regionDistanceM(
 }
 
 /** Centre of the track's box on the ground, the box diagonal (relief included) and its smaller half side. */
-function trackFraming(path: TrackPath, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number) {
-  const box = trackBox(path, frame)
+function trackFraming(path: TrackPath, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number, range?: PathRange) {
+  const box = trackBox(path, frame, range)
   const centre = new Vector3((box.minX + box.maxX) / 2, 0, (box.minZ + box.maxZ) / 2)
   const at = frame.toLonLat(centre)
   const recorded = Number.isNaN(box.minEle) ? 0 : (box.minEle + box.maxEle) / 2
@@ -348,8 +361,8 @@ function viewFromSide(
 }
 
 /**
- * Overview of the whole track for a frame of `aspect` (width / height), seen from the side the `joined` flight
- * view looks from.
+ * Overview of the whole track (or of its stretch `range`: a day) for a frame of `aspect` (width / height), seen from
+ * the side the `joined` flight view looks from.
  */
 export function overviewView(
   path: TrackPath,
@@ -358,8 +371,9 @@ export function overviewView(
   exaggeration: number,
   aspect: number,
   joined: CameraView,
+  range?: PathRange,
 ): CameraView {
-  const { target, diagonal } = trackFraming(path, frame, sample, exaggeration)
+  const { target, diagonal } = trackFraming(path, frame, sample, exaggeration, range)
   return viewFromSide(target, sideOf(joined), OVERVIEW_PITCH_DEG, overviewDistanceM(diagonal, aspect), frame, sample, exaggeration)
 }
 
@@ -527,6 +541,40 @@ function liftedOnTheWay(view: CameraView, k: number, liftM: number): CameraView 
   const share = smootherstep(Math.min(k, 1 - k) / easeShare)
   if (share <= 0) return view
   return { target, position: position.clone().setY(position.y + liftM * share) }
+}
+
+/**
+ * The view `k` (0..1, exclusive) of the way from `from` to `to`, one of which is the `flight` view, lifted over the
+ * relief and eased toward the ends. The camera takes ahead the lift the relief will ask for around: a crest passing
+ * under the line of sight asks 2 km in less than half a second. The lift is read at fixed points of the blend, and
+ * each point's lift counts in full within SHOT_LIFT_HOLD of the blend and down to nothing (raised cosine) at
+ * SHOT_LIFT_REACH: a smooth function of `k`. The lifts above the ground raise the camera only: its aim goes up as
+ * much, so the tilt eases from one end view's to the other's instead of tipping down at the ground.
+ */
+function liftedBlend(
+  from: CameraView,
+  to: CameraView,
+  k: number,
+  flight: CameraView,
+  frame: LocalFrame,
+  sample: HeightSampler | null,
+  exaggeration: number,
+): CameraView {
+  const blended = blendViews(from, to, k, frame, sample, exaggeration, true)
+  if (!(k > 0 && k < 1)) return blended
+  let liftM = 0
+  for (let i = 1; i < SHOT_LIFT_POINTS; i++) {
+    const at = i / SHOT_LIFT_POINTS
+    const away = Math.abs(at - k)
+    if (away >= SHOT_LIFT_REACH) continue
+    const weight = away <= SHOT_LIFT_HOLD ? 1 : 0.5 + 0.5 * Math.cos((Math.PI * (away - SHOT_LIFT_HOLD)) / (SHOT_LIFT_REACH - SHOT_LIFT_HOLD))
+    liftM = Math.max(liftM, weight * shotLift(blendViews(from, to, at, frame, sample, exaggeration, true), flight, frame, sample, exaggeration))
+  }
+  // never less than this very point's lift
+  liftM = Math.max(liftM, shotLift(blended, flight, frame, sample, exaggeration))
+  const { position } = liftedOnTheWay(blended, k, liftM)
+  const free = blendViews(from, to, k, frame, null, exaggeration, true)
+  return { target: blended.target.clone().setY(blended.target.y + position.y - free.position.y), position }
 }
 
 /** Marker position on the draped track at `progress` (as `computeCameraView` places it). */
@@ -775,6 +823,24 @@ export function keyFramingAt(
 }
 
 /**
+ * The day whose high view is on at film time `timeS` and how far the camera is up (0..1): during the night pause before
+ * a day with `view` it rises over the dusk, holds over the night and comes back down over the dawn (the parts of
+ * `film.nights`, as the sun reads them, but never shorter than DAY_VIEW_MIN_SHARE of the pause), null outside.
+ */
+export function dayViewAt(clock: Pick<FilmClock, 'days' | 'nights'>, timeS: number): { day: ClockDay; k: number } | null {
+  const night = nightAt(clock, timeS)
+  const day = night ? clock.days.find((d) => d.night === night && d.view) : undefined
+  if (!night || !day) return null
+  const pauseS = night.endS - night.startS
+  const parts = night.duskS + night.nightS + night.dawnS
+  const scale = parts > 0 ? pauseS / parts : 0
+  const up = Math.min(Math.max(night.duskS * scale, DAY_VIEW_MIN_SHARE * pauseS), 0.5 * pauseS)
+  const down = Math.min(Math.max(night.dawnS * scale, DAY_VIEW_MIN_SHARE * pauseS), 0.5 * pauseS)
+  const k = smootherstep((timeS - night.startS) / up) * (1 - smootherstep((timeS - (night.endS - down)) / down))
+  return { day, k }
+}
+
+/**
  * Camera at film time `timeS` and `progress` (the store's: the export nudges it to re-place the camera). The time-based
  * flight styles follow the flight time, so they start where the opening hands over. The aim and the camera follow the
  * progress smoothed in film time (`timeSmoothing.ts`; stops keep the marker's progress and time). The keyframes take
@@ -805,7 +871,13 @@ export function computeFilmView(
     }
     flight = { ...blendViews(filmFlight, pose, keyed.weight, frame, sample, options.exaggeration), marker: filmFlight.marker }
   }
-  if (state.phase !== 'opening' && state.phase !== 'closing') return flight
+  if (state.phase !== 'opening' && state.phase !== 'closing') {
+    const day = dayViewAt(clock, timeS)
+    if (!day) return flight
+    // the night before a day: up to a high view of its route, held, and back down to the marker at dawn
+    const high = overviewView(path, frame, sample, options.exaggeration, aspect, flight, { fromM: day.day.startM, toM: day.day.endM })
+    return { ...liftedBlend(flight, high, day.k, flight, frame, sample, options.exaggeration), marker: flight.marker }
+  }
 
   const phase = state.phase
   const shot = phase === 'opening' ? clock.opening : clock.closing
@@ -828,25 +900,6 @@ export function computeFilmView(
     return { k, from, to, blended: blendViews(from, to, k, frame, sample, options.exaggeration, true) }
   }
   const now = shotAt(state.localS)
-  const { k, from, to, blended } = now
-  if (!(k > 0 && k < 1)) return { ...blended, marker: flight.marker }
-  // the camera takes ahead the lift the relief will ask for around: a crest passing under the line of sight asks 2 km
-  // in less than half a second. The lift is read at fixed points of the blend, and each point's lift counts in full
-  // within SHOT_LIFT_HOLD of the blend and down to nothing (raised cosine) at SHOT_LIFT_REACH: a smooth function of k
-  let liftM = 0
-  for (let i = 1; i < SHOT_LIFT_POINTS; i++) {
-    const at = i / SHOT_LIFT_POINTS
-    const away = Math.abs(at - k)
-    if (away >= SHOT_LIFT_REACH) continue
-    const weight = away <= SHOT_LIFT_HOLD ? 1 : 0.5 + 0.5 * Math.cos((Math.PI * (away - SHOT_LIFT_HOLD)) / (SHOT_LIFT_REACH - SHOT_LIFT_HOLD))
-    liftM = Math.max(liftM, weight * shotLift(blendViews(from, to, at, frame, sample, options.exaggeration, true), flight, frame, sample, options.exaggeration))
-  }
-  // never less than this very point's lift
-  liftM = Math.max(liftM, shotLift(blended, flight, frame, sample, options.exaggeration))
-  const { position } = liftedOnTheWay(blended, k, liftM)
-  // the lifts above the ground raise the camera only: its aim goes up as much, so the tilt eases from one end view's
-  // to the other's instead of tipping down at the ground
-  const free = blendViews(from, to, k, frame, null, options.exaggeration, true)
-  const target = blended.target.clone().setY(blended.target.y + position.y - free.position.y)
-  return { target, position, marker: flight.marker }
+  if (!(now.k > 0 && now.k < 1)) return { ...now.blended, marker: flight.marker }
+  return { ...liftedBlend(now.from, now.to, now.k, flight, frame, sample, options.exaggeration), marker: flight.marker }
 }

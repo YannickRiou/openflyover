@@ -1,13 +1,13 @@
 /**
- * Days of a multi-day track and their cards (« Ajouter les cartes de jour », Lumière tab): days split on the local
- * calendar date of the recorded times; the cards are ordinary texts of the film, added on demand, then free to edit.
- * Pure module (no DOM, React, Three or store).
+ * Days of a multi-day track and their cards (« Cartes de jour », Lumière tab): days split on the local calendar date of
+ * the recorded times, and the figures of each day the card can show. The card itself is drawn from these at every frame
+ * (overlay/data.ts `dayCardAt`), so it follows the track, the nights and the weather; earlier versions baked it into
+ * the texts of the film (`day-n`), which `withoutDayCards` removes. Pure module (no DOM, React, Three or store).
  */
 import type { TrackPath } from '../flyover/path'
-import { formatDistance } from '../ui/format'
-import type { FilmClock } from './clock'
+import type { WeatherSeries, WeatherSummary } from '../weather/series'
+import { summarizeOuting } from '../weather/series'
 import type { Film, FilmText } from './model'
-import { t } from '../i18n'
 
 /** A day of the track: from its first recorded point to the first point of the next day (metres along the path). */
 export interface TrackDay {
@@ -46,42 +46,63 @@ export function trackDays(path: TrackPath, utcOffsetMin?: number): TrackDay[] {
   return days
 }
 
-/** What a day card says under « Jour n »: the distance of the day, the distance from the start at its end. */
-export interface DayCardContent {
-  day: boolean
-  total: boolean
-}
-
-/** How long a day card stays (seconds at ×1), as a stage card « À la suite ». */
-export const DAY_CARD_S = 5
-
-/** Texts made by `withDayCards`: `day-1`, `day-2`… */
+/** Texts made by the day cards of earlier versions: `day-1`, `day-2`… */
 export const isDayCard = (text: Pick<FilmText, 'id'>) => /^day-\d+$/.test(text.id)
 
-/** The days of a track and how to read their dates (`trackDays`). */
-export interface DayCardTrack {
-  days: readonly TrackDay[]
-  lengthM: number
-  utcOffsetMin?: number
+/** `film` without the day cards baked into its texts by earlier versions (the other texts are kept as they are). */
+export function withoutDayCards(film: Film): Film {
+  return film.texts.some(isDayCard) ? { ...film, texts: film.texts.filter((text) => !isDayCard(text)) } : film
+}
+
+/** What a day card can say of its day. */
+export interface DayFigures {
+  /** 1 for the first day */
+  n: number
+  count: number
+  /** local calendar date, 'YYYY-MM-DD' */
+  date: string
+  /** first recorded time of the day (ms since epoch) */
+  startTime?: number
+  distanceM: number
+  /** climb of the day (absent without elevations) */
+  ascentM?: number
+  /** from its first to its last recorded time */
+  durationS?: number
+  weather?: WeatherSummary
 }
 
 /**
- * `film` with a card at the start of each day of `track` (none for a single day), replacing the day cards made
- * before: « Jour n » and, below, the distance of the day and / or the distance at its end. The first shows when the
- * flight starts, the others when the marker reaches the day's first point, or later, at the end of the night pause
- * whose sunrise is that day.
+ * Figures of each day of `days`: distance, climb (`ascent`: the cumulative ascent at each point of the path,
+ * `cumulativeAscent`), time from its first to its last recorded point and the weather along it (`series`, when fetched).
+ * A day is its timed points of its local date (`utcOffsetMin`, as `trackDays`): the last point of an evening and the
+ * first of the morning can stand at the same distance.
  */
-export function withDayCards(film: Film, track: DayCardTrack, clock: Pick<FilmClock, 'timeAtProgress' | 'nights'>, content: DayCardContent): Film {
-  const texts = film.texts.filter((t) => !isDayCard(t))
-  const { days, lengthM, utcOffsetMin } = track
-  if (days.length < 2 || !(lengthM > 0)) return { ...film, texts }
-  const cards = days.map((day, k): FilmText => {
-    let startS = clock.timeAtProgress(k === 0 ? 0 : day.startM / lengthM)
-    for (const night of clock.nights) if (k > 0 && localDate(night.sunriseMs, utcOffsetMin) === day.date) startS = Math.max(startS, night.holdEndS)
-    const lines = [...(content.day ? [formatDistance(day.endM - day.startM)] : []), ...(content.total ? [t('film.dayTotal', { distance: formatDistance(day.endM) })] : [])]
-    const card: FilmText = { id: `day-${k + 1}`, startS: Math.round(startS * 10) / 10, durationS: DAY_CARD_S, text: t('film.defaultDay', { n: k + 1 }), anchor: 'center', size: 1.25 }
-    if (lines.length > 0) card.subtitle = lines.join(' · ')
-    return card
+export function dayFigures(
+  path: TrackPath,
+  days: readonly TrackDay[],
+  ascent: ArrayLike<number> | undefined,
+  series?: WeatherSeries | null,
+  utcOffsetMin?: number,
+): DayFigures[] {
+  const ends = new Map<string, { first: number; last: number }>()
+  for (let i = 0; i < path.count; i++) {
+    if (Number.isNaN(path.time[i])) continue
+    const date = localDate(path.time[i], utcOffsetMin)
+    const known = ends.get(date)
+    if (known) known.last = i
+    else ends.set(date, { first: i, last: i })
+  }
+  return days.map((day, k) => {
+    const { first, last } = ends.get(day.date) ?? { first: 0, last: 0 }
+    const figures: DayFigures = { n: k + 1, count: days.length, date: day.date, distanceM: day.endM - day.startM }
+    figures.startTime = path.time[first]
+    if (path.time[last] > path.time[first]) figures.durationS = (path.time[last] - path.time[first]) / 1000
+    const gained = ascent ? ascent[last] - ascent[first] : Number.NaN
+    if (Number.isFinite(gained)) figures.ascentM = Math.max(0, gained)
+    if (series) {
+      const weather = summarizeOuting(series, path, 60, { fromM: day.startM, toM: day.endM })
+      if (weather) figures.weather = weather
+    }
+    return figures
   })
-  return { ...film, texts: [...texts, ...cards] }
 }

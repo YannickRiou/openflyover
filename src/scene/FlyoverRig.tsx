@@ -18,7 +18,7 @@ import { markerAt, markerFadeM } from '../film/markerKeys'
 import { useMediaStore } from '../film/media'
 import { keyAt, updateCameraKey } from '../film/timeline'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
-import { filmViewMovesWithTime, situationFramingOf, situationTarget } from '../flyover/filmCamera'
+import { dayViewAt, filmViewMovesWithTime, situationFramingOf, situationTarget } from '../flyover/filmCamera'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { registerFramingCapture, useRegionStore } from '../osm/region'
 import { getSettingsHistory } from '../project/history'
@@ -86,7 +86,7 @@ export function FlyoverRig() {
   const appliedRef = useRef({
     progress: mount.progress,
     timeS: mountTimeS,
-    timed: filmViewMovesWithTime(clock.stateAt(mountTimeS), mountSettings.camera),
+    timed: filmViewMovesWithTime(clock.stateAt(mountTimeS), mountSettings.camera) || dayViewAt(clock, mountTimeS) !== null,
   })
   const appliedSettingsRef = useRef(mountSettings)
   const appliedRegionRef = useRef(useRegionStore.getState().frame)
@@ -199,7 +199,7 @@ export function FlyoverRig() {
       settings.race !== applied.race ||
       region !== appliedRegionRef.current
     const placed = appliedRef.current
-    const timed = filmViewMovesWithTime(clock.stateAt(timeS), settings.camera)
+    const timed = filmViewMovesWithTime(clock.stateAt(timeS), settings.camera) || dayViewAt(clock, timeS) !== null
     const moved = progress !== placed.progress || ((timed || placed.timed) && timeS !== placed.timeS)
     if (playing || moved || cameraChanged) {
       appliedRef.current = { progress, timeS, timed }

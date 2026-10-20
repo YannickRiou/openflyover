@@ -16,6 +16,7 @@ const messages: Messages['overlay'] = {
   'draw.stat.ascent': 'Dislivello +',
   'draw.stat.maxAltitude': 'Altitudine max',
   'draw.stat.duration': 'Durata',
+  'draw.stat.start': 'Partenza',
   'draw.stat.maxSpeed': 'Velocità max',
   'draw.temperatureRange': 'da {min} a {max} °C',
   'draw.weatherLine': '{condition} · {temperature} · vento fino a {wind} km/h',
