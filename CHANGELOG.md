@@ -3,12 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 3.0.0 (October 2026)
 
 - **« Accéléré » sun, as long as you want**: the sun of an opening or closing shot in « Accéléré » now runs 4 hours by default (2 hours before: too short to see the shadows move), and « Heures de soleil » in the shot's inspector sets it from 1 to 12 hours, shot by shot.
 - **Rich day cards and a high view of the day**: on a track recorded over several days, « Cartes de jour » now draws a card at the start of each day from the track, the nights and the weather (date, distance, climb, duration, start time and weather, each one optional, your own title, position, size and duration) instead of plain texts, and « Vue haute pendant la nuit » lifts the camera during each night to show the next day's route from above before diving back to the marker at dawn.
 - **Opening and closing shots without jerks over steep relief**: on a mountain, the camera of the opening and closing shots (« Descente », « Depuis la région », « Balayage ») no longer drops or jerks when a ridge or the glide slope asks it to climb; it takes the climb ahead and comes back down gently, and in « Satellite » the marker stays in the frame.
-
 - **Several blocks at once, copy / paste and closing gaps**: Ctrl + click picks several texts, photos or music clips, one drag moves them all, Ctrl+C / Ctrl+V copy and paste them at the playhead, and Shift+Delete (or Shift while dragging an end) closes the gap they leave.
 - **Frames along a video on the timeline**: a video block wide enough shows a filmstrip of the clip behind its name.
 - **Zoom on the selection, frame timecode, a magnet you can tune**: Z (or a button by the zoom) zooms the timeline to the selected block, the work area or the whole film; « Réglages › Timeline » can show the timecode in frames and choose what the magnet snaps to (playhead, blocks and keys, ruler marks, junctions and highlights).
@@ -20,6 +19,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Normalise the loudness of the film**: « Encodage › Volume » sets the soundtrack (music and video sound) to −14 LUFS (web, the default choice), −16 or −23 LUFS (television) and keeps its peaks under −1 dB, so a film no longer sounds quieter or louder than the others on a platform. Off by default.
 - **AV1 and image sequences**: « Encodage › Codec » offers AV1 (MP4) where your device can encode it, and « Séquence d'images PNG » writes one numbered PNG per frame into a folder for an editing application.
 - **A guide to self-hosting**: `docs/self-hosting.md` explains how to run your own copy of the website (Caddy, Docker with nginx, nginx / Apache or any static host, HTTPS, updates, a subfolder or domain, what the visitors' browsers contact, and how to point the site at your own tile, landmark and weather servers), with a short section in the README.
+
 ## 2.4.1 (October 2026)
 
 - **An opening from the region without a jump**: with « Depuis la région » and the region highlighted, the camera no longer stops halfway down, climbs a few hundred metres and dives again when a mountain lies between the region and the start of the track; it glides down in one go.

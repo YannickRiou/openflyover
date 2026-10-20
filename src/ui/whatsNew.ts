@@ -21,6 +21,18 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
+    version: '3.0',
+    items: [
+      { icon: 'video', get title() { return t('news.v30.camera.title') }, get text() { return t('news.v30.camera.text') } },
+      { icon: 'sun', get title() { return t('news.v30.days.title') }, get text() { return t('news.v30.days.text') } },
+      { icon: 'type', get title() { return t('news.v30.cards.title') }, get text() { return t('news.v30.cards.text') } },
+      { icon: 'move-horizontal', get title() { return t('news.v30.timeline.title') }, get text() { return t('news.v30.timeline.text') } },
+      { icon: 'download', get title() { return t('news.v30.export.title') }, get text() { return t('news.v30.export.text') } },
+      { icon: 'volume-2', get title() { return t('news.v30.sound.title') }, get text() { return t('news.v30.sound.text') } },
+      { icon: 'plus', get title() { return t('news.v30.more.title') }, get text() { return t('news.v30.more.text') } },
+    ],
+  },
+  {
     version: '2.4.1',
     items: [
       { icon: 'video', get title() { return t('news.v241.camera.title') }, get text() { return t('news.v241.camera.text') } },
