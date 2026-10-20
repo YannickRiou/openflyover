@@ -23,6 +23,8 @@ const messages: Messages['inspector'] = {
   'shot.sun.day': 'Full daylight',
   'shot.sun.flyover': 'Flyover time',
   'shot.sun.accelerated': 'Accelerated ({hours} h)',
+  'shot.sunHours': 'Hours of sun',
+  'shot.sunHoursTip': 'How many hours of the day the sun runs during the shot: the longer, the more the shadows move.',
   'shot.style.aucune': 'None',
   'shot.style.descente': 'Descent',
   'shot.style.saut': 'Jump',

@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **« Accéléré » sun, as long as you want**: the sun of an opening or closing shot in « Accéléré » now runs 4 hours by default (2 hours before: too short to see the shadows move), and « Heures de soleil » in the shot's inspector sets it from 1 to 12 hours, shot by shot.
+
 ## 2.4.1 (October 2026)
 
 - **An opening from the region without a jump**: with « Depuis la région » and the region highlighted, the camera no longer stops halfway down, climbs a few hundred metres and dives again when a mountain lies between the region and the start of the track; it glides down in one go.

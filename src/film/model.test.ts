@@ -131,8 +131,12 @@ describe('film model', () => {
       { headroomPct: 50 },
       { moveSun: 'oui' as never },
       { sun: 'nuit' as never },
+      { sunHours: 0 },
+      { sunHours: 13 },
+      { sunHours: 'six' as never },
     ]
     for (const patch of bad) expect(isValidFilm(film({ opening: { ...framed, ...patch } }))).toBe(false)
+    expect(isValidFilm(film({ opening: { ...framed, sun: 'accelere', sunHours: 6 } }))).toBe(true)
   })
 
   it('dip curve: 0 outside its window, symmetric, 1 at the cut', () => {

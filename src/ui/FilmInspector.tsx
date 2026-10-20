@@ -24,6 +24,7 @@ import {
   SITUATION_HEADINGS,
   SITUATION_HEADING_LABELS,
   SITUATION_HEADROOM_RANGE,
+  SHOT_SUN_HOURS_RANGE,
   SITUATION_HOLD_RANGE,
   SITUATION_TILT_DEFAULT_DEG,
   SITUATION_TILT_RANGE,
@@ -67,22 +68,14 @@ import {
 import { cameraKeyEaseM, keyedCamera } from '../flyover/cameraKeys'
 import { CAMERA_RANGES } from '../flyover/cameraSettings'
 import { buildTrackPath } from '../flyover/path'
-import { SHOT_SUN_HOURS } from '../flyover/sun'
+import { shotSunHoursOf } from '../flyover/sun'
 
 /** Hint of each « Soleil » choice, [opening, closing]. */
-const SHOT_SUN_HINTS: Record<ShotSun, readonly [string, string]> = {
-  get jour() {
-    return [t('inspector.shot.sunHint.day.opening'), t('inspector.shot.sunHint.day.closing')] as const
-  },
-  get survol() {
-    return [t('inspector.shot.sunHint.flyover.opening'), t('inspector.shot.sunHint.flyover.closing')] as const
-  },
-  get accelere() {
-    return [
-      t('inspector.shot.sunHint.accelerated.opening', { hours: SHOT_SUN_HOURS }),
-      t('inspector.shot.sunHint.accelerated.closing', { hours: SHOT_SUN_HOURS }),
-    ] as const
-  },
+const SHOT_SUN_HINTS: Record<ShotSun, (hours: number) => readonly [string, string]> = {
+  jour: () => [t('inspector.shot.sunHint.day.opening'), t('inspector.shot.sunHint.day.closing')] as const,
+  survol: () => [t('inspector.shot.sunHint.flyover.opening'), t('inspector.shot.sunHint.flyover.closing')] as const,
+  accelere: (hours) =>
+    [t('inspector.shot.sunHint.accelerated.opening', { hours }), t('inspector.shot.sunHint.accelerated.closing', { hours })] as const,
 }
 import { REGION_KIND_LABELS, candidateId, captureFraming, useRegionStore } from '../osm/region'
 import { WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
@@ -565,12 +558,23 @@ export function FilmInspector() {
               options={[
                 { value: 'jour', label: t('inspector.shot.sun.day') },
                 { value: 'survol', label: t('inspector.shot.sun.flyover') },
-                { value: 'accelere', label: t('inspector.shot.sun.accelerated', { hours: SHOT_SUN_HOURS }) },
+                { value: 'accelere', label: t('inspector.shot.sun.accelerated', { hours: shotSunHoursOf(shot) }) },
               ]}
               onChange={(sun) => change((f) => updateShot(f, item, { sun, moveSun: undefined }), false)}
             />
+            {shotSunOf(shot) === 'accelere' && (
+              <RangeField
+                label={t('inspector.shot.sunHours')}
+                {...SHOT_SUN_HOURS_RANGE}
+                value={shotSunHoursOf(shot)}
+                format={(hours) => `${hours} h`}
+                onChange={(sunHours) => change((f) => updateShot(f, item, { sunHours }), false)}
+                wide={false}
+                tip={t('inspector.shot.sunHoursTip')}
+              />
+            )}
             <p id={`${id}-sun-hint`} className={HINT}>
-              {SHOT_SUN_HINTS[shotSunOf(shot)][item === 'opening' ? 0 : 1]}
+              {SHOT_SUN_HINTS[shotSunOf(shot)](shotSunHoursOf(shot))[item === 'opening' ? 0 : 1]}
               {!atmosphere && t('inspector.shot.sunNeedsAtmosphere')}
             </p>
           </InspectorGroup>

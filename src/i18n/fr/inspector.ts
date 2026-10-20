@@ -21,6 +21,8 @@ export default {
   'shot.sun.day': 'Plein jour',
   'shot.sun.flyover': 'Heure du survol',
   'shot.sun.accelerated': 'Accéléré ({hours} h)',
+  'shot.sunHours': 'Heures de soleil',
+  'shot.sunHoursTip': 'Combien d’heures de journée le soleil parcourt pendant le plan : plus c’est long, plus les ombres bougent.',
   'shot.style.aucune': 'Aucune',
   'shot.style.descente': 'Descente',
   'shot.style.saut': 'Saut',
