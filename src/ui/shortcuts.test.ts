@@ -25,6 +25,17 @@ describe('matchShortcut: editing keys', () => {
     expect(matchShortcut(key('Delete'), 'other')).toBe('remove')
   })
 
+  it('Ctrl+C and Ctrl+V copy and paste, Shift+Delete removes and closes the gap, Delete alone does not', () => {
+    expect(matchShortcut(key('c', { ctrlKey: true }), 'other')).toBe('copy')
+    expect(matchShortcut(key('V', { metaKey: true }), 'other')).toBe('paste')
+    expect(matchShortcut(key('c', { ctrlKey: true }), 'text')).toBeNull()
+    expect(matchShortcut(key('v', { ctrlKey: true }), 'arrows')).toBe('paste')
+    expect(matchShortcut(key('Delete', { shiftKey: true }), 'other')).toBe('ripple-remove')
+    expect(matchShortcut(key('Delete'), 'other')).toBe('remove')
+    expect(matchShortcut(key('Delete', { shiftKey: true }), 'text')).toBeNull()
+    expect(matchShortcut(key('c', { ctrlKey: true, shiftKey: true }), 'other')).toBeNull()
+  })
+
   it('I and O set the in and out points of the work area, Shift+X clears it', () => {
     expect(matchShortcut(key('i'), 'other')).toBe('mark-in')
     expect(matchShortcut(key('O'), 'other')).toBe('mark-out')
@@ -40,7 +51,6 @@ describe('matchShortcut: editing keys', () => {
     expect(matchShortcut(key('d', { ctrlKey: true }), 'text')).toBeNull()
     expect(matchShortcut(key('Delete'), 'text')).toBeNull()
     expect(matchShortcut(key('Delete'), 'arrows')).toBeNull()
-    expect(matchShortcut(key('Delete', { shiftKey: true }), 'other')).toBeNull()
     expect(matchShortcut(key('x', { ctrlKey: true }), 'other')).toBeNull()
     expect(matchShortcut(key('k', { altKey: true }), 'other')).toBeNull()
     expect(matchShortcut(key('k', { shiftKey: true }), 'other')).toBeNull()

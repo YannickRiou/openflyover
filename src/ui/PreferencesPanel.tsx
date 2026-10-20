@@ -1,3 +1,5 @@
+import { SNAP_GROUPS } from '../film/timeline'
+import type { SnapGroup } from '../film/timeline'
 import { useId } from 'react'
 import { t, useT } from '../i18n'
 import { getPlatform } from '../platform'
@@ -24,6 +26,13 @@ const PERF_LABELS: Record<PerfItem, string> = {
   get tiles() { return t('settings.preferences.perf.tiles') },
   get memory() { return t('settings.preferences.perf.memory') },
   get system() { return t('settings.preferences.perf.system') },
+}
+
+const SNAP_LABELS: Record<SnapGroup, string> = {
+  get playhead() { return t('settings.preferences.timeline.snapPlayhead') },
+  get blocks() { return t('settings.preferences.timeline.snapBlocks') },
+  get ruler() { return t('settings.preferences.timeline.snapRuler') },
+  get marks() { return t('settings.preferences.timeline.snapMarks') },
 }
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -174,6 +183,12 @@ export function PreferencesPanel() {
           {t('settings.preferences.timeline.clock')}
         </Switch>
         <p className="type-hint">{t('settings.preferences.timeline.clockHint')}</p>
+        <Switch checked={prefs.timelineFrames} onChange={(on) => setPreferences({ timelineFrames: on })}>
+          {t('settings.preferences.timeline.frames')}
+        </Switch>
+        <p className="type-hint">{t('settings.preferences.timeline.framesHint')}</p>
+        <Chips legend={t('settings.preferences.timeline.snap')} labels={SNAP_LABELS} keys={SNAP_GROUPS} value={prefs.timelineSnap} onChange={(timelineSnap) => setPreferences({ timelineSnap })} />
+        <p className="type-hint">{t('settings.preferences.timeline.snapHint')}</p>
       </PanelSection>
       {getPlatform().checkForUpdate && <UpdatesSection />}
       <DiagnosticRow />

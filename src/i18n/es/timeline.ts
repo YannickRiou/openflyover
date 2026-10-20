@@ -97,7 +97,13 @@ const messages: Messages['timeline'] = {
   'zoom.out': 'Alejar',
   'zoom.in': 'Acercar',
   'zoom.slider': 'Zoom',
+  'zoom.selection': 'Ampliar la selección',
+  'zoom.selectionTip': 'Ampliar el bloque seleccionado o la zona de reproducción; si no, ver toda la película',
   'zoom.fit': 'Ajustar: ver toda la película',
+  'lane.fold': 'Plegar la pista «{name}»',
+  'lane.unfold': 'Desplegar la pista «{name}»',
+  'lane.lock': 'Bloquear la pista «{name}» (sus bloques ya no se mueven)',
+  'lane.unlock': 'Desbloquear la pista «{name}»',
   'workArea.in': 'Punto de entrada de la zona de reproducción: arrastrar para moverlo',
   'workArea.out': 'Punto de salida de la zona de reproducción: arrastrar para moverlo',
   'workArea.clear': 'Quitar la zona de reproducción',
@@ -120,6 +126,7 @@ const messages: Messages['timeline'] = {
   'menu.addKey': 'Añadir un fotograma clave aquí',
   'menu.remove': 'Eliminar',
   'menu.removeKey': 'Eliminar el fotograma clave',
+  'menu.removeClose': {'one': 'Eliminar y cerrar el hueco', 'other': 'Eliminar los {count} bloques y cerrar el hueco'},
   'menu.removeKeys': { one: 'Eliminar el fotograma clave seleccionado', other: 'Eliminar los {count} fotogramas clave seleccionados' },
 }
 

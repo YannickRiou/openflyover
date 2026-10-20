@@ -91,7 +91,13 @@ const messages: Messages['timeline'] = {
   'zoom.out': 'Verkleinern',
   'zoom.in': 'Vergrößern',
   'zoom.slider': 'Zoom',
+  'zoom.selection': 'Auf die Auswahl zoomen',
+  'zoom.selectionTip': 'Auf den gewählten Block oder den Wiedergabebereich zoomen, sonst den ganzen Film zeigen',
   'zoom.fit': 'Einpassen: ganzen Film sehen',
+  'lane.fold': 'Spur „{name}“ einklappen',
+  'lane.unfold': 'Spur „{name}“ ausklappen',
+  'lane.lock': 'Spur „{name}“ sperren (ihre Blöcke bewegen sich nicht mehr)',
+  'lane.unlock': 'Spur „{name}“ entsperren',
   'workArea.in': 'Einstiegspunkt des Wiedergabebereichs: zum Verschieben ziehen',
   'workArea.out': 'Ausstiegspunkt des Wiedergabebereichs: zum Verschieben ziehen',
   'workArea.clear': 'Wiedergabebereich entfernen',
@@ -114,6 +120,7 @@ const messages: Messages['timeline'] = {
   'menu.addKey': 'Hier einen Keyframe hinzufügen',
   'menu.remove': 'Löschen',
   'menu.removeKey': 'Keyframe löschen',
+  'menu.removeClose': {'one': 'Entfernen und die Lücke schließen', 'other': 'Die {count} Blöcke entfernen und die Lücke schließen'},
   'menu.removeKeys': { one: 'Ausgewählten Keyframe löschen', other: 'Die {count} ausgewählten Keyframes löschen' },
 }
 
