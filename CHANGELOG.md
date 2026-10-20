@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Frames along a video on the timeline**: a video block wide enough shows a filmstrip of the clip behind its name.
 - **Zoom on the selection, frame timecode, a magnet you can tune**: Z (or a button by the zoom) zooms the timeline to the selected block, the work area or the whole film; « Réglages › Timeline » can show the timecode in frames and choose what the magnet snaps to (playhead, blocks and keys, ruler marks, junctions and highlights).
 - **Tracks you can fold and lock**: each track of the timeline has a fold button (a thin strip) and a padlock (its blocks no longer move), remembered on your device; wider track names and easier-to-grab edges and keys.
 - **A work area that loops**: I and O mark an in and an out point on the timeline, a band on the ruler shows them (drag either end), and the preview loops between them while you edit; Shift+X or the loop button clears it.

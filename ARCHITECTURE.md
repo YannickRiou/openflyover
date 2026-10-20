@@ -1531,6 +1531,12 @@ The interface and the texts drawn into the films and posters exist in **French**
   at `settings.video.fps` (`formatFrameTimecode`) instead of seconds and tenths; the ruler keeps seconds. **Magnet by family**
   (`preferences.timelineSnap`: `SNAP_GROUPS` = the playhead, the blocks and keys (`edge`, `centre`, `end`), the ruler's marks, the
   junctions and highlights (`snapGroupOf`, `snapTargetsOn` in `dragContext`)): each can be turned off, Alt still inverts the magnet.
+- **Filmstrip of a video clip** (`src/ui/Filmstrip.tsx`, `readFilmstrip` / `filmstripTimes` in `film/video.ts`): the block of a video on the
+  « Médias » lane gets frames along its length behind its label (`count` tiles of 40 px: `filmstripCount` takes the largest of 2, 4, 8,
+  12 that fits, none under 80 px; 64 px JPEG tiles at the middle of each equal part of the clip's `inS`–`outS`, `CanvasSink.canvasesAtTimestamps`
+  of mediabunny). Read lazily and once per clip, stretch and count (a `WeakMap` per clip, kept for the session, never in the project), one
+  clip at a time (a promise chain: the preview and the export decode too) and not while an export runs; a clip that cannot be read keeps
+  its first-frame thumbnail only.
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the

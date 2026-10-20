@@ -68,6 +68,7 @@ import {
 } from '../film/timeline'
 import type { DragContext, Grip, SnapBlock, SnapTarget, TimelineItem } from '../film/timeline'
 import { clampWorkArea, dragWorkArea } from '../film/workArea'
+import { Filmstrip, filmstripCount } from './Filmstrip'
 import { useLaneState } from './laneState'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
@@ -1827,6 +1828,15 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     ['start', 'move', 'end'],
                     pictures[m.src]?.thumb,
                     m.kind === 'video' ? 'video' : undefined,
+                    m.kind === 'video' && !exporting ? (
+                      <Filmstrip
+                        key="filmstrip"
+                        asset={pictures[m.src]}
+                        inS={m.inS ?? 0}
+                        outS={m.outS ?? pictures[m.src]?.durationS ?? 0}
+                        count={filmstripCount(m.durationS * pxPerS)}
+                      />
+                    ) : undefined,
                   ),
                 )}
               </div>
