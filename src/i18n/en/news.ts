@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v241.camera.title': 'An opening without a jolt',
+  'v241.camera.text': 'With “From the region” and the region highlighted, the camera no longer stops halfway down and climbs a few hundred metres when a mountain stands between the region and the start: it glides down in one move.',
   'v24.camera.title': 'A camera that sees the relief coming',
   'v24.camera.text': 'During the flyover the camera rises before a slope or a ridge instead of jumping when it gets there, no longer shakes on calmer stretches, and the opening shot glides down into the flight.',
   'v232.track.title': 'A softer track',

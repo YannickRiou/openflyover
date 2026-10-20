@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v241.camera.title': 'Eine Eröffnung ohne Ruck',
+  'v241.camera.text': 'Mit „Aus der Region“ und hervorgehobener Region hält die Kamera nicht mehr auf halbem Weg an und steigt einige hundert Meter, wenn ein Berg zwischen der Region und dem Start liegt: Sie gleitet in einem Zug hinab.',
   'v24.camera.title': 'Eine Kamera, die das Relief vorwegnimmt',
   'v24.camera.text': 'Beim Überflug steigt die Kamera schon vor einem Hang oder Grat, statt beim Erreichen zu springen, wackelt auf ruhigen Abschnitten nicht mehr, und die Eröffnungseinstellung gleitet sanft in den Flug hinab.',
   'v232.track.title': 'Ein weicherer Track',

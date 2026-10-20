@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v241.camera.title': 'Une ouverture sans à-coup',
+  'v241.camera.text': 'Avec « Depuis la région » et la région mise en évidence, la caméra ne s’arrête plus à mi-descente pour remonter de quelques centaines de mètres quand une montagne se dresse entre la région et le départ : elle descend d’un seul mouvement.',
   'v24.camera.title': 'Une caméra qui anticipe le relief',
   'v24.camera.text': 'Pendant le survol, la caméra monte avant une pente ou une crête au lieu de sauter en l’atteignant, ne tremble plus sur les passages calmes, et le plan d’ouverture descend en douceur vers le vol.',
   'v232.track.title': 'Une trace plus douce',
