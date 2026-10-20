@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Several blocks at once, copy / paste and closing gaps**: Ctrl + click picks several texts, photos or music clips, one drag moves them all, Ctrl+C / Ctrl+V copy and paste them at the playhead, and Shift+Delete (or Shift while dragging an end) closes the gap they leave.
 - **Frames along a video on the timeline**: a video block wide enough shows a filmstrip of the clip behind its name.
 - **Zoom on the selection, frame timecode, a magnet you can tune**: Z (or a button by the zoom) zooms the timeline to the selected block, the work area or the whole film; « Réglages › Timeline » can show the timecode in frames and choose what the magnet snaps to (playhead, blocks and keys, ruler marks, junctions and highlights).
 - **Tracks you can fold and lock**: each track of the timeline has a fold button (a thin strip) and a padlock (its blocks no longer move), remembered on your device; wider track names and easier-to-grab edges and keys.

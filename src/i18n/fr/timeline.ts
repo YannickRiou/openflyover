@@ -118,5 +118,6 @@ export default {
   'menu.addKey': 'Ajouter une image clé ici',
   'menu.remove': 'Supprimer',
   'menu.removeKey': 'Supprimer l’image clé',
+  'menu.removeClose': {'one': 'Supprimer et fermer l’espace', 'other': 'Supprimer les {count} blocs et fermer l’espace'},
   'menu.removeKeys': { one: 'Supprimer l’image clé sélectionnée', other: 'Supprimer les {count} images clés sélectionnées' },
 }
