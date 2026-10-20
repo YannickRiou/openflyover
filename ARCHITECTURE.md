@@ -1075,10 +1075,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   « Trace » and « Marqueur » sections of the Trace tab (`src/ui/TrackMarkerSection.tsx`).
 - **Width**: pixels of a 1080 px image, times `renderScale` in the export (as before). **Glow** (« Halo de la trace »):
   a second `Line2` on the same geometry, `glowWidth` px wide (6–64, default 24), `LineMaterial` material whose fragment
-  shader is replaced (`onBeforeCompile`, own program key): colour × `glowStrength` × radial fade (`vUv`) from the edge
-  of the line (`glowInner` = width / glowWidth) outwards, **MAX** blending — no beads at the joints of overlapping
-  pieces. Strength = `glowIntensity` (0.1–1, default 0.75) × `TRACK_GLOW_MAX_STRENGTH` (2): above 1 the halo is
-  brighter than the line, so it reads on mid-tone imagery too; on white snow a light halo cannot show. Drawn in the
+  shader is replaced (`onBeforeCompile`, own program key): colour × `glowStrength` × gaussian radial fade (`vUv`,
+  exp(−4x²) shifted to reach 0 at the edge) from the edge of the line (`glowInner` = width / glowWidth) outwards,
+  **MAX** blending — no beads at the joints of overlapping pieces. Strength = `glowIntensity` (0.1–1, default 0.75) ×
+  `TRACK_GLOW_MAX_STRENGTH` (0.8): the halo stays dimmer than the line, which keeps a clear edge instead of merging
+  with it into a wider line; on white snow a light halo cannot show. Drawn in the
   opaque pass (`transparent: false`, renderOrder 1) after the terrain and before the line (renderOrder 2), which
   covers it: the line keeps its colour. Depth-tested like the line. Colour: `glowColor` ('#rrggbb'), '' = the track
   colour or its per-vertex colours; divided by the exposure like the line (`applyExposure`).
