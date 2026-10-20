@@ -20,10 +20,12 @@ export interface Shortcut {
 }
 
 export const SHORTCUTS = [
-  { id: 'play', keys: ['Space'], get label() { return t('shortcuts.label.play') }, group: 'playback' },
+  { id: 'play', keys: ['Space', 'K'], get label() { return t('shortcuts.label.play') }, group: 'playback' },
   { id: 'seek', keys: ['←', '→'], get label() { return t('shortcuts.label.seek') }, group: 'playback' },
   { id: 'seek-long', keys: ['Shift+←', 'Shift+→'], get label() { return t('shortcuts.label.seek-long') }, group: 'playback' },
   { id: 'seek-ends', keys: ['Home', 'End'], get label() { return t('shortcuts.label.seek-ends') }, group: 'playback' },
+  { id: 'work-area', keys: ['I', 'O', 'Shift+X'], get label() { return t('shortcuts.label.work-area') }, group: 'playback' },
+  { id: 'frame', keys: ['J', 'L'], get label() { return t('shortcuts.label.frame') }, group: 'playback' },
   { id: 'seek-key', keys: ['Alt+←', 'Alt+→'], get label() { return t('shortcuts.label.seek-key') }, group: 'playback' },
   { id: 'undo', keys: ['Ctrl+Z'], get label() { return t('shortcuts.label.undo') }, group: 'editing' },
   { id: 'redo', keys: ['Ctrl+Shift+Z', 'Ctrl+Y'], get label() { return t('shortcuts.label.redo') }, group: 'editing' },
@@ -32,7 +34,14 @@ export const SHORTCUTS = [
   { id: 'marquee', keys: ['Ctrl+drag'], get label() { return t('shortcuts.label.marquee') }, group: 'editing' },
   { id: 'add-stop', keys: ['S'], get label() { return t('shortcuts.label.add-stop') }, group: 'editing' },
   { id: 'add-text', keys: ['T'], get label() { return t('shortcuts.label.add-text') }, group: 'editing' },
+  { id: 'pick-blocks', keys: ['Ctrl+click'], get label() { return t('shortcuts.label.pick-blocks') }, group: 'editing' },
+  { id: 'copy-paste', keys: ['Ctrl+C', 'Ctrl+V'], get label() { return t('shortcuts.label.copy-paste') }, group: 'editing' },
+  { id: 'ripple', keys: ['Shift+Del', 'Shift+drag'], get label() { return t('shortcuts.label.ripple') }, group: 'editing' },
   { id: 'remove', keys: ['Del'], get label() { return t('shortcuts.label.remove') }, group: 'editing' },
+  { id: 'duplicate', keys: ['Ctrl+D'], get label() { return t('shortcuts.label.duplicate') }, group: 'editing' },
+  { id: 'split', keys: ['X'], get label() { return t('shortcuts.label.split') }, group: 'editing' },
+  { id: 'zoom-selection', keys: ['Z'], get label() { return t('shortcuts.label.zoom-selection') }, group: 'editing' },
+  { id: 'scroll', keys: ['wheel'], get label() { return t('shortcuts.label.scroll') }, group: 'editing' },
   { id: 'zoom', keys: ['Ctrl+wheel'], get label() { return t('shortcuts.label.zoom') }, group: 'editing' },
   { id: 'pick', keys: ['clickTrack'], get label() { return t('shortcuts.label.pick') }, group: 'editing' },
   { id: 'open', keys: ['Ctrl+O'], get label() { return t('shortcuts.label.open') }, group: 'project' },
@@ -55,6 +64,7 @@ const KEY_WORDS = {
   Del: 'shortcuts.key.Del',
   Esc: 'shortcuts.key.Esc',
   drag: 'shortcuts.key.drag',
+  click: 'shortcuts.key.click',
   wheel: 'shortcuts.key.wheel',
   clickTrack: 'shortcuts.key.clickTrack',
 } as const satisfies Record<string, MessageKey>
@@ -95,6 +105,20 @@ export type ShortcutAction =
   | 'seek-end'
   | 'seek-prev-key'
   | 'seek-next-key'
+  | 'play-pause'
+  | 'mark-in'
+  | 'mark-out'
+  | 'clear-range'
+  | 'frame-back'
+  | 'frame-forward'
+  | 'frame-back-long'
+  | 'frame-forward-long'
+  | 'remove'
+  | 'ripple-remove'
+  | 'copy'
+  | 'paste'
+  | 'duplicate'
+  | 'split'
 
 export interface KeyLike {
   key: string
@@ -142,7 +166,9 @@ export function spacePlays(target: EventTarget | null, focusVisible = (el: Eleme
 /**
  * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+Shift+S save as, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer,
  * F fit the view, G the safe zones, [ fold the panel and ? the help (whatever the modifiers that type them: AltGr, Shift), Escape close,
- * S / T add a stop / a text, ← / → seek (Shift: longer; Alt: to the previous / next keyframe), Home / End.
+ * S / T add a stop / a text, I / O set the in / out point of the work area and Shift+X clears it, X cuts the selected text or photo at the playhead, Ctrl/Cmd+D duplicates it, Delete removes the
+ * selected block (Shift: the gap closes), Ctrl/Cmd+C and V copy and paste blocks, K plays / pauses, J / L step a frame back / forward (Shift: ten), ← / → seek (Shift: longer; Alt: to the
+ * previous / next keyframe), Home / End.
  */
 export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | null {
   if (focus === 'text') return null
@@ -159,6 +185,9 @@ export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | nul
     if (e.shiftKey) return null
     if (key === 'o') return 'open'
     if (key === 'e') return 'export'
+    if (key === 'd') return 'duplicate'
+    if (key === 'c') return 'copy'
+    if (key === 'v') return 'paste'
     return null
   }
   if (e.key === 'Escape') return e.shiftKey ? null : 'close'
@@ -166,6 +195,13 @@ export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | nul
   if (key === 'g') return e.shiftKey ? null : 'safe-zones'
   if (key === 's') return e.shiftKey ? null : 'add-stop'
   if (key === 't') return e.shiftKey ? null : 'add-text'
+  if (key === 'k') return e.shiftKey ? null : 'play-pause'
+  if (key === 'x') return e.shiftKey ? 'clear-range' : 'split'
+  if (key === 'i') return e.shiftKey ? null : 'mark-in'
+  if (key === 'o') return e.shiftKey ? null : 'mark-out'
+  if (key === 'j') return e.shiftKey ? 'frame-back-long' : 'frame-back'
+  if (key === 'l') return e.shiftKey ? 'frame-forward-long' : 'frame-forward'
+  if (e.key === 'Delete') return focus === 'other' ? (e.shiftKey ? 'ripple-remove' : 'remove') : null
   if (focus === 'arrows') return null
   if (e.key === 'ArrowLeft') return e.shiftKey ? 'seek-back-long' : 'seek-back'
   if (e.key === 'ArrowRight') return e.shiftKey ? 'seek-forward-long' : 'seek-forward'
@@ -175,12 +211,18 @@ export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | nul
   return null
 }
 
+/** Frames a Shift+J / Shift+L step. */
+export const FRAME_LONG_STEP = 10
 export const SEEK_STEP_S = 1
 export const SEEK_LONG_STEP_S = 5
 
 /** Film time after a seek shortcut from `playheadS` in a film of `totalS` seconds, null for any other action. */
-export function seekTime(action: ShortcutAction, playheadS: number, totalS: number): number | null {
+export function seekTime(action: ShortcutAction, playheadS: number, totalS: number, fps = 30): number | null {
   const steps: Partial<Record<ShortcutAction, number>> = {
+    'frame-back': -1 / fps,
+    'frame-forward': 1 / fps,
+    'frame-back-long': -FRAME_LONG_STEP / fps,
+    'frame-forward-long': FRAME_LONG_STEP / fps,
     'seek-back': -SEEK_STEP_S,
     'seek-forward': SEEK_STEP_S,
     'seek-back-long': -SEEK_LONG_STEP_S,

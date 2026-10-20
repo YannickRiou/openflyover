@@ -114,6 +114,52 @@ function clipBlob(asset: MediaAsset): Blob {
   return blob
 }
 
+// ---------------------------------------------------------------------------
+// Timeline: the filmstrip of a clip
+// ---------------------------------------------------------------------------
+
+/** Longest side of a tile of the filmstrip (pixels): the block of the timeline is about 22 px high. */
+export const FILMSTRIP_SIDE_PX = 64
+export const FILMSTRIP_JPEG_QUALITY = 0.6
+
+/** The film times of `count` tiles over `startS`–`endS` of a clip: the middle of each equal part. */
+export function filmstripTimes(startS: number, endS: number, count: number): number[] {
+  const n = Math.max(1, Math.floor(count))
+  const length = Math.max(0, endS - startS)
+  return Array.from({ length: n }, (_, i) => startS + ((i + 0.5) / n) * length)
+}
+
+/** One clip is read at a time: the preview and the export also decode, and a phone has only so many decoders. */
+let filmstripQueue: Promise<unknown> = Promise.resolve()
+
+/**
+ * `count` small frames spread over `startS`–`endS` of the clip of `asset` (JPEG data URLs, in order), for the filmstrip of its
+ * block on the timeline; empty when the clip cannot be read. Requests go one after the other.
+ */
+export function readFilmstrip(asset: MediaAsset, startS: number, endS: number, count: number): Promise<string[]> {
+  const run = async (): Promise<string[]> => {
+    const { BlobSource, CanvasSink, Input, MP4, QTFF, WEBM } = await mediabunny()
+    const input = new Input({ source: new BlobSource(clipBlob(asset)), formats: [MP4, QTFF, WEBM] })
+    try {
+      const track = await input.getPrimaryVideoTrack()
+      if (!track || !(await track.canDecode())) return []
+      const first = await track.getFirstTimestamp()
+      const size = fitWithin(asset.width ?? 16, asset.height ?? 9, FILMSTRIP_SIDE_PX)
+      const sink = new CanvasSink(track, { ...size, fit: 'fill' })
+      const urls: string[] = []
+      for await (const frame of sink.canvasesAtTimestamps(filmstripTimes(first + startS, first + endS, count))) {
+        if (frame) urls.push(encodeJpeg(frame.canvas, frame.canvas.width, frame.canvas.height, FILMSTRIP_SIDE_PX, FILMSTRIP_JPEG_QUALITY).data)
+      }
+      return urls
+    } finally {
+      input.dispose()
+    }
+  }
+  const result = filmstripQueue.then(run, run).catch(() => [])
+  filmstripQueue = result
+  return result
+}
+
 const visibleVideos = (media: readonly FilmMedia[], timeS: number) =>
   media.filter((m) => m.kind === 'video' && m.startS <= timeS && timeS < m.startS + m.durationS)
 

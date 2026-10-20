@@ -3,7 +3,10 @@ import type { ReactNode } from 'react'
 import { useBatchStore } from './export/batch'
 import { isExportBusy, useExportStore } from './export/store'
 import { isCardItem } from './film/cards'
-import { addStop, addText, removeFilmItem } from './film/timeline'
+import { addStop, addText, copyBlocks, duplicateFilmItem, pasteBlocks, removeFilmItem, rippleRemove, splitFilmItem, timedBlockIds } from './film/timeline'
+import { useMediaStore } from './film/media'
+import { getBlockClip, setBlockClip } from './ui/blockClipboard'
+import { clampWorkArea, markIn, markOut } from './film/workArea'
 import { getPlatform } from './platform'
 import { takeOpenedFiles, watchOpenedFiles } from './platform/openedFiles'
 import { getSettingsHistory, installHistoryShortcuts, installSliderGestures } from './project/history'
@@ -108,8 +111,9 @@ const usePhone = () => useSyncExternalStore(subscribePhone, () => matchesQuery(B
 const handlesOwnEscape = (target: EventTarget | null) => target instanceof Element && target.closest('[data-local-escape]') !== null
 
 /**
- * ← / → (Shift: 5 s; Alt: previous / next keyframe), Home and End move the playhead in film time; S / T add a stop at
- * the marker / a text at the playhead. Its own component: the film clock changes with the settings and must not
+ * ← / → (Shift: 5 s; Alt: previous / next keyframe), Home and End move the playhead in film time, J / L a frame (Shift:
+ * ten); S / T add a stop at the marker / a text at the playhead; K plays / pauses; Delete removes the selected block,
+ * Ctrl+D duplicates and X cuts a selected text or photo at the playhead. Its own component: the film clock changes with the settings and must not
  * re-render the shell. Listens in the bubble phase, after a timeline block that moves with the arrows (it prevents the
  * default).
  */
@@ -139,13 +143,67 @@ function SeekShortcuts() {
         }
         return
       }
+      if (action === 'mark-in' || action === 'mark-out' || action === 'clear-range') {
+        e.preventDefault()
+        if (e.repeat) return
+        const area = clampWorkArea(store.workArea, total)
+        store.setWorkArea(action === 'clear-range' ? null : action === 'mark-in' ? markIn(area, playhead, total) : markOut(area, playhead, total))
+        return
+      }
+      if (action === 'play-pause') {
+        e.preventDefault()
+        if (!e.repeat) store.setPlaying(!store.playback.playing)
+        return
+      }
+      if (action === 'copy' || action === 'paste') {
+        const source = getFilmSource().film
+        if (action === 'copy') {
+          // blocks picked together, or the block selected: else the page's own copy of a text selection goes on
+          const copied = copyBlocks(source, store.filmKeys.length > 1 ? store.filmKeys : store.filmSelection === null ? [] : [store.filmSelection])
+          if (!copied) return
+          e.preventDefault()
+          setBlockClip(copied)
+          return
+        }
+        const clip = getBlockClip()
+        const media = () => useMediaStore.getState().table
+        const pasted = clip ? pasteBlocks(source, clip, playhead, (src) => media()[src] !== undefined) : null
+        if (!clip || !pasted) return
+        e.preventDefault()
+        if (e.repeat) return
+        editFilm((f) => ({ film: pasteBlocks(f, clip, playhead, (src) => media()[src] !== undefined)?.film ?? f }))
+        store.setFilmKeys(pasted.ids)
+        return
+      }
+      if (action === 'remove' || action === 'ripple-remove' || action === 'duplicate' || action === 'split') {
+        // blocks or keys picked together, or the block selected
+        const picked = store.filmKeys.length > 1 ? store.filmKeys : store.filmSelection === null ? [] : [store.filmSelection]
+        const item = picked[0]
+        if (item === undefined) return
+        e.preventDefault()
+        if (e.repeat) return
+        if (action === 'ripple-remove') {
+          // Shift+Delete on texts, media and music: the gap closes
+          if (picked.every((id) => timedBlockIds(getFilmSource().film).includes(id))) editFilm((f) => ({ film: rippleRemove(f, picked), id: null }))
+        } else if (action === 'remove') {
+          if (picked.length === 1 && isCardItem(item)) disableCard(item)
+          else editFilm((f) => ({ film: picked.reduce(removeFilmItem, f), id: null }), { stops: picked.some((id) => c.stops.some((s) => s.id === id)) })
+        } else if (picked.length === 1) {
+          // a text or a photo: a copy just after it, or cut in two at the playhead, the new one selected
+          editFilm((f) => {
+            const done = action === 'duplicate' ? duplicateFilmItem(f, item) : splitFilmItem(f, item, playhead)
+            return done ? { film: done.film, id: done.id } : { film: f }
+          })
+        }
+        return
+      }
       if (action === 'seek-prev-key' || action === 'seek-next-key') {
         // Alt+← is also the browser's « back »: kept from it even without a keyframe to go to
         e.preventDefault()
         seekKeyframe(c, action === 'seek-prev-key' ? -1 : 1)
         return
       }
-      const t = seekTime(action, playhead, total)
+      const t = seekTime(action, playhead, total, store.settings.video.fps)
       if (t === null) return
       e.preventDefault()
       store.setProgress(c.progressAtTime(t), t < total ? t : null)

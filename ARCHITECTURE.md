@@ -1531,6 +1531,55 @@ The interface and the texts drawn into the films and posters exist in **French**
   through `updateCameraKey` / `updateParamKey` / `updateMarkerKey`), released without moving it selects that key alone and goes to it. A drag, the
   arrows (±1 s, Shift ±0.1 s) and Delete on a key of the group act on all of them, each in one undo step (`removeFilmItem` for each key inside a
   single `editFilm`). Esc clears the group (`App`'s Escape chain, like `filmSelection`); a key that goes away (undo) leaves it.
+- **Timeline keys and navigation** (`src/ui/shortcuts.ts`, `App.tsx` `SeekShortcuts`, `film/timeline.ts`): K plays / pauses like Space;
+  J / L step one frame of `settings.video.fps` back / forward (Shift: ten, `FRAME_LONG_STEP`; `seekTime`); Delete removes the
+  selected block whatever the focus (until now only a focused block took it), Ctrl/Cmd+D duplicates a text or a photo just after
+  it (`duplicateFilmItem`: own id, no stop, none for a clip synced with the track), X cuts a text or a photo in two at the
+  playhead (`splitFilmItem`: pieces of at least `SPLIT_MIN_S` = 0.5 s; not videos nor music, whose place in the file would have to
+  follow); the new item is selected. On a zoomed timeline the plain wheel scrolls sideways (Ctrl+wheel still zooms) and, while
+  the film plays, the lanes page to keep the playhead in view (`followScroll`: it stays 10% of the view from the edges, paged
+  back to a quarter of it).
+- **Work area** (`src/film/workArea.ts`, `useAppStore.workArea`, `FlyoverRig`, ruler of `Timeline.tsx`): I / O set the in / out point at
+  the playhead (`markIn`, `markOut`: the other end goes to the edge of the film when it would no longer be at least
+  `WORK_AREA_MIN_S` = 0.5 s away), Shift+X clears it, either end of the band on the ruler is dragged (`dragWorkArea`, a `range`
+  gesture). While the film plays, a step that crosses the out point comes back to the in point by as much as it went past
+  (`loopTime`, applied in `FlyoverRig`'s frame loop after `clock.advance`; a playhead already past the out point plays on). Not
+  part of the film: not saved, not an undo step, cleared with the tracks and when the project is reset, clamped to the film
+  (`clampWorkArea`) when it gets shorter. The export still renders the whole film (a range export would need `fromS` / `toS` in the
+  schedule, the request and the audio mix).
+- **Foldable and lockable lanes** (`src/ui/laneState.ts`, `Timeline.tsx` heads): every lane has an id (`stages`, `shots`, `param:<p>`,
+  `marker`, `holds`, `texts`, `media`, `music`) and its head carries two buttons (they show on hover or focus, and always on touch
+  or once used): fold (a strip `FOLDED_HEIGHT` = 16 px, the blocks `invisible`, still in the page: the e2e counts them by label)
+  and lock (the lane dimmed). Both set `inert` on the lane (no focus, no pointer: a press falls through to the scrub, the
+  right-click menu finds no block), through `laneProps(id)`. Kept per device in `localStorage` (`openflyover.lanes.v1`:
+  `{ folded, locked }`, `parseLaneState` drops what is unreadable), not in the project, no undo step; not applied to the phone's
+  centred timeline. A selected block of a locked lane stays selected: Delete / Ctrl+D act on the selection. The head column is
+  wider (112 px, 128 on touch) and shows the full name in a tooltip; edges (`GRIP`) are 10 px wide and keys have an 8 px
+  invisible margin (`before:`) for the mouse.
+- **Timeline view helpers** (`film/timeline.ts`, `Timeline.tsx`, « Réglages › Timeline »): **zoom to the selection** (button in the zoom
+  group and the Z key, `zoomToSpan`): the selected block or key (its span read from where it is drawn, `spanOfItem`), else the work
+  area, else the whole film, fills the view with 15 % of margin at each side (`ZOOM_SPAN_MARGIN`, at least `ZOOM_SPAN_MIN_S` =
+  2 s), the zoom within `ZOOM_RANGE`, the stretch centred (the scroll is applied at once when the zoom does not change, else after the
+  zoom through `pendingScrollRef`). **Timecode in frames** (`preferences.timelineFrames`, off by default): the bar shows `mm:ss:ff`
+  at `settings.video.fps` (`formatFrameTimecode`) instead of seconds and tenths; the ruler keeps seconds. **Magnet by family**
+  (`preferences.timelineSnap`: `SNAP_GROUPS` = the playhead, the blocks and keys (`edge`, `centre`, `end`), the ruler's marks, the
+  junctions and highlights (`snapGroupOf`, `snapTargetsOn` in `dragContext`)): each can be turned off, Alt still inverts the magnet.
+- **Filmstrip of a video clip** (`src/ui/Filmstrip.tsx`, `readFilmstrip` / `filmstripTimes` in `film/video.ts`): the block of a video on the
+  « Médias » lane gets frames along its length behind its label (`count` tiles of 40 px: `filmstripCount` takes the largest of 2, 4, 8,
+  12 that fits, none under 80 px; 64 px JPEG tiles at the middle of each equal part of the clip's `inS`–`outS`, `CanvasSink.canvasesAtTimestamps`
+  of mediabunny). Read lazily and once per clip, stretch and count (a `WeakMap` per clip, kept for the session, never in the project), one
+  clip at a time (a promise chain: the preview and the export decode too) and not while an export runs; a clip that cannot be read keeps
+  its first-frame thumbnail only.
+- **Blocks picked together, copied and rippled** (`film/timeline.ts`, `Timeline.tsx`, `App.tsx` `SeekShortcuts`, `ui/blockClipboard.ts`): the texts, media and
+  music (`timedBlockIds`, the items placed by film time) can be picked together with Ctrl / Cmd + click (`toggleBlock`; a group is only of blocks or only of
+  keys: `filmKeys` holds either, `focusKey` keeps it when a block is focused), dragged by one of them (`dragBlocks`: the shift `dragFilm` gives the lead, magnet
+  included, applied to all, none before the film's start), removed together (Delete anywhere, `removeFilmItem` for each, one undo step). **Ripple**
+  (« décalage en chaîne »): Shift + Delete, or « Supprimer et fermer l'espace » in the right-click menu, removes blocks and moves what follows in each lane
+  earlier by their length (`rippleRemove`; what is attached to a stop follows the stop, not this); Shift held while an edge is dragged moves the following
+  blocks of the lane by as much as that end moved (`rippleDrag`, `rippleRef`). Ctrl / Cmd + C copies the picked blocks (`copyBlocks`: in memory for the session,
+  `blockClipboard.ts`, not the system clipboard, so a text selected on the page still copies as before), Ctrl / Cmd + V pastes them with their gaps, the earliest at the playhead
+  (`pasteBlocks`: own ids, attached to no stop, a medium whose file is gone and a clip synced with the track left out), the pasted ones left picked. Stops, speeds and
+  keys are not copied or rippled (their place is by metres: a stop shifts the whole clock).
 - **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
   card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: no new data, `overlay.title` / `overlay.end` stay the

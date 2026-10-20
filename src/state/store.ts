@@ -12,6 +12,7 @@ import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S } from '../flyover/cameraSet
 import type { CameraSettings } from '../flyover/cameraSettings'
 import { DEFAULT_FILM } from '../film/model'
 import type { Film } from '../film/model'
+import type { WorkArea } from '../film/workArea'
 import { DEFAULT_PACING } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { DEFAULT_RACE } from '../flyover/race'
@@ -151,6 +152,9 @@ export interface AppState {
   setTerrainStats(stats: TerrainStats): void
   /** incremented to ask the camera to fit the current tracks */
   fitRequest: number
+  /** the stretch the preview loops over (`film/workArea.ts`): not saved, not an undo step */
+  workArea: WorkArea | null
+  setWorkArea(area: WorkArea | null): void
   requestFit(): void
   loading: boolean
   setLoading(v: boolean): void
@@ -286,6 +290,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   settings: { ...DEFAULT_SETTINGS },
   terrainStats: { ...EMPTY_STATS },
   fitRequest: 0,
+  workArea: null,
   loading: false,
   playback: { ...DEFAULT_PLAYBACK },
 
@@ -320,6 +325,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       bounds: unionBounds(tracks),
       frameOrigin: tracks.length === 0 ? null : state.frameOrigin,
       playback: { ...state.playback, playing: false, progress: 0, timeS: null },
+      workArea: null,
     })
   },
 
@@ -348,7 +354,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   clearTracks() {
     const playback = { ...get().playback, playing: false, progress: 0, timeS: null }
-    set({ tracks: [], bounds: null, frameOrigin: null, playback })
+    set({ tracks: [], bounds: null, frameOrigin: null, playback, workArea: null })
   },
 
   setSetting(key, value) {
@@ -387,6 +393,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   setSpeed(speed) {
     set({ playback: { ...get().playback, speed } })
+  },
+
+  setWorkArea(workArea) {
+    set({ workArea })
   },
 
   projectName: '',
@@ -433,6 +443,7 @@ export function resetAppStore(): void {
     settings: { ...DEFAULT_SETTINGS },
     terrainStats: { ...EMPTY_STATS },
     fitRequest: 0,
+    workArea: null,
     loading: false,
     playback: { ...DEFAULT_PLAYBACK },
     projectName: '',
