@@ -22,8 +22,11 @@ export const DASH_PATTERNS: Record<Exclude<TrackDash, 'plein'>, { dash: number; 
 }
 /** Default strength of a glow at its centre (times its colour), fading to 0 at its edge. */
 export const GLOW_STRENGTH = 0.55
-/** Strength of the track glow at « Intensité du halo » 100 %: above 1 it is brighter than the line it borders. */
-export const TRACK_GLOW_MAX_STRENGTH = 2
+/**
+ * Strength of the track glow at « Intensité du halo » 100 %: below 1, so the glow stays dimmer than the line it borders
+ * and the line keeps a clear edge instead of merging with its glow into a wider line.
+ */
+export const TRACK_GLOW_MAX_STRENGTH = 0.8
 
 // ---------------------------------------------------------------------------
 // Glow
@@ -31,15 +34,17 @@ export const TRACK_GLOW_MAX_STRENGTH = 2
 
 const FRAGMENT_OUTPUT = 'gl_FragColor = vec4( diffuseColor.rgb, alpha );'
 /**
- * Fade from `glowInner` (the edge of the line drawn over it, as a fraction of the half-width; 0 = the centre) to the
- * edge (`vUv.x` across the line, `vUv.y` beyond ±1 in the round caps); nothing inside, so the line keeps its colour.
- * Written with MAX blending: where neighbouring pieces overlap at a joint the result does not add up into beads (nor
- * into an opaque line far away), and the glow lightens dark ground with the track colour.
+ * Gaussian fade from `glowInner` (the edge of the line drawn over it, as a fraction of the half-width; 0 = the centre)
+ * to 0 at the edge (`vUv.x` across the line, `vUv.y` beyond ±1 in the round caps); nothing inside, so the line keeps
+ * its colour. The gaussian, shifted to reach 0 at the edge, reads as light rather than as a band. Written with MAX
+ * blending: where neighbouring pieces overlap at a joint the result does not add up into beads (nor into an opaque
+ * line far away), and the glow lightens dark ground with the track colour.
  */
 const GLOW_OUTPUT = `
   float glowR = abs( vUv.y ) > 1.0 ? length( vec2( vUv.x, abs( vUv.y ) - 1.0 ) ) : abs( vUv.x );
-  float glowFade = glowR < glowInner ? 0.0 : 1.0 - smoothstep( glowInner, 1.0, glowR );
-  gl_FragColor = vec4( diffuseColor.rgb * glowFade * glowFade * glowStrength, 1.0 );
+  float glowX = clamp( ( glowR - glowInner ) / max( 1.0 - glowInner, 1e-3 ), 0.0, 1.0 );
+  float glowFade = glowR < glowInner ? 0.0 : ( exp( -4.0 * glowX * glowX ) - exp( -4.0 ) ) / ( 1.0 - exp( -4.0 ) );
+  gl_FragColor = vec4( diffuseColor.rgb * glowFade * glowStrength, 1.0 );
 `
 
 export function createGlowMaterial(color: Color, width: number, height: number): LineMaterial {
