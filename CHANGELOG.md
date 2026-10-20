@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 2.4.1 (October 2026)
+
+- **An opening from the region without a jump**: with « Depuis la région » and the region highlighted, the camera no longer stops halfway down, climbs a few hundred metres and dives again when a mountain lies between the region and the start of the track; it glides down in one go.
+
 ## 2.4.0 (October 2026)
 
 - **A camera that climbs ahead of the relief**: during the flight the camera starts rising before a slope or a ridge needs it, instead of jumping up when it gets there, and no longer shakes on calmer stretches; the opening shot glides down into the flight instead of diving nose first and spinning round when it faces the other way.

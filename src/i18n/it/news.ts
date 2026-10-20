@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v241.camera.title': 'Un’apertura senza scatti',
+  'v241.camera.text': 'Con «Dalla regione» e la regione evidenziata, la camera non si ferma più a metà discesa risalendo di qualche centinaio di metri quando una montagna si trova tra la regione e la partenza: scende con un solo movimento.',
   'v24.camera.title': 'Una camera che anticipa il rilievo',
   'v24.camera.text': 'Durante il sorvolo la camera sale prima di un pendio o di una cresta invece di saltare quando ci arriva, non trema più nei tratti tranquilli, e l’inquadratura di apertura scende dolcemente verso il volo.',
   'v232.track.title': 'Una traccia più morbida',
