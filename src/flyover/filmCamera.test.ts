@@ -456,6 +456,41 @@ describe('computeFilmView', () => {
     }
   })
 
+  it('shots aimed across a ridge: no jolt at 30 i/s when the blended aim passes under the relief', () => {
+    // the highlighted region's centre 40 km west, its plain at 400 m; a N-S ridge west of the track, over the way of the
+    // aim, whose straight blend from the region’s ground to the track’s passes hundreds of metres under it
+    const region = { centre: frame.toLonLat(new Vector3(-40_000, 0, 0)), widthM: 110_000, heightM: 83_000 }
+    const opts = { ...options, region }
+    for (const ridgeAt of [1500, 2500, 4000]) {
+      const sample: HeightSampler = (lon, lat) => {
+        const { x } = frame.toLocal(lon, lat, 0)
+        const plain = x < -8000 ? 400 : x < -3000 ? 1000 - (600 * (-x - 3000)) / 5000 : 1000
+        return plain + 1000 * Math.exp(-(((x + ridgeAt) / 700) ** 2) / 2)
+      }
+      for (const style of ['descente', 'situation', 'balayage'] as const) {
+        const shot: FilmShot = { style, durationS: 9, highlight: true }
+        const clock = clockOf(shot, shot)
+        const closingS = clock.openingS + clock.flightS
+        for (const [from, to] of [[0, clock.openingS], [closingS, clock.totalTime()]]) {
+          const views = Array.from({ length: Math.round((to - from) * 30) + 1 }, (_, i) =>
+            computeFilmView(path, clock, from + i / 30, clock.progressAtTime(from + i / 30), frame, sample, opts),
+          )
+          // change of the camera's and the aim's motion from one frame to the next, per metre of the camera's distance
+          let jolt = 0
+          for (let i = 1; i + 1 < views.length; i++) {
+            const d = views[i].position.distanceTo(views[i].target)
+            for (const k of ['position', 'target'] as const) {
+              const change = views[i + 1][k].clone().sub(views[i][k]).sub(views[i][k].clone().sub(views[i - 1][k]))
+              jolt = Math.max(jolt, change.length() / d)
+            }
+          }
+          // a smooth dive: ~0.002 (0.06 to 0.11 when the camera rode 10× the aim's depth under the ridge)
+          expect(jolt, `ridge ${ridgeAt} m, ${style}, ${from === 0 ? 'opening' : 'closing'}`).toBeLessThan(0.005)
+        }
+      }
+    }
+  })
+
   it('shots never dive far from the other view: no lower than a glide slope above it', () => {
     // a 220 km track: the overview is hundreds of km up, the flight view a few km from the start
     const long = buildTrackPath(

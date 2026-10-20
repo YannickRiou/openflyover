@@ -1270,7 +1270,13 @@ The interface and the texts drawn into the films and posters exist in **French**
   also raised (`clearOnTheWay`, pure: sampled terrain only, so preview and export agree) to a glide slope of
   `SHOT_GLIDE_DEG` = 15° over the flight camera (no dive far from the start of the track), to `SHOT_CLEARANCE_SHARE` = 8% of its
   distance (at least 80 m) above the ground under it, and so that the line to the aim clears the relief (16 samples up to 90%
-  of the way, the clearance tapering to 20 m): the straight blend knows nothing of the ridges between the two views;
+  of the way, the clearance tapering to 20 m): the straight blend knows nothing of the ridges between the two views.
+  Its aim's height is blended as straight (from the region's ground 40 km away to the track's, say), so the aim can pass
+  hundreds of metres inside a slope: the line ends on the ground above the aim, never inside it (the camera rode 10× that
+  depth, a 500 m jump up and back down in half a second, Ariège opening at 5.7 s), and like the flight's sight line
+  (`LINE_OF_SIGHT_FINE_GAIN`) the samples whose lift passes 3× the ground under them ease out up to 6×. Test: a ridge
+  under the aim's way, every style, 30 i/s, the change of motion from one frame to the next under 0.005 of the
+  distance (0.11 before);
   `descente` over the whole shot duration, `saut` holds the overview then moves in 0.6 s. `balayage`: the
   overview turns by `SWEEP_DEG` = 75° around its target (`turnedView`, `sweepRad`) during the first 60% of the opening
   shot and ends on the flight side, then glides like `descente` (closing: the reverse). `situation` ("Depuis la
