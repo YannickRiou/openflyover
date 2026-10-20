@@ -53,6 +53,7 @@ import {
 } from './capture'
 import { noEncodingTest } from './diagnostic'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
+import { createSequenceEncoder, sequencePattern } from './sequenceEncoder'
 import { createGpuTimer } from './gpuTimer'
 import { shadowSummary, timingsSummary } from './history'
 import { compositorAttributes, createExportEncoder } from './nativeEncoder'
@@ -500,7 +501,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
 
     const settings = useAppStore.getState().settings
     // the soundtrack from the first frame: film time 0 comes after the frames held at the start
-    const audio = await mixFilmAudio(settings.film, (id) => useMediaStore.getState().table[id], {
+    // an image sequence has no sound
+    const audio = request.sequence ? null : await mixFilmAudio(settings.film, (id) => useMediaStore.getState().table[id], {
       offsetS: Math.round(request.holdStartS * fps) / fps,
       lengthS: schedule.length / fps,
     })
@@ -511,7 +513,11 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     }
     if (isCanceled()) throw new ExportCanceledError()
     // WebCodecs, else the system's ffmpeg (desktop app on Linux); the test without encoding ends on its message
-    session = noEncoding ? noEncodingSession(() => timings.rendered) : await createExportEncoder(compositor, { ...request, audio })
+    session = noEncoding
+      ? noEncodingSession(() => timings.rendered)
+      : request.sequence
+        ? createSequenceEncoder(compositor, request.sequence.folder, request.baseName)
+        : await createExportEncoder(compositor, { ...request, audio })
     writeBreadcrumb(
       noEncoding
         ? 'export : test sans encodage'
@@ -656,14 +662,16 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     exportStore().complete({
       // null: already written to the chosen file
       url: blob && URL.createObjectURL(blob),
-      fileName: request.destination?.fileName ?? videoFileName(request.baseName, session.extension),
+      fileName: request.sequence ? sequencePattern(request.baseName) : (request.destination?.fileName ?? videoFileName(request.baseName, session.extension)),
       path: request.destination?.path,
       mimeType: session.mimeType,
       sizeBytes,
       codec: `${container}/${codec}`,
       hardware,
       incompleteFrames: timings.timeouts + timings.givenUp,
-      note: audio
+      note: request.sequence
+        ? t('export.controller.noteSequence', { count: schedule.length, folder: request.sequence.folder.name })
+        : audio
         ? session.audioCodec
           ? t('export.controller.noteSound', { codec: session.audioCodec === 'aac' ? 'AAC' : 'Opus' })
           : t('export.controller.noteNoSound')

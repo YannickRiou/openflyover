@@ -11,6 +11,7 @@ import { create } from 'zustand'
 import { DESKTOP_BUDGET, deviceBudget } from '../core/deviceBudget'
 import type { TrackPath } from '../flyover/path'
 import type { Platform, WritableFile } from '../platform'
+import type { WritableFolder } from '../platform/folder'
 import { showToast } from '../ui/toast'
 import type { VideoEncoding, VideoQuality } from './schedule'
 import { t } from '../i18n'
@@ -58,6 +59,8 @@ export interface ExportRequest {
   destination?: WritableFile
   /** the overlay alone over a transparent background, same frames as the film, no 3D render and no sound (WebM / VP9) */
   overlayOnly?: boolean
+  /** an image sequence (one PNG per frame, no sound) written in this folder instead of a video (`sequenceEncoder.ts`) */
+  sequence?: { folder: WritableFolder }
 }
 
 export interface ExportResult {

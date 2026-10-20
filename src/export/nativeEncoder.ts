@@ -47,9 +47,9 @@ export async function nativeVideoAvailable(invoke: Invoke = tauriInvoke): Promis
   return (await invoke('video_available')) === true
 }
 
-/** Codec ffmpeg writes for a codec of « Encodage »: H.264 or VP9 (no HEVC encoder is assumed on the system), else null. */
+/** Codec ffmpeg writes for a codec of « Encodage »: H.264 or VP9 (no HEVC nor AV1 encoder is assumed on the system), else null. */
 function nativeCodecOf(choice: VideoCodecChoice): CodecCandidate | null {
-  return choice === 'vp9' ? NATIVE_WEBM_CODEC : choice === 'hevc' ? null : NATIVE_CODEC
+  return choice === 'vp9' ? NATIVE_WEBM_CODEC : choice === 'hevc' || choice === 'av1' ? null : NATIVE_CODEC
 }
 
 /**
