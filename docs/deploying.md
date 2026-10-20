@@ -1,7 +1,8 @@
 # Deploying and building
 
 How to put OpenFlyover on a web server, and how to build the desktop application. For using the app, see the
-[user guide](user-guide.html).
+[user guide](user-guide.html). To run your own copy of the service from nothing (Caddy, Docker, HTTPS, updates, your own
+map servers), start with [`self-hosting.md`](self-hosting.md); this page keeps the server details.
 
 - [Website on a server](#website-on-a-server)
 - [Desktop application](#desktop-application)
