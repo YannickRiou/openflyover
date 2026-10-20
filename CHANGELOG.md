@@ -3,6 +3,17 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 2.3.0 (October 2026)
+
+- **« Traînée »: only the last stretch of track behind the marker**: with « Trace qui se dessine » on, the new « Traînée » switch and its length (100 m to 20 km, 1 km by default) hide the start of each track, so only the last stretch stays drawn behind each marker, in the preview and in the film alike. Every racer and stage has its own trail; a project saved before opens with the trail off.
+- **The « Colorer selon » legend is in the film**: the legend of the track colouring is now painted into the film overlay, so the exported video shows it as the preview does, at the place chosen by « Position de la légende » under « Colorer selon » (nine positions, bottom left by default). It shows while a colouring is on, even with « Habillage » off.
+- **Start and finish flags on the flat map**: the « Carte à plat » view of the poster shows the start and finish pin of every track (one pin for a loop).
+- **Kite sessions and flights**: a kite activity gets the wing figure, and the stretches of a recorded track clearly above the ground (paragliding, kite jumps) are found at import and drawn in the air instead of on the terrain; the line, the marker, the camera and the ghost racers follow the same height.
+- **A steadier camera**: the opening and closing shots keep the track start in view and no longer tip down at the ground, and a sharper terrain tile arriving near the marker no longer makes the camera jump up or down.
+- **Cleaner relief over the sea**: « Nettoyer le relief en mer » also removes the tall pillars of many pixels that the elevation data holds off some coasts (Corsica).
+- **Overlay fixes**: the accent colour of « Couleurs et police » now colours the played part of the altitude profile, its marker and the covered part of the mini-map in every style; the « Cinéma » mini-map sits under the top bar instead of being squeezed into it; the « Tableau sportif » mini-map no longer shows a dark rectangle inside its circle.
+- **Interface fixes**: all the camera presets of « Survol » are shown at once (no more « Plus de préréglages »); a folded setting row no longer shows its title twice; the keyframe button is centred; the 3D labels no longer show stars through their panel in daylight; the distance band of the landmark map no longer darkens where segments overlap.
+
 ## 2.2.0 (October 2026)
 
 - **Clearer weather limits**: when Open-Meteo refuses a request because too many were sent (HTTP 429), the panel now says which limit was reached, per minute, per hour or per day, and when to try again. The stages of « À la suite » are fetched one at a time instead of all at once (fewer calls in a burst), and a stage whose weather failed is reported in the « Météo » tab with a « Réessayer » button instead of staying silent.

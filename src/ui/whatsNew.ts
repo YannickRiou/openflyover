@@ -20,6 +20,15 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
+    version: '2.3',
+    items: [
+      { icon: 'spline', get title() { return t('news.v23.trail.title') }, get text() { return t('news.v23.trail.text') } },
+      { icon: 'layers', get title() { return t('news.v23.legend.title') }, get text() { return t('news.v23.legend.text') } },
+      { icon: 'plane', get title() { return t('news.v23.flights.title') }, get text() { return t('news.v23.flights.text') } },
+      { icon: 'plus', get title() { return t('news.v23.more.title') }, get text() { return t('news.v23.more.text') } },
+    ],
+  },
+  {
     version: '2.2',
     items: [
       { icon: 'map-pin', get title() { return t('news.v22.landmarks.title') }, get text() { return t('news.v22.landmarks.text') } },
