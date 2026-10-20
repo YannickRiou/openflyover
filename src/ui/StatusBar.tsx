@@ -291,7 +291,7 @@ export function StatusBar() {
           {perfText}
         </p>
       )}
-      <p className="ml-auto shrink-0 grow text-right">
+      <div className="ml-auto shrink-0 grow text-right">
         {short.map((item, i) => (
           <span key={item.text}>
             {i > 0 && ' · '}
@@ -314,7 +314,7 @@ export function StatusBar() {
             )}
           </span>
         ))}
-      </p>
+      </div>
       <Tip text={t('status.sources')} side="top" align="end">
         <button
           type="button"
