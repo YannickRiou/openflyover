@@ -1323,6 +1323,8 @@ describe('day card of a multi-day track', () => {
 
   it('the film can word the title: {n}, {count} and {date}', () => {
     expect(render(42, { ...day, title: 'Étape {n}/{count}' })).toContain('Étape 2/3')
+  })
+})
 
 describe('cards placed on the timeline', () => {
   // 6 s opening, 60 s flight, 5 s closing
