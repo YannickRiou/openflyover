@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## Unreleased
 
 - **« Accéléré » sun, as long as you want**: the sun of an opening or closing shot in « Accéléré » now runs 4 hours by default (2 hours before: too short to see the shadows move), and « Heures de soleil » in the shot's inspector sets it from 1 to 12 hours, shot by shot.
+- **Opening and closing shots without jerks over steep relief**: on a mountain, the camera of the opening and closing shots (« Descente », « Depuis la région », « Balayage ») no longer drops or jerks when a ridge or the glide slope asks it to climb; it takes the climb ahead and comes back down gently, and in « Satellite » the marker stays in the frame.
 
 ## 2.4.1 (October 2026)
 
