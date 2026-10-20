@@ -139,6 +139,8 @@ export default defineConfig({
     // one isolated worker thread per file: ~6 s faster than forked processes (105 files)
     pool: 'threads',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // the camera replays (several seconds alone) ran past the default 5 s on a loaded CI runner, under coverage
+    testTimeout: 30_000,
     // fonts.test.ts reads this stylesheet with ?raw (other CSS stays stubbed out in tests)
     css: { include: [/src\/ui\/fonts\.css/] },
     // `npm run coverage`; CI publishes the summary as the README badge
