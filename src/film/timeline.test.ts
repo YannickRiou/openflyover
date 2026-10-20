@@ -7,6 +7,9 @@ import type { FilmClockInput } from './clock'
 import { AUDIO_DEFAULTS, AUTO_STOP_S, DEFAULT_FILM, MEDIA_DEFAULTS, MIN_SPEED_SPAN_M, SITUATION_DURATION_S, VIDEO_SOUND_DEFAULTS, clipTimeS, isValidFilm } from './model'
 import type { Film, FilmAudio, FilmMedia, FilmSpeed, FilmStop, FilmText } from './model'
 import {
+  duplicateFilmItem,
+  followScroll,
+  splitFilmItem,
   NEW_MEDIA_S,
   NEW_VIDEO_MAX_S,
   addCameraKey,
@@ -978,5 +981,60 @@ describe('free texts and media follow their place on the route', () => {
     expect(followStops(placed, moved, clockOfFilm)).toBe(moved)
     const keyed = { ...placed, markerKeys: [] }
     expect(followStops(placed, keyed, clockOfFilm)).toBe(keyed)
+  })
+})
+
+describe('followScroll', () => {
+  it('keeps the scroll while the playhead is inside the view, away from its edges', () => {
+    expect(followScroll(500, 400, 600, 3000)).toBe(400)
+    expect(followScroll(400 + 60, 400, 600, 3000)).toBe(400)
+    expect(followScroll(400 + 540, 400, 600, 3000)).toBe(400)
+  })
+
+  it('pages when it gets to an edge: the playhead goes to a quarter of the view', () => {
+    expect(followScroll(400 + 541, 400, 600, 3000)).toBe(400 + 541 - 150)
+    // behind the view (a seek back): paged back to it
+    expect(followScroll(100, 400, 600, 3000)).toBe(0)
+    expect(followScroll(1000, 400, 600, 3000)).toBe(850)
+  })
+
+  it('never scrolls past the content, nor when it fits the view', () => {
+    expect(followScroll(2990, 2000, 600, 3000)).toBe(2400)
+    expect(followScroll(500, 0, 600, 600)).toBe(0)
+    expect(followScroll(900, 120, 600, 500)).toBe(120)
+    expect(followScroll(900, 0, 0, 3000)).toBe(0)
+  })
+})
+
+describe('duplicate and split', () => {
+  const text = { id: 'text-1', startS: 2, durationS: 4, text: 'Col', anchor: 'bottom-center' as const, size: 1, stopId: 'stop-1' }
+  const photo = { id: 'media-1', startS: 10, durationS: 5, kind: 'image' as const, src: 'a', ...MEDIA_DEFAULTS }
+  const film: Film = { ...DEFAULT_FILM, texts: [text], media: [photo, { ...photo, id: 'media-2', kind: 'video', startS: 20 }, { ...photo, id: 'media-3', startS: 30, sync: { atMs: 0, offsetS: 0, follow: true } as never }] }
+
+  it('duplicate a text or a medium just after it, with its own id and no stop', () => {
+    const copy = duplicateFilmItem(film, 'text-1')
+    expect(copy?.film.texts).toHaveLength(2)
+    expect(copy?.film.texts[1]).toMatchObject({ startS: 6, durationS: 4, text: 'Col', id: copy?.id })
+    expect(copy?.film.texts[1].stopId).toBeUndefined()
+    expect(copy?.id).not.toBe('text-1')
+    expect(duplicateFilmItem(film, 'media-1')?.film.media[3]).toMatchObject({ startS: 15, durationS: 5, kind: 'image' })
+    // a clip synced with the track, an item that does not exist, a key: none
+    expect(duplicateFilmItem(film, 'media-3')).toBeNull()
+    expect(duplicateFilmItem(film, 'nope')).toBeNull()
+  })
+
+  it('split a text or a photo in two at the playhead, each piece at least 0.5 s', () => {
+    const cut = splitFilmItem(film, 'text-1', 3.5)
+    expect(cut?.film.texts.map((t) => [t.id, t.startS, t.durationS])).toEqual([['text-1', 2, 1.5], [cut?.id, 3.5, 2.5]])
+    expect(cut?.film.texts[1].stopId).toBeUndefined()
+    expect(cut?.film.texts[0].stopId).toBe('stop-1')
+    expect(splitFilmItem(film, 'media-1', 12)?.film.media.slice(0, 1).concat(splitFilmItem(film, 'media-1', 12)?.film.media.slice(-1) ?? []).map((m) => [m.startS, m.durationS])).toEqual([[10, 2], [12, 3]])
+    // outside, too near an edge, a video, a synced photo: none
+    expect(splitFilmItem(film, 'text-1', 1)).toBeNull()
+    expect(splitFilmItem(film, 'text-1', 2.3)).toBeNull()
+    expect(splitFilmItem(film, 'text-1', 5.8)).toBeNull()
+    expect(splitFilmItem(film, 'text-1', 9)).toBeNull()
+    expect(splitFilmItem(film, 'media-2', 22)).toBeNull()
+    expect(splitFilmItem(film, 'media-3', 32)).toBeNull()
   })
 })

@@ -755,6 +755,67 @@ export function addText(film: Film, startS: number, stop: ClockStop | null = nul
   return { film: stop ? attachToStop(next, id, stop) : next, id }
 }
 
+/** The playhead stays at least this share of the view away from its edges while the film plays on a zoomed timeline. */
+export const FOLLOW_MARGIN = 0.1
+/** When it gets there, the timeline pages: the playhead goes back to this share of the view from its left edge. */
+export const FOLLOW_PAGE_AT = 0.25
+
+/**
+ * Scroll position (pixels) that keeps the playhead, `x` pixels into the content, in view of a scroller `viewW` wide
+ * and scrolled to `scrollLeft`: unchanged while it is inside the view without FOLLOW_MARGIN at each edge, else the page
+ * that puts it FOLLOW_PAGE_AT of the way in (never past the content `contentW` wide, nor before its start).
+ */
+export function followScroll(x: number, scrollLeft: number, viewW: number, contentW: number): number {
+  if (!(viewW > 0) || contentW <= viewW) return scrollLeft
+  const margin = viewW * FOLLOW_MARGIN
+  if (x >= scrollLeft + margin && x <= scrollLeft + viewW - margin) return scrollLeft
+  return clamp(x - viewW * FOLLOW_PAGE_AT, 0, contentW - viewW)
+}
+
+/** The shortest piece `splitFilmItem` leaves on each side of the cut (seconds). */
+export const SPLIT_MIN_S = 0.5
+
+/**
+ * A copy of text or medium `id` placed just after it (same length), with its own id and attached to no stop, and its id;
+ * null for anything else, and for a clip synced with the track (`sync`: its place follows the recording).
+ */
+export function duplicateFilmItem(film: Film, id: string): { film: Film; id: string } | null {
+  const text = film.texts.find((item) => item.id === id)
+  if (text) {
+    const copy: FilmText = { ...text, id: nextFilmId(film, 'text'), startS: roundS(text.startS + text.durationS) }
+    delete copy.stopId
+    return { film: { ...film, texts: [...film.texts, copy] }, id: copy.id }
+  }
+  const medium = film.media.find((item) => item.id === id)
+  if (!medium || medium.sync) return null
+  const copy: FilmMedia = { ...medium, id: nextFilmId(film, 'media'), startS: roundS(medium.startS + medium.durationS) }
+  delete copy.stopId
+  return { film: { ...film, media: [...film.media, copy] }, id: copy.id }
+}
+
+/**
+ * Text or photo `id` cut in two at film time `atS`: the first piece ends there, the second (with a new id, its id
+ * returned) starts there and ends where the item did. Null when `atS` is not inside it with SPLIT_MIN_S on each side,
+ * and for a video or a music clip (their position in the file would need to follow).
+ */
+export function splitFilmItem(film: Film, id: string, atS: number): { film: Film; id: string } | null {
+  const text = film.texts.find((item) => item.id === id)
+  const medium = film.media.find((item) => item.id === id)
+  const item = text ?? (medium?.kind === 'image' && !medium.sync ? medium : undefined)
+  if (!item || !(atS - item.startS >= SPLIT_MIN_S) || !(item.startS + item.durationS - atS >= SPLIT_MIN_S)) return null
+  const cut = roundS(atS)
+  const firstS = roundS(cut - item.startS)
+  const secondS = roundS(item.startS + item.durationS - cut)
+  if (text) {
+    const second: FilmText = { ...text, id: nextFilmId(film, 'text'), startS: cut, durationS: secondS }
+    delete second.stopId
+    return { film: { ...film, texts: [...film.texts.map((t) => (t.id === id ? { ...t, durationS: firstS } : t)), second] }, id: second.id }
+  }
+  const second: FilmMedia = { ...(medium as FilmMedia), id: nextFilmId(film, 'media'), startS: cut, durationS: secondS }
+  delete second.stopId
+  return { film: { ...film, media: [...film.media.map((m) => (m.id === id ? { ...m, durationS: firstS } : m)), second] }, id: second.id }
+}
+
 /** Length of a photo added on the timeline (seconds). */
 export const NEW_MEDIA_S = 5
 /** Longest a video is when added (seconds; its natural length below that, stretched or trimmed afterwards). */
