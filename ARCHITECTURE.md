@@ -424,7 +424,7 @@ colour, reset. Device preferences in `Preferences.appearance` (`openflyover.pref
 `appearance.ts`). `applyAppearance(root, appearance, systemDark)` sets `data-theme` on `<html>` and the
 properties `--color-accent*`, `--surface-chrome*` (nothing for the default colours). `installAppearance()` (`preferences.ts`,
 called first in `main.tsx`) applies it at start-up and on changes of the preferences or of `prefers-color-scheme`; `index.html`
-has a tiny inline script for theme and density before the first paint. Free colours are clamped: the accent so that white text
+has a tiny inline script for the theme before the first paint. Free colours are clamped: the accent so that white text
 keeps 4.5:1, the bar for its secondary text (hint in the panel). Compact: spacing scale ×0.85, `--control-h` 28 px with a fine
 pointer (`appearance.css`).
 
