@@ -139,6 +139,9 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
  * « Trace » section of the Trace tab: the draw-on and the glow first; colouring, smoothing, line width and dashes as
  * rows (name and value, control on demand).
  */
+/** Heading of a part of a section (« Ligne », « Halo »). */
+const GROUP = 'border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase first:border-t-0 first:pt-0'
+
 export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const t = useT()
   const style = useAppStore((s) => s.settings.trackStyle)
@@ -162,6 +165,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
 
   return (
     <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail']} hidden={hidden}>
+      <h3 className={GROUP}>{t('marker.track.lineGroup')}</h3>
       <div className="flex items-center gap-1">
         <Switch checked={style.drawOn} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
         <InfoTip text={t('marker.track.drawOnTip')} />
@@ -183,50 +187,6 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
               />
             </SettingRow>
           )}
-        </>
-      )}
-      <Switch checked={style.glow} onChange={(on) => updateStyle({ glow: on })}>{t('marker.track.glow')}</Switch>
-      {style.glow && (
-        <>
-          <SettingRow label={t('marker.track.glowIntensity')} value={formatPercent(style.glowIntensity)} paths={['trackStyle.glowIntensity']}>
-            <RangeField
-              label={t('marker.track.glowIntensity')}
-              {...TRACK_GLOW_INTENSITY_RANGE}
-              value={style.glowIntensity}
-              format={formatPercent}
-              onChange={(glowIntensity) => updateStyle({ glowIntensity })}
-            />
-          </SettingRow>
-          <SettingRow label={t('marker.track.glowWidth')} value={`${formatShort(style.glowWidth)} px`} paths={['trackStyle.glowWidth']}>
-            <RangeField
-              label={t('marker.track.glowWidth')}
-              {...TRACK_GLOW_WIDTH_RANGE}
-              value={style.glowWidth}
-              format={(v) => `${formatShort(v)} px`}
-              onChange={(glowWidth) => updateStyle({ glowWidth })}
-            />
-          </SettingRow>
-          <SettingRow
-            label={t('marker.track.glowColor')}
-            value={style.glowColor ? t('marker.track.custom') : t('marker.track.sameAsTrack')}
-            paths={['trackStyle.glowColor']}
-          >
-            <div className="field">
-              <label className="type-label" htmlFor={`${id}-glow-color`}>
-                {t('marker.track.glowColor')}
-              </label>
-              <ColorField
-                id={`${id}-glow-color`}
-                label={t('marker.track.glowColor')}
-                value={style.glowColor || firstTrack?.color || '#ffffff'}
-                onChange={(color) => updateStyle({ glowColor: color })}
-              >
-                <Button disabled={!style.glowColor} onClick={() => updateStyle({ glowColor: '' })}>
-                  {t('marker.track.sameAsTrack')}
-                </Button>
-              </ColorField>
-            </div>
-          </SettingRow>
         </>
       )}
       <SettingRow label={t('marker.track.colorBy')} value={colorModes.find((m) => m.mode === trackColorBy)?.label} paths={['trackColorBy']}>
@@ -279,6 +239,51 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           onChange={(dash) => updateStyle({ dash })}
         />
       </SettingRow>
+      <h3 className={GROUP}>{t('marker.track.haloGroup')}</h3>
+      <Switch checked={style.glow} onChange={(on) => updateStyle({ glow: on })}>{t('marker.track.glow')}</Switch>
+      {style.glow && (
+        <>
+          <SettingRow label={t('marker.track.glowIntensity')} value={formatPercent(style.glowIntensity)} paths={['trackStyle.glowIntensity']}>
+            <RangeField
+              label={t('marker.track.glowIntensity')}
+              {...TRACK_GLOW_INTENSITY_RANGE}
+              value={style.glowIntensity}
+              format={formatPercent}
+              onChange={(glowIntensity) => updateStyle({ glowIntensity })}
+            />
+          </SettingRow>
+          <SettingRow label={t('marker.track.glowWidth')} value={`${formatShort(style.glowWidth)} px`} paths={['trackStyle.glowWidth']}>
+            <RangeField
+              label={t('marker.track.glowWidth')}
+              {...TRACK_GLOW_WIDTH_RANGE}
+              value={style.glowWidth}
+              format={(v) => `${formatShort(v)} px`}
+              onChange={(glowWidth) => updateStyle({ glowWidth })}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('marker.track.glowColor')}
+            value={style.glowColor ? t('marker.track.custom') : t('marker.track.sameAsTrack')}
+            paths={['trackStyle.glowColor']}
+          >
+            <div className="field">
+              <label className="type-label" htmlFor={`${id}-glow-color`}>
+                {t('marker.track.glowColor')}
+              </label>
+              <ColorField
+                id={`${id}-glow-color`}
+                label={t('marker.track.glowColor')}
+                value={style.glowColor || firstTrack?.color || '#ffffff'}
+                onChange={(color) => updateStyle({ glowColor: color })}
+              >
+                <Button disabled={!style.glowColor} onClick={() => updateStyle({ glowColor: '' })}>
+                  {t('marker.track.sameAsTrack')}
+                </Button>
+              </ColorField>
+            </div>
+          </SettingRow>
+        </>
+      )}
     </PanelSection>
   )
 }

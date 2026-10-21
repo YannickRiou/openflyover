@@ -43,6 +43,8 @@ const messages: Messages['marker'] = {
   'image.hint': 'Foto oder Avatar, rund zugeschnitten. Die anderen Tracks behalten ihre Kugel.',
   'track.solid': 'Einfarbig',
   'track.title': 'Track',
+  'track.lineGroup': 'Linie',
+  'track.haloGroup': 'Leuchten',
   'track.drawOn': 'Track zeichnet sich',
   'track.drawOnTip': 'Nur der bereits zurückgelegte Teil wird gezeichnet; der Rest erscheint, wenn der Marker vorbeikommt.',
   'track.tail': 'Schweif',

@@ -41,6 +41,8 @@ export default {
   'image.hint': 'Photo ou avatar, recadré en rond. Les autres traces gardent leur boule.',
   'track.solid': 'Unie',
   'track.title': 'Trace',
+  'track.lineGroup': 'Ligne',
+  'track.haloGroup': 'Halo',
   'track.drawOn': 'Trace qui se dessine',
   'track.drawOnTip': 'Seule la partie déjà parcourue est tracée ; le reste apparaît au passage du marqueur.',
   'track.tail': 'Traînée',

@@ -43,6 +43,8 @@ const messages: Messages['marker'] = {
   'image.hint': 'Photo or avatar, cropped round. The other tracks keep their ball.',
   'track.solid': 'Solid',
   'track.title': 'Track',
+  'track.lineGroup': 'Line',
+  'track.haloGroup': 'Glow',
   'track.drawOn': 'Track drawn as it goes',
   'track.drawOnTip': 'Only the part already covered is drawn; the rest appears as the marker passes.',
   'track.tail': 'Trail',
