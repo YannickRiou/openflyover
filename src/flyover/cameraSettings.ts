@@ -93,7 +93,7 @@ export interface CameraPreset {
   camera: CameraSettings
 }
 
-/** The default first, then from the lowest and closest to the highest. */
+/** The default first, then from the lowest and closest to the highest, then the free camera. */
 export const CAMERA_PRESETS: readonly CameraPreset[] = [
   { id: 'chase', get name() { return t('camera.preset.chase') }, camera: DEFAULT_CAMERA },
   { id: 'fast-drone', get name() { return t('camera.preset.fast-drone') }, camera: { ...DEFAULT_CAMERA, distance: 0.5, pitchDeg: 20, smoothing: 0.75, cameraSmoothingS: 1.5 } },
@@ -111,6 +111,8 @@ export const CAMERA_PRESETS: readonly CameraPreset[] = [
   { id: 'plane', get name() { return t('camera.preset.plane') }, camera: { ...DEFAULT_CAMERA, distance: 3, pitchDeg: 35, smoothing: 3, cameraSmoothingS: 4 } },
   { id: 'top-view', get name() { return t('camera.preset.top-view') }, camera: { ...DEFAULT_CAMERA, style: 'top', distance: 1.5, pitchDeg: 85, smoothing: 2, northUp: true } },
   { id: 'satellite', get name() { return t('camera.preset.satellite') }, camera: { ...DEFAULT_CAMERA, style: 'top', distance: 4, pitchDeg: 85, smoothing: 4, northUp: true, cameraSmoothingS: 5 } },
+  // follows nothing but the keyframes: last, apart from the views that follow the marker
+  { id: 'free', get name() { return t('camera.preset.free') }, camera: { ...DEFAULT_CAMERA, style: 'free' } },
 ]
 
 /** The preset whose camera equals `camera`, if any. */

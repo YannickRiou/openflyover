@@ -830,7 +830,6 @@ describe("style 'free' (« Libre »): the keyframes alone", () => {
     const late = viewAt(plain, 50)
     expectSameView(early, late)
     expect(early.marker.distanceTo(late.marker)).toBeGreaterThan(2000)
-    expect(filmViewMovesWithTime(plain.stateAt(20), free.camera!)).toBe(false)
   })
 
   it('one keyframe: its captured view, held the whole film', () => {
@@ -868,6 +867,21 @@ describe("style 'free' (« Libre »): the keyframes alone", () => {
       expect(view.position.distanceTo(previous.position)).toBeLessThan(15)
       previous = view
     }
+  })
+
+  it('keeps gliding from one keyframe to the next while the marker holds (timed by the film time)', () => {
+    const keys = [
+      { id: 'camera-1', atM: 0.2 * path.lengthM, distance: 1, pitchDeg: 30, headingOffsetDeg: -90 },
+      { id: 'camera-2', atM: 0.8 * path.lengthM, distance: 1, pitchDeg: 30, headingOffsetDeg: 90 },
+    ]
+    const clock = clockOf(none, none, [], keys)
+    const [a, b] = clock.cameraKeys
+    // the same progress held, two film times: two views
+    const p = clock.progressAtTime((a.timeS + b.timeS) / 2)
+    const early = computeFilmView(path, clock, a.timeS + 1, p, frame, flat, free)
+    const late = computeFilmView(path, clock, b.timeS - 1, p, frame, flat, free)
+    expect(early.position.distanceTo(late.position)).toBeGreaterThan(100)
+    expect(filmViewMovesWithTime(clock.stateAt(a.timeS + 1), free.camera!)).toBe(true)
   })
 })
 

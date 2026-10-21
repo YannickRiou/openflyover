@@ -68,6 +68,7 @@ const PRESET_ICONS: Record<string, IconName> = {
   plane: 'plane',
   'top-view': 'locate-fixed',
   satellite: 'satellite',
+  free: 'diamond',
 }
 
 /** `value` of the tile that shows the settings when they match no preset. */
@@ -85,8 +86,9 @@ const TILE_GRID = 'grid grid-cols-3 gap-2'
 const TILE_NAME = 'max-w-full truncate text-hint font-medium'
 const TILE_FIGURES = 'text-caption whitespace-nowrap text-text-2 tabular-nums'
 
-/** Key figures of a preset tile: distance multiplier and tilt. */
+/** Key figures of a preset tile: distance multiplier and tilt (none for 'free', which does not use them). */
 function presetFigures(camera: CameraSettings): string {
+  if (camera.style === 'free') return '—'
   return `×${formatNumber(camera.distance, 1)} · ${formatDegrees(camera.pitchDeg)}`
 }
 

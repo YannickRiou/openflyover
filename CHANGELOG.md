@@ -5,8 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 3.1.0 (October 2026)
 
-- **« Libre » camera style**: a camera that follows nothing. Without keyframes it stays fixed on a view of the whole track while the marker moves through it; with keyframes it holds the first one's view, glides from one to the next and holds the last one, so you choose every camera move yourself (a fixed shot, a turn around the track, a slow push-in). The framing sliders are hidden in this style since they do nothing there.
-- **« Vent » for the clouds**: with « Manuel » clouds or a sea of clouds, a « Vent » slider (0 to 100 km/h, 15 by default) sets how fast the clouds drift; 0 keeps them still. The direction stays the weather's (from the west without weather); « Météo » keeps the real wind.
+- **« Libre » camera style**: a camera that follows nothing. Without keyframes it stays fixed on a view of the whole track while the marker moves through it; with keyframes it holds the first one's view, glides from one to the next over the film time (it keeps moving during a stop, while the marker waits) and holds the last one, so you choose every camera move yourself (a fixed shot, a turn around the track, a slow push-in). The framing sliders are hidden in this style since they do nothing there; a « Libre » tile closes the camera presets.
+- **« Vent » for the clouds**: with « Manuel » clouds or a sea of clouds, a « Vent » slider (0 to 100 km/h, 15 by default) sets how fast the clouds drift; 0 keeps them still. « Direction du vent » keeps the weather's direction (from the west without weather) or sets one of the eight points of the compass. In « Météo », the real wind is used unless « Choisir le vent à la main » is ticked (the cover stays the weather's).
 
 ## 3.0.1 (October 2026)
 

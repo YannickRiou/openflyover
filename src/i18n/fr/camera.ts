@@ -31,6 +31,7 @@ export default {
   'preset.plane': 'Avion',
   'preset.top-view': 'Vue du dessus',
   'preset.satellite': 'Satellite',
+  'preset.free': 'Libre',
   'panel.custom': 'Personnalisé',
   'panel.customTip': 'Réglages modifiés à la main',
   'panel.morePresets': 'Plus de préréglages',
