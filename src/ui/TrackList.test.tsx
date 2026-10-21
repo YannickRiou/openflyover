@@ -6,6 +6,8 @@ import type { Track } from '../core/types'
 import { filmSequenceOf } from '../flyover/sequence'
 import { buildTrack } from '../import/stats'
 import { getSettingsHistory } from '../project/history'
+import { editFilm } from '../scene/usePacing'
+import { withJunctionCard } from '../film/junctions'
 import { resetAppStore, useAppStore } from '../state/store'
 import { computeTrackElevation } from '../terrain/elevation'
 import { TrackList } from './TrackList'
@@ -300,6 +302,29 @@ describe('TrackList, « Plusieurs traces »', () => {
     const before = card.checked
     await act(async () => card.click())
     expect(host.querySelector<HTMLInputElement>('input[role="switch"]')!.checked).toBe(!before)
+    // the hint under the modes explains the mode chosen, it does not repeat its name
+    expect(host.querySelector(`#${CSS.escape(group.getAttribute('aria-describedby')!)}`)?.textContent).toContain('l’une après l’autre')
+    act(() => root.unmount())
+  })
+
+  it('« À la suite »: the common card is set here, and the cards set on their own are counted and brought back', async () => {
+    resetAppStore()
+    useAppStore.getState().replaceTracks([drawnTrack(), { ...drawnTrack(), id: 'other', name: 'Autre' }])
+    useAppStore.getState().setSetting('race', { ...useAppStore.getState().settings.race, sequence: true })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TrackList />))
+    // the content of the common card: « Mon texte » writes the common card's text
+    const custom = [...host.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find((r) => r.labels?.[0]?.textContent === 'Mon texte')!
+    await act(async () => custom.click())
+    expect(useAppStore.getState().settings.film.junctionDefault?.cardSettings).toMatchObject({ text: '{name}' })
+    expect(host.textContent).not.toContain('ont leur propre réglage')
+    const first = useAppStore.getState().settings.race.order?.[0] ?? useAppStore.getState().tracks[0].id
+    await act(async () => editFilm((f) => ({ film: withJunctionCard(f, first, { size: 2 }) })))
+    expect(host.textContent).toContain('1 carte a son propre réglage.')
+    const reset = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Remettre toutes les cartes au réglage commun')!
+    await act(async () => reset.click())
+    expect(host.textContent).not.toContain('a son propre réglage')
     act(() => root.unmount())
   })
 })

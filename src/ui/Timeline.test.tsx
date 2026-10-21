@@ -565,8 +565,9 @@ describe('Timeline — stages « À la suite »', () => {
     expect(total()).toBeGreaterThanOrEqual(before + 1)
     expect(junction().getAttribute('aria-label')).toContain('Nuit · fondu au noir 2,5 s')
     expect(junction().getAttribute('aria-label')).not.toContain('par défaut')
-    // back to the default transition from the inspector (the selection stays)
-    const reset = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Transition par défaut')!
+    // back to the common transition from the inspector (the selection stays)
+    expect(host.querySelector('[data-testid="film-inspector"]')?.textContent).toContain('Réglage propre à cette transition.')
+    const reset = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Reprendre le réglage commun')!
     await act(async () => reset.click())
     expect(useAppStore.getState().settings.film.junctions).toEqual([])
     expect(useAppStore.getState().filmSelection).toBe(`junction-${tracks[0].id}`)
@@ -593,7 +594,7 @@ describe('Timeline — stages « À la suite »', () => {
     act(() => root.unmount())
   })
 
-  it('a cut is a thin block that holds nothing; the transition is changed from the inspector, « Appliquer à toutes » reaches every junction', async () => {
+  it('a cut is a thin block that holds nothing; the transition is changed from the inspector, « Utiliser pour toutes » reaches every junction', async () => {
     const { host, root, blocks, tracks } = await setup(3)
     await act(async () => useAppStore.getState().setFilmSelection(`junction-${tracks[0].id}`))
     const kind = host.querySelector<HTMLButtonElement>('[data-testid="film-inspector"] button[aria-haspopup="listbox"]')!
@@ -601,14 +602,16 @@ describe('Timeline — stages « À la suite »', () => {
     await act(async () => [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((o) => o.textContent === 'Coupe')!.click())
     expect(blocks('Étapes', '[data-item^="junction-"][aria-label*=": Coupe"]')).toHaveLength(1)
     expect(host.querySelector('[data-testid="film-inspector"] input[type="range"]')).toBeNull()
-    const all = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Appliquer à toutes les transitions')!
+    const all = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Utiliser pour toutes les transitions')!
     await act(async () => all.click())
     expect(blocks('Étapes', '[data-item^="junction-"][aria-label*=": Coupe"]')).toHaveLength(2)
+    // the common transition is now a cut, and no junction keeps its own
     expect(useAppStore.getState().settings.film.junctionDefault).toMatchObject({ kind: 'coupe', holdS: 0 })
+    expect(useAppStore.getState().settings.film.junctions ?? []).toEqual([])
     act(() => root.unmount())
   })
 
-  it('a stage card is deleted by switching it off, and comes back from the junction’s inspector', async () => {
+  it('a stage card is hidden by Delete, and comes back from the button of its transition', async () => {
     const { host, root, blocks, press, tracks } = await setup(2)
     const second = () => blocks('Textes', '[data-item^="card-"]')[1]
     await act(async () => second().focus())
@@ -616,11 +619,14 @@ describe('Timeline — stages « À la suite »', () => {
     expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Carte de l’étape 2')
     await press(second(), 'Delete')
     expect(blocks('Textes', '[data-item^="card-"]')).toHaveLength(1)
-    expect(useAppStore.getState().settings.film.junctions).toMatchObject([{ afterTrackId: tracks[0].id, card: { enabled: false } }])
+    expect(useAppStore.getState().settings.film.junctions).toEqual([{ id: `junction-${tracks[0].id}`, afterTrackId: tracks[0].id, card: { enabled: false } }])
     await act(async () => useAppStore.getState().setFilmSelection(`junction-${tracks[0].id}`))
-    const switchOn = Array.from(host.querySelectorAll<HTMLInputElement>('[data-testid="film-inspector"] input[type="checkbox"]')).find((i) => i.labels?.[0]?.textContent === 'Carte de l’étape 2')!
-    await act(async () => switchOn.click())
+    const button = (text: string) => Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === text)!
+    await act(async () => button('Régler la carte de l’étape 2').click())
+    expect(host.querySelector('[data-testid="film-inspector"]')?.textContent).toContain('Cette carte est masquée.')
+    await act(async () => button('Afficher la carte').click())
     expect(blocks('Textes', '[data-item^="card-"]')).toHaveLength(2)
+    expect(useAppStore.getState().settings.film.junctions ?? []).toEqual([])
     act(() => root.unmount())
   })
 

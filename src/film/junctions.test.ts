@@ -6,6 +6,8 @@ import { buildFilmClock } from './clock'
 import type { ClockJunction, FilmClockInput } from './clock'
 import {
   DEFAULT_JUNCTION,
+  commonCardOf,
+  hasOwnCard,
   FIRST_STAGE_CARD_ID,
   applyToAllJunctions,
   fillTemplate,
@@ -28,6 +30,9 @@ import {
   stageFlightS,
   stageItemId,
   stageSpansOf,
+  withAllCardsCommon,
+  withCardSettings,
+  withCommonCard,
   withDefaultCard,
   withDefaultJunction,
   withJunction,
@@ -105,22 +110,53 @@ describe('junction edits', () => {
     expect(junctionOf(edited, 'a')).toMatchObject({ kind: 'nuit', holdS: 1.5 })
     // text back to automatic: the field goes away
     expect(junctionCardOf(withJunctionCard(edited, 'a', { text: undefined, color: undefined }), 'a')).not.toHaveProperty('text')
+    // only what the card changes is stored: hiding it stores that alone
+    expect(edited.junctions?.[0].card).toEqual({ text: '{name}', durationS: JUNCTION_CARD_RANGE.max, color: '#aa0000' })
     const first = withJunctionCard(film, null, { enabled: false })
-    expect(first.firstCard).toEqual({ enabled: false, durationS: 5, anchor: 'center', size: 1 })
+    expect(first.firstCard).toEqual({ enabled: false })
     expect(junctionCardOf(first, null).enabled).toBe(false)
     expect(junctionCardOf(first, 'a').enabled).toBe(true)
     expect(isValidFilm(edited) && isValidFilm(first)).toBe(true)
   })
 
-  it('applyToAllJunctions: the default and every junction after the given tracks, their cards kept', () => {
-    const base = withJunctionCard(withJunction(film, 'a', { kind: 'coupe' }), 'a', { durationS: 9 })
-    const all = applyToAllJunctions(base, ['a', 'b'], { kind: 'fondu-blanc', holdS: 2.5 })
+  it('applyToAllJunctions: the common transition, every junction back to it, their cards kept', () => {
+    const base = withJunction(withJunctionCard(withJunction(film, 'a', { kind: 'coupe' }), 'a', { durationS: 9 }), 'b', { kind: 'nuit', holdS: 3 })
+    const all = applyToAllJunctions(base, { kind: 'fondu-blanc', holdS: 2.5 })
     expect(junctionDefaultOf(all)).toEqual({ kind: 'fondu-blanc', holdS: 2.5, card: true })
-    for (const id of ['a', 'b']) expect(junctionOf(all, id)).toMatchObject({ kind: 'fondu-blanc', holdS: 2.5 })
+    for (const id of ['a', 'b']) {
+      expect(junctionOf(all, id)).toMatchObject({ kind: 'fondu-blanc', holdS: 2.5 })
+      expect(hasOwnTransition(all, id)).toBe(false)
+    }
     expect(junctionCardOf(all, 'a').durationS).toBe(9)
-    // a future junction passes the same way
+    // a future junction passes the same way; without a card a junction is no longer stored
     expect(junctionOf(all, 'c')).toMatchObject({ kind: 'fondu-blanc', holdS: 2.5 })
-    expect(junctionDefaultOf(applyToAllJunctions(film, [], { kind: 'coupe', holdS: 3 }))).toMatchObject({ kind: 'coupe', holdS: 0 })
+    expect(all.junctions?.map((j) => j.afterTrackId)).toEqual(['a'])
+    expect(junctionDefaultOf(applyToAllJunctions(film, { kind: 'coupe', holdS: 3 }))).toMatchObject({ kind: 'coupe', holdS: 0 })
+  })
+
+  it('the common card: every card follows it unless it sets the same field; the switch shows or hides them all', () => {
+    const common = withCardSettings(film, { anchor: 'top-left', size: 1.4, text: 'Jour {n}' })
+    expect(junctionCardOf(common, 'a')).toMatchObject({ enabled: true, anchor: 'top-left', size: 1.4, text: 'Jour {n}' })
+    expect(junctionCardOf(common, null)).toEqual(commonCardOf(common))
+    // a card changes its size: only that is its own; the common anchor still applies
+    const one = withJunctionCard(common, 'a', { size: 2 })
+    expect(junctionCardOf(one, 'a')).toMatchObject({ anchor: 'top-left', size: 2 })
+    expect([hasOwnCard(one, 'a'), hasOwnCard(one, null)]).toEqual([true, false])
+    // a field set back to the common value is not stored; « automatic » over a common text is stored empty
+    expect(hasOwnCard(withJunctionCard(one, 'a', { size: 1.4 }), 'a')).toBe(false)
+    const auto = withJunctionCard(common, 'a', { text: undefined })
+    expect(auto.junctions?.[0].card).toEqual({ text: '' })
+    expect(junctionCardOf(auto, 'a')).not.toHaveProperty('text')
+    expect(isValidFilm(auto)).toBe(true)
+    // back to the common card, shown or hidden as it was
+    const hidden = withJunctionCard(one, 'a', { enabled: false })
+    expect(junctionCardOf(withCommonCard(hidden, 'a'), 'a')).toMatchObject({ enabled: false, size: 1.4 })
+    expect(hasOwnCard(withAllCardsCommon(withJunctionCard(one, null, { durationS: 8 })), null)).toBe(false)
+    // the switch: every card, even one hidden or shown on its own
+    const off = withDefaultCard(withJunctionCard(film, 'a', { enabled: true, size: 2 }), false)
+    expect([junctionCardOf(off, 'a').enabled, junctionCardOf(off, null).enabled]).toEqual([false, false])
+    expect(junctionCardOf(withDefaultCard(withJunctionCard(film, null, { enabled: false }), true), null).enabled).toBe(true)
+    expect(junctionCardOf(off, 'a').size).toBe(2)
   })
 
   it('the default junction and its card, and back to the default junction', () => {

@@ -15,7 +15,7 @@ import type { FlightStage } from '../flyover/pacing'
 import type { RaceSettings } from '../flyover/race'
 import type { ClockJunction, FilmClock } from './clock'
 import { JUNCTION_CARD_DEFAULT_S, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, STAGE_DURATION_RANGE } from './model'
-import type { Film, FilmJunction, JunctionCard, JunctionDefault, JunctionKind, TransitionDip } from './model'
+import type { Film, FilmJunction, JunctionCard, JunctionDefault, JunctionKind, StoredStageCard, TransitionDip } from './model'
 
 /**
  * Default junction of a film that never chose: the night between two days (a dip to black held for 1.5 s where the
@@ -74,11 +74,35 @@ export const hasOwnTransition = (film: Pick<Film, 'junctions'>, afterTrackId: st
 
 const hasStored = (film: Pick<Film, 'junctions'>, afterTrackId: string) => film.junctions?.some((j) => j.afterTrackId === afterTrackId) === true
 
-/** Card of the stage that follows the junction after `afterTrackId` (null: the first stage), the default one without its own. */
-export function junctionCardOf(film: Pick<Film, 'junctions' | 'junctionDefault' | 'firstCard'>, afterTrackId: string | null): JunctionCard {
-  const own = afterTrackId === null ? film.firstCard : film.junctions?.find((j) => j.afterTrackId === afterTrackId)?.card
-  return own ?? { enabled: junctionDefaultOf(film).card, ...DEFAULT_STAGE_CARD }
+/** What the film stores of the card of the stage after `afterTrackId` (null: the first stage). */
+const storedCardOf = (film: Pick<Film, 'junctions' | 'firstCard'>, afterTrackId: string | null): StoredStageCard | undefined =>
+  afterTrackId === null ? film.firstCard : film.junctions?.find((j) => j.afterTrackId === afterTrackId)?.card
+
+/** The fields a card may set back to « none » over a common card that sets them (stored empty). */
+const CLEARABLE_CARD_FIELDS = ['text', 'subtitle', 'color', 'font'] as const
+
+/** `card` without its empty fields (`StoredStageCard`: back to the automatic card, the overlay's colour or font). */
+function resolvedCard(card: JunctionCard): JunctionCard {
+  const out = { ...card }
+  for (const key of CLEARABLE_CARD_FIELDS) if (out[key] === '' || out[key] === undefined) delete out[key]
+  return out
 }
+
+/** The common card: what every stage card shows unless it sets its own (`JunctionDefault.card` and `cardSettings`). */
+export function commonCardOf(film: Pick<Film, 'junctionDefault'>): JunctionCard {
+  const fallback = junctionDefaultOf(film)
+  return resolvedCard({ enabled: fallback.card, ...DEFAULT_STAGE_CARD, ...fallback.cardSettings })
+}
+
+/** Card of the stage that follows the junction after `afterTrackId` (null: the first stage): the common card with what it changes. */
+export function junctionCardOf(film: Pick<Film, 'junctions' | 'junctionDefault' | 'firstCard'>, afterTrackId: string | null): JunctionCard {
+  const fallback = junctionDefaultOf(film)
+  return resolvedCard({ enabled: fallback.card, ...DEFAULT_STAGE_CARD, ...fallback.cardSettings, ...storedCardOf(film, afterTrackId) })
+}
+
+/** The card of that stage sets something of its own besides being shown or hidden (« réglage propre »). */
+export const hasOwnCard = (film: Pick<Film, 'junctions' | 'firstCard'>, afterTrackId: string | null) =>
+  Object.keys(storedCardOf(film, afterTrackId) ?? {}).some((key) => key !== 'enabled')
 
 /**
  * Settings of a project saved before the junctions: the transition and the cards « À la suite » it kept in `race`
@@ -154,21 +178,84 @@ function storing(film: Film, afterTrackId: string, patch: Partial<FilmJunction>)
   return { ...film, junctions: film.junctions!.map((j) => (j.afterTrackId === afterTrackId ? { ...j, ...patch } : j)) }
 }
 
-/** Card after junction `afterTrackId` (null: first stage) with `patch` (durations kept in range); the film stores it from then on. */
-export function withJunctionCard(film: Film, afterTrackId: string | null, patch: Partial<JunctionCard>): Film {
-  const merged = { ...junctionCardOf(film, afterTrackId), ...patch }
-  const card: JunctionCard = { ...merged, durationS: roundS(Math.min(JUNCTION_CARD_RANGE.max, Math.max(JUNCTION_CARD_RANGE.min, merged.durationS))) }
-  for (const key of ['text', 'subtitle', 'color', 'font'] as const) if (card[key] === undefined) delete card[key]
-  return afterTrackId === null ? { ...film, firstCard: card } : storing(film, afterTrackId, { card })
+const clampCardS = (s: number) => roundS(Math.min(JUNCTION_CARD_RANGE.max, Math.max(JUNCTION_CARD_RANGE.min, s)))
+const sameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
+/**
+ * `stored` with `patch` over the card `common` gives (durations kept in range): a field equal to the common card's is
+ * not stored (the card keeps following it), a field set to undefined goes back to the common card (stored empty where
+ * the common card sets one: back to « none »).
+ */
+function patchedCard<C extends Partial<JunctionCard>>(common: JunctionCard, stored: C, patch: Partial<JunctionCard>): C {
+  const out: Record<string, unknown> = { ...stored }
+  for (const [key, raw] of Object.entries(patch) as [keyof JunctionCard, unknown][]) {
+    const value = key === 'durationS' && typeof raw === 'number' ? clampCardS(raw) : raw
+    if (value === undefined) {
+      if ((CLEARABLE_CARD_FIELDS as readonly string[]).includes(key) && common[key] !== undefined) out[key] = ''
+      else delete out[key]
+    } else if (sameValue(value, common[key])) delete out[key]
+    else out[key] = value
+  }
+  return out as C
+}
+
+/** The film storing `card` for the stage after `afterTrackId` (null: the first stage); nothing stored when it is empty. */
+function storingCard(film: Film, afterTrackId: string | null, card: StoredStageCard): Film {
+  const empty = Object.keys(card).length === 0
+  if (afterTrackId === null) {
+    const { firstCard: _was, ...rest } = film
+    return empty ? rest : { ...rest, firstCard: card }
+  }
+  if (!empty) return storing(film, afterTrackId, { card })
+  if (!film.junctions) return film
+  const junctions = film.junctions.flatMap((j) => {
+    if (j.afterTrackId !== afterTrackId) return [j]
+    const { card: _card, ...rest } = j
+    return rest.kind !== undefined || rest.holdS !== undefined ? [rest] : []
+  })
+  return { ...film, junctions }
 }
 
 /**
- * « Appliquer à toutes les jonctions »: `kind` and `holdS` become the default and are given to every junction after
- * `afterTrackIds` (their cards stay), so every junction, present or future, passes the same way.
+ * Card after junction `afterTrackId` (null: first stage) with `patch`, stored as what it changes over the common card
+ * (`patchedCard`): an edit in its panel makes it the card's own (« réglage propre »).
  */
-export function applyToAllJunctions(film: Film, afterTrackIds: readonly string[], patch: { kind: JunctionKind; holdS: number }): Film {
-  const next = afterTrackIds.reduce((f, id) => withJunction(f, id, patch), film)
-  return { ...next, junctionDefault: { ...junctionDefaultOf(film), kind: patch.kind, holdS: holdFor(film, patch.kind, patch.holdS) } }
+export function withJunctionCard(film: Film, afterTrackId: string | null, patch: Partial<JunctionCard>): Film {
+  return storingCard(film, afterTrackId, patchedCard(commonCardOf(film), storedCardOf(film, afterTrackId) ?? {}, patch))
+}
+
+/** Card after junction `afterTrackId` (null: first stage) back to the common card, shown or hidden as it was. */
+export function withCommonCard(film: Film, afterTrackId: string | null): Film {
+  const enabled = storedCardOf(film, afterTrackId)?.enabled
+  return storingCard(film, afterTrackId, enabled === undefined ? {} : { enabled })
+}
+
+/** The common card with `patch` (« Trace › Plusieurs traces »): every card that does not set the same field follows it. */
+export function withCardSettings(film: Film, patch: Partial<Omit<JunctionCard, 'enabled'>>): Film {
+  const fallback = junctionDefaultOf(film)
+  const base = resolvedCard({ enabled: fallback.card, ...DEFAULT_STAGE_CARD })
+  const cardSettings: Partial<Omit<JunctionCard, 'enabled'>> = patchedCard(base, { ...fallback.cardSettings }, patch)
+  const { cardSettings: _was, ...rest } = fallback
+  return { ...film, junctionDefault: Object.keys(cardSettings).length > 0 ? { ...rest, cardSettings } : rest }
+}
+
+/** Every stage card back to the common card, each shown or hidden as it was. */
+export function withAllCardsCommon(film: Film): Film {
+  const afterIds = [null, ...(film.junctions ?? []).map((j) => j.afterTrackId)]
+  return afterIds.reduce<Film>((f, id) => (hasOwnCard(f, id) ? withCommonCard(f, id) : f), film)
+}
+
+/**
+ * « Utiliser pour toutes les transitions »: `kind` and `holdS` become the common transition and every junction goes
+ * back to it (their cards stay), so every junction, present or future, passes the same way.
+ */
+export function applyToAllJunctions(film: Film, patch: { kind: JunctionKind; holdS: number }): Film {
+  return withAllJunctionsCommon({ ...film, junctionDefault: { ...junctionDefaultOf(film), kind: patch.kind, holdS: holdFor(film, patch.kind, patch.holdS) } })
+}
+
+/** Every junction back to the common transition (their cards stay). */
+export function withAllJunctionsCommon(film: Film): Film {
+  return (film.junctions ?? []).reduce((f, j) => resetJunction(f, j.afterTrackId), film)
 }
 
 /** The default junction with a new transition and / or hold (the junctions that choose their own keep theirs). */
@@ -178,9 +265,16 @@ export function withDefaultJunction(film: Film, patch: Partial<Pick<JunctionDefa
   return { ...film, junctionDefault: { ...current, kind, holdS: holdFor(film, kind, patch.holdS ?? current.holdS) } }
 }
 
-/** The film with the default junction's card shown or hidden for the stages whose card the film does not store. */
+/** « Une carte au début de chaque étape »: every stage card shown or hidden (a card hidden or shown on its own follows). */
 export function withDefaultCard(film: Film, card: boolean): Film {
-  return { ...film, junctionDefault: { ...junctionDefaultOf(film), card } }
+  const next: Film = { ...film, junctionDefault: { ...junctionDefaultOf(film), card } }
+  const afterIds = [null, ...(film.junctions ?? []).map((j) => j.afterTrackId)]
+  return afterIds.reduce<Film>((f, id) => {
+    const stored = storedCardOf(f, id)
+    if (stored?.enabled === undefined) return f
+    const { enabled: _enabled, ...rest } = stored
+    return storingCard(f, id, rest)
+  }, next)
 }
 
 /** Junction `afterTrackId` back to the default transition (its card stays as it is). */

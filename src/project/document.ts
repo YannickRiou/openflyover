@@ -11,8 +11,8 @@ import { isRecord } from '../core/guards'
 import type { Flight, StatsOverride, Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
 import { sanitizeMediaTable, usedMedia } from '../film/media'
 import type { MediaAsset, MediaTable } from '../film/media'
-import { DEFAULT_JUNCTION, withStageSettingsMigrated } from '../film/junctions'
-import { isValidFilm, withFilmDefaults } from '../film/model'
+import { DEFAULT_JUNCTION, DEFAULT_STAGE_CARD, withStageSettingsMigrated } from '../film/junctions'
+import { STAGE_CARD_FIELDS, isValidFilm, withFilmDefaults } from '../film/model'
 import { FLYOVER_DURATION_RANGE, isValidCamera, withCameraDefaults } from '../flyover/cameraSettings'
 import { isValidPacing, withPacingDefaults } from '../flyover/pacing'
 import { isValidRace } from '../flyover/race'
@@ -37,7 +37,7 @@ import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
 
 export const PROJECT_FORMAT = 'openflyover-project'
-export const PROJECT_VERSION = 3
+export const PROJECT_VERSION = 4
 /** Suffix of saved project files (`<name>.opnflvr`, see `file.ts`). */
 export const PROJECT_FILE_SUFFIX = `.${PROJECT_EXTENSION}`
 export const defaultProjectName = (): string => t('project.doc.defaultName')
@@ -335,6 +335,41 @@ export const MIGRATIONS: Readonly<Record<number, ProjectMigration>> = {
   1: (doc) => (isRecord(doc.settings) && !('film' in doc.settings) ? { ...doc, settings: { ...doc.settings, film: { autoMode: 'rythme' } } } : doc),
   // v3: a junction left to the default no longer turns into a night by itself; the default says it (`junctionPlan`)
   2: withExplicitNightJunctions,
+  // v4: a stage card stores only what it changes over the common card (`StoredStageCard`)
+  3: withStageCardsOverCommon,
+}
+
+/**
+ * Before v4 a stage card the film stored kept every field, even those it never changed (showing or hiding it was enough
+ * to store it whole). There was no common card then: the fields equal to the default card (and `enabled` equal to the
+ * default) are dropped, so the card follows the common card from now on and the film stays the same.
+ */
+function withStageCardsOverCommon(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(doc.settings) || !isRecord(doc.settings.film)) return doc
+  const film = doc.settings.film
+  const shown = isRecord(film.junctionDefault) ? film.junctionDefault.card !== false : DEFAULT_JUNCTION.card
+  const defaults: Record<string, unknown> = { ...DEFAULT_STAGE_CARD, enabled: shown, fields: STAGE_CARD_FIELDS }
+  const trimmed = (card: unknown) => {
+    if (!isRecord(card)) return card
+    const kept = Object.fromEntries(Object.entries(card).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(defaults[key])))
+    return Object.keys(kept).length > 0 ? kept : undefined
+  }
+  const next: Record<string, unknown> = { ...film }
+  if ('firstCard' in film) {
+    const card = trimmed(film.firstCard)
+    if (card === undefined) delete next.firstCard
+    else next.firstCard = card
+  }
+  if (Array.isArray(film.junctions)) {
+    next.junctions = film.junctions.flatMap((j: unknown) => {
+      if (!isRecord(j) || !('card' in j)) return [j]
+      const { card: was, ...rest } = j
+      const card = trimmed(was)
+      if (card !== undefined) return [{ ...rest, card }]
+      return rest.kind !== undefined || rest.holdS !== undefined ? [rest] : []
+    })
+  }
+  return { ...doc, settings: { ...doc.settings, film: next } }
 }
 
 /**

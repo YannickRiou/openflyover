@@ -8,7 +8,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber } from './format'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RangeField } from './PanelSection'
-import { Checkbox, Chip, Radio, RadioGroup, Select, TextField } from './primitives'
+import { Chip, Radio, RadioGroup, Select, TextField } from './primitives'
 
 /** What each transition does, under its choice. */
 const JUNCTION_KIND_HINTS: Record<JunctionKind, string> = {
@@ -72,9 +72,9 @@ export function JunctionTransitionFields({
 const SIZE_RANGE = { min: WIDGET_SIZE_MIN, max: WIDGET_SIZE_MAX, step: 0.1 }
 
 /**
- * Settings of the card of a stage « À la suite », in the inspector of its block: shown or not, automatic (name, number,
- * date, distance and D+ of the stage) or worded by the film with `{name} {n} {count} {date} {distance} {ascent}`,
- * where it sits, its size, colour, font and duration (also set by dragging the end of its block).
+ * Settings of a stage card « À la suite », the common card's (Trace › Plusieurs traces) or one card's (the inspector of
+ * its block): automatic (name, number and the figures chosen) or worded by the film with `{name} {n} {count} {date}
+ * {distance} {ascent}`, where it sits, its size, colour, font and duration (also set by dragging the end of its block).
  */
 export function StageCardFields({ card, onChange }: { card: JunctionCard; onChange(patch: Partial<JunctionCard>): void }) {
   const t = useT()
@@ -82,7 +82,6 @@ export function StageCardFields({ card, onChange }: { card: JunctionCard; onChan
   const fields = card.fields ?? STAGE_CARD_FIELDS
   return (
     <>
-      <Checkbox checked={card.enabled} onChange={(on) => onChange({ enabled: on })}>{t('inspector.junction.show')}</Checkbox>
       <fieldset className="flex min-w-0 flex-col gap-1">
         <legend className="type-label">{t('inspector.junction.content')}</legend>
         <RadioGroup

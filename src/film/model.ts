@@ -447,9 +447,10 @@ export const STAGE_DURATION_RANGE = { min: 5, max: 600, step: 0.1 } as const
 
 /**
  * The card of a stage « À la suite »: shown from the middle of the junction before it (the start of the flight for the
- * first stage) for `durationS`. Without `text` it shows what the stage is (name, « Étape 2 sur 3 · date », distance,
- * D+); with it, `text` and `subtitle` where `{name} {n} {count} {date} {distance} {ascent}` are filled in. Placement and
- * style as a `FilmText`.
+ * first stage) until `durationS` into the stage's flight. Without `text` it shows what the stage is (name, « Étape 2 sur
+ * 3 · date » and the figures of `fields`); with it, `text` and `subtitle` where `{name} {n} {count} {date} {distance}
+ * {ascent}` are filled in. Placement and style as a `FilmText`. What `junctionCardOf` reads: the film stores only what a
+ * card changes (`StoredStageCard`) over the common card (`JunctionDefault.cardSettings`).
  */
 export interface JunctionCard {
   enabled: boolean
@@ -474,15 +475,26 @@ export interface FilmJunction {
   kind?: JunctionKind
   /** seconds held on the clock: 0 for 'coupe' */
   holdS?: number
-  /** the card of the stage that follows */
-  card?: JunctionCard
+  /** the card of the stage that follows: what it changes over the common card */
+  card?: StoredStageCard
 }
 
-/** Transition and card of the junctions without a `FilmJunction` of their own (`card`: the stage cards are shown). */
+/**
+ * What a stage card sets of its own (« réglage propre »), the rest coming from the common card: `enabled` alone hides or
+ * shows that card; an empty `text`, `subtitle`, `color` or `font` goes back to the automatic card, the overlay's colour
+ * or font where the common card sets one.
+ */
+export type StoredStageCard = Partial<JunctionCard>
+
+/**
+ * Transition and card of the junctions without a `FilmJunction` of their own (`card`: the stage cards are shown;
+ * `cardSettings`: what every card shows, where and how long, « Trace › Plusieurs traces », absent: `DEFAULT_STAGE_CARD`).
+ */
 export interface JunctionDefault {
   kind: JunctionKind
   holdS: number
   card: boolean
+  cardSettings?: Partial<Omit<JunctionCard, 'enabled'>>
 }
 
 export interface Film {
@@ -516,8 +528,8 @@ export interface Film {
   junctions?: FilmJunction[]
   /** default transition and card of the junctions (absent: `DEFAULT_JUNCTION`, or what `race.stageTransition` said) */
   junctionDefault?: JunctionDefault
-  /** card of the first stage (absent: the default card, `junctionCardOf`) */
-  firstCard?: JunctionCard
+  /** card of the first stage, what it changes over the common card (absent: the common card, `junctionCardOf`) */
+  firstCard?: StoredStageCard
   /**
    * flight time of the stages « À la suite » whose duration is set (seconds, by track id; absent or missing: the stage's
    * share of the flyover duration, proportional to its distance, as ever); read with a sequence only (`stageSpecsOf`)
@@ -835,17 +847,18 @@ export function isValidNights(nights: FilmNights): boolean {
   return typeof nights.enabled === 'boolean' && part(nights.duskS) && part(nights.nightS) && part(nights.dawnS)
 }
 
-export function isValidJunctionCard(card: unknown): card is JunctionCard {
+/** A stored stage card or the common card's settings: each field it sets is valid (an empty colour or font: the overlay's). */
+export function isValidJunctionCard(card: unknown): card is StoredStageCard {
   return (
     isRecord(card) &&
-    typeof card.enabled === 'boolean' &&
-    within(card.durationS, JUNCTION_CARD_RANGE.min, JUNCTION_CARD_RANGE.max) &&
+    (card.enabled === undefined || typeof card.enabled === 'boolean') &&
+    (card.durationS === undefined || within(card.durationS, JUNCTION_CARD_RANGE.min, JUNCTION_CARD_RANGE.max)) &&
     optionalString(card.text) &&
     optionalString(card.subtitle) &&
-    oneOf(OVERLAY_ANCHORS, card.anchor) &&
-    within(card.size, WIDGET_SIZE_MIN, WIDGET_SIZE_MAX) &&
-    (card.color === undefined || isHexColor(card.color)) &&
-    (card.font === undefined || oneOf(OVERLAY_FONT_IDS, card.font)) &&
+    (card.anchor === undefined || oneOf(OVERLAY_ANCHORS, card.anchor)) &&
+    (card.size === undefined || within(card.size, WIDGET_SIZE_MIN, WIDGET_SIZE_MAX)) &&
+    (card.color === undefined || card.color === '' || isHexColor(card.color)) &&
+    (card.font === undefined || card.font === '' || oneOf(OVERLAY_FONT_IDS, card.font)) &&
     (card.fields === undefined || isDayCardFields(card.fields))
   )
 }
@@ -866,7 +879,8 @@ function isValidJunctionDefault(d: unknown): d is JunctionDefault {
     isRecord(d) &&
     oneOf(JUNCTION_KINDS, d.kind) &&
     (d.holdS === 0 || within(d.holdS, JUNCTION_HOLD_RANGE.min, JUNCTION_HOLD_RANGE.max)) &&
-    typeof d.card === 'boolean'
+    typeof d.card === 'boolean' &&
+    (d.cardSettings === undefined || (isValidJunctionCard(d.cardSettings) && !('enabled' in d.cardSettings)))
   )
 }
 

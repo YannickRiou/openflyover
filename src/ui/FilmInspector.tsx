@@ -5,7 +5,7 @@ import { formatDate } from '../i18n/format'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, isCardItem, withCardTimes } from '../film/cards'
 import { dayCardIndexOf, isDayCardItem } from '../film/days'
-import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageFlightS, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from '../film/junctions'
+import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnCard, hasOwnTransition, withCommonCard, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageFlightS, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from '../film/junctions'
 import { useMediaStore } from '../film/media'
 import {
   AUDIO_DURATION_RANGE,
@@ -14,8 +14,6 @@ import {
   FADE_RANGE,
   ITEM_DURATION_RANGE,
   MEDIA_LAYOUTS,
-  NIGHT_PARTS,
-  NIGHT_PART_RANGE,
   SHOT_DURATION_RANGE,
   SHOT_STYLES,
   SHOT_TRANSITIONS,
@@ -658,8 +656,6 @@ export function FilmInspector() {
       const own = hasOwnTransition(film, junction.afterTrackId)
       // what the film says (its own or the default); the clock tells whether a « Nuit » has a night to pass
       const kind = stored.kind
-      const afterIds = (stageIds ?? []).slice(0, -1)
-      const card = junctionCardOf(film, junction.afterTrackId)
       title = t('inspector.junction.title', { n: k + 1 })
       removeLabel = t('inspector.junction.defaultTransition')
       removable = own
@@ -681,34 +677,16 @@ export function FilmInspector() {
             night={kind === 'nuit' ? junction.kind === 'nuit' : undefined}
             onChange={(patch) => change((f) => withJunction(f, junction.afterTrackId, { kind, holdS: stored.holdS, ...patch }), false)}
           />
-          {junction.kind === 'nuit' && (
-            <>
-              {NIGHT_PARTS.map(({ key, label }) =>
-                range(`night-${key}`, label, film.nights[key], NIGHT_PART_RANGE, formatSecondsShort, (v) => change((f) => ({ ...f, nights: { ...f.nights, [key]: v } }), false)),
-              )}
-              <p className={HINT}>{t('inspector.junction.nightsHint')}</p>
-            </>
+          {/* the seconds of a night are those of every night: set in Lumière, said here */}
+          {junction.kind === 'nuit' && <p className={HINT}>{t('inspector.junction.nightInfo', { pause: formatSecondsShort(junction.holdS) })}</p>}
+          <p className={HINT}>{own ? t('inspector.junction.own') : t('inspector.junction.common')}</p>
+          {own && (
+            <Button className={REMOVE} onClick={() => editFilm((f) => ({ film: applyToAllJunctions(f, { kind, holdS: stored.holdS }) }))}>
+              {t('inspector.junction.applyToAll')}
+            </Button>
           )}
-          <Button
-            className={REMOVE}
-            onClick={() => editFilm((f) => ({ film: applyToAllJunctions(f, afterIds, { kind, holdS: stored.holdS }) }))}
-          >
-            {t('inspector.junction.applyToAll')}
-          </Button>
-          <Checkbox
-            checked={card.enabled}
-            onChange={(on) => {
-                const enabled = on
-                editFilm((f) => ({ film: withJunctionCard(f, junction.afterTrackId, { enabled }) }))
-              }}
-          >
-            {t('inspector.junction.stageCard', { n: k + 2 })}
-          </Checkbox>
-          <Button
-            className={REMOVE}
-            onClick={() => useAppStore.getState().setFilmSelection(stageCardId(junction.afterTrackId))}
-          >
-            {t('inspector.junction.adjustCard')}
+          <Button className={REMOVE} onClick={() => useAppStore.getState().setFilmSelection(stageCardId(junction.afterTrackId))}>
+            {t('inspector.junction.adjustCard', { n: k + 2 })}
           </Button>
           {/* what the clock holds here: a night (dusk, night, dawn), a fade (also a « Nuit » with no night to pass) or nothing */}
           {junction.kind === 'nuit' ? (
@@ -1209,8 +1187,23 @@ export function FilmInspector() {
       title = t('inspector.stageCard.title', { n: k + 1 })
       removeLabel = t('inspector.stageCard.remove')
       removable = card.enabled
-      body = (
+      const own = hasOwnCard(film, after)
+      // a hidden card has no block: « Régler la carte » of its transition leads here, to show it again
+      body = !card.enabled ? (
         <>
+          <p className={HINT}>{t('inspector.stageCard.hidden')}</p>
+          <Button className={REMOVE} onClick={() => editFilm((f) => ({ film: withJunctionCard(f, after, { enabled: true }) }))}>
+            {t('inspector.stageCard.showAgain')}
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className={HINT}>{own ? t('inspector.stageCard.own') : t('inspector.stageCard.common')}</p>
+          {own && (
+            <Button className={REMOVE} onClick={() => editFilm((f) => ({ film: withCommonCard(f, after) }))}>
+              {t('inspector.stageCard.backToCommon')}
+            </Button>
+          )}
           <StageCardFields card={card} onChange={(patch) => change((f) => withJunctionCard(f, after, patch), false)} />
           <p className={HINT}>
             {window && t('inspector.stageCard.window', { start: formatFilmTime(window.startS, true), end: formatFilmTime(window.endS, true) })}

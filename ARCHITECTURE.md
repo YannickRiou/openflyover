@@ -2942,9 +2942,18 @@ exports) gets it from the terrain source of the settings.
   the film with the duration changed like `dragJunction`; the body of the block still reorders), arrows ±1 s (Shift ±0.1 s), Delete =
   automatic; « Survol » › « Durée et rythme » says how many stages have their own. Not covered: `flightNights` still decides which nights
   the flight crosses faster than they last from the shared duration.
-- **Stage card**: `JunctionCard` `{ enabled, durationS (1–15 s, 5), text?, subtitle?, anchor, size, color?, font? }` stored on
-  the junction before its stage (`firstCard` for the first stage); without `text` the automatic card (name,
-  « Étape 2 sur 3 · date », distance, D+), with it the film's own words (`fillTemplate`: `{name} {n} {count} {date}
+- **Stage card**: `JunctionCard` `{ enabled, durationS (1–15 s, 5), text?, subtitle?, anchor, size, color?, font?, fields? }`,
+  read with `junctionCardOf` = `DEFAULT_STAGE_CARD` ← the **common card** (`junctionDefault.card` shown or not,
+  `junctionDefault.cardSettings`, set in « Trace › Plusieurs traces », `commonCardOf` / `withCardSettings`) ← what the card
+  stores of its own (`StoredStageCard`, partial, on the junction before its stage, `firstCard` for the first): `withJunctionCard`
+  stores only the fields that differ from the common card (`patchedCard`; an empty `text` / `subtitle` / `color` / `font`
+  goes back to « none » over a common one), so a card hidden by Delete stores `{ enabled: false }` and still follows the
+  common card. `hasOwnCard` (« Réglage propre ») is any field but `enabled`; `withCommonCard` / `withAllCardsCommon` take
+  them back; the switch « Une carte au début de chaque étape » (`withDefaultCard`) drops every card's own `enabled`. The same
+  for the transitions: `applyToAllJunctions` (« Utiliser pour toutes les transitions ») makes one the common transition and
+  sends every junction back to it (`withAllJunctionsCommon`). Project v4 (`withStageCardsOverCommon`) trims the cards older
+  projects stored whole. Without `text` the automatic card (name,
+  « Étape 2 sur 3 · date », the figures of `fields`), with it the film's own words (`fillTemplate`: `{name} {n} {count} {date}
   {distance} {ascent}`, drawn like a timeline text, `STAGE_TEXT_SCALE`). Window (`stageCardWindow`): from `holdStartS` of the
   junction before it (the start of the flight for the first stage) until `durationS` after its `endS` (the stage's flight
   starts there: the card stays on its first seconds; `dragStageCard` counts the duration from there too), not past the
