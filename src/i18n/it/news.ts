@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v331.recap.title': 'Rivedere la tappa finita',
+  'v331.recap.text': 'Ogni transizione tra tappe sceglie il suo passaggio (stacco o dissolvenza), se passare la notte e se rivedere la tappa finita: la camera sale per qualche secondo per mostrarla intera. In Traccia › Più tracce.',
   'v33.stages.title': 'Tappe più semplici',
   'v33.stages.text': 'Transizioni e schede di tappa si regolano una volta per tutte in Traccia › Più tracce; un blocco della timeline dice se segue questa impostazione comune. La scheda resta sull’inizio della tappa, e la camera può riguardare la tappa finita durante la notte.',
   'v33.titles.title': 'I titoli a parte',

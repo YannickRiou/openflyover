@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v331.recap.title': 'Volver a ver la etapa terminada',
+  'v331.recap.text': 'Cada transición entre etapas elige su paso (corte o fundido), si pasa la noche y si vuelve a ver la etapa terminada: la cámara sube unos segundos para mostrarla entera. En Track › Varios tracks.',
   'v33.stages.title': 'Etapas más sencillas',
   'v33.stages.text': 'Las transiciones y las tarjetas de etapa se ajustan una vez para todas en Track › Varios tracks; un bloque de la línea de tiempo dice si sigue ese ajuste común. La tarjeta se queda al inicio de la etapa, y la cámara puede volver a mirar la etapa terminada durante la noche.',
   'v33.titles.title': 'Los títulos aparte',

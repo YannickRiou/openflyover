@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v331.recap.title': 'Revoir l’étape finie',
+  'v331.recap.text': 'Chaque transition entre étapes choisit son passage (coupe ou fondu), de passer la nuit ou non, et de revoir l’étape finie : la caméra s’élève quelques secondes pour la montrer en entier. Dans Trace › Plusieurs traces.',
   'v33.stages.title': 'Des étapes plus simples',
   'v33.stages.text': 'Transitions et cartes d’étape se règlent une fois pour toutes dans Trace › Plusieurs traces ; un bloc de la timeline dit s’il suit ce réglage commun. La carte reste sur le début de l’étape, et la caméra peut revoir l’étape finie pendant la nuit.',
   'v33.titles.title': 'Les titres à part',

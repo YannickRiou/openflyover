@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v331.recap.title': 'Die beendete Etappe noch einmal zeigen',
+  'v331.recap.text': 'Jeder Übergang zwischen Etappen wählt seinen Wechsel (Schnitt oder Abblende), ob er die Nacht vergehen lässt und ob er die beendete Etappe noch einmal zeigt: die Kamera steigt einige Sekunden auf, um sie ganz zu zeigen. Unter Track › Mehrere Tracks.',
   'v33.stages.title': 'Einfachere Etappen',
   'v33.stages.text': 'Übergänge und Etappenkarten werden einmal für alle unter Track › Mehrere Tracks eingestellt; ein Block der Timeline sagt, ob er dieser gemeinsamen Einstellung folgt. Die Karte bleibt am Anfang der Etappe, und die Kamera kann in der Nacht auf die beendete Etappe zurückblicken.',
   'v33.titles.title': 'Titel für sich',
