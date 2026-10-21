@@ -1,11 +1,15 @@
+import { useState } from 'react'
 import { useT } from '../i18n'
-import type { ProjectEntry } from '../platform'
+import { getPlatform, type ProjectEntry } from '../platform'
 import { useAppStore } from '../state/store'
-import { Icon } from './icons'
+import { Icon, type IconName } from './icons'
 import { libraryFile, useLibraryStore } from './library'
+import { setPreferences } from './preferences'
 import { chooseProjectToOpen, chooseTracksToImport, loadSample, openProject } from './projectActions'
 import { StravaImport } from './StravaImport'
 import { Button } from './primitives'
+import { LATEST_NEWS, WHATS_NEW } from './whatsNew'
+import { WhatsNewDialog } from './WhatsNewDialog'
 
 /** The thumbnail of a project of the list, an empty frame for an older entry that has none. */
 const THUMB = 'library-thumb row-span-2'
@@ -18,12 +22,30 @@ const LINK =
   'cursor-pointer rounded-sm px-2 py-1 text-body font-semibold text-text-1 underline underline-offset-[3px] transition-ui ' +
   'enabled:hover:text-(--accent-hover) disabled:cursor-not-allowed disabled:opacity-45'
 
+/** A link of the foot of the home screen (opens a new tab, the system browser on the desktop). */
+const FOOT_LINK =
+  'inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-hint text-text-2 no-underline underline-offset-[3px] transition-ui hover:text-text-1 hover:underline'
+
 /** Projects of « Mes projets » offered on the home screen, most recent first. */
 const RECENT_COUNT = 3
+/** Titles of the newest « Nouveautés » named on the home screen. */
+const NEWS_TITLES = 3
+
+/** The user guide, published with the website (pages.yml), and the desktop installers of the latest release. */
+export const GUIDE_URL = 'https://yannickriou.github.io/openflyover/docs/user-guide.html'
+export const DOWNLOAD_URL = 'https://github.com/YannickRiou/openflyover/releases/latest'
+
+/** What the app promises, under the title. */
+const POINTS: { icon: IconName; key: 'home.empty.pointFree' | 'home.empty.pointNoAccount' | 'home.empty.pointLocal' }[] = [
+  { icon: 'github', key: 'home.empty.pointFree' },
+  { icon: 'lock', key: 'home.empty.pointNoAccount' },
+  { icon: 'eye-off', key: 'home.empty.pointLocal' },
+]
 
 /**
- * Home screen until a track is loaded, over the whole view: import (drop anywhere or the file picker), Strava, the
- * sample, open a project, and the latest projects of « Mes projets ».
+ * Home screen until a track is loaded, over the whole view: what the app does, import (drop anywhere or the file
+ * picker), Strava, the sample, open a project, what is new (« Nouveautés »), the latest projects of « Mes projets », and
+ * links to the user guide, the desktop app (on the website) and the sources.
  */
 export function EmptyState() {
   const t = useT()
@@ -32,6 +54,13 @@ export function EmptyState() {
   const entries = useLibraryStore((s) => s.entries)
   const currentId = useLibraryStore((s) => s.currentId)
   const recent = entries.filter((e) => e.id !== currentId).slice(0, RECENT_COUNT)
+  const [newsOpen, setNewsOpen] = useState(false)
+  const news = WHATS_NEW[0]
+  const openNews = () => {
+    setNewsOpen(true)
+    setPreferences({ whatsNewSeen: LATEST_NEWS })
+  }
+  const web = !getPlatform().capabilities.isDesktop
 
   const open = async (entry: ProjectEntry) => {
     const file = await libraryFile(entry)
@@ -45,7 +74,16 @@ export function EmptyState() {
         <h2 id="empty-title" className="home-title">
           {t('home.empty.title')}
         </h2>
-        <p className="mb-3 max-w-[32ch] text-title text-text-2">{t('home.empty.hint')}</p>
+        <p className="max-w-[36ch] text-title text-text-1">{t('home.empty.pitch')}</p>
+        <ul className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-hint text-text-2">
+          {POINTS.map(({ icon, key }) => (
+            <li key={key} className="inline-flex items-center gap-1.5">
+              <Icon name={icon} size={14} />
+              {t(key)}
+            </li>
+          ))}
+        </ul>
+        <p className="mb-3 max-w-[32ch] text-body text-text-2">{t('home.empty.hint')}</p>
         <Button variant="primary" block className="min-h-12 text-title" onClick={() => void chooseTracksToImport()} disabled={loading}>
           {loading ? t('home.empty.importing') : t('home.empty.chooseFile')}
         </Button>
@@ -58,6 +96,20 @@ export function EmptyState() {
         <button type="button" className={LINK} onClick={() => void chooseProjectToOpen()} disabled={loading}>
           {t('home.empty.openProject')}
         </button>
+
+        <button
+          type="button"
+          className="mt-3 flex w-full cursor-pointer items-start gap-2 rounded-md border border-edge bg-surface-card p-3 text-left transition-ui hover:border-text-1"
+          onClick={openNews}
+          data-testid="home-news"
+        >
+          <Icon name="sparkles" size={18} />
+          <span className="min-w-0">
+            <span className="block font-semibold text-text-1">{t('home.empty.news', { version: news.version })}</span>
+            <span className="type-hint block">{news.items.slice(0, NEWS_TITLES).map((item) => item.title).join(' · ')}</span>
+          </span>
+        </button>
+        <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
 
         {recent.length > 0 && (
           <section className="mt-6 w-full border-t border-edge pt-4 text-left" aria-labelledby="empty-recent">
@@ -78,16 +130,22 @@ export function EmptyState() {
           </section>
         )}
 
-        <a
-          className="mt-3 inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-hint text-text-2 no-underline underline-offset-[3px] transition-ui hover:text-text-1 hover:underline"
-          href="https://github.com/YannickRiou/openflyover"
-          target="_blank"
-          rel="noreferrer"
-          data-testid="home-github"
-        >
-          <Icon name="github" size={14} />
-          {t('home.empty.github')}
-        </a>
+        <nav className="mt-3 flex flex-wrap justify-center gap-x-2" aria-label={t('home.empty.links')}>
+          <a className={FOOT_LINK} href={GUIDE_URL} target="_blank" rel="noreferrer" data-testid="home-guide">
+            <Icon name="circle-help" size={14} />
+            {t('home.empty.guide')}
+          </a>
+          {web && (
+            <a className={FOOT_LINK} href={DOWNLOAD_URL} target="_blank" rel="noreferrer" data-testid="home-download">
+              <Icon name="download" size={14} />
+              {t('home.empty.download')}
+            </a>
+          )}
+          <a className={FOOT_LINK} href="https://github.com/YannickRiou/openflyover" target="_blank" rel="noreferrer" data-testid="home-github">
+            <Icon name="github" size={14} />
+            {t('home.empty.github')}
+          </a>
+        </nav>
       </div>
     </section>
   )

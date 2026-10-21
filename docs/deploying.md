@@ -20,7 +20,8 @@ landmarks itself.
 ### GitHub Pages
 
 The repository publishes the site itself at <https://yannickriou.github.io/openflyover/> (workflow
-`.github/workflows/pages.yml`, on every push to `master` or by hand). GitHub Pages only serves the files: the 3D view,
+`.github/workflows/pages.yml`, on every push to `master` or by hand), with the user guide at `docs/user-guide.html` (« Premiers pas »
+on the home screen; its links to the repository's Markdown files rewritten to GitHub). GitHub Pages only serves the files: the 3D view,
 the clouds and the export run in each visitor's browser, on their graphics card, as with any other host. One-time
 setting: *Settings* › *Pages* › *Build and deployment* › *Source*: **GitHub Actions**. The site lives under
 `/openflyover/`, so the build gets `BASE_PATH=/openflyover/` (Vite `base`); a build without it serves from the domain

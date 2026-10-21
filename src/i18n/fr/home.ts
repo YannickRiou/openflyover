@@ -1,5 +1,13 @@
 export default {
   'empty.title': 'Votre sortie, vue du ciel',
+  'empty.pitch': 'Transformez une trace GPS en film de survol en 3D, avec le relief, la météo du jour et votre musique.',
+  'empty.pointFree': 'Gratuit et libre',
+  'empty.pointNoAccount': 'Sans compte',
+  'empty.pointLocal': 'Tout reste sur votre appareil',
+  'empty.news': 'Nouveau en {version}',
+  'empty.links': 'Liens',
+  'empty.guide': 'Premiers pas',
+  'empty.download': 'Appli de bureau (Windows, macOS, Linux)',
   'empty.hint': 'Glissez une ou plusieurs traces GPX ou FIT n’importe où dans la fenêtre.',
   'empty.importing': 'Import en cours…',
   'empty.chooseFile': 'Choisir un fichier',

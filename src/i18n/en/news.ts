@@ -9,6 +9,8 @@ const messages: Messages['news'] = {
   'v31.dates.text': 'With IGN BD ORTHO or Esri, « Photo date » (Map tab) offers the older photos of the place: a winter date for snow, a summer one to avoid it.',
   'v31.free.title': 'A free camera',
   'v31.free.text': 'The « Free (keyframes) » style does not follow the marker: without keyframes the camera stays fixed on the whole track; add keyframes on the timeline to choose its moves yourself (a fixed shot, a turn around the track…).',
+  'v31.home.title': 'A clearer home screen',
+  'v31.home.text': 'It says in one sentence what OpenFlyover does, shows what is new in this version and leads to the « Getting started » guide and, on the website, to the desktop app.',
   'v31.imagery.title': 'A tidier imagery list',
   'v31.imagery.text': 'In the Map tab, the imagery is sorted into « Aerial photos » and « Maps », the sources of the track’s country first; the ones that show nothing there (swisstopo in France) are set apart.',
   'v31.orbit.title': 'A full orbit',

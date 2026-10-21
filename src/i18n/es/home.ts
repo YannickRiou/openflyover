@@ -2,6 +2,14 @@ import type { Messages } from '../messages'
 
 const messages: Messages['home'] = {
   'empty.title': 'Tu salida, vista desde el cielo',
+  'empty.pitch': 'Convierta un recorrido GPS en un vídeo de sobrevuelo en 3D, con el relieve, el tiempo del día y su música.',
+  'empty.pointFree': 'Gratuito y libre',
+  'empty.pointNoAccount': 'Sin cuenta',
+  'empty.pointLocal': 'Todo se queda en su dispositivo',
+  'empty.news': 'Novedades de la {version}',
+  'empty.links': 'Enlaces',
+  'empty.guide': 'Primeros pasos',
+  'empty.download': 'Aplicación de escritorio (Windows, macOS, Linux)',
   'empty.hint': 'Arrastra uno o varios tracks GPX o FIT a cualquier parte de la ventana.',
   'empty.importing': 'Importando…',
   'empty.chooseFile': 'Elegir un archivo',
