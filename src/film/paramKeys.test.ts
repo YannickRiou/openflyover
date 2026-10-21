@@ -185,3 +185,12 @@ describe('label opacity keys', () => {
     expect(clampParamValue('labels', -1)).toBe(0)
   })
 })
+
+describe('the colour keys', () => {
+  it('read like « Lumière › Couleurs »: signed percents, the vignetting as a percentage', () => {
+    expect(PARAM_SPECS.contrast.format(-0.25)).toBe('−25')
+    expect(PARAM_SPECS.saturation.format(0.3)).toBe('+30')
+    expect(PARAM_SPECS.warmth.format(0)).toBe('0')
+    expect(PARAM_SPECS.vignette.format(0.35)).toBe('35 %')
+  })
+})

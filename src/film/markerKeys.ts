@@ -11,8 +11,8 @@ import { smootherstep } from '../core/math'
 import type { Track } from '../core/types'
 import { trackPathOf } from '../flyover/path'
 import { isHexColor } from '../overlay/settings'
-import { MARKER_FIGURE_CHOICES, MARKER_KINDS, MARKER_SIZE_RANGE, markerMovesWithTime } from '../scene/markerSettings'
-import type { MarkerFigureChoice, MarkerKind, MarkerSettings } from '../scene/markerSettings'
+import { MARKER_BALL_STYLES, MARKER_FIGURE_CHOICES, MARKER_KINDS, MARKER_SHAPES, MARKER_SIZE_RANGE, markerMovesWithTime } from '../scene/markerSettings'
+import type { MarkerBallStyle, MarkerFigureChoice, MarkerKind, MarkerSettings, MarkerShape } from '../scene/markerSettings'
 import type { Film } from './model'
 
 export interface FilmMarkerKey {
@@ -29,10 +29,14 @@ export interface FilmMarkerKey {
   figureColor?: string
   /** multiplier of the on-screen size (`MARKER_SIZE_RANGE`); none: the size of the settings */
   size?: number
+  /** style of a ball, shape of a figure badge, figure animated: none, those of the settings */
+  ballStyle?: MarkerBallStyle
+  shape?: MarkerShape
+  animated?: boolean
 }
 
 /** What a key holds as its look: a key is added with the one in effect, so adding it changes nothing on screen. */
-export type MarkerKeyLook = Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId' | 'color' | 'figureColor' | 'size'>
+export type MarkerKeyLook = Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId' | 'color' | 'figureColor' | 'size' | 'ballStyle' | 'shape' | 'animated'>
 
 /**
  * The look of `key` as stored (its own colours and size stay unset when it has none), else the shape and figure of the
@@ -40,8 +44,8 @@ export type MarkerKeyLook = Pick<FilmMarkerKey, 'kind' | 'figure' | 'imageId' | 
  */
 export function markerKeyLook(key: FilmMarkerKey | undefined, base: MarkerSettings): MarkerKeyLook {
   if (!key) return { kind: base.kind, figure: base.figure }
-  const { kind, figure, imageId, color, figureColor, size } = key
-  return { kind, figure, imageId, color, figureColor, size }
+  const { kind, figure, imageId, color, figureColor, size, ballStyle, shape, animated } = key
+  return { kind, figure, imageId, color, figureColor, size, ballStyle, shape, animated }
 }
 
 /**
@@ -70,7 +74,10 @@ export function isValidMarkerLook(key: Record<string, unknown>): boolean {
     (key.imageId === undefined || typeof key.imageId === 'string') &&
     isOptionalColor(key.color) &&
     isOptionalColor(key.figureColor) &&
-    (key.size === undefined || inRange(key.size, MARKER_SIZE_RANGE))
+    (key.size === undefined || inRange(key.size, MARKER_SIZE_RANGE)) &&
+    (key.ballStyle === undefined || oneOf(MARKER_BALL_STYLES, key.ballStyle)) &&
+    (key.shape === undefined || oneOf(MARKER_SHAPES, key.shape)) &&
+    (key.animated === undefined || typeof key.animated === 'boolean')
   )
 }
 
@@ -94,6 +101,9 @@ export function withKey(base: MarkerSettings, key: FilmMarkerKey, imageOf: (id: 
     color: key.color ?? base.color,
     figureColor: key.figureColor ?? base.figureColor,
     size: key.size ?? base.size,
+    ballStyle: key.ballStyle ?? base.ballStyle,
+    shape: key.shape ?? base.shape,
+    animated: key.animated ?? base.animated,
   }
 }
 
@@ -123,7 +133,7 @@ export function markerAt(
 
 /** A key can bring an animated or pulsing look: a held export frame must then be rendered again. */
 export function markerKeysMoveWithTime(film: Pick<Film, 'markerKeys'>, base: MarkerSettings): boolean {
-  return markerMovesWithTime(base) || film.markerKeys.some((k) => markerMovesWithTime({ ...base, kind: k.kind }))
+  return markerMovesWithTime(base) || film.markerKeys.some((k) => markerMovesWithTime(withKey(base, k, () => '')))
 }
 
 /**

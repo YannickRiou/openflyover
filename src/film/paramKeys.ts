@@ -33,12 +33,20 @@ export interface ParamSpec {
 }
 
 const signed = (n: number, digits = 2) => `${n > 0 ? '+' : ''}${formatNumberIntl(n, digits)}`
+
+/** A colour setting as « Lumière › Couleurs » shows it, on its keys too: « −25 », « +30 », « 35 % » for the vignetting. */
+export function gradingText(key: keyof GradingValues, value: number): string {
+  const percent = Math.round(value * 100)
+  if (key === 'vignette') return t('film.param.percentValue', { value: percent })
+  return `${percent > 0 ? '+' : percent < 0 ? '−' : ''}${formatNumberIntl(Math.abs(percent), 0)}`
+}
+
 const gradingSpec = (label: () => string, key: keyof GradingValues): ParamSpec => ({
   get label() {
     return label()
   },
   ...GRADING_RANGES[key],
-  format: signed,
+  format: (value) => gradingText(key, value),
 })
 
 /**

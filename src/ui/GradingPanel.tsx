@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { hasGradingKeys } from '../film/paramKeys'
+import { gradingText, hasGradingKeys } from '../film/paramKeys'
 import { t, useT } from '../i18n'
 import { getSettingsHistory } from '../project/history'
 import { GRADING_PRESETS, GRADING_RANGES, gradingOfPreset, withGradingValue } from '../scene/grading'
@@ -8,7 +8,6 @@ import { useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, SettingRow } from './PanelSection'
-import { formatNumber, formatPercent } from './format'
 import { Radio, RadioGroup, Slider } from './primitives'
 
 const SLIDERS: { key: keyof GradingValues; label: string; tip?: string }[] = [
@@ -17,12 +16,6 @@ const SLIDERS: { key: keyof GradingValues; label: string; tip?: string }[] = [
   { key: 'warmth', get label() { return t('light.grading.warmth') }, get tip() { return t('light.grading.warmthTip') } },
   { key: 'vignette', get label() { return t('light.grading.vignette') }, get tip() { return t('light.grading.vignetteTip') } },
 ]
-
-/** −0.25 -> "−25", 0.3 -> "+30", 0 -> "0" */
-function formatSigned(v: number): string {
-  const percent = Math.round(v * 100)
-  return `${percent > 0 ? '+' : percent < 0 ? '−' : ''}${formatNumber(Math.abs(percent))}`
-}
 
 /**
  * « Couleurs » (section of the Lumière tab): colour grading of the image, preview and export alike. Preset chips
@@ -74,7 +67,7 @@ function GradingSlider({ name, label, tip }: { name: keyof GradingValues; label:
   const setSetting = useAppStore((s) => s.setSetting)
   const [value, setValue] = useKeyedValue(name, grading[name], (v) => setSetting('grading', withGradingValue(grading, name, v)))
   const range = GRADING_RANGES[name]
-  const text = name === 'vignette' ? formatPercent(value) : formatSigned(value)
+  const text = gradingText(name, value)
   return (
     <SettingRow label={label} value={text} paths={[`grading.${name}`]}>
       <div className="field">

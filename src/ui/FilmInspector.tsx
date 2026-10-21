@@ -43,7 +43,18 @@ import type { Film, FilmShot, MediaLayout, MediaSync, ShotStyle, ShotSun, ShotTr
 import { FILM_PARAMS, PARAM_SPECS, paramAt, paramBase } from '../film/paramKeys'
 import { getPlatform } from '../platform'
 import { AVATAR_SIZE_PX, fileToAvatarDataUrl } from '../scene/markerBadge'
-import { MARKER_FIGURE_CHOICES, MARKER_FIGURE_LABELS, MARKER_KIND_LABELS, MARKER_KINDS, MARKER_LABEL_MODE_LABELS, MARKER_SIZE_RANGE } from '../scene/markerSettings'
+import {
+  MARKER_BALL_STYLE_LABELS,
+  MARKER_BALL_STYLES,
+  MARKER_FIGURE_CHOICES,
+  MARKER_FIGURE_LABELS,
+  MARKER_KIND_LABELS,
+  MARKER_KINDS,
+  MARKER_LABEL_MODE_LABELS,
+  MARKER_SHAPE_LABELS,
+  MARKER_SHAPES,
+  MARKER_SIZE_RANGE,
+} from '../scene/markerSettings'
 import type { FilmParam } from '../film/paramKeys'
 import {
   addItemCamera,
@@ -850,7 +861,14 @@ export function FilmInspector() {
           </ColorField>
         </div>
       )
-      const inherits = markerKey.color === undefined && markerKey.figureColor === undefined && markerKey.size === undefined
+      const keyShape = markerKey.shape ?? marker.shape
+      const inherits =
+        markerKey.color === undefined &&
+        markerKey.figureColor === undefined &&
+        markerKey.size === undefined &&
+        markerKey.ballStyle === undefined &&
+        markerKey.shape === undefined &&
+        markerKey.animated === undefined
       body = (
         <>
           <div className={FIELD}>
@@ -892,13 +910,45 @@ export function FilmInspector() {
               <p className={HINT}>{t('inspector.markerKey.noOwnImage')}</p>
             </div>
           )}
-          {markerKey.kind === 'figurine' && colorField('figureColor', t('inspector.markerKey.discColor'))}
-          {colorField('color', markerKey.kind === 'boule' ? t('inspector.markerKey.color') : t('inspector.markerKey.edgeColor'))}
+          {markerKey.kind === 'boule' && (
+            <div className={FIELD}>
+              <label className="type-label" htmlFor={`${id}-marker-ball`}>
+                {t('marker.section.style')}
+              </label>
+              <Select
+                id={`${id}-marker-ball`}
+                value={markerKey.ballStyle ?? marker.ballStyle}
+                options={MARKER_BALL_STYLES.map((ballStyle) => ({ value: ballStyle, label: MARKER_BALL_STYLE_LABELS[ballStyle] }))}
+                onChange={(ballStyle) => set({ ballStyle })}
+              />
+            </div>
+          )}
+          {markerKey.kind === 'figurine' && (
+            <>
+              <div className={FIELD}>
+                <label className="type-label" htmlFor={`${id}-marker-badge`}>
+                  {t('marker.section.badge')}
+                </label>
+                <Select
+                  id={`${id}-marker-badge`}
+                  value={keyShape}
+                  options={MARKER_SHAPES.map((shape) => ({ value: shape, label: MARKER_SHAPE_LABELS[shape] }))}
+                  onChange={(shape) => set({ shape })}
+                />
+              </div>
+              <Checkbox checked={markerKey.animated ?? marker.animated} onChange={(animated) => set({ animated })}>
+                {t('marker.section.animate')}
+              </Checkbox>
+            </>
+          )}
+          {/* the same names as the Trace panel: a figure alone (« Silhouette ») has a figure colour and an outline */}
+          {markerKey.kind === 'figurine' && colorField('figureColor', keyShape === 'contour' ? t('marker.section.figureColor') : t('marker.section.discColor'))}
+          {colorField('color', markerKey.kind === 'boule' ? t('inspector.markerKey.color') : keyShape === 'contour' && markerKey.kind === 'figurine' ? t('marker.section.outlineColor') : t('marker.section.edgeColor'))}
           {range('size', t('inspector.markerKey.size'), markerKey.size ?? marker.size, MARKER_SIZE_RANGE, (v) => `×${formatShort(v)}`, (size) => set({ size }))}
           <div className={FIELD}>
             <Button
               disabled={inherits}
-              onClick={() => set({ color: undefined, figureColor: undefined, size: undefined })}
+              onClick={() => set({ color: undefined, figureColor: undefined, size: undefined, ballStyle: undefined, shape: undefined, animated: undefined })}
             >
               {t('inspector.markerKey.resetLook')}
             </Button>
@@ -910,8 +960,6 @@ export function FilmInspector() {
               time: formatFilmTime(markerKey.timeS),
               label: MARKER_LABEL_MODE_LABELS[marker.label].toLowerCase(),
               stick: (marker.stick ? t('common.yes') : t('common.no')).toLowerCase(),
-              animation:
-                markerKey.kind === 'figurine' ? t('inspector.markerKey.hintAnimation', { animated: (marker.animated ? t('common.yes') : t('common.no')).toLowerCase() }) : '',
             })}
           </p>
         </>

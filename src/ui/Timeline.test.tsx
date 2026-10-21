@@ -145,16 +145,16 @@ describe('Timeline', () => {
     expect(keys()[0].size).toBeUndefined()
     expect(await colour()).toBe('#ffffff')
     expect(host.textContent).toContain('Restent ceux du panneau : étiquette (aucune), tige (non)')
-    expect(button('Reprendre couleurs et taille du panneau').disabled).toBe(true)
+    expect(button('Reprendre l’aspect du panneau Trace').disabled).toBe(true)
 
     // « Celle de la trace » stores '' (the track's colour), the reset goes back to the panel's values
     await act(async () => button('Celle de la trace').click())
     expect(keys()[0].color).toBe('')
     expect(button('Celle de la trace').disabled).toBe(true)
-    await act(async () => button('Reprendre couleurs et taille du panneau').click())
+    await act(async () => button('Reprendre l’aspect du panneau Trace').click())
     expect(keys()[0].color).toBeUndefined()
     expect(keys()[0].size).toBeUndefined()
-    expect(button('Reprendre couleurs et taille du panneau').disabled).toBe(true)
+    expect(button('Reprendre l’aspect du panneau Trace').disabled).toBe(true)
     act(() => root.unmount())
   })
 
