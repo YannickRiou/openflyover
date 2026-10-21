@@ -43,6 +43,8 @@ const messages: Messages['marker'] = {
   'image.hint': 'Foto o avatar, recortado en círculo. Los demás tracks conservan su bola.',
   'track.solid': 'Uniforme',
   'track.title': 'Track',
+  'track.lineGroup': 'Línea',
+  'track.haloGroup': 'Halo',
   'track.drawOn': 'Track que se dibuja',
   'track.drawOnTip': 'Solo se traza la parte ya recorrida; el resto aparece al paso del marcador.',
   'track.tail': 'Estela',

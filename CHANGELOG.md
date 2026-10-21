@@ -7,6 +7,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **« Date des photos » with Esri shows a date**: an older Esri date chosen earlier (before changing tab, or in a project opened again) showed a number such as « 13968 » instead of its day. The list of dates is now found again by itself and the day shows (« Photos plus anciennes » for the instant it takes).
 - **« Filaire » removed**: the « Carte › Relief » checkbox that drew the relief as triangles (a debugging view) is gone. A project saved with it on opens with the normal relief.
+- **A tidier « Trace » section**: the track settings are in two parts, « Ligne » (how the line is drawn, its colour, smoothing, width and dashes) then « Halo » (the glow and its intensity, width and colour), instead of the glow in the middle of the line settings.
 
 ## 3.2.1 (October 2026)
 

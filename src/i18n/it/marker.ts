@@ -43,6 +43,8 @@ const messages: Messages['marker'] = {
   'image.hint': 'Foto o avatar, ritagliato in tondo. Le altre tracce mantengono la loro sfera.',
   'track.solid': 'Uniforme',
   'track.title': 'Traccia',
+  'track.lineGroup': 'Linea',
+  'track.haloGroup': 'Alone',
   'track.drawOn': 'Traccia che si disegna',
   'track.drawOnTip': 'Viene tracciata solo la parte già percorsa; il resto appare al passaggio del marcatore.',
   'track.tail': 'Scia',
