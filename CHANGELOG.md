@@ -6,9 +6,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## 3.3.2 (October 2026)
 
 - **Hiding several landmarks is quick**: in the « Choisir sur la carte et le profil » window, « Un clic sur un repère » chooses what a click does:
-  - « Le régler », as before; the M key now hides the landmark selected and moves to the next one.
-  - « Le masquer »: each click hides a landmark, or shows a hidden one again, without going through the panel.
-  - « Choisir une zone »: draw a rectangle on the map, or drag over a stretch of the profile, then hide its landmarks, or put them back to auto, in one step.
+  - « Régler », as before; the M key now hides the landmark selected and moves to the next one.
+  - « Masquer »: each click hides a landmark, or shows a hidden one again, without going through the panel.
+  - « Choisir une zone »: draw a rectangle on the map, or drag over a stretch of the profile, then « Masquer » or « Afficher » all its landmarks in one step.
 
 ## 3.3.1 (October 2026)
 

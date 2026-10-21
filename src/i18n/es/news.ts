@@ -6,7 +6,7 @@ const messages: Messages['news'] = {
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
   'v332.landmarks.title': 'Ocultar referencias en pocos clics',
-  'v332.landmarks.text': 'En el mapa de referencias, «La oculta» oculta cada referencia pulsada, «Elegir una zona» oculta de una vez las de un rectángulo o un tramo del perfil, y la tecla M oculta la elegida y pasa a la siguiente.',
+  'v332.landmarks.text': 'En el mapa de referencias, «Ocultar» oculta cada referencia pulsada, «Elegir una zona» oculta de una vez las de un rectángulo o un tramo del perfil, y la tecla M oculta la elegida y pasa a la siguiente.',
   'v331.recap.title': 'Volver a ver la etapa terminada',
   'v331.recap.text': 'Cada transición entre etapas elige su paso (corte o fundido), si pasa la noche y si vuelve a ver la etapa terminada: la cámara sube unos segundos para mostrarla entera. En Track › Varios tracks.',
   'v33.stages.title': 'Etapas más sencillas',
