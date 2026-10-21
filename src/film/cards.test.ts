@@ -5,17 +5,17 @@ import { CARD_MIN_S, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, dragCard
 
 /** 6 s opening, 60 s flight, 5 s closing */
 const clock = { openingS: 6, flightS: 60, totalTime: () => 71 }
-const on: OverlaySettings = { ...DEFAULT_OVERLAY, enabled: true }
+const on: OverlaySettings = { ...DEFAULT_OVERLAY, enabled: true, title: { ...DEFAULT_OVERLAY.title, enabled: true }, end: { ...DEFAULT_OVERLAY.end, enabled: true } }
 
 describe('cards on the timeline', () => {
-  it('shows a card only while the overlay and the card are on', () => {
+  it('shows a card while its switch is on, the overlay on or off', () => {
     expect(shownCards(DEFAULT_OVERLAY)).toEqual([])
     expect(shownCards(on)).toEqual([TITLE_CARD_ID, END_CARD_ID])
     expect(shownCards({ ...on, end: { ...on.end, enabled: false } })).toEqual([TITLE_CARD_ID])
     expect(shownCards({ ...on, title: { ...on.title, enabled: false } })).toEqual([END_CARD_ID])
-    // the whole overlay off hides both, whatever the cards say
-    expect(cardShown({ ...on, enabled: false }, TITLE_CARD_ID)).toBe(false)
-    expect(cardShown({ ...on, enabled: false }, END_CARD_ID)).toBe(false)
+    // the rest of the overlay off: the cards still show
+    expect(cardShown({ ...on, enabled: false }, TITLE_CARD_ID)).toBe(true)
+    expect(cardShown({ ...on, enabled: false }, END_CARD_ID)).toBe(true)
     expect(isCardItem(TITLE_CARD_ID) && isCardItem(END_CARD_ID)).toBe(true)
     expect(isCardItem('text-1') || isCardItem(null) || isCardItem('opening')).toBe(false)
   })

@@ -295,11 +295,10 @@ export function creditsRollProgress(time: OverlayTime, start: number, window?: C
 }
 
 /**
- * Opacity of the opening or closing card at film time `time` (the larger one), 0 while the overlay is off. Pure
- * function of the time and the settings: the live widgets give way to the cards.
+ * Opacity of the opening or closing card at film time `time` (the larger one), each on its own switch (overlay on or
+ * off). Pure function of the time and the settings: the live widgets give way to the cards.
  */
 export function cardOpacityAt(time: OverlayTime, settings: OverlaySettings): number {
-  if (!settings.enabled) return 0
   const title = settings.title.enabled ? titleCardOpacityOf(time, settings.title) : 0
   const end = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
   return Math.max(title, end)
@@ -331,7 +330,7 @@ export function overlayTimedState(
     return opacity > 0 && moving ? [opacity, time.timeS] : [opacity]
   })
   const dip = dipAlpha > 0 ? [dipAlpha] : []
-  if (!settings.enabled) return [...photos, ...dip]
+  // the cards and the timeline texts show with the overlay off too
   const title = settings.title.enabled ? titleCardOpacityOf(time, settings.title) : 0
   const end = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
   // the rolling credits move while the card is on
@@ -1725,12 +1724,14 @@ export function drawOverlay(
   })
   const dip = extras.dip && extras.dip.alpha > 0.001 ? extras.dip : null
   // the first stage's card gives way to the title card of the film
-  const stage = extras.stage && !(extras.stage.index === 0 && settings.enabled && settings.title.enabled) ? extras.stage : null
+  const stage = extras.stage && !(extras.stage.index === 0 && settings.title.enabled) ? extras.stage : null
   const stageOpacity = stage ? filmTextOpacity(stage, time.timeS) : 0
   const day = extras.day ?? null
   const dayOpacity = day ? filmTextOpacity(day, time.timeS) : 0
   const legend = extras.trackLegend ?? null
-  if (!settings.enabled && credits.length === 0 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return
+  // the titles and the texts of the timeline are drawn with the overlay off too
+  const titles = settings.title.enabled || settings.end.enabled || (extras.texts?.length ?? 0) > 0
+  if (!settings.enabled && !titles && credits.length === 0 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return
   const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
   const p: Painter = {
     ctx,
@@ -1759,41 +1760,41 @@ export function drawOverlay(
   let weatherShown = false
   let endOpacity = 0
   let structure: Structure | null = null
-  // live widgets give way to the full-screen photos and the stage cards (and, with the overlay on, to its cards)
-  let live = 1 - Math.max(cover, stageOpacity)
+  // the opening title and the closing card, overlay on or off (their own switches)
+  const titleOpacity = settings.title.enabled ? titleCardOpacityOf(time, settings.title) : 0
+  endOpacity = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
+  const rolling = creditLines(settings.end.credits).length > 0
+  // a widget in a slot of the style's structure is drawn by the structure, the others as ordinary widgets; the structure
+  // holds the live widgets, so with the overlay off the cards are ordinary ones
+  // a card with more than a style's structure shows is drawn as a card: credits, graphics, the opening's figures or line
+  const ownCard = (key: LaidOutWidget) =>
+    key === 'end'
+      ? rolling || cardHasGraphics(settings.end)
+      : key === 'title' && (cardHasGraphics(settings.title) || cardFigures('title', settings.title).length > 0 || Boolean(settings.title.line?.trim()))
+  const slot = (key: LaidOutWidget) => settings.enabled && inStyleSlot(settings, key) && !ownCard(key)
+  // live widgets give way to the full-screen photos, the stage cards and the cards (an opening card that is part of the
+  // structure, a header or a stripe, leaves them as they are)
+  let live = 1 - Math.max(slot('title') ? 0 : titleOpacity, endOpacity, cover, stageOpacity)
+  // a widget with its own colours or fonts draws with its own theme
+  const of = (key: StyledWidget): Painter =>
+    settings[key].overrides ? { ...p, theme: resolveOverlayTheme(settings.style, widgetOverrides(settings, key)) } : p
+  // a widget at a free position: its offset in pixels of the exported film, scaled to this frame
+  const exported = extras.exportSize
+  const scale = exported && exported.width > 0 && exported.height > 0 ? Math.min(size.width, size.height) / Math.min(exported.width, exported.height) : 1
+  const placed = (key: PlacedWidget, w: Widget | null): Widget | null => {
+    const offset = settings[key].offset
+    return w && offset ? { ...w, offset: { x: offset.x * scale, y: offset.y * scale } } : w
+  }
+  if (settings.enabled) structure = styleStructure({ p, of, frame, settings, slot, live, titleOpacity, endOpacity, markerColor: extras.markerColor })
+  if (titleOpacity > 0 && !slot('title')) add(placed('title', titleWidget(of('title'), frame, settings, titleOpacity, assets)))
+  if (endOpacity > 0 && !slot('end')) {
+    const card = endWidget(of('end'), frame, settings, endOpacity, assets)
+    const credits = creditLines(settings.end.credits)
+    // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
+    if (credits.length === 0) add(placed('end', card))
+    else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window))
+  }
   if (settings.enabled) {
-    const titleOpacity = settings.title.enabled ? titleCardOpacityOf(time, settings.title) : 0
-    endOpacity = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
-    const rolling = creditLines(settings.end.credits).length > 0
-    // a widget in a slot of the style's structure is drawn by the structure, the others as ordinary widgets
-    // a card with more than a style's structure shows is drawn as a card: credits, graphics, the opening's figures or line
-    const ownCard = (key: LaidOutWidget) =>
-      key === 'end'
-        ? rolling || cardHasGraphics(settings.end)
-        : key === 'title' && (cardHasGraphics(settings.title) || cardFigures('title', settings.title).length > 0 || Boolean(settings.title.line?.trim()))
-    const slot = (key: LaidOutWidget) => inStyleSlot(settings, key) && !ownCard(key)
-    // an opening card that is part of the structure, a header or a stripe, leaves them as they are
-    live = 1 - Math.max(slot('title') ? 0 : titleOpacity, endOpacity, cover, stageOpacity)
-
-    // a widget with its own colours or fonts draws with its own theme
-    const of = (key: StyledWidget): Painter =>
-      settings[key].overrides ? { ...p, theme: resolveOverlayTheme(settings.style, widgetOverrides(settings, key)) } : p
-    // a widget at a free position: its offset in pixels of the exported film, scaled to this frame
-    const exported = extras.exportSize
-    const scale = exported && exported.width > 0 && exported.height > 0 ? Math.min(size.width, size.height) / Math.min(exported.width, exported.height) : 1
-    const placed = (key: PlacedWidget, w: Widget | null): Widget | null => {
-      const offset = settings[key].offset
-      return w && offset ? { ...w, offset: { x: offset.x * scale, y: offset.y * scale } } : w
-    }
-    structure = styleStructure({ p, of, frame, settings, slot, live, titleOpacity, endOpacity, markerColor: extras.markerColor })
-    if (titleOpacity > 0 && !slot('title')) add(placed('title', titleWidget(of('title'), frame, settings, titleOpacity, assets)))
-    if (endOpacity > 0 && !slot('end')) {
-      const card = endWidget(of('end'), frame, settings, endOpacity, assets)
-      const credits = creditLines(settings.end.credits)
-      // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
-      if (credits.length === 0) add(placed('end', card))
-      else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window))
-    }
     if (settings.counters.enabled && live > 0 && !slot('counters')) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
     if (settings.profile.enabled && live > 0 && !slot('profile')) add(placed('profile', profileWidget(of('profile'), frame, settings, live, extras.markerColor)))
     weather = settings.weather.enabled && live > 0 && !slot('weather') ? placed('weather', weatherWidget(of('weather'), frame, settings, live)) : null
@@ -1803,11 +1804,11 @@ export function drawOverlay(
     if (settings.leaderboard.enabled && live > 0) add(placed('leaderboard', leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, live)))
     if (settings.text.enabled) add(placed('text', textWidget(of('text'), settings)))
     if (settings.logo.enabled) add(placed('logo', logoWidget(p, settings, assets)))
-    // texts of the timeline inside their window
-    for (const item of extras.texts ?? []) {
-      const opacity = filmTextOpacity(item, time.timeS)
-      if (opacity > 0.001) texts.push({ item, opacity })
-    }
+  }
+  // texts of the timeline inside their window, overlay on or off
+  for (const item of extras.texts ?? []) {
+    const opacity = filmTextOpacity(item, time.timeS)
+    if (opacity > 0.001) texts.push({ item, opacity })
   }
   // the legend of the track colouring follows the colouring, overlay on or off
   if (legend && live > 0) add(trackLegendWidget(p, legend, live))

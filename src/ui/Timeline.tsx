@@ -306,8 +306,8 @@ function BarButton({ icon, name, tip = name, onClick, disabled, on, className }:
 }
 
 /**
- * « Options » of the film, in a small panel over the bar: automatic stops, « modifié » marker of the film. `sheet`: a
- * bottom sheet (the centred timeline of a phone).
+ * « Options » of the film, in a small panel over the bar: music, the music lowered under the videos (the whole film),
+ * automatic stops, « modifié » marker of the film. `sheet`: a bottom sheet (the centred timeline of a phone).
  */
 function FilmOptions({
   autoStops,
@@ -324,6 +324,7 @@ function FilmOptions({
 }) {
   const t = useT()
   const modified = useAppStore((s) => modifiedSettings(s.settings, ['film']).length > 0)
+  const duckMusic = useAppStore((s) => s.settings.film.duckMusic)
   return (
     <Popover
       label={t('timeline.options.title')}
@@ -359,6 +360,9 @@ function FilmOptions({
             {t('timeline.options.addMusic')}
           </Button>
           <p className="text-hint text-glacier">{t('timeline.options.musicHint')}</p>
+          <Checkbox className={CHECKBOX_ON_DARK} checked={duckMusic} onChange={(on) => editFilm((f) => ({ film: { ...f, duckMusic: on } }))}>
+            {t('inspector.music.duck')}
+          </Checkbox>
           <Checkbox className={CHECKBOX_ON_DARK} checked={autoStops} onChange={onAutoStops}>
             {t('timeline.options.autoStops')}
           </Checkbox>
@@ -421,7 +425,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     [track, film, durationS, pacing, landmarks, cutsM, stageIds],
   )
   const input = useMemo(() => filmClockInputFor(clockSource), [clockSource])
-  const candidates = useMemo(() => (track ? stopCandidates({ track, landmarks, pacing }) : []), [track, landmarks, pacing])
+  const candidates = useMemo(() => (track ? stopCandidates({ track, landmarks }) : []), [track, landmarks])
 
   const selected = useAppStore((s) => s.filmSelection)
   const setSelected = useAppStore((s) => s.setFilmSelection)

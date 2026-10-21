@@ -9,7 +9,7 @@ const messages: Messages['timeline'] = {
   'options.addMusic': 'Add music…',
   'options.musicHint': 'MP3, M4A, AAC, OGG, Opus, WAV or FLAC, 30 MB at most. Or drop the file on the timeline.',
   'options.autoStops': 'Automatic holds',
-  'options.autoStopsHint': 'A hold at each pass crossed and nearby summit (Landmarks, Map tab). Switching them on replaces the holds made by hand; editing a hold freezes them.',
+  'options.autoStopsHint': 'A hold at each pass crossed and summit nearby among the landmarks shown (Map › Landmarks and points of interest: types, density, distance); two close landmarks make one hold. Switching them on replaces the holds placed by hand; editing a hold freezes them.',
   'options.autoStopsReplaced': { one: '{count} hold made by hand replaced by the automatic holds (Ctrl+Z to get it back).', other: '{count} holds made by hand replaced by the automatic holds (Ctrl+Z to get them back).' },
   noRoom: 'No room here: the marker is in a speed section or too close to another one.',
   unsupported: { one: '{count} file ignored: only photos and videos are supported.', other: '{count} files ignored: only photos and videos are supported.' },

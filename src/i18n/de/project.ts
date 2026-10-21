@@ -102,8 +102,8 @@ const messages: Messages['project'] = {
   'panel.presetFull': 'Voreinstellung nicht gespeichert: Browser-Speicher voll. Sie bleibt bis zum Schließen der Seite nutzbar.',
   'presets.scope.tout': 'Alle Einstellungen',
   'presets.scope.carte': 'Karte und Stimmung (Karte, Gelände, Wolken, Farben, Objektiv)',
-  'presets.scope.trace': 'Track, Marker und Beschriftungen',
-  'presets.scope.habillage': 'Overlay',
+  'presets.scope.trace': 'Track und Marker',
+  'presets.scope.habillage': 'Overlay und 3D-Beschriftungen',
   'presets.scope.prise-de-vue': 'Aufnahme (Kamera, Sonne, Belichtung)',
   'presets.nameRequired': 'Der Voreinstellung einen Namen geben.',
 }

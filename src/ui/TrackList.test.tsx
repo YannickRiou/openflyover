@@ -327,7 +327,8 @@ describe('TrackList, « Plusieurs traces »', () => {
     expect(host.textContent).not.toContain('a son propre réglage')
     // the opening title shown: the first stage starts with it, and the panel says so
     expect(host.textContent).not.toContain('commence par le titre d’ouverture')
-    await act(async () => useAppStore.getState().setSetting('overlay', { ...useAppStore.getState().settings.overlay, enabled: true }))
+    const overlay = useAppStore.getState().settings.overlay
+    await act(async () => useAppStore.getState().setSetting('overlay', { ...overlay, title: { ...overlay.title, enabled: true } }))
     expect(host.textContent).toContain('La 1re étape commence par le titre d’ouverture')
     act(() => root.unmount())
   })

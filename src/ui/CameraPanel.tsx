@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { clamp } from '../core/math'
 import { t, useT } from '../i18n'
+import type { MessageKey } from '../i18n'
 import {
   CAMERA_PRESETS,
   CAMERA_RANGES,
@@ -11,11 +12,9 @@ import {
   turnSmoothingM,
 } from '../flyover/cameraSettings'
 import type { CameraPreset, CameraSettings, CameraStyle } from '../flyover/cameraSettings'
-import { DEFAULT_FILM, SITUATION_DURATION_S } from '../film/model'
-import { updateShot } from '../film/timeline'
 import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
-import { editFilm, setFlightTiming, useFilmClock, useFilmSource, useFilmTrack } from '../scene/usePacing'
+import { setFlightTiming, useFilmClock, useFilmSource, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { getSettingsHistory } from '../project/history'
 import { showToast } from './toast'
@@ -187,44 +186,26 @@ const STYLE_HINTS: Record<CameraStyle, string> = {
   get free() { return t('camera.styleHint.free') },
 }
 
-/** Tips of the « Plan de situation » switches. */
-const SITUATION_TIPS = {
-  get opening() { return t('camera.situationTip.opening') },
-  get closing() { return t('camera.situationTip.closing') },
-}
-
 /**
- * « Depuis la région » at the opening and the closing, the same style as in the shot's inspector: on whenever the shot
- * has that style; switched on with the region highlighted; off: the default style back (and its duration, when the
- * shot still has the one 'situation' gave it).
+ * The opening and closing shots in a line each: their style (« Depuis la région » among them) and a button to their
+ * panel, the one place where a shot is set (style, region, duration, framing).
  */
-function SituationShotSwitches() {
+function ShotSummary() {
   const t = useT()
   const film = useAppStore((s) => s.settings.film)
-  const id = useId()
-  const isOn = (key: 'opening' | 'closing') => film[key].style === 'situation'
-  const toggle = (key: 'opening' | 'closing', on: boolean) =>
-    editFilm((f) => {
-      if (on) return { film: updateShot(f, key, { style: 'situation', highlight: true }) }
-      const back = f[key].durationS === SITUATION_DURATION_S ? { durationS: DEFAULT_FILM[key].durationS } : {}
-      return { film: updateShot(f, key, { style: DEFAULT_FILM[key].style, ...back }) }
-    })
-  const any = isOn('opening') || isOn('closing')
   return (
     <>
       {(['opening', 'closing'] as const).map((key) => (
-        <div key={key} className="flex items-center gap-1">
-          <Switch
-            checked={isOn(key)}
-            aria-describedby={any ? `${id}-region-hint` : undefined}
-            onChange={(on) => toggle(key, on)}
-          >
-            {key === 'opening' ? t('camera.situation.opening') : t('camera.situation.closing')}
-          </Switch>
-          <InfoTip text={SITUATION_TIPS[key]} />
+        <div key={key} className="flex items-center justify-between gap-2">
+          <span className="type-body">
+            {t(key === 'opening' ? 'camera.shot.opening' : 'camera.shot.closing', { style: t(`inspector.shot.style.${film[key].style}` as MessageKey) })}
+          </span>
+          <Button size="sm" onClick={() => useAppStore.getState().setFilmSelection(key)}>
+            {t('camera.shot.edit')}
+          </Button>
         </div>
       ))}
-      {any && <RegionHint id={`${id}-region-hint`} highlight />}
+      <p className="type-hint">{t('camera.shot.hint')}</p>
     </>
   )
 }
@@ -390,7 +371,13 @@ export function CameraPanel() {
           </p>
         </div>
 
-        <SituationShotSwitches />
+        {/* it applies to every stop and speed portion, whether « Ralentir aux temps forts » is on or not */}
+        <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']}>
+          <Checkbox checked={pacing.keepDuration} onChange={(on) => updatePacing({ keepDuration: on })}>{t('camera.pacing.keep')}</Checkbox>
+          <p className="type-hint">{t('camera.pacing.keepHint')}</p>
+        </SettingRow>
+
+        <ShotSummary />
 
         <div className="flex items-center gap-1">
           <Switch checked={pacing.enabled} onChange={(on) => updatePacing({ enabled: on })}>{t('camera.pacing.enable')}</Switch>
@@ -417,10 +404,6 @@ export function CameraPanel() {
               )
             })}
 
-            <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']}>
-              <Checkbox checked={pacing.keepDuration} onChange={(on) => updatePacing({ keepDuration: on })}>{t('camera.pacing.keep')}</Checkbox>
-              <p className="type-hint">{t('camera.pacing.keepHint')}</p>
-            </SettingRow>
           </>
         )}
 

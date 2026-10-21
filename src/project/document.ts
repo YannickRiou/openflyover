@@ -12,6 +12,7 @@ import type { Flight, StatsOverride, Track, TrackPoint, TrackSegment, Waypoint }
 import { sanitizeMediaTable, usedMedia } from '../film/media'
 import type { MediaAsset, MediaTable } from '../film/media'
 import { DEFAULT_JUNCTION, DEFAULT_STAGE_CARD, withStageSettingsMigrated } from '../film/junctions'
+import { AUTO_STOP_GROUP_M } from '../film/assemble'
 import { STAGE_CARD_FIELDS, isValidFilm, withFilmDefaults } from '../film/model'
 import { FLYOVER_DURATION_RANGE, isValidCamera, withCameraDefaults } from '../flyover/cameraSettings'
 import { isValidPacing, withPacingDefaults } from '../flyover/pacing'
@@ -37,7 +38,7 @@ import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
 
 export const PROJECT_FORMAT = 'openflyover-project'
-export const PROJECT_VERSION = 4
+export const PROJECT_VERSION = 5
 /** Suffix of saved project files (`<name>.opnflvr`, see `file.ts`). */
 export const PROJECT_FILE_SUFFIX = `.${PROJECT_EXTENSION}`
 export const defaultProjectName = (): string => t('project.doc.defaultName')
@@ -77,6 +78,8 @@ export interface ProjectTrack {
   timesEstimated?: true
   /** `Track.elevationEstimated`, omitted for recorded elevations */
   elevationEstimated?: 'all' | 'gaps'
+  /** `Track.elevationFilled`, with 'gaps' only */
+  elevationFilled?: [number, number, number][]
   /** `Track.flights`, omitted when the track stays on the ground */
   flights?: Flight[]
   /** `Track.statsOverride`, omitted when no figure is corrected */
@@ -265,6 +268,7 @@ export function toProjectDocument(state: ProjectSource, name: string, media: Med
       if (track.utcOffsetMin !== undefined) out.utcOffsetMin = track.utcOffsetMin
       if (track.timesEstimated) out.timesEstimated = true
       if (track.elevationEstimated) out.elevationEstimated = track.elevationEstimated
+      if (track.elevationFilled) out.elevationFilled = track.elevationFilled
       if (track.flights?.length) out.flights = track.flights
       if (track.statsOverride) out.statsOverride = track.statsOverride
       return out
@@ -337,6 +341,31 @@ export const MIGRATIONS: Readonly<Record<number, ProjectMigration>> = {
   2: withExplicitNightJunctions,
   // v4: a stage card stores only what it changes over the common card (`StoredStageCard`)
   3: withStageCardsOverCommon,
+  // v5: the titles show with the overlay off; the automatic stops no longer read the pacing
+  4: withTitlesAndStopsOnTheirOwn,
+}
+
+/**
+ * Before v5 the opening title and the closing card only showed with the whole overlay on, and the automatic stops of a
+ * film made with the timeline ('temps-forts') came from the landmarks only with « Repères » ticked under « Ralentir aux
+ * temps forts », grouped within its « Longueur du ralenti ». Written out so the film stays the same: the cards of an
+ * overlay that was off are switched off; no stop where there was none; the grouping kept when it was changed.
+ */
+function withTitlesAndStopsOnTheirOwn(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(doc.settings)) return doc
+  const settings: Record<string, unknown> = { ...doc.settings }
+  const overlay = settings.overlay
+  if (isRecord(overlay) && overlay.enabled !== true) {
+    const off = (card: unknown) => (isRecord(card) ? { ...card, enabled: false } : card)
+    settings.overlay = { ...overlay, title: off(overlay.title), end: off(overlay.end) }
+  }
+  const film = settings.film
+  const pacing = isRecord(settings.pacing) ? settings.pacing : {}
+  if (isRecord(film) && film.autoStops !== false && film.autoMode !== 'rythme') {
+    if (pacing.landmarks === false) settings.film = { ...film, autoStops: false, stops: [] }
+    else if (typeof pacing.windowM === 'number' && pacing.windowM !== AUTO_STOP_GROUP_M) settings.film = { ...film, autoStopGroupM: pacing.windowM }
+  }
+  return { ...doc, settings }
 }
 
 /**
@@ -491,6 +520,10 @@ function decodeTrack(raw: unknown, index: number): Track {
   // computed only means something on a track with elevations
   if ((raw.elevationEstimated === 'all' || raw.elevationEstimated === 'gaps') && track.stats.maxEle !== undefined) {
     track.elevationEstimated = raw.elevationEstimated
+    // the filled ranges, each inside its segment; a wrong list is dropped (« Effacer » is then not offered)
+    const inside = (r: unknown) =>
+      Array.isArray(r) && r.length === 3 && r.every(Number.isInteger) && (track.segments[r[0]]?.points.length ?? 0) > r[2] && r[1] >= 0 && r[1] <= r[2]
+    if (raw.elevationEstimated === 'gaps' && Array.isArray(raw.elevationFilled) && raw.elevationFilled.every(inside)) track.elevationFilled = raw.elevationFilled
   }
   // flights only mean something on a track with elevations; an invalid list is dropped (the track stays on the ground)
   if (Array.isArray(raw.flights) && raw.flights.length > 0 && raw.flights.every(isFlight) && track.stats.maxEle !== undefined) {

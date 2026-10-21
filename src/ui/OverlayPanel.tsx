@@ -540,7 +540,8 @@ export function OverlayPanel() {
         <Switch checked={overlay.enabled} onChange={(on) => set({ enabled: on })}>{t('overlay.panel.show')}</Switch>
         <p className="type-hint">{t('overlay.panel.showHint')}</p>
 
-        {overlay.enabled && (
+        {/* the style also draws the titles, shown with the overlay off */}
+        {(overlay.enabled || overlay.title.enabled || overlay.end.enabled) && (
           <fieldset className="field min-w-0">
             <legend className="type-label mb-1">{t('overlay.panel.style')}</legend>
             <RadioGroup wrap aria-label={t('overlay.panel.style')} value={overlay.style} onChange={(style) => changeStyle(overlay, style)}>
@@ -553,7 +554,13 @@ export function OverlayPanel() {
             <p className="type-hint">{t('overlay.panel.styleHint')}</p>
           </fieldset>
         )}
-        {overlay.enabled && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}
+        {(overlay.enabled || overlay.title.enabled || overlay.end.enabled) && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}
+      </PanelSection>
+
+      {/* the titles have their own switches: shown whether the rest of the overlay is or not */}
+      <PanelSection title={t('overlay.panel.titles')}>
+        <CardSwitch card={TITLE_CARD_ID} enabled={overlay.title.enabled} onToggle={(enabled) => setWidget('title', { enabled })} />
+        <CardSwitch card={END_CARD_ID} enabled={overlay.end.enabled} onToggle={(enabled) => setWidget('end', { enabled })} />
       </PanelSection>
 
       {/* every setting of the 3D labels in one place: what shows, size and range, colours, keys along the way */}
@@ -561,16 +568,12 @@ export function OverlayPanel() {
         <LabelSettings />
         <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />
         <p className="type-hint">{t('overlay.panel.labels3dHint')}</p>
+        <p className="type-hint">{t('overlay.panel.labels3dWhich')}</p>
         <PanelKeys target={{ kind: 'param', param: 'labels' }} />
       </PanelSection>
 
       {overlay.enabled && (
         <>
-          <PanelSection title={t('overlay.panel.titles')}>
-            <CardSwitch card={TITLE_CARD_ID} enabled={overlay.title.enabled} onToggle={(enabled) => setWidget('title', { enabled })} />
-            <CardSwitch card={END_CARD_ID} enabled={overlay.end.enabled} onToggle={(enabled) => setWidget('end', { enabled })} />
-          </PanelSection>
-
           <PanelSection title={t('overlay.panel.counters')}>
             <WidgetGroup
               label={t('overlay.panel.showCounters')}

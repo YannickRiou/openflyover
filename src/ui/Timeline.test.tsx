@@ -18,6 +18,10 @@ import { OverlayPanel } from './OverlayPanel'
 import { setPreferences } from './preferences'
 import { Timeline } from './Timeline'
 
+
+/** The opening title and the closing card switched on (they are off by default). */
+const TITLES = { title: { ...DEFAULT_OVERLAY.title, enabled: true }, end: { ...DEFAULT_OVERLAY.end, enabled: true } }
+
 describe('Timeline', () => {
   it('does not render again when the export moves the playhead, and follows it again afterwards', async () => {
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -220,23 +224,26 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
-    it('are blocks of the « Textes » lane only while the overlay and the card are on, and keep the « Plans » shots', async () => {
+    it('are blocks of the « Textes » lane while their card is on, overlay on or off, and keep the « Plans » shots', async () => {
       const { host, root, setOverlay, cards } = await setup()
       expect(cards()).toEqual([])
-      await act(async () => setOverlay({ enabled: true }))
+      await act(async () => setOverlay({ enabled: false, ...TITLES }))
       expect(cards()).toEqual(["Titre d'ouverture", 'Carte de clôture'])
       // the shots of the « Plans » lane are untouched
       expect(host.querySelector('[role="group"][aria-label="Plans"] [aria-label^="Ouverture"]')).not.toBeNull()
       await act(async () => setOverlay({ end: { ...DEFAULT_OVERLAY.end, enabled: false } }))
       expect(cards()).toEqual(["Titre d'ouverture"])
-      await act(async () => setOverlay({ enabled: false }))
+      // the rest of the overlay switched on or off changes nothing to them
+      await act(async () => setOverlay({ enabled: true }))
+      expect(cards()).toEqual(["Titre d'ouverture"])
+      await act(async () => setOverlay({ title: { ...DEFAULT_OVERLAY.title, enabled: false } }))
       expect(cards()).toEqual([])
       act(() => root.unmount())
     })
 
     it('select with the focus, move whole with the arrows and are deleted by switching the card off', async () => {
       const { root, setOverlay, cards, card, press } = await setup()
-      await act(async () => setOverlay({ enabled: true }))
+      await act(async () => setOverlay({ enabled: true, ...TITLES }))
       const title = card("Titre d'ouverture")
       await act(async () => title.focus())
       expect(useAppStore.getState().filmSelection).toBe(TITLE_CARD_ID)
@@ -270,7 +277,7 @@ describe('Timeline', () => {
     it('drag from their body: the card is placed, the shots and the other settings stay', async () => {
       HTMLElement.prototype.setPointerCapture ??= () => {}
       const { root, setOverlay, card } = await setup()
-      await act(async () => setOverlay({ enabled: true }))
+      await act(async () => setOverlay({ enabled: true, ...TITLES }))
       const pointer = (type: string, clientX: number) =>
         Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX }), { pointerId: 1, isPrimary: true, pointerType: 'mouse' })
       const opening = useAppStore.getState().settings.film.opening.durationS
@@ -381,7 +388,7 @@ describe('Timeline', () => {
     it('have a right-click menu of their own: « Supprimer » on a block, « Ajouter une image clé ici » on a lane, never the browser menu', async () => {
       HTMLElement.prototype.setPointerCapture ??= () => {}
       const { host, root, setOverlay, card } = await setup()
-      await act(async () => setOverlay({ enabled: true }))
+      await act(async () => setOverlay({ enabled: true, ...TITLES }))
       const rightClick = async (el: Element) => {
         const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: 40, clientY: 10 })
         await act(async () => void el.dispatchEvent(event))
@@ -414,7 +421,7 @@ describe('Timeline', () => {
 
     it('open the inspector of the start or end of the film, which edits the overlay settings and deletes by switching the card off', async () => {
       const { host, root, setOverlay } = await setup()
-      await act(async () => setOverlay({ enabled: true }))
+      await act(async () => setOverlay({ enabled: true, ...TITLES }))
       await act(async () => useAppStore.getState().setFilmSelection(TITLE_CARD_ID))
       const inspector = host.querySelector('[data-testid="film-inspector"]')!
       expect(inspector.querySelector('h2')?.textContent).toBe('Ouverture')
@@ -460,7 +467,7 @@ describe('Timeline', () => {
 
     it('keep only their switch, a hint and « Modifier » in the Habillage panel', async () => {
       const { host, root, setOverlay } = await setup()
-      await act(async () => setOverlay({ enabled: true }))
+      await act(async () => setOverlay({ enabled: true, ...TITLES }))
       const panel = document.body.appendChild(document.createElement('div'))
       const panelRoot = createRoot(panel)
       await act(async () => panelRoot.render(<OverlayPanel />))
@@ -632,7 +639,7 @@ describe('Timeline — stages « À la suite »', () => {
 
   it('the first stage card gives way to the opening title when it is on', async () => {
     const { root, blocks } = await setup(2)
-    await act(async () => useAppStore.getState().setSetting('overlay', { ...DEFAULT_OVERLAY, enabled: true }))
+    await act(async () => useAppStore.getState().setSetting('overlay', { ...DEFAULT_OVERLAY, enabled: true, ...TITLES }))
     expect(blocks('Textes', '[data-item^="card-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
       "Titre d'ouverture",
       'Carte de clôture',

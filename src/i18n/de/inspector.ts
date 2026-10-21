@@ -163,7 +163,6 @@ const messages: Messages['inspector'] = {
   'text.subtitle': 'Untertitel',
   'text.position': 'Position',
   'text.size': 'Größe',
-  'text.hint': 'Nur sichtbar, wenn „Overlay anzeigen“ eingeschaltet ist (Reiter Overlay).',
   'media.sync.legend': 'Abgleich mit der Strecke',
   'media.sync.outside': 'Video außerhalb der Tour gefilmt: Die Uhrzeit der Kamera mit dem Versatz korrigieren.',
   'media.sync.done': 'Video abgeglichen: Es läuft, wenn der Marker dort ankommt, wo es gefilmt wurde.',
@@ -196,6 +195,7 @@ const messages: Messages['inspector'] = {
   'music.startInFile': 'Beginn in der Datei (s)',
   'music.wholeFilm': 'Ganzer Film',
   'music.duck': 'Alle Musik unter Videos absenken',
+  'music.duckWhere': '„Alle Musik unter Videos absenken“: unter ⋯ Filmoptionen, auf der Timeline.',
   'music.fit': 'Filmdauer an das Ende der Musik anpassen',
   'music.snapBeat': 'Am Rhythmus ausrichten',
   'music.hint': 'Gespielt von {start} bis {end} im Film{file}, bei der Wiedergabe und im exportierten Film. Das Anpassen der Dauer ändert die Überflugdauer, damit der Film mit der Musik endet. Musik absenken: Alle Musikstücke werden während Videos mit Ton um {db} dB leiser. Am Rhythmus ausrichten: Stopps, Titel und Anfänge von Tempoabschnitten, die weniger als 0,4 s von einem Schlag der Musik entfernt sind, werden darauf gesetzt, auf einen Taktanfang, wenn einer ebenso nah liegt{tempo}.',
@@ -247,7 +247,6 @@ const messages: Messages['inspector'] = {
   'junction.position': 'Position',
   'junction.size': 'Größe',
   'junction.displayDuration': 'Anzeigedauer',
-  'shot.overlayOff': '{label}: Das Overlay ist aus. Schalten Sie im Reiter Overlay „Overlay anzeigen“ ein, dann die Karte unter Titel.',
   'card.dateNeedsTime': 'Der Track hat keine Zeiten: Planen Sie die Tour (Reiter Track), um ein Datum zu erhalten.',
 }
 

@@ -31,6 +31,9 @@ import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw
 import { MEDIA_DEFAULTS, STAGE_CARD_FIELDS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
 import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, withStyleLayout } from './settings'
+
+/** The overlay of a new film with its opening title and closing card switched on (they are off by default). */
+const TITLED = { ...DEFAULT_OVERLAY, title: { ...DEFAULT_OVERLAY.title, enabled: true }, end: { ...DEFAULT_OVERLAY.end, enabled: true } }
 import type { OverlaySettings } from './settings'
 import { OVERLAY_FONT_FAMILIES } from './themes'
 import { openMeteoAttribution } from '../weather/openMeteo'
@@ -125,7 +128,7 @@ const FREE_STYLES = OVERLAY_STYLES.filter((style) => !(style in STYLE_LAYOUTS))
 const sampleTrack = parseGpx(sampleGpx, 'tour-du-mont-blanc-j1.gpx')[0]
 const track = prepareOverlayTrack(sampleTrack)
 const SIZE = { width: 1920, height: 1080 }
-const enabled = (patch: Partial<OverlaySettings> = {}): OverlaySettings => ({ ...DEFAULT_OVERLAY, enabled: true, ...patch })
+const enabled = (patch: Partial<OverlaySettings> = {}): OverlaySettings => ({ ...TITLED, enabled: true, ...patch })
 
 const FILM_TEXT: FilmText = { id: 'text-1', startS: 0, durationS: 4, text: 'Col de Balme', anchor: 'bottom-center', size: 1 }
 
@@ -150,7 +153,7 @@ describe('rolling credits', () => {
   })
 
   it('draws the card and every line, moving up with the time, and is part of the timed state', () => {
-    const settings = enabled({ end: { ...DEFAULT_OVERLAY.end, credits: 'Paul\nLou' } })
+    const settings = enabled({ end: { ...TITLED.end, credits: 'Paul\nLou' } })
     const at = (progress: number) => {
       const { ctx, texts } = fakeContext()
       drawOverlay(ctx, overlayFrameAt(track, progress), settings, SIZE)
@@ -182,14 +185,16 @@ describe('card timing', () => {
     expect(endCardOpacity(progressTime(1), 0.9)).toBe(1)
   })
 
-  it('gives the opacity of whichever card is shown, 0 without overlay or cards', () => {
+  it('gives the opacity of whichever card is shown, overlay on or off, 0 without cards', () => {
     const settings = enabled()
     expect(cardOpacityAt(progressTime(0.005), settings)).toBe(titleCardOpacity(progressTime(0.005), settings.title.end))
     expect(cardOpacityAt(progressTime(0.5), settings)).toBe(0)
     expect(cardOpacityAt(progressTime(0.92), settings)).toBe(endCardOpacity(progressTime(0.92), settings.end.start))
     expect(cardOpacityAt(progressTime(0.99), settings)).toBe(1)
+    // each card on its own switch, overlay on or off
+    expect(cardOpacityAt(progressTime(0.99), TITLED)).toBe(1)
     expect(cardOpacityAt(progressTime(0.99), DEFAULT_OVERLAY)).toBe(0)
-    expect(cardOpacityAt(progressTime(0.02), enabled({ title: { ...DEFAULT_OVERLAY.title, enabled: false } }))).toBe(0)
+    expect(cardOpacityAt(progressTime(0.02), enabled({ title: { ...TITLED.title, enabled: false } }))).toBe(0)
   })
 })
 
@@ -228,13 +233,13 @@ describe('film time', () => {
     expect(filmTextOpacity({ startS: 0, durationS: 0.8 }, 0.4)).toBe(1)
   })
 
-  it('lists the timed opacities, empty without overlay', () => {
+  it('lists the timed opacities, the cards and texts with the overlay off too', () => {
     const texts = [{ ...FILM_TEXT, startS: 10, durationS: 4 }]
     expect(overlayTimedState(enabled(), texts, at(12))).toEqual([0, 0, 1])
     expect(overlayTimedState(enabled(), texts, at(3))).toEqual([1, 0, 0])
-    expect(overlayTimedState(DEFAULT_OVERLAY, texts, at(12))).toEqual([])
+    expect(overlayTimedState(DEFAULT_OVERLAY, texts, at(12))).toEqual([0, 0, 1])
     // the dip of a shot transition, while there is one
-    expect(overlayTimedState(DEFAULT_OVERLAY, texts, at(6), [], 0.8)).toEqual([0.8])
+    expect(overlayTimedState(DEFAULT_OVERLAY, texts, at(6), [], 0.8)).toEqual([0, 0, 0, 0.8])
     expect(overlayTimedState(enabled(), texts, at(12), [], 0.8)).toEqual([0, 0, 1, 0.8])
   })
 
@@ -327,7 +332,7 @@ describe('layoutWidgets', () => {
 
 describe('drawOverlay', () => {
   it('draws nothing while disabled', () => {
-    expect(draw(0.5, DEFAULT_OVERLAY).calls).toEqual([])
+    expect(draw(0.5, TITLED).calls).toEqual([])
   })
 
   it.each(OVERLAY_STYLES)('style %s: title card, then counters and profile, then closing card', (style) => {
@@ -355,9 +360,9 @@ describe('drawOverlay', () => {
 
   it('uses the custom titles, the chosen counters and the free text', () => {
     const settings = enabled({
-      title: { ...DEFAULT_OVERLAY.title, title: 'Ma sortie', subtitle: 'Chamonix', showDate: false },
-      counters: { ...DEFAULT_OVERLAY.counters, fields: { ...DEFAULT_OVERLAY.counters.fields, distance: false, heartRate: true } },
-      text: { ...DEFAULT_OVERLAY.text, enabled: true, text: 'avec Marie' },
+      title: { ...TITLED.title, title: 'Ma sortie', subtitle: 'Chamonix', showDate: false },
+      counters: { ...TITLED.counters, fields: { ...TITLED.counters.fields, distance: false, heartRate: true } },
+      text: { ...TITLED.text, enabled: true, text: 'avec Marie' },
     })
     const opening = draw(0.02, settings).joined
     expect(opening).toContain('Ma sortie')
@@ -388,7 +393,7 @@ describe('drawOverlay', () => {
       stations: [{ lon: 6.77, lat: 45.86, values }],
     }
     const withWeather = prepareOverlayTrack(sampleTrack, series)
-    const settings = enabled({ weather: { ...DEFAULT_OVERLAY.weather, enabled: true } })
+    const settings = enabled({ weather: { ...TITLED.weather, enabled: true } })
     const render = (progress: number, s = settings) => {
       const { ctx, texts } = fakeContext()
       drawOverlay(ctx, overlayFrameAt(withWeather, progress), s, SIZE)
@@ -408,7 +413,7 @@ describe('drawOverlay', () => {
   })
 
   it('draws the logo when its image is loaded', () => {
-    const settings = enabled({ logo: { ...DEFAULT_OVERLAY.logo, enabled: true, image: 'data:image/png;base64,AAAA' } })
+    const settings = enabled({ logo: { ...TITLED.logo, enabled: true, image: 'data:image/png;base64,AAAA' } })
     const { ctx, calls } = fakeContext()
     drawOverlay(ctx, overlayFrameAt(track, 0.5), settings, SIZE, { logo: { image: {} as CanvasImageSource, width: 400, height: 100 } })
     expect(calls).toContain('drawImage(5)')
@@ -416,7 +421,7 @@ describe('drawOverlay', () => {
 
   it('draws the logo at its opacity, at its free position scaled from the exported film', () => {
     const image = { image: {} as CanvasImageSource, width: 400, height: 100 }
-    const logo = { ...DEFAULT_OVERLAY.logo, enabled: true, image: 'data:image/png;base64,AAAA', anchor: 'top-left' as const }
+    const logo = { ...TITLED.logo, enabled: true, image: 'data:image/png;base64,AAAA', anchor: 'top-left' as const }
     const drawn = (patch: Partial<OverlaySettings['logo']>, extras: OverlayExtras = {}) => {
       const { ctx, images } = fakeContext()
       drawOverlay(ctx, overlayFrameAt(track, 0.5), enabled({ logo: { ...logo, ...patch } }), SIZE, { logo: image }, extras)
@@ -438,11 +443,11 @@ describe('position dot colour (mini-map and profile)', () => {
   const off = <T extends { enabled: boolean }>(w: T): T => ({ ...w, enabled: false })
   const only = (widget: 'minimap' | 'profile', own: string | undefined): OverlaySettings =>
     enabled({
-      title: off(DEFAULT_OVERLAY.title),
-      end: off(DEFAULT_OVERLAY.end),
-      counters: off(DEFAULT_OVERLAY.counters),
-      profile: { ...DEFAULT_OVERLAY.profile, enabled: widget === 'profile', markerColor: widget === 'profile' ? own : undefined },
-      minimap: { ...DEFAULT_OVERLAY.minimap, enabled: widget === 'minimap', markerColor: widget === 'minimap' ? own : undefined },
+      title: off(TITLED.title),
+      end: off(TITLED.end),
+      counters: off(TITLED.counters),
+      profile: { ...TITLED.profile, enabled: widget === 'profile', markerColor: widget === 'profile' ? own : undefined },
+      minimap: { ...TITLED.minimap, enabled: widget === 'minimap', markerColor: widget === 'minimap' ? own : undefined },
     })
   const fillsOf = (settings: OverlaySettings, markerColor?: string) => {
     const { ctx, fills } = fakeContext()
@@ -466,7 +471,7 @@ describe('position dot colour (mini-map and profile)', () => {
 
 describe('closing card contents', () => {
   const end = (patch: Partial<OverlaySettings['end']>, style: OverlaySettings['style'] = 'editorial') =>
-    enabled({ style, end: { ...DEFAULT_OVERLAY.end, ...patch } })
+    enabled({ style, end: { ...TITLED.end, ...patch } })
 
   it('the chosen figures in the order of the list, those the track does not record left out', () => {
     const labels = (figures: Parameters<typeof cardStats>[1], stats = track.stats) => cardStats(stats, figures).map((f) => f.label)
@@ -545,7 +550,7 @@ describe('opening card contents', () => {
 describe('counters of slope, time of day, pace, power and temperature', () => {
   it('slope, clock, pace, power and temperature, each left out when the track does not record it', () => {
     const settings = enabled({
-      counters: { ...DEFAULT_OVERLAY.counters, fields: { ...DEFAULT_OVERLAY.counters.fields, slope: true, clock: true, pace: true, power: true, temperature: true } },
+      counters: { ...TITLED.counters, fields: { ...TITLED.counters.fields, slope: true, clock: true, pace: true, power: true, temperature: true } },
     })
     const joined = draw(0.5, settings).joined.toLowerCase()
     for (const label of ['pente', 'heure', 'allure', 'min/km']) expect(joined).toContain(label)
@@ -562,9 +567,9 @@ describe('mini-map', () => {
   const minimapOnly = (patch: Partial<OverlaySettings['minimap']> = {}, style: OverlaySettings['style'] = 'broadcast') =>
     enabled({
       style,
-      counters: off(DEFAULT_OVERLAY.counters),
-      profile: off(DEFAULT_OVERLAY.profile),
-      minimap: { ...DEFAULT_OVERLAY.minimap, enabled: true, ...patch },
+      counters: off(TITLED.counters),
+      profile: off(TITLED.profile),
+      minimap: { ...TITLED.minimap, enabled: true, ...patch },
     })
   const render = (progress: number, settings: OverlaySettings) => {
     const { ctx, texts, points } = fakeContext()
@@ -575,12 +580,12 @@ describe('mini-map', () => {
   const dots = (progress: number, settings = minimapOnly()) => render(progress, settings).points.filter((pt) => pt.op === 'arc')
 
   it('is off by default', () => {
-    expect(DEFAULT_OVERLAY.minimap.enabled).toBe(false)
+    expect(TITLED.minimap.enabled).toBe(false)
     expect(draw(0.5, enabled()).texts.map((t) => t.text)).not.toContain('N')
   })
 
   it('puts the marker on the start dot, then on the end dot', () => {
-    const noCards = { ...minimapOnly(), title: off(DEFAULT_OVERLAY.title), end: off(DEFAULT_OVERLAY.end) }
+    const noCards = { ...minimapOnly(), title: off(TITLED.title), end: off(TITLED.end) }
     const [end, start, marker] = dots(0, noCards)
     expect(marker.r).toBeGreaterThan(start.r!)
     expect([marker.x, marker.y]).toEqual([start.x, start.y])
@@ -620,8 +625,8 @@ describe('mini-map', () => {
 
   it('stacks under another widget of the same anchor', () => {
     const alone = render(0.5, minimapOnly({ anchor: 'top-right' }))
-    const withProfile = render(0.5, { ...minimapOnly({ anchor: 'top-right' }), profile: { ...DEFAULT_OVERLAY.profile, anchor: 'top-right' } })
-    const shift = DEFAULT_OVERLAY.profile.height * SIZE.height + 2 * (Math.min(SIZE.width, SIZE.height) / 100)
+    const withProfile = render(0.5, { ...minimapOnly({ anchor: 'top-right' }), profile: { ...TITLED.profile, anchor: 'top-right' } })
+    const shift = TITLED.profile.height * SIZE.height + 2 * (Math.min(SIZE.width, SIZE.height) / 100)
     const n = (r: ReturnType<typeof render>) => r.texts.find((t) => t.text === 'N')!
     expect(n(withProfile).y - n(alone).y).toBeCloseTo(shift, 6)
     expect(n(withProfile).x).toBeCloseTo(n(alone).x, 6)
@@ -653,24 +658,24 @@ describe('legend of the track colouring', () => {
 
   it('is painted while a colouring is on, even with the overlay off, and not without colouring', () => {
     expect(trackLegend([sampleTrack], 'none')).toBeNull()
-    expect(DEFAULT_OVERLAY.enabled).toBe(false)
-    const texts = render(DEFAULT_OVERLAY, { trackLegend: { ...legend, anchor: 'bottom-left' } })
+    expect(TITLED.enabled).toBe(false)
+    const texts = render(TITLED, { trackLegend: { ...legend, anchor: 'bottom-left' } })
     expect(title(texts)).toBeDefined()
     expect(texts.filter((t) => t.text.endsWith(' m'))).toHaveLength(2)
-    expect(render(DEFAULT_OVERLAY, { trackLegend: null })).toEqual([])
+    expect(render(TITLED, { trackLegend: null })).toEqual([])
   })
 
   it('sits at the chosen anchor inside the safe area, and stacks with the widgets of that anchor', () => {
     for (const anchor of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
-      const at = title(render(DEFAULT_OVERLAY, { trackLegend: { ...legend, anchor } }))!
+      const at = title(render(TITLED, { trackLegend: { ...legend, anchor } }))!
       expect(at.x < SIZE.width / 2).toBe(anchor.endsWith('left'))
       expect(at.y < SIZE.height / 2).toBe(anchor.startsWith('top'))
       expect(at.x).toBeGreaterThanOrEqual(SIZE.width * SAFE_MARGIN - 1)
       expect(at.x).toBeLessThanOrEqual(SIZE.width * (1 - SAFE_MARGIN) + 1)
     }
     const extras: OverlayExtras = { trackLegend: { ...legend, anchor: 'top-right' } }
-    const alone = title(render(enabled({ counters: { ...DEFAULT_OVERLAY.counters, enabled: false }, profile: { ...DEFAULT_OVERLAY.profile, enabled: false } }), extras))!
-    const withMap = title(render(enabled({ minimap: { ...DEFAULT_OVERLAY.minimap, enabled: true, anchor: 'top-right' } }), extras))!
+    const alone = title(render(enabled({ counters: { ...TITLED.counters, enabled: false }, profile: { ...TITLED.profile, enabled: false } }), extras))!
+    const withMap = title(render(enabled({ minimap: { ...TITLED.minimap, enabled: true, anchor: 'top-right' } }), extras))!
     expect(withMap.y).toBeGreaterThan(alone.y)
   })
 })
@@ -685,7 +690,7 @@ describe('leaderboard', () => {
     drawOverlay(ctx, overlayFrameAt(track, 0.5), settings, SIZE, {}, { leaderboard })
     return texts.map((t) => t.text).join(' | ')
   }
-  const on = enabled({ leaderboard: { ...DEFAULT_OVERLAY.leaderboard, enabled: true } })
+  const on = enabled({ leaderboard: { ...TITLED.leaderboard, enabled: true } })
 
   it('is off by default', () => {
     expect(drawBoard(enabled(), rows)).not.toMatch(/classement/i)
@@ -733,7 +738,7 @@ describe('timeline texts', () => {
   })
 
   it.each(OVERLAY_STYLES)('style %s: stays inside the safe area at every anchor and size', (style) => {
-    const off = { ...enabled({ style }), counters: { ...DEFAULT_OVERLAY.counters, enabled: false }, profile: { ...DEFAULT_OVERLAY.profile, enabled: false } }
+    const off = { ...enabled({ style }), counters: { ...TITLED.counters, enabled: false }, profile: { ...TITLED.profile, enabled: false } }
     for (const anchor of OVERLAY_ANCHORS) {
       for (const size of [0.5, 2]) {
         const long = { ...FILM_TEXT, startS: 40, durationS: 20, anchor, size, text: 'Une très longue légende '.repeat(40), subtitle: 'Sous-titre' }
@@ -759,8 +764,8 @@ describe('timeline texts', () => {
     expect(find(render(0.6, enabled()), 'Col de Balme')?.font).not.toContain(OVERLAY_FONT_FAMILIES.mono)
   })
 
-  it('is not drawn while the overlay is off', () => {
-    expect(find(render(0.6, DEFAULT_OVERLAY), 'Col de Balme')).toBeUndefined()
+  it('is drawn with the overlay off too', () => {
+    expect(find(render(0.6, DEFAULT_OVERLAY), 'Col de Balme')).toBeDefined()
   })
 })
 
@@ -773,8 +778,8 @@ describe('source credits', () => {
   }
 
   it('are on by default, drawn even without the rest of the overlay', () => {
-    expect(DEFAULT_OVERLAY.credits.enabled).toBe(true)
-    const { texts } = render(DEFAULT_OVERLAY)
+    expect(TITLED.credits.enabled).toBe(true)
+    const { texts } = render(TITLED)
     expect(texts.map((t) => t.text)).toEqual(['Relief : © Mapterhorn · Imagerie : © IGN'])
   })
 
@@ -786,7 +791,7 @@ describe('source credits', () => {
 
   it('sit in the chosen corner, along the edge outside the safe area', () => {
     const at = (position: OverlaySettings['credits']['position']) =>
-      render({ ...DEFAULT_OVERLAY, credits: { enabled: true, position } }).texts[0]
+      render({ ...TITLED, credits: { enabled: true, position } }).texts[0]
     const u = Math.min(SIZE.width, SIZE.height) / 100
     expect(at('bottom-right').x).toBeCloseTo(SIZE.width * (1 - SAFE_MARGIN) - 0.6 * u, 6)
     expect(at('bottom-left').x).toBeCloseTo(SIZE.width * SAFE_MARGIN + 0.6 * u, 6)
@@ -796,13 +801,13 @@ describe('source credits', () => {
 
   it('wrap a long line over the safe width', () => {
     const long = Array.from({ length: 12 }, (_, i) => `Source ${i} : © un fournisseur de données ouvertes`)
-    const { texts } = render(DEFAULT_OVERLAY, { credits: long })
+    const { texts } = render(TITLED, { credits: long })
     expect(texts.length).toBeGreaterThan(1)
     expect(texts.map((t) => t.text).join(' ')).toBe(long.join(' · '))
   })
 
   it('hold the Open-Meteo credit once the weather is shown', () => {
-    const settings = enabled({ weather: { ...DEFAULT_OVERLAY.weather, enabled: true } })
+    const settings = enabled({ weather: { ...TITLED.weather, enabled: true } })
     const hours = 14
     const values = {} as Record<WeatherVariable, number[]>
     for (const v of WEATHER_VARIABLES) values[v] = new Array<number>(hours).fill(1)
@@ -827,7 +832,7 @@ describe('dip of a shot transition', () => {
   }
 
   it('one full-frame layer at its opacity, even without the overlay, under the credits only', () => {
-    const { order, calls } = render(enabled({ text: { ...DEFAULT_OVERLAY.text, enabled: true, text: 'Bonjour' } }), {
+    const { order, calls } = render(enabled({ text: { ...TITLED.text, enabled: true, text: 'Bonjour' } }), {
       credits,
       dip: { color: 'black', alpha: 0.6 },
     })
@@ -916,7 +921,7 @@ describe('timeline photos', () => {
   const assets = { photo: (src: string) => (src === 'photo-1' ? image : undefined) }
   const full: FilmMedia = { id: 'media-1', startS: 40, durationS: 20, kind: 'image', src: 'photo-1', ...MEDIA_DEFAULTS }
   const card: FilmMedia = { ...full, id: 'media-2', layout: 'carte', anchor: 'top-right', kenBurns: false, caption: 'Lac Blanc' }
-  const noCredits = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } }
+  const noCredits = { ...TITLED, credits: { ...TITLED.credits, enabled: false } }
   /** a 100 s film without cards */
   const at = (timeS: number) => ({ timeS, openingS: 0, flightS: 100, totalS: 100 })
   const render = (settings: OverlaySettings, media: FilmMedia[], timeS: number, extras: OverlayExtras = {}) => {
@@ -927,7 +932,7 @@ describe('timeline photos', () => {
 
   it('full screen: covers the frame inside its window, under everything, even without the overlay', () => {
     expect(render(noCredits, [full], 39).images).toEqual([])
-    const { images, order } = render(DEFAULT_OVERLAY, [full], 50, { credits: ['Relief : © Mapterhorn'] })
+    const { images, order } = render(TITLED, [full], 50, { credits: ['Relief : © Mapterhorn'] })
     expect(images).toHaveLength(1)
     expect(images[0].args.slice(4)).toEqual([0, 0, SIZE.width, SIZE.height])
     expect(images[0].alpha).toBe(1)
@@ -956,7 +961,7 @@ describe('timeline photos', () => {
     expect(draw({ ...clip, layout: 'carte' }, 50)).toHaveLength(1)
     expect(draw(clip, 61)).toEqual([])
     // a playing clip changes every frame: the export renders the held frames again
-    expect(overlayTimedState(DEFAULT_OVERLAY, [], at(50), [{ ...clip, layout: 'carte' }])).toEqual([1, 50])
+    expect(overlayTimedState(DEFAULT_OVERLAY, [], at(50), [{ ...clip, layout: 'carte' }])).toEqual([0, 0, 1, 50])
     // following the flight: the frame recorded under the marker, whatever the film time
     const recorded = recordedAtProgress(track.path, 0.5)!
     expect(recorded).toBeGreaterThan(0)
@@ -975,7 +980,7 @@ describe('timeline photos', () => {
   })
 
   it('full screen: the live widgets give way, the caption is drawn like a text', () => {
-    const settings = enabled({ title: { ...DEFAULT_OVERLAY.title, enabled: false }, end: { ...DEFAULT_OVERLAY.end, enabled: false } })
+    const settings = enabled({ title: { ...TITLED.title, enabled: false }, end: { ...TITLED.end, enabled: false } })
     const labels = (timeS: number, media: FilmMedia[]) => render(settings, media, timeS).texts.map((t) => t.text.toLocaleLowerCase('fr'))
     expect(labels(30, [full])).toContain('distance')
     expect(labels(50, [full])).not.toContain('distance')
@@ -1004,8 +1009,8 @@ describe('timeline photos', () => {
   })
 
   it('times the photos for the export: opacity, and the time while a full-screen photo moves', () => {
-    expect(overlayTimedState(DEFAULT_OVERLAY, [], at(50), [full, card])).toEqual([1, 50, 1])
-    expect(overlayTimedState(DEFAULT_OVERLAY, [], at(30), [full, card])).toEqual([0, 0])
+    expect(overlayTimedState(DEFAULT_OVERLAY, [], at(50), [full, card])).toEqual([0, 0, 1, 50, 1])
+    expect(overlayTimedState(DEFAULT_OVERLAY, [], at(30), [full, card])).toEqual([0, 0, 0, 0])
     expect(overlayTimedState(enabled(), [], at(50), [{ ...full, kenBurns: false }])).toEqual([0, 0, 1])
   })
 
@@ -1034,11 +1039,11 @@ describe('timeline photos', () => {
 
 describe('colours and fonts of one widget', () => {
   it('draw that widget with its own font, the others with the overlay\'s', () => {
-    const settings = enabled({ title: { ...DEFAULT_OVERLAY.title, enabled: false }, counters: { ...DEFAULT_OVERLAY.counters, overrides: { numberFont: 'mono' } } })
+    const settings = enabled({ title: { ...TITLED.title, enabled: false }, counters: { ...TITLED.counters, overrides: { numberFont: 'mono' } } })
     const { texts } = draw(0.5, settings)
     const value = texts.find((t) => /km/.test(t.text) || /^\d/.test(t.text))
     expect(value?.font).toContain('monospace')
-    const plain = draw(0.5, enabled({ title: { ...DEFAULT_OVERLAY.title, enabled: false } })).texts
+    const plain = draw(0.5, enabled({ title: { ...TITLED.title, enabled: false } })).texts
     expect(plain.some((t) => t.font.includes('monospace'))).toBe(false)
   })
 })
@@ -1077,7 +1082,7 @@ describe('text backing of a style without panel', () => {
 describe('styles with a structure', () => {
   const U = SIZE.height / 100
   const SAFE_LEFT = SIZE.width * SAFE_MARGIN
-  const styled = (style: OverlaySettings['style'], patch: Partial<OverlaySettings> = {}): OverlaySettings => ({ ...withStyleLayout(DEFAULT_OVERLAY, style), enabled: true, ...patch })
+  const styled = (style: OverlaySettings['style'], patch: Partial<OverlaySettings> = {}): OverlaySettings => ({ ...withStyleLayout(TITLED, style), enabled: true, ...patch })
   const off = <T extends { enabled: boolean }>(w: T): T => ({ ...w, enabled: false })
   const render = (settings: OverlaySettings, progress: number, extras: OverlayExtras = {}, data = track) => {
     const result = fakeContext()
@@ -1103,7 +1108,7 @@ describe('styles with a structure', () => {
     const inTopBar = (t: TextCall) => t.y < BAR
 
     it('draws a pure black bar at the top and at the bottom, even with every widget off', () => {
-      const bare = cinema({ counters: off(DEFAULT_OVERLAY.counters), profile: off(DEFAULT_OVERLAY.profile) })
+      const bare = cinema({ counters: off(TITLED.counters), profile: off(TITLED.profile) })
       const bars = render(bare, 0.5).rects.filter((r) => r.fill === '#000000')
       expect(bars).toEqual([
         { x: 0, y: 0, w: SIZE.width, h: BAR, fill: '#000000', alpha: 1 },
@@ -1146,7 +1151,7 @@ describe('styles with a structure', () => {
     })
 
     it('runs the profile as a thin line along the top edge of the bottom bar, full width, with no area under it', () => {
-      const { points, fills, calls } = render(cinema({ counters: off(DEFAULT_OVERLAY.counters) }), 0.5)
+      const { points, fills, calls } = render(cinema({ counters: off(TITLED.counters) }), 0.5)
       const ridge = points.filter((pt) => pt.op !== 'arc')
       const barTop = SIZE.height - BAR
       expect(Math.min(...ridge.map((pt) => pt.x))).toBeCloseTo(0, 6)
@@ -1162,10 +1167,10 @@ describe('styles with a structure', () => {
 
     it('puts the weather in the top bar at the left and the map just under the top bar at the right', () => {
       const both = cinema({
-        counters: off(DEFAULT_OVERLAY.counters),
-        profile: off(DEFAULT_OVERLAY.profile),
-        weather: { ...DEFAULT_OVERLAY.weather, enabled: true, anchor: 'top-left' },
-        minimap: { ...DEFAULT_OVERLAY.minimap, enabled: true, anchor: 'top-right' },
+        counters: off(TITLED.counters),
+        profile: off(TITLED.profile),
+        weather: { ...TITLED.weather, enabled: true, anchor: 'top-left' },
+        minimap: { ...TITLED.minimap, enabled: true, anchor: 'top-right' },
       })
       const { texts, points } = render(both, 0.5, {}, withWeather)
       const weather = texts.find((t) => t.text.toLowerCase().includes('plutôt dégagé'))!
@@ -1200,7 +1205,7 @@ describe('styles with a structure', () => {
     })
 
     it('draws a counter moved out of its slot as an ordinary widget again', () => {
-      const moved = cinema({ counters: { ...DEFAULT_OVERLAY.counters, anchor: 'top-left' } })
+      const moved = cinema({ counters: { ...TITLED.counters, anchor: 'top-left' } })
       const { texts } = render(moved, 0.5)
       expect(texts.map((t) => t.text.toLowerCase())).toContain('distance')
       expect(texts.filter(inBottomBar).filter((t) => t.text !== '·')).toEqual([])
@@ -1211,7 +1216,7 @@ describe('styles with a structure', () => {
     const SHEET = 0.24 * SIZE.width
     const PAD = 2.6 * U
     const journal = (patch: Partial<OverlaySettings> = {}) =>
-      styled('journal', { minimap: { ...withStyleLayout(DEFAULT_OVERLAY, 'journal').minimap, enabled: true }, ...patch })
+      styled('journal', { minimap: { ...withStyleLayout(TITLED, 'journal').minimap, enabled: true }, ...patch })
 
     it('glues a full-height cream sheet to the left edge, about a quarter of the width, under everything else', () => {
       const { rects, order } = render(journal(), 0.5)
@@ -1219,7 +1224,7 @@ describe('styles with a structure', () => {
       expect(rects[0].w).toBeCloseTo(SHEET, 6)
       expect(order[0]).toMatch(/^rect /)
       // the sheet is drawn even when nothing else is on
-      const bare = journal({ counters: off(DEFAULT_OVERLAY.counters), profile: off(DEFAULT_OVERLAY.profile), minimap: off(DEFAULT_OVERLAY.minimap) })
+      const bare = journal({ counters: off(TITLED.counters), profile: off(TITLED.profile), minimap: off(TITLED.minimap) })
       expect(render(bare, 0.5).rects[0].w).toBeCloseTo(SHEET, 6)
       expect(render({ ...journal(), enabled: false }, 0.5).rects).toEqual([])
     })
@@ -1251,7 +1256,7 @@ describe('styles with a structure', () => {
     })
 
     it('puts nothing in the right half of the frame', () => {
-      const settings = journal({ weather: { ...DEFAULT_OVERLAY.weather, enabled: true, anchor: 'middle-left' }, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } })
+      const settings = journal({ weather: { ...TITLED.weather, enabled: true, anchor: 'middle-left' }, credits: { ...TITLED.credits, enabled: false } })
       const { texts: all, points } = render(settings, 0.5, {}, withWeather)
       // the credit of the weather is required, and drawn on its own at the bottom right
       const texts = all.filter((t) => t.text !== openMeteoAttribution())
@@ -1282,7 +1287,7 @@ describe('styles with a structure', () => {
     })
 
     it('draws a widget out of the left column as an ordinary widget', () => {
-      const moved = journal({ counters: { ...DEFAULT_OVERLAY.counters, anchor: 'top-right' } })
+      const moved = journal({ counters: { ...TITLED.counters, anchor: 'top-right' } })
       const { texts } = render(moved, 0.5)
       expect(texts.find((t) => t.text.toLowerCase() === 'distance')!.x).toBeGreaterThan(SIZE.width / 2)
     })
@@ -1291,7 +1296,7 @@ describe('styles with a structure', () => {
   describe('Tableau sportif', () => {
     const BAND_Y = 0.8 * SIZE.height
     const tableau = (patch: Partial<OverlaySettings> = {}) =>
-      styled('tableau', { minimap: { ...withStyleLayout(DEFAULT_OVERLAY, 'tableau').minimap, enabled: true }, ...patch })
+      styled('tableau', { minimap: { ...withStyleLayout(TITLED, 'tableau').minimap, enabled: true }, ...patch })
     const inBand = (t: TextCall) => t.y > BAND_Y
 
     it('draws a translucent dark band across the bottom fifth of the frame, under an accent line', () => {
@@ -1327,7 +1332,7 @@ describe('styles with a structure', () => {
     })
 
     it('fills the band with the profile as a faded area, over its whole width', () => {
-      const { points, fills } = render(tableau({ counters: off(DEFAULT_OVERLAY.counters), minimap: off(DEFAULT_OVERLAY.minimap) }), 0.5)
+      const { points, fills } = render(tableau({ counters: off(TITLED.counters), minimap: off(TITLED.minimap) }), 0.5)
       expect(fills).toContain('rgba(255, 255, 255, 0.14)')
       const area = points.filter((pt) => pt.op !== 'arc')
       expect(Math.min(...area.map((pt) => pt.x))).toBeCloseTo(0, 6)
@@ -1361,20 +1366,20 @@ describe('styles with a structure', () => {
     it('fills the map circle once: no rectangle of the panel inside it', () => {
       const band = 'rgba(12, 18, 23, 0.84)'
       const count = (settings: OverlaySettings) => render(settings, 0.5).fills.filter((f) => f === band).length
-      expect(count(tableau()) - count(tableau({ minimap: off(DEFAULT_OVERLAY.minimap) }))).toBe(1)
+      expect(count(tableau()) - count(tableau({ minimap: off(TITLED.minimap) }))).toBe(1)
     })
 
     it('keeps the free widgets above the band, and draws a counter out of its slot as an ordinary widget', () => {
       const texts: FilmText[] = [{ ...FILM_TEXT, startS: 0.4, durationS: 0.4, anchor: 'bottom-left' }]
       expect(render(tableau(), 0.6, { texts }).texts.find((t) => t.text === 'Col de Balme')!.y).toBeLessThan(BAND_Y)
-      const { texts: moved } = render(tableau({ counters: { ...DEFAULT_OVERLAY.counters, anchor: 'top-center' } }), 0.5)
+      const { texts: moved } = render(tableau({ counters: { ...TITLED.counters, anchor: 'top-center' } }), 0.5)
       expect(moved.filter(inBand).filter((t) => t.text.toLowerCase() === 'distance')).toEqual([])
       expect(moved.map((t) => t.text.toLowerCase())).toContain('distance')
     })
   })
 
   it.each(['cinema', 'journal', 'tableau'] as const)('%s: every point and text of a frame stays inside it, at every moment of the film', (style) => {
-    const layout = withStyleLayout(DEFAULT_OVERLAY, style)
+    const layout = withStyleLayout(TITLED, style)
     const settings = styled(style, { minimap: { ...layout.minimap, enabled: true }, weather: { ...layout.weather, enabled: true } })
     for (const progress of [0, 0.02, 0.09, 0.5, 0.92, 1]) {
       const { texts, points } = render(settings, progress, {}, withWeather)

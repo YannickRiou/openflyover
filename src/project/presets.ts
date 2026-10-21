@@ -41,8 +41,9 @@ export const PRESET_SCOPE_LABELS: Record<PresetScope, string> = {
 /** Settings of each family ('tout': every setting). */
 export const PRESET_SCOPE_KEYS: Record<Exclude<PresetScope, 'tout'>, readonly (keyof Settings)[]> = {
   carte: ['terrainSourceId', 'imagerySourceId', 'imageryDate', 'imageryZoomOffset', 'exaggeration', 'atmosphere', 'shadows', 'cloudShadows', 'grading', 'lens', 'weatherScene', 'clouds', 'water'],
-  trace: ['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail', 'marker', 'labels'],
-  habillage: ['overlay'],
+  trace: ['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail', 'marker'],
+  // the 3D labels are set in Habillage › Étiquettes 3D, their colours in the overlay
+  habillage: ['overlay', 'labels'],
   'prise-de-vue': ['camera', 'sunHour', 'sunDate', 'sunFromTrack', 'exposureEv'],
 }
 

@@ -114,7 +114,9 @@ function offsetAt(point: TrackPoint | undefined, sample: HeightSampler): number 
 export function withTerrainElevation(track: Track, sample: HeightSampler): Track {
   let filled = 0
   let recorded = 0
-  const segments = track.segments.map((segment): TrackSegment => {
+  // the ranges filled, so « Effacer l'altitude complétée » can take them back
+  const ranges: [number, number, number][] = [...(track.elevationFilled ?? [])]
+  const segments = track.segments.map((segment, s): TrackSegment => {
     const { points } = segment
     const gaps = gapsOf(points)
     recorded += points.length - gaps.reduce((n, [first, last]) => n + last - first + 1, 0)
@@ -140,19 +142,29 @@ export function withTerrainElevation(track: Track, sample: HeightSampler): Track
         out[i] = { ...points[i], ele: Math.round((ground + offset) * 10) / 10 }
         filled++
       }
+      ranges.push([s, first, last])
     }
     return { points: out }
   })
   if (filled === 0) return track
   const estimated = recorded === 0 || track.elevationEstimated === 'all' ? 'all' : 'gaps'
-  return { ...track, segments, stats: computeStats(segments), elevationEstimated: estimated }
+  const out: Track = { ...track, segments, stats: computeStats(segments), elevationEstimated: estimated }
+  if (estimated === 'gaps' && (track.elevationEstimated !== 'gaps' || track.elevationFilled)) out.elevationFilled = ranges
+  else delete out.elevationFilled
+  return out
 }
+
+/** « Effacer l'altitude complétée » is possible: every elevation was computed, or the filled points are known. */
+export const canClearTerrainElevation = (track: Track) => track.elevationEstimated === 'all' || (track.elevationEstimated === 'gaps' && track.elevationFilled !== undefined)
 
 /** « Effacer » : the track as imported, without the elevation computed on every point (only for 'all'). */
 export function withoutTerrainElevation(track: Track): Track {
-  if (track.elevationEstimated !== 'all') return track
-  const segments = track.segments.map((segment) => ({
-    points: segment.points.map((p) => {
+  if (!canClearTerrainElevation(track)) return track
+  // every point, or the ranges filled in the gaps
+  const cleared = (s: number, i: number) => track.elevationEstimated === 'all' || track.elevationFilled!.some(([seg, first, last]) => seg === s && i >= first && i <= last)
+  const segments = track.segments.map((segment, s) => ({
+    points: segment.points.map((p, i) => {
+      if (!cleared(s, i)) return p
       const point = { ...p }
       delete point.ele
       return point
@@ -160,6 +172,7 @@ export function withoutTerrainElevation(track: Track): Track {
   }))
   const out: Track = { ...track, segments, stats: computeStats(segments) }
   delete out.elevationEstimated
+  delete out.elevationFilled
   return out
 }
 

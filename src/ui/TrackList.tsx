@@ -38,7 +38,7 @@ import {
 import type { PlanActivity } from '../plan/timing'
 import { useRace } from '../scene/useRace'
 import { useAppStore } from '../state/store'
-import { computeTrackElevation, hasMissingElevation, withoutTerrainElevation } from '../terrain/elevation'
+import { canClearTerrainElevation, computeTrackElevation, hasMissingElevation, withoutTerrainElevation } from '../terrain/elevation'
 import { getTerrainSource } from '../terrain/sources'
 import { formatClock, formatDistance, formatDistanceGap, formatNumber, formatSecondsShort, formatTimeGap, formatTrackSummary } from './format'
 import { Icon } from './icons'
@@ -171,8 +171,6 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
   const t = useT()
   const id = useId()
   const settings = useAppStore((s) => s.settings.race)
-  const leaderboard = useAppStore((s) => s.settings.overlay.leaderboard)
-  const overlayOn = useAppStore((s) => s.settings.overlay.enabled)
   const setSetting = useAppStore((s) => s.setSetting)
   const flyTrack = useAppStore((s) => s.flyTrack)
   const busy = useExportStore((s) => isExportBusy(s.phase))
@@ -251,21 +249,8 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
             />
             <p className="type-hint">{t('track.race.cameraOnHint')}</p>
           </div>
-          <Switch
-            checked={leaderboard.enabled}
-            onChange={(on) => {
-              const { overlay } = useAppStore.getState().settings
-              setSetting('overlay', { ...overlay, leaderboard: { ...overlay.leaderboard, enabled: on } })
-            }}
-          >
-            {t('overlay.panel.leaderboard')}
-          </Switch>
-          {leaderboard.enabled && (
-            <p className="type-hint">
-              {!overlayOn && `${t('track.race.boardNeedsOverlay')} `}
-              {t('track.race.boardSettings')}
-            </p>
-          )}
+          {/* the leaderboard of the film is set in Habillage › Compteurs, its one place */}
+          <p className="type-hint">{t('track.race.boardWhere')}</p>
           <RaceBoard race={race} tracks={tracks} />
           <p className="type-hint">{t('track.race.gap')}</p>
         </>
@@ -592,7 +577,7 @@ function TrackElevation({ track, busy }: { track: Track; busy: boolean }) {
     }
   }
 
-  if (track.elevationEstimated === 'all') {
+  if (canClearTerrainElevation(track)) {
     return (
       <div className={ELEVATION}>
         <Button

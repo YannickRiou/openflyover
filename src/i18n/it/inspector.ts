@@ -163,7 +163,6 @@ const messages: Messages['inspector'] = {
   'text.subtitle': 'Sottotitolo',
   'text.position': 'Posizione',
   'text.size': 'Dimensione',
-  'text.hint': 'Visibile solo se « Mostra l’overlay » è attivo (scheda Overlay).',
   'media.sync.legend': 'Sincronizzazione sul percorso',
   'media.sync.outside': 'Video girato fuori dall’uscita: correggi l’ora della camera con lo scarto.',
   'media.sync.done': 'Video sincronizzato: passa quando il marcatore arriva dove è stato girato.',
@@ -196,6 +195,7 @@ const messages: Messages['inspector'] = {
   'music.startInFile': 'Inizio nel file (s)',
   'music.wholeFilm': 'Tutto il film',
   'music.duck': 'Abbassa tutte le musiche sotto i video',
+  'music.duckWhere': '«Abbassa tutte le musiche sotto i video»: in ⋯ Opzioni del film, sulla timeline.',
   'music.fit': 'Adatta la durata del film alla fine della musica',
   'music.snapBeat': 'Allinea al ritmo',
   'music.hint': 'Riprodotta da {start} a {end} nel film{file}, durante la riproduzione e nel film esportato. Adattare la durata cambia la durata del sorvolo perché il film finisca con la musica. Abbassare la musica: tutte le musiche si abbassano di {db} dB durante i video con audio. Allineare al ritmo: soste, titoli e inizi dei tratti di velocità a meno di 0,4 s da un battito della musica vi si allineano, sull’inizio di una battuta se ce n’è una altrettanto vicina{tempo}.',
@@ -247,7 +247,6 @@ const messages: Messages['inspector'] = {
   'junction.position': 'Posizione',
   'junction.size': 'Dimensione',
   'junction.displayDuration': 'Durata di visualizzazione',
-  'shot.overlayOff': '{label}: l’overlay è disattivato. Attiva « Mostra l’overlay » nella scheda Overlay, poi la scheda in Titoli.',
   'card.dateNeedsTime': 'La traccia non ha orari: pianifica l’uscita (scheda Traccia) per avere una data.',
 }
 

@@ -102,6 +102,8 @@ export interface Track {
    * when the file had none, 'gaps' when only the points without one were filled
    */
   elevationEstimated?: 'all' | 'gaps'
+  /** with 'gaps': the points filled, `[segment, first, last]` index ranges (absent for completions made by earlier versions) */
+  elevationFilled?: [number, number, number][]
   /** stretches flown above the ground (paragliding…), found at import (src/flyover/flights.ts); absent when none */
   flights?: Flight[]
   /** figures typed by hand over those of the points (« Corriger les chiffres »); absent when none is corrected */

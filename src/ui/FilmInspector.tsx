@@ -532,7 +532,7 @@ export function FilmInspector() {
               <Button onClick={() => disableCard(card)}>{t('inspector.card.remove', { label: CARD_LABELS[card] })}</Button>
             </>
           ) : (
-            <p className={HINT}>{overlay.enabled ? t('inspector.shot.cardOff', { label: CARD_LABELS[card] }) : t('inspector.shot.overlayOff', { label: CARD_LABELS[card] })}</p>
+            <p className={HINT}>{t('inspector.shot.cardOff', { label: CARD_LABELS[card] })}</p>
           )}
         </InspectorGroup>
         <InspectorGroup title={t('inspector.shot.camera')}>
@@ -974,7 +974,6 @@ export function FilmInspector() {
           {timing(filmText.startS, filmText.durationS, set)}
           {attachSelect(filmText.stopId)}
           {itemCamera(filmText.startS, filmText.durationS)}
-          <p className={HINT}>{t('inspector.text.hint')}</p>
         </>
       )
     } else if (media) {
@@ -1098,15 +1097,8 @@ export function FilmInspector() {
           {number('in', t('inspector.music.startInFile'), music.inS, 0, fileS ?? AUDIO_DURATION_RANGE.max, (inS) => set({ inS }))}
           {/* these act on the whole film and every music, not on this block only */}
           <InspectorGroup title={t('inspector.music.wholeFilm')}>
-            <Checkbox
-              checked={film.duckMusic}
-              onChange={(on) => {
-                const duckMusic = on
-                editFilm((f) => ({ film: { ...f, duckMusic } }))
-              }}
-            >
-              {t('inspector.music.duck')}
-            </Checkbox>
+            {/* lowered under the videos: an option of the film, in ⋯ of the timeline */}
+            <p className={HINT}>{t('inspector.music.duckWhere')}</p>
             <Button className={REMOVE} onClick={() => showToast(fitFilmToMusic())}>
               {t('inspector.music.fit')}
             </Button>

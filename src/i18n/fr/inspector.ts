@@ -161,7 +161,6 @@ export default {
   'text.subtitle': 'Sous-titre',
   'text.position': 'Position',
   'text.size': 'Taille',
-  'text.hint': 'Visible seulement si « Afficher l’habillage » est activé (onglet Habillage).',
   'media.sync.legend': 'Calage sur le parcours',
   'media.sync.outside': 'Vidéo filmée en dehors de la sortie : corrigez l’heure de la caméra avec le décalage.',
   'media.sync.done': 'Vidéo calée : elle passe quand le marqueur arrive là où elle a été filmée.',
@@ -194,6 +193,7 @@ export default {
   'music.startInFile': 'Début dans le fichier (s)',
   'music.wholeFilm': 'Tout le film',
   'music.duck': 'Baisser toutes les musiques sous les vidéos',
+  'music.duckWhere': '« Baisser toutes les musiques sous les vidéos » : dans ⋯ Options du film, sur la timeline.',
   'music.fit': 'Caler la durée du film sur la fin de la musique',
   'music.snapBeat': 'Caler sur le rythme',
   'music.hint': 'Jouée de {start} à {end} dans le film{file}, pendant la lecture et dans le film exporté. Caler la durée change la durée du survol pour que le film finisse avec la musique. Baisser la musique : toutes les musiques baissent de {db} dB pendant les vidéos avec du son. Caler sur le rythme : les arrêts, les titres et les débuts des portions de vitesse à moins de 0,4 s d’un temps de la musique s’y posent, sur un début de mesure s’il y en a un aussi près{tempo}.',
@@ -245,6 +245,5 @@ export default {
   'junction.position': 'Position',
   'junction.size': 'Taille',
   'junction.displayDuration': 'Durée d’affichage',
-  'shot.overlayOff': '{label} : l’habillage est désactivé. Activez « Afficher l’habillage » dans l’onglet Habillage, puis la carte dans Titres.',
   'card.dateNeedsTime': 'La trace n’a pas d’horaires : prévoyez la sortie (onglet Trace) pour avoir une date.',
 }

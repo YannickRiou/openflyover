@@ -365,6 +365,7 @@ export function LandmarkPanel() {
       >
         {t('landmarks.enable')}
       </Switch>
+      <p className="type-hint">{t('landmarks.labelsWhere')}</p>
 
       {settings.enabled && (
         <SettingRow label={t('landmarks.types')} value={kindsLabel(settings)} paths={['landmarks.kinds', 'landmarks.places']}>
