@@ -2682,7 +2682,8 @@ exports) gets it from the terrain source of the settings.
   samples computed once per area), a half-float texture sampled again (debounced, flushed by the export) when tiles
   arrive; the cloud fades over its last 120 m (× exaggeration) above the terrain (`edgeFade`) and is discarded where
   invisible (no depth written). A pure function of the settings, film time and camera: the export draws the same sea.
-- Wind: the archive's wind at the start of the outing (constant for the film, 4 m/s westerly breeze by default) × 2 at altitude
+- Wind: the archive's wind at the start of the outing (constant for the film, 4 m/s westerly breeze by default); in « Manuel »
+  and « Mer de nuages », « Vent » (`clouds.windKmh`, 0–100 km/h, 15 by default, 0 = still) in that direction (`settingsWind`); × 2 at altitude
   × `CLOUD_TIMELAPSE` (20). Drift = wind × film time (`playback.timeS`, otherwise `clock.timeAtProgress`): offsets of
   the weather texture (Jacobian of the shader's cube-sphere UV, `weatherOffsetFor`) and of the shape textures (ECEF
   displacement × repeat) set directly on every frame, library velocities at zero: nothing accumulates.

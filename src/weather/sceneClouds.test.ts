@@ -13,6 +13,7 @@ import {
   sceneCloudsFrom,
   seaOfClouds,
   seaTopFor,
+  settingsWind,
   weatherOffsetFor,
   zonedCloudsFrom,
 } from './sceneClouds'
@@ -169,6 +170,18 @@ describe('wind and drift', () => {
     expect(d.east).toBeCloseTo(3 * 10 * 2 * CLOUD_TIMELAPSE, 9)
     expect(d.north).toBeCloseTo(-1 * 10 * 2 * CLOUD_TIMELAPSE, 9)
     expect(cloudDrift({ east: 3, north: -1 }, NaN).east).toBe(0)
+  })
+
+  it('« Vent »: the speed chosen, in the direction of the weather, outside the weather mode', () => {
+    const weather = { east: 0, north: -5 }
+    expect(settingsWind({ mode: 'meteo', windKmh: 36 }, weather)).toEqual(weather)
+    const manual = settingsWind({ mode: 'manuel', windKmh: 36 }, weather)
+    expect(manual.east).toBeCloseTo(0, 9)
+    expect(manual.north).toBeCloseTo(-10, 9)
+    expect(settingsWind({ mode: 'mer', windKmh: 18 }, { east: 0, north: 0 })).toEqual({ east: 5, north: 0 })
+    const still = cloudDrift(settingsWind({ mode: 'manuel', windKmh: 0 }, weather), 30)
+    expect(Math.hypot(still.east, still.north)).toBe(0)
+    expect(isValidClouds({ ...DEFAULT_CLOUDS, windKmh: 150 })).toBe(false)
   })
 })
 
