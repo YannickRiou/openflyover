@@ -97,7 +97,7 @@ const messages: Messages['landmarks'] = {
   'map.corridor': 'Das helle Band ist der Abstand zum Track: {distance}',
   'map.pick': 'Klicken Sie im Profil oder auf der Karte auf eine Landmarke, um sie einzustellen.',
   'map.zoneClear': 'Bereich löschen',
-  'map.zoneAuto': 'Auf Auto zurück',
+  'map.zoneAuto': 'Anzeigen',
   'map.zoneHide': 'Ausblenden',
   'map.zoneCount': { one: '{count} Landmarke im Bereich', other: '{count} Landmarken im Bereich' },
   'map.toolHint.zone': 'Ziehen Sie ein Rechteck auf der Karte oder über einen Abschnitt des Profils und wählen Sie dann, was mit den Landmarken darin geschieht.',

@@ -6,7 +6,7 @@ const messages: Messages['news'] = {
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
   'v332.landmarks.title': 'Hide landmarks in a few clicks',
-  'v332.landmarks.text': 'In the landmark map, “Hides it” hides each landmark clicked, “Choose a zone” hides those of a rectangle or a stretch of the profile at once, and the M key hides the landmark selected then moves to the next.',
+  'v332.landmarks.text': 'In the landmark map, “Hide” hides each landmark clicked, “Choose a zone” hides those of a rectangle or a stretch of the profile at once, and the M key hides the landmark selected then moves to the next.',
   'v331.recap.title': 'Look back at the finished stage',
   'v331.recap.text': 'Each transition between stages chooses its passage (cut or fade), whether to pass the night, and whether to look back at the finished stage: the camera rises for a few seconds to show all of it. In Track › Several tracks.',
   'v33.stages.title': 'Simpler stages',
