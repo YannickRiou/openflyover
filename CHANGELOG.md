@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **« Date des photos » with Esri shows a date**: an older Esri date chosen earlier (before changing tab, or in a project opened again) showed a number such as « 13968 » instead of its day. The list of dates is now found again by itself and the day shows (« Photos plus anciennes » for the instant it takes).
+
 ## 3.2.1 (October 2026)
 
 - **One panel for the start and one for the end of the film**: « Modifier » in « Habillage › Titres », the « Titre d'ouverture » block of the « Textes » track and the « Ouverture » block of the « Plans » track now all open the same « Ouverture » panel, with the title's settings and, below, those of the camera shot (« Plan de caméra »); the same goes for « Clôture » with the closing card. Before, the « Plans » block only showed the camera and the card was set elsewhere. « Retirer » in the card's part switches it off.

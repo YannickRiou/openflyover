@@ -121,6 +121,7 @@ export default {
   'map.imageryDateLatest': 'Les plus récentes',
   'map.imageryDateLatestOn': 'Les plus récentes ({date})',
   'map.imageryDateRelease': 'Version du {date}',
+  'map.imageryDateOther': 'Photos plus anciennes',
   'map.imageryDateSearch': 'Chercher les dates disponibles ici',
   'map.imageryDateSearching': 'Recherche des dates…',
   'map.imageryDateNoTrack': 'Chargez une trace pour chercher les dates de ses photos.',
