@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v332.landmarks.title': 'Masquer des repères en quelques clics',
+  'v332.landmarks.text': 'Dans la carte des repères, « Le masquer » masque chaque repère cliqué, « Choisir une zone » masque d’un coup ceux d’un rectangle ou d’une portion du profil, et la touche M masque le repère choisi puis passe au suivant.',
   'v331.recap.title': 'Revoir l’étape finie',
   'v331.recap.text': 'Chaque transition entre étapes choisit son passage (coupe ou fondu), de passer la nuit ou non, et de revoir l’étape finie : la caméra s’élève quelques secondes pour la montrer en entier. Dans Trace › Plusieurs traces.',
   'v33.stages.title': 'Des étapes plus simples',
