@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 3.2.2 (October 2026)
 
 - **« Date des photos » with Esri shows a date**: an older Esri date chosen earlier (before changing tab, or in a project opened again) showed a number such as « 13968 » instead of its day. The list of dates is now found again by itself and the day shows (« Photos plus anciennes » for the instant it takes).
 - **« Filaire » removed**: the « Carte › Relief » checkbox that drew the relief as triangles (a debugging view) is gone. A project saved with it on opens with the normal relief.
