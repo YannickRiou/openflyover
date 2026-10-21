@@ -101,6 +101,7 @@ const messages: Messages['overlay'] = {
   'tab.visibilite': 'Visibilidad',
   widgetSettings: 'Ajustes de {label}',
   'card.hint': 'Texto, duración y estilo: botón « Editar », o el bloque en la línea de tiempo.',
+  'card.replacesFirstStage': 'En «En secuencia», el título de apertura sustituye a la tarjeta de la 1.ª etapa mientras se muestra; sin él, se muestra la tarjeta de etapa.',
   'card.editAria': 'Editar: {label}',
   'card.edit': 'Editar',
   'swatch.white': 'Blanco',

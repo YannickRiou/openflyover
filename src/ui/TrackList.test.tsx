@@ -325,6 +325,10 @@ describe('TrackList, « Plusieurs traces »', () => {
     const reset = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Remettre toutes les cartes au réglage commun')!
     await act(async () => reset.click())
     expect(host.textContent).not.toContain('a son propre réglage')
+    // the opening title shown: the first stage starts with it, and the panel says so
+    expect(host.textContent).not.toContain('commence par le titre d’ouverture')
+    await act(async () => useAppStore.getState().setSetting('overlay', { ...useAppStore.getState().settings.overlay, enabled: true }))
+    expect(host.textContent).toContain('La 1re étape commence par le titre d’ouverture')
     act(() => root.unmount())
   })
 })

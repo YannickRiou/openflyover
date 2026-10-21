@@ -527,6 +527,7 @@ export function FilmInspector() {
               })()}
               <CardFields card={card} />
               <p className={HINT}>{card === TITLE_CARD_ID ? t('inspector.card.hintRight') : t('inspector.card.hintLeft')}</p>
+              {card === TITLE_CARD_ID && sequence && <p className={HINT}>{t('overlay.card.replacesFirstStage')}</p>}
               <Button onClick={() => disableCard(card)}>{t('inspector.card.remove', { label: CARD_LABELS[card] })}</Button>
             </>
           ) : (

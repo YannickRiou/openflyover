@@ -18,6 +18,7 @@ import { orderedTracks, playsInSequence } from '../flyover/sequence'
 import { metricValues } from '../flyover/trackColor'
 import { DEFAULT_JUNCTION, commonCardOf, hasOwnCard, hasOwnTransition, junctionDefaultOf, withAllCardsCommon, withAllJunctionsCommon, withCardSettings, withDefaultCard, withDefaultJunction } from '../film/junctions'
 import { nightPauseS } from '../flyover/nights'
+import { TITLE_CARD_ID, cardShown } from '../film/cards'
 import { dropIndexAt, idsByDate } from '../film/reorder'
 import { edgeScrollSpeed } from '../film/timeline'
 import { STATS_OVERRIDE_KEYS, correctedStats, statsOverrideOf } from '../import/stats'
@@ -130,6 +131,7 @@ function StageDefaults() {
   const afterIds = (sequence?.stageIds ?? []).slice(0, -1)
   const ownTransitions = afterIds.filter((id) => hasOwnTransition(film, id)).length
   const ownCards = [null, ...afterIds].filter((id) => hasOwnCard(film, id)).length
+  const titleShown = useAppStore((s) => cardShown(s.settings.overlay, TITLE_CARD_ID))
   return (
     <>
       <p className="type-hint">{t('track.stages.common')}</p>
@@ -148,6 +150,7 @@ function StageDefaults() {
       <Switch checked={card} onChange={(on) => editFilm((f) => ({ film: withDefaultCard(f, on) }))}>
         {t('track.stageCard')}
       </Switch>
+      {card && titleShown && <p className="type-hint">{t('track.stages.firstCard')}</p>}
       {card && <StageCardFields card={commonCardOf(film)} onChange={(patch) => editFilm((f) => ({ film: withCardSettings(f, patch) }), { step: false })} />}
       {ownCards > 0 && (
         <>

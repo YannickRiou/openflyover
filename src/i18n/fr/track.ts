@@ -44,6 +44,7 @@ export default {
   boardRef: 'Trace de référence, suivie par la caméra',
   stageCard: 'Une carte au début de chaque étape',
   'stages.common': 'Réglage commun à toutes les étapes. Pour régler une seule transition ou une seule carte, cliquez son bloc dans la timeline.',
+  'stages.firstCard': 'La 1re étape commence par le titre d’ouverture (Habillage › Titres) au lieu de sa carte.',
   'stages.nightInfo': 'Une nuit dure {pause} (crépuscule, nuit et aube) ; ces durées et la « Vue haute pendant la nuit » se règlent dans Lumière › Jours et nuits.',
   'stages.resetCards': 'Remettre toutes les cartes au réglage commun',
   'stages.ownCards': { one: '{count} carte a son propre réglage.', other: '{count} cartes ont leur propre réglage.' },

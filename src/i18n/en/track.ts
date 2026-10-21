@@ -46,6 +46,7 @@ const messages: Messages['track'] = {
   boardRef: 'Reference track, followed by the camera',
   stageCard: 'Card at the start of each stage',
   'stages.common': 'Setting common to all the stages. To set a single transition or card, click its block on the timeline.',
+  'stages.firstCard': 'The 1st stage starts with the opening title (Overlay › Titles) instead of its card.',
   'stages.nightInfo': 'A night lasts {pause} (dusk, night and dawn); these lengths and “High view during the night” are set in Light › Days and nights.',
   'stages.resetCards': 'Bring every card back to the common setting',
   'stages.ownCards': { one: '{count} card has its own setting.', other: '{count} cards have their own setting.' },

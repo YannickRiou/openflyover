@@ -46,6 +46,7 @@ const messages: Messages['track'] = {
   boardRef: 'Traccia di riferimento, seguita dalla camera',
   stageCard: 'Scheda all’inizio di ogni tappa',
   'stages.common': 'Impostazione comune a tutte le tappe. Per regolare una sola transizione o una sola scheda, fai clic sul suo blocco nella timeline.',
+  'stages.firstCard': 'La 1ª tappa inizia con il titolo di apertura (Overlay › Titoli) invece della sua scheda.',
   'stages.nightInfo': 'Una notte dura {pause} (crepuscolo, notte e alba); queste durate e «Vista alta durante la notte» si regolano in Luce › Giorni e notti.',
   'stages.resetCards': 'Riporta tutte le schede all’impostazione comune',
   'stages.ownCards': { one: '{count} scheda ha una propria impostazione.', other: '{count} schede hanno una propria impostazione.' },
