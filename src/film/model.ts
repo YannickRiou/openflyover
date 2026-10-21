@@ -489,7 +489,7 @@ export interface Film {
   media: FilmMedia[]
   /** music of the soundtrack (they may overlap: mixed) */
   audio: FilmAudio[]
-  /** the music is lowered while a video clip with sound plays (« Baisser la musique sous les vidéos ») */
+  /** the music is lowered while a video clip with sound plays (« Baisser toutes les musiques sous les vidéos ») */
   duckMusic: boolean
   /** points of interest placed by hand (labels only: they change neither the flight nor its time) */
   pois: FilmPoi[]
