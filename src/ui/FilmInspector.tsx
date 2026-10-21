@@ -722,7 +722,7 @@ export function FilmInspector() {
         </>
       )
     } else if (speed) {
-      title = PARAM_SPECS.speed.label
+      title = t('inspector.speed.title')
       const set = (patch: Parameters<typeof updateSpeed>[2]) => change((f) => updateSpeed(f, item, patch, lengthM), false)
       const factor = formatSpeedFactor(speed.factor)
       const hintKey = speed.factor > 1 ? 'inspector.speed.hintFast' : speed.factor < 1 ? 'inspector.speed.hintSlow' : 'inspector.speed.hintNormal'
@@ -780,8 +780,8 @@ export function FilmInspector() {
         </>
       )
     } else if (paramKey) {
-      title = t('film.snap.setting')
       const spec = PARAM_SPECS[paramKey.param]
+      title = t('inspector.paramKey.title', { label: spec.label })
       const set = (patch: Parameters<typeof updateParamKey>[2]) => change((f) => updateParamKey(f, item, patch), false)
       /** another parameter starts from what the film shows there without this key */
       const switchTo = (param: FilmParam) => {

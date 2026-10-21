@@ -56,6 +56,8 @@ const messages: Messages['timeline'] = {
   'speed.fast': 'Beschleunigter Abschnitt {label}, von {from} bis {to}',
   'speed.slow': 'Verlangsamter Abschnitt {label}, von {from} bis {to}',
   'speed.normal': 'Abschnitt mit normalem Tempo {label}, von {from} bis {to}',
+  'speed.auto': 'Automatische Verlangsamung {label} (Überflug › An Highlights verlangsamen)',
+  'speed.autoShort': 'auto',
   'hold.description': 'Stopp (Kamera: {camera}): {label}{auto}',
   'hold.auto': ' (automatisch)',
   'card.description': 'Karte: {label}',

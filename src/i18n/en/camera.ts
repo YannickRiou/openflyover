@@ -88,7 +88,7 @@ const messages: Messages['camera'] = {
   'pacing.landmarks': 'Landmarks (passes, summits)',
   'pacing.keep': 'Keep the flyover duration',
   'pacing.keepHint': 'The rest of the route speeds up to make up for slow-downs and pauses.',
-  'pacing.transitions': 'Transitions',
+  'pacing.transitions': 'Length of the speed changes',
   'pacing.transitionsTip': 'Duration of the speed changes: entering and leaving holds, pauses and speed sections.',
 }
 

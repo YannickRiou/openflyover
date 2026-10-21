@@ -91,7 +91,7 @@ const messages: Messages['camera'] = {
   'pacing.landmarks': 'Referencias (puertos, cimas)',
   'pacing.keep': 'Mantener la duración del sobrevuelo',
   'pacing.keepHint': 'El resto del recorrido se acelera para compensar ralentizaciones y pausas.',
-  'pacing.transitions': 'Transiciones',
+  'pacing.transitions': 'Duración de los cambios de velocidad',
   'pacing.transitionsTip': 'Duración de los cambios de velocidad: entrada y salida de las paradas, las pausas y los tramos de velocidad.',
 }
 
