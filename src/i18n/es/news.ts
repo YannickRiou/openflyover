@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v33.counters.title': 'Más contadores',
+  'v33.counters.text': 'Pendiente, hora del día, ritmo en min/km, potencia y temperatura en Gráficos › Contadores, y el ritmo medio en las tarjetas.',
   'v321.panel.title': 'Un solo panel para la apertura y otro para el cierre',
   'v321.panel.text': '« Editar » en Gráficos, el bloque del título y el del plano de cámara abren ahora el mismo panel: el título o la tarjeta arriba, el plano de cámara debajo.',
   'v32.end.title': 'Una tarjeta de cierre a su manera',

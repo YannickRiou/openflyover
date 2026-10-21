@@ -17,7 +17,7 @@ import type { DayFigures } from '../film/days'
 import { getLanguage, t } from '../i18n'
 import type { MessageKey } from '../i18n'
 import { formatDate } from '../i18n/format'
-import { formatClock, formatDistance, formatDuration, formatNumber } from '../ui/format'
+import { formatClock, formatDistance, formatDuration, formatNumber, formatPace } from '../ui/format'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
@@ -190,6 +190,11 @@ export const COUNTER_LABELS: Record<CounterId, string> = {
   get time() { return t('overlay.draw.counter.time') },
   get speed() { return t('overlay.draw.counter.speed') },
   get heartRate() { return t('overlay.draw.counter.heartRate') },
+  get slope() { return t('overlay.draw.counter.slope') },
+  get clock() { return t('overlay.draw.counter.clock') },
+  get pace() { return t('overlay.draw.counter.pace') },
+  get power() { return t('overlay.draw.counter.power') },
+  get temperature() { return t('overlay.draw.counter.temperature') },
 }
 
 // ---------------------------------------------------------------------------
@@ -392,6 +397,19 @@ export function counterText(id: CounterId, frame: OverlayFrame): CounterText | n
       return frame.speedKmh === undefined ? null : { value: formatNumber(frame.speedKmh, 1), unit: 'km/h' }
     case 'heartRate':
       return frame.heartRate === undefined ? null : { value: formatNumber(frame.heartRate), unit: 'bpm' }
+    case 'slope':
+      return frame.slopePct === undefined ? null : { value: formatNumber(frame.slopePct), unit: '%' }
+    case 'clock':
+      return frame.clockMs === undefined ? null : { value: estimatedMark(frame.track) + formatClock(frame.clockMs), unit: '' }
+    case 'pace': {
+      // stopped: the pace of a walker who does not move would be endless
+      const pace = formatPace(frame.speedKmh)
+      return frame.speedKmh === undefined ? null : { value: pace ?? '–', unit: 'min/km' }
+    }
+    case 'power':
+      return frame.powerW === undefined ? null : { value: formatNumber(frame.powerW), unit: 'W' }
+    case 'temperature':
+      return frame.temperatureC === undefined ? null : { value: formatNumber(frame.temperatureC), unit: '°C' }
   }
 }
 
@@ -411,6 +429,16 @@ function counterTemplate(id: CounterId, track: OverlayTrack): CounterText {
       return { value: formatNumber(Math.max(10, s.maxSpeedKmh ?? 0), 1), unit: 'km/h' }
     case 'heartRate':
       return { value: '000', unit: 'bpm' }
+    case 'slope':
+      return { value: '−00', unit: '%' }
+    case 'clock':
+      return { value: estimatedMark(track) + formatClock(Date.UTC(2000, 0, 1, 23, 59)), unit: '' }
+    case 'pace':
+      return { value: '00:00', unit: 'min/km' }
+    case 'power':
+      return { value: '0000', unit: 'W' }
+    case 'temperature':
+      return { value: '−00', unit: '°C' }
   }
 }
 
@@ -1317,6 +1345,7 @@ const CARD_FIGURE_KEYS: Record<CardFigure, MessageKey> = {
   time: 'overlay.draw.stat.duration',
   maxSpeed: 'overlay.draw.stat.maxSpeed',
   avgSpeed: 'overlay.draw.stat.avgSpeed',
+  avgPace: 'overlay.draw.stat.avgPace',
   date: 'overlay.draw.stat.date',
 }
 
@@ -1336,12 +1365,19 @@ export function cardStats(s: OverlayTrack['stats'], figures: readonly CardFigure
     time: timed === undefined ? null : { value: formatDuration(timed), unit: '' },
     maxSpeed: s.maxSpeedKmh === undefined ? null : { value: formatNumber(s.maxSpeedKmh, 1), unit: 'km/h' },
     avgSpeed: timed === undefined || s.distanceM <= 0 ? null : { value: formatNumber((s.distanceM / timed) * 3.6, 1), unit: 'km/h' },
+    avgPace: timed === undefined || s.distanceM <= 0 ? null : paceText((s.distanceM / timed) * 3.6),
     date: s.startTime === undefined ? null : { value: formatDate(s.startTime, { day: '2-digit', month: '2-digit', year: 'numeric' }), unit: '' },
   }
   return CARD_FIGURES.flatMap((id) => {
     const text = texts[id]
     return figures.includes(id) && text ? [{ label: cardFigureLabel(id), text }] : []
   })
+}
+
+/** A pace as a figure, null when too slow to mean anything. */
+function paceText(kmh: number): CounterText | null {
+  const pace = formatPace(kmh)
+  return pace === null ? null : { value: pace, unit: 'min/km' }
 }
 
 /** Figures of a card: those chosen in its inspector; until then none on the opening card, the usual five on the closing one. */

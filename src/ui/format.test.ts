@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatPace,
   formatPercent,
   formatSecondsShort,
   formatSpeedUp,
@@ -14,6 +15,15 @@ import {
 } from './format'
 
 const NNBSP = ' '
+
+describe('formatPace', () => {
+  it('minutes and seconds per km, nothing when stopped or unknown', () => {
+    expect(formatPace(12)).toBe('5:00')
+    expect(formatPace(10.5)).toBe('5:43')
+    expect(formatPace(0.5)).toBeNull()
+    expect(formatPace(undefined)).toBeNull()
+  })
+})
 
 describe('formatNumber', () => {
   it('uses a decimal comma and groups thousands', () => {

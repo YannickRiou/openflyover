@@ -2190,9 +2190,14 @@ exports) gets it from the terrain source of the settings.
   arrow keys via `nextGridIndex`): overlay elements, source credits (`allowed`: the four corners), timeline texts and photos.
 - **Data** (`data.ts`): `prepareOverlayTrack(track, weather?)` once per track: path, cumulative elevation gain (same smoothing and same
   3 m hysteresis as `computeStats`, so the last value equals `stats.ascentM`), smoothed speed and heart rate,
-  profile, closing statistics, weather summary, mini-map outline (`miniMapOutline`: local equirectangular
+  slope, power and temperature (`metricValues`), profile, closing statistics, weather summary, mini-map outline (`miniMapOutline`: local equirectangular
   projection, x east / y south, longest side = 1, proportions kept, at most 1,500 points). `overlayFrameAt(data, progress)` is
-  a pure function of progress (including `mapPoint`, the marker position on the mini-map).
+  a pure function of progress (including `mapPoint`, the marker position on the mini-map, and `clockMs`, the recorded
+  time of day under the marker).
+- **Counters** (`COUNTER_IDS`): distance, altitude, D+, slope, elapsed time, time of day (`clock`), speed, pace (min/km
+  from the speed, « – » below `PACE_MIN_KMH`), heart rate, power, temperature; each is left out when the track does not
+  record it, and greyed out in the panel. The five added in 3.3 (`slope`, `clock`, `pace`, `power`, `temperature`) are
+  filled in off in older projects by `withOverlayDefaults`.
 - **Settings**: `settings.overlay` (`src/overlay/settings.ts`, disabled by default; the opening title and the closing card keep only their switch, a hint and a « Modifier » button in the « Habillage » panel (« Titres »): their other settings live in the inspector of their timeline block, `CardFields`, shared with the camera shot of the same end of the film: `card-title` and `opening` open one « Ouverture » inspector, `card-end` and `closing` one « Clôture » inspector): style (`editorial`, `broadcast`, `app`) and
   widgets — opening card, closing card, counters, profile, mini-map (optional north arrow), logo, free text,
   weather, ranking — each with `enabled`, `anchor`, `size`. Optional `markerColor` ('#rrggbb', '' or absent = the 3D marker's colour:

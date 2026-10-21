@@ -52,6 +52,11 @@ const COUNTER_LABELS: Record<CounterId, string> = {
   get time() { return t('overlay.counter.time') },
   get speed() { return t('overlay.counter.speed') },
   get heartRate() { return t('overlay.counter.heartRate') },
+  get slope() { return t('overlay.counter.slope') },
+  get clock() { return t('overlay.counter.clock') },
+  get pace() { return t('overlay.counter.pace') },
+  get power() { return t('overlay.counter.power') },
+  get temperature() { return t('overlay.counter.temperature') },
 }
 
 type WidgetKey = Exclude<keyof OverlaySettings, 'enabled' | 'style' | 'overrides'>
@@ -492,6 +497,11 @@ export function OverlayPanel() {
     time: !track || hasTime,
     speed: !track || hasMetric(track, 'speed'),
     heartRate: !track || hasMetric(track, 'heartRate'),
+    slope: !track || hasMetric(track, 'slope'),
+    clock: !track || hasTime,
+    pace: !track || hasMetric(track, 'speed'),
+    power: !track || hasMetric(track, 'power'),
+    temperature: !track || hasMetric(track, 'temperature'),
   }
 
   const chooseLogo = async () => {

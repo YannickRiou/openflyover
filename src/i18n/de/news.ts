@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v33.counters.title': 'Mehr Zähler',
+  'v33.counters.text': 'Steigung, Uhrzeit, Pace in min/km, Leistung und Temperatur unter Overlay › Zähler, und die Durchschnittspace auf den Karten.',
   'v321.panel.title': 'Ein Bereich für die Eröffnung, einer für den Abschluss',
   'v321.panel.text': '« Bearbeiten » im Overlay-Tab, der Titelblock und der Block der Kameraeinstellung öffnen jetzt denselben Bereich: oben der Titel oder die Karte, darunter die Kameraeinstellung.',
   'v32.end.title': 'Eine Abschlusskarte nach Ihrem Geschmack',

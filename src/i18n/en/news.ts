@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v33.counters.title': 'More counters',
+  'v33.counters.text': 'Slope, time of day, pace in min/km, power and temperature in Overlay › Counters, and the average pace on the cards.',
   'v321.panel.title': 'One panel for the opening, one for the closing',
   'v321.panel.text': '« Edit » in the Overlay tab, the title block and the camera shot block now open the same panel: the title or card on top, the camera shot below.',
   'v32.end.title': 'A closing card your way',

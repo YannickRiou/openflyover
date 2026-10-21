@@ -68,6 +68,16 @@ export function formatDuration(seconds: number): string {
   return t('format.hoursMinutes', { hours, minutes: String(minutes).padStart(2, '0') })
 }
 
+/** Slowest pace shown (km/h): below it the outing is stopped and a pace in minutes per km means nothing. */
+export const PACE_MIN_KMH = 1
+
+/** Speed (km/h) -> pace « 5:42 » (minutes and seconds per km), null when stopped or unknown. */
+export function formatPace(kmh: number | undefined): string | null {
+  if (kmh === undefined || !Number.isFinite(kmh) || kmh < PACE_MIN_KMH) return null
+  const total = Math.round(3600 / kmh)
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+}
+
 /** "12,4 km · D+ 980 m · 4 h 12" (duration omitted when unknown). */
 export function formatTrackSummary(stats: TrackStats): string {
   const parts = [formatDistance(stats.distanceM), t('format.ascent', { value: formatAscent(stats.ascentM) })]

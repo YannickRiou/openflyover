@@ -84,6 +84,10 @@ export interface OverlayTrack {
   speed: Float64Array
   /** heart rate averaged over a few seconds at each path point (bpm), NaN when unknown */
   heartRate: Float64Array
+  /** slope (%), power (W) and temperature (°C) at each path point, NaN when unknown */
+  slope: Float64Array
+  power: Float64Array
+  temperature: Float64Array
   profile?: ElevationProfile
   /** plan view of the track (mini-map), undefined without points */
   outline?: MiniMapOutline
@@ -103,6 +107,11 @@ export interface OverlayFrame {
   elapsedS?: number
   speedKmh?: number
   heartRate?: number
+  slopePct?: number
+  powerW?: number
+  temperatureC?: number
+  /** recorded time of day under the marker (ms since epoch) */
+  clockMs?: number
   /** weather under the marker, when the track has a weather series */
   weather?: WeatherWidgetData
   /** position of the marker on the mini-map outline (same units as `track.outline`) */
@@ -210,6 +219,11 @@ export function prepareOverlayTrack(track: Track, weather?: WeatherSeries | null
     track.segments.map((s) => metricValues(s.points, 'heartRate')),
     path.count,
   )
+  const sensor = (metric: 'slope' | 'power' | 'temperature') =>
+    concat(
+      track.segments.map((s) => metricValues(s.points, metric)),
+      path.count,
+    )
   const ascent = hasEle ? cumulativeAscent(track) : new Float64Array(path.count).fill(Number.NaN)
   const weatherSeries = weather ?? undefined
   // figures corrected by hand (« Corriger les chiffres ») replace those of the points on the cards
@@ -221,6 +235,9 @@ export function prepareOverlayTrack(track: Track, weather?: WeatherSeries | null
     ascent,
     speed,
     heartRate,
+    slope: sensor('slope'),
+    power: sensor('power'),
+    temperature: sensor('temperature'),
     profile: path.count > 0 ? elevationProfile(path, OVERLAY_PROFILE_SAMPLES) : undefined,
     outline: miniMapOutline(path),
     stats: {
@@ -287,10 +304,14 @@ export function overlayFrameAt(data: OverlayTrack, progress: number): OverlayFra
   frame.ascentM = lerpKnown(data.ascent, a, b, t)
   frame.speedKmh = lerpKnown(data.speed, a, b, t)
   frame.heartRate = lerpKnown(data.heartRate, a, b, t)
+  frame.slopePct = lerpKnown(data.slope, a, b, t)
+  frame.powerW = lerpKnown(data.power, a, b, t)
+  frame.temperatureC = lerpKnown(data.temperature, a, b, t)
   if (data.stats.startTime !== undefined) {
     const start = recordedTimeAt(path, 0)
     const now = recordedTimeAt(path, distanceM)
     if (start !== undefined && now !== undefined) frame.elapsedS = Math.max(0, (now - start) / 1000)
+    if (now !== undefined) frame.clockMs = now
   }
   if (data.weatherSeries) frame.weather = weatherWidgetData(data.weatherSeries, path, p)
   return frame
