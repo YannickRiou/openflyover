@@ -1979,7 +1979,11 @@ it, know at what time you will pass each point, where the sun will be and what t
   elevation of the track under it; map: at its lon/lat); its look is its mode (filled accent « Toujours », filled « Auto »,
   dashed ring « Jamais »); a click on one in either selects it (`selectedId`, local state of the panel), and `SelectedLandmark`
   shows it in full: kind, name, km, distance from the track, the eye (Auto ⇄ Jamais), the mode button, the ▲ ▼ ranking,
-  « Arrêt » and its duration, « Aller à ce repère », and the arrows to the previous / next landmark along the track. The map
+  « Arrêt » and its duration, « Aller à ce repère », and the arrows to the previous / next landmark along the track. What a
+  click does is the window's tool (`MapTool`, chips « Un clic sur un repère », session state of the panel): 'choose' (the
+  above; M hides the selected one and selects the next, `onHideSelected`), 'hide' (Auto ⇄ Jamais at once, `onToggle`) or
+  'zone' (a rectangle drawn on the map, the map not panning meanwhile, or a stretch dragged on the profile, gives `zoneIds`;
+  `ZoneActions` sets them all to Jamais or Auto, one `setRowsMode` undo step). The map
   is drawn on two canvases: the tiles of OpenTopoMap (`opentopomap`, a topographic map of OpenStreetMap data, already in the
   catalogue and in the Tauri CSP; its attribution is shown under the map) fetched through `createTileFetcher` (so the offline
   packs, the retries and the HTTP cache apply; at most 30 tiles a view, a fetcher of its own kept between openings), then the
