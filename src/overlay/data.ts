@@ -60,7 +60,9 @@ export interface OverlayTrackStats {
   distanceM: number
   /** undefined when the track has no elevation */
   ascentM?: number
+  descentM?: number
   maxEleM?: number
+  minEleM?: number
   /** elapsed recorded time, start to end (seconds) */
   durationS?: number
   /** highest smoothed speed (km/h) */
@@ -224,7 +226,9 @@ export function prepareOverlayTrack(track: Track, weather?: WeatherSeries | null
     stats: {
       distanceM: o.distanceM ?? path.lengthM,
       ascentM: o.ascentM ?? (hasEle ? track.stats.ascentM : undefined),
+      descentM: hasEle ? track.stats.descentM : undefined,
       maxEleM: o.maxEle ?? track.stats.maxEle,
+      minEleM: track.stats.minEle,
       durationS: o.durationS ?? track.stats.durationS,
       maxSpeedKmh: o.maxSpeedKmh ?? maxOf(speed),
       startTime: track.stats.startTime,

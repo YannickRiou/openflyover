@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v32.end.title': 'A closing card your way',
+  'v32.end.text': 'Choose its figures (descent, lowest point, average speed, date…), add a line of your own, the profile, the mini-map of the route and a logo or picture: in the inspector of the closing card block.',
   'v32.fix.title': 'Correct the figures of an outing',
   'v32.fix.text': 'The GPS missed the summit? In a track’s card, « Correct the figures » lets you type the distance, ascent, highest point, duration or top speed: the opening and closing cards and the poster use them.',
   'v31.dates.title': 'Photos from another date',

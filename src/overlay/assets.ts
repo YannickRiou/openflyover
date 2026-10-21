@@ -3,7 +3,7 @@
  * the web fonts of the three styles and the logo image. Also turns an image file chosen by the user into
  * the bounded PNG data URL kept in the settings.
  */
-import type { OverlayAssets } from './draw'
+import type { OverlayAssets, OverlayImage } from './draw'
 import { LOGO_MAX_SIZE_PX } from './settings'
 import { OVERLAY_FONTS } from './themes'
 import { t } from '../i18n'
@@ -39,6 +39,33 @@ export async function loadLogo(dataUrl: string): Promise<OverlayAssets['logo']> 
   if (!dataUrl) return null
   const image = await decode(dataUrl)
   return { image, width: image.naturalWidth, height: image.naturalHeight }
+}
+
+/** Pictures of the cards kept decoded at once: the oldest one goes when a new one comes. */
+const CARD_IMAGES_KEPT = 4
+
+/**
+ * Pictures of the cards (`CardExtras.image`), decoded on first use: the returned lookup gives the picture of a data
+ * URL once decoded (undefined meanwhile, or when unreadable) and calls `onReady` when one becomes available.
+ */
+export function createCardImages(onReady: () => void = () => {}): (dataUrl: string) => OverlayImage | undefined {
+  // null: being decoded, or unreadable
+  const decoded = new Map<string, OverlayImage | null>()
+  return (dataUrl) => {
+    if (decoded.has(dataUrl)) return decoded.get(dataUrl) ?? undefined
+    decoded.set(dataUrl, null)
+    if (decoded.size > CARD_IMAGES_KEPT) decoded.delete(decoded.keys().next().value as string)
+    loadLogo(dataUrl)
+      .then((image) => {
+        if (!image || !decoded.has(dataUrl)) return
+        decoded.set(dataUrl, image)
+        onReady()
+      })
+      .catch(() => {
+        // unreadable picture: the card is drawn without it
+      })
+    return undefined
+  }
 }
 
 /** Image file (PNG, JPEG, WebP, SVG…) -> PNG data URL at most LOGO_MAX_SIZE_PX on its longest side. */

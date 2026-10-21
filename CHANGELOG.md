@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 3.2.0 (unreleased)
 
+- **A closing card of your own**: in the inspector of the « Carte de clôture » block, choose its figures among distance, D+, D−, highest and lowest point, duration, top and average speed and date (the usual five until you change them), add a line of your own under the title (« Sommet du Grand Som »), the elevation profile and the mini-map of the whole track under the figures, and a logo or picture above the title. With a picture, the profile or the mini-map, the card stays a card in the styles that lay it out themselves (« Journal de bord »…). Older projects show the same card as before.
 - **Correct the figures of an outing**: a track's card has a « Corriger les chiffres » section to type the distance, D+, highest point, duration or top speed by hand when the GPS got them wrong (a summit at 2001 m recorded at 1992 m). An empty field keeps the file's figure, shown in grey. The opening and closing cards and the poster show the corrected figures, the card of the track shows a « chiffres corrigés » chip, and « Revenir aux chiffres du GPX » removes them. « À la suite », a stage's correction counts in the totals of the whole film. Saved with the project.
 
 ## 3.1.0 (October 2026)

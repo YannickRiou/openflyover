@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v32.end.title': 'Eine Abschlusskarte nach Ihrem Geschmack',
+  'v32.end.text': 'Wählen Sie ihre Zahlen (Abstieg, tiefster Punkt, Durchschnittstempo, Datum…), fügen Sie eine eigene Zeile, das Profil, die Minikarte der Route und ein Logo oder Bild hinzu: im Inspektor des Blocks der Abschlusskarte.',
   'v32.fix.title': 'Die Zahlen einer Tour korrigieren',
   'v32.fix.text': 'Das GPS hat den Gipfel verpasst? In der Karte einer Spur lassen sich unter « Zahlen korrigieren » Distanz, Aufstieg, höchster Punkt, Dauer oder Höchsttempo eintragen: Eröffnungs- und Abschlusskarte und das Poster übernehmen sie.',
   'v31.dates.title': 'Luftbilder eines anderen Datums',
