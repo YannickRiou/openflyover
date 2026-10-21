@@ -93,6 +93,17 @@ const messages: Messages['track'] = {
   'list.sortTip': 'Le tappe per ora di partenza; quelle senza orario in fondo',
   'list.sorted': 'Tappe ordinate per data di partenza',
   'list.sort': 'Ordina per data',
+  'fix.title': 'Correggi i numeri',
+  'fix.hint': 'Per le schede di apertura e chiusura e il poster. Vuoto = valore del GPX (in grigio).',
+  'fix.distance': 'Distanza (km)',
+  'fix.ascent': 'Dislivello + (m)',
+  'fix.maxEle': 'Altitudine max (m)',
+  'fix.duration': 'Durata (h:mm)',
+  'fix.maxSpeed': 'Velocità max (km/h)',
+  'fix.invalid': 'Un valore non si legge: numero come 12,4 o durata come 5:30.',
+  'fix.apply': 'Applica',
+  'fix.clear': 'Torna ai valori del GPX',
+  'list.corrected': 'numeri corretti',
 }
 
 export default messages

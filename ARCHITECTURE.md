@@ -2019,6 +2019,19 @@ it, know at what time you will pass each point, where the sun will be and what t
   receives the type through `withLandmarkDefaults`.
 
 
+## Figures corrected by hand (« Corriger les chiffres »)
+
+`Track.statsOverride` (`src/core/types.ts`): distance, D+, highest point, duration and top speed typed in the track's
+card (`TrackCorrections` in `src/ui/TrackList.tsx`, store action `setTrackStatsOverride`), each absent when not
+corrected. `Track.stats` is left as computed from the points: the path, camera, profile and counters do not move.
+
+- **Where it shows**: the opening and closing cards (`prepareOverlayTrack` in `src/overlay/data.ts`), the poster and
+  the track's summary line (`correctedStats` in `src/import/stats.ts`). « À la suite », `sequenceStats` moves each
+  total of the whole film (distance, D+, time) by the stage's correction and takes the highest point and top speed over
+  the stages as corrected.
+- **Project**: saved with the track, read back through `statsOverrideOf` (finite numbers, ≥ 0 but the highest point;
+  an empty correction is dropped). Old projects have none.
+
 ## Elevation from the terrain (« Calculer l'altitude »)
 
 `src/terrain/elevation.ts`, pure apart from the loader. A track whose points lack elevation (routes drawn on a map, some

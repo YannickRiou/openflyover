@@ -63,6 +63,14 @@ describe('cumulativeAscent', () => {
   })
 })
 
+describe('prepareOverlayTrack, figures corrected by hand', () => {
+  it('the cards show the corrected figures, the others those of the points', () => {
+    const plain = prepareOverlayTrack(sample).stats
+    const fixed = prepareOverlayTrack({ ...sample, statsOverride: { maxEle: 2001, durationS: 3600 } }).stats
+    expect(fixed).toEqual({ ...plain, maxEleM: 2001, durationS: 3600 })
+  })
+})
+
 describe('overlayFrameAt', () => {
   const data = prepareOverlayTrack(sample)
 
@@ -259,6 +267,20 @@ describe('« À la suite »', () => {
     // one track: as before
     const alone = prepareOverlayFilm(a, null)
     expect(overlayFilmFrameAt(alone, 0.5)).toEqual(overlayFrameAt(alone.whole, 0.5))
+  })
+
+  it('the corrections of a stage move the totals of the whole, the highest point taken over the stages', () => {
+    const fixedA = { ...a, statsOverride: { maxEle: 2001, distanceM: 1000, ascentM: 500, maxSpeedKmh: 30 } }
+    const fixed = buildSequence([fixedA, b])
+    const whole = prepareOverlayFilm(fixed.track, fixed).whole.stats
+    const before = film.whole.stats
+    expect(whole.maxEleM).toBe(2001)
+    expect(whole.distanceM).toBeCloseTo(before.distanceM + 1000 - sequence.stages[0].endM, 6)
+    expect(whole.ascentM).toBeCloseTo((before.ascentM ?? 0) + 500 - a.stats.ascentM, 6)
+    expect(whole.durationS).toBe(before.durationS)
+    expect(whole.maxSpeedKmh).toBe(30)
+    // the stage shows its own correction
+    expect(prepareOverlayFilm(fixed.track, fixed).stages?.[0].stats.maxEleM).toBe(2001)
   })
 
   it('each stage its own weather series, the first one that of the first track', () => {

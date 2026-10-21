@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 3.2.0 (unreleased)
+
+- **Correct the figures of an outing**: a track's card has a « Corriger les chiffres » section to type the distance, D+, highest point, duration or top speed by hand when the GPS got them wrong (a summit at 2001 m recorded at 1992 m). An empty field keeps the file's figure, shown in grey. The opening and closing cards and the poster show the corrected figures, the card of the track shows a « chiffres corrigés » chip, and « Revenir aux chiffres du GPX » removes them. « À la suite », a stage's correction counts in the totals of the whole film. Saved with the project.
+
 ## 3.1.0 (October 2026)
 
 - **A clearer home screen**: it now says in one sentence what OpenFlyover does (free, no account, everything stays on your device), shows what is new in this version (a click opens « Nouveautés »), and links to the user guide (« Premiers pas », now published with the website) and, on the website, to the desktop app for Windows, macOS and Linux.

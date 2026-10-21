@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v32.fix.title': 'Correct the figures of an outing',
+  'v32.fix.text': 'The GPS missed the summit? In a track’s card, « Correct the figures » lets you type the distance, ascent, highest point, duration or top speed: the opening and closing cards and the poster use them.',
   'v31.dates.title': 'Photos from another date',
   'v31.dates.text': 'With IGN BD ORTHO or Esri, « Photo date » (Map tab) offers the older photos of the place: a winter date for snow, a summer one to avoid it.',
   'v31.free.title': 'A free camera',

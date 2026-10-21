@@ -8,7 +8,7 @@
  * the right type can still be invalid (enum, catalogue id, range).
  */
 import { isRecord } from '../core/guards'
-import type { Flight, Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
+import type { Flight, StatsOverride, Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
 import { sanitizeMediaTable, usedMedia } from '../film/media'
 import type { MediaAsset, MediaTable } from '../film/media'
 import { withStageSettingsMigrated } from '../film/junctions'
@@ -18,7 +18,7 @@ import { isValidPacing, withPacingDefaults } from '../flyover/pacing'
 import { isValidRace } from '../flyover/race'
 import { isSunDate } from '../flyover/sun'
 import { TRACK_COLORS } from '../import'
-import { buildTrack, isUtcOffsetMin } from '../import/stats'
+import { buildTrack, isUtcOffsetMin, statsOverrideOf } from '../import/stats'
 import { isValidVideoSettings, withVideoDefaults } from '../export/schedule'
 import { LANDMARK_DENSITIES, LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } from '../osm/landmarks'
 import { OVERLAY_ANCHORS, isValidOverlay, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
@@ -79,6 +79,8 @@ export interface ProjectTrack {
   elevationEstimated?: 'all' | 'gaps'
   /** `Track.flights`, omitted when the track stays on the ground */
   flights?: Flight[]
+  /** `Track.statsOverride`, omitted when no figure is corrected */
+  statsOverride?: StatsOverride
 }
 
 export interface ProjectDocument {
@@ -264,6 +266,7 @@ export function toProjectDocument(state: ProjectSource, name: string, media: Med
       if (track.timesEstimated) out.timesEstimated = true
       if (track.elevationEstimated) out.elevationEstimated = track.elevationEstimated
       if (track.flights?.length) out.flights = track.flights
+      if (track.statsOverride) out.statsOverride = track.statsOverride
       return out
     }),
   }
@@ -434,6 +437,8 @@ function decodeTrack(raw: unknown, index: number): Track {
   if (Array.isArray(raw.flights) && raw.flights.length > 0 && raw.flights.every(isFlight) && track.stats.maxEle !== undefined) {
     track.flights = raw.flights.map(({ startM, endM, offsetM }) => ({ startM, endM, offsetM }))
   }
+  const statsOverride = statsOverrideOf(raw.statsOverride)
+  if (statsOverride) track.statsOverride = statsOverride
   track.id = raw.id
   track.color =
     typeof raw.color === 'string' && /^#[0-9a-f]{6}$/i.test(raw.color) ? raw.color : TRACK_COLORS[index % TRACK_COLORS.length]

@@ -5,7 +5,7 @@
  * consumers can subscribe to them with plain selectors and no memoisation.
  */
 import { create } from 'zustand'
-import type { DemCleanOptions, LonLat, LonLatBounds, TerrainStats, Track } from '../core/types'
+import type { DemCleanOptions, LonLat, LonLatBounds, StatsOverride, TerrainStats, Track } from '../core/types'
 import { DEFAULT_VIDEO_SETTINGS } from '../export/schedule'
 import type { VideoSettings } from '../export/schedule'
 import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S } from '../flyover/cameraSettings'
@@ -140,6 +140,8 @@ export interface AppState {
   clearTracks(): void
   /** the colour of a track (`#rrggbb`), nothing else changes */
   setTrackColor(id: string, color: string): void
+  /** the figures corrected by hand of a track (`Track.statsOverride`), undefined back to those of the points */
+  setTrackStatsOverride(id: string, override: StatsOverride | undefined): void
   /** the track flown over (the first one): `id` moved first, playback back to the start */
   flyTrack(id: string): void
   /** `id` moved to `index` in the list (« À la suite »: the order of the stages), playback back to the start */
@@ -336,6 +338,18 @@ export const useAppStore = create<AppState>()((set, get) => ({
     const tracks = get().tracks
     if (!tracks.some((t) => t.id === id && t.color !== color)) return
     set({ tracks: tracks.map((t) => (t.id === id ? { ...t, color } : t)) })
+  },
+
+  setTrackStatsOverride(id, override) {
+    const tracks = get().tracks
+    if (!tracks.some((t) => t.id === id)) return
+    set({
+      tracks: tracks.map((t) => {
+        if (t.id !== id) return t
+        const { statsOverride: _override, ...rest } = t
+        return override ? { ...rest, statsOverride: override } : rest
+      }),
+    })
   },
 
   flyTrack(id) {

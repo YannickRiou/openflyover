@@ -6,8 +6,10 @@ import {
   computeBounds,
   computeElevationGain,
   computeStats,
+  correctedStats,
   densify,
   smoothElevations,
+  statsOverrideOf,
   stripExtension,
 } from './stats'
 
@@ -136,5 +138,22 @@ describe('buildTrack / stripExtension', () => {
     expect(stripExtension('C:\\a\\b\\sortie du matin.fit')).toBe('sortie du matin')
     expect(stripExtension('/tmp/x/sans-extension')).toBe('sans-extension')
     expect(stripExtension('.gpx')).toBe('.gpx')
+  })
+})
+
+describe('figures corrected by hand', () => {
+  const track = buildTrack({ name: 't', source: 'gpx', segments: [{ points: [{ lon: 6, lat: 45, ele: 1980, time: 0 }, { lon: 6.01, lat: 45, ele: 1992, time: 3_600_000 }] }] })
+
+  it('keeps the plausible figures only, undefined when none is left', () => {
+    expect(statsOverrideOf({ maxEle: 2001, ascentM: -5, distanceM: Number.NaN, durationS: '1', other: 3 })).toEqual({ maxEle: 2001 })
+    expect(statsOverrideOf({ maxEle: -12 })).toEqual({ maxEle: -12 })
+    expect(statsOverrideOf({ ascentM: -1 })).toBeUndefined()
+    expect(statsOverrideOf(null)).toBeUndefined()
+  })
+
+  it('replaces the corrected figures, the others stay those of the points', () => {
+    expect(correctedStats(track)).toBe(track.stats)
+    const stats = correctedStats({ ...track, statsOverride: { maxEle: 2001, durationS: 5400 } })
+    expect(stats).toEqual({ ...track.stats, maxEle: 2001, durationS: 5400 })
   })
 })

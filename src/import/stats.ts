@@ -2,7 +2,7 @@
  * Track statistics, bounds, densification and track assembly.
  * Pure functions (no DOM, no React) so everything is unit-testable under jsdom.
  */
-import type { LonLatBounds, Track, TrackPoint, TrackSegment, TrackStats } from '../core/types'
+import type { LonLatBounds, StatsOverride, Track, TrackPoint, TrackSegment, TrackStats } from '../core/types'
 import { haversineM } from '../geo/lonLat'
 
 /** Width (in points) of the centred moving average applied to elevations before counting D+/D-. */
@@ -91,6 +91,32 @@ export function computeStats(segments: readonly TrackSegment[]): TrackStats {
   const durationS = startTime !== undefined && endTime !== undefined ? (endTime - startTime) / 1000 : undefined
 
   return { distanceM, ascentM, descentM, durationS, minEle, maxEle, startTime, endTime, pointCount }
+}
+
+/** The figures of a correction (`Track.statsOverride`), each one kept only when it is a plausible number. */
+export const STATS_OVERRIDE_KEYS = ['distanceM', 'ascentM', 'maxEle', 'durationS', 'maxSpeedKmh'] as const
+
+/** `raw` as a correction: the plausible figures kept (all ≥ 0 but the highest point), undefined when none is left. */
+export function statsOverrideOf(raw: unknown): StatsOverride | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const out: StatsOverride = {}
+  for (const key of STATS_OVERRIDE_KEYS) {
+    const value = (raw as Record<string, unknown>)[key]
+    if (typeof value === 'number' && Number.isFinite(value) && (key === 'maxEle' || value >= 0)) out[key] = value
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
+/** The statistics of a track with the figures corrected by hand in place of those of the points. */
+export function correctedStats(track: Track): TrackStats {
+  const o = track.statsOverride
+  if (!o) return track.stats
+  const out = { ...track.stats }
+  if (o.distanceM !== undefined) out.distanceM = o.distanceM
+  if (o.ascentM !== undefined) out.ascentM = o.ascentM
+  if (o.maxEle !== undefined) out.maxEle = o.maxEle
+  if (o.durationS !== undefined) out.durationS = o.durationS
+  return out
 }
 
 // ---------------------------------------------------------------------------

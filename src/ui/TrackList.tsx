@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
-import type { Track } from '../core/types'
+import type { StatsOverride, Track } from '../core/types'
 import { isExportBusy, useExportStore } from '../export/store'
 import { t, useT } from '../i18n'
 import {
@@ -13,10 +13,13 @@ import {
   syncNeedsTime,
 } from '../flyover/race'
 import type { Race, RaceCamera, RaceSettings, RaceSync, Racer } from '../flyover/race'
+import { buildTrackPath } from '../flyover/path'
 import { orderedTracks, playsInSequence } from '../flyover/sequence'
+import { metricValues } from '../flyover/trackColor'
 import { DEFAULT_JUNCTION, junctionDefaultOf, withDefaultCard, withDefaultJunction } from '../film/junctions'
 import { dropIndexAt, idsByDate } from '../film/reorder'
 import { edgeScrollSpeed } from '../film/timeline'
+import { STATS_OVERRIDE_KEYS, correctedStats, statsOverrideOf } from '../import/stats'
 import { isTextEntry } from '../project/history'
 import { editFilm, orderTracksByDate, reorderTracks } from '../scene/usePacing'
 import {
@@ -40,7 +43,7 @@ import { Icon } from './icons'
 import { JunctionTransitionFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
-import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TimeField, Tip } from './primitives'
+import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TextField, TimeField, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
 const PROGRESS_STEPS = 1000
@@ -404,6 +407,134 @@ function OutingPlanForm({ track }: { track: Track }) {
   )
 }
 
+/** The figures « Corriger les chiffres » offers, in the order of the closing card. */
+const CORRECTED = STATS_OVERRIDE_KEYS
+type Corrected = (typeof CORRECTED)[number]
+
+/** « 12,4 » -> 12.4, NaN when it is not a number. */
+function decimalOf(text: string): number {
+  return /^\s*-?\d+([.,]\d*)?\s*$/.test(text) ? Number(text.trim().replace(',', '.')) : Number.NaN
+}
+
+/** « 5:30 », « 5 h 30 » or « 5 » (hours) -> seconds, NaN when it is not a duration. */
+function durationOf(text: string): number {
+  const m = /^\s*(\d+)\s*(?:[:h]\s*(\d{1,2})?)?\s*(?:min)?\s*$/i.exec(text)
+  return m && (m[2] === undefined || Number(m[2]) < 60) ? (Number(m[1]) * 60 + Number(m[2] ?? 0)) * 60 : Number.NaN
+}
+
+/** Text of a figure in its field: km, m, h:mm, km/h. */
+function entryOf(key: Corrected, value: number | undefined): string {
+  if (value === undefined || !Number.isFinite(value)) return ''
+  if (key === 'distanceM') return formatNumber(value / 1000, 1)
+  if (key === 'durationS') {
+    const minutes = Math.round(value / 60)
+    return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`
+  }
+  return String(Math.round(value))
+}
+
+/** The text of every field for these corrections (empty: not corrected). */
+function entriesOf(override: StatsOverride | undefined): Record<Corrected, string> {
+  return Object.fromEntries(CORRECTED.map((k) => [k, entryOf(k, override?.[k])])) as Record<Corrected, string>
+}
+
+/** Value of a figure from its field's text; undefined when empty (the points' value), NaN when it does not read. */
+function valueOf(key: Corrected, text: string): number | undefined {
+  if (text.trim() === '') return undefined
+  if (key === 'durationS') return durationOf(text)
+  const n = decimalOf(text)
+  if (key !== 'maxEle' && n < 0) return Number.NaN
+  return key === 'distanceM' ? n * 1000 : n
+}
+
+/**
+ * « Corriger les chiffres »: the distance, D+, highest point, time and top speed typed by hand over those of the points
+ * (a summit the GPS missed), shown on the opening and closing cards and the poster. An empty field keeps the GPX value.
+ */
+function TrackCorrections({ track, busy }: { track: Track; busy: boolean }) {
+  const t = useT()
+  const id = useId()
+  const recorded = useMemo(() => {
+    const path = buildTrackPath(track)
+    const speeds = track.segments.flatMap((s) => Array.from(metricValues(s.points, 'speed')))
+    const top = speeds.reduce((max, v) => (Number.isFinite(v) && v > max ? v : max), Number.NEGATIVE_INFINITY)
+    return {
+      distanceM: path.lengthM,
+      ascentM: track.stats.maxEle === undefined ? undefined : track.stats.ascentM,
+      maxEle: track.stats.maxEle,
+      durationS: track.stats.durationS,
+      maxSpeedKmh: Number.isFinite(top) ? top : undefined,
+    } satisfies Record<Corrected, number | undefined>
+  }, [track])
+  const [entries, setEntries] = useState(() => entriesOf(track.statsOverride))
+  // an undo, a project opened: the fields follow the corrections stored
+  const [stored, setStored] = useState(track.statsOverride)
+  if (stored !== track.statsOverride) {
+    setStored(track.statsOverride)
+    setEntries(entriesOf(track.statsOverride))
+  }
+  const values = CORRECTED.map((k) => valueOf(k, entries[k]))
+  const invalid = values.some((v) => v !== undefined && !Number.isFinite(v))
+  const labels: Record<Corrected, string> = {
+    distanceM: t('track.fix.distance'),
+    ascentM: t('track.fix.ascent'),
+    maxEle: t('track.fix.maxEle'),
+    durationS: t('track.fix.duration'),
+    maxSpeedKmh: t('track.fix.maxSpeed'),
+  }
+
+  function apply(e: FormEvent) {
+    e.preventDefault()
+    if (invalid) return
+    const override = statsOverrideOf(Object.fromEntries(CORRECTED.map((k, i) => [k, values[i]])))
+    useAppStore.getState().setTrackStatsOverride(track.id, override)
+  }
+
+  function clear() {
+    useAppStore.getState().setTrackStatsOverride(track.id, undefined)
+  }
+
+  return (
+    <details className="col-span-2 col-start-2 mt-2 border-t border-edge">
+      <summary className="fold-head">
+        {t('track.fix.title')}
+        <Icon name="chevron-down" size={16} />
+      </summary>
+      <form className="flex flex-col gap-2 pb-1" onSubmit={apply}>
+        <p id={`${id}-hint`} className="type-hint">
+          {t('track.fix.hint')}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {CORRECTED.map((k) => (
+            <TextField
+              key={k}
+              label={labels[k]}
+              value={entries[k]}
+              placeholder={entryOf(k, recorded[k]) || '–'}
+              disabled={busy}
+              aria-describedby={`${id}-hint`}
+              onChange={(text) => setEntries({ ...entries, [k]: text })}
+            />
+          ))}
+        </div>
+        {invalid && (
+          <p className="type-hint" role="status">
+            {t('track.fix.invalid')}
+          </p>
+        )}
+        <Button variant="primary" block type="submit" disabled={busy || invalid}>
+          {t('track.fix.apply')}
+        </Button>
+        {track.statsOverride && (
+          <Button block disabled={busy} onClick={clear}>
+            {t('track.fix.clear')}
+          </Button>
+        )}
+      </form>
+    </details>
+  )
+}
+
 /**
  * Elevation read from the terrain (src/terrain/elevation.ts): « Calculer l'altitude » on a track with points without
  * one (the import computes it by itself when it costs few tiles), « Effacer l'altitude » on a track whose whole
@@ -747,7 +878,8 @@ export function TrackList() {
                 </Button>
               </Tip>
               <span className="col-start-2 type-hint tabular-nums">
-                {formatTrackSummary(track.stats)}
+                {formatTrackSummary(correctedStats(track))}
+                {track.statsOverride && <span className="ml-2 font-semibold text-(--text-info)" data-testid="track-badge">{t('track.list.corrected')}</span>}
                 {track.timesEstimated && <span className="ml-2 font-semibold text-(--text-info)" data-testid="track-badge">{t('track.list.timesEstimated')}</span>}
                 {track.elevationEstimated && (
                   <span className="ml-2 font-semibold text-(--text-info)" data-testid="track-badge" title={t('track.list.elevationTip')}>
@@ -756,6 +888,7 @@ export function TrackList() {
                 )}
               </span>
               <TrackElevation track={track} busy={busy} />
+              <TrackCorrections track={track} busy={busy} />
               {(track.timesEstimated || track.stats.startTime === undefined) && <OutingPlanForm track={track} />}
             </li>
           ))}

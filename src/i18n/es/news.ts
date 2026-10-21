@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v32.fix.title': 'Corregir las cifras de una salida',
+  'v32.fix.text': '¿El GPS no marcó la cima? En la tarjeta de una traza, « Corregir las cifras » permite escribir la distancia, el desnivel, la altitud máxima, la duración o la velocidad máxima: las tarjetas de apertura y cierre y el póster las usan.',
   'v31.dates.title': 'Fotos de otra fecha',
   'v31.dates.text': 'Con IGN BD ORTHO o Esri, « Fecha de las fotos » (pestaña Mapa) propone las fotos más antiguas del lugar: una fecha de invierno para tener nieve, de verano para evitarla.',
   'v31.free.title': 'Una cámara libre',

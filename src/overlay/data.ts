@@ -210,6 +210,8 @@ export function prepareOverlayTrack(track: Track, weather?: WeatherSeries | null
   )
   const ascent = hasEle ? cumulativeAscent(track) : new Float64Array(path.count).fill(Number.NaN)
   const weatherSeries = weather ?? undefined
+  // figures corrected by hand (« Corriger les chiffres ») replace those of the points on the cards
+  const o = track.statsOverride ?? {}
   return {
     name: track.name,
     path,
@@ -220,11 +222,11 @@ export function prepareOverlayTrack(track: Track, weather?: WeatherSeries | null
     profile: path.count > 0 ? elevationProfile(path, OVERLAY_PROFILE_SAMPLES) : undefined,
     outline: miniMapOutline(path),
     stats: {
-      distanceM: path.lengthM,
-      ascentM: hasEle ? track.stats.ascentM : undefined,
-      maxEleM: track.stats.maxEle,
-      durationS: track.stats.durationS,
-      maxSpeedKmh: maxOf(speed),
+      distanceM: o.distanceM ?? path.lengthM,
+      ascentM: o.ascentM ?? (hasEle ? track.stats.ascentM : undefined),
+      maxEleM: o.maxEle ?? track.stats.maxEle,
+      durationS: o.durationS ?? track.stats.durationS,
+      maxSpeedKmh: o.maxSpeedKmh ?? maxOf(speed),
       startTime: track.stats.startTime,
       timesEstimated: track.timesEstimated,
       weather: weatherSeries && path.count > 0 ? summarizeOuting(weatherSeries, path) : undefined,
@@ -313,7 +315,32 @@ export function prepareOverlayFilm(
   const stages = sequence.stages.map((s) =>
     prepareOverlayTrack(s.track, (weatherTrackId === undefined ? s.index === 0 : s.track.id === weatherTrackId) ? weather : stageWeather?.[s.track.id]?.series),
   )
-  return { whole: prepareOverlayTrack(track), sequence, stages }
+  const whole = prepareOverlayTrack(track)
+  return { whole: { ...whole, stats: sequenceStats(whole.stats, sequence, stages) }, sequence, stages }
+}
+
+/**
+ * Figures of the whole sequence with the corrections of its stages: each corrected sum (distance, D+, time) moved by
+ * the stage's correction, the highest point and speed taken over the stages as corrected.
+ */
+function sequenceStats(stats: OverlayTrackStats, sequence: Sequence, stages: readonly OverlayTrack[]): OverlayTrackStats {
+  const corrected = sequence.stages.filter((s) => s.track.statsOverride)
+  if (corrected.length === 0) return stats
+  const out = { ...stats }
+  for (const { track, index } of corrected) {
+    const o = track.statsOverride ?? {}
+    const hasEle = track.stats.maxEle !== undefined
+    if (o.distanceM !== undefined) out.distanceM += o.distanceM - stages[index].path.lengthM
+    if (o.ascentM !== undefined) out.ascentM = (out.ascentM ?? 0) + o.ascentM - (hasEle ? track.stats.ascentM : 0)
+    if (o.durationS !== undefined) out.durationS = (out.durationS ?? 0) + o.durationS - (track.stats.durationS ?? 0)
+  }
+  const highest = (of: (s: OverlayTrackStats) => number | undefined) => {
+    const values = stages.flatMap((s) => (of(s.stats) === undefined ? [] : [of(s.stats) as number]))
+    return values.length > 0 ? Math.max(...values) : undefined
+  }
+  if (corrected.some((s) => s.track.statsOverride?.maxEle !== undefined)) out.maxEleM = highest((s) => s.maxEleM)
+  if (corrected.some((s) => s.track.statsOverride?.maxSpeedKmh !== undefined)) out.maxSpeedKmh = highest((s) => s.maxSpeedKmh)
+  return out
 }
 
 /**
