@@ -14,7 +14,7 @@ import { installWebApp } from './platform/webApp'
 import { installAppearance, installLanguage } from './ui/preferences'
 import { openFiles } from './ui/projectActions'
 
-// theme, accent and density of the stored preferences, before anything is drawn
+// theme and accent of the stored preferences, before anything is drawn
 installAppearance()
 // language of the stored preferences (the browser's on a first run)
 installLanguage()

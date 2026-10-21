@@ -301,7 +301,6 @@ describe('parsePreferences', () => {
       ...DEFAULT_PREFERENCES.appearance,
       theme: 'dark',
       accent: '#00766f',
-      density: 'compact',
     })
   })
 })

@@ -3,8 +3,8 @@ import type { SnapGroup } from '../film/timeline'
 import { useId } from 'react'
 import { t, useT } from '../i18n'
 import { getPlatform } from '../platform'
-import { ACCENT_PRESETS, CHROME_PRESETS, DEFAULT_APPEARANCE, DENSITIES, THEMES, clampAccent, clampChrome } from './appearance'
-import type { Density, Theme } from './appearance'
+import { ACCENT_PRESETS, CHROME_PRESETS, DEFAULT_APPEARANCE, THEMES, clampAccent, clampChrome } from './appearance'
+import type { Theme } from './appearance'
 import { DiagnosticRow } from './DiagnosticDialog'
 import { PanelSection } from './PanelSection'
 import { setPreferences, usePreferences } from './preferences'
@@ -40,11 +40,6 @@ const THEME_LABELS: Record<Theme, string> = {
   get dark() { return t('settings.preferences.theme.dark') },
   get system() { return t('settings.preferences.theme.system') },
 }
-const DENSITY_LABELS: Record<Density, string> = {
-  get comfortable() { return t('settings.preferences.density.comfortable') },
-  get compact() { return t('settings.preferences.density.compact') },
-}
-
 /** A label (or a legend) over its control. */
 const GROUP = 'm-0 flex min-w-0 flex-col gap-1 border-0 p-0'
 
@@ -159,7 +154,6 @@ export function PreferencesPanel() {
           hint={t('settings.preferences.appearance.chromeHint')}
           onChange={(chrome) => setAppearance({ chrome })}
         />
-        <Choice legend={t('settings.preferences.appearance.density')} labels={DENSITY_LABELS} keys={DENSITIES} value={appearance.density} onChange={(density) => setAppearance({ density })} />
         <Button disabled={isDefault} onClick={() => setPreferences({ appearance: DEFAULT_APPEARANCE })}>
           {t('settings.preferences.appearance.reset')}
         </Button>

@@ -415,13 +415,13 @@ JSX is a `const` above it with a comment) and reads the state attributes of the 
 `data-focus-visible`…), never extra state classes; tests and the end-to-end scenarios find controls by role, label or `data-testid`,
 never by a styling class. What stays hand-written (about 2,100 lines with `utilities.css`, in `@layer base` / `@layer components` so that a utility wins):
 `src/index.css` (reset and page base), `theme.css` (focus ring, form controls, the dark theme, and at its end what the breakpoints
-change in the `:root` variables and in the form controls of a touch screen), `appearance.css` (density), `fonts.css` and the skins
+change in the `:root` variables and in the form controls of a touch screen), `appearance.css` (the page background), `fonts.css` and the skins
 `primitives/<name>.css`. `shell.css`, `app.css` and `exportPanel.css` are gone: the shell layout, the panels, the dock, the stage, the
 drop veil and the point-of-interest form are utilities in the components that use them. Hooks the code looks for are data attributes
 (`data-stage` on the 3D view for the thumbnail, `data-sheet-handle`, `data-collapsed` on the shell body, `data-rail`).
 **Appearance** (« Réglages » › « Apparence », `PreferencesPanel`): theme Clair / Sombre / Système, accent colour, bar and rail
-colour, density, reset. Device preferences in `Preferences.appearance` (`openflyover.preferences.v1`, `parseAppearance` in
-`appearance.ts`). `applyAppearance(root, appearance, systemDark)` sets `data-theme` and `data-density` on `<html>` and the
+colour, reset. Device preferences in `Preferences.appearance` (`openflyover.preferences.v1`, `parseAppearance` in
+`appearance.ts`). `applyAppearance(root, appearance, systemDark)` sets `data-theme` on `<html>` and the
 properties `--color-accent*`, `--surface-chrome*` (nothing for the default colours). `installAppearance()` (`preferences.ts`,
 called first in `main.tsx`) applies it at start-up and on changes of the preferences or of `prefers-color-scheme`; `index.html`
 has a tiny inline script for theme and density before the first paint. Free colours are clamped: the accent so that white text

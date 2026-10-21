@@ -94,12 +94,11 @@ describe('parseAppearance', () => {
     expect(parseAppearance(undefined)).toEqual(DEFAULT_APPEARANCE)
     expect(parseAppearance('dark')).toEqual(DEFAULT_APPEARANCE)
     expect(parseAppearance([1])).toEqual(DEFAULT_APPEARANCE)
-    expect(parseAppearance({ theme: 'sepia', accent: 'rouge', chrome: '#123', density: 3 })).toEqual(DEFAULT_APPEARANCE)
+    expect(parseAppearance({ theme: 'sepia', accent: 'rouge', chrome: '#123' })).toEqual(DEFAULT_APPEARANCE)
     expect(parseAppearance({ theme: 'system', accent: '#2F6A8A', chrome: '#113b54', density: 'compact' })).toEqual({
       theme: 'system',
       accent: '#2f6a8a',
       chrome: '#113b54',
-      density: 'compact',
     })
     expect(parseAppearance({ theme: 'dark' })).toEqual({ ...DEFAULT_APPEARANCE, theme: 'dark' })
   })
@@ -109,7 +108,6 @@ describe('applyAppearance', () => {
   const root = document.documentElement
   beforeEach(() => {
     root.removeAttribute('data-theme')
-    root.removeAttribute('data-density')
     root.removeAttribute('style')
     document.head.innerHTML = '<meta name="theme-color" content="#1b2832">'
   })
@@ -129,14 +127,12 @@ describe('applyAppearance', () => {
   it('sets nothing but the attributes for the default colours', () => {
     applyAppearance(root, DEFAULT_APPEARANCE, false)
     expect(root.dataset.theme).toBe('light')
-    expect(root.dataset.density).toBe('comfortable')
     expect(root.getAttribute('style') ?? '').toBe('')
     expect(themeColor()).toBe('#1b2832')
   })
 
   it('sets the accent scale and the bar colours of a custom choice, then removes them on the default', () => {
-    applyAppearance(root, { ...DEFAULT_APPEARANCE, accent: '#4a55b8', chrome: '#113b54', density: 'compact' }, false)
-    expect(root.dataset.density).toBe('compact')
+    applyAppearance(root, { ...DEFAULT_APPEARANCE, accent: '#4a55b8', chrome: '#113b54' }, false)
     expect(root.style.getPropertyValue('--color-accent')).toBe('#4a55b8')
     for (const name of ['--color-accent-strong', '--color-accent-tint', '--color-accent-light', '--surface-chrome', '--surface-chrome-raised']) {
       expect(root.style.getPropertyValue(name)).toMatch(/^#[0-9a-f]{6}$/)
