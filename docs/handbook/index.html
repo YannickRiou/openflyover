@@ -1707,7 +1707,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ...
   return (
     &lt;&gt;
-      <span class="why">// keys: the settings this section owns, for « modifié » and « Par défaut »</span>
+      <span class="why">// keys: the settings this section owns, for the ↺ « modifié » button</span>
       &lt;PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'exposureEv']}&gt;
         ...
         <span class="why">// shown only while « Atmosphère » is on</span>
@@ -1717,7 +1717,7 @@ export const DEFAULT_SETTINGS: Settings = {
         )}</code></pre></div>
       <p>In words: <code>useAppStore(...)</code> is a <a href="#gl-hook">hook</a> that reads one value from the <a href="#gl-store">store</a> through a <a href="#gl-selector">selector</a>; <code>&lt;Checkbox … /&gt;</code> is a <a href="#gl-component">component</a> from <code>src/ui/primitives/</code>, and <code>checked</code>, <code>onChange</code> are its <a href="#gl-props">props</a>; <code>setSetting('cloudShadows', on)</code> is the <a href="#gl-action">action</a> that stores the new value (and makes one undo step). For a number, use <code>RangeField</code> inside a <code>SettingRow</code> instead, as the exposure right below it does (<a href="#react">excerpt in the mental model</a>).</p>
       <p><strong>Run</strong> <code>npm run typecheck</code>, then look at the app.</p>
-      <p><strong>You should see</strong>, in « Lumière » › « Atmosphère », the box « Ombres des nuages », ticked. Untick it: the section head shows the <a href="#gl-modified">« modifié »</a> badge and a « Par défaut » button; Ctrl+Z ticks it again and the badge goes away. Switch the language to English (top bar): the label reads « Cloud shadows ».</p>
+      <p><strong>You should see</strong>, in « Lumière » › « Atmosphère », the box « Ombres des nuages », ticked. Untick it: the section head shows the <a href="#gl-modified">« modifié »</a> ↺ button; Ctrl+Z ticks it again and the button goes away. Switch the language to English (top bar): the label reads « Cloud shadows ».</p>
     </div></li>
 
     <li><div class="stack">
@@ -1764,8 +1764,8 @@ export const DEFAULT_SETTINGS: Settings = {
       <dd>Not a bug: <code>src/state/store.test.ts</code> spells out every setting and yours is not in its expected list yet. The <code>+</code> line is what the code has and the test does not expect: add <code>cloudShadows: true,</code> to the expected object.</dd>
       <dt><code>Property 'cloudShadow' does not exist on type 'Settings'. Did you mean 'cloudShadows'?</code>, or <code>Argument of type '"light.atmosphere.cloudShadow"' is not assignable to parameter of type 'MessageKey'</code></dt>
       <dd>A typo in a setting name or a text key. The compiler checks both against the real lists; fix the spelling it points to.</dd>
-      <dt>The « modifié » badge does not appear when you change the value</dt>
-      <dd>The name is missing from the <code>keys={[…]}</code> list of its <code>PanelSection</code>. Note that the badge only shows while the value differs from the default: for <code>cloudShadows</code> (default on) it appears when you <em>untick</em> the box.</dd>
+      <dt>The ↺ « modifié » button does not appear when you change the value</dt>
+      <dd>The name is missing from the <code>keys={[…]}</code> list of its <code>PanelSection</code>. Note that the button only shows while the value differs from the default: for <code>cloudShadows</code> (default on) it appears when you <em>untick</em> the box.</dd>
       <dt>The control changes, but the picture does not</dt>
       <dd>Check that the code of step 5 reads the same name, and the conditions of the effect (cloud shadows need « Atmosphère » on and clouds in the sky). If the picture only changes while the film plays, the value is probably kept somewhere else than <code>useAppStore</code>: <code>renderOnDemand.ts</code> only wakes the paused view for the stores it watches.</dd>
       <dt>Opening a project shows « Réglages invalides remplacés par leur valeur par défaut : … » with your setting's name</dt>
@@ -1851,7 +1851,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
   </div>
 
   <h3 class="sub" id="recipe-tab">Add a rail panel or tab</h3>
-  <p><strong>What it is.</strong> The <em>rail</em> is the column of icons on the side of the window (a scrolling bar at the bottom on a phone); each icon is a <em>tab</em> that opens one panel of settings. A panel is made of foldable <em>sections</em> (<code>PanelSection</code>: a title, the « modifié » badge, then the controls). <strong>When you need it:</strong> almost always, you only need a new section in an existing tab, which is a few lines in one file. A new tab is rarer and touches six places, listed below.</p>
+  <p><strong>What it is.</strong> The <em>rail</em> is the column of icons on the side of the window (a scrolling bar at the bottom on a phone); each icon is a <em>tab</em> that opens one panel of settings. A panel is made of foldable <em>sections</em> (<code>PanelSection</code>: a title, the ↺ « modifié » button, then the controls). <strong>When you need it:</strong> almost always, you only need a new section in an existing tab, which is a few lines in one file. A new tab is rarer and touches six places, listed below.</p>
   <p>Where each current tab's content is built (the <code>contents</code> memo in <code>src/App.tsx</code>, a value built once and kept; the French label is what the user sees):</p>
   <div class="table-wrap"><table class="wide nowrap">
     <thead><tr><th>Tab id</th><th>Label</th><th>Content</th></tr></thead>
@@ -2161,7 +2161,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
       <div class="term"><h4>Offline pack (« Hors ligne »)</h4><p>Tiles of a corridor along the track kept for use without a connection.</p></div>
       <div class="term" id="gl-preset"><h4>Presets (« Préréglages »)</h4><p>Named sets of settings the user saves and applies in one click, either all settings or one family (« Style de carte », « Trace, marqueur et étiquettes »…: <code>PRESET_SCOPES</code>; the settings of each family in <code>PRESET_SCOPE_KEYS</code>, <code>src/project/presets.ts</code>).</p></div>
       <div class="term"><h4>My projects (« Mes projets »)</h4><p>Projects kept inside the app, with thumbnails.</p></div>
-      <div class="term" id="gl-modified"><h4>« Modifié »</h4><p>The marker of a setting or section that differs from its default, with a reset.</p></div>
+      <div class="term" id="gl-modified"><h4>« Modifié »</h4><p>The marker of a setting or section that differs from its default: a round ↺ button (<code>ModifiedMarker</code>) that resets it.</p></div>
       <div class="term"><h4>Render weight (« poids de rendu »)</h4><p>The pictogram that tells how much a setting lengthens the export (<code>ui/renderCost.ts</code>).</p></div>
       <div class="term"><h4>Export quality</h4><p>« Standard / Haute / Maximale »: bitrate and cost of the effects at export time.</p></div>
       <div class="term"><h4>« Carte alpine »</h4><p>The visual identity of the app: map paper, ink, trail-marker red, glacier, moss (<code>src/ui/theme.css</code>).</p></div>
@@ -2172,7 +2172,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
     <h3 id="gl-recipes">Words used in the recipes</h3>
     <div class="gloss">
       <div class="term" id="gl-setting"><h4>Setting (« réglage »)</h4><p>One value of the project chosen by the user in a panel, like one field of a saved form. All of them form the <code>Settings</code> object, saved in the project file.</p><p class="here"><b>Here</b> <code>interface Settings</code> and <code>DEFAULT_SETTINGS</code> in <code>src/state/store.ts</code>; recipe: <a href="#recipe-setting">Add a setting</a>.</p></div>
-      <div class="term" id="gl-default"><h4>Default value</h4><p>The value a setting has in a new project, and the value used when a file lacks the setting or holds a wrong one. « Par défaut » puts it back.</p><p class="here"><b>Here</b> <code>DEFAULT_SETTINGS</code> in <code>src/state/store.ts</code>.</p></div>
+      <div class="term" id="gl-default"><h4>Default value</h4><p>The value a setting has in a new project, and the value used when a file lacks the setting or holds a wrong one. The ↺ button of its section puts it back.</p><p class="here"><b>Here</b> <code>DEFAULT_SETTINGS</code> in <code>src/state/store.ts</code>.</p></div>
       <div class="term" id="gl-type"><h4>Type, interface</h4><p>A type says what kind of value a name holds (<code>boolean</code>: true or false; <code>number</code>; <code>string</code>: text). An <code>interface</code> lists the fields of an object with their types, like a C struct. TypeScript checks them before the program runs, then removes them.</p><p class="here"><b>Here</b> <code>interface Settings</code>; the checker is <code>npm run typecheck</code>.</p></div>
       <div class="term" id="gl-typecheck"><h4>Type check</h4><p>The compiler reads every file and reports names and types that do not match (a typo, a missing translation, a missing field), without running anything. Errors look like <code>file(line,column): error TS2741: …</code>.</p><p class="here"><b>Here</b> <code>npm run typecheck</code>.</p></div>
       <div class="term" id="gl-action"><h4>Action</h4><p>A function of the store that changes it. The panels never edit a value directly; they call an action, which also makes the undo step.</p><p class="here"><b>Here</b> <code>setSetting('cloudShadows', on)</code>.</p></div>
@@ -2181,7 +2181,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
       <div class="term" id="gl-i18n-key"><h4>Translation key (i18n key), domain</h4><p>The name a screen uses to ask for a text: <code>'light.atmosphere.cloudShadows'</code>. The first part is the domain, the file the text lives in (<code>light.ts</code>); the rest is the key inside it. « i18n » is short for internationalisation.</p><p class="here"><b>Here</b> <code>src/i18n/&lt;language&gt;/&lt;domain&gt;.ts</code>; used with <code>t('…')</code>.</p></div>
       <div class="term" id="gl-getter"><h4>Getter</h4><p>A field written <code>get label() { return t('…') }</code>: its value is computed each time it is read instead of once. Used for labels kept in tables, so that they follow a change of language.</p></div>
       <div class="term" id="gl-pure"><h4>Pure function</h4><p>A function whose result depends only on its arguments and which changes nothing else, like a maths function. Easy to test, and what makes the export identical to the preview. Pure modules never read the store; the caller passes the values.</p><p class="here"><b>Here</b> most <code>.ts</code> files of <code>geo/</code>, <code>flyover/</code>, <code>film/</code>, <code>overlay/</code>.</p></div>
-      <div class="term" id="gl-section"><h4>Section (<code>PanelSection</code>)</h4><p>A foldable block of a tab with a title and controls. Its <code>keys</code> list the settings it owns: they drive the « modifié » badge and the « Par défaut » button of its head.</p><p class="here"><b>Here</b> <code>src/ui/PanelSection.tsx</code>.</p></div>
+      <div class="term" id="gl-section"><h4>Section (<code>PanelSection</code>)</h4><p>A foldable block of a tab with a title and controls. Its <code>keys</code> list the settings it owns: they drive the ↺ « modifié » button of its head.</p><p class="here"><b>Here</b> <code>src/ui/PanelSection.tsx</code>.</p></div>
       <div class="term" id="gl-unit-test"><h4>Unit test, test file</h4><p>A small program that calls one part of the code with known inputs and checks the result. Files end in <code>.test.ts</code> or <code>.test.tsx</code>, next to the code they test.</p><p class="here"><b>Here</b> <code>npx vitest run &lt;file&gt;</code> runs one file (<a href="#unit-tests">Unit tests</a>).</p></div>
       <div class="term" id="gl-pr"><h4>Branch, commit, pull request</h4><p>A commit is one saved change; a branch is a line of commits apart from <code>master</code>; a pull request asks to merge a branch into <code>master</code>, after the automatic checks (CI) pass.</p><p class="here"><b>Here</b> <a href="#issue-to-pr">From an issue to a pull request</a>.</p></div>
       <div class="term" id="gl-npx"><h4><code>npm run …</code>, <code>npx …</code></h4><p><code>npm run typecheck</code> runs a command named in the <code>scripts</code> of <code>package.json</code>; <code>npx vitest</code> runs a tool installed in <code>node_modules/</code> by <code>npm ci</code>. Both are typed in a terminal opened in the repository folder.</p></div>

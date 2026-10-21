@@ -3,6 +3,7 @@ import { modifiedSettings } from '../project/apply'
 import { resetSettings } from '../project/history'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
+import { Icon } from './icons'
 import { dismissToast, showToast } from './toast'
 
 interface Props {
@@ -17,10 +18,12 @@ interface Props {
   className?: string
 }
 
-/** The badge and the « Par défaut » button; the marker takes its place in the head it is put in (`className`: grid cell, padding). */
-const BADGE = 'whitespace-nowrap rounded-full border px-2 py-px text-caption font-semibold'
+/**
+ * One round ↺ button: it shows that the group is modified and puts it back to its defaults; the marker takes its
+ * place in the head it is put in (`className`: grid cell, padding).
+ */
 const RESET =
-  'cursor-pointer whitespace-nowrap rounded-sm border border-edge bg-surface-control px-2 py-px text-hint font-semibold text-text-1 transition-ui hover:enabled:border-text-1 disabled:cursor-not-allowed disabled:opacity-45'
+  'inline-flex size-6 cursor-pointer items-center justify-center rounded-full transition-ui hover:enabled:brightness-95 disabled:cursor-not-allowed disabled:opacity-45 touch:size-9'
 
 /**
  * Reset `keys` and say so, with « Annuler »; the message goes away at the next change of the settings (or an undo),
@@ -38,25 +41,24 @@ function resetWithUndo(keys: readonly (keyof Settings)[]): void {
 }
 
 /**
- * « modifié » marker of a settings group (in the head of its section), with a « Par défaut » button that
- * puts `keys` back to their defaults in one undo step. Renders nothing while every key has its default value.
+ * « modifié » marker of a settings group (in the head of its section): a ↺ button that puts `keys` back to their
+ * defaults in one undo step. Renders nothing while every key has its default value.
  */
 export function ModifiedMarker({ keys, label, disabled = false, onDark = false, className }: Props) {
   const tr = useT()
   const modified = useAppStore((s) => modifiedSettings(s.settings, keys).length > 0)
   if (!modified) return null
   return (
-    <div className={className ? `flex items-center gap-1 ${className}` : 'flex items-center gap-1'}>
-      <span className={`${BADGE} ${onDark ? 'border-glacier text-glacier' : 'border-text-2 text-text-2'}`}>{tr('common.modified.badge')}</span>
+    <div className={className ? `flex items-center ${className}` : 'flex items-center'}>
       <button
         type="button"
-        className={RESET}
+        className={`${RESET} ${onDark ? 'border border-glacier text-glacier' : 'bg-accent-tint text-brand'}`}
         aria-label={tr('common.modified.resetAria', { label })}
         title={tr('common.modified.resetTip')}
         disabled={disabled}
         onClick={() => resetWithUndo(keys)}
       >
-        {tr('common.modified.reset')}
+        <Icon name="rotate-ccw" size={14} />
       </button>
     </div>
   )
