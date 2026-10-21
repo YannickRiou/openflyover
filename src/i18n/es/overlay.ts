@@ -156,6 +156,7 @@ const messages: Messages['overlay'] = {
   'panel.profileMinimap': 'Perfil y minimapa',
   'panel.profile': 'Perfil altimétrico',
   'panel.profileWidth': 'Anchura (% de la imagen)',
+  'panel.profileWidthInStyle': 'En este estilo el perfil ocupa todo el ancho de su sitio: solo cuenta la altura.',
   'panel.profileHeight': 'Altura (% de la imagen)',
   'panel.noElevation': 'Este track no tiene altitud registrada.',
   'panel.minimap': 'Minimapa',

@@ -5,7 +5,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { buildTrack } from '../import/stats'
 import { useAppStore } from '../state/store'
 import { findImageryDates } from '../terrain/imageryDates'
-import { MapSettings } from './SettingsPanel'
+import { LightSettings, MapSettings } from './SettingsPanel'
 
 vi.mock('../terrain/imageryDates', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../terrain/imageryDates')>()),
@@ -45,5 +45,28 @@ describe('« Date des photos »', () => {
     act(() => root.unmount())
     setSetting('imagerySourceId', settings.imagerySourceId)
     setSetting('imageryDate', '')
+  })
+})
+
+describe('« Ombres des nuages »', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('greyed out, with the reason, when there are no clouds in volume', async () => {
+    const { settings, setSetting } = useAppStore.getState()
+    setSetting('atmosphere', true)
+    setSetting('clouds', { ...settings.clouds, mode: 'aucun' })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<LightSettings />))
+    const box = [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((i) => i.closest('label')?.textContent?.includes('Ombres des nuages'))!
+    expect(box.disabled).toBe(true)
+    expect(host.textContent).toContain('pas de nuages en volume')
+    await act(async () => setSetting('clouds', { ...settings.clouds, mode: 'manuel' }))
+    expect(box.disabled).toBe(false)
+    act(() => root.unmount())
+    setSetting('clouds', settings.clouds)
+    setSetting('atmosphere', settings.atmosphere)
   })
 })

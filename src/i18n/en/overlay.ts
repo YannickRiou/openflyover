@@ -156,6 +156,7 @@ const messages: Messages['overlay'] = {
   'panel.profileMinimap': 'Profile and mini-map',
   'panel.profile': 'Elevation profile',
   'panel.profileWidth': 'Width (% of the image)',
+  'panel.profileWidthInStyle': 'In this style the profile takes the whole width of its place: only the height counts.',
   'panel.profileHeight': 'Height (% of the image)',
   'panel.noElevation': 'This track has no recorded elevation.',
   'panel.minimap': 'Mini-map',

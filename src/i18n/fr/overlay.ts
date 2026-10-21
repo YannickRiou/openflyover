@@ -154,6 +154,7 @@ export default {
   'panel.profileMinimap': 'Profil et mini-carte',
   'panel.profile': 'Profil altimétrique',
   'panel.profileWidth': "Largeur (% de l'image)",
+  'panel.profileWidthInStyle': 'Dans ce style, le profil prend toute la largeur de sa place : seule la hauteur compte.',
   'panel.profileHeight': "Hauteur (% de l'image)",
   'panel.noElevation': "Cette trace n'a pas d'altitude enregistrée.",
   'panel.minimap': 'Mini-carte',

@@ -57,6 +57,7 @@ const messages: Messages['marker'] = {
   'track.custom': 'Custom',
   'track.sameAsTrack': 'Same as the track',
   'track.colorBy': 'Colour by',
+  'track.colorByHint': 'The line takes the colours of the measure; each track’s colour stays that of its glow, its marker and its stage.',
   'track.legendAnchor': 'Legend position',
   'track.smoothing': 'Track smoothing',
   'track.smoothingTip': 'Zigzagging track or shaky camera? Smoothing averages the GPS positions over this distance: the track and the camera follow a calm line.',

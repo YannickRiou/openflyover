@@ -55,6 +55,7 @@ export default {
   'track.custom': 'Personnalisée',
   'track.sameAsTrack': 'Celle de la trace',
   'track.colorBy': 'Colorer selon',
+  'track.colorByHint': 'La ligne prend les couleurs de la mesure ; la couleur de chaque trace reste celle de son halo, de son marqueur et de son étape.',
   'track.legendAnchor': 'Position de la légende',
   'track.smoothing': 'Lissage de la trace',
   'track.smoothingTip': 'Trace en zigzag ou caméra qui tremble ? Le lissage moyenne les positions GPS sur cette distance : la trace et la caméra suivent une ligne calme.',

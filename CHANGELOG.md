@@ -5,6 +5,13 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Settings that do nothing are greyed out, and say why**:
+  - **Export**: « Habillage seul » greys out the render quality (no 3D view) and the sound settings (it has no sound). « Séquence d'images PNG » greys out bitrate, codec, keyframes and sound.
+  - **Overlay**: in a style that lays the profile out itself, its « Largeur » is greyed out (only the height counts). While credits roll, the closing card's position is greyed out (the roll centres it).
+  - **Light and Weather**: « Ombres des nuages » is greyed out without clouds in volume. A single track's « Vue haute pendant la nuit » is greyed out while « Montrer les nuits » is off.
+  - **Camera and shots**: « Pause aux temps forts » only shows for a film made before the timeline, where it still makes the automatic stops. The greyed « Hauteur de départ » of a shot says that its « Distance » sets it.
+  - **Track**: « Colorer selon » says that each track's colour still gives its glow, marker and stage.
+  - **Photos**: a framed photo no longer shows a greyed but ticked « Mouvement lent ». A full-screen one's « Taille » is called « Taille de la légende », which is what it sets.
 - **Help texts that match what the app does**:
   - The camera key hint said to press ◆ to retake the view, but that removes the key; it now says how to redo it.
   - « Durée du survol » said the stops come on top; by default they are taken from it, at most half.

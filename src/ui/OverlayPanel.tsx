@@ -32,6 +32,7 @@ import {
   withWidgetOffset,
   withWidgetOverrides,
   widgetOverrides,
+  inStyleSlot,
 } from '../overlay/settings'
 import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
@@ -613,6 +614,7 @@ export function OverlayPanel() {
               styled="profile"
               style={
                 <>
+                  {/* in its place of a style's structure the profile takes the whole width there: only its height counts */}
                   <RangeField
                     label={t('overlay.panel.profileWidth')}
                     min={PROFILE_WIDTH_MIN}
@@ -620,8 +622,10 @@ export function OverlayPanel() {
                     step={0.01}
                     value={overlay.profile.width}
                     format={percent}
+                    disabled={inStyleSlot(overlay, 'profile')}
                     onChange={(width) => setWidget('profile', { width })}
                   />
+                  {inStyleSlot(overlay, 'profile') && <p className="type-hint">{t('overlay.panel.profileWidthInStyle')}</p>}
                   <RangeField
                     label={t('overlay.panel.profileHeight')}
                     min={PROFILE_HEIGHT_MIN}

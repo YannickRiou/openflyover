@@ -741,6 +741,8 @@ export function LightSettings() {
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const shadows = useAppStore((s) => s.settings.shadows)
   const cloudShadows = useAppStore((s) => s.settings.cloudShadows)
+  // the shadows fall from clouds in volume: none with « Aucun » nor with a sea of clouds drawn as a flat layer
+  const noCloudVolume = useAppStore((s) => s.settings.clouds.mode === 'aucun' || (s.settings.clouds.mode === 'mer' && s.settings.clouds.seaRender === 'surface'))
   const exposureSetting = useAppStore((s) => s.settings.exposureEv)
   const exposureKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['exposure']))
   const setSetting = useAppStore((s) => s.setSetting)
@@ -758,7 +760,10 @@ export function LightSettings() {
         )}
 
         {atmosphere && (
-          <Checkbox id={`${id}-cloud-shadows`} checked={cloudShadows} onChange={(on) => setSetting('cloudShadows', on)}>{t('light.atmosphere.cloudShadows')}</Checkbox>
+          <>
+            <Checkbox id={`${id}-cloud-shadows`} checked={cloudShadows} disabled={noCloudVolume} onChange={(on) => setSetting('cloudShadows', on)}>{t('light.atmosphere.cloudShadows')}</Checkbox>
+            {noCloudVolume && <p className="type-hint">{t('light.atmosphere.cloudShadowsNone')}</p>}
+          </>
         )}
 
         {atmosphere && (

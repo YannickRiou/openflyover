@@ -131,11 +131,12 @@ export function DayCardFields() {
           onChange={(durationS) => setCards({ durationS }, false)}
         />
       </SettingRow>
-      <Switch id={`${id}-view`} checked={cards.view} aria-describedby={`${id}-view-hint`} onChange={(view) => setCards({ view })}>
+      {/* a single track: the high view is that of the night pauses, none while they are off */}
+      <Switch id={`${id}-view`} checked={cards.view} disabled={!film.nights.enabled} aria-describedby={`${id}-view-hint`} onChange={(view) => setCards({ view })}>
         {tr('light.days.view')}
       </Switch>
       <p id={`${id}-view-hint`} className="type-hint">
-        {tr('light.days.viewHint')}
+        {film.nights.enabled ? tr('light.days.viewHint') : tr('light.days.viewNeedsNights')}
       </p>
     </>
   )

@@ -200,6 +200,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
             options={colorModes.map(({ mode, label, available }) => ({ value: mode, label, disabled: !available }))}
             onChange={(mode) => setSetting('trackColorBy', mode)}
           />
+          {trackColorBy !== 'none' && <p className="type-hint">{t('marker.track.colorByHint')}</p>}
         </div>
       </SettingRow>
       {trackColorBy !== 'none' && (
