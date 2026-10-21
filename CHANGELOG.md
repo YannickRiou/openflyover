@@ -10,6 +10,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **A tidier « Trace » section**: the track settings are in two parts, « Ligne » (how the line is drawn, its colour, smoothing, width and dashes) then « Halo » (the glow and its intensity, width and colour), instead of the glow in the middle of the line settings.
 - **A ↺ button instead of « modifié » and « Par défaut »**: a section that differs from its defaults now shows one small round ↺ button by its title (« Modifié : revenir aux réglages par défaut » in its tooltip) instead of a « modifié » chip and a « Par défaut » button. Clearer and more compact; it still resets the whole section, with « Annuler » or Ctrl+Z.
 - **« Densité » removed**: the « Confortable / Compact » choice of « Réglages › Apparence » changed the spacing by about 15 % only; it is gone and the interface keeps its usual spacing.
+- **More counters**: « Habillage › Compteurs » can also show the slope, the time of day, the pace (minutes per km), the power and the temperature, when the track records them (power and temperature come from the sensors of a FIT file). The opening and closing cards can show the average pace (« Allure moy. »).
 
 ## 3.2.1 (October 2026)
 

@@ -89,6 +89,15 @@ describe('overlay settings', () => {
     expect(sanitizeSettings({ overlay: missingCounters }).invalid).toEqual(['overlay'])
   })
 
+  it('loads the counters of an overlay saved before pace, slope, power, temperature and the clock with them off', () => {
+    const { slope: _s, clock: _c, pace: _p, power: _w, temperature: _t, ...oldFields } = DEFAULT_OVERLAY.counters.fields
+    const old = { ...DEFAULT_OVERLAY, counters: { ...DEFAULT_OVERLAY.counters, fields: { ...oldFields, speed: true } } }
+    const { settings, invalid } = sanitizeSettings({ overlay: old })
+    expect(invalid).toEqual([])
+    expect(settings.overlay.counters.fields).toEqual({ ...DEFAULT_OVERLAY.counters.fields, speed: true })
+    expect(withOverlayDefaults(DEFAULT_OVERLAY)).toBe(DEFAULT_OVERLAY)
+  })
+
   it('validates the credits', () => {
     expect(isValidOverlay(withPatch((o) => (o.credits.position = 'top-left')))).toBe(true)
     expect(isValidOverlay(withPatch((o) => (o.credits.position = 'center' as OverlaySettings['credits']['position'])))).toBe(false)

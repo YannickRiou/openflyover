@@ -71,6 +71,18 @@ describe('prepareOverlayTrack, figures corrected by hand', () => {
   })
 })
 
+describe('overlayFrameAt, the sensors and the clock', () => {
+  it('slope, power, temperature and the recorded time of day under the marker', () => {
+    const track = buildTrack({ name: 's', source: 'fit', segments: [{ points: line(101, (i) => ({ ele: 1000 + i, power: 200, temp: 12 })) }] })
+    const frame = overlayFrameAt(prepareOverlayTrack(track), 0.5)
+    // 1 m up every 10 m
+    expect(frame.slopePct).toBeCloseTo(10, 0)
+    expect(frame.powerW).toBeCloseTo(200, 6)
+    expect(frame.temperatureC).toBeCloseTo(12, 6)
+    expect(frame.clockMs).toBeCloseTo(T0 + 50 * 5000, -2)
+  })
+})
+
 describe('overlayFrameAt', () => {
   const data = prepareOverlayTrack(sample)
 
@@ -112,6 +124,9 @@ describe('overlayFrameAt', () => {
     expect(frame.elapsedS).toBeUndefined()
     expect(frame.speedKmh).toBeUndefined()
     expect(frame.heartRate).toBeUndefined()
+    expect(frame.powerW).toBeUndefined()
+    expect(frame.temperatureC).toBeUndefined()
+    expect(frame.clockMs).toBeUndefined()
     expect(prepareOverlayTrack(bare).profile).toBeUndefined()
   })
 

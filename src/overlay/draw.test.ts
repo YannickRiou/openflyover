@@ -476,6 +476,10 @@ describe('closing card contents', () => {
     expect(avg).toEqual({ value: '9,0', unit: 'km/h' })
   })
 
+  it('the average pace of the outing', () => {
+    expect(cardStats({ distanceM: 10_000, durationS: 3000 }, ['avgPace'])[0]).toEqual({ label: 'Allure moy.', text: { value: '5:00', unit: 'min/km' } })
+  })
+
   it('draws the figures chosen and the free line', () => {
     const closing = draw(0.99, end({ figures: ['distance', 'minAltitude'], line: 'Sommet du Grand Som' })).joined.toLowerCase()
     expect(closing).toContain('altitude min')
@@ -535,6 +539,20 @@ describe('opening card contents', () => {
     const tableau = withStyleLayout(enabled(), 'tableau')
     expect(draw(0.02, tableau).joined.toLowerCase()).not.toContain('dénivelé +')
     expect(draw(0.02, title({ figures: ['ascent'] }, tableau)).joined.toLowerCase()).toContain('dénivelé +')
+  })
+})
+
+describe('counters of slope, time of day, pace, power and temperature', () => {
+  it('slope, clock, pace, power and temperature, each left out when the track does not record it', () => {
+    const settings = enabled({
+      counters: { ...DEFAULT_OVERLAY.counters, fields: { ...DEFAULT_OVERLAY.counters.fields, slope: true, clock: true, pace: true, power: true, temperature: true } },
+    })
+    const joined = draw(0.5, settings).joined.toLowerCase()
+    for (const label of ['pente', 'heure', 'allure', 'min/km']) expect(joined).toContain(label)
+    // the sample records neither power nor temperature
+    expect(joined).not.toContain('puiss.')
+    expect(joined).not.toContain('°c')
+    expect(counterText('pace', { ...overlayFrameAt(track, 0.5), speedKmh: 0.2 })).toEqual({ value: '–', unit: 'min/km' })
   })
 })
 

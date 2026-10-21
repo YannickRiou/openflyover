@@ -87,7 +87,9 @@ export const OVERLAY_ANCHOR_LABELS: Record<OverlayAnchor, string> = {
   get 'bottom-right'() { return t('overlay.anchor.bottom-right') },
 }
 
-export const COUNTER_IDS = ['distance', 'altitude', 'ascent', 'time', 'speed', 'heartRate'] as const
+export const COUNTER_IDS = ['distance', 'altitude', 'ascent', 'slope', 'time', 'clock', 'speed', 'pace', 'heartRate', 'power', 'temperature'] as const
+/** Counters added after the first saved format: off in older projects and presets (`withOverlayDefaults`). */
+const COUNTERS_ADDED: readonly CounterId[] = ['slope', 'clock', 'pace', 'power', 'temperature']
 export type CounterId = (typeof COUNTER_IDS)[number]
 
 /** Size multiplier of a widget (1 = default size). */
@@ -200,7 +202,7 @@ export interface TitleCardSettings extends Sized, CardExtras {
 }
 
 /** Figures a card can show, in the order it draws them. */
-export const CARD_FIGURES = ['distance', 'ascent', 'descent', 'maxAltitude', 'minAltitude', 'time', 'maxSpeed', 'avgSpeed', 'date'] as const
+export const CARD_FIGURES = ['distance', 'ascent', 'descent', 'maxAltitude', 'minAltitude', 'time', 'maxSpeed', 'avgSpeed', 'avgPace', 'date'] as const
 export type CardFigure = (typeof CARD_FIGURES)[number]
 /** The figures of the closing card until others are chosen: those it always showed. */
 export const END_CARD_FIGURES: readonly CardFigure[] = ['distance', 'ascent', 'maxAltitude', 'time', 'maxSpeed']
@@ -308,7 +310,7 @@ export const DEFAULT_OVERLAY: OverlaySettings = {
     enabled: true,
     anchor: 'top-left',
     size: 1,
-    fields: { distance: true, altitude: true, ascent: true, time: true, speed: false, heartRate: false },
+    fields: { distance: true, altitude: true, ascent: true, slope: false, time: true, clock: false, speed: false, pace: false, heartRate: false, power: false, temperature: false },
   },
   profile: { enabled: true, anchor: 'top-right', width: 0.3, height: 0.12 },
   logo: { enabled: false, anchor: 'bottom-right', size: 1, image: '', opacity: 1 },
@@ -417,7 +419,12 @@ export function withOverlayDefaults(raw: unknown): unknown {
   const missing = OVERLAY_ADDED_KEYS.filter((key) => !(key in raw))
   const filled = missing.length === 0 ? raw : { ...Object.fromEntries(missing.map((key) => [key, DEFAULT_OVERLAY[key]])), ...raw }
   const logo = raw.logo
-  return isRecord(logo) && !('opacity' in logo) ? { ...filled, logo: { ...logo, opacity: DEFAULT_OVERLAY.logo.opacity } } : filled
+  const withLogo = isRecord(logo) && !('opacity' in logo) ? { ...filled, logo: { ...logo, opacity: DEFAULT_OVERLAY.logo.opacity } } : filled
+  // the counters added since: off
+  const counters = raw.counters
+  const fields = isRecord(counters) ? counters.fields : undefined
+  if (!isRecord(counters) || !isRecord(fields) || COUNTERS_ADDED.every((id) => id in fields)) return withLogo
+  return { ...withLogo, counters: { ...counters, fields: { ...Object.fromEntries(COUNTERS_ADDED.map((id) => [id, false])), ...fields } } }
 }
 
 /**

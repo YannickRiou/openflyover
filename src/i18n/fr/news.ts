@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v33.counters.title': 'Plus de compteurs',
+  'v33.counters.text': 'Pente, heure de la journée, allure en min/km, puissance et température dans Habillage › Compteurs, et l’allure moyenne sur les cartes.',
   'v321.panel.title': 'Un seul volet pour l’ouverture, un pour la clôture',
   'v321.panel.text': '« Modifier » dans Habillage, le bloc du titre et celui du plan de caméra ouvrent maintenant le même volet : le titre ou la carte en haut, le plan de caméra en dessous.',
   'v32.end.title': 'Une carte de clôture à votre façon',
