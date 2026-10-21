@@ -7,7 +7,7 @@
  */
 import { formatDuration, formatNumber } from '../ui/format'
 import type { OverlayFrame } from './data'
-import { COUNTER_LABELS, PROFILE_MIN_SPAN_M, SAFE_MARGIN, counterText, endStats, fillText, measure, minimapWidget, openingText, truncate, weatherSummaryLine, wrapLines } from './draw'
+import { COUNTER_LABELS, PROFILE_MIN_SPAN_M, SAFE_MARGIN, cardStats, counterText, endFigures, endLine, fillText, measure, minimapWidget, openingText, truncate, wrapLines } from './draw'
 import type { Painter, TextStyle, Widget } from './draw'
 import { COUNTER_IDS } from './settings'
 import type { CounterId, LaidOutWidget, OverlaySettings, StyledWidget } from './settings'
@@ -415,8 +415,8 @@ function journal(i: StructureInput): Structure {
   const closingBody = () => {
     const pe = of('end')
     let y = bodyTop
-    for (const { label, text } of endStats(frame.track.stats)) y += drawRow(pe, { label, value: `${text.value} ${text.unit}`.trim() }, x0, y, innerW, settings.end.size)
-    const weather = settings.end.showWeather ? weatherSummaryLine(frame.track.stats.weather) : ''
+    for (const { label, text } of cardStats(frame.track.stats, endFigures(settings.end))) y += drawRow(pe, { label, value: `${text.value} ${text.unit}`.trim() }, x0, y, innerW, settings.end.size)
+    const weather = endLine(settings.end, frame.track.stats.weather)
     if (!weather) return
     const style: TextStyle = { family: theme.bodyFamily, weight: theme.labelWeight, sizePx: 1.7 * u * settings.end.size, color: theme.textSoft }
     wrapLines(pe, weather, innerW, style).forEach((line, k) => fillText(pe, line, x0, y + 1.2 * u + style.sizePx * 0.8 + k * style.sizePx * 1.3, style))

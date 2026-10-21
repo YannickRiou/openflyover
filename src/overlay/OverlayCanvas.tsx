@@ -12,7 +12,7 @@ import { useLandmarkStore, useWaterStore } from '../osm/store'
 import { useFilmClock } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
-import { loadLogo, loadOverlayFonts } from './assets'
+import { createCardImages, loadLogo, loadOverlayFonts } from './assets'
 import { overlayFilmFrameAt } from './data'
 import { drawOverlay, overlayTime } from './draw'
 import type { OverlayAssets } from './draw'
@@ -64,6 +64,7 @@ function OverlayPreview() {
     let assets: OverlayAssets = {}
     const bitmaps = getMediaBitmaps()
     const videos = getPreviewVideos()
+    const cardImage = createCardImages(() => schedule())
 
     const draw = () => {
       raf = 0
@@ -107,7 +108,7 @@ function OverlayPreview() {
       const video = isExportBusy(useExportStore.getState().phase)
         ? undefined
         : (item: FilmMedia, clipS: number) => videos.frame(item, clipS, sound, clipRateAt(item, data.whole.path, clockRef.current, time.timeS))
-      drawOverlay(ctx, frame, overlay, { width, height }, { ...assets, ...photoAssets(), video }, overlayExtras(time, playback.progress))
+      drawOverlay(ctx, frame, overlay, { width, height }, { ...assets, ...photoAssets(), video, cardImage }, overlayExtras(time, playback.progress))
       // clips not drawn by this frame are paused
       videos.settle()
     }

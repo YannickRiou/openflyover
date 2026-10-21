@@ -199,7 +199,29 @@ export interface TitleCardSettings extends Sized {
   window?: CardWindow
 }
 
-export interface EndCardSettings extends Sized {
+/** Figures a card can show, in the order it draws them. */
+export const CARD_FIGURES = ['distance', 'ascent', 'descent', 'maxAltitude', 'minAltitude', 'time', 'maxSpeed', 'avgSpeed', 'date'] as const
+export type CardFigure = (typeof CARD_FIGURES)[number]
+/** The figures of the closing card until others are chosen: those it always showed. */
+export const END_CARD_FIGURES: readonly CardFigure[] = ['distance', 'ascent', 'maxAltitude', 'time', 'maxSpeed']
+/** Longest free line of a card (characters). */
+export const CARD_LINE_MAX = 120
+
+/** What a card shows besides its title, chosen in its inspector; absent = not shown (`figures`: the card's own). */
+export interface CardExtras {
+  /** the figures, drawn in the order of CARD_FIGURES */
+  figures?: CardFigure[]
+  /** a line of the user's own under the title */
+  line?: string
+  /** a picture above the title (PNG data URL, like the logo) */
+  image?: string
+  /** the elevation profile of the whole track under the figures */
+  showProfile?: boolean
+  /** the plan view of the whole track under the figures */
+  showMinimap?: boolean
+}
+
+export interface EndCardSettings extends Sized, CardExtras {
   /** '' = name of the track */
   title: string
   /** start of the card, fraction of the flight (shown until the end of the film, closing shot included; until its block is placed: `window`) */
@@ -497,6 +519,16 @@ export function isValidOffset(o: unknown): boolean {
   return isRecord(o) && Object.keys(o).length === 2 && isOffsetValue(o.x) && isOffsetValue(o.y)
 }
 
+const isLogoImage = (image: string) => image === '' || /^data:image\/(png|jpeg|webp);base64,/.test(image)
+
+const validExtras = (c: CardExtras) =>
+  (c.figures === undefined ||
+    (Array.isArray(c.figures) && c.figures.every((f, i) => (CARD_FIGURES as readonly string[]).includes(f) && c.figures?.indexOf(f) === i))) &&
+  (c.line === undefined || (typeof c.line === 'string' && c.line.length <= CARD_LINE_MAX)) &&
+  (c.image === undefined || (typeof c.image === 'string' && isLogoImage(c.image))) &&
+  (c.showProfile === undefined || typeof c.showProfile === 'boolean') &&
+  (c.showMinimap === undefined || typeof c.showMinimap === 'boolean')
+
 const validWindow = (w: CardWindow | undefined) =>
   w === undefined ||
   (isRecord(w) && typeof w.startS === 'number' && typeof w.endS === 'number' && within(w.startS, 0, CARD_WINDOW_MAX_S) && within(w.endS, 0, CARD_WINDOW_MAX_S) && w.endS > w.startS && (w.toEnd === undefined || typeof w.toEnd === 'boolean'))
@@ -515,12 +547,13 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     within(o.end.start, END_START_MIN, END_START_MAX) &&
     validWindow(o.end.window) &&
     (o.end.credits === undefined || (typeof o.end.credits === 'string' && o.end.credits.length <= END_CREDITS_MAX)) &&
+    validExtras(o.end) &&
     validSized(o.counters) &&
     isAnchor(o.profile.anchor) &&
     within(o.profile.width, PROFILE_WIDTH_MIN, PROFILE_WIDTH_MAX) &&
     within(o.profile.height, PROFILE_HEIGHT_MIN, PROFILE_HEIGHT_MAX) &&
     validSized(o.logo) &&
-    (o.logo.image === '' || /^data:image\/(png|jpeg|webp);base64,/.test(o.logo.image)) &&
+    isLogoImage(o.logo.image) &&
     within(o.logo.opacity, 0, 1) &&
     validSized(o.text) &&
     validSized(o.weather) &&

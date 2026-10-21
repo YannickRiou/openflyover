@@ -402,6 +402,13 @@ describe('Timeline', () => {
       await act(async () => useAppStore.getState().setFilmSelection(END_CARD_ID))
       expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Carte de clôture')
       expect(host.querySelector('[data-testid="film-inspector"]')?.textContent).toContain('Générique')
+      // what the closing card shows: a figure chip and the profile
+      const box = (label: string) =>
+        Array.from(host.querySelectorAll<HTMLInputElement>('[data-testid="film-inspector"] input[type="checkbox"]')).find((i) => i.closest('label')?.textContent === label)!
+      await act(async () => box('Dénivelé −').click())
+      expect(useAppStore.getState().settings.overlay.end.figures).toEqual(['distance', 'ascent', 'descent', 'maxAltitude', 'time', 'maxSpeed'])
+      await act(async () => box('Profil d’altitude').click())
+      expect(useAppStore.getState().settings.overlay.end.showProfile).toBe(true)
 
       const remove = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Supprimer')!
       await act(async () => remove.click())

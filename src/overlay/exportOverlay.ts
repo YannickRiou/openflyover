@@ -30,7 +30,7 @@ import { trackLegend } from '../flyover/trackColor'
 import type { TrackColorBy, TrackLegend } from '../flyover/trackColor'
 import { getLanguage } from '../i18n'
 import type { Sequence } from '../flyover/sequence'
-import { loadLogo } from './assets'
+import { createCardImages, loadLogo } from './assets'
 import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
 import type { LeaderboardRow, OverlayFilm } from './data'
 import { drawOverlay } from './draw'
@@ -176,6 +176,7 @@ export function createOverlayDrawer(): OverlayDrawer {
   let logoSource = ''
   let assets: OverlayAssets = {}
   let disposed = false
+  const cardImage = createCardImages()
 
   const syncLogo = (source: string) => {
     if (source === logoSource) return
@@ -191,6 +192,9 @@ export function createOverlayDrawer(): OverlayDrawer {
       })
   }
   syncLogo(useAppStore.getState().settings.overlay.logo.image)
+  // decoded before the first frame that shows it
+  const cardPicture = useAppStore.getState().settings.overlay.end.image
+  if (cardPicture) cardImage(cardPicture)
   const unsubscribe = useAppStore.subscribe((state) => syncLogo(state.settings.overlay.logo.image))
 
   return {
@@ -199,7 +203,7 @@ export function createOverlayDrawer(): OverlayDrawer {
       if (!data) return
       const { settings } = useAppStore.getState()
       const video = (item: FilmMedia, clipS: number) => exportVideos?.get(item, clipS)
-      drawOverlay(ctx, overlayFilmFrameAt(data, at.progress), settings.overlay, { width, height }, { ...assets, ...photoAssets(), video }, overlayExtras(at.time, at.progress))
+      drawOverlay(ctx, overlayFilmFrameAt(data, at.progress), settings.overlay, { width, height }, { ...assets, ...photoAssets(), video, cardImage }, overlayExtras(at.time, at.progress))
     },
     dispose() {
       disposed = true

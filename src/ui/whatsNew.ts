@@ -23,6 +23,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '3.2',
     items: [
+      { icon: 'type', get title() { return t('news.v32.end.title') }, get text() { return t('news.v32.end.text') } },
       { icon: 'route', get title() { return t('news.v32.fix.title') }, get text() { return t('news.v32.fix.text') } },
     ],
   },

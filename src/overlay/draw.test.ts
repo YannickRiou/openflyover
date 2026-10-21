@@ -7,6 +7,7 @@ import { overlayFrameAt, prepareOverlayTrack, recordedAtProgress } from './data'
 import {
   SAFE_MARGIN,
   cardOpacityAt,
+  cardStats,
   counterText,
   drawOverlay,
   endCardOpacity,
@@ -460,6 +461,55 @@ describe('position dot colour (mini-map and profile)', () => {
     expect(fillsOf(only(widget, ''), '#112233')).toContain('#112233')
     const style = fillsOf(only(widget, undefined))
     expect(style).not.toContain('#112233')
+  })
+})
+
+describe('closing card contents', () => {
+  const end = (patch: Partial<OverlaySettings['end']>, style: OverlaySettings['style'] = 'editorial') =>
+    enabled({ style, end: { ...DEFAULT_OVERLAY.end, ...patch } })
+
+  it('the chosen figures in the order of the list, those the track does not record left out', () => {
+    const labels = (figures: Parameters<typeof cardStats>[1], stats = track.stats) => cardStats(stats, figures).map((f) => f.label)
+    expect(labels(['date', 'distance', 'descent', 'avgSpeed'])).toEqual(['Distance', 'Dénivelé −', 'Vitesse moy.', 'Date'])
+    expect(labels(['maxAltitude', 'time', 'date'], { distanceM: 1000 })).toEqual([])
+    const avg = cardStats({ distanceM: 9000, durationS: 3600 }, ['avgSpeed'])[0].text
+    expect(avg).toEqual({ value: '9,0', unit: 'km/h' })
+  })
+
+  it('draws the figures chosen and the free line', () => {
+    const closing = draw(0.99, end({ figures: ['distance', 'minAltitude'], line: 'Sommet du Grand Som' })).joined.toLowerCase()
+    expect(closing).toContain('altitude min')
+    expect(closing).not.toContain('dénivelé +')
+    expect(closing).toContain('sommet du grand som')
+  })
+
+  it('draws the picture above the title, the profile and the mini-map of the whole track under the figures', () => {
+    const { ctx, texts, images, points } = fakeContext()
+    const picture = { image: {} as CanvasImageSource, width: 200, height: 100 }
+    const settings = end({ image: 'data:image/png;base64,AA', showProfile: true, showMinimap: true })
+    drawOverlay(ctx, overlayFrameAt(track, 0.99), settings, SIZE, { cardImage: () => picture })
+    const title = texts.find((t) => t.text.startsWith('Tour du Mont-Blanc'))!
+    expect(images).toHaveLength(1)
+    expect(images[0].args[1]).toBeLessThan(title.y)
+    // profile ridge and mini-map route: many points below the figures
+    const lastFigure = Math.max(...texts.map((t) => t.y))
+    expect(points.filter((pt) => pt.y > lastFigure).length).toBeGreaterThan(100)
+    // without the picture decoded yet, the card is drawn without it
+    const later = fakeContext()
+    drawOverlay(later.ctx, overlayFrameAt(track, 0.99), settings, SIZE, { cardImage: () => undefined })
+    expect(later.images).toHaveLength(0)
+  })
+
+  it('a style that lays the closing card out itself keeps its figures and line, and gives way to a card with graphics', () => {
+    const journal = withStyleLayout(enabled(), 'journal')
+    const sheet = draw(0.99, { ...journal, end: { ...journal.end, figures: ['descent'], line: 'Sommet du Grand Som' } }).joined.toLowerCase()
+    expect(sheet).toContain('dénivelé −')
+    expect(sheet).not.toContain('dénivelé +')
+    expect(sheet).toContain('sommet du grand som')
+    const { ctx, images } = fakeContext()
+    const picture = { image: {} as CanvasImageSource, width: 200, height: 100 }
+    drawOverlay(ctx, overlayFrameAt(track, 0.99), { ...journal, end: { ...journal.end, image: 'data:image/png;base64,AA' } }, SIZE, { cardImage: () => picture })
+    expect(images).toHaveLength(1)
   })
 })
 

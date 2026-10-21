@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v32.end.title': 'Une carte de clôture à votre façon',
+  'v32.end.text': 'Choisissez ses chiffres (D−, altitude min, vitesse moyenne, date…), ajoutez une ligne à vous, le profil, la mini-carte du tracé et un logo ou une image : dans l’inspecteur du bloc « Carte de clôture ».',
   'v32.fix.title': 'Corriger les chiffres d’une sortie',
   'v32.fix.text': 'Le GPS a raté le sommet ? Dans la carte d’une trace, « Corriger les chiffres » permet de saisir la distance, le D+, l’altitude max, la durée ou la vitesse max : les cartes d’ouverture et de clôture et l’affiche les reprennent.',
   'v31.dates.title': 'Des photos d’une autre date',

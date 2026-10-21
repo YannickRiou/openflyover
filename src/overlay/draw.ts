@@ -15,14 +15,15 @@ import { clipTimeS } from '../film/model'
 import type { DayCardField, FilmMedia, FilmText, TransitionDip } from '../film/model'
 import type { DayFigures } from '../film/days'
 import { getLanguage, t } from '../i18n'
+import type { MessageKey } from '../i18n'
 import { formatDate } from '../i18n/format'
 import { formatClock, formatDistance, formatDuration, formatNumber } from '../ui/format'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
-import type { CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { COUNTER_IDS, DEFAULT_TEXT_BACKING, fitWindow, inStyleSlot, widgetOverrides } from './settings'
+import type { CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
+import { CARD_FIGURES, COUNTER_IDS, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 import { styleStructure } from './structures'
@@ -51,6 +52,8 @@ export interface OverlayAssets {
   photo?: (src: string) => OverlayImage | undefined
   /** frame of a video clip of the timeline at `clipS` seconds in its file (`clipTimeS`), undefined while it is not ready */
   video?: (item: FilmMedia, clipS: number) => OverlayImage | undefined
+  /** decoded picture of a card (`CardExtras.image`), undefined while it is not loaded */
+  cardImage?: (dataUrl: string) => OverlayImage | undefined
 }
 
 /** Where a frame is in the film: film time and the lengths of the film clock (seconds at ×1). */
@@ -1091,6 +1094,10 @@ interface CardContent {
   /** size of the title relative to the opening card */
   titleScale: number
   cells: Cell[]
+  /** picture above the title (`CardExtras.image`) */
+  image?: OverlayImage
+  /** drawn side by side under the figures, without their own panel (profile, mini-map of the whole track) */
+  below?: Widget[]
 }
 
 function cardWidget(
@@ -1144,11 +1151,23 @@ function cardWidget(
   const gridW = cols * colW + (cols - 1) * cellGap
   const gridH = cellM ? rows * cellM.height + (rows - 1) * 2 * u * scale : 0
 
+  // picture above the title, as large as the logo at most
+  const image = content.image && content.image.width > 0 && content.image.height > 0 ? content.image : undefined
+  let imageH = image ? 9 * u * scale : 0
+  let imageW = image ? (imageH * image.width) / image.height : 0
+  if (imageW > Math.min(28 * u * scale, maxW)) {
+    imageH *= Math.min(28 * u * scale, maxW) / imageW
+    imageW = Math.min(28 * u * scale, maxW)
+  }
+  const below = content.below ?? []
+  const belowW = below.reduce((sum, w) => sum + w.width, 0) + Math.max(0, below.length - 1) * cellGap
+  const belowH = Math.max(0, ...below.map((w) => w.height))
+
   const titleW = Math.max(0, ...lines.map((l) => measure(p, l, title)))
   const subW = sub ? measure(p, sub, subtitle) : 0
-  const innerW = Math.max(titleW, subW, gridW, ruleW)
+  const innerW = Math.max(titleW, subW, gridW, ruleW, imageW, belowW)
   const titleH = lines.length ? (lines.length - 1) * lineH + title.sizePx * 0.78 : 0
-  const parts = [titleH, sub ? subtitle.sizePx * 0.78 : 0, gridH].filter((h) => h > 0)
+  const parts = [imageH, titleH, sub ? subtitle.sizePx * 0.78 : 0, gridH, belowH].filter((h) => h > 0)
   const innerH = parts.reduce((a, b) => a + b, 0) + (parts.length - 1) * (ruleW ? 2 * ruleGap : ruleGap * 1.4)
 
   return {
@@ -1161,6 +1180,12 @@ function cardWidget(
       const ix = x + pad + (align === 'right' ? 0 : barW)
       let cy = y + pad
       const between = ruleW ? 2 * ruleGap : ruleGap * 1.4
+      const placeX = (w: number) => (align === 'left' ? ix : align === 'right' ? ix + innerW - w : ix + (innerW - w) / 2)
+      if (image) {
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(image.image, placeX(imageW), cy, imageW, imageH)
+        cy += imageH + between
+      }
       lines.forEach((line, i) => fillText(p, line, alignX(align, ix, innerW), cy + title.sizePx * 0.78 + i * lineH, title, align))
       if (titleH) cy += titleH + between
       if (ruleW && titleH && (sub || cellM)) {
@@ -1183,6 +1208,12 @@ function cardWidget(
           const rowShift = align === 'center' ? ((cols - rowCount) * (colW + cellGap)) / 2 : 0
           drawCell(p, cellM, cell, ix + offset + rowShift + col * (colW + cellGap), cy + row * (cellM.height + 2 * u * scale), colW, align)
         })
+        if (gridH > 0) cy += gridH + between
+      }
+      let bx = placeX(belowW)
+      for (const w of below) {
+        w.draw(bx, cy + (belowH - w.height) / 2)
+        bx += w.width + cellGap
       }
     },
   }
@@ -1266,25 +1297,82 @@ function dayWidget(p: Painter, card: DayCard, opacity: number): Widget {
   return cardWidget(p, { title, subtitle, titleScale: 0.6, cells }, card.anchor, card.size, opacity, m)
 }
 
-/** Figures of the closing card (the ones the track records), label and text. */
-export function endStats(s: OverlayTrack['stats']): { label: string; text: CounterText }[] {
-  const stats: [string, CounterText | null][] = [
-    [t('overlay.draw.stat.distance'), splitUnit(formatDistance(s.distanceM))],
-    [t('overlay.draw.stat.ascent'), s.ascentM === undefined ? null : { value: formatNumber(s.ascentM), unit: 'm' }],
-    [t('overlay.draw.stat.maxAltitude'), s.maxEleM === undefined ? null : { value: formatNumber(s.maxEleM), unit: 'm' }],
-    [t('overlay.draw.stat.duration'), s.durationS === undefined || s.durationS <= 0 ? null : { value: formatDuration(s.durationS), unit: '' }],
-    [t('overlay.draw.stat.maxSpeed'), s.maxSpeedKmh === undefined ? null : { value: formatNumber(s.maxSpeedKmh, 1), unit: 'km/h' }],
-  ]
-  return stats.flatMap(([label, text]) => (text ? [{ label, text }] : []))
+/** Label of each figure a card can show. */
+const CARD_FIGURE_KEYS: Record<CardFigure, MessageKey> = {
+  distance: 'overlay.draw.stat.distance',
+  ascent: 'overlay.draw.stat.ascent',
+  descent: 'overlay.draw.stat.descent',
+  maxAltitude: 'overlay.draw.stat.maxAltitude',
+  minAltitude: 'overlay.draw.stat.minAltitude',
+  time: 'overlay.draw.stat.duration',
+  maxSpeed: 'overlay.draw.stat.maxSpeed',
+  avgSpeed: 'overlay.draw.stat.avgSpeed',
+  date: 'overlay.draw.stat.date',
 }
 
-function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget {
+/** Label of a figure on the cards (and of its chip in the inspector). */
+export const cardFigureLabel = (id: CardFigure): string => t(CARD_FIGURE_KEYS[id])
+
+/** The `figures` of a card the track records, in the order of CARD_FIGURES: label and text. */
+export function cardStats(s: OverlayTrack['stats'], figures: readonly CardFigure[]): { label: string; text: CounterText }[] {
+  const metres = (m: number | undefined): CounterText | null => (m === undefined ? null : { value: formatNumber(m), unit: 'm' })
+  const timed = s.durationS !== undefined && s.durationS > 0 ? s.durationS : undefined
+  const texts: Record<CardFigure, CounterText | null> = {
+    distance: splitUnit(formatDistance(s.distanceM)),
+    ascent: metres(s.ascentM),
+    descent: metres(s.descentM),
+    maxAltitude: metres(s.maxEleM),
+    minAltitude: metres(s.minEleM),
+    time: timed === undefined ? null : { value: formatDuration(timed), unit: '' },
+    maxSpeed: s.maxSpeedKmh === undefined ? null : { value: formatNumber(s.maxSpeedKmh, 1), unit: 'km/h' },
+    avgSpeed: timed === undefined || s.distanceM <= 0 ? null : { value: formatNumber((s.distanceM / timed) * 3.6, 1), unit: 'km/h' },
+    date: s.startTime === undefined ? null : { value: formatDate(s.startTime, { day: '2-digit', month: '2-digit', year: 'numeric' }), unit: '' },
+  }
+  return CARD_FIGURES.flatMap((id) => {
+    const text = texts[id]
+    return figures.includes(id) && text ? [{ label: cardFigureLabel(id), text }] : []
+  })
+}
+
+/** Figures of the closing card: those chosen in its inspector, the usual five until then. */
+export const endFigures = (e: EndCardSettings): readonly CardFigure[] => e.figures ?? END_CARD_FIGURES
+
+/** The line under the title of the closing card: the user's own and the weather of the outing, when chosen. */
+export function endLine(e: EndCardSettings, weather: WeatherSummary | undefined): string {
+  return [e.line?.trim() ?? '', e.showWeather ? weatherSummaryLine(weather) : ''].filter(Boolean).join(' · ')
+}
+
+/** The closing card has a picture, the profile or the mini-map: drawn as a card, out of a style's structure. */
+export const endHasGraphics = (e: EndCardSettings): boolean => Boolean(e.image) || Boolean(e.showProfile) || Boolean(e.showMinimap)
+
+/** Profile and mini-map of the whole track inside a card: no panel of their own, the whole route covered, no marker. */
+function cardGraphics(p: Painter, frame: OverlayFrame, settings: OverlaySettings, card: EndCardSettings, width: number): Widget[] {
+  const bare: Painter = { ...p, theme: { ...p.theme, panel: null, textBacking: 'shadow' } }
+  const { outline } = frame.track
+  const last = outline && outline.x.length > 0 ? { x: outline.x[outline.x.length - 1], y: outline.y[outline.y.length - 1] } : undefined
+  const whole: OverlayFrame = { ...frame, progress: 1, ele: undefined, distanceM: Number.POSITIVE_INFINITY, mapPoint: last }
+  const out: Widget[] = []
+  const map = card.showMinimap ? minimapWidget(bare, whole, { ...settings, minimap: { ...settings.minimap, size: card.size * 0.8, northArrow: false } }, 1) : null
+  if (map) out.push(map)
+  if (card.showProfile) {
+    const w = Math.max(width - (map ? map.width + 3.2 * p.u * card.size : 0), 24 * p.u * card.size)
+    const h = map ? map.height : 9 * p.u * card.size
+    const profile = profileWidget(bare, whole, { ...settings, profile: { ...settings.profile, width: w / p.size.width, height: h / p.size.height } }, 1)
+    if (profile) out.unshift(profile)
+  }
+  return out
+}
+
+function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number, assets: OverlayAssets): Widget {
   const e = settings.end
   const s = frame.track.stats
   const m = cellMetrics(p, e.size)
-  const cells = endStats(s).map(({ label, text }) => makeCell(p, m, label, text, text))
-  const subtitle = e.showWeather ? weatherSummaryLine(s.weather) : ''
-  return cardWidget(p, { title: e.title.trim() || frame.track.name, subtitle, titleScale: 0.6, cells }, e.anchor, e.size, opacity, m)
+  const cells = cardStats(s, endFigures(e)).map(({ label, text }) => makeCell(p, m, label, text, text))
+  const image = e.image ? assets.cardImage?.(e.image) : undefined
+  // the graphics as wide as the figures, at least a readable width
+  const gridW = cells.reduce((sum, c) => sum + cellWidth(p, m, c), 0) + Math.max(0, cells.length - 1) * 3.2 * p.u * e.size
+  const below = cardGraphics(p, frame, settings, e, Math.min(gridW, Math.min(p.size.width * 0.72, p.size.width * (1 - 2 * SAFE_MARGIN))))
+  return cardWidget(p, { title: e.title.trim() || frame.track.name, subtitle: endLine(e, s.weather), titleScale: 0.6, cells, image, below }, e.anchor, e.size, opacity, m)
 }
 
 /**
@@ -1615,7 +1703,7 @@ export function drawOverlay(
     endOpacity = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
     const rolling = creditLines(settings.end.credits).length > 0
     // a widget in a slot of the style's structure is drawn by the structure, the others as ordinary widgets
-    const slot = (key: LaidOutWidget) => inStyleSlot(settings, key) && !(key === 'end' && rolling)
+    const slot = (key: LaidOutWidget) => inStyleSlot(settings, key) && !(key === 'end' && (rolling || endHasGraphics(settings.end)))
     // an opening card that is part of the structure, a header or a stripe, leaves them as they are
     live = 1 - Math.max(slot('title') ? 0 : titleOpacity, endOpacity, cover, stageOpacity)
 
@@ -1632,7 +1720,7 @@ export function drawOverlay(
     structure = styleStructure({ p, of, frame, settings, slot, live, titleOpacity, endOpacity, markerColor: extras.markerColor })
     if (titleOpacity > 0 && !slot('title')) add(placed('title', titleWidget(of('title'), frame, settings, titleOpacity)))
     if (endOpacity > 0 && !slot('end')) {
-      const card = endWidget(of('end'), frame, settings, endOpacity)
+      const card = endWidget(of('end'), frame, settings, endOpacity, assets)
       const credits = creditLines(settings.end.credits)
       // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
       if (credits.length === 0) add(placed('end', card))

@@ -7,7 +7,7 @@ vi.mock('./draw', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./draw')>()
   return { ...actual, drawOverlay: vi.fn() }
 })
-vi.mock('./assets', () => ({ loadLogo: vi.fn(() => Promise.resolve({ width: 1, height: 1 })) }))
+vi.mock('./assets', () => ({ createCardImages: () => () => undefined, loadLogo: vi.fn(() => Promise.resolve({ width: 1, height: 1 })) }))
 
 const { drawOverlay } = await import('./draw')
 const { createOverlayDrawer } = await import('./exportOverlay')

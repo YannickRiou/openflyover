@@ -95,6 +95,17 @@ describe('overlay settings', () => {
     expect(sanitizeSettings({ overlay: { ...DEFAULT_OVERLAY, credits: { enabled: 'yes', position: 'top-left' } } }).invalid).toEqual(['overlay'])
   })
 
+  it('validates what the closing card shows besides its title (all absent in older projects)', () => {
+    const end = (patch: object) => ({ ...DEFAULT_OVERLAY, end: { ...DEFAULT_OVERLAY.end, ...patch } }) as OverlaySettings
+    expect(isValidOverlay(end({ figures: ['date', 'descent'], line: 'Sommet', image: 'data:image/png;base64,AA', showProfile: true, showMinimap: false }))).toBe(true)
+    expect(isValidOverlay(end({ figures: [] }))).toBe(true)
+    expect(isValidOverlay(end({ figures: ['distance', 'distance'] }))).toBe(false)
+    expect(isValidOverlay(end({ figures: ['heartRate'] }))).toBe(false)
+    expect(isValidOverlay(end({ line: 'x'.repeat(121) }))).toBe(false)
+    expect(isValidOverlay(end({ image: 'https://example.com/a.png' }))).toBe(false)
+    expect(isValidOverlay(end({ showProfile: 'yes' }))).toBe(false)
+  })
+
   it('validates the mini-map', () => {
     expect(isValidOverlay(withPatch((o) => (o.minimap.anchor = 'nowhere' as OverlaySettings['minimap']['anchor'])))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.minimap.size = 3)))).toBe(false)
