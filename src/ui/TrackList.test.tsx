@@ -307,6 +307,24 @@ describe('TrackList, « Plusieurs traces »', () => {
     act(() => root.unmount())
   })
 
+  it('« À la suite »: the three choices of the transitions, passage, night and the high view of the stage', async () => {
+    resetAppStore()
+    useAppStore.getState().replaceTracks([drawnTrack(), { ...drawnTrack(), id: 'other', name: 'Autre' }])
+    useAppStore.getState().setSetting('race', { ...useAppStore.getState().settings.race, sequence: true })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TrackList />))
+    const box = (label: string) => [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find((i) => i.closest('label')?.textContent === label)!
+    expect(box('Passer la nuit').checked).toBe(true)
+    expect(box('Revoir l’étape finie').checked).toBe(false)
+    await act(async () => box('Revoir l’étape finie').click())
+    await act(async () => box('Passer la nuit').click())
+    expect(useAppStore.getState().settings.film.junctionDefault).toMatchObject({ kind: 'fondu-noir', night: false, recap: true })
+    // the passage offers the cut and the fades, the night is a choice of its own
+    expect(host.textContent).toContain('Passage')
+    act(() => root.unmount())
+  })
+
   it('« À la suite »: the common card is set here, and the cards set on their own are counted and brought back', async () => {
     resetAppStore()
     useAppStore.getState().replaceTracks([drawnTrack(), { ...drawnTrack(), id: 'other', name: 'Autre' }])

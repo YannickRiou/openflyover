@@ -43,7 +43,7 @@ const messages: Messages['timeline'] = {
   'stage.short': 'Etappe {n}',
   'junction.description': 'Übergang {n}: {label}{own}',
   'junction.byDefault': ' (Standard)',
-  'junction.nightFade': 'Nacht · Abblende ins Schwarze {s}',
+  'junction.withRecap': '{label} · Rückblick',
   blockRange: '{description}, von {from} bis {to}',
   'key.settingAria': 'Einstellung: {what}, bei {distance}, bei {time}',
   'key.hint': '{what} (Klick: hingehen, Ziehen: verschieben)',

@@ -1323,7 +1323,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         block(
           stageItemId(stage.track.id),
           before ? before.endS : flightStart,
-          after ? after.startS : flightEnd,
+          // « Revoir l'étape finie » belongs to the transition's block, which starts with it
+          after ? (after.recap?.startS ?? after.startS) : flightEnd,
           name,
           t('timeline.stage.description', { n: k + 1, track: stage.track.name }),
           BLOCK_KINDS.stage,
@@ -1335,15 +1336,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       ]
       if (after) {
         const fade = after.kind === 'fondu-noir' || after.kind === 'fondu-blanc'
-        const hold = `${formatNumber(after.holdS, 1)} s`
-        // a « Nuit » with no night between the two stages (same day) is a fade to black: the block says both
-        const noNight = fade && junctionOf(shownFilm, after.afterTrackId).kind === 'nuit'
-        const label = noNight ? t('timeline.junction.nightFade', { s: hold }) : fade ? `${JUNCTION_KIND_LABELS[after.kind]} · ${hold}` : JUNCTION_KIND_LABELS[after.kind]
+        const passage = fade ? `${JUNCTION_KIND_LABELS[after.kind]} · ${formatNumber(after.holdS, 1)} s` : JUNCTION_KIND_LABELS[after.kind]
+        // what the clock plays here: the passage (or the night), with the high view of the stage before it
+        const label = junctionOf(shownFilm, after.afterTrackId).recap ? t('timeline.junction.withRecap', { label: passage }) : passage
         const own = hasOwnTransition(shownFilm, after.afterTrackId) ? '' : t('timeline.junction.byDefault')
         blocks.push(
           block(
             after.id,
-            after.startS,
+            after.recap?.startS ?? after.startS,
             after.endS,
             label,
             t('timeline.junction.description', { n: k + 1, label, own }),

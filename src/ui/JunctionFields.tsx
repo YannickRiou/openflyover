@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { STAGE_CARD_VARIABLES } from '../film/junctions'
-import { DAY_CARD_FIELDS, DAY_CARD_FIELD_LABELS, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, JUNCTION_KINDS, JUNCTION_KIND_LABELS, STAGE_CARD_FIELDS } from '../film/model'
+import { DAY_CARD_FIELDS, DAY_CARD_FIELD_LABELS, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, JUNCTION_KIND_LABELS, PASSAGE_KINDS, STAGE_CARD_FIELDS } from '../film/model'
 import type { JunctionCard, JunctionKind } from '../film/model'
 import { t, useT } from '../i18n'
 import { WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
@@ -8,37 +8,42 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber } from './format'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RangeField } from './PanelSection'
-import { Chip, Radio, RadioGroup, Select, TextField } from './primitives'
+import { Checkbox, Chip, Radio, RadioGroup, Select, TextField } from './primitives'
 
-/** What each transition does, under its choice. */
-const JUNCTION_KIND_HINTS: Record<JunctionKind, string> = {
+/** What each passage does, under its choice. */
+const PASSAGE_HINTS: Record<PassageKind, string> = {
   get coupe() { return t('inspector.junction.hint.coupe') },
   get 'fondu-noir'() { return t('inspector.junction.hint.fondu-noir') },
   get 'fondu-blanc'() { return t('inspector.junction.hint.fondu-blanc') },
-  get nuit() { return t('inspector.junction.hint.nuit') },
 }
 
 const seconds = (s: number) => `${formatNumber(s, Number.isInteger(s) ? 0 : 1)} s`
 
+type PassageKind = (typeof PASSAGE_KINDS)[number]
+
 /**
- * « Type de transition » of a junction and its « Durée » (a fade holds the film for that long), the same in the
- * settings and the inspector. A « Nuit » lasts its night; the « Durée » is that of the fade to black it is where the
- * stages are on the same day: shown in the settings, and in the inspector of a junction that has no night (`night`
- * false; true hides it).
+ * The three choices of a junction, the same in the settings and the inspector: « Passage » (a cut or a fade, held for
+ * its « Durée »), « Passer la nuit » (the night between two days; `hasNight` false: there is none between these two
+ * stages, said under it; absent: not known, in the settings) and « Revoir l'étape finie » (the high view of the stage).
  */
 export function JunctionTransitionFields({
   kind,
   holdS,
   night,
+  recap,
+  hasNight,
   onChange,
 }: {
   kind: JunctionKind
   holdS: number
-  night?: boolean
-  onChange(patch: { kind?: JunctionKind; holdS?: number }): void
+  night: boolean
+  recap: boolean
+  hasNight?: boolean
+  onChange(patch: { kind?: JunctionKind; holdS?: number; night?: boolean; recap?: boolean }): void
 }) {
   const t = useT()
   const id = useId()
+  const passage: PassageKind = kind === 'nuit' ? 'fondu-noir' : kind
   return (
     <>
       <div className="flex flex-col gap-1">
@@ -47,28 +52,27 @@ export function JunctionTransitionFields({
         </label>
         <Select
           id={`${id}-kind`}
-          value={kind}
+          value={passage}
           aria-describedby={`${id}-hint`}
-          options={JUNCTION_KINDS.map((k) => ({ value: k, label: JUNCTION_KIND_LABELS[k] }))}
+          options={PASSAGE_KINDS.map((k) => ({ value: k, label: JUNCTION_KIND_LABELS[k] }))}
           onChange={(next) => onChange({ kind: next })}
         />
         <p id={`${id}-hint`} className="type-hint">
-          {JUNCTION_KIND_HINTS[kind]}
+          {PASSAGE_HINTS[passage]}
         </p>
       </div>
-      {(kind === 'fondu-noir' || kind === 'fondu-blanc') && (
+      {passage !== 'coupe' && (
         <RangeField label={t('inspector.junction.duration')} {...JUNCTION_HOLD_RANGE} value={holdS} format={seconds} onChange={(v) => onChange({ holdS: v })} wide={false} />
       )}
-      {kind === 'nuit' && night !== true && (
-        <>
-          {night === false && <p className="type-hint">{t('inspector.junction.noNight')}</p>}
-          <RangeField label={t('inspector.junction.durationNoNight')} {...JUNCTION_HOLD_RANGE} value={holdS} format={seconds} onChange={(v) => onChange({ holdS: v })} wide={false} />
-        </>
-      )}
+      <Checkbox checked={night} onChange={(on) => onChange({ night: on })}>{t('inspector.junction.night')}</Checkbox>
+      <p className="type-hint">{night && hasNight === false ? t('inspector.junction.noNight') : t('inspector.junction.nightHint')}</p>
+      <Checkbox checked={recap} onChange={(on) => onChange({ recap: on })}>{t('inspector.junction.recap')}</Checkbox>
+      <p className="type-hint">{t('inspector.junction.recapHint')}</p>
     </>
   )
 }
 
+/** Range of the size of a stage card (×, as a text's). */
 const SIZE_RANGE = { min: WIDGET_SIZE_MIN, max: WIDGET_SIZE_MAX, step: 0.1 }
 
 /**

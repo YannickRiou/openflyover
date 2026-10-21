@@ -127,7 +127,7 @@ function StageDefaults() {
   const t = useT()
   const film = useAppStore((s) => s.settings.film)
   const sequence = useFilmSequence()
-  const { kind, holdS, card } = junctionDefaultOf(film)
+  const { kind, holdS, night, recap, card } = junctionDefaultOf(film)
   const afterIds = (sequence?.stageIds ?? []).slice(0, -1)
   const ownTransitions = afterIds.filter((id) => hasOwnTransition(film, id)).length
   const ownCards = [null, ...afterIds].filter((id) => hasOwnCard(film, id)).length
@@ -138,9 +138,11 @@ function StageDefaults() {
       <JunctionTransitionFields
         kind={kind}
         holdS={holdS || DEFAULT_JUNCTION.holdS}
-        onChange={(patch) => editFilm((f) => ({ film: withDefaultJunction(f, patch) }), { step: patch.kind !== undefined })}
+        night={night}
+        recap={recap}
+        onChange={(patch) => editFilm((f) => ({ film: withDefaultJunction(f, patch) }), { step: patch.holdS === undefined })}
       />
-      {kind === 'nuit' && <p className="type-hint">{t('track.stages.nightInfo', { pause: formatSecondsShort(nightPauseS(film.nights)) })}</p>}
+      {night && <p className="type-hint">{t('track.stages.nightInfo', { pause: formatSecondsShort(nightPauseS(film.nights)) })}</p>}
       {ownTransitions > 0 && (
         <>
           <p className="type-hint">{t('track.stages.ownTransitions', { count: ownTransitions })}</p>

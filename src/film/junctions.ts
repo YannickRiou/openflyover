@@ -18,10 +18,10 @@ import { JUNCTION_CARD_DEFAULT_S, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, STAG
 import type { Film, FilmJunction, JunctionCard, JunctionDefault, JunctionKind, StoredStageCard, TransitionDip } from './model'
 
 /**
- * Default junction of a film that never chose: the night between two days (a dip to black held for 1.5 s where the
- * stages are on the same day), a card for every stage.
+ * Default junction of a film that never chose: a dip to black held for 1.5 s, the night passed when the stages are on
+ * two days, no high view of the stage, a card for every stage.
  */
-export const DEFAULT_JUNCTION: JunctionDefault = { kind: 'nuit', holdS: 1.5, card: true }
+export const DEFAULT_JUNCTION: JunctionDefault = { kind: 'fondu-noir', holdS: 1.5, card: true, night: true, recap: false }
 
 /** Placement of a stage card that sets none: centred at the normal size, as the stage card always was. */
 export const DEFAULT_STAGE_CARD: Omit<JunctionCard, 'enabled'> = { durationS: JUNCTION_CARD_DEFAULT_S, anchor: 'center', size: 1 }
@@ -55,22 +55,36 @@ export const stageCardAfterOf = (item: string): string | null => (item === FIRST
 // Reading
 // ---------------------------------------------------------------------------
 
-export const junctionDefaultOf = (film: Pick<Film, 'junctionDefault'>): JunctionDefault => film.junctionDefault ?? DEFAULT_JUNCTION
+/** The default junction, every field set (`night` yes and `recap` no where it says nothing; a 'nuit' kind of before v6: a fade with the night). */
+export function junctionDefaultOf(film: Pick<Film, 'junctionDefault'>): Required<Omit<JunctionDefault, 'cardSettings'>> & Pick<JunctionDefault, 'cardSettings'> {
+  const d = film.junctionDefault ?? DEFAULT_JUNCTION
+  const night = d.kind === 'nuit' ? true : (d.night ?? true)
+  return { ...d, kind: d.kind === 'nuit' ? 'fondu-noir' : d.kind, night, recap: d.recap ?? false }
+}
 
-/** A junction with every field set. */
-export type ResolvedJunction = Required<Pick<FilmJunction, 'id' | 'afterTrackId' | 'kind' | 'holdS'>>
+/** A junction with every field set: its passage (never 'nuit'), hold, night and high view of the stage. */
+export type ResolvedJunction = Required<Pick<FilmJunction, 'id' | 'afterTrackId' | 'kind' | 'holdS' | 'night' | 'recap'>>
 
 /** The junction after the stage of track `afterTrackId`: what the film stores of it, the default for the rest. */
 export function junctionOf(film: Pick<Film, 'junctions' | 'junctionDefault'>, afterTrackId: string): ResolvedJunction {
   const stored = film.junctions?.find((j) => j.afterTrackId === afterTrackId)
   const fallback = junctionDefaultOf(film)
-  const kind = stored?.kind ?? fallback.kind
-  return { id: junctionId(afterTrackId), afterTrackId, kind, holdS: kind === 'coupe' ? 0 : (stored?.holdS ?? fallback.holdS) }
+  // a junction stored 'nuit' (before v6) is a fade to black that passes the night
+  const legacyNight = stored?.kind === 'nuit'
+  const kind = legacyNight ? 'fondu-noir' : (stored?.kind ?? fallback.kind)
+  return {
+    id: junctionId(afterTrackId),
+    afterTrackId,
+    kind,
+    holdS: kind === 'coupe' ? 0 : (stored?.holdS ?? fallback.holdS),
+    night: legacyNight || (stored?.night ?? fallback.night),
+    recap: stored?.recap ?? fallback.recap,
+  }
 }
 
-/** The film chose how the junction after `afterTrackId` passes (`kind` is stored), rather than leaving it to the default. */
+/** The film chose how the junction after `afterTrackId` passes (its passage, night or high view is stored), rather than leaving it to the default. */
 export const hasOwnTransition = (film: Pick<Film, 'junctions'>, afterTrackId: string) =>
-  film.junctions?.some((j) => j.afterTrackId === afterTrackId && j.kind !== undefined) === true
+  film.junctions?.some((j) => j.afterTrackId === afterTrackId && (j.kind !== undefined || j.night !== undefined || j.recap !== undefined)) === true
 
 const hasStored = (film: Pick<Film, 'junctions'>, afterTrackId: string) => film.junctions?.some((j) => j.afterTrackId === afterTrackId) === true
 
@@ -163,13 +177,13 @@ const holdFor = (film: Film, kind: JunctionKind, holdS: number) =>
   kind === 'coupe' ? 0 : clampHold(holdS > 0 ? holdS : junctionDefaultOf(film).holdS || DEFAULT_JUNCTION.holdS)
 
 /**
- * Junction `afterTrackId` with a new transition and / or hold (kept in `JUNCTION_HOLD_RANGE`; 0 for 'coupe'). The film
- * stores the junction from then on.
+ * Junction `afterTrackId` with a new passage, hold (kept in `JUNCTION_HOLD_RANGE`; 0 for 'coupe'), night and / or high
+ * view: the film stores the whole transition from then on (« réglage propre »).
  */
-export function withJunction(film: Film, afterTrackId: string, patch: Partial<Pick<FilmJunction, 'kind' | 'holdS'>>): Film {
+export function withJunction(film: Film, afterTrackId: string, patch: Partial<Pick<FilmJunction, 'kind' | 'holdS' | 'night' | 'recap'>>): Film {
   const current = junctionOf(film, afterTrackId)
   const kind = patch.kind ?? current.kind
-  return storing(film, afterTrackId, { kind, holdS: holdFor(film, kind, patch.holdS ?? current.holdS) })
+  return storing(film, afterTrackId, { kind, holdS: holdFor(film, kind, patch.holdS ?? current.holdS), night: patch.night ?? current.night, recap: patch.recap ?? current.recap })
 }
 
 /** The film with `patch` merged into the junction it stores after `afterTrackId` (stored now if it was not), in place. */
@@ -249,8 +263,8 @@ export function withAllCardsCommon(film: Film): Film {
  * « Utiliser pour toutes les transitions »: `kind` and `holdS` become the common transition and every junction goes
  * back to it (their cards stay), so every junction, present or future, passes the same way.
  */
-export function applyToAllJunctions(film: Film, patch: { kind: JunctionKind; holdS: number }): Film {
-  return withAllJunctionsCommon({ ...film, junctionDefault: { ...junctionDefaultOf(film), kind: patch.kind, holdS: holdFor(film, patch.kind, patch.holdS) } })
+export function applyToAllJunctions(film: Film, patch: { kind: JunctionKind; holdS: number; night: boolean; recap: boolean }): Film {
+  return withAllJunctionsCommon({ ...film, junctionDefault: { ...junctionDefaultOf(film), ...patch, holdS: holdFor(film, patch.kind, patch.holdS) } })
 }
 
 /** Every junction back to the common transition (their cards stay). */
@@ -258,11 +272,11 @@ export function withAllJunctionsCommon(film: Film): Film {
   return (film.junctions ?? []).reduce((f, j) => resetJunction(f, j.afterTrackId), film)
 }
 
-/** The default junction with a new transition and / or hold (the junctions that choose their own keep theirs). */
-export function withDefaultJunction(film: Film, patch: Partial<Pick<JunctionDefault, 'kind' | 'holdS'>>): Film {
+/** The default junction with a new passage, hold, night and / or high view (the junctions that choose their own keep theirs). */
+export function withDefaultJunction(film: Film, patch: Partial<Pick<JunctionDefault, 'kind' | 'holdS' | 'night' | 'recap'>>): Film {
   const current = junctionDefaultOf(film)
   const kind = patch.kind ?? current.kind
-  return { ...film, junctionDefault: { ...current, kind, holdS: holdFor(film, kind, patch.holdS ?? current.holdS) } }
+  return { ...film, junctionDefault: { ...current, ...patch, kind, holdS: holdFor(film, kind, patch.holdS ?? current.holdS) } }
 }
 
 /** « Une carte au début de chaque étape »: every stage card shown or hidden (a card hidden or shown on its own follows). */
@@ -282,7 +296,7 @@ export function resetJunction(film: Film, afterTrackId: string): Film {
   if (!hasOwnTransition(film, afterTrackId)) return film
   const junctions = film.junctions!.flatMap((j) => {
     if (j.afterTrackId !== afterTrackId) return [j]
-    const { kind: _kind, holdS: _holdS, ...rest } = j
+    const { kind: _kind, holdS: _holdS, night: _night, recap: _recap, ...rest } = j
     return rest.card ? [rest] : []
   })
   return { ...film, junctions }
@@ -323,7 +337,8 @@ export function stageFlightS(clock: Pick<FilmClock, 'openingS' | 'flightS' | 'ju
   const before = clock.junctions[k - 1]
   const after = clock.junctions[k]
   const startS = before ? (before.startS + before.endS + before.holdS) / 2 : clock.openingS
-  const endS = after ? (after.startS + after.endS - after.holdS) / 2 : clock.openingS + clock.flightS
+  // « Revoir l'étape finie » holds the film just before the junction: not part of the flight either
+  const endS = after ? (after.startS + after.endS - after.holdS) / 2 - (after.recap?.durationS ?? 0) : clock.openingS + clock.flightS
   const atCut = new Set(clock.junctions.map((j) => j.holdStartS))
   const nightsS = clock.nights.reduce((sum, n) => (n.holdStartS > startS && n.holdStartS < endS && !atCut.has(n.holdStartS) ? sum + nightPauseS(n) : sum), 0)
   return endS - startS - nightsS
@@ -355,6 +370,8 @@ export interface JunctionInput {
   holdS: number
   /** the night this junction passes through (kind 'nuit'): its pause is the night's, `holdS` its length */
   night?: FlightNight
+  /** « Revoir l'étape finie »: a high view of the stage before the passage (`RECAP_S`), or over the night it passes */
+  recap?: boolean
 }
 
 /** A night closer than this to a cut is the one between the two stages (metres). */
@@ -364,9 +381,9 @@ const NIGHT_AT_CUT_M = 25
  * The junctions of the clock and the nights left to the flight, from the film, the stages' track ids, their cuts
  * (metres) and the nights of the sequence's path (`candidates`: those the film would show with « Jours et nuits » on).
  *
- * Each junction passes as the film says (its own transition, else the default): 'nuit' keeps the night at its cut (a
- * dip to black held `holdS` without one), any other kind replaces it, whether « Montrer les nuits » is on or not. The
- * nights not at a cut stay automatic (`nights`).
+ * Each junction passes as the film says (its own transition, else the default): with « Passer la nuit » it keeps the
+ * night at its cut (kind 'nuit' on the clock), else, or without a night there (same day), its passage; whether
+ * « Montrer les nuits » is on or not. The nights not at a cut stay automatic (`nights`).
  */
 export function junctionPlan(
   film: Pick<Film, 'junctions' | 'junctionDefault' | 'nights'>,
@@ -380,12 +397,12 @@ export function junctionPlan(
   cutsM.forEach((atM, k) => {
     const afterTrackId = stageIds[k]
     if (afterTrackId === undefined) return
-    const { id, kind, holdS } = junctionOf(film, afterTrackId)
+    const { id, kind, holdS, night: passesNight, recap } = junctionOf(film, afterTrackId)
     const night = candidates.find((n) => !handled.has(n) && Math.abs(n.atM - atM) <= NIGHT_AT_CUT_M)
     if (night) handled.add(night)
-    if (kind === 'nuit' && night) junctions.push({ id, afterTrackId, atM, kind, holdS: nightPauseS(night), night })
-    // a night without a night to pass: a dip to black as long as the junction holds
-    else junctions.push({ id, afterTrackId, atM, kind: kind === 'nuit' ? 'fondu-noir' : kind, holdS: kind === 'coupe' ? 0 : holdS })
+    if (passesNight && night) junctions.push({ id, afterTrackId, atM, kind: 'nuit', holdS: nightPauseS(night), night, recap })
+    // no night asked for, or none to pass (the same day): the passage, held as long as it says
+    else junctions.push({ id, afterTrackId, atM, kind, holdS: kind === 'coupe' ? 0 : holdS, recap })
   })
   return { junctions, nights: automatic.filter((n) => !handled.has(n)) }
 }

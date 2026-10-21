@@ -7,6 +7,7 @@ import type { Settings } from '../state/store'
 import {
   PROJECT_FORMAT,
   PROJECT_VERSION,
+  MIGRATIONS,
   migrateProject,
   parseProject,
   projectFileName,
@@ -442,7 +443,7 @@ describe('parseProject errors', () => {
     ['not JSON', () => '{', /pas du JSON valide/],
     ['another JSON', () => ({ type: 'FeatureCollection' }), /pas un projet OpenFlyover/],
     ['an array', () => [], /pas un projet OpenFlyover/],
-    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v5\)/],
+    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v6\)/],
     ['a bad version', (d) => ({ ...d, version: '1' }), /version/],
     ['no tracks', (d) => ({ ...d, tracks: undefined }), /liste des traces/],
     ['a track without id', (d) => ({ ...d, tracks: [{ ...(d.tracks as object[])[0], id: '' }] }), /Trace n°1 : identifiant/],
@@ -503,7 +504,7 @@ describe('migrateProject', () => {
 
   it('v3: the default transition « À la suite » says what the film did (a junction no longer turns into a night by itself)', () => {
     const film = (f: Record<string, unknown>, race: Record<string, unknown> = {}) => {
-      const out = migrateProject({ version: 2, settings: { film: f, race } }) as { settings: { film: Record<string, unknown> } }
+      const out = migrateProject({ version: 2, settings: { film: f, race } }, MIGRATIONS, 3) as { settings: { film: Record<string, unknown> } }
       return out.settings.film.junctionDefault
     }
     const fade = { kind: 'fondu-noir', holdS: 1.5, card: true }
@@ -520,7 +521,7 @@ describe('migrateProject', () => {
   })
 
   it('v5: the titles of an overlay that was off are switched off; the automatic stops keep what the pacing made', () => {
-    const v4 = (settings: Record<string, unknown>) => (migrateProject({ version: 4, settings }) as { settings: Record<string, Record<string, unknown>> }).settings
+    const v4 = (settings: Record<string, unknown>) => (migrateProject({ version: 4, settings }, MIGRATIONS, 5) as { settings: Record<string, Record<string, unknown>> }).settings
     const titles = { title: { enabled: true, title: 'T' }, end: { enabled: true, title: 'F' } }
     expect(v4({ overlay: { enabled: false, ...titles } }).overlay).toMatchObject({ title: { enabled: false, title: 'T' }, end: { enabled: false } })
     expect(v4({ overlay: { enabled: true, ...titles } }).overlay).toMatchObject({ title: { enabled: true }, end: { enabled: true } })
@@ -531,6 +532,23 @@ describe('migrateProject', () => {
     expect(v4({ film: { autoStops: true, autoMode: 'temps-forts' }, pacing: { landmarks: true, windowM: 1000 } }).film).not.toHaveProperty('autoStopGroupM')
     // the films of before the timeline keep reading their pacing
     expect(v4({ film: { autoStops: true, autoMode: 'rythme' }, pacing: { landmarks: false } }).film).toMatchObject({ autoStops: true })
+  })
+
+  it('v6: the night and the high view of a junction are choices of their own; the film stays the same', () => {
+    const v5 = (film: Record<string, unknown>, race: Record<string, unknown> = {}) =>
+      (migrateProject({ version: 5, settings: { film, race } }) as { settings: { film: Record<string, unknown> } }).settings.film
+    // 'nuit' was the default and a kind: a fade to black that passes the night; another kind did not pass it
+    expect(v5({ junctionDefault: { kind: 'nuit', holdS: 2, card: true } }).junctionDefault).toEqual({ kind: 'fondu-noir', holdS: 2, card: true, night: true })
+    expect(v5({ junctionDefault: { kind: 'coupe', holdS: 0, card: true } }).junctionDefault).toEqual({ kind: 'coupe', holdS: 0, card: true, night: false })
+    expect(v5({ junctions: [{ id: 'junction-a', afterTrackId: 'a', kind: 'nuit' }, { id: 'junction-b', afterTrackId: 'b', kind: 'fondu-blanc', holdS: 2 }, { id: 'junction-c', afterTrackId: 'c', card: { size: 2 } }] }).junctions).toEqual([
+      { id: 'junction-a', afterTrackId: 'a', kind: 'fondu-noir', night: true },
+      { id: 'junction-b', afterTrackId: 'b', kind: 'fondu-blanc', holdS: 2, night: false },
+      { id: 'junction-c', afterTrackId: 'c', card: { size: 2 } },
+    ])
+    expect(v5({})).not.toHaveProperty('junctionDefault')
+    // the high view of the nights « À la suite » becomes « Revoir l'étape finie »
+    expect(v5({ dayCards: { view: true } }, { sequence: true }).junctionDefault).toEqual({ kind: 'fondu-noir', holdS: 1.5, card: true, night: true, recap: true })
+    expect(v5({ dayCards: { view: true } })).not.toHaveProperty('junctionDefault')
   })
 
   it('v4: a stage card keeps only what it changed, so it follows the common card', () => {
@@ -546,12 +564,12 @@ describe('migrateProject', () => {
           ],
         },
       },
-    }) as { settings: { film: Record<string, unknown> } }
+    }, MIGRATIONS, 4) as { settings: { film: Record<string, unknown> } }
     expect(out.settings.film.firstCard).toEqual({ enabled: false })
     // a card that changed nothing is gone, and its junction with it; the other keeps its own fields
     expect(out.settings.film.junctions).toEqual([{ id: 'junction-b', afterTrackId: 'b', kind: 'coupe', holdS: 0, card: { size: 1.5, text: '{name}' } }])
     // cards hidden by default: a hidden card changed nothing
-    const hidden = migrateProject({ version: 3, settings: { film: { junctionDefault: { kind: 'nuit', holdS: 1.5, card: false }, firstCard: { ...full, enabled: false } } } }) as { settings: { film: Record<string, unknown> } }
+    const hidden = migrateProject({ version: 3, settings: { film: { junctionDefault: { kind: 'nuit', holdS: 1.5, card: false }, firstCard: { ...full, enabled: false } } } }, MIGRATIONS, 4) as { settings: { film: Record<string, unknown> } }
     expect(hidden.settings.film).not.toHaveProperty('firstCard')
   })
 })

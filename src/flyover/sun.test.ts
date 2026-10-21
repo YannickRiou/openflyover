@@ -350,7 +350,7 @@ describe('three days À la suite: the light across the fades', () => {
   const start = Date.UTC(2026, 6, 1, 8)
   const sequence = buildSequence([day('a', 45, start), day('b', 45.1, start + 24 * 3_600_000), day('c', 45.2, start + 48 * 3_600_000)])
   // fades between the stages (the default « Nuit » would pass the nights)
-  const film = { ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, enabled: false }, junctionDefault: { kind: 'fondu-noir' as const, holdS: 1.5, card: true } }
+  const film = { ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, enabled: false }, junctionDefault: { kind: 'fondu-noir' as const, holdS: 1.5, card: true, night: false } }
   const clock = filmClockFor({ track: sequence.track, film, durationS: 60, pacing: DEFAULT_PACING, cutsM: sequence.cutsM, stageIds: sequence.stageIds })
   const sunAt = (progress: number) => {
     const at = stageAt(sequence, progress)

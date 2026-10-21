@@ -286,23 +286,23 @@ describe('film clock — three days À la suite with nights', () => {
     const clock = clockOfFilm(nightsOn)
     expect(clock.junctions.map((j) => [j.kind, j.holdS])).toEqual([['nuit', parts], ['nuit', parts]])
     expect(clock.nights.map((n) => n.holdStartS)).toEqual(clock.junctions.map((j) => j.holdStartS))
-    // a cut as the default is a cut, the nights on or not: the film is shorter by the two nights
-    const cut = { kind: 'coupe' as const, holdS: 0, card: true }
+    // a cut that does not pass the night is a cut, the nights on or not: the film is shorter by the two nights
+    const cut = { kind: 'coupe' as const, holdS: 0, card: true, night: false }
     expect(clockOfFilm({ ...nightsOn, junctionDefault: cut }).junctions.map((j) => j.kind)).toEqual(['coupe', 'coupe'])
     expect(clock.totalTime()).toBeCloseTo(clockOfFilm({ ...nightsOn, junctionDefault: cut }).totalTime() + 2 * parts, 9)
   })
 
   it('a junction that chose another transition replaces the night; the default « Nuit » keeps it with the nights off, a default fade does not', () => {
-    const chosen = clockOfFilm(withJunction(nightsOn, sequence.stageIds[0], { kind: 'fondu-blanc', holdS: 2 }))
+    const chosen = clockOfFilm(withJunction(nightsOn, sequence.stageIds[0], { kind: 'fondu-blanc', holdS: 2, night: false }))
     expect(chosen.junctions.map((j) => [j.kind, j.holdS])).toEqual([['fondu-blanc', 2], ['nuit', parts]])
     expect(chosen.nights).toHaveLength(1)
     const off = clockOfFilm(nightsOff)
     expect(off.junctions.map((j) => [j.kind, j.holdS])).toEqual([['nuit', parts], ['nuit', parts]])
-    const fades = clockOfFilm({ ...nightsOn, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true } })
+    const fades = clockOfFilm({ ...nightsOn, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true, night: false } })
     expect(fades.junctions.map((j) => [j.kind, j.holdS])).toEqual([['fondu-noir', 1.5], ['fondu-noir', 1.5]])
     expect(fades.nights).toEqual([])
     // « Nuit » asked for over a default fade: that junction passes the night
-    const one = withJunction({ ...nightsOff, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true } }, sequence.stageIds[1], { kind: 'nuit' })
+    const one = withJunction({ ...nightsOff, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true, night: false } }, sequence.stageIds[1], { night: true })
     expect(clockOfFilm(one).junctions.map((j) => j.kind)).toEqual(['fondu-noir', 'nuit'])
   })
 })
