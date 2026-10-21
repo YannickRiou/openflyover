@@ -188,15 +188,15 @@ describe('getSettingsHistory (app store)', () => {
 
   it('undoes any setting through setSetting', () => {
     const { setSetting } = useAppStore.getState()
-    setSetting('wireframe', true)
+    setSetting('atmosphere', false)
     getSettingsHistory().undo()
     expect(useAppStore.getState().settings).toEqual(DEFAULT_SETTINGS)
     getSettingsHistory().redo()
-    expect(useAppStore.getState().settings.wireframe).toBe(true)
+    expect(useAppStore.getState().settings.atmosphere).toBe(false)
     // other parts of the state are not recorded
     useAppStore.getState().setSpeed(4)
     getSettingsHistory().undo()
-    expect(useAppStore.getState().settings.wireframe).toBe(false)
+    expect(useAppStore.getState().settings.atmosphere).toBe(true)
     expect(useAppStore.getState().playback.speed).toBe(4)
   })
 
@@ -215,13 +215,13 @@ describe('getSettingsHistory (app store)', () => {
     const camera = { ...DEFAULT_SETTINGS.camera, distance: 2 }
     setSetting('camera', camera)
     setSetting('flyoverDurationS', 120)
-    setSetting('wireframe', true)
+    setSetting('atmosphere', false)
     resetSettings(['camera', 'flyoverDurationS'])
-    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, wireframe: true })
+    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, atmosphere: false })
     getSettingsHistory().undo()
-    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, camera, flyoverDurationS: 120, wireframe: true })
+    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, camera, flyoverDurationS: 120, atmosphere: false })
     getSettingsHistory().redo()
-    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, wireframe: true })
+    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, atmosphere: false })
   })
   it('undoes a reset from its message only while it is still the last change', () => {
     const { setSetting } = useAppStore.getState()
@@ -231,9 +231,9 @@ describe('getSettingsHistory (app store)', () => {
     expect(useAppStore.getState().settings.flyoverDurationS).toBe(120)
     // a later step: the message's « Annuler » must not undo it
     const undoAgain = resetSettings(['flyoverDurationS'])
-    setSetting('wireframe', true)
+    setSetting('atmosphere', false)
     expect(undoAgain()).toBe(false)
-    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, wireframe: true })
+    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, atmosphere: false })
     // undone with Ctrl+Z already: nothing more to undo
     getSettingsHistory().undo()
     getSettingsHistory().undo()
@@ -242,10 +242,10 @@ describe('getSettingsHistory (app store)', () => {
   })
 
   it('does not undo an earlier step when the reset changed nothing', () => {
-    useAppStore.getState().setSetting('wireframe', true)
+    useAppStore.getState().setSetting('atmosphere', false)
     const undoReset = resetSettings(['flyoverDurationS'])
     expect(undoReset()).toBe(false)
-    expect(useAppStore.getState().settings.wireframe).toBe(true)
+    expect(useAppStore.getState().settings.atmosphere).toBe(false)
   })
 
   describe('texts attached to a stop, outside the edits of the film', () => {

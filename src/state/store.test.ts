@@ -171,15 +171,14 @@ describe('removeTrack / clearTracks', () => {
 describe('settings and misc', () => {
   it('setSetting updates one key and keeps the others', () => {
     useAppStore.getState().setSetting('exaggeration', 1.5)
-    useAppStore.getState().setSetting('wireframe', true)
+    useAppStore.getState().setSetting('atmosphere', false)
     expect(useAppStore.getState().settings).toEqual({
       terrainSourceId: 'mapterhorn',
       imagerySourceId: 'arcgis-world-imagery',
       imageryDate: '',
       imageryZoomOffset: 1,
       exaggeration: 1.5,
-      wireframe: true,
-      atmosphere: true,
+      atmosphere: false,
       shadows: true,
       cloudShadows: true,
       sunHour: 10,

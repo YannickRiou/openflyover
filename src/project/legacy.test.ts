@@ -115,7 +115,7 @@ function expectDefaultsBut(settings: Settings, saved: readonly (keyof Settings)[
 
 /** settings checked one by one below (the film of v1 comes from the migration) */
 const CHECKED = [
-  'terrainSourceId', 'imagerySourceId', 'imageryZoomOffset', 'exaggeration', 'wireframe', 'atmosphere', 'shadows', 'sunHour',
+  'terrainSourceId', 'imagerySourceId', 'imageryZoomOffset', 'exaggeration', 'atmosphere', 'shadows', 'sunHour',
   'sunFromTrack', 'exposureEv', 'trackColorBy', 'camera', 'flyoverDurationS', 'pacing', 'film', 'labels', 'weather',
   'weatherScene', 'overlay', 'video', 'landmarks', 'race',
 ] as const
@@ -133,7 +133,6 @@ describe('frozen old projects', () => {
       imagerySourceId: 'swisstopo',
       imageryZoomOffset: 2,
       exaggeration: 1.5,
-      wireframe: false,
       atmosphere: true,
       shadows: false,
       sunHour: 8.5,
@@ -184,6 +183,8 @@ describe('frozen old projects', () => {
       density: 'normal',
     })
     expectDefaultsBut(s, [...CHECKED, 'sunDate'])
+    // « Filaire », removed since: dropped on loading
+    expect(s).not.toHaveProperty('wireframe')
     expect(s.sunDate).toBe('')
 
     const [track] = p.tracks

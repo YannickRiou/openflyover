@@ -285,7 +285,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      coming closer would keep its coarse texture), not loading the culled children on a phone (~45 % of the budget in
      that view goes to tiles out of the frustum, but they are the shadow casters).
    - Bounding sphere: from the geometry if loaded, otherwise from the tile bounds with heights [-500, 9000] m.
-   - Material: `MeshStandardMaterial({ map, roughness: 1, metalness: 0 })`, `side: FrontSide`. `wireframe` option.
+   - Material: `MeshStandardMaterial({ map, roughness: 1, metalness: 0 })`, `side: FrontSide`.
    - `sampleHeight` = the terrain **as drawn**: the triangles of the tile drawn at the point (`sampleTileMesh`), else
      (off the view) the deepest loaded tile there, else the `HeightField` (tree rebuilt after a change of imagery).
      The track, the marker and the labels therefore lie on the visible mesh: never on a finer grid the mesh does not
@@ -323,7 +323,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      Also when the ground changes under a camera sitting still: on `engine.onChange` (finer tiles, at most once per frame) and on
      a change of the exaggeration, one sample, `wakeScene` only if the camera was lifted (same conditions).
 8. **State** (`store.ts`): `tracks: Track[]`, `addTracks`, `removeTrack`, `clearTracks`, `settings { terrainSourceId, imagerySourceId,
-   imageryZoomOffset, exaggeration, wireframe, … }` (the terrain keys; the other groups are described in their own sections), `setSetting`, `terrainStats`, `bounds` (union of the tracks) and `frameOrigin` (centroid of the
+   imageryZoomOffset, exaggeration, … }` (the terrain keys; the other groups are described in their own sections), `setSetting`, `terrainStats`, `bounds` (union of the tracks) and `frameOrigin` (centroid of the
    first batch rounded to 0.01°, fixed as long as a track remains); the engine `area` is derived in the scene (`TerrainLayer`).
    `fitRequest` (counter incremented to request a reframing), `loading` (import failures go through the messages, see "Interface"). On import, the imagery switches automatically to
    IGN then swisstopo if the track lies entirely within their footprint, unless the user has already picked a source by hand.
@@ -629,11 +629,11 @@ pointer (`appearance.css`).
   until the row is pressed, then unfolds under it and takes the focus (the checked radio, else the first field); the
   value turns bold when one of its `paths` departs from the default (`modifiedPaths(settings, paths)` from
   `project/apply.ts`, paths `'key'` or `'key.field'`); the section's "Par défaut" resets it. A lone field in a row hides its
-  plain label (the row names it). Rows: imagery detail, terrain source, water strength, wireframe, track colouring, smoothing, width,
+  plain label (the row names it). Rows: imagery detail, terrain source, water strength, track colouring, smoothing, width,
   dash, marker size, km markers, label size and range, landmark kinds and distance, sea render, low cloud base, cloud quality, weather intensity, exposure, sun date,
   the four grading sliders, flare, bloom radius, camera style, distance / tilt / aim / smoothing, pacing parameters, transitions; export frame rate, quality, still type. Setting
   keys and behavior unchanged. `InfoTip` (ⓘ, one-sentence `Tip`, focusable, `aria-label`) only
-  on jargon: exaggeration, wireframe, exposure, highlights.
+  on jargon: exaggeration, exposure, highlights.
 - **Render weight** (`src/ui/renderCost.ts`, pure, tested; `RenderWeight` and `TabWeightDot` in `PanelSection.tsx`): which settings lengthen
   the export, as a pictogram (three bars like a signal icon: filled navy, the rest periwinkle; the heaviest tier in chartreuse on a navy
   chip; `--color-navy` / `--color-periwinkle` / `--color-chartreuse` in `theme.css`) after the name of the setting (`weight` prop of

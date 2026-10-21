@@ -139,8 +139,6 @@ const messages: Messages['light'] = {
   'map.terrain': 'Gelände',
   'map.exaggeration': 'Geländeüberhöhung',
   'map.exaggerationTip': 'Vervielfacht die Höhen, um die Berge zu betonen (×1 = reales Gelände).',
-  'map.wireframe': 'Drahtgitter',
-  'map.wireframeTip': 'Zeichnet das Gelände als Dreiecke, um den geladenen Detailgrad zu sehen.',
   'weather.offClouds': 'Atmosphäre im Reiter „Licht“ aktivieren, um die Wolken zu sehen.',
   'weather.offScene': 'Atmosphäre im Reiter „Licht“ aktivieren, um das Wetter im Bild zu sehen.',
   'weather.clouds': 'Wolken',

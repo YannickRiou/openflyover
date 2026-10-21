@@ -76,7 +76,7 @@ describe('modifiedSettings', () => {
     const copy = { ...DEFAULT_SETTINGS, camera: { ...DEFAULT_SETTINGS.camera } }
     expect(modifiedSettings(copy, keys)).toEqual([])
     const overlay = { ...DEFAULT_SETTINGS.overlay, title: { ...DEFAULT_SETTINGS.overlay.title, title: 'Col' } }
-    const changed = { ...DEFAULT_SETTINGS, exaggeration: 2, wireframe: true, overlay }
+    const changed = { ...DEFAULT_SETTINGS, exaggeration: 2, atmosphere: false, overlay }
     expect(modifiedSettings(changed, keys)).toEqual(['exaggeration', 'overlay'])
   })
 })
@@ -88,10 +88,10 @@ describe('applyProject', () => {
     store.setProgress(0.5)
     const fit = useAppStore.getState().fitRequest
 
-    applyProject(project({ settings: { ...DEFAULT_SETTINGS, wireframe: true, imagerySourceId: 'opentopomap' } }))
+    applyProject(project({ settings: { ...DEFAULT_SETTINGS, atmosphere: false, imagerySourceId: 'opentopomap' } }))
     const state = useAppStore.getState()
     expect(state.tracks.map((t) => t.id)).toEqual(['new'])
-    expect(state.settings).toEqual({ ...DEFAULT_SETTINGS, wireframe: true, imagerySourceId: 'opentopomap' })
+    expect(state.settings).toEqual({ ...DEFAULT_SETTINGS, atmosphere: false, imagerySourceId: 'opentopomap' })
     expect(state.playback).toMatchObject({ speed: 2, progress: 0, playing: false })
     expect(state.fitRequest).toBeGreaterThan(fit)
     expect(state.frameOrigin).toEqual({ lon: 6.87, lat: 45.93 })

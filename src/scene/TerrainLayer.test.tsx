@@ -107,7 +107,6 @@ describe('engine options from settings', () => {
     imageryDate: '',
     imageryZoomOffset: 1 as const,
     exaggeration: 1,
-    wireframe: false,
     atmosphere: true,
     shadows: true,
     cloudShadows: true,
@@ -154,7 +153,7 @@ describe('engine options from settings', () => {
     const options = engineOptionsFromSettings(settings)
     expect(options.terrain).toBe(getTerrainSource('mapterhorn'))
     expect(options.imagery).toBe(getImagerySource('arcgis-world-imagery'))
-    expect(options).toMatchObject({ imageryZoomOffset: 1, exaggeration: 1, wireframe: false })
+    expect(options).toMatchObject({ imageryZoomOffset: 1, exaggeration: 1 })
   })
 
   it('diff returns null when nothing changed', () => {
@@ -173,16 +172,16 @@ describe('engine options from settings', () => {
     expect(partial?.exaggeration).toBe(1.5)
   })
 
-  it('diff detects terrain, zoom offset and wireframe changes', () => {
+  it('diff detects terrain, zoom offset and exaggeration changes', () => {
     const a = engineOptionsFromSettings(settings)
     const b = engineOptionsFromSettings({
       ...settings,
       terrainSourceId: 'aws-terrarium',
       imageryZoomOffset: 2,
-      wireframe: true,
+      exaggeration: 2,
     })
     const partial = diffEngineOptions(a, b)
-    expect(Object.keys(partial ?? {}).sort()).toEqual(['imageryZoomOffset', 'terrain', 'wireframe'])
+    expect(Object.keys(partial ?? {}).sort()).toEqual(['exaggeration', 'imageryZoomOffset', 'terrain'])
   })
 
   it('diff detects a change of the cleaning of the sea', () => {

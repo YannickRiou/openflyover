@@ -78,7 +78,7 @@ export function statsEqual(a: TerrainStats, b: TerrainStats): boolean {
 /** The subset of engine options that is driven by the user settings. */
 export type EngineSettingsOptions = Pick<
   TerrainEngineOptions,
-  'terrain' | 'imagery' | 'imageryZoomOffset' | 'exaggeration' | 'wireframe' | 'demClean'
+  'terrain' | 'imagery' | 'imageryZoomOffset' | 'exaggeration' | 'demClean'
 >
 
 export function engineOptionsFromSettings(settings: Settings): EngineSettingsOptions {
@@ -88,7 +88,6 @@ export function engineOptionsFromSettings(settings: Settings): EngineSettingsOpt
     // « Très fin » (1024 px textures) is too heavy for a phone's GPU memory
     imageryZoomOffset: Math.min(settings.imageryZoomOffset, deviceBudget().maxImageryZoomOffset),
     exaggeration: settings.exaggeration,
-    wireframe: settings.wireframe,
     demClean: settings.demClean,
   }
 }
@@ -114,10 +113,6 @@ export function diffEngineOptions(
   }
   if (prev.exaggeration !== next.exaggeration) {
     partial.exaggeration = next.exaggeration
-    changed = true
-  }
-  if (prev.wireframe !== next.wireframe) {
-    partial.wireframe = next.wireframe
     changed = true
   }
   if (!sameDemClean(prev.demClean ?? DEFAULT_DEM_CLEAN, next.demClean ?? DEFAULT_DEM_CLEAN)) {

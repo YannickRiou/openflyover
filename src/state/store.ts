@@ -51,7 +51,6 @@ export interface Settings {
   imageryDate: string
   imageryZoomOffset: 0 | 1 | 2
   exaggeration: number
-  wireframe: boolean
   /** physically based sky, sun light and aerial perspective */
   atmosphere: boolean
   /** cast shadows of the relief (atmosphere only) */
@@ -200,7 +199,6 @@ export const DEFAULT_SETTINGS: Settings = {
   imageryDate: '',
   imageryZoomOffset: 1,
   exaggeration: 1,
-  wireframe: false,
   atmosphere: true,
   shadows: true,
   cloudShadows: true,
