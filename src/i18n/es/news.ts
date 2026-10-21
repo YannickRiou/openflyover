@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v31.dates.title': 'Fotos de otra fecha',
+  'v31.dates.text': 'Con IGN BD ORTHO o Esri, « Fecha de las fotos » (pestaña Mapa) propone las fotos más antiguas del lugar: una fecha de invierno para tener nieve, de verano para evitarla.',
   'v31.free.title': 'Una cámara libre',
   'v31.free.text': 'El estilo « Libre (fotogramas clave) » no sigue el marcador: sin fotogramas clave la cámara queda fija sobre todo el recorrido; añada fotogramas clave en la línea de tiempo para elegir usted mismo sus movimientos (plano fijo, vuelta al recorrido…).',
   'v31.orbit.title': 'Una órbita completa',

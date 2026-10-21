@@ -104,6 +104,7 @@ describe('engine options from settings', () => {
   const settings = {
     terrainSourceId: 'mapterhorn',
     imagerySourceId: 'arcgis-world-imagery',
+    imageryDate: '',
     imageryZoomOffset: 1 as const,
     exaggeration: 1,
     wireframe: false,

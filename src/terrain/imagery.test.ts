@@ -384,6 +384,16 @@ describe('loadImageryTexture', () => {
       expect((texture.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(1)
     })
 
+    it('dated photos: a blank tile is drawn from the fallback (the latest photos) at the same place', async () => {
+      const latest = source({ urlTemplate: 'https://latest.test/{z}/{x}/{y}.jpg' })
+      const dated = { ...covered(), fallback: latest }
+      const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url, url.startsWith('https://tiles.test/'))))
+      const texture = await loadImageryTexture(KEY, dated, fetcher, { zoomOffset: 0 })
+      expect(fetcher.calls.map((c) => c.url)).toEqual(['https://tiles.test/10/530/370.jpg', 'https://latest.test/10/530/370.jpg'])
+      const calls = (texture.image as FakeOffscreenCanvas).ctx.drawImage.mock.calls
+      expect((calls[0][0] as { url: string }).url).toBe('https://latest.test/10/530/370.jpg')
+    })
+
     it('leaves a source without coverage alone', async () => {
       const fetcher = fakeFetcher(whiteAt('/11/1061/741.jpg'))
       await loadImageryTexture(KEY, source(), fetcher, { zoomOffset: 1 })

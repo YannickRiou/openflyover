@@ -47,6 +47,8 @@ export interface Settings {
   /** « Nettoyer le relief en mer » (terrain/demClean.ts) */
   demClean: DemCleanOptions
   imagerySourceId: string
+  /** « Date des photos » of IGN BD ORTHO and Esri: '' = the latest, 'ign:<year>', 'esri:<release>' (terrain/imageryDates.ts) */
+  imageryDate: string
   imageryZoomOffset: 0 | 1 | 2
   exaggeration: number
   wireframe: boolean
@@ -193,6 +195,7 @@ export const DEFAULT_SETTINGS: Settings = {
   terrainSourceId: 'mapterhorn',
   demClean: DEFAULT_DEM_CLEAN,
   imagerySourceId: 'arcgis-world-imagery',
+  imageryDate: '',
   imageryZoomOffset: 1,
   exaggeration: 1,
   wireframe: false,

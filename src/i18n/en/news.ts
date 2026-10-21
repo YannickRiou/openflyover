@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v31.dates.title': 'Photos from another date',
+  'v31.dates.text': 'With IGN BD ORTHO or Esri, « Photo date » (Map tab) offers the older photos of the place: a winter date for snow, a summer one to avoid it.',
   'v31.free.title': 'A free camera',
   'v31.free.text': 'The « Free (keyframes) » style does not follow the marker: without keyframes the camera stays fixed on the whole track; add keyframes on the timeline to choose its moves yourself (a fixed shot, a turn around the track…).',
   'v31.orbit.title': 'A full orbit',

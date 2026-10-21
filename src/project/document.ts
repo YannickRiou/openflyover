@@ -31,6 +31,7 @@ import { isValidMarker, isValidTrackStyle, isValidTrackTail, withMarkerDefaults,
 import { DEFAULT_PLAYBACK, DEFAULT_SETTINGS, PLAYBACK_SPEEDS } from '../state/store'
 import type { AppState, Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
+import { isImageryDate } from '../terrain/imageryDates'
 import { isValidClouds, withCloudDefaults } from '../weather/sceneClouds'
 import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
@@ -113,6 +114,7 @@ export type ProjectSource = Pick<AppState, 'tracks' | 'settings' | 'playback'>
 export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => boolean } = {
   terrainSourceId: (id) => TERRAIN_SOURCES.some((s) => s.id === id),
   imagerySourceId: (id) => IMAGERY_SOURCES.some((s) => s.id === id),
+  imageryDate: isImageryDate,
   imageryZoomOffset: (v) => v === 0 || v === 1 || v === 2,
   exaggeration: (v) => v > 0,
   sunHour: (v) => v >= 0 && v <= 24,

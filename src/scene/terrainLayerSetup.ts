@@ -9,6 +9,7 @@ import type { Film } from '../film/model'
 import { REGION_AREA_MARGIN_M } from '../flyover/filmCamera'
 import { AREA_MARGIN_M, AREA_MIN_SIZE_M } from '../terrain/engine'
 import { DEFAULT_DEM_CLEAN, sameDemClean } from '../terrain/demClean'
+import { datedImagerySource } from '../terrain/imageryDates'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import type { Settings } from '../state/store'
 
@@ -83,7 +84,7 @@ export type EngineSettingsOptions = Pick<
 export function engineOptionsFromSettings(settings: Settings): EngineSettingsOptions {
   return {
     terrain: getTerrainSource(settings.terrainSourceId),
-    imagery: getImagerySource(settings.imagerySourceId),
+    imagery: datedImagerySource(getImagerySource(settings.imagerySourceId), settings.imageryDate),
     // « Très fin » (1024 px textures) is too heavy for a phone's GPU memory
     imageryZoomOffset: Math.min(settings.imageryZoomOffset, deviceBudget().maxImageryZoomOffset),
     exaggeration: settings.exaggeration,

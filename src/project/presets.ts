@@ -39,7 +39,7 @@ export const PRESET_SCOPE_LABELS: Record<PresetScope, string> = {
 
 /** Settings of each family ('tout': every setting). */
 export const PRESET_SCOPE_KEYS: Record<Exclude<PresetScope, 'tout'>, readonly (keyof Settings)[]> = {
-  carte: ['terrainSourceId', 'imagerySourceId', 'imageryZoomOffset', 'exaggeration', 'wireframe', 'atmosphere', 'shadows', 'cloudShadows', 'grading', 'lens', 'weatherScene', 'clouds', 'water'],
+  carte: ['terrainSourceId', 'imagerySourceId', 'imageryDate', 'imageryZoomOffset', 'exaggeration', 'wireframe', 'atmosphere', 'shadows', 'cloudShadows', 'grading', 'lens', 'weatherScene', 'clouds', 'water'],
   trace: ['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail', 'marker', 'labels'],
   habillage: ['overlay'],
   'prise-de-vue': ['camera', 'sunHour', 'sunDate', 'sunFromTrack', 'exposureEv'],

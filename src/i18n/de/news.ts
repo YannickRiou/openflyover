@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v31.dates.title': 'Luftbilder eines anderen Datums',
+  'v31.dates.text': 'Mit IGN BD ORTHO oder Esri bietet « Aufnahmedatum » (Reiter Karte) ältere Luftbilder des Ortes: ein Winterdatum für Schnee, ein Sommerdatum ohne.',
   'v31.free.title': 'Eine freie Kamera',
   'v31.free.text': 'Der Stil « Frei (Keyframes) » folgt dem Marker nicht: ohne Keyframes bleibt die Kamera fest auf dem ganzen Track; setzen Sie Keyframes in der Zeitleiste, um ihre Bewegungen selbst zu wählen (feste Einstellung, Runde um den Track…).',
   'v31.orbit.title': 'Ein voller Orbit',
