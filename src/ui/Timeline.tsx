@@ -100,7 +100,7 @@ import type { MenuItem } from './primitives'
 
 /*
  * Looks of the strip. It is dark chrome in both themes: its root carries `chrome-focus` (the light-accent focus ring), the
- * hairlines are `white/10` and the hovers `white/10`. Sizes follow the 4 px scale (so the density setting), a touch screen
+ * hairlines are `white/10` and the hovers `white/10`. Sizes follow the 4 px scale, a touch screen
  * gets the 44 px targets through `touch:`; the state of a block or a key is its `aria-pressed` (selected) or `data-lifted`.
  */
 const ROOT = 'chrome-focus @container/film-tl relative flex flex-col bg-chrome text-hint text-white'

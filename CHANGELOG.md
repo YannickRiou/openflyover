@@ -9,6 +9,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **« Filaire » removed**: the « Carte › Relief » checkbox that drew the relief as triangles (a debugging view) is gone. A project saved with it on opens with the normal relief.
 - **A tidier « Trace » section**: the track settings are in two parts, « Ligne » (how the line is drawn, its colour, smoothing, width and dashes) then « Halo » (the glow and its intensity, width and colour), instead of the glow in the middle of the line settings.
 - **A ↺ button instead of « modifié » and « Par défaut »**: a section that differs from its defaults now shows one small round ↺ button by its title (« Modifié : revenir aux réglages par défaut » in its tooltip) instead of a « modifié » chip and a « Par défaut » button. Clearer and more compact; it still resets the whole section, with « Annuler » or Ctrl+Z.
+- **« Densité » removed**: the « Confortable / Compact » choice of « Réglages › Apparence » changed the spacing by about 15 % only; it is gone and the interface keeps its usual spacing.
 
 ## 3.2.1 (October 2026)
 

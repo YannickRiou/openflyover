@@ -1,6 +1,6 @@
 /**
  * Look of the interface on this device (« Réglages » tab, « Apparence » section): light / dark / system theme, accent
- * colour, colour of the bar and the rail, density. Part of the preferences (`preferences.ts`), not of the project.
+ * colour, colour of the bar and the rail. Part of the preferences (`preferences.ts`), not of the project.
  * Pure: `applyAppearance` writes an attribute and CSS custom properties on the root element; the dark and compact
  * variants themselves are in `theme.css` and `appearance.css`. The 3D view and the film overlay are not concerned.
  */
@@ -10,8 +10,6 @@ import { t } from '../i18n'
 export const THEMES = ['light', 'dark', 'system'] as const
 export type Theme = (typeof THEMES)[number]
 
-export const DENSITIES = ['comfortable', 'compact'] as const
-export type Density = (typeof DENSITIES)[number]
 
 export interface Appearance {
   theme: Theme
@@ -19,10 +17,9 @@ export interface Appearance {
   accent: string
   /** '#rrggbb', the colour of the top bar, the rail and the status bar (`--surface-chrome`) */
   chrome: string
-  density: Density
 }
 
-export const DEFAULT_APPEARANCE: Appearance = { theme: 'light', accent: '#b9391f', chrome: '#1b2832', density: 'comfortable' }
+export const DEFAULT_APPEARANCE: Appearance = { theme: 'light', accent: '#b9391f', chrome: '#1b2832' }
 
 /** Accent colours offered beside the free picker; each keeps white text at 4.5:1 or more as it is. */
 export const ACCENT_PRESETS: readonly { color: string; label: string }[] = [
@@ -157,7 +154,6 @@ export function parseAppearance(raw: unknown): Appearance {
     theme: THEMES.find((t) => t === v.theme) ?? DEFAULT_APPEARANCE.theme,
     accent: normalizeHex(v.accent) ?? DEFAULT_APPEARANCE.accent,
     chrome: normalizeHex(v.chrome) ?? DEFAULT_APPEARANCE.chrome,
-    density: DENSITIES.find((d) => d === v.density) ?? DEFAULT_APPEARANCE.density,
   }
 }
 
@@ -165,14 +161,13 @@ export function parseAppearance(raw: unknown): Appearance {
 export const isDarkTheme = (theme: Theme, systemDark: boolean) => (theme === 'system' ? systemDark : theme === 'dark')
 
 /**
- * Put `appearance` on `root`: `data-theme` ('light' or 'dark', the system's resolved), `data-density`, and the CSS
+ * Put `appearance` on `root`: `data-theme` ('light' or 'dark', the system's resolved) and the CSS
  * custom properties of the accent and the bar colour. A colour left at its default sets nothing, so the palette of
  * `theme.css` applies as designed.
  */
 export function applyAppearance(root: HTMLElement, appearance: Appearance, systemDark: boolean): void {
   const dark = isDarkTheme(appearance.theme, systemDark)
   root.dataset.theme = dark ? 'dark' : 'light'
-  root.dataset.density = appearance.density
   const customChrome = appearance.chrome !== DEFAULT_APPEARANCE.chrome
   // the lightened accent depends on the bar colour, the tint of the dark theme on the accent: both follow either
   const customAccent = appearance.accent !== DEFAULT_APPEARANCE.accent || customChrome

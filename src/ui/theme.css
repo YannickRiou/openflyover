@@ -162,7 +162,7 @@
 
 /*
  * Variables that are not Tailwind tokens. In `base`, so the `:root` rules of the components override them; the dark theme
- * and the density below stay outside the layers (their higher specificity wins over both).
+ * stay outside the layers (their higher specificity wins over both).
  */
 @layer base {
 :root {
@@ -202,7 +202,7 @@
   --status-error: #962c15;
   --status-error-on-dark: #ff9b73;
 
-  /* shell layout and density */
+  /* shell layout */
   --topbar-h: 48px;
   --rail-w: 64px;
   --panel-w: 320px;

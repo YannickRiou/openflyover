@@ -12,12 +12,11 @@
   </head>
   <body>
     <script>
-      // theme and density of the stored preferences before the first paint (the app applies them all again at start-up)
+      // theme of the stored preferences before the first paint (the app applies them all again at start-up)
       try {
         var a = JSON.parse(localStorage.getItem('openflyover.preferences.v1')).appearance
         var d = document.documentElement.dataset
         d.theme = a.theme === 'dark' || (a.theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
-        if (a.density === 'compact') d.density = 'compact'
       } catch (e) {}
     </script>
     <div id="root"></div>

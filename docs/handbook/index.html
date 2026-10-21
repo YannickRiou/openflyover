@@ -1927,7 +1927,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
   <div class="callout"><b>Verify</b>
     <ul class="checklist">
       <li>Keyboard use (Tab, arrows, Enter, Space, Escape) and a screen-reader label (<code>aria-label</code> or visible label).</li>
-      <li>Light and dark themes, compact density, 44 px touch targets on a phone.</li>
+      <li>Light and dark themes, 44 px touch targets on a phone.</li>
       <li>No HeroUI default colour visible; contrast at least 4.5:1.</li>
     </ul>
   </div>
@@ -1937,7 +1937,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
   <ol class="recipe-steps">
     <li><div><strong>Palette</strong>: edit the <code>--color-*</code> tokens in the <code>@theme static</code> block at the top of <code>src/ui/theme.css</code>. Roles (<code>--surface-panel</code>, <code>--text-1</code>, <code>--line</code>, <code>--accent</code>…) are mapped to them in <code>:root</code> (layer <code>base</code>); the dark theme remaps only the roles in <code>:root[data-theme='dark']</code>; HeroUI's variables are mapped to the roles just below. The comments of the dark block give the contrast figures: recompute them for a new colour.</div></li>
     <li><div><strong>Places that repeat palette values</strong> (checked by searching the current values): <code>src/ui/appearance.ts</code> (<code>DEFAULT_APPEARANCE</code>, <code>ACCENT_PRESETS</code>, <code>CHROME_PRESETS</code>, and its test), <code>index.html</code> (<code>theme-color</code>), <code>public/manifest.webmanifest</code> (<code>theme_color</code>, <code>background_color</code>), <code>scripts/installer-assets.mjs</code> (then <code>npm run installer-assets</code>), the film overlay's own palette in <code>src/overlay/themes.ts</code> (deliberately independent: it must read over any imagery), the standalone pages <code>docs/*.html</code> (each carries its own copy of the tokens), and the « Carte alpine » section of <code>ARCHITECTURE.md</code>. Search the old hex values across the repository to find the rest.</div></li>
-    <li><div><strong>Spacing</strong>: Tailwind's unit is <code>--spacing</code> (4 px by default; the compact density sets <code>3.5px</code> in <code>src/ui/appearance.css</code>). The older hand-written CSS uses <code>--space-1…6</code> in <code>theme.css</code>, also remapped by compact density. Prefer utilities (<code>gap-2</code>, <code>p-3</code>).</div></li>
+    <li><div><strong>Spacing</strong>: Tailwind's unit is <code>--spacing</code> (4 px). The older hand-written CSS uses <code>--space-1…6</code> in <code>theme.css</code>. Prefer utilities (<code>gap-2</code>, <code>p-3</code>).</div></li>
     <li><div><strong>Type, control heights, radii</strong>: <code>--text-caption/hint/body/title</code>, <code>--control-h</code> and <code>--control-h-lg</code>, <code>--radius-sm/md</code> in the same file. Change a role once; do not hard-code sizes in components.</div></li>
   </ol>
   <div class="callout"><b>Verify</b>
@@ -2220,7 +2220,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
       <tr><td data-label="I want …">the project file format; migrations; undo</td><td data-label="Look in"><code>src/project/document.ts</code>, <code>file.ts</code>; <code>history.ts</code></td></tr>
       <tr><td data-label="I want …">keyboard shortcuts and the help dialog</td><td data-label="Look in"><code>src/ui/shortcuts.ts</code> (<code>SHORTCUTS</code>); <code>src/ui/HelpDialog.tsx</code></td></tr>
       <tr><td data-label="I want …">messages shown over the view (toasts)</td><td data-label="Look in"><code>src/ui/toast.ts</code> (<code>showToast</code>), <code>src/ui/Toaster.tsx</code></td></tr>
-      <tr><td data-label="I want …">device preferences: theme, density, language, layout</td><td data-label="Look in"><code>src/ui/preferences.ts</code>, <code>appearance.ts</code>, <code>shell.ts</code></td></tr>
+      <tr><td data-label="I want …">device preferences: theme, language, layout</td><td data-label="Look in"><code>src/ui/preferences.ts</code>, <code>appearance.ts</code>, <code>shell.ts</code></td></tr>
       <tr><td data-label="I want …">design tokens, scales, shared classes</td><td data-label="Look in"><code>src/ui/theme.css</code>, <code>utilities.css</code>, <code>appearance.css</code></td></tr>
       <tr><td data-label="I want …">icons; fonts</td><td data-label="Look in"><code>src/ui/icons.tsx</code>; <code>public/fonts/</code>, <code>src/ui/fonts.css</code></td></tr>
       <tr><td data-label="I want …">file open, save, storage, tile cache</td><td data-label="Look in"><code>src/platform/platform.ts</code> (contract), <code>web.ts</code>, <code>desktop.ts</code></td></tr>

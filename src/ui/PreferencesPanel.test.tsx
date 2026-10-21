@@ -30,7 +30,6 @@ afterEach(async () => {
   stop()
   document.body.innerHTML = ''
   document.documentElement.removeAttribute('data-theme')
-  document.documentElement.removeAttribute('data-density')
   document.documentElement.removeAttribute('style')
   getPlatform().storage.remove(PREFERENCES_KEY)
 })
@@ -44,7 +43,7 @@ describe('PreferencesPanel, « Apparence »', () => {
   it('shows the defaults and has nothing to reset', () => {
     expect(host.textContent).toContain('Apparence')
     expect(radio('Clair').checked).toBe(true)
-    expect(radio('Confortable').checked).toBe(true)
+    expect(host.textContent).not.toContain('Densité')
     expect(swatch("Couleur d'accentuation : Rouge balisage").getAttribute('aria-selected')).toBe('true')
     expect(swatch('Couleur de la barre et du rail : Encre').getAttribute('aria-selected')).toBe('true')
     expect(reset().hasAttribute('disabled')).toBe(true)
@@ -65,14 +64,12 @@ describe('PreferencesPanel, « Apparence »', () => {
     expect(document.documentElement.dataset.theme).toBe('light')
   })
 
-  it('applies the density, the accent and the bar colour', async () => {
-    await act(async () => radio('Compact').click())
-    expect(document.documentElement.dataset.density).toBe('compact')
+  it('applies the accent and the bar colour', async () => {
     await act(async () => swatch("Couleur d'accentuation : Indigo").click())
     expect(document.documentElement.style.getPropertyValue('--color-accent')).toBe('#4a55b8')
     await act(async () => swatch('Couleur de la barre et du rail : Bleu marine').click())
     expect(document.documentElement.style.getPropertyValue('--surface-chrome')).toBe('#113b54')
-    expect(stored()).toMatchObject({ accent: '#4a55b8', chrome: '#113b54', density: 'compact' })
+    expect(stored()).toMatchObject({ accent: '#4a55b8', chrome: '#113b54' })
   })
 
   it('tells when a free colour is darkened to keep the text readable', async () => {
