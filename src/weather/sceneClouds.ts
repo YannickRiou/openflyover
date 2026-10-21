@@ -51,13 +51,16 @@ export interface CloudSettings {
   seaRender: SeaRender
   /** quality of the exported frames; 'auto' takes the one of the export quality */
   quality: CloudQualitySetting
+  /** « Vent », 'manuel' and 'mer': speed of the wind pushing the clouds (km/h, 0 = still), instead of the weather's */
+  windKmh: number
 }
 
 /** `seaRender`: « Nappe » by default on a phone or tablet (core/deviceBudget.ts) */
-export const DEFAULT_CLOUDS: CloudSettings = { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: deviceBudget().seaRender, quality: 'auto' }
+export const DEFAULT_CLOUDS: CloudSettings = { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: deviceBudget().seaRender, quality: 'auto', windKmh: 15 }
 
 export const CLOUD_ALTITUDE_RANGE = { min: 200, max: 4000, step: 100 } as const
 export const SEA_TOP_RANGE = { min: 300, max: 5000, step: 50 } as const
+export const CLOUD_WIND_RANGE = { min: 0, max: 100, step: 5 } as const
 
 /** Settings saved before the sea of clouds get its top and rendering by default (a saved quality stays as chosen). */
 export const withCloudDefaults = withDefaults(DEFAULT_CLOUDS)
@@ -87,7 +90,9 @@ export function isValidClouds(v: CloudSettings): boolean {
     v.altitudeM >= CLOUD_ALTITUDE_RANGE.min &&
     v.altitudeM <= CLOUD_ALTITUDE_RANGE.max &&
     v.seaTopM >= SEA_TOP_RANGE.min &&
-    v.seaTopM <= SEA_TOP_RANGE.max
+    v.seaTopM <= SEA_TOP_RANGE.max &&
+    v.windKmh >= CLOUD_WIND_RANGE.min &&
+    v.windKmh <= CLOUD_WIND_RANGE.max
   )
 }
 
@@ -326,6 +331,18 @@ export function filmWind(series: WeatherSeries | null, timeMs: number, lon: numb
   const speed = Math.max(0, sample.windSpeed) / 3.6
   const toward = ((sample.windDirection + 180) * Math.PI) / 180
   return { east: speed * Math.sin(toward), north: speed * Math.cos(toward) }
+}
+
+/**
+ * Wind pushing the clouds of `clouds`: the weather's `wind` in 'meteo'; else « Vent » (`windKmh`) in the direction of
+ * `wind` (from the west when it is calm).
+ */
+export function settingsWind(clouds: Pick<CloudSettings, 'mode' | 'windKmh'>, wind: Wind): Wind {
+  if (clouds.mode === 'meteo') return wind
+  const speed = Math.hypot(wind.east, wind.north)
+  const [east, north] = speed > 0 ? [wind.east / speed, wind.north / speed] : [1, 0]
+  const ms = clouds.windKmh / 3.6
+  return { east: east * ms, north: north * ms }
 }
 
 /** Displacement of the clouds (metres east / north) after `filmTimeS` of film. */

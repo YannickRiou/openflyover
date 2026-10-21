@@ -35,7 +35,7 @@ import { samplePath } from '../flyover/path'
 import { expandBounds } from '../geo/lonLat'
 import { useAppStore } from '../state/store'
 import { AREA_MARGIN_M, AREA_MIN_SIZE_M } from '../terrain/engine'
-import { cloudDrift, filmWind } from '../weather/sceneClouds'
+import { cloudDrift, filmWind, settingsWind } from '../weather/sceneClouds'
 import type { MarkerTrack } from './AtmosphereLayer'
 import {
   EDGE_FADE_M,
@@ -343,7 +343,8 @@ export function CloudSeaSurface({ sun, sky, nightFill, marker }: CloudSeaSurface
     // wind of the track under the marker, at its start
     const under = marker.current
     const start = under && under.path.count > 0 ? samplePath(under.path, 0) : null
-    const unitDrift = cloudDrift(filmWind(under?.series ?? null, under?.track.stats.startTime ?? 0, start?.lon ?? 0, start?.lat ?? 0), 1)
+    const wind = filmWind(under?.series ?? null, under?.track.stats.startTime ?? 0, start?.lon ?? 0, start?.lat ?? 0)
+    const unitDrift = cloudDrift(settingsWind(settings.clouds, wind), 1)
     // noise point = position − (east, −north) (cloudSea.ts `seaNoisePoint`, +Z south)
     u.seaDrift.value.set(unitDrift.east * t, -unitDrift.north * t)
     u.seaBase.value = seaBaseAltitude(settings.clouds.seaTopM, settings.exaggeration)
