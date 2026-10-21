@@ -5,6 +5,8 @@ export default {
   version: 'Version {version}',
   'v31.free.title': 'Une caméra libre',
   'v31.free.text': 'Le style « Libre (images clés) » ne suit pas le marqueur : sans image clé la caméra reste fixe sur tout le tracé ; ajoutez des images clés sur la timeline pour choisir vous-même ses mouvements (plan fixe, tour du tracé…).',
+  'v31.orbit.title': 'Une orbite complète',
+  'v31.orbit.text': '« Orbite autour du marqueur » fait désormais un tour complet pendant le survol, quelle que soit sa durée ; « Tours d’orbite » règle combien.',
   'v31.wind.title': 'Du vent dans les nuages',
   'v31.wind.text': 'Avec des nuages « Manuel » ou une mer de nuages, « Vent » règle la vitesse à laquelle ils défilent (à 0 ils restent immobiles) et « Direction du vent » d’où il souffle. En « Météo », cochez « Choisir le vent à la main » pour les mêmes réglages.',
   'v301.cards.title': 'La carte de clôture suit la fin du film',

@@ -284,6 +284,17 @@ export function CameraPanel() {
           </p>
         </fieldset>
 
+        {camera.style === 'orbit' && (
+          <RangeField
+            label={t('camera.panel.orbitTurns')}
+            tip={t('camera.panel.orbitTurnsTip')}
+            {...CAMERA_RANGES.orbitTurns}
+            value={camera.orbitTurns}
+            format={(v) => formatNumber(v, 1)}
+            onChange={(orbitTurns) => update({ orbitTurns })}
+          />
+        )}
+
         {camera.style === 'top' && (
           <Checkbox id={`${id}-north-up`} checked={camera.northUp} onChange={(on) => update({ northUp: on })}>{t('camera.panel.northUp')}</Checkbox>
         )}

@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Versione {version}',
   'v31.free.title': 'Una telecamera libera',
   'v31.free.text': 'Lo stile « Libera (keyframe) » non segue il marcatore: senza keyframe la telecamera resta fissa sull’intero tracciato; aggiungi dei keyframe sulla timeline per scegliere tu i suoi movimenti (inquadratura fissa, giro attorno al tracciato…).',
+  'v31.orbit.title': 'Un’orbita completa',
+  'v31.orbit.text': '« Orbita attorno al marcatore » ora fa un giro completo durante il sorvolo, qualunque sia la durata; « Giri di orbita » regola quanti.',
   'v31.wind.title': 'Vento tra le nuvole',
   'v31.wind.text': 'Con nuvole « Manuale » o un mare di nuvole, « Vento » regola la velocità con cui scorrono (a 0 restano ferme) e « Direzione del vento » da dove soffia. In « Meteo », spunta « Scegli il vento a mano » per le stesse regolazioni.',
   'v301.cards.title': 'La scheda di chiusura segue la fine del film',

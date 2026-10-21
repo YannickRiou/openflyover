@@ -215,15 +215,20 @@ describe('computeCameraView — styles', () => {
     expect(Math.abs(sway.position.distanceTo(sway.target) - chase.position.distanceTo(chase.target))).toBeLessThan(1)
   })
 
-  it('orbit turns around the marker at a constant angular speed, whatever the track direction', () => {
+  it('orbit turns around the marker at a constant angular speed, whatever the track direction and the duration', () => {
     const start = computeCameraView(northbound, 0, frame, null, options({ style: 'orbit' }))
     expect(azimuthFromTarget(start.position, start.target)).toBeCloseTo(Math.PI, 3) // behind = south
-    // 6°/s over 60 s: a quarter of the flyover = 90° → looking east from the west
+    // one turn over the flight: a quarter of the flyover = 90° → looking east from the west
     const quarter = computeCameraView(northbound, 0.25, frame, null, options({ style: 'orbit' }))
     expect(azimuthFromTarget(quarter.position, quarter.target)).toBeCloseTo(-Math.PI / 2, 3)
-    // twice the duration: twice the angle at the same progress
-    const slow = computeCameraView(northbound, 0.25, frame, null, options({ style: 'orbit' }, 120))
-    expect(azimuthFromTarget(slow.position, slow.target)).toBeCloseTo(0, 3)
+    // a full turn whatever the duration: the same angle at the same progress of a film twice as long or half as long
+    for (const durationS of [30, 120]) {
+      const other = computeCameraView(northbound, 0.25, frame, null, options({ style: 'orbit' }, durationS))
+      expect(azimuthFromTarget(other.position, other.target)).toBeCloseTo(-Math.PI / 2, 3)
+    }
+    // « Tours d'orbite » 2: twice the angle
+    const twice = computeCameraView(northbound, 0.25, frame, null, options({ style: 'orbit', orbitTurns: 2 }))
+    expect(azimuthFromTarget(twice.position, twice.target)).toBeCloseTo(0, 3)
   })
 
   it('top is high and nearly vertical, north-up or heading-up', () => {
