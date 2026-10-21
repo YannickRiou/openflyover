@@ -17,7 +17,7 @@ const messages: Messages['inspector'] = {
   'card.showProfile': 'Perfil de altitud',
   'card.showMinimap': 'Minimapa del recorrido',
   'card.image': 'Logo o imagen',
-  'card.graphicsHint': 'Con una imagen, el perfil o el minimapa, sigue siendo una tarjeta, incluso en un estilo que la dispone de otra forma.',
+  'card.graphicsHint': 'Con una imagen, el perfil o el minimapa (en la apertura, también cifras o una línea libre), sigue siendo una tarjeta, incluso en un estilo que la dispone de otra forma.',
   'shot.sunHint.day.opening': 'La vista inicial está a plena luz del día y luego el sol alcanza la hora de salida durante el plano.',
   'shot.sunHint.day.closing': 'El sol pasa de la hora de llegada a plena luz del día durante el plano.',
   'shot.sunHint.flyover.opening': 'El sol de la hora de salida, como el sobrevuelo.',

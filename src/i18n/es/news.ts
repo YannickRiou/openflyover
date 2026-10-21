@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Versión {version}',
   'v32.end.title': 'Una tarjeta de cierre a su manera',
   'v32.end.text': 'Elija sus cifras (desnivel −, altitud mínima, velocidad media, fecha…), añada una línea propia, el perfil, el minimapa del recorrido y un logo o imagen: en el inspector del bloque de la tarjeta de cierre.',
+  'v32.title.title': 'Una tarjeta de apertura a su manera',
+  'v32.title.text': 'El título de apertura puede anunciar cifras (distancia, desnivel…), añadir una línea propia, el perfil, el minimapa del recorrido y un logo o imagen, como la tarjeta de cierre.',
   'v32.fix.title': 'Corregir las cifras de una salida',
   'v32.fix.text': '¿El GPS no marcó la cima? En la tarjeta de una traza, « Corregir las cifras » permite escribir la distancia, el desnivel, la altitud máxima, la duración o la velocidad máxima: las tarjetas de apertura y cierre y el póster las usan.',
   'v31.dates.title': 'Fotos de otra fecha',

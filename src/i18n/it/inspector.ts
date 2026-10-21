@@ -17,7 +17,7 @@ const messages: Messages['inspector'] = {
   'card.showProfile': 'Profilo altimetrico',
   'card.showMinimap': 'Minimappa del percorso',
   'card.image': 'Logo o immagine',
-  'card.graphicsHint': 'Con un’immagine, il profilo o la minimappa, resta una scheda, anche in uno stile che la impagina diversamente.',
+  'card.graphicsHint': 'Con un’immagine, il profilo o la minimappa (all’apertura, anche numeri o una riga libera), resta una scheda, anche in uno stile che la impagina diversamente.',
   'shot.sunHint.day.opening': 'La vista iniziale è in pieno giorno, poi il sole raggiunge l’ora di partenza durante l’inquadratura.',
   'shot.sunHint.day.closing': 'Il sole lascia l’ora di arrivo per il pieno giorno durante l’inquadratura.',
   'shot.sunHint.flyover.opening': 'Il sole dell’ora di partenza, come nel sorvolo.',

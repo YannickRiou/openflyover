@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Versione {version}',
   'v32.end.title': 'Una scheda di chiusura a modo vostro',
   'v32.end.text': 'Scegliete i suoi numeri (dislivello −, altitudine minima, velocità media, data…), aggiungete una riga vostra, il profilo, la minimappa del percorso e un logo o un’immagine: nell’ispettore del blocco della scheda di chiusura.',
+  'v32.title.title': 'Una scheda di apertura a modo vostro',
+  'v32.title.text': 'Il titolo di apertura può annunciare numeri (distanza, dislivello…), aggiungere una riga vostra, il profilo, la minimappa del percorso e un logo o un’immagine, come la scheda di chiusura.',
   'v32.fix.title': 'Correggere i numeri di un’uscita',
   'v32.fix.text': 'Il GPS ha mancato la vetta? Nella scheda di una traccia, « Correggi i numeri » permette di scrivere distanza, dislivello, altitudine massima, durata o velocità massima: le schede di apertura e chiusura e il poster li usano.',
   'v31.dates.title': 'Foto di un’altra data',

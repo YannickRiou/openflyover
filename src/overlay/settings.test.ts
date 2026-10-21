@@ -106,6 +106,13 @@ describe('overlay settings', () => {
     expect(isValidOverlay(end({ showProfile: 'yes' }))).toBe(false)
   })
 
+  it('validates what the opening card shows besides its title the same way', () => {
+    const title = (patch: object) => ({ ...DEFAULT_OVERLAY, title: { ...DEFAULT_OVERLAY.title, ...patch } }) as OverlaySettings
+    expect(isValidOverlay(title({ figures: ['distance'], line: 'Avec Marie', showMinimap: true }))).toBe(true)
+    expect(isValidOverlay(title({ figures: ['speed'] }))).toBe(false)
+    expect(isValidOverlay(title({ image: 'data:text/html;base64,AA' }))).toBe(false)
+  })
+
   it('validates the mini-map', () => {
     expect(isValidOverlay(withPatch((o) => (o.minimap.anchor = 'nowhere' as OverlaySettings['minimap']['anchor'])))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.minimap.size = 3)))).toBe(false)
