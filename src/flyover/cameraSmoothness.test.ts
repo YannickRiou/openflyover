@@ -28,12 +28,11 @@ describe('camera smoothness', () => {
     expect(quantile(film.climbJerk, 0.99)).toBeLessThan(50_000)
   })
 
-  it('every style keeps the raid calm', { timeout: 20_000 }, () => {
-    for (const style of CAMERA_STYLES) {
-      const film = flyFilm(raid, 270, hillySampler, { ...DEFAULT_CAMERA, style }, FPS)
-      expect(max(film.turn), style).toBeLessThan(150)
-      expect(quantile(film.turnAccel, 0.99), style).toBeLessThan(250)
-    }
+  // one test per style: the six together outran the time limit under the coverage of the CI on master
+  it.each(CAMERA_STYLES)('%s keeps the raid calm', { timeout: 20_000 }, (style) => {
+    const film = flyFilm(raid, 270, hillySampler, { ...DEFAULT_CAMERA, style }, FPS)
+    expect(max(film.turn)).toBeLessThan(150)
+    expect(quantile(film.turnAccel, 0.99)).toBeLessThan(250)
   })
 
   it('the short sample stays close behind the marker', () => {
