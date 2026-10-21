@@ -385,9 +385,9 @@ export const STAGE_CARD_S = JUNCTION_CARD_DEFAULT_S
 
 /**
  * Card of the stage starting at film time `time.timeS` « À la suite »: the first one with the flight, each other at
- * its cut (`time.cutsS`, the middle of the junction before it), for the card's own duration (`film`: `junctionCardOf`,
- * STAGE_CARD_S by default) but not past the start of the junction that follows; null outside these windows or when the
- * card is switched off.
+ * its cut (`time.cutsS`, the middle of the junction before it), until the card's own duration (`film`: `junctionCardOf`,
+ * STAGE_CARD_S by default) after the stage's flight starts (the end of that junction), but not past the start of the
+ * junction that follows; null outside these windows or when the card is switched off (`stageCardWindow`).
  */
 export function stageCardAt(
   sequence: Sequence,
@@ -402,7 +402,8 @@ export function stageCardAt(
   if (!stage) return null
   const own = junctionCardOf(film, k === 0 ? null : sequence.stages[k - 1].track.id)
   if (!own.enabled) return null
-  const durationS = Math.min(own.durationS, (time.junctions?.[k]?.startS ?? Infinity) - starts[k])
+  const flightS = k === 0 ? starts[0] : (time.junctions?.[k - 1]?.endS ?? starts[k])
+  const durationS = Math.min(flightS + own.durationS, time.junctions?.[k]?.startS ?? Infinity) - starts[k]
   if (!(durationS > 0) || time.timeS >= starts[k] + durationS) return null
   const { stats } = stage.track
   const card: StageCard = {

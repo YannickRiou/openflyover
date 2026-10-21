@@ -42,6 +42,7 @@ const messages: Messages['light'] = {
   'days.duration': 'Durata della scheda',
   'days.view': 'Vista alta durante la notte',
   'days.viewHint': 'Durante la notte che precede ogni giorno, la camera sale per mostrare il giorno che viene, poi scende verso il marcatore all’alba; la scheda appare nel frattempo. La durata della notte si imposta sopra.',
+  'days.stageViewHint': 'Durante la notte tra due tappe (transizione « Notte »), la camera sale per mostrare la tappa appena finita, poi scende verso la partenza della successiva all’alba; la scheda di tappa appare nel frattempo.',
   'chip.lever': 'Alba',
   'chip.matin': 'Mattina',
   'chip.midi': 'Mezzodì',

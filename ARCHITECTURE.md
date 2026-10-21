@@ -969,7 +969,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   flight view to `overviewView` framing the box of that day's stretch (`trackBox` with a `PathRange`), lifted like a shot
   (`liftedBlend`): up over the dusk, held over the night, back down over the dawn (the parts of `film.nights`, never under
   20% of the pause each), a pure function of the film time; the preview re-places the camera during it (`FlyoverRig`
-  asks `dayViewAt`), the export already re-renders the frames of a night. Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
+  asks `dayViewAt`), the export already re-renders the frames of a night. « À la suite » the same switch
+  (`dayCards.view`, shown alone in « Jours et nuits ») marks the `nuit` junctions that pass a night (`ClockJunction.view`,
+  `dayInputsFor` → `dayView`) and `dayViewAt` frames the stage the junction ends (from the cut before it to its `atM`). Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
   (browser time zone).
 - **Exposure** (`src/scene/exposure.ts`): `DAYLIGHT_EXPOSURE` (5) × 2^(automatic + `settings.exposureEv`). The automatic part
   opens up as the sun goes down: 0 EV above 10°, +3 EV at civil twilight (−6°), +6 EV at night (−18°). A faint
@@ -2938,7 +2940,9 @@ exports) gets it from the terrain source of the settings.
   the junction before its stage (`firstCard` for the first stage); without `text` the automatic card (name,
   « Étape 2 sur 3 · date », distance, D+), with it the film's own words (`fillTemplate`: `{name} {n} {count} {date}
   {distance} {ascent}`, drawn like a timeline text, `STAGE_TEXT_SCALE`). Window (`stageCardWindow`): from `holdStartS` of the
-  junction before it (the start of the flight for the first stage) for `durationS`, not past the start of the next junction.
+  junction before it (the start of the flight for the first stage) until `durationS` after its `endS` (the stage's flight
+  starts there: the card stays on its first seconds; `dragStageCard` counts the duration from there too), not past the
+  start of the next junction.
 - **Timeline**: an « Étapes » lane above « Plans » in a sequence: a block per stage (`stage-<trackId>`, track colour, selects and
   seeks) and between two of them the junction block (`junction-<trackId>`, `[startS, endS]` of its pause, at least
   `JUNCTION_MIN_PX` wide); the right edge of a fade stretches `holdS` (`dragJunction`, found on the clock of the film with the
@@ -2982,7 +2986,7 @@ exports) gets it from the terrain source of the settings.
   D+, time, profile, mini-map), the opening and closing cards the name and totals of the sequence. A stage card
   (`stageCardAt(sequence, time, film)`, `StageCard`: the automatic name, « Étape 2 sur 3 · date », distance, D+, or the film's
   own text; its own anchor, size and duration, `STAGE_CARD_S` = 5 s by default, from the flight start for the first, from its
-  cut for the others) drawn even while the overlay is off, the live widgets giving way to it; the first stage's card gives way to the title card when that is on. Dip of the junction
+  cut for the others, until that duration after the junction ends, as `stageCardWindow`) drawn even while the overlay is off, the live widgets giving way to it; the first stage's card gives way to the title card when that is on. Dip of the junction
   (`junctionsDipAt`, from `OverlayTime.junctions`, i.e. from the clock: covered at `holdStartS` and until `holdEndS`, `JUNCTION_FADE_S`
   0.8 s each side; a night: only around `holdStartS`) merged with the shot dips; the card is drawn **over** the dip it lives in.
   Both enter the export's held-frame key (dip alpha and card opacity), a pure function of the film time.

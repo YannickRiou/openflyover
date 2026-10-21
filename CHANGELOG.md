@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Stage cards on the stage they announce**: « À la suite », the card of a stage was shown only inside the transition before it (the fade or the night), and with a « Nuit » transition it was gone before the stage even started. It now appears in the transition and stays on the first seconds of the stage's flight; its duration (the right edge of its block) counts from there.
+- **A high view of the stage just finished**: « À la suite », « Lumière › Jours et nuits » now shows « Vue haute pendant la nuit ». During each « Nuit » transition, the camera rises to show the whole stage just finished, holds it through the night, then comes down to the start of the next stage at dawn, with the stage card on screen.
+
 ## 3.2.2 (October 2026)
 
 - **« Date des photos » with Esri shows a date**: an older Esri date chosen earlier (before changing tab, or in a project opened again) showed a number such as « 13968 » instead of its day. The list of dates is now found again by itself and the day shows (« Photos plus anciennes » for the instant it takes).

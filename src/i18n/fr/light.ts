@@ -40,6 +40,7 @@ export default {
   'days.duration': 'Durée de la carte',
   'days.view': 'Vue haute pendant la nuit',
   'days.viewHint': 'Pendant la nuit qui précède chaque jour, la caméra monte pour montrer la journée à venir, puis redescend vers le marqueur à l’aube ; la carte s’affiche pendant ce temps. La durée de la nuit se règle plus haut.',
+  'days.stageViewHint': 'Pendant la nuit entre deux étapes (transition « Nuit »), la caméra monte pour montrer l’étape qui vient de finir, puis redescend vers le départ de la suivante à l’aube ; la carte d’étape s’affiche pendant ce temps.',
   'chip.lever': 'Lever',
   'chip.matin': 'Matin',
   'chip.midi': 'Midi',

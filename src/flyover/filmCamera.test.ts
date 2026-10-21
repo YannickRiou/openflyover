@@ -60,6 +60,7 @@ import { filmClockFor } from '../film/clock'
 import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from '../film/model'
 import { DEFAULT_PACING } from './pacing'
 import { buildTrackPath, trackPathOf } from './path'
+import { buildSequence } from './sequence'
 
 const frame = createLocalFrame(6.85, 45.9)
 /** ~4.4 km straight north at 1000 m */
@@ -1012,5 +1013,41 @@ describe('high view of the day during the night', () => {
     const night = clock.nights[0]
     const issues = auditFilmCamera(twoDays, clock, where, flat, opts, { fromS: night.startS - 2, toS: night.endS + 2 })
     expect(issues).toEqual([])
+  })
+  describe('« À la suite »: the night between two stages', () => {
+    const stage = (name: string, points: typeof day1) => ({ ...buildTrack({ name, source: 'gpx', segments: [{ points }] }), utcOffsetMin: 120 })
+    const sequence = buildSequence([stage('j1', day1), stage('j2', day2)])
+    const path = trackPathOf(sequence.track)
+    const sequenceClockOf = (view: boolean) =>
+      filmClockFor({
+        track: sequence.track,
+        film: { ...DEFAULT_FILM, autoStops: false, opening: { style: 'descente', durationS: 6 }, closing: { style: 'descente', durationS: 6 }, dayCards: { ...DEFAULT_DAY_CARDS, view } },
+        durationS: 60,
+        pacing: { ...DEFAULT_PACING, keepDuration: false },
+        cutsM: sequence.cutsM,
+        stageIds: sequence.stageIds,
+      })
+
+    it('with the high view, the camera rises over the stage just finished; none without it', () => {
+      const clock = sequenceClockOf(true)
+      const [junction] = clock.junctions
+      expect(junction).toMatchObject({ kind: 'nuit', view: true })
+      const middle = dayViewAt(clock, (junction.startS + junction.endS) / 2)
+      expect(middle).toMatchObject({ fromM: 0, toM: junction.atM, k: 1 })
+      expect(dayViewAt(clock, junction.startS - 0.1)).toBeNull()
+      expect(dayViewAt(sequenceClockOf(false), (junction.startS + junction.endS) / 2)).toBeNull()
+      const at = (t: number) => computeFilmView(path, clock, t, clock.progressAtTime(t), where, flat, opts)
+      const high = at((junction.startS + junction.endS) / 2)
+      expect(high.position.y).toBeGreaterThan(at(junction.startS - 1).position.y + 1500)
+      const route = trackBox(path, where, { fromM: 0, toM: junction.atM })
+      expect(high.target.x).toBeGreaterThan(route.minX)
+      expect(high.target.x).toBeLessThan(route.maxX)
+    })
+
+    it('no jolt nor loss of the marker through the night, at 30 i/s', () => {
+      const clock = sequenceClockOf(true)
+      const [junction] = clock.junctions
+      expect(auditFilmCamera(path, clock, where, flat, opts, { fromS: junction.startS - 2, toS: junction.endS + 2 })).toEqual([])
+    })
   })
 })

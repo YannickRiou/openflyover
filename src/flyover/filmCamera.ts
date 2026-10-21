@@ -875,21 +875,25 @@ function freeView(
 }
 
 /**
- * The day whose high view is on at film time `timeS` and how far the camera is up (0..1): during the night pause before
- * a day with `view` it rises over the dusk, holds over the night and comes back down over the dawn (the parts of
+ * The route whose high view is on at film time `timeS` (metres of the path) and how far the camera is up (0..1): during
+ * the night pause before a day with `view`, that day; « À la suite », during the night of a junction with `view`, the
+ * stage it ends. The camera rises over the dusk, holds over the night and comes back down over the dawn (the parts of
  * `film.nights`, as the sun reads them, but never shorter than DAY_VIEW_MIN_SHARE of the pause), null outside.
  */
-export function dayViewAt(clock: Pick<FilmClock, 'days' | 'nights'>, timeS: number): { day: ClockDay; k: number } | null {
+export function dayViewAt(clock: Pick<FilmClock, 'days' | 'nights' | 'junctions'>, timeS: number): { fromM: number; toM: number; k: number; day?: ClockDay } | null {
   const night = nightAt(clock, timeS)
-  const day = night ? clock.days.find((d) => d.night === night && d.view) : undefined
-  if (!night || !day) return null
+  if (!night) return null
+  const day = clock.days.find((d) => d.night === night && d.view)
+  const j = day ? -1 : clock.junctions.findIndex((junction) => junction.view && junction.startS === night.startS)
+  if (!day && j < 0) return null
+  const route = day ? { fromM: day.startM, toM: day.endM, day } : { fromM: clock.junctions[j - 1]?.atM ?? 0, toM: clock.junctions[j].atM }
   const pauseS = night.endS - night.startS
   const parts = night.duskS + night.nightS + night.dawnS
   const scale = parts > 0 ? pauseS / parts : 0
   const up = Math.min(Math.max(night.duskS * scale, DAY_VIEW_MIN_SHARE * pauseS), 0.5 * pauseS)
   const down = Math.min(Math.max(night.dawnS * scale, DAY_VIEW_MIN_SHARE * pauseS), 0.5 * pauseS)
   const k = smootherstep((timeS - night.startS) / up) * (1 - smootherstep((timeS - (night.endS - down)) / down))
-  return { day, k }
+  return { ...route, k }
 }
 
 /**
@@ -925,11 +929,11 @@ export function computeFilmView(
     return { ...blendViews(filmFlight, pose, keyed.weight, frame, sample, options.exaggeration), marker: filmFlight.marker }
   }
   if (state.phase !== 'opening' && state.phase !== 'closing') {
-    const day = dayViewAt(clock, timeS)
-    if (!day) return flight
-    // the night before a day: up to a high view of its route, held, and back down to the marker at dawn
-    const high = overviewView(path, frame, sample, options.exaggeration, aspect, flight, { fromM: day.day.startM, toM: day.day.endM })
-    return { ...liftedBlend(flight, high, day.k, flight, frame, sample, options.exaggeration), marker: flight.marker }
+    const view = dayViewAt(clock, timeS)
+    if (!view) return flight
+    // the night before a day (or after a stage): up to a high view of its route, held, and back down to the marker at dawn
+    const high = overviewView(path, frame, sample, options.exaggeration, aspect, flight, { fromM: view.fromM, toM: view.toM })
+    return { ...liftedBlend(flight, high, view.k, flight, frame, sample, options.exaggeration), marker: flight.marker }
   }
 
   const phase = state.phase

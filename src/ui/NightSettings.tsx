@@ -3,7 +3,8 @@
  * and dawn seconds, `film.nights`), and the cards of the days (`film.dayCards`: which figures, title, place, size, how
  * long, and a high view of the day during the night before it; also in the inspector of a day card block,
  * `DayCardFields`). « À la suite »: the stages are the days; the seconds stay here (the « Nuit » junctions use them,
- * their inspector shows them too) and the stage cards replace the day cards.
+ * their inspector shows them too), the stage cards replace the day cards, and the high view shows the stage a « Nuit »
+ * junction ends.
  */
 import { useId, useMemo } from 'react'
 import { isDayCard, trackDays, withoutDayCards } from '../film/days'
@@ -54,6 +55,16 @@ export function NightSettings() {
       </p>
       {nights.enabled && sequence && (
         <p className="type-hint">{tr('light.nights.sequenceHint')}</p>
+      )}
+      {sequence && (
+        <>
+          <Switch id={`${id}-view`} checked={cards.view} aria-describedby={`${id}-view-hint`} onChange={(view) => setCards({ view })}>
+            {tr('light.days.view')}
+          </Switch>
+          <p id={`${id}-view-hint`} className="type-hint">
+            {tr('light.days.stageViewHint')}
+          </p>
+        </>
       )}
       {nights.enabled &&
         NIGHT_PARTS.map(({ key, label, tip }) => (

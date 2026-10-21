@@ -42,6 +42,7 @@ const messages: Messages['light'] = {
   'days.duration': 'Duración de la tarjeta',
   'days.view': 'Vista alta durante la noche',
   'days.viewHint': 'Durante la noche anterior a cada día, la cámara sube para mostrar el día que viene y baja de nuevo hacia el marcador al amanecer; la tarjeta se muestra mientras tanto. La duración de la noche se ajusta arriba.',
+  'days.stageViewHint': 'Durante la noche entre dos etapas (transición « Noche »), la cámara sube para mostrar la etapa que acaba de terminar y baja de nuevo hacia la salida de la siguiente al amanecer; la tarjeta de etapa se muestra mientras tanto.',
   'chip.lever': 'Amanecer',
   'chip.matin': 'Mañana',
   'chip.midi': 'Mediodía',

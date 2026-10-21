@@ -98,6 +98,8 @@ export interface ClockJunction {
   holdStartS: number
   holdEndS: number
   endS: number
+  /** a night whose camera rises to show the stage it ends (« Vue haute pendant la nuit », `dayViewAt`) */
+  view?: boolean
 }
 
 /** What the film shows at a film time. */
@@ -257,7 +259,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
     const { stop, night, junction } = pauses[k]
     if (stop) stops.push({ ...stop, ...times, addedS: pause.durationS })
     else if (night) nights.push({ ...night, ...times })
-    if (junction) held.set(junction, { ...clockJunction(junction), ...times })
+    if (junction) held.set(junction, { ...clockJunction(junction), ...times, ...(junction.night && input.dayView ? { view: true } : {}) })
   })
 
   // without track (no length) the portions have no place in the flight
@@ -381,9 +383,13 @@ export function junctionInputsFor({ track, film, durationS, cutsM, stageIds }: F
   return { ...plan, stages: stageSpansOf(film, stageIds ?? [], cutsM, track.stats.distanceM) }
 }
 
-/** The days of the track when their cards are on (« Cartes de jour »), a single track and several days: else none. */
+/**
+ * The days of the track when their cards are on (« Cartes de jour »), a single track and several days: else none.
+ * « À la suite », only the high view, over the nights of the junctions.
+ */
 export function dayInputsFor({ track, film, cutsM }: FilmClockFor): Pick<FilmClockInput, 'days' | 'utcOffsetMin' | 'dayView'> {
-  if (!track || cutsM?.length || !film.dayCards?.enabled) return {}
+  if (track && cutsM?.length) return film.dayCards?.view ? { dayView: true } : {}
+  if (!track || !film.dayCards?.enabled) return {}
   const days = trackDays(trackPathOf(track), track.utcOffsetMin)
   return days.length < 2 ? {} : { days, utcOffsetMin: track.utcOffsetMin, dayView: film.dayCards.view }
 }

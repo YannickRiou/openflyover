@@ -277,17 +277,19 @@ describe('dip of a junction', () => {
 })
 
 describe('window of a stage card', () => {
-  const j = (afterTrackId: string, startS: number, holdStartS: number): Pick<ClockJunction, 'afterTrackId' | 'startS' | 'holdStartS'> => ({ afterTrackId, startS, holdStartS })
-  const clock = { openingS: 6, junctions: [j('a', 28, 30), j('b', 33, 35)] as ClockJunction[] }
+  const j = (afterTrackId: string, startS: number, holdStartS: number, endS = holdStartS): Pick<ClockJunction, 'afterTrackId' | 'startS' | 'holdStartS' | 'endS'> => ({ afterTrackId, startS, holdStartS, endS })
+  const clock = { openingS: 6, junctions: [j('a', 28, 30, 31), j('b', 40, 42, 45)] as ClockJunction[] }
 
-  it('from the flight start for the first stage, from the cut for the others, for the card’s duration', () => {
+  it('from the flight start for the first stage, from the cut for the others, until the card’s duration on the flight of the stage', () => {
     expect(stageCardWindow(clock, film, null)).toEqual({ startS: 6, endS: 11 })
-    expect(stageCardWindow(clock, film, 'a')).toEqual({ startS: 30, endS: 33 })
-    expect(stageCardWindow(clock, withJunctionCard(film, 'b', { durationS: 3 }), 'b')).toEqual({ startS: 35, endS: 38 })
+    // through the junction (30 → 31 s), then 5 s on the flight
+    expect(stageCardWindow(clock, film, 'a')).toEqual({ startS: 30, endS: 36 })
+    expect(stageCardWindow(clock, withJunctionCard(film, 'b', { durationS: 3 }), 'b')).toEqual({ startS: 42, endS: 48 })
   })
 
   it('not past the next junction; none without a sequence or for an unknown junction', () => {
     expect(stageCardWindow({ openingS: 6, junctions: [j('a', 14, 16)] as ClockJunction[] }, withJunctionCard(film, null, { durationS: 15 }), null)).toEqual({ startS: 6, endS: 14 })
+    expect(stageCardWindow({ openingS: 6, junctions: [j('a', 28, 30, 31), j('b', 33, 35)] as ClockJunction[] }, film, 'a')).toEqual({ startS: 30, endS: 33 })
     expect(stageCardWindow({ openingS: 6, junctions: [] }, film, null)).toBeNull()
     expect(stageCardWindow(clock, film, 'zz')).toBeNull()
   })

@@ -42,6 +42,7 @@ const messages: Messages['light'] = {
   'days.duration': 'Dauer der Karte',
   'days.view': 'Hohe Ansicht in der Nacht',
   'days.viewHint': 'In der Nacht vor jedem Tag steigt die Kamera auf, um den kommenden Tag zu zeigen, und sinkt bei Tagesanbruch zur Markierung zurück; die Karte erscheint währenddessen. Die Länge der Nacht wird oben eingestellt.',
+  'days.stageViewHint': 'In der Nacht zwischen zwei Etappen (Übergang „Nacht“) steigt die Kamera auf, um die gerade beendete Etappe zu zeigen, und sinkt bei Tagesanbruch zum Start der nächsten zurück; die Etappenkarte erscheint währenddessen.',
   'chip.lever': 'Aufgang',
   'chip.matin': 'Morgen',
   'chip.midi': 'Mittag',
