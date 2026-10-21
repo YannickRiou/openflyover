@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 3.1.0 (October 2026)
+
+- **« Libre » camera style**: a camera that follows nothing. Without keyframes it stays fixed on a view of the whole track while the marker moves through it; with keyframes it holds the first one's view, glides from one to the next and holds the last one, so you choose every camera move yourself (a fixed shot, a turn around the track, a slow push-in). The framing sliders are hidden in this style since they do nothing there.
+
 ## 3.0.1 (October 2026)
 
 - **The closing card follows the end of the film**: after changing the flyover duration (or a shot or a stop), a closing card placed at the end of the film no longer stays where it was, past the end of the timeline or cut short before the last frame: it keeps its length and stays at the end; a card that would go past the end slides back to it. Fixes a card block drawn outside the film.

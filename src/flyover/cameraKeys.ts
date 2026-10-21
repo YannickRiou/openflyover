@@ -50,7 +50,7 @@ export function keyedCamera(camera: CameraSettings, keys: readonly FilmCameraKey
 /** Pose of a keyframe, without its place (`FilmCameraKey`). */
 export type KeyFraming = Required<Pick<FilmCameraKey, 'distance' | 'pitchDeg' | 'headingOffsetDeg' | 'aimRightM' | 'aimAheadM'>>
 
-const keyFraming = (k: FilmCameraKey): KeyFraming => ({
+export const keyFraming = (k: FilmCameraKey): KeyFraming => ({
   distance: k.distance,
   pitchDeg: k.pitchDeg,
   headingOffsetDeg: k.headingOffsetDeg,

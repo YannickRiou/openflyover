@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v31.free.title': 'Una cámara libre',
+  'v31.free.text': 'El estilo « Libre (fotogramas clave) » no sigue el marcador: sin fotogramas clave la cámara queda fija sobre todo el recorrido; añada fotogramas clave en la línea de tiempo para elegir usted mismo sus movimientos (plano fijo, vuelta al recorrido…).',
   'v301.cards.title': 'La tarjeta de cierre sigue el final de la película',
   'v301.cards.text': 'Al cambiar la duración del sobrevuelo (o un plano o una parada), una tarjeta de cierre colocada al final de la película se queda al final en lugar de quedarse donde estaba, a veces más allá del final.',
   'v30.camera.title': 'Una cámara sin tirones sobre el relieve',

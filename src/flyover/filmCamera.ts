@@ -18,7 +18,7 @@ import { clamp, smootherstep } from '../core/math'
 import type { LocalFrame, LonLat } from '../core/types'
 import type { ClockDay, ClockStop, FilmClock, FilmState } from '../film/clock'
 import { CAMERA_KEY_RANGES, SITUATION_DISTANCE_KM_RANGE, SITUATION_TILT_DEFAULT_DEG, SITUATION_TILT_RANGE, shotCuts, situationTiming } from '../film/model'
-import type { FilmShot, ShotStyle, SituationFraming, StartHeight } from '../film/model'
+import type { FilmCameraKey, FilmShot, ShotStyle, SituationFraming, StartHeight } from '../film/model'
 import type { HeightSampler } from '../scene/trackLineSet'
 import {
   LINE_OF_SIGHT_FINE_GAIN,
@@ -37,7 +37,7 @@ import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, type CameraSettings } from 
 import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 import { nightAt } from './sun'
-import { cameraKeyEaseM, keyPoseAt, type KeyFraming } from './cameraKeys'
+import { cameraKeyEaseM, keyFraming, keyPoseAt, type KeyFraming } from './cameraKeys'
 import { anticipatedRaise, smoothsInTime, timeSmoothing } from './timeSmoothing'
 
 export { smootherstep }
@@ -816,10 +816,54 @@ export function keyFramingAt(
   position: Vector3,
   lookAt: Vector3,
 ): KeyFraming {
-  const { base } = flightAt(path, clock, clock.stateAt(timeS), progress, frame, sample, options)
+  const base =
+    options.camera?.style === 'free'
+      ? freeKeyBase(path, progress * path.lengthM, frame, sample, options)
+      : flightAt(path, clock, clock.stateAt(timeS), progress, frame, sample, options).base
   const f = keyFramingFrom(base, position, lookAt)
   const { distance, pitchDeg } = CAMERA_KEY_RANGES
   return { ...f, distance: clamp(f.distance, distance.min, distance.max), pitchDeg: clamp(f.pitchDeg, pitchDeg.min, pitchDeg.max) }
+}
+
+/**
+ * What a keyframe of the 'free' style is placed around: its own place on the film track (the marker there, the
+ * direction of travel there), not the marker's place now. Its pose is fixed in the scene.
+ */
+function freeKeyBase(path: TrackPath, atM: number, frame: LocalFrame, sample: HeightSampler | null, options: FilmViewOptions): KeyBase {
+  const target = markerAt(path, atM / Math.max(1, path.lengthM), frame, sample, options.exaggeration, options.liftM)
+  return { target, reference: keyReferenceAt(path, atM, frame), autoDistanceM: autoDistanceM(path), wide: 0, orbitRad: 0 }
+}
+
+/**
+ * Camera of the 'free' style at `progress`: it follows nothing but the keyframes. Without any, the overview of the
+ * whole track, looking along the start's direction of travel; else the first key's pose up to it, the last one's after
+ * it, eased from one to the next in between by smootherstep (kept above the ground halfway, as `keyPoseAt` does).
+ * Stops, smoothing and the flight styles' motions do not move it.
+ */
+function freeView(path: TrackPath, clock: FilmClock, progress: number, frame: LocalFrame, sample: HeightSampler | null, options: FilmViewOptions): FilmView {
+  const followed = options.follow?.(progress) ?? null
+  const marker =
+    followed && !followed.markerOnFilm
+      ? markerAt(followed.path, followed.progress, frame, sample, options.exaggeration, options.liftM)
+      : markerAt(path, progress, frame, sample, options.exaggeration, options.liftM)
+  const keys = clock.cameraKeys
+  const poseOf = (key: FilmCameraKey) => keyView(freeKeyBase(path, key.atM, frame, sample, options), keyFraming(key))
+  if (keys.length === 0) {
+    const along = { target: new Vector3(), position: keyReferenceAt(path, 0, frame).negate() }
+    return { ...overviewView(path, frame, sample, options.exaggeration, options.aspect, along), marker }
+  }
+  const atM = clamp(progress, 0, 1) * path.lengthM
+  const next = keys.findIndex((k) => k.atM > atM)
+  if (next === 0) return { ...poseOf(keys[0]), marker }
+  if (next === -1) return { ...poseOf(keys[keys.length - 1]), marker }
+  const a = keys[next - 1]
+  const b = keys[next]
+  const u = (atM - a.atM) / (b.atM - a.atM)
+  const view = blendViews(poseOf(a), poseOf(b), smootherstep(u), frame, sample, options.exaggeration)
+  const kept = keepAboveGround(view.position.clone(), frame, sample, options.exaggeration)
+  const position = view.position.clone()
+  position.y += (kept.y - position.y) * 4 * u * (1 - u)
+  return { target: view.target, position, marker }
 }
 
 /**
@@ -859,17 +903,18 @@ export function computeFilmView(
 ): FilmView {
   const state = clock.stateAt(timeS)
   const { aspect, region } = options
-  const { flight: filmFlight, base } = flightAt(path, clock, state, progress, frame, sample, options)
-  const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
-  const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
-  let flight = filmFlight
-  if (keyed && keyed.weight > 0) {
+  const flight = options.camera?.style === 'free' ? freeView(path, clock, progress, frame, sample, options) : keyedFlight()
+  function keyedFlight(): FilmView {
+    const { flight: filmFlight, base } = flightAt(path, clock, state, progress, frame, sample, options)
+    const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
+    const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
+    if (!keyed || keyed.weight <= 0) return filmFlight
     const pose = keyView(base, keyed.framing)
     if (keyed.free > 0) {
       const kept = keepAboveGround(pose.position.clone(), frame, sample, options.exaggeration)
       pose.position.y += (kept.y - pose.position.y) * keyed.free
     }
-    flight = { ...blendViews(filmFlight, pose, keyed.weight, frame, sample, options.exaggeration), marker: filmFlight.marker }
+    return { ...blendViews(filmFlight, pose, keyed.weight, frame, sample, options.exaggeration), marker: filmFlight.marker }
   }
   if (state.phase !== 'opening' && state.phase !== 'closing') {
     const day = dayViewAt(clock, timeS)
