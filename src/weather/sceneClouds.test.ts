@@ -174,14 +174,31 @@ describe('wind and drift', () => {
 
   it('« Vent »: the speed chosen, in the direction of the weather, outside the weather mode', () => {
     const weather = { east: 0, north: -5 }
-    expect(settingsWind({ mode: 'meteo', windKmh: 36 }, weather)).toEqual(weather)
-    const manual = settingsWind({ mode: 'manuel', windKmh: 36 }, weather)
+    expect(settingsWind({ ...DEFAULT_CLOUDS, mode: 'meteo', windKmh: 36 }, weather)).toEqual(weather)
+    const manual = settingsWind({ ...DEFAULT_CLOUDS, mode: 'manuel', windKmh: 36 }, weather)
     expect(manual.east).toBeCloseTo(0, 9)
     expect(manual.north).toBeCloseTo(-10, 9)
-    expect(settingsWind({ mode: 'mer', windKmh: 18 }, { east: 0, north: 0 })).toEqual({ east: 5, north: 0 })
-    const still = cloudDrift(settingsWind({ mode: 'manuel', windKmh: 0 }, weather), 30)
+    expect(settingsWind({ ...DEFAULT_CLOUDS, mode: 'mer', windKmh: 18 }, { east: 0, north: 0 })).toEqual({ east: 5, north: 0 })
+    const still = cloudDrift(settingsWind({ ...DEFAULT_CLOUDS, mode: 'manuel', windKmh: 0 }, weather), 30)
     expect(Math.hypot(still.east, still.north)).toBe(0)
     expect(isValidClouds({ ...DEFAULT_CLOUDS, windKmh: 150 })).toBe(false)
+  })
+
+  it('« Direction du vent » and « Choisir le vent à la main »', () => {
+    const weather = { east: 0, north: -5 }
+    // a northerly blows south, a westerly east, at the speed chosen
+    const north = settingsWind({ ...DEFAULT_CLOUDS, mode: 'manuel', windKmh: 36, windDirection: 'N' }, weather)
+    expect(north.east).toBeCloseTo(0, 9)
+    expect(north.north).toBeCloseTo(-10, 9)
+    const west = settingsWind({ ...DEFAULT_CLOUDS, mode: 'mer', windKmh: 36, windDirection: 'W' }, weather)
+    expect(west.east).toBeCloseTo(10, 9)
+    const southEast = settingsWind({ ...DEFAULT_CLOUDS, mode: 'manuel', windKmh: 36, windDirection: 'SE' }, weather)
+    expect(southEast.east).toBeCloseTo(-10 / Math.SQRT2, 9)
+    expect(southEast.north).toBeCloseTo(10 / Math.SQRT2, 9)
+    // the weather mode keeps the real wind unless set by hand
+    expect(settingsWind({ ...DEFAULT_CLOUDS, mode: 'meteo', windKmh: 36, windDirection: 'W' }, weather)).toEqual(weather)
+    expect(settingsWind({ ...DEFAULT_CLOUDS, mode: 'meteo', windKmh: 36, windDirection: 'W', windByHand: true }, weather).east).toBeCloseTo(10, 9)
+    expect(isValidClouds({ ...DEFAULT_CLOUDS, windDirection: 'NNE' as never })).toBe(false)
   })
 })
 

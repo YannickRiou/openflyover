@@ -8,7 +8,7 @@ const messages: Messages['news'] = {
   'v31.free.title': 'Una telecamera libera',
   'v31.free.text': 'Lo stile « Libera (keyframe) » non segue il marcatore: senza keyframe la telecamera resta fissa sull’intero tracciato; aggiungi dei keyframe sulla timeline per scegliere tu i suoi movimenti (inquadratura fissa, giro attorno al tracciato…).',
   'v31.wind.title': 'Vento tra le nuvole',
-  'v31.wind.text': 'Con nuvole « Manuale » o un mare di nuvole, il cursore « Vento » regola la velocità con cui scorrono; a 0 restano ferme.',
+  'v31.wind.text': 'Con nuvole « Manuale » o un mare di nuvole, « Vento » regola la velocità con cui scorrono (a 0 restano ferme) e « Direzione del vento » da dove soffia. In « Meteo », spunta « Scegli il vento a mano » per le stesse regolazioni.',
   'v301.cards.title': 'La scheda di chiusura segue la fine del film',
   'v301.cards.text': 'Quando cambiate la durata del sorvolo (o un’inquadratura o una sosta), una scheda di chiusura messa alla fine del film resta alla fine invece di restare dove era, a volte oltre la fine.',
   'v30.camera.title': 'Una camera senza scatti sul rilievo',

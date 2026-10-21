@@ -202,10 +202,10 @@ export function heldMotionTimeS(stop: Pick<ClockStop, 'startS' | 'holdStartS' | 
 
 /**
  * True when the view changes with the film time alone (progress unchanged): shots, orbiting or widening stops, every
- * stop with a smoothing in time, orbit / cinema.
+ * stop with a smoothing in time, orbit / cinema, free (its keyframes are timed by the film time).
  */
 export function filmViewMovesWithTime(state: FilmState, camera: CameraSettings): boolean {
-  if (state.phase === 'opening' || state.phase === 'closing') return true
+  if (state.phase === 'opening' || state.phase === 'closing' || camera.style === 'free') return true
   if (state.phase === 'stop' && (state.stop?.camera === 'orbite' || state.stop?.camera === 'large' || smoothsInTime(camera))) return true
   return movesWithTime(camera.style)
 }
@@ -835,12 +835,21 @@ function freeKeyBase(path: TrackPath, atM: number, frame: LocalFrame, sample: He
 }
 
 /**
- * Camera of the 'free' style at `progress`: it follows nothing but the keyframes. Without any, the overview of the
- * whole track, looking along the start's direction of travel; else the first key's pose up to it, the last one's after
- * it, eased from one to the next in between by smootherstep (kept above the ground halfway, as `keyPoseAt` does).
- * Stops, smoothing and the flight styles' motions do not move it.
+ * Camera of the 'free' style at film time `timeS`: it follows nothing but the keyframes. Without any, the overview of
+ * the whole track, looking along the start's direction of travel; else the first key's pose up to its time, the last
+ * one's after it, eased from one to the next in between by smootherstep over the film time (so it keeps gliding
+ * through a stop, while the marker holds; kept above the ground halfway, as `keyPoseAt` does). Stops, smoothing and
+ * the flight styles' motions do not move it.
  */
-function freeView(path: TrackPath, clock: FilmClock, progress: number, frame: LocalFrame, sample: HeightSampler | null, options: FilmViewOptions): FilmView {
+function freeView(
+  path: TrackPath,
+  clock: FilmClock,
+  timeS: number,
+  progress: number,
+  frame: LocalFrame,
+  sample: HeightSampler | null,
+  options: FilmViewOptions,
+): FilmView {
   const followed = options.follow?.(progress) ?? null
   const marker =
     followed && !followed.markerOnFilm
@@ -852,13 +861,12 @@ function freeView(path: TrackPath, clock: FilmClock, progress: number, frame: Lo
     const along = { target: new Vector3(), position: keyReferenceAt(path, 0, frame).negate() }
     return { ...overviewView(path, frame, sample, options.exaggeration, options.aspect, along), marker }
   }
-  const atM = clamp(progress, 0, 1) * path.lengthM
-  const next = keys.findIndex((k) => k.atM > atM)
+  const next = keys.findIndex((k) => k.timeS > timeS)
   if (next === 0) return { ...poseOf(keys[0]), marker }
   if (next === -1) return { ...poseOf(keys[keys.length - 1]), marker }
   const a = keys[next - 1]
   const b = keys[next]
-  const u = (atM - a.atM) / (b.atM - a.atM)
+  const u = b.timeS > a.timeS ? (timeS - a.timeS) / (b.timeS - a.timeS) : 1
   const view = blendViews(poseOf(a), poseOf(b), smootherstep(u), frame, sample, options.exaggeration)
   const kept = keepAboveGround(view.position.clone(), frame, sample, options.exaggeration)
   const position = view.position.clone()
@@ -903,7 +911,7 @@ export function computeFilmView(
 ): FilmView {
   const state = clock.stateAt(timeS)
   const { aspect, region } = options
-  const flight = options.camera?.style === 'free' ? freeView(path, clock, progress, frame, sample, options) : keyedFlight()
+  const flight = options.camera?.style === 'free' ? freeView(path, clock, timeS, progress, frame, sample, options) : keyedFlight()
   function keyedFlight(): FilmView {
     const { flight: filmFlight, base } = flightAt(path, clock, state, progress, frame, sample, options)
     const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)

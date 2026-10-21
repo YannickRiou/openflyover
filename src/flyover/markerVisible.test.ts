@@ -12,6 +12,8 @@ import { flyFilm } from './__fixtures__/smoothness'
  * from its centre (0.14 at most), 0.2 through stops (0.16: the aim stands on a smoothed line, `cameraLine`).
  */
 const LENGTH_S = 60
+/** the presets that follow the marker ('free' follows nothing but the keyframes, by design) */
+const FOLLOWING = CAMERA_PRESETS.filter((p) => p.camera.style !== 'free')
 const edge = (f: { ndcX: number; ndcY: number }) => (Number.isNaN(f.ndcX) ? Infinity : Math.max(Math.abs(f.ndcX), Math.abs(f.ndcY)))
 
 describe('marker visibility', { timeout: 120_000 }, () => {
@@ -21,7 +23,7 @@ describe('marker visibility', { timeout: 120_000 }, () => {
     it(`${name}: no camera preset hides the marker behind the relief`, () => {
       let hiddenFrames = 0
       let allFrames = 0
-      for (const { name: preset, camera } of CAMERA_PRESETS) {
+      for (const { name: preset, camera } of FOLLOWING) {
         const frames = flyMarker(track, LENGTH_S, steepSampler, camera, 10)
         const hidden = frames.map((f) => f.clearanceM < 0)
         hiddenFrames += hidden.filter(Boolean).length
@@ -49,7 +51,7 @@ describe('marker visibility', { timeout: 120_000 }, () => {
           { id: 'v2', fromM: 0.4 * length, toM: 0.5 * length, factor: 0.25 },
         ],
       } as const
-      for (const { name: preset, camera } of CAMERA_PRESETS) {
+      for (const { name: preset, camera } of FOLLOWING) {
         const frames = flyMarker(track, LENGTH_S, steepSampler, camera, 10, 16 / 9, 1, { ...film, stops: [...film.stops], speeds: [...film.speeds] })
         expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.2)
       }

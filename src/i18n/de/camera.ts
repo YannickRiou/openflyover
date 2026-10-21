@@ -33,6 +33,7 @@ const messages: Messages['camera'] = {
   'preset.plane': 'Flugzeug',
   'preset.top-view': 'Draufsicht',
   'preset.satellite': 'Satellit',
+  'preset.free': 'Frei',
   'panel.custom': 'Eigene',
   'panel.customTip': 'Von Hand geänderte Einstellungen',
   'panel.morePresets': 'Weitere Voreinstellungen',

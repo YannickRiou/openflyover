@@ -10,7 +10,7 @@ import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
-import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
+import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, SEA_TOP_RANGE, WIND_DIRECTIONS, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
@@ -323,15 +323,34 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
         />
       )}
 
-      {(clouds.mode === 'manuel' || clouds.mode === 'mer') && (
-        <RangeField
-          label={t('light.clouds.wind')}
-          tip={t('light.clouds.windTip')}
-          {...CLOUD_WIND_RANGE}
-          value={clouds.windKmh}
-          format={(v) => `${formatNumber(v)} km/h`}
-          onChange={(windKmh) => set({ windKmh })}
-        />
+      {clouds.mode === 'meteo' && (
+        <Checkbox id={`${id}-wind-by-hand`} checked={clouds.windByHand} onChange={(windByHand) => set({ windByHand })}>
+          {t('light.clouds.windByHand')}
+        </Checkbox>
+      )}
+
+      {(clouds.mode === 'manuel' || clouds.mode === 'mer' || (clouds.mode === 'meteo' && clouds.windByHand)) && (
+        <>
+          <RangeField
+            label={t('light.clouds.wind')}
+            tip={t('light.clouds.windTip')}
+            {...CLOUD_WIND_RANGE}
+            value={clouds.windKmh}
+            format={(v) => `${formatNumber(v)} km/h`}
+            onChange={(windKmh) => set({ windKmh })}
+          />
+          <div className="field">
+            <label className="type-label" htmlFor={`${id}-wind-direction`}>
+              {t('light.clouds.windDirection')}
+            </label>
+            <Select
+              id={`${id}-wind-direction`}
+              value={clouds.windDirection}
+              options={WIND_DIRECTIONS.map((d) => ({ value: d, label: t(`light.clouds.windFrom.${d}`) }))}
+              onChange={(windDirection) => set({ windDirection })}
+            />
+          </div>
+        </>
       )}
 
       {clouds.mode === 'mer' && (

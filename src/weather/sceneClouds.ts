@@ -34,6 +34,10 @@ export const EXPORT_SAMPLES: Record<CloudQuality, number> = { low: 16, medium: 2
 export const SEA_RENDERS = ['volume', 'surface'] as const
 export type SeaRender = (typeof SEA_RENDERS)[number]
 
+/** Where the wind of « Vent » comes from: the weather's direction, or a point of the compass. */
+export const WIND_DIRECTIONS = ['meteo', 'N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const
+export type WindDirection = (typeof WIND_DIRECTIONS)[number]
+
 /** The user setting (`settings.clouds`, atmosphere only). */
 export interface CloudSettings {
   /**
@@ -51,12 +55,16 @@ export interface CloudSettings {
   seaRender: SeaRender
   /** quality of the exported frames; 'auto' takes the one of the export quality */
   quality: CloudQualitySetting
-  /** « Vent », 'manuel' and 'mer': speed of the wind pushing the clouds (km/h, 0 = still), instead of the weather's */
+  /** « Vent », 'manuel' and 'mer' (and 'meteo' with `windByHand`): speed of the wind pushing the clouds (km/h, 0 = still) */
   windKmh: number
+  /** where « Vent » comes from: 'meteo' = the weather's direction (from the west without weather) */
+  windDirection: WindDirection
+  /** 'meteo': « Vent » and its direction instead of the real wind (the cover stays the weather's) */
+  windByHand: boolean
 }
 
 /** `seaRender`: « Nappe » by default on a phone or tablet (core/deviceBudget.ts) */
-export const DEFAULT_CLOUDS: CloudSettings = { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: deviceBudget().seaRender, quality: 'auto', windKmh: 15 }
+export const DEFAULT_CLOUDS: CloudSettings = { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: deviceBudget().seaRender, quality: 'auto', windKmh: 15, windDirection: 'meteo', windByHand: false }
 
 export const CLOUD_ALTITUDE_RANGE = { min: 200, max: 4000, step: 100 } as const
 export const SEA_TOP_RANGE = { min: 300, max: 5000, step: 50 } as const
@@ -85,6 +93,7 @@ export function isValidClouds(v: CloudSettings): boolean {
     (CLOUD_MODES as readonly string[]).includes(v.mode) &&
     (CLOUD_QUALITY_SETTINGS as readonly string[]).includes(v.quality) &&
     (SEA_RENDERS as readonly string[]).includes(v.seaRender) &&
+    (WIND_DIRECTIONS as readonly string[]).includes(v.windDirection) &&
     v.coverage >= 0 &&
     v.coverage <= 1 &&
     v.altitudeM >= CLOUD_ALTITUDE_RANGE.min &&
@@ -334,14 +343,19 @@ export function filmWind(series: WeatherSeries | null, timeMs: number, lon: numb
 }
 
 /**
- * Wind pushing the clouds of `clouds`: the weather's `wind` in 'meteo'; else « Vent » (`windKmh`) in the direction of
- * `wind` (from the west when it is calm).
+ * Wind pushing the clouds of `clouds`: the weather's `wind` in 'meteo' (unless `windByHand`); else « Vent » (`windKmh`)
+ * from `windDirection`, or in the direction of `wind` (from the west when it is calm).
  */
-export function settingsWind(clouds: Pick<CloudSettings, 'mode' | 'windKmh'>, wind: Wind): Wind {
-  if (clouds.mode === 'meteo') return wind
+export function settingsWind(clouds: Pick<CloudSettings, 'mode' | 'windKmh' | 'windDirection' | 'windByHand'>, wind: Wind): Wind {
+  if (clouds.mode === 'meteo' && !clouds.windByHand) return wind
+  const ms = clouds.windKmh / 3.6
+  if (clouds.windDirection !== 'meteo') {
+    // blows towards the opposite of where it comes from (N = 0°, clockwise by 45°)
+    const toward = ((WIND_DIRECTIONS.indexOf(clouds.windDirection) - 1) * 45 + 180) * (Math.PI / 180)
+    return { east: ms * Math.sin(toward), north: ms * Math.cos(toward) }
+  }
   const speed = Math.hypot(wind.east, wind.north)
   const [east, north] = speed > 0 ? [wind.east / speed, wind.north / speed] : [1, 0]
-  const ms = clouds.windKmh / 3.6
   return { east: east * ms, north: north * ms }
 }
 

@@ -858,7 +858,7 @@ The interface and the texts drawn into the films and posters exist in **French**
 - **Camera settings**: `settings.camera { style, distance, pitchDeg, headingOffsetDeg, smoothing, northUp, turnSmoothingM,
   aimSmoothingS, cameraSmoothingS, endingS }` (a camera saved before the last four gets them from `DEFAULT_CAMERA`,
   `withCameraDefaults` in `SETTING_UPGRADES`: « Auto » keeps its multiplier, so the turns look the same) and named
-  presets (`CAMERA_PRESETS`, 12: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite; `findCameraPreset`; « Préréglage » is a grid of tiles with distance and tilt, all twelve shown at once, plus a « Personnalisé » tile when the settings match no preset) in
+  presets (`CAMERA_PRESETS`, 13: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite, then Libre (style `free`, left out of `markerVisible.test.ts`: it does not follow the marker); `findCameraPreset`; « Préréglage » is a grid of tiles with distance and tilt, all twelve shown at once, plus a « Personnalisé » tile when the settings match no preset) in
   `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s, 60 by default) = duration at ×1, the timeline
   speed applies on top. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra" and "Durée et rythme" sections; the
   smoothing sliders as rows of « Caméra », « Lissage des virages » showing the « Auto » length for
@@ -1412,7 +1412,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   précédente », Alt+← / Alt+→ and a click on the ◆, within 5 cm and 0.1°). A function of progress alone between stops. Style `free` (« Libre », `freeView`): no flight camera at all
   (no stops, smoothing or style motion); each key is placed around its own place on the track (`freeKeyBase`: the marker
   and the direction of travel at `atM`, also used by `keyFramingAt`), so its pose is fixed in the scene; the first key's
-  pose up to it, the last one's after it, smootherstep from one to the next (raised by 4u(1 − u) like above); without
+  pose up to it, the last one's after it, smootherstep from one to the next over the film time (`timeS` of the keys: it keeps gliding through a stop,
+  so `filmViewMovesWithTime` is true for `free`; raised by 4u(1 − u) like above); without
   keys, `overviewView` seen along the start's direction of travel, fixed for the whole film.
   The marker stays on the track (`view.marker`); the target is the flight's aim point (smoothed ground height
   above the marker) during the flight.
@@ -2683,7 +2684,8 @@ exports) gets it from the terrain source of the settings.
   arrive; the cloud fades over its last 120 m (× exaggeration) above the terrain (`edgeFade`) and is discarded where
   invisible (no depth written). A pure function of the settings, film time and camera: the export draws the same sea.
 - Wind: the archive's wind at the start of the outing (constant for the film, 4 m/s westerly breeze by default); in « Manuel »
-  and « Mer de nuages », « Vent » (`clouds.windKmh`, 0–100 km/h, 15 by default, 0 = still) in that direction (`settingsWind`); × 2 at altitude
+  and « Mer de nuages », « Vent » (`clouds.windKmh`, 0–100 km/h, 15 by default, 0 = still) from `windDirection` (the weather's, or one of the
+  eight compass points), also in « Météo » with `windByHand` (`settingsWind`); × 2 at altitude
   × `CLOUD_TIMELAPSE` (20). Drift = wind × film time (`playback.timeS`, otherwise `clock.timeAtProgress`): offsets of
   the weather texture (Jacobian of the shader's cube-sphere UV, `weatherOffsetFor`) and of the shape textures (ECEF
   displacement × repeat) set directly on every frame, library velocities at zero: nothing accumulates.
