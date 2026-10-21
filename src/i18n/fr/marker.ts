@@ -81,7 +81,7 @@ export default {
   'section.badge': 'Badge',
   'section.outlineColor': 'Couleur du contour',
   'section.edgeColor': 'Couleur du bord',
-  'section.label': 'Étiquette',
+  'section.label': 'Texte sous le marqueur',
   'section.labelText': "Texte de l'étiquette",
   'section.otherLabels': 'Les autres marqueurs portent le nom de leur trace.',
   'section.stick': 'Tige et ombre au sol',

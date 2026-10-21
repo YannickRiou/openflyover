@@ -83,7 +83,7 @@ const messages: Messages['marker'] = {
   'section.badge': 'Insignia',
   'section.outlineColor': 'Color del contorno',
   'section.edgeColor': 'Color del borde',
-  'section.label': 'Etiqueta',
+  'section.label': 'Texto bajo el marcador',
   'section.labelText': 'Texto de la etiqueta',
   'section.otherLabels': 'Los demás marcadores llevan el nombre de su track.',
   'section.stick': 'Varilla y sombra en el suelo',

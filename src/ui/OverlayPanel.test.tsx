@@ -6,7 +6,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { OFFSET_MAX_PX, withWidgetOffset } from '../overlay/settings'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
-import { WidgetPosition } from './OverlayPanel'
+import { OverlayPanel, WidgetPosition } from './OverlayPanel'
 
 beforeAll(() => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -135,5 +135,22 @@ describe('WidgetPosition: free position typed in pixels', () => {
     history.undo()
     expect(offsetX()).toBe(10)
     expect(history.getState().canUndo).toBe(false)
+  })
+})
+
+describe('« Étiquettes 3D »: every setting of the 3D labels in one section', () => {
+  afterEach(() => {
+    act(() => root?.unmount())
+    root = null
+    document.body.innerHTML = ''
+  })
+
+  it('what shows, size, range, colours and keys, even with the overlay off', async () => {
+    useAppStore.setState({ settings: DEFAULT_SETTINGS })
+    const host = document.body.appendChild(document.createElement('div'))
+    root = createRoot(host)
+    await act(async () => root!.render(<OverlayPanel />))
+    const section = [...host.querySelectorAll('details')].find((d) => d.querySelector('summary')?.textContent?.includes('Étiquettes 3D'))!
+    for (const text of ['Étiquettes dans la vue', 'Bornes kilométriques', 'Couleurs des étiquettes']) expect(section.textContent).toContain(text)
   })
 })
