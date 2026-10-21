@@ -9,7 +9,9 @@ import { getSettingsHistory } from '../project/history'
 import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
-import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
+import { findImageryDates, imageryDateKind, imageryDateValue, type ImageryDate, type ImageryDates } from '../terrain/imageryDates'
+import { IMAGERY_SOURCES, TERRAIN_SOURCES, getImagerySource } from '../terrain/sources'
+import { centroid } from '../geo/lonLat'
 import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, SEA_TOP_RANGE, WIND_DIRECTIONS, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
 import { NightSettings } from './NightSettings'
@@ -255,6 +257,77 @@ const CLOUD_QUALITY_OPTIONS: { value: CloudQuality; label: string }[] = [
   { value: 'medium', get label() { return CLOUD_QUALITY_NAMES.medium } },
   { value: 'high', get label() { return CLOUD_QUALITY_NAMES.high } },
 ]
+
+/** Label of a date of photos: the day they were taken, else the year (IGN) or the release (Esri without metadata). */
+function imageryDateLabel(date: ImageryDate): string {
+  const day = formatDate(date.timeMs, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+  if (date.taken) return day
+  return date.kind === 'ign' ? String(new Date(date.timeMs).getUTCFullYear()) : t('light.map.imageryDateRelease', { date: day })
+}
+
+/**
+ * « Date des photos » (IGN BD ORTHO, Esri World Imagery): the latest photos, or older ones found at the first track
+ * on demand (a few small requests, `findImageryDates`), to choose a season with or without snow.
+ */
+function ImageryDateControl() {
+  const t = useT()
+  const id = useId()
+  const sourceId = useAppStore((s) => s.settings.imagerySourceId)
+  const date = useAppStore((s) => s.settings.imageryDate)
+  const bounds = useAppStore((s) => s.tracks[0]?.bounds)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const [search, setSearch] = useState<{ key: string; status: 'loading' | 'error' } | ({ key: string } & ImageryDates) | null>(null)
+  const kind = imageryDateKind(sourceId)
+  if (!kind) return null
+  const at = bounds ? centroid(bounds) : null
+  const key = at ? `${sourceId}:${at.lon.toFixed(3)},${at.lat.toFixed(3)}` : ''
+  const current = search?.key === key ? search : null
+  const dates = current && 'dates' in current ? current.dates : []
+  const latest = current && 'dates' in current ? current.latest : null
+  const latestLabel = latest ? t('light.map.imageryDateLatestOn', { date: imageryDateLabel(latest) }) : t('light.map.imageryDateLatest')
+  const value = imageryDateValue(date, kind) === null ? '' : date
+  const chosen = dates.find((d) => d.value === value)
+  const valueLabel = value === '' ? latestLabel : chosen ? imageryDateLabel(chosen) : value.slice(kind.length + 1)
+  const find = () => {
+    if (!at) return
+    setSearch({ key, status: 'loading' })
+    findImageryDates(getImagerySource(sourceId), at).then(
+      (found) => setSearch({ key, ...found }),
+      () => setSearch({ key, status: 'error' }),
+    )
+  }
+  const options = [
+    { value: '', label: latestLabel },
+    ...dates.map((d) => ({ value: d.value, label: imageryDateLabel(d) })),
+    ...(value !== '' && !chosen ? [{ value, label: valueLabel }] : []),
+  ]
+  return (
+    <SettingRow label={t('light.map.imageryDate')} value={valueLabel} paths={['imageryDate']}>
+      <div className="field">
+        <label className="type-label" htmlFor={`${id}-imagery-date`}>
+          {t('light.map.imageryDate')}
+        </label>
+        <Select id={`${id}-imagery-date`} value={value} options={options} onChange={(next) => setSetting('imageryDate', next)} />
+        {!(current && 'dates' in current) && (
+          <Button block disabled={!at || current?.status === 'loading'} onClick={find}>
+            {current?.status === 'loading' ? t('light.map.imageryDateSearching') : t('light.map.imageryDateSearch')}
+          </Button>
+        )}
+        <p className="type-hint">
+          {!at
+            ? t('light.map.imageryDateNoTrack')
+            : current && 'status' in current && current.status === 'error'
+              ? t('light.map.imageryDateError')
+              : current && 'dates' in current && dates.length === 0
+                ? t('light.map.imageryDateNone')
+                : kind === 'ign'
+                  ? t('light.map.imageryDateHintIgn')
+                  : t('light.map.imageryDateHintEsri')}
+        </p>
+      </div>
+    </SettingRow>
+  )
+}
 
 /**
  * « Nuages » (atmosphere on): volumetric clouds from the weather of the outing, a manual cover, a sea of clouds (its
@@ -520,6 +593,8 @@ export function MapSettings() {
             onChange={(source) => setSetting('imagerySourceId', source)}
           />
         </div>
+
+        <ImageryDateControl />
 
         <WaterControl />
 

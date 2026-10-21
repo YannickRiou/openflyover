@@ -166,6 +166,8 @@ export interface TerrainSource extends TileSourceBase {
 
 export interface ImagerySource extends TileSourceBase {
   kind: 'imagery'
+  /** photos drawn where this source's tile is blank (dated IGN photos: the latest ones, `imageryDates.ts`) */
+  fallback?: ImagerySource
 }
 
 /** Decoded elevation tile. Row-major, row 0 = north edge, metres (NaN = nodata). */

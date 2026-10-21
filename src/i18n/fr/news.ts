@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v31.dates.title': 'Des photos d’une autre date',
+  'v31.dates.text': 'Avec IGN BD ORTHO ou Esri, « Date des photos » (onglet Carte) propose les photos plus anciennes de l’endroit : une date d’hiver pour avoir de la neige, d’été pour l’éviter.',
   'v31.free.title': 'Une caméra libre',
   'v31.free.text': 'Le style « Libre (images clés) » ne suit pas le marqueur : sans image clé la caméra reste fixe sur tout le tracé ; ajoutez des images clés sur la timeline pour choisir vous-même ses mouvements (plan fixe, tour du tracé…).',
   'v31.orbit.title': 'Une orbite complète',

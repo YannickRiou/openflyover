@@ -18,7 +18,7 @@ import type { ImagerySource, LoadImageryOptions, LoadImageryTexture, TileFetcher
 import { boundsIntersect, tileBounds, tileKeyString } from '../geo/mercator'
 import { buildTileUrl } from './sources'
 import { createCanvas } from './dem'
-import { createAbortError, isAbortError } from './fetch'
+import { TileFetchError, createAbortError, isAbortError } from './fetch'
 
 /** Neutral grey drawn where imagery is missing (failed, aborted or out of coverage). */
 export const IMAGERY_FALLBACK_COLOR = '#8a8f94'
@@ -146,7 +146,7 @@ let probe: Canvas2D | undefined
  * IGN does outside France from z13 on (docs/sources.md), where the terrain would turn white next to the coarser tiles'
  * colours. Eight by eight nearest-neighbour samples: a real tile hardly has all 64 that bright, and a mistake only costs a blurrier tile.
  */
-function isBlank(bitmap: ImageBitmap): boolean {
+export function isBlank(bitmap: ImageBitmap): boolean {
   try {
     probe ??= createCanvas(BLANK_PROBE_PX, BLANK_PROBE_PX).getContext('2d', { willReadFrequently: true }) as Canvas2D
     probe.imageSmoothingEnabled = false
@@ -193,13 +193,23 @@ export const loadImageryTexture: LoadImageryTexture = async (
         let { sx, sy, sw, sh } = op
         try {
           let key = op.key
-          bitmap = await fetcher.fetchBitmap(buildTileUrl(source, key), { priority, signal })
+          let from = source
+          // dated photos where the year did not fly (a blank tile, or a 404 for some): the latest photos instead
+          const dated = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal }).catch((error: unknown) => {
+            if (from.fallback && error instanceof TileFetchError && error.status === 404) return null
+            throw error
+          })
+          if (dated && !(from.fallback && isBlank(dated))) bitmap = dated
+          else {
+            from = from.fallback ?? from
+            bitmap = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal })
+          }
           // a blank tile (regional sources only): the same ground from the nearest coarser tile that is not, like a source's own overview
-          for (let up = 0; up < BLANK_FALLBACK_LEVELS && key.z > source.minZoom && source.coverage && isBlank(bitmap); up++) {
-            const half = source.tileSize / 2
+          for (let up = 0; up < BLANK_FALLBACK_LEVELS && key.z > from.minZoom && from.coverage && isBlank(bitmap); up++) {
+            const half = from.tileSize / 2
             ;[sx, sy, sw, sh] = [(key.x & 1) * half + sx / 2, (key.y & 1) * half + sy / 2, sw / 2, sh / 2]
             key = { z: key.z - 1, x: key.x >> 1, y: key.y >> 1 }
-            bitmap = await fetcher.fetchBitmap(buildTileUrl(source, key), { priority, signal })
+            bitmap = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal })
           }
         } catch (error) {
           if (!isAbortError(error)) failure = error
