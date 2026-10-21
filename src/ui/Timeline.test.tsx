@@ -6,7 +6,7 @@ import { useExportStore } from '../export/store'
 import { buildTrack } from '../import/stats'
 import { END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { filmClockFor } from '../film/clock'
-import { DEFAULT_FILM } from '../film/model'
+import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from '../film/model'
 import { addCameraKey, addMarkerKey, addParamKey, removeFilmItem, updateMarkerKey } from '../film/timeline'
 import { filmSequenceOf } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
@@ -189,6 +189,23 @@ describe('Timeline', () => {
         act(async () => void el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })))
       return { host, root, setOverlay, cards, card, press }
     }
+
+    it('a multi-day track with « Cartes de jour » shows a block per day in « Textes », opening the shared day card panel', async () => {
+      const { host, root } = await setup()
+      const ride = (fromH: number, toH: number, lon0: number) =>
+        Array.from({ length: (toH - fromH) * 2 + 1 }, (_, k) => ({ lon: lon0 + k / 77.35, lat: 45.92, time: Date.UTC(2026, 5, 1) + (fromH + k / 2) * 3_600_000 }))
+      const day1 = ride(8, 18, 6.8)
+      const days = { ...buildTrack({ name: 'Deux jours', source: 'gpx', segments: [{ points: day1 }, { points: ride(30, 34, day1[day1.length - 1].lon) }] }), utcOffsetMin: 120 }
+      await act(async () => useAppStore.setState({ tracks: [days] }))
+      await act(async () => useAppStore.getState().setSetting('film', { ...DEFAULT_FILM, autoStops: false, dayCards: { ...DEFAULT_DAY_CARDS, enabled: true } }))
+      const blocks = () => [...host.querySelectorAll<HTMLElement>('[role="group"][aria-label="Textes"] [data-item^="card-day-"]')]
+      expect(blocks().map((b) => b.getAttribute('aria-label')?.split(',')[0])).toEqual(['Carte : Jour 1', 'Carte : Jour 2'])
+      await act(async () => useAppStore.getState().setFilmSelection(blocks()[1].getAttribute('data-item')!))
+      const inspector = host.querySelector('[data-testid="film-inspector"]')!
+      expect(inspector.querySelector('h2')?.textContent).toBe('Carte du jour 2')
+      expect(inspector.textContent).toContain('Vue haute pendant la nuit')
+      act(() => root.unmount())
+    })
 
     it('the « Vitesse » lane shows the automatic slow-downs of « Ralentir aux temps forts », not as blocks to edit', async () => {
       const { host, root } = await setup()

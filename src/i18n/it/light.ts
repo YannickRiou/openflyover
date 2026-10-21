@@ -19,7 +19,7 @@ const messages: Messages['light'] = {
   'nights.nightTip': 'La notte passa, illuminata dalla luna.',
   'nights.dawn': 'Alba',
   'nights.dawnTip': 'Il sole sorge, fino alla partenza del mattino.',
-  'nights.sequenceHint': 'In « Una dopo l’altra », la durata di crepuscolo, notte e alba si regola sulla giunzione « Notte » della timeline (traccia « Tappe »).',
+  'nights.sequenceHint': 'In « Una dopo l’altra », queste durate valgono per le giunzioni « Notte » della timeline (traccia « Tappe »); il loro ispettore le mostra anche.',
   'nights.none': 'Nessuna notte di riposo su questa traccia.',
   'nights.hint': { one: '{count} notte: il film si ferma {pause} ogni volta.', other: '{count} notti: il film si ferma {pause} ogni volta.' },
   'nights.instant': 'La notte passa in un istante tra due giorni.',

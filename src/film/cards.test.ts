@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
 import type { OverlaySettings } from '../overlay/settings'
-import { CARD_MIN_S, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards, withoutCard } from './cards'
+import { CARD_MIN_S, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards, withCardTimes, withoutCard } from './cards'
 
 /** 6 s opening, 60 s flight, 5 s closing */
 const clock = { openingS: 6, flightS: 60, totalTime: () => 71 }
@@ -91,5 +91,17 @@ describe('cards on the timeline', () => {
     expect(off.end).toBe(edited.end)
     expect(shownCards(off)).toEqual([END_CARD_ID])
     expect(withoutCard(edited, END_CARD_ID).end.enabled).toBe(false)
+  })
+})
+
+describe('withCardTimes', () => {
+  it('the start and length typed in the panel, with the rules of a drag', () => {
+    const overlay = { ...DEFAULT_OVERLAY, enabled: true }
+    const clock = { openingS: 6, flightS: 60, totalTime: () => 70 }
+    const moved = withCardTimes(overlay, TITLE_CARD_ID, clock, { startS: 10, durationS: 4 })
+    expect(moved.title.window).toEqual({ startS: 10, endS: 14 })
+    // kept in the film and at least CARD_MIN_S long
+    expect(withCardTimes(overlay, TITLE_CARD_ID, clock, { durationS: 0 }).title.window!.endS - cardWindow(overlay, TITLE_CARD_ID, clock).startS).toBe(CARD_MIN_S)
+    expect(cardWindow(withCardTimes(overlay, END_CARD_ID, clock, { startS: 200 }), END_CARD_ID, clock).endS).toBe(70)
   })
 })

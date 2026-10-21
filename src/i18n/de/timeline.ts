@@ -61,6 +61,7 @@ const messages: Messages['timeline'] = {
   'hold.description': 'Stopp (Kamera: {camera}): {label}{auto}',
   'hold.auto': ' (automatisch)',
   'card.description': 'Karte: {label}',
+  'dayCard.label': 'Tag {n}',
   'text.description': 'Text: {text}',
   'media.videoCard': 'Video als Karte: {label}',
   'media.videoFull': 'Video im Vollbild: {label}',

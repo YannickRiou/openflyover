@@ -660,7 +660,7 @@ pointer (`appearance.css`).
   without timestamps; « À la suite »: every stage at its own recorded hour, the light blending across the fade junctions, see
   "Several tracks") / « Heure fixe » (one fixed time and day for the whole film, every stage included). The film track
   (`useFilmTrack`: the sequence for « À la suite ») gives the day bar and the start time. « Jours et nuits » is one switch
-  (the seconds move to the inspector of a `nuit` junction in a sequence, and « Cartes de jour » is hidden there: the stage cards do it). In fixed time: solar-hour slider above a night / dawn / day / dusk bar with the
+  (the seconds stay here in a sequence too, where they apply to the `nuit` junctions, whose inspector shows them as well; « Cartes de jour » is hidden there: the stage cards do it, with the same figure chips, `JunctionCard.fields`). In fixed time: solar-hour slider above a night / dawn / day / dusk bar with the
   sunrise and sunset marks (`solarDay` at the origin of the local frame and on the UTC day of the start of the first track, like the
   scene; standard 6 am – 6 pm day without a track); the text under the bar gives sunrise and sunset in local time when the
   first track knows its UTC offset (`Track.utcOffsetMin`, `clockHourOfSolar`), with the solar hour in the ⓘ,
@@ -960,6 +960,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   the date and weather line, and the chosen figures as cells, like the card of a stage « À la suite » (the overlay's style
   decides its look; `fields`, `anchor`, `size`, `durationS` 2–15 s are the film's). The card follows the track, the nights
   and the weather; the `day-n` texts of earlier versions are removed when the cards are turned on (`withoutDayCards`).
+  On the timeline each day's card is a block of « Textes » (`dayCardId(k)` = `card-day-k`, `dayCardWindow` in
+  `film/days.ts`): its end edge sets the shared `durationS` (`dragFilm`), Delete switches all the cards off
+  (`removeFilmItem`), and its inspector is `DayCardFields` (the panel of « Jours et nuits », `src/ui/NightSettings.tsx`).
+  The opening title and the closing card take « Début (s) » / « Durée (s) » in their inspector (`withCardTimes` in
+  `film/cards.ts`, the rules of a drag); the Habillage « Texte libre » says it stays the whole film.
   **High view** (`dayViewAt`, `computeFilmView`): in the night pause before a day with `view`, the camera blends from the
   flight view to `overviewView` framing the box of that day's stretch (`trackBox` with a `PathRange`), lifted like a shot
   (`liftedBlend`): up over the dusk, held over the night, back down over the dawn (the parts of `film.nights`, never under

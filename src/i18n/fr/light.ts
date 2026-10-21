@@ -17,7 +17,7 @@ export default {
   'nights.nightTip': 'La nuit passe, éclairée par la lune.',
   'nights.dawn': 'Aube',
   'nights.dawnTip': 'Le soleil se lève, jusqu’au départ du matin.',
-  'nights.sequenceHint': 'Dans « À la suite », la durée du crépuscule, de la nuit et de l’aube se règle sur la jonction « Nuit » de la timeline (ligne « Étapes »).',
+  'nights.sequenceHint': 'Dans « À la suite », ces durées valent pour les jonctions « Nuit » de la timeline (ligne « Étapes ») ; leur inspecteur les montre aussi.',
   'nights.none': 'Aucune nuit de repos sur cette trace.',
   'nights.hint': { one: '{count} nuit : le film s’arrête {pause} à chaque fois.', other: '{count} nuits : le film s’arrête {pause} à chaque fois.' },
   'nights.instant': 'La nuit passe en un instant entre deux jours.',

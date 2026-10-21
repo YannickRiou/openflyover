@@ -167,6 +167,7 @@ const messages: Messages['overlay'] = {
   'panel.logo': 'Logo',
   'panel.opacity': 'Opacità',
   'panel.freeText': 'Testo libero',
+  'panel.freeTextHint': 'Mostrato per tutto il film. Per un testo in un momento preciso, aggiungilo sulla traccia « Testi » della timeline (pulsante T).',
   'panel.text': 'Testo',
   'panel.textPlaceholder': 'Es.: con Maria e Paolo',
   'panel.credits': 'Crediti delle fonti',

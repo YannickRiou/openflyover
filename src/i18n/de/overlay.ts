@@ -167,6 +167,7 @@ const messages: Messages['overlay'] = {
   'panel.logo': 'Logo',
   'panel.opacity': 'Deckkraft',
   'panel.freeText': 'Freier Text',
+  'panel.freeTextHint': 'Während des ganzen Films angezeigt. Für einen Text zu einem bestimmten Zeitpunkt fügen Sie ihn auf der Spur „Texte“ der Timeline hinzu (Schaltfläche T).',
   'panel.text': 'Text',
   'panel.textPlaceholder': 'Z. B.: mit Marie und Paul',
   'panel.credits': 'Quellenangaben',
