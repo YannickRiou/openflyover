@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v321.panel.title': 'Un solo panel para la apertura y otro para el cierre',
+  'v321.panel.text': '« Editar » en Gráficos, el bloque del título y el del plano de cámara abren ahora el mismo panel: el título o la tarjeta arriba, el plano de cámara debajo.',
   'v32.end.title': 'Una tarjeta de cierre a su manera',
   'v32.end.text': 'Elija sus cifras (desnivel −, altitud mínima, velocidad media, fecha…), añada una línea propia, el perfil, el minimapa del recorrido y un logo o imagen: en el inspector del bloque de la tarjeta de cierre.',
   'v32.title.title': 'Una tarjeta de apertura a su manera',

@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 3.2.1 (October 2026)
+
+- **One panel for the start and one for the end of the film**: « Modifier » in « Habillage › Titres », the « Titre d'ouverture » block of the « Textes » track and the « Ouverture » block of the « Plans » track now all open the same « Ouverture » panel, with the title's settings and, below, those of the camera shot (« Plan de caméra »); the same goes for « Clôture » with the closing card. Before, the « Plans » block only showed the camera and the card was set elsewhere. « Retirer » in the card's part switches it off.
+
 ## 3.2.0 (October 2026)
 
 - **An opening card of your own too**: the inspector of the « Titre d'ouverture » block offers the same choices as the closing card: figures announced at the start (none until you pick some), a line of your own under the date and subtitle line, the elevation profile and mini-map of the whole outing, and a logo or picture above the title. On both cards the free line and the weather now each take their own line. Older projects show the same title as before.

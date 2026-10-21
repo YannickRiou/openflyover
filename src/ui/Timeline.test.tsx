@@ -382,12 +382,12 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
-    it('open the inspector, which edits the overlay settings and deletes by switching the card off', async () => {
+    it('open the inspector of the start or end of the film, which edits the overlay settings and deletes by switching the card off', async () => {
       const { host, root, setOverlay } = await setup()
       await act(async () => setOverlay({ enabled: true }))
       await act(async () => useAppStore.getState().setFilmSelection(TITLE_CARD_ID))
       const inspector = host.querySelector('[data-testid="film-inspector"]')!
-      expect(inspector.querySelector('h2')?.textContent).toBe("Titre d'ouverture")
+      expect(inspector.querySelector('h2')?.textContent).toBe('Ouverture')
       const field = Array.from(inspector.querySelectorAll<HTMLInputElement>('input[type="text"]')).find((i) => i.labels?.[0]?.textContent === 'Titre')!
       await act(async () => {
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(field, 'Col du Galibier')
@@ -404,8 +404,13 @@ describe('Timeline', () => {
       expect(inspector.textContent).toContain('Taille')
       expect(inspector.textContent).toContain('Couleurs et polices')
 
+      // the camera shot of the opening is in the same inspector, and its block opens the same one
+      expect(inspector.textContent).toContain('Plan de caméra')
+      await act(async () => useAppStore.getState().setFilmSelection('opening'))
+      expect(Array.from(host.querySelectorAll<HTMLInputElement>('[data-testid="film-inspector"] input[type="text"]')).some((i) => i.value === 'Col du Galibier')).toBe(true)
+
       await act(async () => useAppStore.getState().setFilmSelection(END_CARD_ID))
-      expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Carte de clôture')
+      expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Clôture')
       expect(host.querySelector('[data-testid="film-inspector"]')?.textContent).toContain('Générique')
       // what the closing card shows: a figure chip and the profile
       const box = (label: string) =>
@@ -415,7 +420,7 @@ describe('Timeline', () => {
       await act(async () => box('Profil d’altitude').click())
       expect(useAppStore.getState().settings.overlay.end.showProfile).toBe(true)
 
-      const remove = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Supprimer')!
+      const remove = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Retirer : Carte de clôture')!
       await act(async () => remove.click())
       expect(useAppStore.getState().settings.overlay.end.enabled).toBe(false)
       expect(useAppStore.getState().filmSelection).toBeNull()
@@ -439,7 +444,7 @@ describe('Timeline', () => {
       const edit = panel.querySelector<HTMLButtonElement>('button[aria-label="Modifier : Carte de clôture"]')!
       await act(async () => edit.click())
       expect(useAppStore.getState().filmSelection).toBe(END_CARD_ID)
-      expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Carte de clôture')
+      expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Clôture')
       // switched off: no « Modifier »
       await act(async () => setOverlay({ end: { ...useAppStore.getState().settings.overlay.end, enabled: false } }))
       expect(panel.querySelector('button[aria-label="Modifier : Carte de clôture"]')).toBeNull()
