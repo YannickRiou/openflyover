@@ -13,7 +13,6 @@ import { getSettingsHistory, installHistoryShortcuts, installSliderGestures } fr
 import { disableCard, editFilm, getFilmSource, seekKeyframe, useFilmClock } from './scene/usePacing'
 import { useAppStore } from './state/store'
 import { CameraPanel } from './ui/CameraPanel'
-import { LabelSettings } from './ui/LabelSettings'
 import { DiagnosticDialog } from './ui/DiagnosticDialog'
 import { EmptyState } from './ui/EmptyState'
 import { GradingPanel } from './ui/GradingPanel'
@@ -479,9 +478,6 @@ export default function App() {
           <TrackList />
           <TrackStyleSection hidden={!hasTracks} />
           <MarkerSection hidden={!hasTracks} />
-          <PanelSection title={t('shell.section.labels')} keys={['labels']} hidden={!hasTracks}>
-            <LabelSettings />
-          </PanelSection>
         </>
       ),
       carte: (

@@ -42,6 +42,7 @@ import { useWeatherStore } from '../weather/store'
 import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
+import { LabelSettings } from './LabelSettings'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { Button, Checkbox, Chip, ColorField as ColorFieldControl, NumberField, Radio, RadioGroup, Select, Switch, TextField, ToggleButton, ToggleButtonGroup } from './primitives'
 
@@ -537,10 +538,12 @@ export function OverlayPanel() {
           </fieldset>
         )}
         {overlay.enabled && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}
-        {overlay.enabled && <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />}
       </PanelSection>
 
-      <PanelSection title={t('overlay.panel.labels3d')}>
+      {/* every setting of the 3D labels in one place: what shows, size and range, colours, keys along the way */}
+      <PanelSection title={t('overlay.panel.labels3d')} keys={['labels']}>
+        <LabelSettings />
+        <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />
         <p className="type-hint">{t('overlay.panel.labels3dHint')}</p>
         <PanelKeys target={{ kind: 'param', param: 'labels' }} />
       </PanelSection>

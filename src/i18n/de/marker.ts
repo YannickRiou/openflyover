@@ -83,7 +83,7 @@ const messages: Messages['marker'] = {
   'section.badge': 'Badge',
   'section.outlineColor': 'Konturfarbe',
   'section.edgeColor': 'Randfarbe',
-  'section.label': 'Beschriftung',
+  'section.label': 'Text unter dem Marker',
   'section.labelText': 'Text der Beschriftung',
   'section.otherLabels': 'Die anderen Marker tragen den Namen ihres Tracks.',
   'section.stick': 'Stiel und Bodenschatten',

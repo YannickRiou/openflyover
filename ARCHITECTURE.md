@@ -619,7 +619,7 @@ pointer (`appearance.css`).
   state remembered by title in the platform storage (`FOLDS_KEY` `openflyover.folds.v1`, `parseFoldPrefs` in `shell.ts`,
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
   (imagery, water), "Relief" (exaggeration), "Repères et points d'intérêt" (`LandmarkPanel`, absent without a track).
-  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`), "Étiquettes" (`LabelSettings`). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
+  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`). The 3D labels are all in « Habillage » › « Étiquettes 3D » (`LabelSettings`, `LabelColors`, the `labels` keys). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
   `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »: switch, informations, titre, position, taille, durée, « Vue haute pendant la nuit »; `film.dayCards`),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
@@ -2094,7 +2094,7 @@ exports) gets it from the terrain source of the settings.
   `labels.photos`, priority 190, `MediaAsset.lon` / `lat` read from EXIF when the photo is added) use the pictogram
   panel of the points of interest. Setting `settings.labels { waypoints, kmStep, endpoints, photos, size, rangeKm }` (old projects completed by
   `withLabelDefaults`, values checked by `isValidLabelSettings`), section
-  "Étiquettes" (`LabelSettings`).
+  « Habillage » › « Étiquettes 3D » (`LabelSettings`, with the colours and the keys).
 
 ## OpenStreetMap landmarks (phase 7)
 
