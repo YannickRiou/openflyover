@@ -175,6 +175,7 @@ const STYLE_HINTS: Record<CameraStyle, string> = {
   get orbit() { return t('camera.styleHint.orbit') },
   get top() { return t('camera.styleHint.top') },
   get cinematic() { return t('camera.styleHint.cinematic') },
+  get free() { return t('camera.styleHint.free') },
 }
 
 /** Tips of the « Plan de situation » switches. */
@@ -299,7 +300,8 @@ export function CameraPanel() {
             />
           </div>
         </SettingRow>
-        {SLIDERS.map(({ key, label, tip, format }) => {
+        {/* 'free' follows the keyframes alone: the framing sliders do nothing there */}
+        {camera.style !== 'free' && SLIDERS.map(({ key, label, tip, format }) => {
           const range = CAMERA_RANGES[key]
           const value = format(camera[key], autoTurnM)
           return (

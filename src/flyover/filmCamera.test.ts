@@ -819,6 +819,58 @@ describe('keyframes (« Images clés »): the view taken, exactly', () => {
   })
 })
 
+describe("style 'free' (« Libre »): the keyframes alone", () => {
+  const none = { style: 'aucune', durationS: 1 } as const
+  const free: FilmViewOptions = { ...options, camera: { ...DEFAULT_CAMERA, style: 'free' } }
+  const viewAt = (c: ReturnType<typeof clockOf>, s: number) => computeFilmView(path, c, s, c.progressAtTime(s), frame, flat, free)
+
+  it('without keyframes: fixed on the whole track while the marker moves on', () => {
+    const plain = clockOf(none, none)
+    const early = viewAt(plain, 5)
+    const late = viewAt(plain, 50)
+    expectSameView(early, late)
+    expect(early.marker.distanceTo(late.marker)).toBeGreaterThan(2000)
+    expect(filmViewMovesWithTime(plain.stateAt(20), free.camera!)).toBe(false)
+  })
+
+  it('one keyframe: its captured view, held the whole film', () => {
+    const plain = clockOf(none, none)
+    const t = 20
+    const p = plain.progressAtTime(t)
+    const position = markerAt(path, p, frame, flat, 1, 3).add(new Vector3(-900, 500, 200))
+    const lookAt = markerAt(path, 0.5, frame, flat, 1, 3)
+    const pose = keyFramingAt(path, plain, t, p, frame, flat, free, position, lookAt)
+    const clock = clockOf(none, none, [], [{ id: 'camera-1', atM: p * path.lengthM, ...pose }])
+    for (const s of [2, t, 55]) {
+      const view = viewAt(clock, s)
+      expect(view.position.distanceTo(position)).toBeLessThan(0.01)
+      expect(view.target.clone().sub(view.position).normalize().angleTo(lookAt.clone().sub(position).normalize())).toBeLessThan(1e-4)
+    }
+  })
+
+  it('two keyframes: from one pose to the other, still at each', () => {
+    const plain = clockOf(none, none)
+    const take = (s: number, offset: Vector3) => {
+      const p = plain.progressAtTime(s)
+      const target = markerAt(path, p, frame, flat, 1, 3)
+      return { atM: p * path.lengthM, ...keyFramingAt(path, plain, s, p, frame, flat, free, target.clone().add(offset), target) }
+    }
+    const clock = clockOf(none, none, [], [
+      { id: 'camera-1', ...take(15, new Vector3(-600, 300, 0)) },
+      { id: 'camera-2', ...take(40, new Vector3(600, 300, 0)) },
+    ])
+    const [a, b] = clock.cameraKeys
+    expectSameView(viewAt(clock, 3), viewAt(clock, a.timeS), 1e-3)
+    expectSameView(viewAt(clock, 58), viewAt(clock, b.timeS), 1e-3)
+    let previous = viewAt(clock, a.timeS)
+    for (let s = a.timeS; s <= b.timeS; s += 1 / 30) {
+      const view = viewAt(clock, s)
+      expect(view.position.distanceTo(previous.position)).toBeLessThan(15)
+      previous = view
+    }
+  })
+})
+
 describe('stop cameras', () => {
   const none = { style: 'aucune', durationS: 1 } as const
   const stopsOf = (camera: FilmStop['camera']) => clockOf(none, none, [{ id: 's', atM: 2000, durationS: 6, camera }])

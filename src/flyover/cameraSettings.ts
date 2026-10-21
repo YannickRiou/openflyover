@@ -8,7 +8,7 @@ import { clamp } from '../core/math'
 import { withDefaults } from '../core/guards'
 import { t } from '../i18n'
 
-export const CAMERA_STYLES = ['chase', 'sway', 'orbit', 'top', 'cinematic'] as const
+export const CAMERA_STYLES = ['chase', 'sway', 'orbit', 'top', 'cinematic', 'free'] as const
 export type CameraStyle = (typeof CAMERA_STYLES)[number]
 
 /** Labels of the styles (style select). */
@@ -18,6 +18,7 @@ export const CAMERA_STYLE_LABELS: Record<CameraStyle, string> = {
   get orbit() { return t('camera.style.orbit') },
   get top() { return t('camera.style.top') },
   get cinematic() { return t('camera.style.cinematic') },
+  get free() { return t('camera.style.free') },
 }
 
 export interface CameraSettings {

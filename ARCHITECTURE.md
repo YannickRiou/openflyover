@@ -763,7 +763,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   Styles (`settings.camera.style`): `chase` (behind the marker), `sway` (swing toward the outside of bends:
   50° · tanh(0.8 · T / 50°), T = sum of turn angles weighted by a tent over ±2w, continuous and calm), `orbit` (6°/s
   around the marker from the start heading), `top` (≥ 70°, distance × 2.5, north or heading up), `cinematic` (distance × 1.6,
-  pitch / 2, lateral sweep ±35° with a 40 s period). All keep 80 m above the ground and a clear line of sight
+  pitch / 2, lateral sweep ±35° with a 40 s period), `free` (follows nothing: `computeFilmView` takes `freeView` instead of
+  the flight camera, below). All flight styles keep 80 m above the ground and a clear line of sight
   (`LINE_OF_SIGHT_SAMPLES`, 48 samples); the tests check continuity in progress.
   **Marker kept visible**: the aim is the marker (the time smoothing only averages the progress), so it never leaves the
   frame (`markerVisible.test.ts`: at most 0.15 of the half-frame from its centre over every preset, with stops and speed
@@ -1408,7 +1409,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   base speed, `CAMERA_KEY_EASE_S`); elsewhere the film's camera. Field of view: `CAMERA_FOV_DEG` everywhere. At the key's
   film time (`clock.cameraKeys[].timeS`) the view equals the capture (tests: under 1 cm and 0.01° with a cinematic
   style, time smoothing and relief; e2e `image-cle`: orbit, « Ajouter une image clé », away and back with « Image clé
-  précédente », Alt+← / Alt+→ and a click on the ◆, within 5 cm and 0.1°). A function of progress alone between stops.
+  précédente », Alt+← / Alt+→ and a click on the ◆, within 5 cm and 0.1°). A function of progress alone between stops. Style `free` (« Libre », `freeView`): no flight camera at all
+  (no stops, smoothing or style motion); each key is placed around its own place on the track (`freeKeyBase`: the marker
+  and the direction of travel at `atM`, also used by `keyFramingAt`), so its pose is fixed in the scene; the first key's
+  pose up to it, the last one's after it, smootherstep from one to the next (raised by 4u(1 − u) like above); without
+  keys, `overviewView` seen along the start's direction of travel, fixed for the whole film.
   The marker stays on the track (`view.marker`); the target is the flight's aim point (smoothed ground height
   above the marker) during the flight.
 - **Shot transitions** (`transition` of the opening, at its end, and of the closing, at its start; "Transition" in the
