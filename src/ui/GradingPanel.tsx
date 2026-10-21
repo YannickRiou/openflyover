@@ -1,10 +1,11 @@
 import { useId } from 'react'
-import { gradingText, hasGradingKeys } from '../film/paramKeys'
+import { gradingText, hasGradingKeys, hasParamKeys } from '../film/paramKeys'
+import { addParamKey } from '../film/timeline'
 import { t, useT } from '../i18n'
 import { getSettingsHistory } from '../project/history'
 import { GRADING_PRESETS, GRADING_RANGES, gradingOfPreset, withGradingValue } from '../scene/grading'
-import type { GradingValues } from '../scene/grading'
-import { useKeyedValue } from '../scene/usePacing'
+import type { GradingPresetId, GradingValues } from '../scene/grading'
+import { editFilm, getFilmSource, useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, SettingRow } from './PanelSection'
@@ -18,6 +19,22 @@ const SLIDERS: { key: keyof GradingValues; label: string; tip?: string }[] = [
 ]
 
 /**
+ * A grading preset, one undo step: the four values of the setting, and, for a value that keys drive (the setting is
+ * then ignored), its value on the key at the marker, as its slider does (`useKeyedValue`).
+ */
+function applyGradingPreset(preset: GradingPresetId): void {
+  const values = gradingOfPreset(preset)
+  const { track } = getFilmSource()
+  const atM = Math.round(useAppStore.getState().playback.progress * (track?.stats.distanceM ?? 0))
+  getSettingsHistory().transaction(() => {
+    useAppStore.getState().setSetting('grading', values)
+    editFilm((f) => ({ film: GRADING_KEYS.reduce((film, name) => (hasParamKeys(film, [name]) ? addParamKey(film, atM, name, values[name]).film : film), f) }))
+  })
+}
+
+const GRADING_KEYS: readonly (keyof GradingValues)[] = ['contrast', 'saturation', 'warmth', 'vignette']
+
+/**
  * « Couleurs » (section of the Lumière tab): colour grading of the image, preview and export alike. Preset chips
  * first (one undo step each), then the four sliders, one row each (name and value, slider and ◀ ◇ ▶ keys on demand).
  */
@@ -26,7 +43,6 @@ export function GradingPanel() {
   const id = useId()
   const grading = useAppStore((s) => s.settings.grading)
   const keyed = useAppStore((s) => hasGradingKeys(s.settings.film))
-  const setSetting = useAppStore((s) => s.setSetting)
 
   return (
     <PanelSection title={t('light.grading.title')} keys={['grading']}>
@@ -39,7 +55,7 @@ export function GradingPanel() {
           className="mt-2"
           aria-labelledby={`${id}-presets`}
           value={grading.preset}
-          onChange={(preset) => preset !== 'personnalise' && getSettingsHistory().transaction(() => setSetting('grading', gradingOfPreset(preset)))}
+          onChange={(preset) => preset !== 'personnalise' && applyGradingPreset(preset)}
         >
           {GRADING_PRESETS.map((preset) => (
             <Radio key={preset.id} value={preset.id}>

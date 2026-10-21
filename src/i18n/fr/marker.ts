@@ -62,6 +62,7 @@ export default {
   'track.width': 'Épaisseur de la trace',
   'track.dash': 'Trait',
   'section.title': 'Marqueur',
+  'section.keyed': { one: '{count} clé de marqueur (ligne « Marqueur ») change son aspect en cours de route : ce panneau règle l’aspect avant elle.', other: '{count} clés de marqueur (ligne « Marqueur ») changent son aspect en cours de route : ce panneau règle l’aspect avant la première.' },
   'section.shape': 'Forme',
   'section.style': 'Style',
   'section.figurine': 'Figurine',

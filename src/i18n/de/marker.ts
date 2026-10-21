@@ -64,6 +64,7 @@ const messages: Messages['marker'] = {
   'track.width': 'Linienstärke des Tracks',
   'track.dash': 'Linienart',
   'section.title': 'Marker',
+  'section.keyed': { one: '{count} Marker-Keyframe (Spur „Marker“) ändert sein Aussehen unterwegs: dieser Bereich stellt das Aussehen davor ein.', other: '{count} Marker-Keyframes (Spur „Marker“) ändern sein Aussehen unterwegs: dieser Bereich stellt das Aussehen vor dem ersten ein.' },
   'section.shape': 'Form',
   'section.style': 'Stil',
   'section.figurine': 'Figur',

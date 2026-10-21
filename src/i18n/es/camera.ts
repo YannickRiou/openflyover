@@ -43,6 +43,7 @@ const messages: Messages['camera'] = {
   'panel.preset': 'Preajuste',
   'panel.camera': 'Cámara',
   'panel.durationSection': 'Duración y ritmo',
+  'panel.keyed': { one: '{count} fotograma clave de cámara (pista «Planos») controla la vista a su alrededor: estos ajustes valen para el resto de la película.', other: '{count} fotogramas clave de cámara (pista «Planos») controlan la vista del primero al último: estos ajustes valen antes y después.' },
   'slider.distance': 'Distancia',
   'slider.distanceTip': 'Múltiplo de la distancia automática, elegida según la longitud del track.',
   'slider.pitch': 'Inclinación',

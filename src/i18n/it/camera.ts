@@ -43,6 +43,7 @@ const messages: Messages['camera'] = {
   'panel.preset': 'Preset',
   'panel.camera': 'Camera',
   'panel.durationSection': 'Durata e ritmo',
+  'panel.keyed': { one: '{count} keyframe della camera (corsia «Inquadrature») guida la vista intorno a sé: queste impostazioni valgono per il resto del film.', other: '{count} keyframe della camera (corsia «Inquadrature») guidano la vista dal primo all’ultimo: queste impostazioni valgono prima e dopo.' },
   'slider.distance': 'Distanza',
   'slider.distanceTip': 'Multiplo della distanza automatica, scelta in base alla lunghezza della traccia.',
   'slider.pitch': 'Inclinazione',

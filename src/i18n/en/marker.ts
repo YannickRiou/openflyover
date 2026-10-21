@@ -64,6 +64,7 @@ const messages: Messages['marker'] = {
   'track.width': 'Track width',
   'track.dash': 'Line style',
   'section.title': 'Marker',
+  'section.keyed': { one: '{count} marker key (“Marker” lane) changes its look along the way: this panel sets the look before it.', other: '{count} marker keys (“Marker” lane) change its look along the way: this panel sets the look before the first.' },
   'section.shape': 'Shape',
   'section.style': 'Style',
   'section.figurine': 'Figurine',

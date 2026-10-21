@@ -64,6 +64,7 @@ const messages: Messages['marker'] = {
   'track.width': 'Grosor del track',
   'track.dash': 'Trazo',
   'section.title': 'Marcador',
+  'section.keyed': { one: '{count} clave de marcador (pista «Marcador») cambia su aspecto por el camino: este panel ajusta el aspecto antes de ella.', other: '{count} claves de marcador (pista «Marcador») cambian su aspecto por el camino: este panel ajusta el aspecto antes de la primera.' },
   'section.shape': 'Forma',
   'section.style': 'Estilo',
   'section.figurine': 'Figura',

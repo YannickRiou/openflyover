@@ -3,7 +3,7 @@ import type { Messages } from '../messages'
 const messages: Messages['light'] = {
   'grading.title': 'Colores',
   'grading.preset': 'Etalonaje',
-  'grading.custom': 'Elegir un etalonaje sustituye los cuatro controles de abajo.',
+  'grading.custom': 'Elegir un etalonaje sustituye los cuatro controles de abajo; un valor que tiene claves recibe el suyo en su clave en el marcador.',
   'grading.keyed': 'Los valores que tienen claves (una pista de la línea de tiempo cada uno) siguen esas claves a lo largo del recorrido: su control deslizante modifica entonces la clave en el marcador (se crea una si hace falta).',
   'grading.contrast': 'Contraste',
   'grading.saturation': 'Saturación',
@@ -59,7 +59,7 @@ const messages: Messages['light'] = {
   'sun.fixedHint': 'El sol se queda a la misma hora durante todo el vuelo; un plano de apertura o de cierre puede tener su propio sol (su panel), y las noches de un track de varios días lo hacen ponerse.',
   'sun.followHintStages': 'Cada etapa se ilumina a su hora registrada; entre dos etapas, la luz pasa de una a otra durante la transición.',
   'sun.fixedHintStages': 'Todas las etapas se iluminan a la misma hora.',
-  'sun.keyedFollow': 'Unas claves de la pista «Sol» de la línea de tiempo controlan la hora del sol a lo largo del recorrido: sustituyen a la hora registrada.',
+  'sun.keyedFollow': 'Unas claves de la pista «Sol» de la línea de tiempo controlan la hora del sol a lo largo del recorrido: sustituyen a la hora registrada, el día elegido abajo.',
   'sun.keyedFixed': 'Unas claves de la pista «Sol» de la línea de tiempo controlan la hora del sol a lo largo del recorrido: el control deslizante modifica entonces la clave en el marcador (se crea una si hace falta).',
   'sun.solarHour': 'Hora solar',
   'sun.solarTip': 'Hora del sol en lugar de la de la salida: al mediodía, está en lo más alto.',

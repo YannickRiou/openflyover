@@ -5,6 +5,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Keys and panels agree**:
+  - **Étalonnage**: a preset now also changes the values driven by keys: each gets the preset's value on its key at the marker, as its slider does. Before, the image did not change.
+  - **Survol**: when camera keyframes exist, the panel says that they drive the view and that its sliders apply before and after them.
+  - **Marqueur**: when marker keys exist, the panel says that it sets the look before the first key.
+  - **Soleil**: with sun keys in « Heure de la trace », the « Jour » of the sun is shown again, because the keys' hours are on that day.
 - **Each setting in one place, and reachable**:
   - **Titles**: the opening title and the closing card have their own switches in « Habillage › Titres », always there. They show even with « Afficher l'habillage » off, which now only shows the counters, profile, mini-map, weather, logo and free text. Both are off in a new project. Older projects keep the same film.
   - **Timeline texts** always show, like the photos. They used to stay invisible while the overlay was off.

@@ -1,7 +1,7 @@
 export default {
   'grading.title': 'Couleurs',
   'grading.preset': 'Étalonnage',
-  'grading.custom': 'Choisir un étalonnage remplace les quatre curseurs ci-dessous.',
+  'grading.custom': 'Choisir un étalonnage remplace les quatre curseurs ci-dessous ; une valeur qui a des clés reçoit la sienne sur sa clé au marqueur.',
   'grading.keyed': 'Les valeurs qui ont des clés (une ligne de la timeline chacune) suivent ces clés le long du parcours : leur curseur modifie alors la clé placée au marqueur (elle est créée au besoin).',
   'grading.contrast': 'Contraste',
   'grading.saturation': 'Saturation',
@@ -57,7 +57,7 @@ export default {
   'sun.fixedHint': 'Le soleil reste à la même heure pendant tout le vol ; un plan d’ouverture ou de clôture peut avoir son propre soleil (son panneau), et les nuits d’une trace de plusieurs jours le font se coucher.',
   'sun.followHintStages': 'Chaque étape est éclairée à son heure enregistrée ; entre deux étapes, la lumière passe de l’une à l’autre pendant la transition.',
   'sun.fixedHintStages': 'Toutes les étapes sont éclairées à la même heure.',
-  'sun.keyedFollow': 'Des clés de la ligne « Soleil » de la timeline pilotent l’heure du soleil le long du parcours : elles remplacent l’heure enregistrée.',
+  'sun.keyedFollow': 'Des clés de la ligne « Soleil » de la timeline pilotent l’heure du soleil le long du parcours : elles remplacent l’heure enregistrée, au jour choisi ci-dessous.',
   'sun.keyedFixed': 'Des clés de la ligne « Soleil » de la timeline pilotent l’heure du soleil le long du parcours : le curseur modifie alors la clé placée au marqueur (elle est créée au besoin).',
   'sun.solarHour': 'Heure solaire',
   'sun.solarTip': 'Heure du soleil au lieu de la sortie : à midi, il est au plus haut.',
