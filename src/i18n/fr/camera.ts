@@ -86,6 +86,6 @@ export default {
   'pacing.landmarks': 'Repères (cols, sommets)',
   'pacing.keep': 'Garder la durée du survol',
   'pacing.keepHint': 'Le reste du trajet accélère pour compenser ralentis et pauses.',
-  'pacing.transitions': 'Transitions',
+  'pacing.transitions': 'Durée des changements de vitesse',
   'pacing.transitionsTip': 'Durée des changements de vitesse : entrée et sortie des arrêts, des pauses et des portions de vitesse.',
 }

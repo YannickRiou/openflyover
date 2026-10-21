@@ -56,6 +56,8 @@ const messages: Messages['timeline'] = {
   'speed.fast': 'Sped-up section {label}, from {from} to {to}',
   'speed.slow': 'Slowed-down section {label}, from {from} to {to}',
   'speed.normal': 'Normal-speed section {label}, from {from} to {to}',
+  'speed.auto': 'Automatic slow-down {label} (Flyover › Slow down at highlights)',
+  'speed.autoShort': 'auto',
   'hold.description': 'Hold (camera: {camera}): {label}{auto}',
   'hold.auto': ' (automatic)',
   'card.description': 'Card: {label}',

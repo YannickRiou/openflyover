@@ -88,7 +88,7 @@ const messages: Messages['camera'] = {
   'pacing.landmarks': 'Riferimenti (passi, vette)',
   'pacing.keep': 'Mantieni la durata del sorvolo',
   'pacing.keepHint': 'Il resto del percorso accelera per compensare rallentamenti e pause.',
-  'pacing.transitions': 'Transizioni',
+  'pacing.transitions': 'Durata dei cambi di velocità',
   'pacing.transitionsTip': 'Durata dei cambi di velocità: ingresso e uscita da soste, pause e tratti a velocità impostata.',
 }
 

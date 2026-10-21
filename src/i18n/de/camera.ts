@@ -88,7 +88,7 @@ const messages: Messages['camera'] = {
   'pacing.landmarks': 'Landmarken (Pässe, Gipfel)',
   'pacing.keep': 'Überflugdauer beibehalten',
   'pacing.keepHint': 'Der Rest der Strecke wird schneller, um Verlangsamungen und Pausen auszugleichen.',
-  'pacing.transitions': 'Übergänge',
+  'pacing.transitions': 'Dauer der Tempowechsel',
   'pacing.transitionsTip': 'Dauer der Tempowechsel: Beginn und Ende von Stopps, Pausen und Tempoabschnitten.',
 }
 
