@@ -394,6 +394,11 @@ describe('Timeline', () => {
         field.dispatchEvent(new Event('input', { bubbles: true }))
       })
       expect(useAppStore.getState().settings.overlay.title.title).toBe('Col du Galibier')
+      // the opening card has no figures until one is ticked
+      const figure = (label: string) =>
+        Array.from(inspector.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')).find((i) => i.closest('label')?.textContent === label)!
+      await act(async () => figure('Distance').click())
+      expect(useAppStore.getState().settings.overlay.title.figures).toEqual(['distance'])
       // the position, the size and the colours of the card are in the inspector too
       expect(inspector.textContent).toContain('Position')
       expect(inspector.textContent).toContain('Taille')

@@ -513,6 +513,31 @@ describe('closing card contents', () => {
   })
 })
 
+describe('opening card contents', () => {
+  const title = (patch: Partial<OverlaySettings['title']>, base = enabled()) => ({ ...base, title: { ...base.title, ...patch } })
+
+  it('no figures by default; the chosen ones, the free line under the date line and the picture when set', () => {
+    expect(draw(0.02, enabled()).joined.toLowerCase()).not.toContain('dénivelé +')
+    const { ctx, texts, images } = fakeContext()
+    const picture = { image: {} as CanvasImageSource, width: 200, height: 100 }
+    const settings = title({ figures: ['ascent', 'date'], line: 'Avec Marie', image: 'data:image/png;base64,AA', showProfile: true })
+    drawOverlay(ctx, overlayFrameAt(track, 0.02), settings, SIZE, { cardImage: () => picture })
+    const joined = texts.map((t) => t.text).join(' | ').toLowerCase()
+    expect(joined).toContain('dénivelé +')
+    expect(joined).toContain('12/07/2025')
+    const date = texts.find((t) => t.text.toLowerCase().startsWith('12 juillet'))!
+    const line = texts.find((t) => t.text.toLowerCase() === 'avec marie')!
+    expect(line.y).toBeGreaterThan(date.y)
+    expect(images).toHaveLength(1)
+  })
+
+  it('a style that lays the opening out itself gives way to a card with figures', () => {
+    const tableau = withStyleLayout(enabled(), 'tableau')
+    expect(draw(0.02, tableau).joined.toLowerCase()).not.toContain('dénivelé +')
+    expect(draw(0.02, title({ figures: ['ascent'] }, tableau)).joined.toLowerCase()).toContain('dénivelé +')
+  })
+})
+
 describe('mini-map', () => {
   const off = <T extends { enabled: boolean }>(w: T): T => ({ ...w, enabled: false })
   /** only the mini-map, with the cards still timing the live widgets */

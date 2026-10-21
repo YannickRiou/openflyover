@@ -17,7 +17,7 @@ const messages: Messages['inspector'] = {
   'card.showProfile': 'Höhenprofil',
   'card.showMinimap': 'Minikarte der Route',
   'card.image': 'Logo oder Bild',
-  'card.graphicsHint': 'Mit Bild, Profil oder Minikarte bleibt sie eine Karte, auch in einem Stil, der sie anders anordnet.',
+  'card.graphicsHint': 'Mit Bild, Profil oder Minikarte (bei der Eröffnung auch mit Zahlen oder einer freien Zeile) bleibt sie eine Karte, auch in einem Stil, der sie anders anordnet.',
   'shot.sunHint.day.opening': 'Die Startansicht liegt im vollen Tageslicht, dann erreicht die Sonne während der Einstellung die Uhrzeit des Starts.',
   'shot.sunHint.day.closing': 'Die Sonne wechselt während der Einstellung von der Uhrzeit der Ankunft ins volle Tageslicht.',
   'shot.sunHint.flyover.opening': 'Die Sonne der Startzeit, wie im Überflug.',

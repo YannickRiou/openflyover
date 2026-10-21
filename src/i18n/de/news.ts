@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Version {version}',
   'v32.end.title': 'Eine Abschlusskarte nach Ihrem Geschmack',
   'v32.end.text': 'Wählen Sie ihre Zahlen (Abstieg, tiefster Punkt, Durchschnittstempo, Datum…), fügen Sie eine eigene Zeile, das Profil, die Minikarte der Route und ein Logo oder Bild hinzu: im Inspektor des Blocks der Abschlusskarte.',
+  'v32.title.title': 'Eine Eröffnungskarte nach Ihrem Geschmack',
+  'v32.title.text': 'Der Eröffnungstitel kann Zahlen ankündigen (Distanz, Aufstieg…), eine eigene Zeile, das Profil, die Minikarte der Route und ein Logo oder Bild zeigen, wie die Abschlusskarte.',
   'v32.fix.title': 'Die Zahlen einer Tour korrigieren',
   'v32.fix.text': 'Das GPS hat den Gipfel verpasst? In der Karte einer Spur lassen sich unter « Zahlen korrigieren » Distanz, Aufstieg, höchster Punkt, Dauer oder Höchsttempo eintragen: Eröffnungs- und Abschlusskarte und das Poster übernehmen sie.',
   'v31.dates.title': 'Luftbilder eines anderen Datums',

@@ -2208,16 +2208,19 @@ exports) gets it from the terrain source of the settings.
   and presets always load (`minimap` and `leaderboard` disabled, `credits` enabled). Live widgets fade out during the
   cards.
   Logo as a PNG data URL of at most 512 px (self-contained projects). Validation: `isValidOverlay` (`SETTING_CHECKS`).
-- **What the closing card shows** (`CardExtras` on `overlay.end`, every key optional and absent in older projects, so
-  no upgrade: the card is the same): `figures` (ids of `CARD_FIGURES`, drawn in that order; absent = `END_CARD_FIGURES`,
-  the five it always showed), `line` (≤ `CARD_LINE_MAX` characters, before the weather line), `image` (PNG data URL like
+- **What the cards show** (`CardExtras` on `overlay.title` and `overlay.end`, every key optional and absent in older
+  projects, so no upgrade: the cards are the same): `figures` (ids of `CARD_FIGURES`, drawn in that order; absent =
+  `cardFigures`: none on the opening card, `END_CARD_FIGURES`, the five it always showed, on the closing one), `line`
+  (≤ `CARD_LINE_MAX` characters, a line of its own: after the date and subtitle line on the opening card, before the
+  weather line on the closing one; `cardWidget` draws one subtitle line per `\n`), `image` (PNG data URL like
   the logo, drawn above the title, decoded by `createCardImages` in `src/overlay/assets.ts` for the preview and the
   export), `showProfile` and `showMinimap` (`cardGraphics` in `src/overlay/draw.ts`: the profile and mini-map widgets
   drawn inside the card without their own panel, the whole route covered, no marker). `cardStats` turns the stats into
   the figures, leaving out those the track does not record; descent and lowest point come from `Track.stats`, the
-  average speed from the (corrected) distance and duration. A closing card with a picture, the profile or the mini-map
-  is drawn as a card even in a style that places it in its structure (`endHasGraphics`), like a card with credits;
-  the structure itself (« Journal de bord ») follows `figures` and `line`.
+  average speed from the (corrected) distance and duration. A card with a picture, the profile or the mini-map
+  (`cardHasGraphics`), and an opening card with figures or a line, is drawn as a card even in a style that places it in
+  its structure, like a closing card with credits; the « Journal de bord » sheet follows the closing card's `figures`
+  and `line`.
 - **Colors and fonts** (`settings.overlay.overrides`, optional, absent by default: old projects and default
   look unchanged): accent, text, panel background (color, opacity) as `#rrggbb`, font for titles and figures
   from a short list (`OVERLAY_FONT_IDS`: bundled Fraunces, IBM Plex Sans and Sans Condensed, Georgia, system

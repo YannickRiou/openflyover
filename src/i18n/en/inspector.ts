@@ -17,7 +17,7 @@ const messages: Messages['inspector'] = {
   'card.showProfile': 'Elevation profile',
   'card.showMinimap': 'Mini-map of the route',
   'card.image': 'Logo or picture',
-  'card.graphicsHint': 'With a picture, the profile or the mini-map, it stays a card, even in a style that lays it out differently.',
+  'card.graphicsHint': 'With a picture, the profile or the mini-map (for the opening, also figures or a free line), it stays a card, even in a style that lays it out differently.',
   'shot.sunHint.day.opening': 'The starting view is in full daylight, then the sun moves to the departure time during the shot.',
   'shot.sunHint.day.closing': 'The sun leaves the arrival time for full daylight during the shot.',
   'shot.sunHint.flyover.opening': 'The sun at the departure time, like the flyover.',

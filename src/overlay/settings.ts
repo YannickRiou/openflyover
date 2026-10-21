@@ -187,7 +187,7 @@ export function fitWindow(window: CardWindow, totalS: number): CardWindow {
   return { startS: totalS - length, endS: totalS }
 }
 
-export interface TitleCardSettings extends Sized {
+export interface TitleCardSettings extends Sized, CardExtras {
   /** '' = name of the track */
   title: string
   subtitle: string
@@ -543,6 +543,7 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     validSized(o.title) &&
     within(o.title.end, TITLE_END_MIN, TITLE_END_MAX) &&
     validWindow(o.title.window) &&
+    validExtras(o.title) &&
     validSized(o.end) &&
     within(o.end.start, END_START_MIN, END_START_MAX) &&
     validWindow(o.end.window) &&

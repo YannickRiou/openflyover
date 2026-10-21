@@ -15,7 +15,7 @@ export default {
   'card.showProfile': 'Profil d’altitude',
   'card.showMinimap': 'Mini-carte du tracé',
   'card.image': 'Logo ou image',
-  'card.graphicsHint': 'Avec une image, le profil ou la mini-carte, elle reste une carte, même dans un style qui la met en page autrement.',
+  'card.graphicsHint': 'Avec une image, le profil ou la mini-carte (à l’ouverture, aussi des chiffres ou une ligne libre), elle reste une carte, même dans un style qui la met en page autrement.',
   'shot.sunHint.day.opening': 'La vue de départ est en plein jour, puis le soleil rejoint l’heure du départ pendant le plan.',
   'shot.sunHint.day.closing': 'Le soleil quitte l’heure de l’arrivée pour le plein jour pendant le plan.',
   'shot.sunHint.flyover.opening': 'Le soleil de l’heure du départ, comme le survol.',

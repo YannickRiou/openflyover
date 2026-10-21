@@ -193,8 +193,10 @@ export function createOverlayDrawer(): OverlayDrawer {
   }
   syncLogo(useAppStore.getState().settings.overlay.logo.image)
   // decoded before the first frame that shows it
-  const cardPicture = useAppStore.getState().settings.overlay.end.image
-  if (cardPicture) cardImage(cardPicture)
+  for (const card of ['title', 'end'] as const) {
+    const picture = useAppStore.getState().settings.overlay[card].image
+    if (picture) cardImage(picture)
+  }
   const unsubscribe = useAppStore.subscribe((state) => syncLogo(state.settings.overlay.logo.image))
 
   return {

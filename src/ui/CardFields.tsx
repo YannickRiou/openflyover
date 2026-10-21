@@ -3,9 +3,9 @@ import { TITLE_CARD_ID } from '../film/cards'
 import { useT } from '../i18n'
 import type { CardId } from '../film/cards'
 import { fileToLogoDataUrl } from '../overlay/assets'
-import { cardFigureLabel, endFigures } from '../overlay/draw'
+import { cardFigureLabel, cardFigures } from '../overlay/draw'
 import { CARD_FIGURES, CARD_LINE_MAX, END_CREDITS_MAX } from '../overlay/settings'
-import type { EndCardSettings, TitleCardSettings } from '../overlay/settings'
+import type { CardExtras, EndCardSettings, TitleCardSettings } from '../overlay/settings'
 import { getPlatform } from '../platform'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
@@ -28,21 +28,6 @@ export function CardFields({ card }: { card: CardId }) {
   const setTitle = (patch: Partial<TitleCardSettings>) => useAppStore.getState().setSetting('overlay', { ...overlay, title: { ...overlay.title, ...patch } })
   const setEnd = (patch: Partial<EndCardSettings>) => useAppStore.getState().setSetting('overlay', { ...overlay, end: { ...overlay.end, ...patch } })
   const placeholder = trackName ?? t('inspector.card.trackName')
-  const [imageError, setImageError] = useState<string | null>(null)
-
-  const chooseImage = async () => {
-    try {
-      const [file] = await getPlatform().openFiles({ filters: [{ name: t('marker.image.filter'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'] }] })
-      if (!file) return
-      setImageError(null)
-      const image = await fileToLogoDataUrl(file)
-      // the settings as they are now (another change or an undo may have happened during the decoding)
-      const now = useAppStore.getState().settings.overlay
-      useAppStore.getState().setSetting('overlay', { ...now, end: { ...now.end, image } })
-    } catch {
-      setImageError(t('marker.image.error'))
-    }
-  }
 
   if (card === TITLE_CARD_ID) {
     const { title } = overlay
@@ -57,6 +42,7 @@ export function CardFields({ card }: { card: CardId }) {
         >
           {t('inspector.card.showDate')}
         </Checkbox>
+        <CardExtrasFields card="title" />
         <WidgetPosition widget="title" />
         <SizeField value={title.size} onChange={(size) => setTitle({ size })} />
         <WidgetStyleOverrides widget="title" />
@@ -65,51 +51,10 @@ export function CardFields({ card }: { card: CardId }) {
   }
 
   const { end } = overlay
-  const figures = endFigures(end)
   return (
     <>
       <TextField label={t('inspector.card.title')} value={end.title} placeholder={placeholder} onChange={(title) => setEnd({ title })} />
-      <TextField
-        label={t('inspector.card.line')}
-        value={end.line ?? ''}
-        placeholder={t('inspector.card.linePlaceholder')}
-        maxLength={CARD_LINE_MAX}
-        onChange={(line) => setEnd({ line: line || undefined })}
-      />
-      <fieldset className="field min-w-0">
-        <legend className="type-label mb-1">{t('inspector.card.figures')}</legend>
-        <div className="chips">
-          {CARD_FIGURES.map((figure) => (
-            <Chip
-              key={figure}
-              checked={figures.includes(figure)}
-              onChange={(on) => setEnd({ figures: CARD_FIGURES.filter((f) => (f === figure ? on : figures.includes(f))) })}
-            >
-              {cardFigureLabel(figure)}
-            </Chip>
-          ))}
-        </div>
-        <p className="type-hint">{t('inspector.card.figuresHint')}</p>
-      </fieldset>
-      <Checkbox checked={end.showProfile ?? false} onChange={(on) => setEnd({ showProfile: on || undefined })}>
-        {t('inspector.card.showProfile')}
-      </Checkbox>
-      <Checkbox checked={end.showMinimap ?? false} onChange={(on) => setEnd({ showMinimap: on || undefined })}>
-        {t('inspector.card.showMinimap')}
-      </Checkbox>
-      <div className="field">
-        <span className="type-label">{t('inspector.card.image')}</span>
-        <div className="flex gap-2 *:min-w-0 *:flex-1">
-          <Button onClick={() => void chooseImage()}>{end.image ? t('marker.image.change') : t('marker.image.choose')}</Button>
-          {end.image && <Button onClick={() => setEnd({ image: undefined })}>{t('marker.image.remove')}</Button>}
-        </div>
-        {imageError && (
-          <p className="type-hint" role="alert">
-            {imageError}
-          </p>
-        )}
-        <p className="type-hint">{t('inspector.card.graphicsHint')}</p>
-      </div>
+      <CardExtrasFields card="end" />
       <Checkbox
         checked={end.showWeather && hasWeather}
         disabled={!hasWeather}
@@ -135,6 +80,79 @@ export function CardFields({ card }: { card: CardId }) {
       <WidgetPosition widget="end" />
       <SizeField value={end.size} onChange={(size) => setEnd({ size })} />
       <WidgetStyleOverrides widget="end" />
+    </>
+  )
+}
+
+/**
+ * What a card shows besides its title (`CardExtras`): a free line, its figures, the profile and mini-map of the whole
+ * track, a logo or picture above the title.
+ */
+function CardExtrasFields({ card }: { card: 'title' | 'end' }) {
+  const t = useT()
+  const extras = useAppStore((s) => s.settings.overlay[card])
+  const [imageError, setImageError] = useState<string | null>(null)
+  // the settings as they are now (another change or an undo may have happened during a decoding)
+  const set = (patch: CardExtras) => {
+    const now = useAppStore.getState().settings.overlay
+    useAppStore.getState().setSetting('overlay', { ...now, [card]: { ...now[card], ...patch } })
+  }
+  const figures = cardFigures(card, extras)
+
+  const chooseImage = async () => {
+    try {
+      const [file] = await getPlatform().openFiles({ filters: [{ name: t('marker.image.filter'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'] }] })
+      if (!file) return
+      setImageError(null)
+      set({ image: await fileToLogoDataUrl(file) })
+    } catch {
+      setImageError(t('marker.image.error'))
+    }
+  }
+
+  return (
+    <>
+      <TextField
+        label={t('inspector.card.line')}
+        value={extras.line ?? ''}
+        placeholder={t('inspector.card.linePlaceholder')}
+        maxLength={CARD_LINE_MAX}
+        onChange={(line) => set({ line: line || undefined })}
+      />
+      <fieldset className="field min-w-0">
+        <legend className="type-label mb-1">{t('inspector.card.figures')}</legend>
+        <div className="chips">
+          {CARD_FIGURES.map((figure) => (
+            <Chip
+              key={figure}
+              checked={figures.includes(figure)}
+              onChange={(on) => set({ figures: CARD_FIGURES.filter((f) => (f === figure ? on : figures.includes(f))) })}
+            >
+              {cardFigureLabel(figure)}
+            </Chip>
+          ))}
+        </div>
+        <p className="type-hint">{t('inspector.card.figuresHint')}</p>
+      </fieldset>
+      <Checkbox checked={extras.showProfile ?? false} onChange={(on) => set({ showProfile: on || undefined })}>
+        {t('inspector.card.showProfile')}
+      </Checkbox>
+      <Checkbox checked={extras.showMinimap ?? false} onChange={(on) => set({ showMinimap: on || undefined })}>
+        {t('inspector.card.showMinimap')}
+      </Checkbox>
+      <div className="field">
+        <span className="type-label">{t('inspector.card.image')}</span>
+        <div className="flex gap-2 *:min-w-0 *:flex-1">
+          <Button onClick={() => void chooseImage()}>{extras.image ? t('marker.image.change') : t('marker.image.choose')}</Button>
+          {extras.image && <Button onClick={() => set({ image: undefined })}>{t('marker.image.remove')}</Button>}
+        </div>
+        {imageError && (
+          <p className="type-hint" role="alert">
+            {imageError}
+          </p>
+        )}
+        <p className="type-hint">{t('inspector.card.graphicsHint')}</p>
+      </div>
     </>
   )
 }
