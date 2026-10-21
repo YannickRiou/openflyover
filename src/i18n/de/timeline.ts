@@ -41,7 +41,7 @@ const messages: Messages['timeline'] = {
   'stage.name': 'Etappe {n} · {track} · {distance}',
   'stage.description': 'Etappe {n}: {track}',
   'stage.short': 'Etappe {n}',
-  'junction.description': 'Verbindung {n}: {label}{own}',
+  'junction.description': 'Übergang {n}: {label}{own}',
   'junction.byDefault': ' (Standard)',
   blockRange: '{description}, von {from} bis {to}',
   'key.settingAria': 'Einstellung: {what}, bei {distance}, bei {time}',

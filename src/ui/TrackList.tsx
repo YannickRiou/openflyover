@@ -98,9 +98,9 @@ const MULTI_MODE_LABELS: Record<MultiMode, string> = {
   get parallele() { return t('track.mode.parallele') },
 }
 const MULTI_MODE_HINTS: Record<MultiMode, string> = {
-  get une() { return t('track.mode.une') },
-  get suite() { return t('track.mode.suite') },
-  get parallele() { return t('track.mode.parallele') },
+  get une() { return t('track.modeHint.une') },
+  get suite() { return t('track.modeHint.suite') },
+  get parallele() { return t('track.modeHint.parallele') },
 }
 
 function multiModeOf(race: RaceSettings, count: number): MultiMode {

@@ -34,7 +34,8 @@ export function NightSettings() {
   // turning the cards on retires the ones earlier versions baked into the texts
   const setCards = (patch: Partial<FilmDayCards>, step = true) =>
     editFilm((f) => ({ film: { ...(patch.enabled ? withoutDayCards(f) : f), dayCards: { ...(f.dayCards ?? DEFAULT_DAY_CARDS), ...patch } } }), { step })
-  const shown = clock.nights.length
+  // « À la suite », the nights passed by « Nuit » junctions count too
+  const shown = clock.nights.length + clock.junctions.filter((j) => j.kind === 'nuit').length
   const nightsHint =
     shown === 0
       ? tr('light.nights.none')

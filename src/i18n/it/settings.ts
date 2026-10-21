@@ -60,7 +60,7 @@ const messages: Messages['settings'] = {
   'preferences.timeline.snapPlayhead': 'La testina',
   'preferences.timeline.snapBlocks': 'I blocchi e le chiavi',
   'preferences.timeline.snapRuler': 'I segni del righello',
-  'preferences.timeline.snapMarks': 'Giunzioni e momenti salienti',
+  'preferences.timeline.snapMarks': 'Transizioni e momenti salienti',
   'updates.title': 'Aggiornamenti',
   'updates.version': 'Versione installata: {version}',
   'updates.hint': 'OpenFlyover contatta GitHub (github.com) solo quando premi questo pulsante: nulla viene controllato o installato automaticamente.',

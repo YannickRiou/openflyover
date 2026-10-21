@@ -149,7 +149,7 @@ const messages: Messages['overlay'] = {
   'panel.showCounters': 'Show the counters',
   'panel.values': 'Values',
   'panel.missing': 'Missing from this track',
-  'panel.leaderboard': 'Leaderboard (ghost race)',
+  'panel.leaderboard': 'Leaderboard (“In parallel”)',
   'panel.leaderboardRace': 'Rank, name and gap to the leader for each track, at the marker.',
   'panel.leaderboardOff': 'Shown when the tracks are replayed “In parallel” (Track tab, “Several tracks”).',
   'panel.profileMinimap': 'Profile and mini-map',

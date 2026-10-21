@@ -60,7 +60,7 @@ const messages: Messages['settings'] = {
   'preferences.timeline.snapPlayhead': 'El cabezal',
   'preferences.timeline.snapBlocks': 'Los bloques y las claves',
   'preferences.timeline.snapRuler': 'Las marcas de la regla',
-  'preferences.timeline.snapMarks': 'Uniones y momentos destacados',
+  'preferences.timeline.snapMarks': 'Transiciones y momentos destacados',
   'updates.title': 'Actualizaciones',
   'updates.version': 'Versión instalada: {version}',
   'updates.hint': 'OpenFlyover consulta GitHub (github.com) solo cuando pulsas este botón: nada se comprueba ni se instala automáticamente.',

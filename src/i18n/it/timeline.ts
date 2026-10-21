@@ -41,7 +41,7 @@ const messages: Messages['timeline'] = {
   'stage.name': 'Tappa {n} · {track} · {distance}',
   'stage.description': 'Tappa {n}: {track}',
   'stage.short': 'Tappa {n}',
-  'junction.description': 'Giunzione {n}: {label}{own}',
+  'junction.description': 'Transizione {n}: {label}{own}',
   'junction.byDefault': ' (predefinita)',
   blockRange: '{description}, da {from} a {to}',
   'key.settingAria': 'Impostazione: {what}, a {distance}, a {time}',

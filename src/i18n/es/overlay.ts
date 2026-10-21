@@ -149,7 +149,7 @@ const messages: Messages['overlay'] = {
   'panel.showCounters': 'Mostrar los contadores',
   'panel.values': 'Valores',
   'panel.missing': 'No disponible en este track',
-  'panel.leaderboard': 'Clasificación (carrera fantasma)',
+  'panel.leaderboard': 'Clasificación («En paralelo»)',
   'panel.leaderboardRace': 'Posición, nombre y diferencia con el primero de cada track, en el marcador.',
   'panel.leaderboardOff': 'Visible cuando los tracks se reproducen «En paralelo» (pestaña Track, «Varios tracks»).',
   'panel.profileMinimap': 'Perfil y minimapa',

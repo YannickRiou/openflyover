@@ -149,7 +149,7 @@ const messages: Messages['overlay'] = {
   'panel.showCounters': 'Zähler anzeigen',
   'panel.values': 'Werte',
   'panel.missing': 'In diesem Track nicht vorhanden',
-  'panel.leaderboard': 'Rangliste (Geisterrennen)',
+  'panel.leaderboard': 'Rangliste („Parallel“)',
   'panel.leaderboardRace': 'Rang, Name und Rückstand auf den Ersten jedes Tracks, am Marker.',
   'panel.leaderboardOff': 'Sichtbar, wenn die Tracks „Parallel“ abgespielt werden (Reiter „Track“, „Mehrere Tracks“).',
   'panel.profileMinimap': 'Profil und Minikarte',

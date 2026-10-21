@@ -39,7 +39,7 @@ export default {
   'stage.name': 'Étape {n} · {track} · {distance}',
   'stage.description': 'Étape {n} : {track}',
   'stage.short': 'Étape {n}',
-  'junction.description': 'Jonction {n} : {label}{own}',
+  'junction.description': 'Transition {n} : {label}{own}',
   'junction.byDefault': ' (par défaut)',
   blockRange: '{description}, de {from} à {to}',
   'key.settingAria': 'Réglage : {what}, à {distance}, à {time}',

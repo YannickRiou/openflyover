@@ -709,7 +709,12 @@ export function FilmInspector() {
           >
             {t('inspector.junction.adjustCard')}
           </Button>
-          {kind !== 'coupe' && <p className={HINT}>{t('inspector.junction.blockHint')}</p>}
+          {/* what the clock holds here: a night (dusk, night, dawn), a fade (also a « Nuit » with no night to pass) or nothing */}
+          {junction.kind === 'nuit' ? (
+            <p className={HINT}>{t('inspector.junction.blockHintNight')}</p>
+          ) : (
+            junction.kind !== 'coupe' && <p className={HINT}>{t('inspector.junction.blockHint')}</p>
+          )}
         </>
       )
     } else if (stop) {
