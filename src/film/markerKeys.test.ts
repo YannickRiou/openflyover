@@ -196,3 +196,17 @@ describe('junctionsM', () => {
     expect(junctionsM(undefined)).toEqual([])
   })
 })
+
+describe('a key with the ball style, the badge shape and the animation', () => {
+  it('takes them over those of the settings, keeps the settings for the ones it does not set, and validates them', () => {
+    const own: FilmMarkerKey = { ...key('m1', 100, 'figurine', 'randonneur'), shape: 'contour', animated: true }
+    expect(withKey(DEFAULT_MARKER, own, () => '')).toMatchObject({ shape: 'contour', animated: true, ballStyle: DEFAULT_MARKER.ballStyle })
+    expect(withKey({ ...DEFAULT_MARKER, ballStyle: 'halo' }, { ...key('m2', 100, 'boule'), ballStyle: 'pulsation' }, () => '').ballStyle).toBe('pulsation')
+    expect(isValidMarkerKey(own)).toBe(true)
+    expect(isValidMarkerKey({ ...own, shape: 'etoile' })).toBe(false)
+    expect(isValidMarkerKey({ ...own, animated: 'oui' })).toBe(false)
+    // an animated figure on a key: the held frames of an export are drawn again
+    expect(markerKeysMoveWithTime(film([own]), DEFAULT_MARKER)).toBe(true)
+    expect(markerKeysMoveWithTime(film([{ ...own, animated: false }]), DEFAULT_MARKER)).toBe(false)
+  })
+})
