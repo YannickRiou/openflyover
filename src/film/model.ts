@@ -402,6 +402,19 @@ export interface FilmDayCards {
   title?: string
   view: boolean
 }
+/** Names of the figures of a day or stage card (their chips). */
+export const DAY_CARD_FIELD_LABELS: Record<DayCardField, string> = {
+  get date() { return t('light.days.field.date') },
+  get distance() { return t('light.days.field.distance') },
+  get ascent() { return t('light.days.field.ascent') },
+  get duration() { return t('light.days.field.duration') },
+  get start() { return t('light.days.field.start') },
+  get weather() { return t('light.days.field.weather') },
+}
+
+/** The figures of a stage card that does not choose them: those it always showed. */
+export const STAGE_CARD_FIELDS: Record<DayCardField, boolean> = { date: true, distance: true, ascent: true, duration: false, start: false, weather: false }
+
 export const DEFAULT_DAY_CARDS: FilmDayCards = {
   enabled: false,
   durationS: 5,
@@ -447,6 +460,8 @@ export interface JunctionCard {
   size: number
   color?: string
   font?: OverlayFontId
+  /** the figures of the automatic card, like a day card's; absent: `STAGE_CARD_FIELDS` (name, date, distance, D+) */
+  fields?: Record<DayCardField, boolean>
 }
 
 /**
@@ -799,6 +814,9 @@ export function isValidAudio(audio: unknown): audio is FilmAudio {
   )
 }
 
+const isDayCardFields = (fields: unknown) =>
+  isRecord(fields) && DAY_CARD_FIELDS.every((field) => typeof (fields as Record<string, unknown>)[field] === 'boolean')
+
 export function isValidDayCards(cards: unknown): cards is FilmDayCards {
   return (
     isRecord(cards) &&
@@ -806,8 +824,7 @@ export function isValidDayCards(cards: unknown): cards is FilmDayCards {
     within(cards.durationS, DAY_CARD_DURATION_RANGE.min, DAY_CARD_DURATION_RANGE.max) &&
     oneOf(OVERLAY_ANCHORS, cards.anchor) &&
     within(cards.size, WIDGET_SIZE_MIN, WIDGET_SIZE_MAX) &&
-    isRecord(cards.fields) &&
-    DAY_CARD_FIELDS.every((field) => typeof (cards.fields as Record<string, unknown>)[field] === 'boolean') &&
+    isDayCardFields(cards.fields) &&
     optionalString(cards.title) &&
     typeof cards.view === 'boolean'
   )
@@ -828,7 +845,8 @@ export function isValidJunctionCard(card: unknown): card is JunctionCard {
     oneOf(OVERLAY_ANCHORS, card.anchor) &&
     within(card.size, WIDGET_SIZE_MIN, WIDGET_SIZE_MAX) &&
     (card.color === undefined || isHexColor(card.color)) &&
-    (card.font === undefined || oneOf(OVERLAY_FONT_IDS, card.font))
+    (card.font === undefined || oneOf(OVERLAY_FONT_IDS, card.font)) &&
+    (card.fields === undefined || isDayCardFields(card.fields))
   )
 }
 

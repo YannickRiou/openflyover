@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { STAGE_CARD_VARIABLES } from '../film/junctions'
-import { JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, JUNCTION_KINDS, JUNCTION_KIND_LABELS } from '../film/model'
+import { DAY_CARD_FIELDS, DAY_CARD_FIELD_LABELS, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, JUNCTION_KINDS, JUNCTION_KIND_LABELS, STAGE_CARD_FIELDS } from '../film/model'
 import type { JunctionCard, JunctionKind } from '../film/model'
 import { t, useT } from '../i18n'
 import { WIDGET_SIZE_MAX, WIDGET_SIZE_MIN } from '../overlay/settings'
@@ -8,7 +8,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber } from './format'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RangeField } from './PanelSection'
-import { Checkbox, Radio, RadioGroup, Select, TextField } from './primitives'
+import { Checkbox, Chip, Radio, RadioGroup, Select, TextField } from './primitives'
 
 /** What each transition does, under its choice. */
 const JUNCTION_KIND_HINTS: Record<JunctionKind, string> = {
@@ -66,6 +66,7 @@ const SIZE_RANGE = { min: WIDGET_SIZE_MIN, max: WIDGET_SIZE_MAX, step: 0.1 }
 export function StageCardFields({ card, onChange }: { card: JunctionCard; onChange(patch: Partial<JunctionCard>): void }) {
   const t = useT()
   const custom = card.text !== undefined
+  const fields = card.fields ?? STAGE_CARD_FIELDS
   return (
     <>
       <Checkbox checked={card.enabled} onChange={(on) => onChange({ enabled: on })}>{t('inspector.junction.show')}</Checkbox>
@@ -87,7 +88,19 @@ export function StageCardFields({ card, onChange }: { card: JunctionCard; onChan
           <p className="type-hint">{t('inspector.junction.variables', { list: STAGE_CARD_VARIABLES.map((v) => `{${v}}`).join(' ') })}</p>
         </>
       ) : (
-        <p className="type-hint">{t('inspector.junction.autoHint')}</p>
+        <>
+          <fieldset className="field min-w-0">
+            <legend className="type-label mb-1">{t('light.days.fields')}</legend>
+            <div className="chips">
+              {DAY_CARD_FIELDS.map((field) => (
+                <Chip key={field} checked={fields[field]} onChange={(on) => onChange({ fields: { ...fields, [field]: on } })}>
+                  {DAY_CARD_FIELD_LABELS[field]}
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
+          <p className="type-hint">{t('inspector.junction.autoHint')}</p>
+        </>
       )}
       <AnchorPicker label={t('inspector.junction.position')} value={card.anchor} onChange={(anchor) => onChange({ anchor })} />
       <RangeField label={t('inspector.junction.size')} {...SIZE_RANGE} value={card.size} format={(v) => `×${formatNumber(v, 1)}`} onChange={(size) => onChange({ size })} wide={false} />

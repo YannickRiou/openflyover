@@ -20,6 +20,8 @@ import {
   shotDurationS,
   situationTiming,
   transitionDipAt,
+  isValidJunctionCard,
+  STAGE_CARD_FIELDS,
 } from './model'
 import type { Film, FilmAudio, FilmCameraKey, FilmDayCards, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText } from './model'
 
@@ -452,5 +454,14 @@ describe('film model', () => {
     expect(nextFilmId(f, 'stop')).toBe('stop-10')
     expect(nextFilmId(f, 'text')).toBe('text-2')
     expect(nextFilmId(f, 'media')).toBe('media-1')
+  })
+})
+
+describe('the figures of a stage card', () => {
+  it('are optional, and checked like those of the day cards', () => {
+    const card = { enabled: true, durationS: 5, anchor: 'center', size: 1 }
+    expect(isValidJunctionCard(card)).toBe(true)
+    expect(isValidJunctionCard({ ...card, fields: STAGE_CARD_FIELDS })).toBe(true)
+    expect(isValidJunctionCard({ ...card, fields: { date: true } })).toBe(false)
   })
 })

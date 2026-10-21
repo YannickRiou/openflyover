@@ -58,7 +58,7 @@ export default {
   'speed.autoShort': 'auto',
   'hold.description': 'Arrêt (caméra : {camera}) : {label}{auto}',
   'hold.auto': ' (automatique)',
-  'card.description': 'Carton : {label}',
+  'card.description': 'Carte : {label}',
   'text.description': 'Texte : {text}',
   'media.videoCard': 'Vidéo en carte : {label}',
   'media.videoFull': 'Vidéo plein écran : {label}',

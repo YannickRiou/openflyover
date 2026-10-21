@@ -22,7 +22,8 @@ import { leadMarkerColors } from '../scene/markerSprite'
 import { useLandmarkStore, useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
 import { useWeatherStore, weatherShown, type StageWeather } from '../weather/store'
-import type { WeatherSeries } from '../weather/series'
+import { summarizeOuting } from '../weather/series'
+import type { WeatherSeries, WeatherSummary } from '../weather/series'
 import { trackPathOf } from '../flyover/path'
 import { buildRace, raceAt, raceTrackOf } from '../flyover/race'
 import { filmSequenceOf, filmTrackOf, trackUnderMarker } from '../flyover/sequence'
@@ -72,6 +73,20 @@ function dayFiguresOf(track: Track, series: WeatherSeries | null): DayFigures[] 
   return figures
 }
 
+/** Weather of each stage over its own path, by series (fetched once per series). */
+const stageSummaries = new WeakMap<WeatherSeries, WeatherSummary | undefined>()
+
+/** The weather summary of stage `k` « À la suite », when its series is fetched (the first track's is the main series). */
+function stageWeatherOf(sequence: Sequence, k: number, firstTrackId: string | undefined): WeatherSummary | undefined {
+  const stage = sequence.stages[k]
+  if (!stage) return undefined
+  const { series: main, stages } = useWeatherStore.getState()
+  const series = stage.track.id === firstTrackId ? main : stages[stage.track.id]?.series
+  if (!series) return undefined
+  if (!stageSummaries.has(series)) stageSummaries.set(series, summarizeOuting(series, trackPathOf(stage.track)))
+  return stageSummaries.get(series)
+}
+
 /** The stronger of two dips. */
 const strongerDip = (a: TransitionDip | null, b: TransitionDip | null) => (b && b.alpha > (a?.alpha ?? 0) ? b : a)
 
@@ -92,7 +107,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     texts: settings.film.texts,
     media: settings.film.media,
     dip: strongerDip(transitionDipAt(settings.film, time), sequence && time.junctions ? junctionsDipAt(time.junctions, time.timeS) : null),
-    stage: sequence ? stageCardAt(sequence, time, settings.film) : null,
+    stage: sequence ? stageCardAt(sequence, time, settings.film, (k) => stageWeatherOf(sequence, k, tracks[0]?.id)) : null,
     day: !sequence && settings.film.dayCards?.enabled && time.dayCardsS ? dayCardAt(dayFiguresOf(filmTrackOf(tracks, settings.race) ?? tracks[0], useWeatherStore.getState().series), time, settings.film.dayCards) : null,
     exportSize: videoSize(settings.video.aspect, settings.video.resolution, Number.POSITIVE_INFINITY),
     markerColor: leadMarkerColors(settings.marker, (trackUnderMarker(tracks, settings.race, progress)?.track ?? filmTrackOf(tracks, settings.race))?.color ?? '#FFFFFF').ball,
