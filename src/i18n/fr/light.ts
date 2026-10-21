@@ -86,6 +86,8 @@ export default {
   'clouds.cover': 'Couverture nuageuse',
   'clouds.seaTop': 'Sommet de la mer de nuages',
   'clouds.seaTopTip': 'Altitude du dessus des nuages : les sommets plus hauts en émergent. Proposée aux trois quarts entre le point le plus bas et le plus haut de la trace.',
+  'clouds.wind': 'Vent',
+  'clouds.windTip': 'Vitesse du vent qui pousse les nuages, accélérée dans le film pour qu’on la voie. 0 : nuages immobiles.',
   'clouds.seaRender': 'Rendu de la mer de nuages',
   'clouds.hintSurface': 'Une nappe de nuages éclairée, sans grain, plus légère à calculer.',
   'clouds.hintVolume': 'Des nuages en volume, plus coûteux.',

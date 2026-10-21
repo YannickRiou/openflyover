@@ -10,7 +10,7 @@ import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
-import { CLOUD_ALTITUDE_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
+import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, SEA_TOP_RANGE, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
@@ -320,6 +320,17 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
           value={clouds.seaTopM}
           format={(v) => `${formatNumber(v)} m`}
           onChange={(seaTopM) => set({ seaTopM })}
+        />
+      )}
+
+      {(clouds.mode === 'manuel' || clouds.mode === 'mer') && (
+        <RangeField
+          label={t('light.clouds.wind')}
+          tip={t('light.clouds.windTip')}
+          {...CLOUD_WIND_RANGE}
+          value={clouds.windKmh}
+          format={(v) => `${formatNumber(v)} km/h`}
+          onChange={(windKmh) => set({ windKmh })}
         />
       )}
 

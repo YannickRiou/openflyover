@@ -88,6 +88,8 @@ const messages: Messages['light'] = {
   'clouds.cover': 'Cloud cover',
   'clouds.seaTop': 'Top of the sea of clouds',
   'clouds.seaTopTip': 'Elevation of the cloud tops: higher summits stick out of them. Suggested at three quarters between the lowest and the highest point of the track.',
+  'clouds.wind': 'Wind',
+  'clouds.windTip': 'Speed of the wind pushing the clouds, sped up in the film so you can see it. 0: still clouds.',
   'clouds.seaRender': 'Sea of clouds rendering',
   'clouds.hintSurface': 'A lit sheet of clouds, grain-free, lighter to compute.',
   'clouds.hintVolume': 'Volumetric clouds, more costly.',

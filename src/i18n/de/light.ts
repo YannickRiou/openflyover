@@ -88,6 +88,8 @@ const messages: Messages['light'] = {
   'clouds.cover': 'Wolkenbedeckung',
   'clouds.seaTop': 'Oberkante des Wolkenmeers',
   'clouds.seaTopTip': 'Höhe der Wolkenobergrenze: Höhere Gipfel ragen heraus. Vorgeschlagen bei drei Vierteln zwischen dem tiefsten und dem höchsten Punkt des Tracks.',
+  'clouds.wind': 'Wind',
+  'clouds.windTip': 'Geschwindigkeit des Windes, der die Wolken treibt, im Film beschleunigt, damit man sie sieht. 0: stehende Wolken.',
   'clouds.seaRender': 'Darstellung des Wolkenmeers',
   'clouds.hintSurface': 'Eine beleuchtete Wolkendecke, ohne Körnung, weniger rechenintensiv.',
   'clouds.hintVolume': 'Volumenwolken, aufwendiger.',

@@ -88,6 +88,8 @@ const messages: Messages['light'] = {
   'clouds.cover': 'Copertura nuvolosa',
   'clouds.seaTop': 'Sommità del mare di nuvole',
   'clouds.seaTopTip': 'Altitudine della sommità delle nuvole: le vette più alte ne emergono. Proposta ai tre quarti tra il punto più basso e quello più alto della traccia.',
+  'clouds.wind': 'Vento',
+  'clouds.windTip': 'Velocità del vento che spinge le nuvole, accelerata nel filmato perché si veda. 0: nuvole ferme.',
   'clouds.seaRender': 'Resa del mare di nuvole',
   'clouds.hintSurface': 'Una coltre di nuvole illuminata, senza grana, più leggera da calcolare.',
   'clouds.hintVolume': 'Nuvole in volume, più pesanti da calcolare.',

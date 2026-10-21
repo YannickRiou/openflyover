@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Versión {version}',
   'v31.free.title': 'Una cámara libre',
   'v31.free.text': 'El estilo « Libre (fotogramas clave) » no sigue el marcador: sin fotogramas clave la cámara queda fija sobre todo el recorrido; añada fotogramas clave en la línea de tiempo para elegir usted mismo sus movimientos (plano fijo, vuelta al recorrido…).',
+  'v31.wind.title': 'Viento en las nubes',
+  'v31.wind.text': 'Con nubes « Manual » o un mar de nubes, el control « Viento » ajusta la velocidad a la que se desplazan; a 0 quedan inmóviles.',
   'v301.cards.title': 'La tarjeta de cierre sigue el final de la película',
   'v301.cards.text': 'Al cambiar la duración del sobrevuelo (o un plano o una parada), una tarjeta de cierre colocada al final de la película se queda al final en lugar de quedarse donde estaba, a veces más allá del final.',
   'v30.camera.title': 'Una cámara sin tirones sobre el relieve',

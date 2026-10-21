@@ -88,6 +88,8 @@ const messages: Messages['light'] = {
   'clouds.cover': 'Nubosidad',
   'clouds.seaTop': 'Cima del mar de nubes',
   'clouds.seaTopTip': 'Altitud de la parte superior de las nubes: las cimas más altas emergen de ellas. Se propone a tres cuartos entre el punto más bajo y el más alto del track.',
+  'clouds.wind': 'Viento',
+  'clouds.windTip': 'Velocidad del viento que empuja las nubes, acelerada en el vídeo para que se vea. 0: nubes inmóviles.',
   'clouds.seaRender': 'Render del mar de nubes',
   'clouds.hintSurface': 'Una capa de nubes iluminada, sin grano, más ligera de calcular.',
   'clouds.hintVolume': 'Nubes en volumen, más costosas.',

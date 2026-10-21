@@ -5,6 +5,8 @@ export default {
   version: 'Version {version}',
   'v31.free.title': 'Une caméra libre',
   'v31.free.text': 'Le style « Libre (images clés) » ne suit pas le marqueur : sans image clé la caméra reste fixe sur tout le tracé ; ajoutez des images clés sur la timeline pour choisir vous-même ses mouvements (plan fixe, tour du tracé…).',
+  'v31.wind.title': 'Du vent dans les nuages',
+  'v31.wind.text': 'Avec des nuages « Manuel » ou une mer de nuages, le curseur « Vent » règle la vitesse à laquelle ils défilent ; à 0 ils restent immobiles.',
   'v301.cards.title': 'La carte de clôture suit la fin du film',
   'v301.cards.text': 'Quand vous changez la durée du survol (ou un plan, ou un arrêt), la carte de clôture placée à la fin du film reste à la fin au lieu de rester à son ancienne place, parfois au-delà de la fin.',
   'v30.camera.title': 'Une caméra sans à-coup sur le relief',

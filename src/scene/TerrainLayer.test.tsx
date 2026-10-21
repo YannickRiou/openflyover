@@ -125,7 +125,7 @@ describe('engine options from settings', () => {
     labels: { climbs: true, waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 },
     weather: { enabled: true },
     weatherScene: { enabled: true, strength: 1 },
-    clouds: { mode: 'meteo' as const, coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: 'volume' as const, quality: 'medium' as const },
+    clouds: { mode: 'meteo' as const, coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: 'volume' as const, quality: 'medium' as const, windKmh: 15 },
     demClean: { enabled: false, seaToZero: false },
     water: { enabled: true, strength: 1 },
     overlay: DEFAULT_OVERLAY,

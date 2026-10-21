@@ -43,6 +43,7 @@ import {
   cloudCoversAt,
   cloudDrift,
   filmWind,
+  settingsWind,
   sceneCloudsFrom,
   seaOfClouds,
   weatherOffsetFor,
@@ -306,7 +307,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     // drift with the wind, a function of the film time only
     const timeS = playback.timeS ?? clock.timeAtProgress(playback.progress)
     const start = path && path.count > 0 ? samplePath(path, 0) : null
-    const wind = filmWind(series, under?.track.stats.startTime ?? 0, start?.lon ?? 0, start?.lat ?? 0)
+    const wind = settingsWind(settings.clouds, filmWind(series, under?.track.stats.startTime ?? 0, start?.lon ?? 0, start?.lat ?? 0))
     const drift = cloudDrift(wind, timeS)
     const [du, dv] = weatherOffsetFor(_origin.toArray(), _east.toArray(), _north.toArray(), drift, effect.localWeatherRepeat.x)
     effect.localWeatherOffset.set(du, dv)
