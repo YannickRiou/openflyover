@@ -361,7 +361,7 @@ export function durationForFilmEnd(endS: number, totalFor: (durationS: number) =
 }
 
 /**
- * « Caler la durée du film sur la musique »: sets the flyover duration at which the film ends with the music (one
+ * « Caler la durée du film sur la fin de la musique »: sets the flyover duration at which the film ends with the music (one
  * undo step, within the range of the duration); the message saying what was done.
  */
 export function fitFilmToMusic(): { kind: 'success' | 'info'; text: string } {

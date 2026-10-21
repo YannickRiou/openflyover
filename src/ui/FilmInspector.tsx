@@ -1098,21 +1098,24 @@ export function FilmInspector() {
             {number('length', t('inspector.field.length'), music.durationS, AUDIO_DURATION_RANGE.min, fileS ?? AUDIO_DURATION_RANGE.max, (durationS) => set({ durationS }))}
           </div>
           {number('in', t('inspector.music.startInFile'), music.inS, 0, fileS ?? AUDIO_DURATION_RANGE.max, (inS) => set({ inS }))}
-          <Checkbox
-            checked={film.duckMusic}
-            onChange={(on) => {
+          {/* these act on the whole film and every music, not on this block only */}
+          <InspectorGroup title={t('inspector.music.wholeFilm')}>
+            <Checkbox
+              checked={film.duckMusic}
+              onChange={(on) => {
                 const duckMusic = on
                 editFilm((f) => ({ film: { ...f, duckMusic } }))
               }}
-          >
-            {t('inspector.music.duck')}
-          </Checkbox>
-          <Button className={REMOVE} onClick={() => showToast(fitFilmToMusic())}>
-            {t('inspector.music.fit')}
-          </Button>
-          <Button className={REMOVE} onClick={() => void snapFilmToMusic().then(showToast)}>
-            {t('inspector.music.snapBeat')}
-          </Button>
+            >
+              {t('inspector.music.duck')}
+            </Checkbox>
+            <Button className={REMOVE} onClick={() => showToast(fitFilmToMusic())}>
+              {t('inspector.music.fit')}
+            </Button>
+            <Button className={REMOVE} onClick={() => void snapFilmToMusic().then(showToast)}>
+              {t('inspector.music.snapBeat')}
+            </Button>
+          </InspectorGroup>
           <p className={HINT}>
             {t('inspector.music.hint', {
               start: formatFilmTime(music.startS),
