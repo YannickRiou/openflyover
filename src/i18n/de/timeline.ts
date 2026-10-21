@@ -7,7 +7,7 @@ const messages: Messages['timeline'] = {
   film: 'Film',
   'options.title': 'Filmoptionen',
   'options.addMusic': 'Musik hinzufügen…',
-  'options.musicHint': 'MP3, M4A, OGG, WAV oder FLAC, höchstens 30 MB. Oder die Datei auf die Zeitleiste ziehen.',
+  'options.musicHint': 'MP3, M4A, AAC, OGG, Opus, WAV oder FLAC, höchstens 30 MB. Oder die Datei auf die Timeline ziehen.',
   'options.autoStops': 'Automatische Stopps',
   'options.autoStopsHint': 'Ein Stopp bei jedem überquerten Pass und nahen Gipfel (Landmarken, Reiter „Karte“). Einschalten ersetzt die von Hand gesetzten Stopps; das Bearbeiten eines Stopps fixiert sie.',
   'options.autoStopsReplaced': { one: '{count} von Hand gesetzter Stopp durch die automatischen Stopps ersetzt (Strg+Z, um ihn zurückzuholen).', other: '{count} von Hand gesetzte Stopps durch die automatischen Stopps ersetzt (Strg+Z, um sie zurückzuholen).' },

@@ -9,7 +9,7 @@ import { Checkbox, Select } from './primitives'
 const kmStepLabel = (step: number) =>
   step === 0 ? t('track.labels.kmStepNone') : step === 1 ? t('track.labels.kmStepOne') : t('track.labels.kmStepMany', { step })
 
-/** « Étiquettes » section of the Trace tab: which 3D labels are shown in the view, the kilometre markers, size and range. */
+/** « Étiquettes 3D » section of the Habillage tab: which 3D labels are shown in the view, the kilometre markers, size and range. */
 export function LabelSettings() {
   const tr = useT()
   const labels = useAppStore((s) => s.settings.labels)

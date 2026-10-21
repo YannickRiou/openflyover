@@ -5,7 +5,7 @@ export default {
   film: 'Film',
   'options.title': 'Options du film',
   'options.addMusic': 'Ajouter une musique…',
-  'options.musicHint': 'MP3, M4A, OGG, WAV ou FLAC, 30 Mo au plus. Ou glissez le fichier sur la timeline.',
+  'options.musicHint': 'MP3, M4A, AAC, OGG, Opus, WAV ou FLAC, 30 Mo au plus. Ou glissez le fichier sur la timeline.',
   'options.autoStops': 'Arrêts automatiques',
   'options.autoStopsHint': 'Un arrêt à chaque col franchi et sommet proche (Repères, onglet Carte). Les activer remplace les arrêts posés à la main ; retoucher un arrêt les fige.',
   'options.autoStopsReplaced': { one: '{count} arrêt fait à la main remplacé par les arrêts automatiques (Ctrl+Z pour le retrouver).', other: '{count} arrêts faits à la main remplacés par les arrêts automatiques (Ctrl+Z pour les retrouver).' },

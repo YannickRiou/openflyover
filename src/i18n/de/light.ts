@@ -55,7 +55,7 @@ const messages: Messages['light'] = {
   'sun.fixed': 'Feste Uhrzeit',
   'sun.needsTime': '„Uhrzeit des Tracks“ erfordert einen Track mit Zeitstempeln.',
   'sun.followHint': 'Die Sonne folgt der am Marker aufgezeichneten Uhrzeit.',
-  'sun.fixedHint': 'Die Sonne bleibt den ganzen Film über zur selben Uhrzeit.',
+  'sun.fixedHint': 'Die Sonne bleibt während des ganzen Flugs auf derselben Uhrzeit; eine Eröffnungs- oder Abschlusseinstellung kann ihre eigene Sonne haben (ihr Bereich), und die Nächte eines mehrtägigen Tracks lassen sie untergehen.',
   'sun.followHintStages': 'Jede Etappe wird zu ihrer aufgezeichneten Uhrzeit beleuchtet; zwischen zwei Etappen geht das Licht während des Übergangs von der einen in die andere über.',
   'sun.fixedHintStages': 'Alle Etappen werden zur selben Uhrzeit beleuchtet.',
   'sun.keyedFollow': 'Keyframes der Zeile „Sonne“ der Zeitleiste steuern die Uhrzeit der Sonne entlang der Strecke: Sie ersetzen die aufgezeichnete Uhrzeit.',

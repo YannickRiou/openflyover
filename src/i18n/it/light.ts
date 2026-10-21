@@ -55,7 +55,7 @@ const messages: Messages['light'] = {
   'sun.fixed': 'Ora fissa',
   'sun.needsTime': '«Ora della traccia» richiede una traccia con data e ora.',
   'sun.followHint': 'Il sole segue l’ora registrata sul marcatore.',
-  'sun.fixedHint': 'Il sole resta alla stessa ora per tutto il film.',
+  'sun.fixedHint': 'Il sole resta alla stessa ora per tutto il volo; un’inquadratura di apertura o di chiusura può avere il suo sole (il suo pannello), e le notti di una traccia di più giorni lo fanno tramontare.',
   'sun.followHintStages': 'Ogni tappa è illuminata all’ora registrata; tra due tappe la luce passa dall’una all’altra durante la transizione.',
   'sun.fixedHintStages': 'Tutte le tappe sono illuminate alla stessa ora.',
   'sun.keyedFollow': 'I keyframe della corsia «Sole» della timeline guidano l’ora del sole lungo il percorso: sostituiscono l’ora registrata.',

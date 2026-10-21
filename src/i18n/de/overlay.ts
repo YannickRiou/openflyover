@@ -144,7 +144,7 @@ const messages: Messages['overlay'] = {
   'panel.showHint': 'Titel, Zähler und Profil im Film eingeblendet, wie exportiert.',
   'panel.style': 'Stil',
   'panel.labels3d': '3D-Beschriftungen',
-  'panel.labels3dHint': 'Die Beschriftungen der 3D-Ansicht (Start, Pässe, Landmarken…) sind immer sichtbar. Mit ◇ setzen Sie Schlüssel, um sie auszublenden und überblendet zurückzuholen: 100 % zeigt sie, 0 % blendet sie aus.',
+  'panel.labels3dHint': 'Die oben angehakten Beschriftungen bleiben den ganzen Film über sichtbar, innerhalb der gewählten Reichweite. Mit ◇ setzen Sie Schlüssel, um sie auszublenden und überblendet zurückzuholen: 100 % zeigt sie, 0 % blendet sie aus.',
   'panel.titles': 'Titel',
   'panel.counters': 'Zähler',
   'panel.showCounters': 'Zähler anzeigen',
@@ -175,8 +175,8 @@ const messages: Messages['overlay'] = {
   'panel.burnCredits': 'Quellenangaben einblenden',
   'panel.creditsTip': 'Die Lizenzen von Gelände, Luftbildern, Wetter und OpenStreetMap verlangen die Nennung der Quellen im veröffentlichten Film.',
   'panel.creditsHint': 'Klein, in einer Ecke jedes exportierten Bildes, auch ohne den Rest des Overlays.',
-  'panel.creditsOff': 'Dann die Quellen anderswo nennen (Videobeschreibung, Abspann).',
-  'panel.styleHint': 'Ein Stilwechsel setzt die Overlay-Elemente zurück (Positionen und Größen).',
+  'panel.creditsOff': 'Dann die Quellen anderswo nennen (Videobeschreibung, Abspann). Der Open-Meteo-Hinweis bleibt eingeblendet, solange das Wetter angezeigt wird, wie es seine Lizenz verlangt.',
+  'panel.styleHint': 'Ein Stilwechsel setzt Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils (Positionen und Größen); Logo, freier Text und Rangliste behalten ihre.',
 }
 
 export default messages

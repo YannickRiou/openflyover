@@ -723,6 +723,8 @@ export function FilmInspector() {
           <p className={HINT}>
             {t('inspector.hold.info', { at: formatDistance(stop.atM), length: formatDistance(lengthM), start: formatFilmTime(stop.startS), end: formatFilmTime(stop.endS) })}
             {film.autoStops && t('inspector.hold.auto')}
+            {/* « Garder la durée du survol » caps the stops at half of the flyover: say how long this one plays */}
+            {stop.addedS < stop.durationS - 0.05 && t('inspector.hold.shortened', { s: seconds(stop.addedS) })}
           </p>
         </>
       )

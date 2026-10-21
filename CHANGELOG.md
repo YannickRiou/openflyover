@@ -5,6 +5,15 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Help texts that match what the app does**:
+  - The camera key hint said to press ◆ to retake the view, but that removes the key; it now says how to redo it.
+  - « Durée du survol » said the stops come on top; by default they are taken from it, at most half.
+  - « Étiquettes 3D » said the labels « always show », next to the boxes that hide them.
+  - The title and closing cards said only one edge sets their length; both edges move.
+  - The credits roll stops at the end of its block, not of the film.
+  - With the credits off, the Open-Meteo credit stays.
+  - A stop shortened by « Garder la durée du survol » now says how long it plays.
+  - Also corrected: the marker hints in « En parallèle », the accepted music formats (AAC and Opus too), the « Heure fixe » sun, the camera « Visée » and « Inclinaison » tips in « Vue du dessus » and « Orbite », what changing the overlay style moves, and what a preset of the overlay carries (its title, credits and logo).
 - **Stage cards on the stage they announce**: « À la suite », the card of a stage was shown only inside the transition before it (the fade or the night), and with a « Nuit » transition it was gone before the stage even started. It now appears in the transition and stays on the first seconds of the stage's flight; its duration (the right edge of its block) counts from there.
 - **Stage texts that say what happens**: the « Jonction » blocks and panels are now called « Transition » (« Transition 2 », « Appliquer à toutes les transitions »), the word the rest of the interface uses; the list field is « Type de transition ». The hint under « La première / À la suite / En parallèle » now explains the mode instead of repeating its name, and the ghost-race leaderboard is « Classement (« En parallèle ») », the name of the mode. Wrong hints corrected: the automatic stage card lists « the information chosen above » (not fixed figures); a « Nuit » transition no longer says to stretch its block (it lasts dusk + night + dawn); a deleted stage card says how to bring it back; « Jours et nuits » counts the nights of the « Nuit » transitions too, instead of saying there is no night. In English, Spanish and Italian the hint of « Jours et nuits » used another name for « À la suite ».
 - **Transitions that do what they say**: « À la suite », a transition left to the default used to turn into a « Nuit » by itself when « Montrer les nuits » was on and the stages were on two days, whatever the panel showed; and a « Nuit » between two stages of the same day was silently a fade to black whose length could not be seen. Now each transition plays as chosen. The default is « Nuit » (the night between two days, a fade to black on the same day), its block says « Nuit · fondu au noir 1,5 s » when there is no night, and its panel shows that fade's length. « Montrer les nuits » only concerns the nights inside a stage, and the dusk, night and dawn seconds are always shown in « À la suite ». Projects saved before keep the same film: their default is written out when they open.
