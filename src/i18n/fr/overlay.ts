@@ -142,7 +142,7 @@ export default {
   'panel.showHint': "Titres, compteurs et profil incrustés dans le film, tels qu'exportés.",
   'panel.style': 'Style',
   'panel.labels3d': 'Étiquettes 3D',
-  'panel.labels3dHint': 'Les étiquettes de la vue 3D (départ, cols, repères…) sont toujours visibles. Avec ◇, posez des clés pour les masquer puis les faire revenir en fondu : 100 % les affiche, 0 % les masque.',
+  'panel.labels3dHint': 'Les étiquettes cochées ci-dessus restent visibles tout le film, dans la portée choisie. Avec ◇, posez des clés pour les masquer puis les faire revenir en fondu : 100 % les affiche, 0 % les masque.',
   'panel.titles': 'Titres',
   'panel.counters': 'Compteurs',
   'panel.showCounters': 'Afficher les compteurs',
@@ -173,6 +173,6 @@ export default {
   'panel.burnCredits': 'Incruster les crédits',
   'panel.creditsTip': "Les licences du relief, de l'imagerie, de la météo et d'OpenStreetMap demandent de citer les sources dans le film publié.",
   'panel.creditsHint': "En petit, dans un coin de chaque image exportée, même sans le reste de l'habillage.",
-  'panel.creditsOff': 'Citez alors les sources ailleurs (description de la vidéo, générique).',
-  'panel.styleHint': 'Changer de style remet en place les éléments de l’habillage (positions et tailles).',
+  'panel.creditsOff': 'Citez alors les sources ailleurs (description de la vidéo, générique). La mention Open-Meteo reste incrustée tant que la météo est affichée, comme sa licence le demande.',
+  'panel.styleHint': 'Changer de style remet à la place du style le titre, la carte de clôture, les compteurs, le profil, la mini-carte et la météo (positions et tailles) ; le logo, le texte libre et le classement gardent les leurs.',
 }

@@ -7,7 +7,7 @@ const messages: Messages['timeline'] = {
   film: 'Película',
   'options.title': 'Opciones de la película',
   'options.addMusic': 'Añadir música…',
-  'options.musicHint': 'MP3, M4A, OGG, WAV o FLAC, 30 MB como máximo. O arrastra el archivo a la línea de tiempo.',
+  'options.musicHint': 'MP3, M4A, AAC, OGG, Opus, WAV o FLAC, 30 MB como máximo. O arrastra el archivo a la línea de tiempo.',
   'options.autoStops': 'Paradas automáticas',
   'options.autoStopsHint': 'Una parada en cada puerto cruzado y cima cercana (Referencias, pestaña Mapa). Activarlas sustituye las paradas hechas a mano; retocar una parada las congela.',
   'options.autoStopsReplaced': { one: '{count} parada hecha a mano sustituida por las paradas automáticas (Ctrl+Z para recuperarla).', other: '{count} paradas hechas a mano sustituidas por las paradas automáticas (Ctrl+Z para recuperarlas).' },

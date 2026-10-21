@@ -144,7 +144,7 @@ const messages: Messages['overlay'] = {
   'panel.showHint': 'Titles, counters and profile burned into the film, as exported.',
   'panel.style': 'Style',
   'panel.labels3d': '3D labels',
-  'panel.labels3dHint': 'The labels of the 3D view (start, passes, landmarks…) always show. With ◇, set keys to hide them and bring them back with a fade: 100 % shows them, 0 % hides them.',
+  'panel.labels3dHint': 'The labels ticked above show the whole film, within the range chosen. With ◇, set keys to hide them and bring them back with a fade: 100 % shows them, 0 % hides them.',
   'panel.titles': 'Titles',
   'panel.counters': 'Counters',
   'panel.showCounters': 'Show the counters',
@@ -175,8 +175,8 @@ const messages: Messages['overlay'] = {
   'panel.burnCredits': 'Burn in the credits',
   'panel.creditsTip': 'The licences of the terrain, the imagery, the weather and OpenStreetMap require the sources to be credited in the published film.',
   'panel.creditsHint': 'Small, in a corner of every exported frame, even without the rest of the overlay.',
-  'panel.creditsOff': 'Then credit the sources elsewhere (video description, credits).',
-  'panel.styleHint': 'Changing the style puts the overlay elements back in place (positions and sizes).',
+  'panel.creditsOff': 'Then credit the sources elsewhere (video description, credits). The Open-Meteo credit stays burnt in while the weather shows, as its licence requires.',
+  'panel.styleHint': 'Changing the style puts the title, the closing card, the counters, the profile, the mini-map and the weather where the style has them (positions and sizes); the logo, the free text and the leaderboard keep theirs.',
 }
 
 export default messages

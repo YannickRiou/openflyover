@@ -55,7 +55,7 @@ const messages: Messages['light'] = {
   'sun.fixed': 'Hora fija',
   'sun.needsTime': '«Hora del track» requiere un track con marcas de tiempo.',
   'sun.followHint': 'El sol sigue la hora registrada en el marcador.',
-  'sun.fixedHint': 'El sol permanece a la misma hora durante toda la película.',
+  'sun.fixedHint': 'El sol se queda a la misma hora durante todo el vuelo; un plano de apertura o de cierre puede tener su propio sol (su panel), y las noches de un track de varios días lo hacen ponerse.',
   'sun.followHintStages': 'Cada etapa se ilumina a su hora registrada; entre dos etapas, la luz pasa de una a otra durante la transición.',
   'sun.fixedHintStages': 'Todas las etapas se iluminan a la misma hora.',
   'sun.keyedFollow': 'Unas claves de la pista «Sol» de la línea de tiempo controlan la hora del sol a lo largo del recorrido: sustituyen a la hora registrada.',

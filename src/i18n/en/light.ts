@@ -55,7 +55,7 @@ const messages: Messages['light'] = {
   'sun.fixed': 'Fixed time',
   'sun.needsTime': '“Track time” needs a track with timestamps.',
   'sun.followHint': 'The sun follows the recorded time at the marker.',
-  'sun.fixedHint': 'The sun stays at the same time throughout the film.',
+  'sun.fixedHint': 'The sun stays at the same hour for the whole flight; an opening or closing shot may have its own sun (its panel), and the nights of a multi-day track make it set.',
   'sun.followHintStages': 'Each stage is lit at its recorded time; between two stages, the light moves from one to the other during the transition.',
   'sun.fixedHintStages': 'All stages are lit at the same time.',
   'sun.keyedFollow': 'Keyframes on the “Sun” lane of the timeline drive the sun time along the route: they replace the recorded time.',

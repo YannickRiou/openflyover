@@ -53,7 +53,7 @@ export default {
   'sun.fixed': 'Heure fixe',
   'sun.needsTime': '« Heure de la trace » demande une trace horodatée.',
   'sun.followHint': 'Le soleil suit l’heure enregistrée au marqueur.',
-  'sun.fixedHint': 'Le soleil reste à la même heure tout le film.',
+  'sun.fixedHint': 'Le soleil reste à la même heure pendant tout le vol ; un plan d’ouverture ou de clôture peut avoir son propre soleil (son panneau), et les nuits d’une trace de plusieurs jours le font se coucher.',
   'sun.followHintStages': 'Chaque étape est éclairée à son heure enregistrée ; entre deux étapes, la lumière passe de l’une à l’autre pendant la transition.',
   'sun.fixedHintStages': 'Toutes les étapes sont éclairées à la même heure.',
   'sun.keyedFollow': 'Des clés de la ligne « Soleil » de la timeline pilotent l’heure du soleil le long du parcours : elles remplacent l’heure enregistrée.',

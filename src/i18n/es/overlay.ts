@@ -144,7 +144,7 @@ const messages: Messages['overlay'] = {
   'panel.showHint': 'Títulos, contadores y perfil incrustados en la película, tal como se exporta.',
   'panel.style': 'Estilo',
   'panel.labels3d': 'Etiquetas 3D',
-  'panel.labels3dHint': 'Las etiquetas de la vista 3D (salida, puertos, referencias…) siempre se ven. Con ◇, ponga claves para ocultarlas y hacerlas volver con un fundido: 100 % las muestra, 0 % las oculta.',
+  'panel.labels3dHint': 'Las etiquetas marcadas arriba se ven durante toda la película, dentro del alcance elegido. Con ◇, ponga claves para ocultarlas y hacerlas volver con un fundido: 100 % las muestra, 0 % las oculta.',
   'panel.titles': 'Títulos',
   'panel.counters': 'Contadores',
   'panel.showCounters': 'Mostrar los contadores',
@@ -175,8 +175,8 @@ const messages: Messages['overlay'] = {
   'panel.burnCredits': 'Incrustar los créditos',
   'panel.creditsTip': 'Las licencias del relieve, de las imágenes, de la meteorología y de OpenStreetMap exigen citar las fuentes en la película publicada.',
   'panel.creditsHint': 'En pequeño, en una esquina de cada fotograma exportado, incluso sin el resto de los gráficos.',
-  'panel.creditsOff': 'Cita entonces las fuentes en otro lugar (descripción del vídeo, créditos).',
-  'panel.styleHint': 'Cambiar de estilo recoloca los elementos de los gráficos (posiciones y tamaños).',
+  'panel.creditsOff': 'Cita entonces las fuentes en otro lugar (descripción del vídeo, créditos). La mención de Open-Meteo sigue incrustada mientras se muestra el tiempo, como exige su licencia.',
+  'panel.styleHint': 'Cambiar de estilo pone el título, la tarjeta de cierre, los contadores, el perfil, el minimapa y el tiempo donde los tiene el estilo (posiciones y tamaños); el logo, el texto libre y la clasificación conservan los suyos.',
 }
 
 export default messages
