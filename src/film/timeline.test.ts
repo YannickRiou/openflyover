@@ -247,7 +247,7 @@ describe('snapping', () => {
       cutsM: [4000],
     })
     expect(withCuts.cuts).toHaveLength(1)
-    expect(snapTargets(withCuts, film, [], 0)).toContainEqual({ timeS: withCuts.cuts[0].timeS, label: 'Jonction 1', kind: 'junction' })
+    expect(snapTargets(withCuts, film, [], 0)).toContainEqual({ timeS: withCuts.cuts[0].timeS, label: 'Transition 1', kind: 'junction' })
     expect(clock.cuts).toEqual([])
   })
 })

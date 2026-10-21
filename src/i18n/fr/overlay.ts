@@ -147,7 +147,7 @@ export default {
   'panel.showCounters': 'Afficher les compteurs',
   'panel.values': 'Valeurs',
   'panel.missing': 'Absent de cette trace',
-  'panel.leaderboard': 'Classement (course fantôme)',
+  'panel.leaderboard': 'Classement (« En parallèle »)',
   'panel.leaderboardRace': 'Rang, nom et écart au premier de chaque trace, au marqueur.',
   'panel.leaderboardOff': 'Visible quand les traces sont rejouées « En parallèle » (onglet Trace, « Plusieurs traces »).',
   'panel.profileMinimap': 'Profil et mini-carte',

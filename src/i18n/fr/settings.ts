@@ -58,7 +58,7 @@ export default {
   'preferences.timeline.snapPlayhead': 'La tête de lecture',
   'preferences.timeline.snapBlocks': 'Les blocs et les clés',
   'preferences.timeline.snapRuler': 'Les graduations',
-  'preferences.timeline.snapMarks': 'Jonctions et temps forts',
+  'preferences.timeline.snapMarks': 'Transitions et temps forts',
   'updates.title': 'Mises à jour',
   'updates.version': 'Version installée : {version}',
   'updates.hint': "OpenFlyover interroge GitHub (github.com) uniquement quand vous appuyez sur ce bouton : rien n'est vérifié ni installé automatiquement.",

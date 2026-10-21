@@ -527,8 +527,8 @@ describe('Timeline — stages « À la suite »', () => {
     expect(Array.from(host.querySelectorAll('[data-testid="timeline-head"]')).map((h) => h.textContent)[1]).toBe('Étapes')
     expect(blocks('Étapes', '[data-item^="stage-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual(['Étape 1 : Jour 1', 'Étape 2 : Jour 2', 'Étape 3 : Jour 3'])
     expect(blocks('Étapes', '[data-item^="junction-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
-      'Jonction 1 : Fondu au noir · 1,5 s (par défaut)',
-      'Jonction 2 : Fondu au noir · 1,5 s (par défaut)',
+      'Transition 1 : Fondu au noir · 1,5 s (par défaut)',
+      'Transition 2 : Fondu au noir · 1,5 s (par défaut)',
     ])
     // the card of each stage is a block of « Textes »: the first with the flight, the others inside their junction
     expect(blocks('Textes', '[data-item^="card-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
@@ -557,7 +557,7 @@ describe('Timeline — stages « À la suite »', () => {
     const junction = () => blocks('Étapes', '[data-item^="junction-"]')[0]
     await act(async () => junction().focus())
     expect(useAppStore.getState().filmSelection).toBe(`junction-${tracks[0].id}`)
-    expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Jonction 1')
+    expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Transition 1')
     expect(host.querySelector('[data-testid="film-inspector"]')?.textContent).toContain('Entre « Jour 1 » et « Jour 2 »')
     // a nudge by one second: the junction is now the film's own, held 1 s longer
     await press(junction(), 'ArrowRight')
@@ -601,7 +601,7 @@ describe('Timeline — stages « À la suite »', () => {
     await act(async () => [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((o) => o.textContent === 'Coupe')!.click())
     expect(blocks('Étapes', '[data-item^="junction-"][aria-label*=": Coupe"]')).toHaveLength(1)
     expect(host.querySelector('[data-testid="film-inspector"] input[type="range"]')).toBeNull()
-    const all = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Appliquer à toutes les jonctions')!
+    const all = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Appliquer à toutes les transitions')!
     await act(async () => all.click())
     expect(blocks('Étapes', '[data-item^="junction-"][aria-label*=": Coupe"]')).toHaveLength(2)
     expect(useAppStore.getState().settings.film.junctionDefault).toMatchObject({ kind: 'coupe', holdS: 0 })

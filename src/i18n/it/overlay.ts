@@ -149,7 +149,7 @@ const messages: Messages['overlay'] = {
   'panel.showCounters': 'Mostra i contatori',
   'panel.values': 'Valori',
   'panel.missing': 'Assente da questa traccia',
-  'panel.leaderboard': 'Classifica (gara fantasma)',
+  'panel.leaderboard': 'Classifica («In parallelo»)',
   'panel.leaderboardRace': 'Posizione, nome e distacco dal primo di ogni traccia, sul marcatore.',
   'panel.leaderboardOff': 'Visibile quando le tracce sono riprodotte «In parallelo» (scheda Traccia, «Più tracce»).',
   'panel.profileMinimap': 'Profilo e minimappa',

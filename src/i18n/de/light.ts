@@ -56,7 +56,7 @@ const messages: Messages['light'] = {
   'sun.needsTime': '„Uhrzeit des Tracks“ erfordert einen Track mit Zeitstempeln.',
   'sun.followHint': 'Die Sonne folgt der am Marker aufgezeichneten Uhrzeit.',
   'sun.fixedHint': 'Die Sonne bleibt den ganzen Film über zur selben Uhrzeit.',
-  'sun.followHintStages': 'Jede Etappe wird zu ihrer aufgezeichneten Uhrzeit beleuchtet; zwischen zwei Etappen geht das Licht während der Verbindung von der einen in die andere über.',
+  'sun.followHintStages': 'Jede Etappe wird zu ihrer aufgezeichneten Uhrzeit beleuchtet; zwischen zwei Etappen geht das Licht während des Übergangs von der einen in die andere über.',
   'sun.fixedHintStages': 'Alle Etappen werden zur selben Uhrzeit beleuchtet.',
   'sun.keyedFollow': 'Keyframes der Zeile „Sonne“ der Zeitleiste steuern die Uhrzeit der Sonne entlang der Strecke: Sie ersetzen die aufgezeichnete Uhrzeit.',
   'sun.keyedFixed': 'Keyframes der Zeile „Sonne“ der Zeitleiste steuern die Uhrzeit der Sonne entlang der Strecke: Der Regler ändert dann den Keyframe an der Marker-Position (bei Bedarf wird einer angelegt).',
