@@ -150,7 +150,7 @@ export default {
   'markerKey.color': 'Couleur',
   'markerKey.edgeColor': 'Couleur du bord',
   'markerKey.size': 'Taille',
-  'markerKey.resetLook': 'Reprendre couleurs et taille du panneau',
+  'markerKey.resetLook': 'Reprendre l’aspect du panneau Trace',
   'markerKey.hint': 'À {distance}, {time} dans le film : le marqueur prend cet aspect, en fondu sur une courte portion autour de ce point (moins d’une seconde de film). Avant la première clé, il a l’aspect du panneau Trace. Restent ceux du panneau : étiquette ({label}), tige ({stick}).',
   'text.text': 'Texte',
   'text.subtitle': 'Sous-titre',
