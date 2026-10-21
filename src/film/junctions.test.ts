@@ -43,9 +43,9 @@ import type { DragContext } from './timeline'
 const film = DEFAULT_FILM
 
 describe('junction defaults', () => {
-  it('a film that never chose: a dip to black held for 1.5 s and a card for every stage', () => {
-    expect(junctionDefaultOf(film)).toEqual({ kind: 'fondu-noir', holdS: 1.5, card: true })
-    expect(junctionOf(film, 'a')).toEqual({ id: 'junction-a', afterTrackId: 'a', kind: 'fondu-noir', holdS: 1.5 })
+  it('a film that never chose: the night between two days (a dip to black held for 1.5 s without one) and a card for every stage', () => {
+    expect(junctionDefaultOf(film)).toEqual({ kind: 'nuit', holdS: 1.5, card: true })
+    expect(junctionOf(film, 'a')).toEqual({ id: 'junction-a', afterTrackId: 'a', kind: 'nuit', holdS: 1.5 })
     expect(junctionCardOf(film, 'a')).toEqual({ enabled: true, durationS: 5, anchor: 'center', size: 1 })
     expect(junctionCardOf(film, null)).toEqual(junctionCardOf(film, 'a'))
     expect(hasOwnTransition(film, 'a')).toBe(false)
@@ -84,7 +84,7 @@ describe('junction defaults', () => {
 describe('junction edits', () => {
   it('withJunction stores the junction, keeps the hold in range, 0 for a cut, a fade over a cut starts from the default hold', () => {
     const a = withJunction(film, 'a', { holdS: 4.456 })
-    expect(a.junctions).toEqual([{ id: 'junction-a', afterTrackId: 'a', kind: 'fondu-noir', holdS: 4.46 }])
+    expect(a.junctions).toEqual([{ id: 'junction-a', afterTrackId: 'a', kind: 'nuit', holdS: 4.46 }])
     expect(hasOwnTransition(a, 'a')).toBe(true)
     expect(junctionOf(withJunction(a, 'a', { holdS: 99 }), 'a').holdS).toBe(JUNCTION_HOLD_RANGE.max)
     expect(junctionOf(withJunction(a, 'a', { holdS: 0.01 }), 'a').holdS).toBe(JUNCTION_HOLD_RANGE.min)
@@ -102,7 +102,7 @@ describe('junction edits', () => {
     const edited = withJunctionCard(film, 'a', { text: '{name}', durationS: 99, color: '#aa0000' })
     expect(junctionCardOf(edited, 'a')).toEqual({ enabled: true, durationS: JUNCTION_CARD_RANGE.max, anchor: 'center', size: 1, text: '{name}', color: '#aa0000' })
     expect(hasOwnTransition(edited, 'a')).toBe(false)
-    expect(junctionOf(edited, 'a')).toMatchObject({ kind: 'fondu-noir', holdS: 1.5 })
+    expect(junctionOf(edited, 'a')).toMatchObject({ kind: 'nuit', holdS: 1.5 })
     // text back to automatic: the field goes away
     expect(junctionCardOf(withJunctionCard(edited, 'a', { text: undefined, color: undefined }), 'a')).not.toHaveProperty('text')
     const first = withJunctionCard(film, null, { enabled: false })
@@ -201,15 +201,19 @@ describe('junctions on the clock', () => {
     expect(plan.nights).toEqual([inStage])
   })
 
-  it('a junction that chose a transition decides: another kind replaces the night, « Nuit » keeps it even with the nights off', () => {
+  it('each junction passes as the film says: another kind replaces the night, « Nuit » keeps it even with the nights off', () => {
     const atCut = night(3000)
     const replaced = junctionPlan({ ...withJunction(film, 'a', { kind: 'fondu-blanc', holdS: 2 }), nights: { ...film.nights, enabled: true } }, ids, cuts, [atCut])
     expect(replaced.junctions[0]).toMatchObject({ kind: 'fondu-blanc', holdS: 2 })
     expect(replaced.nights).toEqual([])
     const chosen = junctionPlan({ ...withJunction(film, 'a', { kind: 'nuit' }), nights: { ...film.nights, enabled: false } }, ids, cuts, [atCut])
     expect(chosen.junctions[0]).toMatchObject({ kind: 'nuit', night: atCut })
-    // the nights off and the default junction: a fade, no night
-    expect(junctionPlan({ ...film, nights: { ...film.nights, enabled: false } }, ids, cuts, [atCut]).junctions[0].kind).toBe('fondu-noir')
+    // the default « Nuit » passes it with the nights off too; a default fade stays a fade with the nights on
+    expect(junctionPlan({ ...film, nights: { ...film.nights, enabled: false } }, ids, cuts, [atCut]).junctions[0].kind).toBe('nuit')
+    const fadeByDefault = { ...film, junctionDefault: { kind: 'fondu-noir' as const, holdS: 1.5, card: true }, nights: { ...film.nights, enabled: true } }
+    const fades = junctionPlan(fadeByDefault, ids, cuts, [atCut])
+    expect(fades.junctions[0]).toMatchObject({ kind: 'fondu-noir', holdS: 1.5 })
+    expect(fades.nights).toEqual([])
     // « Nuit » without a night to pass: a fade to black as long as the junction holds
     expect(junctionPlan(withJunction(film, 'a', { kind: 'nuit', holdS: 2 }), ids, cuts, []).junctions[0]).toMatchObject({ kind: 'fondu-noir', holdS: 2 })
   })
@@ -319,7 +323,7 @@ describe('dragging a junction or a card', () => {
   })
 
   it('the right edge of a fade follows the pointer: the hold grows by what the edge moved, within its range', () => {
-    const held = withJunction(film, 'a', { holdS: 3 })
+    const held = withJunction(film, 'a', { kind: 'fondu-noir', holdS: 3 })
     const before = clockOfFilm(held).junctions[0]
     const longer = dragFilm(held, 'junction-a', 'end', 2, ctx(held))
     expect(junctionOf(longer, 'a').holdS).toBeCloseTo(5, 1)
@@ -330,7 +334,7 @@ describe('dragging a junction or a card', () => {
   })
 
   it('snaps its edge to a target (the magnet), only the right edge of a fade moves', () => {
-    const held = withJunction(film, 'a', { holdS: 3 })
+    const held = withJunction(film, 'a', { kind: 'fondu-noir', holdS: 3 })
     const end = clockOfFilm(held).junctions[0].endS
     const snapped = dragFilm(held, 'junction-a', 'end', 1.9, ctx(held, { targets: [{ timeS: end + 2, label: 'x', kind: 'edge' }], snapS: 0.3 }))
     expect(clockOfFilm(snapped).junctions[0].endS).toBeCloseTo(end + 2, 1)

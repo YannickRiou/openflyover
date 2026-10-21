@@ -656,8 +656,8 @@ export function FilmInspector() {
       const k = clock.junctions.indexOf(junction)
       const stored = junctionOf(film, junction.afterTrackId)
       const own = hasOwnTransition(film, junction.afterTrackId)
-      // a junction left to the default shows what passes there (a night when the tracks rest overnight)
-      const kind = own ? stored.kind : junction.kind
+      // what the film says (its own or the default); the clock tells whether a « Nuit » has a night to pass
+      const kind = stored.kind
       const afterIds = (stageIds ?? []).slice(0, -1)
       const card = junctionCardOf(film, junction.afterTrackId)
       title = t('inspector.junction.title', { n: k + 1 })
@@ -678,9 +678,10 @@ export function FilmInspector() {
           <JunctionTransitionFields
             kind={kind}
             holdS={stored.holdS || DEFAULT_JUNCTION.holdS}
+            night={kind === 'nuit' ? junction.kind === 'nuit' : undefined}
             onChange={(patch) => change((f) => withJunction(f, junction.afterTrackId, { kind, holdS: stored.holdS, ...patch }), false)}
           />
-          {kind === 'nuit' && (
+          {junction.kind === 'nuit' && (
             <>
               {NIGHT_PARTS.map(({ key, label }) =>
                 range(`night-${key}`, label, film.nights[key], NIGHT_PART_RANGE, formatSecondsShort, (v) => change((f) => ({ ...f, nights: { ...f.nights, [key]: v } }), false)),

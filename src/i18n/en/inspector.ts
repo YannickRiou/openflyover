@@ -225,6 +225,8 @@ const messages: Messages['inspector'] = {
   'junction.hint.nuit': 'The night spent between the two stages: the sun sets, the night passes, the sun rises. With no night between them, a fade to black.',
   'junction.transition': 'Type of transition',
   'junction.duration': 'Duration',
+  'junction.durationNoNight': 'Length of the fade when there is no night',
+  'junction.noNight': 'No night between these two stages (same day): a fade to black lasting the time below.',
   'junction.show': 'Show the card',
   'junction.content': 'Content',
   'junction.auto': 'Automatic',

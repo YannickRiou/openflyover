@@ -19,7 +19,7 @@ const messages: Messages['light'] = {
   'nights.nightTip': 'The night goes by, lit by the moon.',
   'nights.dawn': 'Dawn',
   'nights.dawnTip': 'The sun rises, until the morning departure.',
-  'nights.sequenceHint': 'With “In sequence”, these lengths apply to the “Night” transitions of the timeline (“Stages” lane); their inspector shows them too.',
+  'nights.sequenceHint': 'With “In sequence”, the nights between two stages are the “Night” transitions (Track › Several tracks, or their block on the timeline); “Show the nights” only applies to the nights inside a stage. The lengths below apply to every night.',
   'nights.none': 'No rest night on this track.',
   'nights.hint': { one: '{count} night: the film pauses for {pause} each time.', other: '{count} nights: the film pauses for {pause} each time.' },
   'nights.instant': 'The night passes in an instant between two days.',

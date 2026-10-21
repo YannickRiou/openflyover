@@ -225,6 +225,8 @@ const messages: Messages['inspector'] = {
   'junction.hint.nuit': 'Die Nacht zwischen den beiden Etappen: Die Sonne geht unter, die Nacht vergeht, die Sonne geht auf. Ohne Nacht dazwischen eine Schwarzblende.',
   'junction.transition': 'Art des Übergangs',
   'junction.duration': 'Dauer',
+  'junction.durationNoNight': 'Dauer der Abblende, wenn es keine Nacht gibt',
+  'junction.noNight': 'Keine Nacht zwischen diesen beiden Etappen (gleicher Tag): eine Abblende ins Schwarze mit der Dauer unten.',
   'junction.show': 'Karte anzeigen',
   'junction.content': 'Inhalt',
   'junction.auto': 'Automatisch',

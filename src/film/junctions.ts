@@ -17,8 +17,11 @@ import type { ClockJunction, FilmClock } from './clock'
 import { JUNCTION_CARD_DEFAULT_S, JUNCTION_CARD_RANGE, JUNCTION_HOLD_RANGE, STAGE_DURATION_RANGE } from './model'
 import type { Film, FilmJunction, JunctionCard, JunctionDefault, JunctionKind, TransitionDip } from './model'
 
-/** Default junction of a film that never chose: a dip to black held for 1.5 s, a card for every stage. */
-export const DEFAULT_JUNCTION: JunctionDefault = { kind: 'fondu-noir', holdS: 1.5, card: true }
+/**
+ * Default junction of a film that never chose: the night between two days (a dip to black held for 1.5 s where the
+ * stages are on the same day), a card for every stage.
+ */
+export const DEFAULT_JUNCTION: JunctionDefault = { kind: 'nuit', holdS: 1.5, card: true }
 
 /** Placement of a stage card that sets none: centred at the normal size, as the stage card always was. */
 export const DEFAULT_STAGE_CARD: Omit<JunctionCard, 'enabled'> = { durationS: JUNCTION_CARD_DEFAULT_S, anchor: 'center', size: 1 }
@@ -86,7 +89,8 @@ export function junctionCardOf(film: Pick<Film, 'junctions' | 'junctionDefault' 
 export function withStageSettingsMigrated<S extends { race: RaceSettings; film: Film }>(settings: S): S {
   const { stageTransition, stageCards, ...race } = settings.race
   if (stageTransition === undefined && stageCards === undefined) return settings
-  const kind = stageTransition ?? DEFAULT_JUNCTION.kind
+  // the default of those versions: a fade to black
+  const kind = stageTransition ?? 'fondu-noir'
   const junctionDefault = settings.film.junctionDefault ?? { kind, holdS: kind === 'coupe' ? 0 : DEFAULT_JUNCTION.holdS, card: stageCards !== false }
   return { ...settings, race, film: { ...settings.film, junctionDefault } }
 }
@@ -266,9 +270,9 @@ const NIGHT_AT_CUT_M = 25
  * The junctions of the clock and the nights left to the flight, from the film, the stages' track ids, their cuts
  * (metres) and the nights of the sequence's path (`candidates`: those the film would show with « Jours et nuits » on).
  *
- * A junction whose transition the film stores decides what happens at its cut: 'nuit' keeps the night there (a dip to black without
- * one), any other kind replaces it. A junction left to the default keeps the night as before when « Jours et nuits »
- * is on (kind 'nuit'), else passes as the default says. The nights not at a cut stay automatic (`nights`).
+ * Each junction passes as the film says (its own transition, else the default): 'nuit' keeps the night at its cut (a
+ * dip to black held `holdS` without one), any other kind replaces it, whether « Montrer les nuits » is on or not. The
+ * nights not at a cut stay automatic (`nights`).
  */
 export function junctionPlan(
   film: Pick<Film, 'junctions' | 'junctionDefault' | 'nights'>,
@@ -282,10 +286,9 @@ export function junctionPlan(
   cutsM.forEach((atM, k) => {
     const afterTrackId = stageIds[k]
     if (afterTrackId === undefined) return
-    const { id, kind: chosen, holdS } = junctionOf(film, afterTrackId)
+    const { id, kind, holdS } = junctionOf(film, afterTrackId)
     const night = candidates.find((n) => !handled.has(n) && Math.abs(n.atM - atM) <= NIGHT_AT_CUT_M)
     if (night) handled.add(night)
-    const kind = !hasOwnTransition(film, afterTrackId) && night && film.nights.enabled ? 'nuit' : chosen
     if (kind === 'nuit' && night) junctions.push({ id, afterTrackId, atM, kind, holdS: nightPauseS(night), night })
     // a night without a night to pass: a dip to black as long as the junction holds
     else junctions.push({ id, afterTrackId, atM, kind: kind === 'nuit' ? 'fondu-noir' : kind, holdS: kind === 'coupe' ? 0 : holdS })

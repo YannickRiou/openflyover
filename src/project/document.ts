@@ -11,7 +11,7 @@ import { isRecord } from '../core/guards'
 import type { Flight, StatsOverride, Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
 import { sanitizeMediaTable, usedMedia } from '../film/media'
 import type { MediaAsset, MediaTable } from '../film/media'
-import { withStageSettingsMigrated } from '../film/junctions'
+import { DEFAULT_JUNCTION, withStageSettingsMigrated } from '../film/junctions'
 import { isValidFilm, withFilmDefaults } from '../film/model'
 import { FLYOVER_DURATION_RANGE, isValidCamera, withCameraDefaults } from '../flyover/cameraSettings'
 import { isValidPacing, withPacingDefaults } from '../flyover/pacing'
@@ -37,7 +37,7 @@ import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
 
 export const PROJECT_FORMAT = 'openflyover-project'
-export const PROJECT_VERSION = 2
+export const PROJECT_VERSION = 3
 /** Suffix of saved project files (`<name>.opnflvr`, see `file.ts`). */
 export const PROJECT_FILE_SUFFIX = `.${PROJECT_EXTENSION}`
 export const defaultProjectName = (): string => t('project.doc.defaultName')
@@ -333,6 +333,30 @@ export const MIGRATIONS: Readonly<Record<number, ProjectMigration>> = {
   // v2: the film's automatic stops no longer need the pacing; a v1 project without a film keeps the stops of its
   // pacing (`withFilmDefaults` completes the film from the defaults)
   1: (doc) => (isRecord(doc.settings) && !('film' in doc.settings) ? { ...doc, settings: { ...doc.settings, film: { autoMode: 'rythme' } } } : doc),
+  // v3: a junction left to the default no longer turns into a night by itself; the default says it (`junctionPlan`)
+  2: withExplicitNightJunctions,
+}
+
+/**
+ * Before v3, with « Montrer les nuits » on, a junction left to the default passed the night at its cut whatever the
+ * default said. The default is written so the film stays the same: « Nuit » for a fade to black (a « Nuit » without a
+ * night is that fade), a fade to black with the nights off (the default is now « Nuit »). The default a project saved
+ * before the junctions kept in `race` is read the way `withStageSettingsMigrated` reads it.
+ */
+function withExplicitNightJunctions(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(doc.settings)) return doc
+  const settings = doc.settings
+  const film = isRecord(settings.film) ? settings.film : {}
+  const race = isRecord(settings.race) ? settings.race : {}
+  const nightsOn = isRecord(film.nights) && film.nights.enabled === true
+  const fromRace = race.stageTransition !== undefined || race.stageCards !== undefined
+  const kind = typeof race.stageTransition === 'string' ? race.stageTransition : 'fondu-noir'
+  const saved = isRecord(film.junctionDefault)
+    ? film.junctionDefault
+    : { kind, holdS: kind === 'coupe' ? 0 : DEFAULT_JUNCTION.holdS, card: fromRace ? race.stageCards !== false : DEFAULT_JUNCTION.card }
+  const junctionDefault = nightsOn && saved.kind === 'fondu-noir' ? { ...saved, kind: 'nuit' } : saved
+  if (!fromRace && !isRecord(film.junctionDefault) && junctionDefault.kind === DEFAULT_JUNCTION.kind) return doc
+  return { ...doc, settings: { ...settings, film: { ...film, junctionDefault } } }
 }
 
 /** Run the migrations from `doc.version` up to `target`; the returned document has `version: target`. */

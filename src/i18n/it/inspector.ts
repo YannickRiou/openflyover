@@ -225,6 +225,8 @@ const messages: Messages['inspector'] = {
   'junction.hint.nuit': 'La notte trascorsa tra le due tappe: il sole tramonta, la notte passa, il sole sorge. Senza notte tra le due, una dissolvenza in nero.',
   'junction.transition': 'Tipo di transizione',
   'junction.duration': 'Durata',
+  'junction.durationNoNight': 'Durata della dissolvenza quando non c’è notte',
+  'junction.noNight': 'Nessuna notte tra queste due tappe (stesso giorno): una dissolvenza al nero della durata qui sotto.',
   'junction.show': 'Mostra la scheda',
   'junction.content': 'Contenuto',
   'junction.auto': 'Automatico',

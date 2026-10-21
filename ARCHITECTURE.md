@@ -1834,7 +1834,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   value (nested objects included), otherwise it falls back to the default for that key; unknown keys are ignored. **A new setting
   needs no code here**; add an entry to `SETTING_CHECKS` only if a value of the right type can be invalid
   (enumeration, catalog id, range). Any format change increments `PROJECT_VERSION` and adds `MIGRATIONS[n]`
-  (version 2: film of v1 projects, see "Film and timeline").
+  (version 2: film of v1 projects, see "Film and timeline"; version 3: the default junction « À la suite » written
+  out, `withExplicitNightJunctions`, see "Stages").
 - Settings **history** outside the store: subscribed to `useAppStore`, each step keeps only the changed keys; changes to the
   same keys less than 400 ms apart are merged (keyboard), a pointer slider drag = one step from press to release however
   slow it is (`beginGesture`, wired to every `input[type=range]` by `installSliderGestures`), a preset = one step, a timeline gesture = one step; the regional imagery picked on import
@@ -2907,7 +2908,8 @@ exports) gets it from the terrain source of the settings.
   `clock.junctions` (below). The « Plans » lane keeps a thin band in each stage's colour.
 - **Junctions** (`src/film/junctions.ts`, `film.junctions[]`): the junction after the stage of track `afterTrackId` (derived id
   `junction-<trackId>`, so it survives a reorder), `{ kind, holdS, card? }`, every field optional: what it does not set is
-  `film.junctionDefault` `{ kind, holdS, card }` (absent = `DEFAULT_JUNCTION`: a fade to black held 1.5 s, cards on).
+  `film.junctionDefault` `{ kind, holdS, card }` (absent = `DEFAULT_JUNCTION`: `nuit`, a fade to black held 1.5 s where the
+  stages are on the same day, cards on).
   `junctionOf` / `junctionCardOf` are the only readers. Kinds (`JunctionKind`): `coupe` (hold 0), `fondu-noir`,
   `fondu-blanc` (`holdS` 0.5–10 s), `nuit` (the night between two days). A junction is a **pause of the film clock** at the
   cut (`extra`: added to the film whatever « Garder la durée », like a night; `junctionPlan` → `FilmClockInput.junctions`):
@@ -2915,9 +2917,13 @@ exports) gets it from the terrain source of the settings.
   has all four times equal), `holdStartS` being the film time the marker reaches the cut, so `cuts[k].timeS`, the time the
   stage changes. At the same place a junction comes before a stop, which comes before a night. `junctionInputsFor` computes
   the plan for a film being edited (the timeline's draft). **Nights**: a night found at a cut (`NIGHT_AT_CUT_M`) is the
-  junction's: left to the default with « Jours et nuits » on, the junction is a `nuit` (the night pause as before the
-  junctions, no extra hold); a junction that stores its transition decides: `nuit` keeps the night (even with the nights off;
-  without a night to pass, a fade to black held `holdS`), any other kind replaces it. Nights inside a stage stay automatic.
+  junction's when it passes as `nuit` (its own transition or the default, « Jours et nuits » on or off: the night pause, no
+  extra hold; without a night to pass, a fade to black held `holdS`, which the block names « Nuit · fondu au noir » and the
+  inspector explains with its « Durée du fondu quand il n'y a pas de nuit »); any other kind replaces it. There is no
+  automatic switch: what the panel or the inspector shows is what plays. « Montrer les nuits » only decides the nights
+  inside a stage. Project v3 (`withExplicitNightJunctions` in `project/document.ts`) writes the default an older project
+  played: `nuit` for a default fade to black with the nights on (it used to turn into the night at each cut), a fade to
+  black with the nights off.
   Migration: a transition other than `coupe` holds `DEFAULT_JUNCTION.holdS` (1.5 s), so an old project with a dip grows by
   the holds only; with `coupe` its film is identical.
 - **Duration per stage** (`film.stageDurations?: Record<trackId, seconds>`, `STAGE_DURATION_RANGE` 5–600 s; absent = the stage's share
