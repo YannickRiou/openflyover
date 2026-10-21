@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v32.fix.title': 'Die Zahlen einer Tour korrigieren',
+  'v32.fix.text': 'Das GPS hat den Gipfel verpasst? In der Karte einer Spur lassen sich unter « Zahlen korrigieren » Distanz, Aufstieg, höchster Punkt, Dauer oder Höchsttempo eintragen: Eröffnungs- und Abschlusskarte und das Poster übernehmen sie.',
   'v31.dates.title': 'Luftbilder eines anderen Datums',
   'v31.dates.text': 'Mit IGN BD ORTHO oder Esri bietet « Aufnahmedatum » (Reiter Karte) ältere Luftbilder des Ortes: ein Winterdatum für Schnee, ein Sommerdatum ohne.',
   'v31.free.title': 'Eine freie Kamera',

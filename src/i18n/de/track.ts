@@ -93,6 +93,17 @@ const messages: Messages['track'] = {
   'list.sortTip': 'Die Etappen nach Startzeit; die ohne Zeit am Ende',
   'list.sorted': 'Etappen nach Startdatum geordnet',
   'list.sort': 'Nach Datum ordnen',
+  'fix.title': 'Zahlen korrigieren',
+  'fix.hint': 'Für Eröffnungs- und Abschlusskarte und das Poster. Leer = Wert aus dem GPX (grau).',
+  'fix.distance': 'Distanz (km)',
+  'fix.ascent': 'Aufstieg (m)',
+  'fix.maxEle': 'Max. Höhe (m)',
+  'fix.duration': 'Dauer (h:mm)',
+  'fix.maxSpeed': 'Max. Tempo (km/h)',
+  'fix.invalid': 'Ein Wert ist nicht lesbar: Zahl wie 12,4 oder Dauer wie 5:30.',
+  'fix.apply': 'Übernehmen',
+  'fix.clear': 'Zurück zu den GPX-Werten',
+  'list.corrected': 'Zahlen korrigiert',
 }
 
 export default messages

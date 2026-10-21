@@ -10,6 +10,7 @@
 import type { Track, TrackStats } from '../core/types'
 import { buildTrackPath, elevationProfile } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
+import { correctedStats } from '../import/stats'
 import { miniMapOutline } from '../overlay/data'
 import type { MiniMapOutline } from '../overlay/data'
 import { formatLongDate, weatherSummaryLine } from '../overlay/draw'
@@ -121,7 +122,7 @@ export function availableFigures(stats: TrackStats): Record<PosterFigureId, bool
  * one of them does not record (elevation, time) is left out rather than understated.
  */
 export function totalStats(tracks: readonly Track[]): TrackStats {
-  const all = tracks.map((t) => t.stats)
+  const all = tracks.map(correctedStats)
   const sum = (of: (s: TrackStats) => number) => all.reduce((total, s) => total + of(s), 0)
   const everyEle = all.every((s) => s.maxEle !== undefined)
   const everyTime = all.every((s) => s.durationS !== undefined)
@@ -137,7 +138,7 @@ export function totalStats(tracks: readonly Track[]): TrackStats {
 
 /** What the figures describe: the tracks summed for a set of outings, else the lead (alone, or the route of a race). */
 export function posterStats(tracks: readonly Track[], race: boolean): TrackStats {
-  return tracks.length > 1 && !race ? totalStats(tracks) : tracks[0].stats
+  return tracks.length > 1 && !race ? totalStats(tracks) : correctedStats(tracks[0])
 }
 
 /** « 12 juillet 2026 », or « 3 juillet 2026 – 28 juillet 2026 » when the tracks span several days ('' without time). */
@@ -156,7 +157,7 @@ export function shortDate(ms: number): string {
 
 /** The line of a track in the list. */
 export function trackLine(track: Track): PosterTrackLine {
-  const { stats } = track
+  const stats = correctedStats(track)
   return {
     name: track.name,
     color: track.color,

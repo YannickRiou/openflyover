@@ -104,6 +104,17 @@ export interface Track {
   elevationEstimated?: 'all' | 'gaps'
   /** stretches flown above the ground (paragliding…), found at import (src/flyover/flights.ts); absent when none */
   flights?: Flight[]
+  /** figures typed by hand over those of the points (« Corriger les chiffres »); absent when none is corrected */
+  statsOverride?: StatsOverride
+}
+
+/** Figures of a track corrected by hand (a summit the GPS missed…): each one absent keeps the value of the points. */
+export interface StatsOverride {
+  distanceM?: number
+  ascentM?: number
+  maxEle?: number
+  durationS?: number
+  maxSpeedKmh?: number
 }
 
 /**

@@ -94,6 +94,17 @@ const messages: Messages['track'] = {
   'list.sortTip': 'Las etapas por hora de salida; las que no tienen horario, al final',
   'list.sorted': 'Etapas ordenadas por fecha de salida',
   'list.sort': 'Ordenar por fecha',
+  'fix.title': 'Corregir las cifras',
+  'fix.hint': 'Para las tarjetas de apertura y cierre y el póster. Vacío = cifra del GPX (en gris).',
+  'fix.distance': 'Distancia (km)',
+  'fix.ascent': 'Desnivel + (m)',
+  'fix.maxEle': 'Altitud máx. (m)',
+  'fix.duration': 'Duración (h:mm)',
+  'fix.maxSpeed': 'Velocidad máx. (km/h)',
+  'fix.invalid': 'Una cifra no se puede leer: número como 12,4 o duración como 5:30.',
+  'fix.apply': 'Aplicar',
+  'fix.clear': 'Volver a las cifras del GPX',
+  'list.corrected': 'cifras corregidas',
 }
 
 export default messages

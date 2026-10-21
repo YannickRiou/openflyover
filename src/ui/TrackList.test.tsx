@@ -88,6 +88,39 @@ describe('TrackList, elevation computed from the terrain', () => {
   })
 })
 
+describe('TrackList, « Corriger les chiffres »', () => {
+  afterEach(() => {
+    useAppStore.getState().replaceTracks([])
+    document.body.innerHTML = ''
+  })
+
+  /** types `text` in the field labelled `label`, as a keystroke would */
+  function type(host: HTMLElement, label: string, text: string) {
+    const field = [...host.querySelectorAll('label')].find((l) => l.textContent === label)!
+    const input = host.querySelector<HTMLInputElement>(`#${CSS.escape(field.htmlFor)}`)!
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, text)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  it('writes the figures typed, keeps the others empty, shows the chip and goes back to the GPX', async () => {
+    const recorded = { ...buildTrack({ name: 'Sommet', source: 'gpx', segments: [{ points: drawnTrack().segments[0].points.map((p) => ({ ...p, ele: 1992 })) }] }), color: '#ff5a36' }
+    const { host, root, button } = await mount(recorded)
+    const maxEle = [...host.querySelectorAll('label')].find((l) => l.textContent === 'Altitude max (m)')!
+    expect(host.querySelector<HTMLInputElement>(`#${CSS.escape(maxEle.htmlFor)}`)!.placeholder).toBe('1992')
+    await act(async () => type(host, 'Altitude max (m)', 'abc'))
+    expect(button('Appliquer')!.disabled).toBe(true)
+    await act(async () => type(host, 'Altitude max (m)', '2001'))
+    await act(async () => type(host, 'Durée (h:mm)', '5:30'))
+    await act(async () => button('Appliquer')!.click())
+    expect(useAppStore.getState().tracks[0].statsOverride).toEqual({ maxEle: 2001, durationS: 19_800 })
+    expect(host.querySelector('[data-testid="track-badge"]')!.textContent).toBe('chiffres corrigés')
+    await act(async () => button('Revenir aux chiffres du GPX')!.click())
+    expect(useAppStore.getState().tracks[0]).not.toHaveProperty('statsOverride')
+    expect(host.querySelector('[data-testid="track-badge"]')).toBeNull()
+    act(() => root.unmount())
+  })
+})
+
 describe('TrackList, ordering the stages « À la suite »', () => {
   /** a short northward track recorded on `day` of July 2026 */
   const day = (name: string, n: number, d: number): Track => ({

@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v32.fix.title': 'Corriger les chiffres d’une sortie',
+  'v32.fix.text': 'Le GPS a raté le sommet ? Dans la carte d’une trace, « Corriger les chiffres » permet de saisir la distance, le D+, l’altitude max, la durée ou la vitesse max : les cartes d’ouverture et de clôture et l’affiche les reprennent.',
   'v31.dates.title': 'Des photos d’une autre date',
   'v31.dates.text': 'Avec IGN BD ORTHO ou Esri, « Date des photos » (onglet Carte) propose les photos plus anciennes de l’endroit : une date d’hiver pour avoir de la neige, d’été pour l’éviter.',
   'v31.free.title': 'Une caméra libre',

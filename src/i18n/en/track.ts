@@ -93,6 +93,17 @@ const messages: Messages['track'] = {
   'list.sortTip': 'The stages by start time; those with no time at the end',
   'list.sorted': 'Stages sorted by start date',
   'list.sort': 'Sort by date',
+  'fix.title': 'Correct the figures',
+  'fix.hint': 'For the opening and closing cards and the poster. Empty = GPX figure (in grey).',
+  'fix.distance': 'Distance (km)',
+  'fix.ascent': 'Ascent (m)',
+  'fix.maxEle': 'Max altitude (m)',
+  'fix.duration': 'Duration (h:mm)',
+  'fix.maxSpeed': 'Max speed (km/h)',
+  'fix.invalid': 'A figure cannot be read: a number like 12.4 or a duration like 5:30.',
+  'fix.apply': 'Apply',
+  'fix.clear': 'Back to the GPX figures',
+  'list.corrected': 'corrected figures',
 }
 
 export default messages

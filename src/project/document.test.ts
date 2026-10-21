@@ -425,6 +425,16 @@ describe('serializeProject / parseProject', () => {
     d.tracks[0].flights = [{ startM: 900, endM: 100, offsetM: 0 }]
     expect(parseProject(JSON.stringify(d)).tracks[0]).not.toHaveProperty('flights')
   })
+
+  it('round-trips the figures corrected by hand, and drops the implausible ones', () => {
+    const text = serializeProject({ ...STATE, tracks: [{ ...makeTrack('a', '#FF5A36'), statsOverride: { maxEle: 2001 } }, makeTrack('b', '#5BC0EB')] }, 'x')
+    const loaded = parseProject(text)
+    expect(loaded.tracks[0].statsOverride).toEqual({ maxEle: 2001 })
+    expect(loaded.tracks[1]).not.toHaveProperty('statsOverride')
+    const d = JSON.parse(text) as { tracks: { statsOverride?: unknown }[] }
+    d.tracks[0].statsOverride = { ascentM: -3 }
+    expect(parseProject(JSON.stringify(d)).tracks[0]).not.toHaveProperty('statsOverride')
+  })
 })
 
 describe('parseProject errors', () => {
