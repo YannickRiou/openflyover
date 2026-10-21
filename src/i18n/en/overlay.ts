@@ -163,7 +163,7 @@ const messages: Messages['overlay'] = {
   'panel.weatherLogoText': 'Weather, logo and text',
   'panel.weather': 'Weather',
   'panel.weatherReady': 'Sky, temperature and wind at the marker.',
-  'panel.weatherWaiting': 'Available when the weather of the outing is loaded (Track tab).',
+  'panel.weatherWaiting': 'Available when the weather of the outing is loaded (Weather tab).',
   'panel.logo': 'Logo',
   'panel.opacity': 'Opacity',
   'panel.freeText': 'Free text',

@@ -233,9 +233,14 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
               setSetting('overlay', { ...overlay, leaderboard: { ...overlay.leaderboard, enabled: on } })
             }}
           >
-            {t('track.race.board')}
+            {t('overlay.panel.leaderboard')}
           </Switch>
-          {leaderboard.enabled && !overlayOn && <p className="type-hint">{t('track.race.boardNeedsOverlay')}</p>}
+          {leaderboard.enabled && (
+            <p className="type-hint">
+              {!overlayOn && `${t('track.race.boardNeedsOverlay')} `}
+              {t('track.race.boardSettings')}
+            </p>
+          )}
           <RaceBoard race={race} tracks={tracks} />
           <p className="type-hint">{t('track.race.gap')}</p>
         </>
