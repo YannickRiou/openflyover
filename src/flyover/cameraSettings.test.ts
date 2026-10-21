@@ -58,7 +58,7 @@ describe('validation of a loaded project', () => {
     const saved = { style: 'sway', distance: 1.3, pitchDeg: 25, headingOffsetDeg: 0, smoothing: 1.5, northUp: false }
     const { settings, invalid } = sanitizeSettings({ camera: saved })
     expect(invalid).toEqual([])
-    expect(settings.camera).toEqual({ ...saved, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0 })
+    expect(settings.camera).toEqual({ ...saved, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1 })
     // the same window as before: the automatic one of the track times the multiplier, shown in metres
     expect(turnSmoothingM(settings.camera, 20_000)).toBe(2 * 400 * 1.5)
   })

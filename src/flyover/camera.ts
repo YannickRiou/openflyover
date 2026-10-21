@@ -108,8 +108,6 @@ export const SWING_ONSET = 0.2
 /** 'sway': swing (radians) = SWAY_MAX_RAD · tanh(SWAY_GAIN · turn / SWAY_MAX_RAD), turn measured over ±2w. */
 export const SWAY_GAIN = 0.8
 export const SWAY_MAX_RAD = (50 * Math.PI) / 180
-/** 'orbit': angular speed around the marker, in degrees per second of flyover at speed x1. */
-export const ORBIT_DEG_PER_S = 6
 /** 'top': farther and nearly vertical. */
 export const TOP_DISTANCE_FACTOR = 2.5
 export const TOP_MIN_PITCH_DEG = 70
@@ -478,8 +476,9 @@ function placement(
   timeS: number,
   frame: LocalFrame,
   camera: CameraSettings,
-  speedMps: number,
+  durationS: number,
 ): Placement {
+  const speedMps = path.lengthM / Math.max(1, durationS)
   const w = headingWindowM(path, camera)
   const radiusM = speedMps * camera.cameraSmoothingS * HEADING_SMOOTHING_FACTOR
   const travel = (at: number, window: number) => smoothHeadingAt(path, at, window, radiusM, frame)
@@ -494,10 +493,11 @@ function placement(
       return { reference: travel(d, w), viewAngle: offset + swing, pitchDeg: camera.pitchDeg, distance }
     }
     case 'orbit':
-      // absolute rotation from the start heading: independent of the bends of the track
+      // absolute rotation from the start heading, independent of the bends of the track: `orbitTurns` full turns over
+      // the flight at speed x1, whatever its duration
       return {
         reference: headingAt(path, 0, w, frame),
-        viewAngle: offset + timeS * ORBIT_DEG_PER_S * DEG,
+        viewAngle: offset + (2 * Math.PI * camera.orbitTurns * timeS) / Math.max(1, durationS),
         pitchDeg: camera.pitchDeg,
         distance,
       }
@@ -572,7 +572,7 @@ export function computeCameraView(
   const aimAt = frame.toLonLat(aim)
   const target = frame.toLocal(aimAt.lon, aimAt.lat, aimGround + liftM)
 
-  const place = placement(path, dCamera, timeS, frame, camera, speedMps)
+  const place = placement(path, dCamera, timeS, frame, camera, durationS)
   place.viewAngle += options.orbitRad ?? 0
   if (sample) {
     const slopeRadiusM = Math.max(speedMps * camera.cameraSmoothingS * HEADING_SMOOTHING_FACTOR, headingWindowM(path, camera))

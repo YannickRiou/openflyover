@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Version {version}',
   'v31.free.title': 'A free camera',
   'v31.free.text': 'The « Free (keyframes) » style does not follow the marker: without keyframes the camera stays fixed on the whole track; add keyframes on the timeline to choose its moves yourself (a fixed shot, a turn around the track…).',
+  'v31.orbit.title': 'A full orbit',
+  'v31.orbit.text': '« Orbit around the marker » now makes a full turn during the flyover, whatever its duration; « Orbit turns » sets how many.',
   'v31.wind.title': 'Wind in the clouds',
   'v31.wind.text': 'With « Manual » clouds or a sea of clouds, « Wind » sets how fast they drift (at 0 they stay still) and « Wind direction » where it blows from. In « Weather », tick « Set the wind by hand » for the same controls.',
   'v301.cards.title': 'The closing card follows the end of the film',

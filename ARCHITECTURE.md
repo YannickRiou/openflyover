@@ -761,8 +761,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   (≤ 0.16 of the half-frame). « Lissage de la caméra » at 0 keeps the previous behaviour. `computeCameraView` costs
   ~145–225 µs per call (was ~100) with an analytic sampler, 163–251 terrain samples per call.
   Styles (`settings.camera.style`): `chase` (behind the marker), `sway` (swing toward the outside of bends:
-  50° · tanh(0.8 · T / 50°), T = sum of turn angles weighted by a tent over ±2w, continuous and calm), `orbit` (6°/s
-  around the marker from the start heading), `top` (≥ 70°, distance × 2.5, north or heading up), `cinematic` (distance × 1.6,
+  50° · tanh(0.8 · T / 50°), T = sum of turn angles weighted by a tent over ±2w, continuous and calm), `orbit` (`orbitTurns`
+  full turns around the marker over the flight at speed x1, 1 by default, whatever its duration, from the start heading), `top` (≥ 70°, distance × 2.5, north or heading up), `cinematic` (distance × 1.6,
   pitch / 2, lateral sweep ±35° with a 40 s period), `free` (follows nothing: `computeFilmView` takes `freeView` instead of
   the flight camera, below). All flight styles keep 80 m above the ground and a clear line of sight
   (`LINE_OF_SIGHT_SAMPLES`, 48 samples); the tests check continuity in progress.

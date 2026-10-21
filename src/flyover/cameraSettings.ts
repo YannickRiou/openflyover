@@ -41,6 +41,8 @@ export interface CameraSettings {
   cameraSmoothingS: number
   /** « Fin en douceur »: the camera slows down to a stop over the last seconds of the flight (s), 0 = none */
   endingS: number
+  /** style 'orbit' (« Tours d'orbite »): turns around the marker over the flight, whatever its duration */
+  orbitTurns: number
 }
 
 /** Default camera: the chase view. */
@@ -55,6 +57,7 @@ export const DEFAULT_CAMERA: CameraSettings = {
   aimSmoothingS: 0,
   cameraSmoothingS: 3,
   endingS: 0,
+  orbitTurns: 1,
 }
 
 /** Fields missing from a camera saved before they were added, taken from `DEFAULT_CAMERA` (`SETTING_UPGRADES`). */
@@ -70,6 +73,7 @@ export const CAMERA_RANGES = {
   aimSmoothingS: { min: 0, max: 5, step: 0.5 },
   cameraSmoothingS: { min: 0, max: 10, step: 0.5 },
   endingS: { min: 0, max: 5, step: 0.5 },
+  orbitTurns: { min: 0.5, max: 5, step: 0.5 },
 } as const satisfies Partial<Record<keyof CameraSettings, { min: number; max: number; step: number }>>
 
 /** Heading = direction of the chord [d - w, d + w]; automatic w = this fraction of the track, clamped, times `smoothing`. */

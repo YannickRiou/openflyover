@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Version {version}',
   'v31.free.title': 'Eine freie Kamera',
   'v31.free.text': 'Der Stil « Frei (Keyframes) » folgt dem Marker nicht: ohne Keyframes bleibt die Kamera fest auf dem ganzen Track; setzen Sie Keyframes in der Zeitleiste, um ihre Bewegungen selbst zu wählen (feste Einstellung, Runde um den Track…).',
+  'v31.orbit.title': 'Ein voller Orbit',
+  'v31.orbit.text': '« Kreisfahrt um den Marker » macht jetzt eine volle Runde während des Überflugs, unabhängig von seiner Dauer; « Orbit-Runden » legt fest, wie viele.',
   'v31.wind.title': 'Wind in den Wolken',
   'v31.wind.text': 'Mit « Manuell »-Wolken oder einem Wolkenmeer stellt « Wind » ein, wie schnell sie ziehen (bei 0 bleiben sie stehen), und « Windrichtung », woher er weht. Unter « Wetter » « Wind von Hand wählen » ankreuzen für dieselben Regler.',
   'v301.cards.title': 'Die Schlusskarte folgt dem Filmende',

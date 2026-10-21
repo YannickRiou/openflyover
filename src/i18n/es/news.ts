@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Versión {version}',
   'v31.free.title': 'Una cámara libre',
   'v31.free.text': 'El estilo « Libre (fotogramas clave) » no sigue el marcador: sin fotogramas clave la cámara queda fija sobre todo el recorrido; añada fotogramas clave en la línea de tiempo para elegir usted mismo sus movimientos (plano fijo, vuelta al recorrido…).',
+  'v31.orbit.title': 'Una órbita completa',
+  'v31.orbit.text': '« Órbita alrededor del marcador » da ahora una vuelta completa durante el vuelo, sea cual sea su duración; « Vueltas de órbita » ajusta cuántas.',
   'v31.wind.title': 'Viento en las nubes',
   'v31.wind.text': 'Con nubes « Manual » o un mar de nubes, « Viento » ajusta la velocidad a la que se desplazan (a 0 quedan inmóviles) y « Dirección del viento » de dónde sopla. En « Meteo », marque « Elegir el viento a mano » para los mismos ajustes.',
   'v301.cards.title': 'La tarjeta de cierre sigue el final de la película',
