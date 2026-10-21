@@ -11,6 +11,7 @@ const messages: Messages['inspector'] = {
   'card.creditsPlaceholder': 'Eine Zeile pro Name\nMusik: …',
   'card.creditsHint': 'Ausgefüllt, scrollt er zentriert unter der Karte bis zum Ende des Films.',
   'shot.camera': 'Kameraeinstellung',
+  'shot.remove': 'Kameraeinstellung entfernen',
   'card.remove': 'Entfernen: {label}',
   'shot.cardOff': '{label}: aus, unter Overlay › Titel einschalten.',
   'card.line': 'Freie Zeile',

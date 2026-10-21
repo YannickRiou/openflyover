@@ -11,6 +11,7 @@ const messages: Messages['inspector'] = {
   'card.creditsPlaceholder': 'Una línea por nombre\nMúsica: …',
   'card.creditsHint': 'Si se rellena, se desplaza bajo la tarjeta hasta el final de la película, centrado.',
   'shot.camera': 'Plano de cámara',
+  'shot.remove': 'Quitar el plano de cámara',
   'card.remove': 'Quitar: {label}',
   'shot.cardOff': '{label}: desactivado, actívelo en Gráficos › Títulos.',
   'card.line': 'Línea libre',

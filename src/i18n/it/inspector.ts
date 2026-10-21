@@ -11,6 +11,7 @@ const messages: Messages['inspector'] = {
   'card.creditsPlaceholder': 'Una riga per nome\nMusica: …',
   'card.creditsHint': 'Se compilato, scorre sotto la scheda fino alla fine del film, centrato.',
   'shot.camera': 'Inquadratura della camera',
+  'shot.remove': 'Rimuovi l’inquadratura',
   'card.remove': 'Rimuovi: {label}',
   'shot.cardOff': '{label}: disattivato, attivalo in Overlay › Titoli.',
   'card.line': 'Riga libera',

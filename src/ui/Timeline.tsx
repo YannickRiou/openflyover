@@ -375,6 +375,13 @@ function FilmOptions({
  * playhead stays in the middle and the lanes scroll under it, the scroll is the film time; a tap selects a block, a
  * selected block drags as usual, two fingers zoom around the playhead.
  */
+/** « Arrêts automatiques »: switched on, the stops made by hand go (one undo step), and the message says so. */
+function switchAutoStops(on: boolean): void {
+  const own = on ? useAppStore.getState().settings.film.stops.length : 0
+  setAutoStops(on)
+  if (own > 0) showToast({ kind: 'info', text: translate('timeline.options.autoStopsReplaced', { count: own }) })
+}
+
 export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { sheetOpen?: boolean; centred?: boolean; onUnfold?(): void }) {
   const t = useT()
   const { track, film, durationS, pacing, landmarks, cutsM, stageIds } = useFilmSource()
@@ -1550,7 +1557,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             on={magnet}
             onClick={() => setPreferences({ timelineMagnet: !magnet })}
           />
-          <FilmOptions autoStops={film.autoStops} onAutoStops={setAutoStops} onAddMusic={pickMusic} reading={reading} sheet={centred} />
+          <FilmOptions autoStops={film.autoStops} onAutoStops={switchAutoStops} onAddMusic={pickMusic} reading={reading} sheet={centred} />
         </div>
         <Tip text={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')} side="top" align="end">
           <Button

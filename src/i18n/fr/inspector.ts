@@ -9,6 +9,7 @@ export default {
   'card.creditsPlaceholder': 'Une ligne par nom\nMusique : …',
   'card.creditsHint': 'Rempli, il défile sous la carte jusqu’à la fin du film, centré.',
   'shot.camera': 'Plan de caméra',
+  'shot.remove': 'Retirer le plan de caméra',
   'card.remove': 'Retirer : {label}',
   'shot.cardOff': '{label} : désactivé, à activer dans Habillage › Titres.',
   'card.line': 'Ligne libre',

@@ -11,6 +11,7 @@ const messages: Messages['inspector'] = {
   'card.creditsPlaceholder': 'One line per name\nMusic: …',
   'card.creditsHint': 'When filled in, it scrolls under the card until the end of the film, centred.',
   'shot.camera': 'Camera shot',
+  'shot.remove': 'Remove the camera shot',
   'card.remove': 'Remove: {label}',
   'shot.cardOff': '{label}: off, switch it on in Overlay › Titles.',
   'card.line': 'Free line',

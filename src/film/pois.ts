@@ -31,9 +31,17 @@ export function addPoi(film: Film, at: LonLat, name = ''): Film {
   return { ...film, pois: [...film.pois, poi] }
 }
 
-/** The film with point `id` renamed (kept as typed, so a field can be cleared and retyped; a blank name shows no label). */
-export function renamePoi(film: Film, id: string, name: string): Film {
-  return { ...film, pois: film.pois.map((poi) => (poi.id === id ? { ...poi, name: name.slice(0, POI_NAME_MAX) } : poi)) }
+/**
+ * The film with point `id` renamed (kept as typed, so a field can be cleared and retyped; a blank name shows no label).
+ * Its stop (`stopId`, the one made by « Arrêt » at the point) follows while its label is still the point's name; a
+ * label typed in the stop's own panel stays.
+ */
+export function renamePoi(film: Film, id: string, name: string, stopId?: string): Film {
+  const before = film.pois.find((poi) => poi.id === id)
+  const kept = name.slice(0, POI_NAME_MAX)
+  const pois = film.pois.map((poi) => (poi.id === id ? { ...poi, name: kept } : poi))
+  const stops = film.stops.map((s) => (s.id === stopId && before && (s.label ?? '') === before.name ? { ...s, label: kept || undefined } : s))
+  return { ...film, pois, stops }
 }
 
 /** The film with the pictogram of point `id` changed ('epingle', the default, is not stored). */
