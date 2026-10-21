@@ -212,6 +212,47 @@ describe('LandmarkPanel: the points of interest, and the landmarks in the window
     act(() => root.unmount())
   })
 
+  it('« Le masquer »: each click on a marker hides it or shows it again; M hides the one selected and selects the next', async () => {
+    const { root, openMap, select, profileMarker, mapMarker } = await mount({ ...DEFAULT_FILM })
+    await openMap()
+    const tool = (label: string) => [...document.body.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find((i) => i.closest('label')?.textContent === label)!
+    await act(async () => tool('Le masquer').click())
+    await act(async () => mapMarker('Col de Voza').click())
+    expect(useAppStore.getState().settings.landmarks.hiddenIds).toEqual(['node/1'])
+    await act(async () => profileMarker('Col de Voza').click())
+    expect(useAppStore.getState().settings.landmarks.hiddenIds).toEqual([])
+    // back to « Le régler »: M on the selected landmark
+    await act(async () => tool('Le régler').click())
+    await select('Col de Voza')
+    await act(async () => void profileMarker('Col de Voza').dispatchEvent(new KeyboardEvent('keydown', { key: 'm', bubbles: true })))
+    expect(useAppStore.getState().settings.landmarks.hiddenIds).toEqual(['node/1'])
+    expect(profileMarker('Lac Vert').getAttribute('aria-pressed')).toBe('true')
+    act(() => root.unmount())
+  })
+
+  it('« Choisir une zone »: a stretch dragged over the profile takes its landmarks, hidden or back to auto in one step', async () => {
+    const { root, openMap } = await mount({ ...DEFAULT_FILM })
+    await openMap()
+    const tool = [...document.body.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find((i) => i.closest('label')?.textContent === 'Choisir une zone')!
+    await act(async () => tool.click())
+    const profile = document.body.querySelector<HTMLElement>('[data-testid="landmark-profile"]')!
+    profile.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 100, right: 1000, bottom: 100, x: 0, y: 0, toJSON: () => ({}) })
+    const pointer = (type: string, clientX: number) => Object.assign(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX }), { pointerId: 1, isPrimary: true, pointerType: 'mouse' })
+    // the whole track: both landmarks
+    await act(async () => void profile.dispatchEvent(pointer('pointerdown', 0)))
+    await act(async () => void profile.dispatchEvent(pointer('pointermove', 1000)))
+    await act(async () => void profile.dispatchEvent(pointer('pointerup', 1000)))
+    expect(document.body.textContent).toContain('2 repères dans la zone')
+    const pageButton = (label: string) => [...document.body.querySelectorAll('button')].find((b) => b.textContent?.trim() === label)!
+    await act(async () => pageButton('Les masquer').click())
+    expect([...useAppStore.getState().settings.landmarks.hiddenIds].sort()).toEqual(['node/1', 'way/2'])
+    await act(async () => pageButton('Les remettre en auto').click())
+    expect(useAppStore.getState().settings.landmarks.hiddenIds).toEqual([])
+    await act(async () => pageButton('Effacer la zone').click())
+    expect(document.body.textContent).not.toContain('dans la zone')
+    act(() => root.unmount())
+  })
+
   it('« Tout remettre en auto » clears every Toujours and Jamais in one step', async () => {
     const { host, root, button, openMap, select, mode } = await mount({ ...DEFAULT_FILM, pois: [POI] })
     await openMap()

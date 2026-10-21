@@ -33,6 +33,7 @@ import { editFilm, followLandmarks, useFilmSequence, useFilmSource } from '../sc
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { LandmarkMap } from './LandmarkMap'
+import type { MapTool } from './LandmarkMap'
 import { PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
 import { Button, Checkbox, Chip, NumberField, Radio, RadioGroup, Select, Slider, Switch, TextField, Tip } from './primitives'
@@ -172,6 +173,20 @@ function ModeButton({ name, mode, onClick }: { name: string; mode: LandmarkMode;
 /** A row of a landmark (not a point of interest). */
 type LandmarkRow = PlaceRow & { landmark: Landmark }
 
+/** « Zone » of the map: how many landmarks the zone drawn holds, and what to do with them all at once (one undo step). */
+function ZoneActions({ count, onMode, onClear }: { count: number; onMode(mode: LandmarkMode): void; onClear(): void }) {
+  const t = useT()
+  if (count === 0) return null
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="type-body">{t('landmarks.map.zoneCount', { count })}</span>
+      <Button onClick={() => onMode('never')}>{t('landmarks.map.zoneHide')}</Button>
+      <Button onClick={() => onMode('auto')}>{t('landmarks.map.zoneAuto')}</Button>
+      <Button variant="secondary" onClick={onClear}>{t('landmarks.map.zoneClear')}</Button>
+    </div>
+  )
+}
+
 /**
  * The landmark selected on the profile or the map, in full (its name is never cut: the window is wide): where it is and how
  * far from the track, its mode (the eye hides or shows it in one click, the button also offers « Toujours »), the arrows that
@@ -284,6 +299,9 @@ export function LandmarkPanel() {
   /** the window of the profile and the map, and the landmark selected in it */
   const [mapOpen, setMapOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // the map's tool and the zone drawn with « Zone » (kept for the session)
+  const [tool, setTool] = useState<MapTool>('choose')
+  const [zoneIds, setZoneIds] = useState<string[]>([])
   const stops = useMemo(() => (first ? filmStops(film, { track: first, landmarks, pacing }) : []), [first, film, landmarks, pacing])
 
   useEffect(() => {
@@ -543,8 +561,31 @@ export function LandmarkPanel() {
           onSeek={setProgress}
           selectedId={selected?.id ?? null}
           onSelect={setSelectedId}
+          tool={tool}
+          onTool={(next) => {
+            setTool(next)
+            setZoneIds([])
+          }}
+          onToggle={(id) => {
+            const row = ordered.find((r) => r.id === id)
+            if (row) setRowsMode([row], landmarkMode(settings, id) === 'never' ? 'auto' : 'never')
+          }}
+          zoneIds={zoneIds}
+          onZone={setZoneIds}
+          onHideSelected={() => {
+            if (!selected) return
+            const next = ordered[ordered.indexOf(selected) + 1]
+            setRowsMode([selected], 'never')
+            setSelectedId(next?.id ?? null)
+          }}
         >
-          {selected ? (
+          {tool === 'zone' ? (
+            <ZoneActions
+              count={zoneIds.length}
+              onMode={(mode) => setRowsMode(ordered.filter((r) => zoneIds.includes(r.id)), mode)}
+              onClear={() => setZoneIds([])}
+            />
+          ) : tool === 'hide' ? null : selected ? (
             <SelectedLandmark
               row={selected}
               mode={landmarkMode(settings, selected.id)}

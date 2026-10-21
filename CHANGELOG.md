@@ -3,6 +3,13 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Hiding several landmarks is quick**: in the « Choisir sur la carte et le profil » window, « Un clic sur un repère » chooses what a click does:
+  - « Le régler », as before; the M key now hides the landmark selected and moves to the next one.
+  - « Le masquer »: each click hides a landmark, or shows a hidden one again, without going through the panel.
+  - « Choisir une zone »: draw a rectangle on the map, or drag over a stretch of the profile, then hide its landmarks, or put them back to auto, in one step.
+
 ## 3.3.1 (October 2026)
 
 - **Three choices for each transition between stages**: « Passage » (cut, fade to black or white), « Passer la nuit » (dusk, night and dawn when the two stages are on two days) and « Revoir l'étape finie » (new: at the end of the stage the camera rises for a few seconds to show all of it, then comes the passage; with the night, during the night). They are set once in « Trace › Plusieurs traces » and can be changed per transition on the timeline. Before, the night was a kind of transition (« Nuit ») and the look back only existed over a night, from a switch hidden in Lumière › Jours et nuits. Older projects keep the same film.

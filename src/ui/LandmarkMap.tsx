@@ -11,7 +11,7 @@ import { buildTileUrl, getImagerySource } from '../terrain/sources'
 import { t, useT } from '../i18n'
 import { Icon } from './icons'
 import { formatDistance, formatNumber } from './format'
-import { Button, Modal, Tip } from './primitives'
+import { Button, Modal, Radio, RadioGroup, Tip } from './primitives'
 
 /** A landmark of the track as the map and the profile show it: where it is, and what the user decided for it. */
 export interface MapLandmark {
@@ -80,6 +80,9 @@ function areaPath({ ele, minEle, maxEle }: ElevationProfile): string {
   return d
 }
 
+/** What a click does on the map and the profile: select a landmark, hide or show it at once, or draw a zone. */
+export type MapTool = 'choose' | 'hide' | 'zone'
+
 interface ViewProps {
   track: Track
   path: TrackPath
@@ -87,13 +90,25 @@ interface ViewProps {
   progress: number
   selectedId: string | null
   onSelect(id: string | null): void
+  tool: MapTool
+  /** « Masquer au clic »: the landmark clicked is hidden, or shown again */
+  onToggle(id: string): void
+  /** the landmarks of the zone drawn (« Zone ») */
+  zoneIds: readonly string[]
+  onZone(ids: string[]): void
+}
+
+/** What a click on a marker does with the tool in use. */
+function markerClick(tool: MapTool, id: string, selectedId: string | null, onSelect: ViewProps['onSelect'], onToggle: ViewProps['onToggle']): void {
+  if (tool === 'hide') onToggle(id)
+  else if (tool === 'choose') onSelect(id === selectedId ? null : id)
 }
 
 /**
  * The altitude profile of the track: click it to take the flyover there; each landmark is a marker at its position along the
  * track and at the elevation of the track there.
  */
-function Profile({ path, items, progress, selectedId, onSelect, onSeek }: Omit<ViewProps, 'track'> & { onSeek(progress: number): void }) {
+function Profile({ path, items, progress, selectedId, onSelect, onSeek, tool, onToggle, zoneIds, onZone }: Omit<ViewProps, 'track'> & { onSeek(progress: number): void }) {
   const t = useT()
   const profile = useMemo(() => elevationProfile(path, PROFILE_SAMPLES), [path])
   const area = useMemo(() => (profile ? areaPath(profile) : ''), [profile])
@@ -105,18 +120,44 @@ function Profile({ path, items, progress, selectedId, onSelect, onSeek }: Omit<V
     return ele === undefined ? 50 : 100 * (1 - 0.9 * ((ele - profile.minEle) / span))
   }
   const along = (m: number) => (path.lengthM > 0 ? (100 * m) / path.lengthM : 0)
+  /** « Zone »: the stretch being dragged over the profile, as fractions of the track */
+  const [range, setRange] = useState<{ from: number; to: number } | null>(null)
+  const fractionAt = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const box = e.currentTarget.getBoundingClientRect()
+    return box.width > 0 ? Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)) : 0
+  }
   return (
     <div className="field">
       <span className="type-label">{t('landmarks.map.profile')}</span>
       <div
-        className="relative h-28 cursor-crosshair rounded-sm bg-surface-control"
+        className="relative h-28 cursor-crosshair touch-none rounded-sm bg-surface-control"
         data-testid="landmark-profile"
         role="presentation"
+        onPointerDown={(e) => {
+          if (tool !== 'zone' || e.button !== 0) return
+          const at = fractionAt(e)
+          setRange({ from: at, to: at })
+          e.currentTarget.setPointerCapture?.(e.pointerId)
+        }}
+        onPointerMove={(e) => range && setRange({ ...range, to: fractionAt(e) })}
+        onPointerUp={() => {
+          if (!range) return
+          const [a, b] = [Math.min(range.from, range.to), Math.max(range.from, range.to)].map((f) => f * path.lengthM)
+          setRange(null)
+          onZone(items.filter(({ landmark }) => landmark.alongM >= a && landmark.alongM <= b).map(({ landmark }) => landmark.id))
+        }}
         onClick={(e) => {
+          if (tool === 'zone') return
           const box = e.currentTarget.getBoundingClientRect()
           if (box.width > 0) onSeek(Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)))
         }}
       >
+        {range && (
+          <div
+            className="pointer-events-none absolute inset-y-0 bg-brand/20 outline outline-1 outline-brand"
+            style={{ left: `${Math.min(range.from, range.to) * 100}%`, width: `${Math.abs(range.to - range.from) * 100}%` }}
+          />
+        )}
         <svg className="absolute inset-0 size-full" viewBox={`0 0 ${PROFILE_W} ${PROFILE_H}`} preserveAspectRatio="none" aria-hidden="true">
           <path d={area} className="fill-edge-strong" />
         </svg>
@@ -125,16 +166,17 @@ function Profile({ path, items, progress, selectedId, onSelect, onSeek }: Omit<V
           <button
             key={landmark.id}
             type="button"
-            className={markerClass(mode, landmark.id === selectedId)}
+            className={markerClass(mode, landmark.id === selectedId || zoneIds.includes(landmark.id))}
             style={{ left: `${along(landmark.alongM)}%`, top: `${topOf(landmark)}%` }}
             title={landmark.text}
             aria-label={markerLabel(landmark, mode)}
             aria-pressed={landmark.id === selectedId}
             data-testid="profile-marker"
             data-mode={mode}
+            onPointerDown={(e) => tool !== 'zone' && e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
-              onSelect(landmark.id === selectedId ? null : landmark.id)
+              markerClick(tool, landmark.id, selectedId, onSelect, onToggle)
             }}
           />
         ))}
@@ -178,7 +220,7 @@ function mapBounds(track: Track, items: readonly MapLandmark[]): LonLatBounds {
  * The map of the track and of the landmarks fetched: tiles of a topographic map, the track, a light band as wide as the
  * distance asked from the track « Distance à la trace » and a marker per landmark. Drag to move, wheel or the buttons to zoom.
  */
-function TileMap({ track, path, items, progress, selectedId, onSelect, maxDistanceM }: ViewProps & { maxDistanceM: number }) {
+function TileMap({ track, path, items, progress, selectedId, onSelect, maxDistanceM, tool, onToggle, zoneIds, onZone }: ViewProps & { maxDistanceM: number }) {
   const t = useT()
   const source = useMemo(() => getImagerySource(MAP_SOURCE_ID), [])
   const hostRef = useRef<HTMLDivElement>(null)
@@ -287,13 +329,43 @@ function TileMap({ track, path, items, progress, selectedId, onSelect, maxDistan
   const drag = useRef<{ plan: typeof plan; x: number; y: number } | null>(null)
   /** the pointer moved while pressed: the click that ends a drag is not a click on the map */
   const dragged = useRef(false)
+  /** « Zone »: the rectangle being drawn, in pixels of the map (the map does not move meanwhile) */
+  const [rect, setRect] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
+  const local = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const box = e.currentTarget.getBoundingClientRect()
+    return { x: e.clientX - box.left, y: e.clientY - box.top }
+  }
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return
-    drag.current = { plan: planRef.current, x: e.clientX, y: e.clientY }
     dragged.current = false
     e.currentTarget.setPointerCapture?.(e.pointerId)
+    if (tool === 'zone') {
+      const { x, y } = local(e)
+      setRect({ x0: x, y0: y, x1: x, y1: y })
+      return
+    }
+    drag.current = { plan: planRef.current, x: e.clientX, y: e.clientY }
+  }
+  const endZone = () => {
+    if (!rect) return
+    const [left, right, top, bottom] = [Math.min(rect.x0, rect.x1), Math.max(rect.x0, rect.x1), Math.min(rect.y0, rect.y1), Math.max(rect.y0, rect.y1)]
+    setRect(null)
+    dragged.current = true
+    onZone(
+      items
+        .filter(({ landmark }) => {
+          const { x, y } = planRef.current.project(landmark.lon, landmark.lat)
+          return x >= left && x <= right && y >= top && y <= bottom
+        })
+        .map(({ landmark }) => landmark.id),
+    )
   }
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (rect) {
+      const { x, y } = local(e)
+      setRect({ ...rect, x1: x, y1: y })
+      return
+    }
     const d = drag.current
     if (!d) return
     const dx = e.clientX - d.x
@@ -317,13 +389,26 @@ function TileMap({ track, path, items, progress, selectedId, onSelect, maxDistan
         data-testid="landmark-map"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={() => (drag.current = null)}
-        onPointerCancel={() => (drag.current = null)}
-        onClick={() => !dragged.current && onSelect(null)}
+        onPointerUp={() => {
+          drag.current = null
+          endZone()
+        }}
+        onPointerCancel={() => {
+          drag.current = null
+          setRect(null)
+        }}
+        onClick={() => !dragged.current && tool === 'choose' && onSelect(null)}
       >
         <canvas ref={tilesRef} width={width} height={height} className="absolute inset-0" aria-hidden="true" />
         <canvas ref={overlayRef} width={width} height={height} className="pointer-events-none absolute inset-0" aria-hidden="true" />
         {here && <span className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand bg-white" style={{ left: here.x, top: here.y }} />}
+        {rect && (
+          <div
+            className="pointer-events-none absolute bg-brand/20 outline outline-1 outline-brand"
+            data-testid="landmark-zone"
+            style={{ left: Math.min(rect.x0, rect.x1), top: Math.min(rect.y0, rect.y1), width: Math.abs(rect.x1 - rect.x0), height: Math.abs(rect.y1 - rect.y0) }}
+          />
+        )}
         {items.map(({ landmark, mode }) => {
           const { x, y } = plan.project(landmark.lon, landmark.lat)
           if (x < -10 || y < -10 || x > width + 10 || y > height + 10) return null
@@ -331,17 +416,17 @@ function TileMap({ track, path, items, progress, selectedId, onSelect, maxDistan
             <button
               key={landmark.id}
               type="button"
-              className={markerClass(mode, landmark.id === selectedId)}
+              className={markerClass(mode, landmark.id === selectedId || zoneIds.includes(landmark.id))}
               style={{ left: x, top: y }}
               title={landmark.text}
               aria-label={markerLabel(landmark, mode)}
               aria-pressed={landmark.id === selectedId}
               data-testid="map-marker"
               data-mode={mode}
-              onPointerDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => tool !== 'zone' && e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
-                onSelect(landmark.id === selectedId ? null : landmark.id)
+                markerClick(tool, landmark.id, selectedId, onSelect, onToggle)
               }}
             />
           )
@@ -396,8 +481,27 @@ export interface LandmarkMapProps {
   onSeek(progress: number): void
   selectedId: string | null
   onSelect(id: string | null): void
-  /** the controls of the landmark selected (or a hint when none is) */
+  tool: MapTool
+  onTool(tool: MapTool): void
+  onToggle(id: string): void
+  zoneIds: readonly string[]
+  onZone(ids: string[]): void
+  /** M with a landmark selected: it is hidden, the next one along the track selected */
+  onHideSelected(): void
+  /** the controls of the landmark selected, of the zone drawn (or a hint) */
   children: ReactNode
+}
+
+const TOOLS: readonly MapTool[] = ['choose', 'hide', 'zone']
+const TOOL_LABELS: Record<MapTool, string> = {
+  get choose() { return t('landmarks.map.tool.choose') },
+  get hide() { return t('landmarks.map.tool.hide') },
+  get zone() { return t('landmarks.map.tool.zone') },
+}
+const TOOL_HINTS: Record<MapTool, string> = {
+  get choose() { return t('landmarks.map.toolHint.choose') },
+  get hide() { return t('landmarks.map.toolHint.hide') },
+  get zone() { return t('landmarks.map.toolHint.zone') },
 }
 
 /**
@@ -405,14 +509,34 @@ export interface LandmarkMapProps {
  * OpenStreetMap returned, to choose them by their place, their distance from the track and what was found. A click on a
  * marker (profile or map) selects the landmark; `children` are its controls.
  */
-export function LandmarkMap({ open, onClose, track, items, maxDistanceM, progress, onSeek, selectedId, onSelect, children }: LandmarkMapProps) {
+export function LandmarkMap({ open, onClose, track, items, maxDistanceM, progress, onSeek, selectedId, onSelect, tool, onTool, onToggle, zoneIds, onZone, onHideSelected, children }: LandmarkMapProps) {
   const t = useT()
   const path = trackPathOf(track)
+  const views = { items, progress, selectedId, onSelect, tool, onToggle, zoneIds, onZone }
   return (
     <Modal open={open} onClose={onClose} title={t('landmarks.map.title')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')} width={900}>
-      <div className="flex flex-col gap-3">
-        <Profile path={path} items={items} progress={progress} selectedId={selectedId} onSelect={onSelect} onSeek={onSeek} />
-        <TileMap track={track} path={path} items={items} progress={progress} selectedId={selectedId} onSelect={onSelect} maxDistanceM={maxDistanceM} />
+      <div
+        className="flex flex-col gap-3"
+        onKeyDown={(e) => {
+          // M: the landmark selected hidden, the next one selected (not while typing)
+          if ((e.key === 'm' || e.key === 'M') && tool === 'choose' && selectedId && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+            e.preventDefault()
+            onHideSelected()
+          }
+        }}
+      >
+        <div className="field">
+          <RadioGroup look="chips" aria-label={t('landmarks.map.tool.label')} value={tool} onChange={onTool}>
+            {TOOLS.map((one) => (
+              <Radio key={one} value={one}>
+                {TOOL_LABELS[one]}
+              </Radio>
+            ))}
+          </RadioGroup>
+          <p className="type-hint">{TOOL_HINTS[tool]}</p>
+        </div>
+        <Profile path={path} onSeek={onSeek} {...views} />
+        <TileMap track={track} path={path} maxDistanceM={maxDistanceM} {...views} />
         <Legend />
         {children}
       </div>
