@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 3.3.0 (October 2026)
 
 - **Keys and panels agree**:
   - **Étalonnage**: a preset now also changes the values driven by keys: each gets the preset's value on its key at the marker, as its slider does. Before, the image did not change.
