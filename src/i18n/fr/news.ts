@@ -7,6 +7,8 @@ export default {
   'v31.dates.text': 'Avec IGN BD ORTHO ou Esri, « Date des photos » (onglet Carte) propose les photos plus anciennes de l’endroit : une date d’hiver pour avoir de la neige, d’été pour l’éviter.',
   'v31.free.title': 'Une caméra libre',
   'v31.free.text': 'Le style « Libre (images clés) » ne suit pas le marqueur : sans image clé la caméra reste fixe sur tout le tracé ; ajoutez des images clés sur la timeline pour choisir vous-même ses mouvements (plan fixe, tour du tracé…).',
+  'v31.imagery.title': 'Une liste d’imagerie rangée',
+  'v31.imagery.text': 'Dans l’onglet Carte, l’imagerie est rangée en « Photos aériennes » et « Cartes », les sources du pays de la trace d’abord ; celles qui ne montrent rien là (swisstopo en France) sont mises à part.',
   'v31.orbit.title': 'Une orbite complète',
   'v31.orbit.text': '« Orbite autour du marqueur » fait désormais un tour complet pendant le survol, quelle que soit sa durée ; « Tours d’orbite » règle combien.',
   'v31.wind.title': 'Du vent dans les nuages',

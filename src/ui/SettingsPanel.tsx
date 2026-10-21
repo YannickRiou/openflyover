@@ -10,7 +10,7 @@ import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { findImageryDates, imageryDateKind, imageryDateValue, type ImageryDate, type ImageryDates } from '../terrain/imageryDates'
-import { IMAGERY_SOURCES, TERRAIN_SOURCES, getImagerySource } from '../terrain/sources'
+import { TERRAIN_SOURCES, getImagerySource, groupImagerySources } from '../terrain/sources'
 import { centroid } from '../geo/lonLat'
 import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, SEA_TOP_RANGE, WIND_DIRECTIONS, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
@@ -329,6 +329,13 @@ function ImageryDateControl() {
   )
 }
 
+/** Headings of the imagery picker (`groupImagerySources`). */
+const IMAGERY_GROUP_LABELS = {
+  get photos() { return t('light.map.imageryPhotos') },
+  get maps() { return t('light.map.imageryMaps') },
+  get elsewhere() { return t('light.map.imageryElsewhere') },
+}
+
 /**
  * « Nuages » (atmosphere on): volumetric clouds from the weather of the outing, a manual cover, a sea of clouds (its
  * top proposed from the first track when chosen), or none.
@@ -573,6 +580,7 @@ export function MapSettings() {
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
   const terrainId = `${id}-terrain`
+  const trackBounds = useAppStore((s) => s.tracks[0]?.bounds)
   const imageryId = `${id}-imagery`
   const wireframeId = `${id}-wireframe`
   const zoomLabel = ZOOM_OFFSETS.find((o) => o.value === settings.imageryZoomOffset)?.label
@@ -589,7 +597,10 @@ export function MapSettings() {
           <Select
             id={imageryId}
             value={settings.imagerySourceId}
-            options={IMAGERY_SOURCES.map((source) => ({ value: source.id, label: source.name }))}
+            options={groupImagerySources(trackBounds ? centroid(trackBounds) : undefined).map((group) => ({
+              label: IMAGERY_GROUP_LABELS[group.kind],
+              options: group.sources.map((source) => ({ value: source.id, label: source.name })),
+            }))}
             onChange={(source) => setSetting('imagerySourceId', source)}
           />
         </div>

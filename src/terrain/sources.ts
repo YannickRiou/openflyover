@@ -5,6 +5,7 @@
  */
 import { t } from '../i18n'
 import type { ImagerySource, LonLat, LonLatBounds, TerrainSource, TileKey, TileSourceBase } from '../core/types'
+import { FRANCE_OUTLINE, SWITZERLAND_OUTLINE, insideOutline } from '../geo/outlines'
 
 export const TERRAIN_SOURCES: TerrainSource[] = [
   {
@@ -49,6 +50,7 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'ign-ortho',
+    outline: FRANCE_OUTLINE,
     name: 'IGN BD ORTHO (France)',
     // Géoplateforme WMTS, TileMatrixSet PM (= Web Mercator, 256 px). The layer is bound to PM_0_19.
     urlTemplate:
@@ -69,6 +71,7 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'swisstopo',
+    outline: SWITZERLAND_OUTLINE,
     get name() {
       return t('terrain.sources.swisstopo.name')
     },
@@ -154,6 +157,8 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'ign-plan',
+    outline: FRANCE_OUTLINE,
+    map: true,
     get name() {
       return t('terrain.sources.ign-plan.name')
     },
@@ -172,6 +177,8 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'swisstopo-carte',
+    outline: SWITZERLAND_OUTLINE,
+    map: true,
     get name() {
       return t('terrain.sources.swisstopo-carte.name')
     },
@@ -188,6 +195,7 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
   {
     kind: 'imagery',
     id: 'opentopomap',
+    map: true,
     get name() {
       return t('terrain.sources.opentopomap.name')
     },
@@ -206,6 +214,28 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
 
 export function getTerrainSource(id: string): TerrainSource {
   return TERRAIN_SOURCES.find((s) => s.id === id) ?? TERRAIN_SOURCES[0]
+}
+
+/** Groups of the imagery picker: photos, then maps, each the regional sources first; then the ones that miss the place. */
+export interface ImageryGroup {
+  kind: 'photos' | 'maps' | 'elsewhere'
+  sources: ImagerySource[]
+}
+
+/**
+ * The imagery sources grouped for the picker: the aerial photos and the maps that cover `at` (the centre of the track;
+ * every source without a track; inside its `outline` when it has one), regional ones before the worldwide ones,
+ * catalogue order otherwise; then the regional sources that do not cover it (swisstopo shows nothing in France). Empty groups are left out.
+ */
+export function groupImagerySources(at?: LonLat, sources: readonly ImagerySource[] = IMAGERY_SOURCES): ImageryGroup[] {
+  const covers = (s: ImagerySource) => !at || (sourceCovers(s, at) && (!s.outline || insideOutline(at, s.outline)))
+  const regionalFirst = (list: ImagerySource[]) => [...list.filter((s) => s.coverage), ...list.filter((s) => !s.coverage)]
+  const groups: ImageryGroup[] = [
+    { kind: 'photos', sources: regionalFirst(sources.filter((s) => !s.map && covers(s))) },
+    { kind: 'maps', sources: regionalFirst(sources.filter((s) => s.map && covers(s))) },
+    { kind: 'elsewhere', sources: sources.filter((s) => !covers(s)) },
+  ]
+  return groups.filter((g) => g.sources.length > 0)
 }
 
 export function getImagerySource(id: string): ImagerySource {

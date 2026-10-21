@@ -9,6 +9,8 @@ const messages: Messages['news'] = {
   'v31.dates.text': 'Con IGN BD ORTHO o Esri, « Data delle foto » (scheda Mappa) propone le foto più vecchie del luogo: una data invernale per la neve, estiva per evitarla.',
   'v31.free.title': 'Una telecamera libera',
   'v31.free.text': 'Lo stile « Libera (keyframe) » non segue il marcatore: senza keyframe la telecamera resta fissa sull’intero tracciato; aggiungi dei keyframe sulla timeline per scegliere tu i suoi movimenti (inquadratura fissa, giro attorno al tracciato…).',
+  'v31.imagery.title': 'Un elenco di immagini in ordine',
+  'v31.imagery.text': 'Nella scheda Mappa, le immagini sono divise in « Foto aeree » e « Mappe », prima le fonti del paese della traccia; quelle che lì non mostrano nulla (swisstopo in Francia) sono a parte.',
   'v31.orbit.title': 'Un’orbita completa',
   'v31.orbit.text': '« Orbita attorno al marcatore » ora fa un giro completo durante il sorvolo, qualunque sia la durata; « Giri di orbita » regola quanti.',
   'v31.wind.title': 'Vento tra le nuvole',

@@ -25,6 +25,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
     items: [
       { icon: 'image', get title() { return t('news.v31.dates.title') }, get text() { return t('news.v31.dates.text') } },
       { icon: 'video', get title() { return t('news.v31.free.title') }, get text() { return t('news.v31.free.text') } },
+      { icon: 'layers', get title() { return t('news.v31.imagery.title') }, get text() { return t('news.v31.imagery.text') } },
       { icon: 'orbit', get title() { return t('news.v31.orbit.title') }, get text() { return t('news.v31.orbit.text') } },
       { icon: 'cloud-sun', get title() { return t('news.v31.wind.title') }, get text() { return t('news.v31.wind.text') } },
     ],

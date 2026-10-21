@@ -6,6 +6,7 @@ import {
   buildTileUrl,
   getImagerySource,
   getTerrainSource,
+  groupImagerySources,
   sourceCovers,
 } from './sources'
 
@@ -198,5 +199,31 @@ describe('catalogue integrity (values verified 2026-10-05, see docs/sources.md)'
       expect(sourceCovers(getImagerySource('usgs-imagery'), place)).toBe(true) // Yosemite, Denali, Maui
     }
     expect(sourceCovers(getImagerySource('usgs-imagery'), at(6.87, 45.92))).toBe(false)
+  })
+})
+
+describe('groupImagerySources (the imagery picker)', () => {
+  const ids = (at?: { lon: number; lat: number }) =>
+    Object.fromEntries(groupImagerySources(at).map((g) => [g.kind, g.sources.map((s) => s.id)]))
+
+  it('without a track: photos, then maps, every source', () => {
+    expect(ids()).toEqual({
+      photos: ['ign-ortho', 'swisstopo', 'basemap-at', 'gsi-photo', 'usgs-imagery', 'arcgis-world-imagery'],
+      maps: ['ign-plan', 'swisstopo-carte', 'opentopomap'],
+    })
+  })
+
+  it('in France: the French sources and the worldwide ones, swisstopo apart, even inside its box (Chamonix)', () => {
+    const chamonix = ids({ lon: 6.869, lat: 45.924 })
+    expect(chamonix.photos).toEqual(['ign-ortho', 'arcgis-world-imagery'])
+    expect(chamonix.maps).toEqual(['ign-plan', 'opentopomap'])
+    expect(chamonix.elsewhere).toEqual(['swisstopo', 'basemap-at', 'gsi-photo', 'usgs-imagery', 'swisstopo-carte'])
+  })
+
+  it('in Switzerland: swisstopo first (Geneva, Zermatt)', () => {
+    for (const at of [{ lon: 6.143, lat: 46.204 }, { lon: 7.749, lat: 46.02 }]) {
+      expect(ids(at).photos[0]).toBe('swisstopo')
+      expect(ids(at).maps[0]).toBe('swisstopo-carte')
+    }
   })
 })

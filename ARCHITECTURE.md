@@ -178,6 +178,11 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    release the tile last changed in, walked back (about 20 requests of 116 B in the Alps) plus one metadata query per
    version for the day the photo was taken (`SRC_DATE2`, layer « 1.2m Resolution Metadata »). Kept for the session. The
    poster's flat map and the offline packs keep the latest photos.
+   The picker groups them (`groupImagerySources`): photos, then maps (`map: true`), the sources covering the centre of the first
+   track first (regional before worldwide), then « Ne couvrent pas la trace ». Covering = inside the `coverage` box and, for IGN
+   and swisstopo, inside their country's `outline` (`geo/outlines.ts`, Natural Earth 1:50m simplified to 1.5–2 km, 1.5 km of
+   margin): the boxes overlap (Chamonix is in swisstopo's, Geneva in IGN's). The automatic choice (`pickRegionalImagery`) still
+   uses the boxes.
    Exact URLs, max zooms, encoding and CORS support are checked empirically (`docs/sources.md`); `sources.ts` is the single source of truth.
    A source without CORS goes through the Vite proxy (`/tiles/<id>/...`, see `vite.config.ts`).
 2. **Fetch** (`fetch.ts`): `fetch()` + `createImageBitmap`, priority queue, concurrency ~12, deduplication of in-flight requests,
