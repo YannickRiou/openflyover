@@ -123,6 +123,7 @@ const messages: Messages['light'] = {
   'map.imageryDateLatest': 'Die neuesten',
   'map.imageryDateLatestOn': 'Die neuesten ({date})',
   'map.imageryDateRelease': 'Version vom {date}',
+  'map.imageryDateOther': 'Ältere Fotos',
   'map.imageryDateSearch': 'Verfügbare Daten hier suchen',
   'map.imageryDateSearching': 'Daten werden gesucht…',
   'map.imageryDateNoTrack': 'Laden Sie einen Track, um die Daten seiner Luftbilder zu suchen.',

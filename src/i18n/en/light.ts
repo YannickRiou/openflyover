@@ -123,6 +123,7 @@ const messages: Messages['light'] = {
   'map.imageryDateLatest': 'The most recent',
   'map.imageryDateLatestOn': 'The most recent ({date})',
   'map.imageryDateRelease': 'Version of {date}',
+  'map.imageryDateOther': 'Older photos',
   'map.imageryDateSearch': 'Look for the dates available here',
   'map.imageryDateSearching': 'Looking for dates…',
   'map.imageryDateNoTrack': 'Load a track to look for the dates of its photos.',

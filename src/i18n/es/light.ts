@@ -123,6 +123,7 @@ const messages: Messages['light'] = {
   'map.imageryDateLatest': 'Las más recientes',
   'map.imageryDateLatestOn': 'Las más recientes ({date})',
   'map.imageryDateRelease': 'Versión del {date}',
+  'map.imageryDateOther': 'Fotos más antiguas',
   'map.imageryDateSearch': 'Buscar las fechas disponibles aquí',
   'map.imageryDateSearching': 'Buscando fechas…',
   'map.imageryDateNoTrack': 'Cargue un recorrido para buscar las fechas de sus fotos.',

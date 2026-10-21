@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { CLOUD_QUALITY_NAMES, effectiveRender } from '../export/qualityTier'
 import { t, useT } from '../i18n'
 import { formatDate } from '../i18n/format'
@@ -278,7 +278,6 @@ function ImageryDateControl() {
   const setSetting = useAppStore((s) => s.setSetting)
   const [search, setSearch] = useState<{ key: string; status: 'loading' | 'error' } | ({ key: string } & ImageryDates) | null>(null)
   const kind = imageryDateKind(sourceId)
-  if (!kind) return null
   const at = bounds ? centroid(bounds) : null
   const key = at ? `${sourceId}:${at.lon.toFixed(3)},${at.lat.toFixed(3)}` : ''
   const current = search?.key === key ? search : null
@@ -287,7 +286,8 @@ function ImageryDateControl() {
   const latestLabel = latest ? t('light.map.imageryDateLatestOn', { date: imageryDateLabel(latest) }) : t('light.map.imageryDateLatest')
   const value = imageryDateValue(date, kind) === null ? '' : date
   const chosen = dates.find((d) => d.value === value)
-  const valueLabel = value === '' ? latestLabel : chosen ? imageryDateLabel(chosen) : value.slice(kind.length + 1)
+  // a date chosen before its list was found here (another tab, a project reopened): the year for IGN, never the number of an Esri release
+  const valueLabel = value === '' ? latestLabel : chosen ? imageryDateLabel(chosen) : kind === 'ign' ? value.slice(kind.length + 1) : t('light.map.imageryDateOther')
   const find = () => {
     if (!at) return
     setSearch({ key, status: 'loading' })
@@ -296,6 +296,20 @@ function ImageryDateControl() {
       () => setSearch({ key, status: 'error' }),
     )
   }
+  // the list of a chosen date is found again by itself (kept for the session: no new request when it was found before)
+  const pending = kind !== null && value !== '' && at !== null && current === null
+  useEffect(() => {
+    if (!pending || !bounds) return
+    let live = true
+    findImageryDates(getImagerySource(sourceId), centroid(bounds)).then(
+      (found) => live && setSearch({ key, ...found }),
+      () => {},
+    )
+    return () => {
+      live = false
+    }
+  }, [pending, key, sourceId, bounds])
+  if (!kind) return null
   const options = [
     { value: '', label: latestLabel },
     ...dates.map((d) => ({ value: d.value, label: imageryDateLabel(d) })),
