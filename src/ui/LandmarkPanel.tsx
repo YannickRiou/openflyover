@@ -586,7 +586,7 @@ export function LandmarkPanel() {
                       if (poi.id === added) e.currentTarget.select()
                     }}
                     onBlur={() => setAdded(null)}
-                    onChange={(value) => editFilm((f) => ({ film: renamePoi(f, poi.id, value) }), { step: false })}
+                    onChange={(value) => editFilm((f) => ({ film: renamePoi(f, poi.id, value, placeStop(f.stops, row)?.id) }), { step: false })}
                   />
                 </div>
                 <EyeButton name={name || t('landmarks.poiThis')} hidden={row.hidden} onClick={() => setRowsMode([row], row.hidden ? 'auto' : 'never')} />

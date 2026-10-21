@@ -32,6 +32,15 @@ describe('points of interest', () => {
     expect(removePoi(film, 'poi-9')).toEqual(film)
   })
 
+  it('its stop follows the new name while its label is still the old one; a label of its own stays', () => {
+    const film = { ...addPoi(DEFAULT_FILM, chalet, 'Pique-nique'), stops: [{ id: 'stop-1', atM: 500, durationS: 3, camera: 'orbite' as const, label: 'Pique-nique' }] }
+    expect(renamePoi(film, 'poi-1', 'Pique-nique au lac', 'stop-1').stops[0].label).toBe('Pique-nique au lac')
+    expect(renamePoi(film, 'poi-1', '', 'stop-1').stops[0].label).toBeUndefined()
+    const own = { ...film, stops: [{ ...film.stops[0], label: 'Pause déjeuner' }] }
+    expect(renamePoi(own, 'poi-1', 'Pique-nique au lac', 'stop-1').stops[0].label).toBe('Pause déjeuner')
+    expect(renamePoi(film, 'poi-1', 'Pique-nique au lac').stops[0].label).toBe('Pique-nique')
+  })
+
   it('pictogram: stored unless it is the pin, validated', () => {
     const film = addPoi(addPoi(DEFAULT_FILM, chalet, 'Refuge'), chalet, 'Lac')
     const hut = setPoiIcon(film, 'poi-1', 'refuge')

@@ -615,6 +615,9 @@ export function FilmInspector() {
           range('dip', t('inspector.shot.dipDuration'), shot.dipS ?? DIP_DEFAULT_S, DIP_DURATION_RANGE, seconds, (dipS) =>
             change((f) => updateShot(f, phase, { dipS }), false),
           )}
+          {shot.style !== 'aucune' && (
+            <Button onClick={() => change((f) => updateShot(f, phase, { style: 'aucune' }), false)}>{t('inspector.shot.remove')}</Button>
+          )}
         </InspectorGroup>
       </>
     )

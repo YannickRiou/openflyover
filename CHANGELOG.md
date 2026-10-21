@@ -12,6 +12,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **« Densité » removed**: the « Confortable / Compact » choice of « Réglages › Apparence » changed the spacing by about 15 % only; it is gone and the interface keeps its usual spacing.
 - **More counters**: « Habillage › Compteurs » can also show the slope, the time of day, the pace (minutes per km), the power and the temperature, when the track records them (power and temperature come from the sensors of a FIT file). The opening and closing cards can show the average pace (« Allure moy. »).
 - **Same names in every place**: the ghost-race leaderboard switch of the « Trace » tab is now called « Classement (course fantôme) » as in « Habillage », and says where its position, size and colours are; the « Survol » switches are called « Ouverture / Clôture « Depuis la région » », the name of the style in the shot's panel, and show on whenever the shot has that style (before, only with the region highlighted). The weather hints point to the « Météo » tab (they said « Trace »), and the closing card's « Météo de la sortie » box says why it is greyed out.
+- **Stops that keep up**: renaming a point of interest (« Carte › Repères ») renames its stop too, unless the stop got a label of its own; switching on « Arrêts automatiques » says how many stops made by hand it replaces (Ctrl+Z brings them back), and its hint says so beforehand. The « Ouverture » and « Clôture » panels also have « Retirer le plan de caméra » next to « Retirer » for the card.
 
 ## 3.2.1 (October 2026)
 
