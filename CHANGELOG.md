@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## 3.2.0 (unreleased)
+## 3.2.0 (October 2026)
 
 - **An opening card of your own too**: the inspector of the « Titre d'ouverture » block offers the same choices as the closing card: figures announced at the start (none until you pick some), a line of your own under the date and subtitle line, the elevation profile and mini-map of the whole outing, and a logo or picture above the title. On both cards the free line and the weather now each take their own line. Older projects show the same title as before.
 - **A closing card of your own**: in the inspector of the « Carte de clôture » block, choose its figures among distance, D+, D−, highest and lowest point, duration, top and average speed and date (the usual five until you change them), add a line of your own under the title (« Sommet du Grand Som »), the elevation profile and the mini-map of the whole track under the figures, and a logo or picture above the title. With a picture, the profile or the mini-map, the card stays a card in the styles that lay it out themselves (« Journal de bord »…). Older projects show the same card as before.
