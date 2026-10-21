@@ -57,6 +57,7 @@ const messages: Messages['marker'] = {
   'track.custom': 'Personalizzato',
   'track.sameAsTrack': 'Quello della traccia',
   'track.colorBy': 'Colora in base a',
+  'track.colorByHint': 'La linea prende i colori della misura; il colore di ogni traccia resta quello del suo alone, del suo marcatore e della sua tappa.',
   'track.legendAnchor': 'Posizione della legenda',
   'track.smoothing': 'Smussatura della traccia',
   'track.smoothingTip': 'Traccia a zigzag o camera che trema? La smussatura fa la media delle posizioni GPS su questa distanza: la traccia e la camera seguono una linea calma.',

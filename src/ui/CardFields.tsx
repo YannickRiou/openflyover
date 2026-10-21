@@ -3,7 +3,7 @@ import { TITLE_CARD_ID } from '../film/cards'
 import { useT } from '../i18n'
 import type { CardId } from '../film/cards'
 import { fileToLogoDataUrl } from '../overlay/assets'
-import { cardFigureLabel, cardFigures } from '../overlay/draw'
+import { cardFigureLabel, cardFigures, creditLines } from '../overlay/draw'
 import { CARD_FIGURES, CARD_LINE_MAX, END_CREDITS_MAX } from '../overlay/settings'
 import type { CardExtras, EndCardSettings, TitleCardSettings } from '../overlay/settings'
 import { getPlatform } from '../platform'
@@ -79,7 +79,10 @@ export function CardFields({ card }: { card: CardId }) {
         />
         <p className="type-hint">{t('inspector.card.creditsHint')}</p>
       </div>
-      <WidgetPosition widget="end" />
+      {/* the roll centres the card: its position only counts without credits */}
+      <fieldset className="min-w-0" disabled={creditLines(end.credits).length > 0}>
+        <WidgetPosition widget="end" />
+      </fieldset>
       <SizeField value={end.size} onChange={(size) => setEnd({ size })} />
       <WidgetStyleOverrides widget="end" />
     </>

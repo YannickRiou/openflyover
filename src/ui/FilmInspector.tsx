@@ -267,6 +267,7 @@ function SituationFramingFields({
           options={START_HEIGHTS.map((height) => ({ value: height, label: START_HEIGHT_LABELS[height] }))}
           onChange={(startHeight) => onChange({ startHeight })}
         />
+        {shot.distanceKm !== undefined && <p className={HINT}>{t('inspector.framing.heightByDistance')}</p>}
       </div>
       <RangeField
         label={t('inspector.framing.distance')}
@@ -1059,12 +1060,13 @@ export function FilmInspector() {
               ))}
             </RadioGroup>
           </fieldset>
-          {!video && (
-            <Checkbox checked={media.kenBurns} disabled={card} onChange={(on) => set({ kenBurns: on })}>{t('inspector.media.kenBurns')}</Checkbox>
+          {/* the slow move is that of a full-screen photo; a framed one stays still */}
+          {!video && !card && (
+            <Checkbox checked={media.kenBurns} onChange={(on) => set({ kenBurns: on })}>{t('inspector.media.kenBurns')}</Checkbox>
           )}
           {text('caption', t('inspector.media.caption'), media.caption ?? '', (caption) => set({ caption: caption || undefined }))}
           {anchorSelect(card ? t('inspector.text.position') : t('inspector.media.captionPosition'), media.anchor, (anchor) => set({ anchor }))}
-          {range('size', t('inspector.text.size'), media.size, SIZE_RANGE, (v) => `×${formatNumber(v, 1)}`, (size) => set({ size }))}
+          {range('size', card ? t('inspector.text.size') : t('inspector.media.captionSize'), media.size, SIZE_RANGE, (v) => `×${formatNumber(v, 1)}`, (size) => set({ size }))}
           {timing(media.startS, media.durationS, set)}
           {attachSelect(media.stopId)}
           {itemCamera(media.startS, media.durationS)}

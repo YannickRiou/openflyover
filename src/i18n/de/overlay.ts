@@ -156,6 +156,7 @@ const messages: Messages['overlay'] = {
   'panel.profileMinimap': 'Profil und Minikarte',
   'panel.profile': 'Höhenprofil',
   'panel.profileWidth': 'Breite (% des Bildes)',
+  'panel.profileWidthInStyle': 'In diesem Stil nimmt das Profil die ganze Breite seines Platzes ein: nur die Höhe zählt.',
   'panel.profileHeight': 'Höhe (% des Bildes)',
   'panel.noElevation': 'Für diesen Track ist keine Höhe aufgezeichnet.',
   'panel.minimap': 'Minikarte',

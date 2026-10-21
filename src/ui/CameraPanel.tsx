@@ -395,7 +395,8 @@ export function CameraPanel() {
               </fieldset>
             </SettingRow>
 
-            {PACING_SLIDERS.map(({ key, label, tip, format, spoken = format }) => {
+            {/* « Pause aux temps forts » makes the automatic stops of the films saved before the timeline only ('rythme'); a newer film's stops are set on the timeline */}
+            {PACING_SLIDERS.filter(({ key }) => key !== 'pauseS' || filmSettings.autoMode === 'rythme').map(({ key, label, tip, format, spoken = format }) => {
               const range = PACING_RANGES[key]
               return (
                 <SettingRow key={key} label={label} value={format(pacing[key])} paths={[`pacing.${key}`]}>
