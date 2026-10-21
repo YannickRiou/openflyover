@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v332.landmarks.title': 'Nascondere riferimenti in pochi clic',
+  'v332.landmarks.text': 'Nella mappa dei riferimenti, «Lo nasconde» nasconde ogni riferimento cliccato, «Scegliere una zona» nasconde in una volta quelli di un rettangolo o di un tratto del profilo, e il tasto M nasconde quello scelto e passa al successivo.',
   'v331.recap.title': 'Rivedere la tappa finita',
   'v331.recap.text': 'Ogni transizione tra tappe sceglie il suo passaggio (stacco o dissolvenza), se passare la notte e se rivedere la tappa finita: la camera sale per qualche secondo per mostrarla intera. In Traccia › Più tracce.',
   'v33.stages.title': 'Tappe più semplici',
