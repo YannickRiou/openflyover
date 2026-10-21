@@ -168,6 +168,10 @@ export interface ImagerySource extends TileSourceBase {
   kind: 'imagery'
   /** photos drawn where this source's tile is blank (dated IGN photos: the latest ones, `imageryDates.ts`) */
   fallback?: ImagerySource
+  /** a drawn map (topographic), not photos: listed apart in the picker */
+  map?: true
+  /** where the source really has data, finer than `coverage` (rings of [lon, lat]; the picker's grouping only) */
+  outline?: readonly (readonly (readonly [number, number])[])[]
 }
 
 /** Decoded elevation tile. Row-major, row 0 = north edge, metres (NaN = nodata). */

@@ -9,6 +9,8 @@ const messages: Messages['news'] = {
   'v31.dates.text': 'Mit IGN BD ORTHO oder Esri bietet « Aufnahmedatum » (Reiter Karte) ältere Luftbilder des Ortes: ein Winterdatum für Schnee, ein Sommerdatum ohne.',
   'v31.free.title': 'Eine freie Kamera',
   'v31.free.text': 'Der Stil « Frei (Keyframes) » folgt dem Marker nicht: ohne Keyframes bleibt die Kamera fest auf dem ganzen Track; setzen Sie Keyframes in der Zeitleiste, um ihre Bewegungen selbst zu wählen (feste Einstellung, Runde um den Track…).',
+  'v31.imagery.title': 'Eine geordnete Bilderliste',
+  'v31.imagery.text': 'Im Reiter Karte sind die Quellen in « Luftbilder » und « Karten » sortiert, die des Landes des Tracks zuerst; die dort nichts zeigen (swisstopo in Frankreich), stehen gesondert.',
   'v31.orbit.title': 'Ein voller Orbit',
   'v31.orbit.text': '« Kreisfahrt um den Marker » macht jetzt eine volle Runde während des Überflugs, unabhängig von seiner Dauer; « Orbit-Runden » legt fest, wie viele.',
   'v31.wind.title': 'Wind in den Wolken',

@@ -9,6 +9,8 @@ const messages: Messages['news'] = {
   'v31.dates.text': 'Con IGN BD ORTHO o Esri, « Fecha de las fotos » (pestaña Mapa) propone las fotos más antiguas del lugar: una fecha de invierno para tener nieve, de verano para evitarla.',
   'v31.free.title': 'Una cámara libre',
   'v31.free.text': 'El estilo « Libre (fotogramas clave) » no sigue el marcador: sin fotogramas clave la cámara queda fija sobre todo el recorrido; añada fotogramas clave en la línea de tiempo para elegir usted mismo sus movimientos (plano fijo, vuelta al recorrido…).',
+  'v31.imagery.title': 'Una lista de imágenes ordenada',
+  'v31.imagery.text': 'En la pestaña Mapa, las imágenes se ordenan en « Fotos aéreas » y « Mapas », primero las fuentes del país del recorrido; las que no muestran nada allí (swisstopo en Francia) quedan aparte.',
   'v31.orbit.title': 'Una órbita completa',
   'v31.orbit.text': '« Órbita alrededor del marcador » da ahora una vuelta completa durante el vuelo, sea cual sea su duración; « Vueltas de órbita » ajusta cuántas.',
   'v31.wind.title': 'Viento en las nubes',
