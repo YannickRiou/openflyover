@@ -458,7 +458,7 @@ pointer (`appearance.css`).
   `parsePreferences` in `shell.ts`; not shown on the home screen). All tabs stay mounted (`hidden`): weather, landmarks and export have
   side effects. `App` builds their contents, the stage and the timeline once per track state (`useMemo`, the timeline
   also per `sheetOpen` and the phone layout): a tab switch re-renders the shell (tab bar, top bar, status bar), not the nine panels nor the
-  3D scene (see "Phone and tablet"). Flat sections separated by a rule, sticky section header (title + "modifié / Par défaut" (modified / default)). A click
+  3D scene (see "Phone and tablet"). Flat sections separated by a rule, sticky section header (title + the ↺ "modifié" reset button, `ModifiedMarker`). A click
   on the open tab, the button at the bottom of the rail or `[` collapses the panel. Tab and collapsed state are remembered by the browser
   (`getPlatform().storage` `openflyover.shell.v1`, `parseShellPrefs`: an unknown tab id falls back to Trace), not by the project.
   **Home screen** (no track): the rail holds « Projet » alone, folded, and « Exporter » is hidden (`ShellState.home`,
@@ -615,7 +615,7 @@ pointer (`appearance.css`).
     (`tap`), a long press shows any other tip. Every other `:hover` style sits in `@media (hover: hover)`,
     in place (same cascade on a computer): no grey background or border left on a button after a tap.
 - **Sections of the tabs** (`PanelSection.tsx`): `PanelSection` = flat collapsible section (`fold-head` utility,
-  sticky header: title, "modifié / Par défaut" of its keys, chevron), open initially, then as last left: open / folded
+  sticky header: title, the ↺ "modifié" reset button of its keys, chevron), open initially, then as last left: open / folded
   state remembered by title in the platform storage (`FOLDS_KEY` `openflyover.folds.v1`, `parseFoldPrefs` in `shell.ts`,
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
   (imagery, water), "Relief" (exaggeration), "Repères et points d'intérêt" (`LandmarkPanel`, absent without a track).
@@ -628,7 +628,7 @@ pointer (`appearance.css`).
   its name and current value (iOS Settings style, `aria-expanded`), whose control stays hidden (mounted, `hidden`)
   until the row is pressed, then unfolds under it and takes the focus (the checked radio, else the first field); the
   value turns bold when one of its `paths` departs from the default (`modifiedPaths(settings, paths)` from
-  `project/apply.ts`, paths `'key'` or `'key.field'`); the section's "Par défaut" resets it. A lone field in a row hides its
+  `project/apply.ts`, paths `'key'` or `'key.field'`); the section's ↺ button resets it. A lone field in a row hides its
   plain label (the row names it). Rows: imagery detail, terrain source, water strength, track colouring, smoothing, width,
   dash, marker size, km markers, label size and range, landmark kinds and distance, sea render, low cloud base, cloud quality, weather intensity, exposure, sun date,
   the four grading sliders, flare, bloom radius, camera style, distance / tilt / aim / smoothing, pacing parameters, transitions; export frame rate, quality, still type. Setting
@@ -673,7 +673,7 @@ pointer (`appearance.css`).
   selected, dotted if unavailable) for multiple choices (landmark types, counters); option text at weight 500,
   labels at 600. Météo: weather on two lines (outing; marker instant), tables collapsed under
   "Détails" (details); ghost race synchronization and ranking only once it is enabled. Habillage (`OverlayPanel`)
-  in `PanelSection`: "Habillage" (switch, style, "Couleurs et polices" (colors and fonts) collapsed; the only "modifié / Par défaut",
+  in `PanelSection`: "Habillage" (switch, style, "Couleurs et polices" (colors and fonts) collapsed; the only ↺ "modifié" button,
   for all of `overlay`), "Titres" (titles), "Compteurs" (counters; and "Classement (course fantôme)" (ghost race ranking) from two tracks), "Profil et mini-carte" (profile and mini-map), "Météo, logo et texte" (weather, logo and text; absent when the overlay is off), "Crédits des
   sources" (source credits; always). Each element (`WidgetGroup`) has its switch, then its position (`WidgetPosition`: 3 × 3
   grid `AnchorPicker`, then "Position libre" with two offsets in pixels of the exported film, labelled from the anchor; `OffsetField` keeps a draft
@@ -1470,7 +1470,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   zoom (− / logarithmic slider / + / "Ajuster" (fit) = the whole film), "Options" menu ("Ajouter une musique…" (add music), see
   "Music"; "Arrêts automatiques" (automatic stops) checkbox, `setAutoStops`:
   checked, `autoStops` + `'temps-forts'`, own stops cleared; unchecked, generated stops written; "modifié" /
-  "Par défaut" chip for the film, `ModifiedMarker keys={['film']}`; a dot on the button when the film departs from the default; it
+  ↺ "modifié" button for the film, `ModifiedMarker keys={['film']}`; a dot on the button when the film departs from the default; it
   closes with Esc, a click outside or Tab), collapse.
   Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 56 px): click-drag to seek, **opening and closing
   included** (`setProgress(clock.progressAtTime(t), t)`, end of film = progress 1 without a time); it is also a keyboard

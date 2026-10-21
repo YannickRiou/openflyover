@@ -405,7 +405,7 @@ const SCENARIOS = [
   },
   {
     id: 'reglage-repli',
-    title: 'Réglage replié (onglet Lumière) : nom et valeur, curseur au clavier, Par défaut',
+    title: 'Réglage replié (onglet Lumière) : nom et valeur, curseur au clavier, retour par défaut (↺)',
     async run({ page }) {
       if (await page.evaluate(() => document.querySelector('[data-testid="tab-lumiere"]')?.getAttribute('aria-selected') !== 'true')) {
         await page.click('[data-testid="tab-lumiere"]')
@@ -431,7 +431,7 @@ const SCENARIOS = [
       await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('+2,0'))
       await page.keyboard.press('Home')
       await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('−2,0'))
-      // the section's « Par défaut » puts it back
+      // the section's ↺ button puts it back
       await page.click('[data-testid="tab-panel-lumiere"] button[aria-label="Rétablir les réglages par défaut : Atmosphère"]')
       await until(page, () => !document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]'))
       // Enter on the row folds it again
