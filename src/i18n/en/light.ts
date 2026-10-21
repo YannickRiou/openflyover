@@ -42,6 +42,7 @@ const messages: Messages['light'] = {
   'days.duration': 'Card duration',
   'days.view': 'High view during the night',
   'days.viewHint': 'During the night before each day, the camera rises to show the day to come, then comes back down to the marker at dawn; the card shows meanwhile. The length of the night is set above.',
+  'days.stageViewHint': 'During the night between two stages (« Night » transition), the camera rises to show the stage just finished, then comes back down to the start of the next one at dawn; the stage card shows meanwhile.',
   'chip.lever': 'Sunrise',
   'chip.matin': 'Morning',
   'chip.midi': 'Noon',

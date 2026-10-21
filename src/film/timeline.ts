@@ -649,12 +649,15 @@ function dragDayCard(film: Film, k: number, grip: Grip, deltaS: number, ctx: Dra
   return { ...film, dayCards: { ...cards, durationS } }
 }
 
-/** The card after junction `afterTrackId` (null: the first stage) with its end edge dragged by `deltaS`: its duration. */
+/**
+ * The card after junction `afterTrackId` (null: the first stage) with its end edge dragged by `deltaS`: its duration,
+ * counted from the start of the stage's flight (`stageCardWindow`).
+ */
 function dragStageCard(film: Film, afterTrackId: string | null, grip: Grip, deltaS: number, ctx: DragContext, snap: (t: number) => number): Film {
-  const startS = afterTrackId === null ? ctx.clock.openingS : ctx.clock.junctions.find((j) => j.afterTrackId === afterTrackId)?.holdStartS
-  if (grip !== 'end' || startS === undefined) return film
+  const flightS = afterTrackId === null ? ctx.clock.openingS : ctx.clock.junctions.find((j) => j.afterTrackId === afterTrackId)?.endS
+  if (grip !== 'end' || flightS === undefined) return film
   const own = junctionCardOf(film, afterTrackId)
-  const durationS = clamp(snap(startS + own.durationS + deltaS) - startS, JUNCTION_CARD_RANGE.min, JUNCTION_CARD_RANGE.max)
+  const durationS = clamp(snap(flightS + own.durationS + deltaS) - flightS, JUNCTION_CARD_RANGE.min, JUNCTION_CARD_RANGE.max)
   return withJunctionCard(film, afterTrackId, { durationS })
 }
 

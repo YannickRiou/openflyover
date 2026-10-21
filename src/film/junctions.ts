@@ -107,8 +107,9 @@ export function hasStageItem(item: string, stageIds: readonly string[]): boolean
 
 /**
  * Film times between which the card of a stage is shown: from the middle of the junction before it (the start of the
- * flight for the first stage) for its duration, but not past the start of the next junction. Null without a sequence
- * or when the junction is not on the clock. `afterTrackId` null: the first stage.
+ * flight for the first stage) until its duration after the stage's flight starts (the end of that junction), so it
+ * stays on the first seconds of the flight, but not past the start of the next junction. Null without a sequence or
+ * when the junction is not on the clock. `afterTrackId` null: the first stage.
  */
 export function stageCardWindow(
   clock: Pick<FilmClock, 'openingS' | 'junctions'>,
@@ -118,7 +119,8 @@ export function stageCardWindow(
   const k = afterTrackId === null ? -1 : clock.junctions.findIndex((j) => j.afterTrackId === afterTrackId)
   if (clock.junctions.length === 0 || (afterTrackId !== null && k < 0)) return null
   const startS = k < 0 ? clock.openingS : clock.junctions[k].holdStartS
-  const endS = Math.min(startS + junctionCardOf(film, afterTrackId).durationS, clock.junctions[k + 1]?.startS ?? Infinity)
+  const flightS = k < 0 ? clock.openingS : clock.junctions[k].endS
+  const endS = Math.min(flightS + junctionCardOf(film, afterTrackId).durationS, clock.junctions[k + 1]?.startS ?? Infinity)
   return { startS, endS: Math.max(startS, endS) }
 }
 

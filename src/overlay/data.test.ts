@@ -356,7 +356,10 @@ describe('« À la suite »', () => {
     expect(stageCardAt(sequence, time(9), own)).toBeNull()
     // the junction after the first stage is the one keyed by its track; its card is the second stage's
     expect(stageCardAt(sequence, time(31), own)).toBeNull()
-    expect(stageCardAt(sequence, time(31), withJunctionCard(DEFAULT_FILM, a.id, { durationS: 2 }))).toMatchObject({ name: 'J2', durationS: 2 })
+    // shown from the cut (30 s) through the dip, then its 2 s on the flight of the stage (from 33 s)
+    expect(stageCardAt(sequence, time(31), withJunctionCard(DEFAULT_FILM, a.id, { durationS: 2 }))).toMatchObject({ name: 'J2', startS: 30, durationS: 5 })
+    expect(stageCardAt(sequence, time(34.9), withJunctionCard(DEFAULT_FILM, a.id, { durationS: 2 }))).not.toBeNull()
+    expect(stageCardAt(sequence, time(35), withJunctionCard(DEFAULT_FILM, a.id, { durationS: 2 }))).toBeNull()
     // the junction starts to fade at 12 s: the first card is gone by then
     expect(stageCardAt(sequence, time(11), withJunctionCard(DEFAULT_FILM, null, { durationS: 15 }))?.durationS).toBe(6)
     expect(stageCardAt(sequence, time(12), withJunctionCard(DEFAULT_FILM, null, { durationS: 15 }))).toBeNull()
