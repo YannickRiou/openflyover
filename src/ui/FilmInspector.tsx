@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { t, useT } from '../i18n'
 import { formatDate } from '../i18n/format'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
-import { CARD_LABELS, TITLE_CARD_ID, cardShown, isCardItem } from '../film/cards'
+import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, isCardItem } from '../film/cards'
 import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageFlightS, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from '../film/junctions'
 import { useMediaStore } from '../film/media'
 import {
@@ -493,13 +493,29 @@ export function FilmInspector() {
   let removeLabel = t('inspector.remove')
   let removable = true
   let isStop = false
-  if (item === 'opening' || item === 'closing') {
-    const shot = film[item]
-    title = item === 'opening' ? t('timeline.shot.opening') : t('timeline.shot.closing')
-    removeLabel = t('inspector.noShot')
-    removable = shot.style !== 'aucune'
+  const phase = item === 'opening' || item === TITLE_CARD_ID ? 'opening' : item === 'closing' || item === END_CARD_ID ? 'closing' : null
+  if (phase) {
+    // one inspector for the start of the film and one for its end, whichever block was clicked: the card shown over the
+    // shot (overlay.title / overlay.end) and the camera shot (film.opening / film.closing)
+    const shot = film[phase]
+    const card = phase === 'opening' ? TITLE_CARD_ID : END_CARD_ID
+    title = phase === 'opening' ? t('timeline.shot.opening') : t('timeline.shot.closing')
+    // each part is removed in its own group: the card by its button, the shot by « Aucune » in its style
+    removable = false
     body = (
       <>
+        <InspectorGroup title={CARD_LABELS[card]}>
+          {cardShown(overlay, card) ? (
+            <>
+              <CardFields card={card} />
+              <p className={HINT}>{card === TITLE_CARD_ID ? t('inspector.card.hintRight') : t('inspector.card.hintLeft')}</p>
+              <Button onClick={() => disableCard(card)}>{t('inspector.card.remove', { label: CARD_LABELS[card] })}</Button>
+            </>
+          ) : (
+            <p className={HINT}>{t('inspector.shot.cardOff', { label: CARD_LABELS[card] })}</p>
+          )}
+        </InspectorGroup>
+        <InspectorGroup title={t('inspector.shot.camera')}>
         <div className={FIELD}>
           <label className="type-label" htmlFor={`${id}-style`}>
             {t('inspector.shot.styleLabel')}
@@ -509,7 +525,7 @@ export function FilmInspector() {
             value={shot.style}
             aria-describedby={`${id}-style-hint`}
             options={SHOT_STYLES.map((style) => ({ value: style, label: SHOT_STYLE_LABELS[style] }))}
-            onChange={(style) => change((f) => updateShot(f, item, { style }), false)}
+            onChange={(style) => change((f) => updateShot(f, phase, { style }), false)}
           />
           <p id={`${id}-style-hint`} className={HINT}>
             {SHOT_HINTS[shot.style]}
@@ -521,7 +537,7 @@ export function FilmInspector() {
               <Switch
                 checked={shot.highlight === true}
                 aria-describedby={`${id}-highlight-hint`}
-                onChange={(on) => change((f) => updateShot(f, item, { highlight: on }), false)}
+                onChange={(on) => change((f) => updateShot(f, phase, { highlight: on }), false)}
               >
                 {t('inspector.place.highlight')}
               </Switch>
@@ -531,12 +547,12 @@ export function FilmInspector() {
               )}
             </InspectorGroup>
             <SituationTimings
-              phase={item}
+              phase={phase}
               durationS={shot.durationS}
               holdS={shot.holdS}
-              onChange={(patch) => change((f) => updateShot(f, item, patch), false)}
+              onChange={(patch) => change((f) => updateShot(f, phase, patch), false)}
             />
-            <SituationFramingFields phase={item} shot={shot} onChange={(patch) => change((f) => updateShot(f, item, patch), false)} />
+            <SituationFramingFields phase={phase} shot={shot} onChange={(patch) => change((f) => updateShot(f, phase, patch), false)} />
           </>
         )}
         {shot.style !== 'situation' &&
@@ -546,7 +562,7 @@ export function FilmInspector() {
             shot.durationS,
             SHOT_DURATION_RANGE,
             seconds,
-            (durationS) => change((f) => updateShot(f, item, { durationS }), false),
+            (durationS) => change((f) => updateShot(f, phase, { durationS }), false),
             shot.style === 'aucune',
           )}
         {shot.style !== 'aucune' && (
@@ -560,7 +576,7 @@ export function FilmInspector() {
                 { value: 'survol', label: t('inspector.shot.sun.flyover') },
                 { value: 'accelere', label: t('inspector.shot.sun.accelerated', { hours: shotSunHoursOf(shot) }) },
               ]}
-              onChange={(sun) => change((f) => updateShot(f, item, { sun, moveSun: undefined }), false)}
+              onChange={(sun) => change((f) => updateShot(f, phase, { sun, moveSun: undefined }), false)}
             />
             {shotSunOf(shot) === 'accelere' && (
               <RangeField
@@ -568,13 +584,13 @@ export function FilmInspector() {
                 {...SHOT_SUN_HOURS_RANGE}
                 value={shotSunHoursOf(shot)}
                 format={(hours) => `${hours} h`}
-                onChange={(sunHours) => change((f) => updateShot(f, item, { sunHours }), false)}
+                onChange={(sunHours) => change((f) => updateShot(f, phase, { sunHours }), false)}
                 wide={false}
                 tip={t('inspector.shot.sunHoursTip')}
               />
             )}
             <p id={`${id}-sun-hint`} className={HINT}>
-              {SHOT_SUN_HINTS[shotSunOf(shot)](shotSunHoursOf(shot))[item === 'opening' ? 0 : 1]}
+              {SHOT_SUN_HINTS[shotSunOf(shot)](shotSunHoursOf(shot))[phase === 'opening' ? 0 : 1]}
               {!atmosphere && t('inspector.shot.sunNeedsAtmosphere')}
             </p>
           </InspectorGroup>
@@ -589,7 +605,7 @@ export function FilmInspector() {
             disabled={shot.style === 'aucune'}
             aria-describedby={`${id}-transition-hint`}
             options={SHOT_TRANSITIONS.map((transition) => ({ value: transition, label: SHOT_TRANSITION_LABELS[transition] }))}
-            onChange={(transition) => change((f) => updateShot(f, item, { transition }), false)}
+            onChange={(transition) => change((f) => updateShot(f, phase, { transition }), false)}
           />
           <p id={`${id}-transition-hint`} className={HINT}>
             {TRANSITION_HINTS[shot.transition ?? 'enchaine']}
@@ -597,8 +613,9 @@ export function FilmInspector() {
         </div>
         {shotDipColor(shot) &&
           range('dip', t('inspector.shot.dipDuration'), shot.dipS ?? DIP_DEFAULT_S, DIP_DURATION_RANGE, seconds, (dipS) =>
-            change((f) => updateShot(f, item, { dipS }), false),
+            change((f) => updateShot(f, phase, { dipS }), false),
           )}
+        </InspectorGroup>
       </>
     )
   } else {
@@ -1120,17 +1137,6 @@ export function FilmInspector() {
             {window && t('inspector.stageCard.window', { start: formatFilmTime(window.startS, true), end: formatFilmTime(window.endS, true) })}
             {t('inspector.stageCard.hint')}
             {k === 0 && t('inspector.stageCard.first')}
-          </p>
-        </>
-      )
-    } else if (isCardItem(item) && cardShown(overlay, item)) {
-      // the card's own settings (overlay.title / overlay.end), switched off by deleting its block
-      title = CARD_LABELS[item]
-      body = (
-        <>
-          <CardFields card={item} />
-          <p className={HINT}>
-            {item === TITLE_CARD_ID ? t('inspector.card.hintRight') : t('inspector.card.hintLeft')}
           </p>
         </>
       )

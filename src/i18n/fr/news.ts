@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v321.panel.title': 'Un seul volet pour l’ouverture, un pour la clôture',
+  'v321.panel.text': '« Modifier » dans Habillage, le bloc du titre et celui du plan de caméra ouvrent maintenant le même volet : le titre ou la carte en haut, le plan de caméra en dessous.',
   'v32.end.title': 'Une carte de clôture à votre façon',
   'v32.end.text': 'Choisissez ses chiffres (D−, altitude min, vitesse moyenne, date…), ajoutez une ligne à vous, le profil, la mini-carte du tracé et un logo ou une image : dans l’inspecteur du bloc « Carte de clôture ».',
   'v32.title.title': 'Une carte d’ouverture à votre façon',

@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v321.panel.title': 'One panel for the opening, one for the closing',
+  'v321.panel.text': '« Edit » in the Overlay tab, the title block and the camera shot block now open the same panel: the title or card on top, the camera shot below.',
   'v32.end.title': 'A closing card your way',
   'v32.end.text': 'Choose its figures (descent, lowest point, average speed, date…), add a line of your own, the profile, the mini-map of the route and a logo or picture: in the inspector of the closing card block.',
   'v32.title.title': 'An opening card your way',

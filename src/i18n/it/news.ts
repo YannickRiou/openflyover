@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v321.panel.title': 'Un solo pannello per l’apertura, uno per la chiusura',
+  'v321.panel.text': '« Modifica » in Overlay, il blocco del titolo e quello dell’inquadratura aprono ora lo stesso pannello: il titolo o la scheda in alto, l’inquadratura sotto.',
   'v32.end.title': 'Una scheda di chiusura a modo vostro',
   'v32.end.text': 'Scegliete i suoi numeri (dislivello −, altitudine minima, velocità media, data…), aggiungete una riga vostra, il profilo, la minimappa del percorso e un logo o un’immagine: nell’ispettore del blocco della scheda di chiusura.',
   'v32.title.title': 'Una scheda di apertura a modo vostro',

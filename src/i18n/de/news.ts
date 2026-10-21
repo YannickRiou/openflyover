@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v321.panel.title': 'Ein Bereich für die Eröffnung, einer für den Abschluss',
+  'v321.panel.text': '« Bearbeiten » im Overlay-Tab, der Titelblock und der Block der Kameraeinstellung öffnen jetzt denselben Bereich: oben der Titel oder die Karte, darunter die Kameraeinstellung.',
   'v32.end.title': 'Eine Abschlusskarte nach Ihrem Geschmack',
   'v32.end.text': 'Wählen Sie ihre Zahlen (Abstieg, tiefster Punkt, Durchschnittstempo, Datum…), fügen Sie eine eigene Zeile, das Profil, die Minikarte der Route und ein Logo oder Bild hinzu: im Inspektor des Blocks der Abschlusskarte.',
   'v32.title.title': 'Eine Eröffnungskarte nach Ihrem Geschmack',

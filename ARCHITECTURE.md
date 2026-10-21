@@ -2193,7 +2193,7 @@ exports) gets it from the terrain source of the settings.
   profile, closing statistics, weather summary, mini-map outline (`miniMapOutline`: local equirectangular
   projection, x east / y south, longest side = 1, proportions kept, at most 1,500 points). `overlayFrameAt(data, progress)` is
   a pure function of progress (including `mapPoint`, the marker position on the mini-map).
-- **Settings**: `settings.overlay` (`src/overlay/settings.ts`, disabled by default; the opening title and the closing card keep only their switch, a hint and a « Modifier » button in the « Habillage » panel (« Titres »): their other settings live in the inspector of their timeline block, `CardFields`): style (`editorial`, `broadcast`, `app`) and
+- **Settings**: `settings.overlay` (`src/overlay/settings.ts`, disabled by default; the opening title and the closing card keep only their switch, a hint and a « Modifier » button in the « Habillage » panel (« Titres »): their other settings live in the inspector of their timeline block, `CardFields`, shared with the camera shot of the same end of the film: `card-title` and `opening` open one « Ouverture » inspector, `card-end` and `closing` one « Clôture » inspector): style (`editorial`, `broadcast`, `app`) and
   widgets — opening card, closing card, counters, profile, mini-map (optional north arrow), logo, free text,
   weather, ranking — each with `enabled`, `anchor`, `size`. Optional `markerColor` ('#rrggbb', '' or absent = the 3D marker's colour:
   `marker.color`, else the colour of the track under the marker; `OverlayExtras.markerColor`) on `profile` and `minimap`: the position dot
