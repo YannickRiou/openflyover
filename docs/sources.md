@@ -311,6 +311,13 @@ Not sources of their own: a setting of `ign-ortho` and `arcgis-world-imagery` (`
   flown that year: elsewhere a plain white JPEG of 1,651 B at every zoom (z10–z13 checked at Chamonix for 2022). Chamonix z13: 2020 and
   2023 real (14 kB), 2019, 2021, 2022, 2024 white. Same terms as BD ORTHO (Licence Ouverte). The multi-year mosaics
   (`ORTHOPHOTOS2016-2020`, `2021-2023`) were not used: one year is what tells the season.
+- **IGN, day of each flight**: WFS `https://data.geopf.fr/wfs/ows` (CORS `*`), `GetFeature` on the mosaic graphs
+  `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.<2000-2005|2006-2010|2011-2015|2016-2020|2021-2023>:graphe_bdortho` and
+  `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE-MOSAIQUAGE:graphe_bdortho` (the latest photos), `BBOX=<lon−,lat−,lon+,lat+>,EPSG:4326`
+  (lon first with this CRS code), `OUTPUTFORMAT=application/json`: properties `dep`, `pva` (year), `date_vol`. Pic de l'Homme
+  (Ariège): latest 2025-07-09/10, then 2022-07-02, 2019-08-16, 2013-08-21, 2008-07-15/22, 2003-01-01 (= year only). Better than
+  probing a tile per year: exact at the place, 6 requests, and the season. Where a year did not fly, its layer answers a white
+  tile or a 404 (2023 at the pic de l'Homme z13).
 - **Esri World Imagery Wayback**: releases listed by `https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/waybackconfig.json`
   (197 releases, 2014-02-20 → 2026-09-24; CORS `*`). Tiles `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/<release>/{z}/{y}/{x}`
   (301 to the release that holds the tile, CORS `*`). The tilemap `…/World_Imagery/MapServer/tilemap/<release>/<z>/<y>/<x>` answers

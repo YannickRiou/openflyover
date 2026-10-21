@@ -9,7 +9,7 @@ import { getSettingsHistory } from '../project/history'
 import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
-import { findImageryDates, imageryDateKind, imageryDateValue, type ImageryDate } from '../terrain/imageryDates'
+import { findImageryDates, imageryDateKind, imageryDateValue, type ImageryDate, type ImageryDates } from '../terrain/imageryDates'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES, getImagerySource } from '../terrain/sources'
 import { centroid } from '../geo/lonLat'
 import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, SEA_TOP_RANGE, WIND_DIRECTIONS, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
@@ -258,11 +258,11 @@ const CLOUD_QUALITY_OPTIONS: { value: CloudQuality; label: string }[] = [
   { value: 'high', get label() { return CLOUD_QUALITY_NAMES.high } },
 ]
 
-/** Label of a date of photos: the day it was taken (Esri), or the year (IGN) or the release (Esri without metadata). */
+/** Label of a date of photos: the day they were taken, else the year (IGN) or the release (Esri without metadata). */
 function imageryDateLabel(date: ImageryDate): string {
-  if (date.kind === 'ign') return String(new Date(date.timeMs).getUTCFullYear())
   const day = formatDate(date.timeMs, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-  return date.taken ? day : t('light.map.imageryDateRelease', { date: day })
+  if (date.taken) return day
+  return date.kind === 'ign' ? String(new Date(date.timeMs).getUTCFullYear()) : t('light.map.imageryDateRelease', { date: day })
 }
 
 /**
@@ -276,26 +276,28 @@ function ImageryDateControl() {
   const date = useAppStore((s) => s.settings.imageryDate)
   const bounds = useAppStore((s) => s.tracks[0]?.bounds)
   const setSetting = useAppStore((s) => s.setSetting)
-  const [search, setSearch] = useState<{ key: string; status: 'loading' | 'error' } | { key: string; dates: ImageryDate[] } | null>(null)
+  const [search, setSearch] = useState<{ key: string; status: 'loading' | 'error' } | ({ key: string } & ImageryDates) | null>(null)
   const kind = imageryDateKind(sourceId)
   if (!kind) return null
   const at = bounds ? centroid(bounds) : null
   const key = at ? `${sourceId}:${at.lon.toFixed(3)},${at.lat.toFixed(3)}` : ''
   const current = search?.key === key ? search : null
   const dates = current && 'dates' in current ? current.dates : []
+  const latest = current && 'dates' in current ? current.latest : null
+  const latestLabel = latest ? t('light.map.imageryDateLatestOn', { date: imageryDateLabel(latest) }) : t('light.map.imageryDateLatest')
   const value = imageryDateValue(date, kind) === null ? '' : date
   const chosen = dates.find((d) => d.value === value)
-  const valueLabel = value === '' ? t('light.map.imageryDateLatest') : chosen ? imageryDateLabel(chosen) : value.slice(kind.length + 1)
+  const valueLabel = value === '' ? latestLabel : chosen ? imageryDateLabel(chosen) : value.slice(kind.length + 1)
   const find = () => {
     if (!at) return
     setSearch({ key, status: 'loading' })
     findImageryDates(getImagerySource(sourceId), at).then(
-      (found) => setSearch({ key, dates: found }),
+      (found) => setSearch({ key, ...found }),
       () => setSearch({ key, status: 'error' }),
     )
   }
   const options = [
-    { value: '', label: t('light.map.imageryDateLatest') },
+    { value: '', label: latestLabel },
     ...dates.map((d) => ({ value: d.value, label: imageryDateLabel(d) })),
     ...(value !== '' && !chosen ? [{ value, label: valueLabel }] : []),
   ]

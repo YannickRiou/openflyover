@@ -5,6 +5,7 @@ import type { ImagerySource, TileFetcher, TileKey } from '../core/types'
 import { lonLatToTileFrac } from '../geo/mercator'
 import { IMAGERY_FALLBACK_COLOR, loadImageryTexture, planImagerySubtiles } from './imagery'
 import { buildTileUrl } from './sources'
+import { TileFetchError } from './fetch'
 
 function source(overrides: Partial<ImagerySource> = {}): ImagerySource {
   return {
@@ -392,6 +393,15 @@ describe('loadImageryTexture', () => {
       expect(fetcher.calls.map((c) => c.url)).toEqual(['https://tiles.test/10/530/370.jpg', 'https://latest.test/10/530/370.jpg'])
       const calls = (texture.image as FakeOffscreenCanvas).ctx.drawImage.mock.calls
       expect((calls[0][0] as { url: string }).url).toBe('https://latest.test/10/530/370.jpg')
+    })
+
+    it('dated photos: a 404 is drawn from the fallback too', async () => {
+      const latest = source({ urlTemplate: 'https://latest.test/{z}/{x}/{y}.jpg' })
+      const dated = { ...covered(), fallback: latest }
+      const fetcher = fakeFetcher((url) => (url.startsWith('https://tiles.test/') ? Promise.reject(new TileFetchError(url, 404)) : Promise.resolve(bitmapFor(url))))
+      const texture = await loadImageryTexture(KEY, dated, fetcher, { zoomOffset: 0 })
+      expect(fetcher.calls.map((c) => c.url)).toEqual(['https://tiles.test/10/530/370.jpg', 'https://latest.test/10/530/370.jpg'])
+      expect(texture.userData.incomplete).toBeUndefined()
     })
 
     it('leaves a source without coverage alone', async () => {

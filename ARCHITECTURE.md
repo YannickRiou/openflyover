@@ -172,7 +172,9 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    the dated source's `fallback`, the latest photos, is drawn instead in `loadImageryTexture`), `esri:<release>` = the
    World Imagery Wayback release (`wayback.maptiles.arcgis.com`). `datedImagerySource` gives the engine a source with its own
    id (`ign-ortho@ign:2020`), so a date change reloads the imagery. The dates offered are found on demand at the centre of the
-   first track: 25 tiles at z13 for IGN (blank or not), and for Esri the tilemap of the newest release, whose `select` names the
+   first track: for IGN the mosaic graphs (WFS `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.<period>:graphe_bdortho` for 2000–2023 and
+   `…GRAPHE-MOSAIQUAGE:graphe_bdortho` for the latest, 6 requests in a 20 m box: `pva` year and `date_vol` day of the
+   flight; « YYYY-01-01 » = year only; a dated layer may also answer 404 where the year did not fly: the fallback too), and for Esri the tilemap of the newest release, whose `select` names the
    release the tile last changed in, walked back (about 20 requests of 116 B in the Alps) plus one metadata query per
    version for the day the photo was taken (`SRC_DATE2`, layer « 1.2m Resolution Metadata »). Kept for the session. The
    poster's flat map and the offline packs keep the latest photos.

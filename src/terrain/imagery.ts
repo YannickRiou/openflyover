@@ -18,7 +18,7 @@ import type { ImagerySource, LoadImageryOptions, LoadImageryTexture, TileFetcher
 import { boundsIntersect, tileBounds, tileKeyString } from '../geo/mercator'
 import { buildTileUrl } from './sources'
 import { createCanvas } from './dem'
-import { createAbortError, isAbortError } from './fetch'
+import { TileFetchError, createAbortError, isAbortError } from './fetch'
 
 /** Neutral grey drawn where imagery is missing (failed, aborted or out of coverage). */
 export const IMAGERY_FALLBACK_COLOR = '#8a8f94'
@@ -194,10 +194,14 @@ export const loadImageryTexture: LoadImageryTexture = async (
         try {
           let key = op.key
           let from = source
-          bitmap = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal })
-          // a blank tile of dated photos (a year that did not fly here): the latest photos instead
-          if (from.fallback && isBlank(bitmap)) {
-            from = from.fallback
+          // dated photos where the year did not fly (a blank tile, or a 404 for some): the latest photos instead
+          const dated = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal }).catch((error: unknown) => {
+            if (from.fallback && error instanceof TileFetchError && error.status === 404) return null
+            throw error
+          })
+          if (dated && !(from.fallback && isBlank(dated))) bitmap = dated
+          else {
+            from = from.fallback ?? from
             bitmap = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal })
           }
           // a blank tile (regional sources only): the same ground from the nearest coarser tile that is not, like a source's own overview

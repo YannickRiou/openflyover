@@ -2,8 +2,9 @@
  * « Date des photos »: older photos of IGN BD ORTHO and of Esri World Imagery, to pick a season with or without snow.
  *
  * - IGN: one Géoplateforme layer per year of flight (`ORTHOIMAGERY.ORTHOPHOTOS<year>`), each covering only the
- *   departments flown that year (a plain white tile elsewhere, at every zoom): where the year has nothing, the latest
- *   photos fill in (`fallback`, imagery.ts).
+ *   departments flown that year (a plain white tile or a 404 elsewhere): where the year has nothing, the latest photos fill
+ *   in (`fallback`, imagery.ts). The years flown at a place and the day of each flight come from the mosaic graphs (WFS
+ *   `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.<period>`, `date_vol`): one small request per period.
  * - Esri: the World Imagery Wayback archive, one release per update of the mosaic. The tilemap of a release names the
  *   release a tile last changed in (`select`), so walking back from the newest one costs one small request per version
  *   that really differs here, and the metadata layer of that release gives the date the photo was taken.
@@ -11,10 +12,7 @@
  * `settings.imageryDate`: '' = the latest photos, 'ign:<year>' or 'esri:<release>'; ignored by the other sources.
  * The dates found are probed once per place and source (kept for the session, small JSON and tiles the HTTP cache keeps).
  */
-import type { ImagerySource, LonLat, TileFetcher } from '../core/types'
-import { createTileFetcher } from './fetch'
-import { isBlank } from './imagery'
-import { buildTileUrl } from './sources'
+import type { ImagerySource, LonLat } from '../core/types'
 
 export type ImageryDateKind = 'ign' | 'esri'
 
@@ -25,8 +23,13 @@ const WAYBACK_CONFIG_URL = 'https://s3-us-west-2.amazonaws.com/config.maptiles.a
 const WAYBACK_TILEMAP_URL = 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tilemap'
 const WAYBACK_TILE_TEMPLATE =
   'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{release}/{z}/{y}/{x}'
-/** Zoom of the tile probed at the place: about 1.2 km, the scale the photos are chosen at. */
-const PROBE_ZOOM = 13
+const IGN_WFS_URL = 'https://data.geopf.fr/wfs/ows'
+/** Mosaic graphs of BD ORTHO: the latest photos, then one per period of the yearly layers. */
+const IGN_LATEST_GRAPH = 'ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE-MOSAIQUAGE:graphe_bdortho'
+const IGN_PERIOD_GRAPHS = ['2000-2005', '2006-2010', '2011-2015', '2016-2020', '2021-2023'].map((p) => `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.${p}:graphe_bdortho`)
+/** Half side of the box the graphs are read in (degrees, about 10 m): the place itself. */
+const IGN_POINT_DEG = 0.0001
+/** Zoom of the Wayback tile probed at the place (about 1.2 km). */
 const WAYBACK_PROBE_ZOOM = 15
 /** Metadata layer « 1.2m Resolution Metadata » of a Wayback release (the date of the photo seen near the probe zoom). */
 const WAYBACK_METADATA_LAYER = 6
@@ -72,6 +75,12 @@ export interface ImageryDate {
   kind: ImageryDateKind
 }
 
+/** The dates of the photos at a place, newest first, and the date of the latest photos when known (`value` ''). */
+export interface ImageryDates {
+  latest: ImageryDate | null
+  dates: ImageryDate[]
+}
+
 /** Tile of zoom `z` containing (lon, lat), Web Mercator. */
 export function tileAt({ lon, lat }: LonLat, z: number): { z: number; x: number; y: number } {
   const n = 2 ** z
@@ -81,21 +90,21 @@ export function tileAt({ lon, lat }: LonLat, z: number): { z: number; x: number;
   return { z, x: Math.min(n - 1, Math.max(0, x)), y: Math.min(n - 1, Math.max(0, y)) }
 }
 
-let probeFetcher: TileFetcher | undefined
-const found = new Map<string, Promise<ImageryDate[]>>()
+const found = new Map<string, Promise<ImageryDates>>()
 
 /**
- * The dates of `source`'s photos at `at`, newest first: the IGN years whose tile there is not blank, the Esri versions
- * that differ there. Kept for the session per source and tile; a failed search is forgotten (tried again next time).
+ * The dates of `source`'s photos at `at`, newest first: the IGN years flown there with the day of the flight, the Esri
+ * versions that differ there with the day the photo was taken. Kept for the session per source and place (about 10 m
+ * for IGN, a z15 tile for Esri); a failed search is forgotten (tried again next time).
  */
-export function findImageryDates(source: ImagerySource, at: LonLat): Promise<ImageryDate[]> {
+export function findImageryDates(source: ImagerySource, at: LonLat): Promise<ImageryDates> {
   const kind = imageryDateKind(source.id)
-  if (!kind) return Promise.resolve([])
-  const tile = tileAt(at, kind === 'ign' ? PROBE_ZOOM : WAYBACK_PROBE_ZOOM)
-  const key = `${kind}:${tile.z}/${tile.x}/${tile.y}`
+  if (!kind) return Promise.resolve({ latest: null, dates: [] })
+  const tile = tileAt(at, WAYBACK_PROBE_ZOOM)
+  const key = kind === 'ign' ? `ign:${at.lon.toFixed(4)},${at.lat.toFixed(4)}` : `esri:${tile.z}/${tile.x}/${tile.y}`
   let dates = found.get(key)
   if (!dates) {
-    dates = (kind === 'ign' ? ignYears(source, tile) : waybackVersions(tile, at)).catch((error: unknown) => {
+    dates = (kind === 'ign' ? ignFlights(at) : waybackVersions(tile, at)).catch((error: unknown) => {
       found.delete(key)
       throw error
     })
@@ -104,20 +113,39 @@ export function findImageryDates(source: ImagerySource, at: LonLat): Promise<Ima
   return dates
 }
 
-async function ignYears(source: ImagerySource, tile: { z: number; x: number; y: number }): Promise<ImageryDate[]> {
-  probeFetcher ??= createTileFetcher({ concurrency: 4, maxEntries: 8 })
-  const fetcher = probeFetcher
-  const covered = await Promise.all(
-    IGN_YEARS.map(async (year) => {
-      const dated = datedImagerySource(source, `ign:${year}`)
-      try {
-        return !isBlank(await fetcher.fetchBitmap(buildTileUrl(dated, tile)))
-      } catch {
-        return false
-      }
-    }),
-  )
-  return IGN_YEARS.filter((_, i) => covered[i]).map((year) => ({ value: `ign:${year}`, timeMs: Date.UTC(year, 0, 1), taken: false, kind: 'ign' }))
+interface GraphFeature {
+  properties?: { pva?: number; date_vol?: string }
+}
+
+/** The flights of a mosaic graph at `at`: year and day (null when the graph only knows the year: « 2002-01-01 »). */
+async function graphFlights(layer: string, { lon, lat }: LonLat): Promise<{ year: number; timeMs: number; taken: boolean }[]> {
+  const d = IGN_POINT_DEG
+  const url =
+    `${IGN_WFS_URL}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=${layer}&OUTPUTFORMAT=application/json&COUNT=20` +
+    `&BBOX=${lon - d},${lat - d},${lon + d},${lat + d},EPSG:4326`
+  const answer = await fetchJson<{ features?: GraphFeature[] }>(url)
+  return (answer.features ?? []).flatMap((f) => {
+    const year = f.properties?.pva
+    const day = /^(\d{4})-(\d{2})-(\d{2})/.exec(f.properties?.date_vol ?? '')
+    if (typeof year !== 'number' || !day) return []
+    const taken = !(day[2] === '01' && day[3] === '01')
+    return [{ year, timeMs: Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3])), taken }]
+  })
+}
+
+/** The IGN years flown at `at` that have a layer, the day of each flight, and the day of the latest photos. */
+async function ignFlights(at: LonLat): Promise<ImageryDates> {
+  const [latestFlights, ...periods] = await Promise.all([IGN_LATEST_GRAPH, ...IGN_PERIOD_GRAPHS].map((layer) => graphFlights(layer, at)))
+  const byYear = new Map<number, { timeMs: number; taken: boolean }>()
+  // the latest photos' year is a yearly layer too, unless it is newer than the last one
+  for (const flight of [...periods.flat(), ...latestFlights]) {
+    if (IGN_YEARS.includes(flight.year) && !byYear.has(flight.year)) byYear.set(flight.year, flight)
+  }
+  const dates = [...byYear.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([year, f]): ImageryDate => ({ value: `ign:${year}`, timeMs: f.timeMs, taken: f.taken, kind: 'ign' }))
+  const newest = latestFlights.sort((a, b) => b.timeMs - a.timeMs)[0]
+  return { latest: newest ? { value: '', timeMs: newest.timeMs, taken: newest.taken, kind: 'ign' } : null, dates }
 }
 
 interface WaybackRelease {
@@ -149,7 +177,7 @@ function waybackReleases(): Promise<WaybackRelease[]> {
   return releases
 }
 
-async function waybackVersions(tile: { z: number; x: number; y: number }, at: LonLat): Promise<ImageryDate[]> {
+async function waybackVersions(tile: { z: number; x: number; y: number }, at: LonLat): Promise<ImageryDates> {
   const all = await waybackReleases()
   const index = new Map(all.map((r, i) => [r.release, i]))
   const versions: WaybackRelease[] = []
@@ -171,7 +199,8 @@ async function waybackVersions(tile: { z: number; x: number; y: number }, at: Lo
     seen.add(timeMs)
     result.push({ value: `esri:${v.release}`, timeMs, taken: dates[i] !== null, kind: 'esri' })
   })
-  return result
+  // the newest release is the photo the live service shows
+  return { latest: result[0] ? { ...result[0], value: '' } : null, dates: result }
 }
 
 /** When the photo of `version` at `at` was taken (ms), null when its metadata does not say. */

@@ -64,10 +64,12 @@ describe('the Esri versions at a place', () => {
       const meta = /meta\.test\/(r\d+)\//.exec(url)
       return json({ features: [{ attributes: { SRC_DATE2: meta ? taken[meta[1]] : null } }] })
     })
-    const dates = await findImageryDates(esri, { lon: 6.87, lat: 45.92 })
+    const { latest, dates } = await findImageryDates(esri, { lon: 6.87, lat: 45.92 })
     expect(dates.map((d) => d.value)).toEqual(['esri:30', 'esri:20', 'esri:10'])
     expect(dates.map((d) => d.taken)).toEqual([true, true, false])
     expect(dates[0].timeMs).toBe(Date.UTC(2023, 7, 4))
+    // the live service shows the newest release
+    expect(latest).toEqual({ ...dates[0], value: '' })
     // without metadata: the release date
     expect(dates[2].timeMs).toBe(Date.parse('2014-02-20'))
     // one tilemap request per version (25 is skipped), then one metadata query each
@@ -75,5 +77,35 @@ describe('the Esri versions at a place', () => {
     // kept for the session: no request the second time
     await findImageryDates(esri, { lon: 6.87, lat: 45.92 })
     expect(requests).toHaveLength(1 + 3 + 3)
+  })
+})
+
+describe('the IGN flights at a place', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('reads the years flown and the day of each flight from the mosaic graphs, the latest photos apart', async () => {
+    const graphs: Record<string, { pva: number; date_vol: string }[]> = {
+      'GRAPHE-MOSAIQUAGE': [{ pva: 2025, date_vol: '2025-07-09Z' }],
+      '2000-2005': [{ pva: 2003, date_vol: '2003-01-01Z' }],
+      '2006-2010': [{ pva: 2008, date_vol: '2008-07-22Z' }, { pva: 2008, date_vol: '2008-07-15Z' }],
+      '2011-2015': [{ pva: 2013, date_vol: '2013-08-21Z' }],
+      '2016-2020': [{ pva: 2019, date_vol: '2019-08-16Z' }],
+      '2021-2023': [{ pva: 2022, date_vol: '2022-07-02Z' }],
+    }
+    const requests: string[] = []
+    vi.stubGlobal('fetch', async (url: string) => {
+      requests.push(url)
+      const graph = Object.keys(graphs).find((g) => url.includes(g))!
+      return { ok: true, status: 200, json: async () => ({ features: graphs[graph].map((properties) => ({ properties })) }) }
+    })
+    const { latest, dates } = await findImageryDates(ign, { lon: 1.47, lat: 42.75 })
+    expect(requests).toHaveLength(6)
+    expect(requests[0]).toContain('BBOX=1.4699,42.7499,1.4701,42.7501,EPSG:4326')
+    // 2025 is the latest photos, no yearly layer: not offered as a year
+    expect(dates.map((d) => d.value)).toEqual(['ign:2022', 'ign:2019', 'ign:2013', 'ign:2008', 'ign:2003'])
+    expect(dates[1]).toMatchObject({ timeMs: Date.UTC(2019, 7, 16), taken: true })
+    // « 2003-01-01 »: only the year is known
+    expect(dates[4].taken).toBe(false)
+    expect(latest).toMatchObject({ value: '', timeMs: Date.UTC(2025, 6, 9), taken: true })
   })
 })
