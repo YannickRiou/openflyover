@@ -23,6 +23,8 @@ import {
   ITEM_DURATION_RANGE,
   JUNCTION_CARD_RANGE,
   JUNCTION_HOLD_RANGE,
+  DAY_CARD_DURATION_RANGE,
+  DEFAULT_DAY_CARDS,
   MEDIA_DEFAULTS,
   MIN_SPEED_SPAN_M,
   SHOT_DURATION_RANGE,
@@ -34,6 +36,7 @@ import {
   clipTimeS,
   nextFilmId,
 } from './model'
+import { dayCardIndexOf, isDayCardItem } from './days'
 import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText, MediaSync } from './model'
 import { clampParamValue } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
@@ -512,6 +515,7 @@ export function dragFilm(film: Film, item: TimelineItem, grip: Grip, deltaS: num
 
   if (isJunctionItem(item)) return dragJunction(film, junctionTrackOf(item), grip, deltaS, ctx, snap)
   if (isStageCardItem(item)) return dragStageCard(film, stageCardAfterOf(item), grip, deltaS, ctx, snap)
+  if (isDayCardItem(item)) return dragDayCard(film, dayCardIndexOf(item), grip, deltaS, ctx, snap)
   if (isStageItem(item)) return dragStage(film, stageTrackOf(item), grip, deltaS, ctx, snap)
 
   const stop = clock.stops.find((s) => s.id === item)
@@ -634,6 +638,15 @@ function dragStage(film: Film, trackId: string, grip: Grip, deltaS: number, ctx:
   const endOf = (clock: FilmClock) => clock.junctions.find((j) => j.afterTrackId === trackId)?.startS ?? clock.openingS + clock.flightS
   const durationS = positionAtTime((d) => endOf(clockOfFilm(withStageDuration(film, trackId, d))), snap(endOf(ctx.clock) + deltaS), STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max)
   return withStageDuration(film, trackId, durationS)
+}
+
+/** The cards of the days with the end edge of day `k`'s dragged by `deltaS`: the duration they all share. */
+function dragDayCard(film: Film, k: number, grip: Grip, deltaS: number, ctx: DragContext, snap: (t: number) => number): Film {
+  const day = ctx.clock.days[k]
+  const cards = film.dayCards ?? DEFAULT_DAY_CARDS
+  if (grip !== 'end' || !day) return film
+  const durationS = clamp(snap(day.cardS + cards.durationS + deltaS) - day.cardS, DAY_CARD_DURATION_RANGE.min, DAY_CARD_DURATION_RANGE.max)
+  return { ...film, dayCards: { ...cards, durationS } }
 }
 
 /** The card after junction `afterTrackId` (null: the first stage) with its end edge dragged by `deltaS`: its duration. */
@@ -1147,6 +1160,8 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
   // a junction goes back to the default one, a stage card is switched off (its settings are kept)
   if (isJunctionItem(id)) return resetJunction(film, junctionTrackOf(id))
   if (isStageCardItem(id)) return withJunctionCard(film, stageCardAfterOf(id), { enabled: false })
+  // the cards of the days go together: deleting one block switches them off (their settings are kept)
+  if (isDayCardItem(id)) return { ...film, dayCards: { ...(film.dayCards ?? DEFAULT_DAY_CARDS), enabled: false } }
   // a stage goes back to its share of the flyover duration
   if (isStageItem(id)) return withStageDuration(film, stageTrackOf(id), null)
   return {
@@ -1169,6 +1184,7 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
 export function hasFilmItem(film: Film, stops: readonly { id: string }[], item: TimelineItem, stageIds: readonly string[] = []): boolean {
   if (item === 'opening' || item === 'closing') return true
   if (hasStageItem(item, stageIds)) return true
+  if (isDayCardItem(item)) return film.dayCards?.enabled === true
   return [stops, film.speeds, film.cameraKeys, film.paramKeys, film.markerKeys, film.texts, film.media, film.audio].some((lane) => lane.some((s) => s.id === item))
 }
 

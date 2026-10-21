@@ -165,6 +165,7 @@ export default {
   'panel.logo': 'Logo',
   'panel.opacity': 'Opacité',
   'panel.freeText': 'Texte libre',
+  'panel.freeTextHint': 'Affiché pendant tout le film. Pour un texte à un moment précis, ajoutez-le sur la piste « Textes » de la timeline (bouton T).',
   'panel.text': 'Texte',
   'panel.textPlaceholder': 'Ex. : avec Marie et Paul',
   'panel.credits': 'Crédits des sources',

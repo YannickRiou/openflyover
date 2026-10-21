@@ -59,6 +59,7 @@ export default {
   'hold.description': 'Arrêt (caméra : {camera}) : {label}{auto}',
   'hold.auto': ' (automatique)',
   'card.description': 'Carte : {label}',
+  'dayCard.label': 'Jour {n}',
   'text.description': 'Texte : {text}',
   'media.videoCard': 'Vidéo en carte : {label}',
   'media.videoFull': 'Vidéo plein écran : {label}',

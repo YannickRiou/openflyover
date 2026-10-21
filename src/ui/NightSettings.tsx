@@ -1,9 +1,9 @@
 /**
  * « Jours et nuits » (Lumière tab): the nights of a multi-day track shown as pauses of the flight (a switch; dusk, night
  * and dawn seconds, `film.nights`), and the cards of the days (`film.dayCards`: which figures, title, place, size, how
- * long, and a high view of the day during the night before it). « À la suite »: the stages are the days, so only the
- * switch stays here; the seconds are set on a « Nuit » junction of the timeline (the inspector of the junction) and
- * the stage cards replace the day cards.
+ * long, and a high view of the day during the night before it; also in the inspector of a day card block,
+ * `DayCardFields`). « À la suite »: the stages are the days; the seconds stay here (the « Nuit » junctions use them,
+ * their inspector shows them too) and the stage cards replace the day cards.
  */
 import { useId, useMemo } from 'react'
 import { isDayCard, trackDays, withoutDayCards } from '../film/days'
@@ -56,7 +56,6 @@ export function NightSettings() {
         <p className="type-hint">{tr('light.nights.sequenceHint')}</p>
       )}
       {nights.enabled &&
-        !sequence &&
         NIGHT_PARTS.map(({ key, label, tip }) => (
           <SettingRow key={key} label={label} value={formatSecondsShort(nights[key])} paths={['film.nights']}>
             <RangeField label={label} tip={tip} {...NIGHT_PART_RANGE} value={nights[key]} format={formatSecondsShort} onChange={(v) => setNights({ [key]: v }, false)} />
@@ -73,46 +72,60 @@ export function NightSettings() {
             {days.length < 2 ? tr('light.days.single') : tr('light.days.hint', { count: days.length })}
             {hasLegacy && !cards.enabled && ` ${tr('light.days.legacyHint')}`}
           </p>
-          {cards.enabled && days.length >= 2 && (
-            <>
-              <fieldset className="field min-w-0">
-                <legend className="type-label mb-1">{tr('light.days.fields')}</legend>
-                <div className="chips">
-                  {DAY_CARD_FIELDS.map((field) => (
-                    <Chip key={field} checked={cards.fields[field]} onChange={(on) => setCards({ fields: { ...cards.fields, [field]: on } })}>
-                      {DAY_CARD_FIELD_LABELS[field]}
-                    </Chip>
-                  ))}
-                </div>
-              </fieldset>
-              <TextField
-                label={tr('light.days.title')}
-                value={cards.title ?? ''}
-                placeholder={tr('light.days.titlePlaceholder', { n: '{n}' })}
-                onChange={(title) => setCards({ title: title === '' ? undefined : title }, false)}
-              />
-              <p className="type-hint">{tr('light.days.titleHint')}</p>
-              <AnchorPicker label={tr('overlay.position')} value={cards.anchor} onChange={(anchor) => setCards({ anchor })} />
-              <SizeField value={cards.size} onChange={(size) => setCards({ size }, false)} />
-              <SettingRow label={tr('light.days.duration')} value={formatSecondsShort(cards.durationS)} paths={['film.dayCards']}>
-                <RangeField
-                  label={tr('light.days.duration')}
-                  {...DAY_CARD_DURATION_RANGE}
-                  value={cards.durationS}
-                  format={formatSecondsShort}
-                  onChange={(durationS) => setCards({ durationS }, false)}
-                />
-              </SettingRow>
-              <Switch id={`${id}-view`} checked={cards.view} aria-describedby={`${id}-view-hint`} onChange={(view) => setCards({ view })}>
-                {tr('light.days.view')}
-              </Switch>
-              <p id={`${id}-view-hint`} className="type-hint">
-                {tr('light.days.viewHint')}
-              </p>
-            </>
-          )}
+          {cards.enabled && days.length >= 2 && <DayCardFields />}
         </fieldset>
       )}
     </PanelSection>
+  )
+}
+
+/**
+ * Settings shared by every day card (`film.dayCards`): figures, title, place, size, how long, the high view of the
+ * night; in the Lumière tab and in the inspector of a day card block.
+ */
+export function DayCardFields() {
+  const tr = useT()
+  const id = useId()
+  const { film } = useFilmSource()
+  const cards = film.dayCards ?? DEFAULT_DAY_CARDS
+  const setCards = (patch: Partial<FilmDayCards>, step = true) =>
+    editFilm((f) => ({ film: { ...f, dayCards: { ...(f.dayCards ?? DEFAULT_DAY_CARDS), ...patch } } }), { step })
+  return (
+    <>
+      <fieldset className="field min-w-0">
+        <legend className="type-label mb-1">{tr('light.days.fields')}</legend>
+        <div className="chips">
+          {DAY_CARD_FIELDS.map((field) => (
+            <Chip key={field} checked={cards.fields[field]} onChange={(on) => setCards({ fields: { ...cards.fields, [field]: on } })}>
+              {DAY_CARD_FIELD_LABELS[field]}
+            </Chip>
+          ))}
+        </div>
+      </fieldset>
+      <TextField
+        label={tr('light.days.title')}
+        value={cards.title ?? ''}
+        placeholder={tr('light.days.titlePlaceholder', { n: '{n}' })}
+        onChange={(title) => setCards({ title: title === '' ? undefined : title }, false)}
+      />
+      <p className="type-hint">{tr('light.days.titleHint')}</p>
+      <AnchorPicker label={tr('overlay.position')} value={cards.anchor} onChange={(anchor) => setCards({ anchor })} />
+      <SizeField value={cards.size} onChange={(size) => setCards({ size }, false)} />
+      <SettingRow label={tr('light.days.duration')} value={formatSecondsShort(cards.durationS)} paths={['film.dayCards']}>
+        <RangeField
+          label={tr('light.days.duration')}
+          {...DAY_CARD_DURATION_RANGE}
+          value={cards.durationS}
+          format={formatSecondsShort}
+          onChange={(durationS) => setCards({ durationS }, false)}
+        />
+      </SettingRow>
+      <Switch id={`${id}-view`} checked={cards.view} aria-describedby={`${id}-view-hint`} onChange={(view) => setCards({ view })}>
+        {tr('light.days.view')}
+      </Switch>
+      <p id={`${id}-view-hint`} className="type-hint">
+        {tr('light.days.viewHint')}
+      </p>
+    </>
   )
 }

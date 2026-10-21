@@ -93,6 +93,18 @@ export function dragCard(
 }
 
 /** The overlay with `card` switched off (its settings are kept: switching it on again brings the block back as it was). */
+/**
+ * The card shown from `startS` for `durationS` seconds, typed in its panel like the start and length of a text: the
+ * same rules as dragging its block (kept in the film, at least CARD_MIN_S long, an end reached stays at the end).
+ */
+export function withCardTimes(overlay: OverlaySettings, card: CardId, clock: CardClock, patch: { startS?: number; durationS?: number }): OverlaySettings {
+  const window = cardWindow(overlay, card, clock)
+  const moved = patch.startS === undefined ? overlay : dragCard(overlay, card, 'move', patch.startS - window.startS, clock)
+  if (patch.durationS === undefined) return moved
+  const now = cardWindow(moved, card, clock)
+  return dragCard(moved, card, 'end', now.startS + patch.durationS - now.endS, clock)
+}
+
 export function withoutCard(overlay: OverlaySettings, card: CardId): OverlaySettings {
   return card === TITLE_CARD_ID ? { ...overlay, title: { ...overlay.title, enabled: false } } : { ...overlay, end: { ...overlay.end, enabled: false } }
 }

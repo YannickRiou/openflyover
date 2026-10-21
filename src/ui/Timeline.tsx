@@ -19,6 +19,7 @@ import { materializeStops, stopAt, stopCandidates } from '../film/assemble'
 import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readAudio, startMusicPreview, useMusicPreview, waveformPath } from '../film/audio'
 import { beatTicksPath } from '../film/beats'
 import { CARD_LABELS, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards } from '../film/cards'
+import { dayCardId, dayCardIndexOf, dayCardWindow, isDayCardItem } from '../film/days'
 import type { CardId } from '../film/cards'
 import { buildFilmClock, filmClockFor, filmClockInputFor, junctionInputsFor } from '../film/clock'
 import type { FilmClock, FilmClockFor, FilmClockInput } from '../film/clock'
@@ -28,7 +29,7 @@ import { withKey } from '../film/markerKeys'
 import { dropIndexAt } from '../film/reorder'
 import { useMediaStore } from '../film/media'
 import { isMediaFile, readMedia } from '../film/video'
-import { JUNCTION_KIND_LABELS, STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
+import { DEFAULT_DAY_CARDS, JUNCTION_KIND_LABELS, STOP_CAMERA_LABELS, clipHasSound } from '../film/model'
 import { PARAM_LANE_LABELS, PARAM_SPECS, keysOfParam, paramLanes } from '../film/paramKeys'
 import type { FilmParam, FilmParamKey } from '../film/paramKeys'
 import { MARKER_FIGURE_LABELS, MARKER_KIND_LABELS } from '../scene/markerSettings'
@@ -660,10 +661,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           if (!window || !junctionCardOf(f, after).enabled || (after === null && cardShown(ov, TITLE_CARD_ID))) return []
           return [{ id: stageCardId(after), ...window, label: t('timeline.stage.label', { n: k + 1, track: sequence.stages[k]?.track.name ?? '' }) }]
         })
+  /** the cards of the days of a multi-day track (`film.dayCards`), with their window; one duration for all */
+  const dayCardsOf = (clk: FilmClock, f: Film) =>
+    clk.days.flatMap((_, k) => {
+      const window = dayCardWindow(clk.days, k, (f.dayCards ?? DEFAULT_DAY_CARDS).durationS)
+      return window ? [{ id: dayCardId(k), ...window, label: t('timeline.dayCard.label', { n: k + 1 }) }] : []
+    })
   /** the cards and junctions as blocks, for the targets only the component knows */
   const snapBlocks: SnapBlock[] = [
     ...shownCards(overlay).map((card) => ({ id: card, ...cardWindow(overlay, card, clock), label: CARD_LABELS[card] })),
     ...stageCardsOf(clock, film, overlay),
+    ...dayCardsOf(clock, film),
   ]
   const withOwnStops = (f: Film) => materializeStops(f, { track, landmarks, pacing })
   const clockOf = (f: Film) => clockOfFilm(clockSource, input, f)
@@ -897,6 +905,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     } else if (isStageCardItem(item)) {
       const window = stageCardWindow(clock, film, stageCardAfterOf(item))
       if (window) seek(window.startS)
+    } else if (isDayCardItem(item)) {
+      const day = clock.days[dayCardIndexOf(item)]
+      if (day) seek(day.cardS)
     }
   }
   /** centred: a press that becomes a tap on release (no capture: a slide scrolls the lanes, the browser cancels it) */
@@ -1158,7 +1169,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       const grip: Grip =
         item === 'closing'
           ? 'start'
-          : item === 'opening' || isJunctionItem(item) || isStageCardItem(item) || isStageItem(item)
+          : item === 'opening' || isJunctionItem(item) || isStageCardItem(item) || isDayCardItem(item) || isStageItem(item)
             ? 'end'
             : 'move'
       if (isCardItem(item)) {
@@ -1864,6 +1875,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 {/* the card of each stage « À la suite »: only its end edge moves (its duration) */}
                 {stageCardsOf(shownClock, shownFilm, shownOverlay).map((c) =>
                   block(c.id, c.startS, c.endS, c.label, t('timeline.card.description', { label: c.label }), BLOCK_KINDS.card, ['move', 'end'], undefined, 'type'),
+                )}
+                {/* the card of each day of a multi-day track: only its end edge moves (the duration all of them share) */}
+                {dayCardsOf(shownClock, shownFilm).map((c) =>
+                  block(c.id, c.startS, c.endS, c.label, t('timeline.card.description', { label: c.label }), BLOCK_KINDS.card, ['end'], undefined, 'type'),
                 )}
                 {shownFilm.texts.map((item) =>
                   block(item.id, item.startS, item.startS + item.durationS, item.text || t('film.snap.text'), t('timeline.text.description', { text: item.text }), BLOCK_KINDS.text, [

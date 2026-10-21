@@ -49,6 +49,23 @@ export function trackDays(path: TrackPath, utcOffsetMin?: number): TrackDay[] {
 /** Texts made by the day cards of earlier versions: `day-1`, `day-2`… */
 export const isDayCard = (text: Pick<FilmText, 'id'>) => /^day-\d+$/.test(text.id)
 
+/** Timeline id of the card of day `k` (0 for the first): its block on the « Textes » lane (`film.dayCards`). */
+const DAY_CARD_PREFIX = 'card-day-'
+export const dayCardId = (k: number) => `${DAY_CARD_PREFIX}${k}`
+export const isDayCardItem = (item: string | null | undefined): item is string => typeof item === 'string' && item.startsWith(DAY_CARD_PREFIX)
+export const dayCardIndexOf = (item: string) => Number(item.slice(DAY_CARD_PREFIX.length))
+
+/**
+ * Window of the card of day `k` on the clock (`clock.days`, there only while the cards are on): from the day's card time
+ * for the cards' duration, never past the next day's card; null when there is no such day.
+ */
+export function dayCardWindow(days: readonly { cardS: number }[], k: number, durationS: number): { startS: number; endS: number } | null {
+  const day = days[k]
+  if (!day) return null
+  const endS = Math.min(day.cardS + durationS, days[k + 1]?.cardS ?? Infinity)
+  return endS > day.cardS ? { startS: day.cardS, endS } : null
+}
+
 /** `film` without the day cards baked into its texts by earlier versions (the other texts are kept as they are). */
 export function withoutDayCards(film: Film): Film {
   return film.texts.some(isDayCard) ? { ...film, texts: film.texts.filter((text) => !isDayCard(text)) } : film

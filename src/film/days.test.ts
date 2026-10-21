@@ -5,7 +5,8 @@ import { buildTrackPath } from '../flyover/path'
 import { buildTrack } from '../import/stats'
 import { cumulativeAscent } from '../overlay/data'
 import { filmClockFor } from './clock'
-import { dayFigures, isDayCard, localDate, trackDays, withoutDayCards } from './days'
+import { dayCardId, dayCardIndexOf, dayCardWindow, dayFigures, isDayCard, isDayCardItem, localDate, trackDays, withoutDayCards } from './days'
+import { dragFilm, hasFilmItem, removeFilmItem } from './timeline'
 import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from './model'
 import type { Film } from './model'
 
@@ -92,6 +93,29 @@ describe('days on the film clock', () => {
     const clock = clockOf({ ...film, dayCards: { ...DEFAULT_DAY_CARDS, enabled: true, view: true } })
     expect(clock.days[1].cardS).toBe(clock.nights[0].holdStartS)
     expect(clock.days.map((d) => d.view)).toEqual([false, true])
+  })
+})
+
+describe('the day cards on the timeline', () => {
+  const film: Film = { ...DEFAULT_FILM, autoStops: false, dayCards: { ...DEFAULT_DAY_CARDS, enabled: true } }
+  const clock = filmClockFor({ track, film, durationS: 60, pacing: DEFAULT_PACING })
+  const ctx = { clock, clockOf: () => clock, lengthM: path.lengthM, targets: [], targetsM: [], snapS: 0 }
+
+  it('a block per day from its card time for the shared duration, never past the next day', () => {
+    expect(dayCardWindow(clock.days, 0, 5)).toEqual({ startS: clock.days[0].cardS, endS: clock.days[0].cardS + 5 })
+    expect(dayCardWindow(clock.days, 0, 1e6)?.endS).toBe(clock.days[1].cardS)
+    expect(dayCardWindow(clock.days, 5, 5)).toBeNull()
+    expect(isDayCardItem(dayCardId(1))).toBe(true)
+    expect(dayCardIndexOf(dayCardId(1))).toBe(1)
+  })
+
+  it('its end edge sets the duration of every card; deleting a block switches them all off', () => {
+    expect(dragFilm(film, dayCardId(1), 'end', 2, ctx).dayCards?.durationS).toBe(DEFAULT_DAY_CARDS.durationS + 2)
+    expect(dragFilm(film, dayCardId(1), 'move', 2, ctx)).toBe(film)
+    expect(hasFilmItem(film, [], dayCardId(0))).toBe(true)
+    const off = removeFilmItem(film, dayCardId(0))
+    expect(off.dayCards).toEqual({ ...DEFAULT_DAY_CARDS, enabled: false })
+    expect(hasFilmItem(off, [], dayCardId(0))).toBe(false)
   })
 })
 

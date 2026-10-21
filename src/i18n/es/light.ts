@@ -19,7 +19,7 @@ const messages: Messages['light'] = {
   'nights.nightTip': 'La noche pasa, iluminada por la luna.',
   'nights.dawn': 'Amanecer',
   'nights.dawnTip': 'El sol sale, hasta la salida de la mañana.',
-  'nights.sequenceHint': 'En « Una tras otra », la duración del crepúsculo, la noche y el alba se ajusta en la unión « Noche » de la línea de tiempo (pista « Etapas »).',
+  'nights.sequenceHint': 'En « Una tras otra », estas duraciones valen para las uniones « Noche » de la línea de tiempo (pista « Etapas »); su inspector también las muestra.',
   'nights.none': 'Ninguna noche de descanso en este track.',
   'nights.hint': { one: '{count} noche: la película se detiene {pause} cada vez.', other: '{count} noches: la película se detiene {pause} cada vez.' },
   'nights.instant': 'La noche pasa en un instante entre dos días.',

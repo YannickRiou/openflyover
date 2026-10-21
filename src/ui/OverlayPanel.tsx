@@ -720,6 +720,7 @@ export function OverlayPanel() {
               style={<SizeField value={overlay.text.size} onChange={(size) => setWidget('text', { size })} />}
             >
               <TextField label={t('overlay.panel.text')} value={overlay.text.text} placeholder={t('overlay.panel.textPlaceholder')} onChange={(text) => setWidget('text', { text })} />
+              <p className="type-hint">{t('overlay.panel.freeTextHint')}</p>
             </WidgetGroup>
           </PanelSection>
         </>

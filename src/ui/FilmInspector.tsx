@@ -3,7 +3,8 @@ import type { ReactNode } from 'react'
 import { t, useT } from '../i18n'
 import { formatDate } from '../i18n/format'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
-import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, isCardItem } from '../film/cards'
+import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, isCardItem, withCardTimes } from '../film/cards'
+import { dayCardIndexOf, isDayCardItem } from '../film/days'
 import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageFlightS, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from '../film/junctions'
 import { useMediaStore } from '../film/media'
 import {
@@ -100,6 +101,7 @@ import { Icon } from './icons'
 import { FilmTextStyleFields } from './OverlayPanel'
 import { RegionHint } from './CameraPanel'
 import { InfoTip, RangeField, SettingRow } from './PanelSection'
+import { DayCardFields } from './NightSettings'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { showToast } from './toast'
 import { Button, Checkbox, ColorField, NumberField, Radio, RadioGroup, Select, Switch, TextField, Tip } from './primitives'
@@ -518,6 +520,13 @@ export function FilmInspector() {
         <InspectorGroup title={CARD_LABELS[card]}>
           {cardShown(overlay, card) ? (
             <>
+              {(() => {
+                // start and length typed like those of a text (the block can still be dragged)
+                const window = cardWindow(overlay, card, clock)
+                return timing(window.startS, window.endS - window.startS, (patch) =>
+                  useAppStore.getState().setSetting('overlay', withCardTimes(useAppStore.getState().settings.overlay, card, clock, patch)),
+                )
+              })()}
               <CardFields card={card} />
               <p className={HINT}>{card === TITLE_CARD_ID ? t('inspector.card.hintRight') : t('inspector.card.hintLeft')}</p>
               <Button onClick={() => disableCard(card)}>{t('inspector.card.remove', { label: CARD_LABELS[card] })}</Button>
@@ -1174,6 +1183,16 @@ export function FilmInspector() {
             {t('inspector.stage.goToStart')}
           </Button>
           <p className={HINT}>{t('inspector.stage.nameHint')}</p>
+        </>
+      )
+    } else if (isDayCardItem(item) && film.dayCards?.enabled && clock.days[dayCardIndexOf(item)]) {
+      // the cards of the days share their settings: the same panel as in Lumière › Jours et nuits
+      title = t('inspector.dayCard.title', { n: dayCardIndexOf(item) + 1 })
+      removeLabel = t('inspector.dayCard.remove')
+      body = (
+        <>
+          <DayCardFields />
+          <p className={HINT}>{t('inspector.dayCard.hint')}</p>
         </>
       )
     } else if (isStageCardItem(item) && stageIds && stageIds.length > 1) {
