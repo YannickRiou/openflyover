@@ -426,11 +426,16 @@ export const DEFAULT_DAY_CARDS: FilmDayCards = {
 
 export const JUNCTION_KINDS = ['coupe', 'fondu-noir', 'fondu-blanc', 'nuit'] as const
 /**
- * How the film passes from a stage to the next one « À la suite » (`FilmJunction`): 'coupe', a hard cut (no time);
- * 'fondu-noir' / 'fondu-blanc', a dip held on the film clock for `holdS` seconds (the stage card lives inside it);
- * 'nuit', the night the recording rests through (dusk, night, dawn of `film.nights`), a dip to black without a night.
+ * How the film passes from a stage to the next one « À la suite » (« Passage », `FilmJunction`): 'coupe', a hard cut
+ * (no time); 'fondu-noir' / 'fondu-blanc', a dip held on the film clock for `holdS` seconds (the stage card lives inside
+ * it). 'nuit' is what the clock plays where a junction passes the night (`FilmJunction.night`: dusk, night, dawn of
+ * `film.nights`); stored only by projects before v6 (`withNightAndRecapOnTheirOwn` makes it a fade with `night`).
  */
 export type JunctionKind = (typeof JUNCTION_KINDS)[number]
+/** The « Passage » a junction chooses (the night is a choice of its own). */
+export const PASSAGE_KINDS = ['coupe', 'fondu-noir', 'fondu-blanc'] as const satisfies readonly JunctionKind[]
+/** How long « Revoir l'étape finie » holds the high view of the stage before the passage (seconds, added to the film). */
+export const RECAP_S = 4
 export const JUNCTION_KIND_LABELS: Record<JunctionKind, string> = {
   get coupe() { return t('film.junctionKind.coupe') },
   get 'fondu-noir'() { return t('film.junctionKind.fondu-noir') },
@@ -475,6 +480,10 @@ export interface FilmJunction {
   kind?: JunctionKind
   /** seconds held on the clock: 0 for 'coupe' */
   holdS?: number
+  /** « Passer la nuit »: the night between the two stages, when they are on two days */
+  night?: boolean
+  /** « Revoir l'étape finie »: the camera rises over the stage that ends before the passage (during the night if it passes one) */
+  recap?: boolean
   /** the card of the stage that follows: what it changes over the common card */
   card?: StoredStageCard
 }
@@ -494,6 +503,9 @@ export interface JunctionDefault {
   kind: JunctionKind
   holdS: number
   card: boolean
+  /** « Passer la nuit » (absent: yes) and « Revoir l'étape finie » (absent: no) of the junctions that do not choose */
+  night?: boolean
+  recap?: boolean
   cardSettings?: Partial<Omit<JunctionCard, 'enabled'>>
 }
 
@@ -872,6 +884,8 @@ export function isValidJunction(junction: unknown): junction is FilmJunction {
     isId(junction.afterTrackId) &&
     (junction.kind === undefined || oneOf(JUNCTION_KINDS, junction.kind)) &&
     (junction.holdS === undefined || junction.holdS === 0 || within(junction.holdS, JUNCTION_HOLD_RANGE.min, JUNCTION_HOLD_RANGE.max)) &&
+    (junction.night === undefined || typeof junction.night === 'boolean') &&
+    (junction.recap === undefined || typeof junction.recap === 'boolean') &&
     (junction.card === undefined || isValidJunctionCard(junction.card))
   )
 }
@@ -882,6 +896,8 @@ function isValidJunctionDefault(d: unknown): d is JunctionDefault {
     oneOf(JUNCTION_KINDS, d.kind) &&
     (d.holdS === 0 || within(d.holdS, JUNCTION_HOLD_RANGE.min, JUNCTION_HOLD_RANGE.max)) &&
     typeof d.card === 'boolean' &&
+    (d.night === undefined || typeof d.night === 'boolean') &&
+    (d.recap === undefined || typeof d.recap === 'boolean') &&
     (d.cardSettings === undefined || (isValidJunctionCard(d.cardSettings) && !('enabled' in d.cardSettings)))
   )
 }

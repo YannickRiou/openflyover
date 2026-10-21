@@ -896,6 +896,27 @@ export function dayViewAt(clock: Pick<FilmClock, 'days' | 'nights' | 'junctions'
   return { ...route, k }
 }
 
+/** How long the camera takes to rise over the stage at the start of « Revoir l'étape finie » (seconds, at most). */
+const RECAP_RISE_S = 2.5
+
+/**
+ * « Revoir l'étape finie » without a night: from the start of its pause (`ClockJunction.recap`, just before the cut) to
+ * the cut, the camera up over the stage that ends (rising over RECAP_RISE_S, at most 60 % of the pause), then the
+ * passage takes the next stage from the flight camera (under the dip of a fade, at once for a cut); null outside.
+ */
+export function recapViewAt(clock: Pick<FilmClock, 'junctions'>, timeS: number): { fromM: number; toM: number; k: number } | null {
+  const j = clock.junctions.findIndex((junction) => junction.recap !== undefined && timeS >= junction.recap.startS && timeS < junction.holdStartS)
+  if (j < 0) return null
+  const { recap, atM } = clock.junctions[j]
+  const rise = Math.min(RECAP_RISE_S, 0.6 * (recap!.endS - recap!.startS))
+  return { fromM: clock.junctions[j - 1]?.atM ?? 0, toM: atM, k: rise > 0 ? smootherstep((timeS - recap!.startS) / rise) : 1 }
+}
+
+/** The high view of a route on at `timeS`: a day's or a stage's over a night (`dayViewAt`), or a stage's before its passage (`recapViewAt`). */
+export function highViewAt(clock: Pick<FilmClock, 'days' | 'nights' | 'junctions'>, timeS: number): { fromM: number; toM: number; k: number } | null {
+  return dayViewAt(clock, timeS) ?? recapViewAt(clock, timeS)
+}
+
 /**
  * Camera at film time `timeS` and `progress` (the store's: the export nudges it to re-place the camera). The time-based
  * flight styles follow the flight time, so they start where the opening hands over. The aim and the camera follow the
@@ -929,7 +950,7 @@ export function computeFilmView(
     return { ...blendViews(filmFlight, pose, keyed.weight, frame, sample, options.exaggeration), marker: filmFlight.marker }
   }
   if (state.phase !== 'opening' && state.phase !== 'closing') {
-    const view = dayViewAt(clock, timeS)
+    const view = highViewAt(clock, timeS)
     if (!view) return flight
     // the night before a day (or after a stage): up to a high view of its route, held, and back down to the marker at dawn
     const high = overviewView(path, frame, sample, options.exaggeration, aspect, flight, { fromM: view.fromM, toM: view.toM })

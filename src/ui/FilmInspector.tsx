@@ -656,19 +656,20 @@ export function FilmInspector() {
       const k = clock.junctions.indexOf(junction)
       const stored = junctionOf(film, junction.afterTrackId)
       const own = hasOwnTransition(film, junction.afterTrackId)
-      // what the film says (its own or the default); the clock tells whether a « Nuit » has a night to pass
-      const kind = stored.kind
+      // what the film says (its own or the default); the clock tells whether there is a night to pass here
+      const { kind, night, recap } = stored
+      const startS = junction.recap?.startS ?? junction.startS
       title = t('inspector.junction.title', { n: k + 1 })
       removeLabel = t('inspector.junction.defaultTransition')
       removable = own
       body = (
         <>
           <p className={HINT}>
-            {junction.kind !== 'coupe'
+            {junction.endS > startS
               ? t('inspector.junction.betweenTimed', {
                   from: sequence?.stages[k]?.track.name ?? '',
                   to: sequence?.stages[k + 1]?.track.name ?? '',
-                  start: formatFilmTime(junction.startS, true),
+                  start: formatFilmTime(startS, true),
                   end: formatFilmTime(junction.endS, true),
                 })
               : t('inspector.junction.between', { from: sequence?.stages[k]?.track.name ?? '', to: sequence?.stages[k + 1]?.track.name ?? '' })}
@@ -676,26 +677,24 @@ export function FilmInspector() {
           <JunctionTransitionFields
             kind={kind}
             holdS={stored.holdS || DEFAULT_JUNCTION.holdS}
-            night={kind === 'nuit' ? junction.kind === 'nuit' : undefined}
-            onChange={(patch) => change((f) => withJunction(f, junction.afterTrackId, { kind, holdS: stored.holdS, ...patch }), false)}
+            night={night}
+            recap={recap}
+            hasNight={junction.kind === 'nuit'}
+            onChange={(patch) => change((f) => withJunction(f, junction.afterTrackId, patch), false)}
           />
           {/* the seconds of a night are those of every night: set in Lumière, said here */}
           {junction.kind === 'nuit' && <p className={HINT}>{t('inspector.junction.nightInfo', { pause: formatSecondsShort(junction.holdS) })}</p>}
           <p className={HINT}>{own ? t('inspector.junction.own') : t('inspector.junction.common')}</p>
           {own && (
-            <Button className={REMOVE} onClick={() => editFilm((f) => ({ film: applyToAllJunctions(f, { kind, holdS: stored.holdS }) }))}>
+            <Button className={REMOVE} onClick={() => editFilm((f) => ({ film: applyToAllJunctions(f, { kind, holdS: stored.holdS, night, recap }) }))}>
               {t('inspector.junction.applyToAll')}
             </Button>
           )}
           <Button className={REMOVE} onClick={() => useAppStore.getState().setFilmSelection(stageCardId(junction.afterTrackId))}>
             {t('inspector.junction.adjustCard', { n: k + 2 })}
           </Button>
-          {/* what the clock holds here: a night (dusk, night, dawn), a fade (also a « Nuit » with no night to pass) or nothing */}
-          {junction.kind === 'nuit' ? (
-            <p className={HINT}>{t('inspector.junction.blockHintNight')}</p>
-          ) : (
-            junction.kind !== 'coupe' && <p className={HINT}>{t('inspector.junction.blockHint')}</p>
-          )}
+          {/* a fade's block stretches; a night lasts its dusk, night and dawn (said above) */}
+          {(junction.kind === 'fondu-noir' || junction.kind === 'fondu-blanc') && <p className={HINT}>{t('inspector.junction.blockHint')}</p>}
         </>
       )
     } else if (stop) {

@@ -969,9 +969,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   flight view to `overviewView` framing the box of that day's stretch (`trackBox` with a `PathRange`), lifted like a shot
   (`liftedBlend`): up over the dusk, held over the night, back down over the dawn (the parts of `film.nights`, never under
   20% of the pause each), a pure function of the film time; the preview re-places the camera during it (`FlyoverRig`
-  asks `dayViewAt`), the export already re-renders the frames of a night. « À la suite » the same switch
-  (`dayCards.view`, shown alone in « Jours et nuits ») marks the `nuit` junctions that pass a night (`ClockJunction.view`,
-  `dayInputsFor` → `dayView`) and `dayViewAt` frames the stage the junction ends (from the cut before it to its `atM`). Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
+  asks `dayViewAt`), the export already re-renders the frames of a night. « À la suite » it is « Revoir l'étape finie » of
+  a transition instead (`FilmJunction.recap`): over a night it passes, `ClockJunction.view` and `dayViewAt` frames the stage the
+  junction ends (from the cut before it to its `atM`); without a night, see "Stages". Without timestamps or with the option unchecked: fixed solar time. The timeline shows the recorded time at the marker
   (browser time zone).
 - **Exposure** (`src/scene/exposure.ts`): `DAYLIGHT_EXPOSURE` (5) × 2^(automatic + `settings.exposureEv`). The automatic part
   opens up as the sun goes down: 0 EV above 10°, +3 EV at civil twilight (−6°), +6 EV at night (−18°). A faint
@@ -1840,7 +1840,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   (version 2: film of v1 projects, see "Film and timeline"; version 3: the default junction « À la suite » written
   out, `withExplicitNightJunctions`, see "Stages"; version 4: stage cards trimmed to what they change,
   `withStageCardsOverCommon`; version 5: the cards of an overlay that was off switched off and the automatic stops kept
-  as the pacing made them, `withTitlesAndStopsOnTheirOwn`).
+  as the pacing made them, `withTitlesAndStopsOnTheirOwn`; version 6: the night and the high view of a junction on their
+  own, `withNightAndRecapOnTheirOwn`).
 - Settings **history** outside the store: subscribed to `useAppStore`, each step keeps only the changed keys; changes to the
   same keys less than 400 ms apart are merged (keyboard), a pointer slider drag = one step from press to release however
   slow it is (`beginGesture`, wired to every `input[type=range]` by `installSliderGestures`), a preset = one step, a timeline gesture = one step; the regional imagery picked on import
@@ -2922,11 +2923,18 @@ exports) gets it from the terrain source of the settings.
   has all four times equal), `holdStartS` being the film time the marker reaches the cut, so `cuts[k].timeS`, the time the
   stage changes. At the same place a junction comes before a stop, which comes before a night. `junctionInputsFor` computes
   the plan for a film being edited (the timeline's draft). **Nights**: a night found at a cut (`NIGHT_AT_CUT_M`) is the
-  junction's when it passes as `nuit` (its own transition or the default, « Jours et nuits » on or off: the night pause, no
-  extra hold; without a night to pass, a fade to black held `holdS`, which the block names « Nuit · fondu au noir » and the
-  inspector explains with its « Durée du fondu quand il n'y a pas de nuit »); any other kind replaces it. There is no
-  automatic switch: what the panel or the inspector shows is what plays. « Montrer les nuits » only decides the nights
-  inside a stage. Project v3 (`withExplicitNightJunctions` in `project/document.ts`) writes the default an older project
+  junction's when it asks for it (`night`, « Passer la nuit », its own or the default's, « Jours et nuits » on or off: kind
+  `nuit` on the clock, the night pause, no extra hold); without it, or without a night to pass, its « Passage » (`kind`:
+  `coupe`, `fondu-noir`, `fondu-blanc`, `PASSAGE_KINDS`) replaces it. There is no automatic switch: what the panel or the
+  inspector shows is what plays. « Montrer les nuits » only decides the nights inside a stage. **« Revoir l'étape finie »**
+  (`recap`): over a night, the high view during it (`ClockJunction.view`); else a pause of its own, `RECAP_S` (4 s) at
+  `atM − RECAP_LEAD_M` (1 m: the marker, figures and drawn line stay on the stage that ends), `extra` like the junction,
+  placed on the clock as `ClockJunction.recap`; `recapViewAt` lifts the camera over the stage (`RECAP_RISE_S` 2.5 s) and holds
+  it to the cut, where the passage takes the next stage. The junction block of the timeline starts with that pause, and
+  `stageFlightS` leaves it out. Edits store the whole transition (`withJunction`: kind, hold, night, recap). Project v6
+  (`withNightAndRecapOnTheirOwn`) turns a stored `nuit` into `fondu-noir` + `night`, gives another stored kind
+  `night: false`, and makes the day cards' high view « À la suite » the default `recap`; the migrations read frozen values,
+  never today's defaults. Project v3 (`withExplicitNightJunctions` in `project/document.ts`) writes the default an older project
   played: `nuit` for a default fade to black with the nights on (it used to turn into the night at each cut), a fade to
   black with the nights off.
   Migration: a transition other than `coupe` holds `DEFAULT_JUNCTION.holdS` (1.5 s), so an old project with a dip grows by

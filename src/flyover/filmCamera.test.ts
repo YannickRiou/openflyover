@@ -14,6 +14,7 @@ import {
   blendViews,
   computeFilmView,
   dayViewAt,
+  recapViewAt,
   filmViewMovesWithTime,
   framedGroup,
   GROUP_FRAMING_MARGIN,
@@ -57,7 +58,7 @@ import {
 import { hairpins, steepSampler } from './__fixtures__/markerVisible'
 import { auditFilmCamera } from './filmAudit'
 import { filmClockFor } from '../film/clock'
-import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from '../film/model'
+import { DEFAULT_DAY_CARDS, DEFAULT_FILM, RECAP_S } from '../film/model'
 import { DEFAULT_PACING } from './pacing'
 import { buildTrackPath, trackPathOf } from './path'
 import { buildSequence } from './sequence'
@@ -1018,17 +1019,17 @@ describe('high view of the day during the night', () => {
     const stage = (name: string, points: typeof day1) => ({ ...buildTrack({ name, source: 'gpx', segments: [{ points }] }), utcOffsetMin: 120 })
     const sequence = buildSequence([stage('j1', day1), stage('j2', day2)])
     const path = trackPathOf(sequence.track)
-    const sequenceClockOf = (view: boolean) =>
+    const sequenceClockOf = (recap: boolean, night = true) =>
       filmClockFor({
         track: sequence.track,
-        film: { ...DEFAULT_FILM, autoStops: false, opening: { style: 'descente', durationS: 6 }, closing: { style: 'descente', durationS: 6 }, dayCards: { ...DEFAULT_DAY_CARDS, view } },
+        film: { ...DEFAULT_FILM, autoStops: false, opening: { style: 'descente', durationS: 6 }, closing: { style: 'descente', durationS: 6 }, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true, night, recap } },
         durationS: 60,
         pacing: { ...DEFAULT_PACING, keepDuration: false },
         cutsM: sequence.cutsM,
         stageIds: sequence.stageIds,
       })
 
-    it('with the high view, the camera rises over the stage just finished; none without it', () => {
+    it('« Revoir l’étape finie » over the night: the camera rises over the stage just finished; none without it', () => {
       const clock = sequenceClockOf(true)
       const [junction] = clock.junctions
       expect(junction).toMatchObject({ kind: 'nuit', view: true })
@@ -1042,6 +1043,27 @@ describe('high view of the day during the night', () => {
       const route = trackBox(path, where, { fromM: 0, toM: junction.atM })
       expect(high.target.x).toBeGreaterThan(route.minX)
       expect(high.target.x).toBeLessThan(route.maxX)
+    })
+
+    it('« Revoir l’étape finie » without the night: a pause before the cut, the camera up over the stage until the fade', () => {
+      const clock = sequenceClockOf(true, false)
+      const [junction] = clock.junctions
+      expect(junction.kind).toBe('fondu-noir')
+      const recap = junction.recap!
+      expect(recap.durationS).toBe(RECAP_S)
+      // the pause comes before the junction and lengthens the film by as much
+      expect(recap.endS).toBeLessThanOrEqual(junction.holdStartS)
+      expect(clock.totalTime()).toBeCloseTo(sequenceClockOf(false, false).totalTime() + RECAP_S, 1)
+      // the marker is still on the stage that ends
+      expect(clock.progressAtTime(recap.holdStartS + 1) * path.lengthM).toBeLessThan(junction.atM)
+      expect(recapViewAt(clock, recap.startS - 0.1)).toBeNull()
+      expect(recapViewAt(clock, recap.holdStartS + 3)).toMatchObject({ fromM: 0, toM: junction.atM, k: 1 })
+      expect(recapViewAt(clock, junction.holdStartS + 0.01)).toBeNull()
+      const at = (t: number) => computeFilmView(path, clock, t, clock.progressAtTime(t), where, flat, opts)
+      expect(at(recap.holdStartS + 3).position.y).toBeGreaterThan(at(recap.startS - 1).position.y + 1500)
+      expect(sequenceClockOf(false, false).junctions[0].recap).toBeUndefined()
+      // no jolt nor loss of the marker on the way up and while it holds, at 30 i/s
+      expect(auditFilmCamera(path, clock, where, flat, opts, { fromS: recap.startS - 2, toS: junction.holdStartS - 0.1 })).toEqual([])
     })
 
     it('no jolt nor loss of the marker through the night, at 30 i/s', () => {

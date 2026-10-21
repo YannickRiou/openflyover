@@ -47,7 +47,7 @@ const messages: Messages['track'] = {
   stageCard: 'Tarjeta al inicio de cada etapa',
   'stages.common': 'Ajuste común a todas las etapas. Para ajustar una sola transición o una sola tarjeta, haz clic en su bloque en la línea de tiempo.',
   'stages.firstCard': 'La 1.ª etapa empieza con el título de apertura (Gráficos › Títulos) en lugar de su tarjeta.',
-  'stages.nightInfo': 'Una noche dura {pause} (anochecer, noche y amanecer); estas duraciones y «Vista alta durante la noche» se ajustan en Luz › Días y noches.',
+  'stages.nightInfo': 'Una noche dura {pause} (anochecer, noche y amanecer); estas duraciones se ajustan en Luz › Días y noches.',
   'stages.resetCards': 'Volver a poner todas las tarjetas en el ajuste común',
   'stages.ownCards': { one: '{count} tarjeta tiene su propio ajuste.', other: '{count} tarjetas tienen su propio ajuste.' },
   'stages.resetTransitions': 'Volver a poner todas las transiciones en el ajuste común',

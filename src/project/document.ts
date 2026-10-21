@@ -11,9 +11,8 @@ import { isRecord } from '../core/guards'
 import type { Flight, StatsOverride, Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
 import { sanitizeMediaTable, usedMedia } from '../film/media'
 import type { MediaAsset, MediaTable } from '../film/media'
-import { DEFAULT_JUNCTION, DEFAULT_STAGE_CARD, withStageSettingsMigrated } from '../film/junctions'
-import { AUTO_STOP_GROUP_M } from '../film/assemble'
-import { STAGE_CARD_FIELDS, isValidFilm, withFilmDefaults } from '../film/model'
+import { withStageSettingsMigrated } from '../film/junctions'
+import { isValidFilm, withFilmDefaults } from '../film/model'
 import { FLYOVER_DURATION_RANGE, isValidCamera, withCameraDefaults } from '../flyover/cameraSettings'
 import { isValidPacing, withPacingDefaults } from '../flyover/pacing'
 import { isValidRace } from '../flyover/race'
@@ -38,7 +37,7 @@ import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
 
 export const PROJECT_FORMAT = 'openflyover-project'
-export const PROJECT_VERSION = 5
+export const PROJECT_VERSION = 6
 /** Suffix of saved project files (`<name>.opnflvr`, see `file.ts`). */
 export const PROJECT_FILE_SUFFIX = `.${PROJECT_EXTENSION}`
 export const defaultProjectName = (): string => t('project.doc.defaultName')
@@ -343,6 +342,29 @@ export const MIGRATIONS: Readonly<Record<number, ProjectMigration>> = {
   3: withStageCardsOverCommon,
   // v5: the titles show with the overlay off; the automatic stops no longer read the pacing
   4: withTitlesAndStopsOnTheirOwn,
+  // v6: a junction's night and high view are choices of their own, next to its passage
+  5: withNightAndRecapOnTheirOwn,
+}
+
+/**
+ * Before v6 the night was a kind of junction ('nuit', the default), any other kind replacing it, and « Vue haute pendant
+ * la nuit » of the day cards showed the stage a night ends « À la suite ». Written out so the film stays the same:
+ * 'nuit' becomes a fade to black that passes the night (its fade where there is none, as before), another kind does
+ * not pass it; that high view becomes « Revoir l'étape finie » of the default junction.
+ */
+function withNightAndRecapOnTheirOwn(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(doc.settings) || !isRecord(doc.settings.film)) return doc
+  const film: Record<string, unknown> = { ...doc.settings.film }
+  const race = isRecord(doc.settings.race) ? doc.settings.race : {}
+  const split = (j: Record<string, unknown>) => (j.kind === 'nuit' ? { ...j, kind: 'fondu-noir', night: true } : j.kind !== undefined ? { ...j, night: false } : j)
+  if (isRecord(film.junctionDefault)) film.junctionDefault = split(film.junctionDefault)
+  if (Array.isArray(film.junctions)) film.junctions = film.junctions.map((j: unknown) => (isRecord(j) ? split(j) : j))
+  if (race.sequence === true && isRecord(film.dayCards) && film.dayCards.view === true) {
+    // an absent default was 'nuit' then: a fade to black that passes the night
+    const base = isRecord(film.junctionDefault) ? film.junctionDefault : { kind: 'fondu-noir', holdS: V3_JUNCTION.holdS, card: V3_JUNCTION.card, night: true }
+    film.junctionDefault = { ...base, recap: true }
+  }
+  return { ...doc, settings: { ...doc.settings, film } }
 }
 
 /**
@@ -363,7 +385,8 @@ function withTitlesAndStopsOnTheirOwn(doc: Record<string, unknown>): Record<stri
   const pacing = isRecord(settings.pacing) ? settings.pacing : {}
   if (isRecord(film) && film.autoStops !== false && film.autoMode !== 'rythme') {
     if (pacing.landmarks === false) settings.film = { ...film, autoStops: false, stops: [] }
-    else if (typeof pacing.windowM === 'number' && pacing.windowM !== AUTO_STOP_GROUP_M) settings.film = { ...film, autoStopGroupM: pacing.windowM }
+    // 1 km: the « Longueur du ralenti » of before v5, the grouping of the automatic stops since
+    else if (typeof pacing.windowM === 'number' && pacing.windowM !== 1000) settings.film = { ...film, autoStopGroupM: pacing.windowM }
   }
   return { ...doc, settings }
 }
@@ -376,8 +399,15 @@ function withTitlesAndStopsOnTheirOwn(doc: Record<string, unknown>): Record<stri
 function withStageCardsOverCommon(doc: Record<string, unknown>): Record<string, unknown> {
   if (!isRecord(doc.settings) || !isRecord(doc.settings.film)) return doc
   const film = doc.settings.film
-  const shown = isRecord(film.junctionDefault) ? film.junctionDefault.card !== false : DEFAULT_JUNCTION.card
-  const defaults: Record<string, unknown> = { ...DEFAULT_STAGE_CARD, enabled: shown, fields: STAGE_CARD_FIELDS }
+  const shown = isRecord(film.junctionDefault) ? film.junctionDefault.card !== false : V3_JUNCTION.card
+  // the default card of before v4, frozen here
+  const defaults: Record<string, unknown> = {
+    durationS: 5,
+    anchor: 'center',
+    size: 1,
+    enabled: shown,
+    fields: { date: true, distance: true, ascent: true, duration: false, start: false, weather: false },
+  }
   const trimmed = (card: unknown) => {
     if (!isRecord(card)) return card
     const kept = Object.fromEntries(Object.entries(card).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(defaults[key])))
@@ -407,6 +437,9 @@ function withStageCardsOverCommon(doc: Record<string, unknown>): Record<string, 
  * night is that fade), a fade to black with the nights off (the default is now « Nuit »). The default a project saved
  * before the junctions kept in `race` is read the way `withStageSettingsMigrated` reads it.
  */
+/** The default junction as v3 to v5 read an absent one (a migration never reads today's defaults: they move on). */
+const V3_JUNCTION = { kind: 'nuit', holdS: 1.5, card: true } as const
+
 function withExplicitNightJunctions(doc: Record<string, unknown>): Record<string, unknown> {
   if (!isRecord(doc.settings)) return doc
   const settings = doc.settings
@@ -417,9 +450,9 @@ function withExplicitNightJunctions(doc: Record<string, unknown>): Record<string
   const kind = typeof race.stageTransition === 'string' ? race.stageTransition : 'fondu-noir'
   const saved = isRecord(film.junctionDefault)
     ? film.junctionDefault
-    : { kind, holdS: kind === 'coupe' ? 0 : DEFAULT_JUNCTION.holdS, card: fromRace ? race.stageCards !== false : DEFAULT_JUNCTION.card }
+    : { kind, holdS: kind === 'coupe' ? 0 : V3_JUNCTION.holdS, card: fromRace ? race.stageCards !== false : V3_JUNCTION.card }
   const junctionDefault = nightsOn && saved.kind === 'fondu-noir' ? { ...saved, kind: 'nuit' } : saved
-  if (!fromRace && !isRecord(film.junctionDefault) && junctionDefault.kind === DEFAULT_JUNCTION.kind) return doc
+  if (!fromRace && !isRecord(film.junctionDefault) && junctionDefault.kind === V3_JUNCTION.kind) return doc
   return { ...doc, settings: { ...settings, film: { ...film, junctionDefault } } }
 }
 

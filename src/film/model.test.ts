@@ -399,7 +399,7 @@ describe('film model', () => {
     const { film: _, ...before } = doc.settings
     expect(parseProject(JSON.stringify({ ...doc, settings: before })).settings.film).toEqual(
       // its stages « À la suite » kept their fades: the nights were off (v3)
-      film({ autoMode: 'rythme', nights: { ...DEFAULT_FILM.nights, enabled: false }, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true } }),
+      film({ autoMode: 'rythme', nights: { ...DEFAULT_FILM.nights, enabled: false }, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true, night: false } }),
     )
   })
 

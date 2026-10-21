@@ -47,7 +47,7 @@ const messages: Messages['track'] = {
   stageCard: 'Karte am Anfang jeder Etappe',
   'stages.common': 'Gemeinsame Einstellung für alle Etappen. Um einen einzelnen Übergang oder eine einzelne Karte einzustellen, ihren Block in der Zeitleiste anklicken.',
   'stages.firstCard': 'Die 1. Etappe beginnt mit dem Eröffnungstitel (Overlay › Titel) statt mit ihrer Karte.',
-  'stages.nightInfo': 'Eine Nacht dauert {pause} (Dämmerung, Nacht und Morgengrauen); diese Dauern und „Hohe Ansicht in der Nacht“ werden unter Licht › Tage und Nächte eingestellt.',
+  'stages.nightInfo': 'Eine Nacht dauert {pause} (Dämmerung, Nacht und Morgengrauen); diese Dauern werden unter Licht › Tage und Nächte eingestellt.',
   'stages.resetCards': 'Alle Karten auf die gemeinsame Einstellung zurücksetzen',
   'stages.ownCards': { one: '{count} Karte hat eine eigene Einstellung.', other: '{count} Karten haben eine eigene Einstellung.' },
   'stages.resetTransitions': 'Alle Übergänge auf die gemeinsame Einstellung zurücksetzen',

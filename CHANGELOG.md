@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Three choices for each transition between stages**: « Passage » (cut, fade to black or white), « Passer la nuit » (dusk, night and dawn when the two stages are on two days) and « Revoir l'étape finie » (new: at the end of the stage the camera rises for a few seconds to show all of it, then comes the passage; with the night, during the night). They are set once in « Trace › Plusieurs traces » and can be changed per transition on the timeline. Before, the night was a kind of transition (« Nuit ») and the look back only existed over a night, from a switch hidden in Lumière › Jours et nuits. Older projects keep the same film.
+
 ## 3.3.0 (October 2026)
 
 - **Keys and panels agree**:

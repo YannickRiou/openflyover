@@ -23,7 +23,7 @@ import type { Landmark } from '../osm/landmarks'
 import { filmStops } from './assemble'
 import { junctionPlan, stageSpansOf } from './junctions'
 import type { JunctionInput } from './junctions'
-import { shotDurationS } from './model'
+import { RECAP_S, shotDurationS } from './model'
 import type { Film, FilmCameraKey, FilmShot, FilmSpeed, FilmStop, JunctionKind } from './model'
 import { sortedParamKeys, valueAtKeys } from './paramKeys'
 import type { FilmParamKey } from './paramKeys'
@@ -98,9 +98,17 @@ export interface ClockJunction {
   holdStartS: number
   holdEndS: number
   endS: number
-  /** a night whose camera rises to show the stage it ends (« Vue haute pendant la nuit », `dayViewAt`) */
+  /** a night whose camera rises to show the stage it ends (« Revoir l'étape finie » over a night, `dayViewAt`) */
   view?: boolean
+  /**
+   * « Revoir l'étape finie » without a night: the pause held just before the cut (`RECAP_LEAD_M`, still on the stage that
+   * ends) while the camera shows that stage from above, `durationS` long (`recapViewAt`)
+   */
+  recap?: { startS: number; holdStartS: number; endS: number; durationS: number }
 }
+
+/** The pause of « Revoir l'étape finie » sits this far before the cut: the marker, the figures and the line stay on the stage that ends. */
+export const RECAP_LEAD_M = 1
 
 /** What the film shows at a film time. */
 export interface FilmState {
@@ -228,10 +236,14 @@ const clockJunction = (j: JunctionInput): ClockJunction => ({
 export function buildFilmClock(input: FilmClockInput): FilmClock {
   // the film's stops, the junctions held and the nights, one pause each, by position (a junction first at the same
   // place: the stage ends before a stop starts on the next one; then a stop, then a night)
-  const pauses: (FlightStop & { stop?: FilmStop; night?: FlightNight; junction?: JunctionInput })[] = [
+  // « Revoir l'étape finie » without a night: a pause of its own just before the cut, added to the film like the junction
+  const pauses: (FlightStop & { stop?: FilmStop; night?: FlightNight; junction?: JunctionInput; recapOf?: JunctionInput })[] = [
     ...input.stops.map((stop) => ({ atM: stop.atM, durationS: stop.durationS, stop })),
     ...(input.nights ?? []).map((night) => ({ atM: night.atM, durationS: nightPauseS(night), extra: true, night })),
     ...(input.junctions ?? []).filter((j) => j.holdS > 0).map((junction) => ({ atM: junction.atM, durationS: junction.holdS, extra: true, junction, night: junction.night })),
+    ...(input.junctions ?? [])
+      .filter((j) => j.recap && !j.night)
+      .map((recapOf) => ({ atM: Math.max(0, recapOf.atM - RECAP_LEAD_M), durationS: RECAP_S, extra: true, recapOf })),
   ]
   const rank = (p: (typeof pauses)[number]) => (p.junction ? 0 : p.stop ? 1 : 2)
   pauses.sort((a, b) => a.atM - b.atM || rank(a) - rank(b))
@@ -248,6 +260,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
   const stops: ClockStop[] = []
   const nights: ClockNight[] = []
   const held = new Map<JunctionInput, ClockJunction>()
+  const recaps = new Map<JunctionInput, NonNullable<ClockJunction['recap']>>()
   flight.pauses.forEach((pause, k) => {
     const times = {
       progress: pause.progress,
@@ -256,10 +269,14 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
       holdEndS: openingS + pause.holdEndS,
       endS: openingS + pause.endS,
     }
-    const { stop, night, junction } = pauses[k]
+    const { stop, night, junction, recapOf } = pauses[k]
+    if (recapOf) {
+      recaps.set(recapOf, { startS: times.startS, holdStartS: times.holdStartS, endS: times.endS, durationS: pause.durationS })
+      return
+    }
     if (stop) stops.push({ ...stop, ...times, addedS: pause.durationS })
     else if (night) nights.push({ ...night, ...times })
-    if (junction) held.set(junction, { ...clockJunction(junction), ...times, ...(junction.night && input.dayView ? { view: true } : {}) })
+    if (junction) held.set(junction, { ...clockJunction(junction), ...times, ...(junction.night && junction.recap ? { view: true } : {}) })
   })
 
   // without track (no length) the portions have no place in the flight
@@ -279,7 +296,9 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
       ? (input.junctions ?? []).map((j) => {
           const timeS = flightTimeOf(j.atM)
           const progress = Math.min(1, j.atM / input.lengthM)
-          return held.get(j) ?? { ...clockJunction(j), progress, startS: timeS, holdStartS: timeS, holdEndS: timeS, endS: timeS }
+          const placed = held.get(j) ?? { ...clockJunction(j), progress, startS: timeS, holdStartS: timeS, holdEndS: timeS, endS: timeS }
+          const recap = recaps.get(j)
+          return recap ? { ...placed, recap } : placed
         })
       : []
 
@@ -383,13 +402,9 @@ export function junctionInputsFor({ track, film, durationS, cutsM, stageIds }: F
   return { ...plan, stages: stageSpansOf(film, stageIds ?? [], cutsM, track.stats.distanceM) }
 }
 
-/**
- * The days of the track when their cards are on (« Cartes de jour »), a single track and several days: else none.
- * « À la suite », only the high view, over the nights of the junctions.
- */
+/** The days of the track when their cards are on (« Cartes de jour »), a single track and several days: else none. */
 export function dayInputsFor({ track, film, cutsM }: FilmClockFor): Pick<FilmClockInput, 'days' | 'utcOffsetMin' | 'dayView'> {
-  if (track && cutsM?.length) return film.dayCards?.view ? { dayView: true } : {}
-  if (!track || !film.dayCards?.enabled) return {}
+  if (!track || cutsM?.length || !film.dayCards?.enabled) return {}
   const days = trackDays(trackPathOf(track), track.utcOffsetMin)
   return days.length < 2 ? {} : { days, utcOffsetMin: track.utcOffsetMin, dayView: film.dayCards.view }
 }
