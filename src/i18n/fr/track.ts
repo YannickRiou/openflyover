@@ -55,6 +55,7 @@ export default {
   'race.sync': 'Synchronisation',
   'race.untimed': 'Une trace n’est pas horodatée : seule « même distance » est possible.',
   'race.cameraOn': 'Caméra sur',
+  'race.cameraOnHint': 'Choisir une trace la met en tête de la liste : c’est elle que le film survole et que mesurent les compteurs.',
   'race.boardNeedsOverlay': 'Visible une fois l’habillage activé.',
   'race.boardSettings': 'Position, taille et couleurs : onglet Habillage, section Compteurs.',
   'race.gap': 'Écart avec la première trace, au même pourcentage du parcours.',

@@ -123,6 +123,7 @@ const messages: Messages['export'] = {
   'history.reuseNoop': 'Queste impostazioni sono già attive.',
   'history.reused': 'Impostazioni di «{name}» ripristinate',
   'history.reuse': 'Riutilizza queste impostazioni',
+  'history.reuseHint': 'Ripristina formato, qualità e le impostazioni della scena elencate sopra (atmosfera, sole, nuvole, obiettivo, immagini, rilievo, acqua, stile della camera). «Annulla» nel messaggio torna indietro.',
   'history.delete': 'Elimina',
   'history.title': 'Cronologia dei rendering',
   'history.empty': 'Nessun rendering per ora. I film esportati (riusciti, annullati o non riusciti) compariranno qui con la loro durata e le loro impostazioni.',

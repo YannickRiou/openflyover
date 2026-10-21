@@ -249,6 +249,7 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
               ]}
               onChange={followCamera}
             />
+            <p className="type-hint">{t('track.race.cameraOnHint')}</p>
           </div>
           <Switch
             checked={leaderboard.enabled}

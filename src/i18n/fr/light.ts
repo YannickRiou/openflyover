@@ -119,6 +119,7 @@ export default {
   'demClean.seaToZeroTip': 'Remonte à 0 m tout ce qui est sous le niveau de la mer. Aplatit aussi les vraies dépressions (mer Morte, polders).',
   'map.background': 'Fond de carte',
   'map.imagery': 'Imagerie',
+  'map.imageryAuto': 'À l’import, IGN (France) ou swisstopo (Suisse) est choisi tout seul quand la trace est entièrement dans leur zone, tant que vous n’avez pas choisi vous-même.',
   'map.imageryDate': 'Date des photos',
   'map.imageryDateLatest': 'Les plus récentes',
   'map.imageryDateLatestOn': 'Les plus récentes ({date})',

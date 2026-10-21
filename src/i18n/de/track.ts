@@ -57,6 +57,7 @@ const messages: Messages['track'] = {
   'race.sync': 'Synchronisierung',
   'race.untimed': 'Ein Track hat keine Zeitstempel: Nur „Gleiche Distanz“ ist möglich.',
   'race.cameraOn': 'Kamera auf',
+  'race.cameraOnHint': 'Die Wahl eines Tracks setzt ihn an die Spitze der Liste: ihn überfliegt der Film und ihn messen die Zähler.',
   'race.boardNeedsOverlay': 'Sichtbar, sobald das Overlay aktiviert ist.',
   'race.boardSettings': 'Position, Größe und Farben: Reiter Overlay, Abschnitt Zähler.',
   'race.gap': 'Rückstand auf den ersten Track, beim selben Prozentsatz der Strecke.',

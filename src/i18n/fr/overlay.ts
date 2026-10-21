@@ -176,4 +176,5 @@ export default {
   'panel.creditsHint': "En petit, dans un coin de chaque image exportée, même sans le reste de l'habillage.",
   'panel.creditsOff': 'Citez alors les sources ailleurs (description de la vidéo, générique). La mention Open-Meteo reste incrustée tant que la météo est affichée, comme sa licence le demande.',
   'panel.styleHint': 'Changer de style remet à la place du style le titre, la carte de clôture, les compteurs, le profil, la mini-carte et la météo (positions et tailles) ; le logo, le texte libre et le classement gardent les leurs.',
+  'panel.styleMoved': 'Style « {style} » : titre, carte de clôture, compteurs, profil, mini-carte et météo remis à la place du style.',
 }

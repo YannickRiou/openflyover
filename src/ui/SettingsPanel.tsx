@@ -12,7 +12,7 @@ import type { Settings } from '../state/store'
 import { findImageryDates, imageryDateKind, imageryDateValue, type ImageryDate, type ImageryDates } from '../terrain/imageryDates'
 import { TERRAIN_SOURCES, getImagerySource, groupImagerySources } from '../terrain/sources'
 import { centroid } from '../geo/lonLat'
-import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, SEA_TOP_RANGE, WIND_DIRECTIONS, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
+import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, DEFAULT_CLOUDS, SEA_TOP_RANGE, WIND_DIRECTIONS, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
 import { useWeatherStore } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
@@ -373,7 +373,8 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
         <RadioGroup
           aria-label={t('light.clouds.legend')}
           value={clouds.mode}
-          onChange={(mode) => set(mode === 'mer' ? { mode, seaTopM: seaTopFor(stats?.minEle, stats?.maxEle) } : { mode })}
+          // the top of the sea fits the track the first time; a top chosen since is kept
+          onChange={(mode) => set(mode === 'mer' && clouds.seaTopM === DEFAULT_CLOUDS.seaTopM ? { mode, seaTopM: seaTopFor(stats?.minEle, stats?.maxEle) } : { mode })}
         >
           {CLOUD_MODE_OPTIONS.map((option) => (
             <Radio key={option.value} value={option.value}>
@@ -616,6 +617,7 @@ export function MapSettings() {
             }))}
             onChange={(source) => setSetting('imagerySourceId', source)}
           />
+          <p className="type-hint">{t('light.map.imageryAuto')}</p>
         </div>
 
         <ImageryDateControl />

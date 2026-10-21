@@ -121,6 +121,7 @@ export default {
   'history.reuseNoop': 'Ces réglages sont déjà en place.',
   'history.reused': 'Réglages de « {name} » rétablis',
   'history.reuse': 'Réutiliser ces réglages',
+  'history.reuseHint': 'Remet le format, la qualité et les réglages de la scène listés ci-dessus (atmosphère, soleil, nuages, objectif, imagerie, relief, eau, style de caméra). « Annuler » dans le message revient en arrière.',
   'history.delete': 'Supprimer',
   'history.title': 'Historique des rendus',
   'history.empty': 'Aucun rendu pour l’instant. Les films exportés (réussis, annulés ou échoués) apparaîtront ici avec leur durée et leurs réglages.',

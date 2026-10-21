@@ -5,6 +5,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **No more silent changes**:
+  - **Habillage**: applying a « Habillage » or « Tous les réglages » preset no longer replaces the project's title, subtitle, free lines, credits, free text and logo; it brings the look only. Changing the overlay style says which elements it put back in place, with « Annuler ».
+  - **Survol**: a camera preset that also changes the smoothings, the smooth ending or the turns says so, with « Annuler ».
+  - **Météo**: going back to « Mer de nuages » keeps the top chosen before, instead of computing it again.
+  - **Panel texts**: « Imagerie » says that IGN or swisstopo is picked by itself on import until you choose. « Caméra sur » says that choosing a track puts it first in the list. « Réutiliser ces réglages » lists what it puts back.
 - **Settings that do nothing are greyed out, and say why**:
   - **Export**: « Habillage seul » greys out the render quality (no 3D view) and the sound settings (it has no sound). « Séquence d'images PNG » greys out bitrate, codec, keyframes and sound.
   - **Overlay**: in a style that lays the profile out itself, its « Largeur » is greyed out (only the height counts). While credits roll, the closing card's position is greyed out (the roll centres it).
