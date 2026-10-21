@@ -151,13 +151,15 @@ interface PacingSlider {
   format(value: number): string
   /** spoken value (aria-valuetext), when it differs from the displayed one */
   spoken?(value: number): string
+  tip?: string
 }
 
 const PACING_SLIDERS: PacingSlider[] = [
-  { key: 'slowFactor', get label() { return t('camera.pacing.slowFactor') }, format: formatPercent },
+  { key: 'slowFactor', get label() { return t('camera.pacing.slowFactor') }, get tip() { return t('camera.pacing.slowFactorTip') }, format: formatPercent },
   {
     key: 'windowM',
     get label() { return t('camera.pacing.window') },
+    get tip() { return t('camera.pacing.windowTip') },
     format: (v) => `±${formatDistance(v)}`,
     spoken: (v) => t('camera.pacing.windowSpoken', { distance: formatDistance(v) }),
   },
@@ -393,11 +395,11 @@ export function CameraPanel() {
               </fieldset>
             </SettingRow>
 
-            {PACING_SLIDERS.map(({ key, label, format, spoken = format }) => {
+            {PACING_SLIDERS.map(({ key, label, tip, format, spoken = format }) => {
               const range = PACING_RANGES[key]
               return (
                 <SettingRow key={key} label={label} value={format(pacing[key])} paths={[`pacing.${key}`]}>
-                  <RangeField label={label} {...range} value={pacing[key]} format={format} spoken={spoken} onChange={(v) => updatePacing({ [key]: v })} />
+                  <RangeField label={label} tip={tip} {...range} value={pacing[key]} format={format} spoken={spoken} onChange={(v) => updatePacing({ [key]: v })} />
                 </SettingRow>
               )
             })}

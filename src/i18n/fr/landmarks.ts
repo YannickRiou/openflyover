@@ -81,7 +81,7 @@ export default {
   keepPinned: 'Garder les « Toujours »',
   keepPinnedTip: 'Écarte tous les autres repères, sans en proposer de nouveaux',
   hint: "Ouvrez la carte pour choisir les repères : un clic sur un repère le règle (Auto, Toujours, Jamais) et lui donne un « Arrêt » (le film s'y arrête le temps indiqué).",
-  hintAuto: 'Arrêts automatiques (Options de la timeline) : en changer un les fige.',
+  hintAuto: 'Arrêts automatiques (⋯ Options du film, sur la timeline) : en changer un les fige.',
   'map.open': 'Choisir sur la carte et le profil',
   'map.title': 'Repères le long de la trace',
   'map.profile': "Profil d'altitude : cliquez pour aller à un point",

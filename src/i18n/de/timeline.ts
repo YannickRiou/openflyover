@@ -84,7 +84,7 @@ const messages: Messages['timeline'] = {
   'bar.addText': 'Text am Abspielkopf hinzufügen',
   'bar.addMedia': 'Fotos oder Videos am Abspielkopf hinzufügen',
   'bar.readingFiles': 'Dateien werden gelesen…',
-  'bar.addMediaTip': 'Fotos oder Videos (MP4, WebM, MOV; ohne Ton) am Abspielkopf hinzufügen, oder auf die Zeitleiste ziehen',
+  'bar.addMediaTip': 'Fotos oder Videos (MP4, WebM oder MOV, höchstens 50 MB) am Abspielkopf hinzufügen oder auf die Timeline ziehen',
   'bar.unmute': 'Ton einschalten',
   'bar.mute': 'Ton ausschalten',
   'bar.unmuteTip': 'Ton der Wiedergabe einschalten',

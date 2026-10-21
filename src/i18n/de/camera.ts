@@ -1,11 +1,11 @@
 import type { Messages } from '../messages'
 
 const messages: Messages['camera'] = {
-  'region.idle': 'Dunkelt die Umgebung der Verwaltungsregion der Tour (OpenStreetMap) ab und rahmt sie vollständig ein.',
+  'region.idle': 'Dunkelt die Umgebung des Ortes der Tour (Region, Park, Insel…) nach OpenStreetMap ab und zeigt ihn ganz.',
   'region.loading': 'Region wird gesucht…',
   'region.ready': 'die Umgebung ist abgedunkelt, die Ansicht zeigt die ganze Region.',
-  'region.none': 'Keine Verwaltungsregion enthält den ganzen Track: Die Einstellung bleibt ohne Hervorhebung.',
-  'region.error': 'Region derzeit nicht verfügbar (offline?): Die Einstellung bleibt ohne Hervorhebung.',
+  'region.none': 'Kein Ort (Region, Park, Insel…) enthält den ganzen Track: Die Einstellung bleibt ohne Hervorhebung.',
+  'region.error': 'Ort zurzeit nicht verfügbar (offline?): Die Einstellung bleibt ohne Hervorhebung.',
   'region.named': '{name}: {hint}',
   'styleHint.chase': 'Hinter dem Marker, in Fahrtrichtung.',
   'styleHint.sway': 'Schwenkt wie ein Hubschrauber zur Kurvenaußenseite.',
@@ -13,8 +13,8 @@ const messages: Messages['camera'] = {
   'styleHint.top': 'Hoch und fast senkrecht (Neigung von mindestens 70°).',
   'styleHint.cinematic': 'Weiter weg und tiefer, mit langsamer Seitwärtsbewegung.',
   'styleHint.free': 'Die Kamera folgt nichts: fest auf einer Ansicht des ganzen Tracks, oder von einem Keyframe zum nächsten, wenn Sie welche in der Zeitleiste setzen.',
-  'situationTip.opening': 'Blick aus großer Höhe auf die Region, Umgebung abgedunkelt und Name eingeblendet, dann Sinkflug zum Track.',
-  'situationTip.closing': 'Am Ende steigt die Kamera zurück in die große Höhe über der Region, Umgebung abgedunkelt und Name eingeblendet.',
+  'situationTip.opening': 'Ansicht von sehr hoch über der Region, Umgebung abgedunkelt und Name angezeigt, dann Sturzflug zum Track. Ersetzt den Stil der Eröffnung; ausgeschaltet kehrt sie zum Standardstil zurück.',
+  'situationTip.closing': 'Am Ende steigt die Kamera zur Ansicht von sehr hoch über der Region, Umgebung abgedunkelt und Name angezeigt. Ersetzt den Stil des Abschlusses; ausgeschaltet kehrt er zum Standardstil zurück.',
   'style.chase': 'Verfolgung',
   'style.sway': 'Schwanken (Kurvenaußenseite)',
   'style.orbit': 'Kreisfahrt um den Marker',
@@ -80,7 +80,7 @@ const messages: Messages['camera'] = {
   'duration.stops': { one: '{count} Stopp', other: '{count} Stopps' },
   'duration.film': 'Film: {duration} · {stops}',
   'duration.filmSpeedUp': 'Film: {duration} · {stops} · Beschleunigung {speedUp} (Tour von {recorded})',
-  'duration.timedStages': { one: '{count} Etappe mit fester Dauer (Etappen-Inspektor): Die Überflugdauer verteilt sich auf die übrigen', other: '{count} Etappen mit fester Dauer (Etappen-Inspektor): Die Überflugdauer verteilt sich auf die übrigen' },
+  'duration.timedStages': { one: '{count} Etappe mit fester Dauer (Etappen-Inspektor): Die anderen behalten ihren Anteil an der Überflugdauer, der Film ändert sich um die Differenz', other: '{count} Etappen mit fester Dauer (Etappen-Inspektor): Die anderen behalten ihren Anteil an der Überflugdauer, der Film ändert sich um die Differenz' },
   'pacing.enable': 'An Highlights verlangsamen',
   'pacing.enableTip': 'Highlights: Ende der Anstiege, überquerte Pässe und Gipfel in Tracknähe.',
   'pacing.slowOn': 'Verlangsamen bei',
@@ -90,6 +90,8 @@ const messages: Messages['camera'] = {
   'pacing.keepHint': 'Der Rest der Strecke wird schneller, um Verlangsamungen und Pausen auszugleichen.',
   'pacing.transitions': 'Dauer der Tempowechsel',
   'pacing.transitionsTip': 'Dauer der Tempowechsel: Beginn und Ende von Stopps, Pausen und Tempoabschnitten.',
+  'pacing.slowFactorTip': 'Überfluggeschwindigkeit direkt an einem Highlight, verglichen mit der normalen (35 %: fast dreimal langsamer).',
+  'pacing.windowTip': 'Strecke auf jeder Seite des Highlights, auf der der Überflug langsamer wird und dann wieder beschleunigt.',
 }
 
 export default messages

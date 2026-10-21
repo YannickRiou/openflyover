@@ -56,6 +56,7 @@ export function LabelSettings() {
       <SettingRow label={tr('track.labels.range')} value={`${formatNumber(labels.rangeKm)} km`} paths={['labels.rangeKm']}>
         <RangeField
           label={tr('track.labels.rangeShort')}
+          tip={tr('track.labels.rangeTip')}
           {...LABEL_RANGE_KM}
           value={labels.rangeKm}
           format={(v) => `${formatNumber(v)} km`}

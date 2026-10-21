@@ -84,7 +84,7 @@ const messages: Messages['timeline'] = {
   'bar.addText': 'Add a text at the playhead',
   'bar.addMedia': 'Add photos or videos at the playhead',
   'bar.readingFiles': 'Reading files…',
-  'bar.addMediaTip': 'Add photos or videos (MP4, WebM, MOV; without sound) at the playhead, or drop them on the timeline',
+  'bar.addMediaTip': 'Add photos or videos (MP4, WebM or MOV, 50 MB at most) at the playhead, or drop them on the timeline',
   'bar.unmute': 'Unmute',
   'bar.mute': 'Mute',
   'bar.unmuteTip': 'Turn the playback sound back on',

@@ -1,11 +1,11 @@
 import type { Messages } from '../messages'
 
 const messages: Messages['camera'] = {
-  'region.idle': 'Oscurece los alrededores de la región administrativa de la salida (OpenStreetMap) y la encuadra entera.',
+  'region.idle': 'Oscurece los alrededores del lugar de la salida (región, parque, isla…) según OpenStreetMap y lo encuadra entero.',
   'region.loading': 'Buscando la región…',
   'region.ready': 'los alrededores se oscurecen, la vista encuadra la región entera.',
-  'region.none': 'Ninguna región administrativa contiene todo el track: el plano queda sin resaltado.',
-  'region.error': 'Región no disponible por ahora (¿sin conexión?): el plano queda sin resaltado.',
+  'region.none': 'Ningún lugar (región, parque, isla…) contiene toda la traza: el plano queda sin resaltar.',
+  'region.error': 'Lugar no disponible por ahora (¿sin conexión?): el plano queda sin resaltar.',
   'region.named': '{name}: {hint}',
   'styleHint.chase': 'Detrás del marcador, en la dirección del recorrido.',
   'styleHint.sway': 'Se balancea hacia el exterior de las curvas, como un helicóptero.',
@@ -13,8 +13,8 @@ const messages: Messages['camera'] = {
   'styleHint.top': 'Alta y casi vertical (inclinación de al menos 70°).',
   'styleHint.cinematic': 'Más lejos y más baja, con un lento movimiento lateral.',
   'styleHint.free': 'La cámara no sigue nada: fija en una vista de todo el recorrido, o de un fotograma clave a otro si añade algunos en la línea de tiempo.',
-  'situationTip.opening': 'Vista desde muy alto sobre la región, con los alrededores oscurecidos y el nombre visible, y luego inmersión hacia el track.',
-  'situationTip.closing': 'Al final, la cámara asciende hasta la vista desde muy alto sobre la región, con los alrededores oscurecidos y el nombre visible.',
+  'situationTip.opening': 'Vista desde muy alto sobre la región, alrededores oscurecidos y nombre visible, luego picado hacia la traza. Sustituye el estilo del plano de apertura; desactivado, vuelve al estilo por defecto.',
+  'situationTip.closing': 'Al final, la cámara sube hasta la vista desde muy alto sobre la región, alrededores oscurecidos y nombre visible. Sustituye el estilo del plano de cierre; desactivado, vuelve al estilo por defecto.',
   'style.chase': 'Persecución',
   'style.sway': 'Balanceo (exterior de las curvas)',
   'style.orbit': 'Órbita alrededor del marcador',
@@ -80,10 +80,7 @@ const messages: Messages['camera'] = {
   'duration.stops': { one: '{count} parada', other: '{count} paradas' },
   'duration.film': 'Película: {duration} · {stops}',
   'duration.filmSpeedUp': 'Película: {duration} · {stops} · aceleración {speedUp} (salida de {recorded})',
-  'duration.timedStages': {
-    one: '{count} etapa con duración fija (inspector de la etapa): la duración del sobrevuelo se reparte entre las demás',
-    other: '{count} etapas con duración fija (inspector de la etapa): la duración del sobrevuelo se reparte entre las demás',
-  },
+  'duration.timedStages': { one: '{count} etapa con duración fijada (inspector de la etapa): las demás conservan su parte de la duración del vuelo y la película cambia en la diferencia', other: '{count} etapas con duración fijada (inspector de la etapa): las demás conservan su parte de la duración del vuelo y la película cambia en la diferencia' },
   'pacing.enable': 'Ralentizar en los momentos destacados',
   'pacing.enableTip': 'Momentos destacados: cimas de las subidas, puertos cruzados y cimas cercanas al track.',
   'pacing.slowOn': 'Ralentizar en',
@@ -93,6 +90,8 @@ const messages: Messages['camera'] = {
   'pacing.keepHint': 'El resto del recorrido se acelera para compensar ralentizaciones y pausas.',
   'pacing.transitions': 'Duración de los cambios de velocidad',
   'pacing.transitionsTip': 'Duración de los cambios de velocidad: entrada y salida de las paradas, las pausas y los tramos de velocidad.',
+  'pacing.slowFactorTip': 'Velocidad del vuelo justo en un momento destacado, respecto a la normal (35 %: casi tres veces más lento).',
+  'pacing.windowTip': 'Distancia a cada lado del momento destacado en la que el vuelo frena y luego recupera su velocidad.',
 }
 
 export default messages

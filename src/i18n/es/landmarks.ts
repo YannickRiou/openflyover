@@ -83,7 +83,7 @@ const messages: Messages['landmarks'] = {
   keepPinned: 'Conservar solo «Siempre»',
   keepPinnedTip: 'Descarta todas las demás referencias, sin proponer otras nuevas',
   hint: 'Abra el mapa para elegir las referencias: un clic en una la ajusta (Auto, Siempre, Nunca) y le da una «Parada» (la película se detiene allí el tiempo indicado).',
-  hintAuto: 'Paradas automáticas (Opciones de la línea de tiempo): cambiar una la congela.',
+  hintAuto: 'Paradas automáticas (⋯ Opciones de la película, en la línea de tiempo): cambiar una las congela.',
   'map.open': 'Elegir en el mapa y el perfil',
   'map.title': 'Referencias a lo largo del track',
   'map.profile': 'Perfil de altitud: haga clic para ir a un punto',

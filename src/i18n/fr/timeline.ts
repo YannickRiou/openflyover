@@ -82,7 +82,7 @@ export default {
   'bar.addText': 'Ajouter un texte à la tête de lecture',
   'bar.addMedia': 'Ajouter des photos ou des vidéos à la tête de lecture',
   'bar.readingFiles': 'Lecture des fichiers…',
-  'bar.addMediaTip': 'Ajouter des photos ou des vidéos (MP4, WebM, MOV ; sans le son) à la tête de lecture, ou les glisser sur la timeline',
+  'bar.addMediaTip': 'Ajouter des photos ou des vidéos (MP4, WebM ou MOV, 50 Mo au plus) à la tête de lecture, ou les glisser sur la timeline',
   'bar.unmute': 'Remettre le son',
   'bar.mute': 'Couper le son',
   'bar.unmuteTip': 'Remettre le son de la lecture',

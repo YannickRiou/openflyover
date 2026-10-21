@@ -83,7 +83,7 @@ const messages: Messages['landmarks'] = {
   keepPinned: 'Tieni solo «Sempre»',
   keepPinnedTip: 'Scarta tutti gli altri riferimenti, senza proporne di nuovi',
   hint: 'Apri la mappa per scegliere i riferimenti: un clic su uno lo imposta (Auto, Sempre, Mai) e gli dà una «Sosta» (il film si ferma lì per il tempo indicato).',
-  hintAuto: 'Soste automatiche (opzioni della timeline): modificarne una la blocca.',
+  hintAuto: 'Soste automatiche (⋯ Opzioni del film, sulla timeline): cambiarne una le blocca.',
   'map.open': 'Scegli sulla mappa e sul profilo',
   'map.title': 'Riferimenti lungo la traccia',
   'map.profile': 'Profilo altimetrico: clicca per andare a un punto',

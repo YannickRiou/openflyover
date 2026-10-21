@@ -83,7 +83,7 @@ const messages: Messages['landmarks'] = {
   keepPinned: 'Nur „Immer“ behalten',
   keepPinnedTip: 'Verwirft alle anderen Landmarken, ohne neue vorzuschlagen',
   hint: 'Öffnen Sie die Karte, um die Landmarken zu wählen: Ein Klick stellt eine ein (Auto, Immer, Nie) und gibt ihr einen „Stopp“ (der Film hält dort für die angegebene Zeit an).',
-  hintAuto: 'Automatische Stopps (Optionen der Zeitleiste): Ändern eines Stopps fixiert ihn.',
+  hintAuto: 'Automatische Stopps (⋯ Filmoptionen, auf der Timeline): einen zu ändern fixiert sie.',
   'map.open': 'Auf Karte und Profil wählen',
   'map.title': 'Landmarken entlang des Tracks',
   'map.profile': 'Höhenprofil: Klicken, um zu einem Punkt zu springen',

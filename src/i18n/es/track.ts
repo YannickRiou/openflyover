@@ -105,6 +105,7 @@ const messages: Messages['track'] = {
   'fix.apply': 'Aplicar',
   'fix.clear': 'Volver a las cifras del GPX',
   'list.corrected': 'cifras corregidas',
+  'labels.rangeTip': 'Distancia de la cámara a partir de la cual desaparecen las etiquetas.',
 }
 
 export default messages

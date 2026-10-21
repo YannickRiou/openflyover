@@ -523,7 +523,7 @@ export function FilmInspector() {
               <Button onClick={() => disableCard(card)}>{t('inspector.card.remove', { label: CARD_LABELS[card] })}</Button>
             </>
           ) : (
-            <p className={HINT}>{t('inspector.shot.cardOff', { label: CARD_LABELS[card] })}</p>
+            <p className={HINT}>{overlay.enabled ? t('inspector.shot.cardOff', { label: CARD_LABELS[card] }) : t('inspector.shot.overlayOff', { label: CARD_LABELS[card] })}</p>
           )}
         </InspectorGroup>
         <InspectorGroup title={t('inspector.shot.camera')}>
@@ -700,7 +700,7 @@ export function FilmInspector() {
           >
             {t('inspector.junction.adjustCard')}
           </Button>
-          <p className={HINT}>{t('inspector.junction.blockHint')}</p>
+          {kind !== 'coupe' && <p className={HINT}>{t('inspector.junction.blockHint')}</p>}
         </>
       )
     } else if (stop) {

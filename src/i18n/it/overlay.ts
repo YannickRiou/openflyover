@@ -100,7 +100,7 @@ const messages: Messages['overlay'] = {
   'tab.style': 'Stile',
   'tab.visibilite': 'Visibilità',
   widgetSettings: 'Impostazioni di {label}',
-  'card.hint': 'Impostazioni: clic sul blocco nella timeline.',
+  'card.hint': 'Testo, durata e stile: pulsante « Modifica », o il blocco sulla timeline.',
   'card.editAria': 'Modifica: {label}',
   'card.edit': 'Modifica',
   'swatch.white': 'Bianco',
@@ -143,7 +143,7 @@ const messages: Messages['overlay'] = {
   'panel.showHint': 'Titoli, contatori e profilo sovrapposti al film, come esportati.',
   'panel.style': 'Stile',
   'panel.labels3d': 'Etichette 3D',
-  'panel.labels3dHint': 'Sempre visibili. Inserisci dei keyframe per nasconderle e farle tornare con una dissolvenza lungo il percorso: un keyframe al 100% le mostra, allo 0% le nasconde (due keyframe vicini danno un cambio rapido).',
+  'panel.labels3dHint': 'Le etichette della vista 3D (partenza, passi, riferimenti…) sono sempre visibili. Con ◇, metti delle chiavi per nasconderle e farle tornare in dissolvenza: 100 % le mostra, 0 % le nasconde.',
   'panel.titles': 'Titoli',
   'panel.counters': 'Contatori',
   'panel.showCounters': 'Mostra i contatori',
@@ -174,6 +174,7 @@ const messages: Messages['overlay'] = {
   'panel.creditsTip': 'Le licenze di rilievo, immagini, meteo e OpenStreetMap richiedono di citare le fonti nel film pubblicato.',
   'panel.creditsHint': 'In piccolo, in un angolo di ogni fotogramma esportato, anche senza il resto dell’overlay.',
   'panel.creditsOff': 'Cita allora le fonti altrove (descrizione del video, titoli di coda).',
+  'panel.styleHint': 'Cambiare stile rimette a posto gli elementi dell’overlay (posizioni e dimensioni).',
 }
 
 export default messages
