@@ -13,6 +13,7 @@ import type { PerspectiveCamera } from 'three'
 import type { LocalFrame, TerrainEngine, TerrainStats } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { createTerrainEngine, restoreEngineImagery } from '../terrain/engine'
+import { createTileFetcher } from '../terrain/fetch'
 import { exportLodHeight } from '../export/schedule'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useAppStore } from '../state/store'
@@ -44,6 +45,14 @@ interface AppliedOptions {
   engine: TerrainEngine
   options: EngineSettingsOptions
 }
+
+/**
+ * The tiles already decoded outlive the engine: one fetcher for every engine of the session, so a rebuilt engine (a
+ * track added or removed, a « Depuis la région » shot switched) finds them without asking the network or the HTTP
+ * cache again, as the export finds the preview's. Bounded like any fetcher (`deviceBudget().tileBitmaps`), emptied when
+ * no track is left.
+ */
+let sharedFetcher: ReturnType<typeof createTileFetcher> | undefined
 
 export function TerrainLayer({ children }: TerrainLayerProps) {
   const frameOrigin = useAppStore((s) => s.frameOrigin)
@@ -79,11 +88,15 @@ export function TerrainLayer({ children }: TerrainLayerProps) {
   const statsClockRef = useRef(0)
 
   useEffect(() => {
-    if (!frame || !area) return undefined
+    if (!frame || !area) {
+      sharedFetcher?.clear()
+      return undefined
+    }
+    sharedFetcher ??= createTileFetcher()
     // Read the settings imperatively: they are forwarded by the effect below, so they must not be a
     // dependency here (a settings change must never recreate the engine).
     const options = engineOptionsFromSettings(useAppStore.getState().settings)
-    const created = createTerrainEngine({ frame, ...area, errorTargetPx: ERROR_TARGET_PX, ...options })
+    const created = createTerrainEngine({ frame, ...area, errorTargetPx: ERROR_TARGET_PX, ...options }, { fetcher: sharedFetcher })
     appliedRef.current = { engine: created, options }
     lastStatsRef.current = null
     statsClockRef.current = 0

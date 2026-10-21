@@ -190,6 +190,12 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    and 400 (the IGN Géoplateforme returned bursts of "Layer … unknown" as 400 for valid tiles, with a
    `max-age` of 21 days): a sub-tile that still fails makes its terrain tile's imagery incomplete (next item). Before the
    network, the copy from an offline pack when a pack contains the URL's source (see "Offline packs").
+   **One fetcher for the session** (`TerrainLayer`, `sharedFetcher`): the engine is rebuilt when the tracks or the
+   « Depuis la région » shot change, and the decoded tiles outlive it; emptied when no track is left. The export uses
+   the preview's engine, so it starts from the tiles the preview loaded (only the finer levels of a film taller than the
+   preview canvas are new). Below it, the browser's HTTP cache under each server's rules (Mapterhorn and OpenTopoMap
+   7 days, IGN 21 days, Esri 1 day, swisstopo 1 h then an ETag check): no tile store of our own outside the offline packs,
+   which the providers' terms govern (`docs/sources.md`).
 3. **DEM** (`dem.ts`): Terrarium `h = (R*256 + G + B/256) - 32768`; Mapbox `h = -10000 + (R*65536 + G*256 + B) * 0.1`.
    Decoding through `OffscreenCanvas` (fallback `HTMLCanvasElement`). Bilinear sampling.
 4. **Imagery** (`imagery.ts`): for the terrain tile (z,x,y) and `zoomOffset = k`, fetch the `2^k × 2^k` sub-tiles
