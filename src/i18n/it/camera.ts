@@ -1,11 +1,11 @@
 import type { Messages } from '../messages'
 
 const messages: Messages['camera'] = {
-  'region.idle': 'Oscura i dintorni della regione amministrativa dell’uscita (OpenStreetMap) e la inquadra per intero.',
+  'region.idle': 'Scurisce i dintorni del luogo dell’uscita (regione, parco, isola…) secondo OpenStreetMap e lo inquadra per intero.',
   'region.loading': 'Ricerca della regione…',
   'region.ready': 'i dintorni sono oscurati, la vista inquadra l’intera regione.',
-  'region.none': 'Nessuna regione amministrativa contiene l’intera traccia: l’inquadratura resta senza evidenziazione.',
-  'region.error': 'Regione al momento non disponibile (offline?): l’inquadratura resta senza evidenziazione.',
+  'region.none': 'Nessun luogo (regione, parco, isola…) contiene tutta la traccia: l’inquadratura resta senza evidenza.',
+  'region.error': 'Luogo non disponibile per ora (offline?): l’inquadratura resta senza evidenza.',
   'region.named': '{name}: {hint}',
   'styleHint.chase': 'Dietro il marcatore, nella direzione di marcia.',
   'styleHint.sway': 'Oscilla verso l’esterno delle curve, come un elicottero.',
@@ -13,8 +13,8 @@ const messages: Messages['camera'] = {
   'styleHint.top': 'Alta e quasi verticale (inclinazione di almeno 70°).',
   'styleHint.cinematic': 'Più lontana e più bassa, con un lento movimento laterale.',
   'styleHint.free': 'La telecamera non segue nulla: fissa su una vista dell’intero tracciato, o da un keyframe all’altro se ne aggiungi sulla timeline.',
-  'situationTip.opening': 'Vista dall’alto sulla regione, dintorni oscurati e nome in evidenza, poi discesa verso la traccia.',
-  'situationTip.closing': 'Alla fine, la camera risale fino alla vista dall’alto sulla regione, dintorni oscurati e nome in evidenza.',
+  'situationTip.opening': 'Vista dall’alto sulla regione, dintorni scuriti e nome visibile, poi picchiata verso la traccia. Sostituisce lo stile dell’apertura; disattivato, torna allo stile predefinito.',
+  'situationTip.closing': 'Alla fine, la camera risale fino alla vista dall’alto sulla regione, dintorni scuriti e nome visibile. Sostituisce lo stile della chiusura; disattivato, torna allo stile predefinito.',
   'style.chase': 'Inseguimento',
   'style.sway': 'Oscillazione (esterno delle curve)',
   'style.orbit': 'Orbita attorno al marcatore',
@@ -80,7 +80,7 @@ const messages: Messages['camera'] = {
   'duration.stops': { one: '{count} sosta', other: '{count} soste' },
   'duration.film': 'Film: {duration} · {stops}',
   'duration.filmSpeedUp': 'Film: {duration} · {stops} · accelerazione {speedUp} (uscita di {recorded})',
-  'duration.timedStages': { one: '{count} tappa con durata fissa (inspector della tappa): la durata del sorvolo si ripartisce sulle altre', other: '{count} tappe con durata fissa (inspector della tappa): la durata del sorvolo si ripartisce sulle altre' },
+  'duration.timedStages': { one: '{count} tappa con durata fissata (ispettore della tappa): le altre mantengono la loro parte della durata del sorvolo, il film cambia della differenza', other: '{count} tappe con durata fissata (ispettore della tappa): le altre mantengono la loro parte della durata del sorvolo, il film cambia della differenza' },
   'pacing.enable': 'Rallenta nei punti salienti',
   'pacing.enableTip': 'Punti salienti: cime delle salite, passi superati e vette vicine alla traccia.',
   'pacing.slowOn': 'Rallenta su',
@@ -90,6 +90,8 @@ const messages: Messages['camera'] = {
   'pacing.keepHint': 'Il resto del percorso accelera per compensare rallentamenti e pause.',
   'pacing.transitions': 'Durata dei cambi di velocità',
   'pacing.transitionsTip': 'Durata dei cambi di velocità: ingresso e uscita da soste, pause e tratti a velocità impostata.',
+  'pacing.slowFactorTip': 'Velocità del sorvolo proprio a un punto saliente, rispetto a quella normale (35 %: quasi tre volte più lento).',
+  'pacing.windowTip': 'Distanza da ogni lato del punto saliente su cui il sorvolo rallenta e poi riprende velocità.',
 }
 
 export default messages

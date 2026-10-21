@@ -47,7 +47,7 @@ export function GradingPanel() {
             </Radio>
           ))}
         </RadioGroup>
-        {grading.preset === 'personnalise' && <p className="type-hint">{t('light.grading.custom')}</p>}
+        <p className="type-hint">{t('light.grading.custom')}</p>
       </div>
 
       {keyed && (

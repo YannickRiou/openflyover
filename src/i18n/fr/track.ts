@@ -102,4 +102,5 @@ export default {
   'fix.apply': 'Appliquer',
   'fix.clear': 'Revenir aux chiffres du GPX',
   'list.corrected': 'chiffres corrigés',
+  'labels.rangeTip': 'Distance de la caméra au-delà de laquelle les étiquettes disparaissent.',
 }

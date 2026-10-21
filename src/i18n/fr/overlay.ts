@@ -98,7 +98,7 @@ export default {
   'tab.style': 'Style',
   'tab.visibilite': 'Visibilité',
   widgetSettings: 'Réglages de {label}',
-  'card.hint': 'Réglages : cliquez le bloc dans la timeline.',
+  'card.hint': 'Texte, durée et style : bouton « Modifier », ou le bloc dans la timeline.',
   'card.editAria': 'Modifier : {label}',
   'card.edit': 'Modifier',
   'swatch.white': 'Blanc',
@@ -141,7 +141,7 @@ export default {
   'panel.showHint': "Titres, compteurs et profil incrustés dans le film, tels qu'exportés.",
   'panel.style': 'Style',
   'panel.labels3d': 'Étiquettes 3D',
-  'panel.labels3dHint': 'Toujours affichées. Posez des clés pour les masquer puis les faire revenir en fondu le long du parcours : une clé à 100 % les affiche, à 0 % les masque (deux clés proches font un changement rapide).',
+  'panel.labels3dHint': 'Les étiquettes de la vue 3D (départ, cols, repères…) sont toujours visibles. Avec ◇, posez des clés pour les masquer puis les faire revenir en fondu : 100 % les affiche, 0 % les masque.',
   'panel.titles': 'Titres',
   'panel.counters': 'Compteurs',
   'panel.showCounters': 'Afficher les compteurs',
@@ -172,4 +172,5 @@ export default {
   'panel.creditsTip': "Les licences du relief, de l'imagerie, de la météo et d'OpenStreetMap demandent de citer les sources dans le film publié.",
   'panel.creditsHint': "En petit, dans un coin de chaque image exportée, même sans le reste de l'habillage.",
   'panel.creditsOff': 'Citez alors les sources ailleurs (description de la vidéo, générique).',
+  'panel.styleHint': 'Changer de style remet en place les éléments de l’habillage (positions et tailles).',
 }

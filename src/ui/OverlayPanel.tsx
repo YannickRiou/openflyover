@@ -535,6 +535,7 @@ export function OverlayPanel() {
                 </Radio>
               ))}
             </RadioGroup>
+            <p className="type-hint">{t('overlay.panel.styleHint')}</p>
           </fieldset>
         )}
         {overlay.enabled && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}

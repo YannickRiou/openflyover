@@ -450,7 +450,7 @@ describe('Timeline', () => {
       const groups = Array.from(panel.querySelectorAll<HTMLElement>('[role="group"]')).filter((g) => /Titre d'ouverture|Carte de clôture/.test(g.textContent ?? ''))
       expect(groups).toHaveLength(2)
       for (const g of groups) {
-        expect(g.textContent).toContain('Réglages : cliquez le bloc dans la timeline.')
+        expect(g.textContent).toContain('Texte, durée et style : bouton « Modifier », ou le bloc dans la timeline.')
         // no field left: the switch and the button
         expect(g.querySelectorAll('input, textarea, select, button')).toHaveLength(2)
       }

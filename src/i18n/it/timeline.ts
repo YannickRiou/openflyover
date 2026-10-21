@@ -84,7 +84,7 @@ const messages: Messages['timeline'] = {
   'bar.addText': 'Aggiungi un testo sulla testina di lettura',
   'bar.addMedia': 'Aggiungi foto o video sulla testina di lettura',
   'bar.readingFiles': 'Lettura dei file…',
-  'bar.addMediaTip': 'Aggiungi foto o video (MP4, WebM, MOV; senza audio) sulla testina di lettura, o trascinali sulla timeline',
+  'bar.addMediaTip': 'Aggiungi foto o video (MP4, WebM o MOV, al massimo 50 MB) alla testina, o trascinali sulla timeline',
   'bar.unmute': 'Riattiva l’audio',
   'bar.mute': 'Disattiva l’audio',
   'bar.unmuteTip': 'Riattiva l’audio della riproduzione',

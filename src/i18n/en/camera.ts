@@ -1,11 +1,11 @@
 import type { Messages } from '../messages'
 
 const messages: Messages['camera'] = {
-  'region.idle': 'Darkens the surroundings of the administrative region of the outing (OpenStreetMap) and frames it entirely.',
+  'region.idle': 'Darkens the surroundings of the place of the outing (region, park, island…) from OpenStreetMap and frames all of it.',
   'region.loading': 'Looking for the region…',
   'region.ready': 'the surroundings are darkened, the view frames the whole region.',
-  'region.none': 'No administrative region contains the whole track: the shot stays without highlight.',
-  'region.error': 'Region unavailable for now (offline?): the shot stays without highlight.',
+  'region.none': 'No place (region, park, island…) holds the whole track: the shot stays without a highlight.',
+  'region.error': 'Place unavailable for now (offline?): the shot stays without a highlight.',
   'region.named': '{name}: {hint}',
   'styleHint.chase': 'Behind the marker, in the direction of travel.',
   'styleHint.sway': 'Swings towards the outside of bends, like a helicopter.',
@@ -13,8 +13,8 @@ const messages: Messages['camera'] = {
   'styleHint.top': 'High and almost vertical (tilt of at least 70°).',
   'styleHint.cinematic': 'Further and lower, with a slow sideways movement.',
   'styleHint.free': 'The camera follows nothing: fixed on a view of the whole track, or from one keyframe to the next if you add some on the timeline.',
-  'situationTip.opening': 'View from very high over the region, surroundings darkened and name shown, then a dive towards the track.',
-  'situationTip.closing': 'At the end, the camera climbs back to the very high view over the region, surroundings darkened and name shown.',
+  'situationTip.opening': 'A view from very high over the region, surroundings darkened and name shown, then a dive to the track. Replaces the style of the opening shot; off, it goes back to the default style.',
+  'situationTip.closing': 'At the end, the camera climbs to the view from very high over the region, surroundings darkened and name shown. Replaces the style of the closing shot; off, it goes back to the default style.',
   'style.chase': 'Chase',
   'style.sway': 'Sway (outside of bends)',
   'style.orbit': 'Orbit around the marker',
@@ -80,7 +80,7 @@ const messages: Messages['camera'] = {
   'duration.stops': { one: '{count} hold', other: '{count} holds' },
   'duration.film': 'Film: {duration} · {stops}',
   'duration.filmSpeedUp': 'Film: {duration} · {stops} · speed-up {speedUp} (outing of {recorded})',
-  'duration.timedStages': { one: '{count} stage with a fixed duration (stage inspector): the flyover duration is shared among the others', other: '{count} stages with a fixed duration (stage inspector): the flyover duration is shared among the others' },
+  'duration.timedStages': { one: '{count} stage with a set duration (stage inspector): the others keep their share of the flyover duration, the film changes by the difference', other: '{count} stages with a set duration (stage inspector): the others keep their share of the flyover duration, the film changes by the difference' },
   'pacing.enable': 'Slow down at highlights',
   'pacing.enableTip': 'Highlights: tops of climbs, passes crossed and summits near the track.',
   'pacing.slowOn': 'Slow down on',
@@ -90,6 +90,8 @@ const messages: Messages['camera'] = {
   'pacing.keepHint': 'The rest of the route speeds up to make up for slow-downs and pauses.',
   'pacing.transitions': 'Length of the speed changes',
   'pacing.transitionsTip': 'Duration of the speed changes: entering and leaving holds, pauses and speed sections.',
+  'pacing.slowFactorTip': 'Flyover speed right at a highlight, compared with the normal speed (35 %: almost three times slower).',
+  'pacing.windowTip': 'Distance on each side of the highlight over which the flyover slows down and then picks up again.',
 }
 
 export default messages

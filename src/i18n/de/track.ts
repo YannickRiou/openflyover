@@ -104,6 +104,7 @@ const messages: Messages['track'] = {
   'fix.apply': 'Übernehmen',
   'fix.clear': 'Zurück zu den GPX-Werten',
   'list.corrected': 'Zahlen korrigiert',
+  'labels.rangeTip': 'Kameraabstand, ab dem die Beschriftungen verschwinden.',
 }
 
 export default messages

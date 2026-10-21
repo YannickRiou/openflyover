@@ -100,7 +100,7 @@ const messages: Messages['overlay'] = {
   'tab.style': 'Stil',
   'tab.visibilite': 'Sichtbarkeit',
   widgetSettings: 'Einstellungen von {label}',
-  'card.hint': 'Einstellungen: den Block in der Zeitleiste anklicken.',
+  'card.hint': 'Text, Dauer und Stil: Schaltfläche „Bearbeiten“ oder der Block auf der Timeline.',
   'card.editAria': 'Bearbeiten: {label}',
   'card.edit': 'Bearbeiten',
   'swatch.white': 'Weiß',
@@ -143,7 +143,7 @@ const messages: Messages['overlay'] = {
   'panel.showHint': 'Titel, Zähler und Profil im Film eingeblendet, wie exportiert.',
   'panel.style': 'Stil',
   'panel.labels3d': '3D-Beschriftungen',
-  'panel.labels3dHint': 'Immer angezeigt. Keyframes setzen, um sie auszublenden und dann entlang der Strecke wieder einzublenden: Ein Keyframe bei 100 % zeigt sie an, bei 0 % blendet er sie aus (zwei nahe Keyframes ergeben einen schnellen Wechsel).',
+  'panel.labels3dHint': 'Die Beschriftungen der 3D-Ansicht (Start, Pässe, Landmarken…) sind immer sichtbar. Mit ◇ setzen Sie Schlüssel, um sie auszublenden und überblendet zurückzuholen: 100 % zeigt sie, 0 % blendet sie aus.',
   'panel.titles': 'Titel',
   'panel.counters': 'Zähler',
   'panel.showCounters': 'Zähler anzeigen',
@@ -174,6 +174,7 @@ const messages: Messages['overlay'] = {
   'panel.creditsTip': 'Die Lizenzen von Gelände, Luftbildern, Wetter und OpenStreetMap verlangen die Nennung der Quellen im veröffentlichten Film.',
   'panel.creditsHint': 'Klein, in einer Ecke jedes exportierten Bildes, auch ohne den Rest des Overlays.',
   'panel.creditsOff': 'Dann die Quellen anderswo nennen (Videobeschreibung, Abspann).',
+  'panel.styleHint': 'Ein Stilwechsel setzt die Overlay-Elemente zurück (Positionen und Größen).',
 }
 
 export default messages

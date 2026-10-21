@@ -90,7 +90,7 @@ const messages: Messages['timeline'] = {
   'bar.addText': 'Añadir un texto en el cabezal de reproducción',
   'bar.addMedia': 'Añadir fotos o vídeos en el cabezal de reproducción',
   'bar.readingFiles': 'Leyendo archivos…',
-  'bar.addMediaTip': 'Añadir fotos o vídeos (MP4, WebM, MOV; sin sonido) en el cabezal de reproducción, o arrastrarlos a la línea de tiempo',
+  'bar.addMediaTip': 'Añadir fotos o vídeos (MP4, WebM o MOV, 50 MB como máximo) en el cabezal, o soltarlos en la línea de tiempo',
   'bar.unmute': 'Reactivar el sonido',
   'bar.mute': 'Silenciar',
   'bar.unmuteTip': 'Reactivar el sonido de la reproducción',

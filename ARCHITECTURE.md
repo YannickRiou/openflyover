@@ -1353,7 +1353,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   is spent still on the region view (`situationTiming`: hold + move = duration, so the clock and the timeline keep
   reading `durationS`; a move made longer than 30 s in all shortens the hold), the smootherstep move takes the rest
   (`shotBlend(…, holdS)`). Without a hold (every film saved before), the move takes the whole shot: exactly the
-  curve of before. **Framing** (« Cadrage », `regionView(…, { framing })`, pure): « Inclinaison » `tiltDeg` from the
+  curve of before. **Framing** (« Cadrage », `regionView(…, { framing })`, pure): « Écart à la verticale » `tiltDeg` from the
   vertical (default 25°, `SITUATION_TILT_DEFAULT_DEG`, = `REGION_PITCH_DEG` 65° above the horizon); « Distance »
   `distanceKm` used as is instead of the automatic distance (« Auto » at the left of the slider; no « Pays » or
   portrait factor, « Hauteur » greyed out), still within the reach of the terrain for that tilt and never nearer
@@ -1891,8 +1891,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   text, not ours) when something would be lost, a write still in progress included. Renaming changes the entry (and
   the name of the open project; its document follows at the next save); deleting asks for an inline confirmation, and the open project stays open without an entry.
 - **Presets** in `getPlatform().storage` (`openflyover.presets.v1`, in-memory fallback); a key missing from a preset keeps its
-  current value. A preset keeps every setting or one family (`Preset.scope`, `PRESET_SCOPES`: "Style de carte",
-  "Trace, marqueur et étiquettes", "Habillage", "Prise de vue (caméra, cadrage, lumière)"): `save(name, settings, scope)`
+  current value. A preset keeps every setting or one family (`Preset.scope`, `PRESET_SCOPES`: "Carte et ambiance (fond, relief, nuages, couleurs, objectif)",
+  "Trace, marqueur et étiquettes", "Habillage", "Prise de vue (caméra, soleil, exposition)"): `save(name, settings, scope)`
   stores only the keys of `PRESET_SCOPE_KEYS[scope]`, so applying it changes nothing else; a stored preset with an
   unknown family is dropped on reading. `save` returns false when the storage refuses (full or blocked): the preset remains usable for the
   session and the panel shows "Préréglage non enregistré : stockage du navigateur plein"; the weather cache, on the other hand, stays

@@ -42,6 +42,7 @@ export function CardFields({ card }: { card: CardId }) {
         >
           {t('inspector.card.showDate')}
         </Checkbox>
+        {!hasTime && <p className="type-hint">{t('inspector.card.dateNeedsTime')}</p>}
         <CardExtrasFields card="title" />
         <WidgetPosition widget="title" />
         <SizeField value={title.size} onChange={(size) => setTitle({ size })} />

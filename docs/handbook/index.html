@@ -1749,7 +1749,7 @@ export const DEFAULT_SETTINGS: Settings = {
     </div></li>
 
     <li><div class="stack">
-      <p><strong>Optional extras.</strong> Presets: <code>cloudShadows</code> belongs to the « Style de carte » family, so it is listed in <code>carte</code> of <code>PRESET_SCOPE_KEYS</code> (<code>src/project/presets.ts</code>); add yours to the family it belongs to, or to none (the « Tous les réglages » presets keep every setting anyway). If the setting lengthens the export, see « Export cost » in the checklist below. Then a line in <code>CHANGELOG.md</code> under <code>## Unreleased</code> if users can see the change.</p>
+      <p><strong>Optional extras.</strong> Presets: <code>cloudShadows</code> belongs to the « Carte et ambiance » family, so it is listed in <code>carte</code> of <code>PRESET_SCOPE_KEYS</code> (<code>src/project/presets.ts</code>); add yours to the family it belongs to, or to none (the « Tous les réglages » presets keep every setting anyway). If the setting lengthens the export, see « Export cost » in the checklist below. Then a line in <code>CHANGELOG.md</code> under <code>## Unreleased</code> if users can see the change.</p>
       <p><strong>Finish</strong> with a commit and a pull request: <a href="#issue-to-pr">From an issue to a pull request</a>, last step.</p>
     </div></li>
   </ol>
@@ -2159,7 +2159,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
       <div class="term"><h4>Chaining (« Enchaîner »)</h4><p>Merging several tracks into one route.</p></div>
       <div class="term"><h4>Planned outing (« Prévoir la sortie »)</h4><p>Estimated times for a route without times.</p></div>
       <div class="term"><h4>Offline pack (« Hors ligne »)</h4><p>Tiles of a corridor along the track kept for use without a connection.</p></div>
-      <div class="term" id="gl-preset"><h4>Presets (« Préréglages »)</h4><p>Named sets of settings the user saves and applies in one click, either all settings or one family (« Style de carte », « Trace, marqueur et étiquettes »…: <code>PRESET_SCOPES</code>; the settings of each family in <code>PRESET_SCOPE_KEYS</code>, <code>src/project/presets.ts</code>).</p></div>
+      <div class="term" id="gl-preset"><h4>Presets (« Préréglages »)</h4><p>Named sets of settings the user saves and applies in one click, either all settings or one family (« Carte et ambiance », « Trace, marqueur et étiquettes »…: <code>PRESET_SCOPES</code>; the settings of each family in <code>PRESET_SCOPE_KEYS</code>, <code>src/project/presets.ts</code>).</p></div>
       <div class="term"><h4>My projects (« Mes projets »)</h4><p>Projects kept inside the app, with thumbnails.</p></div>
       <div class="term" id="gl-modified"><h4>« Modifié »</h4><p>The marker of a setting or section that differs from its default: a round ↺ button (<code>ModifiedMarker</code>) that resets it.</p></div>
       <div class="term"><h4>Render weight (« poids de rendu »)</h4><p>The pictogram that tells how much a setting lengthens the export (<code>ui/renderCost.ts</code>).</p></div>

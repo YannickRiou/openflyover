@@ -83,7 +83,7 @@ const messages: Messages['landmarks'] = {
   keepPinned: 'Keep “Always” only',
   keepPinnedTip: 'Dismisses all the other landmarks, without suggesting new ones',
   hint: 'Open the map to choose the landmarks: a click on one sets it (Auto, Always, Never) and gives it a “Hold” (the film holds there for the time given).',
-  hintAuto: 'Automatic holds (Timeline options): changing one freezes it.',
+  hintAuto: 'Automatic holds (⋯ Film options, on the timeline): changing one freezes them.',
   'map.open': 'Choose on the map and the profile',
   'map.title': 'Landmarks along the track',
   'map.profile': 'Altitude profile: click to go to a point',

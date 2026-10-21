@@ -636,6 +636,7 @@ export function MapSettings() {
                 </Radio>
               ))}
             </RadioGroup>
+            <p className="type-hint">{t('light.map.imageryDetailHint')}</p>
           </fieldset>
         </SettingRow>
 

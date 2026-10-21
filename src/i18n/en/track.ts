@@ -104,6 +104,7 @@ const messages: Messages['track'] = {
   'fix.apply': 'Apply',
   'fix.clear': 'Back to the GPX figures',
   'list.corrected': 'corrected figures',
+  'labels.rangeTip': 'Camera distance beyond which the labels fade out.',
 }
 
 export default messages

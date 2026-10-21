@@ -107,10 +107,10 @@ const messages: Messages['project'] = {
   'panel.presetSaved': 'Preajuste «{name}» guardado',
   'panel.presetFull': 'Preajuste no guardado: almacenamiento del navegador lleno. Sigue disponible hasta que se cierre la página.',
   'presets.scope.tout': 'Todos los ajustes',
-  'presets.scope.carte': 'Estilo de mapa',
+  'presets.scope.carte': 'Mapa y ambiente (mapa, relieve, nubes, colores, objetivo)',
   'presets.scope.trace': 'Track, marcador y etiquetas',
   'presets.scope.habillage': 'Gráficos',
-  'presets.scope.prise-de-vue': 'Toma (cámara, encuadre, luz)',
+  'presets.scope.prise-de-vue': 'Toma (cámara, sol, exposición)',
   'presets.nameRequired': 'Escribe un nombre para el preajuste.',
 }
 
