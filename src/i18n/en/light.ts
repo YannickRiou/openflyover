@@ -3,7 +3,7 @@ import type { Messages } from '../messages'
 const messages: Messages['light'] = {
   'grading.title': 'Colours',
   'grading.preset': 'Grade',
-  'grading.custom': 'Choosing a grading replaces the four sliders below.',
+  'grading.custom': 'Choosing a grading replaces the four sliders below; a value that has keys gets its own on its key at the marker.',
   'grading.keyed': 'Values that have keyframes (one timeline lane each) follow those keyframes along the route: their slider then edits the key at the marker (one is created if needed).',
   'grading.contrast': 'Contrast',
   'grading.saturation': 'Saturation',
@@ -59,7 +59,7 @@ const messages: Messages['light'] = {
   'sun.fixedHint': 'The sun stays at the same hour for the whole flight; an opening or closing shot may have its own sun (its panel), and the nights of a multi-day track make it set.',
   'sun.followHintStages': 'Each stage is lit at its recorded time; between two stages, the light moves from one to the other during the transition.',
   'sun.fixedHintStages': 'All stages are lit at the same time.',
-  'sun.keyedFollow': 'Keyframes on the “Sun” lane of the timeline drive the sun time along the route: they replace the recorded time.',
+  'sun.keyedFollow': 'Keyframes on the “Sun” lane of the timeline drive the sun time along the route: they replace the recorded time, on the day chosen below.',
   'sun.keyedFixed': 'Keyframes on the “Sun” lane of the timeline drive the sun time along the route: the slider then edits the key at the marker (one is created if needed).',
   'sun.solarHour': 'Solar time',
   'sun.solarTip': 'Sun time instead of the outing time: at noon, it is at its highest.',

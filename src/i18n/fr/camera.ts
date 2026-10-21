@@ -41,6 +41,7 @@ export default {
   'panel.preset': 'Préréglage',
   'panel.camera': 'Caméra',
   'panel.durationSection': 'Durée et rythme',
+  'panel.keyed': { one: '{count} image clé de caméra (ligne « Plans ») pilote la vue autour d’elle : ces réglages valent pour le reste du film.', other: '{count} images clés de caméra (ligne « Plans ») pilotent la vue de la première à la dernière : ces réglages valent avant et après.' },
   'slider.distance': 'Distance',
   'slider.distanceTip': 'Multiple de la distance automatique, choisie selon la longueur de la trace.',
   'slider.pitch': 'Inclinaison',

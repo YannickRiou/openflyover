@@ -3,7 +3,7 @@ import type { Messages } from '../messages'
 const messages: Messages['light'] = {
   'grading.title': 'Colori',
   'grading.preset': 'Color grading',
-  'grading.custom': 'Scegliere una correzione colore sostituisce i quattro cursori qui sotto.',
+  'grading.custom': 'Scegliere una correzione colore sostituisce i quattro cursori qui sotto; un valore che ha keyframe riceve il suo sul keyframe al marcatore.',
   'grading.keyed': 'I valori con keyframe (una corsia della timeline ciascuno) seguono i loro keyframe lungo il percorso: il relativo cursore modifica allora il keyframe sul marcatore (ne viene creato uno se serve).',
   'grading.contrast': 'Contrasto',
   'grading.saturation': 'Saturazione',
@@ -59,7 +59,7 @@ const messages: Messages['light'] = {
   'sun.fixedHint': 'Il sole resta alla stessa ora per tutto il volo; un’inquadratura di apertura o di chiusura può avere il suo sole (il suo pannello), e le notti di una traccia di più giorni lo fanno tramontare.',
   'sun.followHintStages': 'Ogni tappa è illuminata all’ora registrata; tra due tappe la luce passa dall’una all’altra durante la transizione.',
   'sun.fixedHintStages': 'Tutte le tappe sono illuminate alla stessa ora.',
-  'sun.keyedFollow': 'I keyframe della corsia «Sole» della timeline guidano l’ora del sole lungo il percorso: sostituiscono l’ora registrata.',
+  'sun.keyedFollow': 'I keyframe della corsia «Sole» della timeline guidano l’ora del sole lungo il percorso: sostituiscono l’ora registrata, nel giorno scelto qui sotto.',
   'sun.keyedFixed': 'I keyframe della corsia «Sole» della timeline guidano l’ora del sole lungo il percorso: il cursore modifica allora il keyframe sul marcatore (ne viene creato uno se serve).',
   'sun.solarHour': 'Ora solare',
   'sun.solarTip': 'Ora del sole invece di quella dell’uscita: a mezzogiorno è al punto più alto.',

@@ -222,6 +222,7 @@ export function CameraPanel() {
   const pacing = useAppStore((s) => s.settings.pacing)
   const film = useFilmClock()
   const stopCount = film.stops.length
+  const cameraKeyCount = film.cameraKeys.length
   // « À la suite »: the stages whose flight time is set on the timeline take theirs out of the duration
   const { stageIds, film: filmSettings } = useFilmSource()
   const timedStages = stageIds?.filter((id) => filmSettings.stageDurations?.[id] !== undefined).length ?? 0
@@ -309,6 +310,8 @@ export function CameraPanel() {
             />
           </div>
         </SettingRow>
+        {/* the camera keys take the view from the first to the last: these settings are those of the rest of the film */}
+        {camera.style !== 'free' && cameraKeyCount > 0 && <p className="type-hint">{t('camera.panel.keyed', { count: cameraKeyCount })}</p>}
         {/* 'free' follows the keyframes alone: the framing sliders do nothing there */}
         {camera.style !== 'free' && SLIDERS.map(({ key, label, tip, format }) => {
           const range = CAMERA_RANGES[key]

@@ -43,6 +43,7 @@ const messages: Messages['camera'] = {
   'panel.preset': 'Voreinstellung',
   'panel.camera': 'Kamera',
   'panel.durationSection': 'Dauer und Tempo',
+  'panel.keyed': { one: '{count} Kamera-Keyframe (Spur „Einstellungen“) steuert die Ansicht um ihn herum: diese Einstellungen gelten für den Rest des Films.', other: '{count} Kamera-Keyframes (Spur „Einstellungen“) steuern die Ansicht vom ersten bis zum letzten: diese Einstellungen gelten davor und danach.' },
   'slider.distance': 'Abstand',
   'slider.distanceTip': 'Vielfaches des automatischen Abstands, der sich nach der Länge des Tracks richtet.',
   'slider.pitch': 'Neigung',

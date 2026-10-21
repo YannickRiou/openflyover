@@ -331,6 +331,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const setSetting = useAppStore((s) => s.setSetting)
   const firstTrack = useAppStore((s) => s.tracks[0])
   const racing = useAppStore((s) => s.tracks.length > 1 && s.settings.race.enabled)
+  const markerKeyCount = useAppStore((s) => s.settings.film.markerKeys.length)
   const filmTrack = useFilmTrack()
   const sequence = useFilmSequence()
   const junctions = useMemo(() => junctionsM(filmTrack, sequence?.cutsM).length, [filmTrack, sequence])
@@ -342,6 +343,8 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
 
   return (
     <PanelSection title={t('marker.section.title')} keys={['marker']} hidden={hidden}>
+      {/* from the first marker key on, the keys give the marker its look */}
+      {markerKeyCount > 0 && <p className="type-hint">{t('marker.section.keyed', { count: markerKeyCount })}</p>}
       <ChipChoice
         label={t('marker.section.shape')}
         options={MARKER_KINDS}

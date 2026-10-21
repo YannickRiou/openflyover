@@ -43,6 +43,7 @@ const messages: Messages['camera'] = {
   'panel.preset': 'Preset',
   'panel.camera': 'Camera',
   'panel.durationSection': 'Duration and pacing',
+  'panel.keyed': { one: '{count} camera keyframe (“Shots” lane) drives the view around it: these settings are those of the rest of the film.', other: '{count} camera keyframes (“Shots” lane) drive the view from the first to the last: these settings apply before and after.' },
   'slider.distance': 'Distance',
   'slider.distanceTip': 'Multiple of the automatic distance, chosen from the length of the track.',
   'slider.pitch': 'Tilt',

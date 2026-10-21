@@ -212,7 +212,8 @@ function SunTimeControl() {
         </div>
       )}
 
-      {!follows && (
+      {/* with keys on the sun, its hours are solar hours of this day, in « Heure de la trace » too */}
+      {(!follows || sunKeyed) && (
         <SettingRow label={t('light.sun.day')} value={sunDate ? formatDay(sunDate) : t('light.sun.dayOfOuting')} paths={['sunDate']}>
           <div className="field">
             <div className="flex items-center gap-1">

@@ -3,7 +3,7 @@ import type { Messages } from '../messages'
 const messages: Messages['light'] = {
   'grading.title': 'Farben',
   'grading.preset': 'Farbkorrektur',
-  'grading.custom': 'Eine Farbkorrektur zu wählen ersetzt die vier Regler unten.',
+  'grading.custom': 'Eine Farbkorrektur zu wählen ersetzt die vier Regler unten; ein Wert mit Keyframes erhält seinen auf dem Keyframe an der Marker-Position.',
   'grading.keyed': 'Werte mit Keyframes (je eine Zeile der Zeitleiste) folgen diesen Keyframes entlang der Strecke: Ihr Regler ändert dann den Keyframe an der Marker-Position (bei Bedarf wird einer angelegt).',
   'grading.contrast': 'Kontrast',
   'grading.saturation': 'Sättigung',
@@ -59,7 +59,7 @@ const messages: Messages['light'] = {
   'sun.fixedHint': 'Die Sonne bleibt während des ganzen Flugs auf derselben Uhrzeit; eine Eröffnungs- oder Abschlusseinstellung kann ihre eigene Sonne haben (ihr Bereich), und die Nächte eines mehrtägigen Tracks lassen sie untergehen.',
   'sun.followHintStages': 'Jede Etappe wird zu ihrer aufgezeichneten Uhrzeit beleuchtet; zwischen zwei Etappen geht das Licht während des Übergangs von der einen in die andere über.',
   'sun.fixedHintStages': 'Alle Etappen werden zur selben Uhrzeit beleuchtet.',
-  'sun.keyedFollow': 'Keyframes der Zeile „Sonne“ der Zeitleiste steuern die Uhrzeit der Sonne entlang der Strecke: Sie ersetzen die aufgezeichnete Uhrzeit.',
+  'sun.keyedFollow': 'Keyframes der Zeile „Sonne“ der Zeitleiste steuern die Uhrzeit der Sonne entlang der Strecke: Sie ersetzen die aufgezeichnete Uhrzeit, am unten gewählten Tag.',
   'sun.keyedFixed': 'Keyframes der Zeile „Sonne“ der Zeitleiste steuern die Uhrzeit der Sonne entlang der Strecke: Der Regler ändert dann den Keyframe an der Marker-Position (bei Bedarf wird einer angelegt).',
   'sun.solarHour': 'Sonnenzeit',
   'sun.solarTip': 'Uhrzeit der Sonne statt der Tour: Mittags steht sie am höchsten.',
