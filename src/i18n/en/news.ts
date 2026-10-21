@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v331.recap.title': 'Look back at the finished stage',
+  'v331.recap.text': 'Each transition between stages chooses its passage (cut or fade), whether to pass the night, and whether to look back at the finished stage: the camera rises for a few seconds to show all of it. In Track › Several tracks.',
   'v33.stages.title': 'Simpler stages',
   'v33.stages.text': 'Transitions and stage cards are set once for all in Track › Several tracks; a block of the timeline says whether it follows that common setting. The card stays on the start of the stage, and the camera can look back at the finished stage during the night.',
   'v33.titles.title': 'Titles on their own',
