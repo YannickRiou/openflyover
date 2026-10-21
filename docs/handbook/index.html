@@ -2155,6 +2155,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
       <div class="term"><h4>Lens (« Objectif »)</h4><p>Motion blur, bloom, lens flare, depth of field, all off by default.</p></div>
       <div class="term"><h4>Poster (« Affiche »)</h4><p>Printable poster of the outing (A4, A3, square, 300 dpi).</p></div>
       <div class="term"><h4>Stage (« Étape »)</h4><p>One track of a sequence. « À la suite »: stages flown one after the other. « En parallèle »: ghost race.</p></div>
+      <div class="term"><h4>Common card / own setting (« Réglage commun / propre »)</h4><p>« À la suite », the transition and the stage card set once for all stages in « Trace › Plusieurs traces » (<code>junctionDefault</code>); a transition or card changed from its block on the timeline stores only what differs (<code>hasOwnTransition</code>, <code>hasOwnCard</code>, <code>StoredStageCard</code> in <code>film/junctions.ts</code>).</p></div>
       <div class="term"><h4>Junction (« Transition » in the app)</h4><p>Transition between two stages: « Coupe » (cut), « Fondu au noir », « Fondu au blanc », « Nuit » (the default; a fade to black when both stages are on the same day). It always plays as chosen (<code>junctionPlan</code> in <code>film/junctions.ts</code>).</p></div>
       <div class="term"><h4>Chaining (« Enchaîner »)</h4><p>Merging several tracks into one route.</p></div>
       <div class="term"><h4>Planned outing (« Prévoir la sortie »)</h4><p>Estimated times for a route without times.</p></div>

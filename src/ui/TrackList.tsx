@@ -16,12 +16,13 @@ import type { Race, RaceCamera, RaceSettings, RaceSync, Racer } from '../flyover
 import { buildTrackPath } from '../flyover/path'
 import { orderedTracks, playsInSequence } from '../flyover/sequence'
 import { metricValues } from '../flyover/trackColor'
-import { DEFAULT_JUNCTION, junctionDefaultOf, withDefaultCard, withDefaultJunction } from '../film/junctions'
+import { DEFAULT_JUNCTION, commonCardOf, hasOwnCard, hasOwnTransition, junctionDefaultOf, withAllCardsCommon, withAllJunctionsCommon, withCardSettings, withDefaultCard, withDefaultJunction } from '../film/junctions'
+import { nightPauseS } from '../flyover/nights'
 import { dropIndexAt, idsByDate } from '../film/reorder'
 import { edgeScrollSpeed } from '../film/timeline'
 import { STATS_OVERRIDE_KEYS, correctedStats, statsOverrideOf } from '../import/stats'
 import { isTextEntry } from '../project/history'
-import { editFilm, orderTracksByDate, reorderTracks } from '../scene/usePacing'
+import { editFilm, orderTracksByDate, reorderTracks, useFilmSequence } from '../scene/usePacing'
 import {
   PACE_RANGE,
   PLAN_ACTIVITIES,
@@ -38,9 +39,9 @@ import { useRace } from '../scene/useRace'
 import { useAppStore } from '../state/store'
 import { computeTrackElevation, hasMissingElevation, withoutTerrainElevation } from '../terrain/elevation'
 import { getTerrainSource } from '../terrain/sources'
-import { formatClock, formatDistance, formatDistanceGap, formatNumber, formatTimeGap, formatTrackSummary } from './format'
+import { formatClock, formatDistance, formatDistanceGap, formatNumber, formatSecondsShort, formatTimeGap, formatTrackSummary } from './format'
 import { Icon } from './icons'
-import { JunctionTransitionFields } from './JunctionFields'
+import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TextField, TimeField, Tip } from './primitives'
@@ -117,23 +118,43 @@ function withMultiMode(race: RaceSettings, mode: MultiMode): RaceSettings {
 }
 
 /**
- * « À la suite »: the transition between two stages and the card of each stage as the film makes them by default
- * (`film.junctionDefault`); each junction and each card is set on the timeline (« Étapes » lane), where it keeps its own.
+ * « À la suite », in one place: the transition between two stages and the card of each stage common to them all
+ * (`film.junctionDefault`, its `cardSettings`), the length of a night (set in Lumière, said here), and how many
+ * transitions and cards set their own on the timeline, with a button that brings them back to the common one.
  */
 function StageDefaults() {
   const t = useT()
   const film = useAppStore((s) => s.settings.film)
+  const sequence = useFilmSequence()
   const { kind, holdS, card } = junctionDefaultOf(film)
+  const afterIds = (sequence?.stageIds ?? []).slice(0, -1)
+  const ownTransitions = afterIds.filter((id) => hasOwnTransition(film, id)).length
+  const ownCards = [null, ...afterIds].filter((id) => hasOwnCard(film, id)).length
   return (
     <>
+      <p className="type-hint">{t('track.stages.common')}</p>
       <JunctionTransitionFields
         kind={kind}
         holdS={holdS || DEFAULT_JUNCTION.holdS}
         onChange={(patch) => editFilm((f) => ({ film: withDefaultJunction(f, patch) }), { step: patch.kind !== undefined })}
       />
+      {kind === 'nuit' && <p className="type-hint">{t('track.stages.nightInfo', { pause: formatSecondsShort(nightPauseS(film.nights)) })}</p>}
+      {ownTransitions > 0 && (
+        <>
+          <p className="type-hint">{t('track.stages.ownTransitions', { count: ownTransitions })}</p>
+          <Button onClick={() => editFilm((f) => ({ film: withAllJunctionsCommon(f) }))}>{t('track.stages.resetTransitions')}</Button>
+        </>
+      )}
       <Switch checked={card} onChange={(on) => editFilm((f) => ({ film: withDefaultCard(f, on) }))}>
         {t('track.stageCard')}
       </Switch>
+      {card && <StageCardFields card={commonCardOf(film)} onChange={(patch) => editFilm((f) => ({ film: withCardSettings(f, patch) }), { step: false })} />}
+      {ownCards > 0 && (
+        <>
+          <p className="type-hint">{t('track.stages.ownCards', { count: ownCards })}</p>
+          <Button onClick={() => editFilm((f) => ({ film: withAllCardsCommon(f) }))}>{t('track.stages.resetCards')}</Button>
+        </>
+      )}
       <p className="type-hint">{t('track.stageHint')}</p>
     </>
   )

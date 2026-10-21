@@ -442,7 +442,7 @@ describe('parseProject errors', () => {
     ['not JSON', () => '{', /pas du JSON valide/],
     ['another JSON', () => ({ type: 'FeatureCollection' }), /pas un projet OpenFlyover/],
     ['an array', () => [], /pas un projet OpenFlyover/],
-    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v3\)/],
+    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v4\)/],
     ['a bad version', (d) => ({ ...d, version: '1' }), /version/],
     ['no tracks', (d) => ({ ...d, tracks: undefined }), /liste des traces/],
     ['a track without id', (d) => ({ ...d, tracks: [{ ...(d.tracks as object[])[0], id: '' }] }), /Trace n°1 : identifiant/],
@@ -517,6 +517,28 @@ describe('migrateProject', () => {
     expect(film({ nights: { enabled: true }, junctionDefault: { kind: 'fondu-blanc', holdS: 2, card: false } })).toEqual({ kind: 'fondu-blanc', holdS: 2, card: false })
     expect(film({ nights: { enabled: true } }, { stageTransition: 'fondu-noir', stageCards: false })).toEqual({ ...fade, kind: 'nuit', card: false })
     expect(film({ nights: { enabled: true } }, { stageTransition: 'coupe' })).toEqual({ kind: 'coupe', holdS: 0, card: true })
+  })
+
+  it('v4: a stage card keeps only what it changed, so it follows the common card', () => {
+    const full = { enabled: true, durationS: 5, anchor: 'center', size: 1 }
+    const out = migrateProject({
+      version: 3,
+      settings: {
+        film: {
+          firstCard: { ...full, enabled: false },
+          junctions: [
+            { id: 'junction-a', afterTrackId: 'a', card: full },
+            { id: 'junction-b', afterTrackId: 'b', kind: 'coupe', holdS: 0, card: { ...full, size: 1.5, text: '{name}' } },
+          ],
+        },
+      },
+    }) as { settings: { film: Record<string, unknown> } }
+    expect(out.settings.film.firstCard).toEqual({ enabled: false })
+    // a card that changed nothing is gone, and its junction with it; the other keeps its own fields
+    expect(out.settings.film.junctions).toEqual([{ id: 'junction-b', afterTrackId: 'b', kind: 'coupe', holdS: 0, card: { size: 1.5, text: '{name}' } }])
+    // cards hidden by default: a hidden card changed nothing
+    const hidden = migrateProject({ version: 3, settings: { film: { junctionDefault: { kind: 'nuit', holdS: 1.5, card: false }, firstCard: { ...full, enabled: false } } } }) as { settings: { film: Record<string, unknown> } }
+    expect(hidden.settings.film).not.toHaveProperty('firstCard')
   })
 })
 

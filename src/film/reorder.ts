@@ -10,7 +10,7 @@
 import type { Track } from '../core/types'
 import { junctionId } from './junctions'
 import { MIN_SPEED_SPAN_M } from './model'
-import type { Film, FilmJunction, FilmSpeed, JunctionCard } from './model'
+import type { Film, FilmJunction, FilmSpeed, StoredStageCard } from './model'
 
 /** A stage's place along the sequence (`Stage` of flyover/sequence.ts: metres from the start of the film track). */
 export interface StageSpan {
@@ -116,7 +116,7 @@ export function reorderStages(film: Film, before: readonly StageSpan[], after: r
 function reorderedJunctions(film: Film, beforeIds: readonly string[], afterIds: readonly string[]): Pick<Film, 'junctions' | 'firstCard'> {
   const stored = (afterTrackId: string) => film.junctions?.find((j) => j.afterTrackId === afterTrackId)
   /** the card of the stage `id` as the film stores it */
-  const cardOf = (id: string): JunctionCard | undefined => {
+  const cardOf = (id: string): StoredStageCard | undefined => {
     const k = beforeIds.indexOf(id)
     return k === 0 ? film.firstCard : stored(beforeIds[k - 1])?.card
   }
