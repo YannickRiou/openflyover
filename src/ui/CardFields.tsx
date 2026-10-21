@@ -62,6 +62,7 @@ export function CardFields({ card }: { card: CardId }) {
       >
         {t('inspector.card.showWeather')}
       </Checkbox>
+      {!hasWeather && <p className="type-hint">{t('overlay.panel.weatherWaiting')}</p>}
       <div className="field">
         <label className="type-label" htmlFor={`${id}-credits`}>
           {t('inspector.card.credits')}

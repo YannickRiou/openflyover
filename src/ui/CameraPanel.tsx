@@ -187,14 +187,15 @@ const SITUATION_TIPS = {
 }
 
 /**
- * « Plan de situation » of the opening and the closing, on: style 'situation' with the region highlighted (as in the
- * inspector); off: the default style back (and its duration, when the shot still has the one 'situation' gave it).
+ * « Depuis la région » at the opening and the closing, the same style as in the shot's inspector: on whenever the shot
+ * has that style; switched on with the region highlighted; off: the default style back (and its duration, when the
+ * shot still has the one 'situation' gave it).
  */
 function SituationShotSwitches() {
   const t = useT()
   const film = useAppStore((s) => s.settings.film)
   const id = useId()
-  const isOn = (key: 'opening' | 'closing') => film[key].style === 'situation' && film[key].highlight === true
+  const isOn = (key: 'opening' | 'closing') => film[key].style === 'situation'
   const toggle = (key: 'opening' | 'closing', on: boolean) =>
     editFilm((f) => {
       if (on) return { film: updateShot(f, key, { style: 'situation', highlight: true }) }

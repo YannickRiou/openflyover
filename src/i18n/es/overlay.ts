@@ -163,7 +163,7 @@ const messages: Messages['overlay'] = {
   'panel.weatherLogoText': 'Meteo, logo y texto',
   'panel.weather': 'Meteo',
   'panel.weatherReady': 'Cielo, temperatura y viento en el marcador.',
-  'panel.weatherWaiting': 'Disponible cuando se ha cargado la meteorología de la salida (pestaña Track).',
+  'panel.weatherWaiting': 'Disponible cuando se ha cargado la meteorología de la salida (pestaña Meteo).',
   'panel.logo': 'Logo',
   'panel.opacity': 'Opacidad',
   'panel.freeText': 'Texto libre',

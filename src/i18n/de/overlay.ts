@@ -163,7 +163,7 @@ const messages: Messages['overlay'] = {
   'panel.weatherLogoText': 'Wetter, Logo und Text',
   'panel.weather': 'Wetter',
   'panel.weatherReady': 'Himmel, Temperatur und Wind am Marker.',
-  'panel.weatherWaiting': 'Verfügbar, sobald das Wetter der Tour geladen ist (Reiter „Track“).',
+  'panel.weatherWaiting': 'Verfügbar, sobald das Wetter der Tour geladen ist (Reiter „Wetter“).',
   'panel.logo': 'Logo',
   'panel.opacity': 'Deckkraft',
   'panel.freeText': 'Freier Text',

@@ -161,7 +161,7 @@ export default {
   'panel.weatherLogoText': 'Météo, logo et texte',
   'panel.weather': 'Météo',
   'panel.weatherReady': 'Ciel, température et vent au marqueur.',
-  'panel.weatherWaiting': 'Disponible quand la météo de la sortie est chargée (onglet Trace).',
+  'panel.weatherWaiting': 'Disponible quand la météo de la sortie est chargée (onglet Météo).',
   'panel.logo': 'Logo',
   'panel.opacity': 'Opacité',
   'panel.freeText': 'Texte libre',
