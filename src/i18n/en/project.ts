@@ -102,8 +102,8 @@ const messages: Messages['project'] = {
   'panel.presetFull': 'Preset not saved: browser storage is full. It stays usable until the page is closed.',
   'presets.scope.tout': 'All settings',
   'presets.scope.carte': 'Map and mood (map, relief, clouds, colours, lens)',
-  'presets.scope.trace': 'Track, marker and labels',
-  'presets.scope.habillage': 'Overlay',
+  'presets.scope.trace': 'Track and marker',
+  'presets.scope.habillage': 'Overlay and 3D labels',
   'presets.scope.prise-de-vue': 'Shooting (camera, sun, exposure)',
   'presets.nameRequired': 'Give the preset a name.',
 }

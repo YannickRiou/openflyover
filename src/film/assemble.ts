@@ -8,7 +8,7 @@
  */
 import type { Track } from '../core/types'
 import { climbsOf } from '../flyover/climbs'
-import { isHighlightLandmark, pausePositions } from '../flyover/pacing'
+import { DEFAULT_PACING, isHighlightLandmark, pausePositions } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import type { Landmark } from '../osm/landmarks'
 import { climbLabelText } from '../scene/labelModel'
@@ -44,10 +44,9 @@ function climbCandidates({ track, pacing }: AssembleInput): StopCandidate[] {
 
 /**
  * Where the film offers a stop by itself, by position: the passes crossed and the peaks nearby among the landmarks
- * shown (`pacing.landmarks`). Not the climb tops: stops come from the landmarks, the points of interest and the timeline.
+ * shown (Carte › Repères). Not the climb tops: stops come from the landmarks, the points of interest and the timeline.
  */
-export function stopCandidates({ track, landmarks = [], pacing }: AssembleInput): StopCandidate[] {
-  if (!pacing.landmarks) return []
+export function stopCandidates({ track, landmarks = [] }: Pick<AssembleInput, 'track' | 'landmarks'>): StopCandidate[] {
   const L = track.stats.distanceM
   return landmarks
     .filter(isHighlightLandmark)
@@ -86,18 +85,24 @@ export function withoutPlaceItems(film: Film, places: readonly StopPlace[]): Fil
   return stops.length === film.stops.length ? film : { ...film, stops }
 }
 
+/** Highlights closer than this make one automatic stop (metres; the default « Longueur du ralenti », which no longer sets it). */
+export const AUTO_STOP_GROUP_M = DEFAULT_PACING.windowM
+
 /**
- * Stops at the highlights, one per cluster (like the pauses they replace): 'temps-forts' at the `stopCandidates`,
- * `AUTO_STOP_S` each, camera orbiting; 'rythme' at the highlights of the pacing (climb tops included) only while it is
- * on, `pauseS` each, camera as in the film (as these pauses were).
+ * Stops at the highlights, one per cluster (like the pauses they replace): 'temps-forts' at the `stopCandidates`
+ * (whatever the pacing), grouped within `groupM` (`Film.autoStopGroupM`), `AUTO_STOP_S` each, camera orbiting; 'rythme'
+ * at the highlights of the pacing (climb tops included, landmarks with `pacing.landmarks`) only while it is on, grouped
+ * within `pacing.windowM`, `pauseS` each, camera as in the film (as these pauses were).
  */
-export function autoStops(input: AssembleInput, mode: AutoStopMode): FilmStop[] {
+export function autoStops(input: AssembleInput, mode: AutoStopMode, groupM = AUTO_STOP_GROUP_M): FilmStop[] {
   const { track, pacing } = input
   const legacy = mode === 'rythme'
   if (!(track.stats.distanceM > 0) || (legacy && (!pacing.enabled || !(pacing.pauseS > 0)))) return []
-  const candidates = legacy ? [...climbCandidates(input), ...stopCandidates(input)].sort((a, b) => a.atM - b.atM) : stopCandidates(input)
+  const candidates = legacy
+    ? [...climbCandidates(input), ...(pacing.landmarks ? stopCandidates(input) : [])].sort((a, b) => a.atM - b.atM)
+    : stopCandidates(input)
   const positions = [...new Set(candidates.map((c) => c.atM))]
-  return pausePositions(positions, pacing.windowM).map((atM) => {
+  return pausePositions(positions, legacy ? pacing.windowM : groupM).map((atM) => {
     const { label, source } = candidates.find((c) => c.atM === atM)!
     const durationS = legacy ? pacing.pauseS : AUTO_STOP_S
     return { id: autoStopId(atM), atM, durationS, camera: legacy ? 'film' : 'orbite', label, source }
@@ -106,10 +111,10 @@ export function autoStops(input: AssembleInput, mode: AutoStopMode): FilmStop[] 
 
 /** `film` with its generated stops written out (`autoStops` cleared): the first edit of a stop on the timeline. */
 export function materializeStops(film: Film, input: AssembleInput): Film {
-  return film.autoStops ? { ...film, autoStops: false, stops: autoStops(input, film.autoMode) } : film
+  return film.autoStops ? { ...film, autoStops: false, stops: autoStops(input, film.autoMode, film.autoStopGroupM) } : film
 }
 
 /** Stops of `film`: generated while `autoStops` is set, else its own. */
 export function filmStops(film: Film, input: AssembleInput): FilmStop[] {
-  return film.autoStops ? autoStops(input, film.autoMode) : film.stops
+  return film.autoStops ? autoStops(input, film.autoMode, film.autoStopGroupM) : film.stops
 }

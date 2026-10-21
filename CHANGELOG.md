@@ -5,6 +5,18 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Each setting in one place, and reachable**:
+  - **Titles**: the opening title and the closing card have their own switches in « Habillage › Titres », always there. They show even with « Afficher l'habillage » off, which now only shows the counters, profile, mini-map, weather, logo and free text. Both are off in a new project. Older projects keep the same film.
+  - **Timeline texts** always show, like the photos. They used to stay invisible while the overlay was off.
+  - **Survol**:
+    - « Garder la durée du survol » sits under « Durée du survol », always visible. It was hidden under « Ralentir aux temps forts » but applied all the same.
+    - « Survol › Durée et rythme » says the style of the opening and closing shots, with « Régler » to open their panel, instead of two switches that repeated it.
+  - **Automatic stops** come from the passes and summits shown in « Carte › Repères » (both panels say so). The hidden « Repères » and « Longueur du ralenti » of « Ralentir aux temps forts » no longer change them. Older films keep their stops.
+  - **Plusieurs traces**: the ghost-race leaderboard is set in « Habillage › Compteurs » only; « Plusieurs traces » says where.
+  - **3D labels**: « Habillage › Étiquettes 3D » and « Carte › Repères » point to each other, and the « Habillage » preset family now holds the 3D labels (« Trace et marqueur » for the other).
+  - **Music**: « Baisser toutes les musiques sous les vidéos » moved to ⋯ « Options du film » on the timeline, next to the music.
+  - **Altitude**: « Effacer l'altitude complétée » also works when only the gaps of a track were filled (completions made from now on).
+  - **Camera keys**: the guide said to retake a camera key with ◆, which removes it; it now gives the right steps.
 - **No more silent changes**:
   - **Habillage**: applying a « Habillage » or « Tous les réglages » preset no longer replaces the project's title, subtitle, free lines, credits, free text and logo; it brings the look only. Changing the overlay style says which elements it put back in place, with « Annuler ».
   - **Survol**: a camera preset that also changes the smoothings, the smooth ending or the turns says so, with « Annuler ».

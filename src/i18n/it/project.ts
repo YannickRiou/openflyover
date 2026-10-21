@@ -102,8 +102,8 @@ const messages: Messages['project'] = {
   'panel.presetFull': 'Preset non salvato: archivio del browser pieno. Resta utilizzabile fino alla chiusura della pagina.',
   'presets.scope.tout': 'Tutte le impostazioni',
   'presets.scope.carte': 'Mappa e atmosfera (mappa, rilievo, nuvole, colori, obiettivo)',
-  'presets.scope.trace': 'Traccia, marcatore ed etichette',
-  'presets.scope.habillage': 'Overlay',
+  'presets.scope.trace': 'Traccia e marcatore',
+  'presets.scope.habillage': 'Overlay ed etichette 3D',
   'presets.scope.prise-de-vue': 'Ripresa (camera, sole, esposizione)',
   'presets.nameRequired': 'Inserisci un nome per il preset.',
 }

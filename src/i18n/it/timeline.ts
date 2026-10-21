@@ -9,7 +9,7 @@ const messages: Messages['timeline'] = {
   'options.addMusic': 'Aggiungi musica…',
   'options.musicHint': 'MP3, M4A, AAC, OGG, Opus, WAV o FLAC, al massimo 30 MB. Oppure trascina il file sulla timeline.',
   'options.autoStops': 'Soste automatiche',
-  'options.autoStopsHint': 'Una sosta a ogni passo superato e vetta vicina (Riferimenti, scheda Mappa). Attivarle sostituisce le soste fatte a mano; modificare una sosta le blocca.',
+  'options.autoStopsHint': 'Una sosta a ogni passo attraversato e cima vicina tra i riferimenti mostrati (Mappa › Riferimenti e punti di interesse: tipi, densità, distanza); due riferimenti vicini fanno una sola sosta. Attivarle sostituisce le soste messe a mano; ritoccare una sosta le fissa.',
   'options.autoStopsReplaced': { one: '{count} sosta fatta a mano sostituita dalle soste automatiche (Ctrl+Z per ritrovarla).', other: '{count} soste fatte a mano sostituite dalle soste automatiche (Ctrl+Z per ritrovarle).' },
   noRoom: 'Nessuno spazio qui: il marcatore è in un tratto di velocità o troppo vicino a un altro.',
   unsupported: { one: '{count} file ignorato: sono supportati solo foto e video.', other: '{count} file ignorati: sono supportati solo foto e video.' },

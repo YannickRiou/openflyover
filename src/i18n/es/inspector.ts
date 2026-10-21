@@ -163,7 +163,6 @@ const messages: Messages['inspector'] = {
   'text.subtitle': 'Subtítulo',
   'text.position': 'Posición',
   'text.size': 'Tamaño',
-  'text.hint': 'Visible solo si « Mostrar los gráficos » está activado (pestaña Gráficos).',
   'media.sync.legend': 'Sincronización con el recorrido',
   'media.sync.outside': 'Vídeo grabado fuera de la salida: corrige la hora de la cámara con el desfase.',
   'media.sync.done': 'Vídeo sincronizado: se reproduce cuando el marcador llega al lugar donde se grabó.',
@@ -196,6 +195,7 @@ const messages: Messages['inspector'] = {
   'music.startInFile': 'Inicio en el archivo (s)',
   'music.wholeFilm': 'Toda la película',
   'music.duck': 'Bajar todas las músicas durante los vídeos',
+  'music.duckWhere': '«Bajar todas las músicas durante los vídeos»: en ⋯ Opciones de la película, en la línea de tiempo.',
   'music.fit': 'Ajustar la duración de la película al final de la música',
   'music.snapBeat': 'Ajustar al ritmo',
   'music.hint': 'Se reproduce de {start} a {end} en la película{file}, durante la reproducción y en la película exportada. Ajustar la duración cambia la duración del sobrevuelo para que la película termine con la música. Bajar la música: todas las músicas bajan {db} dB durante los vídeos con sonido. Ajustar al ritmo: las paradas, los títulos y los inicios de tramos de velocidad a menos de 0,4 s de un tiempo de la música se colocan en él, en el inicio de un compás si hay uno tan cerca{tempo}.',
@@ -247,7 +247,6 @@ const messages: Messages['inspector'] = {
   'junction.position': 'Posición',
   'junction.size': 'Tamaño',
   'junction.displayDuration': 'Duración de visualización',
-  'shot.overlayOff': '{label}: los gráficos están desactivados. Active « Mostrar los gráficos » en la pestaña Gráficos y luego la tarjeta en Títulos.',
   'card.dateNeedsTime': 'La traza no tiene horas: prevea la salida (pestaña Track) para tener una fecha.',
 }
 

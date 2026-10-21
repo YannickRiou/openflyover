@@ -82,16 +82,18 @@ describe('autoStops (temps-forts: new films)', () => {
     expect(stops.map((s) => s.label)).toEqual(['Col de Voza', 'Mont Lachat'])
     expect(stops.every((s) => s.camera === 'orbite' && s.durationS === AUTO_STOP_S)).toBe(true)
     expect(autoStops({ track, landmarks, pacing: { ...DEFAULT_PACING, climbs: false } }, 'temps-forts')).toEqual(stops)
-    expect(autoStops({ track, landmarks, pacing: { ...DEFAULT_PACING, landmarks: false } }, 'temps-forts')).toEqual([])
+    // the pacing's « Repères » and « Longueur du ralenti » no longer touch them; the grouping is the film's own
+    expect(autoStops({ track, landmarks, pacing: { ...DEFAULT_PACING, landmarks: false, windowM: 5000 } }, 'temps-forts')).toEqual(stops)
+    expect(autoStops({ track, landmarks, pacing: DEFAULT_PACING }, 'temps-forts', 5000)).toHaveLength(1)
   })
 
   it('stopCandidates: the highlight landmarks by position, not clustered, never a climb top', () => {
-    const candidates = stopCandidates({ track, landmarks, pacing: { ...DEFAULT_PACING, windowM: 5000 } })
+    const candidates = stopCandidates({ track, landmarks })
     expect(candidates.map((c) => c.source)).toEqual([
       { kind: 'landmark', ref: 'node/1500' },
       { kind: 'landmark', ref: 'node/4500' },
     ])
-    expect(autoStops({ track, landmarks, pacing: { ...DEFAULT_PACING, windowM: 5000 } }, 'temps-forts')).toHaveLength(1)
+    expect(autoStops({ track, landmarks, pacing: DEFAULT_PACING }, 'temps-forts', 5000)).toHaveLength(1)
   })
 })
 

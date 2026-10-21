@@ -163,7 +163,6 @@ const messages: Messages['inspector'] = {
   'text.subtitle': 'Subtitle',
   'text.position': 'Position',
   'text.size': 'Size',
-  'text.hint': 'Shown only when « Show the overlay » is on (Overlay tab).',
   'media.sync.legend': 'Sync with the route',
   'media.sync.outside': 'Video shot outside the outing: correct the camera time with the offset.',
   'media.sync.done': 'Video synced: it plays when the marker reaches the place where it was shot.',
@@ -196,6 +195,7 @@ const messages: Messages['inspector'] = {
   'music.startInFile': 'Start in the file (s)',
   'music.wholeFilm': 'Whole film',
   'music.duck': 'Lower every music under videos',
+  'music.duckWhere': '“Lower every music under videos”: in ⋯ Film options, on the timeline.',
   'music.fit': 'Fit the film length to the end of the music',
   'music.snapBeat': 'Snap to the beat',
   'music.hint': 'Played from {start} to {end} in the film{file}, during playback and in the exported film. Fitting the length changes the flyover duration so that the film ends with the music. Lowering the music: all the music is lowered by {db} dB during videos with sound. Snapping to the beat: holds, titles and starts of speed sections within 0.4 s of a beat of the music land on it, on the start of a bar if there is one that close{tempo}.',
@@ -247,7 +247,6 @@ const messages: Messages['inspector'] = {
   'junction.position': 'Position',
   'junction.size': 'Size',
   'junction.displayDuration': 'Display duration',
-  'shot.overlayOff': '{label}: the overlay is off. Switch on « Show the overlay » in the Overlay tab, then the card in Titles.',
   'card.dateNeedsTime': 'The track has no times: plan the outing (Track tab) to get a date.',
 }
 

@@ -33,7 +33,8 @@ export function OverlayCanvas() {
       const dips = shotDipColor(film.opening) !== null || shotDipColor(film.closing) !== null
       const stages = playsInSequence(s.settings.race, s.tracks.length)
       const legend = s.settings.trackColorBy !== 'none'
-      return (overlay.enabled || overlay.credits.enabled || film.media.length > 0 || dips || stages || legend) && s.tracks.length > 0
+      const cards = overlay.title.enabled || overlay.end.enabled || film.texts.length > 0
+      return (overlay.enabled || cards || overlay.credits.enabled || film.media.length > 0 || dips || stages || legend) && s.tracks.length > 0
     },
   )
   return enabled ? <OverlayPreview /> : null

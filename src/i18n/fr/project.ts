@@ -100,8 +100,8 @@ export default {
   'panel.presetFull': 'Préréglage non enregistré : stockage du navigateur plein. Il reste utilisable jusqu’à la fermeture de la page.',
   'presets.scope.tout': 'Tous les réglages',
   'presets.scope.carte': 'Carte et ambiance (fond, relief, nuages, couleurs, objectif)',
-  'presets.scope.trace': 'Trace, marqueur et étiquettes',
-  'presets.scope.habillage': 'Habillage',
+  'presets.scope.trace': 'Trace et marqueur',
+  'presets.scope.habillage': 'Habillage et étiquettes 3D',
   'presets.scope.prise-de-vue': 'Prise de vue (caméra, soleil, exposition)',
   'presets.nameRequired': 'Donnez un nom au préréglage.',
 }

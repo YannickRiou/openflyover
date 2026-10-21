@@ -503,6 +503,8 @@ export interface Film {
   /** stops generated from the pacing highlights (`stops` ignored) until the user edits them */
   autoStops: boolean
   autoMode: AutoStopMode
+  /** highlights closer than this make one automatic stop (metres; absent: `AUTO_STOP_GROUP_M`), kept by older projects */
+  autoStopGroupM?: number
   stops: FilmStop[]
   /** sorted by position or not, never overlapping */
   speeds: FilmSpeed[]
@@ -907,6 +909,7 @@ export function isValidFilm(film: Film): boolean {
   if (film.dayCards !== undefined && !isValidDayCards(film.dayCards)) return false
   if (typeof film.duckMusic !== 'boolean') return false
   if (!oneOf(AUTO_STOP_MODES, film.autoMode)) return false
+  if (film.autoStopGroupM !== undefined && !within(film.autoStopGroupM, 100, 10_000)) return false
   if (!film.stops.every(isValidStop) || !film.texts.every(isValidText) || !film.media.every(isValidMedia)) return false
   if (!film.speeds.every(isValidSpeed) || !apart(film.speeds) || !film.audio.every(isValidAudio)) return false
   if (!film.cameraKeys.every(isValidCameraKey) || !film.pois.every(isValidPoi) || !isValidNights(film.nights)) return false

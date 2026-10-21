@@ -1288,10 +1288,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   junctions between the stages « À la suite » and their cards, and `stageDurations` (flight time in seconds, 5–600, by track id, of the stages that set one), see "Several tracks"; ids unique within the film
   (`stop-3`, `text-1`, `media-2`, `music-1`, `poi-2`, `nextFilmId`).
 - **Automatic assembly** (`src/film/assemble.ts`): as long as `autoStops` is true, stops are generated on every computation
-  (`autoStops`) at the highlights (`stopCandidates`: passes crossed and summits nearby among the landmarks shown, `pacing.landmarks`; climb tops are no
+  (`autoStops`) at the highlights (`stopCandidates`: passes crossed and summits nearby among the landmarks shown, whatever the pacing; climb tops are no
   longer offered: stops come from the landmarks, the points of interest and the timeline; `'rythme'` keeps the pauses of
   the pacing, climb tops included (`climbCandidates`), so older films are unchanged; stops already written into a film,
-  climb tops included, stay ordinary stops; one per `windowM` group, like the pauses they replace), id `auto-<meters>`,
+  climb tops included, stay ordinary stops; one per `film.autoStopGroupM` group (`AUTO_STOP_GROUP_M` = 1 km by default; `'rythme'`:
+  `pacing.windowM` and `pacing.landmarks`), like the pauses they replace), id `auto-<meters>`,
   label ("Montée 1 · cat. 3 · 1 653 m", OSM name) and source; they follow OSM landmarks loaded afterwards.
   `'temps-forts'`: one stop per highlight **even with pacing disabled**, `AUTO_STOP_S` (4 s), `orbite` camera (they are all
   summits or passes). `'rythme'`: the pacing pauses from before the timeline (nothing if pacing is disabled,
@@ -1619,8 +1620,10 @@ The interface and the texts drawn into the films and posters exist in **French**
   `blockClipboard.ts`, not the system clipboard, so a text selected on the page still copies as before), Ctrl / Cmd + V pastes them with their gaps, the earliest at the playhead
   (`pasteBlocks`: own ids, attached to no stop, a medium whose file is gone and a clip synced with the track left out), the pasted ones left picked. Stops, speeds and
   keys are not copied or rippled (their place is by metres: a stop shifts the whole clock).
-- **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while `overlay.enabled` and the
-  card's own switch (`overlay.title.enabled` / `overlay.end.enabled`) are on (fixed ids `card-title` and `card-end`, `cardShown`,
+- **Opening title and closing card on the timeline** (`src/film/cards.ts`): « Textes » carries them while the card's own switch
+  (`overlay.title.enabled` / `overlay.end.enabled`) is on, whatever `overlay.enabled` (which only shows the live widgets; the
+  cards and the timeline texts are drawn with it off too, as plain cards since the style's structure goes with the live
+  widgets; both off by default; project v5 switched off the cards of an overlay that was off) (fixed ids `card-title` and `card-end`, `cardShown`,
   `cardWindow`). They are blocks of the overlay settings, not film items: `overlay.title` / `overlay.end` stay the
   source of truth. Until a card is placed, its window is the one of earlier versions: the title block runs from film time 0 to
   `openingS + title.end × flightS`, the closing block from `openingS + end.start × flightS` to the last frame. The user then
@@ -1835,7 +1838,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   needs no code here**; add an entry to `SETTING_CHECKS` only if a value of the right type can be invalid
   (enumeration, catalog id, range). Any format change increments `PROJECT_VERSION` and adds `MIGRATIONS[n]`
   (version 2: film of v1 projects, see "Film and timeline"; version 3: the default junction « À la suite » written
-  out, `withExplicitNightJunctions`, see "Stages").
+  out, `withExplicitNightJunctions`, see "Stages"; version 4: stage cards trimmed to what they change,
+  `withStageCardsOverCommon`; version 5: the cards of an overlay that was off switched off and the automatic stops kept
+  as the pacing made them, `withTitlesAndStopsOnTheirOwn`).
 - Settings **history** outside the store: subscribed to `useAppStore`, each step keeps only the changed keys; changes to the
   same keys less than 400 ms apart are merged (keyboard), a pointer slider drag = one step from press to release however
   slow it is (`beginGesture`, wired to every `input[type=range]` by `installSliderGestures`), a preset = one step, a timeline gesture = one step; the regional imagery picked on import

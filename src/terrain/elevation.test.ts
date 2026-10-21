@@ -98,11 +98,18 @@ describe('withoutTerrainElevation', () => {
     expect(cleared.segments[0].points.every((p) => !('ele' in p))).toBe(true)
   })
 
-  it('leaves a track whose gaps only were filled (its recorded elevation would go with it)', () => {
+  it('clears the points filled in the gaps only, the recorded elevation stays', () => {
     const points = line(500)
     const partial = withTerrainElevation(trackOf(points.map((p, i) => (i === 2 ? p : { ...p, ele: 1000 }))), ground)
     expect(partial.elevationEstimated).toBe('gaps')
-    expect(withoutTerrainElevation(partial)).toBe(partial)
+    expect(partial.elevationFilled).toEqual([[0, 2, 2]])
+    const cleared = withoutTerrainElevation(partial)
+    expect(cleared).not.toHaveProperty('elevationEstimated')
+    expect(cleared).not.toHaveProperty('elevationFilled')
+    expect(cleared.segments[0].points.map((p) => 'ele' in p)).toEqual(points.map((_, i) => i !== 2))
+    // filled by an earlier version: which points is not known, nothing is cleared
+    const { elevationFilled: _ranges, ...older } = partial
+    expect(withoutTerrainElevation(older)).toBe(older)
   })
 })
 

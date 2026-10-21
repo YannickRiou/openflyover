@@ -97,17 +97,15 @@ describe('CameraPanel: « Depuis la région » at the opening and the closing', 
     document.body.innerHTML = ''
   })
 
-  it('is on whenever the shot has that style, as chosen in its panel, and off puts the default shot back', async () => {
+  it('says the style of each shot, set in its panel, and « Régler » opens that panel', async () => {
     const { host, root } = await mount(timed, 60)
-    const opening = () =>
-      [...host.querySelectorAll<HTMLInputElement>('input[role="switch"]')].find((i) => i.labels?.[0]?.textContent === 'Ouverture « Depuis la région »')!
-    expect(opening().checked).toBe(false)
-    // chosen in the shot's panel, region not highlighted
     const { film } = useAppStore.getState().settings
-    await act(async () => useAppStore.getState().setSetting('film', { ...film, opening: { ...film.opening, style: 'situation', highlight: false } }))
-    expect(opening().checked).toBe(true)
-    await act(async () => opening().click())
-    expect(useAppStore.getState().settings.film.opening.style).toBe(DEFAULT_SETTINGS.film.opening.style)
+    await act(async () => useAppStore.getState().setSetting('film', { ...film, opening: { ...film.opening, style: 'situation' } }))
+    expect(host.textContent).toContain('Ouverture : Depuis la région')
+    expect(host.querySelector('input[role="switch"][aria-label*="région"]')).toBeNull()
+    const edit = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Régler')!
+    await act(async () => edit.click())
+    expect(useAppStore.getState().filmSelection).toBe('opening')
     act(() => root.unmount())
   })
 })

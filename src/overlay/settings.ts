@@ -304,8 +304,8 @@ export interface OverlaySettings {
 export const DEFAULT_OVERLAY: OverlaySettings = {
   enabled: false,
   style: 'editorial',
-  title: { enabled: true, anchor: 'center', size: 1, title: '', subtitle: '', showDate: true, end: 0.1 },
-  end: { enabled: true, anchor: 'center', size: 1, title: '', start: 0.9, showWeather: true },
+  title: { enabled: false, anchor: 'center', size: 1, title: '', subtitle: '', showDate: true, end: 0.1 },
+  end: { enabled: false, anchor: 'center', size: 1, title: '', start: 0.9, showWeather: true },
   counters: {
     enabled: true,
     anchor: 'top-left',

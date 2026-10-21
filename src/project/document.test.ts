@@ -442,7 +442,7 @@ describe('parseProject errors', () => {
     ['not JSON', () => '{', /pas du JSON valide/],
     ['another JSON', () => ({ type: 'FeatureCollection' }), /pas un projet OpenFlyover/],
     ['an array', () => [], /pas un projet OpenFlyover/],
-    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v4\)/],
+    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v5\)/],
     ['a bad version', (d) => ({ ...d, version: '1' }), /version/],
     ['no tracks', (d) => ({ ...d, tracks: undefined }), /liste des traces/],
     ['a track without id', (d) => ({ ...d, tracks: [{ ...(d.tracks as object[])[0], id: '' }] }), /Trace n°1 : identifiant/],
@@ -517,6 +517,20 @@ describe('migrateProject', () => {
     expect(film({ nights: { enabled: true }, junctionDefault: { kind: 'fondu-blanc', holdS: 2, card: false } })).toEqual({ kind: 'fondu-blanc', holdS: 2, card: false })
     expect(film({ nights: { enabled: true } }, { stageTransition: 'fondu-noir', stageCards: false })).toEqual({ ...fade, kind: 'nuit', card: false })
     expect(film({ nights: { enabled: true } }, { stageTransition: 'coupe' })).toEqual({ kind: 'coupe', holdS: 0, card: true })
+  })
+
+  it('v5: the titles of an overlay that was off are switched off; the automatic stops keep what the pacing made', () => {
+    const v4 = (settings: Record<string, unknown>) => (migrateProject({ version: 4, settings }) as { settings: Record<string, Record<string, unknown>> }).settings
+    const titles = { title: { enabled: true, title: 'T' }, end: { enabled: true, title: 'F' } }
+    expect(v4({ overlay: { enabled: false, ...titles } }).overlay).toMatchObject({ title: { enabled: false, title: 'T' }, end: { enabled: false } })
+    expect(v4({ overlay: { enabled: true, ...titles } }).overlay).toMatchObject({ title: { enabled: true }, end: { enabled: true } })
+    // « Repères » unticked under the pacing: there were no automatic stops
+    expect(v4({ film: { autoStops: true, autoMode: 'temps-forts', stops: [] }, pacing: { landmarks: false } }).film).toMatchObject({ autoStops: false, stops: [] })
+    // a « Longueur du ralenti » of its own: its grouping is kept
+    expect(v4({ film: { autoStops: true, autoMode: 'temps-forts' }, pacing: { landmarks: true, windowM: 3000 } }).film).toMatchObject({ autoStops: true, autoStopGroupM: 3000 })
+    expect(v4({ film: { autoStops: true, autoMode: 'temps-forts' }, pacing: { landmarks: true, windowM: 1000 } }).film).not.toHaveProperty('autoStopGroupM')
+    // the films of before the timeline keep reading their pacing
+    expect(v4({ film: { autoStops: true, autoMode: 'rythme' }, pacing: { landmarks: false } }).film).toMatchObject({ autoStops: true })
   })
 
   it('v4: a stage card keeps only what it changed, so it follows the common card', () => {

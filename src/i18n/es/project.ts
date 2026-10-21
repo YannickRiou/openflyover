@@ -108,8 +108,8 @@ const messages: Messages['project'] = {
   'panel.presetFull': 'Preajuste no guardado: almacenamiento del navegador lleno. Sigue disponible hasta que se cierre la página.',
   'presets.scope.tout': 'Todos los ajustes',
   'presets.scope.carte': 'Mapa y ambiente (mapa, relieve, nubes, colores, objetivo)',
-  'presets.scope.trace': 'Track, marcador y etiquetas',
-  'presets.scope.habillage': 'Gráficos',
+  'presets.scope.trace': 'Track y marcador',
+  'presets.scope.habillage': 'Gráficos y etiquetas 3D',
   'presets.scope.prise-de-vue': 'Toma (cámara, sol, exposición)',
   'presets.nameRequired': 'Escribe un nombre para el preajuste.',
 }

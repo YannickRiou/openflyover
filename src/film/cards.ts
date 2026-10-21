@@ -30,9 +30,9 @@ export type CardClock = Pick<FilmClock, 'openingS' | 'flightS' | 'totalTime'>
 
 export const isCardItem = (item: string | null | undefined): item is CardId => item === TITLE_CARD_ID || item === END_CARD_ID
 
-/** The card is drawn: the whole overlay and the card are switched on. */
+/** The card is drawn: its switch is on (it shows with the overlay off too). */
 export function cardShown(overlay: OverlaySettings, card: CardId): boolean {
-  return overlay.enabled && (card === TITLE_CARD_ID ? overlay.title.enabled : overlay.end.enabled)
+  return card === TITLE_CARD_ID ? overlay.title.enabled : overlay.end.enabled
 }
 
 /** The cards that have a block on the timeline, in the order of the film. */
