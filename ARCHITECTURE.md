@@ -441,9 +441,13 @@ pointer (`appearance.css`).
   (`frameRect`, ink bars): the stage (`stage-frame`, `data-stage`), which holds the 3D canvas, the overlay and the legend, takes the framed
   rectangle; the overlay therefore follows the exported area with no change to `src/overlay`. The export renders into this visible canvas.
   Without a track, no framing: the home screen (`EmptyState.tsx`), a paper page over the whole view (no sky gradient),
-  one centred column: "Choisir un fichier" (choose a file), "Importer depuis Strava", "Essayer avec l'exemple" (try the
-  sample), "Ouvrir un projet…" (open a project; a single picker whose `accept` changes), then "Récents": the three latest
-  entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab).
+  one centred column: what the app does (one sentence and three points: free, no account, everything stays on the device),
+  "Choisir un fichier" (choose a file), "Importer depuis Strava", "Essayer avec l'exemple" (try the
+  sample), "Ouvrir un projet…" (open a project; a single picker whose `accept` changes), a « Nouveau en <version> » card
+  (the first titles of `WHATS_NEW[0]`, opens « Nouveautés » and marks them seen like the « i » button), then "Récents": the three latest
+  entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab), and links:
+  « Premiers pas » (the user guide, published with the site by `pages.yml` under `docs/`), the desktop installers of the
+  latest release (website only) and GitHub.
 - **Rail and panel**: vertical rail of icon + label tabs (64 px; `Tabs` primitive: `tablist`, one tab stop, arrows (up / down in the rail, left / right in the phone's bar) and Home / End, a press on the open tab folds the panel) and a
   320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Étiquettes », hidden without a track),
   **Carte** (map; base map and water, relief, OSM landmarks and points of interest),

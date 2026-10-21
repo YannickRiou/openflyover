@@ -7,6 +7,8 @@ export default {
   'v31.dates.text': 'Avec IGN BD ORTHO ou Esri, « Date des photos » (onglet Carte) propose les photos plus anciennes de l’endroit : une date d’hiver pour avoir de la neige, d’été pour l’éviter.',
   'v31.free.title': 'Une caméra libre',
   'v31.free.text': 'Le style « Libre (images clés) » ne suit pas le marqueur : sans image clé la caméra reste fixe sur tout le tracé ; ajoutez des images clés sur la timeline pour choisir vous-même ses mouvements (plan fixe, tour du tracé…).',
+  'v31.home.title': 'Une page d’accueil plus claire',
+  'v31.home.text': 'Elle dit en une phrase ce que fait OpenFlyover, montre les nouveautés de la version et mène au guide « Premiers pas » et, sur le site, à l’appli de bureau.',
   'v31.imagery.title': 'Une liste d’imagerie rangée',
   'v31.imagery.text': 'Dans l’onglet Carte, l’imagerie est rangée en « Photos aériennes » et « Cartes », les sources du pays de la trace d’abord ; celles qui ne montrent rien là (swisstopo en France) sont mises à part.',
   'v31.orbit.title': 'Une orbite complète',
