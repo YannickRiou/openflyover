@@ -220,8 +220,6 @@ export interface TerrainEngineOptions {
   maxZoom?: number
   /** grid segments per tile edge; default 64 */
   segments?: number
-  /** debug: render wireframe */
-  wireframe?: boolean
   /** clean the elevation data of the sea when decoding (spikes, optional flattening to 0 m); default off */
   demClean?: DemCleanOptions
 }

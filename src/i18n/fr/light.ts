@@ -137,8 +137,6 @@ export default {
   'map.terrain': 'Relief',
   'map.exaggeration': 'Exagération du relief',
   'map.exaggerationTip': 'Multiplie les hauteurs pour accentuer les montagnes (×1 = relief réel).',
-  'map.wireframe': 'Filaire',
-  'map.wireframeTip': 'Dessine le relief en triangles, pour voir le détail chargé.',
   'weather.offClouds': 'Activez l’atmosphère (onglet Lumière) pour voir les nuages.',
   'weather.offScene': 'Activez l’atmosphère (onglet Lumière) pour voir la météo dans l’image.',
   'weather.clouds': 'Nuages',

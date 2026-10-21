@@ -92,7 +92,7 @@ describe('preset families', () => {
 
 describe('presetSettings', () => {
   it('applies valid saved values over the base and keeps the base elsewhere', () => {
-    const base = { ...DEFAULT_SETTINGS, wireframe: true, sunHour: 18 }
+    const base = { ...DEFAULT_SETTINGS, atmosphere: false, sunHour: 18 }
     const preset = { name: 'p', settings: { exaggeration: 2, sunHour: 'midi', unknown: 1 } as never }
     expect(presetSettings(preset, base)).toEqual({ ...base, exaggeration: 2 })
   })

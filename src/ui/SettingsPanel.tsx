@@ -596,7 +596,6 @@ export function MapSettings() {
   const terrainId = `${id}-terrain`
   const trackBounds = useAppStore((s) => s.tracks[0]?.bounds)
   const imageryId = `${id}-imagery`
-  const wireframeId = `${id}-wireframe`
   const zoomLabel = ZOOM_OFFSETS.find((o) => o.value === settings.imageryZoomOffset)?.label
   const terrainName = TERRAIN_SOURCES.find((source) => source.id === settings.terrainSourceId)?.name
 
@@ -655,7 +654,7 @@ export function MapSettings() {
         </SettingRow>
       </PanelSection>
 
-      <PanelSection title={t('light.map.terrain')} keys={['exaggeration', 'demClean', 'wireframe']}>
+      <PanelSection title={t('light.map.terrain')} keys={['exaggeration', 'demClean']}>
         <RangeField
           label={t('light.map.exaggeration')}
           tip={t('light.map.exaggerationTip')}
@@ -669,19 +668,6 @@ export function MapSettings() {
         />
 
         <DemCleanControl />
-
-        <SettingRow label={t('light.map.wireframe')} value={settings.wireframe ? t('common.yes') : t('common.no')} paths={['wireframe']}>
-          <div className="flex items-center gap-1">
-            <Checkbox
-              id={wireframeId}
-              checked={settings.wireframe}
-              onChange={(on) => setSetting('wireframe', on)}
-            >
-              {t('light.map.wireframe')}
-            </Checkbox>
-            <InfoTip text={t('light.map.wireframeTip')} />
-          </div>
-        </SettingRow>
       </PanelSection>
     </>
   )

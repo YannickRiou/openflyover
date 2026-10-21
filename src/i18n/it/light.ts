@@ -139,8 +139,6 @@ const messages: Messages['light'] = {
   'map.terrain': 'Rilievo',
   'map.exaggeration': 'Esagerazione del rilievo',
   'map.exaggerationTip': 'Moltiplica le altezze per accentuare le montagne (×1 = rilievo reale).',
-  'map.wireframe': 'Wireframe',
-  'map.wireframeTip': 'Disegna il rilievo in triangoli, per vedere il dettaglio caricato.',
   'weather.offClouds': 'Attiva l’atmosfera (scheda Luce) per vedere le nuvole.',
   'weather.offScene': 'Attiva l’atmosfera (scheda Luce) per vedere il meteo nell’immagine.',
   'weather.clouds': 'Nuvole',

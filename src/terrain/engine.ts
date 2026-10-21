@@ -175,7 +175,6 @@ interface ResolvedOptions {
   /** effective refinement limit (never above the terrain source) */
   maxZoom: number
   segments: number
-  wireframe: boolean
   demClean: DemCleanOptions
 }
 
@@ -192,7 +191,6 @@ function resolveOptions(raw: TerrainEngineOptions): ResolvedOptions {
     errorTargetPx: raw.errorTargetPx ?? DEFAULT_ERROR_TARGET_PX,
     maxZoom: Math.max(raw.terrain.minZoom, Math.min(raw.maxZoom ?? terrainMax, terrainMax)),
     segments: Math.max(1, Math.floor(raw.segments ?? DEFAULT_SEGMENTS)),
-    wireframe: raw.wireframe ?? false,
     demClean: raw.demClean ?? DEFAULT_DEM_CLEAN,
   }
 }
@@ -287,7 +285,6 @@ export function createTerrainEngine(
       color: texture ? 0xffffff : NO_IMAGERY_COLOR,
       roughness: 1,
       metalness: 0,
-      wireframe: opts.wireframe,
       side: FrontSide,
     })
   }
@@ -887,11 +884,6 @@ export function createTerrainEngine(
       return
     }
     if (opts.exaggeration !== prev.exaggeration) markAllDirty()
-    if (opts.wireframe !== prev.wireframe) {
-      forEachNode(roots, (node) => {
-        if (node.mesh) node.mesh.material.wireframe = opts.wireframe
-      })
-    }
     // errorTargetPx and maxZoom are read by the next update()
   }
 

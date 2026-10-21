@@ -37,7 +37,7 @@ function makeTrack(id: string, color: string): Track {
   return track
 }
 
-const SETTINGS: Settings = { ...DEFAULT_SETTINGS, exaggeration: 1.7, imagerySourceId: 'ign-ortho', wireframe: true }
+const SETTINGS: Settings = { ...DEFAULT_SETTINGS, exaggeration: 1.7, imagerySourceId: 'ign-ortho', atmosphere: false }
 const STATE = { tracks: [makeTrack('a', '#FF5A36'), makeTrack('b', '#5BC0EB')], settings: SETTINGS, playback: { ...DEFAULT_PLAYBACK, speed: 2 } }
 
 /** Valid serialised document as a mutable object. */
@@ -153,11 +153,11 @@ describe('serializeProject / parseProject', () => {
 
   it('falls back to the default per invalid or missing setting and ignores unknown keys', () => {
     const d = doc()
-    d.settings = { exaggeration: 'beaucoup', wireframe: true, imageryZoomOffset: 5, terrainSourceId: 'inconnu', sunHour: 14, extra: 1 }
+    d.settings = { exaggeration: 'beaucoup', atmosphere: false, imageryZoomOffset: 5, terrainSourceId: 'inconnu', sunHour: 14, extra: 1 }
     d.playback = { speed: 3 }
     d.unknownTopLevel = { anything: true }
     const loaded = parseProject(JSON.stringify(d))
-    expect(loaded.settings).toEqual({ ...DEFAULT_SETTINGS, wireframe: true, sunHour: 14 })
+    expect(loaded.settings).toEqual({ ...DEFAULT_SETTINGS, atmosphere: false, sunHour: 14 })
     expect(loaded.settings).not.toHaveProperty('extra')
     expect(loaded.speed).toBe(1)
     expect(loaded.warnings).toEqual([
@@ -184,7 +184,7 @@ describe('serializeProject / parseProject', () => {
 
   it('keeps the base value for missing keys in sanitizeSettings', () => {
     const base = { ...DEFAULT_SETTINGS, exaggeration: 2.5 }
-    expect(sanitizeSettings({ wireframe: true }, base).settings).toEqual({ ...base, wireframe: true })
+    expect(sanitizeSettings({ atmosphere: false }, base).settings).toEqual({ ...base, atmosphere: false })
     expect(sanitizeSettings(null, base)).toEqual({ settings: base, invalid: [] })
   })
 

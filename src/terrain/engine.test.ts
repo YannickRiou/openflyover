@@ -297,7 +297,6 @@ describe('createTerrainEngine', () => {
       expect(material.map).toBeInstanceOf(Texture)
       expect(material.roughness).toBe(1)
       expect(material.metalness).toBe(0)
-      expect(material.wireframe).toBe(false)
     }
     expect(deps.decodeDem).toHaveBeenCalledTimes(ROOT_KEYS.length)
     expect(deps.loadImageryTexture).toHaveBeenCalledTimes(ROOT_KEYS.length)
@@ -545,19 +544,6 @@ describe('createTerrainEngine', () => {
     expect(cb.mock.calls.length).toBeLessThanOrEqual(frames)
     // all geometries are rebuilt within the budget: 2 per frame
     expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
-  })
-
-  it('toggles wireframe on existing materials', async () => {
-    const deps = createFakeDeps()
-    const engine = engineWith(deps)
-    const camera = cameraAbove(600_000)
-    engine.update(camera, 1000)
-    await settle()
-    engine.update(camera, 1000)
-    engine.setOptions({ wireframe: true })
-    for (const mesh of meshesOf(engine)) expect((mesh.material as MeshStandardMaterial).wireframe).toBe(true)
-    engine.setOptions({ wireframe: false })
-    for (const mesh of meshesOf(engine)) expect((mesh.material as MeshStandardMaterial).wireframe).toBe(false)
   })
 
   it('rebuilds everything from the new sources when the terrain source changes', async () => {

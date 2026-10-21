@@ -139,8 +139,6 @@ const messages: Messages['light'] = {
   'map.terrain': 'Terrain',
   'map.exaggeration': 'Terrain exaggeration',
   'map.exaggerationTip': 'Multiplies the heights to emphasise the mountains (×1 = real terrain).',
-  'map.wireframe': 'Wireframe',
-  'map.wireframeTip': 'Draws the terrain as triangles, to see the loaded detail.',
   'weather.offClouds': 'Turn on the atmosphere (Light tab) to see the clouds.',
   'weather.offScene': 'Turn on the atmosphere (Light tab) to see the weather in the image.',
   'weather.clouds': 'Clouds',

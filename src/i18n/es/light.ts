@@ -139,8 +139,6 @@ const messages: Messages['light'] = {
   'map.terrain': 'Relieve',
   'map.exaggeration': 'Exageración del relieve',
   'map.exaggerationTip': 'Multiplica las alturas para acentuar las montañas (×1 = relieve real).',
-  'map.wireframe': 'Alambre',
-  'map.wireframeTip': 'Dibuja el relieve en triángulos, para ver el detalle cargado.',
   'weather.offClouds': 'Activa la atmósfera (pestaña Luz) para ver las nubes.',
   'weather.offScene': 'Activa la atmósfera (pestaña Luz) para ver la meteorología en la imagen.',
   'weather.clouds': 'Nubes',
