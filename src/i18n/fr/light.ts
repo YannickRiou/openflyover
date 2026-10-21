@@ -17,7 +17,7 @@ export default {
   'nights.nightTip': 'La nuit passe, éclairée par la lune.',
   'nights.dawn': 'Aube',
   'nights.dawnTip': 'Le soleil se lève, jusqu’au départ du matin.',
-  'nights.sequenceHint': 'Dans « À la suite », ces durées valent pour les transitions « Nuit » de la timeline (ligne « Étapes ») ; leur inspecteur les montre aussi.',
+  'nights.sequenceHint': 'Dans « À la suite », les nuits entre deux étapes sont les transitions « Nuit » (Trace › Plusieurs traces, ou leur bloc de la timeline) ; « Montrer les nuits » ne vaut que pour les nuits à l’intérieur d’une étape. Les durées ci-dessous valent pour toutes les nuits.',
   'nights.none': 'Aucune nuit de repos sur cette trace.',
   'nights.hint': { one: '{count} nuit : le film s’arrête {pause} à chaque fois.', other: '{count} nuits : le film s’arrête {pause} à chaque fois.' },
   'nights.instant': 'La nuit passe en un instant entre deux jours.',

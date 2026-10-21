@@ -20,14 +20,21 @@ const JUNCTION_KIND_HINTS: Record<JunctionKind, string> = {
 
 const seconds = (s: number) => `${formatNumber(s, Number.isInteger(s) ? 0 : 1)} s`
 
-/** « Transition » of a junction and its « Durée » (a fade holds the film for that long), the same in the settings and the inspector. */
+/**
+ * « Type de transition » of a junction and its « Durée » (a fade holds the film for that long), the same in the
+ * settings and the inspector. A « Nuit » lasts its night; the « Durée » is that of the fade to black it is where the
+ * stages are on the same day: shown in the settings, and in the inspector of a junction that has no night (`night`
+ * false; true hides it).
+ */
 export function JunctionTransitionFields({
   kind,
   holdS,
+  night,
   onChange,
 }: {
   kind: JunctionKind
   holdS: number
+  night?: boolean
   onChange(patch: { kind?: JunctionKind; holdS?: number }): void
 }) {
   const t = useT()
@@ -51,6 +58,12 @@ export function JunctionTransitionFields({
       </div>
       {(kind === 'fondu-noir' || kind === 'fondu-blanc') && (
         <RangeField label={t('inspector.junction.duration')} {...JUNCTION_HOLD_RANGE} value={holdS} format={seconds} onChange={(v) => onChange({ holdS: v })} wide={false} />
+      )}
+      {kind === 'nuit' && night !== true && (
+        <>
+          {night === false && <p className="type-hint">{t('inspector.junction.noNight')}</p>}
+          <RangeField label={t('inspector.junction.durationNoNight')} {...JUNCTION_HOLD_RANGE} value={holdS} format={seconds} onChange={(v) => onChange({ holdS: v })} wide={false} />
+        </>
       )}
     </>
   )

@@ -527,8 +527,8 @@ describe('Timeline — stages « À la suite »', () => {
     expect(Array.from(host.querySelectorAll('[data-testid="timeline-head"]')).map((h) => h.textContent)[1]).toBe('Étapes')
     expect(blocks('Étapes', '[data-item^="stage-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual(['Étape 1 : Jour 1', 'Étape 2 : Jour 2', 'Étape 3 : Jour 3'])
     expect(blocks('Étapes', '[data-item^="junction-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
-      'Transition 1 : Fondu au noir · 1,5 s (par défaut)',
-      'Transition 2 : Fondu au noir · 1,5 s (par défaut)',
+      'Transition 1 : Nuit · fondu au noir 1,5 s (par défaut)',
+      'Transition 2 : Nuit · fondu au noir 1,5 s (par défaut)',
     ])
     // the card of each stage is a block of « Textes »: the first with the flight, the others inside their junction
     expect(blocks('Textes', '[data-item^="card-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
@@ -561,9 +561,9 @@ describe('Timeline — stages « À la suite »', () => {
     expect(host.querySelector('[data-testid="film-inspector"]')?.textContent).toContain('Entre « Jour 1 » et « Jour 2 »')
     // a nudge by one second: the junction is now the film's own, held 1 s longer
     await press(junction(), 'ArrowRight')
-    expect(useAppStore.getState().settings.film.junctions).toEqual([{ id: `junction-${tracks[0].id}`, afterTrackId: tracks[0].id, kind: 'fondu-noir', holdS: expect.closeTo(2.5, 1) }])
+    expect(useAppStore.getState().settings.film.junctions).toEqual([{ id: `junction-${tracks[0].id}`, afterTrackId: tracks[0].id, kind: 'nuit', holdS: expect.closeTo(2.5, 1) }])
     expect(total()).toBeGreaterThanOrEqual(before + 1)
-    expect(junction().getAttribute('aria-label')).toContain('Fondu au noir · 2,5 s')
+    expect(junction().getAttribute('aria-label')).toContain('Nuit · fondu au noir 2,5 s')
     expect(junction().getAttribute('aria-label')).not.toContain('par défaut')
     // back to the default transition from the inspector (the selection stays)
     const reset = Array.from(host.querySelectorAll<HTMLButtonElement>('[data-testid="film-inspector"] button')).find((b) => b.textContent === 'Transition par défaut')!

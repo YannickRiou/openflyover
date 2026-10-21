@@ -19,7 +19,7 @@ const messages: Messages['light'] = {
   'nights.nightTip': 'Die Nacht vergeht, vom Mond beleuchtet.',
   'nights.dawn': 'Morgengrauen',
   'nights.dawnTip': 'Die Sonne geht auf, bis zum Aufbruch am Morgen.',
-  'nights.sequenceHint': 'Bei „Nacheinander“ gelten diese Dauern für die „Nacht“-Übergänge der Timeline (Spur „Etappen“); ihr Inspektor zeigt sie auch.',
+  'nights.sequenceHint': 'Bei „Nacheinander“ sind die Nächte zwischen zwei Etappen die „Nacht“-Übergänge (Track › Mehrere Tracks oder ihr Block in der Timeline); „Nächte zeigen“ gilt nur für die Nächte innerhalb einer Etappe. Die Dauern unten gelten für alle Nächte.',
   'nights.none': 'Keine Übernachtung in diesem Track.',
   'nights.hint': { one: '{count} Nacht: Der Film hält jedes Mal {pause} an.', other: '{count} Nächte: Der Film hält jedes Mal {pause} an.' },
   'nights.instant': 'Die Nacht vergeht in einem Augenblick zwischen zwei Tagen.',

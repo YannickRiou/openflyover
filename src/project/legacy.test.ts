@@ -158,6 +158,8 @@ describe('frozen old projects', () => {
       stops: [], speeds: [], cameraKeys: [], paramKeys: [], markerKeys: [], texts: [], media: [], audio: [],
       duckMusic: false, pois: [],
       nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
+      // v3: the nights were off, the stages « À la suite » kept their fades
+      junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true },
     })
     expect(s.labels).toEqual({ climbs: true, waypoints: false, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 })
     expect(s.overlay).toMatchObject({
@@ -224,6 +226,8 @@ describe('frozen old projects', () => {
       duckMusic: false,
       pois: [],
       nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
+      // v3: the nights were off, the stages « À la suite » kept their fades
+      junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true },
     })
     expect(s.labels).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 })
     expect(s.overlay.enabled).toBe(false)

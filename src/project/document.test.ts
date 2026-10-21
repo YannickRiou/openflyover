@@ -442,7 +442,7 @@ describe('parseProject errors', () => {
     ['not JSON', () => '{', /pas du JSON valide/],
     ['another JSON', () => ({ type: 'FeatureCollection' }), /pas un projet OpenFlyover/],
     ['an array', () => [], /pas un projet OpenFlyover/],
-    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v2\)/],
+    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v3\)/],
     ['a bad version', (d) => ({ ...d, version: '1' }), /version/],
     ['no tracks', (d) => ({ ...d, tracks: undefined }), /liste des traces/],
     ['a track without id', (d) => ({ ...d, tracks: [{ ...(d.tracks as object[])[0], id: '' }] }), /Trace n°1 : identifiant/],
@@ -499,6 +499,24 @@ describe('migrateProject', () => {
   it('leaves current documents untouched with the built-in table', () => {
     const d = doc()
     expect(migrateProject(d)).toEqual(d)
+  })
+
+  it('v3: the default transition « À la suite » says what the film did (a junction no longer turns into a night by itself)', () => {
+    const film = (f: Record<string, unknown>, race: Record<string, unknown> = {}) => {
+      const out = migrateProject({ version: 2, settings: { film: f, race } }) as { settings: { film: Record<string, unknown> } }
+      return out.settings.film.junctionDefault
+    }
+    const fade = { kind: 'fondu-noir', holdS: 1.5, card: true }
+    // the nights on: a default fade to black passed the nights, it becomes « Nuit » (a fade where there is no night)
+    expect(film({ nights: { enabled: true }, junctionDefault: fade })).toEqual({ ...fade, kind: 'nuit' })
+    expect(film({ nights: { enabled: true } })).toBeUndefined()
+    // the nights off: the fades stay, written since the default is now « Nuit »
+    expect(film({ nights: { enabled: false } })).toEqual(fade)
+    expect(film({})).toEqual(fade)
+    // another default is kept as chosen; the transition a project kept in `race` is read as before
+    expect(film({ nights: { enabled: true }, junctionDefault: { kind: 'fondu-blanc', holdS: 2, card: false } })).toEqual({ kind: 'fondu-blanc', holdS: 2, card: false })
+    expect(film({ nights: { enabled: true } }, { stageTransition: 'fondu-noir', stageCards: false })).toEqual({ ...fade, kind: 'nuit', card: false })
+    expect(film({ nights: { enabled: true } }, { stageTransition: 'coupe' })).toEqual({ kind: 'coupe', holdS: 0, card: true })
   })
 })
 

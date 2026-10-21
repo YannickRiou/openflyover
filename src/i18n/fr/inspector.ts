@@ -223,6 +223,8 @@ export default {
   'junction.hint.nuit': 'La nuit passée entre les deux étapes : le soleil se couche, la nuit passe, il se lève. Sans nuit entre elles, un fondu au noir.',
   'junction.transition': 'Type de transition',
   'junction.duration': 'Durée',
+  'junction.durationNoNight': 'Durée du fondu quand il n’y a pas de nuit',
+  'junction.noNight': 'Pas de nuit entre ces deux étapes (même jour) : un fondu au noir de la durée ci-dessous.',
   'junction.show': 'Afficher la carte',
   'junction.content': 'Contenu',
   'junction.auto': 'Automatique',

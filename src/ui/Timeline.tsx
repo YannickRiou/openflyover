@@ -23,7 +23,7 @@ import { dayCardId, dayCardIndexOf, dayCardWindow, isDayCardItem } from '../film
 import type { CardId } from '../film/cards'
 import { buildFilmClock, filmClockFor, filmClockInputFor, junctionInputsFor } from '../film/clock'
 import type { FilmClock, FilmClockFor, FilmClockInput } from '../film/clock'
-import { hasOwnTransition, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, stageCardAfterOf, stageCardId, stageCardWindow, stageItemId, stageTrackOf, junctionTrackOf } from '../film/junctions'
+import { hasOwnTransition, isJunctionItem, junctionOf, isStageCardItem, isStageItem, junctionCardOf, stageCardAfterOf, stageCardId, stageCardWindow, stageItemId, stageTrackOf, junctionTrackOf } from '../film/junctions'
 import { photoTimeMs } from '../film/exif'
 import { withKey } from '../film/markerKeys'
 import { dropIndexAt } from '../film/reorder'
@@ -1331,7 +1331,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       ]
       if (after) {
         const fade = after.kind === 'fondu-noir' || after.kind === 'fondu-blanc'
-        const label = fade ? `${JUNCTION_KIND_LABELS[after.kind]} · ${formatNumber(after.holdS, 1)} s` : JUNCTION_KIND_LABELS[after.kind]
+        const hold = `${formatNumber(after.holdS, 1)} s`
+        // a « Nuit » with no night between the two stages (same day) is a fade to black: the block says both
+        const noNight = fade && junctionOf(shownFilm, after.afterTrackId).kind === 'nuit'
+        const label = noNight ? t('timeline.junction.nightFade', { s: hold }) : fade ? `${JUNCTION_KIND_LABELS[after.kind]} · ${hold}` : JUNCTION_KIND_LABELS[after.kind]
         const own = hasOwnTransition(shownFilm, after.afterTrackId) ? '' : t('timeline.junction.byDefault')
         blocks.push(
           block(

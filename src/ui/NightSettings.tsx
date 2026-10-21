@@ -54,9 +54,7 @@ export function NightSettings() {
       <p id={`${id}-nights-hint`} className="type-hint">
         {nights.enabled ? nightsHint : tr('light.nights.instant')}
       </p>
-      {nights.enabled && sequence && (
-        <p className="type-hint">{tr('light.nights.sequenceHint')}</p>
-      )}
+      {sequence && <p className="type-hint">{tr('light.nights.sequenceHint')}</p>}
       {sequence && (
         <>
           <Switch id={`${id}-view`} checked={cards.view} aria-describedby={`${id}-view-hint`} onChange={(view) => setCards({ view })}>
@@ -67,7 +65,8 @@ export function NightSettings() {
           </p>
         </>
       )}
-      {nights.enabled &&
+      {/* « À la suite », the « Nuit » transitions use these seconds whether the nights inside the stages show or not */}
+      {(nights.enabled || sequence) &&
         NIGHT_PARTS.map(({ key, label, tip }) => (
           <SettingRow key={key} label={label} value={formatSecondsShort(nights[key])} paths={['film.nights']}>
             <RangeField label={label} tip={tip} {...NIGHT_PART_RANGE} value={nights[key]} format={formatSecondsShort} onChange={(v) => setNights({ [key]: v }, false)} />

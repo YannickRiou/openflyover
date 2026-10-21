@@ -225,6 +225,8 @@ const messages: Messages['inspector'] = {
   'junction.hint.nuit': 'La noche pasada entre las dos etapas: el sol se pone, pasa la noche y sale de nuevo. Si no hay noche entre ellas, un fundido a negro.',
   'junction.transition': 'Tipo de transición',
   'junction.duration': 'Duración',
+  'junction.durationNoNight': 'Duración del fundido cuando no hay noche',
+  'junction.noNight': 'No hay noche entre estas dos etapas (mismo día): un fundido a negro de la duración indicada abajo.',
   'junction.show': 'Mostrar la tarjeta',
   'junction.content': 'Contenido',
   'junction.auto': 'Automático',

@@ -398,7 +398,8 @@ describe('film model', () => {
     // a v1 project saved before the film existed: default shots, stops of its pacing
     const { film: _, ...before } = doc.settings
     expect(parseProject(JSON.stringify({ ...doc, settings: before })).settings.film).toEqual(
-      film({ autoMode: 'rythme', nights: { ...DEFAULT_FILM.nights, enabled: false } }),
+      // its stages « À la suite » kept their fades: the nights were off (v3)
+      film({ autoMode: 'rythme', nights: { ...DEFAULT_FILM.nights, enabled: false }, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true } }),
     )
   })
 

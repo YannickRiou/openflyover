@@ -41,6 +41,7 @@ export default {
   'stage.short': 'Étape {n}',
   'junction.description': 'Transition {n} : {label}{own}',
   'junction.byDefault': ' (par défaut)',
+  'junction.nightFade': 'Nuit · fondu au noir {s}',
   blockRange: '{description}, de {from} à {to}',
   'key.settingAria': 'Réglage : {what}, à {distance}, à {time}',
   'key.hint': '{what} (clic : y aller, glisser : le déplacer)',

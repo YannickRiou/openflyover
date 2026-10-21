@@ -19,7 +19,7 @@ const messages: Messages['light'] = {
   'nights.nightTip': 'La noche pasa, iluminada por la luna.',
   'nights.dawn': 'Amanecer',
   'nights.dawnTip': 'El sol sale, hasta la salida de la mañana.',
-  'nights.sequenceHint': 'En «En secuencia», estas duraciones valen para las transiciones «Noche» de la línea de tiempo (pista «Etapas»); su inspector también las muestra.',
+  'nights.sequenceHint': 'En «En secuencia», las noches entre dos etapas son las transiciones «Noche» (Track › Varios tracks, o su bloque en la línea de tiempo); «Mostrar las noches» solo vale para las noches dentro de una etapa. Las duraciones de abajo valen para todas las noches.',
   'nights.none': 'Ninguna noche de descanso en este track.',
   'nights.hint': { one: '{count} noche: la película se detiene {pause} cada vez.', other: '{count} noches: la película se detiene {pause} cada vez.' },
   'nights.instant': 'La noche pasa en un instante entre dos días.',
