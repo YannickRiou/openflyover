@@ -101,6 +101,7 @@ const messages: Messages['overlay'] = {
   'tab.visibilite': 'Visibilità',
   widgetSettings: 'Impostazioni di {label}',
   'card.hint': 'Testo, durata e stile: pulsante « Modifica », o il blocco sulla timeline.',
+  'card.replacesFirstStage': 'In «In sequenza», il titolo di apertura sostituisce la scheda della 1ª tappa finché è mostrato; senza di esso appare la scheda di tappa.',
   'card.editAria': 'Modifica: {label}',
   'card.edit': 'Modifica',
   'swatch.white': 'Bianco',

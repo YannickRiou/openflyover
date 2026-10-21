@@ -101,6 +101,7 @@ const messages: Messages['overlay'] = {
   'tab.visibilite': 'Visibility',
   widgetSettings: 'Settings of {label}',
   'card.hint': 'Text, length and style: the « Edit » button, or the block on the timeline.',
+  'card.replacesFirstStage': 'With “In sequence”, the opening title replaces the card of the 1st stage while it is shown; without it, the stage card shows.',
   'card.editAria': 'Edit: {label}',
   'card.edit': 'Edit',
   'swatch.white': 'White',

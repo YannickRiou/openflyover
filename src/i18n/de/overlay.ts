@@ -101,6 +101,7 @@ const messages: Messages['overlay'] = {
   'tab.visibilite': 'Sichtbarkeit',
   widgetSettings: 'Einstellungen von {label}',
   'card.hint': 'Text, Dauer und Stil: Schaltfläche „Bearbeiten“ oder der Block auf der Timeline.',
+  'card.replacesFirstStage': 'Bei „Nacheinander“ ersetzt der Eröffnungstitel die Karte der 1. Etappe, solange er angezeigt wird; ohne ihn erscheint die Etappenkarte.',
   'card.editAria': 'Bearbeiten: {label}',
   'card.edit': 'Bearbeiten',
   'swatch.white': 'Weiß',

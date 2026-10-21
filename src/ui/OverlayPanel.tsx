@@ -4,7 +4,7 @@ import { videoSize } from '../export/schedule'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { t, useT } from '../i18n'
 import type { CardId } from '../film/cards'
-import { filmTrackOf } from '../flyover/sequence'
+import { filmTrackOf, playsInSequence } from '../flyover/sequence'
 import { hasMetric } from '../flyover/trackColor'
 import { fileToLogoDataUrl } from '../overlay/assets'
 import {
@@ -223,11 +223,14 @@ function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolea
   const t = useT()
   const id = useId()
   const hasTrack = useAppStore((s) => s.tracks.length > 0)
+  // « À la suite », the opening title takes the place of the first stage's card
+  const sequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length))
   const label = CARD_LABELS[card]
   return (
     <div className={WIDGET} role="group" aria-labelledby={id}>
       <Switch id={id} checked={enabled} onChange={(on) => onToggle(on)}>{label}</Switch>
       <p className="type-hint">{t('overlay.card.hint')}</p>
+      {card === TITLE_CARD_ID && sequence && <p className="type-hint">{t('overlay.card.replacesFirstStage')}</p>}
       {enabled && (
         <Button
           disabled={!hasTrack}

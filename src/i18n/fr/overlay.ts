@@ -99,6 +99,7 @@ export default {
   'tab.visibilite': 'Visibilité',
   widgetSettings: 'Réglages de {label}',
   'card.hint': 'Texte, durée et style : bouton « Modifier », ou le bloc dans la timeline.',
+  'card.replacesFirstStage': '« À la suite », le titre d’ouverture remplace la carte de la 1re étape tant qu’il est affiché ; sans lui, c’est la carte d’étape qui s’affiche.',
   'card.editAria': 'Modifier : {label}',
   'card.edit': 'Modifier',
   'swatch.white': 'Blanc',
