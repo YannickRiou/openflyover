@@ -296,7 +296,7 @@ describe('TrackList, « Plusieurs traces »', () => {
     await act(async () => radios[1].click())
     expect(useAppStore.getState().settings.race.sequence).toBe(true)
     const card = host.querySelector<HTMLInputElement>('input[role="switch"]')!
-    expect(card.labels?.[0]?.textContent).toBe('Carton au début de chaque étape')
+    expect(card.labels?.[0]?.textContent).toBe('Une carte au début de chaque étape')
     const before = card.checked
     await act(async () => card.click())
     expect(host.querySelector<HTMLInputElement>('input[role="switch"]')!.checked).toBe(!before)

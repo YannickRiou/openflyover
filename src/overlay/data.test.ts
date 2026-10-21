@@ -8,8 +8,9 @@ import { buildTrackPath } from '../flyover/path'
 import { osmAttribution } from '../osm/overpass'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { openMeteoAttribution } from '../weather/openMeteo'
+import type { WeatherSummary } from '../weather/series'
 import type { Racer } from '../flyover/race'
-import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from '../film/model'
+import { DEFAULT_DAY_CARDS, DEFAULT_FILM, STAGE_CARD_FIELDS } from '../film/model'
 import { withDefaultCard, withJunctionCard } from '../film/junctions'
 import { buildSequence } from '../flyover/sequence'
 import {
@@ -325,6 +326,20 @@ describe('« À la suite »', () => {
     expect(second).toMatchObject({ name: 'J2', index: 1, startS: 30, ascentM: b.stats.ascentM })
     expect(second?.distanceM).toBeCloseTo(sequence.stages[1].endM - sequence.stages[1].startM, 6)
     expect(second?.startTime).toBeUndefined()
+  })
+
+  it('the figures of a stage card: the usual ones by default, else those chosen, with the weather of the stage when asked', () => {
+    const time = (timeS: number) => ({ timeS, openingS: 6, flightS: 60, totalS: 70, cutsS: [30] })
+    expect(stageCardAt(sequence, time(6))?.fields).toEqual(STAGE_CARD_FIELDS)
+    expect(stageCardAt(sequence, time(6))?.outingS).toBeCloseTo(a.stats.durationS ?? 0, 6)
+    const weather = { conditionCode: 0 } as unknown as WeatherSummary
+    const fields = { ...STAGE_CARD_FIELDS, weather: true, duration: true }
+    const film = { firstCard: { enabled: true, durationS: 5, anchor: 'center' as const, size: 1, fields } }
+    const card = stageCardAt(sequence, time(6), film, () => weather)
+    expect(card?.fields).toEqual(fields)
+    expect(card?.weather).toBe(weather)
+    // not asked for: the weather is not read
+    expect(stageCardAt(sequence, time(6), {}, () => weather)?.weather).toBeUndefined()
   })
 
   it('the card of the film: its own duration, placement and text, off when switched off, not past the next junction', () => {

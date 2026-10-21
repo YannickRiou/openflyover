@@ -131,6 +131,22 @@ export interface OverlayTrackLegend extends TrackLegend {
   anchor: OverlayAnchor
 }
 
+/** The figures of a day or stage card that `fields` chooses (distance, D+, time, start), those it has. */
+function figureCells(
+  p: Painter,
+  m: ReturnType<typeof cellMetrics>,
+  figures: { distanceM: number; ascentM?: number; durationS?: number; startTime?: number },
+  fields: Record<DayCardField, boolean>,
+): Cell[] {
+  const stats: [string, CounterText | null][] = [
+    [t('overlay.draw.stat.distance'), fields.distance ? splitUnit(formatDistance(figures.distanceM)) : null],
+    [t('overlay.draw.stat.ascent'), fields.ascent && figures.ascentM !== undefined ? { value: formatNumber(figures.ascentM), unit: 'm' } : null],
+    [t('overlay.draw.stat.duration'), fields.duration && figures.durationS !== undefined ? { value: formatDuration(figures.durationS), unit: '' } : null],
+    [t('overlay.draw.stat.start'), fields.start && figures.startTime !== undefined ? { value: formatClock(figures.startTime), unit: '' } : null],
+  ]
+  return stats.flatMap(([label, text]) => (text ? [makeCell(p, m, label, text, text)] : []))
+}
+
 /**
  * Card of a stage « À la suite »: name, number, date and figures of its track, shown from `startS` for `durationS`,
  * as the automatic card, or as `text` and `subtitle` (`fillTemplate`) when the film gives them.
@@ -152,6 +168,11 @@ export interface StageCard {
   subtitle?: string
   color?: string
   font?: OverlayFontId
+  /** the figures of the automatic card, as for the day cards */
+  fields: Record<DayCardField, boolean>
+  /** recorded time of the stage (seconds), its weather when fetched */
+  outingS?: number
+  weather?: WeatherSummary
 }
 
 /** Card of a day of a multi-day track (`dayCardAt`): its figures and how the film wants them shown, from `startS` for `durationS`. */
@@ -1305,13 +1326,10 @@ function stageWidget(p: Painter, card: StageCard, opacity: number, maxWidth: num
     return filmTextWidget(p, item, opacity, maxWidth)
   }
   const m = cellMetrics(p, card.size)
-  const stats: [string, CounterText | null][] = [
-    [t('overlay.draw.stat.distance'), splitUnit(formatDistance(card.distanceM))],
-    [t('overlay.draw.stat.ascent'), card.ascentM === undefined ? null : { value: formatNumber(card.ascentM), unit: 'm' }],
-  ]
-  const cells = stats.flatMap(([label, text]) => (text ? [makeCell(p, m, label, text, text)] : []))
-  const date = card.startTime !== undefined ? formatLongDate(card.startTime) : ''
-  const subtitle = [t('overlay.draw.stageOf', { n: card.index + 1, count: card.count }), date].filter(Boolean).join(' · ')
+  const { fields } = card
+  const cells = figureCells(p, m, { distanceM: card.distanceM, ascentM: card.ascentM, durationS: card.outingS, startTime: card.startTime }, fields)
+  const date = fields.date && card.startTime !== undefined ? formatLongDate(card.startTime) : ''
+  const subtitle = [t('overlay.draw.stageOf', { n: card.index + 1, count: card.count }), date, fields.weather ? weatherSummaryLine(card.weather) : ''].filter(Boolean).join(' · ')
   return cardWidget(p, { title: card.name, subtitle, titleScale: 0.6, cells }, card.anchor, card.size, opacity, m)
 }
 
@@ -1324,13 +1342,7 @@ function dayWidget(p: Painter, card: DayCard, opacity: number): Widget {
   const date = figures.startTime !== undefined ? formatLongDate(figures.startTime) : ''
   const title = fillTemplate(card.title ?? t('film.defaultDay'), { n: String(figures.n), count: String(figures.count), date })
   const m = cellMetrics(p, card.size)
-  const stats: [string, CounterText | null][] = [
-    [t('overlay.draw.stat.distance'), fields.distance ? splitUnit(formatDistance(figures.distanceM)) : null],
-    [t('overlay.draw.stat.ascent'), fields.ascent && figures.ascentM !== undefined ? { value: formatNumber(figures.ascentM), unit: 'm' } : null],
-    [t('overlay.draw.stat.duration'), fields.duration && figures.durationS !== undefined ? { value: formatDuration(figures.durationS), unit: '' } : null],
-    [t('overlay.draw.stat.start'), fields.start && figures.startTime !== undefined ? { value: formatClock(figures.startTime), unit: '' } : null],
-  ]
-  const cells = stats.flatMap(([label, text]) => (text ? [makeCell(p, m, label, text, text)] : []))
+  const cells = figureCells(p, m, figures, fields)
   const subtitle = [fields.date ? date : '', fields.weather ? weatherSummaryLine(figures.weather) : ''].filter(Boolean).join(' · ')
   return cardWidget(p, { title, subtitle, titleScale: 0.6, cells }, card.anchor, card.size, opacity, m)
 }

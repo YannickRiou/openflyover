@@ -515,9 +515,9 @@ describe('Timeline — stages « À la suite »', () => {
     ])
     // the card of each stage is a block of « Textes »: the first with the flight, the others inside their junction
     expect(blocks('Textes', '[data-item^="card-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
-      'Carton : Étape 1 · Jour 1',
-      'Carton : Étape 2 · Jour 2',
-      'Carton : Étape 3 · Jour 3',
+      'Carte : Étape 1 · Jour 1',
+      'Carte : Étape 2 · Jour 2',
+      'Carte : Étape 3 · Jour 3',
     ])
     expect(lane('Plans')).not.toBeNull()
     act(() => root.unmount())
@@ -596,12 +596,12 @@ describe('Timeline — stages « À la suite »', () => {
     const second = () => blocks('Textes', '[data-item^="card-"]')[1]
     await act(async () => second().focus())
     expect(useAppStore.getState().filmSelection).toBe(`card-stage-${tracks[0].id}`)
-    expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Carton de l’étape 2')
+    expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Carte de l’étape 2')
     await press(second(), 'Delete')
     expect(blocks('Textes', '[data-item^="card-"]')).toHaveLength(1)
     expect(useAppStore.getState().settings.film.junctions).toMatchObject([{ afterTrackId: tracks[0].id, card: { enabled: false } }])
     await act(async () => useAppStore.getState().setFilmSelection(`junction-${tracks[0].id}`))
-    const switchOn = Array.from(host.querySelectorAll<HTMLInputElement>('[data-testid="film-inspector"] input[type="checkbox"]')).find((i) => i.labels?.[0]?.textContent === 'Carton de l’étape 2')!
+    const switchOn = Array.from(host.querySelectorAll<HTMLInputElement>('[data-testid="film-inspector"] input[type="checkbox"]')).find((i) => i.labels?.[0]?.textContent === 'Carte de l’étape 2')!
     await act(async () => switchOn.click())
     expect(blocks('Textes', '[data-item^="card-"]')).toHaveLength(2)
     act(() => root.unmount())
@@ -613,7 +613,7 @@ describe('Timeline — stages « À la suite »', () => {
     expect(blocks('Textes', '[data-item^="card-"]').map((b) => b.getAttribute('aria-label')?.split(', de ')[0])).toEqual([
       "Titre d'ouverture",
       'Carte de clôture',
-      'Carton : Étape 2 · Jour 2',
+      'Carte : Étape 2 · Jour 2',
     ])
     act(() => root.unmount())
   })

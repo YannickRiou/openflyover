@@ -8,8 +8,8 @@
 import { useId, useMemo } from 'react'
 import { isDayCard, trackDays, withoutDayCards } from '../film/days'
 import { useT } from '../i18n'
-import { DAY_CARD_DURATION_RANGE, DAY_CARD_FIELDS, DEFAULT_DAY_CARDS, NIGHT_PARTS, NIGHT_PART_RANGE } from '../film/model'
-import type { DayCardField, FilmDayCards, FilmNights } from '../film/model'
+import { DAY_CARD_DURATION_RANGE, DAY_CARD_FIELD_LABELS, DAY_CARD_FIELDS, DEFAULT_DAY_CARDS, NIGHT_PARTS, NIGHT_PART_RANGE } from '../film/model'
+import type { FilmDayCards, FilmNights } from '../film/model'
 import { nightPauseS } from '../flyover/nights'
 import { trackPathOf } from '../flyover/path'
 import { editFilm, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
@@ -18,15 +18,6 @@ import { formatSecondsShort } from './format'
 import { SizeField } from './OverlayPanel'
 import { PanelSection, RangeField, SettingRow } from './PanelSection'
 import { Chip, Switch, TextField } from './primitives'
-
-const FIELD_KEYS = {
-  date: 'light.days.field.date',
-  distance: 'light.days.field.distance',
-  ascent: 'light.days.field.ascent',
-  duration: 'light.days.field.duration',
-  start: 'light.days.field.start',
-  weather: 'light.days.field.weather',
-} as const satisfies Record<DayCardField, string>
 
 export function NightSettings() {
   const tr = useT()
@@ -89,7 +80,7 @@ export function NightSettings() {
                 <div className="chips">
                   {DAY_CARD_FIELDS.map((field) => (
                     <Chip key={field} checked={cards.fields[field]} onChange={(on) => setCards({ fields: { ...cards.fields, [field]: on } })}>
-                      {tr(FIELD_KEYS[field])}
+                      {DAY_CARD_FIELD_LABELS[field]}
                     </Chip>
                   ))}
                 </div>

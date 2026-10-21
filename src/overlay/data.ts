@@ -9,7 +9,7 @@
  */
 import type { Track } from '../core/types'
 import { junctionCardOf } from '../film/junctions'
-import { JUNCTION_CARD_DEFAULT_S } from '../film/model'
+import { JUNCTION_CARD_DEFAULT_S, STAGE_CARD_FIELDS } from '../film/model'
 import type { Film, FilmDayCards } from '../film/model'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath } from '../flyover/path'
 import type { ElevationProfile, TrackPath } from '../flyover/path'
@@ -389,7 +389,12 @@ export const STAGE_CARD_S = JUNCTION_CARD_DEFAULT_S
  * STAGE_CARD_S by default) but not past the start of the junction that follows; null outside these windows or when the
  * card is switched off.
  */
-export function stageCardAt(sequence: Sequence, time: OverlayTime, film: Pick<Film, 'junctions' | 'junctionDefault' | 'firstCard'> = {}): StageCard | null {
+export function stageCardAt(
+  sequence: Sequence,
+  time: OverlayTime,
+  film: Pick<Film, 'junctions' | 'junctionDefault' | 'firstCard'> = {},
+  weatherOf: (stage: number) => WeatherSummary | undefined = () => undefined,
+): StageCard | null {
   const starts = [time.openingS, ...(time.cutsS ?? [])]
   let k = starts.length - 1
   while (k >= 0 && time.timeS < starts[k]) k--
@@ -409,9 +414,13 @@ export function stageCardAt(sequence: Sequence, time: OverlayTime, film: Pick<Fi
     durationS,
     anchor: own.anchor,
     size: own.size,
+    fields: own.fields ?? STAGE_CARD_FIELDS,
   }
   if (stats.startTime !== undefined) card.startTime = stats.startTime
   if (stats.maxEle !== undefined) card.ascentM = stats.ascentM
+  if (stats.durationS !== undefined && stats.durationS > 0) card.outingS = stats.durationS
+  const weather = own.fields?.weather ? weatherOf(k) : undefined
+  if (weather) card.weather = weather
   if (own.text !== undefined) card.text = own.text
   if (own.subtitle !== undefined) card.subtitle = own.subtitle
   if (own.color !== undefined) card.color = own.color

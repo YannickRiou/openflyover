@@ -28,7 +28,7 @@ import {
   titleCardOpacityOf,
 } from './draw'
 import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw'
-import { MEDIA_DEFAULTS } from '../film/model'
+import { MEDIA_DEFAULTS, STAGE_CARD_FIELDS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
 import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, withStyleLayout } from './settings'
 import type { OverlaySettings } from './settings'
@@ -847,6 +847,7 @@ describe('dip of a shot transition', () => {
 describe('stage card « À la suite »', () => {
   const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } }
   const stage: StageCard = {
+    fields: STAGE_CARD_FIELDS,
     name: 'Jour 2',
     index: 1,
     count: 3,
@@ -867,6 +868,13 @@ describe('stage card « À la suite »', () => {
     draw(settings, timeS, card)
       .texts.map((t) => t.text)
       .join(' ')
+
+  it('the figures chosen, as on a day card: duration and start instead of the D+, no date', () => {
+    const chosen = render(off, 42, { ...stage, outingS: 6 * 3600, fields: { ...STAGE_CARD_FIELDS, ascent: false, date: false, duration: true, start: true } })
+    expect(chosen.toLowerCase()).not.toContain(formatLongDate(stage.startTime!))
+    expect(chosen).not.toMatch(/1\s250/)
+    expect(chosen).toContain('6 h 00')
+  })
 
   it('name, number, date, distance and D+ inside its window, even without the overlay', () => {
     const shown = render(off, 42)
