@@ -123,6 +123,7 @@ const messages: Messages['export'] = {
   'history.reuseNoop': 'Estos ajustes ya están aplicados.',
   'history.reused': 'Ajustes de «{name}» restablecidos',
   'history.reuse': 'Reutilizar estos ajustes',
+  'history.reuseHint': 'Restablece el formato, la calidad y los ajustes de la escena enumerados arriba (atmósfera, sol, nubes, objetivo, imágenes, relieve, agua, estilo de cámara). «Deshacer» en el mensaje vuelve atrás.',
   'history.delete': 'Eliminar',
   'history.title': 'Historial de renders',
   'history.empty': 'Todavía no hay ningún render. Las películas exportadas (completadas, canceladas o fallidas) aparecerán aquí con su duración y sus ajustes.',

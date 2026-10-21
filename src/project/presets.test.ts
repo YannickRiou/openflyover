@@ -122,3 +122,18 @@ describe('presetSettings', () => {
     expect(presetSettings({ name: 'bad', settings: { poster: { style: 'nope' } } as never }, base).poster).toBe(base.poster)
   })
 })
+
+describe('an overlay preset keeps the words and pictures of the project', () => {
+  it('its look is applied, the titles, lines, credits, free text and logo stay those of the project', () => {
+    const o = DEFAULT_SETTINGS.overlay
+    const saved = { ...o, style: 'cinema' as const, title: { ...o.title, title: 'Autre sortie', subtitle: 'x', size: 1.5 }, end: { ...o.end, title: 'Fin', credits: 'Musique : X' }, text: { ...o.text, text: 'libre' } }
+    const project = { ...DEFAULT_SETTINGS, overlay: { ...o, title: { ...o.title, title: 'Mon tour', subtitle: 'Juillet', line: 'Avec Paul' }, end: { ...o.end, title: 'Merci' }, text: { ...o.text, text: 'mon texte' } } }
+    const out = presetSettings({ name: 'p', scope: 'habillage', settings: { overlay: saved } }, project).overlay
+    expect(out.style).toBe('cinema')
+    expect(out.title).toMatchObject({ size: 1.5, title: 'Mon tour', subtitle: 'Juillet', line: 'Avec Paul' })
+    expect(out.end.title).toBe('Merci')
+    expect(out.end).not.toHaveProperty('credits')
+    expect(out.text.text).toBe('mon texte')
+    expect(out.logo.image).toBe('')
+  })
+})

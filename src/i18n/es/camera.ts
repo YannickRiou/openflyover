@@ -22,6 +22,7 @@ const messages: Messages['camera'] = {
   'style.cinematic': 'Plano cinematográfico',
   'style.free': 'Libre (fotogramas clave)',
   'preset.chase': 'Persecución',
+  'preset.applied': '«{name}» ajusta toda la cámara, suavizados, final suave y vueltas incluidos.',
   'preset.fast-drone': 'Dron rápido',
   'preset.bird': 'Pájaro',
   'preset.helicopter': 'Helicóptero',

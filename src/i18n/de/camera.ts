@@ -22,6 +22,7 @@ const messages: Messages['camera'] = {
   'style.cinematic': 'Filmische Einstellung',
   'style.free': 'Frei (Keyframes)',
   'preset.chase': 'Verfolgung',
+  'preset.applied': '„{name}“ stellt die ganze Kamera ein, Glättungen, sanftes Ende und Umdrehungen inbegriffen.',
   'preset.fast-drone': 'Schnelle Drohne',
   'preset.bird': 'Vogel',
   'preset.helicopter': 'Hubschrauber',

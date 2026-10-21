@@ -121,6 +121,7 @@ const messages: Messages['light'] = {
   'demClean.seaToZeroTip': 'Hebt alles unter dem Meeresspiegel auf 0 m an. Ebnet auch echte Senken ein (Totes Meer, Polder).',
   'map.background': 'Hintergrundkarte',
   'map.imagery': 'Luftbilder',
+  'map.imageryAuto': 'Beim Import wird IGN (Frankreich) oder swisstopo (Schweiz) von selbst gewählt, wenn der Track ganz in ihrem Gebiet liegt, solange Sie nicht selbst gewählt haben.',
   'map.imageryDate': 'Aufnahmedatum',
   'map.imageryDateLatest': 'Die neuesten',
   'map.imageryDateLatestOn': 'Die neuesten ({date})',

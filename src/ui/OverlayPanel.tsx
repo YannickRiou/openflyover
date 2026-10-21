@@ -34,7 +34,8 @@ import {
   widgetOverrides,
   inStyleSlot,
 } from '../overlay/settings'
-import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
+import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, OverlayStyleId, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
+import { showToast } from './toast'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
 import { getSettingsHistory } from '../project/history'
@@ -220,6 +221,16 @@ function WidgetGroup({
  * The opening title or the closing card: its switch, here; its settings are those of its block on the timeline's
  * « Textes » lane (`CardFields`, in the inspector), which « Modifier » selects.
  */
+/** The overlay in `style`; when the style puts widgets back in its places, a message says so, with « Annuler ». */
+function changeStyle(overlay: OverlaySettings, style: OverlayStyleId): void {
+  const next = withStyleLayout(overlay, style)
+  useAppStore.getState().setSetting('overlay', next)
+  const moved = (['title', 'end', 'counters', 'profile', 'minimap', 'weather'] as const).some((key) => JSON.stringify(next[key]) !== JSON.stringify(overlay[key]))
+  if (!moved) return
+  const history = getSettingsHistory()
+  showToast({ kind: 'info', text: t('overlay.panel.styleMoved', { style: OVERLAY_STYLE_LABELS[style] }), action: { label: t('common.undo'), run: () => history.undo() } })
+}
+
 function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolean; onToggle(v: boolean): void }) {
   const t = useT()
   const id = useId()
@@ -532,7 +543,7 @@ export function OverlayPanel() {
         {overlay.enabled && (
           <fieldset className="field min-w-0">
             <legend className="type-label mb-1">{t('overlay.panel.style')}</legend>
-            <RadioGroup wrap aria-label={t('overlay.panel.style')} value={overlay.style} onChange={(style) => set(withStyleLayout(overlay, style))}>
+            <RadioGroup wrap aria-label={t('overlay.panel.style')} value={overlay.style} onChange={(style) => changeStyle(overlay, style)}>
               {OVERLAY_STYLES.map((style) => (
                 <Radio key={style} value={style}>
                   {OVERLAY_STYLE_LABELS[style]}

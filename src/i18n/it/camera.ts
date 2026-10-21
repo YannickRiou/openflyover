@@ -22,6 +22,7 @@ const messages: Messages['camera'] = {
   'style.cinematic': 'Inquadratura cinematografica',
   'style.free': 'Libera (keyframe)',
   'preset.chase': 'Inseguimento',
+  'preset.applied': '«{name}» regola tutta la camera, levigature, fine dolce e giri compresi.',
   'preset.fast-drone': 'Drone veloce',
   'preset.bird': 'Uccello',
   'preset.helicopter': 'Elicottero',

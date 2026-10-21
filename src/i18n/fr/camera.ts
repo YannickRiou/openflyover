@@ -20,6 +20,7 @@ export default {
   'style.cinematic': 'Plan cinématique',
   'style.free': 'Libre (images clés)',
   'preset.chase': 'Poursuite',
+  'preset.applied': '« {name} » règle toute la caméra, lissages, fin en douceur et tours compris.',
   'preset.fast-drone': 'Drone rapide',
   'preset.bird': 'Oiseau',
   'preset.helicopter': 'Hélicoptère',

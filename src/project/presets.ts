@@ -8,6 +8,7 @@
  */
 import type { Film } from '../film/model'
 import { getPlatform } from '../platform'
+import type { OverlaySettings } from '../overlay/settings'
 import type { PosterSettings } from '../poster/settings'
 import type { Settings } from '../state/store'
 import { sanitizeSettings } from './document'
@@ -85,7 +86,19 @@ export function presetSettings(preset: Preset, base: Settings): Settings {
   }
   // only the style: the format, title and figures stay those of `base`
   if (poster !== null && typeof poster === 'object') raw.poster = { ...base.poster, style: (poster as Partial<PosterSettings>).style }
-  return sanitizeSettings(raw, base).settings
+  const settings = sanitizeSettings(raw, base).settings
+  // the overlay's look, not the words and pictures of the project: its titles, lines, credits and logo stay those of `base`
+  return 'overlay' in raw ? { ...settings, overlay: withOverlayContentOf(settings.overlay, base.overlay) } : settings
+}
+
+/** `overlay` with the texts and pictures of `content`: the titles, subtitle, free lines, credits, free text and logo image. */
+function withOverlayContentOf(overlay: OverlaySettings, content: OverlaySettings): OverlaySettings {
+  const { title, subtitle, line, image } = content.title
+  const end = { ...overlay.end, title: content.end.title, line: content.end.line, image: content.end.image, credits: content.end.credits }
+  for (const key of ['line', 'image', 'credits'] as const) if (end[key] === undefined) delete end[key]
+  const opening = { ...overlay.title, title, subtitle, line, image }
+  for (const key of ['line', 'image'] as const) if (opening[key] === undefined) delete opening[key]
+  return { ...overlay, title: opening, end, text: { ...overlay.text, text: content.text.text }, logo: { ...overlay.logo, image: content.logo.image } }
 }
 
 function readPresets(storage: StorageLike | null): Preset[] {

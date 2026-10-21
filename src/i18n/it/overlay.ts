@@ -178,6 +178,7 @@ const messages: Messages['overlay'] = {
   'panel.creditsHint': 'In piccolo, in un angolo di ogni fotogramma esportato, anche senza il resto dell’overlay.',
   'panel.creditsOff': 'Cita allora le fonti altrove (descrizione del video, titoli di coda). La menzione Open-Meteo resta impressa finché il meteo è mostrato, come chiede la sua licenza.',
   'panel.styleHint': 'Cambiare stile rimette titolo, scheda di chiusura, contatori, profilo, minimappa e meteo dove li ha lo stile (posizioni e dimensioni); logo, testo libero e classifica mantengono i loro.',
+  'panel.styleMoved': 'Stile «{style}»: titolo, scheda di chiusura, contatori, profilo, minimappa e meteo rimessi al posto dello stile.',
 }
 
 export default messages

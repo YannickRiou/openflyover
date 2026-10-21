@@ -57,6 +57,7 @@ const messages: Messages['track'] = {
   'race.sync': 'Sincronización',
   'race.untimed': 'Un track no tiene marcas de tiempo: solo es posible «Misma distancia».',
   'race.cameraOn': 'Cámara en',
+  'race.cameraOnHint': 'Elegir un track lo pone el primero de la lista: es el que sobrevuela la película y el que miden los contadores.',
   'race.boardNeedsOverlay': 'Visible una vez activados los gráficos.',
   'race.boardSettings': 'Posición, tamaño y colores: pestaña Gráficos, sección Contadores.',
   'race.gap': 'Diferencia con el primer track, al mismo porcentaje del recorrido.',

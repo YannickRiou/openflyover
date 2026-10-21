@@ -121,6 +121,7 @@ const messages: Messages['light'] = {
   'demClean.seaToZeroTip': 'Riporta a 0 m tutto ciò che è sotto il livello del mare. Appiattisce anche le vere depressioni (Mar Morto, polder).',
   'map.background': 'Sfondo mappa',
   'map.imagery': 'Immagini',
+  'map.imageryAuto': 'All’importazione, IGN (Francia) o swisstopo (Svizzera) viene scelto da solo quando la traccia è interamente nella loro zona, finché non hai scelto tu.',
   'map.imageryDate': 'Data delle foto',
   'map.imageryDateLatest': 'Le più recenti',
   'map.imageryDateLatestOn': 'Le più recenti ({date})',

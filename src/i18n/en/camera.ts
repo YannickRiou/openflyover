@@ -22,6 +22,7 @@ const messages: Messages['camera'] = {
   'style.cinematic': 'Cinematic shot',
   'style.free': 'Free (keyframes)',
   'preset.chase': 'Chase',
+  'preset.applied': '“{name}” sets the whole camera, smoothings, smooth ending and turns included.',
   'preset.fast-drone': 'Fast drone',
   'preset.bird': 'Bird',
   'preset.helicopter': 'Helicopter',

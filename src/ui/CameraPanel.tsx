@@ -17,6 +17,8 @@ import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { editFilm, setFlightTiming, useFilmClock, useFilmSource, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
+import { getSettingsHistory } from '../project/history'
+import { showToast } from './toast'
 import { formatDegrees, formatDistance, formatDuration, formatNumber, formatPercent, formatSecondsShort, formatSpeedUp } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
@@ -154,6 +156,9 @@ interface PacingSlider {
   tip?: string
 }
 
+/** What a preset tile shows of a camera: its style and framing; the rest (smoothings, end, turns, north) goes with it unseen. */
+const FRAMING_KEYS: readonly (keyof CameraSettings)[] = ['style', 'distance', 'pitchDeg', 'headingOffsetDeg']
+
 const PACING_SLIDERS: PacingSlider[] = [
   { key: 'slowFactor', get label() { return t('camera.pacing.slowFactor') }, get tip() { return t('camera.pacing.slowFactorTip') }, format: formatPercent },
   {
@@ -255,9 +260,16 @@ export function CameraPanel() {
       <span className={TILE_FIGURES}>{presetFigures(p.camera)}</span>
     </Radio>
   )
+  /** a preset is the whole camera: when it also changes the smoothings, the end or the turns, a message says so, with « Annuler » */
   const pickPreset = (presetId: string) => {
     const picked = CAMERA_PRESETS.find((p) => p.id === presetId)
-    if (picked) setSetting('camera', { ...picked.camera })
+    if (!picked) return
+    setSetting('camera', { ...picked.camera })
+    const beyondFraming = (Object.keys(picked.camera) as (keyof CameraSettings)[]).some(
+      (key) => !FRAMING_KEYS.includes(key) && picked.camera[key] !== camera[key],
+    )
+    const history = getSettingsHistory()
+    if (beyondFraming) showToast({ kind: 'info', text: t('camera.preset.applied', { name: picked.name }), action: { label: t('common.undo'), run: () => history.undo() } })
   }
   const update = (patch: Partial<CameraSettings>) => setSetting('camera', { ...camera, ...patch })
   const updatePacing = (patch: Partial<PacingSettings>) => setFlightTiming({ pacing: { ...pacing, ...patch } })

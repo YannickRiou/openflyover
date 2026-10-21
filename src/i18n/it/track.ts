@@ -57,6 +57,7 @@ const messages: Messages['track'] = {
   'race.sync': 'Sincronizzazione',
   'race.untimed': 'Una traccia non ha data e ora: è possibile solo «Stessa distanza».',
   'race.cameraOn': 'Camera su',
+  'race.cameraOnHint': 'Scegliere una traccia la mette in cima alla lista: è quella che il film sorvola e che misurano i contatori.',
   'race.boardNeedsOverlay': 'Visibile una volta attivato l’overlay.',
   'race.boardSettings': 'Posizione, dimensione e colori: scheda Overlay, sezione Contatori.',
   'race.gap': 'Distacco dalla prima traccia, alla stessa percentuale del percorso.',

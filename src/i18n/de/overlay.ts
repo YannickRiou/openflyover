@@ -178,6 +178,7 @@ const messages: Messages['overlay'] = {
   'panel.creditsHint': 'Klein, in einer Ecke jedes exportierten Bildes, auch ohne den Rest des Overlays.',
   'panel.creditsOff': 'Dann die Quellen anderswo nennen (Videobeschreibung, Abspann). Der Open-Meteo-Hinweis bleibt eingeblendet, solange das Wetter angezeigt wird, wie es seine Lizenz verlangt.',
   'panel.styleHint': 'Ein Stilwechsel setzt Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils (Positionen und Größen); Logo, freier Text und Rangliste behalten ihre.',
+  'panel.styleMoved': 'Stil „{style}“: Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils gesetzt.',
 }
 
 export default messages

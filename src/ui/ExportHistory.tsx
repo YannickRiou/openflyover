@@ -90,6 +90,7 @@ function Entry({ entry, busy }: { entry: HistoryEntry; busy: boolean }) {
       >
         <Rows rows={entryDetails(entry)} />
         <Rows rows={settingsDetails(entry.settings)} />
+        <p className="type-hint">{t('export.history.reuseHint')}</p>
         <div className={ACTIONS}>
           <Button onClick={() => reuse(entry)} disabled={busy}>
             {t('export.history.reuse')}

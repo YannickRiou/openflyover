@@ -121,6 +121,7 @@ const messages: Messages['light'] = {
   'demClean.seaToZeroTip': 'Raises to 0 m everything below sea level. Also flattens real depressions (Dead Sea, polders).',
   'map.background': 'Map background',
   'map.imagery': 'Imagery',
+  'map.imageryAuto': 'On import, IGN (France) or swisstopo (Switzerland) is picked by itself when the track lies wholly in their area, as long as you have not chosen yourself.',
   'map.imageryDate': 'Photo date',
   'map.imageryDateLatest': 'The most recent',
   'map.imageryDateLatestOn': 'The most recent ({date})',
