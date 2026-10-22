@@ -86,6 +86,24 @@ const messages: Messages['film'] = {
   'param.exposureValue': '{value} EV',
   'param.sunHourValue': '{hours}:{minutes}',
   'param.percentValue': '{value}%',
+
+  // ---- Automatic film (src/film/autoFilm.ts, src/ui/AutoFilmDialog.tsx)
+  'auto.title': 'Automatic film',
+  'auto.sectionHint': 'In one click: the length, camera, titles and export format of a film ready to publish. Everything stays editable afterwards.',
+  'auto.needTrack': 'Import a track to build an automatic film.',
+  'auto.open': 'Choose a template…',
+  'auto.intro': 'Pick a template: the film length, camera, slow-downs and holds, overlay, opening title, closing card and export format are all set at once.',
+  'auto.editable': 'Everything stays editable afterwards, and "Undo" takes it back. Your own texts (title, subtitle, lines, credits) and the holds you placed by hand are kept. No music is added.',
+  'auto.length': 'The length shown is the film without the nights and the transitions between stages, which come on top.',
+  'auto.apply': 'Apply',
+  'auto.applyNamed': 'Apply the template "{name}"',
+  'auto.applied': 'Automatic film "{name}" applied. Everything stays editable.',
+  'auto.reel.name': 'Reel 30 s',
+  'auto.reel.hint': 'Vertical 9:16, 30 s, Reels / TikTok / Shorts export: a title with the name and date of the outing, a closing card with three figures, no holds, a lively camera.',
+  'auto.resume.name': 'Summary 1 min',
+  'auto.resume.hint': 'Landscape 16:9, 1 min, YouTube HD export: opening title, holds at the passes and summits, one card per day or stage when the track has several, a closing card with the figures.',
+  'auto.souvenir.name': 'Keepsake 3 min',
+  'auto.souvenir.hint': 'Landscape 16:9, 3 min, YouTube HD export: a calm camera, slow motion on the climbs, holds at the passes and summits, day or stage cards, counters, opening title and closing card.',
 }
 
 export default messages

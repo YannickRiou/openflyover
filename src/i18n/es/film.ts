@@ -86,6 +86,24 @@ const messages: Messages['film'] = {
   'param.exposureValue': '{value} EV',
   'param.sunHourValue': '{hours} h {minutes}',
   'param.percentValue': '{value} %',
+
+  // ---- Película automática (src/film/autoFilm.ts, src/ui/AutoFilmDialog.tsx)
+  'auto.title': 'Película automática',
+  'auto.sectionHint': 'En un clic: la duración, la cámara, los títulos y el formato de exportación de una película lista para publicar. Todo se puede modificar después.',
+  'auto.needTrack': 'Importa un recorrido para crear una película automática.',
+  'auto.open': 'Elegir una plantilla…',
+  'auto.intro': 'Elige una plantilla: la duración de la película, la cámara, las ralentizaciones y las paradas, los gráficos, el título de apertura, la tarjeta de cierre y el formato de exportación se ajustan de una vez.',
+  'auto.editable': 'Todo se puede modificar después, y «Deshacer» lo revierte. Tus propios textos (título, subtítulo, líneas, créditos) y las paradas puestas a mano se conservan. No se añade música.',
+  'auto.length': 'La duración indicada es la de la película sin las noches ni los pasos entre etapas, que se suman.',
+  'auto.apply': 'Aplicar',
+  'auto.applyNamed': 'Aplicar la plantilla «{name}»',
+  'auto.applied': 'Película automática «{name}» aplicada. Todo se puede modificar.',
+  'auto.reel.name': 'Reel 30 s',
+  'auto.reel.hint': 'Vertical 9:16, 30 s, exportación Reels / TikTok / Shorts: un título con el nombre y la fecha de la salida, una tarjeta de cierre con tres cifras, sin paradas, una cámara dinámica.',
+  'auto.resume.name': 'Resumen 1 min',
+  'auto.resume.hint': 'Horizontal 16:9, 1 min, exportación YouTube HD: título de apertura, paradas en los puertos y las cumbres, una tarjeta por día o por etapa si el recorrido tiene varios, tarjeta de cierre con las cifras.',
+  'auto.souvenir.name': 'Recuerdo 3 min',
+  'auto.souvenir.hint': 'Horizontal 16:9, 3 min, exportación YouTube HD: cámara tranquila, cámara lenta en las subidas, paradas en los puertos y las cumbres, tarjetas de día o de etapa, contadores, título de apertura y tarjeta de cierre.',
 }
 
 export default messages

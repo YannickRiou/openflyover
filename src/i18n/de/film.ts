@@ -86,6 +86,24 @@ const messages: Messages['film'] = {
   'param.exposureValue': '{value} EV',
   'param.sunHourValue': '{hours}:{minutes}',
   'param.percentValue': '{value} %',
+
+  // ---- Automatischer Film (src/film/autoFilm.ts, src/ui/AutoFilmDialog.tsx)
+  'auto.title': 'Automatischer Film',
+  'auto.sectionHint': 'Mit einem Klick: Länge, Kamera, Titel und Exportformat eines fertigen Films. Danach bleibt alles änderbar.',
+  'auto.needTrack': 'Importieren Sie eine Strecke, um einen automatischen Film zu erstellen.',
+  'auto.open': 'Vorlage wählen …',
+  'auto.intro': 'Wählen Sie eine Vorlage: Filmlänge, Kamera, Verlangsamungen und Stopps, Overlay, Eröffnungstitel, Schlusskarte und Exportformat werden auf einmal eingestellt.',
+  'auto.editable': 'Danach bleibt alles änderbar, und „Rückgängig“ nimmt es zurück. Ihre eigenen Texte (Titel, Untertitel, Zeilen, Abspann) und die von Hand gesetzten Stopps bleiben erhalten. Es wird keine Musik hinzugefügt.',
+  'auto.length': 'Die angegebene Länge gilt ohne die Nächte und die Übergänge zwischen Etappen, die hinzukommen.',
+  'auto.apply': 'Anwenden',
+  'auto.applyNamed': 'Vorlage „{name}“ anwenden',
+  'auto.applied': 'Automatischer Film „{name}“ angewendet. Alles bleibt änderbar.',
+  'auto.reel.name': 'Reel 30 s',
+  'auto.reel.hint': 'Hochformat 9:16, 30 s, Export für Reels / TikTok / Shorts: ein Titel mit Name und Datum der Tour, eine Schlusskarte mit drei Kennzahlen, keine Stopps, eine dynamische Kamera.',
+  'auto.resume.name': 'Zusammenfassung 1 min',
+  'auto.resume.hint': 'Querformat 16:9, 1 min, Export für YouTube HD: Eröffnungstitel, Stopps an Pässen und Gipfeln, eine Karte pro Tag oder Etappe, wenn die Strecke mehrere hat, Schlusskarte mit den Kennzahlen.',
+  'auto.souvenir.name': 'Erinnerung 3 min',
+  'auto.souvenir.hint': 'Querformat 16:9, 3 min, Export für YouTube HD: ruhige Kamera, Zeitlupe an den Anstiegen, Stopps an Pässen und Gipfeln, Tages- oder Etappenkarten, Zähler, Eröffnungstitel und Schlusskarte.',
 }
 
 export default messages

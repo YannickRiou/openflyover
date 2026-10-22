@@ -95,6 +95,10 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'El cielo sigue el tiempo de cada zona atravesada, y las nubes proyectan sombras sobre el relieve.',
   'v20.interface.title': 'Una interfaz rediseñada',
   'v20.interface.text': 'Nuevo aspecto de paneles, menús, botones y ventanas, con las mismas funciones que antes.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Una película en un clic',
+  'v40.auto.text': 'En la pestaña Vuelo, «Película automática» ofrece tres plantillas (Reel 30 s, Resumen 1 min, Recuerdo 3 min): duración, cámara, títulos, tarjetas y formato de exportación se ajustan de una vez, y todo se puede modificar después.',
 }
 
 export default messages
