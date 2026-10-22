@@ -15,6 +15,7 @@ export const WEATHER_VARIABLES = [
   'precipitation',
   'rain',
   'snowfall',
+  'snowDepth',
   'cloudCover',
   'cloudCoverLow',
   'cloudCoverMid',
@@ -31,7 +32,7 @@ export interface WeatherStation extends LonLat {
   /** elevation the values were downscaled to (metres); undefined = the provider's own terrain model */
   ele?: number
   /**
-   * one value per hour of `WeatherSeries.time`, NaN where missing (°C, mm, cm of snow, %, km/h, degrees the wind
+   * one value per hour of `WeatherSeries.time`, NaN where missing (°C, mm, cm of snow, m of snow on the ground, %, km/h, degrees the wind
    * blows from, WMO code); precipitation, snowfall and gusts are totals / maxima over the preceding hour
    */
   values: Record<WeatherVariable, number[]>

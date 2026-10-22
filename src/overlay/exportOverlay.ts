@@ -19,7 +19,7 @@ import { createExportVideos } from '../film/video'
 import type { ExportVideos } from '../film/video'
 import { useRegionStore } from '../osm/region'
 import { leadMarkerColors } from '../scene/markerSprite'
-import { useLandmarkStore, useWaterStore } from '../osm/store'
+import { useForestStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
 import { useWeatherStore, weatherShown, type StageWeather } from '../weather/store'
 import { summarizeOuting } from '../weather/series'
@@ -118,6 +118,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
       landmarks:
         Object.values(useLandmarkStore.getState().landmarks).some((list) => list.length > 0) ||
         useWaterStore.getState().polygons > 0 ||
+        useForestStore.getState().polygons > 0 ||
         useRegionStore.getState().region !== null,
       water: useWaterStore.getState().polygons > 0,
     }),

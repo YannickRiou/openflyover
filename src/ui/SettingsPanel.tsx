@@ -3,8 +3,11 @@ import { CLOUD_QUALITY_NAMES, effectiveRender } from '../export/qualityTier'
 import { t, useT } from '../i18n'
 import { formatDate } from '../i18n/format'
 import { hasParamKeys } from '../film/paramKeys'
+import { trackPathOf } from '../flyover/path'
+import { playsInSequence } from '../flyover/sequence'
 import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
+import { FOREST_DENSITY_RANGE } from '../osm/forest'
 import { getSettingsHistory } from '../project/history'
 import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -13,7 +16,8 @@ import { findImageryDates, imageryDateKind, imageryDateValue, type ImageryDate, 
 import { TERRAIN_SOURCES, getImagerySource, groupImagerySources } from '../terrain/sources'
 import { centroid } from '../geo/lonLat'
 import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, DEFAULT_CLOUDS, SEA_TOP_RANGE, WIND_DIRECTIONS, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
-import { useWeatherStore } from '../weather/store'
+import { SNOW_LINE_RANGE, snowLineAtProgress, type SnowMode, type SnowUnknown } from '../weather/snowLine'
+import { useWeatherStore, weatherSeriesOf } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
@@ -555,6 +559,39 @@ function WaterControl() {
   )
 }
 
+/** « Forêts »: trees where OpenStreetMap has forests, and how many per hectare. */
+function ForestControl() {
+  const t = useT()
+  const id = useId()
+  const forest = useAppStore((s) => s.settings.forest)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const perHectare = (n: number) => t('light.forest.densityValue', { n })
+  return (
+    <>
+      <div className="flex items-center gap-1">
+        <Checkbox id={`${id}-forest`} checked={forest.enabled} onChange={(on) => setSetting('forest', { ...forest, enabled: on })}>
+          {t('light.forest.enable')}
+        </Checkbox>
+        <InfoTip text={t('light.forest.tip')} />
+      </div>
+      {forest.enabled && (
+        <SettingRow label={t('light.forest.density')} value={perHectare(forest.density)} paths={['forest.density']}>
+          <RangeField
+            label={t('light.forest.density')}
+            tip={t('light.forest.densityTip')}
+            min={FOREST_DENSITY_RANGE.min}
+            max={FOREST_DENSITY_RANGE.max}
+            step={FOREST_DENSITY_RANGE.step}
+            value={forest.density}
+            format={perHectare}
+            onChange={(density) => setSetting('forest', { ...forest, density })}
+          />
+        </SettingRow>
+      )}
+    </>
+  )
+}
+
 /** « Nettoyer le relief en mer »: spikes of the elevation data over the sea, and the sea brought to 0 m. */
 function DemCleanControl() {
   const t = useT()
@@ -604,7 +641,7 @@ export function MapSettings() {
   return (
     <>
       {/* the imagery source is left out of the marker: the import picks it per region (IGN, swisstopo) */}
-      <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'water']}>
+      <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'water', 'forest']}>
         <div className="field">
           <label className="type-label" htmlFor={imageryId}>
             {t('light.map.imagery')}
@@ -624,6 +661,8 @@ export function MapSettings() {
         <ImageryDateControl />
 
         <WaterControl />
+
+        <ForestControl />
 
         <SettingRow label={t('light.map.imageryDetail')} value={zoomLabel} paths={['imageryZoomOffset']}>
           <fieldset className="field min-w-0">
@@ -689,6 +728,77 @@ function AtmosphereOffHint({ what }: { what: 'clouds' | 'scene' }) {
   return <p className="type-hint">{t(what === 'clouds' ? 'light.weather.offClouds' : 'light.weather.offScene')}</p>
 }
 
+const SNOW_MODE_OPTIONS: { value: SnowMode; label: string }[] = [
+  { value: 'meteo', get label() { return t('light.snow.mode.meteo') } },
+  { value: 'manuelle', get label() { return t('light.snow.mode.manuelle') } },
+  { value: 'aucune', get label() { return t('light.snow.mode.aucune') } },
+]
+
+/** What the weather gives at the start of the first track: the snow line rounded to 50 m, or none and why. */
+function useWeatherSnow(): { lineM: number | null; unknown: SnowUnknown | null } {
+  const track = useAppStore((s) => s.tracks[0])
+  const series = useWeatherStore((s) => weatherSeriesOf(s, track))
+  return useMemo(() => {
+    const { line, unknown } = track && series ? snowLineAtProgress(series, trackPathOf(track), 0) : { line: null, unknown: null }
+    return { lineM: line && Math.round(line.snowLineM / 50) * 50, unknown }
+  }, [track, series])
+}
+
+/** « Neige »: snow on the terrain above a line, from the weather of the day, set by hand or none, and what it gives now. */
+function SnowControl() {
+  const t = useT()
+  const snow = useAppStore((s) => s.settings.snow)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const sequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length))
+  const weatherEnabled = useAppStore((s) => s.settings.weather.enabled)
+  const weatherReady = useWeatherReady()
+  const { lineM, unknown } = useWeatherSnow()
+  return (
+    <>
+      <fieldset className="field min-w-0">
+        <legend className="sr-only">{t('light.weather.snow')}</legend>
+        <RadioGroup look="chips" aria-label={t('light.weather.snow')} value={snow.mode} onChange={(mode) => setSetting('snow', { ...snow, mode })}>
+          {SNOW_MODE_OPTIONS.map((option) => (
+            <Radio key={option.value} value={option.value}>
+              {option.label}
+            </Radio>
+          ))}
+        </RadioGroup>
+        <p className="type-hint" role="status">
+          {snow.mode === 'aucune'
+            ? t('light.snow.hintNone')
+            : snow.mode === 'manuelle'
+              ? t('light.snow.hintManual', { altitude: formatNumber(snow.lineM) })
+              : !weatherEnabled
+                ? t('light.snow.hintOff')
+                : !weatherReady
+                  ? t('light.snow.hintWaiting')
+                  : unknown
+                    ? t(unknown === 'altitude' ? 'light.snow.hintNoAltitude' : 'light.snow.hintNoData')
+                    : lineM === null
+                      ? t('light.snow.hintNoSnow')
+                      : t('light.snow.hintWeather', { altitude: formatNumber(lineM) })}
+        </p>
+        {snow.mode === 'meteo' && (
+          <p className="type-hint">
+            {t('light.snow.rule')}
+            {sequence && ` ${t('light.snow.sequenceNote')}`}
+          </p>
+        )}
+      </fieldset>
+      {snow.mode === 'manuelle' && (
+        <RangeField
+          label={t('light.snow.line')}
+          {...SNOW_LINE_RANGE}
+          value={snow.lineM}
+          format={(v) => `${formatNumber(v)} m`}
+          onChange={(lineM) => setSetting('snow', { ...snow, lineM })}
+        />
+      )}
+    </>
+  )
+}
+
 /** « Météo » tab, after the weather of the outing: sections Nuages and Pluie et brume (the weather in the image). */
 export function WeatherSettings() {
   const t = useT()
@@ -733,6 +843,10 @@ export function WeatherSettings() {
             )}
           </>
         )}
+      </PanelSection>
+
+      <PanelSection title={t('light.weather.snow')} keys={['snow']}>
+        <SnowControl />
       </PanelSection>
     </>
   )

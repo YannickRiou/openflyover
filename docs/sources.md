@@ -420,6 +420,9 @@ no quota header returned). Displayed attribution: "Données météo : Open-Meteo
 | Grid | ~0.07° in latitude (45.73 / 45.80 / 45.87 / 45.94 / 46.01) and ~0.1–0.14° in longitude in the Alps (≈ 9 km): two points less than ~5 km apart often fall in the same cell |
 | Altitude | the `elevation` parameter adjusts the temperature to the requested altitude: at 45.85° N 6.78° E, 12.5 °C without the parameter (cell at 2,316 m) vs 22.8 °C at 1,000 m and 10.6 °C at 2,500 m → we pass the recorded altitude of the track |
 | Reversed dates | 400 `{"reason":"Bad Request"}` |
+| `snow_depth` (2026-10-22) | accepted by the archive **and** the forecast, hourly, unit `"m"` (metres of snow on the ground), numbers with 2 decimals, `0.00` when there is none; added to the hourly list of the same request (no extra request). Archive `latitude=45.92&longitude=6.87&start_date=end_date=2024-02-10&hourly=temperature_2m,snow_depth,snowfall&elevation=3000` → 2.23 m, −9 °C; the same day with `elevation=1000` → 1.88 m (another cell: 46.01 / 6.71, the grid cell is chosen near the requested elevation); `2024-07-10` at 3,000 m → 0.00 all day; `2024-01-20`, 47.2 N 2.4 E, `elevation=150` → 0.00. Forecast (`api.open-meteo.com/v1/forecast`, `forecast_days=1`, `elevation=2000`, 2026-10-22) → 0.06 m, −2.7 to +2.2 °C. Sample track (Pyrenees) shifted to 2024-02-10: stations at 1,390 m (0.02 m, +1 °C at 12 h) and 2,270 m (0.04 m, −5.7 °C) |
+| `elevation` in the answer | each place of the answer carries `elevation` (the requested one, `3000.0`; without the parameter, the cell's own: 1,034 m at 45.92 / 6.87). The app uses the elevation it requested (`WeatherStation.ele`) for the snow line; a track without altitude requests none and gets no snow |
+| Quota weight | 14 hourly variables now (13 before): the request is still one per track, but a request of more than 10 variables already counted as several calls, and the 14th adds a little to that |
 | Size | ~2.5 kB gzip per place and per day for the 14 variables |
 
 Log (curl, 2026-10-07): `start_date=end_date=2025-07-12`, 2 places (45.89/6.80 and 45.83/6.73) → 200, cells 45.940/6.704 (1,021 m) and
@@ -484,6 +487,24 @@ the reduction run on the answer (`parseWaterShapes`):
 The coastline alone, in a 20 × 30 km box on the Côte de granit rose: 200 in 26.2 s, 653 kB, 144 ways. The same request sent without
 a `User-Agent` receives 406; a busy server answers 502 (`BUSY_STATUSES`: retried, then the next endpoint). The sea is built from
 the answer in the browser (no new request), the polder case shows land at 0 m behind the dike staying land.
+
+**Forests (2026-10-22)**: a third request per track, only if « Forêts » is checked: `way` / `relation` (multipolygons)
+`landuse=forest` and `natural=wood` in the track corridor widened to **5 km**, `out geom qt` (full geometry, `leaf_type` among the
+tags). Same queue, same 30-day cache (for the reduced result: polygons simplified to 8 m, at least 5,000 m², at most 600, coordinates to
+1e-5°), same retry policy, same licence as the landmarks and the water (ODbL, credit « © contributeurs OpenStreetMap »; the credit
+line shows as soon as forests are drawn). Measurement (curl with an explicit `User-Agent` and `Accept: */*`, 406 without, as for the
+water; sample track Pic de l'Homme, Pyrénées, 4.3 × 1.6 km), boxes of the corridor:
+
+| Corridor | Box | Answer | Elements | Reduced result (cache) |
+|---|---|---|---|---|
+| 8 km | 42.5664–42.7496 N × 1.772–1.987 E | 200 in 36.6 s, **2.96 MB** | not counted | 164 polygons, 261 kB, 13,400 vertices |
+| 5 km (kept) | 42.5935–42.7220 N × 1.809–1.950 E | 200 in 34.6 to 39.3 s (two runs), **804 kB** | 85 (79 ways, 6 relations; `leaf_type`: 58 needleleaved, 11 mixed, 9 broadleaved, 7 none) | 64 polygons, 130 kB, 6,700 vertices |
+
+The 8 km corridor of the water was too heavy for forests (3 MB), so the corridor is narrower; 5 km covers what the camera sees (trees
+are drawn up to 6 km from the camera, thinner beyond 2 km from the track). The time is the server's: the same day, the water query alone
+(`natural=water` ways of the 5 km box, 211 kB) took 27 s, against 3.7 s on 2026-10-08, so the public server was slow; the 60 s limit of
+the query (`QUERY_TIMEOUT_S`) leaves room, but a very long track (several boxes) may time out: the forests are then missing, without
+a message (no status chip), and tried again on the next track or setting change.
 
 Log (curl, 2026-10-07): `[out:json][timeout:60]; ( node["natural"~"^(peak|volcano|saddle)$"]["name"](45.79485,6.68680,45.91881,6.83916); … 8 statements … ); out center tags qt;`
 → 200, 5.7 s, 44,447 bytes; same request from headless Chromium (origin `http://127.0.0.1:5184`) → 200 in 3.6 s.

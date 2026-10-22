@@ -159,6 +159,28 @@ const messages: Messages['light'] = {
   'atmosphere.sun': 'Sun',
   'atmosphere.sunOff': 'Turn on the atmosphere (previous section) to set the sun time.',
   'map.imageryDetailHint': 'Finer: sharper photos, but more tiles to load (longer preview, export and offline pack).',
+  // --- Snow (Weather › Snow)
+  'weather.snow': 'Snow',
+  'snow.mode.meteo': 'From the weather of the day',
+  'snow.mode.manuelle': 'Manual',
+  'snow.mode.aucune': 'None',
+  'snow.line': 'Snow line',
+  'snow.hintWeather': 'Snow above {altitude} m (weather of the starting day).',
+  'snow.hintManual': 'Snow above {altitude} m, whatever the weather.',
+  'snow.hintNone': 'No snow: the ground stays as in the photo.',
+  'snow.hintOff': 'No snow: the weather of the day is turned off (the “Weather on the day of the outing” box, above).',
+  'snow.hintWaiting': 'No snow: the weather of the day is not loaded (see the message above).',
+  'snow.hintNoSnow': 'No snow that day: the weather reports neither snow on the ground nor snowfall at the altitude of the track.',
+  'snow.rule': 'The line is the altitude where the mean temperature of the day reaches 0 °C (6.5 °C less every 1,000 m), only if there is snow on the ground or falling that day. Very steep slopes stay bare rock. A track without elevation gets no snow.',
+  'snow.hintNoAltitude': 'No snow: the track has no elevation, so the weather cannot tell where the line is (“Manual” still works).',
+  'snow.hintNoData': 'Snow unknown: the loaded weather has no snow data, or not enough temperature data, that day (weather kept from an older version has no snow).',
+  'snow.sequenceNote': 'With “In sequence”, each stage follows its own weather, and a stage without weather keeps the snow of the stage before; the sentence above describes the start of the first track.',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Forests',
+  'forest.tip': 'Draws 3D trees where OpenStreetMap shows a forest around the track (internet needed). If OpenStreetMap does not answer, there are simply no trees. They are simple shapes, placed at random but always in the same spots: the export shows the same trees as the preview.',
+  'forest.density': 'Tree density',
+  'forest.densityValue': '{n} trees per hectare',
+  'forest.densityTip': 'Number of trees drawn per hectare of forest, close to the track; farther away there are fewer. The more there are, the slower the preview and the export. The device limits the total number of trees (fewer on a phone or tablet).',
 }
 
 export default messages

@@ -15,6 +15,7 @@ import { getFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { syncWeather, useWeatherStore } from '../weather/store'
 import type { BatchContext } from './batch'
+import { wait } from './capture'
 import { EXPORT_HOLD_END_S, EXPORT_HOLD_START_S, videoEncoding } from './schedule'
 import { t } from '../i18n'
 
@@ -42,19 +43,17 @@ export function shownFilm(): BatchContext['film'] {
   }
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
 /**
  * Fetch the landmarks and the weather of the track shown (as their panels do on a change of track), wait for them
  * (at most `TRACK_DATA_WAIT_MS`, or until canceled).
  */
-async function loadTrackData(canceled: () => boolean): Promise<void> {
+export async function loadTrackData(canceled: () => boolean): Promise<void> {
   const { tracks, settings } = useAppStore.getState()
   syncLandmarks(tracks, settings.landmarks)
   syncWeather(tracks[0], settings.weather.enabled)
   const loading = () => useLandmarkStore.getState().status === 'loading' || useWeatherStore.getState().status === 'loading'
   const end = Date.now() + TRACK_DATA_WAIT_MS
-  while (loading() && !canceled() && Date.now() < end) await delay(POLL_MS)
+  while (loading() && !canceled() && Date.now() < end) await wait(POLL_MS)
 }
 
 export interface TrackFilmsSession {

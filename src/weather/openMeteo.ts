@@ -24,6 +24,7 @@ const API_VARIABLES: Record<WeatherVariable, string> = {
   precipitation: 'precipitation',
   rain: 'rain',
   snowfall: 'snowfall',
+  snowDepth: 'snow_depth',
   cloudCover: 'cloud_cover',
   cloudCoverLow: 'cloud_cover_low',
   cloudCoverMid: 'cloud_cover_mid',
@@ -206,6 +207,11 @@ export function parseArchiveResponse(json: unknown, placeCount: number, startDay
     const columns = {} as Record<WeatherVariable, (number | null)[]>
     for (const v of WEATHER_VARIABLES) {
       const column = hourly?.[API_VARIABLES[v]]
+      // the snow depth is optional: without it the rest of the weather still loads (no snow line, `snowLine.ts`)
+      if (v === 'snowDepth' && column === undefined) {
+        columns[v] = time.map(() => null)
+        continue
+      }
       if (!Array.isArray(column) || column.length !== time.length) throw new WeatherError('error', badResponse())
       columns[v] = column.map((x) => (typeof x === 'number' && Number.isFinite(x) ? x : null))
     }
@@ -426,7 +432,8 @@ function cachedStation(
   for (const day of days) {
     const cached = cachedDay(day)
     if (!cached) throw new WeatherError('error', badResponse())
-    for (const v of WEATHER_VARIABLES) for (const x of cached[v]) values[v].push(x ?? Number.NaN)
+    // a day cached before the snow depth was kept has no column for it: unknown (NaN), the weather is used as it is
+    for (const v of WEATHER_VARIABLES) for (const x of cached[v] ?? new Array<null>(24).fill(null)) values[v].push(x ?? Number.NaN)
   }
   const station: WeatherStation = { lon: location.lon, lat: location.lat, values }
   if (location.ele !== undefined) station.ele = location.ele

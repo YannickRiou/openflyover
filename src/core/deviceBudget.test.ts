@@ -32,6 +32,7 @@ describe('budgetFor', () => {
       exportTileKeepFrames: 0,
       exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
       shadowMapSize: 4096,
+      maxTrees: 250_000,
     })
     // a laptop with little memory is still a computer
     expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 2 })).toEqual(DESKTOP_BUDGET)
@@ -57,6 +58,7 @@ describe('budgetFor', () => {
       exportTileKeepFrames: 6,
       exportPrefetchAhead: [5, 10, 20],
       shadowMapSize: 2048,
+      maxTrees: 60_000,
     })
   })
 
@@ -71,6 +73,7 @@ describe('budgetFor', () => {
       tileBitmaps: 120,
       heightGrids: 100,
       shadowMapSize: 1024,
+      maxTrees: 30_000,
       maxResidentTiles: 90,
     })
   })

@@ -95,6 +95,19 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'El cielo sigue el tiempo de cada zona atravesada, y las nubes proyectan sombras sobre el relieve.',
   'v20.interface.title': 'Una interfaz rediseñada',
   'v20.interface.text': 'Nuevo aspecto de paneles, menús, botones y ventanas, con las mismas funciones que antes.',
+  // 4.0.0
+  'v40.queue.title': 'Una cola de renderizado',
+  'v40.queue.text': 'En Exportar › Varios formatos, « Cola de renderizado » renderiza varios proyectos uno tras otro mientras usted está fuera: añada cada proyecto, inicie la cola y el navegador le avisa al final si la ventana no está delante. La cola se conserva si se cierra la aplicación. El renderizado también continúa con la ventana minimizada.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Una película en un clic',
+  'v40.auto.text': 'En la pestaña Vuelo, «Película automática» ofrece tres plantillas (Reel 30 s, Resumen 1 min, Recuerdo 3 min): duración, cámara, títulos, tarjetas y formato de exportación se ajustan de una vez, y todo se puede modificar después.',
+  // --- 4.0
+  'v40.snow.title': 'Nieve según la fecha',
+  'v40.snow.text': 'Por encima de un límite calculado a partir del tiempo del día (nieve en el suelo y temperatura), el terreno se vuelve blanco, con un borde irregular y roca en las pendientes empinadas. Se ajusta a mano o se desactiva en Meteo › Nieve.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Bosques en 3D',
+  'v40.forests.text': 'Los árboles salen del suelo donde OpenStreetMap tiene bosques: los valles arbolados ya no se ven planos. Ajustes en Mapa, sección «Fondo de mapa»: «Bosques» y «Densidad de árboles».',
   // 4.0 — Agua reflectante: el mar y los ríos trazados como líneas (4.0)
   'v40.water.title': 'Aparecen el mar y los arroyos',
   'v40.water.text': 'A lo largo de una costa, ahora se dibuja el mar. Los ríos y arroyos que el mapa solo traza como una línea se convierten en finas cintas de agua. Todo se ajusta con «Agua reflectante (mar, lagos y ríos)», en la pestaña Mapa, sección Fondo de mapa.',

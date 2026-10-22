@@ -95,6 +95,19 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Il cielo segue il meteo di ogni zona attraversata e le nuvole proiettano ombre sul rilievo.',
   'v20.interface.title': 'Un’interfaccia ridisegnata',
   'v20.interface.text': 'Nuovo aspetto per pannelli, menu, pulsanti e finestre, con le stesse funzioni di prima.',
+  // 4.0.0
+  'v40.queue.title': 'Una coda di rendering',
+  'v40.queue.text': 'In Esporta › Più formati, « Coda di rendering » renderizza più progetti uno dopo l’altro mentre sei lontano: aggiungi ogni progetto, avvia la coda e il browser ti avvisa alla fine se la finestra non è in primo piano. La coda resta se l’app viene chiusa. Il rendering continua anche con la finestra ridotta a icona.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Un film in un clic',
+  'v40.auto.text': 'Nella scheda Sorvolo, «Film automatico» propone tre modelli (Reel 30 s, Riassunto 1 min, Ricordo 3 min): durata, camera, titoli, schede e formato di esportazione si impostano in un colpo solo, e tutto resta modificabile in seguito.',
+  // --- 4.0
+  'v40.snow.title': 'Neve secondo la data',
+  'v40.snow.text': 'Sopra un limite calcolato dal meteo del giorno (neve al suolo e temperatura), il terreno diventa bianco, con un bordo irregolare e roccia sui pendii ripidi. Si regola a mano o si disattiva in Meteo › Neve.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Foreste in 3D',
+  'v40.forests.text': 'Gli alberi spuntano dal terreno dove OpenStreetMap ha delle foreste: le valli boscose non sono più piatte. Impostazioni in Mappa, sezione «Sfondo mappa»: «Foreste» e «Densità degli alberi».',
   // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
   'v40.water.title': 'Compaiono il mare e i torrenti',
   'v40.water.text': 'Lungo una costa, il mare viene ora disegnato. I fiumi e i torrenti che la mappa traccia solo come una linea diventano sottili nastri d’acqua. Tutto si regola con «Acqua riflettente (mare, laghi e fiumi)», nella scheda Mappa, sezione Sfondo mappa.',

@@ -65,24 +65,25 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
 | `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `FlightStage` (a stage with its own flight time, the 8th argument `stages`), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
-| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, ; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`junctions`, `nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `junctions.ts`: `junctionOf`, `junctionCardOf`, `withJunction`, `withJunctionCard`, `applyToAllJunctions`, `junctionPlan`, `junctionDipAt`, `stageCardWindow`, `fillTemplate`, `withStageSettingsMigrated`; `timeline.ts`: scale, ruler, snapping (`SnapTarget`, `snapTargets`, `snapTime`, `snapper`), `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
+| `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, ; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`junctions`, `nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `junctions.ts`: `junctionOf`, `junctionCardOf`, `withJunction`, `withJunctionCard`, `applyToAllJunctions`, `junctionPlan`, `junctionDipAt`, `stageCardWindow`, `fillTemplate`, `withStageSettingsMigrated`; `timeline.ts`: scale, ruler, snapping (`SnapTarget`, `snapTargets`, `snapTime`, `snapper`), `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `autoFilm.ts`: « Film automatique » (`AUTO_FILM_TEMPLATES`, `autoFilmSettings`, see "Automatic film"); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
 | `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime`; keyframes: `keyView`, `keyFramingFrom`, `keyFramingAt`, `keyReferenceAt` (`cameraKeys.ts`, no three.js: `keyPoseAt`, `keyedCamera`, `registerKeyCapture`, `captureKey`) |
 | `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)`, `nightAt`, `nightSunDate`, `NIGHT_DARK_MARGIN_MS`, `junctionBlendAt`, `blendSunDates`, `junctionSunDate` (the light across a fade between two stages) |
 | `src/flyover/nights.ts` | nights of a multi-day track (see "Sun at the time of the outing") | `trackNights`, `flightNights`, `nightPauseS`, `TrackNight`, `FlightNight` |
 | `src/flyover/trackColor.ts` | track colored by a metric | `TRACK_COLOR_MODES`, `TrackColorBy`, `TRACK_METRICS` (label, unit, palette), `metricValues`, `trackMetricValues`, `hasMetric`, `robustRange`, `resampleValues`, `colorizeValues`, `VIRIDIS`, `MAGMA`, `MISSING_COLOR` |
 | `src/scene/exposure.ts` | exposure under the atmosphere | `DAYLIGHT_EXPOSURE`, `sunElevation`, `autoExposureEv`, `sceneExposure(elevation, ev)`, `nightFillIntensity` |
-| `src/weather/*` | weather of the outing (archive, or forecast for a planned outing) | `fetchOutingWeather(path, opts)`, `sampleLocations`, `outingDays` (source and days), `forecastCacheKey`, `createWeatherCache`, `WeatherError`, `openMeteoAttribution()`; `weatherAt(series, timeMs, lon, lat)`, `weatherAtTimes(series, timesMs, lon, lat)`, `weatherWidgetData(series, path, progress)`, `summarizeOuting`, `describeWeatherCode`, `windFromLabel`; `useWeatherStore`, `syncWeather` |
+| `src/weather/*` | weather of the outing (archive, or forecast for a planned outing) | `fetchOutingWeather(path, opts)`, `sampleLocations`, `outingDays` (source and days), `forecastCacheKey`, `createWeatherCache`, `WeatherError`, `openMeteoAttribution()`; `weatherAt(series, timeMs, lon, lat)`, `weatherAtTimes(series, timesMs, lon, lat)`, `weatherWidgetData(series, path, progress)`, `summarizeOuting`, `describeWeatherCode`, `windFromLabel`; `snowLineAt`, `snowLineAtProgress`, `resolveSnow` (snow line, `snowLine.ts`); `useWeatherStore`, `syncWeather` |
 | `src/plan/timing.ts` | estimated times of a planned outing (see "Planned outing") | `PLAN_ACTIVITIES`, `PLAN_ACTIVITY_LABELS`, `PACE_RANGE`, `OutingPlan`, `stretchHours`, `estimateElapsedS`, `withEstimatedTimes`, `withoutTimes`, `planActivityOf`, `localDepartureMs`, `localDayAndTime`, `localUtcOffsetMin` |
 | `src/osm/region.ts` + `src/scene/regionMesh.ts` + `src/scene/RegionHighlight.tsx` | administrative region of the outing, framed and highlighted by the region view (see "Film and timeline", Camera) | `regionName`, `regionCandidatesQuery`, `regionKind`, `REGION_KIND_LABELS`, `parseRegionCandidates`, `containingRegions`, `chooseRegion`, `candidateId`, `regionGeometryQuery`, `parseRegionGeometry`, `simplifyRings`, `fetchRegion`, `regionFrame`, `REGION_MIN_RATIO`, `REGION_MAX_POINTS`; `useRegionStore`, `syncRegion`, `holdRegion`; pure, tested: `buildRegionMesh`, `ringDepths`, `labelPoint`, `ringSegments`, `LABEL_GRID`; `RegionHighlight` |
 | `src/osm/*` | OpenStreetMap landmarks | `OVERPASS_ENDPOINTS`, `osmAttribution()`, `corridorBoxes`, `buildOverpassQuery`, `trackQuery`, `parseOverpass`, `runOverpassQuery`, `fetchTrackFeatures`; `parseEle`, `projectOnPath`, `landmarkPriority`, `landmarkText`, `buildLandmarks`, `landmarkLabels`, `splitHidden`, `DEFAULT_LANDMARK_SETTINGS`, `withLandmarkDefaults`, `withHidden`, `newLandmarkIds`, `PLACE_SIZES`, `PLACE_SIZE_LABELS`, `placeSizeOf`, `withPlaceSize`, `parsePopulation`, `pathBoxDistanceM`, `PLACE_SHARE`, `LANDMARK_DISTANCE_RANGE`, `KIND_LABELS`, `KIND_BADGES`; `useLandmarkStore`, `syncLandmarks`, `resetLandmarkStore` |
 | `src/overlay/*` | film overlay | `drawOverlay(ctx, frame, settings, size, assets)`, `prepareOverlayTrack(track, weather?)`, `overlayFrameAt(data, progress)`, `prepareOverlayFilm`, `overlayFilmFrameAt`, `stageCardAt`, `createOverlayFilmCache`, `miniMapOutline`, `DEFAULT_OVERLAY`, `isValidOverlay`, `withOverlayDefaults`, `withOverrides`, `resolveOverlayTheme`, `leaderboardRows`, `loadLogo`, `loadOverlayFonts`, `createOverlayDrawer` (bridge to the export), `OverlayCanvas` |
-| `src/export/*` | video export | `buildFrameSchedule`, `VIDEO_ASPECTS`, `VIDEO_RESOLUTIONS`, `videoSize`, `createVideoEncoder(canvas, options)`, `ExportCanceledError`, `nativeEncoder.ts` (desktop ffmpeg): `exportCodec`, `createExportEncoder`, `createNativeVideoEncoder`, `wavFile`, `settle`, `renderSettledFrame`, `composeFrame`, `composeOverlayFrame`, `fillSky` (export sky, reused by the poster), `useExportStore`, `videoFileName`, `overlayBaseName`, `ALPHA_CANDIDATES`, `chooseVideoDestination`, `warnsInMemory`, `filmRate`, `ExportController`; `trackFilms.ts` (« Un film par trace », app side: `beginTrackFilms`, `trackFilm`, `shownFilm`); `batch.ts` (batch rendering): pure, tested: `buildBatchJobs`, `formatKey`, `batchBaseName`, `estimateBatch`, `runBatch`, `batchProgressLabel`, `batchSummary`; `exportJob`, `useBatchStore` |
+| `src/export/*` | video export | `buildFrameSchedule`, `VIDEO_ASPECTS`, `VIDEO_RESOLUTIONS`, `videoSize`, `createVideoEncoder(canvas, options)`, `ExportCanceledError`, `nativeEncoder.ts` (desktop ffmpeg): `exportCodec`, `createExportEncoder`, `createNativeVideoEncoder`, `wavFile`, `settle`, `renderSettledFrame`, `composeFrame`, `composeOverlayFrame`, `fillSky` (export sky, reused by the poster), `useExportStore`, `videoFileName`, `overlayBaseName`, `ALPHA_CANDIDATES`, `chooseVideoDestination`, `warnsInMemory`, `filmRate`, `ExportController`; `trackFilms.ts` (« Un film par trace », app side: `beginTrackFilms`, `trackFilm`, `shownFilm`); `batch.ts` (batch rendering): pure, tested: `buildBatchJobs`, `formatKey`, `batchBaseName`, `estimateBatch`, `runBatch`, `batchProgressLabel`, `batchSummary`; `exportJob`, `useBatchStore`; `queue.ts` (« File de rendus »: `runQueue`, `parseQueue`, `serialiseQueue`, `runRenderQueue`, `useQueueStore`) |
 | `src/poster/*` | poster (see "Poster") | pure, tested: `PosterSettings`, `DEFAULT_POSTER`, `POSTER_FORMATS`, `posterSize`, `isValidPoster`, `withPosterDefaults`; `posterContent`, `posterFigure`, `availableFigures`, `posterStats`, `totalStats`, `trackLine`, `POSTER_LIST_MAX`; `posterLayout` (boxes), `fitText`, `fitLines`, `fitTrackList`, `wrapText`, `truncate`; `drawPoster`, `coverCrop`, `POSTER_THEMES`, `POSTER_FONTS`; `framingPath`, `planFlatMap` (`view.ts`); not pure: `renderFlatMap` (`view.ts`), `currentPosterContent`, `startPoster`, `usePosterPreview`, `previewKey` (`export.ts`), `PosterPanel` |
 | `src/flyover/race.ts` | ghost race | `RACE_SYNC_MODES`, `RACE_CAMERAS`, `STAGE_TRANSITIONS`, `DEFAULT_RACE`, `isValidRace`, `prepareRaceTrack`, `raceTrackOf`, `positionAtTime`, `positionAtDistance`, `arrivalTime`, `buildRace`, `raceAt(race, progress)`, `rankRacers`; `useRace`, `RaceMarkers` |
 | `src/flyover/sequence.ts` + `follow.ts` | several tracks (see "Several tracks") | `Stage`, `Sequence`, `playsInSequence`, `orderedTracks`, `buildSequence`, `sequenceOf`, `filmSequenceOf`, `filmTrackOf`, `stageAt`, `trackUnderMarker`, `sequenceLandmarks`; `filmFollowOf(tracks, race, smoothingM)`; hooks `useFilmTrack`, `useFilmSequence` (`scene/usePacing.ts`) |
 | `src/weather/sceneWeather.ts` + `src/scene/weatherEffect.ts` | weather in the scene | `sceneConditionsAt`, `sceneWeatherAt`, `sceneWeatherFrom`, `CLEAR_SCENE_WEATHER`, `hazeExtinction`; `WeatherEffect` |
 | `src/osm/water.ts` + `src/osm/coast.ts` + `src/scene/waterMesh.ts` + `src/scene/riverStrip.ts` + `src/scene/WaterLayer.tsx` | reflective water (sea, lakes, rivers) | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`); `waterLinesQuery`, `parseWaterShapes`, `fetchTrackWaterShapes`, `runsOutside`, `lineWidthM`, `LINE_WIDTH_M`; `seaPolygons`, `chainCoastWays`, `reduceCoast`, `seaSide`, `seaCells`; `buildSeaMesh`; `buildRiverStrip`, `stripHeights` |
 | `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `cloudCoverField`, `zonedCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`); `patchRegionalCoverage`, `patchCloudShadow` (`scene/cloudShaders.ts`) |
+| `src/osm/forest.ts` + `src/scene/forestPoints.ts` + `src/scene/treeGeometry.ts` + `src/scene/ForestLayer.tsx` | forests (see "Forests") | `ForestSettings`, `DEFAULT_FOREST`, `FOREST_DENSITY_RANGE`, `isValidForest`, `FOREST_MARGIN_M`, `forestQuery`, `parseForest`, `fetchTrackForest`; `placeTrees`, `treeKind`, `densityFactor`, `hash01`, `CHUNK_M`, `ForestChunk`; `createTreeGeometries`, `TREE_WIDTH_RATIO`; `ForestLayer`, `FOREST_FAR_M`, `FOREST_FADE_M`; `useForestStore` (`osm/store.ts`) |
 | `src/scene/cloudSea.ts` + `src/scene/CloudSeaSurface.tsx` | surface sea of clouds | `seaRelief`, `billow`, `gradientNoise`, `octaveWeight`, `seaNoisePoint`, `seaBaseAltitude`, `curvatureDropM`, `edgeFade`, `rimFade`, `buildRadialGrid`, `terrainBoxOf`, `terrainGridCentres`, `seaReliefGlsl`, `glslFloat`; `CloudSeaSurface` |
 | `src/scene/grading.ts` + `gradingEffect.ts` + `GradingComposer.tsx` | color grading | `GradingSettings`, `DEFAULT_GRADING`, `GRADING_PRESETS`, `GRADING_RANGES`, `isValidGrading`, `isIdentityGrading`, `matchingPreset`, `gradingOfPreset`, `withGradingValue`, `gradingUniforms`; `GradingEffect`; `useGradingEffect`, `GradingComposer` |
 | `src/scene/lens.ts` + `useLensEffects.ts` + `flareEffect.ts` + `shutterEffect.ts` | « Objectif » lens effects (see "Lens") | pure, tested: `LensSettings`, `DEFAULT_LENS`, `LENS_RANGES`, `isValidLens`, `withLensDefaults`, `lensActive`, `bloomParams`, `depthOfFieldParams`, `SHUTTER_SUBFRAMES`, `SHUTTER_STEP_PX`, `shutterSamples`, `adaptiveShutterSamples`, `viewMotionPx`, `subFrameCount`, `previewShutterWeight`, `radialBlurLength`, `setShutterSubFrame`, `shutterSubFrame`, `subFrameSlices`; `useLensEffects`, `FlareEffect`, `ShutterEffect`; `filmViewAt` (`filmView.ts`: the camera placement of `FlyoverRig` at a progress and film time, shared with the export); `LensPanel` (`src/ui`) |
@@ -1804,6 +1805,35 @@ The interface and the texts drawn into the films and posters exist in **French**
   (not the generated ones while "Arrêts automatiques" is checked) can carry items; landmarks loaded for the first time
   after an edit made without them (landmarks off since the import) do not move attached items.
 
+## Automatic film (« Film automatique »)
+
+- **What**: the first section of the « Survol » tab (`AutoFilmSection`, `src/ui/AutoFilmDialog.tsx`; the button is off without a
+  track) opens a dialog with three gabarits, each with its one-sentence description: « Reel 30 s » (9:16, 30 s, no stops,
+  closing card of three figures), « Résumé 1 min » (16:9, 60 s, stops, day or stage cards) and « Souvenir 3 min » (16:9, 3 min,
+  calm camera, slow motion on the climbs, counters). **No music.** A gabarit is a row of `AUTO_FILM_TEMPLATES`
+  (`src/film/autoFilm.ts`): total length and the length of the opening and closing shots (`settings.flyoverDurationS` = total −
+  the two shots, so the length announced is the film's, before the nights and the passages between stages), the platform preset of
+  « Vidéo » › « Format » (`withPlatformPreset`: `vertical` or `youtube`), a camera preset (`CAMERA_PRESETS` id), the overlay style,
+  counters, the closing card's figures, stops, slow motion, cards.
+- **Pure**: `autoFilmSettings(settings, id, { days, stages })` returns the settings with the gabarit applied, no store, no new
+  setting, nothing persisted: the project keeps only what it already stores, so old projects open unchanged and a film made this
+  way is an ordinary film. Slow motion: `pacing.enabled` with `climbs`, no `landmarks` (the stops cover them), `keepDuration` always on.
+  Stops: `autoStops` + `'temps-forts'`, or none (`autoStops: false`, `stops: []`), **unless the film has stops placed by hand**
+  (`autoStops` false and `stops` not empty): those are kept. Cards: the day cards (`film.dayCards.enabled`) on a track of two days
+  or more, the stage cards (`withDefaultCard`) « À la suite »; a gabarit without cards switches them off. Overlay: `enabled`,
+  the style (`withStyleLayout`), the opening title on with its date, the closing card on with its figures, the cards' `end` /
+  `start` fractions so that they stay `CARD_TAIL_S` (3 s) past the shots whatever the length, the counters on or off. **Never
+  touched**: the titles, subtitle, lines, pictures and credits of the cards (an empty opening title is the track's name), the
+  free text, the logo, the cards' `window` placed on the timeline, the style and transition of the opening and closing shots (only
+  their length follows; a shot set to `aucune` becomes `descente`), the `stageDurations` of stages « À la suite », the film's other items (texts, including the
+  day cards of older versions, media, music, keys).
+- **Applying** (`applyAutoFilm(id)`, `src/ui/autoFilm.ts`): the path of a preset: `applySettings` in one
+  `getSettingsHistory().transaction`, `followFlightTiming` (texts and media attached to a stop follow the new duration), `setFreeFraming(false)`
+  when the aspect changes (like a platform chip), then a message with « Annuler » that undoes only while nothing else has
+  changed since. Applying it again replaces its own choices; the result is the same whichever gabarit came before.
+  Strings: `film.auto.*` (five languages), « Nouveautés » 4.0. Tests: `film/autoFilm.test.ts`, `ui/autoFilm.test.ts`,
+  `ui/CameraPanel.test.tsx`.
+
 ## Project (phase 4)
 
 - The project file is `<name>.opnflvr` (MIME `application/x-opnflvr`, `src/project/file.ts`): the ASCII signature `OPNFLVR`, a
@@ -1925,7 +1955,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `visibility` is always null in the archive and is not requested.
 - **Cache**: per rounded location and UTC day, in memory then `getPlatform().storage` (`openflyover.weather.v1`, ≤ 300 location-days, LRU,
   every access inside try/catch); days less than 7 days old are not persisted because the archive revises them.
-- **Series** (`src/weather/series.ts`, pure): 13 hourly variables per location (NaN if missing). `weatherAt` interpolates
+- **Series** (`src/weather/series.ts`, pure): 14 hourly variables per location (NaN if missing; `snowDepth`, in metres, was added with « Neige »: a day stored before it is fetched again). `weatherAt` interpolates
   linearly in time and by inverse squared distance between locations (WMO code of the closest location, wind direction
   as a vector); hourly totals apply to the hour that ends. `weatherWidgetData(series, path, progress)` gives the
   conditions under the marker (recorded time via `recordedTimeAt`), `summarizeOuting` the summary weighted by real time.
@@ -2555,6 +2585,38 @@ exports) gets it from the terrain source of the settings.
   fields. « Réutiliser ces réglages » (`reuseSettings` + `applySettings` in one history transaction, toast with
   « Annuler ») puts back the export options and these fields only, ignoring unknown source ids.
 
+### Render queue and rendering in the background
+
+- **In the background** (`wait` in `capture.ts`): the export loop never uses `requestAnimationFrame` (frames are drawn by R3F
+  `advance`, `frameloop 'never'`) and yields through `scheduler.yield()` or a `MessageChannel`, none of which is a timer.
+  The only timers were the tile polls (`wait(pollMs)`, 16 ms) and the data wait of `trackFilms.ts`: a hidden page
+  (`document.visibilityState`, which is also what a minimised window reports) fires timers once a second, once a minute after
+  five minutes, so each poll cost a second. `wait` now takes a `WaitHost` (`hidden()`, `now()`): shown, a timer; hidden,
+  message-port turns until the deadline (one processor core kept busy while waiting for tiles). WebGL keeps drawing into its
+  buffer in a hidden page and `drawImage` reads it synchronously, the encoder is event driven, and the wake lock
+  (`guard.ts`) is unchanged (screen on; the browser drops it when the page is hidden and it is asked again on return). What
+  no code can change: a page suspended by the system (device asleep, a phone's app in the background) does not run.
+- **The queue** (`src/export/queue.ts`, `src/ui/RenderQueue.tsx`, a section of the « Plusieurs formats » mode): a `QueueItem`
+  is the exact `serializeProject` text of the project when it was added (media included), its name, the `formatKey`s ticked
+  in « Plusieurs formats » (films only) and a status (`pending`, `running`, `done`, `error`). The export request is not
+  stored: it is built from the snapshot when the item runs (`shownFilm()`, `buildBatchJobs`), since a request holds
+  functions (`progressAt`). `runQueue` (pure, tested) takes the next `pending` item of the live list, a failure marks the item
+  and goes on, a cancel puts the item back to `pending` and stops. `runRenderQueue` keeps the project open
+  (`keepOpenProject`: the store fields and the media table, put back as the same objects, so « Enregistré » stays), holds
+  the batch store `running` (`hold` / `release`: no autosave, no edit, same « Annuler » button), then for each item applies
+  the snapshot as « Ouvrir » does (`parseProject` + `applyProject`, no toast, no « Mes projets » entry), waits for the
+  landmarks and weather (`loadTrackData`) and renders its films with `runBatch` + `exportJob`, each into the folder asked at the
+  start (`pickFolder`; without a folder API the films are downloaded). Before starting, `confirmClose` asks to save if the open
+  project has changes kept nowhere.
+- **Persistence**: `{ v: 1, items }` under `openflyover.renderQueue.v1` in the platform `storage`, rewritten at each change;
+  `parseQueue` never throws, an item stored `running` comes back `pending` and `interrupted` (« Reprendre »), the film starts
+  again from its first image. A snapshot is stored only for an item still to render, under `MAX_SNAPSHOT_CHARS` (1 M) and
+  `MAX_STORED_CHARS` (3 M) in all; the others come back as failed (« projet trop gros pour être gardé »). The folder is never
+  stored (a web handle cannot be): it is asked again at « Reprendre ».
+- **Notification**: at the end of a run `notifyWhenAway` uses the web Notification API when the window is hidden or not
+  focused (permission asked at « Lancer la file »). The desktop app has no notification plugin (`@tauri-apps/plugin-notification`
+  is not a dependency): it shows the toast only. `--rendu` is unchanged.
+
 ## Poster (phase 7)
 
 - **Principle**: a PNG poster of the outing, in one click from the export drawer ("Affiche" mode, next to "Vidéo").
@@ -2911,6 +2973,127 @@ exports) gets it from the terrain source of the settings.
   hardly visible from high; lines are only the 200 km widest. The "© contributeurs OpenStreetMap" credit (status bar and
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
+
+## Snow (« Neige »)
+
+Above a snow line computed from the weather of the day, the terrain turns white, so a winter outing no longer looks like the
+summer aerial photo. Settings in « Météo » › « Neige » (`settings.snow`).
+
+- **Data** (`src/weather/openMeteo.ts`): `snow_depth` (hourly, metres of snow on the ground) is one more hourly variable of the
+  request that already brings `temperature_2m` and `snowfall`: same request, archive or forecast, same cache. The snow depth is
+  optional: a response without `snow_depth` parses with an empty column, and a day cached before it existed is used as it is
+  (snow depth unknown, the rest of the weather unaffected, and no snow for that day). Checked on both endpoints (`docs/sources.md`). The station's `ele`
+  (the recorded altitude of the track the values are downscaled to) is the altitude of the line; a track without altitude has
+  no station elevation and so no snow line.
+- **Model** (`src/weather/snowLine.ts`, pure, tested): for the UTC day of an instant, at each station,
+  `snowOfDay` takes the mean temperature `T` (≥ 12 valid hours), the deepest snow `D` and the snowfall total `F`.
+  Without station elevation (`unknown: 'altitude'`), enough temperature or any snow depth (`unknown: 'data'`) the snow is
+  unknown, which the panel says. `D = 0` and `F < 0.1 cm`: no snow (nothing says there is any, whatever the cold). Else the
+  line is the freezing level `E + T / 0.0065` (6.5 °C per 1000 m from the station elevation `E`); with `D ≥ 2 cm` the snow lies
+  at the station, so the line is the lower of the two. Clamped to 0–6000 m. The transition band is 150 m for a settled cover
+  (`D ≥ 20 cm`) and 300 m otherwise (patches, a fresh fall). `snowLineAt` memoises each station's day and keeps the line
+  from jumping in one frame: the stations are weighted by inverse squared distance (like `weatherAt`), unknown ones left
+  out, and a day gives way to the next linearly over the hour before and after midnight UTC (a bare day counts as a line at
+  6000 m; the local day is not used: the response's UTC offset is not kept);
+  `snowLineAtProgress` reads the recorded time and position under the marker; `resolveSnow` picks the manual line
+  (« Manuelle », band 200 m), none (« Aucune ») or that of the weather.
+- **Shader** (`src/terrain/snowShader.ts`): `createMaterial` of the terrain engine calls `applySnow`, which extends the tile's
+  `MeshStandardMaterial` in `onBeforeCompile` (one shared program, `customProgramCacheKey`), the way the water does. The
+  vertex shader passes the world position and the cosine of the slope (normal · up); after `map_fragment` the fragment shader
+  blends a snow **albedo** (linear 0.80, 0.83, 0.88 × the luminance of the imagery, so its relief stays faintly visible) over
+  `diffuseColor` where the cover is above 0. Being albedo, the sun, the terrain shadows, the sky light (blue in the shade),
+  the exposure and the grading treat it as any ground, and the aerial perspective and the water layer are untouched. Cover =
+  `smoothstep` of the altitude across the band, the limit torn by a 3-octave hash noise of the world position (70, 25 and 9 m
+  cells, faded out where a cell is under ~2 pixels: no texture read, no shimmer), times `smoothstep(0.62, 0.85, slope cosine)`:
+  nothing beyond ~50° (the rock stays), all of it under ~32°. The altitude is `(y + r²/2R) / exaggeration` (`r` the distance to
+  the origin of the local frame, `R` the Earth radius: the flat local frame drops away from the ground by ~31 m at 25 km). With no
+  snow (`snowLine` = 10⁶ m) a uniform branch skips the whole block.
+- **Driver** (`src/scene/SnowLayer.tsx`, mounted in `FlyoverCanvas.tsx` as a child of `TerrainLayer`): each frame sets the shared uniforms `snowUniforms` (line, band,
+  exaggeration) from the settings, the track under the marker (`trackUnderMarker`, so each stage of « À la suite » follows its
+  own weather) and the weather store: a function of the film progress, so the export draws what the preview shows (one
+  exception: a stage whose weather is loading or failed keeps the line of the stage before, kept in a ref, while some weather is loaded). A change
+  of the weather store or the setting wakes the on-demand renderer.
+- **Setting**: `settings.snow { mode: 'meteo' | 'manuelle' | 'aucune', lineM }` (`meteo`, 2000 m; `SETTING_CHECKS`: known mode,
+  0 ≤ line ≤ 4500). An old project has no `snow` key and opens with the default; the project format is unchanged. Part of the
+  « Carte » preset family. The panel (`SnowControl` in `SettingsPanel.tsx`) says what the weather gives at the start of the
+  first track (« Neige au-dessus de 1 400 m », rounded to 50 m) or why there is none (weather off, not loaded, no snow that day).
+  The manual line is not keyable on the timeline: keys are a closed list of parameters (`FILM_PARAMS`).
+- **Limits**: the snow depth is the model's (a ~9 km cell chosen near the requested elevation, 2 cm of snow is already
+  « snow at the station »); the mean temperature of the day hides night frost and afternoon thaw; one line for the whole view
+  (no difference between sunny and shaded slopes, no wind drift); permanent snow that the weather does not mention (glaciers in
+  summer) is not drawn; the panel describes the first track only; frozen lakes are white like the ground (the water layer
+  stays dark where it is drawn); not in the render history (`RenderSettings`).
+- **Tuning**: the physics constants are at the top of `snowLine.ts` (lapse rate, 2 cm and 20 cm thresholds, bands); the look
+  is in `snowShader.ts` (`fragmentSnow`: noise cell sizes, slope thresholds, albedo, 0.94 maximum cover).
+## Forests (« Forêts »)
+
+Wooded valleys looked flat: the aerial photo shows the trees painted on the ground. Trees are now drawn as simple 3D volumes
+where OpenStreetMap has forests. Same pipeline as "Reflective water": Overpass query, pure reduction, pure placement, drawing
+draped on the relief.
+
+- **Data** (`src/osm/forest.ts`, pure and tested): same client, queue and 30-day cache as the landmarks and the water
+  (`cachedOverpassQuery`, `runOverpassQuery(…, parse)`), one request per track and only if `settings.forest.enabled`: `way` /
+  multipolygons `landuse=forest` and `natural=wood`, `out geom qt`, in the boxes of the track corridor widened to **5 km**
+  (`FOREST_MARGIN_M`; 8 km sent 3 MB on the sample, 5 km 0.8 MB: `docs/sources.md`). `leaf_type` (`needleleaved`,
+  `broadleaved`, `mixed`) is kept when present. The request is not canceled on unmount (shared and cached); its response is only
+  ignored if it is stale. A failed request is only retried on the next track or setting change, and shows nothing (no status
+  chip: the checkbox's help says there are simply no trees when OpenStreetMap does not answer).
+- **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
+  is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned
+  relation ignored, Douglas–Peucker 8 m (`FOREST_SIMPLIFY_M`), polygons < 5,000 m² dropped (`MIN_FOREST_AREA_M2`), the 600 largest
+  kept (`MAX_FOREST_POLYGONS`) within 40,000 vertices in all (`MAX_FOREST_VERTICES`, largest first, so the entry stays far below `MAX_CACHE_ENTRY_CHARS` = 1.5 MB, beyond which `writeCache` does not write: a huge entry would evict the landmarks and water), coordinates to 1e-5° (~1 m); the `leaf` key is absent when OpenStreetMap does not say. Only
+  this compact result is cached (sample: 64 polygons, 6,700 vertices, 130 kB in the cache).
+- **Pure placement** (`src/scene/forestPoints.ts`, tested): `placeTrees(polygons, { density, maxTrees, path })` gives the trees in
+  **chunks** of the ground (squares of `CHUNK_M` = 1,500 m, in an equirectangular frame around the first point of the track). In
+  a chunk, each forest is cut to the square (`clipRing`, so the point-in-polygon tests run on short rings), and a tree stands in
+  every cell of a lattice whose spacing is √(10,000 / density) m, at a position **hashed from the cell** (`hash01`, integers, no
+  random generator, no state), kept if it falls in the chunk, inside a forest and outside its holes. Height 8–22 m, variation of the
+  colour and turn are hashed from the cell too: **same data, same density, same budget, same trees**, in any order of the
+  forests (they are sorted by id), so the export draws what the preview shows. Kind: `leaf_type` `needleleaved` → conifer,
+  `broadleaved` → broadleaf, `mixed` → by hash, absent → `BY_ALTITUDE`: conifer above 1,200 m (`CONIFER_ALTITUDE_M`), decided when the
+  tree is draped, where the height is known (`treeKind`).
+  **Thinning with the distance to the track** (`densityFactor`): full density up to 2 km, falling linearly to 40 % at 5 km (the flyover
+  sees the near forests closely, the far ones as a texture). **Budget**: the chunks are placed from the nearest to the track outwards
+  until `maxTrees` (`deviceBudget().maxTrees`) would be exceeded; the others are not placed. A forest is therefore dense near the
+  track and absent beyond the budget, never half a chunk.
+- **Budget** (`core/deviceBudget.ts`, `maxTrees`): 250,000 trees on a computer, 60,000 on a phone or tablet, 30,000 with ≤ 2 GB
+  of memory. The same in the preview and the export (the positions must not differ); the export quality only decides the shadows
+  (below). Sample (Pyrenees, 5 km corridor), `docs/sources.md`: at the default density (60 trees / ha) the 250,000 trees fill the 48
+  chunks nearest to the track (~110 km²); the phone's 60,000 fill 7 chunks. Placement takes ~0.3 s for 250,000 trees (on the main
+  thread, when the forests arrive and when the density slider settles: `useDeferredValue`).
+  Measured in headless Chromium with software rendering (SwiftShader, not representative of a GPU; the sample film, camera ~1.7 km high): of
+  ~130,000 trees in range, ~15,000 are in the view, +0.43 M triangles over the 2.7 M of the terrain and the track (+16 %), the same
+  number of draw calls (~300). Mean of 9 frames, software: 10 ms without forests, 33 ms with. Trees casting shadows were tried and
+  dropped: the shadow pass drew every tree in range again (+3.7 M triangles, ~9 × the visible trees) for crowns of a few metres against
+  shadow texels of several metres. The first draping of a
+  chunk (≤ 8,000 trees a frame) shows as one frame a little longer while the film starts; the Overpass answer arrives after the
+  landmarks and the water (one request at a time): ~110 to 160 s on a slow day of the public server.
+- **Shapes** (`src/scene/treeGeometry.ts`, tested): two unit geometries merged from three's primitives, with vertex colours and no
+  texture: conifer = trunk + two stacked 8-sided cones (26 triangles), broadleaf = trunk + flattened icosahedron (30 triangles).
+  The instance matrix scales them to the tree (height × `TREE_WIDTH_RATIO`: 0.26 for a conifer, 0.32 for a broadleaf, wide). The
+  greens (dark for the conifers) are in this file; the instance colour (`setColorAt`) only varies them a little.
+- **Drawing** (`ForestLayer`, next to `WaterLayer` in `FlyoverCanvas`): per chunk, two `InstancedMesh` (conifers, broadleaves)
+  created on first draping, `MeshStandardMaterial` (lit by the sun, receives the terrain's shadows, `raycast` neutralized: the track
+  picker and the camera target the relief). Draping like the water and the track: `engine.sampleHeight` × exaggeration − 1 m
+  (the trunk meets the relief on a slope), but **per chunk, only within `FOREST_FAR_M` (6 km) of the camera**: each frame
+  `updateForest` hides the chunks beyond, and drapes those in range whose relief or exaggeration changed since (nearest first, at
+  most `DRAPE_TREES_PER_FRAME` = 8,000 trees a frame, `wakeScene` until none is left). The relief "changed" when the engine reports it
+  (`engine.onChange`, debounced as the water's: `REDRAPE_DEBOUNCE_MS`); the video export drapes everything in range at once, through
+  `registerDrapeFlush` and with no frame limit while it runs. A tree whose height is unknown (tile not loaded) waits for the next change.
+  **Fade**: in the vertex shader (`onBeforeCompile`) a tree shrinks to nothing between 5.5 and 6 km from the camera, so none pops.
+  No transparency. **Shadows**: they receive the terrain's shadows, they cast none. Everything is a function of the settings, the forests and the camera: the export is deterministic.
+- **Setting**: `settings.forest { enabled, density }` (true, 60 trees / ha; `SETTING_CHECKS`: `isValidForest`, 20 ≤ density ≤ 150,
+  `FOREST_DENSITY_RANGE`), « Forêts » checkbox and « Densité des arbres » slider in the « Fond de carte » section, right after the
+  water; part of the « Carte » preset family (`PRESET_SCOPE_KEYS`). A project saved before it has no `forest` key: the default is
+  used (no format version bump).
+- **Credit**: « © contributeurs OpenStreetMap » (status bar, film and poster) counts the forests like the water
+  (`useForestStore.polygons > 0` in `StatusBar`, `exportOverlay`, `OverlayCanvas`, `poster/export`).
+- **Limits**: the trees are not the real trees (OpenStreetMap maps the forest, not each tree): positions are hashed, shapes are two
+  low-poly models, heights do not follow the relief or the treeline; the budget cuts the far forests of a long track (nearest chunks to
+  the track first), and a track drawn on a ridge far from its forests loses them; trees do not appear in the flat map of the poster;
+  no status chip for a failed query; the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
+  texels wide); the forests are not in the render history's
+  `RenderSettings`; `forestPoints.ts` and `forest.ts` import the ring helpers of `water.ts` and `clipRing` of `waterMesh.ts`.
 
 ## Ghost race (phase 7)
 
@@ -3454,6 +3637,7 @@ and short side < 600 CSS px; tablet = touch screen, larger; computer = everythin
 | sea of clouds by default | `DEFAULT_CLOUDS.seaRender` | volume | « Nappe » | « Nappe » | « Nappe » |
 | export short side | `videoSize` | 2160 (4K) | 1440 | 1080 | as the device |
 | shadow map (texels per side) | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
+| trees of the forests (most placed) | `placeTrees` (`ForestLayer`) | 250,000 | 60,000 | 60,000 | 30,000 |
 | terrain LOD height during an export | `exportLodHeight` (`TerrainLayer`, `ExportController`) | the film's | the film's | min(film, 720) | as the device |
 | video bitrate ceiling, film kept in memory | `videoBitrate` / `deviceBitrateCap` | none | 12 Mbit/s | 8 Mbit/s | as the device |
 | « in memory » size warning | `warnsInMemory` | 1.5 GB | 250 MB | 250 MB | 250 MB |

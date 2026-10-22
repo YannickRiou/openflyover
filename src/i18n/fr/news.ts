@@ -93,6 +93,19 @@ export default {
   'v21.weather.text': 'Le ciel suit la météo de chaque zone traversée, et les nuages font de l’ombre sur le relief.',
   'v20.interface.title': 'Une interface repensée',
   'v20.interface.text': 'Nouvelle présentation des panneaux, des menus, des boutons et des fenêtres, avec les mêmes fonctions qu’avant.',
+  // 4.0.0
+  'v40.queue.title': 'Une file de rendus',
+  'v40.queue.text': 'Dans Exporter › Plusieurs formats, « File de rendus » rend plusieurs projets l’un après l’autre pendant que vous êtes ailleurs : ajoutez chaque projet, lancez la file, et le navigateur vous prévient à la fin si la fenêtre n’est pas devant. La file est gardée si l’application est fermée. Le rendu continue aussi quand la fenêtre est réduite.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Un film en un clic',
+  'v40.auto.text': 'Dans l’onglet Survol, « Film automatique » propose trois gabarits (Reel 30 s, Résumé 1 min, Souvenir 3 min) : durée, caméra, titres, cartes et format d’export se règlent d’un coup, et tout reste modifiable ensuite.',
+  // --- 4.0
+  'v40.snow.title': 'Neige selon la date',
+  'v40.snow.text': 'Au-dessus d’une limite calculée d’après la météo du jour (neige au sol et température), le terrain devient blanc, avec une limite irrégulière et la roche sur les pentes raides. Réglable à la main ou désactivable dans Météo › Neige.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Des forêts en 3D',
+  'v40.forests.text': 'Les arbres sortent du sol là où OpenStreetMap a des forêts : les vallées boisées ne sont plus plates. Réglages dans Carte, section « Fond de carte » : « Forêts » et « Densité des arbres ».',
   // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
   'v40.water.title': 'La mer et les ruisseaux apparaissent',
   'v40.water.text': 'Le long d’une côte, la mer est maintenant dessinée. Les rivières et les ruisseaux que la carte ne trace que comme une ligne deviennent de fins rubans d’eau. Tout se règle avec « Eau reflétante (mer, lacs et rivières) », dans l’onglet Carte, section Fond de carte.',

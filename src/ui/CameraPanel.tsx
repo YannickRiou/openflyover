@@ -25,6 +25,7 @@ import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
 import { Button, Checkbox, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
+import { AutoFilmSection } from './AutoFilmDialog'
 
 /** « Mettre en avant la région »: what it does, then how the search for the region went (found: after its name). */
 const REGION_HINTS: Record<RegionStatus, string> = {
@@ -261,6 +262,7 @@ export function CameraPanel() {
 
   return (
     <>
+      <AutoFilmSection />
       <PanelSection title={t('camera.panel.camera')} keys={['camera']}>
         <fieldset className="field min-w-0">
           <legend id={`${id}-preset`} className="type-label mb-1">

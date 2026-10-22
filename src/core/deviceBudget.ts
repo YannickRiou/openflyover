@@ -46,6 +46,8 @@ export interface DeviceBudget {
   exportPrefetchAhead: readonly number[]
   /** texels per side of the relief's shadow map (memory grows with its square: estimated ~128 MB at 4096², ~32 MB at 2048²) */
   shadowMapSize: number
+  /** most trees the forests place (scene/forestPoints.ts): one instance each, ~30 triangles, drawn only near the camera */
+  maxTrees: number
 }
 
 export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
@@ -67,6 +69,7 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   exportTileKeepFrames: 0,
   exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
   shadowMapSize: 4096,
+  maxTrees: 250_000,
 }
 
 const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'maxTileLoads'> = {
@@ -80,6 +83,7 @@ const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodH
   seaRender: 'surface',
   // a quarter of the computer's memory; the map is refitted to the view every frame and a phone screen is small
   shadowMapSize: 2048,
+  maxTrees: 60_000,
   // counted in film frames, not seconds: a phone renders a few frames a second, 30 s of wall time hold hundreds of them
   exportTileKeepFrames: 6,
   exportPrefetchAhead: [5, 10, 20],
@@ -118,7 +122,7 @@ export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits
     maxTileLoads: phone ? 6 : 12,
   }
   if (memoryGb !== undefined && memoryGb <= LOW_MEMORY_GB) {
-    return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024, maxResidentTiles: 90 }
+    return { ...budget, maxPixelRatio: 1.5, movingPixelRatio: 1, tileBitmaps: 120, heightGrids: 100, shadowMapSize: 1024, maxResidentTiles: 90, maxTrees: 30_000 }
   }
   return budget
 }
