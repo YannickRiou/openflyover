@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { t } from '../i18n'
 import { platformPresetOf } from '../export/schedule'
 import { FLYOVER_DURATION_RANGE, findCameraPreset } from '../flyover/cameraSettings'
+import { CARD_FADE_OUT } from '../overlay/draw'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
 import { sanitizeSettings } from '../project/document'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
-import { AUTO_FILM_IDS, AUTO_FILM_LABELS, AUTO_FILM_TEMPLATES, autoFilmSettings } from './autoFilm'
+import { AUTO_FILM_IDS, AUTO_FILM_LABELS, AUTO_FILM_TEMPLATES, autoFilmFacts, autoFilmSettings } from './autoFilm'
 import { junctionCardOf } from './junctions'
 import { DEFAULT_FILM } from './model'
 
@@ -34,10 +36,10 @@ describe('autoFilmSettings', () => {
     expect(souvenir.overlay.counters.enabled).toBe(true)
   })
 
-  it('keeps the cards a few seconds past the shots, whatever the length', () => {
+  it('keeps the cards fully readable a few seconds past the shots, whatever the length', () => {
     for (const id of AUTO_FILM_IDS) {
       const s = autoFilmSettings(DEFAULT_SETTINGS, id, single)
-      expect(Math.abs(s.overlay.title.end * s.flyoverDurationS - 3)).toBeLessThan(0.05)
+      expect(Math.abs((s.overlay.title.end - CARD_FADE_OUT) * s.flyoverDurationS - 3)).toBeLessThan(0.05)
       expect(Math.abs((1 - s.overlay.end.start) * s.flyoverDurationS - 3)).toBeLessThan(0.05)
     }
   })
@@ -111,6 +113,25 @@ describe('autoFilmSettings', () => {
       for (const context of [single, { days: 3, stages: false }, { days: 0, stages: true }]) {
         const settings = autoFilmSettings(DEFAULT_SETTINGS, id, context)
         expect(sanitizeSettings(settings).invalid).toEqual([])
+      }
+    }
+  })
+})
+
+describe('autoFilmFacts', () => {
+  it('lists the short facts that match what the gabarit sets', () => {
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.reel).map((f) => f.key)).toEqual(['titleEnd', 'noStops'])
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.reel)[0].values).toEqual({ figures: 3 })
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.resume).map((f) => f.key)).toEqual(['titleEnd', 'stops', 'countersCards'])
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.souvenir).map((f) => f.key)).toEqual(['titleEnd', 'stopsSlow', 'countersCards'])
+  })
+
+  it('has a string in every language for each fact', () => {
+    for (const id of AUTO_FILM_IDS) {
+      for (const { key, values } of autoFilmFacts(AUTO_FILM_TEMPLATES[id])) {
+        const text = t(`film.auto.fact.${key}`, values)
+        expect(text).not.toBe('')
+        expect(text).not.toContain('{')
       }
     }
   })

@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Agua reflectante: el mar y los ríos trazados como líneas (4.0)
   'v40.water.title': 'Aparecen el mar y los arroyos',
   'v40.water.text': 'A lo largo de una costa, ahora se dibuja el mar. Los ríos y arroyos que el mapa solo traza como una línea se convierten en finas cintas de agua. Todo se ajusta con «Agua reflectante (mar, lagos y ríos)», en la pestaña Mapa, sección Fondo de mapa.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Plantillas más claras',
+  'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
 }
 
 export default messages

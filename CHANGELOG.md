@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.1.0 (unreleased)
+
+- **The three gabarits of « Film automatique » are cards you can read at a glance**: « Reel 30 s », « Résumé 1 min » and « Souvenir 3 min » each show their format (9:16 or 16:9), the length of the film as a big figure and three or four facts with an icon (the camera, the title and closing card, the stops and slow motion, the counters and cards). Choose a card, then « Appliquer ». One sentence says that everything stays editable and that « Annuler » reverts. On a phone the cards stack.
+- **Films that look better out of the box**: the closing card of « Souvenir 3 min » has four figures instead of five, the opening title no longer fades out slowly on a long film, and the gabarit now uses the pale cards of the « Application » style, readable over a forest and over snow where the thin letters of the old style were not.
+
 ## 4.0.0 (October 2026)
 
 - **A film in one click**: the « Survol » tab starts with « Film automatique ». Three gabarits, « Reel 30 s » (vertical, 30 s), « Résumé 1 min » and « Souvenir 3 min » (16:9), set in one step the length, camera, slow motion and stops, overlay style, opening title and closing card with their figures, day or stage cards and the export format. « Annuler » puts everything back, and everything stays editable. Your own texts and the stops you placed by hand are never replaced. No music is added.

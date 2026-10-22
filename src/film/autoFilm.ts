@@ -9,6 +9,7 @@ import { clamp } from '../core/math'
 import { withPlatformPreset } from '../export/schedule'
 import type { PlatformPresetId } from '../export/schedule'
 import { CAMERA_PRESETS } from '../flyover/cameraSettings'
+import { CARD_FADE_OUT } from '../overlay/draw'
 import { END_START_MAX, END_START_MIN, TITLE_END_MAX, TITLE_END_MIN, withStyleLayout } from '../overlay/settings'
 import type { CardFigure, OverlayStyleId } from '../overlay/settings'
 import type { Settings } from '../state/store'
@@ -44,7 +45,7 @@ export interface AutoFilmTemplate {
 export const AUTO_FILM_TEMPLATES: Record<AutoFilmId, AutoFilmTemplate> = {
   reel: { totalS: 30, openingS: 3, closingS: 3, platform: 'vertical', camera: 'fast-drone', style: 'app', counters: false, figures: ['distance', 'ascent', 'maxAltitude'], stops: false, slowMotion: false, cards: false },
   resume: { totalS: 60, openingS: 5, closingS: 5, platform: 'youtube', camera: 'helicopter', style: 'broadcast', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, slowMotion: false, cards: true },
-  souvenir: { totalS: 180, openingS: 6, closingS: 6, platform: 'youtube', camera: 'cinema', style: 'cinema', counters: true, figures: ['distance', 'ascent', 'descent', 'maxAltitude', 'time'], stops: true, slowMotion: true, cards: true },
+  souvenir: { totalS: 180, openingS: 6, closingS: 6, platform: 'youtube', camera: 'cinema', style: 'app', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, slowMotion: true, cards: true },
 }
 
 export const AUTO_FILM_LABELS: Record<AutoFilmId, string> = {
@@ -53,14 +54,19 @@ export const AUTO_FILM_LABELS: Record<AutoFilmId, string> = {
   get souvenir() { return t('film.auto.souvenir.name') },
 }
 
-/** One plain sentence on what the gabarit makes. */
-export const AUTO_FILM_HINTS: Record<AutoFilmId, string> = {
-  get reel() { return t('film.auto.reel.hint') },
-  get resume() { return t('film.auto.resume.hint') },
-  get souvenir() { return t('film.auto.souvenir.hint') },
+export type AutoFilmFact = 'titleEnd' | 'stops' | 'stopsSlow' | 'slow' | 'noStops' | 'cards' | 'counters' | 'countersCards'
+
+/**
+ * The short facts of a gabarit's card, in order (three at most; the camera comes first, from the dialog): `key` is the end of the string key `film.auto.fact.<key>`,
+ * `values` its figures.
+ */
+export function autoFilmFacts(tpl: AutoFilmTemplate): { key: AutoFilmFact; values?: { figures: number } }[] {
+  const stops: AutoFilmFact = tpl.stops ? (tpl.slowMotion ? 'stopsSlow' : 'stops') : tpl.slowMotion ? 'slow' : 'noStops'
+  const extras: AutoFilmFact | null = tpl.counters && tpl.cards ? 'countersCards' : tpl.cards ? 'cards' : tpl.counters ? 'counters' : null
+  return [{ key: 'titleEnd', values: { figures: tpl.figures.length } }, { key: stops }, ...(extras ? [{ key: extras }] : [])]
 }
 
-/** What the cards stay on screen after the opening and closing shots (seconds). */
+/** How long the cards stay fully readable after the opening and closing shots (seconds), the fade of the opening card coming on top of it. */
 const CARD_TAIL_S = 3
 const round3 = (v: number) => Math.round(v * 1000) / 1000
 
@@ -98,7 +104,7 @@ export function autoFilmSettings(settings: Settings, id: AutoFilmId, context: Au
   const overlay = {
     ...styled,
     enabled: true,
-    title: { ...styled.title, enabled: true, showDate: true, end: round3(clamp(CARD_TAIL_S / durationS, TITLE_END_MIN, TITLE_END_MAX)) },
+    title: { ...styled.title, enabled: true, showDate: true, end: round3(clamp(CARD_TAIL_S / durationS + CARD_FADE_OUT, TITLE_END_MIN, TITLE_END_MAX)) },
     end: { ...styled.end, enabled: true, figures: [...tpl.figures], start: round3(clamp(1 - CARD_TAIL_S / durationS, END_START_MIN, END_START_MAX)) },
     counters: { ...styled.counters, enabled: tpl.counters },
   }

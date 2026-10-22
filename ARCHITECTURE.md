@@ -1808,13 +1808,21 @@ The interface and the texts drawn into the films and posters exist in **French**
 ## Automatic film (« Film automatique »)
 
 - **What**: the first section of the « Survol » tab (`AutoFilmSection`, `src/ui/AutoFilmDialog.tsx`; the button is off without a
-  track) opens a dialog with three gabarits, each with its one-sentence description: « Reel 30 s » (9:16, 30 s, no stops,
-  closing card of three figures), « Résumé 1 min » (16:9, 60 s, stops, day or stage cards) and « Souvenir 3 min » (16:9, 3 min,
-  calm camera, slow motion on the climbs, counters). **No music.** A gabarit is a row of `AUTO_FILM_TEMPLATES`
+  track) opens a dialog with three gabarits shown as cards to choose from (radio cards, « Résumé 1 min » chosen at first; the card
+  chosen carries « Appliquer », the others only their facts): the format as a small outline of its proportions (« 9:16 Reels » /
+  « 16:9 YouTube »), the name, the total length as a big figure, then three or four facts with an icon (the camera preset, the
+  title and closing card, the stops and slow motion, the counters and cards; `autoFilmFacts`, strings `film.auto.fact.*`), each
+  card with an accent of the palette (`ACCENTS`). Above them one sentence: everything stays editable and « Annuler » reverts.
+  The cards stack under 760 px. « Reel 30 s » (9:16, 30 s, no stops, closing card of three figures, style `app`),
+  « Résumé 1 min » (16:9, 60 s, stops, counters, day or stage cards, `broadcast`) and « Souvenir 3 min » (16:9, 3 min, calm camera,
+  slow motion on the climbs, counters, `app`: a style with a panel stays readable on the forest and the snow, unlike the styles drawn
+  straight on the image). **No music.** A gabarit is a row of `AUTO_FILM_TEMPLATES`
   (`src/film/autoFilm.ts`): total length and the length of the opening and closing shots (`settings.flyoverDurationS` = total −
   the two shots, so the length announced is the film's, before the nights and the passages between stages), the platform preset of
   « Vidéo » › « Format » (`withPlatformPreset`: `vertical` or `youtube`), a camera preset (`CAMERA_PRESETS` id), the overlay style,
-  counters, the closing card's figures, stops, slow motion, cards.
+  counters, the closing card's figures (four at most: more crowds the card), stops, slow motion, cards. To judge a gabarit by eye,
+  `node e2e/gabarit-shots.mjs <dir> [reel,resume,souvenir]` loads the sample, applies each gabarit and saves frames spread over the
+  film (headless Chromium, software GPU; `OPENFLYOVER_CHROME`).
 - **Pure**: `autoFilmSettings(settings, id, { days, stages })` returns the settings with the gabarit applied, no store, no new
   setting, nothing persisted: the project keeps only what it already stores, so old projects open unchanged and a film made this
   way is an ordinary film. Slow motion: `pacing.enabled` with `climbs`, no `landmarks` (the stops cover them), `keepDuration` always on.
@@ -1831,7 +1839,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `getSettingsHistory().transaction`, `followFlightTiming` (texts and media attached to a stop follow the new duration), `setFreeFraming(false)`
   when the aspect changes (like a platform chip), then a message with « Annuler » that undoes only while nothing else has
   changed since. Applying it again replaces its own choices; the result is the same whichever gabarit came before.
-  Strings: `film.auto.*` (five languages), « Nouveautés » 4.0. Tests: `film/autoFilm.test.ts`, `ui/autoFilm.test.ts`,
+  Strings: `film.auto.*` (five languages), « Nouveautés » 4.0 and 4.1. Tests: `film/autoFilm.test.ts`, `ui/autoFilm.test.ts`,
   `ui/CameraPanel.test.tsx`.
 
 ## Project (phase 4)

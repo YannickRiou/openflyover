@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
   'v40.water.title': 'The sea and the streams appear',
   'v40.water.text': 'Along a coast, the sea is now drawn. Rivers and streams that the map only draws as a line become thin ribbons of water. Everything is set with “Reflective water (sea, lakes and rivers)”, in the Map tab, Map background section.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Clearer templates',
+  'v41.auto.text': 'In "Automatic film", each template is a card: format, film length, camera and what gets set, at a glance. Pick one, then "Apply"; "Undo" takes it back.',
 }
 
 export default messages

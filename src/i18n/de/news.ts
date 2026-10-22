@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
   'v40.water.title': 'Meer und Bäche erscheinen',
   'v40.water.text': 'Entlang einer Küste wird jetzt das Meer gezeichnet. Flüsse und Bäche, die die Karte nur als Linie zeigt, werden zu schmalen Wasserbändern. Alles wird mit „Spiegelndes Wasser (Meer, Seen und Flüsse)“ eingestellt, im Tab Karte, Abschnitt Hintergrundkarte.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Klarere Vorlagen',
+  'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
 }
 
 export default messages

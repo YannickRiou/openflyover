@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
   'v40.water.title': 'Compaiono il mare e i torrenti',
   'v40.water.text': 'Lungo una costa, il mare viene ora disegnato. I fiumi e i torrenti che la mappa traccia solo come una linea diventano sottili nastri d’acqua. Tutto si regola con «Acqua riflettente (mare, laghi e fiumi)», nella scheda Mappa, sezione Sfondo mappa.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Modelli più chiari',
+  'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',
 }
 
 export default messages

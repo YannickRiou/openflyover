@@ -109,4 +109,7 @@ export default {
   // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
   'v40.water.title': 'La mer et les ruisseaux apparaissent',
   'v40.water.text': 'Le long d’une côte, la mer est maintenant dessinée. Les rivières et les ruisseaux que la carte ne trace que comme une ligne deviennent de fins rubans d’eau. Tout se règle avec « Eau reflétante (mer, lacs et rivières) », dans l’onglet Carte, section Fond de carte.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Des gabarits plus clairs',
+  'v41.auto.text': 'Dans « Film automatique », chaque gabarit est une carte : format, durée du film, caméra et ce qui est réglé, d’un coup d’œil. Choisissez-en une, puis « Appliquer » ; « Annuler » revient en arrière.',
 }
