@@ -28,6 +28,7 @@ import type { WeatherSeries, WeatherSummary, WeatherWidgetData } from '../weathe
 import type { DayCard, OverlayTime, StageCard } from './draw'
 import type { DayFigures } from '../film/days'
 import { t } from '../i18n'
+import { formatList } from '../i18n/format'
 
 /** Samples of the overlay elevation profile over the track. */
 export const OVERLAY_PROFILE_SAMPLES = 240
@@ -452,23 +453,122 @@ export interface CreditSources {
   imagerySourceId: string
   /** the weather of the outing is loaded (Open-Meteo) */
   weather: boolean
-  /** OpenStreetMap data is shown (landmarks, water or region) */
+  /** OpenStreetMap data is shown (landmarks, water, forests, glaciers or region) */
   landmarks: boolean
   /** OpenStreetMap water (sea, lakes, rivers) is drawn: the credit then names it too */
   water?: boolean
+  /** OpenStreetMap forests are drawn */
+  forests?: boolean
+  /** OpenStreetMap glaciers are drawn */
+  glaciers?: boolean
+}
+
+/** One credit: its sentence and the page that states the attribution (for the description of a video). */
+export interface CreditEntry {
+  line: string
+  url: string
+}
+
+/** Attribution page of each source of `terrain/sources.ts` (as recorded in `docs/sources.md`). */
+const SOURCE_PAGES: Readonly<Record<string, string>> = {
+  mapterhorn: 'https://mapterhorn.com/attribution',
+  'aws-terrarium': 'https://registry.opendata.aws/terrain-tiles/',
+  'ign-ortho': 'https://cartes.gouv.fr/cgu',
+  'ign-plan': 'https://cartes.gouv.fr/cgu',
+  swisstopo: 'https://www.geo.admin.ch/en/general-terms-of-use-fsdi',
+  'swisstopo-carte': 'https://www.geo.admin.ch/en/general-terms-of-use-fsdi',
+  'arcgis-world-imagery': 'https://developers.arcgis.com/documentation/mapping-apis-and-services/deployment/basemap-attribution/',
+  'basemap-at': 'https://basemap.at/',
+  'gsi-photo': 'https://maps.gsi.go.jp/development/ichiran.html',
+  'usgs-imagery': 'https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits',
+  opentopomap: 'https://opentopomap.org/about',
+}
+const OSM_PAGE = 'https://www.openstreetmap.org/copyright'
+const OPEN_METEO_PAGE = 'https://open-meteo.com/en/licence'
+
+/** The OpenStreetMap credit, naming the layers drawn: « Repères, eau, forêts et glaciers : © contributeurs OpenStreetMap (ODbL) ». */
+function osmCreditLine({ water, forests, glaciers }: CreditSources): string {
+  const layers = [
+    t('overlay.draw.credits.layer.landmarks'),
+    ...(water ? [t('overlay.draw.credits.layer.water')] : []),
+    ...(forests ? [t('overlay.draw.credits.layer.forests')] : []),
+    ...(glaciers ? [t('overlay.draw.credits.layer.glaciers')] : []),
+  ]
+  return t('overlay.draw.credits.osm', { layers: formatList(layers), source: osmAttribution() })
 }
 
 /**
  * Credits of the sources in the film, the same strings as the status bar: relief and imagery always, Open-Meteo
- * and OpenStreetMap when their data is loaded.
+ * and OpenStreetMap when their data is loaded; each with its attribution page.
  */
-export function overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks, water }: CreditSources): string[] {
+export function creditEntries(sources: CreditSources): CreditEntry[] {
+  const terrain = getTerrainSource(sources.terrainSourceId)
+  const imagery = getImagerySource(sources.imagerySourceId)
   return [
-    t('overlay.draw.credits.relief', { source: getTerrainSource(terrainSourceId).attribution }),
-    t('overlay.draw.credits.imagery', { source: getImagerySource(imagerySourceId).attribution }),
-    ...(weather ? [openMeteoAttribution()] : []),
-    ...(landmarks ? [t(water ? 'overlay.draw.credits.landmarksAndWater' : 'overlay.draw.credits.landmarks', { source: osmAttribution() })] : []),
+    { line: t('overlay.draw.credits.relief', { source: terrain.attribution }), url: SOURCE_PAGES[terrain.id] ?? '' },
+    { line: t('overlay.draw.credits.imagery', { source: imagery.attribution }), url: SOURCE_PAGES[imagery.id] ?? '' },
+    ...(sources.weather ? [{ line: openMeteoAttribution(), url: OPEN_METEO_PAGE }] : []),
+    ...(sources.landmarks ? [{ line: osmCreditLine(sources), url: OSM_PAGE }] : []),
   ]
+}
+
+/** The full credits: one sentence per source. */
+export const overlayCredits = (sources: CreditSources): string[] => creditEntries(sources).map((entry) => entry.line)
+
+/** Short credit of Open-Meteo (CC BY 4.0: the name of the service; its link is in the description and the end credits). */
+export const OPEN_METEO_SHORT = 'Open-Meteo.com'
+const OSM_SHORT = '© OpenStreetMap'
+
+/** Sources whose terms ask for their credit to stay visible with the map, whatever is chosen for the film (Esri). */
+const PERMANENT_CREDIT: ReadonlySet<string> = new Set(['arcgis-world-imagery'])
+
+/** Short form of the credit of each source whose full attribution is longer than what its terms ask for in the film. */
+const SHORT_CREDITS: Readonly<Record<string, string>> = {
+  mapterhorn: '© Mapterhorn',
+  'aws-terrarium': 'Terrain Tiles (Mapzen / AWS)',
+  'ign-ortho': '© IGN',
+  'ign-plan': '© IGN',
+  swisstopo: '© swisstopo',
+  'swisstopo-carte': '© swisstopo',
+  'gsi-photo': 'Source: GSI Japan',
+  'usgs-imagery': 'USDA, USGS The National Map',
+  // CC BY-SA: the licence stays named; the map data are OpenStreetMap's and SRTM
+  opentopomap: `${OSM_SHORT}, SRTM · © OpenTopoMap (CC BY-SA)`,
+}
+
+/**
+ * Short form of the credits, for the film: the names of the holders only, imagery first (« © IGN · © Mapterhorn ·
+ * © OpenStreetMap · Open-Meteo.com »). A source whose terms ask for more keeps its attribution (Esri: « Powered by
+ * Esri » and the data providers); the full sentences close the film (`overlayCredits`).
+ */
+export function overlayShortCredits(sources: CreditSources): string[] {
+  const imagery = getImagerySource(sources.imagerySourceId)
+  const terrain = getTerrainSource(sources.terrainSourceId)
+  const items = [
+    SHORT_CREDITS[imagery.id] ?? imagery.attribution,
+    SHORT_CREDITS[terrain.id] ?? terrain.attribution,
+    ...(sources.landmarks ? [OSM_SHORT] : []),
+    ...(sources.weather ? [OPEN_METEO_SHORT] : []),
+  ]
+  // OpenTopoMap's credit already names OpenStreetMap
+  const namesOsm = items.some((item) => item.startsWith(`${OSM_SHORT},`))
+  return items.filter((item, i) => items.indexOf(item) === i && !(namesOsm && item === OSM_SHORT))
+}
+
+/** Short credits of the sources whose terms ask for a permanent credit on the map (`PERMANENT_CREDIT`): kept in the corner even with « À la fin seulement ». */
+export function overlayPermanentCredits(sources: CreditSources): string[] {
+  return [getImagerySource(sources.imagerySourceId), getTerrainSource(sources.terrainSourceId)]
+    .filter((source, i, all) => PERMANENT_CREDIT.has(source.id) && all.indexOf(source) === i)
+    .map((source) => SHORT_CREDITS[source.id] ?? source.attribution)
+}
+
+/**
+ * The credits as text to paste in the description of a video: each sentence, then the page that states it
+ * (OpenStreetMap and Mapterhorn ask for their page when the credit is in the end credits or the description).
+ */
+export function creditsDescription(sources: CreditSources): string {
+  const lines = creditEntries(sources).flatMap((entry) => (entry.url ? [entry.line, entry.url, ''] : [entry.line, '']))
+  return lines.join('\n').trimEnd()
 }
 
 /** One line of the ghost-race leaderboard. */

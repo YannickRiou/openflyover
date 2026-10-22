@@ -2,11 +2,9 @@ import { useEffect, useRef } from 'react'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useMusicPreview } from '../film/audio'
 import { getMediaBitmaps, mediaToLoad } from '../film/media'
-import { shotDipColor } from '../film/model'
 import type { FilmMedia } from '../film/model'
 import { clipRateAt } from '../film/timeline'
 import { getPreviewVideos } from '../film/video'
-import { playsInSequence } from '../flyover/sequence'
 import { useRegionStore } from '../osm/region'
 import { useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { useFilmClock } from '../scene/usePacing'
@@ -22,21 +20,12 @@ import { createOverlayFilmCache, overlayExtras, photoAssets } from './exportOver
  * Preview of the film overlay: a 2D canvas stacked over the 3D view, redrawn by `drawOverlay` on the next animation
  * frame after any change of what it reads (store subscriptions, no React render per frame). Video clips are video
  * elements playing along during the playback, seeked to the film time when scrubbing (none during an export, which
- * decodes its own frames). Rendered only while something is to draw (overlay or credits on, photos, clips, dips, stages,
- * a track colouring).
+ * decodes its own frames). Rendered while there is a track.
  * Frozen during an export (the progress changes every frame there, and the export composes its own overlay).
  */
 export function OverlayCanvas() {
-  const enabled = useAppStore(
-    (s) => {
-      const { overlay, film } = s.settings
-      const dips = shotDipColor(film.opening) !== null || shotDipColor(film.closing) !== null
-      const stages = playsInSequence(s.settings.race, s.tracks.length)
-      const legend = s.settings.trackColorBy !== 'none'
-      const cards = overlay.title.enabled || overlay.end.enabled || film.texts.length > 0
-      return (overlay.enabled || cards || overlay.credits.enabled || film.media.length > 0 || dips || stages || legend) && s.tracks.length > 0
-    },
-  )
+  // the full credits close every film: there is always something to draw
+  const enabled = useAppStore((s) => s.tracks.length > 0)
   return enabled ? <OverlayPreview /> : null
 }
 

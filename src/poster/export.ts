@@ -83,6 +83,8 @@ export function currentPosterContent(): PosterContent | null {
         hasOsmLandmarks(useLandmarkStore.getState().landmarks) ||
         (!settings.poster.flat && (useWaterStore.getState().polygons > 0 || useForestStore.getState().polygons > 0 || useGlacierStore.getState().polygons > 0)),
       water: !settings.poster.flat && useWaterStore.getState().polygons > 0,
+      forests: !settings.poster.flat && useForestStore.getState().polygons > 0,
+      glaciers: !settings.poster.flat && useGlacierStore.getState().polygons > 0,
     }),
   })
 }

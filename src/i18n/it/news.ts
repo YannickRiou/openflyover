@@ -123,6 +123,9 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Modelli più chiari',
   'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Crediti più discreti',
+  'v41.credits.text': 'In Overlay › Crediti delle fonti, scegli « Discreti » (il nome delle fonti in piccolo in un angolo, le menzioni complete alla fine del film), « Completi » o « Solo alla fine ». In Esporta, « Copia i crediti » dà il testo con i suoi link, da incollare nella descrizione del video.',
   // 4.2 — records of the outing
   'v42.records.title': 'I record della tua uscita',
   'v42.records.text': 'La salita più ripida, la discesa più veloce, il punto più alto, il chilometro più lento… In Mappa › Riferimenti, ogni record è un riferimento con la sua etichetta 3D e, per i tre principali (salita più ripida, punto più alto, discesa più veloce), una sosta automatica con la sua scheda. Si calcolano dalla traccia.',
