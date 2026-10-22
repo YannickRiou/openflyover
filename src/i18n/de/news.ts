@@ -123,6 +123,9 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Klarere Vorlagen',
   'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
+  // 4.2 — records of the outing
+  'v42.records.title': 'Die Rekorde Ihrer Tour',
+  'v42.records.text': 'Der steilste Anstieg, die schnellste Abfahrt, der höchste Punkt, der langsamste Kilometer… In Karte › Landmarken ist jeder Rekord eine Landmarke mit 3D-Etikett und, wenn Sie ihn angezeigt lassen, einem automatischen Stopp mit seiner Karte. Sie werden aus der Spur berechnet.',
 }
 
 export default messages

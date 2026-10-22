@@ -15,8 +15,10 @@ import {
   parseEle,
   parsePopulation,
   pathBoxDistanceM,
+  RECORD_SUMMIT_M,
   placeSizeOf,
   projectOnPath,
+  recordLandmarks,
   splitHidden,
   withLandmarkDefaults,
   withMode,
@@ -437,5 +439,42 @@ describe('withMode / landmarkMode / newLandmarkIds', () => {
   it('the landmarks listed and not seen are new, none before the first choice', () => {
     expect(newLandmarkIds(settings, ['node/1', 'node/2'])).toEqual(new Set())
     expect(newLandmarkIds({ seenIds: ['node/1'] }, ['node/1', 'node/2'])).toEqual(new Set(['node/2']))
+  })
+})
+
+describe('recordLandmarks', () => {
+  const M = (6371008.8 * Math.PI) / 180
+  /** 3 km north, climbing 100 m between 1 km and 2 km (10 %): a steepest climb and a highest point. */
+  const hilly = buildTrack({
+    name: 'h',
+    source: 'gpx',
+    segments: [
+      { points: Array.from({ length: 301 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 10) / M, ele: 1000 + Math.min(100, Math.max(0, i * 10 - 1000) / 10) })) },
+    ],
+  })
+
+  it('lists the records of the track as landmarks at the track, ordered along it, with a language-following text', () => {
+    const list = recordLandmarks(hilly, [])
+    expect(list.map((l) => l.id)).toEqual([`record:${hilly.id}:steepestClimb`, `record:${hilly.id}:highest`])
+    expect(list.every((l) => l.kind === 'record' && l.distanceM === 0)).toBe(true)
+    expect(list[0].alongM).toBeLessThan(list[1].alongM)
+    expect(list[0].text).toMatch(/^Montée la plus raide · /)
+    expect(list[1]).toMatchObject({ name: expect.stringMatching(/^Point le plus haut · 1\D100 m$/), ele: expect.any(Number) })
+    // nothing for a flat track
+    expect(recordLandmarks(TRACK, [])).toEqual([])
+  })
+
+  it('leaves the highest point out when a summit of the landmarks is there', () => {
+    const top = recordLandmarks(hilly, []).find((l) => l.id.endsWith(':highest'))!
+    const summit = (dLat: number): Landmark => ({ id: 'node/9', kind: 'peak', name: 'Cime', lon: top.lon, lat: top.lat + dLat, distanceM: 0, alongM: top.alongM, priority: 30, text: 'Cime' })
+    const near = recordLandmarks(hilly, [summit((RECORD_SUMMIT_M - 20) / M)])
+    expect(near.map((l) => l.id)).toEqual([`record:${hilly.id}:steepestClimb`])
+    expect(recordLandmarks(hilly, [summit((RECORD_SUMMIT_M + 50) / M)])).toHaveLength(2)
+  })
+
+  it('draws the label of a record with the trophy, and pinned ones win like any landmark', () => {
+    const [steep] = recordLandmarks(hilly, [])
+    const [label] = landmarkLabels([[steep]], 40, [steep.id])
+    expect(label).toMatchObject({ id: `osm:${steep.id}`, kind: 'poi', icon: 'trophee', priority: steep.priority + PINNED_LABEL_BOOST })
   })
 })

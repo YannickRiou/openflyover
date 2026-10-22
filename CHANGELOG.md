@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.2.0 (unreleased)
+
+- **Records of the outing**: « Carte › Repères et points d'intérêt » now lists the feats of the track: the steepest climb (« 18 % sur 400 m »), the fastest descent (from 8 km/h), the highest point (unless it is a summit already listed) and the lowest one, the fastest and slowest kilometre (timed tracks), the longest climb (from two climbs) and the peak heart rate and power. Computed from the points of the track only (smoothed elevations, moving time, GPS jumps over 150 km/h ignored), none under 1 km, and the figures corrected by hand do not change them. Each record is a landmark like the others (trophy label in the 3D view, Auto / Toujours / Jamais, ranking, « Arrêt »), shown by default, so « Arrêts automatiques » stops there with a card showing the record and its value; films saved with the pauses of the former pacing keep their pauses. The trophy is also offered as a pictogram of the points of interest. The OpenStreetMap credit no longer shows for records alone. « Nouveautés » presents them.
+
 ## 4.1.0 (unreleased)
 
 - **Timeline ruler**: the ruler now ends with the film. The last time label (« 0:30 ») used to stick out to the right of the closing card and a scrollbar appeared although every block was already in view; the label now sits inside the film's end and the scrollbar only shows when you zoom in.

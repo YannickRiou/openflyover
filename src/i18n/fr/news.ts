@@ -121,4 +121,7 @@ export default {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Des gabarits plus clairs',
   'v41.auto.text': 'Dans « Film automatique », chaque gabarit est une carte : format, durée du film, caméra et ce qui est réglé, d’un coup d’œil. Choisissez-en une, puis « Appliquer » ; « Annuler » revient en arrière.',
+  // 4.2 — records of the outing
+  'v42.records.title': 'Les records de la sortie',
+  'v42.records.text': 'La montée la plus raide, la descente la plus rapide, le point le plus haut, le kilomètre le plus lent… Dans Carte › Repères, chaque record est un repère, avec son étiquette en 3D et, si vous le laissez affiché, un arrêt automatique avec sa carte. Ils sont calculés d’après la trace.',
 }

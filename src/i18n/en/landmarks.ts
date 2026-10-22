@@ -126,6 +126,22 @@ const messages: Messages['landmarks'] = {
   poiDefaultName: 'Point of interest',
   poiAdd: 'Point of interest at the marker',
   poiHint: 'Your own places, also by right-clicking the terrain.',
+  // --- 4.2.0: records of the outing ---
+  'badge.record': 'Record',
+  'poiIcon.trophee': 'Trophy',
+  'record.over': '{value} over {length}',
+  'record.climb': '{length} at {gradient}',
+  'record.steepestClimb': 'Steepest climb',
+  'record.fastestDescent': 'Fastest descent',
+  'record.highest': 'Highest point',
+  'record.lowest': 'Lowest point',
+  'record.fastestKm': 'Fastest kilometre',
+  'record.slowestKm': 'Slowest kilometre',
+  'record.longestClimb': 'Longest climb',
+  'record.maxHeartRate': 'Peak heart rate',
+  'record.maxPower': 'Peak power',
+  hintRecords: 'Records are the feats of the outing (steepest climb, fastest descent, highest point…): they are computed from the track itself, and correcting the figures by hand does not change them.',
+  metaRecord: 'km {km}',
 }
 
 export default messages

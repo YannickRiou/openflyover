@@ -42,6 +42,22 @@ const landmarks = [
   landmark('peak', 'Aiguille', 2000, 900),
 ]
 
+describe('records of the outing', () => {
+  const record: Landmark = { ...landmark('record' as Landmark['kind'], 'Montée la plus raide · 18 % sur 400 m', 2000, 0), id: 'record:t:steepestClimb' }
+
+  it('are stops like the passes and summits, with the record as label and source', () => {
+    expect(stopCandidates({ track, landmarks: [landmarks[0], record] })).toEqual([
+      { atM: 1500, label: 'Col de Voza', source: { kind: 'landmark', ref: 'node/1500' } },
+      { atM: 2000, label: 'Montée la plus raide · 18 % sur 400 m', source: { kind: 'landmark', ref: 'record:t:steepestClimb' } },
+    ])
+    expect(autoStops({ track, landmarks: [record], pacing: DEFAULT_PACING }, 'temps-forts').map((s) => s.label)).toEqual(['Montée la plus raide · 18 % sur 400 m'])
+  })
+
+  it('do not add pauses to a film saved before the timeline', () => {
+    expect(autoStops({ track, landmarks: [record], pacing: ON }, 'rythme').map((s) => s.label?.slice(0, 8))).toEqual(['Montée 1'])
+  })
+})
+
 describe('autoStops (rythme: films saved before the timeline)', () => {
   it('none with the default pacing (off) or without pause', () => {
     expect(autoStops({ track, landmarks, pacing: DEFAULT_PACING }, 'rythme')).toEqual([])

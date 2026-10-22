@@ -123,6 +123,9 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Modelli più chiari',
   'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',
+  // 4.2 — records of the outing
+  'v42.records.title': 'I record della tua uscita',
+  'v42.records.text': 'La salita più ripida, la discesa più veloce, il punto più alto, il chilometro più lento… In Mappa › Riferimenti, ogni record è un riferimento con la sua etichetta 3D e, se lo lasci visibile, una sosta automatica con la sua scheda. Si calcolano dalla traccia.',
 }
 
 export default messages

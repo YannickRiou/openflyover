@@ -43,13 +43,14 @@ function climbCandidates({ track, pacing }: AssembleInput): StopCandidate[] {
 }
 
 /**
- * Where the film offers a stop by itself, by position: the passes crossed and the peaks nearby among the landmarks
- * shown (Carte › Repères). Not the climb tops: stops come from the landmarks, the points of interest and the timeline.
+ * Where the film offers a stop by itself, by position: the passes crossed, the peaks nearby and the records of the
+ * outing (`withRecords`) among the landmarks shown (Carte › Repères). Not the climb tops: stops come from the landmarks,
+ * the points of interest and the timeline.
  */
-export function stopCandidates({ track, landmarks = [] }: Pick<AssembleInput, 'track' | 'landmarks'>): StopCandidate[] {
+export function stopCandidates({ track, landmarks = [] }: Pick<AssembleInput, 'track' | 'landmarks'>, withRecords = true): StopCandidate[] {
   const L = track.stats.distanceM
   return landmarks
-    .filter(isHighlightLandmark)
+    .filter((l) => isHighlightLandmark(l) || (withRecords && l.kind === 'record'))
     .map((l): StopCandidate => ({ atM: Math.min(L, Math.max(0, l.alongM)), label: l.name, source: { kind: 'landmark', ref: l.id } }))
     .sort((a, b) => a.atM - b.atM)
 }
@@ -92,14 +93,14 @@ export const AUTO_STOP_GROUP_M = DEFAULT_PACING.windowM
  * Stops at the highlights, one per cluster (like the pauses they replace): 'temps-forts' at the `stopCandidates`
  * (whatever the pacing), grouped within `groupM` (`Film.autoStopGroupM`), `AUTO_STOP_S` each, camera orbiting; 'rythme'
  * at the highlights of the pacing (climb tops included, landmarks with `pacing.landmarks`) only while it is on, grouped
- * within `pacing.windowM`, `pauseS` each, camera as in the film (as these pauses were).
+ * within `pacing.windowM`, `pauseS` each, camera as in the film (as these pauses were; without the records, which did not exist).
  */
 export function autoStops(input: AssembleInput, mode: AutoStopMode, groupM = AUTO_STOP_GROUP_M): FilmStop[] {
   const { track, pacing } = input
   const legacy = mode === 'rythme'
   if (!(track.stats.distanceM > 0) || (legacy && (!pacing.enabled || !(pacing.pauseS > 0)))) return []
   const candidates = legacy
-    ? [...climbCandidates(input), ...(pacing.landmarks ? stopCandidates(input) : [])].sort((a, b) => a.atM - b.atM)
+    ? [...climbCandidates(input), ...(pacing.landmarks ? stopCandidates(input, false) : [])].sort((a, b) => a.atM - b.atM)
     : stopCandidates(input)
   const positions = [...new Set(candidates.map((c) => c.atM))]
   return pausePositions(positions, legacy ? pacing.windowM : groupM).map((atM) => {
