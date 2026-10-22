@@ -33,6 +33,7 @@ import type { AppState, Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { isImageryDate } from '../terrain/imageryDates'
 import { isValidClouds, withCloudDefaults } from '../weather/sceneClouds'
+import { isValidSnow } from '../weather/snowLine'
 import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
 
@@ -133,6 +134,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   weatherScene: (v) => v.strength >= 0 && v.strength <= 1,
   clouds: isValidClouds,
   water: (v) => v.strength >= 0 && v.strength <= 1,
+  snow: isValidSnow,
   trackColorBy: (v) => (TRACK_COLOR_MODES as readonly string[]).includes(v),
   trackLegendAnchor: (v) => (OVERLAY_ANCHORS as readonly string[]).includes(v),
   overlay: isValidOverlay,

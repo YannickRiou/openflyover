@@ -159,6 +159,20 @@ const messages: Messages['light'] = {
   'atmosphere.sun': 'Sole',
   'atmosphere.sunOff': 'Attiva l’atmosfera (sezione precedente) per impostare l’ora del sole.',
   'map.imageryDetailHint': 'Più fine: foto più nitide, ma più tessere da caricare (anteprima, export e pacchetto offline più lunghi).',
+  // --- Neve (Meteo › Neve)
+  'weather.snow': 'Neve',
+  'snow.mode.meteo': 'Secondo il meteo del giorno',
+  'snow.mode.manuelle': 'Manuale',
+  'snow.mode.aucune': 'Nessuna',
+  'snow.line': 'Limite della neve',
+  'snow.hintWeather': 'Neve sopra {altitude} m (meteo del giorno di partenza).',
+  'snow.hintManual': 'Neve sopra {altitude} m, qualunque sia il meteo.',
+  'snow.hintNone': 'Nessuna neve: il terreno resta come nella foto.',
+  'snow.hintOff': 'Nessuna neve: il meteo del giorno è disattivato (casella « Meteo del giorno dell’uscita », più sopra).',
+  'snow.hintWaiting': 'Nessuna neve: il meteo del giorno non è caricato (vedi il messaggio qui sopra).',
+  'snow.hintNoSnow': 'Nessuna neve quel giorno: il meteo non segnala né neve al suolo né nevicate all’altitudine della traccia.',
+  'snow.rule': 'Il limite è l’altitudine in cui la temperatura media del giorno raggiunge 0 °C (6,5 °C in meno ogni 1 000 m), solo se c’è neve al suolo o che cade quel giorno. I pendii molto ripidi restano roccia. Una traccia senza altitudine non ha neve.',
+  'snow.sequenceNote': 'Con « In sequenza », ogni tappa segue il proprio meteo; la frase qui sopra descrive l’inizio della prima traccia.',
 }
 
 export default messages

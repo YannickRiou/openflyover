@@ -159,6 +159,20 @@ const messages: Messages['light'] = {
   'atmosphere.sun': 'Sol',
   'atmosphere.sunOff': 'Activa la atmósfera (sección anterior) para ajustar la hora del sol.',
   'map.imageryDetailHint': 'Más fino: fotos más nítidas, pero más teselas que cargar (vista previa, exportación y paquete sin conexión más largos).',
+  // --- Nieve (Meteo › Nieve)
+  'weather.snow': 'Nieve',
+  'snow.mode.meteo': 'Según el tiempo del día',
+  'snow.mode.manuelle': 'Manual',
+  'snow.mode.aucune': 'Ninguna',
+  'snow.line': 'Límite de la nieve',
+  'snow.hintWeather': 'Nieve por encima de {altitude} m (tiempo del día de salida).',
+  'snow.hintManual': 'Nieve por encima de {altitude} m, sea cual sea el tiempo.',
+  'snow.hintNone': 'Sin nieve: el suelo queda como en la foto.',
+  'snow.hintOff': 'Sin nieve: el tiempo del día está desactivado (casilla « Meteorología del día de la salida », más arriba).',
+  'snow.hintWaiting': 'Sin nieve: el tiempo del día no está cargado (vea el mensaje de más arriba).',
+  'snow.hintNoSnow': 'Sin nieve ese día: el tiempo no indica ni nieve en el suelo ni nevada a la altitud del track.',
+  'snow.rule': 'El límite es la altitud a la que la temperatura media del día llega a 0 °C (6,5 °C menos cada 1 000 m), solo si hay nieve en el suelo o cayendo ese día. Las pendientes muy empinadas se quedan en roca. Un track sin altitud no tiene nieve.',
+  'snow.sequenceNote': 'Con « En secuencia », cada etapa sigue su propio tiempo; la frase de arriba describe el inicio del primer track.',
 }
 
 export default messages

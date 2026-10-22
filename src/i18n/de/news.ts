@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Der Himmel folgt dem Wetter jedes durchquerten Gebiets, und Wolken werfen Schatten auf das Gelände.',
   'v20.interface.title': 'Eine neu gestaltete Oberfläche',
   'v20.interface.text': 'Neues Aussehen für Bereiche, Menüs, Schaltflächen und Fenster, mit denselben Funktionen wie zuvor.',
+  // --- 4.0
+  'v40.snow.title': 'Schnee je nach Datum',
+  'v40.snow.text': 'Oberhalb einer Grenze, die aus dem Wetter des Tages berechnet wird (Schnee am Boden und Temperatur), wird das Gelände weiß – mit unregelmäßigem Rand und Fels an steilen Hängen. Von Hand einstellbar oder abschaltbar unter Wetter › Schnee.',
 }
 
 export default messages

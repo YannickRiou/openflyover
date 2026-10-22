@@ -46,6 +46,7 @@ function archiveBody(places: number, startDay: string, days: number, temperature
       precipitation: column(0),
       rain: column(0),
       snowfall: column(0),
+      snow_depth: column(0),
       cloud_cover: column(40),
       cloud_cover_low: column(10),
       cloud_cover_mid: column(20),
@@ -146,6 +147,7 @@ describe('buildArchiveUrl', () => {
     expect(url.searchParams.get('start_date')).toBe('2025-07-12')
     expect(url.searchParams.get('end_date')).toBe('2025-07-13')
     expect(url.searchParams.get('hourly')).toContain('weather_code')
+    expect(url.searchParams.get('hourly')).toContain('snow_depth')
     expect(new URL(buildArchiveUrl([{ lon: 6.8, lat: 45.89 }], '2025-07-12', '2025-07-12')).searchParams.has('elevation')).toBe(false)
   })
 
@@ -292,6 +294,15 @@ describe('createWeatherCache', () => {
     await Promise.resolve()
     const stored = JSON.parse(storage.getItem('openflyover.weather.v1')!) as Record<string, unknown>
     expect(Object.keys(stored)).toEqual(['45.90,6.80,@2025-07-11', '45.90,6.80,@2025-07-12'])
+  })
+
+  it('fetches a day stored before the snow depth was kept again', () => {
+    const storage = memoryStorage()
+    const { snowDepth: _dropped, ...before } = day
+    storage.setItem('openflyover.weather.v1', JSON.stringify({ old: { at: 1, day: before }, current: { at: 1, day } }))
+    const cache = createWeatherCache(storage)
+    expect(cache.get('old')).toBeUndefined()
+    expect(cache.get('current')).toEqual(day)
   })
 
   it('persists in the platform storage by default, under the localStorage key of before', async () => {

@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'El cielo sigue el tiempo de cada zona atravesada, y las nubes proyectan sombras sobre el relieve.',
   'v20.interface.title': 'Una interfaz rediseñada',
   'v20.interface.text': 'Nuevo aspecto de paneles, menús, botones y ventanas, con las mismas funciones que antes.',
+  // --- 4.0
+  'v40.snow.title': 'Nieve según la fecha',
+  'v40.snow.text': 'Por encima de un límite calculado a partir del tiempo del día (nieve en el suelo y temperatura), el terreno se vuelve blanco, con un borde irregular y roca en las pendientes empinadas. Se ajusta a mano o se desactiva en Meteo › Nieve.',
 }
 
 export default messages

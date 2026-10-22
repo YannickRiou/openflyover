@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'The sky follows the weather of each area crossed, and clouds cast shadows on the terrain.',
   'v20.interface.title': 'A redesigned interface',
   'v20.interface.text': 'A new look for the panels, menus, buttons and windows, with the same functions as before.',
+  // --- 4.0
+  'v40.snow.title': 'Snow that follows the date',
+  'v40.snow.text': 'Above a line computed from the weather of the day (snow on the ground and temperature), the terrain turns white, with a ragged limit and bare rock on the steep slopes. Set it by hand or turn it off in Weather › Snow.',
 }
 
 export default messages

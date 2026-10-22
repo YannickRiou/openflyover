@@ -24,6 +24,7 @@ const API_VARIABLES: Record<WeatherVariable, string> = {
   precipitation: 'precipitation',
   rain: 'rain',
   snowfall: 'snowfall',
+  snowDepth: 'snow_depth',
   cloudCover: 'cloud_cover',
   cloudCoverLow: 'cloud_cover_low',
   cloudCoverMid: 'cloud_cover_mid',
@@ -295,7 +296,8 @@ export function createWeatherCache(storage: CacheStorage | null = platformStorag
       const hit = memory.get(key)
       if (hit) return hit
       const entry = load()[key]
-      if (!entry?.day) return undefined
+      // a day stored before a variable was added (`snowDepth`) is fetched again
+      if (!entry?.day || WEATHER_VARIABLES.some((v) => !Array.isArray(entry.day[v]))) return undefined
       memory.set(key, entry.day)
       // last use, for the eviction (written with the next save)
       entry.at = Date.now()

@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Il cielo segue il meteo di ogni zona attraversata e le nuvole proiettano ombre sul rilievo.',
   'v20.interface.title': 'Un’interfaccia ridisegnata',
   'v20.interface.text': 'Nuovo aspetto per pannelli, menu, pulsanti e finestre, con le stesse funzioni di prima.',
+  // --- 4.0
+  'v40.snow.title': 'Neve secondo la data',
+  'v40.snow.text': 'Sopra un limite calcolato dal meteo del giorno (neve al suolo e temperatura), il terreno diventa bianco, con un bordo irregolare e roccia sui pendii ripidi. Si regola a mano o si disattiva in Meteo › Neve.',
 }
 
 export default messages

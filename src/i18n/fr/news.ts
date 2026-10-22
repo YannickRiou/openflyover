@@ -93,4 +93,7 @@ export default {
   'v21.weather.text': 'Le ciel suit la météo de chaque zone traversée, et les nuages font de l’ombre sur le relief.',
   'v20.interface.title': 'Une interface repensée',
   'v20.interface.text': 'Nouvelle présentation des panneaux, des menus, des boutons et des fenêtres, avec les mêmes fonctions qu’avant.',
+  // --- 4.0
+  'v40.snow.title': 'Neige selon la date',
+  'v40.snow.text': 'Au-dessus d’une limite calculée d’après la météo du jour (neige au sol et température), le terrain devient blanc, avec une limite irrégulière et la roche sur les pentes raides. Réglable à la main ou désactivable dans Météo › Neige.',
 }

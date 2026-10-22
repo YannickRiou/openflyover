@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.0.0 (unreleased)
+
+- **Snow on the terrain according to the date** (new « Neige » section in the « Météo » tab): above a snow line computed from the weather of the day (snow on the ground, snowfall and mean temperature of Open-Meteo, 6.5 °C less every 1,000 m), the terrain turns white, with a ragged limit, the rock kept on the steep slopes and the photo faintly visible in the transition. « Selon la météo du jour » is the default and the panel says « Neige au-dessus de … m » or why there is none; « Manuelle » sets the line by hand (0 to 4,500 m); « Aucune » keeps the photo. With « À la suite », each stage follows its own weather. Older projects open with « Selon la météo du jour ».
+
 ## 3.3.2 (October 2026)
 
 - **Hiding several landmarks is quick**: in the « Choisir sur la carte et le profil » window, « Un clic sur un repère » chooses what a click does:

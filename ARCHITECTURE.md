@@ -71,7 +71,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/nights.ts` | nights of a multi-day track (see "Sun at the time of the outing") | `trackNights`, `flightNights`, `nightPauseS`, `TrackNight`, `FlightNight` |
 | `src/flyover/trackColor.ts` | track colored by a metric | `TRACK_COLOR_MODES`, `TrackColorBy`, `TRACK_METRICS` (label, unit, palette), `metricValues`, `trackMetricValues`, `hasMetric`, `robustRange`, `resampleValues`, `colorizeValues`, `VIRIDIS`, `MAGMA`, `MISSING_COLOR` |
 | `src/scene/exposure.ts` | exposure under the atmosphere | `DAYLIGHT_EXPOSURE`, `sunElevation`, `autoExposureEv`, `sceneExposure(elevation, ev)`, `nightFillIntensity` |
-| `src/weather/*` | weather of the outing (archive, or forecast for a planned outing) | `fetchOutingWeather(path, opts)`, `sampleLocations`, `outingDays` (source and days), `forecastCacheKey`, `createWeatherCache`, `WeatherError`, `openMeteoAttribution()`; `weatherAt(series, timeMs, lon, lat)`, `weatherAtTimes(series, timesMs, lon, lat)`, `weatherWidgetData(series, path, progress)`, `summarizeOuting`, `describeWeatherCode`, `windFromLabel`; `useWeatherStore`, `syncWeather` |
+| `src/weather/*` | weather of the outing (archive, or forecast for a planned outing) | `fetchOutingWeather(path, opts)`, `sampleLocations`, `outingDays` (source and days), `forecastCacheKey`, `createWeatherCache`, `WeatherError`, `openMeteoAttribution()`; `weatherAt(series, timeMs, lon, lat)`, `weatherAtTimes(series, timesMs, lon, lat)`, `weatherWidgetData(series, path, progress)`, `summarizeOuting`, `describeWeatherCode`, `windFromLabel`; `snowLineAt`, `snowLineAtProgress`, `resolveSnow` (snow line, `snowLine.ts`); `useWeatherStore`, `syncWeather` |
 | `src/plan/timing.ts` | estimated times of a planned outing (see "Planned outing") | `PLAN_ACTIVITIES`, `PLAN_ACTIVITY_LABELS`, `PACE_RANGE`, `OutingPlan`, `stretchHours`, `estimateElapsedS`, `withEstimatedTimes`, `withoutTimes`, `planActivityOf`, `localDepartureMs`, `localDayAndTime`, `localUtcOffsetMin` |
 | `src/osm/region.ts` + `src/scene/regionMesh.ts` + `src/scene/RegionHighlight.tsx` | administrative region of the outing, framed and highlighted by the region view (see "Film and timeline", Camera) | `regionName`, `regionCandidatesQuery`, `regionKind`, `REGION_KIND_LABELS`, `parseRegionCandidates`, `containingRegions`, `chooseRegion`, `candidateId`, `regionGeometryQuery`, `parseRegionGeometry`, `simplifyRings`, `fetchRegion`, `regionFrame`, `REGION_MIN_RATIO`, `REGION_MAX_POINTS`; `useRegionStore`, `syncRegion`, `holdRegion`; pure, tested: `buildRegionMesh`, `ringDepths`, `labelPoint`, `ringSegments`, `LABEL_GRID`; `RegionHighlight` |
 | `src/osm/*` | OpenStreetMap landmarks | `OVERPASS_ENDPOINTS`, `osmAttribution()`, `corridorBoxes`, `buildOverpassQuery`, `trackQuery`, `parseOverpass`, `runOverpassQuery`, `fetchTrackFeatures`; `parseEle`, `projectOnPath`, `landmarkPriority`, `landmarkText`, `buildLandmarks`, `landmarkLabels`, `splitHidden`, `DEFAULT_LANDMARK_SETTINGS`, `withLandmarkDefaults`, `withHidden`, `newLandmarkIds`, `PLACE_SIZES`, `PLACE_SIZE_LABELS`, `placeSizeOf`, `withPlaceSize`, `parsePopulation`, `pathBoxDistanceM`, `PLACE_SHARE`, `LANDMARK_DISTANCE_RANGE`, `KIND_LABELS`, `KIND_BADGES`; `useLandmarkStore`, `syncLandmarks`, `resetLandmarkStore` |
@@ -1925,7 +1925,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `visibility` is always null in the archive and is not requested.
 - **Cache**: per rounded location and UTC day, in memory then `getPlatform().storage` (`openflyover.weather.v1`, ≤ 300 location-days, LRU,
   every access inside try/catch); days less than 7 days old are not persisted because the archive revises them.
-- **Series** (`src/weather/series.ts`, pure): 13 hourly variables per location (NaN if missing). `weatherAt` interpolates
+- **Series** (`src/weather/series.ts`, pure): 14 hourly variables per location (NaN if missing; `snowDepth`, in metres, was added with « Neige »: a day stored before it is fetched again). `weatherAt` interpolates
   linearly in time and by inverse squared distance between locations (WMO code of the closest location, wind direction
   as a vector); hourly totals apply to the hour that ends. `weatherWidgetData(series, path, progress)` gives the
   conditions under the marker (recorded time via `recordedTimeAt`), `summarizeOuting` the summary weighted by real time.
@@ -2870,6 +2870,52 @@ exports) gets it from the terrain source of the settings.
   level); a very steep river keeps 60 m steps; only the 8 km corridor is queried; the "© contributeurs
   OpenStreetMap" credit (status bar and export) is still labelled "Repères" even when only water (`useWaterStore.polygons > 0`)
   calls for it.
+
+## Snow (« Neige »)
+
+Above a snow line computed from the weather of the day, the terrain turns white, so a winter outing no longer looks like the
+summer aerial photo. Settings in « Météo » › « Neige » (`settings.snow`).
+
+- **Data** (`src/weather/openMeteo.ts`): `snow_depth` (hourly, metres of snow on the ground) is one more hourly variable of the
+  request that already brings `temperature_2m` and `snowfall`: same request, archive or forecast, same cache (the persistent
+  entries are read back only when they hold every variable). Checked on both endpoints (`docs/sources.md`). The station's `ele`
+  (the recorded altitude of the track the values are downscaled to) is the altitude of the line; a track without altitude has
+  no station elevation and so no snow line.
+- **Model** (`src/weather/snowLine.ts`, pure, tested): for the UTC day of an instant, at the station nearest the marker,
+  `snowLineOfDay` takes the mean temperature `T` (≥ 12 valid hours), the deepest snow `D` and the snowfall total `F`.
+  `D = 0` and `F < 0.1 cm`: no snow (nothing says there is any, whatever the cold; missing data gives no snow too). Else the
+  line is the freezing level `E + T / 0.0065` (6.5 °C per 1000 m from the station elevation `E`); with `D ≥ 2 cm` the snow lies
+  at the station, so the line is the lower of the two. Clamped to 0–6000 m. The transition band is 150 m for a settled cover
+  (`D ≥ 20 cm`) and 300 m otherwise (patches, a fresh fall). `snowLineAt` memoises the result per station and day;
+  `snowLineAtProgress` reads the recorded time and position under the marker; `resolveSnow` picks the manual line
+  (« Manuelle », band 200 m), none (« Aucune ») or that of the weather.
+- **Shader** (`src/terrain/snowShader.ts`): `createMaterial` of the terrain engine calls `applySnow`, which extends the tile's
+  `MeshStandardMaterial` in `onBeforeCompile` (one shared program, `customProgramCacheKey`), the way the water does. The
+  vertex shader passes the world position and the cosine of the slope (normal · up); after `map_fragment` the fragment shader
+  blends a snow **albedo** (linear 0.80, 0.83, 0.88 × the luminance of the imagery, so its relief stays faintly visible) over
+  `diffuseColor` where the cover is above 0. Being albedo, the sun, the terrain shadows, the sky light (blue in the shade),
+  the exposure and the grading treat it as any ground, and the aerial perspective and the water layer are untouched. Cover =
+  `smoothstep` of the altitude across the band, the limit torn by a 3-octave hash noise of the world position (70, 25 and 9 m
+  cells, faded out where a cell is under ~2 pixels: no texture read, no shimmer), times `smoothstep(0.62, 0.85, slope cosine)`:
+  nothing beyond ~50° (the rock stays), all of it under ~32°. The altitude is `(y + r²/2R) / exaggeration` (`r` the distance to
+  the origin of the local frame, `R` the Earth radius: the flat local frame drops away from the ground by ~31 m at 25 km). With no
+  snow (`snowLine` = 10⁶ m) a uniform branch skips the whole block.
+- **Driver** (`src/scene/SnowLayer.tsx`, in `TerrainLayer`): each frame sets the shared uniforms `snowUniforms` (line, band,
+  exaggeration) from the settings, the track under the marker (`trackUnderMarker`, so each stage of « À la suite » follows its
+  own weather) and the weather store: a function of the film progress, so the export draws what the preview shows. A change
+  of the weather store or the setting wakes the on-demand renderer.
+- **Setting**: `settings.snow { mode: 'meteo' | 'manuelle' | 'aucune', lineM }` (`meteo`, 2000 m; `SETTING_CHECKS`: known mode,
+  0 ≤ line ≤ 4500). An old project has no `snow` key and opens with the default; the project format is unchanged. Part of the
+  « Carte » preset family. The panel (`SnowControl` in `SettingsPanel.tsx`) says what the weather gives at the start of the
+  first track (« Neige au-dessus de 1 400 m », rounded to 50 m) or why there is none (weather off, not loaded, no snow that day).
+  The manual line is not keyable on the timeline: keys are a closed list of parameters (`FILM_PARAMS`).
+- **Limits**: the snow depth is the model's (a ~9 km cell chosen near the requested elevation, 2 cm of snow is already
+  « snow at the station »); the mean temperature of the day hides night frost and afternoon thaw; one line for the whole view
+  (no difference between sunny and shaded slopes, no wind drift); permanent snow that the weather does not mention (glaciers in
+  summer) is not drawn; the panel describes the first track only; frozen lakes are white like the ground (the water layer
+  stays dark where it is drawn); not in the render history (`RenderSettings`).
+- **Tuning**: the physics constants are at the top of `snowLine.ts` (lapse rate, 2 cm and 20 cm thresholds, bands); the look
+  is in `snowShader.ts` (`fragmentSnow`: noise cell sizes, slope thresholds, albedo, 0.94 maximum cover).
 
 ## Ghost race (phase 7)
 
