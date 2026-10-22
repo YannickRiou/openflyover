@@ -18,7 +18,7 @@ const platform = vi.hoisted(() => ({
 }))
 vi.mock('../platform', async (original) => ({ ...(await original<object>()), getPlatform: () => platform }))
 
-const { chooseProjectToOpen, closeProject, newProject, openProject, reopenLastProject, saveProject, saveProjectAs } = await import('./projectActions')
+const { chooseProjectToOpen, closeProject, newProject, openProject, removeTrackOrCloseProject, reopenLastProject, saveProject, saveProjectAs } = await import('./projectActions')
 
 const rando = () =>
   buildTrack({
@@ -56,7 +56,7 @@ const rememberingPlatform = () =>
 beforeEach(() => {
   resetAppStore()
   useToastStore.setState({ toasts: [] })
-  useLibraryStore.setState({ currentId: null })
+  useLibraryStore.setState({ currentId: null, entries: [] })
   platform.saveDocument.mockReset()
   platform.openFiles.mockReset()
 })
@@ -330,6 +330,116 @@ describe('closeProject / newProject', () => {
     await newProject(answering('close'))
     expectEmpty()
     expect(platform.openFiles).toHaveBeenCalledWith({ filters: [{ name: 'Traces GPX ou FIT', extensions: ['gpx', 'fit'] }], multiple: true })
+    expect(toasts()).toEqual([])
+  })
+})
+
+describe('removeTrackOrCloseProject', () => {
+  const answering = (answer: CloseAnswer) => vi.fn(async () => answer)
+  const second = () => ({ ...rando(), id: 'second', name: 'Autre' })
+  const closed = () => {
+    const s = useAppStore.getState()
+    expect(s.tracks).toEqual([])
+    expect(s.settings).toEqual(DEFAULT_SETTINGS)
+    expect(s.projectName).toBe('')
+    expect(s.projectFile).toBeNull()
+    expect(dirty()).toBe(false)
+    expect(useLibraryStore.getState().currentId).toBeNull()
+    expect(useMediaStore.getState().table).toEqual({})
+  }
+
+  it('the last track of a saved project closes it without a question: nothing left to save when quitting', async () => {
+    await savedFile()
+    useAppStore.getState().setProjectFile({ fileName: 'Rando.opnflvr' })
+    useLibraryStore.setState({ currentId: 'p-1' })
+    useToastStore.setState({ toasts: [] })
+    const ask = answering('cancel')
+    await removeTrackOrCloseProject(useAppStore.getState().tracks[0].id, ask)
+    expect(ask).not.toHaveBeenCalled()
+    closed()
+    expect(toasts()).toEqual([{ kind: 'success', text: 'Projet « Rando » fermé' }])
+  })
+
+  it('a modified project asks first: « Annuler » keeps everything, « Fermer sans enregistrer » closes it', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const id = useAppStore.getState().tracks[0].id
+    const cancel = answering('cancel')
+    await removeTrackOrCloseProject(id, cancel)
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(useAppStore.getState().tracks).toHaveLength(1)
+    expect(useAppStore.getState().settings.exaggeration).toBe(2)
+    expect(dirty()).toBe(true)
+    expect(toasts()).toEqual([])
+
+    await removeTrackOrCloseProject(id, answering('close'))
+    closed()
+    expect(platform.saveDocument).not.toHaveBeenCalled()
+  })
+
+  it('« Annuler » in the message puts the track and the project back as they were', async () => {
+    await savedFile()
+    useAppStore.getState().setProjectFile({ fileName: 'Rando.opnflvr' })
+    useAppStore.getState().setSetting('exaggeration', 3)
+    useMediaStore.setState({ table: { 'photo-1': {} as MediaAsset } })
+    useLibraryStore.setState({ currentId: 'p-1', entries: [{ id: 'p-1' } as never] })
+    const before = useAppStore.getState()
+    const media = useMediaStore.getState().table
+    useToastStore.setState({ toasts: [] })
+    await removeTrackOrCloseProject(before.tracks[0].id, answering('close'))
+    closed()
+
+    const [toast] = useToastStore.getState().toasts
+    expect(toast.action?.label).toBe('Annuler')
+    toast.action!.run()
+    const after = useAppStore.getState()
+    expect(after.tracks).toBe(before.tracks)
+    expect(after.settings).toBe(before.settings)
+    expect(after.projectName).toBe('Rando')
+    expect(after.projectFile).toEqual({ fileName: 'Rando.opnflvr' })
+    expect(after.savedProject).toBe(before.savedProject)
+    expect(dirty()).toBe(true)
+    expect(useMediaStore.getState().table).toEqual(media)
+    expect(useLibraryStore.getState().currentId).toBe('p-1')
+    expect(getSettingsHistory().getState().canUndo).toBe(false)
+  })
+
+  it('a second click while the question is open asks nothing more; tracks that came meanwhile keep the project open', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const id = useAppStore.getState().tracks[0].id
+    let answer!: (a: CloseAnswer) => void
+    const ask = vi.fn(() => new Promise<CloseAnswer>((resolve) => (answer = resolve)))
+    const first = removeTrackOrCloseProject(id, ask)
+    await vi.waitFor(() => expect(ask).toHaveBeenCalledTimes(1))
+    await removeTrackOrCloseProject(id, ask)
+    expect(ask).toHaveBeenCalledTimes(1)
+    // an import arrives before the answer
+    useAppStore.getState().addTracks([second()])
+    answer('close')
+    await first
+    expect(useAppStore.getState().tracks).toHaveLength(2)
+    expect(toasts()).toEqual([])
+    expect(dirty()).toBe(true)
+  })
+
+  it('« Annuler » does not bring back an entry deleted from « Mes projets » meanwhile', async () => {
+    await savedFile()
+    useLibraryStore.setState({ currentId: 'p-1', entries: [{ id: 'p-1' } as never] })
+    await removeTrackOrCloseProject(useAppStore.getState().tracks[0].id, answering('close'))
+    useLibraryStore.setState({ entries: [] })
+    useToastStore.getState().toasts.at(-1)!.action!.run()
+    expect(useLibraryStore.getState().currentId).toBeNull()
+  })
+
+  it('a track that is not the last one just goes: the project stays open', async () => {
+    useAppStore.getState().addTracks([rando(), second()])
+    useAppStore.getState().setProjectName('Rando')
+    const ask = answering('cancel')
+    await removeTrackOrCloseProject('second', ask)
+    expect(ask).not.toHaveBeenCalled()
+    expect(useAppStore.getState().tracks).toHaveLength(1)
+    expect(useAppStore.getState().projectName).toBe('Rando')
     expect(toasts()).toEqual([])
   })
 })
