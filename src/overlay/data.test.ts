@@ -18,9 +18,12 @@ import {
   dayCardAt,
   leaderboardRows,
   miniMapOutline,
+  creditsDescription,
   overlayCredits,
+  overlayShortCredits,
   overlayFilmFrameAt,
   overlayFrameAt,
+  overlayPermanentCredits,
   prepareOverlayFilm,
   prepareOverlayTrack,
   STAGE_CARD_S,
@@ -194,10 +197,54 @@ describe('overlayCredits', () => {
       `Imagerie : ${getImagerySource('opentopomap').attribution}`,
     ])
     expect(overlayCredits({ ...sources, weather: true, landmarks: true }).slice(2)).toEqual([openMeteoAttribution(), `Repères : ${osmAttribution()}`])
-    // water is credited with the landmarks, under its own name
+    // each OpenStreetMap layer drawn is named in the credit, and only those
     expect(overlayCredits({ ...sources, landmarks: true, water: true })[2]).toBe(`Repères et eau : ${osmAttribution()}`)
+    expect(overlayCredits({ ...sources, landmarks: true, water: true, forests: true, glaciers: true })[2]).toBe(`Repères, eau, forêts et glaciers : ${osmAttribution()}`)
+    expect(overlayCredits({ ...sources, landmarks: true, forests: true })[2]).toBe(`Repères et forêts : ${osmAttribution()}`)
     // unknown ids fall back to the default sources, like the scene
     expect(overlayCredits({ ...sources, imagerySourceId: 'nope' })[1]).toBe(`Imagerie : ${getImagerySource('nope').attribution}`)
+  })
+})
+
+describe('overlayShortCredits', () => {
+  const sources = { terrainSourceId: 'mapterhorn', imagerySourceId: 'ign-ortho', weather: false, landmarks: false }
+
+  it('names the holders only, imagery first, the weather and OpenStreetMap once loaded', () => {
+    expect(overlayShortCredits(sources)).toEqual(['© IGN', '© Mapterhorn'])
+    expect(overlayShortCredits({ ...sources, weather: true, landmarks: true })).toEqual(['© IGN', '© Mapterhorn', '© OpenStreetMap', 'Open-Meteo.com'])
+    expect(overlayShortCredits({ ...sources, imagerySourceId: 'swisstopo' })[0]).toBe('© swisstopo')
+  })
+
+  it('keeps what the terms of a source ask for', () => {
+    // Esri: « Powered by Esri » and the data providers, in full
+    expect(overlayShortCredits({ ...sources, imagerySourceId: 'arcgis-world-imagery' })[0]).toBe(getImagerySource('arcgis-world-imagery').attribution)
+    // OpenTopoMap: CC BY-SA stays named, OpenStreetMap is not repeated
+    const topo = overlayShortCredits({ ...sources, imagerySourceId: 'opentopomap', landmarks: true })
+    expect(topo[0]).toBe('© OpenStreetMap, SRTM · © OpenTopoMap (CC BY-SA)')
+    expect(topo.filter((item) => item.includes('OpenStreetMap'))).toHaveLength(1)
+    // a source without a short form keeps its attribution; the same holder is named once
+    expect(overlayShortCredits({ ...sources, imagerySourceId: 'ign-plan' })).toEqual(['© IGN', '© Mapterhorn'])
+    expect(overlayShortCredits({ ...sources, imagerySourceId: 'basemap-at' })[0]).toBe(getImagerySource('basemap-at').attribution)
+  })
+})
+
+describe('overlayPermanentCredits', () => {
+  it('keeps the credit of the sources whose terms ask for it on the map: Esri today', () => {
+    const sources = { terrainSourceId: 'mapterhorn', imagerySourceId: 'ign-ortho', weather: false, landmarks: false }
+    expect(overlayPermanentCredits(sources)).toEqual([])
+    expect(overlayPermanentCredits({ ...sources, imagerySourceId: 'arcgis-world-imagery' })).toEqual([getImagerySource('arcgis-world-imagery').attribution])
+  })
+})
+
+describe('creditsDescription', () => {
+  it('gives each sentence, then its page, ready to paste', () => {
+    const text = creditsDescription({ terrainSourceId: 'mapterhorn', imagerySourceId: 'ign-ortho', weather: true, landmarks: true })
+    expect(text.split('\n\n')).toEqual([
+      `Relief : ${getTerrainSource('mapterhorn').attribution}\nhttps://mapterhorn.com/attribution`,
+      `Imagerie : ${getImagerySource('ign-ortho').attribution}\nhttps://cartes.gouv.fr/cgu`,
+      `${openMeteoAttribution()}\nhttps://open-meteo.com/en/licence`,
+      `Repères : ${osmAttribution()}\nhttps://www.openstreetmap.org/copyright`,
+    ])
   })
 })
 

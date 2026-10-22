@@ -121,6 +121,9 @@ export default {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Des gabarits plus clairs',
   'v41.auto.text': 'Dans « Film automatique », chaque gabarit est une carte : format, durée du film, caméra et ce qui est réglé, d’un coup d’œil. Choisissez-en une, puis « Appliquer » ; « Annuler » revient en arrière.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Des crédits plus discrets',
+  'v41.credits.text': 'Dans Habillage › Crédits, choisissez « Discrets » (le nom des sources en petit dans un coin, les mentions complètes à la fin du film), « Complets » ou « À la fin seulement ». Dans Export, « Copier les crédits » donne le texte avec les liens, à coller dans la description de la vidéo.',
   'v42.tools.title': 'Des outils pour retoucher la trace',
   'v42.tools.text': 'Dans la carte d’une trace, « Outils de la trace » rogne le début et la fin, retire une section, supprime les pics GPS et les pauses, simplifie, inverse le sens ou décale l’heure, avec un avant / après. « Annuler » remet la trace d’avant, et le GPX se réexporte.',
 }

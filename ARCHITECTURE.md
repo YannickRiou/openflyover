@@ -2284,7 +2284,7 @@ exports) gets it from the terrain source of the settings.
   `withOverlayDefaults`) is the opacity the logo is drawn at. Widgets added after the first format (`minimap`,
   `credits`, `leaderboard`) are completed with
   their default before validation (`withOverlayDefaults`, via `SETTING_UPGRADES` in `src/project/document.ts`): old projects
-  and presets always load (`minimap` and `leaderboard` disabled, `credits` enabled). Live widgets fade out during the
+  and presets always load (`minimap` and `leaderboard` disabled, `credits` « short »). Live widgets fade out during the
   cards.
   Logo as a PNG data URL of at most 512 px (self-contained projects). Validation: `isValidOverlay` (`SETTING_CHECKS`).
 - **What the cards show** (`CardExtras` on `overlay.title` and `overlay.end`, every key optional and absent in older
@@ -2355,16 +2355,25 @@ exports) gets it from the terrain source of the settings.
   credits only: it is a transition of the whole picture (widgets left on a black screen would float), brief, and the
   credits required by the licenses stay readable. The export counts its opacity in `overlayTimedState` (a held frame
   is not repeated during a fade); the overlay-only export contains it too.
-- **Source credits** (`settings.overlay.credits { enabled, position }`, enabled by default, four corners, chosen on the same 3 × 3 grid with only the corners enabled): small line
-  along the edge, outside the safety margins, on a discreet background specific to each style (`theme.credits`: translucent ink
-  and white text for "Éditorial" and "Diffusion", paper and ink for "Application", readable on snow as on forest), wrapped
-  to the safe width if it is long. Content: `overlayCredits` (`data.ts`), the same strings as the status bar
-  (current terrain and imagery, Open-Meteo when the weather is loaded, OpenStreetMap when landmarks, water or the
-  highlighted region are), read from the
-  stores by `overlayExtras` (`exportOverlay.ts`) for the preview as for the export. Drawn even with the overlay disabled
-  (the preview mounts `OverlayCanvas` as soon as either one is active). With credits disabled, the Open-Meteo credit is still drawn
-  alone when the weather is shown (as before); enabled, it joins the line. Disabling them means citing the sources
-  elsewhere (text in the Habillage panel).
+- **Source credits** (`settings.overlay.credits { mode, position }`, `mode` « short » by default, four corners, chosen on the same 3 × 3 grid with only the corners enabled).
+  Content: `creditEntries` (`data.ts`: sentence and attribution page of each source in use; `overlayCredits` keeps the sentences, the
+  same strings as the status bar: current terrain and imagery, Open-Meteo when the weather is loaded, OpenStreetMap when
+  landmarks, water, forests, glaciers or the highlighted region are, the credit naming only the layers drawn: « Repères, eau, forêts
+  et glaciers »), `overlayShortCredits` (the short form: « © IGN · © Mapterhorn · © OpenStreetMap · Open-Meteo.com », what each source's terms
+  require is in `docs/sources.md` « Attribution in the film »; Esri and OpenTopoMap keep their required wording), both read from the stores
+  by `overlayExtras` (`exportOverlay.ts`, through `currentCreditSources`) for the preview as for the export. Drawn even with the overlay disabled
+  (`OverlayCanvas` is mounted whenever there is a track). **During the film**, by `mode`: « short » (« Discrets ») is `drawShortCredits`
+  (small capitals, 70 % opacity, white with a shadow, no box, the overlay style's font, along the corner); « full » is `drawCredits` (the whole
+  sentence on the style's discreet background, `theme.credits`, wrapped to the safe width); « end » draws only the credits that must stay on
+  screen, in the short form: Open-Meteo while the weather is shown (its licence asks for the credit next to the data) and the sources flagged in
+  `PERMANENT_CREDIT` (`data.ts`, `overlayPermanentCredits`, `extras.permanentCredits`: Esri, whose terms ask for the credit always visible with
+  the map). **At the end, always**, whatever the mode: the full sentences (`extras.credits`) close the roll of the closing card (`drawCreditsRoll`:
+  a small « Sources » title and the sentences after the last line; the roll stops with them on screen instead of leaving the frame, and returns
+  how much of them shows), else (a card without roll, or no closing card) `drawEndSources` along the bottom edge over the last seconds of the film
+  (`endSourcesOpacity`, whatever the window of the card), lifted above the widgets it would cover; the corner credits fade out as the sources
+  come in (`sourcesCover`), and `overlayTimedState` counts the opacity of the bottom block so the export redraws the fade. The poster keeps the full sentences. Old projects: `withOverlayDefaults`
+  turns the former `enabled` switch into `mode` (on: « short », off: « end »). « Copier les crédits » (`CopyCreditsButton` in the
+  export drawer, summary and result) copies `creditsDescription` (each sentence then its page) through `copyText`.
 - **Fonts**: a canvas does not trigger the download of web fonts on its own; `loadOverlayFonts()` requests them before the
   first frame, and the export must wait for it too. Bundled fonts (`src/ui/fonts.css`, `public/fonts/`):
   Fraunces 300–700, IBM Plex Sans and Sans Condensed available offline.
