@@ -15,11 +15,11 @@ import { applyEmptyProject, applyProject } from '../project/apply'
 import { parseProject, projectFileName, serializeProject } from '../project/document'
 import { PROJECT_EXTENSION, decodeProjectFile, encodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
-import { useAppStore } from '../state/store'
+import { imageryChoiceKept, keepImageryChoice, useAppStore } from '../state/store'
 import { setAutoFilmOpen } from './autoFilmOpen'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
-import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry } from './library'
+import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry, useLibraryStore } from './library'
 import { effectiveProjectName, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
 import type { ToastInput } from './toast'
@@ -111,10 +111,12 @@ export type CloseAnswer = 'save' | 'close' | 'cancel'
 /**
  * Replace the open project by an empty one with the default settings (the home screen shows): its waiting change is
  * written to « Mes projets » first, then `ask` only when changes would still be lost. False when it stays open.
+ * `beforeEmptying`: called once it is decided, with the project still as it is.
  */
-async function closeOpenProject(ask: () => Promise<CloseAnswer>): Promise<boolean> {
+async function closeOpenProject(ask: () => Promise<CloseAnswer>, beforeEmptying?: () => void): Promise<boolean> {
   const closing = await confirmClose({ flush: flushAutosave, loss: projectCloseLoss, ask, save: saveProject })
   if (!closing) return false
+  beforeEmptying?.()
   applyEmptyProject()
   getSettingsHistory().clear()
   const store = useAppStore.getState()
@@ -135,6 +137,51 @@ export async function closeProject(ask: () => Promise<CloseAnswer>): Promise<voi
 /** « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import. */
 export async function newProject(ask: () => Promise<CloseAnswer>): Promise<void> {
   if (await closeOpenProject(ask)) await chooseTracksToImport()
+}
+
+/** What the open project is made of, to put it back as it was (as the render queue does after a run). */
+function keepProject(): () => void {
+  const s = useAppStore.getState()
+  const kept = {
+    tracks: s.tracks,
+    bounds: s.bounds,
+    frameOrigin: s.frameOrigin,
+    settings: s.settings,
+    playback: s.playback,
+    projectName: s.projectName,
+    projectFile: s.projectFile,
+    savedProject: s.savedProject,
+    filmSelection: s.filmSelection,
+    filmKeys: s.filmKeys,
+    workArea: s.workArea,
+  }
+  const media = useMediaStore.getState().table
+  const imageryChosen = imageryChoiceKept()
+  const entry = useLibraryStore.getState().currentId
+  return () => {
+    // the settings coming back are not a step of the undo history
+    const resume = getSettingsHistory().suspend()
+    keepImageryChoice(imageryChosen)
+    useMediaStore.getState().replace(media)
+    useAppStore.setState(kept)
+    setOpenEntry(entry)
+    useAppStore.getState().requestFit()
+    resume()
+  }
+}
+
+/**
+ * The ✕ of a track card. The last track of the project goes with the project, as « Fermer le projet » (the home screen
+ * shows, nothing is left to save): the same question when changes would be lost, then « Annuler » in the message puts
+ * the track and the project back. The other tracks just go.
+ */
+export async function removeTrackOrCloseProject(id: string, ask: () => Promise<CloseAnswer>): Promise<void> {
+  const { tracks, projectName, removeTrack } = useAppStore.getState()
+  if (tracks.length !== 1 || tracks[0].id !== id) return removeTrack(id)
+  const name = effectiveProjectName(projectName, tracks[0].name)
+  let putBack = () => {}
+  if (!(await closeOpenProject(ask, () => (putBack = keepProject())))) return
+  showUntilTracksChange({ kind: 'success', text: t('project.actions.closed', { name }), action: { label: t('common.undo'), run: () => putBack() } })
 }
 
 let reopening: Promise<void> | null = null

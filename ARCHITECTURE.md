@@ -1915,8 +1915,12 @@ The interface and the texts drawn into the films and posters exist in **French**
   speed, no block selected, imagery choice forgotten so the next import picks the regional imagery), history cleared,
   name emptied, marked saved, no open entry (`setOpenEntry(null)`, which forgets the remembered last project): the home
   screen appears by itself, the closed project among its « Récents ». « Nouveau projet » then opens the GPX / FIT
-  picker. Disabled during an export; « Fermer le projet » also when nothing is open. Removing the last track still keeps
-  the project open and empty.
+  picker. Disabled during an export; « Fermer le projet » also when nothing is open. Removing the last track (the ✕ of its
+  card, `removeTrackOrCloseProject`; the other tracks go through `removeTrack` of the store) closes the project through
+  the same `closeOpenProject` (same question, shown in place in the track list; disabled during an export or a batch /
+  render queue): the home screen and the quit guard then find an empty, unmodified project. « Annuler » in the message
+  (`showUntilTracksChange`) puts the project back as it was (`keepProject`, like `keepOpenProject` of the render queue:
+  same objects, media table, project file, saved snapshot, open entry; the undo history stays empty).
 - **"modifié" chip + "Par défaut" button** (`ui/ModifiedMarker.tsx`) at the top right of each settings panel: list
   of the panel's `Settings` keys, deep-compared with the values of `DEFAULT_SETTINGS` (`modifiedSettings` /
   `sameValue`, `project/apply.ts`); "Par défaut" resets these keys to default in a single history step (`resetSettings`,
