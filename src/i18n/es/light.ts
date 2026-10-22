@@ -181,6 +181,8 @@ const messages: Messages['light'] = {
   'forest.density': 'Densidad de árboles',
   'forest.densityValue': '{n} árboles por hectárea',
   'forest.densityTip': 'Número de árboles dibujados por hectárea de bosque, cerca del track; más lejos hay menos. Cuantos más hay, más lentas son la vista previa y la exportación. El dispositivo limita el número total de árboles (menos en un móvil o una tableta).',
+  // 4.1 — Glaciers
+  'snow.glaciers': 'Los glaciares cartografiados por OpenStreetMap son siempre blancos, sea cual sea el límite.',
 }
 
 export default messages

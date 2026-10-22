@@ -32,6 +32,8 @@ const messages: Messages['status'] = {
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
   sourcesUpdates: 'Aplicación de escritorio: se contacta con GitHub (github.com) solo cuando pulsas «Buscar actualizaciones» (Ajustes), para leer el archivo de versión.',
+  // 4.1 — Glaciers
+  'source.glacier': 'Glaciares (OpenStreetMap)',
 }
 
 export default messages

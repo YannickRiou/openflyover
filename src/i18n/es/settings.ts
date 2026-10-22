@@ -79,6 +79,8 @@ const messages: Messages['settings'] = {
   'updates.exportBusy': 'Hay una exportación en curso: espera a que termine antes de instalar la actualización.',
   'updates.confirmTitle': '¿Instalar la actualización?',
   'updates.confirmText': 'OpenFlyover se cerrará para instalar la versión {version} y volverá a abrirse.',
+  // 4.1 — Glaciers
+  'preferences.status.glacier': 'Glaciares',
 }
 
 export default messages

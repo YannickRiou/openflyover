@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
   'v40.water.title': 'Compaiono il mare e i torrenti',
   'v40.water.text': 'Lungo una costa, il mare viene ora disegnato. I fiumi e i torrenti che la mappa traccia solo come una linea diventano sottili nastri d’acqua. Tutto si regola con «Acqua riflettente (mare, laghi e fiumi)», nella scheda Mappa, sezione Sfondo mappa.',
+  // 4.1 — Glaciers
+  'v41.glaciers.title': 'I ghiacciai restano bianchi',
+  'v41.glaciers.text': 'I ghiacciai mappati da OpenStreetMap sono disegnati in bianco, con i loro crepacci, anche in estate quando il meteo del giorno non segnala neve. Seguono l’impostazione Meteo › Neve: non vengono disegnati con « Nessuna ».',
 }
 
 export default messages

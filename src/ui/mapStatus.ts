@@ -70,12 +70,14 @@ const CHIP_LABELS: Record<StatusChip, string> = {
   get landmarks() { return t('settings.preferences.status.landmarks') },
   get region() { return t('settings.preferences.status.region') },
   get water() { return t('settings.preferences.status.water') },
+  get glacier() { return t('settings.preferences.status.glacier') },
 }
 const CHIP_SOURCES: Record<StatusChip, string> = {
   get weather() { return t('status.source.weather') },
   get landmarks() { return t('status.source.landmarks') },
   get region() { return t('status.source.region') },
   get water() { return t('status.source.water') },
+  get glacier() { return t('status.source.glacier') },
 }
 
 /**

@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.1.0 (unreleased)
+
+- **Glaciers stay white in summer**: the snow follows the weather of the day, so a glacier in August used to show only the photo's ice. The glaciers mapped by OpenStreetMap are now drawn with the snow look whatever the snow line: white, with crevasses (thin dark lines along the flow), a little bluer in the shade, the very steep faces keeping some rock and a soft edge so the outline is not a hard cut. They follow « Météo › Neige »: drawn with « Selon la météo du jour » and « Manuelle », not with « Aucune ». A « Glaciers » chip in the status bar says whether they have loaded, and the OpenStreetMap credit counts them. Needs an internet connection once per track; older projects open unchanged.
+
 ## 4.0.0 (October 2026)
 
 - **A film in one click**: the « Survol » tab starts with « Film automatique ». Three gabarits, « Reel 30 s » (vertical, 30 s), « Résumé 1 min » and « Souvenir 3 min » (16:9), set in one step the length, camera, slow motion and stops, overlay style, opening title and closing card with their figures, day or stage cards and the export format. « Annuler » puts everything back, and everything stays editable. Your own texts and the stops you placed by hand are never replaced. No music is added.

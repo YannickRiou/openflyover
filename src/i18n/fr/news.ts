@@ -109,4 +109,7 @@ export default {
   // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
   'v40.water.title': 'La mer et les ruisseaux apparaissent',
   'v40.water.text': 'Le long d’une côte, la mer est maintenant dessinée. Les rivières et les ruisseaux que la carte ne trace que comme une ligne deviennent de fins rubans d’eau. Tout se règle avec « Eau reflétante (mer, lacs et rivières) », dans l’onglet Carte, section Fond de carte.',
+  // 4.1 — Glaciers
+  'v41.glaciers.title': 'Les glaciers restent blancs',
+  'v41.glaciers.text': 'Les glaciers cartographiés par OpenStreetMap sont dessinés en blanc, avec leurs crevasses, même en été quand la météo du jour ne signale pas de neige. Ils suivent le réglage Météo › Neige : absents avec « Aucune ».',
 }

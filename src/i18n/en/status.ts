@@ -31,6 +31,8 @@ const messages: Messages['status'] = {
   'perf.js': 'JS {value}',
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value}%',
+  // 4.1 — Glaciers
+  'source.glacier': 'Glaciers (OpenStreetMap)',
 }
 
 export default messages

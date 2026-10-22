@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
-import { useForestStore, useLandmarkStore, useWaterStore } from '../osm/store'
+import { useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { overlayCredits } from '../overlay/data'
 import { getPlatform } from '../platform'
 import { getPerfProbe } from '../scene/perfProbe'
+import { useGlacierStatusStore } from '../scene/glacierStatus'
 import { useWaterStatusStore } from '../scene/waterStatus'
 import { updateDateNote, useSourceDates } from '../terrain/sourceDates'
 import { getImagerySource } from '../terrain/sources'
@@ -191,11 +192,13 @@ function FetchChips() {
   const landmarksMessage = useLandmarkStore((s) => s.message)
   const regionStatus = useRegionStore((s) => s.status)
   const waterStatus = useWaterStatusStore((s) => s.status)
+  const glacierStatus = useGlacierStatusStore((s) => s.status)
   const weather = fetchChip('weather', weatherStatus, weatherMessage)
   const landmarks = fetchChip('landmarks', landmarksStatus, landmarksMessage)
   const region = fetchChip('region', regionStatus)
   const water = fetchChip('water', waterStatus)
-  const chips = [shown.weather && weather, shown.landmarks && landmarks, shown.region && region, shown.water && water].filter((c) => !!c)
+  const glacier = fetchChip('glacier', glacierStatus)
+  const chips = [shown.weather && weather, shown.landmarks && landmarks, shown.region && region, shown.water && water, shown.glacier && glacier].filter((c) => !!c)
   if (chips.length === 0) return null
   return (
     <p className="flex min-w-0 items-center gap-2 overflow-hidden">
@@ -224,6 +227,7 @@ export function StatusBar() {
   // OpenStreetMap is credited for the water, the forests and the highlighted region as well as for the landmarks
   const water = useWaterStore((s) => s.polygons > 0)
   const forest = useForestStore((s) => s.polygons > 0)
+  const glacier = useGlacierStore((s) => s.polygons > 0)
   const region = useRegionStore((s) => s.region !== null)
   const perfShown = usePreferences((s) => s.performance)
   const perf = usePerformance(perfShown)
@@ -241,7 +245,7 @@ export function StatusBar() {
   const imagery = getImagerySource(imagerySourceId)
   // IGN layers: the update date of the data (Etalab licence), as the service sends it
   const dateNote = updateDateNote(imagery.urlTemplate, sourceDates)
-  const osm = landmarks || water || forest || region
+  const osm = landmarks || water || forest || glacier || region
   const credits = overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks: osm, water })
   const short = compactCredits({ terrainSourceId, imagerySourceId, weather, osm })
   const perfText = perf ? perfParts(perf, perfShown).join(' · ') : ''

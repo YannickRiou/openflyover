@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
   'v40.water.title': 'The sea and the streams appear',
   'v40.water.text': 'Along a coast, the sea is now drawn. Rivers and streams that the map only draws as a line become thin ribbons of water. Everything is set with “Reflective water (sea, lakes and rivers)”, in the Map tab, Map background section.',
+  // 4.1 — Glaciers
+  'v41.glaciers.title': 'Glaciers stay white',
+  'v41.glaciers.text': 'Glaciers mapped by OpenStreetMap are drawn white, with their crevasses, even in summer when the weather of the day reports no snow. They follow the Weather › Snow setting: not drawn with « None ».',
 }
 
 export default messages

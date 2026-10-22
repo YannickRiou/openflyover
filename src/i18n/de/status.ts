@@ -31,6 +31,8 @@ const messages: Messages['status'] = {
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
   sourcesUpdates: 'Desktop-App: GitHub (github.com) wird nur kontaktiert, wenn Sie „Nach Updates suchen“ (Einstellungen) drücken, um die Versionsdatei zu lesen.',
+  // 4.1 — Glaciers
+  'source.glacier': 'Gletscher (OpenStreetMap)',
 }
 
 export default messages

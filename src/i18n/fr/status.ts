@@ -29,4 +29,6 @@ export default {
   'perf.js': 'JS {value}',
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
+  // 4.1 — Glaciers
+  'source.glacier': 'Glaciers (OpenStreetMap)',
 }

@@ -506,5 +506,30 @@ are drawn up to 6 km from the camera, thinner beyond 2 km from the track). The t
 the query (`QUERY_TIMEOUT_S`) leaves room, but a very long track (several boxes) may time out: the forests are then missing, without
 a message (no status chip), and tried again on the next track or setting change.
 
+**Glaciers (2026-10-22)**: a request per track, only if « Neige » is not « Aucune »: `way` / `relation` (multipolygons) `natural=glacier` in the track
+corridor widened to **5 km**, `out geom qt`. Same queue, same 30-day cache (for the reduced result: polygons simplified to 8 m, at least 20,000 m², at most
+200 and 20,000 vertices, coordinates to 1e-5°), same retry policy, same licence as the landmarks (ODbL, credit « © contributeurs OpenStreetMap », shown as soon as
+glaciers are drawn). The query (`glacierQuery`), for the box of the Chamonix test track:
+
+```
+[out:json][timeout:60];
+(
+  way["natural"="glacier"](45.85108,6.80484,45.97822,7.04956);
+  relation["natural"="glacier"]["type"="multipolygon"](45.85108,6.80484,45.97822,7.04956);
+);
+out geom qt;
+```
+
+Measurement (curl-like request from Node with an explicit `User-Agent` and `Accept: */*`, as for the water; the public server was busy, several requests of other
+layers in parallel):
+
+| Track | Box | Answer | Elements | Reduced result |
+|---|---|---|---|---|
+| Chamonix – Mer de Glace – Couvercle (10.7 km, 1,035 to 2,680 m) | 45.8511–45.9782 N × 6.8048–7.0496 E | 200 in 37.6 s, **658 kB** | 70 (ways and relations; the Mer de Glace, Argentière, Leschaux, Talèfre, Bossons…) | 72 polygons, 5,949 vertices, 115 kB in the cache; mesh 39,930 triangles |
+| Pic de l'Homme sample (Pyrenees) | 42.5936–42.7219 N × 1.8097–1.9503 E | 200 in 52.2 s (a 502 once before), **287 bytes** | 0 | 0 polygons (nothing is drawn, the chip says « prêt ») |
+
+The time is the server's (the empty answer took longer than the full one: queue and dispatch); the 60 s limit of the query (`QUERY_TIMEOUT_S`) leaves room, a
+very long track (several boxes) may time out: the chip then says « erreur » and the glaciers are missing, tried again on the next track or setting change.
+
 Log (curl, 2026-10-07): `[out:json][timeout:60]; ( node["natural"~"^(peak|volcano|saddle)$"]["name"](45.79485,6.68680,45.91881,6.83916); … 8 statements … ); out center tags qt;`
 → 200, 5.7 s, 44,447 bytes; same request from headless Chromium (origin `http://127.0.0.1:5184`) → 200 in 3.6 s.
