@@ -93,7 +93,7 @@ export function applySnow(material: MeshStandardMaterial): void {
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, snowUniforms)
     shader.vertexShader = vertexHead + after(after(shader.vertexShader, '#include <beginnormal_vertex>', vertexNormal), '#include <begin_vertex>', vertexPosition)
-    shader.fragmentShader = SNOW_NOISE_GLSL + fragmentHead + after(shader.fragmentShader, '#include <map_fragment>', fragmentSnow)
+    shader.fragmentShader = fragmentHead + after(shader.fragmentShader, '#include <map_fragment>', fragmentSnow)
   }
   material.customProgramCacheKey = () => 'openflyover-terrain-snow'
 }
