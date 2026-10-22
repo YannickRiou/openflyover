@@ -2087,6 +2087,33 @@ it, know at what time you will pass each point, where the sun will be and what t
   (`withMode`). Landmarks found later stay shown. `settings.landmarks.seenIds` (OSM ids listed at the last show / hide;
   `withLandmarkDefaults` gives `[]`, keeps strings only) marks the others « nouveau » (`newLandmarkIds`, none before a
   first choice); the « N nouveaux » badge marks them seen.
+- **Records** (« Records de la sortie », 4.2): the feats of the outing, found in the track itself, listed with the landmarks.
+  `detectRecords` (`src/import/records.ts`, pure, cached per track by `recordsOf`) returns at most one record per kind
+  (`RECORD_KINDS`): `steepestClimb` (the steepest 300 / 400 / 500 m stretch, the longest of those within 0.5 point of the
+  best, at least 3 %, « 18 % sur 400 m »), `fastestDescent` (the 1 km going down, ≥ 20 m lost, at the highest mean speed, at
+  least 8 km/h), `highest` (not within 200 m of the start; `recordLandmarks` also drops it when a summit landmark is within
+  `RECORD_SUMMIT_M` = 200 m) and `lowest` (range ≥ 100 m, not within 200 m of an end), `fastestKm` / `slowestKm` (whole
+  kilometres as the kilometre markers count them, at least two, not when the fastest is inside the fastest descent),
+  `longestClimb` (from two climbs of `climbsOf`), `maxHeartRate` / `maxPower` (best 30 s mean). Nothing under 1 km, and
+  only what the points allow (no elevation: no climb, descent or altitude; no time: no speed or kilometre). Elevations are
+  those of the climbs (20 m grid, median of five against spikes, 120 m moving average); times count moving time only (a
+  pause or a recording gap is not a slow kilometre) and a stretch implying more than 150 km/h is a GPS jump, never a
+  record. Statistics corrected by hand (`statsOverride`) are not read, and the records follow the points: changing the
+  track recomputes them. `recordLandmarks` (`osm/landmarks.ts`) makes them `Landmark`s of kind `'record'` (id
+  `record:<track id>:<kind>`, at the track, `name` and `text` « Montée la plus raide · 18 % sur 400 m » in the language of the
+  interface, priority 32 for the steepest, fastest descent and highest, 26 for the others), and `publish` (`osm/store.ts`)
+  adds them to the list of every track, before the ranking and the hidden ones, even before OpenStreetMap answers or when
+  it fails. They are therefore Auto / Toujours / Jamais, ranked, dismissed by « Garder les « Toujours » » and listed in
+  the window of the map like the others, with the badge « Record » and no distance to the track. Their 3D label is a
+  `'poi'` label with the `trophee` pictogram (`POI_ICONS`); `stopCandidates` offers three of them as stops
+  (`AUTO_STOP_RECORDS`: steepest climb, highest point, fastest descent, so a film of N stages has at most 3 N more stops; the
+  others stay labels, and « Arrêt » on a row adds a stop to any), except for the pauses of the films saved with the former
+  pacing (`autoStops` 'rythme'), the stop's label being the record's text. A landmark is copied with `withLandmarkFields`
+  (ranking, stages), never by a spread, which would freeze the `name` / `text` getters in the language of the moment. A segment
+  join (a gap, a chained track, a lift) is no slope: the steepest and fastest descent windows near one are skipped. `hasOsmLandmarks` (`osm/store.ts`) keeps the
+  OpenStreetMap credit for real OSM landmarks: records alone do not need it. The hint under the list (`landmarks.hintRecords`)
+  says what a record is. To add a kind: `RECORD_KINDS`, `detectRecords`, `recordValueText`, the `landmarks.record.<kind>`
+  name in the five languages, a test in `records.test.ts`.
 - **Water points**: landmark type `waterPoint` (Overpass `amenity=drinking_water`, named "Eau potable" (drinking
   water) when it has no name, and named `natural=spring`), off by default for the film and the labels; an old project
   receives the type through `withLandmarkDefaults`.

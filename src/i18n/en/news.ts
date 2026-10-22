@@ -126,6 +126,9 @@ const messages: Messages['news'] = {
   // 4.1 — discreet credits
   'v41.credits.title': 'More discreet credits',
   'v41.credits.text': 'In Overlay › Source credits, choose « Discreet » (the names of the sources in small print in a corner, the full credits at the end of the film), « Full » or « At the end only ». In Export, « Copy the credits » gives the text with its links, to paste in the description of the video.',
+  // 4.2 — records of the outing
+  'v42.records.title': 'The records of your outing',
+  'v42.records.text': 'The steepest climb, the fastest descent, the highest point, the slowest kilometre… In Map › Landmarks, each record is a landmark with its 3D label and, for the three main ones (steepest climb, highest point, fastest descent), an automatic hold with its card. They are computed from the track.',
 }
 
 export default messages

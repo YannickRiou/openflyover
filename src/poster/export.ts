@@ -11,7 +11,7 @@ import { videoSize } from '../export/schedule'
 import { stillBaseName, useExportStore } from '../export/store'
 import { climbsOf } from '../flyover/climbs'
 import { trackPathOf } from '../flyover/path'
-import { useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
+import { hasOsmLandmarks, useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { loadOverlayFonts } from '../overlay/assets'
 import { overlayCredits } from '../overlay/data'
 import { useAppStore } from '../state/store'
@@ -80,7 +80,7 @@ export function currentPosterContent(): PosterContent | null {
       weather: series !== null,
       // OpenStreetMap credited for its landmarks and, on the 3D view, its lakes, rivers, forests and glaciers
       landmarks:
-        Object.values(useLandmarkStore.getState().landmarks).some((list) => list.length > 0) ||
+        hasOsmLandmarks(useLandmarkStore.getState().landmarks) ||
         (!settings.poster.flat && (useWaterStore.getState().polygons > 0 || useForestStore.getState().polygons > 0 || useGlacierStore.getState().polygons > 0)),
       water: !settings.poster.flat && useWaterStore.getState().polygons > 0,
       forests: !settings.poster.flat && useForestStore.getState().polygons > 0,
