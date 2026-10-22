@@ -43,8 +43,8 @@ export interface AutoFilmTemplate {
 }
 
 export const AUTO_FILM_TEMPLATES: Record<AutoFilmId, AutoFilmTemplate> = {
-  reel: { totalS: 30, openingS: 3, closingS: 3, platform: 'vertical', camera: 'fast-drone', style: 'app', counters: false, figures: ['distance', 'ascent', 'maxAltitude'], stops: false, slowMotion: false, cards: false },
-  resume: { totalS: 60, openingS: 5, closingS: 5, platform: 'youtube', camera: 'helicopter', style: 'broadcast', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, slowMotion: false, cards: true },
+  reel: { totalS: 30, openingS: 3, closingS: 3, platform: 'vertical', camera: 'cinema', style: 'app', counters: false, figures: ['distance', 'ascent', 'maxAltitude'], stops: false, slowMotion: false, cards: false },
+  resume: { totalS: 60, openingS: 5, closingS: 5, platform: 'youtube', camera: 'cinema', style: 'broadcast', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, slowMotion: false, cards: true },
   souvenir: { totalS: 180, openingS: 6, closingS: 6, platform: 'youtube', camera: 'cinema', style: 'app', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, slowMotion: true, cards: true },
 }
 

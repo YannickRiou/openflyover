@@ -1812,9 +1812,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   chosen carries « Appliquer », the others only their facts): the format as a small outline of its proportions (« 9:16 Reels » /
   « 16:9 YouTube »), the name, the total length as a big figure, then three or four facts with an icon (the camera preset, the
   title and closing card, the stops and slow motion, the counters and cards; `autoFilmFacts`, strings `film.auto.fact.*`), each
-  card with an accent of the palette (`ACCENTS`). Above them one sentence: everything stays editable and « Annuler » reverts.
+  card with an accent of the palette (`ACCENTS`). All three use the « Cinéma » camera preset. Above them one sentence: everything stays editable and « Annuler » reverts.
   The cards stack under 760 px. « Reel 30 s » (9:16, 30 s, no stops, closing card of three figures, style `app`),
-  « Résumé 1 min » (16:9, 60 s, stops, counters, day or stage cards, `broadcast`) and « Souvenir 3 min » (16:9, 3 min, calm camera,
+  « Résumé 1 min » (16:9, 60 s, stops, counters, day or stage cards, `broadcast`) and « Souvenir 3 min » (16:9, 3 min,
   slow motion on the climbs, counters, `app`: a style with a panel stays readable on the forest and the snow, unlike the styles drawn
   straight on the image). **No music.** A gabarit is a row of `AUTO_FILM_TEMPLATES`
   (`src/film/autoFilm.ts`): total length and the length of the opening and closing shots (`settings.flyoverDurationS` = total −

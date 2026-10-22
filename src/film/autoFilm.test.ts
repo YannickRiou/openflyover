@@ -19,7 +19,7 @@ describe('autoFilmSettings', () => {
     const reel = autoFilmSettings(DEFAULT_SETTINGS, 'reel', single)
     expect(total(reel)).toBe(30)
     expect(platformPresetOf(reel.video)).toBe('vertical')
-    expect(findCameraPreset(reel.camera)?.id).toBe('fast-drone')
+    expect(findCameraPreset(reel.camera)?.id).toBe('cinema')
     expect(reel.overlay).toMatchObject({ enabled: true, style: 'app', title: { enabled: true, showDate: true }, end: { enabled: true, figures: ['distance', 'ascent', 'maxAltitude'] } })
     expect(reel.film).toMatchObject({ autoStops: false, stops: [] })
 
