@@ -1875,7 +1875,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   Ctrl+S) = `saveProject`, « Enregistrer sous… » (Projet tab, Ctrl+Maj+S) = `saveProjectAs`; a failed write keeps the project
   « Modifié »; the autosave to « Mes projets » is unchanged (plain JSON).
 - **« Que faire de ce fichier ? »**: `openFiles` (`projectActions.ts`) is the one door of « Ouvrir » (top bar, Projet tab, Ctrl+O), of a
-  drop on the window, of a file the system opens while the app runs (desktop) and of the shared files of the installed web app.
+  drop on the window and of the shared files of the installed web app (the files the system opens go through it too, but only
+  project files are associated with the desktop app).
   When the project already holds a track and the files are GPX / FIT (`openedTracksAction`, pure, `shell.ts`: `ask` or `add`;
   no question for an empty project, a project file in the batch, or files that are not GPX / FIT), one question covers every file
   (`askOpenChoice`, `openChoice.ts`, shown by `OpenChoiceDialog` mounted in `App`): « Ajouter la trace à ce projet » (initial
