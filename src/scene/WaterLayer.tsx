@@ -19,7 +19,7 @@ import { registerDrapeFlush } from '../export/store'
 import { useWaterStore } from '../osm/store'
 import { fetchTrackWater, fetchTrackWaterShapes, isWaterLine, lineWidthM, runsOutside, waterCover, type WaterLine, type WaterPolygon, type WaterShape } from '../osm/water'
 import { useAppStore } from '../state/store'
-import { GROUND_DROP_PER_M2, NO_SNOW_LINE_M, snowUniforms } from '../terrain/snowShader'
+import { GROUND_DROP_PER_M2, NO_SNOW_LINE_M, SNOW_NOISE_GLSL, snowRagGlsl, snowUniforms } from '../terrain/snowShader'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useTerrainContext } from './terrainContext'
@@ -107,7 +107,7 @@ const fragmentNormal = /* glsl */ `
   waterIce = 0.0;
   if (vWaterLake > 0.5 && snowLine < ${NO_SNOW_LINE_M.toFixed(1)} * 0.5) {
     float iceAlt = (vWaterPos.y + dot(vWaterPos.xz, vWaterPos.xz) * ${GROUND_DROP_PER_M2}) / snowExaggeration;
-    waterIce = smoothstep(-0.5 * snowBand, 0.5 * snowBand, iceAlt - snowLine);
+    waterIce = smoothstep(-0.5 * snowBand, 0.5 * snowBand, iceAlt - snowLine + ${snowRagGlsl('vWaterPos.xz')} * snowBand * 0.9);
   }
   vec2 slope = waterWave(vWaterPos.xz, vec2(0.80, 0.60), 23.0, 0.10, 1.5)
     + waterWave(vWaterPos.xz, vec2(-0.50, 0.866), 9.0, 0.035, 1.0)
@@ -154,6 +154,7 @@ export function createWaterMaterial(uniforms: Record<string, Uniform>): MeshStan
     Object.assign(shader.uniforms, uniforms, snowUniforms)
     shader.vertexShader = vertexHead + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${vertexWiden}${vertexBody}`)
     shader.fragmentShader =
+      SNOW_NOISE_GLSL +
       fragmentHead +
       shader.fragmentShader
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n${fragmentNormal}`)

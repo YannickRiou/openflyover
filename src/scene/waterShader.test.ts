@@ -18,7 +18,7 @@ describe('water material', () => {
     expect(uniforms.snowLine).toBe(snowUniforms.snowLine)
     expect(uniforms.snowBand).toBe(snowUniforms.snowBand)
     expect(uniforms.snowExaggeration).toBe(snowUniforms.snowExaggeration)
-    expect(fragmentShader).toContain('waterIce = smoothstep(-0.5 * snowBand, 0.5 * snowBand, iceAlt - snowLine);')
+    expect(fragmentShader).toContain('waterIce = smoothstep(-0.5 * snowBand, 0.5 * snowBand, iceAlt - snowLine + (0.55 * snowNoise(vWaterPos.xz, 70.0)')
     expect(fragmentShader).toContain(`snowLine < ${NO_SNOW_LINE_M.toFixed(1)} * 0.5`)
     // only a lake freezes: not a river, a ribbon or the sea
     expect(fragmentShader).toContain('vWaterLake > 0.5')

@@ -2966,8 +2966,7 @@ exports) gets it from the terrain source of the settings.
   **Ice** (4.1): a second attribute, `waterLake`, marks the lakes (not the river areas, the sea or the ribbons). The material reads the terrain's own
   `snowUniforms` (`snowLine`, `snowBand`, `snowExaggeration`, the same objects, no copy) and, for a lake whose altitude
   (`(y + r²/2R) / exaggeration`, like the terrain's) is above the line, blends over the same `smoothstep` of the band `waterIce` from 0 to 1: albedo
-  (0.78, 0.83, 0.90) (the snow's, a little bluer), roughness 1 (no sun glint), no sky reflection, waves × (1 − ice), opacity 1 × strength. A lake is flat, so it is
-  all water, all ice, or all in the transition (the terrain's ragged noise is not applied). « Manuelle » and « Aucune » follow the same uniforms; a function of the uniforms only, so
+  (0.78, 0.83, 0.90) (the snow's, a little bluer), roughness 1 (no sun glint), no sky reflection, waves × (1 − ice), opacity 1 × strength. The limit is torn by the terrain's own noise (`SNOW_NOISE_GLSL`, `snowRagGlsl`), so the lake and its shore reach full white together. « Manuelle » and « Aucune » follow the same uniforms; a function of the uniforms only, so
   the export is deterministic.
   **Minimum width of a ribbon** (4.1): the drape gives each vertex of a ribbon `waterEdge`, its offset from the middle vertex (`ribbonEdgeOffsets`, zero elsewhere); the vertex shader
   pushes the banks along it so that the ribbon is at least `MIN_STREAM_FRACTION` of the frame high on screen (1.5 px of a 1080 p frame: size of a pixel at
@@ -2981,7 +2980,7 @@ exports) gets it from the terrain source of the settings.
   the OSM coast cut by the relief, so a DEM below 0.5 m just inside the OSM coast is flooded (tidal flats, estuaries up to the
   limit OSM maps as coast); a river mapped in a gap of its own riverbank polygon is drawn over it; a stream is a 2.5 m ribbon,
   widened up to 4 × from high (4.1), so from the orbit it is a thin, faint line (the fade towards its banks is kept); rivers, ribbons and the sea never freeze (moving water; only the
-  lakes do); a lake freezes by its DEM level, as a whole (no ragged limit inside it); lines are only the 200 km widest. The "© contributeurs OpenStreetMap" credit (status bar and
+  lakes do); a lake freezes by its DEM level; lines are only the 200 km widest. The "© contributeurs OpenStreetMap" credit (status bar and
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
 

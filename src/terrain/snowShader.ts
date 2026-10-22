@@ -39,13 +39,8 @@ const vertexPosition = /* glsl */ `
 vSnowPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
 `
 
-const fragmentHead = /* glsl */ `
-uniform float snowLine;
-uniform float snowBand;
-uniform float snowExaggeration;
-varying vec3 vSnowPos;
-varying float vSnowUp;
-
+/** GLSL value noise (`snowNoise`) the ragged limit of the snow is made of; shared with the frozen lakes of the water layer. */
+export const SNOW_NOISE_GLSL = /* glsl */ `
 float snowHash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
@@ -59,11 +54,22 @@ float snowNoise(vec2 p, float size) {
   return mix(0.5, n, clamp(size / (2.0 * length(fwidth(p))) - 0.5, 0.0, 1.0));
 }
 `
+/** GLSL expression of the tearing of the limit at the world position `xz` (a vec2), about -0.5 to 0.5. */
+export const snowRagGlsl = (xz: string) => `(0.55 * snowNoise(${xz}, 70.0) + 0.3 * snowNoise(${xz}, 25.0) + 0.15 * snowNoise(${xz}, 9.0) - 0.5)`
+
+const fragmentHead = /* glsl */ `
+uniform float snowLine;
+uniform float snowBand;
+uniform float snowExaggeration;
+varying vec3 vSnowPos;
+varying float vSnowUp;
+
+`
 const fragmentSnow = /* glsl */ `
 if (snowLine < ${NO_SNOW_LINE_M.toFixed(1)} * 0.5) {
   // altitude above sea level: the height of the scene, plus the drop of the ground away from the origin
   float snowAlt = (vSnowPos.y + dot(vSnowPos.xz, vSnowPos.xz) * ${GROUND_DROP_PER_M2}) / snowExaggeration;
-  float snowRag = 0.55 * snowNoise(vSnowPos.xz, 70.0) + 0.3 * snowNoise(vSnowPos.xz, 25.0) + 0.15 * snowNoise(vSnowPos.xz, 9.0) - 0.5;
+  float snowRag = ${snowRagGlsl('vSnowPos.xz')};
   // 0 under the transition, 1 above it, its limit torn by the noise
   float snowCover = smoothstep(-0.5 * snowBand, 0.5 * snowBand, snowAlt - snowLine + snowRag * snowBand * 0.9);
   // steep faces keep the rock: nothing beyond ~50 degrees, all of it under ~32
@@ -86,7 +92,7 @@ export function applySnow(material: MeshStandardMaterial): void {
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, snowUniforms)
     shader.vertexShader = vertexHead + after(after(shader.vertexShader, '#include <beginnormal_vertex>', vertexNormal), '#include <begin_vertex>', vertexPosition)
-    shader.fragmentShader = fragmentHead + after(shader.fragmentShader, '#include <map_fragment>', fragmentSnow)
+    shader.fragmentShader = SNOW_NOISE_GLSL + fragmentHead + after(shader.fragmentShader, '#include <map_fragment>', fragmentSnow)
   }
   material.customProgramCacheKey = () => 'openflyover-terrain-snow'
 }
