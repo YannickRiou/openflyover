@@ -93,6 +93,9 @@ export default {
   'v21.weather.text': 'Le ciel suit la météo de chaque zone traversée, et les nuages font de l’ombre sur le relief.',
   'v20.interface.title': 'Une interface repensée',
   'v20.interface.text': 'Nouvelle présentation des panneaux, des menus, des boutons et des fenêtres, avec les mêmes fonctions qu’avant.',
+  // 4.0.0
+  'v40.queue.title': 'Une file de rendus',
+  'v40.queue.text': 'Dans Exporter › Plusieurs formats, « File de rendus » rend plusieurs projets l’un après l’autre pendant que vous êtes ailleurs : ajoutez chaque projet, lancez la file, et le navigateur vous prévient à la fin si la fenêtre n’est pas devant. La file est gardée si l’application est fermée. Le rendu continue aussi quand la fenêtre est réduite.',
 
   // ---- 4.0
   'v40.auto.title': 'Un film en un clic',

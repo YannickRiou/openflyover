@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'The sky follows the weather of each area crossed, and clouds cast shadows on the terrain.',
   'v20.interface.title': 'A redesigned interface',
   'v20.interface.text': 'A new look for the panels, menus, buttons and windows, with the same functions as before.',
+  // 4.0.0
+  'v40.queue.title': 'A render queue',
+  'v40.queue.text': 'In Export › Several formats, “Render queue” renders several projects one after the other while you are away: add each project, start the queue, and the browser tells you when it ends if the window is not in front. The queue is kept if the app is closed. Rendering also carries on when the window is minimised.',
 
   // ---- 4.0
   'v40.auto.title': 'A film in one click',

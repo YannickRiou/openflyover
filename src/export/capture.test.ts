@@ -311,6 +311,33 @@ describe('wait', () => {
     await expect(wait(1)).resolves.toBeUndefined()
   })
 
+  it('waits with a timer while the page is shown', async () => {
+    vi.useFakeTimers()
+    try {
+      let done = false
+      void wait(50, { hidden: () => false, now: () => 0 }).then(() => (done = true))
+      await vi.advanceTimersByTimeAsync(49)
+      expect(done).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(done).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('waits turn by turn, with no timer, while the page is hidden (its timers are throttled to 1 s)', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      // the clock moves 1 ms per read: the wait ends by itself after a few turns
+      let clock = 0
+      await wait(16, { hidden: () => true, now: () => clock++ })
+      expect(vi.getTimerCount()).toBe(0)
+      expect(clock).toBeGreaterThan(16)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('yields through scheduler.yield where the browser has it, else a message port', async () => {
     const scope = globalThis as { scheduler?: unknown }
     const saved = scope.scheduler

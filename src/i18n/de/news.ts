@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Der Himmel folgt dem Wetter jedes durchquerten Gebiets, und Wolken werfen Schatten auf das Gelände.',
   'v20.interface.title': 'Eine neu gestaltete Oberfläche',
   'v20.interface.text': 'Neues Aussehen für Bereiche, Menüs, Schaltflächen und Fenster, mit denselben Funktionen wie zuvor.',
+  // 4.0.0
+  'v40.queue.title': 'Eine Render-Warteschlange',
+  'v40.queue.text': 'Unter Exportieren › Mehrere Formate rendert « Render-Warteschlange » mehrere Projekte nacheinander, während Sie weg sind: jedes Projekt hinzufügen, die Warteschlange starten, und der Browser meldet das Ende, wenn das Fenster nicht im Vordergrund ist. Die Warteschlange bleibt erhalten, wenn die App geschlossen wird. Das Rendern läuft auch bei minimiertem Fenster weiter.',
 
   // ---- 4.0
   'v40.auto.title': 'Ein Film mit einem Klick',

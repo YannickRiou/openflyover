@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Il cielo segue il meteo di ogni zona attraversata e le nuvole proiettano ombre sul rilievo.',
   'v20.interface.title': 'Un’interfaccia ridisegnata',
   'v20.interface.text': 'Nuovo aspetto per pannelli, menu, pulsanti e finestre, con le stesse funzioni di prima.',
+  // 4.0.0
+  'v40.queue.title': 'Una coda di rendering',
+  'v40.queue.text': 'In Esporta › Più formati, « Coda di rendering » renderizza più progetti uno dopo l’altro mentre sei lontano: aggiungi ogni progetto, avvia la coda e il browser ti avvisa alla fine se la finestra non è in primo piano. La coda resta se l’app viene chiusa. Il rendering continua anche con la finestra ridotta a icona.',
 
   // ---- 4.0
   'v40.auto.title': 'Un film in un clic',

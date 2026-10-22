@@ -6,6 +6,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## 4.0.0 (unreleased)
 
 - **A film in one click**: the « Survol » tab starts with « Film automatique ». Three gabarits, « Reel 30 s » (vertical, 30 s), « Résumé 1 min » and « Souvenir 3 min » (16:9), set in one step the length, camera, slow motion and stops, overlay style, opening title and closing card with their figures, day or stage cards and the export format. « Annuler » puts everything back, and everything stays editable. Your own texts and the stops you placed by hand are never replaced. No music is added.
+- **A render queue**: in « Exporter › Plusieurs formats », « File de rendus » renders several projects one after the other while you are away.
+  - Open a project, tick its formats, « Ajouter ce projet à la file », then open the next one. Each project is copied when added: editing it later does not change its film.
+  - « Lancer la file » asks for the folder once, opens each project in turn, renders it, and puts the project that was open back as it was. A failed project is marked and the queue goes on; « Annuler le rendu en cours » stops the run.
+  - The queue is kept when the app is closed: « Reprendre » restarts the interrupted film from its first image. A notification tells you when the queue ends if the window is not in front (web only).
+- **The render goes on in the background**: with the window minimised or the tab hidden, the export no longer slows down to a crawl while it waits for tiles.
 
 ## 3.3.2 (October 2026)
 
