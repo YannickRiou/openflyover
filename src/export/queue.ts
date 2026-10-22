@@ -16,14 +16,18 @@ import { isRecord } from '../core/guards'
 import { useMediaStore } from '../film/media'
 import { t } from '../i18n'
 import { getPlatform } from '../platform'
+import type { Capabilities } from '../platform/platform'
+import { pickFolder, reuseFolder } from '../platform/folder'
 import type { WritableFolder } from '../platform/folder'
 import { applyProject } from '../project/apply'
 import { parseProject, serializeProject } from '../project/document'
 import { getSettingsHistory } from '../project/history'
 import { imageryChoiceKept, keepImageryChoice, useAppStore } from '../state/store'
 import { effectiveProjectName } from '../ui/shell'
+import { startPoster } from '../poster/export'
 import { showToast } from '../ui/toast'
 import { buildBatchJobs, exportJob, runBatch, trackOutcome, useBatchStore } from './batch'
+import type { BatchSelection } from './batch'
 import { containerFor } from './nativeEncoder'
 import { videoEncoding } from './schedule'
 import { isExportBusy, useExportStore } from './store'
@@ -45,8 +49,14 @@ export interface QueueItem {
   id: string
   /** name of the project, also the start of its file names */
   name: string
-  /** `formatKey`s of its films ('16:9@1080p') */
+  /** `formatKey`s of its films ('16:9@1080p'); may be empty when only the still image or the poster is queued */
   formats: string[]
+  /** the still image of the project is queued too (at `progress`, in the format of « Vidéo ») */
+  still?: boolean
+  /** the poster is queued too */
+  poster?: boolean
+  /** playback position when the project was added (not part of the project): where the still image and the poster look */
+  progress?: number
   status: QueueStatus
   /** why it failed */
   error?: string
@@ -71,11 +81,11 @@ export interface QueueItem {
  */
 export function serialiseQueue(items: readonly QueueItem[]): string {
   let room = MAX_STORED_CHARS
-  const stored = items.slice(0, MAX_LISTED_ITEMS).map(({ id, name, formats, status, error, snapshot, interrupted, files }) => {
+  const stored = items.slice(0, MAX_LISTED_ITEMS).map(({ id, name, formats, still, poster, progress, status, error, snapshot, interrupted, files }) => {
     const waiting = status === 'pending' || status === 'running'
     const keep = waiting && snapshot !== null && snapshot.length <= Math.min(MAX_SNAPSHOT_CHARS, room)
     if (keep) room -= snapshot.length
-    return { id, name, formats, status, error, interrupted, files, snapshot: keep ? snapshot : null }
+    return { id, name, formats, still, poster, progress, status, error, interrupted, files, snapshot: keep ? snapshot : null }
   })
   return JSON.stringify({ v: QUEUE_VERSION, items: stored })
 }
@@ -84,10 +94,18 @@ const isStrings = (value: unknown): value is string[] => Array.isArray(value) &&
 
 function parseItem(raw: unknown): QueueItem | null {
   if (!isRecord(raw)) return null
-  const { id, name, formats, status, error, snapshot, interrupted, files } = raw
+  const { id, name, formats, still, poster, progress, status, error, snapshot, interrupted, files } = raw
   if (typeof id !== 'string' || typeof name !== 'string' || !isStrings(formats)) return null
   if (status !== 'pending' && status !== 'running' && status !== 'done' && status !== 'error') return null
-  const head = { id, name, formats, snapshot: typeof snapshot === 'string' ? snapshot : null }
+  const head = {
+    id,
+    name,
+    formats,
+    snapshot: typeof snapshot === 'string' ? snapshot : null,
+    ...(still === true ? { still } : {}),
+    ...(poster === true ? { poster } : {}),
+    ...(typeof progress === 'number' && progress >= 0 && progress <= 1 ? { progress } : {}),
+  }
   if (status === 'done') return { ...head, status, ...(isStrings(files) ? { files } : {}) }
   if (status === 'error') return { ...head, status, ...(typeof error === 'string' ? { error } : {}) }
   if (head.snapshot === null) return { ...head, status: 'error', error: t('export.queue.tooBig') }
@@ -152,6 +170,33 @@ export async function runQueue(runner: QueueRunner): Promise<void> {
   }
 }
 
+/** Films, still image and poster of an item: its jobs (`buildBatchJobs`). */
+export const jobCount = (item: Pick<QueueItem, 'formats' | 'still' | 'poster'>): number =>
+  item.formats.length + (item.still ? 1 : 0) + (item.poster ? 1 : 0)
+
+/** Index of the nearest « en attente » item before (`-1`) or after (`1`) the one at `index`, or -1. */
+function neighbour(items: readonly QueueItem[], index: number, direction: -1 | 1): number {
+  for (let i = index + direction; i >= 0 && i < items.length; i += direction) if (items[i].status === 'pending') return i
+  return -1
+}
+
+/** True when the item `id` is « en attente » and has another one waiting before (`-1`) or after (`1`) it. */
+export function canMove(items: readonly QueueItem[], id: string, direction: -1 | 1): boolean {
+  const index = items.findIndex((i) => i.id === id)
+  return index >= 0 && items[index].status === 'pending' && neighbour(items, index, direction) >= 0
+}
+
+/** The items with `id` swapped with the nearest « en attente » item before or after it (the rendered ones stay in place); the same array when it cannot move. */
+export function moveItem(items: readonly QueueItem[], id: string, direction: -1 | 1): readonly QueueItem[] {
+  if (!canMove(items, id, direction)) return items
+  const from = items.findIndex((i) => i.id === id)
+  const to = neighbour(items, from, direction)
+  const moved = [...items]
+  moved[from] = items[to]
+  moved[to] = items[from]
+  return moved
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -181,6 +226,8 @@ export interface QueueState {
   add(item: QueueItem): boolean
   /** an item that is not running */
   remove(id: string): void
+  /** an item « en attente » one place earlier (-1) or later (1) among those waiting */
+  move(id: string, direction: -1 | 1): void
   patch(id: string, patch: Partial<QueueItem>): void
 }
 
@@ -199,6 +246,11 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
   remove(id) {
     set({ items: get().items.filter((i) => i.id !== id || i.status === 'running') })
   },
+  move(id, direction) {
+    const items = get().items
+    const moved = moveItem(items, id, direction)
+    if (moved !== items) set({ items: [...moved] })
+  },
   patch(id, patch) {
     set({ items: get().items.map((i) => (i.id === id ? { ...i, ...patch } : i)) })
   },
@@ -211,14 +263,17 @@ useQueueStore.subscribe((state, previous) => {
 /** « 16:9@1080p » -> « 16:9 1080p » */
 export const formatLabel = (key: string): string => key.replace('@', ' ')
 
-/** The open project, as it is now, added to the queue with the films `formats`; its name, or null when the queue is full. */
-export function addOpenProject(formats: readonly string[]): string | null {
+/** The open project, as it is now, added to the queue with the films, still image and poster of `selection`; its name, or null when the queue is full. */
+export function addOpenProject(selection: BatchSelection): string | null {
   const state = useAppStore.getState()
   const name = effectiveProjectName(state.projectName, state.tracks[0]?.name)
   const added = useQueueStore.getState().add({
     id: crypto.randomUUID(),
     name,
-    formats: [...formats],
+    formats: [...selection.formats],
+    ...(selection.still ? { still: true } : {}),
+    ...(selection.poster ? { poster: true } : {}),
+    ...(selection.still || selection.poster ? { progress: state.playback.progress } : {}),
     status: 'pending',
     snapshot: serializeProject(state, name, useMediaStore.getState().table),
   })
@@ -228,6 +283,39 @@ export function addOpenProject(formats: readonly string[]): string | null {
 // ---------------------------------------------------------------------------
 // Running
 // ---------------------------------------------------------------------------
+
+/** Desktop: the folder of the last queue, kept for the next « Lancer la file » (the web cannot keep a handle). */
+export const QUEUE_FOLDER_KEY = 'openflyover.renderQueue.folder'
+
+export interface QueueFolderDeps {
+  get(key: string): string | null
+  set(key: string, value: string): unknown
+  exists(dir: string): Promise<boolean>
+  pick(startIn?: string): Promise<WritableFolder | null>
+}
+
+/**
+ * The folder for the films of a run. Web: asked each time (call it from the click, before any await). Desktop: the folder
+ * of the last run, when it is still there and the app may write in it; else asked again (the dialog opens in the old
+ * one) and remembered. Null: the dialog was closed, nothing starts.
+ */
+export async function chooseQueueFolder(
+  capabilities: Pick<Capabilities, 'isDesktop'>,
+  deps: QueueFolderDeps = {
+    get: (key) => getPlatform().storage.get(key),
+    set: (key, value) => getPlatform().storage.set(key, value),
+    exists: async (dir) => (await import('@tauri-apps/plugin-fs')).exists(dir),
+    pick: (startIn) => pickFolder(capabilities, globalThis, startIn),
+  },
+): Promise<WritableFolder | null> {
+  if (!capabilities.isDesktop) return deps.pick()
+  const remembered = deps.get(QUEUE_FOLDER_KEY)
+  const kept = await reuseFolder(remembered, deps.exists)
+  if (kept) return kept
+  const picked = await deps.pick(remembered ?? undefined)
+  if (picked?.path) deps.set(QUEUE_FOLDER_KEY, picked.path)
+  return picked
+}
 
 /** What the app shows, to put it back after the run: the project open, its pictures, its place in the library are untouched. */
 function keepOpenProject(): () => void {
@@ -274,15 +362,19 @@ async function renderItem(item: QueueItem, { folder, save }: QueueRunOptions, ca
   showSnapshot(item.snapshot)
   await loadTrackData(canceled)
   const { video } = useAppStore.getState().settings
-  const jobs = buildBatchJobs({ formats: item.formats, still: false, poster: false }, video)
+  const jobs = buildBatchJobs({ formats: item.formats, still: item.still === true, poster: item.poster === true }, video)
   if (jobs.length === 0) return { status: 'error', error: t('export.queue.noFilm') }
   const ctx = {
     projectName: item.name,
     film: shownFilm(),
-    still: { progress: 0, type: 'image/png' as const },
+    still: { progress: item.progress ?? 0, type: 'image/png' as const },
     folder,
     containerOf: containerFor({ ...video, encoding: videoEncoding(video) }),
-    startPoster: async () => false,
+    // the poster looks where the project was when it was added
+    startPoster: () => {
+      useAppStore.getState().setProgress(item.progress ?? 0)
+      return startPoster()
+    },
     save,
     canceled,
   }

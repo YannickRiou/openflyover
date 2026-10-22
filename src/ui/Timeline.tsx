@@ -69,6 +69,8 @@ import {
   snapTargets,
   snapper,
   syncClip,
+  tickLabelFlips,
+  timelineContentWidth,
   updateMedia,
   zoomAt,
 } from '../film/timeline'
@@ -126,7 +128,7 @@ const KEYED_HEIGHT = 'h-11.5 touch:h-13.5'
 const FOLDED_HEIGHT = 'h-4'
 /** The fold and lock buttons of a lane's head. */
 const LANE_TOOL = 'inline-flex size-5 items-center justify-center rounded-sm text-glacier hover:bg-white/15 aria-pressed:bg-white/20 aria-pressed:text-white focus-visible:outline-2 focus-visible:outline-white touch:size-8'
-const TICK = 'pointer-events-none absolute top-0 h-full border-l border-white/15 pl-[3px] text-caption tabular-nums whitespace-nowrap text-glacier'
+const TICK = 'pointer-events-none absolute top-0 h-full border-white/15 text-caption tabular-nums whitespace-nowrap text-glacier'
 
 /** A block of a lane: the common part, then its kind (`BLOCK_KINDS`). */
 const BLOCK = 'absolute inset-y-[3px] box-border flex min-w-1.5 items-center overflow-hidden rounded-sm px-1.5 text-caption font-semibold aria-pressed:z-1 aria-pressed:ring-2 aria-pressed:ring-white data-[lifted]:z-2 data-[lifted]:shadow-pop'
@@ -648,7 +650,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // centred: half a width of blank at both ends, so that the start and the end reach the middle
   const pad = centred ? width / 2 : PAD_PX
   const xOf = (t: number) => pad + t * pxPerS
-  const contentWidth = Math.max(width, Math.ceil(xOf(total) + pad))
+  const contentWidth = timelineContentWidth(width, total, pxPerS, pad)
   const ele = profile && path.count > 0 ? samplePath(path, progress * path.lengthM).ele : undefined
   // startTime is set as soon as one point has a time: skips the scan of an untimed track
   const time = timelineClock && track.stats.startTime !== undefined && path.count > 0 ? recordedTimeAt(path, progress * path.lengthM) : undefined
@@ -1681,7 +1683,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   </>
                 )}
                 {ticks.map((t) => (
-                  <span key={t} className={`${TICK} ${centred ? 'leading-6' : 'leading-5 touch:leading-7'}`} style={{ left: xOf(t) }}>
+                  <span
+                    key={t}
+                    className={`${TICK} ${tickLabelFlips(xOf(t), contentWidth) ? '-translate-x-full border-r pr-[3px]' : 'border-l pl-[3px]'} ${centred ? 'leading-6' : 'leading-5 touch:leading-7'}`}
+                    style={{ left: xOf(t) }}
+                  >
                     {formatFilmTime(t)}
                   </span>
                 ))}

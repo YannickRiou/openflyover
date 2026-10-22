@@ -104,6 +104,7 @@ const messages: Messages['film'] = {
   'auto.resume.hint': 'Landscape 16:9, 1 min, YouTube HD export: opening title, holds at the passes and summits, one card per day or stage when the track has several, a closing card with the figures.',
   'auto.souvenir.name': 'Keepsake 3 min',
   'auto.souvenir.hint': 'Landscape 16:9, 3 min, YouTube HD export: a calm camera, slow motion on the climbs, holds at the passes and summits, day or stage cards, counters, opening title and closing card.',
+  'auto.afterImport': 'Automatic film…',
 }
 
 export default messages

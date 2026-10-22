@@ -109,6 +109,12 @@ export default {
   // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
   'v40.water.title': 'La mer et les ruisseaux apparaissent',
   'v40.water.text': 'Le long d’une côte, la mer est maintenant dessinée. Les rivières et les ruisseaux que la carte ne trace que comme une ligne deviennent de fins rubans d’eau. Tout se règle avec « Eau reflétante (mer, lacs et rivières) », dans l’onglet Carte, section Fond de carte.',
+  // 4.1 — Glaciers
+  'v41.glaciers.title': 'Les glaciers restent blancs',
+  'v41.glaciers.text': 'Les glaciers cartographiés par OpenStreetMap sont dessinés en blanc, avec leurs crevasses, même en été quand la météo du jour ne signale pas de neige. Ils suivent le réglage Météo › Neige : absents avec « Aucune ».',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Durée ou vitesse du survol',
+  'v41.speed.text': 'Dans Survol › Durée et rythme, réglez le survol par sa durée (au pas d’une seconde, ou en tapant la valeur) ou par la vitesse du marqueur (× le temps réel et km/h). L’un donne l’autre, et les deux sont toujours affichés.',
   // 4.1 — frozen lakes, streams visible from high up
   'v41.ice.title': 'Les lacs gèlent, les ruisseaux restent visibles',
   'v41.ice.text': 'Au-dessus de la limite de la neige, les lacs deviennent de la glace, blanche comme le sol autour. Et vus de haut, les ruisseaux gardent un fin trait d’eau au lieu de disparaître.',
