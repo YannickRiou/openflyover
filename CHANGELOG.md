@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## 4.1.0 (unreleased)
+## 4.1.0 (October 2026)
 
 - **Discreet source credits**: « Habillage › Crédits des sources » now has a choice « Dans le film »: « Discrets » (the default: « © IGN · © Mapterhorn · © OpenStreetMap · Open-Meteo.com » in small capitals, small and translucent, no box, in the corner already chosen), « Complets » (the whole sentence, as before) or « À la fin seulement » (which still keeps Open-Meteo and Esri, whose terms ask for a permanent credit). The full credits always close the film (at the end of the credits roll of the closing card, which then stops with them on screen, or along the bottom edge over the last seconds, above the card), and the poster keeps them in full. The OpenStreetMap credit names the layers drawn (« Repères, eau, forêts et glaciers »). The short form of each source is justified in `docs/sources.md`. Projects saved with the old switch open with « Discrets » (on) or « À la fin seulement » (off). « Copier les crédits » in the export drawer copies the credits with their links, for the description of a video.
 - **Timeline ruler**: the ruler now ends with the film. The last time label (« 0:30 ») used to stick out to the right of the closing card and a scrollbar appeared although every block was already in view; the label now sits inside the film's end and the scrollbar only shows when you zoom in.
