@@ -15,7 +15,7 @@ import { findImageryDates, imageryDateKind, imageryDateValue, type ImageryDate, 
 import { TERRAIN_SOURCES, getImagerySource, groupImagerySources } from '../terrain/sources'
 import { centroid } from '../geo/lonLat'
 import { CLOUD_ALTITUDE_RANGE, CLOUD_WIND_RANGE, DEFAULT_CLOUDS, SEA_TOP_RANGE, WIND_DIRECTIONS, seaTopFor, type CloudMode, type CloudQuality, type SeaRender } from '../weather/sceneClouds'
-import { SNOW_LINE_RANGE, snowLineAtProgress, type SnowMode } from '../weather/snowLine'
+import { SNOW_LINE_RANGE, snowLineAtProgress, type SnowMode, type SnowUnknown } from '../weather/snowLine'
 import { useWeatherStore, weatherSeriesOf } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
@@ -698,13 +698,13 @@ const SNOW_MODE_OPTIONS: { value: SnowMode; label: string }[] = [
   { value: 'aucune', get label() { return t('light.snow.mode.aucune') } },
 ]
 
-/** Snow line the weather gives at the start of the first track, rounded to 50 m; null without snow or weather. */
-function useWeatherSnowLineM(): number | null {
+/** What the weather gives at the start of the first track: the snow line rounded to 50 m, or none and why. */
+function useWeatherSnow(): { lineM: number | null; unknown: SnowUnknown | null } {
   const track = useAppStore((s) => s.tracks[0])
   const series = useWeatherStore((s) => weatherSeriesOf(s, track))
   return useMemo(() => {
-    const line = track && series ? snowLineAtProgress(series, trackPathOf(track), 0) : null
-    return line && Math.round(line.snowLineM / 50) * 50
+    const { line, unknown } = track && series ? snowLineAtProgress(series, trackPathOf(track), 0) : { line: null, unknown: null }
+    return { lineM: line && Math.round(line.snowLineM / 50) * 50, unknown }
   }, [track, series])
 }
 
@@ -716,7 +716,7 @@ function SnowControl() {
   const sequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length))
   const weatherEnabled = useAppStore((s) => s.settings.weather.enabled)
   const weatherReady = useWeatherReady()
-  const lineM = useWeatherSnowLineM()
+  const { lineM, unknown } = useWeatherSnow()
   return (
     <>
       <fieldset className="field min-w-0">
@@ -737,9 +737,11 @@ function SnowControl() {
                 ? t('light.snow.hintOff')
                 : !weatherReady
                   ? t('light.snow.hintWaiting')
-                  : lineM === null
-                    ? t('light.snow.hintNoSnow')
-                    : t('light.snow.hintWeather', { altitude: formatNumber(lineM) })}
+                  : unknown
+                    ? t(unknown === 'altitude' ? 'light.snow.hintNoAltitude' : 'light.snow.hintNoData')
+                    : lineM === null
+                      ? t('light.snow.hintNoSnow')
+                      : t('light.snow.hintWeather', { altitude: formatNumber(lineM) })}
         </p>
         {snow.mode === 'meteo' && (
           <p className="type-hint">

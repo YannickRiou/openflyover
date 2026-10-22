@@ -170,5 +170,7 @@ export default {
   'snow.hintWaiting': 'Pas de neige : la météo du jour n’est pas chargée (voir le message plus haut).',
   'snow.hintNoSnow': 'Pas de neige ce jour-là : la météo n’annonce ni neige au sol ni chute de neige à l’altitude de la trace.',
   'snow.rule': 'La limite est l’altitude où la température moyenne du jour atteint 0 °C (6,5 °C de moins tous les 1 000 m), seulement s’il y a de la neige au sol ou qui tombe ce jour-là. Les pentes très raides restent en roche. Une trace sans altitude n’a pas de neige.',
-  'snow.sequenceNote': 'Avec « À la suite », chaque étape suit sa propre météo ; la phrase ci-dessus décrit le début de la première trace.',
+  'snow.hintNoAltitude': 'Pas de neige : la trace n’a pas d’altitude, la météo ne peut pas dire où est la limite (le réglage « Manuelle » reste possible).',
+  'snow.hintNoData': 'Neige inconnue : la météo chargée n’a pas de données de neige ou de température assez complètes ce jour-là (une météo gardée d’une ancienne version n’a pas la neige).',
+  'snow.sequenceNote': 'Avec « À la suite », chaque étape suit sa propre météo, et une étape sans météo garde la neige de l’étape précédente ; la phrase ci-dessus décrit le début de la première trace.',
 }

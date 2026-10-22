@@ -181,6 +181,14 @@ describe('parseArchiveResponse', () => {
     expect(parseArchiveResponse(archiveBody(1, '2025-07-12', 1)[0], 1, '2025-07-12', '2025-07-12')).toHaveLength(1)
   })
 
+  it('reads a response without the snow depth, the rest of the weather kept', () => {
+    const body = archiveBody(1, '2025-07-12', 1) as { hourly: Record<string, unknown> }[]
+    delete body[0].hourly.snow_depth
+    const [[day]] = parseArchiveResponse(body, 1, '2025-07-12', '2025-07-12')
+    expect(day.snowDepth).toEqual(new Array(24).fill(null))
+    expect(day.temperature[0]).toBe(20)
+  })
+
   it('rejects an unexpected shape', () => {
     expect(() => parseArchiveResponse(archiveBody(1, '2025-07-12', 1), 2, '2025-07-12', '2025-07-12')).toThrow('Réponse météo illisible.')
     expect(() => parseArchiveResponse(archiveBody(1, '2025-07-13', 1), 1, '2025-07-12', '2025-07-12')).toThrow(WeatherError)
@@ -296,13 +304,19 @@ describe('createWeatherCache', () => {
     expect(Object.keys(stored)).toEqual(['45.90,6.80,@2025-07-11', '45.90,6.80,@2025-07-12'])
   })
 
-  it('fetches a day stored before the snow depth was kept again', () => {
+  it('keeps using a day stored before the snow depth was kept, the snow depth unknown', async () => {
     const storage = memoryStorage()
     const { snowDepth: _dropped, ...before } = day
-    storage.setItem('openflyover.weather.v1', JSON.stringify({ old: { at: 1, day: before }, current: { at: 1, day } }))
-    const cache = createWeatherCache(storage)
-    expect(cache.get('old')).toBeUndefined()
-    expect(cache.get('current')).toEqual(day)
+    storage.setItem('openflyover.weather.v1', JSON.stringify({ old: { at: 1, day: before } }))
+    expect(createWeatherCache(storage).get('old')).toEqual(before)
+    // a whole outing cached that way: no request, the weather is there, the snow depth is unknown (NaN)
+    const cache = createWeatherCache(null)
+    for (const location of sampleLocations(outing)) cache.set(weatherCacheKey(location, '2025-07-12'), before as typeof day, false)
+    const fetchSpy = vi.fn()
+    const series = await fetchOutingWeather(outing, { fetch: fetchSpy, cache, now: NOW })
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(series.stations[0].values.temperature[0]).toBe(20)
+    expect(Number.isNaN(series.stations[0].values.snowDepth[0])).toBe(true)
   })
 
   it('persists in the platform storage by default, under the localStorage key of before', async () => {

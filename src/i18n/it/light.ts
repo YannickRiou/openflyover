@@ -172,7 +172,9 @@ const messages: Messages['light'] = {
   'snow.hintWaiting': 'Nessuna neve: il meteo del giorno non è caricato (vedi il messaggio qui sopra).',
   'snow.hintNoSnow': 'Nessuna neve quel giorno: il meteo non segnala né neve al suolo né nevicate all’altitudine della traccia.',
   'snow.rule': 'Il limite è l’altitudine in cui la temperatura media del giorno raggiunge 0 °C (6,5 °C in meno ogni 1 000 m), solo se c’è neve al suolo o che cade quel giorno. I pendii molto ripidi restano roccia. Una traccia senza altitudine non ha neve.',
-  'snow.sequenceNote': 'Con « In sequenza », ogni tappa segue il proprio meteo; la frase qui sopra descrive l’inizio della prima traccia.',
+  'snow.hintNoAltitude': 'Nessuna neve: la traccia non ha altitudine, il meteo non può dire dove sia il limite (la modalità « Manuale » resta possibile).',
+  'snow.hintNoData': 'Neve sconosciuta: il meteo caricato non ha dati sulla neve, o troppo pochi sulla temperatura, quel giorno (un meteo conservato da una versione precedente non ha la neve).',
+  'snow.sequenceNote': 'Con « In sequenza », ogni tappa segue il proprio meteo, e una tappa senza meteo conserva la neve della tappa precedente; la frase qui sopra descrive l’inizio della prima traccia.',
 }
 
 export default messages

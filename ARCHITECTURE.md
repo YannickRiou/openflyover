@@ -2877,16 +2877,21 @@ Above a snow line computed from the weather of the day, the terrain turns white,
 summer aerial photo. Settings in « Météo » › « Neige » (`settings.snow`).
 
 - **Data** (`src/weather/openMeteo.ts`): `snow_depth` (hourly, metres of snow on the ground) is one more hourly variable of the
-  request that already brings `temperature_2m` and `snowfall`: same request, archive or forecast, same cache (the persistent
-  entries are read back only when they hold every variable). Checked on both endpoints (`docs/sources.md`). The station's `ele`
+  request that already brings `temperature_2m` and `snowfall`: same request, archive or forecast, same cache. The snow depth is
+  optional: a response without `snow_depth` parses with an empty column, and a day cached before it existed is used as it is
+  (snow depth unknown, the rest of the weather unaffected, and no snow for that day). Checked on both endpoints (`docs/sources.md`). The station's `ele`
   (the recorded altitude of the track the values are downscaled to) is the altitude of the line; a track without altitude has
   no station elevation and so no snow line.
-- **Model** (`src/weather/snowLine.ts`, pure, tested): for the UTC day of an instant, at the station nearest the marker,
-  `snowLineOfDay` takes the mean temperature `T` (≥ 12 valid hours), the deepest snow `D` and the snowfall total `F`.
-  `D = 0` and `F < 0.1 cm`: no snow (nothing says there is any, whatever the cold; missing data gives no snow too). Else the
+- **Model** (`src/weather/snowLine.ts`, pure, tested): for the UTC day of an instant, at each station,
+  `snowOfDay` takes the mean temperature `T` (≥ 12 valid hours), the deepest snow `D` and the snowfall total `F`.
+  Without station elevation (`unknown: 'altitude'`), enough temperature or any snow depth (`unknown: 'data'`) the snow is
+  unknown, which the panel says. `D = 0` and `F < 0.1 cm`: no snow (nothing says there is any, whatever the cold). Else the
   line is the freezing level `E + T / 0.0065` (6.5 °C per 1000 m from the station elevation `E`); with `D ≥ 2 cm` the snow lies
   at the station, so the line is the lower of the two. Clamped to 0–6000 m. The transition band is 150 m for a settled cover
-  (`D ≥ 20 cm`) and 300 m otherwise (patches, a fresh fall). `snowLineAt` memoises the result per station and day;
+  (`D ≥ 20 cm`) and 300 m otherwise (patches, a fresh fall). `snowLineAt` memoises each station's day and keeps the line
+  from jumping in one frame: the stations are weighted by inverse squared distance (like `weatherAt`), unknown ones left
+  out, and a day gives way to the next linearly over the hour before and after midnight UTC (a bare day counts as a line at
+  6000 m; the local day is not used: the response's UTC offset is not kept);
   `snowLineAtProgress` reads the recorded time and position under the marker; `resolveSnow` picks the manual line
   (« Manuelle », band 200 m), none (« Aucune ») or that of the weather.
 - **Shader** (`src/terrain/snowShader.ts`): `createMaterial` of the terrain engine calls `applySnow`, which extends the tile's
@@ -2900,9 +2905,10 @@ summer aerial photo. Settings in « Météo » › « Neige » (`settings.snow`)
   nothing beyond ~50° (the rock stays), all of it under ~32°. The altitude is `(y + r²/2R) / exaggeration` (`r` the distance to
   the origin of the local frame, `R` the Earth radius: the flat local frame drops away from the ground by ~31 m at 25 km). With no
   snow (`snowLine` = 10⁶ m) a uniform branch skips the whole block.
-- **Driver** (`src/scene/SnowLayer.tsx`, in `TerrainLayer`): each frame sets the shared uniforms `snowUniforms` (line, band,
+- **Driver** (`src/scene/SnowLayer.tsx`, mounted in `FlyoverCanvas.tsx` as a child of `TerrainLayer`): each frame sets the shared uniforms `snowUniforms` (line, band,
   exaggeration) from the settings, the track under the marker (`trackUnderMarker`, so each stage of « À la suite » follows its
-  own weather) and the weather store: a function of the film progress, so the export draws what the preview shows. A change
+  own weather) and the weather store: a function of the film progress, so the export draws what the preview shows (one
+  exception: a stage whose weather is loading or failed keeps the line of the stage before, kept in a ref, while some weather is loaded). A change
   of the weather store or the setting wakes the on-demand renderer.
 - **Setting**: `settings.snow { mode: 'meteo' | 'manuelle' | 'aucune', lineM }` (`meteo`, 2000 m; `SETTING_CHECKS`: known mode,
   0 ≤ line ≤ 4500). An old project has no `snow` key and opens with the default; the project format is unchanged. Part of the

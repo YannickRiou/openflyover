@@ -172,7 +172,9 @@ const messages: Messages['light'] = {
   'snow.hintWaiting': 'Kein Schnee: Das Wetter des Tages ist nicht geladen (siehe die Meldung weiter oben).',
   'snow.hintNoSnow': 'An diesem Tag kein Schnee: Das Wetter meldet weder Schnee am Boden noch Schneefall auf der Höhe der Strecke.',
   'snow.rule': 'Die Grenze liegt dort, wo die Tagesmitteltemperatur 0 °C erreicht (6,5 °C weniger je 1 000 m) – nur wenn an diesem Tag Schnee am Boden liegt oder fällt. Sehr steile Hänge bleiben Fels. Eine Strecke ohne Höhenangabe bekommt keinen Schnee.',
-  'snow.sequenceNote': 'Bei « Nacheinander » folgt jede Etappe ihrem eigenen Wetter; der Satz oben beschreibt den Beginn der ersten Strecke.',
+  'snow.hintNoAltitude': 'Kein Schnee: Die Strecke hat keine Höhenangabe, das Wetter kann die Grenze nicht bestimmen (« Manuell » bleibt möglich).',
+  'snow.hintNoData': 'Schnee unbekannt: Das geladene Wetter hat an diesem Tag keine Schneedaten oder zu wenige Temperaturdaten (Wetter aus einer älteren Version hat keinen Schnee).',
+  'snow.sequenceNote': 'Bei « Nacheinander » folgt jede Etappe ihrem eigenen Wetter, und eine Etappe ohne Wetter behält den Schnee der vorigen Etappe; der Satz oben beschreibt den Beginn der ersten Strecke.',
 }
 
 export default messages

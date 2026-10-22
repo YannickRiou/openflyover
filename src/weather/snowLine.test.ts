@@ -11,50 +11,47 @@ import {
   resolveSnow,
   snowLineAt,
   snowLineAtProgress,
-  snowLineOfDay,
+  snowOfDay,
 } from './snowLine'
 import { WEATHER_VARIABLES, type WeatherSeries, type WeatherVariable } from './series'
 
 const day = (value: number, hours = 24) => new Array<number>(hours).fill(value)
 
-describe('snowLineOfDay', () => {
+describe('snowOfDay', () => {
   it('lies at the freezing level of the mean temperature when snow falls', () => {
     // 2000 m, -3.25 °C: 0 °C is 500 m higher; nothing on the ground yet, so the line is the freezing level
-    const line = snowLineOfDay({ eleM: 2000, temperatureC: day(-3.25), snowDepthM: day(0), snowfallCm: day(0.5) })
+    const { line } = snowOfDay({ eleM: 2000, temperatureC: day(-3.25), snowDepthM: day(0), snowfallCm: day(0.5) })
     expect(line?.snowLineM).toBeCloseTo(1500, 5)
     expect(line?.bandM).toBe(BAND_PATCHY_M)
   })
 
   it('never lies above the station when snow lies there', () => {
     // 1000 m, +5 °C would put the line at 1770 m, but 1.88 m of snow lies at the station
-    const line = snowLineOfDay({ eleM: 1000, temperatureC: day(5), snowDepthM: day(1.88), snowfallCm: day(0) })
+    const { line } = snowOfDay({ eleM: 1000, temperatureC: day(5), snowDepthM: day(1.88), snowfallCm: day(0) })
     expect(line?.snowLineM).toBe(1000)
     expect(line?.bandM).toBe(BAND_SETTLED_M)
   })
 
   it('takes the lower of the station and the freezing level when snow lies and it is cold', () => {
-    const line = snowLineOfDay({ eleM: 2000, temperatureC: day(-6.5), snowDepthM: day(0.5), snowfallCm: day(0) })
-    expect(line?.snowLineM).toBe(1000)
+    expect(snowOfDay({ eleM: 2000, temperatureC: day(-6.5), snowDepthM: day(0.5), snowfallCm: day(0) }).line?.snowLineM).toBe(1000)
   })
 
-  it('draws no snow without snow on the ground or in the air, however cold', () => {
-    expect(snowLineOfDay({ eleM: 3000, temperatureC: day(-12), snowDepthM: day(0), snowfallCm: day(0) })).toBeNull()
+  it('draws no snow, knowingly, without snow on the ground or in the air, however cold', () => {
+    expect(snowOfDay({ eleM: 3000, temperatureC: day(-12), snowDepthM: day(0), snowfallCm: day(0) })).toEqual({ line: null, unknown: null })
   })
 
-  it('draws no snow when the data is missing', () => {
-    expect(snowLineOfDay({ eleM: undefined, temperatureC: day(0), snowDepthM: day(1), snowfallCm: day(1) })).toBeNull()
-    expect(snowLineOfDay({ eleM: 1500, temperatureC: day(Number.NaN), snowDepthM: day(1), snowfallCm: day(1) })).toBeNull()
+  it('says why it cannot tell: no elevation, or not enough data', () => {
+    expect(snowOfDay({ eleM: undefined, temperatureC: day(0), snowDepthM: day(1), snowfallCm: day(1) })).toEqual({ line: null, unknown: 'altitude' })
+    expect(snowOfDay({ eleM: 1500, temperatureC: day(Number.NaN), snowDepthM: day(1), snowfallCm: day(1) }).unknown).toBe('data')
     // fewer than 12 hours of temperature
-    expect(snowLineOfDay({ eleM: 1500, temperatureC: day(0, 8), snowDepthM: day(1, 8), snowfallCm: day(0, 8) })).toBeNull()
-    // the snow depth is missing and nothing falls: nothing says there is snow
-    expect(snowLineOfDay({ eleM: 1500, temperatureC: day(-2), snowDepthM: day(Number.NaN), snowfallCm: day(0) })).toBeNull()
-    // the snow depth is missing but it snows
-    expect(snowLineOfDay({ eleM: 1500, temperatureC: day(-6.5), snowDepthM: day(Number.NaN), snowfallCm: day(2) })?.snowLineM).toBe(500)
+    expect(snowOfDay({ eleM: 1500, temperatureC: day(0, 8), snowDepthM: day(1, 8), snowfallCm: day(0, 8) }).unknown).toBe('data')
+    // no snow depth at all (a weather loaded before it was kept): unknown, even when it snows
+    expect(snowOfDay({ eleM: 1500, temperatureC: day(-6.5), snowDepthM: day(Number.NaN), snowfallCm: day(2) })).toEqual({ line: null, unknown: 'data' })
   })
 
   it('stays between the sea and 6000 m', () => {
-    expect(snowLineOfDay({ eleM: 100, temperatureC: day(-20), snowDepthM: day(0), snowfallCm: day(1) })?.snowLineM).toBe(0)
-    expect(snowLineOfDay({ eleM: 3000, temperatureC: day(30), snowDepthM: day(0), snowfallCm: day(1) })?.snowLineM).toBe(6000)
+    expect(snowOfDay({ eleM: 100, temperatureC: day(-20), snowDepthM: day(0), snowfallCm: day(1) }).line?.snowLineM).toBe(0)
+    expect(snowOfDay({ eleM: 3000, temperatureC: day(30), snowDepthM: day(0), snowfallCm: day(1) }).line?.snowLineM).toBe(6000)
   })
 })
 
@@ -70,21 +67,48 @@ function series(): WeatherSeries {
 describe('snowLineAt', () => {
   it('follows the UTC day of the instant', () => {
     const s = series()
-    expect(snowLineAt(s, Date.UTC(2025, 0, 10, 12), 6.8, 45.9)?.snowLineM).toBe(500)
-    expect(snowLineAt(s, Date.UTC(2025, 0, 11, 12), 6.8, 45.9)).toBeNull()
+    expect(snowLineAt(s, Date.UTC(2025, 0, 10, 12), 6.8, 45.9).line?.snowLineM).toBe(500)
+    expect(snowLineAt(s, Date.UTC(2025, 0, 11, 12), 6.8, 45.9)).toEqual({ line: null, unknown: null })
     // outside the series: the first and the last day
-    expect(snowLineAt(s, Date.UTC(2025, 0, 1), 6.8, 45.9)?.snowLineM).toBe(500)
-    expect(snowLineAt(s, Date.UTC(2025, 5, 1), 6.8, 45.9)).toBeNull()
+    expect(snowLineAt(s, Date.UTC(2025, 0, 1), 6.8, 45.9).line?.snowLineM).toBe(500)
+    expect(snowLineAt(s, Date.UTC(2025, 5, 1), 6.8, 45.9).line).toBeNull()
   })
 
-  it('takes the station nearest the place', () => {
+  it('moves smoothly across midnight, from the line of a day to the next', () => {
     const s = series()
-    s.stations.push({ ...s.stations[0], lon: 7.5, ele: 2500 })
-    expect(snowLineAt(s, Date.UTC(2025, 0, 10, 12), 7.49, 45.9)?.snowLineM).toBe(1500)
+    const at = (h: number, m: number) => snowLineAt(s, Date.UTC(2025, 0, 10, h, m), 6.8, 45.9).line?.snowLineM
+    expect(at(22, 59)).toBe(500)
+    // the bare day counts as a line above every summit (6000 m): 500 m, 3250 m at midnight, then none
+    expect(at(23, 30)).toBeCloseTo(1875, 5)
+    expect(at(24, 0)).toBeCloseTo(3250, 5)
+    expect(at(24, 30)).toBeCloseTo(4625, 5)
+    expect(at(25, 1)).toBeUndefined()
   })
 
-  it('is null for a series without station', () => {
-    expect(snowLineAt({ time: [], stations: [] }, 0, 6.8, 45.9)).toBeNull()
+  it('moves smoothly where the nearest station changes', () => {
+    const s = series()
+    // the second station, 54 km east, has its freezing level higher
+    s.stations.push({ ...s.stations[0], lon: 7.5, ele: 2500 })
+    const lines: number[] = []
+    for (let lon = 6.8; lon <= 7.5001; lon += 0.01) lines.push(snowLineAt(s, Date.UTC(2025, 0, 10, 12), lon, 45.9).line!.snowLineM)
+    expect(lines[0]).toBeCloseTo(500, 0)
+    expect(Math.abs(lines.at(-1)! - 1500)).toBeLessThan(1)
+    const steps = lines.slice(1).map((l, i) => l - lines[i])
+    // one jump from a station to the other would be 1000 m
+    expect(Math.max(...steps)).toBeLessThan(100)
+    expect(Math.min(...steps)).toBeGreaterThanOrEqual(0)
+  })
+
+  it('leaves out a station whose snow is unknown, and says why when none is known', () => {
+    const s = series()
+    s.stations.push({ ...s.stations[0], lon: 6.81, ele: undefined })
+    expect(snowLineAt(s, Date.UTC(2025, 0, 10, 12), 6.81, 45.9).line?.snowLineM).toBe(500)
+    s.stations.shift()
+    expect(snowLineAt(s, Date.UTC(2025, 0, 10, 12), 6.81, 45.9)).toEqual({ line: null, unknown: 'altitude' })
+  })
+
+  it('has nothing for a series without station', () => {
+    expect(snowLineAt({ time: [], stations: [] }, 0, 6.8, 45.9)).toEqual({ line: null, unknown: null })
   })
 })
 
@@ -95,13 +119,13 @@ describe('snowLineAtProgress', () => {
   )
 
   it('reads the day of the recorded time under the marker', () => {
-    expect(snowLineAtProgress(series(), timed, 0)?.snowLineM).toBe(500)
-    expect(snowLineAtProgress(series(), timed, 1)).toBeNull()
+    expect(snowLineAtProgress(series(), timed, 0).line?.snowLineM).toBe(500)
+    expect(snowLineAtProgress(series(), timed, 1).line).toBeNull()
   })
 
-  it('is null for an untimed track', () => {
+  it('has nothing for an untimed track', () => {
     const untimed = buildTrackPath(buildTrack({ name: 't', source: 'gpx', segments: [{ points: [{ lon: 6.8, lat: 45.9 }, { lon: 6.9, lat: 45.9 }] }] }))
-    expect(snowLineAtProgress(series(), untimed, 0.5)).toBeNull()
+    expect(snowLineAtProgress(series(), untimed, 0.5).line).toBeNull()
   })
 })
 

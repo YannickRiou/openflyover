@@ -172,7 +172,9 @@ const messages: Messages['light'] = {
   'snow.hintWaiting': 'No snow: the weather of the day is not loaded (see the message above).',
   'snow.hintNoSnow': 'No snow that day: the weather reports neither snow on the ground nor snowfall at the altitude of the track.',
   'snow.rule': 'The line is the altitude where the mean temperature of the day reaches 0 °C (6.5 °C less every 1,000 m), only if there is snow on the ground or falling that day. Very steep slopes stay bare rock. A track without elevation gets no snow.',
-  'snow.sequenceNote': 'With “In sequence”, each stage follows its own weather; the sentence above describes the start of the first track.',
+  'snow.hintNoAltitude': 'No snow: the track has no elevation, so the weather cannot tell where the line is (“Manual” still works).',
+  'snow.hintNoData': 'Snow unknown: the loaded weather has no snow data, or not enough temperature data, that day (weather kept from an older version has no snow).',
+  'snow.sequenceNote': 'With “In sequence”, each stage follows its own weather, and a stage without weather keeps the snow of the stage before; the sentence above describes the start of the first track.',
 }
 
 export default messages

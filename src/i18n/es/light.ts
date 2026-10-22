@@ -172,7 +172,9 @@ const messages: Messages['light'] = {
   'snow.hintWaiting': 'Sin nieve: el tiempo del día no está cargado (vea el mensaje de más arriba).',
   'snow.hintNoSnow': 'Sin nieve ese día: el tiempo no indica ni nieve en el suelo ni nevada a la altitud del track.',
   'snow.rule': 'El límite es la altitud a la que la temperatura media del día llega a 0 °C (6,5 °C menos cada 1 000 m), solo si hay nieve en el suelo o cayendo ese día. Las pendientes muy empinadas se quedan en roca. Un track sin altitud no tiene nieve.',
-  'snow.sequenceNote': 'Con « En secuencia », cada etapa sigue su propio tiempo; la frase de arriba describe el inicio del primer track.',
+  'snow.hintNoAltitude': 'Sin nieve: el track no tiene altitud, el tiempo no puede decir dónde está el límite (el modo « Manual » sigue disponible).',
+  'snow.hintNoData': 'Nieve desconocida: el tiempo cargado no tiene datos de nieve, o no bastantes de temperatura, ese día (un tiempo guardado de una versión anterior no tiene la nieve).',
+  'snow.sequenceNote': 'Con « En secuencia », cada etapa sigue su propio tiempo, y una etapa sin tiempo conserva la nieve de la etapa anterior; la frase de arriba describe el inicio del primer track.',
 }
 
 export default messages
