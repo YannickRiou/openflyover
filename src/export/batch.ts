@@ -247,7 +247,7 @@ export interface TrackFilmsRunner {
 }
 
 /** Status of a track from those of its films: canceled when one was, else failed when one failed. */
-function trackOutcome(films: readonly BatchJobState[]): Pick<TrackRunState, 'status' | 'error'> {
+export function trackOutcome(films: readonly BatchJobState[]): Pick<TrackRunState, 'status' | 'error'> {
   if (films.some((f) => f.status === 'canceled')) return { status: 'canceled' }
   const failed = films.find((f) => f.status === 'error')
   return failed ? { status: 'error', error: failed.error } : { status: 'done' }
@@ -434,6 +434,9 @@ export interface BatchState {
   run(jobs: readonly BatchJob[], ctx: Omit<BatchContext, 'canceled'>): Promise<BatchJobState[]>
   /** the films `jobs` for each track file, into `ctx.folder`; resolves with the tracks (unchanged when a run is going on) */
   runTracks(files: readonly FolderFile[], jobs: readonly BatchJob[], ctx: TrackFilmsContext): Promise<TrackRunState[]>
+  /** stay « running » while the render queue loads projects between two runs (the app is busy then: no autosave, no edit) */
+  hold(folderName: string | null): void
+  release(): void
   /** stop the job running and drop the others */
   cancel(): void
   /** forget the last run (revokes the URLs of the files kept in memory) */
@@ -487,6 +490,16 @@ export const useBatchStore = create<BatchState>()((set, get) => ({
     })
     set({ phase: 'finished', cancelRequested: false })
     return states
+  },
+
+  hold(folderName) {
+    if (get().phase === 'running') return
+    revokeAll(get().jobs)
+    set({ phase: 'running', jobs: [], tracks: [], cancelRequested: false, folderName })
+  },
+
+  release() {
+    set({ phase: 'idle', cancelRequested: false })
   },
 
   cancel() {

@@ -95,6 +95,13 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'El cielo sigue el tiempo de cada zona atravesada, y las nubes proyectan sombras sobre el relieve.',
   'v20.interface.title': 'Una interfaz rediseñada',
   'v20.interface.text': 'Nuevo aspecto de paneles, menús, botones y ventanas, con las mismas funciones que antes.',
+  // 4.0.0
+  'v40.queue.title': 'Una cola de renderizado',
+  'v40.queue.text': 'En Exportar › Varios formatos, « Cola de renderizado » renderiza varios proyectos uno tras otro mientras usted está fuera: añada cada proyecto, inicie la cola y el navegador le avisa al final si la ventana no está delante. La cola se conserva si se cierra la aplicación. El renderizado también continúa con la ventana minimizada.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Una película en un clic',
+  'v40.auto.text': 'En la pestaña Vuelo, «Película automática» ofrece tres plantillas (Reel 30 s, Resumen 1 min, Recuerdo 3 min): duración, cámara, títulos, tarjetas y formato de exportación se ajustan de una vez, y todo se puede modificar después.',
   // --- 4.0
   'v40.snow.title': 'Nieve según la fecha',
   'v40.snow.text': 'Por encima de un límite calculado a partir del tiempo del día (nieve en el suelo y temperatura), el terreno se vuelve blanco, con un borde irregular y roca en las pendientes empinadas. Se ajusta a mano o se desactiva en Meteo › Nieve.',
