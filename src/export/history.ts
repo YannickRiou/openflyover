@@ -11,11 +11,14 @@ import { formatDate } from '../i18n/format'
 import { formatNumber, formatPercent } from '../ui/format'
 import type { CameraStyle } from '../flyover/cameraSettings'
 import { CAMERA_STYLES, CAMERA_STYLE_LABELS } from '../flyover/cameraSettings'
+import { FOREST_DENSITY_RANGE } from '../osm/forest'
 import { SHUTTER_SUBFRAMES, isValidLens } from '../scene/lens'
 import type { LensSettings } from '../scene/lens'
 import type { VideoEncoderKind } from '../platform/platform'
 import type { Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
+import { SNOW_MODES } from '../weather/snowLine'
+import type { SnowMode } from '../weather/snowLine'
 import { CLOUD_MODES, CLOUD_QUALITIES, SEA_RENDERS } from '../weather/sceneClouds'
 import type { CloudMode, CloudQuality, SeaRender } from '../weather/sceneClouds'
 import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender } from './qualityTier'
@@ -58,6 +61,9 @@ export interface RenderSettings {
   imageryZoom?: 0 | 1 | 2
   terrain?: string
   water?: boolean
+  /** 4.0 layers, absent in the entries recorded before (added without a new `HISTORY_VERSION`): the snow's mode, the forests */
+  snow?: SnowMode
+  forest?: { enabled: boolean; density: number }
   camera?: CameraStyle
 }
 
@@ -129,6 +135,8 @@ export function summariseSettings(settings: Settings, quality: VideoQuality = se
     imageryZoom: settings.imageryZoomOffset,
     terrain: settings.terrainSourceId,
     water: settings.water.enabled,
+    snow: settings.snow.mode,
+    forest: { enabled: settings.forest.enabled, density: settings.forest.density },
     camera: settings.camera.style,
   }
 }
@@ -271,6 +279,12 @@ function parseSettings(raw: unknown): RenderSettings {
   set('imageryZoom', oneOf(raw.imageryZoom, [0, 1, 2] as const))
   set('terrain', text(raw.terrain, 60))
   set('water', bool(raw.water))
+  set('snow', oneOf(raw.snow, SNOW_MODES))
+  if (isRecord(raw.forest)) {
+    const enabled = bool(raw.forest.enabled)
+    const density = num(raw.forest.density)
+    if (enabled !== undefined && density !== undefined && density >= FOREST_DENSITY_RANGE.min && density <= FOREST_DENSITY_RANGE.max) set('forest', { enabled, density })
+  }
   set('camera', oneOf(raw.camera, CAMERA_STYLES))
   return out
 }
@@ -383,6 +397,8 @@ export function reuseSettings(entry: HistoryEntry, current: Settings): Settings 
   if (s.imageryZoom !== undefined) next.imageryZoomOffset = s.imageryZoom
   if (s.terrain !== undefined && TERRAIN_SOURCES.some((src) => src.id === s.terrain)) next.terrainSourceId = s.terrain
   if (s.water !== undefined && s.water !== current.water.enabled) next.water = { ...current.water, enabled: s.water }
+  if (s.snow !== undefined && s.snow !== current.snow.mode) next.snow = { ...current.snow, mode: s.snow }
+  if (s.forest && !same(s.forest, current.forest)) next.forest = { ...current.forest, ...s.forest }
   if (s.camera !== undefined && s.camera !== current.camera.style) next.camera = { ...current.camera, style: s.camera }
   return next
 }
@@ -422,18 +438,52 @@ export function secondsPerMegapixel(entry: Pick<HistoryEntry, 'wallMs' | 'render
  * is exported: render, tile wait and encoding over all its frames), read from the history so that the time of a film is
  * known from the start of a session; null when no such render is in it. The overlay alone is not a film.
  */
-export function rateFromHistory(entries: readonly Pick<HistoryEntry, 'at' | 'outcome' | 'overlayOnly' | 'frames' | 'renderMs' | 'waitMs' | 'encodeMs' | 'width' | 'height'>[]): number | null {
-  let last: (typeof entries)[number] | undefined
+export function rateFromHistory(entries: readonly RateEntry[]): number | null {
+  const last = lastFilm(entries)
+  return last ? (last.renderMs + last.waitMs + last.encodeMs) / 1000 / last.frames / ((last.width * last.height) / 1e6) : null
+}
+
+type RateEntry = Pick<HistoryEntry, 'at' | 'outcome' | 'overlayOnly' | 'frames' | 'renderMs' | 'waitMs' | 'encodeMs' | 'width' | 'height'>
+
+/** The last film rendered through to the end, the one `rateFromHistory` reads. */
+export function lastFilm<T extends RateEntry>(entries: readonly T[]): T | undefined {
+  let last: T | undefined
   for (const entry of entries) {
     const spentMs = entry.renderMs + entry.waitMs + entry.encodeMs
     if (entry.outcome === 'done' && !entry.overlayOnly && entry.frames > 0 && spentMs > 0 && entry.width * entry.height > 0 && (!last || entry.at > last.at)) last = entry
   }
-  return last ? (last.renderMs + last.waitMs + last.encodeMs) / 1000 / last.frames / ((last.width * last.height) / 1e6) : null
+  return last
 }
 
-/** Seconds a film of `frames` frames of `width` × `height` takes at `secondsPerMegapixel` per frame (`filmRate`). */
-export function estimateRenderSeconds(secondsPerMegapixel: number, frames: number, width: number, height: number): number {
-  return secondsPerMegapixel * frames * ((width * height) / 1e6)
+/**
+ * Extra cost of the 4.0 layers on the time of a frame, as fractions of it. Where they come from (ARCHITECTURE « Forests »,
+ * « Snow »): the forests add about 16 % of triangles to the scene at 60 trees per hectare (130,000 trees in range, 15,000 in
+ * view, +0.43 M over 2.7 M), taken as 15 % of the frame at that density and proportional to it; the snow is one more term in
+ * the terrain's fragment shader, 3 %. Estimates, not measures: tile waiting and encoding, which they do not change, are
+ * part of the frame too.
+ */
+export const FOREST_COST_AT_60 = 0.15
+export const SNOW_COST = 0.03
+
+/** Time of a frame with these layers relative to one without; null when the layers are not known (an entry from before). */
+export function layersCost(settings: Pick<RenderSettings, 'snow' | 'forest'>): number | null {
+  const { snow, forest } = settings
+  if (snow === undefined || forest === undefined) return null
+  return 1 + (forest.enabled ? (FOREST_COST_AT_60 * forest.density) / 60 : 0) + (snow !== 'aucune' ? SNOW_COST : 0)
+}
+
+/** What to multiply the rate of a film rendered with the layers `from` by for a film with `to`; 1 when `from` is not known. */
+export function layersRatio(from: Pick<RenderSettings, 'snow' | 'forest'>, to: Pick<RenderSettings, 'snow' | 'forest'>): number {
+  const [before, after] = [layersCost(from), layersCost(to)]
+  return before === null || after === null ? 1 : after / before
+}
+
+/**
+ * Seconds a film of `frames` frames of `width` × `height` takes at `secondsPerMegapixel` per frame (`filmRate`), times
+ * `ratio` (`layersRatio`: the film is not rendered with the forests and the snow of the one the rate comes from).
+ */
+export function estimateRenderSeconds(secondsPerMegapixel: number, frames: number, width: number, height: number, ratio = 1): number {
+  return secondsPerMegapixel * frames * ((width * height) / 1e6) * ratio
 }
 
 export function formatSpeed(entry: HistoryEntry): string {
@@ -495,7 +545,7 @@ export function settingsDetails(settings: RenderSettings): { label: string; valu
   const rows: { label: string; value: string }[] = []
   const yes = (v: boolean) => (v ? t('export.history.yes') : t('export.history.no'))
   const no = t('export.history.no')
-  const { atmosphere, shadows, clouds, lens, tier, sunHour, sunDate, sunFromTrack, imagery, imageryZoom, terrain, water, camera } = settings
+  const { atmosphere, shadows, clouds, lens, tier, sunHour, sunDate, sunFromTrack, imagery, imageryZoom, terrain, water, snow, forest, camera } = settings
   if (atmosphere !== undefined) rows.push({ label: t('export.history.detail.atmosphere'), value: yes(atmosphere) })
   if (shadows !== undefined) rows.push({ label: t('export.history.detail.shadows'), value: yes(shadows) })
   if (clouds) {
@@ -523,6 +573,12 @@ export function settingsDetails(settings: RenderSettings): { label: string; valu
   }
   if (terrain !== undefined) rows.push({ label: t('export.history.detail.terrain'), value: TERRAIN_SOURCES.find((s) => s.id === terrain)?.name ?? terrain })
   if (water !== undefined) rows.push({ label: t('export.history.detail.water'), value: yes(water) })
+  // the layers of 4.0: an older render did not record them
+  rows.push({ label: t('export.history.detail.snow'), value: snow === undefined ? '—' : t(`light.snow.mode.${snow}`) })
+  rows.push({
+    label: t('export.history.detail.forest'),
+    value: forest === undefined ? '—' : forest.enabled ? t('light.forest.densityValue', { n: forest.density }) : no,
+  })
   if (camera) rows.push({ label: t('export.history.detail.camera'), value: CAMERA_STYLE_LABELS[camera] })
   return rows
 }
