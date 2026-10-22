@@ -10,14 +10,15 @@
  * terrain's shadows; they cast none (a tree's shadow would be a few texels wide: heavy for no visible result).
  * Everything is a function of the settings, the forests and the camera: the export is deterministic.
  */
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3 } from 'three'
 import type { Camera, BufferGeometry } from 'three'
 import { deviceBudget } from '../core/deviceBudget'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { isExportBusy, registerDrapeFlush, useExportStore } from '../export/store'
-import { fetchTrackForest, type ForestPolygon } from '../osm/forest'
+import { mergeByTrack } from '../osm/byTrack'
+import { fetchTrackForest } from '../osm/forest'
 import { simplifyLine } from '../osm/overpass'
 import { useForestStore } from '../osm/store'
 import { useAppStore } from '../state/store'
@@ -27,7 +28,8 @@ import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useTerrainContext } from './terrainContext'
 import { TREE_WIDTH_RATIO, createTreeGeometries } from './treeGeometry'
 import { useDebouncedCallback } from './useDebouncedCallback'
-import { useFilmTrack } from './usePacing'
+import { useFilmTracks } from './usePacing'
+import { useTrackResults } from './useTrackResults'
 
 /** Trees are drawn up to this distance from the camera (metres)... */
 export const FOREST_FAR_M = 6000
@@ -192,34 +194,18 @@ function updateForest(forest: Forest, camera: Camera, d: Drape, limit: number): 
 
 export function ForestLayer() {
   const { engine, frame } = useTerrainContext()
-  const track = useFilmTrack()
+  const tracks = useFilmTracks()
   const enabled = useAppStore((s) => s.settings.forest.enabled)
   const density = useDeferredValue(useAppStore((s) => s.settings.forest.density))
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const get = useThree((s) => s.get)
-  /** forests of the track they were fetched for (shown only for the current film track, setting on) */
-  const [fetched, setFetched] = useState<{ trackId: string; polygons: ForestPolygon[] } | null>(null)
-  const polygons = useMemo(() => (enabled && fetched && fetched.trackId === track?.id ? fetched.polygons : []), [enabled, fetched, track])
-
-  // one Overpass query per track (cached); nothing is sent while the setting is off
-  useEffect(() => {
-    if (!enabled || !track) return
-    // not aborted on cleanup: the query is shared and cached (StrictMode runs this effect twice), only its answer is
-    // ignored once stale
-    let current = true
-    const trackId = track.id
-    fetchTrackForest(track).then(
-      (result) => current && setFetched({ trackId, polygons: result }),
-      () => current && setFetched({ trackId, polygons: [] }),
-    )
-    return () => {
-      current = false
-    }
-  }, [enabled, track])
-
-  const path = useMemo(() => (track ? simplifyLine(track.segments.flatMap((s) => s.points), PATH_TOLERANCE_M) : []), [track])
-  const chunks = useMemo(() => placeTrees(polygons, { density, maxTrees: deviceBudget().maxTrees, path }), [polygons, density, path])
+  // one Overpass query per track of the film (cached, one at a time); nothing is sent while the setting is off, and a track
+  // that fails shows no trees (no status chip). The forests of all the tracks are drawn together.
+  const { results } = useTrackResults(enabled, tracks, (track) => fetchTrackForest(track))
+  const polygons = useMemo(() => mergeByTrack(results, tracks.map((t) => t.id)), [results, tracks])
+  const paths = useMemo(() => tracks.map((track) => simplifyLine(track.segments.flatMap((s) => s.points), PATH_TOLERANCE_M)), [tracks])
+  const chunks = useMemo(() => placeTrees(polygons, { density, maxTrees: deviceBudget().maxTrees, paths }), [polygons, density, paths])
   const forest = useMemo(() => (frame ? createForest(chunks, frame) : null), [chunks, frame])
   useEffect(() => () => forest?.dispose(), [forest])
   const geometries = useMemo(() => createTreeGeometries(), [])

@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.1.0 (unreleased)
+
+- **Water and forests for every track of the film**: with « À la suite », each stage now has its own water and trees (before, the later stages flew over bare relief), and in a ghost race the second track's surroundings too. Each track asks OpenStreetMap once, one request after the other, so a film of many stages waits longer for its last stage; removing a track removes its water and trees at once.
+- **Forests thinned, not cut**: when a long track has more forest than the device can draw, the far forests used to be left out altogether. They are now all there, thinner and thinner with the distance to the track (the nearest track when there are several), so the total stays within the device limit. Older projects open unchanged.
+
 ## 4.0.0 (October 2026)
 
 - **A film in one click**: the « Survol » tab starts with « Film automatique ». Three gabarits, « Reel 30 s » (vertical, 30 s), « Résumé 1 min » and « Souvenir 3 min » (16:9), set in one step the length, camera, slow motion and stops, overlay style, opening title and closing card with their figures, day or stage cards and the export format. « Annuler » puts everything back, and everything stays editable. Your own texts and the stops you placed by hand are never replaced. No music is added.

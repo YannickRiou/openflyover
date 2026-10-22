@@ -2900,15 +2900,18 @@ exports) gets it from the terrain source of the settings.
 ## Reflective water (phase 3)
 
 - **Data**: OpenStreetMap through Overpass (same client, queue and 30-day cache as the landmarks:
-  `cachedOverpassQuery`, `runOverpassQuery(…, parse)`), **two requests per track** and only if `settings.water.enabled`.
+  `cachedOverpassQuery`, `runOverpassQuery(…, parse)`), **two requests per track of the film** (4.1, `useFilmTracks`: the first track, every
+  stage « À la suite », every racer of the ghost race; `useTrackResults`) and only if `settings.water.enabled`.
   The first, the water areas:
   `way` / multipolygons `natural=water`, `waterway=riverbank`, `water=*` in the boxes of the track corridor widened to 8 km,
   `out geom qt` (~600 kB, 3–4 s for the sample; `docs/sources.md`). The request is not canceled on unmount (shared and
-  cached; StrictMode runs the effect twice); its response is only ignored if it is stale. A failed request is only
+  cached; StrictMode runs the effect twice); its response is only ignored if it is stale (its track was removed or changed). A failed request is only
   retried on the next track or setting change. The second (4.0, `waterLinesQuery`) gives the **coastline** (`natural=coastline`
   ways, in the same 8 km corridor) and the **waterway lines** (`waterway=river|canal|stream` ways, in a narrower 4 km corridor,
-  `WATER_LINE_MARGIN_M`: streams are many), `out geom qt`. The layer runs both together and shows each answer as it arrives (the lakes
-  do not wait for the heavier second request); the status chip says « erreur » if either failed. Measured on four tracks (2026-10-22, `docs/sources.md`): 0.55–1.1 MB, 21–39 s
+  `WATER_LINE_MARGIN_M`: streams are many), `out geom qt`. The layer asks the areas of every track, then the lines of every track, one request at a time, and shows each answer as it arrives (the lakes
+  do not wait for the heavier second request); the status chip stays « loading » until every answer is in and says « erreur » if any failed. The answers
+  are kept by track id and merged for drawing (`mergeByTrack`, `osm/byTrack.ts`: the shapes of the tracks still in the film, each
+  OpenStreetMap id once), so removing a track drops its water at once and an answer that arrives late is ignored. Measured on four tracks (2026-10-22, `docs/sources.md`): 0.55–1.1 MB, 21–39 s
   on a busy public server, 40–76 kB once reduced.
 - **Pure reduction** (`water.ts`, tested): relation rings stitched end to end from their ways (direction irrelevant,
   unclosed ring dropped), inner rings attached to the outer ring that contains their first point, member way of a
@@ -2970,7 +2973,7 @@ exports) gets it from the terrain source of the settings.
   level); a very steep river keeps 60 m steps; only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is
   the OSM coast cut by the relief, so a DEM below 0.5 m just inside the OSM coast is flooded (tidal flats, estuaries up to the
   limit OSM maps as coast); a river mapped in a gap of its own riverbank polygon is drawn over it; a stream is a 2.5 m ribbon,
-  hardly visible from high; lines are only the 200 km widest. The "© contributeurs OpenStreetMap" credit (status bar and
+  hardly visible from high; lines are only the 200 km widest; the sea of two tracks whose corridors overlap is cut into different rectangles for each, so it is drawn twice there (translucent, a little darker), and a river cut differently by two corridors is drawn twice too (lakes and riverbanks, which keep their OpenStreetMap id, are merged). A film of many stages waits longer: the Overpass policy allows one request at a time, so two requests per stage queue one after the other (a cached stage costs nothing). The "© contributeurs OpenStreetMap" credit (status bar and
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
 
@@ -3032,19 +3035,20 @@ where OpenStreetMap has forests. Same pipeline as "Reflective water": Overpass q
 draped on the relief.
 
 - **Data** (`src/osm/forest.ts`, pure and tested): same client, queue and 30-day cache as the landmarks and the water
-  (`cachedOverpassQuery`, `runOverpassQuery(…, parse)`), one request per track and only if `settings.forest.enabled`: `way` /
+  (`cachedOverpassQuery`, `runOverpassQuery(…, parse)`), one request per track of the film (4.1: `useFilmTracks`, as the water) and only if `settings.forest.enabled`: `way` /
   multipolygons `landuse=forest` and `natural=wood`, `out geom qt`, in the boxes of the track corridor widened to **5 km**
   (`FOREST_MARGIN_M`; 8 km sent 3 MB on the sample, 5 km 0.8 MB: `docs/sources.md`). `leaf_type` (`needleleaved`,
   `broadleaved`, `mixed`) is kept when present. The request is not canceled on unmount (shared and cached); its response is only
-  ignored if it is stale. A failed request is only retried on the next track or setting change, and shows nothing (no status
+  ignored if it is stale (its track was removed or changed); the polygons of the tracks still in the film are merged by OpenStreetMap id
+  (`mergeByTrack`). A failed request is only retried on the next track or setting change, and shows nothing (no status
   chip: the checkbox's help says there are simply no trees when OpenStreetMap does not answer).
 - **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
   is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned
   relation ignored, Douglas–Peucker 8 m (`FOREST_SIMPLIFY_M`), polygons < 5,000 m² dropped (`MIN_FOREST_AREA_M2`), the 600 largest
   kept (`MAX_FOREST_POLYGONS`) within 40,000 vertices in all (`MAX_FOREST_VERTICES`, largest first, so the entry stays far below `MAX_CACHE_ENTRY_CHARS` = 1.5 MB, beyond which `writeCache` does not write: a huge entry would evict the landmarks and water), coordinates to 1e-5° (~1 m); the `leaf` key is absent when OpenStreetMap does not say. Only
   this compact result is cached (sample: 64 polygons, 6,700 vertices, 130 kB in the cache).
-- **Pure placement** (`src/scene/forestPoints.ts`, tested): `placeTrees(polygons, { density, maxTrees, path })` gives the trees in
-  **chunks** of the ground (squares of `CHUNK_M` = 1,500 m, in an equirectangular frame around the first point of the track). In
+- **Pure placement** (`src/scene/forestPoints.ts`, tested): `placeTrees(polygons, { density, maxTrees, paths })` gives the trees in
+  **chunks** of the ground (squares of `CHUNK_M` = 1,500 m, in an equirectangular frame around the first point of the first track). In
   a chunk, each forest is cut to the square (`clipRing`, so the point-in-polygon tests run on short rings), and a tree stands in
   every cell of a lattice whose spacing is √(10,000 / density) m, at a position **hashed from the cell** (`hash01`, integers, no
   random generator, no state), kept if it falls in the chunk, inside a forest and outside its holes. Height 8–22 m, variation of the
@@ -3053,13 +3057,22 @@ draped on the relief.
   `broadleaved` → broadleaf, `mixed` → by hash, absent → `BY_ALTITUDE`: conifer above 1,200 m (`CONIFER_ALTITUDE_M`), decided when the
   tree is draped, where the height is known (`treeKind`).
   **Thinning with the distance to the track** (`densityFactor`): full density up to 2 km, falling linearly to 40 % at 5 km (the flyover
-  sees the near forests closely, the far ones as a texture). **Budget**: the chunks are placed from the nearest to the track outwards
-  until `maxTrees` (`deviceBudget().maxTrees`) would be exceeded; the others are not placed. A forest is therefore dense near the
-  track and absent beyond the budget, never half a chunk.
+  sees the near forests closely, the far ones as a texture). The distance of a chunk is to the **nearest of the film's tracks** (`distanceToPaths`: « À la suite » stages, ghost racers).
+  **Budget, thinning rather than cutting** (4.1, `thinning`): from the area of the forests in each chunk (clipped, holes
+  taken off) the placement knows the trees each chunk would hold at its density, and asks `thinning` for the share each keeps so that
+  the total fits `maxTrees` (`deviceBudget().maxTrees`): all 1 when it fits, else `MIN_THINNING + (1 − MIN_THINNING) × (1 − u)^k`
+  with `u` the distance of the chunk from the nearest one to the farthest one (0..1), `MIN_THINNING` = 5 %, and `k` the gentlest
+  exponent that fits (bisection): the near chunks stay at full density, the far ones fall towards 5 %, **every chunk with a
+  forest stays**. The lattice spacing of a chunk is then √(10,000 / (density × `densityFactor` × share)), so a thinned chunk keeps the
+  same hashed trees as a denser one, only fewer. The area estimate is only approximate, so the real count corrects the aim (up to 4
+  placements aiming at 97 % of the budget, stopping once between 90 and 100 %); a budget below what even the steepest fall reaches scales
+  every chunk alike (still above zero), and as a last resort the nearest chunks only are kept. Deterministic: same data, same
+  density, same budget, same trees. A forest is therefore dense near the track and sparse, never absent, beyond the budget.
 - **Budget** (`core/deviceBudget.ts`, `maxTrees`): 250,000 trees on a computer, 60,000 on a phone or tablet, 30,000 with ≤ 2 GB
   of memory. The same in the preview and the export (the positions must not differ); the export quality only decides the shadows
   (below). Sample (Pyrenees, 5 km corridor), `docs/sources.md`: at the default density (60 trees / ha) the 250,000 trees fill the 48
-  chunks nearest to the track (~110 km²); the phone's 60,000 fill 7 chunks. Placement takes ~0.3 s for 250,000 trees (on the main
+  chunks nearest to the track (~110 km²) (before 4.1 the other chunks were left out; now they are all there, the far ones thinned towards 5 % of
+  their density, the nearest ones a little less dense); the phone's 60,000 fill 7 chunks the same way. Placement takes ~0.3 s for 250,000 trees (on the main
   thread, when the forests arrive and when the density slider settles: `useDeferredValue`).
   Measured in headless Chromium with software rendering (SwiftShader, not representative of a GPU; the sample film, camera ~1.7 km high): of
   ~130,000 trees in range, ~15,000 are in the view, +0.43 M triangles over the 2.7 M of the terrain and the track (+16 %), the same
@@ -3089,8 +3102,9 @@ draped on the relief.
 - **Credit**: « © contributeurs OpenStreetMap » (status bar, film and poster) counts the forests like the water
   (`useForestStore.polygons > 0` in `StatusBar`, `exportOverlay`, `OverlayCanvas`, `poster/export`).
 - **Limits**: the trees are not the real trees (OpenStreetMap maps the forest, not each tree): positions are hashed, shapes are two
-  low-poly models, heights do not follow the relief or the treeline; the budget cuts the far forests of a long track (nearest chunks to
-  the track first), and a track drawn on a ridge far from its forests loses them; trees do not appear in the flat map of the poster;
+  low-poly models, heights do not follow the relief or the treeline; the budget thins the far forests of a long track (down to 5 % of
+  their density, never to nothing), and a track drawn on a ridge far from its forests sees them sparse; a film of many stages waits longer
+  for its forests (one Overpass request at a time, one per stage; a cached stage costs nothing); trees do not appear in the flat map of the poster;
   no status chip for a failed query; the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
   texels wide); the forests are not in the render history's
   `RenderSettings`; `forestPoints.ts` and `forest.ts` import the ring helpers of `water.ts` and `clipRing` of `waterMesh.ts`.
@@ -3126,6 +3140,13 @@ draped on the relief.
   `withStageSettingsMigrated` (in `sanitizeSettings`), into `film.junctionDefault` and dropped from `race`.
 - À la suite: each stage can have its own marker through marker keys at the stage cuts (« Un marqueur par étape »,
   Marqueur section).
+- Water and forests (4.1): fetched **for every track of the film**, not for the film track alone: `filmTracksOf(tracks, race)` (pure,
+  `sequence.ts`; hook `useFilmTracks`) is the first track, or the stages « À la suite » in their order, or every racer of the ghost
+  race (the array keeps its identity while the ids and points do). `useTrackResults` asks one Overpass request per track and per layer
+  (the same queue and 30-day cache as before: a stage fetched alone is a cache hit), keeps the answers by track id, ignores the answer of
+  a track removed or changed meanwhile, and `mergeByTrack` (`osm/byTrack.ts`) merges them for drawing; the forests are placed from all
+  of them, a chunk's distance being to the nearest track. The `trackUnderMarker` is not needed: every stage's water and trees are drawn
+  at once. Limit: the queue is sequential (the Overpass policy), so a film of many stages waits longer for its last stage.
 - « À la suite » (`src/flyover/sequence.ts`, pure): the film flies a **sequence track** (`buildSequence`: the tracks'
   segments one after the other in list order, id `suite:<ids>`, name `chainName`, never stored), cached on the tracks'
   ids, points and names (`sequenceOf`) so it keeps its identity. Unlike « Enchaîner en un seul parcours », nothing is
@@ -3135,7 +3156,7 @@ draped on the relief.
   and clock (`useFilmSource`, `getFilmSource`: landmarks of every stage along the sequence, `sequenceLandmarks`, a
   landmark near two stages once), FlyoverRig and the export, timeline, track picker, climbs and their labels,
   kilometre labels, landmark, climb, highlight and point-of-interest panels (seeking in metres along the film), region
-  highlight, water. Stops, speed sections and camera keys are anchored in metres along the sequence:
+  highlight. The water and the forests are fetched for each stage (`filmTracksOf`, below). Stops, speed sections and camera keys are anchored in metres along the sequence:
   the first stage keeps the first track's metres, so switching mode keeps what was placed on it.
 - Clock: `FilmClockFor.cutsM` (the stages' starts) and `stageIds` (their track ids) → `clock.cuts` (`{ atM, timeS }`, like
   the camera keys), read by the overlay (`overlayTime` copies them into `OverlayTime.cutsS`) and the motion blur, and
