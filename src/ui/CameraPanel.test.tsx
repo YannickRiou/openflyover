@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { FLYOVER_DURATION_RANGE } from '../flyover/cameraSettings'
+import { maintainerOuting } from '../flyover/__fixtures__/maintainerOuting'
 import { buildTrack } from '../import/stats'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { CameraPanel } from './CameraPanel'
@@ -74,15 +75,16 @@ describe('CameraPanel: duration of the flyover', () => {
     act(() => high.root.unmount())
   })
 
-  it('writes the other face beneath: × the recorded time and km/h, or km/h alone for an untimed track', async () => {
+  it('writes the other face beneath: × the pace really walked and km/h, or km/h alone for an untimed track', async () => {
     const withTimes = await mount(timed, 60)
-    // 4 h recorded over 60 s of film, 5 km in 60 s
-    expect(withTimes.host.textContent).toContain('soit × 240 (sortie de 4 h 00) · 300 km/h')
+    // 4 h moving over 60 s of film, 5 km in 60 s
+    expect(withTimes.host.textContent).toContain('Vitesse du marqueur dans le film : 300 km/h, soit × 240 votre allure réelle (vous avanciez à 1,')
+    expect(withTimes.host.textContent).toContain('4 h 00 en mouvement')
     act(() => withTimes.root.unmount())
     document.body.innerHTML = ''
     const without = await mount(untimed, 60)
-    expect(without.host.textContent).toContain('soit 300 km/h')
-    expect(without.host.textContent).not.toContain('sortie de')
+    expect(without.host.textContent).toContain('Vitesse du marqueur dans le film : 300 km/h.')
+    expect(without.host.textContent).not.toContain('en mouvement')
     act(() => without.root.unmount())
   })
 
@@ -119,6 +121,52 @@ describe('CameraPanel: duration of the flyover', () => {
   })
 })
 
+describe('CameraPanel: the maintainer\'s two reports of 4.2.0', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('« 25 s de survol » with a stop and slow-motion: the figures say what the flyover and the film are made of', async () => {
+    const track = maintainerOuting()
+    const pacing = { ...DEFAULT_SETTINGS.pacing, enabled: true, keepDuration: true }
+    useAppStore.setState({ tracks: [track], settings: { ...DEFAULT_SETTINGS, flyoverDurationS: 25, pacing, film: { ...DEFAULT_SETTINGS.film, autoStops: false, stops: [{ id: 's', atM: 8000, durationS: 4.5, camera: 'fixe' }] } } })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<CameraPanel />))
+    const { film } = useAppStore.getState().settings
+    const total = film.opening.durationS + 33 + film.closing.durationS
+    // 25 s set, the stop taken inside them; the night of the bivouac (8 s) is the only thing added, and the panel says so
+    expect(host.textContent).toContain(`Film : ${total} s · 1 arrêt`)
+    expect(host.textContent).toContain(`survol 33 s`)
+    expect(host.textContent).toContain('Au-delà des 25 s réglées, le survol compte : 1 nuit (8 s).')
+    expect(host.textContent).toContain('Les arrêts et les ralentis sont pris dans cette durée.')
+    // unticked: the stop is added too, and the sentences follow
+    await act(async () => useAppStore.getState().setSetting('pacing', { ...pacing, keepDuration: false }))
+    expect(host.textContent).toContain('Les arrêts et les ralentis s’y ajoutent')
+    expect(host.textContent).toContain('1 nuit (8 s) + arrêts (5 s)')
+    act(() => root.unmount())
+  })
+
+  it('« 100 km/h » on a day walked at 2 km/h reads about × 50, not × 150', async () => {
+    const track = maintainerOuting()
+    useAppStore.setState({ tracks: [track], settings: { ...DEFAULT_SETTINGS, flyoverDurationS: 60 } })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<CameraPanel />))
+    await act(async () => chooseSpeed(host))
+    const up = host.querySelector<HTMLInputElement>('input[aria-label="Vitesse du marqueur, en fois le temps réel"]')!
+    await typeIn(up, '50')
+    await act(async () => up.blur())
+    // 8 h 15 moving over × 50 = 594 s, i.e. the marker goes at 100 km/h over the 16.5 km
+    expect(useAppStore.getState().settings.flyoverDurationS).toBe(594)
+    // the speed face shows the marker's speed already: only the pace walked is new
+    expect(host.textContent).toContain('Vous avanciez à 2,0 km/h : 8 h 15 en mouvement, pauses et nuits retirées.')
+    expect(host.textContent).not.toContain('Vitesse du marqueur dans le film')
+    expect(host.textContent).not.toContain('24 h 33')
+    act(() => root.unmount())
+  })
+})
+
 describe('CameraPanel: « À la suite » on two days', () => {
   afterEach(() => {
     document.body.innerHTML = ''
@@ -142,7 +190,8 @@ describe('CameraPanel: « À la suite » on two days', () => {
     })
     await act(async () => undefined)
     // 2 h recorded (not 25 h) over 60 s: × 120
-    expect(host.textContent).toContain('soit × 120 (sortie de 2 h 00)')
+    expect(host.textContent).toContain('soit × 120 votre allure réelle')
+    expect(host.textContent).toContain('2 h 00 en mouvement')
     act(() => root.unmount())
   })
 })

@@ -1,14 +1,24 @@
 import { describe, expect, it } from 'vitest'
+import { buildFilmClock } from '../film/clock'
+import { DEFAULT_NIGHTS } from '../film/model'
+import { buildTrack } from '../import/stats'
+import { maintainerOuting } from './__fixtures__/maintainerOuting'
 import { FLYOVER_DURATION_RANGE } from './cameraSettings'
+import { flightNights } from './nights'
+import { DEFAULT_PACING } from './pacing'
+import { trackPathOf } from './path'
 import {
   clampDuration,
   durationAtPosition,
   durationAtSliderPosition,
   durationForKmh,
   durationForSpeedUp,
+  flightExtras,
   hasSpeedUp,
   kmhRange,
-  recordedTotalS,
+  movingDistanceM,
+  movingTimeS,
+  movingTotalS,
   speedKmh,
   speedPosition,
   speedUpFactor,
@@ -125,14 +135,14 @@ describe('speed slider (log scale over the duration range)', () => {
 describe('recorded time of a sequence', () => {
   it('sums the stages’ own durations, not the span from the first start to the last end', () => {
     // two days of 1 h and 2 h: 3 h recorded, whatever the night between them
-    expect(recordedTotalS([3600, 7200])).toBe(10_800)
-    expect(recordedTotalS([5400])).toBe(5400)
+    expect(movingTotalS([3600, 7200])).toBe(10_800)
+    expect(movingTotalS([5400])).toBe(5400)
   })
 
   it('is none when a stage has no times, or nothing is flown', () => {
-    expect(recordedTotalS([3600, undefined])).toBeUndefined()
-    expect(recordedTotalS([3600, 0])).toBeUndefined()
-    expect(recordedTotalS([])).toBeUndefined()
+    expect(movingTotalS([3600, undefined])).toBeUndefined()
+    expect(movingTotalS([3600, 0])).toBeUndefined()
+    expect(movingTotalS([])).toBeUndefined()
   })
 })
 
@@ -149,5 +159,132 @@ describe('arrow keys on the speed slider', () => {
   it('a drag far from the current notch is the position asked, and staying put changes nothing', () => {
     expect(durationAtSliderPosition(500, 60)).toBe(durationAtPosition(500))
     expect(durationAtSliderPosition(speedPosition(60), 60)).toBe(60)
+  })
+})
+
+describe('moving time of an outing', () => {
+  const outing = maintainerOuting()
+
+  it('leaves the lunch, the bivouac and the gaps out: 8 h of walking in a file of 24 h 33', () => {
+    expect(outing.stats.durationS).toBe((200 + 60 + 100 + 918 + 195) * 60)
+    // 495 minutes of walking
+    expect(movingTimeS(outing)).toBeGreaterThanOrEqual(495 * 60)
+    expect(movingTimeS(outing)).toBeLessThan(500 * 60 + 1)
+    expect(outing.stats.distanceM).toBeGreaterThan(16_400)
+    expect(outing.stats.distanceM).toBeLessThan(16_600)
+  })
+
+  it('is the elapsed time when nothing stops, the figure typed in « Corriger les chiffres » when there is one, none without times', () => {
+    const walk = buildTrack({ name: 'a', source: 'gpx', segments: [{ points: Array.from({ length: 11 }, (_, i) => ({ lon: 6, lat: 45 + i * 0.001, ele: 0, time: i * 60_000 })) }] })
+    expect(movingTimeS(walk)).toBe(600)
+    expect(movingTimeS({ ...walk, statsOverride: { durationS: 5400 } })).toBe(5400)
+    const planned = buildTrack({ name: 'a', source: 'gpx', segments: [{ points: Array.from({ length: 11 }, (_, i) => ({ lon: 6, lat: 45 + i * 0.001, ele: 0 })) }] })
+    expect(movingTimeS(planned)).toBeUndefined()
+  })
+
+  it('does not count the gap between two segments (a night of chained days)', () => {
+    const day = (from: number) => ({ points: Array.from({ length: 11 }, (_, i) => ({ lon: 6, lat: 45 + i * 0.001, ele: 0, time: from + i * 60_000 })) })
+    const two = buildTrack({ name: 'a', source: 'gpx', segments: [day(0), day(86_400_000)] })
+    expect(movingTimeS(two)).toBe(1200)
+  })
+})
+
+describe('recording gaps and the distance of the pace', () => {
+  it('a 12 h gap in one segment, the first fix 200 m after the restart, is not moving time', () => {
+    const walk = (from: number, lat0: number) => Array.from({ length: 31 }, (_, i) => ({ lon: 6, lat: lat0 + i * 0.0002, ele: 0, time: from + i * 60_000 }))
+    const before = walk(0, 45)
+    const lastLat = before[before.length - 1].lat
+    // the recorder was off 12 h; the first fix after it is about 200 m further
+    const after = walk(30 * 60_000 + 12 * 3_600_000, lastLat + 0.0018)
+    const track = buildTrack({ name: 'a', source: 'gpx', segments: [{ points: [...before, ...after] }] })
+    expect(track.stats.durationS).toBe((30 + 720 + 30) * 60)
+    expect(movingTimeS(track)).toBeCloseTo(60 * 60, -1)
+    // the gap of a stop that is already a pause is not taken twice
+    expect(movingTimeS(maintainerOuting())).toBe(495 * 60)
+  })
+
+  it('the corrected distance goes with a corrected duration, the file\'s with its own', () => {
+    const track = buildTrack({ name: 'a', source: 'gpx', segments: [{ points: Array.from({ length: 11 }, (_, i) => ({ lon: 6, lat: 45 + i * 0.001, ele: 0, time: i * 60_000 })) }] })
+    expect(movingDistanceM(track)).toBe(track.stats.distanceM)
+    expect(movingDistanceM({ ...track, statsOverride: { distanceM: 5000 } })).toBe(track.stats.distanceM)
+    expect(movingDistanceM({ ...track, statsOverride: { durationS: 3600, distanceM: 5000 } })).toBe(5000)
+  })
+})
+
+describe('flightExtras when the flight is shorter than the duration set', () => {
+  it('gives a negative difference, with no night nor stop added', () => {
+    expect(flightExtras({ flightS: 20, durationS: 25, keepDuration: false, stopsAddedS: 0, nightsS: [] })).toEqual({ deltaS: -5, nights: 0, nightsS: 0, stopsS: 0, otherS: 0 })
+    expect(flightExtras({ flightS: 25.2, durationS: 25, keepDuration: true, stopsAddedS: 0, nightsS: [] })).toBeUndefined()
+  })
+})
+
+describe('the two reports of 4.2.0 (16.5 km walked at 2 km/h, 24 h 33 in the file)', () => {
+  const outing = maintainerOuting()
+  const lengthM = outing.stats.distanceM
+  const movingS = movingTimeS(outing)!
+
+  it('« 100 km/h » reads about × 50 of the real pace (not × 149 of the file), and the walk is 2 km/h', () => {
+    const durationS = durationForKmh(lengthM, 100)!
+    expect(durationS).toBeGreaterThan(590)
+    expect(durationS).toBeLessThan(600)
+    expect(speedUpFactor(movingS, durationS)).toBeGreaterThan(49)
+    expect(speedUpFactor(movingS, durationS)).toBeLessThan(51)
+    expect(speedUpFactor(outing.stats.durationS, durationS)).toBeGreaterThan(148)
+    expect(speedKmh(lengthM, movingS)).toBeCloseTo(2, 1)
+  })
+
+  it('round trip: × 50 gives the duration whose speed is 100 km/h, and back', () => {
+    const durationS = durationForSpeedUp(movingS, 50)!
+    expect(speedKmh(lengthM, durationS)).toBeCloseTo(100, -1)
+    expect(speedUpFactor(movingS, durationS)).toBeCloseTo(50, 0)
+    expect(durationForKmh(lengthM, speedKmh(lengthM, durationS)!)).toBe(durationS)
+  })
+
+  // the stop of the report, at 8 km, and a slow-down at 5 km
+  const clockOf = (keepDuration: boolean, durationS = 25) => {
+    const nights = flightNights(trackPathOf(outing), DEFAULT_NIGHTS, durationS)
+    return {
+      nights,
+      clock: buildFilmClock({
+        opening: { style: 'aucune', durationS: 5 },
+        closing: { style: 'aucune', durationS: 6 },
+        stops: [{ id: 's', atM: 8000, durationS: 4.5, camera: 'fixe' }],
+        nights,
+        lengthM,
+        highlightsM: [5000],
+        durationS,
+        pacing: { ...DEFAULT_PACING, enabled: true, keepDuration },
+      }),
+    }
+  }
+
+  it('« 25 s »: the flight is the 25 s set plus the night of the bivouac, the stop and the slow-down are taken inside', () => {
+    const { nights, clock } = clockOf(true)
+    expect(nights).toHaveLength(1)
+    // 25 s + dusk 3 s + night 2 s + dawn 3 s: the 33 s block of the report, not the 25 s typed
+    expect(clock.flightS).toBeCloseTo(33, 6)
+    expect(clock.totalTime()).toBeCloseTo(clock.openingS + 33 + clock.closingS, 6)
+    expect(flightExtras({ flightS: clock.flightS, durationS: 25, keepDuration: true, stopsAddedS: clock.stops[0].addedS, nightsS: [8] })).toEqual({ deltaS: 8, nights: 1, nightsS: 8, stopsS: 0, otherS: 0 })
+  })
+
+  it('without the night the flight lasts exactly the duration set, whatever the stop and the slow-down; unticked, they are added and named', () => {
+    const kept = buildFilmClock({
+      opening: { style: 'aucune', durationS: 5 },
+      closing: { style: 'aucune', durationS: 6 },
+      stops: [{ id: 's', atM: 8000, durationS: 4.5, camera: 'fixe' }],
+      lengthM,
+      highlightsM: [5000],
+      durationS: 25,
+      pacing: { ...DEFAULT_PACING, enabled: true, keepDuration: true },
+    })
+    expect(kept.flightS).toBeCloseTo(25, 6)
+    expect(flightExtras({ flightS: kept.flightS, durationS: 25, keepDuration: true, stopsAddedS: kept.stops[0].addedS, nightsS: [] })).toBeUndefined()
+    const { clock } = clockOf(false)
+    const extras = flightExtras({ flightS: clock.flightS, durationS: 25, keepDuration: false, stopsAddedS: clock.stops[0].addedS, nightsS: [8] })!
+    expect(extras.nightsS).toBe(8)
+    expect(extras.stopsS).toBeCloseTo(4.5, 6)
+    // the slow-down lengthens it too: the three add up to what the block lasts beyond 25 s
+    expect(extras.nightsS + extras.stopsS + extras.otherS).toBeCloseTo(clock.flightS - 25, 6)
+    expect(extras.otherS).toBeGreaterThan(0)
   })
 })

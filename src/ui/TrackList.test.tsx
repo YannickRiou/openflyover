@@ -11,12 +11,13 @@ import { withJunctionCard } from '../film/junctions'
 import { resetAppStore, useAppStore } from '../state/store'
 import { computeTrackElevation } from '../terrain/elevation'
 import { TrackList } from './TrackList'
+import { removeTrackOrCloseProject } from './projectActions'
 
 vi.mock('../terrain/elevation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../terrain/elevation')>()),
   computeTrackElevation: vi.fn(),
 }))
-vi.mock('./projectActions', () => ({ chainLoadedTracks: vi.fn(), chooseTracksToImport: vi.fn() }))
+vi.mock('./projectActions', () => ({ chainLoadedTracks: vi.fn(), chooseTracksToImport: vi.fn(), removeTrackOrCloseProject: vi.fn() }))
 vi.mock('./StravaImport', () => ({ StravaDialog: () => null }))
 
 beforeAll(() => {
@@ -371,6 +372,29 @@ describe('TrackList, « Plusieurs traces »', () => {
     const overlay = useAppStore.getState().settings.overlay
     await act(async () => useAppStore.getState().setSetting('overlay', { ...overlay, title: { ...overlay.title, enabled: true } }))
     expect(host.textContent).toContain('La 1re étape commence par le titre d’ouverture')
+    act(() => root.unmount())
+  })
+})
+
+describe('TrackList, the ✕ of a card', () => {
+  afterEach(() => {
+    useAppStore.getState().replaceTracks([])
+    document.body.innerHTML = ''
+  })
+
+  it('removes through the project action, with the means to ask « Fermer sans enregistrer ? » in place', async () => {
+    const track = drawnTrack()
+    const { host, root } = await mount(track)
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label^="Supprimer"]')!.click())
+    expect(removeTrackOrCloseProject).toHaveBeenCalledWith(track.id, expect.any(Function))
+
+    const ask = vi.mocked(removeTrackOrCloseProject).mock.calls[0][1]
+    let answer: Promise<string> | undefined
+    await act(async () => void (answer = ask()))
+    expect(host.querySelector('[role="alert"]')!.textContent).toContain('Fermer sans enregistrer')
+    await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent === 'Fermer sans enregistrer')!.click())
+    await expect(answer).resolves.toBe('close')
+    expect(host.querySelector('[role="alert"]')).toBeNull()
     act(() => root.unmount())
   })
 })
