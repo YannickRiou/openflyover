@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Der Himmel folgt dem Wetter jedes durchquerten Gebiets, und Wolken werfen Schatten auf das Gelände.',
   'v20.interface.title': 'Eine neu gestaltete Oberfläche',
   'v20.interface.text': 'Neues Aussehen für Bereiche, Menüs, Schaltflächen und Fenster, mit denselben Funktionen wie zuvor.',
+  // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
+  'v40.water.title': 'Meer und Bäche erscheinen',
+  'v40.water.text': 'Entlang einer Küste wird jetzt das Meer gezeichnet. Flüsse und Bäche, die die Karte nur als Linie zeigt, werden zu schmalen Wasserbändern. Alles wird mit „Spiegelndes Wasser (Meer, Seen und Flüsse)“ eingestellt, im Tab Karte, Abschnitt Hintergrundkarte.',
 }
 
 export default messages

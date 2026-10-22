@@ -194,6 +194,8 @@ describe('overlayCredits', () => {
       `Imagerie : ${getImagerySource('opentopomap').attribution}`,
     ])
     expect(overlayCredits({ ...sources, weather: true, landmarks: true }).slice(2)).toEqual([openMeteoAttribution(), `Repères : ${osmAttribution()}`])
+    // water is credited with the landmarks, under its own name
+    expect(overlayCredits({ ...sources, landmarks: true, water: true })[2]).toBe(`Repères et eau : ${osmAttribution()}`)
     // unknown ids fall back to the default sources, like the scene
     expect(overlayCredits({ ...sources, imagerySourceId: 'nope' })[1]).toBe(`Imagerie : ${getImagerySource('nope').attribution}`)
   })

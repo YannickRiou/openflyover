@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Il cielo segue il meteo di ogni zona attraversata e le nuvole proiettano ombre sul rilievo.',
   'v20.interface.title': 'Un’interfaccia ridisegnata',
   'v20.interface.text': 'Nuovo aspetto per pannelli, menu, pulsanti e finestre, con le stesse funzioni di prima.',
+  // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
+  'v40.water.title': 'Compaiono il mare e i torrenti',
+  'v40.water.text': 'Lungo una costa, il mare viene ora disegnato. I fiumi e i torrenti che la mappa traccia solo come una linea diventano sottili nastri d’acqua. Tutto si regola con «Acqua riflettente (mare, laghi e fiumi)», nella scheda Mappa, sezione Sfondo mappa.',
 }
 
 export default messages

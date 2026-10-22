@@ -93,4 +93,7 @@ export default {
   'v21.weather.text': 'Le ciel suit la météo de chaque zone traversée, et les nuages font de l’ombre sur le relief.',
   'v20.interface.title': 'Une interface repensée',
   'v20.interface.text': 'Nouvelle présentation des panneaux, des menus, des boutons et des fenêtres, avec les mêmes fonctions qu’avant.',
+  // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
+  'v40.water.title': 'La mer et les ruisseaux apparaissent',
+  'v40.water.text': 'Le long d’une côte, la mer est maintenant dessinée. Les rivières et les ruisseaux que la carte ne trace que comme une ligne deviennent de fins rubans d’eau. Tout se règle avec « Eau reflétante (mer, lacs et rivières) », dans l’onglet Carte, section Fond de carte.',
 }

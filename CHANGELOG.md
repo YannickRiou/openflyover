@@ -3,6 +3,13 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.0.0 (unreleased)
+
+- **The sea, and the rivers mapped as lines**: « Eau reflétante (mer, lacs et rivières) » (formerly « Lacs et rivières reflétants », same switch and same « Intensité de l'eau », old projects open unchanged) now draws:
+  - the sea along a coast, flat at the level of the relief's zero, with longer waves than a lake; nothing is drawn far from a coast, so a polder stays land;
+  - the rivers, canals and streams that OpenStreetMap maps only as a line, as thin ribbons of water that follow the valley (12 m, 8 m and 2.5 m wide unless the map gives the width), cut where a river area already draws them;
+  - the OpenStreetMap credit of the film and the poster reads « Repères et eau » when the water is drawn.
+
 ## 3.3.2 (October 2026)
 
 - **Hiding several landmarks is quick**: in the « Choisir sur la carte et le profil » window, « Un clic sur un repère » chooses what a click does:

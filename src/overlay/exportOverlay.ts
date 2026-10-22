@@ -119,6 +119,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
         Object.values(useLandmarkStore.getState().landmarks).some((list) => list.length > 0) ||
         useWaterStore.getState().polygons > 0 ||
         useRegionStore.getState().region !== null,
+      water: useWaterStore.getState().polygons > 0,
     }),
   }
 }

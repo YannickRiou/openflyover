@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'The sky follows the weather of each area crossed, and clouds cast shadows on the terrain.',
   'v20.interface.title': 'A redesigned interface',
   'v20.interface.text': 'A new look for the panels, menus, buttons and windows, with the same functions as before.',
+  // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
+  'v40.water.title': 'The sea and the streams appear',
+  'v40.water.text': 'Along a coast, the sea is now drawn. Rivers and streams that the map only draws as a line become thin ribbons of water. Everything is set with “Reflective water (sea, lakes and rivers)”, in the Map tab, Map background section.',
 }
 
 export default messages

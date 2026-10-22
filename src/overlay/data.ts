@@ -452,20 +452,22 @@ export interface CreditSources {
   imagerySourceId: string
   /** the weather of the outing is loaded (Open-Meteo) */
   weather: boolean
-  /** OpenStreetMap landmarks are loaded */
+  /** OpenStreetMap data is shown (landmarks, water or region) */
   landmarks: boolean
+  /** OpenStreetMap water (sea, lakes, rivers) is drawn: the credit then names it too */
+  water?: boolean
 }
 
 /**
  * Credits of the sources in the film, the same strings as the status bar: relief and imagery always, Open-Meteo
  * and OpenStreetMap when their data is loaded.
  */
-export function overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks }: CreditSources): string[] {
+export function overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks, water }: CreditSources): string[] {
   return [
     t('overlay.draw.credits.relief', { source: getTerrainSource(terrainSourceId).attribution }),
     t('overlay.draw.credits.imagery', { source: getImagerySource(imagerySourceId).attribution }),
     ...(weather ? [openMeteoAttribution()] : []),
-    ...(landmarks ? [t('overlay.draw.credits.landmarks', { source: osmAttribution() })] : []),
+    ...(landmarks ? [t(water ? 'overlay.draw.credits.landmarksAndWater' : 'overlay.draw.credits.landmarks', { source: osmAttribution() })] : []),
   ]
 }
 

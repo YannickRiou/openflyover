@@ -147,6 +147,27 @@ export function buildWaterMesh(polygon: WaterPolygon, options: WaterMeshOptions 
   return { lonLat, fade, index: Uint32Array.from(index) }
 }
 
+/**
+ * Mesh of a sea polygon (osm/coast.ts): the polygon triangulated as it is, with its holes (islands). The sea is flat, so
+ * it needs no grid, and it fades at no shore: where the relief rises above the plane the land hides the water.
+ */
+export function buildSeaMesh(polygon: WaterPolygon): WaterMesh {
+  const [w, s, e, n] = bounds(polygon.outer)
+  const lon0 = (w + e) / 2
+  const lat0 = (s + n) / 2
+  const kx = Math.cos((lat0 * Math.PI) / 180) * M_PER_DEG
+  const project = (ring: readonly Pt[]) => ring.map(([lon, lat]) => new Vector2((lon - lon0) * kx, (lat - lat0) * M_PER_DEG))
+  const contour = project(polygon.outer)
+  const holes = polygon.holes.map(project)
+  const vertices = [contour, ...holes].flat()
+  const lonLat = new Float64Array(vertices.length * 2)
+  vertices.forEach((v, i) => {
+    lonLat[2 * i] = lon0 + v.x / kx
+    lonLat[2 * i + 1] = lat0 + v.y / M_PER_DEG
+  })
+  return { lonLat, fade: new Float32Array(vertices.length).fill(1), index: Uint32Array.from(ShapeUtils.triangulateShape(contour, holes).flat()) }
+}
+
 /** Share of `fade` from which a vertex counts as inside the water, away from the shore (an OSM shore is a few metres off the DEM's). */
 const INNER_FADE = 0.5
 /** Percentile of the heights inside a lake taken as its level: high, so that the relief of a lake does not poke through. */

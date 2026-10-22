@@ -180,6 +180,8 @@ const messages: Messages['overlay'] = {
   'panel.creditsOff': 'Cita entonces las fuentes en otro lugar (descripción del vídeo, créditos). La mención de Open-Meteo sigue incrustada mientras se muestra el tiempo, como exige su licencia.',
   'panel.styleHint': 'Cambiar de estilo pone el título, la tarjeta de cierre, los contadores, el perfil, el minimapa y el tiempo donde los tiene el estilo (posiciones y tamaños); el logo, el texto libre y la clasificación conservan los suyos.',
   'panel.styleMoved': 'Estilo «{style}»: título, tarjeta de cierre, contadores, perfil, minimapa y tiempo devueltos a su sitio en el estilo.',
+  // 4.0 — Agua reflectante: el mar y los ríos trazados como líneas (4.0)
+  'draw.credits.landmarksAndWater': 'Referencias y agua: {source}',
 }
 
 export default messages
