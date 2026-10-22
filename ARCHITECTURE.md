@@ -891,7 +891,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   speed applies on top. **Duration or speed** (`src/flyover/flightSpeed.ts`, pure; `src/ui/FlightDurationField.tsx`): the one setting
   has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change). The
   marker's *average* speed is derived: km/h = length ÷ duration (`speedKmh`, the length of the film track: all the stages of
-  « À la suite »), « × temps réel » = recorded time ÷ duration (`speedUpFactor`, none for a track without times: km/h only).
+  « À la suite »), « × temps réel » = recorded time ÷ duration (`speedUpFactor`; the recorded time is the sum of the stages' own corrected durations, `recordedTotalS`, nights between days not counted; none for a track without times: km/h only).
   Typing a speed gives the duration back (`durationForKmh`, `durationForSpeedUp`: rounded to a whole second, clamped to the
   range, so the speed shown afterwards may differ by the second's granularity). The speed slider spans the duration range on a
   log scale (`speedPosition`, `durationAtPosition`, 1,000 notches). Stops, slow-motion, speed portions and « Garder la durée du

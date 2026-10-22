@@ -3,18 +3,20 @@ import { clamp } from '../core/math'
 import { t, useT } from '../i18n'
 import { FLYOVER_DURATION_RANGE } from '../flyover/cameraSettings'
 import {
-  durationAtPosition,
+  durationAtSliderPosition,
   durationForKmh,
   durationForSpeedUp,
   hasSpeedUp,
   kmhRange,
+  recordedTotalS,
   speedKmh,
   speedPosition,
   speedUpFactor,
   speedUpRange,
   SPEED_POSITIONS,
 } from '../flyover/flightSpeed'
-import { setFlightTiming, useFilmClock, useFilmSource, useFilmTrack } from '../scene/usePacing'
+import { correctedStats } from '../import/stats'
+import { setFlightTiming, useFilmClock, useFilmSequence, useFilmSource, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { formatDuration, formatNumber, formatSpeedUp } from './format'
 import { InfoTip } from './PanelSection'
@@ -49,7 +51,9 @@ export function FlightDurationField() {
   const { stageIds, film: filmSettings } = useFilmSource()
   const track = useFilmTrack()
   const lengthM = track?.stats.distanceM ?? 0
-  const recordedS = track?.stats.durationS
+  // the recorded time of what is flown: each stage's own (the nights between two days are not part of it)
+  const sequence = useFilmSequence()
+  const recordedS = track ? recordedTotalS((sequence ? sequence.stages.map((s) => s.track) : [track]).map((tr) => correctedStats(tr).durationS)) : undefined
   const stopCount = film.stops.length
   // « À la suite »: the stages whose flight time is set on the timeline take theirs out of the duration
   const timedStages = stageIds?.filter((id) => filmSettings.stageDurations?.[id] !== undefined).length ?? 0
@@ -128,7 +132,7 @@ export function FlightDurationField() {
           max={SPEED_POSITIONS}
           step={1}
           value={speedPosition(durationS)}
-          onChange={(position) => set(durationAtPosition(position))}
+          onChange={(position) => set(durationAtSliderPosition(position, durationS))}
           format={() => speedWords(durationS)}
           spoken={() => speedWords(durationS)}
         />

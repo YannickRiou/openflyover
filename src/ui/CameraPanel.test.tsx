@@ -116,6 +116,34 @@ describe('CameraPanel: duration of the flyover', () => {
   })
 })
 
+describe('CameraPanel: « À la suite » on two days', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  /** 1 h of outing over 5 km, starting `dayOffset` days after the first */
+  const stage = (dayOffset: number) =>
+    buildTrack({
+      name: 'Étape',
+      source: 'gpx',
+      segments: [
+        { points: Array.from({ length: 51 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 100) / M_PER_DEG_LAT, ele: 1000, time: dayOffset * 86_400_000 + i * 72_000 })) },
+      ],
+    })
+
+  it('counts the time recorded in each stage, not the night between them', async () => {
+    const { host, root } = await mount(timed, 60)
+    useAppStore.setState({
+      tracks: [stage(0), stage(1)],
+      settings: { ...DEFAULT_SETTINGS, flyoverDurationS: 60, race: { ...DEFAULT_SETTINGS.race, sequence: true } },
+    })
+    await act(async () => undefined)
+    // 2 h recorded (not 25 h) over 60 s: × 120
+    expect(host.textContent).toContain('soit × 120 (sortie de 2 h 00)')
+    act(() => root.unmount())
+  })
+})
+
 describe('CameraPanel: the presets', () => {
   afterEach(() => {
     document.body.innerHTML = ''

@@ -3,10 +3,12 @@ import { FLYOVER_DURATION_RANGE } from './cameraSettings'
 import {
   clampDuration,
   durationAtPosition,
+  durationAtSliderPosition,
   durationForKmh,
   durationForSpeedUp,
   hasSpeedUp,
   kmhRange,
+  recordedTotalS,
   speedKmh,
   speedPosition,
   speedUpFactor,
@@ -117,5 +119,35 @@ describe('speed slider (log scale over the duration range)', () => {
 
   it('a duration read back from its position is within a second, between the notches', () => {
     for (const d of [24, 50, 60, 168, 300]) expect(Math.abs(durationAtPosition(speedPosition(d)) - d)).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('recorded time of a sequence', () => {
+  it('sums the stages’ own durations, not the span from the first start to the last end', () => {
+    // two days of 1 h and 2 h: 3 h recorded, whatever the night between them
+    expect(recordedTotalS([3600, 7200])).toBe(10_800)
+    expect(recordedTotalS([5400])).toBe(5400)
+  })
+
+  it('is none when a stage has no times, or nothing is flown', () => {
+    expect(recordedTotalS([3600, undefined])).toBeUndefined()
+    expect(recordedTotalS([3600, 0])).toBeUndefined()
+    expect(recordedTotalS([])).toBeUndefined()
+  })
+})
+
+describe('arrow keys on the speed slider', () => {
+  it('one notch either way always changes the duration by at least a second, across the range', () => {
+    for (let d = min; d <= max; d++) {
+      const p = speedPosition(d)
+      // right = faster = shorter
+      if (d > min) expect(durationAtSliderPosition(p + 1, d)).toBeLessThan(d)
+      if (d < max) expect(durationAtSliderPosition(p - 1, d)).toBeGreaterThan(d)
+    }
+  })
+
+  it('a drag far from the current notch is the position asked, and staying put changes nothing', () => {
+    expect(durationAtSliderPosition(500, 60)).toBe(durationAtPosition(500))
+    expect(durationAtSliderPosition(speedPosition(60), 60)).toBe(60)
   })
 })

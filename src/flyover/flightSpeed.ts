@@ -74,3 +74,25 @@ export function durationAtPosition(position: number): number {
   const share = Math.min(1, Math.max(0, position / SPEED_POSITIONS))
   return clampDuration(MIN_S * Math.pow(MAX_S / MIN_S, 1 - share))
 }
+
+/**
+ * Recorded time of everything flown: the sum of each stage's own recorded duration (the nights between two days of
+ * « À la suite » are not counted); undefined when one has no times, since « × temps réel » then means nothing.
+ */
+export function recordedTotalS(durationsS: readonly (number | undefined)[]): number | undefined {
+  if (durationsS.length === 0 || durationsS.some((d) => d === undefined || !(d > 0))) return undefined
+  return (durationsS as number[]).reduce((a, b) => a + b, 0)
+}
+
+/**
+ * Duration the speed slider asks for at `position` while the flyover lasts `currentS`. Several notches of the log slider
+ * can round to the same whole second: a step of one notch (the arrow keys) that would change nothing moves one second
+ * the way it points (right = faster = shorter) instead, so the thumb never sticks. A drag that lands on the same second
+ * more than one notch away changes nothing.
+ */
+export function durationAtSliderPosition(position: number, currentS: number): number {
+  const asked = durationAtPosition(position)
+  if (asked !== currentS) return asked
+  const delta = position - speedPosition(currentS)
+  return Math.abs(delta) === 1 ? clampDuration(currentS - delta) : currentS
+}
