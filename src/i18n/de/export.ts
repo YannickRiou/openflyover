@@ -303,7 +303,7 @@ const messages: Messages['export'] = {
   'weight.heavyActive': ', aufwendige Einstellung aktiv',
   // « File de rendus » and rendering in the background (4.0.0)
   'queue.title': 'Render-Warteschlange',
-  'queue.hint': 'Um mehrere Projekte nacheinander zu rendern: ein Projekt öffnen, oben seine Formate ankreuzen, « Dieses Projekt zur Warteschlange hinzufügen », dann das nächste öffnen. Jedes Projekt wird beim Hinzufügen kopiert: spätere Änderungen ändern seinen Film nicht. Standbild und Poster lassen sich nicht einreihen.',
+  'queue.hint': 'Um mehrere Projekte nacheinander zu rendern: ein Projekt öffnen, oben seine Formate ankreuzen, « Dieses Projekt zur Warteschlange hinzufügen », dann das nächste öffnen. Jedes Projekt wird beim Hinzufügen kopiert: spätere Änderungen ändern seinen Film nicht. Das oben angekreuzte Standbild und Poster werden ebenfalls eingereiht.',
   'queue.add': 'Dieses Projekt zur Warteschlange hinzufügen',
   'queue.added': '« {name} » zur Warteschlange hinzugefügt.',
   'queue.full': 'Die Warteschlange ist voll: höchstens {max} Projekte.',
@@ -315,8 +315,8 @@ const messages: Messages['export'] = {
   'queue.removeLabel':'« {name} » aus der Warteschlange entfernen',
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'unterbrochen: beginnt von vorn',
-  'queue.progress': 'Film {index} / {total} · {percent} %',
-  'queue.help': 'Die Projekte werden nacheinander gerendert: Jedes öffnet sich anstelle des geöffneten Projekts, das am Ende unverändert zurückkommt. Der Ordner für die Filme wird beim Start abgefragt. Wird die App während eines Renderns geschlossen, bleibt die Warteschlange erhalten: « Fortsetzen » fragt den Ordner erneut ab und rendert den unterbrochenen Film von seinem ersten Bild an neu (ein Film macht nicht dort weiter, wo er stehen blieb). Ein sehr großes Projekt wird beim Schließen nicht behalten: Es muss erneut hinzugefügt werden.',
+  'queue.progress': 'Element {index} / {total} · {percent} %',
+  'queue.help': 'Die Projekte werden nacheinander gerendert: Jedes öffnet sich anstelle des geöffneten Projekts, das am Ende unverändert zurückkommt. Der Ordner für die Dateien wird beim Start abgefragt (die Desktop-App merkt ihn sich für die nächsten Läufe). Wird die App während eines Renderns geschlossen, bleibt die Warteschlange erhalten: « Fortsetzen » fragt den Ordner erneut ab und rendert den unterbrochenen Film von seinem ersten Bild an neu (ein Film macht nicht dort weiter, wo er stehen blieb). Ein sehr großes Projekt wird beim Schließen nicht behalten: Es muss erneut hinzugefügt werden.',
   'queue.background': 'Das Rendern läuft weiter, wenn das Fenster minimiert oder der Tab verborgen ist, nicht aber, wenn das Gerät in den Ruhezustand geht (auf einem Telefon den Bildschirm eingeschaltet lassen).',
   'queue.finished': 'Warteschlange beendet: Alle Projekte sind gerendert.',
   'queue.failedSome': 'Warteschlange beendet. Gerendert: {done}. Fehlgeschlagen: {failed}.',
@@ -329,6 +329,12 @@ const messages: Messages['export'] = {
   'history.detail.snow': 'Schnee',
   'history.detail.forest': 'Wälder',
   'panel.renderTimeTip': 'Die Renderzeit ist eine Schätzung auf Grundlage des zuletzt gerenderten Films; die Wälder (etwa +15 % bei 60 Bäumen pro Hektar) und der Schnee (+3 %) werden im Vergleich zu diesem Film gerechnet. Das Laden der Kacheln kann sie verlängern.',
+  'queue.moveUp': '« {name} » in der Warteschlange nach oben',
+  'queue.moveDown': '« {name} » in der Warteschlange nach unten',
+  'queue.stillLabel': 'Standbild',
+  'queue.posterLabel': 'Poster',
+  'queue.folder': 'Render-Ordner: {name}',
+  'queue.folderChange': 'Ordner ändern',
 }
 
 export default messages

@@ -303,7 +303,7 @@ const messages: Messages['export'] = {
   'weight.heavyActive': ', heavy setting on',
   // « File de rendus » and rendering in the background (4.0.0)
   'queue.title': 'Render queue',
-  'queue.hint': 'To render several projects one after the other: open a project, tick its formats above, “Add this project to the queue”, then open the next one. Each project is copied when you add it: editing it afterwards does not change its film. The still image and the poster cannot be queued.',
+  'queue.hint': 'To render several projects one after the other: open a project, tick its formats above, “Add this project to the queue”, then open the next one. Each project is copied when you add it: editing it afterwards does not change its film. The still image and the poster ticked above are queued too.',
   'queue.add': 'Add this project to the queue',
   'queue.added': '“{name}” added to the queue.',
   'queue.full': 'The queue is full: {max} projects at most.',
@@ -315,8 +315,8 @@ const messages: Messages['export'] = {
   'queue.removeLabel':'Remove “{name}” from the queue',
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'interrupted: will start again from the beginning',
-  'queue.progress': 'film {index} / {total} · {percent}%',
-  'queue.help': 'Projects are rendered one after the other: each opens in place of the project that is open, which is put back as it was at the end. The folder for the films is asked when you start. If the app is closed during a render, the queue is kept: “Resume” asks for the folder again and renders the interrupted film again from its first image (a film does not carry on where it stopped). A very large project is not kept after closing: add it again.',
+  'queue.progress': 'item {index} / {total} · {percent}%',
+  'queue.help': 'Projects are rendered one after the other: each opens in place of the project that is open, which is put back as it was at the end. The folder for the files is asked when you start (the desktop app remembers it for the next runs). If the app is closed during a render, the queue is kept: “Resume” asks for the folder again and renders the interrupted film again from its first image (a film does not carry on where it stopped). A very large project is not kept after closing: add it again.',
   'queue.background': 'Rendering carries on when the window is minimised or the tab is hidden, but not when the device goes to sleep (on a phone, keep the screen on).',
   'queue.finished': 'Queue finished: every project is rendered.',
   'queue.failedSome': 'Queue finished. Rendered: {done}. Failed: {failed}.',
@@ -329,6 +329,12 @@ const messages: Messages['export'] = {
   'history.detail.snow': 'Snow',
   'history.detail.forest': 'Forests',
   'panel.renderTimeTip': 'The rendering time is an estimate based on the last film rendered; the forests (about +15% at 60 trees per hectare) and the snow (+3%) are counted against that film. Loading the tiles can make it longer.',
+  'queue.moveUp': 'Move “{name}” up in the queue',
+  'queue.moveDown': 'Move “{name}” down in the queue',
+  'queue.stillLabel': 'still image',
+  'queue.posterLabel': 'poster',
+  'queue.folder': 'Render folder: {name}',
+  'queue.folderChange': 'Change folder',
 }
 
 export default messages

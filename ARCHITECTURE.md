@@ -2618,15 +2618,25 @@ exports) gets it from the terrain source of the settings.
   `advance`, `frameloop 'never'`) and yields through `scheduler.yield()` or a `MessageChannel`, none of which is a timer.
   The only timers were the tile polls (`wait(pollMs)`, 16 ms) and the data wait of `trackFilms.ts`: a hidden page
   (`document.visibilityState`, which is also what a minimised window reports) fires timers once a second, once a minute after
-  five minutes, so each poll cost a second. `wait` now takes a `WaitHost` (`hidden()`, `now()`): shown, a timer; hidden,
-  message-port turns until the deadline (one processor core kept busy while waiting for tiles). WebGL keeps drawing into its
+  five minutes, so each poll cost a second. `wait` now takes a `WaitHost` (`hidden()`, `now()`, `sleep()`): shown, a timer; hidden,
+  the timer of a dedicated Web Worker (`createWorkerSleep`: an inline `Blob` URL running `setTimeout` and posting the id
+  back, made once and kept; the desktop CSP has `worker-src 'self' blob:`). Chrome and Edge throttle the timers of a hidden
+  page, not those of its dedicated workers, and a message to the page is not delayed (what `turn` already relies on), so the
+  wait costs no processor time. Where the worker cannot be made (no `Worker`, a CSP, a test) `sleep` returns null and `wait`
+  falls back to message-port turns until the deadline (one processor core kept busy while waiting for tiles); a worker that
+  fails later frees its pending waits early (the callers poll again) and the fallback takes over. WebGL keeps drawing into its
   buffer in a hidden page and `drawImage` reads it synchronously, the encoder is event driven, and the wake lock
   (`guard.ts`) is unchanged (screen on; the browser drops it when the page is hidden and it is asked again on return). What
   no code can change: a page suspended by the system (device asleep, a phone's app in the background) does not run.
 - **The queue** (`src/export/queue.ts`, `src/ui/RenderQueue.tsx`, a section of the « Plusieurs formats » mode): a `QueueItem`
   is the exact `serializeProject` text of the project when it was added (media included), its name, the `formatKey`s ticked
-  in « Plusieurs formats » (films only) and a status (`pending`, `running`, `done`, `error`). The export request is not
-  stored: it is built from the snapshot when the item runs (`shownFilm()`, `buildBatchJobs`), since a request holds
+  in « Plusieurs formats », optionally `still` and `poster` (the still image and the poster of the batch, with the
+  playback `progress` of the moment they were added, which a project file does not hold) and a status (`pending`, `running`,
+  `done`, `error`). `buildBatchJobs` gives the films, then the still image (PNG, at the « Vidéo » format), then the poster
+  (`startPoster`, after the progress is put back), each with the statuses and file names of the batch (`jobCount` is the
+  « élément 2 / 3 » total). **Reorder**: `moveItem` / `canMove` (pure) swap a `pending` item with the nearest `pending` one,
+  the finished ones staying where they are; two buttons per waiting item (`move` of the store), allowed during a run since
+  `runQueue` reads the live list. The export request is not stored: it is built from the snapshot when the item runs (`shownFilm()`, `buildBatchJobs`), since a request holds
   functions (`progressAt`). `runQueue` (pure, tested) takes the next `pending` item of the live list, a failure marks the item
   and goes on, a cancel puts the item back to `pending` and stops. `runRenderQueue` keeps the project open
   (`keepOpenProject`: the store fields and the media table, put back as the same objects, so « Enregistré » stays), holds
@@ -2638,8 +2648,12 @@ exports) gets it from the terrain source of the settings.
 - **Persistence**: `{ v: 1, items }` under `openflyover.renderQueue.v1` in the platform `storage`, rewritten at each change;
   `parseQueue` never throws, an item stored `running` comes back `pending` and `interrupted` (« Reprendre »), the film starts
   again from its first image. A snapshot is stored only for an item still to render, under `MAX_SNAPSHOT_CHARS` (1 M) and
-  `MAX_STORED_CHARS` (3 M) in all; the others come back as failed (« projet trop gros pour être gardé »). The folder is never
-  stored (a web handle cannot be): it is asked again at « Reprendre ».
+  `MAX_STORED_CHARS` (3 M) in all; the others come back as failed (« projet trop gros pour être gardé »). **The folder**
+  (`chooseQueueFolder`): on the web it is asked at each « Lancer la file » / « Reprendre » (a handle cannot be stored). On
+  the desktop its path (`WritableFolder.path`) is kept under `openflyover.renderQueue.folder` and reused (`reuseFolder`: the
+  Tauri `exists` check) when it is still there; the fs scope given by the dialog is not persisted across launches (no
+  persisted-scope plugin), so after a restart `exists` is refused and the dialog opens again, in the old folder
+  (`pickFolder(…, startIn)`). « Changer de dossier » forgets the path.
 - **Notification**: at the end of a run `notifyWhenAway` uses the web Notification API when the window is hidden or not
   focused (permission asked at « Lancer la file »). The desktop app has no notification plugin (`@tauri-apps/plugin-notification`
   is not a dependency): it shows the toast only. `--rendu` is unchanged.

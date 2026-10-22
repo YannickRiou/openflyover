@@ -15,6 +15,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
   - « Durée »: the slider now moves one second at a time (15 s to 10 min as before) and the value can be typed in seconds.
   - « Vitesse du marqueur »: a slider of the marker's average speed, in « × temps réel » (the speed-up over the recorded time) and km/h, evenly spread in scale; the value can be typed in either unit. A track without times (a planned outing) has km/h only.
   - Whatever the face, the other one is written beneath (« soit × 240 (sortie de 4 h 00) · 300 km/h », « soit 2 min »). Only the duration is saved: older projects and the « Film automatique » gabarits open unchanged. The speed is the average one: « Garder la durée du survol », the stops, the slow-motion and the speed portions still take their time from the duration. With « À la suite » the length is that of the whole route, and a stage with its own duration keeps it.
+- **Render queue**: two small arrows move a waiting project up or down. The still image and the poster ticked in « Plusieurs formats » are queued with the project (the still image where the playback was when it was added). The desktop app keeps the folder of the last run and does not ask again while the app stays open and the folder is there; after a restart, or if the folder is gone, the dialog opens in it. « Changer de dossier » forgets the folder, so the next run asks for a new one from scratch; on the web it is still asked each time. Older queues open unchanged.
+- **Rendering in the background no longer keeps a processor core busy**: with the tab hidden or the window minimised, the export waits for tiles on a timer that the browser does not slow down, instead of looping.
 
 ## 4.0.0 (October 2026)
 

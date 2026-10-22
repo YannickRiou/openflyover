@@ -1,12 +1,25 @@
 import { useState } from 'react'
 import { useBatchStore } from '../export/batch'
-import { MAX_QUEUE_ITEMS, addOpenProject, askNotificationPermission, formatLabel, runRenderQueue, useQueueStore } from '../export/queue'
+import type { BatchSelection } from '../export/batch'
+import {
+  MAX_QUEUE_ITEMS,
+  QUEUE_FOLDER_KEY,
+  addOpenProject,
+  askNotificationPermission,
+  canMove,
+  chooseQueueFolder,
+  formatLabel,
+  jobCount,
+  runRenderQueue,
+  useQueueStore,
+} from '../export/queue'
 import type { QueueItem } from '../export/queue'
 import { isExportBusy, useExportStore } from '../export/store'
 import type { ExportResult } from '../export/store'
 import { t as translate, useT } from '../i18n'
 import { getPlatform } from '../platform'
-import { canPickFolder, pickFolder } from '../platform/folder'
+import { canPickFolder } from '../platform/folder'
+import { fileNameOf } from '../platform/platform'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { confirmClose, flushAutosave, projectCloseLoss, unsavedChangesText } from './library'
@@ -22,18 +35,24 @@ function statusText(item: QueueItem, fraction: number): string {
   if (item.status === 'pending') return item.interrupted ? translate('export.queue.interrupted') : translate('export.panel.status.pending')
   if (item.status === 'running') {
     const percent = Math.round(Math.min(1, Math.max(0, fraction)) * 100)
-    const progress = translate('export.queue.progress', { index: item.step ?? 1, total: item.formats.length, percent })
+    const progress = translate('export.queue.progress', { index: item.step ?? 1, total: jobCount(item), percent })
     return `${translate('export.panel.status.running')} ${progress}`
   }
   if (item.status === 'error') return translate('export.panel.status.failed', { error: item.error ?? translate('export.panel.status.unknown') })
   return translate('export.panel.status.savedTracks', { files: (item.files ?? []).join(', ') })
 }
 
+/** « 16:9 1080p, image fixe, affiche »: what an item renders. */
+function contents(item: QueueItem): string {
+  return [...item.formats.map(formatLabel), ...(item.still ? [translate('export.queue.stillLabel')] : []), ...(item.poster ? [translate('export.queue.posterLabel')] : [])].join(', ')
+}
+
 /**
  * « File de rendus »: projects added with the formats ticked above, rendered one after the other (src/export/queue.ts).
- * `formats` are the films ticked in « Plusieurs formats »; `save` receives a film when no folder could be asked.
+ * `selection` is what is ticked in « Plusieurs formats » (films, still image, poster); `save` receives a file when no
+ * folder could be asked.
  */
-export function RenderQueue({ formats, save }: { formats: readonly string[]; save(result: ExportResult): void }) {
+export function RenderQueue({ selection, save }: { selection: BatchSelection; save(result: ExportResult): void }) {
   const t = useT()
   const items = useQueueStore((s) => s.items)
   const running = useQueueStore((s) => s.running)
@@ -50,9 +69,12 @@ export function RenderQueue({ formats, save }: { formats: readonly string[]; sav
   const capabilities = getPlatform().capabilities
   const toFolder = capabilities.canStreamToDisk && canPickFolder(capabilities)
   const waiting = items.filter((i) => i.status === 'pending')
+  const nothingTicked = selection.formats.length === 0 && !selection.still && !selection.poster
+  /** desktop: the folder of the last run, kept for the next one */
+  const [folderPath, setFolderPath] = useState(() => (capabilities.isDesktop ? getPlatform().storage.get(QUEUE_FOLDER_KEY) : null))
 
   const add = () => {
-    const name = addOpenProject(formats)
+    const name = addOpenProject(selection)
     showToast(name ? { kind: 'success', text: t('export.queue.added', { name }) } : { kind: 'error', text: t('export.queue.full', { max: MAX_QUEUE_ITEMS }) })
   }
 
@@ -70,7 +92,7 @@ export function RenderQueue({ formats, save }: { formats: readonly string[]; sav
     // asked now: the browser's folder picker needs this click; null = closed (nothing starts), undefined = films downloaded
     askNotificationPermission()
     const folder = toFolder
-      ? pickFolder(capabilities).catch((error: unknown) => {
+      ? chooseQueueFolder(capabilities).catch((error: unknown) => {
           console.warn('[file de rendus] dossier impossible, films téléchargés un par un :', error)
           showToast({ kind: 'info', text: t('export.queue.folderFailed') })
           return undefined
@@ -78,6 +100,7 @@ export function RenderQueue({ formats, save }: { formats: readonly string[]; sav
       : Promise.resolve(undefined)
     void folder.then(async (picked) => {
       if (picked === null) return
+      setFolderPath(getPlatform().storage.get(QUEUE_FOLDER_KEY))
       // the open project is replaced by those of the queue (and put back at the end): its changes are asked about first
       const proceed = await confirmClose({ flush: flushAutosave, loss: projectCloseLoss, ask, save: saveProject })
       if (proceed && !(await runRenderQueue({ folder: picked ?? null, save }))) showToast({ kind: 'error', text: t('export.queue.busy') })
@@ -95,7 +118,7 @@ export function RenderQueue({ formats, save }: { formats: readonly string[]; sav
       </summary>
       <div className="flex flex-col gap-3">
         <p className="type-hint">{t('export.queue.hint')}</p>
-        <Button block onClick={add} disabled={busy || !hasTrack || formats.length === 0}>
+        <Button block onClick={add} disabled={busy || !hasTrack || nothingTicked}>
           <Icon name="plus" size={18} />
           {t('export.queue.add')}
         </Button>
@@ -107,13 +130,25 @@ export function RenderQueue({ formats, save }: { formats: readonly string[]; sav
             {items.map((item) => (
               <li key={item.id} className="grid justify-items-start gap-0.5 wrap-anywhere">
                 <span className="text-body font-semibold text-text-1">
-                  {t('export.queue.formats', { name: item.name, formats: item.formats.map(formatLabel).join(', ') })}
+                  {t('export.queue.formats', { name: item.name, formats: contents(item) })}
                 </span>
                 <span className="type-hint">{statusText(item, fraction)}</span>
                 {item.status !== 'running' && (
-                  <Button size="sm" disabled={running} aria-label={t('export.queue.removeLabel', { name: item.name })} onClick={() => useQueueStore.getState().remove(item.id)}>
-                    {t('export.queue.remove')}
-                  </Button>
+                  <div className="flex gap-2">
+                    {item.status === 'pending' && (
+                      <>
+                        <Button size="sm" disabled={!canMove(items, item.id, -1)} aria-label={t('export.queue.moveUp', { name: item.name })} onClick={() => useQueueStore.getState().move(item.id, -1)}>
+                          <Icon name="chevron-up" size={16} />
+                        </Button>
+                        <Button size="sm" disabled={!canMove(items, item.id, 1)} aria-label={t('export.queue.moveDown', { name: item.name })} onClick={() => useQueueStore.getState().move(item.id, 1)}>
+                          <Icon name="chevron-down" size={16} />
+                        </Button>
+                      </>
+                    )}
+                    <Button size="sm" disabled={running} aria-label={t('export.queue.removeLabel', { name: item.name })} onClick={() => useQueueStore.getState().remove(item.id)}>
+                      {t('export.queue.remove')}
+                    </Button>
+                  </div>
                 )}
               </li>
             ))}
@@ -145,6 +180,20 @@ export function RenderQueue({ formats, save }: { formats: readonly string[]; sav
           <Button block onClick={() => useBatchStore.getState().cancel()} disabled={cancelRequested}>
             {t('export.queue.cancel')}
           </Button>
+        )}
+        {folderPath && !running && (
+          <div className="grid justify-items-start gap-1">
+            <p className="type-hint wrap-anywhere">{t('export.queue.folder', { name: fileNameOf(folderPath.replace(/[\\/]+$/, '')) })}</p>
+            <Button
+              size="sm"
+              onClick={() => {
+                getPlatform().storage.remove(QUEUE_FOLDER_KEY)
+                setFolderPath(null)
+              }}
+            >
+              {t('export.queue.folderChange')}
+            </Button>
+          </div>
         )}
         <p className="type-hint">{t('export.queue.help')}</p>
         {running && <p className="type-hint">{t('export.queue.background')}</p>}

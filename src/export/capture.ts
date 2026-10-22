@@ -243,11 +243,70 @@ export interface WaitHost {
   /** the page is not shown: hidden tab, minimised or covered window */
   hidden(): boolean
   now(): number
+  /** a timer that a hidden page does not throttle (`workerSleep`); null: none, the wait spins through message ports */
+  sleep?(ms: number): Promise<void> | null
 }
+
+/**
+ * A timer in a dedicated Web Worker. Chrome and Edge throttle the timers of a hidden page (once a second, once a minute
+ * after five minutes: "intensive throttling") but not those of its dedicated workers, which run their own event loop at
+ * full rate: the worker runs `setTimeout` and posts a message back, and a message is neither delayed nor throttled in a
+ * hidden page (the same property `turn` relies on). `create` makes the worker (an inline Blob URL: the CSP of the desktop
+ * app allows `worker-src blob:`); where it cannot (no Worker, CSP, a test), `sleep` returns null and `wait` falls back to
+ * `turn`. A worker that fails after the start (an error, an unreadable message, or no answer within the delay plus 2 s) is
+ * dropped and frees its pending sleeps early: the callers poll again, and later waits use `turn`.
+ */
+export function createWorkerSleep(create: () => Worker): (ms: number) => Promise<void> | null {
+  let worker: Worker | null | undefined
+  let next = 0
+  const pending = new Map<number, { resolve(): void; watchdog: ReturnType<typeof setTimeout> }>()
+  const settle = (id: number) => {
+    const entry = pending.get(id)
+    if (!entry) return
+    clearTimeout(entry.watchdog)
+    pending.delete(id)
+    entry.resolve()
+  }
+  // the worker is dead (error, unreadable message, no answer in time): free every wait, later ones spin
+  const give = () => {
+    const dead = worker
+    worker = null
+    dead?.terminate?.()
+    for (const id of [...pending.keys()]) settle(id)
+  }
+  return (ms) => {
+    if (worker === undefined) {
+      try {
+        worker = create()
+        worker.onmessage = (event: MessageEvent<number>) => settle(event.data)
+        worker.onerror = give
+        worker.onmessageerror = give
+      } catch {
+        worker = null
+      }
+    }
+    const current = worker
+    if (!current) return null
+    return new Promise((resolve) => {
+      const id = next++
+      // a worker that dies without an event never answers: the wait must not stay pending for ever
+      pending.set(id, { resolve, watchdog: setTimeout(give, ms + WORKER_GRACE_MS) })
+      current.postMessage({ id, ms })
+    })
+  }
+}
+
+/** Time a worker has to answer, over the delay asked, before it is taken for dead. */
+const WORKER_GRACE_MS = 2000
+
+const WORKER_SOURCE = 'onmessage=(e)=>{const{id,ms}=e.data;setTimeout(()=>postMessage(id),ms)}'
+
+const workerSleep = createWorkerSleep(() => new Worker(URL.createObjectURL(new Blob([WORKER_SOURCE], { type: 'text/javascript' }))))
 
 const pageHost: WaitHost = {
   hidden: () => typeof document !== 'undefined' && document.visibilityState === 'hidden',
   now: () => performance.now(),
+  sleep: workerSleep,
 }
 
 /** One turn of the event loop through a message port: neither delayed nor throttled in a page that is not shown. */
@@ -264,13 +323,15 @@ function turn(): Promise<void> {
 
 /**
  * Resolve after `ms`. A page that is shown waits with a timer. A hidden page cannot: its timers fire once a second at
- * best (once a minute after five minutes), which would slow the tile polls of an export a hundredfold, so it waits
- * turn by turn through message ports until the deadline (it keeps a processor core busy while it waits). 0 only
- * yields to the event loop.
+ * best (once a minute after five minutes), which would slow the tile polls of an export a hundredfold, so it waits on
+ * the timer of a worker (`createWorkerSleep`, no processor use), or, where no worker can be made, turn by turn through
+ * message ports until the deadline (a processor core kept busy). 0 only yields to the event loop.
  */
 export async function wait(ms: number, host: WaitHost = pageHost): Promise<void> {
   if (ms <= 0) return turn()
   if (!host.hidden()) return new Promise((resolve) => setTimeout(resolve, ms))
+  const slept = host.sleep?.(ms)
+  if (slept) return slept
   const deadline = host.now() + ms
   do await turn()
   while (host.now() < deadline)
