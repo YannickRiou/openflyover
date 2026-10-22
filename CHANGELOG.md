@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.1.0 (unreleased)
+
+- **A « Forêts » chip in the status bar**: like « Eau », it shows while the trees load. It first says « en attente » while the landmarks and the water, requested before, go through OpenStreetMap's server (one request at a time, to respect it), then « chargement ». If the request fails, the chip says so and its hint explains that the trees are simply missing and tried again at the next track or setting change. It shows only when « Forêts » is on, and « Réglages › Barre d'état › Chargements » can hide it (shown by default, also for existing preferences). The help of « Forêts » now says that the trees can take a few minutes on a busy day of the OpenStreetMap server.
+
 ## 4.0.0 (October 2026)
 
 - **A film in one click**: the « Survol » tab starts with « Film automatique ». Three gabarits, « Reel 30 s » (vertical, 30 s), « Résumé 1 min » and « Souvenir 3 min » (16:9), set in one step the length, camera, slow motion and stops, overlay style, opening title and closing card with their figures, day or stage cards and the export format. « Annuler » puts everything back, and everything stays editable. Your own texts and the stops you placed by hand are never replaced. No music is added.

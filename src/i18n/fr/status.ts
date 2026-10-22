@@ -29,4 +29,8 @@ export default {
   'perf.js': 'JS {value}',
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
+  // --- 4.1.0: « Forêts » chip, waiting for the other OpenStreetMap requests ---
+  'source.forest': 'Forêts (OpenStreetMap)',
+  'chip.queued': '{source} : en attente, les autres chargements OpenStreetMap passent avant',
+  forestError: 'Forêts (OpenStreetMap) : échec du chargement, il n’y aura pas d’arbres. Nouvel essai à la prochaine trace ou au prochain changement de réglage.',
 }
