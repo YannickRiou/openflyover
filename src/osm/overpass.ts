@@ -5,8 +5,9 @@
  * cheapest Overpass form, where `around:` on a polyline times out on the public server (docs/sources.md); the exact
  * distance to the track is computed here (`landmarks.ts`). Changing the kinds or the distance only filters the cache.
  *
- * Usage policy: one request at a time, cached in memory and in the platform storage, one retry on HTTP 429 / 504 then
- * the next of `OVERPASS_ENDPOINTS`. The POST body is form-encoded so the browser sends a "simple" CORS request:
+ * Usage policy: one request at a time (the public server grants two slots per address and answers 429 beyond: running
+ * two of ours would take both, and the retry logic would then fail more often than the queue costs; docs/sources.md),
+ * cached in memory and in the platform storage, one retry on HTTP 429 / 504 then the next of `OVERPASS_ENDPOINTS`. The POST body is form-encoded so the browser sends a "simple" CORS request:
  * overpass-api.de answers the OPTIONS preflight with 406.
  */
 import { cyrb53 } from '../core/math'
@@ -381,6 +382,18 @@ let queue: Promise<unknown> = Promise.resolve()
 export const MEMORY_CACHE_ENTRIES = 32
 /** Insertion order is the use order: the first key is the least recently used. */
 const memoryCache = new Map<string, Promise<unknown[]>>()
+/** Queries queued or being sent, by key (until they settle). */
+const pending = new Set<string>()
+/** Queries being sent now (not just queued), by key. */
+const running = new Set<string>()
+/** Callers waiting for their (queued) query to be sent, by key. */
+const startWaiters = new Map<string, (() => void)[]>()
+
+/** `callback` now if the query is being sent, when it is if it is queued, never for a settled one (a cache hit). */
+function whenStarted(key: string, callback: () => void): void {
+  if (running.has(key)) callback()
+  else if (pending.has(key)) startWaiters.set(key, [...(startWaiters.get(key) ?? []), callback])
+}
 
 function remember(key: string, promise: Promise<unknown[]>): void {
   memoryCache.delete(key)
@@ -430,7 +443,8 @@ export function fetchTrackFeatures(
 /**
  * Result of `query` parsed by `parse` (a JSON-serialisable list), from the memory cache, the persistent cache or
  * one queued Overpass query (shared by the landmarks and the water, `water.ts`; always the query with `refresh`). A
- * failed or aborted query is not cached.
+ * failed or aborted query is not cached. `onStart` is called when the query is actually sent (after the ones queued
+ * before it), never for a result already in a cache: a status chip tells « en attente » from « chargement ».
  */
 export function cachedOverpassQuery<T>(
   query: string,
@@ -438,12 +452,14 @@ export function cachedOverpassQuery<T>(
   signal?: AbortSignal,
   deps: OverpassDeps = defaultDeps(),
   refresh = false,
+  onStart?: () => void,
 ): Promise<T[]> {
   const key = hashQuery(query)
   if (refresh) memoryCache.delete(key)
   const cached = memoryCache.get(key) as Promise<T[]> | undefined
   if (cached) {
     remember(key, cached)
+    if (onStart) whenStarted(key, onStart)
     return cached
   }
   const stored = refresh ? null : readCache<T>(deps.storage, key, deps.now())
@@ -452,15 +468,27 @@ export function cachedOverpassQuery<T>(
     remember(key, promise)
     return promise
   }
+  pending.add(key)
   const promise = queue
     .catch(() => undefined)
-    .then(() => runOverpassQuery(query, signal, deps, OVERPASS_ENDPOINTS, parse))
+    .then(() => {
+      running.add(key)
+      for (const callback of startWaiters.get(key) ?? []) callback()
+      startWaiters.delete(key)
+      return runOverpassQuery(query, signal, deps, OVERPASS_ENDPOINTS, parse).finally(() => running.delete(key))
+    })
     .then((features) => {
       writeCache(deps.storage, key, features, deps.now())
       return features
     })
   queue = promise.catch(() => undefined)
   remember(key, promise)
+  if (onStart) whenStarted(key, onStart)
+  const settled = () => {
+    pending.delete(key)
+    startWaiters.delete(key)
+  }
+  promise.then(settled, settled)
   promise.catch(() => memoryCache.get(key) === promise && memoryCache.delete(key))
   // the promise is tied to this caller's signal: once aborted, a later caller must not get its AbortError
   signal?.addEventListener('abort', () => memoryCache.get(key) === promise && memoryCache.delete(key), { once: true })
@@ -470,5 +498,8 @@ export function cachedOverpassQuery<T>(
 /** Forget the memory cache and the queue (tests). */
 export function clearOverpassMemoryCache(): void {
   memoryCache.clear()
+  pending.clear()
+  running.clear()
+  startWaiters.clear()
   queue = Promise.resolve()
 }

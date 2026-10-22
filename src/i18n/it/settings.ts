@@ -79,6 +79,10 @@ const messages: Messages['settings'] = {
   'updates.exportBusy': 'È in corso un’esportazione: attendi che termini prima di installare l’aggiornamento.',
   'updates.confirmTitle': 'Installare l’aggiornamento?',
   'updates.confirmText': 'OpenFlyover si chiuderà per installare la versione {version}, poi si riavvierà.',
+  // --- 4.1.0: « Forêts » chip of the status bar ---
+  'preferences.status.forest': 'Foreste',
+  // 4.1 — Glaciers
+  'preferences.status.glacier': 'Ghiacciai',
 }
 
 export default messages

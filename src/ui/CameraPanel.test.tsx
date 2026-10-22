@@ -6,6 +6,9 @@ import { FLYOVER_DURATION_RANGE } from '../flyover/cameraSettings'
 import { buildTrack } from '../import/stats'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { CameraPanel } from './CameraPanel'
+import { setAutoFilmOpen } from './autoFilmOpen'
+import { runImport } from './projectActions'
+import { useToastStore } from './toast'
 
 beforeAll(() => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -23,6 +26,18 @@ const untimed = buildTrack({
   source: 'gpx',
   segments: [{ points: Array.from({ length: 51 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 100) / M_PER_DEG_LAT, ele: 1000 })) }],
 })
+
+/** What the browser does when the user edits a field: set the text, fire `input`. */
+const typeIn = (input: HTMLInputElement, text: string) =>
+  act(async () => {
+    input.focus()
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, text)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+
+/** « Régler par » › « Vitesse du marqueur » */
+const chooseSpeed = (host: HTMLElement) =>
+  [...host.querySelectorAll<HTMLElement>('button')].find((b) => b.textContent === 'Vitesse du marqueur')!.click()
 
 async function mount(track: typeof timed, durationS: number) {
   useAppStore.setState({ tracks: [track], settings: { ...DEFAULT_SETTINGS, flyoverDurationS: durationS } })
@@ -59,15 +74,76 @@ describe('CameraPanel: duration of the flyover', () => {
     act(() => high.root.unmount())
   })
 
-  it('tells how much faster than the outing the flyover runs, from the recorded time; nothing for an untimed track', async () => {
+  it('writes the other face beneath: × the recorded time and km/h, or km/h alone for an untimed track', async () => {
     const withTimes = await mount(timed, 60)
-    // 4 h recorded over 60 s of film
-    expect(withTimes.host.textContent).toContain('accélération × 240 (sortie de 4 h 00)')
+    // 4 h recorded over 60 s of film, 5 km in 60 s
+    expect(withTimes.host.textContent).toContain('soit × 240 (sortie de 4 h 00) · 300 km/h')
     act(() => withTimes.root.unmount())
     document.body.innerHTML = ''
     const without = await mount(untimed, 60)
-    expect(without.host.textContent).not.toContain('accélération')
+    expect(without.host.textContent).toContain('soit 300 km/h')
+    expect(without.host.textContent).not.toContain('sortie de')
     act(() => without.root.unmount())
+  })
+
+  it('a typed duration, in seconds, is set when settled', async () => {
+    const { host, root } = await mount(timed, 60)
+    const box = host.querySelector<HTMLInputElement>('input[aria-label="Durée du survol, en secondes"]')!
+    await typeIn(box, '47')
+    await act(async () => box.blur())
+    expect(useAppStore.getState().settings.flyoverDurationS).toBe(47)
+    act(() => root.unmount())
+  })
+
+  it('« Vitesse du marqueur »: typed in × the recorded time, then in km/h for a track without times', async () => {
+    const withTimes = await mount(timed, 60)
+    await act(async () => chooseSpeed(withTimes.host))
+    const up = withTimes.host.querySelector<HTMLInputElement>('input[aria-label="Vitesse du marqueur, en fois le temps réel"]')!
+    expect(up.value).toBe('240')
+    await typeIn(up, '120')
+    await act(async () => up.blur())
+    // 4 h = 14400 s over 120
+    expect(useAppStore.getState().settings.flyoverDurationS).toBe(120)
+    expect(withTimes.host.textContent).toContain('soit 2 min')
+    act(() => withTimes.root.unmount())
+    document.body.innerHTML = ''
+    const without = await mount(untimed, 60)
+    await act(async () => chooseSpeed(without.host))
+    expect(without.host.querySelector('input[aria-label="Vitesse du marqueur, en fois le temps réel"]')).toBeNull()
+    const kmh = without.host.querySelector<HTMLInputElement>('input[aria-label="Vitesse du marqueur, en kilomètres par heure"]')!
+    expect(kmh.value).toBe('300')
+    await typeIn(kmh, '150')
+    await act(async () => kmh.blur())
+    expect(useAppStore.getState().settings.flyoverDurationS).toBe(120)
+    act(() => without.root.unmount())
+  })
+})
+
+describe('CameraPanel: « À la suite » on two days', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  /** 1 h of outing over 5 km, starting `dayOffset` days after the first */
+  const stage = (dayOffset: number) =>
+    buildTrack({
+      name: 'Étape',
+      source: 'gpx',
+      segments: [
+        { points: Array.from({ length: 51 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 100) / M_PER_DEG_LAT, ele: 1000, time: dayOffset * 86_400_000 + i * 72_000 })) },
+      ],
+    })
+
+  it('counts the time recorded in each stage, not the night between them', async () => {
+    const { host, root } = await mount(timed, 60)
+    useAppStore.setState({
+      tracks: [stage(0), stage(1)],
+      settings: { ...DEFAULT_SETTINGS, flyoverDurationS: 60, race: { ...DEFAULT_SETTINGS.race, sequence: true } },
+    })
+    await act(async () => undefined)
+    // 2 h recorded (not 25 h) over 60 s: × 120
+    expect(host.textContent).toContain('soit × 120 (sortie de 2 h 00)')
+    act(() => root.unmount())
   })
 })
 
@@ -159,5 +235,48 @@ describe('CameraPanel: « Film automatique »', () => {
     const open = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Choisir un gabarit'))!
     expect(open.disabled).toBe(true)
     act(() => root.unmount())
+  })
+})
+
+describe('« Film automatique » after an import', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+    setAutoFilmOpen(false)
+    useToastStore.setState({ toasts: [] })
+  })
+  const importSortie = () => runImport([{ label: 'sortie.gpx', run: async () => [timed] }])
+  const success = () => useToastStore.getState().toasts.find((t) => t.text.includes('Sortie'))
+
+  it('offers it in the message of the first import, and its action opens the dialog of the « Survol » tab', async () => {
+    useAppStore.setState({ tracks: [], settings: DEFAULT_SETTINGS })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<CameraPanel />))
+    await act(async () => importSortie())
+    expect(success()?.action?.label).toBe('Film automatique…')
+    expect(document.querySelector('[data-testid="auto-film-templates"]')).toBeNull()
+    await act(async () => success()!.action!.run())
+    expect(document.querySelector('[data-testid="auto-film-templates"]')).not.toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('opens nothing once the track is gone', async () => {
+    useAppStore.setState({ tracks: [], settings: DEFAULT_SETTINGS })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<CameraPanel />))
+    await act(async () => importSortie())
+    const { action } = success()!
+    await act(async () => useAppStore.setState({ tracks: [] }))
+    await act(async () => action!.run())
+    expect(document.querySelector('[data-testid="auto-film-templates"]')).toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('does not offer it when a track is added to a film', async () => {
+    useAppStore.setState({ tracks: [untimed], settings: DEFAULT_SETTINGS })
+    await act(async () => importSortie())
+    expect(success()).toBeDefined()
+    expect(success()?.action).toBeUndefined()
   })
 })

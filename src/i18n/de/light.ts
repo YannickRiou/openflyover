@@ -177,10 +177,12 @@ const messages: Messages['light'] = {
   'snow.sequenceNote': 'Bei « Nacheinander » folgt jede Etappe ihrem eigenen Wetter, und eine Etappe ohne Wetter behält den Schnee der vorigen Etappe; der Satz oben beschreibt den Beginn der ersten Strecke.',
   // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
   'forest.enable': 'Wälder',
-  'forest.tip': 'Zeichnet dreidimensionale Bäume dort, wo OpenStreetMap einen Wald zeigt, rund um die Strecke (Internet nötig). Antwortet OpenStreetMap nicht, gibt es einfach keine Bäume. Es sind einfache Formen, zufällig, aber immer an denselben Stellen platziert: Der Export zeigt dieselben Bäume wie die Vorschau.',
+  'forest.tip': 'Zeichnet dreidimensionale Bäume dort, wo OpenStreetMap einen Wald zeigt, rund um die Strecke (Internet nötig). Antwortet OpenStreetMap nicht, gibt es einfach keine Bäume. An einem Tag mit viel Betrieb auf dem OpenStreetMap-Server können die Bäume einige Minuten brauchen. Es sind einfache Formen, zufällig, aber immer an denselben Stellen platziert: Der Export zeigt dieselben Bäume wie die Vorschau.',
   'forest.density': 'Baumdichte',
   'forest.densityValue': '{n} Bäume pro Hektar',
   'forest.densityTip': 'Anzahl der pro Hektar Wald gezeichneten Bäume, nahe der Strecke; weiter weg sind es weniger. Je mehr es sind, desto langsamer werden Vorschau und Export. Das Gerät begrenzt die Gesamtzahl der Bäume (weniger auf Handy und Tablet).',
+  // 4.1 — Glaciers
+  'snow.glaciers': 'Von OpenStreetMap kartierte Gletscher sind immer weiß, egal wo die Grenze liegt.',
 }
 
 export default messages

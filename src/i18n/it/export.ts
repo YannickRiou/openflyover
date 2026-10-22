@@ -325,6 +325,10 @@ const messages: Messages['export'] = {
   'queue.noFilm': 'nessun film da fare per questo progetto',
   'queue.busy': 'Un’altra esportazione è in corso: la coda non è partita.',
   'queue.folderFailed': 'Impossibile aprire la cartella: i film verranno scaricati uno a uno.',
+  // --- 4.1.0: history knows the layers, estimate ---
+  'history.detail.snow': 'Neve',
+  'history.detail.forest': 'Foreste',
+  'panel.renderTimeTip': 'Il tempo di rendering è una stima basata sull’ultimo film renderizzato; le foreste (circa +15 % con 60 alberi per ettaro) e la neve (+3 %) sono contate rispetto a quel film. Il caricamento delle tessere può allungarlo.',
   'queue.moveUp': 'Sposta « {name} » su nella coda',
   'queue.moveDown': 'Sposta « {name} » giù nella coda',
   'queue.stillLabel': 'immagine fissa',

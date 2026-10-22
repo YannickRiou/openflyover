@@ -325,6 +325,10 @@ const messages: Messages['export'] = {
   'queue.noFilm': 'kein Film für dieses Projekt zu erstellen',
   'queue.busy': 'Ein anderer Export läuft: Die Warteschlange wurde nicht gestartet.',
   'queue.folderFailed': 'Der Ordner konnte nicht geöffnet werden: Die Filme werden einzeln heruntergeladen.',
+  // --- 4.1.0: history knows the layers, estimate ---
+  'history.detail.snow': 'Schnee',
+  'history.detail.forest': 'Wälder',
+  'panel.renderTimeTip': 'Die Renderzeit ist eine Schätzung auf Grundlage des zuletzt gerenderten Films; die Wälder (etwa +15 % bei 60 Bäumen pro Hektar) und der Schnee (+3 %) werden im Vergleich zu diesem Film gerechnet. Das Laden der Kacheln kann sie verlängern.',
   'queue.moveUp': '« {name} » in der Warteschlange nach oben',
   'queue.moveDown': '« {name} » in der Warteschlange nach unten',
   'queue.stillLabel': 'Standbild',

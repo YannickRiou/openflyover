@@ -153,6 +153,6 @@ export function parseForest(json: unknown): ForestPolygon[] {
 }
 
 /** Forests around `track`, from the caches or one queued Overpass query (fair use: see overpass.ts). */
-export function fetchTrackForest(track: Track, signal?: AbortSignal, deps?: OverpassDeps): Promise<ForestPolygon[]> {
-  return cachedOverpassQuery(forestQuery(track), parseForest, signal, deps)
+export function fetchTrackForest(track: Track, signal?: AbortSignal, deps?: OverpassDeps, onStart?: () => void): Promise<ForestPolygon[]> {
+  return cachedOverpassQuery(forestQuery(track), parseForest, signal, deps, false, onStart)
 }

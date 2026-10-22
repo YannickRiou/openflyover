@@ -323,6 +323,10 @@ export default {
   'queue.noFilm': 'aucun film à faire pour ce projet',
   'queue.busy': 'Un autre export est en cours : la file n’a pas démarré.',
   'queue.folderFailed': 'Dossier impossible à ouvrir : les films seront téléchargés un par un.',
+  // --- 4.1.0: history knows the layers, estimate ---
+  'history.detail.snow': 'Neige',
+  'history.detail.forest': 'Forêts',
+  'panel.renderTimeTip': 'Le temps de rendu est une estimation d’après le dernier film rendu ; les forêts (environ + 15 % à 60 arbres par hectare) et la neige (+ 3 %) sont comptées d’après ce film. Le chargement des tuiles peut l’allonger.',
   'queue.moveUp': 'Monter « {name} » dans la file',
   'queue.moveDown': 'Descendre « {name} » dans la file',
   'queue.stillLabel': 'image fixe',

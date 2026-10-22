@@ -325,6 +325,10 @@ const messages: Messages['export'] = {
   'queue.noFilm': 'no film to make for this project',
   'queue.busy': 'Another export is running: the queue did not start.',
   'queue.folderFailed': 'The folder could not be opened: the films will be downloaded one by one.',
+  // --- 4.1.0: history knows the layers, estimate ---
+  'history.detail.snow': 'Snow',
+  'history.detail.forest': 'Forests',
+  'panel.renderTimeTip': 'The rendering time is an estimate based on the last film rendered; the forests (about +15% at 60 trees per hectare) and the snow (+3%) are counted against that film. Loading the tiles can make it longer.',
   'queue.moveUp': 'Move “{name}” up in the queue',
   'queue.moveDown': 'Move “{name}” down in the queue',
   'queue.stillLabel': 'still image',

@@ -77,7 +77,6 @@ const messages: Messages['camera'] = {
   'duration.noStops': 'nessuna sosta',
   'duration.stops': { one: '{count} sosta', other: '{count} soste' },
   'duration.film': 'Film: {duration} · {stops}',
-  'duration.filmSpeedUp': 'Film: {duration} · {stops} · accelerazione {speedUp} (uscita di {recorded})',
   'duration.timedStages': { one: '{count} tappa con durata fissata (ispettore della tappa): le altre mantengono la loro parte della durata del sorvolo, il film cambia della differenza', other: '{count} tappe con durata fissata (ispettore della tappa): le altre mantengono la loro parte della durata del sorvolo, il film cambia della differenza' },
   'pacing.enable': 'Rallenta nei punti salienti',
   'pacing.enableTip': 'Punti salienti: cime delle salite, passi superati e vette vicine alla traccia.',
@@ -94,6 +93,24 @@ const messages: Messages['camera'] = {
   'pacing.transitionsTip': 'Entrata e uscita delle soste, delle pause e delle porzioni di velocità: più lunga, il marcatore rallenta e riparte più dolcemente.',
   'pacing.slowFactorTip': 'Velocità del sorvolo proprio a un punto saliente, rispetto a quella normale (35 %: quasi tre volte più lento).',
   'pacing.windowTip': 'Distanza da ogni lato del punto saliente su cui il sorvolo rallenta e poi riprende velocità.',
+  // 4.1 — flyover set by its duration or by the marker’s speed
+  'speed.by': 'Imposta in base a',
+  'speed.byDuration': 'Durata',
+  'speed.bySpeed': 'Velocità del marcatore',
+  'speed.sliderAria': 'Velocità del marcatore',
+  'speed.durationAria': 'Durata del sorvolo, in secondi',
+  'speed.upAria': 'Velocità del marcatore, in volte il tempo reale',
+  'speed.kmhAria': 'Velocità del marcatore, in chilometri orari',
+  'speed.seconds': 's',
+  'speed.unitKmh': 'km/h',
+  'speed.kmh': '{value} km/h',
+  'speed.asSpeedUp': 'cioè {speedUp} (uscita di {recorded}) · {kmh}',
+  'speed.asKmh': 'cioè {kmh}',
+  'speed.asDuration': 'cioè {duration}',
+  'speed.hintDuration': 'Imposti la durata del sorvolo; la velocità del marcatore ne deriva. È una velocità media: le soste e i rallentamenti sono presi da questa durata.',
+  'speed.hintSpeed': 'Imposti la velocità media del marcatore; l’app ne ricava la durata del sorvolo. Le soste e i rallentamenti sono presi da questa durata.',
+  'speed.hintUntimed': 'Questa traccia non ha orari: la velocità è data solo in km/h.',
+  'speed.hintStages': 'Più tracce: la lunghezza è quella dell’intero percorso; una tappa con durata fissata mantiene la sua durata.',
 }
 
 export default messages

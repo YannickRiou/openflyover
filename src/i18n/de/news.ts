@@ -111,6 +111,12 @@ const messages: Messages['news'] = {
   // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
   'v40.water.title': 'Meer und Bäche erscheinen',
   'v40.water.text': 'Entlang einer Küste wird jetzt das Meer gezeichnet. Flüsse und Bäche, die die Karte nur als Linie zeigt, werden zu schmalen Wasserbändern. Alles wird mit „Spiegelndes Wasser (Meer, Seen und Flüsse)“ eingestellt, im Tab Karte, Abschnitt Hintergrundkarte.',
+  // 4.1 — Glaciers
+  'v41.glaciers.title': 'Gletscher bleiben weiß',
+  'v41.glaciers.text': 'Von OpenStreetMap kartierte Gletscher werden weiß gezeichnet, mit ihren Spalten, auch im Sommer, wenn das Tageswetter keinen Schnee meldet. Sie folgen der Einstellung Wetter › Schnee: mit « Kein » werden sie nicht gezeichnet.',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Dauer oder Tempo des Überflugs',
+  'v41.speed.text': 'Stellen Sie in Überflug › Dauer und Tempo den Überflug nach seiner Dauer (in Sekundenschritten oder durch Eintippen) oder nach dem Tempo des Markers (× Echtzeit und km/h) ein. Das eine ergibt das andere, beide werden immer angezeigt.',
 }
 
 export default messages

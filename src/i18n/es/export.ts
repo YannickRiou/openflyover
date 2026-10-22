@@ -325,6 +325,10 @@ const messages: Messages['export'] = {
   'queue.noFilm': 'ninguna película que hacer para este proyecto',
   'queue.busy': 'Otra exportación está en curso: la cola no ha empezado.',
   'queue.folderFailed': 'No se pudo abrir la carpeta: las películas se descargarán una a una.',
+  // --- 4.1.0: history knows the layers, estimate ---
+  'history.detail.snow': 'Nieve',
+  'history.detail.forest': 'Bosques',
+  'panel.renderTimeTip': 'El tiempo de renderizado es una estimación a partir de la última película renderizada; los bosques (alrededor de +15 % con 60 árboles por hectárea) y la nieve (+3 %) se cuentan respecto a esa película. La carga de las teselas puede alargarlo.',
   'queue.moveUp': 'Subir « {name} » en la cola',
   'queue.moveDown': 'Bajar « {name} » en la cola',
   'queue.stillLabel': 'imagen fija',
