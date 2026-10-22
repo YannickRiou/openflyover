@@ -301,6 +301,28 @@ const messages: Messages['export'] = {
   'weight.fps': '≈ ×{ratio} de fotogramas respecto a 30 fps',
   'weight.label': 'Peso de render: {tier}',
   'weight.heavyActive': ', ajuste pesado activo',
+  // « File de rendus » and rendering in the background (4.0.0)
+  'queue.title': 'Cola de renderizado',
+  'queue.hint': 'Para renderizar varios proyectos uno tras otro: abra un proyecto, marque sus formatos arriba, « Añadir este proyecto a la cola » y abra el siguiente. Cada proyecto se copia al añadirlo: modificarlo después no cambia su película. La imagen fija y el cartel no se pueden poner en cola.',
+  'queue.add': 'Añadir este proyecto a la cola',
+  'queue.added': '« {name} » añadido a la cola.',
+  'queue.full': 'La cola está llena: {max} proyectos como máximo.',
+  'queue.empty': 'La cola está vacía.',
+  'queue.start': 'Iniciar la cola',
+  'queue.resume': 'Reanudar',
+  'queue.cancel': 'Cancelar el renderizado en curso',
+  'queue.remove': 'Quitar',
+  'queue.removeLabel':'Quitar « {name} » de la cola',
+  'queue.formats': '{name} · {formats}',
+  'queue.interrupted': 'interrumpido: empezará de nuevo desde el principio',
+  'queue.progress': 'película {index} / {total} · {percent} %',
+  'queue.help': 'Los proyectos se renderizan uno tras otro: cada uno se abre en lugar del proyecto abierto, que se deja tal cual al final. La carpeta de las películas se pide al iniciar. Si la aplicación se cierra durante un renderizado, la cola se conserva: « Reanudar » vuelve a pedir la carpeta y rehace la película interrumpida desde su primera imagen (una película no continúa donde se detuvo). Un proyecto muy grande no se conserva al cerrar: hay que añadirlo de nuevo.',
+  'queue.background': 'El renderizado continúa cuando la ventana está minimizada o la pestaña oculta, pero no cuando el dispositivo entra en suspensión (en un teléfono, mantenga la pantalla encendida).',
+  'queue.finished': 'Cola terminada: todos los proyectos están renderizados.',
+  'queue.failedSome': 'Cola terminada. Renderizados: {done}. Con error: {failed}.',
+  'queue.stopped': 'Cola interrumpida. Renderizados: {done}. En espera: {left}.',
+  'queue.tooBig': 'proyecto demasiado grande para conservarse al cerrar la aplicación: añádalo de nuevo',
+  'queue.noFilm': 'ninguna película que hacer para este proyecto',
 }
 
 export default messages

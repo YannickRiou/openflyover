@@ -301,6 +301,28 @@ const messages: Messages['export'] = {
   'weight.fps': '≈ ×{ratio} fotogrammi rispetto a 30 fps',
   'weight.label': 'Peso del rendering: {tier}',
   'weight.heavyActive': ', impostazione pesante attiva',
+  // « File de rendus » and rendering in the background (4.0.0)
+  'queue.title': 'Coda di rendering',
+  'queue.hint': 'Per renderizzare più progetti uno dopo l’altro: apri un progetto, spunta i suoi formati qui sopra, « Aggiungi questo progetto alla coda », poi apri il successivo. Ogni progetto viene copiato al momento dell’aggiunta: modificarlo dopo non cambia il suo film. L’immagine fissa e il poster non si possono mettere in coda.',
+  'queue.add': 'Aggiungi questo progetto alla coda',
+  'queue.added': '« {name} » aggiunto alla coda.',
+  'queue.full': 'La coda è piena: al massimo {max} progetti.',
+  'queue.empty': 'La coda è vuota.',
+  'queue.start': 'Avvia la coda',
+  'queue.resume': 'Riprendi',
+  'queue.cancel': 'Annulla il rendering in corso',
+  'queue.remove': 'Rimuovi',
+  'queue.removeLabel':'Rimuovi « {name} » dalla coda',
+  'queue.formats': '{name} · {formats}',
+  'queue.interrupted': 'interrotto: ricomincerà dall’inizio',
+  'queue.progress': 'film {index} / {total} · {percent} %',
+  'queue.help': 'I progetti vengono renderizzati uno dopo l’altro: ciascuno si apre al posto del progetto aperto, che alla fine viene rimesso com’era. La cartella dei film viene chiesta all’avvio. Se l’app viene chiusa durante un rendering, la coda resta: « Riprendi » chiede di nuovo la cartella e rifà il film interrotto dalla prima immagine (un film non riprende da dove si era fermato). Un progetto molto grande non viene conservato alla chiusura: va aggiunto di nuovo.',
+  'queue.background': 'Il rendering continua quando la finestra è ridotta a icona o la scheda è nascosta, ma non quando il dispositivo va in stop (su un telefono, tieni lo schermo acceso).',
+  'queue.finished': 'Coda terminata: tutti i progetti sono renderizzati.',
+  'queue.failedSome': 'Coda terminata. Renderizzati: {done}. Falliti: {failed}.',
+  'queue.stopped': 'Coda interrotta. Renderizzati: {done}. In attesa: {left}.',
+  'queue.tooBig': 'progetto troppo grande per essere conservato alla chiusura dell’app: aggiungilo di nuovo',
+  'queue.noFilm': 'nessun film da fare per questo progetto',
 }
 
 export default messages

@@ -18,6 +18,7 @@ import {
   type TrackRunState,
 } from '../export/batch'
 import { currentReport } from '../export/guard'
+import { useQueueStore } from '../export/queue'
 import { showDiagnostic } from '../export/diagnostic'
 import { targetBitrate, type CodecCandidate } from '../export/encoder'
 import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
@@ -70,6 +71,7 @@ import { useFilmClock } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { ExportHistory } from './ExportHistory'
+import { RenderQueue } from './RenderQueue'
 import { ModifiedMarker } from './ModifiedMarker'
 import { RangeField, RenderWeight, SettingRow } from './PanelSection'
 import { formatBytes, formatNumber } from './format'
@@ -678,6 +680,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                     .join(' · ')}
           </p>
           <p className="type-hint">{t('export.panel.frozen')}</p>
+          <p className="type-hint">{t('export.queue.background')}</p>
           <Button
             block
             onClick={() => useExportStore.getState().cancel()}
@@ -812,8 +815,10 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const rate = useExportStore((s) => s.secondsPerMegapixel)
   const { phase, selection, jobs: states, tracks: trackRuns, folderName, cancelRequested, select } = useBatchStore()
   const id = useId()
-  const running = phase === 'running'
-  const busy = running || exportBusy
+  // the render queue holds the store « running » too, and shows its own progress
+  const queueRunning = useQueueStore((s) => s.running)
+  const running = phase === 'running' && !queueRunning
+  const busy = phase === 'running' || exportBusy
   const capabilities = getPlatform().capabilities
   const toFolder = capabilities.canStreamToDisk && canPickFolder(capabilities)
   // « Un film par trace »: the track files of the folder picked, the films written into an output folder
@@ -1094,6 +1099,8 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           </ul>
         </div>
       )}
+
+      <RenderQueue formats={selection.formats} save={(r) => r.url && download(r.url, r.fileName)} />
 
       <ExportHistory />
 

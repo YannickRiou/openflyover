@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'El cielo sigue el tiempo de cada zona atravesada, y las nubes proyectan sombras sobre el relieve.',
   'v20.interface.title': 'Una interfaz rediseñada',
   'v20.interface.text': 'Nuevo aspecto de paneles, menús, botones y ventanas, con las mismas funciones que antes.',
+  // 4.0.0
+  'v40.queue.title': 'Una cola de renderizado',
+  'v40.queue.text': 'En Exportar › Varios formatos, « Cola de renderizado » renderiza varios proyectos uno tras otro mientras usted está fuera: añada cada proyecto, inicie la cola y el navegador le avisa al final si la ventana no está delante. La cola se conserva si se cierra la aplicación. El renderizado también continúa con la ventana minimizada.',
 }
 
 export default messages

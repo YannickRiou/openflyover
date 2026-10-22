@@ -76,7 +76,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/osm/region.ts` + `src/scene/regionMesh.ts` + `src/scene/RegionHighlight.tsx` | administrative region of the outing, framed and highlighted by the region view (see "Film and timeline", Camera) | `regionName`, `regionCandidatesQuery`, `regionKind`, `REGION_KIND_LABELS`, `parseRegionCandidates`, `containingRegions`, `chooseRegion`, `candidateId`, `regionGeometryQuery`, `parseRegionGeometry`, `simplifyRings`, `fetchRegion`, `regionFrame`, `REGION_MIN_RATIO`, `REGION_MAX_POINTS`; `useRegionStore`, `syncRegion`, `holdRegion`; pure, tested: `buildRegionMesh`, `ringDepths`, `labelPoint`, `ringSegments`, `LABEL_GRID`; `RegionHighlight` |
 | `src/osm/*` | OpenStreetMap landmarks | `OVERPASS_ENDPOINTS`, `osmAttribution()`, `corridorBoxes`, `buildOverpassQuery`, `trackQuery`, `parseOverpass`, `runOverpassQuery`, `fetchTrackFeatures`; `parseEle`, `projectOnPath`, `landmarkPriority`, `landmarkText`, `buildLandmarks`, `landmarkLabels`, `splitHidden`, `DEFAULT_LANDMARK_SETTINGS`, `withLandmarkDefaults`, `withHidden`, `newLandmarkIds`, `PLACE_SIZES`, `PLACE_SIZE_LABELS`, `placeSizeOf`, `withPlaceSize`, `parsePopulation`, `pathBoxDistanceM`, `PLACE_SHARE`, `LANDMARK_DISTANCE_RANGE`, `KIND_LABELS`, `KIND_BADGES`; `useLandmarkStore`, `syncLandmarks`, `resetLandmarkStore` |
 | `src/overlay/*` | film overlay | `drawOverlay(ctx, frame, settings, size, assets)`, `prepareOverlayTrack(track, weather?)`, `overlayFrameAt(data, progress)`, `prepareOverlayFilm`, `overlayFilmFrameAt`, `stageCardAt`, `createOverlayFilmCache`, `miniMapOutline`, `DEFAULT_OVERLAY`, `isValidOverlay`, `withOverlayDefaults`, `withOverrides`, `resolveOverlayTheme`, `leaderboardRows`, `loadLogo`, `loadOverlayFonts`, `createOverlayDrawer` (bridge to the export), `OverlayCanvas` |
-| `src/export/*` | video export | `buildFrameSchedule`, `VIDEO_ASPECTS`, `VIDEO_RESOLUTIONS`, `videoSize`, `createVideoEncoder(canvas, options)`, `ExportCanceledError`, `nativeEncoder.ts` (desktop ffmpeg): `exportCodec`, `createExportEncoder`, `createNativeVideoEncoder`, `wavFile`, `settle`, `renderSettledFrame`, `composeFrame`, `composeOverlayFrame`, `fillSky` (export sky, reused by the poster), `useExportStore`, `videoFileName`, `overlayBaseName`, `ALPHA_CANDIDATES`, `chooseVideoDestination`, `warnsInMemory`, `filmRate`, `ExportController`; `trackFilms.ts` (« Un film par trace », app side: `beginTrackFilms`, `trackFilm`, `shownFilm`); `batch.ts` (batch rendering): pure, tested: `buildBatchJobs`, `formatKey`, `batchBaseName`, `estimateBatch`, `runBatch`, `batchProgressLabel`, `batchSummary`; `exportJob`, `useBatchStore` |
+| `src/export/*` | video export | `buildFrameSchedule`, `VIDEO_ASPECTS`, `VIDEO_RESOLUTIONS`, `videoSize`, `createVideoEncoder(canvas, options)`, `ExportCanceledError`, `nativeEncoder.ts` (desktop ffmpeg): `exportCodec`, `createExportEncoder`, `createNativeVideoEncoder`, `wavFile`, `settle`, `renderSettledFrame`, `composeFrame`, `composeOverlayFrame`, `fillSky` (export sky, reused by the poster), `useExportStore`, `videoFileName`, `overlayBaseName`, `ALPHA_CANDIDATES`, `chooseVideoDestination`, `warnsInMemory`, `filmRate`, `ExportController`; `trackFilms.ts` (« Un film par trace », app side: `beginTrackFilms`, `trackFilm`, `shownFilm`); `batch.ts` (batch rendering): pure, tested: `buildBatchJobs`, `formatKey`, `batchBaseName`, `estimateBatch`, `runBatch`, `batchProgressLabel`, `batchSummary`; `exportJob`, `useBatchStore`; `queue.ts` (« File de rendus »: `runQueue`, `parseQueue`, `serialiseQueue`, `runRenderQueue`, `useQueueStore`) |
 | `src/poster/*` | poster (see "Poster") | pure, tested: `PosterSettings`, `DEFAULT_POSTER`, `POSTER_FORMATS`, `posterSize`, `isValidPoster`, `withPosterDefaults`; `posterContent`, `posterFigure`, `availableFigures`, `posterStats`, `totalStats`, `trackLine`, `POSTER_LIST_MAX`; `posterLayout` (boxes), `fitText`, `fitLines`, `fitTrackList`, `wrapText`, `truncate`; `drawPoster`, `coverCrop`, `POSTER_THEMES`, `POSTER_FONTS`; `framingPath`, `planFlatMap` (`view.ts`); not pure: `renderFlatMap` (`view.ts`), `currentPosterContent`, `startPoster`, `usePosterPreview`, `previewKey` (`export.ts`), `PosterPanel` |
 | `src/flyover/race.ts` | ghost race | `RACE_SYNC_MODES`, `RACE_CAMERAS`, `STAGE_TRANSITIONS`, `DEFAULT_RACE`, `isValidRace`, `prepareRaceTrack`, `raceTrackOf`, `positionAtTime`, `positionAtDistance`, `arrivalTime`, `buildRace`, `raceAt(race, progress)`, `rankRacers`; `useRace`, `RaceMarkers` |
 | `src/flyover/sequence.ts` + `follow.ts` | several tracks (see "Several tracks") | `Stage`, `Sequence`, `playsInSequence`, `orderedTracks`, `buildSequence`, `sequenceOf`, `filmSequenceOf`, `filmTrackOf`, `stageAt`, `trackUnderMarker`, `sequenceLandmarks`; `filmFollowOf(tracks, race, smoothingM)`; hooks `useFilmTrack`, `useFilmSequence` (`scene/usePacing.ts`) |
@@ -2554,6 +2554,38 @@ exports) gets it from the terrain source of the settings.
   `HISTORY_LIMIT` (20) entries and `HISTORY_MAX_BYTES`; `parseHistory` never throws and drops corrupted entries or
   fields. « Réutiliser ces réglages » (`reuseSettings` + `applySettings` in one history transaction, toast with
   « Annuler ») puts back the export options and these fields only, ignoring unknown source ids.
+
+### Render queue and rendering in the background
+
+- **In the background** (`wait` in `capture.ts`): the export loop never uses `requestAnimationFrame` (frames are drawn by R3F
+  `advance`, `frameloop 'never'`) and yields through `scheduler.yield()` or a `MessageChannel`, none of which is a timer.
+  The only timers were the tile polls (`wait(pollMs)`, 16 ms) and the data wait of `trackFilms.ts`: a hidden page
+  (`document.visibilityState`, which is also what a minimised window reports) fires timers once a second, once a minute after
+  five minutes, so each poll cost a second. `wait` now takes a `WaitHost` (`hidden()`, `now()`): shown, a timer; hidden,
+  message-port turns until the deadline (one processor core kept busy while waiting for tiles). WebGL keeps drawing into its
+  buffer in a hidden page and `drawImage` reads it synchronously, the encoder is event driven, and the wake lock
+  (`guard.ts`) is unchanged (screen on; the browser drops it when the page is hidden and it is asked again on return). What
+  no code can change: a page suspended by the system (device asleep, a phone's app in the background) does not run.
+- **The queue** (`src/export/queue.ts`, `src/ui/RenderQueue.tsx`, a section of the « Plusieurs formats » mode): a `QueueItem`
+  is the exact `serializeProject` text of the project when it was added (media included), its name, the `formatKey`s ticked
+  in « Plusieurs formats » (films only) and a status (`pending`, `running`, `done`, `error`). The export request is not
+  stored: it is built from the snapshot when the item runs (`shownFilm()`, `buildBatchJobs`), since a request holds
+  functions (`progressAt`). `runQueue` (pure, tested) takes the next `pending` item of the live list, a failure marks the item
+  and goes on, a cancel puts the item back to `pending` and stops. `runRenderQueue` keeps the project open
+  (`keepOpenProject`: the store fields and the media table, put back as the same objects, so « Enregistré » stays), holds
+  the batch store `running` (`hold` / `release`: no autosave, no edit, same « Annuler » button), then for each item applies
+  the snapshot as « Ouvrir » does (`parseProject` + `applyProject`, no toast, no « Mes projets » entry), waits for the
+  landmarks and weather (`loadTrackData`) and renders its films with `runBatch` + `exportJob`, each into the folder asked at the
+  start (`pickFolder`; without a folder API the films are downloaded). Before starting, `confirmClose` asks to save if the open
+  project has changes kept nowhere.
+- **Persistence**: `{ v: 1, items }` under `openflyover.renderQueue.v1` in the platform `storage`, rewritten at each change;
+  `parseQueue` never throws, an item stored `running` comes back `pending` and `interrupted` (« Reprendre »), the film starts
+  again from its first image. A snapshot is stored only for an item still to render, under `MAX_SNAPSHOT_CHARS` (1 M) and
+  `MAX_STORED_CHARS` (3 M) in all; the others come back as failed (« projet trop gros pour être gardé »). The folder is never
+  stored (a web handle cannot be): it is asked again at « Reprendre ».
+- **Notification**: at the end of a run `notifyWhenAway` uses the web Notification API when the window is hidden or not
+  focused (permission asked at « Lancer la file »). The desktop app has no notification plugin (`@tauri-apps/plugin-notification`
+  is not a dependency): it shows the toast only. `--rendu` is unchanged.
 
 ## Poster (phase 7)
 

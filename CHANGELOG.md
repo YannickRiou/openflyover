@@ -3,6 +3,14 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.0.0 (unreleased)
+
+- **A render queue**: in « Exporter › Plusieurs formats », « File de rendus » renders several projects one after the other while you are away.
+  - Open a project, tick its formats, « Ajouter ce projet à la file », then open the next one. Each project is copied when added: editing it later does not change its film.
+  - « Lancer la file » asks for the folder once, opens each project in turn, renders it, and puts the project that was open back as it was. A failed project is marked and the queue goes on; « Annuler le rendu en cours » stops the run.
+  - The queue is kept when the app is closed: « Reprendre » restarts the interrupted film from its first image. A notification tells you when the queue ends if the window is not in front (web only).
+- **The render goes on in the background**: with the window minimised or the tab hidden, the export no longer slows down to a crawl while it waits for tiles.
+
 ## 3.3.2 (October 2026)
 
 - **Hiding several landmarks is quick**: in the « Choisir sur la carte et le profil » window, « Un clic sur un repère » chooses what a click does:
