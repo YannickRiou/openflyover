@@ -94,7 +94,7 @@ export interface Settings {
    * 3D labels on the relief: GPX waypoints, a marker every `kmStep` km
    * (0: none), « Départ » / « Arrivée » at the ends of the first track, the photos with a GPS position; common size (multiplier) and range (km from the camera) of every label
    */
-  labels: { waypoints: boolean; kmStep: number; endpoints: boolean; photos: boolean; size: number; rangeKm: number }
+  labels: { waypoints: boolean; kmStep: number; endpoints: boolean; photos: boolean; photoPins: boolean; size: number; rangeKm: number }
   /** historical weather of the first timed track (Open-Meteo archive, network) */
   weather: { enabled: boolean }
   /** the weather of the outing drives the scene (clouds dim the sun, haze, veiled sky), strength 0..1 (atmosphere only) */

@@ -15,6 +15,8 @@ const messages: Messages['track'] = {
   'labels.waypoints': 'Named points from the GPX file',
   'labels.endpoints': 'Start and finish',
   'labels.photos': 'Photos, where they were taken',
+  'labels.photoPins': 'Photos on the terrain',
+  'labels.photoPinsTip': 'Each photo of the timeline becomes a pin on the relief, where the marker is when it appears; the camera turns towards it for a moment.',
   'labels.kmMarkers': 'Kilometre markers',
   'labels.kmStepNone': 'None',
   'labels.kmStepOne': 'Every kilometre',

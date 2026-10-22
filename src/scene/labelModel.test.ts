@@ -103,7 +103,7 @@ describe('label texts and sources', () => {
     expect(isValidLabelSettings({ kmStep: 3, size: 1, rangeKm: 70 })).toBe(false)
     expect(isValidLabelSettings({ kmStep: 0, size: 3, rangeKm: 70 })).toBe(false)
     expect(isValidLabelSettings({ kmStep: 0, size: 1, rangeKm: 500 })).toBe(false)
-    expect(withLabelDefaults({ climbs: false, waypoints: true })).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 })
+    expect(withLabelDefaults({ climbs: false, waypoints: true })).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 })
     expect(withLabelDefaults({ climbs: true, waypoints: true, kmStep: 5 })).toMatchObject({ kmStep: 5 })
   })
 

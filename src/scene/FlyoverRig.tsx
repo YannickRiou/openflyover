@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Vector3, type Sprite, type SpriteMaterial } from 'three'
 import { markerAt, markerFadeM } from '../film/markerKeys'
+import { PIN_AIM_RAISE, photoPins, pinAims } from '../film/photoPins'
 import { useMediaStore } from '../film/media'
 import { keyAt, updateCameraKey } from '../film/timeline'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
@@ -25,6 +26,7 @@ import { registerFramingCapture, useRegionStore } from '../osm/region'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { filmFollow, filmViewAt, keyFramingOfView } from './filmView'
+import { pinPosition } from './photoPinPlace'
 import { useTerrainContext } from './terrainContext'
 import { frameDelta } from './renderOnDemand'
 import { trackUnderMarker } from '../flyover/sequence'
@@ -56,6 +58,9 @@ interface DefaultControls {
   removeEventListener?(type: 'start' | 'end' | 'change', listener: () => void): void
 }
 
+const tmpPin = new Vector3()
+const pinOffset = new Vector3()
+
 export function FlyoverRig() {
   const track = useFilmTrack()
   const tracks = useAppStore((s) => s.tracks)
@@ -69,6 +74,10 @@ export function FlyoverRig() {
   // the same function as the other views' (`filmFollow`), so the film camera keeps what it computed (`computeFilmView`)
   const follow = useMemo(() => filmFollow(tracks, race, smoothingM), [tracks, race, smoothingM])
   const clock = useFilmClock()
+  const media = useAppStore((s) => s.settings.film.media)
+  // « Photos sur le terrain »: the camera turns towards the pin of a photo as the marker passes it
+  const pins = useMemo(() => (path ? photoPins(media, path, clock) : []), [media, path, clock])
+  const aimTarget = useMemo(() => new Vector3(), [])
   /** clock the store's film time was computed with */
   const clockRef = useRef(clock)
   const markerRef = useRef<Sprite>(null)
@@ -202,6 +211,7 @@ export function FlyoverRig() {
       settings.flyoverDurationS !== applied.flyoverDurationS ||
       settings.film !== applied.film ||
       settings.race !== applied.race ||
+      settings.labels.photoPins !== applied.labels.photoPins ||
       region !== appliedRegionRef.current
     const placed = appliedRef.current
     const timed = filmViewMovesWithTime(clock.stateAt(timeS), settings.camera) || highViewAt(clock, timeS) !== null
@@ -211,8 +221,19 @@ export function FlyoverRig() {
       appliedSettingsRef.current = settings
       appliedRegionRef.current = region
       camera.position.copy(view.position)
-      camera.lookAt(view.target)
-      orbitControls?.target.copy(view.target)
+      let lookAt = view.target
+      if (settings.labels.photoPins) {
+        aimTarget.copy(view.target)
+        for (const { pin, share } of pinAims(pins, timeS)) {
+          // the picture floats above the foot of the post: aim a little over it
+          pinPosition(pin, path, frame, engine, settings.exaggeration, tmpPin)
+          tmpPin.y += camera.position.distanceTo(tmpPin) * PIN_AIM_RAISE
+          aimTarget.add(pinOffset.copy(tmpPin).sub(view.target).multiplyScalar(share))
+        }
+        lookAt = aimTarget
+      }
+      camera.lookAt(lookAt)
+      orbitControls?.target.copy(lookAt)
     }
     // after the camera move: the figure faces the way the track runs in this very frame; the colour, figure and name
     // of the track under the marker (the stage « À la suite »)

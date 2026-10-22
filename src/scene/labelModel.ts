@@ -111,7 +111,7 @@ export function endpointLabels(track: Track, withText = true): LandmarkLabel[] {
 }
 
 /** « Étiquettes dans la vue » (`settings.labels`): waypoints on, the rest off, size ×1, range 70 km (`LABEL_FADE_END_M`). */
-export const DEFAULT_LABELS = { waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 }
+export const DEFAULT_LABELS = { waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 }
 
 /** Labels settings of an older project: the fields added since take their default. */
 export const withLabelDefaults = withDefaults(DEFAULT_LABELS)
