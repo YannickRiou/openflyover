@@ -123,6 +123,8 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Plantillas más claras',
   'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
+  'v42.tools.title': 'Herramientas para retocar el track',
+  'v42.tools.text': 'En la tarjeta de un track, «Herramientas del track» recorta el principio y el final, quita una sección, elimina los picos de GPS y las pausas, simplifica, invierte el sentido o desplaza la hora, con un antes / después. «Deshacer» devuelve el track anterior, y el GPX se puede volver a exportar.',
 }
 
 export default messages

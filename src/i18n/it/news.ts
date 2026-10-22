@@ -123,6 +123,8 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Modelli più chiari',
   'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',
+  'v42.tools.title': 'Strumenti per ritoccare la traccia',
+  'v42.tools.text': 'Nella scheda di una traccia, «Strumenti della traccia» ritaglia l’inizio e la fine, rimuove una sezione, elimina i picchi GPS e le pause, semplifica, inverte il senso o sposta l’ora, con un prima / dopo. «Annulla» rimette la traccia di prima e il GPX si può riesportare.',
 }
 
 export default messages

@@ -123,6 +123,8 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Clearer templates',
   'v41.auto.text': 'In "Automatic film", each template is a card: format, film length, camera and what gets set, at a glance. Pick one, then "Apply"; "Undo" takes it back.',
+  'v42.tools.title': 'Tools to edit the track',
+  'v42.tools.text': 'In a track’s card, “Track tools” trims the start and the end, removes a section, deletes GPS spikes and pauses, simplifies, reverses the direction or shifts the time, with a before / after. “Undo” puts the earlier track back, and the GPX can be exported again.',
 }
 
 export default messages

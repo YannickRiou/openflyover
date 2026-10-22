@@ -123,6 +123,8 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Klarere Vorlagen',
   'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
+  'v42.tools.title': 'Werkzeuge zum Bearbeiten der Strecke',
+  'v42.tools.text': 'In der Karte einer Strecke kürzen die „Werkzeuge für die Strecke“ Anfang und Ende, entfernen einen Abschnitt, löschen GPS-Ausreißer und Pausen, vereinfachen, kehren die Richtung um oder verschieben die Uhrzeit, mit Vorher / Nachher. „Rückgängig“ bringt die frühere Strecke zurück, und das GPX lässt sich wieder exportieren.',
 }
 
 export default messages
