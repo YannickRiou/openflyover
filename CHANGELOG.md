@@ -5,6 +5,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 4.1.0 (unreleased)
 
+- **Timeline ruler**: the ruler now ends with the film. The last time label (« 0:30 ») used to stick out to the right of the closing card and a scrollbar appeared although every block was already in view; the label now sits inside the film's end and the scrollbar only shows when you zoom in.
+- **The render history knows the snow and the forests**: « Historique des rendus » now records the snow mode and the forests (on or off, density) of each film, shows them in the details (« — » for a film rendered before) and « Réutiliser ces réglages » puts them back with the rest.
+- **The render time counts the forests and the snow**: the « ≈ … de rendu » estimate adjusts the speed of your last film when the forests or the snow differ (about +15 % for forests at 60 trees per hectare, +3 % for snow). It remains an estimate, as the tooltip of the summary says.
 - **« Film automatique » offered right after an import**: the message that follows the import of a first track has a « Film automatique… » button that opens the same window as the « Survol » tab, and the home screen says that « Film automatique » makes a finished film in one click. Adding a track to a film shows no such button.
 
 ## 4.0.0 (October 2026)
