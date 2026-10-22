@@ -16,6 +16,7 @@ import { parseProject, projectFileName, serializeProject } from '../project/docu
 import { PROJECT_EXTENSION, decodeProjectFile, encodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
+import { setAutoFilmOpen } from './autoFilmOpen'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
 import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry } from './library'
@@ -205,11 +206,14 @@ const SAMPLE_NAME = 'etang-ayguelongue-pic-de-l-homme.gpx'
 /** `importFiles` bound to the app store and the toasts (files, the sample, Strava activities). */
 export async function runImport(jobs: ImportJob[]): Promise<void> {
   const { setLoading, addTracks } = useAppStore.getState()
+  // the first track of a new project: the message offers « Film automatique » (not when a track is added to a film)
+  const first = useAppStore.getState().tracks.length === 0
   const outcome = await importFiles(jobs, {
     trackCount: () => useAppStore.getState().tracks.length,
     setLoading,
     addTracks,
-    notify: (kind, text) => showToast({ kind, text }),
+    notify: (kind, text) =>
+      showToast({ kind, text, ...(kind === 'success' && first && { action: { label: t('film.auto.afterImport'), run: () => setAutoFilmOpen(true) } }) }),
   })
   const imported = outcome.tracks
   if (followEachOther(imported)) {

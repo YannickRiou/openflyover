@@ -1831,6 +1831,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   `getSettingsHistory().transaction`, `followFlightTiming` (texts and media attached to a stop follow the new duration), `setFreeFraming(false)`
   when the aspect changes (like a platform chip), then a message with « Annuler » that undoes only while nothing else has
   changed since. Applying it again replaces its own choices; the result is the same whichever gabarit came before.
+  **Second entry point**: the dialog has one open state, `useAutoFilmOpen` (`src/ui/autoFilmOpen.ts`, `setAutoFilmOpen`), read by
+  `AutoFilmSection` (always mounted: the tab panels are force-mounted) so that there is one dialog and one logic. `runImport`
+  (`projectActions.ts`) gives the success message of an import an action « Film automatique… » (`film.auto.afterImport`) that calls
+  `setAutoFilmOpen(true)`, only when the app had no track before the import (not when a track is added to a film). The home screen
+  (`EmptyState`) says in one sentence under the sample button (`home.empty.autoFilm`) that it exists; no button there, there is no track yet.
   Strings: `film.auto.*` (five languages), « Nouveautés » 4.0. Tests: `film/autoFilm.test.ts`, `ui/autoFilm.test.ts`,
   `ui/CameraPanel.test.tsx`.
 
