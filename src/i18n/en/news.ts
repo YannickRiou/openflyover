@@ -117,6 +117,12 @@ const messages: Messages['news'] = {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Flyover duration or speed',
   'v41.speed.text': 'In Flyover › Duration and pacing, set the flyover by its duration (in steps of one second, or by typing the value) or by the marker’s speed (× real time and km/h). One gives the other, and both are always shown.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Lakes freeze, streams stay visible',
+  'v41.ice.text': 'Above the snow line, lakes turn to ice, as white as the ground around them. And seen from high up, streams keep a thin line of water instead of vanishing.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Clearer templates',
+  'v41.auto.text': 'In "Automatic film", each template is a card: format, film length, camera and what gets set, at a glance. Pick one, then "Apply"; "Undo" takes it back.',
   // 4.1 — discreet credits
   'v41.credits.title': 'More discreet credits',
   'v41.credits.text': 'In Overlay › Source credits, choose « Discreet » (the names of the sources in small print in a corner, the full credits at the end of the film), « Full » or « At the end only ». In Export, « Copy the credits » gives the text with its links, to paste in the description of the video.',

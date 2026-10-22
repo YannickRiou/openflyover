@@ -25,7 +25,11 @@ export const WHATS_NEW: readonly NewsVersion[] = [
     items: [
       { icon: 'cloud-sun', get title() { return t('news.v41.glaciers.title') }, get text() { return t('news.v41.glaciers.text') } },
       { icon: 'gauge', get title() { return t('news.v41.speed.title') }, get text() { return t('news.v41.speed.text') } },
+    items: [
+      { icon: 'cloud-sun', get title() { return t('news.v41.ice.title') }, get text() { return t('news.v41.ice.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v41.auto.title') }, get text() { return t('news.v41.auto.text') } },
       { icon: 'type', get title() { return t('news.v41.credits.title') }, get text() { return t('news.v41.credits.text') } },
+    ],
     ],
   },
   {

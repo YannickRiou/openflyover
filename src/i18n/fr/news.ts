@@ -115,6 +115,12 @@ export default {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Durée ou vitesse du survol',
   'v41.speed.text': 'Dans Survol › Durée et rythme, réglez le survol par sa durée (au pas d’une seconde, ou en tapant la valeur) ou par la vitesse du marqueur (× le temps réel et km/h). L’un donne l’autre, et les deux sont toujours affichés.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Les lacs gèlent, les ruisseaux restent visibles',
+  'v41.ice.text': 'Au-dessus de la limite de la neige, les lacs deviennent de la glace, blanche comme le sol autour. Et vus de haut, les ruisseaux gardent un fin trait d’eau au lieu de disparaître.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Des gabarits plus clairs',
+  'v41.auto.text': 'Dans « Film automatique », chaque gabarit est une carte : format, durée du film, caméra et ce qui est réglé, d’un coup d’œil. Choisissez-en une, puis « Appliquer » ; « Annuler » revient en arrière.',
   // 4.1 — discreet credits
   'v41.credits.title': 'Des crédits plus discrets',
   'v41.credits.text': 'Dans Habillage › Crédits, choisissez « Discrets » (le nom des sources en petit dans un coin, les mentions complètes à la fin du film), « Complets » ou « À la fin seulement ». Dans Export, « Copier les crédits » donne le texte avec les liens, à coller dans la description de la vidéo.',

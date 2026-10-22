@@ -117,6 +117,12 @@ const messages: Messages['news'] = {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Durata o velocità del sorvolo',
   'v41.speed.text': 'In Sorvolo › Durata e ritmo, imposti il sorvolo in base alla durata (al secondo, o digitando il valore) o alla velocità del marcatore (× il tempo reale e km/h). L’una dà l’altra, ed entrambe sono sempre mostrate.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'I laghi ghiacciano, i torrenti restano visibili',
+  'v41.ice.text': 'Sopra il limite della neve, i laghi diventano ghiaccio, bianchi come il terreno attorno. E visti dall’alto, i torrenti mantengono un sottile filo d’acqua invece di sparire.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Modelli più chiari',
+  'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',
   // 4.1 — discreet credits
   'v41.credits.title': 'Crediti più discreti',
   'v41.credits.text': 'In Overlay › Crediti delle fonti, scegli « Discreti » (il nome delle fonti in piccolo in un angolo, le menzioni complete alla fine del film), « Completi » o « Solo alla fine ». In Esporta, « Copia i crediti » dà il testo con i suoi link, da incollare nella descrizione del video.',

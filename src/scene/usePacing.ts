@@ -13,7 +13,7 @@ import { idsByDate, movedIds, reorderStages } from '../film/reorder'
 import type { StageSpan } from '../film/reorder'
 import { addCameraKey, addMarkerKey, addMarkerKeysAt, addParamKey, adjacentKey, followStops, keyAt, removeFilmItem } from '../film/timeline'
 import { captureKey } from '../flyover/cameraKeys'
-import { buildSequence, filmSequenceOf, filmTrackOf, orderedTracks, sequenceLandmarks } from '../flyover/sequence'
+import { buildSequence, filmSequenceOf, filmTrackOf, filmTracksOf, orderedTracks, sequenceLandmarks } from '../flyover/sequence'
 import type { Sequence } from '../flyover/sequence'
 import type { Landmark } from '../osm/landmarks'
 import { useLandmarkStore } from '../osm/store'
@@ -29,6 +29,13 @@ export function useFilmSequence(): Sequence | null {
 /** The track the film flies: the first one, or the sequence of all of them « À la suite ». */
 export function useFilmTrack(): Track | undefined {
   return useAppStore((s) => filmTrackOf(s.tracks, s.settings.race))
+}
+
+/** The tracks the film flies over, one by one (`filmTracksOf`): what the water and the forests are fetched for. */
+export function useFilmTracks(): readonly Track[] {
+  const tracks = useAppStore((s) => s.tracks)
+  const race = useAppStore((s) => s.settings.race)
+  return useMemo(() => filmTracksOf(tracks, race), [tracks, race])
 }
 
 /** Landmarks of the film track: the first track's, or those of every stage along the sequence. */

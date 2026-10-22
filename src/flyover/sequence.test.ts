@@ -9,6 +9,7 @@ import {
   buildSequence,
   filmSequenceOf,
   filmTrackOf,
+  filmTracksOf,
   orderedTracks,
   playsInSequence,
   sequenceLandmarks,
@@ -85,6 +86,20 @@ describe('playsInSequence / filmTrackOf', () => {
     expect(filmTrackOf([], SUITE)).toBeUndefined()
     expect(filmSequenceOf([a, b], DEFAULT_RACE)).toBeNull()
     expect(filmTrackOf([a, b], SUITE)).toBe(sequenceOf([a, b]).track)
+  })
+})
+
+describe('filmTracksOf', () => {
+  const a = track('A', 45, null)
+  const b = track('B', 45.1, null)
+  const c = track('C', 45.2, null)
+
+  it('gives the first track alone, the stages in their order « À la suite », every racer in the ghost race', () => {
+    expect(filmTracksOf([a, b, c], DEFAULT_RACE)).toEqual([a])
+    expect(filmTracksOf([], DEFAULT_RACE)).toEqual([])
+    expect(filmTracksOf([a, b, c], SUITE)).toEqual([a, b, c])
+    expect(filmTracksOf([a, b, c], { ...SUITE, order: [c.id, a.id] })).toEqual([c, a, b])
+    expect(filmTracksOf([a, b], { ...DEFAULT_RACE, enabled: true })).toEqual([a, b])
   })
 })
 

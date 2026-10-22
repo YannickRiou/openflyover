@@ -23,7 +23,7 @@ import type { WeatherSummary } from '../weather/series'
 import { OPEN_METEO_SHORT, recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
 import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { CARD_FIGURES, COUNTER_IDS, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
+import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 import { styleStructure } from './structures'
@@ -195,7 +195,7 @@ export interface DayCard {
 export const SAFE_MARGIN = 0.05
 /** Fade lengths of the cards, as fractions of the flight. */
 export const CARD_FADE_IN = 0.01
-export const CARD_FADE_OUT = 0.025
+export { CARD_FADE_OUT }
 /** Fade in and out of a timeline text or photo (seconds, at most a quarter of its duration each). */
 export const TEXT_FADE_S = 0.4
 /** Ken Burns move of a full-screen photo: zoom at one end (1 at the other), largest pan (fraction of the picture side). */

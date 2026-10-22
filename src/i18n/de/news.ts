@@ -117,6 +117,12 @@ const messages: Messages['news'] = {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Dauer oder Tempo des Überflugs',
   'v41.speed.text': 'Stellen Sie in Überflug › Dauer und Tempo den Überflug nach seiner Dauer (in Sekundenschritten oder durch Eintippen) oder nach dem Tempo des Markers (× Echtzeit und km/h) ein. Das eine ergibt das andere, beide werden immer angezeigt.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Seen frieren zu, Bäche bleiben sichtbar',
+  'v41.ice.text': 'Oberhalb der Schneegrenze werden Seen zu Eis, so weiß wie der Boden ringsum. Und aus großer Höhe behalten Bäche eine feine Wasserlinie, statt zu verschwinden.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Klarere Vorlagen',
+  'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
   // 4.1 — discreet credits
   'v41.credits.title': 'Dezentere Quellenangaben',
   'v41.credits.text': 'Wählen Sie in Overlay › Quellenangaben « Dezent » (die Namen der Quellen klein in einer Ecke, die vollständigen Angaben am Ende des Films), « Vollständig » oder « Nur am Ende ». Im Export liefert « Quellenangaben kopieren » den Text mit seinen Links, zum Einfügen in die Videobeschreibung.',
