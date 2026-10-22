@@ -24,6 +24,8 @@ import { centroid } from '../geo/lonLat'
 import type { FileTarget } from '../platform/platform'
 import { DEFAULT_LANDMARK_SETTINGS } from '../osm/landmarks'
 import { DEFAULT_LABELS } from '../scene/labelModel'
+import { DEFAULT_FOREST } from '../osm/forest'
+import type { ForestSettings } from '../osm/forest'
 import { DEFAULT_WATER } from '../osm/water'
 import type { WaterSettings } from '../osm/water'
 import type { LandmarkSettings } from '../osm/landmarks'
@@ -100,6 +102,8 @@ export interface Settings {
   clouds: CloudSettings
   /** lakes and rivers of OpenStreetMap drawn as reflective water (Overpass API, network) */
   water: WaterSettings
+  /** trees drawn where OpenStreetMap has forests (Overpass API, network), density in trees per hectare */
+  forest: ForestSettings
   /** film overlay (« habillage »): style and widgets, drawn by src/overlay/draw.ts */
   overlay: OverlaySettings
   /** exported film: size, frame rate, encoding quality */
@@ -222,6 +226,7 @@ export const DEFAULT_SETTINGS: Settings = {
   weatherScene: DEFAULT_WEATHER_SCENE,
   clouds: DEFAULT_CLOUDS,
   water: DEFAULT_WATER,
+  forest: DEFAULT_FOREST,
   overlay: DEFAULT_OVERLAY,
   video: DEFAULT_VIDEO_SETTINGS,
   poster: DEFAULT_POSTER,

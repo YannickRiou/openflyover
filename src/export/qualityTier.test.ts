@@ -20,9 +20,9 @@ const withCloudQuality = (q: Settings['clouds']['quality'], mode: Settings['clou
 describe('quality tiers', () => {
   it('maps each quality to a clouds quality and a sub-frame cap', () => {
     expect(QUALITY_TIERS).toEqual({
-      standard: { cloudsQuality: 'low', maxSubFrames: 4 },
-      high: { cloudsQuality: 'medium', maxSubFrames: 8 },
-      max: { cloudsQuality: 'high', maxSubFrames: 8 },
+      standard: { cloudsQuality: 'low', maxSubFrames: 4, treeShadows: false },
+      high: { cloudsQuality: 'medium', maxSubFrames: 8, treeShadows: true },
+      max: { cloudsQuality: 'high', maxSubFrames: 8, treeShadows: true },
     })
     // the default project (quality Haute) keeps the clouds and the 8 sub-frames of before the tiers
     expect(qualityTier('high').maxSubFrames).toBe(SHUTTER_SUBFRAMES)
@@ -46,7 +46,7 @@ describe('quality tiers', () => {
 describe('effectiveRender', () => {
   it("follows the quality while the clouds are on 'auto'", () => {
     for (const q of VIDEO_QUALITIES) {
-      expect(effectiveRender(q, { quality: 'auto' })).toEqual({ ...QUALITY_TIERS[q], cloudsByHand: false })
+      expect(effectiveRender(q, { quality: 'auto' })).toEqual({ cloudsQuality: QUALITY_TIERS[q].cloudsQuality, maxSubFrames: QUALITY_TIERS[q].maxSubFrames, cloudsByHand: false })
     }
   })
 

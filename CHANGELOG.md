@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.0.0 (unreleased)
+
+- **Forests in 3D**: the trees now stand out of the ground where OpenStreetMap has forests, so wooded valleys are no longer flat. Two settings in « Carte › Fond de carte »: « Forêts » (on by default) and « Densité des arbres » (20 to 150 trees per hectare, 60 by default). The trees are simple shapes (conifers and broadleaves, by the forest's leaf type or the altitude), placed the same way every time, so the exported film shows the same trees as the preview. Near the track the forest is dense, farther away thinner; the device limits the total (fewer trees on a phone or tablet). In an export at « Haute » or « Maximale » quality the trees also cast their shadows. Older projects open unchanged.
+
 ## 3.3.2 (October 2026)
 
 - **Hiding several landmarks is quick**: in the « Choisir sur la carte et le profil » window, « Un clic sur un repère » chooses what a click does:

@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'The sky follows the weather of each area crossed, and clouds cast shadows on the terrain.',
   'v20.interface.title': 'A redesigned interface',
   'v20.interface.text': 'A new look for the panels, menus, buttons and windows, with the same functions as before.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Forests in 3D',
+  'v40.forests.text': 'Trees rise from the ground where OpenStreetMap has forests: wooded valleys are no longer flat. Settings in Map, “Map background” section: “Forests” and “Tree density”.',
 }
 
 export default messages

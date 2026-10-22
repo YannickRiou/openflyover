@@ -159,6 +159,12 @@ const messages: Messages['light'] = {
   'atmosphere.sun': 'Sonne',
   'atmosphere.sunOff': 'Atmosphäre (vorheriger Abschnitt) aktivieren, um die Uhrzeit der Sonne einzustellen.',
   'map.imageryDetailHint': 'Feiner: schärfere Fotos, aber mehr Kacheln zu laden (längere Vorschau, Export und Offline-Paket).',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Wälder',
+  'forest.tip': 'Zeichnet dreidimensionale Bäume dort, wo OpenStreetMap einen Wald zeigt, rund um die Strecke (Internet nötig). Antwortet OpenStreetMap nicht, gibt es einfach keine Bäume. Es sind einfache Formen, zufällig, aber immer an denselben Stellen platziert: Der Export zeigt dieselben Bäume wie die Vorschau.',
+  'forest.density': 'Baumdichte',
+  'forest.densityValue': '{n} Bäume pro Hektar',
+  'forest.densityTip': 'Anzahl der pro Hektar Wald gezeichneten Bäume, nahe der Strecke; weiter weg sind es weniger. Je mehr es sind, desto langsamer werden Vorschau und Export. Das Gerät begrenzt die Gesamtzahl der Bäume (weniger auf Handy und Tablet).',
 }
 
 export default messages

@@ -143,3 +143,6 @@ export function resetLandmarkStore(): void {
 
 /** Water polygons of OpenStreetMap shown in the scene (scene/WaterLayer.tsx), for the source credits. */
 export const useWaterStore = create<{ polygons: number }>()(() => ({ polygons: 0 }))
+
+/** Forest polygons of OpenStreetMap drawn as trees in the scene (scene/ForestLayer.tsx), for the source credits. */
+export const useForestStore = create<{ polygons: number }>()(() => ({ polygons: 0 }))

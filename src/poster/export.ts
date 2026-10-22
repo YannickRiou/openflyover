@@ -11,7 +11,7 @@ import { videoSize } from '../export/schedule'
 import { stillBaseName, useExportStore } from '../export/store'
 import { climbsOf } from '../flyover/climbs'
 import { trackPathOf } from '../flyover/path'
-import { useLandmarkStore, useWaterStore } from '../osm/store'
+import { useForestStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { loadOverlayFonts } from '../overlay/assets'
 import { overlayCredits } from '../overlay/data'
 import { useAppStore } from '../state/store'
@@ -78,10 +78,10 @@ export function currentPosterContent(): PosterContent | null {
       terrainSourceId: settings.terrainSourceId,
       imagerySourceId: settings.imagerySourceId,
       weather: series !== null,
-      // OpenStreetMap credited for its landmarks and, on the 3D view, its lakes and rivers
+      // OpenStreetMap credited for its landmarks and, on the 3D view, its lakes, rivers and forests
       landmarks:
         Object.values(useLandmarkStore.getState().landmarks).some((list) => list.length > 0) ||
-        (!settings.poster.flat && useWaterStore.getState().polygons > 0),
+        (!settings.poster.flat && (useWaterStore.getState().polygons > 0 || useForestStore.getState().polygons > 0)),
     }),
   })
 }

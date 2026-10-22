@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
-import { useLandmarkStore, useWaterStore } from '../osm/store'
+import { useForestStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { overlayCredits } from '../overlay/data'
 import { getPlatform } from '../platform'
 import { getPerfProbe } from '../scene/perfProbe'
@@ -221,8 +221,9 @@ export function StatusBar() {
   const imagerySourceId = useAppStore((s) => s.settings.imagerySourceId)
   const weather = useWeatherStore(weatherShown)
   const landmarks = useLandmarkStore((s) => Object.values(s.landmarks).some((list) => list.length > 0))
-  // OpenStreetMap is credited for the water and the highlighted region as well as for the landmarks
+  // OpenStreetMap is credited for the water, the forests and the highlighted region as well as for the landmarks
   const water = useWaterStore((s) => s.polygons > 0)
+  const forest = useForestStore((s) => s.polygons > 0)
   const region = useRegionStore((s) => s.region !== null)
   const perfShown = usePreferences((s) => s.performance)
   const perf = usePerformance(perfShown)
@@ -240,7 +241,7 @@ export function StatusBar() {
   const imagery = getImagerySource(imagerySourceId)
   // IGN layers: the update date of the data (Etalab licence), as the service sends it
   const dateNote = updateDateNote(imagery.urlTemplate, sourceDates)
-  const osm = landmarks || water || region
+  const osm = landmarks || water || forest || region
   const credits = overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks: osm })
   const short = compactCredits({ terrainSourceId, imagerySourceId, weather, osm })
   const perfText = perf ? perfParts(perf, perfShown).join(' · ') : ''

@@ -93,4 +93,7 @@ export default {
   'v21.weather.text': 'Le ciel suit la météo de chaque zone traversée, et les nuages font de l’ombre sur le relief.',
   'v20.interface.title': 'Une interface repensée',
   'v20.interface.text': 'Nouvelle présentation des panneaux, des menus, des boutons et des fenêtres, avec les mêmes fonctions qu’avant.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Des forêts en 3D',
+  'v40.forests.text': 'Les arbres sortent du sol là où OpenStreetMap a des forêts : les vallées boisées ne sont plus plates. Réglages dans Carte, section « Fond de carte » : « Forêts » et « Densité des arbres ».',
 }

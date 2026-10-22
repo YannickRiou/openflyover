@@ -467,5 +467,23 @@ distance does not send a new request (local filtering).
 sample track): **200 in 3.7 s, 593 kB, 232 elements** (220 ways, 12 relations: the Arve, the Lac de Passy, reservoirs,
 streams and ponds) → 80 polygons kept. The same request sent by `curl` without a `User-Agent` receives 406.
 
+**Forests (2026-10-22)**: a third request per track, only if « Forêts » is checked: `way` / `relation` (multipolygons)
+`landuse=forest` and `natural=wood` in the track corridor widened to **5 km**, `out geom qt` (full geometry, `leaf_type` among the
+tags). Same queue, same 30-day cache (for the reduced result: polygons simplified to 8 m, at least 5,000 m², at most 600, coordinates to
+1e-5°), same retry policy, same licence as the landmarks and the water (ODbL, credit « © contributeurs OpenStreetMap »; the credit
+line shows as soon as forests are drawn). Measurement (curl with an explicit `User-Agent` and `Accept: */*`, 406 without, as for the
+water; sample track Pic de l'Homme, Pyrénées, 4.3 × 1.6 km), boxes of the corridor:
+
+| Corridor | Box | Answer | Elements | Reduced result (cache) |
+|---|---|---|---|---|
+| 8 km | 42.5664–42.7496 N × 1.772–1.987 E | 200 in 36.6 s, **2.96 MB** | not counted | 164 polygons, 261 kB, 13,400 vertices |
+| 5 km (kept) | 42.5935–42.7220 N × 1.809–1.950 E | 200 in 34.6 to 39.3 s (two runs), **804 kB** | 85 (79 ways, 6 relations; `leaf_type`: 58 needleleaved, 11 mixed, 9 broadleaved, 7 none) | 64 polygons, 130 kB, 6,700 vertices |
+
+The 8 km corridor of the water was too heavy for forests (3 MB), so the corridor is narrower; 5 km covers what the camera sees (trees
+are drawn up to 6 km from the camera, thinner beyond 2 km from the track). The time is the server's: the same day, the water query alone
+(`natural=water` ways of the 5 km box, 211 kB) took 27 s, against 3.7 s on 2026-10-08, so the public server was slow; the 60 s limit of
+the query (`QUERY_TIMEOUT_S`) leaves room, but a very long track (several boxes) may time out: the forests are then missing, without
+a message (no status chip), and tried again on the next track or setting change.
+
 Log (curl, 2026-10-07): `[out:json][timeout:60]; ( node["natural"~"^(peak|volcano|saddle)$"]["name"](45.79485,6.68680,45.91881,6.83916); … 8 statements … ); out center tags qt;`
 → 200, 5.7 s, 44,447 bytes; same request from headless Chromium (origin `http://127.0.0.1:5184`) → 200 in 3.6 s.

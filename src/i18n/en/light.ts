@@ -159,6 +159,12 @@ const messages: Messages['light'] = {
   'atmosphere.sun': 'Sun',
   'atmosphere.sunOff': 'Turn on the atmosphere (previous section) to set the sun time.',
   'map.imageryDetailHint': 'Finer: sharper photos, but more tiles to load (longer preview, export and offline pack).',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Forests',
+  'forest.tip': 'Draws 3D trees where OpenStreetMap shows a forest around the track (internet needed). If OpenStreetMap does not answer, there are simply no trees. They are simple shapes, placed at random but always in the same spots: the export shows the same trees as the preview.',
+  'forest.density': 'Tree density',
+  'forest.densityValue': '{n} trees per hectare',
+  'forest.densityTip': 'Number of trees drawn per hectare of forest, close to the track; farther away there are fewer. The more there are, the slower the preview and the export. The device limits the total number of trees (fewer on a phone or tablet).',
 }
 
 export default messages

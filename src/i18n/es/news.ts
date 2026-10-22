@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'El cielo sigue el tiempo de cada zona atravesada, y las nubes proyectan sombras sobre el relieve.',
   'v20.interface.title': 'Una interfaz rediseñada',
   'v20.interface.text': 'Nuevo aspecto de paneles, menús, botones y ventanas, con las mismas funciones que antes.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Bosques en 3D',
+  'v40.forests.text': 'Los árboles salen del suelo donde OpenStreetMap tiene bosques: los valles arbolados ya no se ven planos. Ajustes en Mapa, sección «Fondo de mapa»: «Bosques» y «Densidad de árboles».',
 }
 
 export default messages

@@ -157,4 +157,10 @@ export default {
   'atmosphere.sun': 'Soleil',
   'atmosphere.sunOff': 'Activez l’atmosphère (section précédente) pour régler l’heure du soleil.',
   'map.imageryDetailHint': 'Plus fin : photos plus nettes, mais plus de tuiles à charger (aperçu, export et pack hors ligne plus longs).',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Forêts',
+  'forest.tip': 'Dessine des arbres en volume là où OpenStreetMap indique une forêt, autour de la trace (internet nécessaire). Si OpenStreetMap ne répond pas, il n’y a simplement pas d’arbres. Ce sont des formes simples, placées au hasard mais toujours aux mêmes endroits : l’export montre les mêmes arbres que l’aperçu.',
+  'forest.density': 'Densité des arbres',
+  'forest.densityValue': '{n} arbres par hectare',
+  'forest.densityTip': 'Nombre d’arbres dessinés par hectare de forêt, près de la trace ; plus loin, il y en a moins. Plus il y en a, plus l’aperçu et l’export sont lents. L’appareil limite le nombre total d’arbres (moins sur téléphone et tablette).',
 }

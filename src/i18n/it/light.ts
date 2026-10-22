@@ -159,6 +159,12 @@ const messages: Messages['light'] = {
   'atmosphere.sun': 'Sole',
   'atmosphere.sunOff': 'Attiva l’atmosfera (sezione precedente) per impostare l’ora del sole.',
   'map.imageryDetailHint': 'Più fine: foto più nitide, ma più tessere da caricare (anteprima, export e pacchetto offline più lunghi).',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Foreste',
+  'forest.tip': 'Disegna alberi in 3D dove OpenStreetMap indica una foresta, attorno alla traccia (serve internet). Se OpenStreetMap non risponde, semplicemente non ci sono alberi. Sono forme semplici, collocate a caso ma sempre negli stessi punti: l’esportazione mostra gli stessi alberi dell’anteprima.',
+  'forest.density': 'Densità degli alberi',
+  'forest.densityValue': '{n} alberi per ettaro',
+  'forest.densityTip': 'Numero di alberi disegnati per ettaro di foresta, vicino alla traccia; più lontano ce ne sono meno. Più ce ne sono, più lenti sono l’anteprima e l’esportazione. Il dispositivo limita il numero totale di alberi (meno su telefono e tablet).',
 }
 
 export default messages

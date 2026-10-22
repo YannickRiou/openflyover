@@ -95,6 +95,9 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Der Himmel folgt dem Wetter jedes durchquerten Gebiets, und Wolken werfen Schatten auf das Gelände.',
   'v20.interface.title': 'Eine neu gestaltete Oberfläche',
   'v20.interface.text': 'Neues Aussehen für Bereiche, Menüs, Schaltflächen und Fenster, mit denselben Funktionen wie zuvor.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Wälder in 3D',
+  'v40.forests.text': 'Bäume wachsen aus dem Boden, wo OpenStreetMap Wälder kennt: bewaldete Täler sind nicht mehr flach. Einstellungen unter Karte, Abschnitt „Hintergrundkarte“: „Wälder“ und „Baumdichte“.',
 }
 
 export default messages

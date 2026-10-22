@@ -5,6 +5,7 @@ import { formatDate } from '../i18n/format'
 import { hasParamKeys } from '../film/paramKeys'
 import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
+import { FOREST_DENSITY_RANGE } from '../osm/forest'
 import { getSettingsHistory } from '../project/history'
 import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -555,6 +556,39 @@ function WaterControl() {
   )
 }
 
+/** « Forêts »: trees where OpenStreetMap has forests, and how many per hectare. */
+function ForestControl() {
+  const t = useT()
+  const id = useId()
+  const forest = useAppStore((s) => s.settings.forest)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const perHectare = (n: number) => t('light.forest.densityValue', { n })
+  return (
+    <>
+      <div className="flex items-center gap-1">
+        <Checkbox id={`${id}-forest`} checked={forest.enabled} onChange={(on) => setSetting('forest', { ...forest, enabled: on })}>
+          {t('light.forest.enable')}
+        </Checkbox>
+        <InfoTip text={t('light.forest.tip')} />
+      </div>
+      {forest.enabled && (
+        <SettingRow label={t('light.forest.density')} value={perHectare(forest.density)} paths={['forest.density']}>
+          <RangeField
+            label={t('light.forest.density')}
+            tip={t('light.forest.densityTip')}
+            min={FOREST_DENSITY_RANGE.min}
+            max={FOREST_DENSITY_RANGE.max}
+            step={FOREST_DENSITY_RANGE.step}
+            value={forest.density}
+            format={perHectare}
+            onChange={(density) => setSetting('forest', { ...forest, density })}
+          />
+        </SettingRow>
+      )}
+    </>
+  )
+}
+
 /** « Nettoyer le relief en mer »: spikes of the elevation data over the sea, and the sea brought to 0 m. */
 function DemCleanControl() {
   const t = useT()
@@ -604,7 +638,7 @@ export function MapSettings() {
   return (
     <>
       {/* the imagery source is left out of the marker: the import picks it per region (IGN, swisstopo) */}
-      <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'water']}>
+      <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'water', 'forest']}>
         <div className="field">
           <label className="type-label" htmlFor={imageryId}>
             {t('light.map.imagery')}
@@ -624,6 +658,8 @@ export function MapSettings() {
         <ImageryDateControl />
 
         <WaterControl />
+
+        <ForestControl />
 
         <SettingRow label={t('light.map.imageryDetail')} value={zoomLabel} paths={['imageryZoomOffset']}>
           <fieldset className="field min-w-0">

@@ -159,6 +159,12 @@ const messages: Messages['light'] = {
   'atmosphere.sun': 'Sol',
   'atmosphere.sunOff': 'Activa la atmósfera (sección anterior) para ajustar la hora del sol.',
   'map.imageryDetailHint': 'Más fino: fotos más nítidas, pero más teselas que cargar (vista previa, exportación y paquete sin conexión más largos).',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Bosques',
+  'forest.tip': 'Dibuja árboles en volumen donde OpenStreetMap indica un bosque, alrededor del track (hace falta internet). Si OpenStreetMap no responde, simplemente no hay árboles. Son formas sencillas, colocadas al azar pero siempre en los mismos sitios: la exportación muestra los mismos árboles que la vista previa.',
+  'forest.density': 'Densidad de árboles',
+  'forest.densityValue': '{n} árboles por hectárea',
+  'forest.densityTip': 'Número de árboles dibujados por hectárea de bosque, cerca del track; más lejos hay menos. Cuantos más hay, más lentas son la vista previa y la exportación. El dispositivo limita el número total de árboles (menos en un móvil o una tableta).',
 }
 
 export default messages
