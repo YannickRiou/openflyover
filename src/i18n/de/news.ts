@@ -102,6 +102,9 @@ const messages: Messages['news'] = {
   // ---- 4.0
   'v40.auto.title': 'Ein Film mit einem Klick',
   'v40.auto.text': 'Im Reiter Überflug bietet „Automatischer Film“ drei Vorlagen (Reel 30 s, Zusammenfassung 1 min, Erinnerung 3 min): Länge, Kamera, Titel, Karten und Exportformat werden auf einmal eingestellt, danach bleibt alles änderbar.',
+  // --- 4.0
+  'v40.snow.title': 'Schnee je nach Datum',
+  'v40.snow.text': 'Oberhalb einer Grenze, die aus dem Wetter des Tages berechnet wird (Schnee am Boden und Temperatur), wird das Gelände weiß – mit unregelmäßigem Rand und Fels an steilen Hängen. Von Hand einstellbar oder abschaltbar unter Wetter › Schnee.',
 }
 
 export default messages

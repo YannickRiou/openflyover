@@ -102,6 +102,9 @@ const messages: Messages['news'] = {
   // ---- 4.0
   'v40.auto.title': 'A film in one click',
   'v40.auto.text': 'In the Flyover tab, "Automatic film" offers three templates (Reel 30 s, Summary 1 min, Keepsake 3 min): length, camera, titles, cards and export format are set at once, and everything stays editable afterwards.',
+  // --- 4.0
+  'v40.snow.title': 'Snow that follows the date',
+  'v40.snow.text': 'Above a line computed from the weather of the day (snow on the ground and temperature), the terrain turns white, with a ragged limit and bare rock on the steep slopes. Set it by hand or turn it off in Weather › Snow.',
 }
 
 export default messages

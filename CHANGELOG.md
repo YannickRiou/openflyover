@@ -11,6 +11,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
   - « Lancer la file » asks for the folder once, opens each project in turn, renders it, and puts the project that was open back as it was. A failed project is marked and the queue goes on; « Annuler le rendu en cours » stops the run.
   - The queue is kept when the app is closed: « Reprendre » restarts the interrupted film from its first image. A notification tells you when the queue ends if the window is not in front (web only).
 - **The render goes on in the background**: with the window minimised or the tab hidden, the export no longer slows down to a crawl while it waits for tiles.
+- **Snow on the terrain according to the date** (new « Neige » section in the « Météo » tab): above a snow line computed from the weather of the day (snow on the ground, snowfall and mean temperature of Open-Meteo, 6.5 °C less every 1,000 m), the terrain turns white, with a ragged limit, the rock kept on the steep slopes and the photo faintly visible in the transition. « Selon la météo du jour » is the default and the panel says « Neige au-dessus de … m » or why there is none; « Manuelle » sets the line by hand (0 to 4,500 m); « Aucune » keeps the photo. With « À la suite », each stage follows its own weather. Older projects open with « Selon la météo du jour ».
 
 ## 3.3.2 (October 2026)
 

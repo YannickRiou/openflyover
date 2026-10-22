@@ -102,6 +102,9 @@ const messages: Messages['news'] = {
   // ---- 4.0
   'v40.auto.title': 'Una película en un clic',
   'v40.auto.text': 'En la pestaña Vuelo, «Película automática» ofrece tres plantillas (Reel 30 s, Resumen 1 min, Recuerdo 3 min): duración, cámara, títulos, tarjetas y formato de exportación se ajustan de una vez, y todo se puede modificar después.',
+  // --- 4.0
+  'v40.snow.title': 'Nieve según la fecha',
+  'v40.snow.text': 'Por encima de un límite calculado a partir del tiempo del día (nieve en el suelo y temperatura), el terreno se vuelve blanco, con un borde irregular y roca en las pendientes empinadas. Se ajusta a mano o se desactiva en Meteo › Nieve.',
 }
 
 export default messages

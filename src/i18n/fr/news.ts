@@ -100,4 +100,7 @@ export default {
   // ---- 4.0
   'v40.auto.title': 'Un film en un clic',
   'v40.auto.text': 'Dans l’onglet Survol, « Film automatique » propose trois gabarits (Reel 30 s, Résumé 1 min, Souvenir 3 min) : durée, caméra, titres, cartes et format d’export se règlent d’un coup, et tout reste modifiable ensuite.',
+  // --- 4.0
+  'v40.snow.title': 'Neige selon la date',
+  'v40.snow.text': 'Au-dessus d’une limite calculée d’après la météo du jour (neige au sol et température), le terrain devient blanc, avec une limite irrégulière et la roche sur les pentes raides. Réglable à la main ou désactivable dans Météo › Neige.',
 }

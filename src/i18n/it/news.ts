@@ -102,6 +102,9 @@ const messages: Messages['news'] = {
   // ---- 4.0
   'v40.auto.title': 'Un film in un clic',
   'v40.auto.text': 'Nella scheda Sorvolo, «Film automatico» propone tre modelli (Reel 30 s, Riassunto 1 min, Ricordo 3 min): durata, camera, titoli, schede e formato di esportazione si impostano in un colpo solo, e tutto resta modificabile in seguito.',
+  // --- 4.0
+  'v40.snow.title': 'Neve secondo la data',
+  'v40.snow.text': 'Sopra un limite calcolato dal meteo del giorno (neve al suolo e temperatura), il terreno diventa bianco, con un bordo irregolare e roccia sui pendii ripidi. Si regola a mano o si disattiva in Meteo › Neve.',
 }
 
 export default messages
