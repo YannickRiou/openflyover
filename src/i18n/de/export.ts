@@ -323,6 +323,8 @@ const messages: Messages['export'] = {
   'queue.stopped': 'Warteschlange unterbrochen. Gerendert: {done}. Wartend: {left}.',
   'queue.tooBig': 'Projekt zu groß, um nach dem Schließen der App behalten zu werden: erneut hinzufügen',
   'queue.noFilm': 'kein Film für dieses Projekt zu erstellen',
+  'queue.busy': 'Ein anderer Export läuft: Die Warteschlange wurde nicht gestartet.',
+  'queue.folderFailed': 'Der Ordner konnte nicht geöffnet werden: Die Filme werden einzeln heruntergeladen.',
 }
 
 export default messages

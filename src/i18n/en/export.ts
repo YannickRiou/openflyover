@@ -323,6 +323,8 @@ const messages: Messages['export'] = {
   'queue.stopped': 'Queue stopped. Rendered: {done}. Waiting: {left}.',
   'queue.tooBig': 'project too large to be kept after the app is closed: add it again',
   'queue.noFilm': 'no film to make for this project',
+  'queue.busy': 'Another export is running: the queue did not start.',
+  'queue.folderFailed': 'The folder could not be opened: the films will be downloaded one by one.',
 }
 
 export default messages

@@ -20,7 +20,7 @@ import type { WritableFolder } from '../platform/folder'
 import { applyProject } from '../project/apply'
 import { parseProject, serializeProject } from '../project/document'
 import { getSettingsHistory } from '../project/history'
-import { useAppStore } from '../state/store'
+import { imageryChoiceKept, keepImageryChoice, useAppStore } from '../state/store'
 import { effectiveProjectName } from '../ui/shell'
 import { showToast } from '../ui/toast'
 import { buildBatchJobs, exportJob, runBatch, trackOutcome, useBatchStore } from './batch'
@@ -32,8 +32,9 @@ import { loadTrackData, shownFilm } from './trackFilms'
 
 export const QUEUE_KEY = 'openflyover.renderQueue.v1'
 const QUEUE_VERSION = 1
-/** items in the queue */
+/** items still to render (the finished and failed ones stay listed without counting), and items listed in all */
 export const MAX_QUEUE_ITEMS = 20
+export const MAX_LISTED_ITEMS = 100
 /** longest snapshot kept after the app is closed (characters of JSON), and all of them together: the storage holds ~5 MB */
 export const MAX_SNAPSHOT_CHARS = 1_000_000
 export const MAX_STORED_CHARS = 3_000_000
@@ -70,7 +71,7 @@ export interface QueueItem {
  */
 export function serialiseQueue(items: readonly QueueItem[]): string {
   let room = MAX_STORED_CHARS
-  const stored = items.slice(0, MAX_QUEUE_ITEMS).map(({ id, name, formats, status, error, snapshot, interrupted, files }) => {
+  const stored = items.slice(0, MAX_LISTED_ITEMS).map(({ id, name, formats, status, error, snapshot, interrupted, files }) => {
     const waiting = status === 'pending' || status === 'running'
     const keep = waiting && snapshot !== null && snapshot.length <= Math.min(MAX_SNAPSHOT_CHARS, room)
     if (keep) room -= snapshot.length
@@ -109,7 +110,7 @@ export function parseQueue(raw: string | null | undefined): QueueItem[] {
         items.push(item)
       }
     }
-    return items.slice(0, MAX_QUEUE_ITEMS)
+    return items.slice(0, MAX_LISTED_ITEMS)
   } catch {
     return []
   }
@@ -187,8 +188,12 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
   items: read(),
   running: false,
   add(item) {
-    if (get().items.length >= MAX_QUEUE_ITEMS) return false
-    set({ items: [...get().items, item] })
+    // only the items still to render count: finished and failed ones stay listed, the oldest go past `MAX_LISTED_ITEMS`
+    const items = get().items
+    if (items.filter((i) => i.status === 'pending' || i.status === 'running').length >= MAX_QUEUE_ITEMS) return false
+    const finished = items.filter((i) => i.status === 'done' || i.status === 'error')
+    const dropped = new Set(finished.slice(0, Math.max(0, items.length + 1 - MAX_LISTED_ITEMS)))
+    set({ items: [...items.filter((i) => !dropped.has(i)), item] })
     return true
   },
   remove(id) {
@@ -238,9 +243,13 @@ function keepOpenProject(): () => void {
     savedProject: s.savedProject,
     filmSelection: s.filmSelection,
     filmKeys: s.filmKeys,
+    workArea: s.workArea,
   }
   const media = useMediaStore.getState().table
+  // the queued projects set their imagery source through `setSetting`, which would count as the user's choice
+  const imageryChosen = imageryChoiceKept()
   return () => {
+    keepImageryChoice(imageryChosen)
     useMediaStore.getState().replace(media)
     useAppStore.setState(kept)
     useAppStore.getState().requestFit()
@@ -288,12 +297,12 @@ async function renderItem(item: QueueItem, { folder, save }: QueueRunOptions, ca
   return { status: 'done', files: films.flatMap((f) => (f.result ? [f.result.fileName] : [])) }
 }
 
-/** « Lancer la file »: render the items « en attente », then put back the project that was open. Resolves once the run is over. */
-export async function runRenderQueue(options: QueueRunOptions): Promise<void> {
+/** « Lancer la file »: render the items « en attente », then put back the project that was open. Resolves once the run is over (false when it could not start: the app is busy). */
+export async function runRenderQueue(options: QueueRunOptions): Promise<boolean> {
   const batch = useBatchStore.getState()
-  if (batch.phase === 'running' || isExportBusy(useExportStore.getState().phase)) return
+  if (batch.phase === 'running' || isExportBusy(useExportStore.getState().phase)) return false
   const started = useQueueStore.getState().items.filter((i) => i.status === 'pending').map((i) => i.id)
-  if (started.length === 0) return
+  if (started.length === 0) return false
   const putBack = keepOpenProject()
   // nothing recorded in the undo history while the queue's projects are shown
   const resume = getSettingsHistory().suspend()
@@ -314,6 +323,7 @@ export async function runRenderQueue(options: QueueRunOptions): Promise<void> {
     useBatchStore.getState().release()
   }
   announceQueue(started)
+  return true
 }
 
 /** Message at the end of a run (the items of this run only), and a system notification when the window is not in front. */

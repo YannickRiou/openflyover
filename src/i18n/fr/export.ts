@@ -321,4 +321,6 @@ export default {
   'queue.stopped': 'File interrompue. Rendus : {done}. En attente : {left}.',
   'queue.tooBig': 'projet trop gros pour être gardé après la fermeture de l’application : ajoutez-le de nouveau',
   'queue.noFilm': 'aucun film à faire pour ce projet',
+  'queue.busy': 'Un autre export est en cours : la file n’a pas démarré.',
+  'queue.folderFailed': 'Dossier impossible à ouvrir : les films seront téléchargés un par un.',
 }

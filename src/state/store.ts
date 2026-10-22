@@ -448,6 +448,14 @@ export function forgetImageryChoice(): void {
   imageryChosenByUser = false
 }
 
+/** Whether the imagery source counts as chosen by the user, and its restoration (the render queue shows other projects meanwhile). */
+export function imageryChoiceKept(): boolean {
+  return imageryChosenByUser
+}
+export function keepImageryChoice(chosen: boolean): void {
+  imageryChosenByUser = chosen
+}
+
 /** Restore the initial state (tests). */
 export function resetAppStore(): void {
   imageryChosenByUser = false

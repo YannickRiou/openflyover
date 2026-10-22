@@ -72,6 +72,7 @@ export function RenderQueue({ formats, save }: { formats: readonly string[]; sav
     const folder = toFolder
       ? pickFolder(capabilities).catch((error: unknown) => {
           console.warn('[file de rendus] dossier impossible, films téléchargés un par un :', error)
+          showToast({ kind: 'info', text: t('export.queue.folderFailed') })
           return undefined
         })
       : Promise.resolve(undefined)
@@ -79,7 +80,7 @@ export function RenderQueue({ formats, save }: { formats: readonly string[]; sav
       if (picked === null) return
       // the open project is replaced by those of the queue (and put back at the end): its changes are asked about first
       const proceed = await confirmClose({ flush: flushAutosave, loss: projectCloseLoss, ask, save: saveProject })
-      if (proceed) await runRenderQueue({ folder: picked ?? null, save })
+      if (proceed && !(await runRenderQueue({ folder: picked ?? null, save }))) showToast({ kind: 'error', text: t('export.queue.busy') })
     })
   }
 

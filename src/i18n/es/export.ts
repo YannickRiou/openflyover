@@ -323,6 +323,8 @@ const messages: Messages['export'] = {
   'queue.stopped': 'Cola interrumpida. Renderizados: {done}. En espera: {left}.',
   'queue.tooBig': 'proyecto demasiado grande para conservarse al cerrar la aplicación: añádalo de nuevo',
   'queue.noFilm': 'ninguna película que hacer para este proyecto',
+  'queue.busy': 'Otra exportación está en curso: la cola no ha empezado.',
+  'queue.folderFailed': 'No se pudo abrir la carpeta: las películas se descargarán una a una.',
 }
 
 export default messages

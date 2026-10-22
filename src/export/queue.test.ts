@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getPlatform } from '../platform'
 import {
+  MAX_LISTED_ITEMS,
   MAX_QUEUE_ITEMS,
   MAX_SNAPSHOT_CHARS,
   MAX_STORED_CHARS,
@@ -17,7 +18,10 @@ import {
 } from './queue'
 import type { ItemOutcome, QueueItem } from './queue'
 import { exportJob, useBatchStore } from './batch'
-import { useAppStore } from '../state/store'
+import { useMediaStore } from '../film/media'
+import { IMAGERY_SOURCES } from '../terrain/sources'
+import { buildTrack } from '../import/stats'
+import { imageryChoiceKept, keepImageryChoice, useAppStore } from '../state/store'
 
 // nothing renders in a test: a film is « made » at once, named after its job
 vi.mock('./batch', async (importOriginal) => ({
@@ -76,8 +80,8 @@ describe('stored form', () => {
   it('drops the snapshot of a finished item and caps the length of the list', () => {
     const done = item('a', { status: 'done', snapshot: '{"keep":false}' })
     expect(parseQueue(serialiseQueue([done]))[0].snapshot).toBeNull()
-    const many = Array.from({ length: MAX_QUEUE_ITEMS + 5 }, (_, i) => item(String(i)))
-    expect(parseQueue(serialiseQueue(many))).toHaveLength(MAX_QUEUE_ITEMS)
+    const many = Array.from({ length: MAX_LISTED_ITEMS + 5 }, (_, i) => item(String(i)))
+    expect(parseQueue(serialiseQueue(many))).toHaveLength(MAX_LISTED_ITEMS)
   })
 })
 
@@ -170,6 +174,13 @@ describe('queue store', () => {
     expect(getPlatform().storage.get(QUEUE_KEY)).toBeNull()
   })
 
+  it('counts only the items still to render against the cap', () => {
+    for (let i = 0; i < MAX_QUEUE_ITEMS; i++) expect(useQueueStore.getState().add(item(String(i), { status: 'done', snapshot: null }))).toBe(true)
+    // finished and failed items stay listed without counting
+    expect(useQueueStore.getState().add(item('next'))).toBe(true)
+    expect(useQueueStore.getState().items).toHaveLength(MAX_QUEUE_ITEMS + 1)
+  })
+
   it('refuses an item when the queue is full, and never removes the one that runs', () => {
     for (let i = 0; i < MAX_QUEUE_ITEMS; i++) expect(useQueueStore.getState().add(item(String(i)))).toBe(true)
     expect(useQueueStore.getState().add(item('late'))).toBe(false)
@@ -228,13 +239,24 @@ describe('runRenderQueue', () => {
   })
 
   it('shows each snapshot, renders its films, goes on after a failure and puts the open project back', async () => {
+    // the queued projects use another imagery source than the one open now
+    const imagery = useAppStore.getState().settings.imagerySourceId
+    useAppStore.getState().setSetting('imagerySourceId', IMAGERY_SOURCES.find((s) => s.id !== imagery)!.id)
     useAppStore.getState().setProjectName('Sortie du samedi')
     expect(addOpenProject(['16:9@720p', '9:16@720p'])).toBe('Sortie du samedi')
     useAppStore.getState().setProjectName('Autre')
     expect(addOpenProject(['16:9@720p'])).toBe('Autre')
     useQueueStore.getState().add(item('bad', { snapshot: 'not json' }))
+    // the project open before has a track, a picture, a work area and an imagery source the user did not choose
+    const track = buildTrack({ name: 'Trace', source: 'gpx', segments: [{ points: [{ lon: 6.87, lat: 45.92, ele: 1000 }, { lon: 6.88, lat: 45.93, ele: 1100 }] }] })
+    useAppStore.getState().addTracks([track])
     useAppStore.getState().setProjectName('Ouvert avant')
-    const settings = useAppStore.getState().settings
+    useAppStore.getState().setWorkArea({ inS: 1, outS: 3 })
+    useMediaStore.getState().replace({ 'photo-1': { data: 'data:image/jpeg;base64,AAAA' } })
+    useAppStore.getState().setSetting('imagerySourceId', imagery)
+    keepImageryChoice(false)
+    const { settings, tracks, workArea } = useAppStore.getState()
+    const media = useMediaStore.getState().table
     const shown: string[] = []
     const stop = useAppStore.subscribe((s, p) => {
       if (s.projectName !== p.projectName) shown.push(s.projectName)
@@ -253,6 +275,11 @@ describe('runRenderQueue', () => {
     // the project open before is back as it was, and the app is free again
     expect(useAppStore.getState().projectName).toBe('Ouvert avant')
     expect(useAppStore.getState().settings).toBe(settings)
+    expect(useAppStore.getState().tracks).toBe(tracks)
+    expect(useAppStore.getState().workArea).toBe(workArea)
+    expect(useMediaStore.getState().table).toEqual(media)
+    // a queued project that sets its imagery source does not count as the user's choice
+    expect(imageryChoiceKept()).toBe(false)
     expect(useBatchStore.getState().phase).toBe('idle')
     expect(useQueueStore.getState().running).toBe(false)
   })
