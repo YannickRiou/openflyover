@@ -47,8 +47,11 @@ export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], f
       failedNow.clear()
       return
     }
-    for (const id of failedNow) ask.delete(id)
+    // a track whose request failed is asked again now: it is loading, not failed, until the new answer
+    const retried = [...failedNow]
+    for (const id of retried) ask.delete(id)
     failedNow.clear()
+    if (retried.length > 0) setState((s) => ({ answers: s.answers, failures: Object.fromEntries(Object.entries(s.failures).filter(([id]) => !retried.includes(id))) }))
     const byId = new Map(tracks.map((t) => [t.id, t]))
     for (const [id, segments] of ask) if (byId.get(id)?.segments !== segments) ask.delete(id)
     for (const track of tracks) {

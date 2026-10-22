@@ -18,6 +18,21 @@ describe('mergeByTrack', () => {
   })
 })
 
+describe('mergeByTrack with shapes numbered per corridor', () => {
+  const ring = (lon: number): [number, number][] => [[lon, 45], [lon + 0.1, 45], [lon + 0.1, 45.1]]
+
+  it('keeps the sea cells and the river pieces of each corridor, and merges what is the same shape', () => {
+    // two corridors both number their first sea cell `sea/0`, and a river crosses both
+    const seaA = { id: 'sea/0', outer: ring(6) }
+    const seaB = { id: 'sea/0', outer: ring(7) }
+    const pieceA = { id: 'way/9#0', points: ring(6) }
+    const pieceB = { id: 'way/9#0', points: ring(6.5) }
+    const lake = { id: 'way/1', outer: ring(6) }
+    const merged = mergeByTrack({ a: [seaA, pieceA, lake], b: [seaB, pieceB, { ...lake }, { ...seaA }] }, ['a', 'b'])
+    expect(merged).toEqual([seaA, pieceA, lake, seaB, pieceB])
+  })
+})
+
 describe('pruneByTrack', () => {
   it('forgets the tracks no longer asked for, and returns the same object when nothing goes', () => {
     const byTrack = { a: 1, b: 2 }

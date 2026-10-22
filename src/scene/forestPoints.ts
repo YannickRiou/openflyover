@@ -131,9 +131,51 @@ export function distanceToPath(p: LonLat, path: readonly LonLat[]): number {
   return best
 }
 
+/** Segments per block of a `PathIndex`. */
+const BLOCK_SEGMENTS = 32
+
+/** The tracks cut into blocks of a few segments, each with its bounding box: a point only measures the blocks that can beat the best distance so far. */
+export interface PathIndex {
+  blocks: { west: number; south: number; east: number; north: number; cosMin: number; points: readonly LonLat[] }[]
+}
+
+export function indexPaths(paths: readonly (readonly LonLat[])[]): PathIndex {
+  const blocks: PathIndex['blocks'] = []
+  for (const path of paths) {
+    for (let from = 0; from === 0 || from < path.length - 1; from += BLOCK_SEGMENTS) {
+      const points = path.slice(from, from + BLOCK_SEGMENTS + 1)
+      if (points.length === 0) break
+      const lons = points.map((q) => q.lon)
+      const lats = points.map((q) => q.lat)
+      const south = Math.min(...lats)
+      const north = Math.max(...lats)
+      blocks.push({ west: Math.min(...lons), south, east: Math.max(...lons), north, cosMin: Math.cos((Math.max(Math.abs(south), Math.abs(north)) * Math.PI) / 180), points })
+    }
+  }
+  return { blocks }
+}
+
+/** Distance (metres) from `p` to the nearest track of `index` (0 without a track): the same as the smallest `distanceToPath`, without measuring every segment. */
+export function distanceToIndex(p: LonLat, { blocks }: PathIndex): number {
+  if (blocks.length === 0) return 0
+  // lower bound of the distance to a block: to its box, in the metric of the segment measure (cos of the latitude of the segment, at least cosMin)
+  const bound = blocks.map((b) => {
+    const dx = Math.max(b.west - p.lon, 0, p.lon - b.east) * b.cosMin
+    const dy = Math.max(b.south - p.lat, 0, p.lat - b.north)
+    return Math.hypot(dx, dy) * M_PER_DEG
+  })
+  const order = bound.map((_, i) => i).sort((i, j) => bound[i] - bound[j])
+  let best = Infinity
+  for (const i of order) {
+    if (bound[i] >= best) break
+    best = Math.min(best, distanceToPath(p, blocks[i].points))
+  }
+  return best
+}
+
 /** Distance (metres) from `p` to the nearest of the tracks `paths`. */
 export function distanceToPaths(p: LonLat, paths: readonly (readonly LonLat[])[]): number {
-  return paths.length === 0 ? 0 : Math.min(...paths.map((path) => distanceToPath(p, path)))
+  return distanceToIndex(p, indexPaths(paths))
 }
 
 type Pt = [number, number]
@@ -205,9 +247,19 @@ interface Cell {
 /** Place the trees of the forests (see the module comment). */
 export function placeTrees(polygons: readonly ForestPolygon[], { density, maxTrees, paths }: PlacementOptions): ForestChunk[] {
   if (polygons.length === 0 || density <= 0 || maxTrees <= 0) return []
-  // equirectangular metres around the first point of the first track (else of the first forest), one fixed frame for the run
-  const origin = paths.find((p) => p.length > 0)?.[0] ?? { lon: polygons[0].outer[0][0], lat: polygons[0].outer[0][1] }
-  const kx = M_PER_DEG * Math.cos((origin.lat * Math.PI) / 180)
+  // equirectangular metres at the latitude of the middle of the tracks (else of the first forest) rounded to 0.01°: one fixed
+  // frame for the run, the same whatever the order of the tracks, and a small change of the tracks does not move the trees
+  let south = Infinity
+  let north = -Infinity
+  for (const path of paths) {
+    for (const q of path) {
+      south = Math.min(south, q.lat)
+      north = Math.max(north, q.lat)
+    }
+  }
+  const originLat = south <= north ? Math.round(((south + north) / 2) * 100) / 100 : polygons[0].outer[0][1]
+  const pathIndex = indexPaths(paths)
+  const kx = M_PER_DEG * Math.cos((originLat * Math.PI) / 180)
   const ky = M_PER_DEG
   const toMetres = (ring: [number, number][]): Pt[] => ring.map(([lon, lat]) => [lon * kx, lat * ky])
 
@@ -241,7 +293,7 @@ export function placeTrees(polygons: readonly ForestPolygon[], { density, maxTre
     const area = clipped.reduce((n, f) => n + areaM2(f.outer) - f.holes.reduce((h, hole) => h + areaM2(hole), 0), 0)
     if (area <= 0) continue
     const centre = { lon: ((cx + 0.5) * CHUNK_M) / kx, lat: ((cy + 0.5) * CHUNK_M) / ky }
-    const distance = distanceToPaths(centre, paths)
+    const distance = distanceToIndex(centre, pathIndex)
     cells.push({ key, cx, cy, centre, distance, forests: clipped, expected: (area * density * densityFactor(distance)) / 10_000 })
   }
   cells.sort((a, b) => a.distance - b.distance || (a.key < b.key ? -1 : 1))

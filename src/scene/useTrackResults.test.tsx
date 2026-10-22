@@ -90,8 +90,16 @@ describe('useTrackResults', () => {
     expect(seen.current).toMatchObject({ loading: false, failed: true })
     expect(Object.keys(seen.current!.results)).toEqual([b.id])
 
+    // asked again when the tracks change: loading, not failed, until the answer
+    const retry = deferred<{ id: string }[]>()
+    fetch.mockImplementation((t: Track) => (t.id === a.id ? retry.promise : Promise.resolve([{ id: 'w2' }])))
+    render({ enabled: true, tracks: [a, b, track('C', 45.2)] })
+    expect(seen.current).toMatchObject({ loading: true, failed: false })
+    await act(async () => retry.resolve([{ id: 'w1' }]))
+    expect(seen.current).toMatchObject({ loading: false, failed: false })
+
     render({ enabled: false, tracks: [a, b] })
     expect(seen.current).toMatchObject({ results: {}, loading: false, failed: false })
-    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch).toHaveBeenCalledTimes(4)
   })
 })

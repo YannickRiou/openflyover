@@ -10,7 +10,7 @@
  * terrain's shadows; they cast none (a tree's shadow would be a few texels wide: heavy for no visible result).
  * Everything is a function of the settings, the forests and the camera: the export is deterministic.
  */
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3 } from 'three'
 import type { Camera, BufferGeometry } from 'three'
@@ -202,10 +202,15 @@ export function ForestLayer() {
   const get = useThree((s) => s.get)
   // one Overpass query per track of the film (cached, one at a time); nothing is sent while the setting is off, and a track
   // that fails shows no trees (no status chip). The forests of all the tracks are drawn together.
-  const { results } = useTrackResults(enabled, tracks, (track) => fetchTrackForest(track))
+  const { results, loading } = useTrackResults(enabled, tracks, (track) => fetchTrackForest(track))
   const polygons = useMemo(() => mergeByTrack(results, tracks.map((t) => t.id)), [results, tracks])
   const paths = useMemo(() => tracks.map((track) => simplifyLine(track.segments.flatMap((s) => s.points), PATH_TOLERANCE_M)), [tracks])
-  const chunks = useMemo(() => placeTrees(polygons, { density, maxTrees: deviceBudget().maxTrees, paths }), [polygons, density, paths])
+  // Placing takes up to a second or more: once the queue is empty, not at each answer (the trees of the tracks asked before stay meanwhile)
+  const [placed, setPlaced] = useState<{ polygons: unknown; density: number; paths: unknown; chunks: ForestChunk[] }>({ polygons, density, paths, chunks: [] })
+  if (!loading && (placed.polygons !== polygons || placed.density !== density || placed.paths !== paths)) {
+    setPlaced({ polygons, density, paths, chunks: placeTrees(polygons, { density, maxTrees: deviceBudget().maxTrees, paths }) })
+  }
+  const { chunks } = placed
   const forest = useMemo(() => (frame ? createForest(chunks, frame) : null), [chunks, frame])
   useEffect(() => () => forest?.dispose(), [forest])
   const geometries = useMemo(() => createTreeGeometries(), [])

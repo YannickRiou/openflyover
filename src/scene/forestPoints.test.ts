@@ -141,6 +141,15 @@ describe('placeTrees', () => {
     expect(total(placeTrees([big], { ...options, maxTrees: 300 }))).toBeLessThanOrEqual(300)
   })
 
+  it('gives the same trees whatever the order of the tracks', () => {
+    const second: LonLat[] = [{ lon: 6.9, lat: 45.95 }, { lon: 6.92, lat: 45.95 }]
+    const forests = [near, forest(6.9, 45.95, 800)]
+    const a = placeTrees(forests, { ...options, paths: [path, second] })
+    const b = placeTrees(forests, { ...options, paths: [second, path] })
+    expect(b.map((c) => [c.key, c.count])).toEqual(a.map((c) => [c.key, c.count]))
+    expect(Array.from(b[0].lonLat)).toEqual(Array.from(a[0].lonLat))
+  })
+
   it('measures the distance to the nearest of several tracks', () => {
     // the same forest, far from the first track and on the second one: its chunks keep their full density
     const farForest = forest(6.8, 45.9 + 8000 / M, 600)
@@ -220,6 +229,16 @@ describe('helpers', () => {
     expect(new Set(values).size).toBe(200)
     expect(hash01(3, 4, 1)).toBe(hash01(3, 4, 1))
     expect(hash01(3, 4, 1)).not.toBe(hash01(3, 4, 2))
+  })
+
+  it('finds the nearest track as the exhaustive measure does, over long tracks', () => {
+    const wiggle = (lat: number, n: number): LonLat[] => Array.from({ length: n }, (_, i) => ({ lon: 6 + i * 0.001, lat: lat + 0.01 * Math.sin(i / 40) }))
+    const paths = [wiggle(45, 300), wiggle(45.2, 1), wiggle(45.3, 100), []]
+    for (const p of [{ lon: 6.05, lat: 45.02 }, { lon: 6.4, lat: 45.25 }, { lon: 5, lat: 44 }, { lon: 6.2, lat: 45.31 }]) {
+      const exhaustive = Math.min(...paths.filter((q) => q.length > 0).map((q) => distanceToPath(p, q)))
+      expect(distanceToPaths(p, paths)).toBeCloseTo(exhaustive, 6)
+    }
+    expect(distanceToPaths({ lon: 6, lat: 45 }, [])).toBe(0)
   })
 
   it('measures the distance to the track', () => {

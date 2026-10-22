@@ -2,14 +2,26 @@
  * What the map layers (water, forests) fetched per track of the film: kept by track id, merged for drawing. Pure.
  */
 
-/** Results of `byTrack` for `trackIds` only (in that order), each item once: two tracks that share a corridor share its shapes (same `id`). */
+/**
+ * What makes a shape the same in two answers: its id and its geometry (first point, point count). A lake, a riverbank or a
+ * forest has one OpenStreetMap id and one shape whatever the corridor; but `sea/<cell>` ids and the `way/<id>#<k>` pieces of a
+ * river are numbered per corridor, so two tracks give different shapes under one id.
+ */
+function shapeKey(item: { id: string }): string {
+  const { outer, points } = item as { outer?: readonly (readonly number[])[]; points?: readonly (readonly number[])[] }
+  const ring = outer ?? points ?? []
+  return `${item.id}|${ring[0]?.join(',') ?? ''}|${ring.length}`
+}
+
+/** Results of `byTrack` for `trackIds` only (in that order), each shape once: two tracks that share a corridor share its shapes. */
 export function mergeByTrack<T extends { id: string }>(byTrack: Readonly<Record<string, readonly T[]>>, trackIds: readonly string[]): T[] {
   const seen = new Set<string>()
   const merged: T[] = []
   for (const trackId of trackIds) {
     for (const item of byTrack[trackId] ?? []) {
-      if (seen.has(item.id)) continue
-      seen.add(item.id)
+      const key = shapeKey(item)
+      if (seen.has(key)) continue
+      seen.add(key)
       merged.push(item)
     }
   }

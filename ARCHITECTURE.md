@@ -2158,7 +2158,7 @@ exports) gets it from the terrain source of the settings.
   polyline exceeds the public server's timeout; the distance to the track is computed locally, so changing the types or the
   distance never triggers a new request. Queue (one request at a time), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
   `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
-  error `remark` (timeout exceeded) is an error.
+  error `remark` (timeout exceeded) is an error. Each fetch is aborted after `QUERY_TIMEOUT_S` + 10 s (4.1: a server that never answers no longer holds the queue; the next endpoint is tried; the body is not covered).
 - **Pure post-processing** (`src/osm/landmarks.ts`): projection onto the path → distance and offset, filter by type and distance
   (`settings.landmarks`, default summits + passes + huts + lakes + places (cities, villages, hamlets) within 1.5 km;
   `settings.landmarks.places { city, village, hamlet }` filters the places, « Villes » = city + town), elevation from `ele`
@@ -2910,8 +2910,7 @@ exports) gets it from the terrain source of the settings.
   ways, in the same 8 km corridor) and the **waterway lines** (`waterway=river|canal|stream` ways, in a narrower 4 km corridor,
   `WATER_LINE_MARGIN_M`: streams are many), `out geom qt`. The layer asks the areas of every track, then the lines of every track, one request at a time, and shows each answer as it arrives (the lakes
   do not wait for the heavier second request); the status chip stays « loading » until every answer is in and says « erreur » if any failed. The answers
-  are kept by track id and merged for drawing (`mergeByTrack`, `osm/byTrack.ts`: the shapes of the tracks still in the film, each
-  OpenStreetMap id once), so removing a track drops its water at once and an answer that arrives late is ignored. Measured on four tracks (2026-10-22, `docs/sources.md`): 0.55–1.1 MB, 21–39 s
+  are kept by track id and merged for drawing (`mergeByTrack`, `osm/byTrack.ts`: the shapes of the tracks still in the film, each shape once, told by its id and its first point and point count), so removing a track drops its water at once and an answer that arrives late is ignored. Measured on four tracks (2026-10-22, `docs/sources.md`): 0.55–1.1 MB, 21–39 s
   on a busy public server, 40–76 kB once reduced.
 - **Pure reduction** (`water.ts`, tested): relation rings stitched end to end from their ways (direction irrelevant,
   unclosed ring dropped), inner rings attached to the outer ring that contains their first point, member way of a
@@ -2973,7 +2972,7 @@ exports) gets it from the terrain source of the settings.
   level); a very steep river keeps 60 m steps; only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is
   the OSM coast cut by the relief, so a DEM below 0.5 m just inside the OSM coast is flooded (tidal flats, estuaries up to the
   limit OSM maps as coast); a river mapped in a gap of its own riverbank polygon is drawn over it; a stream is a 2.5 m ribbon,
-  hardly visible from high; lines are only the 200 km widest; the sea of two tracks whose corridors overlap is cut into different rectangles for each, so it is drawn twice there (translucent, a little darker), and a river cut differently by two corridors is drawn twice too (lakes and riverbanks, which keep their OpenStreetMap id, are merged). A film of many stages waits longer: the Overpass policy allows one request at a time, so two requests per stage queue one after the other (a cached stage costs nothing). The "© contributeurs OpenStreetMap" credit (status bar and
+  hardly visible from high; lines are only the 200 km widest; the sea of two tracks whose corridors overlap is cut into different rectangles for each, so it is drawn twice there (translucent, a little darker), and a river cut differently by two corridors is drawn twice there too (sea cells and river pieces are numbered per corridor and kept; a lake or a riverbank is one shape whatever the corridor and is merged). A film of many stages waits longer: the Overpass policy allows one request at a time, so two requests per stage queue one after the other (a cached stage costs nothing). The "© contributeurs OpenStreetMap" credit (status bar and
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
 
@@ -3039,8 +3038,7 @@ draped on the relief.
   multipolygons `landuse=forest` and `natural=wood`, `out geom qt`, in the boxes of the track corridor widened to **5 km**
   (`FOREST_MARGIN_M`; 8 km sent 3 MB on the sample, 5 km 0.8 MB: `docs/sources.md`). `leaf_type` (`needleleaved`,
   `broadleaved`, `mixed`) is kept when present. The request is not canceled on unmount (shared and cached); its response is only
-  ignored if it is stale (its track was removed or changed); the polygons of the tracks still in the film are merged by OpenStreetMap id
-  (`mergeByTrack`). A failed request is only retried on the next track or setting change, and shows nothing (no status
+  ignored if it is stale (its track was removed or changed); the polygons of the tracks still in the film are merged (`mergeByTrack`: by OpenStreetMap id and geometry). A failed request is only retried on the next track or setting change, and shows nothing (no status
   chip: the checkbox's help says there are simply no trees when OpenStreetMap does not answer).
 - **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
   is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned
@@ -3048,7 +3046,7 @@ draped on the relief.
   kept (`MAX_FOREST_POLYGONS`) within 40,000 vertices in all (`MAX_FOREST_VERTICES`, largest first, so the entry stays far below `MAX_CACHE_ENTRY_CHARS` = 1.5 MB, beyond which `writeCache` does not write: a huge entry would evict the landmarks and water), coordinates to 1e-5° (~1 m); the `leaf` key is absent when OpenStreetMap does not say. Only
   this compact result is cached (sample: 64 polygons, 6,700 vertices, 130 kB in the cache).
 - **Pure placement** (`src/scene/forestPoints.ts`, tested): `placeTrees(polygons, { density, maxTrees, paths })` gives the trees in
-  **chunks** of the ground (squares of `CHUNK_M` = 1,500 m, in an equirectangular frame around the first point of the first track). In
+  **chunks** of the ground (squares of `CHUNK_M` = 1,500 m, in an equirectangular frame at the latitude of the middle of the tracks, rounded to 0.01°: the same whatever the order of the tracks). In
   a chunk, each forest is cut to the square (`clipRing`, so the point-in-polygon tests run on short rings), and a tree stands in
   every cell of a lattice whose spacing is √(10,000 / density) m, at a position **hashed from the cell** (`hash01`, integers, no
   random generator, no state), kept if it falls in the chunk, inside a forest and outside its holes. Height 8–22 m, variation of the
@@ -3064,7 +3062,7 @@ draped on the relief.
   with `u` the distance of the chunk from the nearest one to the farthest one (0..1), `MIN_THINNING` = 5 %, and `k` the gentlest
   exponent that fits (bisection): the near chunks stay at full density, the far ones fall towards 5 %, **every chunk with a
   forest stays**. The lattice spacing of a chunk is then √(10,000 / (density × `densityFactor` × share)), so a thinned chunk keeps the
-  same hashed trees as a denser one, only fewer. The area estimate is only approximate, so the real count corrects the aim (up to 4
+  same hashed trees as a denser one, only fewer. The distance of a chunk to the tracks (`indexPaths` / `distanceToIndex`) goes through blocks of 32 segments with a bounding box, so only the blocks that can beat the best distance are measured. Placement runs once the queue is empty (`ForestLayer`: not at each track answer, about a second each for a big film), so the trees of a film of many stages appear when its last stage has answered. The area estimate is only approximate, so the real count corrects the aim (up to 4
   placements aiming at 97 % of the budget, stopping once between 90 and 100 %); a budget below what even the steepest fall reaches scales
   every chunk alike (still above zero), and as a last resort the nearest chunks only are kept. Deterministic: same data, same
   density, same budget, same trees. A forest is therefore dense near the track and sparse, never absent, beyond the budget.
