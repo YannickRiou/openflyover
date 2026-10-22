@@ -105,6 +105,7 @@ AddType application/manifest+json .webmanifest
   environment (`BASE_PATH=/subfolder/ npm run build`, which is what the GitHub Pages workflow does): the app builds its
   public URLs (`/samples/`, `/favicon.svg`, textures, `/oauth-callback.html`) from `import.meta.env.BASE_URL`, and Vite
   rewrites the others (`/fonts/` in `src/ui/fonts.css`, `index.html`).
+- If you add a strict `Content-Security-Policy`, allow `worker-src blob:`: a hidden tab then waits for tiles on the timer of a small inline worker. Without it the export still works, but keeps one processor core busy while it waits in the background.
 - A public site remains subject to the terms of the sources ([README, "Data sources"](../README.md#data-sources)).
 - A long video takes a lot of memory (about twice its size) where it cannot be written directly to disk (Firefox,
   Safari); Chrome, Edge and the desktop application write it as the export progresses.

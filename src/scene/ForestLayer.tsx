@@ -21,6 +21,7 @@ import { mergeByTrack } from '../osm/byTrack'
 import { fetchTrackForest } from '../osm/forest'
 import { simplifyLine } from '../osm/overpass'
 import { useForestStore } from '../osm/store'
+import { setForestStatus } from './forestStatus'
 import { useAppStore } from '../state/store'
 import { type ForestChunk, placeTrees, treeKind } from './forestPoints'
 import { wakeScene } from './renderOnDemand'
@@ -201,8 +202,13 @@ export function ForestLayer() {
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const get = useThree((s) => s.get)
   // one Overpass query per track of the film (cached, one at a time); nothing is sent while the setting is off, and a track
-  // that fails shows no trees (no status chip). The forests of all the tracks are drawn together.
-  const { results, loading } = useTrackResults(enabled, tracks, (track) => fetchTrackForest(track))
+  // that fails shows no trees (the status chip says so). The forests of all the tracks are drawn together.
+  const { results, loading, started, failed } = useTrackResults(enabled, tracks, (track, onStart) => fetchTrackForest(track, undefined, undefined, onStart))
+  // « en attente » until the Overpass queue reaches the first request still waiting, then « chargement »
+  useEffect(
+    () => setForestStatus(!enabled || tracks.length === 0 ? 'idle' : loading ? (started ? 'loading' : 'queued') : failed ? 'error' : 'ready'),
+    [enabled, tracks, loading, started, failed],
+  )
   const polygons = useMemo(() => mergeByTrack(results, tracks.map((t) => t.id)), [results, tracks])
   const paths = useMemo(() => tracks.map((track) => simplifyLine(track.segments.flatMap((s) => s.points), PATH_TOLERANCE_M)), [tracks])
   // Placing takes up to a second or more: once the queue is empty, not at each answer (the trees of the tracks asked before stay meanwhile)
@@ -226,7 +232,13 @@ export function ForestLayer() {
   // OpenStreetMap is credited while its forests are drawn
   const credited = forest !== null && chunks.length > 0
   useEffect(() => useForestStore.setState({ polygons: credited ? polygons.length : 0 }), [credited, polygons])
-  useEffect(() => () => useForestStore.setState({ polygons: 0 }), [])
+  useEffect(
+    () => () => {
+      useForestStore.setState({ polygons: 0 })
+      setForestStatus('idle')
+    },
+    [],
+  )
 
   // the relief changed (tiles arrived, a level of detail swapped): every chunk in range is draped again, in time
   const epoch = useRef(0)

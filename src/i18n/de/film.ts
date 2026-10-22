@@ -104,6 +104,7 @@ const messages: Messages['film'] = {
   'auto.resume.hint': 'Querformat 16:9, 1 min, Export für YouTube HD: Eröffnungstitel, Stopps an Pässen und Gipfeln, eine Karte pro Tag oder Etappe, wenn die Strecke mehrere hat, Schlusskarte mit den Kennzahlen.',
   'auto.souvenir.name': 'Erinnerung 3 min',
   'auto.souvenir.hint': 'Querformat 16:9, 3 min, Export für YouTube HD: ruhige Kamera, Zeitlupe an den Anstiegen, Stopps an Pässen und Gipfeln, Tages- oder Etappenkarten, Zähler, Eröffnungstitel und Schlusskarte.',
+  'auto.afterImport': 'Automatischer Film …',
 }
 
 export default messages

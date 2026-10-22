@@ -27,7 +27,7 @@ afterEach(() => {
   root = null
 })
 
-function mount(initial: { enabled: boolean; tracks: readonly Track[] }, fetch: (t: Track) => Promise<{ id: string }[]>) {
+function mount(initial: { enabled: boolean; tracks: readonly Track[] }, fetch: (t: Track, onStart: () => void) => Promise<{ id: string }[]>) {
   const seen: { current: TrackResults<{ id: string }[]> | null } = { current: null }
   function Probe({ enabled, tracks }: { enabled: boolean; tracks: readonly Track[] }) {
     seen.current = useTrackResults(enabled, tracks, fetch)
@@ -57,6 +57,25 @@ describe('useTrackResults', () => {
     // the same tracks again: nothing is asked twice
     render({ enabled: true, tracks: [a, b] })
     expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('tells when the queue has reached a request still waiting', async () => {
+    const [a, b] = [track('A', 45), track('B', 45.1)]
+    const answers = new Map([[a.id, deferred<{ id: string }[]>()], [b.id, deferred<{ id: string }[]>()]])
+    const starts = new Map<string, () => void>()
+    const { seen } = mount({ enabled: true, tracks: [a, b] }, (t, onStart) => {
+      starts.set(t.id, onStart)
+      return answers.get(t.id)!.promise
+    })
+    expect(seen.current).toMatchObject({ loading: true, started: false })
+    act(() => starts.get(a.id)!())
+    expect(seen.current).toMatchObject({ loading: true, started: true })
+    await act(async () => answers.get(a.id)!.resolve([{ id: 'w1' }]))
+    // the next request is still queued
+    expect(seen.current).toMatchObject({ loading: true, started: false })
+    act(() => starts.get(b.id)!())
+    await act(async () => answers.get(b.id)!.resolve([]))
+    expect(seen.current).toMatchObject({ loading: false, started: false })
   })
 
   it('forgets a removed track, and ignores its answer when it comes late', async () => {

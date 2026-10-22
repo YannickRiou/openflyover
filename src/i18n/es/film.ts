@@ -104,6 +104,7 @@ const messages: Messages['film'] = {
   'auto.resume.hint': 'Horizontal 16:9, 1 min, exportación YouTube HD: título de apertura, paradas en los puertos y las cumbres, una tarjeta por día o por etapa si el recorrido tiene varios, tarjeta de cierre con las cifras.',
   'auto.souvenir.name': 'Recuerdo 3 min',
   'auto.souvenir.hint': 'Horizontal 16:9, 3 min, exportación YouTube HD: cámara tranquila, cámara lenta en las subidas, paradas en los puertos y las cumbres, tarjetas de día o de etapa, contadores, título de apertura y tarjeta de cierre.',
+  'auto.afterImport': 'Película automática…',
 }
 
 export default messages

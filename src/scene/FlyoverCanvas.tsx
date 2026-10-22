@@ -47,6 +47,7 @@ import { TrackLines } from './TrackLines'
 import { SnowLayer } from './SnowLayer'
 import { ForestLayer } from './ForestLayer'
 import { WaterLayer } from './WaterLayer'
+import { GlacierLayer } from './GlacierLayer'
 import { TrackMenu, TrackPicker } from './TrackPicker'
 import { t } from '../i18n'
 
@@ -169,6 +170,7 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
           <TerrainLayer>
             <RenderOnDemand />
             <TrackLines />
+            <GlacierLayer />
             <WaterLayer />
             <SnowLayer />
             <ForestLayer />

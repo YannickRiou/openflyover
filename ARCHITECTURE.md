@@ -57,6 +57,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/path.ts` | flyover path | `buildTrackPath(track): TrackPath` (concatenated segments, cumulative distances, `time` in ms or NaN), `trackPathOf(track)` (same path, cached per track), `samplePath(path, distanceM): PathSample` (`ele` and `time` interpolated only if both neighbors have them), `recordedTimeAt(path, distanceM)` (fills points without a time), `elevationProfile(path, samples)`, `nearestOnPath(path, lonLat, timeMs?)`, `distanceAtTime(path, timeMs, toleranceMs?)`, `pickProjectedPath(screen, distM, px, py, maxPx)` (point of the projected track closest to the pointer) |
 | `src/flyover/smooth.ts` | track smoothing (see "Track and marker") | `smoothPoints(points, windowM)`, `smoothTrack(track, windowM)`, `smoothedTrackPath(track, windowM)` (smoothed positions, recorded distances and times) |
 | `src/flyover/camera.ts` | flyover camera | `computeCameraView(path, progress, frame, sampler, { exaggeration, liftM, camera?, durationS?, timeS?, orbitRad?, aimProgress?, cameraProgress? })` → `{ target, position, marker }`, `autoDistanceM`, `smoothedTurn`, `smoothHeadingAt`, `movesWithTime` |
+| `src/flyover/flightSpeed.ts` | flyover duration ↔ marker speed (« × temps réel », km/h) | `clampDuration`, `speedKmh`, `speedUpFactor`, `durationForKmh`, `durationForSpeedUp`, `hasSpeedUp`, `kmhRange`, `speedUpRange`, `speedPosition`, `durationAtPosition` |
 | `src/flyover/cameraSettings.ts` | camera styles and presets | `CAMERA_STYLES`, `DEFAULT_CAMERA`, `CAMERA_RANGES`, `CAMERA_PRESETS`, `isValidCamera`, `withCameraDefaults`, `turnSmoothingM(camera, lengthM)`, `advanceProgress(progress, dt, speed, durationS)` |
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
@@ -84,6 +85,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/osm/water.ts` + `src/osm/coast.ts` + `src/scene/waterMesh.ts` + `src/scene/riverStrip.ts` + `src/scene/WaterLayer.tsx` | reflective water (sea, lakes, rivers) | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`); `waterLinesQuery`, `parseWaterShapes`, `fetchTrackWaterShapes`, `runsOutside`, `lineWidthM`, `LINE_WIDTH_M`; `seaPolygons`, `chainCoastWays`, `reduceCoast`, `seaSide`, `seaCells`; `buildSeaMesh`; `buildRiverStrip`, `stripHeights` |
 | `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `cloudCoverField`, `zonedCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`); `patchRegionalCoverage`, `patchCloudShadow` (`scene/cloudShaders.ts`) |
 | `src/osm/forest.ts` + `src/scene/forestPoints.ts` + `src/scene/treeGeometry.ts` + `src/scene/ForestLayer.tsx` | forests (see "Forests") | `ForestSettings`, `DEFAULT_FOREST`, `FOREST_DENSITY_RANGE`, `isValidForest`, `FOREST_MARGIN_M`, `forestQuery`, `parseForest`, `fetchTrackForest`; `placeTrees`, `treeKind`, `densityFactor`, `hash01`, `CHUNK_M`, `ForestChunk`; `createTreeGeometries`, `TREE_WIDTH_RATIO`; `ForestLayer`, `FOREST_FAR_M`, `FOREST_FADE_M`; `useForestStore` (`osm/store.ts`) |
+| `src/osm/glacier.ts` + `src/scene/glacierMesh.ts` + `src/scene/glacierMaterial.ts` + `src/scene/GlacierLayer.tsx` | glaciers (see "Glaciers") | `GLACIER_MARGIN_M`, `MIN_GLACIER_AREA_M2`, `GlacierPolygon`, `glacierQuery`, `parseGlacier`, `fetchTrackGlacier`; `buildGlacierMesh`, `fillHeights`; `createGlacierMaterial`; `GlacierLayer`, `GLACIER_LIFT_M`; `useGlacierStore` (`osm/store.ts`), `useGlacierStatusStore` (`glacierStatus.ts`) |
 | `src/scene/cloudSea.ts` + `src/scene/CloudSeaSurface.tsx` | surface sea of clouds | `seaRelief`, `billow`, `gradientNoise`, `octaveWeight`, `seaNoisePoint`, `seaBaseAltitude`, `curvatureDropM`, `edgeFade`, `rimFade`, `buildRadialGrid`, `terrainBoxOf`, `terrainGridCentres`, `seaReliefGlsl`, `glslFloat`; `CloudSeaSurface` |
 | `src/scene/grading.ts` + `gradingEffect.ts` + `GradingComposer.tsx` | color grading | `GradingSettings`, `DEFAULT_GRADING`, `GRADING_PRESETS`, `GRADING_RANGES`, `isValidGrading`, `isIdentityGrading`, `matchingPreset`, `gradingOfPreset`, `withGradingValue`, `gradingUniforms`; `GradingEffect`; `useGradingEffect`, `GradingComposer` |
 | `src/scene/lens.ts` + `useLensEffects.ts` + `flareEffect.ts` + `shutterEffect.ts` | « Objectif » lens effects (see "Lens") | pure, tested: `LensSettings`, `DEFAULT_LENS`, `LENS_RANGES`, `isValidLens`, `withLensDefaults`, `lensActive`, `bloomParams`, `depthOfFieldParams`, `SHUTTER_SUBFRAMES`, `SHUTTER_STEP_PX`, `shutterSamples`, `adaptiveShutterSamples`, `viewMotionPx`, `subFrameCount`, `previewShutterWeight`, `radialBlurLength`, `setShutterSubFrame`, `shutterSubFrame`, `subFrameSlices`; `useLensEffects`, `FlareEffect`, `ShutterEffect`; `filmViewAt` (`filmView.ts`: the camera placement of `FlyoverRig` at a progress and film time, shared with the export); `LensPanel` (`src/ui`) |
@@ -530,9 +532,11 @@ pointer (`appearance.css`).
   "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
   99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
   erreur" (N tiles in error) in yellow with a tip; nothing before the first tile; not a live region, the ring is a
-  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau from `useWeatherStore`,
-  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`; `fetchChip` in `mapStatus.ts`;
-  spinner / check / attention with the store message / muted); a performance readout when the bar is at least 900 px
+  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau / Forêts / Glaciers from `useWeatherStore`,
+  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`, `useGlacierStatusStore` in `scene/glacierStatus.ts`; `STATUS_CHIPS`
+  in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed shows it; `fetchChip` in `mapStatus.ts`;
+  spinner / check / attention with the store message / muted; « Forêts » has a fifth state, `queued` « en attente », spinner like loading:
+  the request waits for the Overpass queue, `onStart` of `cachedOverpassQuery`); a performance readout when the bar is at least 900 px
   wide (`perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of the renderer
   through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through the Tauri
   command `system_stats`), each part chosen in « Réglages »; then the short credits of the active sources, always
@@ -886,8 +890,16 @@ The interface and the texts drawn into the films and posters exist in **French**
   aimSmoothingS, cameraSmoothingS, endingS }` (a camera saved before the last four gets them from `DEFAULT_CAMERA`,
   `withCameraDefaults` in `SETTING_UPGRADES`: « Auto » keeps its multiplier, so the turns look the same) and named
   presets (`CAMERA_PRESETS`, 13: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite, then Libre (style `free`, left out of `markerVisible.test.ts`: it does not follow the marker); `findCameraPreset`; « Préréglage » is a grid of tiles with distance and tilt, all twelve shown at once, plus a « Personnalisé » tile when the settings match no preset) in
-  `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s, 60 by default) = duration at ×1, the timeline
-  speed applies on top. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra" and "Durée et rythme" sections; the
+  `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s in 1 s steps, 60 by default) = duration at ×1, the timeline
+  speed applies on top. **Duration or speed** (`src/flyover/flightSpeed.ts`, pure; `src/ui/FlightDurationField.tsx`): the one setting
+  has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change). The
+  marker's *average* speed is derived: km/h = length ÷ duration (`speedKmh`, the length of the film track: all the stages of
+  « À la suite »), « × temps réel » = recorded time ÷ duration (`speedUpFactor`; the recorded time is the sum of the stages' own corrected durations, `recordedTotalS`, nights between days not counted; none for a track without times: km/h only).
+  Typing a speed gives the duration back (`durationForKmh`, `durationForSpeedUp`: rounded to a whole second, clamped to the
+  range, so the speed shown afterwards may differ by the second's granularity). The speed slider spans the duration range on a
+  log scale (`speedPosition`, `durationAtPosition`, 1,000 notches). Stops, slow-motion, speed portions and « Garder la durée du
+  survol » are untouched: they take their time from the duration, which is why the speed is an average; a stage with its own
+  duration keeps it. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra" and "Durée et rythme" sections; the
   smoothing sliders as rows of « Caméra », « Lissage des virages » showing the « Auto » length for
   the first track). While paused, a camera setting change repositions the camera.
   "Cadrer la caméra pendant cet élément" (frame the camera during this item; inspector of a text or a media item): `addItemCamera` places a framing where
@@ -1481,7 +1493,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   checked, `autoStops` + `'temps-forts'`, own stops cleared; unchecked, generated stops written; "modifié" /
   ↺ "modifié" button for the film, `ModifiedMarker keys={['film']}`; a dot on the button when the film departs from the default; it
   closes with Esc, a click outside or Tab), collapse.
-  Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 56 px): click-drag to seek, **opening and closing
+  Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 76 px): click-drag to seek, **opening and closing
   included** (`setProgress(clock.progressAtTime(t), t)`, end of film = progress 1 without a time); it is also a keyboard
   slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). The keys are set where they live. Camera keys: the ◀ ◇ ▶ group (`KeyGroup`,
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
@@ -1831,6 +1843,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   `getSettingsHistory().transaction`, `followFlightTiming` (texts and media attached to a stop follow the new duration), `setFreeFraming(false)`
   when the aspect changes (like a platform chip), then a message with « Annuler » that undoes only while nothing else has
   changed since. Applying it again replaces its own choices; the result is the same whichever gabarit came before.
+  **Second entry point**: the dialog has one open state, `useAutoFilmOpen` (`src/ui/autoFilmOpen.ts`, `setAutoFilmOpen`), read by
+  `AutoFilmSection` (always mounted: the tab panels are force-mounted) so that there is one dialog and one logic. `runImport`
+  (`projectActions.ts`) gives the success message of an import an action « Film automatique… » (`film.auto.afterImport`) that calls
+  `setAutoFilmOpen(true)`, only when the app had no track before the import (not when a track is added to a film). The home screen
+  (`EmptyState`) says in one sentence under the sample button (`home.empty.autoFilm`) that it exists; no button there, there is no track yet.
   Strings: `film.auto.*` (five languages), « Nouveautés » 4.0. Tests: `film/autoFilm.test.ts`, `ui/autoFilm.test.ts`,
   `ui/CameraPanel.test.tsx`.
 
@@ -2156,7 +2173,7 @@ exports) gets it from the terrain source of the settings.
   `out tags bb` (ways and relations reduced to their bounding box, positioned at its middle; the box is kept for places as
   `OsmFeature.area`, with the raw `population` tag). The `around:` form on a
   polyline exceeds the public server's timeout; the distance to the track is computed locally, so changing the types or the
-  distance never triggers a new request. Queue (one request at a time), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
+  distance never triggers a new request. Queue (one request at a time, kept at one on purpose: `docs/sources.md`; `onStart` tells a caller when its request is really sent), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
   `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
   error `remark` (timeout exceeded) is an error. Each fetch is aborted after `QUERY_TIMEOUT_S` + 10 s (4.1: a server that never answers no longer holds the queue; the next endpoint is tried; the body is not covered).
 - **Pure post-processing** (`src/osm/landmarks.ts`): projection onto the path → distance and offset, filter by type and distance
@@ -2459,7 +2476,14 @@ exports) gets it from the terrain source of the settings.
   unknown word left as typed; for a single film (the batches keep « projet – format »). **Time before the first film**:
   `rateFromHistory` reads the last film rendered to the end from the history (the same rate as `filmRate`, per frame and
   megapixel) when none was measured this session, and `estimateRenderSeconds` gives « ≈ … de rendu » in the summary (cold tiles make
-  a first film slower: it is an estimate). **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
+  a first film slower: it is an estimate, which the summary's tooltip says). **Forests and snow in the estimate**: the rate is
+  that of the last film (`lastFilm`, the one `rateFromHistory` reads; every film of a session is in the history), and the
+  estimate multiplies it by `layersRatio(that film's layers, the layers to render)`, from `layersCost` = 1 + forests
+  (`FOREST_COST_AT_60` = 0.15 × density / 60, when on) + snow (`SNOW_COST` = 0.03, unless « Aucune »). The 15 % comes from the
+  4.0 measurement (« Forests »: +16 % triangles at 60 trees per hectare, assumed proportional to the density), the 3 % is the
+  extra term of the terrain's fragment shader; both are rough, and tile waiting and encoding do not change with them. A film
+  recorded before 4.1 does not say its layers (`RenderSettings.snow` / `forest` absent): no correction, the rate as it is.
+  The batch estimate (`estimateBatch`) does not use it. **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
   last folder; the desktop one is opened on the folder of the last film (`openflyover.lastFilmFolder`) and, after the export,
   « Ouvrir le dossier » shows the file in the system's file manager (`Platform.revealFile`, the opener plugin's
   `reveal_item_in_dir`, permission `opener:allow-reveal-item-in-dir`; `ExportResult.path`). The website cannot reveal a file.
@@ -2579,11 +2603,14 @@ exports) gets it from the terrain source of the settings.
   recorded, each file of a batch too; still images and posters are not. An entry (`HistoryEntry`) is flat and small:
   name, outcome and short error, output (size, fps, quality, codec, bytes), and `RenderSettings`, the curated summary
   of the settings that change the render time (atmosphere, shadows, sun, clouds mode / quality, lens, imagery and
-  terrain source ids, water on / off, camera style); no track, coordinate or project. Stored as
+  terrain source ids, water on / off, snow mode, forests on / off and density, camera style; no track, coordinate or project.
+  `snow` and `forest` came with 4.1 without a new version: `parseHistory` leaves them out of an older entry, whose detail rows
+  show « — »; a value out of range drops the field, not the entry. Stored as
   `{ v: 1, entries }` under `openflyover.exportHistory.v1` in the platform `storage`, newest first, at most
   `HISTORY_LIMIT` (20) entries and `HISTORY_MAX_BYTES`; `parseHistory` never throws and drops corrupted entries or
   fields. « Réutiliser ces réglages » (`reuseSettings` + `applySettings` in one history transaction, toast with
-  « Annuler ») puts back the export options and these fields only, ignoring unknown source ids.
+  « Annuler ») puts back the export options and these fields only (the snow's mode, not its manual line; the forests' switch and density),
+  ignoring unknown source ids.
 
 ### Render queue and rendering in the background
 
@@ -2591,15 +2618,25 @@ exports) gets it from the terrain source of the settings.
   `advance`, `frameloop 'never'`) and yields through `scheduler.yield()` or a `MessageChannel`, none of which is a timer.
   The only timers were the tile polls (`wait(pollMs)`, 16 ms) and the data wait of `trackFilms.ts`: a hidden page
   (`document.visibilityState`, which is also what a minimised window reports) fires timers once a second, once a minute after
-  five minutes, so each poll cost a second. `wait` now takes a `WaitHost` (`hidden()`, `now()`): shown, a timer; hidden,
-  message-port turns until the deadline (one processor core kept busy while waiting for tiles). WebGL keeps drawing into its
+  five minutes, so each poll cost a second. `wait` now takes a `WaitHost` (`hidden()`, `now()`, `sleep()`): shown, a timer; hidden,
+  the timer of a dedicated Web Worker (`createWorkerSleep`: an inline `Blob` URL running `setTimeout` and posting the id
+  back, made once and kept; the desktop CSP has `worker-src 'self' blob:`). Chrome and Edge throttle the timers of a hidden
+  page, not those of its dedicated workers, and a message to the page is not delayed (what `turn` already relies on), so the
+  wait costs no processor time. Where the worker cannot be made (no `Worker`, a CSP, a test) `sleep` returns null and `wait`
+  falls back to message-port turns until the deadline (one processor core kept busy while waiting for tiles); a worker that
+  fails later frees its pending waits early (the callers poll again) and the fallback takes over. WebGL keeps drawing into its
   buffer in a hidden page and `drawImage` reads it synchronously, the encoder is event driven, and the wake lock
   (`guard.ts`) is unchanged (screen on; the browser drops it when the page is hidden and it is asked again on return). What
   no code can change: a page suspended by the system (device asleep, a phone's app in the background) does not run.
 - **The queue** (`src/export/queue.ts`, `src/ui/RenderQueue.tsx`, a section of the « Plusieurs formats » mode): a `QueueItem`
   is the exact `serializeProject` text of the project when it was added (media included), its name, the `formatKey`s ticked
-  in « Plusieurs formats » (films only) and a status (`pending`, `running`, `done`, `error`). The export request is not
-  stored: it is built from the snapshot when the item runs (`shownFilm()`, `buildBatchJobs`), since a request holds
+  in « Plusieurs formats », optionally `still` and `poster` (the still image and the poster of the batch, with the
+  playback `progress` of the moment they were added, which a project file does not hold) and a status (`pending`, `running`,
+  `done`, `error`). `buildBatchJobs` gives the films, then the still image (PNG, at the « Vidéo » format), then the poster
+  (`startPoster`, after the progress is put back), each with the statuses and file names of the batch (`jobCount` is the
+  « élément 2 / 3 » total). **Reorder**: `moveItem` / `canMove` (pure) swap a `pending` item with the nearest `pending` one,
+  the finished ones staying where they are; two buttons per waiting item (`move` of the store), allowed during a run since
+  `runQueue` reads the live list. The export request is not stored: it is built from the snapshot when the item runs (`shownFilm()`, `buildBatchJobs`), since a request holds
   functions (`progressAt`). `runQueue` (pure, tested) takes the next `pending` item of the live list, a failure marks the item
   and goes on, a cancel puts the item back to `pending` and stops. `runRenderQueue` keeps the project open
   (`keepOpenProject`: the store fields and the media table, put back as the same objects, so « Enregistré » stays), holds
@@ -2611,8 +2648,12 @@ exports) gets it from the terrain source of the settings.
 - **Persistence**: `{ v: 1, items }` under `openflyover.renderQueue.v1` in the platform `storage`, rewritten at each change;
   `parseQueue` never throws, an item stored `running` comes back `pending` and `interrupted` (« Reprendre »), the film starts
   again from its first image. A snapshot is stored only for an item still to render, under `MAX_SNAPSHOT_CHARS` (1 M) and
-  `MAX_STORED_CHARS` (3 M) in all; the others come back as failed (« projet trop gros pour être gardé »). The folder is never
-  stored (a web handle cannot be): it is asked again at « Reprendre ».
+  `MAX_STORED_CHARS` (3 M) in all; the others come back as failed (« projet trop gros pour être gardé »). **The folder**
+  (`chooseQueueFolder`): on the web it is asked at each « Lancer la file » / « Reprendre » (a handle cannot be stored). On
+  the desktop its path (`WritableFolder.path`) is kept under `openflyover.renderQueue.folder` and reused (`reuseFolder`: the
+  Tauri `exists` check) when it is still there; the fs scope given by the dialog is not persisted across launches (no
+  persisted-scope plugin), so after a restart `exists` is refused and the dialog opens again, in the old folder
+  (`pickFolder(…, startIn)`). « Changer de dossier » forgets the path.
 - **Notification**: at the end of a run `notifyWhenAway` uses the web Notification API when the window is hidden or not
   focused (permission asked at « Lancer la file »). The desktop app has no notification plugin (`@tauri-apps/plugin-notification`
   is not a dependency): it shows the toast only. `--rendu` is unchanged.
@@ -2965,6 +3006,15 @@ exports) gets it from the terrain source of the settings.
   in the reflected direction raised above the horizon / π (fixed glacier color without the atmosphere); opacity = bank fade
   × mix(0.82, 1, Fresnel) × `strength`. A function of the film time only: the export stays deterministic. The sea is told
   from the rest by a vertex attribute (`waterSea`): its waves are 3 × longer and 1.5 × taller.
+  **Ice** (4.1): a second attribute, `waterLake`, marks the lakes (not the river areas, the sea or the ribbons). The material reads the terrain's own
+  `snowUniforms` (`snowLine`, `snowBand`, `snowExaggeration`, the same objects, no copy) and, for a lake whose altitude
+  (`(y + r²/2R) / exaggeration`, like the terrain's) is above the line, blends over the same `smoothstep` of the band `waterIce` from 0 to 1: albedo
+  (0.78, 0.83, 0.90) (the snow's, a little bluer), roughness 1 (no sun glint), no sky reflection, waves × (1 − ice), opacity 1 × strength. The limit is torn by the terrain's own noise (`SNOW_NOISE_GLSL`, `snowRagGlsl`), so the lake and its shore reach full white together. « Manuelle » and « Aucune » follow the same uniforms; a function of the uniforms only, so
+  the export is deterministic.
+  **Minimum width of a ribbon** (4.1): the drape gives each vertex of a ribbon `waterEdge`, its offset from the middle vertex (`ribbonEdgeOffsets`, zero elsewhere); the vertex shader
+  pushes the banks along it so that the ribbon is at least `MIN_STREAM_FRACTION` of the frame high on screen (1.5 px of a 1080 p frame: size of a pixel at
+  its depth `depth × 2 / projection[1][1] × fraction`), up to `MAX_STREAM_WIDENING` (4) × its width. The fraction of the frame rather than pixels: a function of the camera and the
+  projection only, so the export frames the same streams as the preview, whatever its resolution.
 - **Setting**: `settings.water { enabled, strength }` (true, 1; `SETTING_CHECKS`: 0 ≤ strength ≤ 1), "Eau reflétante (mer,
   lacs et rivières)" (reflective water: sea, lakes and rivers; « Lacs et rivières reflétants » before 4.0, same field, so the
   render history and the old projects are unchanged) checkbox and "Intensité de l'eau" (water intensity) slider in the "Fond de carte" section.
@@ -2972,7 +3022,8 @@ exports) gets it from the terrain source of the settings.
   level); a very steep river keeps 60 m steps; only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is
   the OSM coast cut by the relief, so a DEM below 0.5 m just inside the OSM coast is flooded (tidal flats, estuaries up to the
   limit OSM maps as coast); a river mapped in a gap of its own riverbank polygon is drawn over it; a stream is a 2.5 m ribbon,
-  hardly visible from high; lines are only the 200 km widest; the sea of two tracks whose corridors overlap is cut into different rectangles for each, so it is drawn twice there (translucent, a little darker), and a river cut differently by two corridors is drawn twice there too (sea cells and river pieces are numbered per corridor and kept; a lake or a riverbank is one shape whatever the corridor and is merged). A film of many stages waits longer: the Overpass policy allows one request at a time, so two requests per stage queue one after the other (a cached stage costs nothing). The "© contributeurs OpenStreetMap" credit (status bar and
+  widened up to 4 × from high (4.1), so from the orbit it is a thin, faint line (the fade towards its banks is kept); rivers, ribbons and the sea never freeze (moving water; only the
+  lakes do); a lake freezes by its DEM level; lines are only the 200 km widest; the sea of two tracks whose corridors overlap is cut into different rectangles for each, so it is drawn twice there (translucent, a little darker), and a river cut differently by two corridors is drawn twice there too (sea cells and river pieces are numbered per corridor and kept; a lake or a riverbank is one shape whatever the corridor and is merged). A film of many stages waits longer: the Overpass policy allows one request at a time, so two requests per stage queue one after the other (a cached stage costs nothing). The "© contributeurs OpenStreetMap" credit (status bar and
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
 
@@ -3022,11 +3073,11 @@ summer aerial photo. Settings in « Météo » › « Neige » (`settings.snow`)
   The manual line is not keyable on the timeline: keys are a closed list of parameters (`FILM_PARAMS`).
 - **Limits**: the snow depth is the model's (a ~9 km cell chosen near the requested elevation, 2 cm of snow is already
   « snow at the station »); the mean temperature of the day hides night frost and afternoon thaw; one line for the whole view
-  (no difference between sunny and shaded slopes, no wind drift); permanent snow that the weather does not mention (glaciers in
-  summer) is not drawn; the panel describes the first track only; frozen lakes are white like the ground (the water layer
-  stays dark where it is drawn); not in the render history (`RenderSettings`).
+  (no difference between sunny and shaded slopes, no wind drift); permanent snow that the weather does not mention is drawn only where
+  OpenStreetMap maps a glacier (see "Glaciers"), not on a snowfield it does not map; the panel describes the first track only; lakes above the line freeze (4.1, see "Reflective water": ice, the same band, rivers and the sea stay water); not in the render history (`RenderSettings`).
 - **Tuning**: the physics constants are at the top of `snowLine.ts` (lapse rate, 2 cm and 20 cm thresholds, bands); the look
   is in `snowShader.ts` (`fragmentSnow`: noise cell sizes, slope thresholds, albedo, 0.94 maximum cover).
+  `SNOW_ALBEDO_GLSL` and `SNOW_NOISE_GLSL` (same file) are also used by the glaciers.
 ## Forests (« Forêts »)
 
 Wooded valleys looked flat: the aerial photo shows the trees painted on the ground. Trees are now drawn as simple 3D volumes
@@ -3038,8 +3089,8 @@ draped on the relief.
   multipolygons `landuse=forest` and `natural=wood`, `out geom qt`, in the boxes of the track corridor widened to **5 km**
   (`FOREST_MARGIN_M`; 8 km sent 3 MB on the sample, 5 km 0.8 MB: `docs/sources.md`). `leaf_type` (`needleleaved`,
   `broadleaved`, `mixed`) is kept when present. The request is not canceled on unmount (shared and cached); its response is only
-  ignored if it is stale (its track was removed or changed); the polygons of the tracks still in the film are merged (`mergeByTrack`: by OpenStreetMap id and geometry). A failed request is only retried on the next track or setting change, and shows nothing (no status
-  chip: the checkbox's help says there are simply no trees when OpenStreetMap does not answer).
+  ignored if it is stale (its track was removed or changed); the polygons of the tracks still in the film are merged (`mergeByTrack`: by OpenStreetMap id and geometry). A failed request is only retried on the next track or setting change; the status chip « Forêts » (`scene/forestStatus.ts`, set by `ForestLayer` from `useTrackResults`: `idle` when « Forêts » is off or without a track; while a request is waiting `queued` until the Overpass queue reaches the first one still waiting (`onStart`, the 4th argument of `fetchTrackForest`), then `loading`; then `error` if any track failed, else `ready`; `error` comes with a hint saying the trees are
+  simply missing and retried on the next track or setting change; hidden when « Forêts » is off) tells the wait that follows.
 - **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
   is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned
   relation ignored, Douglas–Peucker 8 m (`FOREST_SIMPLIFY_M`), polygons < 5,000 m² dropped (`MIN_FOREST_AREA_M2`), the 600 largest
@@ -3078,7 +3129,7 @@ draped on the relief.
   dropped: the shadow pass drew every tree in range again (+3.7 M triangles, ~9 × the visible trees) for crowns of a few metres against
   shadow texels of several metres. The first draping of a
   chunk (≤ 8,000 trees a frame) shows as one frame a little longer while the film starts; the Overpass answer arrives after the
-  landmarks and the water (one request at a time): ~110 to 160 s on a slow day of the public server.
+  landmarks and the water (one request at a time: two at once would take both slots the public server grants per address, `docs/sources.md`): ~110 to 160 s on a slow day of the public server, which the chip « Forêts » now shows (« en attente » then « chargement »).
 - **Shapes** (`src/scene/treeGeometry.ts`, tested): two unit geometries merged from three's primitives, with vertex colours and no
   texture: conifer = trunk + two stacked 8-sided cones (26 triangles), broadleaf = trunk + flattened icosahedron (30 triangles).
   The instance matrix scales them to the tree (height × `TREE_WIDTH_RATIO`: 0.26 for a conifer, 0.32 for a broadleaf, wide). The
@@ -3103,9 +3154,47 @@ draped on the relief.
   low-poly models, heights do not follow the relief or the treeline; the budget thins the far forests of a long track (down to 5 % of
   their density, never to nothing), and a track drawn on a ridge far from its forests sees them sparse; a film of many stages waits longer
   for its forests (one Overpass request at a time, one per stage; a cached stage costs nothing); trees do not appear in the flat map of the poster;
-  no status chip for a failed query; the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
+  the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
   texels wide); the forests are not in the render history's
   `RenderSettings`; `forestPoints.ts` and `forest.ts` import the ring helpers of `water.ts` and `clipRing` of `waterMesh.ts`.
+
+## Glaciers (« Glaciers »)
+
+The snow of "Snow" follows the weather of the day: in summer the glaciers and permanent snowfields show only the ice of the aerial
+photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow look whatever the snow line. Same pipeline as
+"Forests" for the data and "Reflective water" for the mesh and the draping.
+
+- **Data** (`src/osm/glacier.ts`, pure and tested): same client, queue and 30-day cache as the other Overpass layers
+  (`cachedOverpassQuery`), one request per track, only if `settings.snow.mode !== 'aucune'` (« Aucune » leaves the ground as in the photo):
+  `way` / multipolygons `natural=glacier`, `out geom qt`, in the boxes of the corridor widened to **5 km** (`GLACIER_MARGIN_M`).
+  The reduction is that of the forests (`parseForest`, imported: it reads the geometry of ways and multipolygons and does not look at the tags, so
+  the query alone says it is about glaciers): relation rings stitched, holes attached, Douglas–Peucker 8 m. Then `parseGlacier` drops the polygons
+  under 20,000 m² (`MIN_GLACIER_AREA_M2`), keeps the largest 200 (`MAX_GLACIER_POLYGONS`) within 20,000 vertices (`MAX_GLACIER_VERTICES`), and keeps
+  `{ id, outer, holes }` only (the `leaf` key of the forests never appears). Only this compact result is cached. Measured (`docs/sources.md`):
+  Chamonix–Mer de Glace–Couvercle track of 10.7 km: 70 elements, 658 kB in 37.6 s on a busy public server, 72 polygons, 5,949 vertices, 115 kB cached; Pyrenean sample: no glacier
+  (an empty answer, 287 bytes).
+- **Pure mesh** (`src/scene/glacierMesh.ts`, tested): `buildGlacierMesh` is `buildWaterMesh` (the grid of 60 m cells, at most 40 per side, each ring clipped to each cell
+  by `clipRing`, every piece triangulated with its holes, `fade` = distance to the nearest edge / 40 m, capped at 1): the vertices lie inside the glacier and follow the relief.
+  The Chamonix track gives 39,930 triangles (77,708 vertices) for the 72 glaciers, +1.5 % over the ~2.7 M triangles of the terrain, built in ~0.5 s.
+  `fillHeights` gives the vertices whose tile is not loaded the median of the known heights of their glacier (null when none is known: the glacier waits).
+- **Draping** (`GlacierLayer`, before `WaterLayer` in `FlyoverCanvas`): like the water, `engine.sampleHeight` × exaggeration + `GLACIER_LIFT_M` (4 m, not exaggerated:
+  at 1.5 m the coarse levels of detail of the relief rose through the ice as hard-edged patches), re-draped (debounced, flushed by the export through `registerDrapeFlush`) on each
+  `engine.onChange`. The **normal** of each vertex comes from two more heights, 25 m to the east and to the north (`NORMAL_STEP_M`), so the sun and the terrain's shadows shade the
+  ice like the relief. The **flow** of a glacier (downhill, the mean of its normals) is one attribute per glacier. One merged geometry (one draw call), `raycast` off, `depthWrite` off, a polygon offset
+  (−4, −8), `renderOrder` −1 (drawn before the water: a glacial lake stays water).
+- **Material** (`src/scene/glacierMaterial.ts`): `MeshStandardMaterial` (roughness 0.85, `receiveShadow`) extended in `onBeforeCompile`, no texture, no time (the export is deterministic).
+  The albedo is that of the snow (`SNOW_ALBEDO_GLSL`, linear 0.80, 0.83, 0.88); the light the sky gives (what the shade receives) is multiplied by (0.9, 0.97, 1.1), so the shade is a little bluer.
+  **Crevasses**: thin dark lines (the iso-line of a hash noise, `SNOW_NOISE_GLSL` of `snowShader.ts`) of cells 5 m across and 40 m along the flow of the glacier, a second set of 13 m cells, only in
+  patches (a 140 m noise), on slopes (none on a flat névé) and gone where their cells are under ~2 pixels (no shimmer). **Slope**: the opacity falls to 35 % on the steepest faces (seracs keep some rock). **Edge**:
+  the opacity follows `fade` (`smoothstep`), so the outline is not a hard cut. Opacity 0.9 on a gentle slope: the photo's own crevasses stay faintly visible.
+- **Setting**: none of its own. Glaciers follow « Météo › Neige »: drawn in « Selon la météo du jour » and « Manuelle », not in « Aucune »; the panel says so in one sentence
+  (`light.snow.glaciers`). No project format change: an old project opens with the glaciers when its snow is not « Aucune ».
+- **Credit and chip**: « © contributeurs OpenStreetMap » (status bar, film and poster) counts the glaciers like the water and the forests (`useGlacierStore.polygons > 0`).
+  A status chip « Glaciers » (loading / ready / error, `useGlacierStatusStore` in `scene/glacierStatus.ts`, `STATUS_CHIPS` of `ui/shell.ts`, shown by default, hidden in « Réglages ») is added like the water's.
+- **Limits**: only what OpenStreetMap maps as `natural=glacier` is drawn (a snowfield, a firn basin or a glacier it does not map shows the photo); a glacier is white on the whole polygon, with
+  no snout colour, no moraine, no ice-fall shape; the polygons are OpenStreetMap's, not the year's (a glacier that retreated is drawn where it was mapped); the ice is 4 m above the relief, which shows at a few metres from the ground; crevasses
+  are a texture, not relief; very small glaciers (under 2 ha) and any beyond the 200 largest or the 20,000 vertices are left out; one Overpass request of several seconds (up to ~40 s on a busy server) on the first load of a track.
+  A failed request is only retried on the next track or setting change and the chip says « erreur ». Not in the render history's `RenderSettings`.
 
 ## Ghost race (phase 7)
 

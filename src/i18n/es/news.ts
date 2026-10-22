@@ -111,6 +111,15 @@ const messages: Messages['news'] = {
   // 4.0 — Agua reflectante: el mar y los ríos trazados como líneas (4.0)
   'v40.water.title': 'Aparecen el mar y los arroyos',
   'v40.water.text': 'A lo largo de una costa, ahora se dibuja el mar. Los ríos y arroyos que el mapa solo traza como una línea se convierten en finas cintas de agua. Todo se ajusta con «Agua reflectante (mar, lagos y ríos)», en la pestaña Mapa, sección Fondo de mapa.',
+  // 4.1 — Glaciers
+  'v41.glaciers.title': 'Los glaciares siguen blancos',
+  'v41.glaciers.text': 'Los glaciares cartografiados por OpenStreetMap se dibujan en blanco, con sus grietas, incluso en verano cuando la meteorología del día no indica nieve. Siguen el ajuste Meteorología › Nieve: no se dibujan con « Ninguna ».',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Duración o velocidad del sobrevuelo',
+  'v41.speed.text': 'En Vuelo › Duración y ritmo, ajuste el sobrevuelo por su duración (de segundo en segundo, o escribiendo el valor) o por la velocidad del marcador (× el tiempo real y km/h). Una da la otra, y las dos se muestran siempre.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Los lagos se hielan, los arroyos siguen visibles',
+  'v41.ice.text': 'Por encima del límite de la nieve, los lagos se vuelven hielo, tan blancos como el suelo que los rodea. Y vistos desde lo alto, los arroyos conservan un fino trazo de agua en lugar de desaparecer.',
 }
 
 export default messages

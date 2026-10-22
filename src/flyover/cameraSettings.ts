@@ -140,7 +140,7 @@ export function isValidCamera(camera: CameraSettings): boolean {
 
 /** Flyover duration at speed x1, whatever the track length (seconds); the timeline speed applies on top. */
 export const DEFAULT_FLYOVER_DURATION_S = 60
-export const FLYOVER_DURATION_RANGE = { min: 15, max: 600, step: 5 } as const
+export const FLYOVER_DURATION_RANGE = { min: 15, max: 600, step: 1 } as const
 
 /** Progress after `deltaS` seconds of playback at `speed`, for a flyover lasting `durationS` at x1; clamped to 1. */
 export function advanceProgress(progress: number, deltaS: number, speed: number, durationS: number): number {

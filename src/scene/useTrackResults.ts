@@ -14,6 +14,8 @@ export interface TrackResults<T> {
   results: Readonly<Record<string, T>>
   /** a request is still waiting */
   loading: boolean
+  /** the Overpass queue has reached a request still waiting (false while it works for others) */
+  started: boolean
   /** a request failed (asked again when the tracks change) */
   failed: boolean
 }
@@ -26,9 +28,14 @@ interface State<T> {
 
 const NOTHING: Readonly<Record<string, never>> = {}
 
-/** Fetch `fetch(track)` for every track while `enabled`; each answer is available as it arrives. */
-export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], fetch: (track: Track) => Promise<T>): TrackResults<T> {
+/**
+ * Fetch `fetch(track, onStart)` for every track while `enabled`; each answer is available as it arrives. `onStart` is for the
+ * fetcher to call when the queue really sends the request (`started`).
+ */
+export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], fetch: (track: Track, onStart: () => void) => Promise<T>): TrackResults<T> {
   const [state, setState] = useState<State<T>>({ answers: {}, failures: {} })
+  /** the points of each track whose request the queue has started */
+  const [startedFor, setStartedFor] = useState<Readonly<Record<string, Segments>>>({})
   /** the points each track was asked for (an answer whose track has gone or changed meanwhile is stale) */
   const asked = useRef(new Map<string, Segments>())
   /** the tracks whose request failed: asked again the next time the tracks change */
@@ -63,7 +70,10 @@ export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], f
         answers: Object.fromEntries(Object.entries(answers).filter(([key]) => ask.has(key))),
         failures: Object.fromEntries(Object.entries(failures).filter(([key]) => ask.has(key))),
       })
-      fetchRef.current(track).then(
+      const onStart = () => {
+        if (ask.get(id) === segments) setStartedFor((s) => ({ ...s, [id]: segments }))
+      }
+      fetchRef.current(track, onStart).then(
         (value) => {
           if (ask.get(id) !== segments) return
           setState((s) => keep({ ...s.answers, [id]: { segments, value } }, s.failures))
@@ -78,16 +88,21 @@ export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], f
   }, [enabled, tracks])
 
   return useMemo(() => {
-    if (!enabled) return { results: NOTHING, loading: false, failed: false }
+    if (!enabled) return { results: NOTHING, loading: false, started: false, failed: false }
     const results: Record<string, T> = {}
     let loading = false
+    let started = false
     let failed = false
     for (const { id, segments } of tracks) {
       const answer = state.answers[id]
       if (answer?.segments === segments) results[id] = answer.value
       else if (state.failures[id] === segments) failed = true
-      else loading = true
+      else {
+        loading = true
+        // the queue is sequential: a started request that has not answered is the one it works on
+        if (startedFor[id] === segments) started = true
+      }
     }
-    return { results, loading, failed }
-  }, [enabled, tracks, state])
+    return { results, loading, started, failed }
+  }, [enabled, tracks, state, startedFor])
 }

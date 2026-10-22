@@ -175,8 +175,10 @@ export default {
   'snow.sequenceNote': 'Avec « À la suite », chaque étape suit sa propre météo, et une étape sans météo garde la neige de l’étape précédente ; la phrase ci-dessus décrit le début de la première trace.',
   // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
   'forest.enable': 'Forêts',
-  'forest.tip': 'Dessine des arbres en volume là où OpenStreetMap indique une forêt, autour de la trace (internet nécessaire). Si OpenStreetMap ne répond pas, il n’y a simplement pas d’arbres. Ce sont des formes simples, placées au hasard mais toujours aux mêmes endroits : l’export montre les mêmes arbres que l’aperçu.',
+  'forest.tip': 'Dessine des arbres en volume là où OpenStreetMap indique une forêt, autour de la trace (internet nécessaire). Si OpenStreetMap ne répond pas, il n’y a simplement pas d’arbres. Un jour de forte affluence sur le serveur d’OpenStreetMap, les arbres peuvent mettre quelques minutes à arriver. Ce sont des formes simples, placées au hasard mais toujours aux mêmes endroits : l’export montre les mêmes arbres que l’aperçu.',
   'forest.density': 'Densité des arbres',
   'forest.densityValue': '{n} arbres par hectare',
   'forest.densityTip': 'Nombre d’arbres dessinés par hectare de forêt, près de la trace ; plus loin, il y en a moins. Plus il y en a, plus l’aperçu et l’export sont lents. L’appareil limite le nombre total d’arbres (moins sur téléphone et tablette).',
+  // 4.1 — Glaciers
+  'snow.glaciers': 'Les glaciers cartographiés par OpenStreetMap sont toujours blancs, quelle que soit la limite.',
 }
