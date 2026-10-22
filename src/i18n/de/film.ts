@@ -99,6 +99,8 @@ const messages: Messages['film'] = {
   'auto.reel.name': 'Reel 30 s',
   'auto.resume.name': 'Zusammenfassung 1 min',
   'auto.souvenir.name': 'Erinnerung 3 min',
+  'auto.souvenir.hint': 'Querformat 16:9, 3 min, Export für YouTube HD: ruhige Kamera, Zeitlupe an den Anstiegen, Stopps an Pässen und Gipfeln, Tages- oder Etappenkarten, Zähler, Eröffnungstitel und Schlusskarte.',
+  'auto.afterImport': 'Automatischer Film …',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
   'auto.card.formatWide': '16:9 YouTube',

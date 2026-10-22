@@ -102,3 +102,20 @@ export function stripHeights(middle: ArrayLike<number>): Float64Array | null {
   }
   return out.length > 0 && !Number.isNaN(out[0]) ? out : null
 }
+
+/**
+ * Offset of each vertex of ribbons from their middle vertex, as (x, z) pairs: the vertices come three by three (left bank,
+ * middle, right bank) like `buildRiverStrip`'s, `xz` holding the (x, z) of each in local metres. The shader of the water pushes a
+ * bank along its offset to keep a thin stream visible from high up; the middle vertices have a zero offset.
+ */
+export function ribbonEdgeOffsets(xz: ArrayLike<number>): Float32Array {
+  const out = new Float32Array(xz.length)
+  for (let c = 2; c + 3 < xz.length; c += 6) {
+    // vertex 3i + 1 is the middle: its (x, z) is at 2 * (3i + 1) = 6i + 2
+    for (const bank of [c - 2, c + 2]) {
+      out[bank] = xz[bank] - xz[c]
+      out[bank + 1] = xz[bank + 1] - xz[c + 1]
+    }
+  }
+  return out
+}

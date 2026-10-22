@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { canPickFolder, joinPath, pickFolder, pickReadableFolder } from './folder'
+import { canPickFolder, joinPath, pickFolder, pickReadableFolder, reuseFolder } from './folder'
 
 const dialog = vi.hoisted(() => ({ open: vi.fn(), save: vi.fn() }))
 const fs = vi.hoisted(() => ({
@@ -96,5 +96,23 @@ describe('folder', () => {
     expect(fs.readFile).toHaveBeenCalledWith('C:\\Traces\\a.fit')
     expect(file.name).toBe('a.fit')
     expect(file.size).toBe(2)
+  })
+})
+
+describe('reuseFolder and the dialog start folder', () => {
+  it('reuses a folder that is there, null when it is gone, out of reach or not remembered', async () => {
+    const folder = await reuseFolder('C:\\Films', async () => true)
+    expect(folder?.path).toBe('C:\\Films')
+    expect(folder?.name).toBe('Films')
+    expect(await reuseFolder('C:\\Films', async () => false)).toBeNull()
+    expect(await reuseFolder('C:\\Films', () => Promise.reject(new Error('forbidden path')))).toBeNull()
+    expect(await reuseFolder(null, async () => true)).toBeNull()
+  })
+
+  it('desktop: the dialog opens in the folder asked', async () => {
+    dialog.open.mockResolvedValueOnce('D:\\Rendus')
+    const folder = await pickFolder({ isDesktop: true }, globalThis, 'C:\\Films')
+    expect(dialog.open).toHaveBeenCalledWith({ directory: true, multiple: false, recursive: false, defaultPath: 'C:\\Films' })
+    expect(folder?.path).toBe('D:\\Rendus')
   })
 })

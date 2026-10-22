@@ -286,6 +286,8 @@ describe('parsePreferences', () => {
       language: 'fr',
       whatsNewSeen: '',
     })
+    // preferences saved before the « Forêts » chip existed show it
+    expect(parsePreferences('{"status":{"weather":false,"water":true}}').status).toEqual({ ...DEFAULT_PREFERENCES.status, weather: false })
     expect(parsePreferences('{"whatsNewSeen":"2.2"}').whatsNewSeen).toBe('2.2')
     expect(parsePreferences('{"whatsNewSeen":2}').whatsNewSeen).toBe('')
     expect(parsePreferences('{"timelineMagnet":false}').timelineMagnet).toBe(false)

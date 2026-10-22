@@ -77,7 +77,6 @@ const messages: Messages['camera'] = {
   'duration.noStops': 'ninguna parada',
   'duration.stops': { one: '{count} parada', other: '{count} paradas' },
   'duration.film': 'Película: {duration} · {stops}',
-  'duration.filmSpeedUp': 'Película: {duration} · {stops} · aceleración {speedUp} (salida de {recorded})',
   'duration.timedStages': { one: '{count} etapa con duración fijada (inspector de la etapa): las demás conservan su parte de la duración del vuelo y la película cambia en la diferencia', other: '{count} etapas con duración fijada (inspector de la etapa): las demás conservan su parte de la duración del vuelo y la película cambia en la diferencia' },
   'pacing.enable': 'Ralentizar en los momentos destacados',
   'pacing.enableTip': 'Momentos destacados: cimas de las subidas, puertos cruzados y cimas cercanas al track.',
@@ -94,6 +93,24 @@ const messages: Messages['camera'] = {
   'pacing.transitionsTip': 'Entrada y salida de las paradas, las pausas y las porciones de velocidad: más larga, el marcador frena y arranca más suavemente.',
   'pacing.slowFactorTip': 'Velocidad del vuelo justo en un momento destacado, respecto a la normal (35 %: casi tres veces más lento).',
   'pacing.windowTip': 'Distancia a cada lado del momento destacado en la que el vuelo frena y luego recupera su velocidad.',
+  // 4.1 — flyover set by its duration or by the marker’s speed
+  'speed.by': 'Ajustar por',
+  'speed.byDuration': 'Duración',
+  'speed.bySpeed': 'Velocidad del marcador',
+  'speed.sliderAria': 'Velocidad del marcador',
+  'speed.durationAria': 'Duración del sobrevuelo, en segundos',
+  'speed.upAria': 'Velocidad del marcador, en veces el tiempo real',
+  'speed.kmhAria': 'Velocidad del marcador, en kilómetros por hora',
+  'speed.seconds': 's',
+  'speed.unitKmh': 'km/h',
+  'speed.kmh': '{value} km/h',
+  'speed.asSpeedUp': 'es decir {speedUp} (salida de {recorded}) · {kmh}',
+  'speed.asKmh': 'es decir {kmh}',
+  'speed.asDuration': 'es decir {duration}',
+  'speed.hintDuration': 'Usted ajusta la duración del sobrevuelo; la velocidad del marcador se deduce de ella. Es una velocidad media: las paradas y las ralentizaciones se toman de esta duración.',
+  'speed.hintSpeed': 'Usted ajusta la velocidad media del marcador; la app deduce de ella la duración del sobrevuelo. Las paradas y las ralentizaciones se toman de esta duración.',
+  'speed.hintUntimed': 'Este track no tiene horas: la velocidad se da solo en km/h.',
+  'speed.hintStages': 'Varios tracks: la longitud es la de todo el recorrido; una etapa con duración fijada conserva su duración.',
 }
 
 export default messages

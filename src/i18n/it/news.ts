@@ -111,6 +111,15 @@ const messages: Messages['news'] = {
   // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
   'v40.water.title': 'Compaiono il mare e i torrenti',
   'v40.water.text': 'Lungo una costa, il mare viene ora disegnato. I fiumi e i torrenti che la mappa traccia solo come una linea diventano sottili nastri d’acqua. Tutto si regola con «Acqua riflettente (mare, laghi e fiumi)», nella scheda Mappa, sezione Sfondo mappa.',
+  // 4.1 — Glaciers
+  'v41.glaciers.title': 'I ghiacciai restano bianchi',
+  'v41.glaciers.text': 'I ghiacciai mappati da OpenStreetMap sono disegnati in bianco, con i loro crepacci, anche in estate quando il meteo del giorno non segnala neve. Seguono l’impostazione Meteo › Neve: non vengono disegnati con « Nessuna ».',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Durata o velocità del sorvolo',
+  'v41.speed.text': 'In Sorvolo › Durata e ritmo, imposti il sorvolo in base alla durata (al secondo, o digitando il valore) o alla velocità del marcatore (× il tempo reale e km/h). L’una dà l’altra, ed entrambe sono sempre mostrate.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'I laghi ghiacciano, i torrenti restano visibili',
+  'v41.ice.text': 'Sopra il limite della neve, i laghi diventano ghiaccio, bianchi come il terreno attorno. E visti dall’alto, i torrenti mantengono un sottile filo d’acqua invece di sparire.',
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Modelli più chiari',
   'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',

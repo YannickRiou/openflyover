@@ -785,6 +785,7 @@ function SnowControl() {
             {sequence && ` ${t('light.snow.sequenceNote')}`}
           </p>
         )}
+        {snow.mode !== 'aucune' && <p className="type-hint">{t('light.snow.glaciers')}</p>}
       </fieldset>
       {snow.mode === 'manuelle' && (
         <RangeField

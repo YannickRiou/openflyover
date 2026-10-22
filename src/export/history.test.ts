@@ -8,6 +8,9 @@ import {
   formatSpeed,
   formatWall,
   estimateRenderSeconds,
+  lastFilm,
+  layersCost,
+  layersRatio,
   parseHistory,
   rateFromHistory,
   recordEntry,
@@ -56,7 +59,7 @@ describe('summariseSettings', () => {
     expect(summary.lens).toEqual(settings.lens)
     // no film, track, overlay, title or poster text
     expect(Object.keys(summary).sort()).toEqual(
-      ['atmosphere', 'camera', 'clouds', 'imagery', 'imageryZoom', 'lens', 'shadows', 'sunDate', 'sunFromTrack', 'sunHour', 'terrain', 'tier', 'water'].sort(),
+      ['atmosphere', 'camera', 'clouds', 'imagery', 'imageryZoom', 'lens', 'shadows', 'sunDate', 'sunFromTrack', 'sunHour', 'snow', 'forest', 'terrain', 'tier', 'water'].sort(),
     )
   })
 })
@@ -212,6 +215,29 @@ describe('parseHistory', () => {
     expect(parsed.settings.shadows).toBe(true)
   })
 
+  it('reads the snow and the forests, and shows « — » for an entry recorded before them', () => {
+    const e = entry(1)
+    const fresh = { ...e, settings: { ...e.settings, snow: 'manuelle', forest: { enabled: true, density: 90 } } }
+    const before = { ...e.settings, snow: undefined, forest: undefined }
+    const old = { ...entry(2), settings: before }
+    const [parsedFresh, parsedOld] = parseHistory(JSON.stringify({ v: 1, entries: [fresh, old] })).sort((a, b) => a.at - b.at)
+    expect(parsedFresh.settings).toMatchObject({ snow: 'manuelle', forest: { enabled: true, density: 90 } })
+    expect(parsedOld.settings.snow).toBeUndefined()
+    expect(parsedOld.settings.forest).toBeUndefined()
+    const value = (rows: { label: string; value: string }[], label: string) => rows.find((r) => r.label === label)?.value
+    const rows = settingsDetails(parsedFresh.settings)
+    expect(value(rows, 'Neige')).toBe('Manuelle')
+    expect(value(rows, 'Forêts')).toBe('90 arbres par hectare')
+    expect(value(settingsDetails(parsedOld.settings), 'Neige')).toBe('—')
+    expect(value(settingsDetails(parsedOld.settings), 'Forêts')).toBe('—')
+    expect(value(settingsDetails({ forest: { enabled: false, density: 60 } }), 'Forêts')).toBe('non')
+    // a bad value drops the field, not the entry
+    const bad = { ...e, settings: { ...e.settings, snow: 'blizzard', forest: { enabled: true, density: 9999 } } }
+    const [parsedBad] = parseHistory(JSON.stringify({ v: 1, entries: [bad] }))
+    expect(parsedBad.settings.snow).toBeUndefined()
+    expect(parsedBad.settings.forest).toBeUndefined()
+  })
+
   it('caps a list written with more entries than the limit, and ignores duplicate ids', () => {
     const many = Array.from({ length: HISTORY_LIMIT + 10 }, (_, i) => entry(i))
     expect(parseHistory(JSON.stringify({ v: 1, entries: many }))).toHaveLength(HISTORY_LIMIT)
@@ -257,6 +283,16 @@ describe('reuseSettings', () => {
     expect(next.overlay).toBe(current.overlay)
     expect(next.poster).toBe(current.poster)
     expect(next.imagerySourceId).toBe(current.imagerySourceId)
+  })
+
+  it('puts back the snow and the forests with the rest, and leaves them when the entry lacks them', () => {
+    const current: Settings = { ...DEFAULT_SETTINGS, snow: { mode: 'meteo', lineM: 1800 }, forest: { enabled: true, density: 60 } }
+    const next = reuseSettings(entry(4, { settings: { snow: 'aucune', forest: { enabled: false, density: 120 } } }), current)
+    expect(next.snow).toEqual({ mode: 'aucune', lineM: 1800 })
+    expect(next.forest).toEqual({ enabled: false, density: 120 })
+    const old = reuseSettings(entry(5, { settings: { shadows: true } }), current)
+    expect(old.snow).toBe(current.snow)
+    expect(old.forest).toBe(current.forest)
   })
 
   it('keeps the reference of what is already as recorded', () => {
@@ -376,5 +412,27 @@ describe('render time before the first film of a session', () => {
     expect(estimateRenderSeconds(0.25, 1800, 1920, 1080)).toBeCloseTo(0.25 * 1800 * 2.0736, 9)
     expect(estimateRenderSeconds(0.25, 1800, 3840, 2160)).toBeCloseTo(4 * estimateRenderSeconds(0.25, 1800, 1920, 1080), 9)
     expect(estimateRenderSeconds(0.25, 0, 1920, 1080)).toBe(0)
+    expect(estimateRenderSeconds(0.25, 1800, 1920, 1080, 1.2)).toBeCloseTo(1.2 * estimateRenderSeconds(0.25, 1800, 1920, 1080), 9)
+  })
+
+  it('counts the forests (+15 % at 60 trees per hectare, in proportion) and the snow (+3 %) against the film the rate comes from', () => {
+    const off = { snow: 'aucune', forest: { enabled: false, density: 60 } } as const
+    const forests = { snow: 'aucune', forest: { enabled: true, density: 60 } } as const
+    expect(layersCost(off)).toBe(1)
+    expect(layersCost(forests)).toBeCloseTo(1.15, 9)
+    expect(layersCost({ snow: 'aucune', forest: { enabled: true, density: 120 } })).toBeCloseTo(1.3, 9)
+    expect(layersCost({ snow: 'meteo', forest: { enabled: false, density: 60 } })).toBeCloseTo(1.03, 9)
+    expect(layersRatio(off, forests)).toBeCloseTo(1.15, 9)
+    expect(layersRatio(forests, off)).toBeCloseTo(1 / 1.15, 9)
+    expect(layersRatio(forests, forests)).toBe(1)
+    // a film recorded before the layers were: nothing to compare with, the rate is used as it is
+    expect(layersCost({})).toBeNull()
+    expect(layersRatio({}, forests)).toBe(1)
+    expect(layersRatio(forests, { snow: 'meteo' })).toBe(1)
+  })
+
+  it('reads the last film of the list', () => {
+    expect(lastFilm([entry({ at: 5, outcome: 'error' }), entry({ at: 3 }), entry({ at: 4, overlayOnly: true })])?.at).toBe(3)
+    expect(lastFilm([])).toBeUndefined()
   })
 })

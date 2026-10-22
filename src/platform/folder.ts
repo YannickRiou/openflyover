@@ -13,6 +13,8 @@ import { t } from '../i18n'
 export interface WritableFolder {
   /** name of the folder, for the messages */
   readonly name: string
+  /** full path, on the desktop only (a web handle has none): what is remembered to open the same folder again */
+  readonly path?: string
   /** a file of that name in the folder (an existing one is replaced), open for writing */
   createFile(fileName: string): Promise<WritableFile>
 }
@@ -35,7 +37,11 @@ export function joinPath(dir: string, name: string): string {
 
 /** Desktop: the folder at `dir` (in the fs scope: picked in a dialog, or given on the command line). */
 export function writableFolderAt(dir: string): WritableFolder {
-  return { name: fileNameOf(dir.replace(/[\\/]+$/, '')), createFile: (fileName) => openWritablePath(joinPath(dir, fileName)) }
+  return {
+    name: fileNameOf(dir.replace(/[\\/]+$/, '')),
+    path: dir,
+    createFile: (fileName) => openWritablePath(joinPath(dir, fileName)),
+  }
 }
 
 /** Desktop: the files directly inside the folder at `dir` (in the fs scope). */
@@ -46,16 +52,28 @@ export async function readableFolderAt(dir: string, fs?: typeof import('@tauri-a
   return { name: fileNameOf(dir.replace(/[\\/]+$/, '')), files }
 }
 
+/** Desktop: the folder at `dir` again, when it is still there and the app may write in it (`exists` fails outside the fs scope); else null. */
+export async function reuseFolder(dir: string | null, exists: (dir: string) => Promise<boolean>): Promise<WritableFolder | null> {
+  if (!dir) return null
+  try {
+    return (await exists(dir)) ? writableFolderAt(dir) : null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Ask for a folder; null when the dialog is closed. On the web, call it from the user's click (before any await).
+ * `startIn` (desktop): the folder the dialog opens in.
  */
 export async function pickFolder(
   capabilities: Pick<Capabilities, 'isDesktop'>,
   scope: object = globalThis,
+  startIn?: string,
 ): Promise<WritableFolder | null> {
   if (capabilities.isDesktop) {
     const { open } = await import('@tauri-apps/plugin-dialog')
-    const dir = (await open({ directory: true, multiple: false, recursive: false })) as string | null
+    const dir = (await open({ directory: true, multiple: false, recursive: false, defaultPath: startIn })) as string | null
     return dir ? writableFolderAt(dir) : null
   }
   const picker = (scope as { showDirectoryPicker?: DirectoryPicker }).showDirectoryPicker

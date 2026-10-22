@@ -97,6 +97,8 @@ export default {
   'auto.reel.name': 'Reel 30 s',
   'auto.resume.name': 'Résumé 1 min',
   'auto.souvenir.name': 'Souvenir 3 min',
+  'auto.souvenir.hint': 'Paysage 16:9, 3 min, export YouTube HD : caméra calme, ralenti dans les montées, arrêts aux cols et aux sommets, cartes de jour ou d’étape, compteurs, titre d’ouverture et carte de clôture.',
+  'auto.afterImport': 'Film automatique…',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
   'auto.card.formatWide': '16:9 YouTube',

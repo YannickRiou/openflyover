@@ -6,6 +6,7 @@ import { CAMERA_PRESETS } from '../flyover/cameraSettings'
 import { useT } from '../i18n'
 import { useFilmTrack } from '../scene/usePacing'
 import { applyAutoFilm } from './autoFilm'
+import { setAutoFilmOpen, useAutoFilmOpen } from './autoFilmOpen'
 import { Icon } from './icons'
 import type { IconName } from './icons'
 import { PanelSection } from './PanelSection'
@@ -18,7 +19,8 @@ import { Button, Modal } from './primitives'
  */
 export function AutoFilmSection() {
   const t = useT()
-  const [open, setOpen] = useState(false)
+  const open = useAutoFilmOpen((s) => s.open)
+  const setOpen = setAutoFilmOpen
   const hasTrack = useFilmTrack() !== undefined
   return (
     <PanelSection title={t('film.auto.title')}>

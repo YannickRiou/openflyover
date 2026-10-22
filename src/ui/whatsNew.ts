@@ -22,7 +22,12 @@ export interface NewsVersion {
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '4.1',
-    items: [{ icon: 'clapperboard', get title() { return t('news.v41.auto.title') }, get text() { return t('news.v41.auto.text') } }],
+    items: [
+      { icon: 'cloud-sun', get title() { return t('news.v41.glaciers.title') }, get text() { return t('news.v41.glaciers.text') } },
+      { icon: 'gauge', get title() { return t('news.v41.speed.title') }, get text() { return t('news.v41.speed.text') } },
+      { icon: 'cloud-sun', get title() { return t('news.v41.ice.title') }, get text() { return t('news.v41.ice.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v41.auto.title') }, get text() { return t('news.v41.auto.text') } },
+    ],
   },
   {
     version: '4.0',

@@ -5,9 +5,14 @@ import {
   MAX_QUEUE_ITEMS,
   MAX_SNAPSHOT_CHARS,
   MAX_STORED_CHARS,
+  QUEUE_FOLDER_KEY,
   QUEUE_KEY,
   addOpenProject,
   askNotificationPermission,
+  canMove,
+  chooseQueueFolder,
+  jobCount,
+  moveItem,
   formatLabel,
   notifyWhenAway,
   parseQueue,
@@ -32,6 +37,8 @@ vi.mock('./trackFilms', () => ({
   loadTrackData: async () => undefined,
   shownFilm: () => ({ fps: 30, quality: 'high', encoding: {}, durationS: 10, progressAt: (t: number) => t, holdStartS: 1, holdEndS: 2 }),
 }))
+
+const selection = (formats: string[], extra: { still?: boolean; poster?: boolean } = {}) => ({ formats, still: false, poster: false, ...extra })
 
 const item = (id: string, patch: Partial<QueueItem> = {}): QueueItem => ({
   id,
@@ -82,6 +89,104 @@ describe('stored form', () => {
     expect(parseQueue(serialiseQueue([done]))[0].snapshot).toBeNull()
     const many = Array.from({ length: MAX_LISTED_ITEMS + 5 }, (_, i) => item(String(i)))
     expect(parseQueue(serialiseQueue(many))).toHaveLength(MAX_LISTED_ITEMS)
+  })
+})
+
+describe('old stored queues', () => {
+  it('opens an item stored before stills and posters existed, unchanged', () => {
+    const old = JSON.stringify({ v: 1, items: [{ id: 'a', name: 'Vieux', formats: ['16:9@720p'], status: 'pending', snapshot: '{}' }] })
+    expect(parseQueue(old)).toEqual([{ id: 'a', name: 'Vieux', formats: ['16:9@720p'], status: 'pending', snapshot: '{}' }])
+  })
+
+  it('keeps the still image, the poster and their position, and ignores what is not valid', () => {
+    const items = [item('a', { formats: [], still: true, poster: true, progress: 0.4 })]
+    expect(parseQueue(serialiseQueue(items))).toEqual(items)
+    const junk = JSON.parse(serialiseQueue([item('b')])).items[0]
+    const [back] = parseQueue(JSON.stringify({ v: 1, items: [{ ...junk, still: 'yes', poster: 1, progress: 7 }] }))
+    expect(back).toEqual(item('b'))
+  })
+
+  it('counts the films, the still image and the poster as its jobs', () => {
+    expect(jobCount(item('a', { formats: ['16:9@720p', '9:16@720p'], still: true, poster: true }))).toBe(4)
+    expect(jobCount(item('a'))).toBe(1)
+  })
+})
+
+describe('moveItem', () => {
+  const ids = (items: readonly QueueItem[]) => items.map((i) => i.id)
+  const items = [item('a'), item('b', { status: 'done', snapshot: null }), item('c'), item('d')]
+
+  it('swaps a waiting item with the nearest waiting one, over the finished ones', () => {
+    expect(ids(moveItem(items, 'c', -1))).toEqual(['c', 'b', 'a', 'd'])
+    expect(ids(moveItem(items, 'a', 1))).toEqual(['c', 'b', 'a', 'd'])
+    expect(ids(moveItem(items, 'd', -1))).toEqual(['a', 'b', 'd', 'c'])
+  })
+
+  it('does not move the first one up, the last one down, nor an item that is not waiting', () => {
+    expect(moveItem(items, 'a', -1)).toBe(items)
+    expect(moveItem(items, 'd', 1)).toBe(items)
+    expect(moveItem(items, 'b', 1)).toBe(items)
+    expect(moveItem(items, 'zzz', 1)).toBe(items)
+    expect(canMove(items, 'a', -1)).toBe(false)
+    expect(canMove(items, 'a', 1)).toBe(true)
+    expect(canMove([item('r', { status: 'running' }), item('p')], 'p', -1)).toBe(false)
+  })
+
+  it('is kept: the store moves it and the order is stored', () => {
+    useQueueStore.setState({ items: [item('a'), item('b')], running: false })
+    useQueueStore.getState().move('b', -1)
+    expect(ids(useQueueStore.getState().items)).toEqual(['b', 'a'])
+    expect(ids(parseQueue(getPlatform().storage.get(QUEUE_KEY)))).toEqual(['b', 'a'])
+  })
+})
+
+describe('chooseQueueFolder', () => {
+  const folder = (path?: string) => ({ name: 'Films', path, createFile: vi.fn() })
+  const deps = (stored: string | null, there: boolean | Error) => {
+    const store = new Map<string, string>(stored ? [[QUEUE_FOLDER_KEY, stored]] : [])
+    return {
+      store,
+      get: (key: string) => store.get(key) ?? null,
+      set: (key: string, value: string) => store.set(key, value),
+      exists: vi.fn(async () => {
+        if (there instanceof Error) throw there
+        return there
+      }),
+      pick: vi.fn(async (_startIn?: string) => folder('/home/films-2') as never),
+    }
+  }
+
+  it('desktop: reuses the folder of the last run when it is still there, without asking', async () => {
+    const d = deps('/home/films', true)
+    const chosen = await chooseQueueFolder({ isDesktop: true }, d)
+    expect(chosen?.path).toBe('/home/films')
+    expect(d.pick).not.toHaveBeenCalled()
+  })
+
+  it('desktop: asks again, from the old folder, when it is gone or out of reach, and remembers the new one', async () => {
+    for (const there of [false, new Error('forbidden path')]) {
+      const d = deps('/home/films', there)
+      expect((await chooseQueueFolder({ isDesktop: true }, d))?.path).toBe('/home/films-2')
+      expect(d.pick).toHaveBeenCalledWith('/home/films')
+      expect(d.store.get(QUEUE_FOLDER_KEY)).toBe('/home/films-2')
+    }
+  })
+
+  it('desktop: asks the first time, and keeps nothing when the dialog is closed', async () => {
+    const d = deps(null, true)
+    d.pick.mockResolvedValueOnce(null as never)
+    expect(await chooseQueueFolder({ isDesktop: true }, d)).toBeNull()
+    expect(d.exists).not.toHaveBeenCalled()
+    expect(d.store.size).toBe(0)
+  })
+
+  it('web: always asks, remembers nothing', async () => {
+    const d = deps(null, true)
+    d.pick.mockResolvedValueOnce(folder() as never)
+    await chooseQueueFolder({ isDesktop: false }, d)
+    expect(d.pick).toHaveBeenCalledWith()
+    expect(d.exists).not.toHaveBeenCalled()
+    expect(d.store.size).toBe(0)
   })
 })
 
@@ -243,9 +348,9 @@ describe('runRenderQueue', () => {
     const imagery = useAppStore.getState().settings.imagerySourceId
     useAppStore.getState().setSetting('imagerySourceId', IMAGERY_SOURCES.find((s) => s.id !== imagery)!.id)
     useAppStore.getState().setProjectName('Sortie du samedi')
-    expect(addOpenProject(['16:9@720p', '9:16@720p'])).toBe('Sortie du samedi')
+    expect(addOpenProject(selection(['16:9@720p', '9:16@720p']))).toBe('Sortie du samedi')
     useAppStore.getState().setProjectName('Autre')
-    expect(addOpenProject(['16:9@720p'])).toBe('Autre')
+    expect(addOpenProject(selection(['16:9@720p']))).toBe('Autre')
     useQueueStore.getState().add(item('bad', { snapshot: 'not json' }))
     // the project open before has a track, a picture, a work area and an imagery source the user did not choose
     const track = buildTrack({ name: 'Trace', source: 'gpx', segments: [{ points: [{ lon: 6.87, lat: 45.92, ele: 1000 }, { lon: 6.88, lat: 45.93, ele: 1100 }] }] })
@@ -284,10 +389,25 @@ describe('runRenderQueue', () => {
     expect(useQueueStore.getState().running).toBe(false)
   })
 
+  it('renders the still image and the poster of an item next to its films, where the project was when added', async () => {
+    useAppStore.getState().setProjectName('Avec image')
+    useAppStore.getState().setProgress(0.4)
+    addOpenProject(selection(['16:9@720p'], { still: true, poster: true }))
+    addOpenProject(selection([], { poster: true }))
+    await runRenderQueue({ folder: null, save: () => undefined })
+    expect(vi.mocked(exportJob).mock.calls.map(([job]) => job.kind)).toEqual(['video', 'still', 'poster', 'poster'])
+    const [, ctx] = vi.mocked(exportJob).mock.calls[1]
+    expect(ctx.still.progress).toBe(0.4)
+    const items = useQueueStore.getState().items
+    expect(items.map((i) => i.status)).toEqual(['done', 'done'])
+    expect(items[0].files).toHaveLength(3)
+    expect(items[0].progress).toBe(0.4)
+  })
+
   it('keeps the item canceled « en attente » and the others untouched', async () => {
     useAppStore.getState().setProjectName('A')
-    addOpenProject(['16:9@720p'])
-    addOpenProject(['16:9@720p'])
+    addOpenProject(selection(['16:9@720p']))
+    addOpenProject(selection(['16:9@720p']))
     vi.mocked(exportJob).mockImplementationOnce(async () => ({ status: 'canceled' }))
     await runRenderQueue({ folder: null, save: () => undefined })
     expect(useQueueStore.getState().items.map((i) => i.status)).toEqual(['pending', 'pending'])
@@ -296,7 +416,7 @@ describe('runRenderQueue', () => {
   })
 
   it('does nothing while another run holds the app', async () => {
-    addOpenProject(['16:9@720p'])
+    addOpenProject(selection(['16:9@720p']))
     useBatchStore.getState().hold(null)
     await runRenderQueue({ folder: null, save: () => undefined })
     useBatchStore.getState().release()

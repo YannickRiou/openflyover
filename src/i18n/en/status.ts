@@ -31,6 +31,12 @@ const messages: Messages['status'] = {
   'perf.js': 'JS {value}',
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value}%',
+  // --- 4.1.0: « Forêts » chip, waiting for the other OpenStreetMap requests ---
+  'source.forest': 'Forests (OpenStreetMap)',
+  'chip.queued': '{source}: waiting, the other OpenStreetMap loads go first',
+  forestError: 'Forests (OpenStreetMap): loading failed, there will be no trees. Tried again with the next track or the next setting change.',
+  // 4.1 — Glaciers
+  'source.glacier': 'Glaciers (OpenStreetMap)',
 }
 
 export default messages

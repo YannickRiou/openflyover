@@ -99,6 +99,8 @@ const messages: Messages['film'] = {
   'auto.reel.name': 'Reel 30 s',
   'auto.resume.name': 'Summary 1 min',
   'auto.souvenir.name': 'Keepsake 3 min',
+  'auto.souvenir.hint': 'Landscape 16:9, 3 min, YouTube HD export: a calm camera, slow motion on the climbs, holds at the passes and summits, day or stage cards, counters, opening title and closing card.',
+  'auto.afterImport': 'Automatic film…',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
   'auto.card.formatWide': '16:9 YouTube',

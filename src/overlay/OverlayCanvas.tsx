@@ -8,7 +8,7 @@ import { clipRateAt } from '../film/timeline'
 import { getPreviewVideos } from '../film/video'
 import { playsInSequence } from '../flyover/sequence'
 import { useRegionStore } from '../osm/region'
-import { useForestStore, useLandmarkStore, useWaterStore } from '../osm/store'
+import { useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { useFilmClock } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
@@ -138,11 +138,14 @@ function OverlayPreview() {
     const unsubscribeLandmarks = useLandmarkStore.subscribe((state, prev) => {
       if (state.landmarks !== prev.landmarks) schedule()
     })
-    // the OpenStreetMap credit also follows the water and forest polygons and the highlighted region
+    // the OpenStreetMap credit also follows the water, forest and glacier polygons and the highlighted region
     const unsubscribeWater = useWaterStore.subscribe((state, prev) => {
       if (state.polygons !== prev.polygons) schedule()
     })
     const unsubscribeForest = useForestStore.subscribe((state, prev) => {
+      if (state.polygons !== prev.polygons) schedule()
+    })
+    const unsubscribeGlacier = useGlacierStore.subscribe((state, prev) => {
       if (state.polygons !== prev.polygons) schedule()
     })
     const unsubscribeRegion = useRegionStore.subscribe((state, prev) => {
@@ -173,6 +176,7 @@ function OverlayPreview() {
       unsubscribeLandmarks()
       unsubscribeWater()
       unsubscribeForest()
+      unsubscribeGlacier()
       unsubscribeRegion()
       unsubscribeExport()
       unsubscribeSound()
