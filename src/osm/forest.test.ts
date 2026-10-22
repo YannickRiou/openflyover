@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildTrack } from '../import/stats'
-import { FOREST_MARGIN_M, MAX_FOREST_POLYGONS, fetchTrackForest, forestQuery, isValidForest, parseForest } from './forest'
+import { FOREST_MARGIN_M, MAX_FOREST_POLYGONS, MAX_FOREST_VERTICES, fetchTrackForest, forestQuery, isValidForest, parseForest } from './forest'
 import { clearOverpassMemoryCache, type OverpassDeps } from './overpass'
 
 const M = 111_320
@@ -79,6 +79,27 @@ describe('parseForest', () => {
     expect(kept).toHaveLength(MAX_FOREST_POLYGONS)
     expect(kept[0].id).toBe(`way/${100 + MAX_FOREST_POLYGONS + 19}`)
     expect(() => parseForest({ elements: [], remark: 'runtime error: Query timed out' })).toThrow()
+  })
+})
+
+describe('parseForest vertex cap', () => {
+  it('keeps the largest polygons while their vertices fit', () => {
+    // wavy rings of 500 vertices that the simplification keeps, the first the largest
+    const wavy = (i: number) =>
+      Array.from({ length: 501 }, (_, k) => {
+        const a = (2 * Math.PI * (k % 500)) / 500
+        const r = ((1500 - i * 5) / 2) * (k % 2 ? 1.2 : 1)
+        return { lon: 6.8 + i * 0.05 + (r * Math.cos(a)) / K, lat: 45.9 + (r * Math.sin(a)) / M }
+      })
+    const response = { elements: Array.from({ length: 120 }, (_, i) => ({ type: 'way', id: i + 1, tags: { landuse: 'forest' }, geometry: wavy(i) })) }
+    const kept = parseForest(response)
+    const vertices = kept.reduce((n, f) => n + f.outer.length, 0)
+    expect(vertices).toBeLessThanOrEqual(MAX_FOREST_VERTICES)
+    expect(vertices).toBeGreaterThan(MAX_FOREST_VERTICES - 500)
+    expect(kept.length).toBeLessThan(120)
+    expect(kept[0].id).toBe('way/1')
+    // the smallest are the ones left out
+    expect(kept.map((f) => f.id)).not.toContain('way/120')
   })
 })
 

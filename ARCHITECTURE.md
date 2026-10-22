@@ -2658,9 +2658,6 @@ exports) gets it from the terrain source of the settings.
   | Haute (default) | « Moyenne » (`medium`, 24 slices) | 8 | 0.28 |
   | Maximale | « Fine » (`high`, 32 slices) | 8 | 0.44 |
 
-- **Tree shadows**: `QualityTier.treeShadows` (`false` « Standard », `true` « Haute » and « Maximale »): the trees of the forests cast their
-  own shadows only in an export of those qualities (`ForestLayer`, see "Forests"); the preview never does. It is not a row of the settings,
-  nor a badge: the trees themselves are the same at every quality.
 - **Precedence**: a value chosen by hand wins over the tier. `settings.clouds.quality` is `'auto' | 'low' | 'medium' | 'high'` and
   defaults to `'auto'` (« Selon la qualité de l'export »): `effectiveRender(quality, clouds)` takes the tier's clouds quality on
   `'auto'`, the hand-chosen one otherwise (both ways: « Rapide » by hand stays « Rapide » at « Maximale », « Fine » by hand stays
@@ -2891,7 +2888,7 @@ draped on the relief.
 - **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
   is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned
   relation ignored, Douglas–Peucker 8 m (`FOREST_SIMPLIFY_M`), polygons < 5,000 m² dropped (`MIN_FOREST_AREA_M2`), the 600 largest
-  kept (`MAX_FOREST_POLYGONS`), coordinates to 1e-5° (~1 m); the `leaf` key is absent when OpenStreetMap does not say. Only
+  kept (`MAX_FOREST_POLYGONS`) within 40,000 vertices in all (`MAX_FOREST_VERTICES`, largest first, so the entry stays far below `MAX_CACHE_ENTRY_CHARS` = 1.5 MB, beyond which `writeCache` does not write: a huge entry would evict the landmarks and water), coordinates to 1e-5° (~1 m); the `leaf` key is absent when OpenStreetMap does not say. Only
   this compact result is cached (sample: 64 polygons, 6,700 vertices, 130 kB in the cache).
 - **Pure placement** (`src/scene/forestPoints.ts`, tested): `placeTrees(polygons, { density, maxTrees, path })` gives the trees in
   **chunks** of the ground (squares of `CHUNK_M` = 1,500 m, in an equirectangular frame around the first point of the track). In
@@ -2913,8 +2910,9 @@ draped on the relief.
   thread, when the forests arrive and when the density slider settles: `useDeferredValue`).
   Measured in headless Chromium with software rendering (SwiftShader, not representative of a GPU; the sample film, camera ~1.7 km high): of
   ~130,000 trees in range, ~15,000 are in the view, +0.43 M triangles over the 2.7 M of the terrain and the track (+16 %), the same
-  number of draw calls (~300); with `castShadow` on the trees, the shadow pass draws every tree in range again, +3.7 M triangles
-  (~9 × the visible trees). Mean of 9 frames, software: 10 ms without forests, 33 ms with, 41 ms with tree shadows. The first draping of a
+  number of draw calls (~300). Mean of 9 frames, software: 10 ms without forests, 33 ms with. Trees casting shadows were tried and
+  dropped: the shadow pass drew every tree in range again (+3.7 M triangles, ~9 × the visible trees) for crowns of a few metres against
+  shadow texels of several metres. The first draping of a
   chunk (≤ 8,000 trees a frame) shows as one frame a little longer while the film starts; the Overpass answer arrives after the
   landmarks and the water (one request at a time): ~110 to 160 s on a slow day of the public server.
 - **Shapes** (`src/scene/treeGeometry.ts`, tested): two unit geometries merged from three's primitives, with vertex colours and no
@@ -2930,9 +2928,7 @@ draped on the relief.
   (`engine.onChange`, debounced as the water's: `REDRAPE_DEBOUNCE_MS`); the video export drapes everything in range at once, through
   `registerDrapeFlush` and with no frame limit while it runs. A tree whose height is unknown (tile not loaded) waits for the next change.
   **Fade**: in the vertex shader (`onBeforeCompile`) a tree shrinks to nothing between 5.5 and 6 km from the camera, so none pops.
-  No transparency. **Shadows**: they receive; they cast (`castShadow`) only in an export whose quality has `treeShadows`
-  (`QUALITY_TIERS`: « Haute » and « Maximale », not « Standard »; see "Export quality tiers"): a second draw of every tree in the
-  shadow map. Everything is a function of the settings, the forests and the camera: the export is deterministic.
+  No transparency. **Shadows**: they receive the terrain's shadows, they cast none. Everything is a function of the settings, the forests and the camera: the export is deterministic.
 - **Setting**: `settings.forest { enabled, density }` (true, 60 trees / ha; `SETTING_CHECKS`: `isValidForest`, 20 ≤ density ≤ 150,
   `FOREST_DENSITY_RANGE`), « Forêts » checkbox and « Densité des arbres » slider in the « Fond de carte » section, right after the
   water; part of the « Carte » preset family (`PRESET_SCOPE_KEYS`). A project saved before it has no `forest` key: the default is
@@ -2942,8 +2938,8 @@ draped on the relief.
 - **Limits**: the trees are not the real trees (OpenStreetMap maps the forest, not each tree): positions are hashed, shapes are two
   low-poly models, heights do not follow the relief or the treeline; the budget cuts the far forests of a long track (nearest chunks to
   the track first), and a track drawn on a ridge far from its forests loses them; trees do not appear in the flat map of the poster;
-  no status chip for a failed query; the shadow map covers tens of km (`TerrainShadow`), so a tree's shadow is a few texels wide (a
-  few metres): it adds weight at the best qualities more than detail; the forests are not in the render history's
+  no status chip for a failed query; the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
+  texels wide); the forests are not in the render history's
   `RenderSettings`; `forestPoints.ts` and `forest.ts` import the ring helpers of `water.ts` and `clipRing` of `waterMesh.ts`.
 
 ## Ghost race (phase 7)

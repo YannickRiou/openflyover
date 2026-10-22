@@ -7,7 +7,7 @@
  * is first within `FOREST_FAR_M` of the camera and again after the relief changed (a few thousand trees a frame while
  * the film plays, all of them at once for the video export through `registerDrapeFlush`). A chunk beyond the distance is
  * not drawn; the trees shrink to nothing over the last `FOREST_FADE_M`, so none pops. Lit by the sun, they receive the
- * terrain's shadows; they cast their own only in the export, at the qualities that ask for it (`treeShadows`).
+ * terrain's shadows; they cast none (a tree's shadow would be a few texels wide: heavy for no visible result).
  * Everything is a function of the settings, the forests and the camera: the export is deterministic.
  */
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
@@ -16,7 +16,6 @@ import { Color, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion,
 import type { Camera, BufferGeometry } from 'three'
 import { deviceBudget } from '../core/deviceBudget'
 import type { LocalFrame, TerrainEngine } from '../core/types'
-import { qualityTier } from '../export/qualityTier'
 import { isExportBusy, registerDrapeFlush, useExportStore } from '../export/store'
 import { fetchTrackForest, type ForestPolygon } from '../osm/forest'
 import { simplifyLine } from '../osm/overpass'
@@ -64,8 +63,6 @@ interface Entry {
   /** scene position of the chunk's centre */
   x: number
   z: number
-  /** mean height of its draped trees (scene units), null until draped */
-  y: number | null
   conifer: InstancedMesh | null
   broadleaf: InstancedMesh | null
   /** relief and exaggeration it was draped with */
@@ -76,8 +73,6 @@ interface Entry {
 interface Forest {
   root: Group
   entries: Entry[]
-  /** the trees cast shadows */
-  cast: boolean
   dispose(): void
 }
 
@@ -94,7 +89,7 @@ function createForest(chunks: readonly ForestChunk[], frame: LocalFrame): Forest
   root.name = 'forest'
   const entries = chunks.map((chunk): Entry => {
     frame.toLocal(chunk.centre.lon, chunk.centre.lat, 0, _p)
-    return { chunk, x: _p.x, z: _p.z, y: null, conifer: null, broadleaf: null, epoch: -1, exaggeration: 0 }
+    return { chunk, x: _p.x, z: _p.z, conifer: null, broadleaf: null, epoch: -1, exaggeration: 0 }
   })
   const dispose = () => {
     for (const entry of entries) {
@@ -103,14 +98,13 @@ function createForest(chunks: readonly ForestChunk[], frame: LocalFrame): Forest
     }
     root.clear()
   }
-  return { root, entries, cast: false, dispose }
+  return { root, entries, dispose }
 }
 
 /** A tree mesh with room for `capacity` trees, never picked (the track picker and the camera target the relief). */
-function createMesh(geometry: BufferGeometry, material: MeshStandardMaterial, capacity: number, cast: boolean): InstancedMesh {
+function createMesh(geometry: BufferGeometry, material: MeshStandardMaterial, capacity: number): InstancedMesh {
   const mesh = new InstancedMesh(geometry, material, capacity)
   mesh.receiveShadow = true
-  mesh.castShadow = cast
   mesh.count = 0
   mesh.raycast = () => {}
   return mesh
@@ -132,16 +126,14 @@ function drapeEntry(entry: Entry, forest: Forest, d: Drape): void {
   const mayBeConifer = kinds.reduce((n, k) => n + (k !== 1 ? 1 : 0), 0)
   const mayBeBroadleaf = chunk.count - kinds.reduce((n, k) => n + (k === 0 ? 1 : 0), 0)
   if (!entry.conifer && mayBeConifer > 0) {
-    entry.conifer = createMesh(d.geometries.conifer, d.material, mayBeConifer, forest.cast)
+    entry.conifer = createMesh(d.geometries.conifer, d.material, mayBeConifer)
     forest.root.add(entry.conifer)
   }
   if (!entry.broadleaf && mayBeBroadleaf > 0) {
-    entry.broadleaf = createMesh(d.geometries.broadleaf, d.material, mayBeBroadleaf, forest.cast)
+    entry.broadleaf = createMesh(d.geometries.broadleaf, d.material, mayBeBroadleaf)
     forest.root.add(entry.broadleaf)
   }
   const used = { conifer: 0, broadleaf: 0 }
-  let sumY = 0
-  let known = 0
   for (let i = 0; i < chunk.count; i++) {
     const lon = chunk.lonLat[2 * i]
     const lat = chunk.lonLat[2 * i + 1]
@@ -160,8 +152,6 @@ function drapeEntry(entry: Entry, forest: Forest, d: Drape): void {
     // a slight variation of the green, from lighter and yellower to darker and bluer
     const v = chunk.variation[i]
     mesh.setColorAt(index, _c.setRGB(0.78 + 0.34 * v, 0.84 + 0.2 * v, 0.72 + 0.3 * (1 - v)))
-    sumY += _p.y
-    known++
   }
   for (const [mesh, count] of [[entry.conifer, used.conifer], [entry.broadleaf, used.broadleaf]] as const) {
     if (!mesh) continue
@@ -170,7 +160,6 @@ function drapeEntry(entry: Entry, forest: Forest, d: Drape): void {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
     if (count > 0) mesh.computeBoundingSphere()
   }
-  entry.y = known > 0 ? sumY / known : null
   entry.epoch = d.epoch
   entry.exaggeration = d.exaggeration
 }
@@ -179,19 +168,12 @@ function drapeEntry(entry: Entry, forest: Forest, d: Drape): void {
  * One pass over the chunks: hide those beyond FOREST_FAR_M, drape those in range that need it (nearest to the camera
  * first, `limit` trees at most). Returns the trees draped and whether chunks in range still wait for their turn.
  */
-function updateForest(forest: Forest, camera: Camera, d: Drape, cast: boolean, limit: number): { draped: number; waiting: boolean } {
+function updateForest(forest: Forest, camera: Camera, d: Drape, limit: number): { draped: number; waiting: boolean } {
   camera.getWorldPosition(_cam)
-  if (cast !== forest.cast) {
-    forest.cast = cast
-    for (const { conifer, broadleaf } of forest.entries) {
-      if (conifer) conifer.castShadow = cast
-      if (broadleaf) broadleaf.castShadow = cast
-    }
-  }
   const inRange: { entry: Entry; distance: number }[] = []
   for (const entry of forest.entries) {
-    const dy = entry.y === null ? 0 : _cam.y - entry.y
-    const distance = Math.hypot(_cam.x - entry.x, dy, _cam.z - entry.z) - entry.chunk.radiusM
+    // horizontal distance: a function of the camera alone, whatever has been draped before
+    const distance = Math.hypot(_cam.x - entry.x, _cam.z - entry.z) - entry.chunk.radiusM
     const visible = distance < FOREST_FAR_M
     if (entry.conifer) entry.conifer.visible = visible
     if (entry.broadleaf) entry.broadleaf.visible = visible
@@ -214,9 +196,7 @@ export function ForestLayer() {
   const enabled = useAppStore((s) => s.settings.forest.enabled)
   const density = useDeferredValue(useAppStore((s) => s.settings.forest.density))
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
-  const exportQuality = useExportStore((s) => s.request?.quality ?? 'high')
   const exporting = useExportStore((s) => isExportBusy(s.phase))
-  const cast = exporting && qualityTier(exportQuality).treeShadows
   const get = useThree((s) => s.get)
   /** forests of the track they were fetched for (shown only for the current film track, setting on) */
   const [fetched, setFetched] = useState<{ trackId: string; polygons: ForestPolygon[] } | null>(null)
@@ -277,9 +257,9 @@ export function ForestLayer() {
   const run = useCallback(
     (camera: Camera, limit: number) => {
       if (!forest || !frame) return { draped: 0, waiting: false }
-      return updateForest(forest, camera, { engine, frame, exaggeration, epoch: epoch.current, geometries, material }, cast, limit)
+      return updateForest(forest, camera, { engine, frame, exaggeration, epoch: epoch.current, geometries, material }, limit)
     },
-    [forest, frame, engine, exaggeration, geometries, material, cast],
+    [forest, frame, engine, exaggeration, geometries, material],
   )
   useFrame(({ camera }) => {
     const { draped, waiting } = run(camera, exporting ? Infinity : DRAPE_TREES_PER_FRAME)

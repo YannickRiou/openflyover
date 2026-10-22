@@ -17,14 +17,12 @@ export interface QualityTier {
   cloudsQuality: CloudQuality
   /** most renders per frame with the motion blur on (`adaptiveShutterSamples`) */
   maxSubFrames: number
-  /** the trees of the forests cast shadows (scene/ForestLayer.tsx): a second draw of every tree, kept for the best qualities */
-  treeShadows: boolean
 }
 
 export const QUALITY_TIERS: Record<VideoQuality, QualityTier> = {
-  standard: { cloudsQuality: 'low', maxSubFrames: 4, treeShadows: false },
-  high: { cloudsQuality: 'medium', maxSubFrames: SHUTTER_SUBFRAMES, treeShadows: true },
-  max: { cloudsQuality: 'high', maxSubFrames: SHUTTER_SUBFRAMES, treeShadows: true },
+  standard: { cloudsQuality: 'low', maxSubFrames: 4 },
+  high: { cloudsQuality: 'medium', maxSubFrames: SHUTTER_SUBFRAMES },
+  max: { cloudsQuality: 'high', maxSubFrames: SHUTTER_SUBFRAMES },
 }
 
 /** Name of each quality in the UI (the badge « Imposé par Haute »). */
@@ -46,7 +44,7 @@ export const qualityTier = (quality: VideoQuality): QualityTier => QUALITY_TIERS
 type Input = Pick<Settings, 'atmosphere' | 'clouds' | 'lens' | 'video'>
 
 /** What an export of `quality` really uses: the clouds' hand-chosen quality over the tier's, the tier's sub-frame cap. */
-export function effectiveRender(quality: VideoQuality, clouds: Pick<Settings['clouds'], 'quality'>): Pick<QualityTier, 'cloudsQuality' | 'maxSubFrames'> & { cloudsByHand: boolean } {
+export function effectiveRender(quality: VideoQuality, clouds: Pick<Settings['clouds'], 'quality'>): QualityTier & { cloudsByHand: boolean } {
   const tier = qualityTier(quality)
   const cloudsByHand = clouds.quality !== 'auto'
   return { cloudsQuality: clouds.quality === 'auto' ? tier.cloudsQuality : clouds.quality, maxSubFrames: tier.maxSubFrames, cloudsByHand }

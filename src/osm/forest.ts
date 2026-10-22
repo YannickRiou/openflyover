@@ -25,6 +25,8 @@ export const FOREST_SIMPLIFY_M = 8
 /** Polygons smaller than this are dropped (m², a 70 m square). */
 export const MIN_FOREST_AREA_M2 = 5000
 export const MAX_FOREST_POLYGONS = 600
+/** Most vertices kept in all (the sample's 8 km corridor has 13,000): ~20 bytes each in the cache, under its 1.5 MB entry limit. */
+export const MAX_FOREST_VERTICES = 40_000
 
 /** Trees per hectare offered by the « Densité des arbres » slider. */
 export const FOREST_DENSITY_RANGE = { min: 20, max: 150, step: 10 } as const
@@ -137,7 +139,17 @@ export function parseForest(json: unknown): ForestPolygon[] {
     }
   }
   const area = new Map(polygons.map((p) => [p, ringAreaM2(p.outer.map(([lon, lat]) => ({ lon, lat })))]))
-  return polygons.sort((a, b) => area.get(b)! - area.get(a)!).slice(0, MAX_FOREST_POLYGONS)
+  // the largest first, until the polygons or the vertices run out (a smaller one may still fit)
+  const kept: ForestPolygon[] = []
+  let vertices = 0
+  for (const p of polygons.sort((a, b) => area.get(b)! - area.get(a)!)) {
+    const count = p.outer.length + p.holes.reduce((n, h) => n + h.length, 0)
+    if (kept.length >= MAX_FOREST_POLYGONS) break
+    if (vertices + count > MAX_FOREST_VERTICES) continue
+    kept.push(p)
+    vertices += count
+  }
+  return kept
 }
 
 /** Forests around `track`, from the caches or one queued Overpass query (fair use: see overpass.ts). */
