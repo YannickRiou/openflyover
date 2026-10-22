@@ -98,6 +98,10 @@ export default {
   'auto.resume.name': 'Résumé 1 min',
   'auto.souvenir.name': 'Souvenir 3 min',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
+  'auto.card.formatVertical': '9:16 Reels',
+  'auto.card.formatWide': '16:9 YouTube',
+  'auto.card.unitMin': 'min',
+  'auto.card.unitSec': 's',
   'auto.card.total': 'durée du film',
   'auto.fact.camera': 'Caméra : {camera}',
   'auto.fact.titleEnd': 'Titre et date au début, carte de fin avec {figures} chiffres',

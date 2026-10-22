@@ -4,10 +4,11 @@
  *
  *   node e2e/gabarit-shots.mjs [out-dir] [reel,resume,souvenir]
  *
- * Environment: OPENFLYOVER_CHROME (default /usr/bin/google-chrome), OPENFLYOVER_SHOTS_WIDTH (page width, default 1280).
+ * Environment: OPENFLYOVER_CHROME (default: the Playwright headless shell, as e2e/run.mjs), OPENFLYOVER_SHOTS_WIDTH (page width, default 1280).
  * Writes <out-dir>/<gabarit>-<n>-<film time>.png and prints the film's total length and its stops.
  */
 import { existsSync, mkdirSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer-core'
@@ -16,9 +17,11 @@ import { createServer } from 'vite'
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const OUT = process.argv[2] ?? join(ROOT, 'gabarit-shots')
 const IDS = (process.argv[3] ?? 'reel,resume,souvenir').split(',')
-const CHROME = process.env.OPENFLYOVER_CHROME || '/usr/bin/google-chrome'
+// the same browser as e2e/run.mjs
+const DEFAULT_CHROME = join(homedir(), '.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell')
+const CHROME = process.env.OPENFLYOVER_CHROME || (existsSync(DEFAULT_CHROME) ? DEFAULT_CHROME : '')
 const WIDTH = Number(process.env.OPENFLYOVER_SHOTS_WIDTH ?? 1280)
-if (!existsSync(CHROME)) throw new Error('Chromium introuvable : OPENFLYOVER_CHROME')
+if (!CHROME) throw new Error('Chromium introuvable : OPENFLYOVER_CHROME')
 mkdirSync(OUT, { recursive: true })
 
 async function retry(fn) {

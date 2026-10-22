@@ -100,6 +100,10 @@ const messages: Messages['film'] = {
   'auto.resume.name': 'Summary 1 min',
   'auto.souvenir.name': 'Keepsake 3 min',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
+  'auto.card.formatVertical': '9:16 Reels',
+  'auto.card.formatWide': '16:9 YouTube',
+  'auto.card.unitMin': 'min',
+  'auto.card.unitSec': 's',
   'auto.card.total': 'film length',
   'auto.fact.camera': 'Camera: {camera}',
   'auto.fact.titleEnd': 'Title and date at the start, closing card with {figures} figures',

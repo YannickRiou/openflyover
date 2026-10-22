@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { t } from '../i18n'
+import { LANGUAGES, setLanguage, t } from '../i18n'
 import { platformPresetOf } from '../export/schedule'
 import { FLYOVER_DURATION_RANGE, findCameraPreset } from '../flyover/cameraSettings'
-import { CARD_FADE_OUT } from '../overlay/draw'
-import { DEFAULT_OVERLAY } from '../overlay/settings'
+import { CARD_FADE_OUT, DEFAULT_OVERLAY } from '../overlay/settings'
 import { sanitizeSettings } from '../project/document'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
@@ -126,13 +125,17 @@ describe('autoFilmFacts', () => {
     expect(autoFilmFacts(AUTO_FILM_TEMPLATES.souvenir).map((f) => f.key)).toEqual(['titleEnd', 'stopsSlow', 'countersCards'])
   })
 
-  it('has a string in every language for each fact', () => {
-    for (const id of AUTO_FILM_IDS) {
-      for (const { key, values } of autoFilmFacts(AUTO_FILM_TEMPLATES[id])) {
-        const text = t(`film.auto.fact.${key}`, values)
-        expect(text).not.toBe('')
-        expect(text).not.toContain('{')
+  it('has a string in the five languages for each fact', () => {
+    for (const language of LANGUAGES) {
+      setLanguage(language.code)
+      for (const id of AUTO_FILM_IDS) {
+        for (const { key, values } of autoFilmFacts(AUTO_FILM_TEMPLATES[id])) {
+          const text = t(`film.auto.fact.${key}`, values)
+          expect(text).not.toBe('')
+          expect(text).not.toContain('{')
+        }
       }
     }
+    setLanguage('fr')
   })
 })

@@ -143,11 +143,26 @@ describe('CameraPanel: « Film automatique »', () => {
     const open = [...document.querySelectorAll('button')].find((b) => b.textContent?.includes('Choisir un gabarit'))!
     await act(async () => open.click())
     const list = document.querySelector('[data-testid="auto-film-templates"]')!
-    expect([...list.querySelectorAll('li p.font-semibold')].map((p) => p.textContent)).toEqual(['Reel 30 s', 'Résumé 1 min', 'Souvenir 3 min'])
+    expect([...list.querySelectorAll('p.font-semibold')].map((p) => p.textContent)).toEqual(['Reel 30 s', 'Résumé 1 min', 'Souvenir 3 min'])
     await act(async () => list.querySelector<HTMLButtonElement>('button[aria-label="Appliquer le gabarit « Résumé 1 min »"]')!.click())
     const { settings } = useAppStore.getState()
     expect(settings.flyoverDurationS + settings.film.opening.durationS + settings.film.closing.durationS).toBe(60)
     expect(document.querySelector('[data-testid="auto-film-templates"]')).toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('applies the card chosen after another one, not the one chosen at first', async () => {
+    const { root } = await mount(timed, 60)
+    const open = [...document.querySelectorAll('button')].find((b) => b.textContent?.includes('Choisir un gabarit'))!
+    await act(async () => open.click())
+    const list = document.querySelector('[data-testid="auto-film-templates"]')!
+    // only the card chosen carries « Appliquer »: the summary at first
+    expect(list.querySelectorAll('button')).toHaveLength(1)
+    await act(async () => list.querySelector<HTMLInputElement>('input[aria-label="Souvenir 3 min"]')!.click())
+    expect(list.querySelector('button[aria-label="Appliquer le gabarit « Résumé 1 min »"]')).toBeNull()
+    await act(async () => list.querySelector<HTMLButtonElement>('button[aria-label="Appliquer le gabarit « Souvenir 3 min »"]')!.click())
+    const { settings } = useAppStore.getState()
+    expect(settings.flyoverDurationS + settings.film.opening.durationS + settings.film.closing.durationS).toBe(180)
     act(() => root.unmount())
   })
 
