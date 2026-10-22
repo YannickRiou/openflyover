@@ -36,7 +36,6 @@ const messages: Messages['overlay'] = {
   'draw.weatherRow.wind': 'Viento',
   'draw.credits.relief': 'Relieve: {source}',
   'draw.credits.imagery': 'Imágenes: {source}',
-  'draw.credits.landmarks': 'Referencias: {source}',
   'draw.race.finished': 'Llegada',
   'draw.race.lead': 'Cabeza',
   'style.editorial': 'Editorial',
@@ -174,10 +173,7 @@ const messages: Messages['overlay'] = {
   'panel.text': 'Texto',
   'panel.textPlaceholder': 'Ej.: con María y Pablo',
   'panel.credits': 'Créditos de las fuentes',
-  'panel.burnCredits': 'Incrustar los créditos',
   'panel.creditsTip': 'Las licencias del relieve, de las imágenes, de la meteorología y de OpenStreetMap exigen citar las fuentes en la película publicada.',
-  'panel.creditsHint': 'En pequeño, en una esquina de cada fotograma exportado, incluso sin el resto de los gráficos.',
-  'panel.creditsOff': 'Cita entonces las fuentes en otro lugar (descripción del vídeo, créditos). La mención de Open-Meteo sigue incrustada mientras se muestra el tiempo, como exige su licencia.',
   'panel.styleHint': 'Cambiar de estilo pone el título, la tarjeta de cierre, los contadores, el perfil, el minimapa y el tiempo donde los tiene el estilo (posiciones y tamaños); el logo, el texto libre y la clasificación conservan los suyos.',
   'panel.styleMoved': 'Estilo «{style}»: título, tarjeta de cierre, contadores, perfil, minimapa y tiempo devueltos a su sitio en el estilo.',
   // 4.0 — Agua reflectante: el mar y los ríos trazados como líneas (4.0)
@@ -190,6 +186,18 @@ const messages: Messages['overlay'] = {
   'counter.outings': 'Salidas',
   'panel.notInBilan': 'No se usa en un Balance',
   'panel.bilanCounters': 'En un Balance, los contadores suman las salidas dibujadas hasta ahora: salidas, distancia, D+ y tiempo.',
+  // 4.1 — credits: short form during the film, full form at the end
+  'draw.credits.osm': '{layers}: {source}',
+  'draw.credits.layer.landmarks': 'Referencias',
+  'draw.credits.layer.water': 'agua',
+  'draw.credits.layer.forests': 'bosques',
+  'draw.credits.layer.glaciers': 'glaciares',
+  'draw.credits.title': 'Fuentes',
+  'panel.creditsMode': 'En la película',
+  'panel.creditsMode.short': 'Discretos',
+  'panel.creditsMode.full': 'Completos',
+  'panel.creditsMode.end': 'Solo al final',
+  'panel.creditsHint': 'Discretos: el nombre de las fuentes en versalitas en una esquina y, al final de la película, las menciones completas. Completos: la frase entera en la esquina durante toda la película y luego al final. Solo al final: nada durante la película (salvo Open-Meteo mientras se muestra el tiempo, como exige su licencia, y Esri, cuyas condiciones exigen un crédito siempre visible con el mapa). En todos los casos la película termina con las fuentes: siempre hay que citarlas.',
 }
 
 export default messages

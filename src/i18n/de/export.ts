@@ -335,6 +335,11 @@ const messages: Messages['export'] = {
   'queue.posterLabel': 'Poster',
   'queue.folder': 'Render-Ordner: {name}',
   'queue.folderChange': 'Ordner ändern',
+  // 4.1 — copy the credits
+  'panel.creditsCopy': 'Quellenangaben kopieren',
+  'panel.creditsCopyTip': 'Die Quellenangaben mit ihren Links, zum Einfügen in die Videobeschreibung.',
+  'panel.creditsCopied': 'Quellenangaben kopiert: in die Videobeschreibung einfügen.',
+  'panel.creditsManual': 'Der Browser verweigert das automatische Kopieren: Markieren Sie den Text unten und kopieren Sie ihn (Strg+C), dann fügen Sie ihn in die Videobeschreibung ein.',
 }
 
 export default messages

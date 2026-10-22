@@ -118,6 +118,7 @@ const messages: Messages['track'] = {
   'bilan.undated': { one: '{count} Tour hat kein Datum: Sie kommt nach den anderen ihrer Region.', other: '{count} Touren haben kein Datum: Sie kommen nach den anderen ihrer Region.' },
   'bilan.card': 'Eine Karte am Anfang jeder Region',
   'bilan.hint': 'Die Kamera bleibt hoch und fest über jeder Region (Anfangs- und Schlusseinstellung bewegen sie nicht); die Tracks zeichnen sich einzeln, die fertigen dunkler; die Zähler unter Overlay zählen die Touren zusammen. Keine Orientierungspunkte, Gewässer, Wälder, Gletscher und kein Wetter pro Tour. Für ein Licht, das sich von einer Tour zur nächsten nicht ändert, wählen Sie unter Licht „Feste Uhrzeit“.',
+  'bilan.fixed': 'Fest im Jahresrückblick: Die Kamera bleibt hoch über jeder Region, Anfangs- und Schlusseinstellung bewegen sie nicht.',
 }
 
 export default messages

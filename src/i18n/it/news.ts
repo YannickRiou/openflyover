@@ -125,6 +125,9 @@ const messages: Messages['news'] = {
   'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',
   'v42.bilan.title': 'Il bilancio dell’anno',
   'v42.bilan.text': 'In Traccia › Più tracce, «Bilancio» fa un unico film di una stagione o di un anno di uscite: si disegnano una dopo l’altra sotto una vista alta della loro regione, i contatori salgono e la scheda finale dà i totali.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Crediti più discreti',
+  'v41.credits.text': 'In Overlay › Crediti delle fonti, scegli « Discreti » (il nome delle fonti in piccolo in un angolo, le menzioni complete alla fine del film), « Completi » o « Solo alla fine ». In Esporta, « Copia i crediti » dà il testo con i suoi link, da incollare nella descrizione del video.',
 }
 
 export default messages

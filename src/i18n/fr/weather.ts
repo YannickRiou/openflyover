@@ -82,4 +82,5 @@ export default {
   'panel.windValueFrom': '{wind} km/h de {dir}, rafales {gusts} km/h',
   'panel.rain': 'Pluie',
   'panel.forecastNote': 'Prévision, pas une mesure : à revoir la veille du départ.',
+  'panel.bilanOff': 'Pas de météo par sortie dans un Bilan.',
 }

@@ -4,7 +4,7 @@ import { t, useT } from '../i18n'
 import { formatDate } from '../i18n/format'
 import { hasParamKeys } from '../film/paramKeys'
 import { trackPathOf } from '../flyover/path'
-import { playsInSequence } from '../flyover/sequence'
+import { playsBilan, playsInSequence } from '../flyover/sequence'
 import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
 import { FOREST_DENSITY_RANGE } from '../osm/forest'
@@ -530,19 +530,23 @@ function WaterControl() {
   const id = useId()
   const water = useAppStore((s) => s.settings.water)
   const setSetting = useAppStore((s) => s.setSetting)
+  // a « Bilan » fetches no water (a request per outing)
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   return (
     <>
       <div className="flex items-center gap-1">
         <Checkbox
           id={`${id}-water`}
-          checked={water.enabled}
+          checked={water.enabled && !bilan}
+          disabled={bilan}
           onChange={(on) => setSetting('water', { ...water, enabled: on })}
         >
           {t('light.water.enable')}
         </Checkbox>
         <InfoTip text={t('light.water.tip')} />
       </div>
-      {water.enabled && (
+      {bilan && <p className="type-hint">{t('track.bilan.fixed')}</p>}
+      {water.enabled && !bilan && (
         <SettingRow label={t('light.water.strength')} value={formatPercent(water.strength)} paths={['water.strength']}>
           <RangeField
             label={t('light.water.strength')}
@@ -565,16 +569,19 @@ function ForestControl() {
   const id = useId()
   const forest = useAppStore((s) => s.settings.forest)
   const setSetting = useAppStore((s) => s.setSetting)
+  // a « Bilan » fetches no forests (a request per outing)
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const perHectare = (n: number) => t('light.forest.densityValue', { n })
   return (
     <>
       <div className="flex items-center gap-1">
-        <Checkbox id={`${id}-forest`} checked={forest.enabled} onChange={(on) => setSetting('forest', { ...forest, enabled: on })}>
+        <Checkbox id={`${id}-forest`} checked={forest.enabled && !bilan} disabled={bilan} onChange={(on) => setSetting('forest', { ...forest, enabled: on })}>
           {t('light.forest.enable')}
         </Checkbox>
         <InfoTip text={t('light.forest.tip')} />
       </div>
-      {forest.enabled && (
+      {bilan && <p className="type-hint">{t('track.bilan.fixed')}</p>}
+      {forest.enabled && !bilan && (
         <SettingRow label={t('light.forest.density')} value={perHectare(forest.density)} paths={['forest.density']}>
           <RangeField
             label={t('light.forest.density')}
@@ -750,6 +757,7 @@ function SnowControl() {
   const snow = useAppStore((s) => s.settings.snow)
   const setSetting = useAppStore((s) => s.setSetting)
   const sequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length))
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const weatherEnabled = useAppStore((s) => s.settings.weather.enabled)
   const weatherReady = useWeatherReady()
   const { lineM, unknown } = useWeatherSnow()
@@ -769,7 +777,9 @@ function SnowControl() {
             ? t('light.snow.hintNone')
             : snow.mode === 'manuelle'
               ? t('light.snow.hintManual', { altitude: formatNumber(snow.lineM) })
-              : !weatherEnabled
+              : bilan
+                ? t('light.snow.hintBilan')
+                : !weatherEnabled
                 ? t('light.snow.hintOff')
                 : !weatherReady
                   ? t('light.snow.hintWaiting')

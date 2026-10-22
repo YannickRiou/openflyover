@@ -113,6 +113,9 @@ export const PROFILE_HEIGHT_MAX = 0.3
 /** Corners where the source credits can sit (along the edge, outside the safe area). */
 export const CREDITS_POSITIONS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'] as const
 export type CreditsPosition = (typeof CREDITS_POSITIONS)[number]
+/** What the film shows of the source credits: the short form (« Discrets »), the full sentence, or only the closing lines. */
+export const CREDITS_MODES = ['short', 'full', 'end'] as const
+export type CreditsMode = (typeof CREDITS_MODES)[number]
 /** Longest side of the logo kept in the settings (pixels). */
 export const LOGO_MAX_SIZE_PX = 512
 /** Largest free offset of a widget from its anchor, either way (pixels of the exported film). */
@@ -277,11 +280,12 @@ export interface MiniMapSettings extends Sized {
 }
 
 /**
- * Credits of the map, relief, weather and OpenStreetMap sources burned into every frame (their licences require
- * attribution in the published film). Independent of `enabled`: drawn even without the rest of the overlay.
+ * Credits of the map, relief, weather and OpenStreetMap sources burned into the film (their licences require
+ * attribution in the published film). Independent of `enabled`: drawn even without the rest of the overlay. The full
+ * form always closes the film, whatever `mode`.
  */
 export interface CreditsSettings {
-  enabled: boolean
+  mode: CreditsMode
   position: CreditsPosition
 }
 
@@ -324,7 +328,7 @@ export const DEFAULT_OVERLAY: OverlaySettings = {
   weather: { enabled: false, anchor: 'top-left', size: 1 },
   minimap: { enabled: false, anchor: 'bottom-right', size: 1, northArrow: true },
   leaderboard: { enabled: false, anchor: 'middle-right', size: 1 },
-  credits: { enabled: true, position: 'bottom-right' },
+  credits: { mode: 'short', position: 'bottom-right' },
 }
 
 /** Widgets a style places: its anchors and sizes are applied when the style is chosen (`withStyleLayout`). */
@@ -424,8 +428,14 @@ export function withOverlayDefaults(raw: unknown): unknown {
   if (!isRecord(raw)) return raw
   const missing = OVERLAY_ADDED_KEYS.filter((key) => !(key in raw))
   const filled = missing.length === 0 ? raw : { ...Object.fromEntries(missing.map((key) => [key, DEFAULT_OVERLAY[key]])), ...raw }
+  // the credits switch of before: on gave the short form, off the closing lines only
+  const credits = raw.credits
+  const withCredits =
+    isRecord(credits) && typeof credits.enabled === 'boolean' && !('mode' in credits)
+      ? { ...filled, credits: { mode: credits.enabled ? 'short' : 'end', position: credits.position } }
+      : filled
   const logo = raw.logo
-  const withLogo = isRecord(logo) && !('opacity' in logo) ? { ...filled, logo: { ...logo, opacity: DEFAULT_OVERLAY.logo.opacity } } : filled
+  const withLogo = isRecord(logo) && !('opacity' in logo) ? { ...withCredits, logo: { ...logo, opacity: DEFAULT_OVERLAY.logo.opacity } } : withCredits
   // the counters added since: off
   const counters = raw.counters
   const fields = isRecord(counters) ? counters.fields : undefined
@@ -576,6 +586,7 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     isValidDotColor(o.minimap.markerColor) &&
     validSized(o.leaderboard) &&
     (CREDITS_POSITIONS as readonly string[]).includes(o.credits.position) &&
+    (CREDITS_MODES as readonly string[]).includes(o.credits.mode) &&
     isValidOverrides(o.overrides) &&
     isValidLabelColors(o.labelColors) &&
     STYLED_WIDGETS.every((key) => isValidOverrides(o[key].overrides)) &&

@@ -118,6 +118,7 @@ const messages: Messages['track'] = {
   'bilan.undated': { one: '{count} uscita non ha una data: passa dopo le altre della sua regione.', other: '{count} uscite non hanno una data: passano dopo le altre della loro regione.' },
   'bilan.card': 'Una scheda all’inizio di ogni regione',
   'bilan.hint': 'La camera resta alta e ferma su ogni regione (le inquadrature di apertura e di chiusura non la muovono); le tracce si disegnano una alla volta, quelle finite più scure; i contatori di Overlay sommano le uscite. Niente punti di riferimento, acqua, boschi, ghiacciai né meteo per uscita. Per una luce che non cambia da un’uscita all’altra, scegliete «Ora fissa» in Luce.',
+  'bilan.fixed': 'Fissa in un Bilancio: la camera resta alta su ogni regione, le inquadrature di apertura e di chiusura non la muovono.',
 }
 
 export default messages

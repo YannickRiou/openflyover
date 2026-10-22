@@ -36,7 +36,10 @@ export function WeatherPanel() {
   const t = useT()
   const id = useId()
   const track = useAppStore((s) => s.tracks[0])
-  const enabled = useAppStore((s) => s.settings.weather.enabled)
+  const chosen = useAppStore((s) => s.settings.weather.enabled)
+  // a « Bilan » has no weather per outing (one series would land on whichever outing has the first track's id): off, with the reason
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
+  const enabled = chosen && !bilan
   const setSetting = useAppStore((s) => s.setSetting)
   const progress = useAppStore((s) => Math.round(s.playback.progress * PROGRESS_STEPS) / PROGRESS_STEPS)
   const status = useWeatherStore((s) => s.status)
@@ -66,10 +69,11 @@ export function WeatherPanel() {
 
   return (
     <section className="flex flex-col gap-3" aria-label={t('weather.panel.title')}>
-      <Switch id={`${id}-enabled`} checked={enabled} onChange={(on) => setSetting('weather', { enabled: on })}>{t('weather.panel.enable')}</Switch>
+      <Switch id={`${id}-enabled`} checked={enabled} disabled={bilan} onChange={(on) => setSetting('weather', { enabled: on })}>{t('weather.panel.enable')}</Switch>
 
       <p className="type-hint" role="status" aria-live="polite">
-        {!enabled && t('weather.panel.off')}
+        {bilan && t('weather.panel.bilanOff')}
+        {!bilan && !enabled && t('weather.panel.off')}
         {enabled && status === 'loading' && t('weather.panel.loading')}
         {enabled && (status === 'unavailable' || status === 'error') && message}
       </p>

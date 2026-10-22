@@ -32,8 +32,8 @@ import type { TrackColorBy, TrackLegend } from '../flyover/trackColor'
 import { getLanguage } from '../i18n'
 import type { Sequence } from '../flyover/sequence'
 import { createCardImages, loadLogo } from './assets'
-import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
-import type { LeaderboardRow, OverlayFilm } from './data'
+import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, overlayPermanentCredits, overlayShortCredits, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
+import type { CreditSources, LeaderboardRow, OverlayFilm } from './data'
 import { bilanStampAt, drawOverlay } from './draw'
 import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
 import type { OverlayAnchor } from './settings'
@@ -90,6 +90,28 @@ function stageWeatherOf(sequence: Sequence, k: number, firstTrackId: string | un
 /** The stronger of two dips. */
 const strongerDip = (a: TransitionDip | null, b: TransitionDip | null) => (b && b.alpha > (a?.alpha ?? 0) ? b : a)
 
+/** The sources in use for the credits: the terrain and imagery of the project, and the weather and OpenStreetMap data loaded. */
+export function currentCreditSources(): CreditSources {
+  const { settings } = useAppStore.getState()
+  const water = useWaterStore.getState().polygons > 0
+  const forests = useForestStore.getState().polygons > 0
+  const glaciers = useGlacierStore.getState().polygons > 0
+  return {
+    terrainSourceId: settings.terrainSourceId,
+    imagerySourceId: settings.imagerySourceId,
+    weather: weatherShown(useWeatherStore.getState()),
+    landmarks:
+      Object.values(useLandmarkStore.getState().landmarks).some((list) => list.length > 0) ||
+      water ||
+      forests ||
+      glaciers ||
+      useRegionStore.getState().region !== null,
+    water,
+    forests,
+    glaciers,
+  }
+}
+
 /**
  * What the overlay draws beyond the track at film time `time` and `progress`, from the stores: the texts and photos
  * of the timeline, the credits of the sources in use (as the status bar: relief, imagery, weather and OpenStreetMap
@@ -99,6 +121,7 @@ const strongerDip = (a: TransitionDip | null, b: TransitionDip | null) => (b && 
  */
 export function overlayExtras(time: OverlayTime, progress: number): OverlayExtras {
   const { settings, tracks } = useAppStore.getState()
+  const sources = currentCreditSources()
   const sequence = filmSequenceOf(tracks, settings.race)
   const stamp = sequence ? bilanStampAt(sequence, time) : null
   return {
@@ -113,18 +136,9 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     day: !sequence && settings.film.dayCards?.enabled && time.dayCardsS ? dayCardAt(dayFiguresOf(filmTrackOf(tracks, settings.race) ?? tracks[0], useWeatherStore.getState().series), time, settings.film.dayCards) : null,
     exportSize: videoSize(settings.video.aspect, settings.video.resolution, Number.POSITIVE_INFINITY),
     markerColor: leadMarkerColors(settings.marker, (trackUnderMarker(tracks, settings.race, progress)?.track ?? filmTrackOf(tracks, settings.race))?.color ?? '#FFFFFF').ball,
-    credits: overlayCredits({
-      terrainSourceId: settings.terrainSourceId,
-      imagerySourceId: settings.imagerySourceId,
-      weather: weatherShown(useWeatherStore.getState()),
-      landmarks:
-        Object.values(useLandmarkStore.getState().landmarks).some((list) => list.length > 0) ||
-        useWaterStore.getState().polygons > 0 ||
-        useForestStore.getState().polygons > 0 ||
-        useGlacierStore.getState().polygons > 0 ||
-        useRegionStore.getState().region !== null,
-      water: useWaterStore.getState().polygons > 0,
-    }),
+    credits: overlayCredits(sources),
+    shortCredits: overlayShortCredits(sources),
+    permanentCredits: overlayPermanentCredits(sources),
   }
 }
 

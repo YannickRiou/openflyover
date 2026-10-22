@@ -84,6 +84,7 @@ const messages: Messages['weather'] = {
   'panel.windValueFrom': '{wind} km/h de {dir}, rachas {gusts} km/h',
   'panel.rain': 'Lluvia',
   'panel.forecastNote': 'Previsión, no una medición: vuelve a comprobarla la víspera de la salida.',
+  'panel.bilanOff': 'Sin tiempo por salida en un Balance.',
 }
 
 export default messages

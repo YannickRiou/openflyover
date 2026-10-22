@@ -19,9 +19,12 @@ import {
   dayCardAt,
   leaderboardRows,
   miniMapOutline,
+  creditsDescription,
   overlayCredits,
+  overlayShortCredits,
   overlayFilmFrameAt,
   overlayFrameAt,
+  overlayPermanentCredits,
   prepareOverlayFilm,
   prepareOverlayTrack,
   STAGE_CARD_S,
@@ -195,10 +198,54 @@ describe('overlayCredits', () => {
       `Imagerie : ${getImagerySource('opentopomap').attribution}`,
     ])
     expect(overlayCredits({ ...sources, weather: true, landmarks: true }).slice(2)).toEqual([openMeteoAttribution(), `Repères : ${osmAttribution()}`])
-    // water is credited with the landmarks, under its own name
+    // each OpenStreetMap layer drawn is named in the credit, and only those
     expect(overlayCredits({ ...sources, landmarks: true, water: true })[2]).toBe(`Repères et eau : ${osmAttribution()}`)
+    expect(overlayCredits({ ...sources, landmarks: true, water: true, forests: true, glaciers: true })[2]).toBe(`Repères, eau, forêts et glaciers : ${osmAttribution()}`)
+    expect(overlayCredits({ ...sources, landmarks: true, forests: true })[2]).toBe(`Repères et forêts : ${osmAttribution()}`)
     // unknown ids fall back to the default sources, like the scene
     expect(overlayCredits({ ...sources, imagerySourceId: 'nope' })[1]).toBe(`Imagerie : ${getImagerySource('nope').attribution}`)
+  })
+})
+
+describe('overlayShortCredits', () => {
+  const sources = { terrainSourceId: 'mapterhorn', imagerySourceId: 'ign-ortho', weather: false, landmarks: false }
+
+  it('names the holders only, imagery first, the weather and OpenStreetMap once loaded', () => {
+    expect(overlayShortCredits(sources)).toEqual(['© IGN', '© Mapterhorn'])
+    expect(overlayShortCredits({ ...sources, weather: true, landmarks: true })).toEqual(['© IGN', '© Mapterhorn', '© OpenStreetMap', 'Open-Meteo.com'])
+    expect(overlayShortCredits({ ...sources, imagerySourceId: 'swisstopo' })[0]).toBe('© swisstopo')
+  })
+
+  it('keeps what the terms of a source ask for', () => {
+    // Esri: « Powered by Esri » and the data providers, in full
+    expect(overlayShortCredits({ ...sources, imagerySourceId: 'arcgis-world-imagery' })[0]).toBe(getImagerySource('arcgis-world-imagery').attribution)
+    // OpenTopoMap: CC BY-SA stays named, OpenStreetMap is not repeated
+    const topo = overlayShortCredits({ ...sources, imagerySourceId: 'opentopomap', landmarks: true })
+    expect(topo[0]).toBe('© OpenStreetMap, SRTM · © OpenTopoMap (CC BY-SA)')
+    expect(topo.filter((item) => item.includes('OpenStreetMap'))).toHaveLength(1)
+    // a source without a short form keeps its attribution; the same holder is named once
+    expect(overlayShortCredits({ ...sources, imagerySourceId: 'ign-plan' })).toEqual(['© IGN', '© Mapterhorn'])
+    expect(overlayShortCredits({ ...sources, imagerySourceId: 'basemap-at' })[0]).toBe(getImagerySource('basemap-at').attribution)
+  })
+})
+
+describe('overlayPermanentCredits', () => {
+  it('keeps the credit of the sources whose terms ask for it on the map: Esri today', () => {
+    const sources = { terrainSourceId: 'mapterhorn', imagerySourceId: 'ign-ortho', weather: false, landmarks: false }
+    expect(overlayPermanentCredits(sources)).toEqual([])
+    expect(overlayPermanentCredits({ ...sources, imagerySourceId: 'arcgis-world-imagery' })).toEqual([getImagerySource('arcgis-world-imagery').attribution])
+  })
+})
+
+describe('creditsDescription', () => {
+  it('gives each sentence, then its page, ready to paste', () => {
+    const text = creditsDescription({ terrainSourceId: 'mapterhorn', imagerySourceId: 'ign-ortho', weather: true, landmarks: true })
+    expect(text.split('\n\n')).toEqual([
+      `Relief : ${getTerrainSource('mapterhorn').attribution}\nhttps://mapterhorn.com/attribution`,
+      `Imagerie : ${getImagerySource('ign-ortho').attribution}\nhttps://cartes.gouv.fr/cgu`,
+      `${openMeteoAttribution()}\nhttps://open-meteo.com/en/licence`,
+      `Repères : ${osmAttribution()}\nhttps://www.openstreetmap.org/copyright`,
+    ])
   })
 })
 
@@ -445,6 +492,26 @@ describe('« Bilan »', () => {
     expect(overlayFilmFrameAt(prepareOverlayFilm(suite.track, suite), 0.5).cumul).toBeUndefined()
   })
 
+  it('does not jump at a cut when an outing has corrected figures: the part drawn is scaled to them', () => {
+    const fixed = { ...march, statsOverride: { distanceM: 5000, ascentM: 800, durationS: 7200 } }
+    const corrected = filmSequenceOf([pyrenees, april, fixed], race)!
+    const data = prepareOverlayFilm(corrected.track, corrected)
+    const [a, b] = corrected.stages
+    const half = overlayFilmFrameAt(data, a.to / 2).cumul!
+    expect(half.distanceM).toBeCloseTo(2500, 3)
+    expect(half.durationS).toBeCloseTo(3600, 3)
+    const end = overlayFilmFrameAt(data, a.to - 1e-12).cumul!
+    const next = overlayFilmFrameAt(data, b.from).cumul!
+    expect(next.outings).toBe(2)
+    for (const key of ['distanceM', 'ascentM', 'durationS'] as const) expect(end[key]).toBeCloseTo(next[key]!, 3)
+    expect(next).toMatchObject({ distanceM: 5000, ascentM: 800, durationS: 7200 })
+    // the last frame is the closing card's totals
+    const last = overlayFilmFrameAt(data, 1).cumul!
+    expect(last.distanceM).toBeCloseTo(data.whole.stats.distanceM, 3)
+    expect(last.ascentM).toBeCloseTo(data.whole.stats.ascentM!, 3)
+    expect(last.durationS).toBeCloseTo(data.whole.stats.durationS!, 3)
+  })
+
   it('has a card for each region, at its first outing, once there are several', () => {
     const time = (timeS: number) => ({ timeS, openingS: 0, flightS: 60, totalS: 60, cutsS: [20, 40] })
     expect(stageCardAt(sequence, time(1))).toMatchObject({ index: 0, count: 2, text: 'Région 1 sur 2', subtitle: expect.stringContaining('2 sorties') })
@@ -452,6 +519,9 @@ describe('« Bilan »', () => {
     expect(stageCardAt(sequence, time(21))).toBeNull()
     expect(stageCardAt(sequence, time(41))).toMatchObject({ index: 1, text: 'Région 2 sur 2', subtitle: expect.stringContaining('1 sortie') })
     expect(stageCardAt(sequence, time(1), withDefaultCard(DEFAULT_FILM, false))).toBeNull()
+    // the cards left on the junctions by « À la suite » do not apply: only the common card does
+    const own = withJunctionCard(DEFAULT_FILM, april.id, { enabled: false })
+    expect(stageCardAt(sequence, time(41), own)).toMatchObject({ index: 1, text: 'Région 2 sur 2' })
     // one region: no card at all
     const single = filmSequenceOf([april, march], race)!
     expect(stageCardAt(single, time(1))).toBeNull()
@@ -479,6 +549,9 @@ describe('« Bilan »', () => {
     expect(bilanStampAt(sequence, time(1))).toBeNull()
     expect(bilanStampAt(sequence, time(5))).toMatchObject({ startS: 2, durationS: 18, subtitle: 'Mars', text: formatLongDate(T0), anchor: 'bottom-left' })
     expect(bilanStampAt(sequence, time(25))).toMatchObject({ startS: 20, durationS: 20, subtitle: 'Avril' })
+    // it ends where the marker reaches the cut, which a fade has covered by then
+    const fade = { kind: 'fondu-noir' as const, startS: 19, holdStartS: 20, holdEndS: 21.5, endS: 22 }
+    expect(bilanStampAt(sequence, { ...time(5), junctions: [fade] })).toMatchObject({ startS: 2, durationS: 18 })
     // the last one stops with the flight, over which the closing card comes
     expect(bilanStampAt(sequence, time(45))).toMatchObject({ startS: 40, durationS: 20 })
     expect(bilanStampAt(buildSequence([march, april]), time(5))).toBeNull()

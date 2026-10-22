@@ -10,6 +10,7 @@ import { fileToLogoDataUrl } from '../overlay/assets'
 import {
   BILAN_COUNTERS,
   COUNTER_IDS,
+  CREDITS_MODES,
   CREDITS_POSITIONS,
   OFFSET_MAX_PX,
   OVERLAY_FONT_IDS,
@@ -756,22 +757,27 @@ export function OverlayPanel() {
       )}
 
       <PanelSection title={t('overlay.panel.credits')}>
-        <div className="flex items-center gap-1">
-          <Switch checked={overlay.credits.enabled} onChange={(on) => setWidget('credits', { enabled: on })}>{t('overlay.panel.burnCredits')}</Switch>
-          <InfoTip text={t('overlay.panel.creditsTip')} />
-        </div>
-        {overlay.credits.enabled ? (
-          <>
-            <AnchorPicker
-              label={t('overlay.position')}
-              value={overlay.credits.position}
-              allowed={CREDITS_POSITIONS}
-              onChange={(position) => setWidget('credits', { position })}
-            />
-            <p className="type-hint">{t('overlay.panel.creditsHint')}</p>
-          </>
-        ) : (
-          <p className="type-hint">{t('overlay.panel.creditsOff')}</p>
+        <fieldset className="field min-w-0">
+          <legend className="type-label mb-1 flex items-center gap-1">
+            {t('overlay.panel.creditsMode')}
+            <InfoTip text={t('overlay.panel.creditsTip')} />
+          </legend>
+          <RadioGroup wrap aria-label={t('overlay.panel.creditsMode')} value={overlay.credits.mode} onChange={(mode) => setWidget('credits', { mode })}>
+            {CREDITS_MODES.map((mode) => (
+              <Radio key={mode} value={mode}>
+                {t(`overlay.panel.creditsMode.${mode}`)}
+              </Radio>
+            ))}
+          </RadioGroup>
+          <p className="type-hint">{t('overlay.panel.creditsHint')}</p>
+        </fieldset>
+        {overlay.credits.mode !== 'end' && (
+          <AnchorPicker
+            label={t('overlay.position')}
+            value={overlay.credits.position}
+            allowed={CREDITS_POSITIONS}
+            onChange={(position) => setWidget('credits', { position })}
+          />
         )}
       </PanelSection>
     </>

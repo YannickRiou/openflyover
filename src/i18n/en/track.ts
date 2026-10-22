@@ -118,6 +118,7 @@ const messages: Messages['track'] = {
   'bilan.undated': { one: '{count} outing has no date: it comes after the others of its region.', other: '{count} outings have no date: they come after the others of their region.' },
   'bilan.card': 'A card at the start of each region',
   'bilan.hint': 'The camera stays high and still over each region (the opening and closing shots do not move it); the tracks draw themselves one by one, the finished ones darker; the counters in Overlay add up the outings. No landmarks, water, forests, glaciers or weather per outing. For a light that does not change from one outing to the next, choose “Fixed time” in Light.',
+  'bilan.fixed': 'Fixed in Year in review: the camera stays high over each region, the opening and closing shots do not move it.',
 }
 
 export default messages

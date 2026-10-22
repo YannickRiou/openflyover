@@ -517,6 +517,7 @@ export function FilmInspector() {
     const shot = film[phase]
     const card = phase === 'opening' ? TITLE_CARD_ID : END_CARD_ID
     title = phase === 'opening' ? t('timeline.shot.opening') : t('timeline.shot.closing')
+    const bilanHint = sequence?.bilan ? <p className={HINT}>{t('track.bilan.fixed')}</p> : null
     // each part is removed in its own group: the card by its button, the shot by « Aucune » in its style
     removable = false
     body = (
@@ -541,6 +542,7 @@ export function FilmInspector() {
           )}
         </InspectorGroup>
         <InspectorGroup title={t('inspector.shot.camera')}>
+        {bilanHint}
         <div className={FIELD}>
           <label className="type-label" htmlFor={`${id}-style`}>
             {t('inspector.shot.styleLabel')}
