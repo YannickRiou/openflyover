@@ -32,6 +32,8 @@ export function LabelSettings() {
           {tr('track.labels.endpoints')}
         </Checkbox>
         <Checkbox checked={labels.photos} onChange={(on) => setSetting('labels', { ...labels, photos: on })}>{tr('track.labels.photos')}</Checkbox>
+        <Checkbox checked={labels.photoPins} onChange={(on) => setSetting('labels', { ...labels, photoPins: on })}>{tr('track.labels.photoPins')}</Checkbox>
+        <p className="type-hint">{tr('track.labels.photoPinsHint')}</p>
       </fieldset>
       <SettingRow label={tr('track.labels.kmMarkers')} value={kmStepLabel(labels.kmStep)} paths={['labels.kmStep']}>
         <div className="field">

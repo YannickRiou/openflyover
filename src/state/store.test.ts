@@ -225,7 +225,7 @@ describe('settings and misc', () => {
         pois: [],
         nights: { enabled: true, duskS: 3, nightS: 2, dawnS: 3 },
       },
-      labels: { waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 },
+      labels: { waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 },
       weather: { enabled: true },
       weatherScene: { enabled: true, strength: 1 },
       clouds: { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: 'volume', quality: 'auto', windKmh: 15, windDirection: 'meteo', windByHand: false },

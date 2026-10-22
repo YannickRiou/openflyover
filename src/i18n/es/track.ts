@@ -15,6 +15,8 @@ const messages: Messages['track'] = {
   'labels.waypoints': 'Puntos con nombre del archivo GPX',
   'labels.endpoints': 'Inicio y llegada',
   'labels.photos': 'Fotos, donde se hicieron',
+  'labels.photoPins': 'Fotos sobre el terreno',
+  'labels.photoPinsHint': 'Cada foto o vídeo de la línea de tiempo se convierte en una chincheta con su miniatura sobre el relieve, y la cámara se orienta hacia ella al pasar. No es lo mismo que «Fotos, donde se hicieron», que solo pone un nombre en el mapa.',
   'labels.kmMarkers': 'Hitos kilométricos',
   'labels.kmStepNone': 'Ninguno',
   'labels.kmStepOne': 'Cada kilómetro',

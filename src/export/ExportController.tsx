@@ -21,6 +21,7 @@ import { mixFilmAudio } from '../film/audio'
 import { normaliseLoudness } from '../film/loudness'
 import type { FilmClock } from '../film/clock'
 import { useMediaStore } from '../film/media'
+import { pinsMoveWithTime } from '../film/photoPins'
 import { CAMERA_FOV_DEG, filmViewMovesWithTime, overviewView } from '../flyover/filmCamera'
 import { filmTrackOf } from '../flyover/sequence'
 import { smoothedTrackPath } from '../flyover/smooth'
@@ -553,6 +554,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const shutter = settings.lens.shutter
     const sceneMovesWithTime =
       markerKeysMoveWithTime(settings.film, settings.marker) ||
+      pinsMoveWithTime(settings.labels, settings.film) ||
       (settings.atmosphere && settings.clouds.mode !== 'aucun') ||
       (settings.water.enabled && useWaterStore.getState().polygons > 0)
     const localFrame = deps.frame()

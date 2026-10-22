@@ -111,10 +111,19 @@ export function endpointLabels(track: Track, withText = true): LandmarkLabel[] {
 }
 
 /** « Étiquettes dans la vue » (`settings.labels`): waypoints on, the rest off, size ×1, range 70 km (`LABEL_FADE_END_M`). */
-export const DEFAULT_LABELS = { waypoints: true, kmStep: 0, endpoints: false, photos: false, size: 1, rangeKm: 70 }
+export const DEFAULT_LABELS = { waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 }
 
 /** Labels settings of an older project: the fields added since take their default. */
 export const withLabelDefaults = withDefaults(DEFAULT_LABELS)
+
+/**
+ * Labels settings read from a saved project: as `withLabelDefaults`, except that a project saved before « Photos sur le
+ * terrain » keeps its film as it was (the pins off); a new project has them on.
+ */
+export function upgradeLabelSettings(raw: unknown): unknown {
+  if (raw !== null && typeof raw === 'object' && !Array.isArray(raw) && !('photoPins' in raw)) return withLabelDefaults({ ...raw, photoPins: false })
+  return withLabelDefaults(raw)
+}
 
 /** Value checks of the labels settings (shape already checked). */
 export function isValidLabelSettings(v: { kmStep: number; size: number; rangeKm: number }): boolean {
