@@ -112,4 +112,7 @@ export default {
   // 4.1 — Glaciers
   'v41.glaciers.title': 'Les glaciers restent blancs',
   'v41.glaciers.text': 'Les glaciers cartographiés par OpenStreetMap sont dessinés en blanc, avec leurs crevasses, même en été quand la météo du jour ne signale pas de neige. Ils suivent le réglage Météo › Neige : absents avec « Aucune ».',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Durée ou vitesse du survol',
+  'v41.speed.text': 'Dans Survol › Durée et rythme, réglez le survol par sa durée (au pas d’une seconde, ou en tapant la valeur) ou par la vitesse du marqueur (× le temps réel et km/h). L’un donne l’autre, et les deux sont toujours affichés.',
 }

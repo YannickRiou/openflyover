@@ -57,6 +57,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/path.ts` | flyover path | `buildTrackPath(track): TrackPath` (concatenated segments, cumulative distances, `time` in ms or NaN), `trackPathOf(track)` (same path, cached per track), `samplePath(path, distanceM): PathSample` (`ele` and `time` interpolated only if both neighbors have them), `recordedTimeAt(path, distanceM)` (fills points without a time), `elevationProfile(path, samples)`, `nearestOnPath(path, lonLat, timeMs?)`, `distanceAtTime(path, timeMs, toleranceMs?)`, `pickProjectedPath(screen, distM, px, py, maxPx)` (point of the projected track closest to the pointer) |
 | `src/flyover/smooth.ts` | track smoothing (see "Track and marker") | `smoothPoints(points, windowM)`, `smoothTrack(track, windowM)`, `smoothedTrackPath(track, windowM)` (smoothed positions, recorded distances and times) |
 | `src/flyover/camera.ts` | flyover camera | `computeCameraView(path, progress, frame, sampler, { exaggeration, liftM, camera?, durationS?, timeS?, orbitRad?, aimProgress?, cameraProgress? })` → `{ target, position, marker }`, `autoDistanceM`, `smoothedTurn`, `smoothHeadingAt`, `movesWithTime` |
+| `src/flyover/flightSpeed.ts` | flyover duration ↔ marker speed (« × temps réel », km/h) | `clampDuration`, `speedKmh`, `speedUpFactor`, `durationForKmh`, `durationForSpeedUp`, `hasSpeedUp`, `kmhRange`, `speedUpRange`, `speedPosition`, `durationAtPosition` |
 | `src/flyover/cameraSettings.ts` | camera styles and presets | `CAMERA_STYLES`, `DEFAULT_CAMERA`, `CAMERA_RANGES`, `CAMERA_PRESETS`, `isValidCamera`, `withCameraDefaults`, `turnSmoothingM(camera, lengthM)`, `advanceProgress(progress, dt, speed, durationS)` |
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
@@ -889,8 +890,16 @@ The interface and the texts drawn into the films and posters exist in **French**
   aimSmoothingS, cameraSmoothingS, endingS }` (a camera saved before the last four gets them from `DEFAULT_CAMERA`,
   `withCameraDefaults` in `SETTING_UPGRADES`: « Auto » keeps its multiplier, so the turns look the same) and named
   presets (`CAMERA_PRESETS`, 13: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite, then Libre (style `free`, left out of `markerVisible.test.ts`: it does not follow the marker); `findCameraPreset`; « Préréglage » is a grid of tiles with distance and tilt, all twelve shown at once, plus a « Personnalisé » tile when the settings match no preset) in
-  `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s, 60 by default) = duration at ×1, the timeline
-  speed applies on top. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra" and "Durée et rythme" sections; the
+  `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s in 1 s steps, 60 by default) = duration at ×1, the timeline
+  speed applies on top. **Duration or speed** (`src/flyover/flightSpeed.ts`, pure; `src/ui/FlightDurationField.tsx`): the one setting
+  has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change). The
+  marker's *average* speed is derived: km/h = length ÷ duration (`speedKmh`, the length of the film track: all the stages of
+  « À la suite »), « × temps réel » = recorded time ÷ duration (`speedUpFactor`; the recorded time is the sum of the stages' own corrected durations, `recordedTotalS`, nights between days not counted; none for a track without times: km/h only).
+  Typing a speed gives the duration back (`durationForKmh`, `durationForSpeedUp`: rounded to a whole second, clamped to the
+  range, so the speed shown afterwards may differ by the second's granularity). The speed slider spans the duration range on a
+  log scale (`speedPosition`, `durationAtPosition`, 1,000 notches). Stops, slow-motion, speed portions and « Garder la durée du
+  survol » are untouched: they take their time from the duration, which is why the speed is an average; a stage with its own
+  duration keeps it. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra" and "Durée et rythme" sections; the
   smoothing sliders as rows of « Caméra », « Lissage des virages » showing the « Auto » length for
   the first track). While paused, a camera setting change repositions the camera.
   "Cadrer la caméra pendant cet élément" (frame the camera during this item; inspector of a text or a media item): `addItemCamera` places a framing where

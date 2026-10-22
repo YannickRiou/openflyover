@@ -114,6 +114,9 @@ const messages: Messages['news'] = {
   // 4.1 — Glaciers
   'v41.glaciers.title': 'I ghiacciai restano bianchi',
   'v41.glaciers.text': 'I ghiacciai mappati da OpenStreetMap sono disegnati in bianco, con i loro crepacci, anche in estate quando il meteo del giorno non segnala neve. Seguono l’impostazione Meteo › Neve: non vengono disegnati con « Nessuna ».',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Durata o velocità del sorvolo',
+  'v41.speed.text': 'In Sorvolo › Durata e ritmo, imposti il sorvolo in base alla durata (al secondo, o digitando il valore) o alla velocità del marcatore (× il tempo reale e km/h). L’una dà l’altra, ed entrambe sono sempre mostrate.',
 }
 
 export default messages

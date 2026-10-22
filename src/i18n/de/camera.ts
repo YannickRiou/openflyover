@@ -77,7 +77,6 @@ const messages: Messages['camera'] = {
   'duration.noStops': 'keine Stopps',
   'duration.stops': { one: '{count} Stopp', other: '{count} Stopps' },
   'duration.film': 'Film: {duration} · {stops}',
-  'duration.filmSpeedUp': 'Film: {duration} · {stops} · Beschleunigung {speedUp} (Tour von {recorded})',
   'duration.timedStages': { one: '{count} Etappe mit fester Dauer (Etappen-Inspektor): Die anderen behalten ihren Anteil an der Überflugdauer, der Film ändert sich um die Differenz', other: '{count} Etappen mit fester Dauer (Etappen-Inspektor): Die anderen behalten ihren Anteil an der Überflugdauer, der Film ändert sich um die Differenz' },
   'pacing.enable': 'An Highlights verlangsamen',
   'pacing.enableTip': 'Highlights: Ende der Anstiege, überquerte Pässe und Gipfel in Tracknähe.',
@@ -94,6 +93,24 @@ const messages: Messages['camera'] = {
   'pacing.transitionsTip': 'Ein- und Ausgang der Stopps, Pausen und Geschwindigkeitsabschnitte: länger, und die Markierung bremst und startet sanfter.',
   'pacing.slowFactorTip': 'Überfluggeschwindigkeit direkt an einem Highlight, verglichen mit der normalen (35 %: fast dreimal langsamer).',
   'pacing.windowTip': 'Strecke auf jeder Seite des Highlights, auf der der Überflug langsamer wird und dann wieder beschleunigt.',
+  // 4.1 — flyover set by its duration or by the marker’s speed
+  'speed.by': 'Einstellen nach',
+  'speed.byDuration': 'Dauer',
+  'speed.bySpeed': 'Tempo des Markers',
+  'speed.sliderAria': 'Tempo des Markers',
+  'speed.durationAria': 'Dauer des Überflugs in Sekunden',
+  'speed.upAria': 'Tempo des Markers, als Vielfaches der Echtzeit',
+  'speed.kmhAria': 'Tempo des Markers in Kilometern pro Stunde',
+  'speed.seconds': 's',
+  'speed.unitKmh': 'km/h',
+  'speed.kmh': '{value} km/h',
+  'speed.asSpeedUp': 'also {speedUp} (Tour von {recorded}) · {kmh}',
+  'speed.asKmh': 'also {kmh}',
+  'speed.asDuration': 'also {duration}',
+  'speed.hintDuration': 'Sie stellen die Dauer des Überflugs ein; das Tempo des Markers ergibt sich daraus. Es ist ein Durchschnittstempo: Stopps und Verlangsamungen gehen von dieser Dauer ab.',
+  'speed.hintSpeed': 'Sie stellen das durchschnittliche Tempo des Markers ein; die App berechnet daraus die Dauer des Überflugs. Stopps und Verlangsamungen gehen von dieser Dauer ab.',
+  'speed.hintUntimed': 'Diese Strecke hat keine Zeiten: das Tempo wird nur in km/h angegeben.',
+  'speed.hintStages': 'Mehrere Strecken: die Länge ist die der ganzen Route; eine Etappe mit festgelegter Dauer behält ihre Dauer.',
 }
 
 export default messages

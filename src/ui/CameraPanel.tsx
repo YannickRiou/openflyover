@@ -1,5 +1,4 @@
 import { useId } from 'react'
-import { clamp } from '../core/math'
 import { t, useT } from '../i18n'
 import type { MessageKey } from '../i18n'
 import {
@@ -8,24 +7,24 @@ import {
   CAMERA_STYLE_LABELS,
   CAMERA_STYLES,
   findCameraPreset,
-  FLYOVER_DURATION_RANGE,
   turnSmoothingM,
 } from '../flyover/cameraSettings'
 import type { CameraPreset, CameraSettings, CameraStyle } from '../flyover/cameraSettings'
 import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
-import { setFlightTiming, useFilmClock, useFilmSource, useFilmTrack } from '../scene/usePacing'
+import { setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { getSettingsHistory } from '../project/history'
 import { showToast } from './toast'
-import { formatDegrees, formatDistance, formatDuration, formatNumber, formatPercent, formatSecondsShort, formatSpeedUp } from './format'
+import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
-import { Button, Checkbox, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Select, Switch } from './primitives'
 import { AutoFilmSection } from './AutoFilmDialog'
+import { FlightDurationField } from './FlightDurationField'
 
 /** « Mettre en avant la région »: what it does, then how the search for the region went (found: after its name). */
 const REGION_HINTS: Record<RegionStatus, string> = {
@@ -82,8 +81,6 @@ const TILE_LABEL =
   'relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-start gap-0.5 rounded-sm border border-edge bg-surface-control px-1 pt-2 pb-1.5 text-center transition-ui hover:border-text-1 ' +
   'data-[selected=true]:border-brand data-[selected=true]:bg-accent-tint data-[selected=true]:ring-1 data-[selected=true]:ring-brand data-[selected=true]:ring-inset ' +
   'data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-offset-2 data-[focus-visible=true]:outline-brand'
-/** « − » and « + » around the duration slider: the fine adjustment the slider only roughly reaches (a square the height of a control). */
-const STEP_BUTTON = 'w-control flex-none px-0'
 const TILE_GRID = 'grid grid-cols-3 gap-2'
 const TILE_NAME = 'max-w-full truncate text-hint font-medium'
 const TILE_FIGURES = 'text-caption whitespace-nowrap text-text-2 tabular-nums'
@@ -93,15 +90,6 @@ function presetFigures(camera: CameraSettings): string {
   if (camera.style === 'free') return '—'
   return `×${formatNumber(camera.distance, 1)} · ${formatDegrees(camera.pitchDeg)}`
 }
-
-/** 90 -> "1 min 30 s", 45 -> "45 s" */
-function formatSeconds(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = Math.round(seconds - m * 60)
-  if (m === 0) return `${s} s`
-  return s === 0 ? `${m} min` : `${m} min ${String(s).padStart(2, '0')} s`
-}
-
 
 type NumericKey = keyof typeof CAMERA_RANGES
 
@@ -219,21 +207,12 @@ function ShotSummary() {
 export function CameraPanel() {
   const t = useT()
   const camera = useAppStore((s) => s.settings.camera)
-  const durationS = useAppStore((s) => s.settings.flyoverDurationS)
   const pacing = useAppStore((s) => s.settings.pacing)
   const film = useFilmClock()
-  const stopCount = film.stops.length
   const cameraKeyCount = film.cameraKeys.length
-  // « À la suite »: the stages whose flight time is set on the timeline take theirs out of the duration
-  const { stageIds, film: filmSettings } = useFilmSource()
-  const timedStages = stageIds?.filter((id) => filmSettings.stageDurations?.[id] !== undefined).length ?? 0
-  const recordedS = useFilmTrack()?.stats.durationS
+  const filmSettings = useAppStore((s) => s.settings.film)
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
-  const speedUp = formatSpeedUp(recordedS, durationS)
-  /** one notch of the slider, one way or the other, kept inside the range */
-  const stepDuration = (direction: 1 | -1) =>
-    setFlightTiming({ durationS: clamp(durationS + direction * FLYOVER_DURATION_RANGE.step, FLYOVER_DURATION_RANGE.min, FLYOVER_DURATION_RANGE.max) })
   const preset = findCameraPreset(camera)
 
   const presetTile = (p: CameraPreset) => (
@@ -327,54 +306,7 @@ export function CameraPanel() {
       </PanelSection>
 
       <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
-        <div className="field">
-          <div className="flex items-center gap-1">
-            <span className="type-label">{t('camera.duration.label')}</span>
-            <InfoTip text={t('camera.duration.tip')} />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              className={STEP_BUTTON}
-              aria-label={t('camera.duration.shorten')}
-              disabled={durationS <= FLYOVER_DURATION_RANGE.min}
-              onClick={() => stepDuration(-1)}
-            >
-              −
-            </Button>
-            <Slider
-              className="w-auto flex-auto"
-              aria-label={t('camera.duration.label')}
-              min={FLYOVER_DURATION_RANGE.min}
-              max={FLYOVER_DURATION_RANGE.max}
-              step={FLYOVER_DURATION_RANGE.step}
-              value={durationS}
-              onChange={(v) => setFlightTiming({ durationS: v })}
-              spoken={formatSeconds}
-            />
-            <Button
-              size="sm"
-              className={STEP_BUTTON}
-              aria-label={t('camera.duration.lengthen')}
-              disabled={durationS >= FLYOVER_DURATION_RANGE.max}
-              onClick={() => stepDuration(1)}
-            >
-              +
-            </Button>
-            <output className="range-value-wide">
-              {formatSeconds(durationS)}
-            </output>
-          </div>
-          <p className="type-hint">
-            {t(speedUp ? 'camera.duration.filmSpeedUp' : 'camera.duration.film', {
-              duration: formatSeconds(Math.round(film.totalTime())),
-              stops: stopCount === 0 ? t('camera.duration.noStops') : t('camera.duration.stops', { count: stopCount }),
-              speedUp: speedUp ?? '',
-              recorded: formatDuration(recordedS ?? 0),
-            })}
-            {timedStages > 0 && ` · ${t('camera.duration.timedStages', { count: timedStages })}`}
-          </p>
-        </div>
+        <FlightDurationField />
 
         {/* it applies to every stop and speed portion, whether « Ralentir aux temps forts » is on or not */}
         <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']}>

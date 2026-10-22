@@ -114,6 +114,9 @@ const messages: Messages['news'] = {
   // 4.1 — Glaciers
   'v41.glaciers.title': 'Gletscher bleiben weiß',
   'v41.glaciers.text': 'Von OpenStreetMap kartierte Gletscher werden weiß gezeichnet, mit ihren Spalten, auch im Sommer, wenn das Tageswetter keinen Schnee meldet. Sie folgen der Einstellung Wetter › Schnee: mit « Kein » werden sie nicht gezeichnet.',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Dauer oder Tempo des Überflugs',
+  'v41.speed.text': 'Stellen Sie in Überflug › Dauer und Tempo den Überflug nach seiner Dauer (in Sekundenschritten oder durch Eintippen) oder nach dem Tempo des Markers (× Echtzeit und km/h) ein. Das eine ergibt das andere, beide werden immer angezeigt.',
 }
 
 export default messages

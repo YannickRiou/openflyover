@@ -77,7 +77,6 @@ const messages: Messages['camera'] = {
   'duration.noStops': 'no holds',
   'duration.stops': { one: '{count} hold', other: '{count} holds' },
   'duration.film': 'Film: {duration} · {stops}',
-  'duration.filmSpeedUp': 'Film: {duration} · {stops} · speed-up {speedUp} (outing of {recorded})',
   'duration.timedStages': { one: '{count} stage with a set duration (stage inspector): the others keep their share of the flyover duration, the film changes by the difference', other: '{count} stages with a set duration (stage inspector): the others keep their share of the flyover duration, the film changes by the difference' },
   'pacing.enable': 'Slow down at highlights',
   'pacing.enableTip': 'Highlights: tops of climbs, passes crossed and summits near the track.',
@@ -94,6 +93,24 @@ const messages: Messages['camera'] = {
   'pacing.transitionsTip': 'Way into and out of the holds, the pauses and the speed portions: longer, the marker slows down and sets off more gently.',
   'pacing.slowFactorTip': 'Flyover speed right at a highlight, compared with the normal speed (35 %: almost three times slower).',
   'pacing.windowTip': 'Distance on each side of the highlight over which the flyover slows down and then picks up again.',
+  // 4.1 — flyover set by its duration or by the marker’s speed
+  'speed.by': 'Set by',
+  'speed.byDuration': 'Duration',
+  'speed.bySpeed': 'Marker speed',
+  'speed.sliderAria': 'Marker speed',
+  'speed.durationAria': 'Flyover duration, in seconds',
+  'speed.upAria': 'Marker speed, in times real time',
+  'speed.kmhAria': 'Marker speed, in kilometres per hour',
+  'speed.seconds': 's',
+  'speed.unitKmh': 'km/h',
+  'speed.kmh': '{value} km/h',
+  'speed.asSpeedUp': 'i.e. {speedUp} (outing of {recorded}) · {kmh}',
+  'speed.asKmh': 'i.e. {kmh}',
+  'speed.asDuration': 'i.e. {duration}',
+  'speed.hintDuration': 'You set the flyover duration; the marker’s speed follows from it. It is an average speed: stops and slow-downs are taken from this duration.',
+  'speed.hintSpeed': 'You set the marker’s average speed; the app works out the flyover duration from it. Stops and slow-downs are taken from this duration.',
+  'speed.hintUntimed': 'This track has no times: the speed is given in km/h only.',
+  'speed.hintStages': 'Several tracks: the length is that of the whole route; a stage with a set duration keeps its duration.',
 }
 
 export default messages

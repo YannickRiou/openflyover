@@ -114,6 +114,9 @@ const messages: Messages['news'] = {
   // 4.1 — Glaciers
   'v41.glaciers.title': 'Los glaciares siguen blancos',
   'v41.glaciers.text': 'Los glaciares cartografiados por OpenStreetMap se dibujan en blanco, con sus grietas, incluso en verano cuando la meteorología del día no indica nieve. Siguen el ajuste Meteorología › Nieve: no se dibujan con « Ninguna ».',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Duración o velocidad del sobrevuelo',
+  'v41.speed.text': 'En Vuelo › Duración y ritmo, ajuste el sobrevuelo por su duración (de segundo en segundo, o escribiendo el valor) o por la velocidad del marcador (× el tiempo real y km/h). Una da la otra, y las dos se muestran siempre.',
 }
 
 export default messages

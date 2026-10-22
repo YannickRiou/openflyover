@@ -114,6 +114,9 @@ const messages: Messages['news'] = {
   // 4.1 — Glaciers
   'v41.glaciers.title': 'Glaciers stay white',
   'v41.glaciers.text': 'Glaciers mapped by OpenStreetMap are drawn white, with their crevasses, even in summer when the weather of the day reports no snow. They follow the Weather › Snow setting: not drawn with « None ».',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Flyover duration or speed',
+  'v41.speed.text': 'In Flyover › Duration and pacing, set the flyover by its duration (in steps of one second, or by typing the value) or by the marker’s speed (× real time and km/h). One gives the other, and both are always shown.',
 }
 
 export default messages
