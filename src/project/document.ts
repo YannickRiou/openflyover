@@ -26,7 +26,7 @@ import { OVERLAY_ANCHORS, isValidOverlay, withKnownStyle, withOverlayDefaults } 
 import { isValidPoster, withPosterDefaults } from '../poster/settings'
 import { isValidGrading } from '../scene/grading'
 import { isValidLens, withLensDefaults } from '../scene/lens'
-import { isValidLabelSettings, withLabelDefaults } from '../scene/labelModel'
+import { isValidLabelSettings, upgradeLabelSettings } from '../scene/labelModel'
 import { TRACK_COLOR_MODES } from '../flyover/trackColor'
 import { isValidMarker, isValidTrackStyle, isValidTrackTail, withMarkerDefaults, withTrackStyleDefaults } from '../scene/markerSettings'
 import { DEFAULT_PLAYBACK, DEFAULT_SETTINGS, PLAYBACK_SPEEDS } from '../state/store'
@@ -178,7 +178,7 @@ export const SETTING_UPGRADES: { [K in keyof Settings]?: (raw: unknown) => unkno
   trackStyle: withTrackStyleDefaults,
   marker: withMarkerDefaults,
   poster: (raw) => withPosterDefaults(withKnownStyle(raw)),
-  labels: withLabelDefaults,
+  labels: upgradeLabelSettings,
   pacing: withPacingDefaults,
   landmarks: withLandmarkDefaults,
   clouds: withCloudDefaults,

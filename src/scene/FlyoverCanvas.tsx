@@ -28,6 +28,7 @@ import { FlyoverRig } from './FlyoverRig'
 import { isIdentityGrading } from './grading'
 import { lensActive } from './lens'
 import { Labels } from './Labels'
+import { PhotoPins } from './PhotoPins'
 import { RaceMarkers } from './RaceMarkers'
 import { RegionHighlight } from './RegionHighlight'
 import { setPerfProbe } from './perfProbe'
@@ -179,6 +180,7 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
             <RaceMarkers />
             <CameraRig />
             <Labels />
+            <PhotoPins />
             <TrackPicker />
             {atmosphere && (
               // its own boundary: the rest of the scene is drawn while it loads
