@@ -121,4 +121,6 @@ export default {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Des gabarits plus clairs',
   'v41.auto.text': 'Dans « Film automatique », chaque gabarit est une carte : format, durée du film, caméra et ce qui est réglé, d’un coup d’œil. Choisissez-en une, puis « Appliquer » ; « Annuler » revient en arrière.',
+  'v42.bilan.title': 'Le Bilan de l’année',
+  'v42.bilan.text': 'Dans Trace › Plusieurs traces, « Bilan » fait un seul film d’une saison ou d’une année de sorties : elles se dessinent l’une après l’autre sous une vue haute de leur région, des compteurs montent, et la carte de fin donne les totaux.',
 }

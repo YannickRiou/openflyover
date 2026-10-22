@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { TITLE_CARD_ID } from '../film/cards'
 import { useT } from '../i18n'
 import type { CardId } from '../film/cards'
+import { playsBilan } from '../flyover/sequence'
 import { fileToLogoDataUrl } from '../overlay/assets'
 import { cardFigureLabel, cardFigures, creditLines } from '../overlay/draw'
 import { CARD_FIGURES, CARD_LINE_MAX, END_CREDITS_MAX } from '../overlay/settings'
@@ -102,7 +103,9 @@ function CardExtrasFields({ card }: { card: 'title' | 'end' }) {
     const now = useAppStore.getState().settings.overlay
     useAppStore.getState().setSetting('overlay', { ...now, [card]: { ...now[card], ...patch } })
   }
-  const figures = cardFigures(card, extras)
+  // « Sorties » is a figure of a « Bilan » only
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
+  const figures = cardFigures(card, extras, bilan)
 
   const chooseImage = async () => {
     try {
@@ -127,7 +130,7 @@ function CardExtrasFields({ card }: { card: 'title' | 'end' }) {
       <fieldset className="field min-w-0">
         <legend className="type-label mb-1">{t('inspector.card.figures')}</legend>
         <div className="chips">
-          {CARD_FIGURES.map((figure) => (
+          {CARD_FIGURES.filter((figure) => bilan || figure !== 'outings').map((figure) => (
             <Chip
               key={figure}
               checked={figures.includes(figure)}

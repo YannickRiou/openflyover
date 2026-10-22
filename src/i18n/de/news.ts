@@ -123,6 +123,8 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Klarere Vorlagen',
   'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
+  'v42.bilan.title': 'Der Jahresrückblick',
+  'v42.bilan.text': 'Unter Track › Mehrere Tracks macht „Jahresrückblick“ einen einzigen Film aus einer Saison oder einem Jahr voller Touren: Sie zeichnen sich nacheinander unter einer hohen Ansicht ihrer Region, Zähler steigen, und die Schlusskarte nennt die Summen.',
 }
 
 export default messages

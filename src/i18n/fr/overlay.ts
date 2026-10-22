@@ -180,4 +180,12 @@ export default {
   'panel.styleMoved': 'Style « {style} » : titre, carte de clôture, compteurs, profil, mini-carte et météo remis à la place du style.',
   // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
   'draw.credits.landmarksAndWater': 'Repères et eau : {source}',
+  'draw.counter.outings': 'Sorties',
+  'draw.stat.outings': 'Sorties',
+  'draw.regionTitle': 'Région {n} sur {count}',
+  'draw.regionAscent': 'D+ {ascent} m',
+  'draw.regionOutings': { one: '{count} sortie', other: '{count} sorties' },
+  'counter.outings': 'Sorties',
+  'panel.notInBilan': 'Sans objet dans un Bilan',
+  'panel.bilanCounters': 'Dans un Bilan, les compteurs cumulent les sorties dessinées jusqu’ici : sorties, distance, D+ et temps.',
 }

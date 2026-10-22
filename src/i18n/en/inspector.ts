@@ -249,6 +249,8 @@ const messages: Messages['inspector'] = {
   'junction.size': 'Size',
   'junction.displayDuration': 'Display duration',
   'card.dateNeedsTime': 'The track has no times: plan the outing (Track tab) to get a date.',
+  'bilan.title': 'Year in review',
+  'bilan.hint': 'In a Year in review the passages are automatic: a cut between two outings of one region, a fade to black from one region to the next. The region cards are set in Track › Several tracks.',
 }
 
 export default messages

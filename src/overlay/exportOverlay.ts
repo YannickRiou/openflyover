@@ -34,7 +34,7 @@ import type { Sequence } from '../flyover/sequence'
 import { createCardImages, loadLogo } from './assets'
 import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
 import type { LeaderboardRow, OverlayFilm } from './data'
-import { drawOverlay } from './draw'
+import { bilanStampAt, drawOverlay } from './draw'
 import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
 import type { OverlayAnchor } from './settings'
 
@@ -100,11 +100,13 @@ const strongerDip = (a: TransitionDip | null, b: TransitionDip | null) => (b && 
 export function overlayExtras(time: OverlayTime, progress: number): OverlayExtras {
   const { settings, tracks } = useAppStore.getState()
   const sequence = filmSequenceOf(tracks, settings.race)
+  const stamp = sequence ? bilanStampAt(sequence, time) : null
   return {
     time,
     leaderboard: leaderboardAt(progress),
     trackLegend: trackLegendOf(tracks, settings.trackColorBy, settings.trackLegendAnchor),
-    texts: settings.film.texts,
+    // a « Bilan »: the date of the outing being drawn, with the film's own texts
+    texts: stamp ? [...settings.film.texts, stamp] : settings.film.texts,
     media: settings.film.media,
     dip: strongerDip(transitionDipAt(settings.film, time), sequence && time.junctions ? junctionsDipAt(time.junctions, time.timeS) : null),
     stage: sequence ? stageCardAt(sequence, time, settings.film, (k) => stageWeatherOf(sequence, k, tracks[0]?.id)) : null,

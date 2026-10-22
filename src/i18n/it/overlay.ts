@@ -182,6 +182,14 @@ const messages: Messages['overlay'] = {
   'panel.styleMoved': 'Stile «{style}»: titolo, scheda di chiusura, contatori, profilo, minimappa e meteo rimessi al posto dello stile.',
   // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
   'draw.credits.landmarksAndWater': 'Riferimenti e acqua: {source}',
+  'draw.counter.outings': 'Uscite',
+  'draw.stat.outings': 'Uscite',
+  'draw.regionTitle': 'Regione {n} di {count}',
+  'draw.regionAscent': 'D+ {ascent} m',
+  'draw.regionOutings': { one: '{count} uscita', other: '{count} uscite' },
+  'counter.outings': 'Uscite',
+  'panel.notInBilan': 'Non usato in un Bilancio',
+  'panel.bilanCounters': 'In un Bilancio, i contatori sommano le uscite disegnate finora: uscite, distanza, D+ e tempo.',
 }
 
 export default messages

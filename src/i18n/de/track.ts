@@ -112,6 +112,12 @@ const messages: Messages['track'] = {
   'fix.clear': 'Zurück zu den GPX-Werten',
   'list.corrected': 'Zahlen korrigiert',
   'labels.rangeTip': 'Kameraabstand, ab dem die Beschriftungen verschwinden.',
+  'mode.bilan': 'Jahresrückblick',
+  'modeHint.bilan': 'Ein Film über eine Saison oder ein Jahr: Die Touren zeichnen sich nacheinander, nach Datum, unter einer hohen Ansicht ihrer Region.',
+  'bilan.regions': { one: 'Die Touren bilden {count} Region: Touren mit mehr als 50 km Abstand bilden eigene Kapitel.', other: 'Die Touren bilden {count} Regionen: Touren mit mehr als 50 km Abstand bilden eigene Kapitel.' },
+  'bilan.undated': { one: '{count} Tour hat kein Datum: Sie kommt nach den anderen ihrer Region.', other: '{count} Touren haben kein Datum: Sie kommen nach den anderen ihrer Region.' },
+  'bilan.card': 'Eine Karte am Anfang jeder Region',
+  'bilan.hint': 'Die Kamera bleibt hoch und fest über jeder Region (Anfangs- und Schlusseinstellung bewegen sie nicht); die Tracks zeichnen sich einzeln, die fertigen dunkler; die Zähler unter Overlay zählen die Touren zusammen. Keine Orientierungspunkte, Gewässer, Wälder, Gletscher und kein Wetter pro Tour. Für ein Licht, das sich von einer Tour zur nächsten nicht ändert, wählen Sie unter Licht „Feste Uhrzeit“.',
 }
 
 export default messages

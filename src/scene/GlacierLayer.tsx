@@ -15,6 +15,7 @@ import type { LocalFrame, TerrainEngine } from '../core/types'
 import { registerDrapeFlush } from '../export/store'
 import { fetchTrackGlacier, type GlacierPolygon } from '../osm/glacier'
 import { useGlacierStore } from '../osm/store'
+import { playsBilan } from '../flyover/sequence'
 import { useAppStore } from '../state/store'
 import { createGlacierMaterial } from './glacierMaterial'
 import { buildGlacierMesh, fillHeights, type GlacierMesh } from './glacierMesh'
@@ -107,7 +108,8 @@ export function GlacierLayer() {
   const { engine, frame } = useTerrainContext()
   const track = useFilmTrack()
   // « Aucune » leaves the ground as in the photo: no glacier either (and no request)
-  const enabled = useAppStore((s) => s.settings.snow.mode !== 'aucune')
+  // …nor in a « Bilan »: its track is the whole year, too wide for one query
+  const enabled = useAppStore((s) => s.settings.snow.mode !== 'aucune' && !playsBilan(s.settings.race, s.tracks.length))
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   /** glaciers of the track they were fetched for (shown only for the current first track, snow not « Aucune ») */
   const [fetched, setFetched] = useState<{ trackId: string; polygons: GlacierPolygon[] } | null>(null)

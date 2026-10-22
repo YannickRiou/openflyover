@@ -3228,8 +3228,9 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
 ## Several tracks (« Plusieurs traces »)
 
 - Block of the track list from two tracks: « La première » (default, nothing changes: the first track is flown, the
-  others drawn), « À la suite », « En parallèle » (the ghost race). Stored in `settings.race`, no migration: « En
-  parallèle » is `enabled` (as before), « À la suite » the optional `sequence` flag (ignored while `enabled`); one track is
+  others drawn), « À la suite », « En parallèle » (the ghost race), « Bilan » (a year of outings, below). Stored in
+  `settings.race`, no migration: « En parallèle » is `enabled` (as before), « À la suite » the optional `sequence` flag
+  (ignored while `enabled`), « Bilan » `sequence` + the optional `bilan` flag; one track is
   never a sequence (`playsInSequence`). The transition and the cards between the stages are the film's **junctions**
   (below); `race.stageCards` and `race.stageTransition` of a project saved before them are read once, by
   `withStageSettingsMigrated` (in `sanitizeSettings`), into `film.junctionDefault` and dropped from `race`.
@@ -3242,6 +3243,44 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
   a track removed or changed meanwhile, and `mergeByTrack` (`osm/byTrack.ts`) merges them for drawing; the forests are placed from all
   of them, a chunk's distance being to the nearest track. The `trackUnderMarker` is not needed: every stage's water and trees are drawn
   at once. Limit: the queue is sequential (the Overpass policy), so a film of many stages waits longer for its last stage.
+- **« Bilan »** (4.2, `src/flyover/bilan.ts`; `settings.race.bilan`, always with `sequence`): one film of a season or a year of outings,
+  reusing the stages, junctions and cards of « À la suite » rather than a film engine of its own. Chosen as a fourth mode in the
+  « Plusieurs traces » panel (`withMultiMode`: `{ sequence: true, bilan: true }`, the others drop the flag; no migration, `bilan` is
+  optional and `isValidRace` checks it). `playsInSequence` is unchanged, `playsBilan(race, n)` asks for the flag.
+  - **Plan** (`planBilan`, pure, kept by `bilanPlanOf` while the tracks' ids, points, names and corrections stay): `clusterBoxes` groups
+    the tracks into **regions** (single linkage on the gap between their boxes, `boxGapM`, at most `BILAN_REGION_KM` = 50 km); the regions
+    are ordered by the first date of their outings, each region's outings by `stats.startTime`, those without one last in list order
+    (`orderedTracks` returns `plan.tracks`: `race.order` and the hand reordering do not apply, `setStageOrder` refuses; the list shows the
+    order, without handles). `BilanPlan` `{ tracks, regions: BilanRegion[] { firstStage, stageCount, fromMs?, toMs?, figures }, regionOf[] }`;
+    `filmSequenceOf` adds `Sequence.bilan { plan, views }` (`views[r]`: the region's outings as one track, `buildSequence`, what the camera frames).
+    `outingFigures` / `addFigures` read the figures (corrections of « Corriger les chiffres » first) for the region cards, the totals and the counters.
+  - **Camera**: `filmFollowOf` gives `FollowedFlight.overview` (the region's path, `trackPathOf(views[regionOf[stage]])`) with the stage's path
+    and progress; `computeFilmView` then returns `bilanView` before any shot, stop, key or camera style: `overviewView` of the region seen from the
+    south (north up, `OVERVIEW_PITCH_DEG`, the distance of a track of the region's box), the marker `markerAt` on the outing being drawn. A pure
+    function of the progress: the view only changes at the cut between two regions, under the fade. The opening and closing shots therefore keep
+    their lengths and their cards but hold the first and the last region's view. The terrain area is that of a region view (`TerrainLayer`:
+    `engineAreaFor(bounds, true)`, detail around the tracks, coarse up to `REGION_AREA_MARGIN_M` beyond), so only the tiles of the high view load; a region 1,000 km from the frame's origin is seen a few degrees off the local « up » (the Earth's curvature in
+    the local frame), which `overviewView` does not correct.
+  - **Clock**: `FilmClockFor.bilan` (the plan, from `useFilmSource` / `getFilmSource`) makes `junctionInputsFor` use `bilanInputs` instead of
+    `junctionPlan` and the film's junctions: a `coupe` between two outings of a region, a `fondu-noir` held `BILAN_REGION_HOLD_S` (1.5 s) between two regions, no night,
+    and every stage the same flight time, `bilanStageS` = the flyover duration ÷ the number of stages, at least `BILAN_STAGE_MIN_S` (2 s) (`FlightStage.durationS`
+    for all, so the film lasts N × that, + the fades, and « Durée du vol » only counts above the minimum). The timeline's « Étapes » lane shows them without
+    editing, no card blocks; the inspector says the passages are automatic.
+  - **Lines**: `TrackLines` forces the draw-on (without a tail) and dims the lines of the finished outings (`dimTrackLineSet`, `TrackLineSet.dim`: the colours
+    × 0.45 once the distance drawn reaches the outing's length, but never the last one; `applyExposure` keeps it). The « Trace » section shows the switch
+    on and greyed with the reason.
+  - **Counters**: `OverlayFilm.before` (`figuresBefore`) and `OverlayFrame.cumul` `{ outings, distanceM, ascentM?, durationS? }` (`overlayFilmFrameAt`: the stages before +
+    the one being drawn at the marker); `counterText` reads the cumul in a Bilan: the new counter `outings` (`COUNTER_IDS`, off in older projects by `withOverlayDefaults`,
+    offered in the panel for a Bilan only), distance, D+ and time; the others return null (greyed with the reason, `BILAN_COUNTERS`). Whole-film stats (`bilanStats`):
+    the sums over the outings, the highest point, `outings`; the closing card's default figures are `BILAN_CARD_FIGURES` (`cardFigures(…, bilan)`), `CARD_FIGURES` has `outings`.
+  - **Cards and stamp**: `stageCardAt` gives a card to the first outing of each region (none with a single region), which outlasts that outing up to the junction that
+    leaves the region: the automatic text is « Région n sur N » and a line (`regionLine`: outings, km, D+, months), through the card's `text` / `subtitle` (the film's
+    own text, set per card, still wins; `{name}` is « Région n sur N »). `bilanStampAt` (`draw.ts`) is a `FilmText` for the outing being drawn (date, then name), added to
+    `extras.texts` by `overlayExtras` (also in the export's held-frame key), drawn overlay on or off, without making the live widgets give way as a card does.
+  - **Requests**: `filmTracksOf` returns none (no water or forests), `LandmarkPanel` asks OpenStreetMap for no landmarks, `WeatherPanel` for no later stage's weather,
+    `GlacierLayer` for no glaciers: a Bilan sends no request per outing (the first track's weather and a highlighted region excepted).
+  - **Labels**: `Labels` draws no start or finish pin and no kilometre label (two pins per outing would crowd a year); the waypoints of the files stay.
+  - Limits: no low flyover of each outing, no year poster (mosaic), no weather per outing; the weather, the poster and the batch still read `tracks[0]`; no calendar strip, no longest / highest outing on the closing card; a region is named « Région n sur N » (no place name: it would take a request).
 - « À la suite » (`src/flyover/sequence.ts`, pure): the film flies a **sequence track** (`buildSequence`: the tracks'
   segments one after the other in list order, id `suite:<ids>`, name `chainName`, never stored), cached on the tracks'
   ids, points and names (`sequenceOf`) so it keeps its identity. Unlike « Enchaîner en un seul parcours », nothing is

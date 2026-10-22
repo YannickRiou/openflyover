@@ -110,4 +110,10 @@ export default {
   'fix.clear': 'Revenir aux chiffres du GPX',
   'list.corrected': 'chiffres corrigés',
   'labels.rangeTip': 'Distance de la caméra au-delà de laquelle les étiquettes disparaissent.',
+  'mode.bilan': 'Bilan',
+  'modeHint.bilan': 'Un film d’une saison ou d’une année : les sorties se dessinent l’une après l’autre, par date, sous une vue haute de leur région.',
+  'bilan.regions': { one: 'Les sorties forment {count} région : les sorties à plus de 50 km les unes des autres font des chapitres séparés.', other: 'Les sorties forment {count} régions : les sorties à plus de 50 km les unes des autres font des chapitres séparés.' },
+  'bilan.undated': { one: '{count} sortie n’a pas de date : elle passe après les autres de sa région.', other: '{count} sorties n’ont pas de date : elles passent après les autres de leur région.' },
+  'bilan.card': 'Une carte au début de chaque région',
+  'bilan.hint': 'La caméra reste haute et fixe sur chaque région (les plans d’ouverture et de clôture ne la bougent pas) ; les traces se dessinent une à une, les finies plus sombres ; les compteurs de Habillage cumulent les sorties. Pas de repères, d’eau, de forêts, de glaciers ni de météo par sortie. Pour une lumière qui ne change pas d’une sortie à l’autre, choisissez « Heure fixe » dans Lumière.',
 }

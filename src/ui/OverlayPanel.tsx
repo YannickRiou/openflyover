@@ -4,10 +4,11 @@ import { videoSize } from '../export/schedule'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { t, useT } from '../i18n'
 import type { CardId } from '../film/cards'
-import { filmTrackOf, playsInSequence } from '../flyover/sequence'
+import { filmTrackOf, playsBilan, playsInSequence } from '../flyover/sequence'
 import { hasMetric } from '../flyover/trackColor'
 import { fileToLogoDataUrl } from '../overlay/assets'
 import {
+  BILAN_COUNTERS,
   COUNTER_IDS,
   CREDITS_POSITIONS,
   OFFSET_MAX_PX,
@@ -60,6 +61,7 @@ const COUNTER_LABELS: Record<CounterId, string> = {
   get pace() { return t('overlay.counter.pace') },
   get power() { return t('overlay.counter.power') },
   get temperature() { return t('overlay.counter.temperature') },
+  get outings() { return t('overlay.counter.outings') },
 }
 
 type WidgetKey = Exclude<keyof OverlaySettings, 'enabled' | 'style' | 'overrides'>
@@ -498,6 +500,7 @@ export function OverlayPanel() {
   const track = useAppStore((s) => s.tracks[0])
   const severalTracks = useAppStore((s) => s.tracks.length >= 2)
   const raceOn = useAppStore((s) => s.settings.race.enabled)
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const hasWeather = useWeatherStore((s) => s.series !== null)
   const [logoError, setLogoError] = useState<string | null>(null)
 
@@ -518,7 +521,11 @@ export function OverlayPanel() {
     pace: !track || hasMetric(track, 'speed'),
     power: !track || hasMetric(track, 'power'),
     temperature: !track || hasMetric(track, 'temperature'),
+    outings: true,
   }
+  // a « Bilan » counts the outings: only the figures that add up have a counter there
+  const counterShown = (counter: CounterId) => (counter === 'outings' ? bilan : true)
+  const counterOn = (counter: CounterId) => available[counter] && (!bilan || BILAN_COUNTERS.includes(counter))
 
   const chooseLogo = async () => {
     try {
@@ -586,18 +593,19 @@ export function OverlayPanel() {
               <fieldset className="field min-w-0">
                 <legend className="type-label mb-1">{t('overlay.panel.values')}</legend>
                 <div className="chips">
-                  {COUNTER_IDS.map((counter) => (
+                  {COUNTER_IDS.filter(counterShown).map((counter) => (
                     <Chip
                       key={counter}
-                      checked={overlay.counters.fields[counter] && available[counter]}
-                      disabled={!available[counter]}
-                      title={available[counter] ? undefined : t('overlay.panel.missing')}
+                      checked={overlay.counters.fields[counter] && counterOn(counter)}
+                      disabled={!counterOn(counter)}
+                      title={counterOn(counter) ? undefined : bilan && available[counter] ? t('overlay.panel.notInBilan') : t('overlay.panel.missing')}
                       onChange={(on) => setWidget('counters', { fields: { ...overlay.counters.fields, [counter]: on } })}
                     >
                       {COUNTER_LABELS[counter]}
                     </Chip>
                   ))}
                 </div>
+                {bilan && <p className="type-hint">{t('overlay.panel.bilanCounters')}</p>}
               </fieldset>
             </WidgetGroup>
 

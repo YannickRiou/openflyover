@@ -112,6 +112,12 @@ const messages: Messages['track'] = {
   'fix.clear': 'Torna ai valori del GPX',
   'list.corrected': 'numeri corretti',
   'labels.rangeTip': 'Distanza della camera oltre la quale le etichette scompaiono.',
+  'mode.bilan': 'Bilancio',
+  'modeHint.bilan': 'Un film di una stagione o di un anno: le uscite si disegnano una dopo l’altra, per data, sotto una vista alta della loro regione.',
+  'bilan.regions': { one: 'Le uscite formano {count} regione: le uscite a più di 50 km l’una dall’altra formano capitoli separati.', other: 'Le uscite formano {count} regioni: le uscite a più di 50 km l’una dall’altra formano capitoli separati.' },
+  'bilan.undated': { one: '{count} uscita non ha una data: passa dopo le altre della sua regione.', other: '{count} uscite non hanno una data: passano dopo le altre della loro regione.' },
+  'bilan.card': 'Una scheda all’inizio di ogni regione',
+  'bilan.hint': 'La camera resta alta e ferma su ogni regione (le inquadrature di apertura e di chiusura non la muovono); le tracce si disegnano una alla volta, quelle finite più scure; i contatori di Overlay sommano le uscite. Niente punti di riferimento, acqua, boschi, ghiacciai né meteo per uscita. Per una luce che non cambia da un’uscita all’altra, scegliete «Ora fissa» in Luce.',
 }
 
 export default messages

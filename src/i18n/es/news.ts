@@ -123,6 +123,8 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Plantillas más claras',
   'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
+  'v42.bilan.title': 'El balance del año',
+  'v42.bilan.text': 'En Track › Varios tracks, «Balance» hace una sola película de una temporada o de un año de salidas: se dibujan una tras otra bajo una vista alta de su región, los contadores suben y la tarjeta final da los totales.',
 }
 
 export default messages

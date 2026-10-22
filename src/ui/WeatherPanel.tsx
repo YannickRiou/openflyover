@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo } from 'react'
 import { buildTrackPath } from '../flyover/path'
 import { useT } from '../i18n'
-import { playsInSequence } from '../flyover/sequence'
+import { playsBilan, playsInSequence } from '../flyover/sequence'
 import { useAppStore } from '../state/store'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import { summarizeOuting, weatherWidgetData } from '../weather/series'
@@ -45,7 +45,8 @@ export function WeatherPanel() {
   const series = useWeatherStore((s) => s.series)
   const weatherTrackId = useWeatherStore((s) => s.trackId)
   const tracks = useAppStore((s) => s.tracks)
-  const sequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length))
+  // the later stages' weather: not in a « Bilan » (a request per outing)
+  const sequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length) && !playsBilan(s.settings.race, s.tracks.length))
 
   useEffect(() => {
     syncWeather(track, enabled)

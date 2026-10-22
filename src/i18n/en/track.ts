@@ -112,6 +112,12 @@ const messages: Messages['track'] = {
   'fix.clear': 'Back to the GPX figures',
   'list.corrected': 'corrected figures',
   'labels.rangeTip': 'Camera distance beyond which the labels fade out.',
+  'mode.bilan': 'Year in review',
+  'modeHint.bilan': 'A film of a season or a year: the outings draw themselves one after the other, by date, under a high view of their region.',
+  'bilan.regions': { one: 'The outings make {count} region: outings more than 50 km apart make separate chapters.', other: 'The outings make {count} regions: outings more than 50 km apart make separate chapters.' },
+  'bilan.undated': { one: '{count} outing has no date: it comes after the others of its region.', other: '{count} outings have no date: they come after the others of their region.' },
+  'bilan.card': 'A card at the start of each region',
+  'bilan.hint': 'The camera stays high and still over each region (the opening and closing shots do not move it); the tracks draw themselves one by one, the finished ones darker; the counters in Overlay add up the outings. No landmarks, water, forests, glaciers or weather per outing. For a light that does not change from one outing to the next, choose “Fixed time” in Light.',
 }
 
 export default messages

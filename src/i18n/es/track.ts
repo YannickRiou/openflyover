@@ -112,6 +112,12 @@ const messages: Messages['track'] = {
   'fix.clear': 'Volver a las cifras del GPX',
   'list.corrected': 'cifras corregidas',
   'labels.rangeTip': 'Distancia de la cámara a partir de la cual desaparecen las etiquetas.',
+  'mode.bilan': 'Balance',
+  'modeHint.bilan': 'Una película de una temporada o de un año: las salidas se dibujan una tras otra, por fecha, bajo una vista alta de su región.',
+  'bilan.regions': { one: 'Las salidas forman {count} región: las salidas a más de 50 km unas de otras forman capítulos separados.', other: 'Las salidas forman {count} regiones: las salidas a más de 50 km unas de otras forman capítulos separados.' },
+  'bilan.undated': { one: '{count} salida no tiene fecha: pasa después de las demás de su región.', other: '{count} salidas no tienen fecha: pasan después de las demás de su región.' },
+  'bilan.card': 'Una tarjeta al comienzo de cada región',
+  'bilan.hint': 'La cámara se queda alta y fija sobre cada región (los planos de apertura y de cierre no la mueven); los tracks se dibujan uno a uno, los terminados más oscuros; los contadores de Gráficos suman las salidas. Sin puntos de referencia, agua, bosques, glaciares ni tiempo por salida. Para una luz que no cambie de una salida a otra, elija «Hora fija» en Luz.',
 }
 
 export default messages

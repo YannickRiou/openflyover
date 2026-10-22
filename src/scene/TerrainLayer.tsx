@@ -16,6 +16,7 @@ import { createTerrainEngine, restoreEngineImagery } from '../terrain/engine'
 import { createTileFetcher } from '../terrain/fetch'
 import { exportLodHeight } from '../export/schedule'
 import { isExportBusy, useExportStore } from '../export/store'
+import { playsBilan } from '../flyover/sequence'
 import { useAppStore } from '../state/store'
 import { TerrainEngineContext, type TerrainContextValue } from './terrainContext'
 import {
@@ -58,7 +59,8 @@ export function TerrainLayer({ children }: TerrainLayerProps) {
   const frameOrigin = useAppStore((s) => s.frameOrigin)
   const bounds = useAppStore((s) => s.bounds)
   const settings = useAppStore((s) => s.settings)
-  const regionView = useAppStore((s) => usesRegionView(s.settings.film))
+  // a « Bilan » looks at its regions from high up, like a region view: a wide area, coarse beyond the tracks
+  const regionView = useAppStore((s) => usesRegionView(s.settings.film) || playsBilan(s.settings.race, s.tracks.length))
   const setTerrainStats = useAppStore((s) => s.setTerrainStats)
 
   // Local frame: depends on the origin values only, so a store update that keeps the same origin

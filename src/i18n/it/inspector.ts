@@ -249,6 +249,8 @@ const messages: Messages['inspector'] = {
   'junction.size': 'Dimensione',
   'junction.displayDuration': 'Durata di visualizzazione',
   'card.dateNeedsTime': 'La traccia non ha orari: pianifica l’uscita (scheda Traccia) per avere una data.',
+  'bilan.title': 'Bilancio',
+  'bilan.hint': 'In un Bilancio i passaggi sono automatici: uno stacco tra due uscite della stessa regione, una dissolvenza al nero da una regione all’altra. Le schede delle regioni si regolano in Traccia › Più tracce.',
 }
 
 export default messages

@@ -544,9 +544,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const overlayKey = (progress: number, timeS: number) => {
       if (!deps.overlay()) return ''
       const time = overlayTime(filmClock, progress, timeS)
-      const { dip, stage } = overlayExtras(time, progress)
+      const { dip, stage, texts } = overlayExtras(time, progress)
       const card = stage ? filmTextOpacity(stage, timeS) : 0
-      return [...overlayTimedState(settings.overlay, settings.film.texts, time, settings.film.media, dip?.alpha), card].join()
+      return [...overlayTimedState(settings.overlay, texts ?? settings.film.texts, time, settings.film.media, dip?.alpha), card].join()
     }
     /** progress of the renders of the last rendered frame (one, or one per sub-frame of the open shutter) */
     let previous = ''

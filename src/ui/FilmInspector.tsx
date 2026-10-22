@@ -506,7 +506,12 @@ export function FilmInspector() {
   let removable = true
   let isStop = false
   const phase = item === 'opening' || item === TITLE_CARD_ID ? 'opening' : item === 'closing' || item === END_CARD_ID ? 'closing' : null
-  if (phase) {
+  if (sequence?.bilan && (isStageItem(item) || isJunctionItem(item) || isStageCardItem(item))) {
+    // a « Bilan »: the passages and the cards of its regions are not set here
+    title = t('inspector.bilan.title')
+    removable = false
+    body = <p className={HINT}>{t('inspector.bilan.hint')}</p>
+  } else if (phase) {
     // one inspector for the start of the film and one for its end, whichever block was clicked: the card shown over the
     // shot (overlay.title / overlay.end) and the camera shot (film.opening / film.closing)
     const shot = film[phase]

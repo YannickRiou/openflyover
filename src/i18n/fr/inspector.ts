@@ -247,4 +247,6 @@ export default {
   'junction.size': 'Taille',
   'junction.displayDuration': 'Durée d’affichage',
   'card.dateNeedsTime': 'La trace n’a pas d’horaires : prévoyez la sortie (onglet Trace) pour avoir une date.',
+  'bilan.title': 'Bilan',
+  'bilan.hint': 'Dans un Bilan, les passages sont automatiques : une coupe entre deux sorties d’une même région, un fondu au noir d’une région à l’autre. Les cartes de région se règlent dans Trace › Plusieurs traces.',
 }

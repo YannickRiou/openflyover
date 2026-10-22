@@ -90,6 +90,7 @@ const messages: Messages['marker'] = {
   'section.otherLabels': 'Los demás marcadores llevan el nombre de su track.',
   'section.stick': 'Varilla y sombra en el suelo',
   'section.stickTip': 'El marcador se alza sobre una varilla por encima del track, con su sombra en el suelo.',
+  'track.drawOnBilan': 'En un Balance los tracks siempre se dibujan uno a uno, sin estela.',
 }
 
 export default messages

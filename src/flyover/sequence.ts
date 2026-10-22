@@ -11,8 +11,12 @@ import type { Track } from '../core/types'
 import { chainName } from '../import/chain'
 import { computeBounds, computeStats } from '../import/stats'
 import type { Landmark } from '../osm/landmarks'
+import { bilanPlanOf, type BilanPlan } from './bilan'
 import { trackPathOf } from './path'
 import type { RaceSettings } from './race'
+
+/** What decides how the tracks play together (`settings.race`). */
+type SequenceRace = Pick<RaceSettings, 'enabled' | 'sequence' | 'order' | 'bilan'>
 
 /** One track of the sequence: metres along the sequence and the matching fractions of the film progress. */
 export interface Stage {
@@ -33,6 +37,14 @@ export interface Sequence {
   cutsM: readonly number[]
   /** the stages' track ids in order: the junction k (after the stage k, at `cutsM[k]`) is keyed by the id k */
   stageIds: readonly string[]
+  /** « Bilan »: the regions of the stages and the track the camera frames for each (see `flyover/bilan.ts`) */
+  bilan?: BilanSequence
+}
+
+/** What « Bilan » adds to a sequence: the plan and, per region, the tracks of its stages as one track (the camera's view of the region). */
+export interface BilanSequence {
+  plan: BilanPlan
+  views: readonly Track[]
 }
 
 /** The tracks are flown one after the other: « À la suite » chosen (the ghost race wins when both are set), 2+ tracks. */
@@ -40,11 +52,21 @@ export function playsInSequence(race: Pick<RaceSettings, 'enabled' | 'sequence'>
   return race.sequence === true && !race.enabled && trackCount >= 2
 }
 
+/** « Bilan » is chosen (it plays in sequence). */
+export function playsBilan(race: Pick<RaceSettings, 'enabled' | 'sequence' | 'bilan'>, trackCount: number): boolean {
+  return race.bilan === true && playsInSequence(race, trackCount)
+}
+
 /**
  * The tracks in the order of the stages: « À la suite » `race.order` (ids that are no longer tracks are ignored, tracks
  * it lacks come last, in list order), else the list itself. Every reader of the order of the stages goes through here.
  */
-export function orderedTracks(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>): readonly Track[] {
+export function orderedTracks(tracks: readonly Track[], race: SequenceRace): readonly Track[] {
+  if (playsBilan(race, tracks.length)) {
+    // the order of the dates, the tracks as the store holds them now (a colour change does not make the plan again)
+    const byId = new Map(tracks.map((t) => [t.id, t]))
+    return bilanPlanOf(tracks).tracks.map((t) => byId.get(t.id) ?? t)
+  }
   if (!race.order || race.order.length === 0 || !playsInSequence(race, tracks.length)) return tracks
   const byId = new Map(tracks.map((t) => [t.id, t]))
   const out: Track[] = []
@@ -105,13 +127,27 @@ export function sequenceOf(tracks: readonly Track[]): Sequence {
   return last.sequence
 }
 
-/** The sequence the film flies, null unless the tracks play « À la suite ». */
-export function filmSequenceOf(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>): Sequence | null {
-  return playsInSequence(race, tracks.length) ? sequenceOf(orderedTracks(tracks, race)) : null
+/** Last « Bilan » sequence, with the plan it was built from (the plan keeps its identity while the tracks do). */
+let lastBilan: { plan: BilanPlan; sequence: Sequence } | null = null
+
+/** The sequence of a « Bilan »: the stages in date order, with the regions and what the camera frames of each. */
+function bilanSequenceOf(tracks: readonly Track[]): Sequence {
+  const plan = bilanPlanOf(tracks)
+  if (lastBilan?.plan !== plan) {
+    const views = plan.regions.map((r) => buildSequence(plan.tracks.slice(r.firstStage, r.firstStage + r.stageCount)).track)
+    lastBilan = { plan, sequence: { ...buildSequence(plan.tracks), bilan: { plan, views } } }
+  }
+  return lastBilan.sequence
+}
+
+/** The sequence the film flies, null unless the tracks play « À la suite » (or « Bilan »). */
+export function filmSequenceOf(tracks: readonly Track[], race: SequenceRace): Sequence | null {
+  if (!playsInSequence(race, tracks.length)) return null
+  return playsBilan(race, tracks.length) ? bilanSequenceOf(tracks) : sequenceOf(orderedTracks(tracks, race))
 }
 
 /** The track the film flies: the sequence « À la suite », else the first track (undefined without tracks). */
-export function filmTrackOf(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>): Track | undefined {
+export function filmTrackOf(tracks: readonly Track[], race: SequenceRace): Track | undefined {
   return filmSequenceOf(tracks, race)?.track ?? tracks[0]
 }
 
@@ -120,11 +156,12 @@ let lastFilmTracks: readonly Track[] = []
 
 /**
  * The tracks the film shows over the terrain, for the map layers fetched per track (water, forests): the stages
- * « À la suite » in their order, every racer of the ghost race, else the first track alone. The array keeps its identity
+ * « À la suite » in their order, every racer of the ghost race, none in a « Bilan », else the first track alone. The array keeps its identity
  * while the ids and the points do (a colour change does not make the layers start again).
  */
-export function filmTracksOf(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>): readonly Track[] {
-  const next = race.enabled || playsInSequence(race, tracks.length) ? orderedTracks(tracks, race) : tracks.slice(0, 1)
+export function filmTracksOf(tracks: readonly Track[], race: SequenceRace): readonly Track[] {
+  // « Bilan »: none, a request per outing would be too many (the water and the forests of a high view are not worth them)
+  const next = playsBilan(race, tracks.length) ? [] : race.enabled || playsInSequence(race, tracks.length) ? orderedTracks(tracks, race) : tracks.slice(0, 1)
   const same = next.length === lastFilmTracks.length && next.every((t, i) => t.id === lastFilmTracks[i].id && t.segments === lastFilmTracks[i].segments)
   if (!same) lastFilmTracks = next
   return lastFilmTracks
@@ -149,7 +186,7 @@ export function stageAt(sequence: Sequence, progress: number): { stage: Stage; p
  */
 export function trackUnderMarker(
   tracks: readonly Track[],
-  race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>,
+  race: SequenceRace,
   progress: number,
 ): { track: Track; progress: number } | undefined {
   const sequence = filmSequenceOf(tracks, race)

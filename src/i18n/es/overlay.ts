@@ -182,6 +182,14 @@ const messages: Messages['overlay'] = {
   'panel.styleMoved': 'Estilo «{style}»: título, tarjeta de cierre, contadores, perfil, minimapa y tiempo devueltos a su sitio en el estilo.',
   // 4.0 — Agua reflectante: el mar y los ríos trazados como líneas (4.0)
   'draw.credits.landmarksAndWater': 'Referencias y agua: {source}',
+  'draw.counter.outings': 'Salidas',
+  'draw.stat.outings': 'Salidas',
+  'draw.regionTitle': 'Región {n} de {count}',
+  'draw.regionAscent': 'D+ {ascent} m',
+  'draw.regionOutings': { one: '{count} salida', other: '{count} salidas' },
+  'counter.outings': 'Salidas',
+  'panel.notInBilan': 'No se usa en un Balance',
+  'panel.bilanCounters': 'En un Balance, los contadores suman las salidas dibujadas hasta ahora: salidas, distancia, D+ y tiempo.',
 }
 
 export default messages

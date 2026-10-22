@@ -182,6 +182,14 @@ const messages: Messages['overlay'] = {
   'panel.styleMoved': 'Style “{style}”: title, closing card, counters, profile, mini-map and weather put back where the style has them.',
   // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
   'draw.credits.landmarksAndWater': 'Landmarks and water: {source}',
+  'draw.counter.outings': 'Outings',
+  'draw.stat.outings': 'Outings',
+  'draw.regionTitle': 'Region {n} of {count}',
+  'draw.regionAscent': 'Gain {ascent} m',
+  'draw.regionOutings': { one: '{count} outing', other: '{count} outings' },
+  'counter.outings': 'Outings',
+  'panel.notInBilan': 'Not used in a Year in review',
+  'panel.bilanCounters': 'In a Year in review, the counters add up the outings drawn so far: outings, distance, gain and time.',
 }
 
 export default messages

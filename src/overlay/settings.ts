@@ -87,9 +87,11 @@ export const OVERLAY_ANCHOR_LABELS: Record<OverlayAnchor, string> = {
   get 'bottom-right'() { return t('overlay.anchor.bottom-right') },
 }
 
-export const COUNTER_IDS = ['distance', 'altitude', 'ascent', 'slope', 'time', 'clock', 'speed', 'pace', 'heartRate', 'power', 'temperature'] as const
+export const COUNTER_IDS = ['distance', 'altitude', 'ascent', 'slope', 'time', 'clock', 'speed', 'pace', 'heartRate', 'power', 'temperature', 'outings'] as const
 /** Counters added after the first saved format: off in older projects and presets (`withOverlayDefaults`). */
-const COUNTERS_ADDED: readonly CounterId[] = ['slope', 'clock', 'pace', 'power', 'temperature']
+const COUNTERS_ADDED: readonly CounterId[] = ['slope', 'clock', 'pace', 'power', 'temperature', 'outings']
+/** The counters of a « Bilan »: the figures that add up over the outings (the others have no meaning there). */
+export const BILAN_COUNTERS: readonly CounterId[] = ['outings', 'distance', 'ascent', 'time']
 export type CounterId = (typeof COUNTER_IDS)[number]
 
 /** Size multiplier of a widget (1 = default size). */
@@ -203,11 +205,13 @@ export interface TitleCardSettings extends Sized, CardExtras {
   window?: CardWindow
 }
 
-/** Figures a card can show, in the order it draws them. */
-export const CARD_FIGURES = ['distance', 'ascent', 'descent', 'maxAltitude', 'minAltitude', 'time', 'maxSpeed', 'avgSpeed', 'avgPace', 'date'] as const
+/** Figures a card can show, in the order it draws them (`outings`: only a « Bilan » has them). */
+export const CARD_FIGURES = ['outings', 'distance', 'ascent', 'descent', 'maxAltitude', 'minAltitude', 'time', 'maxSpeed', 'avgSpeed', 'avgPace', 'date'] as const
 export type CardFigure = (typeof CARD_FIGURES)[number]
 /** The figures of the closing card until others are chosen: those it always showed. */
 export const END_CARD_FIGURES: readonly CardFigure[] = ['distance', 'ascent', 'maxAltitude', 'time', 'maxSpeed']
+/** What the closing card of a « Bilan » shows until the film chooses: the totals of the year. */
+export const BILAN_CARD_FIGURES: readonly CardFigure[] = ['outings', 'distance', 'ascent', 'time', 'maxAltitude']
 /** Longest free line of a card (characters). */
 export const CARD_LINE_MAX = 120
 
@@ -312,7 +316,7 @@ export const DEFAULT_OVERLAY: OverlaySettings = {
     enabled: true,
     anchor: 'top-left',
     size: 1,
-    fields: { distance: true, altitude: true, ascent: true, slope: false, time: true, clock: false, speed: false, pace: false, heartRate: false, power: false, temperature: false },
+    fields: { distance: true, altitude: true, ascent: true, slope: false, time: true, clock: false, speed: false, pace: false, heartRate: false, power: false, temperature: false, outings: true },
   },
   profile: { enabled: true, anchor: 'top-right', width: 0.3, height: 0.12 },
   logo: { enabled: false, anchor: 'bottom-right', size: 1, image: '', opacity: 1 },

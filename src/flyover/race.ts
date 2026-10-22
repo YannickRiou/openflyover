@@ -45,6 +45,11 @@ export interface RaceSettings {
   /** « À la suite »: the tracks flown one after the other in list order (ignored while `enabled`) */
   sequence?: boolean
   /**
+   * « Bilan »: the tracks drawn one after the other in date order over a high view of their region, a chapter per region
+   * (`flyover/bilan.ts`); always with `sequence`, whose stages, junctions and cards it uses. The order is the dates', never `order`.
+   */
+  bilan?: boolean
+  /**
    * « À la suite »: the track ids in the order of the stages (`orderedTracks`); absent = the list order. Ids that are no
    * longer tracks are ignored, tracks it lacks come last. Reordering the stages writes it (`reorderStages` remaps the film).
    */
@@ -81,6 +86,7 @@ export function isValidRace(race: RaceSettings): boolean {
     (RACE_SYNC_MODES as readonly string[]).includes(race.sync) &&
     (race.camera === undefined || oneOf(RACE_CAMERAS, race.camera)) &&
     (race.sequence === undefined || typeof race.sequence === 'boolean') &&
+    (race.bilan === undefined || typeof race.bilan === 'boolean') &&
     (race.order === undefined || (Array.isArray(race.order) && race.order.every((id) => typeof id === 'string'))) &&
     (race.stageCards === undefined || typeof race.stageCards === 'boolean') &&
     (race.stageTransition === undefined || oneOf(STAGE_TRANSITIONS, race.stageTransition))

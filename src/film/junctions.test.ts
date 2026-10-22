@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { FlightNight } from '../flyover/nights'
 import { DEFAULT_RACE } from '../flyover/race'
 import { DEFAULT_PACING } from '../flyover/pacing'
+import { BILAN_REGION_HOLD_S, BILAN_STAGE_MIN_S } from '../flyover/bilan'
 import { buildFilmClock } from './clock'
 import type { ClockJunction, FilmClockInput } from './clock'
 import {
@@ -10,6 +11,7 @@ import {
   hasOwnCard,
   FIRST_STAGE_CARD_ID,
   applyToAllJunctions,
+  bilanInputs,
   fillTemplate,
   hasOwnTransition,
   hasStageItem,
@@ -472,5 +474,59 @@ describe('project migration', () => {
     expect(withStageSettingsMigrated(settings({ stageTransition: 'coupe' })).film.junctionDefault).toEqual({ kind: 'coupe', holdS: 0, card: true })
     const plain = settings({ sequence: true })
     expect(withStageSettingsMigrated(plain)).toBe(plain)
+  })
+})
+
+describe('« Bilan »', () => {
+  // five outings of 1 km, the first three in one region, the last two in another
+  const stageIds = ['a', 'b', 'c', 'd', 'e']
+  const cutsM = [1000, 2000, 3000, 4000]
+  const plan = { regionOf: [0, 0, 0, 1, 1] }
+
+  it('cuts between the outings of a region, fades to black from a region to the next, passes no night', () => {
+    const { junctions, nights } = bilanInputs(plan, stageIds, cutsM, 5000, 60)
+    expect(junctions.map((j) => [j.afterTrackId, j.kind, j.holdS])).toEqual([
+      ['a', 'coupe', 0],
+      ['b', 'coupe', 0],
+      ['c', 'fondu-noir', BILAN_REGION_HOLD_S],
+      ['d', 'coupe', 0],
+    ])
+    expect(junctions.map((j) => j.atM)).toEqual(cutsM)
+    expect(nights).toEqual([])
+  })
+
+  it('gives every outing the same time: the duration shared, at least the minimum', () => {
+    expect(bilanInputs(plan, stageIds, cutsM, 5000, 60).stages.map((s) => s.durationS)).toEqual([12, 12, 12, 12, 12])
+    expect(bilanInputs(plan, stageIds, cutsM, 5000, 5).stages.map((s) => s.durationS)).toEqual(Array(5).fill(BILAN_STAGE_MIN_S))
+    expect(bilanInputs(plan, stageIds, cutsM, 5000, 60).stages.map((s) => [s.fromM, s.toM])).toEqual([[0, 1000], [1000, 2000], [2000, 3000], [3000, 4000], [4000, 5000]])
+  })
+
+  it('makes a film as long as the outings and the fades, whatever the film says of its junctions', () => {
+    const { junctions, nights, stages } = bilanInputs(plan, stageIds, cutsM, 5000, 60)
+    const clock = buildFilmClock({
+      opening: { style: 'aucune', durationS: 0 },
+      closing: { style: 'aucune', durationS: 0 },
+      stops: [],
+      speeds: [],
+      cameraKeys: [],
+      paramKeys: [],
+      markerKeys: [],
+      cutsM,
+      junctions,
+      nights,
+      stages,
+      lengthM: 5000,
+      highlightsM: [],
+      durationS: 60,
+      pacing: DEFAULT_PACING,
+    })
+    expect(clock.totalTime()).toBeCloseTo(60 + BILAN_REGION_HOLD_S, 6)
+    // each outing flies for its share, the fade being a pause at the cut between the regions
+    const gaps = clock.cuts.map((c, k) => c.timeS - (clock.cuts[k - 1]?.timeS ?? 0))
+    expect(gaps[1]).toBeCloseTo(12, 6)
+    expect(gaps[3] - gaps[2]).toBeCloseTo(0, 6)
+    expect(gaps[2]).toBeCloseTo(12 + BILAN_REGION_HOLD_S / 2, 6)
+    expect(clock.junctions.map((j) => j.kind)).toEqual(['coupe', 'coupe', 'fondu-noir', 'coupe'])
+    expect(stageFlightS(clock, 2)).toBeCloseTo(12, 6)
   })
 })

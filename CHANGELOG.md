@@ -3,6 +3,14 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.2.0 (unreleased)
+
+- **« Bilan »: one film of a season or a year of outings**: « Trace › Plusieurs traces » has a fourth mode, next to « La première », « À la suite » and « En parallèle ». The tracks already imported (several files at once, or the Strava activities of a period) draw themselves one after the other, in date order, over a high fixed view of their region (the « Libre » framing of the region, a little tilted); the ones already drawn stay in a dimmer tone, and a date stamp in the bottom-left corner gives the date and the name of the outing being drawn. Each outing takes the same time: the flyover duration shared between them, at least 2 s each.
+  - Tracks more than 50 km from each other make separate regions, one chapter each: its own high view, a fade to black from one region to the next (a cut between two outings of one region) and a card at the start of each region (« Région 2 sur 3 », outings, distance, D+, months), shown or hidden by « Une carte au début de chaque région ».
+  - The counters (Habillage › Compteurs) add up the outings drawn so far: the new « Sorties », distance, D+ and time. The closing card shows the totals of the year by default (outings, distance, D+, time, highest point; « Sorties » is a new figure of the cards, offered for a Bilan only).
+  - The film does of its own: the camera stays on the region (the opening and closing shots only add their seconds), the lines always draw themselves one by one, the order is the dates' (an outing without a date comes after the others of its region), and no landmarks, water, forests, glaciers, start and finish pins or weather per outing are shown (no request per outing). Old projects open unchanged (`race.bilan` is optional).
+  - Not in this version: no low flyover of each outing, no year poster (mosaic), no weather per outing.
+
 ## 4.1.0 (unreleased)
 
 - **Timeline ruler**: the ruler now ends with the film. The last time label (« 0:30 ») used to stick out to the right of the closing card and a scrollbar appeared although every block was already in view; the label now sits inside the film's end and the scrollbar only shows when you zoom in.

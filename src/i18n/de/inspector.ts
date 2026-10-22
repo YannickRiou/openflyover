@@ -249,6 +249,8 @@ const messages: Messages['inspector'] = {
   'junction.size': 'Größe',
   'junction.displayDuration': 'Anzeigedauer',
   'card.dateNeedsTime': 'Der Track hat keine Zeiten: Planen Sie die Tour (Reiter Track), um ein Datum zu erhalten.',
+  'bilan.title': 'Jahresrückblick',
+  'bilan.hint': 'Im Jahresrückblick sind die Übergänge automatisch: ein Schnitt zwischen zwei Touren derselben Region, eine Abblende zu Schwarz von einer Region zur nächsten. Die Regionskarten stellen Sie unter Track › Mehrere Tracks ein.',
 }
 
 export default messages

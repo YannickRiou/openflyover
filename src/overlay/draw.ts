@@ -13,6 +13,7 @@ import type { TrackLegend } from '../flyover/trackColor'
 import { fillTemplate } from '../film/junctions'
 import { clipTimeS } from '../film/model'
 import type { DayCardField, FilmMedia, FilmText, TransitionDip } from '../film/model'
+import type { Sequence } from '../flyover/sequence'
 import type { DayFigures } from '../film/days'
 import { getLanguage, t } from '../i18n'
 import type { MessageKey } from '../i18n'
@@ -21,9 +22,9 @@ import { formatClock, formatDistance, formatDuration, formatNumber, formatPace }
 import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { recordedAtProgress } from './data'
-import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
+import type { BilanCumul, LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
 import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
+import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 import { styleStructure } from './structures'
@@ -187,6 +188,31 @@ export interface DayCard {
   title?: string
 }
 
+/**
+ * The date stamp of a « Bilan »: the date of the outing being drawn, its name under it, in the corner, from its cut to the
+ * next one (the end of the flight for the last); null before the flight, without a « Bilan », or past it.
+ */
+export function bilanStampAt(sequence: Sequence, time: OverlayTime): FilmText | null {
+  if (!sequence.bilan) return null
+  const starts = [time.openingS, ...(time.cutsS ?? [])]
+  let k = starts.length - 1
+  while (k >= 0 && time.timeS < starts[k]) k--
+  const stage = sequence.stages[k]
+  if (!stage) return null
+  const endS = time.junctions?.[k]?.startS ?? starts[k + 1] ?? time.openingS + time.flightS
+  if (!(endS > starts[k])) return null
+  const { name, stats } = stage.track
+  return {
+    id: `stamp-${k}`,
+    startS: starts[k],
+    durationS: endS - starts[k],
+    text: stats.startTime === undefined ? name : formatLongDate(stats.startTime),
+    subtitle: stats.startTime === undefined ? undefined : name,
+    anchor: 'bottom-left',
+    size: 0.8,
+  }
+}
+
 /** Safe area: 5 % of the frame on each side. */
 export const SAFE_MARGIN = 0.05
 /** Fade lengths of the cards, as fractions of the flight. */
@@ -216,6 +242,7 @@ export const COUNTER_LABELS: Record<CounterId, string> = {
   get pace() { return t('overlay.draw.counter.pace') },
   get power() { return t('overlay.draw.counter.power') },
   get temperature() { return t('overlay.draw.counter.temperature') },
+  get outings() { return t('overlay.draw.counter.outings') },
 }
 
 // ---------------------------------------------------------------------------
@@ -404,6 +431,8 @@ function estimatedMark(track: OverlayTrack): string {
 
 /** Text of a counter at this frame; null when the track does not record what it needs. */
 export function counterText(id: CounterId, frame: OverlayFrame): CounterText | null {
+  // a « Bilan »: the figures that add up over the outings drawn so far, nothing else
+  if (frame.cumul) return cumulText(id, frame.cumul, frame.track)
   switch (id) {
     case 'distance':
       return splitUnit(formatDistance(frame.distanceM))
@@ -430,6 +459,24 @@ export function counterText(id: CounterId, frame: OverlayFrame): CounterText | n
       return frame.powerW === undefined ? null : { value: formatNumber(frame.powerW), unit: 'W' }
     case 'temperature':
       return frame.temperatureC === undefined ? null : { value: formatNumber(frame.temperatureC), unit: '°C' }
+    case 'outings':
+      return null
+  }
+}
+
+/** The counters of a « Bilan »: the outings drawn so far and their distance, D+ and time, those the outings record. */
+function cumulText(id: CounterId, cumul: BilanCumul, track: OverlayTrack): CounterText | null {
+  switch (id) {
+    case 'outings':
+      return { value: String(cumul.outings), unit: '' }
+    case 'distance':
+      return splitUnit(formatDistance(cumul.distanceM))
+    case 'ascent':
+      return cumul.ascentM === undefined ? null : { value: formatNumber(cumul.ascentM), unit: 'm' }
+    case 'time':
+      return cumul.durationS === undefined ? null : { value: estimatedMark(track) + formatElapsed(cumul.durationS), unit: '' }
+    default:
+      return null
   }
 }
 
@@ -459,6 +506,8 @@ function counterTemplate(id: CounterId, track: OverlayTrack): CounterText {
       return { value: '0000', unit: 'W' }
     case 'temperature':
       return { value: '−00', unit: '°C' }
+    case 'outings':
+      return { value: String(Math.max(1, s.outings ?? 0)), unit: '' }
   }
 }
 
@@ -1358,6 +1407,7 @@ const CARD_FIGURE_KEYS: Record<CardFigure, MessageKey> = {
   avgSpeed: 'overlay.draw.stat.avgSpeed',
   avgPace: 'overlay.draw.stat.avgPace',
   date: 'overlay.draw.stat.date',
+  outings: 'overlay.draw.stat.outings',
 }
 
 /** Label of a figure on the cards (and of its chip in the inspector). */
@@ -1378,6 +1428,7 @@ export function cardStats(s: OverlayTrack['stats'], figures: readonly CardFigure
     avgSpeed: timed === undefined || s.distanceM <= 0 ? null : { value: formatNumber((s.distanceM / timed) * 3.6, 1), unit: 'km/h' },
     avgPace: timed === undefined || s.distanceM <= 0 ? null : paceText((s.distanceM / timed) * 3.6),
     date: s.startTime === undefined ? null : { value: formatDate(s.startTime, { day: '2-digit', month: '2-digit', year: 'numeric' }), unit: '' },
+    outings: s.outings === undefined ? null : { value: String(s.outings), unit: '' },
   }
   return CARD_FIGURES.flatMap((id) => {
     const text = texts[id]
@@ -1392,7 +1443,8 @@ function paceText(kmh: number): CounterText | null {
 }
 
 /** Figures of a card: those chosen in its inspector; until then none on the opening card, the usual five on the closing one. */
-export const cardFigures = (card: 'title' | 'end', c: CardExtras): readonly CardFigure[] => c.figures ?? (card === 'end' ? END_CARD_FIGURES : [])
+export const cardFigures = (card: 'title' | 'end', c: CardExtras, bilan = false): readonly CardFigure[] =>
+  c.figures ?? (card === 'end' ? (bilan ? BILAN_CARD_FIGURES : END_CARD_FIGURES) : [])
 
 /** The line under the title of the closing card: the user's own and the weather of the outing, when chosen. */
 export function endLine(e: EndCardSettings, weather: WeatherSummary | undefined): string {
@@ -1430,7 +1482,7 @@ function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, o
   const e = settings.end
   const s = frame.track.stats
   const m = cellMetrics(p, e.size)
-  const cells = cardStats(s, cardFigures('end', e)).map(({ label, text }) => makeCell(p, m, label, text, text))
+  const cells = cardStats(s, cardFigures('end', e, s.outings !== undefined)).map(({ label, text }) => makeCell(p, m, label, text, text))
   const image = e.image ? assets.cardImage?.(e.image) : undefined
   const below = cardGraphics(p, frame, settings, e, figuresWidth(p, m, cells, e.size))
   const subtitle = [e.line?.trim() ?? '', e.showWeather ? weatherSummaryLine(s.weather) : ''].filter(Boolean).join('\n')
