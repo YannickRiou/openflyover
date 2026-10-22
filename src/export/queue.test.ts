@@ -389,6 +389,26 @@ describe('runRenderQueue', () => {
     expect(useQueueStore.getState().running).toBe(false)
   })
 
+  it('renders each film at the format ticked for the queue, not the one of the project, and puts the project\'s own back', async () => {
+    const setVideo = (aspect: '16:9' | '9:16') => useAppStore.getState().setSetting('video', { ...useAppStore.getState().settings.video, aspect })
+    useAppStore.getState().setProjectName('Reel')
+    setVideo('9:16')
+    addOpenProject(selection(['16:9@1080p'], { poster: true }))
+    useAppStore.getState().setProjectName('Paysage')
+    setVideo('16:9')
+    addOpenProject(selection(['9:16@1080p']))
+    const seen: Array<[string, string, number, number]> = []
+    const record = async (job: Parameters<typeof exportJob>[0]) => {
+      seen.push([job.kind, useAppStore.getState().settings.video.aspect, ...('width' in job ? ([job.width, job.height] as const) : ([0, 0] as const))])
+      return { status: 'done', result: { fileName: 'x.mp4' } } as never
+    }
+    vi.mocked(exportJob).mockImplementationOnce(record).mockImplementationOnce(record).mockImplementationOnce(record)
+    await runRenderQueue({ folder: null, save: () => undefined })
+    // the Reel project is shown in 16:9 for its film (its poster keeps 9:16), the 16:9 one in 9:16
+    expect(seen).toEqual([['video', '16:9', 1920, 1080], ['poster', '9:16', 0, 0], ['video', '9:16', 1080, 1920]])
+    expect(useAppStore.getState().settings.video.aspect).toBe('16:9')
+  })
+
   it('renders the still image and the poster of an item next to its films, where the project was when added', async () => {
     useAppStore.getState().setProjectName('Avec image')
     useAppStore.getState().setProgress(0.4)
