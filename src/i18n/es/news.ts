@@ -123,6 +123,16 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Plantillas más claras',
   'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
+  'v42.bilan.title': 'El balance del año',
+  'v42.bilan.text': 'En Track › Varios tracks, «Balance» hace una sola película de una temporada o de un año de salidas: se dibujan una tras otra bajo una vista alta de su región, los contadores suben y la tarjeta final da los totales.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Créditos más discretos',
+  'v41.credits.text': 'En Gráficos › Créditos de las fuentes, elige « Discretos » (el nombre de las fuentes en pequeño en una esquina, las menciones completas al final de la película), « Completos » o « Solo al final ». En Exportar, « Copiar los créditos » da el texto con sus enlaces, para pegar en la descripción del vídeo.',
+  // 4.2 — records of the outing
+  'v42.records.title': 'Los récords de tu salida',
+  'v42.records.text': 'La subida más empinada, la bajada más rápida, el punto más alto, el kilómetro más lento… En Mapa › Referencias, cada récord es una referencia con su etiqueta 3D y, en las tres principales (subida más empinada, punto más alto, bajada más rápida), una parada automática con su tarjeta. Se calculan a partir del track.',
+  'v42.tools.title': 'Herramientas para retocar el track',
+  'v42.tools.text': 'En la tarjeta de un track, «Herramientas del track» recorta el principio y el final, quita una sección, elimina los picos de GPS y las pausas, simplifica, invierte el sentido o desplaza la hora, con un antes / después. «Deshacer» devuelve el track anterior, y el GPX se puede volver a exportar.',
 }
 
 export default messages

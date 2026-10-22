@@ -13,6 +13,7 @@ import type { TrackLegend } from '../flyover/trackColor'
 import { fillTemplate } from '../film/junctions'
 import { clipTimeS } from '../film/model'
 import type { DayCardField, FilmMedia, FilmText, TransitionDip } from '../film/model'
+import type { Sequence } from '../flyover/sequence'
 import type { DayFigures } from '../film/days'
 import { getLanguage, t } from '../i18n'
 import type { MessageKey } from '../i18n'
@@ -20,10 +21,10 @@ import { formatDate } from '../i18n/format'
 import { formatClock, formatDistance, formatDuration, formatNumber, formatPace } from '../ui/format'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
-import { recordedAtProgress } from './data'
-import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
+import { OPEN_METEO_SHORT, recordedAtProgress } from './data'
+import type { BilanCumul, LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
 import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
+import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 import { styleStructure } from './structures'
@@ -108,8 +109,12 @@ export interface OverlayExtras {
   texts?: readonly FilmText[]
   /** photos and clips of the timeline (`settings.film.media`), drawn inside their window once their picture or frame is loaded */
   media?: readonly FilmMedia[]
-  /** credits of the sources in the film (`overlayCredits`), drawn while `settings.credits` is on */
+  /** full credits of the sources in the film (`overlayCredits`): in the corner with `credits.mode` « full », and at the end of the film always */
   credits?: readonly string[]
+  /** short form of the credits (`overlayShortCredits`), in the corner with `credits.mode` « short » */
+  shortCredits?: readonly string[]
+  /** short credits of the sources whose terms ask for a permanent credit (`overlayPermanentCredits`), kept in the corner with `credits.mode` « end » */
+  permanentCredits?: readonly string[]
   /** ghost-race leaderboard at the frame's progress (`leaderboardRows`), drawn while `settings.leaderboard` is on */
   leaderboard?: readonly LeaderboardRow[]
   /** dip to black or white of a shot transition at the frame's time (`transitionDipAt`), drawn even while the overlay is off */
@@ -187,6 +192,31 @@ export interface DayCard {
   title?: string
 }
 
+/**
+ * The date stamp of a « Bilan »: the date of the outing being drawn, its name under it, in the corner, from its cut to the
+ * next one (the end of the flight for the last); null before the flight, without a « Bilan », or past it.
+ */
+export function bilanStampAt(sequence: Sequence, time: OverlayTime): FilmText | null {
+  if (!sequence.bilan) return null
+  const starts = [time.openingS, ...(time.cutsS ?? [])]
+  let k = starts.length - 1
+  while (k >= 0 && time.timeS < starts[k]) k--
+  const stage = sequence.stages[k]
+  if (!stage) return null
+  const endS = time.junctions?.[k]?.holdStartS ?? starts[k + 1] ?? time.openingS + time.flightS
+  if (!(endS > starts[k])) return null
+  const { name, stats } = stage.track
+  return {
+    id: `stamp-${k}`,
+    startS: starts[k],
+    durationS: endS - starts[k],
+    text: stats.startTime === undefined ? name : formatLongDate(stats.startTime),
+    subtitle: stats.startTime === undefined ? undefined : name,
+    anchor: 'bottom-left',
+    size: 0.8,
+  }
+}
+
 /** Safe area: 5 % of the frame on each side. */
 export const SAFE_MARGIN = 0.05
 /** Fade lengths of the cards, as fractions of the flight. */
@@ -216,6 +246,7 @@ export const COUNTER_LABELS: Record<CounterId, string> = {
   get pace() { return t('overlay.draw.counter.pace') },
   get power() { return t('overlay.draw.counter.power') },
   get temperature() { return t('overlay.draw.counter.temperature') },
+  get outings() { return t('overlay.draw.counter.outings') },
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +325,15 @@ export function creditsRollProgress(time: OverlayTime, start: number, window?: C
   return Math.min(1, Math.max(0, (time.timeS - startS - holdS) / (rollS - holdS)))
 }
 
+/** Seconds at the end of the film that carry the full credits when no roll does (at most a quarter of the film). */
+export const END_SOURCES_S = 5
+
+/** Opacity of the full credits along the bottom edge: they fade in over the last seconds of the film, whatever the closing card's window. */
+export function endSourcesOpacity(time: OverlayTime): number {
+  const tailS = Math.min(END_SOURCES_S, time.totalS / 4)
+  return ramp(time.timeS - (time.totalS - tailS), Math.min(1, tailS / 2))
+}
+
 /**
  * Opacity of the opening or closing card at film time `time` (the larger one), each on its own switch (overlay on or
  * off). Pure function of the time and the settings: the live widgets give way to the cards.
@@ -335,7 +375,9 @@ export function overlayTimedState(
   const end = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
   // the rolling credits move while the card is on
   const roll = end > 0 && creditLines(settings.end.credits).length > 0 ? [creditsRollProgress(time, settings.end.start, settings.end.window)] : []
-  return [title, end, ...roll, ...texts.map((text) => filmTextOpacity(text, time.timeS)), ...photos, ...dip]
+  // the full credits fade in over the last seconds of the film, unless the roll of the closing card carries them
+  const sources = settings.end.enabled && creditLines(settings.end.credits).length > 0 ? 0 : endSourcesOpacity(time)
+  return [title, end, ...(sources > 0 ? [sources] : []), ...roll, ...texts.map((text) => filmTextOpacity(text, time.timeS)), ...photos, ...dip]
 }
 
 /** Part of a picture drawn over the frame (source rectangle of `drawImage`). */
@@ -404,6 +446,8 @@ function estimatedMark(track: OverlayTrack): string {
 
 /** Text of a counter at this frame; null when the track does not record what it needs. */
 export function counterText(id: CounterId, frame: OverlayFrame): CounterText | null {
+  // a « Bilan »: the figures that add up over the outings drawn so far, nothing else
+  if (frame.cumul) return cumulText(id, frame.cumul, frame.track)
   switch (id) {
     case 'distance':
       return splitUnit(formatDistance(frame.distanceM))
@@ -430,6 +474,24 @@ export function counterText(id: CounterId, frame: OverlayFrame): CounterText | n
       return frame.powerW === undefined ? null : { value: formatNumber(frame.powerW), unit: 'W' }
     case 'temperature':
       return frame.temperatureC === undefined ? null : { value: formatNumber(frame.temperatureC), unit: '°C' }
+    case 'outings':
+      return null
+  }
+}
+
+/** The counters of a « Bilan »: the outings drawn so far and their distance, D+ and time, those the outings record. */
+function cumulText(id: CounterId, cumul: BilanCumul, track: OverlayTrack): CounterText | null {
+  switch (id) {
+    case 'outings':
+      return { value: String(cumul.outings), unit: '' }
+    case 'distance':
+      return splitUnit(formatDistance(cumul.distanceM))
+    case 'ascent':
+      return cumul.ascentM === undefined ? null : { value: formatNumber(cumul.ascentM), unit: 'm' }
+    case 'time':
+      return cumul.durationS === undefined ? null : { value: estimatedMark(track) + formatElapsed(cumul.durationS), unit: '' }
+    default:
+      return null
   }
 }
 
@@ -459,6 +521,8 @@ function counterTemplate(id: CounterId, track: OverlayTrack): CounterText {
       return { value: '0000', unit: 'W' }
     case 'temperature':
       return { value: '−00', unit: '°C' }
+    case 'outings':
+      return { value: String(Math.max(1, s.outings ?? 0)), unit: '' }
   }
 }
 
@@ -1358,6 +1422,7 @@ const CARD_FIGURE_KEYS: Record<CardFigure, MessageKey> = {
   avgSpeed: 'overlay.draw.stat.avgSpeed',
   avgPace: 'overlay.draw.stat.avgPace',
   date: 'overlay.draw.stat.date',
+  outings: 'overlay.draw.stat.outings',
 }
 
 /** Label of a figure on the cards (and of its chip in the inspector). */
@@ -1378,6 +1443,7 @@ export function cardStats(s: OverlayTrack['stats'], figures: readonly CardFigure
     avgSpeed: timed === undefined || s.distanceM <= 0 ? null : { value: formatNumber((s.distanceM / timed) * 3.6, 1), unit: 'km/h' },
     avgPace: timed === undefined || s.distanceM <= 0 ? null : paceText((s.distanceM / timed) * 3.6),
     date: s.startTime === undefined ? null : { value: formatDate(s.startTime, { day: '2-digit', month: '2-digit', year: 'numeric' }), unit: '' },
+    outings: s.outings === undefined ? null : { value: String(s.outings), unit: '' },
   }
   return CARD_FIGURES.flatMap((id) => {
     const text = texts[id]
@@ -1392,7 +1458,8 @@ function paceText(kmh: number): CounterText | null {
 }
 
 /** Figures of a card: those chosen in its inspector; until then none on the opening card, the usual five on the closing one. */
-export const cardFigures = (card: 'title' | 'end', c: CardExtras): readonly CardFigure[] => c.figures ?? (card === 'end' ? END_CARD_FIGURES : [])
+export const cardFigures = (card: 'title' | 'end', c: CardExtras, bilan = false): readonly CardFigure[] =>
+  c.figures ?? (card === 'end' ? (bilan ? BILAN_CARD_FIGURES : END_CARD_FIGURES) : [])
 
 /** The line under the title of the closing card: the user's own and the weather of the outing, when chosen. */
 export function endLine(e: EndCardSettings, weather: WeatherSummary | undefined): string {
@@ -1430,7 +1497,7 @@ function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, o
   const e = settings.end
   const s = frame.track.stats
   const m = cellMetrics(p, e.size)
-  const cells = cardStats(s, cardFigures('end', e)).map(({ label, text }) => makeCell(p, m, label, text, text))
+  const cells = cardStats(s, cardFigures('end', e, s.outings !== undefined)).map(({ label, text }) => makeCell(p, m, label, text, text))
   const image = e.image ? assets.cardImage?.(e.image) : undefined
   const below = cardGraphics(p, frame, settings, e, figuresWidth(p, m, cells, e.size))
   const subtitle = [e.line?.trim() ?? '', e.showWeather ? weatherSummaryLine(s.weather) : ''].filter(Boolean).join('\n')
@@ -1441,20 +1508,83 @@ function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, o
  * The closing card and the credits under it, centred, rolling up from the card's place in the middle of the frame
  * (`progress` 0) until the last line has left the top (`progress` 1).
  */
-function drawCreditsRoll(p: Painter, card: Widget, lines: readonly string[], size: number, progress: number): void {
+function drawCreditsRoll(p: Painter, card: Widget, lines: readonly string[], size: number, progress: number, sources: readonly string[] = []): number {
   const { ctx, theme, u } = p
   const style: TextStyle = { family: theme.bodyFamily, weight: 500, sizePx: 2.2 * u * size, color: theme.text }
   // readable over the relief without a panel
   const shadowed = { ...p, theme: { ...theme, textShadow: theme.textShadow ?? { color: 'rgba(0, 0, 0, 0.6)', blur: 0.5 } } }
   const lineH = style.sizePx * 1.5
   const gap = 3 * u * size
-  const height = card.height + gap + lines.length * lineH
+  // the sources close the roll: a small « Sources » title, then their sentences wrapped to the frame
+  const small: TextStyle = { ...style, sizePx: style.sizePx * 0.6 }
+  const smallH = small.sizePx * 1.5
+  const closing = sources.length === 0 ? [] : [t('overlay.draw.credits.title'), ...sources.flatMap((line) => wrapLines(shadowed, line, p.size.width * 0.8, small))]
+  const height = card.height + gap + lines.length * lineH + (closing.length > 0 ? gap + closing.length * smallH : 0)
   const from = (p.size.height - card.height) / 2
-  const top = from + (-height - from) * progress
+  // the roll ends with the sources on screen (else the last frames would carry no credit), or with its last line gone
+  const to = closing.length > 0 ? Math.min(from, p.size.height - 1.6 * u - height) : -height
+  const top = from + (to - from) * progress
   ctx.save()
   ctx.globalAlpha = card.opacity
   card.draw((p.size.width - card.width) / 2, top)
   lines.forEach((line, i) => fillText(shadowed, line, p.size.width / 2, top + card.height + gap + i * lineH + style.sizePx * 0.8, style, 'center'))
+  const closingTop = top + card.height + gap + lines.length * lineH + gap
+  closing.forEach((line, i) => {
+    const title = i === 0
+    fillText(shadowed, line, p.size.width / 2, closingTop + i * smallH + small.sizePx * 0.8, title ? { ...small, uppercase: true, tracking: 0.12 } : small, 'center')
+  })
+  ctx.restore()
+  // how much of the sources the frame shows now
+  return closing.length === 0 ? 0 : card.opacity * Math.min(1, Math.max(0, (p.size.height - closingTop) / (closing.length * smallH)))
+}
+
+/**
+ * The full credits at the end of the film when no roll carries them: a small « Sources » title and the sentences,
+ * centred along the bottom edge (inside `area` when the style leaves less), lifted above the widgets (`obstacles`) it would cover.
+ */
+function drawEndSources(p: Painter, sources: readonly string[], opacity: number, area?: Rect, obstacles: readonly Rect[] = []): void {
+  const { ctx, theme, u, size } = p
+  const style: TextStyle = { family: theme.bodyFamily, weight: 500, sizePx: 1.3 * u, color: theme.text }
+  const shadowed = { ...p, theme: { ...theme, textShadow: theme.textShadow ?? { color: 'rgba(0, 0, 0, 0.6)', blur: 0.5 } } }
+  const left = area ? area.x : size.width * SAFE_MARGIN
+  const width = (area ? area.w : size.width * (1 - 2 * SAFE_MARGIN)) * 0.9
+  const lines = sources.flatMap((line) => wrapLines(shadowed, line, width, style))
+  const lineH = style.sizePx * 1.5
+  const title = t('overlay.draw.credits.title')
+  const centre = left + (area ? area.w : size.width * (1 - 2 * SAFE_MARGIN)) / 2
+  const blockH = (lines.length + 1) * lineH
+  const half = Math.max(...lines.map((line) => measure(shadowed, line, style))) / 2
+  let bottom = size.height - 1.6 * u
+  // the nearest widget first: lifted above each one it overlaps
+  for (const o of [...obstacles].sort((a, b) => b.y + b.h - (a.y + a.h))) {
+    if (o.x < centre + half && o.x + o.w > centre - half && o.y < bottom && o.y + o.h > bottom - blockH) bottom = o.y - 0.8 * u
+  }
+  const top = bottom - blockH
+  ctx.save()
+  ctx.globalAlpha = opacity
+  fillText(shadowed, title, centre, top + style.sizePx * 0.8, { ...style, uppercase: true, tracking: 0.12 }, 'center')
+  lines.forEach((line, i) => fillText(shadowed, line, centre, top + (i + 1) * lineH + style.sizePx * 0.8, style, 'center'))
+  ctx.restore()
+}
+
+/**
+ * The short form of the credits: small capitals in the corner of the credits, no box, translucent, in the style's
+ * font. White over the film (its shadow keeps it legible on snow), wrapped to the safe width.
+ */
+function drawShortCredits(p: Painter, items: readonly string[], position: CreditsPosition, area?: Rect): void {
+  const { ctx, theme, u, size } = p
+  const style: TextStyle = { family: theme.bodyFamily, weight: 600, sizePx: 1.05 * u, color: '#FFFFFF', uppercase: true, tracking: 0.08 }
+  const shadowed = { ...p, theme: { ...theme, textShadow: { color: 'rgba(0, 0, 0, 0.8)', blur: 0.5 } } }
+  const left = area ? area.x : size.width * SAFE_MARGIN
+  const edgeRight = area ? area.x + area.w : size.width * (1 - SAFE_MARGIN)
+  const lines = wrapLines(shadowed, items.join(' · '), edgeRight - left, style)
+  const lineH = style.sizePx * 1.4
+  const right = position.endsWith('right')
+  const edge = 0.8 * u
+  const top = position.startsWith('bottom') ? size.height - edge - lines.length * lineH : edge
+  ctx.save()
+  ctx.globalAlpha *= 0.7
+  lines.forEach((line, i) => fillText(shadowed, line, right ? edgeRight : left, top + i * lineH + style.sizePx * 1.05, style, right ? 'right' : 'left'))
   ctx.restore()
 }
 
@@ -1465,17 +1595,6 @@ export function weatherSummaryLine(summary: WeatherSummary | undefined): string 
   const max = Math.round(summary.maxTemperatureC)
   const temperature = min === max ? `${formatNumber(min)} °C` : t('overlay.draw.temperatureRange', { min: formatNumber(min), max: formatNumber(max) })
   return t('overlay.draw.weatherLine', { condition: summary.dominant.label, temperature, wind: formatNumber(summary.maxWindKmh) })
-}
-
-/** Source credit of the weather, small along the bottom edge (required by the Open-Meteo licence). */
-function drawWeatherCredit(p: Painter): void {
-  const { u, size } = p
-  const style: TextStyle = { family: p.theme.bodyFamily, weight: 500, sizePx: 1.2 * u, color: '#FFFFFF' }
-  const shadowed = { ...p, theme: { ...p.theme, textShadow: { color: 'rgba(0, 0, 0, 0.8)', blur: 0.5 } } }
-  p.ctx.save()
-  p.ctx.globalAlpha = 0.85
-  fillText(shadowed, openMeteoAttribution(), size.width * (1 - SAFE_MARGIN), size.height - 1.4 * u, style, 'right')
-  p.ctx.restore()
 }
 
 /**
@@ -1707,7 +1826,8 @@ export function drawOverlay(
   extras: OverlayExtras = {},
 ): void {
   if (size.width <= 0 || size.height <= 0) return
-  const credits = settings.credits.enabled ? [...(extras.credits ?? [])] : []
+  const mode = settings.credits.mode
+  const credits = mode === 'full' ? [...(extras.credits ?? [])] : [...(mode === 'short' ? (extras.shortCredits ?? []) : (extras.permanentCredits ?? []))]
   const time = extras.time ?? progressTime(frame.progress)
   // photos and clips inside their window whose picture or frame is loaded (a clip following the flight: its frame
   // recorded under the marker)
@@ -1731,7 +1851,12 @@ export function drawOverlay(
   const legend = extras.trackLegend ?? null
   // the titles and the texts of the timeline are drawn with the overlay off too
   const titles = settings.title.enabled || settings.end.enabled || (extras.texts?.length ?? 0) > 0
-  if (!settings.enabled && !titles && credits.length === 0 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return
+  // the full credits close the film, whatever the mode: on the closing card (its roll when it has one), else along the bottom edge
+  const sources = extras.credits ?? []
+  // with a roll on the closing card they close it (`drawCreditsRoll`), else they fade in along the bottom edge over the last seconds
+  const rollsSources = settings.end.enabled && creditLines(settings.end.credits).length > 0
+  const endSources = sources.length > 0 && !rollsSources ? endSourcesOpacity(time) : 0
+  if (!settings.enabled && !titles && credits.length === 0 && endSources <= 0.001 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return
   const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
   const p: Painter = {
     ctx,
@@ -1756,6 +1881,8 @@ export function drawOverlay(
   }
   const texts: { item: FilmText; opacity: number }[] = []
   let roll: (() => void) | null = null
+  // how much of the full credits the film shows now (the roll's or the bottom block's): the corner credits give way to them
+  let sourcesCover = endSources
   let weather: Widget | null = null
   let weatherShown = false
   let endOpacity = 0
@@ -1792,7 +1919,11 @@ export function drawOverlay(
     const credits = creditLines(settings.end.credits)
     // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
     if (credits.length === 0) add(placed('end', card))
-    else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window))
+    else {
+      roll = () => {
+        sourcesCover = drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window), sources)
+      }
+    }
   }
   if (settings.enabled) {
     if (settings.counters.enabled && live > 0 && !slot('counters')) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
@@ -1858,10 +1989,21 @@ export function drawOverlay(
     ctx.restore()
   }
   if (weatherShown || (endOpacity > 0 && settings.end.showWeather && frame.track.stats.weather)) {
-    // required by the Open-Meteo licence: with the other credits when they are drawn, else on its own
-    if (!settings.credits.enabled) drawWeatherCredit(p)
-    else if (!credits.includes(openMeteoAttribution())) credits.push(openMeteoAttribution())
+    // required by the Open-Meteo licence: with the other credits (in every mode, even « à la fin seulement »)
+    const meteo = mode === 'full' ? openMeteoAttribution() : OPEN_METEO_SHORT
+    if (!credits.includes(meteo)) credits.push(meteo)
   }
-  if (credits.length > 0) drawCredits(p, credits, settings.credits.position, structure?.area)
+  // the corner credits give way to the full form at the end of the film
+  if (credits.length > 0 && sourcesCover < 0.999) {
+    ctx.save()
+    ctx.globalAlpha = 1 - sourcesCover
+    if (mode === 'full') drawCredits(p, credits, settings.credits.position, structure?.area)
+    else drawShortCredits(p, credits, settings.credits.position, structure?.area)
+    ctx.restore()
+  }
+  if (endSources > 0.001) {
+    const obstacles = widgets.map((w, i) => ({ x: positions[i].x, y: positions[i].y, w: w.width, h: w.height }))
+    drawEndSources(p, sources, endSources, structure?.area, obstacles)
+  }
   ctx.restore()
 }

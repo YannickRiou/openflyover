@@ -123,6 +123,16 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Klarere Vorlagen',
   'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
+  'v42.bilan.title': 'Der Jahresrückblick',
+  'v42.bilan.text': 'Unter Track › Mehrere Tracks macht „Jahresrückblick“ einen einzigen Film aus einer Saison oder einem Jahr voller Touren: Sie zeichnen sich nacheinander unter einer hohen Ansicht ihrer Region, Zähler steigen, und die Schlusskarte nennt die Summen.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Dezentere Quellenangaben',
+  'v41.credits.text': 'Wählen Sie in Overlay › Quellenangaben « Dezent » (die Namen der Quellen klein in einer Ecke, die vollständigen Angaben am Ende des Films), « Vollständig » oder « Nur am Ende ». Im Export liefert « Quellenangaben kopieren » den Text mit seinen Links, zum Einfügen in die Videobeschreibung.',
+  // 4.2 — records of the outing
+  'v42.records.title': 'Die Rekorde Ihrer Tour',
+  'v42.records.text': 'Der steilste Anstieg, die schnellste Abfahrt, der höchste Punkt, der langsamste Kilometer… In Karte › Landmarken ist jeder Rekord eine Landmarke mit 3D-Etikett und, bei den drei wichtigsten (steilster Anstieg, höchster Punkt, schnellste Abfahrt) einem automatischen Stopp mit seiner Karte. Sie werden aus der Spur berechnet.',
+  'v42.tools.title': 'Werkzeuge zum Bearbeiten der Strecke',
+  'v42.tools.text': 'In der Karte einer Strecke kürzen die „Werkzeuge für die Strecke“ Anfang und Ende, entfernen einen Abschnitt, löschen GPS-Ausreißer und Pausen, vereinfachen, kehren die Richtung um oder verschieben die Uhrzeit, mit Vorher / Nachher. „Rückgängig“ bringt die frühere Strecke zurück, und das GPX lässt sich wieder exportieren.',
 }
 
 export default messages

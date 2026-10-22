@@ -27,7 +27,7 @@ import {
 import type { Landmark, LandmarkMode, LandmarkSettings } from '../osm/landmarks'
 import { osmAttribution, OSM_KINDS } from '../osm/overpass'
 import { syncLandmarks, useLandmarkStore } from '../osm/store'
-import { sequenceLandmarks } from '../flyover/sequence'
+import { playsBilan, sequenceLandmarks } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
 import { editFilm, followLandmarks, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -232,7 +232,11 @@ function SelectedLandmark({
         </span>
         {isNew && <span className="rounded-sm bg-accent-tint px-1 text-hint font-semibold text-brand" data-testid="place-new">{t('landmarks.isNew')}</span>}
       </div>
-      <p className="type-hint tabular-nums">{t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}</p>
+      <p className="type-hint tabular-nums">
+        {landmark.kind === 'record'
+          ? t('landmarks.metaRecord', { km: formatNumber(row.atM / 1000, 1) })
+          : t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}
+      </p>
       <div className="flex flex-wrap items-center gap-2">
         <EyeButton name={landmark.name} hidden={row.hidden} onClick={() => onMode(row.hidden ? 'auto' : 'never')} />
         <ModeButton name={landmark.name} mode={mode} onClick={() => onMode(nextMode(mode))} />
@@ -304,9 +308,11 @@ export function LandmarkPanel() {
   const [zoneIds, setZoneIds] = useState<string[]>([])
   const stops = useMemo(() => (first ? filmStops(film, { track: first, landmarks, pacing }) : []), [first, film, landmarks, pacing])
 
+  // a « Bilan » asks OpenStreetMap for none: a request per outing would be too many, and a high view shows no landmark
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   useEffect(() => {
-    syncLandmarks(tracks, settings)
-  }, [tracks, settings])
+    syncLandmarks(bilan ? [] : tracks, settings)
+  }, [tracks, settings, bilan])
 
   useEffect(() => {
     followLandmarks()
@@ -540,7 +546,9 @@ export function LandmarkPanel() {
       )}
 
       {rows.length > 0 && (
-        <p className="type-hint">{[t('landmarks.hint'), film.autoStops && t('landmarks.hintAuto')].filter(Boolean).join(' ')}</p>
+        <p className="type-hint">
+          {[t('landmarks.hint'), film.autoStops && t('landmarks.hintAuto'), ranked.some((r) => r.landmark.kind === 'record') && t('landmarks.hintRecords')].filter(Boolean).join(' ')}
+        </p>
       )}
 
       {ranked.length > 0 && (

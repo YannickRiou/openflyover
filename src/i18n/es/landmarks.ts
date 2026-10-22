@@ -126,6 +126,22 @@ const messages: Messages['landmarks'] = {
   poiDefaultName: 'Punto de interés',
   poiAdd: 'Punto de interés en el marcador',
   poiHint: 'Tus propios lugares, también con un clic derecho en el relieve.',
+  // --- 4.2.0: records of the outing ---
+  'badge.record': 'Récord',
+  'poiIcon.trophee': 'Trofeo',
+  'record.over': '{value} en {length}',
+  'record.climb': '{length} al {gradient}',
+  'record.steepestClimb': 'Subida más empinada',
+  'record.fastestDescent': 'Bajada más rápida',
+  'record.highest': 'Punto más alto',
+  'record.lowest': 'Punto más bajo',
+  'record.fastestKm': 'Kilómetro más rápido',
+  'record.slowestKm': 'Kilómetro más lento',
+  'record.longestClimb': 'Subida más larga',
+  'record.maxHeartRate': 'Frecuencia cardíaca máxima',
+  'record.maxPower': 'Potencia máxima',
+  hintRecords: 'Los récords son las hazañas de la salida (subida más empinada, bajada más rápida, punto más alto…): se calculan a partir del propio track, y corregir las cifras a mano no los cambia. Solo la subida más empinada, el punto más alto y la bajada más rápida hacen una parada automática; los demás siguen siendo etiquetas.',
+  metaRecord: 'km {km}',
 }
 
 export default messages

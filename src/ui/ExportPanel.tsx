@@ -19,7 +19,7 @@ import {
 } from '../export/batch'
 import { currentReport } from '../export/guard'
 import { useQueueStore } from '../export/queue'
-import { showDiagnostic } from '../export/diagnostic'
+import { copyText, showDiagnostic } from '../export/diagnostic'
 import { targetBitrate, type CodecCandidate } from '../export/encoder'
 import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
 import { estimateRenderSeconds, lastFilm, layersRatio, rateFromHistory } from '../export/history'
@@ -65,6 +65,8 @@ import {
 import { getPlatform, videoEncoderMissingHint } from '../platform'
 import { shareSaveLabel } from '../platform/platform'
 import { canPickFolder, pickFolder, pickReadableFolder, type ReadableFolder, type WritableFolder } from '../platform/folder'
+import { creditsDescription } from '../overlay/data'
+import { currentCreditSources } from '../overlay/exportOverlay'
 import { startPoster } from '../poster/export'
 import { PosterPanel } from '../poster/PosterPanel'
 import { useFilmClock } from '../scene/usePacing'
@@ -80,7 +82,7 @@ import { effectiveProjectName } from './shell'
 import { AspectIcon, Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
-import { Button, Checkbox, Chip, Radio, RadioGroup, Select, TextField, Tip } from './primitives'
+import { Button, Checkbox, Chip, Modal, Radio, RadioGroup, Select, TextField, Tip } from './primitives'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
   { value: 'standard', get label() { return QUALITY_NAMES.standard } },
@@ -626,6 +628,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           .filter(Boolean)
           .join(' · ')}
       </p>
+      <CopyCreditsButton />
       {codec && streams && <p className="type-hint">{t('export.panel.direct')}</p>}
       {codec && warnsInMemory(estimatedBytes, streams) && (
         <p className="type-hint">
@@ -729,7 +732,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                 {t('export.panel.openFolder')}
               </Button>
             </>
-          )}
+          )}{' '}
+          <CopyCreditsButton />
         </p>
       )}
 
@@ -739,6 +743,39 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         {announcement}
       </p>
     </section>
+  )
+}
+
+/**
+ * « Copier les crédits »: the sources with their links, to paste in the description of the video. When the browser
+ * refuses the clipboard (plain http, some Firefox settings), the text is shown to select and copy by hand.
+ */
+function CopyCreditsButton() {
+  const [manual, setManual] = useState<string | null>(null)
+  const copy = async () => {
+    const text = creditsDescription(currentCreditSources())
+    if (await copyText(text)) showToast({ kind: 'success', text: t('export.panel.creditsCopied') })
+    else setManual(text)
+  }
+  return (
+    <>
+      <Tip text={t('export.panel.creditsCopyTip')}>
+        <Button size="sm" onClick={() => void copy()}>
+          {t('export.panel.creditsCopy')}
+        </Button>
+      </Tip>
+      <Modal open={manual !== null} onClose={() => setManual(null)} title={t('export.panel.creditsCopy')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
+        <p className="type-hint mb-2">{t('export.panel.creditsManual')}</p>
+        <textarea
+          readOnly
+          rows={10}
+          className="input w-full"
+          aria-label={t('export.panel.creditsCopy')}
+          value={manual ?? ''}
+          onFocus={(e) => e.currentTarget.select()}
+        />
+      </Modal>
+    </>
   )
 }
 

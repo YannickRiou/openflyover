@@ -14,7 +14,7 @@ import {
 } from '../flyover/race'
 import type { Race, RaceCamera, RaceSettings, RaceSync, Racer } from '../flyover/race'
 import { buildTrackPath } from '../flyover/path'
-import { orderedTracks, playsInSequence } from '../flyover/sequence'
+import { orderedTracks, playsBilan, playsInSequence } from '../flyover/sequence'
 import { metricValues } from '../flyover/trackColor'
 import { DEFAULT_JUNCTION, commonCardOf, hasOwnCard, hasOwnTransition, junctionDefaultOf, withAllCardsCommon, withAllJunctionsCommon, withCardSettings, withDefaultCard, withDefaultJunction } from '../film/junctions'
 import { nightPauseS } from '../flyover/nights'
@@ -45,6 +45,7 @@ import { Icon } from './icons'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
+import { TrackToolsButton } from './TrackTools'
 import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TextField, TimeField, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
@@ -92,29 +93,33 @@ function RaceBoard({ race, tracks }: { race: Race; tracks: readonly Track[] }) {
 }
 
 /** « Plusieurs traces »: how the film plays two tracks or more. */
-const MULTI_MODES = ['une', 'suite', 'parallele'] as const
+const MULTI_MODES = ['une', 'suite', 'parallele', 'bilan'] as const
 type MultiMode = (typeof MULTI_MODES)[number]
 const MULTI_MODE_LABELS: Record<MultiMode, string> = {
   get une() { return t('track.mode.une') },
   get suite() { return t('track.mode.suite') },
   get parallele() { return t('track.mode.parallele') },
+  get bilan() { return t('track.mode.bilan') },
 }
 const MULTI_MODE_HINTS: Record<MultiMode, string> = {
   get une() { return t('track.modeHint.une') },
   get suite() { return t('track.modeHint.suite') },
   get parallele() { return t('track.modeHint.parallele') },
+  get bilan() { return t('track.modeHint.bilan') },
 }
 
 function multiModeOf(race: RaceSettings, count: number): MultiMode {
   if (race.enabled) return 'parallele'
+  if (playsBilan(race, count)) return 'bilan'
   return playsInSequence(race, count) ? 'suite' : 'une'
 }
 
 /** The race settings for a mode: the ghost race and the sequence never both on. */
 function withMultiMode(race: RaceSettings, mode: MultiMode): RaceSettings {
-  const { sequence: _sequence, ...rest } = race
+  const { sequence: _sequence, bilan: _bilan, ...rest } = race
   if (mode === 'parallele') return { ...rest, enabled: true }
   if (mode === 'suite') return { ...rest, enabled: false, sequence: true }
+  if (mode === 'bilan') return { ...rest, enabled: false, sequence: true, bilan: true }
   return { ...rest, enabled: false }
 }
 
@@ -161,6 +166,30 @@ function StageDefaults() {
         </>
       )}
       <p className="type-hint">{t('track.stageHint')}</p>
+    </>
+  )
+}
+
+/**
+ * « Bilan », in one place: how many regions the outings make, those without a date, the card of each region, and what
+ * the film does of its own (the camera, the lines, the counters).
+ */
+function BilanDefaults({ tracks }: { tracks: readonly Track[] }) {
+  const t = useT()
+  const sequence = useFilmSequence()
+  const card = useAppStore((s) => junctionDefaultOf(s.settings.film).card)
+  const regions = sequence?.bilan?.plan.regions.length ?? 0
+  const undated = tracks.filter((track) => track.stats.startTime === undefined).length
+  return (
+    <>
+      <p className="type-hint">{t('track.bilan.regions', { count: regions })}</p>
+      {undated > 0 && <p className="type-hint">{t('track.bilan.undated', { count: undated })}</p>}
+      {regions > 1 && (
+        <Switch checked={card} onChange={(on) => editFilm((f) => ({ film: withDefaultCard(f, on) }))}>
+          {t('track.bilan.card')}
+        </Switch>
+      )}
+      <p className="type-hint">{t('track.bilan.hint')}</p>
     </>
   )
 }
@@ -213,6 +242,7 @@ function RacePanel({ tracks }: { tracks: readonly Track[] }) {
       </p>
 
       {mode === 'suite' && <StageDefaults />}
+      {mode === 'bilan' && <BilanDefaults tracks={tracks} />}
 
       <div className="field" hidden={mode !== 'parallele'}>
         <label className="type-label" htmlFor={`${id}-sync`}>
@@ -675,7 +705,9 @@ export function TrackList() {
   const removeTrack = useAppStore((s) => s.removeTrack)
   const setTrackColor = useAppStore((s) => s.setTrackColor)
   const flyTrack = useAppStore((s) => s.flyTrack)
-  const inSequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length))
+  // the stages are moved by hand « À la suite »; a « Bilan » has the order of the dates
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
+  const inSequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length) && !playsBilan(s.settings.race, s.tracks.length))
   const busy = useExportStore((s) => isExportBusy(s.phase))
   /** the list in the order of the stages « À la suite », the list order otherwise */
   const shown = useMemo(() => orderedTracks(tracks, race), [tracks, race])
@@ -870,7 +902,7 @@ export function TrackList() {
                   </Button>
                 </Tip>
               )}
-              {index > 0 && !inSequence && (
+              {index > 0 && !inSequence && !bilan && (
                 <Tip text={t('track.list.flyTip')} side="left">
                   <Button
                     variant="icon"
@@ -906,6 +938,7 @@ export function TrackList() {
               </span>
               <TrackElevation track={track} busy={busy} />
               <TrackCorrections track={track} busy={busy} />
+              <TrackToolsButton track={track} busy={busy} />
               {(track.timesEstimated || track.stats.startTime === undefined) && <OutingPlanForm track={track} />}
             </li>
           ))}

@@ -280,7 +280,7 @@ describe('TrackList, « Plusieurs traces »', () => {
     document.body.innerHTML = ''
   })
 
-  it('is a radio group of three modes, and « À la suite » shows the stage card switch', async () => {
+  it('is a radio group of four modes, and « À la suite » shows the stage card switch', async () => {
     resetAppStore()
     useAppStore.getState().replaceTracks([drawnTrack(), { ...drawnTrack(), id: 'other', name: 'Autre' }])
     const host = document.body.appendChild(document.createElement('div'))
@@ -293,6 +293,7 @@ describe('TrackList, « Plusieurs traces »', () => {
       ['La première', true],
       ['À la suite', false],
       ['En parallèle', false],
+      ['Bilan', false],
     ])
     expect(host.querySelector('input[role="switch"]')).toBeNull()
     await act(async () => radios[1].click())
@@ -304,6 +305,28 @@ describe('TrackList, « Plusieurs traces »', () => {
     expect(host.querySelector<HTMLInputElement>('input[role="switch"]')!.checked).toBe(!before)
     // the hint under the modes explains the mode chosen, it does not repeat its name
     expect(host.querySelector(`#${CSS.escape(group.getAttribute('aria-describedby')!)}`)?.textContent).toContain('l’une après l’autre')
+    act(() => root.unmount())
+  })
+
+  it('« Bilan » sets the sequence with its flag, says how many regions, and leaves the stages in the order of the dates', async () => {
+    resetAppStore()
+    const outing = (id: string, name: string, lon: number, startTime: number | undefined) => ({ ...drawnTrack(), id, name, bounds: { west: lon, east: lon + 0.01, south: 45, north: 45.01 }, stats: { ...drawnTrack().stats, startTime } })
+    useAppStore.getState().replaceTracks([outing('b', 'Juin', 6, Date.UTC(2026, 5, 1)), outing('a', 'Mars', 6.02, Date.UTC(2026, 2, 1)), outing('c', 'Sans date', 12, undefined)])
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TrackList />))
+    const radios = [...host.querySelectorAll<HTMLInputElement>('[role="radiogroup"][aria-labelledby] input[type="radio"]')]
+    await act(async () => radios[3].click())
+    expect(useAppStore.getState().settings.race).toMatchObject({ enabled: false, sequence: true, bilan: true })
+    expect(host.textContent).toContain('2 régions')
+    // the cards, the dates' order, no handle to move a track
+    expect([...host.querySelectorAll('[data-testid="track-name"]')].map((n) => n.textContent)).toEqual(['Mars', 'Juin', 'Sans date'])
+    expect(host.querySelector('[data-handle]')).toBeNull()
+    expect(host.querySelector<HTMLInputElement>('input[role="switch"]')?.labels?.[0]?.textContent).toBe('Une carte au début de chaque région')
+    // back to « À la suite »: the flag is gone, the handles are back
+    await act(async () => radios[1].click())
+    expect(useAppStore.getState().settings.race.bilan).toBeUndefined()
+    expect(host.querySelector('[data-handle]')).not.toBeNull()
     act(() => root.unmount())
   })
 

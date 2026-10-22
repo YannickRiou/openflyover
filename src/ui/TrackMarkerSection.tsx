@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { junctionsM } from '../film/markerKeys'
 import { t as translate, useT } from '../i18n'
 import { TRACK_COLOR_MODES, TRACK_METRICS, hasMetric } from '../flyover/trackColor'
+import { playsBilan } from '../flyover/sequence'
 import { OVERLAY_ANCHOR_LABELS } from '../overlay/settings'
 import { getPlatform } from '../platform'
 import { fileToAvatarDataUrl } from '../scene/markerBadge'
@@ -153,6 +154,8 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const trackColorBy = useAppStore((s) => s.settings.trackColorBy)
   const legendAnchor = useAppStore((s) => s.settings.trackLegendAnchor)
   const firstTrack = useAppStore((s) => s.tracks[0])
+  // a « Bilan » draws its outings one after the other whatever this says, without a tail
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const colorModes = useMemo(
     () =>
       TRACK_COLOR_MODES.map((mode) =>
@@ -167,10 +170,11 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
     <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail']} hidden={hidden}>
       <h3 className={GROUP}>{t('marker.track.lineGroup')}</h3>
       <div className="flex items-center gap-1">
-        <Switch checked={style.drawOn} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
+        <Switch checked={style.drawOn || bilan} disabled={bilan} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
         <InfoTip text={t('marker.track.drawOnTip')} />
       </div>
-      {style.drawOn && (
+      {bilan && <p className="type-hint">{t('marker.track.drawOnBilan')}</p>}
+      {style.drawOn && !bilan && (
         <>
           <div className="flex items-center gap-1">
             <Switch checked={tail.enabled} onChange={(enabled) => updateTail({ enabled })}>{t('marker.track.tail')}</Switch>

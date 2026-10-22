@@ -76,7 +76,9 @@ const zeros = (text: string) => text.replace(/\d/g, '0')
 /** The frame with the widest value each counter takes along the flyover, so a centred line keeps its width. */
 function widestFrame(frame: OverlayFrame): OverlayFrame {
   const s = frame.track.stats
-  return { ...frame, distanceM: Math.max(s.distanceM, 999), ele: s.maxEleM, ascentM: s.ascentM, elapsedS: s.durationS, speedKmh: Math.max(10, s.maxSpeedKmh ?? 0), heartRate: 100 }
+  // a « Bilan »: the totals of the outings
+  const cumul = frame.cumul && { outings: s.outings ?? frame.cumul.outings, distanceM: Math.max(s.distanceM, 999), ascentM: s.ascentM, durationS: s.durationS }
+  return { ...frame, ...(cumul && { cumul }), distanceM: Math.max(s.distanceM, 999), ele: s.maxEleM, ascentM: s.ascentM, elapsedS: s.durationS, speedKmh: Math.max(10, s.maxSpeedKmh ?? 0), heartRate: 100 }
 }
 
 /** `settings` with the minimap at `size` (and without its north arrow when `arrow` is false). */
@@ -195,10 +197,13 @@ const CINEMA_BAR = 0.11
 /** A counter as the words of a subtitle: « 12,4 km », « alt. 2 450 m », « D+ 980 m », « 4 h 12 »; null when not recorded. */
 function subtitlePart(id: CounterId, frame: OverlayFrame): string | null {
   if (id === 'time') {
-    return frame.elapsedS === undefined ? null : `${frame.track.stats.timesEstimated ? '≈ ' : ''}${formatDuration(frame.elapsedS)}`
+    const elapsedS = frame.cumul ? frame.cumul.durationS : frame.elapsedS
+    return elapsedS === undefined ? null : `${frame.track.stats.timesEstimated ? '≈ ' : ''}${formatDuration(elapsedS)}`
   }
   const text = counterText(id, frame)
   if (!text) return null
+  // « 12 sorties »: the count says what it counts
+  if (id === 'outings') return `${text.value} ${COUNTER_LABELS.outings.toLowerCase()}`
   const prefix = id === 'altitude' ? 'alt. ' : id === 'ascent' ? 'D+ ' : ''
   return `${prefix}${text.value} ${text.unit}`.trim()
 }
@@ -415,7 +420,7 @@ function journal(i: StructureInput): Structure {
   const closingBody = () => {
     const pe = of('end')
     let y = bodyTop
-    for (const { label, text } of cardStats(frame.track.stats, cardFigures('end', settings.end))) y += drawRow(pe, { label, value: `${text.value} ${text.unit}`.trim() }, x0, y, innerW, settings.end.size)
+    for (const { label, text } of cardStats(frame.track.stats, cardFigures('end', settings.end, frame.track.stats.outings !== undefined))) y += drawRow(pe, { label, value: `${text.value} ${text.unit}`.trim() }, x0, y, innerW, settings.end.size)
     const weather = endLine(settings.end, frame.track.stats.weather)
     if (!weather) return
     const style: TextStyle = { family: theme.bodyFamily, weight: theme.labelWeight, sizePx: 1.7 * u * settings.end.size, color: theme.textSoft }

@@ -42,6 +42,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/import/fit.ts` | FIT parsing (in-house decoder: record, hr, session, sport, activity messages; compressed timestamps; developer fields skipped) | `parseFit(buffer: ArrayBuffer, fileName: string): Promise<Track[]>` |
 | `src/import/stats.ts` | stats & bounds, assembly | `computeStats(segments): TrackStats`, `computeBounds(segments): LonLatBounds`, `densify(points, maxStepM): TrackPoint[]`, `buildTrack(init): Track`, `stripExtension(fileName)` (shared by both parsers) |
 | `src/import/chain.ts` | track chaining (see "Track chaining") | `chainTracks(tracks): Track`, `chainOrder`, `chainName`, `replaceByChain`, `followEachOther`, `CHAIN_OFFER_MAX_GAP_MS` |
+| `src/import/tools/*` | track tools (see "Track tools"): pure functions on the segments of a track | `trim`, `cutSection`, `removeSpikes` / `findSpikes`, `removePauses` / `findPauses`, `simplify`, `reverse`, `shiftTime`, `trackToGpx` / `gpxFileName`, `withSegments` (`common.ts`) |
 | `src/import/index.ts` | entry point | `importFile(file: File, colorIndex?): Promise<Track[]>`, `importText(text, fileName, colorIndex?)`, `TRACK_COLORS`, `assignColors` |
 | `src/strava/*` | Strava import (see "Strava import") | `api.ts`: pure, tested: `authorizeUrl`, `tokenRequestBody`, `activitiesUrl`, `streamsUrl`, `callbackDomain`, `parseCallback`, `needsRefresh`, `tokensFromResponse`, `stravaError`, `StravaAuthError`; storage and requests: `loadApp`, `saveApp`, `forgetApp`, `loadTokens`, `disconnect`, `connect`, `listActivities`, `fetchStreams`; `track.ts`: `streamsToTrack`, `stravaActivityType`, `stravaSportLabel` |
 | `src/terrain/sources.ts` | source catalog | `TERRAIN_SOURCES: TerrainSource[]`, `IMAGERY_SOURCES: ImagerySource[]`, `buildTileUrl(source, key): string`, `getTerrainSource(id)`, `getImagerySource(id)`, `sourceCovers(source, bounds \| point)` |
@@ -2087,6 +2088,33 @@ it, know at what time you will pass each point, where the sun will be and what t
   (`withMode`). Landmarks found later stay shown. `settings.landmarks.seenIds` (OSM ids listed at the last show / hide;
   `withLandmarkDefaults` gives `[]`, keeps strings only) marks the others « nouveau » (`newLandmarkIds`, none before a
   first choice); the « N nouveaux » badge marks them seen.
+- **Records** (« Records de la sortie », 4.2): the feats of the outing, found in the track itself, listed with the landmarks.
+  `detectRecords` (`src/import/records.ts`, pure, cached per track by `recordsOf`) returns at most one record per kind
+  (`RECORD_KINDS`): `steepestClimb` (the steepest 300 / 400 / 500 m stretch, the longest of those within 0.5 point of the
+  best, at least 3 %, « 18 % sur 400 m »), `fastestDescent` (the 1 km going down, ≥ 20 m lost, at the highest mean speed, at
+  least 8 km/h), `highest` (not within 200 m of the start; `recordLandmarks` also drops it when a summit landmark is within
+  `RECORD_SUMMIT_M` = 200 m) and `lowest` (range ≥ 100 m, not within 200 m of an end), `fastestKm` / `slowestKm` (whole
+  kilometres as the kilometre markers count them, at least two, not when the fastest is inside the fastest descent),
+  `longestClimb` (from two climbs of `climbsOf`), `maxHeartRate` / `maxPower` (best 30 s mean). Nothing under 1 km, and
+  only what the points allow (no elevation: no climb, descent or altitude; no time: no speed or kilometre). Elevations are
+  those of the climbs (20 m grid, median of five against spikes, 120 m moving average); times count moving time only (a
+  pause or a recording gap is not a slow kilometre) and a stretch implying more than 150 km/h is a GPS jump, never a
+  record. Statistics corrected by hand (`statsOverride`) are not read, and the records follow the points: changing the
+  track recomputes them. `recordLandmarks` (`osm/landmarks.ts`) makes them `Landmark`s of kind `'record'` (id
+  `record:<track id>:<kind>`, at the track, `name` and `text` « Montée la plus raide · 18 % sur 400 m » in the language of the
+  interface, priority 32 for the steepest, fastest descent and highest, 26 for the others), and `publish` (`osm/store.ts`)
+  adds them to the list of every track, before the ranking and the hidden ones, even before OpenStreetMap answers or when
+  it fails. They are therefore Auto / Toujours / Jamais, ranked, dismissed by « Garder les « Toujours » » and listed in
+  the window of the map like the others, with the badge « Record » and no distance to the track. Their 3D label is a
+  `'poi'` label with the `trophee` pictogram (`POI_ICONS`); `stopCandidates` offers three of them as stops
+  (`AUTO_STOP_RECORDS`: steepest climb, highest point, fastest descent, so a film of N stages has at most 3 N more stops; the
+  others stay labels, and « Arrêt » on a row adds a stop to any), except for the pauses of the films saved with the former
+  pacing (`autoStops` 'rythme'), the stop's label being the record's text. A landmark is copied with `withLandmarkFields`
+  (ranking, stages), never by a spread, which would freeze the `name` / `text` getters in the language of the moment. A segment
+  join (a gap, a chained track, a lift) is no slope: the steepest and fastest descent windows near one are skipped. `hasOsmLandmarks` (`osm/store.ts`) keeps the
+  OpenStreetMap credit for real OSM landmarks: records alone do not need it. The hint under the list (`landmarks.hintRecords`)
+  says what a record is. To add a kind: `RECORD_KINDS`, `detectRecords`, `recordValueText`, the `landmarks.record.<kind>`
+  name in the five languages, a test in `records.test.ts`.
 - **Water points**: landmark type `waterPoint` (Overpass `amenity=drinking_water`, named "Eau potable" (drinking
   water) when it has no name, and named `natural=spring`), off by default for the film and the labels; an old project
   receives the type through `withLandmarkDefaults`.
@@ -2283,7 +2311,7 @@ exports) gets it from the terrain source of the settings.
   `withOverlayDefaults`) is the opacity the logo is drawn at. Widgets added after the first format (`minimap`,
   `credits`, `leaderboard`) are completed with
   their default before validation (`withOverlayDefaults`, via `SETTING_UPGRADES` in `src/project/document.ts`): old projects
-  and presets always load (`minimap` and `leaderboard` disabled, `credits` enabled). Live widgets fade out during the
+  and presets always load (`minimap` and `leaderboard` disabled, `credits` « short »). Live widgets fade out during the
   cards.
   Logo as a PNG data URL of at most 512 px (self-contained projects). Validation: `isValidOverlay` (`SETTING_CHECKS`).
 - **What the cards show** (`CardExtras` on `overlay.title` and `overlay.end`, every key optional and absent in older
@@ -2354,16 +2382,25 @@ exports) gets it from the terrain source of the settings.
   credits only: it is a transition of the whole picture (widgets left on a black screen would float), brief, and the
   credits required by the licenses stay readable. The export counts its opacity in `overlayTimedState` (a held frame
   is not repeated during a fade); the overlay-only export contains it too.
-- **Source credits** (`settings.overlay.credits { enabled, position }`, enabled by default, four corners, chosen on the same 3 × 3 grid with only the corners enabled): small line
-  along the edge, outside the safety margins, on a discreet background specific to each style (`theme.credits`: translucent ink
-  and white text for "Éditorial" and "Diffusion", paper and ink for "Application", readable on snow as on forest), wrapped
-  to the safe width if it is long. Content: `overlayCredits` (`data.ts`), the same strings as the status bar
-  (current terrain and imagery, Open-Meteo when the weather is loaded, OpenStreetMap when landmarks, water or the
-  highlighted region are), read from the
-  stores by `overlayExtras` (`exportOverlay.ts`) for the preview as for the export. Drawn even with the overlay disabled
-  (the preview mounts `OverlayCanvas` as soon as either one is active). With credits disabled, the Open-Meteo credit is still drawn
-  alone when the weather is shown (as before); enabled, it joins the line. Disabling them means citing the sources
-  elsewhere (text in the Habillage panel).
+- **Source credits** (`settings.overlay.credits { mode, position }`, `mode` « short » by default, four corners, chosen on the same 3 × 3 grid with only the corners enabled).
+  Content: `creditEntries` (`data.ts`: sentence and attribution page of each source in use; `overlayCredits` keeps the sentences, the
+  same strings as the status bar: current terrain and imagery, Open-Meteo when the weather is loaded, OpenStreetMap when
+  landmarks, water, forests, glaciers or the highlighted region are, the credit naming only the layers drawn: « Repères, eau, forêts
+  et glaciers »), `overlayShortCredits` (the short form: « © IGN · © Mapterhorn · © OpenStreetMap · Open-Meteo.com », what each source's terms
+  require is in `docs/sources.md` « Attribution in the film »; Esri and OpenTopoMap keep their required wording), both read from the stores
+  by `overlayExtras` (`exportOverlay.ts`, through `currentCreditSources`) for the preview as for the export. Drawn even with the overlay disabled
+  (`OverlayCanvas` is mounted whenever there is a track). **During the film**, by `mode`: « short » (« Discrets ») is `drawShortCredits`
+  (small capitals, 70 % opacity, white with a shadow, no box, the overlay style's font, along the corner); « full » is `drawCredits` (the whole
+  sentence on the style's discreet background, `theme.credits`, wrapped to the safe width); « end » draws only the credits that must stay on
+  screen, in the short form: Open-Meteo while the weather is shown (its licence asks for the credit next to the data) and the sources flagged in
+  `PERMANENT_CREDIT` (`data.ts`, `overlayPermanentCredits`, `extras.permanentCredits`: Esri, whose terms ask for the credit always visible with
+  the map). **At the end, always**, whatever the mode: the full sentences (`extras.credits`) close the roll of the closing card (`drawCreditsRoll`:
+  a small « Sources » title and the sentences after the last line; the roll stops with them on screen instead of leaving the frame, and returns
+  how much of them shows), else (a card without roll, or no closing card) `drawEndSources` along the bottom edge over the last seconds of the film
+  (`endSourcesOpacity`, whatever the window of the card), lifted above the widgets it would cover; the corner credits fade out as the sources
+  come in (`sourcesCover`), and `overlayTimedState` counts the opacity of the bottom block so the export redraws the fade. The poster keeps the full sentences. Old projects: `withOverlayDefaults`
+  turns the former `enabled` switch into `mode` (on: « short », off: « end »). « Copier les crédits » (`CopyCreditsButton` in the
+  export drawer, summary and result) copies `creditsDescription` (each sentence then its page) through `copyText`.
 - **Fonts**: a canvas does not trigger the download of web fonts on its own; `loadOverlayFonts()` requests them before the
   first frame, and the export must wait for it too. Bundled fonts (`src/ui/fonts.css`, `public/fonts/`):
   Fraunces 300–700, IBM Plex Sans and Sans Condensed available offline.
@@ -3228,8 +3265,9 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
 ## Several tracks (« Plusieurs traces »)
 
 - Block of the track list from two tracks: « La première » (default, nothing changes: the first track is flown, the
-  others drawn), « À la suite », « En parallèle » (the ghost race). Stored in `settings.race`, no migration: « En
-  parallèle » is `enabled` (as before), « À la suite » the optional `sequence` flag (ignored while `enabled`); one track is
+  others drawn), « À la suite », « En parallèle » (the ghost race), « Bilan » (a year of outings, below). Stored in
+  `settings.race`, no migration: « En parallèle » is `enabled` (as before), « À la suite » the optional `sequence` flag
+  (ignored while `enabled`), « Bilan » `sequence` + the optional `bilan` flag; one track is
   never a sequence (`playsInSequence`). The transition and the cards between the stages are the film's **junctions**
   (below); `race.stageCards` and `race.stageTransition` of a project saved before them are read once, by
   `withStageSettingsMigrated` (in `sanitizeSettings`), into `film.junctionDefault` and dropped from `race`.
@@ -3242,6 +3280,44 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
   a track removed or changed meanwhile, and `mergeByTrack` (`osm/byTrack.ts`) merges them for drawing; the forests are placed from all
   of them, a chunk's distance being to the nearest track. The `trackUnderMarker` is not needed: every stage's water and trees are drawn
   at once. Limit: the queue is sequential (the Overpass policy), so a film of many stages waits longer for its last stage.
+- **« Bilan »** (4.2, `src/flyover/bilan.ts`; `settings.race.bilan`, always with `sequence`): one film of a season or a year of outings,
+  reusing the stages, junctions and cards of « À la suite » rather than a film engine of its own. Chosen as a fourth mode in the
+  « Plusieurs traces » panel (`withMultiMode`: `{ sequence: true, bilan: true }`, the others drop the flag; no migration, `bilan` is
+  optional and `isValidRace` checks it). `playsInSequence` is unchanged, `playsBilan(race, n)` asks for the flag.
+  - **Plan** (`planBilan`, pure, kept by `bilanPlanOf` while the tracks' ids, points, names and corrections stay): `clusterBoxes` groups
+    the tracks into **regions** (single linkage on the gap between their boxes, `boxGapM`, at most `BILAN_REGION_KM` = 50 km); the regions
+    are ordered by the first date of their outings, each region's outings by `stats.startTime`, those without one last in list order
+    (`orderedTracks` returns `plan.tracks`: `race.order` and the hand reordering do not apply, `setStageOrder` refuses; the list shows the
+    order, without handles). `BilanPlan` `{ tracks, regions: BilanRegion[] { firstStage, stageCount, fromMs?, toMs?, figures }, regionOf[] }`;
+    `filmSequenceOf` adds `Sequence.bilan { plan, views }` (`views[r]`: the region's outings as one track, `buildSequence`, what the camera frames).
+    `outingFigures` / `addFigures` read the figures (corrections of « Corriger les chiffres » first) for the region cards, the totals and the counters.
+  - **Camera**: `filmFollowOf` gives `FollowedFlight.overview` (the region's path, `trackPathOf(views[regionOf[stage]])`) with the stage's path
+    and progress; `computeFilmView` then returns `bilanView` before any shot, stop, key or camera style: `overviewView` of the region seen from the
+    south (north up, `OVERVIEW_PITCH_DEG`, the distance of a track of the region's box), the marker `markerAt` on the outing being drawn. A pure
+    function of the progress: the view only changes at the cut between two regions, under the fade. The opening and closing shots therefore keep
+    their lengths and their cards but hold the first and the last region's view. The terrain area is that of a region view (`TerrainLayer`:
+    `engineAreaFor(bounds, true)`, detail around the tracks, coarse up to `REGION_AREA_MARGIN_M` beyond), so only the tiles of the high view load; a region 1,000 km from the frame's origin is seen a few degrees off the local « up » (the Earth's curvature in
+    the local frame), which `overviewView` does not correct.
+  - **Clock**: `FilmClockFor.bilan` (the plan, from `useFilmSource` / `getFilmSource`) makes `junctionInputsFor` use `bilanInputs` instead of
+    `junctionPlan` and the film's junctions: a `coupe` between two outings of a region, a `fondu-noir` held `BILAN_REGION_HOLD_S` (1.5 s) between two regions, no night,
+    and every stage the same flight time, `bilanStageS` = the flyover duration ÷ the number of stages, at least `BILAN_STAGE_MIN_S` (2 s) (`FlightStage.durationS`
+    for all, so the film lasts N × that, + the fades, and « Durée du vol » only counts above the minimum). The timeline's « Étapes » lane shows them without
+    editing, no card blocks; the inspector says the passages are automatic.
+  - **Lines**: `TrackLines` forces the draw-on (without a tail) and dims the lines of the finished outings (`dimTrackLineSet`, `TrackLineSet.dim`: the colours
+    × 0.45 once the distance drawn reaches the outing's length, but never the last one; `applyExposure` keeps it). The « Trace » section shows the switch
+    on and greyed with the reason.
+  - **Counters**: `OverlayFilm.before` (`figuresBefore`) and `OverlayFrame.cumul` `{ outings, distanceM, ascentM?, durationS? }` (`overlayFilmFrameAt`: the stages before +
+    the one being drawn at the marker); `counterText` reads the cumul in a Bilan: the new counter `outings` (`COUNTER_IDS`, off in older projects by `withOverlayDefaults`,
+    offered in the panel for a Bilan only), distance, D+ and time; the others return null (greyed with the reason, `BILAN_COUNTERS`). Whole-film stats (`bilanStats`):
+    the sums over the outings, the highest point, `outings`; the closing card's default figures are `BILAN_CARD_FIGURES` (`cardFigures(…, bilan)`), `CARD_FIGURES` has `outings`.
+  - **Cards and stamp**: `stageCardAt` gives a card to the first outing of each region (none with a single region), which outlasts that outing up to the junction that
+    leaves the region: the automatic text is « Région n sur N » and a line (`regionLine`: outings, km, D+, months), through the card's `text` / `subtitle` (the film's
+    own text, set per card, still wins; `{name}` is « Région n sur N »). `bilanStampAt` (`draw.ts`) is a `FilmText` for the outing being drawn (date, then name), added to
+    `extras.texts` by `overlayExtras` (also in the export's held-frame key), drawn overlay on or off, without making the live widgets give way as a card does.
+  - **Requests**: `filmTracksOf` returns none (no water or forests), `LandmarkPanel` asks OpenStreetMap for no landmarks, `WeatherPanel` for no later stage's weather,
+    `GlacierLayer` for no glaciers, and `WeatherPanel` turns the weather off (`syncWeather(track, false)`: one series would land on whichever outing has the first track's id, so no weather widget, scene weather or weather-based snow; the manual snow limit still applies, in the terrain shader): a Bilan sends no request per outing (a highlighted region excepted). What a Bilan fixes is said where it would be set: « Fixe en mode Bilan » in the camera panel and the shot inspector, the Water, Forests and weather switches greyed with the reason, the snow hint. Region cards read the common card only (`junctionDefault`), not the cards left on junctions by « À la suite ». The counters scale the part drawn of an outing to its corrected figures (`cumulAt`), so they do not jump at a cut; the stamp ends at `holdStartS` of its junction.
+  - **Labels**: `Labels` draws no start or finish pin and no kilometre label (two pins per outing would crowd a year); the waypoints of the files stay.
+  - Limits: no low flyover of each outing, no year poster (mosaic), no weather per outing; the weather, the poster and the batch still read `tracks[0]`; no calendar strip, no longest / highest outing on the closing card; a region is named « Région n sur N » (no place name: it would take a request).
 - « À la suite » (`src/flyover/sequence.ts`, pure): the film flies a **sequence track** (`buildSequence`: the tracks'
   segments one after the other in list order, id `suite:<ids>`, name `chainName`, never stored), cached on the tracks'
   ids, points and names (`sequenceOf`) so it keeps its identity. Unlike « Enchaîner en un seul parcours », nothing is
@@ -3395,6 +3471,26 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
 - « Un marqueur par jour » (Marqueur section): one marker key per junction (`junctionsM`: the segment starts), set
   afterwards in the inspector.
 - Limit: stops, key framings and landmarks anchored in meters on the old first track are not re-anchored.
+
+## Track tools (« Outils de la trace »)
+
+Seven tools on the points of a loaded track and the export of the track as GPX, in a window of their own (`src/ui/TrackTools.tsx`) opened by one line of the track's card in the « Trace » tab, « Outils de la trace… » (`TrackToolsButton`): the editing interface is about the film, not about managing a GPX, so nothing else of it carries the tools. They act on the track in memory, never on the file.
+
+- **Pure tools** (`src/import/tools/<tool>.ts`, tested together in `tools.test.ts`): each takes `Segments` (`TrackSegment[]`; the points are addressed by one running index over every segment) and its options and returns new segments, or **the same array** when it has nothing to do (`next === segments`: the dialog says « Rien à modifier » and « Appliquer » stays off, no step is made). Points are shared with the old track (only the changed ones are copied), so a tool costs one pass.
+  - `trim(segments, first, last)`: the points `first..last` stay, times untouched; fewer than two points left is refused (unchanged).
+  - `cutSection(segments, first, last, mode)`: the points `first..last` go. `join`: the two sides stay in one segment, a straight line over the gap, the time gap kept; `split`: two segments of the same track (nothing drawn or counted between them, as for the days of a chain). A cut across segments joins the last kept point of the first with the first kept point of the last.
+  - `findSpikes` / `removeSpikes(segments, { factor = 4, minJumpM = 100 })`: an interior point of a segment is a spike when the track leaves it and comes back (`dist(prev, next) < min(leg1, leg2) / 2`), both legs are at least 100 m and, with times, both are faster than `factor` × the median speed (legs of speed > 0; without times, longer than `factor` × the median step). Compared with the previous point kept, so a second spike behind a first is judged on the clean path.
+  - `findPauses` / `removePauses(segments, { radiusM = 15, minDurationS = 120 })`: a pause is a stay: from a point, the track keeps within `radiusM` of it for `minDurationS` or more (`Pause { fromIndex, toIndex, startTime, durationS, lon, lat }`, per segment). Not a run of slow legs: the GPS wanders by several metres at rest, which breaks such runs, while a slow climb leaves the radius within the minute. The first point of the stay stays, the others go, and every later time (later segments too) moves back by the duration, so the duration and the average speed no longer count the stop. No time on a point: no pause (`hasTimes`). On the sample (7 h 14) the defaults find 25 pauses, 2 h 10.
+  - `simplify(segments, toleranceM = 2)`: `simplifyLine` of `osm/overpass.ts` (Douglas–Peucker) on each segment; the kept points are the original objects, with every measure. Warning above `SIMPLIFY_WARNING_M` = 8 m.
+  - `reverse(segments)`: points and segments reversed; a time `t` becomes `first + last − t` (first and last of the whole track), so times keep increasing and the gaps are mirrored; points without time stay without.
+  - `shiftTime(segments, offsetMs)`: every time moved; the dialog reads a start date and time on the **clock of the track** (`utcOffsetMin`, else the device's) with `clockOf` / `instantOf` and turns it into an offset.
+  - `trackToGpx(track)`: GPX 1.1 with the waypoints, one `<trkseg>` per segment, `<ele>`, `<time>` (ISO UTC) and the extensions the parser reads back: `gpxtpx:TrackPointExtension` (`atemp`, `hr`, `cad`) and a `power` element. Saved through `getPlatform().saveDocument` (`exportTrackGpx`, `ui/trackTools.ts`), named after the track (`gpxFileName`).
+- **From points to a track** (`withSegments(track, segments, tool, distances)`, `common.ts`): stats and bounds recomputed (`computeStats`, `computeBounds`). The tools that remove points leave no segment of a single point (`settled`: dropped, and a result without any segment of two points is refused: « Appliquer » stays off with the reason). The figures corrected by hand (`statsOverride`) that the tool makes wrong are dropped (`invalidatedFigures`: all of them after a trim or a cut; distance, D+ and top speed after the spikes and `simplify`; distance and duration after the pauses; D+ after a reversal; nothing after a time shift) and the window says how many before « Appliquer ». `flights` (metres along the track) move with the places through the `DistanceMap` (those on a removed stretch go; `detectFlights` needs the terrain tiles, so it is not run again); `elevationFilled` is indexed on the old points and dropped, except after a time shift, which moves nothing. Same id, colour, name, waypoints.
+- **The film follows** (`remapFilm`, `film/remap.ts`, pure; `distanceMap`, `import/tools/distanceMap.ts`): stops, camera / parameter / marker keys and speed portions are metres along the film track (the first track, or the whole sequence « À la suite »: `StageSpan`, `filmSpans`). `distanceMap(before, after, { reversed, removed })` finds the points that stay by their position and moves a place between two of them in proportion (reversal: `L − d`; a trimmed or cut stretch: `removed`). Items of the edited stage move with it, those of the later stages with the change of their stage's start, an item on a removed stretch is dropped and counted (the message says how many), a speed portion keeps what survives (under `MIN_SPEED_SPAN_M`: dropped). The texts and media attached to a stop follow it (`followStops`). The film is written with the track, outside the settings history (the tool's « Annuler » puts both back).
+- **Applying** (`applyTrackTool`, `ui/trackTools.ts`): the track is replaced in the list through `replaceTracks`, the path that « Calculer l'altitude » and the times of « Prévoir la sortie » use, so the weather (keyed by the start time), the layers keyed by the points (water, forests) and the landmarks (re-filtered on the new path from the features already fetched: a tool never extends a track beyond its old box) follow. Tracks are not in the settings history: like the chaining, the message « … appliqué » carries « Annuler » (`showUntilTracksChange`), which puts the track (and the film, if it is still as the tool left it) back and goes away on the next change to the tracks. Playback goes back to the start.
+- **Window** (`TrackToolsWindow`, a `Modal` 900 px wide, full screen on a phone): at the top the preview of the tool in use, under it the list of the seven tools (one chosen at a time; below it on a phone) and the chosen tool's panel, at the bottom « Exporter la trace en GPX » and « Fermer ». Each tool is a panel over a shared `ToolFrame` (help, controls, figures before → after of distance, D+, duration and points, « Appliquer »), keyed by the tool and by the track's points so it starts again from the new track after an application or an « Annuler ». The panel draws its preview into the slot at the top of the window through a portal (`PreviewSlot`). `TrackPreview.tsx` draws the profile and the plan of the track in SVG (no map tiles: the same offline), shades the part the tool acts on (`marks`: removed parts, pauses, spikes) and, for the range tools (trim, cut), moves the nearer of the two handles when the profile is dragged; the sliders under it move the same two indexes. Tools that need times (pauses, time shift) and tools that need three points (trim, cut) are greyed out with the reason written under them.
+- **« Annuler »**: the toasts sit under a modal window, so `applyTrackTool` also returns an `AppliedTool` and the window shows « … appliqué » (and the film items lost) with its own « Annuler » while the track still has the points of that step. The undo looks the track up by id and compares its `segments`, so a colour or a name changed since is kept and does not cancel it; any other change of the points makes it do nothing.
+- **Limits**: landmarks are re-filtered on the new path from the features already fetched; the forests, water and weather are refetched for the new points; simplifying changes the smoothed ascent a little (fewer points), shown in the before → after figures; the film items of a removed stretch are lost (the message counts them). A tool never touches the file or other tracks.
 
 ## Strava import
 

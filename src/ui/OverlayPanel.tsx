@@ -4,11 +4,13 @@ import { videoSize } from '../export/schedule'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { t, useT } from '../i18n'
 import type { CardId } from '../film/cards'
-import { filmTrackOf, playsInSequence } from '../flyover/sequence'
+import { filmTrackOf, playsBilan, playsInSequence } from '../flyover/sequence'
 import { hasMetric } from '../flyover/trackColor'
 import { fileToLogoDataUrl } from '../overlay/assets'
 import {
+  BILAN_COUNTERS,
   COUNTER_IDS,
+  CREDITS_MODES,
   CREDITS_POSITIONS,
   OFFSET_MAX_PX,
   OVERLAY_FONT_IDS,
@@ -60,6 +62,7 @@ const COUNTER_LABELS: Record<CounterId, string> = {
   get pace() { return t('overlay.counter.pace') },
   get power() { return t('overlay.counter.power') },
   get temperature() { return t('overlay.counter.temperature') },
+  get outings() { return t('overlay.counter.outings') },
 }
 
 type WidgetKey = Exclude<keyof OverlaySettings, 'enabled' | 'style' | 'overrides'>
@@ -498,6 +501,7 @@ export function OverlayPanel() {
   const track = useAppStore((s) => s.tracks[0])
   const severalTracks = useAppStore((s) => s.tracks.length >= 2)
   const raceOn = useAppStore((s) => s.settings.race.enabled)
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const hasWeather = useWeatherStore((s) => s.series !== null)
   const [logoError, setLogoError] = useState<string | null>(null)
 
@@ -518,7 +522,11 @@ export function OverlayPanel() {
     pace: !track || hasMetric(track, 'speed'),
     power: !track || hasMetric(track, 'power'),
     temperature: !track || hasMetric(track, 'temperature'),
+    outings: true,
   }
+  // a « Bilan » counts the outings: only the figures that add up have a counter there
+  const counterShown = (counter: CounterId) => (counter === 'outings' ? bilan : true)
+  const counterOn = (counter: CounterId) => available[counter] && (!bilan || BILAN_COUNTERS.includes(counter))
 
   const chooseLogo = async () => {
     try {
@@ -586,18 +594,19 @@ export function OverlayPanel() {
               <fieldset className="field min-w-0">
                 <legend className="type-label mb-1">{t('overlay.panel.values')}</legend>
                 <div className="chips">
-                  {COUNTER_IDS.map((counter) => (
+                  {COUNTER_IDS.filter(counterShown).map((counter) => (
                     <Chip
                       key={counter}
-                      checked={overlay.counters.fields[counter] && available[counter]}
-                      disabled={!available[counter]}
-                      title={available[counter] ? undefined : t('overlay.panel.missing')}
+                      checked={overlay.counters.fields[counter] && counterOn(counter)}
+                      disabled={!counterOn(counter)}
+                      title={counterOn(counter) ? undefined : bilan && available[counter] ? t('overlay.panel.notInBilan') : t('overlay.panel.missing')}
                       onChange={(on) => setWidget('counters', { fields: { ...overlay.counters.fields, [counter]: on } })}
                     >
                       {COUNTER_LABELS[counter]}
                     </Chip>
                   ))}
                 </div>
+                {bilan && <p className="type-hint">{t('overlay.panel.bilanCounters')}</p>}
               </fieldset>
             </WidgetGroup>
 
@@ -748,22 +757,27 @@ export function OverlayPanel() {
       )}
 
       <PanelSection title={t('overlay.panel.credits')}>
-        <div className="flex items-center gap-1">
-          <Switch checked={overlay.credits.enabled} onChange={(on) => setWidget('credits', { enabled: on })}>{t('overlay.panel.burnCredits')}</Switch>
-          <InfoTip text={t('overlay.panel.creditsTip')} />
-        </div>
-        {overlay.credits.enabled ? (
-          <>
-            <AnchorPicker
-              label={t('overlay.position')}
-              value={overlay.credits.position}
-              allowed={CREDITS_POSITIONS}
-              onChange={(position) => setWidget('credits', { position })}
-            />
-            <p className="type-hint">{t('overlay.panel.creditsHint')}</p>
-          </>
-        ) : (
-          <p className="type-hint">{t('overlay.panel.creditsOff')}</p>
+        <fieldset className="field min-w-0">
+          <legend className="type-label mb-1 flex items-center gap-1">
+            {t('overlay.panel.creditsMode')}
+            <InfoTip text={t('overlay.panel.creditsTip')} />
+          </legend>
+          <RadioGroup wrap aria-label={t('overlay.panel.creditsMode')} value={overlay.credits.mode} onChange={(mode) => setWidget('credits', { mode })}>
+            {CREDITS_MODES.map((mode) => (
+              <Radio key={mode} value={mode}>
+                {t(`overlay.panel.creditsMode.${mode}`)}
+              </Radio>
+            ))}
+          </RadioGroup>
+          <p className="type-hint">{t('overlay.panel.creditsHint')}</p>
+        </fieldset>
+        {overlay.credits.mode !== 'end' && (
+          <AnchorPicker
+            label={t('overlay.position')}
+            value={overlay.credits.position}
+            allowed={CREDITS_POSITIONS}
+            onChange={(position) => setWidget('credits', { position })}
+          />
         )}
       </PanelSection>
     </>

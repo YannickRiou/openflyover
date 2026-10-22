@@ -1073,3 +1073,59 @@ describe('high view of the day during the night', () => {
     })
   })
 })
+
+describe('« Bilan »: the camera holds the high view of the region', () => {
+  // two outings of one region (a few km apart), the marker on the second
+  const other = buildTrackPath(
+    buildTrack({ name: 'u', source: 'gpx', segments: [{ points: [{ lon: 6.9, lat: 45.9, ele: 1100 }, { lon: 6.9, lat: 45.95, ele: 1100 }] }] }),
+  )
+  const region = buildTrackPath(
+    buildTrack({
+      name: 'region',
+      source: 'gpx',
+      segments: [
+        { points: [{ lon: 6.85, lat: 45.88, ele: 1000 }, { lon: 6.85, lat: 45.92, ele: 1000 }] },
+        { points: [{ lon: 6.9, lat: 45.9, ele: 1100 }, { lon: 6.9, lat: 45.95, ele: 1100 }] },
+      ],
+    }),
+  )
+  const clock = clockOf({ style: 'descente', durationS: 5 }, { style: 'situation', durationS: 4 })
+  const held = (progress: number, stagePath = other) => ({ path: stagePath, progress, overview: region })
+  const north = { target: new Vector3(), position: new Vector3(0, 0, 1) }
+
+  it('is the overview of the region, north up, wherever the marker, the shot or the camera style', () => {
+    const wanted = overviewView(region, frame, flat, 1, 16 / 9, north)
+    for (const [timeS, progress] of [[0, 0], [2, 0], [8, 0.3], [20, 0.9], [clock.totalTime(), 1]]) {
+      const view = computeFilmView(path, clock, timeS, progress, frame, flat, { ...options, follow: () => held(0.5) })
+      expectSameView(view, wanted)
+    }
+    for (const style of ['orbit', 'free', 'suivi'] as CameraStyle[]) {
+      expectSameView(computeFilmView(path, clock, 8, 0.3, frame, flat, { ...options, camera: { ...CAMERA, style }, follow: () => held(0.5) }), wanted)
+    }
+    // the camera stands south of what it frames, above it
+    expect(wanted.position.z).toBeGreaterThan(wanted.target.z)
+    const back = wanted.position.clone().sub(wanted.target)
+    expect((Math.asin(back.y / back.length()) * 180) / Math.PI).toBeCloseTo(OVERVIEW_PITCH_DEG, 6)
+  })
+
+  it('shows the whole region: its box centre is the target', () => {
+    const box = trackBox(region, frame)
+    const view = computeFilmView(path, clock, 8, 0.3, frame, flat, { ...options, follow: () => held(0.5) })
+    expect(view.target.x).toBeCloseTo((box.minX + box.maxX) / 2, -1)
+    expect(view.target.z).toBeCloseTo((box.minZ + box.maxZ) / 2, -1)
+  })
+
+  it('puts the marker on the outing being drawn', () => {
+    const at = (progress: number) => computeFilmView(path, clock, 8, 0.3, frame, flat, { ...options, follow: () => held(progress) }).marker
+    expect(at(0).distanceTo(markerAt(other, 0, frame, flat, 1, 3))).toBeLessThan(1e-9)
+    expect(at(1).distanceTo(markerAt(other, 1, frame, flat, 1, 3))).toBeLessThan(1e-9)
+    expect(at(1).distanceTo(at(0))).toBeGreaterThan(1000)
+  })
+
+  it('flies the stage as ever without an overview', () => {
+    const wanted = overviewView(region, frame, flat, 1, 16 / 9, north)
+    const flown = computeFilmView(path, clock, 8, 0.3, frame, flat, { ...options, follow: () => ({ path: other, progress: 0.5 }) })
+    expect(flown.position.distanceTo(wanted.position)).toBeGreaterThan(1000)
+    expect(flown.target.distanceTo(markerAt(other, 0.5, frame, flat, 1, 3))).toBeLessThan(1000)
+  })
+})

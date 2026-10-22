@@ -9,6 +9,8 @@
  * of the code reads junctions only through `junctionOf` and `junctionCardOf`, never the optional fields.
  */
 import { smootherstep } from '../core/math'
+import { BILAN_REGION_HOLD_S, bilanStageS } from '../flyover/bilan'
+import type { BilanPlan } from '../flyover/bilan'
 import { nightPauseS } from '../flyover/nights'
 import type { FlightNight } from '../flyover/nights'
 import type { FlightStage } from '../flyover/pacing'
@@ -405,6 +407,29 @@ export function junctionPlan(
     else junctions.push({ id, afterTrackId, atM, kind, holdS: kind === 'coupe' ? 0 : holdS, recap })
   })
   return { junctions, nights: automatic.filter((n) => !handled.has(n)) }
+}
+
+/**
+ * The junctions and the stages of a « Bilan »: no night, a cut between two outings of a region, a fade to black
+ * (BILAN_REGION_HOLD_S) from one region to the next, and every stage the same time (`bilanStageS`). What the film stores
+ * of its junctions does not apply: the passages are the chapters'.
+ */
+export function bilanInputs(
+  plan: Pick<BilanPlan, 'regionOf'>,
+  stageIds: readonly string[],
+  cutsM: readonly number[],
+  lengthM: number,
+  durationS: number,
+): { junctions: JunctionInput[]; nights: FlightNight[]; stages: FlightStage[] } {
+  const junctions = cutsM.flatMap((atM, k): JunctionInput[] => {
+    const afterTrackId = stageIds[k]
+    if (afterTrackId === undefined) return []
+    const changes = plan.regionOf[k] !== plan.regionOf[k + 1]
+    return [{ id: junctionId(afterTrackId), afterTrackId, atM, kind: changes ? 'fondu-noir' : 'coupe', holdS: changes ? BILAN_REGION_HOLD_S : 0 }]
+  })
+  const stageS = bilanStageS(stageIds.length, durationS)
+  const stages = stageIds.map((_, k) => ({ fromM: k === 0 ? 0 : cutsM[k - 1], toM: k < cutsM.length ? cutsM[k] : lengthM, durationS: stageS }))
+  return { junctions, nights: [], stages }
 }
 
 /** Length of the fade into and out of a dip (seconds), ending at the cut and starting at the end of the hold. */

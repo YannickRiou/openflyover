@@ -169,7 +169,7 @@ describe('frozen old projects', () => {
       counters: { fields: { heartRate: true } },
       weather: { enabled: true, anchor: 'top-left', size: 1 },
       minimap: { enabled: true, anchor: 'bottom-right', size: 1.5, northArrow: false },
-      credits: { enabled: true, position: 'bottom-right' },
+      credits: { mode: 'short', position: 'bottom-right' },
       leaderboard: { enabled: false, anchor: 'middle-right', size: 1 },
     })
     expect(s.landmarks).toEqual({

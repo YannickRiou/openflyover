@@ -10,7 +10,7 @@ import { create } from 'zustand'
 import type { Track } from '../core/types'
 import { trackPathOf } from '../flyover/path'
 import { setLabelSource, useLabelSources } from '../scene/labelSources'
-import { DEFAULT_LANDMARK_SETTINGS, LANDMARK_DENSITY_COUNTS, buildLandmarks, landmarkLabels, splitHidden, withRank } from './landmarks'
+import { DEFAULT_LANDMARK_SETTINGS, LANDMARK_DENSITY_COUNTS, buildLandmarks, landmarkLabels, recordLandmarks, splitHidden, withRank } from './landmarks'
 import type { Landmark, LandmarkSettings } from './landmarks'
 import { BUSY_STATUSES, OverpassError, fetchTrackFeatures } from './overpass'
 import type { OsmFeature } from './overpass'
@@ -59,9 +59,12 @@ function publish(tracks: readonly Track[], settings: LandmarkSettings, message: 
   const hidden: Record<string, Landmark[]> = {}
   for (const track of tracks) {
     const list = features[track.id]
-    if (!list) continue
-    const built = buildLandmarks(list, trackPathOf(track), { ...settings, maxCount: LANDMARK_DENSITY_COUNTS[settings.density] })
-    const split = splitHidden(withRank(built, settings.rank), settings.hiddenIds)
+    const built = list ? buildLandmarks(list, trackPathOf(track), { ...settings, maxCount: LANDMARK_DENSITY_COUNTS[settings.density] }) : []
+    // the records of the outing come from the track itself: they are there before OpenStreetMap answers, and without it
+    const dismissed = new Set(settings.dismissedIds)
+    const all = [...built, ...recordLandmarks(track, built).filter((r) => !dismissed.has(r.id))].sort((a, b) => a.alongM - b.alongM || b.priority - a.priority)
+    if (!list && all.length === 0) continue
+    const split = splitHidden(withRank(all, settings.rank), settings.hiddenIds)
     landmarks[track.id] = split.shown
     hidden[track.id] = split.hidden
   }
@@ -139,6 +142,11 @@ export function resetLandmarkStore(): void {
   const state = useLandmarkStore.getState()
   if (state.status !== 'idle' || Object.keys(state.features).length > 0) useLandmarkStore.setState({ ...INITIAL })
   if (useLabelSources.getState().sources.osm) setLabelSource('osm', [])
+}
+
+/** Whether some of `landmarks` (per track) come from OpenStreetMap, which then is credited: the records come from the track. */
+export function hasOsmLandmarks(landmarks: Readonly<Record<string, readonly Landmark[]>>): boolean {
+  return Object.values(landmarks).some((list) => list.some((l) => l.kind !== 'record'))
 }
 
 /** Water polygons of OpenStreetMap shown in the scene (scene/WaterLayer.tsx), for the source credits. */

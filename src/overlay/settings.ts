@@ -87,9 +87,11 @@ export const OVERLAY_ANCHOR_LABELS: Record<OverlayAnchor, string> = {
   get 'bottom-right'() { return t('overlay.anchor.bottom-right') },
 }
 
-export const COUNTER_IDS = ['distance', 'altitude', 'ascent', 'slope', 'time', 'clock', 'speed', 'pace', 'heartRate', 'power', 'temperature'] as const
+export const COUNTER_IDS = ['distance', 'altitude', 'ascent', 'slope', 'time', 'clock', 'speed', 'pace', 'heartRate', 'power', 'temperature', 'outings'] as const
 /** Counters added after the first saved format: off in older projects and presets (`withOverlayDefaults`). */
-const COUNTERS_ADDED: readonly CounterId[] = ['slope', 'clock', 'pace', 'power', 'temperature']
+const COUNTERS_ADDED: readonly CounterId[] = ['slope', 'clock', 'pace', 'power', 'temperature', 'outings']
+/** The counters of a « Bilan »: the figures that add up over the outings (the others have no meaning there). */
+export const BILAN_COUNTERS: readonly CounterId[] = ['outings', 'distance', 'ascent', 'time']
 export type CounterId = (typeof COUNTER_IDS)[number]
 
 /** Size multiplier of a widget (1 = default size). */
@@ -111,6 +113,9 @@ export const PROFILE_HEIGHT_MAX = 0.3
 /** Corners where the source credits can sit (along the edge, outside the safe area). */
 export const CREDITS_POSITIONS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'] as const
 export type CreditsPosition = (typeof CREDITS_POSITIONS)[number]
+/** What the film shows of the source credits: the short form (« Discrets »), the full sentence, or only the closing lines. */
+export const CREDITS_MODES = ['short', 'full', 'end'] as const
+export type CreditsMode = (typeof CREDITS_MODES)[number]
 /** Longest side of the logo kept in the settings (pixels). */
 export const LOGO_MAX_SIZE_PX = 512
 /** Largest free offset of a widget from its anchor, either way (pixels of the exported film). */
@@ -203,11 +208,13 @@ export interface TitleCardSettings extends Sized, CardExtras {
   window?: CardWindow
 }
 
-/** Figures a card can show, in the order it draws them. */
-export const CARD_FIGURES = ['distance', 'ascent', 'descent', 'maxAltitude', 'minAltitude', 'time', 'maxSpeed', 'avgSpeed', 'avgPace', 'date'] as const
+/** Figures a card can show, in the order it draws them (`outings`: only a « Bilan » has them). */
+export const CARD_FIGURES = ['outings', 'distance', 'ascent', 'descent', 'maxAltitude', 'minAltitude', 'time', 'maxSpeed', 'avgSpeed', 'avgPace', 'date'] as const
 export type CardFigure = (typeof CARD_FIGURES)[number]
 /** The figures of the closing card until others are chosen: those it always showed. */
 export const END_CARD_FIGURES: readonly CardFigure[] = ['distance', 'ascent', 'maxAltitude', 'time', 'maxSpeed']
+/** What the closing card of a « Bilan » shows until the film chooses: the totals of the year. */
+export const BILAN_CARD_FIGURES: readonly CardFigure[] = ['outings', 'distance', 'ascent', 'time', 'maxAltitude']
 /** Longest free line of a card (characters). */
 export const CARD_LINE_MAX = 120
 
@@ -273,11 +280,12 @@ export interface MiniMapSettings extends Sized {
 }
 
 /**
- * Credits of the map, relief, weather and OpenStreetMap sources burned into every frame (their licences require
- * attribution in the published film). Independent of `enabled`: drawn even without the rest of the overlay.
+ * Credits of the map, relief, weather and OpenStreetMap sources burned into the film (their licences require
+ * attribution in the published film). Independent of `enabled`: drawn even without the rest of the overlay. The full
+ * form always closes the film, whatever `mode`.
  */
 export interface CreditsSettings {
-  enabled: boolean
+  mode: CreditsMode
   position: CreditsPosition
 }
 
@@ -312,7 +320,7 @@ export const DEFAULT_OVERLAY: OverlaySettings = {
     enabled: true,
     anchor: 'top-left',
     size: 1,
-    fields: { distance: true, altitude: true, ascent: true, slope: false, time: true, clock: false, speed: false, pace: false, heartRate: false, power: false, temperature: false },
+    fields: { distance: true, altitude: true, ascent: true, slope: false, time: true, clock: false, speed: false, pace: false, heartRate: false, power: false, temperature: false, outings: true },
   },
   profile: { enabled: true, anchor: 'top-right', width: 0.3, height: 0.12 },
   logo: { enabled: false, anchor: 'bottom-right', size: 1, image: '', opacity: 1 },
@@ -320,7 +328,7 @@ export const DEFAULT_OVERLAY: OverlaySettings = {
   weather: { enabled: false, anchor: 'top-left', size: 1 },
   minimap: { enabled: false, anchor: 'bottom-right', size: 1, northArrow: true },
   leaderboard: { enabled: false, anchor: 'middle-right', size: 1 },
-  credits: { enabled: true, position: 'bottom-right' },
+  credits: { mode: 'short', position: 'bottom-right' },
 }
 
 /** Widgets a style places: its anchors and sizes are applied when the style is chosen (`withStyleLayout`). */
@@ -420,8 +428,14 @@ export function withOverlayDefaults(raw: unknown): unknown {
   if (!isRecord(raw)) return raw
   const missing = OVERLAY_ADDED_KEYS.filter((key) => !(key in raw))
   const filled = missing.length === 0 ? raw : { ...Object.fromEntries(missing.map((key) => [key, DEFAULT_OVERLAY[key]])), ...raw }
+  // the credits switch of before: on gave the short form, off the closing lines only
+  const credits = raw.credits
+  const withCredits =
+    isRecord(credits) && typeof credits.enabled === 'boolean' && !('mode' in credits)
+      ? { ...filled, credits: { mode: credits.enabled ? 'short' : 'end', position: credits.position } }
+      : filled
   const logo = raw.logo
-  const withLogo = isRecord(logo) && !('opacity' in logo) ? { ...filled, logo: { ...logo, opacity: DEFAULT_OVERLAY.logo.opacity } } : filled
+  const withLogo = isRecord(logo) && !('opacity' in logo) ? { ...withCredits, logo: { ...logo, opacity: DEFAULT_OVERLAY.logo.opacity } } : withCredits
   // the counters added since: off
   const counters = raw.counters
   const fields = isRecord(counters) ? counters.fields : undefined
@@ -572,6 +586,7 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     isValidDotColor(o.minimap.markerColor) &&
     validSized(o.leaderboard) &&
     (CREDITS_POSITIONS as readonly string[]).includes(o.credits.position) &&
+    (CREDITS_MODES as readonly string[]).includes(o.credits.mode) &&
     isValidOverrides(o.overrides) &&
     isValidLabelColors(o.labelColors) &&
     STYLED_WIDGETS.every((key) => isValidOverrides(o[key].overrides)) &&

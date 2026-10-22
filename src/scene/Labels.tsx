@@ -19,7 +19,7 @@ import { registerDrapeFlush, useExportStore } from '../export/store'
 import { useMediaStore } from '../film/media'
 import { paramAt } from '../film/paramKeys'
 import { trackPathOf } from '../flyover/path'
-import { filmTrackOf } from '../flyover/sequence'
+import { filmTrackOf, playsBilan } from '../flyover/sequence'
 import type { PoiIcon } from '../film/model'
 import { OVERLAY_THEMES, resolveLabelStyle } from '../overlay/themes'
 import type { LabelStyle } from '../overlay/themes'
@@ -285,6 +285,8 @@ export function Labels() {
   const tracks = useAppStore((s) => s.tracks)
   // climbs and kilometres along the film: the first track, or the tracks « À la suite »
   const filmTrack = useFilmTrack()
+  // a « Bilan » names no start, finish or kilometre: two pins per outing would crowd a year
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const show = useAppStore((s) => s.settings.labels)
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const pois = useAppStore((s) => s.settings.film.pois)
@@ -309,16 +311,16 @@ export function Labels() {
     const out: LandmarkLabel[] = []
     const first = filmTrack
     if (show.waypoints) out.push(...waypointLabels(tracks))
-    if (first) out.push(...kmLabels(first, show.kmStep))
+    if (first && !bilan) out.push(...kmLabels(first, show.kmStep))
     // « À la suite », every stage is flown: each one's start and finish named
     const flown = filmTrack !== tracks[0]
-    tracks.forEach((track, i) => out.push(...endpointLabels(track, show.endpoints && (i === 0 || flown))))
+    if (!bilan) tracks.forEach((track, i) => out.push(...endpointLabels(track, show.endpoints && (i === 0 || flown))))
     if (show.photos) out.push(...photoLabels(media, table))
     // a point of interest hidden with its eye (« Repères et points d'intérêt ») gets no label
     out.push(...poiLabels(pois.filter((poi) => !hiddenIds.includes(poi.id))))
     out.push(...externalLabels(sources))
     return out
-  }), [tracks, filmTrack, show, pois, hiddenIds, media, table, sources, language])
+  }), [tracks, filmTrack, bilan, show, pois, hiddenIds, media, table, sources, language])
 
   // Redraw the textures once the web font is available (the first ones may use the fallback font).
   useEffect(() => {

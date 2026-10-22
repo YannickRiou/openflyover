@@ -391,7 +391,7 @@ function switchAutoStops(on: boolean): void {
 
 export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { sheetOpen?: boolean; centred?: boolean; onUnfold?(): void }) {
   const t = useT()
-  const { track, film, durationS, pacing, landmarks, cutsM, stageIds } = useFilmSource()
+  const { track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan } = useFilmSource()
   const sequence = useFilmSequence()
   const tracks = useAppStore((s) => s.tracks)
   const settingsMarker = useAppStore((s) => s.settings.marker)
@@ -423,8 +423,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
   const profile = useMemo(() => (path ? elevationProfile(path, PROFILE_SAMPLES) : undefined), [path])
   const clockSource = useMemo<FilmClockFor>(
-    () => ({ track, film, durationS, pacing, landmarks, cutsM, stageIds }),
-    [track, film, durationS, pacing, landmarks, cutsM, stageIds],
+    () => ({ track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan }),
+    [track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan],
   )
   const input = useMemo(() => filmClockInputFor(clockSource), [clockSource])
   const candidates = useMemo(() => (track ? stopCandidates({ track, landmarks }) : []), [track, landmarks])
@@ -660,7 +660,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const isStop = (item: TimelineItem) => clock.stops.some((s) => s.id === item)
   /** the cards of the stages « À la suite » that are shown, with their window (the first one gives way to the opening title) */
   const stageCardsOf = (clk: FilmClock, f: Film, ov: OverlaySettings) =>
-    !sequence
+    // a « Bilan »: the cards are the regions', set in Trace › Plusieurs traces, not blocks
+    !sequence || sequence.bilan
       ? []
       : [null, ...clk.junctions.map((j) => j.afterTrackId)].flatMap((after, k) => {
           const window = stageCardWindow(clk, f, after)
@@ -1330,7 +1331,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           name,
           t('timeline.stage.description', { n: k + 1, track: stage.track.name }),
           BLOCK_KINDS.stage,
-          ['move', 'end'],
+          // a « Bilan »: the stages are the outings in date order, with the same time each: nothing to move or stretch
+          sequence?.bilan ? [] : ['move', 'end'],
           undefined,
           undefined,
           <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px]" style={{ background: color }} />,
@@ -1340,8 +1342,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         const fade = after.kind === 'fondu-noir' || after.kind === 'fondu-blanc'
         const passage = fade ? `${JUNCTION_KIND_LABELS[after.kind]} · ${formatNumber(after.holdS, 1)} s` : JUNCTION_KIND_LABELS[after.kind]
         // what the clock plays here: the passage (or the night), with the high view of the stage before it
-        const label = junctionOf(shownFilm, after.afterTrackId).recap ? t('timeline.junction.withRecap', { label: passage }) : passage
-        const own = hasOwnTransition(shownFilm, after.afterTrackId) ? '' : t('timeline.junction.byDefault')
+        const label = !sequence?.bilan && junctionOf(shownFilm, after.afterTrackId).recap ? t('timeline.junction.withRecap', { label: passage }) : passage
+        const own = sequence?.bilan || hasOwnTransition(shownFilm, after.afterTrackId) ? '' : t('timeline.junction.byDefault')
         blocks.push(
           block(
             after.id,
@@ -1350,7 +1352,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             label,
             t('timeline.junction.description', { n: k + 1, label, own }),
             JUNCTION_KINDS_LOOK[after.kind] ?? JUNCTION_KINDS_LOOK['fondu-noir'],
-            fade ? ['move', 'end'] : ['move'],
+            sequence?.bilan ? [] : fade ? ['move', 'end'] : ['move'],
             undefined,
             undefined,
             undefined,
