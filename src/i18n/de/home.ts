@@ -17,6 +17,7 @@ const messages: Messages['home'] = {
   'empty.openProject': 'Projekt öffnen…',
   'empty.recent': 'Zuletzt geöffnet',
   'empty.github': 'Open Source auf GitHub',
+  'empty.autoFilm': 'Nach dem Import erstellt „Automatischer Film“ mit einem Klick einen fertigen Film.',
 }
 
 export default messages

@@ -93,6 +93,7 @@ export function EmptyState() {
             {t('home.empty.sample')}
           </Button>
         </div>
+        <p className="type-hint mt-2 max-w-[32ch]">{t('home.empty.autoFilm')}</p>
         <button type="button" className={LINK} onClick={() => void chooseProjectToOpen()} disabled={loading}>
           {t('home.empty.openProject')}
         </button>

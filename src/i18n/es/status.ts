@@ -32,6 +32,12 @@ const messages: Messages['status'] = {
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
   sourcesUpdates: 'Aplicación de escritorio: se contacta con GitHub (github.com) solo cuando pulsas «Buscar actualizaciones» (Ajustes), para leer el archivo de versión.',
+  // --- 4.1.0: « Forêts » chip, waiting for the other OpenStreetMap requests ---
+  'source.forest': 'Bosques (OpenStreetMap)',
+  'chip.queued': '{source}: en espera, las demás cargas de OpenStreetMap van primero',
+  forestError: 'Bosques (OpenStreetMap): fallo de carga, no habrá árboles. Nuevo intento con el próximo track o el próximo cambio de ajuste.',
+  // 4.1 — Glaciers
+  'source.glacier': 'Glaciares (OpenStreetMap)',
 }
 
 export default messages

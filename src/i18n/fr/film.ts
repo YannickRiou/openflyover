@@ -102,4 +102,5 @@ export default {
   'auto.resume.hint': 'Paysage 16:9, 1 min, export YouTube HD : titre d’ouverture, arrêts aux cols et aux sommets, une carte par jour ou par étape si la trace en compte plusieurs, carte de clôture avec les chiffres.',
   'auto.souvenir.name': 'Souvenir 3 min',
   'auto.souvenir.hint': 'Paysage 16:9, 3 min, export YouTube HD : caméra calme, ralenti dans les montées, arrêts aux cols et aux sommets, cartes de jour ou d’étape, compteurs, titre d’ouverture et carte de clôture.',
+  'auto.afterImport': 'Film automatique…',
 }

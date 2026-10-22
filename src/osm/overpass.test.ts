@@ -370,4 +370,46 @@ describe('fetchTrackFeatures', () => {
     expect(await pb).toHaveLength(6)
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
+
+  it('tells when a queued query is actually sent, never for a result already cached', async () => {
+    let release!: (r: Response) => void
+    const first = new Promise<Response>((resolve) => (release = resolve))
+    const fetchMock = vi.fn()
+    fetchMock.mockReturnValueOnce(first).mockResolvedValueOnce(json({ elements: [] }))
+    const deps: OverpassDeps = { fetch: fetchMock as unknown as typeof fetch, sleep: async () => {}, storage: null, now: () => 0 }
+    const started: string[] = []
+    const pa = cachedOverpassQuery('A', parseOverpass, undefined, deps, false, () => started.push('A'))
+    const pb = cachedOverpassQuery('B', parseOverpass, undefined, deps, false, () => started.push('B'))
+    // the same query asked again while it waits (StrictMode, a setting toggled) is told too
+    cachedOverpassQuery('B', parseOverpass, undefined, deps, false, () => started.push('B again'))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(started).toEqual(['A'])
+    release(json({ elements: [] }))
+    await Promise.all([pa, pb])
+    expect(started).toEqual(['A', 'B', 'B again'])
+    await cachedOverpassQuery('A', parseOverpass, undefined, deps, false, () => started.push('cached'))
+    expect(started).toEqual(['A', 'B', 'B again'])
+  })
+
+  it('calls back at once for a query already being sent, and parks nothing for a cache hit', async () => {
+    let release!: (r: Response) => void
+    const first = new Promise<Response>((resolve) => (release = resolve))
+    const fetchMock = vi.fn()
+    fetchMock.mockReturnValueOnce(first).mockResolvedValue(json({ elements: [] }))
+    const deps: OverpassDeps = { fetch: fetchMock as unknown as typeof fetch, sleep: async () => {}, storage: null, now: () => 0 }
+    const started: string[] = []
+    const pa = cachedOverpassQuery('A', parseOverpass, undefined, deps)
+    await Promise.resolve()
+    await Promise.resolve()
+    // A is on the wire: a second caller is told straight away
+    cachedOverpassQuery('A', parseOverpass, undefined, deps, false, () => started.push('running'))
+    expect(started).toEqual(['running'])
+    release(json({ elements: [] }))
+    await pa
+    // settled: a cache hit never « starts », and leaves no waiter that a later run of the same query would wake
+    await cachedOverpassQuery('A', parseOverpass, undefined, deps, false, () => started.push('cache hit'))
+    await cachedOverpassQuery('A', parseOverpass, undefined, deps, true, () => started.push('refresh'))
+    expect(started).toEqual(['running', 'refresh'])
+  })
 })
