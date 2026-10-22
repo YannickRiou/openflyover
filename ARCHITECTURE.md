@@ -531,9 +531,11 @@ pointer (`appearance.css`).
   "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
   99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
   erreur" (N tiles in error) in yellow with a tip; nothing before the first tile; not a live region, the ring is a
-  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau / Glaciers from `useWeatherStore`,
-  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`, `useGlacierStatusStore` in `scene/glacierStatus.ts`; `fetchChip` in `mapStatus.ts`;
-  spinner / check / attention with the store message / muted); a performance readout when the bar is at least 900 px
+  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau / Forêts / Glaciers from `useWeatherStore`,
+  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`, `useGlacierStatusStore` in `scene/glacierStatus.ts`; `STATUS_CHIPS`
+  in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed shows it; `fetchChip` in `mapStatus.ts`;
+  spinner / check / attention with the store message / muted; « Forêts » has a fifth state, `queued` « en attente », spinner like loading:
+  the request waits for the Overpass queue, `onStart` of `cachedOverpassQuery`); a performance readout when the bar is at least 900 px
   wide (`perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of the renderer
   through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through the Tauri
   command `system_stats`), each part chosen in « Réglages »; then the short credits of the active sources, always
@@ -1482,7 +1484,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   checked, `autoStops` + `'temps-forts'`, own stops cleared; unchecked, generated stops written; "modifié" /
   ↺ "modifié" button for the film, `ModifiedMarker keys={['film']}`; a dot on the button when the film departs from the default; it
   closes with Esc, a click outside or Tab), collapse.
-  Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 56 px): click-drag to seek, **opening and closing
+  Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 76 px): click-drag to seek, **opening and closing
   included** (`setProgress(clock.progressAtTime(t), t)`, end of film = progress 1 without a time); it is also a keyboard
   slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). The keys are set where they live. Camera keys: the ◀ ◇ ▶ group (`KeyGroup`,
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
@@ -1832,6 +1834,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   `getSettingsHistory().transaction`, `followFlightTiming` (texts and media attached to a stop follow the new duration), `setFreeFraming(false)`
   when the aspect changes (like a platform chip), then a message with « Annuler » that undoes only while nothing else has
   changed since. Applying it again replaces its own choices; the result is the same whichever gabarit came before.
+  **Second entry point**: the dialog has one open state, `useAutoFilmOpen` (`src/ui/autoFilmOpen.ts`, `setAutoFilmOpen`), read by
+  `AutoFilmSection` (always mounted: the tab panels are force-mounted) so that there is one dialog and one logic. `runImport`
+  (`projectActions.ts`) gives the success message of an import an action « Film automatique… » (`film.auto.afterImport`) that calls
+  `setAutoFilmOpen(true)`, only when the app had no track before the import (not when a track is added to a film). The home screen
+  (`EmptyState`) says in one sentence under the sample button (`home.empty.autoFilm`) that it exists; no button there, there is no track yet.
   Strings: `film.auto.*` (five languages), « Nouveautés » 4.0. Tests: `film/autoFilm.test.ts`, `ui/autoFilm.test.ts`,
   `ui/CameraPanel.test.tsx`.
 
@@ -2157,7 +2164,7 @@ exports) gets it from the terrain source of the settings.
   `out tags bb` (ways and relations reduced to their bounding box, positioned at its middle; the box is kept for places as
   `OsmFeature.area`, with the raw `population` tag). The `around:` form on a
   polyline exceeds the public server's timeout; the distance to the track is computed locally, so changing the types or the
-  distance never triggers a new request. Queue (one request at a time), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
+  distance never triggers a new request. Queue (one request at a time, kept at one on purpose: `docs/sources.md`; `onStart` tells a caller when its request is really sent), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
   `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
   error `remark` (timeout exceeded) is an error.
 - **Pure post-processing** (`src/osm/landmarks.ts`): projection onto the path → distance and offset, filter by type and distance
@@ -2460,7 +2467,14 @@ exports) gets it from the terrain source of the settings.
   unknown word left as typed; for a single film (the batches keep « projet – format »). **Time before the first film**:
   `rateFromHistory` reads the last film rendered to the end from the history (the same rate as `filmRate`, per frame and
   megapixel) when none was measured this session, and `estimateRenderSeconds` gives « ≈ … de rendu » in the summary (cold tiles make
-  a first film slower: it is an estimate). **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
+  a first film slower: it is an estimate, which the summary's tooltip says). **Forests and snow in the estimate**: the rate is
+  that of the last film (`lastFilm`, the one `rateFromHistory` reads; every film of a session is in the history), and the
+  estimate multiplies it by `layersRatio(that film's layers, the layers to render)`, from `layersCost` = 1 + forests
+  (`FOREST_COST_AT_60` = 0.15 × density / 60, when on) + snow (`SNOW_COST` = 0.03, unless « Aucune »). The 15 % comes from the
+  4.0 measurement (« Forests »: +16 % triangles at 60 trees per hectare, assumed proportional to the density), the 3 % is the
+  extra term of the terrain's fragment shader; both are rough, and tile waiting and encoding do not change with them. A film
+  recorded before 4.1 does not say its layers (`RenderSettings.snow` / `forest` absent): no correction, the rate as it is.
+  The batch estimate (`estimateBatch`) does not use it. **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
   last folder; the desktop one is opened on the folder of the last film (`openflyover.lastFilmFolder`) and, after the export,
   « Ouvrir le dossier » shows the file in the system's file manager (`Platform.revealFile`, the opener plugin's
   `reveal_item_in_dir`, permission `opener:allow-reveal-item-in-dir`; `ExportResult.path`). The website cannot reveal a file.
@@ -2580,11 +2594,14 @@ exports) gets it from the terrain source of the settings.
   recorded, each file of a batch too; still images and posters are not. An entry (`HistoryEntry`) is flat and small:
   name, outcome and short error, output (size, fps, quality, codec, bytes), and `RenderSettings`, the curated summary
   of the settings that change the render time (atmosphere, shadows, sun, clouds mode / quality, lens, imagery and
-  terrain source ids, water on / off, camera style); no track, coordinate or project. Stored as
+  terrain source ids, water on / off, snow mode, forests on / off and density, camera style; no track, coordinate or project.
+  `snow` and `forest` came with 4.1 without a new version: `parseHistory` leaves them out of an older entry, whose detail rows
+  show « — »; a value out of range drops the field, not the entry. Stored as
   `{ v: 1, entries }` under `openflyover.exportHistory.v1` in the platform `storage`, newest first, at most
   `HISTORY_LIMIT` (20) entries and `HISTORY_MAX_BYTES`; `parseHistory` never throws and drops corrupted entries or
   fields. « Réutiliser ces réglages » (`reuseSettings` + `applySettings` in one history transaction, toast with
-  « Annuler ») puts back the export options and these fields only, ignoring unknown source ids.
+  « Annuler ») puts back the export options and these fields only (the snow's mode, not its manual line; the forests' switch and density),
+  ignoring unknown source ids.
 
 ### Render queue and rendering in the background
 
@@ -3038,8 +3055,9 @@ draped on the relief.
   multipolygons `landuse=forest` and `natural=wood`, `out geom qt`, in the boxes of the track corridor widened to **5 km**
   (`FOREST_MARGIN_M`; 8 km sent 3 MB on the sample, 5 km 0.8 MB: `docs/sources.md`). `leaf_type` (`needleleaved`,
   `broadleaved`, `mixed`) is kept when present. The request is not canceled on unmount (shared and cached); its response is only
-  ignored if it is stale. A failed request is only retried on the next track or setting change, and shows nothing (no status
-  chip: the checkbox's help says there are simply no trees when OpenStreetMap does not answer).
+  ignored if it is stale. A failed request is only retried on the next track or setting change; the status chip « Forêts » (`scene/forestStatus.ts`, set by `ForestLayer`: `queued` while the
+  Overpass queue works for the landmarks and the water, `loading` once the request is sent, `ready`, `error` with a hint saying the trees are
+  simply missing and retried on the next track or setting change; hidden when « Forêts » is off) tells the wait that follows.
 - **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
   is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned
   relation ignored, Douglas–Peucker 8 m (`FOREST_SIMPLIFY_M`), polygons < 5,000 m² dropped (`MIN_FOREST_AREA_M2`), the 600 largest
@@ -3069,7 +3087,7 @@ draped on the relief.
   dropped: the shadow pass drew every tree in range again (+3.7 M triangles, ~9 × the visible trees) for crowns of a few metres against
   shadow texels of several metres. The first draping of a
   chunk (≤ 8,000 trees a frame) shows as one frame a little longer while the film starts; the Overpass answer arrives after the
-  landmarks and the water (one request at a time): ~110 to 160 s on a slow day of the public server.
+  landmarks and the water (one request at a time: two at once would take both slots the public server grants per address, `docs/sources.md`): ~110 to 160 s on a slow day of the public server, which the chip « Forêts » now shows (« en attente » then « chargement »).
 - **Shapes** (`src/scene/treeGeometry.ts`, tested): two unit geometries merged from three's primitives, with vertex colours and no
   texture: conifer = trunk + two stacked 8-sided cones (26 triangles), broadleaf = trunk + flattened icosahedron (30 triangles).
   The instance matrix scales them to the tree (height × `TREE_WIDTH_RATIO`: 0.26 for a conifer, 0.32 for a broadleaf, wide). The
@@ -3093,7 +3111,7 @@ draped on the relief.
 - **Limits**: the trees are not the real trees (OpenStreetMap maps the forest, not each tree): positions are hashed, shapes are two
   low-poly models, heights do not follow the relief or the treeline; the budget cuts the far forests of a long track (nearest chunks to
   the track first), and a track drawn on a ridge far from its forests loses them; trees do not appear in the flat map of the poster;
-  no status chip for a failed query; the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
+  the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
   texels wide); the forests are not in the render history's
   `RenderSettings`; `forestPoints.ts` and `forest.ts` import the ring helpers of `water.ts` and `clipRing` of `waterMesh.ts`.
 

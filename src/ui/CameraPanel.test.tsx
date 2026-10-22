@@ -6,6 +6,9 @@ import { FLYOVER_DURATION_RANGE } from '../flyover/cameraSettings'
 import { buildTrack } from '../import/stats'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { CameraPanel } from './CameraPanel'
+import { setAutoFilmOpen } from './autoFilmOpen'
+import { runImport } from './projectActions'
+import { useToastStore } from './toast'
 
 beforeAll(() => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -159,5 +162,48 @@ describe('CameraPanel: « Film automatique »', () => {
     const open = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Choisir un gabarit'))!
     expect(open.disabled).toBe(true)
     act(() => root.unmount())
+  })
+})
+
+describe('« Film automatique » after an import', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+    setAutoFilmOpen(false)
+    useToastStore.setState({ toasts: [] })
+  })
+  const importSortie = () => runImport([{ label: 'sortie.gpx', run: async () => [timed] }])
+  const success = () => useToastStore.getState().toasts.find((t) => t.text.includes('Sortie'))
+
+  it('offers it in the message of the first import, and its action opens the dialog of the « Survol » tab', async () => {
+    useAppStore.setState({ tracks: [], settings: DEFAULT_SETTINGS })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<CameraPanel />))
+    await act(async () => importSortie())
+    expect(success()?.action?.label).toBe('Film automatique…')
+    expect(document.querySelector('[data-testid="auto-film-templates"]')).toBeNull()
+    await act(async () => success()!.action!.run())
+    expect(document.querySelector('[data-testid="auto-film-templates"]')).not.toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('opens nothing once the track is gone', async () => {
+    useAppStore.setState({ tracks: [], settings: DEFAULT_SETTINGS })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<CameraPanel />))
+    await act(async () => importSortie())
+    const { action } = success()!
+    await act(async () => useAppStore.setState({ tracks: [] }))
+    await act(async () => action!.run())
+    expect(document.querySelector('[data-testid="auto-film-templates"]')).toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('does not offer it when a track is added to a film', async () => {
+    useAppStore.setState({ tracks: [untimed], settings: DEFAULT_SETTINGS })
+    await act(async () => importSortie())
+    expect(success()).toBeDefined()
+    expect(success()?.action).toBeUndefined()
   })
 })

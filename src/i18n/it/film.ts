@@ -104,6 +104,7 @@ const messages: Messages['film'] = {
   'auto.resume.hint': 'Orizzontale 16:9, 1 min, esportazione YouTube HD: titolo di apertura, soste ai passi e alle cime, una scheda per giorno o per tappa se la traccia ne ha più di una, scheda di chiusura con le cifre.',
   'auto.souvenir.name': 'Ricordo 3 min',
   'auto.souvenir.hint': 'Orizzontale 16:9, 3 min, esportazione YouTube HD: camera tranquilla, rallentatore nelle salite, soste ai passi e alle cime, schede di giorno o di tappa, contatori, titolo di apertura e scheda di chiusura.',
+  'auto.afterImport': 'Film automatico…',
 }
 
 export default messages

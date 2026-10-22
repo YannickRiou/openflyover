@@ -20,6 +20,7 @@ import { isExportBusy, registerDrapeFlush, useExportStore } from '../export/stor
 import { fetchTrackForest, type ForestPolygon } from '../osm/forest'
 import { simplifyLine } from '../osm/overpass'
 import { useForestStore } from '../osm/store'
+import { setForestStatus } from './forestStatus'
 import { useAppStore } from '../state/store'
 import { type ForestChunk, placeTrees, treeKind } from './forestPoints'
 import { wakeScene } from './renderOnDemand'
@@ -204,14 +205,27 @@ export function ForestLayer() {
 
   // one Overpass query per track (cached); nothing is sent while the setting is off
   useEffect(() => {
-    if (!enabled || !track) return
+    if (!enabled || !track) {
+      setForestStatus('idle')
+      return
+    }
     // not aborted on cleanup: the query is shared and cached (StrictMode runs this effect twice), only its answer is
     // ignored once stale
     let current = true
     const trackId = track.id
-    fetchTrackForest(track).then(
-      (result) => current && setFetched({ trackId, polygons: result }),
-      () => current && setFetched({ trackId, polygons: [] }),
+    // « en attente » until the Overpass queue reaches this request, then « chargement »
+    setForestStatus('queued')
+    fetchTrackForest(track, undefined, undefined, () => current && setForestStatus('loading')).then(
+      (result) => {
+        if (!current) return
+        setFetched({ trackId, polygons: result })
+        setForestStatus('ready')
+      },
+      () => {
+        if (!current) return
+        setFetched({ trackId, polygons: [] })
+        setForestStatus('error')
+      },
     )
     return () => {
       current = false
@@ -235,7 +249,13 @@ export function ForestLayer() {
   // OpenStreetMap is credited while its forests are drawn
   const credited = forest !== null && chunks.length > 0
   useEffect(() => useForestStore.setState({ polygons: credited ? polygons.length : 0 }), [credited, polygons])
-  useEffect(() => () => useForestStore.setState({ polygons: 0 }), [])
+  useEffect(
+    () => () => {
+      useForestStore.setState({ polygons: 0 })
+      setForestStatus('idle')
+    },
+    [],
+  )
 
   // the relief changed (tiles arrived, a level of detail swapped): every chunk in range is draped again, in time
   const epoch = useRef(0)

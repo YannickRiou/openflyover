@@ -4,6 +4,7 @@ import { useRegionStore } from '../osm/region'
 import { useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { overlayCredits } from '../overlay/data'
 import { getPlatform } from '../platform'
+import { useForestStatusStore } from '../scene/forestStatus'
 import { getPerfProbe } from '../scene/perfProbe'
 import { useGlacierStatusStore } from '../scene/glacierStatus'
 import { useWaterStatusStore } from '../scene/waterStatus'
@@ -181,9 +182,9 @@ function Chip({ chip }: { chip: FetchChip }) {
   )
 }
 
-/** Weather, landmarks, region and water fetches, as chosen in « Réglages » (nothing while idle). */
+/** Weather, landmarks, region, water and forest fetches, as chosen in « Réglages » (nothing while idle). */
 function FetchChips() {
-  useT()
+  const t = useT()
   const shown = usePreferences((s) => s.status)
   // primitives only: a selector returning a new object on every call makes the store re-render forever
   const weatherStatus = useWeatherStore((s) => s.status)
@@ -196,9 +197,11 @@ function FetchChips() {
   const weather = fetchChip('weather', weatherStatus, weatherMessage)
   const landmarks = fetchChip('landmarks', landmarksStatus, landmarksMessage)
   const region = fetchChip('region', regionStatus)
+  const forestStatus = useForestStatusStore((s) => s.status)
   const water = fetchChip('water', waterStatus)
+  const forest = fetchChip('forest', forestStatus, forestStatus === 'error' ? t('status.forestError') : null)
   const glacier = fetchChip('glacier', glacierStatus)
-  const chips = [shown.weather && weather, shown.landmarks && landmarks, shown.region && region, shown.water && water, shown.glacier && glacier].filter((c) => !!c)
+  const chips = [shown.weather && weather, shown.landmarks && landmarks, shown.region && region, shown.water && water, shown.forest && forest, shown.glacier && glacier].filter((c) => !!c)
   if (chips.length === 0) return null
   return (
     <p className="flex min-w-0 items-center gap-2 overflow-hidden">

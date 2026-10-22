@@ -70,6 +70,7 @@ const CHIP_LABELS: Record<StatusChip, string> = {
   get landmarks() { return t('settings.preferences.status.landmarks') },
   get region() { return t('settings.preferences.status.region') },
   get water() { return t('settings.preferences.status.water') },
+  get forest() { return t('settings.preferences.status.forest') },
   get glacier() { return t('settings.preferences.status.glacier') },
 }
 const CHIP_SOURCES: Record<StatusChip, string> = {
@@ -77,17 +78,20 @@ const CHIP_SOURCES: Record<StatusChip, string> = {
   get landmarks() { return t('status.source.landmarks') },
   get region() { return t('status.source.region') },
   get water() { return t('status.source.water') },
+  get forest() { return t('status.source.forest') },
   get glacier() { return t('status.source.glacier') },
 }
 
 /**
- * Chip of a fetch from the status of its store (weather, landmarks, region, water), null while idle. « unavailable »
- * (untimed track) and « none » (no region around the track) are not errors.
+ * Chip of a fetch from the status of its store (weather, landmarks, region, water, forest), null while idle.
+ * « queued » waits for the other OpenStreetMap requests. « unavailable » (untimed track) and « none » (no region around the track) are not errors.
  */
 export function fetchChip(chip: StatusChip, status: string, message: string | null = null): FetchChip | null {
   const label = CHIP_LABELS[chip]
   const source = CHIP_SOURCES[chip]
   switch (status) {
+    case 'queued':
+      return { label, tone: 'loading', tip: t('status.chip.queued', { source }) }
     case 'loading':
       return { label, tone: 'loading', tip: t('status.chip.loading', { source }) }
     case 'ready':

@@ -77,6 +77,8 @@ export default {
   'updates.exportBusy': "Un export est en cours : attendez sa fin pour installer la mise à jour.",
   'updates.confirmTitle': 'Installer la mise à jour ?',
   'updates.confirmText': 'OpenFlyover va se fermer pour installer la version {version}, puis redémarrer.',
+  // --- 4.1.0: « Forêts » chip of the status bar ---
+  'preferences.status.forest': 'Forêts',
   // 4.1 — Glaciers
   'preferences.status.glacier': 'Glaciers',
 }

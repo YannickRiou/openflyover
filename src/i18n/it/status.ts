@@ -31,6 +31,10 @@ const messages: Messages['status'] = {
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value}%',
   sourcesUpdates: 'Applicazione desktop: GitHub (github.com) viene contattato solo quando premi «Cerca aggiornamenti» (Impostazioni), per leggere il file delle versioni.',
+  // --- 4.1.0: « Forêts » chip, waiting for the other OpenStreetMap requests ---
+  'source.forest': 'Foreste (OpenStreetMap)',
+  'chip.queued': '{source}: in attesa, gli altri caricamenti OpenStreetMap vengono prima',
+  forestError: 'Foreste (OpenStreetMap): caricamento non riuscito, non ci saranno alberi. Nuovo tentativo alla prossima traccia o alla prossima modifica delle impostazioni.',
   // 4.1 — Glaciers
   'source.glacier': 'Ghiacciai (OpenStreetMap)',
 }

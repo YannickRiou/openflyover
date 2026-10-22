@@ -256,7 +256,7 @@ export function parseFoldPrefs(raw: string | null): Record<string, boolean> {
 // ---------------------------------------------------------------------------
 
 /** Fetches shown as chips in the status bar. */
-export const STATUS_CHIPS = ['weather', 'landmarks', 'region', 'water', 'glacier'] as const
+export const STATUS_CHIPS = ['weather', 'landmarks', 'region', 'water', 'forest', 'glacier'] as const
 export type StatusChip = (typeof STATUS_CHIPS)[number]
 
 /**
@@ -286,7 +286,7 @@ export interface Preferences {
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
-  status: { weather: true, landmarks: true, region: true, water: true, glacier: true },
+  status: { weather: true, landmarks: true, region: true, water: true, forest: true, glacier: true },
   performance: { fps: true, gpu: false, tiles: true, memory: true, system: true },
   timelineClock: false,
   timelineMagnet: true,
