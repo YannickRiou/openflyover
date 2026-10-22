@@ -180,6 +180,8 @@ const messages: Messages['overlay'] = {
   'panel.creditsOff': 'Dann die Quellen anderswo nennen (Videobeschreibung, Abspann). Der Open-Meteo-Hinweis bleibt eingeblendet, solange das Wetter angezeigt wird, wie es seine Lizenz verlangt.',
   'panel.styleHint': 'Ein Stilwechsel setzt Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils (Positionen und Größen); Logo, freier Text und Rangliste behalten ihre.',
   'panel.styleMoved': 'Stil „{style}“: Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils gesetzt.',
+  // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
+  'draw.credits.landmarksAndWater': 'Landmarken und Wasser: {source}',
 }
 
 export default messages

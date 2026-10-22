@@ -180,6 +180,8 @@ const messages: Messages['overlay'] = {
   'panel.creditsOff': 'Cita allora le fonti altrove (descrizione del video, titoli di coda). La menzione Open-Meteo resta impressa finché il meteo è mostrato, come chiede la sua licenza.',
   'panel.styleHint': 'Cambiare stile rimette titolo, scheda di chiusura, contatori, profilo, minimappa e meteo dove li ha lo stile (posizioni e dimensioni); logo, testo libero e classifica mantengono i loro.',
   'panel.styleMoved': 'Stile «{style}»: titolo, scheda di chiusura, contatori, profilo, minimappa e meteo rimessi al posto dello stile.',
+  // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
+  'draw.credits.landmarksAndWater': 'Riferimenti e acqua: {source}',
 }
 
 export default messages

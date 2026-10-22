@@ -108,6 +108,9 @@ const messages: Messages['news'] = {
   // --- 4.0.0: forests ---
   'v40.forests.title': 'Bosques en 3D',
   'v40.forests.text': 'Los árboles salen del suelo donde OpenStreetMap tiene bosques: los valles arbolados ya no se ven planos. Ajustes en Mapa, sección «Fondo de mapa»: «Bosques» y «Densidad de árboles».',
+  // 4.0 — Agua reflectante: el mar y los ríos trazados como líneas (4.0)
+  'v40.water.title': 'Aparecen el mar y los arroyos',
+  'v40.water.text': 'A lo largo de una costa, ahora se dibuja el mar. Los ríos y arroyos que el mapa solo traza como una línea se convierten en finas cintas de agua. Todo se ajusta con «Agua reflectante (mar, lagos y ríos)», en la pestaña Mapa, sección Fondo de mapa.',
 }
 
 export default messages

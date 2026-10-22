@@ -180,6 +180,8 @@ const messages: Messages['overlay'] = {
   'panel.creditsOff': 'Then credit the sources elsewhere (video description, credits). The Open-Meteo credit stays burnt in while the weather shows, as its licence requires.',
   'panel.styleHint': 'Changing the style puts the title, the closing card, the counters, the profile, the mini-map and the weather where the style has them (positions and sizes); the logo, the free text and the leaderboard keep theirs.',
   'panel.styleMoved': 'Style “{style}”: title, closing card, counters, profile, mini-map and weather put back where the style has them.',
+  // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
+  'draw.credits.landmarksAndWater': 'Landmarks and water: {source}',
 }
 
 export default messages

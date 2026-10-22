@@ -82,6 +82,7 @@ export function currentPosterContent(): PosterContent | null {
       landmarks:
         Object.values(useLandmarkStore.getState().landmarks).some((list) => list.length > 0) ||
         (!settings.poster.flat && (useWaterStore.getState().polygons > 0 || useForestStore.getState().polygons > 0)),
+      water: !settings.poster.flat && useWaterStore.getState().polygons > 0,
     }),
   })
 }

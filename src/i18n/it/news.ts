@@ -108,6 +108,9 @@ const messages: Messages['news'] = {
   // --- 4.0.0: forests ---
   'v40.forests.title': 'Foreste in 3D',
   'v40.forests.text': 'Gli alberi spuntano dal terreno dove OpenStreetMap ha delle foreste: le valli boscose non sono più piatte. Impostazioni in Mappa, sezione «Sfondo mappa»: «Foreste» e «Densità degli alberi».',
+  // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
+  'v40.water.title': 'Compaiono il mare e i torrenti',
+  'v40.water.text': 'Lungo una costa, il mare viene ora disegnato. I fiumi e i torrenti che la mappa traccia solo come una linea diventano sottili nastri d’acqua. Tutto si regola con «Acqua riflettente (mare, laghi e fiumi)», nella scheda Mappa, sezione Sfondo mappa.',
 }
 
 export default messages

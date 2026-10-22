@@ -108,6 +108,9 @@ const messages: Messages['news'] = {
   // --- 4.0.0: forests ---
   'v40.forests.title': 'Wälder in 3D',
   'v40.forests.text': 'Bäume wachsen aus dem Boden, wo OpenStreetMap Wälder kennt: bewaldete Täler sind nicht mehr flach. Einstellungen unter Karte, Abschnitt „Hintergrundkarte“: „Wälder“ und „Baumdichte“.',
+  // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
+  'v40.water.title': 'Meer und Bäche erscheinen',
+  'v40.water.text': 'Entlang einer Küste wird jetzt das Meer gezeichnet. Flüsse und Bäche, die die Karte nur als Linie zeigt, werden zu schmalen Wasserbändern. Alles wird mit „Spiegelndes Wasser (Meer, Seen und Flüsse)“ eingestellt, im Tab Karte, Abschnitt Hintergrundkarte.',
 }
 
 export default messages

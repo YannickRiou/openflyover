@@ -81,7 +81,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/flyover/race.ts` | ghost race | `RACE_SYNC_MODES`, `RACE_CAMERAS`, `STAGE_TRANSITIONS`, `DEFAULT_RACE`, `isValidRace`, `prepareRaceTrack`, `raceTrackOf`, `positionAtTime`, `positionAtDistance`, `arrivalTime`, `buildRace`, `raceAt(race, progress)`, `rankRacers`; `useRace`, `RaceMarkers` |
 | `src/flyover/sequence.ts` + `follow.ts` | several tracks (see "Several tracks") | `Stage`, `Sequence`, `playsInSequence`, `orderedTracks`, `buildSequence`, `sequenceOf`, `filmSequenceOf`, `filmTrackOf`, `stageAt`, `trackUnderMarker`, `sequenceLandmarks`; `filmFollowOf(tracks, race, smoothingM)`; hooks `useFilmTrack`, `useFilmSequence` (`scene/usePacing.ts`) |
 | `src/weather/sceneWeather.ts` + `src/scene/weatherEffect.ts` | weather in the scene | `sceneConditionsAt`, `sceneWeatherAt`, `sceneWeatherFrom`, `CLEAR_SCENE_WEATHER`, `hazeExtinction`; `WeatherEffect` |
-| `src/osm/water.ts` + `src/scene/waterMesh.ts` + `src/scene/WaterLayer.tsx` | reflective water | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`) |
+| `src/osm/water.ts` + `src/osm/coast.ts` + `src/scene/waterMesh.ts` + `src/scene/riverStrip.ts` + `src/scene/WaterLayer.tsx` | reflective water (sea, lakes, rivers) | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`); `waterLinesQuery`, `parseWaterShapes`, `fetchTrackWaterShapes`, `runsOutside`, `lineWidthM`, `LINE_WIDTH_M`; `seaPolygons`, `chainCoastWays`, `reduceCoast`, `seaSide`, `seaCells`; `buildSeaMesh`; `buildRiverStrip`, `stripHeights` |
 | `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `cloudCoverField`, `zonedCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`); `patchRegionalCoverage`, `patchCloudShadow` (`scene/cloudShaders.ts`) |
 | `src/osm/forest.ts` + `src/scene/forestPoints.ts` + `src/scene/treeGeometry.ts` + `src/scene/ForestLayer.tsx` | forests (see "Forests") | `ForestSettings`, `DEFAULT_FOREST`, `FOREST_DENSITY_RANGE`, `isValidForest`, `FOREST_MARGIN_M`, `forestQuery`, `parseForest`, `fetchTrackForest`; `placeTrees`, `treeKind`, `densityFactor`, `hash01`, `CHUNK_M`, `ForestChunk`; `createTreeGeometries`, `TREE_WIDTH_RATIO`; `ForestLayer`, `FOREST_FAR_M`, `FOREST_FADE_M`; `useForestStore` (`osm/store.ts`) |
 | `src/scene/cloudSea.ts` + `src/scene/CloudSeaSurface.tsx` | surface sea of clouds | `seaRelief`, `billow`, `gradientNoise`, `octaveWeight`, `seaNoisePoint`, `seaBaseAltitude`, `curvatureDropM`, `edgeFade`, `rimFade`, `buildRadialGrid`, `terrainBoxOf`, `terrainGridCentres`, `seaReliefGlsl`, `glslFloat`; `CloudSeaSurface` |
@@ -2900,24 +2900,60 @@ exports) gets it from the terrain source of the settings.
 ## Reflective water (phase 3)
 
 - **Data**: OpenStreetMap through Overpass (same client, queue and 30-day cache as the landmarks:
-  `cachedOverpassQuery`, `runOverpassQuery(…, parse)`), one request per track and only if `settings.water.enabled`:
+  `cachedOverpassQuery`, `runOverpassQuery(…, parse)`), **two requests per track** and only if `settings.water.enabled`.
+  The first, the water areas:
   `way` / multipolygons `natural=water`, `waterway=riverbank`, `water=*` in the boxes of the track corridor widened to 8 km,
   `out geom qt` (~600 kB, 3–4 s for the sample; `docs/sources.md`). The request is not canceled on unmount (shared and
   cached; StrictMode runs the effect twice); its response is only ignored if it is stale. A failed request is only
-  retried on the next track or setting change.
+  retried on the next track or setting change. The second (4.0, `waterLinesQuery`) gives the **coastline** (`natural=coastline`
+  ways, in the same 8 km corridor) and the **waterway lines** (`waterway=river|canal|stream` ways, in a narrower 4 km corridor,
+  `WATER_LINE_MARGIN_M`: streams are many), `out geom qt`. The layer runs both together and shows each answer as it arrives (the lakes
+  do not wait for the heavier second request); the status chip says « erreur » if either failed. Measured on four tracks (2026-10-22, `docs/sources.md`): 0.55–1.1 MB, 21–39 s
+  on a busy public server, 40–76 kB once reduced.
 - **Pure reduction** (`water.ts`, tested): relation rings stitched end to end from their ways (direction irrelevant,
   unclosed ring dropped), inner rings attached to the outer ring that contains their first point, member way of a
   returned relation ignored, Douglas–Peucker 4 m, polygons < 2,000 m² discarded, the 300 largest kept, coordinates to 1e-6°;
   `lake` (flat surface) or `river` (`waterway=riverbank`, `water=river|stream|canal…`). Only this compact result is cached.
+  **The sea** (`coast.ts`, tested, `parseWaterShapes` → `seaPolygons`): by OSM convention the land is on the LEFT of a coastline
+  way and the water on its right. Ways are joined end to end **in their own direction only** (`chainCoastWays`), cut to the
+  corridor (`clipChainsToBoxes`: `out geom` returns whole ways, and only the segments that cross a box are counted),
+  simplified at 8 m, coarser while the corridor holds more than 20,000 points (`reduceCoast`). The corridor boxes overlap (their margins), and
+  translucent water drawn twice would show: they are cut into disjoint rectangles (`seaCells`, the grid of every box edge). In
+  each rectangle the coast is clipped (Liang–Barsky); every piece enters and leaves through the rectangle's edge, and the sea is
+  the ring made of the pieces and of the edge walked **clockwise** from each exit to the next entry (water on the right all the
+  way round; the corners of the rectangle are added). A closed ring inside a rectangle is an island (counter-clockwise: a hole of
+  the sea that contains it) or a lagoon (clockwise: a polygon of its own). A rectangle crossed by no coast is all sea if an island
+  stands in the open sea (not one inside a lagoon ring), else decided by the side of the **nearest coast** (`seaSide`: its own side inside a segment, the sum of the two
+  normals at a vertex), else nothing. **Fallbacks**: a rectangle crossed by a coast whose pieces do not close (data cut off, crossing
+  ways) becomes a flat rectangle, because the sea plane is at 0 m and hides under any land above it (so it also floods land at or
+  below 0.5 m in that rectangle: the known limit); a rectangle that fails with no coast across it is left out; and **without a single coastline nothing
+  is drawn at all**, so a polder or flat land at 0 m stays land. Result: polygons of kind `sea` (`sea/<cell>#<n>`), e.g. 2
+  polygons of 2,358 vertices and 69 holes (islands) on the Brittany coast, 54 ms.
+  **The lines** (`parseWaterLines`, `WaterLine { id, kind, width?, points }`): cut to the 4 km corridor (a way that leaves and comes back
+  gives `way/<id>#<n>` pieces), tunnels and culverts left out, simplified at 4 m,
+  ways under 30 m dropped, the widest then the longest kept up to 200 km (`MAX_LINE_LENGTH_M`). The cache keeps the kind and the
+  `width` tag only (metres, the first value of « 2;3 », another unit ignored; clamped 1–150 m); the width of a kind without a tag (`LINE_WIDTH_M`: river 12 m, canal 8 m, stream 2.5 m) is read
+  when the water is drawn (`lineWidthM`), so changing it needs no new request. When the area polygons are known, the part of a line
+  inside a polygon (riverbank, lake, sea, holes excepted) is cut out (`runsOutside`, rings and boxes built once by `waterCover`: a run keeps its first point inside so the
+  ribbon reaches the polygon), so nothing is drawn twice.
 - **Pure mesh** (`waterMesh.ts`, tested): polygon cut by a grid of square cells (60 m, at most 40 per side,
   Sutherland–Hodgman of each ring against each cell), each piece triangulated with its holes (`ShapeUtils`, earcut). The
   grid puts vertices inside the water: a river follows its valley and the opacity fades toward the bank (`fade` = distance to the closest
-  edge / 40 m, capped at 1).
+  edge / 40 m, capped at 1). **The sea** has no grid: `buildSeaMesh` triangulates the polygon with its holes as it is (flat water
+  needs no vertex inside), with `fade` 1 everywhere: where the relief rises above the plane the land hides the water, so the
+  shore is the relief's own. **A line river** (`riverStrip.ts`, tested `buildRiverStrip`): the polyline resampled every 60 m
+  (`STRIP_STEP_M`, so the ribbon follows its valley), three vertices per sample (left bank, middle, right bank, banks mitred
+  at bends up to twice the half-width), `fade` 1 in the middle and 0 on the banks (`EDGE_FADE`), triangles counter-clockwise like
+  the lakes'. The ribbons of a track total at most a few thousand samples.
 - **Draping** (`WaterLayer`, in `TerrainLayer`): like the track, `engine.sampleHeight` × exaggeration + 2 m, re-draped
   (debounced, flushed by the export via `registerDrapeFlush`) on each `engine.onChange`. A lake is flat at the 90th percentile of the
   heights of its vertices away from the shore (`fade` ≥ 0.5; the median of all of them when fewer than 4: `lakeLevel` in
   `waterMesh.ts`): a low level let the relief of the lake (DEM noise, tile seams, coarse levels of detail rising towards the
   banks) poke through the water as dark patches. A polygon with no known height waits for its tiles.
+  The **sea** is flat at 0 m (the datum of the relief: scene heights are above mean sea level) + `SEA_LIFT_M` 0.5 m, so a beach a
+  little above the datum is not flooded; it needs no tile (`pieceHeights`), the same on every exaggeration (0 × any factor).
+  A **ribbon** takes the height of its middle vertex for its three vertices (the water is level across the river); a sample
+  whose tile is not loaded takes that of the nearest known one along the line (`stripHeights`), none known: skipped.
   A single merged geometry (one draw call), `raycast` neutralized (track picker, camera), `depthWrite` off, a polygon offset
   (−2, −4) towards the camera.
 - **Rendering**: `MeshStandardMaterial` (roughness 0.08: sun glint from the `SunLight`, terrain shadows) extended in
@@ -2925,13 +2961,18 @@ exports) gets it from the terrain source of the settings.
   (`playback.timeS`, otherwise `clock.timeAtProgress`), faded out when their wavelength covers fewer than ~8 pixels (no
   shimmering in the distance); sky reflection = Schlick Fresnel (F0 0.02) × 1.5 × irradiance of the Takram sky probe (`lightProbe`)
   in the reflected direction raised above the horizon / π (fixed glacier color without the atmosphere); opacity = bank fade
-  × mix(0.82, 1, Fresnel) × `strength`. A function of the film time only: the export stays deterministic.
-- **Setting**: `settings.water { enabled, strength }` (true, 1; `SETTING_CHECKS`: 0 ≤ strength ≤ 1), "Lacs et rivières
-  reflétants" (reflective lakes and rivers) checkbox and "Intensité de l'eau" (water intensity) slider in the "Fond de carte" section.
+  × mix(0.82, 1, Fresnel) × `strength`. A function of the film time only: the export stays deterministic. The sea is told
+  from the rest by a vertex attribute (`waterSea`): its waves are 3 × longer and 1.5 × taller.
+- **Setting**: `settings.water { enabled, strength }` (true, 1; `SETTING_CHECKS`: 0 ≤ strength ≤ 1), "Eau reflétante (mer,
+  lacs et rivières)" (reflective water: sea, lakes and rivers; « Lacs et rivières reflétants » before 4.0, same field, so the
+  render history and the old projects are unchanged) checkbox and "Intensité de l'eau" (water intensity) slider in the "Fond de carte" section.
 - **Limits**: the reflection is that of the average sky (SH probe), neither of mountains nor of clouds; lakes at DEM level (no OSM
-  level); a very steep river keeps 60 m steps; only the 8 km corridor is queried; the "© contributeurs
-  OpenStreetMap" credit (status bar and export) is still labelled "Repères" even when only water (`useWaterStore.polygons > 0`)
-  calls for it.
+  level); a very steep river keeps 60 m steps; only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is
+  the OSM coast cut by the relief, so a DEM below 0.5 m just inside the OSM coast is flooded (tidal flats, estuaries up to the
+  limit OSM maps as coast); a river mapped in a gap of its own riverbank polygon is drawn over it; a stream is a 2.5 m ribbon,
+  hardly visible from high; lines are only the 200 km widest. The "© contributeurs OpenStreetMap" credit (status bar and
+  export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
+  lines count with the lakes).
 
 ## Snow (« Neige »)
 

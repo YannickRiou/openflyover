@@ -120,6 +120,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
         useWaterStore.getState().polygons > 0 ||
         useForestStore.getState().polygons > 0 ||
         useRegionStore.getState().region !== null,
+      water: useWaterStore.getState().polygons > 0,
     }),
   }
 }

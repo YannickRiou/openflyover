@@ -108,6 +108,9 @@ const messages: Messages['news'] = {
   // --- 4.0.0: forests ---
   'v40.forests.title': 'Forests in 3D',
   'v40.forests.text': 'Trees rise from the ground where OpenStreetMap has forests: wooded valleys are no longer flat. Settings in Map, “Map background” section: “Forests” and “Tree density”.',
+  // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
+  'v40.water.title': 'The sea and the streams appear',
+  'v40.water.text': 'Along a coast, the sea is now drawn. Rivers and streams that the map only draws as a line become thin ribbons of water. Everything is set with “Reflective water (sea, lakes and rivers)”, in the Map tab, Map background section.',
 }
 
 export default messages

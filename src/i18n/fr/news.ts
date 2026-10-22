@@ -106,4 +106,7 @@ export default {
   // --- 4.0.0: forests ---
   'v40.forests.title': 'Des forêts en 3D',
   'v40.forests.text': 'Les arbres sortent du sol là où OpenStreetMap a des forêts : les vallées boisées ne sont plus plates. Réglages dans Carte, section « Fond de carte » : « Forêts » et « Densité des arbres ».',
+  // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
+  'v40.water.title': 'La mer et les ruisseaux apparaissent',
+  'v40.water.text': 'Le long d’une côte, la mer est maintenant dessinée. Les rivières et les ruisseaux que la carte ne trace que comme une ligne deviennent de fins rubans d’eau. Tout se règle avec « Eau reflétante (mer, lacs et rivières) », dans l’onglet Carte, section Fond de carte.',
 }

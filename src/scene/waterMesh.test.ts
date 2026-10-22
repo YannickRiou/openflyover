@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WaterPolygon } from '../osm/water'
-import { buildWaterMesh, clipRing, lakeLevel } from './waterMesh'
+import { buildSeaMesh, buildWaterMesh, clipRing, lakeLevel } from './waterMesh'
 
 const M = 111_320
 const LAT = 45.9
@@ -74,6 +74,24 @@ describe('buildWaterMesh', () => {
     const big = buildWaterMesh({ ...lake, outer: square(20_000) }, { cellM: 60, maxCells: 40, fadeM: 40 })
     expect(big.index.length / 3).toBeLessThanOrEqual(40 * 40 * 4)
     expect(meshArea(big)).toBeCloseTo(4e8, -5)
+  })
+})
+
+describe('buildSeaMesh', () => {
+  const sea: WaterPolygon = { id: 'sea/0', kind: 'sea', outer: square(5000), holes: [] }
+
+  it('triangulates the polygon as it is, islands left out, counter-clockwise', () => {
+    const mesh = buildSeaMesh(sea)
+    expect(meshArea(mesh)).toBeCloseTo(25_000_000, -3)
+    expect(mesh.index.length).toBe(6)
+    expect(meshArea(buildSeaMesh({ ...sea, holes: [square(1000)] }))).toBeCloseTo(24_000_000, -3)
+    const xy = (i: number) => [(mesh.lonLat[2 * i] - 6.8) * K, (mesh.lonLat[2 * i + 1] - LAT) * M]
+    const [a, b, c] = [mesh.index[0], mesh.index[1], mesh.index[2]].map(xy)
+    expect((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])).toBeGreaterThan(0)
+  })
+
+  it('has no shore to fade from', () => {
+    expect([...buildSeaMesh(sea).fade].every((f) => f === 1)).toBe(true)
   })
 })
 

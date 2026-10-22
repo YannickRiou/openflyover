@@ -17,7 +17,7 @@ sources were checked.
 | USGS The National Map | aerial photos of the United States | `basemap.nationalmap.gov` | "USDA, USGS The National Map: Orthoimagery" |
 | OpenTopoMap | world topographic map | `tile.opentopomap.org` | "Données : © contributeurs OpenStreetMap, SRTM \| Rendu : © OpenTopoMap (CC BY-SA)" |
 | Open-Meteo | historical weather, forecast for an upcoming outing | `archive-api.open-meteo.com`, `api.open-meteo.com` | "Données météo : Open-Meteo.com (CC BY 4.0)" |
-| OpenStreetMap (Overpass API) | landmarks, water bodies (reflective lakes and rivers) | `overpass-api.de`, fallback `maps.mail.ru` | "© contributeurs OpenStreetMap (ODbL)" |
+| OpenStreetMap (Overpass API) | landmarks, water (the sea, lakes, rivers and streams, reflective) | `overpass-api.de`, fallback `maps.mail.ru` | "© contributeurs OpenStreetMap (ODbL)" |
 
 The service worker of the website (installable app) caches only the app's own files: it never stores a tile, a weather
 answer, an Overpass answer nor a Strava call, so third-party data is kept only where its terms are checked (offline
@@ -92,8 +92,8 @@ To spare these services, the application:
   at a time, and a refusal (HTTP 429) is shown with the quota it names (minute, hour or day) and when to try again;
 - sends **one** landmark request per track, kept for 30 days, and retries only once if the server is overloaded;
 - downloads an offline pack only once, 4 tiles at a time, and never requests a tile that is already stored;
-- sends **one** water body request per track (lakes and rivers in an 8 km corridor), in the same queue and the same
-  cache, only if reflective water is checked.
+- sends **two** water requests per track (the lakes and river areas in an 8 km corridor; the coastline in the same corridor and
+  the river, canal and stream lines in a 4 km one), in the same queue and the same cache, only if reflective water is checked.
 
 The track itself is never sent. These services receive only an approximate position: the tile area, a few
 points rounded to 1 km with their dates for the weather, the rectangle around the track for the landmarks.
@@ -469,6 +469,24 @@ distance does not send a new request (local filtering).
 4 m, at most 300, coordinates to 1e-6°), same retry policy. Measurement (curl, box 45.81–45.98 N × 6.66–6.90 E around the
 sample track): **200 in 3.7 s, 593 kB, 232 elements** (220 ways, 12 relations: the Arve, the Lac de Passy, reservoirs,
 streams and ponds) → 80 polygons kept. The same request sent by `curl` without a `User-Agent` receives 406.
+
+**The sea and the waterway lines (2026-10-22)**: a second request per track, in the same cases:
+`way["natural"="coastline"]` in the track corridor widened to **8 km**, and `way["waterway"="river"]`, `"canal"`, `"stream"` in the
+corridor widened to **4 km**, `out geom qt`. Same queue, same 30-day cache (reduced result: sea polygons built from the coast, with
+the corridor cut into rectangles and the coast simplified to 8 m, at most 20,000 coast points; lines simplified to 4 m, at most
+200 km), same retry policy. Measurements (curl with a `User-Agent`, public instance busy: part of the time is queueing), then
+the reduction run on the answer (`parseWaterShapes`):
+
+| Track (corridor box) | Answer | Elements | Reduced and cached |
+|---|---|---|---|
+| Côte de granit rose, Brittany (6 km coast walk; 48.74–48.90 N, −3.63…−3.33 E) | **200 in 30.1 s, 775 kB** | 138 coast ways, 119 waterways | 2 sea polygons (2,358 vertices, 69 islands as holes), 67 streams; **71 kB**, 54 ms |
+| Marseille, Calanques coast (43.1–43.3 N) | **200 in 39.4 s, 1,070 kB** | 147 coast ways, 61 waterways | 1 sea polygon (2,502 vertices, 43 holes), 32 lines (8 rivers, 18 canals, 6 streams); **57 kB**, 47 ms |
+| Mont-Blanc massif, Chamonix valley (45.77–45.99 N) | **200 in 30.0 s, 636 kB** | no coast, 354 waterways | 136 lines (9 rivers, 126 streams); **76 kB**, 10 ms |
+| Polder coast, Dunkerque – De Panne (50.9–51.2 N) | **200 in 20.9 s, 547 kB** | 28 coast ways, 504 waterways | 1 sea polygon (154 vertices), 148 lines (4 rivers, 48 canals, 96 streams); **40 kB**, 9 ms |
+
+The coastline alone, in a 20 × 30 km box on the Côte de granit rose: 200 in 26.2 s, 653 kB, 144 ways. The same request sent without
+a `User-Agent` receives 406; a busy server answers 502 (`BUSY_STATUSES`: retried, then the next endpoint). The sea is built from
+the answer in the browser (no new request), the polder case shows land at 0 m behind the dike staying land.
 
 **Forests (2026-10-22)**: a third request per track, only if « Forêts » is checked: `way` / `relation` (multipolygons)
 `landuse=forest` and `natural=wood` in the track corridor widened to **5 km**, `out geom qt` (full geometry, `leaf_type` among the

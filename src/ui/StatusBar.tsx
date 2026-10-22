@@ -242,7 +242,7 @@ export function StatusBar() {
   // IGN layers: the update date of the data (Etalab licence), as the service sends it
   const dateNote = updateDateNote(imagery.urlTemplate, sourceDates)
   const osm = landmarks || water || forest || region
-  const credits = overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks: osm })
+  const credits = overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks: osm, water })
   const short = compactCredits({ terrainSourceId, imagerySourceId, weather, osm })
   const perfText = perf ? perfParts(perf, perfShown).join(' · ') : ''
 
