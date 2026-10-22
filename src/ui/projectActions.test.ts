@@ -56,7 +56,7 @@ const rememberingPlatform = () =>
 beforeEach(() => {
   resetAppStore()
   useToastStore.setState({ toasts: [] })
-  useLibraryStore.setState({ currentId: null })
+  useLibraryStore.setState({ currentId: null, entries: [] })
   platform.saveDocument.mockReset()
   platform.openFiles.mockReset()
 })
@@ -382,7 +382,7 @@ describe('removeTrackOrCloseProject', () => {
     useAppStore.getState().setProjectFile({ fileName: 'Rando.opnflvr' })
     useAppStore.getState().setSetting('exaggeration', 3)
     useMediaStore.setState({ table: { 'photo-1': {} as MediaAsset } })
-    useLibraryStore.setState({ currentId: 'p-1' })
+    useLibraryStore.setState({ currentId: 'p-1', entries: [{ id: 'p-1' } as never] })
     const before = useAppStore.getState()
     const media = useMediaStore.getState().table
     useToastStore.setState({ toasts: [] })
@@ -402,6 +402,34 @@ describe('removeTrackOrCloseProject', () => {
     expect(useMediaStore.getState().table).toEqual(media)
     expect(useLibraryStore.getState().currentId).toBe('p-1')
     expect(getSettingsHistory().getState().canUndo).toBe(false)
+  })
+
+  it('a second click while the question is open asks nothing more; tracks that came meanwhile keep the project open', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const id = useAppStore.getState().tracks[0].id
+    let answer!: (a: CloseAnswer) => void
+    const ask = vi.fn(() => new Promise<CloseAnswer>((resolve) => (answer = resolve)))
+    const first = removeTrackOrCloseProject(id, ask)
+    await vi.waitFor(() => expect(ask).toHaveBeenCalledTimes(1))
+    await removeTrackOrCloseProject(id, ask)
+    expect(ask).toHaveBeenCalledTimes(1)
+    // an import arrives before the answer
+    useAppStore.getState().addTracks([second()])
+    answer('close')
+    await first
+    expect(useAppStore.getState().tracks).toHaveLength(2)
+    expect(toasts()).toEqual([])
+    expect(dirty()).toBe(true)
+  })
+
+  it('« Annuler » does not bring back an entry deleted from « Mes projets » meanwhile', async () => {
+    await savedFile()
+    useLibraryStore.setState({ currentId: 'p-1', entries: [{ id: 'p-1' } as never] })
+    await removeTrackOrCloseProject(useAppStore.getState().tracks[0].id, answering('close'))
+    useLibraryStore.setState({ entries: [] })
+    useToastStore.getState().toasts.at(-1)!.action!.run()
+    expect(useLibraryStore.getState().currentId).toBeNull()
   })
 
   it('a track that is not the last one just goes: the project stays open', async () => {

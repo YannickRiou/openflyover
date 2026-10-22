@@ -705,7 +705,7 @@ export function TrackList() {
   const t = useT()
   const tracks = useAppStore((s) => s.tracks)
   const race = useAppStore((s) => s.settings.race)
-    const setTrackColor = useAppStore((s) => s.setTrackColor)
+  const setTrackColor = useAppStore((s) => s.setTrackColor)
   const flyTrack = useAppStore((s) => s.flyTrack)
   // the stages are moved by hand « À la suite »; a « Bilan » has the order of the dates
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))

@@ -111,12 +111,12 @@ export type CloseAnswer = 'save' | 'close' | 'cancel'
 /**
  * Replace the open project by an empty one with the default settings (the home screen shows): its waiting change is
  * written to « Mes projets » first, then `ask` only when changes would still be lost. False when it stays open.
- * `beforeEmptying`: called once it is decided, with the project still as it is.
+ * `beforeEmptying`: called once it is decided, with the project still as it is; it may return false to keep it open.
  */
-async function closeOpenProject(ask: () => Promise<CloseAnswer>, beforeEmptying?: () => void): Promise<boolean> {
+async function closeOpenProject(ask: () => Promise<CloseAnswer>, beforeEmptying?: () => boolean | void): Promise<boolean> {
   const closing = await confirmClose({ flush: flushAutosave, loss: projectCloseLoss, ask, save: saveProject })
   if (!closing) return false
-  beforeEmptying?.()
+  if (beforeEmptying?.() === false) return false
   applyEmptyProject()
   getSettingsHistory().clear()
   const store = useAppStore.getState()
@@ -164,11 +164,15 @@ function keepProject(): () => void {
     keepImageryChoice(imageryChosen)
     useMediaStore.getState().replace(media)
     useAppStore.setState(kept)
-    setOpenEntry(entry)
+    // the entry may have been deleted from « Mes projets » meanwhile
+    setOpenEntry(useLibraryStore.getState().entries.some((e) => e.id === entry) ? entry : null)
     useAppStore.getState().requestFit()
     resume()
   }
 }
+
+/** true while the last track is being removed (awaiting the last write or the answer) */
+let closingLastTrack = false
 
 /**
  * The ✕ of a track card. The last track of the project goes with the project, as « Fermer le projet » (the home screen
@@ -178,9 +182,21 @@ function keepProject(): () => void {
 export async function removeTrackOrCloseProject(id: string, ask: () => Promise<CloseAnswer>): Promise<void> {
   const { tracks, projectName, removeTrack } = useAppStore.getState()
   if (tracks.length !== 1 || tracks[0].id !== id) return removeTrack(id)
+  // a second click, while the last write or the answer is awaited, would close (and keep) the project twice
+  if (closingLastTrack) return
+  closingLastTrack = true
   const name = effectiveProjectName(projectName, tracks[0].name)
   let putBack = () => {}
-  if (!(await closeOpenProject(ask, () => (putBack = keepProject())))) return
+  try {
+    const closed = await closeOpenProject(ask, () => {
+      // other tracks came in meanwhile (import, opened project): that project is not the one asked about
+      if (useAppStore.getState().tracks !== tracks) return false
+      putBack = keepProject()
+    })
+    if (!closed) return
+  } finally {
+    closingLastTrack = false
+  }
   showUntilTracksChange({ kind: 'success', text: t('project.actions.closed', { name }), action: { label: t('common.undo'), run: () => putBack() } })
 }
 
