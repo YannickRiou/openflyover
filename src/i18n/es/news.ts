@@ -117,6 +117,9 @@ const messages: Messages['news'] = {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Duración o velocidad del sobrevuelo',
   'v41.speed.text': 'En Vuelo › Duración y ritmo, ajuste el sobrevuelo por su duración (de segundo en segundo, o escribiendo el valor) o por la velocidad del marcador (× el tiempo real y km/h). Una da la otra, y las dos se muestran siempre.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Créditos más discretos',
+  'v41.credits.text': 'En Gráficos › Créditos de las fuentes, elige « Discretos » (el nombre de las fuentes en pequeño en una esquina, las menciones completas al final de la película), « Completos » o « Solo al final ». En Exportar, « Copiar los créditos » da el texto con sus enlaces, para pegar en la descripción del vídeo.',
 }
 
 export default messages

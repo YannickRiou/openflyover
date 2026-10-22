@@ -117,6 +117,9 @@ const messages: Messages['news'] = {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Flyover duration or speed',
   'v41.speed.text': 'In Flyover › Duration and pacing, set the flyover by its duration (in steps of one second, or by typing the value) or by the marker’s speed (× real time and km/h). One gives the other, and both are always shown.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'More discreet credits',
+  'v41.credits.text': 'In Overlay › Source credits, choose « Discreet » (the names of the sources in small print in a corner, the full credits at the end of the film), « Full » or « At the end only ». In Export, « Copy the credits » gives the text with its links, to paste in the description of the video.',
 }
 
 export default messages

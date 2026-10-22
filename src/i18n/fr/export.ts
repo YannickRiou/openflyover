@@ -333,4 +333,9 @@ export default {
   'queue.posterLabel': 'affiche',
   'queue.folder': 'Dossier des rendus : {name}',
   'queue.folderChange': 'Changer de dossier',
+  // 4.1 — copy the credits
+  'panel.creditsCopy': 'Copier les crédits',
+  'panel.creditsCopyTip': 'Les mentions des sources avec leurs liens, à coller dans la description de la vidéo.',
+  'panel.creditsCopied': 'Crédits copiés : collez-les dans la description de la vidéo.',
+  'panel.creditsCopyFailed': 'Copie impossible : le navigateur refuse l’accès au presse-papiers.',
 }

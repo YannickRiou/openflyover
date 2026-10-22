@@ -20,7 +20,7 @@ import { formatDate } from '../i18n/format'
 import { formatClock, formatDistance, formatDuration, formatNumber, formatPace } from '../ui/format'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
-import { recordedAtProgress } from './data'
+import { OPEN_METEO_SHORT, recordedAtProgress } from './data'
 import type { LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
 import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
 import { CARD_FIGURES, COUNTER_IDS, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
@@ -108,8 +108,10 @@ export interface OverlayExtras {
   texts?: readonly FilmText[]
   /** photos and clips of the timeline (`settings.film.media`), drawn inside their window once their picture or frame is loaded */
   media?: readonly FilmMedia[]
-  /** credits of the sources in the film (`overlayCredits`), drawn while `settings.credits` is on */
+  /** full credits of the sources in the film (`overlayCredits`): in the corner with `credits.mode` « full », and at the end of the film always */
   credits?: readonly string[]
+  /** short form of the credits (`overlayShortCredits`), in the corner with `credits.mode` « short » */
+  shortCredits?: readonly string[]
   /** ghost-race leaderboard at the frame's progress (`leaderboardRows`), drawn while `settings.leaderboard` is on */
   leaderboard?: readonly LeaderboardRow[]
   /** dip to black or white of a shot transition at the frame's time (`transitionDipAt`), drawn even while the overlay is off */
@@ -335,7 +337,9 @@ export function overlayTimedState(
   const end = settings.end.enabled ? endCardOpacityOf(time, settings.end) : 0
   // the rolling credits move while the card is on
   const roll = end > 0 && creditLines(settings.end.credits).length > 0 ? [creditsRollProgress(time, settings.end.start, settings.end.window)] : []
-  return [title, end, ...roll, ...texts.map((text) => filmTextOpacity(text, time.timeS)), ...photos, ...dip]
+  // the full credits fade in over the end of the film with the closing card, or alone when it is off
+  const sources = end === 0 ? endCardOpacityOf(time, settings.end) : 0
+  return [title, end, ...(sources > 0 ? [sources] : []), ...roll, ...texts.map((text) => filmTextOpacity(text, time.timeS)), ...photos, ...dip]
 }
 
 /** Part of a picture drawn over the frame (source rectangle of `drawImage`). */
@@ -1441,20 +1445,73 @@ function endWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, o
  * The closing card and the credits under it, centred, rolling up from the card's place in the middle of the frame
  * (`progress` 0) until the last line has left the top (`progress` 1).
  */
-function drawCreditsRoll(p: Painter, card: Widget, lines: readonly string[], size: number, progress: number): void {
+function drawCreditsRoll(p: Painter, card: Widget, lines: readonly string[], size: number, progress: number, sources: readonly string[] = []): void {
   const { ctx, theme, u } = p
   const style: TextStyle = { family: theme.bodyFamily, weight: 500, sizePx: 2.2 * u * size, color: theme.text }
   // readable over the relief without a panel
   const shadowed = { ...p, theme: { ...theme, textShadow: theme.textShadow ?? { color: 'rgba(0, 0, 0, 0.6)', blur: 0.5 } } }
   const lineH = style.sizePx * 1.5
   const gap = 3 * u * size
-  const height = card.height + gap + lines.length * lineH
+  // the sources close the roll: a small « Sources » title, then their sentences wrapped to the frame
+  const small: TextStyle = { ...style, sizePx: style.sizePx * 0.6 }
+  const smallH = small.sizePx * 1.5
+  const closing = sources.length === 0 ? [] : [t('overlay.draw.credits.title'), ...sources.flatMap((line) => wrapLines(shadowed, line, p.size.width * 0.8, small))]
+  const height = card.height + gap + lines.length * lineH + (closing.length > 0 ? gap + closing.length * smallH : 0)
   const from = (p.size.height - card.height) / 2
   const top = from + (-height - from) * progress
   ctx.save()
   ctx.globalAlpha = card.opacity
   card.draw((p.size.width - card.width) / 2, top)
   lines.forEach((line, i) => fillText(shadowed, line, p.size.width / 2, top + card.height + gap + i * lineH + style.sizePx * 0.8, style, 'center'))
+  const closingTop = top + card.height + gap + lines.length * lineH + gap
+  closing.forEach((line, i) => {
+    const title = i === 0
+    fillText(shadowed, line, p.size.width / 2, closingTop + i * smallH + small.sizePx * 0.8, title ? { ...small, uppercase: true, tracking: 0.12 } : small, 'center')
+  })
+  ctx.restore()
+}
+
+/**
+ * The full credits at the end of the film when no roll carries them: a small « Sources » title and the sentences,
+ * centred along the bottom edge (inside `area` when the style leaves less), fading in with the closing card.
+ */
+function drawEndSources(p: Painter, sources: readonly string[], opacity: number, area?: Rect): void {
+  const { ctx, theme, u, size } = p
+  const style: TextStyle = { family: theme.bodyFamily, weight: 500, sizePx: 1.3 * u, color: theme.text }
+  const shadowed = { ...p, theme: { ...theme, textShadow: theme.textShadow ?? { color: 'rgba(0, 0, 0, 0.6)', blur: 0.5 } } }
+  const left = area ? area.x : size.width * SAFE_MARGIN
+  const width = (area ? area.w : size.width * (1 - 2 * SAFE_MARGIN)) * 0.9
+  const lines = sources.flatMap((line) => wrapLines(shadowed, line, width, style))
+  const lineH = style.sizePx * 1.5
+  const title = t('overlay.draw.credits.title')
+  const bottom = size.height - 1.6 * u
+  const top = bottom - (lines.length + 1) * lineH
+  const centre = left + (area ? area.w : size.width * (1 - 2 * SAFE_MARGIN)) / 2
+  ctx.save()
+  ctx.globalAlpha = opacity
+  fillText(shadowed, title, centre, top + style.sizePx * 0.8, { ...style, uppercase: true, tracking: 0.12 }, 'center')
+  lines.forEach((line, i) => fillText(shadowed, line, centre, top + (i + 1) * lineH + style.sizePx * 0.8, style, 'center'))
+  ctx.restore()
+}
+
+/**
+ * The short form of the credits: small capitals in the corner of the credits, no box, translucent, in the style's
+ * font. White over the film (its shadow keeps it legible on snow), wrapped to the safe width.
+ */
+function drawShortCredits(p: Painter, items: readonly string[], position: CreditsPosition, area?: Rect): void {
+  const { ctx, theme, u, size } = p
+  const style: TextStyle = { family: theme.bodyFamily, weight: 600, sizePx: 1.05 * u, color: '#FFFFFF', uppercase: true, tracking: 0.08 }
+  const shadowed = { ...p, theme: { ...theme, textShadow: { color: 'rgba(0, 0, 0, 0.8)', blur: 0.5 } } }
+  const left = area ? area.x : size.width * SAFE_MARGIN
+  const edgeRight = area ? area.x + area.w : size.width * (1 - SAFE_MARGIN)
+  const lines = wrapLines(shadowed, items.join(' · '), edgeRight - left, style)
+  const lineH = style.sizePx * 1.4
+  const right = position.endsWith('right')
+  const edge = 0.8 * u
+  const top = position.startsWith('bottom') ? size.height - edge - lines.length * lineH : edge
+  ctx.save()
+  ctx.globalAlpha = 0.7
+  lines.forEach((line, i) => fillText(shadowed, line, right ? edgeRight : left, top + i * lineH + style.sizePx * 1.05, style, right ? 'right' : 'left'))
   ctx.restore()
 }
 
@@ -1473,7 +1530,7 @@ function drawWeatherCredit(p: Painter): void {
   const style: TextStyle = { family: p.theme.bodyFamily, weight: 500, sizePx: 1.2 * u, color: '#FFFFFF' }
   const shadowed = { ...p, theme: { ...p.theme, textShadow: { color: 'rgba(0, 0, 0, 0.8)', blur: 0.5 } } }
   p.ctx.save()
-  p.ctx.globalAlpha = 0.85
+  p.ctx.globalAlpha *= 0.85
   fillText(shadowed, openMeteoAttribution(), size.width * (1 - SAFE_MARGIN), size.height - 1.4 * u, style, 'right')
   p.ctx.restore()
 }
@@ -1707,7 +1764,8 @@ export function drawOverlay(
   extras: OverlayExtras = {},
 ): void {
   if (size.width <= 0 || size.height <= 0) return
-  const credits = settings.credits.enabled ? [...(extras.credits ?? [])] : []
+  const mode = settings.credits.mode
+  const credits = mode === 'full' ? [...(extras.credits ?? [])] : mode === 'short' ? [...(extras.shortCredits ?? [])] : []
   const time = extras.time ?? progressTime(frame.progress)
   // photos and clips inside their window whose picture or frame is loaded (a clip following the flight: its frame
   // recorded under the marker)
@@ -1731,7 +1789,10 @@ export function drawOverlay(
   const legend = extras.trackLegend ?? null
   // the titles and the texts of the timeline are drawn with the overlay off too
   const titles = settings.title.enabled || settings.end.enabled || (extras.texts?.length ?? 0) > 0
-  if (!settings.enabled && !titles && credits.length === 0 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return
+  // the full credits close the film, whatever the mode: on the closing card (its roll when it has one), else along the bottom edge
+  const sources = extras.credits ?? []
+  const endSources = sources.length > 0 ? endCardOpacityOf(time, settings.end) : 0
+  if (!settings.enabled && !titles && credits.length === 0 && endSources <= 0.001 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return
   const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
   const p: Painter = {
     ctx,
@@ -1792,7 +1853,7 @@ export function drawOverlay(
     const credits = creditLines(settings.end.credits)
     // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
     if (credits.length === 0) add(placed('end', card))
-    else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window))
+    else roll = () => drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window), sources)
   }
   if (settings.enabled) {
     if (settings.counters.enabled && live > 0 && !slot('counters')) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
@@ -1857,11 +1918,22 @@ export function drawOverlay(
     card.draw(at.x, at.y)
     ctx.restore()
   }
+  let meteoAlone = false
   if (weatherShown || (endOpacity > 0 && settings.end.showWeather && frame.track.stats.weather)) {
     // required by the Open-Meteo licence: with the other credits when they are drawn, else on its own
-    if (!settings.credits.enabled) drawWeatherCredit(p)
-    else if (!credits.includes(openMeteoAttribution())) credits.push(openMeteoAttribution())
+    const meteo = mode === 'short' ? OPEN_METEO_SHORT : openMeteoAttribution()
+    if (mode === 'end') meteoAlone = true
+    else if (!credits.includes(meteo)) credits.push(meteo)
   }
-  if (credits.length > 0) drawCredits(p, credits, settings.credits.position, structure?.area)
+  // the corner credits give way to the full form at the end of the film
+  if (endSources < 0.999) {
+    ctx.save()
+    ctx.globalAlpha = 1 - endSources
+    if (meteoAlone) drawWeatherCredit(p)
+    if (credits.length > 0 && mode === 'short') drawShortCredits(p, credits, settings.credits.position, structure?.area)
+    else if (credits.length > 0) drawCredits(p, credits, settings.credits.position, structure?.area)
+    ctx.restore()
+  }
+  if (endSources > 0.001 && !(settings.end.enabled && rolling)) drawEndSources(p, sources, endSources, structure?.area)
   ctx.restore()
 }

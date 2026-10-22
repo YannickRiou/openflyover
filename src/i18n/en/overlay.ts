@@ -36,7 +36,6 @@ const messages: Messages['overlay'] = {
   'draw.weatherRow.wind': 'Wind',
   'draw.credits.relief': 'Terrain: {source}',
   'draw.credits.imagery': 'Imagery: {source}',
-  'draw.credits.landmarks': 'Landmarks: {source}',
   'draw.race.finished': 'Finish',
   'draw.race.lead': 'Lead',
   'style.editorial': 'Editorial',
@@ -174,14 +173,21 @@ const messages: Messages['overlay'] = {
   'panel.text': 'Text',
   'panel.textPlaceholder': 'E.g.: with Marie and Paul',
   'panel.credits': 'Source credits',
-  'panel.burnCredits': 'Burn in the credits',
   'panel.creditsTip': 'The licences of the terrain, the imagery, the weather and OpenStreetMap require the sources to be credited in the published film.',
-  'panel.creditsHint': 'Small, in a corner of every exported frame, even without the rest of the overlay.',
-  'panel.creditsOff': 'Then credit the sources elsewhere (video description, credits). The Open-Meteo credit stays burnt in while the weather shows, as its licence requires.',
   'panel.styleHint': 'Changing the style puts the title, the closing card, the counters, the profile, the mini-map and the weather where the style has them (positions and sizes); the logo, the free text and the leaderboard keep theirs.',
   'panel.styleMoved': 'Style “{style}”: title, closing card, counters, profile, mini-map and weather put back where the style has them.',
-  // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
-  'draw.credits.landmarksAndWater': 'Landmarks and water: {source}',
+  // 4.1 — credits: short form during the film, full form at the end
+  'draw.credits.osm': '{layers}: {source}',
+  'draw.credits.layer.landmarks': 'Landmarks',
+  'draw.credits.layer.water': 'water',
+  'draw.credits.layer.forests': 'forests',
+  'draw.credits.layer.glaciers': 'glaciers',
+  'draw.credits.title': 'Sources',
+  'panel.creditsMode': 'In the film',
+  'panel.creditsMode.short': 'Discreet',
+  'panel.creditsMode.full': 'Full',
+  'panel.creditsMode.end': 'At the end only',
+  'panel.creditsHint': 'Discreet: the names of the sources in small capitals in a corner, then the full credits at the end of the film. Full: the whole sentence in the corner throughout the film, then at the end. At the end only: nothing during the film (except Open-Meteo while the weather shows, as its licence requires). In every case the film ends with the sources: they must always be credited.',
 }
 
 export default messages

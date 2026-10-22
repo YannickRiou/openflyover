@@ -19,7 +19,7 @@ import {
 } from '../export/batch'
 import { currentReport } from '../export/guard'
 import { useQueueStore } from '../export/queue'
-import { showDiagnostic } from '../export/diagnostic'
+import { copyText, showDiagnostic } from '../export/diagnostic'
 import { targetBitrate, type CodecCandidate } from '../export/encoder'
 import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
 import { estimateRenderSeconds, lastFilm, layersRatio, rateFromHistory } from '../export/history'
@@ -65,6 +65,8 @@ import {
 import { getPlatform, videoEncoderMissingHint } from '../platform'
 import { shareSaveLabel } from '../platform/platform'
 import { canPickFolder, pickFolder, pickReadableFolder, type ReadableFolder, type WritableFolder } from '../platform/folder'
+import { creditsDescription } from '../overlay/data'
+import { currentCreditSources } from '../overlay/exportOverlay'
 import { startPoster } from '../poster/export'
 import { PosterPanel } from '../poster/PosterPanel'
 import { useFilmClock } from '../scene/usePacing'
@@ -626,6 +628,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           .filter(Boolean)
           .join(' · ')}
       </p>
+      <CopyCreditsButton />
       {codec && streams && <p className="type-hint">{t('export.panel.direct')}</p>}
       {codec && warnsInMemory(estimatedBytes, streams) && (
         <p className="type-hint">
@@ -729,7 +732,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                 {t('export.panel.openFolder')}
               </Button>
             </>
-          )}
+          )}{' '}
+          <CopyCreditsButton />
         </p>
       )}
 
@@ -739,6 +743,21 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         {announcement}
       </p>
     </section>
+  )
+}
+
+/** « Copier les crédits »: the sources with their links, to paste in the description of the video. */
+function CopyCreditsButton() {
+  const copy = async () => {
+    const ok = await copyText(creditsDescription(currentCreditSources()))
+    showToast(ok ? { kind: 'success', text: t('export.panel.creditsCopied') } : { kind: 'error', text: t('export.panel.creditsCopyFailed') })
+  }
+  return (
+    <Tip text={t('export.panel.creditsCopyTip')}>
+      <Button size="sm" onClick={() => void copy()}>
+        {t('export.panel.creditsCopy')}
+      </Button>
+    </Tip>
   )
 }
 

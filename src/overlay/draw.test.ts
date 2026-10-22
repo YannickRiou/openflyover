@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import sampleGpx from '../import/__fixtures__/tour-du-mont-blanc-j1.gpx?raw'
 import { parseGpx } from '../import/gpx'
 import { trackLegend } from '../flyover/trackColor'
-import { overlayFrameAt, prepareOverlayTrack, recordedAtProgress } from './data'
+import { OPEN_METEO_SHORT, overlayFrameAt, prepareOverlayTrack, recordedAtProgress } from './data'
 import {
   SAFE_MARGIN,
   cardOpacityAt,
@@ -403,13 +403,13 @@ describe('drawOverlay', () => {
     expect(middle.toLowerCase()).toContain('plutôt dégagé')
     expect(middle).toContain('°C')
     expect(middle.toLowerCase()).toContain('vent no')
-    expect(middle).toContain(openMeteoAttribution())
+    expect(middle).toContain(OPEN_METEO_SHORT.toUpperCase())
     const closing = render(0.99, enabled())
     expect(closing.toLowerCase()).toContain("plutôt dégagé · 14 °c · vent jusqu'à 12 km/h")
-    expect(closing).toContain(openMeteoAttribution())
+    expect(closing).toContain(OPEN_METEO_SHORT.toUpperCase())
     // no weather shown, no credit
-    expect(render(0.5, enabled())).not.toContain(openMeteoAttribution())
-    expect(draw(0.5, settings).joined).not.toContain(openMeteoAttribution())
+    expect(render(0.5, enabled())).not.toContain(OPEN_METEO_SHORT.toUpperCase())
+    expect(draw(0.5, settings).joined).not.toContain(OPEN_METEO_SHORT.toUpperCase())
   })
 
   it('draws the logo when its image is loaded', () => {
@@ -771,27 +771,56 @@ describe('timeline texts', () => {
 
 describe('source credits', () => {
   const credits = ['Relief : © Mapterhorn', 'Imagerie : © IGN']
+  const FULL = { ...DEFAULT_OVERLAY.credits, mode: 'full' as const }
   const render = (settings: OverlaySettings, extras: OverlayExtras = { credits }, progress = 0.5) => {
     const { ctx, texts, calls } = fakeContext()
     drawOverlay(ctx, overlayFrameAt(track, progress), settings, SIZE, {}, extras)
     return { texts, calls, joined: texts.map((t) => t.text).join(' | ') }
   }
 
-  it('are on by default, drawn even without the rest of the overlay', () => {
-    expect(TITLED.credits.enabled).toBe(true)
-    const { texts } = render(TITLED)
-    expect(texts.map((t) => t.text)).toEqual(['Relief : © Mapterhorn · Imagerie : © IGN'])
+  const short = ['© Mapterhorn', '© IGN']
+
+  it('are discreet by default: the short form in small capitals, no box, drawn even without the rest of the overlay', () => {
+    expect(TITLED.credits.mode).toBe('short')
+    const { texts, calls } = render(TITLED, { credits, shortCredits: short })
+    expect(texts.map((t) => t.text)).toEqual(['© MAPTERHORN · © IGN'])
+    expect(texts[0].alpha).toBeLessThan(1)
+    expect(calls).not.toContain('fill')
   })
 
-  it('are left out on request', () => {
-    const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } }
-    expect(render(off).calls).toEqual([])
-    expect(render({ ...off, enabled: true }).joined).not.toContain('Mapterhorn')
+  it('give the whole sentence in the corner with the full mode', () => {
+    const full = { ...TITLED, credits: { ...TITLED.credits, mode: 'full' as const } }
+    expect(render(full, { credits, shortCredits: short }).texts.map((t) => t.text)).toEqual(['Relief : © Mapterhorn · Imagerie : © IGN'])
+  })
+
+  it('leave the film alone with « à la fin seulement »', () => {
+    const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, mode: 'end' as const } }
+    expect(render(off, { credits, shortCredits: short }).calls).toEqual([])
+    expect(render({ ...off, enabled: true }, { credits, shortCredits: short }).joined).not.toContain('Mapterhorn')
+  })
+
+  it('close the film in full, whatever the mode, in place of the corner credits', () => {
+    for (const mode of ['short', 'full', 'end'] as const) {
+      const settings = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, mode } }
+      const { joined } = render(settings, { credits, shortCredits: short }, 1)
+      expect(joined, mode).toContain('Relief : © Mapterhorn')
+      expect(joined, mode).toContain('Imagerie : © IGN')
+      expect(joined, mode).not.toContain('MAPTERHORN')
+    }
+  })
+
+  it('end the roll of the closing card with the full sources', () => {
+    const rolling = { ...TITLED, end: { ...TITLED.end, credits: 'Merci' } }
+    const { texts } = render(rolling, { credits, shortCredits: short }, 0.97)
+    const lines = texts.map((t) => t.text)
+    expect(lines).toContain('Merci')
+    expect(lines).toContain('SOURCES')
+    expect(lines.join(' ')).toContain('Relief : © Mapterhorn')
   })
 
   it('sit in the chosen corner, along the edge outside the safe area', () => {
     const at = (position: OverlaySettings['credits']['position']) =>
-      render({ ...TITLED, credits: { enabled: true, position } }).texts[0]
+      render({ ...TITLED, credits: { mode: 'full', position } }).texts[0]
     const u = Math.min(SIZE.width, SIZE.height) / 100
     expect(at('bottom-right').x).toBeCloseTo(SIZE.width * (1 - SAFE_MARGIN) - 0.6 * u, 6)
     expect(at('bottom-left').x).toBeCloseTo(SIZE.width * SAFE_MARGIN + 0.6 * u, 6)
@@ -801,13 +830,13 @@ describe('source credits', () => {
 
   it('wrap a long line over the safe width', () => {
     const long = Array.from({ length: 12 }, (_, i) => `Source ${i} : © un fournisseur de données ouvertes`)
-    const { texts } = render(TITLED, { credits: long })
+    const { texts } = render({ ...TITLED, credits: FULL }, { credits: long })
     expect(texts.length).toBeGreaterThan(1)
     expect(texts.map((t) => t.text).join(' ')).toBe(long.join(' · '))
   })
 
   it('hold the Open-Meteo credit once the weather is shown', () => {
-    const settings = enabled({ weather: { ...TITLED.weather, enabled: true } })
+    const settings = enabled({ weather: { ...TITLED.weather, enabled: true }, credits: FULL })
     const hours = 14
     const values = {} as Record<WeatherVariable, number[]>
     for (const v of WEATHER_VARIABLES) values[v] = new Array<number>(hours).fill(1)
@@ -832,7 +861,7 @@ describe('dip of a shot transition', () => {
   }
 
   it('one full-frame layer at its opacity, even without the overlay, under the credits only', () => {
-    const { order, calls } = render(enabled({ text: { ...TITLED.text, enabled: true, text: 'Bonjour' } }), {
+    const { order, calls } = render(enabled({ text: { ...TITLED.text, enabled: true, text: 'Bonjour' }, credits: { ...TITLED.credits, mode: 'full' } }), {
       credits,
       dip: { color: 'black', alpha: 0.6 },
     })
@@ -842,7 +871,7 @@ describe('dip of a shot transition', () => {
     // the overlay text under it, the credits line over it
     expect(order.slice(0, dip)).toContain('text')
     expect(order.slice(dip + 1)).toEqual(['text'])
-    const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } }
+    const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, mode: 'end' as const } }
     expect(render(off, { dip: { color: 'white', alpha: 1 } }).order).toEqual(['rect white 1'])
     expect(render(off, { dip: { color: 'white', alpha: 0 } }).calls).toEqual([])
     expect(render(off, { dip: null }).calls).toEqual([])
@@ -850,7 +879,7 @@ describe('dip of a shot transition', () => {
 })
 
 describe('stage card « À la suite »', () => {
-  const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } }
+  const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, mode: 'end' as const } }
   const stage: StageCard = {
     fields: STAGE_CARD_FIELDS,
     name: 'Jour 2',
@@ -921,7 +950,7 @@ describe('timeline photos', () => {
   const assets = { photo: (src: string) => (src === 'photo-1' ? image : undefined) }
   const full: FilmMedia = { id: 'media-1', startS: 40, durationS: 20, kind: 'image', src: 'photo-1', ...MEDIA_DEFAULTS }
   const card: FilmMedia = { ...full, id: 'media-2', layout: 'carte', anchor: 'top-right', kenBurns: false, caption: 'Lac Blanc' }
-  const noCredits = { ...TITLED, credits: { ...TITLED.credits, enabled: false } }
+  const noCredits = { ...TITLED, credits: { ...TITLED.credits, mode: 'end' as const } }
   /** a 100 s film without cards */
   const at = (timeS: number) => ({ timeS, openingS: 0, flightS: 100, totalS: 100 })
   const render = (settings: OverlaySettings, media: FilmMedia[], timeS: number, extras: OverlayExtras = {}) => {
@@ -932,7 +961,7 @@ describe('timeline photos', () => {
 
   it('full screen: covers the frame inside its window, under everything, even without the overlay', () => {
     expect(render(noCredits, [full], 39).images).toEqual([])
-    const { images, order } = render(TITLED, [full], 50, { credits: ['Relief : © Mapterhorn'] })
+    const { images, order } = render({ ...TITLED, credits: { ...TITLED.credits, mode: 'full' } }, [full], 50, { credits: ['Relief : © Mapterhorn'] })
     expect(images).toHaveLength(1)
     expect(images[0].args.slice(4)).toEqual([0, 0, SIZE.width, SIZE.height])
     expect(images[0].alpha).toBe(1)
@@ -1256,7 +1285,7 @@ describe('styles with a structure', () => {
     })
 
     it('puts nothing in the right half of the frame', () => {
-      const settings = journal({ weather: { ...TITLED.weather, enabled: true, anchor: 'middle-left' }, credits: { ...TITLED.credits, enabled: false } })
+      const settings = journal({ weather: { ...TITLED.weather, enabled: true, anchor: 'middle-left' }, credits: { ...TITLED.credits, mode: 'end' as const } })
       const { texts: all, points } = render(settings, 0.5, {}, withWeather)
       // the credit of the weather is required, and drawn on its own at the bottom right
       const texts = all.filter((t) => t.text !== openMeteoAttribution())
@@ -1279,7 +1308,7 @@ describe('styles with a structure', () => {
 
     it('keeps the free widgets and the credits out of the sheet', () => {
       const texts: FilmText[] = [{ ...FILM_TEXT, startS: 0.4, durationS: 0.4, anchor: 'top-left' }]
-      const drawn = render(journal(), 0.6, { texts, credits: ['Relief : © Mapterhorn'] }).texts
+      const drawn = render(journal({ credits: { ...TITLED.credits, mode: 'full' } }), 0.6, { texts, credits: ['Relief : © Mapterhorn'] }).texts
       expect(drawn.find((t) => t.text === 'Col de Balme')!.x).toBeGreaterThan(SHEET)
       const credit = drawn.find((t) => t.text.startsWith('Relief'))!
       expect(credit.x).toBeGreaterThan(SHEET)
@@ -1389,7 +1418,7 @@ describe('styles with a structure', () => {
 })
 
 describe('day card of a multi-day track', () => {
-  const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, enabled: false } }
+  const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, mode: 'end' as const } }
   const day: DayCard = {
     figures: { n: 2, count: 3, date: '2026-07-02', startTime: Date.UTC(2026, 6, 2, 8), distanceM: 18_400, ascentM: 1250, durationS: 7 * 3600 + 30 * 60 },
     startS: 40,

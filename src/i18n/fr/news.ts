@@ -115,4 +115,7 @@ export default {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Durée ou vitesse du survol',
   'v41.speed.text': 'Dans Survol › Durée et rythme, réglez le survol par sa durée (au pas d’une seconde, ou en tapant la valeur) ou par la vitesse du marqueur (× le temps réel et km/h). L’un donne l’autre, et les deux sont toujours affichés.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Des crédits plus discrets',
+  'v41.credits.text': 'Dans Habillage › Crédits, choisissez « Discrets » (le nom des sources en petit dans un coin, les mentions complètes à la fin du film), « Complets » ou « À la fin seulement ». Dans Export, « Copier les crédits » donne le texte avec les liens, à coller dans la description de la vidéo.',
 }

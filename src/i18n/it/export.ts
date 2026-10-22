@@ -335,6 +335,11 @@ const messages: Messages['export'] = {
   'queue.posterLabel': 'poster',
   'queue.folder': 'Cartella dei rendering: {name}',
   'queue.folderChange': 'Cambia cartella',
+  // 4.1 — copy the credits
+  'panel.creditsCopy': 'Copia i crediti',
+  'panel.creditsCopyTip': 'Le menzioni delle fonti con i loro link, da incollare nella descrizione del video.',
+  'panel.creditsCopied': 'Crediti copiati: incollali nella descrizione del video.',
+  'panel.creditsCopyFailed': 'Copia non riuscita: il browser rifiuta l’accesso agli appunti.',
 }
 
 export default messages

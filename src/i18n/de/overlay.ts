@@ -36,7 +36,6 @@ const messages: Messages['overlay'] = {
   'draw.weatherRow.wind': 'Wind',
   'draw.credits.relief': 'Gelände: {source}',
   'draw.credits.imagery': 'Luftbilder: {source}',
-  'draw.credits.landmarks': 'Landmarken: {source}',
   'draw.race.finished': 'Ziel',
   'draw.race.lead': 'Spitze',
   'style.editorial': 'Editorial',
@@ -174,14 +173,21 @@ const messages: Messages['overlay'] = {
   'panel.text': 'Text',
   'panel.textPlaceholder': 'Z. B.: mit Marie und Paul',
   'panel.credits': 'Quellenangaben',
-  'panel.burnCredits': 'Quellenangaben einblenden',
   'panel.creditsTip': 'Die Lizenzen von Gelände, Luftbildern, Wetter und OpenStreetMap verlangen die Nennung der Quellen im veröffentlichten Film.',
-  'panel.creditsHint': 'Klein, in einer Ecke jedes exportierten Bildes, auch ohne den Rest des Overlays.',
-  'panel.creditsOff': 'Dann die Quellen anderswo nennen (Videobeschreibung, Abspann). Der Open-Meteo-Hinweis bleibt eingeblendet, solange das Wetter angezeigt wird, wie es seine Lizenz verlangt.',
   'panel.styleHint': 'Ein Stilwechsel setzt Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils (Positionen und Größen); Logo, freier Text und Rangliste behalten ihre.',
   'panel.styleMoved': 'Stil „{style}“: Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils gesetzt.',
-  // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
-  'draw.credits.landmarksAndWater': 'Landmarken und Wasser: {source}',
+  // 4.1 — credits: short form during the film, full form at the end
+  'draw.credits.osm': '{layers}: {source}',
+  'draw.credits.layer.landmarks': 'Landmarken',
+  'draw.credits.layer.water': 'Wasser',
+  'draw.credits.layer.forests': 'Wälder',
+  'draw.credits.layer.glaciers': 'Gletscher',
+  'draw.credits.title': 'Quellen',
+  'panel.creditsMode': 'Im Film',
+  'panel.creditsMode.short': 'Dezent',
+  'panel.creditsMode.full': 'Vollständig',
+  'panel.creditsMode.end': 'Nur am Ende',
+  'panel.creditsHint': 'Dezent: die Namen der Quellen in Kapitälchen in einer Ecke, dann die vollständigen Angaben am Ende des Films. Vollständig: der ganze Satz während des ganzen Films in der Ecke, dann am Ende. Nur am Ende: nichts während des Films (außer Open-Meteo, solange das Wetter angezeigt wird, wie es seine Lizenz verlangt). In jedem Fall endet der Film mit den Quellen: sie müssen immer genannt werden.',
 }
 
 export default messages

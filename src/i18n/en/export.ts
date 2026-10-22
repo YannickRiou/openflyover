@@ -335,6 +335,11 @@ const messages: Messages['export'] = {
   'queue.posterLabel': 'poster',
   'queue.folder': 'Render folder: {name}',
   'queue.folderChange': 'Change folder',
+  // 4.1 — copy the credits
+  'panel.creditsCopy': 'Copy the credits',
+  'panel.creditsCopyTip': 'The credits of the sources with their links, to paste in the description of the video.',
+  'panel.creditsCopied': 'Credits copied: paste them in the description of the video.',
+  'panel.creditsCopyFailed': 'Copy failed: the browser refuses access to the clipboard.',
 }
 
 export default messages
