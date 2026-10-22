@@ -94,7 +94,7 @@ const messages: Messages['film'] = {
   'auto.open': 'Vorlage wählen …',
   'auto.intro': 'Wählen Sie eine Vorlage: Filmlänge, Kamera, Verlangsamungen und Stopps, Overlay, Eröffnungstitel, Schlusskarte und Exportformat werden auf einmal eingestellt.',
   'auto.editable': 'Danach bleibt alles änderbar, und „Rückgängig“ nimmt es zurück. Ihre eigenen Texte (Titel, Untertitel, Zeilen, Abspann) und die von Hand gesetzten Stopps bleiben erhalten. Es wird keine Musik hinzugefügt.',
-  'auto.length': 'Die angegebene Länge gilt ohne die Nächte und die Übergänge zwischen Etappen, die hinzukommen.',
+  'auto.length': 'Die angegebene Länge umfasst die Eröffnungs- und Schlusseinstellung (die Überflugdauer zeigt also 24, 50 oder 168 s); die Nächte und die Übergänge zwischen Etappen kommen hinzu, und eine Etappe mit eigener Dauer behält sie.',
   'auto.apply': 'Anwenden',
   'auto.applyNamed': 'Vorlage „{name}“ anwenden',
   'auto.applied': 'Automatischer Film „{name}“ angewendet. Alles bleibt änderbar.',

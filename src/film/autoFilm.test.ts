@@ -37,8 +37,8 @@ describe('autoFilmSettings', () => {
   it('keeps the cards a few seconds past the shots, whatever the length', () => {
     for (const id of AUTO_FILM_IDS) {
       const s = autoFilmSettings(DEFAULT_SETTINGS, id, single)
-      expect(s.overlay.title.end * s.flyoverDurationS).toBeCloseTo(3, 0)
-      expect((1 - s.overlay.end.start) * s.flyoverDurationS).toBeCloseTo(3, 0)
+      expect(Math.abs(s.overlay.title.end * s.flyoverDurationS - 3)).toBeLessThan(0.05)
+      expect(Math.abs((1 - s.overlay.end.start) * s.flyoverDurationS - 3)).toBeLessThan(0.05)
     }
   })
 
@@ -51,10 +51,25 @@ describe('autoFilmSettings', () => {
         end: { ...DEFAULT_OVERLAY.end, title: 'Fin', credits: 'Merci' },
         text: { ...DEFAULT_OVERLAY.text, text: 'Libre' },
       },
-      film: { ...DEFAULT_FILM, autoStops: false, stops: [{ id: 'stop-1', atM: 100, durationS: 3, camera: 'fixe' }], texts: [{ id: 'text-1', startS: 1, durationS: 2, text: 'Hop', anchor: 'center', size: 1 }] },
+      film: {
+        ...DEFAULT_FILM,
+        autoStops: false,
+        stops: [{ id: 'stop-1', atM: 100, durationS: 3, camera: 'fixe' }],
+        // a text of the user, and a card of a version that baked the days into the texts, perhaps edited since
+        texts: [
+          { id: 'text-1', startS: 1, durationS: 2, text: 'Hop', anchor: 'center', size: 1 },
+          { id: 'day-1', startS: 5, durationS: 3, text: 'Jour 1, ma version', anchor: 'center', size: 1 },
+        ],
+        stageDurations: { 'track-1': 40 },
+        opening: { style: 'situation', durationS: 9, transition: 'fondu-noir', highlight: true, holdS: 2 },
+        closing: { style: 'balayage', durationS: 5, transition: 'coupe' },
+      },
     }
     for (const id of AUTO_FILM_IDS) {
-      const s = autoFilmSettings(own, id, single)
+      const s = autoFilmSettings(own, id, { days: 3, stages: false })
+      expect(s.film.opening).toEqual({ ...own.film.opening, durationS: AUTO_FILM_TEMPLATES[id].openingS })
+      expect(s.film.closing).toEqual({ ...own.film.closing, durationS: AUTO_FILM_TEMPLATES[id].closingS })
+      expect(s.film.stageDurations).toEqual({ 'track-1': 40 })
       expect(s.overlay.title).toMatchObject({ title: 'Mon tour', subtitle: 'Avec Léa', line: 'Été', window: { startS: 0, endS: 4 } })
       expect(s.overlay.end).toMatchObject({ title: 'Fin', credits: 'Merci' })
       expect(s.overlay.text.text).toBe('Libre')
@@ -62,6 +77,13 @@ describe('autoFilmSettings', () => {
       expect(s.film.autoStops).toBe(false)
       expect(s.film.texts).toEqual(own.film.texts)
     }
+  })
+
+  it('gives a film without opening or closing shot a « Descente » of the gabarit\'s length', () => {
+    const none = { ...DEFAULT_SETTINGS, film: { ...DEFAULT_FILM, opening: { style: 'aucune' as const, durationS: 6 }, closing: { style: 'aucune' as const, durationS: 5 } } }
+    const s = autoFilmSettings(none, 'reel', single)
+    expect(s.film.opening).toEqual({ style: 'descente', durationS: 3 })
+    expect(s.film.closing).toEqual({ style: 'descente', durationS: 3 })
   })
 
   it('applied again, or after another gabarit, it replaces its own choices only', () => {

@@ -94,7 +94,7 @@ const messages: Messages['film'] = {
   'auto.open': 'Scegli un modello…',
   'auto.intro': 'Scegli un modello: la durata del film, la camera, i rallentamenti e le soste, l’overlay, il titolo di apertura, la scheda di chiusura e il formato di esportazione si impostano in un colpo solo.',
   'auto.editable': 'Tutto resta modificabile in seguito, e «Annulla» riporta indietro. I tuoi testi (titolo, sottotitolo, righe, crediti) e le soste messe a mano vengono mantenuti. Non viene aggiunta alcuna musica.',
-  'auto.length': 'La durata indicata è quella del film senza le notti e i passaggi tra le tappe, che si aggiungono.',
+  'auto.length': 'La durata indicata comprende le inquadrature di apertura e di chiusura (quindi la durata del sorvolo mostra 24, 50 o 168 s); le notti e i passaggi tra le tappe si aggiungono, e una tappa con durata propria la mantiene.',
   'auto.apply': 'Applica',
   'auto.applyNamed': 'Applica il modello «{name}»',
   'auto.applied': 'Film automatico «{name}» applicato. Tutto resta modificabile.',

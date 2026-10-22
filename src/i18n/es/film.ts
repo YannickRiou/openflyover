@@ -94,7 +94,7 @@ const messages: Messages['film'] = {
   'auto.open': 'Elegir una plantilla…',
   'auto.intro': 'Elige una plantilla: la duración de la película, la cámara, las ralentizaciones y las paradas, los gráficos, el título de apertura, la tarjeta de cierre y el formato de exportación se ajustan de una vez.',
   'auto.editable': 'Todo se puede modificar después, y «Deshacer» lo revierte. Tus propios textos (título, subtítulo, líneas, créditos) y las paradas puestas a mano se conservan. No se añade música.',
-  'auto.length': 'La duración indicada es la de la película sin las noches ni los pasos entre etapas, que se suman.',
+  'auto.length': 'La duración indicada incluye los planos de apertura y de cierre (así la duración del vuelo muestra 24, 50 o 168 s); las noches y los pasos entre etapas se suman, y una etapa con duración propia la conserva.',
   'auto.apply': 'Aplicar',
   'auto.applyNamed': 'Aplicar la plantilla «{name}»',
   'auto.applied': 'Película automática «{name}» aplicada. Todo se puede modificar.',

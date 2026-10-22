@@ -13,7 +13,6 @@ import { END_START_MAX, END_START_MIN, TITLE_END_MAX, TITLE_END_MIN, withStyleLa
 import type { CardFigure, OverlayStyleId } from '../overlay/settings'
 import type { Settings } from '../state/store'
 import { t } from '../i18n'
-import { withoutDayCards } from './days'
 import { withDefaultCard } from './junctions'
 import { DEFAULT_DAY_CARDS } from './model'
 import type { Film } from './model'
@@ -75,7 +74,8 @@ export interface AutoFilmContext {
  * `settings` with gabarit `id` applied: length (the flyover is the total minus the two shots), camera, slow-downs, stops,
  * overlay (on, style, counters, opening title with the date, closing card with its figures), day or stage cards and the
  * format of the video. Left as they are: the titles, subtitle, lines, pictures and credits of the cards, the free text,
- * the logo, the stops placed by hand, the places the user gave the cards on the timeline, the film's other items.
+ * the logo, the stops placed by hand, the places the user gave the cards on the timeline, the style of the opening and
+ * closing shots (only their length follows), the own duration of stages « À la suite », the film's other items.
  */
 export function autoFilmSettings(settings: Settings, id: AutoFilmId, context: AutoFilmContext): Settings {
   const tpl = AUTO_FILM_TEMPLATES[id]
@@ -85,13 +85,14 @@ export function autoFilmSettings(settings: Settings, id: AutoFilmId, context: Au
 
   let film: Film = {
     ...settings.film,
-    opening: { style: 'descente', durationS: tpl.openingS },
-    closing: { style: 'descente', durationS: tpl.closingS },
+    // the style of a shot the user chose stays (« Situation », « Balayage », transitions…): only its length follows; no shot becomes « Descente »
+    opening: { ...settings.film.opening, style: settings.film.opening.style === 'aucune' ? 'descente' : settings.film.opening.style, durationS: tpl.openingS },
+    closing: { ...settings.film.closing, style: settings.film.closing.style === 'aucune' ? 'descente' : settings.film.closing.style, durationS: tpl.closingS },
   }
   // stops made by hand are the user's work: the generated ones are the only ones a gabarit replaces
   if (film.autoStops || film.stops.length === 0) film = tpl.stops ? { ...film, autoStops: true, autoMode: 'temps-forts', stops: [] } : { ...film, autoStops: false, stops: [] }
   if (context.stages) film = withDefaultCard(film, tpl.cards)
-  else if (context.days >= 2) film = { ...(tpl.cards ? withoutDayCards(film) : film), dayCards: { ...(film.dayCards ?? DEFAULT_DAY_CARDS), enabled: tpl.cards } }
+  else if (context.days >= 2) film = { ...film, dayCards: { ...(film.dayCards ?? DEFAULT_DAY_CARDS), enabled: tpl.cards } }
 
   const styled = withStyleLayout(settings.overlay, tpl.style)
   const overlay = {

@@ -94,7 +94,7 @@ const messages: Messages['film'] = {
   'auto.open': 'Choose a template…',
   'auto.intro': 'Pick a template: the film length, camera, slow-downs and holds, overlay, opening title, closing card and export format are all set at once.',
   'auto.editable': 'Everything stays editable afterwards, and "Undo" takes it back. Your own texts (title, subtitle, lines, credits) and the holds you placed by hand are kept. No music is added.',
-  'auto.length': 'The length shown is the film without the nights and the transitions between stages, which come on top.',
+  'auto.length': 'The length shown includes the opening and closing shots (so the flyover duration reads 24, 50 or 168 s); the nights and the transitions between stages come on top, and a stage with its own duration keeps it.',
   'auto.apply': 'Apply',
   'auto.applyNamed': 'Apply the template "{name}"',
   'auto.applied': 'Automatic film "{name}" applied. Everything stays editable.',

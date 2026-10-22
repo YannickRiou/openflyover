@@ -1823,7 +1823,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   the style (`withStyleLayout`), the opening title on with its date, the closing card on with its figures, the cards' `end` /
   `start` fractions so that they stay `CARD_TAIL_S` (3 s) past the shots whatever the length, the counters on or off. **Never
   touched**: the titles, subtitle, lines, pictures and credits of the cards (an empty opening title is the track's name), the
-  free text, the logo, the cards' `window` placed on the timeline, the film's other items (texts, media, music, keys).
+  free text, the logo, the cards' `window` placed on the timeline, the style and transition of the opening and closing shots (only
+  their length follows; a shot set to `aucune` becomes `descente`), the `stageDurations` of stages « À la suite », the film's other items (texts, including the
+  day cards of older versions, media, music, keys).
 - **Applying** (`applyAutoFilm(id)`, `src/ui/autoFilm.ts`): the path of a preset: `applySettings` in one
   `getSettingsHistory().transaction`, `followFlightTiming` (texts and media attached to a stop follow the new duration), `setFreeFraming(false)`
   when the aspect changes (like a platform chip), then a message with « Annuler » that undoes only while nothing else has

@@ -92,7 +92,7 @@ export default {
   'auto.open': 'Choisir un gabarit…',
   'auto.intro': 'Choisissez un gabarit : la durée du film, la caméra, les ralentis et les arrêts, l’habillage, le titre d’ouverture, la carte de clôture et le format d’export se règlent d’un coup.',
   'auto.editable': 'Tout reste modifiable ensuite, et « Annuler » revient en arrière. Vos propres textes (titre, sous-titre, lignes, crédits) et les arrêts posés à la main sont conservés. Aucune musique n’est ajoutée.',
-  'auto.length': 'La durée annoncée est celle du film sans les nuits ni les passages entre étapes, qui s’ajoutent.',
+  'auto.length': 'La durée annoncée comprend les plans d’ouverture et de clôture (la « Durée du survol » affiche donc 24, 50 ou 168 s) ; les nuits et les passages entre étapes s’y ajoutent, et une étape à durée fixée la garde.',
   'auto.apply': 'Appliquer',
   'auto.applyNamed': 'Appliquer le gabarit « {name} »',
   'auto.applied': 'Film automatique « {name} » appliqué. Tout reste modifiable.',
