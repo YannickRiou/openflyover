@@ -21,8 +21,8 @@ import { Icon } from './icons'
 import { Button, DateField, Modal, NumberField, Radio, RadioGroup, Slider, TimeField } from './primitives'
 import { TrackPreview } from './TrackPreview'
 import type { PointRange } from './TrackPreview'
-import { appliedText, applyTrackTool, exportTrackGpx } from './trackTools'
-import type { AppliedTool } from './trackTools'
+import { appliedText, applyTrackTool, exportTrackGpx } from './applyTrackTool'
+import type { AppliedTool } from './applyTrackTool'
 
 /**
  * « Outils de la trace »: one button on the track's card opens a window of its own (the editing interface stays about the
