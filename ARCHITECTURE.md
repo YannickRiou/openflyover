@@ -1483,7 +1483,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   checked, `autoStops` + `'temps-forts'`, own stops cleared; unchecked, generated stops written; "modifié" /
   ↺ "modifié" button for the film, `ModifiedMarker keys={['film']}`; a dot on the button when the film departs from the default; it
   closes with Esc, a click outside or Tab), collapse.
-  Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 56 px): click-drag to seek, **opening and closing
+  Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 76 px): click-drag to seek, **opening and closing
   included** (`setProgress(clock.progressAtTime(t), t)`, end of film = progress 1 without a time); it is also a keyboard
   slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). The keys are set where they live. Camera keys: the ◀ ◇ ▶ group (`KeyGroup`,
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
@@ -1833,6 +1833,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   `getSettingsHistory().transaction`, `followFlightTiming` (texts and media attached to a stop follow the new duration), `setFreeFraming(false)`
   when the aspect changes (like a platform chip), then a message with « Annuler » that undoes only while nothing else has
   changed since. Applying it again replaces its own choices; the result is the same whichever gabarit came before.
+  **Second entry point**: the dialog has one open state, `useAutoFilmOpen` (`src/ui/autoFilmOpen.ts`, `setAutoFilmOpen`), read by
+  `AutoFilmSection` (always mounted: the tab panels are force-mounted) so that there is one dialog and one logic. `runImport`
+  (`projectActions.ts`) gives the success message of an import an action « Film automatique… » (`film.auto.afterImport`) that calls
+  `setAutoFilmOpen(true)`, only when the app had no track before the import (not when a track is added to a film). The home screen
+  (`EmptyState`) says in one sentence under the sample button (`home.empty.autoFilm`) that it exists; no button there, there is no track yet.
   Strings: `film.auto.*` (five languages), « Nouveautés » 4.0. Tests: `film/autoFilm.test.ts`, `ui/autoFilm.test.ts`,
   `ui/CameraPanel.test.tsx`.
 
@@ -2461,7 +2466,14 @@ exports) gets it from the terrain source of the settings.
   unknown word left as typed; for a single film (the batches keep « projet – format »). **Time before the first film**:
   `rateFromHistory` reads the last film rendered to the end from the history (the same rate as `filmRate`, per frame and
   megapixel) when none was measured this session, and `estimateRenderSeconds` gives « ≈ … de rendu » in the summary (cold tiles make
-  a first film slower: it is an estimate). **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
+  a first film slower: it is an estimate, which the summary's tooltip says). **Forests and snow in the estimate**: the rate is
+  that of the last film (`lastFilm`, the one `rateFromHistory` reads; every film of a session is in the history), and the
+  estimate multiplies it by `layersRatio(that film's layers, the layers to render)`, from `layersCost` = 1 + forests
+  (`FOREST_COST_AT_60` = 0.15 × density / 60, when on) + snow (`SNOW_COST` = 0.03, unless « Aucune »). The 15 % comes from the
+  4.0 measurement (« Forests »: +16 % triangles at 60 trees per hectare, assumed proportional to the density), the 3 % is the
+  extra term of the terrain's fragment shader; both are rough, and tile waiting and encoding do not change with them. A film
+  recorded before 4.1 does not say its layers (`RenderSettings.snow` / `forest` absent): no correction, the rate as it is.
+  The batch estimate (`estimateBatch`) does not use it. **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
   last folder; the desktop one is opened on the folder of the last film (`openflyover.lastFilmFolder`) and, after the export,
   « Ouvrir le dossier » shows the file in the system's file manager (`Platform.revealFile`, the opener plugin's
   `reveal_item_in_dir`, permission `opener:allow-reveal-item-in-dir`; `ExportResult.path`). The website cannot reveal a file.
@@ -2581,11 +2593,14 @@ exports) gets it from the terrain source of the settings.
   recorded, each file of a batch too; still images and posters are not. An entry (`HistoryEntry`) is flat and small:
   name, outcome and short error, output (size, fps, quality, codec, bytes), and `RenderSettings`, the curated summary
   of the settings that change the render time (atmosphere, shadows, sun, clouds mode / quality, lens, imagery and
-  terrain source ids, water on / off, camera style); no track, coordinate or project. Stored as
+  terrain source ids, water on / off, snow mode, forests on / off and density, camera style; no track, coordinate or project.
+  `snow` and `forest` came with 4.1 without a new version: `parseHistory` leaves them out of an older entry, whose detail rows
+  show « — »; a value out of range drops the field, not the entry. Stored as
   `{ v: 1, entries }` under `openflyover.exportHistory.v1` in the platform `storage`, newest first, at most
   `HISTORY_LIMIT` (20) entries and `HISTORY_MAX_BYTES`; `parseHistory` never throws and drops corrupted entries or
   fields. « Réutiliser ces réglages » (`reuseSettings` + `applySettings` in one history transaction, toast with
-  « Annuler ») puts back the export options and these fields only, ignoring unknown source ids.
+  « Annuler ») puts back the export options and these fields only (the snow's mode, not its manual line; the forests' switch and density),
+  ignoring unknown source ids.
 
 ### Render queue and rendering in the background
 

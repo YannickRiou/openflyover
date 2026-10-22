@@ -15,4 +15,5 @@ export default {
   'empty.openProject': 'Ouvrir un projet…',
   'empty.recent': 'Récents',
   'empty.github': 'Projet libre sur GitHub',
+  'empty.autoFilm': 'Après l’import, « Film automatique » compose un film terminé en un clic.',
 }

@@ -22,7 +22,7 @@ import { useQueueStore } from '../export/queue'
 import { showDiagnostic } from '../export/diagnostic'
 import { targetBitrate, type CodecCandidate } from '../export/encoder'
 import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
-import { estimateRenderSeconds, rateFromHistory } from '../export/history'
+import { estimateRenderSeconds, lastFilm, layersRatio, rateFromHistory } from '../export/history'
 import { useExportHistory } from '../export/historyStore'
 import { getSettingsHistory } from '../project/history'
 import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
@@ -200,6 +200,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const t = useT()
   const video = useAppStore((s) => s.settings.video)
   const clouds = useAppStore((s) => s.settings.clouds)
+  const snow = useAppStore((s) => s.settings.snow.mode)
+  const forest = useAppStore((s) => s.settings.forest)
   const customised = useAppStore((s) => isCustomised(s.settings))
   // film length and progress at each film time, with the slow-downs and pauses of the preview
   const pacing = useFilmClock()
@@ -237,7 +239,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const measuredRate = useExportStore((s) => s.secondsPerMegapixel)
   const history = useExportHistory((s) => s.entries)
   const rate = measuredRate ?? rateFromHistory(history)
-  const renderS = rate === null || overlayOnly ? null : estimateRenderSeconds(rate, totalFrames, width, height)
+  // that film's forests and snow against the ones to render (every film of a session is in the history; a film from before 4.0 has no record of them: no correction)
+  const layers = layersRatio(lastFilm(history)?.settings ?? {}, { snow, forest: { enabled: forest.enabled, density: forest.density } })
+  const renderS = rate === null || overlayOnly ? null : estimateRenderSeconds(rate, totalFrames, width, height, layers)
 
   // Ask the browser which codec it can use at this size (H.264 may refuse large or tall frames).
   const probeKey = `${width}x${height}@${video.fps}/${video.quality}/${encoding.codec}/${encoding.bitrateMbps ?? ''}${overlayOnly ? '/alpha' : ''}`
@@ -612,7 +616,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         {overlayOnly && <p className="type-hint">{t('export.panel.overlayOnlyHint')}</p>}
       </div>
 
-      <p className={SUMMARY} title={t('export.panel.summaryTip')}>
+      <p className={SUMMARY} title={renderS === null ? t('export.panel.summaryTip') : `${t('export.panel.summaryTip')} ${t('export.panel.renderTimeTip')}`}>
         {[
           t('export.panel.summary', { duration: formatClock(totalFrames / video.fps), frames: formatNumber(totalFrames) }),
           sequence && !overlayOnly ? 'PNG' : codec && CODEC_LABELS[`${codec.container}/${codec.codec}`],
