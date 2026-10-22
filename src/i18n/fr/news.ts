@@ -115,4 +115,7 @@ export default {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Durée ou vitesse du survol',
   'v41.speed.text': 'Dans Survol › Durée et rythme, réglez le survol par sa durée (au pas d’une seconde, ou en tapant la valeur) ou par la vitesse du marqueur (× le temps réel et km/h). L’un donne l’autre, et les deux sont toujours affichés.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Les lacs gèlent, les ruisseaux restent visibles',
+  'v41.ice.text': 'Au-dessus de la limite de la neige, les lacs deviennent de la glace, blanche comme le sol autour. Et vus de haut, les ruisseaux gardent un fin trait d’eau au lieu de disparaître.',
 }

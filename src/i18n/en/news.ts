@@ -117,6 +117,9 @@ const messages: Messages['news'] = {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Flyover duration or speed',
   'v41.speed.text': 'In Flyover › Duration and pacing, set the flyover by its duration (in steps of one second, or by typing the value) or by the marker’s speed (× real time and km/h). One gives the other, and both are always shown.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Lakes freeze, streams stay visible',
+  'v41.ice.text': 'Above the snow line, lakes turn to ice, as white as the ground around them. And seen from high up, streams keep a thin line of water instead of vanishing.',
 }
 
 export default messages

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CENTRE_FADE, EDGE_FADE, buildRiverStrip, stripHeights } from './riverStrip'
+import { CENTRE_FADE, EDGE_FADE, buildRiverStrip, ribbonEdgeOffsets, stripHeights } from './riverStrip'
 
 const M = 111_320
 const LAT = 45.9
@@ -69,5 +69,21 @@ describe('stripHeights', () => {
   it('is null while no height is known', () => {
     expect(stripHeights([Number.NaN, Number.NaN])).toBeNull()
     expect(stripHeights([])).toBeNull()
+  })
+})
+
+describe('ribbonEdgeOffsets', () => {
+  it('gives each bank its offset from the middle vertex, and none to the middle', () => {
+    const strip = buildRiverStrip(east(3, 60), 10, 60)
+    const xz = Array.from({ length: strip.fade.length }, (_, v) => local(strip, v)).flat()
+    const offsets = ribbonEdgeOffsets(xz)
+    expect(offsets).toHaveLength(xz.length)
+    for (let i = 0; i < xz.length / 6; i++) {
+      expect(Array.from(offsets.slice(6 * i + 2, 6 * i + 4))).toEqual([0, 0])
+      const [lx, lz, rx, rz] = [offsets[6 * i], offsets[6 * i + 1], offsets[6 * i + 4], offsets[6 * i + 5]]
+      expect(Math.hypot(lx, lz)).toBeCloseTo(5, 3)
+      expect(lx).toBeCloseTo(-rx, 4)
+      expect(lz).toBeCloseTo(-rz, 4)
+    }
   })
 })

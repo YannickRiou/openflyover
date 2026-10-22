@@ -117,6 +117,9 @@ const messages: Messages['news'] = {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Durata o velocità del sorvolo',
   'v41.speed.text': 'In Sorvolo › Durata e ritmo, imposti il sorvolo in base alla durata (al secondo, o digitando il valore) o alla velocità del marcatore (× il tempo reale e km/h). L’una dà l’altra, ed entrambe sono sempre mostrate.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'I laghi ghiacciano, i torrenti restano visibili',
+  'v41.ice.text': 'Sopra il limite della neve, i laghi diventano ghiaccio, bianchi come il terreno attorno. E visti dall’alto, i torrenti mantengono un sottile filo d’acqua invece di sparire.',
 }
 
 export default messages

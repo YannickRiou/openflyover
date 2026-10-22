@@ -117,6 +117,9 @@ const messages: Messages['news'] = {
   // 4.1 — duration or speed of the flyover
   'v41.speed.title': 'Dauer oder Tempo des Überflugs',
   'v41.speed.text': 'Stellen Sie in Überflug › Dauer und Tempo den Überflug nach seiner Dauer (in Sekundenschritten oder durch Eintippen) oder nach dem Tempo des Markers (× Echtzeit und km/h) ein. Das eine ergibt das andere, beide werden immer angezeigt.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Seen frieren zu, Bäche bleiben sichtbar',
+  'v41.ice.text': 'Oberhalb der Schneegrenze werden Seen zu Eis, so weiß wie der Boden ringsum. Und aus großer Höhe behalten Bäche eine feine Wasserlinie, statt zu verschwinden.',
 }
 
 export default messages
