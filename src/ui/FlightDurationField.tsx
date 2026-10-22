@@ -9,6 +9,7 @@ import {
   flightExtras,
   hasSpeedUp,
   kmhRange,
+  movingDistanceM,
   movingTimeS,
   movingTotalS,
   speedKmh,
@@ -55,7 +56,10 @@ export function FlightDurationField() {
   const lengthM = track?.stats.distanceM ?? 0
   // the time spent moving on what is flown: each stage's own (pauses, lunches and the nights between two days are not part of it)
   const sequence = useFilmSequence()
-  const movingS = track ? movingTotalS((sequence ? sequence.stages.map((s) => s.track) : [track]).map(movingTimeS)) : undefined
+  const flown = track ? (sequence ? sequence.stages.map((s) => s.track) : [track]) : []
+  const movingS = track ? movingTotalS(flown.map(movingTimeS)) : undefined
+  // the distance that goes with that time, for the pace really kept
+  const paceKmh = movingS !== undefined ? speedKmh(flown.reduce((sum, tr) => sum + movingDistanceM(tr), 0), movingS) : undefined
   const keepDuration = useAppStore((s) => s.settings.pacing.keepDuration)
   const stopCount = film.stops.length
   // « À la suite »: the stages whose flight time is set on the timeline take theirs out of the duration
@@ -73,8 +77,15 @@ export function FlightDurationField() {
     kmh === undefined
       ? undefined
       : speedUp
-        ? t('camera.speed.asSpeedUp', { speedUp, moving: formatDuration(movingS ?? 0), avg: formatKmh(speedKmh(lengthM, movingS ?? 0) ?? 0), kmh: formatKmh(kmh) })
-        : t('camera.speed.asKmh', { kmh: formatKmh(kmh) })
+        ? paceKmh === undefined
+          ? undefined
+          : face === 'speed' && lengthM > 0
+            ? // the speed face already shows the marker's speed: only what is new
+              t('camera.speed.asPace', { moving: formatDuration(movingS ?? 0), avg: formatKmh(paceKmh) })
+            : t('camera.speed.asSpeedUp', { speedUp, moving: formatDuration(movingS ?? 0), avg: formatKmh(paceKmh), kmh: formatKmh(kmh) })
+        : face === 'speed'
+          ? undefined
+          : t('camera.speed.asKmh', { kmh: formatKmh(kmh) })
   const speedWords = (d: number) => {
     const k = speedKmh(lengthM, d)
     const up = timed ? formatSpeedUp(movingS, d) : null
@@ -91,7 +102,7 @@ export function FlightDurationField() {
     stopsAddedS: film.stops.reduce((sum, s) => sum + s.addedS, 0),
     nightsS: film.nights.map(nightPauseS),
   })
-  const extraParts = extras
+  const extraParts = extras && extras.deltaS > 0
     ? [
         extras.nights > 0 && t('camera.duration.extraNights', { count: extras.nights, duration: formatSeconds(Math.round(extras.nightsS)) }),
         extras.stopsS >= 0.5 && t('camera.duration.extraStops', { duration: formatSeconds(Math.round(extras.stopsS)) }),
@@ -197,7 +208,7 @@ export function FlightDurationField() {
       {asSpeed && <p className="type-hint">{asSpeed}</p>}
       {lengthM > 0 && (
         <p className="type-hint">
-          {t(shown === 'duration' ? 'camera.speed.hintDuration' : 'camera.speed.hintSpeed')} {t(keepDuration ? 'camera.speed.hintKept' : 'camera.speed.hintAdded')}
+          {t(shown === 'duration' ? 'camera.speed.hintDuration' : 'camera.speed.hintSpeed')} {keepDuration ? t('camera.speed.hintKept') : extras && extras.stopsS + extras.otherS >= 0.5 ? t('camera.speed.hintAdded') : ''}
           {shown === 'speed' && !upRange && ` ${t('camera.speed.hintUntimed')}`}
           {(stageIds?.length ?? 0) > 1 && ` ${t('camera.speed.hintStages')}`}
         </p>
@@ -214,7 +225,8 @@ export function FlightDurationField() {
           flight: formatSeconds(Math.round(film.flightS)),
           closing: formatSeconds(Math.round(film.closingS)),
         })}
-        {extras && ` ${t('camera.duration.extra', { duration: formatSeconds(durationS), parts: extraParts.join(' + ') })}`}
+        {extras && extras.deltaS > 0 && ` ${t('camera.duration.extra', { duration: formatSeconds(durationS), parts: extraParts.join(' + ') })}`}
+        {extras && extras.deltaS < 0 && ` ${t('camera.duration.shorter', { duration: formatSeconds(durationS), flight: formatSeconds(Math.round(film.flightS)) })}`}
         {timedStages > 0 && ` · ${t('camera.duration.timedStages', { count: timedStages })}`}
       </p>
     </div>

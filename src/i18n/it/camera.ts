@@ -119,6 +119,8 @@ const messages: Messages['camera'] = {
   'duration.extraNights': { one: '{count} notte ({duration})', other: '{count} notti ({duration})' },
   'duration.extraStops': 'soste ({duration})',
   'duration.extraOther': 'passaggi tra tappe o rallentamenti ({duration})',
+  'speed.asPace': 'Andava a {avg}: {moving} in movimento, senza pause né notti.',
+  'duration.shorter': 'Il sorvolo dura {flight}, meno dei {duration} impostati: porzioni di velocità o tappe con durata fissata.',
 }
 
 export default messages

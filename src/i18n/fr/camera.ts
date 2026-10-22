@@ -117,4 +117,6 @@ export default {
   'duration.extraNights': { one: '{count} nuit ({duration})', other: '{count} nuits ({duration})' },
   'duration.extraStops': 'arrêts ({duration})',
   'duration.extraOther': 'passages entre étapes ou ralentis ({duration})',
+  'speed.asPace': 'Vous avanciez à {avg} : {moving} en mouvement, pauses et nuits retirées.',
+  'duration.shorter': 'Le survol dure {flight}, moins que les {duration} réglées : portions de vitesse ou étapes à durée fixée.',
 }

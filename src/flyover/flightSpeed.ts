@@ -10,6 +10,7 @@
  * Pure values and functions (no DOM, no React).
  */
 import type { Track } from '../core/types'
+import { correctedStats } from '../import/stats'
 import { hasTimes } from '../import/tools/common'
 import { findPauses } from '../import/tools/removePauses'
 import { FLYOVER_DURATION_RANGE } from './cameraSettings'
@@ -81,12 +82,15 @@ export function durationAtPosition(position: number): number {
   return clampDuration(MIN_S * Math.pow(MAX_S / MIN_S, 1 - share))
 }
 
+/** Between two consecutive points, longer than this (seconds) is a recording gap, not time spent moving. */
+const GAP_S = 600
+
 const movingCache = new WeakMap<Track['segments'], number | undefined>()
 
 /**
  * Time the person spent moving on the outing (seconds): the time of each segment minus its stops (« Retirer les pauses »:
- * the track stays within 15 m for 2 minutes), so a lunch, a bivouac or a night are not counted, nor the gap between two
- * segments. The duration typed in « Corriger les chiffres » is taken as it is; a track without times has none.
+ * the track stays within 15 m for 2 minutes) and its recording gaps (over 10 minutes between two points), so a lunch, a
+ * bivouac or a night are not counted, nor the gap between two segments. The duration typed in « Corriger les chiffres » is taken as it is; a track without times has none.
  */
 export function movingTimeS(track: Track): number | undefined {
   const typed = track.statsOverride?.durationS
@@ -95,11 +99,28 @@ export function movingTimeS(track: Track): number | undefined {
   if (!hasTimes(segments)) return track.stats.durationS
   if (movingCache.has(segments)) return movingCache.get(segments)
   const elapsedMs = segments.reduce((sum, { points }) => sum + (points.length > 1 ? points[points.length - 1].time! - points[0].time! : 0), 0)
-  const stoppedS = findPauses(segments).reduce((sum, pause) => sum + pause.durationS, 0)
-  const movingS = elapsedMs / 1000 - stoppedS
+  const pauses = findPauses(segments)
+  const stoppedS = pauses.reduce((sum, pause) => sum + pause.durationS, 0)
+  // a recording gap (recorder paused or off, the first fix after it far away) is a pause too, unless a stop already holds it
+  let gapS = 0
+  let index = 0
+  for (const { points } of segments) {
+    for (let k = 0; k + 1 < points.length; k++) {
+      const at = index + k
+      const dt = (points[k + 1].time! - points[k].time!) / 1000
+      if (dt > GAP_S && !pauses.some((p) => p.fromIndex <= at && at + 1 <= p.toIndex)) gapS += dt
+    }
+    index += points.length
+  }
+  const movingS = elapsedMs / 1000 - stoppedS - gapS
   const result = movingS > 0 ? movingS : undefined
   movingCache.set(segments, result)
   return result
+}
+
+/** Distance that goes with `movingTimeS` for the pace walked: the corrected one when the duration is a corrected figure. */
+export function movingDistanceM(track: Track): number {
+  return track.statsOverride?.durationS !== undefined ? correctedStats(track).distanceM : track.stats.distanceM
 }
 
 /**
@@ -111,8 +132,10 @@ export function movingTotalS(durationsS: readonly (number | undefined)[]): numbe
   return (durationsS as number[]).reduce((a, b) => a + b, 0)
 }
 
-/** What makes the flight longer than the duration set, in seconds (`flightExtras`). */
+/** What makes the flight longer (or shorter) than the duration set, in seconds (`flightExtras`). */
 export interface FlightExtras {
+  /** flight minus the duration set: negative when the flight is shorter */
+  deltaS: number
   nights: number
   nightsS: number
   /** stops added on top of the duration (« Garder la durée du survol » unticked) */
@@ -122,9 +145,9 @@ export interface FlightExtras {
 }
 
 /**
- * Why the flight (the « Survol » block of the timeline, `flightS`) lasts longer than the duration set: the nights shown
- * as pauses, the stops when « Garder la durée du survol » is off, and the rest. Undefined when it lasts the duration set
- * (within half a second).
+ * Why the flight (the « Survol » block of the timeline, `flightS`) does not last the duration set: longer (the nights
+ * shown as pauses, the stops when « Garder la durée du survol » is off, the rest) or shorter (speed portions, stages with
+ * a duration of their own, « Garder » off). Undefined when it lasts the duration set (within half a second).
  */
 export function flightExtras(input: {
   flightS: number
@@ -135,11 +158,11 @@ export function flightExtras(input: {
   /** film time of each night shown as a pause */
   nightsS: readonly number[]
 }): FlightExtras | undefined {
-  const extraS = input.flightS - input.durationS
-  if (!(extraS >= 0.5)) return undefined
+  const deltaS = input.flightS - input.durationS
+  if (!(Math.abs(deltaS) >= 0.5)) return undefined
   const nightsS = input.nightsS.reduce((a, b) => a + b, 0)
   const stopsS = input.keepDuration ? 0 : input.stopsAddedS
-  return { nights: input.nightsS.length, nightsS, stopsS, otherS: Math.max(0, extraS - nightsS - stopsS) }
+  return { deltaS, nights: input.nightsS.length, nightsS, stopsS, otherS: Math.max(0, deltaS - nightsS - stopsS) }
 }
 
 /**

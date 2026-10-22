@@ -119,6 +119,8 @@ const messages: Messages['camera'] = {
   'duration.extraNights': { one: '{count} Nacht ({duration})', other: '{count} Nächte ({duration})' },
   'duration.extraStops': 'Stopps ({duration})',
   'duration.extraOther': 'Pausen zwischen Etappen oder Verlangsamungen ({duration})',
+  'speed.asPace': 'Sie waren mit {avg} unterwegs: {moving} in Bewegung, Pausen und Nächte abgezogen.',
+  'duration.shorter': 'Der Überflug dauert {flight}, weniger als die eingestellten {duration}: Geschwindigkeitsabschnitte oder Etappen mit festgelegter Dauer.',
 }
 
 export default messages

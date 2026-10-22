@@ -119,6 +119,8 @@ const messages: Messages['camera'] = {
   'duration.extraNights': { one: '{count} night ({duration})', other: '{count} nights ({duration})' },
   'duration.extraStops': 'holds ({duration})',
   'duration.extraOther': 'pauses between stages or slow-downs ({duration})',
+  'speed.asPace': 'You moved at {avg}: {moving} moving, pauses and nights left out.',
+  'duration.shorter': 'The flyover lasts {flight}, less than the {duration} set: speed portions or stages with a set duration.',
 }
 
 export default messages

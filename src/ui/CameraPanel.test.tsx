@@ -159,7 +159,9 @@ describe('CameraPanel: the maintainer\'s two reports of 4.2.0', () => {
     await act(async () => up.blur())
     // 8 h 15 moving over × 50 = 594 s, i.e. the marker goes at 100 km/h over the 16.5 km
     expect(useAppStore.getState().settings.flyoverDurationS).toBe(594)
-    expect(host.textContent).toContain('Vitesse du marqueur dans le film : 100 km/h, soit × 50 votre allure réelle (vous avanciez à 2,0 km/h : 8 h 15 en mouvement')
+    // the speed face shows the marker's speed already: only the pace walked is new
+    expect(host.textContent).toContain('Vous avanciez à 2,0 km/h : 8 h 15 en mouvement, pauses et nuits retirées.')
+    expect(host.textContent).not.toContain('Vitesse du marqueur dans le film')
     expect(host.textContent).not.toContain('24 h 33')
     act(() => root.unmount())
   })

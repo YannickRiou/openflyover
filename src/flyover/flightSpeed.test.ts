@@ -16,6 +16,7 @@ import {
   flightExtras,
   hasSpeedUp,
   kmhRange,
+  movingDistanceM,
   movingTimeS,
   movingTotalS,
   speedKmh,
@@ -188,6 +189,35 @@ describe('moving time of an outing', () => {
   })
 })
 
+describe('recording gaps and the distance of the pace', () => {
+  it('a 12 h gap in one segment, the first fix 200 m after the restart, is not moving time', () => {
+    const walk = (from: number, lat0: number) => Array.from({ length: 31 }, (_, i) => ({ lon: 6, lat: lat0 + i * 0.0002, ele: 0, time: from + i * 60_000 }))
+    const before = walk(0, 45)
+    const lastLat = before[before.length - 1].lat
+    // the recorder was off 12 h; the first fix after it is about 200 m further
+    const after = walk(30 * 60_000 + 12 * 3_600_000, lastLat + 0.0018)
+    const track = buildTrack({ name: 'a', source: 'gpx', segments: [{ points: [...before, ...after] }] })
+    expect(track.stats.durationS).toBe((30 + 720 + 30) * 60)
+    expect(movingTimeS(track)).toBeCloseTo(60 * 60, -1)
+    // the gap of a stop that is already a pause is not taken twice
+    expect(movingTimeS(maintainerOuting())).toBe(495 * 60)
+  })
+
+  it('the corrected distance goes with a corrected duration, the file\'s with its own', () => {
+    const track = buildTrack({ name: 'a', source: 'gpx', segments: [{ points: Array.from({ length: 11 }, (_, i) => ({ lon: 6, lat: 45 + i * 0.001, ele: 0, time: i * 60_000 })) }] })
+    expect(movingDistanceM(track)).toBe(track.stats.distanceM)
+    expect(movingDistanceM({ ...track, statsOverride: { distanceM: 5000 } })).toBe(track.stats.distanceM)
+    expect(movingDistanceM({ ...track, statsOverride: { durationS: 3600, distanceM: 5000 } })).toBe(5000)
+  })
+})
+
+describe('flightExtras when the flight is shorter than the duration set', () => {
+  it('gives a negative difference, with no night nor stop added', () => {
+    expect(flightExtras({ flightS: 20, durationS: 25, keepDuration: false, stopsAddedS: 0, nightsS: [] })).toEqual({ deltaS: -5, nights: 0, nightsS: 0, stopsS: 0, otherS: 0 })
+    expect(flightExtras({ flightS: 25.2, durationS: 25, keepDuration: true, stopsAddedS: 0, nightsS: [] })).toBeUndefined()
+  })
+})
+
 describe('the two reports of 4.2.0 (16.5 km walked at 2 km/h, 24 h 33 in the file)', () => {
   const outing = maintainerOuting()
   const lengthM = outing.stats.distanceM
@@ -234,7 +264,7 @@ describe('the two reports of 4.2.0 (16.5 km walked at 2 km/h, 24 h 33 in the fil
     // 25 s + dusk 3 s + night 2 s + dawn 3 s: the 33 s block of the report, not the 25 s typed
     expect(clock.flightS).toBeCloseTo(33, 6)
     expect(clock.totalTime()).toBeCloseTo(clock.openingS + 33 + clock.closingS, 6)
-    expect(flightExtras({ flightS: clock.flightS, durationS: 25, keepDuration: true, stopsAddedS: clock.stops[0].addedS, nightsS: [8] })).toEqual({ nights: 1, nightsS: 8, stopsS: 0, otherS: 0 })
+    expect(flightExtras({ flightS: clock.flightS, durationS: 25, keepDuration: true, stopsAddedS: clock.stops[0].addedS, nightsS: [8] })).toEqual({ deltaS: 8, nights: 1, nightsS: 8, stopsS: 0, otherS: 0 })
   })
 
   it('without the night the flight lasts exactly the duration set, whatever the stop and the slow-down; unticked, they are added and named', () => {

@@ -896,7 +896,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change). The
   marker's *average* speed is derived: km/h = length ÷ duration (`speedKmh`, the length of the film track: all the stages of
   « À la suite »), « × l'allure réelle » = **moving time** ÷ duration (`speedUpFactor`). The moving time (`movingTimeS`) is the
-  track's time minus its stops (`findPauses`, the rule of « Retirer les pauses »: within 15 m for 2 min) and the gaps between
+  track's time minus its stops (`findPauses`, the rule of « Retirer les pauses »: within 15 m for 2 min), every gap of over 10 min between two points (recorder off) and the gaps between
   segments, so a lunch, a bivouac or a night are not counted (a day walked at 2 km/h read × 150 against the 24 h of the file, it
   now reads × 50 for 100 km/h); the duration typed in « Corriger les chiffres » is taken as it is; `movingTotalS` sums the
   stages' own, the nights between days not counted; none for a track without times: km/h only. The panel writes both and the
