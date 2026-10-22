@@ -95,6 +95,10 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Der Himmel folgt dem Wetter jedes durchquerten Gebiets, und Wolken werfen Schatten auf das Gelände.',
   'v20.interface.title': 'Eine neu gestaltete Oberfläche',
   'v20.interface.text': 'Neues Aussehen für Bereiche, Menüs, Schaltflächen und Fenster, mit denselben Funktionen wie zuvor.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Ein Film mit einem Klick',
+  'v40.auto.text': 'Im Reiter Überflug bietet „Automatischer Film“ drei Vorlagen (Reel 30 s, Zusammenfassung 1 min, Erinnerung 3 min): Länge, Kamera, Titel, Karten und Exportformat werden auf einmal eingestellt, danach bleibt alles änderbar.',
 }
 
 export default messages

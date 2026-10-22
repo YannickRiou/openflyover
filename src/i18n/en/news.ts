@@ -95,6 +95,10 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'The sky follows the weather of each area crossed, and clouds cast shadows on the terrain.',
   'v20.interface.title': 'A redesigned interface',
   'v20.interface.text': 'A new look for the panels, menus, buttons and windows, with the same functions as before.',
+
+  // ---- 4.0
+  'v40.auto.title': 'A film in one click',
+  'v40.auto.text': 'In the Flyover tab, "Automatic film" offers three templates (Reel 30 s, Summary 1 min, Keepsake 3 min): length, camera, titles, cards and export format are set at once, and everything stays editable afterwards.',
 }
 
 export default messages

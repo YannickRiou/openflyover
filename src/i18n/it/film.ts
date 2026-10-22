@@ -86,6 +86,24 @@ const messages: Messages['film'] = {
   'param.exposureValue': '{value} EV',
   'param.sunHourValue': '{hours} h {minutes}',
   'param.percentValue': '{value}%',
+
+  // ---- Film automatico (src/film/autoFilm.ts, src/ui/AutoFilmDialog.tsx)
+  'auto.title': 'Film automatico',
+  'auto.sectionHint': 'In un clic: durata, camera, titoli e formato di esportazione di un film pronto da pubblicare. Tutto resta modificabile in seguito.',
+  'auto.needTrack': 'Importa una traccia per creare un film automatico.',
+  'auto.open': 'Scegli un modello…',
+  'auto.intro': 'Scegli un modello: la durata del film, la camera, i rallentamenti e le soste, l’overlay, il titolo di apertura, la scheda di chiusura e il formato di esportazione si impostano in un colpo solo.',
+  'auto.editable': 'Tutto resta modificabile in seguito, e «Annulla» riporta indietro. I tuoi testi (titolo, sottotitolo, righe, crediti) e le soste messe a mano vengono mantenuti. Non viene aggiunta alcuna musica.',
+  'auto.length': 'La durata indicata comprende le inquadrature di apertura e di chiusura (quindi la durata del sorvolo mostra 24, 50 o 168 s); le notti e i passaggi tra le tappe si aggiungono, e una tappa con durata propria la mantiene.',
+  'auto.apply': 'Applica',
+  'auto.applyNamed': 'Applica il modello «{name}»',
+  'auto.applied': 'Film automatico «{name}» applicato. Tutto resta modificabile.',
+  'auto.reel.name': 'Reel 30 s',
+  'auto.reel.hint': 'Verticale 9:16, 30 s, esportazione Reels / TikTok / Shorts: un titolo con il nome e la data dell’uscita, una scheda di chiusura con tre cifre, nessuna sosta, una camera dinamica.',
+  'auto.resume.name': 'Riassunto 1 min',
+  'auto.resume.hint': 'Orizzontale 16:9, 1 min, esportazione YouTube HD: titolo di apertura, soste ai passi e alle cime, una scheda per giorno o per tappa se la traccia ne ha più di una, scheda di chiusura con le cifre.',
+  'auto.souvenir.name': 'Ricordo 3 min',
+  'auto.souvenir.hint': 'Orizzontale 16:9, 3 min, esportazione YouTube HD: camera tranquilla, rallentatore nelle salite, soste ai passi e alle cime, schede di giorno o di tappa, contatori, titolo di apertura e scheda di chiusura.',
 }
 
 export default messages

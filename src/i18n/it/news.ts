@@ -95,6 +95,10 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'Il cielo segue il meteo di ogni zona attraversata e le nuvole proiettano ombre sul rilievo.',
   'v20.interface.title': 'Un’interfaccia ridisegnata',
   'v20.interface.text': 'Nuovo aspetto per pannelli, menu, pulsanti e finestre, con le stesse funzioni di prima.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Un film in un clic',
+  'v40.auto.text': 'Nella scheda Sorvolo, «Film automatico» propone tre modelli (Reel 30 s, Riassunto 1 min, Ricordo 3 min): durata, camera, titoli, schede e formato di esportazione si impostano in un colpo solo, e tutto resta modificabile in seguito.',
 }
 
 export default messages

@@ -132,3 +132,32 @@ describe('CameraPanel: « Pause aux temps forts »', () => {
     act(() => older.root.unmount())
   })
 })
+
+describe('CameraPanel: « Film automatique »', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('opens the three gabarits and applies the one chosen', async () => {
+    const { root } = await mount(timed, 60)
+    const open = [...document.querySelectorAll('button')].find((b) => b.textContent?.includes('Choisir un gabarit'))!
+    await act(async () => open.click())
+    const list = document.querySelector('[data-testid="auto-film-templates"]')!
+    expect([...list.querySelectorAll('li p.font-semibold')].map((p) => p.textContent)).toEqual(['Reel 30 s', 'Résumé 1 min', 'Souvenir 3 min'])
+    await act(async () => list.querySelector<HTMLButtonElement>('button[aria-label="Appliquer le gabarit « Résumé 1 min »"]')!.click())
+    const { settings } = useAppStore.getState()
+    expect(settings.flyoverDurationS + settings.film.opening.durationS + settings.film.closing.durationS).toBe(60)
+    expect(document.querySelector('[data-testid="auto-film-templates"]')).toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('is off without a track', async () => {
+    useAppStore.setState({ tracks: [], settings: DEFAULT_SETTINGS })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<CameraPanel />))
+    const open = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Choisir un gabarit'))!
+    expect(open.disabled).toBe(true)
+    act(() => root.unmount())
+  })
+})

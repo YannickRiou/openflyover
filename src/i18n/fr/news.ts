@@ -93,4 +93,8 @@ export default {
   'v21.weather.text': 'Le ciel suit la météo de chaque zone traversée, et les nuages font de l’ombre sur le relief.',
   'v20.interface.title': 'Une interface repensée',
   'v20.interface.text': 'Nouvelle présentation des panneaux, des menus, des boutons et des fenêtres, avec les mêmes fonctions qu’avant.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Un film en un clic',
+  'v40.auto.text': 'Dans l’onglet Survol, « Film automatique » propose trois gabarits (Reel 30 s, Résumé 1 min, Souvenir 3 min) : durée, caméra, titres, cartes et format d’export se règlent d’un coup, et tout reste modifiable ensuite.',
 }
