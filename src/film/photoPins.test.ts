@@ -1,18 +1,49 @@
 import { describe, expect, it } from 'vitest'
-import type { TrackPath } from '../flyover/path'
+import { buildTrackPath } from '../flyover/path'
+import { buildTrack } from '../import/stats'
 import type { FilmMedia } from './model'
-import { PIN_AIM_SHARE, PIN_APPROACH_S, PIN_RELEASE_S, pinAims, photoPins, pinAimWeight, pinLit } from './photoPins'
+import { PIN_AIM_SHARE, PIN_APPROACH_S, PIN_RELEASE_S, photoPins, pinAimWeight, pinAims, pinLit } from './photoPins'
 
-const path = { count: 2, lengthM: 1000 } as unknown as TrackPath
+// a straight track along a parallel, 0.01° of longitude ≈ 775 m, 4 points: 0 – 2.3 km
+const track = buildTrack({
+  name: 'droite',
+  source: 'gpx',
+  segments: [{ points: [6.8, 6.81, 6.82, 6.83].map((lon) => ({ lon, lat: 45.9 })) }],
+})
+const path = buildTrackPath(track)
 const clock = { progressAtTime: (t: number) => t / 100 }
 const photo = (id: string, startS: number, kind: FilmMedia['kind'] = 'image'): FilmMedia =>
-  ({ id, startS, durationS: 5, kind, src: `photo-${id}`, layout: 'carte', anchor: 'bottom-right', size: 1, kenBurns: false }) as FilmMedia
+  ({ id, startS, durationS: 5, kind, src: `s-${id}`, layout: 'carte', anchor: 'bottom-right', size: 1, kenBurns: false }) as FilmMedia
+const thumbed = (...ids: string[]) => Object.fromEntries(ids.map((id) => [`s-${id}`, { thumb: 'data:image/jpeg;base64,AA' }]))
 
 describe('photoPins', () => {
-  it('places each picture where the marker is when it appears, videos left out', () => {
-    const pins = photoPins([photo('a', 20), photo('b', 50, 'video'), photo('c', 150)], path, clock)
-    expect(pins.map((p) => [p.id, p.atM])).toEqual([['a', 200], ['c', 1000]])
+  it('places each picture where the marker is when it appears, videos included', () => {
+    const pins = photoPins([photo('a', 20), photo('b', 50, 'video'), photo('c', 150)], path, clock, thumbed('a', 'b', 'c'))
+    expect(pins.map((p) => [p.id, Math.round(p.atM / path.lengthM * 100)])).toEqual([['a', 20], ['b', 50], ['c', 100]])
+    expect(pins[0].lon).toBeCloseTo(6.8 + 0.03 * 0.2, 4)
+    expect(pins[0].lat).toBeCloseTo(45.9, 4)
   })
+  it('leaves out a medium without a thumbnail', () => {
+    expect(photoPins([photo('a', 20), photo('b', 30)], path, clock, thumbed('b')).map((p) => p.id)).toEqual(['b'])
+  })
+  it('puts a geotagged photo at the track point nearest to where it was taken, not under the marker', () => {
+    const table = { 's-a': { thumb: 'data:image/jpeg;base64,AA', lon: 6.8301, lat: 45.9005 }, ...thumbed('b') }
+    const [a, b] = photoPins([photo('a', 20), photo('b', 20)], path, clock, table)
+    expect(a.atM).toBeCloseTo(path.lengthM, -1)
+    expect(a.lon).toBeCloseTo(6.83, 3)
+    expect(b.atM).toBeCloseTo(path.lengthM * 0.2, -1)
+  })
+  it('ignores a position too far from the track', () => {
+    const table = { 's-a': { thumb: 'data:image/jpeg;base64,AA', lon: 7.5, lat: 45.9 } }
+    const [a] = photoPins([photo('a', 20)], path, clock, table)
+    expect(a.atM).toBeCloseTo(path.lengthM * 0.2, -1)
+  })
+  it('gives nothing without a track', () => {
+    expect(photoPins([photo('a', 20)], { ...path, count: 0 }, clock, thumbed('a'))).toEqual([])
+  })
+})
+
+describe('pin timing', () => {
   it('lights up while the photo is on screen only', () => {
     const pin = { startS: 20, endS: 25 }
     expect([19.9, 20, 24.9, 25].map((t) => pinLit(pin, t))).toEqual([false, true, true, false])
@@ -26,10 +57,10 @@ describe('photoPins', () => {
     expect(pinAimWeight(pin, 45 + PIN_RELEASE_S)).toBe(0)
   })
   it('shares the pull between a pin being left and the next being approached', () => {
-    const alone = photoPins([photo('a', 20), photo('b', 80)], path, clock)
+    const alone = photoPins([photo('a', 20), photo('b', 80)], path, clock, thumbed('a', 'b'))
     expect(pinAims(alone, 100)).toEqual([])
     expect(pinAims(alone, 22)).toEqual([{ pin: alone[0], share: PIN_AIM_SHARE }])
-    const pins = photoPins([photo('a', 20), photo('b', 36)], path, clock)
+    const pins = photoPins([photo('a', 20), photo('b', 36)], path, clock, thumbed('a', 'b'))
     const both = pinAims(pins, 27)
     expect(both.map((x) => x.pin.id)).toEqual(['a', 'b'])
     expect(both.reduce((sum, x) => sum + x.share, 0)).toBeCloseTo(PIN_AIM_SHARE)

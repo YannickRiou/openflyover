@@ -15,6 +15,8 @@ import {
   photoLabels,
   PHOTO_PRIORITY,
   ENDPOINT_PRIORITY,
+  DEFAULT_LABELS,
+  upgradeLabelSettings,
   withLabelDefaults,
   isValidLabelSettings,
   lineOfSightClearance,
@@ -105,6 +107,13 @@ describe('label texts and sources', () => {
     expect(isValidLabelSettings({ kmStep: 0, size: 1, rangeKm: 500 })).toBe(false)
     expect(withLabelDefaults({ climbs: false, waypoints: true })).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 })
     expect(withLabelDefaults({ climbs: true, waypoints: true, kmStep: 5 })).toMatchObject({ kmStep: 5 })
+  })
+
+  it('a project saved before « Photos sur le terrain » keeps its film as it was; the setting is kept when it is there', () => {
+    expect(upgradeLabelSettings({ waypoints: true, kmStep: 0, endpoints: false, photos: true, size: 1, rangeKm: 70 })).toMatchObject({ photos: true, photoPins: false })
+    expect(upgradeLabelSettings({ photoPins: true })).toMatchObject({ photoPins: true })
+    expect(upgradeLabelSettings({ photoPins: false })).toMatchObject({ photoPins: false })
+    expect(DEFAULT_LABELS.photoPins).toBe(true)
   })
 
   it('formats climb labels in French', () => {

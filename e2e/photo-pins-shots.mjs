@@ -4,9 +4,11 @@
  *
  *   node e2e/photo-pins-shots.mjs [out-dir]
  *
- * Environment: OPENFLYOVER_CHROME (default /usr/bin/google-chrome), OPENFLYOVER_SHOTS_WIDTH (default 1280).
+ * Environment: OPENFLYOVER_CHROME (default: the Playwright headless shell, as e2e/run.mjs), OPENFLYOVER_SHOTS_WIDTH (page width, default 1280).
+ * Writes <out-dir>/<n>-<name>.png: the stage only, about 1280 px wide (the page is rendered at 1.69× its CSS size).
  */
 import { existsSync, mkdirSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer-core'
@@ -14,9 +16,11 @@ import { createServer } from 'vite'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const OUT = process.argv[2] ?? join(ROOT, 'photo-pins-shots')
-const CHROME = process.env.OPENFLYOVER_CHROME || '/usr/bin/google-chrome'
+// the same browser as e2e/run.mjs
+const DEFAULT_CHROME = join(homedir(), '.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell')
+const CHROME = process.env.OPENFLYOVER_CHROME || (existsSync(DEFAULT_CHROME) ? DEFAULT_CHROME : '')
 const WIDTH = Number(process.env.OPENFLYOVER_SHOTS_WIDTH ?? 1280)
-if (!existsSync(CHROME)) throw new Error('Chromium introuvable : OPENFLYOVER_CHROME')
+if (!CHROME) throw new Error('Chromium introuvable : OPENFLYOVER_CHROME')
 mkdirSync(OUT, { recursive: true })
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 

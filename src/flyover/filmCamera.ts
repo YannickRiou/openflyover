@@ -39,6 +39,7 @@ import { samplePath, type TrackPath } from './path'
 import { nightAt } from './sun'
 import { cameraKeyEaseM, keyFraming, keyPoseAt, type KeyFraming } from './cameraKeys'
 import { anticipatedRaise, smoothsInTime, timeSmoothing } from './timeSmoothing'
+import { aimTowardsPins, type AimPin } from './pinAim'
 
 export { smootherstep }
 export { CAMERA_KEY_EASE_S, cameraKeyEaseM, keyedCamera } from './cameraKeys'
@@ -633,6 +634,8 @@ export interface FilmViewOptions extends Omit<CameraViewOptions, 'timeS' | 'orbi
   follow?: ((progress: number) => FollowedFlight | null) | null
   /** how many times the terrain behind `sample` changed (tiles loaded or dropped): see `raiseTable` */
   terrainVersion?: number
+  /** the photo pins the flight camera turns towards (« Photos sur le terrain », `pinAim.ts`); none or absent: it does not turn */
+  pins?: readonly AimPin[]
 }
 
 export interface FilmView extends CameraView {
@@ -935,6 +938,27 @@ function bilanView(region: TrackPath, held: FollowedFlight, frame: LocalFrame, s
  * the film track; smoothed progresses are never averaged across a stage cut or a change of leader.
  */
 export function computeFilmView(
+  path: TrackPath,
+  clock: FilmClock,
+  timeS: number,
+  progress: number,
+  frame: LocalFrame,
+  sample: HeightSampler | null,
+  options: FilmViewOptions,
+): FilmView {
+  const view = computeFlownView(path, clock, timeS, progress, frame, sample, options)
+  const { pins } = options
+  if (!pins || pins.length === 0 || options.follow?.(progress)?.overview) return view
+  // the turn is the flight's: not in the opening and closing shots nor in the high views of the nights, and the camera keys
+  // (a pose set by hand) take it away as they take the view over
+  const { phase } = clock.stateAt(timeS)
+  if (phase === 'opening' || phase === 'closing' || highViewAt(clock, timeS)) return view
+  const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
+  const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
+  return aimTowardsPins(view, pins, timeS, frame, sample, options.exaggeration, options.liftM, 1 - (keyed?.weight ?? 0))
+}
+
+function computeFlownView(
   path: TrackPath,
   clock: FilmClock,
   timeS: number,

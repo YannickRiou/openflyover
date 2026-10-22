@@ -116,6 +116,15 @@ export const DEFAULT_LABELS = { waypoints: true, kmStep: 0, endpoints: false, ph
 /** Labels settings of an older project: the fields added since take their default. */
 export const withLabelDefaults = withDefaults(DEFAULT_LABELS)
 
+/**
+ * Labels settings read from a saved project: as `withLabelDefaults`, except that a project saved before « Photos sur le
+ * terrain » keeps its film as it was (the pins off); a new project has them on.
+ */
+export function upgradeLabelSettings(raw: unknown): unknown {
+  if (raw !== null && typeof raw === 'object' && !Array.isArray(raw) && !('photoPins' in raw)) return withLabelDefaults({ ...raw, photoPins: false })
+  return withLabelDefaults(raw)
+}
+
 /** Value checks of the labels settings (shape already checked). */
 export function isValidLabelSettings(v: { kmStep: number; size: number; rangeKm: number }): boolean {
   return (KM_MARKER_STEPS as readonly number[]).includes(v.kmStep) && inRange(v.size, LABEL_SIZE_RANGE) && inRange(v.rangeKm, LABEL_RANGE_KM)

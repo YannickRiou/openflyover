@@ -16,7 +16,7 @@ const messages: Messages['track'] = {
   'labels.endpoints': 'Start and finish',
   'labels.photos': 'Photos, where they were taken',
   'labels.photoPins': 'Photos on the terrain',
-  'labels.photoPinsTip': 'Each photo of the timeline becomes a pin on the relief, where the marker is when it appears; the camera turns towards it for a moment.',
+  'labels.photoPinsHint': 'Each photo or video of the timeline becomes a pin with its thumbnail standing on the relief, and the camera turns towards it as it goes by. Not the same as “Photos, where they were taken”, which only puts a name on the map.',
   'labels.kmMarkers': 'Kilometre markers',
   'labels.kmStepNone': 'None',
   'labels.kmStepOne': 'Every kilometre',

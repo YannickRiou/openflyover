@@ -42,6 +42,7 @@ import {
   type ScreenRect,
 } from './labelModel'
 import { externalLabels, useLabelSources } from './labelSources'
+import { setShownLabelRects } from './labelRects'
 import { reliefClearance } from './markerSprite'
 import { POI_ICON_PATHS } from './poiIcons'
 import { useFilmTrack } from './usePacing'
@@ -239,6 +240,7 @@ function updateLabelSet(
 ): void {
   if (keyOpacity < MIN_OPACITY) {
     for (const entry of set.entries) entry.sprite.visible = false
+    setShownLabelRects([])
     return
   }
   camera.getWorldPosition(cameraPosition)
@@ -270,6 +272,7 @@ function updateLabelSet(
     shown.push({ entry, opacity })
   }
   const visible = resolveOverlaps(candidates)
+  setShownLabelRects(candidates.filter((_, i) => visible[i]).map((c) => c.rect))
   shown.forEach(({ entry, opacity }, i) => {
     if (!visible[i]) return
     entry.sprite.visible = true
@@ -432,7 +435,10 @@ export function Labels() {
   )
 
   useFrame(({ camera, gl, size }) => {
-    if (!setRef.current) return
+    if (!setRef.current) {
+      setShownLabelRects([])
+      return
+    }
     const { playback, settings, tracks } = useAppStore.getState()
     const { renderScale } = useExportStore.getState()
     // the « Étiquettes » keys are anchored in metres along the film track, like the other parameter keys

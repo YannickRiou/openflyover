@@ -1,6 +1,8 @@
 import type { Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import type { FilmClock } from '../film/clock'
+import { useMediaStore } from '../film/media'
+import { photoPins, type PhotoPin } from '../film/photoPins'
 import type { KeyFraming } from '../flyover/cameraKeys'
 import { computeFilmView, keyFramingAt, type FilmView, type FilmViewOptions } from '../flyover/filmCamera'
 import { filmFollowOf, type FollowFlight } from '../flyover/follow'
@@ -52,6 +54,17 @@ function viewInputs(engine: TerrainEngine | null, aspect: number, follow?: Follo
   return { sampler: terrain?.sampler ?? null, options }
 }
 
+/** The pins of the film's photos while « Photos sur le terrain » is on, the same array while nothing they come from changes. */
+let pinned: { inputs: readonly unknown[]; pins: PhotoPin[] } | undefined
+
+export function filmPins(path: TrackPath, clock: FilmClock): PhotoPin[] {
+  const { settings } = useAppStore.getState()
+  const table = useMediaStore.getState().table
+  const inputs = [path, clock, settings.film.media, table]
+  if (!pinned || pinned.inputs.some((input, i) => input !== inputs[i])) pinned = { inputs, pins: photoPins(settings.film.media, path, clock, table) }
+  return pinned.pins
+}
+
 /** Camera placement of the film (preview and export) at `progress` and film time `timeS` with the terrain loaded now. */
 export function filmViewAt(
   path: TrackPath,
@@ -64,7 +77,8 @@ export function filmViewAt(
   follow?: FollowFlight | null,
 ): FilmView {
   const { sampler, options } = viewInputs(engine, aspect, follow)
-  return computeFilmView(path, clock, timeS ?? clock.timeAtProgress(progress), progress, frame, sampler, options)
+  const pins = useAppStore.getState().settings.labels.photoPins ? filmPins(path, clock) : undefined
+  return computeFilmView(path, clock, timeS ?? clock.timeAtProgress(progress), progress, frame, sampler, { ...options, pins })
 }
 
 /** Keyframe pose of the camera at `position` looking toward `lookAt`, at `progress` and film time `timeS` (`keyFramingAt`). */

@@ -161,7 +161,7 @@ describe('frozen old projects', () => {
       // v3: the nights were off, the stages « À la suite » kept their fades
       junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true, night: false },
     })
-    expect(s.labels).toEqual({ climbs: true, waypoints: false, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 })
+    expect(s.labels).toEqual({ climbs: true, waypoints: false, kmStep: 0, endpoints: false, photos: false, photoPins: false, size: 1, rangeKm: 70 })
     expect(s.overlay).toMatchObject({
       enabled: true,
       style: 'broadcast',
@@ -229,7 +229,7 @@ describe('frozen old projects', () => {
       // v3: the nights were off, the stages « À la suite » kept their fades
       junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true, night: false },
     })
-    expect(s.labels).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 })
+    expect(s.labels).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: false, size: 1, rangeKm: 70 })
     expect(s.overlay.enabled).toBe(false)
     expect(s.landmarks.maxDistanceM).toBe(1500)
     expectDefaultsBut(s, [...CHECKED, 'sunDate'])

@@ -14,7 +14,7 @@ export default {
   'labels.endpoints': 'Départ et arrivée',
   'labels.photos': 'Photos, là où elles ont été prises',
   'labels.photoPins': 'Photos sur le terrain',
-  'labels.photoPinsTip': 'Chaque photo de la timeline devient une épingle sur le relief, à l\'endroit où passe le marqueur quand elle apparaît ; la caméra se tourne vers elle un instant.',
+  'labels.photoPinsHint': 'Chaque photo ou vidéo de la timeline devient une épingle avec sa vignette posée sur le relief, et la caméra se tourne vers elle quand elle passe. À ne pas confondre avec « Photos, là où elles ont été prises », qui ne pose qu’un nom sur la carte.',
   'labels.kmMarkers': 'Bornes kilométriques',
   'labels.kmStepNone': 'Aucune',
   'labels.kmStepOne': 'Tous les kilomètres',
