@@ -530,9 +530,11 @@ pointer (`appearance.css`).
   "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
   99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
   erreur" (N tiles in error) in yellow with a tip; nothing before the first tile; not a live region, the ring is a
-  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau from `useWeatherStore`,
-  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`; `fetchChip` in `mapStatus.ts`;
-  spinner / check / attention with the store message / muted); a performance readout when the bar is at least 900 px
+  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau / Forêts from `useWeatherStore`,
+  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`; `STATUS_CHIPS`
+  in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed shows it; `fetchChip` in `mapStatus.ts`;
+  spinner / check / attention with the store message / muted; « Forêts » has a fifth state, `queued` « en attente », spinner like loading:
+  the request waits for the Overpass queue, `onStart` of `cachedOverpassQuery`); a performance readout when the bar is at least 900 px
   wide (`perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of the renderer
   through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through the Tauri
   command `system_stats`), each part chosen in « Réglages »; then the short credits of the active sources, always
@@ -2161,7 +2163,7 @@ exports) gets it from the terrain source of the settings.
   `out tags bb` (ways and relations reduced to their bounding box, positioned at its middle; the box is kept for places as
   `OsmFeature.area`, with the raw `population` tag). The `around:` form on a
   polyline exceeds the public server's timeout; the distance to the track is computed locally, so changing the types or the
-  distance never triggers a new request. Queue (one request at a time), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
+  distance never triggers a new request. Queue (one request at a time, kept at one on purpose: `docs/sources.md`; `onStart` tells a caller when its request is really sent), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
   `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
   error `remark` (timeout exceeded) is an error.
 - **Pure post-processing** (`src/osm/landmarks.ts`): projection onto the path → distance and offset, filter by type and distance
@@ -3051,8 +3053,9 @@ draped on the relief.
   multipolygons `landuse=forest` and `natural=wood`, `out geom qt`, in the boxes of the track corridor widened to **5 km**
   (`FOREST_MARGIN_M`; 8 km sent 3 MB on the sample, 5 km 0.8 MB: `docs/sources.md`). `leaf_type` (`needleleaved`,
   `broadleaved`, `mixed`) is kept when present. The request is not canceled on unmount (shared and cached); its response is only
-  ignored if it is stale. A failed request is only retried on the next track or setting change, and shows nothing (no status
-  chip: the checkbox's help says there are simply no trees when OpenStreetMap does not answer).
+  ignored if it is stale. A failed request is only retried on the next track or setting change; the status chip « Forêts » (`scene/forestStatus.ts`, set by `ForestLayer`: `queued` while the
+  Overpass queue works for the landmarks and the water, `loading` once the request is sent, `ready`, `error` with a hint saying the trees are
+  simply missing and retried on the next track or setting change; hidden when « Forêts » is off) tells the wait that follows.
 - **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
   is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned
   relation ignored, Douglas–Peucker 8 m (`FOREST_SIMPLIFY_M`), polygons < 5,000 m² dropped (`MIN_FOREST_AREA_M2`), the 600 largest
@@ -3082,7 +3085,7 @@ draped on the relief.
   dropped: the shadow pass drew every tree in range again (+3.7 M triangles, ~9 × the visible trees) for crowns of a few metres against
   shadow texels of several metres. The first draping of a
   chunk (≤ 8,000 trees a frame) shows as one frame a little longer while the film starts; the Overpass answer arrives after the
-  landmarks and the water (one request at a time): ~110 to 160 s on a slow day of the public server.
+  landmarks and the water (one request at a time: two at once would take both slots the public server grants per address, `docs/sources.md`): ~110 to 160 s on a slow day of the public server, which the chip « Forêts » now shows (« en attente » then « chargement »).
 - **Shapes** (`src/scene/treeGeometry.ts`, tested): two unit geometries merged from three's primitives, with vertex colours and no
   texture: conifer = trunk + two stacked 8-sided cones (26 triangles), broadleaf = trunk + flattened icosahedron (30 triangles).
   The instance matrix scales them to the tree (height × `TREE_WIDTH_RATIO`: 0.26 for a conifer, 0.32 for a broadleaf, wide). The
@@ -3106,7 +3109,7 @@ draped on the relief.
 - **Limits**: the trees are not the real trees (OpenStreetMap maps the forest, not each tree): positions are hashed, shapes are two
   low-poly models, heights do not follow the relief or the treeline; the budget cuts the far forests of a long track (nearest chunks to
   the track first), and a track drawn on a ridge far from its forests loses them; trees do not appear in the flat map of the poster;
-  no status chip for a failed query; the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
+  the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
   texels wide); the forests are not in the render history's
   `RenderSettings`; `forestPoints.ts` and `forest.ts` import the ring helpers of `water.ts` and `clipRing` of `waterMesh.ts`.
 

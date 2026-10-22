@@ -31,6 +31,10 @@ const messages: Messages['status'] = {
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
   sourcesUpdates: 'Desktop-App: GitHub (github.com) wird nur kontaktiert, wenn Sie „Nach Updates suchen“ (Einstellungen) drücken, um die Versionsdatei zu lesen.',
+  // --- 4.1.0: « Forêts » chip, waiting for the other OpenStreetMap requests ---
+  'source.forest': 'Wälder (OpenStreetMap)',
+  'chip.queued': '{source}: wartet, die anderen OpenStreetMap-Ladevorgänge kommen zuerst',
+  forestError: 'Wälder (OpenStreetMap): Laden fehlgeschlagen, es gibt keine Bäume. Neuer Versuch bei der nächsten Strecke oder der nächsten Einstellungsänderung.',
 }
 
 export default messages

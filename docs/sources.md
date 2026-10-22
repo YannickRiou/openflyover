@@ -504,7 +504,15 @@ The 8 km corridor of the water was too heavy for forests (3 MB), so the corridor
 are drawn up to 6 km from the camera, thinner beyond 2 km from the track). The time is the server's: the same day, the water query alone
 (`natural=water` ways of the 5 km box, 211 kB) took 27 s, against 3.7 s on 2026-10-08, so the public server was slow; the 60 s limit of
 the query (`QUERY_TIMEOUT_S`) leaves room, but a very long track (several boxes) may time out: the forests are then missing, without
-a message (no status chip), and tried again on the next track or setting change.
+a message in the scene (the « Forêts » status chip says so), and tried again on the next track or setting change.
+
+**One request at a time, kept (2026-10-22)**: raising the queue to two concurrent requests (landmarks first, then water and forests) was
+considered to shorten the 1 to 3 minutes before the trees. Not done. The public instance announces "Rate limit: 2" (two slots per address, see
+above): two of our requests would take both, any other use from the same address (a shared network, a second window) would get **429**, and the
+heavy requests (water lines and forests, 20 to 40 s each on a busy day) would hold the slots long. The code answers a 429 by waiting 15 s, then
+the other instance, so a refusal costs more than the parallelism saves; `maps.mail.ru` states no limit, so nothing says it would behave better.
+The wait is not shortened but shown: the « Forêts » chip reads « en attente » while the landmarks and the water go first, then « chargement ».
+The 30-day cache is unchanged, so a track already seen shows its trees at once.
 
 Log (curl, 2026-10-07): `[out:json][timeout:60]; ( node["natural"~"^(peak|volcano|saddle)$"]["name"](45.79485,6.68680,45.91881,6.83916); … 8 statements … ); out center tags qt;`
 → 200, 5.7 s, 44,447 bytes; same request from headless Chromium (origin `http://127.0.0.1:5184`) → 200 in 3.6 s.

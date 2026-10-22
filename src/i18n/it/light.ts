@@ -177,7 +177,7 @@ const messages: Messages['light'] = {
   'snow.sequenceNote': 'Con « In sequenza », ogni tappa segue il proprio meteo, e una tappa senza meteo conserva la neve della tappa precedente; la frase qui sopra descrive l’inizio della prima traccia.',
   // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
   'forest.enable': 'Foreste',
-  'forest.tip': 'Disegna alberi in 3D dove OpenStreetMap indica una foresta, attorno alla traccia (serve internet). Se OpenStreetMap non risponde, semplicemente non ci sono alberi. Sono forme semplici, collocate a caso ma sempre negli stessi punti: l’esportazione mostra gli stessi alberi dell’anteprima.',
+  'forest.tip': 'Disegna alberi in 3D dove OpenStreetMap indica una foresta, attorno alla traccia (serve internet). Se OpenStreetMap non risponde, semplicemente non ci sono alberi. In un giorno di forte affluenza sul server di OpenStreetMap, gli alberi possono impiegare qualche minuto ad arrivare. Sono forme semplici, collocate a caso ma sempre negli stessi punti: l’esportazione mostra gli stessi alberi dell’anteprima.',
   'forest.density': 'Densità degli alberi',
   'forest.densityValue': '{n} alberi per ettaro',
   'forest.densityTip': 'Numero di alberi disegnati per ettaro di foresta, vicino alla traccia; più lontano ce ne sono meno. Più ce ne sono, più lenti sono l’anteprima e l’esportazione. Il dispositivo limita il numero totale di alberi (meno su telefono e tablet).',
