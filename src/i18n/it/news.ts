@@ -129,6 +129,8 @@ const messages: Messages['news'] = {
   // 4.2 — records of the outing
   'v42.records.title': 'I record della tua uscita',
   'v42.records.text': 'La salita più ripida, la discesa più veloce, il punto più alto, il chilometro più lento… In Mappa › Riferimenti, ogni record è un riferimento con la sua etichetta 3D e, per i tre principali (salita più ripida, punto più alto, discesa più veloce), una sosta automatica con la sua scheda. Si calcolano dalla traccia.',
+  'v42.tools.title': 'Strumenti per ritoccare la traccia',
+  'v42.tools.text': 'Nella scheda di una traccia, «Strumenti della traccia» ritaglia l’inizio e la fine, rimuove una sezione, elimina i picchi GPS e le pause, semplifica, inverte il senso o sposta l’ora, con un prima / dopo. «Annulla» rimette la traccia di prima e il GPX si può riesportare.',
 }
 
 export default messages

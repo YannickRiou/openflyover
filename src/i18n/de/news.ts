@@ -129,6 +129,8 @@ const messages: Messages['news'] = {
   // 4.2 — records of the outing
   'v42.records.title': 'Die Rekorde Ihrer Tour',
   'v42.records.text': 'Der steilste Anstieg, die schnellste Abfahrt, der höchste Punkt, der langsamste Kilometer… In Karte › Landmarken ist jeder Rekord eine Landmarke mit 3D-Etikett und, bei den drei wichtigsten (steilster Anstieg, höchster Punkt, schnellste Abfahrt) einem automatischen Stopp mit seiner Karte. Sie werden aus der Spur berechnet.',
+  'v42.tools.title': 'Werkzeuge zum Bearbeiten der Strecke',
+  'v42.tools.text': 'In der Karte einer Strecke kürzen die „Werkzeuge für die Strecke“ Anfang und Ende, entfernen einen Abschnitt, löschen GPS-Ausreißer und Pausen, vereinfachen, kehren die Richtung um oder verschieben die Uhrzeit, mit Vorher / Nachher. „Rückgängig“ bringt die frühere Strecke zurück, und das GPX lässt sich wieder exportieren.',
 }
 
 export default messages

@@ -129,6 +129,8 @@ const messages: Messages['news'] = {
   // 4.2 — records of the outing
   'v42.records.title': 'The records of your outing',
   'v42.records.text': 'The steepest climb, the fastest descent, the highest point, the slowest kilometre… In Map › Landmarks, each record is a landmark with its 3D label and, for the three main ones (steepest climb, highest point, fastest descent), an automatic hold with its card. They are computed from the track.',
+  'v42.tools.title': 'Tools to edit the track',
+  'v42.tools.text': 'In a track’s card, “Track tools” trims the start and the end, removes a section, deletes GPS spikes and pauses, simplifies, reverses the direction or shifts the time, with a before / after. “Undo” puts the earlier track back, and the GPX can be exported again.',
 }
 
 export default messages

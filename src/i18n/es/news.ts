@@ -129,6 +129,8 @@ const messages: Messages['news'] = {
   // 4.2 — records of the outing
   'v42.records.title': 'Los récords de tu salida',
   'v42.records.text': 'La subida más empinada, la bajada más rápida, el punto más alto, el kilómetro más lento… En Mapa › Referencias, cada récord es una referencia con su etiqueta 3D y, en las tres principales (subida más empinada, punto más alto, bajada más rápida), una parada automática con su tarjeta. Se calculan a partir del track.',
+  'v42.tools.title': 'Herramientas para retocar el track',
+  'v42.tools.text': 'En la tarjeta de un track, «Herramientas del track» recorta el principio y el final, quita una sección, elimina los picos de GPS y las pausas, simplifica, invierte el sentido o desplaza la hora, con un antes / después. «Deshacer» devuelve el track anterior, y el GPX se puede volver a exportar.',
 }
 
 export default messages
