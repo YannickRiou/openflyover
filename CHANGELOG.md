@@ -5,7 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 4.2.1 (unreleased)
 
-- **« Ouvrir » asks what to do with a GPX or FIT file**: when a project that already holds tracks is open, opening a track file (the folder icon, Ctrl+O, a drop on the window, or a double-click on the desktop) asks « Que faire de ce fichier ? » with « Ajouter la trace à ce projet » (as before), « Commencer un nouveau projet » (closes the project like « Nouveau projet », asking « Fermer sans enregistrer ? » if needed) and « Annuler ». One question for several files; none for an empty project or a project file; the « Ajouter » button and the Strava import still add straight away.
+- **« Ouvrir » asks what to do with a GPX or FIT file**: when a project that already holds tracks is open, opening a track file (the folder icon, Ctrl+O or a drop on the window) asks « Que faire de ce fichier ? » with « Ajouter la trace à ce projet » (as before), « Commencer un nouveau projet » (closes the project like « Nouveau projet », asking « Fermer sans enregistrer ? » if needed) and « Annuler ». One question for several files; none for an empty project or a project file; the « Ajouter » button and the Strava import still add straight away.
 
 ## 4.2.0 (October 2026)
 
