@@ -187,7 +187,7 @@ const messages: Messages['overlay'] = {
   'panel.creditsMode.short': 'Discreet',
   'panel.creditsMode.full': 'Full',
   'panel.creditsMode.end': 'At the end only',
-  'panel.creditsHint': 'Discreet: the names of the sources in small capitals in a corner, then the full credits at the end of the film. Full: the whole sentence in the corner throughout the film, then at the end. At the end only: nothing during the film (except Open-Meteo while the weather shows, as its licence requires). In every case the film ends with the sources: they must always be credited.',
+  'panel.creditsHint': 'Discreet: the names of the sources in small capitals in a corner, then the full credits at the end of the film. Full: the whole sentence in the corner throughout the film, then at the end. At the end only: nothing during the film (except Open-Meteo while the weather shows, as its licence requires, and Esri, whose terms ask for a credit always visible with the map). In every case the film ends with the sources: they must always be credited.',
 }
 
 export default messages

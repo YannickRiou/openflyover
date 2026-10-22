@@ -337,5 +337,5 @@ export default {
   'panel.creditsCopy': 'Copier les crédits',
   'panel.creditsCopyTip': 'Les mentions des sources avec leurs liens, à coller dans la description de la vidéo.',
   'panel.creditsCopied': 'Crédits copiés : collez-les dans la description de la vidéo.',
-  'panel.creditsCopyFailed': 'Copie impossible : le navigateur refuse l’accès au presse-papiers.',
+  'panel.creditsManual': 'Le navigateur refuse la copie automatique : sélectionnez le texte ci-dessous et copiez-le (Ctrl+C), puis collez-le dans la description de la vidéo.',
 }

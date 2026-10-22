@@ -187,7 +187,7 @@ const messages: Messages['overlay'] = {
   'panel.creditsMode.short': 'Discreti',
   'panel.creditsMode.full': 'Completi',
   'panel.creditsMode.end': 'Solo alla fine',
-  'panel.creditsHint': 'Discreti: il nome delle fonti in maiuscoletto in un angolo, poi le menzioni complete alla fine del film. Completi: la frase intera nell’angolo per tutto il film, poi alla fine. Solo alla fine: niente durante il film (tranne Open-Meteo finché il meteo è mostrato, come chiede la sua licenza). In ogni caso il film finisce con le fonti: vanno sempre citate.',
+  'panel.creditsHint': 'Discreti: il nome delle fonti in maiuscoletto in un angolo, poi le menzioni complete alla fine del film. Completi: la frase intera nell’angolo per tutto il film, poi alla fine. Solo alla fine: niente durante il film (tranne Open-Meteo finché il meteo è mostrato, come chiede la sua licenza, ed Esri, le cui condizioni chiedono un credito sempre visibile con la mappa). In ogni caso il film finisce con le fonti: vanno sempre citate.',
 }
 
 export default messages

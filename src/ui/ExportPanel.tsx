@@ -82,7 +82,7 @@ import { effectiveProjectName } from './shell'
 import { AspectIcon, Icon } from './icons'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
-import { Button, Checkbox, Chip, Radio, RadioGroup, Select, TextField, Tip } from './primitives'
+import { Button, Checkbox, Chip, Modal, Radio, RadioGroup, Select, TextField, Tip } from './primitives'
 
 const QUALITIES: { value: VideoQuality; label: string }[] = [
   { value: 'standard', get label() { return QUALITY_NAMES.standard } },
@@ -746,18 +746,36 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   )
 }
 
-/** « Copier les crédits »: the sources with their links, to paste in the description of the video. */
+/**
+ * « Copier les crédits »: the sources with their links, to paste in the description of the video. When the browser
+ * refuses the clipboard (plain http, some Firefox settings), the text is shown to select and copy by hand.
+ */
 function CopyCreditsButton() {
+  const [manual, setManual] = useState<string | null>(null)
   const copy = async () => {
-    const ok = await copyText(creditsDescription(currentCreditSources()))
-    showToast(ok ? { kind: 'success', text: t('export.panel.creditsCopied') } : { kind: 'error', text: t('export.panel.creditsCopyFailed') })
+    const text = creditsDescription(currentCreditSources())
+    if (await copyText(text)) showToast({ kind: 'success', text: t('export.panel.creditsCopied') })
+    else setManual(text)
   }
   return (
-    <Tip text={t('export.panel.creditsCopyTip')}>
-      <Button size="sm" onClick={() => void copy()}>
-        {t('export.panel.creditsCopy')}
-      </Button>
-    </Tip>
+    <>
+      <Tip text={t('export.panel.creditsCopyTip')}>
+        <Button size="sm" onClick={() => void copy()}>
+          {t('export.panel.creditsCopy')}
+        </Button>
+      </Tip>
+      <Modal open={manual !== null} onClose={() => setManual(null)} title={t('export.panel.creditsCopy')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
+        <p className="type-hint mb-2">{t('export.panel.creditsManual')}</p>
+        <textarea
+          readOnly
+          rows={10}
+          className="input w-full"
+          aria-label={t('export.panel.creditsCopy')}
+          value={manual ?? ''}
+          onFocus={(e) => e.currentTarget.select()}
+        />
+      </Modal>
+    </>
   )
 }
 

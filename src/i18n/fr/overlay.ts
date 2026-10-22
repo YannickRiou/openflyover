@@ -185,5 +185,5 @@ export default {
   'panel.creditsMode.short': 'Discrets',
   'panel.creditsMode.full': 'Complets',
   'panel.creditsMode.end': 'À la fin seulement',
-  'panel.creditsHint': 'Discrets : le nom des sources en petites capitales dans un coin, puis les mentions complètes à la fin du film. Complets : la phrase entière dans le coin pendant tout le film, puis à la fin. À la fin seulement : rien pendant le film (sauf Open-Meteo tant que la météo est affichée, comme sa licence le demande). Dans tous les cas, le film se termine par les sources : il faut toujours les citer.',
+  'panel.creditsHint': 'Discrets : le nom des sources en petites capitales dans un coin, puis les mentions complètes à la fin du film. Complets : la phrase entière dans le coin pendant tout le film, puis à la fin. À la fin seulement : rien pendant le film (sauf Open-Meteo tant que la météo est affichée, comme sa licence le demande, et Esri, dont les conditions exigent un crédit toujours visible avec la carte). Dans tous les cas, le film se termine par les sources : il faut toujours les citer.',
 }

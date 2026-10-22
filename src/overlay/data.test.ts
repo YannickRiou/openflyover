@@ -23,6 +23,7 @@ import {
   overlayShortCredits,
   overlayFilmFrameAt,
   overlayFrameAt,
+  overlayPermanentCredits,
   prepareOverlayFilm,
   prepareOverlayTrack,
   STAGE_CARD_S,
@@ -224,6 +225,14 @@ describe('overlayShortCredits', () => {
     // a source without a short form keeps its attribution; the same holder is named once
     expect(overlayShortCredits({ ...sources, imagerySourceId: 'ign-plan' })).toEqual(['© IGN', '© Mapterhorn'])
     expect(overlayShortCredits({ ...sources, imagerySourceId: 'basemap-at' })[0]).toBe(getImagerySource('basemap-at').attribution)
+  })
+})
+
+describe('overlayPermanentCredits', () => {
+  it('keeps the credit of the sources whose terms ask for it on the map: Esri today', () => {
+    const sources = { terrainSourceId: 'mapterhorn', imagerySourceId: 'ign-ortho', weather: false, landmarks: false }
+    expect(overlayPermanentCredits(sources)).toEqual([])
+    expect(overlayPermanentCredits({ ...sources, imagerySourceId: 'arcgis-world-imagery' })).toEqual([getImagerySource('arcgis-world-imagery').attribution])
   })
 })
 

@@ -519,6 +519,9 @@ export const overlayCredits = (sources: CreditSources): string[] => creditEntrie
 export const OPEN_METEO_SHORT = 'Open-Meteo.com'
 const OSM_SHORT = '© OpenStreetMap'
 
+/** Sources whose terms ask for their credit to stay visible with the map, whatever is chosen for the film (Esri). */
+const PERMANENT_CREDIT: ReadonlySet<string> = new Set(['arcgis-world-imagery'])
+
 /** Short form of the credit of each source whose full attribution is longer than what its terms ask for in the film. */
 const SHORT_CREDITS: Readonly<Record<string, string>> = {
   mapterhorn: '© Mapterhorn',
@@ -550,6 +553,13 @@ export function overlayShortCredits(sources: CreditSources): string[] {
   // OpenTopoMap's credit already names OpenStreetMap
   const namesOsm = items.some((item) => item.startsWith(`${OSM_SHORT},`))
   return items.filter((item, i) => items.indexOf(item) === i && !(namesOsm && item === OSM_SHORT))
+}
+
+/** Short credits of the sources whose terms ask for a permanent credit on the map (`PERMANENT_CREDIT`): kept in the corner even with « À la fin seulement ». */
+export function overlayPermanentCredits(sources: CreditSources): string[] {
+  return [getImagerySource(sources.imagerySourceId), getTerrainSource(sources.terrainSourceId)]
+    .filter((source, i, all) => PERMANENT_CREDIT.has(source.id) && all.indexOf(source) === i)
+    .map((source) => SHORT_CREDITS[source.id] ?? source.attribution)
 }
 
 /**

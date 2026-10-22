@@ -187,7 +187,7 @@ const messages: Messages['overlay'] = {
   'panel.creditsMode.short': 'Dezent',
   'panel.creditsMode.full': 'Vollständig',
   'panel.creditsMode.end': 'Nur am Ende',
-  'panel.creditsHint': 'Dezent: die Namen der Quellen in Kapitälchen in einer Ecke, dann die vollständigen Angaben am Ende des Films. Vollständig: der ganze Satz während des ganzen Films in der Ecke, dann am Ende. Nur am Ende: nichts während des Films (außer Open-Meteo, solange das Wetter angezeigt wird, wie es seine Lizenz verlangt). In jedem Fall endet der Film mit den Quellen: sie müssen immer genannt werden.',
+  'panel.creditsHint': 'Dezent: die Namen der Quellen in Kapitälchen in einer Ecke, dann die vollständigen Angaben am Ende des Films. Vollständig: der ganze Satz während des ganzen Films in der Ecke, dann am Ende. Nur am Ende: nichts während des Films (außer Open-Meteo, solange das Wetter angezeigt wird, wie es seine Lizenz verlangt, und Esri, dessen Bedingungen eine stets sichtbare Nennung bei der Karte verlangen). In jedem Fall endet der Film mit den Quellen: sie müssen immer genannt werden.',
 }
 
 export default messages

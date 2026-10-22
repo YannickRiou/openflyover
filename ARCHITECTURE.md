@@ -2355,12 +2355,14 @@ exports) gets it from the terrain source of the settings.
   by `overlayExtras` (`exportOverlay.ts`, through `currentCreditSources`) for the preview as for the export. Drawn even with the overlay disabled
   (`OverlayCanvas` is mounted whenever there is a track). **During the film**, by `mode`: « short » (« Discrets ») is `drawShortCredits`
   (small capitals, 70 % opacity, white with a shadow, no box, the overlay style's font, along the corner); « full » is `drawCredits` (the whole
-  sentence on the style's discreet background, `theme.credits`, wrapped to the safe width); « end » draws nothing, but the Open-Meteo credit stays
-  alone while the weather is shown (as before; its licence asks for the credit next to the data). **At the end, always**, whatever the mode:
-  the full sentences (`extras.credits`) close the roll of the closing card (`drawCreditsRoll`: a small « Sources » title and the sentences
-  after the last line), else (a card without roll, or no closing card) `drawEndSources` along the bottom edge, fading in with the card's
-  opacity (`endCardOpacityOf`, even when the card is off); the corner credits fade out as it comes in, and `overlayTimedState` counts that
-  opacity when the card is off so the export redraws the fade. The poster keeps the full sentences. Old projects: `withOverlayDefaults`
+  sentence on the style's discreet background, `theme.credits`, wrapped to the safe width); « end » draws only the credits that must stay on
+  screen, in the short form: Open-Meteo while the weather is shown (its licence asks for the credit next to the data) and the sources flagged in
+  `PERMANENT_CREDIT` (`data.ts`, `overlayPermanentCredits`, `extras.permanentCredits`: Esri, whose terms ask for the credit always visible with
+  the map). **At the end, always**, whatever the mode: the full sentences (`extras.credits`) close the roll of the closing card (`drawCreditsRoll`:
+  a small « Sources » title and the sentences after the last line; the roll stops with them on screen instead of leaving the frame, and returns
+  how much of them shows), else (a card without roll, or no closing card) `drawEndSources` along the bottom edge over the last seconds of the film
+  (`endSourcesOpacity`, whatever the window of the card), lifted above the widgets it would cover; the corner credits fade out as the sources
+  come in (`sourcesCover`), and `overlayTimedState` counts the opacity of the bottom block so the export redraws the fade. The poster keeps the full sentences. Old projects: `withOverlayDefaults`
   turns the former `enabled` switch into `mode` (on: « short », off: « end »). « Copier les crédits » (`CopyCreditsButton` in the
   export drawer, summary and result) copies `creditsDescription` (each sentence then its page) through `copyText`.
 - **Fonts**: a canvas does not trigger the download of web fonts on its own; `loadOverlayFonts()` requests them before the

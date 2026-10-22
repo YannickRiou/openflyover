@@ -809,13 +809,60 @@ describe('source credits', () => {
     }
   })
 
-  it('end the roll of the closing card with the full sources', () => {
+  it('end the roll of the closing card with the full sources, still on screen on the last frame', () => {
     const rolling = { ...TITLED, end: { ...TITLED.end, credits: 'Merci' } }
     const { texts } = render(rolling, { credits, shortCredits: short }, 0.97)
     const lines = texts.map((t) => t.text)
     expect(lines).toContain('Merci')
     expect(lines).toContain('SOURCES')
     expect(lines.join(' ')).toContain('Relief : © Mapterhorn')
+    // the roll holds with the sources in the frame, and the corner credit gives way to them
+    const last = render(rolling, { credits, shortCredits: short }, 1).texts
+    const title = last.find((t) => t.text === 'SOURCES')!
+    expect(title.y).toBeGreaterThan(0)
+    expect(Math.max(...last.map((t) => t.y))).toBeLessThanOrEqual(SIZE.height)
+    expect(last.map((t) => t.text)).not.toContain('© MAPTERHORN · © IGN')
+  })
+
+  it('fade the short form with the full form, not above it', () => {
+    // 81.25 % of the film: the full credits are half in
+    const fading = render(TITLED, { credits, shortCredits: short }, 0.8125).texts
+    const corner = fading.find((t) => t.text === '© MAPTERHORN · © IGN')!
+    expect(corner.alpha).toBeCloseTo(0.35, 2)
+    expect(render(TITLED, { credits, shortCredits: short }, 0.5).texts[0].alpha).toBeCloseTo(0.7, 6)
+  })
+
+  it('close the film in its last seconds, whatever the window of the closing card', () => {
+    const early = { ...DEFAULT_OVERLAY, end: { ...DEFAULT_OVERLAY.end, enabled: true, window: { startS: 5, endS: 20 } } }
+    const at = (timeS: number) => {
+      const { ctx, texts } = fakeContext()
+      drawOverlay(ctx, overlayFrameAt(track, 0.99), early, SIZE, {}, { credits, time: { timeS, openingS: 0, flightS: 100, totalS: 100 } })
+      return texts.map((t) => t.text).join(' | ')
+    }
+    expect(at(60)).not.toContain('Relief')
+    expect(at(99)).toContain('Relief : © Mapterhorn')
+  })
+
+  it('keep the permanent credit of a source in the corner with « à la fin seulement » (Esri)', () => {
+    const off = { ...DEFAULT_OVERLAY, credits: { ...DEFAULT_OVERLAY.credits, mode: 'end' as const } }
+    const esri = ['Powered by Esri — Source: Esri, Vantor']
+    expect(render(off, { credits, shortCredits: short, permanentCredits: esri }).texts.map((t) => t.text)).toEqual(['POWERED BY ESRI — SOURCE: ESRI, VANTOR'])
+    expect(render(off, { credits, shortCredits: short }).calls).toEqual([])
+  })
+
+  it('lift the sources above a closing card anchored at the bottom of a tall frame', () => {
+    const tall = { width: 1080, height: 1920 }
+    const settings = { ...TITLED, end: { ...TITLED.end, anchor: 'bottom-center' as const } }
+    const { ctx, texts } = fakeContext()
+    // five sentences: the block is taller than the margin under the safe area, so it would cover the card
+    const many = Array.from({ length: 5 }, (_, i) => `Source ${i} : © un fournisseur de données ouvertes`)
+    drawOverlay(ctx, overlayFrameAt(track, 0.99), settings, tall, {}, { credits: many, time: { timeS: 1, openingS: 0, flightS: 1, totalS: 1 } })
+    const isSource = (text: string) => text === 'SOURCES' || many.includes(text)
+    const sources = texts.filter((t) => isSource(t.text))
+    const card = texts.filter((t) => !isSource(t.text))
+    expect(sources).toHaveLength(6)
+    expect(card.length).toBeGreaterThan(0)
+    expect(Math.max(...sources.map((t) => t.y))).toBeLessThan(Math.min(...card.map((t) => t.y)))
   })
 
   it('sit in the chosen corner, along the edge outside the safe area', () => {
@@ -1287,8 +1334,8 @@ describe('styles with a structure', () => {
     it('puts nothing in the right half of the frame', () => {
       const settings = journal({ weather: { ...TITLED.weather, enabled: true, anchor: 'middle-left' }, credits: { ...TITLED.credits, mode: 'end' as const } })
       const { texts: all, points } = render(settings, 0.5, {}, withWeather)
-      // the credit of the weather is required, and drawn on its own at the bottom right
-      const texts = all.filter((t) => t.text !== openMeteoAttribution())
+      // the credit of the weather is required, and drawn on its own in the corner
+      const texts = all.filter((t) => t.text !== OPEN_METEO_SHORT.toUpperCase())
       expect(texts.length).toBeGreaterThan(10)
       for (const t of texts) expect(t.x).toBeLessThanOrEqual(SHEET)
       for (const pt of points) expect(pt.x).toBeLessThanOrEqual(SHEET)

@@ -339,7 +339,7 @@ const messages: Messages['export'] = {
   'panel.creditsCopy': 'Copiar los créditos',
   'panel.creditsCopyTip': 'Las menciones de las fuentes con sus enlaces, para pegar en la descripción del vídeo.',
   'panel.creditsCopied': 'Créditos copiados: pégalos en la descripción del vídeo.',
-  'panel.creditsCopyFailed': 'No se pudo copiar: el navegador rechaza el acceso al portapapeles.',
+  'panel.creditsManual': 'El navegador rechaza la copia automática: selecciona el texto de abajo y cópialo (Ctrl+C), luego pégalo en la descripción del vídeo.',
 }
 
 export default messages

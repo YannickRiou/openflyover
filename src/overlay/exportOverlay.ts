@@ -32,7 +32,7 @@ import type { TrackColorBy, TrackLegend } from '../flyover/trackColor'
 import { getLanguage } from '../i18n'
 import type { Sequence } from '../flyover/sequence'
 import { createCardImages, loadLogo } from './assets'
-import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, overlayShortCredits, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
+import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, overlayPermanentCredits, overlayShortCredits, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
 import type { CreditSources, LeaderboardRow, OverlayFilm } from './data'
 import { drawOverlay } from './draw'
 import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
@@ -136,6 +136,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     markerColor: leadMarkerColors(settings.marker, (trackUnderMarker(tracks, settings.race, progress)?.track ?? filmTrackOf(tracks, settings.race))?.color ?? '#FFFFFF').ball,
     credits: overlayCredits(sources),
     shortCredits: overlayShortCredits(sources),
+    permanentCredits: overlayPermanentCredits(sources),
   }
 }
 

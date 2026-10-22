@@ -339,7 +339,7 @@ const messages: Messages['export'] = {
   'panel.creditsCopy': 'Copy the credits',
   'panel.creditsCopyTip': 'The credits of the sources with their links, to paste in the description of the video.',
   'panel.creditsCopied': 'Credits copied: paste them in the description of the video.',
-  'panel.creditsCopyFailed': 'Copy failed: the browser refuses access to the clipboard.',
+  'panel.creditsManual': 'The browser refuses automatic copying: select the text below and copy it (Ctrl+C), then paste it in the description of the video.',
 }
 
 export default messages

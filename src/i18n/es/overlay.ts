@@ -187,7 +187,7 @@ const messages: Messages['overlay'] = {
   'panel.creditsMode.short': 'Discretos',
   'panel.creditsMode.full': 'Completos',
   'panel.creditsMode.end': 'Solo al final',
-  'panel.creditsHint': 'Discretos: el nombre de las fuentes en versalitas en una esquina y, al final de la película, las menciones completas. Completos: la frase entera en la esquina durante toda la película y luego al final. Solo al final: nada durante la película (salvo Open-Meteo mientras se muestra el tiempo, como exige su licencia). En todos los casos la película termina con las fuentes: siempre hay que citarlas.',
+  'panel.creditsHint': 'Discretos: el nombre de las fuentes en versalitas en una esquina y, al final de la película, las menciones completas. Completos: la frase entera en la esquina durante toda la película y luego al final. Solo al final: nada durante la película (salvo Open-Meteo mientras se muestra el tiempo, como exige su licencia, y Esri, cuyas condiciones exigen un crédito siempre visible con el mapa). En todos los casos la película termina con las fuentes: siempre hay que citarlas.',
 }
 
 export default messages

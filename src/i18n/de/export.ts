@@ -339,7 +339,7 @@ const messages: Messages['export'] = {
   'panel.creditsCopy': 'Quellenangaben kopieren',
   'panel.creditsCopyTip': 'Die Quellenangaben mit ihren Links, zum Einfügen in die Videobeschreibung.',
   'panel.creditsCopied': 'Quellenangaben kopiert: in die Videobeschreibung einfügen.',
-  'panel.creditsCopyFailed': 'Kopieren nicht möglich: Der Browser verweigert den Zugriff auf die Zwischenablage.',
+  'panel.creditsManual': 'Der Browser verweigert das automatische Kopieren: Markieren Sie den Text unten und kopieren Sie ihn (Strg+C), dann fügen Sie ihn in die Videobeschreibung ein.',
 }
 
 export default messages
