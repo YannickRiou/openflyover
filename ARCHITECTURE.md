@@ -1481,7 +1481,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   checked, `autoStops` + `'temps-forts'`, own stops cleared; unchecked, generated stops written; "modifié" /
   ↺ "modifié" button for the film, `ModifiedMarker keys={['film']}`; a dot on the button when the film departs from the default; it
   closes with Esc, a click outside or Tab), collapse.
-  Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 56 px): click-drag to seek, **opening and closing
+  Ruler (`rulerTicks`, step from 1 s to 1 h depending on the zoom, ≥ 76 px): click-drag to seek, **opening and closing
   included** (`setProgress(clock.progressAtTime(t), t)`, end of film = progress 1 without a time); it is also a keyboard
   slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). The keys are set where they live. Camera keys: the ◀ ◇ ▶ group (`KeyGroup`,
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
