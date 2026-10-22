@@ -5,6 +5,7 @@ import {
   REPLACE_TOLERANCE_M,
   composeFrame,
   composeOverlayFrame,
+  createWorkerSleep,
   renderSettledFrame,
   settle,
   tileFailureMessage,
@@ -338,6 +339,35 @@ describe('wait', () => {
     }
   })
 
+  it('hidden page: waits on the timer of a worker, no timer and no spin', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      const sleep = vi.fn(() => Promise.resolve())
+      const now = vi.fn(() => 0)
+      await wait(16, { hidden: () => true, now, sleep })
+      expect(sleep).toHaveBeenCalledWith(16)
+      expect(vi.getTimerCount()).toBe(0)
+      expect(now).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('hidden page, no worker: spins as before; shown page: a timer, never the worker', async () => {
+    let clock = 0
+    await wait(16, { hidden: () => true, now: () => clock++, sleep: () => null })
+    expect(clock).toBeGreaterThan(16)
+    vi.useFakeTimers()
+    try {
+      const sleep = vi.fn(() => Promise.resolve())
+      void wait(5, { hidden: () => false, now: () => 0, sleep })
+      await vi.advanceTimersByTimeAsync(5)
+      expect(sleep).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('yields through scheduler.yield where the browser has it, else a message port', async () => {
     const scope = globalThis as { scheduler?: unknown }
     const saved = scope.scheduler
@@ -351,5 +381,63 @@ describe('wait', () => {
     } finally {
       scope.scheduler = saved
     }
+  })
+})
+
+describe('createWorkerSleep', () => {
+  /** a worker that answers each message by itself, in the order asked */
+  function fakeWorker() {
+    const worker = {
+      onmessage: null as ((event: { data: number }) => void) | null,
+      onerror: null as (() => void) | null,
+      posted: [] as { id: number; ms: number }[],
+      postMessage(message: { id: number; ms: number }) {
+        worker.posted.push(message)
+      },
+      answer(id: number) {
+        worker.onmessage?.({ data: id })
+      },
+    }
+    return worker
+  }
+
+  it('posts the delay to one worker, made once, and resolves on its answer', async () => {
+    const worker = fakeWorker()
+    const create = vi.fn(() => worker as unknown as Worker)
+    const sleep = createWorkerSleep(create)
+    let first = false
+    let second = false
+    void sleep(30)?.then(() => (first = true))
+    void sleep(10)?.then(() => (second = true))
+    expect(create).toHaveBeenCalledOnce()
+    expect(worker.posted).toEqual([
+      { id: 0, ms: 30 },
+      { id: 1, ms: 10 },
+    ])
+    worker.answer(1)
+    await Promise.resolve()
+    expect([first, second]).toEqual([false, true])
+    worker.answer(0)
+    await Promise.resolve()
+    expect(first).toBe(true)
+  })
+
+  it('returns null when the worker cannot be made, and asks only once', () => {
+    const create = vi.fn(() => {
+      throw new Error('blocked by the CSP')
+    })
+    const sleep = createWorkerSleep(create)
+    expect(sleep(5)).toBeNull()
+    expect(sleep(5)).toBeNull()
+    expect(create).toHaveBeenCalledOnce()
+  })
+
+  it('frees the waits in progress when the worker fails, then returns null', async () => {
+    const worker = fakeWorker()
+    const sleep = createWorkerSleep(() => worker as unknown as Worker)
+    const waiting = sleep(1000)
+    worker.onerror?.()
+    await expect(waiting).resolves.toBeUndefined()
+    expect(sleep(5)).toBeNull()
   })
 })

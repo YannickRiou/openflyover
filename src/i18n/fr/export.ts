@@ -301,7 +301,7 @@ export default {
   'weight.heavyActive': ', réglage lourd actif',
   // « File de rendus » and rendering in the background (4.0.0)
   'queue.title': 'File de rendus',
-  'queue.hint': 'Pour rendre plusieurs projets l’un après l’autre : ouvrez un projet, cochez ses formats ci-dessus, « Ajouter ce projet à la file », puis ouvrez le suivant. Chaque projet est copié au moment de l’ajout : le modifier ensuite ne change pas son film. L’image fixe et l’affiche ne se mettent pas en file.',
+  'queue.hint': 'Pour rendre plusieurs projets l’un après l’autre : ouvrez un projet, cochez ses formats ci-dessus, « Ajouter ce projet à la file », puis ouvrez le suivant. Chaque projet est copié au moment de l’ajout : le modifier ensuite ne change pas son film. L’image fixe et l’affiche cochées ci-dessus s’ajoutent aussi à la file.',
   'queue.add': 'Ajouter ce projet à la file',
   'queue.added': '« {name} » ajouté à la file.',
   'queue.full': 'La file est pleine : {max} projets au plus.',
@@ -314,7 +314,7 @@ export default {
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'interrompu : reprendra au début',
   'queue.progress': 'film {index} / {total} · {percent} %',
-  'queue.help': 'Les projets sont rendus l’un après l’autre : chacun s’ouvre à la place du projet ouvert, qui est remis tel quel à la fin. Le dossier des films est demandé au lancement. Si l’application est fermée pendant un rendu, la file est gardée : « Reprendre » redemande le dossier et refait le film interrompu depuis sa première image (un film ne reprend pas là où il s’est arrêté). Un projet très gros n’est pas gardé après la fermeture : il faut l’ajouter de nouveau.',
+  'queue.help': 'Les projets sont rendus l’un après l’autre : chacun s’ouvre à la place du projet ouvert, qui est remis tel quel à la fin. Le dossier des fichiers est demandé au lancement (l’application de bureau le retient pour les lancements suivants). Si l’application est fermée pendant un rendu, la file est gardée : « Reprendre » redemande le dossier et refait le film interrompu depuis sa première image (un film ne reprend pas là où il s’est arrêté). Un projet très gros n’est pas gardé après la fermeture : il faut l’ajouter de nouveau.',
   'queue.background': 'Le rendu continue quand la fenêtre est réduite ou l’onglet masqué, mais pas quand l’appareil se met en veille (sur un téléphone, gardez l’écran allumé).',
   'queue.finished': 'File terminée : tous les projets sont rendus.',
   'queue.failedSome': 'File terminée. Rendus : {done}. En échec : {failed}.',
@@ -323,4 +323,10 @@ export default {
   'queue.noFilm': 'aucun film à faire pour ce projet',
   'queue.busy': 'Un autre export est en cours : la file n’a pas démarré.',
   'queue.folderFailed': 'Dossier impossible à ouvrir : les films seront téléchargés un par un.',
+  'queue.moveUp': 'Monter « {name} » dans la file',
+  'queue.moveDown': 'Descendre « {name} » dans la file',
+  'queue.stillLabel': 'image fixe',
+  'queue.posterLabel': 'affiche',
+  'queue.folder': 'Dossier des rendus : {name}',
+  'queue.folderChange': 'Changer de dossier',
 }

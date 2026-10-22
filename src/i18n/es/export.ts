@@ -303,7 +303,7 @@ const messages: Messages['export'] = {
   'weight.heavyActive': ', ajuste pesado activo',
   // « File de rendus » and rendering in the background (4.0.0)
   'queue.title': 'Cola de renderizado',
-  'queue.hint': 'Para renderizar varios proyectos uno tras otro: abra un proyecto, marque sus formatos arriba, « Añadir este proyecto a la cola » y abra el siguiente. Cada proyecto se copia al añadirlo: modificarlo después no cambia su película. La imagen fija y el cartel no se pueden poner en cola.',
+  'queue.hint': 'Para renderizar varios proyectos uno tras otro: abra un proyecto, marque sus formatos arriba, « Añadir este proyecto a la cola » y abra el siguiente. Cada proyecto se copia al añadirlo: modificarlo después no cambia su película. La imagen fija y el cartel marcados arriba también se ponen en cola.',
   'queue.add': 'Añadir este proyecto a la cola',
   'queue.added': '« {name} » añadido a la cola.',
   'queue.full': 'La cola está llena: {max} proyectos como máximo.',
@@ -316,7 +316,7 @@ const messages: Messages['export'] = {
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'interrumpido: empezará de nuevo desde el principio',
   'queue.progress': 'película {index} / {total} · {percent} %',
-  'queue.help': 'Los proyectos se renderizan uno tras otro: cada uno se abre en lugar del proyecto abierto, que se deja tal cual al final. La carpeta de las películas se pide al iniciar. Si la aplicación se cierra durante un renderizado, la cola se conserva: « Reanudar » vuelve a pedir la carpeta y rehace la película interrumpida desde su primera imagen (una película no continúa donde se detuvo). Un proyecto muy grande no se conserva al cerrar: hay que añadirlo de nuevo.',
+  'queue.help': 'Los proyectos se renderizan uno tras otro: cada uno se abre en lugar del proyecto abierto, que se deja tal cual al final. La carpeta de los archivos se pide al iniciar (la aplicación de escritorio la recuerda para las siguientes veces). Si la aplicación se cierra durante un renderizado, la cola se conserva: « Reanudar » vuelve a pedir la carpeta y rehace la película interrumpida desde su primera imagen (una película no continúa donde se detuvo). Un proyecto muy grande no se conserva al cerrar: hay que añadirlo de nuevo.',
   'queue.background': 'El renderizado continúa cuando la ventana está minimizada o la pestaña oculta, pero no cuando el dispositivo entra en suspensión (en un teléfono, mantenga la pantalla encendida).',
   'queue.finished': 'Cola terminada: todos los proyectos están renderizados.',
   'queue.failedSome': 'Cola terminada. Renderizados: {done}. Con error: {failed}.',
@@ -325,6 +325,12 @@ const messages: Messages['export'] = {
   'queue.noFilm': 'ninguna película que hacer para este proyecto',
   'queue.busy': 'Otra exportación está en curso: la cola no ha empezado.',
   'queue.folderFailed': 'No se pudo abrir la carpeta: las películas se descargarán una a una.',
+  'queue.moveUp': 'Subir « {name} » en la cola',
+  'queue.moveDown': 'Bajar « {name} » en la cola',
+  'queue.stillLabel': 'imagen fija',
+  'queue.posterLabel': 'cartel',
+  'queue.folder': 'Carpeta de los renders: {name}',
+  'queue.folderChange': 'Cambiar de carpeta',
 }
 
 export default messages

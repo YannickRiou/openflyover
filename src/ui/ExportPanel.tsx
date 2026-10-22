@@ -1100,7 +1100,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </div>
       )}
 
-      <RenderQueue formats={selection.formats} save={(r) => r.url && download(r.url, r.fileName)} />
+      <RenderQueue selection={selection} save={(r) => r.url && download(r.url, r.fileName)} />
 
       <ExportHistory />
 
