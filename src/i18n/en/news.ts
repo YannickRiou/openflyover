@@ -95,6 +95,16 @@ const messages: Messages['news'] = {
   'v21.weather.text': 'The sky follows the weather of each area crossed, and clouds cast shadows on the terrain.',
   'v20.interface.title': 'A redesigned interface',
   'v20.interface.text': 'A new look for the panels, menus, buttons and windows, with the same functions as before.',
+  // 4.0.0
+  'v40.queue.title': 'A render queue',
+  'v40.queue.text': 'In Export › Several formats, “Render queue” renders several projects one after the other while you are away: add each project, start the queue, and the browser tells you when it ends if the window is not in front. The queue is kept if the app is closed. Rendering also carries on when the window is minimised.',
+
+  // ---- 4.0
+  'v40.auto.title': 'A film in one click',
+  'v40.auto.text': 'In the Flyover tab, "Automatic film" offers three templates (Reel 30 s, Summary 1 min, Keepsake 3 min): length, camera, titles, cards and export format are set at once, and everything stays editable afterwards.',
+  // --- 4.0
+  'v40.snow.title': 'Snow that follows the date',
+  'v40.snow.text': 'Above a line computed from the weather of the day (snow on the ground and temperature), the terrain turns white, with a ragged limit and bare rock on the steep slopes. Set it by hand or turn it off in Weather › Snow.',
   // --- 4.0.0: forests ---
   'v40.forests.title': 'Forests in 3D',
   'v40.forests.text': 'Trees rise from the ground where OpenStreetMap has forests: wooded valleys are no longer flat. Settings in Map, “Map background” section: “Forests” and “Tree density”.',

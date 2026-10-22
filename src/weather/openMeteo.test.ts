@@ -46,6 +46,7 @@ function archiveBody(places: number, startDay: string, days: number, temperature
       precipitation: column(0),
       rain: column(0),
       snowfall: column(0),
+      snow_depth: column(0),
       cloud_cover: column(40),
       cloud_cover_low: column(10),
       cloud_cover_mid: column(20),
@@ -146,6 +147,7 @@ describe('buildArchiveUrl', () => {
     expect(url.searchParams.get('start_date')).toBe('2025-07-12')
     expect(url.searchParams.get('end_date')).toBe('2025-07-13')
     expect(url.searchParams.get('hourly')).toContain('weather_code')
+    expect(url.searchParams.get('hourly')).toContain('snow_depth')
     expect(new URL(buildArchiveUrl([{ lon: 6.8, lat: 45.89 }], '2025-07-12', '2025-07-12')).searchParams.has('elevation')).toBe(false)
   })
 
@@ -177,6 +179,14 @@ describe('parseArchiveResponse', () => {
     expect(days[0][0].cloudCoverHigh[0]).toBeNull()
     // a single place comes back as a bare object
     expect(parseArchiveResponse(archiveBody(1, '2025-07-12', 1)[0], 1, '2025-07-12', '2025-07-12')).toHaveLength(1)
+  })
+
+  it('reads a response without the snow depth, the rest of the weather kept', () => {
+    const body = archiveBody(1, '2025-07-12', 1) as { hourly: Record<string, unknown> }[]
+    delete body[0].hourly.snow_depth
+    const [[day]] = parseArchiveResponse(body, 1, '2025-07-12', '2025-07-12')
+    expect(day.snowDepth).toEqual(new Array(24).fill(null))
+    expect(day.temperature[0]).toBe(20)
   })
 
   it('rejects an unexpected shape', () => {
@@ -292,6 +302,21 @@ describe('createWeatherCache', () => {
     await Promise.resolve()
     const stored = JSON.parse(storage.getItem('openflyover.weather.v1')!) as Record<string, unknown>
     expect(Object.keys(stored)).toEqual(['45.90,6.80,@2025-07-11', '45.90,6.80,@2025-07-12'])
+  })
+
+  it('keeps using a day stored before the snow depth was kept, the snow depth unknown', async () => {
+    const storage = memoryStorage()
+    const { snowDepth: _dropped, ...before } = day
+    storage.setItem('openflyover.weather.v1', JSON.stringify({ old: { at: 1, day: before } }))
+    expect(createWeatherCache(storage).get('old')).toEqual(before)
+    // a whole outing cached that way: no request, the weather is there, the snow depth is unknown (NaN)
+    const cache = createWeatherCache(null)
+    for (const location of sampleLocations(outing)) cache.set(weatherCacheKey(location, '2025-07-12'), before as typeof day, false)
+    const fetchSpy = vi.fn()
+    const series = await fetchOutingWeather(outing, { fetch: fetchSpy, cache, now: NOW })
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(series.stations[0].values.temperature[0]).toBe(20)
+    expect(Number.isNaN(series.stations[0].values.snowDepth[0])).toBe(true)
   })
 
   it('persists in the platform storage by default, under the localStorage key of before', async () => {

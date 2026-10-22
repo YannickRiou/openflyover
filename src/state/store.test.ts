@@ -231,6 +231,7 @@ describe('settings and misc', () => {
       clouds: { mode: 'meteo', coverage: 0.4, altitudeM: 1200, seaTopM: 2000, seaRender: 'volume', quality: 'auto', windKmh: 15, windDirection: 'meteo', windByHand: false },
       demClean: { enabled: false, seaToZero: false },
       water: { enabled: true, strength: 1 },
+      snow: { mode: 'meteo', lineM: 2000 },
       forest: { enabled: true, density: 60 },
       overlay: DEFAULT_OVERLAY,
       video: {

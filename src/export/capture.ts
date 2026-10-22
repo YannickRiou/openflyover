@@ -238,9 +238,20 @@ export function yieldToEventLoop(): Promise<void> {
   return typeof scheduler?.yield === 'function' ? scheduler.yield() : wait(0)
 }
 
-/** Resolve after `ms`; 0 yields to the event loop through a message port (not throttled in background tabs). */
-export function wait(ms: number): Promise<void> {
-  if (ms > 0) return new Promise((resolve) => setTimeout(resolve, ms))
+/** What `wait` reads of the page (a test hands its own). */
+export interface WaitHost {
+  /** the page is not shown: hidden tab, minimised or covered window */
+  hidden(): boolean
+  now(): number
+}
+
+const pageHost: WaitHost = {
+  hidden: () => typeof document !== 'undefined' && document.visibilityState === 'hidden',
+  now: () => performance.now(),
+}
+
+/** One turn of the event loop through a message port: neither delayed nor throttled in a page that is not shown. */
+function turn(): Promise<void> {
   return new Promise((resolve) => {
     const channel = new MessageChannel()
     channel.port1.onmessage = () => {
@@ -249,4 +260,18 @@ export function wait(ms: number): Promise<void> {
     }
     channel.port2.postMessage(null)
   })
+}
+
+/**
+ * Resolve after `ms`. A page that is shown waits with a timer. A hidden page cannot: its timers fire once a second at
+ * best (once a minute after five minutes), which would slow the tile polls of an export a hundredfold, so it waits
+ * turn by turn through message ports until the deadline (it keeps a processor core busy while it waits). 0 only
+ * yields to the event loop.
+ */
+export async function wait(ms: number, host: WaitHost = pageHost): Promise<void> {
+  if (ms <= 0) return turn()
+  if (!host.hidden()) return new Promise((resolve) => setTimeout(resolve, ms))
+  const deadline = host.now() + ms
+  do await turn()
+  while (host.now() < deadline)
 }

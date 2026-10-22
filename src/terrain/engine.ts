@@ -43,6 +43,7 @@ import {
   type SelectionParams,
   type TileFailureCause,
 } from './quadtree'
+import { applySnow } from './snowShader'
 import { buildTileUrl } from './sources'
 import { t } from '../i18n'
 
@@ -280,13 +281,15 @@ export function createTerrainEngine(
   }
 
   function createMaterial(texture: Texture | undefined): MeshStandardMaterial {
-    return new MeshStandardMaterial({
+    const material = new MeshStandardMaterial({
       map: texture ?? null,
       color: texture ? 0xffffff : NO_IMAGERY_COLOR,
       roughness: 1,
       metalness: 0,
       side: FrontSide,
     })
+    applySnow(material)
+    return material
   }
 
   // --- height field cache ----------------------------------------------------
