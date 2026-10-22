@@ -12,6 +12,7 @@ import {
 import type { CameraPreset, CameraSettings, CameraStyle } from '../flyover/cameraSettings'
 import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
+import { playsBilan } from '../flyover/sequence'
 import { setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { getSettingsHistory } from '../project/history'
@@ -211,6 +212,7 @@ export function CameraPanel() {
   const film = useFilmClock()
   const cameraKeyCount = film.cameraKeys.length
   const filmSettings = useAppStore((s) => s.settings.film)
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
   const preset = findCameraPreset(camera)
@@ -243,6 +245,7 @@ export function CameraPanel() {
     <>
       <AutoFilmSection />
       <PanelSection title={t('camera.panel.camera')} keys={['camera']}>
+        {bilan && <p className="type-hint">{t('track.bilan.fixed')}</p>}
         <fieldset className="field min-w-0">
           <legend id={`${id}-preset`} className="type-label mb-1">
             {t('camera.panel.preset')}

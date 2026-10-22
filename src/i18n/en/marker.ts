@@ -90,6 +90,7 @@ const messages: Messages['marker'] = {
   'section.otherLabels': 'The other markers carry the name of their track.',
   'section.stick': 'Stick and ground shadow',
   'section.stickTip': 'The marker stands on a stick above the track, its shadow on the ground.',
+  'track.drawOnBilan': 'In a Year in review the tracks always draw themselves one by one, without a tail.',
 }
 
 export default messages

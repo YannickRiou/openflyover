@@ -249,6 +249,8 @@ const messages: Messages['inspector'] = {
   'junction.size': 'Tamaño',
   'junction.displayDuration': 'Duración de visualización',
   'card.dateNeedsTime': 'La traza no tiene horas: prevea la salida (pestaña Track) para tener una fecha.',
+  'bilan.title': 'Balance',
+  'bilan.hint': 'En un Balance los pasos son automáticos: un corte entre dos salidas de una misma región, un fundido a negro de una región a la siguiente. Las tarjetas de región se ajustan en Track › Varios tracks.',
 }
 
 export default messages

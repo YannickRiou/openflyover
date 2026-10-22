@@ -13,6 +13,7 @@
  */
 import { clamp } from '../core/math'
 import type { Track } from '../core/types'
+import type { BilanPlan } from '../flyover/bilan'
 import { flightNights, nightPauseS } from '../flyover/nights'
 import { localDate, trackDays } from './days'
 import type { FlightNight } from '../flyover/nights'
@@ -21,7 +22,7 @@ import type { FlightStage, FlightStop, Pacing, PacingPosition, PacingSettings, S
 import { trackPathOf } from '../flyover/path'
 import type { Landmark } from '../osm/landmarks'
 import { filmStops } from './assemble'
-import { junctionPlan, stageSpansOf } from './junctions'
+import { bilanInputs, junctionPlan, stageSpansOf } from './junctions'
 import type { JunctionInput } from './junctions'
 import { RECAP_S, shotDurationS } from './model'
 import type { Film, FilmCameraKey, FilmShot, FilmSpeed, FilmStop, JunctionKind } from './model'
@@ -385,6 +386,8 @@ export interface FilmClockFor {
   cutsM?: readonly number[]
   /** ids of the tracks of the stages when the track is a sequence, in order: the junction k follows the stage k */
   stageIds?: readonly string[]
+  /** « Bilan »: the regions of the stages; its junctions and stage times are the chapters' (`bilanInputs`) */
+  bilan?: BilanPlan
 }
 
 /**
@@ -392,8 +395,9 @@ export interface FilmClockFor {
  * with a flight time of their own: the part of the clock input that follows the film's stages and junctions, to place
  * those of a film being edited.
  */
-export function junctionInputsFor({ track, film, durationS, cutsM, stageIds }: FilmClockFor): Pick<FilmClockInput, 'junctions' | 'nights' | 'stages'> {
+export function junctionInputsFor({ track, film, durationS, cutsM, stageIds, bilan }: FilmClockFor): Pick<FilmClockInput, 'junctions' | 'nights' | 'stages'> {
   if (!track) return { junctions: [], nights: [], stages: [] }
+  if (bilan && cutsM?.length) return bilanInputs(bilan, stageIds ?? [], cutsM, track.stats.distanceM, durationS)
   const path = trackPathOf(track)
   // not a sequence: the nights of the flight, as ever
   if (!cutsM?.length) return { junctions: [], nights: flightNights(path, film.nights, durationS), stages: [] }

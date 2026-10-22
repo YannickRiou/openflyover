@@ -506,12 +506,18 @@ export function FilmInspector() {
   let removable = true
   let isStop = false
   const phase = item === 'opening' || item === TITLE_CARD_ID ? 'opening' : item === 'closing' || item === END_CARD_ID ? 'closing' : null
-  if (phase) {
+  if (sequence?.bilan && (isStageItem(item) || isJunctionItem(item) || isStageCardItem(item))) {
+    // a « Bilan »: the passages and the cards of its regions are not set here
+    title = t('inspector.bilan.title')
+    removable = false
+    body = <p className={HINT}>{t('inspector.bilan.hint')}</p>
+  } else if (phase) {
     // one inspector for the start of the film and one for its end, whichever block was clicked: the card shown over the
     // shot (overlay.title / overlay.end) and the camera shot (film.opening / film.closing)
     const shot = film[phase]
     const card = phase === 'opening' ? TITLE_CARD_ID : END_CARD_ID
     title = phase === 'opening' ? t('timeline.shot.opening') : t('timeline.shot.closing')
+    const bilanHint = sequence?.bilan ? <p className={HINT}>{t('track.bilan.fixed')}</p> : null
     // each part is removed in its own group: the card by its button, the shot by « Aucune » in its style
     removable = false
     body = (
@@ -536,6 +542,7 @@ export function FilmInspector() {
           )}
         </InspectorGroup>
         <InspectorGroup title={t('inspector.shot.camera')}>
+        {bilanHint}
         <div className={FIELD}>
           <label className="type-label" htmlFor={`${id}-style`}>
             {t('inspector.shot.styleLabel')}

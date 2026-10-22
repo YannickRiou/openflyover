@@ -123,6 +123,8 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Clearer templates',
   'v41.auto.text': 'In "Automatic film", each template is a card: format, film length, camera and what gets set, at a glance. Pick one, then "Apply"; "Undo" takes it back.',
+  'v42.bilan.title': 'The year in review',
+  'v42.bilan.text': 'In Track › Several tracks, “Year in review” makes a single film of a season or a year of outings: they draw themselves one after the other under a high view of their region, counters climb, and the closing card gives the totals.',
   // 4.1 — discreet credits
   'v41.credits.title': 'More discreet credits',
   'v41.credits.text': 'In Overlay › Source credits, choose « Discreet » (the names of the sources in small print in a corner, the full credits at the end of the film), « Full » or « At the end only ». In Export, « Copy the credits » gives the text with its links, to paste in the description of the video.',

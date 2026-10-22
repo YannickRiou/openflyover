@@ -11,6 +11,8 @@ import type { Track } from '../core/types'
 import { junctionCardOf } from '../film/junctions'
 import { JUNCTION_CARD_DEFAULT_S, STAGE_CARD_FIELDS } from '../film/model'
 import type { Film, FilmDayCards } from '../film/model'
+import { addFigures, figuresBefore, outingFigures } from '../flyover/bilan'
+import type { BilanRegion, OutingFigures } from '../flyover/bilan'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath } from '../flyover/path'
 import type { ElevationProfile, TrackPath } from '../flyover/path'
 import { rankRacers } from '../flyover/race'
@@ -21,7 +23,8 @@ import { metricValues } from '../flyover/trackColor'
 import { ELEVATION_HYSTERESIS_M, smoothElevations } from '../import/stats'
 import { osmAttribution } from '../osm/overpass'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
-import { formatDistanceGap, formatTimeGap } from '../ui/format'
+import { formatDate } from '../i18n/format'
+import { formatDistance, formatDistanceGap, formatNumber, formatTimeGap } from '../ui/format'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import { summarizeOuting, weatherWidgetData } from '../weather/series'
 import type { WeatherSeries, WeatherSummary, WeatherWidgetData } from '../weather/series'
@@ -74,6 +77,8 @@ export interface OverlayTrackStats {
   timesEstimated?: boolean
   /** weather of the outing, when its series is known */
   weather?: WeatherSummary
+  /** « Bilan »: how many outings the film shows (the sequence's figures only) */
+  outings?: number
 }
 
 export interface OverlayTrack {
@@ -117,6 +122,16 @@ export interface OverlayFrame {
   weather?: WeatherWidgetData
   /** position of the marker on the mini-map outline (same units as `track.outline`) */
   mapPoint?: { x: number; y: number }
+  /** « Bilan »: what the outings drawn so far add up to, which the counters show instead of the outing under the marker's */
+  cumul?: BilanCumul
+}
+
+/** The outings drawn so far in a « Bilan » (the one being drawn included) and their figures added up. */
+export interface BilanCumul {
+  outings: number
+  distanceM: number
+  ascentM?: number
+  durationS?: number
 }
 
 /**
@@ -323,6 +338,8 @@ export interface OverlayFilm {
   whole: OverlayTrack
   sequence?: Sequence
   stages?: readonly OverlayTrack[]
+  /** « Bilan »: the figures of the stages before each stage (`figuresBefore`) */
+  before?: readonly OutingFigures[]
 }
 
 /**
@@ -338,11 +355,28 @@ export function prepareOverlayFilm(
   weatherTrackId?: string | null,
 ): OverlayFilm {
   if (!sequence) return { whole: prepareOverlayTrack(track, weather) }
+  // a « Bilan » has no weather per outing: the first track's series would land on whichever stage has its id
   const stages = sequence.stages.map((s) =>
-    prepareOverlayTrack(s.track, (weatherTrackId === undefined ? s.index === 0 : s.track.id === weatherTrackId) ? weather : stageWeather?.[s.track.id]?.series),
+    prepareOverlayTrack(s.track, sequence.bilan ? undefined : (weatherTrackId === undefined ? s.index === 0 : s.track.id === weatherTrackId) ? weather : stageWeather?.[s.track.id]?.series),
   )
   const whole = prepareOverlayTrack(track)
+  if (sequence.bilan) return { whole: { ...whole, stats: bilanStats(whole.stats, sequence) }, sequence, stages, before: figuresBefore(sequence.stages.map((s) => s.track)) }
   return { whole: { ...whole, stats: sequenceStats(whole.stats, sequence, stages) }, sequence, stages }
+}
+
+/** The figures of a « Bilan »: what the outings add up to (not what the sequence's points say: its time would span the year), the highest point, how many. */
+function bilanStats(stats: OverlayTrackStats, sequence: Sequence): OverlayTrackStats {
+  const total = addFigures(sequence.stages.map((s) => outingFigures(s.track)))
+  const first = sequence.stages.find((s) => s.track.stats.startTime !== undefined)
+  return {
+    ...stats,
+    distanceM: total.distanceM,
+    ascentM: total.ascentM,
+    durationS: total.durationS,
+    maxEleM: total.maxEleM,
+    startTime: first?.track.stats.startTime,
+    outings: sequence.stages.length,
+  }
 }
 
 /**
@@ -378,7 +412,32 @@ export function overlayFilmFrameAt(film: OverlayFilm, progress: number): Overlay
   if (!film.sequence || !film.stages) return overlayFrameAt(film.whole, progress)
   const at = stageAt(film.sequence, Number.isFinite(progress) ? progress : 0)
   const frame = overlayFrameAt(film.stages[at.stage.index], at.progress)
-  return { ...frame, track: { ...frame.track, name: film.whole.name, stats: film.whole.stats } }
+  const out = { ...frame, track: { ...frame.track, name: film.whole.name, stats: film.whole.stats } }
+  const before = film.before?.[at.stage.index]
+  return before ? { ...out, cumul: cumulAt(before, film.sequence.stages[at.stage.index].track, at.stage.index, frame) } : out
+}
+
+/**
+ * The figures of a « Bilan » at a frame: the outings before it (their corrected figures), and the one being drawn up to the
+ * marker, scaled to its own corrected figures so that the count does not jump at the cut: what the points say of the part
+ * drawn × corrected figure / what the points say of the whole outing.
+ */
+function cumulAt(before: OutingFigures, track: Track, index: number, frame: OverlayFrame): BilanCumul {
+  const own = outingFigures(track)
+  const scaled = (now: number | undefined, corrected: number | undefined, recorded: number | undefined) =>
+    now === undefined ? undefined : corrected !== undefined && recorded !== undefined && recorded > 0 ? (now * corrected) / recorded : now
+  const live = {
+    distanceM: scaled(frame.distanceM, own.distanceM, frame.track.path.lengthM) ?? 0,
+    ascentM: scaled(frame.ascentM, own.ascentM, track.stats.maxEle === undefined ? undefined : track.stats.ascentM),
+    durationS: scaled(frame.elapsedS, own.durationS, track.stats.durationS),
+  }
+  const known = (sum: number | undefined, now: number | undefined) => (sum === undefined && now === undefined ? undefined : (sum ?? 0) + (now ?? 0))
+  return {
+    outings: index + 1,
+    distanceM: before.distanceM + live.distanceM,
+    ascentM: known(before.ascentM, live.ascentM),
+    durationS: known(before.durationS, live.durationS),
+  }
 }
 
 /** How long the card of a stage stays by default (seconds at ×1). */
@@ -399,12 +458,20 @@ export function stageCardAt(
   const starts = [time.openingS, ...(time.cutsS ?? [])]
   let k = starts.length - 1
   while (k >= 0 && time.timeS < starts[k]) k--
+  // a « Bilan » has a card for each region, once there are several: it belongs to the first outing of the region and outlasts it
+  const { bilan } = sequence
+  const region = bilan && sequence.stages[k] ? bilan.plan.regions[bilan.plan.regionOf[k]] : undefined
+  if (bilan && (!region || bilan.plan.regions.length < 2)) return null
+  if (region) k = region.firstStage
   const stage = sequence.stages[k]
   if (!stage) return null
-  const own = junctionCardOf(film, k === 0 ? null : sequence.stages[k - 1].track.id)
+  // a « Bilan » has the common card only: the cards left by « À la suite » on its junctions do not apply
+  const own = bilan ? junctionCardOf({ junctionDefault: film.junctionDefault }, null) : junctionCardOf(film, k === 0 ? null : sequence.stages[k - 1].track.id)
   if (!own.enabled) return null
   const flightS = k === 0 ? starts[0] : (time.junctions?.[k - 1]?.endS ?? starts[k])
-  const durationS = Math.min(flightS + own.durationS, time.junctions?.[k]?.startS ?? Infinity) - starts[k]
+  // a region's card is cut short by the junction that leaves the region, not by those between its outings
+  const lastStage = region ? region.firstStage + region.stageCount - 1 : k
+  const durationS = Math.min(flightS + own.durationS, time.junctions?.[lastStage]?.startS ?? Infinity) - starts[k]
   if (!(durationS > 0) || time.timeS >= starts[k] + durationS) return null
   const { stats } = stage.track
   const card: StageCard = {
@@ -421,6 +488,20 @@ export function stageCardAt(
   if (stats.startTime !== undefined) card.startTime = stats.startTime
   if (stats.maxEle !== undefined) card.ascentM = stats.ascentM
   if (stats.durationS !== undefined && stats.durationS > 0) card.outingS = stats.durationS
+  if (region && bilan) {
+    const title = t('overlay.draw.regionTitle', { n: region.index + 1, count: bilan.plan.regions.length })
+    card.name = title
+    card.index = region.index
+    card.count = bilan.plan.regions.length
+    card.distanceM = region.figures.distanceM
+    card.ascentM = region.figures.ascentM
+    delete card.outingS
+    if (region.fromMs === undefined) delete card.startTime
+    else card.startTime = region.fromMs
+    // the card says the region in words: its own title and its figures, unless the film words it
+    card.text = title
+    card.subtitle = regionLine(region)
+  }
   const weather = own.fields?.weather ? weatherOf(k) : undefined
   if (weather) card.weather = weather
   if (own.text !== undefined) card.text = own.text
@@ -428,6 +509,15 @@ export function stageCardAt(
   if (own.color !== undefined) card.color = own.color
   if (own.font !== undefined) card.font = own.font
   return card
+}
+
+/** « 12 sorties · 240 km · D+ 5 200 m · mars – juin 2026 »: what a region of a « Bilan » comes to. */
+function regionLine(region: BilanRegion): string {
+  const { figures } = region
+  const month = (ms: number) => formatDate(ms, { month: 'long', year: 'numeric' })
+  const period = region.fromMs === undefined || region.toMs === undefined ? '' : month(region.fromMs) === month(region.toMs) ? month(region.fromMs) : `${month(region.fromMs)} – ${month(region.toMs)}`
+  const ascent = figures.ascentM === undefined ? '' : t('overlay.draw.regionAscent', { ascent: formatNumber(figures.ascentM) })
+  return [t('overlay.draw.regionOutings', { count: region.stageCount }), formatDistance(figures.distanceM), ascent, period].filter(Boolean).join(' · ')
 }
 
 /**

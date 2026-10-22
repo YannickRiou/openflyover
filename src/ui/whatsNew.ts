@@ -25,6 +25,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
     items: [
       { icon: 'map-pin', get title() { return t('news.v42.records.title') }, get text() { return t('news.v42.records.text') } },
       { icon: 'route', get title() { return t('news.v42.tools.title') }, get text() { return t('news.v42.tools.text') } },
+      { icon: 'route', get title() { return t('news.v42.bilan.title') }, get text() { return t('news.v42.bilan.text') } },
     ],
   },
   {

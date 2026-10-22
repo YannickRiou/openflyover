@@ -183,6 +183,7 @@ const messages: Messages['light'] = {
   'forest.densityTip': 'Numero di alberi disegnati per ettaro di foresta, vicino alla traccia; più lontano ce ne sono meno. Più ce ne sono, più lenti sono l’anteprima e l’esportazione. Il dispositivo limita il numero totale di alberi (meno su telefono e tablet).',
   // 4.1 — Glaciers
   'snow.glaciers': 'I ghiacciai mappati da OpenStreetMap sono sempre bianchi, qualunque sia il limite.',
+  'snow.hintBilan': 'Nessun meteo per uscita in un Bilancio: la neve segue solo il limite manuale.',
 }
 
 export default messages

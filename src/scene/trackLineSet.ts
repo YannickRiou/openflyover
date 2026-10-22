@@ -229,6 +229,8 @@ export interface TrackLineSet {
   glowMaterial: LineMaterial
   /** distance the lines are drawn up to (Infinity = whole), NaN when it must be applied again (after a drape) */
   drawnM: number
+  /** share of its colours the track is drawn with: 1, or less for an outing already drawn in a « Bilan » (`dimTrackLineSet`) */
+  dim: number
 }
 
 function createLineMaterials(
@@ -297,6 +299,7 @@ export function buildTrackLineSet(
     solidMaterial: materials.solid,
     glowMaterial: materials.glow,
     drawnM: Number.NaN,
+    dim: 1,
   }
 }
 
@@ -331,14 +334,21 @@ export function applyExposure(sets: Iterable<TrackLineSet>, exposure: number, gl
   for (const set of sets) {
     // with vertex colours the material colour is a plain multiplier
     const base = set.solidMaterial.vertexColors ? '#ffffff' : set.track.color
-    set.solidMaterial.color.set(base).multiplyScalar(1 / exposure)
+    set.solidMaterial.color.set(base).multiplyScalar(set.dim / exposure)
     const glowVertexColors = set.solidMaterial.vertexColors && glowColor === ''
     if (set.glowMaterial.vertexColors !== glowVertexColors) {
       set.glowMaterial.vertexColors = glowVertexColors
       set.glowMaterial.needsUpdate = true
     }
-    set.glowMaterial.color.set(glowColor || base).multiplyScalar(1 / exposure)
+    set.glowMaterial.color.set(glowColor || base).multiplyScalar(set.dim / exposure)
   }
+}
+
+/** Draw `set` in `dim` of its colours (1 = as it is), at once: a track already drawn in a « Bilan » is dimmer than the one being drawn. */
+export function dimTrackLineSet(set: TrackLineSet, dim: number): void {
+  if (set.dim === dim) return
+  for (const material of materialsOf(set)) material.color.multiplyScalar(dim / set.dim)
+  set.dim = dim
 }
 
 function setVertexColors(set: TrackLineSet, enabled: boolean): void {

@@ -176,6 +176,16 @@ const messages: Messages['overlay'] = {
   'panel.creditsTip': 'Die Lizenzen von Gelände, Luftbildern, Wetter und OpenStreetMap verlangen die Nennung der Quellen im veröffentlichten Film.',
   'panel.styleHint': 'Ein Stilwechsel setzt Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils (Positionen und Größen); Logo, freier Text und Rangliste behalten ihre.',
   'panel.styleMoved': 'Stil „{style}“: Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils gesetzt.',
+  // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
+  'draw.credits.landmarksAndWater': 'Landmarken und Wasser: {source}',
+  'draw.counter.outings': 'Touren',
+  'draw.stat.outings': 'Touren',
+  'draw.regionTitle': 'Region {n} von {count}',
+  'draw.regionAscent': 'Aufstieg {ascent} m',
+  'draw.regionOutings': { one: '{count} Tour', other: '{count} Touren' },
+  'counter.outings': 'Touren',
+  'panel.notInBilan': 'Gilt nicht im Jahresrückblick',
+  'panel.bilanCounters': 'Im Jahresrückblick zählen die Zähler die bisher gezeichneten Touren zusammen: Touren, Strecke, Aufstieg und Zeit.',
   // 4.1 — credits: short form during the film, full form at the end
   'draw.credits.osm': '{layers}: {source}',
   'draw.credits.layer.landmarks': 'Landmarken',

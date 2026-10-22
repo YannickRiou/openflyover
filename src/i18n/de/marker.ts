@@ -90,6 +90,7 @@ const messages: Messages['marker'] = {
   'section.otherLabels': 'Die anderen Marker tragen den Namen ihres Tracks.',
   'section.stick': 'Stiel und Bodenschatten',
   'section.stickTip': 'Der Marker steht auf einem Stiel über dem Track, sein Schatten liegt am Boden.',
+  'track.drawOnBilan': 'Im Jahresrückblick zeichnen sich die Tracks immer einzeln, ohne Schweif.',
 }
 
 export default messages

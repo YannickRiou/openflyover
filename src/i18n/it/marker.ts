@@ -90,6 +90,7 @@ const messages: Messages['marker'] = {
   'section.otherLabels': 'Gli altri marcatori portano il nome della loro traccia.',
   'section.stick': 'Asta e ombra a terra',
   'section.stickTip': 'Il marcatore si erge su un’asta sopra la traccia, con la sua ombra proiettata a terra.',
+  'track.drawOnBilan': 'In un Bilancio le tracce si disegnano sempre una alla volta, senza scia.',
 }
 
 export default messages

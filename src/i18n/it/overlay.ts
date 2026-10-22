@@ -176,6 +176,16 @@ const messages: Messages['overlay'] = {
   'panel.creditsTip': 'Le licenze di rilievo, immagini, meteo e OpenStreetMap richiedono di citare le fonti nel film pubblicato.',
   'panel.styleHint': 'Cambiare stile rimette titolo, scheda di chiusura, contatori, profilo, minimappa e meteo dove li ha lo stile (posizioni e dimensioni); logo, testo libero e classifica mantengono i loro.',
   'panel.styleMoved': 'Stile «{style}»: titolo, scheda di chiusura, contatori, profilo, minimappa e meteo rimessi al posto dello stile.',
+  // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
+  'draw.credits.landmarksAndWater': 'Riferimenti e acqua: {source}',
+  'draw.counter.outings': 'Uscite',
+  'draw.stat.outings': 'Uscite',
+  'draw.regionTitle': 'Regione {n} di {count}',
+  'draw.regionAscent': 'D+ {ascent} m',
+  'draw.regionOutings': { one: '{count} uscita', other: '{count} uscite' },
+  'counter.outings': 'Uscite',
+  'panel.notInBilan': 'Non usato in un Bilancio',
+  'panel.bilanCounters': 'In un Bilancio, i contatori sommano le uscite disegnate finora: uscite, distanza, D+ e tempo.',
   // 4.1 — credits: short form during the film, full form at the end
   'draw.credits.osm': '{layers}: {source}',
   'draw.credits.layer.landmarks': 'Riferimenti',

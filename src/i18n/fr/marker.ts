@@ -88,4 +88,5 @@ export default {
   'section.otherLabels': 'Les autres marqueurs portent le nom de leur trace.',
   'section.stick': 'Tige et ombre au sol',
   'section.stickTip': 'Le marqueur se dresse sur une tige au-dessus de la trace, son ombre posée au sol.',
+  'track.drawOnBilan': 'Dans un Bilan, les traces se dessinent toujours une à une, sans traînée.',
 }

@@ -174,6 +174,16 @@ export default {
   'panel.creditsTip': "Les licences du relief, de l'imagerie, de la météo et d'OpenStreetMap demandent de citer les sources dans le film publié.",
   'panel.styleHint': 'Changer de style remet à la place du style le titre, la carte de clôture, les compteurs, le profil, la mini-carte et la météo (positions et tailles) ; le logo, le texte libre et le classement gardent les leurs.',
   'panel.styleMoved': 'Style « {style} » : titre, carte de clôture, compteurs, profil, mini-carte et météo remis à la place du style.',
+  // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
+  'draw.credits.landmarksAndWater': 'Repères et eau : {source}',
+  'draw.counter.outings': 'Sorties',
+  'draw.stat.outings': 'Sorties',
+  'draw.regionTitle': 'Région {n} sur {count}',
+  'draw.regionAscent': 'D+ {ascent} m',
+  'draw.regionOutings': { one: '{count} sortie', other: '{count} sorties' },
+  'counter.outings': 'Sorties',
+  'panel.notInBilan': 'Sans objet dans un Bilan',
+  'panel.bilanCounters': 'Dans un Bilan, les compteurs cumulent les sorties dessinées jusqu’ici : sorties, distance, D+ et temps.',
   // 4.1 — credits: short form during the film, full form at the end
   'draw.credits.osm': '{layers} : {source}',
   'draw.credits.layer.landmarks': 'Repères',

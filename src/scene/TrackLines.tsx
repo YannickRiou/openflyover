@@ -30,6 +30,7 @@ import {
   applyTrackColors,
   applyTrackStyle,
   cutTrackLineSet,
+  dimTrackLineSet,
   disposeTrackLineSet,
   drapeTrackLineSet,
   drawOnDistances,
@@ -40,6 +41,9 @@ import {
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
+
+/** Share of its colours an outing already drawn keeps in a « Bilan ». */
+const BILAN_DIM = 0.45
 
 /** What the default controls (drei OrbitControls) expose here: the point the camera looks at. */
 interface DefaultControls {
@@ -81,14 +85,18 @@ export function TrackLines() {
     const { tracks: current, playback, settings } = useAppStore.getState()
     // the distances are in the order of the stages « À la suite »
     const flown = orderedTracks(current, settings.race)
-    const distances = settings.trackStyle.drawOn
-      ? drawOnDistances(flown, playback.progress, settings.race.enabled ? raceRef.current : null, filmSequenceOf(current, settings.race))
-      : null
+    const sequence = filmSequenceOf(current, settings.race)
+    // « Bilan »: the outings draw themselves one after the other whatever the setting, the finished ones dimmer, without a tail
+    const bilan = sequence?.bilan !== undefined
+    const distances = settings.trackStyle.drawOn || bilan ? drawOnDistances(flown, playback.progress, settings.race.enabled ? raceRef.current : null, sequence) : null
     // « Traînée »: only with the draw-on
-    const trailM = distances && settings.trackTail.enabled ? settings.trackTail.lengthM : Infinity
+    const trailM = distances && settings.trackTail.enabled && !bilan ? settings.trackTail.lengthM : Infinity
     flown.forEach((track, i) => {
       const set = setsRef.current.get(track.id)
-      if (set) cutTrackLineSet(set, distances?.[i] ?? Infinity, trailM)
+      if (!set) return
+      cutTrackLineSet(set, distances?.[i] ?? Infinity, trailM)
+      const stage = sequence?.stages[i]
+      dimTrackLineSet(set, bilan && stage && i < flown.length - 1 && (distances?.[i] ?? 0) >= stage.endM - stage.startM ? BILAN_DIM : 1)
     })
   }, [])
 

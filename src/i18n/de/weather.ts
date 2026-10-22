@@ -84,6 +84,7 @@ const messages: Messages['weather'] = {
   'panel.windValueFrom': '{wind} km/h aus {dir}, Böen {gusts} km/h',
   'panel.rain': 'Regen',
   'panel.forecastNote': 'Vorhersage, keine Messung: am Vortag des Starts erneut prüfen.',
+  'panel.bilanOff': 'Im Jahresrückblick gibt es kein Wetter pro Tour.',
 }
 
 export default messages

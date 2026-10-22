@@ -620,6 +620,8 @@ export interface FollowedFlight {
   markerOnFilm?: boolean
   /** positions the camera frames together (« Toutes les traces ») */
   group?: readonly { lon: number; lat: number; ele?: number }[]
+  /** « Bilan »: the camera does not fly, it holds the high view of this path (the region of the stage), the marker stays on `path` */
+  overview?: TrackPath
 }
 
 export interface FilmViewOptions extends Omit<CameraViewOptions, 'timeS' | 'orbitRad'> {
@@ -917,6 +919,13 @@ export function highViewAt(clock: Pick<FilmClock, 'days' | 'nights' | 'junctions
   return dayViewAt(clock, timeS) ?? recapViewAt(clock, timeS)
 }
 
+/** « Bilan »: the overview of `region` (a region's tracks as one path), north up (the camera stands south of it). */
+function bilanView(region: TrackPath, held: FollowedFlight, frame: LocalFrame, sample: HeightSampler | null, options: FilmViewOptions): FilmView {
+  const north = { target: new Vector3(), position: new Vector3(0, 0, 1) }
+  const view = overviewView(region, frame, sample, options.exaggeration, options.aspect, north)
+  return { ...view, marker: markerAt(held.path, held.progress, frame, sample, options.exaggeration, options.liftM) }
+}
+
 /**
  * Camera at film time `timeS` and `progress` (the store's: the export nudges it to re-place the camera). The time-based
  * flight styles follow the flight time, so they start where the opening hands over. The aim and the camera follow the
@@ -934,6 +943,9 @@ export function computeFilmView(
   sample: HeightSampler | null,
   options: FilmViewOptions,
 ): FilmView {
+  const held = options.follow?.(progress)
+  // « Bilan »: the camera holds the high view of the region whatever the shot, stop or key; the marker is on the outing being drawn
+  if (held?.overview) return bilanView(held.overview, held, frame, sample, options)
   const state = clock.stateAt(timeS)
   const { aspect, region } = options
   const flight = options.camera?.style === 'free' ? freeView(path, clock, timeS, progress, frame, sample, options) : keyedFlight()

@@ -1,11 +1,12 @@
 /**
  * What the flight camera follows when several tracks are played (`FilmViewOptions.follow`, flyover/filmCamera.ts):
- * « À la suite » the stage under the marker, on its own path (a cut at each stage change); « En parallèle » the racer
+ * « À la suite » the stage under the marker, on its own path (a cut at each stage change), « Bilan » the high view of its region; « En parallèle » the racer
  * ahead (`tete`) or all the racers framed together (`ensemble`); 'premiere': the first track.
  * A function of the film progress only (`raceAt` is), so the preview and the export place the camera alike.
  */
 import type { Track } from '../core/types'
 import type { FollowedFlight } from './filmCamera'
+import { trackPathOf } from './path'
 import { buildRace, raceAt, raceTrackOf, rankRacers } from './race'
 import type { RaceSettings } from './race'
 import { filmSequenceOf, stageAt } from './sequence'
@@ -19,7 +20,10 @@ export function filmFollowOf(tracks: readonly Track[], race: RaceSettings, smoot
     return (progress) => {
       const at = stageAt(sequence, progress)
       // the stage's smoothed path, cached per track (the same line as the one drawn)
-      return { path: raceTrackOf(at.stage.track, smoothingM).path, progress: at.progress }
+      const followed = { path: raceTrackOf(at.stage.track, smoothingM).path, progress: at.progress }
+      // « Bilan »: the camera holds a high view of the region of the stage
+      const { bilan } = sequence
+      return bilan ? { ...followed, overview: trackPathOf(bilan.views[bilan.plan.regionOf[at.stage.index]]) } : followed
     }
   }
   const camera = race.camera ?? 'premiere'

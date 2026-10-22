@@ -27,7 +27,7 @@ import {
 import type { Landmark, LandmarkMode, LandmarkSettings } from '../osm/landmarks'
 import { osmAttribution, OSM_KINDS } from '../osm/overpass'
 import { syncLandmarks, useLandmarkStore } from '../osm/store'
-import { sequenceLandmarks } from '../flyover/sequence'
+import { playsBilan, sequenceLandmarks } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
 import { editFilm, followLandmarks, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -308,9 +308,11 @@ export function LandmarkPanel() {
   const [zoneIds, setZoneIds] = useState<string[]>([])
   const stops = useMemo(() => (first ? filmStops(film, { track: first, landmarks, pacing }) : []), [first, film, landmarks, pacing])
 
+  // a « Bilan » asks OpenStreetMap for none: a request per outing would be too many, and a high view shows no landmark
+  const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   useEffect(() => {
-    syncLandmarks(tracks, settings)
-  }, [tracks, settings])
+    syncLandmarks(bilan ? [] : tracks, settings)
+  }, [tracks, settings, bilan])
 
   useEffect(() => {
     followLandmarks()

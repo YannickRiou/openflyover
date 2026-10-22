@@ -21,6 +21,7 @@ const {
   drapeTrackLineSet,
   disposeTrackLineSet,
   applyExposure,
+  dimTrackLineSet,
   applyTrackColors,
   applyTrackStyle,
   cutTrackLineSet,
@@ -323,6 +324,26 @@ describe('applyExposure', () => {
     applyExposure(sets.values(), 1)
     expect(set.glowMaterial.vertexColors).toBe(true)
     expect(set.glowMaterial.color.getHexString()).toBe('ffffff')
+  })
+})
+
+describe('dimTrackLineSet', () => {
+  it('draws a track in a share of its colours at once, and keeps the share through the exposure', () => {
+    const sets = new Map<string, TrackLineSet>()
+    syncTrackLineSets(new Group(), sets, [makeTrack('a', [segmentA])], frame, 800, 600)
+    const set = sets.get('a')!
+    applyExposure(sets.values(), 2)
+    expect(set.solidMaterial.color.r).toBeCloseTo(0.5, 6)
+    dimTrackLineSet(set, 0.4)
+    expect(set.solidMaterial.color.r).toBeCloseTo(0.2, 6)
+    expect(set.glowMaterial.color.r).toBeCloseTo(0.2, 6)
+    // a new exposure keeps the dimmer tone, the full one comes back with 1
+    applyExposure(sets.values(), 4)
+    expect(set.solidMaterial.color.r).toBeCloseTo(0.1, 6)
+    dimTrackLineSet(set, 1)
+    expect(set.solidMaterial.color.r).toBeCloseTo(0.25, 6)
+    dimTrackLineSet(set, 1)
+    expect(set.solidMaterial.color.r).toBeCloseTo(0.25, 6)
   })
 })
 

@@ -52,7 +52,7 @@ export function useFilmSource(): FilmClockFor {
   const pacing = useAppStore((s) => s.settings.pacing)
   const film = useAppStore((s) => s.settings.film)
   const landmarks = useLandmarkStore((s) => filmLandmarks(track, sequence, s.landmarks))
-  return { track, film, durationS, pacing, landmarks, cutsM: sequence?.cutsM, stageIds: sequence?.stageIds }
+  return { track, film, durationS, pacing, landmarks, cutsM: sequence?.cutsM, stageIds: sequence?.stageIds, bilan: sequence?.bilan?.plan }
 }
 
 /** The film source read from the stores outside React (event handlers, shortcuts). */
@@ -61,7 +61,7 @@ export function getFilmSource(): FilmClockFor {
   const sequence = filmSequenceOf(tracks, settings.race)
   const track = sequence?.track ?? tracks[0]
   const landmarks = filmLandmarks(track, sequence, useLandmarkStore.getState().landmarks)
-  return { track, film: settings.film, durationS: settings.flyoverDurationS, pacing: settings.pacing, landmarks, cutsM: sequence?.cutsM, stageIds: sequence?.stageIds }
+  return { track, film: settings.film, durationS: settings.flyoverDurationS, pacing: settings.pacing, landmarks, cutsM: sequence?.cutsM, stageIds: sequence?.stageIds, bilan: sequence?.bilan?.plan }
 }
 
 /**
@@ -263,14 +263,14 @@ export function filmSpans(tracks: readonly Track[], race: Settings['race']): Sta
 /**
  * « À la suite »: the stages in the order of `ids` (every track id once). The order (`race.order`) and the film remapped
  * with it (`reorderStages`: what is anchored in metres follows its stage; the texts and media attached to a stop follow
- * it) are one undo step. The playhead stays where it is. False when there is no sequence, `ids` are not its stages or
+ * it) are one undo step. The playhead stays where it is. False when there is no sequence (or a « Bilan »: dates order it), `ids` are not its stages or
  * the order does not change.
  */
 export function setStageOrder(ids: readonly string[]): boolean {
   const { tracks, settings, playback } = useAppStore.getState()
   const sequence = filmSequenceOf(tracks, settings.race)
   const same = (list: readonly string[]) => list.length === ids.length && list.every((id, k) => id === ids[k])
-  if (!sequence || ids.length !== sequence.stageIds.length || new Set(ids).size !== ids.length || same(sequence.stageIds) || !ids.every((id) => sequence.stageIds.includes(id))) return false
+  if (!sequence || sequence.bilan || ids.length !== sequence.stageIds.length || new Set(ids).size !== ids.length || same(sequence.stageIds) || !ids.every((id) => sequence.stageIds.includes(id))) return false
   const byId = new Map(tracks.map((t) => [t.id, t]))
   const next = buildSequence(ids.map((id) => byId.get(id)!))
   const source = getFilmSource()
@@ -340,9 +340,9 @@ export function followLandmarks(): void {
  * and the panels (film duration, highlights).
  */
 export function useFilmClock(): FilmClock {
-  const { track, film, durationS, pacing, landmarks, cutsM, stageIds } = useFilmSource()
+  const { track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan } = useFilmSource()
   return useMemo(
-    () => filmClockFor({ track, film, durationS, pacing, landmarks, cutsM, stageIds }),
-    [track, film, durationS, pacing, landmarks, cutsM, stageIds],
+    () => filmClockFor({ track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan }),
+    [track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan],
   )
 }
