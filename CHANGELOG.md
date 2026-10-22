@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.1.0 (October 2026)
+## 4.2.0 (unreleased)
+
+- **Records of the outing**: « Carte › Repères et points d'intérêt » now lists the feats of the track: the steepest climb (« 18 % sur 400 m »), the fastest descent (from 8 km/h), the highest point (unless it is a summit already listed) and the lowest one, the fastest and slowest kilometre (timed tracks), the longest climb (from two climbs) and the peak heart rate and power. Computed from the points of the track only (smoothed elevations, moving time, GPS jumps over 150 km/h ignored), none under 1 km, and the figures corrected by hand do not change them. Each record is a landmark like the others (trophy label in the 3D view, Auto / Toujours / Jamais, ranking, « Arrêt »), shown by default, « Arrêts automatiques » stops at the steepest climb, the highest point and the fastest descent (the other records stay labels; « Arrêt » adds a stop to any) with a card showing the record and its value; films saved with the pauses of the former pacing keep their pauses. The trophy is also offered as a pictogram of the points of interest. The OpenStreetMap credit no longer shows for records alone. « Nouveautés » presents them.
 ## 4.2.0 (unreleased)
 
 - **« Outils de la trace »**: one line « Outils de la trace… » on each track's card of the « Trace » tab opens a window of its own (the editing panels stay about the film) with seven tools that retouch the loaded track (never the file): the profile and the plan with the part concerned highlighted at the top, the list of tools on the left, the tool's settings and the distance, D+, duration and number of points before → after on the right. « Appliquer » makes one step with « Annuler » in the message and in the window; a tool that changes nothing says so. On a phone the window is full screen.

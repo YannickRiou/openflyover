@@ -22,7 +22,10 @@ export interface NewsVersion {
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '4.2',
-    items: [{ icon: 'route', get title() { return t('news.v42.tools.title') }, get text() { return t('news.v42.tools.text') } }],
+    items: [
+      { icon: 'map-pin', get title() { return t('news.v42.records.title') }, get text() { return t('news.v42.records.text') } },
+      { icon: 'route', get title() { return t('news.v42.tools.title') }, get text() { return t('news.v42.tools.text') } },
+    ],
   },
   {
     version: '4.1',

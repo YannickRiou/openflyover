@@ -10,8 +10,10 @@
  * Priority range [0, 50): below the GPX waypoints and the climbs of the 3D labels. Peaks rank by elevation (a proxy for
  * prominence) and closeness, places by population. No React, no DOM, no network.
  */
-import type { LonLatBounds } from '../core/types'
+import type { LonLatBounds, Track } from '../core/types'
 import type { TrackPath } from '../flyover/path'
+import { recordText, recordsOf } from '../import/records'
+import type { RecordKind } from '../import/records'
 import type { LandmarkKind as LabelKind, LandmarkLabel } from '../scene/labelModel'
 import { formatNumber } from '../ui/format'
 import { MAX_LANDMARK_DISTANCE_M, M_PER_DEG, planarDistanceM, type OsmFeature, type OsmKind } from './overpass'
@@ -187,7 +189,15 @@ export function withRank(landmarks: readonly Landmark[], rank: readonly string[]
   const values = ranked.map((l) => l.priority).sort((a, b) => b - a)
   const given = new Map<string, number>()
   ranked.forEach((l, i) => given.set(l.id, i === 0 ? values[0] : Math.min(values[i], given.get(ranked[i - 1].id)! - RANK_STEP)))
-  return landmarks.map((l) => (given.has(l.id) ? { ...l, priority: given.get(l.id)! } : l))
+  return landmarks.map((l) => (given.has(l.id) ? withLandmarkFields(l, { priority: given.get(l.id)! }) : l))
+}
+
+/**
+ * `landmark` with some fields replaced. Unlike a spread it keeps the getters of `name` and `text`, which read the
+ * language and the number format when shown (a copy would freeze them in the language of the moment).
+ */
+export function withLandmarkFields(landmark: Landmark, fields: Partial<Landmark>): Landmark {
+  return Object.defineProperties({} as Landmark, { ...Object.getOwnPropertyDescriptors(landmark), ...Object.getOwnPropertyDescriptors(fields) })
 }
 
 /** Gap between two ranked landmarks of the same importance. */
@@ -236,7 +246,8 @@ export const KIND_LABELS: Readonly<Record<OsmKind, string>> = {
 }
 
 /** Name of one landmark of each kind (badge of the lists). */
-export const KIND_BADGES: Readonly<Record<OsmKind, string>> = {
+export const KIND_BADGES: Readonly<Record<Landmark['kind'], string>> = {
+  get record() { return t('landmarks.badge.record') },
   get peak() { return t('landmarks.badge.peak') },
   get pass() { return t('landmarks.badge.pass') },
   get hut() { return t('landmarks.badge.hut') },
@@ -256,9 +267,12 @@ export const DEDUPE_RADIUS_M = 1000
 export const CROSSED_PASS_M = 150
 
 export interface Landmark {
-  /** OSM id ("node/123") */
+  /** OSM id ("node/123"), or `record:<track id>:<kind>` for a record of the outing */
   id: string
-  kind: OsmKind
+  /** an OpenStreetMap kind, or 'record': a feat found in the track itself (`recordLandmarks`) */
+  kind: OsmKind | 'record'
+  /** which record it is, when `kind` is 'record' */
+  recordKind?: RecordKind
   name: string
   lon: number
   lat: number
@@ -461,7 +475,7 @@ export function pathBoxDistanceM(path: TrackPath, box: LonLatBounds): number {
  * The first `maxCount` of `sorted` (most important first), keeping up to `PLACE_SHARE` of them for places: they rank
  * below every other kind and would otherwise always be cut first.
  */
-function capWithPlaces<T extends { kind: OsmKind }>(sorted: readonly T[], maxCount: number): T[] {
+function capWithPlaces<T extends { kind: OsmKind | 'record' }>(sorted: readonly T[], maxCount: number): T[] {
   const places = sorted.filter((l) => l.kind === 'place').length
   const othersMax = maxCount - Math.min(places, Math.round(maxCount * PLACE_SHARE))
   const kept: T[] = []
@@ -555,6 +569,46 @@ export function buildLandmarks(
     .sort((a, b) => a.alongM - b.alongM || b.priority - a.priority)
 }
 
+/** A highest point this close to a summit landmark is that summit, not a record (metres). */
+export const RECORD_SUMMIT_M = 200
+
+/** Importance of the records, among the landmarks: the feats of the outing (steepest, fastest, highest) then the others. */
+const RECORD_PRIORITY: Readonly<Record<string, number>> = { steepestClimb: 32, fastestDescent: 32, highest: 32 }
+const RECORD_PRIORITY_OTHER = 26
+
+/**
+ * The records of `track` (`import/records.ts`) as landmarks, ordered along it, at the places the points give: always at
+ * the track (distance 0), the highest point left out when a summit of `landmarks` is within `RECORD_SUMMIT_M` of it.
+ * Their id is made of the track's, so the mode, the rank and the stops of a record follow it as for any landmark.
+ */
+export function recordLandmarks(track: Track, landmarks: readonly Landmark[]): Landmark[] {
+  const summits = landmarks.filter((l) => l.kind === 'peak')
+  return recordsOf(track)
+    .filter((r) => r.kind !== 'highest' || !summits.some((s) => planarDistanceM(s, r) <= RECORD_SUMMIT_M))
+    .map((r): Landmark => {
+      const landmark: Landmark = {
+        id: `record:${track.id}:${r.kind}`,
+        kind: 'record',
+        recordKind: r.kind,
+        // read when shown: the text follows the language and the number format
+        get name() {
+          return recordText(r)
+        },
+        lon: r.lon,
+        lat: r.lat,
+        distanceM: 0,
+        alongM: r.alongM,
+        priority: RECORD_PRIORITY[r.kind] ?? RECORD_PRIORITY_OTHER,
+        get text() {
+          return recordText(r)
+        },
+      }
+      if (r.kind === 'highest' || r.kind === 'lowest') landmark.ele = r.value
+      return landmark
+    })
+    .sort((a, b) => a.alongM - b.alongM)
+}
+
 /** The landmarks the user left visible and those hidden by id, both in the incoming order. */
 export function splitHidden(
   landmarks: readonly Landmark[],
@@ -616,9 +670,11 @@ export function landmarkLabels(
         lon: l.lon,
         lat: l.lat,
         text: l.text,
-        kind: LABEL_KINDS[l.kind],
+        // a record is drawn like a place of the user's, with a trophy
+        kind: l.kind === 'record' ? 'poi' : LABEL_KINDS[l.kind],
         priority: pinned.has(l.id) ? l.priority + PINNED_LABEL_BOOST : l.priority,
       }
+      if (l.kind === 'record') label.icon = 'trophee'
       if (l.ele !== undefined) label.ele = l.ele
       return label
     })

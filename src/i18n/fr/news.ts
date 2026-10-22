@@ -124,6 +124,9 @@ export default {
   // 4.1 — discreet credits
   'v41.credits.title': 'Des crédits plus discrets',
   'v41.credits.text': 'Dans Habillage › Crédits, choisissez « Discrets » (le nom des sources en petit dans un coin, les mentions complètes à la fin du film), « Complets » ou « À la fin seulement ». Dans Export, « Copier les crédits » donne le texte avec les liens, à coller dans la description de la vidéo.',
+  // 4.2 — records of the outing
+  'v42.records.title': 'Les records de la sortie',
+  'v42.records.text': 'La montée la plus raide, la descente la plus rapide, le point le plus haut, le kilomètre le plus lent… Dans Carte › Repères, chaque record est un repère, avec son étiquette en 3D et, pour les trois principaux (montée la plus raide, point le plus haut, descente la plus rapide), un arrêt automatique avec sa carte. Ils sont calculés d’après la trace.',
   'v42.tools.title': 'Des outils pour retoucher la trace',
   'v42.tools.text': 'Dans la carte d’une trace, « Outils de la trace » rogne le début et la fin, retire une section, supprime les pics GPS et les pauses, simplifie, inverse le sens ou décale l’heure, avec un avant / après. « Annuler » remet la trace d’avant, et le GPX se réexporte.',
 }

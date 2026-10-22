@@ -126,6 +126,22 @@ const messages: Messages['landmarks'] = {
   poiDefaultName: 'Punto di interesse',
   poiAdd: 'Punto di interesse al marcatore',
   poiHint: 'I tuoi luoghi, anche con un clic destro sul rilievo.',
+  // --- 4.2.0: records of the outing ---
+  'badge.record': 'Record',
+  'poiIcon.trophee': 'Trofeo',
+  'record.over': '{value} su {length}',
+  'record.climb': '{length} al {gradient}',
+  'record.steepestClimb': 'Salita più ripida',
+  'record.fastestDescent': 'Discesa più veloce',
+  'record.highest': 'Punto più alto',
+  'record.lowest': 'Punto più basso',
+  'record.fastestKm': 'Chilometro più veloce',
+  'record.slowestKm': 'Chilometro più lento',
+  'record.longestClimb': 'Salita più lunga',
+  'record.maxHeartRate': 'Frequenza cardiaca massima',
+  'record.maxPower': 'Potenza massima',
+  hintRecords: 'I record sono le imprese dell’uscita (salita più ripida, discesa più veloce, punto più alto…): si calcolano dalla traccia stessa, e correggere le cifre a mano non li cambia. Solo la salita più ripida, il punto più alto e la discesa più veloce fanno una sosta automatica; gli altri restano etichette.',
+  metaRecord: 'km {km}',
 }
 
 export default messages

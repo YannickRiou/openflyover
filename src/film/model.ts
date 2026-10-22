@@ -295,7 +295,7 @@ export const AUDIO_DURATION_RANGE = { min: 0.5, max: 3600 } as const
 export const FADE_RANGE = { min: 0, max: 30, step: 0.5 } as const
 
 /** A point of interest placed by hand: a name at a place on the ground, shown as a label in the view and the film. */
-export const POI_ICONS = ['epingle', 'refuge', 'bivouac', 'sommet', 'vue', 'photo', 'drapeau', 'eau', 'repas'] as const
+export const POI_ICONS = ['epingle', 'refuge', 'bivouac', 'sommet', 'vue', 'photo', 'drapeau', 'eau', 'repas', 'trophee'] as const
 export type PoiIcon = (typeof POI_ICONS)[number]
 export const POI_ICON_LABELS: Record<PoiIcon, string> = {
   get epingle() { return t('landmarks.poiIcon.epingle') },
@@ -307,6 +307,7 @@ export const POI_ICON_LABELS: Record<PoiIcon, string> = {
   get drapeau() { return t('landmarks.poiIcon.drapeau') },
   get eau() { return t('landmarks.poiIcon.eau') },
   get repas() { return t('landmarks.poiIcon.repas') },
+  get trophee() { return t('landmarks.poiIcon.trophee') },
 }
 
 export interface FilmPoi {

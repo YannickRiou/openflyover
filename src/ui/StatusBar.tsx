@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
-import { useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
+import { hasOsmLandmarks, useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { overlayCredits } from '../overlay/data'
 import { getPlatform } from '../platform'
 import { useForestStatusStore } from '../scene/forestStatus'
@@ -226,7 +226,7 @@ export function StatusBar() {
   const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
   const imagerySourceId = useAppStore((s) => s.settings.imagerySourceId)
   const weather = useWeatherStore(weatherShown)
-  const landmarks = useLandmarkStore((s) => Object.values(s.landmarks).some((list) => list.length > 0))
+  const landmarks = useLandmarkStore((s) => hasOsmLandmarks(s.landmarks))
   // OpenStreetMap is credited for the water, the forests and the highlighted region as well as for the landmarks
   const water = useWaterStore((s) => s.polygons > 0)
   const forest = useForestStore((s) => s.polygons > 0)
