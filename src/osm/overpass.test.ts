@@ -391,4 +391,25 @@ describe('fetchTrackFeatures', () => {
     await cachedOverpassQuery('A', parseOverpass, undefined, deps, false, () => started.push('cached'))
     expect(started).toEqual(['A', 'B', 'B again'])
   })
+
+  it('calls back at once for a query already being sent, and parks nothing for a cache hit', async () => {
+    let release!: (r: Response) => void
+    const first = new Promise<Response>((resolve) => (release = resolve))
+    const fetchMock = vi.fn()
+    fetchMock.mockReturnValueOnce(first).mockResolvedValue(json({ elements: [] }))
+    const deps: OverpassDeps = { fetch: fetchMock as unknown as typeof fetch, sleep: async () => {}, storage: null, now: () => 0 }
+    const started: string[] = []
+    const pa = cachedOverpassQuery('A', parseOverpass, undefined, deps)
+    await Promise.resolve()
+    await Promise.resolve()
+    // A is on the wire: a second caller is told straight away
+    cachedOverpassQuery('A', parseOverpass, undefined, deps, false, () => started.push('running'))
+    expect(started).toEqual(['running'])
+    release(json({ elements: [] }))
+    await pa
+    // settled: a cache hit never « starts », and leaves no waiter that a later run of the same query would wake
+    await cachedOverpassQuery('A', parseOverpass, undefined, deps, false, () => started.push('cache hit'))
+    await cachedOverpassQuery('A', parseOverpass, undefined, deps, true, () => started.push('refresh'))
+    expect(started).toEqual(['running', 'refresh'])
+  })
 })

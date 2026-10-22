@@ -81,8 +81,8 @@ const CHIP_SOURCES: Record<StatusChip, string> = {
 }
 
 /**
- * Chip of a fetch from the status of its store (weather, landmarks, region, water, forest), null while idle. « queued » waits for the other OpenStreetMap requests. « unavailable »
- * (untimed track) and « none » (no region around the track) are not errors.
+ * Chip of a fetch from the status of its store (weather, landmarks, region, water, forest), null while idle.
+ * « queued » waits for the other OpenStreetMap requests. « unavailable » (untimed track) and « none » (no region around the track) are not errors.
  */
 export function fetchChip(chip: StatusChip, status: string, message: string | null = null): FetchChip | null {
   const label = CHIP_LABELS[chip]
