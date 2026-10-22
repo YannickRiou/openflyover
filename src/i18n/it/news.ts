@@ -98,6 +98,10 @@ const messages: Messages['news'] = {
   // 4.0.0
   'v40.queue.title': 'Una coda di rendering',
   'v40.queue.text': 'In Esporta › Più formati, « Coda di rendering » renderizza più progetti uno dopo l’altro mentre sei lontano: aggiungi ogni progetto, avvia la coda e il browser ti avvisa alla fine se la finestra non è in primo piano. La coda resta se l’app viene chiusa. Il rendering continua anche con la finestra ridotta a icona.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Un film in un clic',
+  'v40.auto.text': 'Nella scheda Sorvolo, «Film automatico» propone tre modelli (Reel 30 s, Riassunto 1 min, Ricordo 3 min): durata, camera, titoli, schede e formato di esportazione si impostano in un colpo solo, e tutto resta modificabile in seguito.',
 }
 
 export default messages

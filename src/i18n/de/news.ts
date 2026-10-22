@@ -98,6 +98,10 @@ const messages: Messages['news'] = {
   // 4.0.0
   'v40.queue.title': 'Eine Render-Warteschlange',
   'v40.queue.text': 'Unter Exportieren › Mehrere Formate rendert « Render-Warteschlange » mehrere Projekte nacheinander, während Sie weg sind: jedes Projekt hinzufügen, die Warteschlange starten, und der Browser meldet das Ende, wenn das Fenster nicht im Vordergrund ist. Die Warteschlange bleibt erhalten, wenn die App geschlossen wird. Das Rendern läuft auch bei minimiertem Fenster weiter.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Ein Film mit einem Klick',
+  'v40.auto.text': 'Im Reiter Überflug bietet „Automatischer Film“ drei Vorlagen (Reel 30 s, Zusammenfassung 1 min, Erinnerung 3 min): Länge, Kamera, Titel, Karten und Exportformat werden auf einmal eingestellt, danach bleibt alles änderbar.',
 }
 
 export default messages

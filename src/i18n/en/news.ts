@@ -98,6 +98,10 @@ const messages: Messages['news'] = {
   // 4.0.0
   'v40.queue.title': 'A render queue',
   'v40.queue.text': 'In Export › Several formats, “Render queue” renders several projects one after the other while you are away: add each project, start the queue, and the browser tells you when it ends if the window is not in front. The queue is kept if the app is closed. Rendering also carries on when the window is minimised.',
+
+  // ---- 4.0
+  'v40.auto.title': 'A film in one click',
+  'v40.auto.text': 'In the Flyover tab, "Automatic film" offers three templates (Reel 30 s, Summary 1 min, Keepsake 3 min): length, camera, titles, cards and export format are set at once, and everything stays editable afterwards.',
 }
 
 export default messages

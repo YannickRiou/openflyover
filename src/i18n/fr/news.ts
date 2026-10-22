@@ -96,4 +96,8 @@ export default {
   // 4.0.0
   'v40.queue.title': 'Une file de rendus',
   'v40.queue.text': 'Dans Exporter › Plusieurs formats, « File de rendus » rend plusieurs projets l’un après l’autre pendant que vous êtes ailleurs : ajoutez chaque projet, lancez la file, et le navigateur vous prévient à la fin si la fenêtre n’est pas devant. La file est gardée si l’application est fermée. Le rendu continue aussi quand la fenêtre est réduite.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Un film en un clic',
+  'v40.auto.text': 'Dans l’onglet Survol, « Film automatique » propose trois gabarits (Reel 30 s, Résumé 1 min, Souvenir 3 min) : durée, caméra, titres, cartes et format d’export se règlent d’un coup, et tout reste modifiable ensuite.',
 }

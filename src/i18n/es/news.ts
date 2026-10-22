@@ -98,6 +98,10 @@ const messages: Messages['news'] = {
   // 4.0.0
   'v40.queue.title': 'Una cola de renderizado',
   'v40.queue.text': 'En Exportar › Varios formatos, « Cola de renderizado » renderiza varios proyectos uno tras otro mientras usted está fuera: añada cada proyecto, inicie la cola y el navegador le avisa al final si la ventana no está delante. La cola se conserva si se cierra la aplicación. El renderizado también continúa con la ventana minimizada.',
+
+  // ---- 4.0
+  'v40.auto.title': 'Una película en un clic',
+  'v40.auto.text': 'En la pestaña Vuelo, «Película automática» ofrece tres plantillas (Reel 30 s, Resumen 1 min, Recuerdo 3 min): duración, cámara, títulos, tarjetas y formato de exportación se ajustan de una vez, y todo se puede modificar después.',
 }
 
 export default messages
