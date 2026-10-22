@@ -126,6 +126,22 @@ const messages: Messages['landmarks'] = {
   poiDefaultName: 'POI',
   poiAdd: 'POI am Marker',
   poiHint: 'Eigene Orte, auch per Rechtsklick auf das Gelände.',
+  // --- 4.2.0: records of the outing ---
+  'badge.record': 'Rekord',
+  'poiIcon.trophee': 'Pokal',
+  'record.over': '{value} auf {length}',
+  'record.climb': '{length} bei {gradient}',
+  'record.steepestClimb': 'Steilster Anstieg',
+  'record.fastestDescent': 'Schnellste Abfahrt',
+  'record.highest': 'Höchster Punkt',
+  'record.lowest': 'Tiefster Punkt',
+  'record.fastestKm': 'Schnellster Kilometer',
+  'record.slowestKm': 'Langsamster Kilometer',
+  'record.longestClimb': 'Längster Anstieg',
+  'record.maxHeartRate': 'Höchster Puls',
+  'record.maxPower': 'Höchste Leistung',
+  hintRecords: 'Rekorde sind die Höchstleistungen der Tour (steilster Anstieg, schnellste Abfahrt, höchster Punkt…): Sie werden aus der Spur selbst berechnet, und von Hand korrigierte Zahlen ändern sie nicht. Nur der steilste Anstieg, der höchste Punkt und die schnellste Abfahrt ergeben einen automatischen Stopp; die anderen bleiben Etiketten.',
+  metaRecord: 'km {km}',
 }
 
 export default messages

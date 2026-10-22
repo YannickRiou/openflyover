@@ -20,7 +20,7 @@ import {
 } from './region'
 import type { AdminCandidate, AdminRegion, RegionAnswer } from './region'
 import type { OsmFeature } from './overpass'
-import { resetLandmarkStore, syncLandmarks, useLandmarkStore } from './store'
+import { hasOsmLandmarks, resetLandmarkStore, syncLandmarks, useLandmarkStore } from './store'
 
 /** Track going south along 6.78° E from 45.9° N, ≈ 1 km per point. */
 function makeTrack(id: string, lon = 6.78): Track {
@@ -91,6 +91,32 @@ describe('syncLandmarks', () => {
     syncLandmarks([track], { ...DEFAULT_LANDMARK_SETTINGS, maxDistanceM: 100 }, { deps })
     expect(useLandmarkStore.getState().landmarks.a.map((l) => l.name)).toEqual(['Les Houches', 'Col de Voza'])
     expect(deps.fetchFeatures).toHaveBeenCalledTimes(1)
+  })
+
+  it('publishes the records of a hilly track at once, without OpenStreetMap, and credits OpenStreetMap only for its landmarks', async () => {
+    const { calls, deps } = deferredFetcher()
+    const hilly = buildTrack({
+      name: 'hilly',
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 12 }, (_, i) => ({ lon: 6.78, lat: 45.9 - i * 0.009, ele: 1000 + (i > 3 && i < 8 ? (i - 3) * 100 : i >= 8 ? 400 : 0) })) }],
+    })
+    const track = { ...hilly, id: 'h' }
+    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps })
+    const before = useLandmarkStore.getState().landmarks.h
+    expect(before.length).toBeGreaterThan(0)
+    expect(before.every((l) => l.kind === 'record')).toBe(true)
+    expect(hasOsmLandmarks(useLandmarkStore.getState().landmarks)).toBe(false)
+    expect(osmLabels().every((l) => l.icon === 'trophee')).toBe(true)
+
+    // « Jamais » puts one aside like any landmark
+    const id = before[0].id
+    syncLandmarks([track], { ...DEFAULT_LANDMARK_SETTINGS, hiddenIds: [id] }, { deps })
+    expect(useLandmarkStore.getState().hidden.h.map((l) => l.id)).toEqual([id])
+    expect(osmLabels().map((l) => l.id)).not.toContain(`osm:${id}`)
+
+    calls[0].resolve(FEATURES)
+    await flush()
+    expect(hasOsmLandmarks(useLandmarkStore.getState().landmarks)).toBe(true)
   })
 
   it('reports an error with a French message and retries on demand', async () => {

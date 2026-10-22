@@ -235,7 +235,7 @@ export async function runImport(jobs: ImportJob[]): Promise<void> {
 }
 
 /** Show `toast` until the tracks change: its action is meant for the tracks it was shown with. */
-function showUntilTracksChange(toast: ToastInput): void {
+export function showUntilTracksChange(toast: ToastInput): void {
   const tracks = useAppStore.getState().tracks
   const id = showToast(toast)
   const stop = useAppStore.subscribe((state) => {

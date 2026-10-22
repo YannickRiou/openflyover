@@ -10,6 +10,7 @@
 import type { Track } from '../core/types'
 import { chainName } from '../import/chain'
 import { computeBounds, computeStats } from '../import/stats'
+import { withLandmarkFields } from '../osm/landmarks'
 import type { Landmark } from '../osm/landmarks'
 import { bilanPlanOf, type BilanPlan } from './bilan'
 import { trackPathOf } from './path'
@@ -217,7 +218,7 @@ export function sequenceLandmarks(sequence: Sequence, byTrack: Readonly<Record<s
         (inputs[i] ?? []).flatMap((l) => {
           if (seen.has(l.id)) return []
           seen.add(l.id)
-          return [{ ...l, alongM: l.alongM + s.startM }]
+          return [withLandmarkFields(l, { alongM: l.alongM + s.startM })]
         }),
       )
   landmarkCache.set(sequence, [{ inputs, out }, ...entries].slice(0, LANDMARK_CACHE_SIZE))

@@ -45,6 +45,7 @@ import { Icon } from './icons'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
 import { StravaDialog } from './StravaImport'
+import { TrackToolsButton } from './TrackTools'
 import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TextField, TimeField, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
@@ -937,6 +938,7 @@ export function TrackList() {
               </span>
               <TrackElevation track={track} busy={busy} />
               <TrackCorrections track={track} busy={busy} />
+              <TrackToolsButton track={track} busy={busy} />
               {(track.timesEstimated || track.stats.startTime === undefined) && <OutingPlanForm track={track} />}
             </li>
           ))}

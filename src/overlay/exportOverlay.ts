@@ -19,7 +19,7 @@ import { createExportVideos } from '../film/video'
 import type { ExportVideos } from '../film/video'
 import { useRegionStore } from '../osm/region'
 import { leadMarkerColors } from '../scene/markerSprite'
-import { useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
+import { hasOsmLandmarks, useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
 import { useWeatherStore, weatherShown, type StageWeather } from '../weather/store'
 import { summarizeOuting } from '../weather/series'
@@ -101,7 +101,7 @@ export function currentCreditSources(): CreditSources {
     imagerySourceId: settings.imagerySourceId,
     weather: weatherShown(useWeatherStore.getState()),
     landmarks:
-      Object.values(useLandmarkStore.getState().landmarks).some((list) => list.length > 0) ||
+      hasOsmLandmarks(useLandmarkStore.getState().landmarks) ||
       water ||
       forests ||
       glaciers ||

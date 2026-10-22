@@ -232,7 +232,11 @@ function SelectedLandmark({
         </span>
         {isNew && <span className="rounded-sm bg-accent-tint px-1 text-hint font-semibold text-brand" data-testid="place-new">{t('landmarks.isNew')}</span>}
       </div>
-      <p className="type-hint tabular-nums">{t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}</p>
+      <p className="type-hint tabular-nums">
+        {landmark.kind === 'record'
+          ? t('landmarks.metaRecord', { km: formatNumber(row.atM / 1000, 1) })
+          : t('landmarks.meta', { km: formatNumber(row.atM / 1000, 1), distance: formatDistance(landmark.distanceM) })}
+      </p>
       <div className="flex flex-wrap items-center gap-2">
         <EyeButton name={landmark.name} hidden={row.hidden} onClick={() => onMode(row.hidden ? 'auto' : 'never')} />
         <ModeButton name={landmark.name} mode={mode} onClick={() => onMode(nextMode(mode))} />
@@ -542,7 +546,9 @@ export function LandmarkPanel() {
       )}
 
       {rows.length > 0 && (
-        <p className="type-hint">{[t('landmarks.hint'), film.autoStops && t('landmarks.hintAuto')].filter(Boolean).join(' ')}</p>
+        <p className="type-hint">
+          {[t('landmarks.hint'), film.autoStops && t('landmarks.hintAuto'), ranked.some((r) => r.landmark.kind === 'record') && t('landmarks.hintRecords')].filter(Boolean).join(' ')}
+        </p>
       )}
 
       {ranked.length > 0 && (

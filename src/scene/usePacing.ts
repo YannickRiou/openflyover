@@ -253,6 +253,13 @@ export function followFlightTiming(before: Pick<Settings, 'flyoverDurationS' | '
 
 const spansOf = (sequence: Sequence): StageSpan[] => sequence.stages.map((s) => ({ trackId: s.track.id, startM: s.startM, endM: s.endM }))
 
+/** The stages of the film track: those of the sequence « À la suite », else the first track alone (`remapFilm`). */
+export function filmSpans(tracks: readonly Track[], race: Settings['race']): StageSpan[] {
+  const sequence = filmSequenceOf(tracks, race)
+  if (sequence) return spansOf(sequence)
+  return tracks[0] ? [{ trackId: tracks[0].id, startM: 0, endM: tracks[0].stats.distanceM }] : []
+}
+
 /**
  * « À la suite »: the stages in the order of `ids` (every track id once). The order (`race.order`) and the film remapped
  * with it (`reorderStages`: what is anchored in metres follows its stage; the texts and media attached to a stop follow
