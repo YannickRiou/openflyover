@@ -51,6 +51,16 @@ export function routeOpenedFiles<F extends { name: string }>(files: readonly F[]
   return out
 }
 
+/**
+ * What « Ouvrir », a drop or a file opened by the system does with GPX / FIT files (`routed`: `routeOpenedFiles`) when the
+ * project holds `trackCount` tracks: `ask` (add them or start a new project), or `add` (an empty project, a project file
+ * in the same batch, no GPX / FIT file: the importer reports it).
+ */
+export function openedTracksAction(routed: { project: unknown; tracks: readonly { name: string }[] }, trackCount: number): 'ask' | 'add' {
+  const trackFiles = routed.tracks.some((file) => /\.(gpx|fit)$/i.test(file.name))
+  return trackCount > 0 && !routed.project && trackFiles ? 'ask' : 'add'
+}
+
 /** A drag carries files (not text or a link): the window offers to import them. */
 export function isFileDrag(types: readonly string[] | null | undefined): boolean {
   return types?.includes('Files') ?? false
