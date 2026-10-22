@@ -24,6 +24,18 @@ const untimed = buildTrack({
   segments: [{ points: Array.from({ length: 51 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 100) / M_PER_DEG_LAT, ele: 1000 })) }],
 })
 
+/** What the browser does when the user edits a field: set the text, fire `input`. */
+const typeIn = (input: HTMLInputElement, text: string) =>
+  act(async () => {
+    input.focus()
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, text)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+
+/** « Régler par » › « Vitesse du marqueur » */
+const chooseSpeed = (host: HTMLElement) =>
+  [...host.querySelectorAll<HTMLElement>('button')].find((b) => b.textContent === 'Vitesse du marqueur')!.click()
+
 async function mount(track: typeof timed, durationS: number) {
   useAppStore.setState({ tracks: [track], settings: { ...DEFAULT_SETTINGS, flyoverDurationS: durationS } })
   const host = document.body.appendChild(document.createElement('div'))
@@ -59,14 +71,47 @@ describe('CameraPanel: duration of the flyover', () => {
     act(() => high.root.unmount())
   })
 
-  it('tells how much faster than the outing the flyover runs, from the recorded time; nothing for an untimed track', async () => {
+  it('writes the other face beneath: × the recorded time and km/h, or km/h alone for an untimed track', async () => {
     const withTimes = await mount(timed, 60)
-    // 4 h recorded over 60 s of film
-    expect(withTimes.host.textContent).toContain('accélération × 240 (sortie de 4 h 00)')
+    // 4 h recorded over 60 s of film, 5 km in 60 s
+    expect(withTimes.host.textContent).toContain('soit × 240 (sortie de 4 h 00) · 300 km/h')
     act(() => withTimes.root.unmount())
     document.body.innerHTML = ''
     const without = await mount(untimed, 60)
-    expect(without.host.textContent).not.toContain('accélération')
+    expect(without.host.textContent).toContain('soit 300 km/h')
+    expect(without.host.textContent).not.toContain('sortie de')
+    act(() => without.root.unmount())
+  })
+
+  it('a typed duration, in seconds, is set when settled', async () => {
+    const { host, root } = await mount(timed, 60)
+    const box = host.querySelector<HTMLInputElement>('input[aria-label="Durée du survol, en secondes"]')!
+    await typeIn(box, '47')
+    await act(async () => box.blur())
+    expect(useAppStore.getState().settings.flyoverDurationS).toBe(47)
+    act(() => root.unmount())
+  })
+
+  it('« Vitesse du marqueur »: typed in × the recorded time, then in km/h for a track without times', async () => {
+    const withTimes = await mount(timed, 60)
+    await act(async () => chooseSpeed(withTimes.host))
+    const up = withTimes.host.querySelector<HTMLInputElement>('input[aria-label="Vitesse du marqueur, en fois le temps réel"]')!
+    expect(up.value).toBe('240')
+    await typeIn(up, '120')
+    await act(async () => up.blur())
+    // 4 h = 14400 s over 120
+    expect(useAppStore.getState().settings.flyoverDurationS).toBe(120)
+    expect(withTimes.host.textContent).toContain('soit 2 min')
+    act(() => withTimes.root.unmount())
+    document.body.innerHTML = ''
+    const without = await mount(untimed, 60)
+    await act(async () => chooseSpeed(without.host))
+    expect(without.host.querySelector('input[aria-label="Vitesse du marqueur, en fois le temps réel"]')).toBeNull()
+    const kmh = without.host.querySelector<HTMLInputElement>('input[aria-label="Vitesse du marqueur, en kilomètres par heure"]')!
+    expect(kmh.value).toBe('300')
+    await typeIn(kmh, '150')
+    await act(async () => kmh.blur())
+    expect(useAppStore.getState().settings.flyoverDurationS).toBe(120)
     act(() => without.root.unmount())
   })
 })

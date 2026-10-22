@@ -3,6 +3,13 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.1.0 (unreleased)
+
+- **The flyover set by its duration or by the marker's speed**: in « Survol › Durée et rythme », « Régler par » switches the « Durée du survol » control between two faces of one setting.
+  - « Durée »: the slider now moves one second at a time (15 s to 10 min as before) and the value can be typed in seconds.
+  - « Vitesse du marqueur »: a slider of the marker's average speed, in « × temps réel » (the speed-up over the recorded time) and km/h, evenly spread in scale; the value can be typed in either unit. A track without times (a planned outing) has km/h only.
+  - Whatever the face, the other one is written beneath (« soit × 240 (sortie de 4 h 00) · 300 km/h », « soit 2 min »). Only the duration is saved: older projects and the « Film automatique » gabarits open unchanged. The speed is the average one: « Garder la durée du survol », the stops, the slow-motion and the speed portions still take their time from the duration. With « À la suite » the length is that of the whole route, and a stage with its own duration keeps it.
+
 ## 4.0.0 (October 2026)
 
 - **A film in one click**: the « Survol » tab starts with « Film automatique ». Three gabarits, « Reel 30 s » (vertical, 30 s), « Résumé 1 min » and « Souvenir 3 min » (16:9), set in one step the length, camera, slow motion and stops, overlay style, opening title and closing card with their figures, day or stage cards and the export format. « Annuler » puts everything back, and everything stays editable. Your own texts and the stops you placed by hand are never replaced. No music is added.

@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
   'v40.water.title': 'The sea and the streams appear',
   'v40.water.text': 'Along a coast, the sea is now drawn. Rivers and streams that the map only draws as a line become thin ribbons of water. Everything is set with “Reflective water (sea, lakes and rivers)”, in the Map tab, Map background section.',
+  // 4.1 — duration or speed of the flyover
+  'v41.speed.title': 'Flyover duration or speed',
+  'v41.speed.text': 'In Flyover › Duration and pacing, set the flyover by its duration (in steps of one second, or by typing the value) or by the marker’s speed (× real time and km/h). One gives the other, and both are always shown.',
 }
 
 export default messages
