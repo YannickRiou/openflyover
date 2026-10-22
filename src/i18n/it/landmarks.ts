@@ -140,7 +140,7 @@ const messages: Messages['landmarks'] = {
   'record.longestClimb': 'Salita più lunga',
   'record.maxHeartRate': 'Frequenza cardiaca massima',
   'record.maxPower': 'Potenza massima',
-  hintRecords: 'I record sono le imprese dell’uscita (salita più ripida, discesa più veloce, punto più alto…): si calcolano dalla traccia stessa, e correggere le cifre a mano non li cambia.',
+  hintRecords: 'I record sono le imprese dell’uscita (salita più ripida, discesa più veloce, punto più alto…): si calcolano dalla traccia stessa, e correggere le cifre a mano non li cambia. Solo la salita più ripida, il punto più alto e la discesa più veloce fanno una sosta automatica; gli altri restano etichette.',
   metaRecord: 'km {km}',
 }
 

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { withLanguage } from '../i18n'
+import { buildSequence, sequenceLandmarks } from '../flyover/sequence'
 import { buildTrack } from '../import/stats'
 import { buildTrackPath } from '../flyover/path'
 import {
@@ -476,5 +478,16 @@ describe('recordLandmarks', () => {
     const [steep] = recordLandmarks(hilly, [])
     const [label] = landmarkLabels([[steep]], 40, [steep.id])
     expect(label).toMatchObject({ id: `osm:${steep.id}`, kind: 'poi', icon: 'trophee', priority: steep.priority + PINNED_LABEL_BOOST })
+  })
+
+  it('keeps the text following the language when ranked or placed along a sequence (no frozen copy)', () => {
+    const [steep] = recordLandmarks(hilly, [])
+    const [ranked] = withRank([steep], [steep.id])
+    expect(withLanguage('en', () => ranked.text)).toMatch(/^Steepest climb · /)
+    const other = buildTrack({ name: 'o', source: 'gpx', segments: hilly.segments })
+    const sequence = buildSequence([hilly, { ...other, id: 'other' }])
+    const placed = sequenceLandmarks(sequence, { [hilly.id]: [steep] })![0]
+    expect(placed.alongM).toBe(steep.alongM)
+    expect(withLanguage('en', () => placed.name)).toMatch(/^Steepest climb · /)
   })
 })

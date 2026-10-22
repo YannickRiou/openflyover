@@ -140,7 +140,7 @@ const messages: Messages['landmarks'] = {
   'record.longestClimb': 'Longest climb',
   'record.maxHeartRate': 'Peak heart rate',
   'record.maxPower': 'Peak power',
-  hintRecords: 'Records are the feats of the outing (steepest climb, fastest descent, highest point…): they are computed from the track itself, and correcting the figures by hand does not change them.',
+  hintRecords: 'Records are the feats of the outing (steepest climb, fastest descent, highest point…): they are computed from the track itself, and correcting the figures by hand does not change them. Only the steepest climb, the highest point and the fastest descent make an automatic hold; the others stay labels.',
   metaRecord: 'km {km}',
 }
 

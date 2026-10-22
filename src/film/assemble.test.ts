@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Track } from '../core/types'
 import { DEFAULT_PACING } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
+import { buildSequence, sequenceLandmarks } from '../flyover/sequence'
 import { buildTrack } from '../import/stats'
+import { recordLandmarks } from '../osm/landmarks'
 import type { Landmark } from '../osm/landmarks'
 import {
   autoStopId,
@@ -43,14 +45,39 @@ const landmarks = [
 ]
 
 describe('records of the outing', () => {
-  const record: Landmark = { ...landmark('record' as Landmark['kind'], 'Montée la plus raide · 18 % sur 400 m', 2000, 0), id: 'record:t:steepestClimb' }
+  const record: Landmark = { ...landmark('record' as Landmark['kind'], 'Montée la plus raide · 18 % sur 400 m', 2000, 0), id: 'record:t:steepestClimb', recordKind: 'steepestClimb' }
 
   it('are stops like the passes and summits, with the record as label and source', () => {
     expect(stopCandidates({ track, landmarks: [landmarks[0], record] })).toEqual([
       { atM: 1500, label: 'Col de Voza', source: { kind: 'landmark', ref: 'node/1500' } },
       { atM: 2000, label: 'Montée la plus raide · 18 % sur 400 m', source: { kind: 'landmark', ref: 'record:t:steepestClimb' } },
     ])
+    // the other records stay labels
+    expect(stopCandidates({ track, landmarks: [{ ...record, id: 'record:t:slowestKm', recordKind: 'slowestKm' }] })).toEqual([])
     expect(autoStops({ track, landmarks: [record], pacing: DEFAULT_PACING }, 'temps-forts').map((s) => s.label)).toEqual(['Montée la plus raide · 18 % sur 400 m'])
+  })
+
+  it('make at most three stops per stage of a film: the steepest climb, the highest point, the fastest descent', () => {
+    const stage = (id: string): Track => {
+      const points = []
+      for (let d = 0; d <= 6000; d += 10) {
+        const ele = 1000 + (d < 1000 ? 0 : d < 2000 ? (d - 1000) * 0.15 : d < 3000 ? 150 - (d - 2000) * 0.1 : 50 + (d - 3000) * 0.05)
+        points.push({ lon: 6.8, lat: 45.8 + d / M_PER_DEG_LAT, ele, time: Date.UTC(2026, 5, 1, 8) + (d / (d > 2000 && d < 3000 ? 12 : d % 1500 < 700 ? 3 : 4)) * 1000 })
+      }
+      return { ...buildTrack({ name: id, source: 'gpx', segments: [{ points }] }), id }
+    }
+    const [a, b] = [stage('a'), stage('b')]
+    const all = [a, b].map((t) => recordLandmarks(t, []))
+    // every kind is listed as a landmark, per stage…
+    expect(all.every((list) => list.length > 3)).toBe(true)
+    const sequence = buildSequence([a, b])
+    const landmarks = sequenceLandmarks(sequence, { a: all[0], b: all[1] })!
+    const stops = stopCandidates({ track: sequence.track, landmarks })
+    // …but only three per stage feed the automatic stops
+    expect(stops.length).toBeLessThanOrEqual(6)
+    expect(stops.length).toBeGreaterThan(2)
+    const kinds = new Set(stops.map((s) => (s.source.ref ?? '').split(':')[2]))
+    expect([...kinds].every((k) => ['steepestClimb', 'highest', 'fastestDescent'].includes(k))).toBe(true)
   })
 
   it('do not add pauses to a film saved before the timeline', () => {

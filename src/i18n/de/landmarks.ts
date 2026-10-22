@@ -140,7 +140,7 @@ const messages: Messages['landmarks'] = {
   'record.longestClimb': 'Längster Anstieg',
   'record.maxHeartRate': 'Höchster Puls',
   'record.maxPower': 'Höchste Leistung',
-  hintRecords: 'Rekorde sind die Höchstleistungen der Tour (steilster Anstieg, schnellste Abfahrt, höchster Punkt…): Sie werden aus der Spur selbst berechnet, und von Hand korrigierte Zahlen ändern sie nicht.',
+  hintRecords: 'Rekorde sind die Höchstleistungen der Tour (steilster Anstieg, schnellste Abfahrt, höchster Punkt…): Sie werden aus der Spur selbst berechnet, und von Hand korrigierte Zahlen ändern sie nicht. Nur der steilste Anstieg, der höchste Punkt und die schnellste Abfahrt ergeben einen automatischen Stopp; die anderen bleiben Etiketten.',
   metaRecord: 'km {km}',
 }
 

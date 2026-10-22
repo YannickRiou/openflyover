@@ -126,6 +126,13 @@ describe('detectRecords', () => {
     expect(detectRecords(jitter)).toEqual([])
   })
 
+  it('finds no slope in an elevation step between two segments (a gap, a chained track, a lift)', () => {
+    const segment = (from: number, ele: number): TrackPoint[] =>
+      Array.from({ length: 101 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (from + i * 10) / M_PER_DEG_LAT, ele }))
+    const track = buildTrack({ name: 'seam', source: 'gpx', segments: [{ points: segment(0, 1000) }, { points: segment(1000, 1400) }] })
+    expect(detectRecords(track).filter((r) => r.kind === 'steepestClimb' || r.kind === 'fastestDescent')).toEqual([])
+  })
+
   it('ignores a stretch with a GPS jump (more than 150 km/h)', () => {
     // 4 km at 4 m/s, but 800 m are gained in one second at 2.5 km: no kilometre is fast because of it
     const points: TrackPoint[] = []

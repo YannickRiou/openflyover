@@ -10,6 +10,7 @@ import type { Track } from '../core/types'
 import { climbsOf } from '../flyover/climbs'
 import { DEFAULT_PACING, isHighlightLandmark, pausePositions } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
+import { AUTO_STOP_RECORDS } from '../import/records'
 import type { Landmark } from '../osm/landmarks'
 import { climbLabelText } from '../scene/labelModel'
 import { AUTO_STOP_S } from './model'
@@ -44,13 +45,13 @@ function climbCandidates({ track, pacing }: AssembleInput): StopCandidate[] {
 
 /**
  * Where the film offers a stop by itself, by position: the passes crossed, the peaks nearby and the records of the
- * outing (`withRecords`) among the landmarks shown (Carte › Repères). Not the climb tops: stops come from the landmarks,
+ * outing that make stops (`withRecords`, `AUTO_STOP_RECORDS`: the other records stay labels) among the landmarks shown (Carte › Repères). Not the climb tops: stops come from the landmarks,
  * the points of interest and the timeline.
  */
 export function stopCandidates({ track, landmarks = [] }: Pick<AssembleInput, 'track' | 'landmarks'>, withRecords = true): StopCandidate[] {
   const L = track.stats.distanceM
   return landmarks
-    .filter((l) => isHighlightLandmark(l) || (withRecords && l.kind === 'record'))
+    .filter((l) => isHighlightLandmark(l) || (withRecords && l.recordKind !== undefined && AUTO_STOP_RECORDS.includes(l.recordKind)))
     .map((l): StopCandidate => ({ atM: Math.min(L, Math.max(0, l.alongM)), label: l.name, source: { kind: 'landmark', ref: l.id } }))
     .sort((a, b) => a.atM - b.atM)
 }

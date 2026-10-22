@@ -138,6 +138,6 @@ export default {
   'record.longestClimb': 'Plus longue montée',
   'record.maxHeartRate': 'Fréquence cardiaque maximale',
   'record.maxPower': 'Puissance maximale',
-  hintRecords: 'Les records sont les exploits de la sortie (montée la plus raide, descente la plus rapide, point le plus haut…) : ils sont calculés d’après la trace elle-même, et corriger les chiffres à la main ne les change pas.',
+  hintRecords: 'Les records sont les exploits de la sortie (montée la plus raide, descente la plus rapide, point le plus haut…) : ils sont calculés d’après la trace elle-même, et corriger les chiffres à la main ne les change pas. Seuls la montée la plus raide, le point le plus haut et la descente la plus rapide font un arrêt automatique ; les autres restent des étiquettes.',
   metaRecord: 'km {km}',
 }

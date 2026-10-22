@@ -27,6 +27,9 @@ export const RECORD_KINDS = [
 ] as const
 export type RecordKind = (typeof RECORD_KINDS)[number]
 
+/** The records that make an automatic stop (the others stay labels: a film of several stages would be all stops). */
+export const AUTO_STOP_RECORDS: readonly RecordKind[] = ['steepestClimb', 'fastestDescent', 'highest']
+
 export interface TrackRecord {
   kind: RecordKind
   /** distance along the track (metres, the scale of `buildTrackPath`), the middle of a stretch */
@@ -48,6 +51,8 @@ const STEP_M = 20
 /** Lengths of the stretches tried for the steepest climb (metres), the longest one within `GRADIENT_TOLERANCE` of the best kept. */
 const STEEP_LENGTHS_M = [300, 400, 500] as const
 const GRADIENT_TOLERANCE = 0.005
+/** Cells around the join of two segments whose elevations the despiking and the smoothing blend (a step there is no slope). */
+const SEAM_CELLS = 5
 /** Gradients below this are not a record (fraction of 1). */
 const MIN_STEEP_GRADIENT = 0.03
 /** Length of the fastest descent and of a kilometre (metres). */
@@ -86,6 +91,29 @@ interface Grid {
   moving?: Float64Array
   /** prefix count of the cells that hold a GPS jump */
   jumps?: Int32Array
+  /** prefix count of the cells near the join of two segments (a recording gap, a chained track, a lift) */
+  seams: Int32Array
+}
+
+/** Prefix count of the cells within `SEAM_CELLS` of a segment join; the jump between two segments adds no distance. */
+function seamGrid(track: Track, dist: Float64Array, count: number): Int32Array {
+  const near = new Uint8Array(count)
+  let index = 0
+  track.segments.forEach((segment, k) => {
+    if (k > 0 && segment.points.length > 0 && index > 0) {
+      const cell = Math.round(dist[index] / STEP_M)
+      for (let c = Math.max(0, cell - SEAM_CELLS); c <= Math.min(count - 1, cell + SEAM_CELLS); c++) near[c] = 1
+    }
+    index += segment.points.length
+  })
+  const prefix = new Int32Array(count + 1)
+  for (let s = 0; s < count; s++) prefix[s + 1] = prefix[s] + near[s]
+  return prefix
+}
+
+/** Whether cells `from` to `to` include one near a segment join. */
+function crossesSeam(grid: Grid, from: number, to: number): boolean {
+  return grid.seams[to + 1] - grid.seams[from] > 0
 }
 
 /** Moving time and GPS jumps on the grid, from the timed points (bridged by distance over the points without time). */
@@ -172,6 +200,7 @@ export function detectRecords(track: Track): TrackRecord[] {
     count,
     eleRaw,
     ele: eleRaw && movingAverage(eleRaw, Math.round(SMOOTHING_WINDOW_M / STEP_M / 2)),
+    seams: seamGrid(track, path.dist, count),
     ...timeGrid(flat, path.dist, count),
   }
   const out: TrackRecord[] = []
@@ -188,6 +217,7 @@ export function detectRecords(track: Track): TrackRecord[] {
       const w = lengthM / STEP_M
       let best = { gradient: -Infinity, from: 0 }
       for (let i = 0; i + w < count; i++) {
+        if (crossesSeam(grid, i, i + w)) continue
         const gradient = (ele[i + w] - ele[i]) / lengthM
         if (gradient > best.gradient) best = { gradient, from: i }
       }
@@ -203,7 +233,7 @@ export function detectRecords(track: Track): TrackRecord[] {
     const w = KM_M / STEP_M
     let fastest = { kmh: 0, from: -1 }
     for (let i = 0; i + w < count; i++) {
-      if (ele[i] - ele[i + w] < MIN_DESCENT_DROP_M) continue
+      if (ele[i] - ele[i + w] < MIN_DESCENT_DROP_M || crossesSeam(grid, i, i + w)) continue
       const s = movingS(grid, i, i + w)
       if (s !== undefined && KM_M / s > fastest.kmh / 3.6) fastest = { kmh: (KM_M / s) * 3.6, from: i }
     }

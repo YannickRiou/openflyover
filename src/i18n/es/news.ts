@@ -125,7 +125,7 @@ const messages: Messages['news'] = {
   'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
   // 4.2 — records of the outing
   'v42.records.title': 'Los récords de tu salida',
-  'v42.records.text': 'La subida más empinada, la bajada más rápida, el punto más alto, el kilómetro más lento… En Mapa › Referencias, cada récord es una referencia con su etiqueta 3D y, si la dejas visible, una parada automática con su tarjeta. Se calculan a partir del track.',
+  'v42.records.text': 'La subida más empinada, la bajada más rápida, el punto más alto, el kilómetro más lento… En Mapa › Referencias, cada récord es una referencia con su etiqueta 3D y, en las tres principales (subida más empinada, punto más alto, bajada más rápida), una parada automática con su tarjeta. Se calculan a partir del track.',
 }
 
 export default messages

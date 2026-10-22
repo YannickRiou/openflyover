@@ -13,6 +13,7 @@
 import type { LonLatBounds, Track } from '../core/types'
 import type { TrackPath } from '../flyover/path'
 import { recordText, recordsOf } from '../import/records'
+import type { RecordKind } from '../import/records'
 import type { LandmarkKind as LabelKind, LandmarkLabel } from '../scene/labelModel'
 import { formatNumber } from '../ui/format'
 import { MAX_LANDMARK_DISTANCE_M, M_PER_DEG, planarDistanceM, type OsmFeature, type OsmKind } from './overpass'
@@ -188,7 +189,15 @@ export function withRank(landmarks: readonly Landmark[], rank: readonly string[]
   const values = ranked.map((l) => l.priority).sort((a, b) => b - a)
   const given = new Map<string, number>()
   ranked.forEach((l, i) => given.set(l.id, i === 0 ? values[0] : Math.min(values[i], given.get(ranked[i - 1].id)! - RANK_STEP)))
-  return landmarks.map((l) => (given.has(l.id) ? { ...l, priority: given.get(l.id)! } : l))
+  return landmarks.map((l) => (given.has(l.id) ? withLandmarkFields(l, { priority: given.get(l.id)! }) : l))
+}
+
+/**
+ * `landmark` with some fields replaced. Unlike a spread it keeps the getters of `name` and `text`, which read the
+ * language and the number format when shown (a copy would freeze them in the language of the moment).
+ */
+export function withLandmarkFields(landmark: Landmark, fields: Partial<Landmark>): Landmark {
+  return Object.defineProperties({} as Landmark, { ...Object.getOwnPropertyDescriptors(landmark), ...Object.getOwnPropertyDescriptors(fields) })
 }
 
 /** Gap between two ranked landmarks of the same importance. */
@@ -262,6 +271,8 @@ export interface Landmark {
   id: string
   /** an OpenStreetMap kind, or 'record': a feat found in the track itself (`recordLandmarks`) */
   kind: OsmKind | 'record'
+  /** which record it is, when `kind` is 'record' */
+  recordKind?: RecordKind
   name: string
   lon: number
   lat: number
@@ -578,6 +589,7 @@ export function recordLandmarks(track: Track, landmarks: readonly Landmark[]): L
       const landmark: Landmark = {
         id: `record:${track.id}:${r.kind}`,
         kind: 'record',
+        recordKind: r.kind,
         // read when shown: the text follows the language and the number format
         get name() {
           return recordText(r)
