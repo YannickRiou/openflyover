@@ -20,6 +20,7 @@ import { isSunDate } from '../flyover/sun'
 import { TRACK_COLORS } from '../import'
 import { buildTrack, isUtcOffsetMin, statsOverrideOf } from '../import/stats'
 import { isValidVideoSettings, withVideoDefaults } from '../export/schedule'
+import { isValidForest } from '../osm/forest'
 import { LANDMARK_DENSITIES, LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } from '../osm/landmarks'
 import { OVERLAY_ANCHORS, isValidOverlay, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
 import { isValidPoster, withPosterDefaults } from '../poster/settings'
@@ -135,6 +136,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   clouds: isValidClouds,
   water: (v) => v.strength >= 0 && v.strength <= 1,
   snow: isValidSnow,
+  forest: isValidForest,
   trackColorBy: (v) => (TRACK_COLOR_MODES as readonly string[]).includes(v),
   trackLegendAnchor: (v) => (OVERLAY_ANCHORS as readonly string[]).includes(v),
   overlay: isValidOverlay,

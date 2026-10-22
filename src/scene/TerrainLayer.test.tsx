@@ -129,6 +129,7 @@ describe('engine options from settings', () => {
     demClean: { enabled: false, seaToZero: false },
     water: { enabled: true, strength: 1 },
     snow: { mode: 'meteo' as const, lineM: 2000 },
+    forest: { enabled: true, density: 60 },
     overlay: DEFAULT_OVERLAY,
     video: { ...DEFAULT_VIDEO_SETTINGS, aspect: '16:9' as const, resolution: '1080p' as const, fps: 30 as const, quality: 'high' as const },
     poster: DEFAULT_POSTER,

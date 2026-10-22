@@ -175,6 +175,12 @@ const messages: Messages['light'] = {
   'snow.hintNoAltitude': 'Sin nieve: el track no tiene altitud, el tiempo no puede decir dónde está el límite (el modo « Manual » sigue disponible).',
   'snow.hintNoData': 'Nieve desconocida: el tiempo cargado no tiene datos de nieve, o no bastantes de temperatura, ese día (un tiempo guardado de una versión anterior no tiene la nieve).',
   'snow.sequenceNote': 'Con « En secuencia », cada etapa sigue su propio tiempo, y una etapa sin tiempo conserva la nieve de la etapa anterior; la frase de arriba describe el inicio del primer track.',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Bosques',
+  'forest.tip': 'Dibuja árboles en volumen donde OpenStreetMap indica un bosque, alrededor del track (hace falta internet). Si OpenStreetMap no responde, simplemente no hay árboles. Son formas sencillas, colocadas al azar pero siempre en los mismos sitios: la exportación muestra los mismos árboles que la vista previa.',
+  'forest.density': 'Densidad de árboles',
+  'forest.densityValue': '{n} árboles por hectárea',
+  'forest.densityTip': 'Número de árboles dibujados por hectárea de bosque, cerca del track; más lejos hay menos. Cuantos más hay, más lentas son la vista previa y la exportación. El dispositivo limita el número total de árboles (menos en un móvil o una tableta).',
 }
 
 export default messages

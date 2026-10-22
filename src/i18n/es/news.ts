@@ -105,6 +105,9 @@ const messages: Messages['news'] = {
   // --- 4.0
   'v40.snow.title': 'Nieve según la fecha',
   'v40.snow.text': 'Por encima de un límite calculado a partir del tiempo del día (nieve en el suelo y temperatura), el terreno se vuelve blanco, con un borde irregular y roca en las pendientes empinadas. Se ajusta a mano o se desactiva en Meteo › Nieve.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Bosques en 3D',
+  'v40.forests.text': 'Los árboles salen del suelo donde OpenStreetMap tiene bosques: los valles arbolados ya no se ven planos. Ajustes en Mapa, sección «Fondo de mapa»: «Bosques» y «Densidad de árboles».',
 }
 
 export default messages

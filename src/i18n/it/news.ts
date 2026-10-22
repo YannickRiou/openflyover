@@ -105,6 +105,9 @@ const messages: Messages['news'] = {
   // --- 4.0
   'v40.snow.title': 'Neve secondo la data',
   'v40.snow.text': 'Sopra un limite calcolato dal meteo del giorno (neve al suolo e temperatura), il terreno diventa bianco, con un bordo irregolare e roccia sui pendii ripidi. Si regola a mano o si disattiva in Meteo › Neve.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Foreste in 3D',
+  'v40.forests.text': 'Gli alberi spuntano dal terreno dove OpenStreetMap ha delle foreste: le valli boscose non sono più piatte. Impostazioni in Mappa, sezione «Sfondo mappa»: «Foreste» e «Densità degli alberi».',
 }
 
 export default messages

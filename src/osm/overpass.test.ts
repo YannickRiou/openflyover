@@ -3,6 +3,7 @@ import type { LonLat, Track } from '../core/types'
 import { buildTrack } from '../import/stats'
 import { keyValueStore, type KeyValueStore } from '../platform'
 import {
+  MAX_CACHE_ENTRY_CHARS,
   MAX_LANDMARK_DISTANCE_M,
   MEMORY_CACHE_ENTRIES,
   OverpassError,
@@ -327,6 +328,15 @@ describe('fetchTrackFeatures', () => {
     const track = northTrack(3, 1000)
     await fetchTrackFeatures(track, undefined, deps)
     expect([...storage.map.keys()]).toEqual(['openflyover.prefs', `openflyover.osm.v1.${hashQuery(trackQuery(track))}`])
+  })
+
+  it('does not write a result too large for the cache, and keeps the entries already there', async () => {
+    const storage = memoryStorage()
+    storage.set('openflyover.osm.v1.old', '{}')
+    const big = [{ text: 'x'.repeat(MAX_CACHE_ENTRY_CHARS) }]
+    const deps = makeDeps([json({ elements: [] })], storage)
+    expect(await cachedOverpassQuery('q-big', () => big, undefined, deps)).toBe(big)
+    expect([...storage.map.keys()]).toEqual(['openflyover.osm.v1.old'])
   })
 
   it('keeps the most recently used results in memory', async () => {

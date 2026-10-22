@@ -175,6 +175,12 @@ const messages: Messages['light'] = {
   'snow.hintNoAltitude': 'Nessuna neve: la traccia non ha altitudine, il meteo non può dire dove sia il limite (la modalità « Manuale » resta possibile).',
   'snow.hintNoData': 'Neve sconosciuta: il meteo caricato non ha dati sulla neve, o troppo pochi sulla temperatura, quel giorno (un meteo conservato da una versione precedente non ha la neve).',
   'snow.sequenceNote': 'Con « In sequenza », ogni tappa segue il proprio meteo, e una tappa senza meteo conserva la neve della tappa precedente; la frase qui sopra descrive l’inizio della prima traccia.',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Foreste',
+  'forest.tip': 'Disegna alberi in 3D dove OpenStreetMap indica una foresta, attorno alla traccia (serve internet). Se OpenStreetMap non risponde, semplicemente non ci sono alberi. Sono forme semplici, collocate a caso ma sempre negli stessi punti: l’esportazione mostra gli stessi alberi dell’anteprima.',
+  'forest.density': 'Densità degli alberi',
+  'forest.densityValue': '{n} alberi per ettaro',
+  'forest.densityTip': 'Numero di alberi disegnati per ettaro di foresta, vicino alla traccia; più lontano ce ne sono meno. Più ce ne sono, più lenti sono l’anteprima e l’esportazione. Il dispositivo limita il numero totale di alberi (meno su telefono e tablet).',
 }
 
 export default messages

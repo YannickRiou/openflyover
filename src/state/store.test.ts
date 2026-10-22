@@ -232,6 +232,7 @@ describe('settings and misc', () => {
       demClean: { enabled: false, seaToZero: false },
       water: { enabled: true, strength: 1 },
       snow: { mode: 'meteo', lineM: 2000 },
+      forest: { enabled: true, density: 60 },
       overlay: DEFAULT_OVERLAY,
       video: {
         aspect: '16:9',

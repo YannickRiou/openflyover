@@ -173,4 +173,10 @@ export default {
   'snow.hintNoAltitude': 'Pas de neige : la trace n’a pas d’altitude, la météo ne peut pas dire où est la limite (le réglage « Manuelle » reste possible).',
   'snow.hintNoData': 'Neige inconnue : la météo chargée n’a pas de données de neige ou de température assez complètes ce jour-là (une météo gardée d’une ancienne version n’a pas la neige).',
   'snow.sequenceNote': 'Avec « À la suite », chaque étape suit sa propre météo, et une étape sans météo garde la neige de l’étape précédente ; la phrase ci-dessus décrit le début de la première trace.',
+  // --- Forêts (4.0.0): trees on OpenStreetMap forests ---
+  'forest.enable': 'Forêts',
+  'forest.tip': 'Dessine des arbres en volume là où OpenStreetMap indique une forêt, autour de la trace (internet nécessaire). Si OpenStreetMap ne répond pas, il n’y a simplement pas d’arbres. Ce sont des formes simples, placées au hasard mais toujours aux mêmes endroits : l’export montre les mêmes arbres que l’aperçu.',
+  'forest.density': 'Densité des arbres',
+  'forest.densityValue': '{n} arbres par hectare',
+  'forest.densityTip': 'Nombre d’arbres dessinés par hectare de forêt, près de la trace ; plus loin, il y en a moins. Plus il y en a, plus l’aperçu et l’export sont lents. L’appareil limite le nombre total d’arbres (moins sur téléphone et tablette).',
 }

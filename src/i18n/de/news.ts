@@ -105,6 +105,9 @@ const messages: Messages['news'] = {
   // --- 4.0
   'v40.snow.title': 'Schnee je nach Datum',
   'v40.snow.text': 'Oberhalb einer Grenze, die aus dem Wetter des Tages berechnet wird (Schnee am Boden und Temperatur), wird das Gelände weiß – mit unregelmäßigem Rand und Fels an steilen Hängen. Von Hand einstellbar oder abschaltbar unter Wetter › Schnee.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Wälder in 3D',
+  'v40.forests.text': 'Bäume wachsen aus dem Boden, wo OpenStreetMap Wälder kennt: bewaldete Täler sind nicht mehr flach. Einstellungen unter Karte, Abschnitt „Hintergrundkarte“: „Wälder“ und „Baumdichte“.',
 }
 
 export default messages

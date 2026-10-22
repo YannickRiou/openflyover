@@ -103,4 +103,7 @@ export default {
   // --- 4.0
   'v40.snow.title': 'Neige selon la date',
   'v40.snow.text': 'Au-dessus d’une limite calculée d’après la météo du jour (neige au sol et température), le terrain devient blanc, avec une limite irrégulière et la roche sur les pentes raides. Réglable à la main ou désactivable dans Météo › Neige.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Des forêts en 3D',
+  'v40.forests.text': 'Les arbres sortent du sol là où OpenStreetMap a des forêts : les vallées boisées ne sont plus plates. Réglages dans Carte, section « Fond de carte » : « Forêts » et « Densité des arbres ».',
 }

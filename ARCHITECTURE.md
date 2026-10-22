@@ -83,6 +83,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/weather/sceneWeather.ts` + `src/scene/weatherEffect.ts` | weather in the scene | `sceneConditionsAt`, `sceneWeatherAt`, `sceneWeatherFrom`, `CLEAR_SCENE_WEATHER`, `hazeExtinction`; `WeatherEffect` |
 | `src/osm/water.ts` + `src/scene/waterMesh.ts` + `src/scene/WaterLayer.tsx` | reflective water | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`) |
 | `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `cloudCoverField`, `zonedCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`); `patchRegionalCoverage`, `patchCloudShadow` (`scene/cloudShaders.ts`) |
+| `src/osm/forest.ts` + `src/scene/forestPoints.ts` + `src/scene/treeGeometry.ts` + `src/scene/ForestLayer.tsx` | forests (see "Forests") | `ForestSettings`, `DEFAULT_FOREST`, `FOREST_DENSITY_RANGE`, `isValidForest`, `FOREST_MARGIN_M`, `forestQuery`, `parseForest`, `fetchTrackForest`; `placeTrees`, `treeKind`, `densityFactor`, `hash01`, `CHUNK_M`, `ForestChunk`; `createTreeGeometries`, `TREE_WIDTH_RATIO`; `ForestLayer`, `FOREST_FAR_M`, `FOREST_FADE_M`; `useForestStore` (`osm/store.ts`) |
 | `src/scene/cloudSea.ts` + `src/scene/CloudSeaSurface.tsx` | surface sea of clouds | `seaRelief`, `billow`, `gradientNoise`, `octaveWeight`, `seaNoisePoint`, `seaBaseAltitude`, `curvatureDropM`, `edgeFade`, `rimFade`, `buildRadialGrid`, `terrainBoxOf`, `terrainGridCentres`, `seaReliefGlsl`, `glslFloat`; `CloudSeaSurface` |
 | `src/scene/grading.ts` + `gradingEffect.ts` + `GradingComposer.tsx` | color grading | `GradingSettings`, `DEFAULT_GRADING`, `GRADING_PRESETS`, `GRADING_RANGES`, `isValidGrading`, `isIdentityGrading`, `matchingPreset`, `gradingOfPreset`, `withGradingValue`, `gradingUniforms`; `GradingEffect`; `useGradingEffect`, `GradingComposer` |
 | `src/scene/lens.ts` + `useLensEffects.ts` + `flareEffect.ts` + `shutterEffect.ts` | « Objectif » lens effects (see "Lens") | pure, tested: `LensSettings`, `DEFAULT_LENS`, `LENS_RANGES`, `isValidLens`, `withLensDefaults`, `lensActive`, `bloomParams`, `depthOfFieldParams`, `SHUTTER_SUBFRAMES`, `SHUTTER_STEP_PX`, `shutterSamples`, `adaptiveShutterSamples`, `viewMotionPx`, `subFrameCount`, `previewShutterWeight`, `radialBlurLength`, `setShutterSubFrame`, `shutterSubFrame`, `subFrameSlices`; `useLensEffects`, `FlareEffect`, `ShutterEffect`; `filmViewAt` (`filmView.ts`: the camera placement of `FlyoverRig` at a progress and film time, shared with the export); `LensPanel` (`src/ui`) |
@@ -2983,6 +2984,75 @@ summer aerial photo. Settings in « Météo » › « Neige » (`settings.snow`)
   stays dark where it is drawn); not in the render history (`RenderSettings`).
 - **Tuning**: the physics constants are at the top of `snowLine.ts` (lapse rate, 2 cm and 20 cm thresholds, bands); the look
   is in `snowShader.ts` (`fragmentSnow`: noise cell sizes, slope thresholds, albedo, 0.94 maximum cover).
+## Forests (« Forêts »)
+
+Wooded valleys looked flat: the aerial photo shows the trees painted on the ground. Trees are now drawn as simple 3D volumes
+where OpenStreetMap has forests. Same pipeline as "Reflective water": Overpass query, pure reduction, pure placement, drawing
+draped on the relief.
+
+- **Data** (`src/osm/forest.ts`, pure and tested): same client, queue and 30-day cache as the landmarks and the water
+  (`cachedOverpassQuery`, `runOverpassQuery(…, parse)`), one request per track and only if `settings.forest.enabled`: `way` /
+  multipolygons `landuse=forest` and `natural=wood`, `out geom qt`, in the boxes of the track corridor widened to **5 km**
+  (`FOREST_MARGIN_M`; 8 km sent 3 MB on the sample, 5 km 0.8 MB: `docs/sources.md`). `leaf_type` (`needleleaved`,
+  `broadleaved`, `mixed`) is kept when present. The request is not canceled on unmount (shared and cached); its response is only
+  ignored if it is stale. A failed request is only retried on the next track or setting change, and shows nothing (no status
+  chip: the checkbox's help says there are simply no trees when OpenStreetMap does not answer).
+- **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
+  is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned
+  relation ignored, Douglas–Peucker 8 m (`FOREST_SIMPLIFY_M`), polygons < 5,000 m² dropped (`MIN_FOREST_AREA_M2`), the 600 largest
+  kept (`MAX_FOREST_POLYGONS`) within 40,000 vertices in all (`MAX_FOREST_VERTICES`, largest first, so the entry stays far below `MAX_CACHE_ENTRY_CHARS` = 1.5 MB, beyond which `writeCache` does not write: a huge entry would evict the landmarks and water), coordinates to 1e-5° (~1 m); the `leaf` key is absent when OpenStreetMap does not say. Only
+  this compact result is cached (sample: 64 polygons, 6,700 vertices, 130 kB in the cache).
+- **Pure placement** (`src/scene/forestPoints.ts`, tested): `placeTrees(polygons, { density, maxTrees, path })` gives the trees in
+  **chunks** of the ground (squares of `CHUNK_M` = 1,500 m, in an equirectangular frame around the first point of the track). In
+  a chunk, each forest is cut to the square (`clipRing`, so the point-in-polygon tests run on short rings), and a tree stands in
+  every cell of a lattice whose spacing is √(10,000 / density) m, at a position **hashed from the cell** (`hash01`, integers, no
+  random generator, no state), kept if it falls in the chunk, inside a forest and outside its holes. Height 8–22 m, variation of the
+  colour and turn are hashed from the cell too: **same data, same density, same budget, same trees**, in any order of the
+  forests (they are sorted by id), so the export draws what the preview shows. Kind: `leaf_type` `needleleaved` → conifer,
+  `broadleaved` → broadleaf, `mixed` → by hash, absent → `BY_ALTITUDE`: conifer above 1,200 m (`CONIFER_ALTITUDE_M`), decided when the
+  tree is draped, where the height is known (`treeKind`).
+  **Thinning with the distance to the track** (`densityFactor`): full density up to 2 km, falling linearly to 40 % at 5 km (the flyover
+  sees the near forests closely, the far ones as a texture). **Budget**: the chunks are placed from the nearest to the track outwards
+  until `maxTrees` (`deviceBudget().maxTrees`) would be exceeded; the others are not placed. A forest is therefore dense near the
+  track and absent beyond the budget, never half a chunk.
+- **Budget** (`core/deviceBudget.ts`, `maxTrees`): 250,000 trees on a computer, 60,000 on a phone or tablet, 30,000 with ≤ 2 GB
+  of memory. The same in the preview and the export (the positions must not differ); the export quality only decides the shadows
+  (below). Sample (Pyrenees, 5 km corridor), `docs/sources.md`: at the default density (60 trees / ha) the 250,000 trees fill the 48
+  chunks nearest to the track (~110 km²); the phone's 60,000 fill 7 chunks. Placement takes ~0.3 s for 250,000 trees (on the main
+  thread, when the forests arrive and when the density slider settles: `useDeferredValue`).
+  Measured in headless Chromium with software rendering (SwiftShader, not representative of a GPU; the sample film, camera ~1.7 km high): of
+  ~130,000 trees in range, ~15,000 are in the view, +0.43 M triangles over the 2.7 M of the terrain and the track (+16 %), the same
+  number of draw calls (~300). Mean of 9 frames, software: 10 ms without forests, 33 ms with. Trees casting shadows were tried and
+  dropped: the shadow pass drew every tree in range again (+3.7 M triangles, ~9 × the visible trees) for crowns of a few metres against
+  shadow texels of several metres. The first draping of a
+  chunk (≤ 8,000 trees a frame) shows as one frame a little longer while the film starts; the Overpass answer arrives after the
+  landmarks and the water (one request at a time): ~110 to 160 s on a slow day of the public server.
+- **Shapes** (`src/scene/treeGeometry.ts`, tested): two unit geometries merged from three's primitives, with vertex colours and no
+  texture: conifer = trunk + two stacked 8-sided cones (26 triangles), broadleaf = trunk + flattened icosahedron (30 triangles).
+  The instance matrix scales them to the tree (height × `TREE_WIDTH_RATIO`: 0.26 for a conifer, 0.32 for a broadleaf, wide). The
+  greens (dark for the conifers) are in this file; the instance colour (`setColorAt`) only varies them a little.
+- **Drawing** (`ForestLayer`, next to `WaterLayer` in `FlyoverCanvas`): per chunk, two `InstancedMesh` (conifers, broadleaves)
+  created on first draping, `MeshStandardMaterial` (lit by the sun, receives the terrain's shadows, `raycast` neutralized: the track
+  picker and the camera target the relief). Draping like the water and the track: `engine.sampleHeight` × exaggeration − 1 m
+  (the trunk meets the relief on a slope), but **per chunk, only within `FOREST_FAR_M` (6 km) of the camera**: each frame
+  `updateForest` hides the chunks beyond, and drapes those in range whose relief or exaggeration changed since (nearest first, at
+  most `DRAPE_TREES_PER_FRAME` = 8,000 trees a frame, `wakeScene` until none is left). The relief "changed" when the engine reports it
+  (`engine.onChange`, debounced as the water's: `REDRAPE_DEBOUNCE_MS`); the video export drapes everything in range at once, through
+  `registerDrapeFlush` and with no frame limit while it runs. A tree whose height is unknown (tile not loaded) waits for the next change.
+  **Fade**: in the vertex shader (`onBeforeCompile`) a tree shrinks to nothing between 5.5 and 6 km from the camera, so none pops.
+  No transparency. **Shadows**: they receive the terrain's shadows, they cast none. Everything is a function of the settings, the forests and the camera: the export is deterministic.
+- **Setting**: `settings.forest { enabled, density }` (true, 60 trees / ha; `SETTING_CHECKS`: `isValidForest`, 20 ≤ density ≤ 150,
+  `FOREST_DENSITY_RANGE`), « Forêts » checkbox and « Densité des arbres » slider in the « Fond de carte » section, right after the
+  water; part of the « Carte » preset family (`PRESET_SCOPE_KEYS`). A project saved before it has no `forest` key: the default is
+  used (no format version bump).
+- **Credit**: « © contributeurs OpenStreetMap » (status bar, film and poster) counts the forests like the water
+  (`useForestStore.polygons > 0` in `StatusBar`, `exportOverlay`, `OverlayCanvas`, `poster/export`).
+- **Limits**: the trees are not the real trees (OpenStreetMap maps the forest, not each tree): positions are hashed, shapes are two
+  low-poly models, heights do not follow the relief or the treeline; the budget cuts the far forests of a long track (nearest chunks to
+  the track first), and a track drawn on a ridge far from its forests loses them; trees do not appear in the flat map of the poster;
+  no status chip for a failed query; the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
+  texels wide); the forests are not in the render history's
+  `RenderSettings`; `forestPoints.ts` and `forest.ts` import the ring helpers of `water.ts` and `clipRing` of `waterMesh.ts`.
 
 ## Ghost race (phase 7)
 
@@ -3526,6 +3596,7 @@ and short side < 600 CSS px; tablet = touch screen, larger; computer = everythin
 | sea of clouds by default | `DEFAULT_CLOUDS.seaRender` | volume | « Nappe » | « Nappe » | « Nappe » |
 | export short side | `videoSize` | 2160 (4K) | 1440 | 1080 | as the device |
 | shadow map (texels per side) | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
+| trees of the forests (most placed) | `placeTrees` (`ForestLayer`) | 250,000 | 60,000 | 60,000 | 30,000 |
 | terrain LOD height during an export | `exportLodHeight` (`TerrainLayer`, `ExportController`) | the film's | the film's | min(film, 720) | as the device |
 | video bitrate ceiling, film kept in memory | `videoBitrate` / `deviceBitrateCap` | none | 12 Mbit/s | 8 Mbit/s | as the device |
 | « in memory » size warning | `warnsInMemory` | 1.5 GB | 250 MB | 250 MB | 250 MB |

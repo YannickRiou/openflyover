@@ -105,6 +105,9 @@ const messages: Messages['news'] = {
   // --- 4.0
   'v40.snow.title': 'Snow that follows the date',
   'v40.snow.text': 'Above a line computed from the weather of the day (snow on the ground and temperature), the terrain turns white, with a ragged limit and bare rock on the steep slopes. Set it by hand or turn it off in Weather › Snow.',
+  // --- 4.0.0: forests ---
+  'v40.forests.title': 'Forests in 3D',
+  'v40.forests.text': 'Trees rise from the ground where OpenStreetMap has forests: wooded valleys are no longer flat. Settings in Map, “Map background” section: “Forests” and “Tree density”.',
 }
 
 export default messages

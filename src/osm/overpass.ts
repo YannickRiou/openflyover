@@ -37,6 +37,8 @@ export const BUSY_RETRY_DELAY_MS = 15_000
 /** HTTP statuses of a busy server: retried, then the next endpoint (a full overpass-api.de answers 502). */
 export const BUSY_STATUSES: readonly number[] = [429, 502, 503, 504]
 /** Persistent cache lifetime (milliseconds): OSM names and summits change slowly. */
+/** A result serialised beyond this many characters is not written to the persistent cache (it would evict the others). */
+export const MAX_CACHE_ENTRY_CHARS = 1_500_000
 export const CACHE_TTL_MS = 30 * 24 * 3600 * 1000
 
 const CACHE_PREFIX = 'openflyover.osm.v1.'
@@ -404,6 +406,7 @@ function readCache<T>(storage: OverpassDeps['storage'], key: string, now: number
 function writeCache(storage: OverpassDeps['storage'], key: string, features: readonly unknown[], now: number): void {
   if (!storage) return
   const value = JSON.stringify({ t: now, features })
+  if (value.length > MAX_CACHE_ENTRY_CHARS) return
   if (storage.set(CACHE_PREFIX + key, value)) return
   // full: drop our older entries (never other keys) and try once more; if refused again, the memory cache still
   // avoids repeated queries in this session
