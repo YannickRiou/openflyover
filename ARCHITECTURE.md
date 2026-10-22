@@ -2459,7 +2459,14 @@ exports) gets it from the terrain source of the settings.
   unknown word left as typed; for a single film (the batches keep « projet – format »). **Time before the first film**:
   `rateFromHistory` reads the last film rendered to the end from the history (the same rate as `filmRate`, per frame and
   megapixel) when none was measured this session, and `estimateRenderSeconds` gives « ≈ … de rendu » in the summary (cold tiles make
-  a first film slower: it is an estimate). **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
+  a first film slower: it is an estimate, which the summary's tooltip says). **Forests and snow in the estimate**: the rate is
+  that of the last film (`lastFilm`, the one `rateFromHistory` reads; every film of a session is in the history), and the
+  estimate multiplies it by `layersRatio(that film's layers, the layers to render)`, from `layersCost` = 1 + forests
+  (`FOREST_COST_AT_60` = 0.15 × density / 60, when on) + snow (`SNOW_COST` = 0.03, unless « Aucune »). The 15 % comes from the
+  4.0 measurement (« Forests »: +16 % triangles at 60 trees per hectare, assumed proportional to the density), the 3 % is the
+  extra term of the terrain's fragment shader; both are rough, and tile waiting and encoding do not change with them. A film
+  recorded before 4.1 does not say its layers (`RenderSettings.snow` / `forest` absent): no correction, the rate as it is.
+  The batch estimate (`estimateBatch`) does not use it. **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
   last folder; the desktop one is opened on the folder of the last film (`openflyover.lastFilmFolder`) and, after the export,
   « Ouvrir le dossier » shows the file in the system's file manager (`Platform.revealFile`, the opener plugin's
   `reveal_item_in_dir`, permission `opener:allow-reveal-item-in-dir`; `ExportResult.path`). The website cannot reveal a file.
@@ -2579,11 +2586,14 @@ exports) gets it from the terrain source of the settings.
   recorded, each file of a batch too; still images and posters are not. An entry (`HistoryEntry`) is flat and small:
   name, outcome and short error, output (size, fps, quality, codec, bytes), and `RenderSettings`, the curated summary
   of the settings that change the render time (atmosphere, shadows, sun, clouds mode / quality, lens, imagery and
-  terrain source ids, water on / off, camera style); no track, coordinate or project. Stored as
+  terrain source ids, water on / off, snow mode, forests on / off and density, camera style; no track, coordinate or project.
+  `snow` and `forest` came with 4.1 without a new version: `parseHistory` leaves them out of an older entry, whose detail rows
+  show « — »; a value out of range drops the field, not the entry. Stored as
   `{ v: 1, entries }` under `openflyover.exportHistory.v1` in the platform `storage`, newest first, at most
   `HISTORY_LIMIT` (20) entries and `HISTORY_MAX_BYTES`; `parseHistory` never throws and drops corrupted entries or
   fields. « Réutiliser ces réglages » (`reuseSettings` + `applySettings` in one history transaction, toast with
-  « Annuler ») puts back the export options and these fields only, ignoring unknown source ids.
+  « Annuler ») puts back the export options and these fields only (the snow's mode, not its manual line; the forests' switch and density),
+  ignoring unknown source ids.
 
 ### Render queue and rendering in the background
 

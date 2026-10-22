@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.1.0 (unreleased)
+
+- **The render history knows the snow and the forests**: « Historique des rendus » now records the snow mode and the forests (on or off, density) of each film, shows them in the details (« — » for a film rendered before) and « Réutiliser ces réglages » puts them back with the rest.
+- **The render time counts the forests and the snow**: the « ≈ … de rendu » estimate adjusts the speed of your last film when the forests or the snow differ (about +15 % for forests at 60 trees per hectare, +3 % for snow). It remains an estimate, as the tooltip of the summary says.
+
 ## 4.0.0 (October 2026)
 
 - **A film in one click**: the « Survol » tab starts with « Film automatique ». Three gabarits, « Reel 30 s » (vertical, 30 s), « Résumé 1 min » and « Souvenir 3 min » (16:9), set in one step the length, camera, slow motion and stops, overlay style, opening title and closing card with their figures, day or stage cards and the export format. « Annuler » puts everything back, and everything stays editable. Your own texts and the stops you placed by hand are never replaced. No music is added.
