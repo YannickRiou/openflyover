@@ -10,7 +10,7 @@
  * 30 days).
  */
 import type { LonLat, LonLatBounds, Track } from '../core/types'
-import { chainCoastWays, reduceCoast, seaPolygons } from './coast'
+import { chainCoastWays, clipChainsToBoxes, reduceCoast, seaPolygons } from './coast'
 import {
   M_PER_DEG,
   QUERY_TIMEOUT_S,
@@ -231,10 +231,10 @@ export function waterLinesQuery(track: Track): string {
   return `[out:json][timeout:${QUERY_TIMEOUT_S}];\n(\n${[...coast, ...lines].join('\n')}\n);\nout geom qt;\n`
 }
 
-/** The `width` tag ("12", "12.5 m", "8,5") in metres, clamped; undefined when it is missing or not a number. */
+/** The `width` tag ("12", "12.5 m", "8,5", the first of "2;3") in metres, clamped; undefined when missing or in another unit ("50 ft"). */
 export function taggedWidthM(raw: string | undefined): number | undefined {
-  const width = Number.parseFloat((raw ?? '').replace(',', '.'))
-  return Number.isFinite(width) ? Math.min(MAX_LINE_WIDTH_M, Math.max(MIN_LINE_WIDTH_M, width)) : undefined
+  const match = /^\s*(\d+(?:[.,]\d+)?)\s*(?:m|meters?|metres?)?\s*(?:;.*)?$/i.exec(raw ?? '')
+  return match ? Math.min(MAX_LINE_WIDTH_M, Math.max(MIN_LINE_WIDTH_M, Number.parseFloat(match[1].replace(',', '.')))) : undefined
 }
 
 /** Width of the ribbon of a line: its own, else that of its kind. */
@@ -248,19 +248,25 @@ function lengthM(points: readonly [number, number][]): number {
   return sum
 }
 
-/** Waterway lines of an Overpass response: tunnels left out, simplified, the widest then the longest kept up to `MAX_LINE_LENGTH_M`. */
-export function parseWaterLines(elements: readonly WaterElement[]): WaterLine[] {
+/**
+ * Waterway lines of an Overpass response (whole ways come back: only their parts in the line corridor `boxes` count):
+ * tunnels left out, simplified, the widest then the longest kept up to `MAX_LINE_LENGTH_M`.
+ */
+export function parseWaterLines(elements: readonly WaterElement[], boxes: readonly LonLatBounds[]): WaterLine[] {
   const lines: (WaterLine & { length: number })[] = []
   for (const e of elements) {
     const tags = e.tags ?? {}
     if (e.type !== 'way' || !Object.hasOwn(LINE_WIDTH_M, tags.waterway ?? '') || (tags.tunnel && tags.tunnel !== 'no')) continue
-    const points = simplifyLine(toRing(e.geometry), WATER_SIMPLIFY_M).map((p): [number, number] => [round6(p.lon), round6(p.lat)])
-    const length = lengthM(points)
-    if (points.length < 2 || length < MIN_LINE_LENGTH_M) continue
-    const line: WaterLine = { id: `way/${e.id}`, kind: tags.waterway as WaterLine['kind'], points }
-    const width = taggedWidthM(tags.width)
-    if (width !== undefined) line.width = width
-    lines.push({ ...line, length })
+    const pieces = clipChainsToBoxes([toRing(e.geometry).map((p): [number, number] => [p.lon, p.lat])], boxes)
+    pieces.forEach((piece, k) => {
+      const points = simplifyLine(piece.map(([lon, lat]) => ({ lon, lat })), WATER_SIMPLIFY_M).map((p): [number, number] => [round6(p.lon), round6(p.lat)])
+      const length = lengthM(points)
+      if (points.length < 2 || length < MIN_LINE_LENGTH_M) return
+      const line: WaterLine = { id: pieces.length > 1 ? `way/${e.id}#${k}` : `way/${e.id}`, kind: tags.waterway as WaterLine['kind'], points }
+      const width = taggedWidthM(tags.width)
+      if (width !== undefined) line.width = width
+      lines.push({ ...line, length })
+    })
   }
   lines.sort((a, b) => lineWidthM(b) - lineWidthM(a) || b.length - a.length)
   const kept: WaterLine[] = []
@@ -273,45 +279,61 @@ export function parseWaterLines(elements: readonly WaterElement[]): WaterLine[] 
   return kept
 }
 
-/** Sea polygons of the corridor `boxes` and waterway lines of an Overpass response; throws on a server-side error. */
-export function parseWaterShapes(json: unknown, boxes: readonly LonLatBounds[]): WaterShape[] {
+/**
+ * Sea polygons of the corridor `boxes` and waterway lines (corridor `lineBoxes`) of an Overpass response; throws on a
+ * server-side error. The coast is cut to the corridor before it is counted and simplified.
+ */
+export function parseWaterShapes(json: unknown, boxes: readonly LonLatBounds[], lineBoxes: readonly LonLatBounds[] = boxes): WaterShape[] {
   const elements = overpassElements(json) as WaterElement[]
   const ways = elements
     .filter((e) => e.type === 'way' && e.tags?.natural === 'coastline')
     .map((e) => toRing(e.geometry).map((p): [number, number] => [p.lon, p.lat]))
     .filter((w) => w.length >= 2)
-  return [...seaPolygons(reduceCoast(chainCoastWays(ways)), boxes), ...parseWaterLines(elements)]
+  const coast = reduceCoast(clipChainsToBoxes(chainCoastWays(ways), boxes))
+  return [...seaPolygons(coast, boxes), ...parseWaterLines(elements, lineBoxes)]
 }
 
 /** The sea and the waterway lines around `track`, from the caches or one queued Overpass query. */
 export function fetchTrackWaterShapes(track: Track, signal?: AbortSignal, deps?: OverpassDeps): Promise<WaterShape[]> {
   const boxes = corridorBoxes(track, WATER_MARGIN_M)
-  return cachedOverpassQuery(waterLinesQuery(track), (json) => parseWaterShapes(json, boxes), signal, deps)
+  const lineBoxes = corridorBoxes(track, WATER_LINE_MARGIN_M)
+  return cachedOverpassQuery(waterLinesQuery(track), (json) => parseWaterShapes(json, boxes, lineBoxes), signal, deps)
+}
+
+/** The rings and bounding boxes of polygons, built once for `runsOutside`. */
+export interface WaterCover {
+  rings: { outer: LonLat[]; holes: LonLat[][]; west: number; south: number; east: number; north: number }[]
+}
+
+export function waterCover(polygons: readonly WaterPolygon[]): WaterCover {
+  return {
+    rings: polygons.map((p) => {
+      const outer = p.outer.map(([lon, lat]) => ({ lon, lat }))
+      return {
+        outer,
+        holes: p.holes.map((h) => h.map(([lon, lat]) => ({ lon, lat }))),
+        west: Math.min(...p.outer.map((q) => q[0])),
+        south: Math.min(...p.outer.map((q) => q[1])),
+        east: Math.max(...p.outer.map((q) => q[0])),
+        north: Math.max(...p.outer.map((q) => q[1])),
+      }
+    }),
+  }
 }
 
 /**
- * The runs of `line` outside every polygon: a river mapped as a line inside its riverbank polygon (or in a lake, or
- * the sea) is drawn by the polygon. A run keeps the first point inside, so the ribbon reaches the polygon.
+ * The runs of `line` outside every polygon (`waterCover`): a river mapped as a line inside its riverbank polygon (or in a
+ * lake, or the sea) is drawn by the polygon. A run keeps the first point inside, so the ribbon reaches the polygon.
  */
-export function runsOutside(line: WaterLine, polygons: readonly WaterPolygon[]): WaterLine[] {
-  const rings = polygons.map((p) => ({
-    outer: p.outer.map(([lon, lat]) => ({ lon, lat })),
-    holes: p.holes.map((h) => h.map(([lon, lat]) => ({ lon, lat }))),
-  }))
-  const boxes = rings.map(({ outer }) => ({
-    west: Math.min(...outer.map((q) => q.lon)),
-    south: Math.min(...outer.map((q) => q.lat)),
-    east: Math.max(...outer.map((q) => q.lon)),
-    north: Math.max(...outer.map((q) => q.lat)),
-  }))
+export function runsOutside(line: WaterLine, { rings }: WaterCover): WaterLine[] {
   const covered = line.points.map(([lon, lat]) => {
     const p = { lon, lat }
     return rings.some(
-      (ring, i) =>
-        lon >= boxes[i].west &&
-        lon <= boxes[i].east &&
-        lat >= boxes[i].south &&
-        lat <= boxes[i].north &&
+      (ring) =>
+        lon >= ring.west &&
+        lon <= ring.east &&
+        lat >= ring.south &&
+        lat <= ring.north &&
         pointInRing(p, ring.outer) &&
         !ring.holes.some((h) => pointInRing(p, h)),
     )

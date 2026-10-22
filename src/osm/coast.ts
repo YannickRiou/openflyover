@@ -6,8 +6,9 @@
  * In each cell the coast is clipped to the rectangle; every piece enters and leaves through the edge of the cell, and
  * the sea is closed along that edge turning clockwise (water on the right all the way round). A cell crossed by no
  * coastline is all sea or all land: an island ring inside it makes it sea, otherwise the side of the nearest coastline
- * decides (`seaSide`). When the pieces do not close (data cut off, crossing ways) the cell falls back to a flat
- * rectangle: the sea is drawn at 0 m, so it hides under any land above it (WaterLayer).
+ * decides (`seaSide`). When the pieces of a coast that crosses the cell do not close (data cut off, crossing ways) the cell
+ * falls back to a flat rectangle: the sea is drawn at sea level (0 m, raised by `SEA_LIFT_M` in WaterLayer), so it hides
+ * under any land above it. A cell that fails with no coast crossing it is left out.
  */
 import type { LonLat, LonLatBounds } from '../core/types'
 import { simplifyLine } from './overpass'
@@ -68,6 +69,41 @@ export function chainCoastWays(ways: readonly Pt[][]): Pt[][] {
   // what is left are loops of several ways
   ways.forEach((_, i) => !used.has(i) && follow(i))
   return chains
+}
+
+/**
+ * The parts of `chains` that touch the rectangles `boxes` (a segment is kept when it crosses one, whatever its ends): far
+ * parts of a long way are neither counted nor simplified. A chain is cut where it leaves the boxes, so the pieces end
+ * outside every cell; a closed ring is opened at such a gap first.
+ */
+export function clipChainsToBoxes(chains: readonly Pt[][], boxes: readonly LonLatBounds[]): Pt[][] {
+  const rects = boxes.map((b): Rect => [b.west, b.south, b.east, b.north])
+  const out: Pt[][] = []
+  for (const chain of chains) {
+    const n = chain.length - 1
+    const kept = Array.from({ length: n }, (_, i) => rects.some((r) => clipSegment(chain[i], chain[i + 1], r) !== null))
+    const closed = same(chain[0], chain[n])
+    const gap = kept.indexOf(false)
+    if (gap < 0 && closed) {
+      out.push(chain)
+      continue
+    }
+    // a closed ring starts just after a gap, so no piece wraps around its first point
+    const first = closed ? gap + 1 : 0
+    let piece: Pt[] = []
+    for (let t = 0; t < n; t++) {
+      const i = (first + t) % n
+      if (kept[i]) {
+        if (piece.length === 0) piece.push(chain[i])
+        piece.push(chain[i + 1])
+      } else if (piece.length > 0) {
+        out.push(piece)
+        piece = []
+      }
+    }
+    if (piece.length > 0) out.push(piece)
+  }
+  return out
 }
 
 /** The chains simplified at `COAST_SIMPLIFY_M`, then coarser until they hold at most `maxPoints` points. */
@@ -295,8 +331,9 @@ function seaInCell(chains: readonly Pt[][], cell: Rect, id: string): WaterPolygo
   const lagoons = rings.filter((r) => signedArea(r) < 0)
   if (runs.length === 0) {
     const centre: Pt = [(cell[0] + cell[2]) / 2, (cell[1] + cell[3]) / 2]
-    // all sea (an island stands in it, or the nearest coast has the cell on its right), all land, or only lagoons
-    if (islands.length > 0 || (lagoons.length === 0 && seaSide(chains, centre) === 'sea')) outers.push(rectRing(cell))
+    // all sea (an island stands in the open sea, or the nearest coast has the cell on its right), all land, or only lagoons
+    const standsInSea = islands.some((island) => !lagoons.some((lagoon) => inRing(island[0], lagoon)))
+    if (standsInSea || (islands.length === 0 && lagoons.length === 0 && seaSide(chains, centre) === 'sea')) outers.push(rectRing(cell))
   }
   outers.push(...lagoons)
   const area = outers.map((o) => Math.abs(signedArea(o)))
@@ -322,7 +359,8 @@ function seaInCell(chains: readonly Pt[][], cell: Rect, id: string): WaterPolygo
 
 /**
  * Sea polygons of the corridor `boxes` from the coast `chains` (see `chainCoastWays`). Nothing without a coast: the sea is
- * never drawn far from one. A cell whose pieces do not close is a flat rectangle (the sea plane is at 0 m).
+ * never drawn far from one. A cell crossed by a coast whose pieces do not close is a flat rectangle (the sea plane is at 0 m);
+ * any other cell that fails is left out.
  */
 export function seaPolygons(chains: readonly Pt[][], boxes: readonly LonLatBounds[]): WaterPolygon[] {
   if (chains.length === 0) return []
@@ -330,7 +368,13 @@ export function seaPolygons(chains: readonly Pt[][], boxes: readonly LonLatBound
     try {
       return seaInCell(chains, cell, `sea/${i}`)
     } catch {
-      return [{ id: `sea/${i}`, kind: 'sea' as const, outer: rectRing(cell), holes: [] }]
+      const crossed = chains.some((chain) =>
+        chain.some((p, k) => {
+          const span = k > 0 ? clipSegment(chain[k - 1], p, cell) : null
+          return span !== null && span[1] > span[0]
+        }),
+      )
+      return crossed ? [{ id: `sea/${i}`, kind: 'sea' as const, outer: rectRing(cell), holes: [] }] : []
     }
   })
 }

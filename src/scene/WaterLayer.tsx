@@ -17,7 +17,7 @@ import { BufferAttribute, BufferGeometry, Color, Mesh, MeshStandardMaterial, Uni
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { registerDrapeFlush } from '../export/store'
 import { useWaterStore } from '../osm/store'
-import { fetchTrackWater, fetchTrackWaterShapes, isWaterLine, lineWidthM, runsOutside, type WaterLine, type WaterPolygon } from '../osm/water'
+import { fetchTrackWater, fetchTrackWaterShapes, isWaterLine, lineWidthM, runsOutside, waterCover, type WaterLine, type WaterPolygon, type WaterShape } from '../osm/water'
 import { useAppStore } from '../state/store'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
@@ -194,10 +194,10 @@ export function WaterLayer() {
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const clock = useFilmClock()
   /** water of the track it was fetched for (shown only for the current first track, setting on) */
-  const [fetched, setFetched] = useState<{ trackId: string; polygons: WaterPolygon[]; lines: WaterLine[] } | null>(null)
+  const [fetched, setFetched] = useState<{ trackId: string; areas: WaterPolygon[]; shapes: WaterShape[] } | null>(null)
   const shown = enabled && fetched && fetched.trackId === track?.id ? fetched : null
-  const polygons = shown?.polygons ?? NONE
-  const lines = shown?.lines ?? NO_LINES
+  const polygons = useMemo(() => (shown ? [...shown.areas, ...shown.shapes.filter((s): s is WaterPolygon => !isWaterLine(s))] : NONE), [shown])
+  const lines = useMemo(() => (shown ? shown.shapes.filter(isWaterLine) : NO_LINES), [shown])
   const uniforms = useMemo(
     () => ({
       waterTime: new Uniform(0),
@@ -223,8 +223,8 @@ export function WaterLayer() {
     [mesh],
   )
 
-  // two Overpass queries per track (cached): the water areas, then the sea and the waterway lines; nothing is sent
-  // while the setting is off. What one of them gives is shown even if the other fails.
+  // two Overpass queries per track (cached): the water areas, then the sea and the waterway lines (the heavier one); nothing
+  // is sent while the setting is off. Each answer is shown as it arrives, even if the other fails.
   useEffect(() => {
     if (!enabled || !track) {
       setWaterStatus('idle')
@@ -235,16 +235,25 @@ export function WaterLayer() {
     let current = true
     const trackId = track.id
     setWaterStatus('loading')
-    Promise.allSettled([fetchTrackWater(track), fetchTrackWaterShapes(track)]).then(([areas, shapes]) => {
+    let waiting = 2
+    let failed = false
+    const settle = (patch: { areas?: WaterPolygon[]; shapes?: WaterShape[] }, ok: boolean) => {
       if (!current) return
-      const found = shapes.status === 'fulfilled' ? shapes.value : []
-      setFetched({
-        trackId,
-        polygons: [...(areas.status === 'fulfilled' ? areas.value : []), ...found.filter((s): s is WaterPolygon => !isWaterLine(s))],
-        lines: found.filter(isWaterLine),
+      setFetched((previous) => {
+        const same = previous?.trackId === trackId
+        return { trackId, areas: same ? previous.areas : [], shapes: same ? previous.shapes : [], ...patch }
       })
-      setWaterStatus(areas.status === 'fulfilled' && shapes.status === 'fulfilled' ? 'ready' : 'error')
-    })
+      failed ||= !ok
+      if (--waiting === 0) setWaterStatus(failed ? 'error' : 'ready')
+    }
+    fetchTrackWater(track).then(
+      (areas) => settle({ areas }, true),
+      () => settle({}, false),
+    )
+    fetchTrackWaterShapes(track).then(
+      (shapes) => settle({ shapes }, true),
+      () => settle({}, false),
+    )
     return () => {
       current = false
     }
@@ -258,16 +267,16 @@ export function WaterLayer() {
     [],
   )
 
-  const pieces = useMemo<WaterPiece[]>(
-    () => [
+  const pieces = useMemo<WaterPiece[]>(() => {
+    const cover = waterCover(polygons)
+    return [
       ...polygons.map((polygon): WaterPiece => ({ kind: polygon.kind, mesh: polygon.kind === 'sea' ? buildSeaMesh(polygon) : buildWaterMesh(polygon) })),
       // a river mapped as a line inside a riverbank polygon is the polygon's
       ...lines
-        .flatMap((line) => runsOutside(line, polygons))
+        .flatMap((line) => runsOutside(line, cover))
         .map((line): WaterPiece => ({ kind: 'line', mesh: buildRiverStrip(line.points, lineWidthM(line)) })),
-    ],
-    [polygons, lines],
-  )
+    ]
+  }, [polygons, lines])
   const drape = useCallback(
     (current: TerrainEngine | null, factor: number) => {
       if (!frame) return

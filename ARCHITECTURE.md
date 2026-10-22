@@ -2845,31 +2845,34 @@ exports) gets it from the terrain source of the settings.
   cached; StrictMode runs the effect twice); its response is only ignored if it is stale. A failed request is only
   retried on the next track or setting change. The second (4.0, `waterLinesQuery`) gives the **coastline** (`natural=coastline`
   ways, in the same 8 km corridor) and the **waterway lines** (`waterway=river|canal|stream` ways, in a narrower 4 km corridor,
-  `WATER_LINE_MARGIN_M`: streams are many), `out geom qt`. The layer runs both together (`Promise.allSettled`) and shows what
-  came; the status chip says « erreur » if either failed. Measured on four tracks (2026-10-22, `docs/sources.md`): 0.55–1.1 MB, 21–39 s
+  `WATER_LINE_MARGIN_M`: streams are many), `out geom qt`. The layer runs both together and shows each answer as it arrives (the lakes
+  do not wait for the heavier second request); the status chip says « erreur » if either failed. Measured on four tracks (2026-10-22, `docs/sources.md`): 0.55–1.1 MB, 21–39 s
   on a busy public server, 40–76 kB once reduced.
 - **Pure reduction** (`water.ts`, tested): relation rings stitched end to end from their ways (direction irrelevant,
   unclosed ring dropped), inner rings attached to the outer ring that contains their first point, member way of a
   returned relation ignored, Douglas–Peucker 4 m, polygons < 2,000 m² discarded, the 300 largest kept, coordinates to 1e-6°;
   `lake` (flat surface) or `river` (`waterway=riverbank`, `water=river|stream|canal…`). Only this compact result is cached.
   **The sea** (`coast.ts`, tested, `parseWaterShapes` → `seaPolygons`): by OSM convention the land is on the LEFT of a coastline
-  way and the water on its right. Ways are joined end to end **in their own direction only** (`chainCoastWays`), simplified at
-  8 m, coarser while the corridor holds more than 20,000 points (`reduceCoast`). The corridor boxes overlap (their margins), and
+  way and the water on its right. Ways are joined end to end **in their own direction only** (`chainCoastWays`), cut to the
+  corridor (`clipChainsToBoxes`: `out geom` returns whole ways, and only the segments that cross a box are counted),
+  simplified at 8 m, coarser while the corridor holds more than 20,000 points (`reduceCoast`). The corridor boxes overlap (their margins), and
   translucent water drawn twice would show: they are cut into disjoint rectangles (`seaCells`, the grid of every box edge). In
   each rectangle the coast is clipped (Liang–Barsky); every piece enters and leaves through the rectangle's edge, and the sea is
   the ring made of the pieces and of the edge walked **clockwise** from each exit to the next entry (water on the right all the
   way round; the corners of the rectangle are added). A closed ring inside a rectangle is an island (counter-clockwise: a hole of
   the sea that contains it) or a lagoon (clockwise: a polygon of its own). A rectangle crossed by no coast is all sea if an island
-  stands in it, else decided by the side of the **nearest coast** (`seaSide`: its own side inside a segment, the sum of the two
-  normals at a vertex), else nothing. **Fallbacks**: a rectangle whose pieces do not close (data cut off, crossing ways) becomes
-  a flat rectangle, because the sea plane is at 0 m and hides under any land above it; and **without a single coastline nothing
+  stands in the open sea (not one inside a lagoon ring), else decided by the side of the **nearest coast** (`seaSide`: its own side inside a segment, the sum of the two
+  normals at a vertex), else nothing. **Fallbacks**: a rectangle crossed by a coast whose pieces do not close (data cut off, crossing
+  ways) becomes a flat rectangle, because the sea plane is at 0 m and hides under any land above it (so it also floods land at or
+  below 0.5 m in that rectangle: the known limit); a rectangle that fails with no coast across it is left out; and **without a single coastline nothing
   is drawn at all**, so a polder or flat land at 0 m stays land. Result: polygons of kind `sea` (`sea/<cell>#<n>`), e.g. 2
   polygons of 2,358 vertices and 69 holes (islands) on the Brittany coast, 54 ms.
-  **The lines** (`parseWaterLines`, `WaterLine { id, kind, width?, points }`): tunnels and culverts left out, simplified at 4 m,
+  **The lines** (`parseWaterLines`, `WaterLine { id, kind, width?, points }`): cut to the 4 km corridor (a way that leaves and comes back
+  gives `way/<id>#<n>` pieces), tunnels and culverts left out, simplified at 4 m,
   ways under 30 m dropped, the widest then the longest kept up to 200 km (`MAX_LINE_LENGTH_M`). The cache keeps the kind and the
-  `width` tag only (clamped 1–150 m); the width of a kind without a tag (`LINE_WIDTH_M`: river 12 m, canal 8 m, stream 2.5 m) is read
+  `width` tag only (metres, the first value of « 2;3 », another unit ignored; clamped 1–150 m); the width of a kind without a tag (`LINE_WIDTH_M`: river 12 m, canal 8 m, stream 2.5 m) is read
   when the water is drawn (`lineWidthM`), so changing it needs no new request. When the area polygons are known, the part of a line
-  inside a polygon (riverbank, lake, sea, holes excepted) is cut out (`runsOutside`: a run keeps its first point inside so the
+  inside a polygon (riverbank, lake, sea, holes excepted) is cut out (`runsOutside`, rings and boxes built once by `waterCover`: a run keeps its first point inside so the
   ribbon reaches the polygon), so nothing is drawn twice.
 - **Pure mesh** (`waterMesh.ts`, tested): polygon cut by a grid of square cells (60 m, at most 40 per side,
   Sutherland–Hodgman of each ring against each cell), each piece triangulated with its holes (`ShapeUtils`, earcut). The

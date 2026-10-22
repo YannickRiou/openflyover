@@ -17,6 +17,7 @@ import {
   pointInRing,
   ringAreaM2,
   runsOutside,
+  waterCover,
   stitchRings,
   waterLinesQuery,
   waterQuery,
@@ -160,6 +161,13 @@ describe('line widths', () => {
     expect(taggedWidthM('0')).toBe(1)
   })
 
+  it('ignores another unit and takes the first of several values', () => {
+    expect(taggedWidthM('50 ft')).toBeUndefined()
+    expect(taggedWidthM("5'")).toBeUndefined()
+    expect(taggedWidthM('2;3')).toBe(2)
+    expect(taggedWidthM('12 m;15 m')).toBe(12)
+  })
+
   it('takes the width of the kind when the line has none', () => {
     expect(lineWidthM({ kind: 'river' })).toBe(12)
     expect(lineWidthM({ kind: 'canal' })).toBe(8)
@@ -167,6 +175,9 @@ describe('line widths', () => {
     expect(lineWidthM({ kind: 'river', width: 30 })).toBe(30)
   })
 })
+
+/** Corridor of the line tests: 45.8–46.0 N, 6.7–6.9 E. */
+const corridor = [{ west: 6.7, south: 45.8, east: 6.9, north: 46 }]
 
 describe('parseWaterLines', () => {
   it('keeps rivers, canals and streams, without tunnels, culverts or ways too short', () => {
@@ -177,7 +188,7 @@ describe('parseWaterLines', () => {
       { type: 'way', id: 4, tags: { waterway: 'drain' }, geometry: eastLine(6.8, 45.93, 10) },
       { type: 'way', id: 5, tags: { waterway: 'stream' }, geometry: eastLine(6.8, 45.94, 2, 10) },
       { type: 'node', id: 6, tags: { waterway: 'stream' } },
-    ])
+    ], corridor)
     expect(lines.map((l) => l.id)).toEqual(['way/1', 'way/2'])
     expect(lines.map(lineWidthM)).toEqual([12, 2.5])
     // the width of the kind is not stored: it is read when drawn
@@ -193,8 +204,30 @@ describe('parseWaterLines', () => {
       tags: { waterway },
       geometry: eastLine(6, lat, 2, MAX_LINE_LENGTH_M * 0.6),
     })
-    const lines = parseWaterLines([long(1, 45, 'stream'), long(2, 46, 'river'), long(3, 47, 'canal')])
+    const wide = [{ west: 5, south: 44, east: 9, north: 48 }]
+    const lines = parseWaterLines([long(1, 45, 'stream'), long(2, 46, 'river'), long(3, 47, 'canal')], wide)
     expect(lines.map((l) => l.id)).toEqual(['way/2'])
+  })
+
+  it('counts only what is in the corridor: a long river far away does not eat the budget of the streams beside the track', () => {
+    const lines = parseWaterLines(
+      [
+        // 390 km going east from 6.0 E: only its first degree is in the corridor
+        { type: 'way', id: 1, tags: { waterway: 'river' }, geometry: eastLine(6, 45.5, 40, 10_000) },
+        { type: 'way', id: 2, tags: { waterway: 'stream' }, geometry: eastLine(6.1, 45.6, 10, 5000) },
+        // a way entirely outside
+        { type: 'way', id: 3, tags: { waterway: 'stream' }, geometry: eastLine(8, 45.6, 10, 500) },
+      ],
+      [{ west: 6, south: 45, east: 7, north: 46 }],
+    )
+    expect(lines.map((l) => l.id)).toEqual(['way/1', 'way/2'])
+    expect(lines[0].points[1][0]).toBeLessThan(7.3)
+  })
+
+  it('gives each piece of a way that leaves the corridor and comes back its own id', () => {
+    const geometry = [...eastLine(6.5, 45.5, 5, 1000), { lon: 7.2, lat: 45.5 }, { lon: 7.2, lat: 45.6 }, ...eastLine(6.5, 45.6, 5, 1000).reverse()]
+    const lines = parseWaterLines([{ type: 'way', id: 9, tags: { waterway: 'river' }, geometry }], [{ west: 6, south: 45, east: 7, north: 46 }])
+    expect(lines.map((l) => l.id)).toEqual(['way/9#0', 'way/9#1'])
   })
 })
 
@@ -255,23 +288,23 @@ describe('runsOutside', () => {
 
   it('leaves a line that no polygon covers as it is', () => {
     const l = line([[6.79, 45.9], [6.791, 45.9]])
-    expect(runsOutside(l, [riverbank])).toEqual([l])
+    expect(runsOutside(l, waterCover([riverbank]))).toEqual([l])
   })
 
   it('cuts out what a riverbank polygon already draws, keeping the first point inside so the ribbon reaches it', () => {
     const l = line([[6.79, 45.9], [6.795, 45.9], [6.801, 45.9], [6.805, 45.9], [6.81, 45.9]])
-    const runs = runsOutside(l, [riverbank])
+    const runs = runsOutside(l, waterCover([riverbank]))
     expect(runs.map((r) => r.points.map((p) => p[0]))).toEqual([[6.79, 6.795, 6.801], [6.801, 6.805, 6.81]])
     expect(runs.map((r) => r.id)).toEqual(['way/9#0', 'way/9#1'])
   })
 
   it('drops a line entirely inside a polygon', () => {
-    expect(runsOutside(line([[6.8005, 45.9], [6.801, 45.9]]), [riverbank])).toEqual([])
+    expect(runsOutside(line([[6.8005, 45.9], [6.801, 45.9]]), waterCover([riverbank]))).toEqual([])
   })
 
   it('does not count a polygon hole as covered', () => {
     const lake: WaterPolygon = { ...riverbank, holes: [[[6.8005, 45.8995], [6.8015, 45.8995], [6.8015, 45.9005], [6.8005, 45.9005]]] }
     const l = line([[6.8, 45.9], [6.801, 45.9]])
-    expect(runsOutside(l, [lake])).toHaveLength(1)
+    expect(runsOutside(l, waterCover([lake]))).toHaveLength(1)
   })
 })

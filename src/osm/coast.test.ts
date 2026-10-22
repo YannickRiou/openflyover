@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LonLatBounds } from '../core/types'
-import { MAX_COAST_POINTS, chainCoastWays, reduceCoast, seaCells, seaPolygons, seaSide } from './coast'
+import { MAX_COAST_POINTS, chainCoastWays, clipChainsToBoxes, reduceCoast, seaCells, seaPolygons, seaSide } from './coast'
 import type { WaterPolygon } from './water'
 
 type Pt = [number, number]
@@ -80,6 +80,55 @@ describe('seaPolygons', () => {
     const polygons = seaPolygons([broken], [box])
     expect(polygons).toHaveLength(1)
     expect(total(polygons)).toBeCloseTo(0.04, 9)
+  })
+
+  it('does not call a cell sea for an island standing in a lagoon', () => {
+    const lagoon: Pt[] = [[0.02, 44.92], [0.02, 45.08], [0.18, 45.08], [0.18, 44.92], [0.02, 44.92]]
+    const island: Pt[] = [[0.08, 44.98], [0.12, 44.98], [0.12, 45.02], [0.08, 45.02], [0.08, 44.98]]
+    const polygons = seaPolygons([lagoon, island], [box])
+    expect(polygons).toHaveLength(1)
+    expect(polygons[0].holes).toHaveLength(1)
+    expect(total(polygons)).toBeCloseTo(0.16 * 0.16 - 0.04 * 0.04, 9)
+  })
+
+  it('closes the sea where a single way leaves the cell and comes back in', () => {
+    // east along 45°N, north out of the cell at 0.05, back along 45.2, south at 0.1: an inlet of sea between the two legs
+    const inlet: Pt[] = [[-0.1, 45], [0.05, 45], [0.05, 45.2], [0.1, 45.2], [0.1, 45], [0.3, 45]]
+    expect(total(seaPolygons([inlet], [box]))).toBeCloseTo(0.2 * 0.1 + 0.05 * 0.1, 9)
+  })
+
+  it('takes a vertex exactly on the edge of the cell as an exit, and a graze as an exit and an entry', () => {
+    const onEdge: Pt[] = [[-0.1, 45], [0.2, 45], [0.3, 45]]
+    const edge = seaPolygons([onEdge], [box])
+    expect(edge).toHaveLength(1)
+    expect(total(edge)).toBeCloseTo(0.2 * 0.1, 9)
+    // up to the north edge at (0.1, 45.1) and down again: the sea is below the two slopes
+    const graze: Pt[] = [[-0.1, 45], [0.1, 45.1], [0.3, 45]]
+    expect(total(seaPolygons([graze], [box]))).toBeCloseTo(0.035, 9)
+  })
+})
+
+describe('clipChainsToBoxes', () => {
+  it('keeps the segments that cross a box, cut where the chain leaves it', () => {
+    const chain: Pt[] = [[-1, 45], [-0.5, 45], [0.1, 45], [0.15, 45.05], [2, 45.05], [3, 45.05], [0.15, 44.95], [0.05, 44.95]]
+    const pieces = clipChainsToBoxes([chain], [box])
+    expect(pieces).toEqual([
+      [[-0.5, 45], [0.1, 45], [0.15, 45.05], [2, 45.05]],
+      [[3, 45.05], [0.15, 44.95], [0.05, 44.95]],
+    ])
+  })
+
+  it('opens a closed ring at a gap, so no piece wraps around its first point', () => {
+    const ring: Pt[] = [[0.1, 45], [0.15, 45], [0.15, 46], [-3, 46], [-3, 45], [0.1, 45]]
+    const pieces = clipChainsToBoxes([ring], [box])
+    expect(pieces).toHaveLength(1)
+    expect(pieces[0][0]).toEqual([-3, 45])
+    expect(pieces[0][pieces[0].length - 1]).toEqual([0.15, 46])
+  })
+
+  it('keeps a ring entirely inside as it is', () => {
+    const ring: Pt[] = [[0.05, 44.95], [0.1, 44.95], [0.1, 45], [0.05, 44.95]]
+    expect(clipChainsToBoxes([ring], [box])).toEqual([ring])
   })
 })
 
