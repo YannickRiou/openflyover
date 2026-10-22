@@ -120,6 +120,9 @@ const messages: Messages['news'] = {
   // 4.1 — frozen lakes, streams visible from high up
   'v41.ice.title': 'Los lagos se hielan, los arroyos siguen visibles',
   'v41.ice.text': 'Por encima del límite de la nieve, los lagos se vuelven hielo, tan blancos como el suelo que los rodea. Y vistos desde lo alto, los arroyos conservan un fino trazo de agua en lugar de desaparecer.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Plantillas más claras',
+  'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
 }
 
 export default messages

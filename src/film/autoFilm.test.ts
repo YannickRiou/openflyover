@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { LANGUAGES, setLanguage, t } from '../i18n'
 import { platformPresetOf } from '../export/schedule'
 import { FLYOVER_DURATION_RANGE, findCameraPreset } from '../flyover/cameraSettings'
-import { DEFAULT_OVERLAY } from '../overlay/settings'
+import { CARD_FADE_OUT, DEFAULT_OVERLAY } from '../overlay/settings'
 import { sanitizeSettings } from '../project/document'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
-import { AUTO_FILM_IDS, AUTO_FILM_LABELS, AUTO_FILM_TEMPLATES, autoFilmSettings } from './autoFilm'
+import { AUTO_FILM_IDS, AUTO_FILM_LABELS, AUTO_FILM_TEMPLATES, autoFilmFacts, autoFilmSettings } from './autoFilm'
 import { junctionCardOf } from './junctions'
 import { DEFAULT_FILM } from './model'
 
@@ -17,7 +18,7 @@ describe('autoFilmSettings', () => {
     const reel = autoFilmSettings(DEFAULT_SETTINGS, 'reel', single)
     expect(total(reel)).toBe(30)
     expect(platformPresetOf(reel.video)).toBe('vertical')
-    expect(findCameraPreset(reel.camera)?.id).toBe('fast-drone')
+    expect(findCameraPreset(reel.camera)?.id).toBe('cinema')
     expect(reel.overlay).toMatchObject({ enabled: true, style: 'app', title: { enabled: true, showDate: true }, end: { enabled: true, figures: ['distance', 'ascent', 'maxAltitude'] } })
     expect(reel.film).toMatchObject({ autoStops: false, stops: [] })
 
@@ -34,10 +35,10 @@ describe('autoFilmSettings', () => {
     expect(souvenir.overlay.counters.enabled).toBe(true)
   })
 
-  it('keeps the cards a few seconds past the shots, whatever the length', () => {
+  it('keeps the cards fully readable a few seconds past the shots, whatever the length', () => {
     for (const id of AUTO_FILM_IDS) {
       const s = autoFilmSettings(DEFAULT_SETTINGS, id, single)
-      expect(Math.abs(s.overlay.title.end * s.flyoverDurationS - 3)).toBeLessThan(0.05)
+      expect(Math.abs((s.overlay.title.end - CARD_FADE_OUT) * s.flyoverDurationS - 3)).toBeLessThan(0.05)
       expect(Math.abs((1 - s.overlay.end.start) * s.flyoverDurationS - 3)).toBeLessThan(0.05)
     }
   })
@@ -113,5 +114,28 @@ describe('autoFilmSettings', () => {
         expect(sanitizeSettings(settings).invalid).toEqual([])
       }
     }
+  })
+})
+
+describe('autoFilmFacts', () => {
+  it('lists the short facts that match what the gabarit sets', () => {
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.reel).map((f) => f.key)).toEqual(['titleEnd', 'noStops'])
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.reel)[0].values).toEqual({ figures: 3 })
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.resume).map((f) => f.key)).toEqual(['titleEnd', 'stops', 'countersCards'])
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.souvenir).map((f) => f.key)).toEqual(['titleEnd', 'stopsSlow', 'countersCards'])
+  })
+
+  it('has a string in the five languages for each fact', () => {
+    for (const language of LANGUAGES) {
+      setLanguage(language.code)
+      for (const id of AUTO_FILM_IDS) {
+        for (const { key, values } of autoFilmFacts(AUTO_FILM_TEMPLATES[id])) {
+          const text = t(`film.auto.fact.${key}`, values)
+          expect(text).not.toBe('')
+          expect(text).not.toContain('{')
+        }
+      }
+    }
+    setLanguage('fr')
   })
 })

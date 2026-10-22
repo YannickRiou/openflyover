@@ -98,6 +98,8 @@ export const WIDGET_SIZE_MAX = 2
 /** Opening card: shown from the start until `end` (fraction of the flyover). */
 export const TITLE_END_MIN = 0.01
 export const TITLE_END_MAX = 0.3
+/** Fade-out of the closing and opening cards, as a fraction of the flight (the fade-in is `CARD_FADE_IN` of the drawing). */
+export const CARD_FADE_OUT = 0.025
 /** Closing card: shown from `start` to the end. */
 export const END_START_MIN = 0.6
 export const END_START_MAX = 0.99

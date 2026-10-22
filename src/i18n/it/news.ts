@@ -120,6 +120,9 @@ const messages: Messages['news'] = {
   // 4.1 — frozen lakes, streams visible from high up
   'v41.ice.title': 'I laghi ghiacciano, i torrenti restano visibili',
   'v41.ice.text': 'Sopra il limite della neve, i laghi diventano ghiaccio, bianchi come il terreno attorno. E visti dall’alto, i torrenti mantengono un sottile filo d’acqua invece di sparire.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Modelli più chiari',
+  'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',
 }
 
 export default messages

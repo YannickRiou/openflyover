@@ -19,6 +19,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Rendering in the background no longer keeps a processor core busy**: with the tab hidden or the window minimised, the export waits for tiles on a timer that the browser does not slow down, instead of looping.
 - **Frozen lakes**: a lake above the snow line (« Neige », weather of the day or manual) turns into matt white ice, without waves or sun glint, over the same transition as the snow of the ground. Rivers and the sea are not frozen.
 - **Streams visible from high up**: the rivers drawn as lines are widened as the camera rises, so a stream stays at least about 1.5 pixels wide on a 1080-pixel-high film (at most 4 times its real width).
+- **The three gabarits of « Film automatique » are cards you can read at a glance**: « Reel 30 s », « Résumé 1 min » and « Souvenir 3 min » each show their format (9:16 or 16:9), the length of the film as a big figure and three or four facts with an icon (the camera, the title and closing card, the stops and slow motion, the counters and cards). Choose a card, then « Appliquer ». One sentence says that everything stays editable and that « Annuler » reverts. On a phone the cards stack.
+- **Films that look better out of the box**: the closing card of « Souvenir 3 min » has four figures instead of five, the opening title no longer fades out slowly on a long film, and the gabarit now uses the pale cards of the « Application » style, readable over a forest and over snow where the thin letters of the old style were not.
 
 ## 4.0.0 (October 2026)
 

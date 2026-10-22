@@ -120,6 +120,9 @@ const messages: Messages['news'] = {
   // 4.1 — frozen lakes, streams visible from high up
   'v41.ice.title': 'Seen frieren zu, Bäche bleiben sichtbar',
   'v41.ice.text': 'Oberhalb der Schneegrenze werden Seen zu Eis, so weiß wie der Boden ringsum. Und aus großer Höhe behalten Bäche eine feine Wasserlinie, statt zu verschwinden.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Klarere Vorlagen',
+  'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
 }
 
 export default messages
