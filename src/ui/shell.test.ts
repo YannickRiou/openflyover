@@ -12,6 +12,7 @@ import {
   parseFoldPrefs,
   parsePreferences,
   parseShellPrefs,
+  openedTracksAction,
   routeOpenedFiles,
   shellReducer,
   shownTabs,
@@ -50,6 +51,20 @@ describe('frameRect', () => {
   it('fills the stage in free framing or for an empty stage', () => {
     expect(frameRect(640, 480, null)).toEqual({ left: 0, top: 0, width: 640, height: 480 })
     expect(frameRect(0, 480, 16 / 9)).toEqual({ left: 0, top: 0, width: 0, height: 480 })
+  })
+})
+
+describe('openedTracksAction', () => {
+  const routed = (...names: string[]) => routeOpenedFiles(names.map((name) => ({ name })))
+
+  it('asks for GPX / FIT files when the project holds tracks, adds them straight away otherwise', () => {
+    expect(openedTracksAction(routed('a.gpx', 'b.FIT'), 1)).toBe('ask')
+    expect(openedTracksAction(routed('a.gpx'), 0)).toBe('add')
+  })
+
+  it('never asks with a project file in the batch, nor when no file is a track file', () => {
+    expect(openedTracksAction(routed('a.gpx', 'Tour.opnflvr'), 2)).toBe('add')
+    expect(openedTracksAction(routed('notes.txt'), 2)).toBe('add')
   })
 })
 

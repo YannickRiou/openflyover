@@ -106,6 +106,9 @@ const messages: Messages['project'] = {
   'presets.scope.habillage': 'Overlay und 3D-Beschriftungen',
   'presets.scope.prise-de-vue': 'Aufnahme (Kamera, Sonne, Belichtung)',
   'presets.nameRequired': 'Der Voreinstellung einen Namen geben.',
+  'openAsk.title': { one: 'Was soll mit dieser Datei geschehen?', other: 'Was soll mit diesen Dateien geschehen?' },
+  'openAsk.add': { one: 'Den Track zu diesem Projekt hinzufügen', other: 'Die Tracks zu diesem Projekt hinzufügen' },
+  'openAsk.new': 'Neues Projekt beginnen',
 }
 
 export default messages

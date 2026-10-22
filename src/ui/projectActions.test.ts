@@ -8,6 +8,7 @@ import { decodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, resetAppStore, useAppStore } from '../state/store'
 import { useLibraryStore } from './library'
+import { useOpenChoiceStore } from './openChoice'
 import type { CloseAnswer } from './projectActions'
 import { isProjectDirty } from './shell'
 import { useToastStore } from './toast'
@@ -18,7 +19,15 @@ const platform = vi.hoisted(() => ({
 }))
 vi.mock('../platform', async (original) => ({ ...(await original<object>()), getPlatform: () => platform }))
 
-const { chooseProjectToOpen, closeProject, newProject, openProject, reopenLastProject, saveProject, saveProjectAs } = await import('./projectActions')
+// the GPX parser needs a DOM: a file becomes a track named after it
+vi.mock('../import', async (original) => ({
+  ...(await original<object>()),
+  importFile: async (file: File) => [
+    buildTrack({ name: file.name.replace(/\.gpx$/, ''), source: 'gpx', segments: [{ points: [{ lon: 6.86, lat: 45.92, ele: 1000 }, { lon: 6.87, lat: 45.93, ele: 1100 }] }] }),
+  ],
+}))
+
+const { chooseProjectToOpen, closeProject, newProject, openFiles, openProject, reopenLastProject, saveProject, saveProjectAs } = await import('./projectActions')
 
 const rando = () =>
   buildTrack({
@@ -57,6 +66,7 @@ beforeEach(() => {
   resetAppStore()
   useToastStore.setState({ toasts: [] })
   useLibraryStore.setState({ currentId: null })
+  useOpenChoiceStore.setState({ choice: null, unsaved: null })
   platform.saveDocument.mockReset()
   platform.openFiles.mockReset()
 })
@@ -342,5 +352,71 @@ describe('reopenLastProject', () => {
     await reopenLastProject(Promise.resolve(false), opened)
     expect(useAppStore.getState().projectName).toBe('Rando')
     expect(opened).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('openFiles with a project that holds tracks', () => {
+  const gpx = (name: string) => new File(['<gpx/>'], `${name}.gpx`)
+  const names = () => useAppStore.getState().tracks.map((track) => track.name)
+  const choice = () => useOpenChoiceStore.getState().choice
+
+  it('asks once for every file, and « Ajouter » adds them to the open project', async () => {
+    useAppStore.getState().addTracks([rando()])
+    const done = openFiles([gpx('a'), gpx('b')])
+    expect(choice()?.names).toEqual(['a.gpx', 'b.gpx'])
+    expect(names()).toEqual(['Rando'])
+    choice()!.answer('add')
+    await done
+    await vi.waitFor(() => expect(names()).toEqual(['Rando', 'a', 'b']))
+  })
+
+  it('« Annuler » changes nothing', async () => {
+    useAppStore.getState().addTracks([rando()])
+    const done = openFiles([gpx('a')])
+    choice()!.answer('cancel')
+    await done
+    expect(names()).toEqual(['Rando'])
+    expect(useAppStore.getState().loading).toBe(false)
+  })
+
+  it('« Commencer un nouveau projet » closes the open project, then imports the files into the empty one', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    useAppStore.getState().markProjectSaved()
+    const done = openFiles([gpx('a')])
+    choice()!.answer('new')
+    await done
+    await vi.waitFor(() => expect(names()).toEqual(['a']))
+    expect(useAppStore.getState().settings.exaggeration).toBe(DEFAULT_SETTINGS.exaggeration)
+    // the first import of a project: the message offers « Film automatique »
+    expect(useToastStore.getState().toasts.some((toast) => toast.action?.label === 'Film automatique…')).toBe(true)
+  })
+
+  it('a new project with unsaved changes asks « Fermer sans enregistrer ? » first; « Annuler » keeps everything', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const done = openFiles([gpx('a')])
+    choice()!.answer('new')
+    await vi.waitFor(() => expect(useOpenChoiceStore.getState().unsaved).not.toBeNull())
+    expect(useOpenChoiceStore.getState().unsaved!.text).toBe('Les changements de « Rando » ne sont pas enregistrés.')
+    useOpenChoiceStore.getState().unsaved!.answer('cancel')
+    await done
+    expect(names()).toEqual(['Rando'])
+    expect(useAppStore.getState().settings.exaggeration).toBe(2)
+  })
+
+  it('an empty project imports straight away, without a question', async () => {
+    const done = openFiles([gpx('a')])
+    expect(choice()).toBeNull()
+    await done
+    await vi.waitFor(() => expect(names()).toEqual(['a']))
+  })
+
+  it('a project file is opened without a question, even with tracks open', async () => {
+    const project = await savedFile()
+    const done = openFiles([project])
+    expect(choice()).toBeNull()
+    await done
+    expect(names()).toEqual(['Rando'])
   })
 })

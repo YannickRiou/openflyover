@@ -106,6 +106,9 @@ const messages: Messages['project'] = {
   'presets.scope.habillage': 'Overlay ed etichette 3D',
   'presets.scope.prise-de-vue': 'Ripresa (camera, sole, esposizione)',
   'presets.nameRequired': 'Inserisci un nome per il preset.',
+  'openAsk.title': { one: 'Cosa fare di questo file?', other: 'Cosa fare di questi file?' },
+  'openAsk.add': { one: 'Aggiungi la traccia a questo progetto', other: 'Aggiungi le tracce a questo progetto' },
+  'openAsk.new': 'Inizia un nuovo progetto',
 }
 
 export default messages

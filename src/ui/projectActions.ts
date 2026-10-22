@@ -19,8 +19,9 @@ import { useAppStore } from '../state/store'
 import { setAutoFilmOpen } from './autoFilmOpen'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
-import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry } from './library'
-import { effectiveProjectName, routeOpenedFiles } from './shell'
+import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry, unsavedChangesText } from './library'
+import { askOpenChoice, askUnsavedChanges } from './openChoice'
+import { effectiveProjectName, openedTracksAction, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
 import type { ToastInput } from './toast'
 import { t } from '../i18n'
@@ -132,9 +133,14 @@ export async function closeProject(ask: () => Promise<CloseAnswer>): Promise<voi
   if (await closeOpenProject(ask)) showToast({ kind: 'success', text: t('project.actions.closed', { name }) })
 }
 
-/** « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import. */
-export async function newProject(ask: () => Promise<CloseAnswer>): Promise<void> {
-  if (await closeOpenProject(ask)) await chooseTracksToImport()
+/**
+ * « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import (`files`
+ * when they are already chosen, else a dialog).
+ */
+export async function newProject(ask: () => Promise<CloseAnswer>, files?: readonly File[]): Promise<void> {
+  if (!(await closeOpenProject(ask))) return
+  if (files) importTrackFiles(files)
+  else await chooseTracksToImport()
 }
 
 let reopening: Promise<void> | null = null
@@ -158,11 +164,21 @@ export function reopenLastProject(rendering: Promise<boolean>, openedByOs: () =>
   return reopening
 }
 
-/** Files picked with « Ouvrir » or dropped on the window: the first project is opened, the tracks are imported. */
+/**
+ * Files picked with « Ouvrir », dropped on the window or opened by the system: the first project is opened, the tracks
+ * are imported; when the open project holds tracks, « Que faire de ce fichier ? » first (added to it, or a new project).
+ */
 export async function openFiles(files: readonly File[]): Promise<void> {
   const { project, tracks, extraProjects } = routeOpenedFiles(files)
   if (project) await openProject(project)
-  if (tracks.length > 0) importTrackFiles(tracks)
+  if (tracks.length > 0) {
+    if (openedTracksAction({ project, tracks }, useAppStore.getState().tracks.length) === 'add') importTrackFiles(tracks)
+    else {
+      const choice = await askOpenChoice(tracks.map((file) => file.name))
+      if (choice === 'add') importTrackFiles(tracks)
+      else if (choice === 'new') await newProject(() => askUnsavedChanges(unsavedChangesText()), tracks)
+    }
+  }
   if (extraProjects.length > 0) {
     showToast({ kind: 'info', text: t('project.actions.extraProjects', { names: extraProjects.map((f) => t('common.quoted', { text: f.name })).join(', ') }) })
   }

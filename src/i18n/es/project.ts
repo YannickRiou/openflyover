@@ -112,6 +112,9 @@ const messages: Messages['project'] = {
   'presets.scope.habillage': 'Gráficos y etiquetas 3D',
   'presets.scope.prise-de-vue': 'Toma (cámara, sol, exposición)',
   'presets.nameRequired': 'Escribe un nombre para el preajuste.',
+  'openAsk.title': { one: '¿Qué hacer con este archivo?', other: '¿Qué hacer con estos archivos?' },
+  'openAsk.add': { one: 'Añadir el track a este proyecto', other: 'Añadir los tracks a este proyecto' },
+  'openAsk.new': 'Empezar un proyecto nuevo',
 }
 
 export default messages
