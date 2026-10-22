@@ -11,20 +11,22 @@
  * Shading: MeshStandardMaterial extended in `onBeforeCompile` (animated waves faded out below a few pixels, Fresnel
  * reflection of the sky). Everything is a function of the film time: the export is deterministic.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { BufferAttribute, BufferGeometry, Color, Mesh, MeshStandardMaterial, Uniform, Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { registerDrapeFlush } from '../export/store'
+import { mergeByTrack } from '../osm/byTrack'
 import { useWaterStore } from '../osm/store'
-import { fetchTrackWater, fetchTrackWaterShapes, isWaterLine, lineWidthM, runsOutside, waterCover, type WaterLine, type WaterPolygon, type WaterShape } from '../osm/water'
+import { fetchTrackWater, fetchTrackWaterShapes, isWaterLine, lineWidthM, runsOutside, waterCover, type WaterPolygon } from '../osm/water'
 import { useAppStore } from '../state/store'
 import { GROUND_DROP_PER_M2, NO_SNOW_LINE_M, SNOW_NOISE_GLSL, snowRagGlsl, snowUniforms } from '../terrain/snowShader'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useTerrainContext } from './terrainContext'
 import { wakeScene } from './renderOnDemand'
-import { useFilmClock, useFilmTrack } from './usePacing'
+import { useFilmClock, useFilmTracks } from './usePacing'
+import { useTrackResults } from './useTrackResults'
 import { setWaterStatus } from './waterStatus'
 import { buildRiverStrip, ribbonEdgeOffsets, stripHeights } from './riverStrip'
 import { buildSeaMesh, buildWaterMesh, lakeLevel, type WaterMesh } from './waterMesh'
@@ -173,8 +175,6 @@ function sampleHeights(mesh: WaterMesh, engine: TerrainEngine | null): Float64Ar
 }
 
 const _p = new Vector3()
-const NONE: WaterPolygon[] = []
-const NO_LINES: WaterLine[] = []
 
 /** A meshed shape of the water: a lake (flat), a river area (per vertex), the sea (flat at 0 m) or a ribbon (per sample, three vertices each). */
 export interface WaterPiece {
@@ -239,15 +239,21 @@ function drapeWater(pieces: readonly WaterPiece[], engine: TerrainEngine | null,
 
 export function WaterLayer() {
   const { engine, frame } = useTerrainContext()
-  const track = useFilmTrack()
+  const tracks = useFilmTracks()
   const enabled = useAppStore((s) => s.settings.water.enabled)
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const clock = useFilmClock()
-  /** water of the track it was fetched for (shown only for the current first track, setting on) */
-  const [fetched, setFetched] = useState<{ trackId: string; areas: WaterPolygon[]; shapes: WaterShape[] } | null>(null)
-  const shown = enabled && fetched && fetched.trackId === track?.id ? fetched : null
-  const polygons = useMemo(() => (shown ? [...shown.areas, ...shown.shapes.filter((s): s is WaterPolygon => !isWaterLine(s))] : NONE), [shown])
-  const lines = useMemo(() => (shown ? shown.shapes.filter(isWaterLine) : NO_LINES), [shown])
+  // two Overpass queries per track of the film (cached, one at a time): the water areas, then the sea and the waterway lines
+  // (the heavier one); nothing is sent while the setting is off. Each answer is shown as it arrives, even if another fails;
+  // the water of all the tracks is drawn together.
+  const areaResults = useTrackResults(enabled, tracks, (track) => fetchTrackWater(track))
+  const shapeResults = useTrackResults(enabled, tracks, (track) => fetchTrackWaterShapes(track))
+  const polygons = useMemo(() => {
+    const ids = tracks.map((t) => t.id)
+    const areas = mergeByTrack(areaResults.results, ids)
+    return [...areas, ...mergeByTrack(shapeResults.results, ids).filter((s): s is WaterPolygon => !isWaterLine(s))]
+  }, [tracks, areaResults.results, shapeResults.results])
+  const lines = useMemo(() => mergeByTrack(shapeResults.results, tracks.map((t) => t.id)).filter(isWaterLine), [tracks, shapeResults.results])
   const uniforms = useMemo(
     () => ({
       waterTime: new Uniform(0),
@@ -273,41 +279,9 @@ export function WaterLayer() {
     [mesh],
   )
 
-  // two Overpass queries per track (cached): the water areas, then the sea and the waterway lines (the heavier one); nothing
-  // is sent while the setting is off. Each answer is shown as it arrives, even if the other fails.
-  useEffect(() => {
-    if (!enabled || !track) {
-      setWaterStatus('idle')
-      return
-    }
-    // not aborted on cleanup: the queries are shared and cached (StrictMode runs this effect twice), only their
-    // answer is ignored once stale
-    let current = true
-    const trackId = track.id
-    setWaterStatus('loading')
-    let waiting = 2
-    let failed = false
-    const settle = (patch: { areas?: WaterPolygon[]; shapes?: WaterShape[] }, ok: boolean) => {
-      if (!current) return
-      setFetched((previous) => {
-        const same = previous?.trackId === trackId
-        return { trackId, areas: same ? previous.areas : [], shapes: same ? previous.shapes : [], ...patch }
-      })
-      failed ||= !ok
-      if (--waiting === 0) setWaterStatus(failed ? 'error' : 'ready')
-    }
-    fetchTrackWater(track).then(
-      (areas) => settle({ areas }, true),
-      () => settle({}, false),
-    )
-    fetchTrackWaterShapes(track).then(
-      (shapes) => settle({ shapes }, true),
-      () => settle({}, false),
-    )
-    return () => {
-      current = false
-    }
-  }, [enabled, track])
+  const loading = areaResults.loading || shapeResults.loading
+  const failed = areaResults.failed || shapeResults.failed
+  useEffect(() => setWaterStatus(!enabled || tracks.length === 0 ? 'idle' : loading ? 'loading' : failed ? 'error' : 'ready'), [enabled, tracks, loading, failed])
   useEffect(() => useWaterStore.setState({ polygons: polygons.length + lines.length }), [polygons, lines])
   useEffect(
     () => () => {

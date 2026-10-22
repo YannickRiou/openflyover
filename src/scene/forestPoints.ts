@@ -5,8 +5,9 @@
  * The forests (osm/forest.ts) are cut into square chunks of CHUNK_M. In each chunk, trees stand on a jittered grid whose
  * spacing follows the density (every grid cell's tree comes from a hash of its place, not from a random generator), kept
  * only inside a forest and outside its holes. The density thins out with the distance of the chunk to the track
- * (the flyover sees the near forests closely, the far ones as a texture), and the chunks nearest to the track are placed
- * first, until `maxTrees` is reached: a long track never exceeds the device budget (core/deviceBudget.ts).
+ * (the flyover sees the near forests closely, the far ones as a texture). Beyond `maxTrees` (core/deviceBudget.ts) the
+ * far chunks are thinned, not dropped (`thinning`): the density keeps its full value near the track and falls with the
+ * distance to the nearest track, just enough for the total to fit the budget.
  */
 import type { LonLat } from '../core/types'
 import type { ForestPolygon } from '../osm/forest'
@@ -50,8 +51,46 @@ export interface PlacementOptions {
   density: number
   /** most trees placed in all */
   maxTrees: number
-  /** the track (simplified is enough) */
-  path: readonly LonLat[]
+  /** the tracks of the film (simplified is enough); a forest is as near as its nearest track */
+  paths: readonly (readonly LonLat[])[]
+}
+
+/** Smallest share of its density a chunk keeps while the budget is met by thinning (the far chunks stay present). */
+export const MIN_THINNING = 0.05
+/** The placement aims at this share of the budget: the count of the lattice only matches the area estimate roughly. */
+const BUDGET_MARGIN = 0.97
+/** Placements tried to land close under the budget (the area estimate is refined by the real count each time). */
+const MAX_ATTEMPTS = 4
+/** A placement using at least this share of the budget is good enough. */
+const GOOD_FILL = 0.9
+
+/** Steepest fall of `thinning` (exponent): the nearest chunk whole, the others near MIN_THINNING. */
+const MAX_THINNING_EXPONENT = 40
+
+/**
+ * Share of its density each chunk keeps so that its expected trees (`expected`, at the density of its distance) fit
+ * `target`: 1 everywhere when they already fit, else `MIN + (1 − MIN) × (1 − u) ^ k` where `u` runs from 0 (the nearest
+ * chunk) to 1 (the farthest), MIN is MIN_THINNING and `k` the gentlest exponent that fits: the near chunks stay full
+ * and the far ones fall towards MIN, never to zero. Below even the steepest fall every chunk is scaled alike (still above
+ * zero). Pure, monotone with the distance, independent of the order of the chunks.
+ */
+export function thinning(distance: readonly number[], expected: readonly number[], target: number): number[] {
+  const sum = (m: readonly number[]) => m.reduce((n, share, i) => n + share * expected[i], 0)
+  const full = distance.map(() => 1)
+  if (sum(full) <= target) return full
+  const near = Math.min(...distance)
+  const span = Math.max(...distance) - near
+  const shares = (k: number) => distance.map((d) => MIN_THINNING + (1 - MIN_THINNING) * (span > 0 ? (1 - (d - near) / span) ** k : 1))
+  const steepest = shares(MAX_THINNING_EXPONENT)
+  if (sum(steepest) > target) return steepest.map((m) => (m * target) / sum(steepest))
+  let lo = 0
+  let hi = MAX_THINNING_EXPONENT
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2
+    if (sum(shares(mid)) <= target) hi = mid
+    else lo = mid
+  }
+  return shares(hi)
 }
 
 /** The trees of one square of the ground. Arrays are parallel, `count` long. */
@@ -82,6 +121,7 @@ export function hash01(a: number, b: number, salt: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296
 }
 
+
 /** Distance (metres) from `p` to the polyline `path`. */
 export function distanceToPath(p: LonLat, path: readonly LonLat[]): number {
   if (path.length === 0) return 0
@@ -89,6 +129,53 @@ export function distanceToPath(p: LonLat, path: readonly LonLat[]): number {
   let best = Infinity
   for (let i = 1; i < path.length; i++) best = Math.min(best, segmentDistanceM(p, path[i - 1], path[i]))
   return best
+}
+
+/** Segments per block of a `PathIndex`. */
+const BLOCK_SEGMENTS = 32
+
+/** The tracks cut into blocks of a few segments, each with its bounding box: a point only measures the blocks that can beat the best distance so far. */
+export interface PathIndex {
+  blocks: { west: number; south: number; east: number; north: number; cosMin: number; points: readonly LonLat[] }[]
+}
+
+export function indexPaths(paths: readonly (readonly LonLat[])[]): PathIndex {
+  const blocks: PathIndex['blocks'] = []
+  for (const path of paths) {
+    for (let from = 0; from === 0 || from < path.length - 1; from += BLOCK_SEGMENTS) {
+      const points = path.slice(from, from + BLOCK_SEGMENTS + 1)
+      if (points.length === 0) break
+      const lons = points.map((q) => q.lon)
+      const lats = points.map((q) => q.lat)
+      const south = Math.min(...lats)
+      const north = Math.max(...lats)
+      blocks.push({ west: Math.min(...lons), south, east: Math.max(...lons), north, cosMin: Math.cos((Math.max(Math.abs(south), Math.abs(north)) * Math.PI) / 180), points })
+    }
+  }
+  return { blocks }
+}
+
+/** Distance (metres) from `p` to the nearest track of `index` (0 without a track): the same as the smallest `distanceToPath`, without measuring every segment. */
+export function distanceToIndex(p: LonLat, { blocks }: PathIndex): number {
+  if (blocks.length === 0) return 0
+  // lower bound of the distance to a block: to its box, in the metric of the segment measure (cos of the latitude of the segment, at least cosMin)
+  const bound = blocks.map((b) => {
+    const dx = Math.max(b.west - p.lon, 0, p.lon - b.east) * b.cosMin
+    const dy = Math.max(b.south - p.lat, 0, p.lat - b.north)
+    return Math.hypot(dx, dy) * M_PER_DEG
+  })
+  const order = bound.map((_, i) => i).sort((i, j) => bound[i] - bound[j])
+  let best = Infinity
+  for (const i of order) {
+    if (bound[i] >= best) break
+    best = Math.min(best, distanceToPath(p, blocks[i].points))
+  }
+  return best
+}
+
+/** Distance (metres) from `p` to the nearest of the tracks `paths`. */
+export function distanceToPaths(p: LonLat, paths: readonly (readonly LonLat[])[]): number {
+  return distanceToIndex(p, indexPaths(paths))
 }
 
 type Pt = [number, number]
@@ -103,6 +190,13 @@ interface Prepared {
   y0: number
   x1: number
   y1: number
+}
+
+/** Area of a ring in metres (shoelace). */
+function areaM2(ring: readonly Pt[]): number {
+  let sum = 0
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) sum += ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1]
+  return Math.abs(sum) / 2
 }
 
 /** A forest cut to one chunk: short rings, so the point-in-polygon tests of its many candidate trees stay cheap. */
@@ -137,12 +231,35 @@ interface Trees {
   yaw: number[]
 }
 
+/** A chunk that meets a forest: where it is, how far from the tracks, what it holds. */
+interface Cell {
+  key: string
+  cx: number
+  cy: number
+  centre: LonLat
+  /** metres to the nearest track */
+  distance: number
+  forests: Clipped[]
+  /** trees expected at the full density of the chunk (`densityFactor` applied), from the area of its forests */
+  expected: number
+}
+
 /** Place the trees of the forests (see the module comment). */
-export function placeTrees(polygons: readonly ForestPolygon[], { density, maxTrees, path }: PlacementOptions): ForestChunk[] {
+export function placeTrees(polygons: readonly ForestPolygon[], { density, maxTrees, paths }: PlacementOptions): ForestChunk[] {
   if (polygons.length === 0 || density <= 0 || maxTrees <= 0) return []
-  // equirectangular metres around the first point of the track (else of the first forest), one fixed frame for the run
-  const origin = path[0] ?? { lon: polygons[0].outer[0][0], lat: polygons[0].outer[0][1] }
-  const kx = M_PER_DEG * Math.cos((origin.lat * Math.PI) / 180)
+  // equirectangular metres at the latitude of the middle of the tracks (else of the first forest) rounded to 0.01°: one fixed
+  // frame for the run, the same whatever the order of the tracks, and a small change of the tracks does not move the trees
+  let south = Infinity
+  let north = -Infinity
+  for (const path of paths) {
+    for (const q of path) {
+      south = Math.min(south, q.lat)
+      north = Math.max(north, q.lat)
+    }
+  }
+  const originLat = south <= north ? Math.round(((south + north) / 2) * 100) / 100 : polygons[0].outer[0][1]
+  const pathIndex = indexPaths(paths)
+  const kx = M_PER_DEG * Math.cos((originLat * Math.PI) / 180)
   const ky = M_PER_DEG
   const toMetres = (ring: [number, number][]): Pt[] => ring.map(([lon, lat]) => [lon * kx, lat * ky])
 
@@ -170,25 +287,51 @@ export function placeTrees(polygons: readonly ForestPolygon[], { density, maxTre
   }
 
   // nearest to the track first; the key breaks ties so the order never depends on the input order
-  const ordered = [...chunks.entries()]
-    .map(([key, chunk]) => {
-      const centre = { lon: ((chunk.cx + 0.5) * CHUNK_M) / kx, lat: ((chunk.cy + 0.5) * CHUNK_M) / ky }
-      return { key, chunk, centre, distance: distanceToPath(centre, path) }
-    })
-    .sort((a, b) => a.distance - b.distance || (a.key < b.key ? -1 : 1))
-
-  const result: ForestChunk[] = []
-  let total = 0
-  for (const { key, chunk, centre, distance } of ordered) {
-    const spacing = Math.sqrt(10_000 / (density * densityFactor(distance)))
-    const trees = treesOfChunk(chunk, spacing)
-    const count = trees.x.length
-    if (count === 0) continue
-    if (total + count > maxTrees) break
-    total += count
-    result.push(toChunk(key, centre, trees, kx, ky))
+  const cells: Cell[] = []
+  for (const [key, { cx, cy, forests }] of chunks) {
+    const clipped = clipToChunk(forests, cx * CHUNK_M, cy * CHUNK_M, (cx + 1) * CHUNK_M, (cy + 1) * CHUNK_M)
+    const area = clipped.reduce((n, f) => n + areaM2(f.outer) - f.holes.reduce((h, hole) => h + areaM2(hole), 0), 0)
+    if (area <= 0) continue
+    const centre = { lon: ((cx + 0.5) * CHUNK_M) / kx, lat: ((cy + 0.5) * CHUNK_M) / ky }
+    const distance = distanceToIndex(centre, pathIndex)
+    cells.push({ key, cx, cy, centre, distance, forests: clipped, expected: (area * density * densityFactor(distance)) / 10_000 })
   }
-  return result
+  cells.sort((a, b) => a.distance - b.distance || (a.key < b.key ? -1 : 1))
+
+  // Thinned, not cut: aim a little under the budget, place, and correct the aim by the real count (a few attempts)
+  const place = (shares: readonly number[]): ForestChunk[] => {
+    const result: ForestChunk[] = []
+    cells.forEach((cell, i) => {
+      const trees = treesOfChunk(cell, Math.sqrt(10_000 / (density * densityFactor(cell.distance) * shares[i])))
+      if (trees.x.length > 0) result.push(toChunk(cell.key, cell.centre, trees, kx, ky))
+    })
+    return result
+  }
+  const countOf = (result: readonly ForestChunk[]) => result.reduce((n, c) => n + c.count, 0)
+  const distances = cells.map((c) => c.distance)
+  const expected = cells.map((c) => c.expected)
+  let target = maxTrees * BUDGET_MARGIN
+  let best: ForestChunk[] = []
+  let last: ForestChunk[] = []
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const shares = thinning(distances, expected, target)
+    last = place(shares)
+    const count = countOf(last)
+    const aimed = shares.reduce((n, share, i) => n + share * expected[i], 0)
+    if (count <= maxTrees && count > countOf(best)) best = last
+    if (count <= maxTrees && (count >= maxTrees * GOOD_FILL || shares.every((s) => s === 1))) break
+    target = count > 0 ? (aimed * maxTrees * BUDGET_MARGIN) / count : target * 2
+  }
+  if (best.length > 0 || countOf(last) <= maxTrees) return best.length > 0 ? best : last
+  // the budget is smaller than a minimal thinning can reach: the nearest chunks only, as a last resort
+  const kept: ForestChunk[] = []
+  let total = 0
+  for (const chunk of last) {
+    if (total + chunk.count > maxTrees) break
+    total += chunk.count
+    kept.push(chunk)
+  }
+  return kept
 }
 
 /** The forests of a chunk cut to its square (those left with no area dropped). */
@@ -204,13 +347,13 @@ function clipToChunk(forests: readonly Prepared[], x0: number, y0: number, x1: n
 }
 
 /** Trees of one chunk: the cells of a global lattice of `spacing` whose jittered point falls in the chunk and in a forest. */
-function treesOfChunk(chunk: { cx: number; cy: number; forests: Prepared[] }, spacing: number): Trees {
+function treesOfChunk(chunk: { cx: number; cy: number; forests: Clipped[] }, spacing: number): Trees {
   const trees: Trees = { x: [], y: [], height: [], kind: [], variation: [], yaw: [] }
   const cellX0 = chunk.cx * CHUNK_M
   const cellY0 = chunk.cy * CHUNK_M
   const cellX1 = cellX0 + CHUNK_M
   const cellY1 = cellY0 + CHUNK_M
-  const forests = clipToChunk(chunk.forests, cellX0, cellY0, cellX1, cellY1)
+  const { forests } = chunk
   for (let k = 0; k < forests.length; k++) {
     const forest = forests[k]
     const xs = forest.outer.map((p) => p[0])

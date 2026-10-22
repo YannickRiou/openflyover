@@ -360,12 +360,20 @@ export async function runOverpassQuery<T = OsmFeature[]>(
     for (let attempt = 0; attempt < 2; attempt++) {
       if (signal?.aborted) throw abortError()
       let response: Response
+      // a server that never answers must not hold the queue for ever: a little longer than the server's own timeout
+      const hung = new AbortController()
+      const timer = setTimeout(() => hung.abort(), QUERY_TIMEOUT_S * 1000 + 10_000)
+      const onAbort = () => hung.abort()
+      signal?.addEventListener('abort', onAbort, { once: true })
       try {
-        response = await deps.fetch(endpoint, { method: 'POST', body: new URLSearchParams({ data: query }), signal })
+        response = await deps.fetch(endpoint, { method: 'POST', body: new URLSearchParams({ data: query }), signal: hung.signal })
       } catch (e) {
         if (signal?.aborted) throw abortError()
         lastError = e
         break
+      } finally {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
       }
       if (response.ok) return parse(await response.json())
       lastError = new OverpassError(`HTTP ${response.status}`, response.status)

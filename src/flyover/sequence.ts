@@ -115,6 +115,21 @@ export function filmTrackOf(tracks: readonly Track[], race: Pick<RaceSettings, '
   return filmSequenceOf(tracks, race)?.track ?? tracks[0]
 }
 
+/** Last `filmTracksOf`, so the array keeps its identity while the ids and the points stay the same. */
+let lastFilmTracks: readonly Track[] = []
+
+/**
+ * The tracks the film shows over the terrain, for the map layers fetched per track (water, forests): the stages
+ * « À la suite » in their order, every racer of the ghost race, else the first track alone. The array keeps its identity
+ * while the ids and the points do (a colour change does not make the layers start again).
+ */
+export function filmTracksOf(tracks: readonly Track[], race: Pick<RaceSettings, 'enabled' | 'sequence' | 'order'>): readonly Track[] {
+  const next = race.enabled || playsInSequence(race, tracks.length) ? orderedTracks(tracks, race) : tracks.slice(0, 1)
+  const same = next.length === lastFilmTracks.length && next.every((t, i) => t.id === lastFilmTracks[i].id && t.segments === lastFilmTracks[i].segments)
+  if (!same) lastFilmTracks = next
+  return lastFilmTracks
+}
+
 /**
  * Stage under the marker at film `progress` and the progress along it (0..1). A cut belongs to the stage it starts
  * (the end of the film to the last one).

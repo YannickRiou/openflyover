@@ -17,7 +17,8 @@ import type { Camera, BufferGeometry } from 'three'
 import { deviceBudget } from '../core/deviceBudget'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { isExportBusy, registerDrapeFlush, useExportStore } from '../export/store'
-import { fetchTrackForest, type ForestPolygon } from '../osm/forest'
+import { mergeByTrack } from '../osm/byTrack'
+import { fetchTrackForest } from '../osm/forest'
 import { simplifyLine } from '../osm/overpass'
 import { useForestStore } from '../osm/store'
 import { setForestStatus } from './forestStatus'
@@ -28,7 +29,8 @@ import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useTerrainContext } from './terrainContext'
 import { TREE_WIDTH_RATIO, createTreeGeometries } from './treeGeometry'
 import { useDebouncedCallback } from './useDebouncedCallback'
-import { useFilmTrack } from './usePacing'
+import { useFilmTracks } from './usePacing'
+import { useTrackResults } from './useTrackResults'
 
 /** Trees are drawn up to this distance from the camera (metres)... */
 export const FOREST_FAR_M = 6000
@@ -193,47 +195,28 @@ function updateForest(forest: Forest, camera: Camera, d: Drape, limit: number): 
 
 export function ForestLayer() {
   const { engine, frame } = useTerrainContext()
-  const track = useFilmTrack()
+  const tracks = useFilmTracks()
   const enabled = useAppStore((s) => s.settings.forest.enabled)
   const density = useDeferredValue(useAppStore((s) => s.settings.forest.density))
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const get = useThree((s) => s.get)
-  /** forests of the track they were fetched for (shown only for the current film track, setting on) */
-  const [fetched, setFetched] = useState<{ trackId: string; polygons: ForestPolygon[] } | null>(null)
-  const polygons = useMemo(() => (enabled && fetched && fetched.trackId === track?.id ? fetched.polygons : []), [enabled, fetched, track])
-
-  // one Overpass query per track (cached); nothing is sent while the setting is off
-  useEffect(() => {
-    if (!enabled || !track) {
-      setForestStatus('idle')
-      return
-    }
-    // not aborted on cleanup: the query is shared and cached (StrictMode runs this effect twice), only its answer is
-    // ignored once stale
-    let current = true
-    const trackId = track.id
-    // « en attente » until the Overpass queue reaches this request, then « chargement »
-    setForestStatus('queued')
-    fetchTrackForest(track, undefined, undefined, () => current && setForestStatus('loading')).then(
-      (result) => {
-        if (!current) return
-        setFetched({ trackId, polygons: result })
-        setForestStatus('ready')
-      },
-      () => {
-        if (!current) return
-        setFetched({ trackId, polygons: [] })
-        setForestStatus('error')
-      },
-    )
-    return () => {
-      current = false
-    }
-  }, [enabled, track])
-
-  const path = useMemo(() => (track ? simplifyLine(track.segments.flatMap((s) => s.points), PATH_TOLERANCE_M) : []), [track])
-  const chunks = useMemo(() => placeTrees(polygons, { density, maxTrees: deviceBudget().maxTrees, path }), [polygons, density, path])
+  // one Overpass query per track of the film (cached, one at a time); nothing is sent while the setting is off, and a track
+  // that fails shows no trees (the status chip says so). The forests of all the tracks are drawn together.
+  const { results, loading, started, failed } = useTrackResults(enabled, tracks, (track, onStart) => fetchTrackForest(track, undefined, undefined, onStart))
+  // « en attente » until the Overpass queue reaches the first request still waiting, then « chargement »
+  useEffect(
+    () => setForestStatus(!enabled || tracks.length === 0 ? 'idle' : loading ? (started ? 'loading' : 'queued') : failed ? 'error' : 'ready'),
+    [enabled, tracks, loading, started, failed],
+  )
+  const polygons = useMemo(() => mergeByTrack(results, tracks.map((t) => t.id)), [results, tracks])
+  const paths = useMemo(() => tracks.map((track) => simplifyLine(track.segments.flatMap((s) => s.points), PATH_TOLERANCE_M)), [tracks])
+  // Placing takes up to a second or more: once the queue is empty, not at each answer (the trees of the tracks asked before stay meanwhile)
+  const [placed, setPlaced] = useState<{ polygons: unknown; density: number; paths: unknown; chunks: ForestChunk[] }>({ polygons, density, paths, chunks: [] })
+  if (!loading && (placed.polygons !== polygons || placed.density !== density || placed.paths !== paths)) {
+    setPlaced({ polygons, density, paths, chunks: placeTrees(polygons, { density, maxTrees: deviceBudget().maxTrees, paths }) })
+  }
+  const { chunks } = placed
   const forest = useMemo(() => (frame ? createForest(chunks, frame) : null), [chunks, frame])
   useEffect(() => () => forest?.dispose(), [forest])
   const geometries = useMemo(() => createTreeGeometries(), [])

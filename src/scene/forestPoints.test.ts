@@ -10,12 +10,15 @@ import {
   CONIFER_ALTITUDE_M,
   FAR_DENSITY_RATIO,
   FAR_TRACK_M,
+  MIN_THINNING,
   NEAR_TRACK_M,
   TREE_HEIGHT_M,
   densityFactor,
   distanceToPath,
+  distanceToPaths,
   hash01,
   placeTrees,
+  thinning,
   treeKind,
 } from './forestPoints'
 import { TREE_WIDTH_RATIO, createTreeGeometries } from './treeGeometry'
@@ -37,7 +40,7 @@ function forest(lon: number, lat: number, sideM: number, extra: Partial<ForestPo
 
 const path: LonLat[] = [{ lon: 6.8, lat: 45.9 }, { lon: 6.82, lat: 45.9 }]
 const near = forest(6.8, 45.9, 600)
-const options = { density: 60, maxTrees: 100_000, path }
+const options = { density: 60, maxTrees: 100_000, paths: [path] }
 
 const total = (chunks: ReturnType<typeof placeTrees>) => chunks.reduce((n, c) => n + c.count, 0)
 
@@ -108,15 +111,54 @@ describe('placeTrees', () => {
     expect(treeKind(BROADLEAF, 2500)).toBe('broadleaf')
   })
 
-  it('never places more than the budget, nearest chunks first', () => {
+  it('never places more than the budget, and thins the far chunks instead of dropping them', () => {
     const big = forest(6.8, 45.9, 6000)
     const all = placeTrees([big], options)
     const limited = placeTrees([big], { ...options, maxTrees: 20_000 })
     expect(total(all)).toBeGreaterThan(20_000)
     expect(total(limited)).toBeLessThanOrEqual(20_000)
-    expect(total(limited)).toBeGreaterThan(10_000)
-    // what is kept is the start of the nearest-first order
-    expect(limited.map((c) => c.key)).toEqual(all.slice(0, limited.length).map((c) => c.key))
+    // most of the budget is used, and every chunk of the forest is still there
+    expect(total(limited)).toBeGreaterThan(20_000 * 0.8)
+    expect(limited.map((c) => c.key).sort()).toEqual(all.map((c) => c.key).sort())
+    // full density near the track, far fewer trees in the chunks beyond, none emptied
+    const count = (chunks: typeof all, key: string) => chunks.find((c) => c.key === key)!.count
+    const byDistance = [...all].sort((a, b) => distanceToPath(a.centre, path) - distanceToPath(b.centre, path))
+    expect(count(limited, byDistance[0].key)).toBe(count(all, byDistance[0].key))
+    const far = byDistance.slice(-10).map((c) => c.key)
+    const farTotal = (chunks: typeof all) => far.reduce((n, key) => n + count(chunks, key), 0)
+    expect(farTotal(limited)).toBeLessThan(farTotal(all) * 0.5)
+    for (const key of far) expect(count(limited, key)).toBeGreaterThan(0)
+  })
+
+  it('places the same trees for the same budget, and keeps within it with a tiny budget', () => {
+    const big = forest(6.8, 45.9, 6000)
+    const options2 = { ...options, maxTrees: 5_000 }
+    const a = placeTrees([big], options2)
+    const b = placeTrees([big], options2)
+    expect(total(a)).toBeLessThanOrEqual(5_000)
+    expect(b.map((c) => [c.key, c.count])).toEqual(a.map((c) => [c.key, c.count]))
+    expect(Array.from(b[b.length - 1].lonLat)).toEqual(Array.from(a[a.length - 1].lonLat))
+    expect(total(placeTrees([big], { ...options, maxTrees: 300 }))).toBeLessThanOrEqual(300)
+  })
+
+  it('gives the same trees whatever the order of the tracks', () => {
+    const second: LonLat[] = [{ lon: 6.9, lat: 45.95 }, { lon: 6.92, lat: 45.95 }]
+    const forests = [near, forest(6.9, 45.95, 800)]
+    const a = placeTrees(forests, { ...options, paths: [path, second] })
+    const b = placeTrees(forests, { ...options, paths: [second, path] })
+    expect(b.map((c) => [c.key, c.count])).toEqual(a.map((c) => [c.key, c.count]))
+    expect(Array.from(b[0].lonLat)).toEqual(Array.from(a[0].lonLat))
+  })
+
+  it('measures the distance to the nearest of several tracks', () => {
+    // the same forest, far from the first track and on the second one: its chunks keep their full density
+    const farForest = forest(6.8, 45.9 + 8000 / M, 600)
+    const second: LonLat[] = [{ lon: 6.8, lat: 45.9 + 8000 / M }, { lon: 6.82, lat: 45.9 + 8000 / M }]
+    const alone = total(placeTrees([farForest], { ...options, paths: [path] }))
+    const both = total(placeTrees([farForest], { ...options, paths: [path, second] }))
+    expect(alone).toBeLessThan(both * (FAR_DENSITY_RATIO + 0.1))
+    expect(both).toBeGreaterThan(36 * 60 * 0.9)
+    expect(distanceToPaths({ lon: 6.81, lat: 45.9 + 8000 / M }, [path, second])).toBeCloseTo(0, 0)
   })
 
   it('thins out with the distance to the track', () => {
@@ -131,6 +173,43 @@ describe('placeTrees', () => {
     expect(placeTrees([], options)).toEqual([])
     expect(placeTrees([near], { ...options, density: 0 })).toEqual([])
     expect(placeTrees([near], { ...options, maxTrees: 0 })).toEqual([])
+  })
+})
+
+describe('thinning', () => {
+  const distance = [0, 1000, 3000, 6000, 9000]
+
+  it('keeps every chunk at full density when the budget is enough', () => {
+    expect(thinning(distance, [10, 10, 10, 10, 10], 50)).toEqual([1, 1, 1, 1, 1])
+    expect(thinning([], [], 10)).toEqual([])
+  })
+
+  it('fits the budget, keeps the nearest chunk whole and falls with the distance', () => {
+    const expected = [400, 500, 600, 700, 800]
+    const shares = thinning(distance, expected, 1500)
+    const sum = shares.reduce((n, m, i) => n + m * expected[i], 0)
+    expect(sum).toBeLessThanOrEqual(1500)
+    expect(sum).toBeGreaterThan(1500 * 0.99)
+    expect(shares[0]).toBe(1)
+    for (let i = 1; i < shares.length; i++) {
+      expect(shares[i]).toBeLessThan(shares[i - 1])
+      expect(shares[i]).toBeGreaterThanOrEqual(MIN_THINNING)
+    }
+  })
+
+  it('does not depend on the order of the chunks', () => {
+    const expected = [400, 500, 600, 700, 800]
+    const shares = thinning(distance, expected, 1500)
+    const order = [3, 0, 4, 2, 1]
+    const shuffled = thinning(order.map((i) => distance[i]), order.map((i) => expected[i]), 1500)
+    order.forEach((i, k) => expect(shuffled[k]).toBeCloseTo(shares[i], 9))
+  })
+
+  it('never reaches zero, even when the budget is below the minimal thinning', () => {
+    const expected = [1000, 1000, 1000]
+    const shares = thinning([0, 5000, 10_000], expected, 30)
+    expect(shares.reduce((n, m, i) => n + m * expected[i], 0)).toBeCloseTo(30, 6)
+    expect(Math.min(...shares)).toBeGreaterThan(0)
   })
 })
 
@@ -150,6 +229,16 @@ describe('helpers', () => {
     expect(new Set(values).size).toBe(200)
     expect(hash01(3, 4, 1)).toBe(hash01(3, 4, 1))
     expect(hash01(3, 4, 1)).not.toBe(hash01(3, 4, 2))
+  })
+
+  it('finds the nearest track as the exhaustive measure does, over long tracks', () => {
+    const wiggle = (lat: number, n: number): LonLat[] => Array.from({ length: n }, (_, i) => ({ lon: 6 + i * 0.001, lat: lat + 0.01 * Math.sin(i / 40) }))
+    const paths = [wiggle(45, 300), wiggle(45.2, 1), wiggle(45.3, 100), []]
+    for (const p of [{ lon: 6.05, lat: 45.02 }, { lon: 6.4, lat: 45.25 }, { lon: 5, lat: 44 }, { lon: 6.2, lat: 45.31 }]) {
+      const exhaustive = Math.min(...paths.filter((q) => q.length > 0).map((q) => distanceToPath(p, q)))
+      expect(distanceToPaths(p, paths)).toBeCloseTo(exhaustive, 6)
+    }
+    expect(distanceToPaths({ lon: 6, lat: 45 }, [])).toBe(0)
   })
 
   it('measures the distance to the track', () => {
