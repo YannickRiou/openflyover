@@ -98,7 +98,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/scene/touchGesture.ts` | fingers moving the 3D view (lower pixel ratio, see "Device budget") | tested: `watchTouchGesture`, `TOUCH_SETTLE_MS` |
 | `src/offline/*` | offline tile packs (see "Offline packs") | pure, tested: `planOfflineTiles`, `packImageryLevel`, `splitDistanceM`, `CORRIDOR_WIDTHS_M`, `MAX_PACK_TILES` (`plan.ts`); `offlinePolicy`, `OFFLINE_POLICIES` (`policy.ts`); `startPackDownload`, `createDailyQuota` (`download.ts`); `createPackRegistry`, `createStoredTileReader`, `packIdFor`, `sourcePrefixes` (`packs.ts`); not pure: `useOfflineStore`, `installOfflineTiles`, `preparePack`, `pausePack`, `resumePack`, `cancelPack`, `deletePack` (`store.ts`), `OfflinePanel` (`src/ui`) |
 | `src/state/store.ts` | zustand state | `useAppStore`, `Settings`, `Playback`, `AppState`, `resetAppStore` |
-| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested); `StatusBar.tsx` (see "Status bar"), `ErrorBoundary.tsx` |
+| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `openedTracksAction`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested); `openChoice.ts` + `OpenChoiceDialog.tsx` (« Que faire de ce fichier ? », see "Project"); `StatusBar.tsx` (see "Status bar"), `ErrorBoundary.tsx` |
 | `src/ui/primitives/*` | HeroUI wrappers: the only place that imports `@heroui/react` (see "Interface", « Primitives ») | `Button`, `Tip`, `Menu`, `Popover`, `Modal`, `Toast`, `Tabs` / `TabList` / `Tab` / `TabPanel`, `Disclosure`, `Switch`, `Checkbox`, `Chip`, `RadioGroup` / `Radio`, `ToggleButtonGroup`, `ColorField`, `Select`, `Slider`, `NumberField`, `TextField`, `DateField`, `TimeField`, `Titled`; `overlay.ts` (`isModalOpen`, `openDialog`, panel classes); `coarse.ts` (`useCoarsePointer`); `index.ts` exports them; the skins are `<name>.css` |
 | `src/ui/theme.css` + `utilities.css` + `src/index.css` | styling (see "Interface", « Styling ») | Tailwind setup, tokens (`@theme`), named variants and HeroUI imports (`theme.css`); `@utility` classes (`utilities.css`); reset and page base (`index.css`); `fonts.css`, `appearance.css` |
 
@@ -896,11 +896,22 @@ The interface and the texts drawn into the films and posters exist in **French**
   speed applies on top. **Duration or speed** (`src/flyover/flightSpeed.ts`, pure; `src/ui/FlightDurationField.tsx`): the one setting
   has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change). The
   marker's *average* speed is derived: km/h = length ÷ duration (`speedKmh`, the length of the film track: all the stages of
-  « À la suite »), « × temps réel » = recorded time ÷ duration (`speedUpFactor`; the recorded time is the sum of the stages' own corrected durations, `recordedTotalS`, nights between days not counted; none for a track without times: km/h only).
+  « À la suite »), « × l'allure réelle » = **moving time** ÷ duration (`speedUpFactor`). The moving time (`movingTimeS`) is the
+  track's time minus its stops (`findPauses`, the rule of « Retirer les pauses »: within 15 m for 2 min), every gap of over 10 min between two points (recorder off) and the gaps between
+  segments, so a lunch, a bivouac or a night are not counted (a day walked at 2 km/h read × 150 against the 24 h of the file, it
+  now reads × 50 for 100 km/h); the duration typed in « Corriger les chiffres » is taken as it is; `movingTotalS` sums the
+  stages' own, the nights between days not counted; none for a track without times: km/h only. The panel writes both and the
+  average pace walked (`speedKmh(length, moving)`): « Vitesse du marqueur dans le film : 99 km/h, soit × 50 votre allure réelle
+  (vous avanciez à 2,0 km/h : 8 h 15 en mouvement… ») on both faces.
   Typing a speed gives the duration back (`durationForKmh`, `durationForSpeedUp`: rounded to a whole second, clamped to the
   range, so the speed shown afterwards may differ by the second's granularity). The speed slider spans the duration range on a
-  log scale (`speedPosition`, `durationAtPosition`, 1,000 notches). Stops, slow-motion, speed portions and « Garder la durée du
-  survol » are untouched: they take their time from the duration, which is why the speed is an average; a stage with its own
+  log scale (`speedPosition`, `durationAtPosition`, 1,000 notches). **What the duration counts**: with « Garder la durée du
+  survol » (the default) the stops, slow-motion and speed portions are taken inside it, so the flight (the « Survol » block,
+  `clock.flightS`) lasts exactly `flyoverDurationS`; unticked they are added. Always added, whatever « Garder »: the nights
+  shown as pauses and the holds between stages (`extra` pauses of the clock). `flightExtras` names what makes the flight longer
+  than the duration (nights, stops with « Garder » unticked, the rest) and the panel prints it under the film length: « Film :
+  44 s · 1 arrêt » (the main figure), « Ouverture 5 s + survol 33 s + clôture 6 s. Au-delà des 25 s réglées, le survol compte :
+  1 nuit (8 s). » (the 4.2.0 report: 25 s typed gave a 33 s block because the 24 h outing crossed a night); a stage with its own
   duration keeps it. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra" and "Durée et rythme" sections; the
   smoothing sliders as rows of « Caméra », « Lissage des virages » showing the « Auto » length for
   the first track). While paused, a camera setting change repositions the camera.
@@ -1920,6 +1931,20 @@ The interface and the texts drawn into the films and posters exist in **French**
   save, « Enregistrer sous… » or « Ouvrir » and forgotten by `closeProject` / `newProject`. « Enregistrer » (the save icon of the top bar,
   Ctrl+S) = `saveProject`, « Enregistrer sous… » (Projet tab, Ctrl+Maj+S) = `saveProjectAs`; a failed write keeps the project
   « Modifié »; the autosave to « Mes projets » is unchanged (plain JSON).
+- **« Que faire de ce fichier ? »**: `openFiles` (`projectActions.ts`) is the one door of « Ouvrir » (top bar, Projet tab, Ctrl+O), of a
+  drop on the window and of the shared files of the installed web app (the files the system opens go through it too, but only
+  project files are associated with the desktop app).
+  When the project already holds a track and the files are GPX / FIT (`openedTracksAction`, pure, `shell.ts`: `ask` or `add`;
+  no question for an empty project, a project file in the batch, or files that are not GPX / FIT), one question covers every file
+  (`askOpenChoice`, `openChoice.ts`, shown by `OpenChoiceDialog` mounted in `App`): « Ajouter la trace à ce projet » (initial
+  focus; the import and the chaining offer as before), « Commencer un nouveau projet » (`newProjectWith`: the same closing
+  as « Nouveau projet », « Fermer sans enregistrer ? » answered in the same dialog through `askUnsavedChanges`, then the files
+  are imported into the empty project, the first-import message offering « Film automatique… »; « Rien n'a changé » when that
+  question is cancelled) or « Annuler » (Esc: nothing changes). The dialog lists the GPX / FIT files only, the others go along
+  and the importer reports them. Guards: a new `openFiles` cancels the question still open (`dismissOpenQuestions`), nothing is
+  opened or closed while an export or a batch runs (checked again after each answer), and a project file that cannot be read
+  stops the batch (its message is shown, the tracks are not added to the project it did not replace). Not asked: the « Ajouter » button of the Trace tab (`chooseTracksToImport`), « Choisir un fichier » of the home screen,
+  the Strava import and the sample (they already say « add » or start from nothing), nor the files the app is started with.
 - **Desktop opening** (`src-tauri/src/opened.rs`, `src/platform/openedFiles.ts`): a `.opnflvr` or `.json` argv path (Windows and
   Linux), or a macOS `RunEvent::Opened`, is added to the fs scope and queued; the command `opened_files` hands the queue over once,
   the event `openflyover://opened-files` (macOS, app running) makes the frontend take it again; `reopenLastProject` takes the
@@ -1961,8 +1986,12 @@ The interface and the texts drawn into the films and posters exist in **French**
   speed, no block selected, imagery choice forgotten so the next import picks the regional imagery), history cleared,
   name emptied, marked saved, no open entry (`setOpenEntry(null)`, which forgets the remembered last project): the home
   screen appears by itself, the closed project among its « Récents ». « Nouveau projet » then opens the GPX / FIT
-  picker. Disabled during an export; « Fermer le projet » also when nothing is open. Removing the last track still keeps
-  the project open and empty.
+  picker. Disabled during an export; « Fermer le projet » also when nothing is open. Removing the last track (the ✕ of its
+  card, `removeTrackOrCloseProject`; the other tracks go through `removeTrack` of the store) closes the project through
+  the same `closeOpenProject` (same question, shown in place in the track list; disabled during an export or a batch /
+  render queue): the home screen and the quit guard then find an empty, unmodified project. « Annuler » in the message
+  (`showUntilTracksChange`) puts the project back as it was (`keepProject`, like `keepOpenProject` of the render queue:
+  same objects, media table, project file, saved snapshot, open entry; the undo history stays empty).
 - **"modifié" chip + "Par défaut" button** (`ui/ModifiedMarker.tsx`) at the top right of each settings panel: list
   of the panel's `Settings` keys, deep-compared with the values of `DEFAULT_SETTINGS` (`modifiedSettings` /
   `sameValue`, `project/apply.ts`); "Par défaut" resets these keys to default in a single history step (`resetSettings`,

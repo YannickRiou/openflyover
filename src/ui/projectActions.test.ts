@@ -8,6 +8,8 @@ import { decodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, resetAppStore, useAppStore } from '../state/store'
 import { useLibraryStore } from './library'
+import { resetExportStore, useExportStore } from '../export/store'
+import { useOpenChoiceStore } from './openChoice'
 import type { CloseAnswer } from './projectActions'
 import { isProjectDirty } from './shell'
 import { useToastStore } from './toast'
@@ -18,7 +20,18 @@ const platform = vi.hoisted(() => ({
 }))
 vi.mock('../platform', async (original) => ({ ...(await original<object>()), getPlatform: () => platform }))
 
-const { chooseProjectToOpen, closeProject, newProject, openProject, reopenLastProject, saveProject, saveProjectAs } = await import('./projectActions')
+// the GPX parser needs a DOM: a file becomes a track named after it
+vi.mock('../import', async (original) => ({
+  ...(await original<object>()),
+  importFile: async (file: File) => {
+    if (!/\.gpx$/.test(file.name)) throw new Error('Format non supporté')
+    return [
+    buildTrack({ name: file.name.replace(/\.gpx$/, ''), source: 'gpx', segments: [{ points: [{ lon: 6.86, lat: 45.92, ele: 1000 }, { lon: 6.87, lat: 45.93, ele: 1100 }] }] }),
+  ]
+  },
+}))
+
+const { chooseProjectToOpen, closeProject, newProject, openFiles, openProject, removeTrackOrCloseProject, reopenLastProject, saveProject, saveProjectAs } = await import('./projectActions')
 
 const rando = () =>
   buildTrack({
@@ -56,7 +69,9 @@ const rememberingPlatform = () =>
 beforeEach(() => {
   resetAppStore()
   useToastStore.setState({ toasts: [] })
-  useLibraryStore.setState({ currentId: null })
+  useLibraryStore.setState({ currentId: null, entries: [] })
+  useOpenChoiceStore.setState({ choice: null, unsaved: null })
+  resetExportStore()
   platform.saveDocument.mockReset()
   platform.openFiles.mockReset()
 })
@@ -334,6 +349,116 @@ describe('closeProject / newProject', () => {
   })
 })
 
+describe('removeTrackOrCloseProject', () => {
+  const answering = (answer: CloseAnswer) => vi.fn(async () => answer)
+  const second = () => ({ ...rando(), id: 'second', name: 'Autre' })
+  const closed = () => {
+    const s = useAppStore.getState()
+    expect(s.tracks).toEqual([])
+    expect(s.settings).toEqual(DEFAULT_SETTINGS)
+    expect(s.projectName).toBe('')
+    expect(s.projectFile).toBeNull()
+    expect(dirty()).toBe(false)
+    expect(useLibraryStore.getState().currentId).toBeNull()
+    expect(useMediaStore.getState().table).toEqual({})
+  }
+
+  it('the last track of a saved project closes it without a question: nothing left to save when quitting', async () => {
+    await savedFile()
+    useAppStore.getState().setProjectFile({ fileName: 'Rando.opnflvr' })
+    useLibraryStore.setState({ currentId: 'p-1' })
+    useToastStore.setState({ toasts: [] })
+    const ask = answering('cancel')
+    await removeTrackOrCloseProject(useAppStore.getState().tracks[0].id, ask)
+    expect(ask).not.toHaveBeenCalled()
+    closed()
+    expect(toasts()).toEqual([{ kind: 'success', text: 'Projet « Rando » fermé' }])
+  })
+
+  it('a modified project asks first: « Annuler » keeps everything, « Fermer sans enregistrer » closes it', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const id = useAppStore.getState().tracks[0].id
+    const cancel = answering('cancel')
+    await removeTrackOrCloseProject(id, cancel)
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(useAppStore.getState().tracks).toHaveLength(1)
+    expect(useAppStore.getState().settings.exaggeration).toBe(2)
+    expect(dirty()).toBe(true)
+    expect(toasts()).toEqual([])
+
+    await removeTrackOrCloseProject(id, answering('close'))
+    closed()
+    expect(platform.saveDocument).not.toHaveBeenCalled()
+  })
+
+  it('« Annuler » in the message puts the track and the project back as they were', async () => {
+    await savedFile()
+    useAppStore.getState().setProjectFile({ fileName: 'Rando.opnflvr' })
+    useAppStore.getState().setSetting('exaggeration', 3)
+    useMediaStore.setState({ table: { 'photo-1': {} as MediaAsset } })
+    useLibraryStore.setState({ currentId: 'p-1', entries: [{ id: 'p-1' } as never] })
+    const before = useAppStore.getState()
+    const media = useMediaStore.getState().table
+    useToastStore.setState({ toasts: [] })
+    await removeTrackOrCloseProject(before.tracks[0].id, answering('close'))
+    closed()
+
+    const [toast] = useToastStore.getState().toasts
+    expect(toast.action?.label).toBe('Annuler')
+    toast.action!.run()
+    const after = useAppStore.getState()
+    expect(after.tracks).toBe(before.tracks)
+    expect(after.settings).toBe(before.settings)
+    expect(after.projectName).toBe('Rando')
+    expect(after.projectFile).toEqual({ fileName: 'Rando.opnflvr' })
+    expect(after.savedProject).toBe(before.savedProject)
+    expect(dirty()).toBe(true)
+    expect(useMediaStore.getState().table).toEqual(media)
+    expect(useLibraryStore.getState().currentId).toBe('p-1')
+    expect(getSettingsHistory().getState().canUndo).toBe(false)
+  })
+
+  it('a second click while the question is open asks nothing more; tracks that came meanwhile keep the project open', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const id = useAppStore.getState().tracks[0].id
+    let answer!: (a: CloseAnswer) => void
+    const ask = vi.fn(() => new Promise<CloseAnswer>((resolve) => (answer = resolve)))
+    const first = removeTrackOrCloseProject(id, ask)
+    await vi.waitFor(() => expect(ask).toHaveBeenCalledTimes(1))
+    await removeTrackOrCloseProject(id, ask)
+    expect(ask).toHaveBeenCalledTimes(1)
+    // an import arrives before the answer
+    useAppStore.getState().addTracks([second()])
+    answer('close')
+    await first
+    expect(useAppStore.getState().tracks).toHaveLength(2)
+    expect(toasts()).toEqual([])
+    expect(dirty()).toBe(true)
+  })
+
+  it('« Annuler » does not bring back an entry deleted from « Mes projets » meanwhile', async () => {
+    await savedFile()
+    useLibraryStore.setState({ currentId: 'p-1', entries: [{ id: 'p-1' } as never] })
+    await removeTrackOrCloseProject(useAppStore.getState().tracks[0].id, answering('close'))
+    useLibraryStore.setState({ entries: [] })
+    useToastStore.getState().toasts.at(-1)!.action!.run()
+    expect(useLibraryStore.getState().currentId).toBeNull()
+  })
+
+  it('a track that is not the last one just goes: the project stays open', async () => {
+    useAppStore.getState().addTracks([rando(), second()])
+    useAppStore.getState().setProjectName('Rando')
+    const ask = answering('cancel')
+    await removeTrackOrCloseProject('second', ask)
+    expect(ask).not.toHaveBeenCalled()
+    expect(useAppStore.getState().tracks).toHaveLength(1)
+    expect(useAppStore.getState().projectName).toBe('Rando')
+    expect(toasts()).toEqual([])
+  })
+})
+
 describe('reopenLastProject', () => {
   it('opens the files the system started the app with', async () => {
     const file = await savedFile()
@@ -342,5 +467,151 @@ describe('reopenLastProject', () => {
     await reopenLastProject(Promise.resolve(false), opened)
     expect(useAppStore.getState().projectName).toBe('Rando')
     expect(opened).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('openFiles with a project that holds tracks', () => {
+  const gpx = (name: string) => new File(['<gpx/>'], `${name}.gpx`)
+  const names = () => useAppStore.getState().tracks.map((track) => track.name)
+  const choice = () => useOpenChoiceStore.getState().choice
+
+  it('asks once for every file, and « Ajouter » adds them to the open project', async () => {
+    useAppStore.getState().addTracks([rando()])
+    const done = openFiles([gpx('a'), gpx('b')])
+    expect(choice()?.names).toEqual(['a.gpx', 'b.gpx'])
+    expect(names()).toEqual(['Rando'])
+    choice()!.answer('add')
+    await done
+    await vi.waitFor(() => expect(names()).toEqual(['Rando', 'a', 'b']))
+  })
+
+  it('« Annuler » changes nothing', async () => {
+    useAppStore.getState().addTracks([rando()])
+    const done = openFiles([gpx('a')])
+    choice()!.answer('cancel')
+    await done
+    expect(names()).toEqual(['Rando'])
+    expect(useAppStore.getState().loading).toBe(false)
+  })
+
+  it('« Commencer un nouveau projet » closes the open project, then imports the files into the empty one', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    useAppStore.getState().markProjectSaved()
+    const done = openFiles([gpx('a')])
+    choice()!.answer('new')
+    await done
+    await vi.waitFor(() => expect(names()).toEqual(['a']))
+    expect(useAppStore.getState().settings.exaggeration).toBe(DEFAULT_SETTINGS.exaggeration)
+    // the first import of a project: the message offers « Film automatique »
+    expect(useToastStore.getState().toasts.some((toast) => toast.action?.label === 'Film automatique…')).toBe(true)
+  })
+
+  it('a new project with unsaved changes asks « Fermer sans enregistrer ? » first; « Annuler » keeps everything', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const done = openFiles([gpx('a')])
+    choice()!.answer('new')
+    await vi.waitFor(() => expect(useOpenChoiceStore.getState().unsaved).not.toBeNull())
+    expect(useOpenChoiceStore.getState().unsaved!.text).toBe('Les changements de « Rando » ne sont pas enregistrés.')
+    useOpenChoiceStore.getState().unsaved!.answer('cancel')
+    await done
+    expect(names()).toEqual(['Rando'])
+    expect(useAppStore.getState().settings.exaggeration).toBe(2)
+  })
+
+  it('« Annuler » of « Fermer sans enregistrer ? » says that nothing changed', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const done = openFiles([gpx('a')])
+    choice()!.answer('new')
+    await vi.waitFor(() => expect(useOpenChoiceStore.getState().unsaved).not.toBeNull())
+    useOpenChoiceStore.getState().unsaved!.answer('cancel')
+    await done
+    expect(toasts()).toEqual([{ kind: 'info', text: "Rien n'a changé" }])
+  })
+
+  it('a second open while a question is shown cancels it: the first files never wipe the second ones', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 2)
+    const first = openFiles([gpx('a')])
+    const firstQuestion = choice()
+    const second = openFiles([gpx('b')])
+    expect(choice()).not.toBe(firstQuestion)
+    expect(choice()?.names).toEqual(['b.gpx'])
+    await first
+    // a drop while « Fermer sans enregistrer ? » is open
+    choice()!.answer('new')
+    await vi.waitFor(() => expect(useOpenChoiceStore.getState().unsaved).not.toBeNull())
+    const third = openFiles([gpx('c')])
+    expect(useOpenChoiceStore.getState().unsaved).toBeNull()
+    await second
+    expect(names()).toEqual(['Rando'])
+    expect(choice()?.names).toEqual(['c.gpx'])
+    choice()!.answer('cancel')
+    await third
+    expect(names()).toEqual(['Rando'])
+  })
+
+  it('lists the GPX / FIT files only; the others go along and the importer reports them', async () => {
+    useAppStore.getState().addTracks([rando()])
+    const done = openFiles([gpx('a'), new File(['x'], 'notes.txt')])
+    expect(choice()?.names).toEqual(['a.gpx'])
+    choice()!.answer('add')
+    await done
+    await vi.waitFor(() => expect(names()).toEqual(['Rando', 'a']))
+    expect(toasts().some((toast) => toast.kind === 'error' && toast.text.includes('notes.txt'))).toBe(true)
+  })
+
+  it('a project file that cannot be read stops the batch: its tracks do not go to the project it did not replace', async () => {
+    useAppStore.getState().addTracks([rando()])
+    await openFiles([new File(['not a project'], 'broken.opnflvr'), gpx('a')])
+    expect(names()).toEqual(['Rando'])
+    expect(choice()).toBeNull()
+    expect(toasts().some((toast) => toast.kind === 'error' && toast.text.includes('broken.opnflvr'))).toBe(true)
+  })
+
+  it('opens nothing while an export runs, nor after an export started during the question', async () => {
+    useAppStore.getState().addTracks([rando()])
+    useExportStore.setState({ phase: 'rendering' })
+    await openFiles([gpx('a')])
+    expect(choice()).toBeNull()
+    expect(toasts()).toEqual([{ kind: 'info', text: "Un export est en cours : le fichier n'a pas été ouvert." }])
+    useExportStore.setState({ phase: 'idle' })
+    useToastStore.setState({ toasts: [] })
+
+    // « Ajouter » answered once the export started
+    let done = openFiles([gpx('a')])
+    useExportStore.setState({ phase: 'rendering' })
+    choice()!.answer('add')
+    await done
+    expect(names()).toEqual(['Rando'])
+
+    // « Commencer un nouveau projet » answered once the export started, then the unsaved question answered too
+    useExportStore.setState({ phase: 'idle' })
+    useAppStore.getState().setSetting('exaggeration', 2)
+    done = openFiles([gpx('a')])
+    choice()!.answer('new')
+    await vi.waitFor(() => expect(useOpenChoiceStore.getState().unsaved).not.toBeNull())
+    useExportStore.setState({ phase: 'rendering' })
+    useOpenChoiceStore.getState().unsaved!.answer('close')
+    await done
+    expect(names()).toEqual(['Rando'])
+    expect(useAppStore.getState().settings.exaggeration).toBe(2)
+  })
+
+  it('an empty project imports straight away, without a question', async () => {
+    const done = openFiles([gpx('a')])
+    expect(choice()).toBeNull()
+    await done
+    await vi.waitFor(() => expect(names()).toEqual(['a']))
+  })
+
+  it('a project file is opened without a question, even with tracks open', async () => {
+    const project = await savedFile()
+    const done = openFiles([project])
+    expect(choice()).toBeNull()
+    await done
+    expect(names()).toEqual(['Rando'])
   })
 })

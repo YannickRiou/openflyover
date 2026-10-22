@@ -14,6 +14,7 @@ import { disableCard, editFilm, getFilmSource, seekKeyframe, useFilmClock } from
 import { useAppStore } from './state/store'
 import { CameraPanel } from './ui/CameraPanel'
 import { DiagnosticDialog } from './ui/DiagnosticDialog'
+import { OpenChoiceDialog } from './ui/OpenChoiceDialog'
 import { EmptyState } from './ui/EmptyState'
 import { GradingPanel } from './ui/GradingPanel'
 import { HelpDialog } from './ui/HelpDialog'
@@ -616,6 +617,7 @@ export default function App() {
       <StatusBar />
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       <DiagnosticDialog />
+      <OpenChoiceDialog />
       <SeekShortcuts />
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-100 flex items-center justify-center bg-ink/60 p-8 fade-in" aria-hidden="true">

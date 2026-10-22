@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { StatsOverride, Track } from '../core/types'
+import { useBatchStore } from '../export/batch'
 import { isExportBusy, useExportStore } from '../export/store'
 import { t, useT } from '../i18n'
 import {
@@ -43,7 +44,9 @@ import { getTerrainSource } from '../terrain/sources'
 import { formatClock, formatDistance, formatDistanceGap, formatNumber, formatSecondsShort, formatTimeGap, formatTrackSummary } from './format'
 import { Icon } from './icons'
 import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
-import { chainLoadedTracks, chooseTracksToImport } from './projectActions'
+import { unsavedChangesText } from './library'
+import { chainLoadedTracks, chooseTracksToImport, removeTrackOrCloseProject } from './projectActions'
+import type { CloseAnswer } from './projectActions'
 import { StravaDialog } from './StravaImport'
 import { TrackToolsButton } from './TrackTools'
 import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TextField, TimeField, Tip } from './primitives'
@@ -702,13 +705,36 @@ export function TrackList() {
   const t = useT()
   const tracks = useAppStore((s) => s.tracks)
   const race = useAppStore((s) => s.settings.race)
-  const removeTrack = useAppStore((s) => s.removeTrack)
   const setTrackColor = useAppStore((s) => s.setTrackColor)
   const flyTrack = useAppStore((s) => s.flyTrack)
   // the stages are moved by hand « À la suite »; a « Bilan » has the order of the dates
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const inSequence = useAppStore((s) => playsInSequence(s.settings.race, s.tracks.length) && !playsBilan(s.settings.race, s.tracks.length))
   const busy = useExportStore((s) => isExportBusy(s.phase))
+  // the last track goes with the project: not under a batch or a render queue, which show it between two films
+  const batching = useBatchStore((s) => s.phase === 'running')
+  /** « Fermer sans enregistrer ? » in place, when removing the last track would lose changes */
+  const [question, setQuestion] = useState<{ answer(a: CloseAnswer): void } | null>(null)
+  const ask = () =>
+    new Promise<CloseAnswer>((resolve) =>
+      setQuestion({
+        answer(a) {
+          setQuestion(null)
+          resolve(a)
+        },
+      }),
+    )
+  // the question is about the project it was asked for: other tracks, or an export, cancel it
+  useEffect(() => {
+    if (!question) return
+    if (busy || batching) {
+      question.answer('cancel')
+      return
+    }
+    return useAppStore.subscribe((state, previous) => {
+      if (state.tracks !== previous.tracks) question.answer('cancel')
+    })
+  }, [question, busy, batching])
   /** the list in the order of the stages « À la suite », the list order otherwise */
   const shown = useMemo(() => orderedTracks(tracks, race), [tracks, race])
   const listRef = useRef<HTMLUListElement>(null)
@@ -841,6 +867,18 @@ export function TrackList() {
         </h2>
         <AddTracksMenu />
       </div>
+      {question && (
+        <div className="mb-2 flex flex-col gap-2 rounded-md bg-surface-card p-3">
+          <p className="type-hint" role="alert">
+            <strong>{t('project.library.closeQuestion')}</strong> {unsavedChangesText()}
+          </p>
+          <Button autoFocus onClick={() => question.answer('save')}>
+            {t('common.save')}
+          </Button>
+          <Button onClick={() => question.answer('close')}>{t('project.library.closeNoSave')}</Button>
+          <Button onClick={() => question.answer('cancel')}>{t('common.cancel')}</Button>
+        </div>
+      )}
       {tracks.length === 0 ? (
         <p className="rounded-md bg-surface-card p-3 text-center text-body text-text-2">{t('track.list.empty')}</p>
       ) : (
@@ -920,8 +958,8 @@ export function TrackList() {
                   variant="icon"
                   className={`${CARD_BUTTON} col-start-4`}
                   aria-label={t('track.list.deleteAria', { name: track.name })}
-                  disabled={busy}
-                  onClick={() => removeTrack(track.id)}
+                  disabled={busy || batching}
+                  onClick={() => void removeTrackOrCloseProject(track.id, ask)}
                 >
                   <Icon name="x" size={16} />
                 </Button>

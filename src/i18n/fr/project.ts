@@ -104,4 +104,8 @@ export default {
   'presets.scope.habillage': 'Habillage et étiquettes 3D',
   'presets.scope.prise-de-vue': 'Prise de vue (caméra, soleil, exposition)',
   'presets.nameRequired': 'Donnez un nom au préréglage.',
+  'openAsk.title': { one: 'Que faire de ce fichier ?', other: 'Que faire de ces fichiers ?' },
+  'openAsk.add': { one: 'Ajouter la trace à ce projet', other: 'Ajouter les traces à ce projet' },
+  'openAsk.new': 'Commencer un nouveau projet',
+  'openAsk.unchanged': "Rien n'a changé",
 }

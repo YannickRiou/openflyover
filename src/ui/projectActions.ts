@@ -6,8 +6,10 @@
  */
 import { errorMessage } from '../core/errors'
 import type { Track } from '../core/types'
+import { useBatchStore } from '../export/batch'
+import { isExportBusy, useExportStore } from '../export/store'
 import { useMediaStore } from '../film/media'
-import { importFile, importText } from '../import'
+import { importFile, importText, supportedExtension } from '../import'
 import { chainTracks, followEachOther, replaceByChain } from '../import/chain'
 import { fileTargetOf, getPlatform } from '../platform'
 import type { OpenFilesOptions, ProjectEntry } from '../platform'
@@ -15,12 +17,13 @@ import { applyEmptyProject, applyProject } from '../project/apply'
 import { parseProject, projectFileName, serializeProject } from '../project/document'
 import { PROJECT_EXTENSION, decodeProjectFile, encodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
-import { useAppStore } from '../state/store'
+import { imageryChoiceKept, keepImageryChoice, useAppStore } from '../state/store'
 import { setAutoFilmOpen } from './autoFilmOpen'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
-import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry } from './library'
-import { effectiveProjectName, routeOpenedFiles } from './shell'
+import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry, unsavedChangesText, useLibraryStore } from './library'
+import { askOpenChoice, askUnsavedChanges, dismissOpenQuestions } from './openChoice'
+import { effectiveProjectName, openedTracksAction, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
 import type { ToastInput } from './toast'
 import { t } from '../i18n'
@@ -77,7 +80,7 @@ export async function saveExportedFile(url: string, fileName: string): Promise<v
  * Replace everything by the project in `file`; says so, with the warnings of the file, or why it failed. `entry`: the
  * « Mes projets » entry it comes from (its name wins, it is saved automatically from now on); `reopened` at start-up.
  */
-export async function openProject(file: File, entry: ProjectEntry | null = null, reopened = false): Promise<void> {
+export async function openProject(file: File, entry: ProjectEntry | null = null, reopened = false): Promise<boolean> {
   // a change of the project being replaced, still waiting for its autosave
   await flushAutosave()
   try {
@@ -94,9 +97,11 @@ export async function openProject(file: File, entry: ProjectEntry | null = null,
     const opened = t(reopened ? 'project.actions.reopened' : 'project.actions.opened', { name: effectiveProjectName(name, store.tracks[0]?.name) })
     if (project.warnings.length > 0) showToast({ kind: 'info', text: t('project.actions.openedWarnings', { opened, warnings: project.warnings.join('\n') }) })
     else showToast({ kind: 'success', text: opened })
+    return true
   } catch (err) {
     const reason = errorMessage(err)
     showToast({ kind: 'error', text: t('project.actions.openFailed', { fileName: file.name, reason }) })
+    return false
   }
 }
 
@@ -111,10 +116,14 @@ export type CloseAnswer = 'save' | 'close' | 'cancel'
 /**
  * Replace the open project by an empty one with the default settings (the home screen shows): its waiting change is
  * written to « Mes projets » first, then `ask` only when changes would still be lost. False when it stays open.
+ * `beforeEmptying`: called once it is decided, with the project still as it is; it may return false to keep it open.
  */
-async function closeOpenProject(ask: () => Promise<CloseAnswer>): Promise<boolean> {
+async function closeOpenProject(ask: () => Promise<CloseAnswer>, beforeEmptying?: () => boolean | void): Promise<boolean> {
   const closing = await confirmClose({ flush: flushAutosave, loss: projectCloseLoss, ask, save: saveProject })
   if (!closing) return false
+  // the render may have started during the question: its project must not be emptied under it
+  if (refuseWhileExporting()) return false
+  if (beforeEmptying?.() === false) return false
   applyEmptyProject()
   getSettingsHistory().clear()
   const store = useAppStore.getState()
@@ -132,9 +141,92 @@ export async function closeProject(ask: () => Promise<CloseAnswer>): Promise<voi
   if (await closeOpenProject(ask)) showToast({ kind: 'success', text: t('project.actions.closed', { name }) })
 }
 
-/** « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import. */
+/**
+ * « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import (dialog).
+ */
 export async function newProject(ask: () => Promise<CloseAnswer>): Promise<void> {
   if (await closeOpenProject(ask)) await chooseTracksToImport()
+}
+
+/** `newProject` with the files already chosen; false (and says so) when the open project stays. */
+async function newProjectWith(files: readonly File[], ask: () => Promise<CloseAnswer>): Promise<boolean> {
+  const closed = await closeOpenProject(ask)
+  if (closed) importTrackFiles(files)
+  else if (!exportRunning()) showToast({ kind: 'info', text: t('project.openAsk.unchanged') })
+  return closed
+}
+
+/** An export or a batch is running (it keeps the shell locked between its jobs too). */
+function exportRunning(): boolean {
+  return isExportBusy(useExportStore.getState().phase) || useBatchStore.getState().phase === 'running'
+}
+
+/** Says why nothing was opened when an export is running. */
+function refuseWhileExporting(): boolean {
+  if (!exportRunning()) return false
+  showToast({ kind: 'info', text: t('shell.exportBusy') })
+  return true
+}
+
+/** What the open project is made of, to put it back as it was (as the render queue does after a run). */
+function keepProject(): () => void {
+  const s = useAppStore.getState()
+  const kept = {
+    tracks: s.tracks,
+    bounds: s.bounds,
+    frameOrigin: s.frameOrigin,
+    settings: s.settings,
+    playback: s.playback,
+    projectName: s.projectName,
+    projectFile: s.projectFile,
+    savedProject: s.savedProject,
+    filmSelection: s.filmSelection,
+    filmKeys: s.filmKeys,
+    workArea: s.workArea,
+  }
+  const media = useMediaStore.getState().table
+  const imageryChosen = imageryChoiceKept()
+  const entry = useLibraryStore.getState().currentId
+  return () => {
+    // the settings coming back are not a step of the undo history
+    const resume = getSettingsHistory().suspend()
+    keepImageryChoice(imageryChosen)
+    useMediaStore.getState().replace(media)
+    useAppStore.setState(kept)
+    // the entry may have been deleted from « Mes projets » meanwhile
+    setOpenEntry(useLibraryStore.getState().entries.some((e) => e.id === entry) ? entry : null)
+    useAppStore.getState().requestFit()
+    resume()
+  }
+}
+
+/** true while the last track is being removed (awaiting the last write or the answer) */
+let closingLastTrack = false
+
+/**
+ * The ✕ of a track card. The last track of the project goes with the project, as « Fermer le projet » (the home screen
+ * shows, nothing is left to save): the same question when changes would be lost, then « Annuler » in the message puts
+ * the track and the project back. The other tracks just go.
+ */
+export async function removeTrackOrCloseProject(id: string, ask: () => Promise<CloseAnswer>): Promise<void> {
+  const { tracks, projectName, removeTrack } = useAppStore.getState()
+  if (tracks.length !== 1 || tracks[0].id !== id) return removeTrack(id)
+  // a second click, while the last write or the answer is awaited, would close (and keep) the project twice
+  if (closingLastTrack) return
+  closingLastTrack = true
+  const name = effectiveProjectName(projectName, tracks[0].name)
+  let putBack = () => {}
+  try {
+    const closed = await closeOpenProject(ask, () => {
+      // other tracks came in meanwhile (import, opened project): that project is not the one asked about
+      if (useAppStore.getState().tracks !== tracks) return false
+      putBack = keepProject()
+    })
+    if (!closed) return
+  } finally {
+    closingLastTrack = false
+  }
+  showUntilTracksChange({ kind: 'success', text: t('project.actions.closed', { name }), action: { label: t('common.undo'), run: () => putBack() } })
 }
 
 let reopening: Promise<void> | null = null
@@ -158,11 +250,28 @@ export function reopenLastProject(rendering: Promise<boolean>, openedByOs: () =>
   return reopening
 }
 
-/** Files picked with « Ouvrir » or dropped on the window: the first project is opened, the tracks are imported. */
+/**
+ * Files picked with « Ouvrir », dropped on the window or opened by the system: the first project is opened, the tracks
+ * are imported; when the open project holds tracks, « Que faire de ce fichier ? » first (added to it, or a new project).
+ */
 export async function openFiles(files: readonly File[]): Promise<void> {
+  // a question still open is about the files before these: it is cancelled
+  dismissOpenQuestions()
+  if (refuseWhileExporting()) return
   const { project, tracks, extraProjects } = routeOpenedFiles(files)
-  if (project) await openProject(project)
-  if (tracks.length > 0) importTrackFiles(tracks)
+  // an unreadable project: said by its message, the tracks of the same batch do not go to the project it did not replace
+  if (project && !(await openProject(project))) return
+  if (tracks.length > 0) {
+    if (openedTracksAction({ project, tracks }, useAppStore.getState().tracks.length) === 'add') importTrackFiles(tracks)
+    else {
+      // the question names the tracks; the other files go along and the importer says what it cannot read
+      const choice = await askOpenChoice(tracks.filter((file) => supportedExtension(file.name)).map((file) => file.name))
+      // an export may have started during the question
+      if (choice !== 'cancel' && refuseWhileExporting()) return
+      if (choice === 'add') importTrackFiles(tracks)
+      else if (choice === 'new') await newProjectWith(tracks, () => askUnsavedChanges(unsavedChangesText()))
+    }
+  }
   if (extraProjects.length > 0) {
     showToast({ kind: 'info', text: t('project.actions.extraProjects', { names: extraProjects.map((f) => t('common.quoted', { text: f.name })).join(', ') }) })
   }
