@@ -35,6 +35,8 @@ const messages: Messages['status'] = {
   'source.forest': 'Forests (OpenStreetMap)',
   'chip.queued': '{source}: waiting, the other OpenStreetMap loads go first',
   forestError: 'Forests (OpenStreetMap): loading failed, there will be no trees. Tried again with the next track or the next setting change.',
+  // 4.1 — Glaciers
+  'source.glacier': 'Glaciers (OpenStreetMap)',
 }
 
 export default messages

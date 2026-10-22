@@ -35,6 +35,8 @@ const messages: Messages['status'] = {
   'source.forest': 'Foreste (OpenStreetMap)',
   'chip.queued': '{source}: in attesa, gli altri caricamenti OpenStreetMap vengono prima',
   forestError: 'Foreste (OpenStreetMap): caricamento non riuscito, non ci saranno alberi. Nuovo tentativo alla prossima traccia o alla prossima modifica delle impostazioni.',
+  // 4.1 — Glaciers
+  'source.glacier': 'Ghiacciai (OpenStreetMap)',
 }
 
 export default messages

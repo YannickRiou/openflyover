@@ -81,6 +81,8 @@ const messages: Messages['settings'] = {
   'updates.confirmText': 'OpenFlyover will close to install version {version}, then restart.',
   // --- 4.1.0: « Forêts » chip of the status bar ---
   'preferences.status.forest': 'Forests',
+  // 4.1 — Glaciers
+  'preferences.status.glacier': 'Glaciers',
 }
 
 export default messages

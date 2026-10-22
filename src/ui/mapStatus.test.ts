@@ -73,6 +73,7 @@ describe('fetchChip', () => {
     expect(fetchChip('weather', 'idle')).toBeNull()
     expect(fetchChip('weather', 'loading')).toMatchObject({ label: 'Météo', tone: 'loading' })
     expect(fetchChip('water', 'ready')).toMatchObject({ label: 'Eau', tone: 'ready' })
+    expect(fetchChip('glacier', 'error')).toMatchObject({ label: 'Glaciers', tone: 'attention' })
     expect(fetchChip('landmarks', 'error', 'Serveur saturé')).toEqual({ label: 'Repères', tone: 'attention', tip: 'Serveur saturé' })
     expect(fetchChip('region', 'none')?.tone).toBe('muted')
     expect(fetchChip('forest', 'queued')).toMatchObject({ label: 'Forêts', tone: 'loading', tip: expect.stringContaining('en attente') })

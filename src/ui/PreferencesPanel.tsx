@@ -19,6 +19,7 @@ const STATUS_LABELS: Record<StatusChip, string> = {
   get region() { return t('settings.preferences.status.region') },
   get water() { return t('settings.preferences.status.water') },
   get forest() { return t('settings.preferences.status.forest') },
+  get glacier() { return t('settings.preferences.status.glacier') },
 }
 
 const PERF_LABELS: Record<PerfItem, string> = {

@@ -179,4 +179,6 @@ export default {
   'forest.density': 'Densité des arbres',
   'forest.densityValue': '{n} arbres par hectare',
   'forest.densityTip': 'Nombre d’arbres dessinés par hectare de forêt, près de la trace ; plus loin, il y en a moins. Plus il y en a, plus l’aperçu et l’export sont lents. L’appareil limite le nombre total d’arbres (moins sur téléphone et tablette).',
+  // 4.1 — Glaciers
+  'snow.glaciers': 'Les glaciers cartographiés par OpenStreetMap sont toujours blancs, quelle que soit la limite.',
 }

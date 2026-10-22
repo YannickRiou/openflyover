@@ -84,6 +84,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/osm/water.ts` + `src/osm/coast.ts` + `src/scene/waterMesh.ts` + `src/scene/riverStrip.ts` + `src/scene/WaterLayer.tsx` | reflective water (sea, lakes, rivers) | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`); `waterLinesQuery`, `parseWaterShapes`, `fetchTrackWaterShapes`, `runsOutside`, `lineWidthM`, `LINE_WIDTH_M`; `seaPolygons`, `chainCoastWays`, `reduceCoast`, `seaSide`, `seaCells`; `buildSeaMesh`; `buildRiverStrip`, `stripHeights` |
 | `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `cloudCoverField`, `zonedCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`); `patchRegionalCoverage`, `patchCloudShadow` (`scene/cloudShaders.ts`) |
 | `src/osm/forest.ts` + `src/scene/forestPoints.ts` + `src/scene/treeGeometry.ts` + `src/scene/ForestLayer.tsx` | forests (see "Forests") | `ForestSettings`, `DEFAULT_FOREST`, `FOREST_DENSITY_RANGE`, `isValidForest`, `FOREST_MARGIN_M`, `forestQuery`, `parseForest`, `fetchTrackForest`; `placeTrees`, `treeKind`, `densityFactor`, `hash01`, `CHUNK_M`, `ForestChunk`; `createTreeGeometries`, `TREE_WIDTH_RATIO`; `ForestLayer`, `FOREST_FAR_M`, `FOREST_FADE_M`; `useForestStore` (`osm/store.ts`) |
+| `src/osm/glacier.ts` + `src/scene/glacierMesh.ts` + `src/scene/glacierMaterial.ts` + `src/scene/GlacierLayer.tsx` | glaciers (see "Glaciers") | `GLACIER_MARGIN_M`, `MIN_GLACIER_AREA_M2`, `GlacierPolygon`, `glacierQuery`, `parseGlacier`, `fetchTrackGlacier`; `buildGlacierMesh`, `fillHeights`; `createGlacierMaterial`; `GlacierLayer`, `GLACIER_LIFT_M`; `useGlacierStore` (`osm/store.ts`), `useGlacierStatusStore` (`glacierStatus.ts`) |
 | `src/scene/cloudSea.ts` + `src/scene/CloudSeaSurface.tsx` | surface sea of clouds | `seaRelief`, `billow`, `gradientNoise`, `octaveWeight`, `seaNoisePoint`, `seaBaseAltitude`, `curvatureDropM`, `edgeFade`, `rimFade`, `buildRadialGrid`, `terrainBoxOf`, `terrainGridCentres`, `seaReliefGlsl`, `glslFloat`; `CloudSeaSurface` |
 | `src/scene/grading.ts` + `gradingEffect.ts` + `GradingComposer.tsx` | color grading | `GradingSettings`, `DEFAULT_GRADING`, `GRADING_PRESETS`, `GRADING_RANGES`, `isValidGrading`, `isIdentityGrading`, `matchingPreset`, `gradingOfPreset`, `withGradingValue`, `gradingUniforms`; `GradingEffect`; `useGradingEffect`, `GradingComposer` |
 | `src/scene/lens.ts` + `useLensEffects.ts` + `flareEffect.ts` + `shutterEffect.ts` | « Objectif » lens effects (see "Lens") | pure, tested: `LensSettings`, `DEFAULT_LENS`, `LENS_RANGES`, `isValidLens`, `withLensDefaults`, `lensActive`, `bloomParams`, `depthOfFieldParams`, `SHUTTER_SUBFRAMES`, `SHUTTER_STEP_PX`, `shutterSamples`, `adaptiveShutterSamples`, `viewMotionPx`, `subFrameCount`, `previewShutterWeight`, `radialBlurLength`, `setShutterSubFrame`, `shutterSubFrame`, `subFrameSlices`; `useLensEffects`, `FlareEffect`, `ShutterEffect`; `filmViewAt` (`filmView.ts`: the camera placement of `FlyoverRig` at a progress and film time, shared with the export); `LensPanel` (`src/ui`) |
@@ -530,8 +531,8 @@ pointer (`appearance.css`).
   "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
   99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
   erreur" (N tiles in error) in yellow with a tip; nothing before the first tile; not a live region, the ring is a
-  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau / Forêts from `useWeatherStore`,
-  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`; `STATUS_CHIPS`
+  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau / Forêts / Glaciers from `useWeatherStore`,
+  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`, `useGlacierStatusStore` in `scene/glacierStatus.ts`; `STATUS_CHIPS`
   in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed shows it; `fetchChip` in `mapStatus.ts`;
   spinner / check / attention with the store message / muted; « Forêts » has a fifth state, `queued` « en attente », spinner like loading:
   the request waits for the Overpass queue, `onStart` of `cachedOverpassQuery`); a performance readout when the bar is at least 900 px
@@ -3037,11 +3038,12 @@ summer aerial photo. Settings in « Météo » › « Neige » (`settings.snow`)
   The manual line is not keyable on the timeline: keys are a closed list of parameters (`FILM_PARAMS`).
 - **Limits**: the snow depth is the model's (a ~9 km cell chosen near the requested elevation, 2 cm of snow is already
   « snow at the station »); the mean temperature of the day hides night frost and afternoon thaw; one line for the whole view
-  (no difference between sunny and shaded slopes, no wind drift); permanent snow that the weather does not mention (glaciers in
-  summer) is not drawn; the panel describes the first track only; frozen lakes are white like the ground (the water layer
+  (no difference between sunny and shaded slopes, no wind drift); permanent snow that the weather does not mention is drawn only where
+  OpenStreetMap maps a glacier (see "Glaciers"), not on a snowfield it does not map; the panel describes the first track only; frozen lakes are white like the ground (the water layer
   stays dark where it is drawn); not in the render history (`RenderSettings`).
 - **Tuning**: the physics constants are at the top of `snowLine.ts` (lapse rate, 2 cm and 20 cm thresholds, bands); the look
   is in `snowShader.ts` (`fragmentSnow`: noise cell sizes, slope thresholds, albedo, 0.94 maximum cover).
+  `SNOW_ALBEDO_GLSL` and `SNOW_NOISE_GLSL` (same file) are also used by the glaciers.
 ## Forests (« Forêts »)
 
 Wooded valleys looked flat: the aerial photo shows the trees painted on the ground. Trees are now drawn as simple 3D volumes
@@ -3112,6 +3114,44 @@ draped on the relief.
   the trees cast no shadow (the shadow map covers tens of km, `TerrainShadow`: a tree's shadow would be a few
   texels wide); the forests are not in the render history's
   `RenderSettings`; `forestPoints.ts` and `forest.ts` import the ring helpers of `water.ts` and `clipRing` of `waterMesh.ts`.
+
+## Glaciers (« Glaciers »)
+
+The snow of "Snow" follows the weather of the day: in summer the glaciers and permanent snowfields show only the ice of the aerial
+photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow look whatever the snow line. Same pipeline as
+"Forests" for the data and "Reflective water" for the mesh and the draping.
+
+- **Data** (`src/osm/glacier.ts`, pure and tested): same client, queue and 30-day cache as the other Overpass layers
+  (`cachedOverpassQuery`), one request per track, only if `settings.snow.mode !== 'aucune'` (« Aucune » leaves the ground as in the photo):
+  `way` / multipolygons `natural=glacier`, `out geom qt`, in the boxes of the corridor widened to **5 km** (`GLACIER_MARGIN_M`).
+  The reduction is that of the forests (`parseForest`, imported: it reads the geometry of ways and multipolygons and does not look at the tags, so
+  the query alone says it is about glaciers): relation rings stitched, holes attached, Douglas–Peucker 8 m. Then `parseGlacier` drops the polygons
+  under 20,000 m² (`MIN_GLACIER_AREA_M2`), keeps the largest 200 (`MAX_GLACIER_POLYGONS`) within 20,000 vertices (`MAX_GLACIER_VERTICES`), and keeps
+  `{ id, outer, holes }` only (the `leaf` key of the forests never appears). Only this compact result is cached. Measured (`docs/sources.md`):
+  Chamonix–Mer de Glace–Couvercle track of 10.7 km: 70 elements, 658 kB in 37.6 s on a busy public server, 72 polygons, 5,949 vertices, 115 kB cached; Pyrenean sample: no glacier
+  (an empty answer, 287 bytes).
+- **Pure mesh** (`src/scene/glacierMesh.ts`, tested): `buildGlacierMesh` is `buildWaterMesh` (the grid of 60 m cells, at most 40 per side, each ring clipped to each cell
+  by `clipRing`, every piece triangulated with its holes, `fade` = distance to the nearest edge / 40 m, capped at 1): the vertices lie inside the glacier and follow the relief.
+  The Chamonix track gives 39,930 triangles (77,708 vertices) for the 72 glaciers, +1.5 % over the ~2.7 M triangles of the terrain, built in ~0.5 s.
+  `fillHeights` gives the vertices whose tile is not loaded the median of the known heights of their glacier (null when none is known: the glacier waits).
+- **Draping** (`GlacierLayer`, before `WaterLayer` in `FlyoverCanvas`): like the water, `engine.sampleHeight` × exaggeration + `GLACIER_LIFT_M` (4 m, not exaggerated:
+  at 1.5 m the coarse levels of detail of the relief rose through the ice as hard-edged patches), re-draped (debounced, flushed by the export through `registerDrapeFlush`) on each
+  `engine.onChange`. The **normal** of each vertex comes from two more heights, 25 m to the east and to the north (`NORMAL_STEP_M`), so the sun and the terrain's shadows shade the
+  ice like the relief. The **flow** of a glacier (downhill, the mean of its normals) is one attribute per glacier. One merged geometry (one draw call), `raycast` off, `depthWrite` off, a polygon offset
+  (−4, −8), `renderOrder` −1 (drawn before the water: a glacial lake stays water).
+- **Material** (`src/scene/glacierMaterial.ts`): `MeshStandardMaterial` (roughness 0.85, `receiveShadow`) extended in `onBeforeCompile`, no texture, no time (the export is deterministic).
+  The albedo is that of the snow (`SNOW_ALBEDO_GLSL`, linear 0.80, 0.83, 0.88); the light the sky gives (what the shade receives) is multiplied by (0.9, 0.97, 1.1), so the shade is a little bluer.
+  **Crevasses**: thin dark lines (the iso-line of a hash noise, `SNOW_NOISE_GLSL` of `snowShader.ts`) of cells 5 m across and 40 m along the flow of the glacier, a second set of 13 m cells, only in
+  patches (a 140 m noise), on slopes (none on a flat névé) and gone where their cells are under ~2 pixels (no shimmer). **Slope**: the opacity falls to 35 % on the steepest faces (seracs keep some rock). **Edge**:
+  the opacity follows `fade` (`smoothstep`), so the outline is not a hard cut. Opacity 0.9 on a gentle slope: the photo's own crevasses stay faintly visible.
+- **Setting**: none of its own. Glaciers follow « Météo › Neige »: drawn in « Selon la météo du jour » and « Manuelle », not in « Aucune »; the panel says so in one sentence
+  (`light.snow.glaciers`). No project format change: an old project opens with the glaciers when its snow is not « Aucune ».
+- **Credit and chip**: « © contributeurs OpenStreetMap » (status bar, film and poster) counts the glaciers like the water and the forests (`useGlacierStore.polygons > 0`).
+  A status chip « Glaciers » (loading / ready / error, `useGlacierStatusStore` in `scene/glacierStatus.ts`, `STATUS_CHIPS` of `ui/shell.ts`, shown by default, hidden in « Réglages ») is added like the water's.
+- **Limits**: only what OpenStreetMap maps as `natural=glacier` is drawn (a snowfield, a firn basin or a glacier it does not map shows the photo); a glacier is white on the whole polygon, with
+  no snout colour, no moraine, no ice-fall shape; the polygons are OpenStreetMap's, not the year's (a glacier that retreated is drawn where it was mapped); the ice is 4 m above the relief, which shows at a few metres from the ground; crevasses
+  are a texture, not relief; very small glaciers (under 2 ha) and any beyond the 200 largest or the 20,000 vertices are left out; one Overpass request of several seconds (up to ~40 s on a busy server) on the first load of a track.
+  A failed request is only retried on the next track or setting change and the chip says « erreur ». Not in the render history's `RenderSettings`.
 
 ## Ghost race (phase 7)
 

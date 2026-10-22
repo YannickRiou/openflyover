@@ -71,6 +71,7 @@ const CHIP_LABELS: Record<StatusChip, string> = {
   get region() { return t('settings.preferences.status.region') },
   get water() { return t('settings.preferences.status.water') },
   get forest() { return t('settings.preferences.status.forest') },
+  get glacier() { return t('settings.preferences.status.glacier') },
 }
 const CHIP_SOURCES: Record<StatusChip, string> = {
   get weather() { return t('status.source.weather') },
@@ -78,6 +79,7 @@ const CHIP_SOURCES: Record<StatusChip, string> = {
   get region() { return t('status.source.region') },
   get water() { return t('status.source.water') },
   get forest() { return t('status.source.forest') },
+  get glacier() { return t('status.source.glacier') },
 }
 
 /**

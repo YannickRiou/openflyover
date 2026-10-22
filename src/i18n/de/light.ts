@@ -181,6 +181,8 @@ const messages: Messages['light'] = {
   'forest.density': 'Baumdichte',
   'forest.densityValue': '{n} Bäume pro Hektar',
   'forest.densityTip': 'Anzahl der pro Hektar Wald gezeichneten Bäume, nahe der Strecke; weiter weg sind es weniger. Je mehr es sind, desto langsamer werden Vorschau und Export. Das Gerät begrenzt die Gesamtzahl der Bäume (weniger auf Handy und Tablet).',
+  // 4.1 — Glaciers
+  'snow.glaciers': 'Von OpenStreetMap kartierte Gletscher sind immer weiß, egal wo die Grenze liegt.',
 }
 
 export default messages

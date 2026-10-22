@@ -35,6 +35,8 @@ const messages: Messages['status'] = {
   'source.forest': 'Wälder (OpenStreetMap)',
   'chip.queued': '{source}: wartet, die anderen OpenStreetMap-Ladevorgänge kommen zuerst',
   forestError: 'Wälder (OpenStreetMap): Laden fehlgeschlagen, es gibt keine Bäume. Neuer Versuch bei der nächsten Strecke oder der nächsten Einstellungsänderung.',
+  // 4.1 — Glaciers
+  'source.glacier': 'Gletscher (OpenStreetMap)',
 }
 
 export default messages

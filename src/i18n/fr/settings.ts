@@ -79,4 +79,6 @@ export default {
   'updates.confirmText': 'OpenFlyover va se fermer pour installer la version {version}, puis redémarrer.',
   // --- 4.1.0: « Forêts » chip of the status bar ---
   'preferences.status.forest': 'Forêts',
+  // 4.1 — Glaciers
+  'preferences.status.glacier': 'Glaciers',
 }

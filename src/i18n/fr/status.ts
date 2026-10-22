@@ -33,4 +33,6 @@ export default {
   'source.forest': 'Forêts (OpenStreetMap)',
   'chip.queued': '{source} : en attente, les autres chargements OpenStreetMap passent avant',
   forestError: 'Forêts (OpenStreetMap) : échec du chargement, il n’y aura pas d’arbres. Nouvel essai à la prochaine trace ou au prochain changement de réglage.',
+  // 4.1 — Glaciers
+  'source.glacier': 'Glaciers (OpenStreetMap)',
 }
