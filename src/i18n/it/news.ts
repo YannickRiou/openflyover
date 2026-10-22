@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Acqua riflettente: il mare e i fiumi tracciati come linee (4.0)
   'v40.water.title': 'Compaiono il mare e i torrenti',
   'v40.water.text': 'Lungo una costa, il mare viene ora disegnato. I fiumi e i torrenti che la mappa traccia solo come una linea diventano sottili nastri d’acqua. Tutto si regola con «Acqua riflettente (mare, laghi e fiumi)», nella scheda Mappa, sezione Sfondo mappa.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'I laghi ghiacciano, i torrenti restano visibili',
+  'v41.ice.text': 'Sopra il limite della neve, i laghi diventano ghiaccio, bianchi come il terreno attorno. E visti dall’alto, i torrenti mantengono un sottile filo d’acqua invece di sparire.',
 }
 
 export default messages

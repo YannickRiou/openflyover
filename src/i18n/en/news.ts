@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Reflective water: the sea and the rivers drawn as lines (4.0)
   'v40.water.title': 'The sea and the streams appear',
   'v40.water.text': 'Along a coast, the sea is now drawn. Rivers and streams that the map only draws as a line become thin ribbons of water. Everything is set with “Reflective water (sea, lakes and rivers)”, in the Map tab, Map background section.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Lakes freeze, streams stay visible',
+  'v41.ice.text': 'Above the snow line, lakes turn to ice, as white as the ground around them. And seen from high up, streams keep a thin line of water instead of vanishing.',
 }
 
 export default messages

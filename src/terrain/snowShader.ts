@@ -15,6 +15,8 @@ import type { MeshStandardMaterial } from 'three'
 export const NO_SNOW_LINE_M = 1e6
 /** Earth radius (metres): the local frame is flat at its origin, the ground curves away below it. */
 const EARTH_RADIUS_M = 6_371_000
+/** Drop of the ground below the local frame per squared metre of distance to its origin (GLSL float literal); shared with the frozen lakes of the water layer. */
+export const GROUND_DROP_PER_M2 = (0.5 / EARTH_RADIUS_M).toExponential(6)
 
 export const snowUniforms = {
   /** altitude above sea level of the middle of the transition (metres, not exaggerated) */
@@ -60,7 +62,7 @@ float snowNoise(vec2 p, float size) {
 const fragmentSnow = /* glsl */ `
 if (snowLine < ${NO_SNOW_LINE_M.toFixed(1)} * 0.5) {
   // altitude above sea level: the height of the scene, plus the drop of the ground away from the origin
-  float snowAlt = (vSnowPos.y + dot(vSnowPos.xz, vSnowPos.xz) * ${(0.5 / EARTH_RADIUS_M).toExponential(6)}) / snowExaggeration;
+  float snowAlt = (vSnowPos.y + dot(vSnowPos.xz, vSnowPos.xz) * ${GROUND_DROP_PER_M2}) / snowExaggeration;
   float snowRag = 0.55 * snowNoise(vSnowPos.xz, 70.0) + 0.3 * snowNoise(vSnowPos.xz, 25.0) + 0.15 * snowNoise(vSnowPos.xz, 9.0) - 0.5;
   // 0 under the transition, 1 above it, its limit torn by the noise
   float snowCover = smoothstep(-0.5 * snowBand, 0.5 * snowBand, snowAlt - snowLine + snowRag * snowBand * 0.9);

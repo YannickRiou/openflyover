@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.1.0 (unreleased)
+
+- **Frozen lakes**: a lake above the snow line (« Neige », weather of the day or manual) turns into matt white ice, without waves or sun glint, over the same transition as the snow of the ground. Rivers and the sea are not frozen.
+- **Streams visible from high up**: the rivers drawn as lines are widened as the camera rises, so a stream stays at least about 1.5 pixels wide on a 1080-pixel-high film (at most 4 times its real width).
+
 ## 4.0.0 (October 2026)
 
 - **A film in one click**: the « Survol » tab starts with « Film automatique ». Three gabarits, « Reel 30 s » (vertical, 30 s), « Résumé 1 min » and « Souvenir 3 min » (16:9), set in one step the length, camera, slow motion and stops, overlay style, opening title and closing card with their figures, day or stage cards and the export format. « Annuler » puts everything back, and everything stays editable. Your own texts and the stops you placed by hand are never replaced. No music is added.

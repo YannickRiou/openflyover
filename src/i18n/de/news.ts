@@ -111,6 +111,9 @@ const messages: Messages['news'] = {
   // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
   'v40.water.title': 'Meer und Bäche erscheinen',
   'v40.water.text': 'Entlang einer Küste wird jetzt das Meer gezeichnet. Flüsse und Bäche, die die Karte nur als Linie zeigt, werden zu schmalen Wasserbändern. Alles wird mit „Spiegelndes Wasser (Meer, Seen und Flüsse)“ eingestellt, im Tab Karte, Abschnitt Hintergrundkarte.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Seen frieren zu, Bäche bleiben sichtbar',
+  'v41.ice.text': 'Oberhalb der Schneegrenze werden Seen zu Eis, so weiß wie der Boden ringsum. Und aus großer Höhe behalten Bäche eine feine Wasserlinie, statt zu verschwinden.',
 }
 
 export default messages

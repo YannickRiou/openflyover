@@ -2963,6 +2963,16 @@ exports) gets it from the terrain source of the settings.
   in the reflected direction raised above the horizon / π (fixed glacier color without the atmosphere); opacity = bank fade
   × mix(0.82, 1, Fresnel) × `strength`. A function of the film time only: the export stays deterministic. The sea is told
   from the rest by a vertex attribute (`waterSea`): its waves are 3 × longer and 1.5 × taller.
+  **Ice** (4.1): a second attribute, `waterLake`, marks the lakes (not the river areas, the sea or the ribbons). The material reads the terrain's own
+  `snowUniforms` (`snowLine`, `snowBand`, `snowExaggeration`, the same objects, no copy) and, for a lake whose altitude
+  (`(y + r²/2R) / exaggeration`, like the terrain's) is above the line, blends over the same `smoothstep` of the band `waterIce` from 0 to 1: albedo
+  (0.78, 0.83, 0.90) (the snow's, a little bluer), roughness 1 (no sun glint), no sky reflection, waves × (1 − ice), opacity 1 × strength. A lake is flat, so it is
+  all water, all ice, or all in the transition (the terrain's ragged noise is not applied). « Manuelle » and « Aucune » follow the same uniforms; a function of the uniforms only, so
+  the export is deterministic.
+  **Minimum width of a ribbon** (4.1): the drape gives each vertex of a ribbon `waterEdge`, its offset from the middle vertex (`ribbonEdgeOffsets`, zero elsewhere); the vertex shader
+  pushes the banks along it so that the ribbon is at least `MIN_STREAM_FRACTION` of the frame high on screen (1.5 px of a 1080 p frame: size of a pixel at
+  its depth `depth × 2 / projection[1][1] × fraction`), up to `MAX_STREAM_WIDENING` (4) × its width. The fraction of the frame rather than pixels: a function of the camera and the
+  projection only, so the export frames the same streams as the preview, whatever its resolution.
 - **Setting**: `settings.water { enabled, strength }` (true, 1; `SETTING_CHECKS`: 0 ≤ strength ≤ 1), "Eau reflétante (mer,
   lacs et rivières)" (reflective water: sea, lakes and rivers; « Lacs et rivières reflétants » before 4.0, same field, so the
   render history and the old projects are unchanged) checkbox and "Intensité de l'eau" (water intensity) slider in the "Fond de carte" section.
@@ -2970,7 +2980,8 @@ exports) gets it from the terrain source of the settings.
   level); a very steep river keeps 60 m steps; only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is
   the OSM coast cut by the relief, so a DEM below 0.5 m just inside the OSM coast is flooded (tidal flats, estuaries up to the
   limit OSM maps as coast); a river mapped in a gap of its own riverbank polygon is drawn over it; a stream is a 2.5 m ribbon,
-  hardly visible from high; lines are only the 200 km widest. The "© contributeurs OpenStreetMap" credit (status bar and
+  widened up to 4 × from high (4.1), so from the orbit it is a thin, faint line (the fade towards its banks is kept); rivers, ribbons and the sea never freeze (moving water; only the
+  lakes do); a lake freezes by its DEM level, as a whole (no ragged limit inside it); lines are only the 200 km widest. The "© contributeurs OpenStreetMap" credit (status bar and
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
 
@@ -3021,8 +3032,8 @@ summer aerial photo. Settings in « Météo » › « Neige » (`settings.snow`)
 - **Limits**: the snow depth is the model's (a ~9 km cell chosen near the requested elevation, 2 cm of snow is already
   « snow at the station »); the mean temperature of the day hides night frost and afternoon thaw; one line for the whole view
   (no difference between sunny and shaded slopes, no wind drift); permanent snow that the weather does not mention (glaciers in
-  summer) is not drawn; the panel describes the first track only; frozen lakes are white like the ground (the water layer
-  stays dark where it is drawn); not in the render history (`RenderSettings`).
+  summer) is not drawn; the panel describes the first track only; lakes above the line freeze (4.1, see "Reflective water": ice, the same band, rivers and the sea stay water);
+  not in the render history (`RenderSettings`).
 - **Tuning**: the physics constants are at the top of `snowLine.ts` (lapse rate, 2 cm and 20 cm thresholds, bands); the look
   is in `snowShader.ts` (`fragmentSnow`: noise cell sizes, slope thresholds, albedo, 0.94 maximum cover).
 ## Forests (« Forêts »)

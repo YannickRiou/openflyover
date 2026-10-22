@@ -109,4 +109,7 @@ export default {
   // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
   'v40.water.title': 'La mer et les ruisseaux apparaissent',
   'v40.water.text': 'Le long d’une côte, la mer est maintenant dessinée. Les rivières et les ruisseaux que la carte ne trace que comme une ligne deviennent de fins rubans d’eau. Tout se règle avec « Eau reflétante (mer, lacs et rivières) », dans l’onglet Carte, section Fond de carte.',
+  // 4.1 — frozen lakes, streams visible from high up
+  'v41.ice.title': 'Les lacs gèlent, les ruisseaux restent visibles',
+  'v41.ice.text': 'Au-dessus de la limite de la neige, les lacs deviennent de la glace, blanche comme le sol autour. Et vus de haut, les ruisseaux gardent un fin trait d’eau au lieu de disparaître.',
 }
