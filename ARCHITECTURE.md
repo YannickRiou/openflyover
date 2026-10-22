@@ -2607,7 +2607,7 @@ exports) gets it from the terrain source of the settings.
   playback `progress` of the moment they were added, which a project file does not hold) and a status (`pending`, `running`,
   `done`, `error`). `buildBatchJobs` gives the films, then the still image (PNG, at the « Vidéo » format), then the poster
   (`startPoster`, after the progress is put back), each with the statuses and file names of the batch (`jobCount` is the
-  « film 2 / 3 » total). **Reorder**: `moveItem` / `canMove` (pure) swap a `pending` item with the nearest `pending` one,
+  « élément 2 / 3 » total). **Reorder**: `moveItem` / `canMove` (pure) swap a `pending` item with the nearest `pending` one,
   the finished ones staying where they are; two buttons per waiting item (`move` of the store), allowed during a run since
   `runQueue` reads the live list. The export request is not stored: it is built from the snapshot when the item runs (`shownFilm()`, `buildBatchJobs`), since a request holds
   functions (`progressAt`). `runQueue` (pure, tested) takes the next `pending` item of the live list, a failure marks the item

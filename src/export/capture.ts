@@ -253,26 +253,34 @@ export interface WaitHost {
  * full rate: the worker runs `setTimeout` and posts a message back, and a message is neither delayed nor throttled in a
  * hidden page (the same property `turn` relies on). `create` makes the worker (an inline Blob URL: the CSP of the desktop
  * app allows `worker-src blob:`); where it cannot (no Worker, CSP, a test), `sleep` returns null and `wait` falls back to
- * `turn`. A worker that fails after the start frees its pending sleeps early: the callers poll again.
+ * `turn`. A worker that fails after the start (an error, an unreadable message, or no answer within the delay plus 2 s) is
+ * dropped and frees its pending sleeps early: the callers poll again, and later waits use `turn`.
  */
 export function createWorkerSleep(create: () => Worker): (ms: number) => Promise<void> | null {
   let worker: Worker | null | undefined
   let next = 0
-  const pending = new Map<number, () => void>()
+  const pending = new Map<number, { resolve(): void; watchdog: ReturnType<typeof setTimeout> }>()
+  const settle = (id: number) => {
+    const entry = pending.get(id)
+    if (!entry) return
+    clearTimeout(entry.watchdog)
+    pending.delete(id)
+    entry.resolve()
+  }
+  // the worker is dead (error, unreadable message, no answer in time): free every wait, later ones spin
   const give = () => {
+    const dead = worker
     worker = null
-    for (const resolve of pending.values()) resolve()
-    pending.clear()
+    dead?.terminate?.()
+    for (const id of [...pending.keys()]) settle(id)
   }
   return (ms) => {
     if (worker === undefined) {
       try {
         worker = create()
-        worker.onmessage = (event: MessageEvent<number>) => {
-          pending.get(event.data)?.()
-          pending.delete(event.data)
-        }
+        worker.onmessage = (event: MessageEvent<number>) => settle(event.data)
         worker.onerror = give
+        worker.onmessageerror = give
       } catch {
         worker = null
       }
@@ -281,11 +289,15 @@ export function createWorkerSleep(create: () => Worker): (ms: number) => Promise
     if (!current) return null
     return new Promise((resolve) => {
       const id = next++
-      pending.set(id, resolve)
+      // a worker that dies without an event never answers: the wait must not stay pending for ever
+      pending.set(id, { resolve, watchdog: setTimeout(give, ms + WORKER_GRACE_MS) })
       current.postMessage({ id, ms })
     })
   }
 }
+
+/** Time a worker has to answer, over the delay asked, before it is taken for dead. */
+const WORKER_GRACE_MS = 2000
 
 const WORKER_SOURCE = 'onmessage=(e)=>{const{id,ms}=e.data;setTimeout(()=>postMessage(id),ms)}'
 

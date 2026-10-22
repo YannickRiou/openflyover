@@ -390,6 +390,7 @@ describe('createWorkerSleep', () => {
     const worker = {
       onmessage: null as ((event: { data: number }) => void) | null,
       onerror: null as (() => void) | null,
+      onmessageerror: null as (() => void) | null,
       posted: [] as { id: number; ms: number }[],
       postMessage(message: { id: number; ms: number }) {
         worker.posted.push(message)
@@ -439,5 +440,32 @@ describe('createWorkerSleep', () => {
     worker.onerror?.()
     await expect(waiting).resolves.toBeUndefined()
     expect(sleep(5)).toBeNull()
+  })
+
+  it('frees the waits when the worker cannot read a message', async () => {
+    const worker = fakeWorker()
+    const sleep = createWorkerSleep(() => worker as unknown as Worker)
+    const waiting = sleep(1000)
+    worker.onmessageerror?.()
+    await expect(waiting).resolves.toBeUndefined()
+    expect(sleep(5)).toBeNull()
+  })
+
+  it('takes a worker that never replies for dead after the delay plus 2 s, and terminates it', async () => {
+    vi.useFakeTimers()
+    try {
+      const worker = { ...fakeWorker(), terminate: vi.fn() }
+      const sleep = createWorkerSleep(() => worker as unknown as Worker)
+      let done = false
+      void sleep(1000)?.then(() => (done = true))
+      await vi.advanceTimersByTimeAsync(2999)
+      expect(done).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(done).toBe(true)
+      expect(worker.terminate).toHaveBeenCalledOnce()
+      expect(sleep(5)).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

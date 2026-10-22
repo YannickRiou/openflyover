@@ -315,7 +315,7 @@ const messages: Messages['export'] = {
   'queue.removeLabel':'Quitar « {name} » de la cola',
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'interrumpido: empezará de nuevo desde el principio',
-  'queue.progress': 'película {index} / {total} · {percent} %',
+  'queue.progress': 'elemento {index} / {total} · {percent} %',
   'queue.help': 'Los proyectos se renderizan uno tras otro: cada uno se abre en lugar del proyecto abierto, que se deja tal cual al final. La carpeta de los archivos se pide al iniciar (la aplicación de escritorio la recuerda para las siguientes veces). Si la aplicación se cierra durante un renderizado, la cola se conserva: « Reanudar » vuelve a pedir la carpeta y rehace la película interrumpida desde su primera imagen (una película no continúa donde se detuvo). Un proyecto muy grande no se conserva al cerrar: hay que añadirlo de nuevo.',
   'queue.background': 'El renderizado continúa cuando la ventana está minimizada o la pestaña oculta, pero no cuando el dispositivo entra en suspensión (en un teléfono, mantenga la pantalla encendida).',
   'queue.finished': 'Cola terminada: todos los proyectos están renderizados.',

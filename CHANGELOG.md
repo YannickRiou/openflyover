@@ -5,7 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 4.1.0 (unreleased)
 
-- **Render queue**: two small arrows move a waiting project up or down. The still image and the poster ticked in « Plusieurs formats » are queued with the project (the still image where the playback was when it was added). The desktop app keeps the folder of the last run and does not ask again while the app stays open and the folder is there, and after a restart the dialog opens in it (« Changer de dossier » to pick another one); on the web it is still asked each time. Older queues open unchanged.
+- **Render queue**: two small arrows move a waiting project up or down. The still image and the poster ticked in « Plusieurs formats » are queued with the project (the still image where the playback was when it was added). The desktop app keeps the folder of the last run and does not ask again while the app stays open and the folder is there; after a restart, or if the folder is gone, the dialog opens in it. « Changer de dossier » forgets the folder, so the next run asks for a new one from scratch; on the web it is still asked each time. Older queues open unchanged.
 - **Rendering in the background no longer keeps a processor core busy**: with the tab hidden or the window minimised, the export waits for tiles on a timer that the browser does not slow down, instead of looping.
 
 ## 4.0.0 (October 2026)

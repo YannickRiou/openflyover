@@ -315,7 +315,7 @@ const messages: Messages['export'] = {
   'queue.removeLabel':'Remove “{name}” from the queue',
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'interrupted: will start again from the beginning',
-  'queue.progress': 'film {index} / {total} · {percent}%',
+  'queue.progress': 'item {index} / {total} · {percent}%',
   'queue.help': 'Projects are rendered one after the other: each opens in place of the project that is open, which is put back as it was at the end. The folder for the files is asked when you start (the desktop app remembers it for the next runs). If the app is closed during a render, the queue is kept: “Resume” asks for the folder again and renders the interrupted film again from its first image (a film does not carry on where it stopped). A very large project is not kept after closing: add it again.',
   'queue.background': 'Rendering carries on when the window is minimised or the tab is hidden, but not when the device goes to sleep (on a phone, keep the screen on).',
   'queue.finished': 'Queue finished: every project is rendered.',

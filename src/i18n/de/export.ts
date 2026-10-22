@@ -315,7 +315,7 @@ const messages: Messages['export'] = {
   'queue.removeLabel':'« {name} » aus der Warteschlange entfernen',
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'unterbrochen: beginnt von vorn',
-  'queue.progress': 'Film {index} / {total} · {percent} %',
+  'queue.progress': 'Element {index} / {total} · {percent} %',
   'queue.help': 'Die Projekte werden nacheinander gerendert: Jedes öffnet sich anstelle des geöffneten Projekts, das am Ende unverändert zurückkommt. Der Ordner für die Dateien wird beim Start abgefragt (die Desktop-App merkt ihn sich für die nächsten Läufe). Wird die App während eines Renderns geschlossen, bleibt die Warteschlange erhalten: « Fortsetzen » fragt den Ordner erneut ab und rendert den unterbrochenen Film von seinem ersten Bild an neu (ein Film macht nicht dort weiter, wo er stehen blieb). Ein sehr großes Projekt wird beim Schließen nicht behalten: Es muss erneut hinzugefügt werden.',
   'queue.background': 'Das Rendern läuft weiter, wenn das Fenster minimiert oder der Tab verborgen ist, nicht aber, wenn das Gerät in den Ruhezustand geht (auf einem Telefon den Bildschirm eingeschaltet lassen).',
   'queue.finished': 'Warteschlange beendet: Alle Projekte sind gerendert.',

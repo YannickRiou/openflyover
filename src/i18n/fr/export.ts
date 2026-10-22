@@ -313,7 +313,7 @@ export default {
   'queue.removeLabel':'Retirer « {name} » de la file',
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'interrompu : reprendra au début',
-  'queue.progress': 'film {index} / {total} · {percent} %',
+  'queue.progress': 'élément {index} / {total} · {percent} %',
   'queue.help': 'Les projets sont rendus l’un après l’autre : chacun s’ouvre à la place du projet ouvert, qui est remis tel quel à la fin. Le dossier des fichiers est demandé au lancement (l’application de bureau le retient pour les lancements suivants). Si l’application est fermée pendant un rendu, la file est gardée : « Reprendre » redemande le dossier et refait le film interrompu depuis sa première image (un film ne reprend pas là où il s’est arrêté). Un projet très gros n’est pas gardé après la fermeture : il faut l’ajouter de nouveau.',
   'queue.background': 'Le rendu continue quand la fenêtre est réduite ou l’onglet masqué, mais pas quand l’appareil se met en veille (sur un téléphone, gardez l’écran allumé).',
   'queue.finished': 'File terminée : tous les projets sont rendus.',

@@ -315,7 +315,7 @@ const messages: Messages['export'] = {
   'queue.removeLabel':'Rimuovi « {name} » dalla coda',
   'queue.formats': '{name} · {formats}',
   'queue.interrupted': 'interrotto: ricomincerà dall’inizio',
-  'queue.progress': 'film {index} / {total} · {percent} %',
+  'queue.progress': 'elemento {index} / {total} · {percent} %',
   'queue.help': 'I progetti vengono renderizzati uno dopo l’altro: ciascuno si apre al posto del progetto aperto, che alla fine viene rimesso com’era. La cartella dei file viene chiesta all’avvio (l’app desktop la ricorda per le volte successive). Se l’app viene chiusa durante un rendering, la coda resta: « Riprendi » chiede di nuovo la cartella e rifà il film interrotto dalla prima immagine (un film non riprende da dove si era fermato). Un progetto molto grande non viene conservato alla chiusura: va aggiunto di nuovo.',
   'queue.background': 'Il rendering continua quando la finestra è ridotta a icona o la scheda è nascosta, ma non quando il dispositivo va in stop (su un telefono, tieni lo schermo acceso).',
   'queue.finished': 'Coda terminata: tutti i progetti sono renderizzati.',
