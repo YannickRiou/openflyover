@@ -24,8 +24,40 @@ answer, an Overpass answer nor a Strava call, so third-party data is kept only w
 packs, see below; the weather and landmark caches of the app, in its local storage).
 
 The status bar, at the bottom of the screen, shows the attributions of the current terrain and imagery. Those of Open-Meteo and OpenStreetMap
-are added when the weather or the landmarks are loaded. The same lines are burned into exported videos and images
-([README, "Licenses"](../README.md#licenses)).
+are added when the weather or the landmarks are loaded. The same lines (the full form) close exported videos, and fill the
+poster and the images ([README, "Licenses"](../README.md#licenses)); during the film the short form below is the default.
+
+## Attribution in the film: short form / full form / where
+
+A video cannot carry a link, and a credit that fills the bottom of the image for the whole film is not read. The film therefore
+has two forms of each credit: a **short form** on screen while the film plays (« Habillage › Crédits des sources › Dans le
+film »: « Discrets », the default, shows it in small capitals, small and translucent, no box, in the corner already chosen by the
+user; « Complets » shows the full sentence instead; « À la fin seulement » shows nothing, except the credits that must stay on
+screen: Open-Meteo while the weather shows, and Esri) and the **full form** (the sentences of
+the « Displayed attribution » column above, one per source in use) that always closes the film, whatever the choice: under the
+closing card (at the end of its credits roll, which then stops with the sources on screen; without a roll, along the bottom edge
+over the last seconds of the film, lifted above the closing card or any widget it would cover, whatever the window of the card). The
+poster keeps the full form (print); the status bar keeps the full text in « Sources et licences ». « Copier les crédits » in the
+export drawer copies the full form with the page that states each attribution, for the description of the video. The short form is
+the name of the holder and nothing more, except where the terms ask for more (read 2026-10-22):
+
+| Source | Short form on screen | What the terms ask, and why the short form is enough |
+|---|---|---|
+| Mapterhorn | `© Mapterhorn` | Its own `tiles.json` attribution is exactly `© Mapterhorn`, linked to `mapterhorn.com/attribution` (the list of its 151 open sources, mostly CC BY 4.0 and similar). The page must be reachable: CC BY 4.0 (§ 3(a)(2)) lets the credit point to a page "in any reasonable manner", so the link is in the full form at the end and in the description. |
+| AWS Terrain Tiles / Tilezen | `Terrain Tiles (Mapzen / AWS)` | The AWS Open Data registry asks to cite the dataset; the per-source credits (USGS, NOAA, Copernicus, LINZ, Kartverket…) are in the list of `tilezen/joerd`. The full form lists the main ones, and the description holds the registry page. |
+| IGN (BD ORTHO, Plan IGN) | `© IGN` | Licence Ouverte Etalab 2.0 asks to name the producer (« paternité ») and, when possible, the date of the update: `© IGN` names it; the full form adds « Géoplateforme », the layer and the licence, and the date of the data stays in « Sources et licences » of the status bar. |
+| swisstopo (SWISSIMAGE, national map) | `© swisstopo` | Open Government Data: the source credit is mandatory, written « © Data: swisstopo » in its viewer; the name of the office is the credit. The full form adds the product and « OGD ». |
+| Esri World Imagery | `Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community` (in full) | « Powered by Esri » and the data providers (the `copyrightText` of the service) are mandatory and must stay visible with the map: nothing is cut, and it is the one imagery credit still drawn in the corner with « À la fin seulement » (`PERMANENT_CREDIT` in `src/overlay/data.ts`: a flag per source for any credit the terms ask to keep on the map). It is the longest short form. |
+| basemap.at | `Datenquelle: basemap.at` (in full) | CC BY 4.0: « Datenquelle: basemap.at » is the credit asked and already as short as it gets; the link to `basemap.at` is in the description. |
+| GSI Japan | `Source: GSI Japan` | Public Data License 1.0: credit GSI (国土地理院, 地理院タイル) with a link to the tile list, and say so when the tiles are edited. The English name stands on screen (the Japanese characters would need a font in the film); the full form adds « Geospatial Information Authority of Japan, GSI Tiles », the link to the list is in the description. |
+| USGS The National Map | `USDA, USGS The National Map` | Public domain: the credit asked is « USDA, USGS The National Map » (the « Orthoimagery » suffix of the full form is only the layer). |
+| OpenTopoMap | `© OpenStreetMap, SRTM · © OpenTopoMap (CC BY-SA)` | CC BY-SA: the attribution of its « About » page, « Kartendaten: © OpenStreetMap-Mitwirkende, SRTM \| Kartendarstellung: © OpenTopoMap (CC-BY-SA) », keeps the data, the rendering and the licence name; only the labels « Données » and « Rendu » are dropped. OpenStreetMap is not repeated. |
+| Open-Meteo | `Open-Meteo.com` | CC BY 4.0: credit with a link to the service (« Weather data by Open-Meteo.com » on their licence page). The name is on screen, the link (`open-meteo.com`, and its licence page) in the full form and in the description: a film cannot carry a link. With « À la fin seulement » the name stays in the corner while the weather shows, as before. |
+| OpenStreetMap | `© OpenStreetMap` | OSMF attribution guidelines (read 2026-10-22): « Attribution must be to "OpenStreetMap" », and « © OpenStreetMap » is an accepted form; for a video where the map is a major element, a credit on the map **and** the end credits or the description, with the URL `openstreetmap.org/copyright`. The full form is « Repères, eau, forêts et glaciers : © contributeurs OpenStreetMap (ODbL) », naming only the layers drawn, and the description holds the URL. |
+
+A project with the credits switched off before this setting existed opens with « À la fin seulement » (on opens with
+« Discrets »), so none loses its credits. Code: `creditEntries`, `overlayCredits`, `overlayShortCredits`, `creditsDescription`
+(`src/overlay/data.ts`); the page of each source is in `SOURCE_PAGES` there.
 
 The desktop application can check for a new version of itself, on demand: it contacts `github.com` (the release feed
 `latest.json`, then the update package if you install it) only when you press « Rechercher une mise à jour »

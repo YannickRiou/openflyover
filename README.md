@@ -234,10 +234,11 @@ Embedded files:
 
 **Exported videos.** They contain map data under its own license
 ([see the sources](#data-sources)). You must therefore credit these sources when you distribute a
-video. The application burns them in small print into a corner of each exported video and still image, and at the bottom of each poster (same lines as the status
-bar: terrain, imagery, and Open-Meteo / OpenStreetMap when the weather or the landmarks are loaded). These credits can be
-turned off in the "Habillage" panel ("Crédits des sources"): then credit the sources elsewhere, for example in the
-video description.
+video. The application burns them into each exported video and still image, and at the bottom of each poster (terrain, imagery,
+and Open-Meteo / OpenStreetMap when the weather or the landmarks are loaded). During the film they are discreet by default (the
+names of the holders in small capitals in a corner); "Habillage" › "Crédits des sources" can show the whole sentence instead, or
+nothing but the end of the film, which always closes with the full credits. "Copier les crédits" in the export drawer gives the
+text with its links for the description of the video. What each source requires is in [`docs/sources.md`](docs/sources.md#attribution-in-the-film-short-form--full-form--where).
 
 ## Contributing
 

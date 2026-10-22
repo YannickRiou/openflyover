@@ -80,7 +80,7 @@ describe('overlay settings', () => {
     expect(invalid).toEqual([])
     expect(settings.overlay).toEqual({ ...custom, minimap: DEFAULT_OVERLAY.minimap, credits: DEFAULT_OVERLAY.credits, leaderboard: DEFAULT_OVERLAY.leaderboard })
     expect(settings.overlay.minimap.enabled).toBe(false)
-    expect(settings.overlay.credits).toEqual({ enabled: true, position: 'bottom-right' })
+    expect(settings.overlay.credits).toEqual({ mode: 'short', position: 'bottom-right' })
     expect(settings.overlay.leaderboard).toEqual({ enabled: false, anchor: 'middle-right', size: 1 })
     // only the widgets added since are filled in
     expect(withOverlayDefaults(custom)).toBe(custom)
@@ -101,7 +101,20 @@ describe('overlay settings', () => {
   it('validates the credits', () => {
     expect(isValidOverlay(withPatch((o) => (o.credits.position = 'top-left')))).toBe(true)
     expect(isValidOverlay(withPatch((o) => (o.credits.position = 'center' as OverlaySettings['credits']['position'])))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => (o.credits.mode = 'never' as OverlaySettings['credits']['mode'])))).toBe(false)
     expect(sanitizeSettings({ overlay: { ...DEFAULT_OVERLAY, credits: { enabled: 'yes', position: 'top-left' } } }).invalid).toEqual(['overlay'])
+  })
+
+  it('opens the credits switch of before: on is « Discrets », off is « À la fin seulement »', () => {
+    const before = (enabled: boolean) => ({ ...DEFAULT_OVERLAY, credits: { enabled, position: 'top-left' } })
+    for (const [enabled, mode] of [[true, 'short'], [false, 'end']] as const) {
+      const { settings, invalid } = sanitizeSettings({ overlay: before(enabled) })
+      expect(invalid).toEqual([])
+      expect(settings.overlay.credits).toEqual({ mode, position: 'top-left' })
+    }
+    // an overlay saved with the new setting is left as it is
+    const full = { ...DEFAULT_OVERLAY, credits: { mode: 'full', position: 'top-left' } }
+    expect(withOverlayDefaults(full)).toBe(full)
   })
 
   it('validates what the closing card shows besides its title (all absent in older projects)', () => {

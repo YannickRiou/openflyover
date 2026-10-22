@@ -123,6 +123,9 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Plantillas más claras',
   'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Créditos más discretos',
+  'v41.credits.text': 'En Gráficos › Créditos de las fuentes, elige « Discretos » (el nombre de las fuentes en pequeño en una esquina, las menciones completas al final de la película), « Completos » o « Solo al final ». En Exportar, « Copiar los créditos » da el texto con sus enlaces, para pegar en la descripción del vídeo.',
 }
 
 export default messages

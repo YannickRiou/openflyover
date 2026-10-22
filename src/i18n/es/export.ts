@@ -335,6 +335,11 @@ const messages: Messages['export'] = {
   'queue.posterLabel': 'cartel',
   'queue.folder': 'Carpeta de los renders: {name}',
   'queue.folderChange': 'Cambiar de carpeta',
+  // 4.1 — copy the credits
+  'panel.creditsCopy': 'Copiar los créditos',
+  'panel.creditsCopyTip': 'Las menciones de las fuentes con sus enlaces, para pegar en la descripción del vídeo.',
+  'panel.creditsCopied': 'Créditos copiados: pégalos en la descripción del vídeo.',
+  'panel.creditsManual': 'El navegador rechaza la copia automática: selecciona el texto de abajo y cópialo (Ctrl+C), luego pégalo en la descripción del vídeo.',
 }
 
 export default messages

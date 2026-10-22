@@ -27,6 +27,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'gauge', get title() { return t('news.v41.speed.title') }, get text() { return t('news.v41.speed.text') } },
       { icon: 'cloud-sun', get title() { return t('news.v41.ice.title') }, get text() { return t('news.v41.ice.text') } },
       { icon: 'clapperboard', get title() { return t('news.v41.auto.title') }, get text() { return t('news.v41.auto.text') } },
+      { icon: 'type', get title() { return t('news.v41.credits.title') }, get text() { return t('news.v41.credits.text') } },
     ],
   },
   {
@@ -66,9 +67,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
   },
   {
     version: '3.2.1',
-    items: [
-      { icon: 'type', get title() { return t('news.v321.panel.title') }, get text() { return t('news.v321.panel.text') } },
-    ],
+    items: [{ icon: 'type', get title() { return t('news.v321.panel.title') }, get text() { return t('news.v321.panel.text') } }],
   },
   {
     version: '3.2',
@@ -91,9 +90,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
   },
   {
     version: '3.0.1',
-    items: [
-      { icon: 'type', get title() { return t('news.v301.cards.title') }, get text() { return t('news.v301.cards.text') } },
-    ],
+    items: [{ icon: 'type', get title() { return t('news.v301.cards.title') }, get text() { return t('news.v301.cards.text') } }],
   },
   {
     version: '3.0',
@@ -109,21 +106,15 @@ export const WHATS_NEW: readonly NewsVersion[] = [
   },
   {
     version: '2.4.1',
-    items: [
-      { icon: 'video', get title() { return t('news.v241.camera.title') }, get text() { return t('news.v241.camera.text') } },
-    ],
+    items: [{ icon: 'video', get title() { return t('news.v241.camera.title') }, get text() { return t('news.v241.camera.text') } }],
   },
   {
     version: '2.4',
-    items: [
-      { icon: 'video', get title() { return t('news.v24.camera.title') }, get text() { return t('news.v24.camera.text') } },
-    ],
+    items: [{ icon: 'video', get title() { return t('news.v24.camera.title') }, get text() { return t('news.v24.camera.text') } }],
   },
   {
     version: '2.3.2',
-    items: [
-      { icon: 'spline', get title() { return t('news.v232.track.title') }, get text() { return t('news.v232.track.text') } },
-    ],
+    items: [{ icon: 'spline', get title() { return t('news.v232.track.title') }, get text() { return t('news.v232.track.text') } }],
   },
   {
     version: '2.3',

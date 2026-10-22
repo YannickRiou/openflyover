@@ -123,6 +123,9 @@ const messages: Messages['news'] = {
   // 4.1 — gabarits du Film automatique en cartes
   'v41.auto.title': 'Klarere Vorlagen',
   'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
+  // 4.1 — discreet credits
+  'v41.credits.title': 'Dezentere Quellenangaben',
+  'v41.credits.text': 'Wählen Sie in Overlay › Quellenangaben « Dezent » (die Namen der Quellen klein in einer Ecke, die vollständigen Angaben am Ende des Films), « Vollständig » oder « Nur am Ende ». Im Export liefert « Quellenangaben kopieren » den Text mit seinen Links, zum Einfügen in die Videobeschreibung.',
 }
 
 export default messages
