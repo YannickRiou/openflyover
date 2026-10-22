@@ -1,10 +1,10 @@
 import type { TrackSegment } from '../../core/types'
-import { pointCount } from './common'
+import { pointCount, settled } from './common'
 import type { Segments } from './common'
 
 /**
  * « Rogner le début et la fin »: keeps the points from index `first` to index `last` (inclusive, counted over every
- * segment), times and measures untouched. Unchanged when nothing is cut or when fewer than two points would stay.
+ * segment), times and measures untouched. Segments left with a single point go. Unchanged when nothing is cut or when no segment of two points would stay.
  */
 export function trim(segments: Segments, first: number, last: number): Segments {
   const total = pointCount(segments)
@@ -19,5 +19,5 @@ export function trim(segments: Segments, first: number, last: number): Segments 
     if (hi >= lo) out.push({ points: segment.points.slice(lo, hi + 1) })
     offset += segment.points.length
   }
-  return out
+  return settled(out, segments)
 }

@@ -4,7 +4,8 @@ import type { Track, TrackPoint, TrackSegment } from '../../core/types'
 import { haversineM } from '../../geo/lonLat'
 import { parseGpx } from '../gpx'
 import { buildTrack } from '../stats'
-import { withSegments } from './common'
+import { invalidatedFigures, withSegments } from './common'
+import { distanceMap } from './distanceMap'
 import { cutSection } from './cutSection'
 import { gpxFileName, trackToGpx } from './exportGpx'
 import { findPauses, removePauses } from './removePauses'
@@ -148,14 +149,14 @@ describe('removeSpikes', () => {
 })
 
 describe('removePauses', () => {
-  /** walks 11 m every 10 s, stands still 5 minutes (a point every 10 s), walks on */
+  /** walks 33 m every 10 s, stands still 5 minutes (a point every 10 s), walks on */
   function walkStopWalk(): TrackSegment {
     const points: TrackPoint[] = []
     let t = T0
     let lat = 45
-    for (let i = 0; i < 10; i++, t += 10_000, lat += 0.0001) points.push({ lon: 6, lat, time: t })
+    for (let i = 0; i < 10; i++, t += 10_000, lat += 0.0003) points.push({ lon: 6, lat, time: t })
     for (let i = 0; i < 30; i++, t += 10_000) points.push({ lon: 6, lat, time: t })
-    for (let i = 0; i < 10; i++, t += 10_000, lat += 0.0001) points.push({ lon: 6, lat, time: t })
+    for (let i = 0; i < 10; i++, t += 10_000, lat += 0.0003) points.push({ lon: 6, lat, time: t })
     return { points }
   }
 
@@ -165,7 +166,7 @@ describe('removePauses', () => {
     expect(pause.fromIndex).toBe(10)
     expect(pause.toIndex).toBe(40)
     expect(pause.durationS).toBe(300)
-    expect(pause.lat).toBeCloseTo(45.001, 6)
+    expect(pause.lat).toBeCloseTo(45.003, 6)
   })
 
   it('drops the stop and moves the later times back by its duration', () => {
@@ -178,13 +179,29 @@ describe('removePauses', () => {
     expect(t.every((v, i) => i === 0 || v > t[i - 1])).toBe(true)
   })
 
-  it('keeps a stop shorter than the duration, honours the thresholds, keeps the gap between segments', () => {
+  it('keeps a stop shorter than the duration and honours the thresholds', () => {
     const segments = [walkStopWalk()]
-    expect(removePauses(segments, { maxSpeedKmh: 1, minDurationS: 400 })).toBe(segments)
-    expect(findPauses(segments, { maxSpeedKmh: 1, minDurationS: 100 })).toHaveLength(1)
-    // walking at 4 km/h is not slow for 1 km/h, but is for 5 km/h
-    expect(findPauses([line(30, 10)], { maxSpeedKmh: 1, minDurationS: 60 })).toEqual([])
-    expect(findPauses([line(30, 10)], { maxSpeedKmh: 5, minDurationS: 60 })).toHaveLength(1)
+    expect(removePauses(segments, { radiusM: 15, minDurationS: 400 })).toBe(segments)
+    expect(findPauses(segments, { radiusM: 15, minDurationS: 100 })).toHaveLength(1)
+    // walking at 4 km/h leaves a 15 m radius in 20 s: a stop only for a wide radius
+    expect(findPauses([line(30, 10)], { radiusM: 15, minDurationS: 60 })).toEqual([])
+    expect(findPauses([line(30, 10)], { radiusM: 500, minDurationS: 60 })).toHaveLength(1)
+  })
+
+  it('the GPS wandering at rest (±3 m, one point a second, 5 minutes) is one stop', () => {
+    const rest = Array.from({ length: 301 }, (_, i) => ({ lon: 6 + (3 * Math.cos(i * 2.3)) / 78_700, lat: 45 + (3 * Math.sin(i * 1.7)) / 111_195, time: T0 + i * 1000 }))
+    const walk = Array.from({ length: 20 }, (_, i) => ({ lon: 6, lat: 45.001 + i * 0.0003, time: T0 + (301 + i) * 1000 }))
+    const [pause, ...others] = findPauses([{ points: [...rest, ...walk] }])
+    expect(others).toEqual([])
+    expect(pause.fromIndex).toBe(0)
+    expect(pause.durationS).toBeGreaterThanOrEqual(299)
+    const out = removePauses([{ points: [...rest, ...walk] }])
+    expect(flat(out).length).toBeLessThan(25)
+  })
+
+  it('a slow steep climb (1.5 km/h) is not a stop', () => {
+    const climb = Array.from({ length: 600 }, (_, i) => ({ lon: 6, lat: 45 + (i * 0.42) / 111_195, ele: 1000 + i * 0.3, time: T0 + i * 1000 }))
+    expect(findPauses([{ points: climb }])).toEqual([])
   })
 
   it('shifts the segments after the stop and leaves a track without times as it is', () => {
@@ -200,7 +217,7 @@ describe('removePauses', () => {
   })
 
   it('a stop at the end of the track goes, the earlier times stay', () => {
-    const points = [...line(5, 10).points]
+    const points: TrackPoint[] = Array.from({ length: 5 }, (_, i) => ({ lon: 6, lat: 45 + i * 0.0003, time: T0 + i * 10_000 }))
     const last = points[4]
     for (let i = 1; i <= 20; i++) points.push({ ...last, time: last.time! + i * 10_000 })
     const out = removePauses([{ points }])
@@ -293,21 +310,92 @@ describe('shiftTime', () => {
 })
 
 describe('withSegments', () => {
-  it('rebuilds the figures, drops the indexed data and keeps what was corrected by hand', () => {
-    const track: Track = {
-      ...buildTrack({ name: 'Tracé', source: 'gpx', segments: [line(50, 10)] }),
-      flights: [{ startM: 0, endM: 10, offsetM: 0 }],
-      statsOverride: { distanceM: 1234 },
-    }
-    const next = withSegments(track, trim(track.segments, 10, 29))
+  const base = (): Track => ({
+    ...buildTrack({ name: 'Tracé', source: 'gpx', segments: [line(50, 10)] }),
+    flights: [{ startM: 100, endM: 200, offsetM: 3 }],
+    statsOverride: { distanceM: 1234, maxEle: 2001 },
+  })
+
+  it('rebuilds the figures, drops the corrected figures the tool makes wrong and keeps the others', () => {
+    const track = base()
+    const next = withSegments(track, trim(track.segments, 10, 29), 'trim')
     expect(next.stats.pointCount).toBe(20)
     expect(next.stats.distanceM).toBeCloseTo(19 * haversineM(track.segments[0].points[0], track.segments[0].points[1]), 3)
     expect(next.stats.durationS).toBe(190)
     expect(next.bounds.south).toBeCloseTo(45.001, 6)
-    expect(next).not.toHaveProperty('flights')
-    expect(next.statsOverride).toEqual({ distanceM: 1234 })
+    expect(next).not.toHaveProperty('statsOverride')
     expect(next.id).toBe(track.id)
-    expect(withSegments(track, track.segments)).toBe(track)
+    expect(withSegments(track, track.segments, 'trim')).toBe(track)
+    // a reversal only turns the climb into a descent; a time shift moves nothing
+    expect(withSegments(track, reverse(track.segments), 'reverse').statsOverride).toEqual({ distanceM: 1234, maxEle: 2001 })
+    expect(withSegments({ ...track, statsOverride: { ascentM: 5, maxEle: 3 } }, reverse(track.segments), 'reverse').statsOverride).toEqual({ maxEle: 3 })
+    expect(withSegments(track, shiftTime(track.segments, 1000), 'shift').statsOverride).toEqual(track.statsOverride)
+    expect(invalidatedFigures(track, 'pauses')).toEqual(['distanceM'])
+  })
+
+  it('moves the flights with the places, drops those on a removed stretch, keeps them for a time shift', () => {
+    const track = base()
+    const trimmed = trim(track.segments, 10, 49)
+    const next = withSegments(track, trimmed, 'trim', distanceMap(track.segments, trimmed, { removed: [{ from: 0, to: 9 }] }))
+    // 10 points of 11 m gone: the flight starts on the removed part (now the start) and ends 111 m earlier
+    expect(next.flights![0].startM).toBe(0)
+    expect(next.flights![0].endM).toBeCloseTo(200 - 10 * haversineM(track.segments[0].points[0], track.segments[0].points[1]), 3)
+    const cutAway = cutSection(track.segments, 5, 30, 'split')
+    const gone = withSegments(track, cutAway, 'cut', distanceMap(track.segments, cutAway, { removed: [{ from: 5, to: 30 }] }))
+    expect(gone).not.toHaveProperty('flights')
+    const shifted = withSegments(track, shiftTime(track.segments, 1000), 'shift')
+    expect(shifted.flights).toEqual(track.flights)
+  })
+})
+
+describe('distanceMap', () => {
+  it('moves a place with the points that stay, in proportion between two of them', () => {
+    const segments = [line(11, 0)]
+    const step = haversineM(segments[0].points[0], segments[0].points[1])
+    const out = trim(segments, 2, 10)
+    const map = distanceMap(segments, out, { removed: [{ from: 0, to: 1 }] })
+    expect(map.map(5 * step)).toBeCloseTo(3 * step, 3)
+    expect(map.removed(step)).toBe(true)
+    expect(map.removed(2 * step)).toBe(false)
+    expect(map.removed(5 * step)).toBe(false)
+    const thin = simplify([line(11, 0)], 2)
+    expect(distanceMap(segments, thin).map(5 * step)).toBeCloseTo(5 * step, 3)
+  })
+
+  it('mirrors the places of a reversed track', () => {
+    const segments = [line(11, 0)]
+    const total = haversineM(segments[0].points[0], segments[0].points[10])
+    const map = distanceMap(segments, reverse(segments), { reversed: true })
+    expect(map.map(0.2 * total)).toBeCloseTo(0.8 * total, 1)
+  })
+
+  it('a cut removes the places strictly over it, not the points around', () => {
+    const segments = [line(11, 0)]
+    const step = haversineM(segments[0].points[0], segments[0].points[1])
+    const out = cutSection(segments, 4, 6, 'join')
+    const map = distanceMap(segments, out, { removed: [{ from: 4, to: 6 }] })
+    expect(map.removed(2.9 * step)).toBe(false)
+    expect(map.removed(5 * step)).toBe(true)
+    expect(map.removed(7.1 * step)).toBe(false)
+    expect(map.map(7.1 * step)).toBeCloseTo(7.1 * step, 3)
+  })
+})
+
+describe('the segments left by a tool', () => {
+  it('a trim across segments and a split cut drop the segments of a single point', () => {
+    const segments = [line(5, 10, 0), line(5, 10, 20)]
+    expect(trim(segments, 4, 9).map((s) => s.points.length)).toEqual([5])
+    expect(trim(segments, 3, 5).map((s) => s.points.length)).toEqual([2])
+    expect(cutSection([line(10)], 2, 7, 'split').map((s) => s.points.length)).toEqual([2, 2])
+    // the first point is left alone on its side of the cut: it goes
+    expect(cutSection([line(5)], 1, 2, 'split').map((s) => s.points.length)).toEqual([2])
+  })
+
+  it('refuses a result with no line in it', () => {
+    const segments = [line(1), line(1, 10, 1), line(1, 10, 2)]
+    expect(trim(segments, 0, 2)).toBe(segments)
+    const three = [line(10)]
+    expect(cutSection(three, 1, 8, 'split')).toBe(three)
   })
 })
 
@@ -338,5 +426,10 @@ describe('trackToGpx', () => {
     expect(parseGpx(xml, 'x.gpx')[0].segments[0].points).toHaveLength(2)
     expect(gpxFileName(track)).toBe('a b c.gpx')
     expect(gpxFileName({ ...track, name: '  ' })).toBe('trace.gpx')
+    expect(gpxFileName({ ...track, name: 'CON' })).toBe('_CON.gpx')
+    expect(gpxFileName({ ...track, name: 'lpt3' })).toBe('_lpt3.gpx')
+    expect(gpxFileName({ ...track, name: 'Col. ' })).toBe('Col.gpx')
+    expect(gpxFileName({ ...track, name: 'ok\u0007name' })).toBe('ok name.gpx')
+    expect(trackToGpx({ ...track, name: 'a\u0007b' })).not.toContain('\u0007')
   })
 })

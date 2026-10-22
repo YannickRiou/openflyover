@@ -4,10 +4,12 @@ import { createPortal } from 'react-dom'
 import type { Track } from '../core/types'
 import { trackPathOf } from '../flyover/path'
 import { computeStats } from '../import/stats'
-import { hasTimes, pointCount, withSegments } from '../import/tools/common'
+import { TOOL_IDS, hasTimes, invalidatedFigures, pointCount } from '../import/tools/common'
+import type { ToolId } from '../import/tools/common'
+import type { Anchors } from '../import/tools/distanceMap'
 import { cutSection } from '../import/tools/cutSection'
 import type { CutMode } from '../import/tools/cutSection'
-import { DEFAULT_PAUSES, PAUSE_DURATION_RANGE, PAUSE_SPEED_RANGE, findPauses, removePauses } from '../import/tools/removePauses'
+import { DEFAULT_PAUSES, PAUSE_DURATION_RANGE, PAUSE_RADIUS_RANGE, findPauses, removePauses } from '../import/tools/removePauses'
 import { DEFAULT_SPIKES, SPIKE_FACTOR_RANGE, findSpikes, removeSpikes } from '../import/tools/removeSpikes'
 import { reverse } from '../import/tools/reverse'
 import { clockOf, clockOffsetMin, instantOf, shiftTime } from '../import/tools/shiftTime'
@@ -19,7 +21,7 @@ import { Icon } from './icons'
 import { Button, DateField, Modal, NumberField, Radio, RadioGroup, Slider, TimeField } from './primitives'
 import { TrackPreview } from './TrackPreview'
 import type { PointRange } from './TrackPreview'
-import { applyTrackTool, exportTrackGpx } from './trackTools'
+import { appliedText, applyTrackTool, exportTrackGpx } from './trackTools'
 import type { AppliedTool } from './trackTools'
 
 /**
@@ -29,8 +31,7 @@ import type { AppliedTool } from './trackTools'
  * message and in the window) on the right, and « Exporter en GPX » and « Fermer » at the bottom. The tools are pure
  * (`src/import/tools/*`).
  */
-const TOOLS = ['trim', 'cut', 'spikes', 'pauses', 'simplify', 'reverse', 'shift'] as const
-type ToolId = (typeof TOOLS)[number]
+const TOOLS = TOOL_IDS
 
 const TOOL_NAMES: Record<ToolId, string> = {
   get trim() { return t('track.tools.trim.name') },
@@ -68,6 +69,10 @@ interface DialogProps {
 const PreviewSlot = createContext<HTMLElement | null>(null)
 
 interface FrameProps extends DialogProps {
+  /** what the tool did to the places of the track, so that what the film anchors there follows (`distanceMap`) */
+  anchors?: Anchors
+  /** the tool could not do what the controls ask (it would leave no line): said under the controls */
+  refused?: boolean
   tool: ToolId
   /** the points after the tool: `track.segments` itself when it does nothing */
   next: Track['segments']
@@ -78,7 +83,7 @@ interface FrameProps extends DialogProps {
 }
 
 /** What every tool shares: its preview (in the slot of the window), its help, the controls, the figures before → after and « Appliquer ». */
-function ToolFrame({ track, tool, next, marks, handles, onApplied, children }: FrameProps) {
+function ToolFrame({ track, tool, next, marks, handles, anchors, refused, onApplied, children }: FrameProps) {
   const t = useT()
   const slot = use(PreviewSlot)
   const changed = next !== track.segments
@@ -92,8 +97,10 @@ function ToolFrame({ track, tool, next, marks, handles, onApplied, children }: F
       : []),
     [t('track.tools.points'), beforeAfter(formatNumber(before.pointCount), formatNumber(after.pointCount))],
   ]
+  // the figures typed by hand that this tool makes wrong go with it: said before, not after
+  const lost = changed ? invalidatedFigures(track, tool).length : 0
   function apply() {
-    const applied = applyTrackTool(track, withSegments(track, next), TOOL_NAMES[tool])
+    const applied = applyTrackTool(track, next, tool, TOOL_NAMES[tool], anchors)
     if (applied) onApplied(applied)
   }
   return (
@@ -110,10 +117,14 @@ function ToolFrame({ track, tool, next, marks, handles, onApplied, children }: F
             </div>
           ))}
         </dl>
-        {track.statsOverride && <p className="type-hint">{t('track.tools.keepsCorrection')}</p>}
+        {lost > 0 && (
+          <p className="type-hint" role="status">
+            {t('track.tools.willClear', { count: lost })}
+          </p>
+        )}
         {!changed && (
           <p className="type-hint" role="status">
-            {t('track.tools.nothing')}
+            {refused ? t('track.tools.tooShort') : t('track.tools.nothing')}
           </p>
         )}
         <Button variant="primary" block disabled={!changed} onClick={apply}>
@@ -140,8 +151,10 @@ function TrimDialog({ track, onApplied }: DialogProps) {
   const [range, setRange] = useState<PointRange>({ from: 0, to: last })
   const next = useMemo(() => trim(track.segments, range.from, range.to), [track, range])
   const marks = [...(range.from > 0 ? [{ from: 0, to: range.from }] : []), ...(range.to < last ? [{ from: range.to, to: last }] : [])]
+  const removed = [...(range.from > 0 ? [{ from: 0, to: range.from - 1 }] : []), ...(range.to < last ? [{ from: range.to + 1, to: last }] : [])]
+  const refused = next === track.segments && removed.length > 0
   return (
-    <ToolFrame track={track} tool="trim" next={next} marks={marks} handles={{ range, onChange: setRange }} onApplied={onApplied}>
+    <ToolFrame track={track} tool="trim" next={next} marks={marks} handles={{ range, onChange: setRange }} anchors={{ removed }} refused={refused} onApplied={onApplied}>
       <PointSlider label={t('track.tools.trim.start')} track={track} value={range.from} min={0} max={range.to - 1} onChange={(from) => setRange({ ...range, from })} />
       <PointSlider label={t('track.tools.trim.end')} track={track} value={range.to} min={range.from + 1} max={last} onChange={(to) => setRange({ ...range, to })} />
     </ToolFrame>
@@ -156,7 +169,7 @@ function CutDialog({ track, onApplied }: DialogProps) {
   const [mode, setMode] = useState<CutMode>('join')
   const next = useMemo(() => cutSection(track.segments, range.from, range.to, mode), [track, range, mode])
   return (
-    <ToolFrame track={track} tool="cut" next={next} marks={[range]} handles={{ range, onChange: setRange }} onApplied={onApplied}>
+    <ToolFrame track={track} tool="cut" next={next} marks={[range]} handles={{ range, onChange: setRange }} anchors={{ removed: [range] }} refused={next === track.segments && range.to >= range.from} onApplied={onApplied}>
       <PointSlider label={t('track.tools.cut.from')} track={track} value={range.from} min={0} max={range.to} onChange={(from) => setRange({ ...range, from })} />
       <PointSlider label={t('track.tools.cut.to')} track={track} value={range.to} min={range.from} max={last} onChange={(to) => setRange({ ...range, to })} />
       <div className="field">
@@ -194,9 +207,9 @@ function SpikesDialog({ track, onApplied }: DialogProps) {
 
 function PausesDialog({ track, onApplied }: DialogProps) {
   const t = useT()
-  const [maxSpeedKmh, setSpeed] = useState(DEFAULT_PAUSES.maxSpeedKmh)
+  const [radiusM, setRadius] = useState(DEFAULT_PAUSES.radiusM)
   const [minDurationS, setDuration] = useState(DEFAULT_PAUSES.minDurationS)
-  const options = useMemo(() => ({ maxSpeedKmh, minDurationS }), [maxSpeedKmh, minDurationS])
+  const options = useMemo(() => ({ radiusM, minDurationS }), [radiusM, minDurationS])
   const pauses = useMemo(() => findPauses(track.segments, options), [track, options])
   const next = useMemo(() => removePauses(track.segments, options), [track, options])
   const dist = trackPathOf(track).dist
@@ -205,8 +218,8 @@ function PausesDialog({ track, onApplied }: DialogProps) {
     <ToolFrame track={track} tool="pauses" next={next} marks={pauses.map((p) => ({ from: p.fromIndex, to: p.toIndex }))} onApplied={onApplied}>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="field">
-          <span className="type-label">{t('track.tools.pauses.speed')}</span>
-          <Slider aria-label={t('track.tools.pauses.speed')} {...PAUSE_SPEED_RANGE} value={maxSpeedKmh} onChange={setSpeed} format={(v) => `${formatNumber(v, 1)} km/h`} />
+          <span className="type-label">{t('track.tools.pauses.radius')}</span>
+          <Slider aria-label={t('track.tools.pauses.radius')} {...PAUSE_RADIUS_RANGE} value={radiusM} onChange={setRadius} format={(v) => `${v} m`} />
         </div>
         <div className="field">
           <span className="type-label">{t('track.tools.pauses.duration')}</span>
@@ -253,7 +266,7 @@ function SimplifyDialog({ track, onApplied }: DialogProps) {
 function ReverseDialog({ track, onApplied }: DialogProps) {
   const next = useMemo(() => reverse(track.segments), [track])
   return (
-    <ToolFrame track={track} tool="reverse" next={next} onApplied={onApplied}>
+    <ToolFrame track={track} tool="reverse" next={next} anchors={{ reversed: true }} onApplied={onApplied}>
       {null}
     </ToolFrame>
   )
@@ -385,7 +398,7 @@ function TrackToolsWindow({ track, onClose }: { track: Track; onClose(): void })
             <PreviewSlot value={slot}>{Panel && <Panel key={`${tool}:${version}`} track={track} onApplied={setApplied} />}</PreviewSlot>
             {applied && applied.segments === track.segments && (
               <p className="flex items-center justify-between gap-2 rounded-sm bg-surface-card p-2 font-semibold text-text-1" role="status" data-testid="track-tools-applied">
-                {t('track.tools.applied', { tool: applied.tool, name: track.name })}
+                {appliedText(applied, track.name)}
                 <Button size="sm" onClick={applied.undo}>
                   {t('common.undo')}
                 </Button>

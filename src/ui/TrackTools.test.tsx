@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Track, TrackPoint } from '../core/types'
+import { DEFAULT_FILM } from '../film/model'
 import { buildTrack } from '../import/stats'
 import { resetAppStore, useAppStore } from '../state/store'
 import { TrackToolsButton } from './TrackTools'
@@ -108,8 +109,39 @@ describe('TrackTools', () => {
     const inWindow = page.querySelector('[data-testid="track-tools-applied"]')!
     expect(inWindow.textContent).toContain('Inverser le sens')
     await act(async () => [...inWindow.querySelectorAll('button')].find((b) => b.textContent === 'Annuler')!.click())
-    expect(useAppStore.getState().tracks[0]).toBe(track)
+    expect(useAppStore.getState().tracks[0].segments).toBe(track.segments)
     expect(page.querySelector('[data-testid="track-tools-applied"]')).toBeNull()
+    stop()
+  })
+
+  it('moves what the film anchors along the track with the reversal, undoes it with the track, and survives a recolouring', async () => {
+    const track = walk(true)
+    const length = track.stats.distanceM
+    const film = { ...DEFAULT_FILM, autoStops: false, cameraKeys: [{ id: 'key-1', atM: 100, distance: 1, pitchDeg: 30, headingOffsetDeg: 0 }] }
+    const { open, pick, button, page, stop } = await mount(track)
+    useAppStore.getState().setSetting('film', film)
+    await open()
+    await pick('reverse')
+    await act(async () => button('Appliquer').click())
+    expect(useAppStore.getState().settings.film.cameraKeys[0].atM).toBeCloseTo(length - 100, 3)
+    useAppStore.getState().setTrackColor(track.id, '#123456')
+    const inWindow = page.querySelector('[data-testid="track-tools-applied"]')!
+    await act(async () => [...inWindow.querySelectorAll('button')].find((b) => b.textContent === 'Annuler')!.click())
+    const restored = useAppStore.getState().tracks[0]
+    expect(restored.segments).toBe(track.segments)
+    expect(restored.color).toBe('#123456')
+    expect(useAppStore.getState().settings.film).toBe(film)
+    stop()
+  })
+
+  it('says how many figures typed by hand will go, and clears them', async () => {
+    const track = { ...walk(true), statsOverride: { distanceM: 1234, maxEle: 2001 } }
+    const { open, pick, button, page, stop } = await mount(track)
+    await open()
+    await pick('simplify')
+    expect(page.textContent).toContain('1 chiffre corrigé à la main ne correspondra plus')
+    await act(async () => button('Appliquer').click())
+    expect(useAppStore.getState().tracks[0].statsOverride).toEqual({ maxEle: 2001 })
     stop()
   })
 

@@ -1,18 +1,18 @@
 import type { TrackPoint, TrackSegment } from '../../core/types'
 import { haversineM } from '../../geo/lonLat'
-import { hasTimes, secondsBetween } from './common'
+import { hasTimes, settled } from './common'
 import type { Segments } from './common'
 
 export interface PauseOptions {
-  /** a leg slower than this (km/h) belongs to a pause */
-  maxSpeedKmh: number
-  /** a stretch of slow legs shorter than this (seconds) is not a pause */
+  /** a stop: the track stays within this distance (metres) of where it stopped… */
+  radiusM: number
+  /** …for at least this long (seconds) */
   minDurationS: number
 }
 
-export const DEFAULT_PAUSES: PauseOptions = { maxSpeedKmh: 1, minDurationS: 60 }
-export const PAUSE_SPEED_RANGE = { min: 0.5, max: 5, step: 0.5 }
-export const PAUSE_DURATION_RANGE = { min: 10, max: 600, step: 10 }
+export const DEFAULT_PAUSES: PauseOptions = { radiusM: 15, minDurationS: 120 }
+export const PAUSE_RADIUS_RANGE = { min: 5, max: 50, step: 5 }
+export const PAUSE_DURATION_RANGE = { min: 30, max: 600, step: 10 }
 
 /** A stop found: the points `fromIndex` (kept) to `toIndex` (over every segment) and where and when it was. */
 export interface Pause {
@@ -25,14 +25,11 @@ export interface Pause {
   lat: number
 }
 
-function slowLeg(a: TrackPoint, b: TrackPoint, maxSpeedKmh: number): boolean {
-  const s = secondsBetween(a, b)
-  if (s === undefined || s < 0) return false
-  const d = haversineM(a, b)
-  return s === 0 ? d === 0 : (d / s) * 3.6 < maxSpeedKmh
-}
-
-/** The stops of the track (none without times). */
+/**
+ * The stops of the track (none without times). The GPS wanders by several metres at rest, so a stop is not a run of slow
+ * legs but a stay: from a point, the track keeps within `radiusM` of it for `minDurationS` or more. A slow climb moves
+ * out of the radius within the minute and is never a stop.
+ */
 export function findPauses(segments: Segments, options: PauseOptions = DEFAULT_PAUSES): Pause[] {
   const pauses: Pause[] = []
   if (!hasTimes(segments)) return pauses
@@ -41,12 +38,14 @@ export function findPauses(segments: Segments, options: PauseOptions = DEFAULT_P
     let i = 0
     while (i < points.length - 1) {
       let end = i
-      while (end < points.length - 1 && slowLeg(points[end], points[end + 1], options.maxSpeedKmh)) end++
+      while (end + 1 < points.length && haversineM(points[i], points[end + 1]) <= options.radiusM) end++
       const durationS = (points[end].time! - points[i].time!) / 1000
       if (end > i && durationS >= options.minDurationS) {
         pauses.push({ fromIndex: offset + i, toIndex: offset + end, startTime: points[i].time!, durationS, lon: points[i].lon, lat: points[i].lat })
+        i = end + 1
+      } else {
+        i++
       }
-      i = Math.max(end, i + 1)
     }
     offset += points.length
   }
@@ -65,12 +64,12 @@ export function removePauses(segments: Segments, options: PauseOptions = DEFAULT
   let shiftMs = 0
   let skipUntil = -1
   let index = 0
-  return segments.map(({ points }): TrackSegment => {
-    const out: TrackPoint[] = []
+  const out = segments.map(({ points }): TrackSegment => {
+    const kept: TrackPoint[] = []
     for (const point of points) {
       const i = index++
       if (i <= skipUntil) continue
-      out.push(shiftMs === 0 ? point : { ...point, time: point.time! - shiftMs })
+      kept.push(shiftMs === 0 ? point : { ...point, time: point.time! - shiftMs })
       const pause = byStart.get(i)
       if (pause) {
         skipUntil = pause.toIndex
@@ -78,6 +77,7 @@ export function removePauses(segments: Segments, options: PauseOptions = DEFAULT
         shiftMs += pause.durationS * 1000
       }
     }
-    return { points: out }
+    return { points: kept }
   })
+  return settled(out, segments)
 }

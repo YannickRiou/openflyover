@@ -1,5 +1,5 @@
 import type { TrackPoint, TrackSegment } from '../../core/types'
-import { pointCount } from './common'
+import { pointCount, settled } from './common'
 import type { Segments } from './common'
 
 /** What becomes of the two sides of the removed section: one segment (a straight line over it) or two. */
@@ -8,7 +8,7 @@ export type CutMode = 'join' | 'split'
 /**
  * « Retirer une section »: removes the points from index `first` to index `last` (inclusive, over every segment).
  * `join`: the points around the cut stay in one segment, joined by a straight line (the time gap is kept);
- * `split`: they become two segments of the same track. Unchanged when no point goes or when fewer than two would stay.
+ * `split`: they become two segments of the same track. Segments left with a single point go. Unchanged when no point goes or when no segment of two points would stay.
  */
 export function cutSection(segments: Segments, first: number, last: number, mode: CutMode): Segments {
   const total = pointCount(segments)
@@ -38,5 +38,5 @@ export function cutSection(segments: Segments, first: number, last: number, mode
       gap = false
     }
   })
-  return out.map((points): TrackSegment => ({ points }))
+  return settled(out.map((points): TrackSegment => ({ points })), segments)
 }

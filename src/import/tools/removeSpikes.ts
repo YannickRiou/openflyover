@@ -1,6 +1,6 @@
 import type { TrackPoint, TrackSegment } from '../../core/types'
 import { haversineM } from '../../geo/lonLat'
-import { medianOf, secondsBetween } from './common'
+import { medianOf, secondsBetween, settled } from './common'
 import type { Segments } from './common'
 
 export interface SpikeOptions {
@@ -65,5 +65,5 @@ export function removeSpikes(segments: Segments, options: SpikeOptions = DEFAULT
   const spikes = new Set(findSpikes(segments, options))
   if (spikes.size === 0) return segments
   let index = 0
-  return segments.map((segment): TrackSegment => ({ points: segment.points.filter(() => !spikes.has(index++)) }))
+  return settled(segments.map((segment): TrackSegment => ({ points: segment.points.filter(() => !spikes.has(index++)) })), segments)
 }

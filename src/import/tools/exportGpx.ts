@@ -1,6 +1,8 @@
 import type { Track, TrackPoint } from '../../core/types'
 
-const escapeXml = (text: string): string => text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`)
+/** XML 1.0 refuses most control characters, even escaped: they are left out of a name. */
+const withoutControls = (text: string): string => Array.from(text).filter((c) => c.charCodeAt(0) >= 32 || c === '\t' || c === '\n' || c === '\r').join('')
+const escapeXml = (text: string): string => withoutControls(text).replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`)
 const coordinate = (value: number): string => String(Math.round(value * 1e7) / 1e7)
 
 function pointXml(p: TrackPoint, tag: string, indent: string): string {
@@ -42,6 +44,7 @@ export function trackToGpx(track: Track): string {
 /** File name of the export: the track's name without what a file system refuses. */
 export function gpxFileName(track: Track): string {
   const printable = Array.from(track.name, (c) => (c.charCodeAt(0) < 32 ? ' ' : c)).join('')
-  const base = printable.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()
-  return `${base || 'trace'}.gpx`
+  const base = printable.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').replace(/[. ]+$/, '').trim().slice(0, 100)
+  // Windows keeps these names for devices
+  return `${/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base) ? `_${base}` : base || 'trace'}.gpx`
 }

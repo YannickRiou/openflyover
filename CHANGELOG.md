@@ -7,10 +7,11 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **« Outils de la trace »**: one line « Outils de la trace… » on each track's card of the « Trace » tab opens a window of its own (the editing panels stay about the film) with seven tools that retouch the loaded track (never the file): the profile and the plan with the part concerned highlighted at the top, the list of tools on the left, the tool's settings and the distance, D+, duration and number of points before → after on the right. « Appliquer » makes one step with « Annuler » in the message and in the window; a tool that changes nothing says so. On a phone the window is full screen.
   - « Rogner le début et la fin » (drag on the profile or the two sliders), « Retirer une section » (« Relier en ligne droite » or « Couper en deux morceaux »).
-  - « Supprimer les pics GPS » (a point jumped at least 100 m and faster than 4 times the median speed, adjustable; the window says how many points will go), « Retirer les pauses » (slower than 1 km/h for 60 s by default, listed with where and how long; the later times move back, so the duration and average speed no longer count them).
+  - « Supprimer les pics GPS » (a point jumped at least 100 m and faster than 4 times the median speed, adjustable; the window says how many points will go), « Retirer les pauses » (the track stays within 15 m for 2 minutes by default, listed with where and how long; the later times move back, so the duration and average speed no longer count them).
   - « Simplifier » (Douglas–Peucker, 2 m by default, points before → after, a warning above 8 m), « Inverser le sens » (times stay increasing) and « Décaler l'heure » (hours and minutes, or a new start; the weather and the snow follow).
   - « Exporter la trace en GPX »: a clean GPX 1.1 of the track as it is now, with heart rate, cadence, power and temperature.
-  - A track without times greys out the tools that need them, with the reason. Figures corrected by hand are kept. Older projects open unchanged (a modified track is stored like any track).
+  - What the film anchors along the track (stops, camera and parameter keys, marker keys, speed portions) follows the places it was set on, on a single track and on the stages « À la suite »: after a trim or a cut, a reversal or the pauses, a stop stays on the same spot. Items on a removed stretch are deleted and the window counts them.
+  - A track without times greys out the tools that need them, with the reason. Figures corrected by hand that a tool makes wrong are cleared (the window says how many before « Appliquer »). Older projects open unchanged (a modified track is stored like any track).
 
 ## 4.1.0 (unreleased)
 
