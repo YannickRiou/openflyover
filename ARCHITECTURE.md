@@ -2762,7 +2762,7 @@ exports) gets it from the terrain source of the settings.
   (`keepOpenProject`: the store fields and the media table, put back as the same objects, so « Enregistré » stays), holds
   the batch store `running` (`hold` / `release`: no autosave, no edit, same « Annuler » button), then for each item applies
   the snapshot as « Ouvrir » does (`parseProject` + `applyProject`, no toast, no « Mes projets » entry), waits for the
-  landmarks and weather (`loadTrackData`) and renders its films with `runBatch` + `exportJob`, each into the folder asked at the
+  landmarks and weather (`loadTrackData`) and renders its films with `runBatch` + `exportJob` (before each job `settings.video` takes the job's aspect and resolution, so the film is composed for the format ticked for the queue, not the project's: stage frame, overlay `exportSize`; the poster gets the project's own; `keepOpenProject` puts the open project's settings back), each into the folder asked at the
   start (`pickFolder`; without a folder API the films are downloaded). Before starting, `confirmClose` asks to save if the open
   project has changes kept nowhere.
 - **Persistence**: `{ v: 1, items }` under `openflyover.renderQueue.v1` in the platform `storage`, rewritten at each change;
