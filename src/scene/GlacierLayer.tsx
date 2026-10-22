@@ -53,31 +53,39 @@ function drapeGlacier(meshes: readonly GlacierMesh[], engine: TerrainEngine | nu
   const flows: number[] = []
   const index: number[] = []
   for (const mesh of meshes) {
-    const heights = fillHeights(sampleHeights(mesh, engine))
+    const known = sampleHeights(mesh, engine)
+    const heights = fillHeights(known)
     if (!heights) continue
     const base = positions.length / 3
-    let flowX = 0
-    let flowZ = 0
-    for (let v = 0; v < mesh.fade.length; v++) {
+    // the slope: the heights NORMAL_STEP_M to the east and to the north, only where the vertex's own is known (its own elsewhere)
+    const east = Float64Array.from(heights)
+    const north = Float64Array.from(heights)
+    for (let v = 0; v < heights.length; v++) {
+      if (Number.isNaN(known[v])) continue
       const lon = mesh.lonLat[2 * v]
       const lat = mesh.lonLat[2 * v + 1]
-      const h = heights[v]
-      frame.toLocal(lon, lat, h * exaggeration + GLACIER_LIFT_M, _p)
+      const e = engine?.sampleHeight(lon + NORMAL_STEP_M / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)), lat)
+      const n = engine?.sampleHeight(lon, lat + NORMAL_STEP_M / M_PER_DEG)
+      if (e !== undefined && !Number.isNaN(e)) east[v] = e
+      if (n !== undefined && !Number.isNaN(n)) north[v] = n
+    }
+    let flowX = 0
+    let flowZ = 0
+    for (let v = 0; v < heights.length; v++) {
+      const lon = mesh.lonLat[2 * v]
+      const lat = mesh.lonLat[2 * v + 1]
+      frame.toLocal(lon, lat, heights[v] * exaggeration + GLACIER_LIFT_M, _p)
       positions.push(_p.x, _p.y, _p.z)
-      // the slope: the heights NORMAL_STEP_M to the east and to the north (the vertex's own where unknown)
-      const dLon = NORMAL_STEP_M / (M_PER_DEG * Math.cos((lat * Math.PI) / 180))
-      const dLat = NORMAL_STEP_M / M_PER_DEG
-      const up = (lonAt: number, latAt: number, out: Vector3) => {
-        const ground = engine?.sampleHeight(lonAt, latAt)
-        return frame.toLocal(lonAt, latAt, (ground === undefined || Number.isNaN(ground) ? h : ground) * exaggeration + GLACIER_LIFT_M, out).sub(_p)
-      }
-      _n.copy(up(lon + dLon, lat, _e)).cross(up(lon, lat + dLat, _f))
+      frame.toLocal(lon + NORMAL_STEP_M / (M_PER_DEG * Math.cos((lat * Math.PI) / 180)), lat, east[v] * exaggeration + GLACIER_LIFT_M, _e).sub(_p)
+      frame.toLocal(lon, lat + NORMAL_STEP_M / M_PER_DEG, north[v] * exaggeration + GLACIER_LIFT_M, _f).sub(_p)
+      _n.copy(_e).cross(_f)
       if (_n.y < 0) _n.negate()
       _n.normalize()
       normals.push(_n.x, _n.y, _n.z)
       fades.push(mesh.fade[v])
-      flowX -= _n.x
-      flowZ -= _n.z
+      // the normal leans downhill: its horizontal part is the way the ice flows
+      flowX += _n.x
+      flowZ += _n.z
     }
     // the flow of the glacier: downhill on average (any direction on flat ground)
     const length = Math.hypot(flowX, flowZ)
