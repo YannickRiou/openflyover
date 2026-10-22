@@ -207,13 +207,22 @@ const SAMPLE_NAME = 'etang-ayguelongue-pic-de-l-homme.gpx'
 export async function runImport(jobs: ImportJob[]): Promise<void> {
   const { setLoading, addTracks } = useAppStore.getState()
   // the first track of a new project: the message offers « Film automatique » (not when a track is added to a film)
-  const first = useAppStore.getState().tracks.length === 0
+  let first = false
   const outcome = await importFiles(jobs, {
     trackCount: () => useAppStore.getState().tracks.length,
     setLoading,
-    addTracks,
-    notify: (kind, text) =>
-      showToast({ kind, text, ...(kind === 'success' && first && { action: { label: t('film.auto.afterImport'), run: () => setAutoFilmOpen(true) } }) }),
+    addTracks: (tracks) => {
+      first = useAppStore.getState().tracks.length === 0
+      addTracks(tracks)
+    },
+    notify: (kind, text) => {
+      if (kind !== 'success' || !first) return void showToast({ kind, text })
+      // the action is meant for these tracks: the message goes away when they change, and nothing opens without a track
+      const run = () => {
+        if (useAppStore.getState().tracks.length > 0) setAutoFilmOpen(true)
+      }
+      showUntilTracksChange({ kind, text, action: { label: t('film.auto.afterImport'), run } })
+    },
   })
   const imported = outcome.tracks
   if (followEachOther(imported)) {

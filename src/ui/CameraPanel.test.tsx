@@ -187,6 +187,19 @@ describe('« Film automatique » after an import', () => {
     act(() => root.unmount())
   })
 
+  it('opens nothing once the track is gone', async () => {
+    useAppStore.setState({ tracks: [], settings: DEFAULT_SETTINGS })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<CameraPanel />))
+    await act(async () => importSortie())
+    const { action } = success()!
+    await act(async () => useAppStore.setState({ tracks: [] }))
+    await act(async () => action!.run())
+    expect(document.querySelector('[data-testid="auto-film-templates"]')).toBeNull()
+    act(() => root.unmount())
+  })
+
   it('does not offer it when a track is added to a film', async () => {
     useAppStore.setState({ tracks: [untimed], settings: DEFAULT_SETTINGS })
     await act(async () => importSortie())
