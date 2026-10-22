@@ -61,6 +61,8 @@ import {
   snapper,
   stopPositionAt,
   syncClip,
+  tickLabelFlips,
+  timelineContentWidth,
   syncClipPlacement,
   updateCameraKey,
   setFilmPlace,
@@ -150,6 +152,24 @@ describe('timeline scale', () => {
     expect(rulerStep(100)).toBe(1)
     expect(rulerStep(1)).toBe(60)
     expect(rulerTicks(25, 10)).toEqual([0, 10, 20])
+  })
+
+  it('ends the content at the end of the film: a film that fits the view never scrolls', () => {
+    for (const [viewW, totalS] of [[1000, 30], [973, 7], [1280, 600], [640, 31.3]]) {
+      const pad = 10
+      const fit = fitPxPerS(viewW - 2 * pad, totalS)
+      expect(timelineContentWidth(viewW, totalS, fit, pad)).toBe(viewW)
+    }
+    // zoomed: the film and its two margins, rounded up; never narrower than the view
+    expect(timelineContentWidth(1000, 30, 100, 10)).toBe(3020)
+    expect(timelineContentWidth(1000, 30.004, 100, 10)).toBe(3021)
+    expect(timelineContentWidth(1000, 5, 1, 10)).toBe(1000)
+  })
+
+  it('draws the label of a tick next to the end of the content on its left', () => {
+    expect(tickLabelFlips(990, 1000)).toBe(true) // the 0:30 at the end of a 30 s film
+    expect(tickLabelFlips(500, 1000)).toBe(false)
+    expect(tickLabelFlips(10, 20)).toBe(false) // never off the left edge
   })
 
   it('formats film times as m:ss, tenths on demand', () => {

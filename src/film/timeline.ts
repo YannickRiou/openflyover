@@ -105,6 +105,17 @@ export function rulerStep(pxPerS: number, minPx = 56): number {
   return TICK_STEPS_S.find((step) => step * pxPerS >= minPx) ?? TICK_STEPS_S[TICK_STEPS_S.length - 1]
 }
 
+/** Width of the scrolling lanes: `pad` before the start, the film, `pad` after its end, never less than the view `viewW`. The tiny excess of float rounding is dropped, so a film that fits never gets a scrollbar. */
+export function timelineContentWidth(viewW: number, totalS: number, pxPerS: number, pad: number): number {
+  return Math.max(viewW, Math.ceil(2 * pad + totalS * pxPerS - 1e-6))
+}
+
+/** Room taken by the label of a tick, its line and its gap (pixels, « 00:00 » at most). */
+export const TICK_LABEL_PX = 32
+
+/** A tick whose label would run past the end of the content (`contentW`) is drawn to the left of its line, so the ruler never outgrows the film. */
+export const tickLabelFlips = (xPx: number, contentW: number): boolean => xPx >= TICK_LABEL_PX && xPx + TICK_LABEL_PX > contentW
+
 /** Labelled ticks of the ruler, from 0 to `totalS`. */
 export function rulerTicks(totalS: number, pxPerS: number, minPx?: number): number[] {
   const step = rulerStep(pxPerS, minPx)
