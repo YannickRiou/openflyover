@@ -1,8 +1,8 @@
 /**
  * Weather of the first track (zustand), fetched when a timed track is loaded and `settings.weather.enabled`
  * allows it, and « À la suite » that of the later stages (`syncStageWeather`). Both syncs are idempotent: calling
- * them again for the same tracks, start times and setting does nothing, so React effects may call them freely; new
- * (estimated) times on the same track fetch again.
+ * them again for the same tracks, points, start times and setting does nothing, so React effects may call them freely;
+ * new (estimated) times or new points (« Outils de la trace ») on the same track fetch again.
  */
 import { create } from 'zustand'
 import type { Track } from '../core/types'
@@ -18,8 +18,9 @@ export interface WeatherState {
   /** why there is no weather (unavailable / error), in French */
   message: string | null
   series: WeatherSeries | null
-  /** track the status refers to, and its start time then (null when untimed) */
+  /** track the status refers to, its points and its start time then (null when untimed) */
   trackId: string | null
+  segments: Track['segments'] | null
   startTime: number | null
   /** « À la suite »: weather of the later stages, by track id */
   stages: Readonly<Record<string, StageWeather>>
@@ -27,13 +28,14 @@ export interface WeatherState {
   stageMessage: string | null
 }
 
-/** Weather of a later stage: the start time it is fetched for, its series once there (null while loading or failed). */
+/** Weather of a later stage: the points and start time it is fetched for, its series once there (null while loading or failed). */
 export interface StageWeather {
+  segments: Track['segments']
   startTime: number
   series: WeatherSeries | null
 }
 
-const IDLE = { status: 'idle', message: null, series: null, trackId: null, startTime: null } as const
+const IDLE = { status: 'idle', message: null, series: null, trackId: null, segments: null, startTime: null } as const
 const INITIAL: WeatherState = { ...IDLE, stages: {}, stageMessage: null }
 
 export const useWeatherStore = create<WeatherState>()(() => ({ ...INITIAL }))
@@ -67,7 +69,8 @@ export function syncWeather(
     return
   }
   const startTime = track.stats.startTime ?? null
-  const sameTrack = state.trackId === track.id && state.startTime === startTime
+  // the same points too: a tool that keeps the start time (trim at the end, cut, pauses…) still moves the stations and the days
+  const sameTrack = state.trackId === track.id && state.segments === track.segments && state.startTime === startTime
   if (sameTrack && state.status !== 'idle' && !(retry && state.status === 'error')) return
 
   controller?.abort()
@@ -78,6 +81,7 @@ export function syncWeather(
       message: t('weather.store.untimed'),
       series: null,
       trackId: track.id,
+      segments: track.segments,
       startTime,
     })
     return
@@ -85,7 +89,7 @@ export function syncWeather(
 
   const ctrl = new AbortController()
   controller = ctrl
-  useWeatherStore.setState({ status: 'loading', message: null, series: null, trackId: track.id, startTime })
+  useWeatherStore.setState({ status: 'loading', message: null, series: null, trackId: track.id, segments: track.segments, startTime })
   deps.fetchWeather(buildTrackPath(track), { signal: ctrl.signal }).then(
     (series) => {
       if (controller !== ctrl) return
@@ -116,19 +120,19 @@ export function syncStageWeather(
     const startTime = track.stats.startTime
     if (startTime === undefined) continue
     const kept = current[track.id]
-    if (kept?.startTime === startTime && (kept.series !== null || stageControllers.has(track.id))) {
+    if (kept?.segments === track.segments && kept.startTime === startTime && (kept.series !== null || stageControllers.has(track.id))) {
       stages[track.id] = kept
       continue
     }
     stageControllers.get(track.id)?.abort()
     const ctrl = new AbortController()
     stageControllers.set(track.id, ctrl)
-    stages[track.id] = { startTime, series: null }
+    stages[track.id] = { segments: track.segments, startTime, series: null }
     const settle = (series: WeatherSeries | null, failure?: unknown) => {
       if (stageControllers.get(track.id) !== ctrl) return
       stageControllers.delete(track.id)
       if (series) {
-        useWeatherStore.setState((s) => ({ stages: { ...s.stages, [track.id]: { startTime, series } }, stageMessage: null }))
+        useWeatherStore.setState((s) => ({ stages: { ...s.stages, [track.id]: { segments: track.segments, startTime, series } }, stageMessage: null }))
       } else if (failure instanceof WeatherError) {
         // `unavailable` (date out of reach) is not a failure worth a message
         if (failure.kind === 'error') useWeatherStore.setState({ stageMessage: failure.message })
