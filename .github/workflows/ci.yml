@@ -29,6 +29,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # two paths that differ only in casing (ui/TrackTools.tsx and ui/trackTools.ts, once) build on Linux and fail on
+      # Windows and macOS, where the desktop installers are made
+      - name: Paths that differ only in casing
+        run: |
+          dups=$(git ls-files | tr 'A-Z' 'a-z' | sort | uniq -d)
+          if [ -n "$dups" ]; then echo "Chemins qui ne diffèrent que par la casse :"; echo "$dups"; exit 1; fi
 
   test:
     runs-on: ubuntu-latest
