@@ -118,4 +118,7 @@ export default {
   // 4.1 — frozen lakes, streams visible from high up
   'v41.ice.title': 'Les lacs gèlent, les ruisseaux restent visibles',
   'v41.ice.text': 'Au-dessus de la limite de la neige, les lacs deviennent de la glace, blanche comme le sol autour. Et vus de haut, les ruisseaux gardent un fin trait d’eau au lieu de disparaître.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Des gabarits plus clairs',
+  'v41.auto.text': 'Dans « Film automatique », chaque gabarit est une carte : format, durée du film, caméra et ce qui est réglé, d’un coup d’œil. Choisissez-en une, puis « Appliquer » ; « Annuler » revient en arrière.',
 }

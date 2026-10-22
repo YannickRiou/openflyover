@@ -120,6 +120,9 @@ const messages: Messages['news'] = {
   // 4.1 — frozen lakes, streams visible from high up
   'v41.ice.title': 'Lakes freeze, streams stay visible',
   'v41.ice.text': 'Above the snow line, lakes turn to ice, as white as the ground around them. And seen from high up, streams keep a thin line of water instead of vanishing.',
+  // 4.1 — gabarits du Film automatique en cartes
+  'v41.auto.title': 'Clearer templates',
+  'v41.auto.text': 'In "Automatic film", each template is a card: format, film length, camera and what gets set, at a glance. Pick one, then "Apply"; "Undo" takes it back.',
 }
 
 export default messages
