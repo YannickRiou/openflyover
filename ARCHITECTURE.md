@@ -895,11 +895,22 @@ The interface and the texts drawn into the films and posters exist in **French**
   speed applies on top. **Duration or speed** (`src/flyover/flightSpeed.ts`, pure; `src/ui/FlightDurationField.tsx`): the one setting
   has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change). The
   marker's *average* speed is derived: km/h = length ÷ duration (`speedKmh`, the length of the film track: all the stages of
-  « À la suite »), « × temps réel » = recorded time ÷ duration (`speedUpFactor`; the recorded time is the sum of the stages' own corrected durations, `recordedTotalS`, nights between days not counted; none for a track without times: km/h only).
+  « À la suite »), « × l'allure réelle » = **moving time** ÷ duration (`speedUpFactor`). The moving time (`movingTimeS`) is the
+  track's time minus its stops (`findPauses`, the rule of « Retirer les pauses »: within 15 m for 2 min) and the gaps between
+  segments, so a lunch, a bivouac or a night are not counted (a day walked at 2 km/h read × 150 against the 24 h of the file, it
+  now reads × 50 for 100 km/h); the duration typed in « Corriger les chiffres » is taken as it is; `movingTotalS` sums the
+  stages' own, the nights between days not counted; none for a track without times: km/h only. The panel writes both and the
+  average pace walked (`speedKmh(length, moving)`): « Vitesse du marqueur dans le film : 99 km/h, soit × 50 votre allure réelle
+  (vous avanciez à 2,0 km/h : 8 h 15 en mouvement… ») on both faces.
   Typing a speed gives the duration back (`durationForKmh`, `durationForSpeedUp`: rounded to a whole second, clamped to the
   range, so the speed shown afterwards may differ by the second's granularity). The speed slider spans the duration range on a
-  log scale (`speedPosition`, `durationAtPosition`, 1,000 notches). Stops, slow-motion, speed portions and « Garder la durée du
-  survol » are untouched: they take their time from the duration, which is why the speed is an average; a stage with its own
+  log scale (`speedPosition`, `durationAtPosition`, 1,000 notches). **What the duration counts**: with « Garder la durée du
+  survol » (the default) the stops, slow-motion and speed portions are taken inside it, so the flight (the « Survol » block,
+  `clock.flightS`) lasts exactly `flyoverDurationS`; unticked they are added. Always added, whatever « Garder »: the nights
+  shown as pauses and the holds between stages (`extra` pauses of the clock). `flightExtras` names what makes the flight longer
+  than the duration (nights, stops with « Garder » unticked, the rest) and the panel prints it under the film length: « Film :
+  44 s · 1 arrêt » (the main figure), « Ouverture 5 s + survol 33 s + clôture 6 s. Au-delà des 25 s réglées, le survol compte :
+  1 nuit (8 s). » (the 4.2.0 report: 25 s typed gave a 33 s block because the 24 h outing crossed a night); a stage with its own
   duration keeps it. "Survol" tab (`src/ui/CameraPanel.tsx`, "Caméra" and "Durée et rythme" sections; the
   smoothing sliders as rows of « Caméra », « Lissage des virages » showing the « Auto » length for
   the first track). While paused, a camera setting change repositions the camera.
