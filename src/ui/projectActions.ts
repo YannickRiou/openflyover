@@ -6,8 +6,10 @@
  */
 import { errorMessage } from '../core/errors'
 import type { Track } from '../core/types'
+import { useBatchStore } from '../export/batch'
+import { isExportBusy, useExportStore } from '../export/store'
 import { useMediaStore } from '../film/media'
-import { importFile, importText } from '../import'
+import { importFile, importText, supportedExtension } from '../import'
 import { chainTracks, followEachOther, replaceByChain } from '../import/chain'
 import { fileTargetOf, getPlatform } from '../platform'
 import type { OpenFilesOptions, ProjectEntry } from '../platform'
@@ -20,7 +22,7 @@ import { setAutoFilmOpen } from './autoFilmOpen'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
 import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry, unsavedChangesText } from './library'
-import { askOpenChoice, askUnsavedChanges } from './openChoice'
+import { askOpenChoice, askUnsavedChanges, dismissOpenQuestions } from './openChoice'
 import { effectiveProjectName, openedTracksAction, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
 import type { ToastInput } from './toast'
@@ -78,7 +80,7 @@ export async function saveExportedFile(url: string, fileName: string): Promise<v
  * Replace everything by the project in `file`; says so, with the warnings of the file, or why it failed. `entry`: the
  * « Mes projets » entry it comes from (its name wins, it is saved automatically from now on); `reopened` at start-up.
  */
-export async function openProject(file: File, entry: ProjectEntry | null = null, reopened = false): Promise<void> {
+export async function openProject(file: File, entry: ProjectEntry | null = null, reopened = false): Promise<boolean> {
   // a change of the project being replaced, still waiting for its autosave
   await flushAutosave()
   try {
@@ -95,9 +97,11 @@ export async function openProject(file: File, entry: ProjectEntry | null = null,
     const opened = t(reopened ? 'project.actions.reopened' : 'project.actions.opened', { name: effectiveProjectName(name, store.tracks[0]?.name) })
     if (project.warnings.length > 0) showToast({ kind: 'info', text: t('project.actions.openedWarnings', { opened, warnings: project.warnings.join('\n') }) })
     else showToast({ kind: 'success', text: opened })
+    return true
   } catch (err) {
     const reason = errorMessage(err)
     showToast({ kind: 'error', text: t('project.actions.openFailed', { fileName: file.name, reason }) })
+    return false
   }
 }
 
@@ -115,7 +119,8 @@ export type CloseAnswer = 'save' | 'close' | 'cancel'
  */
 async function closeOpenProject(ask: () => Promise<CloseAnswer>): Promise<boolean> {
   const closing = await confirmClose({ flush: flushAutosave, loss: projectCloseLoss, ask, save: saveProject })
-  if (!closing) return false
+  // the render may have started during the question: its project must not be emptied under it
+  if (!closing || refuseWhileExporting()) return false
   applyEmptyProject()
   getSettingsHistory().clear()
   const store = useAppStore.getState()
@@ -134,13 +139,30 @@ export async function closeProject(ask: () => Promise<CloseAnswer>): Promise<voi
 }
 
 /**
- * « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import (`files`
- * when they are already chosen, else a dialog).
+ * « Nouveau projet » (Projet tab): the open project closed, the default settings, then GPX / FIT files to import (dialog).
  */
-export async function newProject(ask: () => Promise<CloseAnswer>, files?: readonly File[]): Promise<void> {
-  if (!(await closeOpenProject(ask))) return
-  if (files) importTrackFiles(files)
-  else await chooseTracksToImport()
+export async function newProject(ask: () => Promise<CloseAnswer>): Promise<void> {
+  if (await closeOpenProject(ask)) await chooseTracksToImport()
+}
+
+/** `newProject` with the files already chosen; false (and says so) when the open project stays. */
+async function newProjectWith(files: readonly File[], ask: () => Promise<CloseAnswer>): Promise<boolean> {
+  const closed = await closeOpenProject(ask)
+  if (closed) importTrackFiles(files)
+  else if (!exportRunning()) showToast({ kind: 'info', text: t('project.openAsk.unchanged') })
+  return closed
+}
+
+/** An export or a batch is running (it keeps the shell locked between its jobs too). */
+function exportRunning(): boolean {
+  return isExportBusy(useExportStore.getState().phase) || useBatchStore.getState().phase === 'running'
+}
+
+/** Says why nothing was opened when an export is running. */
+function refuseWhileExporting(): boolean {
+  if (!exportRunning()) return false
+  showToast({ kind: 'info', text: t('shell.exportBusy') })
+  return true
 }
 
 let reopening: Promise<void> | null = null
@@ -169,14 +191,21 @@ export function reopenLastProject(rendering: Promise<boolean>, openedByOs: () =>
  * are imported; when the open project holds tracks, « Que faire de ce fichier ? » first (added to it, or a new project).
  */
 export async function openFiles(files: readonly File[]): Promise<void> {
+  // a question still open is about the files before these: it is cancelled
+  dismissOpenQuestions()
+  if (refuseWhileExporting()) return
   const { project, tracks, extraProjects } = routeOpenedFiles(files)
-  if (project) await openProject(project)
+  // an unreadable project: said by its message, the tracks of the same batch do not go to the project it did not replace
+  if (project && !(await openProject(project))) return
   if (tracks.length > 0) {
     if (openedTracksAction({ project, tracks }, useAppStore.getState().tracks.length) === 'add') importTrackFiles(tracks)
     else {
-      const choice = await askOpenChoice(tracks.map((file) => file.name))
+      // the question names the tracks; the other files go along and the importer says what it cannot read
+      const choice = await askOpenChoice(tracks.filter((file) => supportedExtension(file.name)).map((file) => file.name))
+      // an export may have started during the question
+      if (choice !== 'cancel' && refuseWhileExporting()) return
       if (choice === 'add') importTrackFiles(tracks)
-      else if (choice === 'new') await newProject(() => askUnsavedChanges(unsavedChangesText()), tracks)
+      else if (choice === 'new') await newProjectWith(tracks, () => askUnsavedChanges(unsavedChangesText()))
     }
   }
   if (extraProjects.length > 0) {

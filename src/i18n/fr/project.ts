@@ -107,4 +107,5 @@ export default {
   'openAsk.title': { one: 'Que faire de ce fichier ?', other: 'Que faire de ces fichiers ?' },
   'openAsk.add': { one: 'Ajouter la trace à ce projet', other: 'Ajouter les traces à ce projet' },
   'openAsk.new': 'Commencer un nouveau projet',
+  'openAsk.unchanged': "Rien n'a changé",
 }

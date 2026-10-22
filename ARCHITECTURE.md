@@ -1880,10 +1880,13 @@ The interface and the texts drawn into the films and posters exist in **French**
   When the project already holds a track and the files are GPX / FIT (`openedTracksAction`, pure, `shell.ts`: `ask` or `add`;
   no question for an empty project, a project file in the batch, or files that are not GPX / FIT), one question covers every file
   (`askOpenChoice`, `openChoice.ts`, shown by `OpenChoiceDialog` mounted in `App`): « Ajouter la trace à ce projet » (initial
-  focus; the import and the chaining offer as before), « Commencer un nouveau projet » (`newProject(ask, files)`: the same closing
+  focus; the import and the chaining offer as before), « Commencer un nouveau projet » (`newProjectWith`: the same closing
   as « Nouveau projet », « Fermer sans enregistrer ? » answered in the same dialog through `askUnsavedChanges`, then the files
-  are imported into the empty project, the first-import message offering « Film automatique… ») or « Annuler » (Esc: nothing
-  changes). Not asked: the « Ajouter » button of the Trace tab (`chooseTracksToImport`), « Choisir un fichier » of the home screen,
+  are imported into the empty project, the first-import message offering « Film automatique… »; « Rien n'a changé » when that
+  question is cancelled) or « Annuler » (Esc: nothing changes). The dialog lists the GPX / FIT files only, the others go along
+  and the importer reports them. Guards: a new `openFiles` cancels the question still open (`dismissOpenQuestions`), nothing is
+  opened or closed while an export or a batch runs (checked again after each answer), and a project file that cannot be read
+  stops the batch (its message is shown, the tracks are not added to the project it did not replace). Not asked: the « Ajouter » button of the Trace tab (`chooseTracksToImport`), « Choisir un fichier » of the home screen,
   the Strava import and the sample (they already say « add » or start from nothing), nor the files the app is started with.
 - **Desktop opening** (`src-tauri/src/opened.rs`, `src/platform/openedFiles.ts`): a `.opnflvr` or `.json` argv path (Windows and
   Linux), or a macOS `RunEvent::Opened`, is added to the fs scope and queued; the command `opened_files` hands the queue over once,

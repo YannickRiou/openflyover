@@ -5,7 +5,7 @@ import type { Root } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { setLanguage } from '../i18n'
 import { OpenChoiceDialog } from './OpenChoiceDialog'
-import { askOpenChoice, askUnsavedChanges, useOpenChoiceStore } from './openChoice'
+import { askOpenChoice, askUnsavedChanges, dismissOpenQuestions, useOpenChoiceStore } from './openChoice'
 
 beforeAll(() => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -71,6 +71,25 @@ describe('OpenChoiceDialog', () => {
     await settle()
     await act(async () => void dialog()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
     expect(await answer).toBe('cancel')
+  })
+
+  it('Escape on « Fermer sans enregistrer ? » keeps the project', async () => {
+    await mount()
+    const answer = askUnsavedChanges('Les changements de « Rando » ne sont pas enregistrés.')
+    await settle()
+    await act(async () => void dialog()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+    expect(await answer).toBe('cancel')
+  })
+
+  it('a new question cancels the one still open, whichever it is', async () => {
+    const first = askOpenChoice(['a.gpx'])
+    const second = askOpenChoice(['b.gpx'])
+    expect(await first).toBe('cancel')
+    const unsaved = askUnsavedChanges('x')
+    dismissOpenQuestions()
+    expect(await unsaved).toBe('cancel')
+    // the dismissal took the second question too
+    expect(await second).toBe('cancel')
   })
 
   it('asks « Fermer sans enregistrer ? » for a new project that would lose changes', async () => {

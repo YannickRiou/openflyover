@@ -115,6 +115,7 @@ const messages: Messages['project'] = {
   'openAsk.title': { one: '¿Qué hacer con este archivo?', other: '¿Qué hacer con estos archivos?' },
   'openAsk.add': { one: 'Añadir el track a este proyecto', other: 'Añadir los tracks a este proyecto' },
   'openAsk.new': 'Empezar un proyecto nuevo',
+  'openAsk.unchanged': 'No ha cambiado nada',
 }
 
 export default messages

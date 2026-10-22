@@ -24,9 +24,16 @@ export const useOpenChoiceStore = create<{ choice: OpenQuestion | null; unsaved:
   unsaved: null,
 }))
 
+/** Cancel the question being shown, if any: new files arrived, or the project it was about changed. */
+export function dismissOpenQuestions(): void {
+  const { choice, unsaved } = useOpenChoiceStore.getState()
+  choice?.answer('cancel')
+  unsaved?.answer('cancel')
+}
+
 /** Ask what to do with the files named `names`; a question still open is cancelled. */
 export function askOpenChoice(names: readonly string[]): Promise<OpenChoice> {
-  useOpenChoiceStore.getState().choice?.answer('cancel')
+  dismissOpenQuestions()
   return new Promise((resolve) =>
     useOpenChoiceStore.setState({
       choice: {
