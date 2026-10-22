@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildTrackPath } from '../flyover/path'
 import { buildTrack } from '../import/stats'
 import type { FilmMedia } from './model'
-import { PIN_AIM_SHARE, PIN_APPROACH_S, PIN_RELEASE_S, photoPins, pinAimWeight, pinAims, pinLit } from './photoPins'
+import { PIN_AIM_SHARE, PIN_MAX_FROM_MARKER_M, pinsMoveWithTime, PIN_APPROACH_S, PIN_RELEASE_S, photoPins, pinAimWeight, pinAims, pinLit } from './photoPins'
 
 // a straight track along a parallel, 0.01° of longitude ≈ 775 m, 4 points: 0 – 2.3 km
 const track = buildTrack({
@@ -26,12 +26,17 @@ describe('photoPins', () => {
   it('leaves out a medium without a thumbnail', () => {
     expect(photoPins([photo('a', 20), photo('b', 30)], path, clock, thumbed('b')).map((p) => p.id)).toEqual(['b'])
   })
-  it('puts a geotagged photo at the track point nearest to where it was taken, not under the marker', () => {
-    const table = { 's-a': { thumb: 'data:image/jpeg;base64,AA', lon: 6.8301, lat: 45.9005 }, ...thumbed('b') }
-    const [a, b] = photoPins([photo('a', 20), photo('b', 20)], path, clock, table)
+  it('puts a geotagged photo at the track point nearest to where it was taken when that is near the marker', () => {
+    const table = { 's-a': { thumb: 'data:image/jpeg;base64,AA', lon: 6.8301, lat: 45.9005 } }
+    const [a] = photoPins([photo('a', 90)], path, clock, table)
     expect(a.atM).toBeCloseTo(path.lengthM, -1)
     expect(a.lon).toBeCloseTo(6.83, 3)
-    expect(b.atM).toBeCloseTo(path.lengthM * 0.2, -1)
+  })
+  it('keeps a geotagged photo under the marker when its place is far from it (a loop or an out-and-back passes twice)', () => {
+    const table = { 's-a': { thumb: 'data:image/jpeg;base64,AA', lon: 6.8301, lat: 45.9005 } }
+    const [a] = photoPins([photo('a', 20)], path, clock, table)
+    expect(a.atM).toBeCloseTo(path.lengthM * 0.2, -1)
+    expect(Math.abs(path.lengthM - a.atM)).toBeGreaterThan(PIN_MAX_FROM_MARKER_M)
   })
   it('ignores a position too far from the track', () => {
     const table = { 's-a': { thumb: 'data:image/jpeg;base64,AA', lon: 7.5, lat: 45.9 } }
@@ -44,6 +49,17 @@ describe('photoPins', () => {
 })
 
 describe('pin timing', () => {
+  it('moves with the film time while the marker holds only with the setting on and a medium on the timeline', () => {
+    expect(pinsMoveWithTime({ photoPins: true }, { media: [photo('a', 1)] })).toBe(true)
+    expect(pinsMoveWithTime({ photoPins: false }, { media: [photo('a', 1)] })).toBe(false)
+    expect(pinsMoveWithTime({ photoPins: true }, { media: [] })).toBe(false)
+  })
+  it('pulls nothing out of the window of the photo', () => {
+    const [pin] = photoPins([photo('a', 40)], path, clock, thumbed('a'))
+    expect(pinAims([pin], 40 - PIN_APPROACH_S)).toEqual([])
+    expect(pinAims([pin], 45 + PIN_RELEASE_S)).toEqual([])
+    expect(pinAims([pin], 41)).toHaveLength(1)
+  })
   it('lights up while the photo is on screen only', () => {
     const pin = { startS: 20, endS: 25 }
     expect([19.9, 20, 24.9, 25].map((t) => pinLit(pin, t))).toEqual([false, true, true, false])

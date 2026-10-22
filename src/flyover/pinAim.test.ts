@@ -72,7 +72,7 @@ describe('the camera turns towards a photo pin', () => {
     expect(after.position.toArray()).toEqual(alone.position.toArray())
   })
 
-  it('is taken away by a camera key (a pose set by hand wins), and not applied in the shots of the opening and closing', () => {
+  it('is taken away by a camera key (a pose set by hand wins), and absent at the very start of the opening', () => {
     const key: FilmCameraKey = { id: 'camera-1', atM: path.lengthM * 0.5, distance: 1, pitchDeg: 30, headingOffsetDeg: 0 }
     const keyed = clockWith([key])
     const t = keyed.timeAtProgress(0.5)
@@ -87,12 +87,40 @@ describe('the camera turns towards a photo pin', () => {
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })
-    expect(at(3, [{ ...pin, startS: 0, endS: 8 }], shot).target.distanceTo(at(3, undefined, shot).target)).toBe(0)
+    expect(at(0, [{ ...pin, startS: 0, endS: 8 }], shot).target.distanceTo(at(0, undefined, shot).target)).toBe(0)
   })
 
   it('aimTowardsPins returns the same view when no pin pulls or the strength is nil', () => {
     const view = at(10)
     expect(aimTowardsPins(view, [pin], 10, frame, flat, 1, 3)).toBe(view)
     expect(aimTowardsPins(view, [pin], 33, frame, flat, 1, 3, 0)).toBe(view)
+  })
+
+  it('does not jump at the edges of the opening and closing shots, nor of a high view', () => {
+    const shots = buildFilmClock({
+      opening: { style: 'descente', durationS: 6 },
+      closing: { style: 'descente', durationS: 6 },
+      stops: [],
+      lengthM: path.lengthM,
+      highlightsM: [],
+      durationS: 60,
+      pacing: { ...DEFAULT_PACING, keepDuration: false },
+    })
+    const total = shots.totalTime()
+    // a photo on screen across the whole film: the pull is full everywhere it is allowed
+    const always: AimPin = { ...pin, startS: -PIN_APPROACH_S, endS: total + 10 }
+    const step = 0.02
+    for (const edge of [shots.openingS, total - shots.closingS]) {
+      const before = at(edge - step, [always], shots)
+      const after = at(edge + step, [always], shots)
+      const plainBefore = at(edge - step, undefined, shots)
+      const plainAfter = at(edge + step, undefined, shots)
+      // the turn itself (the aim with the pins minus without) moves little over two steps, where it used to leap by about a kilometre
+      const turn = (v: { target: Vector3 }, p: { target: Vector3 }) => v.target.clone().sub(p.target)
+      expect(turn(after, plainAfter).distanceTo(turn(before, plainBefore))).toBeLessThan(40)
+    }
+    // inside the opening the turn grows from nothing, in the closing it ends at nothing
+    expect(at(0.01, [always], shots).target.distanceTo(at(0.01, undefined, shots).target)).toBeLessThan(1)
+    expect(at(total - 0.01, [always], shots).target.distanceTo(at(total - 0.01, undefined, shots).target)).toBeLessThan(1)
   })
 })

@@ -946,16 +946,27 @@ export function computeFilmView(
   sample: HeightSampler | null,
   options: FilmViewOptions,
 ): FilmView {
-  const view = computeFlownView(path, clock, timeS, progress, frame, sample, options)
   const { pins } = options
-  if (!pins || pins.length === 0 || options.follow?.(progress)?.overview) return view
-  // the turn is the flight's: not in the opening and closing shots nor in the high views of the nights, and the camera keys
-  // (a pose set by hand) take it away as they take the view over
-  const { phase } = clock.stateAt(timeS)
-  if (phase === 'opening' || phase === 'closing' || highViewAt(clock, timeS)) return view
+  if (!pins || pins.length === 0) return computeFlownView(path, clock, timeS, progress, frame, sample, options)
+  const held = options.follow?.(progress)
+  const view = computeFlownView(path, clock, timeS, progress, frame, sample, options, held)
+  if (held?.overview) return view
+  // the turn is the flight's: it fades with the flight's share of the view (the opening and closing shots and the high views
+  // of the nights blend it in and out, so the aim never jumps at their edges), and the camera keys take it away as they take
+  // the view over
+  const state = clock.stateAt(timeS)
+  let flight = 1
+  if (state.phase === 'opening' || state.phase === 'closing') {
+    const shot = state.phase === 'opening' ? clock.opening : clock.closing
+    const wide = shotWeight(shot, state.phase, state.localS, state.lengthS)
+    flight = state.phase === 'opening' ? wide : 1 - wide
+  } else {
+    const high = highViewAt(clock, timeS)
+    if (high) flight = 1 - high.k
+  }
   const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
   const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
-  return aimTowardsPins(view, pins, timeS, frame, sample, options.exaggeration, options.liftM, 1 - (keyed?.weight ?? 0))
+  return aimTowardsPins(view, pins, timeS, frame, sample, options.exaggeration, options.liftM, flight * (1 - (keyed?.weight ?? 0)))
 }
 
 function computeFlownView(
@@ -966,8 +977,8 @@ function computeFlownView(
   frame: LocalFrame,
   sample: HeightSampler | null,
   options: FilmViewOptions,
+  held = options.follow?.(progress),
 ): FilmView {
-  const held = options.follow?.(progress)
   // « Bilan »: the camera holds the high view of the region whatever the shot, stop or key; the marker is on the outing being drawn
   if (held?.overview) return bilanView(held.overview, held, frame, sample, options)
   const state = clock.stateAt(timeS)

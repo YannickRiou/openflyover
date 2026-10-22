@@ -60,7 +60,8 @@ let pinned: { inputs: readonly unknown[]; pins: PhotoPin[] } | undefined
 export function filmPins(path: TrackPath, clock: FilmClock): PhotoPin[] {
   const { settings } = useAppStore.getState()
   const table = useMediaStore.getState().table
-  const inputs = [path, clock, settings.film.media, table]
+  // `path.dist` is the recorded track's, shared by every smoothed path of it (`smoothedTrackPath` makes a new path each time)
+  const inputs = [path.dist, settings.trackStyle.smoothingM, clock, settings.film.media, table]
   if (!pinned || pinned.inputs.some((input, i) => input !== inputs[i])) pinned = { inputs, pins: photoPins(settings.film.media, path, clock, table) }
   return pinned.pins
 }

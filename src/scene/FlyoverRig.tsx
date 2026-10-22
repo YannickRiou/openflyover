@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Vector3, type Sprite, type SpriteMaterial } from 'three'
 import { markerAt, markerFadeM } from '../film/markerKeys'
+import { pinsMoveWithTime } from '../film/photoPins'
 import { useMediaStore } from '../film/media'
 import { keyAt, updateCameraKey } from '../film/timeline'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
@@ -209,7 +210,7 @@ export function FlyoverRig() {
     const timed =
       filmViewMovesWithTime(clock.stateAt(timeS), settings.camera) ||
       highViewAt(clock, timeS) !== null ||
-      (settings.labels.photoPins && settings.film.media.length > 0)
+      pinsMoveWithTime(settings.labels, settings.film)
     const moved = progress !== placed.progress || ((timed || placed.timed) && timeS !== placed.timeS)
     if (playing || moved || cameraChanged) {
       appliedRef.current = { progress, timeS, timed }

@@ -1827,21 +1827,24 @@ The interface and the texts drawn into the films and posters exist in **French**
   a project saved without it opens with it off (`upgradeLabelSettings`, in `SETTING_UPGRADES`), so its film does not change.
 - **Where** (`film/photoPins.ts`, pure, tested): `photoPins(media, path, clock, table)` gives one `PhotoPin` per medium whose
   table entry has a thumbnail (`PinAsset`): the point of the track nearest to the EXIF GPS position (`MediaAsset.lon` / `lat`,
-  within `PIN_MAX_OFF_M` = 2 km, like the suggested placement), else the point under the marker when the medium starts
-  (`clock.progressAtTime(startS)`). A video has no GPS here: it is pinned at its start.
+  within `PIN_MAX_OFF_M` = 2 km of the track, like the suggested placement, and within `PIN_MAX_FROM_MARKER_M` = 500 m of the
+  point under the marker when the medium starts, so that a loop or an out-and-back does not send the camera kilometres away),
+  else that point under the marker (`clock.progressAtTime(startS)`). A video has no GPS here: it is pinned at its start.
 - **The turn** (`flyover/pinAim.ts`, `flyover/filmCamera.ts`): `pinAimWeight` rises over `PIN_APPROACH_S` (15 s) before the
   medium appears, is 1 while it is on screen and falls over `PIN_RELEASE_S` (6 s); `pinAims` gives the pins that pull with their
   share of the way (`PIN_AIM_SHARE` 0.7 for all together, so a pin being left and the next one being approached share the pull and
   the aim never jumps). `computeFilmView` takes `options.pins` and, after the view it always computed (now
   `computeFlownView`), `aimTowardsPins` moves the aim point towards the pins (the camera does not move; the aim is raised by
   `PIN_AIM_RAISE` of the distance, over the foot of the post, where the picture floats). Nothing else changes in the view:
-  no turn in the opening and closing shots, the high views of the nights and the « Bilan » overview, and the camera keys take it
-  away as they take the view over (`1 - keyed.weight`). It is a pure function of the film time: `filmViewAt`
+  the turn is weighted by the flight's share of the view (the opening and closing shots and the high views of the nights blend it
+  in and out, so the aim does not jump at their edges; none in the « Bilan » overview), and the camera keys take it away as they
+  take the view over (`1 - keyed.weight`). It is a pure function of the film time: `filmViewAt`
   (`scene/filmView.ts`, which reads the store: `filmPins` keeps the pins while the film, the track and the media table stay
   the same) is what the preview rig (`FlyoverRig`), the lens effects and the video export call, so every frame renders the
   same on its own and the export has the same turn as the preview. A change of the media or of the setting re-places the camera
-  (`settings.film` / `labels.photoPins` in `FlyoverRig`'s `cameraChanged`, `timed` while a photo is on the timeline: the turn
-  follows the film time even while the marker holds).
+  (`settings.film` / `labels.photoPins` in `FlyoverRig`'s `cameraChanged`). While the marker holds (a stop, a pause) the turn and the
+  lit pin still follow the film time: `pinsMoveWithTime(labels, film)` makes the preview rig's view `timed` and the export's scene
+  `sceneMovesWithTime`, so a held frame is not copied.
 - **The pins** (`scene/PhotoPins.tsx`, in `TerrainLayer` after `Labels`): three sprites per pin with `sizeAttenuation` off
   (the foot, the post, the framed thumbnail drawn on a canvas from the table's 160 px thumbnail; lit: chartreuse frame and glow, ×1.25), drawn like the labels (`AlwaysDepth` with a depth write, so the atmosphere does not haze them as sky).
   Size: a share of the height of the frame (`PIN_REFERENCE_HEIGHT_PX` = 720, or the height of a 16:9 frame of the same width in

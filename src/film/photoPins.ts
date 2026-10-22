@@ -7,6 +7,9 @@ import { nearestOnPath, samplePath, type TrackPath } from '../flyover/path'
 import type { FilmClock } from './clock'
 import type { FilmMedia } from './model'
 
+/** Farthest a geotagged photo's pin may stand from the point under the marker when the photo appears (metres). */
+export const PIN_MAX_FROM_MARKER_M = 500
+
 /** Farthest a geotagged photo may be from the track to be pinned on it (metres): the same limit as its suggested placement. */
 export const PIN_MAX_OFF_M = 2000
 
@@ -40,7 +43,8 @@ export type PinAsset = { thumb?: string; lon?: number; lat?: number }
 
 /**
  * One pin per picture or clip of the film that has a thumbnail. Its place is the track point nearest to where the
- * photo was taken (EXIF GPS, within `PIN_MAX_OFF_M`), else the point under the marker when it appears.
+ * photo was taken (EXIF GPS, within `PIN_MAX_OFF_M` of the track and `PIN_MAX_FROM_MARKER_M` of the point under the marker
+ * when it appears), else that point.
  */
 export function photoPins(
   media: readonly FilmMedia[],
@@ -53,15 +57,26 @@ export function photoPins(
   for (const item of media) {
     const asset = table[item.src]
     if (!asset?.thumb) continue
-    let atM = Math.min(1, Math.max(0, clock.progressAtTime(item.startS))) * path.lengthM
+    const underMarkerM = Math.min(1, Math.max(0, clock.progressAtTime(item.startS))) * path.lengthM
+    let atM = underMarkerM
     if (asset.lon !== undefined && asset.lat !== undefined) {
+      // the photo's own place, if it is near the marker when it appears (a loop or an out-and-back passes twice: the camera
+      // would turn towards a point kilometres from the marker); else under the marker
       const near = nearestOnPath(path, { lon: asset.lon, lat: asset.lat })
-      if (near && near.offM <= PIN_MAX_OFF_M) atM = near.distanceM
+      if (near && near.offM <= PIN_MAX_OFF_M && Math.abs(near.distanceM - underMarkerM) <= PIN_MAX_FROM_MARKER_M) atM = near.distanceM
     }
     const at = samplePath(path, atM)
     pins.push({ id: item.id, src: item.src, atM, lon: at.lon, lat: at.lat, ele: at.ele, startS: item.startS, endS: item.startS + item.durationS })
   }
   return pins
+}
+
+/**
+ * The pins change with the film time while the marker holds (a stop, a pause): the camera turns and the pins light up. True
+ * with the setting on and a medium on the timeline. Shared by the preview rig and the export, which would copy a held frame.
+ */
+export function pinsMoveWithTime(labels: { photoPins: boolean }, film: { media: readonly unknown[] }): boolean {
+  return labels.photoPins && film.media.length > 0
 }
 
 const smooth = (x: number) => {
@@ -87,8 +102,17 @@ export function pinAimWeight(pin: Pick<PhotoPin, 'startS' | 'endS'>, timeS: numb
  * so the aim never jumps from one to the other).
  */
 export function pinAims<P extends Pick<PhotoPin, 'startS' | 'endS'>>(pins: readonly P[], timeS: number): { pin: P; share: number }[] {
-  const weighted = pins.map((pin) => ({ pin, weight: pinAimWeight(pin, timeS) })).filter((w) => w.weight > 0)
-  const total = weighted.reduce((sum, w) => sum + w.weight, 0)
+  const weighted: { pin: P; weight: number }[] = []
+  let total = 0
+  for (const pin of pins) {
+    // out of [startS - approach, endS + release] the weight is nil
+    if (timeS <= pin.startS - PIN_APPROACH_S || timeS >= pin.endS + PIN_RELEASE_S) continue
+    const weight = pinAimWeight(pin, timeS)
+    if (weight > 0) {
+      weighted.push({ pin, weight })
+      total += weight
+    }
+  }
   const scale = PIN_AIM_SHARE / Math.max(1, total)
   return weighted.map(({ pin, weight }) => ({ pin, share: weight * scale }))
 }
