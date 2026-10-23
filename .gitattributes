@@ -1,0 +1,21 @@
+# LF everywhere, whatever the system that commits: the installers are built on Windows and macOS too.
+* text=auto eol=lf
+
+# kept as their authors wrote them
+public/fonts/OFL-IBM-Plex.txt -text
+
+# binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.bin binary
+*.gz binary
+*.zip binary
+*.mp3 binary
+*.mp4 binary

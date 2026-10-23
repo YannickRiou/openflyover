@@ -1,0 +1,54 @@
+name: Bug report
+description: Something does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. A security problem? Do not open an issue: see SECURITY.md.
+        Vous pouvez écrire en français.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What you did, what you expected, what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the sample (« Essayer avec l'exemple »)
+        2. …
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Website
+        - Desktop app, Windows
+        - Desktop app, macOS
+        - Desktop app, Linux
+        - Phone or tablet
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: « Réglages › Mises à jour », or the « Nouveautés » window.
+      placeholder: 4.3.0
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Diagnostic report
+      description: « Réglages › Diagnostic › Afficher le rapport », then « Copier le rapport ». It holds no position nor track name.
+      render: text
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots, a GPX file (remove what you do not want to share), the browser.

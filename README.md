@@ -242,6 +242,8 @@ text with its links for the description of the video. What each source requires 
 
 ## Contributing
 
+How to set up, test and open a pull request: [`CONTRIBUTING.md`](CONTRIBUTING.md). Security problems: [`SECURITY.md`](SECURITY.md).
+
 Conventions:
 
 - Two targets, both always working: the hosted static website (no application server, no Node at run time) and the desktop application (Tauri); disk access and storage go through the common interface of `src/platform` (browser / Tauri).

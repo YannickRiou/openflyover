@@ -1,0 +1,32 @@
+# Dead links of the documentation (README, the Markdown files, the user guides and the handbook), every week and on
+# demand. Servers that refuse robots (403) or rate them (429) count as alive; the tile and API endpoints quoted as
+# examples are not pages and are left out.
+name: Links
+
+on:
+  schedule:
+    - cron: '41 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --max-concurrency 8
+            --accept 100..=103,200..=299,403,429
+            --exclude-loopback
+            --exclude '\{[a-z]\}|\{z\}|\{x\}|\{y\}'
+            --exclude '^https://github\.com/YannickRiou/openflyover/(security/advisories/new|compare)'
+            './*.md'
+            './docs/**/*.md'
+            './docs/**/*.html'
+          fail: true

@@ -1,7 +1,8 @@
 # Checks on pull requests and on master: lint, unit tests with coverage and production build with its type check (lint,
 # test and build jobs, in parallel), and the Rust tests of the desktop app only when src-tauri or this file changed (rust job: its Linux libraries
-# alone take minutes to install). The Rust tests do not use the site, so they build against a placeholder dist/. No
-# end-to-end tests. On master, the line coverage feeds the README badge (badge job, `badges` branch).
+# alone take minutes to install). The Rust tests do not use the site, so they build against a placeholder dist/. The
+# types are also checked on Windows and macOS (types-os job). The end-to-end tests run every night (e2e.yml). On
+# master, the line coverage feeds the README badge (badge job, `badges` branch).
 name: CI
 
 on:
@@ -68,6 +69,26 @@ jobs:
       - run: npm ci
       # `tsc -b` type checks both projects (tsconfig.app.json, tsconfig.node.json) before the Vite build: no separate typecheck step
       - run: npm run build
+      # what a visitor downloads before the home screen shows, gzipped, under its budget
+      - run: node scripts/check-bundle-size.mjs
+
+  # the installers are built on Windows and macOS, whose file systems ignore casing: an import that resolves on Linux
+  # and not there (4.2.0 and 4.2.1 failed so) shows here, in the pull request
+  types-os:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc -b
 
   rust:
     runs-on: ubuntu-latest
