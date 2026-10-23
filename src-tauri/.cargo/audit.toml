@@ -1,0 +1,9 @@
+# Advisories cargo audit lets through, each with its reason. Remove an entry once the fix can be taken.
+[advisories]
+ignore = [
+  # zip 4.x, through tauri-plugin-updater 2.14.0 (zip ^4; the fixed zip 9 only in its 3.0 alphas). The updater extracts
+  # an archive only after checking its minisign signature, so a crafted archive cannot reach the extraction.
+  "RUSTSEC-2026-0367",
+  "RUSTSEC-2026-0368",
+  "RUSTSEC-2026-0369",
+]
