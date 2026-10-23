@@ -191,7 +191,7 @@ export function AtmosphereLayer() {
     weatherRef.current = weather
 
     gl.toneMappingExposure = sceneExposure(elevation, paramAt(film, settings.exposureEv, 'exposure', playback.progress * lengthM) + weather.exposureCompensationEv)
-    if (nightFillRef.current) nightFillRef.current.intensity = nightFillIntensity(elevation)
+    if (nightFillRef.current) nightFillRef.current.intensity = nightFillIntensity(elevation, settings.nightLightEv)
     if (sun) {
       sun.intensity = weather.sunScale
       sun.shadow.intensity = weather.shadowStrength

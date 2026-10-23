@@ -156,6 +156,8 @@ const messages: Messages['light'] = {
   'atmosphere.exposure': 'Exposición',
   'atmosphere.exposureTip': 'Aclara u oscurece la imagen, además del ajuste automático según el sol.',
   'atmosphere.exposureKeyed': 'Unas claves de la pista «Exposición» de la línea de tiempo controlan este valor a lo largo del recorrido: el control deslizante modifica entonces la clave en el marcador (se crea una si hace falta).',
+  'atmosphere.nightLight': 'Claridad de la noche',
+  'atmosphere.nightLightTip': 'Ilumina el relieve de noche, como la luz de la luna: en 0 la noche queda muy oscura; más alto, se ven las montañas y las nubes. Sin efecto de día.',
   'atmosphere.sun': 'Sol',
   'atmosphere.sunOff': 'Activa la atmósfera (sección anterior) para ajustar la hora del sol.',
   'map.imageryDetailHint': 'Más fino: fotos más nítidas, pero más teselas que cargar (vista previa, exportación y paquete sin conexión más largos).',

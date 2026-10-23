@@ -15,6 +15,11 @@ export function formatNumber(value: number, fractionDigits = 0): string {
   return formatNumberIntl(value, fractionDigits)
 }
 
+/** 0.5 -> "+0,5 IL" (stops of light) */
+export function formatEv(ev: number): string {
+  return t('light.ev', { value: `${ev > 0 ? '+' : ev < 0 ? '−' : ''}${formatNumber(Math.abs(ev), 1)}` })
+}
+
 /** bytes -> "420 Mo", "1,2 Go" (French) / "420 MB", "1.2 GB" (English) */
 export function formatBytes(bytes: number): string {
   return bytes >= 1e9 ? t('format.gigabytes', { value: formatNumber(bytes / 1e9, 1) }) : t('format.megabytes', { value: formatNumber(Math.max(bytes, 0) / 1e6) })

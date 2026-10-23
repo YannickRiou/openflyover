@@ -130,6 +130,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   pacing: isValidPacing,
   film: isValidFilm,
   exposureEv: (v) => v >= -4 && v <= 4,
+  nightLightEv: (v) => v >= 0 && v <= 4,
   grading: isValidGrading,
   lens: isValidLens,
   weatherScene: (v) => v.strength >= 0 && v.strength <= 1,

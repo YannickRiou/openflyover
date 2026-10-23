@@ -49,8 +49,8 @@ export function sceneExposure(elevationRad: number, compensationEv: number): num
   return DAYLIGHT_EXPOSURE * 2 ** (autoExposureEv(elevationRad) + compensationEv)
 }
 
-/** Night fill light: 0 while the sun is up, full once it is 6° below the horizon. */
-export function nightFillIntensity(elevationRad: number): number {
+/** Night fill light: 0 while the sun is up, full once it is 6° below the horizon; `nightLightEv` stops brighter (« Clarté des nuits »). */
+export function nightFillIntensity(elevationRad: number, nightLightEv = 0): number {
   const t = Math.min(1, Math.max(0, -(elevationRad * DEG) / 6))
-  return NIGHT_FILL_INTENSITY * t
+  return NIGHT_FILL_INTENSITY * t * 2 ** nightLightEv
 }

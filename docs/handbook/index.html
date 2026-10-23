@@ -730,15 +730,15 @@ details.callout[open] > summary { margin-bottom: 6px; }
     <div class="card"><h4>Lazy loading and Suspense</h4><p><code>lazy()</code> declares a component loaded on first use; <code>&lt;Suspense fallback=...&gt;</code> shows a placeholder meanwhile. Used for the 3D scene, the export drawer and the atmosphere.</p></div>
   </div>
   <p><strong>The same idea, in this repository.</strong> A real component, trimmed from <code>src/ui/SettingsPanel.tsx</code> (<code>LightSettings</code>): it <em>reads</em> state with a selector, <em>writes</em> it through an action, and renders a labelled control. Nothing else is needed to make the slider drive the 3D scene.</p>
-  <div class="code"><figcaption>src/ui/SettingsPanel.tsx (LightSettings, excerpt)</figcaption><pre><code>const exposureEv = useAppStore((s) =&gt; s.settings.exposureEv)
+  <div class="code"><figcaption>src/ui/SettingsPanel.tsx (LightSettings, excerpt)</figcaption><pre><code>const nightLightEv = useAppStore((s) =&gt; s.settings.nightLightEv)
 const setSetting = useAppStore((s) =&gt; s.setSetting)
 ...
 &lt;RangeField
-  label={t('light.atmosphere.exposure')}
-  min={EXPOSURE_EV_MIN} max={EXPOSURE_EV_MAX} step={EXPOSURE_EV_STEP}
-  value={exposureEv}
+  label={t('light.atmosphere.nightLight')}
+  min={0} max={NIGHT_LIGHT_EV_MAX} step={NIGHT_LIGHT_EV_STEP}
+  value={nightLightEv}
   format={formatEv}
-  onChange={(ev) =&gt; setSetting('exposureEv', ev)}
+  onChange={(ev) =&gt; setSetting('nightLightEv', ev)}
 /&gt;</code></pre></div>
 
   <h3 class="sub" id="state">State management: one store, selectors, pure modules</h3>
@@ -1718,7 +1718,7 @@ export const DEFAULT_SETTINGS: Settings = {
   return (
     &lt;&gt;
       <span class="why">// keys: the settings this section owns, for the ↺ « modifié » button</span>
-      &lt;PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'exposureEv']}&gt;
+      &lt;PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'nightLightEv']}&gt;
         ...
         <span class="why">// shown only while « Atmosphère » is on</span>
         {atmosphere &amp;&amp; (
@@ -1838,7 +1838,7 @@ gl.toneMappingExposure = sceneExposure(elevation, paramAt(film, settings.exposur
     </div></li>
     <li><div class="stack">
       <p><strong>Make the slider write into the key.</strong> Wrap the setting with <code>useKeyedValue(param, base, setBase)</code> (<code>scene/usePacing.ts</code>): it shows the value at the playhead (the line of the timeline that marks the current moment) and, once the setting has keys, writes into the key there. Put <code>&lt;PanelKeys target={{ kind: 'param', param }} /&gt;</code> under the slider for the key buttons (see <code>GradingPanel.tsx</code> and <code>OverlayPanel.tsx</code>).</p>
-      <div class="code"><figcaption>src/ui/SettingsPanel.tsx (LightSettings, excerpt)</figcaption><pre><code><span class="why">// the value at the playhead, and a writer that knows about keys</span>
+      <div class="code"><figcaption>src/ui/GradingPanel.tsx (ExposureSlider, excerpt)</figcaption><pre><code><span class="why">// the value at the playhead, and a writer that knows about keys</span>
 const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (ev) =&gt; setSetting('exposureEv', ev))
 ...
 <span class="why">// the « ajouter une clé » and previous / next key buttons</span>

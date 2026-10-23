@@ -21,7 +21,7 @@ import { useWeatherStore, weatherSeriesOf } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
-import { formatNumber, formatPercent } from './format'
+import { formatEv, formatNumber, formatPercent } from './format'
 import { Button, Checkbox, DateField, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
 
 const ZOOM_OFFSETS: { value: Settings['imageryZoomOffset']; label: string }[] = [
@@ -34,16 +34,11 @@ const EXAGGERATION_MIN = 1
 const EXAGGERATION_MAX = 3
 const EXAGGERATION_STEP = 0.1
 
-const EXPOSURE_EV_MIN = -2
-const EXPOSURE_EV_MAX = 2
-const EXPOSURE_EV_STEP = 0.5
+/** « Clarté des nuits »: stops added to the night fill light, none to a full moon's worth */
+const NIGHT_LIGHT_EV_MAX = 4
+const NIGHT_LIGHT_EV_STEP = 0.5
 
 const WEATHER_STRENGTH_STEP = 0.05
-
-/** 0.5 -> "+0,5 IL" */
-function formatEv(ev: number): string {
-  return t('light.ev', { value: `${ev > 0 ? '+' : ev < 0 ? '−' : ''}${formatNumber(Math.abs(ev), 1)}` })
-}
 
 /** 10.5 -> "10 h 30" */
 function formatHour(hour: number): string {
@@ -863,7 +858,7 @@ export function WeatherSettings() {
   )
 }
 
-/** « Lumière » tab, before the colours (`GradingPanel`): sections Atmosphère (sky, shadows, exposure) and Soleil. */
+/** « Lumière » tab, before the colours (`GradingPanel`, which holds the exposure): sections Atmosphère (sky, shadows, night light) and Soleil. */
 export function LightSettings() {
   const t = useT()
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
@@ -871,16 +866,13 @@ export function LightSettings() {
   const cloudShadows = useAppStore((s) => s.settings.cloudShadows)
   // the shadows fall from clouds in volume: none with « Aucun » nor with a sea of clouds drawn as a flat layer
   const noCloudVolume = useAppStore((s) => s.settings.clouds.mode === 'aucun' || (s.settings.clouds.mode === 'mer' && s.settings.clouds.seaRender === 'surface'))
-  const exposureSetting = useAppStore((s) => s.settings.exposureEv)
-  const exposureKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['exposure']))
+  const nightLightEv = useAppStore((s) => s.settings.nightLightEv)
   const setSetting = useAppStore((s) => s.setSetting)
-  // with keys on the exposure the slider shows and edits the key at the marker, not the setting they ignore
-  const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (ev) => setSetting('exposureEv', ev))
   const id = useId()
 
   return (
     <>
-      <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'exposureEv']}>
+      <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'nightLightEv']}>
         <Switch id={`${id}-atmosphere`} checked={atmosphere} onChange={(on) => setSetting('atmosphere', on)}>{t('light.atmosphere.enable')}</Switch>
 
         {atmosphere && (
@@ -895,21 +887,17 @@ export function LightSettings() {
         )}
 
         {atmosphere && (
-          <SettingRow label={t('light.atmosphere.exposure')} value={formatEv(exposureEv)} paths={['exposureEv']}>
+          <SettingRow label={t('light.atmosphere.nightLight')} value={formatEv(nightLightEv)} paths={['nightLightEv']}>
             <RangeField
-              label={t('light.atmosphere.exposure')}
-              tip={t('light.atmosphere.exposureTip')}
-              min={EXPOSURE_EV_MIN}
-              max={EXPOSURE_EV_MAX}
-              step={EXPOSURE_EV_STEP}
-              value={exposureEv}
+              label={t('light.atmosphere.nightLight')}
+              tip={t('light.atmosphere.nightLightTip')}
+              min={0}
+              max={NIGHT_LIGHT_EV_MAX}
+              step={NIGHT_LIGHT_EV_STEP}
+              value={nightLightEv}
               format={formatEv}
-              onChange={setExposureEv}
+              onChange={(ev) => setSetting('nightLightEv', ev)}
             />
-            {exposureKeyed && (
-              <p className="type-hint">{t('light.atmosphere.exposureKeyed')}</p>
-            )}
-            <PanelKeys target={{ kind: 'param', param: 'exposure' }} />
           </SettingRow>
         )}
       </PanelSection>

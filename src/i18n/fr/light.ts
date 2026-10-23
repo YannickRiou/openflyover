@@ -154,6 +154,8 @@ export default {
   'atmosphere.exposure': 'Exposition',
   'atmosphere.exposureTip': 'Éclaircit ou assombrit l’image, en plus du réglage automatique selon le soleil.',
   'atmosphere.exposureKeyed': 'Des clés de la ligne « Exposition » de la timeline pilotent cette valeur le long du parcours : le curseur modifie alors la clé placée au marqueur (elle est créée au besoin).',
+  'atmosphere.nightLight': 'Clarté des nuits',
+  'atmosphere.nightLightTip': 'Éclaire le relief la nuit, comme un clair de lune : à 0, la nuit reste très sombre ; plus haut, on distingue les montagnes et les nuages. Sans effet le jour.',
   'atmosphere.sun': 'Soleil',
   'atmosphere.sunOff': 'Activez l’atmosphère (section précédente) pour régler l’heure du soleil.',
   'map.imageryDetailHint': 'Plus fin : photos plus nettes, mais plus de tuiles à charger (aperçu, export et pack hors ligne plus longs).',
