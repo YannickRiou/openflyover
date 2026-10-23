@@ -1,7 +1,7 @@
 /**
  * GPU and memory budget of the device, read once at start-up where the limits live (canvas pixel ratio, tile caches,
  * imagery texture size, preview clouds, export resolution). Phones and tablets (touch screen as the main pointer) get
- * lower limits; computers keep the values they always had. iOS gives no per-tab WebGL budget and reloads a page that
+ * lower limits; computers keep the values they always had, but a modest one (4 cores or 4 GB) previews lighter. iOS gives no per-tab WebGL budget and reloads a page that
  * holds too many textures (WebKit bug 300782): the mobile values are conservative. See ARCHITECTURE.md "Device budget".
  */
 
@@ -93,6 +93,20 @@ const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodH
 export const PHONE_MAX_SHORT_SIDE = 600
 /** `navigator.deviceMemory` (GB, Chrome only, rounded down) at or below which the limits drop further */
 export const LOW_MEMORY_GB = 2
+/** a computer with this many logical cores or GB of memory or fewer is modest (integrated GPU, 4–8 GB of RAM) */
+export const MODEST_CORES = 4
+export const MODEST_MEMORY_GB = 4
+
+/**
+ * What a modest computer lowers: the preview only. The export sets its own pixel ratio (1) and cloud pass (full scale,
+ * chosen quality), so its films do not change; the caches, the shadow map and the trees, which would, stay.
+ */
+const MODEST_DESKTOP_PREVIEW: Pick<DeviceBudget, 'maxPixelRatio' | 'movingPixelRatio' | 'cloudResolutionScale' | 'cloudSettleFrames'> = {
+  maxPixelRatio: 1.5,
+  movingPixelRatio: 1,
+  cloudResolutionScale: 0.5,
+  cloudSettleFrames: 16,
+}
 
 export interface DeviceTraits {
   /** touch screen as the main pointer */
@@ -101,10 +115,15 @@ export interface DeviceTraits {
   shortSidePx: number
   /** `navigator.deviceMemory`, undefined where the browser does not tell (Safari, Firefox) */
   memoryGb?: number
+  /** `navigator.hardwareConcurrency` (logical cores), undefined where the browser does not tell */
+  cores?: number
 }
 
-export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits): DeviceBudget {
-  if (!coarsePointer) return { ...DESKTOP_BUDGET }
+export function budgetFor({ coarsePointer, shortSidePx, memoryGb, cores }: DeviceTraits): DeviceBudget {
+  if (!coarsePointer) {
+    const modest = (memoryGb !== undefined && memoryGb <= MODEST_MEMORY_GB) || (cores !== undefined && cores <= MODEST_CORES)
+    return modest ? { ...DESKTOP_BUDGET, ...MODEST_DESKTOP_PREVIEW } : { ...DESKTOP_BUDGET }
+  }
   const phone = shortSidePx < PHONE_MAX_SHORT_SIDE
   const budget: DeviceBudget = {
     ...MOBILE_BUDGET,
@@ -141,12 +160,14 @@ export function readDeviceTraits(scope: object): DeviceTraits {
   const s = scope as {
     matchMedia?: (query: string) => MediaQueryList
     screen?: { width: number; height: number }
-    navigator?: { deviceMemory?: number }
+    navigator?: { deviceMemory?: number; hardwareConcurrency?: number }
   }
   return {
     coarsePointer: typeof s.matchMedia === 'function' && s.matchMedia.call(scope, '(pointer: coarse)').matches,
     shortSidePx: s.screen ? Math.min(s.screen.width, s.screen.height) : Infinity,
     memoryGb: s.navigator?.deviceMemory,
+    // Node (the tests) tells its cores too: without a screen, a full computer as before
+    cores: s.screen ? s.navigator?.hardwareConcurrency : undefined,
   }
 }
 

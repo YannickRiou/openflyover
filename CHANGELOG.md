@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **A lighter preview on modest computers**: a computer with 4 logical cores or fewer, or 4 GB of memory or less (as the browser reports it), now draws the 3D preview at a pixel ratio of 1.5 at most, 1 while the film plays, and its preview clouds at half resolution, averaged over 16 still frames instead of 32. This is the first step of the performance work for low-end PCs. Exported films do not change: the export sets its own pixel ratio and cloud quality. « Diagnostic » lists the values in use.
+
 ## 4.2.1 (October 2026)
 
 - **The weather follows « Outils de la trace »**: after « Rogner la fin », « Retirer une section », « Supprimer les pics GPS », « Retirer les pauses », « Simplifier » or « Inverser le sens » (tools that keep the start time) the weather of the outing, the clouds, the wind and the snow line were still those fetched for the former points; they are fetched again for the new ones, as after « Décaler l'heure ». The stages « À la suite » follow too. The tools already changed the track loaded in the project itself (the 3D line, the figures, the film and the landmarks follow « Appliquer », « Annuler » puts it back): there is no need to export the GPX and open it again, « Exporter la trace en GPX » is only for using the clean track elsewhere.

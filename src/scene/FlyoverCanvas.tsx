@@ -77,10 +77,10 @@ export interface FlyoverCanvasProps {
   style?: CSSProperties
 }
 
-/** Pixel ratio caps of this device: [1, 2] on a computer, lower while the view moves on a phone (core/deviceBudget.ts). */
+/** Pixel ratio caps of this device: [1, 2] on a computer, lower while the view moves on a phone or a modest computer (core/deviceBudget.ts). */
 const BUDGET = deviceBudget()
 
-/** Phones and tablets: the lower pixel ratio while the film plays or fingers move the view; the export sets its own. */
+/** Phones, tablets and modest computers: the lower pixel ratio while the film plays or fingers move the view; the export sets its own. */
 function MovingPixelRatio() {
   const playing = useAppStore((s) => s.playback.playing)
   const exporting = useExportStore((s) => isExportBusy(s.phase))

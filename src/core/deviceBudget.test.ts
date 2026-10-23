@@ -5,10 +5,10 @@ import { DEFAULT_TUNING } from '../terrain/engine'
 import { DEFAULT_CLOUDS } from '../weather/sceneClouds'
 import { DESKTOP_BUDGET, budgetFor, canvasAntialias, deviceBudget, readDeviceTraits } from './deviceBudget'
 
-const scope = (coarse: boolean, width: number, height: number, deviceMemory?: number) => ({
+const scope = (coarse: boolean, width: number, height: number, deviceMemory?: number, hardwareConcurrency?: number) => ({
   matchMedia: (query: string) => ({ matches: coarse && query === '(pointer: coarse)' }),
   screen: { width, height },
-  navigator: { deviceMemory },
+  navigator: { deviceMemory, hardwareConcurrency },
 })
 
 describe('budgetFor', () => {
@@ -34,8 +34,15 @@ describe('budgetFor', () => {
       shadowMapSize: 4096,
       maxTrees: 250_000,
     })
-    // a laptop with little memory is still a computer
-    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 2 })).toEqual(DESKTOP_BUDGET)
+    expect(budgetFor({ coarsePointer: false, shortSidePx: 1080, memoryGb: 8, cores: 8 })).toEqual(DESKTOP_BUDGET)
+  })
+
+  it('a modest computer (4 cores or 4 GB) lowers its preview only, nothing the export uses', () => {
+    const preview = { maxPixelRatio: 1.5, movingPixelRatio: 1, cloudResolutionScale: 0.5, cloudSettleFrames: 16 }
+    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 4 })).toEqual({ ...DESKTOP_BUDGET, ...preview })
+    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, cores: 4 })).toEqual({ ...DESKTOP_BUDGET, ...preview })
+    // still a computer: the tablet's limits do not apply, even with 2 GB
+    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 2 })).toMatchObject({ kind: 'desktop', shadowMapSize: 4096, tileBitmaps: 600 })
   })
 
   it('lowers the limits of a phone', () => {
@@ -97,13 +104,16 @@ describe('canvasAntialias', () => {
 
 describe('readDeviceTraits', () => {
   it('reads the pointer, the screen and the memory', () => {
-    expect(readDeviceTraits(scope(true, 390, 844, 4))).toEqual({ coarsePointer: true, shortSidePx: 390, memoryGb: 4 })
+    expect(readDeviceTraits(scope(true, 390, 844, 4, 6))).toEqual({ coarsePointer: true, shortSidePx: 390, memoryGb: 4, cores: 6 })
+    expect(budgetFor(readDeviceTraits(scope(false, 1366, 768, undefined, 4))).movingPixelRatio).toBe(1)
     expect(budgetFor(readDeviceTraits(scope(true, 1024, 1366))).kind).toBe('tablet')
     expect(budgetFor(readDeviceTraits(scope(false, 1920, 1080))).kind).toBe('desktop')
   })
 
   it('a scope without a screen is a computer', () => {
     expect(budgetFor(readDeviceTraits({})).kind).toBe('desktop')
+    // Node tells its cores: the tests keep the full computer's values on a 4-core runner
+    expect(budgetFor(readDeviceTraits({ navigator: { hardwareConcurrency: 2 } }))).toEqual(DESKTOP_BUDGET)
   })
 })
 
