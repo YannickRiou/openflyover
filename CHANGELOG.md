@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## Unreleased
 
 - **A lighter preview on modest computers**: a computer with 4 logical cores or fewer, or 4 GB of memory or less (as the browser reports it), now draws the 3D preview at a pixel ratio of 1.5 at most, 1 while the film plays, and its preview clouds at half resolution, averaged over 16 still frames instead of 32. This is the first step of the performance work for low-end PCs. Exported films do not change: the export sets its own pixel ratio and cloud quality. « Diagnostic » lists the values in use.
+- **Landmark settings answer at once on long tracks**: each change of « Repères et points d'intérêt » (a kind, the distance, the density, « Toujours », « Masquer »), a recolour, and each OpenStreetMap answer measured again every landmark against every point of every track. A landmark is now measured once per track; the settings only filter again. The landmarks shown are the same.
 
 ## 4.2.1 (October 2026)
 
