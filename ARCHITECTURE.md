@@ -118,7 +118,9 @@ full customization through a single project document, WebCodecs video export, Ta
   `rust` only when `src-tauri/` or the workflow changed, `badge` on master for the README coverage badge),
   `security.yml` (CodeQL for TypeScript and the workflows, `cargo audit`, Dependency Review on pull requests),
   `e2e.yml` (the end-to-end scenarios every night), `links.yml` (dead links of the documentation every week), `pages.yml` (website on GitHub
-  Pages), `desktop.yml` (installers; a `v*` tag also publishes a release, see "Desktop application").
+  Pages), `desktop.yml` (installers; a `v*` tag also publishes a release, see "Desktop application"), `release-pr.yml`
+  (a shipped dependency changed on master: opens the patch release pull request `release/X.Y.Z`), `release-tag.yml`
+  (a `release/*` pull request merged: tags it and starts `desktop.yml`).
 
 ## Loading (bundle splitting)
 
