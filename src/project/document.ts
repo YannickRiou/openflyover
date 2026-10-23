@@ -255,6 +255,32 @@ function encodeWaypoint(w: Waypoint): Waypoint {
   return out
 }
 
+function encodeTrack(track: Track): ProjectTrack {
+  const segments = track.segments.map(encodeSegment)
+  const out: ProjectTrack = { id: track.id, name: track.name, source: track.source, color: track.color, segments }
+  if (track.activityType) out.activityType = track.activityType
+  if (track.waypoints?.length) out.waypoints = track.waypoints.map(encodeWaypoint)
+  if (track.utcOffsetMin !== undefined) out.utcOffsetMin = track.utcOffsetMin
+  if (track.timesEstimated) out.timesEstimated = true
+  if (track.elevationEstimated) out.elevationEstimated = track.elevationEstimated
+  if (track.elevationFilled) out.elevationFilled = track.elevationFilled
+  if (track.flights?.length) out.flights = track.flights
+  if (track.statsOverride) out.statsOverride = track.statsOverride
+  return out
+}
+
+/** JSON line of each track, made once: a track is never changed in place (an edit replaces it), so the autosave of a slider does not encode every point again. */
+const trackLines = new WeakMap<Track, string>()
+
+function trackLine(track: Track): string {
+  let line = trackLines.get(track)
+  if (line === undefined) {
+    line = JSON.stringify(encodeTrack(track))
+    trackLines.set(track, line)
+  }
+  return line
+}
+
 export function toProjectDocument(state: ProjectSource, name: string, media: MediaTable = {}): ProjectDocument {
   const pictures = usedMedia(state.settings.film, media)
   const doc: ProjectDocument = {
@@ -263,19 +289,7 @@ export function toProjectDocument(state: ProjectSource, name: string, media: Med
     name: name.trim() || defaultProjectName(),
     settings: { ...state.settings },
     playback: { speed: state.playback.speed },
-    tracks: state.tracks.map((track) => {
-      const segments = track.segments.map(encodeSegment)
-      const out: ProjectTrack = { id: track.id, name: track.name, source: track.source, color: track.color, segments }
-      if (track.activityType) out.activityType = track.activityType
-      if (track.waypoints?.length) out.waypoints = track.waypoints.map(encodeWaypoint)
-      if (track.utcOffsetMin !== undefined) out.utcOffsetMin = track.utcOffsetMin
-      if (track.timesEstimated) out.timesEstimated = true
-      if (track.elevationEstimated) out.elevationEstimated = track.elevationEstimated
-      if (track.elevationFilled) out.elevationFilled = track.elevationFilled
-      if (track.flights?.length) out.flights = track.flights
-      if (track.statsOverride) out.statsOverride = track.statsOverride
-      return out
-    }),
+    tracks: state.tracks.map(encodeTrack),
   }
   if (Object.keys(pictures).length > 0) doc.media = pictures
   return doc
@@ -286,9 +300,10 @@ export function toProjectDocument(state: ProjectSource, name: string, media: Med
  * giving the piece of each picture (its JSON, or a stored copy of it).
  */
 function projectPieces<P extends string | Blob>(state: ProjectSource, name: string, media: MediaTable, asset: (a: MediaAsset) => P): (string | P)[] {
-  const { tracks, media: pictures, ...head } = toProjectDocument(state, name, media)
+  // the tracks come from their lines (`trackLine`), not from the document
+  const { tracks: _none, media: pictures, ...head } = toProjectDocument({ ...state, tracks: [] }, name, media)
   const headJson = JSON.stringify(head, null, 2)
-  const tracksJson = tracks.length === 0 ? '[]' : `[\n${tracks.map((t) => `    ${JSON.stringify(t)}`).join(',\n')}\n  ]`
+  const tracksJson = state.tracks.length === 0 ? '[]' : `[\n${state.tracks.map((t) => `    ${trackLine(t)}`).join(',\n')}\n  ]`
   const entries = Object.entries(pictures ?? {})
   // headJson ends with "\n}"
   const start = `${headJson.slice(0, -2)},\n  "tracks": ${tracksJson}`
