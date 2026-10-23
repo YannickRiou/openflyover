@@ -127,6 +127,13 @@ const messages: Messages['news'] = {
   'v42.bilan.text': 'In Track › Several tracks, “Year in review” makes a single film of a season or a year of outings: they draw themselves one after the other under a high view of their region, counters climb, and the closing card gives the totals.',
   'v421.photos.title': 'Photos on the terrain',
   'v421.photos.text': 'Each photo or video of the timeline stands on the relief where it was taken: a pin with its thumbnail. As the marker arrives, the camera turns towards it, the thumbnail lights up while the photo is on screen, then the camera comes back. One setting in Overlay › 3D labels.',
+  // 4.3 — preview quality, quieter at rest, the guide in every language
+  'v43.preview.title': 'A preview that fits your computer',
+  'v43.preview.text': 'Settings › 3D preview › Preview quality. On Auto, when the preview runs below 30 frames per second during playback, it gets lighter: fewer pixels and simpler clouds. Exported films do not change.',
+  'v43.quiet.title': 'Quieter at rest',
+  'v43.quiet.text': 'With no track open, the graphics card stays idle. A hidden tab pauses the film. Changing a track’s colour no longer recomputes the forests, the water or the glaciers.',
+  'v43.guide.title': 'The guide in your language',
+  'v43.guide.text': 'Getting started, on the home screen, opens the user guide in the language of the interface: French, English, Spanish, Italian or German.',
   // 4.1 — discreet credits
   'v41.credits.title': 'More discreet credits',
   'v41.credits.text': 'In Overlay › Source credits, choose « Discreet » (the names of the sources in small print in a corner, the full credits at the end of the film), « Full » or « At the end only ». In Export, « Copy the credits » gives the text with its links, to paste in the description of the video.',

@@ -127,6 +127,13 @@ const messages: Messages['news'] = {
   'v42.bilan.text': 'En Track › Varios tracks, «Balance» hace una sola película de una temporada o de un año de salidas: se dibujan una tras otra bajo una vista alta de su región, los contadores suben y la tarjeta final da los totales.',
   'v421.photos.title': 'Fotos sobre el terreno',
   'v421.photos.text': 'Cada foto o vídeo de la línea de tiempo se coloca sobre el relieve donde se hizo: una chincheta con su miniatura. Cuando llega el marcador, la cámara se orienta hacia ella, la miniatura se ilumina mientras la foto está en pantalla y luego la cámara vuelve. Un ajuste en Gráficos › Etiquetas 3D.',
+  // 4.3 — preview quality, quieter at rest, the guide in every language
+  'v43.preview.title': 'Una vista previa a la medida de tu ordenador',
+  'v43.preview.text': 'Ajustes › Vista previa 3D › Calidad de la vista previa. En Auto, cuando la vista previa va a menos de 30 fotogramas por segundo durante la reproducción, se aligera: menos píxeles y nubes más sencillas. Las películas exportadas no cambian.',
+  'v43.quiet.title': 'Más sobria en reposo',
+  'v43.quiet.text': 'Sin ninguna ruta abierta, la tarjeta gráfica descansa. Una pestaña oculta pone la película en pausa. Cambiar el color de una ruta ya no recalcula los bosques, el agua ni los glaciares.',
+  'v43.guide.title': 'La guía en tu idioma',
+  'v43.guide.text': 'Primeros pasos, en la pantalla de inicio, abre la guía de uso en el idioma de la interfaz: francés, inglés, español, italiano o alemán.',
   // 4.1 — discreet credits
   'v41.credits.title': 'Créditos más discretos',
   'v41.credits.text': 'En Gráficos › Créditos de las fuentes, elige « Discretos » (el nombre de las fuentes en pequeño en una esquina, las menciones completas al final de la película), « Completos » o « Solo al final ». En Exportar, « Copiar los créditos » da el texto con sus enlaces, para pegar en la descripción del vídeo.',

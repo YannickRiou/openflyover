@@ -125,6 +125,13 @@ export default {
   'v42.bilan.text': 'Dans Trace › Plusieurs traces, « Bilan » fait un seul film d’une saison ou d’une année de sorties : elles se dessinent l’une après l’autre sous une vue haute de leur région, des compteurs montent, et la carte de fin donne les totaux.',
   'v421.photos.title': 'Photos sur le terrain',
   'v421.photos.text': 'Chaque photo ou vidéo de la timeline se pose sur le relief, là où elle a été prise : une épingle avec sa vignette. Quand le marqueur arrive, la caméra se tourne vers elle, la vignette s’allume pendant que la photo est à l’écran, puis la caméra revient. Un réglage dans Habillage › Étiquettes 3D.',
+  // 4.3 — preview quality, quieter at rest, the guide in every language
+  'v43.preview.title': 'Un aperçu à la mesure de votre ordinateur',
+  'v43.preview.text': 'Réglages › Aperçu 3D › Qualité de l’aperçu. En Auto, quand l’aperçu tient moins de 30 images par seconde pendant la lecture, il s’allège : moins de pixels et des nuages plus simples. Les films exportés ne changent pas.',
+  'v43.quiet.title': 'Plus sobre au repos',
+  'v43.quiet.text': 'Sans trace ouverte, la carte graphique reste au repos. Un onglet caché met le film en pause. Changer la couleur d’une trace ne recalcule plus les forêts, l’eau ni les glaciers.',
+  'v43.guide.title': 'Le guide dans votre langue',
+  'v43.guide.text': 'Premiers pas, sur l’écran d’accueil, ouvre le guide d’utilisation dans la langue de l’interface : français, anglais, espagnol, italien ou allemand.',
   // 4.1 — discreet credits
   'v41.credits.title': 'Des crédits plus discrets',
   'v41.credits.text': 'Dans Habillage › Crédits, choisissez « Discrets » (le nom des sources en petit dans un coin, les mentions complètes à la fin du film), « Complets » ou « À la fin seulement ». Dans Export, « Copier les crédits » donne le texte avec les liens, à coller dans la description de la vidéo.',
