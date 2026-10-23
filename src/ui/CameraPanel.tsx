@@ -306,6 +306,17 @@ export function CameraPanel() {
             </SettingRow>
           )
         })}
+        {/* next to « Fin en douceur »; it eases the speed in every style, « Libre » too */}
+        <SettingRow label={t('camera.pacing.transitions')} value={formatSecondsShort(pacing.transitionS)} paths={['pacing.transitionS']}>
+          <RangeField
+            label={t('camera.pacing.transitions')}
+            tip={t('camera.pacing.transitionsTip')}
+            {...PACING_RANGES.transitionS}
+            value={pacing.transitionS}
+            format={formatSecondsShort}
+            onChange={(transitionS) => updatePacing({ transitionS })}
+          />
+        </SettingRow>
       </PanelSection>
 
       <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
@@ -346,17 +357,6 @@ export function CameraPanel() {
 
           </>
         )}
-
-        <SettingRow label={t('camera.pacing.transitions')} value={formatSecondsShort(pacing.transitionS)} paths={['pacing.transitionS']}>
-          <RangeField
-            label={t('camera.pacing.transitions')}
-            tip={t('camera.pacing.transitionsTip')}
-            {...PACING_RANGES.transitionS}
-            value={pacing.transitionS}
-            format={formatSecondsShort}
-            onChange={(transitionS) => updatePacing({ transitionS })}
-          />
-        </SettingRow>
       </PanelSection>
     </>
   )
