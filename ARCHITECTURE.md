@@ -117,9 +117,7 @@ full customization through a single project document, WebCodecs video export, Ta
   (with the first-screen size budget), `types-os` (`tsc -b` on Windows and macOS, whose file systems ignore casing),
   `rust` only when `src-tauri/` or the workflow changed, `badge` on master for the README coverage badge),
   `security.yml` (CodeQL for TypeScript and the workflows, `cargo audit`, Dependency Review on pull requests),
-  `export-regression.yml` (pull requests touching the app: the same short film exported from the base and from the
-  pull request, frame hashes compared; the label `film-change` accepts a change on purpose), `e2e.yml` (the end-to-end
-  scenarios every night), `links.yml` (dead links of the documentation every week), `pages.yml` (website on GitHub
+  `e2e.yml` (the end-to-end scenarios every night), `links.yml` (dead links of the documentation every week), `pages.yml` (website on GitHub
   Pages), `desktop.yml` (installers; a `v*` tag also publishes a release, see "Desktop application").
 
 ## Loading (bundle splitting)

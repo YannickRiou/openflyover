@@ -1,9 +1,8 @@
 # Checks on pull requests and on master: lint, unit tests with coverage and production build with its type check (lint,
 # test and build jobs, in parallel), and the Rust tests of the desktop app only when src-tauri or this file changed (rust job: its Linux libraries
 # alone take minutes to install). The Rust tests do not use the site, so they build against a placeholder dist/. The
-# types are also checked on Windows and macOS (types-os job). The end-to-end tests run every night (e2e.yml), the
-# exported film is compared with the base branch's (export-regression.yml). On master, the line coverage feeds the
-# README badge (badge job, `badges` branch).
+# types are also checked on Windows and macOS (types-os job). The end-to-end tests run every night (e2e.yml). On
+# master, the line coverage feeds the README badge (badge job, `badges` branch).
 name: CI
 
 on:
