@@ -460,7 +460,7 @@ export function withOverrides(overlay: OverlaySettings, patch: OverlayOverrides 
 }
 
 /** `overrides` patched (null: none left), fields set to undefined dropped; undefined once nothing is left. */
-function mergeOverrides(overrides: OverlayOverrides | undefined, patch: OverlayOverrides | null): OverlayOverrides | undefined {
+export function mergeOverrides(overrides: OverlayOverrides | undefined, patch: OverlayOverrides | null): OverlayOverrides | undefined {
   const merged = patch === null ? {} : { ...overrides, ...patch }
   const kept: OverlayOverrides = Object.fromEntries(Object.entries(merged).filter(([, v]) => v !== undefined))
   return Object.keys(kept).length > 0 ? kept : undefined

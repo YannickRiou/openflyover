@@ -1532,6 +1532,23 @@ describe('day card of a multi-day track', () => {
   it('the film can word the title: {n}, {count} and {date}', () => {
     expect(render(42, { ...day, title: 'Étape {n}/{count}' })).toContain('Étape 2/3')
   })
+
+  it('its own colours, fonts and text backing over the overlay\'s, the overlay unchanged', () => {
+    const colours = (card: DayCard, settings = off) => {
+      const drawn = fakeContext()
+      drawOverlay(drawn.ctx, overlayFrameAt(track, 0.5), settings, SIZE, {}, { time: { timeS: 42, openingS: 0, flightS: 100, totalS: 100 }, day: card })
+      return drawn
+    }
+    const plain = colours(day)
+    const own = colours({ ...day, overrides: { text: '#123456', titleFont: 'mono' } })
+    expect(plain.texts.some((t) => t.color === '#123456')).toBe(false)
+    expect(own.texts.some((t) => t.color === '#123456')).toBe(true)
+    expect(own.texts.some((t) => t.font.includes('monospace'))).toBe(true)
+    // a style without panel: the blurred rectangle by default, the text's shadow alone when chosen
+    const editorial = { ...off, style: 'editorial' as const }
+    expect(colours(day, editorial).offsets.length).toBeGreaterThan(0)
+    expect(colours({ ...day, overrides: { textBacking: 'shadow' } }, editorial).offsets).toEqual([])
+  })
 })
 
 describe('cards placed on the timeline', () => {

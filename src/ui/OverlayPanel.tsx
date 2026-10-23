@@ -36,7 +36,6 @@ import {
   withWidgetAnchor,
   withWidgetOffset,
   withWidgetOverrides,
-  widgetOverrides,
   inStyleSlot,
   placedSettings,
 } from '../overlay/settings'
@@ -384,27 +383,29 @@ export function FilmTextStyleFields({
 /** « Couleurs et polices » of one widget (`StyleOverrides` on its own changes), in its panel group or in the inspector of a card. */
 export function WidgetStyleOverrides({ widget }: { widget: StyledWidget }) {
   const overlay = useAppStore((s) => s.settings.overlay)
-  return <StyleOverrides overlay={overlay} widget={widget} onChange={(patch) => useAppStore.getState().setSetting('overlay', withWidgetOverrides(overlay, widget, patch))} />
+  return <StyleOverrides overlay={overlay} own={overlay[widget].overrides ?? {}} onChange={(patch) => useAppStore.getState().setSetting('overlay', withWidgetOverrides(overlay, widget, patch))} />
 }
 
 /**
  * « Couleurs et polices »: accent, text, panel and fonts changed on top of the style; the pickers show the colours
- * drawn (the style's until changed). « Revenir au style » drops every change. For one widget (`widget`): the same,
- * on top of the overlay's own changes, and « Comme le reste de l'habillage » drops the widget's.
+ * drawn (the style's until changed). « Revenir au style » drops every change. For one widget or card (`own`, its own
+ * changes, {} while it has none): the same, on top of the overlay's own changes, and « Comme le reste de
+ * l'habillage » drops them.
  */
-function StyleOverrides({
+export function StyleOverrides({
   overlay,
-  widget,
+  own: widgetOwn,
   onChange,
 }: {
   overlay: OverlaySettings
-  widget?: StyledWidget
+  own?: OverlayOverrides
   onChange(patch: OverlayOverrides | null): void
 }) {
   const t = useT()
-  const theme = resolveOverlayTheme(overlay.style, widget ? widgetOverrides(overlay, widget) : overlay.overrides)
+  const widget = widgetOwn !== undefined
+  const own = (widget ? widgetOwn : overlay.overrides) ?? {}
+  const theme = resolveOverlayTheme(overlay.style, widget ? { ...overlay.overrides, ...widgetOwn } : overlay.overrides)
   const panel = panelColorOf(theme)
-  const own = (widget ? overlay[widget].overrides : overlay.overrides) ?? {}
   const inherit = widget ? t('overlay.font.overlay') : t('overlay.font.style')
   const backingId = useId()
   return (

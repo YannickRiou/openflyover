@@ -448,6 +448,11 @@ describe('dayCardAt', () => {
     expect(dayCardAt(figures, time(7), { ...cards, title: '  ' })).not.toHaveProperty('title')
     expect(dayCardAt(figures, time(7), { ...cards, title: 'Jour {n}/{count}' })?.title).toBe('Jour {n}/{count}')
   })
+
+  it('carries its own colours and fonts only when it has some', () => {
+    expect(dayCardAt(figures, time(7), cards)).not.toHaveProperty('overrides')
+    expect(dayCardAt(figures, time(7), { ...cards, overrides: { text: '#ff0000' } })?.overrides).toEqual({ text: '#ff0000' })
+  })
 })
 
 describe('« Bilan »', () => {

@@ -638,7 +638,7 @@ pointer (`appearance.css`).
   (imagery, water), "Relief" (exaggeration), "Repères et points d'intérêt" (`LandmarkPanel`, absent without a track).
   Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`). The 3D labels are all in « Habillage » › « Étiquettes 3D » (`LabelSettings`, `LabelColors`, the `labels` keys). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
-  `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »: switch, informations, titre, position, taille, durée, « Vue haute pendant la nuit »; `film.dayCards`),
+  `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »: switch, informations, titre, position, taille, couleurs et polices, durée, « Vue haute pendant la nuit »; `film.dayCards`),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
   "Durée et rythme" (duration and pacing; duration with « − » / « + » buttons (one slider notch) around the slider and the acceleration over the recorded time (`formatSpeedUp`: elapsed time start to end, nights included, over the duration; hidden for an untimed track), film duration, slow-downs on / off, « Plan de situation » switches for the opening and the closing). Objectif: "Effets d'objectif" (`LensPanel`).
   The two or three essential settings of a section stay open; every other one is a `SettingRow`: one button row with
@@ -994,7 +994,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   baked into the texts any more: `dayCardAt` (overlay/data.ts) reads the film time (`OverlayTime.dayCardsS`) and the
   figures every frame and `dayWidget` (overlay/draw.ts) draws « Jour n » (or the title, with `{n}` `{count}` `{date}`),
   the date and weather line, and the chosen figures as cells, like the card of a stage « À la suite » (the overlay's style
-  decides its look; `fields`, `anchor`, `size`, `durationS` 2–15 s are the film's). The card follows the track, the nights
+  decides its look, over which `overrides` (`OverlayOverrides`, « Couleurs et polices » through `StyleOverrides`) sets the
+  colours, fonts and text backing of the day cards, as a widget's do; `fields`, `anchor`, `size`, `durationS` 2–15 s are the film's). The card follows the track, the nights
   and the weather; the `day-n` texts of earlier versions are removed when the cards are turned on (`withoutDayCards`).
   On the timeline each day's card is a block of « Textes » (`dayCardId(k)` = `card-day-k`, `dayCardWindow` in
   `film/days.ts`): its end edge sets the shared `durationS` (`dragFilm`), Delete switches all the cards off

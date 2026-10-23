@@ -23,7 +23,7 @@ import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { OPEN_METEO_SHORT, recordedAtProgress } from './data'
 import type { BilanCumul, LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
-import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, LogoSettings, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
+import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, LogoSettings, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
 import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, placedSettings, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
@@ -191,6 +191,8 @@ export interface DayCard {
   fields: Readonly<Record<DayCardField, boolean>>
   /** title with `{n}`, `{count}` and `{date}` (`fillTemplate`); absent: « Jour n » */
   title?: string
+  /** colours, fonts and text backing over the overlay's (`FilmDayCards.overrides`) */
+  overrides?: OverlayOverrides
 }
 
 /**
@@ -1984,7 +1986,7 @@ export function drawOverlay(
   }
   // the card of a day, laid out on its own like a stage's
   if (day && dayOpacity > 0.001) {
-    const card = dayWidget(p, day, dayOpacity)
+    const card = dayWidget(day.overrides ? { ...p, theme: resolveOverlayTheme(settings.style, { ...settings.overrides, ...day.overrides }) } : p, day, dayOpacity)
     const [at] = layoutWidgets([card], size, 2 * p.u, structure?.area)
     ctx.save()
     ctx.globalAlpha = card.opacity

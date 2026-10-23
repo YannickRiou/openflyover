@@ -525,7 +525,7 @@ function regionLine(region: BilanRegion): string {
  * (`time.dayCardsS`) is the latest one passed, for the film's duration, never past the start of the next day; null
  * outside the window or when the days have no cards. `figures` are those of the days (`dayFigures`).
  */
-export function dayCardAt(figures: readonly DayFigures[], time: OverlayTime, cards: Pick<FilmDayCards, 'enabled' | 'durationS' | 'anchor' | 'size' | 'fields' | 'title'> | undefined): DayCard | null {
+export function dayCardAt(figures: readonly DayFigures[], time: OverlayTime, cards: Pick<FilmDayCards, 'enabled' | 'durationS' | 'anchor' | 'size' | 'fields' | 'title' | 'overrides'> | undefined): DayCard | null {
   const starts = time.dayCardsS
   if (!cards?.enabled || !starts || starts.length === 0 || figures.length !== starts.length) return null
   let k = starts.length - 1
@@ -535,6 +535,7 @@ export function dayCardAt(figures: readonly DayFigures[], time: OverlayTime, car
   if (!(durationS > 0) || time.timeS >= starts[k] + durationS) return null
   const card: DayCard = { figures: figures[k], startS: starts[k], durationS, anchor: cards.anchor, size: cards.size, fields: cards.fields }
   if (cards.title !== undefined && cards.title.trim() !== '') card.title = cards.title
+  if (cards.overrides) card.overrides = cards.overrides
   return card
 }
 

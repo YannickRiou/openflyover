@@ -144,7 +144,7 @@ describe('film model', () => {
 
   it('day cards: optional, each field within its range', () => {
     expect(isValidFilm(film({ dayCards: DEFAULT_DAY_CARDS }))).toBe(true)
-    expect(isValidFilm(film({ dayCards: { ...DEFAULT_DAY_CARDS, enabled: true, view: true, title: 'Jour {n}', durationS: 8 } }))).toBe(true)
+    expect(isValidFilm(film({ dayCards: { ...DEFAULT_DAY_CARDS, enabled: true, view: true, title: 'Jour {n}', durationS: 8, overrides: { text: '#ffffff', textBacking: 'shadow' } } }))).toBe(true)
     const bad: Partial<FilmDayCards>[] = [
       { enabled: 'oui' as never },
       { durationS: 1 },
@@ -156,6 +156,8 @@ describe('film model', () => {
       { fields: { date: true } as never },
       { title: 3 as never },
       { view: 1 as never },
+      { overrides: { accent: 'rouge' } },
+      { overrides: { textBacking: 'neon' as never } },
     ]
     for (const patch of bad) expect(isValidFilm(film({ dayCards: { ...DEFAULT_DAY_CARDS, ...patch } })), JSON.stringify(patch)).toBe(false)
   })

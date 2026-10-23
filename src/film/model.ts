@@ -10,8 +10,8 @@
 import { isRecord, oneOf } from '../core/guards'
 import { smootherstep } from '../core/math'
 import { CAMERA_RANGES } from '../flyover/cameraSettings'
-import { OVERLAY_ANCHORS, OVERLAY_FONT_IDS, WIDGET_SIZE_MAX, WIDGET_SIZE_MIN, isHexColor } from '../overlay/settings'
-import type { OverlayAnchor, OverlayFontId } from '../overlay/settings'
+import { OVERLAY_ANCHORS, OVERLAY_FONT_IDS, WIDGET_SIZE_MAX, WIDGET_SIZE_MIN, isHexColor, isValidOverrides } from '../overlay/settings'
+import type { OverlayAnchor, OverlayFontId, OverlayOverrides } from '../overlay/settings'
 import { isValidMarkerLook } from './markerKeys'
 import type { FilmMarkerKey } from './markerKeys'
 import { FILM_PARAMS, PARAM_SPECS } from './paramKeys'
@@ -399,8 +399,10 @@ export interface FilmDayCards {
   anchor: OverlayAnchor
   size: number
   fields: Record<DayCardField, boolean>
-  /** title with `{n}` (day number), `{count}` (days) and `{date}`; absent: « Jour n »; its look is the overlay's style */
+  /** title with `{n}` (day number), `{count}` (days) and `{date}`; absent: « Jour n » */
   title?: string
+  /** the colours, fonts and text backing of the day cards over the overlay's (« Couleurs et polices »); absent: the overlay's */
+  overrides?: OverlayOverrides
   view: boolean
 }
 /** Names of the figures of a day or stage card (their chips). */
@@ -853,6 +855,7 @@ export function isValidDayCards(cards: unknown): cards is FilmDayCards {
     within(cards.size, WIDGET_SIZE_MIN, WIDGET_SIZE_MAX) &&
     isDayCardFields(cards.fields) &&
     optionalString(cards.title) &&
+    isValidOverrides(cards.overrides) &&
     typeof cards.view === 'boolean'
   )
 }
