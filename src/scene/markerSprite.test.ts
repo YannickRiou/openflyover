@@ -13,7 +13,8 @@ import {
   leadMarkerColors,
   markerBadge,
   markerLook,
-  occludeMarker,
+  MARKER_DEPTH_PULL_M,
+  pullMarkerForward,
   placeMarker,
   RACE_HALO_SCALE,
   racerMarkerColors,
@@ -163,20 +164,36 @@ describe('headsLeft', () => {
   })
 })
 
-describe('occludeMarker', () => {
-  // camera 1 km up at x = 0, marker on the ground 5 km away along x
-  const camera = new PerspectiveCamera()
+describe('pullMarkerForward', () => {
+  const camera = new PerspectiveCamera(50, 1, 1, 1e6)
   camera.position.set(0, 1000, 0)
-  const marker = new Sprite()
-  marker.position.set(5000, 0, 0)
-  const ridgeAt = (heightM: number) => (x: number, y: number) => y - (x > 2000 && x < 3000 ? heightM : 0)
+  camera.lookAt(5000, 0, 0)
+  camera.updateMatrixWorld()
+  const placed = (x: number) => {
+    const marker = new Sprite()
+    marker.position.set(x, 0, 0)
+    marker.scale.set(40, 60, 1)
+    return marker
+  }
 
-  it('hides a marker behind a ridge, shows it in plain view or without terrain', () => {
-    occludeMarker(marker, camera, ridgeAt(800))
-    expect(marker.material.opacity).toBe(0)
-    occludeMarker(marker, camera, ridgeAt(0))
-    expect(marker.material.opacity).toBe(1)
-    occludeMarker(marker, camera, null)
-    expect(marker.material.opacity).toBe(1)
+  it('moves the marker towards the camera without changing its place or its size on screen', () => {
+    const marker = placed(5000)
+    const before = marker.position.clone().project(camera)
+    const apparent = marker.scale.y / camera.position.distanceTo(marker.position)
+    const distance = camera.position.distanceTo(marker.position)
+    pullMarkerForward(marker, camera)
+    expect(camera.position.distanceTo(marker.position)).toBeCloseTo(distance - MARKER_DEPTH_PULL_M, 6)
+    const after = marker.position.clone().project(camera)
+    expect(after.x).toBeCloseTo(before.x, 9)
+    expect(after.y).toBeCloseTo(before.y, 9)
+    expect(marker.scale.y / camera.position.distanceTo(marker.position)).toBeCloseTo(apparent, 12)
+    expect(marker.scale.x / marker.scale.y).toBeCloseTo(40 / 60, 12)
+  })
+
+  it('a marker close to the camera moves by half its distance at most', () => {
+    const marker = placed(0)
+    marker.position.set(0, 800, 0)
+    pullMarkerForward(marker, camera)
+    expect(camera.position.distanceTo(marker.position)).toBeCloseTo(100, 6)
   })
 })

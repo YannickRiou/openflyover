@@ -1230,8 +1230,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   piece end (smoothstep), the opacity stays whole (a translucent line would darken at the joints where pieces overlap)
   and the halo shrinks with its line.
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
-  `RaceMarkers`; drawn without depth test so the slope never cuts them, hidden (opacity 0, never half-transparent) behind the relief with the labels'
-  line of sight: `reliefClearance`, `occludeMarker`), badge texture drawn on a canvas (`markerBadge.ts`) and cached by key (48 at most). Ball:
+  `RaceMarkers`; drawn with the depth test, moved `MARKER_DEPTH_PULL_M` (150 m, half the distance at most) towards the
+  camera and shrunk in proportion, `pullMarkerForward`: same place and size on screen, the slope under it never cuts it
+  and a crest in front cuts it pixel by pixel like a real object, never switched off whole), badge texture drawn on a canvas (`markerBadge.ts`) and cached by key (48 at most). Ball:
   white disk (head) or track color in an ink halo ×1.35 (race) — same look as before. Figurine: 24 × 24 line
   pictogram (Lucide style; bike and car taken from Lucide) on an ink disk edged in white (head) or track color
   edged in ink (race), ink or white stroke depending on luminance. Image: round photo, white edge; racers
