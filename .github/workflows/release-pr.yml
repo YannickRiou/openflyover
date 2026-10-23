@@ -1,5 +1,5 @@
 # A dependency update only reaches the users with new installers. When a push to master changes what the app ships (a
-# package of package-lock.json that is not dev-only, or a crate of src-tauri/Cargo.lock), this opens the pull request
+# package of package-lock.json that is not dev-only, or a crate compiled into the app), this opens the pull request
 # release/X.Y.Z of the next patch version: version bumped where the release commits bump it, a CHANGELOG section, the
 # third-party licences regenerated (npm run notices).
 # Merging it tags and builds the installers (release-tag.yml). Nothing when a release pull request is already open (it
@@ -36,6 +36,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
 
       - id: check
         env:
@@ -46,12 +47,16 @@ jobs:
             echo "A release pull request is already open."; echo "open=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           if [ "$MANUAL" = true ]; then echo "open=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          # name@version of what ships, the app itself left out
+          # name and version of what ships, the app itself left out: npm packages that are not dev-only, crates compiled
+          # into the app (not those of build scripts, procedural macros and tests)
           shipped() {
             git show "$1:package-lock.json" | node -e '
               const { packages } = JSON.parse(require("fs").readFileSync(0, "utf8"))
               for (const [path, p] of Object.entries(packages)) if (path && !p.dev) console.log(`${path}@${p.version}`)'
-            git show "$1:src-tauri/Cargo.lock" | awk '/^name = /{n=$3} /^version = /{if (n != "\"openflyover\"") print n "@" $3}'
+            dir=$(mktemp -d)
+            git archive "$1" src-tauri | tar -x -C "$dir"
+            (cd "$dir/src-tauri" && cargo tree -q --locked --target all -e normal,no-proc-macro --prefix none --format '{p}') \
+              | sed 's/ (\*)$//' | grep -v '^openflyover ' | sort -u
           }
           changed=$(diff <(shipped "$BEFORE" | sort) <(shipped HEAD | sort) | grep -c '^[<>]' || true)
           echo "$changed shipped packages changed."
