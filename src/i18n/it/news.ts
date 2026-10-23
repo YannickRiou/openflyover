@@ -127,6 +127,13 @@ const messages: Messages['news'] = {
   'v42.bilan.text': 'In Traccia › Più tracce, «Bilancio» fa un unico film di una stagione o di un anno di uscite: si disegnano una dopo l’altra sotto una vista alta della loro regione, i contatori salgono e la scheda finale dà i totali.',
   'v421.photos.title': 'Foto sul terreno',
   'v421.photos.text': 'Ogni foto o video della timeline si posa sul rilievo dove è stata scattata: uno spillo con la sua miniatura. Quando arriva il marcatore, la camera si volge verso di esso, la miniatura si accende mentre la foto è sullo schermo, poi la camera torna indietro. Un’impostazione in Overlay › Etichette 3D.',
+  // 4.3 — preview quality, quieter at rest, the guide in every language
+  'v43.preview.title': 'Un’anteprima su misura per il tuo computer',
+  'v43.preview.text': 'Impostazioni › Anteprima 3D › Qualità dell’anteprima. In Auto, quando l’anteprima scende sotto i 30 fotogrammi al secondo durante la riproduzione, si alleggerisce: meno pixel e nuvole più semplici. I filmati esportati non cambiano.',
+  'v43.quiet.title': 'Più sobria a riposo',
+  'v43.quiet.text': 'Senza tracce aperte, la scheda grafica resta a riposo. Una scheda nascosta mette in pausa il filmato. Cambiare il colore di una traccia non ricalcola più boschi, acqua e ghiacciai.',
+  'v43.guide.title': 'La guida nella tua lingua',
+  'v43.guide.text': 'Primi passi, nella schermata iniziale, apre la guida all’uso nella lingua dell’interfaccia: francese, inglese, spagnolo, italiano o tedesco.',
   // 4.1 — discreet credits
   'v41.credits.title': 'Crediti più discreti',
   'v41.credits.text': 'In Overlay › Crediti delle fonti, scegli « Discreti » (il nome delle fonti in piccolo in un angolo, le menzioni complete alla fine del film), « Completi » o « Solo alla fine ». In Esporta, « Copia i crediti » dà il testo con i suoi link, da incollare nella descrizione del video.',

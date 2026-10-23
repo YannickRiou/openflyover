@@ -127,6 +127,13 @@ const messages: Messages['news'] = {
   'v42.bilan.text': 'Unter Track › Mehrere Tracks macht „Jahresrückblick“ einen einzigen Film aus einer Saison oder einem Jahr voller Touren: Sie zeichnen sich nacheinander unter einer hohen Ansicht ihrer Region, Zähler steigen, und die Schlusskarte nennt die Summen.',
   'v421.photos.title': 'Fotos im Gelände',
   'v421.photos.text': 'Jedes Foto und Video der Timeline steht auf dem Relief dort, wo es aufgenommen wurde: eine Nadel mit Vorschaubild. Kommt der Marker an, dreht sich die Kamera dorthin, das Vorschaubild leuchtet, solange das Foto zu sehen ist, dann kehrt die Kamera zurück. Eine Einstellung unter Overlay › 3D-Beschriftungen.',
+  // 4.3 — preview quality, quieter at rest, the guide in every language
+  'v43.preview.title': 'Eine Vorschau passend zu Ihrem Computer',
+  'v43.preview.text': 'Einstellungen › 3D-Vorschau › Qualität der Vorschau. Auf Auto wird die Vorschau leichter, wenn sie bei der Wiedergabe unter 30 Bildern pro Sekunde bleibt: weniger Pixel und einfachere Wolken. Exportierte Filme ändern sich nicht.',
+  'v43.quiet.title': 'Sparsamer im Ruhezustand',
+  'v43.quiet.text': 'Ohne geöffneten Track ruht die Grafikkarte. Ein verborgener Tab pausiert den Film. Eine neue Trackfarbe berechnet Wälder, Wasser und Gletscher nicht mehr neu.',
+  'v43.guide.title': 'Das Handbuch in Ihrer Sprache',
+  'v43.guide.text': 'Erste Schritte auf dem Startbildschirm öffnet das Benutzerhandbuch in der Sprache der Oberfläche: Französisch, Englisch, Spanisch, Italienisch oder Deutsch.',
   // 4.1 — discreet credits
   'v41.credits.title': 'Dezentere Quellenangaben',
   'v41.credits.text': 'Wählen Sie in Overlay › Quellenangaben « Dezent » (die Namen der Quellen klein in einer Ecke, die vollständigen Angaben am Ende des Films), « Vollständig » oder « Nur am Ende ». Im Export liefert « Quellenangaben kopieren » den Text mit seinen Links, zum Einfügen in die Videobeschreibung.',
