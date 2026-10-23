@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.3.2 (October 2026)
+
+- **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.3.1.
+
 ## 4.3.1 (October 2026)
 
 - **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.3.0.

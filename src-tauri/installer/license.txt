@@ -25,12 +25,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 LICENCES DES COMPOSANTS UTILISÉS
 ================================
 
-OpenFlyover redistribue 139 paquets npm et 512 bibliothèques Rust, ainsi que des polices
+OpenFlyover redistribue 139 paquets npm et 513 bibliothèques Rust, ainsi que des polices
 et des icônes, chacun sous sa propre licence. Les composants sont regroupés ci-dessous
 par licence ; une double licence est classée dans le premier des groupes ci-dessous
 qu’elle propose.
 
-MIT (seule, ou au choix avec une autre licence permissive) : 521 composants
+MIT (seule, ou au choix avec une autre licence permissive) : 522 composants
 
 npm : @babel/runtime, @heroui/react, @heroui/styles, @monogrid/gainmap-js,
 @petamoriken/float16, @radix-ui/primitive, @radix-ui/react-avatar,
@@ -99,29 +99,29 @@ serde_core, serde_derive, serde_derive_internals, serde_json, serde_repr, serde_
 serde_with, serde_with_macros, serde-untagged, serialize-to-javascript,
 serialize-to-javascript-impl, servo_arc, sha2, shlex, signal-hook-registry, simd_cesu8,
 simd-adler32, simdutf8, siphasher, slab, smallvec, socket2, softbuffer, soup3,
-soup3-sys, stable_deref_trait, string_cache, string_cache_codegen, strsim, swift-rs,
-syn, synstructure, sysinfo, system-configuration, system-configuration-sys, system-deps,
-tao-macros, tar, tauri, tauri-build, tauri-codegen, tauri-macros, tauri-plugin,
-tauri-plugin-dialog, tauri-plugin-fs, tauri-plugin-oauth, tauri-plugin-opener,
-tauri-plugin-process, tauri-plugin-updater, tauri-runtime, tauri-runtime-wry,
-tauri-utils, tauri-winres, tempfile, tendril, thiserror, thiserror-impl, time,
-time-core, time-macros, tinyvec, tokio, tokio-rustls, tokio-util, toml, toml_datetime,
-toml_edit, toml_parser, toml_writer, tower, tower-http, tower-layer, tower-service,
-tracing, tracing-attributes, tracing-core, tray-icon, try-lock, typeid, typenum,
-uds_windows, unicode-segmentation, url, urlpattern, utf8_iter, uuid, version_check,
-version-compare, vswhom, vswhom-sys, walkdir, want, wasi, wasip2, wasm-bindgen,
-wasm-bindgen-futures, wasm-bindgen-macro, wasm-bindgen-macro-support,
-wasm-bindgen-shared, wasm-streams, web_atoms, web-sys, web-time, webkit2gtk,
-webkit2gtk-sys, webview2-com, webview2-com-macros, webview2-com-sys, winapi,
-winapi-i686-pc-windows-gnu, winapi-util, winapi-x86_64-pc-windows-gnu, window-vibrancy,
-windows, windows_aarch64_gnullvm, windows_aarch64_msvc, windows_i686_gnu,
-windows_i686_gnullvm, windows_i686_msvc, windows_x86_64_gnu, windows_x86_64_gnullvm,
-windows_x86_64_msvc, windows-collections, windows-core, windows-future,
-windows-implement, windows-interface, windows-link, windows-numerics, windows-registry,
-windows-result, windows-strings, windows-sys, windows-targets, windows-threading,
-windows-version, winnow, winreg, wit-bindgen, wry, x11, x11-dl, xattr, zbus,
-zbus_macros, zbus_names, zcheapstr, zeroize, zip, zmij, zvariant, zvariant_derive,
-zvariant_utils.
+soup3-sys, stable_deref_trait, static_vcruntime, string_cache, string_cache_codegen,
+strsim, swift-rs, syn, synstructure, sysinfo, system-configuration,
+system-configuration-sys, system-deps, tao-macros, tar, tauri, tauri-build,
+tauri-codegen, tauri-macros, tauri-plugin, tauri-plugin-dialog, tauri-plugin-fs,
+tauri-plugin-oauth, tauri-plugin-opener, tauri-plugin-process, tauri-plugin-updater,
+tauri-runtime, tauri-runtime-wry, tauri-utils, tauri-winres, tempfile, tendril,
+thiserror, thiserror-impl, time, time-core, time-macros, tinyvec, tokio, tokio-rustls,
+tokio-util, toml, toml_datetime, toml_edit, toml_parser, toml_writer, tower, tower-http,
+tower-layer, tower-service, tracing, tracing-attributes, tracing-core, tray-icon,
+try-lock, typeid, typenum, uds_windows, unicode-segmentation, url, urlpattern,
+utf8_iter, uuid, version_check, version-compare, vswhom, vswhom-sys, walkdir, want,
+wasi, wasip2, wasm-bindgen, wasm-bindgen-futures, wasm-bindgen-macro,
+wasm-bindgen-macro-support, wasm-bindgen-shared, wasm-streams, web_atoms, web-sys,
+web-time, webkit2gtk, webkit2gtk-sys, webview2-com, webview2-com-macros,
+webview2-com-sys, winapi, winapi-i686-pc-windows-gnu, winapi-util,
+winapi-x86_64-pc-windows-gnu, window-vibrancy, windows, windows_aarch64_gnullvm,
+windows_aarch64_msvc, windows_i686_gnu, windows_i686_gnullvm, windows_i686_msvc,
+windows_x86_64_gnu, windows_x86_64_gnullvm, windows_x86_64_msvc, windows-collections,
+windows-core, windows-future, windows-implement, windows-interface, windows-link,
+windows-numerics, windows-registry, windows-result, windows-strings, windows-sys,
+windows-targets, windows-threading, windows-version, winnow, winreg, wit-bindgen, wry,
+x11, x11-dl, xattr, zbus, zbus_macros, zbus_names, zcheapstr, zeroize, zip, zmij,
+zvariant, zvariant_derive, zvariant_utils.
 
 Apache-2.0 : 30 composants
 

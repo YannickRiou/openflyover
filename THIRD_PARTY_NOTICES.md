@@ -4104,7 +4104,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Rust crates (512)
+## Rust crates (513)
 
 Every registry crate of `src-tauri/Cargo.lock`, including those used only on one operating system or at build time. License as declared on crates.io; the copyright notice of each crate is in its source, <https://crates.io/crates/NAME/VERSION>.
 
@@ -4447,11 +4447,12 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - soup3 0.5.0: MIT
 - soup3-sys 0.5.0: MIT
 - stable_deref_trait 1.2.1: MIT OR Apache-2.0
+- static_vcruntime 3.0.0: MIT OR Apache-2.0 OR Zlib
 - string_cache 0.9.0: MIT OR Apache-2.0
 - string_cache_codegen 0.6.1: MIT OR Apache-2.0
 - strsim 0.11.1: MIT
 - subtle 2.6.1: BSD-3-Clause
-- swift-rs 1.0.8: MIT OR Apache-2.0
+- swift-rs 1.0.9: MIT OR Apache-2.0
 - syn 1.0.109: MIT OR Apache-2.0
 - syn 2.0.119: MIT OR Apache-2.0
 - syn 3.0.6: MIT OR Apache-2.0
@@ -4466,7 +4467,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tar 0.4.46: MIT OR Apache-2.0
 - target-lexicon 0.12.16: Apache-2.0 WITH LLVM-exception
 - tauri 2.12.2: Apache-2.0 OR MIT
-- tauri-build 2.7.2: Apache-2.0 OR MIT
+- tauri-build 2.7.3: Apache-2.0 OR MIT
 - tauri-codegen 2.7.1: Apache-2.0 OR MIT
 - tauri-macros 2.7.1: Apache-2.0 OR MIT
 - tauri-plugin 2.7.1: Apache-2.0 OR MIT
@@ -4478,7 +4479,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tauri-plugin-updater 2.14.0: Apache-2.0 OR MIT
 - tauri-runtime 2.12.1: Apache-2.0 OR MIT
 - tauri-runtime-wry 2.12.1: Apache-2.0 OR MIT
-- tauri-utils 2.10.1: Apache-2.0 OR MIT
+- tauri-utils 2.10.2: Apache-2.0 OR MIT
 - tauri-winres 0.3.6: MIT
 - tempfile 3.27.0: MIT OR Apache-2.0
 - tendril 0.5.1: MIT OR Apache-2.0
