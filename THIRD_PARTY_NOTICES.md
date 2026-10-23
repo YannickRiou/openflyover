@@ -284,8 +284,8 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - @react-stately/color 3.10.1: Apache-2.0
 - @react-stately/utils 3.12.1: Apache-2.0
 - @react-three/drei 10.7.9: MIT
-- @react-three/fiber 9.8.1: MIT (no license file in the package; standard text below; author Paul Henschel (https://github.com/drcmda); https://github.com/pmndrs/react-three-fiber)
-- @react-three/postprocessing 3.1.3: MIT
+- @react-three/fiber 9.8.2: MIT (no license file in the package; standard text below; author Paul Henschel (https://github.com/drcmda); https://github.com/pmndrs/react-three-fiber)
+- @react-three/postprocessing 3.2.1: MIT
 - @react-types/color 3.2.0: Apache-2.0
 - @react-types/shared 3.36.1: Apache-2.0
 - @spectrum-icons/ui 3.7.2: Apache-2.0
@@ -294,9 +294,9 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - @takram/three-atmosphere 0.19.1: MIT (no license file in the package; standard text below; author Shota Matsuda; https://github.com/takram-design-engineering/three-geospatial)
 - @takram/three-clouds 0.7.6: MIT (no license file in the package; standard text below; author Shota Matsuda; https://github.com/takram-design-engineering/three-geospatial)
 - @takram/three-geospatial 0.9.1: MIT (no license file in the package; standard text below; author Shota Matsuda; https://github.com/takram-design-engineering/three-geospatial)
-- @tauri-apps/api 2.12.1: Apache-2.0 OR MIT
-- @tauri-apps/plugin-dialog 2.8.1: MIT OR Apache-2.0
-- @tauri-apps/plugin-fs 2.6.0: MIT OR Apache-2.0
+- @tauri-apps/api 2.12.4: Apache-2.0 OR MIT
+- @tauri-apps/plugin-dialog 2.8.3: MIT OR Apache-2.0
+- @tauri-apps/plugin-fs 2.7.1: MIT OR Apache-2.0
 - @tauri-apps/plugin-process 2.4.0: MIT OR Apache-2.0
 - @tauri-apps/plugin-updater 2.14.0: MIT OR Apache-2.0
 - @tweenjs/tween.js 23.1.3: MIT
@@ -339,7 +339,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - loose-envify 1.4.0: MIT
 - loose-envify/node_modules/js-tokens 4.0.0: MIT
 - maath 0.10.8: MIT (no license file in the package; standard text below)
-- mediabunny 1.61.3: MPL-2.0
+- mediabunny 1.61.6: MPL-2.0
 - meshline 3.3.1: MIT
 - meshoptimizer 1.1.1: MIT
 - n8ao 2.0.1: ISC
@@ -349,12 +349,12 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - potpack 1.0.2: ISC
 - promise-worker-transferable 1.0.4: Apache-2.0
 - prop-types 15.8.1: MIT
-- react 19.3.0: MIT
+- react 19.3.1: MIT
 - react-aria 3.53.1: Apache-2.0
 - react-aria-components 1.22.1: Apache-2.0
 - react-aria-components/node_modules/@react-types/shared 3.37.0: Apache-2.0
 - react-aria/node_modules/@react-types/shared 3.37.0: Apache-2.0
-- react-dom 19.3.0: MIT
+- react-dom 19.3.1: MIT
 - react-is 16.13.1: MIT
 - react-merge-refs 3.0.2: MIT
 - react-stately 3.51.0: Apache-2.0
@@ -653,7 +653,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### @tauri-apps/plugin-dialog 2.8.1, @tauri-apps/plugin-fs 2.6.0, @tauri-apps/plugin-process 2.4.0, @tauri-apps/plugin-updater 2.14.0
+#### @tauri-apps/plugin-dialog 2.8.3, @tauri-apps/plugin-fs 2.7.1, @tauri-apps/plugin-process 2.4.0, @tauri-apps/plugin-updater 2.14.0
 
 ```text
 SPDXVersion: SPDX-2.1
@@ -678,7 +678,7 @@ PackageDownloadLocation: git+ssh://github.com/tauri-apps/tauri.git
 Creator: Person: Daniel Thompson-Yvetot
 ```
 
-#### react 19.3.0, react-dom 19.3.0, scheduler 0.28.0, use-sync-external-store 1.7.0
+#### react 19.3.1, react-dom 19.3.1, scheduler 0.28.0, use-sync-external-store 1.7.0
 
 ```text
 MIT License
@@ -1141,7 +1141,7 @@ Apache License
    limitations under the License.
 ```
 
-#### @react-three/drei 10.7.9, @react-three/postprocessing 3.1.3
+#### @react-three/drei 10.7.9, @react-three/postprocessing 3.2.1
 
 ```text
 MIT License
@@ -1769,7 +1769,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-#### @tauri-apps/api 2.12.1
+#### @tauri-apps/api 2.12.4
 
 ```text
 --- LICENSE-APACHE-2.0 ---
@@ -2534,7 +2534,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### mediabunny 1.61.3
+#### mediabunny 1.61.6
 
 ```text
 Mozilla Public License Version 2.0
@@ -4104,7 +4104,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Rust crates (521)
+## Rust crates (512)
 
 Every registry crate of `src-tauri/Cargo.lock`, including those used only on one operating system or at build time. License as declared on crates.io; the copyright notice of each crate is in its source, <https://crates.io/crates/NAME/VERSION>.
 
@@ -4406,7 +4406,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - rustls-pki-types 1.15.1: MIT OR Apache-2.0
 - rustls-platform-verifier 0.7.1: MIT OR Apache-2.0
 - rustls-platform-verifier-android 0.2.0: MIT OR Apache-2.0
-- rustls-webpki 0.103.15: ISC
+- rustls-webpki 0.103.16: ISC
 - rustversion 1.0.23: MIT OR Apache-2.0
 - same-file 1.0.6: Unlicense/MIT
 - schannel 0.1.29: MIT
@@ -4424,7 +4424,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - serde_core 1.0.229: MIT OR Apache-2.0
 - serde_derive 1.0.229: MIT OR Apache-2.0
 - serde_derive_internals 0.29.1: MIT OR Apache-2.0
-- serde_json 1.0.151: MIT OR Apache-2.0
+- serde_json 1.0.154: MIT OR Apache-2.0
 - serde_repr 0.1.21: MIT OR Apache-2.0
 - serde_spanned 0.6.9: MIT OR Apache-2.0
 - serde_spanned 1.1.2: MIT OR Apache-2.0
@@ -4457,7 +4457,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - syn 3.0.6: MIT OR Apache-2.0
 - sync_wrapper 1.0.2: Apache-2.0
 - synstructure 0.14.0: MIT
-- sysinfo 0.36.1: MIT
+- sysinfo 0.39.6: MIT
 - system-configuration 0.7.0: MIT OR Apache-2.0
 - system-configuration-sys 0.6.0: MIT OR Apache-2.0
 - system-deps 6.2.2: MIT OR Apache-2.0
@@ -4465,15 +4465,15 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tao-macros 0.1.4: MIT OR Apache-2.0
 - tar 0.4.46: MIT OR Apache-2.0
 - target-lexicon 0.12.16: Apache-2.0 WITH LLVM-exception
-- tauri 2.12.1: Apache-2.0 OR MIT
-- tauri-build 2.7.1: Apache-2.0 OR MIT
+- tauri 2.12.2: Apache-2.0 OR MIT
+- tauri-build 2.7.2: Apache-2.0 OR MIT
 - tauri-codegen 2.7.1: Apache-2.0 OR MIT
 - tauri-macros 2.7.1: Apache-2.0 OR MIT
 - tauri-plugin 2.7.1: Apache-2.0 OR MIT
-- tauri-plugin-dialog 2.8.1: Apache-2.0 OR MIT
-- tauri-plugin-fs 2.6.0: Apache-2.0 OR MIT
+- tauri-plugin-dialog 2.8.3: Apache-2.0 OR MIT
+- tauri-plugin-fs 2.7.1: Apache-2.0 OR MIT
 - tauri-plugin-oauth 2.1.0: MIT OR Apache-2.0
-- tauri-plugin-opener 2.7.0: Apache-2.0 OR MIT
+- tauri-plugin-opener 2.7.2: Apache-2.0 OR MIT
 - tauri-plugin-process 2.4.0: Apache-2.0 OR MIT
 - tauri-plugin-updater 2.14.0: Apache-2.0 OR MIT
 - tauri-runtime 2.12.1: Apache-2.0 OR MIT
@@ -4541,7 +4541,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - web_atoms 0.2.6: MIT OR Apache-2.0
 - webkit2gtk 2.0.2: MIT
 - webkit2gtk-sys 2.0.2: MIT
-- webpki-root-certs 1.0.9: CDLA-Permissive-2.0
+- webpki-root-certs 1.0.10: CDLA-Permissive-2.0
 - webview2-com 0.39.1: MIT
 - webview2-com-macros 0.8.1: MIT
 - webview2-com-sys 0.39.1: MIT
@@ -4550,24 +4550,16 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - winapi-util 0.1.11: Unlicense OR MIT
 - winapi-x86_64-pc-windows-gnu 0.4.0: MIT/Apache-2.0
 - window-vibrancy 0.8.1: Apache-2.0 OR MIT
-- windows 0.61.3: MIT OR Apache-2.0
 - windows 0.62.2: MIT OR Apache-2.0
-- windows-collections 0.2.0: MIT OR Apache-2.0
 - windows-collections 0.3.2: MIT OR Apache-2.0
-- windows-core 0.61.2: MIT OR Apache-2.0
 - windows-core 0.62.2: MIT OR Apache-2.0
-- windows-future 0.2.1: MIT OR Apache-2.0
 - windows-future 0.3.2: MIT OR Apache-2.0
 - windows-implement 0.60.2: MIT OR Apache-2.0
 - windows-interface 0.59.3: MIT OR Apache-2.0
-- windows-link 0.1.3: MIT OR Apache-2.0
 - windows-link 0.2.1: MIT OR Apache-2.0
-- windows-numerics 0.2.0: MIT OR Apache-2.0
 - windows-numerics 0.3.1: MIT OR Apache-2.0
 - windows-registry 0.6.1: MIT OR Apache-2.0
-- windows-result 0.3.4: MIT OR Apache-2.0
 - windows-result 0.4.1: MIT OR Apache-2.0
-- windows-strings 0.4.2: MIT OR Apache-2.0
 - windows-strings 0.5.1: MIT OR Apache-2.0
 - windows-sys 0.45.0: MIT OR Apache-2.0
 - windows-sys 0.52.0: MIT OR Apache-2.0
@@ -4576,7 +4568,6 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - windows-targets 0.42.2: MIT OR Apache-2.0
 - windows-targets 0.52.6: MIT OR Apache-2.0
 - windows-targets 0.53.5: MIT OR Apache-2.0
-- windows-threading 0.1.0: MIT OR Apache-2.0
 - windows-threading 0.2.1: MIT OR Apache-2.0
 - windows-version 0.1.7: MIT OR Apache-2.0
 - windows_aarch64_gnullvm 0.42.2: MIT OR Apache-2.0

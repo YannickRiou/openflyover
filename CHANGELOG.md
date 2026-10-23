@@ -3,8 +3,9 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 4.3.1 (October 2026)
 
+- **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.3.0.
 - **The sources at the end of the film no longer cover the « Cinéma » bar**: in the « Cinéma » style (and the band of « Tableau »), the « Sources » block of the last seconds was drawn over the figures of the bottom bar; it now stands above the bar, over the image.
 
 ## 4.3.0 (October 2026)
