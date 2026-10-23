@@ -8,8 +8,9 @@ import type { Theme } from './appearance'
 import { DiagnosticRow } from './DiagnosticDialog'
 import { PanelSection } from './PanelSection'
 import { setPreferences, usePreferences } from './preferences'
-import { PERF_ITEMS, STATUS_CHIPS } from './shell'
-import type { PerfItem, StatusChip } from './shell'
+import { PERF_ITEMS, PREVIEW_QUALITIES, STATUS_CHIPS } from './shell'
+import type { PerfItem, PreviewQuality, StatusChip } from './shell'
+import { usePreviewMeasure } from '../scene/previewQuality'
 import { Button, Chip, ColorField, Radio, RadioGroup, Switch } from './primitives'
 import { UpdatesSection } from './UpdatesSection'
 
@@ -35,6 +36,12 @@ const SNAP_LABELS: Record<SnapGroup, string> = {
   get blocks() { return t('settings.preferences.timeline.snapBlocks') },
   get ruler() { return t('settings.preferences.timeline.snapRuler') },
   get marks() { return t('settings.preferences.timeline.snapMarks') },
+}
+
+const PREVIEW_LABELS: Record<PreviewQuality, string> = {
+  get auto() { return t('settings.preferences.preview.auto') },
+  get light() { return t('settings.preferences.preview.light') },
+  get full() { return t('settings.preferences.preview.full') },
 }
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -121,11 +128,12 @@ function Chips<K extends string>({ legend, labels, keys, value, onChange }: {
 
 /**
  * « Réglages » tab: preferences of the app on this device, not of the project (`preferences.ts`): what the status
- * bar shows, the clock time on the timeline, the diagnostic report.
+ * bar shows, the clock time on the timeline, the quality of the 3D preview, the diagnostic report.
  */
 export function PreferencesPanel() {
   const t = useT()
   const prefs = usePreferences()
+  const measuredSlow = usePreviewMeasure((s) => s.slow)
   const desktop = getPlatform().capabilities.isDesktop
   // the memory of the JavaScript engine is only told by Chromium; the machine's load only by the desktop app
   const heap = 'memory' in performance
@@ -185,6 +193,17 @@ export function PreferencesPanel() {
         <p className="type-hint">{t('settings.preferences.timeline.framesHint')}</p>
         <Chips legend={t('settings.preferences.timeline.snap')} labels={SNAP_LABELS} keys={SNAP_GROUPS} value={prefs.timelineSnap} onChange={(timelineSnap) => setPreferences({ timelineSnap })} />
         <p className="type-hint">{t('settings.preferences.timeline.snapHint')}</p>
+      </PanelSection>
+      <PanelSection title={t('settings.preferences.preview.title')}>
+        <Choice
+          legend={t('settings.preferences.preview.quality')}
+          labels={PREVIEW_LABELS}
+          keys={PREVIEW_QUALITIES}
+          value={prefs.previewQuality}
+          onChange={(previewQuality) => setPreferences({ previewQuality })}
+        />
+        <p className="type-hint">{t('settings.preferences.preview.hint')}</p>
+        {prefs.previewQuality === 'auto' && measuredSlow && <p className="type-hint">{t('settings.preferences.preview.measuredSlow')}</p>}
       </PanelSection>
       {getPlatform().checkForUpdate && <UpdatesSection />}
       <DiagnosticRow />

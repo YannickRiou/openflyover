@@ -8,6 +8,7 @@
 import { create } from 'zustand'
 import { deviceBudget } from '../core/deviceBudget'
 import type { DeviceBudget } from '../core/deviceBudget'
+import { currentPreviewBudget } from '../scene/previewQuality'
 import type { Track } from '../core/types'
 import { isAudioAsset, isVideoAsset, useMediaStore, usedMedia } from '../film/media'
 import type { MediaTable } from '../film/media'
@@ -373,7 +374,8 @@ export function collectDiagnostic(request?: ReportRequest, now = Date.now()): Di
     pixelRatio: scope.devicePixelRatio,
     memoryGb: scope.navigator?.deviceMemory,
     cores: scope.navigator?.hardwareConcurrency,
-    budget: deviceBudget(),
+    // the preview limits in use: « Qualité de l'aperçu » and what « Auto » measured
+    budget: { ...deviceBudget(), ...currentPreviewBudget() },
     gpu: gpuInfo(),
     settings,
     tracks,

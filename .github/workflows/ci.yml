@@ -37,6 +37,8 @@ jobs:
         run: |
           dups=$(git ls-files | tr 'A-Z' 'a-z' | sort | uniq -d)
           if [ -n "$dups" ]; then echo "Chemins qui ne diffèrent que par la casse :"; echo "$dups"; exit 1; fi
+      # the user guide in every language of the interface, with the same sections, anchors and pictures
+      - run: node scripts/check-user-guides.mjs
 
   test:
     runs-on: ubuntu-latest

@@ -339,6 +339,26 @@ export function projectOnPath(path: TrackPath, lon: number, lat: number): { dist
   return { distanceM: best, alongM: along }
 }
 
+/** Placements by path, then by feature: both are immutable (the path of a track is cached per points, `trackPathOf`). */
+const placements = new WeakMap<TrackPath, WeakMap<OsmFeature, { distanceM: number; alongM: number }>>()
+
+/**
+ * Distance of a feature to the path (its area's box too) and its position along it, computed once per path and
+ * feature: `projectOnPath` walks every point, and a change of the landmark settings, a recolour or another track's
+ * answer rebuilds the landmarks of every track (`publish`, osm/store.ts).
+ */
+function placementOf(path: TrackPath, f: OsmFeature): { distanceM: number; alongM: number } {
+  let byFeature = placements.get(path)
+  if (!byFeature) placements.set(path, (byFeature = new WeakMap()))
+  let placed = byFeature.get(f)
+  if (!placed) {
+    const projected = projectOnPath(path, f.lon, f.lat)
+    placed = { distanceM: f.area ? Math.min(projected.distanceM, pathBoxDistanceM(path, f.area)) : projected.distanceM, alongM: projected.alongM }
+    byFeature.set(f, placed)
+  }
+  return placed
+}
+
 // ---------------------------------------------------------------------------
 // Priority and text
 // ---------------------------------------------------------------------------
@@ -513,8 +533,7 @@ export function buildLandmarks(
   for (const f of features) {
     if (!settings.kinds[f.kind]) continue
     if (f.kind === 'place' && !settings.places[placeSizeOf(f.detail)]) continue
-    const projected = projectOnPath(path, f.lon, f.lat)
-    const distanceM = f.area ? Math.min(projected.distanceM, pathBoxDistanceM(path, f.area)) : projected.distanceM
+    const { distanceM, alongM } = placementOf(path, f)
     if (!(distanceM <= settings.maxDistanceM)) continue
     const ele = parseEle(f.ele)
     const landmark: Landmark = {
@@ -524,7 +543,7 @@ export function buildLandmarks(
       lon: f.lon,
       lat: f.lat,
       distanceM,
-      alongM: projected.alongM,
+      alongM,
       priority: landmarkPriority(f.kind, ele, distanceM, f.detail, parsePopulation(f.population)),
       // read when shown: the elevation follows the number format of the language
       get text() {

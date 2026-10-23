@@ -43,7 +43,7 @@ export function frameDelta(delta: number): number {
   return Math.min(delta, MAX_FRAME_DELTA_S)
 }
 
-/** Still frames the preview clouds average before the scene may sleep (CloudsLayer): 32, 16 on a phone or tablet. */
+/** Still frames the preview clouds average before the scene may sleep (CloudsLayer): 32, 16 on a phone or tablet or with a light preview (`usePreviewBudget`). */
 export const CLOUD_SETTLE_FRAMES = deviceBudget().cloudSettleFrames
 
 /** Cloud pass of a preview frame (CloudsLayer). */
@@ -60,11 +60,11 @@ export interface PreviewCloudPass {
  * Cloud pass of a preview frame whose view has not changed for `still` frames (0: it just changed). Temporal
  * upscaling is cheap while the view moves, but it never averages: each pixel keeps the one noisy ray marched for it,
  * a grain a still view would keep for good. Once still, every pixel of the pass is marched and the frames are
- * averaged (1/1 discards the upscaled history, then 1/2 … 1/CLOUD_SETTLE_FRAMES), frames asked for until then.
+ * averaged (1/1 discards the upscaled history, then 1/2 … 1/`settleFrames`), frames asked for until then.
  */
-export function previewCloudPass(still: number): PreviewCloudPass {
+export function previewCloudPass(still: number, settleFrames = CLOUD_SETTLE_FRAMES): PreviewCloudPass {
   if (still <= 0) return { upscale: true, alpha: 1, more: true }
-  return { upscale: false, alpha: 1 / Math.min(still, CLOUD_SETTLE_FRAMES), more: still < CLOUD_SETTLE_FRAMES }
+  return { upscale: false, alpha: 1 / Math.min(still, settleFrames), more: still < settleFrames }
 }
 
 /** Keys of the app store whose change does not touch the scene (`terrainStats` is written by the scene itself). */

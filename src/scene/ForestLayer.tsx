@@ -30,7 +30,7 @@ import { useTerrainContext } from './terrainContext'
 import { TREE_WIDTH_RATIO, createTreeGeometries } from './treeGeometry'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { useFilmTracks } from './usePacing'
-import { useTrackResults } from './useTrackResults'
+import { useTrackResults, useTracksByPoints } from './useTrackResults'
 
 /** Trees are drawn up to this distance from the camera (metres)... */
 export const FOREST_FAR_M = 6000
@@ -195,7 +195,7 @@ function updateForest(forest: Forest, camera: Camera, d: Drape, limit: number): 
 
 export function ForestLayer() {
   const { engine, frame } = useTerrainContext()
-  const tracks = useFilmTracks()
+  const tracks = useTracksByPoints(useFilmTracks())
   const enabled = useAppStore((s) => s.settings.forest.enabled)
   const density = useDeferredValue(useAppStore((s) => s.settings.forest.density))
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
@@ -203,7 +203,7 @@ export function ForestLayer() {
   const get = useThree((s) => s.get)
   // one Overpass query per track of the film (cached, one at a time); nothing is sent while the setting is off, and a track
   // that fails shows no trees (the status chip says so). The forests of all the tracks are drawn together.
-  const { results, loading, started, failed } = useTrackResults(enabled, tracks, (track, onStart) => fetchTrackForest(track, undefined, undefined, onStart))
+  const { results, loading, started, failed } = useTrackResults(enabled, tracks, (track, onStart, signal) => fetchTrackForest(track, signal, undefined, onStart))
   // « en attente » until the Overpass queue reaches the first request still waiting, then « chargement »
   useEffect(
     () => setForestStatus(!enabled || tracks.length === 0 ? 'idle' : loading ? (started ? 'loading' : 'queued') : failed ? 'error' : 'ready'),

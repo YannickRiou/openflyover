@@ -153,6 +153,27 @@ describe('buildLandmarks', () => {
   const settings = { kinds: DEFAULT_LANDMARK_SETTINGS.kinds, places: DEFAULT_LANDMARK_SETTINGS.places, maxDistanceM: 1500 }
   const noPlaces = { ...settings, kinds: { ...settings.kinds, place: false } }
 
+  it('projects a feature on a path once: another setting only filters again, to the same places', () => {
+    const features = [
+      feature({ kind: 'peak', name: 'Mont Truc', ele: '1 811 m', lat: 45.9 - 8 * 0.009, lon: 6.785 }),
+      feature({ kind: 'hut', name: 'Refuge', lat: 45.9 - 5 * 0.009, lon: 6.79 }),
+    ]
+    let reads = 0
+    const path = new Proxy(buildTrackPath(TRACK), {
+      get(target, key) {
+        if (key === 'lon') reads++
+        return Reflect.get(target, key)
+      },
+    })
+    expect(buildLandmarks(features, path, noPlaces).map((l) => l.name)).toEqual(['Refuge', 'Mont Truc'])
+    expect(reads).toBeGreaterThan(0)
+    reads = 0
+    const closer = buildLandmarks(features, path, { ...noPlaces, maxDistanceM: 500 })
+    expect(reads).toBe(0)
+    expect(closer).toEqual(buildLandmarks(features, buildTrackPath(TRACK), { ...noPlaces, maxDistanceM: 500 }))
+    expect(closer.map((l) => l.name)).toEqual(['Mont Truc'])
+  })
+
   it('filters by kind and distance, parses the elevation and orders along the track', () => {
     const features = [
       feature({ kind: 'peak', name: 'Mont Truc', ele: '1 811 m', lat: 45.9 - 8 * 0.009, lon: 6.785 }),

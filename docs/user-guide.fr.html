@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guide d’utilisation d’OpenFlyover</title>
+<link rel="alternate" hreflang="en" href="user-guide.html">
+<link rel="alternate" hreflang="fr" href="user-guide.fr.html">
+<link rel="alternate" hreflang="es" href="user-guide.es.html">
+<link rel="alternate" hreflang="it" href="user-guide.it.html">
+<link rel="alternate" hreflang="de" href="user-guide.de.html">
+<meta name="description" content="Utiliser OpenFlyover : importer une trace, préparer une sortie, choisir l’apparence, monter le film sur la timeline, exporter une vidéo ou une affiche et travailler hors ligne.">
+<style>
+/* The project's bundled faces (public/fonts, SIL OFL), read from the repository when this page is opened from a clone; anything else falls back to the system faces. */
+@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: local('Fraunces'), url('../public/fonts/fraunces-variable-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
+@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('../public/fonts/fraunces-variable-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 100 700; font-display: swap;
+  src: local('IBM Plex Sans'), url('../public/fonts/ibm-plex-sans-variable-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 100 700; font-display: swap;
+  src: url('../public/fonts/ibm-plex-sans-variable-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+
+/* "Carte alpine", the project's own palette (src/ui/theme.css): map paper, ink, trail-marker red, glacier, moss. */
+:root {
+  --paper: #f5f2ea;
+  --card: #eae4d6;
+  --band: #ece6d8;
+  --ink: #1c2a33;
+  --ink-soft: #55626b;
+  --line: #d6cdbb;
+  --accent: #c23b22;
+  --accent-ink: #a3301a;
+  --glacier: #a9ccd9;
+  --glacier-ink: #2f5d70;
+  --moss: #3f6b4a;
+  --contour: rgb(28 42 51 / 0.07);
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --step--1: 0.85rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(2rem, 1.4rem + 2.6vw, 2.8rem);
+  --measure: 66ch;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #141d23;
+    --card: #1e2a32;
+    --band: #1a252c;
+    --ink: #ece6d8;
+    --ink-soft: #a6b1b8;
+    --line: #34434d;
+    --accent: #ff8a5c;
+    --accent-ink: #ff8a5c;
+    --glacier: #6f9fb2;
+    --glacier-ink: #8fc0d3;
+    --moss: #7fb08b;
+    --contour: rgb(236 230 216 / 0.05);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #141d23;
+  --card: #1e2a32;
+  --band: #1a252c;
+  --ink: #ece6d8;
+  --ink-soft: #a6b1b8;
+  --line: #34434d;
+  --accent: #ff8a5c;
+  --accent-ink: #ff8a5c;
+  --glacier: #6f9fb2;
+  --glacier-ink: #8fc0d3;
+  --moss: #7fb08b;
+  --contour: rgb(236 230 216 / 0.05);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  padding: 0 16px 64px;
+  overflow-wrap: break-word;
+}
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+code, kbd {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--band);
+  padding: 0.06em 0.32em;
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+kbd { border: 1px solid var(--line); }
+pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  background: var(--band);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 650; line-height: 1.2; text-wrap: balance; margin: 0; }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); font-weight: 500; }
+h4 { font-family: var(--font-body); font-size: var(--step-0); font-weight: 600; }
+p { margin: 0; }
+ul, ol { margin: 0; padding-left: 1.25em; display: grid; gap: 0.35em; }
+strong { font-weight: 600; }
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+}
+@media (min-width: 1040px) {
+  .page { grid-template-columns: 220px minmax(0, 1fr); gap: 56px; }
+}
+
+/* masthead: contour lines, like a topographic map */
+.masthead {
+  grid-column: 1 / -1;
+  position: relative;
+  padding-block: 48px 28px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+}
+.masthead::before {
+  content: "";
+  position: absolute;
+  inset: -40% -10% -40% 40%;
+  background: repeating-radial-gradient(ellipse at 60% 55%, transparent 0 22px, var(--contour) 22px 23px);
+  pointer-events: none;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  position: relative;
+}
+.masthead h1 { font-size: var(--step-3); max-width: 20ch; position: relative; }
+.masthead h1 em { font-style: normal; color: var(--accent-ink); }
+.lede { max-width: var(--measure); font-size: var(--step-1); color: var(--ink-soft); position: relative; }
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  position: relative;
+}
+.facts b { color: var(--ink); font-weight: 500; }
+
+/* contents: a compact list on top on small screens, a sticky rail on wide ones */
+.toc { font-size: 0.93rem; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--card); }
+.toc h2 { font-family: var(--font-mono); font-size: var(--step--1); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+.toc ol { list-style: none; padding: 0; gap: 0; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a { display: flex; gap: 8px; padding: 4px 0; color: var(--ink); text-decoration: none; }
+.toc a::before { content: counter(toc, decimal-leading-zero); font-family: var(--font-mono); font-size: 0.8em; color: var(--ink-soft); padding-top: 0.15em; }
+.toc a:hover { color: var(--accent-ink); }
+@media (min-width: 620px) and (max-width: 1039px) {
+  .toc ol { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
+}
+@media (min-width: 1040px) {
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; background: none; border: 0; padding: 0; }
+  .toc a { padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+  .toc a:hover { border-left-color: var(--accent); }
+}
+
+main { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 64px; }
+section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; scroll-margin-top: 24px; min-width: 0; }
+.faq { grid-template-columns: minmax(0, 1fr); }
+section > p, section > ul, section > ol, .prose { max-width: var(--measure); }
+.sec-head { display: grid; gap: 4px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.sec-head .num { font-family: var(--font-mono); font-size: var(--step--1); color: var(--accent-ink); letter-spacing: 0.06em; }
+h3.sub { margin-top: 10px; }
+
+/* figures that may be wider than the column scroll inside their own box */
+.figure { display: grid; gap: 8px; margin: 0; min-width: 0; }
+.figure .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 12px; }
+.figure svg { display: block; min-width: 680px; width: 100%; height: auto; }
+.figure figcaption { font-size: var(--step--1); color: var(--ink-soft); max-width: var(--measure); }
+.scroll-hint { display: none; }
+@media (max-width: 720px) { .scroll-hint { display: inline; } }
+
+/* ordered pipelines: the order is the information */
+.steps { list-style: none; padding: 0; counter-reset: step; display: grid; gap: 14px; max-width: var(--measure); }
+.steps > li { counter-increment: step; display: grid; grid-template-columns: 2.1em minmax(0, 1fr); gap: 12px; }
+.steps > li::before {
+  content: counter(step);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  width: 1.9em; height: 1.9em;
+  display: grid; place-items: center;
+  margin-top: 0.1em;
+}
+.steps .who { display: block; font-family: var(--font-mono); font-size: 0.82rem; color: var(--ink-soft); margin-top: 2px; }
+
+/* tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--font-mono); font-size: var(--step--1); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); background: var(--card); }
+td:first-child { white-space: nowrap; }
+table.wide { min-width: 640px; }
+
+.note {
+  max-width: var(--measure);
+  border-left: 3px solid var(--glacier);
+  padding: 4px 0 4px 14px;
+  color: var(--ink-soft);
+}
+.key {
+  max-width: var(--measure);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 8px;
+}
+.key h3 { font-size: var(--step-1); }
+.tag { font-family: var(--font-mono); font-size: 0.78rem; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); white-space: nowrap; }
+.tag.warn { border-color: var(--accent); color: var(--accent-ink); }
+.tag.ok { border-color: var(--moss); color: var(--moss); }
+
+.cols { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.cols > div { min-width: 0; display: grid; gap: 8px; align-content: start; }
+
+.limits { list-style: none; padding: 0; display: grid; gap: 10px; max-width: var(--measure); }
+.limits li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: baseline; }
+
+/* FAQ */
+.faq { display: grid; gap: 8px; max-width: calc(var(--measure) + 40px); }
+.faq details { border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.faq summary { cursor: pointer; padding: 12px 16px; font-weight: 600; list-style: none; display: grid; grid-template-columns: 1.2em minmax(0, 1fr); gap: 8px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::before { content: "+"; font-family: var(--font-mono); color: var(--accent-ink); }
+.faq details[open] summary::before { content: "−"; }
+.faq .answer { padding: 0 16px 14px calc(16px + 1.2em + 8px); display: grid; gap: 8px; }
+
+footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16px; font-size: var(--step--1); color: var(--ink-soft); }
+/* screenshots */
+.shot img { display: block; width: 100%; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+/* the guide in the other languages of the app */
+.langs { position: relative; display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--font-mono); font-size: var(--step--1); }
+.langs a { color: var(--ink-soft); }
+.langs a[aria-current] { color: var(--ink); font-weight: 700; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="masthead">
+  <nav class="langs" aria-label="Langues"><a href="user-guide.html" hreflang="en" lang="en">English</a><a href="user-guide.fr.html" hreflang="fr" lang="fr" aria-current="page">Français</a><a href="user-guide.es.html" hreflang="es" lang="es">Español</a><a href="user-guide.it.html" hreflang="it" lang="it">Italiano</a><a href="user-guide.de.html" hreflang="de" lang="de">Deutsch</a></nav>
+  <p class="eyebrow">Guide d’utilisation · vérifié sur l’application le 15 octobre 2026</p>
+  <h1>Réalisez votre premier <em>film de survol</em></h1>
+  <p class="lede">Tout ce qu’il faut pour transformer la trace d’une sortie en film 3D : l’import, le montage sur la timeline, le choix de l’apparence, l’export d’une vidéo ou d’une affiche et le travail hors ligne. Aucune connaissance technique n’est nécessaire.</p>
+  <div class="facts">
+    <span><b>GPX · FIT</b> ou Strava</span>
+    <span><b>9</b> onglets, <b>1</b> timeline</span>
+    <span>export <b>720p → 4K</b>, 24 / 30 / 60 i/s</span>
+    <span><b>0</b> compte, <b>0</b> clé d’API</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sommaire">
+  <h2>Sommaire</h2>
+  <ol>
+    <li><a href="#start">Avant de commencer</a></li>
+    <li><a href="#screen">L’écran</a></li>
+    <li><a href="#import">Importer une trace</a></li>
+    <li><a href="#plan">Préparer une sortie</a></li>
+    <li><a href="#view">Regarder et lire</a></li>
+    <li><a href="#look">Choisir l’apparence</a></li>
+    <li><a href="#edit">Monter le film</a></li>
+    <li><a href="#format">Format de sortie</a></li>
+    <li><a href="#export">Exporter</a></li>
+    <li><a href="#offline">Travailler hors ligne</a></li>
+    <li><a href="#save">Enregistrer et réutiliser</a></li>
+    <li><a href="#mobile">Sur téléphone ou tablette</a></li>
+    <li><a href="#desktop">Spécificités de l’application de bureau</a></li>
+    <li><a href="#keys">Raccourcis clavier</a></li>
+    <li><a href="#privacy">Données, confidentialité et crédits</a></li>
+    <li><a href="#faq">Questions et réponses</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ================================================================== 1 -->
+<section id="start">
+  <div class="sec-head"><span class="num">01</span><h2>Avant de commencer</h2></div>
+  <p>OpenFlyover pose la trace d’une sortie (randonnée, trail, vélo, ski de randonnée…) sur un vrai relief 3D recouvert de photos aériennes, fait voler une caméra le long de cette trace et enregistre le résultat en vidéo. Tout se passe sur votre ordinateur : il n’y a pas de compte et votre trace n’est jamais envoyée en ligne.</p>
+  <div class="cols">
+    <div>
+      <h3>Ce qu’il vous faut</h3>
+      <ul>
+        <li>Un <strong>Chrome ou Edge</strong> récent, ou l’application de bureau. L’export vidéo n’a pas été testé dans Firefox ni dans Safari.</li>
+        <li>Une <strong>carte graphique correcte</strong> : c’est elle qui fixe la vitesse d’export.</li>
+        <li>Une <strong>connexion Internet</strong> pour les tuiles de la carte, sauf si vous avez <a href="#offline">préparé la trace pour une utilisation hors ligne</a>.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Deux façons de l’utiliser</h3>
+      <ul>
+        <li>Comme <strong>site web</strong>, sur votre propre machine ou chez un hébergeur (servi en HTTPS).</li>
+        <li>Comme <strong>application de bureau</strong> pour Windows, macOS et Linux. C’est la même application, avec les fenêtres de fichiers du système et le <a href="#desktop">rendu par lots</a>.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">L’interface existe en français, anglais, espagnol, italien et allemand : le bouton à drapeau de la barre du haut (à côté de <kbd>?</kbd>) choisit la langue de l’interface et des textes dessinés dans les films et les affiches ; au premier lancement, l’application suit la langue du navigateur si c’est l’une de celles-ci (sinon le français). Ce guide cite les libellés tels que l’interface française les affiche.</p>
+</section>
+
+<!-- ================================================================== 2 -->
+<section id="screen">
+  <div class="sec-head"><span class="num">02</span><h2>L’écran</h2></div>
+  <figure class="figure shot">
+    <img src="images/interface.jpg" alt="L’interface : barre du haut, onglets à gauche, vue 3D d’une randonnée dans les Pyrénées, timeline en bas" loading="lazy" width="1440" height="900">
+    <figcaption>L’interface avec la trace d’exemple : les onglets à gauche, la vue 3D cadrée au format de la vidéo, la timeline en dessous.</figcaption>
+  </figure>
+  <p>L’écran se lit comme celui d’un logiciel de montage vidéo :</p>
+  <ul>
+    <li><strong>Barre du haut</strong> : le nom du projet, annuler / rétablir, « Ouvrir » et « Enregistrer » sous forme d’icônes (un petit point sur l’icône d’enregistrement signale des modifications non enregistrées ; une fois le projet enregistré, elle prend la couleur d’accent pendant quelques secondes), le format de sortie au milieu et <strong>« Exporter »</strong> à droite. Le bouton <kbd>?</kbd> liste tous les raccourcis clavier, et le bouton à drapeau à côté choisit la langue.</li>
+    <li><strong>Colonne de gauche</strong> : neuf onglets avec leur nom, « Trace », « Carte », « Météo », « Lumière », « Survol », « Objectif », « Habillage », « Projet » et « Réglages » (les préférences de l’application sur cet appareil). Cliquez à nouveau sur l’onglet actif, ou appuyez sur <kbd>[</kbd>, pour replier le panneau.</li>
+    <li><strong>Au centre</strong> : la vue 3D, cadrée exactement comme la vidéo. <strong>En dessous</strong> : la timeline du film.</li>
+    <li><strong>En bas</strong> : une fine barre d’état avec l’état de la carte, le chargement de la météo, des repères, de la région, de l’eau et des forêts (la pastille des forêts indique « en attente » tant que les autres requêtes OpenStreetMap passent en premier, puis « chargement »), des indicateurs de performance quand il y a la place, et les crédits courts des sources de données (ⓘ affiche les sources complètes, les licences et la date de mise à jour de l’IGN, un lien vers le dépôt GitHub, et « Voir les nouveautés », qui liste en termes simples ce qui a changé dans chaque version ; un point sur ⓘ signale des nouveautés que vous n’avez pas encore vues). « Réglages » choisit ce qu’elle affiche. Tant que la vue actuelle attend encore des tuiles, un petit anneau se remplit à côté de « Carte · 72 % » ; « Carte prête » avec une coche signifie que tout ce qui est dans la vue est chargé : un aperçu lancé à ce moment-là se déroule sans zones floues. Les tuiles qui n’ont pas pu être chargées apparaissent en jaune sous la forme « N tuiles en erreur » ; elles sont rechargées automatiquement.</li>
+  </ul>
+  <p>Les messages (trace importée, projet enregistré, vidéo prête…) s’affichent en bas de la vue ; les erreurs restent affichées jusqu’à ce que vous les fermiez. L’application retient l’onglet ouvert et si le panneau est replié. À côté des réglages qui allongent l’export (qualité des nuages, flou de bougé, profondeur de champ, résolution, cadence d’images), une petite icône à trois barres indique le poids de la valeur actuelle, avec le facteur dans son info-bulle (appui long sur un téléphone) ; un point sur un onglet signifie que l’un de ses réglages est au niveau le plus lourd.</p>
+</section>
+
+<!-- ================================================================== 3 -->
+<section id="import">
+  <div class="sec-head"><span class="num">03</span><h2>Importer une trace</h2></div>
+  <ol class="steps">
+    <li><div><strong>Déposez un fichier.</strong> Faites glisser un ou plusieurs fichiers <code>.gpx</code> ou <code>.fit</code> n’importe où dans la fenêtre. L’écran d’accueil (« Votre sortie, vue du ciel ») dit en une phrase ce que fait l’application, présente les nouveautés de la dernière version (« Nouveau en … » ; un clic ouvre « Nouveautés »), donne un lien vers ce guide (« Premiers pas ») et, sur le site web, vers l’application de bureau ; il propose aussi « Choisir un fichier », « Essayer avec l’exemple » (une vraie randonnée dans les Pyrénées ariégeoises, l’étang d’Ayguelongue et le pic de l’Homme), « Ouvrir un projet… » et, sous « Récents », vos derniers projets. Tant qu’aucune trace n’est chargée, la colonne n’affiche que « Projet » ; les autres onglets et « Exporter » apparaissent avec la première trace.</div></li>
+    <li><div><strong>Laissez la vue la cadrer.</strong> La caméra cadre la trace. En France ou en Suisse, l’imagerie passe aux photos aériennes de l’IGN ou de swisstopo, sauf si vous avez déjà choisi une source.</div></li>
+    <li><div><strong>Ajoutez-en d’autres si besoin.</strong> « Ajouter » dans la liste des traces ajoute des traces : « Fichiers GPX ou FIT… » ou « Activités Strava… ». « Ouvrir » (<kbd>Ctrl+O</kbd>) accepte une trace ou un projet enregistré ; quand un projet avec des traces est ouvert, ouvrir ou déposer un fichier GPX ou FIT demande « Que faire de ce fichier ? » : ajouter la trace à ce projet, commencer un nouveau projet avec elle, ou annuler.</div></li>
+  </ol>
+  <h3 class="sub">Plusieurs traces</h3>
+  <p>Le survol, la météo, les repères et les montées suivent la <strong>première</strong> trace ; la flèche d’une autre trace en fait celle qui est survolée, et sa pastille de couleur change sa couleur. À partir de deux traces, « Plusieurs traces » choisit comment le film les joue :</p>
+  <ul>
+    <li>« La première » (par défaut) : la première trace est survolée, les autres sont seulement dessinées ;</li>
+    <li>« À la suite » : le film survole toutes les traces dans l’ordre de la liste, chacune étant une <strong>étape</strong> avec sa propre couleur, son nom et ses chiffres (les compteurs, le profil et la mini-carte de l’habillage sont ceux de l’étape). Quatre choses à savoir :
+      <ul>
+        <li><strong>Un seul endroit pour ce que toutes les étapes partagent</strong> : Trace › « Plusieurs traces » règle la transition entre deux étapes et la carte au début de chaque étape, pour toutes à la fois. Chaque transition fait trois choix : « Passage » est une « Coupe », un « Fondu au noir » (par défaut) ou un « Fondu au blanc » (le film s’arrête pendant sa « Durée », 1,5 s par défaut, en plus du vol) ; « Passer la nuit » (activé par défaut) montre la nuit passée entre deux jours, avec le crépuscule et l’aube, quand les deux étapes sont sur deux jours (sinon, le passage seul) ; « Revoir l’étape finie » fait monter la caméra quelques secondes à la fin de l’étape pour la montrer en entier avant le passage (avec la nuit, pendant la nuit). Sous « Une carte au début de chaque étape » (qui affiche ou masque toutes les cartes), vous réglez ce que montrent les cartes : « Automatique » (le nom de l’étape, « Étape 2 sur 3 » et les chiffres que vous cochez : date, distance, D+, durée, heure de départ, météo) ou « Mon texte » avec {name} {n} {count} {date} {distance} {ascent}, leur position, leur taille, leurs couleurs et leur durée d’affichage.</li>
+        <li><strong>Une transition ou une carte à part</strong> : la timeline a une piste « Étapes » (un bloc par étape et, entre deux étapes, le bloc de la transition) et chaque carte est un bloc de la piste « Textes ». Cliquez sur un bloc pour ne changer que celui-là : son panneau indique « Réglage commun… » ou « Réglage propre… », et « Reprendre le réglage commun » le ramène au réglage commun. « Utiliser pour toutes les transitions » fait d’une transition la transition commune. « Plusieurs traces » compte les transitions et les cartes réglées à part et peut toutes les ramener au réglage commun. Faites glisser le bord droit d’un fondu pour régler sa longueur, le bord droit d’une carte pour sa durée d’affichage ; <kbd>Suppr</kbd> sur une carte la masque, et « Régler la carte de l’étape n » dans le panneau de la transition y mène pour l’afficher de nouveau. Une carte apparaît pendant la transition qui précède son étape et reste sur les premières secondes de l’étape. La première étape commence par le titre d’ouverture au lieu de sa carte tant que ce titre est affiché (Habillage › Titres) ; les panneaux le signalent.</li>
+        <li><strong>Les nuits</strong> : ce qui est joué est ce que vous avez choisi. Les secondes de crépuscule, de nuit et d’aube se règlent dans Lumière › « Jours et nuits », pour toutes les nuits ; « Montrer les nuits », au même endroit, ne concerne que les nuits à l’intérieur d’une étape.</li>
+        <li><strong>Ordre et durée</strong> : faites glisser une trace par sa poignée (au doigt, appuyez d’abord un instant), déplacez-la avec <kbd>Alt</kbd> <kbd>↑</kbd> <kbd>↓</kbd>, appuyez sur la flèche vers le haut pour l’avancer d’une étape, appuyez sur « Ordonner par date », ou faites glisser un bloc d’étape sur la timeline. Tout ce qui est placé sur une étape (arrêts, portions de vitesse, caméra, clés de réglage et de marqueur, sa transition et sa carte) la suit, les textes et les photos restent à leur moment sauf s’ils sont attachés à un arrêt, et une seule annulation (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) remet tout en place. Sélectionnez un bloc d’étape pour régler sa « Durée du vol » (ou faites glisser son bord droit, ou utilisez <kbd>←</kbd> <kbd>→</kbd>) : elle est alors survolée pendant ce temps, arrêts compris et transitions non comprises, les autres gardent leur part de la « Durée du survol » et le film change de la différence ; « Durée automatique » annule ce réglage. La météo et les nuages suivent la première trace ; le soleil suit chaque étape et se fond d’une étape à l’autre pendant les transitions (voir « Lumière »).</li>
+      </ul>
+    </li>
+    <li>« En parallèle » (la course de fantômes) les rejoue ensemble : « Synchronisation » (même temps écoulé, même heure ou même distance), « Caméra sur » la première trace, une autre trace (elle devient alors la première), « Celle en tête » ou « Toutes les traces » (toutes dans le cadre), et le classement au niveau du marqueur, affiché et réglé dans « Habillage » › « Compteurs » (son seul emplacement) ;</li>
+    <li>« Bilan » fait <strong>un seul film d’une saison ou d’une année entière de sorties</strong>. Importez toutes les traces (plusieurs fichiers à la fois, ou les « Activités Strava… » d’une période), puis choisissez « Bilan » : les traces se dessinent l’une après l’autre, dans l’ordre des dates, vues de haut et sans bouger au-dessus de leur région ; celles déjà dessinées restent, dans un ton plus sombre, et un tampon de date dans le coin inférieur gauche indique la sortie en cours de dessin. Chaque sortie dure le même temps, la « Durée du survol » étant partagée entre elles (au moins 2 s chacune, si bien qu’un film de 60 sorties dure au moins 2 minutes). À savoir :
+      <ul>
+        <li><strong>Les régions</strong> : les traces distantes de plus de 50 km les unes des autres forment des régions séparées, chacune étant un chapitre avec sa propre vue haute, une coupe entre deux sorties d’une même région, un fondu au noir d’une région à la suivante et, sous « Une carte au début de chaque région », une carte au début de chaque région (« Région 2 sur 3 », son nombre de sorties, la distance, le D+ et les mois). Une région unique n’a pas de carte.</li>
+        <li><strong>Des compteurs qui montent</strong> : avec l’habillage activé (Habillage › Compteurs), les compteurs additionnent les sorties déjà dessinées : « Sorties », « Distance », « Dénivelé positif » et « Temps » (les autres compteurs y sont grisés). La carte de clôture montre par défaut les totaux de l’année : sorties, distance, D+, temps et point le plus haut (ses pastilles sont dans l’inspecteur du bloc « Carte de clôture » ; « Sorties » n’y apparaît que pour un Bilan).</li>
+        <li><strong>Ce que le film fait de lui-même</strong> : la caméra reste sur la région (les plans d’ouverture et de clôture ajoutent seulement leurs secondes : ils tiennent la première et la dernière région), les lignes se dessinent toujours une à une (sans traînée), et l’ordre est celui des dates : une sortie sans date vient après les autres de sa région, et la liste ne peut pas être réordonnée à la main. Aucun repère, ni eau, ni forêt, ni glacier, ni épingle de départ et d’arrivée, ni météo n’est affiché (une requête par sortie en ferait trop ; leurs interrupteurs sont grisés et le panneau de la caméra indique « Fixe en mode Bilan ») ; la neige ne suit que sa limite manuelle, et les clés de caméra, les arrêts et les blocs d’étapes de la timeline ne s’appliquent pas. La lumière suit toujours l’heure propre à chaque sortie : pour une lumière qui ne change pas d’une sortie à l’autre, choisissez « Heure fixe » dans Lumière.</li>
+        <li><strong>Pas encore</strong> : pas de survol à basse altitude de chaque sortie, pas d’affiche mosaïque de l’année, pas de météo par sortie.</li>
+      </ul>
+    </li>
+    <li>« Enchaîner en un seul parcours » les fusionne dans l’ordre de leur heure de départ, pour une sortie sur plusieurs jours ou un enregistrement coupé en deux fichiers. Le message propose « Annuler ». Contrairement à « À la suite », les traces n’en font plus qu’une (une couleur, un seul jeu de chiffres).</li>
+  </ul>
+  <h3 class="sub">Depuis Strava</h3>
+  <p>« Ajouter » › « Activités Strava… » dans la liste des traces (ou « Importer depuis Strava » sur l’écran d’accueil) importe vos activités. OpenFlyover n’embarque aucune clé Strava : vous créez donc une fois votre propre application Strava :</p>
+  <ol class="steps">
+    <li><div>Sur <a href="https://www.strava.com/settings/api">strava.com/settings/api</a>, créez une application (gratuite). Dans « Authorization Callback Domain », saisissez <code>localhost</code> (site local ou application de bureau) ou l’adresse de votre site.</div></li>
+    <li><div>Collez son <strong>Client ID</strong> et son <strong>Client Secret</strong> dans OpenFlyover. Ils restent dans ce navigateur (ou dans l’application de bureau) et ne sont envoyés qu’à Strava.</div></li>
+    <li><div>Cliquez sur « Se connecter » et autorisez la lecture de vos activités.</div></li>
+    <li><div>Cochez les activités (« Plus » charge les plus anciennes), puis « Importer ».</div></li>
+  </ol>
+  <p class="note">L’accès est en lecture seule, mais il inclut les activités privées et la trace complète, zones de confidentialité comprises : pensez-y avant de publier un film. Strava autorise 100 requêtes par tranche de 15 minutes et 1 000 par jour et par application. « Déconnecter Strava » oublie la connexion.</p>
+</section>
+
+<!-- ================================================================== 4 -->
+<section id="plan">
+  <div class="sec-head"><span class="num">04</span><h2>Préparer une sortie</h2></div>
+  <p>Vous pouvez survoler un itinéraire <strong>avant</strong> de le parcourir : importez-le comme n’importe quelle trace (un GPX préparé sur Komoot, Visorando, IGNrando…).</p>
+  <h3 class="sub">Horaires de passage et prévisions météo</h3>
+  <p>Une trace sans horaires (en général une trace préparée sur Komoot, Visorando…) a une section <strong>« Prévoir la sortie »</strong> : choisissez la date, l’heure de départ, l’activité et l’allure, puis « Calculer les horaires ». Le soleil, les compteurs et les prévisions météo (jusqu’à 16 jours à l’avance) suivent alors la sortie prévue.</p>
+  <p>Une trace sans altitude (un itinéraire tracé sur une carte) la reçoit du relief : automatiquement à l’import pour une sortie ordinaire, sinon avec <strong>« Calculer l’altitude »</strong> dans sa fiche. La pastille « altitude complétée » le signale ; « Effacer l’altitude » revient à la trace du fichier, y compris quand seuls ses trous ont été comblés (à partir de cette version). Les ponts et les tunnels suivent le sol. Calculez l’altitude avant « Prévoir la sortie » pour que les montées comptent dans les horaires.</p>
+  <h3 class="sub">Corriger les chiffres</h3>
+  <p>Le GPS se trompe parfois de quelques mètres (un sommet à 2001 m enregistré à 1992 m). Ouvrez <strong>« Corriger les chiffres »</strong> dans la fiche de la trace et saisissez la bonne distance, le D+, le point le plus haut, la durée (sous la forme 5:30) ou la vitesse maximale, puis « Appliquer ». Un champ vide garde le chiffre du fichier, affiché en gris. Les cartes d’ouverture et de clôture et l’affiche montrent alors vos chiffres, et la fiche indique « chiffres corrigés ». « Revenir aux chiffres du GPX » les retire. Le vol 3D lui-même ne change pas.</p>
+  <h3 class="sub">Retoucher la trace : « Outils de la trace »</h3>
+  <p>Cliquez sur <strong>« Outils de la trace… »</strong> dans la fiche de la trace (sous « Corriger les chiffres ») pour ouvrir une fenêtre à part, afin que les panneaux de montage restent consacrés au film. La fenêtre montre en haut le profil et le plan de la trace, avec la partie concernée mise en évidence, la liste des outils à gauche et les réglages de l’outil choisi à droite, avec la distance, le D+, la durée et le nombre de points avant → après. « Appliquer » retouche la trace chargée dans le projet (jamais le fichier d’origine) et un bouton <strong>« Annuler »</strong>, dans la fenêtre et dans le message qui suit, remet la trace en place. Ce que le film place le long de la trace (arrêts, clés de caméra, portions de vitesse) suit la trace, et ce qui se trouvait sur une partie retirée est supprimé (la fenêtre dit combien). Les chiffres saisis dans « Corriger les chiffres » qu’un outil rend faux sont effacés. Un outil qui ne changerait rien le dit. « Exporter la trace en GPX » et « Fermer » sont en bas.</p>
+  <ul>
+    <li><strong>Rogner le début et la fin</strong> : faites glisser sur le profil (ou utilisez les deux curseurs) pour couper ce qui précède le vrai départ ou suit l’arrivée. Les horaires des points restants sont conservés.</li>
+    <li><strong>Retirer une section</strong> : retire un passage au milieu. « Relier en ligne droite » joint les deux côtés par une ligne droite (l’horaire garde son écart) ; « Couper en deux morceaux » laisse deux morceaux, sans rien de dessiné ni de compté entre eux.</li>
+    <li><strong>Supprimer les pics GPS</strong> : retire les points que le GPS a projetés loin le temps d’une mesure (au moins 100 m, plus vite que 4 fois votre vitesse habituelle). La fenêtre indique combien de points vont partir ; « Seuil » rend l’outil plus strict ou plus tolérant.</li>
+    <li><strong>Retirer les pauses</strong> : retire les arrêts (par défaut, rester dans un rayon de 15 m plus de 2 minutes ; les errances du GPS au repos ne comptent pas), les liste (où, combien de temps) et avance les horaires suivants, pour que la durée et la vitesse moyenne ne les comptent plus. Nécessite des horaires.</li>
+    <li><strong>Simplifier</strong> : retire les points qui tombent sur une ligne droite, à une tolérance près (2 m par défaut). La fenêtre montre les points avant → après et prévient au-delà de 8 m, quand les virages serrés commencent à s’arrondir.</li>
+    <li><strong>Inverser le sens</strong> : parcourt la trace à l’envers ; les horaires restent croissants (le premier instant est conservé).</li>
+    <li><strong>Décaler l’heure</strong> : décale tous les horaires d’un nombre d’heures et de minutes (négatif pour reculer), ou fixe une nouvelle date et heure de départ. La météo et la neige suivent. Nécessite des horaires.</li>
+    <li><strong>Exporter la trace en GPX</strong> : enregistre la trace telle qu’elle est, retouches comprises, avec la fréquence cardiaque, la cadence, la puissance et la température si elle les avait.</li>
+  </ul>
+</section>
+
+<!-- ================================================================== 5 -->
+<section id="view">
+  <div class="sec-head"><span class="num">05</span><h2>Regarder et lire</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Action</th><th>Comment</th></tr></thead>
+      <tbody>
+        <tr><td>Tourner · déplacer · zoomer</td><td>Glisser avec le bouton gauche · glisser avec le bouton droit · molette de la souris</td></tr>
+        <tr><td>Revenir à la vue d’ensemble</td><td>Bouton à réticule en haut à droite de la vue, ou <kbd>F</kbd></td></tr>
+        <tr><td>Lecture / pause</td><td>▶ dans la timeline, ou <kbd>Espace</kbd> ; ■ revient au début</td></tr>
+        <tr><td>Se déplacer dans le temps</td><td>Cliquer ou glisser sur le profil ; <kbd>←</kbd> <kbd>→</kbd> (1 s, 5 s avec <kbd>Maj</kbd>), <kbd>Début</kbd>, <kbd>Fin</kbd></td></tr>
+        <tr><td>Aller à un endroit</td><td>Cliquer sur la trace dans la vue 3D</td></tr>
+        <tr><td>Vitesse de lecture</td><td>×0,5 à ×4</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>En pause, vous pouvez tourner librement autour du marqueur.</p>
+</section>
+
+<!-- ================================================================== 6 -->
+<section id="look">
+  <div class="sec-head"><span class="num">06</span><h2>Choisir l’apparence</h2></div>
+  <p>Neuf onglets, dans l’ordre où l’on fait un film : un onglet, une question. Chacun regroupe ses réglages en courtes sections repliables. Les deux ou trois réglages qui comptent restent ouverts ; chacun des autres tient sur une seule ligne avec son nom et sa valeur actuelle, comme « Exposition · 0 IL › » : cliquez ou touchez la ligne (ou appuyez sur <kbd>Entrée</kbd>) pour afficher son curseur ou ses boutons juste en dessous, et recommencez pour les masquer. Une valeur en gras diffère de la valeur par défaut. Chaque fonction s’active ou se désactive avec un interrupteur ; ce qui est sélectionné apparaît dans le rouge du balisage des sentiers. Sur un téléphone, les onglets sont dans une barre en bas qui défile sur le côté.</p>
+  <div class="table-wrap">
+    <table class="wide">
+      <thead><tr><th>Onglet</th><th>Ce que vous y réglez</th></tr></thead>
+      <tbody>
+        <tr><td>« Trace »</td><td>Vos traces, « Plusieurs traces » (à la suite ou en parallèle), l’aspect de la ligne (« Trace », avec la coloration de la trace : vitesse, pente, altitude, fréquence cardiaque, cadence, puissance, température), le marqueur (« Marqueur »)</td></tr>
+        <tr><td>« Carte »</td><td>Le fond de carte (photos aériennes : l’IGN en France et swisstopo en Suisse sont choisis automatiquement, Esri World Imagery est la source par défaut ailleurs, et les photos nationales de l’Autriche, du Japon et des États-Unis se choisissent à la main ; et cartes topographiques ; avec l’IGN ou Esri, « Date des photos » › « Chercher les dates disponibles ici » liste les photos plus anciennes du lieu : une date d’hiver pour la neige, une date d’été pour l’éviter) et « Eau reflétante (mer, lacs et rivières) » (dessine l’eau OpenStreetMap autour de la trace avec les reflets du ciel et du soleil : la mer le long d’une côte, les lacs, et les rivières et ruisseaux, y compris ceux que la carte ne dessine que par un trait, sous forme de minces rubans d’eau ; elle nécessite une connexion Internet une fois par trace, et son curseur « Intensité de l’eau » règle la force de l’effet ; la mer est plate et rien n’est dessiné loin d’une côte, si bien qu’un polder reste de la terre), les forêts (« Forêts », activées par défaut : de simples arbres 3D placés là où OpenStreetMap a des forêts, plus clairsemés loin de la trace, avec « Densité des arbres », de 20 à 150 arbres par hectare ; elles nécessitent une connexion Internet, et le film exporté montre les mêmes arbres que l’aperçu ; elles ne projettent pas d’ombre mais reçoivent celles du relief), l’exagération du relief et « Nettoyer le relief en mer » (retire les pics isolés que les données d’altitude laissent parfois sur la mer, par exemple au large de la Corse ; désactivé par défaut ; son option « Ramener la mer à 0 m » aplanit aussi les vraies dépressions), les repères et points d’intérêt OpenStreetMap (« Repères et points d’intérêt »)</td></tr>
+        <tr><td>« Carte »</td><td>Le fond de carte, présenté en « Photos aériennes », « Cartes » et « Ne couvrent pas la trace » (les sources nationales qui ne montrent rien là où se trouve votre trace) (photos aériennes : l’IGN en France et swisstopo en Suisse sont choisis automatiquement, Esri World Imagery est la source par défaut ailleurs, et les photos nationales de l’Autriche, du Japon et des États-Unis se choisissent à la main ; et cartes topographiques) et « Eau reflétante (mer, lacs et rivières) » (dessine l’eau OpenStreetMap autour de la trace avec les reflets du ciel et du soleil : la mer le long d’une côte, les lacs, et les rivières et ruisseaux, y compris ceux que la carte ne dessine que par un trait, sous forme de minces rubans d’eau ; elle nécessite une connexion Internet une fois par trace, et son curseur « Intensité de l’eau » règle la force de l’effet ; la mer est plate et rien n’est dessiné loin d’une côte, si bien qu’un polder reste de la terre), les forêts (« Forêts », activées par défaut : de simples arbres 3D placés là où OpenStreetMap a des forêts, plus clairsemés loin de la trace, avec « Densité des arbres », de 20 à 150 arbres par hectare ; elles nécessitent une connexion Internet, et le film exporté montre les mêmes arbres que l’aperçu ; elles ne projettent pas d’ombre mais reçoivent celles du relief), l’exagération du relief et « Nettoyer le relief en mer » (retire les pics isolés que les données d’altitude laissent parfois sur la mer, par exemple au large de la Corse ; désactivé par défaut ; son option « Ramener la mer à 0 m » aplanit aussi les vraies dépressions), les repères et points d’intérêt OpenStreetMap (« Repères et points d’intérêt »)</td></tr>
+        <tr><td>« Météo »</td><td>La météo de la sortie (« Météo de la sortie »), les nuages (« Météo », « Manuel », « Mer de nuages » ; avec « Manuel » ou « Mer de nuages », « Vent » règle la vitesse à laquelle ils dérivent, 0 = immobiles, et « Direction du vent » d’où il vient ; dans « Météo », cochez « Choisir le vent à la main » pour avoir les mêmes réglages), la pluie, la neige et la brume dans l’image et leur intensité (« Pluie et brume »), la neige au sol (« Neige »)</td></tr>
+        <tr><td>« Lumière »</td><td>L’atmosphère, les ombres et l’exposition, l’heure et la date du soleil (« Soleil »), l’étalonnage des couleurs (« Couleurs »)</td></tr>
+        <tr><td>« Survol »</td><td>Le préréglage de caméra dans « Caméra » › « Préréglage », une grille de vignettes (icône, nom, multiplicateur de distance et inclinaison) : « Poursuite », « Oiseau », « Orbite », « Cinéma », « Drone haut », « Satellite » ; « Plus de préréglages » déplie « Drone rapide », « Hélicoptère », « Planeur », « Montgolfière », « Avion » et « Vue du dessus » (celui que vous avez choisi reste dans la première grille), plus une vignette « Personnalisé », sélectionnée quand vos réglages ne correspondent à aucun préréglage. Chaque préréglage implique un style de caméra (le mouvement : poursuite, balancement, orbite, vue du dessus, cinéma), décrit sous les vignettes ; pour ne changer que lui, la ligne « Style » de « Caméra ». Avec « Orbite autour du marqueur », « Tours d’orbite » règle combien de tours complets la caméra fait autour du marqueur pendant le vol (1 par défaut). Le style « Libre (images clés) » ne suit rien : sans image clé, la caméra reste fixe sur une vue de toute la trace ; ajoutez des images clés sur la timeline pour la faire bouger (elle tient la vue de la première, glisse de l’une à la suivante — même pendant un arrêt —, puis tient la dernière). Dans ce style, les curseurs de cadrage sont masqués ; la vignette « Libre », la dernière des préréglages, le sélectionne. La durée du film ou la vitesse du marqueur (de 15 s à 10 min), le rythme aux temps forts, les plans de situation. Le lissage de la caméra se trouve dans des lignes de « Caméra » : « Lissage des virages » (en mètres de trace, « Auto » par défaut), « Lissage de la visée » et « Lissage de la caméra » (en secondes : la vue entre en douceur dans les arrêts, les changements de vitesse et les virages au lieu de saccader), « Fin en douceur » (la caméra ralentit jusqu’à l’arrêt pendant les dernières secondes et regarde le marqueur finir). « Lissage de la caméra » lisse aussi la trajectoire de la caméra : les petits zigzags et le bruit du GPS ne la font plus trembler. Le marqueur et les étiquettes cachés par le relief disparaissent complètement (jamais à moitié transparents) ; la caméra monte ou tourne autour du marqueur pour le garder en vue.</td></tr>
+        <tr><td>« Objectif »</td><td>Les effets d’objectif : flou de bougé, halo lumineux, profondeur de champ et reflet d’objectif</td></tr>
+        <tr><td>« Habillage »</td><td>L’habillage du film. « Afficher l’habillage » montre les compteurs, le profil, la mini-carte, la météo, le logo et le texte libre ; le titre d’ouverture et la carte de clôture ont leurs propres interrupteurs (ils s’affichent aussi quand il est désactivé), et les textes et les photos de la timeline s’affichent toujours. Le style (« Éditorial », « Diffusion », « Application », « Néon nuit », « Cinéma » (bandes noires, chiffres sur une ligne de sous-titre), « Journal de bord » (une feuille de papier à gauche avec les chiffres en liste, la carte et le profil), « Tableau sportif » (un bandeau sombre avec de grands chiffres au-dessus du profil) ; chacun des trois derniers place lui-même les éléments quand on le choisit, et vous pouvez toujours les déplacer ensuite ; tous valent aussi pour l’affiche, chacun avec sa propre disposition), les couleurs et les polices, « Fond du texte » pour les styles sans panneau (« Rectangle arrondi flouté », « Ombre du texte seulement », « Contour du texte seulement »), « Couleurs des étiquettes » (une liste pour choisir le type d’étiquette, puis sa couleur ; les étiquettes prennent la police et le panneau du style), les titres (les interrupteurs du titre d’ouverture et de la carte de clôture, toujours présents ; leurs réglages sont dans l’inspecteur, voir « Timeline »), les compteurs (distance, altitude, D+, pente, temps écoulé, heure, vitesse, allure en min/km, fréquence cardiaque, puissance, température : ceux que la trace n’enregistre pas sont grisés), le profil et la mini-carte (le point de position de chacun a sa propre couleur, celle du marqueur 3D par défaut), la météo, le logo et le texte, les crédits des sources</td></tr>
+        <tr><td>« Habillage »</td><td>L’habillage du film. « Afficher l’habillage » montre les compteurs, le profil, la mini-carte, la météo, le logo et le texte libre ; le titre d’ouverture et la carte de clôture ont leurs propres interrupteurs (ils s’affichent aussi quand il est désactivé), et les textes et les photos de la timeline s’affichent toujours. Le style (« Éditorial », « Diffusion », « Application », « Néon nuit », « Cinéma » (bandes noires, chiffres sur une ligne de sous-titre), « Journal de bord » (une feuille de papier à gauche avec les chiffres en liste, la carte et le profil), « Tableau sportif » (un bandeau sombre avec de grands chiffres au-dessus du profil) ; chacun des trois derniers place lui-même les éléments quand on le choisit, et vous pouvez toujours les déplacer ensuite ; tous valent aussi pour l’affiche, chacun avec sa propre disposition), les couleurs et les polices, « Fond du texte » pour les styles sans panneau (« Rectangle arrondi flouté », « Ombre du texte seulement », « Contour du texte seulement »), « Étiquettes 3D » (tous les réglages des étiquettes de la vue 3D, dans une seule section : ce qui s’affiche (les points GPX nommés, le départ et l’arrivée, les photos, et « Photos sur le terrain », les épingles des photos de la timeline), « Bornes kilométriques », la taille et la portée, « Couleurs des étiquettes » (une liste pour choisir le type d’étiquette, puis sa couleur ; les étiquettes prennent la police et le panneau du style) et les clés qui les masquent ou les affichent en cours de route), les titres (les interrupteurs du titre d’ouverture et de la carte de clôture, toujours présents ; leurs réglages sont dans l’inspecteur, voir « Timeline »), les compteurs, le profil et la mini-carte (le point de position de chacun a sa propre couleur, celle du marqueur 3D par défaut), la météo, le logo et le texte, les crédits des sources</td></tr>
+        <tr><td>« Projet »</td><td>Les actions sur le projet (« Nouveau projet », « Ouvrir… », « Enregistrer », « Enregistrer sous… », « Fermer le projet »), « Mes projets », les préréglages de réglages, la préparation hors ligne (« Hors ligne »)</td></tr>
+        <tr><td>« Réglages »</td><td>Les préférences de l’application sur cet appareil : l’apparence (« Apparence » : thème « Clair » / « Sombre » / « Système », couleur d’accent, couleur de la barre du haut et de la colonne ; une couleur trop claire pour le texte blanc est assombrie automatiquement ; « Rétablir l’apparence par défaut » annule ces choix ; la vue 3D et le film ne sont pas concernés), ce qu’affiche la barre d’état, l’heure enregistrée dans la timeline, le rapport de diagnostic ; dans l’application de bureau, « Mises à jour » (version installée, « Rechercher une mise à jour » : elle ne cherche une version plus récente que quand vous appuyez sur ce bouton, montre ce qu’elle apporte, puis « Installer et redémarrer » l’installe et relance l’application, après vous l’avoir demandé et jamais pendant un export)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="cols">
+    <div>
+      <h3>Lumière</h3>
+      <p>Par défaut, le soleil est là où il était à l’heure de la sortie. Dans l’onglet « Lumière », section « Soleil » (elle nécessite l’interrupteur « Atmosphère » au-dessus), « Source de la lumière » choisit « Heure de la trace » (l’heure enregistrée : avec des traces « À la suite », chaque étape est éclairée à sa propre heure) ou « Heure fixe » (une même heure pour tout le film, toutes les étapes comprises), qui place le soleil à n’importe quel moment de la journée, avec en un clic « Lever », « Matin », « Midi », « Heure dorée », « Coucher » ou « Nuit ». La ligne « Jour » éclaire la scène à une autre date : la saison change la hauteur du soleil. Avec « Heure de la trace » et des traces « À la suite », la lumière passe en douceur d’une étape à l’autre à chaque jonction en fondu (l’heure continue de la fin d’une étape au début de la suivante, en passant par le crépuscule, la nuit et l’aube) au lieu de changer d’un coup à la coupe ; une jonction « Nuit » a ses propres crépuscule, nuit et aube, et des clés sur l’heure du soleil remplacent ce fondu.</p>
+      <p>« Jours et nuits » (onglet « Lumière ») : un interrupteur, « Montrer les nuits ». Sur une trace enregistrée sur plusieurs jours, le film marque une pause à chaque nuit, le temps que le soleil se couche, que la nuit passe (nuages éclairés par la lune) et que le soleil se lève ; les secondes de « Crépuscule », « Nuit » et « Aube » se règlent à cet endroit (pour des traces « À la suite », elles s’appliquent aux jonctions « Nuit », dont l’inspecteur les montre aussi). Pour une seule trace enregistrée sur plusieurs jours, « Cartes de jour » active une carte au début de chaque jour, tirée de la trace, des nuits et de la météo (elle les suit si vous changez la trace). Choisissez ce qu’elle montre avec les pastilles sous « Informations » (date, distance, dénivelé, durée, heure de départ, météo), son « Titre » (« Jour {n} » par défaut ; {n} est le numéro du jour, {count} le nombre de jours, {date} la date), sa position, sa taille et sa durée d’affichage. La carte de chaque jour est aussi un bloc sur la piste « Textes » de la timeline : cliquez dessus pour ouvrir les mêmes réglages (ils sont communs à tous les jours), faites glisser son bord droit pour régler la durée d’affichage des cartes, et <kbd>Suppr</kbd> les désactive. « Vue haute pendant la nuit » élève la caméra pendant la nuit qui précède chaque jour pour montrer d’en haut l’itinéraire de ce jour, la maintient là, puis la ramène sur le marqueur à l’aube, avec la carte à l’écran (la durée de la nuit est celle réglée plus haut). Les cartes « Jour n » ajoutées par une version précédente sont retirées quand vous activez cette option. Les traces « À la suite » ont à la place leurs cartes d’étape, et chaque transition choisit « Passer la nuit » et « Revoir l’étape finie » (Trace › « Plusieurs traces »).</p>
+    </div>
+    <div>
+      <h3>Météo</h3>
+      <p>La météo du jour (ou la prévision pour une sortie préparée) alimente la brume, le voile du soleil et les nuages volumétriques. La couverture nuageuse est relevée en un point environ tous les 10 km le long de la trace, si bien que le ciel change en cours de route, et les nuages projettent leur ombre sur le relief (« Ombres des nuages », dans « Lumière » › « Atmosphère », activé par défaut). Les nuages peuvent aussi se régler à la main, ou devenir une « Mer de nuages » : une mer plate de nuages bas qui remplit les vallées, dont le dessus se règle avec « Sommet de la mer de nuages », et d’où émergent les sommets plus hauts. « Rendu de la mer de nuages » choisit entre « Volumétrique » (des nuages en volume, plus coûteux) et « Nappe » (une surface éclairée de sommets de nuages ondulants, sans grain et plus légère à calculer). Dans l’onglet « Météo », la météo de la sortie tient en deux lignes : la sortie, puis le moment au niveau du marqueur.</p>
+      <p><strong>La neige.</strong> Une sortie d’hiver ne devrait pas ressembler à la photo aérienne d’été. Dans l’onglet « Météo », « Neige » met de la neige sur le relief au-dessus d’une limite : « Selon la météo du jour » (par défaut) la calcule d’après la météo du jour, « Manuelle » vous laisse la régler avec « Limite de la neige » (de 0 à 4 500 m), et « Aucune » garde la photo telle quelle. Avec la météo du jour, la limite est l’altitude où la température moyenne du jour atteint 0 °C (6,5 °C de moins tous les 1 000 m), mais seulement s’il y a de la neige au sol ou s’il en tombe ce jour-là ; sinon, il n’y a pas de neige. Le panneau donne le résultat en une ligne (« Neige au-dessus de 1 400 m », ou la raison de son absence : la météo du jour est désactivée ou pas chargée, ou elle n’annonce pas de neige ce jour-là). La limite n’est pas une ligne droite : elle est irrégulière, la photo reste légèrement visible là où la neige est mince, et les pentes très raides gardent leur rocher. Avec « À la suite », chaque étape suit sa propre météo ; la ligne affichée dans le panneau est celle du début de la première trace. Une trace sans altitude ne reçoit pas de neige de la météo (la limite manuelle fonctionne toujours). Les glaciers cartographiés par OpenStreetMap sont toujours blancs, quelle que soit la limite, si bien qu’un glacier garde sa neige même en été (avec ses crevasses, et un peu plus bleu à l’ombre ; les faces très raides gardent un peu de rocher) ; « Aucune » les retire avec le reste de la neige. Ils nécessitent une connexion Internet une fois par trace, et la pastille « Glaciers » de la barre d’état indique s’ils sont chargés. La neige vient de la même requête Open-Meteo que le reste de la météo : rien de plus n’est téléchargé. Les lacs au-dessus de la limite gèlent : l’eau devient une glace blanche et mate, sans vagues, avec la même transition que le sol (les rivières et la mer continuent de couler). Vus de haut, les ruisseaux gardent un mince filet d’eau au lieu de disparaître.</p>
+    </div>
+    <div>
+      <h3>Trace et marqueur</h3>
+      <p>« Marqueur » (onglet « Trace ») choisit une boule, une figurine ou votre photo dans un cercle. La boule a un « Style » (Disque, Halo, Pulsation) et une « Couleur » (libre, ou « Celle de la trace ») ; avec plusieurs traces en parallèle, chaque marqueur garde la couleur de sa trace. La figurine est choisie « Selon l’activité » par défaut, ou parmi le randonneur, le coureur, le cycliste, le skieur, le parapentiste, le traileur, le vélo électrique, le ski de randonnée, le nageur, le kayak, le cavalier…, avec une « Couleur du disque » et la couleur de son bord (ou de son contour avec le badge « Silhouette »). « Plus d’options » règle le « Badge » (Rond, Épingle, Carré arrondi, Silhouette), un « Texte sous le marqueur » (aucun, le nom de la trace ou un texte libre) et « Tige et ombre au sol ».</p>
+      <p>La section « Trace » a deux parties : <strong>« Ligne »</strong> (la façon dont la ligne est dessinée : « Trace qui se dessine », « Traînée », « Colorer selon », lissage, largeur, tirets) et <strong>« Halo »</strong> (« Halo de la trace » et son intensité, sa largeur et sa couleur). Dans « Ligne », « Trace qui se dessine » ne dessine que la partie déjà parcourue ; une fois cette option activée, « Traînée » ne garde que le dernier tronçon derrière chaque marqueur, sur sa « Longueur de la traînée » en mètres ou en kilomètres, pour qu’une boucle ou un aller-retour reste lisible ; « Halo de la trace » ajoute une lueur autour de la ligne, avec ses lignes « Intensité du halo », « Largeur du halo » et « Couleur du halo » (la couleur de la trace par défaut) ; le relief le cache comme la ligne. « Colorer selon » colore la ligne selon une grandeur enregistrée (vitesse, pente, altitude…) et affiche une légende sur la vue ; « Position de la légende » la place comme les éléments de l’habillage (en bas à gauche par défaut). La légende fait partie de l’image : elle figure aussi dans la vidéo exportée, même avec « Habillage » désactivé, et s’empile avec les éléments placés au même endroit. « Lissage de la trace » fait la moyenne des positions sur une distance : utilisez-le quand la trace zigzague ou que la caméra tremble.</p>
+    </div>
+    <div>
+      <h3>Repères</h3>
+      <p>« Repères et points d’intérêt » (onglet « Carte ») trouve les sommets, cols, refuges, lacs, villes et villages le long de la trace, et liste vos propres points d’intérêt. Dans « Types », les pastilles « Villes », « Villages » et « Hameaux » choisissent les lieux affichés. « Choisir sur la carte et le profil » ouvre une fenêtre avec le profil d’altitude et une carte de la trace montrant chaque repère trouvé (la bande claire est la « Distance à la trace ») : cliquez sur le profil pour y emmener le film, cliquez sur un repère, sur l’un ou l’autre, pour le voir en entier et le régler. Au-dessus, « Un clic sur un repère » choisit ce que fait un clic : « Régler » (par défaut ; la touche <kbd>M</kbd> masque alors le repère sélectionné et passe au suivant), « Masquer » (chaque clic masque un repère, ou réaffiche un repère masqué) ou « Choisir une zone » (tracez un rectangle sur la carte, ou glissez sur un passage du profil, puis « Masquer » ou « Afficher » pour tous les repères qu’il contient, en une fois). Les flèches classent le repère : le mieux classé garde son étiquette quand deux étiquettes se chevauchent dans la vue. « Densité » (« Peu », « Normal », « Beaucoup ») règle combien de repères sont gardés, les plus importants d’abord. Le bouton d’un repère a trois états : « Auto » (la densité décide), « Toujours » (toujours gardé, et son étiquette l’emporte quand deux se chevauchent) et « Jamais » (aucune étiquette dans la vue ni dans le film, et son arrêt est retiré). Le film ne ralentit pas de lui-même aux repères : seuls ses arrêts (« Arrêt », ou les arrêts automatiques) l’y retiennent. « Arrêt » fait s’arrêter le film à cet endroit ; le champ à côté règle la durée en secondes. La ligne au-dessus de la liste les résume (« 14 affichés · 3 toujours · 2 jamais »). « Garder les « Toujours » » écarte tous les autres de la liste ; « Relancer la recherche » interroge de nouveau OpenStreetMap et fait revenir les repères écartés. « Tout masquer » met toutes les étiquettes sur « Jamais » ; « Tout remettre en auto » efface tous les choix. Les repères trouvés plus tard (distance plus large, autre type) sont affichés et marqués « nouveau » ; cliquez sur le badge « N nouveaux » une fois que vous les avez vus. La liste contient aussi les records de la sortie, calculés d’après la trace elle-même : la montée la plus raide (« 18 % sur 400 m »), la descente la plus rapide, les points le plus haut et le plus bas, les kilomètres le plus rapide et le plus lent, la plus longue montée, et la fréquence cardiaque et la puissance maximales, quand la trace a les altitudes, les horaires ou les capteurs nécessaires (aucun en dessous de 1 km). Un record est un repère comme les autres (une étiquette à trophée dans la vue, « Auto », « Toujours » ou « Jamais », « Arrêt »), affiché par défaut ; « Arrêts automatiques » s’arrête à la montée la plus raide, au point le plus haut et à la descente la plus rapide (les autres records restent des étiquettes, et « Arrêt » ajoute un arrêt à n’importe lequel d’entre eux), avec le record et sa valeur sur la carte. Corriger les chiffres à la main ne les change pas.</p>
+    </div>
+    <div>
+      <h3>Couleurs</h3>
+      <p>« Couleurs » étalonne l’image dans l’aperçu et à l’export : « Naturel », « Lumineux », « Doux », « Contrasté », « Chaud du soir », « Froid d’altitude », « Noir et blanc » ; une ligne pour chacun affine le contraste, la saturation, la température et le vignettage (onglet « Lumière »).</p>
+    </div>
+    <div>
+      <h3>Objectif</h3>
+      <p>L’onglet « Objectif » ajoute des effets d’objectif photo, tous désactivés (« Non ») tant que vous ne bougez pas leur curseur, identiques dans l’aperçu et à l’export : « Flou de bougé (obturateur) » (effet de vitesse : les bords de l’image filent dans le sens du déplacement tandis que le centre reste net, d’autant plus fort que la caméra va vite, et nul pendant les arrêts ; l’export calcule aussi jusqu’à 8 images par image finale pendant que l’obturateur est ouvert (moins quand l’image bouge à peine, une seule à l’arrêt), il prend donc plus de temps tant que la caméra bouge, et l’aperçu ajoute une traînée pendant la lecture du film), « Halo lumineux » (une lueur sur le soleil, la neige et l’eau ; son rayon dans la ligne « Rayon du halo »), « Reflet d’objectif » (une ligne) (des reflets quand le soleil est dans l’image, avec l’atmosphère seulement) et « Profondeur de champ » (net sur le marqueur, flou devant et derrière).</p>
+    </div>
+  </div>
+  <div class="key">
+    <h3>Le bouton ↺ : revenir aux valeurs par défaut</h3>
+    <p>Quand une section diffère de ses valeurs par défaut, un petit bouton rond <strong>↺</strong> apparaît à côté de son titre (son info-bulle indique « Modifié : revenir aux réglages par défaut (Ctrl+Z pour annuler) »). Un clic dessus réinitialise toute la section ; « Annuler » dans le message, ou <kbd>Ctrl+Z</kbd>, annule la réinitialisation. La source d’imagerie n’est pas concernée : l’import la choisit selon la région.</p>
+  </div>
+</section>
+
+<!-- ================================================================== 7 -->
+<section id="edit">
+  <div class="sec-head"><span class="num">07</span><h2>Monter le film</h2></div>
+  <p>À l’import, le film est monté pour vous : une ouverture sur la vue d’ensemble, le survol avec des arrêts aux sommets, aux cols et dans les montées, et une clôture. La timeline sous la vue vous permet de tout changer. Faites glisser la barre entre la vue 3D et la timeline (ou utilisez dessus les flèches haut / bas, <kbd>Maj</kbd> pour aller plus vite, <kbd>Début</kbd> / <kbd>Fin</kbd> pour les tailles extrêmes) pour donner plus de place à l’une ou à l’autre ; un double-clic rend la taille d’origine. La taille est retenue sur cet appareil. Non disponible sur un téléphone.</p>
+  <h3 class="sub">Un film en un clic : « Film automatique »</h3>
+  <p>Juste après l’import d’une première trace, le message qui le confirme a un bouton « Film automatique… » qui ouvre la fenêtre décrite ici. Vous pouvez aussi l’ouvrir à tout moment : dans l’onglet « Survol », sa première section, « Film automatique », a un bouton « Choisir un gabarit… ». Il ouvre une fenêtre avec trois cartes côte à côte (l’une sous l’autre sur un téléphone). Chaque carte montre le format du film (9:16 ou 16:9), la durée du film entier en gros chiffres, et quelques informations : la caméra, le titre d’ouverture et la carte de clôture, les arrêts, les compteurs et les cartes des jours. Cliquez sur une carte pour la choisir :</p>
+  <ul>
+    <li><strong>« Reel 30 s »</strong> : vertical 9:16, 30 secondes, pour Reels / TikTok / Shorts. Un titre d’ouverture avec le nom et la date de la sortie, une carte de clôture avec trois chiffres (distance, dénivelé, point le plus haut), aucun arrêt et une caméra cinéma.</li>
+    <li><strong>« Résumé 1 min »</strong> : 16:9, une minute, pour YouTube HD. Une caméra cinéma, un titre d’ouverture, un arrêt à chaque col et sommet, les compteurs, une carte par jour (ou par étape « À la suite ») quand la trace en a plusieurs, et une carte de clôture avec quatre chiffres.</li>
+    <li><strong>« Souvenir 3 min »</strong> : 16:9, trois minutes, pour YouTube HD. Une caméra cinéma, des ralentis dans les montées, des arrêts, des cartes de jour ou d’étape, les compteurs, le titre d’ouverture et la carte de clôture.</li>
+  </ul>
+  <p>Cliquez sur « Appliquer » sur la carte choisie. En une seule fois, cela règle la durée du survol (les plans d’ouverture et de clôture comptent dans la durée annoncée ; les nuits et les passages entre étapes s’y ajoutent), la caméra, les ralentis et les arrêts, le style de l’habillage et les compteurs, le titre d’ouverture (avec la date) et la carte de clôture avec leurs chiffres, et le format d’export (les mêmes formats en un clic que dans le panneau « Vidéo »). Un message propose « Annuler », qui remet tout en place.</p>
+  <p>Tout reste modifiable ensuite, depuis les panneaux « Survol », « Habillage » et « Vidéo » et depuis la timeline. Appliquer de nouveau un gabarit, ou un autre, remplace ce que le premier avait choisi, mais jamais vos propres mots : le titre, le sous-titre, les lignes et les crédits des cartes, le texte libre et le logo restent tels que vous les avez saisis (un titre d’ouverture vide est le nom de la trace), tout comme les arrêts placés à la main et les emplacements que vous avez donnés aux cartes sur la timeline. Aucune musique n’est ajoutée ; ajoutez la vôtre depuis la timeline (⋯ › « Ajouter une musique… »).</p>
+  <figure class="figure shot">
+    <img src="images/montage.jpg" alt="Un arrêt sélectionné dans la timeline, ses réglages dans le panneau de droite" loading="lazy" width="1440" height="900">
+    <figcaption>Cliquez sur un bloc de la timeline : ses réglages s’ouvrent dans le panneau de droite. <kbd>Échap</kbd> le ferme.</figcaption>
+  </figure>
+  <div class="table-wrap">
+    <table class="wide">
+      <thead><tr><th>Pour ajouter</th><th>Comment</th><th>Ensuite</th></tr></thead>
+      <tbody>
+        <tr><td>Un arrêt</td><td>« Arrêt » ou <kbd>S</kbd>, au niveau du marqueur</td><td>« Caméra pendant l’arrêt » : comme le film, rotation lente, vue large ou fixe</td></tr>
+        <tr><td>Un texte</td><td>« Texte » ou <kbd>T</kbd>, à la tête de lecture</td><td>Position, durée, couleur et police propres (« Couleur et police »)</td></tr>
+        <tr><td>Une photo ou une vidéo</td><td>« Médias », ou déposez des fichiers sur la timeline</td><td>Les photos sont placées là où elles ont été prises ; les vidéos (MP4, WebM, MOV, 50 Mo au plus, ajoutées sur 30 s au plus et recadrables) gardent leur son</td></tr>
+        <tr><td>Une musique</td><td>« Options du film » › « Ajouter une musique… », ou déposez le fichier (MP3, M4A, OGG, WAV, FLAC ; 30 Mo au plus)</td><td>Volume, fondus, « Caler la durée du film sur la fin de la musique », « Caler sur le rythme »</td></tr>
+        <tr><td>Une portion de vitesse</td><td>« Vitesse », ou clic droit sur la trace › « Accélérer / ralentir ici »</td><td>De ×0,25 à ×4 ; faites glisser les bords du bloc. Les ralentis de « Ralentir aux temps forts » (onglet Survol) apparaissent sur la même piste sous forme de bandes pointillées claires marquées « auto » : ils suivent les réglages de Survol et ne se modifient pas ici</td></tr>
+        <tr><td>Une musique</td><td>« Options du film » › « Ajouter une musique… », ou déposez le fichier (MP3, M4A, OGG, WAV, FLAC ; 30 Mo au plus)</td><td>Volume, fondus et, regroupés sous « Tout le film » dans son panneau parce qu’ils agissent sur tout le film : « Caler la durée du film sur la fin de la musique », « Caler sur le rythme »</td></tr>
+        <tr><td>Une portion de vitesse</td><td>« Vitesse », ou clic droit sur la trace › « Accélérer / ralentir ici »</td><td>De ×0,25 à ×4 ; faites glisser les bords du bloc</td></tr>
+        <tr><td>Une image clé (« Image clé »)</td><td>Cadrez la vue 3D (orbite, zoom, déplacement), puis le ◇ dans l’en-tête de la piste « Plans », au niveau du marqueur (sur une image clé, le même bouton la supprime)</td><td>Le film montre exactement cette vue à ce moment-là et passe en douceur d’une image clé à l’autre ; la distance, l’inclinaison et la visée restent réglables. Avec le marqueur sur une image clé, faire tourner, zoomer ou déplacer la vue à la souris écrit la nouvelle vue dans cette clé au fur et à mesure (une étape d’annulation par geste)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">« Arrêts automatiques » (« Options du film » de la timeline) place un arrêt à chaque col franchi, à chaque sommet proche de la trace et à chaque record parmi les repères affichés (Carte › « Repères et points d’intérêt » : types, densité, distance ; deux repères proches font un seul arrêt). Les réglages de « Ralentir aux temps forts » ne les changent pas. « Baisser toutes les musiques sous les vidéos » se trouve dans les mêmes « Options du film ». Les activer remplace les arrêts que vous avez créés à la main (un message dit combien ; <kbd>Ctrl+Z</kbd> les fait revenir). Votre première modification d’un arrêt les fige. Renommer un point d’intérêt renomme aussi son arrêt, sauf si vous avez donné à l’arrêt un nom à lui.</p>
+  <ul>
+    <li>Faites glisser un bloc pour le déplacer, faites glisser ses bords pour l’étirer. La timeline est magnétique : les bords et les centres des autres blocs, les clés, les jonctions, la tête de lecture et les graduations de la règle attirent le bloc que vous faites glisser, et une ligne à travers les pistes indique avec quoi il est aligné. Le bouton aimant de la barre désactive ce magnétisme ; maintenez <kbd>Alt</kbd> pendant le glissement pour l’inverser. <kbd>Suppr</kbd> supprime le bloc sélectionné.</li>
+    <li>Le curseur de zoom et « Ajuster » règlent la largeur de la timeline ; <kbd>Ctrl</kbd> + molette zoome.</li>
+    <li><strong>Zone de travail (boucle)</strong> : <kbd>I</kbd> et <kbd>O</kbd> placent un point d’entrée et un point de sortie à la tête de lecture ; une bande les montre sur la règle et l’aperçu tourne en boucle entre les deux pendant que vous travaillez sur ce passage. Faites glisser l’une ou l’autre extrémité de la bande pour la déplacer ; le bouton boucle de la barre (ou <kbd>Maj+X</kbd>) l’efface. Elle n’est pas enregistrée dans le projet et ne change pas l’export, qui rend le film entier.</li>
+    <li><strong>Replier ou verrouiller une piste</strong> : pointez le nom d’une piste (ou atteignez-le avec Tab) pour faire apparaître deux petits boutons : le chevron replie la piste en une fine bande, le cadenas la verrouille pour que ses blocs ne bougent plus (un clic dessus déplace alors la tête de lecture). Chaque appareil les retient ; ils ne sont pas enregistrés dans le projet. Les noms sont plus larges, avec le nom complet dans une info-bulle, et les bords et les clés sont plus faciles à attraper à la souris.</li>
+    <li><strong>Zoomer sur la sélection</strong> : le bouton à côté du zoom (ou <kbd>Z</kbd>) zoome la timeline sur le bloc ou la clé sélectionnés, sinon sur la zone de travail, sinon montre tout le film. « Réglages » › « Timeline » peut afficher le timecode en images (minutes : secondes : images, à la cadence de l’export) et choisir ce qui attire l’aimant : la tête de lecture, les blocs et les clés, les graduations de la règle, les jonctions et les temps forts.</li>
+    <li><strong>Des images le long d’une vidéo</strong> : un bloc vidéo assez large (zoomez) montre quelques images du clip derrière son nom, pour trouver un moment sans le lire. Elles sont lues quand le bloc est à l’écran et ne sont pas enregistrées dans le projet.</li>
+    <li><strong>Plusieurs blocs à la fois</strong> : <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> sur Mac) + clic sur des textes, des photos ou des musiques ajoute un bloc à la sélection ou l’en retire ; en faire glisser un les déplace tous du même temps, <kbd>Suppr</kbd> les supprime tous. <kbd>Ctrl+C</kbd> les copie et <kbd>Ctrl+V</kbd> les colle à la tête de lecture avec les mêmes écarts entre eux (une photo dont le fichier n’est plus dans le projet, ou un clip synchronisé avec la trace, est laissé de côté). <strong>Refermer l’espace</strong> : <kbd>Maj+Suppr</kbd> (ou « Supprimer et fermer l’espace » dans le menu du clic droit) supprime les blocs et avance d’autant les blocs suivants de la même piste ; <kbd>Maj</kbd> maintenu pendant que vous faites glisser la fin d’un bloc déplace les suivants avec lui.</li>
+    <li><strong>Plusieurs clés à la fois</strong> : maintenez <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> sur Mac) et tracez un rectangle sur le fond vide d’une piste pour sélectionner les clés qu’il contient (clés de caméra, de réglage et de marqueur) ; <kbd>Ctrl</kbd> + clic ajoute une clé à la sélection ou l’en retire. Faire glisser une clé sélectionnée les déplace toutes, <kbd>Suppr</kbd> les supprime toutes et <kbd>Échap</kbd> vide la sélection.</li>
+    <li><strong>Clic droit sur la timeline</strong> (appui long sur un écran tactile) : un menu propose « Ajouter une image clé ici » sur une piste qui a des clés (caméra, réglage, marqueur), « Supprimer » sur un bloc, « Supprimer l’image clé » sur une clé, et « Supprimer les N images clés sélectionnées » sur une sélection. Il remplace le menu du navigateur ; la vue 3D a son propre menu (arrêt, texte, vitesse ici).</li>
+    <li><strong>Les textes, les photos et les vidéos suivent l’itinéraire</strong> : quand vous ralentissez ou accélérez une portion, ou déplacez un arrêt, les textes, les photos et les vidéos placés sur l’itinéraire y gardent leur place (la musique reste où elle est).</li>
+    <li><strong>Les photos sur le terrain</strong> (« Habillage » › « Étiquettes 3D » › « Photos sur le terrain », activé par défaut) : chaque photo ou vidéo de la timeline se dresse sur le relief comme une épingle, un poteau portant sa miniature encadrée, toujours tournée vers la vue et un peu plus petite au loin. L’épingle est là où la photo a été prise quand le fichier a une position GPS (à moins de 2 km de la trace, et à moins de 500 m de l’endroit où se trouve le marqueur quand la photo apparaît sur la timeline), sinon là où se trouve le marqueur quand elle apparaît. Environ 15 secondes avant que la photo n’apparaisse, la caméra commence à se tourner vers son épingle, sans se déplacer ; l’épingle s’allume (cadre jaune-vert, un peu plus grand) tant que la photo est à l’écran, et la caméra revient pendant les six secondes qui suivent. Une clé de caméra placée à la main l’emporte sur cette rotation, et les plans d’ouverture et de clôture l’amènent et la retirent en douceur. Les épingles proches les unes des autres à l’écran sont empilées sur des poteaux plus hauts au lieu de se cacher, et cèdent la place aux étiquettes 3D là où il y a de la place au-dessus d’elles (pas l’épingle allumée). Le film exporté montre les mêmes épingles et la même rotation que l’aperçu (les épingles gardent leur part de la hauteur de l’image à toutes les résolutions) ; l’affiche de la vue 3D ne les montre pas. Ne confondez pas avec « Photos, là où elles ont été prises », qui place seulement un nom sur la carte à la position GPS de la photo. Les projets enregistrés avant cette version s’ouvrent avec les épingles désactivées, pour que leurs films ne changent pas.</li>
+    <li>Ouverture et clôture : « Depuis la région » part de très haut au-dessus de la région et plonge vers la trace ; « Balayage » fait tourner la vue d’ensemble avant de descendre. « Transition » choisit « Enchaîné », « Coupe », ou un fondu au noir ou au blanc.</li>
+    <li>« Durée du survol » (onglet « Survol » › « Durée et rythme ») : « Régler par » choisit comment vous la réglez. Avec « Durée », le curseur avance d’une seconde à la fois (de 15 s à 10 min), les boutons « − » et « + » qui l’entourent d’une seconde aussi, et vous pouvez saisir la valeur en secondes. Avec « Vitesse du marqueur », un curseur règle la vitesse moyenne du marqueur, en « × votre allure réelle » (combien de fois plus vite que l’allure que vous avez réellement tenue) et en km/h, et vous pouvez saisir la valeur dans l’une ou l’autre unité ; une trace sans horaires (une sortie préparée) n’a que les km/h. Quel que soit votre choix, l’autre valeur est écrite en dessous (« Vitesse du marqueur dans le film : 300 km/h, soit × 240 votre allure réelle (vous avanciez à 1,3 km/h : 4 h 00 en mouvement, pauses et nuits retirées) »). « × votre allure réelle » compte le temps où vous étiez réellement en mouvement : les arrêts de la trace (dans un rayon de 15 m pendant 2 minutes, comme « Retirer les pauses »), un déjeuner, un bivouac ou une nuit sont laissés de côté, si bien que 100 km/h pour une journée marchée à 2 km/h donne environ × 50, et non les × 150 que donneraient les 24 h du fichier. Avec plusieurs étapes, les temps en mouvement s’additionnent (les nuits entre les jours ne comptent pas). Avec « Garder la durée du survol » coché (par défaut), les arrêts et les ralentis sont pris sur la durée, si bien que le bloc « Survol » de la timeline dure exactement la durée réglée ; décoché, ils s’y ajoutent. Les nuits montrées comme des pauses et les transitions entre étapes s’ajoutent toujours : sous la durée du film (« Film : 44 s · 1 arrêt »), le panneau indique « Ouverture 5 s + survol 33 s + clôture 6 s. Au-delà des 25 s réglées, le survol compte : 1 nuit (8 s). » Avec plusieurs étapes, la durée est celle de l’itinéraire entier, et une étape qui a sa propre durée la garde.</li>
+    <li>L’onglet « Survol » › « Durée et rythme » indique le style des plans d’ouverture et de clôture ; « Régler » ouvre le panneau du plan, le seul endroit où se règlent son style (dont « Depuis la région »), sa région, sa durée et son cadrage. « Garder la durée du survol » se trouve juste sous « Durée du survol », puisqu’il s’applique à chaque arrêt et à chaque portion de vitesse.</li>
+    <li>Avec « Depuis la région », « Hauteur de départ » choisit « Région » ou « Pays », et « Mettre en avant la région » cadre toute la région administrative de la sortie (canton, département…, d’après OpenStreetMap) : l’extérieur est assombri, la frontière brille, le nom s’affiche au milieu et un point orange marque la sortie, puis tout s’efface pendant la plongée. Hors ligne, ou quand aucune région ne contient toute la trace, le plan n’a simplement pas de mise en avant.</li>
+    <li>En dessous, regroupés : « Lieu » choisit une autre zone qui contient toute la trace, de la plus petite à la plus grande : un parc national, une aire protégée ou un parc naturel régional, une île, un massif, ou un autre niveau administratif (« Automatique » garde la région administrative). « Durées » : « Maintien » garde la vue de la région immobile quelques secondes, puis « Plongée » (« Remontée » à la clôture) est le mouvement ; le plan dure les deux. « Cadrage » : « Hauteur de départ », « Distance » (« Auto » tout à gauche), « Écart à la verticale », « Cap » « Libre » (le côté du vol) ou « Boussole » (le nord en haut, tourné selon « Orientation »), « Marge » (l’espace au-dessus du lieu), et « Capturer la vue actuelle » pour reprendre l’inclinaison, la distance et le cap de la vue 3D telle que vous l’avez laissée. « Soleil » : « Soleil » éclaire le plan : « Plein jour » (par défaut) montre la région en plein jour quelle que soit l’heure de la sortie, puis le soleil rejoint la lumière propre au vol pendant la plongée ; « Heure du survol » garde la lumière du vol ; « Accéléré » fait défiler quelques heures de jour pendant le plan (4 par défaut ; « Heures de soleil », de 1 à 12 h, règle combien, plan par plan : plus il y a d’heures, plus les ombres bougent). « Soleil » est proposé pour tous les styles d’ouverture et de clôture sauf « Aucune » : choisissez « Plein jour » pour finir une trace de nuit en plein jour ; « Heure du survol » est la valeur par défaut pour les autres styles.</li>
+    <li>Une vidéo filmée pendant la sortie peut être <strong>calée sur l’itinéraire</strong> : « Caler sur le parcours » la place là où passe le marqueur à l’heure où elle a été filmée. « Décalage de l’horloge » corrige une horloge d’appareil fausse ; « Suivre la vitesse du survol » la lit à l’allure du marqueur (elle est alors muette).</li>
+    <li>« Baisser toutes les musiques sous les vidéos » (dans le panneau de n’importe quelle musique, « Tout le film ») baisse toutes les musiques de 10 dB sous les vidéos avec son. Le bouton haut-parleur coupe seulement le son de la lecture ; l’export garde le son.</li>
+    <li><strong>Les images clés</strong> (« Images clés », ◆ sur la piste « Plans ») : mettez en pause, cadrez la vue 3D comme vous le souhaitez, puis le bouton ◇ sous « Plans ». Le film montre exactement cette vue quand il atteint ce point de la trace, y arrive en douceur en 3 secondes environ, d’une image clé à la suivante, et revient à la caméra de « Survol » après la dernière. Le panneau de l’image clé ajuste sa « Distance », son « Inclinaison » et sa « Visée » à partir de cette vue ; pour la refaire, avec la tête de lecture dessus, appuyez sur ◇ (ce qui la supprime), cadrez la vue, puis appuyez de nouveau sur ◇. Passez d’une image clé à l’autre avec les boutons ◀ et ▶ à côté (les premiers de la rangée d’outils sur un téléphone), <kbd>Alt+←</kbd> / <kbd>Alt+→</kbd>, ou un clic sur son ◆ ; faites glisser le ◆ pour la déplacer.</li>
+    <li>« Baisser toutes les musiques sous les vidéos » baisse la musique de 10 dB sous les vidéos avec son. Le bouton haut-parleur coupe seulement le son de la lecture ; l’export garde le son.</li>
+    <li><strong>Les images clés</strong> (« Images clés », ◆ sur la piste « Plans ») : mettez en pause, cadrez la vue 3D comme vous le souhaitez, puis le bouton ◇ sous « Plans ». Le film montre exactement cette vue quand il atteint ce point de la trace, y arrive en douceur en 3 secondes environ, d’une image clé à la suivante, et revient à la caméra de « Survol » après la dernière. Le panneau de l’image clé ajuste sa « Distance », son « Écart à la verticale » et sa « Visée » à partir de cette vue ; pour la refaire, avec la tête de lecture dessus, appuyez sur ◇ (ce qui la supprime), cadrez la vue, puis appuyez de nouveau sur ◇. Passez d’une image clé à l’autre avec les boutons ◀ et ▶ à côté (les premiers de la rangée d’outils sur un téléphone), <kbd>Alt+←</kbd> / <kbd>Alt+→</kbd>, ou un clic sur son ◆ ; faites glisser le ◆ pour la déplacer.</li>
+    <li><strong>Les clés de réglage</strong> : des clés ◆ qui font varier la vitesse, l’exposition, l’heure du soleil et les couleurs (saturation, contraste, température, vignettage) le long de la trace. Chaque réglage qui a une clé a sa propre piste dans la timeline (« Vitesse », « Exposition », « Soleil », « Saturation », « Contraste », « Température », « Vignettage » ; la piste disparaît avec sa dernière clé). Placez la tête de lecture, puis utilisez les boutons ◀ ◇ ▶ : pour la vitesse, dans l’en-tête de la piste « Vitesse » ; pour les autres, sous le curseur du réglage (onglet Lumière pour l’exposition et l’heure du soleil, section « Couleurs » pour les couleurs). ◇ ajoute une clé qui garde la valeur actuelle ; ◀ et ▶ vont à la clé précédente ou suivante. Sélectionnez une clé pour régler sa valeur dans l’inspecteur. La valeur passe en douceur d’une clé à la suivante, garde la valeur de la première clé avant celle-ci et celle de la dernière après, et ne bouge pas pendant un arrêt. Dès qu’un réglage a une clé, son curseur montre la valeur à la tête de lecture et l’écrit dans la clé à cet endroit (une clé est créée au premier changement) ; une clé de soleil remplace l’heure enregistrée de la sortie. ◇ sur une clé la supprime. La piste « Étiquettes » porte des clés sur l’opacité des étiquettes 3D (« Habillage » › « Étiquettes 3D »). Supprimez avec <kbd>Suppr</kbd> ou le bouton de l’inspecteur.</li>
+    <li><strong>Les clés de marqueur</strong> (points ronds sur la piste « Marqueur », qui existe dès que le film a une telle clé) : changez le marqueur en cours de route. Placez la tête de lecture et appuyez sur ◉ dans la section « Marqueur » de l’onglet Trace (« Changements de marqueur », avec ◀ ▶ pour aller à la clé précédente ou suivante), puis choisissez dans l’inspecteur la forme, la figurine ou une image et, si vous le souhaitez, ses couleurs, sa taille, le style de la boule, la forme du badge et l’animation (avec les mêmes noms que dans l’onglet Trace ; ce qu’une clé ne règle pas suit l’onglet Trace). Le marqueur passe en fondu au nouvel aspect en moins d’une seconde autour de ce point ; avant la première clé, il garde l’aspect de l’onglet Trace. Pour une trace enchaînée ou des traces « À la suite », « Un marqueur par jour » / « Un marqueur par étape » dans la même section ajoute une clé par jonction, à régler une par une. Faites glisser pour déplacer, <kbd>Suppr</kbd> pour supprimer.</li>
+    <li><strong>Les titres sur la timeline</strong> : avec « Afficher l’habillage » activé, « Titre d’ouverture » et « Carte de clôture » (interrupteurs dans « Habillage » › « Titres ») apparaissent sous forme de blocs sur la piste « Textes », sur le temps réel pendant lequel chacun est affiché (par défaut, le titre dès la première image, la carte de clôture jusqu’à la dernière). Cliquez sur un bloc (ou sur « Modifier » dans le panneau) pour modifier dans l’inspecteur à droite son texte, sa date / météo, ses crédits, sa position, sa taille et ses couleurs ; « Début (s) » et « Durée (s) » le placent comme un texte. Les deux cartes permettent aussi de choisir leurs <strong>« Chiffres »</strong> (distance, D+, D−, altitudes maximale et minimale, durée, vitesses maximale et moyenne, date : ceux que la trace n’enregistre pas sont laissés de côté), une <strong>« Ligne libre »</strong> (sous le titre sur la carte de clôture, sous la date et le sous-titre sur le titre d’ouverture), le <strong>« Profil d’altitude »</strong> et la <strong>« Mini-carte du tracé »</strong> de toute la sortie, et un <strong>« Logo ou image »</strong> au-dessus du titre. Le titre d’ouverture ne montre aucun chiffre tant que vous n’en choisissez pas, la carte de clôture montre ses cinq chiffres habituels. Vous placez la carte où vous le voulez : faites glisser le bloc pour le déplacer, ou l’un de ses bords pour changer sa durée d’affichage (il n’y a plus de curseur « Apparition » ; les flèches déplacent aussi le bloc qui a le focus, Maj pour un pas plus fin) ; <kbd>Suppr</kbd> (ou « Supprimer » dans l’inspecteur) désactive la carte, et l’interrupteur dans « Habillage » la fait revenir avec ses réglages. Les blocs « Ouverture » et « Clôture » de la piste « Plans » (les plans de caméra) ouvrent le même panneau : <strong>un seul panneau « Ouverture »</strong> regroupe le titre d’ouverture et, sous « Plan de caméra », le plan de caméra ; <strong>un seul panneau « Clôture »</strong> regroupe la carte de clôture et le plan de clôture, quel que soit le bloc ou le « Modifier » sur lequel vous avez cliqué.</li>
+    <li>Dans le panneau d’un texte ou d’une photo, « Cadrer la caméra pendant cet élément » place une image clé pour sa durée.</li>
+    <li>« Attaché à », dans le panneau d’un texte, d’une photo ou d’une vidéo, le relie à l’un de vos arrêts : il suit alors l’arrêt quand vous le déplacez, et redevient libre si l’arrêt est supprimé. Un texte ajouté avec <kbd>T</kbd> pendant qu’un arrêt est sélectionné y est attaché tout de suite.</li>
+    <li>Un texte, une photo ou une vidéo non attachés gardent leur place sur l’itinéraire : quand vous ralentissez ou accélérez une portion, ajoutez un arrêt, allongez l’ouverture ou changez la durée du vol, ils se déplacent avec l’endroit où ils étaient affichés (leur propre durée reste la même). Ce qui est affiché pendant l’ouverture ou la clôture garde son temps depuis le début du film ou depuis la fin du vol, et la musique garde son temps dans le film : elle n’est pas liée à un lieu. Mettre les étapes dans un autre ordre les laisse à leur temps dans le film.</li>
+    <li>Quand vous faites glisser un bloc près du bord gauche ou droit de la timeline, celle-ci défile d’elle-même. Les sections repliées des panneaux restent repliées la fois suivante.</li>
+  </ul>
+</section>
+
+<!-- ================================================================== 8 -->
+<section id="format">
+  <div class="sec-head"><span class="num">08</span><h2>Format de sortie</h2></div>
+  <p>Les icônes au milieu de la barre du haut choisissent le format : <strong>16:9, 9:16, 1:1, 4:5 ou 21:9</strong>. La vue 3D est cadrée exactement comme la vidéo : ce que vous voyez est ce que vous exportez. « Libre » remplit tout l’écran pour regarder et n’est pas enregistré.</p>
+  <p>Dans l’onglet « Habillage », chaque élément (sauf le titre d’ouverture et la carte de clôture, réglés depuis leur bloc de la timeline) montre sa <strong>position</strong> juste sous son interrupteur : cliquez sur une case du petit cadre 3 × 3 (ou utilisez les flèches du clavier). Les éléments qui partagent une case sont empilés. Cochez « Position libre » pour placer un élément précisément : deux champs donnent sa distance en pixels de la vidéo exportée (par exemple « Depuis la gauche », « Depuis le bas »), mesurée depuis la marge de sécurité ; l’aperçu suit à son échelle. Cet élément quitte la pile et peut chevaucher les autres. Le logo a aussi un curseur « Opacité » dans son onglet « Style ». Les crédits des sources utilisent le même cadre, coins seulement.</p>
+  <p>Le bouton en pointillés sous le réticule (ou <kbd>G</kbd>) affiche les <strong>zones de sécurité</strong> : les marges « Action 93 % » et « Titres 90 % » dans les formats paysage et carré, et les parties cachées par les interfaces de Reels, TikTok et Shorts en 9:16 et 4:5. Elles n’apparaissent jamais dans l’export.</p>
+</section>
+
+<!-- ================================================================== 9 -->
+<section id="export">
+  <div class="sec-head"><span class="num">09</span><h2>Exporter</h2></div>
+  <figure class="figure shot">
+    <img src="images/habillage.jpg" alt="Le film avec son habillage et le tiroir d’export ouvert" loading="lazy" width="1440" height="900">
+    <figcaption>L’habillage (titre, date, crédits) et le tiroir d’export : format, résolution, durée et taille estimées.</figcaption>
+  </figure>
+  <h3 class="sub">Une vidéo</h3>
+  <ol class="steps">
+    <li><div>Cliquez sur <strong>« Exporter »</strong> (<kbd>Ctrl+E</kbd>) : le tiroir d’export s’ouvre à droite.</div></li>
+    <li><div>Choisissez la résolution (de 720p à 4K). Les lignes « Images par seconde » (24, 30, 60) et « Qualité de rendu » règlent le reste : la qualité fixe aussi la finesse de calcul des nuages et du flou de bougé à l’export (une pastille « Imposé par Haute » le signale sur ces réglages ; une valeur que vous choisissez vous-même l’emporte, et « Revenir à « Selon la qualité de l’export » » rend le choix à la qualité).</div></li>
+    <li><div>Lisez le récapitulatif : durée, images, codec, taille estimée. La vidéo ajoute 1 s au début et 2 s à la fin.</div></li>
+    <li><div>Cliquez sur <strong>« Exporter la vidéo »</strong>. Dans Chrome, Edge et l’application de bureau, vous choisissez d’abord où enregistrer : le fichier est écrit au fur et à mesure de l’export. Chaque image attend que le relief visible soit chargé. Le bouton du haut montre la progression (« 42 % · Annuler ») ; cliquez dessus pour arrêter.</div></li>
+    <li><div>À la fin, le panneau indique « Enregistrée dans… ». Dans les autres navigateurs, le fichier est téléchargé à la fin.</div></li>
+  </ol>
+  <p>Le panneau Vidéo est organisé en « Format » (des formats en un clic pour une plateforme — YouTube 4K ou HD, Reels / TikTok / Shorts, Instagram / Facebook, carré — qui règlent les proportions, la taille, la cadence d’images, le H.264 et un débit ; puis les proportions, la résolution et les images par seconde), « Encodage » (débit vidéo « Selon la qualité » ou « Manuel » avec un curseur de 1 à 80 Mbit/s ; codec et conteneur, seulement ceux que votre appareil sait encoder (H.264, HEVC, VP9, et AV1 quand votre appareil le permet : fichiers plus petits, encodage plus lent, jamais choisi par « Automatique ») ; images clés toutes les 0,5 à 10 s ; son de 96 à 320 kbit/s ; « Modèle du nom de fichier » : par exemple <code>{project} – {format}-{resolution}</code>, avec <code>{project}</code>, <code>{track}</code>, <code>{format}</code>, <code>{resolution}</code>, <code>{fps}</code> et <code>{date}</code>, vide pour le nom de la trace, pour un film seul ; « Volume » : « Normaliser le volume » mesure la musique et le son des vidéos et les règle à −14 LUFS (web), −16 ou −23 LUFS (télévision), sans jamais dépasser −1 dB en crête — l’aperçu n’est pas normalisé, si bien que le film exporté peut sembler plus fort ou plus faible)) et « Rendu » (« Qualité de rendu » : nuages et flou de bougé de l’export, et le débit sauf s’il est manuel).</p>
+  <p>Chaque image attend ses tuiles de carte. Si un serveur de tuiles continue d’échouer (quelques minutes de nouvelles tentatives), l’export s’arrête avec un message qui nomme le serveur et la tuile ; le « Rapport de diagnostic » donne les détails. Réessayez plus tard ou choisissez un autre fond de carte.</p>
+  <p class="note">Gardez l’onglet ouvert pendant l’export ; les onglets et le format sont verrouillés, et l’aperçu reste immobile jusqu’à la fin. Sans écriture directe sur le disque, la vidéo est construite en mémoire (environ deux fois sa taille) ; au-delà de 1,5 Go estimés, le panneau vous prévient.</p>
+  <h3 class="sub">Autres sorties</h3>
+  <div class="cols">
+    <div>
+      <h4>Image fixe</h4>
+      <p>Déplacez la tête de lecture, puis « Image fixe » dans le mode « Affiche » (PNG ou JPEG dans sa ligne « Type d’image »). Même taille que la vidéo, habillage compris.</p>
+    </div>
+    <div>
+      <h4>Habillage seul</h4>
+      <p>« Habillage seul (fond transparent) » exporte les compteurs, le profil, la carte, les titres et les crédits sur un WebM transparent, calé image par image sur la vidéo normale, pour votre logiciel de montage (sous Linux, l’application de bureau l’encode aussi avec <code>ffmpeg</code>).</p>
+    </div>
+    <div>
+      <h4>Plusieurs formats</h4>
+      <p>« Plusieurs formats » exporte en une fois plusieurs couples format × résolution, plus l’image fixe et l’affiche si vous le souhaitez (« Tout exporter »). Chrome, Edge et l’application de bureau les écrivent dans un même dossier. À cet endroit, « Un film par trace » avec « Choisir le dossier des traces… » réalise les films de tous les fichiers GPX ou FIT d’un dossier.</p>
+    </div>
+    <div>
+      <h4>File de rendus</h4>
+      <p>« File de rendus », dans « Plusieurs formats », rend plusieurs projets l’un après l’autre pendant que vous êtes ailleurs. Ouvrez un projet, cochez ses formats, appuyez sur « Ajouter ce projet à la file », puis ouvrez le projet suivant et ajoutez-le aussi (la liste montre chaque projet, ses formats et « en attente », « en cours… », « fait » ou « échec », et « Retirer » enlève tout projet qui n’est pas en cours de rendu, y compris ceux terminés ou en échec ; seuls les projets encore en attente comptent dans la limite de 20). Un projet est copié quand vous l’ajoutez : le modifier ensuite ne change pas son film. Si « Image fixe » ou « Affiche » est coché plus haut, ils sont mis en file avec le projet (l’image fixe à l’endroit où était la lecture quand vous l’avez ajouté). Les petites flèches d’un projet en attente le font monter ou descendre : la file les rend dans cet ordre.</p>
+      <p>« Lancer la file » demande un dossier une fois (Chrome, Edge et l’application de bureau ; ailleurs, chaque fichier est téléchargé), ouvre chaque projet à tour de rôle, le rend et passe au suivant. Un projet qui échoue est signalé et la file continue. Quand la file est terminée, le projet que vous aviez ouvert est remis tel qu’il était ; s’il avait des modifications non enregistrées, la question vous est d’abord posée. « Annuler le rendu en cours » arrête la file : le projet en cours de rendu repasse « en attente ». Le rendu continue quand la fenêtre est réduite ou l’onglet masqué, mais pas quand l’appareil se met en veille (sur un téléphone, gardez l’écran allumé). Dans le navigateur, vous êtes averti de la fin de la file si la fenêtre n’est pas au premier plan (le navigateur demande l’autorisation quand vous lancez la file) ; l’application de bureau n’affiche pas de notification.</p>
+      <p>Si vous fermez l’application pendant un rendu, la file est conservée : à votre retour, le projet interrompu affiche « interrompu : reprendra au début » et le bouton indique « Reprendre ». Sur le web, le dossier est redemandé (un navigateur ne peut pas le garder) ; l’application de bureau garde le dossier de la dernière exécution et ne le redemande pas tant que l’application reste ouverte et que le dossier existe (après un redémarrage, ou si le dossier a disparu, la fenêtre du système s’ouvre sur ce dossier) ; « Changer de dossier » oublie le dossier, et l’exécution suivante en demande un nouveau depuis le début. Le film recommence depuis sa première image : un film ne reprend pas là où il s’était arrêté. Un très gros projet (par exemple avec beaucoup de photos ou de musique) n’est pas gardé après la fermeture et doit être ajouté de nouveau.</p>
+    </div>
+    <div>
+      <h4>Affiche</h4>
+      <p>« Affiche » : A4 ou A3 à 300 dpi, en portrait ou en paysage, ou carré. Titre, date, chiffres clés, profil, météo, crédits ; plusieurs traces, chacune dans sa couleur ; « Carte à plat » pour une carte vue de dessus. Sinon, « Vue 3D » choisit « Vue d’ensemble » ou « Vue actuelle de la caméra » (placez d’abord la caméra à la main). « Type d’image » : PNG ou JPEG. La miniature est une approximation (carte à plat en basse résolution) ; une barre montre le chargement des tuiles, et les tuiles manquantes de la carte à plat sont signalées.</p>
+    </div>
+  </div>
+  <p>En bas du tiroir, « Historique des rendus » liste vos 20 derniers films (faits, annulés ou en échec) avec la durée réelle de l’export, la vitesse par image, la sortie et les réglages qui ralentissent un rendu (nuages, ombres, effets d’objectif, style de carte, forêts, neige). « Réutiliser ces réglages » les remet en une seule étape que vous pouvez annuler ; la liste reste sur cet appareil et ne contient ni trace ni vidéo.</p>
+  <p>Si un export est interrompu (un téléphone à court de mémoire, un écran verrouillé), le démarrage suivant le signale ; son bouton « Détails », et à tout moment « Diagnostic » › « Afficher le rapport » en bas de l’onglet « Réglages », affichent un rapport de diagnostic (appareil, export, réglages, dernières étapes) à copier dans un signalement de bug : il ne contient aucune position, ni aucun nom de trace, de lieu ou de projet.</p>
+</section>
+
+<!-- ================================================================== 10 -->
+<section id="offline">
+  <div class="sec-head"><span class="num">10</span><h2>Travailler hors ligne</h2></div>
+  <p>« Hors ligne » (onglet « Projet ») télécharge une fois les tuiles de la trace ; la vue et l’export fonctionnent ensuite sans connexion.</p>
+  <ol class="steps">
+    <li><div>Choisissez la largeur du couloir autour de la trace : 2, 5 ou 10 km. En dehors, le relief reste plus grossier.</div></li>
+    <li><div>Lisez l’estimation (tuiles et taille : comptez plusieurs centaines de Mo pour 20 km).</div></li>
+    <li><div>« Préparer hors ligne » lance le téléchargement, avec « Pause », « Reprendre » et « Annuler ». Le relancer complète un pack inachevé.</div></li>
+  </ol>
+  <p>Le pack vaut pour la trace, la source du relief, l’imagerie et le niveau de détail choisis à ce moment-là. « Supprimer » libère la place. Certaines sources limitent le nombre de tuiles téléchargées par jour (voir les <a href="sources.md#attributions-licenses-and-offline-use">sources de données</a>).</p>
+</section>
+
+<!-- ================================================================== 11 -->
+<section id="save">
+  <div class="sec-head"><span class="num">11</span><h2>Enregistrer et réutiliser</h2></div>
+  <ul>
+    <li>Nommez le projet dans la barre du haut (sinon, il prend le nom de la première trace). Un point sur l’icône d’enregistrement signale des modifications non enregistrées.</li>
+    <li>« Enregistrer » (<kbd>Ctrl+S</kbd>) enregistre un fichier <code>&lt;name&gt;.opnflvr</code> (le format compressé propre à OpenFlyover ; les anciens projets <code>.json</code> s’ouvrent toujours) avec les traces, les photos, les vidéos, la musique et tous les réglages. Après le premier enregistrement, ou après l’ouverture d’un fichier de projet, « Enregistrer » réécrit le même fichier sans rien demander (Chrome, Edge et l’application de bureau ; Firefox, Safari et l’iPhone téléchargent une nouvelle copie à chaque fois) ; « Enregistrer sous… » (<kbd>Ctrl+Maj+S</kbd>, onglet « Projet ») demande toujours où enregistrer. Dans l’application de bureau, un double-clic sur un fichier <code>.opnflvr</code> l’ouvre. « Ouvrir » (<kbd>Ctrl+O</kbd>) le recharge ; un réglage invalide revient à sa valeur par défaut et un message le signale.</li>
+    <li><strong>Mes projets</strong> (onglet « Projet ») : dès qu’un projet a une trace, l’application l’y garde d’elle-même et l’enregistre quelques secondes après chaque modification, et immédiatement quand vous quittez l’application ou passez à une autre. La liste montre une petite image de la vue 3D et rouvre un projet en un clic. Au prochain démarrage de l’application (ou quand un téléphone recharge la page après l’avoir fermée en arrière-plan), le projet que vous aviez laissé revient, avec le message « Projet … rouvert » ; retirez les traces ou ouvrez un autre projet pour recommencer. Un projet supprimé de la liste pendant qu’il est ouvert n’est plus gardé (« Garder dans Mes projets » le fait revenir).</li>
+    <li><strong>Nouveau projet, fermer</strong> (onglet « Projet ») : « Fermer le projet » vous ramène à l’écran d’accueil avec les réglages par défaut ; un projet gardé dans « Mes projets » est d’abord enregistré et apparaît dans « Récents ». Si vos modifications ne sont enregistrées nulle part, l’onglet vous demande d’abord : « Enregistrer », « Fermer sans enregistrer » ou « Annuler ». « Nouveau projet » fait de même, puis demande les fichiers GPX ou FIT à importer. Retirer la dernière trace (la croix de sa fiche) ferme le projet de la même façon, avec la même question quand des modifications ne sont enregistrées nulle part, et « Annuler » dans le message remet la trace et le projet (l’historique de Ctrl+Z n’est pas restauré, il repart vide).</li>
+    <li><strong>Les préréglages</strong> (onglet « Projet ») enregistrent une famille de réglages sous un nom : style de carte, trace et marqueur, habillage et étiquettes 3D, ou prise de vue (« Prise de vue »). En appliquer un garde le titre, les lignes, les crédits et le logo propres au projet.</li>
+    <li>Annuler et rétablir couvrent tous les réglages : <kbd>Ctrl+Z</kbd>, <kbd>Ctrl+Maj+Z</kbd> ou <kbd>Ctrl+Y</kbd>. Un glissement de curseur compte pour une étape.</li>
+  </ul>
+</section>
+
+<!-- ================================================================== 12 -->
+<section id="mobile">
+  <div class="sec-head"><span class="num">12</span><h2>Sur téléphone ou tablette</h2></div>
+  <p>Le site web s’installe comme une application : il s’ouvre alors en plein écran, sans la barre du navigateur, et démarre sans
+  connexion (les tuiles en ont toujours besoin, ou d’un pack hors ligne).</p>
+  <h3 class="sub">L’installer</h3>
+  <ul>
+    <li><strong>Android</strong> (Chrome) : menu <kbd>⋮</kbd> › « Installer l’application » (ou « Ajouter à l’écran d’accueil »).</li>
+    <li><strong>iPhone, iPad</strong> (Safari) : « Partager » › « Sur l’écran d’accueil ». Le site vous le rappelle une fois.</li>
+  </ul>
+  <p>Quand une nouvelle version est en ligne, « Nouvelle version disponible » apparaît : « Recharger » passe à cette version.</p>
+  <h3 class="sub">Envoyer une trace à l’application</h3>
+  <ul>
+    <li><strong>Android</strong>, une fois l’application installée : dans Strava, Garmin Connect, Komoot ou Fichiers, partagez le fichier GPX ou FIT
+    (« Partager ») et choisissez OpenFlyover. L’application s’ouvre avec la trace importée.</li>
+    <li><strong>iPhone</strong> : iOS ne permet pas de partager un fichier vers une application web. Enregistrez d’abord le fichier dans Fichiers (« Enregistrer dans
+    Fichiers »), puis « Choisir un fichier » dans OpenFlyover.</li>
+  </ul>
+  <h3 class="sub">Où va le film</h3>
+  <p>Là où il existe une fenêtre d’enregistrement (l’application de bureau, Chrome, Edge), elle s’ouvre sur le dossier du dernier film enregistré, et dans l’application de bureau « Ouvrir le dossier » apparaît avec le résultat et montre le fichier dans votre gestionnaire de fichiers (une page web ne peut pas le faire). Avant votre premier film d’une session, le récapitulatif donne déjà « ≈ … de rendu », d’après la vitesse de votre dernier rendu, un peu plus si vous dessinez maintenant des forêts ou de la neige (les premières minutes dépendent aussi de la vitesse d’arrivée des tuiles de relief : prenez-le comme une estimation).</p>
+  <h3 class="sub">Une séquence d’images</h3>
+  <p>« Séquence d’images PNG » (au-dessus de « Habillage seul » dans le panneau Vidéo) écrit un PNG numéroté par image du film, <code>Name_00001.png</code>, <code>Name_00002.png</code>…, dans un dossier de votre choix, pour une application de montage ou de compositing. Elle nécessite un navigateur capable de choisir un dossier (Chrome, Edge) ou l’application de bureau. Il n’y a pas de son ni d’image tenue au début ou à la fin ; si vous annulez, les images déjà écrites restent dans le dossier. ProRes n’est pas proposé : un navigateur ne sait pas l’encoder.</p>
+  <h3 class="sub">Enregistrer un film sur un iPhone</h3>
+  <p>Sans fenêtre d’enregistrement (iPhone, iPad, anciens Android), les boutons d’enregistrement ouvrent la feuille de partage, « Partager /
+  Enregistrer » : « Enregistrer la vidéo » met le film dans Photos, « Enregistrer dans Fichiers » n’importe où ailleurs. Il en va de même
+  pour l’image fixe, l’affiche et le fichier de projet (« Enregistrer »).</p>
+  <h3 class="sub">Ce qui change sur un téléphone</h3>
+  <ul>
+    <li>La vue 3D est plus légère : plus nette seulement quand elle s’arrête de bouger, nuages plus grossiers, « Nappe » pour la mer de nuages,
+    imagerie jusqu’à « Fin ».</li>
+    <li>Les films sont exportés jusqu’en 1080p sur un téléphone (1440p sur une tablette) ; un choix plus grand sort à cette taille.</li>
+    <li>Le son nécessite Safari 26 sur iPhone et iPad ; avant cette version, le film est exporté sans le son et le résultat le signale
+    (« sans le son »). Firefox pour Android ne peut pas exporter de vidéo : utilisez Chrome. L’image fixe fonctionne partout.</li>
+    <li>Gardez l’écran allumé et l’application au premier plan pendant un export : un téléphone met en pause une page en arrière-plan.</li>
+  </ul>
+  <h3 class="sub">Disposition et gestes</h3>
+  <p>L’application web s’adapte aux petits écrans et aux écrans tactiles (prévue pour Safari sur iOS 16.4 et versions ultérieures et pour Chrome sur Android) ; chaque bouton mesure au moins 44 px de haut et les champs ne zooment pas quand vous tapez.</p>
+  <ul>
+    <li><strong>Téléphone tenu droit</strong> (disposé comme une application de montage vidéo) : la vue 3D reste toujours en haut ; en dessous, une rangée avec la lecture, le temps et les boutons de la timeline sous forme d’icônes (« Arrêt », « Vitesse », « Texte », « Médias », vitesse, « Options du film » ; la rangée défile sur le côté), puis la timeline, puis les neuf onglets dans une barre qui défile sur le côté. Un onglet ouvre ses réglages dans un panneau à mi-hauteur par-dessus la timeline et la barre d’onglets, jamais par-dessus la vue : « ✓ » (Terminé) ou un glissement vers le bas sur son haut le ferme. Le tiroir d’export s’ouvre de la même façon.</li>
+    <li><strong>Barre du haut</strong> : le nom du projet, « Exporter » et le menu « Plus d’actions » (⋯) avec « Annuler », « Rétablir », « Ouvrir… » et « Enregistrer ». Le format de sortie se choisit dans le tiroir d’export.</li>
+    <li><strong>Timeline</strong> (téléphone tenu droit) : la tête de lecture reste au milieu ; faites glisser les pistes sous elle avec un doigt pour vous déplacer dans le film, pincez avec deux doigts pour zoomer ou dézoomer. Touchez un bloc (un arrêt, un texte, un plan…) pour le sélectionner : la barre d’onglets laisse la place à ses actions, « Modifier » (ses réglages dans le demi-panneau), « Supprimer » (« Sans plan » pour l’ouverture et la clôture) et « Terminé » pour le désélectionner. Un bloc sélectionné se fait glisser et s’étire au doigt ; un autre bloc se sélectionne d’abord d’une touche. Téléphone tenu en largeur : la timeline est repliée en une bande (lecture, temps) et « Déplier les pistes » l’ouvre par-dessus la vue.</li>
+    <li><strong>Téléphone tenu en largeur</strong> : les onglets restent à gauche et le panneau s’ouvre à côté, par-dessus la vue.</li>
+    <li><strong>Tablette</strong> : les onglets restent à gauche, le panneau et le tiroir d’export s’ouvrent par-dessus la vue, la timeline reste ouverte en dessous.</li>
+  </ul>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Geste</th><th>Dans la vue 3D</th></tr></thead>
+      <tbody>
+        <tr><td>Un doigt</td><td>Tourner autour de la scène</td></tr>
+        <tr><td>Deux doigts</td><td>Pincer pour zoomer, glisser pour se déplacer</td></tr>
+        <tr><td>Toucher la trace</td><td>Y déplacer la tête de lecture</td></tr>
+        <tr><td>Double toucher</td><td>« Recadrer la vue »</td></tr>
+        <tr><td>Appui long</td><td>Le menu d’un clic droit : « Ajouter un arrêt ici », « Ajouter un texte ici », « Point d’intérêt ici »…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Touchez un ⓘ pour lire son explication ; un appui long sur un bouton à icône affiche son nom.</p>
+</section>
+
+<!-- ================================================================== 13 -->
+<section id="desktop">
+  <div class="sec-head"><span class="num">13</span><h2>Spécificités de l’application de bureau</h2></div>
+  <p>L’application de bureau ouvre et enregistre par les fenêtres de fichiers du système, garde les packs hors ligne et « Mes projets » dans son propre dossier, et peut rendre <strong>un film par trace d’un dossier</strong> sans aucun clic :</p>
+  <pre><code>openflyover --rendu ~/Traces/2026 --sortie ~/Films --prereglage "Montagne" --formats 16:9@1080p,9:16@1080p</code></pre>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Option</th><th>Signification</th></tr></thead>
+      <tbody>
+        <tr><td><code>--rendu</code></td><td>Dossier des traces GPX et FIT (seulement les fichiers placés directement dedans)</td></tr>
+        <tr><td><code>--sortie</code></td><td>Dossier de sortie, créé s’il n’existe pas ; par défaut, le dossier des traces</td></tr>
+        <tr><td><code>--prereglage</code></td><td>Un préréglage enregistré dans l’application ; sinon, les réglages actuels de l’application</td></tr>
+        <tr><td><code>--formats</code></td><td>format@résolution, séparés par des virgules (<code>16:9</code>, <code>9:16</code>, <code>1:1</code>, <code>4:5</code>, <code>21:9</code> ; <code>720p</code>, <code>1080p</code>, <code>1440p</code>, <code>4k</code>)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>La fenêtre rend chaque trace, écrit <code>rendu-en-lot.txt</code> à côté des films, puis se ferme. Code de sortie 0 : tout est fait ; 1 : un film a échoué ; 2 : la commande n’a pas pu s’exécuter.</p>
+  <p>Sous Windows, le programme d’installation demande s’il faut installer pour l’utilisateur actuel ou pour tous les utilisateurs (Windows affiche alors une demande d’autorisation administrateur). L’application de bureau peut aussi rechercher des mises à jour : « Réglages » › « Mises à jour » (voir plus haut).</p>
+  <p class="note">Sous Linux, l’application de bureau encode la vidéo avec le <code>ffmpeg</code> du système (<code>sudo apt install ffmpeg</code>) ; sans lui, seules les images fixes peuvent être exportées.</p>
+</section>
+
+<!-- ================================================================== 14 -->
+<section id="keys">
+  <div class="sec-head"><span class="num">14</span><h2>Raccourcis clavier</h2></div>
+  <p>La même liste est disponible dans l’application avec <kbd>?</kbd>.</p>
+  <div class="table-wrap">
+    <table class="wide">
+      <thead><tr><th>Touches</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>Espace</kbd> · <kbd>K</kbd></td><td>Lecture ou pause</td></tr>
+        <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Reculer ou avancer d’une seconde ; avec un bloc sélectionné, le décaler d’une seconde (d’un dixième avec <kbd>Maj</kbd>)</td></tr>
+        <tr><td><kbd>Maj+←</kbd> <kbd>Maj+→</kbd></td><td>Reculer ou avancer de cinq secondes</td></tr>
+        <tr><td><kbd>Z</kbd></td><td>Zoomer la timeline sur la sélection (ou sur la zone de travail, ou sur tout le film)</td></tr>
+        <tr><td><kbd>I</kbd> · <kbd>O</kbd> · <kbd>Maj+X</kbd></td><td>Placer le point d’entrée · le point de sortie de la zone de travail (l’aperçu tourne en boucle entre les deux) · l’effacer</td></tr>
+        <tr><td><kbd>J</kbd> <kbd>L</kbd></td><td>Reculer ou avancer d’une image (<kbd>Maj</kbd> : dix images)</td></tr>
+        <tr><td><kbd>Début</kbd> <kbd>Fin</kbd></td><td>Début ou fin du film</td></tr>
+        <tr><td><kbd>Alt+←</kbd> <kbd>Alt+→</kbd></td><td>Image clé précédente ou suivante</td></tr>
+        <tr><td><kbd>Alt</kbd> + glisser</td><td>Inverser l’aimant de la timeline pendant le glissement d’un bloc</td></tr>
+        <tr><td><kbd>S</kbd> · <kbd>T</kbd></td><td>Ajouter un arrêt au niveau du marqueur · un texte à la tête de lecture</td></tr>
+        <tr><td><kbd>Suppr</kbd> · <kbd>Maj+Suppr</kbd></td><td>Supprimer le ou les blocs sélectionnés (où que soit le focus), ou toutes les clés sélectionnées · et refermer l’espace qu’ils laissent</td></tr>
+        <tr><td><kbd>Ctrl+C</kbd> · <kbd>Ctrl+V</kbd></td><td>Copier les textes, photos et musiques sélectionnés · les coller à la tête de lecture</td></tr>
+        <tr><td><kbd>Ctrl+D</kbd> · <kbd>X</kbd></td><td>Dupliquer le texte ou la photo sélectionnés, juste après · le couper en deux à la tête de lecture (une vidéo ou une musique ne peut pas encore être coupée)</td></tr>
+        <tr><td><kbd>Ctrl</kbd> + glisser sur une piste</td><td>Sélectionner les clés à l’intérieur du rectangle ; <kbd>Ctrl</kbd> + clic ajoute ou retire une clé</td></tr>
+        <tr><td><kbd>Ctrl+Z</kbd> · <kbd>Ctrl+Maj+Z</kbd> / <kbd>Ctrl+Y</kbd></td><td>Annuler · rétablir</td></tr>
+        <tr><td><kbd>Ctrl</kbd> + molette</td><td>Zoomer la timeline ; la molette seule fait défiler sur le côté une timeline zoomée, et pendant la lecture elle suit la tête de lecture</td></tr>
+        <tr><td><kbd>Ctrl+O</kbd> · <kbd>Ctrl+S</kbd> · <kbd>Ctrl+Maj+S</kbd> · <kbd>Ctrl+E</kbd></td><td>Ouvrir · enregistrer · enregistrer sous · tiroir d’export</td></tr>
+        <tr><td><kbd>F</kbd> · <kbd>G</kbd></td><td>Recadrer la vue sur la trace · afficher les zones de sécurité</td></tr>
+        <tr><td><kbd>[</kbd></td><td>Replier ou déplier le panneau</td></tr>
+        <tr><td><kbd>?</kbd></td><td>Afficher les raccourcis</td></tr>
+        <tr><td><kbd>Échap</kbd></td><td>Fermer la fenêtre de dialogue, puis le tiroir d’export, puis la sélection</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================================================================== 15 -->
+<section id="privacy">
+  <div class="sec-head"><span class="num">15</span><h2>Données, confidentialité et crédits</h2></div>
+  <ul>
+    <li><strong>Votre trace ne quitte jamais votre ordinateur.</strong> Les services ouverts ne voient qu’une position approximative : la zone des tuiles, quelques points arrondis à 1 km pour la météo, le rectangle autour de la trace pour les repères.</li>
+    <li>La météo et les repères sont activés par défaut ; désactivez-les et plus aucune requête n’est envoyée.</li>
+    <li>Les vidéos, images et affiches exportées portent les <strong>crédits des sources</strong>. Dans « Habillage » › « Crédits des sources », « Dans le film » choisit ce que le film montre pendant la lecture : <strong>« Discrets »</strong> (par défaut : les noms des sources en petites capitales dans un coin, aussi peu que leurs conditions le demandent), <strong>« Complets »</strong> (la phrase entière dans le coin) ou <strong>« À la fin seulement »</strong> (rien, à part Open-Meteo tant que la météo est affichée, et Esri, dont les conditions demandent que son crédit reste sur la carte). Quel que soit votre choix, le film se termine par les crédits complets (sous la carte de clôture, à la fin de son générique quand elle en a un) et l’affiche les porte en entier, car les sources doivent toujours être créditées. Dans le tiroir d’export, « Copier les crédits » copie les crédits avec leurs liens, prêts à coller dans la description de la vidéo (quand le navigateur refuse l’accès au presse-papiers, le texte est affiché pour être sélectionné et copié à la main ; certaines sources, comme Mapterhorn et OpenStreetMap, demandent que leur page soit accessible depuis cet endroit).</li>
+    <li>Certaines sources interdisent l’usage commercial (Open-Meteo) ou imposent la même licence aux œuvres dérivées (OpenTopoMap). Vérifiez-les avant de publier un film à des fins commerciales : voir les <a href="sources.md#attributions-licenses-and-offline-use">sources de données</a>.</li>
+  </ul>
+</section>
+
+<!-- ================================================================== 16 -->
+<section id="faq">
+  <div class="sec-head"><span class="num">16</span><h2>Questions et réponses</h2></div>
+  <div class="faq">
+    <details>
+      <summary>L’export est lent. Quelque chose ne va pas ?</summary>
+      <div class="answer"><p>Non. Chaque image attend que le relief visible soit entièrement chargé, puis elle est rendue à la taille de la vidéo. Une carte graphique et une bonne connexion (ou un pack hors ligne) accélèrent l’export. Après un premier film, le récapitulatif multi-format estime le temps de rendu.</p></div>
+    </details>
+    <details>
+      <summary>L’import ou l’export ne fait rien sur mon site hébergé.</summary>
+      <div class="answer"><p>Le site doit être servi en <strong>HTTPS</strong> : en dehors de <code>localhost</code>, les navigateurs réservent l’encodeur vidéo et d’autres fonctions aux pages sécurisées.</p></div>
+    </details>
+    <details>
+      <summary>Puis-je utiliser Firefox ou Safari ?</summary>
+      <div class="answer"><p>La vue fonctionne, mais l’export vidéo n’y a pas été testé et les longues vidéos sont construites en mémoire. Utilisez Chrome, Edge ou l’application de bureau pour les exports.</p></div>
+    </details>
+    <details>
+      <summary>Une partie du relief paraît floue ou plate.</summary>
+      <div class="answer"><p>Le détail se charge autour de la caméra à mesure que les tuiles arrivent. Pendant l’export, chaque image les attend. En dehors d’un couloir hors ligne, le relief reste plus grossier quand vous êtes hors connexion.</p></div>
+    </details>
+    <details>
+      <summary>Ma vidéo n’a pas de son.</summary>
+      <div class="answer"><p>Si le navigateur ne sait pas encoder l’audio, la vidéo sort muette et le panneau d’export le signale. Les vidéos synchronisées avec « Suivre la vitesse du survol » sont toujours muettes.</p></div>
+    </details>
+    <details>
+      <summary>Où sont gardés mes préréglages et mes projets ?</summary>
+      <div class="answer"><p>Dans le stockage du navigateur (ou dans le dossier propre à l’application de bureau). Pour déplacer un projet vers une autre machine, utilisez « Enregistrer » et copiez le fichier <code>.opnflvr</code>.</p></div>
+    </details>
+  </div>
+</section>
+
+</main>
+
+<footer>Guide d’utilisation d’OpenFlyover. Comment l’application est construite : <a href="how-it-works.html">base de connaissances</a>. Code, installation et licences : <a href="../README.md">README</a>.</footer>
+</div>
+</body>
+</html>

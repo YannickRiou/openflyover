@@ -108,6 +108,12 @@ function usePerformance(shown: Record<PerfItem, boolean>): PerfSample | null {
     let stopCounting: (() => void) | undefined
     const timer = window.setInterval(() => {
       const now = performance.now()
+      // nobody sees it: no render of the bar, no question to the desktop app; the next shown tick counts from here
+      if (document.hidden) {
+        frames = 0
+        since = now
+        return
+      }
       const probe = getPerfProbe()
       // no frame rate on the tick that starts the count
       const starting = !!probe && !stopCounting

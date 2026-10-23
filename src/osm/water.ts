@@ -14,11 +14,11 @@ import { chainCoastWays, clipChainsToBoxes, reduceCoast, seaPolygons } from './c
 import {
   M_PER_DEG,
   QUERY_TIMEOUT_S,
-  cachedOverpassQuery,
   corridorBoxes,
   overpassBbox,
   overpassElements,
   planarDistanceM,
+  sharedOverpassQuery,
   simplifyLine,
   type OverpassDeps,
 } from './overpass'
@@ -214,7 +214,7 @@ export function parseWater(json: unknown): WaterPolygon[] {
 
 /** Water around `track`, from the caches or one queued Overpass query (fair use: see overpass.ts). */
 export function fetchTrackWater(track: Track, signal?: AbortSignal, deps?: OverpassDeps): Promise<WaterPolygon[]> {
-  return cachedOverpassQuery(waterQuery(track), parseWater, signal, deps)
+  return sharedOverpassQuery(waterQuery(track), parseWater, signal, deps)
 }
 
 // ---------------------------------------------------------------------------
@@ -297,7 +297,7 @@ export function parseWaterShapes(json: unknown, boxes: readonly LonLatBounds[], 
 export function fetchTrackWaterShapes(track: Track, signal?: AbortSignal, deps?: OverpassDeps): Promise<WaterShape[]> {
   const boxes = corridorBoxes(track, WATER_MARGIN_M)
   const lineBoxes = corridorBoxes(track, WATER_LINE_MARGIN_M)
-  return cachedOverpassQuery(waterLinesQuery(track), (json) => parseWaterShapes(json, boxes, lineBoxes), signal, deps)
+  return sharedOverpassQuery(waterLinesQuery(track), (json) => parseWaterShapes(json, boxes, lineBoxes), signal, deps)
 }
 
 /** The rings and bounding boxes of polygons, built once for `runsOutside`. */

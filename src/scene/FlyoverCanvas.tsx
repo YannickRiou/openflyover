@@ -15,6 +15,7 @@ import { Canvas, addAfterEffect, useThree } from '@react-three/fiber'
 import type { RootState } from '@react-three/fiber'
 import { canvasAntialias, deviceBudget } from '../core/deviceBudget'
 import { useAppStore } from '../state/store'
+import { usePreferences } from '../ui/preferences'
 import { dismissToast, showToast } from '../ui/toast'
 import { ExportController } from '../export/ExportController'
 import { readGpuInfo, setGpuProbe } from '../export/diagnostic'
@@ -32,6 +33,7 @@ import { PhotoPins } from './PhotoPins'
 import { RaceMarkers } from './RaceMarkers'
 import { RegionHighlight } from './RegionHighlight'
 import { setPerfProbe } from './perfProbe'
+import { createSlowPreviewDetector, usePreviewBudget, usePreviewMeasure } from './previewQuality'
 import { useRenderOnDemand } from './renderOnDemand'
 import {
   HEMISPHERE_GROUND,
@@ -77,22 +79,40 @@ export interface FlyoverCanvasProps {
   style?: CSSProperties
 }
 
-/** Pixel ratio caps of this device: [1, 2] on a computer, lower while the view moves on a phone (core/deviceBudget.ts). */
+/** Limits of this device (core/deviceBudget.ts); the pixel ratio caps follow « Qualité de l'aperçu » (`usePreviewBudget`). */
 const BUDGET = deviceBudget()
 
-/** Phones and tablets: the lower pixel ratio while the film plays or fingers move the view; the export sets its own. */
-function MovingPixelRatio() {
-  const playing = useAppStore((s) => s.playback.playing)
-  const exporting = useExportStore((s) => isExportBusy(s.phase))
-  const setDpr = useThree((s) => s.setDpr)
+/**
+ * Fingers moving the 3D view, told to the canvas: phones, tablets and a light preview lower the pixel ratio while they
+ * move (or the film plays). The ratio goes through the `dpr` of <Canvas>: R3F sets it back on each render of the
+ * canvas (`configure`, after the children's effects), so a `setDpr` from here would not hold. The export sets its own.
+ */
+function TouchWatch({ onChange }: { onChange(touching: boolean): void }) {
   // the orbit controls listen there too, and capture the pointer there
   const surface = useThree((s) => (s.events.connected as EventTarget | undefined) ?? s.gl.domElement)
-  const [touching, setTouching] = useState(false)
-  useEffect(() => watchTouchGesture(surface, setTouching), [surface])
-  const moving = playing || touching
   useEffect(() => {
-    if (!exporting) setDpr([1, moving ? BUDGET.movingPixelRatio : BUDGET.maxPixelRatio])
-  }, [moving, exporting, setDpr])
+    const stop = watchTouchGesture(surface, onChange)
+    return () => {
+      stop()
+      onChange(false)
+    }
+  }, [surface, onChange])
+  return null
+}
+
+/** « Qualité de l'aperçu » on « Auto »: the frames drawn while the film plays, until the preview is found too slow. */
+function MeasurePreview() {
+  const playing = useAppStore((s) => s.playback.playing)
+  const exporting = useExportStore((s) => isExportBusy(s.phase))
+  const auto = usePreferences((s) => s.previewQuality === 'auto')
+  const slow = usePreviewMeasure((s) => s.slow)
+  useEffect(() => {
+    if (!playing || exporting || !auto || slow) return
+    const detector = createSlowPreviewDetector()
+    return addAfterEffect(() => {
+      if (detector.frame(performance.now())) usePreviewMeasure.setState({ slow: true })
+    })
+  }, [playing, exporting, auto, slow])
   return null
 }
 
@@ -138,6 +158,11 @@ function watchContextLoss({ gl, invalidate }: RootState) {
 export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
   const hasTracks = useAppStore((s) => s.tracks.length > 0)
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
+  const preview = usePreviewBudget()
+  const lowersWhileMoving = preview.movingPixelRatio !== preview.maxPixelRatio
+  const playing = useAppStore((s) => lowersWhileMoving && s.playback.playing)
+  const [touching, setTouching] = useState(false)
+  const pixelRatio = lowersWhileMoving && (playing || touching) ? preview.movingPixelRatio : preview.maxPixelRatio
   // fixed with the context: a phone that starts with the atmosphere keeps its default framebuffer without MSAA
   const [gl] = useState(() => ({ ...GL, antialias: canvasAntialias(BUDGET, useAppStore.getState().settings.atmosphere) }))
   const postProcessed = useAppStore(
@@ -159,14 +184,15 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
 
   return (
     <div className={className} style={style ? { ...wrapperStyle, ...style } : wrapperStyle}>
-      <Canvas gl={gl} camera={CAMERA} dpr={[1, BUDGET.maxPixelRatio]} frameloop="demand" flat shadows="percentage" style={canvasStyle} onCreated={watchContextLoss}>
+      <Canvas gl={gl} camera={CAMERA} dpr={[1, pixelRatio]} frameloop="demand" flat shadows="percentage" style={canvasStyle} onCreated={watchContextLoss}>
         {!atmosphere && (
           <>
             <hemisphereLight color={HEMISPHERE_SKY} groundColor={HEMISPHERE_GROUND} intensity={HEMISPHERE_INTENSITY} />
             <directionalLight position={SUN_POSITION} intensity={SUN_INTENSITY} />
           </>
         )}
-        {BUDGET.movingPixelRatio !== BUDGET.maxPixelRatio && <MovingPixelRatio />}
+        {lowersWhileMoving && <TouchWatch onChange={setTouching} />}
+        <MeasurePreview />
         {hasTracks && (
           <TerrainLayer>
             <RenderOnDemand />
