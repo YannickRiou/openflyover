@@ -10,10 +10,9 @@ import { useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from
 import { useFilmClock } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
-import { createCardImages, loadLogo, loadOverlayFonts } from './assets'
+import { createCardImages, createLogos, loadOverlayFonts } from './assets'
 import { overlayFilmFrameAt } from './data'
 import { drawOverlay, overlayTime } from './draw'
-import type { OverlayAssets } from './draw'
 import { createOverlayFilmCache, overlayExtras, photoAssets } from './exportOverlay'
 
 /**
@@ -50,8 +49,7 @@ function OverlayPreview() {
     let disposed = false
     let fontsReady = false
     const film = createOverlayFilmCache()
-    let logoSource = ''
-    let assets: OverlayAssets = {}
+    const logos = createLogos(() => schedule())
     const bitmaps = getMediaBitmaps()
     const videos = getPreviewVideos()
     const cardImage = createCardImages(() => schedule())
@@ -76,20 +74,7 @@ function OverlayPreview() {
       if (!fontsReady || !data || width === 0 || height === 0) return
 
       const frame = overlayFilmFrameAt(data, playback.progress)
-      if (overlay.logo.image !== logoSource) {
-        const source = overlay.logo.image
-        logoSource = source
-        assets = {}
-        loadLogo(source)
-          .then((logo) => {
-            if (disposed || logoSource !== source) return
-            assets = { logo }
-            schedule()
-          })
-          .catch(() => {
-            // unreadable image: drawn without logo
-          })
-      }
+      logos.sync(overlay.logos.map((logo) => logo.image))
       ctx.setTransform(pixelW / width, 0, 0, pixelH / height, 0, 0)
       const time = overlayTime(clockRef.current, playback.progress, playback.timeS)
       // decode the photos coming up before they fade in
@@ -98,7 +83,7 @@ function OverlayPreview() {
       const video = isExportBusy(useExportStore.getState().phase)
         ? undefined
         : (item: FilmMedia, clipS: number) => videos.frame(item, clipS, sound, clipRateAt(item, data.whole.path, clockRef.current, time.timeS))
-      drawOverlay(ctx, frame, overlay, { width, height }, { ...assets, ...photoAssets(), video, cardImage }, overlayExtras(time, playback.progress))
+      drawOverlay(ctx, frame, overlay, { width, height }, { logos: logos.logos(), ...photoAssets(), video, cardImage }, overlayExtras(time, playback.progress))
       // clips not drawn by this frame are paused
       videos.settle()
     }
@@ -157,6 +142,7 @@ function OverlayPreview() {
     schedule()
 
     return () => {
+      logos.dispose()
       disposed = true
       cancelAnimationFrame(raf)
       scheduleRef.current = () => {}

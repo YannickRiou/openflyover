@@ -3,7 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { OFFSET_MAX_PX, withWidgetOffset } from '../overlay/settings'
+import { LOGOS_MAX, OFFSET_MAX_PX, withWidgetOffset } from '../overlay/settings'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { OverlayPanel, WidgetPosition } from './OverlayPanel'
@@ -22,7 +22,7 @@ async function mount() {
   root = createRoot(host)
   await act(async () => root!.render(<WidgetPosition widget="logo" />))
   const x = host.querySelector<HTMLInputElement>('input[aria-roledescription="Number field"]')!
-  const offsetX = () => useAppStore.getState().settings.overlay.logo.offset?.x
+  const offsetX = () => useAppStore.getState().settings.overlay.logos[0].offset?.x
   return { x, offsetX }
 }
 
@@ -152,5 +152,37 @@ describe('« Étiquettes 3D »: every setting of the 3D labels in one section', 
     await act(async () => root!.render(<OverlayPanel />))
     const section = [...host.querySelectorAll('details')].find((d) => d.querySelector('summary')?.textContent?.includes('Étiquettes 3D'))!
     for (const text of ['Étiquettes dans la vue', 'Bornes kilométriques', 'Couleurs des étiquettes']) expect(section.textContent).toContain(text)
+  })
+})
+
+describe('several logos', () => {
+  afterEach(() => {
+    act(() => root?.unmount())
+    root = null
+    document.body.innerHTML = ''
+  })
+
+  it('adds a logo, removes it, and stops at the most allowed', async () => {
+    useAppStore.setState({ settings: { ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay, enabled: true } } })
+    const host = document.body.appendChild(document.createElement('div'))
+    root = createRoot(host)
+    await act(async () => root!.render(<OverlayPanel />))
+    const logos = () => useAppStore.getState().settings.overlay.logos
+    const button = (text: string) => [...host.querySelectorAll('button')].find((b) => b.textContent === text)!
+    const click = (text: string) => act(async () => button(text).click())
+
+    // the first logo has no remove button
+    expect(host.textContent).not.toContain('Supprimer ce logo')
+    await click('Ajouter un logo')
+    expect(logos()).toHaveLength(2)
+    expect(logos()[1]).toMatchObject({ enabled: true, anchor: 'top-left', image: '' })
+    expect(host.textContent).toContain('Logo 2')
+    for (let i = logos().length; i < LOGOS_MAX; i++) await click('Ajouter un logo')
+    expect(logos()).toHaveLength(LOGOS_MAX)
+    expect(button('Ajouter un logo').disabled).toBe(true)
+
+    await click('Supprimer ce logo')
+    expect(logos()).toHaveLength(LOGOS_MAX - 1)
+    expect(button('Ajouter un logo').disabled).toBe(false)
   })
 })

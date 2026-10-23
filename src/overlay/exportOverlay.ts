@@ -31,7 +31,7 @@ import { trackLegend } from '../flyover/trackColor'
 import type { TrackColorBy, TrackLegend } from '../flyover/trackColor'
 import { getLanguage } from '../i18n'
 import type { Sequence } from '../flyover/sequence'
-import { createCardImages, loadLogo } from './assets'
+import { createCardImages, createLogos } from './assets'
 import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, overlayPermanentCredits, overlayShortCredits, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
 import type { CreditSources, LeaderboardRow, OverlayFilm } from './data'
 import { bilanStampAt, drawOverlay } from './draw'
@@ -207,31 +207,17 @@ export function createOverlayFilmCache(): () => OverlayFilm | null {
 
 export function createOverlayDrawer(): OverlayDrawer {
   const film = createOverlayFilmCache()
-  let logoSource = ''
-  let assets: OverlayAssets = {}
-  let disposed = false
+  const logos = createLogos()
   const cardImage = createCardImages()
 
-  const syncLogo = (source: string) => {
-    if (source === logoSource) return
-    logoSource = source
-    assets = {}
-    if (!source) return
-    loadLogo(source)
-      .then((logo) => {
-        if (!disposed && logoSource === source) assets = { logo }
-      })
-      .catch(() => {
-        // unreadable image: drawn without logo
-      })
-  }
-  syncLogo(useAppStore.getState().settings.overlay.logo.image)
+  const syncLogos = () => logos.sync(useAppStore.getState().settings.overlay.logos.map((logo) => logo.image))
+  syncLogos()
   // decoded before the first frame that shows it
   for (const card of ['title', 'end'] as const) {
     const picture = useAppStore.getState().settings.overlay[card].image
     if (picture) cardImage(picture)
   }
-  const unsubscribe = useAppStore.subscribe((state) => syncLogo(state.settings.overlay.logo.image))
+  const unsubscribe = useAppStore.subscribe(syncLogos)
 
   return {
     draw(ctx, at, width, height) {
@@ -239,10 +225,10 @@ export function createOverlayDrawer(): OverlayDrawer {
       if (!data) return
       const { settings } = useAppStore.getState()
       const video = (item: FilmMedia, clipS: number) => exportVideos?.get(item, clipS)
-      drawOverlay(ctx, overlayFilmFrameAt(data, at.progress), settings.overlay, { width, height }, { ...assets, ...photoAssets(), video, cardImage }, overlayExtras(at.time, at.progress))
+      drawOverlay(ctx, overlayFilmFrameAt(data, at.progress), settings.overlay, { width, height }, { logos: logos.logos(), ...photoAssets(), video, cardImage }, overlayExtras(at.time, at.progress))
     },
     dispose() {
-      disposed = true
+      logos.dispose()
       unsubscribe()
     },
   }
