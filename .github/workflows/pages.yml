@@ -28,14 +28,17 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
-      # the user guide next to the site (« Premiers pas » on the home screen): its links to the repository's Markdown point to GitHub
+      # the user guide in each language next to the site (« Premiers pas » on the home screen opens the one of the
+      # interface): its links to the repository's Markdown point to GitHub
       - name: User guide
         run: |
           mkdir -p dist/docs
           cp -r docs/images dist/docs/
-          sed -e 's#href="sources.md#href="https://github.com/${{ github.repository }}/blob/master/docs/sources.md#g' \
-              -e 's#href="../README.md"#href="https://github.com/${{ github.repository }}"#g' \
-              docs/user-guide.html > dist/docs/user-guide.html
+          for guide in docs/user-guide*.html; do
+            sed -e 's#href="sources.md#href="https://github.com/${{ github.repository }}/blob/master/docs/sources.md#g' \
+                -e 's#href="../README.md"#href="https://github.com/${{ github.repository }}"#g' \
+                "$guide" > "dist/$guide"
+          done
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
