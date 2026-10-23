@@ -416,6 +416,10 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(size) => updateMarker({ size })}
         />
       </SettingRow>
+      <div className="flex items-center gap-1">
+        <Switch checked={marker.stick} onChange={(on) => updateMarker({ stick: on })}>{t('marker.section.stick')}</Switch>
+        <InfoTip text={t('marker.section.stickTip')} />
+      </div>
       <div className="field">
         <div className="flex items-center gap-1">
           <span className="type-label">{t('marker.section.changes')}</span>
@@ -467,10 +471,6 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
             />
           )}
           {marker.label !== 'aucune' && racing && <p className="type-hint">{t('marker.section.otherLabels')}</p>}
-          <div className="flex items-center gap-1">
-            <Switch checked={marker.stick} onChange={(on) => updateMarker({ stick: on })}>{t('marker.section.stick')}</Switch>
-            <InfoTip text={t('marker.section.stickTip')} />
-          </div>
         </div>
       </details>
     </PanelSection>
