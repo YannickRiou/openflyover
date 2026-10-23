@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 4.4.1 (October 2026)
 
 - **The marker no longer blinks behind the relief**: it was switched off whole as soon as the computed sight line touched the relief, and back on as soon as it cleared it, so a line grazing a crest (a low view, or a higher one over small mountains) made it blink, and it showed whole over a summit that was really in front of it. The relief now hides the marker like a real object, from the image itself: a crest in front of it covers it where it passes, a little at first, then all of it, without blinking, and the slope just under it (150 m) never cuts it. The same for the markers of « En parallèle ». Its place and size on screen do not change; the 3D labels still disappear whole behind the relief.
 
