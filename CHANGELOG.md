@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## 4.4.0 (unreleased)
+## 4.4.0 (October 2026)
 
 - **« Clarté des nuits »: nights you can see**: at night the relief was lit only by a very faint sky light, so a film crossing a night (or set at a night hour) often showed almost nothing. A new slider in « Lumière › Atmosphère » lights the relief and the clouds at night, like moonlight, from 0 IL (as before, the default: films do not change) to +4 IL; it has no effect while the sun is up and fades in with dusk. The sky, the stars and the daytime image stay as they were. « Exposition » moved from « Atmosphère » to « Couleurs », just above contrast and saturation (same setting, same keys on the timeline).
 - **Two settings next to their neighbours**: « Durée des changements de vitesse » moved from the bottom of « Survol › Durée et rythme » to « Survol › Caméra », right under « Fin en douceur » (it is shown in every camera style, « Libre » too). « Tige et ombre au sol » left « Plus d'options » of « Trace › Marqueur » for the line right under « Taille du marqueur ». Same settings, same values: films do not change.
