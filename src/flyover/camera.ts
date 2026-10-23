@@ -48,7 +48,7 @@ export const GROUND_SAMPLES_PER_SIDE = 4
 /**
  * Terrain samples along the sight line camera → marker (at its steady height, not its own: that rides each bump). The
  * clearance tapers from MIN_GROUND_CLEARANCE_M under the camera to LINE_OF_SIGHT_MIN_CLEARANCE_M (a safety margin: the
- * marker is not drawn at all once the relief cuts the line, `occlusionFade`), so a rise just before the marker no
+ * relief cuts the marker where it passes in front, `pullMarkerForward`), so a rise just before the marker no
  * longer hides it. The ground is the grid's raised by the relief its cells miss (`reliefGround`). The line is checked
  * up to LINE_OF_SIGHT_END_M
  * short of the marker (`lineOfSightClearance` leaves the slope under it out) and at most LINE_OF_SIGHT_MAX_GAIN × the

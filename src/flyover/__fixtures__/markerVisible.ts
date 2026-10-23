@@ -1,7 +1,7 @@
 /**
  * Test helpers of the marker-visibility measures (markerVisible.test.ts): twisty synthetic tracks on steep terrain and,
  * frame by frame, where the lead marker falls in the film camera's frame (screen position, distance, line of sight
- * above the relief as `occludeMarker` draws it).
+ * above the relief, `lineOfSightClearance`).
  */
 import { PerspectiveCamera, Vector3 } from 'three'
 import type { Track, TrackPoint } from '../../core/types'

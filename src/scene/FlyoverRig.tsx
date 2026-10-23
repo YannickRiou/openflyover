@@ -32,9 +32,8 @@ import { trackUnderMarker } from '../flyover/sequence'
 import {
   leadMarkerColors,
   markerLook,
-  occludeMarker,
+  pullMarkerForward,
   placeMarker,
-  reliefClearance,
   releaseMarkerTexture,
   screenHeading,
   useMarkerImages,
@@ -225,14 +224,13 @@ export function FlyoverRig() {
     const under = trackUnderMarker(store.tracks, settings.race, progress)?.track ?? track
     const imageOf = (id: string) => useMediaStore.getState().table[id]?.data ?? ''
     const blend = markerAt(settings.film, settings.marker, progress * path.lengthM, markerFadeM(path.lengthM, clock.flightS), imageOf)
-    const clearance = reliefClearance(engine, frame, settings.exaggeration)
     const exposureGain = 1 / gl.toneMappingExposure
     const draw = (sprite: Sprite, look: MarkerSettings, weight: number) => {
       const heading = look.kind === 'figurine' ? screenHeading(path, progress * path.lengthM, view.marker, frame, camera, settings.exaggeration) : null
       const colors = leadMarkerColors(look, under?.color ?? '#FFFFFF')
       placeMarker(sprite, view.marker, camera, markerLook(look, under, true, markerImages.get(look.image) ?? null), colors, heading?.left ?? false, exposureGain, timeS, heading?.lean)
-      occludeMarker(sprite, camera, clearance)
-      ;(sprite.material as SpriteMaterial).opacity *= weight
+      pullMarkerForward(sprite, camera)
+      ;(sprite.material as SpriteMaterial).opacity = weight
     }
     // a change of look: the new one fades in over the old, which stays opaque until it is settled
     leaving.visible = blend.mix < 1
@@ -240,14 +238,14 @@ export function FlyoverRig() {
     draw(marker, blend.to, blend.mix)
   })
 
-  // unlit and drawn over the terrain (faded out behind the relief): readable on the track colour and on dark forest alike
+  // unlit and drawn over the terrain (cut by the relief in front of it): readable on the track colour and on dark forest alike
   return (
     <>
       <sprite ref={fadeRef} name="flyover-marker-from" visible={false} renderOrder={2}>
-        <spriteMaterial depthTest={false} depthWrite={false} />
+        <spriteMaterial depthWrite={false} />
       </sprite>
       <sprite ref={markerRef} name="flyover-marker" visible={false} renderOrder={2}>
-        <spriteMaterial depthTest={false} depthWrite={false} />
+        <spriteMaterial depthWrite={false} />
       </sprite>
     </>
   )

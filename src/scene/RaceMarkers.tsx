@@ -4,7 +4,7 @@
  * lead (`settings.marker`, see `markerSprite.ts`: style, shape, stick) in the track's colour with an ink ring, the
  * figure of its own activity ('auto') and its own name as label; a picture stays the lead's own, so the racers then
  * show their ball. Same constant screen size as the lead marker, unlit, drawn over
- * the terrain but hidden behind the relief, height = `pathHeightM` × exaggeration + LINE_LIFT_M like the lead marker (in the air on a flight).
+ * the terrain but cut by the relief in front of it (`pullMarkerForward`), height = `pathHeightM` × exaggeration + LINE_LIFT_M like the lead marker (in the air on a flight).
  * The camera keeps following the first track (FlyoverRig); mounted after it so the progress and the camera of
  * this frame are used.
  */
@@ -14,7 +14,7 @@ import type { Group, Sprite } from 'three'
 import { pathHeightM } from '../flyover/flights'
 import { raceAt } from '../flyover/race'
 import { useAppStore } from '../state/store'
-import { markerLook, occludeMarker, placeMarker, racerMarkerColors, reliefClearance, releaseMarkerTexture, screenHeading } from './markerSprite'
+import { markerLook, placeMarker, pullMarkerForward, racerMarkerColors, releaseMarkerTexture, screenHeading } from './markerSprite'
 import { useTerrainContext } from './terrainContext'
 import { LINE_LIFT_M, type HeightSampler } from './trackLineSet'
 import { useFilmClock } from './usePacing'
@@ -41,7 +41,6 @@ export function RaceMarkers() {
     // unlit colours divided by the exposure, as the track lines (see applyExposure)
     const gain = 1 / gl.toneMappingExposure
     const timeS = playback.timeS ?? clock.timeAtProgress(playback.progress)
-    const clearanceAt = reliefClearance(engine, frame, settings.exaggeration)
     const sampler: HeightSampler | null = engine ? (lon, lat) => engine.sampleHeight(lon, lat) : null
 
     for (const racer of raceAt(race, playback.progress)) {
@@ -54,7 +53,7 @@ export function RaceMarkers() {
       const heading = settings.marker.kind === 'figurine' ? screenHeading(path, racer.distanceM, position, frame, camera, settings.exaggeration) : null
       const look = markerLook(settings.marker, track, false)
       placeMarker(marker, position, camera, look, racerMarkerColors(track.color), heading?.left ?? false, gain, timeS, heading?.lean)
-      occludeMarker(marker, camera, clearanceAt)
+      pullMarkerForward(marker, camera)
       marker.visible = true
     }
   })
@@ -74,7 +73,7 @@ export function RaceMarkers() {
             markersRef.current[i] = sprite
           }}
         >
-          <spriteMaterial depthTest={false} depthWrite={false} />
+          <spriteMaterial depthWrite={false} />
         </sprite>
       ))}
     </group>

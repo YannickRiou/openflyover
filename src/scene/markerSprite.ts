@@ -14,7 +14,6 @@ import type { Camera, PerspectiveCamera, Sprite, SpriteMaterial } from 'three'
 import type { LocalFrame, TerrainEngine, Track } from '../core/types'
 import { samplePath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
-import { lineOfSightClearance, occlusionFade } from './labelModel'
 import type { ClearanceAt } from './labelModel'
 import { BADGE_INK, BALL_STYLE_SCALE, drawMarker, loadMarkerImage, markerLabelFont, markerLayout, PIN_HEIGHT, PX_PER_BALL } from './markerBadge'
 import type { Badge, MarkerDrawing, MarkerLayout } from './markerBadge'
@@ -347,10 +346,22 @@ export function reliefClearance(engine: TerrainEngine | null, frame: LocalFrame 
   }
 }
 
-/** A marker is drawn without depth test (never sunk into the slope): it is hidden behind the relief like the labels (hard cut). */
-export function occludeMarker(sprite: Sprite, camera: Camera, clearanceAt: ClearanceAt | null): void {
-  const material = sprite.material as SpriteMaterial
-  material.opacity = clearanceAt ? occlusionFade(lineOfSightClearance(camera.position, sprite.position, clearanceAt)) : 1
+/** How far in front of its point a marker is drawn (metres, half its distance at most): the relief that close never cuts it. */
+export const MARKER_DEPTH_PULL_M = 150
+
+/**
+ * Behind the relief a marker is cut by the crest pixel by pixel, like a real object, never switched off whole: it is
+ * drawn with the depth test, moved towards the camera along its sight line by MARKER_DEPTH_PULL_M and shrunk in
+ * proportion, so its place and size on screen do not change and the slope under it never sinks it. Call after
+ * `placeMarker`.
+ */
+export function pullMarkerForward(sprite: Sprite, camera: Camera): void {
+  const distance = camera.position.distanceTo(sprite.position)
+  if (distance === 0) return
+  const k = 1 - Math.min(MARKER_DEPTH_PULL_M, distance / 2) / distance
+  sprite.position.sub(camera.position).multiplyScalar(k).add(camera.position)
+  sprite.scale.x *= k
+  sprite.scale.y *= k
 }
 
 /** Decoded pictures of `dataUrls` (the marker's, and those of its keys): absent while loading, for none or for an unreadable one. */
