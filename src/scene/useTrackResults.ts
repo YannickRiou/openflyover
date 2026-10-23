@@ -1,8 +1,8 @@
 /**
  * What a map layer (water, forests) fetches for each track of the film: one request per track, through the shared
- * Overpass queue and cache (osm/overpass.ts), kept by track id. A track that is removed (or whose points change) is
- * forgotten and its answer, if it comes later, ignored; the queries themselves are not canceled (shared and cached,
- * and StrictMode runs the effect twice). See ARCHITECTURE.md "Several tracks".
+ * Overpass queue and cache (osm/overpass.ts), kept by track id. A track that is removed (or whose points change), the
+ * layer switched off or gone, gives its request up (`signal`): `sharedOverpassQuery` cancels a query once nobody waits
+ * for it any more, so it no longer holds the single queue. See ARCHITECTURE.md "Several tracks".
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Track } from '../core/types'
@@ -29,10 +29,15 @@ interface State<T> {
 const NOTHING: Readonly<Record<string, never>> = {}
 
 /**
- * Fetch `fetch(track, onStart)` for every track while `enabled`; each answer is available as it arrives. `onStart` is for the
- * fetcher to call when the queue really sends the request (`started`).
+ * Fetch `fetch(track, onStart, signal)` for every track while `enabled`; each answer is available as it arrives. `onStart` is
+ * for the fetcher to call when the queue really sends the request (`started`); `signal` aborts once the track is no longer
+ * asked for.
  */
-export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], fetch: (track: Track, onStart: () => void) => Promise<T>): TrackResults<T> {
+export function useTrackResults<T>(
+  enabled: boolean,
+  tracks: readonly Track[],
+  fetch: (track: Track, onStart: () => void, signal: AbortSignal) => Promise<T>,
+): TrackResults<T> {
   const [state, setState] = useState<State<T>>({ answers: {}, failures: {} })
   /** the points of each track whose request the queue has started */
   const [startedFor, setStartedFor] = useState<Readonly<Record<string, Segments>>>({})
@@ -40,17 +45,36 @@ export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], f
   const asked = useRef(new Map<string, Segments>())
   /** the tracks whose request failed: asked again the next time the tracks change */
   const failedIds = useRef(new Set<string>())
+  /** the request of each track asked for, to give it up */
+  const controllers = useRef(new Map<string, AbortController>())
   // the latest fetcher, without restarting the requests
   const fetchRef = useRef(fetch)
   useEffect(() => {
     fetchRef.current = fetch
   })
 
+  // gone (or StrictMode's first run): every request is given up, and asked again by the next run
+  useEffect(() => {
+    const ask = asked.current
+    const ctrls = controllers.current
+    return () => {
+      for (const ctrl of ctrls.values()) ctrl.abort()
+      ctrls.clear()
+      ask.clear()
+    }
+  }, [])
+
   useEffect(() => {
     const ask = asked.current
     const failedNow = failedIds.current
+    const ctrls = controllers.current
+    const forget = (id: string) => {
+      ctrls.get(id)?.abort()
+      ctrls.delete(id)
+      ask.delete(id)
+    }
     if (!enabled) {
-      ask.clear()
+      for (const id of [...ask.keys()]) forget(id)
       failedNow.clear()
       return
     }
@@ -60,7 +84,7 @@ export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], f
     failedNow.clear()
     if (retried.length > 0) setState((s) => ({ answers: s.answers, failures: Object.fromEntries(Object.entries(s.failures).filter(([id]) => !retried.includes(id))) }))
     const byId = new Map(tracks.map((t) => [t.id, t]))
-    for (const [id, segments] of ask) if (byId.get(id)?.segments !== segments) ask.delete(id)
+    for (const [id, segments] of [...ask]) if (byId.get(id)?.segments !== segments) forget(id)
     for (const track of tracks) {
       if (ask.has(track.id)) continue
       const { id, segments } = track
@@ -73,13 +97,15 @@ export function useTrackResults<T>(enabled: boolean, tracks: readonly Track[], f
       const onStart = () => {
         if (ask.get(id) === segments) setStartedFor((s) => ({ ...s, [id]: segments }))
       }
-      fetchRef.current(track, onStart).then(
+      const ctrl = new AbortController()
+      ctrls.set(id, ctrl)
+      fetchRef.current(track, onStart, ctrl.signal).then(
         (value) => {
-          if (ask.get(id) !== segments) return
+          if (ctrl.signal.aborted || ask.get(id) !== segments) return
           setState((s) => keep({ ...s.answers, [id]: { segments, value } }, s.failures))
         },
         () => {
-          if (ask.get(id) !== segments) return
+          if (ctrl.signal.aborted || ask.get(id) !== segments) return
           failedNow.add(id)
           setState((s) => ({ answers: s.answers, failures: { ...s.failures, [id]: segments } }))
         },

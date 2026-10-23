@@ -9,10 +9,10 @@
 import type { LonLat, Track } from '../core/types'
 import {
   QUERY_TIMEOUT_S,
-  cachedOverpassQuery,
   corridorBoxes,
   overpassBbox,
   overpassElements,
+  sharedOverpassQuery,
   simplifyLine,
   type OverpassDeps,
 } from './overpass'
@@ -154,5 +154,5 @@ export function parseForest(json: unknown): ForestPolygon[] {
 
 /** Forests around `track`, from the caches or one queued Overpass query (fair use: see overpass.ts). */
 export function fetchTrackForest(track: Track, signal?: AbortSignal, deps?: OverpassDeps, onStart?: () => void): Promise<ForestPolygon[]> {
-  return cachedOverpassQuery(forestQuery(track), parseForest, signal, deps, false, onStart)
+  return sharedOverpassQuery(forestQuery(track), parseForest, signal, deps, onStart)
 }

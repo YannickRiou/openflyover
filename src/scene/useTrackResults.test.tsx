@@ -27,7 +27,7 @@ afterEach(() => {
   root = null
 })
 
-function mount(initial: { enabled: boolean; tracks: readonly Track[] }, fetch: (t: Track, onStart: () => void) => Promise<{ id: string }[]>) {
+function mount(initial: { enabled: boolean; tracks: readonly Track[] }, fetch: (t: Track, onStart: () => void, signal: AbortSignal) => Promise<{ id: string }[]>) {
   const seen: { current: TrackResults<{ id: string }[]> | null } = { current: null }
   function Probe({ enabled, tracks }: { enabled: boolean; tracks: readonly Track[] }) {
     seen.current = useTrackResults(enabled, tracks, fetch)
@@ -40,6 +40,26 @@ function mount(initial: { enabled: boolean; tracks: readonly Track[] }, fetch: (
 }
 
 describe('useTrackResults', () => {
+  it('gives up the request of a track removed, of a layer switched off and of a layer gone', () => {
+    const [a, b] = [track('A', 45), track('B', 45.1)]
+    const signals = new Map<string, AbortSignal>()
+    const { render } = mount({ enabled: true, tracks: [a, b] }, (t, _onStart, signal) => {
+      signals.set(t.id, signal)
+      return new Promise(() => {})
+    })
+    render({ enabled: true, tracks: [a] })
+    expect(signals.get(b.id)!.aborted).toBe(true)
+    expect(signals.get(a.id)!.aborted).toBe(false)
+    render({ enabled: false, tracks: [a] })
+    expect(signals.get(a.id)!.aborted).toBe(true)
+    render({ enabled: true, tracks: [a] })
+    const again = signals.get(a.id)!
+    expect(again.aborted).toBe(false)
+    act(() => root!.unmount())
+    root = null
+    expect(again.aborted).toBe(true)
+  })
+
   it('asks once per track, shows each answer as it comes and merges them by track', async () => {
     const [a, b] = [track('A', 45), track('B', 45.1)]
     const answers = new Map([[a.id, deferred<{ id: string }[]>()], [b.id, deferred<{ id: string }[]>()]])

@@ -138,12 +138,12 @@ export function GlacierLayer() {
       setGlacierStatus('idle')
       return
     }
-    // not aborted on cleanup: the query is shared and cached (StrictMode runs this effect twice), only its answer is
-    // ignored once stale
+    // given up on cleanup: the shared query (osm/overpass.ts `sharedOverpassQuery`) is cancelled once nobody waits for it
     let current = true
+    const ctrl = new AbortController()
     const trackId = track.id
     setGlacierStatus('loading')
-    fetchTrackGlacier(track).then(
+    fetchTrackGlacier(track, ctrl.signal).then(
       (list) => {
         if (!current) return
         setFetched({ trackId, polygons: list })
@@ -153,6 +153,7 @@ export function GlacierLayer() {
     )
     return () => {
       current = false
+      ctrl.abort()
     }
   }, [enabled, track])
   useEffect(() => useGlacierStore.setState({ polygons: polygons.length }), [polygons])

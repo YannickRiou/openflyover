@@ -10,6 +10,7 @@ import {
   buildOverpassQuery,
   cachedOverpassQuery,
   clearOverpassMemoryCache,
+  sharedOverpassQuery,
   corridorBoxes,
   fetchTrackFeatures,
   hashQuery,
@@ -411,5 +412,45 @@ describe('fetchTrackFeatures', () => {
     await cachedOverpassQuery('A', parseOverpass, undefined, deps, false, () => started.push('cache hit'))
     await cachedOverpassQuery('A', parseOverpass, undefined, deps, true, () => started.push('refresh'))
     expect(started).toEqual(['running', 'refresh'])
+  })
+})
+
+describe('sharedOverpassQuery', () => {
+  beforeEach(() => clearOverpassMemoryCache())
+
+  /** A first query holding the queue until `release`, then empty answers. */
+  function heldQueue() {
+    let release!: (r: Response) => void
+    const fetchMock = vi.fn()
+    fetchMock.mockReturnValueOnce(new Promise<Response>((resolve) => (release = resolve))).mockResolvedValue(json({ elements: [] }))
+    const deps: OverpassDeps = { fetch: fetchMock as unknown as typeof fetch, sleep: async () => {}, storage: null, now: () => 0 }
+    return { deps, fetchMock, release: () => release(json({ elements: [] })) }
+  }
+
+  it('a caller that gives up gets an AbortError; the query goes on for the others', async () => {
+    const { deps, fetchMock, release } = heldQueue()
+    const leaving = new AbortController()
+    const a = sharedOverpassQuery('A', parseOverpass, leaving.signal, deps)
+    const b = sharedOverpassQuery('A', parseOverpass, new AbortController().signal, deps)
+    leaving.abort()
+    await expect(a).rejects.toMatchObject({ name: 'AbortError' })
+    release()
+    expect(await b).toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('a queued query nobody waits for any more is never sent, and is sent again when asked again', async () => {
+    const { deps, fetchMock, release } = heldQueue()
+    const first = sharedOverpassQuery('A', parseOverpass, undefined, deps)
+    const gone = new AbortController()
+    const b = sharedOverpassQuery('B', parseOverpass, gone.signal, deps)
+    gone.abort()
+    await expect(b).rejects.toMatchObject({ name: 'AbortError' })
+    release()
+    await first
+    await Promise.resolve()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(await sharedOverpassQuery('B', parseOverpass, undefined, deps)).toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

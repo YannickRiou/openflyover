@@ -3065,8 +3065,10 @@ exports) gets it from the terrain source of the settings.
   stage « À la suite », every racer of the ghost race; `useTrackResults`) and only if `settings.water.enabled`.
   The first, the water areas:
   `way` / multipolygons `natural=water`, `waterway=riverbank`, `water=*` in the boxes of the track corridor widened to 8 km,
-  `out geom qt` (~600 kB, 3–4 s for the sample; `docs/sources.md`). The request is not canceled on unmount (shared and
-  cached; StrictMode runs the effect twice); its response is only ignored if it is stale (its track was removed or changed). A failed request is only
+  `out geom qt` (~600 kB, 3–4 s for the sample; `docs/sources.md`). A track removed or changed, the layer switched off or
+  unmounted gives its request up (`useTrackResults` aborts its `signal`); the query is shared (`sharedOverpassQuery`: a caller
+  that gives up gets an AbortError, the query is cancelled — never sent if still queued — once nobody waits for it, so
+  StrictMode's double effect costs nothing on the network). A failed request is only
   retried on the next track or setting change. The second (4.0, `waterLinesQuery`) gives the **coastline** (`natural=coastline`
   ways, in the same 8 km corridor) and the **waterway lines** (`waterway=river|canal|stream` ways, in a narrower 4 km corridor,
   `WATER_LINE_MARGIN_M`: streams are many), `out geom qt`. The layer asks the areas of every track, then the lines of every track, one request at a time, and shows each answer as it arrives (the lakes
@@ -3208,8 +3210,8 @@ draped on the relief.
   (`cachedOverpassQuery`, `runOverpassQuery(…, parse)`), one request per track of the film (4.1: `useFilmTracks`, as the water) and only if `settings.forest.enabled`: `way` /
   multipolygons `landuse=forest` and `natural=wood`, `out geom qt`, in the boxes of the track corridor widened to **5 km**
   (`FOREST_MARGIN_M`; 8 km sent 3 MB on the sample, 5 km 0.8 MB: `docs/sources.md`). `leaf_type` (`needleleaved`,
-  `broadleaved`, `mixed`) is kept when present. The request is not canceled on unmount (shared and cached); its response is only
-  ignored if it is stale (its track was removed or changed); the polygons of the tracks still in the film are merged (`mergeByTrack`: by OpenStreetMap id and geometry). A failed request is only retried on the next track or setting change; the status chip « Forêts » (`scene/forestStatus.ts`, set by `ForestLayer` from `useTrackResults`: `idle` when « Forêts » is off or without a track; while a request is waiting `queued` until the Overpass queue reaches the first one still waiting (`onStart`, the 4th argument of `fetchTrackForest`), then `loading`; then `error` if any track failed, else `ready`; `error` comes with a hint saying the trees are
+  `broadleaved`, `mixed`) is kept when present. The request is given up like the water's (`sharedOverpassQuery`, cancelled once
+  nobody waits for it); the polygons of the tracks still in the film are merged (`mergeByTrack`: by OpenStreetMap id and geometry). A failed request is only retried on the next track or setting change; the status chip « Forêts » (`scene/forestStatus.ts`, set by `ForestLayer` from `useTrackResults`: `idle` when « Forêts » is off or without a track; while a request is waiting `queued` until the Overpass queue reaches the first one still waiting (`onStart`, the 4th argument of `fetchTrackForest`), then `loading`; then `error` if any track failed, else `ready`; `error` comes with a hint saying the trees are
   simply missing and retried on the next track or setting change; hidden when « Forêts » is off) tells the wait that follows.
 - **Pure reduction** (`parseForest`): the water's helpers (`stitchRings`, `ringAreaM2`, `pointInRing`, imported from `water.ts`, which
   is not modified): relation rings stitched, inner rings attached to the outer ring that holds them, member ways of a returned

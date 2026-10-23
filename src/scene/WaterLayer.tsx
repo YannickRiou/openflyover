@@ -246,8 +246,8 @@ export function WaterLayer() {
   // two Overpass queries per track of the film (cached, one at a time): the water areas, then the sea and the waterway lines
   // (the heavier one); nothing is sent while the setting is off. Each answer is shown as it arrives, even if another fails;
   // the water of all the tracks is drawn together.
-  const areaResults = useTrackResults(enabled, tracks, (track) => fetchTrackWater(track))
-  const shapeResults = useTrackResults(enabled, tracks, (track) => fetchTrackWaterShapes(track))
+  const areaResults = useTrackResults(enabled, tracks, (track, _onStart, signal) => fetchTrackWater(track, signal))
+  const shapeResults = useTrackResults(enabled, tracks, (track, _onStart, signal) => fetchTrackWaterShapes(track, signal))
   const polygons = useMemo(() => {
     const ids = tracks.map((t) => t.id)
     const areas = mergeByTrack(areaResults.results, ids)

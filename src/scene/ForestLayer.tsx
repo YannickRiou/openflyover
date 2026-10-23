@@ -203,7 +203,7 @@ export function ForestLayer() {
   const get = useThree((s) => s.get)
   // one Overpass query per track of the film (cached, one at a time); nothing is sent while the setting is off, and a track
   // that fails shows no trees (the status chip says so). The forests of all the tracks are drawn together.
-  const { results, loading, started, failed } = useTrackResults(enabled, tracks, (track, onStart) => fetchTrackForest(track, undefined, undefined, onStart))
+  const { results, loading, started, failed } = useTrackResults(enabled, tracks, (track, onStart, signal) => fetchTrackForest(track, signal, undefined, onStart))
   // « en attente » until the Overpass queue reaches the first request still waiting, then « chargement »
   useEffect(
     () => setForestStatus(!enabled || tracks.length === 0 ? 'idle' : loading ? (started ? 'loading' : 'queued') : failed ? 'error' : 'ready'),
