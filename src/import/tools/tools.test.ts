@@ -346,6 +346,20 @@ describe('withSegments', () => {
     const shifted = withSegments(track, shiftTime(track.segments, 1000), 'shift')
     expect(shifted.flights).toEqual(track.flights)
   })
+
+  it('drops the waypoints set on a removed stretch, keeps the others and those away from the track', () => {
+    const at = (i: number, lon = 6) => ({ lon, lat: 45 + i * 0.0001, name: `km ${i}` })
+    const track: Track = { ...base(), waypoints: [at(2), at(20), at(2, 6.1)] }
+    const trimmed = trim(track.segments, 10, 49)
+    const next = withSegments(track, trimmed, 'trim', distanceMap(track.segments, trimmed, { removed: [{ from: 0, to: 9 }] }))
+    // the first one stood on the removed start; the third, 8 km east, was never on the track
+    expect(next.waypoints).toEqual([at(20), at(2, 6.1)])
+    const reversed = reverse(track.segments)
+    expect(withSegments(track, reversed, 'reverse', distanceMap(track.segments, reversed, { reversed: true })).waypoints).toBe(track.waypoints)
+    const cutAway = cutSection(track.segments, 0, 30, 'split')
+    const lone = withSegments({ ...track, waypoints: [at(2)] }, cutAway, 'cut', distanceMap(track.segments, cutAway, { removed: [{ from: 0, to: 30 }] }))
+    expect(lone).not.toHaveProperty('waypoints')
+  })
 })
 
 describe('distanceMap', () => {
