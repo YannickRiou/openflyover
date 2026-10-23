@@ -73,6 +73,20 @@ describe('syncWeather', () => {
     expect(useWeatherStore.getState()).toMatchObject({ status: 'loading', trackId: 'p', startTime: T0 })
   })
 
+  it('fetches again when the same track gets new points with the same start time (« Outils de la trace »)', async () => {
+    const { calls, deps } = deferredFetcher()
+    const track = makeTrack('a', true)
+    syncWeather(track, true, { deps })
+    calls[0].resolve(SERIES)
+    await Promise.resolve()
+    // trimmed at the end: the start time is unchanged, the stations along the way and the days are not
+    const trimmed: Track = { ...track, segments: [{ points: track.segments[0].points.slice(0, 1) }] }
+    syncWeather(trimmed, true, { deps })
+    syncWeather(trimmed, true, { deps })
+    expect(deps.fetchWeather).toHaveBeenCalledTimes(2)
+    expect(useWeatherStore.getState()).toMatchObject({ status: 'loading', series: null, trackId: 'a', startTime: T0 })
+  })
+
   it('reports failures and retries on demand', async () => {
     const { calls, deps } = deferredFetcher()
     const track = makeTrack('a', true)

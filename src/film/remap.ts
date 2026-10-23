@@ -1,7 +1,7 @@
 /**
  * The film after a track tool changed the points of a track (« Outils de la trace »: trim, cut, reverse, pauses…):
  * everything the film anchors in metres along the film track (stops, camera / parameter / marker keys, speed portions)
- * follows the places it was set on. Pure module (no DOM, no React, no store); `applyTrackTool` (ui/trackTools.ts) runs it
+ * follows the places it was set on. Pure module (no DOM, no React, no store); `applyTrackTool` (ui/applyTrackTool.ts) runs it
  * in the same step as the replacement of the track. See ARCHITECTURE.md "Track tools".
  *
  * The film track is the first track, or the sequence of the stages « À la suite » (`StageSpan`: metres along the whole

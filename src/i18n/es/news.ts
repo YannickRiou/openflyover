@@ -125,6 +125,8 @@ const messages: Messages['news'] = {
   'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
   'v42.bilan.title': 'El balance del año',
   'v42.bilan.text': 'En Track › Varios tracks, «Balance» hace una sola película de una temporada o de un año de salidas: se dibujan una tras otra bajo una vista alta de su región, los contadores suben y la tarjeta final da los totales.',
+  'v421.photos.title': 'Fotos sobre el terreno',
+  'v421.photos.text': 'Cada foto o vídeo de la línea de tiempo se coloca sobre el relieve donde se hizo: una chincheta con su miniatura. Cuando llega el marcador, la cámara se orienta hacia ella, la miniatura se ilumina mientras la foto está en pantalla y luego la cámara vuelve. Un ajuste en Gráficos › Etiquetas 3D.',
   // 4.1 — discreet credits
   'v41.credits.title': 'Créditos más discretos',
   'v41.credits.text': 'En Gráficos › Créditos de las fuentes, elige « Discretos » (el nombre de las fuentes en pequeño en una esquina, las menciones completas al final de la película), « Completos » o « Solo al final ». En Exportar, « Copiar los créditos » da el texto con sus enlaces, para pegar en la descripción del vídeo.',

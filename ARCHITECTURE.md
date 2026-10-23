@@ -94,10 +94,11 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/platform/*` | website / desktop (see "Desktop application") | `getPlatform()` → `Platform` (`capabilities`, `storage`, `openFiles`, `saveFile`, `saveUrl`, `saveDocument`, `createWritableFile`, `droppedFiles`, `tileCache`, `projectLibrary`), `selectPlatform(scope)`, `videoEncoderMissingHint`; pure, tested: `isTauriRuntime`, `detectCapabilities`, `acceptAttribute`, `fileNameOf`, `extensionOf`, `mimeTypeOf`, `saveFilters`, `pickerTypes`, `keyValueStore`, `tileFileName`, `imageTypeOf`; `tileCache.ts`: `TileCache` (`get`, `has`, `put`, `deletePack`, `packs`, `size`), `createWebTileCache`, `createDesktopTileCache`; `projectLibrary.ts`: `ProjectLibrary` (`list`, `save`, `load`, `rename`, `remove`), `createProjectLibrary`, `createWebLibraryFiles`, `createDesktopLibraryFiles`, `projectFileNames`, `cleanProjectName`, `sortProjectEntries`, `parseProjectEntry`, `isProjectThumbnail`; `folder.ts`: `WritableFolder`, `canPickFolder`, `pickFolder`, `joinPath`; `oauthRedirect.ts`: `authorizeInBrowser` (see "Strava import"); `webApp.ts`: `installWebApp`, pure, tested: `shouldRegisterServiceWorker`, `wantsIosInstallHint`, `sharedFileName`, `watchForUpdates`; `serviceWorker.js` (see "Installable web app and mobile"); `isAppleMobile`, `pickerAccept`, `touchScreen`, `shareSaveLabel()`; `externalLinks.ts`: `externalLinkOf`, `installExternalLinks` (desktop: links that open a new tab go to the system browser); `updater.ts`: `UpdateCheck`, `UpdateState`, `checkOutcome`, `failedCheck`, `downloadProgress`, `percentOf`, `shortNotes` (see "Desktop application", « Updates ») |
 | `src/core/deviceBudget.ts` | GPU and memory budget of the device (see "Device budget") | `deviceBudget()`, pure, tested: `budgetFor`, `readDeviceTraits`, `DESKTOP_BUDGET`, `PHONE_MAX_SHORT_SIDE`, `LOW_MEMORY_GB` |
 | `src/scene/sceneLighting.ts` | sky and light constants of the viewer without the atmosphere (kept out of `FlyoverCanvas.tsx` for fast refresh, shared with the thumbnail) | `SKY_TOP_COLOR`, `SKY_HORIZON_COLOR`, `HEMISPHERE_*`, `SUN_POSITION`, `SUN_INTENSITY` |
+| `src/film/photoPins.ts` + `src/flyover/pinAim.ts` + `src/scene/PhotoPins.tsx` + `pinLayout.ts` + `labelRects.ts` | photos on the terrain (see "Photos on the terrain") | pure, tested: `photoPins`, `pinAimWeight`, `pinAims`, `pinLit`, `PIN_*` (`photoPins.ts`); `aimTowardsPins`, `pinLocalPosition` (`pinAim.ts`); `layoutPins`, `MAX_PIN_LEVELS` (`pinLayout.ts`); not pure: `PhotoPins`, `setShownLabelRects` / `getShownLabelRects` |
 | `src/scene/touchGesture.ts` | fingers moving the 3D view (lower pixel ratio, see "Device budget") | tested: `watchTouchGesture`, `TOUCH_SETTLE_MS` |
 | `src/offline/*` | offline tile packs (see "Offline packs") | pure, tested: `planOfflineTiles`, `packImageryLevel`, `splitDistanceM`, `CORRIDOR_WIDTHS_M`, `MAX_PACK_TILES` (`plan.ts`); `offlinePolicy`, `OFFLINE_POLICIES` (`policy.ts`); `startPackDownload`, `createDailyQuota` (`download.ts`); `createPackRegistry`, `createStoredTileReader`, `packIdFor`, `sourcePrefixes` (`packs.ts`); not pure: `useOfflineStore`, `installOfflineTiles`, `preparePack`, `pausePack`, `resumePack`, `cancelPack`, `deletePack` (`store.ts`), `OfflinePanel` (`src/ui`) |
 | `src/state/store.ts` | zustand state | `useAppStore`, `Settings`, `Playback`, `AppState`, `resetAppStore` |
-| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested); `StatusBar.tsx` (see "Status bar"), `ErrorBoundary.tsx` |
+| `src/ui/*` + `src/App.tsx` | interface | `App` (shell); `shell.ts` (pure, tested: `frameRect`, `routeOpenedFiles`, `openedTracksAction`, `nextGridIndex`, `shellReducer`, `parseShellPrefs`, `effectiveProjectName`, `isProjectDirty`, `dismissSheet`, `BOTTOM_SHEET_QUERY`, `COMPACT_QUERY`); `SheetHandle`; `TopBar`, `Stage`, `icons.tsx` (`Icon`, `AspectIcon`); `projectActions.ts` (`saveProject`, `openProject`, `chooseFilesToOpen`, `saveExportedFile`, `importTrackFiles`, `runImport`, `loadSample`, `chainLoadedTracks`); `importFlow.ts` (import orchestration without React, tested); `openChoice.ts` + `OpenChoiceDialog.tsx` (« Que faire de ce fichier ? », see "Project"); `StatusBar.tsx` (see "Status bar"), `ErrorBoundary.tsx` |
 | `src/ui/primitives/*` | HeroUI wrappers: the only place that imports `@heroui/react` (see "Interface", « Primitives ») | `Button`, `Tip`, `Menu`, `Popover`, `Modal`, `Toast`, `Tabs` / `TabList` / `Tab` / `TabPanel`, `Disclosure`, `Switch`, `Checkbox`, `Chip`, `RadioGroup` / `Radio`, `ToggleButtonGroup`, `ColorField`, `Select`, `Slider`, `NumberField`, `TextField`, `DateField`, `TimeField`, `Titled`; `overlay.ts` (`isModalOpen`, `openDialog`, panel classes); `coarse.ts` (`useCoarsePointer`); `index.ts` exports them; the skins are `<name>.css` |
 | `src/ui/theme.css` + `utilities.css` + `src/index.css` | styling (see "Interface", « Styling ») | Tailwind setup, tokens (`@theme`), named variants and HeroUI imports (`theme.css`); `@utility` classes (`utilities.css`); reset and page base (`index.css`); `fonts.css`, `appearance.css` |
 
@@ -1829,6 +1830,51 @@ The interface and the texts drawn into the films and posters exist in **French**
   (not the generated ones while "Arrêts automatiques" is checked) can carry items; landmarks loaded for the first time
   after an edit made without them (landmarks off since the import) do not move attached items.
 
+## Photos on the terrain (« Photos sur le terrain »)
+
+- **Use**: the pictures and clips of the timeline stand on the relief as 3D pins, and the flight camera turns towards the one
+  whose photo is about to appear. Setting `settings.labels.photoPins` (« Habillage › Étiquettes 3D », next to
+  « Photos, là où elles ont été prises », `labels.photos`, which only puts a name at the EXIF position): on for a new project;
+  a project saved without it opens with it off (`upgradeLabelSettings`, in `SETTING_UPGRADES`), so its film does not change.
+- **Where** (`film/photoPins.ts`, pure, tested): `photoPins(media, path, clock, table)` gives one `PhotoPin` per medium whose
+  table entry has a thumbnail (`PinAsset`): the point of the track nearest to the EXIF GPS position (`MediaAsset.lon` / `lat`,
+  within `PIN_MAX_OFF_M` = 2 km of the track, like the suggested placement, and within `PIN_MAX_FROM_MARKER_M` = 500 m of the
+  point under the marker when the medium starts, so that a loop or an out-and-back does not send the camera kilometres away),
+  else that point under the marker (`clock.progressAtTime(startS)`). A video has no GPS here: it is pinned at its start.
+- **The turn** (`flyover/pinAim.ts`, `flyover/filmCamera.ts`): `pinAimWeight` rises over `PIN_APPROACH_S` (15 s) before the
+  medium appears, is 1 while it is on screen and falls over `PIN_RELEASE_S` (6 s); `pinAims` gives the pins that pull with their
+  share of the way (`PIN_AIM_SHARE` 0.7 for all together, so a pin being left and the next one being approached share the pull and
+  the aim never jumps). `computeFilmView` takes `options.pins` and, after the view it always computed (now
+  `computeFlownView`), `aimTowardsPins` moves the aim point towards the pins (the camera does not move; the aim is raised by
+  `PIN_AIM_RAISE` of the distance, over the foot of the post, where the picture floats). Nothing else changes in the view:
+  the turn is weighted by the flight's share of the view (the opening and closing shots and the high views of the nights blend it
+  in and out, so the aim does not jump at their edges; none in the « Bilan » overview), and the camera keys take it away as they
+  take the view over (`1 - keyed.weight`). It is a pure function of the film time: `filmViewAt`
+  (`scene/filmView.ts`, which reads the store: `filmPins` keeps the pins while the film, the track and the media table stay
+  the same) is what the preview rig (`FlyoverRig`), the lens effects and the video export call, so every frame renders the
+  same on its own and the export has the same turn as the preview. A change of the media or of the setting re-places the camera
+  (`settings.film` / `labels.photoPins` in `FlyoverRig`'s `cameraChanged`). While the marker holds (a stop, a pause) the turn and the
+  lit pin still follow the film time: `pinsMoveWithTime(labels, film)` makes the preview rig's view `timed` and the export's scene
+  `sceneMovesWithTime`, so a held frame is not copied.
+- **The pins** (`scene/PhotoPins.tsx`, in `TerrainLayer` after `Labels`): three sprites per pin with `sizeAttenuation` off
+  (the foot, the post, the framed thumbnail drawn on a canvas from the table's 160 px thumbnail; lit: chartreuse frame and glow, ×1.25), drawn like the labels (`AlwaysDepth` with a depth write, so the atmosphere does not haze them as sky).
+  Size: a share of the height of the frame (`PIN_REFERENCE_HEIGHT_PX` = 720, or the height of a 16:9 frame of the same width in
+  a tall frame), not CSS pixels, so the preview and every export resolution show the same pin (the 3D labels, in pixels, use
+  `renderScale`); down to 50 % from 1 to 10 km. Hidden behind the relief and faded with « Portée » like the labels
+  (`occlusionFade`, `distanceFade`). Not drawn when the export request is a poster (`still.compose`): the poster of the 3D view
+  has no pins; the still image of « Image fixe » has them like the film.
+- **Decluttering** (`scene/pinLayout.ts`, pure, tested): `layoutPins(boxes, labelRects)` places the lit pins first (over
+  everything), then the others by distance: a pin whose picture would overlap one already placed, or a 3D label (the rectangles
+  `Labels` publishes each frame through `labelRects.ts`), is raised by a picture's height on a longer post, up to
+  `MAX_PIN_LEVELS` levels and while it stays on the screen, then left out; a pin that cannot clear a 3D label this way stays under it (drawn over it) rather than disappear. The posts are drawn under the labels (render order 9), the pictures over them (11), the lit pin over all (14).
+- **Not done**: the pin of a video comes from its start, not from its position on the recording; no pins on the poster;
+  the pin does not follow a photo's own `size` or `anchor`.
+- **Looking at it**: `node e2e/photo-pins-shots.mjs <dir>` (same Chromium as `e2e/run.mjs`, `OPENFLYOVER_CHROME`) loads the sample,
+  adds three generated photos and saves frames of the stage (about 1280 px wide): the wide view, the approach with the setting on
+  and off, the photo on screen with its pin lit, the view after, the first photo and a 9:16 frame. Tests: `photoPins.test.ts`,
+  `pinAim.test.ts` (the turn in `computeFilmView`; a frame is the same alone or after others), `pinLayout.test.ts`,
+  `labelModel.test.ts` (the setting and its migration).
+
 ## Automatic film (« Film automatique »)
 
 - **What**: the first section of the « Survol » tab (`AutoFilmSection`, `src/ui/AutoFilmDialog.tsx`; the button is off without a
@@ -1885,6 +1931,20 @@ The interface and the texts drawn into the films and posters exist in **French**
   save, « Enregistrer sous… » or « Ouvrir » and forgotten by `closeProject` / `newProject`. « Enregistrer » (the save icon of the top bar,
   Ctrl+S) = `saveProject`, « Enregistrer sous… » (Projet tab, Ctrl+Maj+S) = `saveProjectAs`; a failed write keeps the project
   « Modifié »; the autosave to « Mes projets » is unchanged (plain JSON).
+- **« Que faire de ce fichier ? »**: `openFiles` (`projectActions.ts`) is the one door of « Ouvrir » (top bar, Projet tab, Ctrl+O), of a
+  drop on the window and of the shared files of the installed web app (the files the system opens go through it too, but only
+  project files are associated with the desktop app).
+  When the project already holds a track and the files are GPX / FIT (`openedTracksAction`, pure, `shell.ts`: `ask` or `add`;
+  no question for an empty project, a project file in the batch, or files that are not GPX / FIT), one question covers every file
+  (`askOpenChoice`, `openChoice.ts`, shown by `OpenChoiceDialog` mounted in `App`): « Ajouter la trace à ce projet » (initial
+  focus; the import and the chaining offer as before), « Commencer un nouveau projet » (`newProjectWith`: the same closing
+  as « Nouveau projet », « Fermer sans enregistrer ? » answered in the same dialog through `askUnsavedChanges`, then the files
+  are imported into the empty project, the first-import message offering « Film automatique… »; « Rien n'a changé » when that
+  question is cancelled) or « Annuler » (Esc: nothing changes). The dialog lists the GPX / FIT files only, the others go along
+  and the importer reports them. Guards: a new `openFiles` cancels the question still open (`dismissOpenQuestions`), nothing is
+  opened or closed while an export or a batch runs (checked again after each answer), and a project file that cannot be read
+  stops the batch (its message is shown, the tracks are not added to the project it did not replace). Not asked: the « Ajouter » button of the Trace tab (`chooseTracksToImport`), « Choisir un fichier » of the home screen,
+  the Strava import and the sample (they already say « add » or start from nothing), nor the files the app is started with.
 - **Desktop opening** (`src-tauri/src/opened.rs`, `src/platform/openedFiles.ts`): a `.opnflvr` or `.json` argv path (Windows and
   Linux), or a macOS `RunEvent::Opened`, is added to the fs scope and queued; the command `opened_files` hands the queue over once,
   the event `openflyover://opened-files` (macOS, app running) makes the frontend take it again; `reopenLastProject` takes the
@@ -2702,7 +2762,7 @@ exports) gets it from the terrain source of the settings.
   (`keepOpenProject`: the store fields and the media table, put back as the same objects, so « Enregistré » stays), holds
   the batch store `running` (`hold` / `release`: no autosave, no edit, same « Annuler » button), then for each item applies
   the snapshot as « Ouvrir » does (`parseProject` + `applyProject`, no toast, no « Mes projets » entry), waits for the
-  landmarks and weather (`loadTrackData`) and renders its films with `runBatch` + `exportJob`, each into the folder asked at the
+  landmarks and weather (`loadTrackData`) and renders its films with `runBatch` + `exportJob` (before each job `settings.video` takes the job's aspect and resolution, so the film is composed for the format ticked for the queue, not the project's: stage frame, overlay `exportSize`; the poster gets the project's own; `keepOpenProject` puts the open project's settings back), each into the folder asked at the
   start (`pickFolder`; without a folder API the films are downloaded). Before starting, `confirmClose` asks to save if the open
   project has changes kept nowhere.
 - **Persistence**: `{ v: 1, items }` under `openflyover.renderQueue.v1` in the platform `storage`, rewritten at each change;

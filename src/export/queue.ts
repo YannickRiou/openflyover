@@ -379,7 +379,13 @@ async function renderItem(item: QueueItem, { folder, save }: QueueRunOptions, ca
     canceled,
   }
   const films = await runBatch(jobs, {
-    run: (job) => exportJob(job, ctx),
+    run: (job) => {
+      // the format ticked for the queue overrides the project's: it is shown at that format (the frame, the overlay's
+      // reference size, the cards), as if the project had been made in it; the poster keeps the project's own
+      const { settings, setSetting } = useAppStore.getState()
+      setSetting('video', job.kind === 'poster' ? video : { ...settings.video, aspect: job.aspect, resolution: job.resolution })
+      return exportJob(job, ctx)
+    },
     canceled,
     report: (list) => useQueueStore.getState().patch(item.id, { step: Math.max(1, list.findIndex((f) => f.status === 'running') + 1) }),
   })

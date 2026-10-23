@@ -39,6 +39,7 @@ import { samplePath, type TrackPath } from './path'
 import { nightAt } from './sun'
 import { cameraKeyEaseM, keyFraming, keyPoseAt, type KeyFraming } from './cameraKeys'
 import { anticipatedRaise, smoothsInTime, timeSmoothing } from './timeSmoothing'
+import { aimTowardsPins, type AimPin } from './pinAim'
 
 export { smootherstep }
 export { CAMERA_KEY_EASE_S, cameraKeyEaseM, keyedCamera } from './cameraKeys'
@@ -633,6 +634,8 @@ export interface FilmViewOptions extends Omit<CameraViewOptions, 'timeS' | 'orbi
   follow?: ((progress: number) => FollowedFlight | null) | null
   /** how many times the terrain behind `sample` changed (tiles loaded or dropped): see `raiseTable` */
   terrainVersion?: number
+  /** the photo pins the flight camera turns towards (« Photos sur le terrain », `pinAim.ts`); none or absent: it does not turn */
+  pins?: readonly AimPin[]
 }
 
 export interface FilmView extends CameraView {
@@ -943,7 +946,39 @@ export function computeFilmView(
   sample: HeightSampler | null,
   options: FilmViewOptions,
 ): FilmView {
+  const { pins } = options
+  if (!pins || pins.length === 0) return computeFlownView(path, clock, timeS, progress, frame, sample, options)
   const held = options.follow?.(progress)
+  const view = computeFlownView(path, clock, timeS, progress, frame, sample, options, held)
+  if (held?.overview) return view
+  // the turn is the flight's: it fades with the flight's share of the view (the opening and closing shots and the high views
+  // of the nights blend it in and out, so the aim never jumps at their edges), and the camera keys take it away as they take
+  // the view over
+  const state = clock.stateAt(timeS)
+  let flight = 1
+  if (state.phase === 'opening' || state.phase === 'closing') {
+    const shot = state.phase === 'opening' ? clock.opening : clock.closing
+    const wide = shotWeight(shot, state.phase, state.localS, state.lengthS)
+    flight = state.phase === 'opening' ? wide : 1 - wide
+  } else {
+    const high = highViewAt(clock, timeS)
+    if (high) flight = 1 - high.k
+  }
+  const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
+  const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
+  return aimTowardsPins(view, pins, timeS, frame, sample, options.exaggeration, options.liftM, flight * (1 - (keyed?.weight ?? 0)))
+}
+
+function computeFlownView(
+  path: TrackPath,
+  clock: FilmClock,
+  timeS: number,
+  progress: number,
+  frame: LocalFrame,
+  sample: HeightSampler | null,
+  options: FilmViewOptions,
+  held = options.follow?.(progress),
+): FilmView {
   // « Bilan »: the camera holds the high view of the region whatever the shot, stop or key; the marker is on the outing being drawn
   if (held?.overview) return bilanView(held.overview, held, frame, sample, options)
   const state = clock.stateAt(timeS)
