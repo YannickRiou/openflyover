@@ -127,6 +127,8 @@ const messages: Messages['news'] = {
   'v41.auto.text': 'In «Film automatico», ogni modello è una scheda: formato, durata, camera e ciò che viene impostato, a colpo d’occhio. Scegline uno, poi «Applica»; «Annulla» riporta indietro.',
   'v42.bilan.title': 'Il bilancio dell’anno',
   'v42.bilan.text': 'In Traccia › Più tracce, «Bilancio» fa un unico film di una stagione o di un anno di uscite: si disegnano una dopo l’altra sotto una vista alta della loro regione, i contatori salgono e la scheda finale dà i totali.',
+  'v44.logos.title': 'Più loghi',
+  'v44.logos.text': 'Aggiungi fino a quattro loghi (per esempio quello del club in basso a destra e quello di uno sponsor in alto a sinistra), ciascuno con la propria immagine, posizione, dimensione e opacità: Overlay › Meteo, logo e testo › « Aggiungi un logo ».',
   'v421.photos.title': 'Foto sul terreno',
   'v421.photos.text': 'Ogni foto o video della timeline si posa sul rilievo dove è stata scattata: uno spillo con la sua miniatura. Quando arriva il marcatore, la camera si volge verso di esso, la miniatura si accende mentre la foto è sullo schermo, poi la camera torna indietro. Un’impostazione in Overlay › Etichette 3D.',
   // 4.3 — preview quality, quieter at rest, the guide in every language

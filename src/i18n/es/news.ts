@@ -127,6 +127,8 @@ const messages: Messages['news'] = {
   'v41.auto.text': 'En «Película automática», cada plantilla es una tarjeta: formato, duración, cámara y lo que se ajusta, de un vistazo. Elige una y pulsa «Aplicar»; «Deshacer» lo revierte.',
   'v42.bilan.title': 'El balance del año',
   'v42.bilan.text': 'En Track › Varios tracks, «Balance» hace una sola película de una temporada o de un año de salidas: se dibujan una tras otra bajo una vista alta de su región, los contadores suben y la tarjeta final da los totales.',
+  'v44.logos.title': 'Varios logos',
+  'v44.logos.text': 'Añada hasta cuatro logos (por ejemplo el de su club abajo a la derecha y el de un patrocinador arriba a la izquierda), cada uno con su imagen, su lugar, su tamaño y su opacidad: Gráficos › Meteo, logo y texto › « Añadir un logo ».',
   'v421.photos.title': 'Fotos sobre el terreno',
   'v421.photos.text': 'Cada foto o vídeo de la línea de tiempo se coloca sobre el relieve donde se hizo: una chincheta con su miniatura. Cuando llega el marcador, la cámara se orienta hacia ella, la miniatura se ilumina mientras la foto está en pantalla y luego la cámara vuelve. Un ajuste en Gráficos › Etiquetas 3D.',
   // 4.3 — preview quality, quieter at rest, the guide in every language

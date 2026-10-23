@@ -125,6 +125,8 @@ export default {
   'v41.auto.text': 'Dans « Film automatique », chaque gabarit est une carte : format, durée du film, caméra et ce qui est réglé, d’un coup d’œil. Choisissez-en une, puis « Appliquer » ; « Annuler » revient en arrière.',
   'v42.bilan.title': 'Le Bilan de l’année',
   'v42.bilan.text': 'Dans Trace › Plusieurs traces, « Bilan » fait un seul film d’une saison ou d’une année de sorties : elles se dessinent l’une après l’autre sous une vue haute de leur région, des compteurs montent, et la carte de fin donne les totaux.',
+  'v44.logos.title': 'Plusieurs logos',
+  'v44.logos.text': 'Ajoutez jusqu’à quatre logos (par exemple celui du club en bas à droite et celui d’un partenaire en haut à gauche), chacun avec son image, sa place, sa taille et son opacité : Habillage › Météo, logo et texte › « Ajouter un logo ».',
   'v421.photos.title': 'Photos sur le terrain',
   'v421.photos.text': 'Chaque photo ou vidéo de la timeline se pose sur le relief, là où elle a été prise : une épingle avec sa vignette. Quand le marqueur arrive, la caméra se tourne vers elle, la vignette s’allume pendant que la photo est à l’écran, puis la caméra revient. Un réglage dans Habillage › Étiquettes 3D.',
   // 4.3 — preview quality, quieter at rest, the guide in every language

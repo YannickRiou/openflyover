@@ -17,8 +17,10 @@ import {
   OVERLAY_FONT_LABELS,
   OVERLAY_STYLES,
   OVERLAY_STYLE_LABELS,
+  DEFAULT_LOGO,
   DEFAULT_TEXT_BACKING,
   LABEL_KINDS,
+  LOGOS_MAX,
   LABEL_KIND_LABELS,
   TEXT_BACKINGS,
   TEXT_BACKING_LABELS,
@@ -31,12 +33,14 @@ import {
   WIDGET_SIZE_MAX,
   WIDGET_SIZE_MIN,
   withOverrides,
+  withWidgetAnchor,
   withWidgetOffset,
   withWidgetOverrides,
   widgetOverrides,
   inStyleSlot,
+  placedSettings,
 } from '../overlay/settings'
-import type { CounterId, LabelKind, OverlayFontId, OverlayOverrides, OverlaySettings, OverlayStyleId, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
+import type { CounterId, LabelKind, LogoSettings, OverlayFontId, OverlayOverrides, OverlaySettings, OverlayStyleId, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
 import { showToast } from './toast'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
@@ -65,7 +69,7 @@ const COUNTER_LABELS: Record<CounterId, string> = {
   get outings() { return t('overlay.counter.outings') },
 }
 
-type WidgetKey = Exclude<keyof OverlaySettings, 'enabled' | 'style' | 'overrides'>
+type WidgetKey = Exclude<keyof OverlaySettings, 'enabled' | 'style' | 'overrides' | 'logos'>
 
 const percent = formatPercent
 
@@ -114,13 +118,13 @@ function OffsetField({ id, label, value, onCommit }: { id: string; label: string
  * Where a widget sits: its anchor on the 3 × 3 grid, then « Position libre », an offset in pixels of the exported film
  * from that corner of the safe area (the widget leaves its anchor's stack).
  */
-export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
+export function WidgetPosition({ widget, index = 0 }: { widget: PlacedWidget; index?: number }) {
   const t = useT()
   const id = useId()
   const overlay = useAppStore((s) => s.settings.overlay)
   const video = useAppStore((s) => s.settings.video)
   const set = (next: OverlaySettings) => useAppStore.getState().setSetting('overlay', next)
-  const { anchor, offset } = overlay[widget]
+  const { anchor, offset } = placedSettings(overlay, widget, index)
   const [row, column] = anchor === 'center' ? ['middle', 'center'] : anchor.split('-')
   const film = videoSize(video.aspect, video.resolution, Number.POSITIVE_INFINITY)
   const axis = (key: keyof WidgetOffset, label: string, current: WidgetOffset) => (
@@ -128,15 +132,15 @@ export function WidgetPosition({ widget }: { widget: PlacedWidget }) {
       id={`${id}-${key}`}
       label={label}
       value={current[key]}
-      onCommit={(px) => set(withWidgetOffset(overlay, widget, { ...current, [key]: px }))}
+      onCommit={(px) => set(withWidgetOffset(overlay, widget, { ...current, [key]: px }, index))}
     />
   )
   return (
     <>
-      <AnchorPicker label={t('overlay.position')} value={anchor} onChange={(next) => set({ ...overlay, [widget]: { ...overlay[widget], anchor: next } })} />
+      <AnchorPicker label={t('overlay.position')} value={anchor} onChange={(next) => set(withWidgetAnchor(overlay, widget, next, index))} />
       <Checkbox
         checked={offset !== undefined}
-        onChange={(on) => set(withWidgetOffset(overlay, widget, on ? { x: 0, y: 0 } : null))}
+        onChange={(on) => set(withWidgetOffset(overlay, widget, on ? { x: 0, y: 0 } : null, index))}
       >
         {t('overlay.freePosition')}
       </Checkbox>
@@ -167,6 +171,7 @@ function WidgetGroup({
   enabled,
   onToggle,
   position,
+  positionIndex,
   styled,
   style,
   visibility,
@@ -177,6 +182,8 @@ function WidgetGroup({
   onToggle(v: boolean): void
   /** where it sits (`WidgetPosition`), above the tabs */
   position?: PlacedWidget
+  /** the logo number of `position` 'logo' */
+  positionIndex?: number
   /** its own colours and fonts (« Couleurs et polices » at the end of its « Style » tab) */
   styled?: StyledWidget
   /** « Style » tab: size… */
@@ -196,7 +203,7 @@ function WidgetGroup({
       <Switch id={id} checked={enabled} onChange={(on) => onToggle(on)}>{label}</Switch>
       {enabled && (
         <div className={WIDGET_BODY}>
-          {position && <WidgetPosition widget={position} />}
+          {position && <WidgetPosition widget={position} index={positionIndex} />}
           {tabs.length > 1 && (
             <ToggleButtonGroup aria-label={tr('overlay.widgetSettings', { label })} value={shown} onChange={(next) => setTab(next)}>
               {tabs.map((t) => (
@@ -503,7 +510,8 @@ export function OverlayPanel() {
   const raceOn = useAppStore((s) => s.settings.race.enabled)
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const hasWeather = useWeatherStore((s) => s.series !== null)
-  const [logoError, setLogoError] = useState<string | null>(null)
+  // place in the list of the logo whose image could not be read
+  const [logoError, setLogoError] = useState<number | null>(null)
 
   const set = (patch: Partial<OverlaySettings>) => setSetting('overlay', { ...overlay, ...patch })
   const setWidget = <K extends WidgetKey>(key: K, patch: Partial<OverlaySettings[K]>) => set({ [key]: { ...overlay[key], ...patch } })
@@ -528,7 +536,9 @@ export function OverlayPanel() {
   const counterShown = (counter: CounterId) => (counter === 'outings' ? bilan : true)
   const counterOn = (counter: CounterId) => available[counter] && (!bilan || BILAN_COUNTERS.includes(counter))
 
-  const chooseLogo = async () => {
+  const setLogo = (index: number, patch: Partial<LogoSettings>) => set({ logos: overlay.logos.map((logo, i) => (i === index ? { ...logo, ...patch } : logo)) })
+
+  const chooseLogo = async (index: number) => {
     try {
       const [file] = await getPlatform().openFiles({ filters: [{ name: t('marker.image.filter'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'] }] })
       if (!file) return
@@ -536,9 +546,9 @@ export function OverlayPanel() {
       const image = await fileToLogoDataUrl(file)
       // the settings as they are now (another change or an undo may have happened during the decoding)
       const now = useAppStore.getState().settings.overlay
-      setSetting('overlay', { ...now, logo: { ...now.logo, image } })
+      setSetting('overlay', { ...now, logos: now.logos.map((logo, i) => (i === index ? { ...logo, image } : logo)) })
     } catch {
-      setLogoError(t('marker.image.error'))
+      setLogoError(index)
     }
   }
 
@@ -704,42 +714,58 @@ export function OverlayPanel() {
               </p>
             </WidgetGroup>
 
-            <WidgetGroup
-              label={t('overlay.panel.logo')}
-              enabled={overlay.logo.enabled}
-              onToggle={(enabled) => setWidget('logo', { enabled })}
-              position="logo"
-              style={
-                <>
-                  <SizeField value={overlay.logo.size} onChange={(size) => setWidget('logo', { size })} />
-                  <RangeField
-                    label={t('overlay.panel.opacity')}
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={overlay.logo.opacity}
-                    format={percent}
-                    onChange={(opacity) => setWidget('logo', { opacity })}
-                  />
-                </>
-              }
-            >
-              <div className="flex gap-2 *:min-w-0 *:flex-1">
-                <Button onClick={() => void chooseLogo()}>
-                  {overlay.logo.image ? t('marker.image.change') : t('marker.image.choose')}
-                </Button>
-                {overlay.logo.image && (
-                  <Button onClick={() => setWidget('logo', { image: '' })}>
-                    {t('marker.image.remove')}
+            {overlay.logos.map((logo, i) => (
+              <WidgetGroup
+                key={i}
+                label={i === 0 ? t('overlay.panel.logo') : t('overlay.panel.logoN', { n: i + 1 })}
+                enabled={logo.enabled}
+                onToggle={(enabled) => setLogo(i, { enabled })}
+                position="logo"
+                positionIndex={i}
+                style={
+                  <>
+                    <SizeField value={logo.size} onChange={(size) => setLogo(i, { size })} />
+                    <RangeField
+                      label={t('overlay.panel.opacity')}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={logo.opacity}
+                      format={percent}
+                      onChange={(opacity) => setLogo(i, { opacity })}
+                    />
+                  </>
+                }
+              >
+                <div className="flex gap-2 *:min-w-0 *:flex-1">
+                  <Button onClick={() => void chooseLogo(i)}>
+                    {logo.image ? t('marker.image.change') : t('marker.image.choose')}
+                  </Button>
+                  {logo.image && (
+                    <Button onClick={() => setLogo(i, { image: '' })}>
+                      {t('marker.image.remove')}
+                    </Button>
+                  )}
+                </div>
+                {logoError === i && (
+                  <p className="type-hint" role="alert">
+                    {t('marker.image.error')}
+                  </p>
+                )}
+                {i > 0 && (
+                  <Button onClick={() => set({ logos: overlay.logos.filter((_, at) => at !== i) })}>
+                    {t('overlay.panel.logoRemove')}
                   </Button>
                 )}
-              </div>
-              {logoError && (
-                <p className="type-hint" role="alert">
-                  {logoError}
-                </p>
-              )}
-            </WidgetGroup>
+              </WidgetGroup>
+            ))}
+            <Button
+              disabled={overlay.logos.length >= LOGOS_MAX}
+              title={overlay.logos.length >= LOGOS_MAX ? t('overlay.panel.logoMax', { max: LOGOS_MAX }) : undefined}
+              onClick={() => set({ logos: [...overlay.logos, { ...DEFAULT_LOGO, enabled: true, anchor: 'top-left' }] })}
+            >
+              {t('overlay.panel.logoAdd')}
+            </Button>
 
             <WidgetGroup
               label={t('overlay.panel.freeText')}

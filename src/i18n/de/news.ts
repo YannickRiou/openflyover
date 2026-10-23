@@ -127,6 +127,8 @@ const messages: Messages['news'] = {
   'v41.auto.text': 'Im „Automatischen Film“ ist jede Vorlage eine Karte: Format, Filmlänge, Kamera und was eingestellt wird, auf einen Blick. Eine wählen, dann „Anwenden“; „Rückgängig“ nimmt es zurück.',
   'v42.bilan.title': 'Der Jahresrückblick',
   'v42.bilan.text': 'Unter Track › Mehrere Tracks macht „Jahresrückblick“ einen einzigen Film aus einer Saison oder einem Jahr voller Touren: Sie zeichnen sich nacheinander unter einer hohen Ansicht ihrer Region, Zähler steigen, und die Schlusskarte nennt die Summen.',
+  'v44.logos.title': 'Mehrere Logos',
+  'v44.logos.text': 'Fügen Sie bis zu vier Logos hinzu (zum Beispiel das Ihres Vereins unten rechts und das eines Partners oben links), jedes mit eigenem Bild, eigener Position, Größe und Deckkraft: Overlay › Wetter, Logo und Text › « Logo hinzufügen ».',
   'v421.photos.title': 'Fotos im Gelände',
   'v421.photos.text': 'Jedes Foto und Video der Timeline steht auf dem Relief dort, wo es aufgenommen wurde: eine Nadel mit Vorschaubild. Kommt der Marker an, dreht sich die Kamera dorthin, das Vorschaubild leuchtet, solange das Foto zu sehen ist, dann kehrt die Kamera zurück. Eine Einstellung unter Overlay › 3D-Beschriftungen.',
   // 4.3 — preview quality, quieter at rest, the guide in every language

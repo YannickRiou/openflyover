@@ -30,7 +30,7 @@ import {
 import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw'
 import { MEDIA_DEFAULTS, STAGE_CARD_FIELDS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
-import { DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, withStyleLayout } from './settings'
+import { DEFAULT_LOGO, DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, withStyleLayout } from './settings'
 
 /** The overlay of a new film with its opening title and closing card switched on (they are off by default). */
 const TITLED = { ...DEFAULT_OVERLAY, title: { ...DEFAULT_OVERLAY.title, enabled: true }, end: { ...DEFAULT_OVERLAY.end, enabled: true } }
@@ -413,18 +413,37 @@ describe('drawOverlay', () => {
   })
 
   it('draws the logo when its image is loaded', () => {
-    const settings = enabled({ logo: { ...TITLED.logo, enabled: true, image: 'data:image/png;base64,AAAA' } })
+    const settings = enabled({ logos: [{ ...DEFAULT_LOGO, enabled: true, image: 'data:image/png;base64,AAAA' }] })
     const { ctx, calls } = fakeContext()
-    drawOverlay(ctx, overlayFrameAt(track, 0.5), settings, SIZE, { logo: { image: {} as CanvasImageSource, width: 400, height: 100 } })
+    drawOverlay(ctx, overlayFrameAt(track, 0.5), settings, SIZE, { logos: [{ image: {} as CanvasImageSource, width: 400, height: 100 }] })
     expect(calls).toContain('drawImage(5)')
+  })
+
+  it('draws every logo with its own image, stacked on a shared anchor, and none that is off or unreadable', () => {
+    const image = { image: {} as CanvasImageSource, width: 400, height: 100 }
+    const logo = { ...DEFAULT_LOGO, enabled: true, image: 'data:image/png;base64,AAAA', anchor: 'top-left' as const }
+    const drawn = (logos: OverlaySettings['logos'], images: (typeof image | null)[]) => {
+      const fake = fakeContext()
+      drawOverlay(fake.ctx, overlayFrameAt(track, 0.5), enabled({ logos }), SIZE, { logos: images })
+      return fake.images
+    }
+    const two = drawn([logo, { ...logo, opacity: 0.5 }], [image, image])
+    expect(two.map((i) => i.alpha)).toEqual([1, 0.5])
+    // same anchor: one under the other, not on top of each other
+    expect(two[1].args[1]).toBeGreaterThan(two[0].args[1])
+    // another anchor: another corner
+    expect(drawn([logo, { ...logo, anchor: 'bottom-right' }], [image, image])).toHaveLength(2)
+    expect(drawn([logo, { ...logo, enabled: false }], [image, image])).toHaveLength(1)
+    expect(drawn([logo, logo], [image, null])).toHaveLength(1)
+    expect(drawn([logo, logo], [image])).toHaveLength(1)
   })
 
   it('draws the logo at its opacity, at its free position scaled from the exported film', () => {
     const image = { image: {} as CanvasImageSource, width: 400, height: 100 }
-    const logo = { ...TITLED.logo, enabled: true, image: 'data:image/png;base64,AAAA', anchor: 'top-left' as const }
-    const drawn = (patch: Partial<OverlaySettings['logo']>, extras: OverlayExtras = {}) => {
+    const logo = { ...DEFAULT_LOGO, enabled: true, image: 'data:image/png;base64,AAAA', anchor: 'top-left' as const }
+    const drawn = (patch: Partial<OverlaySettings['logos'][number]>, extras: OverlayExtras = {}) => {
       const { ctx, images } = fakeContext()
-      drawOverlay(ctx, overlayFrameAt(track, 0.5), enabled({ logo: { ...logo, ...patch } }), SIZE, { logo: image }, extras)
+      drawOverlay(ctx, overlayFrameAt(track, 0.5), enabled({ logos: [{ ...logo, ...patch }] }), SIZE, { logos: [image] }, extras)
       return images[0]
     }
     expect(drawn({}).alpha).toBe(1)

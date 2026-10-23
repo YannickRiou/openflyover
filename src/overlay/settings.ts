@@ -118,6 +118,8 @@ export const CREDITS_MODES = ['short', 'full', 'end'] as const
 export type CreditsMode = (typeof CREDITS_MODES)[number]
 /** Longest side of the logo kept in the settings (pixels). */
 export const LOGO_MAX_SIZE_PX = 512
+/** Most logos on the film: each one is an image kept in the project. */
+export const LOGOS_MAX = 4
 /** Largest free offset of a widget from its anchor, either way (pixels of the exported film). */
 export const OFFSET_MAX_PX = 10000
 
@@ -296,7 +298,8 @@ export interface OverlaySettings {
   end: EndCardSettings
   counters: CountersSettings
   profile: ProfileSettings
-  logo: LogoSettings
+  /** the logos, the first one always there (LOGOS_MAX at most): each with its own image, place, size and opacity */
+  logos: LogoSettings[]
   text: TextSettings
   /** weather under the marker: condition, temperature, wind (Open-Meteo, when the outing's weather is known) */
   weather: Sized
@@ -311,6 +314,8 @@ export interface OverlaySettings {
   labelColors?: Partial<Record<LabelKind, string>>
 }
 
+export const DEFAULT_LOGO: LogoSettings = { enabled: false, anchor: 'bottom-right', size: 1, image: '', opacity: 1 }
+
 export const DEFAULT_OVERLAY: OverlaySettings = {
   enabled: false,
   style: 'editorial',
@@ -323,7 +328,7 @@ export const DEFAULT_OVERLAY: OverlaySettings = {
     fields: { distance: true, altitude: true, ascent: true, slope: false, time: true, clock: false, speed: false, pace: false, heartRate: false, power: false, temperature: false, outings: true },
   },
   profile: { enabled: true, anchor: 'top-right', width: 0.3, height: 0.12 },
-  logo: { enabled: false, anchor: 'bottom-right', size: 1, image: '', opacity: 1 },
+  logos: [DEFAULT_LOGO],
   text: { enabled: false, anchor: 'bottom-left', size: 1, text: '' },
   weather: { enabled: false, anchor: 'top-left', size: 1 },
   minimap: { enabled: false, anchor: 'bottom-right', size: 1, northArrow: true },
@@ -421,8 +426,8 @@ const OVERLAY_ADDED_KEYS: readonly (keyof OverlaySettings)[] = ['minimap', 'cred
 
 /**
  * Raw overlay settings of an older project or preset with the widgets (and the logo opacity) added since filled in
- * with their defaults, so they still load. Applied before the shape check: anything else (other keys, a present but
- * malformed widget) is left as is and still rejected.
+ * with their defaults and its single logo made the first of the list, so they still load. Applied before the shape
+ * check: anything else (other keys, a present but malformed widget) is left as is and still rejected.
  */
 export function withOverlayDefaults(raw: unknown): unknown {
   if (!isRecord(raw)) return raw
@@ -434,8 +439,9 @@ export function withOverlayDefaults(raw: unknown): unknown {
     isRecord(credits) && typeof credits.enabled === 'boolean' && !('mode' in credits)
       ? { ...filled, credits: { mode: credits.enabled ? 'short' : 'end', position: credits.position } }
       : filled
-  const logo = raw.logo
-  const withLogo = isRecord(logo) && !('opacity' in logo) ? { ...withCredits, logo: { ...logo, opacity: DEFAULT_OVERLAY.logo.opacity } } : withCredits
+  // the single logo of before (without opacity before that) is the first of the list
+  const { logo, ...others } = withCredits
+  const withLogo = isRecord(logo) && !('logos' in raw) ? { ...others, logos: [{ opacity: DEFAULT_LOGO.opacity, ...logo }] } : withCredits
   // the counters added since: off
   const counters = raw.counters
   const fields = isRecord(counters) ? counters.fields : undefined
@@ -475,10 +481,25 @@ export function withWidgetOverrides(overlay: OverlaySettings, key: StyledWidget,
 export const PLACED_WIDGETS = ['title', 'end', 'counters', 'profile', 'logo', 'text', 'weather', 'minimap', 'leaderboard'] as const
 export type PlacedWidget = (typeof PLACED_WIDGETS)[number]
 
-/** `overlay` with widget `key` at the free position `offset`, or back in its anchor's stack (null: the key dropped). */
-export function withWidgetOffset(overlay: OverlaySettings, key: PlacedWidget, offset: WidgetOffset | null): OverlaySettings {
-  const { offset: _offset, ...rest } = overlay[key]
-  return { ...overlay, [key]: offset ? { ...rest, offset } : rest }
+/** Settings of a placed widget (of logo number `index` for 'logo'). */
+export function placedSettings(overlay: OverlaySettings, key: PlacedWidget, index = 0) {
+  return key === 'logo' ? overlay.logos[index] : overlay[key]
+}
+
+/** `overlay` with the settings of widget `key` (logo number `index`) replaced by `placed`. */
+function withPlaced(overlay: OverlaySettings, key: PlacedWidget, placed: Placed, index: number): OverlaySettings {
+  return key === 'logo' ? { ...overlay, logos: overlay.logos.map((logo, i) => (i === index ? (placed as LogoSettings) : logo)) } : { ...overlay, [key]: placed }
+}
+
+/** `overlay` with widget `key` (logo number `index`) at the free position `offset`, or back in its anchor's stack (null: the key dropped). */
+export function withWidgetOffset(overlay: OverlaySettings, key: PlacedWidget, offset: WidgetOffset | null, index = 0): OverlaySettings {
+  const { offset: _offset, ...rest } = placedSettings(overlay, key, index)
+  return withPlaced(overlay, key, offset ? { ...rest, offset } : rest, index)
+}
+
+/** `overlay` with widget `key` (logo number `index`) at `anchor`. */
+export function withWidgetAnchor(overlay: OverlaySettings, key: PlacedWidget, anchor: OverlayAnchor, index = 0): OverlaySettings {
+  return withPlaced(overlay, key, { ...placedSettings(overlay, key, index), anchor }, index)
 }
 
 /** Overrides drawn for widget `key`: the overlay's, then the widget's own; undefined when neither has any. */
@@ -576,9 +597,8 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     isAnchor(o.profile.anchor) &&
     within(o.profile.width, PROFILE_WIDTH_MIN, PROFILE_WIDTH_MAX) &&
     within(o.profile.height, PROFILE_HEIGHT_MIN, PROFILE_HEIGHT_MAX) &&
-    validSized(o.logo) &&
-    isLogoImage(o.logo.image) &&
-    within(o.logo.opacity, 0, 1) &&
+    within(o.logos.length, 1, LOGOS_MAX) &&
+    o.logos.every((logo) => validSized(logo) && isLogoImage(logo.image) && within(logo.opacity, 0, 1) && isValidOffset(logo.offset)) &&
     validSized(o.text) &&
     validSized(o.weather) &&
     validSized(o.minimap) &&
@@ -590,6 +610,6 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     isValidOverrides(o.overrides) &&
     isValidLabelColors(o.labelColors) &&
     STYLED_WIDGETS.every((key) => isValidOverrides(o[key].overrides)) &&
-    PLACED_WIDGETS.every((key) => isValidOffset(o[key].offset))
+    PLACED_WIDGETS.every((key) => key === 'logo' || isValidOffset(o[key].offset))
   )
 }

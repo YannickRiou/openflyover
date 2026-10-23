@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { isValidSetting, sanitizeSettings } from '../project/document'
 import { DEFAULT_POSTER } from '../poster/settings'
 import {
+  DEFAULT_LOGO,
   DEFAULT_OVERLAY,
   LABEL_KINDS,
+  LOGOS_MAX,
   OFFSET_MAX_PX,
   WIDGET_SIZE_MIN,
   OVERLAY_STYLES,
@@ -53,8 +55,8 @@ describe('overlay settings', () => {
     expect(isValidOverlay(withPatch((o) => (o.end.start = 0.995)))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.text.size = 5)))).toBe(false)
     expect(isValidOverlay(withPatch((o) => (o.profile.width = 1)))).toBe(false)
-    expect(isValidOverlay(withPatch((o) => (o.logo.image = 'https://example.org/logo.png')))).toBe(false)
-    expect(isValidOverlay(withPatch((o) => (o.logo.image = 'data:image/png;base64,iVBORw0KGgo=')))).toBe(true)
+    expect(isValidOverlay(withPatch((o) => (o.logos[0].image = 'https://example.org/logo.png')))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => (o.logos[0].image = 'data:image/png;base64,iVBORw0KGgo=')))).toBe(true)
   })
 
   it('is restored from a project, or replaced by the default when a widget is malformed', () => {
@@ -147,15 +149,36 @@ describe('overlay settings', () => {
     expect(isValidOverlay(withPatch((o) => (o.leaderboard.size = 9)))).toBe(false)
   })
 
-  it('validates the logo opacity, and fills it in for an overlay saved before it', () => {
-    expect(DEFAULT_OVERLAY.logo.opacity).toBe(1)
-    expect(isValidOverlay(withPatch((o) => (o.logo.opacity = 0)))).toBe(true)
-    expect(isValidOverlay(withPatch((o) => (o.logo.opacity = 1.2)))).toBe(false)
-    const custom = withPatch((o) => (o.logo.size = 1.5))
-    const { opacity: _opacity, ...oldLogo } = custom.logo
-    const { settings, invalid } = sanitizeSettings({ overlay: { ...custom, logo: oldLogo } })
-    expect(invalid).toEqual([])
-    expect(settings.overlay).toEqual(custom)
+  it('validates the logo opacity', () => {
+    expect(DEFAULT_OVERLAY.logos[0].opacity).toBe(1)
+    expect(isValidOverlay(withPatch((o) => (o.logos[0].opacity = 0)))).toBe(true)
+    expect(isValidOverlay(withPatch((o) => (o.logos[0].opacity = 1.2)))).toBe(false)
+  })
+
+  it('validates each of the logos, one to LOGOS_MAX of them', () => {
+    const several = (n: number) => withPatch((o) => (o.logos = Array.from({ length: n }, () => ({ ...DEFAULT_LOGO }))))
+    expect(isValidOverlay(several(LOGOS_MAX))).toBe(true)
+    expect(isValidOverlay(several(LOGOS_MAX + 1))).toBe(false)
+    expect(isValidOverlay(several(0))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, image: 'https://example.org/logo.png' })))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, anchor: 'nowhere' as never })))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, opacity: 2 })))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, offset: { x: 1e9, y: 0 } })))).toBe(false)
+    expect(sanitizeSettings({ overlay: several(2) }).invalid).toEqual([])
+  })
+
+  it('makes the single logo of an older project the first of the list, with its opacity when it had none', () => {
+    const { logos, ...rest } = withPatch((o) => (o.logos[0] = { ...DEFAULT_LOGO, enabled: true, size: 1.5, image: 'data:image/png;base64,AAAA', opacity: 0.4 }))
+    const old = { ...rest, logo: logos[0] }
+    const migrated = sanitizeSettings({ overlay: old })
+    expect(migrated.invalid).toEqual([])
+    expect(migrated.settings.overlay).toEqual({ ...rest, logos })
+    expect('logo' in migrated.settings.overlay).toBe(false)
+    // saved before the opacity existed
+    const { opacity: _opacity, ...noOpacity } = logos[0]
+    expect(sanitizeSettings({ overlay: { ...rest, logo: noOpacity } }).settings.overlay.logos).toEqual([{ ...logos[0], opacity: 1 }])
+    // a project already saved with the list keeps it
+    expect(sanitizeSettings({ overlay: { ...rest, logos: [logos[0], DEFAULT_LOGO] } }).settings.overlay.logos).toHaveLength(2)
   })
 })
 
@@ -163,11 +186,14 @@ describe('free position of a widget', () => {
   it('is absent by default, set and dropped by withWidgetOffset', () => {
     expect(DEFAULT_OVERLAY.counters.offset).toBeUndefined()
     const moved = withWidgetOffset(DEFAULT_OVERLAY, 'logo', { x: 120, y: -8 })
-    expect(moved.logo).toEqual({ ...DEFAULT_OVERLAY.logo, offset: { x: 120, y: -8 } })
+    expect(moved.logos[0]).toEqual({ ...DEFAULT_LOGO, offset: { x: 120, y: -8 } })
     expect(moved.counters).toBe(DEFAULT_OVERLAY.counters)
     const back = withWidgetOffset(moved, 'logo', null)
     expect(back).toEqual(DEFAULT_OVERLAY)
-    expect('offset' in back.logo).toBe(false)
+    expect('offset' in back.logos[0]).toBe(false)
+    // each logo has its own
+    const two = { ...DEFAULT_OVERLAY, logos: [DEFAULT_LOGO, DEFAULT_LOGO] }
+    expect(withWidgetOffset(two, 'logo', { x: 5, y: 6 }, 1).logos.map((l) => l.offset)).toEqual([undefined, { x: 5, y: 6 }])
   })
 
   it('is restored from a project when valid, and rejects the overlay when not', () => {

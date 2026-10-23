@@ -7,7 +7,9 @@ vi.mock('./draw', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./draw')>()
   return { ...actual, drawOverlay: vi.fn() }
 })
-vi.mock('./assets', () => ({ createCardImages: () => () => undefined, loadLogo: vi.fn(() => Promise.resolve({ width: 1, height: 1 })) }))
+const decodedLogos = [{ image: {} as CanvasImageSource, width: 1, height: 1 }, null]
+const syncLogos = vi.fn()
+vi.mock('./assets', () => ({ createCardImages: () => () => undefined, createLogos: () => ({ sync: syncLogos, logos: () => decodedLogos, dispose: vi.fn() }) }))
 
 const { drawOverlay } = await import('./draw')
 const { createOverlayDrawer } = await import('./exportOverlay')
@@ -44,6 +46,9 @@ describe('createOverlayDrawer', () => {
     expect(frame.progress).toBe(0.75)
     expect(settings).toBe(useAppStore.getState().settings.overlay)
     expect(size).toEqual({ width: 1920, height: 1080 })
+    // the images of the logos, followed in the settings
+    expect(vi.mocked(drawOverlay).mock.calls[1][4]?.logos).toBe(decodedLogos)
+    expect(syncLogos).toHaveBeenLastCalledWith([''])
     // film time of the frame, timeline texts, credits of the sources in use
     expect(extras?.time).toEqual(at(0.75).time)
     expect(extras?.texts).toBe(useAppStore.getState().settings.film.texts)

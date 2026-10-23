@@ -23,8 +23,8 @@ import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { OPEN_METEO_SHORT, recordedAtProgress } from './data'
 import type { BilanCumul, LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
-import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, widgetOverrides } from './settings'
+import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, LogoSettings, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
+import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, placedSettings, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 import { styleStructure } from './structures'
@@ -48,7 +48,8 @@ export interface OverlayImage {
 
 /** Decoded images used by the overlay (loaded asynchronously before drawing). */
 export interface OverlayAssets {
-  logo?: OverlayImage | null
+  /** decoded images of the logos, by place in `OverlaySettings.logos` (null: none or unreadable) */
+  logos?: readonly (OverlayImage | null)[]
   /** decoded picture of a photo of the timeline (`FilmMedia.src`), undefined while it is not loaded */
   photo?: (src: string) => OverlayImage | undefined
   /** frame of a video clip of the timeline at `clipS` seconds in its file (`clipTimeS`), undefined while it is not ready */
@@ -1782,11 +1783,10 @@ function drawDip({ ctx, size }: Painter, dip: TransitionDip): void {
   ctx.restore()
 }
 
-function logoWidget(p: Painter, settings: OverlaySettings, assets: OverlayAssets): Widget | null {
-  const logo = assets.logo
-  if (!logo || !settings.logo.image || logo.width <= 0 || logo.height <= 0) return null
+function logoWidget(p: Painter, settings: LogoSettings, logo: OverlayImage | null | undefined): Widget | null {
+  if (!logo || !settings.image || logo.width <= 0 || logo.height <= 0) return null
   const { u, ctx } = p
-  const s = settings.logo.size
+  const s = settings.size
   let h = 9 * u * s
   let w = (h * logo.width) / logo.height
   const maxW = 28 * u * s
@@ -1795,10 +1795,10 @@ function logoWidget(p: Painter, settings: OverlaySettings, assets: OverlayAssets
     w = maxW
   }
   return {
-    anchor: settings.logo.anchor,
+    anchor: settings.anchor,
     width: w,
     height: h,
-    opacity: settings.logo.opacity,
+    opacity: settings.opacity,
     draw(x, y) {
       ctx.imageSmoothingQuality = 'high'
       ctx.drawImage(logo.image, x, y, w, h)
@@ -1909,8 +1909,8 @@ export function drawOverlay(
   // a widget at a free position: its offset in pixels of the exported film, scaled to this frame
   const exported = extras.exportSize
   const scale = exported && exported.width > 0 && exported.height > 0 ? Math.min(size.width, size.height) / Math.min(exported.width, exported.height) : 1
-  const placed = (key: PlacedWidget, w: Widget | null): Widget | null => {
-    const offset = settings[key].offset
+  const placed = (key: PlacedWidget, w: Widget | null, index = 0): Widget | null => {
+    const offset = placedSettings(settings, key, index).offset
     return w && offset ? { ...w, offset: { x: offset.x * scale, y: offset.y * scale } } : w
   }
   if (settings.enabled) structure = styleStructure({ p, of, frame, settings, slot, live, titleOpacity, endOpacity, markerColor: extras.markerColor })
@@ -1935,7 +1935,9 @@ export function drawOverlay(
     if (settings.minimap.enabled && live > 0 && !slot('minimap')) add(placed('minimap', minimapWidget(of('minimap'), frame, settings, live, extras.markerColor)))
     if (settings.leaderboard.enabled && live > 0) add(placed('leaderboard', leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, live)))
     if (settings.text.enabled) add(placed('text', textWidget(of('text'), settings)))
-    if (settings.logo.enabled) add(placed('logo', logoWidget(p, settings, assets)))
+    settings.logos.forEach((logo, i) => {
+      if (logo.enabled) add(placed('logo', logoWidget(p, logo, assets.logos?.[i]), i))
+    })
   }
   // texts of the timeline inside their window, overlay on or off
   for (const item of extras.texts ?? []) {

@@ -127,6 +127,8 @@ const messages: Messages['news'] = {
   'v41.auto.text': 'In "Automatic film", each template is a card: format, film length, camera and what gets set, at a glance. Pick one, then "Apply"; "Undo" takes it back.',
   'v42.bilan.title': 'The year in review',
   'v42.bilan.text': 'In Track › Several tracks, “Year in review” makes a single film of a season or a year of outings: they draw themselves one after the other under a high view of their region, counters climb, and the closing card gives the totals.',
+  'v44.logos.title': 'Several logos',
+  'v44.logos.text': 'Add up to four logos (for example your club’s at the bottom right and a sponsor’s at the top left), each with its own image, place, size and opacity: Overlay › Weather, logo and text › “Add a logo”.',
   'v421.photos.title': 'Photos on the terrain',
   'v421.photos.text': 'Each photo or video of the timeline stands on the relief where it was taken: a pin with its thumbnail. As the marker arrives, the camera turns towards it, the thumbnail lights up while the photo is on screen, then the camera comes back. One setting in Overlay › 3D labels.',
   // 4.3 — preview quality, quieter at rest, the guide in every language

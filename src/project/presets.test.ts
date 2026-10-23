@@ -134,6 +134,6 @@ describe('an overlay preset keeps the words and pictures of the project', () => 
     expect(out.end.title).toBe('Merci')
     expect(out.end).not.toHaveProperty('credits')
     expect(out.text.text).toBe('mon texte')
-    expect(out.logo.image).toBe('')
+    expect(out.logos[0].image).toBe('')
   })
 })

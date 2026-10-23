@@ -35,10 +35,37 @@ function decode(src: string): Promise<HTMLImageElement> {
 }
 
 /** Decoded logo for `drawOverlay` (null for an empty data URL). */
-export async function loadLogo(dataUrl: string): Promise<OverlayAssets['logo']> {
+export async function loadLogo(dataUrl: string): Promise<OverlayImage | null> {
   if (!dataUrl) return null
   const image = await decode(dataUrl)
   return { image, width: image.naturalWidth, height: image.naturalHeight }
+}
+
+/**
+ * The decoded logos of the overlay, kept in step with the images in the settings: `sync` reloads them when the list
+ * of images changed (a logo that cannot be read is drawn without), `onReady` is called once they are decoded.
+ */
+export function createLogos(onReady: () => void = () => {}) {
+  let sources: readonly string[] = []
+  let decoded: (OverlayImage | null)[] = []
+  let disposed = false
+  return {
+    sync(next: readonly string[]) {
+      if (next.length === sources.length && next.every((source, i) => source === sources[i])) return
+      sources = next
+      decoded = []
+      Promise.all(next.map((source) => loadLogo(source).catch(() => null))).then((logos) => {
+        if (disposed || sources !== next) return
+        decoded = logos
+        onReady()
+      })
+    },
+    /** by place in the list of logos (null: none or unreadable) */
+    logos: (): OverlayAssets['logos'] => decoded,
+    dispose() {
+      disposed = true
+    },
+  }
 }
 
 /** Pictures of the cards kept decoded at once: the oldest one goes when a new one comes. */
