@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v44.night.title': 'Brighter nights',
+  'v44.night.text': '« Night brightness » (Light › Atmosphere) lights the relief and the clouds at night, like moonlight, and changes nothing in daylight. The exposure now sits with contrast and saturation in Colours.',
   'v332.landmarks.title': 'Hide landmarks in a few clicks',
   'v332.landmarks.text': 'In the landmark map, “Hide” hides each landmark clicked, “Choose a zone” hides those of a rectangle or a stretch of the profile at once, and the M key hides the landmark selected then moves to the next.',
   'v331.recap.title': 'Look back at the finished stage',

@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v44.night.title': 'Des nuits moins noires',
+  'v44.night.text': '« Clarté des nuits » (Lumière › Atmosphère) éclaire le relief et les nuages la nuit, comme un clair de lune, sans rien changer le jour. L’exposition rejoint le contraste et la saturation dans Couleurs.',
   'v332.landmarks.title': 'Masquer des repères en quelques clics',
   'v332.landmarks.text': 'Dans la carte des repères, « Masquer » masque chaque repère cliqué, « Choisir une zone » masque d’un coup ceux d’un rectangle ou d’une portion du profil, et la touche M masque le repère choisi puis passe au suivant.',
   'v331.recap.title': 'Revoir l’étape finie',

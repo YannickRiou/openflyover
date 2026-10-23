@@ -50,4 +50,9 @@ describe('nightFillIntensity', () => {
     expect(nightFillIntensity(deg(-3))).toBeCloseTo(NIGHT_FILL_INTENSITY / 2, 12)
     expect(nightFillIntensity(deg(-30))).toBe(NIGHT_FILL_INTENSITY)
   })
+
+  it('« Clarté des nuits » adds stops at night only', () => {
+    expect(nightFillIntensity(deg(5), 3)).toBe(0)
+    expect(nightFillIntensity(deg(-30), 2)).toBe(NIGHT_FILL_INTENSITY * 4)
+  })
 })

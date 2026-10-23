@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v44.night.title': 'Hellere Nächte',
+  'v44.night.text': '« Helligkeit der Nacht » (Licht › Atmosphäre) beleuchtet Gelände und Wolken nachts wie Mondlicht und ändert tagsüber nichts. Die Belichtung steht jetzt bei Kontrast und Sättigung unter Farben.',
   'v332.landmarks.title': 'Landmarken mit wenigen Klicks ausblenden',
   'v332.landmarks.text': 'In der Landmarkenkarte blendet „Ausblenden“ jede angeklickte Landmarke aus, „Bereich wählen“ blendet die eines Rechtecks oder eines Profilabschnitts auf einmal aus, und die Taste M blendet die gewählte aus und geht zur nächsten.',
   'v331.recap.title': 'Die beendete Etappe noch einmal zeigen',

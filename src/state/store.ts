@@ -68,6 +68,8 @@ export interface Settings {
   sunFromTrack: boolean
   /** exposure compensation in stops, on top of the automatic exposure (atmosphere only) */
   exposureEv: number
+  /** « Clarté des nuits »: stops added to the faint night light of the relief, 0–4 (atmosphere only) */
+  nightLightEv: number
   /** colour grading of the final image (« Couleurs »): preset, contrast, saturation, warmth, vignette (scene/grading.ts) */
   grading: GradingSettings
   /** « Objectif »: motion blur, bloom, lens flare and depth of field, all off by default (scene/lens.ts) */
@@ -213,6 +215,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sunDate: '',
   sunFromTrack: true,
   exposureEv: 0,
+  nightLightEv: 0,
   grading: DEFAULT_GRADING,
   lens: DEFAULT_LENS,
   trackColorBy: 'none',

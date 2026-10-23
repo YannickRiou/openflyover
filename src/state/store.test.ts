@@ -185,6 +185,7 @@ describe('settings and misc', () => {
       sunDate: '',
       sunFromTrack: true,
       exposureEv: 0,
+      nightLightEv: 0,
       grading: { preset: 'naturel', contrast: 0, saturation: 0, warmth: 0, vignette: 0 },
       lens: { shutter: 0, bloom: 0, bloomRadius: 0.6, flare: 0, depthOfField: 0 },
       trackColorBy: 'none',

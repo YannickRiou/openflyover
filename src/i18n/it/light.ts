@@ -156,6 +156,8 @@ const messages: Messages['light'] = {
   'atmosphere.exposure': 'Esposizione',
   'atmosphere.exposureTip': 'Schiarisce o scurisce l’immagine, oltre alla regolazione automatica in base al sole.',
   'atmosphere.exposureKeyed': 'I keyframe della corsia «Esposizione» della timeline guidano questo valore lungo il percorso: il cursore modifica allora il keyframe sul marcatore (ne viene creato uno se serve).',
+  'atmosphere.nightLight': 'Luminosità della notte',
+  'atmosphere.nightLightTip': 'Illumina il rilievo di notte, come la luce della luna: a 0 la notte resta molto scura; più in alto si vedono montagne e nuvole. Nessun effetto di giorno.',
   'atmosphere.sun': 'Sole',
   'atmosphere.sunOff': 'Attiva l’atmosfera (sezione precedente) per impostare l’ora del sole.',
   'map.imageryDetailHint': 'Più fine: foto più nitide, ma più tessere da caricare (anteprima, export e pacchetto offline più lunghi).',

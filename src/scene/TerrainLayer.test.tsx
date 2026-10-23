@@ -114,6 +114,7 @@ describe('engine options from settings', () => {
     sunDate: '',
     sunFromTrack: true,
     exposureEv: 0,
+    nightLightEv: 0,
     grading: DEFAULT_GRADING,
     lens: DEFAULT_LENS,
     trackColorBy: 'none' as const,

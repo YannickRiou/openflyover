@@ -156,6 +156,8 @@ const messages: Messages['light'] = {
   'atmosphere.exposure': 'Belichtung',
   'atmosphere.exposureTip': 'Hellt das Bild auf oder dunkelt es ab, zusätzlich zur automatischen Einstellung nach der Sonne.',
   'atmosphere.exposureKeyed': 'Keyframes der Zeile „Belichtung“ der Zeitleiste steuern diesen Wert entlang der Strecke: Der Regler ändert dann den Keyframe an der Marker-Position (bei Bedarf wird einer angelegt).',
+  'atmosphere.nightLight': 'Helligkeit der Nacht',
+  'atmosphere.nightLightTip': 'Beleuchtet das Gelände nachts wie Mondlicht: bei 0 bleibt die Nacht sehr dunkel, höher sieht man Berge und Wolken. Tagsüber ohne Wirkung.',
   'atmosphere.sun': 'Sonne',
   'atmosphere.sunOff': 'Atmosphäre (vorheriger Abschnitt) aktivieren, um die Uhrzeit der Sonne einzustellen.',
   'map.imageryDetailHint': 'Feiner: schärfere Fotos, aber mehr Kacheln zu laden (längere Vorschau, Export und Offline-Paket).',

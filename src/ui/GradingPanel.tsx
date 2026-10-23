@@ -8,7 +8,8 @@ import type { GradingPresetId, GradingValues } from '../scene/grading'
 import { editFilm, getFilmSource, useKeyedValue } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { PanelKeys } from './KeyControls'
-import { InfoTip, PanelSection, SettingRow } from './PanelSection'
+import { formatEv } from './format'
+import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { Radio, RadioGroup, Slider } from './primitives'
 
 const SLIDERS: { key: keyof GradingValues; label: string; tip?: string }[] = [
@@ -32,20 +33,26 @@ function applyGradingPreset(preset: GradingPresetId): void {
   })
 }
 
+const EXPOSURE_EV_MIN = -2
+const EXPOSURE_EV_MAX = 2
+const EXPOSURE_EV_STEP = 0.5
+
 const GRADING_KEYS: readonly (keyof GradingValues)[] = ['contrast', 'saturation', 'warmth', 'vignette']
 
 /**
  * « Couleurs » (section of the Lumière tab): colour grading of the image, preview and export alike. Preset chips
- * first (one undo step each), then the four sliders, one row each (name and value, slider and ◀ ◇ ▶ keys on demand).
+ * first (one undo step each), then the exposure (atmosphere only) and the four sliders, one row each (name and value,
+ * slider and ◀ ◇ ▶ keys on demand).
  */
 export function GradingPanel() {
   const t = useT()
   const id = useId()
   const grading = useAppStore((s) => s.settings.grading)
   const keyed = useAppStore((s) => hasGradingKeys(s.settings.film))
+  const atmosphere = useAppStore((s) => s.settings.atmosphere)
 
   return (
-    <PanelSection title={t('light.grading.title')} keys={['grading']}>
+    <PanelSection title={t('light.grading.title')} keys={['exposureEv', 'grading']}>
       <div className="field">
         <span id={`${id}-presets`} className="type-label">
           {t('light.grading.preset')}
@@ -70,10 +77,39 @@ export function GradingPanel() {
         <p className="type-hint">{t('light.grading.keyed')}</p>
       )}
 
+      {atmosphere && <ExposureSlider />}
+
       {SLIDERS.map((slider) => (
         <GradingSlider key={slider.key} name={slider.key} label={slider.label} tip={slider.tip} />
       ))}
     </PanelSection>
+  )
+}
+
+/** Exposure compensation on top of the automatic exposure; with keys it shows and edits the key at the marker (`useKeyedValue`). */
+function ExposureSlider() {
+  const t = useT()
+  const exposureSetting = useAppStore((s) => s.settings.exposureEv)
+  const exposureKeyed = useAppStore((s) => hasParamKeys(s.settings.film, ['exposure']))
+  const setSetting = useAppStore((s) => s.setSetting)
+  const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (ev) => setSetting('exposureEv', ev))
+  return (
+    <SettingRow label={t('light.atmosphere.exposure')} value={formatEv(exposureEv)} paths={['exposureEv']}>
+      <RangeField
+        label={t('light.atmosphere.exposure')}
+        tip={t('light.atmosphere.exposureTip')}
+        min={EXPOSURE_EV_MIN}
+        max={EXPOSURE_EV_MAX}
+        step={EXPOSURE_EV_STEP}
+        value={exposureEv}
+        format={formatEv}
+        onChange={setExposureEv}
+      />
+      {exposureKeyed && (
+        <p className="type-hint">{t('light.atmosphere.exposureKeyed')}</p>
+      )}
+      <PanelKeys target={{ kind: 'param', param: 'exposure' }} />
+    </SettingRow>
   )
 }
 

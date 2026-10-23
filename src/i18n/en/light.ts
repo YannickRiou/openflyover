@@ -156,6 +156,8 @@ const messages: Messages['light'] = {
   'atmosphere.exposure': 'Exposure',
   'atmosphere.exposureTip': 'Brightens or darkens the image, on top of the automatic adjustment based on the sun.',
   'atmosphere.exposureKeyed': 'Keyframes on the “Exposure” lane of the timeline drive this value along the route: the slider then edits the key at the marker (one is created if needed).',
+  'atmosphere.nightLight': 'Night brightness',
+  'atmosphere.nightLightTip': 'Lights the relief at night, like moonlight: at 0 the night stays very dark; higher, the mountains and clouds show. No effect in daylight.',
   'atmosphere.sun': 'Sun',
   'atmosphere.sunOff': 'Turn on the atmosphere (previous section) to set the sun time.',
   'map.imageryDetailHint': 'Finer: sharper photos, but more tiles to load (longer preview, export and offline pack).',

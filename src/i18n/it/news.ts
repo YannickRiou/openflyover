@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v44.night.title': 'Notti meno nere',
+  'v44.night.text': '« Luminosità della notte » (Luce › Atmosfera) illumina il rilievo e le nuvole di notte, come la luce della luna, senza cambiare nulla di giorno. L’esposizione ora sta con contrasto e saturazione in Colori.',
   'v332.landmarks.title': 'Nascondere riferimenti in pochi clic',
   'v332.landmarks.text': 'Nella mappa dei riferimenti, «Nascondi» nasconde ogni riferimento cliccato, «Scegliere una zona» nasconde in una volta quelli di un rettangolo o di un tratto del profilo, e il tasto M nasconde quello scelto e passa al successivo.',
   'v331.recap.title': 'Rivedere la tappa finita',
