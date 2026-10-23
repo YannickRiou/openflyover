@@ -26,7 +26,7 @@ import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useTerrainContext } from './terrainContext'
 import { wakeScene } from './renderOnDemand'
 import { useFilmClock, useFilmTracks } from './usePacing'
-import { useTrackResults } from './useTrackResults'
+import { useTrackResults, useTracksByPoints } from './useTrackResults'
 import { setWaterStatus } from './waterStatus'
 import { buildRiverStrip, ribbonEdgeOffsets, stripHeights } from './riverStrip'
 import { buildSeaMesh, buildWaterMesh, lakeLevel, type WaterMesh } from './waterMesh'
@@ -239,7 +239,7 @@ function drapeWater(pieces: readonly WaterPiece[], engine: TerrainEngine | null,
 
 export function WaterLayer() {
   const { engine, frame } = useTerrainContext()
-  const tracks = useFilmTracks()
+  const tracks = useTracksByPoints(useFilmTracks())
   const enabled = useAppStore((s) => s.settings.water.enabled)
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const clock = useFilmClock()

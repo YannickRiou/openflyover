@@ -132,3 +132,15 @@ export function useTrackResults<T>(
     return { results, loading, started, failed }
   }, [enabled, tracks, state, startedFor])
 }
+
+/**
+ * `tracks` as far as their points go: the same array as before while no track is added, removed or given new points.
+ * A recolour, a rename or « Corriger les chiffres » make a new track object with the same points: a layer that reads
+ * only the points (water, forests, glaciers) then neither asks again, nor places its trees, nor builds its meshes again.
+ */
+export function useTracksByPoints(tracks: readonly Track[]): readonly Track[] {
+  const [kept, setKept] = useState(tracks)
+  const same = kept === tracks || (kept.length === tracks.length && kept.every((t, i) => t.id === tracks[i].id && t.segments === tracks[i].segments))
+  if (!same) setKept(tracks)
+  return same ? kept : tracks
+}

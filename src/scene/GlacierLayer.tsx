@@ -25,6 +25,7 @@ import { useTerrainContext } from './terrainContext'
 import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { useFilmTrack } from './usePacing'
+import { useTracksByPoints } from './useTrackResults'
 
 /** Height of the ice above the draped relief (metres, not exaggerated): the coarse levels of detail of the relief rise above 1 or 2 m of ice and show through as patches. */
 export const GLACIER_LIFT_M = 4
@@ -106,7 +107,9 @@ function drapeGlacier(meshes: readonly GlacierMesh[], engine: TerrainEngine | nu
 
 export function GlacierLayer() {
   const { engine, frame } = useTerrainContext()
-  const track = useFilmTrack()
+  // a recolour or a rename keeps the points: no new query, no new mesh
+  const filmTrack = useFilmTrack()
+  const [track] = useTracksByPoints(filmTrack ? [filmTrack] : [])
   // « Aucune » leaves the ground as in the photo: no glacier either (and no request)
   // …nor in a « Bilan »: its track is the whole year, too wide for one query
   const enabled = useAppStore((s) => s.settings.snow.mode !== 'aucune' && !playsBilan(s.settings.race, s.tracks.length))

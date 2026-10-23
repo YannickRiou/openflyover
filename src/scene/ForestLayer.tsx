@@ -30,7 +30,7 @@ import { useTerrainContext } from './terrainContext'
 import { TREE_WIDTH_RATIO, createTreeGeometries } from './treeGeometry'
 import { useDebouncedCallback } from './useDebouncedCallback'
 import { useFilmTracks } from './usePacing'
-import { useTrackResults } from './useTrackResults'
+import { useTrackResults, useTracksByPoints } from './useTrackResults'
 
 /** Trees are drawn up to this distance from the camera (metres)... */
 export const FOREST_FAR_M = 6000
@@ -195,7 +195,7 @@ function updateForest(forest: Forest, camera: Camera, d: Drape, limit: number): 
 
 export function ForestLayer() {
   const { engine, frame } = useTerrainContext()
-  const tracks = useFilmTracks()
+  const tracks = useTracksByPoints(useFilmTracks())
   const enabled = useAppStore((s) => s.settings.forest.enabled)
   const density = useDeferredValue(useAppStore((s) => s.settings.forest.density))
   const exaggeration = useAppStore((s) => s.settings.exaggeration)

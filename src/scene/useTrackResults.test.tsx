@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Track } from '../core/types'
 import { buildTrack } from '../import/stats'
 import { mergeByTrack } from '../osm/byTrack'
-import { useTrackResults, type TrackResults } from './useTrackResults'
+import { useTrackResults, useTracksByPoints, type TrackResults } from './useTrackResults'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -140,5 +140,27 @@ describe('useTrackResults', () => {
     render({ enabled: false, tracks: [a, b] })
     expect(seen.current).toMatchObject({ results: {}, loading: false, failed: false })
     expect(fetch).toHaveBeenCalledTimes(4)
+  })
+})
+
+describe('useTracksByPoints', () => {
+  it('keeps the same array through a recolour or a rename, a new one when points or tracks change', () => {
+    const [a, b] = [track('A', 45), track('B', 45.1)]
+    const seen: (readonly Track[])[] = []
+    function Probe({ tracks }: { tracks: readonly Track[] }) {
+      seen.push(useTracksByPoints(tracks))
+      return null
+    }
+    root = createRoot(document.createElement('div'))
+    const render = (tracks: readonly Track[]) => act(() => root!.render(<Probe tracks={tracks} />))
+    const first = [a, b]
+    render(first)
+    render([{ ...a, color: '#000000', name: 'Autre' }, b])
+    expect(seen.at(-1)).toBe(first)
+    render([a])
+    expect(seen.at(-1)).toEqual([a])
+    const moved = { ...a, segments: [...a.segments] }
+    render([moved])
+    expect(seen.at(-1)).toEqual([moved])
   })
 })
