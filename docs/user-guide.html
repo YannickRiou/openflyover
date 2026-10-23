@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OpenFlyover user guide</title>
+<link rel="alternate" hreflang="en" href="user-guide.html">
+<link rel="alternate" hreflang="fr" href="user-guide.fr.html">
+<link rel="alternate" hreflang="es" href="user-guide.es.html">
+<link rel="alternate" hreflang="it" href="user-guide.it.html">
+<link rel="alternate" hreflang="de" href="user-guide.de.html">
 <meta name="description" content="How to use OpenFlyover: import a track, plan an outing, choose the look, edit the film on the timeline, export a video or a poster, and work offline.">
 <style>
 /* The project's bundled faces (public/fonts, SIL OFL), read from the repository when this page is opened from a clone; anything else falls back to the system faces. */
@@ -269,12 +274,17 @@ table.wide { min-width: 640px; }
 footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16px; font-size: var(--step--1); color: var(--ink-soft); }
 /* screenshots */
 .shot img { display: block; width: 100%; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+/* the guide in the other languages of the app */
+.langs { position: relative; display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--font-mono); font-size: var(--step--1); }
+.langs a { color: var(--ink-soft); }
+.langs a[aria-current] { color: var(--ink); font-weight: 700; text-decoration: none; }
 </style>
 </head>
 <body>
 <div class="page">
 
 <header class="masthead">
+  <nav class="langs" aria-label="Languages"><a href="user-guide.html" hreflang="en" lang="en" aria-current="page">English</a><a href="user-guide.fr.html" hreflang="fr" lang="fr">Français</a><a href="user-guide.es.html" hreflang="es" lang="es">Español</a><a href="user-guide.it.html" hreflang="it" lang="it">Italiano</a><a href="user-guide.de.html" hreflang="de" lang="de">Deutsch</a></nav>
   <p class="eyebrow">User guide · checked against the app on 15 October 2026</p>
   <h1>Make your first <em>flyover film</em></h1>
   <p class="lede">Everything you need to turn the track of an outing into a 3D film: importing, editing on the timeline, choosing the look, exporting a video or a poster, and working offline. No technical knowledge required.</p>

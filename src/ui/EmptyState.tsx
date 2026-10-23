@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useT } from '../i18n'
+import { useLanguage, useT } from '../i18n'
+import type { LanguageCode } from '../i18n'
 import { getPlatform, type ProjectEntry } from '../platform'
 import { useAppStore } from '../state/store'
 import { Icon, type IconName } from './icons'
@@ -31,8 +32,12 @@ const RECENT_COUNT = 3
 /** Titles of the newest « Nouveautés » named on the home screen. */
 const NEWS_TITLES = 3
 
-/** The user guide, published with the website (pages.yml), and the desktop installers of the latest release. */
-export const GUIDE_URL = 'https://yannickriou.github.io/openflyover/docs/user-guide.html'
+/** The user guide in `language`, published with the website (pages.yml): English at user-guide.html, the others at user-guide.<code>.html. */
+export function guideUrl(language: LanguageCode): string {
+  return `https://yannickriou.github.io/openflyover/docs/user-guide${language === 'en' ? '' : `.${language}`}.html`
+}
+
+/** The desktop installers of the latest release. */
 export const DOWNLOAD_URL = 'https://github.com/YannickRiou/openflyover/releases/latest'
 
 /** What the app promises, under the title. */
@@ -49,6 +54,7 @@ const POINTS: { icon: IconName; key: 'home.empty.pointFree' | 'home.empty.pointN
  */
 export function EmptyState() {
   const t = useT()
+  const language = useLanguage()
   const loading = useAppStore((s) => s.loading)
   // the list is read by the « Projet » tab, always mounted; the open entry (emptied of its tracks) is not offered
   const entries = useLibraryStore((s) => s.entries)
@@ -132,7 +138,7 @@ export function EmptyState() {
         )}
 
         <nav className="mt-3 flex flex-wrap justify-center gap-x-2" aria-label={t('home.empty.links')}>
-          <a className={FOOT_LINK} href={GUIDE_URL} target="_blank" rel="noreferrer" data-testid="home-guide">
+          <a className={FOOT_LINK} href={guideUrl(language)} target="_blank" rel="noreferrer" data-testid="home-guide">
             <Icon name="circle-help" size={14} />
             {t('home.empty.guide')}
           </a>
