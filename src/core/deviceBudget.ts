@@ -1,7 +1,8 @@
 /**
  * GPU and memory budget of the device, read once at start-up where the limits live (canvas pixel ratio, tile caches,
  * imagery texture size, preview clouds, export resolution). Phones and tablets (touch screen as the main pointer) get
- * lower limits; computers keep the values they always had, but a modest one (4 cores or 4 GB) previews lighter. iOS gives no per-tab WebGL budget and reloads a page that
+ * lower limits; computers keep the values they always had, but a modest one (integrated or software GPU, 4 cores or
+ * 4 GB) previews lighter. iOS gives no per-tab WebGL budget and reloads a page that
  * holds too many textures (WebKit bug 300782): the mobile values are conservative. See ARCHITECTURE.md "Device budget".
  */
 
@@ -96,6 +97,14 @@ export const LOW_MEMORY_GB = 2
 /** a computer with this many logical cores or GB of memory or fewer is modest (integrated GPU, 4–8 GB of RAM) */
 export const MODEST_CORES = 4
 export const MODEST_MEMORY_GB = 4
+/**
+ * WebGL renderers of a GPU without memory of its own: Intel's integrated graphics (« Iris Xe », « UHD »; not the Arc
+ * cards) and the software ones (no GPU at all). Under Chromium on Windows the name comes through ANGLE:
+ * « ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11) ».
+ */
+export function isModestGpu(renderer: string): boolean {
+  return (/\bintel\b/i.test(renderer) && !/\barc\b/i.test(renderer)) || /llvmpipe|softpipe|swiftshader|basic render/i.test(renderer)
+}
 
 /**
  * What a modest computer lowers: the preview only. The export sets its own pixel ratio (1) and cloud pass (full scale,
@@ -117,11 +126,14 @@ export interface DeviceTraits {
   memoryGb?: number
   /** `navigator.hardwareConcurrency` (logical cores), undefined where the browser does not tell */
   cores?: number
+  /** WebGL renderer (`readGpuRenderer`), undefined where WebGL is missing */
+  gpu?: string
 }
 
-export function budgetFor({ coarsePointer, shortSidePx, memoryGb, cores }: DeviceTraits): DeviceBudget {
+export function budgetFor({ coarsePointer, shortSidePx, memoryGb, cores, gpu }: DeviceTraits): DeviceBudget {
   if (!coarsePointer) {
-    const modest = (memoryGb !== undefined && memoryGb <= MODEST_MEMORY_GB) || (cores !== undefined && cores <= MODEST_CORES)
+    const modest =
+      (memoryGb !== undefined && memoryGb <= MODEST_MEMORY_GB) || (cores !== undefined && cores <= MODEST_CORES) || (gpu !== undefined && isModestGpu(gpu))
     return modest ? { ...DESKTOP_BUDGET, ...MODEST_DESKTOP_PREVIEW } : { ...DESKTOP_BUDGET }
   }
   const phone = shortSidePx < PHONE_MAX_SHORT_SIDE
@@ -168,6 +180,24 @@ export function readDeviceTraits(scope: object): DeviceTraits {
     memoryGb: s.navigator?.deviceMemory,
     // Node (the tests) tells its cores too: without a screen, a full computer as before
     cores: s.screen ? s.navigator?.hardwareConcurrency : undefined,
+    gpu: s.screen ? readGpuRenderer(scope) : undefined,
+  }
+}
+
+/** The WebGL renderer of `scope`'s GPU, from a throwaway context released at once (the 3D view is not created yet). */
+export function readGpuRenderer(scope: object): string | undefined {
+  try {
+    const { document: doc, WebGLRenderingContext: webgl } = scope as { document?: Document; WebGLRenderingContext?: unknown }
+    // no WebGL in this scope (jsdom in the tests): no throwaway canvas either
+    if (!webgl) return undefined
+    const gl = doc?.createElement('canvas').getContext('webgl')
+    if (!gl) return undefined
+    const ext = gl.getExtension('WEBGL_debug_renderer_info')
+    const renderer = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '')
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
+    return renderer
+  } catch {
+    return undefined
   }
 }
 

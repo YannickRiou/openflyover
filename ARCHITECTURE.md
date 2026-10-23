@@ -3911,10 +3911,12 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
 
 Read once (`deviceBudget()`), where each limit lives. Phone = touch screen as the main pointer (`(pointer: coarse)`)
 and short side < 600 CSS px; tablet = touch screen, larger; computer = everything else, values unchanged (tested).
-`navigator.deviceMemory` ≤ 2 GB (Chrome only) lowers a touch device further. A modest computer (`hardwareConcurrency`
-≤ 4 or `deviceMemory` ≤ 4, `MODEST_CORES` / `MODEST_MEMORY_GB`) lowers its preview only: pixel ratio 1.5 / 1 while
-playing, preview clouds 0.5, 16 still frames. The export sets its own pixel ratio (1) and cloud pass, so its films do
-not change; the other columns stay the computer's. A scope without a screen (Node, the tests) never reads as modest.
+`navigator.deviceMemory` ≤ 2 GB (Chrome only) lowers a touch device further. A modest computer (an Intel integrated or
+software GPU, `isModestGpu` on the WebGL renderer read from a throwaway context, `readGpuRenderer`; or
+`hardwareConcurrency` ≤ 4, or `deviceMemory` ≤ 4: `MODEST_CORES` / `MODEST_MEMORY_GB`) lowers its preview only: pixel
+ratio 1.5 / 1 while playing, preview clouds 0.5, 16 still frames. The export sets its own pixel ratio (1) and cloud
+pass, so its films do not change; the other columns stay the computer's. A scope without a screen (Node, the tests) or
+without WebGL (jsdom) never reads as modest. Verified in headless Chromium (SwiftShader): modest, values as above.
 
 | Limit | Where | Computer | Tablet | Phone | ≤ 2 GB |
 |---|---|---|---|---|---|
