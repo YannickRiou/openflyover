@@ -1195,6 +1195,13 @@ describe('styles with a structure', () => {
       expect(render({ ...bare, enabled: false }, 0.5).rects).toEqual([])
     })
 
+    it('closes the film with the sources above the bottom bar, not over its counters', () => {
+      const { texts } = render(cinema(), 1, { credits: ['Relief : © Mapterhorn', 'Imagerie : © IGN'] })
+      const sources = texts.filter((t) => t.text === 'SOURCES' || t.text.includes('Mapterhorn'))
+      expect(sources.length).toBeGreaterThan(1)
+      expect(sources.filter(inBottomBar)).toEqual([])
+    })
+
     it('puts the counters on one line in the middle of the bottom bar, widely spaced and separated by dots, not in the corners', () => {
       const { texts } = render(cinema(), 0.5)
       const line = texts.filter(inBottomBar)

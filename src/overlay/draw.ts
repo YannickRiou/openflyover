@@ -1554,7 +1554,8 @@ function drawEndSources(p: Painter, sources: readonly string[], opacity: number,
   const centre = left + (area ? area.w : size.width * (1 - 2 * SAFE_MARGIN)) / 2
   const blockH = (lines.length + 1) * lineH
   const half = Math.max(...lines.map((line) => measure(shadowed, line, style))) / 2
-  let bottom = size.height - 1.6 * u
+  // above the bottom bar or band of the style, which carries its own texts
+  let bottom = Math.min(size.height - 1.6 * u, area ? area.y + area.h : Infinity)
   // the nearest widget first: lifted above each one it overlaps
   for (const o of [...obstacles].sort((a, b) => b.y + b.h - (a.y + a.h))) {
     if (o.x < centre + half && o.x + o.w > centre - half && o.y < bottom && o.y + o.h > bottom - blockH) bottom = o.y - 0.8 * u
