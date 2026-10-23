@@ -1,0 +1,34 @@
+# Merging a release pull request (branch release/X.Y.Z, by hand or from release-pr.yml) tags the merge commit vX.Y.Z,
+# the version of its package.json, and starts desktop.yml on that tag: the installers and the GitHub release. A tag
+# pushed with the workflow token does not start desktop.yml by itself, hence the explicit run. Nothing when the tag
+# already exists (tagged by hand first).
+name: Release tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [master]
+
+permissions:
+  contents: write # pushes the tag
+  actions: write # starts desktop.yml
+
+jobs:
+  tag:
+    if: github.event.pull_request.merged && startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+      - run: |
+          version=$(node -p "require('./package.json').version")
+          if git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then echo "v$version already exists."; exit 0; fi
+          git -c user.name=YannickRiou -c user.email=59170639+YannickRiou@users.noreply.github.com \
+            tag -a "v$version" -m "OpenFlyover $version"
+          git push origin "v$version"
+          gh workflow run desktop.yml --ref "v$version"

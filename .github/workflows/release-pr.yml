@@ -1,0 +1,96 @@
+# A dependency update only reaches the users with new installers. When a push to master changes what the app ships (a
+# package of package-lock.json that is not dev-only, or a crate of src-tauri/Cargo.lock), this opens the pull request
+# release/X.Y.Z of the next patch version: version bumped where the release commits bump it, a CHANGELOG section, the
+# third-party licences regenerated (npm run notices).
+# Merging it tags and builds the installers (release-tag.yml). Nothing when a release pull request is already open (it
+# will carry this change too), nor for the release commit itself (only the app's own version changes in the lockfiles).
+# A manual run opens it whatever changed.
+# Needs Settings › Actions › General › « Allow GitHub Actions to create and approve pull requests ». A pull request
+# opened with the workflow token does not start the other workflows: the checks already ran on master.
+name: Release pull request
+
+on:
+  push:
+    branches: [master]
+    paths: [package-lock.json, src-tauri/Cargo.lock]
+  workflow_dispatch:
+
+concurrency:
+  group: release-pr
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  open:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - id: check
+        env:
+          BEFORE: ${{ github.event.before }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [ -n "$(gh pr list --state open --json headRefName --jq '.[] | select(.headRefName | startswith("release/"))')" ]; then
+            echo "A release pull request is already open."; echo "open=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ "$MANUAL" = true ]; then echo "open=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # name@version of what ships, the app itself left out
+          shipped() {
+            git show "$1:package-lock.json" | node -e '
+              const { packages } = JSON.parse(require("fs").readFileSync(0, "utf8"))
+              for (const [path, p] of Object.entries(packages)) if (path && !p.dev) console.log(`${path}@${p.version}`)'
+            git show "$1:src-tauri/Cargo.lock" | awk '/^name = /{n=$3} /^version = /{if (n != "\"openflyover\"") print n "@" $3}'
+          }
+          changed=$(diff <(shipped "$BEFORE" | sort) <(shipped HEAD | sort) | grep -c '^[<>]' || true)
+          echo "$changed shipped packages changed."
+          echo "open=$([ "$changed" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      # the third-party licences ship with the installers (crates.io answers cached between runs)
+      - if: steps.check.outputs.open == 'true'
+        uses: actions/cache@v4
+        with:
+          path: scripts/notices-cache.local
+          key: notices-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: notices-
+      - if: steps.check.outputs.open == 'true'
+        run: npm ci --ignore-scripts && npm run notices
+
+      - if: steps.check.outputs.open == 'true'
+        run: |
+          current=$(node -p "require('./package.json').version")
+          next=$(node -p "const v = '$current'.split('.'); v[2]++; v.join('.')")
+          npm version "$next" --no-git-tag-version --ignore-scripts
+          sed -i "s/^version = \"$current\"/version = \"$next\"/" src-tauri/Cargo.toml
+          sed -i "/^name = \"openflyover\"$/{n;s/^version = \".*\"/version = \"$next\"/}" src-tauri/Cargo.lock
+          sed -i "0,/\"version\": \"$current\"/s//\"version\": \"$next\"/" src-tauri/tauri.conf.json
+          # the « Unreleased » section becomes the version's, with a line for the dependencies
+          NEXT="$next" CURRENT="$current" MONTH="$(LC_ALL=C date -u '+%B %Y')" node -e '
+            const fs = require("fs")
+            const { NEXT, CURRENT, MONTH } = process.env
+            const line = `- **Dependencies of the app updated**, security fixes included: the list is in the commits since ${CURRENT}.`
+            let s = fs.readFileSync("CHANGELOG.md", "utf8")
+            const heading = `## ${NEXT} (${MONTH})`
+            s = s.includes("## Unreleased\n\n")
+              ? s.replace("## Unreleased\n\n", `${heading}\n\n${line}\n`)
+              : s.replace(/\n## /, `\n${heading}\n\n${line}\n\n## `)
+            fs.writeFileSync("CHANGELOG.md", s)'
+          git checkout -B "release/$next"
+          git -c user.name=YannickRiou -c user.email=59170639+YannickRiou@users.noreply.github.com \
+            commit -qam "chore(release): $next"
+          git push --force origin "release/$next"
+          changes=$(git log "v$current..HEAD~1" --format='- %s' -- package-lock.json src-tauri/Cargo.lock)
+          gh pr create --base master --head "release/$next" --title "chore(release): $next" --body "$(printf '%s\n\n%s\n\n%s\n' \
+            "Patch release for the dependencies the app ships, opened by release-pr.yml. Merging it tags v$next and builds the installers (release-tag.yml, then desktop.yml); the update reaches the installed apps through « Rechercher une mise à jour »." \
+            "Changes to the shipped dependencies since v$current:" "$changes")"
