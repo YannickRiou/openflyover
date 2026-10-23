@@ -1,4 +1,4 @@
-import { Suspense, lazy, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { VIDEO_ASPECTS } from '../export/schedule'
 import { isExportBusy, useExportStore } from '../export/store'
@@ -35,6 +35,13 @@ export function Stage({ children }: { children?: ReactNode }) {
   const aspectId = useAppStore((s) => s.settings.video.aspect)
   const safeZones = useSafeZonesStore((s) => s.visible)
   const hasTracks = useAppStore((s) => s.tracks.length > 0)
+  // the 3D view and its WebGL context (on the high-performance GPU) are created with the first track, then kept: the
+  // home screen keeps the GPU asleep. Its code still loads at once, so the first track does not wait for it.
+  const [viewStarted, setViewStarted] = useState(hasTracks)
+  if (hasTracks && !viewStarted) setViewStarted(true)
+  useEffect(() => {
+    void import('../scene/FlyoverCanvas')
+  }, [])
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const viewport = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
@@ -60,9 +67,11 @@ export function Stage({ children }: { children?: ReactNode }) {
     >
       {/* `data-stage`: what the thumbnail looks for; its canvases and overlays fill it (`stage-frame`) */}
       <div className="stage-frame" data-stage="" style={rect ?? undefined}>
-        <Suspense>
-          <FlyoverCanvas />
-        </Suspense>
+        {viewStarted && (
+          <Suspense>
+            <FlyoverCanvas />
+          </Suspense>
+        )}
         <Suspense>
           <OverlayCanvas />
         </Suspense>

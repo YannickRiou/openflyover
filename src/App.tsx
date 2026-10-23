@@ -337,6 +337,14 @@ export default function App() {
   // a project emptied of its tracks is not written over the kept one (it waits for a track)
   useEffect(() => installLibraryAutosave(() => !isExporting() && useAppStore.getState().tracks.length > 0), [])
   useEffect(() => installCloseGuard(isExporting, saveProject), [])
+  // a hidden page draws no frame: the film pauses, and its music and video clips with it (an export goes on hidden)
+  useEffect(() => {
+    const pause = () => {
+      if (document.hidden && !isExporting() && useAppStore.getState().playback.playing) useAppStore.getState().setPlaying(false)
+    }
+    document.addEventListener('visibilitychange', pause)
+    return () => document.removeEventListener('visibilitychange', pause)
+  }, [])
 
   /** a pointer button is down */
   const pressed = useRef(false)
