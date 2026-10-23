@@ -3,9 +3,10 @@
  * points addressed by one running index over every segment) that returns the **same array** when it has nothing to do:
  * the dialog and the store tell « no change, no history entry » by `next === segments`.
  */
-import type { Flight, StatsOverride, Track, TrackPoint, TrackSegment } from '../../core/types'
+import type { Flight, StatsOverride, Track, TrackPoint, TrackSegment, Waypoint } from '../../core/types'
+import { haversineM } from '../../geo/lonLat'
 import { computeBounds, computeStats } from '../stats'
-import type { DistanceMap } from './distanceMap'
+import { cumulativeOf, type DistanceMap } from './distanceMap'
 
 export type Segments = TrackSegment[]
 
@@ -70,11 +71,31 @@ function movedFlights(flights: readonly Flight[], distances: DistanceMap): Fligh
   })
 }
 
+/** A GPX waypoint this close to the track was set on it: it goes with a removed stretch; farther (a summit in view), it stays. */
+const WAYPOINT_ON_TRACK_M = 200
+
+/** `waypoints` but those set on a stretch the tool removed: their nearest old point, within `WAYPOINT_ON_TRACK_M`, is on it. */
+function keptWaypoints(waypoints: Waypoint[], before: Segments, distances: DistanceMap): Waypoint[] {
+  const points = before.flatMap((s) => s.points)
+  const dist = cumulativeOf(before)
+  const kept = waypoints.filter((w) => {
+    let nearest = -1
+    let nearestM = WAYPOINT_ON_TRACK_M
+    points.forEach((p, i) => {
+      const m = haversineM(w, p)
+      if (m <= nearestM) [nearest, nearestM] = [i, m]
+    })
+    return nearest < 0 || !distances.removed(dist[nearest])
+  })
+  return kept.length === waypoints.length ? waypoints : kept
+}
+
 /**
  * `track` over new segments: statistics and bounds recomputed. The figures corrected by hand that `tool` makes wrong are
  * dropped (`invalidatedFigures`). With `distances` (old distance → new distance of the same place) the stretches flown
  * (`flights`, metres along the track) move with it; `elevationFilled` is indexed on the old points: dropped. A time shift
- * moves nothing: both stay. Returns `track` itself when `segments` is its own (the tool had nothing to do).
+ * moves nothing: both stay. The GPX waypoints set on a removed stretch go with it. Returns `track` itself when
+ * `segments` is its own (the tool had nothing to do).
  */
 export function withSegments(track: Track, segments: Segments, tool: ToolId, distances?: DistanceMap): Track {
   if (segments === track.segments) return track
@@ -86,6 +107,11 @@ export function withSegments(track: Track, segments: Segments, tool: ToolId, dis
     delete out.flights
     const flights = track.flights && distances ? movedFlights(track.flights, distances) : []
     if (flights.length > 0) out.flights = flights
+  }
+  if (track.waypoints && distances) {
+    const waypoints = keptWaypoints(track.waypoints, track.segments, distances)
+    if (waypoints.length > 0) out.waypoints = waypoints
+    else delete out.waypoints
   }
   const dropped = invalidatedFigures(track, tool)
   if (dropped.length > 0) {

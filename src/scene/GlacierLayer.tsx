@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BufferAttribute, BufferGeometry, Mesh, Vector3 } from 'three'
-import type { LocalFrame, TerrainEngine } from '../core/types'
+import type { LocalFrame, TerrainEngine, Track } from '../core/types'
 import { registerDrapeFlush } from '../export/store'
 import { fetchTrackGlacier, type GlacierPolygon } from '../osm/glacier'
 import { useGlacierStore } from '../osm/store'
@@ -111,9 +111,12 @@ export function GlacierLayer() {
   // …nor in a « Bilan »: its track is the whole year, too wide for one query
   const enabled = useAppStore((s) => s.settings.snow.mode !== 'aucune' && !playsBilan(s.settings.race, s.tracks.length))
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
-  /** glaciers of the track they were fetched for (shown only for the current first track, snow not « Aucune ») */
-  const [fetched, setFetched] = useState<{ trackId: string; polygons: GlacierPolygon[] } | null>(null)
-  const polygons = useMemo(() => (enabled && fetched && fetched.trackId === track?.id ? fetched.polygons : NONE), [enabled, fetched, track])
+  /** glaciers of the track and points they were fetched for (shown only for the current first track, snow not « Aucune »; a track tool changes the points) */
+  const [fetched, setFetched] = useState<{ trackId: string; segments: Track['segments']; polygons: GlacierPolygon[] } | null>(null)
+  const polygons = useMemo(
+    () => (enabled && fetched && fetched.trackId === track?.id && fetched.segments === track.segments ? fetched.polygons : NONE),
+    [enabled, fetched, track],
+  )
   const mesh = useMemo(() => {
     const m = new Mesh(new BufferGeometry(), createGlacierMaterial())
     m.name = 'glacier'
@@ -141,12 +144,12 @@ export function GlacierLayer() {
     // not aborted on cleanup: the query is shared and cached (StrictMode runs this effect twice), only its answer is
     // ignored once stale
     let current = true
-    const trackId = track.id
+    const { id: trackId, segments } = track
     setGlacierStatus('loading')
     fetchTrackGlacier(track).then(
       (list) => {
         if (!current) return
-        setFetched({ trackId, polygons: list })
+        setFetched({ trackId, segments, polygons: list })
         setGlacierStatus('ready')
       },
       () => current && setGlacierStatus('error'),
