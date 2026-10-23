@@ -2,8 +2,9 @@
 # package of package-lock.json that is not dev-only, or a crate compiled into the app), this opens the pull request
 # release/X.Y.Z of the next patch version: version bumped where the release commits bump it, a CHANGELOG section, the
 # third-party licences regenerated (npm run notices).
-# Merging it tags and builds the installers (release-tag.yml). Nothing when a release pull request is already open (it
-# will carry this change too), nor for the release commit itself (only the app's own version changes in the lockfiles).
+# Merging it tags and builds the installers (release-tag.yml). A release pull request already open is made again from
+# master (unless it carries commits of its own), nothing for the release commit itself (only the app's own version
+# changes in the lockfiles).
 # A manual run opens it whatever changed.
 # Needs Settings › Actions › General › « Allow GitHub Actions to create and approve pull requests ». A pull request
 # opened with the workflow token does not start the other workflows: the checks already ran on master.
@@ -43,8 +44,16 @@ jobs:
           BEFORE: ${{ github.event.before }}
           MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          if [ -n "$(gh pr list --state open --json headRefName --jq '.[] | select(.headRefName | startswith("release/"))')" ]; then
-            echo "A release pull request is already open."; echo "open=false" >> "$GITHUB_OUTPUT"; exit 0
+          # an open release pull request is made again from master (its licences would miss the new versions), unless
+          # it carries more than its own commit; compared with the master it was made from
+          branch=$(gh pr list --state open --json headRefName --jq '.[] | select(.headRefName | startswith("release/")) | .headRefName')
+          if [ -n "$branch" ]; then
+            git fetch -q origin "$branch"
+            if [ "$(git rev-list --count HEAD..FETCH_HEAD)" != 1 ] || ! git log -1 --format=%s FETCH_HEAD | grep -q '^chore(release): '; then
+              echo "$branch has commits of its own: left as it is."; echo "open=false" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            echo "refresh=true" >> "$GITHUB_OUTPUT"
+            BEFORE=$(git rev-parse FETCH_HEAD~1)
           fi
           if [ "$MANUAL" = true ]; then echo "open=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           # name and version of what ships, the app itself left out: npm packages that are not dev-only, crates compiled
@@ -73,6 +82,8 @@ jobs:
         run: npm ci --ignore-scripts && npm run notices
 
       - if: steps.check.outputs.open == 'true'
+        env:
+          REFRESH: ${{ steps.check.outputs.refresh }}
         run: |
           current=$(node -p "require('./package.json').version")
           next=$(node -p "const v = '$current'.split('.'); v[2]++; v.join('.')")
@@ -96,6 +107,8 @@ jobs:
             commit -qam "chore(release): $next"
           git push --force origin "release/$next"
           changes=$(git log "v$current..HEAD~1" --format='- %s' -- package-lock.json src-tauri/Cargo.lock)
-          gh pr create --base master --head "release/$next" --title "chore(release): $next" --body "$(printf '%s\n\n%s\n\n%s\n' \
+          body=$(printf '%s\n\n%s\n\n%s\n' \
             "Patch release for the dependencies the app ships, opened by release-pr.yml. Merging it tags v$next and builds the installers (release-tag.yml, then desktop.yml); the update reaches the installed apps through « Rechercher une mise à jour »." \
-            "Changes to the shipped dependencies since v$current:" "$changes")"
+            "Changes to the shipped dependencies since v$current:" "$changes")
+          if [ "$REFRESH" = true ]; then gh pr edit "release/$next" --body "$body"
+          else gh pr create --base master --head "release/$next" --title "chore(release): $next" --body "$body"; fi
