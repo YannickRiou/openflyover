@@ -3,7 +3,8 @@
  * (`import/tools/*`); here the result replaces the track in the store (same path as « Calculer l'altitude »: the stats,
  * the weather and the layers follow the new points), what the film anchors in metres follows the places it was set on
  * (`remapFilm`), and the message carries « Annuler », which puts the track and the film back (tracks are not in the
- * settings history; same as « Enchaîner »).
+ * settings history; same as « Enchaîner »). Both clear the settings history: its steps hold the film in metres of the
+ * points they were recorded on, and Ctrl+Z would put the stops back at the old places on the new points.
  */
 import { errorMessage } from '../core/errors'
 import type { Track } from '../core/types'
@@ -81,6 +82,7 @@ export function applyTrackTool(track: Track, segments: Segments, tool: ToolId, t
     )
     setFilmQuietly(filmAfter)
   }
+  getSettingsHistory().clear()
 
   const undo = () => {
     const state = useAppStore.getState()
@@ -89,6 +91,7 @@ export function applyTrackTool(track: Track, segments: Segments, tool: ToolId, t
     if (!current || current.segments !== next.segments) return
     state.replaceTracks(state.tracks.map((other) => (other === current ? { ...track, color: current.color, name: current.name } : other)))
     if (filmAfter !== filmBefore && useAppStore.getState().settings.film === filmAfter) setFilmQuietly(filmBefore)
+    getSettingsHistory().clear()
   }
   const applied: AppliedTool = { tool: toolName, segments: next.segments, dropped: remapped.dropped, undo }
   showUntilTracksChange({ kind: 'success', text: appliedText(applied, next.name), action: { label: t('common.undo'), run: undo } })
