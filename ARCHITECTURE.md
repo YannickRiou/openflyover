@@ -113,14 +113,24 @@ full customization through a single project document, WebCodecs video export, Ta
   Windows it is installed with fnm: run `fnm use 24` (or prepend the fnm installation folder of Node 24 to PATH) before `npm`.
 - Scripts (`package.json`): `npm run dev` (port 5173), `npm run build` (`tsc -b`, then Vite), `npm run preview`, `npm test` (vitest run; `npx vitest run --maxWorkers=1` on a busy machine), `npm run coverage` (same with coverage), `npm run typecheck` (`tsc --noEmit -p tsconfig.app.json`), `npm run lint` (oxlint), `npm run e2e`, `npm run tauri:dev` / `tauri:build`, `npm run notices` (regenerates `THIRD_PARTY_NOTICES.md` and the installers' licence pages), `npm run installer-assets` (installer images).
 - `npm run e2e` (`e2e/run.mjs`): starts its own Vite server and drives the app in a headless Chromium (puppeteer-core, software GPU) through 21 scenarios run one after the other in the same page (`accueil`, `onglets`, `langue`, `diagnostic`, `couleur`, `reglage-repli`, `poids-de-rendu`, `qualite-export`, `image-cle`, `timeline`, `inspecteur`, `menus`, `heure`, `cartes`, `cles-etiquettes`, `reperes`, `region`, `projet`, `export`, `historique`, `mobile`); any console or page error that is not network noise fails the scenario. Environment: `OPENFLYOVER_CHROME` (Chromium / Chrome executable), `OPENFLYOVER_E2E_SKIP_EXPORT=1` (skips `export`, the slowest, which needs the tile servers), `OPENFLYOVER_E2E_ONLY=a,b` (only those scenario ids). The scenarios read the French interface; they find controls by role, label or `data-testid`, never by styling class.
-- CI (`.github/workflows/`): `ci.yml` (pull requests and master: `lint`, `test`, `build` in parallel, `rust` only when `src-tauri/` or the workflow changed, `badge` on master for the README coverage badge), `pages.yml` (website on GitHub Pages), `desktop.yml` (installers; a `v*` tag also publishes a release, see "Desktop application"). No end-to-end tests in CI.
+- CI (`.github/workflows/`): `ci.yml` (pull requests and master: `lint` (with the user guides check), `test`, `build`
+  (with the first-screen size budget), `types-os` (`tsc -b` on Windows and macOS, whose file systems ignore casing),
+  `rust` only when `src-tauri/` or the workflow changed, `badge` on master for the README coverage badge),
+  `security.yml` (CodeQL for TypeScript and the workflows, `cargo audit`, Dependency Review on pull requests),
+  `export-regression.yml` (pull requests touching the app: the same short film exported from the base and from the
+  pull request, frame hashes compared; the label `film-change` accepts a change on purpose), `e2e.yml` (the end-to-end
+  scenarios every night), `links.yml` (dead links of the documentation every week), `pages.yml` (website on GitHub
+  Pages), `desktop.yml` (installers; a `v*` tag also publishes a release, see "Desktop application").
 
 ## Loading (bundle splitting)
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
-about 1.5 MB, 475 kB gzip over 20 files (the app 328 kB, `primitives` 290 kB, React 219 kB, the React Aria code they share in chunks of their own), instead of a single 3.1 MB file, 930 kB gzip.
+2.5 MB, 756 kB gzip over 21 files in 4.2.1, stylesheet included (the five languages 812 kB, the app 434 kB, `primitives`
+291 kB, React 219 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 790 kB
+gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it.
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
-`scene/perfProbe.ts` (a plain module the scene fills when its canvas is created), and the build prints no chunk-size warning.
+`scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). The language catalogs (812 kB) make
+the build print a chunk-size warning; loading only the language in use is a known lead.
 The rest arrives through dynamic `import()` calls, each in its own file:
 
 - right after the first paint: the 3D scene (`FlyoverCanvas`, three.js + fiber, `React.lazy` in `Stage`) and the
