@@ -3910,13 +3910,20 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
 ### Device budget (`src/core/deviceBudget.ts`)
 
 Read once (`deviceBudget()`), where each limit lives. Phone = touch screen as the main pointer (`(pointer: coarse)`)
-and short side < 600 CSS px; tablet = touch screen, larger; computer = everything else, values unchanged (tested).
-`navigator.deviceMemory` ≤ 2 GB (Chrome only) lowers a touch device further. A modest computer (an Intel integrated or
-software GPU, `isModestGpu` on the WebGL renderer read from a throwaway context, `readGpuRenderer`; or
-`hardwareConcurrency` ≤ 4, or `deviceMemory` ≤ 4: `MODEST_CORES` / `MODEST_MEMORY_GB`) lowers its preview only: pixel
-ratio 1.5 / 1 while playing, preview clouds 0.5, 16 still frames. The export sets its own pixel ratio (1) and cloud
-pass, so its films do not change; the other columns stay the computer's. A scope without a screen (Node, the tests) or
-without WebGL (jsdom) never reads as modest. Verified in headless Chromium (SwiftShader): modest, values as above.
+and short side < 600 CSS px; tablet = touch screen, larger; computer = everything else, values strictly unchanged
+(tested). `navigator.deviceMemory` ≤ 2 GB (Chrome only) lowers a touch device further.
+
+« Qualité de l'aperçu » (Réglages, `scene/previewQuality.ts`, a device preference: `Preferences.previewQuality`) lowers
+the preview of any device, by what it does and not by its hardware: « Auto » (default) measures the frame times while
+the film plays (`createSlowPreviewDetector`: median over 2 s of playback, a gap over 1 s restarts the count) and, under
+30 frames per second, keeps the preview light for the session; « Légère » forces it, « Complète » never lightens.
+Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
+0.5, 16 still frames. The export sets its own pixel ratio (1) and cloud pass: films do not change. The pixel ratio goes
+through the `dpr` of <Canvas> (`FlyoverCanvas`): R3F sets it back on each render of the canvas (`configure`, after the
+children's effects), so a `setDpr` from a child does not hold — that also fixed a phone that kept 1.5 while playing
+once a track arrived. The diagnostic report shows the preview values in use (`budget.*`). Verified in headless
+Chromium (SwiftShader, DPR 2): « Complète » 2 while playing; « Légère » 1.5, 1 while playing, 1.5 again on pause;
+« Auto » 2, then 1 once about 3 s of slow playback were measured (not every run: the sample may still be loading).
 
 | Limit | Where | Computer | Tablet | Phone | ≤ 2 GB |
 |---|---|---|---|---|---|

@@ -3,12 +3,12 @@ import { DEFAULT_VIDEO_SETTINGS, exportLodHeight, exportResolutionNote, videoSiz
 import { CLOUD_SETTLE_FRAMES } from '../scene/renderOnDemand'
 import { DEFAULT_TUNING } from '../terrain/engine'
 import { DEFAULT_CLOUDS } from '../weather/sceneClouds'
-import { DESKTOP_BUDGET, budgetFor, canvasAntialias, deviceBudget, isModestGpu, readDeviceTraits, readGpuRenderer } from './deviceBudget'
+import { DESKTOP_BUDGET, budgetFor, canvasAntialias, deviceBudget, readDeviceTraits } from './deviceBudget'
 
-const scope = (coarse: boolean, width: number, height: number, deviceMemory?: number, hardwareConcurrency?: number) => ({
+const scope = (coarse: boolean, width: number, height: number, deviceMemory?: number) => ({
   matchMedia: (query: string) => ({ matches: coarse && query === '(pointer: coarse)' }),
   screen: { width, height },
-  navigator: { deviceMemory, hardwareConcurrency },
+  navigator: { deviceMemory },
 })
 
 describe('budgetFor', () => {
@@ -34,19 +34,8 @@ describe('budgetFor', () => {
       shadowMapSize: 4096,
       maxTrees: 250_000,
     })
-    expect(budgetFor({ coarsePointer: false, shortSidePx: 1080, memoryGb: 8, cores: 8 })).toEqual(DESKTOP_BUDGET)
-  })
-
-  it('a modest computer (4 cores or 4 GB) lowers its preview only, nothing the export uses', () => {
-    const preview = { maxPixelRatio: 1.5, movingPixelRatio: 1, cloudResolutionScale: 0.5, cloudSettleFrames: 16 }
-    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 4 })).toEqual({ ...DESKTOP_BUDGET, ...preview })
-    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, cores: 4 })).toEqual({ ...DESKTOP_BUDGET, ...preview })
-    // an i7 laptop with 16 threads and 16 GB, but Intel graphics only
-    const irisXe = 'ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x0000A7A0) Direct3D11 vs_5_0 ps_5_0, D3D11)'
-    expect(budgetFor({ coarsePointer: false, shortSidePx: 1080, memoryGb: 8, cores: 16, gpu: irisXe })).toEqual({ ...DESKTOP_BUDGET, ...preview })
-    expect(budgetFor({ coarsePointer: false, shortSidePx: 1080, memoryGb: 8, cores: 16, gpu: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)' })).toEqual(DESKTOP_BUDGET)
-    // still a computer: the tablet's limits do not apply, even with 2 GB
-    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 2 })).toMatchObject({ kind: 'desktop', shadowMapSize: 4096, tileBitmaps: 600 })
+    // a laptop with little memory is still a computer
+    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 2 })).toEqual(DESKTOP_BUDGET)
   })
 
   it('lowers the limits of a phone', () => {
@@ -106,47 +95,15 @@ describe('canvasAntialias', () => {
   })
 })
 
-describe('isModestGpu', () => {
-  it('Intel integrated graphics and software rendering, not the Arc cards nor the other GPUs', () => {
-    expect(isModestGpu('Mesa Intel(R) UHD Graphics 620 (KBL GT2)')).toBe(true)
-    expect(isModestGpu('Intel(R) Iris(TM) Plus Graphics 655')).toBe(true)
-    expect(isModestGpu('llvmpipe (LLVM 15.0.7, 256 bits)')).toBe(true)
-    expect(isModestGpu('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)')).toBe(true)
-    expect(isModestGpu('ANGLE (Intel, Intel(R) Arc(TM) A770 Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)')).toBe(false)
-    expect(isModestGpu('ANGLE (AMD, AMD Radeon RX 6700 XT Direct3D11 vs_5_0 ps_5_0, D3D11)')).toBe(false)
-    expect(isModestGpu('Apple M2')).toBe(false)
-  })
-})
-
 describe('readDeviceTraits', () => {
   it('reads the pointer, the screen and the memory', () => {
-    expect(readDeviceTraits(scope(true, 390, 844, 4, 6))).toEqual({ coarsePointer: true, shortSidePx: 390, memoryGb: 4, cores: 6 })
-    expect(budgetFor(readDeviceTraits(scope(false, 1366, 768, undefined, 4))).movingPixelRatio).toBe(1)
+    expect(readDeviceTraits(scope(true, 390, 844, 4))).toEqual({ coarsePointer: true, shortSidePx: 390, memoryGb: 4 })
     expect(budgetFor(readDeviceTraits(scope(true, 1024, 1366))).kind).toBe('tablet')
     expect(budgetFor(readDeviceTraits(scope(false, 1920, 1080))).kind).toBe('desktop')
   })
 
-  it('reads the GPU from a throwaway WebGL context, and releases it', () => {
-    let lost = false
-    const gl = {
-      RENDERER: 1,
-      getExtension: (name: string) =>
-        name === 'WEBGL_debug_renderer_info' ? { UNMASKED_RENDERER_WEBGL: 2 } : { loseContext: () => (lost = true) },
-      getParameter: (p: number) => (p === 2 ? 'Mesa Intel(R) UHD Graphics 620' : 'WebKit WebGL'),
-    }
-    const document = { createElement: () => ({ getContext: () => gl }) }
-    expect(readGpuRenderer({ document, WebGLRenderingContext: class {} })).toBe('Mesa Intel(R) UHD Graphics 620')
-    expect(lost).toBe(true)
-    expect(budgetFor(readDeviceTraits({ ...scope(false, 1920, 1080, 8, 16), document, WebGLRenderingContext: class {} })).movingPixelRatio).toBe(1)
-    // no WebGL (jsdom has none): nothing said, a full computer
-    expect(readGpuRenderer({ document })).toBeUndefined()
-    expect(readGpuRenderer({ document: { createElement: () => ({ getContext: () => null }) }, WebGLRenderingContext: class {} })).toBeUndefined()
-  })
-
   it('a scope without a screen is a computer', () => {
     expect(budgetFor(readDeviceTraits({})).kind).toBe('desktop')
-    // Node tells its cores: the tests keep the full computer's values on a 4-core runner
-    expect(budgetFor(readDeviceTraits({ navigator: { hardwareConcurrency: 2 } }))).toEqual(DESKTOP_BUDGET)
   })
 })
 

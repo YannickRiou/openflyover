@@ -300,6 +300,7 @@ describe('parsePreferences', () => {
       appearance: DEFAULT_PREFERENCES.appearance,
       language: 'fr',
       whatsNewSeen: '',
+      previewQuality: 'auto',
     })
     // preferences saved before the « Forêts » chip existed show it
     expect(parsePreferences('{"status":{"weather":false,"water":true}}').status).toEqual({ ...DEFAULT_PREFERENCES.status, weather: false })
@@ -310,6 +311,8 @@ describe('parsePreferences', () => {
     expect(parsePreferences('{"timelineSnap":{"ruler":false,"blocks":"non","x":false}}').timelineSnap).toEqual({ playhead: true, blocks: true, ruler: false, marks: true })
     expect(parsePreferences('{"timelineFrames":true}').timelineFrames).toBe(true)
     expect(parsePreferences('{"timelineFrames":1}').timelineFrames).toBe(false)
+    expect(parsePreferences('{"previewQuality":"light"}').previewQuality).toBe('light')
+    expect(parsePreferences('{"previewQuality":"ultra"}').previewQuality).toBe('auto')
   })
 
   it('reads the appearance, the defaults for preferences stored before it existed', () => {
