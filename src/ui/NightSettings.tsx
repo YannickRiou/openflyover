@@ -1,7 +1,7 @@
 /**
  * « Jours et nuits » (Lumière tab): the nights of a multi-day track shown as pauses of the flight (a switch; dusk, night
- * and dawn seconds, `film.nights`), and the cards of the days (`film.dayCards`: which figures, title, place, size, how
- * long, and a high view of the day during the night before it; also in the inspector of a day card block,
+ * and dawn seconds, `film.nights`), and the cards of the days (`film.dayCards`: which figures, title, place, size, colours
+ * and fonts, how long, and a high view of the day during the night before it; also in the inspector of a day card block,
  * `DayCardFields`). « À la suite »: the stages are the days; the seconds stay here (the « Nuit » junctions use them,
  * the transitions that pass a night use them), the stage cards replace the day cards, and the transitions set the night
  * and the high view of the stage (Trace › Plusieurs traces).
@@ -13,10 +13,12 @@ import { DAY_CARD_DURATION_RANGE, DAY_CARD_FIELD_LABELS, DAY_CARD_FIELDS, DEFAUL
 import type { FilmDayCards, FilmNights } from '../film/model'
 import { nightPauseS } from '../flyover/nights'
 import { trackPathOf } from '../flyover/path'
+import { mergeOverrides } from '../overlay/settings'
 import { editFilm, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { useAppStore } from '../state/store'
 import { AnchorPicker } from './AnchorPicker'
 import { formatSecondsShort } from './format'
-import { SizeField } from './OverlayPanel'
+import { SizeField, StyleOverrides } from './OverlayPanel'
 import { PanelSection, RangeField, SettingRow } from './PanelSection'
 import { Chip, Switch, TextField } from './primitives'
 
@@ -89,6 +91,7 @@ export function DayCardFields() {
   const id = useId()
   const { film } = useFilmSource()
   const cards = film.dayCards ?? DEFAULT_DAY_CARDS
+  const overlay = useAppStore((s) => s.settings.overlay)
   const setCards = (patch: Partial<FilmDayCards>, step = true) =>
     editFilm((f) => ({ film: { ...f, dayCards: { ...(f.dayCards ?? DEFAULT_DAY_CARDS), ...patch } } }), { step })
   return (
@@ -112,6 +115,7 @@ export function DayCardFields() {
       <p className="type-hint">{tr('light.days.titleHint')}</p>
       <AnchorPicker label={tr('overlay.position')} value={cards.anchor} onChange={(anchor) => setCards({ anchor })} />
       <SizeField value={cards.size} onChange={(size) => setCards({ size }, false)} />
+      <StyleOverrides overlay={overlay} own={cards.overrides ?? {}} onChange={(patch) => setCards({ overrides: mergeOverrides(cards.overrides, patch) }, false)} />
       <SettingRow label={tr('light.days.duration')} value={formatSecondsShort(cards.durationS)} paths={['film.dayCards']}>
         <RangeField
           label={tr('light.days.duration')}
