@@ -217,9 +217,17 @@ describe('syncTrackLineSets', () => {
     expect(group.children).toHaveLength(2)
 
     // same track objects: nothing is rebuilt
-    syncTrackLineSets(group, sets, [a, b], frame, 800, 600)
+    expect(syncTrackLineSets(group, sets, [a, b], frame, 800, 600)).toEqual([])
     expect(sets.get('a')).toBe(setA)
     expect(sets.get('b')).toBe(setB)
+
+    // recoloured or renamed (a new object, the same points): kept, its colour read by the next exposure
+    const recoloured = { ...a, color: '#0000ff', name: 'Autre' }
+    expect(syncTrackLineSets(group, sets, [recoloured, b], frame, 800, 600)).toEqual([])
+    expect(sets.get('a')).toBe(setA)
+    expect(setA.track).toBe(recoloured)
+    applyExposure([setA], 1)
+    expect(setA.solidMaterial.color.getHexString()).toBe('0000ff')
 
     // a replaced by a new object with the same id, b removed
     const geometryDispose = vi.spyOn(setA.segments[0].geometry, 'dispose')
@@ -227,7 +235,7 @@ describe('syncTrackLineSets', () => {
     const glowDispose = vi.spyOn(setA.glowMaterial, 'dispose')
     const bGeometryDispose = vi.spyOn(setB.segments[0].geometry, 'dispose')
     const a2 = makeTrack('a', [segmentA], '#00ff00')
-    syncTrackLineSets(group, sets, [a2], frame, 800, 600)
+    expect(syncTrackLineSets(group, sets, [a2], frame, 800, 600)).toEqual([sets.get('a')])
 
     expect(geometryDispose).toHaveBeenCalledTimes(1)
     expect(solidDispose).toHaveBeenCalledTimes(1)

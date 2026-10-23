@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Track } from '../core/types'
 import { buildTrack } from '../import/stats'
 import { mergeByTrack } from '../osm/byTrack'
-import { useTrackResults, type TrackResults } from './useTrackResults'
+import { useTrackResults, useTracksByPoints, type TrackResults } from './useTrackResults'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -27,7 +27,7 @@ afterEach(() => {
   root = null
 })
 
-function mount(initial: { enabled: boolean; tracks: readonly Track[] }, fetch: (t: Track, onStart: () => void) => Promise<{ id: string }[]>) {
+function mount(initial: { enabled: boolean; tracks: readonly Track[] }, fetch: (t: Track, onStart: () => void, signal: AbortSignal) => Promise<{ id: string }[]>) {
   const seen: { current: TrackResults<{ id: string }[]> | null } = { current: null }
   function Probe({ enabled, tracks }: { enabled: boolean; tracks: readonly Track[] }) {
     seen.current = useTrackResults(enabled, tracks, fetch)
@@ -40,6 +40,26 @@ function mount(initial: { enabled: boolean; tracks: readonly Track[] }, fetch: (
 }
 
 describe('useTrackResults', () => {
+  it('gives up the request of a track removed, of a layer switched off and of a layer gone', () => {
+    const [a, b] = [track('A', 45), track('B', 45.1)]
+    const signals = new Map<string, AbortSignal>()
+    const { render } = mount({ enabled: true, tracks: [a, b] }, (t, _onStart, signal) => {
+      signals.set(t.id, signal)
+      return new Promise(() => {})
+    })
+    render({ enabled: true, tracks: [a] })
+    expect(signals.get(b.id)!.aborted).toBe(true)
+    expect(signals.get(a.id)!.aborted).toBe(false)
+    render({ enabled: false, tracks: [a] })
+    expect(signals.get(a.id)!.aborted).toBe(true)
+    render({ enabled: true, tracks: [a] })
+    const again = signals.get(a.id)!
+    expect(again.aborted).toBe(false)
+    act(() => root!.unmount())
+    root = null
+    expect(again.aborted).toBe(true)
+  })
+
   it('asks once per track, shows each answer as it comes and merges them by track', async () => {
     const [a, b] = [track('A', 45), track('B', 45.1)]
     const answers = new Map([[a.id, deferred<{ id: string }[]>()], [b.id, deferred<{ id: string }[]>()]])
@@ -120,5 +140,27 @@ describe('useTrackResults', () => {
     render({ enabled: false, tracks: [a, b] })
     expect(seen.current).toMatchObject({ results: {}, loading: false, failed: false })
     expect(fetch).toHaveBeenCalledTimes(4)
+  })
+})
+
+describe('useTracksByPoints', () => {
+  it('keeps the same array through a recolour or a rename, a new one when points or tracks change', () => {
+    const [a, b] = [track('A', 45), track('B', 45.1)]
+    const seen: (readonly Track[])[] = []
+    function Probe({ tracks }: { tracks: readonly Track[] }) {
+      seen.push(useTracksByPoints(tracks))
+      return null
+    }
+    root = createRoot(document.createElement('div'))
+    const render = (tracks: readonly Track[]) => act(() => root!.render(<Probe tracks={tracks} />))
+    const first = [a, b]
+    render(first)
+    render([{ ...a, color: '#000000', name: 'Autre' }, b])
+    expect(seen.at(-1)).toBe(first)
+    render([a])
+    expect(seen.at(-1)).toEqual([a])
+    const moved = { ...a, segments: [...a.segments] }
+    render([moved])
+    expect(seen.at(-1)).toEqual([moved])
   })
 })

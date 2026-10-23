@@ -276,6 +276,10 @@ export type StatusChip = (typeof STATUS_CHIPS)[number]
 export const PERF_ITEMS = ['fps', 'gpu', 'tiles', 'memory', 'system'] as const
 export type PerfItem = (typeof PERF_ITEMS)[number]
 
+/** « Qualité de l'aperçu » (`scene/previewQuality.ts`): judged on the frame rate, or forced light or full. */
+export const PREVIEW_QUALITIES = ['auto', 'light', 'full'] as const
+export type PreviewQuality = (typeof PREVIEW_QUALITIES)[number]
+
 export interface Preferences {
   status: Record<StatusChip, boolean>
   performance: Record<PerfItem, boolean>
@@ -293,6 +297,8 @@ export interface Preferences {
   language: LanguageCode
   /** version of « Nouveautés » last opened (`whatsNew.ts`), '' when never: the dot of the « i » button shows until then */
   whatsNewSeen: string
+  /** pixels and clouds of the 3D preview (`scene/previewQuality.ts`); never the export's */
+  previewQuality: PreviewQuality
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -305,6 +311,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   appearance: DEFAULT_APPEARANCE,
   language: DEFAULT_LANGUAGE,
   whatsNewSeen: '',
+  previewQuality: 'auto',
 }
 
 /** The booleans of `raw` for `keys`, the defaults for anything missing or not a boolean. */
@@ -332,6 +339,7 @@ export function parsePreferences(raw: string | null): Preferences {
     appearance: parseAppearance(v.appearance),
     language: isLanguageCode(v.language) ? v.language : DEFAULT_PREFERENCES.language,
     whatsNewSeen: typeof v.whatsNewSeen === 'string' ? v.whatsNewSeen : DEFAULT_PREFERENCES.whatsNewSeen,
+    previewQuality: (PREVIEW_QUALITIES as readonly unknown[]).includes(v.previewQuality) ? (v.previewQuality as PreviewQuality) : DEFAULT_PREFERENCES.previewQuality,
   }
 }
 

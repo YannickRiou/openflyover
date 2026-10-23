@@ -503,8 +503,57 @@ export function cachedOverpassQuery<T>(
   return promise
 }
 
+/** Queries of `sharedOverpassQuery` not settled yet: the callers still waiting, and what cancels the query. */
+const shared = new Map<string, { promise: Promise<unknown[]>; controller: AbortController; waiters: number }>()
+
+/**
+ * `cachedOverpassQuery` for callers that may each give up (a layer switched off, a track removed, a project closed,
+ * React's StrictMode running an effect twice): a caller whose `signal` aborts gets an AbortError at once, and the query
+ * is cancelled — never sent, if it still waits in the queue — once the last caller waiting for it has given up. Without
+ * this, a layer's queries kept the single queue busy (up to 70 s each) after nobody wanted them.
+ */
+export function sharedOverpassQuery<T>(query: string, parse: (json: unknown) => T[], signal?: AbortSignal, deps?: OverpassDeps, onStart?: () => void): Promise<T[]> {
+  if (signal?.aborted) return Promise.reject(abortError())
+  const key = hashQuery(query)
+  let entry = shared.get(key)
+  if (entry) {
+    if (onStart) whenStarted(key, onStart)
+  } else {
+    const controller = new AbortController()
+    const created = { promise: cachedOverpassQuery(query, parse, controller.signal, deps, false, onStart), controller, waiters: 0 }
+    entry = created
+    shared.set(key, created)
+    const settled = () => shared.get(key) === created && shared.delete(key)
+    created.promise.then(settled, settled)
+  }
+  const own = entry
+  own.waiters++
+  return new Promise<T[]>((resolve, reject) => {
+    const leave = () => {
+      own.waiters--
+      if (own.waiters === 0 && shared.get(key) === own) {
+        shared.delete(key)
+        own.controller.abort()
+      }
+      reject(abortError())
+    }
+    signal?.addEventListener('abort', leave, { once: true })
+    ;(own.promise as Promise<T[]>).then(
+      (value) => {
+        signal?.removeEventListener('abort', leave)
+        resolve(value)
+      },
+      (error: unknown) => {
+        signal?.removeEventListener('abort', leave)
+        reject(error)
+      },
+    )
+  })
+}
+
 /** Forget the memory cache and the queue (tests). */
 export function clearOverpassMemoryCache(): void {
+  shared.clear()
   memoryCache.clear()
   pending.clear()
   running.clear()

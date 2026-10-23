@@ -449,8 +449,9 @@ export function drawOnDistances(tracks: readonly Track[], progress: number, race
 }
 
 /**
- * Reconcile the Three objects with the store: keep sets whose track, frame and smoothing are unchanged, rebuild
- * the others, drop the ones whose track disappeared.
+ * Reconcile the Three objects with the store: keep sets whose points, frame and smoothing are unchanged (a recolour or
+ * a rename only swaps their `track`: `applyExposure` reads its colour), rebuild the others, drop the ones whose track
+ * disappeared. Returns the sets built, the ones to drape.
  */
 export function syncTrackLineSets(
   group: Group,
@@ -460,12 +461,16 @@ export function syncTrackLineSets(
   width: number,
   height: number,
   smoothingM = 0,
-): void {
+): TrackLineSet[] {
   const alive = new Set<string>()
+  const built: TrackLineSet[] = []
   for (const track of tracks) {
     alive.add(track.id)
     const existing = sets.get(track.id)
-    if (existing && existing.track === track && existing.frame === frame && existing.smoothingM === smoothingM) continue
+    if (existing && existing.track.segments === track.segments && existing.frame === frame && existing.smoothingM === smoothingM) {
+      existing.track = track
+      continue
+    }
     if (existing) {
       disposeTrackLineSet(existing)
       sets.delete(track.id)
@@ -474,11 +479,13 @@ export function syncTrackLineSets(
     const set = buildTrackLineSet(track, frame, width, height, smoothingM)
     group.add(set.object)
     sets.set(track.id, set)
+    built.push(set)
   }
   for (const [id, set] of sets) {
     if (alive.has(id)) continue
     disposeTrackLineSet(set)
     sets.delete(id)
   }
+  return built
 }
 

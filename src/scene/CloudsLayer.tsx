@@ -30,7 +30,6 @@ import {
 } from 'three'
 import { CloudLayers, type CloudsEffect } from '@takram/three-clouds'
 import { Clouds, type CloudsProps } from '@takram/three-clouds/r3f'
-import { deviceBudget } from '../core/deviceBudget'
 import { effectiveRender } from '../export/qualityTier'
 import { cloudsSkipped, isExportBusy, registerExportClouds, useExportStore } from '../export/store'
 import { samplePath } from '../flyover/path'
@@ -52,17 +51,12 @@ import {
 import type { MarkerTrack } from './AtmosphereLayer'
 import { patchRegionalCoverage } from './cloudShaders'
 import { shutterSubFrame, subFrameSlices } from './lens'
+import { usePreviewBudget } from './previewQuality'
 import { previewCloudPass } from './renderOnDemand'
 import { useFilmClock } from './usePacing'
 import { useTerrainContext } from './terrainContext'
 
 const CLOUD_TEXTURES_URL = `${import.meta.env.BASE_URL}clouds/`
-/**
- * Resolution of the cloud pass in the preview (fraction of the canvas): full on a computer, so that the average of a
- * still view is as sharp as an exported frame; half on a phone or tablet. While the view moves, temporal upscaling
- * still marches one pixel in 16 only.
- */
-const PREVIEW_RESOLUTION_SCALE = deviceBudget().cloudResolutionScale
 /**
  * Preview marches, cheaper than the 'low' preset (200 steps of at least 100 m, 25 for the shadows): the clouds of the
  * preview are a little coarser, the export keeps its quality (`qualityPreset` sets every value back).
@@ -183,6 +177,12 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
   // the export quality of the clouds: the one chosen by hand, else the tier of the export quality (qualityTier.ts)
   const quality = effectiveRender(exportQuality, { quality: qualitySetting }).cloudsQuality
   const clock = useFilmClock()
+  /**
+   * resolution of the cloud pass in the preview (fraction of the canvas): full on a computer, so that the average of a
+   * still view is as sharp as an exported frame; half on a phone or tablet, or with a light preview. While the view
+   * moves, temporal upscaling still marches one pixel in 16 only.
+   */
+  const { cloudResolutionScale, cloudSettleFrames } = usePreviewBudget()
   const ref = useRef<CloudsEffect>(null)
   /** preview: inputs of the last frame and number of frames since they last changed */
   const last = useRef<number[]>([])
@@ -208,7 +208,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     const effect = ref.current
     if (!effect) return
     effect.qualityPreset = exporting ? quality : 'low'
-    effect.resolutionScale = exporting ? 1 : PREVIEW_RESOLUTION_SCALE
+    effect.resolutionScale = exporting ? 1 : cloudResolutionScale
     effect.temporalUpscale = !exporting
     // no reprojection of the shadow map (its jitter is averaged with the frames of a still view); its depth only
     // where the clouds are seen in detail
@@ -240,7 +240,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
       unregister()
       effect.update = update
     }
-  }, [exporting, quality])
+  }, [exporting, quality, cloudResolutionScale])
 
   useFrame(({ camera, invalidate }) => {
     const effect = ref.current
@@ -321,7 +321,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     const changed = inputs.length !== last.current.length || inputs.some((v, i) => v !== last.current[i])
     last.current = inputs
     still.current = changed ? 0 : still.current + 1
-    const pass = previewCloudPass(still.current)
+    const pass = previewCloudPass(still.current, cloudSettleFrames)
     effect.temporalUpscale = pass.upscale
     const march = pass.upscale ? PREVIEW_MARCH : STILL_MARCH
     effect.clouds.maxIterationCount = march.maxIterationCount
@@ -340,7 +340,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
       shapeDetailTexture={`${CLOUD_TEXTURES_URL}shape_detail.bin`}
       turbulenceTexture={`${CLOUD_TEXTURES_URL}turbulence.png`}
       stbnTexture={noise}
-      resolutionScale={exporting ? 1 : PREVIEW_RESOLUTION_SCALE}
+      resolutionScale={exporting ? 1 : cloudResolutionScale}
     />
   )
 }

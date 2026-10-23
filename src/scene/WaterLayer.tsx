@@ -26,7 +26,7 @@ import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useTerrainContext } from './terrainContext'
 import { wakeScene } from './renderOnDemand'
 import { useFilmClock, useFilmTracks } from './usePacing'
-import { useTrackResults } from './useTrackResults'
+import { useTrackResults, useTracksByPoints } from './useTrackResults'
 import { setWaterStatus } from './waterStatus'
 import { buildRiverStrip, ribbonEdgeOffsets, stripHeights } from './riverStrip'
 import { buildSeaMesh, buildWaterMesh, lakeLevel, type WaterMesh } from './waterMesh'
@@ -239,15 +239,15 @@ function drapeWater(pieces: readonly WaterPiece[], engine: TerrainEngine | null,
 
 export function WaterLayer() {
   const { engine, frame } = useTerrainContext()
-  const tracks = useFilmTracks()
+  const tracks = useTracksByPoints(useFilmTracks())
   const enabled = useAppStore((s) => s.settings.water.enabled)
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const clock = useFilmClock()
   // two Overpass queries per track of the film (cached, one at a time): the water areas, then the sea and the waterway lines
   // (the heavier one); nothing is sent while the setting is off. Each answer is shown as it arrives, even if another fails;
   // the water of all the tracks is drawn together.
-  const areaResults = useTrackResults(enabled, tracks, (track) => fetchTrackWater(track))
-  const shapeResults = useTrackResults(enabled, tracks, (track) => fetchTrackWaterShapes(track))
+  const areaResults = useTrackResults(enabled, tracks, (track, _onStart, signal) => fetchTrackWater(track, signal))
+  const shapeResults = useTrackResults(enabled, tracks, (track, _onStart, signal) => fetchTrackWaterShapes(track, signal))
   const polygons = useMemo(() => {
     const ids = tracks.map((t) => t.id)
     const areas = mergeByTrack(areaResults.results, ids)

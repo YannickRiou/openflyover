@@ -93,6 +93,26 @@ describe('serializeProject / parseProject', () => {
     expect(toProjectDocument(STATE, '   ').name).toBe('Sans titre')
   })
 
+  it('encodes the points of a track once: the next writes reuse its line, a new track object is encoded again', () => {
+    let reads = 0
+    const counted = (track: Track) =>
+      new Proxy(track, {
+        get(target, key) {
+          if (key === 'segments') reads++
+          return Reflect.get(target, key)
+        },
+      })
+    const a = counted(makeTrack('a', '#FF5A36'))
+    const first = serializeProject({ ...STATE, tracks: [a] }, 'x')
+    expect(reads).toBeGreaterThan(0)
+    reads = 0
+    const later = serializeProject({ ...STATE, tracks: [a], settings: { ...SETTINGS, exaggeration: 2 } }, 'x')
+    expect(reads).toBe(0)
+    expect(later.split('\n').find((l) => l.startsWith('    {"id"'))).toBe(first.split('\n').find((l) => l.startsWith('    {"id"')))
+    expect(serializeProject({ ...STATE, tracks: [counted({ ...makeTrack('a', '#000000') })] }, 'x')).toContain('"color":"#000000"')
+    expect(reads).toBeGreaterThan(0)
+  })
+
   it('carries the pictures of the film, one line each; leaves out the photos without a readable picture', () => {
     const data = 'data:image/jpeg;base64,/9j/AAEC'
     const picture = { data, thumb: data, width: 4, height: 3, name: 'lac.jpg' }

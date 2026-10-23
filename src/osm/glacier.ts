@@ -12,9 +12,9 @@ import type { Track } from '../core/types'
 import { parseForest } from './forest'
 import {
   QUERY_TIMEOUT_S,
-  cachedOverpassQuery,
   corridorBoxes,
   overpassBbox,
+  sharedOverpassQuery,
   type OverpassDeps,
 } from './overpass'
 import { ringAreaM2 } from './water'
@@ -62,5 +62,5 @@ export function parseGlacier(json: unknown): GlacierPolygon[] {
 
 /** Glaciers around `track`, from the caches or one queued Overpass query (fair use: see overpass.ts). */
 export function fetchTrackGlacier(track: Track, signal?: AbortSignal, deps?: OverpassDeps): Promise<GlacierPolygon[]> {
-  return cachedOverpassQuery(glacierQuery(track), parseGlacier, signal, deps)
+  return sharedOverpassQuery(glacierQuery(track), parseGlacier, signal, deps)
 }

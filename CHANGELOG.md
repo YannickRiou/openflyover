@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **« Qualité de l'aperçu »** (Réglages › Aperçu 3D): « Auto », « Légère » or « Complète ». A light preview draws at a pixel ratio of 1.5 at most, 1 while the film plays, and its clouds at half resolution, averaged over 16 still frames instead of 32. « Auto » (the default) judges the device by what it does, not by its hardware: when the preview runs below 30 frames per second during playback, it stays light for the session (the panel says so). Exported films do not change: the export sets its own pixel ratio and cloud quality. « Diagnostic » lists the values in use. On a phone or tablet, the lower pixel ratio while playing now also holds after a track finishes loading.
+- **Landmark settings answer at once on long tracks**: each change of « Repères et points d'intérêt » (a kind, the distance, the density, « Toujours », « Masquer »), a recolour, and each OpenStreetMap answer measured again every landmark against every point of every track. A landmark is now measured once per track; the settings only filter again. The landmarks shown are the same.
+
 ## 4.2.1 (October 2026)
 
 - **The user guide in every language of the app**: « Premiers pas » on the home screen opens the guide in the language of the interface (English, French, Spanish, Italian, German), each page quoting the labels as that interface shows them, with links to the other languages at the top. The CI checks that every translation keeps the sections, anchors and pictures of the English guide.

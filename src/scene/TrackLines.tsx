@@ -115,15 +115,25 @@ export function TrackLines() {
     wakeScene()
   }, [])
 
-  // Build / rebuild the lines, then drape them with the current terrain and exaggeration.
+  /** terrain and exaggeration the lines were last draped with */
+  const drapedWith = useRef<{ engine: TerrainEngine | null; exaggeration: number } | null>(null)
+  // Build / rebuild the lines, then drape them with the current terrain and exaggeration: all of them when these
+  // changed, else only the ones built (a recolour rebuilds nothing, and drapes nothing).
   useEffect(() => {
     const group = groupRef.current
     if (!group) return
     const { width, height } = sizeRef.current
-    syncTrackLineSets(group, setsRef.current, tracks, frame, width, height, smoothingM)
+    const built = syncTrackLineSets(group, setsRef.current, tracks, frame, width, height, smoothingM)
     exposureRef.current = Number.NaN
     styleRef.current = null
-    drapeAll(engine, exaggeration)
+    const last = drapedWith.current
+    if (!last || last.engine !== engine || last.exaggeration !== exaggeration) {
+      drapedWith.current = { engine, exaggeration }
+      drapeAll(engine, exaggeration)
+    } else if (built.length > 0) {
+      for (const set of built) drapeTrackLineSet(set, engine, exaggeration)
+      wakeScene()
+    } else wakeScene()
   }, [tracks, frame, engine, exaggeration, drapeAll, smoothingM])
 
   // Colours: after the build above (same commit), only when the mode or the set of lines changes.
