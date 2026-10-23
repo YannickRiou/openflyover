@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The sources at the end of the film no longer cover the « Cinéma » bar**: in the « Cinéma » style (and the band of « Tableau »), the « Sources » block of the last seconds was drawn over the figures of the bottom bar; it now stands above the bar, over the image.
+
 ## 4.3.0 (October 2026)
 
 - **« Qualité de l'aperçu »** (Réglages › Aperçu 3D): « Auto », « Légère » or « Complète ». A light preview draws at a pixel ratio of 1.5 at most, 1 while the film plays, and its clouds at half resolution, averaged over 16 still frames instead of 32. « Auto » (the default) judges the device by what it does, not by its hardware: when the preview runs below 30 frames per second during playback, it stays light for the session (the panel says so). Exported films do not change: the export sets its own pixel ratio and cloud quality. « Diagnostic » lists the values in use. On a phone or tablet, the lower pixel ratio while playing now also holds after a track finishes loading.
