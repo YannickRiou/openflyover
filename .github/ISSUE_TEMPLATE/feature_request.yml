@@ -1,0 +1,24 @@
+name: Idea or feature request
+description: Something the app could do, or do better.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: Vous pouvez écrire en français.
+  - type: textarea
+    id: need
+    attributes:
+      label: What you want to do
+      description: The film or the situation you have in mind, rather than the button you imagine.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: How you do it today
+      description: The workaround, if any, and what is wrong with it.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How it could work. Pictures and examples of other apps are welcome.
