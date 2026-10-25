@@ -12,7 +12,7 @@ import { Vector3 } from 'three'
 import { clamp, lastIndexAtOrBelow } from '../core/math'
 import type { LocalFrame } from '../core/types'
 import type { HeightSampler } from '../scene/trackLineSet'
-import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
+import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, focalDolly, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
 import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 
@@ -136,7 +136,7 @@ export function headingWindowM(path: TrackPath, camera: CameraSettings): number 
   return turnSmoothingM(camera, path.lengthM) / 2
 }
 
-/** Automatic camera distance for `path`, before the distance multiplier. */
+/** Automatic camera distance for `path`, before the distance multiplier and the lens's dolly (`focalDolly`, applied after this clamp: they never fight). */
 export function autoDistanceM(path: TrackPath): number {
   return clamp(path.lengthM * CHASE_DISTANCE_FRACTION, CHASE_DISTANCE_MIN_M, CHASE_DISTANCE_MAX_M)
 }
@@ -482,7 +482,7 @@ function placement(
   const w = headingWindowM(path, camera)
   const radiusM = speedMps * camera.cameraSmoothingS * HEADING_SMOOTHING_FACTOR
   const travel = (at: number, window: number) => smoothHeadingAt(path, at, window, radiusM, frame)
-  const distance = autoDistanceM(path) * camera.distance
+  const distance = autoDistanceM(path) * camera.distance * focalDolly(camera.focalMm)
   const offset = camera.headingOffsetDeg * DEG
 
   switch (camera.style) {
@@ -590,7 +590,8 @@ export function computeCameraView(
   if (sample) {
     // the sight line ends at the marker, at its steady height (its own rides each bump)
     const endGround = dAim === d && !smoothLine ? aimGround : steadyGround(d, marker)
-    position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM)
+    const dolly = Math.max(1, focalDolly(camera.focalMm))
+    position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM, dolly)
   }
   return { target, position, marker, raiseM: position.y - freeY }
 }
@@ -832,7 +833,9 @@ function positionAround(target: Vector3, { reference, viewAngle, pitchDeg, dista
  * (exaggerated) grid ground with the relief its cells miss (`reliefGround`): the line at fraction f (0 = camera) has
  * height y + (target.y - y) · f
  * and must clear the ground there by MIN_GROUND_CLEARANCE_M · (1 - f), at least LINE_OF_SIGHT_MIN_CLEARANCE_M, up to
- * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN). Where the lift per metre of ground passes
+ * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN), at LINE_OF_SIGHT_SAMPLES points. With a
+ * telephoto the line is `dolly` times longer (`focalDolly`): the samples and the gain grow with it, so the spacing of
+ * the samples and the stretch left unchecked before the marker stay as long in metres as with the default lens. Where the lift per metre of ground passes
  * LINE_OF_SIGHT_FINE_GAIN, the line is checked against the coarse grid instead (LINE_OF_SIGHT_COARSE_CELL_M). The floor
  * is eased in (`smoothMax`), then the camera is kept MIN_TERRAIN_CLEARANCE_M above the actual terrain below it.
  */
@@ -844,7 +847,9 @@ function lowestClearY(
   exaggeration: number,
   cellM: number,
   liftM: number,
+  dolly = 1,
 ): number {
+  const samples = Math.ceil(LINE_OF_SIGHT_SAMPLES * dolly)
   let floor = -Infinity
   const grid = terrainGrid(cellM, frame, sample)
   const coarseM = Math.max(cellM, LINE_OF_SIGHT_COARSE_CELL_M)
@@ -863,9 +868,9 @@ function lowestClearY(
     const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance, _sight).y
     return to.y + ((floorY - to.y) * share) / (1 - f)
   }
-  const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
-  for (let i = 0; i <= LINE_OF_SIGHT_SAMPLES; i++) {
-    const f = (i / LINE_OF_SIGHT_SAMPLES) * (1 - Math.min(0.5, left))
+  const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / (LINE_OF_SIGHT_MAX_GAIN * dolly))
+  for (let i = 0; i <= samples; i++) {
+    const f = (i / samples) * (1 - Math.min(0.5, left))
     const clearance = Math.max(MIN_GROUND_CLEARANCE_M * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
     // the fine grid's lift eased out between LINE_OF_SIGHT_FINE_GAIN and twice that
     const t = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)

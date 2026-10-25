@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v45.focal.title': 'Scegli l’obiettivo del film',
+  'v45.focal.text': 'Sorvolo › Camera › «Focale», da 18 mm (grandangolo: più spazio intorno) a 135 mm (teleobiettivo: le montagne sembrano più vicine e imponenti). La camera si avvicina o si allontana perché il marcatore mantenga la stessa dimensione; a 26 mm non cambia nulla.',
   'v44.night.title': 'Notti meno nere',
   'v44.night.text': '« Luminosità della notte » (Luce › Atmosfera) illumina il rilievo e le nuvole di notte, come la luce della luna, senza cambiare nulla di giorno. L’esposizione ora sta con contrasto e saturazione in Colori.',
   'v332.landmarks.title': 'Nascondere riferimenti in pochi clic',

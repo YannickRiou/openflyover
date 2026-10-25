@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { PerspectiveCamera, Sprite, Vector3 } from 'three'
 import { createLocalFrame } from '../geo/ellipsoid'
+import { focalDolly, fovDegOf } from '../flyover/cameraSettings'
 import { buildTrackPath, samplePath } from '../flyover/path'
 import type { Track } from '../core/types'
 import { DEFAULT_MARKER } from './markerSettings'
@@ -94,6 +95,21 @@ describe('placeMarker', () => {
     // 7 world units of ball radius at 1 km
     expect(sprite.scale.x).toBeCloseTo((expected.width * 14) / PX_PER_BALL, 6)
     expect(sprite.center.y).toBeCloseTo(1 - expected.anchorY / expected.height, 6)
+  })
+
+  it('keeps its size on the screen with any lens: the camera stands focalDolly farther for a telephoto', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) })
+    const onScreen = (focalMm: number) => {
+      const sprite = new Sprite()
+      const camera = new PerspectiveCamera(fovDegOf(focalMm))
+      camera.position.set(0, 0, 1000 * focalDolly(focalMm))
+      placeMarker(sprite, new Vector3(), camera, look('boule'), LEAD, false, 1)
+      // height on the screen, as a share of the frame height: world height / (distance × tan(fov / 2))
+      return sprite.scale.y / (camera.position.length() * Math.tan((camera.fov * Math.PI) / 360))
+    }
+    const reference = onScreen(26)
+    for (const focalMm of [18, 50, 85, 135]) expect(onScreen(focalMm)).toBeCloseTo(reference, 9)
+    vi.unstubAllGlobals()
   })
 })
 

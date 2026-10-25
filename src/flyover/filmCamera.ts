@@ -12,6 +12,10 @@
  * relief on the way (`shotLift`); the aim is raised as much as the camera, so the tilt goes from one end view's to
  * the other's. A shot that cuts ('coupe', dips to black or white) holds its wide view and cuts at the boundary with the
  * flight (`shotWeight`).
+ *
+ * « Focale »: every framing here is that of the film's lens (`CameraSettings.focalMm`, `focalMm` below): a distance
+ * computed from a size (overview, region, group) is the one that frames it with that lens, the flight camera and the
+ * keyframes stand `focalDolly` farther or closer than with the default one.
  */
 import { Vector3 } from 'three'
 import { clamp, smootherstep } from '../core/math'
@@ -33,7 +37,7 @@ import {
   type CameraView,
   type CameraViewOptions,
 } from './camera'
-import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, type CameraSettings } from './cameraSettings'
+import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, DEFAULT_FOCAL_MM, focalDolly, fovDegOf, type CameraSettings } from './cameraSettings'
 import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 import { nightAt } from './sun'
@@ -67,8 +71,6 @@ export const REGION_FIT_MARGIN = 1.15
  */
 export const REGION_REACH_M = 400_000
 export const REGION_AREA_MARGIN_M = 500_000
-/** Vertical field of view of the scene camera (scene/FlyoverCanvas.tsx, offline/plan.ts). */
-export const CAMERA_FOV_DEG = 50
 /** 'balayage' shot: turn of the overview around its target (degrees), share of the shot it takes. */
 export const SWEEP_DEG = 75
 export const SWEEP_SHARE = 0.6
@@ -103,6 +105,10 @@ export const STOP_WIDE_PITCH_DEG = 20
 export const GROUP_FRAMING_MARGIN = 1.4
 const DEG = Math.PI / 180
 const UP = new Vector3(0, 1, 0)
+/** tan(vertical field of view / 2) of the lens `focalMm` long. */
+const tanHalfFov = (focalMm: number) => Math.tan((fovDegOf(focalMm) / 2) * DEG)
+/** The lens of the film (`FilmViewOptions.camera`). */
+const focalOf = (options: { camera?: CameraSettings }) => options.camera?.focalMm ?? DEFAULT_FOCAL_MM
 
 /**
  * Fraction (0 = first view, 1 = second) of a shot `localS` seconds into it: opening overview → flight, closing
@@ -275,19 +281,26 @@ function keepAboveGround(position: Vector3, frame: LocalFrame, sample: HeightSam
 /** Distance factor for a frame taller than wide (9:16 keeps the whole track). */
 const portraitFactor = (aspect: number) => (aspect > 0 && aspect < 1 ? 1 / aspect : 1)
 
-/** Distance of the overview from the centre of a track box `diagonal` long (relief included). */
-export function overviewDistanceM(diagonal: number, aspect: number): number {
-  return Math.max(OVERVIEW_MIN_DISTANCE_M, OVERVIEW_DISTANCE_FACTOR * diagonal * portraitFactor(aspect))
+/**
+ * How much farther than with the default lens a wide view (overview, region) stands with a lens `focalMm` long: a
+ * telephoto backs off (`focalDolly`) so the whole track still fits the narrower frame; a wide angle does not come closer,
+ * it already sees more: the view is the default's, with more land around (and no camera nearer the relief than before).
+ */
+const wideViewDolly = (focalMm: number) => Math.max(1, focalDolly(focalMm))
+
+/** Distance of the overview from the centre of a track box `diagonal` long (relief included), with a lens `focalMm` long. */
+export function overviewDistanceM(diagonal: number, aspect: number, focalMm = DEFAULT_FOCAL_MM): number {
+  return Math.max(OVERVIEW_MIN_DISTANCE_M, OVERVIEW_DISTANCE_FACTOR * diagonal * portraitFactor(aspect)) * wideViewDolly(focalMm)
 }
 
 /**
  * Farthest flat ground in the frame from the target, per metre of camera distance, for a camera `pitchDeg` above
  * the horizon (more than half the field of view: no sky) and a frame of `aspect`: the top or bottom corners.
  */
-export function groundReach(pitchDeg: number, aspect: number): number {
+export function groundReach(pitchDeg: number, aspect: number, focalMm = DEFAULT_FOCAL_MM): number {
   const sin = Math.sin(pitchDeg * DEG)
   const cos = Math.cos(pitchDeg * DEG)
-  const t = Math.tan((CAMERA_FOV_DEG / 2) * DEG)
+  const t = tanHalfFov(focalMm)
   // camera 1 m from the target; corner ray = forward + side·t·up + aspect·t·right, cut by the ground plane
   const corner = (side: number) => {
     const length = sin / (sin - side * t * cos)
@@ -318,14 +331,16 @@ export function regionDistanceM(
   offsetM = 0,
   pitchDeg = REGION_PITCH_DEG,
   chosenM?: number,
+  focalMm = DEFAULT_FOCAL_MM,
 ): number {
-  const overview = overviewDistanceM(diagonal, aspect)
+  const overview = overviewDistanceM(diagonal, aspect, focalMm)
+  // the automatic height is that of the default lens (the telephoto's, farther: `wideViewDolly`); a box to fit, exactly
   const regional = region
-    ? (REGION_FIT_MARGIN * Math.max(region.widthM, region.heightM)) / (2 * Math.tan((CAMERA_FOV_DEG / 2) * DEG))
-    : clamp(REGION_DISTANCE_FACTOR * diagonal, REGION_MIN_DISTANCE_M, REGION_MAX_DISTANCE_M)
+    ? (REGION_FIT_MARGIN * Math.max(region.widthM, region.heightM)) / (2 * tanHalfFov(focalMm))
+    : clamp(REGION_DISTANCE_FACTOR * diagonal, REGION_MIN_DISTANCE_M, REGION_MAX_DISTANCE_M) * wideViewDolly(focalMm)
   const wanted = chosenM ?? regional * portraitFactor(aspect) * (height === 'pays' ? COUNTRY_DISTANCE_FACTOR : 1)
   const reachM = halfSideM + REGION_REACH_M - offsetM
-  return Math.max(overview, Math.min(wanted, reachM / groundReach(pitchDeg, aspect)))
+  return Math.max(overview, Math.min(wanted, reachM / groundReach(pitchDeg, aspect, focalMm)))
 }
 
 /** Centre of the track's box on the ground, the box diagonal (relief included) and its smaller half side. */
@@ -373,9 +388,10 @@ export function overviewView(
   aspect: number,
   joined: CameraView,
   range?: PathRange,
+  focalMm = DEFAULT_FOCAL_MM,
 ): CameraView {
   const { target, diagonal } = trackFraming(path, frame, sample, exaggeration, range)
-  return viewFromSide(target, sideOf(joined), OVERVIEW_PITCH_DEG, overviewDistanceM(diagonal, aspect), frame, sample, exaggeration)
+  return viewFromSide(target, sideOf(joined), OVERVIEW_PITCH_DEG, overviewDistanceM(diagonal, aspect, focalMm), frame, sample, exaggeration)
 }
 
 /**
@@ -412,14 +428,15 @@ export function regionView(
     height = 'region',
     region = null,
     framing = {},
-  }: { height?: StartHeight; region?: RegionFrame | null; framing?: SituationFraming } = {},
+    focalMm = DEFAULT_FOCAL_MM,
+  }: { height?: StartHeight; region?: RegionFrame | null; framing?: SituationFraming; focalMm?: number } = {},
 ): CameraView {
   const track = trackFraming(path, frame, sample, exaggeration)
   const target = region ? situationTarget(path, frame, sample, exaggeration, region) : track.target
   const offsetM = Math.hypot(target.x - track.target.x, target.z - track.target.z)
   const pitchDeg = framing.tiltDeg === undefined ? REGION_PITCH_DEG : 90 - framing.tiltDeg
   const chosenM = framing.distanceKm === undefined ? undefined : framing.distanceKm * 1000
-  const distance = regionDistanceM(track.diagonal, track.halfSideM, aspect, height, region ?? undefined, offsetM, pitchDeg, chosenM)
+  const distance = regionDistanceM(track.diagonal, track.halfSideM, aspect, height, region ?? undefined, offsetM, pitchDeg, chosenM, focalMm)
   // 'boussole': looking toward the bearing (+X east, -Z north), so the camera stands on the opposite side
   const bearing = (framing.bearingDeg ?? 0) * DEG
   const side = framing.heading === 'boussole' ? new Vector3(-Math.sin(bearing), 0, Math.cos(bearing)) : sideOf(joined)
@@ -429,7 +446,7 @@ export function regionView(
   // up in the frame: perpendicular to the line of sight, in its vertical plane
   const back = view.position.clone().sub(view.target).normalize()
   const up = UP.clone().addScaledVector(back, -back.y).normalize()
-  const shift = up.multiplyScalar(2 * headroom * distance * Math.tan((CAMERA_FOV_DEG / 2) * DEG))
+  const shift = up.multiplyScalar(2 * headroom * distance * tanHalfFov(focalMm))
   return { target: view.target.clone().add(shift), position: keepAboveGround(view.position.clone().add(shift), frame, sample, exaggeration) }
 }
 
@@ -550,7 +567,9 @@ function liftedOnTheWay(view: CameraView, k: number, liftM: number): CameraView 
  * under the line of sight asks 2 km in less than half a second. The lift is read at fixed points of the blend, and
  * each point's lift counts in full within SHOT_LIFT_HOLD of the blend and down to nothing (raised cosine) at
  * SHOT_LIFT_REACH: a smooth function of `k`. The lifts above the ground raise the camera only: its aim goes up as
- * much, so the tilt eases from one end view's to the other's instead of tipping down at the ground.
+ * much, so the tilt eases from one end view's to the other's instead of tipping down at the ground. With a telephoto
+ * (`focalMm` over the default), the lift scales with the distance but the frame is narrower by the same factor: the aim
+ * is raised that much less (`aimShare`), or the marker would leave the frame on the way.
  */
 function liftedBlend(
   from: CameraView,
@@ -560,6 +579,7 @@ function liftedBlend(
   frame: LocalFrame,
   sample: HeightSampler | null,
   exaggeration: number,
+  focalMm: number,
 ): CameraView {
   const blended = blendViews(from, to, k, frame, sample, exaggeration, true)
   if (!(k > 0 && k < 1)) return blended
@@ -575,7 +595,8 @@ function liftedBlend(
   liftM = Math.max(liftM, shotLift(blended, flight, frame, sample, exaggeration))
   const { position } = liftedOnTheWay(blended, k, liftM)
   const free = blendViews(from, to, k, frame, null, exaggeration, true)
-  return { target: blended.target.clone().setY(blended.target.y + position.y - free.position.y), position }
+  const aimShare = 1 / Math.max(1, focalDolly(focalMm))
+  return { target: blended.target.clone().setY(blended.target.y + (position.y - free.position.y) * aimShare), position }
 }
 
 /** Marker position on the draped track at `progress` (as `computeCameraView` places it). */
@@ -596,13 +617,14 @@ export function framedGroup(
   sample: HeightSampler | null,
   exaggeration: number,
   aspect: number,
+  focalMm = DEFAULT_FOCAL_MM,
 ): CameraView {
   if (group.length < 2) return view
   const points = group.map((g) => frame.toLocal(g.lon, g.lat, (sample?.(g.lon, g.lat) ?? g.ele ?? 0) * exaggeration))
   const target = points.reduce((sum, p) => sum.add(p), new Vector3()).divideScalar(points.length)
   const spread = Math.max(...points.map((p) => Math.hypot(p.x - target.x, p.z - target.z)))
   const back = view.position.clone().sub(view.target)
-  const fit = (GROUP_FRAMING_MARGIN * spread * portraitFactor(aspect)) / Math.tan((CAMERA_FOV_DEG / 2) * DEG)
+  const fit = (GROUP_FRAMING_MARGIN * spread * portraitFactor(aspect)) / tanHalfFov(focalMm)
   const distance = Math.max(back.length(), fit)
   if (back.lengthSq() < 1e-12) back.copy(UP)
   const position = target.clone().addScaledVector(back.normalize(), distance)
@@ -644,8 +666,8 @@ export interface FilmView extends CameraView {
 }
 
 /**
- * What a keyframe pose is placed around: the film's aim point, the direction of travel, the automatic distance, and a
- * stop's widening (0..1) and orbit (radians).
+ * What a keyframe pose is placed around: the film's aim point, the direction of travel, the automatic distance (with the
+ * lens's dolly: a key frames the same with any focal length), and a stop's widening (0..1) and orbit (radians).
  */
 export interface KeyBase {
   target: Vector3
@@ -763,10 +785,10 @@ function flightAt(
   }
   const view = flown.view
   const marker = followed?.markerOnFilm ? markerAt(path, progress, frame, sample, options.exaggeration, options.liftM) : view.marker
-  const framed = followed?.group ? framedGroup(view, followed.group, frame, sample, options.exaggeration, options.aspect) : view
+  const framed = followed?.group ? framedGroup(view, followed.group, frame, sample, options.exaggeration, options.aspect, focalOf(options)) : view
   const flight = followed ? { ...framed, marker } : view
   const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame)
-  return { flight, base: { target: flight.target, reference, autoDistanceM: autoDistanceM(flightPath), wide, orbitRad } }
+  return { flight, base: { target: flight.target, reference, autoDistanceM: autoDistanceM(flightPath) * focalDolly(focalOf(options)), wide, orbitRad } }
 }
 
 /** The flight camera of `computeCameraView` at a film state (stop cameras, time smoothing, followed track), with its own raise. */
@@ -836,7 +858,7 @@ export function keyFramingAt(
  */
 function freeKeyBase(path: TrackPath, atM: number, frame: LocalFrame, sample: HeightSampler | null, options: FilmViewOptions): KeyBase {
   const target = markerAt(path, atM / Math.max(1, path.lengthM), frame, sample, options.exaggeration, options.liftM)
-  return { target, reference: keyReferenceAt(path, atM, frame), autoDistanceM: autoDistanceM(path), wide: 0, orbitRad: 0 }
+  return { target, reference: keyReferenceAt(path, atM, frame), autoDistanceM: autoDistanceM(path) * focalDolly(focalOf(options)), wide: 0, orbitRad: 0 }
 }
 
 /**
@@ -864,7 +886,7 @@ function freeView(
   const poseOf = (key: FilmCameraKey) => keyView(freeKeyBase(path, key.atM, frame, sample, options), keyFraming(key))
   if (keys.length === 0) {
     const along = { target: new Vector3(), position: keyReferenceAt(path, 0, frame).negate() }
-    return { ...overviewView(path, frame, sample, options.exaggeration, options.aspect, along), marker }
+    return { ...overviewView(path, frame, sample, options.exaggeration, options.aspect, along, undefined, focalOf(options)), marker }
   }
   const next = keys.findIndex((k) => k.timeS > timeS)
   if (next === 0) return { ...poseOf(keys[0]), marker }
@@ -925,7 +947,7 @@ export function highViewAt(clock: Pick<FilmClock, 'days' | 'nights' | 'junctions
 /** « Bilan »: the overview of `region` (a region's tracks as one path), north up (the camera stands south of it). */
 function bilanView(region: TrackPath, held: FollowedFlight, frame: LocalFrame, sample: HeightSampler | null, options: FilmViewOptions): FilmView {
   const north = { target: new Vector3(), position: new Vector3(0, 0, 1) }
-  const view = overviewView(region, frame, sample, options.exaggeration, options.aspect, north)
+  const view = overviewView(region, frame, sample, options.exaggeration, options.aspect, north, undefined, focalOf(options))
   return { ...view, marker: markerAt(held.path, held.progress, frame, sample, options.exaggeration, options.liftM) }
 }
 
@@ -1000,8 +1022,8 @@ function computeFlownView(
     const view = highViewAt(clock, timeS)
     if (!view) return flight
     // the night before a day (or after a stage): up to a high view of its route, held, and back down to the marker at dawn
-    const high = overviewView(path, frame, sample, options.exaggeration, aspect, flight, { fromM: view.fromM, toM: view.toM })
-    return { ...liftedBlend(flight, high, view.k, flight, frame, sample, options.exaggeration), marker: flight.marker }
+    const high = overviewView(path, frame, sample, options.exaggeration, aspect, flight, { fromM: view.fromM, toM: view.toM }, focalOf(options))
+    return { ...liftedBlend(flight, high, view.k, flight, frame, sample, options.exaggeration, focalOf(options)), marker: flight.marker }
   }
 
   const phase = state.phase
@@ -1012,8 +1034,9 @@ function computeFlownView(
           height: shot.startHeight,
           region: shot.highlight ? region : null,
           framing: shot,
+          focalMm: focalOf(options),
         })
-      : overviewView(path, frame, sample, options.exaggeration, aspect, flight)
+      : overviewView(path, frame, sample, options.exaggeration, aspect, flight, undefined, focalOf(options))
   // the shot `localS` seconds in: the wide view (turned by a 'balayage'), the blend's weight and the blend itself
   const shotAt = (localS: number) => {
     const turned = shot.style === 'balayage' ? turnedView(overview, sweepRad(phase, localS, state.lengthS)) : overview
@@ -1026,5 +1049,5 @@ function computeFlownView(
   }
   const now = shotAt(state.localS)
   if (!(now.k > 0 && now.k < 1)) return { ...now.blended, marker: flight.marker }
-  return { ...liftedBlend(now.from, now.to, now.k, flight, frame, sample, options.exaggeration), marker: flight.marker }
+  return { ...liftedBlend(now.from, now.to, now.k, flight, frame, sample, options.exaggeration, focalOf(options)), marker: flight.marker }
 }

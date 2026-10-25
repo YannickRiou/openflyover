@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v45.focal.title': 'Choisissez l’objectif du film',
+  'v45.focal.text': 'Survol › Caméra › « Focale », de 18 mm (grand-angle : plus d’espace autour) à 135 mm (téléobjectif : les montagnes paraissent plus proches et plus imposantes). La caméra se rapproche ou recule pour que le marqueur garde la même taille ; à 26 mm, rien ne change.',
   'v44.night.title': 'Des nuits moins noires',
   'v44.night.text': '« Clarté des nuits » (Lumière › Atmosphère) éclaire le relief et les nuages la nuit, comme un clair de lune, sans rien changer le jour. L’exposition rejoint le contraste et la saturation dans Couleurs.',
   'v332.landmarks.title': 'Masquer des repères en quelques clics',

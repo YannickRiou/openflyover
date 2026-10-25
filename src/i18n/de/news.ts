@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v45.focal.title': 'Das Objektiv des Films wählen',
+  'v45.focal.text': 'Überflug › Kamera › „Brennweite“, von 18 mm (Weitwinkel: mehr Platz ringsum) bis 135 mm (Teleobjektiv: die Berge wirken näher und mächtiger). Die Kamera rückt näher oder weicht zurück, damit der Marker gleich groß bleibt; bei 26 mm ändert sich nichts.',
   'v44.night.title': 'Hellere Nächte',
   'v44.night.text': '« Helligkeit der Nacht » (Licht › Atmosphäre) beleuchtet Gelände und Wolken nachts wie Mondlicht und ändert tagsüber nichts. Die Belichtung steht jetzt bei Kontrast und Sättigung unter Farben.',
   'v332.landmarks.title': 'Landmarken mit wenigen Klicks ausblenden',

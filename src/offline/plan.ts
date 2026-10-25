@@ -12,7 +12,7 @@ import { deviceBudget } from '../core/deviceBudget'
 import type { ImagerySource, LonLat, LonLatBounds, TerrainSource, TileKey } from '../core/types'
 import { expandBounds } from '../geo/lonLat'
 import { childrenOf, tileBounds, tileGroundSizeM, tilesForBounds, zoomForTileBudget } from '../geo/mercator'
-import { CAMERA_FOV_DEG } from '../flyover/filmCamera'
+import { CAMERA_FOV_DEG } from '../flyover/cameraSettings'
 import { AREA_MARGIN_M, AREA_MIN_SIZE_M, DEFAULT_ERROR_TARGET_PX, DEFAULT_SEGMENTS, DEFAULT_TUNING } from '../terrain/engine'
 import { planImagerySubtiles } from '../terrain/imagery'
 import { buildTileUrl } from '../terrain/sources'
@@ -77,7 +77,10 @@ export interface OfflinePlan {
   estimatedBytes: number
 }
 
-/** Distance (metres) under which the engine splits `key`: r = cell · H / (2 · errorTarget · tan(fov / 2)). */
+/**
+ * Distance (metres) under which the engine splits `key`: r = cell · H / (2 · errorTarget · tan(fov / 2)), for the default
+ * lens: another focal length moves the camera by the same factor (`focalDolly`), so the tiles seen are the same.
+ */
 export function splitDistanceM(key: TileKey, viewportHeightPx: number): number {
   const cell = tileGroundSizeM(key) / DEFAULT_SEGMENTS
   return (cell * viewportHeightPx) / (2 * DEFAULT_ERROR_TARGET_PX * Math.tan((CAMERA_FOV_DEG / 2) * (Math.PI / 180)))

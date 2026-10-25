@@ -238,6 +238,7 @@ export function CameraPanel() {
   const update = (patch: Partial<CameraSettings>) => setSetting('camera', { ...camera, ...patch })
   const updatePacing = (patch: Partial<PacingSettings>) => setFlightTiming({ pacing: { ...pacing, ...patch } })
   const lengthM = useFilmTrack()?.stats.distanceM ?? 0
+  const focalLabel = t('camera.slider.focalValue', { value: formatNumber(camera.focalMm) })
   /** « Lissage des virages » in Auto for the first track */
   const autoTurnM = lengthM > 0 ? turnSmoothingM({ ...camera, turnSmoothingM: 0 }, lengthM) : undefined
 
@@ -293,6 +294,17 @@ export function CameraPanel() {
               onChange={(style) => update({ style })}
             />
           </div>
+        </SettingRow>
+        {/* the lens of the whole film, whatever the style (« Libre » too) */}
+        <SettingRow label={t('camera.slider.focal')} value={focalLabel} paths={['camera.focalMm']}>
+          <RangeField
+            label={t('camera.slider.focal')}
+            tip={t('camera.slider.focalTip')}
+            {...CAMERA_RANGES.focalMm}
+            value={camera.focalMm}
+            format={() => focalLabel}
+            onChange={(focalMm) => update({ focalMm })}
+          />
         </SettingRow>
         {/* the camera keys take the view from the first to the last: these settings are those of the rest of the film */}
         {camera.style !== 'free' && cameraKeyCount > 0 && <p className="type-hint">{t('camera.panel.keyed', { count: cameraKeyCount })}</p>}

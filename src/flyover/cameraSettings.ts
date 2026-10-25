@@ -43,6 +43,29 @@ export interface CameraSettings {
   endingS: number
   /** style 'orbit' (« Tours d'orbite »): turns around the marker over the flight, whatever its duration */
   orbitTurns: number
+  /** « Focale »: lens of the whole film, millimetres (24×36 equivalent); the camera backs off or comes closer as it changes (`focalDolly`) */
+  focalMm: number
+}
+
+/** Vertical field of view of the scene camera at the default focal length (degrees): what the film always showed. */
+export const CAMERA_FOV_DEG = 50
+/** Default « Focale » (mm): CAMERA_FOV_DEG exactly (a 24 mm tall sensor would give 49.6°, a hair off the films saved before). */
+export const DEFAULT_FOCAL_MM = 26
+const RAD_TO_DEG = 180 / Math.PI
+
+/** Vertical field of view (degrees) of a lens `focalMm` long: tan(fov / 2) is inversely proportional to the focal length. */
+export function fovDegOf(focalMm: number): number {
+  if (focalMm === DEFAULT_FOCAL_MM) return CAMERA_FOV_DEG
+  return 2 * Math.atan((Math.tan((CAMERA_FOV_DEG / 2) / RAD_TO_DEG) * DEFAULT_FOCAL_MM) / focalMm) * RAD_TO_DEG
+}
+
+/**
+ * How much farther the camera stands with a lens `focalMm` long than with the default one, for what it frames to keep
+ * its size on the screen: tan(default fov / 2) / tan(fov / 2) = focalMm / DEFAULT_FOCAL_MM. Only the perspective changes
+ * (a telephoto from far away, a wide angle from close by), like swapping lenses on a real camera.
+ */
+export function focalDolly(focalMm: number): number {
+  return focalMm / DEFAULT_FOCAL_MM
 }
 
 /** Default camera: the chase view. */
@@ -58,6 +81,7 @@ export const DEFAULT_CAMERA: CameraSettings = {
   cameraSmoothingS: 3,
   endingS: 0,
   orbitTurns: 1,
+  focalMm: DEFAULT_FOCAL_MM,
 }
 
 /** Fields missing from a camera saved before they were added, taken from `DEFAULT_CAMERA` (`SETTING_UPGRADES`). */
@@ -74,6 +98,7 @@ export const CAMERA_RANGES = {
   cameraSmoothingS: { min: 0, max: 10, step: 0.5 },
   endingS: { min: 0, max: 5, step: 0.5 },
   orbitTurns: { min: 0.5, max: 5, step: 0.5 },
+  focalMm: { min: 18, max: 135, step: 1 },
 } as const satisfies Partial<Record<keyof CameraSettings, { min: number; max: number; step: number }>>
 
 /** Heading = direction of the chord [d - w, d + w]; automatic w = this fraction of the track, clamped, times `smoothing`. */

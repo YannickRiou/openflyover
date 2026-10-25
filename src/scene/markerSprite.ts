@@ -12,6 +12,7 @@ import { wakeScene } from './renderOnDemand'
 import { CanvasTexture, SRGBColorSpace, Vector3 } from 'three'
 import type { Camera, PerspectiveCamera, Sprite, SpriteMaterial } from 'three'
 import type { LocalFrame, TerrainEngine, Track } from '../core/types'
+import { CAMERA_FOV_DEG } from '../flyover/cameraSettings'
 import { samplePath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import type { ClearanceAt } from './labelModel'
@@ -20,7 +21,7 @@ import type { Badge, MarkerDrawing, MarkerLayout } from './markerBadge'
 import { figureMotion, figureOfActivity, MARKER_LABEL_MAX_CHARS, pulsePhase } from './markerSettings'
 import type { MarkerFigure, MarkerSettings } from './markerSettings'
 
-/** Ball radius as a fraction of its distance to the camera (constant on-screen size, ~7 px at 1000 px). */
+/** Ball radius as a fraction of its distance to the camera, at the default field of view (constant on-screen size, ~7 px at 1000 px). */
 export const MARKER_SCREEN_FACTOR = 0.007
 /** Diameter of the pictogram and picture badges relative to the ball: room for a readable figure. */
 export const BADGE_SCALE = 2.2
@@ -327,7 +328,10 @@ export function placeMarker(
   material.rotation = mirrored ? motion.tilt - slope : slope - motion.tilt
   if (material.map !== texture) material.map = texture
   material.color.setScalar(gain)
-  const radius = Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR) * look.marker.size
+  // MARKER_SCREEN_FACTOR is for the default field of view: a narrower or wider lens (« Focale », the camera stands farther
+  // or closer for it) scales it, so the marker keeps its size on the screen
+  const lens = 'fov' in camera ? Math.tan(((camera as PerspectiveCamera).fov * Math.PI) / 360) / Math.tan((CAMERA_FOV_DEG * Math.PI) / 360) : 1
+  const radius = Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR * lens) * look.marker.size
   // world size of a texture pixel: a ball is PX_PER_BALL pixels across
   const pixel = (2 * radius) / PX_PER_BALL
   sprite.position.copy(position)

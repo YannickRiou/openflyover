@@ -13,12 +13,13 @@
  */
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Vector3, type Sprite, type SpriteMaterial } from 'three'
+import { Vector3, type PerspectiveCamera, type Sprite, type SpriteMaterial } from 'three'
 import { markerAt, markerFadeM } from '../film/markerKeys'
 import { pinsMoveWithTime } from '../film/photoPins'
 import { useMediaStore } from '../film/media'
 import { keyAt, updateCameraKey } from '../film/timeline'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
+import { fovDegOf } from '../flyover/cameraSettings'
 import { clampWorkArea, loopTime } from '../film/workArea'
 import { filmViewMovesWithTime, highViewAt, situationFramingOf, situationTarget } from '../flyover/filmCamera'
 import { smoothedTrackPath } from '../flyover/smooth'
@@ -155,6 +156,14 @@ export function FlyoverRig() {
     const store = useAppStore.getState()
     const { playing, speed } = store.playback
     const { settings } = store
+    // « Focale »: the lens of the film, in the preview and in the export (it draws with this camera; R3F keeps the fov through
+    // a resize). The projection matrix is what the labels, the marker and the terrain's level of detail read.
+    const lens = camera as PerspectiveCamera
+    const fov = fovDegOf(settings.camera.focalMm)
+    if (lens.isPerspectiveCamera && lens.fov !== fov) {
+      lens.fov = fov
+      lens.updateProjectionMatrix()
+    }
     // after a change of the film, keep the film time (the timeline edits in film time) and take its progress
     if (clockRef.current !== clock) {
       clockRef.current = clock

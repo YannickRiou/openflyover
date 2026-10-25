@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v45.focal.title': 'Choose the lens of the film',
+  'v45.focal.text': 'Flyover › Camera › “Focal length”, from 18 mm (wide angle: more space around) to 135 mm (telephoto: the mountains look closer and more imposing). The camera comes closer or backs off so the marker keeps the same size; at 26 mm nothing changes.',
   'v44.night.title': 'Brighter nights',
   'v44.night.text': '« Night brightness » (Light › Atmosphere) lights the relief and the clouds at night, like moonlight, and changes nothing in daylight. The exposure now sits with contrast and saturation in Colours.',
   'v332.landmarks.title': 'Hide landmarks in a few clicks',
