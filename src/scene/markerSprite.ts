@@ -1,24 +1,27 @@
 /**
  * Progress markers as camera-facing sprites: the lead marker of FlyoverRig and the ghost racers of RaceMarkers.
  * Each marker is one Sprite showing a texture chosen by `settings.marker` (ball, pictogram or picture, with its
- * optional stick and label), with the constant on-screen size of the original ball. A pictogram is mirrored to
- * move the way its track heads on screen and leans with its slope there (`screenHeading`, from the track itself
- * around the marker), and a pulsing ball takes the
- * phase of the film time, so every frame of the film gets the same marker whatever frames came before (the export
- * renders any frame on its own).
+ * optional stick and label), with the constant on-screen size of the original ball. A pictogram faces the way its
+ * track heads on screen and leans with its slope there (`figureHeading`, from the track itself around the marker): it
+ * changes side only when the track clearly runs the other way, and turns round over `FIGURE_TURN_S`. It walks at the
+ * pace of the marker (`figureMotion`), and a pulsing ball takes the phase of the film time, so every frame of the film
+ * gets the same marker whatever frames came before (the export renders any frame on its own). All of it takes a little
+ * of the scene's light (`setMarkerLight`).
  */
 import { useEffect, useRef, useState } from 'react'
 import { wakeScene } from './renderOnDemand'
-import { CanvasTexture, SRGBColorSpace, Vector3 } from 'three'
-import type { Camera, PerspectiveCamera, Sprite, SpriteMaterial } from 'three'
+import { CanvasTexture, PerspectiveCamera, SRGBColorSpace, Vector3 } from 'three'
+import type { Camera, Sprite, SpriteMaterial } from 'three'
 import type { LocalFrame, TerrainEngine, Track } from '../core/types'
 import { samplePath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import type { ClearanceAt } from './labelModel'
 import { BADGE_INK, BALL_STYLE_SCALE, drawMarker, loadMarkerImage, markerLabelFont, markerLayout, PIN_HEIGHT, PX_PER_BALL } from './markerBadge'
 import type { Badge, MarkerDrawing, MarkerLayout } from './markerBadge'
-import { figureMotion, figureOfActivity, MARKER_LABEL_MAX_CHARS, pulsePhase } from './markerSettings'
+import { FIGURE_TURN_S, figureOfActivity, MARKER_LABEL_MAX_CHARS, pulsePhase } from './markerSettings'
 import type { MarkerFigure, MarkerSettings } from './markerSettings'
+import { NEUTRAL_MARKER_LIGHT } from './exposure'
+import type { MarkerLight } from './exposure'
 
 /** Ball radius as a fraction of its distance to the camera (constant on-screen size, ~7 px at 1000 px). */
 export const MARKER_SCREEN_FACTOR = 0.007
@@ -111,16 +114,21 @@ function ballBadge(marker: MarkerSettings, colors: MarkerColors, timeS: number):
   return { badge, diameter: (ring ? RACE_HALO_SCALE : 1) * BALL_STYLE_SCALE[style] }
 }
 
-export function markerBadge(look: MarkerLook, colors: MarkerColors, mirrored: boolean, timeS = 0): MarkerBadge {
+/** A figure turning round is drawn in this many steps per unit of width: enough textures for a turn, few to keep. */
+const FACING_STEPS = 8
+
+/** `facing` of a figure: 1 heads right, -1 heads left, between: turning round (its width). */
+export function markerBadge(look: MarkerLook, colors: MarkerColors, facing: number, timeS = 0): MarkerBadge {
   const { marker, image } = look
   let badge: Badge
   let diameter = BADGE_SCALE
   let key: string
   if (marker.kind === 'figurine') {
     const shape = marker.shape
-    badge = { kind: 'figure', figure: look.figure, fill: colors.badgeFill, ring: colors.badgeRing, mirrored, shape }
+    const width = Math.round(facing * FACING_STEPS) / FACING_STEPS
+    badge = { kind: 'figure', figure: look.figure, fill: colors.badgeFill, ring: colors.badgeRing, facing: width, shape }
     if (shape === 'epingle') diameter = BADGE_SCALE * PIN_HEIGHT
-    key = `figure:${look.figure}:${shape}:${colors.badgeFill}:${colors.badgeRing}:${mirrored}`
+    key = `figure:${look.figure}:${shape}:${colors.badgeFill}:${colors.badgeRing}:${width}`
   } else if (marker.kind === 'image' && look.allowImage && image) {
     badge = { kind: 'image', image, width: image.naturalWidth, height: image.naturalHeight, ring: colors.badgeRing }
     key = `image:${colors.badgeRing}:${image.src}`
@@ -227,6 +235,7 @@ export function releaseMarkerTexture(sprite: Sprite | null): void {
 
 const behindLocal = new Vector3()
 const aheadLocal = new Vector3()
+const hereLocal = new Vector3()
 /** Steepest lean of a figure on screen (radians): a track climbing or dropping steeply on screen tilts it this far. */
 const MAX_LEAN_RAD = (30 * Math.PI) / 180
 
@@ -237,6 +246,44 @@ const MAX_LEAN_RAD = (30 * Math.PI) / 180
  */
 const HEADING_OFFSETS_M = [-80, -60, -40, -20, 0, 20, 40, 60, 80] as const
 const HEADING_WEIGHTS = [1, 2, 3, 4, 5, 4, 3, 2, 1] as const
+
+/**
+ * The run of the track on screen around `centreM`: from the point HEADING_WINDOW_M behind to the one ahead, at
+ * `height` (the marker's, the neighbours raised or lowered by the track's own rise, terrain exaggeration included),
+ * projected with `camera`; x in units of the frame's height. With `at`, the run is that of a marker standing at `at`
+ * (the track around `centreM` moved there): how it would look from the camera if the marker were there. Nil when
+ * either end is behind the camera.
+ */
+function screenRun(
+  path: TrackPath,
+  centreM: number,
+  height: number,
+  frame: LocalFrame,
+  camera: Camera,
+  exaggeration: number,
+  aspect: number,
+  at: Vector3 | null = null,
+): { dx: number; dy: number } {
+  const centre = Math.min(path.lengthM, Math.max(0, centreM))
+  const here = samplePath(path, centre)
+  const behind = samplePath(path, Math.max(0, centre - HEADING_WINDOW_M))
+  const ahead = samplePath(path, Math.min(path.lengthM, centre + HEADING_WINDOW_M))
+  const heightOf = (p: { ele?: number }) => height + ((p.ele ?? here.ele ?? 0) - (here.ele ?? 0)) * exaggeration
+  frame.toLocal(behind.lon, behind.lat, heightOf(behind), behindLocal)
+  frame.toLocal(ahead.lon, ahead.lat, heightOf(ahead), aheadLocal)
+  if (at) {
+    frame.toLocal(here.lon, here.lat, height, hereLocal)
+    behindLocal.sub(hereLocal).add(at)
+    aheadLocal.sub(hereLocal).add(at)
+  }
+  // in the camera's space (z < 0 in front of it) before the projection, which would mirror what is behind the camera
+  behindLocal.applyMatrix4(camera.matrixWorldInverse)
+  aheadLocal.applyMatrix4(camera.matrixWorldInverse)
+  if (behindLocal.z >= 0 || aheadLocal.z >= 0) return { dx: 0, dy: 0 }
+  behindLocal.applyMatrix4(camera.projectionMatrix)
+  aheadLocal.applyMatrix4(camera.projectionMatrix)
+  return { dx: (aheadLocal.x - behindLocal.x) * aspect, dy: aheadLocal.y - behindLocal.y }
+}
 
 /**
  * Which way the track runs on screen around `distanceM`, from the points HEADING_WINDOW_M behind and ahead of the
@@ -263,16 +310,7 @@ export function screenHeading(
   let sumLean = 0
   let sumWeight = 0
   HEADING_OFFSETS_M.forEach((offset, i) => {
-    const centre = Math.min(path.lengthM, Math.max(0, distanceM + offset))
-    const here = samplePath(path, centre)
-    const behind = samplePath(path, Math.max(0, centre - HEADING_WINDOW_M))
-    const ahead = samplePath(path, Math.min(path.lengthM, centre + HEADING_WINDOW_M))
-    // the neighbours at the marker's height, raised or lowered by the track's own rise (terrain exaggeration included)
-    const heightOf = (p: { ele?: number }) => height + ((p.ele ?? here.ele ?? 0) - (here.ele ?? 0)) * exaggeration
-    frame.toLocal(behind.lon, behind.lat, heightOf(behind), behindLocal).project(camera)
-    frame.toLocal(ahead.lon, ahead.lat, heightOf(ahead), aheadLocal).project(camera)
-    const dx = (aheadLocal.x - behindLocal.x) * aspect
-    const dy = aheadLocal.y - behindLocal.y
+    const { dx, dy } = screenRun(path, distanceM + offset, height, frame, camera, exaggeration, aspect)
     const length = Math.hypot(dx, dy)
     const run = Math.abs(dx)
     // the more the track runs across the screen, the more its slope is read
@@ -295,12 +333,153 @@ export function headsLeft(path: TrackPath, distanceM: number, at: Vector3, frame
   return screenHeading(path, distanceM, at, frame, camera).left
 }
 
+/**
+ * A figure changes side only when the track clearly runs the other way on screen: its run must be more than this far
+ * from the vertical (sine of the angle, 20°). Nearer the vertical (a switchback climbing up the screen, a track coming
+ * at the camera) the figure keeps the side it had.
+ */
+export const SIDE_BAND = Math.sin((20 * Math.PI) / 180)
+/**
+ * The side it had is read from the track behind the marker, not from the time: every SIDE_STEP_M back to SIDE_DENSE_M,
+ * then every SIDE_COARSE_STEP_M to SIDE_LOOK_BACK_M, so a flight at any speed keeps the same side on the same switchback.
+ */
+const SIDE_STEP_M = 25
+const SIDE_DENSE_M = 600
+const SIDE_COARSE_STEP_M = 100
+const SIDE_LOOK_BACK_M = 3000
+/** Bisection steps that place the instant a figure changed side within a turn (a few milliseconds). */
+const TURN_BISECTIONS = 6
+
+/** The film camera at an earlier film time (position and what it looks at), to read the side the figure had then. */
+export interface PastView {
+  position: Vector3
+  target: Vector3
+}
+
+const pastShown = { timeS: Number.NaN, position: new Vector3(), target: new Vector3(), set: false }
+
+/**
+ * The rig tells the markers what the film camera looked like at `timeS` (the frame's film time less FIGURE_TURN_S), or
+ * null when the camera is not the film's (the user orbits a paused film). Rewritten every frame, never read after it.
+ */
+export function showPastView(timeS: number, view: PastView | null): void {
+  pastShown.set = view !== null
+  pastShown.timeS = timeS
+  if (view) {
+    pastShown.position.copy(view.position)
+    pastShown.target.copy(view.target)
+  }
+}
+
+/** The camera of `timeS` as the rig told it this frame, null for any other time. */
+export function pastViewAt(timeS: number): PastView | null {
+  return pastShown.set && pastShown.timeS === timeS ? pastShown : null
+}
+
+const sideCamera = new PerspectiveCamera()
+const pastDirection = new Vector3()
+const pastMarker = new Vector3()
+const sideMarker = new Vector3()
+const nowDirection = new Vector3()
+
+/**
+ * Side a figure faces (1 right, -1 left) with the marker at `distanceM`, the track seen with `camera`: the side of the
+ * nearest clear run of the track on screen (SIDE_BAND), from the marker back along the track, each place seen as if
+ * the marker stood at `at` (so a place far behind the marker, or the camera, still tells which way the track went).
+ * None in the whole look back (a straight climb up the screen): right.
+ */
+function sideAt(
+  path: TrackPath,
+  distanceM: number,
+  at: Vector3,
+  height: number,
+  frame: LocalFrame,
+  camera: Camera,
+  exaggeration: number,
+  aspect: number,
+): 1 | -1 {
+  for (let back = 0; back <= SIDE_LOOK_BACK_M; back += back < SIDE_DENSE_M ? SIDE_STEP_M : SIDE_COARSE_STEP_M) {
+    const place = Math.max(0, distanceM - back)
+    const { dx, dy } = screenRun(path, place, height, frame, camera, exaggeration, aspect, at)
+    const length = Math.hypot(dx, dy)
+    const run = length > 1e-6 ? dx / length : 0
+    if (Math.abs(run) > SIDE_BAND) return run < 0 ? -1 : 1
+    if (place === 0) break
+  }
+  return 1
+}
+
+/**
+ * Width of the figure (`facing`: 1 heads right, -1 left, between: turning round) and its `lean` at film time `timeS`.
+ * The side comes from the track's run on screen at `timeS` and before it (`sideAt`: no flicker on a switchback running
+ * up the screen); when it changed within the last FIGURE_TURN_S the figure is turning round, its width going through
+ * zero as a card flipped (a cosine: eased at both ends), the change placed by bisection between the camera of that
+ * time (`before`, null: no turn, the side changes at once) and this frame's. Every instant is read again from the
+ * clock and the camera, with no memory between frames: the export gives the preview's frame.
+ */
+export function figureHeading(
+  path: TrackPath,
+  distanceAt: (timeS: number) => number,
+  timeS: number,
+  at: Vector3,
+  frame: LocalFrame,
+  camera: Camera,
+  before: PastView | null,
+  exaggeration = 1,
+): { facing: number; lean: number } {
+  const { lean } = screenHeading(path, distanceAt(timeS), at, frame, camera, exaggeration)
+  const { height } = frame.toLonLat(at)
+  const aspect = 'aspect' in camera ? (camera as PerspectiveCamera).aspect : 1
+  const side = (t: number, from: Camera, marker: Vector3) => sideAt(path, distanceAt(t), marker, height, frame, from, exaggeration, aspect)
+  const now = side(timeS, camera, at)
+  if (!before) return { facing: now, lean }
+  // the side the figure had `k` of the way from a turn ago (0) to now (1), the view blended between the two
+  const was = samplePath(path, distanceAt(timeS - FIGURE_TURN_S))
+  frame.toLocal(was.lon, was.lat, height, pastMarker)
+  const sideAtK = (k: number) =>
+    side(timeS - (1 - k) * FIGURE_TURN_S, placeSideCamera(camera, before, k), sideMarker.lerpVectors(pastMarker, at, k))
+  if (sideAtK(0) === now) return { facing: now, lean }
+  // changed within the turn: where, as a fraction k of the time since the camera of `before`
+  let low = 0
+  let high = 1
+  for (let i = 0; i < TURN_BISECTIONS; i++) {
+    const k = (low + high) / 2
+    if (sideAtK(k) === now) high = k
+    else low = k
+  }
+  // the turn began at the change: the old side at first, the new one when `1 - high` of the turn has passed
+  return { facing: -now * Math.cos(Math.PI * (1 - high)), lean }
+}
+
+/** The camera `k` of the way from the `before` view to `camera` (position and direction blended), projection of `camera`. */
+function placeSideCamera(camera: Camera, before: PastView, k: number): Camera {
+  sideCamera.projectionMatrix.copy(camera.projectionMatrix)
+  sideCamera.projectionMatrixInverse.copy(camera.projectionMatrixInverse)
+  sideCamera.position.lerpVectors(before.position, camera.position, k)
+  pastDirection.subVectors(before.target, before.position).normalize()
+  camera.getWorldDirection(nowDirection)
+  sideCamera.lookAt(pastDirection.lerp(nowDirection, k).add(sideCamera.position))
+  sideCamera.updateMatrixWorld()
+  return sideCamera
+}
+
 const NO_MOTION = { lift: 0, tilt: 0 }
+/** Light the markers take from the scene (`setMarkerLight`): neutral without the atmosphere. */
+let markerLight: MarkerLight = NEUTRAL_MARKER_LIGHT
+
+/**
+ * The atmosphere tells the markers the light of this frame (`markerLight`, from the sun elevation and the weather):
+ * rewritten every frame before they are placed, neutral again when it goes.
+ */
+export function setMarkerLight(light: MarkerLight): void {
+  markerLight = light
+}
 
 /**
  * Put `sprite` at `position` with the texture of `look` at film time `timeS`, at the constant on-screen size times
- * `marker.size`, its colours divided by the exposure (`gain`) like the track lines. The track point is the anchor
- * of the texture: the centre of the badge, the tip of a pin or the foot of the stick.
+ * `marker.size`, its colours divided by the exposure (`gain`) like the track lines and tinted by the light of the scene.
+ * The track point is the anchor of the texture: the centre of the badge, the tip of a pin or the foot of the stick.
+ * `facing` and `lean` come from `figureHeading`, `motion` (the bounce and sway of a walking figure, `figureMotion`) from the rig.
  */
 export function placeMarker(
   sprite: Sprite,
@@ -308,25 +487,26 @@ export function placeMarker(
   camera: Camera,
   look: MarkerLook,
   colors: MarkerColors,
-  mirrored: boolean,
+  facing: number,
   gain: number,
   timeS = 0,
   lean = 0,
+  motion = NO_MOTION,
 ): void {
-  const badge = markerBadge(look, colors, mirrored, timeS)
+  const badge = markerBadge(look, colors, facing, timeS)
   if (!badge.pulsing) releaseMarkerTexture(sprite)
   const { texture, layout } = badge.pulsing ? ownTexture(sprite, badge) : badgeTexture(badge)
   const material = sprite.material as SpriteMaterial
-  // an animated figure: lifted on screen (the sprite's anchor moves down) and tilted forward, mirrored with it; on
+  // an animated figure: lifted on screen (the sprite's anchor moves down) and tilted forward, turning with it; on
   // a stick it only sways
-  const motion = look.animated ? figureMotion(timeS) : NO_MOTION
-  const lift = look.marker.stick ? 0 : motion.lift * layout.side
+  const bounce = look.animated ? motion : NO_MOTION
+  const lift = look.marker.stick ? 0 : bounce.lift * layout.side
   sprite.center.set(0.5, 1 - (layout.anchorY + lift) / layout.height)
   // a figure alone (no stick, no label drawn with it) also leans with the slope of the track on screen (`lean`)
   const slope = look.marker.kind === 'figurine' && !look.marker.stick && look.label === '' ? lean : 0
-  material.rotation = mirrored ? motion.tilt - slope : slope - motion.tilt
+  material.rotation = facing * (slope - bounce.tilt)
   if (material.map !== texture) material.map = texture
-  material.color.setScalar(gain)
+  material.color.setRGB(gain * markerLight.r, gain * markerLight.g, gain * markerLight.b)
   const radius = Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR) * look.marker.size
   // world size of a texture pixel: a ball is PX_PER_BALL pixels across
   const pixel = (2 * radius) / PX_PER_BALL

@@ -1,15 +1,19 @@
 import { describe, expect, it, vi } from 'vitest'
 import { PerspectiveCamera, Sprite, Vector3 } from 'three'
+import type { SpriteMaterial } from 'three'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { buildTrackPath, samplePath } from '../flyover/path'
 import type { Track } from '../core/types'
-import { DEFAULT_MARKER } from './markerSettings'
+import { DEFAULT_MARKER, FIGURE_TURN_S } from './markerSettings'
+import { NEUTRAL_MARKER_LIGHT } from './exposure'
 import type { MarkerSettings } from './markerSettings'
 import { markerLayout, PX_PER_BALL } from './markerBadge'
 import {
   BADGE_SCALE,
+  figureHeading,
   headsLeft,
   screenHeading,
+  setMarkerLight,
   leadMarkerColors,
   markerBadge,
   markerLook,
@@ -28,18 +32,18 @@ const LEAD = leadMarkerColors(DEFAULT_MARKER, '#E4572E')
 
 describe('markerBadge', () => {
   it('keeps the former balls: plain white for the lead, track colour in an ink halo for a racer', () => {
-    expect(markerBadge(look('boule'), LEAD, false).drawing).toMatchObject({ badge: { kind: 'disc', fill: '#FFFFFF' }, diameter: 1 })
-    const racer = markerBadge(look('boule'), racerMarkerColors('#5BC0EB'), false)
+    expect(markerBadge(look('boule'), LEAD, 1).drawing).toMatchObject({ badge: { kind: 'disc', fill: '#FFFFFF' }, diameter: 1 })
+    const racer = markerBadge(look('boule'), racerMarkerColors('#5BC0EB'), 1)
     expect(racer.drawing.diameter).toBe(RACE_HALO_SCALE)
     expect(racer.drawing.badge).toMatchObject({ kind: 'disc', fill: '#5BC0EB' })
   })
 
   it('draws larger badges for a figure or a picture, the racers keeping their ball instead of the picture', () => {
-    const figure = markerBadge(look('figurine'), LEAD, true)
-    expect(figure.drawing).toMatchObject({ badge: { kind: 'figure', mirrored: true, figure: 'cycliste' }, diameter: BADGE_SCALE })
-    expect(figure.key).not.toBe(markerBadge(look('figurine'), LEAD, false).key)
-    expect(markerBadge(look('image'), LEAD, false).drawing.badge.kind).toBe('image')
-    expect(markerBadge(look('image', false), racerMarkerColors('#5BC0EB'), false).drawing.badge.kind).toBe('disc')
+    const figure = markerBadge(look('figurine'), LEAD, -1)
+    expect(figure.drawing).toMatchObject({ badge: { kind: 'figure', facing: -1, figure: 'cycliste' }, diameter: BADGE_SCALE })
+    expect(figure.key).not.toBe(markerBadge(look('figurine'), LEAD, 1).key)
+    expect(markerBadge(look('image'), LEAD, 1).drawing.badge.kind).toBe('image')
+    expect(markerBadge(look('image', false), racerMarkerColors('#5BC0EB'), 1).drawing.badge.kind).toBe('disc')
   })
 
   it('takes the colours of the settings, the track colour for an empty one', () => {
@@ -49,14 +53,14 @@ describe('markerBadge', () => {
   })
 
   it('haloes or pulses the ball, the pulse following the film time', () => {
-    expect(markerBadge(look('boule', true, { ballStyle: 'halo' }), LEAD, false).drawing.diameter).toBeGreaterThan(2)
+    expect(markerBadge(look('boule', true, { ballStyle: 'halo' }), LEAD, 1).drawing.diameter).toBeGreaterThan(2)
     const pulse = look('boule', true, { ballStyle: 'pulsation' })
-    const early = markerBadge(pulse, LEAD, false, 0.11)
+    const early = markerBadge(pulse, LEAD, 1, 0.11)
     expect(early.pulsing).toBe(true)
-    expect(early.key).not.toBe(markerBadge(pulse, LEAD, false, 0.61).key)
+    expect(early.key).not.toBe(markerBadge(pulse, LEAD, 1, 0.61).key)
     // one period later: the same frame
-    expect(markerBadge(pulse, LEAD, false, 1.61).key).toBe(early.key)
-    expect(markerBadge(look('boule'), LEAD, false, 0.6).pulsing).toBe(false)
+    expect(markerBadge(pulse, LEAD, 1, 1.61).key).toBe(early.key)
+    expect(markerBadge(look('boule'), LEAD, 1, 0.6).pulsing).toBe(false)
   })
 
   it('resolves the figure from the activity of each track, the label from its name or the free text', () => {
@@ -68,10 +72,10 @@ describe('markerBadge', () => {
   })
 
   it('stands a pin on its tip and a stick on its foot, the label under it', () => {
-    const pin = markerBadge(look('figurine', true, { shape: 'epingle' }), LEAD, false)
+    const pin = markerBadge(look('figurine', true, { shape: 'epingle' }), LEAD, 1)
     const pinLayout = markerLayout(pin.drawing, () => 0)
     expect(pinLayout.height - pinLayout.anchorY).toBeLessThan(1)
-    const stick = markerBadge(look('boule', true, { stick: true, label: 'nom' }), LEAD, false)
+    const stick = markerBadge(look('boule', true, { stick: true, label: 'nom' }), LEAD, 1)
     const layout = markerLayout(stick.drawing, (text) => text.length * 50)
     expect(layout.footY).toBeGreaterThan(layout.side)
     expect(layout.anchorY).toBe(layout.footY)
@@ -88,8 +92,8 @@ describe('placeMarker', () => {
     const camera = new PerspectiveCamera()
     camera.position.set(0, 0, 1000)
     const lookWithStick = look('boule', true, { stick: true })
-    const expected = markerLayout(markerBadge(lookWithStick, LEAD, false).drawing, () => 0)
-    placeMarker(sprite, new Vector3(), camera, lookWithStick, LEAD, false, 1)
+    const expected = markerLayout(markerBadge(lookWithStick, LEAD, 1).drawing, () => 0)
+    placeMarker(sprite, new Vector3(), camera, lookWithStick, LEAD, 1, 1)
     vi.unstubAllGlobals()
     // 7 world units of ball radius at 1 km
     expect(sprite.scale.x).toBeCloseTo((expected.width * 14) / PX_PER_BALL, 6)
@@ -195,5 +199,127 @@ describe('pullMarkerForward', () => {
     marker.position.set(0, 800, 0)
     pullMarkerForward(marker, camera)
     expect(camera.position.distanceTo(marker.position)).toBeCloseTo(100, 6)
+  })
+})
+
+describe('placeMarker light', () => {
+  const stub = () => vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) })
+  const colourOf = (gain: number) => {
+    stub()
+    const sprite = new Sprite()
+    const camera = new PerspectiveCamera()
+    camera.position.set(0, 0, 1000)
+    placeMarker(sprite, new Vector3(), camera, look('boule'), LEAD, 1, gain)
+    vi.unstubAllGlobals()
+    return (sprite.material as SpriteMaterial).color
+  }
+
+  it('keeps the colours as they are without atmosphere, and tints them by the light of the frame', () => {
+    expect(colourOf(0.4)).toMatchObject({ r: 0.4, g: 0.4, b: 0.4 })
+    setMarkerLight({ r: 1, g: 0.72, b: 0.5 })
+    expect(colourOf(0.4)).toMatchObject({ r: 0.4, g: expect.closeTo(0.288, 6), b: expect.closeTo(0.2, 6) })
+    setMarkerLight(NEUTRAL_MARKER_LIGHT)
+    expect(colourOf(0.4)).toMatchObject({ r: 0.4, g: 0.4, b: 0.4 })
+  })
+})
+
+describe('figureHeading', () => {
+  const frame = createLocalFrame(6.5, 45.5)
+  const DEG = Math.PI / 180
+  /** east / north metres around the frame's origin, as a position of the frame */
+  const lonLat = (x: number, y: number) => ({ lon: 6.5 + x / (111_320 * Math.cos(45.5 * DEG)), lat: 45.5 + y / 111_320 })
+  const place = (x: number, y: number, height: number) => frame.toLocal(lonLat(x, y).lon, lonLat(x, y).lat, height)
+  const north = (lat: number) => (lat - 45.5) * 111_320
+  const pathOf = (corners: readonly (readonly [number, number])[]) => {
+    const points = []
+    for (let c = 0; c + 1 < corners.length; c++) {
+      const [x0, y0] = corners[c]
+      const [x1, y1] = corners[c + 1]
+      const steps = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / 10))
+      for (let i = 0; i < steps; i++) points.push(lonLat(x0 + ((x1 - x0) * i) / steps, y0 + ((y1 - y0) * i) / steps))
+    }
+    points.push(lonLat(...corners[corners.length - 1]))
+    return buildTrackPath({ segments: [{ points }] } as unknown as Track)
+  }
+  /** where the film camera is for a marker at north `y`: still (500 m south, 400 m up, looking at the middle) or chasing it from the south */
+  type Aim = (y: number) => { position: Vector3; target: Vector3 }
+  const still: Aim = () => ({ position: place(0, -500, 400), target: place(0, 60, 0) })
+  const chasing: Aim = (y) => ({ position: place(0, y - 350, 300), target: place(0, y + 50, 0) })
+  const cameraOf = ({ position, target }: ReturnType<Aim>) => {
+    const camera = new PerspectiveCamera(50, 16 / 9, 1, 1e6)
+    camera.position.copy(position)
+    camera.lookAt(target)
+    camera.updateProjectionMatrix()
+    camera.updateMatrixWorld()
+    return camera
+  }
+  const SPEED_M_PER_S = 25
+  /** the figure of a marker flying `path` at 25 m per second of film, frame by frame (`withPast` false: no camera of a moment ago) */
+  function fly(path: ReturnType<typeof pathOf>, fps: number, aim: Aim, withPast = true) {
+    const distanceAt = (s: number) => Math.min(path.lengthM, Math.max(0, SPEED_M_PER_S * s))
+    const markerAt = (s: number) => {
+      const here = samplePath(path, distanceAt(s))
+      return frame.toLocal(here.lon, here.lat, 0)
+    }
+    const northAt = (s: number) => north(samplePath(path, distanceAt(s)).lat)
+    const frames: { t: number; facing: number; left: boolean }[] = []
+    for (let t = 0; t <= path.lengthM / SPEED_M_PER_S; t += 1 / fps) {
+      const at = markerAt(t)
+      const camera = cameraOf(aim(northAt(t)))
+      const before = withPast ? aim(northAt(t - FIGURE_TURN_S)) : null
+      const { facing } = figureHeading(path, distanceAt, t, at, frame, camera, before, 1)
+      frames.push({ t, facing, left: screenHeading(path, distanceAt(t), at, frame, camera).left })
+    }
+    return frames
+  }
+  const changes = (values: readonly unknown[]) => values.filter((v, i) => i > 0 && v !== values[i - 1]).length
+  /** a track going north with a wiggle of 15 m every 150 m */
+  const wiggle = (from: number, count: number) =>
+    Array.from({ length: count }, (_, i) => [15 * Math.sin((2 * Math.PI * i * 10) / 150), from + i * 10] as const)
+
+  it('keeps its side on a switchback that runs up the screen with small left and right wiggles', () => {
+    const frames = fly(pathOf(wiggle(-300, 121)), 30, chasing)
+    // the raw side flips with every wiggle...
+    expect(changes(frames.map((f) => f.left))).toBeGreaterThanOrEqual(6)
+    // ...the figure does not move
+    expect(new Set(frames.map((f) => f.facing)).size).toBe(1)
+  })
+
+  it('keeps the side it had when the track turns up the screen', () => {
+    // west, clearly to the left, then north with wiggles: still left
+    const frames = fly(pathOf([[400, 0], ...wiggle(0, 91)]), 30, chasing)
+    expect(frames[0].facing).toBe(-1)
+    expect(new Set(frames.map((f) => f.facing))).toEqual(new Set([-1]))
+  })
+
+  // east, a U-turn of 60 m radius, back west: right, then left
+  const arc = Array.from({ length: 37 }, (_, i) => {
+    const a = (-90 + i * 5) * DEG
+    return [300 + 60 * Math.cos(a), 60 + 60 * Math.sin(a)] as const
+  })
+  const uturn = pathOf([[-400, 0], ...arc, [-400, 120]])
+
+  it('turns round over a quarter of a second when the track clearly runs the other way, once', () => {
+    const fine = fly(uturn, 240, still)
+    expect(fine[0].facing).toBe(1)
+    expect(fine[fine.length - 1].facing).toBe(-1)
+    expect(changes(fine.map((f) => Math.sign(f.facing)))).toBe(1)
+    // in FIGURE_TURN_S, from one side to the other without coming back, edge-on in the middle
+    const turning = fine.filter((f) => Math.abs(f.facing) < 0.999)
+    expect(turning.length / 240).toBeGreaterThan(FIGURE_TURN_S - 0.03)
+    expect(turning.length / 240).toBeLessThan(FIGURE_TURN_S + 0.03)
+    fine.forEach((f, i) => i > 0 && expect(f.facing).toBeLessThanOrEqual(fine[i - 1].facing + 1e-9))
+    expect(Math.min(...turning.map((f) => Math.abs(f.facing)))).toBeLessThan(0.1)
+    // at 30 frames a second the turn takes 7 or 8 frames, none of them a jump
+    const frames = fly(uturn, 30, still)
+    let widest = 0
+    frames.forEach((f, i) => i > 0 && (widest = Math.max(widest, Math.abs(f.facing - frames[i - 1].facing))))
+    expect(widest).toBeLessThan(0.5)
+    expect(frames.filter((f) => Math.abs(f.facing) < 0.999).length).toBeGreaterThanOrEqual(6)
+  })
+
+  it('changes side at once without the camera of a moment ago (the user orbits a paused film)', () => {
+    const facings = new Set(fly(uturn, 240, still, false).map((f) => f.facing))
+    expect([...facings].sort()).toEqual([-1, 1])
   })
 })
