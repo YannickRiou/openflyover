@@ -801,7 +801,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   by point symmetry, Catmull-Rom read-back; built once per path, frame and σ, at most 4 windows per path) and the aim on
   one half as wide, at most 6 % of the camera's distance: GPS noise and tight zigzags no longer shake the camera
   (sideways jerk p99 22,000 → 64 m/s³ on a noisy zigzag walk in « Poursuite ») while the marker stays near the centre
-  (≤ 0.16 of the half-frame). « Lissage de la caméra » at 0 keeps the previous behaviour. `computeCameraView` costs
+  (≤ 0.16 of the half-frame). The heading is never averaged over less than `HEADING_MIN_SMOOTHING_S` = 1 s whatever « Lissage de la caméra » says (see « The camera corrects itself »). `computeCameraView` costs
   ~145–225 µs per call (was ~100) with an analytic sampler, 163–251 terrain samples per call.
   Styles (`settings.camera.style`): `chase` (behind the marker), `sway` (swing toward the outside of bends:
   50° · tanh(0.8 · T / 50°), T = sum of turn angles weighted by a tent over ±2w, continuous and calm), `orbit` (`orbitTurns`
@@ -867,6 +867,44 @@ The interface and the texts drawn into the films and posters exist in **French**
   the loops (steep massif, slope 0.8) and a raid over hills: no jolt (but « Saut », a quick move of 0.6 s on purpose), never
   low, the marker never out of the frame. No in-app button yet: the audit reads the terrain it is given, and what the
   engine has loaded is not the terrain of the whole film.
+  **The camera corrects itself** (no button, no setting: old projects get it too; every fix is a pure function of the film
+  time, so the export still renders any frame alone). The audit replayed whole films (the home page example over hills,
+  the switchbacks over the steep massif) beyond the shots; five cases it flagged are fixed at their source, and
+  `filmAudit.test.ts` keeps them. (1) **« Lissage de la caméra » at 0 or 0.5 s**: the plain chord heading flips through the
+  apex of a switchback and the camera whipped round by up to 1.5 × its distance in a few frames (0.07 at 0.5 s, none from
+  1 s): the heading, the sway and the slope the swing reads (`placement`, `computeCameraView`) are averaged over at least
+  `HEADING_MIN_SMOOTHING_S` = 1 s of track whatever the slider says (the camera's own line and time smoothing still follow
+  it). (2) **Speed portions**: the smoothings scale with the flight's average speed, so at ×4 the sway followed the bends 4 times
+  as fast (« Oiseau » 0.055 of the distance a frame). `groundSpeedMps` (`timeSmoothing.ts`, over ± 0.5 s of film time, read in
+  `flownAt`) gives `computeCameraView` the marker's speed now; above the average, the heading and the sway are averaged
+  over `RUN_TAPS` = 9 points of a tent as wide as the track covered in `RUN_SMOOTHING_S` = 0.7 s of the extra speed
+  (`runTaps`: no new table per width, which `headingTable` would build for each one; at the average speed or below nothing
+  changes): 0.055 → 0. The aim is left alone: averaging it the same way took the marker 1.6 half-frames off the middle on
+  the switchbacks (`markerVisible.test.ts` holds it under 0.2), and capped at what that allows it did not calm it
+  (« Drone rapide » 0.071 → 0.061). (3) **Camera keys**: a blend of two poses knows nothing of the relief between them, and the 80 m clearance
+  jumped where a pose lies closer to the ground than that. The keyed camera (`keyedFlight`, `freeView`) is blended
+  without a clearance, then raised to `MIN_GROUND_CLEARANCE_M` by smootherstep of its distance from an exact pose
+  (`keyClearance`: none at a key, whole from `KEY_CLEARANCE_EDGE` = 0.2 of the way out): 65 to 101 m under the ground on the
+  switchbacks → none, and the free style no longer jumps by 0.106 of the distance as it reaches a key. (4) **Photo pins**:
+  the turn to a pin ahead of or behind the marker took it out of the frame (1.7 NDC with the default camera on the example,
+  behind the camera with the lively presets); `aimTowardsPins` now limits the turn to what keeps the marker within
+  `PIN_MARKER_MARGIN` = 0.8 of the frame (`keepMarkerNear`: along the same arc, a soft saturation, so the aim stays smooth).
+  (5) **Sharper tiles arriving while the film plays** (`flightAt`, `raiseTable`): tiles arriving bump `terrainVersion` every
+  frame, and the first stale film instant in time order was the one refreshed (one a frame, so the others starved while the
+  bumps went on, then all changed in a row once they stopped): a whole sharper terrain (480 m → 60 m detail on the example)
+  made a step of 70 to 135 m in the camera height in one frame (0.13 of the distance). The instant refreshed is now the stale
+  one nearest to the film time (the ones that count most come first), and its raise moves toward the sharper terrain's by at most
+  `RAISE_REFRESH_SHARE` = 1.2 % of the camera's distance each time (it stays stale until it has got there): the same
+  tiles arriving over 3 s give 0.012 at most (0.131 / 0.129 / 0.068 before for the default, « Cinéma » and « Drone rapide »)
+  and the camera is exactly the one of the final terrain 2 s after the last tile. All at once (a flip), 0.131 → 0.042 and
+  0.129 → 0.023; « Drone rapide » and « Oiseau » keep ~0.06–0.08 there (the aim's ground height follows the terrain 1:1, a
+  step of a few tens of metres). Cost: a plain flight is unchanged but for two clock look-ups per frame (the speed) and,
+  while tiles arrive, a scan of 12 instants. **Left as is**: the aim of the lively presets at ×4 on the switchbacks, the
+  sideways swing of the lively presets in a hairpin of a steep slope (`swingAngle` turns twice as fast straight uphill:
+  0.03–0.06 with « Drone rapide »), the stage end of « À la suite » with a lively preset (a heading wobble of 0.15 in the last
+  third of a second before the cut, only when a stage ends in a switchback), the racers' positions of « En parallèle » /
+  « Toutes les traces » (the group centre follows them as they hop), and the terrain level the camera reads: making it
+  insensitive to the tiles loaded (a coarse level that never changes) needs the engine to answer at a given zoom.
   **Smoothing in film time** (`src/flyover/timeSmoothing.ts`, applied by `computeFilmView`; still no frame-to-frame
   state): the aim point follows the marker's progress averaged over « Lissage de la visée » `aimSmoothingS` (0 by
   default: on the marker), the camera follows it averaged over « Lissage de la caméra » `cameraSmoothingS` (3 s by

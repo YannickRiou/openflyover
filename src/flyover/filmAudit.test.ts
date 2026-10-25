@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
+import exampleGpx from '../../public/samples/etang-ayguelongue-pic-de-l-homme.gpx?raw'
 import { filmClockFor } from '../film/clock'
 import { DEFAULT_FILM, type Film, type ShotStyle } from '../film/model'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { centroid } from '../geo/lonLat'
-import { CAMERA_PRESETS } from './cameraSettings'
+import type { HeightSampler } from '../scene/trackLineSet'
+import { CAMERA_PRESETS, DEFAULT_CAMERA, type CameraSettings } from './cameraSettings'
 import { AUDIT_JOLT_LIMIT, auditFilmCamera, auditPoses, type AuditPose } from './filmAudit'
+import { computeFilmView } from './filmCamera'
 import { DEFAULT_PACING } from './pacing'
-import { trackPathOf } from './path'
+import { samplePath, trackPathOf } from './path'
 import { hairpins, loops, steepSampler } from './__fixtures__/markerVisible'
-import { curvyOuting, hillySampler } from './__fixtures__/smoothness'
+import { curvyOuting, gpxTrack, hillySampler } from './__fixtures__/smoothness'
 
 const frame = createLocalFrame(6.85, 45.9)
 const FPS = 30
@@ -94,6 +97,107 @@ describe('the opening and closing shots of every preset', () => {
             expect(issues, `${name}, ${preset.id}, ${style}, ${fromS === 0 ? 'opening' : 'closing'}`).toEqual([])
           }
         }
+      }
+    }
+  })
+})
+
+describe('the whole film over the home page example, beyond the opening and the closing', () => {
+  // the real hike of « Essayer avec l'exemple »: switchbacks, 12.6 km flown in 60 s; hills under it
+  const track = gpxTrack(exampleGpx)
+  const path = trackPathOf(track)
+  const where = createLocalFrame(centroid(track.bounds).lon, centroid(track.bounds).lat)
+  const lengthM = path.lengthM
+  const clockOf = (film: Partial<Film>) => filmClockFor({ track, film: { ...DEFAULT_FILM, autoStops: false, ...film }, durationS: 60, pacing: DEFAULT_PACING, landmarks: [] })
+  const audit = (film: Partial<Film>, camera: CameraSettings, extra: Record<string, unknown> = {}) =>
+    auditFilmCamera(path, clockOf(film), where, hillySampler, { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9, ...extra })
+  const preset = (id: string) => CAMERA_PRESETS.find((p) => p.id === id)!.camera
+
+  it('« Lissage de la caméra » at 0 or 0.5 s: the heading no longer whips round the switchbacks', { timeout: 60_000 }, () => {
+    for (const cameraSmoothingS of [0, 0.5]) {
+      const issues = audit({}, { ...DEFAULT_CAMERA, distance: 0.5, pitchDeg: 25, cameraSmoothingS })
+      expect(issues.filter((i) => i.kind === 'jolt'), `smoothing ${cameraSmoothingS}`).toEqual([])
+    }
+  })
+
+  it('speed portions at ×4 and ×0.25: the sway of the bird follows the bends at the pace of the film, not 4 times as fast', { timeout: 60_000 }, () => {
+    const speeds = [
+      { id: 'a', fromM: lengthM * 0.2, toM: lengthM * 0.35, factor: 4 },
+      { id: 'b', fromM: lengthM * 0.55, toM: lengthM * 0.7, factor: 0.25 },
+    ]
+    // 0.055 before; the aim of the fast drone still whips round the switchbacks at ×4 (0.07): it must stay near the marker
+    expect(audit({ speeds }, preset('bird'))).toEqual([])
+  })
+
+  it('camera keys over the steep massif: the camera never goes through the ridges between them', { timeout: 60_000 }, () => {
+    // the blend of two views knows nothing of the relief between them: 65 to 101 m under the ground before the fix
+    const switchbacks = hairpins()
+    const steepPath = trackPathOf(switchbacks)
+    const c = centroid(switchbacks.bounds)
+    const steep = createLocalFrame(c.lon, c.lat)
+    const cameraKeys = [
+      { id: 'k1', atM: steepPath.lengthM * 0.25, distance: 1, pitchDeg: 20, headingOffsetDeg: 45 },
+      { id: 'k2', atM: steepPath.lengthM * 0.5, distance: 1.6, pitchDeg: 25, headingOffsetDeg: -120, aimAheadM: 400 },
+      { id: 'k3', atM: steepPath.lengthM * 0.7, distance: 0.8, pitchDeg: 80, headingOffsetDeg: 0 },
+    ]
+    const clock = filmClockFor({ track: switchbacks, film: { ...DEFAULT_FILM, autoStops: false, cameraKeys }, durationS: 60, pacing: DEFAULT_PACING, landmarks: [] })
+    for (const camera of [DEFAULT_CAMERA, preset('free')]) {
+      const issues = auditFilmCamera(steepPath, clock, steep, steepSampler, { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9 })
+      expect(issues.filter((i) => i.kind !== 'marker-out'), camera.style).toEqual([])
+    }
+  })
+
+  it('sharper tiles arriving while the film plays: the camera climbs to its new height over a few frames, no step of a hundred metres', { timeout: 60_000 }, () => {
+    // the terrain of the hills at 0.9–1.3 km cells, then sharpened a little each frame for 3 s (the engine's version rises each time)
+    // the hills three times as high: ridges between the camera and the marker
+    const rugged = (lon: number, lat: number) => 3 * (hillySampler(lon, lat) as number)
+    const ruggedSampler: HeightSampler = rugged
+    const cellLon = 0.012
+    const cellLat = 0.009
+    const coarse: HeightSampler = (lon, lat) => {
+      const [i, j] = [Math.floor(lon / cellLon), Math.floor(lat / cellLat)]
+      const [fx, fy] = [lon / cellLon - i, lat / cellLat - j]
+      const h = (a: number, b: number) => rugged(a * cellLon, b * cellLat)
+      return h(i, j) * (1 - fx) * (1 - fy) + h(i + 1, j) * fx * (1 - fy) + h(i, j + 1) * (1 - fx) * fy + h(i + 1, j + 1) * fx * fy
+    }
+    for (const [id, startS] of [['chase', 20], ['chase', 40], ['cinema', 30], ['cinema', 50]] as const) {
+      const camera = preset(id)
+      const clock = clockOf({})
+      let share = 0
+      let version = 0
+      const sample: HeightSampler = (lon, lat) => (coarse(lon, lat) as number) * (1 - share) + rugged(lon, lat) * share
+      const frames: Vector3[][] = []
+      for (let i = 0; i < 60 + 90 + 90; i++) {
+        if (i >= 60 && i < 150) {
+          share = (i - 59) / 90
+          version++
+        }
+        const t = startS + i / 30
+        const view = computeFilmView(path, clock, t, clock.progressAtTime(t), where, sample, { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9, terrainVersion: version })
+        frames.push([view.position, view.target])
+      }
+      let worst = 0
+      for (let i = 56; i + 1 < frames.length; i++) {
+        const distance = frames[i][0].distanceTo(frames[i][1])
+        for (const k of [0, 1]) worst = Math.max(worst, frames[i + 1][k].clone().add(frames[i - 1][k]).addScaledVector(frames[i][k], -2).length() / distance)
+      }
+      expect(worst, `${id} from ${startS} s`).toBeLessThan(AUDIT_JOLT_LIMIT)
+      // and it gets there: the camera over the final terrain, placed from scratch, is the one 3 s after the last tile
+      const final = computeFilmView(path, clock, startS + 239 / 30, clock.progressAtTime(startS + 239 / 30), where, ruggedSampler, { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9 })
+      expect(frames[239][0].distanceTo(final.position), `${id} from ${startS} s`).toBeLessThan(1)
+    }
+  })
+
+  it('photo pins on the track: the turn to them keeps the marker in the frame, with the default camera and the close ones', { timeout: 60_000 }, () => {
+    const clock = clockOf({})
+    // a pin on the track ahead of the marker, on it, behind it, as photos taken 400 m away are
+    for (const shiftM of [400, 0, -400]) {
+      const pins = [14, 30, 45, 58].map((startS) => {
+        const at = samplePath(path, clock.progressAtTime(startS) * lengthM + shiftM)
+        return { startS, endS: startS + 3, lon: at.lon, lat: at.lat, ele: at.ele }
+      })
+      for (const id of ['chase', 'fast-drone', 'bird']) {
+        expect(audit({}, preset(id), { pins }).filter((i) => i.kind === 'marker-out'), `${id}, pins ${shiftM} m from the marker`).toEqual([])
       }
     }
   })
