@@ -9,7 +9,7 @@
  * swing) follow the film time, so they keep moving while the pacing holds the progress.
  */
 import { Vector3 } from 'three'
-import { clamp, lastIndexAtOrBelow } from '../core/math'
+import { clamp, lastIndexAtOrBelow, smootherstep } from '../core/math'
 import type { LocalFrame } from '../core/types'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
@@ -117,6 +117,27 @@ export const CINEMATIC_PITCH_FACTOR = 0.5
 export const CINEMATIC_WINDOW_FACTOR = 2
 export const CINEMATIC_SWING_RAD = (35 * Math.PI) / 180
 export const CINEMATIC_PERIOD_S = 40
+
+/**
+ * « Espace devant »: the aim moves ahead along the smoothed travel direction, so the marker stands behind the middle of the
+ * frame by `leadRoomPct` of half its height, whatever the camera's distance, pitch or viewing angle. Half the frame
+ * height per metre of distance at the scene camera's field of view (CAMERA_FOV_DEG, filmCamera.ts imports this module).
+ * Full once the marker moves at LEAD_FULL_SPEED of a flight's constant pace, eased out below it (a stop, a shot).
+ * LEAD_SCREEN_FLOOR keeps the shift finite where travel is nearly along the line of sight at a low pitch (the same
+ * ground shift moves the marker little on screen there, `leadRoom`).
+ */
+export const LEAD_HALF_FRAME_PER_M = Math.tan((50 * Math.PI) / 360)
+export const LEAD_FULL_SPEED = 0.5
+export const LEAD_PAN_PITCH_DEG = 45
+export const LEAD_MOVE_PITCH_DEG = 75
+export const LEAD_SCREEN_FLOOR = 0.2
+/**
+ * « Inclinaison dans les virages »: the camera rolls into a bend by `bankDeg` × tanh(turn rate / BANK_TURN_RATE_RAD_S), the
+ * turn rate being that of the smoothed travel direction in film time, read over BANK_SPAN_SHARE of the heading window.
+ * Proportional in a gentle bend, never more than `bankDeg`, and at 0 where the camera does not turn (a stop included).
+ */
+export const BANK_TURN_RATE_RAD_S = 0.15
+export const BANK_SPAN_SHARE = 0.5
 
 const DEG = Math.PI / 180
 const NORTH = new Vector3(0, 0, -1)
@@ -438,6 +459,12 @@ export interface FlightView extends CameraView {
   marker: Vector3
   /** how far the clearance rules raised the camera (metres; 0 without terrain) */
   raiseM: number
+  /** the aim point before « Espace devant » moved it ahead (`target` = this + the lead room): what the camera keys are placed around */
+  aim: Vector3
+  /** `target` for a camera that stands at `position` instead (the lead is meant on the screen, so it depends on the camera's height) */
+  leadTarget: (position: Vector3) => Vector3
+  /** roll of the camera about its line of sight (radians, > 0 = banking right: its up leans to the right, as in a right bend) */
+  rollRad: number
 }
 
 export interface CameraViewOptions {
@@ -455,6 +482,8 @@ export interface CameraViewOptions {
   aimProgress?: number
   /** progress the camera is placed from (place along the track, heading); the marker's when absent */
   cameraProgress?: number
+  /** how fast the marker and the camera's point of the track move, as shares of a flight's constant pace (`motionShares`, `timeSmoothing.ts`); 1 each (steady flight) when absent */
+  motion?: { marker: number; camera: number }
 }
 
 /** Styles whose view also moves with the film time (they keep moving during a pause of the pacing). */
@@ -585,14 +614,72 @@ export function computeCameraView(
     : dCamera === dAim
       ? target
       : smoothPointAt(path, dCamera, pointRadiusM, aimGround + liftM, frame)
+  // the aim moves ahead (and the camera with it, as far as `leadRoom` says): the marker falls back in the frame; the
+  // clearance rules below place the camera where it ends up
+  const motion = options.motion ?? { marker: 1, camera: 1 }
+  const travel = smoothHeadingAt(path, dCamera, headingWindowM(path, camera), speedMps * camera.cameraSmoothingS * HEADING_SMOOTHING_FACTOR, frame)
   const position = positionAround(from, place)
+  const lead = leadRoom(target.clone().sub(position), travel, camera, motion.marker)
+  position.add(lead.camera)
   const freeY = position.y
   if (sample) {
     // the sight line ends at the marker, at its steady height (its own rides each bump)
     const endGround = dAim === d && !smoothLine ? aimGround : steadyGround(d, marker)
     position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM)
   }
-  return { target, position, marker, raiseM: position.y - freeY }
+  // the aim moves by what the camera needs where it stands (the film moves it again once it has set its height)
+  const leadTarget = (at: Vector3) => target.clone().add(leadRoom(target.clone().sub(at).add(lead.camera), travel, camera, motion.marker).target)
+  const rollRad = bankRad(path, dCamera, timeS, frame, camera, durationS, motion.camera)
+  return { target: leadTarget(position), aim: target, leadTarget, position, marker, raiseM: position.y - freeY, rollRad }
+}
+
+/**
+ * « Espace devant »: how far the aim moves ahead along `travel` and how far the camera goes with it (horizontal vectors,
+ * local frame), so that the marker, which stays where it is, falls back from the middle of the frame by `leadRoomPct`
+ * of half the frame height (toward the side of the screen the travel leaves it) once it moves (`markerShare`,
+ * LEAD_FULL_SPEED); `sight` is the vector from the camera to the aim. Below LEAD_PAN_PITCH_DEG the camera stays put and
+ * turns to its new aim (the sight line to the marker and the clearances are what they were); from LEAD_MOVE_PITCH_DEG it
+ * moves with it (a near-vertical view turned toward an aim just beside it would swing round); in between the share
+ * `move` of the shift is the camera's.
+ *
+ * Solved exactly: with `d` the camera's distance from the aim, `u` = shift / d, `f` the unit forward and `t` the travel,
+ * the marker is at d·f − move·u·d·t from the camera and the axis along d·f + (1 − move)·u·d·t, so the tangent of the angle
+ * between them is u·|f × t| / (1 + (1 − 2·move)·u·f·t − move·(1 − move)·u²) and must be `leadRoomPct` of tan(fov / 2).
+ * No lead in 'orbit', whose view turns round the marker whatever the way it is heading.
+ */
+function leadRoom(sight: Vector3, travel: Vector3, { style, leadRoomPct }: CameraSettings, markerShare: number): { target: Vector3; camera: Vector3 } {
+  const distance = sight.length()
+  if (style === 'orbit' || !(leadRoomPct > 0) || !(distance > 0)) return { target: new Vector3(), camera: new Vector3() }
+  const f = sight.clone().divideScalar(distance)
+  const along = f.x * travel.x + f.z * travel.z
+  const across = Math.sqrt(Math.max(0, 1 - along * along))
+  const pitchDeg = Math.asin(clamp(-f.y, -1, 1)) / DEG
+  const move = smootherstep((pitchDeg - LEAD_PAN_PITCH_DEG) / (LEAD_MOVE_PITCH_DEG - LEAD_PAN_PITCH_DEG))
+  const k = (leadRoomPct / 100) * smootherstep(markerShare / LEAD_FULL_SPEED) * LEAD_HALF_FRAME_PER_M
+  // travel nearly along the line of sight, toward the camera, at a low pitch: the marker would drift away, not off-centre
+  const divisor = smoothMax(across - k * (1 - 2 * move) * along, LEAD_SCREEN_FLOOR, LEAD_SCREEN_FLOOR)
+  const shiftM = ((2 * k) / (divisor + Math.sqrt(divisor * divisor + 4 * k * k * move * (1 - move)))) * distance
+  return { target: travel.clone().multiplyScalar(shiftM), camera: travel.clone().multiplyScalar(shiftM * move) }
+}
+
+/**
+ * Roll of the camera at `d` (radians, > 0 = banking right) from the turn rate of its reference direction (`placement`):
+ * the turn over ± BANK_SPAN_SHARE of the heading window per metre of track, times the camera's speed along the track
+ * (`cameraShare`: its share of a flight's constant pace). None in 'top' (the map does not tilt).
+ */
+function bankRad(path: TrackPath, d: number, timeS: number, frame: LocalFrame, camera: CameraSettings, durationS: number, cameraShare: number): number {
+  if (camera.style === 'top' || !(camera.bankDeg > 0)) return 0
+  const half = headingWindowM(path, camera) * BANK_SPAN_SHARE
+  const from = clamp(d - half, 0, path.lengthM)
+  const to = clamp(d + half, 0, path.lengthM)
+  if (!(to > from)) return 0
+  const heading = (at: number) => {
+    const { reference } = placement(path, at, timeS, frame, camera, durationS)
+    return Math.atan2(reference.x, -reference.z)
+  }
+  const turn = heading(to) - heading(from)
+  const rate = (Math.atan2(Math.sin(turn), Math.cos(turn)) / (to - from)) * cameraShare * (path.lengthM / Math.max(1, durationS))
+  return camera.bankDeg * DEG * Math.tanh(rate / BANK_TURN_RATE_RAD_S)
 }
 
 /**
@@ -814,13 +901,18 @@ export function smoothMax(a: number, b: number, k: number): number {
   return Math.max(a, b) + (h * h * k) / 4
 }
 
-/** Camera on the sphere around `target` given by the placement (pitch clamped to PITCH_MIN_DEG..PITCH_MAX_DEG). */
-function positionAround(target: Vector3, { reference, viewAngle, pitchDeg, distance }: Placement): Vector3 {
-  const pitch = clamp(pitchDeg, PITCH_MIN_DEG, PITCH_MAX_DEG) * DEG
-  // viewing direction = reference turned clockwise (seen from above) by viewAngle; right = (-z, 0, x)
+/** Horizontal viewing direction of a placement: its reference turned clockwise (seen from above) by its viewing angle; right = (-z, 0, x). */
+function lookDirection({ reference, viewAngle }: Placement): Vector3 {
   const cos = Math.cos(viewAngle)
   const sin = Math.sin(viewAngle)
-  const look = new Vector3(reference.x * cos - reference.z * sin, 0, reference.z * cos + reference.x * sin)
+  return new Vector3(reference.x * cos - reference.z * sin, 0, reference.z * cos + reference.x * sin)
+}
+
+/** Camera on the sphere around `target` given by the placement (pitch clamped to PITCH_MIN_DEG..PITCH_MAX_DEG). */
+function positionAround(target: Vector3, place: Placement): Vector3 {
+  const { pitchDeg, distance } = place
+  const pitch = clamp(pitchDeg, PITCH_MIN_DEG, PITCH_MAX_DEG) * DEG
+  const look = lookDirection(place)
   return target
     .clone()
     .addScaledVector(look, -distance * Math.cos(pitch))

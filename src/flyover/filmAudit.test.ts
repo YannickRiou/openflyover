@@ -4,7 +4,7 @@ import { filmClockFor } from '../film/clock'
 import { DEFAULT_FILM, type Film, type ShotStyle } from '../film/model'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { centroid } from '../geo/lonLat'
-import { CAMERA_PRESETS } from './cameraSettings'
+import { CAMERA_PRESETS, CAMERA_RANGES } from './cameraSettings'
 import { AUDIT_JOLT_LIMIT, auditFilmCamera, auditPoses, type AuditPose } from './filmAudit'
 import { DEFAULT_PACING } from './pacing'
 import { trackPathOf } from './path'
@@ -77,21 +77,28 @@ describe('the opening and closing shots of every preset', () => {
   ]
   const styles: ShotStyle[] = ['descente', 'situation', 'balayage', 'saut']
 
+  // every preset as it is, and with « Espace devant » and « Inclinaison dans les virages » at their maximum
+  const maxed = { leadRoomPct: CAMERA_RANGES.leadRoomPct.max, bankDeg: CAMERA_RANGES.bankDeg.max }
+  const cameras = CAMERA_PRESETS.flatMap(({ id, camera }) => [
+    { id, camera },
+    { id: `${id} at the maximum lead room and bank`, camera: { ...camera, ...maxed } },
+  ])
+
   // « Saut » is a quick move on purpose (0.6 s): it is checked for everything but its pace
-  it('never jolt, skim the terrain nor lose the marker, at 30 i/s', { timeout: 120_000 }, () => {
+  it('never jolt, skim the terrain nor lose the marker, at 30 i/s', { timeout: 240_000 }, () => {
     for (const { name, track, sample } of scenes) {
       const path = trackPathOf(track)
       const c = centroid(track.bounds)
       const where = createLocalFrame(c.lon, c.lat)
-      for (const preset of CAMERA_PRESETS) {
+      for (const { id, camera } of cameras) {
         for (const style of styles) {
           const film: Film = { ...DEFAULT_FILM, opening: { style, durationS: 8 }, closing: { style, durationS: 6 } }
           const clock = filmClockFor({ track, film, durationS: 60, pacing: DEFAULT_PACING, landmarks: [] })
-          const opts = { exaggeration: 1, liftM: 3, camera: preset.camera, durationS: 60, aspect: 16 / 9 }
+          const opts = { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9 }
           const closingS = clock.openingS + clock.flightS
           for (const [fromS, toS] of [[0, clock.openingS], [closingS, clock.totalTime()]]) {
             const issues = auditFilmCamera(path, clock, where, sample, opts, { fromS, toS }).filter((i) => i.kind !== 'jolt' || style !== 'saut')
-            expect(issues, `${name}, ${preset.id}, ${style}, ${fromS === 0 ? 'opening' : 'closing'}`).toEqual([])
+            expect(issues, `${name}, ${id}, ${style}, ${fromS === 0 ? 'opening' : 'closing'}`).toEqual([])
           }
         }
       }

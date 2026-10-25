@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CAMERA_PRESETS } from './cameraSettings'
+import { CAMERA_PRESETS, CAMERA_RANGES } from './cameraSettings'
 import { MARKER_TRACKS, flyMarker, steepSampler } from './__fixtures__/markerVisible'
 import { flyFilm } from './__fixtures__/smoothness'
 
@@ -9,7 +9,9 @@ import { flyFilm } from './__fixtures__/smoothness'
  * over a steep synthetic massif, every camera preset, 60 s flights. Measured at 10 fps: 2 frames hidden out of 21,600
  * over the 36 flights, both in one (« Montgolfière » on the switchbacks, 4 m behind the crest at most); it was 0.3%,
  * up to 8% for one flight with 22 switches between shown and hidden. The marker stays within 0.15 of the half-frame
- * from its centre (0.14 at most), 0.2 through stops (0.16: the aim stands on a smoothed line, `cameraLine`).
+ * from its centre (0.14 at most), 0.2 through stops (0.16: the aim stands on a smoothed line, `cameraLine`), plus
+ * the share « Espace devant » moves it back by on purpose (`leadRoomPct`), and in every case within 0.65 of the
+ * half-frame with that setting and « Inclinaison dans les virages » at their maximum.
  */
 const LENGTH_S = 60
 /** the presets that follow the marker ('free' follows nothing but the keyframes, by design) */
@@ -32,7 +34,7 @@ describe('marker visibility', { timeout: 120_000 }, () => {
         expect(Math.min(...frames.map((f) => f.clearanceM)), preset).toBeGreaterThan(-8)
         // no blinking: shown and hidden swap a few times at most over the flight
         expect(hidden.filter((h, i) => i > 0 && h !== hidden[i - 1]).length, preset).toBeLessThanOrEqual(4)
-        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.15)
+        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.15 + camera.leadRoomPct / 100)
       }
       expect(hiddenFrames / allFrames).toBeLessThan(0.001)
     })
@@ -53,7 +55,15 @@ describe('marker visibility', { timeout: 120_000 }, () => {
       } as const
       for (const { name: preset, camera } of FOLLOWING) {
         const frames = flyMarker(track, LENGTH_S, steepSampler, camera, 10, 16 / 9, 1, { ...film, stops: [...film.stops], speeds: [...film.speeds] })
-        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.2)
+        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.2 + camera.leadRoomPct / 100)
+      }
+    })
+
+    it(`${name}: the marker stays comfortably in the frame with the lead room and the bank at their maximum`, () => {
+      for (const { name: preset, camera } of FOLLOWING) {
+        const { max: leadRoomPct } = CAMERA_RANGES.leadRoomPct
+        const frames = flyMarker(track, LENGTH_S, steepSampler, { ...camera, leadRoomPct, bankDeg: CAMERA_RANGES.bankDeg.max }, 10)
+        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.65)
       }
     })
   }
