@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v45.flight.title': 'Easier-to-read flights',
+  'v45.flight.text': 'A flight (paragliding, kite jump, cable car) now has a translucent curtain down to the terrain, a shadow on the ground, and a line that gets thicker as it comes closer to the camera. “Colour by › Vertical speed” shows at a glance where you climb and where you sink. Settings in Track › Flight.',
   'v44.night.title': 'Brighter nights',
   'v44.night.text': '« Night brightness » (Light › Atmosphere) lights the relief and the clouds at night, like moonlight, and changes nothing in daylight. The exposure now sits with contrast and saturation in Colours.',
   'v332.landmarks.title': 'Hide landmarks in a few clicks',

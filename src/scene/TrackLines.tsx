@@ -1,6 +1,6 @@
 /**
  * TrackLines — draws every loaded track draped on the terrain: one Line2 per segment (and its glow), depth-tested so
- * the relief hides the parts behind it (see "Track and marker" in ARCHITECTURE.md; styles in `trackLineStyle.ts`,
+ * the relief hides the parts behind it; a flight also gets its curtain and its ground shadow (see "Track and marker" in ARCHITECTURE.md; styles in `trackLineStyle.ts`,
  * colours in `flyover/trackColor.ts`).
  *
  * The line objects, their draping and styles are in `trackLineSet.ts` (no React, so this file only exports the
@@ -26,6 +26,7 @@ import {
   REDRAPE_DEBOUNCE_MS,
   REDRAPE_MAX_WAIT_MS,
   applyExposure,
+  applyFlightDepth,
   applyResolution,
   applyTrackColors,
   applyTrackStyle,
@@ -153,6 +154,8 @@ export function TrackLines() {
       // the glow colour is applied with the exposure
       exposureRef.current = Number.NaN
     }
+    // a flight's width is the user's at the distance the camera looks at (the dashes' scale reference too)
+    applyFlightDepth(setsRef.current.values(), viewDistance(camera, controls?.target ?? null))
     // after a rebuild or a re-drape (the subscription covers the progress and settings)
     refreshDrawOn()
     if (gl.toneMappingExposure === exposureRef.current) return

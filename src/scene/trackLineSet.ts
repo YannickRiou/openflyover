@@ -6,11 +6,16 @@
  * `base + up * height`. Buffers are updated in place when the point count is unchanged.
  */
 import {
+  BufferAttribute,
+  BufferGeometry,
   Color,
   Group,
+  Mesh,
   SRGBColorSpace,
   Vector3,
   type InterleavedBufferAttribute,
+  type MeshBasicMaterial,
+  type ShaderMaterial,
 } from 'three'
 import { Line2 } from 'three/addons/lines/Line2.js'
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
@@ -20,11 +25,11 @@ import {
   TRACK_METRICS,
   colorizeValues,
   resampleValues,
-  robustRange,
+  metricRange,
   trackMetricValues,
   type TrackColorBy,
 } from '../flyover/trackColor'
-import { flightOffsetAt, trackHeightM } from '../flyover/flights'
+import { flightEase, flightOffsetAt, trackHeightM } from '../flyover/flights'
 import { smoothPoints } from '../flyover/smooth'
 import { raceAt } from '../flyover/race'
 import type { Race } from '../flyover/race'
@@ -36,11 +41,17 @@ import { cumulativeDistances } from '../geo/lonLat'
 import {
   addTrailCut,
   applyDash,
+  createCurtainMaterial,
   createGlowMaterial,
+  createShadowMaterial,
+  CURTAIN_TOP_ALPHA,
   cutLine,
   lineWidthPx,
   NO_TRAIL,
+  setFlightCut,
+  setFlightWeights,
   setGlow,
+  SHADOW_WIDTH_SHARE,
   setTrackDistances,
   setTrailStart,
   TRACK_GLOW_MAX_STRENGTH,
@@ -58,6 +69,8 @@ export const LINE_WIDTH_PX = DEFAULT_TRACK_STYLE.width
 export const DENSIFY_STEP_M = 10
 /** Vertical lift above the (exaggerated) terrain so the line is never z-fighting with it (metres). */
 export const LINE_LIFT_M = 3
+/** The curtain of a flight starts this far above the terrain-exaggerated flight height, a little under the line (which is lifted by LINE_LIFT_M), so the two never fight for the depth (metres). */
+export const CURTAIN_LIFT_M = 1
 /** Delay between a terrain change and the re-drape (milliseconds). */
 export const REDRAPE_DEBOUNCE_MS = 150
 /**
@@ -199,8 +212,118 @@ export function writeLineColors(geometry: LineGeometry, colors: Float32Array): v
 }
 
 // ---------------------------------------------------------------------------
+// Flights: curtain and shadow
+// ---------------------------------------------------------------------------
+
+/** The stretches of consecutive points in a flight, as [first, count]; a lone point draws nothing. */
+export function flightStretches(buffer: DrapeBuffer): [number, number][] {
+  const out: [number, number][] = []
+  for (let i = 0; i < buffer.count; i++) {
+    if (Number.isNaN(buffer.flight[i])) continue
+    const first = i
+    while (i + 1 < buffer.count && !Number.isNaN(buffer.flight[i + 1])) i++
+    if (i > first) out.push([first, i - first + 1])
+  }
+  return out
+}
+
+/** The two strips of a flight of `count` points starting at `first`; `dist` are the segment's point distances. */
+function buildFlightPiece(first: number, count: number, dist: Float64Array, curtainMaterial: MeshBasicMaterial, shadowMaterial: ShaderMaterial): FlightPiece {
+  // a quad between the vertex pairs (2k, 2k + 1) and (2k + 2, 2k + 3), shared by both strips
+  const index: number[] = []
+  for (let k = 0; k < count - 1; k++) index.push(2 * k, 2 * k + 1, 2 * k + 2, 2 * k + 1, 2 * k + 3, 2 * k + 2)
+  const trackM = new Float32Array(count * 2)
+  const edge = new Float32Array(count * 2)
+  for (let k = 0; k < count; k++) {
+    trackM.fill(dist[first + k], 2 * k, 2 * k + 2)
+    edge[2 * k] = -1
+    edge[2 * k + 1] = 1
+  }
+  const curtain = new BufferGeometry()
+  curtain.setAttribute('position', new BufferAttribute(new Float32Array(count * 6), 3))
+  curtain.setAttribute('color', new BufferAttribute(new Float32Array(count * 8), 4))
+  curtain.setAttribute('trackM', new BufferAttribute(trackM, 1))
+  curtain.setIndex(index)
+  const shadow = new BufferGeometry()
+  shadow.setAttribute('position', new BufferAttribute(new Float32Array(count * 6), 3))
+  shadow.setAttribute('ahead', new BufferAttribute(new Float32Array(count * 6), 3))
+  shadow.setAttribute('edge', new BufferAttribute(edge, 1))
+  shadow.setAttribute('trackM', new BufferAttribute(trackM.slice(), 1))
+  shadow.setIndex(index)
+  const piece: FlightPiece = { first, count, curtain: new Mesh(curtain, curtainMaterial), shadow: new Mesh(shadow, shadowMaterial) }
+  piece.curtain.name = 'track-curtain'
+  piece.curtain.renderOrder = 1
+  piece.shadow.name = 'track-shadow'
+  setCurtainColors([piece], null)
+  return piece
+}
+
+/**
+ * Drape the curtain and the shadow of a flight: the curtain's top follows the flight (a little under the line), its
+ * bottom and the shadow lie on the terrain (LINE_LIFT_M above it like the line, never above the flight); where the
+ * terrain is not known yet they collapse onto the flight, and come down once its tiles load (the re-drape).
+ */
+export function drapeFlightPiece(buffer: DrapeBuffer, piece: FlightPiece, sample: HeightSampler | null, exaggeration: number): void {
+  const { lon, lat, ele, flight, base, up } = buffer
+  const curtain = piece.curtain.geometry.getAttribute('position') as BufferAttribute
+  const shadow = piece.shadow.geometry.getAttribute('position') as BufferAttribute
+  const ahead = piece.shadow.geometry.getAttribute('ahead') as BufferAttribute
+  const at = (i: number, height: number, out: BufferAttribute, v: number) =>
+    out.setXYZ(v, base[i * 3] + up[i * 3] * height, base[i * 3 + 1] + up[i * 3 + 1] * height, base[i * 3 + 2] + up[i * 3 + 2] * height)
+  for (let k = 0; k < piece.count; k++) {
+    const i = piece.first + k
+    const ground = sample?.(lon[i], lat[i])
+    const top = trackHeightM(ground, ele[i], flight[i]) * exaggeration + CURTAIN_LIFT_M
+    const low = ground === undefined || Number.isNaN(ground) ? top : Math.min(top, ground * exaggeration + LINE_LIFT_M)
+    at(i, top, curtain, 2 * k)
+    at(i, low, curtain, 2 * k + 1)
+    at(i, low, shadow, 2 * k)
+    at(i, low, shadow, 2 * k + 1)
+  }
+  // direction of travel at each point, for the width of the shadow in the screen
+  for (let k = 0; k < piece.count; k++) {
+    const a = 2 * Math.max(0, k - 1)
+    const b = 2 * Math.min(piece.count - 1, k + 1)
+    for (let v = 2 * k; v < 2 * k + 2; v++) ahead.setXYZ(v, shadow.getX(b) - shadow.getX(a), shadow.getY(b) - shadow.getY(a), shadow.getZ(b) - shadow.getZ(a))
+  }
+  for (const attribute of [curtain, shadow, ahead]) attribute.needsUpdate = true
+  piece.curtain.geometry.computeBoundingSphere()
+  piece.shadow.geometry.computeBoundingSphere()
+}
+
+/**
+ * Colour the curtains of `pieces` like the line: `colors` (linear rgb per point of the segment, null = white, the material
+ * then carrying the track colour), opaque-ish at the line (CURTAIN_TOP_ALPHA) and transparent at the ground.
+ */
+export function setCurtainColors(pieces: readonly FlightPiece[], colors: Float32Array | null): void {
+  for (const piece of pieces) {
+    const attribute = piece.curtain.geometry.getAttribute('color') as BufferAttribute
+    for (let k = 0; k < piece.count; k++) {
+      const o = (piece.first + k) * 3
+      const r = colors ? colors[o] : 1
+      const g = colors ? colors[o + 1] : 1
+      const b = colors ? colors[o + 2] : 1
+      attribute.setXYZW(2 * k, r, g, b, CURTAIN_TOP_ALPHA)
+      attribute.setXYZW(2 * k + 1, r, g, b, 0)
+    }
+    attribute.needsUpdate = true
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Three.js object management (no React below this line except the component; exported for unit tests)
 // ---------------------------------------------------------------------------
+
+/**
+ * A flight of a segment: its consecutive points `first`..`first + count - 1`, the curtain falling from the line to the
+ * relief and the shadow draped on it, both strips of two vertices per point (top and ground / left and right).
+ */
+export interface FlightPiece {
+  first: number
+  count: number
+  curtain: Mesh<BufferGeometry, MeshBasicMaterial>
+  shadow: Mesh<BufferGeometry, ShaderMaterial>
+}
 
 export interface SegmentLines extends CuttableLine {
   /** index in track.segments */
@@ -216,6 +339,8 @@ export interface SegmentLines extends CuttableLine {
   solid: Line2
   /** wider soft halo, shown with `trackStyle.glow` */
   glow: Line2
+  /** the flights of the segment, none for a track on the ground */
+  flights: FlightPiece[]
 }
 
 export interface TrackLineSet {
@@ -227,6 +352,8 @@ export interface TrackLineSet {
   segments: SegmentLines[]
   solidMaterial: LineMaterial
   glowMaterial: LineMaterial
+  curtainMaterial: MeshBasicMaterial
+  shadowMaterial: ShaderMaterial
   /** distance the lines are drawn up to (Infinity = whole), NaN when it must be applied again (after a drape) */
   drawnM: number
   /** share of its colours the track is drawn with: 1, or less for an outing already drawn in a « Bilan » (`dimTrackLineSet`) */
@@ -263,6 +390,8 @@ export function buildTrackLineSet(
   const object = new Group()
   object.name = `track:${track.id}`
   const materials = createLineMaterials(track.color, width, height)
+  const curtainMaterial = createCurtainMaterial()
+  const shadowMaterial = createShadowMaterial(width, height)
 
   const segments: SegmentLines[] = []
   /** distance at the start of the segment, as the marker counts it */
@@ -276,9 +405,12 @@ export function buildTrackLineSet(
     startM = dist[dist.length - 1]
     const buffer = buildDrapeBuffer(points, frame)
     for (let i = 0; i < buffer.count; i++) buffer.flight[i] = flightOffsetAt(track.flights, dist[i])
+    const flights = flightStretches(buffer).map(([first, count]) => buildFlightPiece(first, count, dist, curtainMaterial, shadowMaterial))
     const positions = new Float32Array(buffer.count * 3)
     const geometry = new LineGeometry()
     setTrackDistances(geometry, dist)
+    // the width follows the depth in the air, easing in and out at the ends of a flight
+    if (flights.length > 0) setFlightWeights(geometry, Float32Array.from(dist, (d) => flightEase(track.flights, d)))
     const solid = new Line2(geometry, materials.solid)
     solid.name = 'track-line'
     solid.renderOrder = 2
@@ -287,7 +419,8 @@ export function buildTrackLineSet(
     glow.renderOrder = 1
     glow.visible = false
     object.add(solid, glow)
-    segments.push({ index, source, points, buffer, positions, dist, shortened: -1, geometry, solid, glow })
+    for (const piece of flights) object.add(piece.curtain, piece.shadow)
+    segments.push({ index, source, points, buffer, positions, dist, shortened: -1, geometry, solid, glow, flights })
   }
 
   return {
@@ -298,6 +431,8 @@ export function buildTrackLineSet(
     segments,
     solidMaterial: materials.solid,
     glowMaterial: materials.glow,
+    curtainMaterial,
+    shadowMaterial,
     drawnM: Number.NaN,
     dim: 1,
   }
@@ -309,8 +444,14 @@ function materialsOf(set: TrackLineSet): LineMaterial[] {
 
 export function disposeTrackLineSet(set: TrackLineSet): void {
   set.object.removeFromParent()
-  for (const segment of set.segments) segment.geometry.dispose()
-  for (const material of materialsOf(set)) material.dispose()
+  for (const segment of set.segments) {
+    segment.geometry.dispose()
+    for (const piece of segment.flights) {
+      piece.curtain.geometry.dispose()
+      piece.shadow.geometry.dispose()
+    }
+  }
+  for (const material of [...materialsOf(set), set.curtainMaterial, set.shadowMaterial]) material.dispose()
 }
 
 export function drapeTrackLineSet(set: TrackLineSet, engine: TerrainEngine | null, exaggeration: number): void {
@@ -321,6 +462,7 @@ export function drapeTrackLineSet(set: TrackLineSet, engine: TerrainEngine | nul
     writeLinePositions(segment.geometry, segment.positions)
     segment.shortened = -1
     if (segment.geometry.getAttribute('instanceDistanceStart')) segment.solid.computeLineDistances()
+    for (const piece of segment.flights) drapeFlightPiece(segment.buffer, piece, sampler, exaggeration)
   }
   set.drawnM = Number.NaN
 }
@@ -341,13 +483,15 @@ export function applyExposure(sets: Iterable<TrackLineSet>, exposure: number, gl
       set.glowMaterial.needsUpdate = true
     }
     set.glowMaterial.color.set(glowColor || base).multiplyScalar(set.dim / exposure)
+    // its vertex colours are white (the track colour is the material's) or the line's
+    set.curtainMaterial.color.set(base).multiplyScalar(set.dim / exposure)
   }
 }
 
 /** Draw `set` in `dim` of its colours (1 = as it is), at once: a track already drawn in a « Bilan » is dimmer than the one being drawn. */
 export function dimTrackLineSet(set: TrackLineSet, dim: number): void {
   if (set.dim === dim) return
-  for (const material of materialsOf(set)) material.color.multiplyScalar(dim / set.dim)
+  for (const material of [...materialsOf(set), set.curtainMaterial]) material.color.multiplyScalar(dim / set.dim)
   set.dim = dim
 }
 
@@ -371,12 +515,13 @@ export function applyTrackColors(sets: Iterable<TrackLineSet>, colorBy: TrackCol
       for (const segment of set.segments) {
         segment.geometry.deleteAttribute('instanceColorStart')
         segment.geometry.deleteAttribute('instanceColorEnd')
+        setCurtainColors(segment.flights, null)
       }
     }
     return
   }
   const values = list.map((set) => trackMetricValues(set.track, colorBy))
-  const range = robustRange(values.flat()) ?? { min: 0, max: 0 }
+  const range = metricRange(values.flat(), colorBy) ?? { min: 0, max: 0 }
   const { colormap } = TRACK_METRICS[colorBy]
   const linear = new Color()
   list.forEach((set, k) => {
@@ -390,17 +535,26 @@ export function applyTrackColors(sets: Iterable<TrackLineSet>, colorBy: TrackCol
         colors[o + 2] = linear.b
       }
       writeLineColors(segment.geometry, colors)
+      setCurtainColors(segment.flights, colors)
     }
     setVertexColors(set, true)
   })
 }
 
 export function applyResolution(sets: Iterable<TrackLineSet>, width: number, height: number): void {
-  for (const set of sets) for (const material of materialsOf(set)) material.resolution.set(width, height)
+  for (const set of sets) {
+    for (const material of materialsOf(set)) material.resolution.set(width, height)
+    set.shadowMaterial.uniforms.resolution.value.set(width, height)
+  }
+}
+
+/** The distance from the camera at which a flight is drawn at the user's width (the camera's target): nearer is thicker. */
+export function applyFlightDepth(sets: Iterable<TrackLineSet>, depthM: number): void {
+  for (const set of sets) for (const material of materialsOf(set)) material.uniforms.flightDepthM.value = depthM
 }
 
 /**
- * Width, glow and dashes of `style`. Widths are in pixels of the canvas times the export render scale, so a 4K
+ * Width, glow, dashes and flight extras of `style`. Widths are in pixels of the canvas times the export render scale, so a 4K
  * video looks like the 1080p one; `pixelSize` is the world length of a pixel for the dashes (`quantizedPixelSize`).
  */
 export function applyTrackStyle(sets: Iterable<TrackLineSet>, style: TrackStyle, renderScale: number, pixelSize: number): void {
@@ -410,8 +564,13 @@ export function applyTrackStyle(sets: Iterable<TrackLineSet>, style: TrackStyle,
     // the halo starts at the edge of the line
     setGlow(set.glowMaterial, style.glowIntensity * TRACK_GLOW_MAX_STRENGTH, Math.min(1, style.width / style.glowWidth))
     for (const material of materialsOf(set)) applyDash(material, style, renderScale, pixelSize)
+    set.shadowMaterial.uniforms.widthPx.value = style.width * SHADOW_WIDTH_SHARE * renderScale
     for (const segment of set.segments) {
       segment.glow.visible = style.glow
+      for (const piece of segment.flights) {
+        piece.curtain.visible = style.flightCurtain
+        piece.shadow.visible = style.flightShadow
+      }
       // measured once draped (the drape keeps them up to date)
       const { geometry } = segment
       const measurable = geometry.getAttribute('instanceStart') && !geometry.getAttribute('instanceDistanceStart')
@@ -430,6 +589,8 @@ export function cutTrackLineSet(set: TrackLineSet, distanceM: number, trailM = I
   const startM = trail ? distanceM - trailM : NO_TRAIL
   const fadeM = trail ? trailM * TRAIL_FADE_SHARE : 0
   for (const material of materialsOf(set)) setTrailStart(material, startM, fadeM)
+  // the curtain and the shadow are cut per pixel, up to the marker too
+  for (const material of [set.curtainMaterial, set.shadowMaterial]) setFlightCut(material, startM, fadeM, distanceM)
   if (distanceM === set.drawnM) return
   for (const segment of set.segments) cutLine(segment, distanceM)
   set.drawnM = distanceM

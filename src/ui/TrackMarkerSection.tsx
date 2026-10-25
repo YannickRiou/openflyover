@@ -140,7 +140,7 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
  * « Trace » section of the Trace tab: the draw-on and the glow first; colouring, smoothing, line width and dashes as
  * rows (name and value, control on demand).
  */
-/** Heading of a part of a section (« Ligne », « Halo »). */
+/** Heading of a part of a section (« Ligne », « Halo », « Vol »). */
 const GROUP = 'border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase first:border-t-0 first:pt-0'
 
 export function TrackStyleSection({ hidden }: { hidden: boolean }) {
@@ -154,6 +154,8 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const trackColorBy = useAppStore((s) => s.settings.trackColorBy)
   const legendAnchor = useAppStore((s) => s.settings.trackLegendAnchor)
   const firstTrack = useAppStore((s) => s.tracks[0])
+  // the flight settings only matter when a loaded track has a flight
+  const hasFlights = useAppStore((s) => s.tracks.some((track) => !!track.flights?.length))
   // a « Bilan » draws its outings one after the other whatever this says, without a tail
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const colorModes = useMemo(
@@ -205,6 +207,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
             onChange={(mode) => setSetting('trackColorBy', mode)}
           />
           {trackColorBy !== 'none' && <p className="type-hint">{t('marker.track.colorByHint')}</p>}
+          {trackColorBy === 'verticalSpeed' && <p className="type-hint">{t('marker.track.verticalSpeedHint')}</p>}
         </div>
       </SettingRow>
       {trackColorBy !== 'none' && (
@@ -287,6 +290,19 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
               </ColorField>
             </div>
           </SettingRow>
+        </>
+      )}
+      {hasFlights && (
+        <>
+          <h3 className={GROUP}>{t('marker.track.flightGroup')}</h3>
+          <div className="flex items-center gap-1">
+            <Switch checked={style.flightCurtain} onChange={(on) => updateStyle({ flightCurtain: on })}>{t('marker.track.flightCurtain')}</Switch>
+            <InfoTip text={t('marker.track.flightCurtainTip')} />
+          </div>
+          <div className="flex items-center gap-1">
+            <Switch checked={style.flightShadow} onChange={(on) => updateStyle({ flightShadow: on })}>{t('marker.track.flightShadow')}</Switch>
+            <InfoTip text={t('marker.track.flightShadowTip')} />
+          </div>
         </>
       )}
     </PanelSection>

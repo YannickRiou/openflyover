@@ -5,7 +5,20 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import type { InterleavedBufferAttribute } from 'three'
 import { DEFAULT_TRACK_STYLE } from './markerSettings'
 import { cumulativeDistances } from '../geo/lonLat'
-import { addTrailCut, applyDash, createGlowMaterial, cutAt, cutLine, NO_TRAIL, quantizedPixelSize, setTrackDistances, type CuttableLine } from './trackLineStyle'
+import {
+  addTrailCut,
+  applyDash,
+  createGlowMaterial,
+  cutAt,
+  cutLine,
+  FLIGHT_WIDTH_MAX,
+  FLIGHT_WIDTH_MIN,
+  flightWidthFactor,
+  NO_TRAIL,
+  quantizedPixelSize,
+  setTrackDistances,
+  type CuttableLine,
+} from './trackLineStyle'
 
 describe('cutAt', () => {
   const dist = Float64Array.from([100, 110, 120, 130])
@@ -100,5 +113,42 @@ describe('dashes', () => {
     expect(material.gapSize).toBe(8)
     applyDash(material, DEFAULT_TRACK_STYLE, 1, 0.25)
     expect(material.dashed).toBe(false)
+  })
+})
+
+describe('flightWidthFactor', () => {
+  it("is the user's width at the focus distance, thicker nearer and thinner farther", () => {
+    expect(flightWidthFactor(1000, 1000)).toBe(1)
+    expect(flightWidthFactor(1000, 800)).toBeCloseTo(1.25, 9)
+    expect(flightWidthFactor(1000, 1250)).toBeCloseTo(0.8, 9)
+  })
+
+  it('stays between 0.6 and 1.6: never vanishes, never a ribbon', () => {
+    expect(FLIGHT_WIDTH_MIN).toBe(0.6)
+    expect(FLIGHT_WIDTH_MAX).toBe(1.6)
+    expect(flightWidthFactor(1000, 1)).toBe(FLIGHT_WIDTH_MAX)
+    expect(flightWidthFactor(1000, 1_000_000)).toBe(FLIGHT_WIDTH_MIN)
+  })
+
+  it('eases from 1 on the ground (weight 0) to the full factor, and ignores what it cannot compute', () => {
+    expect(flightWidthFactor(1000, 100, 0)).toBe(1)
+    expect(flightWidthFactor(1000, 100, 0.5)).toBeCloseTo(1.3, 9)
+    expect(flightWidthFactor(1000, 100, 1)).toBe(FLIGHT_WIDTH_MAX)
+    expect(flightWidthFactor(0, 100)).toBe(1)
+    expect(flightWidthFactor(1000, 0)).toBe(1)
+  })
+})
+
+describe('addTrailCut: width in a flight', () => {
+  it('multiplies the line offset by the depth factor with the same bounds as flightWidthFactor', () => {
+    const material = new LineMaterial()
+    addTrailCut(material, 'test-flight')
+    expect(material.uniforms.flightDepthM.value).toBe(0)
+    const shader = { vertexShader: material.vertexShader, fragmentShader: material.fragmentShader, uniforms: {} }
+    material.onBeforeCompile(shader as never, {} as never)
+    expect(shader.vertexShader).toContain('offset *= linewidth * trailWidth * flightWidth;')
+    expect(shader.vertexShader).toContain(`clamp( flightDepthM / flightDepth, ${FLIGHT_WIDTH_MIN.toFixed(1)}, ${FLIGHT_WIDTH_MAX.toFixed(1)} )`)
+    // the stock offset line was replaced, not kept next to ours
+    expect(shader.vertexShader.match(/offset \*= linewidth/g)).toHaveLength(1)
   })
 })

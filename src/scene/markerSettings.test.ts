@@ -66,6 +66,11 @@ describe('track style and marker settings', () => {
     expect(older.invalid).toEqual([])
     expect(older.settings.trackStyle).toEqual({ ...DEFAULT_TRACK_STYLE, width: 6, dash: 'tirets', glow: true, drawOn: true, smoothingM: 0 })
     expect(older.settings.trackStyle.glowColor).toBe('')
+    // flights: an older project gets the curtain and the shadow too
+    expect(older.settings.trackStyle.flightCurtain).toBe(true)
+    expect(older.settings.trackStyle.flightShadow).toBe(true)
+    expect(sanitizeSettings({ trackStyle: { ...DEFAULT_TRACK_STYLE, flightCurtain: false } }).settings.trackStyle.flightCurtain).toBe(false)
+    expect(sanitizeSettings({ trackStyle: { ...DEFAULT_TRACK_STYLE, flightShadow: 'yes' } }).invalid).toEqual(['trackStyle'])
   })
 
   it('« Traînée »: off in a project saved before it, an out-of-range length falls back to the default', () => {

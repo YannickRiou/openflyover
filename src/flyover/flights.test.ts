@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildTrack } from '../import/stats'
-import { detectFlights, flightOffsetAt, MAX_DEVICE_OFFSET_M, pathHeightM, trackHeightM } from './flights'
+import { detectFlights, flightEase, FLIGHT_EASE_M, flightOffsetAt, MAX_DEVICE_OFFSET_M, pathHeightM, trackHeightM } from './flights'
 import { buildTrackPath, type TrackPath } from './path'
 
 /** Metres per degree of latitude on the haversine sphere (R = 6371008.8 m). */
@@ -94,5 +94,37 @@ describe('height of a point of the track', () => {
     const flying = { ...path, flights }
     expect(pathHeightM(flying, 150, { lon: 6.8, lat: 45.8, ele: 500 }, () => 0)).toBe(495)
     expect(pathHeightM(flying, 50, { lon: 6.8, lat: 45.8, ele: 500 }, () => 0)).toBe(0)
+  })
+})
+
+describe('flightEase', () => {
+  const flights = [{ startM: 1000, endM: 3000, offsetM: 0 }]
+
+  it('is 0 on the ground and 1 inside a flight, easing over the first and last FLIGHT_EASE_M', () => {
+    expect(flightEase(flights, 500)).toBe(0)
+    expect(flightEase(flights, 3500)).toBe(0)
+    expect(flightEase(undefined, 1500)).toBe(0)
+    expect(flightEase(flights, 1000)).toBe(0)
+    expect(flightEase(flights, 3000)).toBe(0)
+    expect(flightEase(flights, 1000 + FLIGHT_EASE_M)).toBe(1)
+    expect(flightEase(flights, 2000)).toBe(1)
+    expect(flightEase(flights, 3000 - FLIGHT_EASE_M)).toBe(1)
+    // half way: the middle of a smooth step, the same at both ends
+    expect(flightEase(flights, 1000 + FLIGHT_EASE_M / 2)).toBeCloseTo(0.5, 6)
+    expect(flightEase(flights, 3000 - FLIGHT_EASE_M / 2)).toBeCloseTo(0.5, 6)
+  })
+
+  it('never steps: it rises monotonically and by small amounts along the first FLIGHT_EASE_M', () => {
+    let previous = 0
+    for (let d = 1000; d <= 1000 + FLIGHT_EASE_M; d += 5) {
+      const e = flightEase(flights, d)
+      expect(e).toBeGreaterThanOrEqual(previous)
+      expect(e - previous).toBeLessThan(0.2)
+      previous = e
+    }
+  })
+
+  it('a flight shorter than twice the ease never reaches 1', () => {
+    expect(flightEase([{ startM: 0, endM: 100, offsetM: 0 }], 50)).toBeLessThan(1)
   })
 })

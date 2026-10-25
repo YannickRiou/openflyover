@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v45.flight.title': 'Voli più leggibili',
+  'v45.flight.text': 'Un volo (parapendio, salto di kite, funivia) ha ora una tenda traslucida fino al rilievo, un’ombra a terra e una linea che si ispessisce avvicinandosi alla camera. « Colora in base a › Velocità verticale » mostra a colpo d’occhio dove si sale e dove si scende. Impostazioni in Traccia › Volo.',
   'v44.night.title': 'Notti meno nere',
   'v44.night.text': '« Luminosità della notte » (Luce › Atmosfera) illumina il rilievo e le nuvole di notte, come la luce della luna, senza cambiare nulla di giorno. L’esposizione ora sta con contrasto e saturazione in Colori.',
   'v332.landmarks.title': 'Nascondere riferimenti in pochi clic',

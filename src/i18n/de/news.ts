@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v45.flight.title': 'Besser lesbare Flüge',
+  'v45.flight.text': 'Ein Flug (Gleitschirm, Kitesprung, Seilbahn) hat jetzt einen durchscheinenden Vorhang bis zum Gelände, einen Schatten am Boden und eine Linie, die dicker wird, wenn sie sich der Kamera nähert. « Einfärben nach › Vertikalgeschwindigkeit » zeigt auf einen Blick, wo man steigt und wo man sinkt. Einstellungen unter Track › Flug.',
   'v44.night.title': 'Hellere Nächte',
   'v44.night.text': '« Helligkeit der Nacht » (Licht › Atmosphäre) beleuchtet Gelände und Wolken nachts wie Mondlicht und ändert tagsüber nichts. Die Belichtung steht jetzt bei Kontrast und Sättigung unter Farben.',
   'v332.landmarks.title': 'Landmarken mit wenigen Klicks ausblenden',

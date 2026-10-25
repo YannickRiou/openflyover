@@ -30,6 +30,10 @@ export interface TrackStyle {
   drawOn: boolean
   /** positions averaged over this many metres of track against GPS jitter (`flyover/smooth.ts`), 0 = as recorded */
   smoothingM: number
+  /** « Rideau sous le vol »: a translucent wall from a flight down to the relief (only with flights) */
+  flightCurtain: boolean
+  /** « Ombre au sol du vol »: the flight projected on the relief as a soft dark line (only with flights) */
+  flightShadow: boolean
 }
 
 export const TRACK_WIDTH_RANGE = { min: 1, max: 12, step: 0.5 } as const
@@ -46,6 +50,8 @@ export const DEFAULT_TRACK_STYLE: TrackStyle = {
   glowColor: '',
   drawOn: false,
   smoothingM: 0,
+  flightCurtain: true,
+  flightShadow: true,
 }
 
 /**
