@@ -14,6 +14,7 @@ export const TRACK_COLOR_MODES = [
   'speed',
   'slope',
   'elevation',
+  'verticalSpeed',
   'heartRate',
   'cadence',
   'power',
@@ -55,6 +56,7 @@ export const TRACK_METRICS: Record<TrackMetric, MetricInfo> = {
   speed: { get label() { return t('track.metric.speed') }, unit: 'km/h', fractionDigits: 1, colormap: VIRIDIS },
   slope: { get label() { return t('track.metric.slope') }, unit: '%', fractionDigits: 0, colormap: VIRIDIS },
   elevation: { get label() { return t('track.metric.elevation') }, unit: 'm', fractionDigits: 0, colormap: VIRIDIS },
+  verticalSpeed: { get label() { return t('track.metric.verticalSpeed') }, unit: 'm/s', fractionDigits: 1, colormap: VIRIDIS },
   heartRate: { get label() { return t('track.metric.heartRate') }, unit: 'bpm', fractionDigits: 0, colormap: MAGMA },
   cadence: { get label() { return t('track.metric.cadence') }, get unit() { return t('track.metric.cadenceUnit') }, fractionDigits: 0, colormap: VIRIDIS },
   power: { get label() { return t('track.metric.power') }, unit: 'W', fractionDigits: 0, colormap: MAGMA },
@@ -73,6 +75,13 @@ export const SPEED_MAX_HALF_WINDOW_S = 300
 export const SLOPE_HALF_WINDOW_M = 50
 /** Shortest run a slope is computed over (metres); below it the slope is unknown. */
 export const SLOPE_MIN_RUN_M = 20
+/**
+ * Vertical speed: elevation change over a centred window that grows until each half covers at least
+ * VSPEED_HALF_WINDOW_S of recording (about 16 s in all: a GPS height is noisy over a few seconds), without bridging
+ * a gap longer than VSPEED_MAX_GAP_S (a pause is not a climb).
+ */
+export const VSPEED_HALF_WINDOW_S = 8
+export const VSPEED_MAX_GAP_S = 60
 /** Sensor channels (heart rate, cadence, power, temperature) are averaged over ±this many seconds. */
 export const SENSOR_HALF_WINDOW_S = 5
 /** Percentiles bounding the colour range: outliers saturate instead of squeezing the scale. */
@@ -131,6 +140,25 @@ function slopePercent(points: readonly TrackPoint[]): Float64Array {
   return out
 }
 
+/** Climb rate in m/s (negative when sinking) from the recorded elevation over time; NaN without time or elevation. */
+function verticalSpeed(points: readonly TrackPoint[]): Float64Array {
+  const n = points.length
+  const out = new Float64Array(n).fill(Number.NaN)
+  const t = Float64Array.from(points, (p) => finiteOrNaN(p.time) / 1000)
+  const e = Float64Array.from(points, (p) => finiteOrNaN(p.ele))
+  const known = (i: number) => !Number.isNaN(t[i]) && !Number.isNaN(e[i])
+  for (let i = 0; i < n; i++) {
+    if (!known(i)) continue
+    let a = i
+    while (a > 0 && known(a - 1) && t[i] - t[a - 1] <= VSPEED_MAX_GAP_S && t[i] - t[a] < VSPEED_HALF_WINDOW_S) a--
+    let b = i
+    while (b < n - 1 && known(b + 1) && t[b + 1] - t[i] <= VSPEED_MAX_GAP_S && t[b] - t[i] < VSPEED_HALF_WINDOW_S) b++
+    const dt = t[b] - t[a]
+    if (dt > 0) out[i] = (e[b] - e[a]) / dt
+  }
+  return out
+}
+
 /** Mean of the known values within ±SENSOR_HALF_WINDOW_S; a point without value stays unknown. */
 function sensorValues(
   points: readonly TrackPoint[],
@@ -171,6 +199,8 @@ export function metricValues(points: readonly TrackPoint[], metric: TrackMetric)
       return slopePercent(points)
     case 'elevation':
       return Float64Array.from(points, (p) => finiteOrNaN(p.ele))
+    case 'verticalSpeed':
+      return verticalSpeed(points)
     default:
       return sensorValues(points, SENSOR_FIELDS[metric])
   }
@@ -181,14 +211,20 @@ export function trackMetricValues(track: Track, metric: TrackMetric): Float64Arr
   return track.segments.map((segment) => metricValues(segment.points, metric))
 }
 
-/** Whether the track records what `metric` needs (speed and slope need two points with time / elevation). */
+/** Whether the track records what `metric` needs (speed, slope and vertical speed need two points with time / elevation / both). */
 export function hasMetric(track: Track, metric: TrackMetric): boolean {
-  const needed = metric === 'speed' || metric === 'slope' ? 2 : 1
+  const needed = metric === 'speed' || metric === 'slope' || metric === 'verticalSpeed' ? 2 : 1
   let count = 0
   for (const segment of track.segments) {
     for (const p of segment.points) {
       const value =
-        metric === 'speed' ? p.time : metric === 'slope' || metric === 'elevation' ? p.ele : p[SENSOR_FIELDS[metric]]
+        metric === 'speed'
+          ? p.time
+          : metric === 'slope' || metric === 'elevation'
+            ? p.ele
+            : metric === 'verticalSpeed'
+              ? p.time === undefined ? undefined : p.ele
+              : p[SENSOR_FIELDS[metric]]
       if (value !== undefined && Number.isFinite(value) && ++count >= needed) return true
     }
   }
@@ -216,6 +252,17 @@ export function robustRange(
   return { min: at(low), max: at(high) }
 }
 
+/**
+ * Colour range of `metric` over `series`: the robust one, centred on 0 for the vertical speed so that the middle of
+ * the colormap is « neither climbing nor sinking ».
+ */
+export function metricRange(series: Iterable<ArrayLike<number>>, metric: TrackMetric): ValueRange | null {
+  const range = robustRange(series)
+  if (!range || metric !== 'verticalSpeed') return range
+  const reach = Math.max(Math.abs(range.min), Math.abs(range.max))
+  return { min: -reach, max: reach }
+}
+
 /** What the legend of the colouring shows (drawn by the film overlay, the preview and the export alike). */
 export interface TrackLegend {
   label: string
@@ -233,7 +280,7 @@ export function trackLegend(tracks: readonly Track[], colorBy: TrackColorBy): Tr
   if (colorBy === 'none' || tracks.length === 0) return null
   const series = tracks.flatMap((track) => trackMetricValues(track, colorBy))
   const { label, unit, fractionDigits, colormap } = TRACK_METRICS[colorBy]
-  return { label, unit, fractionDigits, colormap, range: robustRange(series), missing: series.some((values) => values.some(Number.isNaN)) }
+  return { label, unit, fractionDigits, colormap, range: metricRange(series, colorBy), missing: series.some((values) => values.some(Number.isNaN)) }
 }
 
 /**

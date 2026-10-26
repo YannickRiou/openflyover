@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { Color, Group, Vector3 } from 'three'
 import { Line2 } from 'three/addons/lines/Line2.js'
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
-import type { InterleavedBufferAttribute, TypedArray } from 'three'
+import type { BufferAttribute, InterleavedBufferAttribute, MeshBasicMaterial, ShaderMaterial, TypedArray } from 'three'
 import type { TerrainEngine, Track, TrackPoint } from '../core/types'
 import { buildSequence } from '../flyover/sequence'
 import { createLocalFrame } from '../geo/ellipsoid'
-import { DEFAULT_TRACK_STYLE } from './markerSettings'
-import { NO_TRAIL, TRACK_GLOW_MAX_STRENGTH } from './trackLineStyle'
+import { DEFAULT_TRACK_STYLE, TRACK_CURTAIN_RANGE } from './markerSettings'
+import { CURTAIN_TOP_ALPHA, NO_TRAIL, SHADOW_WIDTH_SHARE, TRACK_GLOW_MAX_STRENGTH } from './trackLineStyle'
 import type { TrackLineSet } from './trackLineSet'
 
 vi.mock('@react-three/fiber', () => ({ useFrame: vi.fn(), useThree: vi.fn() }))
@@ -21,12 +21,16 @@ const {
   drapeTrackLineSet,
   disposeTrackLineSet,
   applyExposure,
+  applyFlightDepth,
+  applyResolution,
   dimTrackLineSet,
   applyTrackColors,
   applyTrackStyle,
   cutTrackLineSet,
   drawOnDistances,
   writeLineColors,
+  CURTAIN_LIFT_M,
+  curtainLengthM,
   LINE_LIFT_M,
   LINE_WIDTH_PX,
   DENSIFY_STEP_M,
@@ -547,5 +551,211 @@ describe('draw-on (« trace qui se dessine »)', () => {
     cutTrackLineSet(set, 500)
     expect(trailStart()).toEqual([NO_TRAIL, NO_TRAIL])
     expect(trailFade()).toEqual([0, 0])
+  })
+})
+
+describe('flights: curtain, ground shadow, width weights', () => {
+  // 1.1 km north, recorded 500 m above the 1000 m terrain; the flight is the stretch 300..800 m
+  const air: TrackPoint[] = [
+    { lon: 6.5, lat: 45.5, ele: 1500 },
+    { lon: 6.5, lat: 45.505, ele: 1600 },
+    { lon: 6.5, lat: 45.51, ele: 1500 },
+  ]
+  const flights = [{ startM: 300, endM: 800, offsetM: 0 }]
+  const build = (withFlights: boolean) => {
+    const sets = new Map<string, TrackLineSet>()
+    const track = { ...makeTrack('f', [air]), flights: withFlights ? flights : undefined }
+    syncTrackLineSets(new Group(), sets, [track], frame, 800, 600)
+    return sets.get('f')!
+  }
+  const at = (attribute: BufferAttribute, v: number) => [attribute.getX(v), attribute.getY(v), attribute.getZ(v)]
+
+  it('builds a strip per flight and nothing on the ground: two vertices per point of the flight only', () => {
+    const none = build(false)
+    expect(none.segments[0].flights).toEqual([])
+    expect(none.object.children.some((c) => c.name === 'track-curtain' || c.name === 'track-shadow')).toBe(false)
+    expect(none.segments[0].geometry.getAttribute('instanceFlightStart')).toBeUndefined()
+
+    const set = build(true)
+    const [segment] = set.segments
+    expect(segment.flights).toHaveLength(1)
+    const [piece] = segment.flights
+    // the first and last points of the strip are the flight's, the points around it are on the ground
+    expect(segment.dist[piece.first]).toBeGreaterThanOrEqual(300)
+    expect(segment.dist[piece.first + piece.count - 1]).toBeLessThanOrEqual(800)
+    expect(Number.isNaN(segment.buffer.flight[piece.first - 1])).toBe(true)
+    expect(Number.isNaN(segment.buffer.flight[piece.first + piece.count])).toBe(true)
+    expect(segment.buffer.count).toBeGreaterThan(piece.count * 2)
+    for (const mesh of [piece.curtain, piece.shadow]) {
+      expect(mesh.geometry.getAttribute('position').count).toBe(piece.count * 2)
+      expect(mesh.geometry.getIndex()!.count).toBe((piece.count - 1) * 6)
+    }
+    expect(set.object.children).toContain(piece.curtain)
+    expect(set.object.children).toContain(piece.shadow)
+    disposeTrackLineSet(set)
+  })
+
+  it('drapes the curtain from the flight down to the relief, and the shadow on the relief', () => {
+    const set = build(true)
+    const [segment] = set.segments
+    const [piece] = segment.flights
+    drapeTrackLineSet(set, fakeEngine(1000), 2)
+    const curtain = piece.curtain.geometry.getAttribute('position') as BufferAttribute
+    const shadow = piece.shadow.geometry.getAttribute('position') as BufferAttribute
+    for (const k of [0, Math.floor(piece.count / 2), piece.count - 1]) {
+      const p = segment.points[piece.first + k]
+      const top = Math.max(1000, segment.buffer.ele[piece.first + k]) * 2 + CURTAIN_LIFT_M
+      const ground = 1000 * 2 + LINE_LIFT_M
+      for (const [vertex, height] of [[2 * k, top], [2 * k + 1, ground]] as const) {
+        const expected = frame.toLocal(p.lon, p.lat, height)
+        expect(at(curtain, vertex)[0]).toBeCloseTo(expected.x, 2)
+        expect(at(curtain, vertex)[1]).toBeCloseTo(expected.y, 2)
+        expect(at(curtain, vertex)[2]).toBeCloseTo(expected.z, 2)
+      }
+      // the shadow is the ground foot of the curtain, on both sides of the strip
+      expect(at(shadow, 2 * k)).toEqual(at(curtain, 2 * k + 1))
+      expect(at(shadow, 2 * k + 1)).toEqual(at(curtain, 2 * k + 1))
+    }
+    // the shadow knows its direction of travel, for its width in the screen
+    const ahead = piece.shadow.geometry.getAttribute('ahead') as BufferAttribute
+    expect(Math.hypot(...at(ahead, 0))).toBeGreaterThan(5)
+
+    // tiles load: the re-drape follows the new ground; a ground above the flight never flips the strip
+    drapeTrackLineSet(set, fakeEngine(5000), 1)
+    const flat = frame.toLocal(segment.points[piece.first].lon, segment.points[piece.first].lat, 5000 + CURTAIN_LIFT_M)
+    expect(at(curtain, 0)[0]).toBeCloseTo(flat.x, 2)
+    expect(at(curtain, 1)[0]).toBeCloseTo(flat.x, 2)
+    expect(at(curtain, 1)[1]).toBeCloseTo(at(curtain, 0)[1], 2)
+    // no terrain yet: the strip collapses onto the flight
+    drapeTrackLineSet(set, null, 1)
+    expect(at(curtain, 1)).toEqual(at(curtain, 0))
+    disposeTrackLineSet(set)
+  })
+
+  it('stops the curtain on the turn under it in a thermal, falls to the ground under the lowest turn, and as far as « Longueur du rideau » says', () => {
+    // a thermal: five turns of 60 m radius (one point every 10°), climbing 60 m a turn from 1500 m over a 1000 m terrain
+    const spiral: TrackPoint[] = Array.from({ length: 5 * 36 + 1 }, (_, i) => {
+      const a = (i / 36) * 2 * Math.PI
+      const p = frame.toLonLat(new Vector3(60 * Math.cos(a), 0, 60 * Math.sin(a)))
+      return { lon: p.lon, lat: p.lat, ele: 1500 + (60 * i) / 36 }
+    })
+    const sets = new Map<string, TrackLineSet>()
+    syncTrackLineSets(new Group(), sets, [{ ...makeTrack('t', [spiral]), flights: [{ startM: 0, endM: 1e6, offsetM: 0 }] }], frame, 800, 600)
+    const set = sets.get('t')!
+    const [piece] = set.segments[0].flights
+    const curtain = piece.curtain.geometry.getAttribute('position') as BufferAttribute
+    const height = (v: number) => frame.toLonLat(new Vector3(...at(curtain, v))).height
+    const fall = (k: number) => height(2 * k) - height(2 * k + 1)
+    drapeTrackLineSet(set, fakeEngine(1000), 1)
+    // the first turn falls to the ground (500 m and more); a point of the fourth stops on the third, about 60 m under it
+    expect(fall(10)).toBeGreaterThan(490)
+    const k = Math.floor(piece.count * 0.7)
+    expect(fall(k)).toBeGreaterThan(50)
+    expect(fall(k)).toBeLessThan(70)
+    // never through the ground nor above the line
+    for (let j = 0; j < piece.count; j++) expect(fall(j)).toBeGreaterThanOrEqual(0)
+    // « Longueur du rideau »: 20 m under every turn; its maximum is « Jusqu'au sol »
+    drapeTrackLineSet(set, fakeEngine(1000), 1, 20)
+    expect(fall(10)).toBeCloseTo(20, 3)
+    expect(fall(k)).toBeCloseTo(20, 3)
+    expect(curtainLengthM(TRACK_CURTAIN_RANGE.max)).toBe(Infinity)
+    expect(curtainLengthM(200)).toBe(200)
+    expect(DEFAULT_TRACK_STYLE.flightCurtainM).toBe(TRACK_CURTAIN_RANGE.max)
+    disposeTrackLineSet(set)
+  })
+
+  it('colours the curtain like the line, from opaque-ish at the line to nothing at the ground, white without colouring', () => {
+    const set = build(true)
+    const [segment] = set.segments
+    const [piece] = segment.flights
+    const color = piece.curtain.geometry.getAttribute('color') as BufferAttribute
+    expect(color.itemSize).toBe(4)
+    expect(Array.from(color.array.slice(0, 8))).toEqual([1, 1, 1, Math.fround(CURTAIN_TOP_ALPHA), 1, 1, 1, 0])
+
+    drapeTrackLineSet(set, null, 1)
+    applyTrackColors([set], 'elevation')
+    const line = segment.geometry.getAttribute('instanceColorStart') as InterleavedBufferAttribute
+    for (const k of [0, piece.count - 1]) {
+      const i = piece.first + k
+      expect(color.getX(2 * k)).toBeCloseTo(line.getX(i), 6)
+      expect(color.getY(2 * k)).toBeCloseTo(line.getY(i), 6)
+      expect(color.getZ(2 * k + 1)).toBeCloseTo(line.getZ(i), 6)
+      expect(color.getW(2 * k)).toBeCloseTo(CURTAIN_TOP_ALPHA, 6)
+      expect(color.getW(2 * k + 1)).toBe(0)
+    }
+    expect(color.getX(0)).not.toBe(1)
+    // the material carries the track colour only without colouring
+    applyExposure([set], 2)
+    expect(set.curtainMaterial.color.toArray()).toEqual([0.5, 0.5, 0.5])
+    applyTrackColors([set], 'none')
+    expect(Array.from(color.array.slice(0, 8))).toEqual([1, 1, 1, Math.fround(CURTAIN_TOP_ALPHA), 1, 1, 1, 0])
+    applyExposure([set], 2)
+    expect(set.curtainMaterial.color.r).toBeCloseTo(0.5, 6)
+    expect(set.curtainMaterial.color.g).toBe(0)
+    // a track drawn dimmer in a « Bilan » dims its curtain too
+    dimTrackLineSet(set, 0.5)
+    expect(set.curtainMaterial.color.r).toBeCloseTo(0.25, 6)
+    disposeTrackLineSet(set)
+  })
+
+  it('shows the curtain and the shadow with their own switches, the shadow as wide as the line times its share', () => {
+    const set = build(true)
+    const [piece] = set.segments[0].flights
+    applyTrackStyle([set], { ...DEFAULT_TRACK_STYLE, width: 4 }, 2, 0)
+    expect(piece.curtain.visible).toBe(true)
+    expect(piece.shadow.visible).toBe(true)
+    expect(set.shadowMaterial.uniforms.widthPx.value).toBe(4 * SHADOW_WIDTH_SHARE * 2)
+    applyTrackStyle([set], { ...DEFAULT_TRACK_STYLE, flightCurtain: false }, 1, 0)
+    expect(piece.curtain.visible).toBe(false)
+    expect(piece.shadow.visible).toBe(true)
+    applyTrackStyle([set], { ...DEFAULT_TRACK_STYLE, flightShadow: false }, 1, 0)
+    expect(piece.curtain.visible).toBe(true)
+    expect(piece.shadow.visible).toBe(false)
+  })
+
+  it('follows the draw-on and the trail like the line: cut at the marker, nothing before the trail', () => {
+    const set = build(true)
+    const cut = (m: ShaderMaterial | MeshBasicMaterial) => m.userData.cut as Record<string, { value: number }>
+    cutTrackLineSet(set, 500, 200)
+    for (const material of [set.curtainMaterial, set.shadowMaterial]) {
+      expect(cut(material).trailStartM.value).toBe(300)
+      expect(cut(material).trailFadeM.value).toBe(100)
+      expect(cut(material).drawEndM.value).toBe(500)
+    }
+    // whole again: nothing cut (a finite stand-in for infinity: a GLSL float)
+    cutTrackLineSet(set, Infinity)
+    expect(cut(set.curtainMaterial).trailStartM.value).toBe(NO_TRAIL)
+    expect(cut(set.shadowMaterial).drawEndM.value).toBeGreaterThan(1e8)
+    disposeTrackLineSet(set)
+  })
+
+  it('weights the width by the flight, easing in and out at both ends: 0 on the ground, 1 inside', () => {
+    const set = build(true)
+    const [segment] = set.segments
+    const start = segment.geometry.getAttribute('instanceFlightStart') as InterleavedBufferAttribute
+    const weight = (i: number) => start.getX(i)
+    const dist = (i: number) => segment.dist[i]
+    for (let i = 0; i < start.count; i++) {
+      if (dist(i) < 300 || dist(i) > 800) expect(weight(i)).toBe(0)
+      else if (dist(i) >= 400 && dist(i) <= 700) expect(weight(i)).toBe(1)
+      else expect(weight(i)).toBeLessThanOrEqual(1)
+    }
+    // in between it rises without a step
+    const rising = Array.from({ length: start.count }, (_, i) => i).filter((i) => dist(i) >= 300 && dist(i) <= 400)
+    for (let j = 1; j < rising.length; j++) {
+      expect(weight(rising[j])).toBeGreaterThanOrEqual(weight(rising[j - 1]))
+      expect(weight(rising[j]) - weight(rising[j - 1])).toBeLessThan(0.15)
+    }
+    disposeTrackLineSet(set)
+  })
+
+  it('tells the line materials the distance the width is the user\'s at, and the shadow the canvas size', () => {
+    const set = build(true)
+    applyFlightDepth([set], 1234)
+    expect(set.solidMaterial.uniforms.flightDepthM.value).toBe(1234)
+    expect(set.glowMaterial.uniforms.flightDepthM.value).toBe(1234)
+    applyResolution([set], 1920, 1080)
+    expect(set.shadowMaterial.uniforms.resolution.value.toArray()).toEqual([1920, 1080])
+    disposeTrackLineSet(set)
   })
 })

@@ -83,6 +83,19 @@ export function flightOffsetAt(flights: readonly Flight[] | undefined, distanceM
   return Number.NaN
 }
 
+/** Distance over which the look of the line eases in and out at each end of a flight (metres): no step where a flight starts. */
+export const FLIGHT_EASE_M = 100
+
+/** 0 on the ground, 1 from FLIGHT_EASE_M inside a flight (smooth step between): how much of the flight look applies at `distanceM`. */
+export function flightEase(flights: readonly Flight[] | undefined, distanceM: number): number {
+  for (const f of flights ?? []) {
+    if (distanceM < f.startM || distanceM > f.endM) continue
+    const x = clamp(Math.min(distanceM - f.startM, f.endM - distanceM) / FLIGHT_EASE_M, 0, 1)
+    return x * x * (3 - 2 * x)
+  }
+  return 0
+}
+
 /**
  * Height of a point of a track (metres, true scale: × exaggeration like the terrain), the one rule of the line, the
  * marker, the camera and the racers. On the ground: the terrain, else the recorded elevation, else 0. In a flight

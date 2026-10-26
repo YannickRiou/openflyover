@@ -11,6 +11,8 @@ const messages: Messages['news'] = {
   'v45.marker.text': 'Die Figur läuft jetzt im Tempo des Markers, steht still, wenn er anhält, und dreht sich in einer Kurve weich um (der Text darunter wird nie gespiegelt). Jeder Marker nimmt außerdem ein wenig vom Licht der Szene an: warm bei Sonnenaufgang und Sonnenuntergang, nachts leicht bläulich. Nichts einzustellen.',
   'v45.records.title': 'Rekorde für Flüge',
   'v45.records.text': 'Der beste Aufwind (der stetigste Anstieg eines Fluges) und die größte Höhe über Grund sind zwei weitere Rekorde für Gleitschirmflüge. Dafür zählen die Rekorde für Anstieg, Abfahrt und Kilometer die Flugabschnitte nicht mehr mit: Eine Steigung bedeutet dort nichts. Unter Karte › Landmarken blendet der Schalter „Rekorde der Tour“ sie ein oder aus, und „Rekorde neu berechnen“ aktualisiert die automatischen Stopps des Films.',
+  'v45.flight.title': 'Besser lesbare Flüge',
+  'v45.flight.text': 'Ein Flug (Gleitschirm, Kitesprung, Seilbahn) hat jetzt einen durchscheinenden Vorhang bis zum Gelände, einen Schatten am Boden und eine Linie, die dicker wird, wenn sie sich der Kamera nähert. « Einfärben nach › Vertikalgeschwindigkeit » zeigt auf einen Blick, wo man steigt und wo man sinkt. Einstellungen unter Track › Flug.',
   'v44.night.title': 'Hellere Nächte',
   'v44.night.text': '« Helligkeit der Nacht » (Licht › Atmosphäre) beleuchtet Gelände und Wolken nachts wie Mondlicht und ändert tagsüber nichts. Die Belichtung steht jetzt bei Kontrast und Sättigung unter Farben.',
   'v332.landmarks.title': 'Landmarken mit wenigen Klicks ausblenden',

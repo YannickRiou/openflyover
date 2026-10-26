@@ -11,6 +11,8 @@ const messages: Messages['news'] = {
   'v45.marker.text': 'La figurina ora cammina al passo del marcatore, sta ferma quando questo si ferma e si gira con dolcezza in curva (il testo sotto non viene mai specchiato). Inoltre ogni marcatore prende un po’ della luce della scena: caldo all’alba e al tramonto, leggermente bluastro di notte. Nulla da impostare.',
   'v45.records.title': 'Record per i voli',
   'v45.records.text': 'La miglior termica (la salita più sostenuta di un volo) e la massima altezza dal suolo sono due record in più per i voli in parapendio. In cambio, i record di salita, discesa e chilometri non contano più i tratti in volo: la pendenza lì non significa nulla. In Mappa › Riferimenti, un interruttore «Record dell’uscita» li mostra o li nasconde, e «Ricalcola i record» aggiorna le soste automatiche del film.',
+  'v45.flight.title': 'Voli più leggibili',
+  'v45.flight.text': 'Un volo (parapendio, salto di kite, funivia) ha ora una tenda traslucida fino al rilievo, un’ombra a terra e una linea che si ispessisce avvicinandosi alla camera. « Colora in base a › Velocità verticale » mostra a colpo d’occhio dove si sale e dove si scende. Impostazioni in Traccia › Volo.',
   'v44.night.title': 'Notti meno nere',
   'v44.night.text': '« Luminosità della notte » (Luce › Atmosfera) illumina il rilievo e le nuvole di notte, come la luce della luna, senza cambiare nulla di giorno. L’esposizione ora sta con contrasto e saturazione in Colori.',
   'v332.landmarks.title': 'Nascondere riferimenti in pochi clic',

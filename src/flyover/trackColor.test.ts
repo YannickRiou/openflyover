@@ -8,6 +8,7 @@ import {
   VIRIDIS,
   colorizeValues,
   hasMetric,
+  metricRange,
   metricValues,
   resampleValues,
   robustRange,
@@ -55,6 +56,35 @@ describe('metricValues', () => {
     expect(Array.from(short).every(Number.isNaN)).toBe(true)
   })
 
+  it('vertical speed: m/s from the elevation over time, positive climbing, negative sinking', () => {
+    // 40 s climbing at 2 m/s, then 40 s sinking at 1.5 m/s
+    const ele = (i: number) => (i < 40 ? 1000 + 2 * i : 1080 - 1.5 * (i - 40))
+    const vspeed = metricValues(line(80, 5, (i) => ({ ele: ele(i) })), 'verticalSpeed')
+    expect(vspeed[20]).toBeCloseTo(2, 6)
+    expect(vspeed[60]).toBeCloseTo(-1.5, 6)
+    // at the top the window straddles the turn: between the two, no jump
+    expect(vspeed[40]).toBeGreaterThan(-1.5)
+    expect(vspeed[40]).toBeLessThan(2)
+  })
+
+  it('vertical speed: smoothed over about 16 s, so a noisy GPS height does not speckle the colours', () => {
+    // a steady 1 m/s climb with ±3 m of alternating noise: the raw difference of two samples is 7 m/s
+    const noisy = metricValues(line(120, 5, (i) => ({ ele: 1000 + i + (i % 2 === 0 ? 3 : -3) })), 'verticalSpeed')
+    for (const v of noisy.slice(20, 100)) expect(Math.abs(v - 1)).toBeLessThan(0.5)
+  })
+
+  it('vertical speed: unknown without time or elevation, and a pause is not bridged', () => {
+    const noTime = metricValues(line(20, 5, (i) => ({ ele: 1000 + i })).map(({ time: _time, ...p }) => p), 'verticalSpeed')
+    expect(Array.from(noTime).every(Number.isNaN)).toBe(true)
+    const noEle = metricValues(line(20, 5), 'verticalSpeed')
+    expect(Array.from(noEle).every(Number.isNaN)).toBe(true)
+    // 10 minutes without a point in the middle of a 1 m/s climb: each side is computed from its own points
+    const gap = line(40, 5, (i) => ({ ele: 1000 + i })).map((p, i) => (i < 20 ? p : { ...p, time: p.time! + 600_000 }))
+    const v = metricValues(gap, 'verticalSpeed')
+    expect(v[10]).toBeCloseTo(1, 6)
+    expect(v[30]).toBeCloseTo(1, 6)
+  })
+
   it('elevation is the recorded one, sensor channels are averaged over a few seconds', () => {
     const points = line(20, 2, (i) => ({ ele: 1000 + i, hr: i % 2 === 0 ? 100 : 120 }))
     points[10] = { ...points[10], hr: undefined, ele: undefined }
@@ -77,6 +107,12 @@ describe('hasMetric', () => {
     expect(hasMetric(track, 'elevation')).toBe(true)
     expect(hasMetric(track, 'heartRate')).toBe(false)
     expect(hasMetric(track, 'power')).toBe(false)
+    expect(hasMetric(track, 'verticalSpeed')).toBe(true)
+    // untimed: a climb rate is not offered
+    const untimed = buildTrack({ name: 'u', source: 'gpx', segments: [{ points: points.map(({ time: _time, ...p }) => p) }] })
+    expect(hasMetric(untimed, 'verticalSpeed')).toBe(false)
+    const noEle = buildTrack({ name: 'n', source: 'gpx', segments: [{ points: line(5, 2) }] })
+    expect(hasMetric(noEle, 'verticalSpeed')).toBe(false)
     const bare = buildTrack({ name: 'b', source: 'gpx', segments: [{ points: [{ lon: 6, lat: 45, time: T0 }] }] })
     expect(hasMetric(bare, 'speed')).toBe(false)
   })
@@ -97,6 +133,16 @@ describe('robustRange', () => {
     const series = (metric: 'elevation' | 'heartRate') => [a, b].flatMap((t) => trackMetricValues(t, metric))
     expect(robustRange(series('elevation'))).toEqual({ min: 1000, max: 2000 })
     expect(robustRange(series('heartRate'))).toBeNull()
+  })
+})
+
+describe('metricRange', () => {
+  it('is the robust range, except the vertical speed whose range is centred on 0 (the middle of the scale)', () => {
+    const series = [[-1, 0, 1, 4]]
+    expect(metricRange(series, 'speed')).toEqual(robustRange(series))
+    expect(metricRange(series, 'verticalSpeed')).toEqual({ min: -4, max: 4 })
+    expect(metricRange([[-5, -2]], 'verticalSpeed')).toEqual({ min: -5, max: 5 })
+    expect(metricRange([[Number.NaN]], 'verticalSpeed')).toBeNull()
   })
 })
 

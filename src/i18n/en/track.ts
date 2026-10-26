@@ -4,6 +4,7 @@ const messages: Messages['track'] = {
   'metric.speed': 'Speed',
   'metric.slope': 'Slope',
   'metric.elevation': 'Elevation',
+  'metric.verticalSpeed': 'Vertical speed',
   'metric.heartRate': 'Heart rate',
   'metric.cadence': 'Cadence',
   'metric.cadenceUnit': 'rpm',
