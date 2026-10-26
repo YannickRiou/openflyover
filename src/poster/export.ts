@@ -219,7 +219,7 @@ export function startStill(camera = false): boolean {
     holdStartS: 0,
     holdEndS: 0,
     baseName: stillBaseName(track.name, playback.progress),
-    still: { progress: playback.progress, type: settings.poster.type, ...(camera && { camera }) },
+    still: { progress: playback.progress, type: settings.poster.type, ...(camera && { camera, marker: true }) },
   })
   return true
 }

@@ -5,7 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
-- **Two buttons on the 3D view**: under the crosshair, « Capturer cette image » saves the picture the preview shows (the « Image fixe » of the export drawer, at the size of the output format, with the overlay: the film's image at this instant, or your own view once you have turned it with the mouse; not offered in « Libre »), and « Revenir à la vue du film » appears when you have turned the view with the mouse while the film is paused, and puts the camera back exactly where the film has it at this instant.
+- **Two buttons on the 3D view**: under the crosshair and the safe areas, « Capturer cette image » saves the picture the preview shows (the « Image fixe » of the export drawer, at the size of the output format, with the overlay: the film's image at this instant, or your own view once you have turned it with the mouse; not offered in « Libre »), and « Revenir à la vue du film » appears when you have turned the view with the mouse while the film is paused, and puts the camera back exactly where the film has it at this instant.
 
 ## 4.5.0 (October 2026)
 

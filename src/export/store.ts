@@ -45,6 +45,8 @@ export interface ExportRequest {
     overview?: boolean
     /** the camera as it is now (placed by hand, or by the film), instead of the view at `progress`, no marker */
     camera?: boolean
+    /** with `camera`: the progress marker stays in the picture, as the preview shows it (« Capturer cette image ») */
+    marker?: boolean
     /** what the overview frames (default: the first track) */
     framing?: TrackPath
     /**
