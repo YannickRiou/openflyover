@@ -74,7 +74,8 @@ folders contain the sky and cloud textures, as `.exr`, `.bin` and `.png`; nginx 
 
 The build contains `sw.js` (service worker) and `manifest.webmanifest`, at the root of the site or of its subfolder:
 installing the site on a phone and the offline app shell need nothing else from the server, HTTPS apart. The worker
-precaches the app (~3.7 MB) on the first visit and the sky and cloud textures (~12 MB) the first time they are shown;
+precaches the app (~3.7 MB) on the first visit, once the page has loaded and the browser is idle (the files the page has
+just loaded come from the browser's cache, not from the server a second time), and the sky and cloud textures (~12 MB) the first time they are shown;
 it never caches the tiles, the weather, the landmarks nor Strava (see [`ARCHITECTURE.md`](../ARCHITECTURE.md),
 "Installable web app and mobile").
 
