@@ -67,7 +67,11 @@ function movedFlights(flights: readonly Flight[], distances: DistanceMap): Fligh
     if (distances.removed(f.startM) && distances.removed(f.endM)) return []
     const [a, b] = [distances.map(f.startM), distances.map(f.endM)]
     const [startM, endM] = [Math.min(a, b), Math.max(a, b)]
-    return endM - startM >= 1 ? [{ ...f, startM, endM }] : []
+    if (endM - startM < 1) return []
+    // its highest point goes with the stretch, or is forgotten when that part was cut
+    const { maxHeightM, maxHeightAtM, ...own } = f
+    const top = maxHeightM !== undefined && maxHeightAtM !== undefined && !distances.removed(maxHeightAtM)
+    return [{ ...own, startM, endM, ...(top ? { maxHeightM, maxHeightAtM: distances.map(maxHeightAtM) } : {}) }]
   })
 }
 

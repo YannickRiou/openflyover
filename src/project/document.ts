@@ -547,8 +547,9 @@ function decodeWaypoint(raw: unknown, where: string): Waypoint {
 
 function isFlight(raw: unknown): raw is Flight {
   if (!isRecord(raw)) return false
-  const { startM, endM, offsetM } = raw
-  return typeof startM === 'number' && typeof endM === 'number' && typeof offsetM === 'number' && Number.isFinite(startM + endM + offsetM) && startM <= endM
+  const { startM, endM, offsetM, maxHeightM, maxHeightAtM } = raw
+  const top = maxHeightM === undefined && maxHeightAtM === undefined ? true : typeof maxHeightM === 'number' && typeof maxHeightAtM === 'number' && Number.isFinite(maxHeightM + maxHeightAtM)
+  return typeof startM === 'number' && typeof endM === 'number' && typeof offsetM === 'number' && Number.isFinite(startM + endM + offsetM) && startM <= endM && top
 }
 
 function decodeTrack(raw: unknown, index: number): Track {
@@ -580,7 +581,7 @@ function decodeTrack(raw: unknown, index: number): Track {
   }
   // flights only mean something on a track with elevations; an invalid list is dropped (the track stays on the ground)
   if (Array.isArray(raw.flights) && raw.flights.length > 0 && raw.flights.every(isFlight) && track.stats.maxEle !== undefined) {
-    track.flights = raw.flights.map(({ startM, endM, offsetM }) => ({ startM, endM, offsetM }))
+    track.flights = raw.flights.map(({ startM, endM, offsetM, maxHeightM, maxHeightAtM }) => ({ startM, endM, offsetM, ...(maxHeightM === undefined ? {} : { maxHeightM, maxHeightAtM }) }))
   }
   const statsOverride = statsOverrideOf(raw.statsOverride)
   if (statsOverride) track.statsOverride = statsOverride

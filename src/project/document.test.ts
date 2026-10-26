@@ -437,13 +437,16 @@ describe('serializeProject / parseProject', () => {
   })
 
   it('round-trips the flights; an old project or a wrong list leaves the track on the ground', () => {
-    const flights = [{ startM: 100, endM: 900, offsetM: 12.5 }]
+    // the second flight is one saved before the greatest height above the ground was kept
+    const flights = [{ startM: 100, endM: 900, offsetM: 12.5, maxHeightM: 340, maxHeightAtM: 500 }, { startM: 950, endM: 990, offsetM: 1 }]
     const text = serializeProject({ ...STATE, tracks: [{ ...makeTrack('a', '#FF5A36'), flights }, makeTrack('b', '#5BC0EB')] }, 'x')
     const loaded = parseProject(text)
     expect(loaded.tracks[0].flights).toEqual(flights)
     expect(loaded.tracks[1]).not.toHaveProperty('flights')
     const d = JSON.parse(text) as { tracks: { flights?: unknown }[] }
     d.tracks[0].flights = [{ startM: 900, endM: 100, offsetM: 0 }]
+    expect(parseProject(JSON.stringify(d)).tracks[0]).not.toHaveProperty('flights')
+    d.tracks[0].flights = [{ startM: 100, endM: 900, offsetM: 0, maxHeightM: 340 }]
     expect(parseProject(JSON.stringify(d)).tracks[0]).not.toHaveProperty('flights')
   })
 

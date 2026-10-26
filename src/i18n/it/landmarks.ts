@@ -140,7 +140,18 @@ const messages: Messages['landmarks'] = {
   'record.longestClimb': 'Salita più lunga',
   'record.maxHeartRate': 'Frequenza cardiaca massima',
   'record.maxPower': 'Potenza massima',
-  hintRecords: 'I record sono le imprese dell’uscita (salita più ripida, discesa più veloce, punto più alto…): si calcolano dalla traccia stessa, e correggere le cifre a mano non li cambia. Solo la salita più ripida, il punto più alto e la discesa più veloce fanno una sosta automatica; gli altri restano etichette.',
+  'record.bestThermal': 'Miglior termica',
+  'record.highestAboveGround': 'Massima altezza dal suolo',
+  'record.thermal': '+{value} m/s',
+  // the switch and the recomputation of the records
+  'records.enable': 'Record dell’uscita',
+  'records.tip': 'Le imprese dell’uscita, calcolate dalla traccia: un’etichetta 3D ciascuna e, per le principali, una sosta automatica. Spenti, sono nascosti senza cancellare nulla.',
+  'records.recompute': 'Ricalcola i record',
+  'records.recomputeTip': 'Rilegge la traccia e allinea le soste automatiche del film ai record: le tue soste non si spostano.',
+  'records.removed': { one: '{count} record tolto', other: '{count} record tolti' },
+  'records.added': { one: '{count} record aggiunto', other: '{count} record aggiunti' },
+  'records.unchanged': 'Nulla è cambiato',
+  hintRecords: 'I record sono le imprese dell’uscita (salita più ripida, discesa più veloce, punto più alto…): si calcolano dalla traccia stessa, e correggere le cifre a mano non li cambia. Salite, discese e chilometri ignorano i tratti in volo, che hanno la loro miglior termica e la massima altezza dal suolo. Solo la salita più ripida, il punto più alto, la discesa più veloce e la miglior termica fanno una sosta automatica; gli altri restano etichette.',
   metaRecord: 'km {km}',
 }
 

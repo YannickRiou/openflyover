@@ -140,7 +140,18 @@ const messages: Messages['landmarks'] = {
   'record.longestClimb': 'Längster Anstieg',
   'record.maxHeartRate': 'Höchster Puls',
   'record.maxPower': 'Höchste Leistung',
-  hintRecords: 'Rekorde sind die Höchstleistungen der Tour (steilster Anstieg, schnellste Abfahrt, höchster Punkt…): Sie werden aus der Spur selbst berechnet, und von Hand korrigierte Zahlen ändern sie nicht. Nur der steilste Anstieg, der höchste Punkt und die schnellste Abfahrt ergeben einen automatischen Stopp; die anderen bleiben Etiketten.',
+  'record.bestThermal': 'Bester Aufwind',
+  'record.highestAboveGround': 'Größte Höhe über Grund',
+  'record.thermal': '+{value} m/s',
+  // the switch and the recomputation of the records
+  'records.enable': 'Rekorde der Tour',
+  'records.tip': 'Die Höchstleistungen der Tour, aus der Spur berechnet: je ein 3D-Etikett und, bei den wichtigsten, ein automatischer Stopp. Ausgeschaltet sind sie ausgeblendet, nichts wird gelöscht.',
+  'records.recompute': 'Rekorde neu berechnen',
+  'records.recomputeTip': 'Liest die Spur erneut und gleicht dann die automatischen Stopps des Films mit den Rekorden ab: Ihre eigenen Stopps bleiben, wo sie sind.',
+  'records.removed': { one: '{count} Rekord entfernt', other: '{count} Rekorde entfernt' },
+  'records.added': { one: '{count} Rekord hinzugefügt', other: '{count} Rekorde hinzugefügt' },
+  'records.unchanged': 'Nichts hat sich geändert',
+  hintRecords: 'Rekorde sind die Höchstleistungen der Tour (steilster Anstieg, schnellste Abfahrt, höchster Punkt…): Sie werden aus der Spur selbst berechnet, und von Hand korrigierte Zahlen ändern sie nicht. Anstiege, Abfahrten und Kilometer lassen die Flugabschnitte aus, die ihren eigenen besten Aufwind und ihre größte Höhe über Grund haben. Nur der steilste Anstieg, der höchste Punkt, die schnellste Abfahrt und der beste Aufwind ergeben einen automatischen Stopp; die anderen bleiben Etiketten.',
   metaRecord: 'km {km}',
 }
 

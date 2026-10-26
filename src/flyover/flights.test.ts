@@ -51,6 +51,11 @@ describe('detectFlights', () => {
     expect(flight.endM).toBeLessThan(9_550)
     expect(flight.offsetM).toBeGreaterThan(10)
     expect(flight.offsetM).toBeLessThan(30)
+    // the greatest height above the ground (600 m here, the offset removed), kept with the flight
+    expect(flight.maxHeightM).toBeGreaterThan(570)
+    expect(flight.maxHeightM).toBeLessThan(630)
+    expect(flight.maxHeightAtM).toBeGreaterThan(800)
+    expect(flight.maxHeightAtM).toBeLessThan(9_000)
   })
 
   it('caps the offset of a track recorded in the air from start to end', () => {

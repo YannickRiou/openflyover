@@ -63,11 +63,18 @@ export function detectFlights(path: TrackPath, ground: ArrayLike<number>): Fligh
   const smooth = movingAverage(clearance, Math.round(FLIGHT_SMOOTHING_M / FLIGHT_STEP_M / 2))
   const first = flightRuns(smooth, deviceOffset(clearance, () => false))
   const offsetM = deviceOffset(clearance, (i) => first.some(([a, b]) => i >= a && i <= b))
-  return flightRuns(smooth, offsetM).map(([a, b]) => ({
-    startM: Math.round(Math.min(path.lengthM, a * FLIGHT_STEP_M)),
-    endM: Math.round(Math.min(path.lengthM, b * FLIGHT_STEP_M)),
-    offsetM: Math.round(offsetM * 10) / 10,
-  }))
+  return flightRuns(smooth, offsetM).map(([a, b]) => {
+    // the highest point above the ground: the ground is only known here (the tiles of the moment are not kept), so it is kept with the flight
+    let top = a
+    for (let i = a; i <= b; i++) if (smooth[i] > smooth[top]) top = i
+    return {
+      startM: Math.round(Math.min(path.lengthM, a * FLIGHT_STEP_M)),
+      endM: Math.round(Math.min(path.lengthM, b * FLIGHT_STEP_M)),
+      offsetM: Math.round(offsetM * 10) / 10,
+      maxHeightM: Math.round(smooth[top] - offsetM),
+      maxHeightAtM: Math.round(Math.min(path.lengthM, top * FLIGHT_STEP_M)),
+    }
+  })
 }
 
 /** Device offset of the flight at `distanceM` along the track, NaN on the ground. */

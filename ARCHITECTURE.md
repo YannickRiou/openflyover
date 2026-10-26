@@ -1248,9 +1248,13 @@ The interface and the texts drawn into the films and posters exist in **French**
   off, sway kept). One sprite and one texture per marker (`markerLayout` / `drawMarker`: badge, stick, label;
   `sprite.center` = anchor); texture cache of 48 textures and 8 Mpx. 3D models (glTF) evaluated, not done (licensing,
   lighting parity, poster overview hiding). `animated`: the
-  figurine bounces and sways with `figureMotion(timeS)` (two steps per second of film, lift up to 8% of the badge through
-  `sprite.center`, ±5° through `material.rotation`), a function of the film time only: a paused film keeps its pose,
-  the export matches the preview; the ghost-race markers stay still. Defaults = the previous look
+  figurine bounces and sways with `figureMotion(clock, timeS)` (lift up to 8% of the badge through `sprite.center`,
+  ±5° through `material.rotation`). It walks at the marker's pace: a table over the whole film (`figureTable`, per
+  `FilmClock`, a step of 1/30 s) turns the marker's progress per second, against the pace it keeps while it moves, into a
+  cadence (the pace to the power 0.4, 1.2 to 3.2 steps a second) summed into the steps taken so far, and a strength that
+  eases the walk in and out (0.4 s) so the figure stands still, upright, at stops, holds and night pauses. A function of
+  the clock and the film time only: a paused film keeps its pose, the export matches the preview; the ghost-race
+  markers stay still. Defaults = the previous look
   (4 px, solid, white ball). Checked by `SETTING_CHECKS`, completed by `SETTING_UPGRADES` (keys added later).
   `image`: 128 px square PNG as a data URL (`fileToAvatarDataUrl`, platform picker), 300,000 characters at most.
   « Trace » and « Marqueur » sections of the Trace tab (`src/ui/TrackMarkerSection.tsx`).
@@ -1302,8 +1306,22 @@ The interface and the texts drawn into the films and posters exist in **French**
   edged in ink (race), ink or white stroke depending on luminance. Image: round photo, white edge; racers
   keep their ball. Badge diameter: 2.2 times the ball. Constant screen size: radius = max(1, distance × 0.007)
   × `size`. Colors divided by the exposure, like the lines.
-- **Direction**: the figurine is flipped when the track runs from right to left on screen, based on the track points within
-  ±60 m of the marker projected with the frame's camera (`headsLeft`, stateless: same image in preview and export).
+- **Direction** (`figureHeading`, stateless: same image in preview and export): the figurine faces the side the track runs
+  to on screen, with the lean of its slope (`screenHeading`). The side (`sideAt`) is read from the track behind the
+  marker, each place seen as if the marker stood there: the signed runs (sine of the angle from the vertical, one per
+  25 m, then per 100 m after 600 m, up to 3000 m) are added up until the sum passes `SIDE_EVIDENCE`, so a switchback
+  running up the screen keeps its side and the wiggles of a noisy track cancel out (the first run past a threshold
+  flipped the side from one frame to the next on the sample). It turns round over `FIGURE_TURN_S` (0.25 s): the
+  rig tells the markers the film camera of that time ago (`showPastView`, null when the user orbits a paused film), a
+  bisection between that camera and this frame's places the change, and the width of the pictogram goes through zero as
+  a flipped card (`facing` from 1 to −1, drawn by `markerBadge` in steps of 1/8 so the textures stay few). The text
+  under the marker is drawn at its full width and never mirrored.
+- **Light of the marker** (`markerLight` in `exposure.ts`, set each frame by `AtmosphereLayer` through `setMarkerLight`,
+  neutral again when the atmosphere goes): the marker is unlit, so it takes a little of the scene's light by a colour
+  multiplier of its sprite from the sun elevation and the weather: neutral by day, warming to a full orange at the
+  horizon, a mauve dusk, then a bluish and dimmer night, a floor of 0.32 per channel so the white ball stays readable,
+  the tint fading and the level dropping a little under clouds. The colours of the racers keep their order at night
+  (every pair of the track palette stays at least 30 ΔE apart).
 
 ## Film and timeline (phase 4, increments 1 to 4 of 4: model, engine, timeline, texts, photos and videos; music and video sound, phase 7)
 
@@ -2246,7 +2264,15 @@ it, know at what time you will pass each point, where the sun will be and what t
   least 8 km/h), `highest` (not within 200 m of the start; `recordLandmarks` also drops it when a summit landmark is within
   `RECORD_SUMMIT_M` = 200 m) and `lowest` (range ≥ 100 m, not within 200 m of an end), `fastestKm` / `slowestKm` (whole
   kilometres as the kilometre markers count them, at least two, not when the fastest is inside the fastest descent),
-  `longestClimb` (from two climbs of `climbsOf`), `maxHeartRate` / `maxPower` (best 30 s mean). Nothing under 1 km, and
+  `longestClimb` (from two climbs of `climbsOf`), `maxHeartRate` / `maxPower` (best 30 s mean), and on flights only
+  `bestThermal` (best climb rate held 25 s inside a `Track.flights` stretch, ≥ 1 m/s so ridge lift is not a thermal, at the
+  middle of that window, « +3,2 m/s ») and `highestAboveGround` (the greatest height above the ground of a flight, which
+  `detectFlights` measures against the ground of the import and keeps as `Flight.maxHeightM` / `maxHeightAtM`, moved by the
+  tools with the flight; absent on flights saved before). The records of the ground (steepest climb, fastest descent, both
+  kilometres, longest climb) never read a flight: the cells within `SEAM_CELLS` of a flight are skipped like a segment join
+  and kilometres or climbs that overlap one are left out, so a track flown from start to end has none; highest, lowest,
+  heart rate and power do not care. `recordsOf` caches per list of points and per `flights` list (flights set later
+  recompute), `forgetRecords` empties it. Nothing under 1 km, and
   only what the points allow (no elevation: no climb, descent or altitude; no time: no speed or kilometre). Elevations are
   those of the climbs (20 m grid, median of five against spikes, 120 m moving average); times count moving time only (a
   pause or a recording gap is not a slow kilometre) and a stretch implying more than 150 km/h is a GPS jump, never a
@@ -2257,8 +2283,8 @@ it, know at what time you will pass each point, where the sun will be and what t
   adds them to the list of every track, before the ranking and the hidden ones, even before OpenStreetMap answers or when
   it fails. They are therefore Auto / Toujours / Jamais, ranked, dismissed by « Garder les « Toujours » » and listed in
   the window of the map like the others, with the badge « Record » and no distance to the track. Their 3D label is a
-  `'poi'` label with the `trophee` pictogram (`POI_ICONS`); `stopCandidates` offers three of them as stops
-  (`AUTO_STOP_RECORDS`: steepest climb, highest point, fastest descent, so a film of N stages has at most 3 N more stops; the
+  `'poi'` label with the `trophee` pictogram (`POI_ICONS`); `stopCandidates` offers four of them as stops
+  (`AUTO_STOP_RECORDS`: steepest climb, highest point, fastest descent, best thermal, so a film of N stages has at most 4 N more stops; the
   others stay labels, and « Arrêt » on a row adds a stop to any), except for the pauses of the films saved with the former
   pacing (`autoStops` 'rythme'), the stop's label being the record's text. A landmark is copied with `withLandmarkFields`
   (ranking, stages), never by a spread, which would freeze the `name` / `text` getters in the language of the moment. A segment
@@ -2266,6 +2292,17 @@ it, know at what time you will pass each point, where the sun will be and what t
   OpenStreetMap credit for real OSM landmarks: records alone do not need it. The hint under the list (`landmarks.hintRecords`)
   says what a record is. To add a kind: `RECORD_KINDS`, `detectRecords`, `recordValueText`, the `landmarks.record.<kind>`
   name in the five languages, a test in `records.test.ts`.
+  « Records de la sortie » is `LandmarkSettings.records` (default on; old projects get it from `withLandmarkDefaults`): one
+  switch at the top of the records part of the panel. `publish` (`osm/store.ts`) lists no record when it is off, so
+  their labels and the generated automatic stops (derived from the landmarks shown) go with it, and nothing is deleted
+  (the ids in `hiddenIds`, `pinnedIds`, `rank` stay); the stops a film wrote out (`autoStops: false`) are its own and stay.
+  « Recalculer les records » (`recomputeRecords`, `ui/LandmarkPanel.tsx`) calls `refreshRecords` (`forgetRecords` then
+  `publish`), then `alignRecordStops` (`film/assemble.ts`) on the film in one `editFilm` step: the stops `autoStops` wrote
+  out for a record (id `auto-…`, source `record:…`) whose record is gone, has moved or is no longer an automatic-stop kind
+  are removed, the record stops the rules give now are added unless a stop is within `autoStopGroupM`, and everything else
+  (the user's stops, the landmarks') is untouched; a film that generates its stops has nothing to align. The message counts
+  the records that went and came (store before / after plus the stops), says « Rien n'a changé » otherwise, and offers
+  « Annuler » only when the film changed.
 - **Water points**: landmark type `waterPoint` (Overpass `amenity=drinking_water`, named "Eau potable" (drinking
   water) when it has no name, and named `natural=spring`), off by default for the film and the labels; an old project
   receives the type through `withLandmarkDefaults`.

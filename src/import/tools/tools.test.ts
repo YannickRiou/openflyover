@@ -312,7 +312,7 @@ describe('shiftTime', () => {
 describe('withSegments', () => {
   const base = (): Track => ({
     ...buildTrack({ name: 'Tracé', source: 'gpx', segments: [line(50, 10)] }),
-    flights: [{ startM: 100, endM: 200, offsetM: 3 }],
+    flights: [{ startM: 100, endM: 200, offsetM: 3, maxHeightM: 80, maxHeightAtM: 150 }],
     statsOverride: { distanceM: 1234, maxEle: 2001 },
   })
 
@@ -340,6 +340,9 @@ describe('withSegments', () => {
     // 10 points of 11 m gone: the flight starts on the removed part (now the start) and ends 111 m earlier
     expect(next.flights![0].startM).toBe(0)
     expect(next.flights![0].endM).toBeCloseTo(200 - 10 * haversineM(track.segments[0].points[0], track.segments[0].points[1]), 3)
+    // its highest point goes with it
+    expect(next.flights![0]).toMatchObject({ maxHeightM: 80 })
+    expect(next.flights![0].maxHeightAtM).toBeCloseTo(150 - 10 * haversineM(track.segments[0].points[0], track.segments[0].points[1]), 3)
     const cutAway = cutSection(track.segments, 5, 30, 'split')
     const gone = withSegments(track, cutAway, 'cut', distanceMap(track.segments, cutAway, { removed: [{ from: 5, to: 30 }] }))
     expect(gone).not.toHaveProperty('flights')

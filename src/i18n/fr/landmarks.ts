@@ -138,6 +138,17 @@ export default {
   'record.longestClimb': 'Plus longue montée',
   'record.maxHeartRate': 'Fréquence cardiaque maximale',
   'record.maxPower': 'Puissance maximale',
-  hintRecords: 'Les records sont les exploits de la sortie (montée la plus raide, descente la plus rapide, point le plus haut…) : ils sont calculés d’après la trace elle-même, et corriger les chiffres à la main ne les change pas. Seuls la montée la plus raide, le point le plus haut et la descente la plus rapide font un arrêt automatique ; les autres restent des étiquettes.',
+  'record.bestThermal': 'Meilleur thermique',
+  'record.highestAboveGround': 'Plus haut au-dessus du sol',
+  'record.thermal': '+{value} m/s',
+  // the switch and the recomputation of the records
+  'records.enable': 'Records de la sortie',
+  'records.tip': 'Les exploits de la sortie, calculés d’après la trace : une étiquette en 3D chacun et, pour les principaux, un arrêt automatique. Éteints, ils sont masqués sans rien effacer.',
+  'records.recompute': 'Recalculer les records',
+  'records.recomputeTip': 'Relit la trace, puis met les arrêts automatiques du film en accord avec les records : vos propres arrêts ne bougent pas.',
+  'records.removed': { one: '{count} record retiré', other: '{count} records retirés' },
+  'records.added': { one: '{count} record ajouté', other: '{count} records ajoutés' },
+  'records.unchanged': 'Rien n’a changé',
+  hintRecords: 'Les records sont les exploits de la sortie (montée la plus raide, descente la plus rapide, point le plus haut…) : ils sont calculés d’après la trace elle-même, et corriger les chiffres à la main ne les change pas. Les montées, descentes et kilomètres ignorent les passages en vol, qui ont leur meilleur thermique et leur hauteur maximale au-dessus du sol. Seuls la montée la plus raide, le point le plus haut, la descente la plus rapide et le meilleur thermique font un arrêt automatique ; les autres restent des étiquettes.',
   metaRecord: 'km {km}',
 }
