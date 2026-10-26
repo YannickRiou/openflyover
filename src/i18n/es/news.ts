@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v45.camera.title': 'Una cámara más agradable de ver',
+  'v45.camera.text': 'Dos ajustes en Vuelo › Cámara. «Espacio delante» coloca el marcador un poco por detrás del centro de la imagen, para dejar sitio del lado hacia el que avanza. «Inclinación en las curvas» inclina suavemente el horizonte en las curvas, como un dron que se ladea. Por defecto, un poco de cada uno: sus películas resultan más fluidas.',
   'v45.marker.title': 'Un marcador más vivo',
   'v45.marker.text': 'La figurita camina ahora al ritmo del marcador, se queda quieta cuando este se detiene y se da la vuelta con suavidad en una curva (el texto de debajo nunca se refleja). Además, cada marcador toma un poco de la luz de la escena: cálido al amanecer y al atardecer, algo azulado de noche. Nada que ajustar.',
   'v44.night.title': 'Noches menos negras',

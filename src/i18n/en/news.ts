@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v45.camera.title': 'A camera that is nicer to watch',
+  'v45.camera.text': 'Two settings in Flyover › Camera. “Lead room” puts the marker a little behind the middle of the picture, leaving room on the side it is heading to. “Banking in bends” gently tilts the horizon in bends, like a drone leaning into the turn. Both are on a little by default: your films feel smoother.',
   'v45.marker.title': 'A livelier marker',
   'v45.marker.text': 'The figurine now walks at the marker’s pace, stands still when the marker stops, and turns round smoothly at a bend (the text under it is never mirrored). Every marker also takes a little of the light of the scene: warm at sunrise and sunset, slightly bluish at night. Nothing to set.',
   'v44.night.title': 'Brighter nights',

@@ -208,6 +208,8 @@ export function CameraRig() {
 
     const firstFit = handledFitRef.current === null
     handledFitRef.current = fitRequest
+    // the film's bank (FlyoverRig) does not outlive the film's view
+    controls.object.up.set(0, 1, 0)
 
     const { tracks, settings } = useAppStore.getState()
     const centre = centroid(bounds)

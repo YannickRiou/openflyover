@@ -20,7 +20,7 @@ import { useMediaStore } from '../film/media'
 import { keyAt, updateCameraKey } from '../film/timeline'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
 import { clampWorkArea, loopTime } from '../film/workArea'
-import { filmViewMovesWithTime, highViewAt, situationFramingOf, situationTarget } from '../flyover/filmCamera'
+import { filmViewMovesWithTime, highViewAt, lookAtView, situationFramingOf, situationTarget } from '../flyover/filmCamera'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { registerFramingCapture, useRegionStore } from '../osm/region'
 import { getSettingsHistory } from '../project/history'
@@ -137,6 +137,8 @@ export function FlyoverRig() {
     }
     const start = () => {
       keyGestureRef.current ??= getSettingsHistory().beginGesture()
+      // the hand takes the camera over: no more bank (the film's roll is not a key's)
+      camera.up.set(0, 1, 0)
     }
     const end = () => {
       follow()
@@ -151,7 +153,7 @@ export function FlyoverRig() {
       controls.removeEventListener?.('change', follow)
       controls.removeEventListener?.('end', end)
     }
-  }, [path, frame, controls])
+  }, [path, frame, controls, camera])
 
   useFrame(({ camera, size, gl, controls: orbit }, delta) => {
     const store = useAppStore.getState()
@@ -219,7 +221,7 @@ export function FlyoverRig() {
       appliedSettingsRef.current = settings
       appliedRegionRef.current = region
       camera.position.copy(view.position)
-      camera.lookAt(view.target)
+      lookAtView(camera, view)
       orbitControls?.target.copy(view.target)
     }
     // after the camera move: the figure faces the way the track runs in this very frame; the colour, figure and name

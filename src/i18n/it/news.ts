@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v45.camera.title': 'Una camera più piacevole da guardare',
+  'v45.camera.text': 'Due impostazioni in Sorvolo › Camera. «Spazio davanti» mette il marcatore un po’ dietro il centro dell’immagine, lasciando spazio dal lato verso cui avanza. «Inclinazione nelle curve» inclina dolcemente l’orizzonte nelle curve, come un drone che si piega. Per impostazione predefinita, un po’ di entrambe: i film risultano più fluidi.',
   'v45.marker.title': 'Un marcatore più vivo',
   'v45.marker.text': 'La figurina ora cammina al passo del marcatore, sta ferma quando questo si ferma e si gira con dolcezza in curva (il testo sotto non viene mai specchiato). Inoltre ogni marcatore prende un po’ della luce della scena: caldo all’alba e al tramonto, leggermente bluastro di notte. Nulla da impostare.',
   'v44.night.title': 'Notti meno nere',
