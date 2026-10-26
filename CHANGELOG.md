@@ -5,7 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
-- **A camera key no longer whips the view round on a track flown fast**: on a long raid flown in a minute, over hairpins, the camera turned at more than 300° a second around two close camera keys, like a spin; it now turns as calmly as the rest of the film (existing films with keys on a fast track change there; films without keys, and slower films, do not).
+- **Between two camera keys, the view no longer whips round on a track flown fast**: on a long raid flown in a minute, over hairpins, the camera turned at more than 300° a second around two close camera keys, like a spin; it now turns as calmly as the rest of the film. Each key keeps exactly the image it was taken with (nothing to redo), only the motion between and around keys changes; films without keys, and slower films, are untouched.
 
 ## 4.5.0 (October 2026)
 

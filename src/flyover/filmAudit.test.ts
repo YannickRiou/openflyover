@@ -314,4 +314,16 @@ describe('camera keys on a long winding road flown fast', () => {
     const clock = clockOf([{ id: 'k', atM: p * path.lengthM, ...keyFramingAt(path, plain, t, p, where, hillySampler, opts, position, lookAt) }] as typeof cameraKeys)
     expect(computeFilmView(path, clock, clock.cameraKeys[0].timeS, p, where, hillySampler, opts).position.distanceTo(position)).toBeLessThan(0.01)
   })
+
+  it('a saved key shows the image it was taken with at its own instant: its offsets are still read from the direction of travel of the track', () => {
+    // what the film shows at a key, read back as a pose (against the plain direction of travel, as a key is captured): the
+    // pose that was saved, so the keys of a project saved before keep their image
+    const clock = clockOf(cameraKeys)
+    for (const key of clock.cameraKeys) {
+      const p = clock.progressAtTime(key.timeS)
+      const view = computeFilmView(path, clock, key.timeS, p, where, hillySampler, opts)
+      const back = keyFramingAt(path, clock, key.timeS, p, where, hillySampler, opts, view.position, view.target)
+      for (const field of ['distance', 'pitchDeg', 'headingOffsetDeg', 'aimRightM', 'aimAheadM'] as const) expect(back[field], `${key.id} ${field}`).toBeCloseTo(key[field] ?? 0, 3)
+    }
+  })
 })

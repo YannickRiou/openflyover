@@ -718,17 +718,18 @@ export interface KeyBase {
 }
 
 /**
- * A keyframe's reference direction is averaged over at least ± the track the flight covers in this much film time (at its
- * average speed). At 10 km of track per film second over hairpins, the 6 km it is otherwise averaged over turned 50° a
- * kilometre and swung the view round at 350 deg/s; with 5 s the film stays under 70 deg/s.
+ * Between and around the keys, the direction a keyframe is placed around is averaged over at least ± the track the flight
+ * covers in this much film time (at its average speed). At 10 km of track per film second over hairpins, the 6 km it is
+ * otherwise averaged over turned 50° a kilometre and swung the view round at 350 deg/s; with 5 s the film stays under 70 deg/s.
+ * At a key it is still the plain one (`flightAt`: `keyTurn`), so a key keeps the image it was taken with.
  */
 export const KEY_REFERENCE_SMOOTHING_S = 5
 
 /**
  * Direction of travel a keyframe's heading is measured from at `d` metres: the default turn window averaged over four
- * of them, set by the track alone, so a keyframe keeps its pose when the camera settings change. Wider where the flight's
- * average `speedMps` (metres per film second) asks (KEY_REFERENCE_SMOOTHING_S): a track flown fast does not whip the pose
- * round, and a slower film keeps its reference.
+ * of them, set by the track alone, so a keyframe keeps its pose when the camera settings change. With the flight's average
+ * `speedMps` (metres per film second): wider where KEY_REFERENCE_SMOOTHING_S of film asks, the direction the film places its
+ * keys around between them (a track flown fast does not whip the view round); a slower film keeps its reference.
  */
 export function keyReferenceAt(path: TrackPath, d: number, frame: LocalFrame, speedMps = 0): Vector3 {
   const w = headingWindowM(path, DEFAULT_CAMERA)
@@ -814,7 +815,7 @@ function flightAt(
   frame: LocalFrame,
   sample: HeightSampler | null,
   options: FilmViewOptions,
-): { flight: FilmView; base: KeyBase } {
+): { flight: FilmView; base: KeyBase; captureBase: KeyBase; keyTurn: (key: FilmCameraKey) => number } {
   const flown = flownAt(path, clock, state, progress, frame, sample, options)
   const { followed, flightPath, wide, orbitRad } = flown
   if (sample) {
@@ -853,10 +854,28 @@ function flightAt(
   const framed = followed?.group ? framedGroup(view, followed.group, frame, sample, options.exaggeration, options.aspect, focalOf(options)) : view
   const flight = followed ? { ...framed, marker } : view
   const speedMps = flightPath.lengthM / Math.max(1, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
-  const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame, speedMps)
+  const at = (followed?.progress ?? progress) * flightPath.lengthM
   // a key is placed around the aim before « Espace devant » moved it, so it keeps its pose whatever that setting
   const target = framed === view ? view.aim : flight.target
-  return { flight, base: { target, reference, autoDistanceM: autoDistanceM(flightPath) * focalDolly(focalOf(options)), wide, orbitRad } }
+  const base = { target, reference: keyReferenceAt(flightPath, at, frame, speedMps), autoDistanceM: autoDistanceM(flightPath) * focalDolly(focalOf(options)), wide, orbitRad }
+  /**
+   * How far the key's reference is turned from the one that calms the view (radians): `keyReferenceAt` at the key's own place
+   * without and with the film-time average, so the key's pose there is placed around the reference it was taken with
+   */
+  const keyTurn = (key: FilmCameraKey) => {
+    let d = key.atM
+    if (followed) {
+      // a key is placed on the film track: on the followed one only where the flight is on it
+      const held = options.follow?.(key.atM / Math.max(1, path.lengthM))
+      if (held?.path !== flightPath) return 0
+      d = held.progress * flightPath.lengthM
+    }
+    const heading = (v: Vector3) => Math.atan2(v.x, -v.z)
+    const turn = heading(keyReferenceAt(flightPath, d, frame)) - heading(keyReferenceAt(flightPath, d, frame, speedMps))
+    return Math.atan2(Math.sin(turn), Math.cos(turn))
+  }
+  // the capture is made against the reference as it was before (the average only calms what the film does around the keys)
+  return { flight, base, captureBase: { ...base, reference: keyReferenceAt(flightPath, at, frame) }, keyTurn }
 }
 
 /** The flight camera of `computeCameraView` at a film state (stop cameras, time smoothing, followed track), with its own raise. */
@@ -916,7 +935,7 @@ export function keyFramingAt(
   const base =
     options.camera?.style === 'free'
       ? freeKeyBase(path, progress * path.lengthM, frame, sample, options)
-      : flightAt(path, clock, clock.stateAt(timeS), progress, frame, sample, options).base
+      : flightAt(path, clock, clock.stateAt(timeS), progress, frame, sample, options).captureBase
   const f = keyFramingFrom(base, position, lookAt)
   const { distance, pitchDeg } = CAMERA_KEY_RANGES
   return { ...f, distance: clamp(f.distance, distance.min, distance.max), pitchDeg: clamp(f.pitchDeg, pitchDeg.min, pitchDeg.max) }
@@ -1077,11 +1096,13 @@ function computeFlownView(
   const { aspect, region } = options
   const flight = options.camera?.style === 'free' ? freeView(path, clock, timeS, progress, frame, sample, options) : keyedFlight()
   function keyedFlight(): FilmView {
-    const { flight: filmFlight, base } = flightAt(path, clock, state, progress, frame, sample, options)
+    const { flight: filmFlight, base, keyTurn } = flightAt(path, clock, state, progress, frame, sample, options)
     const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
-    const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
+    const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM, keyTurn)
     if (!keyed || keyed.weight <= 0) return filmFlight
-    const pose = keyView(base, keyed.framing)
+    // around the reference that calms the view, turned to the one each key was taken with (eased from one key to the next)
+    const heading = Math.atan2(base.reference.x, -base.reference.z) + keyed.turn
+    const pose = keyView({ ...base, reference: new Vector3(Math.sin(heading), 0, -Math.cos(heading)) }, keyed.framing)
     // blended without a clearance of its own: `keyClearance` gives it one that is none at the exact poses
     const blended = blendViews(filmFlight, pose, keyed.weight, frame, null, options.exaggeration)
     const edge = keyed.weight < 1 ? Math.min(keyed.weight, 1 - keyed.weight) : keyed.free

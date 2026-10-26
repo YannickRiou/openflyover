@@ -908,14 +908,16 @@ The interface and the texts drawn into the films and posters exist in **French**
   0.129 → 0.023; « Drone rapide » and « Oiseau » keep ~0.06–0.08 there (the aim's ground height follows the terrain 1:1, a
   step of a few tens of metres). Cost: a plain flight is unchanged but for two clock look-ups per frame (the speed) and,
   while tiles arrive, a scan of 12 instants.
-  (6) **Camera keys at speed** (`keyReferenceAt`): a key's heading is measured from the direction of travel averaged over ±6 km
-  of track; on a 540 km raid flown in 60 s (9 km of track per film second) over hairpins that direction turned 40–50° a
-  kilometre, so the view whipped round at 350 deg/s between two keys 13 km apart (1,750 deg/s²; 70 deg/s without the keys),
-  which the jolt measured at 0.035. The average is now at least ± `KEY_REFERENCE_SMOOTHING_S` = 5 s of film at the flight's
-  average speed (`speedMps`, wider than 6 km only above 1.2 km of track per film second: a film of an ordinary hike keeps its
-  reference). The same reference serves the capture and the replay (`flightAt`), so a view captured is the one shown at its
-  key; but a key of a film that was flown fast shows another direction than before (58° and 67° at the two keys of that raid:
-  the old one was taken from the whipping reference), and the film now stays under 70 deg/s. A film with no key does not change.
+  (6) **Camera keys at speed** (`keyReferenceAt`, `flightAt`: `keyTurn`): a key's heading is measured from the direction of
+  travel averaged over ±6 km of track; on a 540 km raid flown in 60 s (9 km of track per film second) over hairpins that
+  direction turned 40–50° a kilometre, so the view whipped round at 350 deg/s between two keys 13 km apart (1,750 deg/s²;
+  70 deg/s without the keys), which the jolt measured at 0.035. The film now places its keys around the direction averaged
+  over at least ± `KEY_REFERENCE_SMOOTHING_S` = 5 s of film at the flight's average speed (wider than 6 km only above 1.2 km
+  of track per film second: a film of an ordinary hike is untouched), turned at each key by the angle `keyTurn` between the two
+  there (blended from one key to the next like the heading, `keyPoseAt`): at a key the pose is exactly the one measured from
+  the plain direction, so a saved key keeps its image (0° and 0 m at the two keys of that raid) and a capture
+  (`keyFramingAt`, against the plain direction) stays the inverse; between and around the keys the pose moves with the calm
+  direction, and the film stays under 36 deg/s there (70 over the whole film). A film with no key does not change.
   **Left as is**: the aim of the lively presets at ×4 on the switchbacks, the
   sideways swing of the lively presets in a hairpin of a steep slope (`swingAngle` turns twice as fast straight uphill:
   0.03–0.06 with « Drone rapide »), the stage end of « À la suite » with a lively preset (a heading wobble of 0.15 in the last
@@ -1587,8 +1589,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   **Keyframes** (`keyPoseAt`, `keyView`, pure): a keyframe is the pose of the camera around the film's aim point at its
   place (`flight.target`: time smoothing of the aim included), not camera settings: distance × `autoDistanceM`, pitch
   above the horizon, heading from `keyReferenceAt` (the direction of travel over the default turn window, averaged over
-  four of them, or over `KEY_REFERENCE_SMOOTHING_S` of film time at the flight's average speed when that is wider (a film
-  flown fast): the track and the duration set it, so a key keeps its pose when the camera settings change), aim point shifted by
+  four of them, ; between and around the keys of a film flown fast the film averages it over `KEY_REFERENCE_SMOOTHING_S` of film time
+  instead and turns it back to the plain one at each key, see (6) above: the track and the duration set it, so a key keeps
+  its pose when the camera settings change), aim point shifted by
   `aimRightM` / `aimAheadM` (a panned view). `keyView` places it with no style, time smoothing, pitch clamp or ground
   clearance, so the film shows the very view that was taken; a « Vue large » or « Tour lent » stop widens or turns it
   like the film's camera. Capture (`keyFramingAt` → `keyFramingFrom`, the inverse): the aim point is taken on the line
