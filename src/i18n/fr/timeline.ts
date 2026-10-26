@@ -61,6 +61,8 @@ export default {
   'hold.auto': ' (automatique)',
   'card.description': 'Carte : {label}',
   'dayCard.label': 'Jour {n}',
+  'night.label': 'Nuit {n}',
+  'night.description': 'Nuit : {label}, le film s’arrête ici',
   'text.description': 'Texte : {text}',
   'media.videoCard': 'Vidéo en carte : {label}',
   'media.videoFull': 'Vidéo plein écran : {label}',

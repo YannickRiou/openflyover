@@ -22,6 +22,8 @@ const messages: Messages['light'] = {
   'nights.sequenceHint': 'Bei „Nacheinander“ wählt jeder Übergang, ob er die Nacht vergehen lässt (Track › Mehrere Tracks oder sein Block in der Timeline); „Nächte zeigen“ gilt nur für die Nächte innerhalb einer Etappe. Die Dauern unten gelten für alle Nächte.',
   'nights.none': 'Keine Übernachtung in diesem Track.',
   'nights.hint': { one: '{count} Nacht: Der Film hält jedes Mal {pause} an.', other: '{count} Nächte: Der Film hält jedes Mal {pause} an.' },
+  'nights.removed': { one: '{count} Nacht von der Timeline entfernt.', other: '{count} Nächte von der Timeline entfernt.' },
+  'nights.restore': 'Nächte wiederherstellen',
   'nights.instant': 'Die Nacht vergeht in einem Augenblick zwischen zwei Tagen.',
   'nights.show': 'Nächte zeigen',
   'days.legend': 'Tageskarten',

@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v46.nights.title': 'Les nuits sur la timeline',
+  'v46.nights.text': 'Sur une trace de plusieurs jours, chaque nuit est maintenant un bloc vert sur la piste « Arrêts » de la timeline. Cliquez dessus pour la voir, Suppr pour la retirer du film (annulable). « Rétablir les nuits » (Lumière › Jours et nuits) les remet toutes.',
   'v46.stage.title': 'Deux boutons sur la vue',
   'v46.stage.text': 'Sous le réticule, « Capturer cette image » enregistre l’image que vous voyez, à la taille du format de sortie et avec l’habillage (l’image du film à cet instant, ou votre propre vue si vous l’avez tournée). Quand vous avez tourné la vue à la souris, le film étant en pause, « Revenir à la vue du film » remet la caméra là où le film la place.',
   'v45.camera.title': 'Une caméra plus agréable à regarder',

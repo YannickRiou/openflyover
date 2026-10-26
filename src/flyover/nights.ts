@@ -78,18 +78,31 @@ export function trackNights(path: TrackPath): TrackNight[] {
   return nights
 }
 
+/**
+ * Stable key of a night (`film.nights.skipped`): the UTC date of its sunset, `2026-07-14`. It needs no clock of the
+ * recording and does not change when the track is trimmed (a night's position along the path does).
+ */
+export const nightKey = (night: Pick<TrackNight, 'sunsetMs'>) => new Date(night.sunsetMs).toISOString().slice(0, 10)
+
+/** Timeline id of a night: its block on the « Arrêts » lane (see `dayCardId`). */
+const NIGHT_PREFIX = 'night-'
+export const nightItemId = (night: Pick<TrackNight, 'sunsetMs'>) => `${NIGHT_PREFIX}${nightKey(night)}`
+export const isNightItem = (item: string | null | undefined): item is string => typeof item === 'string' && item.startsWith(NIGHT_PREFIX)
+export const nightKeyOf = (item: string) => item.slice(NIGHT_PREFIX.length)
+
 /** Film seconds a night pause lasts. */
 export const nightPauseS = (nights: Pick<FilmNights, 'duskS' | 'nightS' | 'dawnS'>) => nights.duskS + nights.nightS + nights.dawnS
 
 /**
  * Nights of `path` the film pauses for (`settings.enabled`): those the flight, at its base speed over `durationS`,
- * would cross faster than the pause lasts (a night spent riding is already shown by the flight).
+ * would cross faster than the pause lasts (a night spent riding is already shown by the flight), but those removed
+ * by hand (`settings.skipped`).
  */
 export function flightNights(path: TrackPath, settings: FilmNights, durationS: number): FlightNight[] {
   const pauseS = nightPauseS(settings)
   if (!settings.enabled || !(pauseS > 0) || !(path.lengthM > 0)) return []
   const { duskS, nightS, dawnS } = settings
   return trackNights(path)
-    .filter((n) => (n.nightM / path.lengthM) * durationS < pauseS)
+    .filter((n) => (n.nightM / path.lengthM) * durationS < pauseS && !settings.skipped?.includes(nightKey(n)))
     .map((n) => ({ ...n, duskS, nightS, dawnS }))
 }

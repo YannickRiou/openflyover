@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v46.nights.title': 'Le notti sulla timeline',
+  'v46.nights.text': 'Su una traccia di più giorni, ogni notte è ora un blocco verde sulla traccia «Soste» della timeline. Clicca per vederla, Canc per toglierla dal film (si può annullare). «Ripristina le notti» (Luce › Giorni e notti) le riporta tutte.',
   'v46.stage.title': 'Due pulsanti sulla vista',
   'v46.stage.text': 'Sotto il mirino, “Cattura questa immagine” salva l’immagine che vedi, alla dimensione del formato di uscita e con la sovrapposizione (l’immagine del film in quell’istante, o la tua vista se l’hai ruotata). Quando hai ruotato la vista con il mouse a film in pausa, “Torna alla vista del film” rimette la telecamera dove la colloca il film.',
   'v45.camera.title': 'Una camera più piacevole da guardare',

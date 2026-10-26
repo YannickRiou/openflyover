@@ -63,6 +63,8 @@ const messages: Messages['timeline'] = {
   'hold.auto': ' (automatica)',
   'card.description': 'Scheda: {label}',
   'dayCard.label': 'Giorno {n}',
+  'night.label': 'Notte {n}',
+  'night.description': 'Notte: {label}, il film si ferma qui',
   'text.description': 'Testo: {text}',
   'media.videoCard': 'Video in riquadro: {label}',
   'media.videoFull': 'Video a schermo intero: {label}',

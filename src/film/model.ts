@@ -370,6 +370,8 @@ export interface FilmNights {
   duskS: number
   nightS: number
   dawnS: number
+  /** nights removed on the timeline (`nightKey`: the date of their sunset); absent: none */
+  skipped?: string[]
 }
 /** Range of each part of a night (seconds at ×1; also their validity range in a loaded project). */
 export const NIGHT_PART_RANGE = { min: 0, max: 20, step: 0.5 } as const
@@ -862,7 +864,13 @@ export function isValidDayCards(cards: unknown): cards is FilmDayCards {
 
 export function isValidNights(nights: FilmNights): boolean {
   const part = (v: unknown) => within(v, NIGHT_PART_RANGE.min, NIGHT_PART_RANGE.max)
-  return typeof nights.enabled === 'boolean' && part(nights.duskS) && part(nights.nightS) && part(nights.dawnS)
+  return (
+    typeof nights.enabled === 'boolean' &&
+    part(nights.duskS) &&
+    part(nights.nightS) &&
+    part(nights.dawnS) &&
+    (nights.skipped === undefined || (Array.isArray(nights.skipped) && nights.skipped.every((k) => typeof k === 'string')))
+  )
 }
 
 /** A stored stage card or the common card's settings: each field it sets is valid (an empty colour or font: the overlay's). */

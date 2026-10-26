@@ -20,6 +20,8 @@ export default {
   'nights.sequenceHint': 'Dans « À la suite », chaque transition choisit de passer la nuit ou non (Trace › Plusieurs traces, ou son bloc de la timeline) ; « Montrer les nuits » ne vaut que pour les nuits à l’intérieur d’une étape. Les durées ci-dessous valent pour toutes les nuits.',
   'nights.none': 'Aucune nuit de repos sur cette trace.',
   'nights.hint': { one: '{count} nuit : le film s’arrête {pause} à chaque fois.', other: '{count} nuits : le film s’arrête {pause} à chaque fois.' },
+  'nights.removed': { one: '{count} nuit supprimée de la timeline.', other: '{count} nuits supprimées de la timeline.' },
+  'nights.restore': 'Rétablir les nuits',
   'nights.instant': 'La nuit passe en un instant entre deux jours.',
   'nights.show': 'Montrer les nuits',
   'days.legend': 'Cartes de jour',

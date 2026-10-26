@@ -37,6 +37,7 @@ import {
   nextFilmId,
 } from './model'
 import { dayCardIndexOf, isDayCardItem } from './days'
+import { isNightItem, nightItemId, nightKeyOf, type TrackNight } from '../flyover/nights'
 import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText, MediaSync } from './model'
 import { clampParamValue } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
@@ -1176,6 +1177,8 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
   if (isStageCardItem(id)) return withJunctionCard(film, stageCardAfterOf(id), { enabled: false })
   // the cards of the days go together: deleting one block switches them off (their settings are kept)
   if (isDayCardItem(id)) return { ...film, dayCards: { ...(film.dayCards ?? DEFAULT_DAY_CARDS), enabled: false } }
+  // a night is left out of the film (« Rétablir les nuits » in the Lumière tab brings them back)
+  if (isNightItem(id)) return { ...film, nights: { ...film.nights, skipped: [...(film.nights.skipped ?? []), nightKeyOf(id)] } }
   // a stage goes back to its share of the flyover duration
   if (isStageItem(id)) return withStageDuration(film, stageTrackOf(id), null)
   return {
@@ -1193,11 +1196,18 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
 
 /**
  * `item` is in the film: a shot (always there), one of the clock's `stops` (generated ones included), a speed portion,
- * a camera, parameter or marker key, a text, a medium or a music clip.
+ * a camera, parameter or marker key, a text, a medium, a music clip or one of the clock's `nights`.
  */
-export function hasFilmItem(film: Film, stops: readonly { id: string }[], item: TimelineItem, stageIds: readonly string[] = []): boolean {
+export function hasFilmItem(
+  film: Film,
+  stops: readonly { id: string }[],
+  item: TimelineItem,
+  stageIds: readonly string[] = [],
+  nights: readonly Pick<TrackNight, 'sunsetMs'>[] = [],
+): boolean {
   if (item === 'opening' || item === 'closing') return true
   if (hasStageItem(item, stageIds)) return true
+  if (isNightItem(item)) return nights.some((n) => nightItemId(n) === item)
   if (isDayCardItem(item)) return film.dayCards?.enabled === true
   return [stops, film.speeds, film.cameraKeys, film.paramKeys, film.markerKeys, film.texts, film.media, film.audio].some((lane) => lane.some((s) => s.id === item))
 }
