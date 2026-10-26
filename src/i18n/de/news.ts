@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v45.camera.title': 'Eine Kamera, die angenehmer anzusehen ist',
+  'v45.camera.text': 'Zwei Einstellungen unter Überflug › Kamera. „Raum voraus“ setzt den Marker etwas hinter die Bildmitte und lässt Platz auf der Seite, in die er fährt. „Neigung in Kurven“ neigt den Horizont in Kurven sanft, wie eine Drohne, die sich in die Kurve legt. Beide sind standardmäßig leicht eingeschaltet: Ihre Filme wirken ruhiger.',
   'v45.focal.title': 'Das Objektiv des Films wählen',
   'v45.focal.text': 'Überflug › Kamera › „Brennweite“, von 18 mm (Weitwinkel: mehr Platz ringsum) bis 135 mm (Teleobjektiv: die Berge wirken näher und mächtiger). Die Kamera rückt näher oder weicht zurück, damit der Marker gleich groß bleibt; bei 26 mm ändert sich nichts.',
   'v44.night.title': 'Hellere Nächte',

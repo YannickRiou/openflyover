@@ -17,7 +17,7 @@
  * computed from a size (overview, region, group) is the one that frames it with that lens, the flight camera and the
  * keyframes stand `focalDolly` farther or closer than with the default one.
  */
-import { Vector3 } from 'three'
+import { Vector3, type PerspectiveCamera } from 'three'
 import { clamp, smootherstep } from '../core/math'
 import type { LocalFrame, LonLat } from '../core/types'
 import type { ClockDay, ClockStop, FilmClock, FilmState } from '../film/clock'
@@ -42,7 +42,7 @@ import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 import { nightAt } from './sun'
 import { cameraKeyEaseM, keyFraming, keyPoseAt, type KeyFraming } from './cameraKeys'
-import { anticipatedRaise, smoothsInTime, timeSmoothing } from './timeSmoothing'
+import { ANTICIPATION_REACH_S, ANTICIPATION_STEP_S, anticipatedRaise, groundSpeedMps, motionShares, smoothsInTime, timeSmoothing } from './timeSmoothing'
 import { aimTowardsPins, type AimPin } from './pinAim'
 
 export { smootherstep }
@@ -93,6 +93,8 @@ const SHOT_LIFT_POINTS = 40
 const SHOT_LIFT_HOLD = 0.06
 const SHOT_LIFT_REACH = 0.25
 const SHOT_EASE_MAX_SHARE = 0.5
+/** The raise of a film instant moves by at most this share of the camera's distance each time a sharper terrain refreshes it (`flightAt`). */
+const RAISE_REFRESH_SHARE = 0.012
 /** Length of the quick move of a 'saut' shot (seconds). */
 export const JUMP_S = 0.6
 /** 'orbite' stop: the camera turns out by STOP_ORBIT_DEG_PER_S × stop duration (at most STOP_ORBIT_MAX_DEG) and back. */
@@ -276,6 +278,22 @@ function keepAboveGround(position: Vector3, frame: LocalFrame, sample: HeightSam
   const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + MIN_GROUND_CLEARANCE_M).y
   if (position.y < floorY) position.y = floorY
   return position
+}
+
+/** The clearance of a keyed camera is whole beyond this much of `edge` (0 at an exact pose of a key, 1 halfway between two keys). */
+const KEY_CLEARANCE_EDGE = 0.2
+
+/**
+ * `position` of a keyed camera raised to MIN_GROUND_CLEARANCE_M above the ground, by smootherstep of `edge` over
+ * KEY_CLEARANCE_EDGE: none at a keyframe (its pose is the view that was taken, and the flight camera it blends with has
+ * its own clearance), whole a little way from it. Blends of two views know nothing of the terrain between them: the
+ * camera went through a ridge between two keys (65 to 101 m under the ground on the switchbacks), and a plain floor jumped where a key
+ * lies within MIN_GROUND_CLEARANCE_M of the ground.
+ */
+function keyClearance(position: Vector3, edge: number, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number): Vector3 {
+  if (!(edge > 0)) return position
+  const kept = keepAboveGround(position.clone(), frame, sample, exaggeration)
+  return position.clone().setY(position.y + (kept.y - position.y) * smootherstep(edge / KEY_CLEARANCE_EDGE))
 }
 
 /** Distance factor for a frame taller than wide (9:16 keeps the whole track). */
@@ -515,9 +533,11 @@ export function blendViews(
  * How much higher (metres, 0 or more) the camera of `view`, a blend of a wide view and the `flight` view, must be so
  * that it stays on a glide slope of SHOT_GLIDE_DEG over the flight camera (no dive far from it), clears the ground under
  * it by SHOT_CLEARANCE_SHARE of its distance and does not hide its aim behind the relief (the straight line of the
- * blend knows nothing of the terrain between the two views).
+ * blend knows nothing of the terrain between the two views). The aim checked is the one before « Espace devant », for the
+ * `flightShare` of the flight view in `view`: the lead aims ahead of the marker, often into the slope it climbs, and lifting
+ * the camera over that would drop the marker out of the frame.
  */
-function shotLift(view: CameraView, flight: CameraView, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number): number {
+function shotLift(view: CameraView, flight: CameraView, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number, flightShare = 1): number {
   const { position, target } = view
   // where the floor takes over from the blend, the camera's climb changes pace over a stretch, not at a point
   const softM = SHOT_SOFT_SHARE * position.distanceTo(target)
@@ -528,6 +548,7 @@ function shotLift(view: CameraView, flight: CameraView, frame: LocalFrame, sampl
     // relief up to it (the lift would be the depth × 1 / (1 − f), km for a few hundred metres): the line ends on the
     // ground above it
     const end = target.clone()
+    if ('aim' in flight && flight.aim instanceof Vector3) end.addScaledVector(flight.aim.clone().sub(flight.target), flightShare)
     const aim = frame.toLonLat(end)
     const aimGround = sample(aim.lon, aim.lat)
     if (aimGround !== undefined) end.y = Math.max(end.y, frame.toLocal(aim.lon, aim.lat, aimGround * exaggeration).y)
@@ -583,16 +604,18 @@ function liftedBlend(
 ): CameraView {
   const blended = blendViews(from, to, k, frame, sample, exaggeration, true)
   if (!(k > 0 && k < 1)) return blended
+  // the share of the flight view in the blend at `at` (`shotLift`)
+  const flightShare = (at: number) => (to === flight ? at : from === flight ? 1 - at : 0)
   let liftM = 0
   for (let i = 1; i < SHOT_LIFT_POINTS; i++) {
     const at = i / SHOT_LIFT_POINTS
     const away = Math.abs(at - k)
     if (away >= SHOT_LIFT_REACH) continue
     const weight = away <= SHOT_LIFT_HOLD ? 1 : 0.5 + 0.5 * Math.cos((Math.PI * (away - SHOT_LIFT_HOLD)) / (SHOT_LIFT_REACH - SHOT_LIFT_HOLD))
-    liftM = Math.max(liftM, weight * shotLift(blendViews(from, to, at, frame, sample, exaggeration, true), flight, frame, sample, exaggeration))
+    liftM = Math.max(liftM, weight * shotLift(blendViews(from, to, at, frame, sample, exaggeration, true), flight, frame, sample, exaggeration, flightShare(at)))
   }
   // never less than this very point's lift
-  liftM = Math.max(liftM, shotLift(blended, flight, frame, sample, exaggeration))
+  liftM = Math.max(liftM, shotLift(blended, flight, frame, sample, exaggeration, flightShare(k)))
   const { position } = liftedOnTheWay(blended, k, liftM)
   const free = blendViews(from, to, k, frame, null, exaggeration, true)
   const aimShare = 1 / Math.max(1, focalDolly(focalMm))
@@ -663,6 +686,20 @@ export interface FilmViewOptions extends Omit<CameraViewOptions, 'timeS' | 'orbi
 export interface FilmView extends CameraView {
   /** marker position on the draped track (the target only during the flight) */
   marker: Vector3
+  /**
+   * roll of the camera about its line of sight (radians, > 0 = banking right; 0 when absent): the flight camera's, which the
+   * shots, the high views and the camera keys take away as they take the view over (`lookAtView` applies it)
+   */
+  rollRad?: number
+}
+
+const _sight = new Vector3()
+
+/** Point `camera` at the target of `view`, rolled by its `rollRad` about the line of sight (the horizon tilts in a bend). */
+export function lookAtView(camera: Pick<PerspectiveCamera, 'up' | 'lookAt'>, view: CameraView & Pick<FilmView, 'rollRad'>): void {
+  camera.up.set(0, 1, 0)
+  if (view.rollRad) camera.up.applyAxisAngle(_sight.subVectors(view.target, view.position).normalize(), view.rollRad)
+  camera.lookAt(view.target)
 }
 
 /**
@@ -734,8 +771,9 @@ export function keyFramingFrom(base: KeyBase, position: Vector3, lookAt: Vector3
  * Raises of the flight camera at the instants of `anticipatedRaise` (film time → raise in metres and the terrain version
  * it was computed with), one table per terrain sampler, emptied when another input changes. A frame computes only the
  * instants that came into reach since the frame before (about one flight camera every ANTICIPATION_STEP_S of film) and,
- * while tiles arrive, refreshes one instant computed on an older terrain: the camera height follows the sharper terrain
- * an instant at a time, never with a jump, and the anticipation costs about one more flight camera at most per frame.
+ * while tiles arrive, refreshes the instant nearest to now computed on an older terrain, its raise moving a little toward
+ * the sharper terrain's each time (RAISE_REFRESH_SHARE): the camera height follows the sharper terrain over a few frames,
+ * never with a jump, and the anticipation costs about one more flight camera at most per frame.
  */
 interface RaiseTable {
   inputs: readonly unknown[]
@@ -770,25 +808,42 @@ function flightAt(
   if (sample) {
     const { camera, exaggeration, liftM, durationS, aspect, follow, terrainVersion: version = 0 } = options
     const raises = raiseTable(sample, [path, clock, frame, camera, exaggeration, liftM, durationS, aspect, follow])
-    let refreshed = false
-    const raiseAt = (instantS: number) => {
-      const known = raises.get(instantS)
-      if (known && (known.version === version || refreshed)) return known.raiseM
-      refreshed ||= known !== undefined
-      const raiseM = flownAt(path, clock, clock.stateAt(instantS), clock.progressAtTime(instantS), frame, sample, options).view.raiseM
-      raises.set(instantS, { raiseM, version })
-      return raiseM
-    }
     // the progress holds still during the opening and closing shots, so does the flight view they blend with
     const timeS = clamp(state.timeS, clock.openingS, clock.openingS + clock.flightS)
+    // the instant refreshed this frame: the nearest to now that was computed on an older terrain (the first in time
+    // order starved the others while tiles kept arriving, and the ones that count most went stale)
+    let stale: number | undefined
+    for (let k = Math.ceil((timeS - ANTICIPATION_REACH_S) / ANTICIPATION_STEP_S); k * ANTICIPATION_STEP_S < timeS + ANTICIPATION_REACH_S; k++) {
+      const instantS = k * ANTICIPATION_STEP_S
+      const known = raises.get(instantS)
+      if (known && known.version !== version && (stale === undefined || Math.abs(instantS - timeS) < Math.abs(stale - timeS))) stale = instantS
+    }
+    const raiseAt = (instantS: number) => {
+      const known = raises.get(instantS)
+      if (known && instantS !== stale) return known.raiseM
+      const fresh = flownAt(path, clock, clock.stateAt(instantS), clock.progressAtTime(instantS), frame, sample, options).view.raiseM
+      if (!known) {
+        raises.set(instantS, { raiseM: fresh, version })
+        return fresh
+      }
+      // on a sharper terrain the raise moves a little each time it is refreshed (it stays stale until it has got there), so
+      // a whole terrain arriving at once is a climb over a few frames, not a step of a hundred metres
+      const reach = RAISE_REFRESH_SHARE * flown.view.position.distanceTo(flown.view.target)
+      const raiseM = known.raiseM + clamp(fresh - known.raiseM, -reach, reach)
+      raises.set(instantS, { raiseM, version: raiseM === fresh ? version : known.version })
+      return raiseM
+    }
     flown.view.position.y += anticipatedRaise(raiseAt, timeS) - flown.view.raiseM
+    flown.view.target = flown.view.leadTarget(flown.view.position)
   }
   const view = flown.view
   const marker = followed?.markerOnFilm ? markerAt(path, progress, frame, sample, options.exaggeration, options.liftM) : view.marker
   const framed = followed?.group ? framedGroup(view, followed.group, frame, sample, options.exaggeration, options.aspect, focalOf(options)) : view
   const flight = followed ? { ...framed, marker } : view
   const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame)
-  return { flight, base: { target: flight.target, reference, autoDistanceM: autoDistanceM(flightPath) * focalDolly(focalOf(options)), wide, orbitRad } }
+  // a key is placed around the aim before « Espace devant » moved it, so it keeps its pose whatever that setting
+  const target = framed === view ? view.aim : flight.target
+  return { flight, base: { target, reference, autoDistanceM: autoDistanceM(flightPath) * focalDolly(focalOf(options)), wide, orbitRad } }
 }
 
 /** The flight camera of `computeCameraView` at a film state (stop cameras, time smoothing, followed track), with its own raise. */
@@ -821,6 +876,8 @@ function flownAt(
     ...flightOptions,
     camera,
     orbitRad,
+    speedMps: groundSpeedMps(clock, state.timeS, path.lengthM),
+    motion: motionShares(clock, state.timeS, camera, options.durationS ?? DEFAULT_FLYOVER_DURATION_S),
     ...smoothing,
     aimProgress: along(smoothing.aimProgress),
     cameraProgress: along(smoothing.cameraProgress),
@@ -894,11 +951,8 @@ function freeView(
   const a = keys[next - 1]
   const b = keys[next]
   const u = b.timeS > a.timeS ? (timeS - a.timeS) / (b.timeS - a.timeS) : 1
-  const view = blendViews(poseOf(a), poseOf(b), smootherstep(u), frame, sample, options.exaggeration)
-  const kept = keepAboveGround(view.position.clone(), frame, sample, options.exaggeration)
-  const position = view.position.clone()
-  position.y += (kept.y - position.y) * 4 * u * (1 - u)
-  return { target: view.target, position, marker }
+  const view = blendViews(poseOf(a), poseOf(b), smootherstep(u), frame, null, options.exaggeration)
+  return { target: view.target, position: keyClearance(view.position, 4 * u * (1 - u), frame, sample, options.exaggeration), marker }
 }
 
 /**
@@ -988,7 +1042,10 @@ export function computeFilmView(
   }
   const easeM = cameraKeyEaseM(path.lengthM, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
   const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
-  return aimTowardsPins(view, pins, timeS, frame, sample, options.exaggeration, options.liftM, flight * (1 - (keyed?.weight ?? 0)))
+  return aimTowardsPins(view, pins, timeS, frame, sample, options.exaggeration, options.liftM, flight * (1 - (keyed?.weight ?? 0)), {
+    aspect: options.aspect,
+    fovDeg: fovDegOf(focalOf(options)),
+  })
 }
 
 function computeFlownView(
@@ -1012,18 +1069,19 @@ function computeFlownView(
     const keyed = keyPoseAt(clock.cameraKeys, progress * path.lengthM, easeM)
     if (!keyed || keyed.weight <= 0) return filmFlight
     const pose = keyView(base, keyed.framing)
-    if (keyed.free > 0) {
-      const kept = keepAboveGround(pose.position.clone(), frame, sample, options.exaggeration)
-      pose.position.y += (kept.y - pose.position.y) * keyed.free
-    }
-    return { ...blendViews(filmFlight, pose, keyed.weight, frame, sample, options.exaggeration), marker: filmFlight.marker }
+    // blended without a clearance of its own: `keyClearance` gives it one that is none at the exact poses
+    const blended = blendViews(filmFlight, pose, keyed.weight, frame, null, options.exaggeration)
+    const edge = keyed.weight < 1 ? Math.min(keyed.weight, 1 - keyed.weight) : keyed.free
+    return { target: blended.target, position: keyClearance(blended.position, edge, frame, sample, options.exaggeration), marker: filmFlight.marker, rollRad: (filmFlight.rollRad ?? 0) * (1 - keyed.weight) }
   }
+  /** `view` with the flight's roll taken away as the flight leaves it: `share` of it (the shots and the high views are level) */
+  const withRoll = (view: CameraView, share: number): FilmView => ({ ...view, marker: flight.marker, rollRad: (flight.rollRad ?? 0) * share })
   if (state.phase !== 'opening' && state.phase !== 'closing') {
     const view = highViewAt(clock, timeS)
     if (!view) return flight
     // the night before a day (or after a stage): up to a high view of its route, held, and back down to the marker at dawn
     const high = overviewView(path, frame, sample, options.exaggeration, aspect, flight, { fromM: view.fromM, toM: view.toM }, focalOf(options))
-    return { ...liftedBlend(flight, high, view.k, flight, frame, sample, options.exaggeration, focalOf(options)), marker: flight.marker }
+    return withRoll(liftedBlend(flight, high, view.k, flight, frame, sample, options.exaggeration, focalOf(options)), 1 - view.k)
   }
 
   const phase = state.phase
@@ -1048,6 +1106,7 @@ function computeFlownView(
     return { k, from, to, blended: blendViews(from, to, k, frame, sample, options.exaggeration, true) }
   }
   const now = shotAt(state.localS)
-  if (!(now.k > 0 && now.k < 1)) return { ...now.blended, marker: flight.marker }
-  return { ...liftedBlend(now.from, now.to, now.k, flight, frame, sample, options.exaggeration, focalOf(options)), marker: flight.marker }
+  const flightShare = phase === 'opening' ? now.k : 1 - now.k
+  if (!(now.k > 0 && now.k < 1)) return withRoll(now.blended, flightShare)
+  return withRoll(liftedBlend(now.from, now.to, now.k, flight, frame, sample, options.exaggeration, focalOf(options)), flightShare)
 }

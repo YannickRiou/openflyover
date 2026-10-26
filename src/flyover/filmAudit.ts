@@ -10,7 +10,7 @@ import type { FilmClock } from '../film/clock'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { MIN_TERRAIN_CLEARANCE_M } from './camera'
 import { DEFAULT_FOCAL_MM, fovDegOf } from './cameraSettings'
-import { computeFilmView, type FilmViewOptions } from './filmCamera'
+import { computeFilmView, lookAtView, type FilmViewOptions } from './filmCamera'
 import type { TrackPath } from './path'
 
 export const AUDIT_KINDS = ['jolt', 'low', 'marker-out'] as const
@@ -46,6 +46,8 @@ export interface AuditPose {
   position: Vector3
   target: Vector3
   marker: Vector3
+  /** roll of the camera about its line of sight (radians, `FilmView.rollRad`); none when absent */
+  rollRad?: number
   /** shot or stop the frame belongs to: the marker starts or stops moving where it changes, the camera follows at once */
   state: string
 }
@@ -62,9 +64,9 @@ export function replayFilm(
   const poses: AuditPose[] = []
   for (let i = 0, count = Math.max(0, Math.floor((toS - fromS) * fps)) + 1; i < count; i++) {
     const t = fromS + i / fps
-    const { position, target, marker } = computeFilmView(path, clock, t, clock.progressAtTime(t), frame, sample, options)
+    const { position, target, marker, rollRad } = computeFilmView(path, clock, t, clock.progressAtTime(t), frame, sample, options)
     const state = clock.stateAt(t)
-    poses.push({ position, target, marker, state: `${state.phase}|${state.stop?.id ?? ''}` })
+    poses.push({ position, target, marker, rollRad, state: `${state.phase}|${state.stop?.id ?? ''}` })
   }
   return poses
 }
@@ -114,7 +116,7 @@ export function auditPoses(
       }
     }
     camera.position.copy(pose.position)
-    camera.lookAt(pose.target)
+    lookAtView(camera, pose)
     camera.updateMatrixWorld()
     const ahead = ndc.copy(pose.marker).sub(pose.position).dot(scratch.copy(pose.target).sub(pose.position)) > 0
     const edge = ahead ? Math.max(Math.abs(ndc.copy(pose.marker).project(camera).x), Math.abs(ndc.y)) : Infinity

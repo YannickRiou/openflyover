@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v45.camera.title': 'A camera that is nicer to watch',
+  'v45.camera.text': 'Two settings in Flyover › Camera. “Lead room” puts the marker a little behind the middle of the picture, leaving room on the side it is heading to. “Banking in bends” gently tilts the horizon in bends, like a drone leaning into the turn. Both are on a little by default: your films feel smoother.',
   'v45.focal.title': 'Choose the lens of the film',
   'v45.focal.text': 'Flyover › Camera › “Focal length”, from 18 mm (wide angle: more space around) to 135 mm (telephoto: the mountains look closer and more imposing). The camera comes closer or backs off so the marker keeps the same size; at 26 mm nothing changes.',
   'v44.night.title': 'Brighter nights',

@@ -30,6 +30,18 @@ describe('camera presets', () => {
     for (const preset of CAMERA_PRESETS) expect(isValidCamera(preset.camera)).toBe(true)
   })
 
+  it('bank more in the lively ones, not in the calm ones or from above; the lead room is the default one in all', () => {
+    const bank = (id: string) => CAMERA_PRESETS.find((p) => p.id === id)!.camera.bankDeg
+    for (const id of ['fast-drone', 'bird', 'glider']) expect(bank(id), id).toBeGreaterThan(DEFAULT_CAMERA.bankDeg)
+    for (const id of ['orbit', 'balloon', 'top-view', 'satellite']) expect(bank(id), id).toBe(0)
+    for (const p of CAMERA_PRESETS) expect(p.camera.leadRoomPct, p.id).toBe(DEFAULT_CAMERA.leadRoomPct)
+  })
+
+  it('a camera that differs by the lead room or the bank alone is a custom one', () => {
+    expect(findCameraPreset({ ...DEFAULT_CAMERA, leadRoomPct: 20 })).toBeUndefined()
+    expect(findCameraPreset({ ...DEFAULT_CAMERA, bankDeg: 5 })).toBeUndefined()
+  })
+
   it('findCameraPreset returns undefined for a custom camera', () => {
     expect(findCameraPreset({ ...DEFAULT_CAMERA, pitchDeg: 31 })).toBeUndefined()
     expect(findCameraPreset({ ...DEFAULT_CAMERA, focalMm: 85 })).toBeUndefined()
@@ -50,6 +62,9 @@ describe('validation of a loaded project', () => {
   it('rejects an unknown style, an out-of-range value or a missing key', () => {
     expect(isValidSetting('camera', { ...DEFAULT_CAMERA, style: 'fisheye' })).toBe(false)
     expect(isValidSetting('camera', { ...DEFAULT_CAMERA, distance: 10 })).toBe(false)
+    expect(isValidSetting('camera', { ...DEFAULT_CAMERA, leadRoomPct: 45 })).toBe(false)
+    expect(isValidSetting('camera', { ...DEFAULT_CAMERA, bankDeg: -1 })).toBe(false)
+    expect(isValidSetting('camera', { ...DEFAULT_CAMERA, leadRoomPct: 40, bankDeg: 10 })).toBe(true)
     for (const focalMm of [10, 17, 136, 400]) expect(isValidSetting('camera', { ...DEFAULT_CAMERA, focalMm })).toBe(false)
     for (const focalMm of [18, 85, 135]) expect(isValidSetting('camera', { ...DEFAULT_CAMERA, focalMm })).toBe(true)
     const { northUp: _, ...missing } = DEFAULT_CAMERA
@@ -61,7 +76,7 @@ describe('validation of a loaded project', () => {
     const saved = { style: 'sway', distance: 1.3, pitchDeg: 25, headingOffsetDeg: 0, smoothing: 1.5, northUp: false }
     const { settings, invalid } = sanitizeSettings({ camera: saved })
     expect(invalid).toEqual([])
-    expect(settings.camera).toEqual({ ...saved, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, focalMm: 26 })
+    expect(settings.camera).toEqual({ ...saved, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3, focalMm: 26 })
     // the same window as before: the automatic one of the track times the multiplier, shown in metres
     expect(turnSmoothingM(settings.camera, 20_000)).toBe(2 * 400 * 1.5)
   })

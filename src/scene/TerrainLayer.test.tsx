@@ -119,7 +119,7 @@ describe('engine options from settings', () => {
     lens: DEFAULT_LENS,
     trackColorBy: 'none' as const,
     trackLegendAnchor: 'bottom-left' as const,
-    camera: { style: 'chase' as const, distance: 1, pitchDeg: 30, headingOffsetDeg: 0, smoothing: 1, northUp: false, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, focalMm: 26 },
+    camera: { style: 'chase' as const, distance: 1, pitchDeg: 30, headingOffsetDeg: 0, smoothing: 1, northUp: false, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3, focalMm: 26 },
     flyoverDurationS: 60,
     pacing: { enabled: false, climbs: true, landmarks: true, slowFactor: 0.35, windowM: 1000, pauseS: 2, keepDuration: true, transitionS: 1.5 },
     film: DEFAULT_FILM,

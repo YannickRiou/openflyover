@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v45.camera.title': 'Une caméra plus agréable à regarder',
+  'v45.camera.text': 'Deux réglages dans Survol › Caméra. « Espace devant » place le marqueur un peu en arrière du centre de l’image, pour laisser de la place du côté où il va. « Inclinaison dans les virages » incline doucement l’horizon dans les virages, comme un drone qui penche. Par défaut, un peu des deux : vos films en deviennent plus fluides.',
   'v45.focal.title': 'Choisissez l’objectif du film',
   'v45.focal.text': 'Survol › Caméra › « Focale », de 18 mm (grand-angle : plus d’espace autour) à 135 mm (téléobjectif : les montagnes paraissent plus proches et plus imposantes). La caméra se rapproche ou recule pour que le marqueur garde la même taille ; à 26 mm, rien ne change.',
   'v44.night.title': 'Des nuits moins noires',

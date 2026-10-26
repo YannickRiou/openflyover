@@ -23,7 +23,7 @@ import type { FilmClock } from '../film/clock'
 import { useMediaStore } from '../film/media'
 import { pinsMoveWithTime } from '../film/photoPins'
 import { fovDegOf } from '../flyover/cameraSettings'
-import { filmViewMovesWithTime, overviewView } from '../flyover/filmCamera'
+import { filmViewMovesWithTime, lookAtView, overviewView } from '../flyover/filmCamera'
 import { filmTrackOf } from '../flyover/sequence'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { junctionBlendAt, nightAt } from '../flyover/sun'
@@ -310,7 +310,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const { exaggeration, camera: lens } = useAppStore.getState().settings
     const view = overviewView(framing, frame, sampler, exaggeration, width / height, FROM_SOUTH, undefined, lens.focalMm)
     camera.position.copy(view.position)
-    camera.lookAt(view.target)
+    lookAtView(camera, view)
     controlsTarget()?.copy(view.target)
   }
 
@@ -405,7 +405,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       if (j >= schedule.length) break
       const view = filmViewAt(path, filmClock, schedule[j], times[j], frame, engine, width / height)
       prefetchCamera.position.copy(view.position)
-      prefetchCamera.lookAt(view.target)
+      lookAtView(prefetchCamera, view)
       engine.prefetch(prefetchCamera, lodHeight)
     }
   }

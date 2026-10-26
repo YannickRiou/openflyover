@@ -13,7 +13,7 @@ import { buildTrack } from '../../import/stats'
 import { lineOfSightClearance } from '../../scene/labelModel'
 import type { HeightSampler } from '../../scene/trackLineSet'
 import { fovDegOf, type CameraSettings } from '../cameraSettings'
-import { computeFilmView } from '../filmCamera'
+import { computeFilmView, lookAtView, type FilmView } from '../filmCamera'
 import { DEFAULT_PACING } from '../pacing'
 import { trackPathOf } from '../path'
 
@@ -87,11 +87,11 @@ export interface MarkerFrame {
   clearanceM: number
 }
 
-/** The scene camera (the lens of `focalMm`) at `position` looking at `target`. */
-function sceneCamera(position: Vector3, target: Vector3, aspect: number, focalMm: number): PerspectiveCamera {
+/** The scene camera (the lens of `focalMm`) of `view`: at its position looking at its target, rolled by its bank. */
+function sceneCamera(view: FilmView, aspect: number, focalMm: number): PerspectiveCamera {
   const camera = new PerspectiveCamera(fovDegOf(focalMm), aspect, 1, 5e6)
-  camera.position.copy(position)
-  camera.lookAt(target)
+  camera.position.copy(view.position)
+  lookAtView(camera, view)
   camera.updateMatrixWorld(true)
   camera.updateProjectionMatrix()
   return camera
@@ -129,7 +129,7 @@ export function flyMarker(
   for (let t = clock.openingS; t <= clock.openingS + clock.flightS; t += 1 / fps) {
     const progress = clock.progressAtTime(t)
     const v = computeFilmView(path, clock, t, progress, frame, sample, options)
-    const cam = sceneCamera(v.position, v.target, aspect, camera.focalMm)
+    const cam = sceneCamera(v, aspect, camera.focalMm)
     const behind = view.copy(v.marker).applyMatrix4(cam.matrixWorldInverse).z > 0
     const ndc = view.copy(v.marker).project(cam)
     frames.push({

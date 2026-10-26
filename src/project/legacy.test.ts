@@ -147,7 +147,7 @@ describe('frozen old projects', () => {
     })
     expect(s.camera).toEqual({
       style: 'orbit', distance: 1.2, pitchDeg: 30, headingOffsetDeg: 0, smoothing: 1, northUp: false,
-      turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, focalMm: 26,
+      turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3, focalMm: 26,
     })
     expect(s.pacing).toEqual({ enabled: true, climbs: true, landmarks: false, slowFactor: 0.5, windowM: 800, pauseS: 3, keepDuration: false, transitionS: 1.5 })
     expect(s.film).toEqual({

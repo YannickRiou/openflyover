@@ -101,6 +101,8 @@ interface Slider {
   tip: string
   /** `autoM`: the length « Lissage des virages » takes in Auto for the first track, when there is one */
   format(value: number, autoM?: number): string
+  /** styles where it does nothing: its row is left out */
+  unusedIn?: readonly CameraStyle[]
 }
 
 /** 0 -> the message `none`, else "2,5 s" */
@@ -110,6 +112,13 @@ const SLIDERS: Slider[] = [
   { key: 'distance', get label() { return t('camera.slider.distance') }, get tip() { return t('camera.slider.distanceTip') }, format: (v) => `×${formatNumber(v, 1)}` },
   { key: 'pitchDeg', get label() { return t('camera.slider.pitch') }, get tip() { return t('camera.slider.pitchTip') }, format: formatDegrees },
   { key: 'headingOffsetDeg', get label() { return t('camera.slider.heading') }, get tip() { return t('camera.slider.headingTip') }, format: formatDegrees },
+  {
+    key: 'leadRoomPct',
+    get label() { return t('camera.slider.leadRoom') },
+    get tip() { return t('camera.slider.leadRoomTip') },
+    format: (v) => (v === 0 ? t('camera.slider.noneMasc') : formatPercent(v / 100)),
+    unusedIn: ['orbit'],
+  },
   {
     key: 'turnSmoothingM',
     get label() { return t('camera.slider.turn') },
@@ -133,6 +142,13 @@ const SLIDERS: Slider[] = [
     get label() { return t('camera.slider.ending') },
     get tip() { return t('camera.slider.endingTip') },
     format: formatSmoothingS('camera.slider.noneFem'),
+  },
+  {
+    key: 'bankDeg',
+    get label() { return t('camera.slider.bank') },
+    get tip() { return t('camera.slider.bankTip') },
+    format: (v) => (v === 0 ? t('camera.slider.noneFem') : formatDegrees(v)),
+    unusedIn: ['top', 'orbit'],
   },
 ]
 
@@ -309,7 +325,7 @@ export function CameraPanel() {
         {/* the camera keys take the view from the first to the last: these settings are those of the rest of the film */}
         {camera.style !== 'free' && cameraKeyCount > 0 && <p className="type-hint">{t('camera.panel.keyed', { count: cameraKeyCount })}</p>}
         {/* 'free' follows the keyframes alone: the framing sliders do nothing there */}
-        {camera.style !== 'free' && SLIDERS.map(({ key, label, tip, format }) => {
+        {camera.style !== 'free' && SLIDERS.filter(({ unusedIn }) => !unusedIn?.includes(camera.style)).map(({ key, label, tip, format }) => {
           const range = CAMERA_RANGES[key]
           const value = format(camera[key], autoTurnM)
           return (

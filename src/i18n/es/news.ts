@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v45.camera.title': 'Una cámara más agradable de ver',
+  'v45.camera.text': 'Dos ajustes en Vuelo › Cámara. «Espacio delante» coloca el marcador un poco por detrás del centro de la imagen, para dejar sitio del lado hacia el que avanza. «Inclinación en las curvas» inclina suavemente el horizonte en las curvas, como un dron que se ladea. Por defecto, un poco de cada uno: sus películas resultan más fluidas.',
   'v45.focal.title': 'Elija el objetivo de la película',
   'v45.focal.text': 'Vuelo › Cámara › «Focal», de 18 mm (gran angular: más espacio alrededor) a 135 mm (teleobjetivo: las montañas parecen más cercanas e imponentes). La cámara se acerca o se aleja para que el marcador mantenga el mismo tamaño; con 26 mm no cambia nada.',
   'v44.night.title': 'Noches menos negras',

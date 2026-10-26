@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { Vector3 } from 'three'
+import { PerspectiveCamera, Vector3 } from 'three'
 import { buildFilmClock } from '../film/clock'
 import type { FilmCameraKey } from '../film/model'
 import { PIN_AIM_RAISE, PIN_AIM_SHARE, PIN_APPROACH_S } from '../film/photoPins'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { buildTrack } from '../import/stats'
-import { DEFAULT_CAMERA } from './cameraSettings'
+import { CAMERA_FOV_DEG, DEFAULT_CAMERA } from './cameraSettings'
 import { computeFilmView, type FilmViewOptions } from './filmCamera'
 import { DEFAULT_PACING } from './pacing'
 import { buildTrackPath } from './path'
-import { aimTowardsPins, pinLocalPosition, type AimPin } from './pinAim'
+import { aimTowardsPins, pinLocalPosition, PIN_MARKER_MARGIN, type AimPin } from './pinAim'
 
 const frame = createLocalFrame(6.85, 45.9)
 /** ~4.4 km straight north at 1000 m */
@@ -49,11 +49,12 @@ describe('the camera turns towards a photo pin', () => {
     expect(turned.position.distanceTo(plain.position)).toBe(0)
     expect(turned.marker.distanceTo(plain.marker)).toBe(0)
     const foot = pinLocalPosition(pin, frame, flat, 1, 3, new Vector3())
-    // towards the pin, by its share of the way (the raise aims a little above the foot)
+    // towards the pin, by at most its share of the way (the raise aims a little above the foot); the room the marker has in
+    // the frame limits it (a pin 600 m off, a camera 600 m away)
     const shift = turned.target.clone().sub(plain.target)
     const wanted = foot.clone().sub(plain.target)
     expect(shift.dot(wanted)).toBeGreaterThan(0)
-    expect(shift.length()).toBeGreaterThan(0.5 * PIN_AIM_SHARE * wanted.length())
+    expect(shift.length()).toBeGreaterThan(0.25 * PIN_AIM_SHARE * wanted.length())
     expect(shift.length()).toBeLessThan(PIN_AIM_SHARE * (wanted.length() + plain.position.distanceTo(foot) * PIN_AIM_RAISE) + 1e-6)
   })
 
@@ -61,7 +62,21 @@ describe('the camera turns towards a photo pin', () => {
     const shifts = [30 - PIN_APPROACH_S, 30 - PIN_APPROACH_S / 2, 30].map((t) => at(t, [pin]).target.distanceTo(at(t).target))
     expect(shifts[0]).toBe(0)
     expect(shifts[1]).toBeGreaterThan(0)
-    expect(shifts[2]).toBeGreaterThan(shifts[1])
+    expect(shifts[2]).toBeGreaterThan(0)
+  })
+
+  it('never takes the marker beyond 0.8 of the frame, nor further out than the usual view had it', () => {
+    const camera = new PerspectiveCamera(CAMERA_FOV_DEG, options.aspect)
+    const edge = (view: { position: Vector3; target: Vector3; marker: Vector3 }) => {
+      camera.position.copy(view.position)
+      camera.lookAt(view.target)
+      camera.updateMatrixWorld()
+      const ndc = view.marker.clone().project(camera)
+      return Math.max(Math.abs(ndc.x), Math.abs(ndc.y))
+    }
+    for (let t = 12; t < 45; t += 0.5) {
+      expect(edge(at(t, [pin]))).toBeLessThanOrEqual(Math.max(PIN_MARKER_MARGIN, edge(at(t))) + 1e-3)
+    }
   })
 
   it('gives a frame the same view whether or not earlier frames were computed', () => {

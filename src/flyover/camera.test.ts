@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Vector3 } from 'three'
+import { PerspectiveCamera, Vector3 } from 'three'
 import type { TrackPoint } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { buildTrack } from '../import/stats'
@@ -9,6 +9,7 @@ import {
   CINEMATIC_DISTANCE_FACTOR,
   CINEMATIC_PITCH_FACTOR,
   computeCameraView,
+  type FlightView,
   MIN_GROUND_CLEARANCE_M,
   MIN_TERRAIN_CLEARANCE_M,
   movesWithTime,
@@ -18,7 +19,8 @@ import {
   type CameraView,
   type CameraViewOptions,
 } from './camera'
-import { CAMERA_STYLES, DEFAULT_CAMERA, type CameraSettings, type CameraStyle } from './cameraSettings'
+import { CAMERA_FOV_DEG, CAMERA_STYLES, DEFAULT_CAMERA, type CameraSettings, type CameraStyle } from './cameraSettings'
+import { lookAtView } from './filmCamera'
 import { buildTrackPath, type TrackPath } from './path'
 
 const LIFT = 3
@@ -81,8 +83,9 @@ function twisty(): TrackPath {
 /** Smooth hills (~1.5 km wavelength, ±300 m, slopes up to ~50°) that make the clearance rules act. */
 const hills = (lon: number, lat: number) => 1000 + 300 * Math.sin(lon * 330) * Math.cos(lat * 240)
 
+/** The geometry of the styles is read without « Espace devant » and « Inclinaison dans les virages » (see their own tests below). */
 function options(camera: Partial<CameraSettings> = {}, durationS = 60): CameraViewOptions {
-  return { exaggeration: 1, liftM: LIFT, camera: { ...DEFAULT_CAMERA, ...camera }, durationS }
+  return { exaggeration: 1, liftM: LIFT, camera: { ...DEFAULT_CAMERA, leadRoomPct: 0, bankDeg: 0, ...camera }, durationS }
 }
 
 /** Horizontal angle (radians, clockwise from north) of the camera seen from the marker. */
@@ -395,5 +398,170 @@ describe('computeCameraView — terrain sharpness and cliffs (#186, every style)
     const jolt = (y: number[]) => Math.max(...y.slice(2).map((v, i) => Math.abs(v - 2 * y[i + 1] + y[i])))
     // the change of vertical speed per frame: the ground under the marker 100 m, the camera up to 70 m before
     expect(jolt(views.map((v) => v.position.y))).toBeLessThan(0.3 * jolt(views.map((v) => v.marker.y)))
+  })
+})
+
+/** Where the marker falls in the frame of `view` (normalised device coordinates, square frame, the scene camera's field of view). */
+function markerNdc(view: Pick<FlightView, 'position' | 'target' | 'marker'> & { rollRad?: number }): Vector3 {
+  const camera = new PerspectiveCamera(CAMERA_FOV_DEG, 1)
+  camera.position.copy(view.position)
+  lookAtView(camera, view)
+  camera.updateMatrixWorld()
+  return view.marker.clone().project(camera)
+}
+
+describe('computeCameraView — « Espace devant »', () => {
+  const LEAD = { leadRoomPct: 15, bankDeg: 0 }
+
+  it('the marker falls back from the middle of the frame by that share of half its height, toward where it came from', () => {
+    const view = computeCameraView(eastbound, 0.5, frame, null, options(LEAD))
+    expect(view.aim.distanceTo(computeCameraView(eastbound, 0.5, frame, null, options()).target)).toBeLessThan(1e-9)
+    // heading east, the camera behind it looking east: the aim moves east, the marker goes down the frame
+    expect(view.target.x).toBeGreaterThan(view.aim.x + 20)
+    const ndc = markerNdc(view)
+    expect(ndc.y).toBeCloseTo(-0.15, 3)
+    expect(ndc.x).toBeCloseTo(0, 2)
+  })
+
+  it('looks the same at every distance, pitch and viewing angle', () => {
+    for (const camera of [{ distance: 0.5 }, { distance: 3 }, { pitchDeg: 25 }, { pitchDeg: 60 }, { headingOffsetDeg: 90 }, { headingOffsetDeg: 180, pitchDeg: 40 }]) {
+      const ndc = markerNdc(computeCameraView(eastbound, 0.5, frame, null, options({ ...LEAD, ...camera })))
+      // (a camera nearly level looking along the travel would need a shift of several camera distances: eased, `LEAD_SCREEN_FLOOR`)
+      expect(Math.hypot(ndc.x, ndc.y), JSON.stringify(camera)).toBeCloseTo(0.15, 2)
+    }
+    // seen from the side the lead is across the frame
+    expect(Math.abs(markerNdc(computeCameraView(eastbound, 0.5, frame, null, options({ ...LEAD, headingOffsetDeg: 90 }))).x)).toBeGreaterThan(0.1)
+  })
+
+  it('from above with north up, it follows the travel direction on the screen and the map does not turn', () => {
+    const view = computeCameraView(eastbound, 0.5, frame, null, options({ ...LEAD, style: 'top', northUp: true, pitchDeg: 85 }))
+    const ndc = markerNdc(view)
+    expect(ndc.x).toBeCloseTo(-0.15, 3)
+    expect(ndc.y).toBeCloseTo(0, 3)
+    expect(azimuthFromTarget(view.position, view.target)).toBeCloseTo(Math.PI, 6)
+  })
+
+  it('keeps that share where the clearance rules raise the camera (the film sets its height afterwards)', () => {
+    const view = computeCameraView(eastbound, 0.5, frame, null, options(LEAD))
+    for (const raise of [0, 300]) {
+      const position = view.position.clone().setY(view.position.y + raise)
+      const ndc = markerNdc({ position, target: view.leadTarget(position), marker: view.marker })
+      expect(Math.hypot(ndc.x, ndc.y), `raised by ${raise} m`).toBeCloseTo(0.15, 2)
+    }
+  })
+
+  it('eases to nothing as the marker stops, with the share of speed', () => {
+    const lead = (marker: number) => {
+      const view = computeCameraView(eastbound, 0.5, frame, null, { ...options(LEAD), motion: { marker, camera: marker } })
+      return view.target.distanceTo(view.aim)
+    }
+    expect(lead(0)).toBe(0)
+    expect(lead(0.1)).toBeGreaterThan(0)
+    expect(lead(0.1)).toBeLessThan(lead(0.25))
+    expect(lead(0.25)).toBeLessThan(lead(0.5))
+    // full from half the pace of the flight
+    expect(lead(0.5)).toBeCloseTo(lead(3), 9)
+  })
+
+  it('is none without the setting and in orbit', () => {
+    for (const camera of [{ leadRoomPct: 0 }, { style: 'orbit' as const }]) {
+      const view = computeCameraView(eastbound, 0.5, frame, null, options({ ...LEAD, ...camera }))
+      expect(view.target.distanceTo(view.aim)).toBe(0)
+    }
+  })
+
+  it('moves the camera with its aim from a high pitch (the view does not swing round), not from a low one', () => {
+    const plain = (camera: Partial<CameraSettings>) => computeCameraView(eastbound, 0.5, frame, null, options(camera))
+    expect(computeCameraView(eastbound, 0.5, frame, null, options({ ...LEAD, pitchDeg: 30 })).position.distanceTo(plain({ pitchDeg: 30 }).position)).toBe(0)
+    const high = computeCameraView(eastbound, 0.5, frame, null, options({ ...LEAD, pitchDeg: 80 }))
+    const base = plain({ pitchDeg: 80 })
+    expect(high.position.distanceTo(base.position)).toBeGreaterThan(20)
+    expect(high.position.clone().sub(high.target).distanceTo(base.position.clone().sub(base.target))).toBeLessThan(1e-6)
+  })
+
+  it('stays smooth along a twisty track, and the marker stays in the frame at the maximum', () => {
+    const path = twisty()
+    const STEPS = 1500
+    let worst = 0
+    const maxStep = (steps: number) => {
+      let step = 0
+      let previous: Vector3 | null = null
+      for (let i = 0; i <= steps; i++) {
+        const view = computeCameraView(path, i / steps, frame, hills, options({ leadRoomPct: 40, bankDeg: 0 }))
+        const ndc = markerNdc(view)
+        worst = Math.max(worst, Math.hypot(ndc.x, ndc.y))
+        const lead = view.target.clone().sub(view.aim)
+        if (previous) step = Math.max(step, lead.distanceTo(previous))
+        previous = lead
+      }
+      return step
+    }
+    // the lead turns with the smoothed heading: halving the step halves its largest change (a break would keep its size)
+    expect(maxStep(STEPS)).toBeLessThan(0.7 * maxStep(STEPS / 2))
+    expect(worst).toBeLessThan(0.75)
+  })
+})
+
+describe('computeCameraView — « Inclinaison dans les virages »', () => {
+  const BANK = { bankDeg: 10, leadRoomPct: 0 }
+  const roll = (path: TrackPath, camera: Partial<CameraSettings> = {}, motion?: { marker: number; camera: number }) =>
+    computeCameraView(path, 0.5, frame, null, { ...options({ ...BANK, ...camera }), motion }).rollRad
+
+  it('none on a straight track, banking right in a right bend and left in a left one, never past the setting', () => {
+    expect(Math.abs(roll(northbound))).toBeLessThan(1e-9)
+    const right = roll(arc(true))
+    const left = roll(arc(false))
+    expect(right).toBeGreaterThan((2 * Math.PI) / 180)
+    expect(right).toBeLessThan((10 * Math.PI) / 180)
+    expect(left).toBeCloseTo(-right, 9)
+    // sharper bends and a livelier camera saturate at the setting, never beyond
+    expect(Math.abs(roll(twisty(), { cameraSmoothingS: 0, smoothing: 0.25 }))).toBeLessThanOrEqual((10 * Math.PI) / 180 + 1e-12)
+  })
+
+  it('is proportional to the setting, and none at 0', () => {
+    expect(roll(arc(true), { bankDeg: 5 }) * 2).toBeCloseTo(roll(arc(true)), 9)
+    expect(roll(arc(true), { bankDeg: 0 })).toBe(0)
+  })
+
+  it('eases to nothing with the camera\'s speed: a camera at a stop does not bank', () => {
+    const at = (camera: number) => roll(arc(true), {}, { marker: 1, camera })
+    expect(at(0)).toBe(0)
+    expect(at(0.3)).toBeGreaterThan(0)
+    expect(at(0.3)).toBeLessThan(at(1))
+    expect(at(1)).toBeLessThan(at(2))
+  })
+
+  it('is none from above (the map does not tilt) and while the camera turns round the marker', () => {
+    expect(roll(arc(true), { style: 'top', northUp: false })).toBe(0)
+    expect(roll(arc(true), { style: 'orbit' })).toBe(0)
+  })
+
+  it('is continuous along the track', () => {
+    const path = twisty()
+    const maxStep = (steps: number) => {
+      const rolls = Array.from({ length: steps + 1 }, (_, i) => computeCameraView(path, i / steps, frame, null, options({ ...BANK, style: 'sway' })).rollRad)
+      return Math.max(...rolls.slice(1).map((r, i) => Math.abs(r - rolls[i])))
+    }
+    // halving the step halves the largest change (a break would keep its size); a few degrees per 4 m at most in these switchbacks
+    expect(maxStep(1500)).toBeLessThan((2 * Math.PI) / 180)
+    expect(maxStep(1500)).toBeLessThan(0.7 * maxStep(750))
+  })
+
+  it('tilts the camera into the bend: its up leans to the inside, along the line of sight', () => {
+    const view = computeCameraView(arc(true), 0.5, frame, null, options(BANK))
+    const camera = new PerspectiveCamera(CAMERA_FOV_DEG, 1)
+    camera.position.copy(view.position)
+    lookAtView(camera, view)
+    camera.updateMatrixWorld()
+    const forward = view.target.clone().sub(view.position).normalize()
+    const right = forward.clone().cross(new Vector3(0, 1, 0)).normalize()
+    expect(camera.up.dot(right)).toBeGreaterThan(0.03)
+    const level = new Vector3(0, 1, 0).addScaledVector(forward, -forward.y).normalize()
+    const tilted = camera.up.clone().addScaledVector(forward, -camera.up.dot(forward)).normalize()
+    expect(tilted.angleTo(level)).toBeCloseTo(view.rollRad, 9)
+    expect(camera.getWorldDirection(new Vector3()).distanceTo(forward)).toBeLessThan(1e-9)
+    // no roll: the vertical
+    lookAtView(camera, { ...view, rollRad: 0 })
+    expect(camera.up.toArray()).toEqual([0, 1, 0])
   })
 })

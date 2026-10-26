@@ -22,7 +22,10 @@ export interface NewsVersion {
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '4.5',
-    items: [{ icon: 'aperture', get title() { return t('news.v45.focal.title') }, get text() { return t('news.v45.focal.text') } }],
+    items: [
+      { icon: 'clapperboard', get title() { return t('news.v45.camera.title') }, get text() { return t('news.v45.camera.text') } },
+      { icon: 'aperture', get title() { return t('news.v45.focal.title') }, get text() { return t('news.v45.focal.text') } },
+    ],
   },
   {
     version: '4.4',

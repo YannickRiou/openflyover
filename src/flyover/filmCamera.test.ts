@@ -14,6 +14,7 @@ import {
   blendViews,
   computeFilmView,
   dayViewAt,
+  lookAtView,
   recapViewAt,
   filmViewMovesWithTime,
   framedGroup,
@@ -73,8 +74,11 @@ const path = buildTrackPath(
   }),
 )
 const flat = () => 1000
-/** without the smoothing in film time, so the views compare exactly with the flight camera (timeSmoothing.test.ts) */
-const CAMERA = { ...DEFAULT_CAMERA, cameraSmoothingS: 0 }
+/**
+ * without the smoothing in film time, the lead room and the bank (they follow the film's speed, `motionShares`), so the
+ * views compare exactly with the flight camera (timeSmoothing.test.ts)
+ */
+const CAMERA = { ...DEFAULT_CAMERA, cameraSmoothingS: 0, leadRoomPct: 0, bankDeg: 0 }
 const options: FilmViewOptions = { exaggeration: 1, liftM: 3, camera: CAMERA, durationS: 60, aspect: 16 / 9 }
 
 const clockOf = (opening: FilmShot, closing: FilmShot, stops: FilmStop[] = [], cameraKeys: FilmCameraKey[] = []) =>
@@ -1225,5 +1229,77 @@ describe('« Focale »: the lens changes the perspective, not the size of what i
       const issues = auditFilmCamera(path, clock, frame, hills, withLens(focalMm))
       expect(issues.filter((i) => i.kind !== 'jolt'), `${focalMm} mm`).toEqual([])
     }
+  })
+})
+
+describe('« Espace devant » and « Inclinaison dans les virages » over a film', () => {
+  const track = hairpins()
+  const bendy = trackPathOf(track)
+  const where = (() => {
+    const c = centroid(track.bounds)
+    return createLocalFrame(c.lon, c.lat)
+  })()
+  const BANK_MAX = 10
+  const camera = { ...DEFAULT_CAMERA, style: 'sway' as const, bankDeg: BANK_MAX, leadRoomPct: 30 }
+  const shots = { style: 'descente', durationS: 5 } as const
+  const filmWith = (stops: FilmStop[], cameraKeys: FilmCameraKey[] = []) =>
+    filmClockFor({ track, film: { ...DEFAULT_FILM, autoStops: false, opening: shots, closing: shots, stops, cameraKeys }, durationS: 60, pacing: DEFAULT_PACING, landmarks: [] })
+  const stop: FilmStop = { id: 's', atM: 0.4 * bendy.lengthM, durationS: 12, camera: 'film' }
+  const key: FilmCameraKey = { id: 'k', atM: 0.7 * bendy.lengthM, distance: 1, pitchDeg: 30, headingOffsetDeg: 0 }
+  const viewsOf = (clock: ReturnType<typeof filmWith>, settings = camera) =>
+    Array.from({ length: Math.floor(clock.totalTime() * 30) + 1 }, (_, i) => {
+      const t = i / 30
+      const options: FilmViewOptions = { exaggeration: 1, liftM: 3, camera: settings, durationS: 60, aspect: 16 / 9 }
+      return { t, view: computeFilmView(bendy, clock, t, clock.progressAtTime(t), where, steepSampler, options) }
+    })
+
+  it('the bank is continuous through shots, stops and keys, none at the ends of the film or at a stop or a key, never past the setting', () => {
+    const clock = filmWith([stop], [key])
+    const rolls = viewsOf(clock).map(({ view }) => view.rollRad ?? 0)
+    expect(Math.max(...rolls.map(Math.abs))).toBeGreaterThan((3 * Math.PI) / 180)
+    expect(Math.max(...rolls.map(Math.abs))).toBeLessThanOrEqual((BANK_MAX * Math.PI) / 180 + 1e-9)
+    // in these hairpins the roll turns by a few degrees a second at most: a snap would be a degree or more per frame
+    for (let i = 1; i < rolls.length; i++) expect(Math.abs(rolls[i] - rolls[i - 1]), `frame ${i}`).toBeLessThan((0.5 * Math.PI) / 180)
+    expect(Math.abs(rolls[0])).toBe(0)
+    expect(Math.abs(rolls[rolls.length - 1])).toBe(0)
+    const [held] = clock.stops
+    const at = (timeS: number) => rolls[Math.round(timeS * 30)]
+    expect(at((held.startS + held.endS) / 2)).toBeCloseTo(0, 9)
+    expect(Math.abs(at(clock.cameraKeys[0].timeS))).toBeLessThan(1e-9)
+  })
+
+  it('the lead room eases to nothing at a stop and back, with no step, and the shots and keys take it away', () => {
+    const clock = filmWith([stop], [key])
+    const lead = (settings: typeof camera) => viewsOf(clock, settings).map(({ view }) => view.target)
+    const [on, off] = [lead(camera), lead({ ...camera, leadRoomPct: 0 })]
+    const moved = on.map((target, i) => target.distanceTo(off[i]))
+    const [held] = clock.stops
+    expect(moved[Math.round(((held.startS + held.endS) / 2) * 30)]).toBeLessThan(1e-6)
+    expect(Math.max(...moved)).toBeGreaterThan(20)
+    // it comes in over about two seconds: a frame changes it by a few percent at most (less than a tenth)
+    const largest = Math.max(...moved)
+    for (let i = 1; i < moved.length; i++) expect(Math.abs(moved[i] - moved[i - 1]), `frame ${i}`).toBeLessThan(0.1 * largest)
+    // the view of a key is the key's, whatever the setting
+    const k = Math.round(clock.cameraKeys[0].timeS * 30)
+    expect(on[k].distanceTo(off[k])).toBeLessThan(1e-6)
+  })
+
+  it('a camera key is placed around the aim without the lead room, so it keeps its pose whatever the setting', () => {
+    const clock = filmWith([], [key])
+    const at = clock.cameraKeys[0].timeS
+    const viewWith = (leadRoomPct: number) =>
+      computeFilmView(bendy, clock, at, key.atM / bendy.lengthM, where, steepSampler, { exaggeration: 1, liftM: 3, camera: { ...camera, leadRoomPct }, durationS: 60, aspect: 16 / 9 })
+    expectSameView(viewWith(0), viewWith(40))
+  })
+
+  it('applies the roll about the line of sight: lookAtView', () => {
+    const view = viewsOf(filmWith([]))[Math.round(30 * 30)].view
+    expect(Math.abs(view.rollRad ?? 0)).toBeGreaterThan(0)
+    const cam = new PerspectiveCamera(50, 1)
+    cam.position.copy(view.position)
+    lookAtView(cam, view)
+    cam.updateMatrixWorld()
+    const forward = view.target.clone().sub(view.position).normalize()
+    expect(cam.getWorldDirection(new Vector3()).distanceTo(forward)).toBeLessThan(1e-9)
   })
 })

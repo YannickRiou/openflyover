@@ -43,6 +43,10 @@ export interface CameraSettings {
   endingS: number
   /** style 'orbit' (« Tours d'orbite »): turns around the marker over the flight, whatever its duration */
   orbitTurns: number
+  /** « Espace devant »: the marker stands this far behind the middle of the frame (% of half its height), the way it is heading */
+  leadRoomPct: number
+  /** « Inclinaison dans les virages »: the horizon tilts into a bend by at most this much (degrees) */
+  bankDeg: number
   /** « Focale »: lens of the whole film, millimetres (24×36 equivalent); the camera backs off or comes closer as it changes (`focalDolly`) */
   focalMm: number
 }
@@ -81,6 +85,8 @@ export const DEFAULT_CAMERA: CameraSettings = {
   cameraSmoothingS: 3,
   endingS: 0,
   orbitTurns: 1,
+  leadRoomPct: 15,
+  bankDeg: 3,
   focalMm: DEFAULT_FOCAL_MM,
 }
 
@@ -98,6 +104,8 @@ export const CAMERA_RANGES = {
   cameraSmoothingS: { min: 0, max: 10, step: 0.5 },
   endingS: { min: 0, max: 5, step: 0.5 },
   orbitTurns: { min: 0.5, max: 5, step: 0.5 },
+  leadRoomPct: { min: 0, max: 40, step: 5 },
+  bankDeg: { min: 0, max: 10, step: 1 },
   focalMm: { min: 18, max: 135, step: 1 },
 } as const satisfies Partial<Record<keyof CameraSettings, { min: number; max: number; step: number }>>
 
@@ -125,21 +133,21 @@ export interface CameraPreset {
 /** The default first, then from the lowest and closest to the highest, then the free camera. */
 export const CAMERA_PRESETS: readonly CameraPreset[] = [
   { id: 'chase', get name() { return t('camera.preset.chase') }, camera: DEFAULT_CAMERA },
-  { id: 'fast-drone', get name() { return t('camera.preset.fast-drone') }, camera: { ...DEFAULT_CAMERA, distance: 0.5, pitchDeg: 20, smoothing: 0.75, cameraSmoothingS: 1.5 } },
-  { id: 'bird', get name() { return t('camera.preset.bird') }, camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 0.8, pitchDeg: 35, smoothing: 0.5, cameraSmoothingS: 1 } },
+  { id: 'fast-drone', get name() { return t('camera.preset.fast-drone') }, camera: { ...DEFAULT_CAMERA, distance: 0.5, pitchDeg: 20, smoothing: 0.75, cameraSmoothingS: 1.5, bankDeg: 6 } },
+  { id: 'bird', get name() { return t('camera.preset.bird') }, camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 0.8, pitchDeg: 35, smoothing: 0.5, cameraSmoothingS: 1, bankDeg: 8 } },
   { id: 'helicopter', get name() { return t('camera.preset.helicopter') }, camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 1.3, pitchDeg: 25, smoothing: 1.5 } },
-  { id: 'orbit', get name() { return t('camera.preset.orbit') }, camera: { ...DEFAULT_CAMERA, style: 'orbit', distance: 1.2 } },
+  { id: 'orbit', get name() { return t('camera.preset.orbit') }, camera: { ...DEFAULT_CAMERA, style: 'orbit', distance: 1.2, bankDeg: 0 } },
   { id: 'cinema', get name() { return t('camera.preset.cinema') }, camera: { ...DEFAULT_CAMERA, style: 'cinematic', smoothing: 2 } },
   { id: 'high-drone', get name() { return t('camera.preset.high-drone') }, camera: { ...DEFAULT_CAMERA, distance: 1.8, pitchDeg: 55, smoothing: 1.5 } },
-  { id: 'glider', get name() { return t('camera.preset.glider') }, camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 2, pitchDeg: 15, smoothing: 2.5, cameraSmoothingS: 5 } },
+  { id: 'glider', get name() { return t('camera.preset.glider') }, camera: { ...DEFAULT_CAMERA, style: 'sway', distance: 2, pitchDeg: 15, smoothing: 2.5, cameraSmoothingS: 5, bankDeg: 6 } },
   {
     id: 'balloon',
     get name() { return t('camera.preset.balloon') },
-    camera: { ...DEFAULT_CAMERA, style: 'cinematic', distance: 2.5, pitchDeg: 40, smoothing: 4, aimSmoothingS: 2, cameraSmoothingS: 7.5 },
+    camera: { ...DEFAULT_CAMERA, style: 'cinematic', distance: 2.5, pitchDeg: 40, smoothing: 4, aimSmoothingS: 2, cameraSmoothingS: 7.5, bankDeg: 0 },
   },
   { id: 'plane', get name() { return t('camera.preset.plane') }, camera: { ...DEFAULT_CAMERA, distance: 3, pitchDeg: 35, smoothing: 3, cameraSmoothingS: 4 } },
-  { id: 'top-view', get name() { return t('camera.preset.top-view') }, camera: { ...DEFAULT_CAMERA, style: 'top', distance: 1.5, pitchDeg: 85, smoothing: 2, northUp: true } },
-  { id: 'satellite', get name() { return t('camera.preset.satellite') }, camera: { ...DEFAULT_CAMERA, style: 'top', distance: 4, pitchDeg: 85, smoothing: 4, northUp: true, cameraSmoothingS: 5 } },
+  { id: 'top-view', get name() { return t('camera.preset.top-view') }, camera: { ...DEFAULT_CAMERA, style: 'top', distance: 1.5, pitchDeg: 85, smoothing: 2, northUp: true, bankDeg: 0 } },
+  { id: 'satellite', get name() { return t('camera.preset.satellite') }, camera: { ...DEFAULT_CAMERA, style: 'top', distance: 4, pitchDeg: 85, smoothing: 4, northUp: true, cameraSmoothingS: 5, bankDeg: 0 } },
   // follows nothing but the keyframes: last, apart from the views that follow the marker
   { id: 'free', get name() { return t('camera.preset.free') }, camera: { ...DEFAULT_CAMERA, style: 'free' } },
 ]

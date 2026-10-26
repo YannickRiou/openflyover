@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v45.camera.title': 'Una camera più piacevole da guardare',
+  'v45.camera.text': 'Due impostazioni in Sorvolo › Camera. «Spazio davanti» mette il marcatore un po’ dietro il centro dell’immagine, lasciando spazio dal lato verso cui avanza. «Inclinazione nelle curve» inclina dolcemente l’orizzonte nelle curve, come un drone che si piega. Per impostazione predefinita, un po’ di entrambe: i film risultano più fluidi.',
   'v45.focal.title': 'Scegli l’obiettivo del film',
   'v45.focal.text': 'Sorvolo › Camera › «Focale», da 18 mm (grandangolo: più spazio intorno) a 135 mm (teleobiettivo: le montagne sembrano più vicine e imponenti). La camera si avvicina o si allontana perché il marcatore mantenga la stessa dimensione; a 26 mm non cambia nulla.',
   'v44.night.title': 'Notti meno nere',

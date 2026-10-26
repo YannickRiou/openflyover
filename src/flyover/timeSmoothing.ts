@@ -45,6 +45,14 @@ export function windowAverage(f: (timeS: number) => number, timeS: number, windo
   return centre + sum
 }
 
+/** The ground speed of the marker is read over ± this much film time. */
+const GROUND_SPEED_WINDOW_S = 0.5
+
+/** Ground speed of the marker at film time `timeS` (metres per second of film, the pacing and the speed portions included). */
+export function groundSpeedMps(clock: Pick<FilmClock, 'progressAtTime'>, timeS: number, lengthM: number): number {
+  return (Math.max(0, clock.progressAtTime(timeS + GROUND_SPEED_WINDOW_S) - clock.progressAtTime(timeS - GROUND_SPEED_WINDOW_S)) * lengthM) / (2 * GROUND_SPEED_WINDOW_S)
+}
+
 /**
  * Anticipated raise of the flight camera (#211). The clearance rules of `computeCameraView` (ground clearance, sight
  * line to the marker) raise the camera by what the relief needs at that very instant: that raise changes fast as the
@@ -118,4 +126,27 @@ export function timeSmoothing(
       camera.cameraSmoothingS > 0 || cameraTimeS !== timeS ? windowAverage(progressAt, cameraTimeS, camera.cameraSmoothingS) : undefined,
     timeS: easedEndTimeS(motionS, clock.flightS, easeS),
   }
+}
+
+/** Film time over which `motionShares` reads the speed (seconds): the lead room and the bank ease in and out over about this. */
+export const MOTION_WINDOW_S = 2
+
+/**
+ * How fast the marker and the camera's point of the track move around `timeS`, each as a share of the speed of a flight
+ * at constant pace (1 at speed x1 without pause; `durationS` = flyover duration at x1): the progress gained over the
+ * MOTION_WINDOW_S centred on `timeS`, so it eases to 0 into a stop, a pause or a shot (the clock holds the progress)
+ * instead of jumping, and the camera's one follows the smoothing in film time and « Fin en douceur ». « Espace devant »
+ * and « Inclinaison dans les virages » (camera.ts) scale with them, whatever the film does around.
+ */
+export function motionShares(
+  clock: Pick<FilmClock, 'progressAtTime' | 'openingS' | 'flightS'>,
+  timeS: number,
+  camera: Smoothing,
+  durationS: number,
+): { marker: number; camera: number } {
+  const marker = (t: number) => clock.progressAtTime(t)
+  const cameraAt = (t: number) => timeSmoothing(clock, t, t, camera).cameraProgress ?? marker(t)
+  const share = (progressAt: (t: number) => number) =>
+    Math.max(0, ((progressAt(timeS + MOTION_WINDOW_S / 2) - progressAt(timeS - MOTION_WINDOW_S / 2)) * durationS) / MOTION_WINDOW_S)
+  return { marker: share(marker), camera: share(cameraAt) }
 }
