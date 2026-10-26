@@ -56,6 +56,28 @@ describe('installLanguage', () => {
     expect(getLanguage()).toBe('fr')
   })
 
+  it('puts the preference back to the language shown, with a message, when the catalog cannot be fetched', async () => {
+    // fresh modules, German failing to load: only French is in memory, as at start-up
+    vi.resetModules()
+    vi.doMock('../i18n/de', () => {
+      throw new Error('chunk not found')
+    })
+    const i18n = await import('../i18n')
+    const preferences = await import('./preferences')
+    const { useToastStore } = await import('./toast')
+    getPlatform().storage.set(PREFERENCES_KEY, JSON.stringify({ language: 'fr' }))
+    preferences.usePreferences.setState({ language: 'fr' })
+    stop = preferences.installLanguage()
+    preferences.setPreferences({ language: 'de' })
+    await vi.waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1))
+    expect(preferences.usePreferences.getState().language).toBe('fr')
+    expect(i18n.getLanguage()).toBe('fr')
+    expect(document.documentElement.lang).toBe('fr')
+    expect(useToastStore.getState().toasts[0].text).toBe("Impossible de charger cette langue pour l'instant.")
+    expect(JSON.parse(getPlatform().storage.get(PREFERENCES_KEY) ?? 'null')).toMatchObject({ language: 'fr' })
+    vi.doUnmock('../i18n/de')
+  })
+
   it('uses the page it is given, and stops following once stopped', () => {
     browserLanguages(['ja'])
     const page = document.createElement('div')
