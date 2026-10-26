@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { createGpuTimer } from './gpuTimer'
+import { describe, expect, it, vi } from 'vitest'
+import { createGpuTimer, waitForGpu } from './gpuTimer'
 
 /** WebGL 2 context with timer queries: each query lasts `ns`, its result ready once `ready` is set. */
 function fakeGl({ extension = true } = {}) {
@@ -64,5 +64,22 @@ describe('createGpuTimer', () => {
     timer.begin()
     timer.dispose()
     expect(state.deleted).toBe(2)
+  })
+})
+
+describe('waitForGpu', () => {
+  it('reads one pixel, and never throws', () => {
+    const readPixels = vi.fn()
+    waitForGpu({ readPixels, RGBA: 6408, UNSIGNED_BYTE: 5121 })
+    expect(readPixels).toHaveBeenCalledWith(0, 0, 1, 1, 6408, 5121, expect.any(Uint8Array))
+    expect(() =>
+      waitForGpu({
+        readPixels: () => {
+          throw new Error('INVALID_OPERATION')
+        },
+      }),
+    ).not.toThrow()
+    expect(() => waitForGpu(null)).not.toThrow()
+    expect(() => waitForGpu({})).not.toThrow()
   })
 })

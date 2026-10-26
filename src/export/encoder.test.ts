@@ -24,7 +24,7 @@ const fake = vi.hoisted(() => ({
     closed: boolean
   }[],
   /** video samples taken from the canvas, closed once encoded */
-  samples: [] as { closed: boolean }[],
+  samples: [] as { closed: boolean; data: unknown }[],
   /** chunks the fake output writes when finalized, at their position (none: an empty file) */
   writes: [] as [position: number, bytes: number[]][],
   /** audio sources and what they received: [timestamp, frames, first value of each channel] */
@@ -63,8 +63,10 @@ vi.mock('mediabunny', () => {
   }
   class VideoSample {
     init: { timestamp: number; duration: number }
+    data: unknown
     closed = false
-    constructor(_canvas: unknown, init: VideoSample['init']) {
+    constructor(data: unknown, init: VideoSample['init']) {
+      this.data = data
       this.init = init
       fake.samples.push(this)
     }
@@ -310,6 +312,15 @@ describe('pickCodec', () => {
 })
 
 describe('createVideoEncoder', () => {
+  it('reads the frame from the source it is given, the canvas of the session otherwise', async () => {
+    const session = await createVideoEncoder(canvas, OPTIONS, supporting('avc'))
+    const bitmap = {} as unknown as CanvasImageSource
+    expect(session.acceptsSource).toBe(true)
+    await session.addFrame(0)
+    await session.addFrame(1, bitmap)
+    expect(fake.samples.map((sample) => sample.data)).toEqual([canvas, bitmap])
+  })
+
   it('encodes frames at index / fps and returns an MP4 blob', async () => {
     const session = await createVideoEncoder(canvas, OPTIONS, supporting('avc'))
     expect(session.codec).toEqual({ container: 'mp4', codec: 'avc' })

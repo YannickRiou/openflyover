@@ -2890,13 +2890,28 @@ exports) gets it from the terrain source of the settings.
   (`OverlayCanvas`) and the timeline are frozen while an export runs and redrawn at its end.
 - **Encoding pipeline**: the encoder takes the canvas synchronously in `addFrame` (`VideoSampleSource` +
   `new VideoSample(canvas)` before any await; ffmpeg path: `getImageData`), so frame i is encoded while frame i+1
-  settles and renders (one `addFrame` in flight). `pickCodec` asks `hardwareAcceleration: 'prefer-hardware'` first, else
+  settles and renders (one `addFrame` in flight). Right after the last render of an image the loop waits for the GPU
+  (`waitForGpu`: a 1×1 `readPixels` of the default framebuffer, synchronous everywhere, timed as `gpuWaitMs`), so that
+  `composeMs` and `frameMs` are not charged for the render (on WebKit the drawing of the WebGL canvas into a 2D canvas is
+  deferred, and the render was paid for when the `VideoFrame` was made).
+- **Frame handover** (`handover.ts`, WebCodecs sessions only: `session.acceptsSource`): three ways to get the composed
+  frame to the encoder, all with the same pixels (same `composeFrame`, sRGB, no alpha; checked in Chrome: byte-identical
+  `VideoFrame`s, same colour space): `offscreen` (OffscreenCanvas → `VideoSample(canvas)`, the reference), `canvas` (a
+  canvas of the page, not attached, accelerated in Safari → `VideoSample(canvas)`), `bitmap` (OffscreenCanvas →
+  `createImageBitmap` → `VideoSample(bitmap)`, closed once handed over). `createChooser` times each available method on
+  3 composed frames (composing + handing over, after one warm-up frame; holds are not timed) and keeps the one with the
+  lowest median for the rest of the export, the reference unless another is at least 10 % faster; a bitmap that cannot be
+  made drops that method. The choice is in `timings.handover`, the breadcrumb (« image vidéo <méthode> ; offscreen … ms »),
+  the history row and the diagnostic « Image vidéo ». The ffmpeg path, the PNG sequence and the overlay-only film keep
+  the OffscreenCanvas. `pickCodec` asks `hardwareAcceleration: 'prefer-hardware'` first, else
   `'no-preference'` (`CodecCandidate.hardware`). On the native path the compositor's 2D context is created with
   `willReadFrequently` (`compositorAttributes`).
 - **Timings** (`ExportTimings`): `rendered`, `renders` (advance calls), `renderMs` (main thread), `gpuMs` / `gpuRenders`
-  (GPU timer queries `EXT_disjoint_timer_query_webgl2`, `gpuTimer.ts`; 0 where unavailable, e.g. Safari / iOS: the
-  composition then holds the wait for the GPU), `waitMs`, `composeMs`, `frameMs` (VideoFrame / readback), `encodeWaitMs`
-  (back-pressure), `encodeMs` = the last three, `timeouts`, `givenUp`. `timingsSummary` writes them on one line for the
+  (GPU timer queries `EXT_disjoint_timer_query_webgl2`, `gpuTimer.ts`; 0 where unavailable, e.g. Safari / iOS: only
+  `gpuWaitMs` then tells the GPU's share), `waitMs`, `gpuWaitMs` (waiting for the GPU to finish the last render,
+  « attente de la carte graphique »; absent from the summary of older entries), `composeMs`, `frameMs` (VideoFrame /
+  readback), `encodeWaitMs` (back-pressure), `encodeMs` = the last four, `timeouts`, `givenUp`, and `handover` (the
+  method kept, a string; stored in the history entry as `handover`). `timingsSummary` writes them on one line for the
   console `[export]` line, the history « Répartition » and the diagnostic « Résultat » (added to the stored report when
   an export ends, shown in « Dernier export »).
 - **Shadow pass count** (#52): `shadowTiles`, `shadowTriangles` and their `shadowOffscreen…` share, summed over the renders. `TerrainShadow`

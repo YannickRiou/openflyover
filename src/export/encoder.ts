@@ -207,8 +207,13 @@ export interface VideoEncodeSession {
   readonly mimeType: string
   /** '.mp4' or '.webm' */
   readonly extension: string
-  /** Encode the current content of the canvas as frame `index` (timestamp index / fps); respects backpressure. */
-  addFrame(index: number): Promise<void>
+  /** the frames can be read from any canvas or bitmap, not only the canvas of the session (WebCodecs): see `handover.ts` */
+  readonly acceptsSource?: true
+  /**
+   * Encode the current content of the canvas (or of `source`, where accepted) as frame `index` (timestamp index / fps);
+   * respects backpressure. The frame is taken before anything is awaited: `source` may be closed once the call returned.
+   */
+  addFrame(index: number, source?: CanvasImageSource): Promise<void>
   /** Finalize the file: the blob in memory, null when it was written to the destination. */
   finish(): Promise<{ blob: Blob | null; sizeBytes: number }>
   /** Abort the encoding and drop what was written (a destination file is removed); later calls reject with ExportCanceledError. */
@@ -362,10 +367,11 @@ export async function createVideoEncoder(
     bitrate,
     mimeType,
     extension: `.${codec.container}`,
-    async addFrame(index) {
+    acceptsSource: true,
+    async addFrame(index, from = canvas) {
       if (canceled) throw new ExportCanceledError()
       // the canvas is read now, synchronously: the caller may draw the next frame while this one is encoded
-      const sample = new VideoSample(canvas, { timestamp: index * frameDuration, duration: frameDuration })
+      const sample = new VideoSample(from, { timestamp: index * frameDuration, duration: frameDuration })
       try {
         await addAudio((index + 1) * frameDuration + AUDIO_LEAD_S)
         await source.add(sample)

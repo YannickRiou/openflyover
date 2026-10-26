@@ -13,6 +13,7 @@ import type { TrackPath } from '../flyover/path'
 import type { Platform, WritableFile } from '../platform'
 import type { WritableFolder } from '../platform/folder'
 import { showToast } from '../ui/toast'
+import type { HandoverMethod } from './handover'
 import type { VideoEncoding, VideoQuality } from './schedule'
 import { t } from '../i18n'
 
@@ -98,9 +99,11 @@ export interface ExportTimings {
   gpuRenders: number
   /** waiting for tiles between renders */
   waitMs: number
-  /** composing and encoding: `composeMs` + `frameMs` + `encodeWaitMs` */
+  /** composing and encoding: `gpuWaitMs` + `composeMs` + `frameMs` + `encodeWaitMs` */
   encodeMs: number
-  /** sky, WebGL image (which waits for the GPU to finish the render) and overlay drawn into the encoder canvas */
+  /** waiting for the GPU to finish the last render of each image, before composing (`waitForGpu`) */
+  gpuWaitMs: number
+  /** sky, WebGL image and overlay drawn into the encoder canvas */
   composeMs: number
   /** the video frame taken from that canvas (`VideoFrame`, or its pixels read back for ffmpeg) */
   frameMs: number
@@ -115,6 +118,8 @@ export interface ExportTimings {
   shadowTriangles: number
   shadowOffscreenTiles: number
   shadowOffscreenTriangles: number
+  /** the way the frames reach the WebCodecs encoder, once measured (`handover.ts`) */
+  handover?: HandoverMethod
 }
 
 export const EMPTY_TIMINGS: ExportTimings = {
@@ -125,6 +130,7 @@ export const EMPTY_TIMINGS: ExportTimings = {
   gpuRenders: 0,
   waitMs: 0,
   encodeMs: 0,
+  gpuWaitMs: 0,
   composeMs: 0,
   frameMs: 0,
   encodeWaitMs: 0,
