@@ -155,6 +155,15 @@ export function exportResolutionNote(resolution: VideoResolution, maxShortSide =
   return t('export.resolutionNote', { cap })
 }
 
+/**
+ * What a phone or tablet changes in the picture besides the size (fewer trees, smaller shadow map, terrain detail capped
+ * by `deviceBudget`), null on a computer. The bitrate ceiling has its own line in « Encodage ». To show next to the
+ * resolution choice.
+ */
+export function exportDeviceNote(kind = deviceBudget().kind): string | null {
+  return kind === 'desktop' ? null : t('export.deviceNote')
+}
+
 /** Viewport height the terrain LOD is evaluated at for a film `heightPx` tall: its own, except on a phone (fewer tiles in memory). */
 export function exportLodHeight(heightPx: number, maxLodHeightPx = deviceBudget().maxLodHeightPx): number {
   return Math.min(heightPx, maxLodHeightPx)
