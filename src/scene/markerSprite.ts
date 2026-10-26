@@ -334,11 +334,15 @@ export function headsLeft(path: TrackPath, distanceM: number, at: Vector3, frame
 }
 
 /**
- * A figure changes side only when the track clearly runs the other way on screen: its run must be more than this far
- * from the vertical (sine of the angle, 20°). Nearer the vertical (a switchback climbing up the screen, a track coming
- * at the camera) the figure keeps the side it had.
+ * A figure changes side only when the track clearly keeps running the other way on screen: the runs seen back from the
+ * marker (each from -1 to 1, the sine of its angle from the vertical, weighted by the length it stands for) are added up
+ * until the sum passes this much (one SIDE_STEP_M of a track running straight across the screen is 1). A run nearer the
+ * vertical (a switchback climbing up the screen, a track coming at the camera) adds little, and the wiggles of a noisy
+ * track cancel out, where taking the first run past a threshold flipped the side from one frame to the next.
  */
-export const SIDE_BAND = Math.sin((20 * Math.PI) / 180)
+export const SIDE_EVIDENCE = 1.5
+/** Mean run (sine of the angle from the vertical, 20°) that tells a side where the track has too little behind it. */
+const SIDE_BAND = Math.sin((20 * Math.PI) / 180)
 /**
  * The side it had is read from the track behind the marker, not from the time: every SIDE_STEP_M back to SIDE_DENSE_M,
  * then every SIDE_COARSE_STEP_M to SIDE_LOOK_BACK_M, so a flight at any speed keeps the same side on the same switchback.
@@ -384,9 +388,9 @@ const nowDirection = new Vector3()
 
 /**
  * Side a figure faces (1 right, -1 left) with the marker at `distanceM`, the track seen with `camera`: the side of the
- * nearest clear run of the track on screen (SIDE_BAND), from the marker back along the track, each place seen as if
- * the marker stood at `at` (so a place far behind the marker, or the camera, still tells which way the track went).
- * None in the whole look back (a straight climb up the screen): right.
+ * way the track has clearly run on screen (SIDE_EVIDENCE), from the marker back along the track, each place seen as
+ * if the marker stood at `at` (so a place far behind the marker, or the camera, still tells which way the track went).
+ * Not enough evidence in the whole look back (a straight climb up the screen): the way the sum leans, right if none.
  */
 function sideAt(
   path: TrackPath,
@@ -398,15 +402,20 @@ function sideAt(
   exaggeration: number,
   aspect: number,
 ): 1 | -1 {
+  let evidence = 0
+  let places = 0
   for (let back = 0; back <= SIDE_LOOK_BACK_M; back += back < SIDE_DENSE_M ? SIDE_STEP_M : SIDE_COARSE_STEP_M) {
     const place = Math.max(0, distanceM - back)
     const { dx, dy } = screenRun(path, place, height, frame, camera, exaggeration, aspect, at)
     const length = Math.hypot(dx, dy)
     const run = length > 1e-6 ? dx / length : 0
-    if (Math.abs(run) > SIDE_BAND) return run < 0 ? -1 : 1
+    evidence += run
+    places++
+    if (Math.abs(evidence) > SIDE_EVIDENCE) break
     if (place === 0) break
   }
-  return 1
+  // the start of a track has too little behind it for that sum: the mean run alone, as clear as SIDE_BAND
+  return Math.abs(evidence) > Math.min(SIDE_EVIDENCE, SIDE_BAND * places) ? (evidence < 0 ? -1 : 1) : 1
 }
 
 /**

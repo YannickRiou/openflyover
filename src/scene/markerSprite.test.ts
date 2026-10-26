@@ -274,8 +274,8 @@ describe('figureHeading', () => {
   }
   const changes = (values: readonly unknown[]) => values.filter((v, i) => i > 0 && v !== values[i - 1]).length
   /** a track going north with a wiggle of 15 m every 150 m */
-  const wiggle = (from: number, count: number) =>
-    Array.from({ length: count }, (_, i) => [15 * Math.sin((2 * Math.PI * i * 10) / 150), from + i * 10] as const)
+  const wiggle = (from: number, count: number, amplitudeM = 15) =>
+    Array.from({ length: count }, (_, i) => [amplitudeM * Math.sin((2 * Math.PI * i * 10) / 150), from + i * 10] as const)
 
   it('keeps its side on a switchback that runs up the screen with small left and right wiggles', () => {
     const frames = fly(pathOf(wiggle(-300, 121)), 30, chasing)
@@ -283,6 +283,13 @@ describe('figureHeading', () => {
     expect(changes(frames.map((f) => f.left))).toBeGreaterThanOrEqual(6)
     // ...the figure does not move
     expect(new Set(frames.map((f) => f.facing)).size).toBe(1)
+  })
+
+  it('does not flicker where the track runs a little off the vertical after a clear run', () => {
+    // east, then a gentle drift to the west and straight on up the screen: the first run past a threshold read from
+    // the track behind flipped the side four times a second there
+    const frames = fly(pathOf([[-600, 0], [0, 0], [-40, 120], [-40, 500]]), 30, chasing)
+    expect(changes(frames.map((f) => Math.sign(f.facing)))).toBeLessThanOrEqual(2)
   })
 
   it('keeps the side it had when the track turns up the screen', () => {
