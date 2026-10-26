@@ -45,6 +45,14 @@ export function windowAverage(f: (timeS: number) => number, timeS: number, windo
   return centre + sum
 }
 
+/** The ground speed of the marker is read over ± this much film time. */
+const GROUND_SPEED_WINDOW_S = 0.5
+
+/** Ground speed of the marker at film time `timeS` (metres per second of film, the pacing and the speed portions included). */
+export function groundSpeedMps(clock: Pick<FilmClock, 'progressAtTime'>, timeS: number, lengthM: number): number {
+  return (Math.max(0, clock.progressAtTime(timeS + GROUND_SPEED_WINDOW_S) - clock.progressAtTime(timeS - GROUND_SPEED_WINDOW_S)) * lengthM) / (2 * GROUND_SPEED_WINDOW_S)
+}
+
 /**
  * Anticipated raise of the flight camera (#211). The clearance rules of `computeCameraView` (ground clearance, sight
  * line to the marker) raise the camera by what the relief needs at that very instant: that raise changes fast as the

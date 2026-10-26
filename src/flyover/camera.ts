@@ -82,10 +82,25 @@ export const LINE_OF_SIGHT_COARSE_SAMPLES = 2
  * the camera's distance (the marker stays near the middle of the frame).
  */
 export const HEADING_SMOOTHING_FACTOR = 1.5
+/**
+ * Whatever « Lissage de la caméra » says, the heading (and the slope the swing reads) is averaged over at least this
+ * much film time: the plain chord direction flips through the apex of a switchback, and with the smoothing at 0 or 0.5 s
+ * the camera whipped round by up to 1.5 × its distance in a few frames (0.07 at 0.5 s; none from 1 s).
+ */
+export const HEADING_MIN_SMOOTHING_S = 1
 export const POSITION_SMOOTHING_S = 0.5
 export const CAMERA_LINE_FACTOR = 0.2
 export const AIM_LINE_SHARE = 0.5
 export const AIM_LINE_MAX_SHARE = 0.06
+/**
+ * Where the marker runs faster than the flight's average (a speed portion), the heading is averaged over the track it
+ * covers in RUN_SMOOTHING_S film seconds of the extra speed (`runTaps`): the smoothing scales with the flight's average
+ * speed, so at 4 times the pace the sway of the camera followed the bends 4 times as fast (0.055 of the camera's
+ * distance a frame with « Oiseau », none at the average speed). The aim is left alone: it has to stay near the marker
+ * (a wider average took it 1.6 half-frames off it on the switchbacks).
+ */
+export const RUN_SMOOTHING_S = 0.7
+const RUN_TAPS = 9
 export const GROUND_SPEED_S = 0.25
 export const GROUND_SPEED_MAX_M = 500
 /** The aim's height eases between the track's ground and the grid's over this band (smooth maximum). */
@@ -482,6 +497,8 @@ export interface CameraViewOptions {
   aimProgress?: number
   /** progress the camera is placed from (place along the track, heading); the marker's when absent */
   cameraProgress?: number
+  /** ground speed of the marker now (metres per film second, `groundSpeedMps`); absent: the flight's average */
+  speedMps?: number
   /** how fast the marker and the camera's point of the track move, as shares of a flight's constant pace (`motionShares`, `timeSmoothing.ts`); 1 each (steady flight) when absent */
   motion?: { marker: number; camera: number }
 }
@@ -506,17 +523,24 @@ function placement(
   frame: LocalFrame,
   camera: CameraSettings,
   durationS: number,
+  taps: Taps | null,
 ): Placement {
   const speedMps = path.lengthM / Math.max(1, durationS)
   const w = headingWindowM(path, camera)
-  const radiusM = speedMps * camera.cameraSmoothingS * HEADING_SMOOTHING_FACTOR
-  const travel = (at: number, window: number) => smoothHeadingAt(path, at, window, radiusM, frame)
+  const radiusM = speedMps * Math.max(camera.cameraSmoothingS, HEADING_MIN_SMOOTHING_S) * HEADING_SMOOTHING_FACTOR
+  // in a speed portion, the heading is also averaged over the taps (radians: the chord directions are unwrapped)
+  const heading = (at: number, window: number) => tapped((o) => smoothAngleAt(path, at + o, window, radiusM, frame), taps!)
+  const travel = (at: number, window: number) => {
+    if (!taps) return smoothHeadingAt(path, at, window, radiusM, frame)
+    const angle = heading(at, window)
+    return new Vector3(Math.sin(angle), 0, -Math.cos(angle))
+  }
   const distance = autoDistanceM(path) * camera.distance
   const offset = camera.headingOffsetDeg * DEG
 
   switch (camera.style) {
     case 'sway': {
-      const turn = smoothTurnAt(path, d, w, radiusM, frame)
+      const turn = taps ? heading(d + w, w) - heading(d - w, w) : smoothTurnAt(path, d, w, radiusM, frame)
       // to the outside of the bend: a right turn swings the view to the right (camera on the left)
       const swing = SWAY_MAX_RAD * Math.tanh((SWAY_GAIN * turn) / SWAY_MAX_RAD)
       return { reference: travel(d, w), viewAngle: offset + swing, pitchDeg: camera.pitchDeg, distance }
@@ -587,6 +611,8 @@ export function computeCameraView(
   const aimSigmaM = Math.max(Math.min(lineSigmaM * AIM_LINE_SHARE, autoDistanceM(path) * camera.distance * AIM_LINE_MAX_SHARE), pointSigmaM)
   const smoothLine = camera.cameraSmoothingS > 0
   const aim = smoothLine ? cameraLineAt(path, dAim, aimSigmaM, 0, frame) : smoothPointAt(path, dAim, pointRadiusM, 0, frame)
+  // in a speed portion the heading is averaged over more (`placement`)
+  const taps = runTaps(Math.max(0, (options.speedMps ?? 0) - speedMps) * RUN_SMOOTHING_S)
   const cellM = Math.max(
     Math.min(headingWindowM(path, camera) * GROUND_WINDOW_FRACTION, GROUND_WINDOW_MAX_M),
     Math.min(speedMps * GROUND_SPEED_S, GROUND_SPEED_MAX_M),
@@ -601,10 +627,10 @@ export function computeCameraView(
   const aimAt = frame.toLonLat(aim)
   const target = frame.toLocal(aimAt.lon, aimAt.lat, aimGround + liftM)
 
-  const place = placement(path, dCamera, timeS, frame, camera, durationS)
+  const place = placement(path, dCamera, timeS, frame, camera, durationS, taps)
   place.viewAngle += options.orbitRad ?? 0
   if (sample) {
-    const slopeRadiusM = Math.max(speedMps * camera.cameraSmoothingS * HEADING_SMOOTHING_FACTOR, headingWindowM(path, camera))
+    const slopeRadiusM = Math.max(speedMps * Math.max(camera.cameraSmoothingS, HEADING_MIN_SMOOTHING_S) * HEADING_SMOOTHING_FACTOR, headingWindowM(path, camera))
     const baselineM = Math.max(SWING_SLOPE_BASELINE_M, (place.distance * Math.cos(clamp(place.pitchDeg, PITCH_MIN_DEG, PITCH_MAX_DEG) * DEG)) / 2)
     place.viewAngle += swingAngle(place, trackSlope(path, d, slopeRadiusM, baselineM, frame, sample, exaggeration))
   }
@@ -617,7 +643,7 @@ export function computeCameraView(
   // the aim moves ahead (and the camera with it, as far as `leadRoom` says): the marker falls back in the frame; the
   // clearance rules below place the camera where it ends up
   const motion = options.motion ?? { marker: 1, camera: 1 }
-  const travel = smoothHeadingAt(path, dCamera, headingWindowM(path, camera), speedMps * camera.cameraSmoothingS * HEADING_SMOOTHING_FACTOR, frame)
+  const travel = smoothHeadingAt(path, dCamera, headingWindowM(path, camera), speedMps * Math.max(camera.cameraSmoothingS, HEADING_MIN_SMOOTHING_S) * HEADING_SMOOTHING_FACTOR, frame)
   const position = positionAround(from, place)
   const lead = leadRoom(target.clone().sub(position), travel, camera, motion.marker)
   position.add(lead.camera)
@@ -674,12 +700,36 @@ function bankRad(path: TrackPath, d: number, timeS: number, frame: LocalFrame, c
   const to = clamp(d + half, 0, path.lengthM)
   if (!(to > from)) return 0
   const heading = (at: number) => {
-    const { reference } = placement(path, at, timeS, frame, camera, durationS)
+    const { reference } = placement(path, at, timeS, frame, camera, durationS, null)
     return Math.atan2(reference.x, -reference.z)
   }
   const turn = heading(to) - heading(from)
   const rate = (Math.atan2(Math.sin(turn), Math.cos(turn)) / (to - from)) * cameraShare * (path.lengthM / Math.max(1, durationS))
   return camera.bankDeg * DEG * Math.tanh(rate / BANK_TURN_RATE_RAD_S)
+}
+
+/**
+ * Offsets (metres of track) and weights of RUN_TAPS points of a tent of half-width 2.45 × `sigmaM` (a deviation of
+ * `sigmaM`) to average a smooth function of the distance over; null when `sigmaM` is under a metre. Each point follows the
+ * function, so the average does.
+ */
+function runTaps(sigmaM: number): { offsetM: number; weight: number }[] | null {
+  if (!(sigmaM > 1)) return null
+  const half = (RUN_TAPS - 1) / 2
+  return Array.from({ length: RUN_TAPS }, (_, i) => ({ offsetM: ((i - half) / half) * 2.45 * sigmaM, weight: half + 1 - Math.abs(i - half) }))
+}
+
+type Taps = NonNullable<ReturnType<typeof runTaps>>
+
+/** Average of `f` (of an offset in metres of track) over `taps`. */
+function tapped(f: (offsetM: number) => number, taps: Taps): number {
+  let sum = 0
+  let weight = 0
+  for (const t of taps) {
+    sum += t.weight * f(t.offsetM)
+    weight += t.weight
+  }
+  return sum / weight
 }
 
 /**
