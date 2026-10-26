@@ -4,7 +4,8 @@ import { filmClockFor } from '../film/clock'
 import { DEFAULT_FILM, DEFAULT_NIGHTS } from '../film/model'
 import type { Film } from '../film/model'
 import { buildTrack } from '../import/stats'
-import { flightNights, nightPauseS, trackNights } from './nights'
+import { hasFilmItem, removeFilmItem } from '../film/timeline'
+import { flightNights, isNightItem, nightItemId, nightKey, nightPauseS, trackNights } from './nights'
 import { DEFAULT_PACING } from './pacing'
 import { buildTrackPath, recordedTimeAt } from './path'
 import { NIGHT_DARK_MARGIN_MS, nightAt, nightSunDate, sunTimes } from './sun'
@@ -78,6 +79,29 @@ describe('flightNights', () => {
     expect(flightNights(path, DEFAULT_NIGHTS, 60)).toHaveLength(1)
     expect(flightNights(path, { ...DEFAULT_NIGHTS, enabled: false }, 60)).toEqual([])
     expect(flightNights(path, { enabled: true, duskS: 0, nightS: 0, dawnS: 0 }, 60)).toEqual([])
+  })
+
+  it('a night removed by hand (`skipped`, its sunset date) is left out; the others stay', () => {
+    const path = buildTrackPath(twoDays())
+    const [night] = trackNights(path)
+    expect(nightKey(night)).toBe('2026-06-01')
+    expect(flightNights(path, { ...DEFAULT_NIGHTS, skipped: ['2026-06-01'] }, 60)).toEqual([])
+    expect(flightNights(path, { ...DEFAULT_NIGHTS, skipped: ['2026-06-02'] }, 60)).toHaveLength(1)
+  })
+
+  it('removing the block of a night on the timeline adds its key to `skipped`: the film loses the pause, the item is gone', () => {
+    const track = twoDays()
+    const film: Film = { ...DEFAULT_FILM, autoStops: false }
+    const clockOf = (f: Film) => filmClockFor({ track, film: f, durationS: 60, pacing: DEFAULT_PACING })
+    const [night] = clockOf(film).nights
+    const id = nightItemId(night)
+    expect(isNightItem(id)).toBe(true)
+    expect(hasFilmItem(film, [], id, [], clockOf(film).nights)).toBe(true)
+    const removed = removeFilmItem(film, id)
+    expect(removed.nights.skipped).toEqual(['2026-06-01'])
+    expect(clockOf(removed).nights).toEqual([])
+    expect(clockOf(removed).totalTime()).toBeCloseTo(clockOf(film).totalTime() - nightPauseS(DEFAULT_NIGHTS), 9)
+    expect(hasFilmItem(removed, [], id, [], clockOf(removed).nights)).toBe(false)
   })
 })
 

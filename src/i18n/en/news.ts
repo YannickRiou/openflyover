@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v46.nights.title': 'Nights on the timeline',
+  'v46.nights.text': 'On a track of several days, each night is now a green block on the “Holds” lane of the timeline. Click it to see it, press Delete to take it out of the film (you can undo). “Restore the nights” (Light › Days and nights) brings them all back.',
   'v45.camera.title': 'A camera that is nicer to watch',
   'v45.camera.text': 'Two settings in Flyover › Camera. “Lead room” puts the marker a little behind the middle of the picture, leaving room on the side it is heading to. “Banking in bends” gently tilts the horizon in bends, like a drone leaning into the turn. Both are on a little by default: your films feel smoother.',
   'v45.marker.title': 'A livelier marker',

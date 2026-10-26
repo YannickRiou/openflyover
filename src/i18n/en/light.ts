@@ -22,6 +22,8 @@ const messages: Messages['light'] = {
   'nights.sequenceHint': 'With “In sequence”, each transition chooses whether to pass the night (Track › Several tracks, or its block on the timeline); “Show the nights” only applies to the nights inside a stage. The lengths below apply to every night.',
   'nights.none': 'No rest night on this track.',
   'nights.hint': { one: '{count} night: the film pauses for {pause} each time.', other: '{count} nights: the film pauses for {pause} each time.' },
+  'nights.removed': { one: '{count} night removed from the timeline.', other: '{count} nights removed from the timeline.' },
+  'nights.restore': 'Restore the nights',
   'nights.instant': 'The night passes in an instant between two days.',
   'nights.show': 'Show the nights',
   'days.legend': 'Day cards',

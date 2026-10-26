@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The nights show on the timeline, and can be removed**: on a track recorded over several days, each night pause is now a green block on the « Arrêts » lane, next to the stops. Click it to select it, press Delete (or « Supprimer cette nuit ») to take that night out of the film (one undo step); « Rétablir les nuits » in « Lumière › Jours et nuits » brings the removed ones back.
+
 ## 4.5.0 (October 2026)
 
 - **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.4.1.
