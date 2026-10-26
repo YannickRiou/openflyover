@@ -28,6 +28,11 @@ function terrainOf(engine: TerrainEngine) {
   return terrain
 }
 
+/** How many times the terrain of `engine` changed (tiles loaded, dropped or swapped): a stamp for what is computed from `sampleHeight`. */
+export function terrainVersion(engine: TerrainEngine): number {
+  return terrainOf(engine).version
+}
+
 /** What the flight camera follows, the same function while the tracks and the race settings stay the same (as above). */
 let followed: { inputs: readonly unknown[]; follow: FollowFlight | null } | undefined
 

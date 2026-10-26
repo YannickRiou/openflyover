@@ -14,13 +14,15 @@ export function clampLat(lat: number): number {
   return Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, lat))
 }
 
-/** Fractional tile coordinates at zoom z. */
-export function lonLatToTileFrac(lon: number, lat: number, z: number): { x: number; y: number } {
+/** Fractional tile coordinates at zoom z (written into `out` when given, for hot loops). */
+export function lonLatToTileFrac(lon: number, lat: number, z: number, out: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
   const n = 2 ** z
   const latRad = clampLat(lat) * DEG
   const x = ((lon + 180) / 360) * n
   const y = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
-  return { x, y }
+  out.x = x
+  out.y = y
+  return out
 }
 
 /** Latitude (degrees) of the north edge of tile row `y` (fractional allowed) at zoom z. */

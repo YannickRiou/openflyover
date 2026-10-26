@@ -29,8 +29,8 @@ import {
   kmLabels,
   endpointLabels,
   photoLabels,
+  createClearanceMemo,
   distanceFade,
-  lineOfSightClearance,
   occlusionFade,
   poiLabels,
   FAINT_OPACITY,
@@ -41,6 +41,7 @@ import {
   type LandmarkLabel,
   type ScreenRect,
 } from './labelModel'
+import { terrainVersion } from './filmView'
 import { externalLabels, useLabelSources } from './labelSources'
 import { setShownLabelRects } from './labelRects'
 import { reliefClearance } from './markerSprite'
@@ -200,6 +201,8 @@ interface LabelSet {
   entries: LabelEntry[]
   buffer: DrapeBuffer
   positions: Float32Array
+  /** the lines of sight, kept while the camera, the relief and the label stay as they are */
+  sight: ReturnType<typeof createClearanceMemo>
 }
 
 function disposeLabelSet(set: LabelSet | null): void {
@@ -247,17 +250,19 @@ function updateLabelSet(
   const scale = renderScale * look.size
   const pixel = spriteScaleForPixels(1, size.height, camera.projectionMatrix.elements[5]) * scale
   const clearanceAt = reliefClearance(engine, frame, exaggeration)
+  set.sight.begin([cameraPosition.x, cameraPosition.y, cameraPosition.z, engine, frame, exaggeration, engine && terrainVersion(engine)])
 
   const candidates: { rect: ScreenRect; priority: number; faint: boolean }[] = []
   const shown: { entry: LabelEntry; opacity: number }[] = []
-  for (const entry of set.entries) {
+  for (let i = 0; i < set.entries.length; i++) {
+    const entry = set.entries[i]
     const { sprite, tex } = entry
     sprite.visible = false
     let opacity = distanceFade(cameraPosition.distanceTo(sprite.position), look.rangeKm * 1000)
     if (opacity < MIN_OPACITY) continue
     projected.copy(sprite.position).project(camera)
     if (projected.z > 1 || Math.abs(projected.x) > 1.2 || Math.abs(projected.y) > 1.2) continue
-    if (clearanceAt) opacity *= occlusionFade(lineOfSightClearance(cameraPosition, sprite.position, clearanceAt))
+    if (clearanceAt) opacity *= occlusionFade(set.sight.clearance(i, cameraPosition, sprite.position, clearanceAt))
     if (opacity < MIN_OPACITY) continue
     const x = ((projected.x + 1) / 2) * size.width
     const y = ((1 - projected.y) / 2) * size.height
@@ -400,7 +405,7 @@ export function Labels() {
     }
     if (!frame || entries.length === 0) return
     const buffer = buildDrapeBuffer(entries.map((e) => e.label), frame)
-    setRef.current = { entries, buffer, positions: new Float32Array(buffer.count * 3) }
+    setRef.current = { entries, buffer, positions: new Float32Array(buffer.count * 3), sight: createClearanceMemo() }
     drape(engine, exaggeration)
   }, [labels, frame, engine, exaggeration, fontVersion, look, family, drape])
 

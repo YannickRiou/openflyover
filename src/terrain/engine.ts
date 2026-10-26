@@ -29,7 +29,7 @@ import { errorMessage } from '../core/errors'
 import { BACKGROUND_PRIORITY, TileFetchError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
-import { buildTileGeometry, sampleTileMesh } from './mesh'
+import { buildTileGeometry, sampleTileMeshAt } from './mesh'
 import {
   TileNode,
   countSelection,
@@ -837,13 +837,17 @@ export function createTerrainEngine(
   }
 
   /** Tile drawn at lon/lat, else (off the view, or not drawn yet) the deepest loaded one there. */
-  function surfaceNodeAt(lon: number, lat: number): TileNode | undefined {
-    const f = lonLatToTileFrac(lon, lat, 0)
-    const indexAt = (z: number) => ({ x: Math.floor(f.x * 2 ** z), y: Math.floor(f.y * 2 ** z) })
-    let node = roots.find((r) => {
-      const at = indexAt(r.key.z)
-      return r.key.x === at.x && r.key.y === at.y
-    })
+  function surfaceNodeAt(f: { x: number; y: number }): TileNode | undefined {
+    let node: TileNode | undefined
+    let n = 1
+    for (let i = 0; i < roots.length; i++) {
+      const { z, x, y } = roots[i].key
+      n = 2 ** z
+      if (x === Math.floor(f.x * n) && y === Math.floor(f.y * n)) {
+        node = roots[i]
+        break
+      }
+    }
     let loaded: TileNode | undefined
     while (node) {
       if (node.grid) {
@@ -851,15 +855,17 @@ export function createTerrainEngine(
         loaded = node
       }
       if (!node.children) break
-      const at = indexAt(node.key.z + 1)
-      node = node.children[(at.x & 1) + 2 * (at.y & 1)]
+      n *= 2
+      node = node.children[(Math.floor(f.x * n) & 1) + 2 * (Math.floor(f.y * n) & 1)]
     }
     return loaded
   }
 
   function sampleHeight(lon: number, lat: number): number | undefined {
-    const node = surfaceNodeAt(lon, lat)
-    if (node?.grid) return sampleTileMesh(node.key, node.grid, opts.segments, lon, lat)
+    const f = lonLatToTileFrac(lon, lat, 0, zeroFrac)
+    const node = surfaceNodeAt(f)
+    // the tile coordinates at zoom z are those at zoom 0 times 2^z, exactly
+    if (node?.grid) return sampleTileMeshAt(node.key, node.grid, opts.segments, f.x * 2 ** node.key.z, f.y * 2 ** node.key.z)
     return io.heightField.sampleHeight(lon, lat)
   }
 
@@ -964,6 +970,9 @@ export interface TileFailure extends TileFailureCause {
   /** every attempt used (or drawn without all its imagery); false: it is still retried */
   givenUp: boolean
 }
+
+/** Scratch of `sampleHeight`, called thousands of times a frame by the labels' lines of sight: no allocation. */
+const zeroFrac = { x: 0, y: 0 }
 
 const failureReaders = new WeakMap<TerrainEngine, () => TileFailure[]>()
 const imageryRestorers = new WeakMap<TerrainEngine, () => void>()
