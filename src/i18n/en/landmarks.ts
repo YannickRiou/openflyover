@@ -140,7 +140,18 @@ const messages: Messages['landmarks'] = {
   'record.longestClimb': 'Longest climb',
   'record.maxHeartRate': 'Peak heart rate',
   'record.maxPower': 'Peak power',
-  hintRecords: 'Records are the feats of the outing (steepest climb, fastest descent, highest point…): they are computed from the track itself, and correcting the figures by hand does not change them. Only the steepest climb, the highest point and the fastest descent make an automatic hold; the others stay labels.',
+  'record.bestThermal': 'Best thermal',
+  'record.highestAboveGround': 'Highest above the ground',
+  'record.thermal': '+{value} m/s',
+  // the switch and the recomputation of the records
+  'records.enable': 'Records of the outing',
+  'records.tip': 'The feats of the outing, worked out from the track: a 3D label each and, for the main ones, an automatic hold. Switched off, they are hidden and nothing is erased.',
+  'records.recompute': 'Recompute the records',
+  'records.recomputeTip': 'Reads the track again, then brings the automatic holds of the film in line with the records: your own holds do not move.',
+  'records.removed': { one: '{count} record removed', other: '{count} records removed' },
+  'records.added': { one: '{count} record added', other: '{count} records added' },
+  'records.unchanged': 'Nothing changed',
+  hintRecords: 'Records are the feats of the outing (steepest climb, fastest descent, highest point…): they are computed from the track itself, and correcting the figures by hand does not change them. Climbs, descents and kilometres ignore the stretches flown, which have their own best thermal and greatest height above the ground. Only the steepest climb, the highest point, the fastest descent and the best thermal make an automatic hold; the others stay labels.',
   metaRecord: 'km {km}',
 }
 

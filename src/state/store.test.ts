@@ -262,6 +262,7 @@ describe('settings and misc', () => {
       },
       landmarks: {
         enabled: true,
+        records: true,
         kinds: { peak: true, pass: true, hut: true, lake: true, waterfall: false, place: true, viewpoint: false, glacier: false, waterPoint: false },
         places: { city: true, village: true, hamlet: true },
         maxDistanceM: 1500,

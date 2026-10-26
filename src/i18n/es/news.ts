@@ -9,6 +9,8 @@ const messages: Messages['news'] = {
   'v45.camera.text': 'Dos ajustes en Vuelo › Cámara. «Espacio delante» coloca el marcador un poco por detrás del centro de la imagen, para dejar sitio del lado hacia el que avanza. «Inclinación en las curvas» inclina suavemente el horizonte en las curvas, como un dron que se ladea. Por defecto, un poco de cada uno: sus películas resultan más fluidas.',
   'v45.marker.title': 'Un marcador más vivo',
   'v45.marker.text': 'La figurita camina ahora al ritmo del marcador, se queda quieta cuando este se detiene y se da la vuelta con suavidad en una curva (el texto de debajo nunca se refleja). Además, cada marcador toma un poco de la luz de la escena: cálido al amanecer y al atardecer, algo azulado de noche. Nada que ajustar.',
+  'v45.records.title': 'Récords para los vuelos',
+  'v45.records.text': 'La mejor térmica (la subida más sostenida de un vuelo) y la mayor altura sobre el suelo son dos récords más para los vuelos en parapente. A cambio, los récords de subida, bajada y kilómetros ya no cuentan los tramos en vuelo: la pendiente no significa nada allí. En Mapa › Referencias, un interruptor «Récords de la salida» los muestra u oculta, y «Recalcular los récords» actualiza las paradas automáticas de la película.',
   'v44.night.title': 'Noches menos negras',
   'v44.night.text': '« Claridad de la noche » (Luz › Atmósfera) ilumina el relieve y las nubes de noche, como la luz de la luna, sin cambiar nada de día. La exposición se une al contraste y la saturación en Colores.',
   'v332.landmarks.title': 'Ocultar referencias en pocos clics',

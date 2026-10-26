@@ -331,6 +331,7 @@ describe('withLandmarkDefaults', () => {
     const older = { enabled: true, kinds: { ...olderKinds, place: false }, maxDistanceM: 800 }
     expect(withLandmarkDefaults(older)).toEqual({
       ...older,
+      records: true,
       kinds: { ...older.kinds, waterPoint: false },
       places: { city: true, village: true, hamlet: true },
       hiddenIds: [],
@@ -341,6 +342,7 @@ describe('withLandmarkDefaults', () => {
       density: 'normal',
     })
     expect(withLandmarkDefaults({ ...older, hiddenIds: ['node/1'] })).toMatchObject({ hiddenIds: ['node/1'] })
+    expect(withLandmarkDefaults({ ...older, records: false })).toMatchObject({ records: false })
     // the cap of an older project becomes the nearest density; hidden wins over pinned
     for (const [maxCount, density] of [[10, 'few'], [25, 'few'], [40, 'normal'], [50, 'normal'], [70, 'many'], [80, 'many']] as const) {
       expect(withLandmarkDefaults({ ...older, maxCount })).toMatchObject({ density })

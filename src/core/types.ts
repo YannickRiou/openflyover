@@ -128,6 +128,9 @@ export interface Flight {
   endM: number
   /** constant error of the device's elevation (recorded minus ground where the track is on the ground), removed in the air */
   offsetM: number
+  /** greatest height above the ground reached (metres) and where (metres along the track), measured at detection against the ground then; absent on flights saved before the records of flights */
+  maxHeightM?: number
+  maxHeightAtM?: number
 }
 
 /** A named point stored with a track (GPX <wpt>), not part of the path. */

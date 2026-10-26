@@ -9,6 +9,8 @@ const messages: Messages['news'] = {
   'v45.camera.text': 'Two settings in Flyover › Camera. “Lead room” puts the marker a little behind the middle of the picture, leaving room on the side it is heading to. “Banking in bends” gently tilts the horizon in bends, like a drone leaning into the turn. Both are on a little by default: your films feel smoother.',
   'v45.marker.title': 'A livelier marker',
   'v45.marker.text': 'The figurine now walks at the marker’s pace, stands still when the marker stops, and turns round smoothly at a bend (the text under it is never mirrored). Every marker also takes a little of the light of the scene: warm at sunrise and sunset, slightly bluish at night. Nothing to set.',
+  'v45.records.title': 'Records for flights',
+  'v45.records.text': 'The best thermal (the most sustained climb of a flight) and the greatest height above the ground are two more records for paragliding flights. In return, the record climbs, descents and kilometres no longer count the stretches flown: a slope means nothing there. In Map › Landmarks, a “Records of the outing” switch shows or hides them, and “Recompute the records” updates the automatic holds of the film.',
   'v44.night.title': 'Brighter nights',
   'v44.night.text': '« Night brightness » (Light › Atmosphere) lights the relief and the clouds at night, like moonlight, and changes nothing in daylight. The exposure now sits with contrast and saturation in Colours.',
   'v332.landmarks.title': 'Hide landmarks in a few clicks',

@@ -59,6 +59,8 @@ function densityFromCount(maxCount: number): LandmarkDensity {
 
 export interface LandmarkSettings {
   enabled: boolean
+  /** « Records de la sortie »: the records of the outing (`import/records.ts`) are shown, as labels and automatic stops; off hides them and deletes nothing */
+  records: boolean
   kinds: Record<OsmKind, boolean>
   /** which places are shown when `kinds.place` is on */
   places: Record<PlaceSize, boolean>
@@ -83,6 +85,7 @@ export interface LandmarkSettings {
 
 export const DEFAULT_LANDMARK_SETTINGS: LandmarkSettings = {
   enabled: true,
+  records: true,
   kinds: {
     peak: true,
     pass: true,
@@ -125,7 +128,7 @@ export function withLandmarkDefaults(raw: unknown): unknown {
   const hidden = new Set(Array.isArray(settings.hiddenIds) ? settings.hiddenIds : [])
   // anything else than a list is left for the validation of the project to reject
   const pinnedIds = Array.isArray(settings.pinnedIds) ? settings.pinnedIds.filter((id) => !hidden.has(id)) : (settings.pinnedIds ?? [])
-  return { hiddenIds: [], rank: [], dismissedIds: [], ...settings, density, pinnedIds, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, ...settings.kinds }, places, seenIds }
+  return { records: true, hiddenIds: [], rank: [], dismissedIds: [], ...settings, density, pinnedIds, kinds: { ...DEFAULT_LANDMARK_SETTINGS.kinds, ...settings.kinds }, places, seenIds }
 }
 
 /** The state of a landmark in the list: left to the app (« Auto »), kept and put first (« Toujours »), or never shown (« Jamais »). */
@@ -591,8 +594,8 @@ export function buildLandmarks(
 /** A highest point this close to a summit landmark is that summit, not a record (metres). */
 export const RECORD_SUMMIT_M = 200
 
-/** Importance of the records, among the landmarks: the feats of the outing (steepest, fastest, highest) then the others. */
-const RECORD_PRIORITY: Readonly<Record<string, number>> = { steepestClimb: 32, fastestDescent: 32, highest: 32 }
+/** Importance of the records, among the landmarks: the feats of the outing (steepest, fastest, highest, best thermal) then the others. */
+const RECORD_PRIORITY: Readonly<Record<string, number>> = { steepestClimb: 32, fastestDescent: 32, highest: 32, bestThermal: 32 }
 const RECORD_PRIORITY_OTHER = 26
 
 /**

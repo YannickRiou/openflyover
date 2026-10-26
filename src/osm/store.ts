@@ -10,6 +10,7 @@ import { create } from 'zustand'
 import type { Track } from '../core/types'
 import { trackPathOf } from '../flyover/path'
 import { setLabelSource, useLabelSources } from '../scene/labelSources'
+import { forgetRecords } from '../import/records'
 import { DEFAULT_LANDMARK_SETTINGS, LANDMARK_DENSITY_COUNTS, buildLandmarks, landmarkLabels, recordLandmarks, splitHidden, withRank } from './landmarks'
 import type { Landmark, LandmarkSettings } from './landmarks'
 import { BUSY_STATUSES, OverpassError, fetchTrackFeatures } from './overpass'
@@ -61,8 +62,10 @@ function publish(tracks: readonly Track[], settings: LandmarkSettings, message: 
     const list = features[track.id]
     const built = list ? buildLandmarks(list, trackPathOf(track), { ...settings, maxCount: LANDMARK_DENSITY_COUNTS[settings.density] }) : []
     // the records of the outing come from the track itself: they are there before OpenStreetMap answers, and without it
+    // (« Records de la sortie » off: none, their stops with them, and nothing is deleted)
     const dismissed = new Set(settings.dismissedIds)
-    const all = [...built, ...recordLandmarks(track, built).filter((r) => !dismissed.has(r.id))].sort((a, b) => a.alongM - b.alongM || b.priority - a.priority)
+    const records = settings.records ? recordLandmarks(track, built).filter((r) => !dismissed.has(r.id)) : []
+    const all = [...built, ...records].sort((a, b) => a.alongM - b.alongM || b.priority - a.priority)
     if (!list && all.length === 0) continue
     const split = splitHidden(withRank(all, settings.rank), settings.hiddenIds)
     landmarks[track.id] = split.shown
@@ -132,6 +135,12 @@ export function syncLandmarks(
   }
   if (failed.size === 0) message = null
   publish(tracks, settings, message)
+}
+
+/** « Recalculer les records »: the records of the tracks read their points again and are published again, now. */
+export function refreshRecords(): void {
+  forgetRecords(latest.tracks)
+  publish(latest.tracks, latest.settings, useLandmarkStore.getState().message)
 }
 
 /** Back to idle: cancel the requests, forget the features, remove the labels (disable, no track, tests). */

@@ -2259,7 +2259,15 @@ it, know at what time you will pass each point, where the sun will be and what t
   least 8 km/h), `highest` (not within 200 m of the start; `recordLandmarks` also drops it when a summit landmark is within
   `RECORD_SUMMIT_M` = 200 m) and `lowest` (range ≥ 100 m, not within 200 m of an end), `fastestKm` / `slowestKm` (whole
   kilometres as the kilometre markers count them, at least two, not when the fastest is inside the fastest descent),
-  `longestClimb` (from two climbs of `climbsOf`), `maxHeartRate` / `maxPower` (best 30 s mean). Nothing under 1 km, and
+  `longestClimb` (from two climbs of `climbsOf`), `maxHeartRate` / `maxPower` (best 30 s mean), and on flights only
+  `bestThermal` (best climb rate held 25 s inside a `Track.flights` stretch, ≥ 1 m/s so ridge lift is not a thermal, at the
+  middle of that window, « +3,2 m/s ») and `highestAboveGround` (the greatest height above the ground of a flight, which
+  `detectFlights` measures against the ground of the import and keeps as `Flight.maxHeightM` / `maxHeightAtM`, moved by the
+  tools with the flight; absent on flights saved before). The records of the ground (steepest climb, fastest descent, both
+  kilometres, longest climb) never read a flight: the cells within `SEAM_CELLS` of a flight are skipped like a segment join
+  and kilometres or climbs that overlap one are left out, so a track flown from start to end has none; highest, lowest,
+  heart rate and power do not care. `recordsOf` caches per list of points and per `flights` list (flights set later
+  recompute), `forgetRecords` empties it. Nothing under 1 km, and
   only what the points allow (no elevation: no climb, descent or altitude; no time: no speed or kilometre). Elevations are
   those of the climbs (20 m grid, median of five against spikes, 120 m moving average); times count moving time only (a
   pause or a recording gap is not a slow kilometre) and a stretch implying more than 150 km/h is a GPS jump, never a
@@ -2270,8 +2278,8 @@ it, know at what time you will pass each point, where the sun will be and what t
   adds them to the list of every track, before the ranking and the hidden ones, even before OpenStreetMap answers or when
   it fails. They are therefore Auto / Toujours / Jamais, ranked, dismissed by « Garder les « Toujours » » and listed in
   the window of the map like the others, with the badge « Record » and no distance to the track. Their 3D label is a
-  `'poi'` label with the `trophee` pictogram (`POI_ICONS`); `stopCandidates` offers three of them as stops
-  (`AUTO_STOP_RECORDS`: steepest climb, highest point, fastest descent, so a film of N stages has at most 3 N more stops; the
+  `'poi'` label with the `trophee` pictogram (`POI_ICONS`); `stopCandidates` offers four of them as stops
+  (`AUTO_STOP_RECORDS`: steepest climb, highest point, fastest descent, best thermal, so a film of N stages has at most 4 N more stops; the
   others stay labels, and « Arrêt » on a row adds a stop to any), except for the pauses of the films saved with the former
   pacing (`autoStops` 'rythme'), the stop's label being the record's text. A landmark is copied with `withLandmarkFields`
   (ranking, stages), never by a spread, which would freeze the `name` / `text` getters in the language of the moment. A segment
@@ -2279,6 +2287,17 @@ it, know at what time you will pass each point, where the sun will be and what t
   OpenStreetMap credit for real OSM landmarks: records alone do not need it. The hint under the list (`landmarks.hintRecords`)
   says what a record is. To add a kind: `RECORD_KINDS`, `detectRecords`, `recordValueText`, the `landmarks.record.<kind>`
   name in the five languages, a test in `records.test.ts`.
+  « Records de la sortie » is `LandmarkSettings.records` (default on; old projects get it from `withLandmarkDefaults`): one
+  switch at the top of the records part of the panel. `publish` (`osm/store.ts`) lists no record when it is off, so
+  their labels and the generated automatic stops (derived from the landmarks shown) go with it, and nothing is deleted
+  (the ids in `hiddenIds`, `pinnedIds`, `rank` stay); the stops a film wrote out (`autoStops: false`) are its own and stay.
+  « Recalculer les records » (`recomputeRecords`, `ui/LandmarkPanel.tsx`) calls `refreshRecords` (`forgetRecords` then
+  `publish`), then `alignRecordStops` (`film/assemble.ts`) on the film in one `editFilm` step: the stops `autoStops` wrote
+  out for a record (id `auto-…`, source `record:…`) whose record is gone, has moved or is no longer an automatic-stop kind
+  are removed, the record stops the rules give now are added unless a stop is within `autoStopGroupM`, and everything else
+  (the user's stops, the landmarks') is untouched; a film that generates its stops has nothing to align. The message counts
+  the records that went and came (store before / after plus the stops), says « Rien n'a changé » otherwise, and offers
+  « Annuler » only when the film changed.
 - **Water points**: landmark type `waterPoint` (Overpass `amenity=drinking_water`, named "Eau potable" (drinking
   water) when it has no name, and named `natural=spring`), off by default for the film and the labels; an old project
   receives the type through `withLandmarkDefaults`.
