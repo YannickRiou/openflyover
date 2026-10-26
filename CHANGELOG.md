@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The sources at the end of the film no longer cover the profile in « Cinéma »**: without a closing card, the « Sources » block sat on the profile strip above the bottom bar, in every format and most of all in vertical (9:16), where the sentences take more lines. It now stands just above the profile. The other styles already kept clear of it.
+
 ## 4.5.0 (October 2026)
 
 - **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.4.1.
