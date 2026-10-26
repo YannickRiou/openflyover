@@ -545,6 +545,9 @@ pointer (`appearance.css`).
   wraps differently while the film plays, so the view never resizes. The recorded clock time only with the « Réglages »
   preference. Tool buttons are icons only (tooltip and `aria-label`), « Options » included. During an export the
   timeline keeps the playback it had (it does not follow the export's playhead, so it does not re-render per frame).
+  While a film plays the timeline does not render at each frame either: it selects only `playing` and `speed`; what
+  follows the playhead (readouts, playhead, flown part of the profile, ruler slider, ◀ ◇ ▶ of `KeyGroup`) selects the
+  playback itself, and the scrolling that follows the playhead runs from a store subscription.
 - **Status bar** (24 px, below the timeline): map state of the current view (`ui/mapStatus.ts`, pure): a ring and
   "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
   99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en

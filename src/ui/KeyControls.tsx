@@ -109,9 +109,18 @@ function textsOf(target: KeyTarget, on: boolean): Texts {
   }
 }
 
+/** The states of ◀ ◇ ▶ at the playhead, or at `fixedS`: the selectors change only when one does, not at each frame. */
+function useKeyState(clock: FilmClock, keys: readonly { timeS: number }[], fixedS?: number) {
+  const timeOf = (s: AppState) => fixedS ?? Math.min(clock.totalTime(), s.playback.timeS ?? clock.timeAtProgress(s.playback.progress))
+  const prev = useAppStore((s) => keyState(keys, timeOf(s)).prev)
+  const next = useAppStore((s) => keyState(keys, timeOf(s)).next)
+  const on = useAppStore((s) => keyState(keys, timeOf(s)).on)
+  return { prev, next, on }
+}
+
 /**
- * ◀ ◇ ▶ of `target` at film time `timeS` (the playhead). The caller says where the playhead is, so that a timeline
- * which keeps still while the export moves it does not render again. `tipSide`: where the tips open.
+ * ◀ ◇ ▶ of `target` at the playhead, which it follows itself. `timeS`: a film time to keep instead, so that a timeline
+ * which keeps still while the export moves the playhead does not follow it. `tipSide`: where the tips open.
  */
 export function KeyGroup({
   target,
@@ -123,7 +132,7 @@ export function KeyGroup({
 }: {
   target: KeyTarget
   clock: FilmClock
-  timeS: number
+  timeS?: number
   /** no track to put a key on */
   disabled?: boolean
   tipSide?: 'top' | 'bottom'
@@ -131,8 +140,8 @@ export function KeyGroup({
 }) {
   useT()
   const keys = keysOf(clock, target)
-  const { prev, next, on } = keyState(keys, timeS)
-  return <KeyButtons target={target} keys={keys} clock={clock} state={{ prev, next, on }} disabled={disabled} tipSide={tipSide} look={look} />
+  const state = useKeyState(clock, keys, timeS)
+  return <KeyButtons target={target} keys={keys} clock={clock} state={state} disabled={disabled} tipSide={tipSide} look={look} />
 }
 
 function KeyButtons({
@@ -189,13 +198,10 @@ export function PanelKeys({ target }: { target: KeyTarget }) {
   const clock = useFilmClock()
   const track = useFilmTrack()
   const keys = keysOf(clock, target)
-  const timeOf = (s: AppState) => Math.min(clock.totalTime(), s.playback.timeS ?? clock.timeAtProgress(s.playback.progress))
-  const prev = useAppStore((s) => keyState(keys, timeOf(s)).prev)
-  const next = useAppStore((s) => keyState(keys, timeOf(s)).next)
-  const on = useAppStore((s) => keyState(keys, timeOf(s)).on)
+  const state = useKeyState(clock, keys)
   return (
     <div className="mt-0.5 flex justify-center">
-      <KeyButtons target={target} keys={keys} clock={clock} state={{ prev, next, on }} disabled={!track} tipSide="bottom" look="panel" />
+      <KeyButtons target={target} keys={keys} clock={clock} state={state} disabled={!track} tipSide="bottom" look="panel" />
     </div>
   )
 }
