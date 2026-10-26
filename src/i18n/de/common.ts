@@ -7,6 +7,7 @@ const messages: Messages['common'] = {
   colorHex: 'Farbcode (Hex)',
   undo: 'Rückgängig',
   retry: 'Erneut versuchen',
+  languageLoadFailed: 'Diese Sprache kann gerade nicht geladen werden.',
   cancel: 'Abbrechen',
   'modified.srOnly': ' (geändert)',
   'modified.resetAria': 'Auf Standardeinstellungen zurücksetzen: {label}',

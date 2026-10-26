@@ -125,12 +125,13 @@ full customization through a single project document, WebCodecs video export, Ta
 ## Loading (bundle splitting)
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
-2.5 MB, 756 kB gzip over 21 files in 4.2.1, stylesheet included (the five languages 812 kB, the app 434 kB, `primitives`
-291 kB, React 219 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 790 kB
+1.9 MB, 559 kB gzip over 22 files in 4.5.0, stylesheet included (the app 441 kB, `primitives` 291 kB, React 219 kB,
+French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 580 kB
 gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it.
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
-`scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). The language catalogs (812 kB) make
-the build print a chunk-size warning; loading only the language in use is a known lead.
+`scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). Only French (the
+reference, the fallback of a missing message) is in the first screen; English, Spanish, Italian and German are one chunk each
+(~55 kB gzip), loaded by `loadLanguage` (see "Internationalisation").
 The rest arrives through dynamic `import()` calls, each in its own file:
 
 - right after the first paint: the 3D scene (`FlyoverCanvas`, three.js + fiber, `React.lazy` in `Stage`) and the
@@ -731,9 +732,15 @@ The interface and the texts drawn into the films and posters exist in **French**
   - `useT()`: `t` for a component. It renders again when the language changes and returns a new function then, so a `useMemo`
     or `useEffect` that lists `t` among its dependencies follows the language (but a toast raised from an effect keyed on
     something else must not list `t`: it calls the module-level `t`, which reads the language at that moment).
+  - `loadLanguage(code)` fetches a catalog (French is bundled, the others are `import()`ed, one chunk each, in the service
+    worker's precache as every build file). `setLanguage(code)` applies at once when the catalog is in memory, otherwise once it is
+    fetched (the last language asked for wins); `main.tsx` waits for the language of the preferences before the first render, so no
+    text shows in the wrong language, and starts in French if the chunk cannot be fetched. Tests preload every catalog
+    (`i18n/testSetup.ts`).
   - `useLanguage()`, `getLanguage()`, `setLanguage()`, `subscribeLanguage()`, `currentLocale()` (for `Intl` and `localeCompare`);
     `template(key)` (the message with its placeholders unfilled); `withLanguage(code, fn)` words something in another language
-    without telling the components (the diagnostic report stays French); `tRich(key, { link: <a/> })` (`rich.tsx`) for a message
+    without telling the components (the diagnostic report stays French; `code` must be French, the current language or one
+    `loadLanguage` has fetched, otherwise the text is in French); `tRich(key, { link: <a/> })` (`rich.tsx`) for a message
     with React nodes in it.
   - Non-React code (film overlay, poster, export, import errors, film model) calls `t` directly: the current language lives in
     this module, set from the preferences.
