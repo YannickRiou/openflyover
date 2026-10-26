@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import manifestText from '../../public/manifest.webmanifest?raw'
+import workerSource from './serviceWorker.js?raw'
 import { pickerAccept } from './platform'
-import { sharedFileName, shouldRegisterServiceWorker, UPDATE_CHECK_MS, UPDATE_MIN_GAP_MS, wantsIosInstallHint, watchForUpdates } from './webApp'
+import {
+  afterLoadAndIdle,
+  REGISTER_IDLE_MS,
+  sharedFileName,
+  shouldRegisterServiceWorker,
+  UPDATE_CHECK_MS,
+  UPDATE_MIN_GAP_MS,
+  wantsIosInstallHint,
+  watchForUpdates,
+} from './webApp'
 
 /** files of public/, as `icons/icon-192.png` */
 const PUBLIC_FILES = Object.keys(import.meta.glob('../../public/**/*.{png,svg}')).map((path) => path.replace('../../public/', ''))
@@ -135,5 +145,102 @@ describe('watchForUpdates', () => {
     show('visible')
     expect(update).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
+  })
+})
+
+describe('afterLoadAndIdle', () => {
+  function fakeWindow(readyState: string, idle: boolean) {
+    const listeners: Record<string, () => void> = {}
+    const idleCallbacks: { run: () => void; timeout: number }[] = []
+    const timers: { run: () => void; ms: number }[] = []
+    const win = {
+      document: { readyState },
+      addEventListener: (type: string, listener: () => void) => void (listeners[type] = listener),
+      setTimeout: (run: () => void, ms: number) => void timers.push({ run, ms }),
+      ...(idle ? { requestIdleCallback: (run: () => void, o: { timeout: number }) => void idleCallbacks.push({ run, timeout: o.timeout }) } : {}),
+    }
+    return { win, listeners, idleCallbacks, timers }
+  }
+
+  it('waits for the load event, then for an idle moment, before running', () => {
+    const run = vi.fn()
+    const { win, listeners, idleCallbacks } = fakeWindow('loading', true)
+    afterLoadAndIdle(win, run)
+    expect(idleCallbacks).toHaveLength(0)
+    listeners.load()
+    expect(run).not.toHaveBeenCalled()
+    expect(idleCallbacks[0].timeout).toBe(REGISTER_IDLE_MS)
+    idleCallbacks[0].run()
+    expect(run).toHaveBeenCalledTimes(1)
+  })
+
+  it('goes straight to the idle moment when the page is already loaded', () => {
+    const { win, listeners, idleCallbacks } = fakeWindow('complete', true)
+    afterLoadAndIdle(win, vi.fn())
+    expect(listeners.load).toBeUndefined()
+    expect(idleCallbacks).toHaveLength(1)
+  })
+
+  it('uses a timeout where requestIdleCallback is missing', () => {
+    const run = vi.fn()
+    const { win, listeners, timers } = fakeWindow('loading', false)
+    afterLoadAndIdle(win, run)
+    listeners.load()
+    expect(timers[0].ms).toBe(REGISTER_IDLE_MS)
+    timers[0].run()
+    expect(run).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('service worker', () => {
+  const PRECACHE = ['./', 'assets/index-DJmkmaKt.js', 'assets/events-e51d7528.esm-GVOHBRHr.js', 'assets/ExportPanel-BWYKVeN-.js', 'assets/index-jTAbkCA5.css', 'favicon.svg', 'fonts/fraunces-variable-latin.woff2', 'manifest.webmanifest']
+
+  /** the worker evaluated against a fake `self`, with the caches it holds and the listeners it registers */
+  function load(cacheNames: string[] = []) {
+    const listeners: Record<string, (event: unknown) => void> = {}
+    const added: Request[] = []
+    const deleted: string[] = []
+    const self = {
+      registration: { scope: 'https://example.org/openflyover/' },
+      addEventListener: (type: string, listener: (event: unknown) => void) => void (listeners[type] = listener),
+      skipWaiting: vi.fn(),
+      clients: { claim: vi.fn(() => Promise.resolve()) },
+    }
+    const caches = {
+      open: () => Promise.resolve({ addAll: (requests: Request[]) => Promise.resolve(void added.push(...requests)) }),
+      keys: () => Promise.resolve(cacheNames),
+      delete: (name: string) => Promise.resolve(void deleted.push(name)),
+    }
+    const source = workerSource.replace('/* PRECACHE */ []', JSON.stringify(PRECACHE)).replace("/* VERSION */ 'dev'", "'v2'")
+    new Function('self', 'caches', source)(self, caches)
+    const run = async (type: string, data?: unknown) => {
+      let pending: Promise<unknown> = Promise.resolve()
+      listeners[type]({ data, waitUntil: (p: Promise<unknown>) => void (pending = p) })
+      await pending
+    }
+    return { self, added, deleted, run }
+  }
+
+  it('precaches every file, a fingerprinted one from the HTTP cache, the others always from the network', async () => {
+    const { added, run } = load()
+    await run('install')
+    const mode = Object.fromEntries(added.map((r) => [r.url.replace('https://example.org/openflyover/', ''), r.cache]))
+    expect(Object.keys(mode)).toEqual(['', ...PRECACHE.slice(1)])
+    expect(mode['assets/index-DJmkmaKt.js']).toBe('default')
+    expect(mode['assets/events-e51d7528.esm-GVOHBRHr.js']).toBe('default')
+    expect(mode['assets/ExportPanel-BWYKVeN-.js']).toBe('default')
+    expect(mode['assets/index-jTAbkCA5.css']).toBe('default')
+    for (const name of ['', 'favicon.svg', 'fonts/fraunces-variable-latin.woff2', 'manifest.webmanifest']) expect(mode[name]).toBe('reload')
+  })
+
+  it('an update still arrives the same way: the page accepts, the worker takes over and drops the older shell caches only', async () => {
+    const { self, deleted, run } = load(['openflyover-shell-v1', 'openflyover-shell-v2', 'openflyover-sky-s1', 'openflyover-sky-s0', 'openflyover-tiles-v1:x', 'openflyover-projects-v1'])
+    await run('message', { type: 'OTHER' })
+    expect(self.skipWaiting).not.toHaveBeenCalled()
+    await run('message', { type: 'SKIP_WAITING' })
+    expect(self.skipWaiting).toHaveBeenCalledTimes(1)
+    await run('activate')
+    expect(deleted).toEqual(['openflyover-shell-v1', 'openflyover-sky-s1', 'openflyover-sky-s0'])
+    expect(self.clients.claim).toHaveBeenCalledTimes(1)
   })
 })

@@ -4035,6 +4035,12 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
   - precached at install, in `openflyover-shell-<hash of the build>`: the page (`./`), every build file (JS, CSS) and
     every public file except `oauth-callback.html` (fonts, sample, icons, manifest): ~3.7 MB, 50-odd files. The whole
     app works offline, the 3D scene and the export included;
+  - registered once the page has loaded and the browser is idle (`afterLoadAndIdle` in `webApp.ts`: `load`, then
+    `requestIdleCallback`, 3 s at the latest, a timeout where it is missing), so the download of the build does not compete
+    with the first screen; a fingerprinted file (`assets/<name>-<8-character hash>.<ext>`, `FINGERPRINTED`) is fetched
+    with the default cache mode, so the files the page has just loaded come from the HTTP cache instead of being
+    downloaded again; the page, the worker and the public files (no fingerprint) keep `cache: 'reload'`, so an update
+    always reaches them. The list is generated at build time (`vite.config.ts`), whatever the chunk names;
   - cached on first use, in `openflyover-sky-<hash of their content>`: the sky and cloud textures (`atmosphere/`,
     `clouds/`, ~12 MB), downloaded only when the atmosphere is first shown, not at install over a mobile connection;
     the cache name follows their content, so it survives app updates (the textures change with the Takram packages
