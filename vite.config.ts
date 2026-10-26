@@ -139,6 +139,8 @@ export default defineConfig({
     // one isolated worker thread per file: ~6 s faster than forked processes (105 files)
     pool: 'threads',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // every catalog in memory, so that a test can setLanguage('en') at once (the app fetches them on demand)
+    setupFiles: ['src/i18n/testSetup.ts'],
     // the camera replays (several seconds alone) ran past the default 5 s on a loaded CI runner, under coverage
     testTimeout: 30_000,
     // fonts.test.ts reads this stylesheet with ?raw (other CSS stays stubbed out in tests)

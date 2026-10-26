@@ -155,3 +155,63 @@ describe('detectLanguage', () => {
     expect(detectLanguage(undefined)).toBe('fr')
   })
 })
+
+describe('a message missing from a language', () => {
+  it('is read in French', () => {
+    const film = en.film as Record<string, unknown>
+    const written = film.defaultHold
+    delete film.defaultHold
+    try {
+      setLanguage('en')
+      expect(t('film.defaultHold', { n: 4 })).toBe('Arrêt 4')
+    } finally {
+      film.defaultHold = written
+    }
+  })
+})
+
+describe('loading the languages on demand', () => {
+  // a fresh module: only French in memory, as at start-up
+  const fresh = async () => {
+    vi.resetModules()
+    return import('./index')
+  }
+
+  it('keeps the language until the catalog is in, then switches once', async () => {
+    const i18n = await fresh()
+    const listener = vi.fn()
+    i18n.subscribeLanguage(listener)
+    i18n.setLanguage('en')
+    expect(i18n.getLanguage()).toBe('fr')
+    expect(listener).not.toHaveBeenCalled()
+    await i18n.loadLanguage('en')
+    await Promise.resolve()
+    expect(i18n.getLanguage()).toBe('en')
+    expect(i18n.t('film.defaultHold', { n: 1 })).toBe('Hold 1')
+    expect(listener).toHaveBeenCalledTimes(1)
+  })
+
+  it('applies the last language asked for, not the last one to arrive', async () => {
+    const i18n = await fresh()
+    i18n.setLanguage('de')
+    i18n.setLanguage('en')
+    i18n.setLanguage('fr')
+    await Promise.all([i18n.loadLanguage('de'), i18n.loadLanguage('en')])
+    await Promise.resolve()
+    expect(i18n.getLanguage()).toBe('fr')
+  })
+
+  it('is ready at once for French, the language of the first screen', async () => {
+    const i18n = await fresh()
+    await i18n.loadLanguage('fr')
+    expect(i18n.t('film.defaultHold', { n: 1 })).toBe('Arrêt 1')
+  })
+
+  it('words a text in a language once it is loaded, in French before', async () => {
+    const i18n = await fresh()
+    expect(i18n.withLanguage('de', () => i18n.t('film.defaultHold', { n: 2 }))).toBe('Arrêt 2')
+    await i18n.loadLanguage('de')
+    expect(i18n.withLanguage('de', () => i18n.t('film.defaultHold', { n: 2 }))).toBe('Stopp 2')
+    expect(i18n.getLanguage()).toBe('fr')
+  })
+})

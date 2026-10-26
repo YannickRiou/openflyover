@@ -5,13 +5,14 @@ import './ui/theme.css'
 import './index.css'
 import './ui/appearance.css'
 import App from './App.tsx'
+import { loadLanguage } from './i18n'
 import { installExportGuard, reportInterruptedExport } from './export/guard'
 import { installExportHistory } from './export/historyStore'
 import { installOfflineTiles } from './offline/store'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 import { installExternalLinks } from './platform/externalLinks'
 import { installWebApp } from './platform/webApp'
-import { installAppearance, installLanguage } from './ui/preferences'
+import { installAppearance, installLanguage, usePreferences } from './ui/preferences'
 import { openFiles } from './ui/projectActions'
 
 // theme and accent of the stored preferences, before anything is drawn
@@ -29,10 +30,16 @@ installExportGuard()
 // website: service worker, update prompt, iOS install hint, tracks shared to the installed app
 installWebApp((files) => void openFiles(files))
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </StrictMode>,
-)
+// first render once the catalog of the language is in (French is bundled; another is a small chunk, precached by the
+// service worker): no text in the wrong language, no missing one. If it cannot be fetched the app starts in French.
+void loadLanguage(usePreferences.getState().language)
+  .catch(() => undefined)
+  .then(() =>
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </StrictMode>,
+    ),
+  )

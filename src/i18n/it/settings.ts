@@ -60,7 +60,7 @@ const messages: Messages['settings'] = {
   'preferences.preview.auto': 'Auto',
   'preferences.preview.light': 'Leggera',
   'preferences.preview.full': 'Completa',
-  'preferences.preview.hint': 'Leggera: meno pixel e nuvole più grossolane nell’anteprima. Auto la sceglie quando l’anteprima scende sotto 30 fotogrammi al secondo durante la riproduzione. I filmati esportati non cambiano.',
+  'preferences.preview.hint': 'Leggera: meno pixel, nuvole più grossolane, ombre meno nitide e meno alberi in lontananza nell’anteprima. Auto la sceglie quando l’anteprima scende sotto 30 fotogrammi al secondo durante la riproduzione. I filmati esportati non cambiano.',
   'preferences.preview.measuredSlow': 'Misurato su questo dispositivo: l’anteprima è leggera per questa sessione.',
   'preferences.timeline.snap': 'La calamita si aggancia a',
   'preferences.timeline.snapHint': 'Alt inverte la calamita durante il trascinamento.',

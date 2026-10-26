@@ -5,11 +5,12 @@
  * once at start-up. Parsing and defaults: `parsePreferences` in `shell.ts`.
  */
 import { create } from 'zustand'
-import { detectLanguage, setLanguage } from '../i18n'
+import { detectLanguage, getLanguage, loadLanguage, setLanguage, t } from '../i18n'
 import { getPlatform } from '../platform'
 import { applyAppearance } from './appearance'
 import { DEFAULT_PREFERENCES, parsePreferences } from './shell'
 import type { Preferences } from './shell'
+import { showToast } from './toast'
 
 export const PREFERENCES_KEY = 'openflyover.preferences.v1'
 
@@ -46,7 +47,8 @@ function hasStoredLanguage(): boolean {
 /**
  * Put the language of the preferences on the interface now and whenever it changes (`<html lang>` too). First run, with
  * no choice stored: the browser's language when the app has it, French otherwise; it is only remembered once
- * the person picks one. Returns the function that stops it.
+ * the person picks one. A language whose catalog cannot be fetched (offline, chunk missing) is not kept: the preference
+ * goes back to the language shown, with a message. Returns the function that stops it.
  */
 export function installLanguage(root: HTMLElement = document.documentElement): () => void {
   if (!hasStoredLanguage()) usePreferences.setState({ language: detectLanguage(navigator.languages ?? [navigator.language]) })
@@ -57,7 +59,14 @@ export function installLanguage(root: HTMLElement = document.documentElement): (
   }
   apply()
   return usePreferences.subscribe((state, previous) => {
-    if (state.language !== previous.language) apply()
+    if (state.language === previous.language) return
+    apply()
+    const { language } = state
+    loadLanguage(language).catch(() => {
+      if (usePreferences.getState().language !== language) return
+      setPreferences({ language: getLanguage() })
+      showToast({ kind: 'error', text: t('common.languageLoadFailed') })
+    })
   })
 }
 

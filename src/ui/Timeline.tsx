@@ -265,6 +265,131 @@ const clockOfFilm = (source: FilmClockFor, input: FilmClockInput, film: Film) =>
     markerKeys: film.markerKeys,
   })
 
+/**
+ * The parts of the timeline that follow the playhead select the playback themselves: the timeline does not render at
+ * each frame of a film that plays, they do. `frozen`: the playback it keeps while the export moves the playhead.
+ */
+function useShownPlayback(frozen: Playback | null): Playback {
+  return useAppStore((s) => frozen ?? s.playback)
+}
+
+/** The film time of the playhead. */
+const playheadOf = (playback: Playback, clock: FilmClock) => Math.min(playback.timeS ?? clock.timeAtProgress(playback.progress), clock.totalTime())
+
+/** The time, the distance with the elevation, and the recorded time of the bar. */
+function PlayheadReadouts({
+  frozen,
+  clock,
+  path,
+  profile,
+  lengthM,
+  recorded,
+  frameTimecode,
+  fps,
+  centred,
+  collapsed,
+}: {
+  frozen: Playback | null
+  clock: FilmClock
+  path: ReturnType<typeof buildTrackPath>
+  profile: ElevationProfile | undefined
+  lengthM: number
+  /** the recorded time of the track is asked for and known */
+  recorded: boolean
+  frameTimecode: boolean
+  fps: number
+  centred: boolean
+  collapsed: boolean
+}) {
+  const t = useT()
+  const playback = useShownPlayback(frozen)
+  const playheadS = playheadOf(playback, clock)
+  const ele = profile && path.count > 0 ? samplePath(path, playback.progress * path.lengthM).ele : undefined
+  const time = recorded && path.count > 0 ? recordedTimeAt(path, playback.progress * path.lengthM) : undefined
+  return (
+    <>
+      {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
+      <span className={TIME}>
+        <strong className="text-accent-light" data-testid="timeline-time">{frameTimecode ? formatFrameTimecode(playheadS, fps) : formatTimecode(playheadS, true)}</strong> / {frameTimecode ? formatFrameTimecode(clock.totalTime(), fps) : formatTimecode(clock.totalTime())}
+      </span>
+      <span className={`${READOUT} ${centred ? 'hidden' : collapsed ? '@max-[1200px]/film-tl:hidden phone-any:hidden' : '@max-[1200px]/film-tl:hidden'}`}>
+        <span className="inline-block text-right" style={{ minWidth: `${formatDistance(lengthM).length + 1}ch` }}>
+          {formatDistance(playback.progress * lengthM)}
+        </span>{' '}
+        / {formatDistance(lengthM)}
+        {ele !== undefined && profile && (
+          <>
+            {' · '}
+            <span className="sr-only">{t('timeline.bar.elevation')}</span>
+            <span className="inline-block text-right" style={{ minWidth: `${formatNumber(profile.maxEle).length + 1}ch` }}>
+              {formatNumber(ele)}
+            </span>{' '}
+            m
+          </>
+        )}
+      </span>
+      {/* apart from the readout, which a narrow timeline hides: the clock was asked for in « Réglages » */}
+      {time !== undefined && (
+        <span className={`${READOUT} ${centred ? 'hidden' : collapsed ? 'phone-any:hidden' : ''}`}>
+          <span className="sr-only">{t('timeline.bar.recordedTime')}</span>
+          <time className="inline-block min-w-[7ch] text-right" data-testid="timeline-clock" dateTime={new Date(time).toISOString()}>
+            {formatClock(time)}
+          </time>
+        </span>
+      )}
+    </>
+  )
+}
+
+/** The playhead: a line across the lanes. */
+function Playhead({ frozen, clock, pad, pxPerS, centred }: { frozen: Playback | null; clock: FilmClock; pad: number; pxPerS: number; centred: boolean }) {
+  const playheadS = playheadOf(useShownPlayback(frozen), clock)
+  return <div className={centred ? 'hidden' : PLAYHEAD} data-testid="timeline-playhead" style={{ left: pad + playheadS * pxPerS }} aria-hidden="true" />
+}
+
+/** The part of the profile the playhead has flown, as a clip. */
+function FlownClip({ frozen, clock, id, flightStart }: { frozen: Playback | null; clock: FilmClock; id: string; flightStart: number }) {
+  const playheadS = playheadOf(useShownPlayback(frozen), clock)
+  return (
+    <clipPath id={id}>
+      <rect width={Math.max(0, playheadS - flightStart)} height={PROFILE_HEIGHT} />
+    </clipPath>
+  )
+}
+
+/** The ruler as a slider on the film time. Its `children` are the timeline's: they do not render with the playhead. */
+function RulerSlider({
+  frozen,
+  clock,
+  className,
+  onKeyDown,
+  children,
+}: {
+  frozen: Playback | null
+  clock: FilmClock
+  className: string
+  onKeyDown(e: KeyboardEvent<HTMLDivElement>): void
+  children: ReactNode
+}) {
+  const t = useT()
+  const playheadS = playheadOf(useShownPlayback(frozen), clock)
+  return (
+    <div
+      className={className}
+      role="slider"
+      tabIndex={0}
+      aria-label={t('timeline.ruler.label')}
+      aria-valuemin={0}
+      aria-valuemax={Math.round(clock.totalTime())}
+      aria-valuenow={Math.round(playheadS)}
+      aria-valuetext={t('timeline.ruler.valueText', { time: formatFilmTime(playheadS), total: formatFilmTime(clock.totalTime()) })}
+      onKeyDown={onKeyDown}
+    >
+      {children}
+    </div>
+  )
+}
+
 /** Closed SVG area under the profile at abscissas `xs`, one sub-path per run of known elevations. */
 function profileAreaPath(profile: ElevationProfile, xs: readonly number[]): string {
   const { ele, minEle, maxEle } = profile
@@ -409,11 +534,16 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const setWorkArea = useAppStore((s) => s.setWorkArea)
   // the export moves the playhead at every frame: the timeline keeps the playback it had (it would render with each one)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
-  const livePlayback = useAppStore((s) => (exporting ? null : s.playback))
   const [frozenPlayback, setFrozenPlayback] = useState<Playback | null>(null)
-  if (livePlayback && frozenPlayback) setFrozenPlayback(null)
-  else if (!livePlayback && !frozenPlayback) setFrozenPlayback(useAppStore.getState().playback)
-  const { playing, progress, timeS: storedTimeS, speed } = livePlayback ?? frozenPlayback ?? useAppStore.getState().playback
+  if (!exporting && frozenPlayback) setFrozenPlayback(null)
+  else if (exporting && !frozenPlayback) setFrozenPlayback(useAppStore.getState().playback)
+  // not the playhead: it moves at every frame, and only what shows it follows (`useShownPlayback`)
+  const playing = useAppStore((s) => (exporting && frozenPlayback ? frozenPlayback.playing : s.playback.playing))
+  const speed = useAppStore((s) => (exporting && frozenPlayback ? frozenPlayback.speed : s.playback.speed))
+  /** the film time the keys are given while the export moves the playhead (they follow it themselves otherwise) */
+  const frozenS = frozenPlayback ? playheadOf(frozenPlayback, clock) : undefined
+  /** where the playhead is now, for what acts on it (the keys, the drops, the zoom) */
+  const shownPlayback = () => frozenPlayback ?? useAppStore.getState().playback
   const timelineClock = usePreferences((s) => s.timelineClock)
   const magnet = usePreferences((s) => s.timelineMagnet)
   const snapOn = usePreferences((s) => s.timelineSnap)
@@ -585,24 +715,34 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
 
   // the scale follows the committed film: it does not change while an edge is dragged
   const pxPerS = fitPxPerS(Math.max(0, width - 2 * PAD_PX), clock.totalTime()) * zoom
-  const playheadS = Math.min(storedTimeS ?? clock.timeAtProgress(progress), clock.totalTime())
+  const playheadNow = () => playheadOf(shownPlayback(), clock)
   const workSpan = clampWorkArea(workArea, clock.totalTime())
-  // centred: the lanes scroll so that the playhead time sits in the middle (after every render: time, zoom, width)
+  // centred: the lanes scroll so that the playhead time sits in the middle; zoomed in, they follow the playhead while the
+  // film plays (it never leaves the view). After every render (zoom, width) and at every frame, with no render of the timeline
+  const followRef = useRef(() => {})
   useLayoutEffect(() => {
-    const el = scrollerRef.current
-    if (!centred || !el) return
-    const target = centredScrollLeft(playheadS, pxPerS)
-    if (Math.abs(el.scrollLeft - target) > 0.5) el.scrollLeft = target
-    syncedScrollRef.current = el.scrollLeft
+    followRef.current = () => {
+      const el = scrollerRef.current
+      if (!el) return
+      const playheadS = playheadNow()
+      if (centred) {
+        const target = centredScrollLeft(playheadS, pxPerS)
+        if (Math.abs(el.scrollLeft - target) > 0.5) el.scrollLeft = target
+        syncedScrollRef.current = el.scrollLeft
+      } else if (playing && !gestureRef.current) {
+        const next = followScroll(PAD_PX + playheadS * pxPerS, el.scrollLeft, el.clientWidth, el.scrollWidth)
+        if (next !== el.scrollLeft) el.scrollLeft = next
+      }
+    }
+    followRef.current()
   })
-
-  // zoomed in, the lanes follow the playhead while the film plays: it never leaves the view
-  useLayoutEffect(() => {
-    const el = scrollerRef.current
-    if (centred || !el || !playing || gestureRef.current) return
-    const next = followScroll(PAD_PX + playheadS * pxPerS, el.scrollLeft, el.clientWidth, el.scrollWidth)
-    if (next !== el.scrollLeft) el.scrollLeft = next
-  })
+  useEffect(
+    () =>
+      useAppStore.subscribe((state, prev) => {
+        if (state.playback.progress !== prev.playback.progress || state.playback.timeS !== prev.playback.timeS) followRef.current()
+      }),
+    [],
+  )
 
   // Z zooms the timeline to the selected block (or the work area, or the whole film)
   const zoomSelectionRef = useRef<() => void>(() => {})
@@ -659,9 +799,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const pad = centred ? width / 2 : PAD_PX
   const xOf = (t: number) => pad + t * pxPerS
   const contentWidth = timelineContentWidth(width, total, pxPerS, pad)
-  const ele = profile && path.count > 0 ? samplePath(path, progress * path.lengthM).ele : undefined
-  // startTime is set as soon as one point has a time: skips the scan of an untimed track
-  const time = timelineClock && track.stats.startTime !== undefined && path.count > 0 ? recordedTimeAt(path, progress * path.lengthM) : undefined
   const freeCandidates = candidates.filter((c) => !stopAt(shownClock.stops, c.atM))
 
   // --- edits -------------------------------------------------------------------------------------------------
@@ -707,7 +844,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     clockOf: (stops: readonly FilmStop[]) => buildFilmClock({ ...input, stops }),
     clockOfSpeeds: (speeds: readonly FilmSpeed[]) => buildFilmClock({ ...input, speeds }),
     lengthM,
-    targets: snapTargetsOn(snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadS, item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }), snapOn),
+    targets: snapTargetsOn(snapTargets(clock, film, candidates.map((c) => c.atM / lengthM), playheadNow(), item, { ticks: rulerTicks(total, pxPerS), blocks: snapBlocks }), snapOn),
     targetsM: candidates.map((c) => c.atM),
     snapS: SNAP_PX / pxPerS,
     releaseS: RELEASE_PX / pxPerS,
@@ -793,7 +930,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       showToast({ kind: 'error', text: unsupported.trim() })
       return
     }
-    const startS = playheadS
+    const startS = playheadNow()
     setReading(true)
     const read: Awaited<ReturnType<typeof readMedia>>[] = []
     const failed: string[] = []
@@ -1208,14 +1345,14 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const steps: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, PageDown: -10, PageUp: 10 }
     if (e.key === 'Home') seek(0)
     else if (e.key === 'End') seek(clock.totalTime())
-    else if (e.key in steps) seek(playheadS + steps[e.key] * (e.shiftKey ? 5 : 1))
+    else if (e.key in steps) seek(playheadNow() + steps[e.key] * (e.shiftKey ? 5 : 1))
     else return
     e.preventDefault()
   }
   const zoomBy = (factor: number) => {
     const el = scrollerRef.current
     // keep the playhead in place
-    const next = zoomAt(zoom, factor, el ? xOf(playheadS) - el.scrollLeft : 0, el?.scrollLeft ?? 0)
+    const next = zoomAt(zoom, factor, el ? xOf(playheadNow()) - el.scrollLeft : 0, el?.scrollLeft ?? 0)
     pendingScrollRef.current = next.scrollLeft
     setZoom(next.zoom)
   }
@@ -1449,35 +1586,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             seek(0)
           }}
         />
-        {/* fixed widths (tabular digits): a longer value never wraps the bar, so the view never resizes while it plays */}
-        <span className={TIME}>
-          <strong className="text-accent-light" data-testid="timeline-time">{frameTimecode ? formatFrameTimecode(playheadS, fps) : formatTimecode(playheadS, true)}</strong> / {frameTimecode ? formatFrameTimecode(clock.totalTime(), fps) : formatTimecode(clock.totalTime())}
-        </span>
-        <span className={`${READOUT} ${centred ? 'hidden' : collapsed ? '@max-[1200px]/film-tl:hidden phone-any:hidden' : '@max-[1200px]/film-tl:hidden'}`}>
-          <span className="inline-block text-right" style={{ minWidth: `${formatDistance(lengthM).length + 1}ch` }}>
-            {formatDistance(progress * lengthM)}
-          </span>{' '}
-          / {formatDistance(lengthM)}
-          {ele !== undefined && profile && (
-            <>
-              {' · '}
-              <span className="sr-only">{t('timeline.bar.elevation')}</span>
-              <span className="inline-block text-right" style={{ minWidth: `${formatNumber(profile.maxEle).length + 1}ch` }}>
-                {formatNumber(ele)}
-              </span>{' '}
-              m
-            </>
-          )}
-        </span>
-        {/* apart from the readout, which a narrow timeline hides: the clock was asked for in « Réglages » */}
-        {time !== undefined && (
-          <span className={`${READOUT} ${centred ? 'hidden' : collapsed ? 'phone-any:hidden' : ''}`}>
-            <span className="sr-only">{t('timeline.bar.recordedTime')}</span>
-            <time className="inline-block min-w-[7ch] text-right" data-testid="timeline-clock" dateTime={new Date(time).toISOString()}>
-              {formatClock(time)}
-            </time>
-          </span>
-        )}
+        <PlayheadReadouts
+          frozen={frozenPlayback}
+          clock={clock}
+          path={path}
+          profile={profile}
+          lengthM={lengthM}
+          recorded={timelineClock && track.stats.startTime !== undefined}
+          frameTimecode={frameTimecode}
+          fps={fps}
+          centred={centred}
+          collapsed={collapsed}
+        />
         <span className={centred ? 'hidden' : 'flex-1 basis-0'} />
         {/* a row of its own on a phone, which scrolls sideways */}
         <div
@@ -1492,16 +1612,16 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           {centred && (
             <>
               <span className="flex-none text-caption font-semibold text-glacier">{t('timeline.lane.shots')}</span>
-              <KeyGroup target={{ kind: 'camera' }} clock={clock} timeS={playheadS} disabled={!hasTrack} look="bar" />
+              <KeyGroup target={{ kind: 'camera' }} clock={clock} timeS={frozenS} disabled={!hasTrack} look="bar" />
               <span className="flex-none text-caption font-semibold text-glacier">{PARAM_LANE_LABELS.speed}</span>
-              <KeyGroup target={{ kind: 'param', param: 'speed' }} clock={clock} timeS={playheadS} disabled={!hasTrack} look="bar" />
+              <KeyGroup target={{ kind: 'param', param: 'speed' }} clock={clock} timeS={frozenS} disabled={!hasTrack} look="bar" />
             </>
           )}
           <BarButton
             icon="map-pin"
             name={t('timeline.bar.addHold')}
             tip={withShortcut(t('timeline.bar.addHold'), 'add-stop')}
-            onClick={() => addStopAt(Math.round(progress * lengthM))}
+            onClick={() => addStopAt(Math.round(shownPlayback().progress * lengthM))}
           />
           {freeCandidates.length > 0 && (
             <Select
@@ -1522,13 +1642,13 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             icon="gauge"
             name={t('timeline.bar.addSpeed')}
             tip={t('timeline.bar.addSpeedTip')}
-            onClick={() => addSpeedAt(Math.round(progress * lengthM))}
+            onClick={() => addSpeedAt(Math.round(shownPlayback().progress * lengthM))}
           />
           <BarButton
             icon="type"
             name={t('timeline.bar.addText')}
             tip={withShortcut(t('timeline.bar.addText'), 'add-text')}
-            onClick={() => editFilm((f) => addText(f, playheadS))}
+            onClick={() => editFilm((f) => addText(f, playheadNow()))}
           />
           <BarButton
             icon="image"
@@ -1630,7 +1750,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   <span className={`max-w-full truncate pr-11 ${folded ? 'text-[10px] leading-none' : ''}`} title={lane.name}>
                     {lane.name}
                   </span>
-                  {lane.keys && !folded && <KeyGroup target={lane.keys} clock={clock} timeS={playheadS} disabled={!hasTrack} />}
+                  {lane.keys && !folded && <KeyGroup target={lane.keys} clock={clock} timeS={frozenS} disabled={!hasTrack} />}
                   <span
                     className={`absolute right-1 ${lane.keys && !folded ? 'top-1' : 'top-1/2 -translate-y-1/2'} flex gap-0.5 ${folded || locked ? '' : 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 touch:opacity-100'}`}
                   >
@@ -1665,15 +1785,10 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onPointerCancel={endGesture}
               onContextMenu={onContentContextMenu}
             >
-              <div
+              <RulerSlider
+                frozen={frozenPlayback}
+                clock={clock}
                 className={`relative cursor-pointer border-b border-white/10 focus-visible:-outline-offset-2! ${centred ? 'h-6' : 'h-5 touch:h-7'}`}
-                role="slider"
-                tabIndex={0}
-                aria-label={t('timeline.ruler.label')}
-                aria-valuemin={0}
-                aria-valuemax={Math.round(clock.totalTime())}
-                aria-valuenow={Math.round(playheadS)}
-                aria-valuetext={t('timeline.ruler.valueText', { time: formatFilmTime(playheadS), total: formatFilmTime(clock.totalTime()) })}
                 onKeyDown={onRulerKeyDown}
               >
                 {workSpan && (
@@ -1705,7 +1820,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     {formatFilmTime(t)}
                   </span>
                 ))}
-              </div>
+              </RulerSlider>
 
               {sequence && (
                 <div data-testid="timeline-lane" {...laneProps('stages')} role="group" aria-label={t('timeline.lane.stages')}>
@@ -1730,9 +1845,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 >
                   {profile && shownClock.flightS > 0 && (
                     <svg className="absolute inset-0 size-full" viewBox={`0 0 ${shownClock.flightS} ${PROFILE_HEIGHT}`} preserveAspectRatio="none">
-                      <clipPath id={clipId}>
-                        <rect width={Math.max(0, playheadS - flightStart)} height={PROFILE_HEIGHT} />
-                      </clipPath>
+                      <FlownClip frozen={frozenPlayback} clock={clock} id={clipId} flightStart={flightStart} />
                       <path className="fill-glacier opacity-35" d={area} />
                       <path className="fill-accent-light opacity-80" d={area} clipPath={`url(#${clipId})`} />
                     </svg>
@@ -1986,7 +2099,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   </span>
                 </div>
               )}
-              <div className={centred ? 'hidden' : PLAYHEAD} style={{ left: xOf(playheadS) }} aria-hidden="true" />
+              <Playhead frozen={frozenPlayback} clock={clock} pad={pad} pxPerS={pxPerS} centred={centred} />
               {contextMenu && (
                 <Menu label={t('timeline.menu.label')} items={contextMenu.items} point={{ x: contextMenu.x, y: contextMenu.y }} onClose={() => setContextMenu(null)} placement="bottom start" sheet />
               )}
