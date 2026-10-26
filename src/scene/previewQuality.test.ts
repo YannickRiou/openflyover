@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DESKTOP_BUDGET } from '../core/deviceBudget'
-import { LIGHT_PREVIEW, SLOW_PREVIEW_WINDOW_MS, createSlowPreviewDetector, previewBudget, previewIsLight } from './previewQuality'
+import { LIGHT_PREVIEW, SLOW_PREVIEW_WINDOW_MS, createSlowPreviewDetector, previewBudget, previewIsLight, sceneBudget } from './previewQuality'
 
 /** Feeds frames `stepMs` apart for `durationMs`; whether the detector found the preview slow. */
 function play(detector: ReturnType<typeof createSlowPreviewDetector>, stepMs: number, durationMs: number, from = 0): boolean {
@@ -10,16 +10,28 @@ function play(detector: ReturnType<typeof createSlowPreviewDetector>, stepMs: nu
 }
 
 describe('previewBudget', () => {
-  it('a computer keeps its preview, a light one draws a phone’s pixels and clouds', () => {
-    expect(previewBudget(DESKTOP_BUDGET, false)).toEqual({ maxPixelRatio: 2, movingPixelRatio: 2, cloudResolutionScale: 1, cloudSettleFrames: 32 })
+  it('a computer keeps its preview, a light one draws a phone’s pixels and clouds, a 2048² shadow map and half the trees', () => {
+    expect(previewBudget(DESKTOP_BUDGET, false)).toEqual({
+      maxPixelRatio: 2,
+      movingPixelRatio: 2,
+      cloudResolutionScale: 1,
+      cloudSettleFrames: 32,
+      shadowMapSize: 4096,
+      maxTrees: 250_000,
+    })
     expect(previewBudget(DESKTOP_BUDGET, true)).toEqual(LIGHT_PREVIEW)
     // a device already lower keeps its own
-    expect(previewBudget({ maxPixelRatio: 1.5, movingPixelRatio: 1, cloudResolutionScale: 0.25, cloudSettleFrames: 8 }, true)).toEqual({
-      maxPixelRatio: 1.5,
-      movingPixelRatio: 1,
-      cloudResolutionScale: 0.25,
-      cloudSettleFrames: 8,
-    })
+    const lower = { maxPixelRatio: 1.5, movingPixelRatio: 1, cloudResolutionScale: 0.25, cloudSettleFrames: 8, shadowMapSize: 1024, maxTrees: 30_000 }
+    expect(previewBudget(lower, true)).toEqual(lower)
+    expect(LIGHT_PREVIEW.shadowMapSize).toBe(2048)
+    expect(LIGHT_PREVIEW.maxTrees).toBe(DESKTOP_BUDGET.maxTrees / 2)
+  })
+
+  it('an export, a poster or a capture takes the device’s shadow map and trees, whatever the preview', () => {
+    const light = previewBudget(DESKTOP_BUDGET, true)
+    expect(sceneBudget(light, false, DESKTOP_BUDGET)).toEqual({ shadowMapSize: 2048, maxTrees: 125_000 })
+    expect(sceneBudget(light, true, DESKTOP_BUDGET)).toEqual({ shadowMapSize: 4096, maxTrees: 250_000 })
+    expect(sceneBudget(previewBudget(DESKTOP_BUDGET, false), false, DESKTOP_BUDGET)).toEqual({ shadowMapSize: 4096, maxTrees: 250_000 })
   })
 
   it('« Auto » is light once measured slow, « Légère » and « Complète » whatever the measure', () => {

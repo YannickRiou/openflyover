@@ -546,6 +546,9 @@ pointer (`appearance.css`).
   wraps differently while the film plays, so the view never resizes. The recorded clock time only with the « Réglages »
   preference. Tool buttons are icons only (tooltip and `aria-label`), « Options » included. During an export the
   timeline keeps the playback it had (it does not follow the export's playhead, so it does not re-render per frame).
+  While a film plays the timeline does not render at each frame either: it selects only `playing` and `speed`; what
+  follows the playhead (readouts, playhead, flown part of the profile, ruler slider, ◀ ◇ ▶ of `KeyGroup`) selects the
+  playback itself, and the scrolling that follows the playhead runs from a store subscription.
 - **Status bar** (24 px, below the timeline): map state of the current view (`ui/mapStatus.ts`, pure): a ring and
   "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
   99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
@@ -4042,6 +4045,12 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
   - precached at install, in `openflyover-shell-<hash of the build>`: the page (`./`), every build file (JS, CSS) and
     every public file except `oauth-callback.html` (fonts, sample, icons, manifest): ~3.7 MB, 50-odd files. The whole
     app works offline, the 3D scene and the export included;
+  - registered once the page has loaded and the browser is idle (`afterLoadAndIdle` in `webApp.ts`: `load`, then
+    `requestIdleCallback`, 3 s at the latest, a timeout where it is missing), so the download of the build does not compete
+    with the first screen; a fingerprinted file (`assets/<name>-<8-character hash>.<ext>`, `FINGERPRINTED`) is fetched
+    with the default cache mode, so the files the page has just loaded come from the HTTP cache instead of being
+    downloaded again; the page, the worker and the public files (no fingerprint) keep `cache: 'reload'`, so an update
+    always reaches them. The list is generated at build time (`vite.config.ts`), whatever the chunk names;
   - cached on first use, in `openflyover-sky-<hash of their content>`: the sky and cloud textures (`atmosphere/`,
     `clouds/`, ~12 MB), downloaded only when the atmosphere is first shown, not at install over a mobile connection;
     the cache name follows their content, so it survives app updates (the textures change with the Takram packages
@@ -4095,7 +4104,14 @@ the preview of any device, by what it does and not by its hardware: « Auto » (
 the film plays (`createSlowPreviewDetector`: median over 2 s of playback, a gap over 1 s restarts the count) and, under
 30 frames per second, keeps the preview light for the session; « Légère » forces it, « Complète » never lightens.
 Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
-0.5, 16 still frames. The export sets its own pixel ratio (1) and cloud pass: films do not change. The pixel ratio goes
+0.5, 16 still frames, shadow map 2048² (~32 MB, not ~128 MB), at most 125,000 trees (far chunks thin first,
+`forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass, and `sceneBudget(preview, exporting)` gives
+`AtmosphereLayer` and `ForestLayer` the device's own shadow map and trees whenever `isExportBusy` (video, poster and
+« Capturer cette image » all run through `runExport`): films do not change. The shadow map and the trees are made again
+when the preview changes and at the start and end of an export (~0.3 s for 250,000 trees). Not lightened: imagery
+anisotropy (16, set when a tile's texture is created and the canvas freed after upload, so it cannot follow the preview)
+and the canvas's MSAA (fixed with the context; a computer that started with the atmosphere would lose the antialiasing of
+the exports made without it). The pixel ratio goes
 through the `dpr` of <Canvas> (`FlyoverCanvas`): R3F sets it back on each render of the canvas (`configure`, after the
 children's effects), so a `setDpr` from a child does not hold — that also fixed a phone that kept 1.5 while playing
 once a track arrived. The diagnostic report shows the preview values in use (`budget.*`). Verified in headless
@@ -4112,8 +4128,8 @@ Chromium (SwiftShader, DPR 2): « Complète » 2 while playing; « Légère » 1
 | preview clouds: resolution, still frames | `CloudsLayer`, `CLOUD_SETTLE_FRAMES` | 1, 32 | 0.5, 16 | 0.5, 16 | 0.5, 16 |
 | sea of clouds by default | `DEFAULT_CLOUDS.seaRender` | volume | « Nappe » | « Nappe » | « Nappe » |
 | export short side | `videoSize` | 2160 (4K) | 1440 | 1080 | as the device |
-| shadow map (texels per side) | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
-| trees of the forests (most placed) | `placeTrees` (`ForestLayer`) | 250,000 | 60,000 | 60,000 | 30,000 |
+| shadow map (texels per side), 2048 in a light preview | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
+| trees of the forests (most placed), 125,000 in a light preview | `placeTrees` (`ForestLayer`) | 250,000 | 60,000 | 60,000 | 30,000 |
 | terrain LOD height during an export | `exportLodHeight` (`TerrainLayer`, `ExportController`) | the film's | the film's | min(film, 720) | as the device |
 | video bitrate ceiling, film kept in memory | `videoBitrate` / `deviceBitrateCap` | none | 12 Mbit/s | 8 Mbit/s | as the device |
 | « in memory » size warning | `warnsInMemory` | 1.5 GB | 250 MB | 250 MB | 250 MB |

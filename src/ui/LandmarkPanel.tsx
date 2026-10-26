@@ -64,6 +64,8 @@ const PLACE_GO = 'flex min-h-control min-w-0 items-center gap-2 text-left text-t
 const PLACE_LINE = 'col-span-full flex flex-wrap items-center gap-x-2 gap-y-1 pr-1'
 /** A small button of the tools bar above the list. */
 const TOOL = 'px-2'
+/** Progress steps the map follows: a few renders per second of the panel, not one per frame. */
+const PROGRESS_STEPS = 1000
 
 /** OSM ids of the landmarks of every track, shown ones and hidden ones (the 3D labels of all tracks). */
 function listedIds(hidden: boolean): string[] {
@@ -338,7 +340,7 @@ export function LandmarkPanel() {
   const sequence = useFilmSequence()
   const hiddenByTrack = useLandmarkStore((s) => s.hidden)
   const hidden = sequence ? sequenceLandmarks(sequence, hiddenByTrack) : first ? hiddenByTrack[first.id] : undefined
-  const progress = useAppStore((s) => s.playback.progress)
+  const progress = useAppStore((s) => Math.round(s.playback.progress * PROGRESS_STEPS) / PROGRESS_STEPS)
   /** the point just added from here, whose name field takes the focus */
   const [added, setAdded] = useState<string | null>(null)
   /** the window of the profile and the map, and the landmark selected in it */
