@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { Profiler, act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { useExportStore } from '../export/store'
 import { buildTrack } from '../import/stats'
 import { END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
@@ -18,6 +18,18 @@ import { OverlayPanel } from './OverlayPanel'
 import { setPreferences } from './preferences'
 import { Timeline } from './Timeline'
 
+// Timeline calls `useFilmSource` once per render of its own: counting the calls counts its renders
+const renders = vi.hoisted(() => ({ timeline: 0 }))
+vi.mock('../scene/usePacing', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../scene/usePacing')>()
+  return {
+    ...actual,
+    useFilmSource: () => {
+      renders.timeline++
+      return actual.useFilmSource()
+    },
+  }
+})
 
 /** The opening title and the closing card switched on (they are off by default). */
 const TITLES = { title: { ...DEFAULT_OVERLAY.title, enabled: true }, end: { ...DEFAULT_OVERLAY.end, enabled: true } }
@@ -54,6 +66,30 @@ describe('Timeline', () => {
 
     await act(async () => useExportStore.setState({ phase: 'done' }))
     expect(time()).not.toBe(start)
+    act(() => root.unmount())
+  })
+
+  it('does not render again at each frame of the playback: only the playhead and the readouts follow it', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<Timeline />))
+    await act(async () => useAppStore.getState().setPlaying(true))
+    const playhead = () => host.querySelector<HTMLElement>('[data-testid="timeline-playhead"]')?.style.left
+    const time = () => host.querySelector('[data-testid="timeline-time"]')?.textContent
+    const [left, shown] = [playhead(), time()]
+    const before = renders.timeline
+    for (let i = 1; i <= 20; i++) await act(async () => useAppStore.getState().setProgress(i / 40))
+    expect(renders.timeline).toBe(before)
+    expect(playhead()).not.toBe(left)
+    expect(time()).not.toBe(shown)
     act(() => root.unmount())
   })
 
