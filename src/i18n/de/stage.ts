@@ -5,6 +5,8 @@ const messages: Messages['stage'] = {
   fit: 'Ansicht ausrichten',
   safeZones: 'Sicherheitszonen',
   safeZonesTip: 'Sicherheitszonen (nur Vorschau)',
+  filmView: 'Zurück zur Filmansicht',
+  capture: 'Dieses Bild aufnehmen',
 }
 
 export default messages

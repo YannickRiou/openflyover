@@ -291,7 +291,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   const savedView = fixedView
     ? { position: three.camera.position.clone(), quaternion: three.camera.quaternion.clone(), target: controlsTarget()?.clone() }
     : null
-  const marker = fixedView ? three.scene.getObjectByName('flyover-marker') : undefined
+  const marker = fixedView && request.still?.marker !== true ? three.scene.getObjectByName('flyover-marker') : undefined
   const markerLayers = marker?.layers.mask
   const framing = request.still?.framing ?? path
   const placeFixedView = () => {

@@ -211,6 +211,27 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
+    it('the nights of a multi-day track are blocks of « Arrêts », without grips, removed by Delete (and restored from « Jours et nuits »)', async () => {
+      const { host, root, press } = await setup()
+      const ride = (fromH: number, toH: number, lon0: number) =>
+        Array.from({ length: (toH - fromH) * 2 + 1 }, (_, k) => ({ lon: lon0 + k / 77.35, lat: 45.92, time: Date.UTC(2026, 5, 1) + (fromH + k / 2) * 3_600_000 }))
+      const day1 = ride(8, 18, 6.8)
+      const days = buildTrack({ name: 'Deux jours', source: 'gpx', segments: [{ points: day1 }, { points: ride(30, 34, day1[day1.length - 1].lon) }] })
+      await act(async () => useAppStore.setState({ tracks: [days] }))
+      await act(async () => useAppStore.getState().setSetting('film', { ...DEFAULT_FILM, autoStops: false }))
+      const blocks = () => [...host.querySelectorAll<HTMLElement>('[role="group"][aria-label="Arrêts"] [data-item^="night-"]')]
+      expect(blocks().map((b) => b.getAttribute('aria-label')?.split(',')[0])).toEqual(['Nuit : Nuit 1'])
+      expect(blocks()[0].querySelector('span[class*="cursor-ew-resize"]')).toBeNull()
+      await act(async () => blocks()[0].focus())
+      expect(useAppStore.getState().filmSelection).toBe('night-2026-06-01')
+      expect(host.querySelector('[data-testid="film-inspector"] h2')?.textContent).toBe('Nuit 1')
+      await press(blocks()[0], 'Delete')
+      expect(blocks()).toEqual([])
+      expect(useAppStore.getState().settings.film.nights.skipped).toEqual(['2026-06-01'])
+      expect(useAppStore.getState().filmSelection).toBeNull()
+      act(() => root.unmount())
+    })
+
     it('the film options offer « Aussi aux lieux traversés » under « Arrêts automatiques », only while those are on', async () => {
       const { host, root } = await setup()
       await act(async () => useAppStore.getState().setSetting('film', DEFAULT_FILM))

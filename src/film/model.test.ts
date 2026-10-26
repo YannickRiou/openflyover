@@ -58,6 +58,11 @@ describe('film model', () => {
     expect(isValidSetting('film', DEFAULT_FILM)).toBe(true)
   })
 
+  it('the nights removed on the timeline are an optional list of keys', () => {
+    expect(isValidFilm({ ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, skipped: ['2026-06-01'] } })).toBe(true)
+    for (const skipped of ['2026-06-01', [1]]) expect(isValidFilm({ ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, skipped } as unknown as typeof DEFAULT_FILM.nights })).toBe(false)
+  })
+
   it('shot duration: none for « aucune »', () => {
     expect(shotDurationS({ style: 'saut', durationS: 4 })).toBe(4)
     expect(shotDurationS({ style: 'aucune', durationS: 4 })).toBe(0)

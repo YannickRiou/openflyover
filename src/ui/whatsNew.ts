@@ -22,7 +22,11 @@ export interface NewsVersion {
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '4.6',
-    items: [{ icon: 'map-pin', get title() { return t('news.v46.places.title') }, get text() { return t('news.v46.places.text') } }],
+    items: [
+      { icon: 'moon', get title() { return t('news.v46.nights.title') }, get text() { return t('news.v46.nights.text') } },
+      { icon: 'image', get title() { return t('news.v46.stage.title') }, get text() { return t('news.v46.stage.text') } },
+      { icon: 'map-pin', get title() { return t('news.v46.places.title') }, get text() { return t('news.v46.places.text') } },
+    ],
   },
   {
     version: '4.5',

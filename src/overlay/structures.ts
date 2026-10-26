@@ -25,6 +25,8 @@ export interface Rect {
 export interface Structure {
   /** what is left of the frame to the ordinary widgets (and to the credits): they are laid out in it, not in the safe area */
   area: Rect
+  /** widgets of its slots drawn inside `area`, which the sources at the end of the film keep clear of */
+  obstacles?: Rect[]
   /** furniture and the widgets in its slots, under the ordinary widgets */
   draw(): void
 }
@@ -216,10 +218,13 @@ function cinema(i: StructureInput): Structure {
   const topMiddle = barH / 2
   const bottomMiddle = size.height - barH / 2
 
+  const profileH = Math.max(2 * u, settings.profile.height * size.height)
+  const profileBox = { x: 0, y: size.height - barH - 0.8 * u - profileH, w: size.width, h: profileH }
+  const profileShown = slot('profile') && settings.profile.enabled
+
   const profile = () => {
     const pp = of('profile')
-    const height = Math.max(2 * u, settings.profile.height * size.height)
-    const box = { x: 0, y: size.height - barH - 0.8 * u - height, w: size.width, h: height }
+    const box = profileBox
     const { theme } = pp
     const look: ProfileLook = { line: theme.profile.line, played: theme.profile.played, lineWidth: 0.15 * u, dot: 0.5 * u }
     drawProfileChart(pp, frame, box, look, settings.profile.markerColor || markerColor || theme.profile.marker)
@@ -271,13 +276,15 @@ function cinema(i: StructureInput): Structure {
 
   return {
     area: { x: margin, y: barH + 1.5 * u, w: size.width - 2 * margin, h: size.height - 2 * barH - 3 * u },
+    // the profile reaches just above the bottom bar, inside the area
+    obstacles: profileShown && live > 0 ? [profileBox] : [],
     draw() {
       ctx.save()
       ctx.fillStyle = '#000000'
       ctx.fillRect(0, 0, size.width, barH)
       ctx.fillRect(0, size.height - barH, size.width, barH)
       ctx.restore()
-      if (slot('profile') && settings.profile.enabled) faded(p, live, profile)
+      if (profileShown) faded(p, live, profile)
       if (slot('counters') && settings.counters.enabled) faded(p, live, counters)
       if (slot('weather') && settings.weather.enabled && frame.weather) faded(p, live, weather)
       if (slot('minimap') && settings.minimap.enabled) faded(p, live, minimap)
