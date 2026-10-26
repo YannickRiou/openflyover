@@ -2,6 +2,7 @@ export default {
   'metric.speed': 'Vitesse',
   'metric.slope': 'Pente',
   'metric.elevation': 'Altitude',
+  'metric.verticalSpeed': 'Vitesse verticale',
   'metric.heartRate': 'Fréquence cardiaque',
   'metric.cadence': 'Cadence',
   'metric.cadenceUnit': 'tr/min',

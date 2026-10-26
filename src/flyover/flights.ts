@@ -63,17 +63,37 @@ export function detectFlights(path: TrackPath, ground: ArrayLike<number>): Fligh
   const smooth = movingAverage(clearance, Math.round(FLIGHT_SMOOTHING_M / FLIGHT_STEP_M / 2))
   const first = flightRuns(smooth, deviceOffset(clearance, () => false))
   const offsetM = deviceOffset(clearance, (i) => first.some(([a, b]) => i >= a && i <= b))
-  return flightRuns(smooth, offsetM).map(([a, b]) => ({
-    startM: Math.round(Math.min(path.lengthM, a * FLIGHT_STEP_M)),
-    endM: Math.round(Math.min(path.lengthM, b * FLIGHT_STEP_M)),
-    offsetM: Math.round(offsetM * 10) / 10,
-  }))
+  return flightRuns(smooth, offsetM).map(([a, b]) => {
+    // the highest point above the ground: the ground is only known here (the tiles of the moment are not kept), so it is kept with the flight
+    let top = a
+    for (let i = a; i <= b; i++) if (smooth[i] > smooth[top]) top = i
+    return {
+      startM: Math.round(Math.min(path.lengthM, a * FLIGHT_STEP_M)),
+      endM: Math.round(Math.min(path.lengthM, b * FLIGHT_STEP_M)),
+      offsetM: Math.round(offsetM * 10) / 10,
+      maxHeightM: Math.round(smooth[top] - offsetM),
+      maxHeightAtM: Math.round(Math.min(path.lengthM, top * FLIGHT_STEP_M)),
+    }
+  })
 }
 
 /** Device offset of the flight at `distanceM` along the track, NaN on the ground. */
 export function flightOffsetAt(flights: readonly Flight[] | undefined, distanceM: number): number {
   for (const f of flights ?? []) if (distanceM >= f.startM && distanceM <= f.endM) return f.offsetM
   return Number.NaN
+}
+
+/** Distance over which the look of the line eases in and out at each end of a flight (metres): no step where a flight starts. */
+export const FLIGHT_EASE_M = 100
+
+/** 0 on the ground, 1 from FLIGHT_EASE_M inside a flight (smooth step between): how much of the flight look applies at `distanceM`. */
+export function flightEase(flights: readonly Flight[] | undefined, distanceM: number): number {
+  for (const f of flights ?? []) {
+    if (distanceM < f.startM || distanceM > f.endM) continue
+    const x = clamp(Math.min(distanceM - f.startM, f.endM - distanceM) / FLIGHT_EASE_M, 0, 1)
+    return x * x * (3 - 2 * x)
+  }
+  return 0
 }
 
 /**

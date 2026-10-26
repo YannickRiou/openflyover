@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Track, TrackPoint } from '../core/types'
-import { detectRecords, recordText, recordsOf } from './records'
+import type { Flight, Track, TrackPoint } from '../core/types'
+import { AUTO_STOP_RECORDS, detectRecords, forgetRecords, recordText, recordsOf } from './records'
 import type { RecordKind, TrackRecord } from './records'
 import { buildTrack } from './stats'
 
@@ -174,5 +174,97 @@ describe('detectRecords', () => {
   it('keeps the same records for a track recoloured or renamed', () => {
     const track = make({ lengthM: 3000, ele: ramp })
     expect(recordsOf({ ...track, name: 'autre' })).toBe(recordsOf(track))
+  })
+})
+
+/**
+ * A ground climb (18 % from 1 to 1.5 km), then a flight from 2 km to 5.5 km at 10 m/s: a glide at -1 m/s, a thermal at
+ * +2.5 m/s for two minutes (25 % gradient, steeper than the ground climb), a glide, a +6 m/s gust of 3 s, a glide; walking after.
+ */
+function flightEle(d: number): number {
+  if (d < 2000) return ramp(d)
+  if (d < 2500) return 1090 - 0.1 * (d - 2000)
+  if (d < 3700) return 1040 + 0.25 * (d - 2500)
+  if (d < 4500) return 1340 - 0.1 * (d - 3700)
+  if (d < 4530) return 1260 + 0.6 * (d - 4500)
+  if (d < 5500) return 1278 - 0.1 * (d - 4530)
+  return 1181
+}
+const FLIGHT: Flight = { startM: 2000, endM: 5500, offsetM: 0, maxHeightM: 340, maxHeightAtM: 3700 }
+const flown = (flights = [FLIGHT]): Track => ({ ...make({ lengthM: 7000, ele: flightEle, speed: () => 10 }), flights })
+
+describe('records of a track with flights', () => {
+  it('finds the slope records on the ground parts, never on a flight', () => {
+    const track = flown()
+    const steep = get(track, 'steepestClimb')!
+    // the thermal is steeper (25 %) but flown: the climb is the ground one
+    expect(Math.abs(steep.alongM - 1250)).toBeLessThanOrEqual(100)
+    expect(steep.value).toBeLessThanOrEqual(18.5)
+    // without the flight, the same points have their steepest climb in the thermal
+    expect(get({ ...track, flights: undefined }, 'steepestClimb')!.alongM).toBeGreaterThan(2500)
+  })
+
+  it('gives a track flown from start to end none of the ground records, and keeps the altitude ones', () => {
+    const track = flown([{ ...FLIGHT, startM: 0, endM: 7000 }])
+    const found = kinds(track)
+    for (const kind of ['steepestClimb', 'fastestDescent', 'fastestKm', 'slowestKm', 'longestClimb'] as const) expect(found).not.toContain(kind)
+    expect(found).toContain('highest')
+  })
+
+  it('leaves out the kilometres a flight crosses, and the climbs it holds', () => {
+    // kilometres 2 to 5 are flown (or end in the flight): the fastest and the slowest are kilometres 0, 1 or 6
+    const slow = (d: number) => (d >= 1000 && d < 2000 ? 5 : 10)
+    const track = { ...make({ lengthM: 7000, ele: flightEle, speed: slow }), flights: [FLIGHT] }
+    for (const kind of ['fastestKm', 'slowestKm'] as const) {
+      const r = get(track, kind)!
+      expect(r.alongM < 2000 || r.alongM > 5500).toBe(true)
+    }
+  })
+
+  it('finds the best thermal: its climb rate, its middle; a gust of a few seconds does not win', () => {
+    const r = get(flown(), 'bestThermal')!
+    expect(r.value).toBeGreaterThan(2.3)
+    expect(r.value).toBeLessThanOrEqual(2.55)
+    expect(r.alongM).toBeGreaterThan(2600)
+    expect(r.alongM).toBeLessThan(3600)
+    expect(recordText(r)).toMatch(/^Meilleur thermique · \+2,\d m\/s$/)
+    // a flight with a gust and no thermal has none
+    const gust = (d: number) => (d < 2000 ? 1000 : d < 3000 ? 1000 - 0.1 * (d - 2000) : d < 3030 ? 900 + 0.6 * (d - 3000) : 918 - 0.1 * (d - 3030))
+    const gusty = { ...make({ lengthM: 6000, ele: gust, speed: () => 10 }), flights: [{ startM: 1500, endM: 5500, offsetM: 0 }] }
+    expect(get(gusty, 'bestThermal')).toBeUndefined()
+    // nor a single point of the flight recorded 60 m too high (an elevation spike, not a climb held)
+    const spike = (d: number) => gust(d) + (d === 3500 ? 60 : 0)
+    expect(get({ ...make({ lengthM: 6000, ele: spike, speed: () => 10 }), flights: gusty.flights }, 'bestThermal')).toBeUndefined()
+    // nor does a track without flights, even climbing at 2.5 m/s
+    expect(get({ ...flown(), flights: undefined }, 'bestThermal')).toBeUndefined()
+  })
+
+  it('finds the greatest height above the ground where the flight measured it', () => {
+    const r = get(flown(), 'highestAboveGround')!
+    expect(r).toMatchObject({ value: 340, alongM: 3700 })
+    expect(recordText(r)).toBe('Plus haut au-dessus du sol · 340 m')
+    // a flight saved before it was kept has none
+    expect(get(flown([{ startM: 2000, endM: 5500, offsetM: 0 }]), 'highestAboveGround')).toBeUndefined()
+  })
+
+  it('makes the best thermal an automatic stop, the height above the ground a label', () => {
+    expect(AUTO_STOP_RECORDS).toContain('bestThermal')
+    expect(AUTO_STOP_RECORDS).not.toContain('highestAboveGround')
+  })
+
+  it('computes again when the flights of a track change (same points)', () => {
+    const track = flown()
+    const grounded = { ...track, flights: undefined }
+    expect(recordsOf(grounded)).not.toBe(recordsOf(track))
+    expect(recordsOf(track).map((r) => r.kind)).toContain('bestThermal')
+    expect(recordsOf(grounded).map((r) => r.kind)).not.toContain('bestThermal')
+  })
+
+  it('forgets the records on demand', () => {
+    const track = make({ lengthM: 3000, ele: ramp })
+    const first = recordsOf(track)
+    forgetRecords([track])
+    expect(recordsOf(track)).not.toBe(first)
+    expect(recordsOf(track)).toEqual(first)
   })
 })

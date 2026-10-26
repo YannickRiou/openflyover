@@ -11,13 +11,20 @@ import { useLandmarkStore } from '../osm/store'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { LandmarkPanel } from './LandmarkPanel'
+import { useToastStore } from './toast'
 
 /** the landmarks "found" for the track, filtered by distance and split by hidden id like the store does */
-const found = vi.hoisted(() => ({ list: [] as Landmark[], refreshed: 0 }))
+const found = vi.hoisted(() => ({ list: [] as Landmark[], refreshed: 0, recomputed: 0 }))
 vi.mock('../osm/store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../osm/store')>()
   return {
     ...actual,
+    // the records are found again from the points: the list the test set stands for them
+    refreshRecords: () => {
+      found.recomputed++
+      const [id] = Object.keys(actual.useLandmarkStore.getState().landmarks)
+      actual.useLandmarkStore.setState({ landmarks: { [id]: found.list } })
+    },
     syncLandmarks: (tracks: readonly { id: string }[], settings: LandmarkSettings, options?: { refresh?: boolean }) => {
       if (options?.refresh) found.refreshed++
       const near = found.list.filter((l) => l.distanceM <= settings.maxDistanceM && !settings.dismissedIds.includes(l.id))
@@ -343,5 +350,58 @@ describe('LandmarkPanel: the points of interest, and the landmarks in the window
     expect(useAppStore.getState().settings.landmarks.hiddenIds).toEqual([])
     expect(useAppStore.getState().settings.film.stops).toEqual([lakeStop])
     act(() => root.unmount())
+  })
+
+  it('« Records de la sortie » is one switch: off, the records are gone from the list and the recompute button waits; on, they are back', async () => {
+    const { host, root, button } = await mount({ ...DEFAULT_FILM })
+    const records = () => [...host.querySelectorAll<HTMLInputElement>('input[role="switch"]')].find((i) => i.closest('label')?.textContent?.includes('Records de la sortie'))!
+    expect(records().checked).toBe(true)
+    expect(button('Recalculer les records').disabled).toBe(false)
+    await act(async () => records().click())
+    expect(useAppStore.getState().settings.landmarks.records).toBe(false)
+    expect(records().checked).toBe(false)
+    expect(button('Recalculer les records').disabled).toBe(true)
+    // one undo step like any setting
+    act(() => getSettingsHistory().undo())
+    expect(useAppStore.getState().settings.landmarks.records).toBe(true)
+    act(() => root.unmount())
+  })
+
+  describe('« Recalculer les records »', () => {
+    const RECORD = { ...landmark('record:t:steepestClimb', 'record', 'Montée la plus raide · 18 % sur 400 m', 3500, 0), recordKind: 'steepestClimb' as const }
+    const autoStop = (atM: number, ref: string) => ({ id: `auto-${atM}`, atM, durationS: 4, camera: 'orbite' as const, source: { kind: 'landmark' as const, ref } })
+    const byHand = { id: 'stop-1', atM: 4800, durationS: 4, camera: 'orbite' as const, source: { kind: 'manual' as const } }
+
+    it('brings the automatic stops of the records in line in one undo step, leaves the others, tells what changed and « Annuler » puts it back', async () => {
+      const before: Film = { ...DEFAULT_FILM, autoStops: false, stops: [autoStop(1000, 'record:t:highest'), byHand] }
+      const { root, button } = await mount(before)
+      useToastStore.setState({ toasts: [] })
+      found.list = [PASS, LAKE, RECORD]
+      await act(async () => button('Recalculer les records').click())
+      expect(found.recomputed).toBe(1)
+      const film = useAppStore.getState().settings.film
+      expect(film.stops.map((s) => [s.id, s.source?.ref])).toEqual([['auto-3500', 'record:t:steepestClimb'], ['stop-1', undefined]])
+      const [toast] = useToastStore.getState().toasts
+      expect(toast.text).toBe('1 record retiré, 1 record ajouté')
+      expect(toast.action?.label).toBe('Annuler')
+      act(() => toast.action!.run())
+      expect(useAppStore.getState().settings.film.stops).toEqual(before.stops)
+      act(() => root.unmount())
+    })
+
+    it('says so when nothing changed, without a step to undo', async () => {
+      const before: Film = { ...DEFAULT_FILM, autoStops: false, stops: [autoStop(3500, 'record:t:steepestClimb'), byHand] }
+      const { root, button } = await mount(before)
+      found.list = [PASS, LAKE, RECORD]
+      // the first press publishes the record the panel did not know yet; the second finds nothing to do
+      await act(async () => button('Recalculer les records').click())
+      useToastStore.setState({ toasts: [] })
+      await act(async () => button('Recalculer les records').click())
+      expect(useAppStore.getState().settings.film).toBe(before)
+      const [toast] = useToastStore.getState().toasts
+      expect(toast.text).toBe('Rien n’a changé')
+      expect(toast.action).toBeUndefined()
+      act(() => root.unmount())
+    })
   })
 })

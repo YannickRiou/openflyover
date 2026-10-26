@@ -31,15 +31,17 @@ import { useTerrainContext } from './terrainContext'
 import { frameDelta } from './renderOnDemand'
 import { trackUnderMarker } from '../flyover/sequence'
 import {
+  figureHeading,
   leadMarkerColors,
   markerLook,
   pullMarkerForward,
   placeMarker,
   releaseMarkerTexture,
-  screenHeading,
+  showPastView,
   useMarkerImages,
   useMarkerLabelFont,
 } from './markerSprite'
+import { FIGURE_TURN_S, figureMotion } from './markerSettings'
 import type { MarkerSettings } from './markerSettings'
 import { editFilm, useFilmClock, useFilmTrack } from './usePacing'
 import type { HeightSampler } from './trackLineSet'
@@ -204,7 +206,8 @@ export function FlyoverRig() {
     // the highlighted region a 'situation' shot frames, once loaded (osm/region.ts)
     const region = useRegionStore.getState().frame
     // the export places its camera with the same function
-    const view = filmViewAt(path, clock, progress, timeS, frame, engine, size.height > 0 ? size.width / size.height : 1, follow)
+    const aspect = size.height > 0 ? size.width / size.height : 1
+    const view = filmViewAt(path, clock, progress, timeS, frame, engine, aspect, follow)
     marker.visible = true
 
     const applied = appliedSettingsRef.current
@@ -236,10 +239,18 @@ export function FlyoverRig() {
     const imageOf = (id: string) => useMediaStore.getState().table[id]?.data ?? ''
     const blend = markerAt(settings.film, settings.marker, progress * path.lengthM, markerFadeM(path.lengthM, clock.flightS), imageOf)
     const exposureGain = 1 / gl.toneMappingExposure
+    // the figure turns round over FIGURE_TURN_S: the film camera that long ago tells where the track ran then (the
+    // racers read it too); not while the camera is the user's (moved away from the film's by orbiting a paused film)
+    const pastS = timeS - FIGURE_TURN_S
+    const figure = settings.marker.kind === 'figurine' || blend.from.kind === 'figurine' || blend.to.kind === 'figurine'
+    const past = figure && camera.position.distanceToSquared(view.position) < 1 ? filmViewAt(path, clock, clock.progressAtTime(Math.max(0, pastS)), Math.max(0, pastS), frame, engine, aspect, follow) : null
+    showPastView(pastS, past)
+    const distanceAt = (t: number) => clock.progressAtTime(Math.max(0, t)) * path.lengthM
     const draw = (sprite: Sprite, look: MarkerSettings, weight: number) => {
-      const heading = look.kind === 'figurine' ? screenHeading(path, progress * path.lengthM, view.marker, frame, camera, settings.exaggeration) : null
+      const heading = look.kind === 'figurine' ? figureHeading(path, distanceAt, timeS, view.marker, frame, camera, past, settings.exaggeration) : null
       const colors = leadMarkerColors(look, under?.color ?? '#FFFFFF')
-      placeMarker(sprite, view.marker, camera, markerLook(look, under, true, markerImages.get(look.image) ?? null), colors, heading?.left ?? false, exposureGain, timeS, heading?.lean)
+      const shown = markerLook(look, under, true, markerImages.get(look.image) ?? null)
+      placeMarker(sprite, view.marker, camera, shown, colors, heading?.facing ?? 1, exposureGain, timeS, heading?.lean, shown.animated ? figureMotion(clock, timeS) : undefined)
       pullMarkerForward(sprite, camera)
       ;(sprite.material as SpriteMaterial).opacity = weight
     }

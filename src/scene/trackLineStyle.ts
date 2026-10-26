@@ -9,8 +9,21 @@
  * and the export draw the same line. The trail (« Traînée ») hides the start the other way: the painting step skips
  * what lies before a distance (`addTrailCut`), since the pieces drawn always start at the first, and its oldest part
  * thins out to nothing instead of ending on a sharp cut.
+ *
+ * Flights (stretches recorded in the air, `flyover/flights.ts`) add three things: the line's width follows its depth
+ * there (patched in by `addTrailCut`), a translucent curtain falls from the line to the relief, and a soft shadow is
+ * draped on the ground under it (their materials are at the end of this file, the meshes are built in `trackLineSet.ts`).
  */
-import { CustomBlending, InstancedInterleavedBuffer, InterleavedBufferAttribute, MaxEquation } from 'three'
+import {
+  CustomBlending,
+  DoubleSide,
+  InstancedInterleavedBuffer,
+  InterleavedBufferAttribute,
+  MaxEquation,
+  MeshBasicMaterial,
+  ShaderMaterial,
+  Vector2,
+} from 'three'
 import type { Camera, Color, Vector3 } from 'three'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import type { LineGeometry } from 'three/addons/lines/LineGeometry.js'
@@ -174,6 +187,146 @@ export function cutLine(line: CuttableLine, distanceM: number): void {
 }
 
 // ---------------------------------------------------------------------------
+// Flights: width following the depth
+// ---------------------------------------------------------------------------
+
+/** Bounds of the factor a flight's width follows the depth with: it never vanishes nor becomes a ribbon. */
+export const FLIGHT_WIDTH_MIN = 0.6
+export const FLIGHT_WIDTH_MAX = 1.6
+
+/**
+ * Factor of the user's width at `depthM` from the camera in a flight, `focusM` being the distance it is the user's width
+ * at (the camera's target): nearer is thicker, farther thinner, within the bounds. `weight` (`flightEase`) fades it in
+ * from the ground, where it is 1. The vertex shader of `addTrailCut` computes the same, per vertex.
+ */
+export function flightWidthFactor(focusM: number, depthM: number, weight = 1): number {
+  if (!(focusM > 0) || !(depthM > 0) || !(weight > 0)) return 1
+  return 1 + (Math.min(FLIGHT_WIDTH_MAX, Math.max(FLIGHT_WIDTH_MIN, focusM / depthM)) - 1) * Math.min(1, weight)
+}
+
+/** Store the flight weight (0..1, `flightEase`) of both ends of every piece in the geometry, like `setTrackDistances`. */
+export function setFlightWeights(geometry: LineGeometry, weights: Float32Array): void {
+  const pieces = weights.length - 1
+  const array = new Float32Array(Math.max(0, pieces) * 2)
+  for (let i = 0; i < pieces; i++) {
+    array[i * 2] = weights[i]
+    array[i * 2 + 1] = weights[i + 1]
+  }
+  const buffer = new InstancedInterleavedBuffer(array, 2, 1)
+  geometry.setAttribute('instanceFlightStart', new InterleavedBufferAttribute(buffer, 1, 0))
+  geometry.setAttribute('instanceFlightEnd', new InterleavedBufferAttribute(buffer, 1, 1))
+}
+
+// ---------------------------------------------------------------------------
+// Flights: curtain and ground shadow
+// ---------------------------------------------------------------------------
+
+/** Opacity of the curtain at the line, fading to 0 at the ground. */
+export const CURTAIN_TOP_ALPHA = 0.35
+/** Opacity of the shadow at its centre, and its width as a share of the line's. */
+export const SHADOW_ALPHA = 0.4
+export const SHADOW_WIDTH_SHARE = 1.5
+/** `trailEndM` when the whole track is drawn: past every distance. */
+const NO_END = 1e9
+
+/** Uniforms of the draw-on and trail cut shared by the curtain and the shadow (`setFlightCut`). */
+interface FlightCut {
+  trailStartM: { value: number }
+  trailFadeM: { value: number }
+  drawEndM: { value: number }
+}
+
+const newFlightCut = (): FlightCut => ({ trailStartM: { value: NO_TRAIL }, trailFadeM: { value: 0 }, drawEndM: { value: NO_END } })
+
+/** Fragment code of the cut: nothing before the trail start or past the marker, the trail thinning out the oldest part. */
+const CUT_DISCARD = 'if ( vTrackM < trailStartM || vTrackM > drawEndM ) discard;'
+const CUT_FADE = 'trailFadeM > 0.0 ? smoothstep( trailStartM, trailStartM + trailFadeM, vTrackM ) : 1.0'
+const CUT_PARS = 'uniform float trailStartM;\nuniform float trailFadeM;\nuniform float drawEndM;\nvarying float vTrackM;\n'
+
+/**
+ * The wall under a flight: vertex colours with alpha (the line's colours, `CURTAIN_TOP_ALPHA` at the top, 0 at the ground),
+ * the relief hides it (depth test) but it hides nothing (no depth write). Its `trackM` attribute (distance along the
+ * track) drives the cut: the part not yet flown and the trail are skipped per pixel, the trail thinning out in opacity.
+ */
+export function createCurtainMaterial(): MeshBasicMaterial {
+  const material = new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: DoubleSide })
+  const cut = newFlightCut()
+  material.userData.cut = cut
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, cut)
+    shader.vertexShader = `attribute float trackM;\nvarying float vTrackM;\n${shader.vertexShader.replace('void main() {', 'void main() {\n  vTrackM = trackM;')}`
+    shader.fragmentShader = `${CUT_PARS}${shader.fragmentShader
+      .replace('void main() {', `void main() {\n  ${CUT_DISCARD}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n  diffuseColor.a *= ${CUT_FADE};`)}`
+  }
+  material.customProgramCacheKey = () => 'track-curtain'
+  return material
+}
+
+/**
+ * The flight's shadow: a ribbon draped on the ground (centre line twice, `edge` -1 / +1, `ahead` the direction of travel),
+ * widened in screen space to `widthPx` like the line, so one strip has no overlap to darken where pieces meet as a
+ * translucent line would. Black, soft towards its edges.
+ */
+export function createShadowMaterial(width: number, height: number): ShaderMaterial {
+  const cut = newFlightCut()
+  const material = new ShaderMaterial({
+    uniforms: { ...cut, resolution: { value: new Vector2(width, height) }, widthPx: { value: 0 }, shadowAlpha: { value: SHADOW_ALPHA } },
+    // <common> declares isPerspectiveMatrix, which <logdepthbuf_vertex> calls
+    vertexShader: `#include <common>
+attribute vec3 ahead;
+attribute float edge;
+attribute float trackM;
+uniform vec2 resolution;
+uniform float widthPx;
+varying float vEdge;
+varying float vTrackM;
+#include <logdepthbuf_pars_vertex>
+void main() {
+  vEdge = edge;
+  vTrackM = trackM;
+  vec4 here = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+  vec4 next = projectionMatrix * modelViewMatrix * vec4( position + ahead, 1.0 );
+  float aspect = resolution.x / resolution.y;
+  vec2 dir = next.xy / next.w - here.xy / here.w;
+  dir.x *= aspect;
+  dir = length( dir ) > 1e-6 ? normalize( dir ) : vec2( 1.0, 0.0 );
+  vec2 offset = vec2( dir.y / aspect, - dir.x ) * edge;
+  here.xy += offset * widthPx / resolution.y * here.w;
+  gl_Position = here;
+  #include <logdepthbuf_vertex>
+}`,
+    fragmentShader: `${CUT_PARS}uniform float shadowAlpha;
+varying float vEdge;
+#include <logdepthbuf_pars_fragment>
+void main() {
+  #include <logdepthbuf_fragment>
+  ${CUT_DISCARD}
+  float soft = 1.0 - smoothstep( 0.2, 1.0, abs( vEdge ) );
+  gl_FragColor = vec4( 0.0, 0.0, 0.0, shadowAlpha * soft * ( ${CUT_FADE} ) );
+}`,
+    transparent: true,
+    // the ribbon is widened in the screen: which face looks at the camera depends on the direction of travel
+    side: DoubleSide,
+    depthWrite: false,
+    // pulled towards the camera like the line's lift: the relief between two draped points must not cut it
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  })
+  material.userData.cut = cut
+  return material
+}
+
+/** Cut a curtain or shadow material like the line: nothing before `startM` (thinning out over `fadeM`) nor past `endM` along the track. */
+export function setFlightCut(material: MeshBasicMaterial | ShaderMaterial, startM: number, fadeM: number, endM: number): void {
+  const cut = material.userData.cut as FlightCut
+  cut.trailStartM.value = startM
+  cut.trailFadeM.value = fadeM
+  cut.drawEndM.value = Number.isFinite(endM) ? endM : NO_END
+}
+
+// ---------------------------------------------------------------------------
 // Trail (« Traînée »)
 // ---------------------------------------------------------------------------
 
@@ -203,21 +356,30 @@ export function setTrackDistances(geometry: LineGeometry, dist: Float64Array): v
  * out over the next `trailFadeM` metres: the pieces stay in place, only the painting skips them, so the colours by
  * metric and the dashes stored piece by piece still match. The fade scales the width at each piece end rather than the
  * opacity: the line is opaque, and a translucent one would darken where neighbouring pieces overlap at a joint. The
- * whole cross-section shrinks, so a glow keeps bordering its line. `cacheKey` names the patched program (it must
- * differ from the unpatched material's).
+ * whole cross-section shrinks, so a glow keeps bordering its line. In a flight the same offset also follows the depth
+ * (`flightWeight` per piece end, `setFlightWeights`; `flightDepthM` = the distance where the width is the user's). `cacheKey`
+ * names the patched program (it must differ from the unpatched material's).
  */
 export function addTrailCut(material: LineMaterial, cacheKey: string): void {
   material.uniforms.trailStartM = { value: NO_TRAIL }
   material.uniforms.trailFadeM = { value: 0 }
+  material.uniforms.flightDepthM = { value: 0 }
   const patch = material.onBeforeCompile.bind(material)
   material.onBeforeCompile = (shader, renderer) => {
     patch(shader, renderer)
-    shader.vertexShader = `attribute float instanceTrackStart;\nattribute float instanceTrackEnd;\nuniform float trailStartM;\nuniform float trailFadeM;\nvarying float vTrackM;\n${shader.vertexShader
+    shader.vertexShader = `attribute float instanceTrackStart;\nattribute float instanceTrackEnd;\nattribute float instanceFlightStart;\nattribute float instanceFlightEnd;\nuniform float trailStartM;\nuniform float trailFadeM;\nuniform float flightDepthM;\nvarying float vTrackM;\n${shader.vertexShader
       .replace(
         'void main() {',
         'void main() {\n  vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;\n  float trailWidth = trailFadeM > 0.0 ? smoothstep( trailStartM, trailStartM + trailFadeM, vTrackM ) : 1.0;',
       )
-      .replace('offset *= linewidth;', 'offset *= linewidth * trailWidth;')}`
+      // `flightWidthFactor` in GLSL: weight 0 (the ground, and every track without the attribute) leaves the width alone
+      .replace(
+        'offset *= linewidth;',
+        `float flightWeight = ( position.y < 0.5 ) ? instanceFlightStart : instanceFlightEnd;
+  float flightDepth = ( position.y < 0.5 ) ? clipStart.w : clipEnd.w;
+  float flightWidth = ( flightDepthM > 0.0 && flightWeight > 0.0 ) ? mix( 1.0, clamp( flightDepthM / flightDepth, ${FLIGHT_WIDTH_MIN.toFixed(1)}, ${FLIGHT_WIDTH_MAX.toFixed(1)} ), flightWeight ) : 1.0;
+  offset *= linewidth * trailWidth * flightWidth;`,
+      )}`
     shader.fragmentShader = `uniform float trailStartM;\nvarying float vTrackM;\n${shader.fragmentShader.replace(
       'void main() {',
       'void main() {\n  if ( vTrackM < trailStartM ) discard;',

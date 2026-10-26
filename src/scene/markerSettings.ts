@@ -6,6 +6,7 @@
 import { inRange, isRecord, oneOf, withDefaults } from '../core/guards'
 import { isHexColor } from '../overlay/settings'
 import { t } from '../i18n'
+import type { FilmClock } from '../film/clock'
 
 // ---------------------------------------------------------------------------
 // Track style
@@ -30,10 +31,18 @@ export interface TrackStyle {
   drawOn: boolean
   /** positions averaged over this many metres of track against GPS jitter (`flyover/smooth.ts`), 0 = as recorded */
   smoothingM: number
+  /** « Rideau sous le vol »: a translucent wall from a flight down to the relief (only with flights) */
+  flightCurtain: boolean
+  /** « Longueur du rideau »: how far the curtain falls under the line (metres), `TRACK_CURTAIN_RANGE.max` = down to the ground */
+  flightCurtainM: number
+  /** « Ombre au sol du vol »: the flight projected on the relief as a soft dark line (only with flights) */
+  flightShadow: boolean
 }
 
 export const TRACK_WIDTH_RANGE = { min: 1, max: 12, step: 0.5 } as const
 export const TRACK_SMOOTHING_RANGE = { min: 0, max: 300, step: 10 } as const
+/** « Longueur du rideau »: the maximum means « Jusqu'au sol » */
+export const TRACK_CURTAIN_RANGE = { min: 20, max: 1000, step: 10 } as const
 export const TRACK_GLOW_INTENSITY_RANGE = { min: 0.1, max: 1, step: 0.05 } as const
 export const TRACK_GLOW_WIDTH_RANGE = { min: 6, max: 64, step: 2 } as const
 
@@ -46,6 +55,9 @@ export const DEFAULT_TRACK_STYLE: TrackStyle = {
   glowColor: '',
   drawOn: false,
   smoothingM: 0,
+  flightCurtain: true,
+  flightCurtainM: TRACK_CURTAIN_RANGE.max,
+  flightShadow: true,
 }
 
 /**
@@ -120,7 +132,7 @@ export interface MarkerSettings {
   image: string
   /** multiplier of the on-screen size (1 = the ball of a 1000-pixel frame, about 14 pixels across) */
   size: number
-  /** a 'figurine' marker bounces and sways with the film time (`figureMotion`) */
+  /** a 'figurine' marker bounces and sways as it walks at the marker's pace (`figureMotion`) */
   animated: boolean
   /**
    * '#rrggbb' of the ball and of the ring of a figure or picture badge, '' = the colour of the track. The lead
@@ -161,33 +173,112 @@ export const DEFAULT_MARKER: MarkerSettings = {
   stick: false,
 }
 
-/** Steps of an animated figure per second of film, height of its bounce (fraction of the badge) and sway (radians). */
+/**
+ * An animated figure walks at the pace of the marker on its track: FIGURE_STEPS_PER_S steps per second of film at the
+ * film's average pace, more when the flight goes faster and fewer when it slows down (the pace to the power
+ * FIGURE_PACE_EXPONENT, kept between FIGURE_STEPS_MIN and FIGURE_STEPS_MAX: a speed portion never makes it frantic).
+ * It stands still, upright, while the marker does (stops, nights, holds); the bounce (FIGURE_LIFT, a fraction of the
+ * badge) and the sway (FIGURE_SWAY_RAD) ease in and out over FIGURE_EASE_S.
+ */
 const FIGURE_STEPS_PER_S = 2
+const FIGURE_STEPS_MIN = 1.2
+const FIGURE_STEPS_MAX = 3.2
+const FIGURE_PACE_EXPONENT = 0.4
 const FIGURE_LIFT = 0.08
 const FIGURE_SWAY_RAD = (5 * Math.PI) / 180
+/** Below this pace (a fraction of the film's average pace) the figure is still; from FIGURE_FULL_PACE it walks fully. */
+const FIGURE_STILL_PACE = 0.02
+const FIGURE_FULL_PACE = 0.3
+const FIGURE_EASE_S = 0.4
+/** Step of the table of the walk (film seconds): the phase is interpolated between its entries. */
+const FIGURE_TABLE_STEP_S = 1 / 30
+/** A figure turns round (its pictogram flips) over this long (film seconds). */
+export const FIGURE_TURN_S = 0.25
+
+/** What the walk needs of the film clock. */
+export type FigureClock = Pick<FilmClock, 'progressAtTime' | 'totalTime'>
+
+/** The walk over the whole film: steps taken so far and how fully the figure walks, at each step of the table. */
+interface FigureTable {
+  steps: Float64Array
+  strength: Float64Array
+}
+
+const figureTables = new WeakMap<FigureClock, FigureTable>()
+
+const smoothstep = (from: number, to: number, x: number) => {
+  const k = Math.min(1, Math.max(0, (x - from) / (to - from)))
+  return k * k * (3 - 2 * k)
+}
+
+/** `values` averaged over the last FIGURE_EASE_S (before the film, its first value): the walk follows the pace, never leads it. */
+function easedOver(values: readonly number[]): Float64Array {
+  const k = Math.round(FIGURE_EASE_S / FIGURE_TABLE_STEP_S)
+  const out = new Float64Array(values.length)
+  let sum = k * (values[0] ?? 0)
+  values.forEach((value, i) => {
+    sum += value - (i >= k ? values[i - k] : values[0])
+    out[i] = sum / k
+  })
+  return out
+}
 
 /**
- * Bounce and sway of an animated figure at film time `timeS`: a function of the time alone, so a paused film keeps
- * its pose and every export frame is the same as the preview. `lift` in [0, FIGURE_LIFT], one bounce per step.
+ * The walk of the film of `clock`, built once per clock: the marker's pace (progress per second, against the pace it
+ * keeps while it moves) gives a target strength and cadence at each step of the table, both eased; the cadence is
+ * summed into the steps taken so far. The phase is thus continuous, and the same for any frame rendered alone.
  */
-export function figureMotion(timeS: number): { lift: number; tilt: number } {
-  const phase = Math.PI * FIGURE_STEPS_PER_S * timeS
-  return { lift: FIGURE_LIFT * Math.abs(Math.sin(phase)), tilt: FIGURE_SWAY_RAD * Math.sin(phase) }
+function figureTable(clock: FigureClock): FigureTable {
+  const cached = figureTables.get(clock)
+  if (cached) return cached
+  const count = Math.ceil(clock.totalTime() / FIGURE_TABLE_STEP_S) + 1
+  const progress = Array.from({ length: count }, (_, i) => clock.progressAtTime(i * FIGURE_TABLE_STEP_S))
+  const speed = progress.map((p, i) => (i === 0 ? 0 : Math.max(0, (p - progress[i - 1]) / FIGURE_TABLE_STEP_S)))
+  // the whole track over the time it takes to cover it: the average pace while it moves
+  const movingS = speed.filter((v) => v > 1e-9).length * FIGURE_TABLE_STEP_S
+  const pace = speed.map((v) => v * movingS)
+  const strength = easedOver(pace.map((v) => smoothstep(FIGURE_STILL_PACE, FIGURE_FULL_PACE, v)))
+  const cadence = easedOver(pace.map((v) => Math.min(FIGURE_STEPS_MAX, Math.max(FIGURE_STEPS_MIN, FIGURE_STEPS_PER_S * v ** FIGURE_PACE_EXPONENT))))
+  const steps = new Float64Array(count)
+  for (let i = 1; i < count; i++) steps[i] = steps[i - 1] + cadence[i] * FIGURE_TABLE_STEP_S
+  const table = { steps, strength }
+  figureTables.set(clock, table)
+  return table
+}
+
+/**
+ * Bounce and sway of an animated figure at film time `timeS`: a function of the film clock and the time alone, so a
+ * paused film keeps its pose and every export frame is the same as the preview. `lift` in [0, FIGURE_LIFT], one
+ * bounce per step; both zero while the marker stands still.
+ */
+export function figureMotion(clock: FigureClock, timeS: number): { lift: number; tilt: number } {
+  const { steps, strength } = figureTable(clock)
+  const x = Math.min(Math.max(timeS / FIGURE_TABLE_STEP_S, 0), steps.length - 1)
+  const i = Math.floor(x)
+  const j = Math.min(i + 1, steps.length - 1)
+  const k = x - i
+  const phase = Math.PI * (steps[i] + (steps[j] - steps[i]) * k)
+  const walk = strength[i] + (strength[j] - strength[i]) * k
+  return { lift: FIGURE_LIFT * walk * Math.abs(Math.sin(phase)), tilt: FIGURE_SWAY_RAD * walk * Math.sin(phase) }
 }
 
 /** One pulse of a 'pulsation' ball every PULSE_PERIOD_S of film, drawn in PULSE_STEPS steps. */
 export const PULSE_PERIOD_S = 1.5
 const PULSE_STEPS = 45
 
-/** Phase in [0, 1) of the pulse at film time `timeS`: like `figureMotion`, a function of the film time alone. */
+/** Phase in [0, 1) of the pulse at film time `timeS`: a function of the film time alone. */
 export function pulsePhase(timeS: number): number {
   const turns = timeS / PULSE_PERIOD_S
   return Math.floor((turns - Math.floor(turns)) * PULSE_STEPS) / PULSE_STEPS
 }
 
-/** The marker changes with the film time alone (an animated figure, a pulsing ball): a held export frame is not reused. */
+/**
+ * The marker changes with the film time alone (a walking figure, a figure that turns round, a pulsing ball): a held
+ * export frame is not reused. A figure still turns round FIGURE_TURN_S after the track changes direction, so a stop that
+ * begins may catch it half-way.
+ */
 export function markerMovesWithTime(marker: MarkerSettings): boolean {
-  return marker.kind === 'figurine' ? marker.animated : marker.ballStyle === 'pulsation'
+  return marker.kind === 'figurine' || marker.ballStyle === 'pulsation'
 }
 
 /**
@@ -274,6 +365,7 @@ export function isValidTrackStyle(style: TrackStyle): boolean {
     inRange(style.width, TRACK_WIDTH_RANGE) &&
     oneOf(TRACK_DASHES, style.dash) &&
     inRange(style.smoothingM, TRACK_SMOOTHING_RANGE) &&
+    inRange(style.flightCurtainM, TRACK_CURTAIN_RANGE) &&
     inRange(style.glowIntensity, TRACK_GLOW_INTENSITY_RANGE) &&
     inRange(style.glowWidth, TRACK_GLOW_WIDTH_RANGE) &&
     (style.glowColor === '' || isHexColor(style.glowColor))
