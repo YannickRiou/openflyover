@@ -5,7 +5,9 @@
  * cut at a distance that grows with the camera height, intersected with the bounding box of the drawn terrain meshes.
  * Its near plane is pushed towards the sun so a ridge outside the view still casts into it (the terrain engine keeps
  * those ready tiles visible for that purpose; three culls them from the main pass). The ortho bounds are quantised and
- * snapped to whole texels so the shadows do not shimmer when the camera moves.
+ * snapped to whole texels so the shadows do not shimmer when the camera moves. A tile is only drawn into the map when
+ * its box, swept along the sun down to the lowest terrain, meets the view frustum (`mayShadowView`): the others cannot
+ * shade anything the view sees.
  * `fitShadowFrustum` and `shadowDistance` are pure and unit-tested.
  */
 import { Box3, Frustum, LightShadow, Matrix4, OrthographicCamera, Plane, Vector3 } from 'three'
@@ -24,7 +26,7 @@ export const SHADOW_RADIUS = 2
 /** Ortho extents grow by steps of 2^(1/8) (~9 %) so the texel size only changes when the region really does. */
 const EXTENT_STEPS_PER_OCTAVE = 8
 
-/** What the last shadow pass draws (export diagnostic, #52): the terrain tiles the shadow camera sees, with the share of off-screen casters. */
+/** What the last shadow pass draws (export diagnostic, #52): the terrain tiles that can shade the view, with the share of off-screen casters. */
 export interface ShadowPassCount {
   tiles: number
   triangles: number
@@ -38,6 +40,30 @@ export const lastShadowPass: ShadowPassCount = { tiles: 0, triangles: 0, offscre
 /** Zero the count: a render without shadow map then leaves it at zero. */
 export function resetShadowPass(): void {
   lastShadowPass.tiles = lastShadowPass.triangles = lastShadowPass.offscreenTiles = lastShadowPass.offscreenTriangles = 0
+}
+
+/**
+ * True unless the box, swept from its top down along `-towardsSun` to `floorY` (at most `reach` metres), and grown by
+ * `margin`, lies wholly outside one plane of the view `frustum`: no point of the box can then shade a point the view sees.
+ * Conservative (separating planes only), allocation-free.
+ */
+export function mayShadowView(box: Box3, towardsSun: Vector3, frustum: Frustum, floorY: number, reach: number, margin: number): boolean {
+  const { min, max } = box
+  const cx = (min.x + max.x) / 2
+  const cy = (min.y + max.y) / 2
+  const cz = (min.z + max.z) / 2
+  const hx = (max.x - min.x) / 2
+  const hy = (max.y - min.y) / 2
+  const hz = (max.z - min.z) / 2
+  const sweep = towardsSun.y > 1e-3 ? Math.min(reach, Math.max(0, max.y - floorY) / towardsSun.y) : reach
+  for (let i = 0; i < 6; i++) {
+    const { normal, constant } = frustum.planes[i]
+    // best signed distance of the box (centre + extent) and of the box moved down the sun ray
+    const toBox = normal.x * cx + normal.y * cy + normal.z * cz + constant + Math.abs(normal.x) * hx + Math.abs(normal.y) * hy + Math.abs(normal.z) * hz
+    const moved = -sweep * normal.dot(towardsSun)
+    if (toBox + Math.max(0, moved) + margin < 0) return false
+  }
+  return true
 }
 
 export interface ShadowFit {
@@ -170,6 +196,7 @@ const _frustum = new Frustum()
 const _viewProjection = new Matrix4()
 const _eye = new Vector3()
 const _forward = new Vector3()
+const _towardsSun = new Vector3()
 const _box = new Box3()
 
 /**
@@ -205,15 +232,38 @@ export class TerrainShadow extends LightShadow<OrthographicCamera> {
     this.normalBias = NORMAL_BIAS_TEXELS * fit.texelSize
     this.bias = -DEPTH_BIAS_M / (fit.far - fit.near)
     super.updateMatrices(light) // shadow matrix and culling frustum with the new projection
+    this.selectCasters(fit)
     this.countPass()
   }
 
-  /** The tiles three draws in the shadow map (those its culling frustum meets), apart from those the view sees. */
+  override dispose(): void {
+    for (const mesh of this.terrain.children as Mesh[]) mesh.castShadow = true // the engine's default
+    super.dispose()
+  }
+
+  /**
+   * Only the tiles that can shade the view cast into the map (three skips a mesh whose `castShadow` is off, the main
+   * pass ignores it). The margin keeps what the PCF taps and the normal offset reach beside the receivers.
+   * `_frustum` and `_box` still hold the view's and the drawn tiles', set by `fit` just before.
+   */
+  private selectCasters(fit: ShadowFit): void {
+    const margin = (SHADOW_RADIUS + NORMAL_BIAS_TEXELS + 2) * fit.texelSize
+    const floorY = _box.min.y - margin
+    _towardsSun.setFromMatrixColumn(this.camera.matrixWorld, 2) // the shadow camera looks down -Z, away from the sun
+    const meshes = this.terrain.children
+    for (let i = 0; i < meshes.length; i++) {
+      const mesh = meshes[i] as Mesh
+      const bounds = mesh.visible ? mesh.geometry?.boundingBox : null
+      if (bounds) mesh.castShadow = mayShadowView(bounds, _towardsSun, _frustum, floorY, fit.far - fit.near, margin)
+    }
+  }
+
+  /** The tiles three draws in the shadow map (those that cast and its culling frustum meets), apart from those the view sees. */
   private countPass(): void {
     resetShadowPass()
     const shadowFrustum = this.getFrustum()
     for (const mesh of this.terrain.children as Mesh[]) {
-      if (!mesh.visible || !shadowFrustum.intersectsObject(mesh)) continue
+      if (!mesh.visible || !mesh.castShadow || !shadowFrustum.intersectsObject(mesh)) continue
       const geometry = mesh.geometry
       const triangles = (geometry.index?.count ?? geometry.getAttribute('position').count) / 3
       lastShadowPass.tiles++
