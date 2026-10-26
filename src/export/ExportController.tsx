@@ -56,7 +56,8 @@ import {
 import { noEncodingTest } from './diagnostic'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createSequenceEncoder, sequencePattern } from './sequenceEncoder'
-import { createGpuTimer } from './gpuTimer'
+import { createGpuTimer, waitForGpu } from './gpuTimer'
+import { createFrameHandover } from './handover'
 import { shadowSummary, timingsSummary } from './history'
 import { compositorAttributes, createExportEncoder } from './nativeEncoder'
 import { isExportStep, setExportProbe, writeBreadcrumb } from './guard'
@@ -275,7 +276,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   const report = throttledReporter()
   // GPU time of the renders, where the browser has timer queries (diagnostic, gpuTimer.ts)
   const gl = three.gl as { getContext?: () => unknown }
-  const gpuTimer = typeof gl.getContext === 'function' ? createGpuTimer(gl.getContext()) : null
+  const glContext = typeof gl.getContext === 'function' ? gl.getContext() : null
+  const gpuTimer = createGpuTimer(glContext)
   const readGpuTimer = () => {
     if (!gpuTimer) return
     gpuTimer.poll()
@@ -526,6 +528,19 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         ? 'export : test sans encodage'
         : `export : encodeur prêt (${session.codec.container}/${session.codec.codec}${session.codec.hardware ? ' matériel' : ''}, ${(session.bitrate / 1e6).toFixed(1)} Mbit/s)`,
     )
+    // WebCodecs reads any canvas: the way the frames reach it is measured on the first frames (handover.ts)
+    const handover = createFrameHandover({
+      compositor,
+      ctx,
+      width,
+      height,
+      measure: session.acceptsSource === true,
+      onChosen: (method, medians) => {
+        timings.handover = method
+        // a breadcrumb keeps 80 characters: « export : image vidéo canvas ; offscreen 12.3 canvas 4.1 bitmap 8.0 ms »
+        writeBreadcrumb(`export : image vidéo ${method} ; ${medians.map(([name, ms]) => `${name} ${ms.toFixed(1)}`).join(' ')} ms`)
+      },
+    })
     // the counters of the breadcrumbs written while it runs (pagehide included)
     const encoder = session
     setExportProbe(() => {
@@ -607,6 +622,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       const timed =
         sceneMovesWithTime || filmViewMovesWithTime(state, settings.camera) || nightAt(filmClock, times[i]) !== null || junctionBlendAt(filmClock, times[i]) !== null
       const overlayNow = overlayKey(progress, times[i])
+      /** time spent composing this frame (ms), null when it repeats the previous one */
+      let composed: number | null = null
       if (rendered !== previous || ((timed || previousTimed) && times[i] !== frameTimeS) || overlayNow !== previousOverlay) {
         frameTimeS = times[i]
         previousTimed = timed
@@ -625,10 +642,16 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
           if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
         }
         frameTimeS = times[i]
-        // same task as the last render: the drawing buffer still holds the frame
+        // same task as the last render: the drawing buffer still holds the frame; the render is waited for apart, so that
+        // composing and the video frame are not charged for it
+        const g0 = performance.now()
+        waitForGpu(glContext)
+        const waited = performance.now() - g0
+        timings.gpuWaitMs += waited
+        timings.encodeMs += waited
         const t0 = performance.now()
-        composeFrame(ctx, canvas, { progress, time: overlayTime(filmClock, progress, frameTimeS) }, width, height, deps.overlay())
-        const composed = performance.now() - t0
+        composeFrame(handover.begin(), canvas, { progress, time: overlayTime(filmClock, progress, frameTimeS) }, width, height, deps.overlay())
+        composed = performance.now() - t0
         timings.composeMs += composed
         timings.encodeMs += composed
         timings.rendered++
@@ -639,10 +662,14 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       // the next frame renders
       await encoded()
       const t0 = performance.now()
-      encoding = session.addFrame(i)
+      const frame = await handover.take()
+      encoding = session.addFrame(i, frame)
+      handover.release(frame)
       const taken = performance.now() - t0
       timings.frameMs += taken
       timings.encodeMs += taken
+      // a composed image, not a hold: what composing it and handing it over cost, for the choice of the method
+      if (composed !== null) handover.record(composed + taken)
       report(i + 1, performance.now(), timings, i === schedule.length - 1)
     }
     await encoded()
@@ -659,7 +686,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     console.info(
       `[export] ${schedule.length} images (${timings.rendered} rendues) en ${s(performance.now() - startedAt)} s : ${timingsSummary(timings)}` +
         `${shadowSummary(timings) ? ` ; ${shadowSummary(timings)}` : ''}` +
-        `${timings.gpuRenders === 0 ? ' (GPU non mesuré : la composition attend la fin du rendu)' : ''} ; ` +
+        `${timings.gpuRenders === 0 ? " (GPU non mesuré : voir l'attente de la carte graphique)" : ''} ; ` +
         `encodeur ${container}/${codec}${hardware ? ' matériel' : ''} ; ` +
         `${timings.timeouts} image(s) au délai, ${timings.givenUp} image(s) aux tuiles abandonnées`,
     )

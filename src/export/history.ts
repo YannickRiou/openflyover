@@ -21,6 +21,7 @@ import { SNOW_MODES } from '../weather/snowLine'
 import type { SnowMode } from '../weather/snowLine'
 import { CLOUD_MODES, CLOUD_QUALITIES, SEA_RENDERS } from '../weather/sceneClouds'
 import type { CloudMode, CloudQuality, SeaRender } from '../weather/sceneClouds'
+import { HANDOVER_METHODS, type HandoverMethod } from './handover'
 import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender } from './qualityTier'
 import { VIDEO_ASPECTS, VIDEO_FPS, VIDEO_QUALITIES, VIDEO_RESOLUTIONS, videoSize } from './schedule'
 import type { VideoAspect, VideoQuality, VideoResolution } from './schedule'
@@ -87,12 +88,13 @@ export interface HistoryEntry {
   encodeMs: number
   /**
    * Split of the render and encoding time (`ExportTimings`): renders made, GPU time measured (`gpuRenders` of them,
-   * 0 where the browser has no timer queries), composing, video frame, waiting for the encoder. 0 in entries recorded
-   * before (added without a new `HISTORY_VERSION`).
+   * 0 where the browser has no timer queries), waiting for the GPU after the render, composing, video frame, waiting
+   * for the encoder. 0 in entries recorded before (added without a new `HISTORY_VERSION`).
    */
   renders: number
   gpuMs: number
   gpuRenders: number
+  gpuWaitMs: number
   composeMs: number
   frameMs: number
   encodeWaitMs: number
@@ -115,6 +117,8 @@ export interface HistoryEntry {
   encoder?: 'webcodecs' | 'native'
   /** the browser encoded on the GPU's encoder (`prefer-hardware`) */
   hardware?: true
+  /** the way the frames reached the encoder, the fastest measured on the device (`handover.ts`) */
+  handover?: HandoverMethod
   settings: RenderSettings
 }
 
@@ -182,6 +186,7 @@ export function entryOf(record: RenderRecord): HistoryEntry {
     renders: round(timings.renders),
     gpuMs: round(timings.gpuMs),
     gpuRenders: round(timings.gpuRenders),
+    gpuWaitMs: round(timings.gpuWaitMs),
     composeMs: round(timings.composeMs),
     frameMs: round(timings.frameMs),
     encodeWaitMs: round(timings.encodeWaitMs),
@@ -197,6 +202,7 @@ export function entryOf(record: RenderRecord): HistoryEntry {
     ...(record.outcome === 'done' && result && { codec: result.codec, bytes: round(result.sizeBytes) }),
     ...(record.encoder && { encoder: record.encoder }),
     ...(result?.hardware && { hardware: true as const }),
+    ...(timings.handover && { handover: timings.handover }),
     settings: summariseSettings(record.settings, request.quality),
   }
 }
@@ -302,6 +308,7 @@ function parseEntry(raw: unknown): HistoryEntry | null {
   const codec = text(raw.codec, 30)
   const bytes = num(raw.bytes)
   const encoder = oneOf(raw.encoder, ['webcodecs', 'native'] as const)
+  const handover = oneOf(raw.handover, HANDOVER_METHODS)
   return {
     id,
     at,
@@ -318,6 +325,7 @@ function parseEntry(raw: unknown): HistoryEntry | null {
     renders: count(raw.renders),
     gpuMs: count(raw.gpuMs),
     gpuRenders: count(raw.gpuRenders),
+    gpuWaitMs: count(raw.gpuWaitMs),
     composeMs: count(raw.composeMs),
     frameMs: count(raw.frameMs),
     encodeWaitMs: count(raw.encodeWaitMs),
@@ -334,6 +342,7 @@ function parseEntry(raw: unknown): HistoryEntry | null {
     ...(bytes !== undefined && bytes >= 0 && { bytes }),
     ...(encoder && { encoder }),
     ...(raw.hardware === true && { hardware: true as const }),
+    ...(handover && { handover }),
     settings: parseSettings(raw.settings),
   }
 }
@@ -511,6 +520,13 @@ const MODE_LABELS: Record<CloudMode, string> = {
 /** « rapide », « moyenne », « fine » (the names of the export panel in lower case) */
 const cloudQualityLabel = (quality: CloudQuality) => CLOUD_QUALITY_NAMES[quality].toLowerCase()
 const ZOOM_KEYS = ['export.history.zoom.0', 'export.history.zoom.1', 'export.history.zoom.2'] as const
+/** « méthode canevas de la page » */
+const HANDOVER_KEYS = {
+  offscreen: 'export.history.handover.offscreen',
+  canvas: 'export.history.handover.canvas',
+  bitmap: 'export.history.handover.bitmap',
+} as const
+export const handoverLabel = (method: HandoverMethod) => t('export.history.row.handoverValue', { method: t(HANDOVER_KEYS[method]) })
 const ENCODER_KEYS = { webcodecs: 'export.history.encoder.webcodecs', native: 'export.history.encoder.native' } as const
 const CODEC_LABELS: Record<string, string> = { 'mp4/avc': 'MP4 (H.264)', 'mp4/hevc': 'MP4 (HEVC)', 'mp4/av1': 'MP4 (AV1)', 'png/png': 'PNG', 'webm/vp9': 'WebM (VP9)', 'webm/vp8': 'WebM (VP8)' }
 
@@ -586,13 +602,15 @@ export function settingsDetails(settings: RenderSettings): { label: string; valu
 type TimingSplit = Pick<
   ExportTimings,
   'rendered' | 'renders' | 'renderMs' | 'gpuMs' | 'gpuRenders' | 'waitMs' | 'encodeMs' | 'composeMs' | 'frameMs' | 'encodeWaitMs'
->
+> &
+  Partial<Pick<ExportTimings, 'gpuWaitMs'>>
 
 /**
  * Where the time of a render went, on one line: « rendu 50,0 s (GPU 21,3 s), 1,4 rendu par image, tuiles 30,0 s,
- * composition 6,0 s, image vidéo 1,5 s, attente de l'encodeur 2,5 s ». The GPU time when measured: without it, the
- * composition also holds the wait for the GPU to finish the render (it reads the WebGL image). A split recorded before
- * the composition was measured apart gives « composition et encodage ».
+ * attente de la carte graphique 4,0 s, composition 6,0 s, image vidéo 1,5 s, attente de l'encodeur 2,5 s ». The wait for
+ * the graphics card (the end of the last render of each image) is apart where it was measured (absent from a split
+ * recorded before); the GPU time when measured. A split recorded before the composition was measured apart gives
+ * « composition et encodage ».
  */
 export function timingsSummary(timings: TimingSplit): string {
   const s = (ms: number) => t('format.seconds', { value: comma(ms / 1000) })
@@ -611,6 +629,7 @@ export function timingsSummary(timings: TimingSplit): string {
   }
   parts.push(t('export.history.timings.tiles', { time: s(timings.waitMs) }))
   if (timings.composeMs + timings.frameMs + timings.encodeWaitMs > 0) {
+    if (timings.gpuWaitMs) parts.push(t('export.history.timings.gpuWait', { time: s(timings.gpuWaitMs) }))
     parts.push(
       t('export.history.timings.compose', { time: s(timings.composeMs) }),
       t('export.history.timings.videoFrame', { time: s(timings.frameMs) }),
@@ -658,5 +677,6 @@ export function entryDetails(entry: HistoryEntry): { label: string; value: strin
     const encoder = t(ENCODER_KEYS[entry.encoder])
     rows.push({ label: t('export.history.row.encoder'), value: entry.hardware ? t('export.history.row.encoderHardware', { encoder }) : encoder })
   }
+  if (entry.handover) rows.push({ label: t('export.history.row.handover'), value: handoverLabel(entry.handover) })
   return rows
 }
