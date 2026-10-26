@@ -204,7 +204,7 @@ export function FlyoverRig() {
     // the export places its camera with the same function
     const view = filmViewAt(path, clock, progress, timeS, frame, engine, size.height > 0 ? size.width / size.height : 1, follow)
     marker.visible = true
-    ;(window as unknown as { __rig: unknown }).__rig = { view, camera } // TEMP-DEBUG
+    ;(window as unknown as { __rig: unknown }).__rig = { view, camera, engine, path, frame } // TEMP-DEBUG
 
     const applied = appliedSettingsRef.current
     const cameraChanged =
