@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **A camera that is nicer to watch: « Espace devant » and « Inclinaison dans les virages »**: two sliders in « Survol › Caméra », with gentle defaults that old projects get too (their films change a little; both at 0 give the old framing back). « Espace devant » (15 % by default, up to 40 %) puts the marker a little behind the middle of the picture, on the side it comes from, so there is room on the side it is heading to; it comes back to the middle when the marker stops. « Inclinaison dans les virages » (3° by default, up to 10°) tilts the horizon gently into a bend and levels it on straight stretches and at stops. The opening and closing shots, the keyframes and the high views level the horizon again smoothly, and a keyframe added by hand never keeps the tilt. Neither acts in « Orbite autour du marqueur », the tilt not in « Vue du dessus ». The preview, the video export and the poster show the same picture. « Nouveautés » presents it.
+
 ## 4.4.1 (October 2026)
 
 - **The marker no longer blinks behind the relief**: it was switched off whole as soon as the computed sight line touched the relief, and back on as soon as it cleared it, so a line grazing a crest (a low view, or a higher one over small mountains) made it blink, and it showed whole over a summit that was really in front of it. The relief now hides the marker like a real object, from the image itself: a crest in front of it covers it where it passes, a little at first, then all of it, without blinking, and the slope just under it (150 m) never cuts it. The same for the markers of « En parallèle ». Its place and size on screen do not change; the 3D labels still disappear whole behind the relief.
