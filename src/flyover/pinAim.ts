@@ -29,6 +29,8 @@ const foot = new Vector3()
 
 /** The marker may be pushed this far toward the edge of the frame (normalised device coordinate, 1 = the edge) by the turn to a pin. */
 export const PIN_MARKER_MARGIN = 0.8
+/** The angle between the usual aim and the marker is rounded off below this (radians): see `keepMarkerNear`. */
+const MARKER_OFF_ROUNDING_RAD = 0.08
 
 /**
  * `aim` (the usual aim `from` turned toward the pins), with its turn limited so that the marker stays within the frame
@@ -44,7 +46,10 @@ function keepMarkerNear(aim: Vector3, from: Vector3, marker: Vector3, position: 
   const length = ray.length()
   const turned = ray.divideScalar(Math.max(length, 1e-9))
   const half = Math.atan(PIN_MARKER_MARGIN * Math.tan((keep.fovDeg / 2) * (Math.PI / 180)) * Math.min(1, keep.aspect))
-  const room = Math.max(0, half - angleBetween(usual, marker.clone().sub(position).normalize()))
+  // the angle is a V where the usual aim crosses the marker's direction (a hairpin's apex does it in a frame): the room dipped
+  // and the aim with it, a jolt of 0.04 with « Drone rapide »; rounded off, the room is a little smaller and never jolts
+  const off = Math.hypot(angleBetween(usual, marker.clone().sub(position).normalize()), MARKER_OFF_ROUNDING_RAD)
+  const room = Math.max(0, half - off)
   const turn = angleBetween(usual, turned)
   if (turn <= room / 2) return aim
   const free = room / 2
@@ -52,7 +57,10 @@ function keepMarkerNear(aim: Vector3, from: Vector3, marker: Vector3, position: 
   // along the arc from the usual aim to the turned one, `kept` of the way round
   const sin = Math.sin(turn)
   const dir = sin < 1e-6 ? usual : usual.multiplyScalar(Math.sin(turn - kept) / sin).addScaledVector(turned, Math.sin(kept) / sin)
-  return position.clone().addScaledVector(dir, length)
+  // the aim's distance follows the turn that is kept: a pin far off would otherwise keep the aim far away, where a small
+  // swing of the direction moves it by several times the camera's distance
+  const usualLength = from.distanceTo(position)
+  return position.clone().addScaledVector(dir, usualLength + (length - usualLength) * (kept / turn))
 }
 
 /**

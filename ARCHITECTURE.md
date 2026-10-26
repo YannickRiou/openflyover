@@ -879,7 +879,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `flownAt`) gives `computeCameraView` the marker's speed now; above the average, the heading and the sway are averaged
   over `RUN_TAPS` = 9 points of a tent as wide as the track covered in `RUN_SMOOTHING_S` = 0.7 s of the extra speed
   (`runTaps`: no new table per width, which `headingTable` would build for each one; at the average speed or below nothing
-  changes): 0.055 → 0. The aim is left alone: averaging it the same way took the marker 1.6 half-frames off the middle on
+  changes): the camera's own jolt of « Oiseau » on the example at ×4 0.054 → 0.027. The aim is left alone: averaging it the same way took the marker 1.6 half-frames off the middle on
   the switchbacks (`markerVisible.test.ts` holds it under 0.2), and capped at what that allows it did not calm it
   (« Drone rapide » 0.071 → 0.061). (3) **Camera keys**: a blend of two poses knows nothing of the relief between them, and the 80 m clearance
   jumped where a pose lies closer to the ground than that. The keyed camera (`keyedFlight`, `freeView`) is blended
@@ -888,7 +888,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   switchbacks → none, and the free style no longer jumps by 0.106 of the distance as it reaches a key. (4) **Photo pins**:
   the turn to a pin ahead of or behind the marker took it out of the frame (1.7 NDC with the default camera on the example,
   behind the camera with the lively presets); `aimTowardsPins` now limits the turn to what keeps the marker within
-  `PIN_MARKER_MARGIN` = 0.8 of the frame (`keepMarkerNear`: along the same arc, a soft saturation, so the aim stays smooth).
+  `PIN_MARKER_MARGIN` = 0.8 of the frame (`keepMarkerNear`: along the same arc, a soft saturation, so the aim stays smooth; the angle to the marker is rounded off below `MARKER_OFF_ROUNDING_RAD` = 0.08 and the aim's distance follows the turn that is kept: without them the turn jolted 0.04 to 0.08 with « Drone rapide »).
   (5) **Sharper tiles arriving while the film plays** (`flightAt`, `raiseTable`): tiles arriving bump `terrainVersion` every
   frame, and the first stale film instant in time order was the one refreshed (one a frame, so the others starved while the
   bumps went on, then all changed in a row once they stopped): a whole sharper terrain (480 m → 60 m detail on the example)

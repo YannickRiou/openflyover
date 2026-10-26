@@ -125,8 +125,11 @@ describe('the whole film over the home page example, beyond the opening and the 
       { id: 'a', fromM: lengthM * 0.2, toM: lengthM * 0.35, factor: 4 },
       { id: 'b', fromM: lengthM * 0.55, toM: lengthM * 0.7, factor: 0.25 },
     ]
-    // 0.055 before; the aim of the fast drone still whips round the switchbacks at ×4 (0.07): it must stay near the marker
-    expect(audit({ speeds }, preset('bird'))).toEqual([])
+    // the camera itself: 0.054 before, 0.027 now. What is left (0.037) is the aim, which stays on the marker as it takes a
+    // switchback at ×4 (the aim of « Drone rapide » reaches 0.07): averaging it over more took the marker out of the frame
+    const issues = audit({ speeds }, preset('bird'))
+    expect(issues.filter((i) => i.kind !== 'jolt')).toEqual([])
+    for (const issue of issues) expect(issue.worst).toBeLessThan(0.045)
   })
 
   it('camera keys over the steep massif: the camera never goes through the ridges between them', { timeout: 60_000 }, () => {
@@ -197,8 +200,32 @@ describe('the whole film over the home page example, beyond the opening and the 
         return { startS, endS: startS + 3, lon: at.lon, lat: at.lat, ele: at.ele }
       })
       for (const id of ['chase', 'fast-drone', 'bird']) {
-        expect(audit({}, preset(id), { pins }).filter((i) => i.kind === 'marker-out'), `${id}, pins ${shiftM} m from the marker`).toEqual([])
+        const issues = audit({}, preset(id), { pins })
+        expect(issues.filter((i) => i.kind === 'marker-out'), `${id}, pins ${shiftM} m from the marker`).toEqual([])
+        // and the turn is no jolt of its own: « Drone rapide » reached 0.08 where the room left to the marker dipped
+        // as the aim crossed the marker's direction (its own swing is 0.025 at most there)
+        for (const issue of issues) expect(issue.worst, `${id}, pins ${shiftM} m from the marker`).toBeLessThan(0.04)
       }
+    }
+  })
+
+  it('stays a function of the film time: a frame is the same alone as after others (the export renders any frame alone)', { timeout: 60_000 }, () => {
+    const cameraKeys = [{ id: 'k1', atM: lengthM * 0.4, distance: 1.4, pitchDeg: 30, headingOffsetDeg: 60 }]
+    const speeds = [{ id: 'a', fromM: lengthM * 0.2, toM: lengthM * 0.35, factor: 4 }]
+    const clock = clockOf({ cameraKeys, speeds })
+    const pins = [20, 40].map((startS) => {
+      const at = samplePath(path, clock.progressAtTime(startS) * lengthM)
+      return { startS, endS: startS + 3, lon: at.lon, lat: at.lat, ele: at.ele }
+    })
+    const view = (t: number, sample: HeightSampler) =>
+      computeFilmView(path, clock, t, clock.progressAtTime(t), where, sample, { exaggeration: 1, liftM: 3, camera: preset('bird'), durationS: 60, aspect: 16 / 9, pins, terrainVersion: 1 })
+    const shared: HeightSampler = (lon, lat) => hillySampler(lon, lat)
+    // the instants in a scrambled order: the ones before warm what the next ones read
+    for (const t of [47.3, 12.1, 30.4, 18.8, 33.3, 8.2, 52.9, 19.5, 40.1]) {
+      const after = view(t, shared)
+      const alone = view(t, (lon, lat) => hillySampler(lon, lat))
+      expect(after.position.distanceTo(alone.position), `${t} s`).toBeLessThan(1e-6)
+      expect(after.target.distanceTo(alone.target), `${t} s`).toBeLessThan(1e-6)
     }
   })
 })
