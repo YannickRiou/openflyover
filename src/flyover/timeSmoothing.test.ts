@@ -14,6 +14,7 @@ import {
   ANTICIPATION_STEP_S,
   anticipatedRaise,
   easedEndTimeS,
+  motionShares,
   TIME_SMOOTHING_SAMPLES,
   timeSmoothing,
   windowAverage,
@@ -29,7 +30,8 @@ const path = buildTrackPath(
   }),
 )
 const flat = () => 1000
-const NONE: CameraSettings = { ...DEFAULT_CAMERA, aimSmoothingS: 0, cameraSmoothingS: 0, endingS: 0 }
+/** no smoothing in film time, no lead room, no bank (they follow the film's speed: tested in camera.test.ts) */
+const NONE: CameraSettings = { ...DEFAULT_CAMERA, aimSmoothingS: 0, cameraSmoothingS: 0, endingS: 0, leadRoomPct: 0, bankDeg: 0 }
 
 const clockOf = (opening: FilmShot, closing: FilmShot, stops: FilmStop[] = []) =>
   buildFilmClock({
@@ -175,9 +177,11 @@ describe('film camera smoothed in time', () => {
   it('the dive of a situation shot still closes in at every frame', () => {
     const clock = clockOf({ style: 'situation', durationS: 8 }, NO_SHOT)
     const range = (view: { position: Vector3; target: Vector3 }) => view.position.distanceTo(view.target)
-    let previous = viewAt(clock, 0, DEFAULT_CAMERA)
+    // without the lead room, which moves the aim as the marker starts to move at the end of the dive
+    const camera = { ...DEFAULT_CAMERA, leadRoomPct: 0 }
+    let previous = viewAt(clock, 0, camera)
     for (let t = 1 / 30; t <= 8; t += 1 / 30) {
-      const view = viewAt(clock, t, DEFAULT_CAMERA)
+      const view = viewAt(clock, t, camera)
       expect(range(view)).toBeLessThan(range(previous))
       previous = view
     }
@@ -215,5 +219,52 @@ describe('anticipated raise', () => {
       expect(Math.abs(raise - before)).toBeLessThan(10)
       before = raise
     }
+  })
+})
+
+describe('motionShares (the speed the lead room and the bank follow)', () => {
+  const stop: FilmStop = { id: 's', atM: 2000, durationS: 12, camera: 'fixe' }
+  const smooth = { ...NONE, cameraSmoothingS: 3 }
+
+  it('is 1 in a steady flight at x1, for the marker and the camera', () => {
+    const clock = clockOf(NO_SHOT, NO_SHOT)
+    for (const camera of [NONE, smooth]) {
+      const { marker, camera: cam } = motionShares(clock, 30, camera, 60)
+      expect(marker).toBeCloseTo(1, 9)
+      expect(cam).toBeCloseTo(1, 9)
+    }
+  })
+
+  it('is 0 in the middle of a stop and before the flight, and never steps from one frame to the next', () => {
+    const clock = clockOf({ style: 'descente', durationS: 6 }, NO_SHOT, [stop])
+    const [held] = clock.stops
+    const middle = motionShares(clock, (held.startS + held.endS) / 2, smooth, 60)
+    expect(middle.marker).toBeCloseTo(0, 9)
+    expect(middle.camera).toBeCloseTo(0, 9)
+    expect(motionShares(clock, 2, smooth, 60).marker).toBe(0)
+    for (const camera of [NONE, smooth]) {
+      let previous = motionShares(clock, 0, camera, 60)
+      for (let t = 1 / 30; t < clock.totalTime(); t += 1 / 30) {
+        const shares = motionShares(clock, t, camera, 60)
+        // it takes about two seconds to go from still to moving
+        expect(Math.abs(shares.marker - previous.marker)).toBeLessThan(0.1)
+        expect(Math.abs(shares.camera - previous.camera)).toBeLessThan(0.1)
+        previous = shares
+      }
+    }
+  })
+
+  it('follows the speed portions: half the pace, half the share', () => {
+    const clock = buildFilmClock({
+      opening: NO_SHOT,
+      closing: NO_SHOT,
+      stops: [],
+      speeds: [{ id: 'v', fromM: 500, toM: 3500, factor: 0.5 }],
+      lengthM: path.lengthM,
+      highlightsM: [],
+      durationS: 60,
+      pacing: { ...DEFAULT_PACING, keepDuration: false },
+    })
+    expect(motionShares(clock, clock.timeAtProgress(0.5), NONE, 60).marker).toBeCloseTo(0.5, 1)
   })
 })

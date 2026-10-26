@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v45.camera.title': 'Una camera più piacevole da guardare',
+  'v45.camera.text': 'Due impostazioni in Sorvolo › Camera. «Spazio davanti» mette il marcatore un po’ dietro il centro dell’immagine, lasciando spazio dal lato verso cui avanza. «Inclinazione nelle curve» inclina dolcemente l’orizzonte nelle curve, come un drone che si piega. Per impostazione predefinita, un po’ di entrambe: i film risultano più fluidi.',
   'v45.flight.title': 'Voli più leggibili',
   'v45.flight.text': 'Un volo (parapendio, salto di kite, funivia) ha ora una tenda traslucida fino al rilievo, un’ombra a terra e una linea che si ispessisce avvicinandosi alla camera. « Colora in base a › Velocità verticale » mostra a colpo d’occhio dove si sale e dove si scende. Impostazioni in Traccia › Volo.',
   'v44.night.title': 'Notti meno nere',

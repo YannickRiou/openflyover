@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v45.camera.title': 'A camera that is nicer to watch',
+  'v45.camera.text': 'Two settings in Flyover › Camera. “Lead room” puts the marker a little behind the middle of the picture, leaving room on the side it is heading to. “Banking in bends” gently tilts the horizon in bends, like a drone leaning into the turn. Both are on a little by default: your films feel smoother.',
   'v45.flight.title': 'Easier-to-read flights',
   'v45.flight.text': 'A flight (paragliding, kite jump, cable car) now has a translucent curtain down to the terrain, a shadow on the ground, and a line that gets thicker as it comes closer to the camera. “Colour by › Vertical speed” shows at a glance where you climb and where you sink. Settings in Track › Flight.',
   'v44.night.title': 'Brighter nights',

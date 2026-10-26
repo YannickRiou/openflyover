@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v45.camera.title': 'Une caméra plus agréable à regarder',
+  'v45.camera.text': 'Deux réglages dans Survol › Caméra. « Espace devant » place le marqueur un peu en arrière du centre de l’image, pour laisser de la place du côté où il va. « Inclinaison dans les virages » incline doucement l’horizon dans les virages, comme un drone qui penche. Par défaut, un peu des deux : vos films en deviennent plus fluides.',
   'v45.flight.title': 'Des vols plus lisibles',
   'v45.flight.text': 'Un vol (parapente, saut en kite, téléphérique) a maintenant un rideau translucide jusqu’au relief, une ombre au sol, et un trait qui s’épaissit en se rapprochant de la caméra. « Colorer selon › Vitesse verticale » montre d’un coup d’œil où l’on monte et où l’on descend. Réglages dans Trace › Vol.',
   'v44.night.title': 'Des nuits moins noires',

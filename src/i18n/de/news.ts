@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v45.camera.title': 'Eine Kamera, die angenehmer anzusehen ist',
+  'v45.camera.text': 'Zwei Einstellungen unter Überflug › Kamera. „Raum voraus“ setzt den Marker etwas hinter die Bildmitte und lässt Platz auf der Seite, in die er fährt. „Neigung in Kurven“ neigt den Horizont in Kurven sanft, wie eine Drohne, die sich in die Kurve legt. Beide sind standardmäßig leicht eingeschaltet: Ihre Filme wirken ruhiger.',
   'v45.flight.title': 'Besser lesbare Flüge',
   'v45.flight.text': 'Ein Flug (Gleitschirm, Kitesprung, Seilbahn) hat jetzt einen durchscheinenden Vorhang bis zum Gelände, einen Schatten am Boden und eine Linie, die dicker wird, wenn sie sich der Kamera nähert. « Einfärben nach › Vertikalgeschwindigkeit » zeigt auf einen Blick, wo man steigt und wo man sinkt. Einstellungen unter Track › Flug.',
   'v44.night.title': 'Hellere Nächte',
