@@ -279,6 +279,7 @@ uniform vec2 resolution;
 uniform float widthPx;
 varying float vEdge;
 varying float vTrackM;
+#include <logdepthbuf_pars_vertex>
 void main() {
   vEdge = edge;
   vTrackM = trackM;
@@ -291,15 +292,20 @@ void main() {
   vec2 offset = vec2( dir.y / aspect, - dir.x ) * edge;
   here.xy += offset * widthPx / resolution.y * here.w;
   gl_Position = here;
+  #include <logdepthbuf_vertex>
 }`,
     fragmentShader: `${CUT_PARS}uniform float shadowAlpha;
 varying float vEdge;
+#include <logdepthbuf_pars_fragment>
 void main() {
+  #include <logdepthbuf_fragment>
   ${CUT_DISCARD}
   float soft = 1.0 - smoothstep( 0.2, 1.0, abs( vEdge ) );
   gl_FragColor = vec4( 0.0, 0.0, 0.0, shadowAlpha * soft * ( ${CUT_FADE} ) );
 }`,
     transparent: true,
+    // the ribbon is widened in the screen: which face looks at the camera depends on the direction of travel
+    side: DoubleSide,
     depthWrite: false,
     // pulled towards the camera like the line's lift: the relief between two draped points must not cut it
     polygonOffset: true,

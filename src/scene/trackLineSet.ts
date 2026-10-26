@@ -254,6 +254,7 @@ function buildFlightPiece(first: number, count: number, dist: Float64Array, curt
   piece.curtain.name = 'track-curtain'
   piece.curtain.renderOrder = 1
   piece.shadow.name = 'track-shadow'
+  piece.shadow.renderOrder = 1
   setCurtainColors([piece], null)
   return piece
 }
