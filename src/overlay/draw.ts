@@ -2007,7 +2007,7 @@ export function drawOverlay(
     ctx.restore()
   }
   if (endSources > 0.001) {
-    const obstacles = widgets.map((w, i) => ({ x: positions[i].x, y: positions[i].y, w: w.width, h: w.height }))
+    const obstacles = [...widgets.map((w, i) => ({ x: positions[i].x, y: positions[i].y, w: w.width, h: w.height })), ...(structure?.obstacles ?? [])]
     drawEndSources(p, sources, endSources, structure?.area, obstacles)
   }
   ctx.restore()
