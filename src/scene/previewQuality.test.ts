@@ -111,6 +111,13 @@ describe('frame cap', () => {
     expect(Math.abs(framesDrawn(60, frameIntervalMs('phone', 1), 4) - 4 * 30)).toBeLessThanOrEqual(1)
   })
 
+  it('averages the cap when the ticks are irregular, as on a display without a fixed rate (a tick every 11.6 ms or 13 ms)', () => {
+    expect(framesDrawn(1000 / 11.6, frameIntervalMs('phone', 0), 4)).toBeGreaterThanOrEqual(4 * 59)
+    expect(framesDrawn(1000 / 13, frameIntervalMs('phone', 0), 4)).toBeGreaterThanOrEqual(4 * 59)
+    expect(framesDrawn(1000 / 11.6, frameIntervalMs('phone', 1), 4)).toBeGreaterThanOrEqual(4 * 29)
+    expect(framesDrawn(1000 / 11.6, frameIntervalMs('phone', 1), 4)).toBeLessThanOrEqual(4 * 31)
+  })
+
   it('does not hold back a screen slower than the cap, and a stall is not followed by a burst', () => {
     expect(Math.abs(framesDrawn(30, frameIntervalMs('phone', 0), 4) - 4 * 30)).toBeLessThanOrEqual(1)
     const cap = createFrameCap()

@@ -173,6 +173,15 @@ one was due, so 90 Hz averages 60 rather than dropping to 45), the loop stops an
 drawn on the next tick. That tick still runs the after-effects: those that follow the frames (status bar counter,
 thumbnail) use `addFrameEffect`, and the rung measure counts from `useFrame`. Computers, a paused film and every
 export (`isExportBusy`) are not capped.
+Verified in headless Chromium (SwiftShader, touch emulation, dev server), the film playing: a phone at « Complète » draws
+about 50 frames a second where the same scene uncapped draws 65-90 (the ticks of that browser come every ~12 ms, which a 60
+cap can only follow in steps; a 60, 90 or 120 Hz display gives 60 in the tests), at « Légère » 28-30, the film advancing
+1.0 s per second; a computer is unchanged. Paused, the scene sleeps (no frame in 3 s); a one-finger drag draws frames, then
+it sleeps again, and playing resumes, also with a drag while playing. « Auto » went 0, 1, 2 in about 4 s on that slow
+renderer (5-12 frames a second), the shadow map drawn once for every two frames at rung 2. Not measured: a real phone.
+Changing the pixel ratio while a software renderer is behind with its frames (unthrottled headless) blocks `setSize`
+for seconds (the same for « Complète » to « Légère » in the middle of a film, before this change); with the display's
+vsync, none.
 The export keeps `frameloop 'never'` and draws its own frames. Measured with software rendering: no more frame requests
 once the margin has elapsed (~30 s there, one frame per second; ~0.5 s on a real graphics card). The engine's delays
 (retry of a failed tile, unloading) are times, checked at the next frame.

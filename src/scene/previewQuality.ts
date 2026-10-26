@@ -109,7 +109,7 @@ export function createFrameCap(): { allow(nowMs: number, interval: number): bool
       }
       // a millisecond of slack: a tick lands a hair before its due time as often as a hair after
       if (due !== undefined && now + 1 < due) return false
-      due = due === undefined ? now + interval : Math.max(due + interval, now + interval / 2)
+      due = due === undefined ? now + interval : Math.max(due + interval, now)
       return true
     },
   }
