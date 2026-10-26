@@ -266,12 +266,19 @@ describe('pickCodec', () => {
     const canEncode = supporting('avc', 'hevc', 'vp9', 'vp8')
     expect(await pickCodec(OPTIONS, canEncode)).toEqual({ container: 'mp4', codec: 'avc' })
     // the hardware encoder first, refused here, then any
-    expect(canEncode).toHaveBeenCalledTimes(2)
+    expect(canEncode).toHaveBeenCalledTimes(5)
     const [codec, query] = canEncode.mock.calls[0] as [string, Record<string, unknown>]
     expect(codec).toBe('avc')
     expect(query).toMatchObject({ width: 1920, height: 1080, frameRate: 30, hardwareAcceleration: 'prefer-hardware' })
     expect(query.quality).toMatchObject({ options: { bitrate: videoBitrate(1920, 1080, 30, 'high', 'avc') } })
-    expect(canEncode.mock.calls[1][1]).toMatchObject({ hardwareAcceleration: 'no-preference' })
+    expect(canEncode.mock.calls[4]).toMatchObject(['avc', { hardwareAcceleration: 'no-preference' }])
+  })
+
+  it('takes a hardware HEVC over a software H.264, and keeps the codec chosen in « Encodage »', async () => {
+    const canEncode = vi.fn(async (codec: string, query?: { hardwareAcceleration?: string }) => query?.hardwareAcceleration === 'prefer-hardware' ? codec === 'hevc' : codec === 'avc') as unknown as CanEncode
+    expect(await pickCodec(OPTIONS, canEncode)).toEqual({ container: 'mp4', codec: 'hevc', hardware: true })
+    expect(await pickCodec(OPTIONS, canEncode, candidatesFor(undefined, 'avc'))).toEqual({ container: 'mp4', codec: 'avc' })
+    expect(await pickCodec(OPTIONS, onHardware('avc', 'hevc'))).toEqual({ container: 'mp4', codec: 'avc', hardware: true })
   })
 
   it('asks for the hardware encoder when the browser takes the configuration on it', async () => {

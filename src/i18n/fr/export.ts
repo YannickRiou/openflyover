@@ -274,6 +274,7 @@ export default {
   'panel.modeBatch': 'Plusieurs formats',
   'panel.modePoster': 'Affiche',
   resolutionNote: "Sur cet appareil, l'export est limité à {cap} (mémoire de la carte graphique) : le film sort en {cap}.",
+  deviceNote: "Sur cet appareil, la vidéo économise la mémoire : forêts moins denses, ombres et détails du terrain un peu moins fins.",
   'preset.imposed': 'Imposé par {name}',
   'preset.custom': 'Personnalisé',
   'history.fps': '{fps} i/s',
