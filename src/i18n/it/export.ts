@@ -282,6 +282,7 @@ const messages: Messages['export'] = {
   'panel.modeBatch': 'Più formati',
   'panel.modePoster': 'Poster',
   resolutionNote: 'Su questo dispositivo l’esportazione è limitata a {cap} (memoria della scheda grafica): il film esce in {cap}.',
+  deviceNote: 'Su questo dispositivo il video risparmia memoria: foreste meno dense, ombre e dettagli del terreno un po’ meno fini.',
   'preset.imposed': 'Imposto da {name}',
   'preset.custom': 'Personalizzato',
   'history.fps': '{fps} fps',

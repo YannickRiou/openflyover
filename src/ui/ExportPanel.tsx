@@ -42,6 +42,7 @@ import {
   VIDEO_FPS,
   VIDEO_RESOLUTIONS,
   buildFrameSchedule,
+  exportDeviceNote,
   exportResolutionNote,
   expandNameTemplate,
   platformPresetOf,
@@ -230,6 +231,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const busy = isExportBusy(phase)
   const { width, height } = videoSize(video.aspect, video.resolution)
   const resolutionNote = exportResolutionNote(video.resolution)
+  // the overlay alone has no terrain, forest or shadow to save
+  const deviceNote = overlayOnly ? null : exportDeviceNote()
   const encoding = videoEncoding(video)
   const totalFrames = buildFrameSchedule({
     durationS,
@@ -438,7 +441,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           onChange={(resolution) => update({ resolution })}
         />
         <p id={`${id}-size`} className="type-hint">
-          {[t('export.panel.size', { width: formatNumber(width), height: formatNumber(height) }), resolutionNote].filter(Boolean).join(' · ')}
+          {[t('export.panel.size', { width: formatNumber(width), height: formatNumber(height) }), resolutionNote, deviceNote].filter(Boolean).join(' · ')}
         </p>
       </div>
 
