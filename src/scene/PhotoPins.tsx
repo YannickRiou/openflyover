@@ -16,7 +16,8 @@ import { photoPins, pinLit, type PhotoPin } from '../film/photoPins'
 import { pinLocalPosition } from '../flyover/pinAim'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { useAppStore } from '../state/store'
-import { distanceFade, lineOfSightClearance, occlusionFade, spriteScaleForPixels } from './labelModel'
+import { terrainVersion } from './filmView'
+import { createClearanceMemo, distanceFade, occlusionFade, spriteScaleForPixels } from './labelModel'
 import { getShownLabelRects } from './labelRects'
 import { reliefClearance } from './markerSprite'
 import { layoutPins, type PinBox } from './pinLayout'
@@ -184,6 +185,8 @@ export function PhotoPins() {
   const pins = useMemo(() => (enabled && path ? photoPins(media, path, clock, table) : []), [enabled, media, path, clock, table])
   const groupRef = useRef<Group>(null)
   const entriesRef = useRef<PinEntry[]>([])
+  // the lines of sight, kept while the camera, the relief and the pin stay as they are
+  const sightRef = useRef(createClearanceMemo())
   const sharedRef = useRef<{ post: CanvasTexture; postLit: CanvasTexture; foot: CanvasTexture; footLit: CanvasTexture } | null>(null)
 
   useEffect(() => {
@@ -242,6 +245,7 @@ export function PhotoPins() {
     const timeS = playback.timeS ?? clock.timeAtProgress(playback.progress)
     camera.getWorldPosition(cameraPosition)
     const clearanceAt = reliefClearance(engine, frame, settings.exaggeration)
+    sightRef.current.begin([cameraPosition.x, cameraPosition.y, cameraPosition.z, engine, frame, settings.exaggeration, engine && terrainVersion(engine)])
     const sample = engine ? (lon: number, lat: number) => engine.sampleHeight(lon, lat) : null
     const pixel = spriteScaleForPixels(1, size.height, camera.projectionMatrix.elements[5])
     const exposureGain = 1 / gl.toneMappingExposure
@@ -249,13 +253,14 @@ export function PhotoPins() {
     const unit = Math.min(size.height, (size.width * 9) / 16) / PIN_REFERENCE_HEIGHT_PX
 
     const shown: { entry: PinEntry; lit: boolean; opacity: number; k: number; box: PinBox }[] = []
-    for (const entry of entries) {
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i]
       if (!entry.cardTextures) continue
       const { pin } = entry
       const position = pinLocalPosition(pin, frame, sample, settings.exaggeration, LINE_LIFT_M, entry.foot.position)
       const distance = cameraPosition.distanceTo(position)
       let opacity = distanceFade(distance, settings.labels.rangeKm * 1000)
-      if (clearanceAt) opacity *= occlusionFade(lineOfSightClearance(cameraPosition, position, clearanceAt))
+      if (clearanceAt) opacity *= occlusionFade(sightRef.current.clearance(i, cameraPosition, position, clearanceAt))
       if (opacity < 0.02) continue
       projected.copy(position).project(camera)
       if (projected.z > 1 || Math.abs(projected.x) > 1.2 || Math.abs(projected.y) > 1.2) continue

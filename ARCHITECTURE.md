@@ -301,6 +301,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      that view goes to tiles out of the frustum, but they are the shadow casters).
    - Bounding sphere: from the geometry if loaded, otherwise from the tile bounds with heights [-500, 9000] m.
    - Material: `MeshStandardMaterial({ map, roughness: 1, metalness: 0 })`, `side: FrontSide`.
+   - `sampleHeight` allocates nothing (scratch tile fractions, no closures; the labels' lines of sight call it ~6000 times a frame) and keeps the tile coordinates at zoom 0 to derive those of every level exactly (`sampleTileMeshAt`).
    - `sampleHeight` = the terrain **as drawn**: the triangles of the tile drawn at the point (`sampleTileMesh`), else
      (off the view) the deepest loaded tile there, else the `HeightField` (tree rebuilt after a change of imagery).
      The track, the marker and the labels therefore lie on the visible mesh: never on a finer grid the mesh does not
@@ -2422,7 +2423,7 @@ exports) gets it from the terrain source of the settings.
   of interest (`poiLabels`, light orange pictogram instead of the stroke, `FilmPoi.icon` among 9 Lucide paths in
   `Labels.tsx`, priority 200: above everything) and any external source registered through
   `setLabelSource(id, LandmarkLabel[])` (e.g. `'osm'`). Height = terrain (or recorded elevation) × exaggeration, re-draped on
-  `engine.onChange` (same debounce as the track). Hidden when the line of sight goes below the terrain (24 samples, the 2 lowest dips within 60 m refined by a golden-section search between their neighbours, so the cut does not flicker as samples slide over a ridge) and
+  `engine.onChange` (same debounce as the track). Hidden when the line of sight goes below the terrain (24 samples, the 2 lowest dips within 60 m refined by a golden-section search between their neighbours, so the cut does not flicker as samples slide over a ridge; the result of each label is kept from one frame to the next by `createClearanceMemo` while the camera position, the engine, the frame, the exaggeration, the terrain version (`terrainVersion(engine)` of `scene/filmView.ts`, bumped by `engine.onChange`) and the label's own position are unchanged, so a paused film samples the relief 0 times, and a moving one gets the same opacity as without the memo, which the export relies on; `PhotoPins` does the same) and
   between half the range and the range (`labels.rangeKm`, 70 km by default: `distanceFade`); shared size
   `labels.size` (×0.6 to ×1.6); on overlap, the highest priority wins. Opacity is a function of the view alone (no
   temporal smoothing): each export frame is rendered in isolation. The opening and closing cards do not hide them (the cards are drawn over the 3D view, labels

@@ -19,6 +19,7 @@ import {
   upgradeLabelSettings,
   withLabelDefaults,
   isValidLabelSettings,
+  createClearanceMemo,
   lineOfSightClearance,
   occlusionFade,
   FAINT_OPACITY,
@@ -187,6 +188,36 @@ describe('screen-space rules', () => {
     // the slope right under the label (last 150 m) never hides it
     expect(lineOfSightClearance({ x: 0, y: 50, z: 0 }, { x: 500, y: 50, z: 0 }, clearance, 48)).toBeGreaterThan(0)
     expect(lineOfSightClearance({ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, () => undefined)).toBe(Infinity)
+  })
+
+  it('keeps the lines of sight while the camera, the relief and the anchor stay the same, and gives the same answers', () => {
+    let calls = 0
+    const clearance = (x: number, y: number) => {
+      calls++
+      return y - (x >= 400 && x <= 600 ? 100 : 0)
+    }
+    const from = { x: 0, y: 150, z: 0 }
+    const a = { x: 1000, y: 50, z: 0 }
+    const b = { x: 800, y: 300, z: 0 }
+    const memo = createClearanceMemo()
+    memo.begin([0, 150, 0, 1])
+    const first = [memo.clearance(0, from, a, clearance), memo.clearance(1, from, b, clearance)]
+    expect(first).toEqual([lineOfSightClearance(from, a, clearance), lineOfSightClearance(from, b, clearance)])
+    // the next frame is the same view: nothing is sampled again
+    calls = 0
+    memo.begin([0, 150, 0, 1])
+    expect([memo.clearance(0, from, a, clearance), memo.clearance(1, from, b, clearance)]).toEqual(first)
+    expect(calls).toBe(0)
+    // an anchor that moved is measured again, the other one is not
+    expect(memo.clearance(0, from, { x: 1000, y: 500, z: 0 }, clearance)).toBeGreaterThan(100)
+    expect(calls).toBeGreaterThan(0)
+    calls = 0
+    memo.clearance(1, from, b, clearance)
+    expect(calls).toBe(0)
+    // a camera or a terrain that changed: everything is measured again
+    memo.begin([0, 150, 0, 2])
+    expect(memo.clearance(1, from, b, clearance)).toEqual(first[1])
+    expect(calls).toBeGreaterThan(0)
   })
 
   it('finds the crest between the samples, so a moving camera does not flicker at the cut', () => {

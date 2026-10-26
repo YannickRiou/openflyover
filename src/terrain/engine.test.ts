@@ -12,7 +12,9 @@ import type {
 } from '../core/types'
 import { DEFAULT_SETTLE, settle as settleView } from '../export/capture'
 import { createLocalFrame } from '../geo/ellipsoid'
-import { tileKeyString, tilesForBounds, zoomForTileBudget } from '../geo/mercator'
+import { tileKeyString, tilesForBounds, tileUVToLonLat, zoomForTileBudget } from '../geo/mercator'
+import { lineOfSightClearance } from '../scene/labelModel'
+import { reliefClearance } from '../scene/markerSprite'
 import {
   DEFAULT_TUNING,
   LOD_STEP,
@@ -206,6 +208,10 @@ afterEach(() => {
   for (const engine of engines.splice(0)) engine.dispose()
   vi.restoreAllMocks()
 })
+
+/** Measured with the code before the allocation-free sampler (`sampleHeight`), on the relief of the test below. */
+const GOLDEN_HEIGHTS = [3155.2381257334173, 2235.8323928189325, 2385.5599238246637, 1665.2910642942363, 1979.4281493185972, 2216.650056721362]
+const GOLDEN_CLEARANCES = [-273.8769027401613, 85.57436192387104, -563.3075770864134, -245.59193430973846, 120.7502592295159, 119.81120563374316, -355.1026891223364, 166.07386544786095]
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -725,6 +731,54 @@ describe('createTerrainEngine', () => {
     // the height field still answers where no tile is loaded (tree rebuilt for new imagery)
     engine.setOptions({ imageryZoomOffset: 2 })
     expect(engine.sampleHeight(6.9, 45.9)).toBeCloseTo(6.9 + 45.9, 9)
+  })
+
+  it('samples the same heights, and lines of sight over them, as the first version did (hot path of the labels)', async () => {
+    const hill = (lon: number, lat: number) => 2200 + 1200 * Math.sin(lon * 90) * Math.cos(lat * 120) + 400 * Math.sin(lon * 700 + lat * 500)
+    const deps = createFakeDeps()
+    vi.mocked(deps.fetcher.fetchBitmap).mockImplementation(async (url: string) => {
+      const [z, x, y] = new URL(url).pathname.slice(1).replace('.png', '').split('/').map(Number)
+      return { width: 4, height: 4, key: { z, x, y }, close() {} } as unknown as ImageBitmap
+    })
+    vi.mocked(deps.decodeDem).mockImplementation((bitmap) => {
+      const key = (bitmap as unknown as { key: TileKey }).key
+      const n = 128
+      const data = new Float32Array(n * n)
+      for (let j = 0; j < n; j++) {
+        for (let i = 0; i < n; i++) {
+          const p = tileUVToLonLat(key, (i + 0.5) / n, (j + 0.5) / n)
+          data[j * n + i] = hill(p.lon, p.lat)
+        }
+      }
+      return { width: n, height: n, data }
+    })
+    const engine = engineWith(deps, { maxZoom: 13 })
+    const camera = new PerspectiveCamera(50, 16 / 9, 5, 5e6)
+    camera.position.set(-9000, 3500, 9000)
+    camera.lookAt(new Vector3(0, 1500, 0))
+    camera.updateProjectionMatrix()
+    camera.updateMatrixWorld()
+    for (let i = 0; i < 40; i++) {
+      engine.update(camera, 1000)
+      await settle()
+    }
+    // inside the tiles drawn, and (last two) outside the area: the height field's answer (the fake one: lon + lat)
+    const points: Array<[number, number]> = [[6.9, 45.9], [6.75, 45.8], [7.05, 46.0], [6.61, 45.71], [7.19, 46.09], [6.9123, 45.8777]]
+    points.forEach(([lon, lat], i) => expect(engine.sampleHeight(lon, lat)).toBeCloseTo(GOLDEN_HEIGHTS[i], 9))
+    expect(engine.sampleHeight(7.5, 46.5)).toBeCloseTo(7.5 + 46.5, 9)
+    // lines of sight: cameras 4 to 12 km up, to labels 60 m over the relief
+    const clearanceAt = reliefClearance(engine, FRAME, 1)!
+    const clearances = [
+      [[-9000, 5200, 9000], [6.9, 45.9]],
+      [[-6000, 6500, 6000], [6.75, 45.8]],
+      [[-2000, 9000, 3000], [7.05, 46.0]],
+      [[5000, 7000, -2000], [6.9123, 45.8777]],
+      [[-9000, 4400, 9000], [6.7, 45.85]],
+      [[-9000, 12000, 9000], [6.9, 45.9]],
+      [[-3000, 8000, 4000], [6.95, 45.92]],
+      [[-9000, 6000, 8000], [6.82, 45.86]],
+    ].map(([from, [lon, lat]]) => lineOfSightClearance(new Vector3(...(from as [number, number, number])), FRAME.toLocal(lon, lat, hill(lon, lat) + 60), clearanceAt))
+    clearances.forEach((clearance, i) => expect(clearance).toBeCloseTo(GOLDEN_CLEARANCES[i], 6))
   })
 
   it('reports a change when the drawn tiles change without any load', async () => {

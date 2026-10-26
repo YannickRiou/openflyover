@@ -187,24 +187,32 @@ export function buildTileGeometry(
  * triangle of its grid cell, not the finer grid, so what is draped on the tile lies on its mesh.
  */
 export function sampleTileMesh(key: TileKey, grid: HeightGrid, segments: number, lon: number, lat: number): number {
-  const f = lonLatToTileFrac(lon, lat, key.z)
-  const u = Math.min(Math.max((f.x - key.x) * segments, 0), segments)
-  const v = Math.min(Math.max((f.y - key.y) * segments, 0), segments)
+  const f = lonLatToTileFrac(lon, lat, key.z, fracScratch)
+  return sampleTileMeshAt(key, grid, segments, f.x, f.y)
+}
+
+const fracScratch = { x: 0, y: 0 }
+
+/** `sampleTileMesh` at the tile coordinates (zoom `key.z`) of the point, when the caller already has them. */
+export function sampleTileMeshAt(key: TileKey, grid: HeightGrid, segments: number, fx: number, fy: number): number {
+  const u = Math.min(Math.max((fx - key.x) * segments, 0), segments)
+  const v = Math.min(Math.max((fy - key.y) * segments, 0), segments)
   const i = Math.min(Math.floor(u), segments - 1)
   const j = Math.min(Math.floor(v), segments - 1)
   const tx = u - i
   const ty = v - j
-  const at = (a: number, b: number) => {
-    const h = sampleGrid(grid, a / segments, b / segments)
-    return h === h ? h : 0
-  }
   // the cell's two triangles share the NE-SW diagonal
   if (tx + ty <= 1) {
-    const nw = at(i, j)
-    return nw + tx * (at(i + 1, j) - nw) + ty * (at(i, j + 1) - nw)
+    const nw = vertexHeight(grid, segments, i, j)
+    return nw + tx * (vertexHeight(grid, segments, i + 1, j) - nw) + ty * (vertexHeight(grid, segments, i, j + 1) - nw)
   }
-  const se = at(i + 1, j + 1)
-  return se + (1 - tx) * (at(i, j + 1) - se) + (1 - ty) * (at(i + 1, j) - se)
+  const se = vertexHeight(grid, segments, i + 1, j + 1)
+  return se + (1 - tx) * (vertexHeight(grid, segments, i, j + 1) - se) + (1 - ty) * (vertexHeight(grid, segments, i + 1, j) - se)
+}
+
+function vertexHeight(grid: HeightGrid, segments: number, a: number, b: number): number {
+  const h = sampleGrid(grid, a / segments, b / segments)
+  return h === h ? h : 0
 }
 
 /** Grid vertex index of the t-th vertex along a border (north/south walk east, west/east walk south). */
