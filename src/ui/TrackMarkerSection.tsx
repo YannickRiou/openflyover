@@ -27,6 +27,7 @@ import {
   TRACK_GLOW_INTENSITY_RANGE,
   TRACK_GLOW_WIDTH_RANGE,
   TRACK_SMOOTHING_RANGE,
+  TRACK_CURTAIN_RANGE,
   TRACK_TAIL_LENGTH_RANGE,
   TRACK_WIDTH_RANGE,
 } from '../scene/markerSettings'
@@ -44,6 +45,7 @@ import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch, TextFi
 
 /** 0 -> "Aucun", else the distance */
 const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.slider.noneMasc') : formatDistance(metres))
+const formatCurtain = (metres: number) => (metres >= TRACK_CURTAIN_RANGE.max ? translate('marker.track.flightCurtainGround') : formatDistance(metres))
 
 /** Pictogram of a figure, drawn from the same paths as the marker badge. */
 function FigureIcon({ figure }: { figure: MarkerFigure }) {
@@ -299,6 +301,18 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
             <Switch checked={style.flightCurtain} onChange={(on) => updateStyle({ flightCurtain: on })}>{t('marker.track.flightCurtain')}</Switch>
             <InfoTip text={t('marker.track.flightCurtainTip')} />
           </div>
+          {style.flightCurtain && (
+            <SettingRow label={t('marker.track.flightCurtainLength')} value={formatCurtain(style.flightCurtainM)} paths={['trackStyle.flightCurtainM']}>
+              <RangeField
+                label={t('marker.track.flightCurtainLength')}
+                tip={t('marker.track.flightCurtainLengthTip')}
+                {...TRACK_CURTAIN_RANGE}
+                value={style.flightCurtainM}
+                format={formatCurtain}
+                onChange={(flightCurtainM) => updateStyle({ flightCurtainM })}
+              />
+            </SettingRow>
+          )}
           <div className="flex items-center gap-1">
             <Switch checked={style.flightShadow} onChange={(on) => updateStyle({ flightShadow: on })}>{t('marker.track.flightShadow')}</Switch>
             <InfoTip text={t('marker.track.flightShadowTip')} />

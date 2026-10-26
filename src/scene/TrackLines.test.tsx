@@ -6,7 +6,7 @@ import type { BufferAttribute, InterleavedBufferAttribute, MeshBasicMaterial, Sh
 import type { TerrainEngine, Track, TrackPoint } from '../core/types'
 import { buildSequence } from '../flyover/sequence'
 import { createLocalFrame } from '../geo/ellipsoid'
-import { DEFAULT_TRACK_STYLE } from './markerSettings'
+import { DEFAULT_TRACK_STYLE, TRACK_CURTAIN_RANGE } from './markerSettings'
 import { CURTAIN_TOP_ALPHA, NO_TRAIL, SHADOW_WIDTH_SHARE, TRACK_GLOW_MAX_STRENGTH } from './trackLineStyle'
 import type { TrackLineSet } from './trackLineSet'
 
@@ -30,6 +30,7 @@ const {
   drawOnDistances,
   writeLineColors,
   CURTAIN_LIFT_M,
+  curtainLengthM,
   LINE_LIFT_M,
   LINE_WIDTH_PX,
   DENSIFY_STEP_M,
@@ -628,6 +629,38 @@ describe('flights: curtain, ground shadow, width weights', () => {
     // no terrain yet: the strip collapses onto the flight
     drapeTrackLineSet(set, null, 1)
     expect(at(curtain, 1)).toEqual(at(curtain, 0))
+    disposeTrackLineSet(set)
+  })
+
+  it('stops the curtain on the turn under it in a thermal, falls to the ground under the lowest turn, and as far as « Longueur du rideau » says', () => {
+    // a thermal: five turns of 60 m radius (one point every 10°), climbing 60 m a turn from 1500 m over a 1000 m terrain
+    const spiral: TrackPoint[] = Array.from({ length: 5 * 36 + 1 }, (_, i) => {
+      const a = (i / 36) * 2 * Math.PI
+      const p = frame.toLonLat(new Vector3(60 * Math.cos(a), 0, 60 * Math.sin(a)))
+      return { lon: p.lon, lat: p.lat, ele: 1500 + (60 * i) / 36 }
+    })
+    const sets = new Map<string, TrackLineSet>()
+    syncTrackLineSets(new Group(), sets, [{ ...makeTrack('t', [spiral]), flights: [{ startM: 0, endM: 1e6, offsetM: 0 }] }], frame, 800, 600)
+    const set = sets.get('t')!
+    const [piece] = set.segments[0].flights
+    const curtain = piece.curtain.geometry.getAttribute('position') as BufferAttribute
+    const height = (v: number) => frame.toLonLat(new Vector3(...at(curtain, v))).height
+    const fall = (k: number) => height(2 * k) - height(2 * k + 1)
+    drapeTrackLineSet(set, fakeEngine(1000), 1)
+    // the first turn falls to the ground (500 m and more); a point of the fourth stops on the third, about 60 m under it
+    expect(fall(10)).toBeGreaterThan(490)
+    const k = Math.floor(piece.count * 0.7)
+    expect(fall(k)).toBeGreaterThan(50)
+    expect(fall(k)).toBeLessThan(70)
+    // never through the ground nor above the line
+    for (let j = 0; j < piece.count; j++) expect(fall(j)).toBeGreaterThanOrEqual(0)
+    // « Longueur du rideau »: 20 m under every turn; its maximum is « Jusqu'au sol »
+    drapeTrackLineSet(set, fakeEngine(1000), 1, 20)
+    expect(fall(10)).toBeCloseTo(20, 3)
+    expect(fall(k)).toBeCloseTo(20, 3)
+    expect(curtainLengthM(TRACK_CURTAIN_RANGE.max)).toBe(Infinity)
+    expect(curtainLengthM(200)).toBe(200)
+    expect(DEFAULT_TRACK_STYLE.flightCurtainM).toBe(TRACK_CURTAIN_RANGE.max)
     disposeTrackLineSet(set)
   })
 

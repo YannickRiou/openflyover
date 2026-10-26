@@ -325,7 +325,9 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      height = `(engine.sampleHeight(lon,lat) ?? pt.ele ?? 0) * exaggeration + 3` (the drawn surface, see above); on a
      flight (`track.flights`) `max(terrain, pt.ele − offsetM) * exaggeration + 3` (`trackHeightM`, `src/flyover/flights.ts`,
      the one rule of the line, the marker, the camera aim, the ghost racers and the track picking). A flight also gets a
-     curtain (translucent strip from the line down to the terrain) and a ground shadow (ribbon widened in screen space),
+     curtain (translucent strip from the line down to the terrain, stopping on a pass of the flight under it, `passUnder`:
+     the turns of a thermal read as stacked bands; « Longueur du rideau » `trackStyle.flightCurtainM`, 20–1000 m, its
+     maximum down to the ground, re-drapes) and a ground shadow (ribbon widened in screen space),
      `FlightPiece`s built per flight in `trackLineSet.ts` (materials in `trackLineStyle.ts`, cut at the marker per pixel),
      and its line width follows the depth (`flightWidthFactor`, ×0.6 to ×1.6, eased by `flightEase`). Re-draped on
      `engine.onChange` (150 ms debounce, 600 ms at most while the drawn tiles keep changing).

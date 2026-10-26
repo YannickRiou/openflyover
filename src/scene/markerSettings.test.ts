@@ -71,6 +71,8 @@ describe('track style and marker settings', () => {
     expect(older.settings.trackStyle.flightShadow).toBe(true)
     expect(sanitizeSettings({ trackStyle: { ...DEFAULT_TRACK_STYLE, flightCurtain: false } }).settings.trackStyle.flightCurtain).toBe(false)
     expect(sanitizeSettings({ trackStyle: { ...DEFAULT_TRACK_STYLE, flightShadow: 'yes' } }).invalid).toEqual(['trackStyle'])
+    expect(sanitizeSettings({ trackStyle: { ...DEFAULT_TRACK_STYLE, flightCurtainM: 5 } }).invalid).toEqual(['trackStyle'])
+    expect(older.settings.trackStyle.flightCurtainM).toBe(DEFAULT_TRACK_STYLE.flightCurtainM)
   })
 
   it('« Traînée »: off in a project saved before it, an out-of-range length falls back to the default', () => {

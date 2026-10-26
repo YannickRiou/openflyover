@@ -272,7 +272,9 @@ export function createShadowMaterial(width: number, height: number): ShaderMater
   const cut = newFlightCut()
   const material = new ShaderMaterial({
     uniforms: { ...cut, resolution: { value: new Vector2(width, height) }, widthPx: { value: 0 }, shadowAlpha: { value: SHADOW_ALPHA } },
-    vertexShader: `attribute vec3 ahead;
+    // <common> declares isPerspectiveMatrix, which <logdepthbuf_vertex> calls
+    vertexShader: `#include <common>
+attribute vec3 ahead;
 attribute float edge;
 attribute float trackM;
 uniform vec2 resolution;

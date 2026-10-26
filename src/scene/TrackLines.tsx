@@ -33,6 +33,7 @@ import {
   cutTrackLineSet,
   dimTrackLineSet,
   disposeTrackLineSet,
+  curtainLengthM,
   drapeTrackLineSet,
   drawOnDistances,
   syncTrackLineSets,
@@ -63,6 +64,7 @@ export function TrackLines() {
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const colorBy = useAppStore((s) => s.settings.trackColorBy)
   const smoothingM = useAppStore((s) => s.settings.trackStyle.smoothingM)
+  const curtainM = curtainLengthM(useAppStore((s) => s.settings.trackStyle.flightCurtainM))
   const race = useRace()
   const { engine, frame } = useTerrainContext()
   const size = useThree((s) => s.size)
@@ -111,13 +113,13 @@ export function TrackLines() {
     applyResolution(setsRef.current.values(), size.width, size.height)
   }, [size])
 
-  const drapeAll = useCallback((current: TerrainEngine | null, factor: number) => {
-    for (const set of setsRef.current.values()) drapeTrackLineSet(set, current, factor)
+  const drapeAll = useCallback((current: TerrainEngine | null, factor: number, curtain: number) => {
+    for (const set of setsRef.current.values()) drapeTrackLineSet(set, current, factor, curtain)
     wakeScene()
   }, [])
 
-  /** terrain and exaggeration the lines were last draped with */
-  const drapedWith = useRef<{ engine: TerrainEngine | null; exaggeration: number } | null>(null)
+  /** terrain, exaggeration and curtain length the lines were last draped with */
+  const drapedWith = useRef<{ engine: TerrainEngine | null; exaggeration: number; curtainM: number } | null>(null)
   // Build / rebuild the lines, then drape them with the current terrain and exaggeration: all of them when these
   // changed, else only the ones built (a recolour rebuilds nothing, and drapes nothing).
   useEffect(() => {
@@ -128,14 +130,14 @@ export function TrackLines() {
     exposureRef.current = Number.NaN
     styleRef.current = null
     const last = drapedWith.current
-    if (!last || last.engine !== engine || last.exaggeration !== exaggeration) {
-      drapedWith.current = { engine, exaggeration }
-      drapeAll(engine, exaggeration)
+    if (!last || last.engine !== engine || last.exaggeration !== exaggeration || last.curtainM !== curtainM) {
+      drapedWith.current = { engine, exaggeration, curtainM }
+      drapeAll(engine, exaggeration, curtainM)
     } else if (built.length > 0) {
-      for (const set of built) drapeTrackLineSet(set, engine, exaggeration)
+      for (const set of built) drapeTrackLineSet(set, engine, exaggeration, curtainM)
       wakeScene()
     } else wakeScene()
-  }, [tracks, frame, engine, exaggeration, drapeAll, smoothingM])
+  }, [tracks, frame, engine, exaggeration, drapeAll, smoothingM, curtainM])
 
   // Colours: after the build above (same commit), only when the mode or the set of lines changes.
   useEffect(() => {
@@ -179,12 +181,12 @@ export function TrackLines() {
 
   useEffect(() => {
     if (!engine) return
-    const unsubscribe = engine.onChange(() => redrape(engine, exaggeration))
+    const unsubscribe = engine.onChange(() => redrape(engine, exaggeration, curtainM))
     return () => {
       unsubscribe()
       redrape.cancel()
     }
-  }, [engine, exaggeration, redrape])
+  }, [engine, exaggeration, curtainM, redrape])
 
   // Release every Three resource on unmount (also exercised by StrictMode's simulated unmount).
   useEffect(

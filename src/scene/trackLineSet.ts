@@ -35,7 +35,7 @@ import { raceAt } from '../flyover/race'
 import type { Race } from '../flyover/race'
 import type { Sequence } from '../flyover/sequence'
 import { densify } from '../import/stats'
-import { DEFAULT_TRACK_STYLE } from './markerSettings'
+import { DEFAULT_TRACK_STYLE, TRACK_CURTAIN_RANGE } from './markerSettings'
 import type { TrackStyle } from './markerSettings'
 import { cumulativeDistances } from '../geo/lonLat'
 import {
@@ -71,6 +71,15 @@ export const DENSIFY_STEP_M = 10
 export const LINE_LIFT_M = 3
 /** The curtain of a flight starts this far above the terrain-exaggerated flight height, a little under the line (which is lifted by LINE_LIFT_M), so the two never fight for the depth (metres). */
 export const CURTAIN_LIFT_M = 1
+/**
+ * Where a flight passes over itself (the turns of a thermal, a glide over an earlier one), the curtain stops on the pass
+ * under it instead of falling through it to the ground: the turns read as a stack of bands. A pass is under a point when
+ * one of its points is within this horizontal distance (metres), at least CURTAIN_STACK_GAP_M lower and at least
+ * CURTAIN_STACK_ALONG_M away along the track (the neighbours on the same pass are not under it).
+ */
+export const CURTAIN_STACK_RADIUS_M = 30
+export const CURTAIN_STACK_GAP_M = 10
+export const CURTAIN_STACK_ALONG_M = 100
 /** Delay between a terrain change and the re-drape (milliseconds). */
 export const REDRAPE_DEBOUNCE_MS = 150
 /**
@@ -260,26 +269,70 @@ function buildFlightPiece(first: number, count: number, dist: Float64Array, curt
 }
 
 /**
+ * For each point of `piece`, the top of the highest pass of the same flight under it (`CURTAIN_STACK_RADIUS_M`), -Infinity
+ * where there is none. `tops`: the curtain's top at each point of the piece.
+ */
+export function passUnder(buffer: DrapeBuffer, piece: FlightPiece, tops: Float64Array): Float64Array {
+  const { lon, lat } = buffer
+  const trackM = piece.curtain.geometry.getAttribute('trackM') as BufferAttribute
+  const metresPerLat = 111_320
+  const metresPerLon = metresPerLat * Math.cos((lat[piece.first] * Math.PI) / 180)
+  const cellOf = (k: number) => [Math.floor((lon[piece.first + k] * metresPerLon) / CURTAIN_STACK_RADIUS_M), Math.floor((lat[piece.first + k] * metresPerLat) / CURTAIN_STACK_RADIUS_M)]
+  const cells = new Map<string, number[]>()
+  for (let k = 0; k < piece.count; k++) {
+    const key = cellOf(k).join(',')
+    const list = cells.get(key)
+    if (list) list.push(k)
+    else cells.set(key, [k])
+  }
+  const under = new Float64Array(piece.count).fill(-Infinity)
+  for (let k = 0; k < piece.count; k++) {
+    const [cx, cy] = cellOf(k)
+    const i = piece.first + k
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (const j of cells.get(`${cx + dx},${cy + dy}`) ?? []) {
+          if (!(tops[j] < tops[k] - CURTAIN_STACK_GAP_M) || tops[j] <= under[k]) continue
+          if (Math.abs(trackM.getX(2 * j) - trackM.getX(2 * k)) < CURTAIN_STACK_ALONG_M) continue
+          const east = (lon[piece.first + j] - lon[i]) * metresPerLon
+          const north = (lat[piece.first + j] - lat[i]) * metresPerLat
+          if (east * east + north * north <= CURTAIN_STACK_RADIUS_M * CURTAIN_STACK_RADIUS_M) under[k] = tops[j]
+        }
+      }
+    }
+  }
+  return under
+}
+
+/**
  * Drape the curtain and the shadow of a flight: the curtain's top follows the flight (a little under the line), its
  * bottom and the shadow lie on the terrain (LINE_LIFT_M above it like the line, never above the flight); where the
- * terrain is not known yet they collapse onto the flight, and come down once its tiles load (the re-drape).
+ * terrain is not known yet they collapse onto the flight, and come down once its tiles load (the re-drape). The curtain
+ * stops on a pass of the flight under it (`passUnder`) and falls `curtainM` metres at most (Infinity: to the ground).
  */
-export function drapeFlightPiece(buffer: DrapeBuffer, piece: FlightPiece, sample: HeightSampler | null, exaggeration: number): void {
+export function drapeFlightPiece(buffer: DrapeBuffer, piece: FlightPiece, sample: HeightSampler | null, exaggeration: number, curtainM = Infinity): void {
   const { lon, lat, ele, flight, base, up } = buffer
   const curtain = piece.curtain.geometry.getAttribute('position') as BufferAttribute
   const shadow = piece.shadow.geometry.getAttribute('position') as BufferAttribute
   const ahead = piece.shadow.geometry.getAttribute('ahead') as BufferAttribute
   const at = (i: number, height: number, out: BufferAttribute, v: number) =>
     out.setXYZ(v, base[i * 3] + up[i * 3] * height, base[i * 3 + 1] + up[i * 3 + 1] * height, base[i * 3 + 2] + up[i * 3 + 2] * height)
+  const tops = new Float64Array(piece.count)
+  const lows = new Float64Array(piece.count)
   for (let k = 0; k < piece.count; k++) {
     const i = piece.first + k
     const ground = sample?.(lon[i], lat[i])
-    const top = trackHeightM(ground, ele[i], flight[i]) * exaggeration + CURTAIN_LIFT_M
-    const low = ground === undefined || Number.isNaN(ground) ? top : Math.min(top, ground * exaggeration + LINE_LIFT_M)
-    at(i, top, curtain, 2 * k)
-    at(i, low, curtain, 2 * k + 1)
-    at(i, low, shadow, 2 * k)
-    at(i, low, shadow, 2 * k + 1)
+    tops[k] = trackHeightM(ground, ele[i], flight[i]) * exaggeration + CURTAIN_LIFT_M
+    lows[k] = ground === undefined || Number.isNaN(ground) ? tops[k] : Math.min(tops[k], ground * exaggeration + LINE_LIFT_M)
+  }
+  const under = passUnder(buffer, piece, tops)
+  for (let k = 0; k < piece.count; k++) {
+    const i = piece.first + k
+    const bottom = Math.min(tops[k], Math.max(lows[k], under[k], tops[k] - curtainM))
+    at(i, tops[k], curtain, 2 * k)
+    at(i, bottom, curtain, 2 * k + 1)
+    at(i, lows[k], shadow, 2 * k)
+    at(i, lows[k], shadow, 2 * k + 1)
   }
   // direction of travel at each point, for the width of the shadow in the screen
   for (let k = 0; k < piece.count; k++) {
@@ -455,7 +508,10 @@ export function disposeTrackLineSet(set: TrackLineSet): void {
   for (const material of [...materialsOf(set), set.curtainMaterial, set.shadowMaterial]) material.dispose()
 }
 
-export function drapeTrackLineSet(set: TrackLineSet, engine: TerrainEngine | null, exaggeration: number): void {
+/** `drapeFlightPiece`'s `curtainM` for « Longueur du rideau »: its maximum is « Jusqu'au sol ». */
+export const curtainLengthM = (flightCurtainM: number) => (flightCurtainM >= TRACK_CURTAIN_RANGE.max ? Infinity : flightCurtainM)
+
+export function drapeTrackLineSet(set: TrackLineSet, engine: TerrainEngine | null, exaggeration: number, curtainM = Infinity): void {
   const sampler: HeightSampler | null = engine ? (lon, lat) => engine.sampleHeight(lon, lat) : null
   for (const segment of set.segments) {
     computeDrapedPositions(segment.buffer, sampler, exaggeration, segment.positions)
@@ -463,7 +519,7 @@ export function drapeTrackLineSet(set: TrackLineSet, engine: TerrainEngine | nul
     writeLinePositions(segment.geometry, segment.positions)
     segment.shortened = -1
     if (segment.geometry.getAttribute('instanceDistanceStart')) segment.solid.computeLineDistances()
-    for (const piece of segment.flights) drapeFlightPiece(segment.buffer, piece, sampler, exaggeration)
+    for (const piece of segment.flights) drapeFlightPiece(segment.buffer, piece, sampler, exaggeration, curtainM)
   }
   set.drawnM = Number.NaN
 }
