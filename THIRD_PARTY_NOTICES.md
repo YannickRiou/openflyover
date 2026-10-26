@@ -339,7 +339,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - loose-envify 1.4.0: MIT
 - loose-envify/node_modules/js-tokens 4.0.0: MIT
 - maath 0.10.8: MIT (no license file in the package; standard text below)
-- mediabunny 1.61.6: MPL-2.0
+- mediabunny 1.62.0: MPL-2.0
 - meshline 3.3.1: MIT
 - meshoptimizer 1.1.1: MIT
 - n8ao 2.0.1: ISC
@@ -2534,7 +2534,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### mediabunny 1.61.6
+#### mediabunny 1.62.0
 
 ```text
 Mozilla Public License Version 2.0
@@ -4104,7 +4104,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Rust crates (513)
+## Rust crates (512)
 
 Every registry crate of `src-tauri/Cargo.lock`, including those used only on one operating system or at build time. License as declared on crates.io; the copyright notice of each crate is in its source, <https://crates.io/crates/NAME/VERSION>.
 
@@ -4266,7 +4266,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - hyper-util 0.1.21: MIT
 - iana-time-zone 0.1.65: MIT OR Apache-2.0
 - iana-time-zone-haiku 0.1.2: MIT OR Apache-2.0
-- ico 0.5.0: MIT
+- ico 0.6.0: MIT
 - icu_collections 2.3.0: Unicode-3.0
 - icu_locale_core 2.3.0: Unicode-3.0
 - icu_normalizer 2.3.0: Unicode-3.0
@@ -4369,7 +4369,6 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - piper 0.2.5: MIT OR Apache-2.0
 - pkg-config 0.3.34: MIT OR Apache-2.0
 - plist 1.10.1: MIT
-- png 0.17.16: MIT OR Apache-2.0
 - png 0.18.1: MIT OR Apache-2.0
 - polling 3.11.0: Apache-2.0 OR MIT
 - portable-atomic 1.15.0: Apache-2.0 OR MIT
@@ -4466,10 +4465,10 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tao-macros 0.1.4: MIT OR Apache-2.0
 - tar 0.4.46: MIT OR Apache-2.0
 - target-lexicon 0.12.16: Apache-2.0 WITH LLVM-exception
-- tauri 2.12.2: Apache-2.0 OR MIT
+- tauri 2.12.4: Apache-2.0 OR MIT
 - tauri-build 2.7.3: Apache-2.0 OR MIT
-- tauri-codegen 2.7.1: Apache-2.0 OR MIT
-- tauri-macros 2.7.1: Apache-2.0 OR MIT
+- tauri-codegen 2.7.4: Apache-2.0 OR MIT
+- tauri-macros 2.7.4: Apache-2.0 OR MIT
 - tauri-plugin 2.7.1: Apache-2.0 OR MIT
 - tauri-plugin-dialog 2.8.3: Apache-2.0 OR MIT
 - tauri-plugin-fs 2.7.1: Apache-2.0 OR MIT
@@ -4477,8 +4476,8 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tauri-plugin-opener 2.7.2: Apache-2.0 OR MIT
 - tauri-plugin-process 2.4.0: Apache-2.0 OR MIT
 - tauri-plugin-updater 2.14.0: Apache-2.0 OR MIT
-- tauri-runtime 2.12.1: Apache-2.0 OR MIT
-- tauri-runtime-wry 2.12.1: Apache-2.0 OR MIT
+- tauri-runtime 2.12.2: Apache-2.0 OR MIT
+- tauri-runtime-wry 2.12.3: Apache-2.0 OR MIT
 - tauri-utils 2.10.2: Apache-2.0 OR MIT
 - tauri-winres 0.3.6: MIT
 - tempfile 3.27.0: MIT OR Apache-2.0
