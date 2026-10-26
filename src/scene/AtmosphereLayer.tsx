@@ -36,7 +36,8 @@ import { CloudsLayer } from './CloudsLayer'
 import { DEFAULT_GROUND_HEIGHT_M } from './CameraRig'
 import { useGradingEffect } from './GradingComposer'
 import { useLensEffects } from './useLensEffects'
-import { nightFillIntensity, sceneExposure, sunElevation } from './exposure'
+import { NEUTRAL_MARKER_LIGHT, markerLight, nightFillIntensity, sceneExposure, sunElevation } from './exposure'
+import { setMarkerLight } from './markerSprite'
 import { useTerrainContext } from './terrainContext'
 import { useFilmClock } from './usePacing'
 import { TerrainShadow } from './terrainShadow'
@@ -128,11 +129,12 @@ export function AtmosphereLayer() {
   // the effects are owned above: dispose only the pass
   useEffect(() => () => disposePassWithoutEffects(antialiasPass), [antialiasPass])
 
-  // Restore the renderer exposure when the atmosphere is switched off.
+  // Restore the renderer exposure (and the neutral light of the markers) when the atmosphere is switched off.
   useLayoutEffect(() => {
     const previous = gl.toneMappingExposure
     return () => {
       gl.toneMappingExposure = previous
+      setMarkerLight(NEUTRAL_MARKER_LIGHT)
     }
   }, [gl])
 
@@ -191,6 +193,8 @@ export function AtmosphereLayer() {
     weatherRef.current = weather
 
     gl.toneMappingExposure = sceneExposure(elevation, paramAt(film, settings.exposureEv, 'exposure', playback.progress * lengthM) + weather.exposureCompensationEv)
+    // the markers (unlit, placed after this) take a little of this frame's light
+    setMarkerLight(markerLight(elevation, weather))
     if (nightFillRef.current) nightFillRef.current.intensity = nightFillIntensity(elevation, settings.nightLightEv)
     if (sun) {
       sun.intensity = weather.sunScale

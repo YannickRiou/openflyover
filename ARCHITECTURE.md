@@ -1243,9 +1243,13 @@ The interface and the texts drawn into the films and posters exist in **French**
   off, sway kept). One sprite and one texture per marker (`markerLayout` / `drawMarker`: badge, stick, label;
   `sprite.center` = anchor); texture cache of 48 textures and 8 Mpx. 3D models (glTF) evaluated, not done (licensing,
   lighting parity, poster overview hiding). `animated`: the
-  figurine bounces and sways with `figureMotion(timeS)` (two steps per second of film, lift up to 8% of the badge through
-  `sprite.center`, ±5° through `material.rotation`), a function of the film time only: a paused film keeps its pose,
-  the export matches the preview; the ghost-race markers stay still. Defaults = the previous look
+  figurine bounces and sways with `figureMotion(clock, timeS)` (lift up to 8% of the badge through `sprite.center`,
+  ±5° through `material.rotation`). It walks at the marker's pace: a table over the whole film (`figureTable`, per
+  `FilmClock`, a step of 1/30 s) turns the marker's progress per second, against the pace it keeps while it moves, into a
+  cadence (the pace to the power 0.4, 1.2 to 3.2 steps a second) summed into the steps taken so far, and a strength that
+  eases the walk in and out (0.4 s) so the figure stands still, upright, at stops, holds and night pauses. A function of
+  the clock and the film time only: a paused film keeps its pose, the export matches the preview; the ghost-race
+  markers stay still. Defaults = the previous look
   (4 px, solid, white ball). Checked by `SETTING_CHECKS`, completed by `SETTING_UPGRADES` (keys added later).
   `image`: 128 px square PNG as a data URL (`fileToAvatarDataUrl`, platform picker), 300,000 characters at most.
   « Trace » and « Marqueur » sections of the Trace tab (`src/ui/TrackMarkerSection.tsx`).
@@ -1297,8 +1301,22 @@ The interface and the texts drawn into the films and posters exist in **French**
   edged in ink (race), ink or white stroke depending on luminance. Image: round photo, white edge; racers
   keep their ball. Badge diameter: 2.2 times the ball. Constant screen size: radius = max(1, distance × 0.007)
   × `size`. Colors divided by the exposure, like the lines.
-- **Direction**: the figurine is flipped when the track runs from right to left on screen, based on the track points within
-  ±60 m of the marker projected with the frame's camera (`headsLeft`, stateless: same image in preview and export).
+- **Direction** (`figureHeading`, stateless: same image in preview and export): the figurine faces the side the track runs
+  to on screen, with the lean of its slope (`screenHeading`). The side (`sideAt`) is read from the track behind the
+  marker, each place seen as if the marker stood there: the signed runs (sine of the angle from the vertical, one per
+  25 m, then per 100 m after 600 m, up to 3000 m) are added up until the sum passes `SIDE_EVIDENCE`, so a switchback
+  running up the screen keeps its side and the wiggles of a noisy track cancel out (the first run past a threshold
+  flipped the side from one frame to the next on the sample). It turns round over `FIGURE_TURN_S` (0.25 s): the
+  rig tells the markers the film camera of that time ago (`showPastView`, null when the user orbits a paused film), a
+  bisection between that camera and this frame's places the change, and the width of the pictogram goes through zero as
+  a flipped card (`facing` from 1 to −1, drawn by `markerBadge` in steps of 1/8 so the textures stay few). The text
+  under the marker is drawn at its full width and never mirrored.
+- **Light of the marker** (`markerLight` in `exposure.ts`, set each frame by `AtmosphereLayer` through `setMarkerLight`,
+  neutral again when the atmosphere goes): the marker is unlit, so it takes a little of the scene's light by a colour
+  multiplier of its sprite from the sun elevation and the weather: neutral by day, warming to a full orange at the
+  horizon, a mauve dusk, then a bluish and dimmer night, a floor of 0.32 per channel so the white ball stays readable,
+  the tint fading and the level dropping a little under clouds. The colours of the racers keep their order at night
+  (every pair of the track palette stays at least 30 ΔE apart).
 
 ## Film and timeline (phase 4, increments 1 to 4 of 4: model, engine, timeline, texts, photos and videos; music and video sound, phase 7)
 

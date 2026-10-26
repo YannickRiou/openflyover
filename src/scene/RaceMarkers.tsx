@@ -14,7 +14,8 @@ import type { Group, Sprite } from 'three'
 import { pathHeightM } from '../flyover/flights'
 import { raceAt } from '../flyover/race'
 import { useAppStore } from '../state/store'
-import { markerLook, placeMarker, pullMarkerForward, racerMarkerColors, releaseMarkerTexture, screenHeading } from './markerSprite'
+import { figureHeading, markerLook, pastViewAt, placeMarker, pullMarkerForward, racerMarkerColors, releaseMarkerTexture } from './markerSprite'
+import { FIGURE_TURN_S } from './markerSettings'
 import { useTerrainContext } from './terrainContext'
 import { LINE_LIFT_M, type HeightSampler } from './trackLineSet'
 import { useFilmClock } from './usePacing'
@@ -50,9 +51,15 @@ export function RaceMarkers() {
       const { path } = race.tracks[racer.index]
       const height = pathHeightM(path, racer.distanceM, racer, sampler)
       const position = frame.toLocal(racer.lon, racer.lat, height * settings.exaggeration + LINE_LIFT_M, marker.position)
-      const heading = settings.marker.kind === 'figurine' ? screenHeading(path, racer.distanceM, position, frame, camera, settings.exaggeration) : null
+      // where this racer was at an earlier film time, for the side its figure faced then (`figureHeading`)
+      const distanceAt = (t: number) =>
+        t === timeS ? racer.distanceM : (raceAt(race, clock.progressAtTime(Math.max(0, t))).find((r) => r.index === racer.index)?.distanceM ?? racer.distanceM)
+      const heading =
+        settings.marker.kind === 'figurine'
+          ? figureHeading(path, distanceAt, timeS, position, frame, camera, pastViewAt(timeS - FIGURE_TURN_S), settings.exaggeration)
+          : null
       const look = markerLook(settings.marker, track, false)
-      placeMarker(marker, position, camera, look, racerMarkerColors(track.color), heading?.left ?? false, gain, timeS, heading?.lean)
+      placeMarker(marker, position, camera, look, racerMarkerColors(track.color), heading?.facing ?? 1, gain, timeS, heading?.lean)
       pullMarkerForward(marker, camera)
       marker.visible = true
     }

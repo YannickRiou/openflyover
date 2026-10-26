@@ -32,11 +32,13 @@ export const BALL_STYLE_SCALE: Record<MarkerBallStyle, number> = { plat: 1, halo
 export const PIN_HEIGHT = 1.45
 /** Corner radius of a rounded-square badge, fraction of its half side. */
 const SQUARE_CORNER = 0.45
+/** Narrowest a pictogram turning round is drawn, as a fraction of its width: edge-on, a thin line instead of nothing. */
+const MIN_FACING = 0.06
 
 export type Badge =
   /** `ringWidth`: fraction of the disc radius taken by the ring; `pulse`: phase in [0, 1) of a 'pulsation' */
   | { kind: 'disc'; fill: string; ring?: string; ringWidth?: number; style?: MarkerBallStyle; pulse?: number }
-  | { kind: 'figure'; figure: MarkerFigure; fill: string; ring: string; mirrored: boolean; shape?: MarkerShape }
+  | { kind: 'figure'; figure: MarkerFigure; fill: string; ring: string; facing: number; shape?: MarkerShape }
   | { kind: 'image'; image: CanvasImageSource; width: number; height: number; ring: string }
 
 /** Builds a path from SVG path data (injectable: test environments have no `Path2D`). */
@@ -108,12 +110,12 @@ function pinPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: numbe
 
 /**
  * Stroke the pictogram of `figure` centred at (cx, cy), its 24-unit grid `side` pixels across, once per pass
- * (an outline under the line for a figure drawn alone).
+ * (an outline under the line for a figure drawn alone). `facing` is its width (1 heads right, -1 is mirrored, between: turning round).
  */
 function drawFigure(
   ctx: CanvasRenderingContext2D,
   figure: MarkerFigure,
-  mirrored: boolean,
+  facing: number,
   cx: number,
   cy: number,
   side: number,
@@ -123,7 +125,7 @@ function drawFigure(
   const scale = side / FIGURE_GRID
   ctx.save()
   ctx.translate(cx, cy)
-  if (mirrored) ctx.scale(-1, 1)
+  ctx.scale(Math.abs(facing) < MIN_FACING ? MIN_FACING : facing, 1)
   ctx.scale(scale, scale)
   ctx.translate(-FIGURE_GRID / 2, -FIGURE_GRID / 2)
   ctx.lineCap = 'round'
@@ -144,7 +146,7 @@ function drawFigureBadge(ctx: CanvasRenderingContext2D, badge: Extract<Badge, { 
     case 'rond':
       fillCircle(ctx, centre, radius, badge.ring)
       fillCircle(ctx, centre, radius * (1 - BADGE_RING), badge.fill)
-      drawFigure(ctx, badge.figure, badge.mirrored, centre, centre, radius * FIGURE_SCALE, ink, makePath)
+      drawFigure(ctx, badge.figure, badge.facing, centre, centre, radius * FIGURE_SCALE, ink, makePath)
       return
     case 'carre': {
       const inset = radius * BADGE_RING
@@ -156,7 +158,7 @@ function drawFigureBadge(ctx: CanvasRenderingContext2D, badge: Extract<Badge, { 
       ctx.roundRect(1 + inset, 1 + inset, 2 * (radius - inset), 2 * (radius - inset), (radius - inset) * SQUARE_CORNER)
       ctx.fillStyle = badge.fill
       ctx.fill()
-      drawFigure(ctx, badge.figure, badge.mirrored, centre, centre, radius * FIGURE_SCALE * 1.1, ink, makePath)
+      drawFigure(ctx, badge.figure, badge.facing, centre, centre, radius * FIGURE_SCALE * 1.1, ink, makePath)
       return
     }
     case 'epingle': {
@@ -174,14 +176,14 @@ function drawFigureBadge(ctx: CanvasRenderingContext2D, badge: Extract<Badge, { 
       ctx.fillStyle = badge.fill
       ctx.fill()
       ctx.restore()
-      drawFigure(ctx, badge.figure, badge.mirrored, centre, cy, head * FIGURE_SCALE, ink, makePath)
+      drawFigure(ctx, badge.figure, badge.facing, centre, cy, head * FIGURE_SCALE, ink, makePath)
       return
     }
     case 'contour':
       drawFigure(
         ctx,
         badge.figure,
-        badge.mirrored,
+        badge.facing,
         centre,
         centre,
         size * CONTOUR_SCALE,
