@@ -51,7 +51,8 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/terrain/dem.ts` | elevation decoding | `decodeDem(bitmap, encoding, clean?): HeightGrid`, `sampleGrid(grid, u, v): number` (bilinear, NaN-safe) |
 | `src/terrain/heightField.ts` | multi-level height field | `class HeightField { set(key, grid); delete(key); has(key); sampleHeight(lon, lat): number \| undefined }` (deepest tile containing the point; the engine's fallback where no tile of its tree is loaded) |
 | `src/terrain/imagery.ts` | composed texture | `loadImageryTexture: LoadImageryTexture` |
-| `src/terrain/mesh.ts` | tile geometry | `buildTileGeometry(key, grid, frame, opts: BuildTileGeometryOptions): TileGeometryResult`, `sampleTileMesh(key, grid, segments, lon, lat)` (height of that mesh) |
+| `src/terrain/mesh.ts` | tile geometry | `buildTileGeometry(key, grid, frame, opts: BuildTileGeometryOptions): TileGeometryResult`, `buildTileMesh` (its typed arrays, `TileMeshArrays`, what a worker builds), `geometryFromArrays`, `sampleTileMesh(key, grid, segments, lon, lat)` (height of that mesh) |
+| `src/terrain/tileJob.ts`, `tile.worker.ts`, `tileWorker.ts` | decoding and meshing off the main thread | `runTileJob(job: TileJob): TileResult` (decode + clean + mesh arrays), `resultBuffers`; `buildTileOffThread(job): Promise<TileResult \| undefined>` (pool of workers; undefined = build it on the main thread) |
 | `src/terrain/quadtree.ts` + `engine.ts` | LOD, loading, Three group | `createTerrainEngine(options: TerrainEngineOptions, deps?: Partial<EngineDeps>, tuning?: Partial<EngineTuning>): TerrainEngine` (deps injectable for tests) |
 | `src/scene/*.tsx` | R3F components | `FlyoverCanvas`, `TerrainLayer` (+ `useTerrainContext` in `terrainContext.ts`, its pure setup in `terrainLayerSetup.ts`), `TrackLines` (+ `trackLineSet.ts`), `TrackPicker` (+ `TrackMenu`, DOM), `CameraRig`, `FlyoverRig`, `useDebouncedCallback` |
 | `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `TrackTailSettings`, `DEFAULT_TRACK_TAIL`, `isValidTrackTail`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImages`, `MARKER_SCREEN_FACTOR` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine`, `setTrackDistances`, `addTrailCut`, `setTrailStart` (`trackLineStyle.ts`); `TrackStyleSection`, `MarkerSection` (`src/ui/TrackMarkerSection.tsx`) |
@@ -213,6 +214,23 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    which the providers' terms govern (`docs/sources.md`).
 3. **DEM** (`dem.ts`): Terrarium `h = (R*256 + G + B/256) - 32768`; Mapbox `h = -10000 + (R*65536 + G*256 + B) * 0.1`.
    Decoding through `OffscreenCanvas` (fallback `HTMLCanvasElement`). Bilinear sampling.
+   **Off the main thread** (`tileWorker.ts`, `tile.worker.ts`, `tileJob.ts`): a tile arriving during the film no longer costs
+   a frame. A pool of module workers (`min(4, hardwareConcurrency − 1)`, made on the first tile, kept) runs `runTileJob`
+   for each tile: `decodeDem` (read-back, decoding, `cleanDem`) then `buildTileMesh` (item 5), the very functions of the
+   main-thread path, so the grid and the mesh are bit for bit the same. The page sends the job (the engine's bitmap,
+   copied with `createImageBitmap` and handed over: the fetcher keeps its own, which its cache and the imagery may need
+   again; the encoding, cleaning, tile key, origin of the local frame, which the worker makes again with
+   `createLocalFrame`, and the `segments`, exaggeration and skirt depth of the mesh) and gets back the height grid and the
+   position, normal, uv and index arrays, transferred, not copied. The page keeps the grid (`sampleHeight`, height field)
+   and only builds the `BufferGeometry` from the arrays (`geometryFromArrays`) and its bounds. A tile loaded before the
+   exaggeration changed comes back with the old mesh: the page then builds it again (as it always did for loaded tiles).
+   The tile is « ready » when the worker's answer is attached, so the export's waits (`pendingVisibleTiles`) and its
+   retries are unchanged. **Fallback**: where `Worker`, `OffscreenCanvas` or `ImageBitmap` are missing (jsdom, a test, an old
+   WebView), where a bitmap is an `<img>` (`decodeWithImageElement`), where the worker cannot read pixels back
+   (`unsupported`: the pool is dropped for good), where it errors or dies, or when a test injects `decodeDem`,
+   `buildTileOffThread` resolves undefined and the engine decodes and meshes on the main thread as before (a bad tile
+   throws there, with its usual message). The worker script comes from the page's own origin (`worker-src 'self'` of the
+   desktop CSP). The rebuild after an exaggeration change stays on the main thread, 4 tiles a frame.
 4. **Imagery** (`imagery.ts`): for the terrain tile (z,x,y) and `zoomOffset = k`, fetch the `2^k × 2^k` sub-tiles
    at z+k and draw them into a `tileSize·2^k` canvas → `CanvasTexture` (sRGB, mipmaps, max anisotropy).
    If z+k > the source's maxZoom: take the deepest available tile and crop it.

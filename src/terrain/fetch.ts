@@ -141,7 +141,7 @@ export async function downloadTile(url: string, signal?: AbortSignal, retryDelay
 // ---------------------------------------------------------------------------
 
 /** No colour management: elevation tiles must be read back bit-exact; imagery is treated as sRGB anyway. */
-const BITMAP_OPTIONS: ImageBitmapOptions = { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }
+export const BITMAP_OPTIONS: ImageBitmapOptions = { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }
 
 function decodeBlob(blob: Blob): Promise<ImageBitmap> {
   if (typeof createImageBitmap === 'function') return createImageBitmap(blob, BITMAP_OPTIONS)
