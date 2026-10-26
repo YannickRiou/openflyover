@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v45.marker.title': 'A livelier marker',
+  'v45.marker.text': 'The figurine now walks at the marker’s pace, stands still when the marker stops, and turns round smoothly at a bend (the text under it is never mirrored). Every marker also takes a little of the light of the scene: warm at sunrise and sunset, slightly bluish at night. Nothing to set.',
   'v44.night.title': 'Brighter nights',
   'v44.night.text': '« Night brightness » (Light › Atmosphere) lights the relief and the clouds at night, like moonlight, and changes nothing in daylight. The exposure now sits with contrast and saturation in Colours.',
   'v332.landmarks.title': 'Hide landmarks in a few clicks',

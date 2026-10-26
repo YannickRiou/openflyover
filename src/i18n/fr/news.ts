@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v45.marker.title': 'Un marqueur plus vivant',
+  'v45.marker.text': 'La figurine marche maintenant au pas du marqueur, reste immobile quand il s’arrête et se retourne en douceur dans un virage (le texte dessous n’est jamais inversé). Chaque marqueur prend aussi un peu de la lumière de la scène : chaud au lever et au coucher du soleil, un peu bleuté la nuit. Rien à régler.',
   'v44.night.title': 'Des nuits moins noires',
   'v44.night.text': '« Clarté des nuits » (Lumière › Atmosphère) éclaire le relief et les nuages la nuit, comme un clair de lune, sans rien changer le jour. L’exposition rejoint le contraste et la saturation dans Couleurs.',
   'v332.landmarks.title': 'Masquer des repères en quelques clics',

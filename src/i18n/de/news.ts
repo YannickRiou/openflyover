@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v45.marker.title': 'Ein lebendigerer Marker',
+  'v45.marker.text': 'Die Figur läuft jetzt im Tempo des Markers, steht still, wenn er anhält, und dreht sich in einer Kurve weich um (der Text darunter wird nie gespiegelt). Jeder Marker nimmt außerdem ein wenig vom Licht der Szene an: warm bei Sonnenaufgang und Sonnenuntergang, nachts leicht bläulich. Nichts einzustellen.',
   'v44.night.title': 'Hellere Nächte',
   'v44.night.text': '« Helligkeit der Nacht » (Licht › Atmosphäre) beleuchtet Gelände und Wolken nachts wie Mondlicht und ändert tagsüber nichts. Die Belichtung steht jetzt bei Kontrast und Sättigung unter Farben.',
   'v332.landmarks.title': 'Landmarken mit wenigen Klicks ausblenden',
