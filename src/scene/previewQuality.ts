@@ -1,9 +1,11 @@
 /**
- * « Qualité de l'aperçu » (Réglages): a light preview draws fewer pixels and a coarser cloud pass. « Auto » judges the
+ * « Qualité de l'aperçu » (Réglages): a light preview draws fewer pixels, a coarser cloud pass, a smaller shadow map and
+ * fewer trees. « Auto » judges the
  * device by what it does, not by its name: the frame rate measured while the film plays (`createSlowPreviewDetector`),
  * and once too slow the preview stays light for the session; « Légère » and « Complète » force it. Only the preview
- * changes: the export sets its own pixel ratio (1) and cloud pass, its films are the same. A plain module (no
- * three.js): the diagnostic report reads it.
+ * changes: the export (video, poster, « Capturer cette image ») sets its own pixel ratio (1) and cloud pass and takes the
+ * device's shadow map and trees (`sceneBudget`), its films are the same. A plain module (no three.js): the diagnostic
+ * report reads it.
  */
 import { useMemo } from 'react'
 import { create } from 'zustand'
@@ -12,10 +14,23 @@ import type { DeviceBudget } from '../core/deviceBudget'
 import { usePreferences } from '../ui/preferences'
 import type { PreviewQuality } from '../ui/shell'
 
-export type PreviewBudget = Pick<DeviceBudget, 'maxPixelRatio' | 'movingPixelRatio' | 'cloudResolutionScale' | 'cloudSettleFrames'>
+export type PreviewBudget = Pick<
+  DeviceBudget,
+  'maxPixelRatio' | 'movingPixelRatio' | 'cloudResolutionScale' | 'cloudSettleFrames' | 'shadowMapSize' | 'maxTrees'
+>
 
-/** The light preview: a phone's pixel ratio while playing and its cloud pass; a device already lower keeps its own. */
-export const LIGHT_PREVIEW: PreviewBudget = { maxPixelRatio: 1.5, movingPixelRatio: 1, cloudResolutionScale: 0.5, cloudSettleFrames: 16 }
+/**
+ * The light preview: a phone's pixel ratio while playing and its cloud pass, a shadow map of 2048² (~32 MB, not ~128 MB)
+ * and half the computer's trees (the far forests thin first, forestPoints.ts); a device already lower keeps its own.
+ */
+export const LIGHT_PREVIEW: PreviewBudget = {
+  maxPixelRatio: 1.5,
+  movingPixelRatio: 1,
+  cloudResolutionScale: 0.5,
+  cloudSettleFrames: 16,
+  shadowMapSize: 2048,
+  maxTrees: 125_000,
+}
 
 /** Below this frame rate while the film plays, « Auto » lightens the preview. */
 export const SLOW_PREVIEW_FPS = 30
@@ -26,14 +41,22 @@ const PAUSE_GAP_MS = 1000
 
 /** The preview limits of `budget`, lowered to `LIGHT_PREVIEW` when `light`. */
 export function previewBudget(budget: PreviewBudget, light: boolean): PreviewBudget {
-  const { maxPixelRatio, movingPixelRatio, cloudResolutionScale, cloudSettleFrames } = budget
-  if (!light) return { maxPixelRatio, movingPixelRatio, cloudResolutionScale, cloudSettleFrames }
+  const { maxPixelRatio, movingPixelRatio, cloudResolutionScale, cloudSettleFrames, shadowMapSize, maxTrees } = budget
+  if (!light) return { maxPixelRatio, movingPixelRatio, cloudResolutionScale, cloudSettleFrames, shadowMapSize, maxTrees }
   return {
     maxPixelRatio: Math.min(maxPixelRatio, LIGHT_PREVIEW.maxPixelRatio),
     movingPixelRatio: Math.min(movingPixelRatio, LIGHT_PREVIEW.movingPixelRatio),
     cloudResolutionScale: Math.min(cloudResolutionScale, LIGHT_PREVIEW.cloudResolutionScale),
     cloudSettleFrames: Math.min(cloudSettleFrames, LIGHT_PREVIEW.cloudSettleFrames),
+    shadowMapSize: Math.min(shadowMapSize, LIGHT_PREVIEW.shadowMapSize),
+    maxTrees: Math.min(maxTrees, LIGHT_PREVIEW.maxTrees),
   }
+}
+
+/** Shadow map and trees to draw: the preview's, but always the device's own while exporting (video, poster, capture). */
+export function sceneBudget(preview: PreviewBudget, exporting: boolean, device: PreviewBudget = deviceBudget()): Pick<PreviewBudget, 'shadowMapSize' | 'maxTrees'> {
+  const { shadowMapSize, maxTrees } = exporting ? device : preview
+  return { shadowMapSize, maxTrees }
 }
 
 /** Whether the preview is light: forced, or « Auto » and measured too slow. */
