@@ -5,6 +5,8 @@ const messages: Messages['stage'] = {
   fit: 'Reencuadrar la vista',
   safeZones: 'Zonas seguras',
   safeZonesTip: 'Zonas seguras (solo vista previa)',
+  filmView: 'Volver a la vista de la película',
+  capture: 'Capturar esta imagen',
 }
 
 export default messages

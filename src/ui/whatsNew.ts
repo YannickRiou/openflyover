@@ -21,6 +21,10 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
+    version: '4.6',
+    items: [{ icon: 'image', get title() { return t('news.v46.stage.title') }, get text() { return t('news.v46.stage.text') } }],
+  },
+  {
     version: '4.5',
     items: [
       { icon: 'clapperboard', get title() { return t('news.v45.camera.title') }, get text() { return t('news.v45.camera.text') } },

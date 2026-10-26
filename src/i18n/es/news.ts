@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v46.stage.title': 'Dos botones en la vista',
+  'v46.stage.text': 'Bajo la mira, «Capturar esta imagen» guarda la imagen que ves, con el tamaño del formato de salida y con la superposición (la imagen de la película en ese instante, o tu propia vista si la has girado). Cuando has girado la vista con el ratón con la película en pausa, «Volver a la vista de la película» devuelve la cámara adonde la película la coloca.',
   'v45.camera.title': 'Una cámara más agradable de ver',
   'v45.camera.text': 'Dos ajustes en Vuelo › Cámara. «Espacio delante» coloca el marcador un poco por detrás del centro de la imagen, para dejar sitio del lado hacia el que avanza. «Inclinación en las curvas» inclina suavemente el horizonte en las curvas, como un dron que se ladea. Por defecto, un poco de cada uno: sus películas resultan más fluidas.',
   'v45.marker.title': 'Un marcador más vivo',

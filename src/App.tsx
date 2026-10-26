@@ -267,9 +267,10 @@ export default function App() {
   )
   const tabs = shownTabs(shell)
   const [dragging, setDragging] = useState(false)
-  // the export drawer is mounted on its first opening and kept (export progress, result, batch)
+  // the export drawer is mounted on its first opening, or on the first export (« Capturer cette image »), and kept (export
+  // progress, result, batch): it is what saves the file
   const [dockMounted, setDockMounted] = useState(false)
-  if (shell.dockOpen && !dockMounted) setDockMounted(true)
+  if ((shell.dockOpen || exportBusy) && !dockMounted) setDockMounted(true)
   const [helpOpen, setHelpOpen] = useState(false)
   const dockOpen = useRef(shell.dockOpen)
   const collapsedRef = useRef(shell.collapsed)

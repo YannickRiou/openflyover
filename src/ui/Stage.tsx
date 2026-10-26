@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { VIDEO_ASPECTS } from '../export/schedule'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useT } from '../i18n'
+import { useHandViewStore } from '../scene/handView'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { SafeZones, useSafeZonesStore } from './SafeZones'
@@ -16,13 +17,14 @@ const OverlayCanvas = lazy(() => import('../overlay/OverlayCanvas').then((m) => 
 
 /** Pale sky behind the transparent canvas of a view that fills the stage. */
 const SKY = 'bg-[linear-gradient(180deg,var(--color-glacier)_0%,var(--color-paper)_100%)]'
-/** A button floating over the view, at its right edge (the top is set per button). */
+/** A button floating over the view, at its right edge (the top is set per button, 3.5 rem apart, 4 rem on a touch screen). */
 const FLOAT = 'btn-float absolute right-3 z-4'
 
 /**
  * Centre of the shell: the 3D view and its overlay framed to the output format (letterbox in ink, the export
- * renders exactly this area), or filling the stage with « Libre » or without a track; the « Recadrer » and « Zones de
- * sécurité » buttons, the welcome card and the messages (`children`) float over it.
+ * renders exactly this area), or filling the stage with « Libre » or without a track; the « Recadrer », « Zones de
+ * sécurité », « Capturer cette image » and « Revenir à la vue du film » buttons, the welcome card and the messages
+ * (`children`) float over it.
  */
 export function Stage({ children }: { children?: ReactNode }) {
   const t = useT()
@@ -43,6 +45,8 @@ export function Stage({ children }: { children?: ReactNode }) {
     void import('../scene/FlyoverCanvas')
   }, [])
   const exporting = useExportStore((s) => isExportBusy(s.phase))
+  // the view was moved away from the film's (orbited while paused): the way back
+  const away = useHandViewStore((s) => s.away)
   const viewport = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
 
@@ -100,6 +104,33 @@ export function Stage({ children }: { children?: ReactNode }) {
             aria-label={t('stage.safeZones')}
           >
             <Icon name="square-dashed" />
+          </Button>
+        </Tip>
+      )}
+      {aspect !== null && (
+        <Tip text={t('stage.capture')} side="left">
+          {/* none in « Libre »: its view is not the picture of the film. The view as it is now, once moved by hand. */}
+          <Button
+            variant="icon"
+            className={`${FLOAT} top-25 touch:top-29`}
+            onClick={() => void import('../poster/export').then((m) => m.startStill(away))}
+            disabled={exporting}
+            aria-label={t('stage.capture')}
+          >
+            <Icon name="image" />
+          </Button>
+        </Tip>
+      )}
+      {hasTracks && away && (
+        <Tip text={t('stage.filmView')} side="left">
+          <Button
+            variant="icon"
+            className={`${FLOAT} ${aspect === null ? 'top-14 touch:top-16' : 'top-36 touch:top-42'}`}
+            onClick={() => useHandViewStore.getState().returnToFilm()}
+            disabled={exporting}
+            aria-label={t('stage.filmView')}
+          >
+            <Icon name="clapperboard" />
           </Button>
         </Tip>
       )}
