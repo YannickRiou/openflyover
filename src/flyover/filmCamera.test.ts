@@ -9,7 +9,7 @@ import { centroid } from '../geo/lonLat'
 import { buildTrack } from '../import/stats'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { computeCameraView, MIN_GROUND_CLEARANCE_M } from './camera'
-import { DEFAULT_CAMERA, type CameraStyle } from './cameraSettings'
+import { DEFAULT_CAMERA, DEFAULT_FOCAL_MM, focalDolly, fovDegOf, type CameraStyle } from './cameraSettings'
 import {
   blendViews,
   computeFilmView,
@@ -1131,6 +1131,104 @@ describe('« Bilan »: the camera holds the high view of the region', () => {
     const flown = computeFilmView(path, clock, 8, 0.3, frame, flat, { ...options, follow: () => ({ path: other, progress: 0.5 }) })
     expect(flown.position.distanceTo(wanted.position)).toBeGreaterThan(1000)
     expect(flown.target.distanceTo(markerAt(other, 0.5, frame, flat, 1, 3))).toBeLessThan(1000)
+  })
+})
+
+describe('« Focale »: the lens changes the perspective, not the size of what is framed', () => {
+  const FOCALS = [18, 26, 50, 85, 135]
+  const withLens = (focalMm: number): FilmViewOptions => ({ ...options, camera: { ...CAMERA, focalMm } })
+  const tanHalf = (focalMm: number) => Math.tan((fovDegOf(focalMm) * Math.PI) / 360)
+  /** distance × tan(fov / 2): what the frame height covers at the target, the same whatever the lens when the size is kept */
+  const coverage = (v: { position: Vector3; target: Vector3 }, focalMm: number) => v.position.distanceTo(v.target) * tanHalf(focalMm)
+  const hills = (lon: number, lat: number) => 1000 + 150 * Math.sin(lon * 400) * Math.cos(lat * 300)
+
+  it('the default lens is today\'s 50° field of view, exactly, and does not move the camera', () => {
+    expect(fovDegOf(DEFAULT_FOCAL_MM)).toBe(50)
+    expect(focalDolly(DEFAULT_FOCAL_MM)).toBe(1)
+    expect(fovDegOf(18)).toBeGreaterThan(fovDegOf(26))
+    expect(fovDegOf(135)).toBeLessThan(fovDegOf(26))
+    expectSameView(computeCameraView(path, 0.5, frame, flat, { ...withLens(26), timeS: 5 }), computeCameraView(path, 0.5, frame, flat, { ...options, timeS: 5 }), 1e-12)
+  })
+
+  it('the marker keeps its size on the screen: a 10 m post at the marker spans the same height with any lens', () => {
+    const heights = FOCALS.map((focalMm) => {
+      const v = computeCameraView(path, 0.5, frame, hills, { ...withLens(focalMm), timeS: 20 })
+      const lens = new PerspectiveCamera(fovDegOf(focalMm), 16 / 9, 1, 5e6)
+      lens.position.copy(v.position)
+      lens.lookAt(v.target)
+      lens.updateMatrixWorld(true)
+      lens.updateProjectionMatrix()
+      const foot = v.marker.clone().project(lens)
+      const top = v.marker.clone().add(new Vector3(0, 10, 0)).project(lens)
+      return top.y - foot.y
+    })
+    for (const h of heights) expect(h / heights[1]).toBeGreaterThan(0.97)
+    for (const h of heights) expect(h / heights[1]).toBeLessThan(1.03)
+  })
+
+  it('every style stands farther with a telephoto, closer with a wide angle, by the same factor (after the distance clamp)', () => {
+    for (const style of ['chase', 'sway', 'orbit', 'top', 'cinematic'] as CameraStyle[]) {
+      const distance = (focalMm: number) => {
+        const v = computeCameraView(path, 0.5, frame, flat, { ...options, camera: { ...CAMERA, style, focalMm }, timeS: 20 })
+        return v.position.distanceTo(v.target)
+      }
+      for (const focalMm of FOCALS) expect(distance(focalMm) / distance(26)).toBeCloseTo(focalDolly(focalMm), 2)
+    }
+  })
+
+  it('the overview, the region view and a group keep their framing with a telephoto; a wide angle leaves the wide views where they are', () => {
+    const joined = flightAt(0.5, 10)
+    const group = [{ lon: 6.8, lat: 45.9 }, { lon: 6.9, lat: 45.9 }]
+    const box = { widthM: 120_000, heightM: 80_000 }
+    const spread = frame.toLocal(6.9, 45.9, 1000).distanceTo(frame.toLocal(6.8, 45.9, 1000)) / 2
+    const reference = coverage(overviewView(path, frame, flat, 1, 16 / 9, joined), DEFAULT_FOCAL_MM)
+    for (const focalMm of FOCALS) {
+      const tele = focalMm >= DEFAULT_FOCAL_MM
+      // the same ground in the frame from a telephoto; from a wide angle, the default's distance (more land around)
+      expect(overviewDistanceM(10_000, 9 / 16, focalMm)).toBeCloseTo(overviewDistanceM(10_000, 9 / 16) * (tele ? focalDolly(focalMm) : 1), 6)
+      const overview = overviewView(path, frame, flat, 1, 16 / 9, joined, undefined, focalMm)
+      if (tele) expect(coverage(overview, focalMm)).toBeCloseTo(reference, 3)
+      else expect(overview.position.distanceTo(overview.target)).toBeCloseTo(overviewDistanceM(path.lengthM, 16 / 9), -1)
+      for (const height of ['region', 'pays'] as const) {
+        for (const diagonal of [1_000, 10_000]) {
+          const lens = regionDistanceM(diagonal, diagonal / 4, 16 / 9, height, undefined, 0, REGION_PITCH_DEG, undefined, focalMm)
+          const wanted = regionDistanceM(diagonal, diagonal / 4, 16 / 9, height)
+          // at most the default's times the dolly (the reach of the terrain may cap it), and a telephoto never nearer than the default
+          expect(lens).toBeLessThanOrEqual(wanted * (tele ? focalDolly(focalMm) : 1) + 1e-3)
+          if (tele) expect(lens).toBeGreaterThanOrEqual(wanted - 1e-3)
+          if (tele && height === 'region' && diagonal === 1_000) expect(lens).toBeCloseTo(wanted * focalDolly(focalMm), 3)
+        }
+      }
+      // a box to fit fills the frame height with any lens
+      const fitted = regionDistanceM(10_000, 3_000, 16 / 9, 'region', box, 0, REGION_PITCH_DEG, undefined, focalMm)
+      if (tele) expect(fitted * tanHalf(focalMm)).toBeCloseTo((REGION_FIT_MARGIN * box.widthM) / 2, 3)
+      const framed = framedGroup(joined, group, frame, flat, 1, 16 / 9, focalMm)
+      expect(framed.position.distanceTo(framed.target) * tanHalf(focalMm)).toBeGreaterThan(GROUP_FRAMING_MARGIN * spread * 0.99)
+    }
+    // the region view stays within the reach of the terrain with every lens
+    for (const focalMm of FOCALS) {
+      const far = regionDistanceM(10_000, 3_000, 16 / 9, 'pays', { widthM: 2_000_000, heightM: 1_000_000 }, 0, REGION_PITCH_DEG, undefined, focalMm)
+      expect(far * groundReach(REGION_PITCH_DEG, 16 / 9, focalMm)).toBeCloseTo(3_000 + REGION_REACH_M, 6)
+    }
+  })
+
+  it('a keyframe frames the same with any lens: its distance is that of the lens, and the headroom follows the field of view', () => {
+    const none = { style: 'aucune', durationS: 1 } as const
+    const clock = clockOf(none, none, [], [{ id: 'camera-1', atM: 1500, distance: 2, pitchDeg: 40, headingOffsetDeg: 20, aimRightM: 0, aimAheadM: 0 }])
+    const t = clock.cameraKeys[0].timeS
+    for (const focalMm of FOCALS) {
+      const view = computeFilmView(path, clock, t, clock.progressAtTime(t), frame, flat, withLens(focalMm))
+      const wide = computeFilmView(path, clock, t, clock.progressAtTime(t), frame, flat, withLens(26))
+      expect(coverage(view, focalMm)).toBeCloseTo(coverage(wide, 26), 3)
+    }
+  })
+
+  it('the relief protections hold with a telephoto: never under the clearance, at every lens, over steep hills', () => {
+    const clock = clockOf({ style: 'descente', durationS: 6 }, { style: 'descente', durationS: 6 })
+    for (const focalMm of [18, 135]) {
+      const issues = auditFilmCamera(path, clock, frame, hills, withLens(focalMm))
+      expect(issues.filter((i) => i.kind !== 'jolt'), `${focalMm} mm`).toEqual([])
+    }
   })
 })
 

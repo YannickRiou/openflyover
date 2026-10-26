@@ -11,6 +11,8 @@ export default {
   'v45.records.text': 'Le meilleur thermique (la montée la plus soutenue du vol) et la plus grande hauteur au-dessus du sol sont des records de plus pour les vols en parapente. À l’inverse, les montées, descentes et kilomètres records ne comptent plus les passages en vol : la pente n’y a aucun sens. Dans Carte › Repères, un interrupteur « Records de la sortie » les affiche ou les masque, et « Recalculer les records » remet à jour les arrêts automatiques du film.',
   'v45.flight.title': 'Des vols plus lisibles',
   'v45.flight.text': 'Un vol (parapente, saut en kite, téléphérique) a maintenant un rideau translucide jusqu’au relief, une ombre au sol, et un trait qui s’épaissit en se rapprochant de la caméra. « Colorer selon › Vitesse verticale » montre d’un coup d’œil où l’on monte et où l’on descend. Réglages dans Trace › Vol.',
+  'v45.focal.title': 'Choisissez l’objectif du film',
+  'v45.focal.text': 'Survol › Caméra › « Focale », de 18 mm (grand-angle : plus d’espace autour) à 135 mm (téléobjectif : les montagnes paraissent plus proches et plus imposantes). La caméra se rapproche ou recule pour que le marqueur garde la même taille ; à 26 mm, rien ne change.',
   'v44.night.title': 'Des nuits moins noires',
   'v44.night.text': '« Clarté des nuits » (Lumière › Atmosphère) éclaire le relief et les nuages la nuit, comme un clair de lune, sans rien changer le jour. L’exposition rejoint le contraste et la saturation dans Couleurs.',
   'v332.landmarks.title': 'Masquer des repères en quelques clics',

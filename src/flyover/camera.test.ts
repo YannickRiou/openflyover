@@ -19,8 +19,8 @@ import {
   type CameraView,
   type CameraViewOptions,
 } from './camera'
-import { CAMERA_STYLES, DEFAULT_CAMERA, type CameraSettings, type CameraStyle } from './cameraSettings'
-import { CAMERA_FOV_DEG, lookAtView } from './filmCamera'
+import { CAMERA_FOV_DEG, CAMERA_STYLES, DEFAULT_CAMERA, type CameraSettings, type CameraStyle } from './cameraSettings'
+import { lookAtView } from './filmCamera'
 import { buildTrackPath, type TrackPath } from './path'
 
 const LIFT = 3

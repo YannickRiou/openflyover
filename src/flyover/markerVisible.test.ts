@@ -39,6 +39,18 @@ describe('marker visibility', { timeout: 120_000 }, () => {
       expect(hiddenFrames / allFrames).toBeLessThan(0.001)
     })
 
+    // a telephoto stands several times farther: its line of sight crosses more relief (`lowestClearY` samples and checks it as far in metres)
+    it.each([18, 135])(`${name}: with a %i mm lens no camera preset hides the marker nor loses it`, (focalMm) => {
+      for (const { name: preset, camera } of FOLLOWING) {
+        const frames = flyMarker(track, LENGTH_S, steepSampler, { ...camera, focalMm }, 10)
+        const hidden = frames.map((f) => f.clearanceM < 0)
+        expect(hidden.filter(Boolean).length / frames.length, preset).toBeLessThan(0.005)
+        expect(Math.min(...frames.map((f) => f.clearanceM)), preset).toBeGreaterThan(-8)
+        expect(hidden.filter((h, i) => i > 0 && h !== hidden[i - 1]).length, preset).toBeLessThanOrEqual(4)
+        expect(Math.max(...frames.map(edge)), preset).toBeLessThan(0.15 + camera.leadRoomPct / 100)
+      }
+    })
+
     it(`${name}: the marker stays in the middle of the frame through stops and speed changes`, () => {
       const length = track.stats.distanceM
       const film = {

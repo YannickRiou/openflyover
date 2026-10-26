@@ -4,7 +4,8 @@ import { buildFrameTimes } from '../export/schedule'
 import { filmClockFor, type FilmClock } from '../film/clock'
 import { DEFAULT_FILM } from '../film/model'
 import { CAMERA_PRESETS } from '../flyover/cameraSettings'
-import { CAMERA_FOV_DEG, computeFilmView } from '../flyover/filmCamera'
+import { CAMERA_FOV_DEG } from '../flyover/cameraSettings'
+import { computeFilmView } from '../flyover/filmCamera'
 import { DEFAULT_PACING } from '../flyover/pacing'
 import { trackPathOf } from '../flyover/path'
 import { gpxTrack } from '../flyover/__fixtures__/smoothness'
@@ -67,6 +68,9 @@ describe('effect parameters', () => {
     expect(strong.bokehScale).toBeGreaterThan(weak.bokehScale)
     expect(strong.focusRange).toBeLessThan(weak.focusRange)
     expect(depthOfFieldParams(1, 2000).focusRange).toBeCloseTo(2 * strong.focusRange)
+    // « Focale »: the camera of a 130 mm lens stands 5 times as far for the same framing, the sharp zone stays as deep in metres
+    expect(depthOfFieldParams(1, 5000, 130).focusRange).toBeCloseTo(strong.focusRange)
+    expect(depthOfFieldParams(1, 1000, 26)).toEqual(strong)
   })
 })
 

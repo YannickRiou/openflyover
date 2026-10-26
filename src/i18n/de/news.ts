@@ -13,6 +13,8 @@ const messages: Messages['news'] = {
   'v45.records.text': 'Der beste Aufwind (der stetigste Anstieg eines Fluges) und die größte Höhe über Grund sind zwei weitere Rekorde für Gleitschirmflüge. Dafür zählen die Rekorde für Anstieg, Abfahrt und Kilometer die Flugabschnitte nicht mehr mit: Eine Steigung bedeutet dort nichts. Unter Karte › Landmarken blendet der Schalter „Rekorde der Tour“ sie ein oder aus, und „Rekorde neu berechnen“ aktualisiert die automatischen Stopps des Films.',
   'v45.flight.title': 'Besser lesbare Flüge',
   'v45.flight.text': 'Ein Flug (Gleitschirm, Kitesprung, Seilbahn) hat jetzt einen durchscheinenden Vorhang bis zum Gelände, einen Schatten am Boden und eine Linie, die dicker wird, wenn sie sich der Kamera nähert. « Einfärben nach › Vertikalgeschwindigkeit » zeigt auf einen Blick, wo man steigt und wo man sinkt. Einstellungen unter Track › Flug.',
+  'v45.focal.title': 'Das Objektiv des Films wählen',
+  'v45.focal.text': 'Überflug › Kamera › „Brennweite“, von 18 mm (Weitwinkel: mehr Platz ringsum) bis 135 mm (Teleobjektiv: die Berge wirken näher und mächtiger). Die Kamera rückt näher oder weicht zurück, damit der Marker gleich groß bleibt; bei 26 mm ändert sich nichts.',
   'v44.night.title': 'Hellere Nächte',
   'v44.night.text': '« Helligkeit der Nacht » (Licht › Atmosphäre) beleuchtet Gelände und Wolken nachts wie Mondlicht und ändert tagsüber nichts. Die Belichtung steht jetzt bei Kontrast und Sättigung unter Farben.',
   'v332.landmarks.title': 'Landmarken mit wenigen Klicks ausblenden',

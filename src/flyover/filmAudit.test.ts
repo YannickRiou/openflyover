@@ -6,7 +6,7 @@ import { DEFAULT_FILM, type Film, type ShotStyle } from '../film/model'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { centroid } from '../geo/lonLat'
 import type { HeightSampler } from '../scene/trackLineSet'
-import { CAMERA_PRESETS, CAMERA_RANGES, DEFAULT_CAMERA, type CameraSettings } from './cameraSettings'
+import { CAMERA_PRESETS, CAMERA_RANGES, DEFAULT_CAMERA, DEFAULT_FOCAL_MM, type CameraSettings } from './cameraSettings'
 import { AUDIT_JOLT_LIMIT, auditFilmCamera, auditPoses, type AuditPose } from './filmAudit'
 import { computeFilmView } from './filmCamera'
 import { DEFAULT_PACING } from './pacing'
@@ -88,7 +88,9 @@ describe('the opening and closing shots of every preset', () => {
   ])
 
   // « Saut » is a quick move on purpose (0.6 s): it is checked for everything but its pace
-  it('never jolt, skim the terrain nor lose the marker, at 30 i/s', { timeout: 240_000 }, () => {
+  // the default lens and both ends of « Focale »: a telephoto stands several times farther, a wide angle closer; 21 mm:
+  // the closer camera came down from the lift of a closing « Balayage » too fast (0.028 before `SHOT_EASE_LIFT` 1.5)
+  it.each([DEFAULT_FOCAL_MM, 18, 21, 135])('never jolt, skim the terrain nor lose the marker, at 30 i/s, with a %i mm lens', { timeout: 240_000 }, (focalMm) => {
     for (const { name, track, sample } of scenes) {
       const path = trackPathOf(track)
       const c = centroid(track.bounds)
@@ -97,11 +99,11 @@ describe('the opening and closing shots of every preset', () => {
         for (const style of styles) {
           const film: Film = { ...DEFAULT_FILM, opening: { style, durationS: 8 }, closing: { style, durationS: 6 } }
           const clock = filmClockFor({ track, film, durationS: 60, pacing: DEFAULT_PACING, landmarks: [] })
-          const opts = { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9 }
+          const opts = { exaggeration: 1, liftM: 3, camera: { ...camera, focalMm }, durationS: 60, aspect: 16 / 9 }
           const closingS = clock.openingS + clock.flightS
           for (const [fromS, toS] of [[0, clock.openingS], [closingS, clock.totalTime()]]) {
             const issues = auditFilmCamera(path, clock, where, sample, opts, { fromS, toS }).filter((i) => i.kind !== 'jolt' || style !== 'saut')
-            expect(issues, `${name}, ${id}, ${style}, ${fromS === 0 ? 'opening' : 'closing'}`).toEqual([])
+            expect(issues, `${name}, ${id}, ${style}, ${focalMm} mm, ${fromS === 0 ? 'opening' : 'closing'}`).toEqual([])
           }
         }
       }
@@ -119,6 +121,30 @@ describe('the whole film over the home page example, beyond the opening and the 
   const audit = (film: Partial<Film>, camera: CameraSettings, extra: Record<string, unknown> = {}) =>
     auditFilmCamera(path, clockOf(film), where, hillySampler, { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9, ...extra })
   const preset = (id: string) => CAMERA_PRESETS.find((p) => p.id === id)!.camera
+
+  it('a telephoto keeps the marker in the frame and the tilt chosen: it compresses the relief, it does not look down on it', { timeout: 120_000 }, () => {
+    // the camera pitch over the flight (degrees from the horizontal), on average, and the issues of the whole film
+    const lens = (focalMm: number) => {
+      const camera = { ...DEFAULT_CAMERA, focalMm }
+      const clock = clockOf({ stops: [{ id: 's', atM: lengthM * 0.8, durationS: 4, camera: 'large' }] })
+      let sum = 0
+      let n = 0
+      for (let t = clock.openingS; t <= clock.openingS + clock.flightS; t += 0.25) {
+        const v = computeFilmView(path, clock, t, clock.progressAtTime(t), where, hillySampler, { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9 })
+        const sight = v.target.clone().sub(v.position)
+        sum += (Math.asin(-sight.y / sight.length()) * 180) / Math.PI
+        n++
+      }
+      return { pitch: sum / n, issues: auditFilmCamera(path, clock, where, hillySampler, { exaggeration: 1, liftM: 3, camera, durationS: 60, aspect: 16 / 9 }) }
+    }
+    const normal = lens(DEFAULT_FOCAL_MM)
+    for (const focalMm of [85, 135]) {
+      const { pitch, issues } = lens(focalMm)
+      expect(issues.filter((i) => i.kind === 'marker-out'), `${focalMm} mm`).toEqual([])
+      // over the sample on its real relief: 27.7° at 26 mm, 30.3° at 85 mm, 30.7° at 135 mm
+      expect(Math.abs(pitch - normal.pitch), `${focalMm} mm`).toBeLessThan(5)
+    }
+  })
 
   it('« Lissage de la caméra » at 0 or 0.5 s: the heading no longer whips round the switchbacks', { timeout: 60_000 }, () => {
     for (const cameraSmoothingS of [0, 0.5]) {

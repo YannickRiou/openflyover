@@ -27,6 +27,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'map-pin', get title() { return t('news.v45.marker.title') }, get text() { return t('news.v45.marker.text') } },
       { icon: 'sparkles', get title() { return t('news.v45.records.title') }, get text() { return t('news.v45.records.text') } },
       { icon: 'plane', get title() { return t('news.v45.flight.title') }, get text() { return t('news.v45.flight.text') } },
+      { icon: 'aperture', get title() { return t('news.v45.focal.title') }, get text() { return t('news.v45.focal.text') } },
     ],
   },
   {

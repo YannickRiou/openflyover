@@ -22,7 +22,8 @@ import { normaliseLoudness } from '../film/loudness'
 import type { FilmClock } from '../film/clock'
 import { useMediaStore } from '../film/media'
 import { pinsMoveWithTime } from '../film/photoPins'
-import { CAMERA_FOV_DEG, filmViewMovesWithTime, lookAtView, overviewView } from '../flyover/filmCamera'
+import { fovDegOf } from '../flyover/cameraSettings'
+import { filmViewMovesWithTime, lookAtView, overviewView } from '../flyover/filmCamera'
 import { filmTrackOf } from '../flyover/sequence'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { junctionBlendAt, nightAt } from '../flyover/sun'
@@ -306,7 +307,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const engine = deps.engine()
     if (!framing || framing.count === 0 || !frame) return
     const sampler: HeightSampler | null = engine ? (lon, lat) => engine.sampleHeight(lon, lat) : null
-    const view = overviewView(framing, frame, sampler, useAppStore.getState().settings.exaggeration, width / height, FROM_SOUTH)
+    const { exaggeration, camera: lens } = useAppStore.getState().settings
+    const view = overviewView(framing, frame, sampler, exaggeration, width / height, FROM_SOUTH, undefined, lens.focalMm)
     camera.position.copy(view.position)
     lookAtView(camera, view)
     controlsTarget()?.copy(view.target)
@@ -594,7 +596,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
               i,
               shutter,
               (r) => filmViewAt(path, filmClock, r.progress, r.timeS, localFrame, null, aspect),
-              { heightPx: height, aspect, fovDeg: CAMERA_FOV_DEG },
+              { heightPx: height, aspect, fovDeg: fovDegOf(settings.camera.focalMm) },
               keep,
               maxSubFrames,
             )

@@ -13,6 +13,8 @@ const messages: Messages['news'] = {
   'v45.records.text': 'La miglior termica (la salita più sostenuta di un volo) e la massima altezza dal suolo sono due record in più per i voli in parapendio. In cambio, i record di salita, discesa e chilometri non contano più i tratti in volo: la pendenza lì non significa nulla. In Mappa › Riferimenti, un interruttore «Record dell’uscita» li mostra o li nasconde, e «Ricalcola i record» aggiorna le soste automatiche del film.',
   'v45.flight.title': 'Voli più leggibili',
   'v45.flight.text': 'Un volo (parapendio, salto di kite, funivia) ha ora una tenda traslucida fino al rilievo, un’ombra a terra e una linea che si ispessisce avvicinandosi alla camera. « Colora in base a › Velocità verticale » mostra a colpo d’occhio dove si sale e dove si scende. Impostazioni in Traccia › Volo.',
+  'v45.focal.title': 'Scegli l’obiettivo del film',
+  'v45.focal.text': 'Sorvolo › Camera › «Focale», da 18 mm (grandangolo: più spazio intorno) a 135 mm (teleobiettivo: le montagne sembrano più vicine e imponenti). La camera si avvicina o si allontana perché il marcatore mantenga la stessa dimensione; a 26 mm non cambia nulla.',
   'v44.night.title': 'Notti meno nere',
   'v44.night.text': '« Luminosità della notte » (Luce › Atmosfera) illumina il rilievo e le nuvole di notte, come la luce della luna, senza cambiare nulla di giorno. L’esposizione ora sta con contrasto e saturazione in Colori.',
   'v332.landmarks.title': 'Nascondere riferimenti in pochi clic',

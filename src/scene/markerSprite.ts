@@ -13,6 +13,7 @@ import { wakeScene } from './renderOnDemand'
 import { CanvasTexture, PerspectiveCamera, SRGBColorSpace, Vector3 } from 'three'
 import type { Camera, Sprite, SpriteMaterial } from 'three'
 import type { LocalFrame, TerrainEngine, Track } from '../core/types'
+import { CAMERA_FOV_DEG } from '../flyover/cameraSettings'
 import { samplePath } from '../flyover/path'
 import type { TrackPath } from '../flyover/path'
 import type { ClearanceAt } from './labelModel'
@@ -23,7 +24,7 @@ import type { MarkerFigure, MarkerSettings } from './markerSettings'
 import { NEUTRAL_MARKER_LIGHT } from './exposure'
 import type { MarkerLight } from './exposure'
 
-/** Ball radius as a fraction of its distance to the camera (constant on-screen size, ~7 px at 1000 px). */
+/** Ball radius as a fraction of its distance to the camera, at the default field of view (constant on-screen size, ~7 px at 1000 px). */
 export const MARKER_SCREEN_FACTOR = 0.007
 /** Diameter of the pictogram and picture badges relative to the ball: room for a readable figure. */
 export const BADGE_SCALE = 2.2
@@ -516,7 +517,10 @@ export function placeMarker(
   material.rotation = facing * (slope - bounce.tilt)
   if (material.map !== texture) material.map = texture
   material.color.setRGB(gain * markerLight.r, gain * markerLight.g, gain * markerLight.b)
-  const radius = Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR) * look.marker.size
+  // MARKER_SCREEN_FACTOR is for the default field of view: a narrower or wider lens (« Focale », the camera stands farther
+  // or closer for it) scales it, so the marker keeps its size on the screen
+  const lens = 'fov' in camera ? Math.tan(((camera as PerspectiveCamera).fov * Math.PI) / 360) / Math.tan((CAMERA_FOV_DEG * Math.PI) / 360) : 1
+  const radius = Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR * lens) * look.marker.size
   // world size of a texture pixel: a ball is PX_PER_BALL pixels across
   const pixel = (2 * radius) / PX_PER_BALL
   sprite.position.copy(position)

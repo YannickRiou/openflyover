@@ -12,7 +12,7 @@ import { Vector3 } from 'three'
 import { clamp, lastIndexAtOrBelow, smootherstep } from '../core/math'
 import type { LocalFrame } from '../core/types'
 import type { HeightSampler } from '../scene/trackLineSet'
-import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
+import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, focalDolly, fovDegOf, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
 import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 
@@ -135,13 +135,12 @@ export const CINEMATIC_PERIOD_S = 40
 
 /**
  * « Espace devant »: the aim moves ahead along the smoothed travel direction, so the marker stands behind the middle of the
- * frame by `leadRoomPct` of half its height, whatever the camera's distance, pitch or viewing angle. Half the frame
- * height per metre of distance at the scene camera's field of view (CAMERA_FOV_DEG, filmCamera.ts imports this module).
+ * frame by `leadRoomPct` of half its height, whatever the camera's distance, pitch, viewing angle or lens. Half the frame
+ * height per metre of distance at the scene camera's field of view (that of « Focale », `fovDegOf`).
  * Full once the marker moves at LEAD_FULL_SPEED of a flight's constant pace, eased out below it (a stop, a shot).
  * LEAD_SCREEN_FLOOR keeps the shift finite where travel is nearly along the line of sight at a low pitch (the same
  * ground shift moves the marker little on screen there, `leadRoom`).
  */
-export const LEAD_HALF_FRAME_PER_M = Math.tan((50 * Math.PI) / 360)
 export const LEAD_FULL_SPEED = 0.5
 export const LEAD_PAN_PITCH_DEG = 45
 export const LEAD_MOVE_PITCH_DEG = 75
@@ -172,7 +171,7 @@ export function headingWindowM(path: TrackPath, camera: CameraSettings): number 
   return turnSmoothingM(camera, path.lengthM) / 2
 }
 
-/** Automatic camera distance for `path`, before the distance multiplier. */
+/** Automatic camera distance for `path`, before the distance multiplier and the lens's dolly (`focalDolly`, applied after this clamp: they never fight). */
 export function autoDistanceM(path: TrackPath): number {
   return clamp(path.lengthM * CHASE_DISTANCE_FRACTION, CHASE_DISTANCE_MIN_M, CHASE_DISTANCE_MAX_M)
 }
@@ -535,7 +534,7 @@ function placement(
     const angle = heading(at, window)
     return new Vector3(Math.sin(angle), 0, -Math.cos(angle))
   }
-  const distance = autoDistanceM(path) * camera.distance
+  const distance = autoDistanceM(path) * camera.distance * focalDolly(camera.focalMm)
   const offset = camera.headingOffsetDeg * DEG
 
   switch (camera.style) {
@@ -651,7 +650,8 @@ export function computeCameraView(
   if (sample) {
     // the sight line ends at the marker, at its steady height (its own rides each bump)
     const endGround = dAim === d && !smoothLine ? aimGround : steadyGround(d, marker)
-    position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM)
+    const dolly = Math.max(1, focalDolly(camera.focalMm))
+    position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM, dolly)
   }
   // the aim moves by what the camera needs where it stands (the film moves it again once it has set its height)
   const leadTarget = (at: Vector3) => target.clone().add(leadRoom(target.clone().sub(at).add(lead.camera), travel, camera, motion.marker).target)
@@ -673,7 +673,7 @@ export function computeCameraView(
  * between them is u·|f × t| / (1 + (1 − 2·move)·u·f·t − move·(1 − move)·u²) and must be `leadRoomPct` of tan(fov / 2).
  * No lead in 'orbit', whose view turns round the marker whatever the way it is heading.
  */
-function leadRoom(sight: Vector3, travel: Vector3, { style, leadRoomPct }: CameraSettings, markerShare: number): { target: Vector3; camera: Vector3 } {
+function leadRoom(sight: Vector3, travel: Vector3, { style, leadRoomPct, focalMm }: CameraSettings, markerShare: number): { target: Vector3; camera: Vector3 } {
   const distance = sight.length()
   if (style === 'orbit' || !(leadRoomPct > 0) || !(distance > 0)) return { target: new Vector3(), camera: new Vector3() }
   const f = sight.clone().divideScalar(distance)
@@ -681,7 +681,7 @@ function leadRoom(sight: Vector3, travel: Vector3, { style, leadRoomPct }: Camer
   const across = Math.sqrt(Math.max(0, 1 - along * along))
   const pitchDeg = Math.asin(clamp(-f.y, -1, 1)) / DEG
   const move = smootherstep((pitchDeg - LEAD_PAN_PITCH_DEG) / (LEAD_MOVE_PITCH_DEG - LEAD_PAN_PITCH_DEG))
-  const k = (leadRoomPct / 100) * smootherstep(markerShare / LEAD_FULL_SPEED) * LEAD_HALF_FRAME_PER_M
+  const k = (leadRoomPct / 100) * smootherstep(markerShare / LEAD_FULL_SPEED) * Math.tan((fovDegOf(focalMm) / 2) * DEG)
   // travel nearly along the line of sight, toward the camera, at a low pitch: the marker would drift away, not off-centre
   const divisor = smoothMax(across - k * (1 - 2 * move) * along, LEAD_SCREEN_FLOOR, LEAD_SCREEN_FLOOR)
   const shiftM = ((2 * k) / (divisor + Math.sqrt(divisor * divisor + 4 * k * k * move * (1 - move)))) * distance
@@ -974,7 +974,9 @@ function positionAround(target: Vector3, place: Placement): Vector3 {
  * (exaggerated) grid ground with the relief its cells miss (`reliefGround`): the line at fraction f (0 = camera) has
  * height y + (target.y - y) · f
  * and must clear the ground there by MIN_GROUND_CLEARANCE_M · (1 - f), at least LINE_OF_SIGHT_MIN_CLEARANCE_M, up to
- * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN). Where the lift per metre of ground passes
+ * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN), at LINE_OF_SIGHT_SAMPLES points. With a
+ * telephoto the line is `dolly` times longer (`focalDolly`): the samples and the gain grow with it, so the spacing of
+ * the samples and the stretch left unchecked before the marker stay as long in metres as with the default lens. Where the lift per metre of ground passes
  * LINE_OF_SIGHT_FINE_GAIN, the line is checked against the coarse grid instead (LINE_OF_SIGHT_COARSE_CELL_M). The floor
  * is eased in (`smoothMax`), then the camera is kept MIN_TERRAIN_CLEARANCE_M above the actual terrain below it.
  */
@@ -986,7 +988,9 @@ function lowestClearY(
   exaggeration: number,
   cellM: number,
   liftM: number,
+  dolly = 1,
 ): number {
+  const samples = Math.ceil(LINE_OF_SIGHT_SAMPLES * dolly)
   let floor = -Infinity
   const grid = terrainGrid(cellM, frame, sample)
   const coarseM = Math.max(cellM, LINE_OF_SIGHT_COARSE_CELL_M)
@@ -1005,9 +1009,9 @@ function lowestClearY(
     const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance, _sight).y
     return to.y + ((floorY - to.y) * share) / (1 - f)
   }
-  const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
-  for (let i = 0; i <= LINE_OF_SIGHT_SAMPLES; i++) {
-    const f = (i / LINE_OF_SIGHT_SAMPLES) * (1 - Math.min(0.5, left))
+  const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / (LINE_OF_SIGHT_MAX_GAIN * dolly))
+  for (let i = 0; i <= samples; i++) {
+    const f = (i / samples) * (1 - Math.min(0.5, left))
     const clearance = Math.max(MIN_GROUND_CLEARANCE_M * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
     // the fine grid's lift eased out between LINE_OF_SIGHT_FINE_GAIN and twice that
     const t = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)

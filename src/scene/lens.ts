@@ -2,6 +2,7 @@
 import { withDefaults } from '../core/guards'
 import { clamp } from '../core/math'
 import type { FilmClock } from '../film/clock'
+import { DEFAULT_FOCAL_MM, focalDolly } from '../flyover/cameraSettings'
 
 export interface LensSettings {
   /** motion blur: fraction of the frame interval the shutter stays open, 0 (off) .. 1 */
@@ -56,13 +57,18 @@ export function bloomParams(amount: number, radius: number): { intensity: number
 
 /** Bokeh scale (pixels at the 1080p reference) at amount 1. */
 const DOF_MAX_BOKEH = 6
-/** Distance from the focus, as a fraction of it, at which the blur is full (amount 0 and 1). */
+/** Distance from the focus, as a fraction of it, at which the blur is full (amount 0 and 1), with the default lens. */
 const DOF_RANGE = { weak: 2, strong: 0.5 }
 
-export function depthOfFieldParams(amount: number, focusM: number): { focusRange: number; bokehScale: number } {
+/**
+ * With « Focale » the camera stands `focalDolly` times as far for the same framing: the range is divided by as much, so
+ * the depth kept sharp is the same in metres, as with a real lens (a telephoto blurs the far mountains more, a wide
+ * angle less).
+ */
+export function depthOfFieldParams(amount: number, focusM: number, focalMm = DEFAULT_FOCAL_MM): { focusRange: number; bokehScale: number } {
   const a = clamp(amount, 0, 1)
   return {
-    focusRange: Math.max(1, focusM) * (DOF_RANGE.weak + (DOF_RANGE.strong - DOF_RANGE.weak) * a),
+    focusRange: (Math.max(1, focusM) * (DOF_RANGE.weak + (DOF_RANGE.strong - DOF_RANGE.weak) * a)) / focalDolly(focalMm),
     bokehScale: DOF_MAX_BOKEH * a,
   }
 }

@@ -44,6 +44,7 @@ describe('camera presets', () => {
 
   it('findCameraPreset returns undefined for a custom camera', () => {
     expect(findCameraPreset({ ...DEFAULT_CAMERA, pitchDeg: 31 })).toBeUndefined()
+    expect(findCameraPreset({ ...DEFAULT_CAMERA, focalMm: 85 })).toBeUndefined()
   })
 })
 
@@ -64,6 +65,8 @@ describe('validation of a loaded project', () => {
     expect(isValidSetting('camera', { ...DEFAULT_CAMERA, leadRoomPct: 45 })).toBe(false)
     expect(isValidSetting('camera', { ...DEFAULT_CAMERA, bankDeg: -1 })).toBe(false)
     expect(isValidSetting('camera', { ...DEFAULT_CAMERA, leadRoomPct: 40, bankDeg: 10 })).toBe(true)
+    for (const focalMm of [10, 17, 136, 400]) expect(isValidSetting('camera', { ...DEFAULT_CAMERA, focalMm })).toBe(false)
+    for (const focalMm of [18, 85, 135]) expect(isValidSetting('camera', { ...DEFAULT_CAMERA, focalMm })).toBe(true)
     const { northUp: _, ...missing } = DEFAULT_CAMERA
     expect(isValidSetting('camera', missing)).toBe(false)
     expect(isValidSetting('camera', { ...DEFAULT_CAMERA, style: 'orbit' })).toBe(true)
@@ -73,7 +76,7 @@ describe('validation of a loaded project', () => {
     const saved = { style: 'sway', distance: 1.3, pitchDeg: 25, headingOffsetDeg: 0, smoothing: 1.5, northUp: false }
     const { settings, invalid } = sanitizeSettings({ camera: saved })
     expect(invalid).toEqual([])
-    expect(settings.camera).toEqual({ ...saved, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3 })
+    expect(settings.camera).toEqual({ ...saved, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3, focalMm: 26 })
     // the same window as before: the automatic one of the track times the multiplier, shown in metres
     expect(turnSmoothingM(settings.camera, 20_000)).toBe(2 * 400 * 1.5)
   })

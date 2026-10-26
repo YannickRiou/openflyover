@@ -311,7 +311,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    - `onChange` fired (coalesced per frame) when a tile becomes ready or is removed, or the drawn tiles change (a
      refinement from loaded children, a return to the parent) → the track re-drapes.
 7. **Scene** (`scene/`):
-   - `FlyoverCanvas`: `<Canvas gl={{ antialias: true, logarithmicDepthBuffer: true, alpha: true }} camera={{ fov: 50, near: 1, far: 5e6 }} flat>`
+   - `FlyoverCanvas`: `<Canvas gl={{ antialias: true, logarithmicDepthBuffer: true, alpha: true }} camera={{ fov: 50, near: 1, far: 5e6 }} flat>` (the fov is the default lens's; `FlyoverRig` sets it from « Focale »)
      (no tone mapping: orthophotos are already displayable images), `HemisphereLight` 1.2 + `DirectionalLight` 2.0 (fixed SE sun;
      with three's 1/π shading a flat ground renders ~0.88 of the albedo), glacier sky `#A9CCD9` → paper `#F5F2EA` background as a CSS gradient behind the transparent canvas.
    - `TerrainLayer`: creates the engine in a `useEffect` and disposes it in the cleanup (StrictMode-safe; never in a useMemo), recreates it
@@ -963,8 +963,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   (`CameraRig.tsx`) puts `camera.up` back to level. The audit guard (`filmAudit.test.ts`, `markerVisible.test.ts`)
   runs at the presets and with both at their maximum: no new jolt, the marker within 0.65 of the half-frame.
 - **Camera settings**: `settings.camera { style, distance, pitchDeg, headingOffsetDeg, smoothing, northUp, turnSmoothingM,
-  aimSmoothingS, cameraSmoothingS, endingS, orbitTurns, leadRoomPct, bankDeg }` (a camera saved before the last four gets them from `DEFAULT_CAMERA`,
-  `withCameraDefaults` in `SETTING_UPGRADES`: « Auto » keeps its multiplier, so the turns look the same) and named
+  aimSmoothingS, cameraSmoothingS, endingS, orbitTurns, leadRoomPct, bankDeg, focalMm }` (a camera saved before the smoothings,
+  `leadRoomPct`, `bankDeg` or `focalMm` gets them from `DEFAULT_CAMERA`, `withCameraDefaults` in `SETTING_UPGRADES`: « Auto »
+  keeps its multiplier, so the turns look the same) and named
   presets (`CAMERA_PRESETS`, 13: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite, then Libre (style `free`, left out of `markerVisible.test.ts`: it does not follow the marker); `findCameraPreset`; « Préréglage » is a grid of tiles with distance and tilt, all twelve shown at once, plus a « Personnalisé » tile when the settings match no preset) in
   `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s in 1 s steps, 60 by default) = duration at ×1, the timeline
   speed applies on top. **Duration or speed** (`src/flyover/flightSpeed.ts`, pure; `src/ui/FlightDurationField.tsx`): the one setting
@@ -1203,9 +1204,33 @@ The interface and the texts drawn into the films and posters exist in **French**
   output (`previewShutterWeight`: the lag Δt·w/(1−w) of the trail equals half the exported shutter time, at any
   preview frame rate; no trail in the sharp centre, full towards the sides). Paused or scrubbing: the image as is. An approximation (a trailing smear, not the centred
   blur of the export). Cost: one blend per frame.
-- **Field of view**: left fixed (`CAMERA_FOV_DEG` = 50°). It enters the framing of the film camera (situation
-  distances, region fit, headroom), the overview of the poster, the offline tile plan and the LOD; making it a setting
-  means threading it through all of these and through the export, not a small change.
+- **Field of view** (« Focale », `camera.focalMm`, 18–135 mm in 1 mm steps, 26 by default; `cameraSettings.ts`): the lens of the
+  whole film. `fovDegOf(focalMm)`: tan(fov / 2) is inversely proportional to the focal length, with 26 mm = `CAMERA_FOV_DEG`
+  = 50° vertical exactly (a 24 mm tall sensor would give 49.6°: films saved before would change), so the default
+  reproduces the former image to the bit and a project without the field gets 26. **Dolly compensation**: the camera
+  stands `focalDolly(focalMm)` = tan(50° / 2) / tan(fov / 2) = focalMm / 26 times as far, so what it frames keeps its size
+  and only the perspective changes, like swapping lenses (a telephoto from far away, a wide angle from close by). It
+  multiplies the distance after the 600–4000 m clamp of `autoDistanceM` and the « Distance » multiplier (so they never
+  fight: 135 mm at ×4 is 83 km, 18 mm at ×0.3 is 124 m), in `placement` (every style) and in the base of the keyframes (`KeyBase.autoDistanceM`: a key frames the same with any lens).
+  Where a distance comes from a size (`overviewDistanceM`, `regionDistanceM`, `framedGroup`, the region's headroom,
+  `groundReach`) the framing reads the lens through a trailing `focalMm` (default 26; `FilmViewOptions.camera.focalMm`
+  in the film views: shots, night high views, « Bilan », « En parallèle »). A telephoto backs the wide views off by the
+  same factor (the whole track still fits); a wide angle leaves them where they were (`wideViewDolly`): the track is just
+  smaller in a wider frame, and no camera comes nearer the relief than before (a closer overview broke the audit's
+  jolt limit on steep relief, a lifted blend being sensitive to every metre of it). Lifts: the aim of a shot's blend is
+  raised by the camera's lift divided by the dolly of a telephoto (`liftedBlend`): the lift scales with the distance but
+  the frame is that many times narrower, so the marker would leave it. A distance chosen by the user for the region view
+  (« Cadrage ») is the camera's real distance, as is. **Relief protections**: the line-of-sight check (`lowestClearY`) takes
+  `LINE_OF_SIGHT_SAMPLES` × the dolly of a telephoto, and its unchecked tail (1 / `LINE_OF_SIGHT_MAX_GAIN` of the line) shrinks
+  by the same factor, so it stays as long in metres: with the default tail the 135 mm « Avion » camera hid the marker
+  behind a crest on 10 % of the frames of the steep test massif (0 with it, and at 18 mm and 26 mm as before). Scene: `FlyoverRig` sets `camera.fov` and the projection matrix
+  from the setting (preview and export draw with this camera); the marker's radius (`placeMarker`) is scaled by
+  tan(fov / 2) / tan(25°) to keep its size on screen (labels, pins and track widths read the projection matrix). The offline tile plan
+  (`offline/plan.ts`) and the terrain LOD need nothing: both the camera distance and the split distance scale by the
+  dolly. Depth of field: `depthOfFieldParams` divides the sharp range (a share of the focus distance) by the dolly, so the
+  depth kept sharp is the same in metres with any lens. Audit: `filmAudit.test.ts` runs every preset × shot style at 26,
+  18, 21 and 135 mm (the audit camera follows the lens; 21 mm was the worst of 19–24 mm for the end of the shot lift,
+  `SHOT_EASE_LIFT`), and the sample film at 85 and 135 mm keeps the marker in the frame and the tilt within 5° of 26 mm's.
 - Verified: unit tests (setting, sub-frame instants, trail weight, mask and sub-frame weights, slice sharing) and SwiftShader screenshots;
   inferred: the cost and the look on a real GPU (the manual checks of `docs/handbook/index.html`).
 
@@ -1473,7 +1498,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   8 × diagonal clamped to 55–165 km for the "Région" start height (`startHeight: 'region'`), × 2.5 for "Pays"
   (country), × height / width in portrait. With `highlight` and a region found, the view aims at the centre of the
   region's box and its distance fits that box in the frame (margin 1.15) instead. Bounded so that the farthest corner
-  of the frame (`groundReach`, flat ground, 50° vertical field of view) stays within 400 km of the track's box
+  of the frame (`groundReach`, flat ground, the film's vertical field of view, 50° by default) stays within 400 km of the track's box
   (`REGION_REACH_M`; the terrain area of a film with a region view reaches 500 km, `REGION_AREA_MARGIN_M`), never
   closer than the overview. A single move (geometric distance, smootherstep), which passes the overview distance on the way
   without stopping there: no jerk, never backing up. **Hold and push-in** (« Durées » in the inspector: « Maintien »,
@@ -1560,7 +1585,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   the shortest way, aim shift linear: `keyedCamera` gives the same blend of the first three for « Cadrer la caméra
   pendant cet élément »), raised above the ground (`keepAboveGround`) by a share 4u(1 − u) that is 0 at the keys; before
   the first and after the last, that key's pose with a weight easing in and out over `cameraKeyEaseM` (3 s of flight at
-  base speed, `CAMERA_KEY_EASE_S`); elsewhere the film's camera. Field of view: `CAMERA_FOV_DEG` everywhere. At the key's
+  base speed, `CAMERA_KEY_EASE_S`); elsewhere the film's camera. Field of view: the film's lens (« Focale »), the key's distance being that of the lens (dolly in `KeyBase.autoDistanceM`). At the key's
   film time (`clock.cameraKeys[].timeS`) the view equals the capture (tests: under 1 cm and 0.01° with a cinematic
   style, time smoothing and relief; e2e `image-cle`: orbit, « Ajouter une image clé », away and back with « Image clé
   précédente », Alt+← / Alt+→ and a click on the ◆, within 5 cm and 0.1°). A function of progress alone between stops. Style `free` (« Libre », `freeView`): no flight camera at all

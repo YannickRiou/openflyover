@@ -13,6 +13,8 @@ const messages: Messages['news'] = {
   'v45.records.text': 'The best thermal (the most sustained climb of a flight) and the greatest height above the ground are two more records for paragliding flights. In return, the record climbs, descents and kilometres no longer count the stretches flown: a slope means nothing there. In Map › Landmarks, a “Records of the outing” switch shows or hides them, and “Recompute the records” updates the automatic holds of the film.',
   'v45.flight.title': 'Easier-to-read flights',
   'v45.flight.text': 'A flight (paragliding, kite jump, cable car) now has a translucent curtain down to the terrain, a shadow on the ground, and a line that gets thicker as it comes closer to the camera. “Colour by › Vertical speed” shows at a glance where you climb and where you sink. Settings in Track › Flight.',
+  'v45.focal.title': 'Choose the lens of the film',
+  'v45.focal.text': 'Flyover › Camera › “Focal length”, from 18 mm (wide angle: more space around) to 135 mm (telephoto: the mountains look closer and more imposing). The camera comes closer or backs off so the marker keeps the same size; at 26 mm nothing changes.',
   'v44.night.title': 'Brighter nights',
   'v44.night.text': '« Night brightness » (Light › Atmosphere) lights the relief and the clouds at night, like moonlight, and changes nothing in daylight. The exposure now sits with contrast and saturation in Colours.',
   'v332.landmarks.title': 'Hide landmarks in a few clicks',
