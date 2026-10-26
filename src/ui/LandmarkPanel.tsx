@@ -117,9 +117,9 @@ function recomputeRecords(): void {
   const changed = { removed: new Set([...before].filter((k) => !after.has(k))), added: new Set([...after].filter((k) => !before.has(k))) }
   const settings = useAppStore.getState().settings
   editFilm((film) => {
-    const { track, landmarks } = getFilmSource()
+    const { track, landmarks, durationS } = getFilmSource()
     if (!track) return { film }
-    const result = alignRecordStops(film, { track, landmarks })
+    const result = alignRecordStops(film, { track, landmarks, durationS })
     const key = (s: FilmStop) => `${s.source?.ref}@${Math.round(s.atM)}`
     result.removed.forEach((s) => changed.removed.add(key(s)))
     result.added.forEach((s) => changed.added.add(key(s)))
@@ -334,7 +334,7 @@ export function LandmarkPanel() {
   const status = useLandmarkStore((s) => s.status)
   const message = useLandmarkStore((s) => s.message)
   // the landmarks along the film: the first track's, or « À la suite » those of every stage
-  const { track: first, landmarks, film } = useFilmSource()
+  const { track: first, landmarks, film, durationS } = useFilmSource()
   const sequence = useFilmSequence()
   const hiddenByTrack = useLandmarkStore((s) => s.hidden)
   const hidden = sequence ? sequenceLandmarks(sequence, hiddenByTrack) : first ? hiddenByTrack[first.id] : undefined
@@ -347,7 +347,7 @@ export function LandmarkPanel() {
   // the map's tool and the zone drawn with « Zone » (kept for the session)
   const [tool, setTool] = useState<MapTool>('choose')
   const [zoneIds, setZoneIds] = useState<string[]>([])
-  const stops = useMemo(() => (first ? filmStops(film, { track: first, landmarks }) : []), [first, film, landmarks])
+  const stops = useMemo(() => (first ? filmStops(film, { track: first, landmarks, durationS }) : []), [first, film, landmarks, durationS])
 
   // a « Bilan » asks OpenStreetMap for none: a request per outing would be too many, and a high view shows no landmark
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))

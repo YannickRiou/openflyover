@@ -97,7 +97,7 @@ export default {
   'auto.reel.name': 'Reel 30 s',
   'auto.resume.name': 'Résumé 1 min',
   'auto.souvenir.name': 'Souvenir 3 min',
-  'auto.souvenir.hint': 'Paysage 16:9, 3 min, export YouTube HD : caméra calme, arrêts aux cols et aux sommets, cartes de jour ou d’étape, compteurs, titre d’ouverture et carte de clôture.',
+  'auto.souvenir.hint': 'Paysage 16:9, 3 min, export YouTube HD : caméra calme, arrêts aux cols, aux sommets et aux lieux traversés, cartes de jour ou d’étape, compteurs, titre d’ouverture et carte de clôture.',
   'auto.afterImport': 'Film automatique…',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
@@ -108,6 +108,7 @@ export default {
   'auto.fact.camera': 'Caméra : {camera}',
   'auto.fact.titleEnd': 'Titre et date au début, carte de fin avec {figures} chiffres',
   'auto.fact.stops': 'Arrêts aux cols et sommets',
+  'auto.fact.stopsPlaces': 'Arrêts aux cols, sommets et lieux traversés',
   'auto.fact.noStops': 'Sans arrêt : le film file',
   'auto.fact.cards': 'Cartes de jour ou d’étape',
   'auto.fact.counters': 'Compteurs en direct',

@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v46.places.title': 'Soste nei luoghi attraversati',
+  'v46.places.text': 'Il modello «Ricordo 3 min» di «Film automatico» ora si ferma anche ai paesi, ai rifugi, ai laghi, alle cascate e ai punti panoramici accanto alla traccia, oltre ai passi e alle cime: al massimo una sosta ogni 12 s di film, le più notevoli per prime. Nelle opzioni della timeline, «Anche nei luoghi attraversati» lo imposta per qualsiasi film. «Rallenta nei punti salienti» non esiste più: le soste e i tratti di velocità della timeline fanno questo lavoro.',
   'v45.camera.title': 'Una camera più piacevole da guardare',
   'v45.camera.text': 'Due impostazioni in Sorvolo › Camera. «Spazio davanti» mette il marcatore un po’ dietro il centro dell’immagine, lasciando spazio dal lato verso cui avanza. «Inclinazione nelle curve» inclina dolcemente l’orizzonte nelle curve, come un drone che si piega. Per impostazione predefinita, un po’ di entrambe: i film risultano più fluidi.',
   'v45.marker.title': 'Un marcatore più vivo',

@@ -1408,6 +1408,7 @@ export function followStops(
     before.opening !== after.opening ||
     before.closing !== after.closing ||
     before.autoStops !== after.autoStops ||
+    before.autoStopsPlaces !== after.autoStopsPlaces ||
     before.junctions !== after.junctions ||
     before.junctionDefault !== after.junctionDefault ||
     before.stageDurations !== after.stageDurations ||

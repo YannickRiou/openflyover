@@ -133,6 +133,54 @@ describe('autoStops', () => {
   })
 })
 
+describe('autoStops with « Aussi aux lieux traversés »', () => {
+  const at = (kind: Landmark['kind'], name: string, alongM: number, distanceM: number, priority = 10): Landmark => ({ ...landmark(kind, name, alongM, distanceM), id: `node/${name}`, priority })
+  const names = (list: Landmark[], durationS = 180, groupM = 1000) => autoStops({ track, landmarks: list, durationS }, groupM, true).map((x) => x.label)
+
+  it('adds the villages, huts, lakes, waterfalls and viewpoints beside the track; not without the option', () => {
+    const list = [at('pass', 'Col', 500, 20), at('place', 'Village', 1500, 100), at('hut', 'Refuge', 2500, 250), at('lake', 'Lac', 3200, 250), at('waterfall', 'Cascade', 3900, 250), at('viewpoint', 'Belvédère', 4600, 250)]
+    expect(names(list, 180, 500)).toEqual(['Col', 'Village', 'Refuge', 'Lac', 'Cascade', 'Belvédère'])
+    expect(autoStops({ track, landmarks: list }).map((x) => x.label)).toEqual(['Col'])
+    const stop = autoStops({ track, landmarks: list, durationS: 180 }, 500, true)[1]
+    expect(stop).toEqual({ id: autoStopId(1500), atM: 1500, durationS: AUTO_STOP_S, camera: 'orbite', label: 'Village', source: { kind: 'landmark', ref: 'node/Village' } })
+  })
+
+  it('distance limits: 150 m for a place, 300 m for the others; glaciers and water points are not stops', () => {
+    expect(names([at('place', 'Près', 1000, 150), at('place', 'Loin', 2500, 151), at('hut', 'Refuge près', 3500, 300), at('hut', 'Refuge loin', 4500, 301)])).toEqual(['Près', 'Refuge près'])
+    expect(names([at('glacier', 'Glacier', 1000, 0), at('waterPoint', 'Source', 2000, 0)])).toEqual([])
+  })
+
+  it('at most one stop every 12 s of the film at the base speed: a long track with many villages is capped, passes and peaks first', () => {
+    const long = buildTrack({ name: 'long', source: 'gpx', segments: [{ points: Array.from({ length: 301 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 100) / M_PER_DEG_LAT, ele: 1000 })) }] })
+    const L = long.stats.distanceM
+    const villages = Array.from({ length: 28 }, (_, i) => at('place', `V${i}`, 500 + i * 1000, 20, 20 + (i % 5)))
+    const notable = [at('pass', 'Col', 7300, 20, 45), at('peak', 'Sommet', 19700, 100, 30)]
+    const durationS = 60
+    const stops = autoStops({ track: long, landmarks: [...villages, ...notable], durationS }, 1000, true)
+    expect(stops.length).toBeLessThanOrEqual(Math.floor(durationS / 12))
+    expect(stops.length).toBeGreaterThan(1)
+    // the pass and the summit are kept, the villages that fit are the best ranked
+    expect(stops.map((x) => x.label)).toEqual(expect.arrayContaining(['Col', 'Sommet']))
+    for (let i = 1; i < stops.length; i++) expect(stops[i].atM - stops[i - 1].atM).toBeGreaterThanOrEqual((12 * L) / durationS - 1e-6)
+    expect(stops.every((x, i) => i === 0 || x.atM > stops[i - 1].atM)).toBe(true)
+    // a longer film leaves room for more
+    expect(autoStops({ track: long, landmarks: [...villages, ...notable], durationS: 300 }, 1000, true).length).toBeGreaterThan(stops.length)
+  })
+
+  it('a pass beats a village in the same group, and « materializeStops » writes the same stops out', () => {
+    const list = [at('place', 'Village', 1450, 20, 25), at('pass', 'Col', 1500, 20, 45)]
+    expect(names(list)).toEqual(['Col'])
+    const film = { ...DEFAULT_FILM, autoStopsPlaces: true }
+    const input = { track, landmarks: [at('pass', 'Col', 500, 20), at('place', 'Village', 3000, 20)], durationS: 180 }
+    const written = materializeStops(film, input)
+    expect(written.autoStops).toBe(false)
+    expect(written.stops).toEqual(filmStops(film, input))
+    expect(written.stops.map((x) => x.label)).toEqual(['Col', 'Village'])
+    expect(isValidFilm(film)).toBe(true)
+    expect(isValidFilm({ ...film, autoStopsPlaces: 'oui' as unknown as boolean })).toBe(false)
+  })
+})
+
 describe('stops of the rows of « Repères »', () => {
   const pass: StopPlace = { id: 'node/1500', atM: 1500 }
   const stop = (id: string, atM: number, source?: FilmStop['source']): FilmStop => ({ id, atM, durationS: 4, camera: 'orbite', source })

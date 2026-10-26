@@ -99,7 +99,7 @@ const messages: Messages['film'] = {
   'auto.reel.name': 'Reel 30 s',
   'auto.resume.name': 'Riassunto 1 min',
   'auto.souvenir.name': 'Ricordo 3 min',
-  'auto.souvenir.hint': 'Orizzontale 16:9, 3 min, esportazione YouTube HD: camera tranquilla, soste ai passi e alle cime, schede di giorno o di tappa, contatori, titolo di apertura e scheda di chiusura.',
+  'auto.souvenir.hint': 'Orizzontale 16:9, 3 min, esportazione YouTube HD: camera tranquilla, soste ai passi, alle cime e ai luoghi attraversati, schede di giorno o di tappa, contatori, titolo di apertura e scheda di chiusura.',
   'auto.afterImport': 'Film automatico…',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
@@ -110,6 +110,7 @@ const messages: Messages['film'] = {
   'auto.fact.camera': 'Camera: {camera}',
   'auto.fact.titleEnd': 'Titolo e data all’inizio, scheda di chiusura con {figures} cifre',
   'auto.fact.stops': 'Soste ai passi e alle cime',
+  'auto.fact.stopsPlaces': 'Soste ai passi, alle cime e ai luoghi attraversati',
   'auto.fact.noStops': 'Nessuna sosta: il film scorre senza fermarsi',
   'auto.fact.cards': 'Schede di giorno o di tappa',
   'auto.fact.counters': 'Contatori in diretta',

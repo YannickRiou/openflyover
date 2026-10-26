@@ -414,7 +414,7 @@ export function filmClockInputFor(source: FilmClockFor): FilmClockInput {
   return {
     opening: film.opening,
     closing: film.closing,
-    stops: track ? filmStops(film, { track, landmarks }) : [],
+    stops: track ? filmStops(film, { track, landmarks, durationS }) : [],
     speeds: track ? film.speeds : [],
     cameraKeys: track ? film.cameraKeys : [],
     paramKeys: track ? film.paramKeys : [],

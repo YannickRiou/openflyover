@@ -458,8 +458,8 @@ export async function snapFilmToMusic(): Promise<{ kind: 'success' | 'info'; tex
   const tempos = [...found.values()].flatMap((b) => (b && b.times.length > 0 ? [Math.round(b.bpm)] : []))
   const tempo = `≈ ${[...new Set(tempos)].join(' / ')} BPM`
 
-  const { track, landmarks } = source
-  const film = track ? materializeStops(source.film, { track, landmarks }) : source.film
+  const { track, landmarks, durationS } = source
+  const film = track ? materializeStops(source.film, { track, landmarks, durationS }) : source.film
   const input = filmClockInputFor({ ...source, film })
   const clockOf = (stops: readonly FilmStop[]) => buildFilmClock({ ...input, stops })
   const clockOfSpeeds = (stops: readonly FilmStop[], speeds: readonly FilmSpeed[]) => buildFilmClock({ ...input, stops, speeds })

@@ -35,14 +35,16 @@ export interface AutoFilmTemplate {
   figures: readonly CardFigure[]
   /** a stop at every pass and summit (otherwise none) */
   stops: boolean
+  /** the stops also come at the places the track goes through (villages, huts, lakes, waterfalls, viewpoints: `Film.autoStopsPlaces`) */
+  places: boolean
   /** a card for each day of a multi-day track, and at the start of each stage « À la suite » */
   cards: boolean
 }
 
 export const AUTO_FILM_TEMPLATES: Record<AutoFilmId, AutoFilmTemplate> = {
-  reel: { totalS: 30, openingS: 3, closingS: 3, platform: 'vertical', camera: 'cinema', style: 'app', counters: false, figures: ['distance', 'ascent', 'maxAltitude'], stops: false, cards: false },
-  resume: { totalS: 60, openingS: 5, closingS: 5, platform: 'youtube', camera: 'cinema', style: 'broadcast', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, cards: true },
-  souvenir: { totalS: 180, openingS: 6, closingS: 6, platform: 'youtube', camera: 'cinema', style: 'app', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, cards: true },
+  reel: { totalS: 30, openingS: 3, closingS: 3, platform: 'vertical', camera: 'cinema', style: 'app', counters: false, figures: ['distance', 'ascent', 'maxAltitude'], stops: false, places: false, cards: false },
+  resume: { totalS: 60, openingS: 5, closingS: 5, platform: 'youtube', camera: 'cinema', style: 'broadcast', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, places: false, cards: true },
+  souvenir: { totalS: 180, openingS: 6, closingS: 6, platform: 'youtube', camera: 'cinema', style: 'app', counters: true, figures: ['distance', 'ascent', 'maxAltitude', 'time'], stops: true, places: true, cards: true },
 }
 
 export const AUTO_FILM_LABELS: Record<AutoFilmId, string> = {
@@ -51,14 +53,14 @@ export const AUTO_FILM_LABELS: Record<AutoFilmId, string> = {
   get souvenir() { return t('film.auto.souvenir.name') },
 }
 
-export type AutoFilmFact = 'titleEnd' | 'stops' | 'noStops' | 'cards' | 'counters' | 'countersCards'
+export type AutoFilmFact = 'titleEnd' | 'stops' | 'stopsPlaces' | 'noStops' | 'cards' | 'counters' | 'countersCards'
 
 /**
  * The short facts of a gabarit's card, in order (three at most; the camera comes first, from the dialog): `key` is the end of the string key `film.auto.fact.<key>`,
  * `values` its figures.
  */
 export function autoFilmFacts(tpl: AutoFilmTemplate): { key: AutoFilmFact; values?: { figures: number } }[] {
-  const stops: AutoFilmFact = tpl.stops ? 'stops' : 'noStops'
+  const stops: AutoFilmFact = tpl.stops ? (tpl.places ? 'stopsPlaces' : 'stops') : 'noStops'
   const extras: AutoFilmFact | null = tpl.counters && tpl.cards ? 'countersCards' : tpl.cards ? 'cards' : tpl.counters ? 'counters' : null
   return [{ key: 'titleEnd', values: { figures: tpl.figures.length } }, { key: stops }, ...(extras ? [{ key: extras }] : [])]
 }
@@ -93,7 +95,10 @@ export function autoFilmSettings(settings: Settings, id: AutoFilmId, context: Au
     closing: { ...settings.film.closing, style: settings.film.closing.style === 'aucune' ? 'descente' : settings.film.closing.style, durationS: tpl.closingS },
   }
   // stops made by hand are the user's work: the generated ones are the only ones a gabarit replaces
-  if (film.autoStops || film.stops.length === 0) film = tpl.stops ? { ...film, autoStops: true, stops: [] } : { ...film, autoStops: false, stops: [] }
+  if (film.autoStops || film.stops.length === 0) {
+    const { autoStopsPlaces: _, ...rest } = film
+    film = tpl.stops ? { ...rest, autoStops: true, ...(tpl.places && { autoStopsPlaces: true }), stops: [] } : { ...rest, autoStops: false, stops: [] }
+  }
   if (context.stages) film = withDefaultCard(film, tpl.cards)
   else if (context.days >= 2) film = { ...film, dayCards: { ...(film.dayCards ?? DEFAULT_DAY_CARDS), enabled: tpl.cards } }
 

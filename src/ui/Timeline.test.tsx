@@ -211,6 +211,23 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
+    it('the film options offer « Aussi aux lieux traversés » under « Arrêts automatiques », only while those are on', async () => {
+      const { host, root } = await setup()
+      await act(async () => useAppStore.getState().setSetting('film', DEFAULT_FILM))
+      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Options du film"]')!.click())
+      const box = (label: string) => [...document.querySelectorAll('label')].find((l) => l.textContent?.trim() === label)!.querySelector('input')!
+      expect(box('Arrêts automatiques').checked).toBe(true)
+      expect(box('Aussi aux lieux traversés').checked).toBe(false)
+      expect(box('Aussi aux lieux traversés').disabled).toBe(false)
+      await act(async () => box('Aussi aux lieux traversés').click())
+      expect(useAppStore.getState().settings.film.autoStopsPlaces).toBe(true)
+      await act(async () => box('Aussi aux lieux traversés').click())
+      expect(useAppStore.getState().settings.film.autoStopsPlaces).toBeUndefined()
+      await act(async () => useAppStore.getState().setSetting('film', { ...DEFAULT_FILM, autoStops: false }))
+      expect(box('Aussi aux lieux traversés').disabled).toBe(true)
+      act(() => root.unmount())
+    })
+
     it('are blocks of the « Textes » lane while their card is on, overlay on or off, and keep the « Plans » shots', async () => {
       const { host, root, setOverlay, cards } = await setup()
       expect(cards()).toEqual([])

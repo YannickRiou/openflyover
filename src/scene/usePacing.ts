@@ -71,8 +71,8 @@ export function getFilmSource(): FilmClockFor {
  */
 export function editFilm(edit: (film: Film) => { film: Film; id?: string | null }, { stops = false, step = true } = {}): void {
   const source = getFilmSource()
-  const { track, film, landmarks } = source
-  const base = stops && track ? materializeStops(film, { track, landmarks }) : film
+  const { track, film, landmarks, durationS } = source
+  const base = stops && track ? materializeStops(film, { track, landmarks, durationS }) : film
   const result = edit(base)
   const next = followStops(base, result.film, (f) => filmClockFor({ ...source, film: f }))
   const set = () => useAppStore.getState().setSetting('film', next)
@@ -216,6 +216,14 @@ export function seekKeyframe(clock: FilmClock, direction: -1 | 1, keys: readonly
  */
 export function setAutoStops(on: boolean): void {
   editFilm((film) => ({ film: on ? { ...film, autoStops: true, stops: [] } : film }), { stops: !on })
+}
+
+/** « Aussi aux lieux traversés » (timeline options): the generated stops also come at villages, huts, lakes, waterfalls and viewpoints. One undo step. */
+export function setAutoStopsPlaces(on: boolean): void {
+  editFilm((film) => {
+    const { autoStopsPlaces: _, ...rest } = film
+    return { film: on ? { ...rest, autoStopsPlaces: true } : rest }
+  })
 }
 
 /**
