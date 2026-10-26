@@ -9,6 +9,7 @@ import {
   Mesh,
   OrthographicCamera,
   PerspectiveCamera,
+  Ray,
   Vector3,
 } from 'three'
 import {
@@ -18,6 +19,7 @@ import {
   TerrainShadow,
   fitShadowFrustum,
   lastShadowPass,
+  mayShadowView,
   shadowDistance,
   type ShadowFit,
 } from './terrainShadow'
@@ -179,5 +181,105 @@ describe('TerrainShadow', () => {
     const before = shadow.camera.right
     shadow.updateMatrices(light, camera)
     expect(shadow.camera.right).toBe(before)
+  })
+})
+
+describe('casters that cannot shade the view', () => {
+  /** 16 x 16 tiles of 4 km, ridges up to ~4 km: the boxes are the engine's tile bounds. */
+  function mountains() {
+    const terrain = new Group()
+    for (let i = 0; i < 16; i++) {
+      for (let j = 0; j < 16; j++) {
+        const height = 800 + 700 * (Math.sin(i * 0.9 + 1) + Math.cos(j * 0.7) + 2)
+        const geometry = new BoxGeometry(4000, height, 4000, 8, 2, 8).translate(-30_000 + i * 4000, height / 2, -30_000 + j * 4000)
+        geometry.computeBoundingBox()
+        terrain.add(new Mesh(geometry))
+      }
+    }
+    return terrain
+  }
+
+  const cases = [
+    { name: 'sun mid-height', sun: new Vector3(-1, 0.7, 0.2), from: new Vector3(0, 2600, 12_000), to: new Vector3(0, 1800, 0) },
+    { name: 'low sun', sun: new Vector3(-1, 0.1, 0.2), from: new Vector3(0, 3000, 0), to: new Vector3(5000, 1800, 0) },
+    { name: 'high sun', sun: new Vector3(0.3, 1, 0.2), from: new Vector3(-15_000, 4500, -15_000), to: new Vector3(0, 1500, 0) },
+  ]
+
+  function setup(sunDirection: Vector3, from: Vector3, to: Vector3) {
+    const terrain = mountains()
+    const light = new DirectionalLight()
+    light.position.copy(sunDirection).normalize()
+    light.updateMatrixWorld()
+    light.target.updateMatrixWorld()
+    const camera = viewCamera(from, to)
+    camera.far = 20_000 // what the flyover sees of a tile pyramid: far ground is coarse and small
+    camera.updateProjectionMatrix()
+    const shadow = new TerrainShadow(terrain, MAP_SIZE)
+    shadow.updateMatrices(light, camera)
+    return { terrain, camera, shadow, sun: light.position.clone() }
+  }
+
+  it.each(cases)('never drops a tile that shades a point the view sees ($name)', ({ sun, from, to }) => {
+    const { terrain, camera, shadow, sun: towardsSun } = setup(sun, from, to)
+    const frustum = new Frustum().setFromProjectionMatrix(new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse))
+    // receivers: points of the view between the lowest and the highest ground (a superset of the visible surface)
+    let seed = 12345
+    const random = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296
+    const receivers: Vector3[] = []
+    for (let n = 0; n < 40_000 && receivers.length < 4000; n++) {
+      const point = new Vector3(random() * 2 - 1, random() * 2 - 1, 0.5).unproject(camera)
+      point.sub(camera.position).normalize().multiplyScalar(100 + random() * 60_000).add(camera.position)
+      if (point.y >= 0 && point.y <= 4000 && frustum.containsPoint(point)) receivers.push(point)
+    }
+    expect(receivers.length).toBeGreaterThan(500)
+    const ray = new Ray(new Vector3(), towardsSun)
+    const meshes = terrain.children as Mesh[]
+    let shading = 0
+    for (const mesh of meshes) {
+      const shades = receivers.some((receiver) => ray.origin.copy(receiver) && ray.intersectsBox(mesh.geometry.boundingBox!))
+      if (shades) shading++
+      if (shades) expect(mesh.castShadow).toBe(true)
+    }
+    const casting = meshes.filter((mesh) => mesh.castShadow).length
+    expect(shading).toBeGreaterThan(0)
+    expect(casting).toBeLessThan(meshes.length)
+    // what the pass then draws is never more than before
+    expect(lastShadowPass.tiles).toBeLessThanOrEqual(casting)
+    expect(shadow.camera.far).toBeGreaterThan(shadow.camera.near)
+  })
+
+  it('draws under 70 % of the tiles and triangles it drew (141 to 45 tiles here), a low camera over mountains and a sun side-on', () => {
+    const { terrain, shadow } = setup(cases[0].sun, cases[0].from, cases[0].to)
+    const after = { ...lastShadowPass }
+    for (const mesh of terrain.children as Mesh[]) mesh.castShadow = true
+    const meshes = terrain.children as Mesh[]
+    // the pass before the selection: every visible tile the shadow camera's frustum meets
+    const before = { tiles: 0, triangles: 0 }
+    for (const mesh of meshes) {
+      if (!shadow.getFrustum().intersectsObject(mesh)) continue
+      before.tiles++
+      before.triangles += mesh.geometry.index!.count / 3
+    }
+    expect(after.tiles).toBeLessThan(before.tiles * 0.7)
+    expect(after.triangles).toBeLessThan(before.triangles * 0.7)
+  })
+
+  it('restores the engine default when the shadow is disposed', () => {
+    const { terrain, shadow } = setup(cases[0].sun, cases[0].from, cases[0].to)
+    expect((terrain.children as Mesh[]).some((mesh) => !mesh.castShadow)).toBe(true)
+    shadow.dispose()
+    expect((terrain.children as Mesh[]).every((mesh) => mesh.castShadow)).toBe(true)
+  })
+
+  it('keeps a box whose sun ray crosses the view and drops one that is behind it', () => {
+    const camera = viewCamera(new Vector3(0, 100, 0), new Vector3(0, 100, -1000))
+    const frustum = new Frustum().setFromProjectionMatrix(new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse))
+    const sun = new Vector3(0, 1, 1).normalize() // the sun behind the camera
+    const ahead = new Box3(new Vector3(-50, 500, -3000), new Vector3(50, 600, -2900))
+    const behind = new Box3(new Vector3(-50, 500, 2900), new Vector3(50, 600, 3000))
+    // the ground is at 0: a box ahead and high shades ground in view only with the sun in front of it
+    expect(mayShadowView(ahead, new Vector3(0, 1, -1).normalize(), frustum, 0, 1e6, 0)).toBe(true)
+    expect(mayShadowView(behind, sun, frustum, 0, 1e6, 0)).toBe(false)
+    expect(mayShadowView(ahead, sun, frustum, 0, 1e6, 0)).toBe(true) // already in the view itself
   })
 })

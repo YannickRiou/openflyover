@@ -1143,6 +1143,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   intersected with the box of the visible tiles (`fitShadowFrustum`, pure and tested); near plane pushed toward the sun
   up to the top of that box; bounds rounded in steps of 2^(1/8) and snapped to whole texels (no shimmering);
   texel-based bias (normalBias 1.5 texel, depth 2 m). Texel ≈ 8–9 m in chase, 15–25 m in overview.
+  **Caster selection** (`selectCasters`, `mayShadowView`, after the fit): three only draws a mesh into the map when
+  `castShadow` is on and its box meets the shadow camera's frustum, so `TerrainShadow` switches `castShadow` per tile
+  each frame (the main pass ignores it; `dispose` puts it back to `true`). A tile casts only if its box, swept from its top
+  down along the sun ray to the lowest visible terrain (at most `far − near` of the shadow camera) and grown by
+  (PCF radius + normal bias + 2) texels, is not wholly outside one of the six planes of the **view** frustum (the
+  whole frustum, not the distance cut: strictly the same map for every receiver). Conservative (separating planes),
+  allocation-free; the test places a seeded cloud of receivers in the view and checks that every tile whose sun ray
+  reaches one still casts, and that a synthetic fixture goes from 141 to 45 tiles (54 k to 17 k triangles).
 - **Off-screen casters** (`engine.ts`): all tiles cast and receive; `frustumCulled` on. After the
   LOD selection, ready tiles that were visited but are outside the frustum and not covered by a drawn tile stay `visible`: a
   ridge behind the camera reaches the shadow map, and three drops them from the main pass. `stats.visibleTiles` only counts
@@ -2900,8 +2908,8 @@ exports) gets it from the terrain source of the settings.
   console `[export]` line, the history « Répartition » and the diagnostic « Résultat » (added to the stored report when
   an export ends, shown in « Dernier export »).
 - **Shadow pass count** (#52): `shadowTiles`, `shadowTriangles` and their `shadowOffscreen…` share, summed over the renders. `TerrainShadow`
-  counts them after fitting its camera (`lastShadowPass`: the visible tiles three's shadow culling keeps, the off-screen
-  casters apart); `ExportController` adds them after each `advance`. `shadowSummary` writes « ombres : N tuiles (M hors
+  counts them after fitting its camera and selecting the casters (`lastShadowPass`: the tiles that cast and that three's
+  shadow culling keeps, the off-screen casters apart: those out of the view that can still shade it); `ExportController` adds them after each `advance`. `shadowSummary` writes « ombres : N tuiles (M hors
   champ), K triangles (… hors champ) par rendu » in the console `[export]` line and the diagnostic « Ombres » row (not in
   the history). Measure before changing which tiles cast.
 - Limits: without direct writing (Firefox, Safari), file kept in memory (~1× its size at the end); the tab must stay open, speed depends on the GPU (to be measured on a
