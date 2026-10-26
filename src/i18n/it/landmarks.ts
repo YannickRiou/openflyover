@@ -84,7 +84,7 @@ const messages: Messages['landmarks'] = {
   keepPinnedTip: 'Scarta tutti gli altri riferimenti, senza proporne di nuovi',
   hint: 'Apri la mappa per scegliere i riferimenti: un clic su uno lo imposta (Auto, Sempre, Mai) e gli dà una «Sosta» (il film si ferma lì per il tempo indicato).',
   labelsWhere: 'Le loro etichette 3D (dimensione, portata, colori) si regolano in Overlay › Etichette 3D.',
-  hintAuto: 'Soste automatiche (⋯ Opzioni del film, sulla timeline): ogni passo attraversato e cima vicina mostrati qui fanno una sosta; cambiare i tipi, la densità o la distanza le cambia, ritoccarne una le fissa.',
+  hintAuto: 'Soste automatiche (⋯ Opzioni del film, sulla timeline): i passi attraversati e le cime vicine mostrati qui fanno alcune soste, le più notevoli per prime; cambiare i tipi, la densità o la distanza le cambia, ritoccarne una le fissa.',
   'map.open': 'Scegli sulla mappa e sul profilo',
   'map.title': 'Riferimenti lungo la traccia',
   'map.profile': 'Profilo altimetrico: clicca per andare a un punto',

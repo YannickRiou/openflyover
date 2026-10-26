@@ -4,7 +4,7 @@ export default {
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
   'v46.places.title': 'Des arrêts aux lieux traversés',
-  'v46.places.text': 'Le gabarit « Souvenir 3 min » de « Film automatique » s’arrête maintenant aussi aux villages, refuges, lacs, cascades et points de vue au bord de la trace, en plus des cols et des sommets : au plus un arrêt toutes les 12 s du film, les plus remarquables d’abord. Dans les options de la timeline, « Aussi aux lieux traversés » le règle pour n’importe quel film. « Ralentir aux temps forts » a disparu : les arrêts et les portions de vitesse de la timeline font ce travail.',
+  'v46.places.text': 'Le gabarit « Souvenir 3 min » de « Film automatique » s’arrête aussi aux villages, refuges, lacs, cascades et points de vue au bord de la trace, en plus des cols et des sommets, sans surcharger le film. Dans les options de la timeline, « Aussi aux lieux traversés » le règle pour n’importe quel film. « Ralentir aux temps forts » a disparu : les arrêts et les portions de vitesse de la timeline font ce travail.',
   'v45.camera.title': 'Une caméra plus agréable à regarder',
   'v45.camera.text': 'Deux réglages dans Survol › Caméra. « Espace devant » place le marqueur un peu en arrière du centre de l’image, pour laisser de la place du côté où il va. « Inclinaison dans les virages » incline doucement l’horizon dans les virages, comme un drone qui penche. Par défaut, un peu des deux : vos films en deviennent plus fluides.',
   'v45.marker.title': 'Un marqueur plus vivant',

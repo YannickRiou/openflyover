@@ -6,7 +6,7 @@ const messages: Messages['news'] = {
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
   'v46.places.title': 'Holds at the places you pass',
-  'v46.places.text': 'The “Keepsake 3 min” template of “Automatic film” now also holds at the villages, huts, lakes, waterfalls and viewpoints beside the track, besides the passes and summits: at most one hold every 12 s of the film, the most notable first. In the timeline options, “Also at the places passed” sets it for any film. “Slow down at highlights” is gone: the holds and speed sections of the timeline do that job.',
+  'v46.places.text': 'The “Keepsake 3 min” template of “Automatic film” also holds at villages, huts, lakes, waterfalls and viewpoints beside the track, besides passes and summits, without crowding the film. In the timeline options, “Also at the places passed” sets it for any film. “Slow down at highlights” is gone: the holds and speed sections of the timeline do that job.',
   'v45.camera.title': 'A camera that is nicer to watch',
   'v45.camera.text': 'Two settings in Flyover › Camera. “Lead room” puts the marker a little behind the middle of the picture, leaving room on the side it is heading to. “Banking in bends” gently tilts the horizon in bends, like a drone leaning into the turn. Both are on a little by default: your films feel smoother.',
   'v45.marker.title': 'A livelier marker',

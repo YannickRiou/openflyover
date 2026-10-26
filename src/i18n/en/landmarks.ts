@@ -84,7 +84,7 @@ const messages: Messages['landmarks'] = {
   keepPinnedTip: 'Dismisses all the other landmarks, without suggesting new ones',
   hint: 'Open the map to choose the landmarks: a click on one sets it (Auto, Always, Never) and gives it a “Hold” (the film holds there for the time given).',
   labelsWhere: 'Their 3D labels (size, range, colours) are set in Overlay › 3D labels.',
-  hintAuto: 'Automatic holds (⋯ Film options, on the timeline): each pass crossed and summit nearby shown here makes a hold; changing the types, the density or the distance changes them, editing one freezes them.',
+  hintAuto: 'Automatic holds (⋯ Film options, on the timeline): the passes crossed and summits nearby shown here make a few holds, the most notable first; changing the types, the density or the distance changes them, editing one freezes them.',
   'map.open': 'Choose on the map and the profile',
   'map.title': 'Landmarks along the track',
   'map.profile': 'Altitude profile: click to go to a point',

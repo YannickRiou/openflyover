@@ -10,7 +10,7 @@ const messages: Messages['timeline'] = {
   'options.musicHint': 'MP3, M4A, AAC, OGG, Opus, WAV or FLAC, 30 MB at most. Or drop the file on the timeline.',
   'options.autoStops': 'Automatic holds',
   'options.autoStopsPlaces': 'Also at the places passed',
-  'options.autoStopsHint': 'A hold at each pass crossed and summit nearby among the landmarks shown (Map › Landmarks and points of interest: types, density, distance); two close landmarks make one hold. Switching them on replaces the holds placed by hand; editing a hold freezes them. “Also at the places passed” adds the villages, huts, lakes, waterfalls and viewpoints beside the track (150 m for a village, 300 m for the others) among those landmarks, at most one hold every 12 s of the film: passes, summits and records come first, then the best-ranked landmarks.',
+  'options.autoStopsHint': 'A few holds at the passes crossed, summits nearby and records among the landmarks shown (Map › Landmarks and points of interest: types, density, distance), the most notable first; two close landmarks make one hold. Switching them on replaces the holds placed by hand; editing a hold freezes them. “Also at the places passed” adds the villages, huts, lakes, waterfalls and viewpoints beside the track; passes and summits come first.',
   'options.autoStopsReplaced': { one: '{count} hold made by hand replaced by the automatic holds (Ctrl+Z to get it back).', other: '{count} holds made by hand replaced by the automatic holds (Ctrl+Z to get them back).' },
   noRoom: 'No room here: the marker is in a speed section or too close to another one.',
   unsupported: { one: '{count} file ignored: only photos and videos are supported.', other: '{count} files ignored: only photos and videos are supported.' },

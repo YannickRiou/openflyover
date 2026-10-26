@@ -84,7 +84,7 @@ const messages: Messages['landmarks'] = {
   keepPinnedTip: 'Verwirft alle anderen Landmarken, ohne neue vorzuschlagen',
   hint: 'Öffnen Sie die Karte, um die Landmarken zu wählen: Ein Klick stellt eine ein (Auto, Immer, Nie) und gibt ihr einen „Stopp“ (der Film hält dort für die angegebene Zeit an).',
   labelsWhere: 'Ihre 3D-Beschriftungen (Größe, Reichweite, Farben) werden unter Overlay › 3D-Beschriftungen eingestellt.',
-  hintAuto: 'Automatische Stopps (⋯ Filmoptionen, auf der Timeline): jeder überquerte Pass und nahe Gipfel, der hier angezeigt wird, ergibt einen Stopp; Typen, Dichte oder Abstand ändern sie, einen zu bearbeiten friert sie ein.',
+  hintAuto: 'Automatische Stopps (⋯ Filmoptionen, auf der Timeline): die hier angezeigten überquerten Pässe und nahen Gipfel ergeben einige Stopps, die markantesten zuerst; Typen, Dichte oder Abstand ändern sie, einen zu bearbeiten friert sie ein.',
   'map.open': 'Auf Karte und Profil wählen',
   'map.title': 'Landmarken entlang des Tracks',
   'map.profile': 'Höhenprofil: Klicken, um zu einem Punkt zu springen',

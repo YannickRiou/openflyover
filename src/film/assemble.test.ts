@@ -133,6 +133,47 @@ describe('autoStops', () => {
   })
 })
 
+describe('autoStops: few and spread out', () => {
+  const at = (kind: Landmark['kind'], name: string, alongM: number, distanceM: number, priority = 10): Landmark => ({ ...landmark(kind, name, alongM, distanceM), id: `node/${name}`, priority })
+  /** 30 km north */
+  const long = buildTrack({ name: 'long', source: 'gpx', segments: [{ points: Array.from({ length: 301 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 100) / M_PER_DEG_LAT, ele: 1000 })) }] })
+  const gapM = (durationS: number) => Math.max(1000, (15 * long.stats.distanceM) / durationS)
+  const spread = (stops: { atM: number }[], minM: number) => stops.every((x, i) => i === 0 || x.atM - stops[i - 1].atM >= minM - 1e-6)
+
+  it('a 60 s flyover gets at most 4 stops, the most notable kept, and a longer one more', () => {
+    const peaks = Array.from({ length: 20 }, (_, i) => at('peak', `P${i}`, 500 + i * 1450, 20, 20 + i))
+    const stops = autoStops({ track: long, landmarks: peaks, durationS: 60 })
+    expect(stops).toHaveLength(4)
+    expect(stops.map((x) => x.label)).toContain('P19')
+    expect(spread(stops, gapM(60))).toBe(true)
+    expect(autoStops({ track: long, landmarks: peaks, durationS: 180 }).length).toBeGreaterThan(4)
+    expect(autoStops({ track: long, landmarks: peaks, durationS: 10 })).toHaveLength(1)
+  })
+
+  it('no two stops closer than the group, nor than 15 s of film at the base speed', () => {
+    const list = [at('pass', 'Col', 1000, 20, 45), at('peak', 'Voisin', 1900, 20, 40), at('peak', 'Loin', 9000, 20, 30)]
+    expect(autoStops({ track: long, landmarks: list, durationS: 180 }).map((x) => x.label)).toEqual(['Col', 'Loin'])
+    // 30 km in 60 s: 7.5 km apart
+    expect(autoStops({ track: long, landmarks: [at('pass', 'A', 1000, 20, 45), at('peak', 'B', 7000, 20, 40), at('peak', 'C', 12000, 20, 30)], durationS: 60 }).map((x) => x.label)).toEqual(['A', 'C'])
+  })
+
+  it("the stops of the film's own are not generated, counted, capped nor touched", () => {
+    const own = Array.from({ length: 10 }, (_, i): FilmStop => ({ id: `stop-${i}`, atM: 1000 * (i + 1), durationS: 4, camera: 'orbite', source: { kind: 'manual' } }))
+    const film: Film = { ...DEFAULT_FILM, autoStops: false, stops: own }
+    const input = { track: long, landmarks: [at('pass', 'Col', 1000, 20, 45)], durationS: 60 }
+    expect(filmStops(film, input)).toBe(own)
+    expect(materializeStops(film, input)).toBe(film)
+  })
+
+  it('« Recalculer les records » does not bring back a record stop the cap dropped', () => {
+    const rec: Landmark = { ...at('record' as Landmark['kind'], 'Record', 14000, 0, 32), id: 'record:t:highest', recordKind: 'highest' }
+    const passes = [0, 1, 2, 3].map((i) => at('pass', `Col ${i}`, 2000 + i * 8000, 20, 45))
+    const input = { track: long, landmarks: [...passes, rec], durationS: 60 }
+    expect(autoStops(input).map((x) => x.label)).toEqual(['Col 0', 'Col 1', 'Col 2', 'Col 3'])
+    expect(alignRecordStops({ ...DEFAULT_FILM, autoStops: false, stops: [] }, input).added).toEqual([])
+  })
+})
+
 describe('autoStops with « Aussi aux lieux traversés »', () => {
   const at = (kind: Landmark['kind'], name: string, alongM: number, distanceM: number, priority = 10): Landmark => ({ ...landmark(kind, name, alongM, distanceM), id: `node/${name}`, priority })
   const names = (list: Landmark[], durationS = 180, groupM = 1000) => autoStops({ track, landmarks: list, durationS }, groupM, true).map((x) => x.label)
@@ -140,7 +181,7 @@ describe('autoStops with « Aussi aux lieux traversés »', () => {
   it('adds the villages, huts, lakes, waterfalls and viewpoints beside the track; not without the option', () => {
     const list = [at('pass', 'Col', 500, 20), at('place', 'Village', 1500, 100), at('hut', 'Refuge', 2500, 250), at('lake', 'Lac', 3200, 250), at('waterfall', 'Cascade', 3900, 250), at('viewpoint', 'Belvédère', 4600, 250)]
     expect(names(list, 180, 500)).toEqual(['Col', 'Village', 'Refuge', 'Lac', 'Cascade', 'Belvédère'])
-    expect(autoStops({ track, landmarks: list }).map((x) => x.label)).toEqual(['Col'])
+    expect(autoStops({ track, landmarks: list, durationS: 180 }).map((x) => x.label)).toEqual(['Col'])
     const stop = autoStops({ track, landmarks: list, durationS: 180 }, 500, true)[1]
     expect(stop).toEqual({ id: autoStopId(1500), atM: 1500, durationS: AUTO_STOP_S, camera: 'orbite', label: 'Village', source: { kind: 'landmark', ref: 'node/Village' } })
   })
@@ -150,26 +191,21 @@ describe('autoStops with « Aussi aux lieux traversés »', () => {
     expect(names([at('glacier', 'Glacier', 1000, 0), at('waterPoint', 'Source', 2000, 0)])).toEqual([])
   })
 
-  it('at most one stop every 12 s of the film at the base speed: a long track with many villages is capped, passes and peaks first', () => {
+  it('places never take the slot of a pass, a summit or a record, whatever their ranking', () => {
     const long = buildTrack({ name: 'long', source: 'gpx', segments: [{ points: Array.from({ length: 301 }, (_, i) => ({ lon: 6.8, lat: 45.8 + (i * 100) / M_PER_DEG_LAT, ele: 1000 })) }] })
-    const L = long.stats.distanceM
-    const villages = Array.from({ length: 28 }, (_, i) => at('place', `V${i}`, 500 + i * 1000, 20, 20 + (i % 5)))
+    const villages = Array.from({ length: 28 }, (_, i) => at('place', `V${i}`, 500 + i * 1000, 20, 49))
     const notable = [at('pass', 'Col', 7300, 20, 45), at('peak', 'Sommet', 19700, 100, 30)]
-    const durationS = 60
-    const stops = autoStops({ track: long, landmarks: [...villages, ...notable], durationS }, 1000, true)
-    expect(stops.length).toBeLessThanOrEqual(Math.floor(durationS / 12))
-    expect(stops.length).toBeGreaterThan(1)
-    // the pass and the summit are kept, the villages that fit are the best ranked
+    const run = (durationS: number, list: Landmark[]) => autoStops({ track: long, landmarks: list, durationS }, 1000, true)
+    const stops = run(60, [...villages, ...notable])
+    expect(stops.length).toBeLessThanOrEqual(4)
     expect(stops.map((x) => x.label)).toEqual(expect.arrayContaining(['Col', 'Sommet']))
-    for (let i = 1; i < stops.length; i++) expect(stops[i].atM - stops[i - 1].atM).toBeGreaterThanOrEqual((12 * L) / durationS - 1e-6)
-    expect(stops.every((x, i) => i === 0 || x.atM > stops[i - 1].atM)).toBe(true)
-    // a longer film leaves room for more
-    expect(autoStops({ track: long, landmarks: [...villages, ...notable], durationS: 300 }, 1000, true).length).toBeGreaterThan(stops.length)
+    expect(stops.some((x) => x.label?.startsWith('V'))).toBe(true)
+    // the first tier fills the slots: no place at all
+    const four = [0, 1, 2, 3].map((i) => at('peak', `S${i}`, 1000 + i * 9000, 20, 30))
+    expect(run(60, [...villages, ...four]).map((x) => x.label)).toEqual(['S0', 'S1', 'S2', 'S3'])
   })
 
-  it('a pass beats a village in the same group, and « materializeStops » writes the same stops out', () => {
-    const list = [at('place', 'Village', 1450, 20, 25), at('pass', 'Col', 1500, 20, 45)]
-    expect(names(list)).toEqual(['Col'])
+  it('« materializeStops » writes the same stops out, and the film validates', () => {
     const film = { ...DEFAULT_FILM, autoStopsPlaces: true }
     const input = { track, landmarks: [at('pass', 'Col', 500, 20), at('place', 'Village', 3000, 20)], durationS: 180 }
     const written = materializeStops(film, input)
