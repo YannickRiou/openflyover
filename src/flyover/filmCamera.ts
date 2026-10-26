@@ -84,8 +84,11 @@ const SHOT_SIGHT_SAMPLES = 16
 const SHOT_SOFT_SHARE = 0.2
 /** The glide and the clearances ease in over this share of the shot's blend at each end (the end views are untouched). */
 const SHOT_EASE_SHARE = 0.1
-/** ... longer by the lift's share of the camera's distance over this much, up to this share of the blend. */
-const SHOT_EASE_LIFT = 2
+/**
+ * ... longer by the lift's share of the camera's distance over this much, up to this share of the blend (2 before « Focale »:
+ * a wide angle's closer camera came down from a lift of 4 km in a few frames at the start of a closing « Balayage »).
+ */
+const SHOT_EASE_LIFT = 1.5
 /** The camera takes at least this share of a night pause to rise to the high view of the day, and as much to come back. */
 const DAY_VIEW_MIN_SHARE = 0.2
 /** A shot's lift is read at this many points of the blend, kept in full within HOLD of the blend and down to nothing at REACH. */

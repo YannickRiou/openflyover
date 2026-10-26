@@ -98,7 +98,7 @@ export function useLensEffects(atmosphere?: RefObject<AtmosphereApi | null>): Le
           : target
             ? camera.position.distanceTo(target)
             : DEFAULT_FOCUS_M
-        const params = depthOfFieldParams(lens.depthOfField, focus)
+        const params = depthOfFieldParams(lens.depthOfField, focus, settings.camera.focalMm)
         depth.cocMaterial.focusDistance = focus
         depth.cocMaterial.focusRange = params.focusRange
         depth.bokehScale = params.bokehScale * pixelScale

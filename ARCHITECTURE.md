@@ -1222,7 +1222,10 @@ The interface and the texts drawn into the films and posters exist in **French**
   from the setting (preview and export draw with this camera); the marker's radius (`placeMarker`) is scaled by
   tan(fov / 2) / tan(25°) to keep its size on screen (labels, pins and track widths read the projection matrix). The offline tile plan
   (`offline/plan.ts`) and the terrain LOD need nothing: both the camera distance and the split distance scale by the
-  dolly. Audit: `filmAudit.test.ts` runs every preset × shot style at 26, 18 and 135 mm (the audit camera follows the lens).
+  dolly. Depth of field: `depthOfFieldParams` divides the sharp range (a share of the focus distance) by the dolly, so the
+  depth kept sharp is the same in metres with any lens. Audit: `filmAudit.test.ts` runs every preset × shot style at 26,
+  18, 21 and 135 mm (the audit camera follows the lens; 21 mm was the worst of 19–24 mm for the end of the shot lift,
+  `SHOT_EASE_LIFT`), and the sample film at 85 and 135 mm keeps the marker in the frame and the tilt within 5° of 26 mm's.
 - Verified: unit tests (setting, sub-frame instants, trail weight, mask and sub-frame weights, slice sharing) and SwiftShader screenshots;
   inferred: the cost and the look on a real GPU (the manual checks of `docs/handbook/index.html`).
 
