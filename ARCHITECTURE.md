@@ -4094,7 +4094,14 @@ the preview of any device, by what it does and not by its hardware: « Auto » (
 the film plays (`createSlowPreviewDetector`: median over 2 s of playback, a gap over 1 s restarts the count) and, under
 30 frames per second, keeps the preview light for the session; « Légère » forces it, « Complète » never lightens.
 Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
-0.5, 16 still frames. The export sets its own pixel ratio (1) and cloud pass: films do not change. The pixel ratio goes
+0.5, 16 still frames, shadow map 2048² (~32 MB, not ~128 MB), at most 125,000 trees (far chunks thin first,
+`forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass, and `sceneBudget(preview, exporting)` gives
+`AtmosphereLayer` and `ForestLayer` the device's own shadow map and trees whenever `isExportBusy` (video, poster and
+« Capturer cette image » all run through `runExport`): films do not change. The shadow map and the trees are made again
+when the preview changes and at the start and end of an export (~0.3 s for 250,000 trees). Not lightened: imagery
+anisotropy (16, set when a tile's texture is created and the canvas freed after upload, so it cannot follow the preview)
+and the canvas's MSAA (fixed with the context; a computer that started with the atmosphere would lose the antialiasing of
+the exports made without it). The pixel ratio goes
 through the `dpr` of <Canvas> (`FlyoverCanvas`): R3F sets it back on each render of the canvas (`configure`, after the
 children's effects), so a `setDpr` from a child does not hold — that also fixed a phone that kept 1.5 while playing
 once a track arrived. The diagnostic report shows the preview values in use (`budget.*`). Verified in headless
@@ -4111,8 +4118,8 @@ Chromium (SwiftShader, DPR 2): « Complète » 2 while playing; « Légère » 1
 | preview clouds: resolution, still frames | `CloudsLayer`, `CLOUD_SETTLE_FRAMES` | 1, 32 | 0.5, 16 | 0.5, 16 | 0.5, 16 |
 | sea of clouds by default | `DEFAULT_CLOUDS.seaRender` | volume | « Nappe » | « Nappe » | « Nappe » |
 | export short side | `videoSize` | 2160 (4K) | 1440 | 1080 | as the device |
-| shadow map (texels per side) | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
-| trees of the forests (most placed) | `placeTrees` (`ForestLayer`) | 250,000 | 60,000 | 60,000 | 30,000 |
+| shadow map (texels per side), 2048 in a light preview | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
+| trees of the forests (most placed), 125,000 in a light preview | `placeTrees` (`ForestLayer`) | 250,000 | 60,000 | 60,000 | 30,000 |
 | terrain LOD height during an export | `exportLodHeight` (`TerrainLayer`, `ExportController`) | the film's | the film's | min(film, 720) | as the device |
 | video bitrate ceiling, film kept in memory | `videoBitrate` / `deviceBitrateCap` | none | 12 Mbit/s | 8 Mbit/s | as the device |
 | « in memory » size warning | `warnsInMemory` | 1.5 GB | 250 MB | 250 MB | 250 MB |

@@ -14,7 +14,6 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3 } from 'three'
 import type { Camera, BufferGeometry } from 'three'
-import { deviceBudget } from '../core/deviceBudget'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { isExportBusy, registerDrapeFlush, useExportStore } from '../export/store'
 import { mergeByTrack } from '../osm/byTrack'
@@ -24,6 +23,7 @@ import { useForestStore } from '../osm/store'
 import { setForestStatus } from './forestStatus'
 import { useAppStore } from '../state/store'
 import { type ForestChunk, placeTrees, treeKind } from './forestPoints'
+import { usePreviewBudget, sceneBudget } from './previewQuality'
 import { wakeScene } from './renderOnDemand'
 import { REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS } from './trackLineSet'
 import { useTerrainContext } from './terrainContext'
@@ -200,6 +200,8 @@ export function ForestLayer() {
   const density = useDeferredValue(useAppStore((s) => s.settings.forest.density))
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
+  // the preview's trees, the device's own for an export (video, poster, capture): placed again at its start and end
+  const { maxTrees } = sceneBudget(usePreviewBudget(), exporting)
   const get = useThree((s) => s.get)
   // one Overpass query per track of the film (cached, one at a time); nothing is sent while the setting is off, and a track
   // that fails shows no trees (the status chip says so). The forests of all the tracks are drawn together.
@@ -212,9 +214,9 @@ export function ForestLayer() {
   const polygons = useMemo(() => mergeByTrack(results, tracks.map((t) => t.id)), [results, tracks])
   const paths = useMemo(() => tracks.map((track) => simplifyLine(track.segments.flatMap((s) => s.points), PATH_TOLERANCE_M)), [tracks])
   // Placing takes up to a second or more: once the queue is empty, not at each answer (the trees of the tracks asked before stay meanwhile)
-  const [placed, setPlaced] = useState<{ polygons: unknown; density: number; paths: unknown; chunks: ForestChunk[] }>({ polygons, density, paths, chunks: [] })
-  if (!loading && (placed.polygons !== polygons || placed.density !== density || placed.paths !== paths)) {
-    setPlaced({ polygons, density, paths, chunks: placeTrees(polygons, { density, maxTrees: deviceBudget().maxTrees, paths }) })
+  const [placed, setPlaced] = useState<{ polygons: unknown; density: number; paths: unknown; maxTrees: number; chunks: ForestChunk[] }>({ polygons, density, paths, maxTrees, chunks: [] })
+  if (!loading && (placed.polygons !== polygons || placed.density !== density || placed.paths !== paths || placed.maxTrees !== maxTrees)) {
+    setPlaced({ polygons, density, paths, maxTrees, chunks: placeTrees(polygons, { density, maxTrees, paths }) })
   }
   const { chunks } = placed
   const forest = useMemo(() => (frame ? createForest(chunks, frame) : null), [chunks, frame])
