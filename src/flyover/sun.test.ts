@@ -264,6 +264,21 @@ describe('shotSunShiftMs', () => {
     for (const t of [0, none.totalTime()]) expect(shotSunDate(none, t, night, daylight)).toEqual(night)
   })
 
+  it('« Plein jour » on a multi-day track: daylight on the day of the arrival, not back through the days', () => {
+    const plain = { style: 'situation', durationS: 8, sun: 'jour' } as const
+    const clock = clockOf(plain, plain)
+    const closingS = clock.openingS + clock.flightS
+    // daylight of the first day (the start of the track), arrival seven days later at 17 h
+    const daylight = new Date(Date.UTC(2026, 5, 1, SHOT_DAYLIGHT_HOUR)), arrival = new Date(Date.UTC(2026, 5, 8, 17))
+    expect(shotSunDate(clock, clock.totalTime(), arrival, daylight)).toEqual(new Date(Date.UTC(2026, 5, 8, SHOT_DAYLIGHT_HOUR)))
+    // the sun only moves between 13 h and 17 h of the last day during the shot
+    for (let t = closingS; t <= clock.totalTime(); t += 0.5) {
+      const ms = shotSunDate(clock, t, arrival, daylight).getTime()
+      expect(ms).toBeGreaterThanOrEqual(Date.UTC(2026, 5, 8, SHOT_DAYLIGHT_HOUR))
+      expect(ms).toBeLessThanOrEqual(arrival.getTime())
+    }
+  })
+
   it('no time lapse without « Accéléré », outside a « Depuis la région » shot', () => {
     for (const shot of [{ style: 'situation', durationS: 8 }, { style: 'descente', durationS: 8, moveSun: true }] as const) {
       const clock = clockOf(shot, shot)

@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The closing shot in « Plein jour » no longer flickers on a track of several days**: it aimed at the daylight of the first day, so during the zoom out the sun ran back through every day of the outing (a week-long raid showed seven nights in a few seconds). It now goes to the daylight of the arrival day, as the guide says. Single-day films do not change.
+
 ## 4.5.0 (October 2026)
 
 - **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.4.1.
