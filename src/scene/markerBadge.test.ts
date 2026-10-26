@@ -43,18 +43,37 @@ describe('marker badge', () => {
 
   it('strokes every path of the figure, mirrored when asked', () => {
     const plain = recordingContext()
-    drawBadge(plain.ctx, 128, { kind: 'figure', figure: 'cycliste', fill: BADGE_INK, ring: BADGE_WHITE, mirrored: false }, fakePath)
+    drawBadge(plain.ctx, 128, { kind: 'figure', figure: 'cycliste', fill: BADGE_INK, ring: BADGE_WHITE, facing: 1 }, fakePath)
     expect(plain.calls.filter((c) => c.startsWith('stroke('))).toHaveLength(MARKER_FIGURE_PATHS.cycliste.length)
     expect(plain.calls).toContain(`strokeStyle=${BADGE_WHITE}`)
     expect(plain.calls).not.toContain('scale(-1,1)')
 
     const mirrored = recordingContext()
-    drawBadge(mirrored.ctx, 128, { kind: 'figure', figure: 'cycliste', fill: BADGE_INK, ring: BADGE_WHITE, mirrored: true }, fakePath)
+    drawBadge(mirrored.ctx, 128, { kind: 'figure', figure: 'cycliste', fill: BADGE_INK, ring: BADGE_WHITE, facing: -1 }, fakePath)
     expect(mirrored.calls).toContain('scale(-1,1)')
   })
 
+  it('turns the figure round by its width alone: the label under it is never mirrored nor squashed', () => {
+    const drawing = {
+      badge: { kind: 'figure', figure: 'cycliste', fill: BADGE_INK, ring: BADGE_WHITE, facing: -0.5 } as const,
+      diameter: 2.2,
+      stick: false,
+      label: 'Moi',
+    }
+    const { ctx, calls } = recordingContext()
+    drawMarker(ctx, markerLayout(drawing, (text) => text.length * 40), drawing, fakePath)
+    expect(calls).toContain('scale(-0.5,1)')
+    // every scale is inside the badge, its restore before the label
+    expect(calls.findIndex((c) => c.startsWith('fillText('))).toBeGreaterThan(calls.lastIndexOf('restore()'))
+    expect(calls.findIndex((c) => c.startsWith('fillText('))).toBeGreaterThan(calls.findLastIndex((c) => c.startsWith('scale(')))
+    // edge-on it is a thin line, not nothing
+    const edge = recordingContext()
+    drawBadge(edge.ctx, 128, { ...drawing.badge, facing: 0 }, fakePath)
+    expect(edge.calls).toContain('scale(0.06,1)')
+  })
+
   it('draws the figure badge shapes: a pin, a rounded square, the figure alone over its outline', () => {
-    const figure = { kind: 'figure', figure: 'nageur', fill: BADGE_INK, ring: BADGE_WHITE, mirrored: false } as const
+    const figure = { kind: 'figure', figure: 'nageur', fill: BADGE_INK, ring: BADGE_WHITE, facing: 1 } as const
     const pin = recordingContext()
     drawBadge(pin.ctx, 128, { ...figure, shape: 'epingle' }, fakePath)
     // outline and inner pin: from the tip, round the head

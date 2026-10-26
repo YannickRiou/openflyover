@@ -205,8 +205,9 @@ describe('a key with the ball style, the badge shape and the animation', () => {
     expect(isValidMarkerKey(own)).toBe(true)
     expect(isValidMarkerKey({ ...own, shape: 'etoile' })).toBe(false)
     expect(isValidMarkerKey({ ...own, animated: 'oui' })).toBe(false)
-    // an animated figure on a key: the held frames of an export are drawn again
+    // a figure on a key walks or turns round with the film time: the held frames of an export are drawn again
     expect(markerKeysMoveWithTime(film([own]), DEFAULT_MARKER)).toBe(true)
-    expect(markerKeysMoveWithTime(film([{ ...own, animated: false }]), DEFAULT_MARKER)).toBe(false)
+    expect(markerKeysMoveWithTime(film([{ ...own, animated: false }]), DEFAULT_MARKER)).toBe(true)
+    expect(markerKeysMoveWithTime(film([{ ...key('m3', 100, 'boule') }]), DEFAULT_MARKER)).toBe(false)
   })
 })

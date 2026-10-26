@@ -5,6 +5,8 @@ export default {
   version: 'Version {version}',
   'v45.camera.title': 'Une caméra plus agréable à regarder',
   'v45.camera.text': 'Deux réglages dans Survol › Caméra. « Espace devant » place le marqueur un peu en arrière du centre de l’image, pour laisser de la place du côté où il va. « Inclinaison dans les virages » incline doucement l’horizon dans les virages, comme un drone qui penche. Par défaut, un peu des deux : vos films en deviennent plus fluides.',
+  'v45.marker.title': 'Un marqueur plus vivant',
+  'v45.marker.text': 'La figurine marche maintenant au pas du marqueur, reste immobile quand il s’arrête et se retourne en douceur dans un virage (le texte dessous n’est jamais inversé). Chaque marqueur prend aussi un peu de la lumière de la scène : chaud au lever et au coucher du soleil, un peu bleuté la nuit. Rien à régler.',
   'v45.records.title': 'Des records pour les vols',
   'v45.records.text': 'Le meilleur thermique (la montée la plus soutenue du vol) et la plus grande hauteur au-dessus du sol sont des records de plus pour les vols en parapente. À l’inverse, les montées, descentes et kilomètres records ne comptent plus les passages en vol : la pente n’y a aucun sens. Dans Carte › Repères, un interrupteur « Records de la sortie » les affiche ou les masque, et « Recalculer les records » remet à jour les arrêts automatiques du film.',
   'v44.night.title': 'Des nuits moins noires',
