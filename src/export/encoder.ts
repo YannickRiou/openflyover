@@ -1,7 +1,7 @@
 /**
  * Video encoder — WebCodecs through mediabunny, writing the file in memory or, given a destination, straight to disk.
- * Codec choice (H.264, else HEVC, else VP9, else VP8: first one the browser can encode at the requested size, rate and
- * bitrate, on the GPU's encoder when it takes it; or the codec chosen in « Encodage »), soundtrack and disk layout:
+ * Codec choice (H.264, else HEVC, else VP9, else VP8: first one the GPU's encoder takes at the requested size, rate and
+ * bitrate, else the first any encoder takes; or the codec chosen in « Encodage »), soundtrack and disk layout:
  * ARCHITECTURE.md "Video export".
  *
  * On disk the MP4 has no fast start (`moov` after the frames, header size patched at the end): a plain MP4 every player
@@ -144,8 +144,8 @@ export async function pickAudioCodec(
 }
 
 /**
- * First candidate the browser can encode with these options, or null: on the hardware encoder when it takes this
- * configuration (`hardware: true`), else on whichever encoder it picks.
+ * First candidate the browser can encode with these options, or null: the first one the hardware encoder takes
+ * (`hardware: true`), whatever the codec; else the first one whichever encoder it picks takes.
  */
 export async function pickCodec(
   options: VideoEncodeOptions,
@@ -155,9 +155,10 @@ export async function pickCodec(
   const { Quality, canEncodeVideo } = await mediabunny()
   canEncode ??= canEncodeVideo
   const { width, height, fps } = options
-  for (const { container, codec } of candidates) {
-    const config = { width, height, frameRate: fps, quality: new Quality({ bitrate: targetBitrate(options, codec) }) }
-    for (const hardwareAcceleration of ['prefer-hardware', 'no-preference'] as const) {
+  // the hardware encoder over every codec first: a software H.264 would be slow and hot where a hardware HEVC is not
+  for (const hardwareAcceleration of ['prefer-hardware', 'no-preference'] as const) {
+    for (const { container, codec } of candidates) {
+      const config = { width, height, frameRate: fps, quality: new Quality({ bitrate: targetBitrate(options, codec) }) }
       try {
         if (await canEncode(codec, { ...config, hardwareAcceleration })) {
           return hardwareAcceleration === 'prefer-hardware' ? { container, codec, hardware: true } : { container, codec }

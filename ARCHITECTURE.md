@@ -2898,8 +2898,9 @@ exports) gets it from the terrain source of the settings.
   (`OverlayCanvas`) and the timeline are frozen while an export runs and redrawn at its end.
 - **Encoding pipeline**: the encoder takes the canvas synchronously in `addFrame` (`VideoSampleSource` +
   `new VideoSample(canvas)` before any await; ffmpeg path: `getImageData`), so frame i is encoded while frame i+1
-  settles and renders (one `addFrame` in flight). `pickCodec` asks `hardwareAcceleration: 'prefer-hardware'` first, else
-  `'no-preference'` (`CodecCandidate.hardware`). On the native path the compositor's 2D context is created with
+  settles and renders (one `addFrame` in flight). `pickCodec` asks `hardwareAcceleration: 'prefer-hardware'` over all the
+  candidates first (H.264, HEVC, VP9, VP8: a hardware HEVC wins over a software H.264), then `'no-preference'` over them
+  (`CodecCandidate.hardware`). On the native path the compositor's 2D context is created with
   `willReadFrequently` (`compositorAttributes`).
 - **Timings** (`ExportTimings`): `rendered`, `renders` (advance calls), `renderMs` (main thread), `gpuMs` / `gpuRenders`
   (GPU timer queries `EXT_disjoint_timer_query_webgl2`, `gpuTimer.ts`; 0 where unavailable, e.g. Safari / iOS: the
