@@ -6,11 +6,7 @@
  * components call `useT()` to render again when the language changes.
  */
 import { useMemo, useSyncExternalStore } from 'react'
-import { de } from './de'
-import { en } from './en'
-import { es } from './es'
 import { fr } from './fr'
-import { it } from './it'
 import { DEFAULT_LANGUAGE, localeOf } from './languages'
 import type { LanguageCode } from './languages'
 import type { MessageKey, Messages, Plural } from './messages'
@@ -19,11 +15,40 @@ export { LANGUAGES, detectLanguage } from './languages'
 export type { LanguageCode } from './languages'
 export type { MessageKey, Messages } from './messages'
 
-const catalogs: Record<LanguageCode, Messages> = { fr, en, es, it, de }
+/** The catalogs in memory: French (the reference, in the first screen) and the others once `loadLanguage` has fetched them. */
+const catalogs: Partial<Record<LanguageCode, Messages>> = { fr }
+
+/** One chunk per language, fetched by `import()` when first needed. */
+const loaders: Record<LanguageCode, () => Promise<Messages>> = {
+  fr: async () => fr,
+  en: () => import('./en').then((m) => m.en),
+  es: () => import('./es').then((m) => m.es),
+  it: () => import('./it').then((m) => m.it),
+  de: () => import('./de').then((m) => m.de),
+}
+const loading = new Map<LanguageCode, Promise<void>>()
+
+/** Fetch the catalog of `code` (once); resolves when `setLanguage(code)` and `withLanguage(code, …)` can use it. A failure is not remembered, so a later call tries again. */
+export function loadLanguage(code: LanguageCode): Promise<void> {
+  let promise = loading.get(code)
+  if (!promise) {
+    promise = loaders[code]().then(
+      (messages) => void (catalogs[code] = messages),
+      (error: unknown) => {
+        loading.delete(code)
+        throw error
+      },
+    )
+    loading.set(code, promise)
+  }
+  return promise
+}
 
 export type Vars = Record<string, string | number>
 
 let current: LanguageCode = DEFAULT_LANGUAGE
+/** The language last asked for: a catalog that arrives late applies only if nothing was asked since. */
+let wanted: LanguageCode = DEFAULT_LANGUAGE
 const listeners = new Set<() => void>()
 
 export function getLanguage(): LanguageCode {
@@ -35,14 +60,29 @@ export function currentLocale(): string {
   return localeOf(current)
 }
 
-/** Switch the language now: every `useT()` component renders again. */
+/**
+ * Switch the language: every `useT()` component renders again. At once when the catalog is in memory, otherwise as soon
+ * as it is fetched (the interface keeps its language meanwhile, and when the fetch fails).
+ */
 export function setLanguage(code: LanguageCode): void {
+  wanted = code
   if (code === current) return
-  current = code
-  for (const listener of listeners) listener()
+  if (catalogs[code]) {
+    current = code
+    for (const listener of listeners) listener()
+  } else {
+    loadLanguage(code).then(
+      () => wanted === code && setLanguage(code),
+      () => undefined,
+    )
+  }
 }
 
-/** Run `fn` with `code` as the current language, without telling the components (text that must not follow the interface). */
+/**
+ * Run `fn` with `code` as the current language, without telling the components (text that must not follow the interface).
+ * `code` must be French (always there), the current language or one that `loadLanguage` has fetched: a catalog not in
+ * memory answers in French.
+ */
 export function withLanguage<T>(code: LanguageCode, fn: () => T): T {
   const previous = current
   current = code
@@ -71,7 +111,7 @@ function pluralCategory(count: number): keyof Plural {
 
 function lookup(language: LanguageCode, key: string): string | Plural | undefined {
   const dot = key.indexOf('.')
-  const domain = (catalogs[language] as Record<string, Record<string, string | Plural> | undefined>)[key.slice(0, dot)]
+  const domain = (catalogs[language] as Record<string, Record<string, string | Plural> | undefined> | undefined)?.[key.slice(0, dot)]
   return domain?.[key.slice(dot + 1)]
 }
 
