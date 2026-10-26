@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Flights are easier to read** (paragliding, kite jumps, cable cars: the stretches drawn in the air): a translucent **curtain** falls from the line down to the relief, fading towards the ground, so you see how high the flight goes and spirals stand out; a soft **shadow** of the flight lies on the relief right under it; and the line is **thicker when it comes closer to the camera and thinner farther away** (from ×0.6 to ×1.6 of the width you set, eased in and out at the ends of the flight, automatic). The curtain and the shadow each have a switch in a new « Vol » group of the « Trace » section (shown only when a loaded track has a flight, on by default). « Colorer selon » also gets **« Vitesse verticale »** for tracks with times: yellow where you climb, purple where you sink, the middle of the legend being 0 m/s, so thermals show at a glance. « Nouveautés » presents it.
+
 ## 4.4.1 (October 2026)
 
 - **The marker no longer blinks behind the relief**: it was switched off whole as soon as the computed sight line touched the relief, and back on as soon as it cleared it, so a line grazing a crest (a low view, or a higher one over small mountains) made it blink, and it showed whole over a summit that was really in front of it. The relief now hides the marker like a real object, from the image itself: a crest in front of it covers it where it passes, a little at first, then all of it, without blinking, and the slope just under it (150 m) never cuts it. The same for the markers of « En parallèle ». Its place and size on screen do not change; the 3D labels still disappear whole behind the relief.

@@ -324,7 +324,10 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      component file keeps React fast refresh): for each track, `Line2` (three/addons/lines) 4 px wide, color `track.color`, densified points (step ≤ 10 m),
      height = `(engine.sampleHeight(lon,lat) ?? pt.ele ?? 0) * exaggeration + 3` (the drawn surface, see above); on a
      flight (`track.flights`) `max(terrain, pt.ele − offsetM) * exaggeration + 3` (`trackHeightM`, `src/flyover/flights.ts`,
-     the one rule of the line, the marker, the camera aim, the ghost racers and the track picking). Re-draped on
+     the one rule of the line, the marker, the camera aim, the ghost racers and the track picking). A flight also gets a
+     curtain (translucent strip from the line down to the terrain) and a ground shadow (ribbon widened in screen space),
+     `FlightPiece`s built per flight in `trackLineSet.ts` (materials in `trackLineStyle.ts`, cut at the marker per pixel),
+     and its line width follows the depth (`flightWidthFactor`, ×0.6 to ×1.6, eased by `flightEase`). Re-draped on
      `engine.onChange` (150 ms debounce, 600 ms at most while the drawn tiles keep changing).
      Depth-tested only: the relief hides the parts behind it. (A translucent pass without the depth test, meant as a
      faint hint, was dropped: the round caps of the 10 m pieces overlap by several pixels and its alpha piled up into

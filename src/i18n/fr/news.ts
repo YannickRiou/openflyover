@@ -4,7 +4,7 @@ export default {
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
   'v45.flight.title': 'Des vols plus lisibles',
-  'v45.flight.text': 'Un vol (parapente, saut en kite, téléphérique) a maintenant un rideau translucide jusqu’au relief, une ombre au sol, et un trait qui s’épaissit en se rapprochant de la caméra. « Colorer selon › Vitesse verticale » montre d’un coup d’œil où l’on monte et où l’on descend. Réglages dans Trace › Vol.',
+  'v45.flight.text': 'Un vol (parapente, saut en kite, téléphérique) a maintenant un rideau translucide jusqu’au relief, une ombre au sol, et un trait qui s’épaissit en se rapprochant de la caméra. « Colorer selon › Vitesse verticale » montre d’un coup d’œil où l’on monte et où l’on descend. Réglages dans Trace › Vol.',
   'v44.night.title': 'Des nuits moins noires',
   'v44.night.text': '« Clarté des nuits » (Lumière › Atmosphère) éclaire le relief et les nuages la nuit, comme un clair de lune, sans rien changer le jour. L’exposition rejoint le contraste et la saturation dans Couleurs.',
   'v332.landmarks.title': 'Masquer des repères en quelques clics',
