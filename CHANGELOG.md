@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **« Ralentir aux temps forts » removed**: the switch of « Survol › Durée et rythme » and its settings (what to slow down on, speed, length, pause) are gone, since the stops and speed portions of the timeline do that job and, on a long track, the switch made dozens of tiny slow-downs drawn as empty dotted « auto » boxes in the « Vitesse » lane. A project saved with it on now plays without those slow-downs and shows a message when it is opened; the films saved before the timeline, whose automatic stops were these pauses, open without automatic stops (the stops they had of their own stay); add stops or speed portions on the timeline instead. The « Souvenir » gabarit of « Film automatique » no longer slows down on the climbs (it still puts a stop at the passes and summits).
+
 ## 4.5.0 (October 2026)
 
 - **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.4.1.

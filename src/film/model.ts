@@ -200,14 +200,6 @@ export interface FilmText {
   stopId?: string
 }
 
-export const AUTO_STOP_MODES = ['temps-forts', 'rythme'] as const
-/**
- * How the automatic stops are made. 'temps-forts' (new projects): one at every highlight whatever the pacing,
- * `AUTO_STOP_S` each, camera orbiting (highlights are climb tops, passes and summits); 'rythme' (projects saved
- * before the timeline): the pauses of the pacing, only while it is on, `pauseS` each, camera as in the film.
- */
-export type AutoStopMode = (typeof AUTO_STOP_MODES)[number]
-
 /** 'image': a photo; 'video': a video clip (with its sound unless muted, see `clipHasSound`). */
 export const MEDIA_KINDS = ['image', 'video'] as const
 export type MediaKind = (typeof MEDIA_KINDS)[number]
@@ -515,9 +507,8 @@ export interface JunctionDefault {
 export interface Film {
   opening: FilmShot
   closing: FilmShot
-  /** stops generated from the pacing highlights (`stops` ignored) until the user edits them */
+  /** stops generated at the highlights (passes, summits, records: `autoStops`; `stops` ignored) until the user edits them */
   autoStops: boolean
-  autoMode: AutoStopMode
   /** highlights closer than this make one automatic stop (metres; absent: `AUTO_STOP_GROUP_M`), kept by older projects */
   autoStopGroupM?: number
   stops: FilmStop[]
@@ -565,7 +556,6 @@ export const DEFAULT_FILM: Film = {
   opening: { style: 'descente', durationS: 6 },
   closing: { style: 'descente', durationS: 5 },
   autoStops: true,
-  autoMode: 'temps-forts',
   stops: [],
   speeds: [],
   cameraKeys: [],
@@ -928,7 +918,6 @@ export function isValidFilm(film: Film): boolean {
   if (!isValidShot(film.opening) || !isValidShot(film.closing) || typeof film.autoStops !== 'boolean') return false
   if (film.dayCards !== undefined && !isValidDayCards(film.dayCards)) return false
   if (typeof film.duckMusic !== 'boolean') return false
-  if (!oneOf(AUTO_STOP_MODES, film.autoMode)) return false
   if (film.autoStopGroupM !== undefined && !within(film.autoStopGroupM, 100, 10_000)) return false
   if (!film.stops.every(isValidStop) || !film.texts.every(isValidText) || !film.media.every(isValidMedia)) return false
   if (!film.speeds.every(isValidSpeed) || !apart(film.speeds) || !film.audio.every(isValidAudio)) return false
@@ -940,20 +929,18 @@ export function isValidFilm(film: Film): boolean {
 }
 
 /**
- * Fill-in of a film saved before a field existed (`SETTING_UPGRADES`): missing fields from `DEFAULT_FILM`, except
- * `autoMode`, which keeps the automatic stops of those films following the pacing ('rythme'). Films saved before
+ * Fill-in of a film saved before a field existed (`SETTING_UPGRADES`): missing fields from `DEFAULT_FILM`. Films saved before
  * music, camera keys, parameter, marker keys, points of interest or nights get none of them, and old video clips stay silent
- * (`muted: true`), so they look and sound as saved. The `epochs` key of earlier versions and the `landmarkTitles` flag
- * (« Ralentir et titrer aux repères », removed) are dropped: the slow-downs and titles that option had written stay in
- * `speeds` and `texts` as ordinary items. A text or a
+ * (`muted: true`), so they look and sound as saved. The `epochs` key of earlier versions, the `landmarkTitles` flag
+ * (« Ralentir et titrer aux repères », removed) and the `autoMode` of projects up to v6 (`MIGRATIONS[6]`) are dropped:
+ * the slow-downs and titles that option had written stay in `speeds` and `texts` as ordinary items. A text or a
  * medium attached to a stop the film does not own (generated stops, unknown id) is loaded free.
  */
 export function withFilmDefaults(raw: unknown): unknown {
   if (!isRecord(raw)) return raw
-  const { epochs: _epochs, landmarkTitles: _landmarkTitles, ...saved } = raw
+  const { epochs: _epochs, landmarkTitles: _landmarkTitles, autoMode: _autoMode, ...saved } = raw
   const film: Record<string, unknown> = {
     ...DEFAULT_FILM,
-    autoMode: 'rythme',
     nights: { ...DEFAULT_NIGHTS, enabled: false },
     ...saved,
   }

@@ -138,7 +138,7 @@ export default {
   'paramKey.title': 'Clé : {label}',
   'paramKey.value': 'Valeur',
   'paramKey.hint': 'À {distance}, {time} dans le film : {label} {value}. La valeur passe en douceur d’une clé à la suivante et reste celle de la première clé avant elle, de la dernière après elle, y compris pendant les arrêts. Dès qu’une clé existe, le curseur de ce réglage dans les panneaux modifie la clé placée au marqueur.',
-  'paramKey.speedExtra': ' Se combine avec les portions de vitesse et les ralentissements aux temps forts.',
+  'paramKey.speedExtra': ' Se combine avec les portions de vitesse.',
   'paramKey.sunExtra': ' Le soleil suit les clés au lieu de l’heure enregistrée de la sortie.',
   'paramKey.noAtmosphere': ' Sans atmosphère, ce réglage est sans effet.',
   'markerKey.imageFilter': 'Images',

@@ -55,8 +55,6 @@ export default {
   'speed.fast': 'Portion accélérée {label}, de {from} à {to}',
   'speed.slow': 'Portion ralentie {label}, de {from} à {to}',
   'speed.normal': 'Portion à vitesse normale {label}, de {from} à {to}',
-  'speed.auto': 'Ralentissement automatique {label} (Survol › Ralentir aux temps forts)',
-  'speed.autoShort': 'auto',
   'hold.description': 'Arrêt (caméra : {camera}) : {label}{auto}',
   'hold.auto': ' (automatique)',
   'card.description': 'Carte : {label}',

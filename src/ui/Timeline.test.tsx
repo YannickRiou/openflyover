@@ -211,19 +211,6 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
-    it('the « Vitesse » lane shows the automatic slow-downs of « Ralentir aux temps forts », not as blocks to edit', async () => {
-      const { host, root } = await setup()
-      // a 6 km climb of 600 m then the same back down: one climb top
-      const points = Array.from({ length: 121 }, (_, i) => ({ lon: 6.8 + i * 0.001, lat: 45.9, ele: 1000 + 600 * (1 - Math.abs(i - 60) / 60) }))
-      await act(async () => useAppStore.setState({ tracks: [buildTrack({ name: 'Col', source: 'gpx', segments: [{ points }] })] }))
-      const bands = () => host.querySelectorAll('[data-lane="param:speed"] [data-testid="timeline-auto-slow"]')
-      expect(bands()).toHaveLength(0)
-      await act(async () => useAppStore.getState().setSetting('pacing', { ...useAppStore.getState().settings.pacing, enabled: true, landmarks: false }))
-      expect(bands().length).toBeGreaterThan(0)
-      expect(bands()[0].getAttribute('aria-label')).toContain('Ralentissement automatique ×0,35')
-      act(() => root.unmount())
-    })
-
     it('are blocks of the « Textes » lane while their card is on, overlay on or off, and keep the « Plans » shots', async () => {
       const { host, root, setOverlay, cards } = await setup()
       expect(cards()).toEqual([])

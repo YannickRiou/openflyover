@@ -129,7 +129,6 @@ describe('snapping the film onto the beats', () => {
       closing: film.closing,
       stops: film.stops,
       lengthM: L,
-      highlightsM: [],
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     }
@@ -179,7 +178,7 @@ describe('snapping the film onto the beats', () => {
     const slow: Film = { ...film, stops: [], texts: [], speeds: [{ id: 'speed-1', fromM: 3420, toM: 3820, factor: 0.5 }] }
     const base = placementOf(slow)
     const clockOfSpeeds = (stops: readonly FilmStop[], speeds: readonly FilmSpeed[]) =>
-      buildFilmClock({ opening: slow.opening, closing: slow.closing, stops, speeds, lengthM: L, highlightsM: [], durationS: 60, pacing: { ...DEFAULT_PACING, keepDuration: false } })
+      buildFilmClock({ opening: slow.opening, closing: slow.closing, stops, speeds, lengthM: L, durationS: 60, pacing: { ...DEFAULT_PACING, keepDuration: false } })
     const placement = { ...base, clockOfSpeeds }
     const { film: snapped, moved } = snapFilmToBeats(slow, beats, placement)
     expect(moved).toBe(1)
@@ -194,7 +193,7 @@ describe('snapping the film onto the beats', () => {
 
   it('places a stop inside a moved portion on the clock with the portion moved: snapping again moves nothing', () => {
     const clockOfSpeeds = (stops: readonly FilmStop[], speeds: readonly FilmSpeed[]) =>
-      buildFilmClock({ opening: film.opening, closing: film.closing, stops, speeds, lengthM: L, highlightsM: [], durationS: 60, pacing: { ...DEFAULT_PACING, keepDuration: false } })
+      buildFilmClock({ opening: film.opening, closing: film.closing, stops, speeds, lengthM: L, durationS: 60, pacing: { ...DEFAULT_PACING, keepDuration: false } })
     const inside: Film = { ...film, texts: [], stops: [stop('stop-1', 3700)], speeds: [{ id: 'speed-1', fromM: 3420, toM: 3920, factor: 0.25 }] }
     const placementWith = (f: Film) => ({ clockOf: (s: readonly FilmStop[]) => clockOfSpeeds(s, f.speeds), clockOfSpeeds, lengthM: L })
     const { film: snapped } = snapFilmToBeats(inside, beats, placementWith(inside))

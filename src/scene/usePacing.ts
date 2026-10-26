@@ -71,8 +71,8 @@ export function getFilmSource(): FilmClockFor {
  */
 export function editFilm(edit: (film: Film) => { film: Film; id?: string | null }, { stops = false, step = true } = {}): void {
   const source = getFilmSource()
-  const { track, film, pacing, landmarks } = source
-  const base = stops && track ? materializeStops(film, { track, landmarks, pacing }) : film
+  const { track, film, landmarks } = source
+  const base = stops && track ? materializeStops(film, { track, landmarks }) : film
   const result = edit(base)
   const next = followStops(base, result.film, (f) => filmClockFor({ ...source, film: f }))
   const set = () => useAppStore.getState().setSetting('film', next)
@@ -215,7 +215,7 @@ export function seekKeyframe(clock: FilmClock, direction: -1 | 1, keys: readonly
  * highlight, the film's own stops dropped; off, the generated stops written out as its own. One undo step.
  */
 export function setAutoStops(on: boolean): void {
-  editFilm((film) => ({ film: on ? { ...film, autoStops: true, autoMode: 'temps-forts', stops: [] } : film }), { stops: !on })
+  editFilm((film) => ({ film: on ? { ...film, autoStops: true, stops: [] } : film }), { stops: !on })
 }
 
 /**
@@ -307,8 +307,8 @@ export function orderTracksByDate(): boolean {
 let followedLandmarks: { trackId: string | undefined; landmarks: readonly Landmark[] | null } = { trackId: undefined, landmarks: null }
 
 /**
- * The landmarks of the first track published again (`LandmarkPanel`): the slow-downs of the pacing at landmarks move
- * the stops in film time, and the texts and media attached to a stop follow them (`followStops`) from the landmarks
+ * The landmarks of the first track published again (`LandmarkPanel`): the stops generated at landmarks move
+ * what follows them in film time, and the texts and media follow the route (`followStops`) from the landmarks
  * published before. Not an undo step: loading landmarks is not an edit. Not on the first landmarks of a track (project
  * opened, track imported): landmarks are not saved but fetched again, and a film was saved with the times of its own.
  */
@@ -337,7 +337,7 @@ export function followLandmarks(): void {
 /**
  * Film clock of the film track (the first track, or the sequence « À la suite ») for the current settings and
  * OpenStreetMap landmarks (memoised), shared by the playback (FlyoverRig), the export (ExportController), the timeline
- * and the panels (film duration, highlights).
+ * and the panels (film duration).
  */
 export function useFilmClock(): FilmClock {
   const { track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan } = useFilmSource()

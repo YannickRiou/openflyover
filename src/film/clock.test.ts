@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Track } from '../core/types'
-import { buildPacing } from '../flyover/__fixtures__/pacing'
 import { DEFAULT_PACING, flightPacing, PAUSE_EASE_S } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { buildTrack } from '../import/stats'
 import type { Landmark } from '../osm/landmarks'
 import { buildSequence } from '../flyover/sequence'
+import { filmStops } from './assemble'
 import { buildFilmClock, filmClockFor } from './clock'
 import type { FilmClock, FilmClockInput } from './clock'
 import { stageFlightS, withJunction, withStageDuration } from './junctions'
@@ -21,7 +21,7 @@ const OPEN: FilmShot = { style: 'descente', durationS: 6 }
 const CLOSE: FilmShot = { style: 'saut', durationS: 4 }
 
 const clockOf = (patch: Partial<FilmClockInput>): FilmClock =>
-  buildFilmClock({ opening: OPEN, closing: CLOSE, stops: [], lengthM: L, highlightsM: [], durationS: D, pacing: OFF, ...patch })
+  buildFilmClock({ opening: OPEN, closing: CLOSE, stops: [], lengthM: L, durationS: D, pacing: OFF, ...patch })
 const stop = (id: string, atM: number, durationS: number, camera: FilmStop['camera'] = 'fixe'): FilmStop => ({ id, atM, durationS, camera })
 
 describe('film clock — phases', () => {
@@ -112,7 +112,7 @@ describe('film clock — speed portions', () => {
     expect(fast.endS).toBeGreaterThan(clock.stops[0].endS)
     expect(slow.startS).toBe(clock.timeAtProgress(0.6))
     expect(slow.endS).toBe(clock.timeAtProgress(0.8))
-    const flight = flightPacing(L, [], D, OFF, [{ atM: 2000, durationS: 2 }], [...speeds].sort((a, b) => a.fromM - b.fromM))
+    const flight = flightPacing(L, D, OFF, [{ atM: 2000, durationS: 2 }], [...speeds].sort((a, b) => a.fromM - b.fromM))
     expect(clock.flightS).toBe(flight.totalTime())
     for (let t = 0; t <= clock.totalTime(); t += 0.3) expect(clock.progressAtTime(t)).toBe(flight.progressAtTime(t - 6))
   })
@@ -144,16 +144,16 @@ describe('film clock — equivalence with the pacing', () => {
   const landmarks: Landmark[] = [
     { id: 'node/1', kind: 'pass', name: 'Col', lon: 6.8, lat: 45.8, distanceM: 20, alongM: 1500, priority: 10, text: 'Col' },
   ]
-  // films saved before the timeline: the generated stops are the pauses of the pacing
-  const legacy: Film = { ...DEFAULT_FILM, autoMode: 'rythme' }
-  const noShots: Film = { ...legacy, opening: NONE, closing: NONE }
+  const noShots: Film = { ...DEFAULT_FILM, opening: NONE, closing: NONE }
+  /** the flight pacing with the stops the film generates at the landmarks */
+  const pacingOf = (pacing: PacingSettings) => flightPacing(track.stats.distanceM, D, pacing, filmStops(DEFAULT_FILM, { track, landmarks }))
 
-  it('without shots, the generated stops (rythme) replay the pacing exactly (pauses and slow-downs)', () => {
-    for (const pacing of [DEFAULT_PACING, { ...DEFAULT_PACING, enabled: true }, { ...DEFAULT_PACING, enabled: true, keepDuration: false, pauseS: 4 }]) {
-      const before = buildPacing({ track, durationS: D, settings: pacing, landmarks })
+  it('without shots, the generated stops replay the flight pacing exactly', () => {
+    for (const pacing of [DEFAULT_PACING, { ...DEFAULT_PACING, keepDuration: false }]) {
+      const before = pacingOf(pacing)
       const clock = filmClockFor({ track, film: noShots, durationS: D, pacing, landmarks })
+      expect(before.pauses).toHaveLength(1)
       expect(clock.totalTime()).toBeCloseTo(before.totalTime(), 9)
-      expect(clock.highlights).toEqual(before.highlights)
       expect(clock.stops.map((s) => s.holdStartS)).toEqual(before.pauses.map((p) => p.holdStartS))
       for (let t = 0; t <= before.totalTime(); t += 0.25) expect(clock.progressAtTime(t)).toBeCloseTo(before.progressAtTime(t), 12)
       for (let i = 0; i <= 100; i++) expect(clock.timeAtProgress(i / 100)).toBeCloseTo(before.timeAtProgress(i / 100), 9)
@@ -161,16 +161,15 @@ describe('film clock — equivalence with the pacing', () => {
   })
 
   it('with the default shots: the same flight, shifted by the opening', () => {
-    const pacing = { ...DEFAULT_PACING, enabled: true }
-    const before = buildPacing({ track, durationS: D, settings: pacing, landmarks })
-    const clock = filmClockFor({ track, film: legacy, durationS: D, pacing, landmarks })
+    const before = pacingOf(DEFAULT_PACING)
+    const clock = filmClockFor({ track, film: DEFAULT_FILM, durationS: D, pacing: DEFAULT_PACING, landmarks })
     const O = DEFAULT_FILM.opening.durationS
     expect(clock.totalTime()).toBeCloseTo(O + before.totalTime() + DEFAULT_FILM.closing.durationS, 9)
     for (let t = 0; t <= before.totalTime(); t += 0.5) expect(clock.progressAtTime(O + t)).toBeCloseTo(before.progressAtTime(t), 12)
   })
 
   it('own stops replace the generated ones; no track: the bare flight duration and shots', () => {
-    const pacing = { ...DEFAULT_PACING, enabled: true }
+    const pacing = DEFAULT_PACING
     const own: Film = { ...noShots, autoStops: false, stops: [stop('stop-1', 2500, 7, 'orbite')] }
     const clock = filmClockFor({ track, film: own, durationS: D, pacing, landmarks })
     expect(clock.stops.map((s) => s.id)).toEqual(['stop-1'])

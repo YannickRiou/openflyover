@@ -196,7 +196,6 @@ describe('shotSunShiftMs', () => {
       stops: [],
       cameraKeys: [],
       lengthM: 4_000,
-      highlightsM: [],
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })

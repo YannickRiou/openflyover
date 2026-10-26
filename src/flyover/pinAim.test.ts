@@ -24,7 +24,6 @@ const clockWith = (cameraKeys: FilmCameraKey[] = []) =>
     stops: [],
     cameraKeys,
     lengthM: path.lengthM,
-    highlightsM: [],
     durationS: 60,
     pacing: { ...DEFAULT_PACING, keepDuration: false },
   })
@@ -98,7 +97,6 @@ describe('the camera turns towards a photo pin', () => {
       closing: { style: 'aucune', durationS: 0 },
       stops: [],
       lengthM: path.lengthM,
-      highlightsM: [],
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })
@@ -117,7 +115,6 @@ describe('the camera turns towards a photo pin', () => {
       closing: { style: 'descente', durationS: 6 },
       stops: [],
       lengthM: path.lengthM,
-      highlightsM: [],
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })

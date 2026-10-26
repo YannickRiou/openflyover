@@ -140,7 +140,7 @@ const messages: Messages['inspector'] = {
   'paramKey.title': 'Clave: {label}',
   'paramKey.value': 'Valor',
   'paramKey.hint': 'En {distance}, {time} en la película: {label} {value}. El valor pasa suavemente de una clave a la siguiente y es el de la primera clave antes de ella y el de la última después, también durante las paradas. En cuanto existe una clave, el control de este ajuste en los paneles modifica la clave situada en el marcador.',
-  'paramKey.speedExtra': ' Se combina con los tramos de velocidad y las ralentizaciones en los momentos destacados.',
+  'paramKey.speedExtra': ' Se combina con los tramos de velocidad.',
   'paramKey.sunExtra': ' El sol sigue las claves en lugar de la hora registrada de la salida.',
   'paramKey.noAtmosphere': ' Sin atmósfera, este ajuste no tiene efecto.',
   'markerKey.imageFilter': 'Imágenes',

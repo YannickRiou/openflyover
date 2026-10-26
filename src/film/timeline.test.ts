@@ -99,7 +99,6 @@ function contextOf(f: Film, patch: Partial<DragContext> = {}, pacing = { ...DEFA
     stops: f.stops,
     cameraKeys: f.cameraKeys,
     lengthM: L,
-    highlightsM: [],
     durationS: D,
     pacing,
   }
@@ -273,7 +272,6 @@ describe('snapping', () => {
       stops: [],
       cameraKeys: [],
       lengthM: L,
-      highlightsM: [],
       durationS: D,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
       cutsM: [4000],
@@ -512,7 +510,6 @@ describe('speed portions', () => {
       stops: f.stops,
       speeds: f.speeds,
       lengthM: L,
-      highlightsM: [],
       durationS: D,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     }
@@ -601,9 +598,8 @@ describe('placing a photo on the track', () => {
     closing: { style: 'aucune', durationS: 5 },
     stops: [],
     lengthM: path.lengthM,
-    highlightsM: [],
     durationS: 40,
-    pacing: { ...DEFAULT_PACING, enabled: false },
+    pacing: DEFAULT_PACING,
   }
   const clock = buildFilmClock(input)
   const at = (distanceM: number) => Math.round(clock.timeAtProgress(distanceM / path.lengthM) * 100) / 100
@@ -642,9 +638,8 @@ describe('syncing a video clip with the recorded track', () => {
     closing: { style: 'aucune', durationS: 5 },
     stops: [],
     lengthM: path.lengthM,
-    highlightsM: [],
     durationS: 40,
-    pacing: { ...DEFAULT_PACING, enabled: false },
+    pacing: DEFAULT_PACING,
   }
   const clock = buildFilmClock(input)
   const clip = (startMs: number, follow = false, patch: Partial<FilmMedia> = {}): FilmMedia => ({
@@ -836,7 +831,7 @@ describe('camera keys', () => {
     const keyed = c.film
     const ids = [a.id, b.id, c.id]
     const clockOf = (f: Film) =>
-      buildFilmClock({ opening: f.opening, closing: f.closing, stops: f.stops, cameraKeys: f.cameraKeys, paramKeys: f.paramKeys, markerKeys: f.markerKeys, lengthM: L, highlightsM: [], durationS: D, pacing: { ...DEFAULT_PACING, keepDuration: false } })
+      buildFilmClock({ opening: f.opening, closing: f.closing, stops: f.stops, cameraKeys: f.cameraKeys, paramKeys: f.paramKeys, markerKeys: f.markerKeys, lengthM: L, durationS: D, pacing: { ...DEFAULT_PACING, keepDuration: false } })
     const timesOf = (f: Film) => {
       const clock = clockOf(f)
       return [...clock.cameraKeys, ...clock.paramKeys, ...clock.markerKeys].map((k) => k.timeS)
@@ -871,7 +866,6 @@ describe('texts and media attached to a stop', () => {
       stops: f.stops,
       speeds: f.speeds,
       lengthM: L,
-      highlightsM: [],
       durationS: D,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })
@@ -943,7 +937,6 @@ describe('texts and media attached to a stop', () => {
         stops: f.stops,
         speeds: f.speeds,
         lengthM: L,
-        highlightsM: [],
         durationS: 2 * D,
         pacing: { ...DEFAULT_PACING, keepDuration: false },
       })
@@ -991,7 +984,6 @@ describe('free texts and media follow their place on the route', () => {
       stops: f.stops,
       speeds: f.speeds,
       lengthM: L,
-      highlightsM: [],
       durationS: D,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })

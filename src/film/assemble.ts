@@ -3,25 +3,20 @@
  * per cluster, like the pauses it replaces), overview closing. The user retouches it on the timeline and in « Repères »
  * (Carte tab), where each landmark and point of interest has its « Arrêt ».
  *
- * New films ('temps-forts') stop at every pass crossed and peak nearby, camera orbiting; films saved before the
- * timeline ('rythme') keep the pauses of the pacing, climb tops included. Pure module.
+ * A stop at every pass crossed, peak nearby and record of the outing, camera orbiting. Pure module.
  */
 import type { Track } from '../core/types'
-import { climbsOf } from '../flyover/climbs'
-import { DEFAULT_PACING, isHighlightLandmark, pausePositions } from '../flyover/pacing'
-import type { PacingSettings } from '../flyover/pacing'
+import { isHighlightLandmark, pausePositions } from '../flyover/pacing'
 import { AUTO_STOP_RECORDS } from '../import/records'
 import type { Landmark } from '../osm/landmarks'
-import { climbLabelText } from '../scene/labelModel'
 import { AUTO_STOP_S } from './model'
-import type { AutoStopMode, Film, FilmStop } from './model'
+import type { Film, FilmStop } from './model'
 
 export interface AssembleInput {
   /** first track */
   track: Track
   /** OpenStreetMap landmarks of the track (from the landmark store) */
   landmarks?: readonly Landmark[]
-  pacing: PacingSettings
 }
 
 /** Id of a generated stop: its rounded position, stable while the highlights do not move. */
@@ -31,17 +26,6 @@ export function autoStopId(atM: number): string {
 
 /** A highlight a stop can be made for. */
 export type StopCandidate = Required<Pick<FilmStop, 'atM' | 'label' | 'source'>>
-
-/** Climb tops of the track (`pacing.climbs`): only the pauses of the films saved before the timeline ('rythme') stop there. */
-function climbCandidates({ track, pacing }: AssembleInput): StopCandidate[] {
-  if (!pacing.climbs) return []
-  const L = track.stats.distanceM
-  return climbsOf(track).map((climb, i) => ({
-    atM: Math.min(L, Math.max(0, climb.endDistM)),
-    label: climbLabelText(climb, i),
-    source: { kind: 'climb', ref: String(i) },
-  }))
-}
 
 /**
  * Where the film offers a stop by itself, by position: the passes crossed, the peaks nearby and the records of the
@@ -87,38 +71,32 @@ export function withoutPlaceItems(film: Film, places: readonly StopPlace[]): Fil
   return stops.length === film.stops.length ? film : { ...film, stops }
 }
 
-/** Highlights closer than this make one automatic stop (metres; the default « Longueur du ralenti », which no longer sets it). */
-export const AUTO_STOP_GROUP_M = DEFAULT_PACING.windowM
+/** Highlights closer than this make one automatic stop (metres; `Film.autoStopGroupM` changes it). */
+export const AUTO_STOP_GROUP_M = 1000
 
 /**
- * Stops at the highlights, one per cluster (like the pauses they replace): 'temps-forts' at the `stopCandidates`
- * (whatever the pacing), grouped within `groupM` (`Film.autoStopGroupM`), `AUTO_STOP_S` each, camera orbiting; 'rythme'
- * at the highlights of the pacing (climb tops included, landmarks with `pacing.landmarks`) only while it is on, grouped
- * within `pacing.windowM`, `pauseS` each, camera as in the film (as these pauses were; without the records, which did not exist).
+ * Stops at the highlights, one per cluster: at the `stopCandidates`, grouped within `groupM` (`Film.autoStopGroupM`),
+ * `AUTO_STOP_S` each, camera orbiting.
  */
-export function autoStops(input: AssembleInput, mode: AutoStopMode, groupM = AUTO_STOP_GROUP_M): FilmStop[] {
-  const { track, pacing } = input
-  const legacy = mode === 'rythme'
-  if (!(track.stats.distanceM > 0) || (legacy && (!pacing.enabled || !(pacing.pauseS > 0)))) return []
-  const candidates = legacy
-    ? [...climbCandidates(input), ...(pacing.landmarks ? stopCandidates(input, false) : [])].sort((a, b) => a.atM - b.atM)
-    : stopCandidates(input)
+export function autoStops(input: AssembleInput, groupM = AUTO_STOP_GROUP_M): FilmStop[] {
+  const { track } = input
+  if (!(track.stats.distanceM > 0)) return []
+  const candidates = stopCandidates(input)
   const positions = [...new Set(candidates.map((c) => c.atM))]
-  return pausePositions(positions, legacy ? pacing.windowM : groupM).map((atM) => {
+  return pausePositions(positions, groupM).map((atM) => {
     const { label, source } = candidates.find((c) => c.atM === atM)!
-    const durationS = legacy ? pacing.pauseS : AUTO_STOP_S
-    return { id: autoStopId(atM), atM, durationS, camera: legacy ? 'film' : 'orbite', label, source }
+    return { id: autoStopId(atM), atM, durationS: AUTO_STOP_S, camera: 'orbite', label, source }
   })
 }
 
 /** `film` with its generated stops written out (`autoStops` cleared): the first edit of a stop on the timeline. */
 export function materializeStops(film: Film, input: AssembleInput): Film {
-  return film.autoStops ? { ...film, autoStops: false, stops: autoStops(input, film.autoMode, film.autoStopGroupM) } : film
+  return film.autoStops ? { ...film, autoStops: false, stops: autoStops(input, film.autoStopGroupM) } : film
 }
 
 /** Stops of `film`: generated while `autoStops` is set, else its own. */
 export function filmStops(film: Film, input: AssembleInput): FilmStop[] {
-  return film.autoStops ? autoStops(input, film.autoMode, film.autoStopGroupM) : film.stops
+  return film.autoStops ? autoStops(input, film.autoStopGroupM) : film.stops
 }
 
 /** A stop `autoStops` wrote out for a record of the outing (`record:<track>:<kind>`), as opposed to one the user made. */
@@ -142,12 +120,9 @@ export function alignRecordStops(film: Film, input: AssembleInput): { film: Film
   }
   const kept = film.stops.filter((s) => !stale(s))
   const groupM = film.autoStopGroupM ?? AUTO_STOP_GROUP_M
-  const added =
-    film.autoMode === 'temps-forts'
-      ? autoStops(input, film.autoMode, film.autoStopGroupM).filter(
-          (c) => c.source?.ref?.startsWith('record:') && !kept.some((s) => Math.abs(s.atM - c.atM) < groupM || s.id === c.id),
-        )
-      : []
+  const added = autoStops(input, film.autoStopGroupM).filter(
+    (c) => c.source?.ref?.startsWith('record:') && !kept.some((s) => Math.abs(s.atM - c.atM) < groupM || s.id === c.id),
+  )
   const removed = film.stops.filter(stale)
   if (removed.length === 0 && added.length === 0) return { film, removed, added }
   return { film: { ...film, stops: [...kept, ...added].sort((a, b) => a.atM - b.atM) }, removed, added }

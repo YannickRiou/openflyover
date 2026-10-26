@@ -88,7 +88,6 @@ const clockOf = (opening: FilmShot, closing: FilmShot, stops: FilmStop[] = [], c
     stops,
     cameraKeys,
     lengthM: path.lengthM,
-    highlightsM: [],
     durationS: 60,
     pacing: { ...DEFAULT_PACING, keepDuration: false },
   } satisfies FilmClockInput)
@@ -513,7 +512,6 @@ describe('computeFilmView', () => {
       stops: [],
       cameraKeys: [],
       lengthM: long.lengthM,
-      highlightsM: [],
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })
@@ -550,7 +548,6 @@ describe('computeFilmView', () => {
             stops: [],
             cameraKeys: [],
             lengthM: g.path.lengthM,
-            highlightsM: [],
             durationS: 60,
             pacing: { ...DEFAULT_PACING, keepDuration: false },
           })

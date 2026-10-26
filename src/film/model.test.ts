@@ -350,16 +350,12 @@ describe('film model', () => {
     expect(auto.settings.film.texts).toEqual([text('text-1')])
   })
 
-  it('older projects keep the stops of their pacing (rythme); new ones stop at every highlight', () => {
-    expect(DEFAULT_FILM.autoMode).toBe('temps-forts')
+  it('new films stop at every highlight; the `autoMode` of older ones is dropped', () => {
     expect(sanitizeSettings({ flyoverDurationS: 90 }).settings.film).toEqual(DEFAULT_FILM)
-    // a film saved before `autoMode` (and its presets): completed, its stops still follow the pacing
-    const { autoMode: _, ...saved } = film({ texts: [text('text-1')] })
-    expect(sanitizeSettings({ film: saved }).settings.film).toEqual(film({ texts: [text('text-1')], autoMode: 'rythme' }))
+    expect(sanitizeSettings({ film: { ...film({ texts: [text('text-1')] }), autoMode: 'rythme' } }).settings.film).toEqual(film({ texts: [text('text-1')] }))
     const { settings, invalid } = sanitizeSettings({ film: { ...DEFAULT_FILM, stops: [stop('x', { durationS: -1 })] } })
     expect(invalid).toEqual(['film'])
     expect(settings.film).toEqual(DEFAULT_FILM)
-    expect(isValidFilm(film({ autoMode: 'partout' as 'rythme' }))).toBe(false)
     // « Ralentir et titrer aux repères » is gone: a new film has no slow-down or title of that kind
     expect(DEFAULT_FILM).not.toHaveProperty('landmarkTitles')
     expect(DEFAULT_FILM.speeds).toEqual([])
@@ -397,11 +393,11 @@ describe('film model', () => {
       tracks: [{ id: 't', name: 't', source: 'gpx', color: '#123456', segments: [{ lon: [6.8, 6.81], lat: [45.8, 45.81] }] }],
     }
     expect(parseProject(JSON.stringify(doc)).settings.film).toEqual(custom)
-    // a v1 project saved before the film existed: default shots, stops of its pacing
+    // a v1 project saved before the film existed: default shots, no generated stops
     const { film: _, ...before } = doc.settings
     expect(parseProject(JSON.stringify({ ...doc, settings: before })).settings.film).toEqual(
       // its stages « À la suite » kept their fades: the nights were off (v3)
-      film({ autoMode: 'rythme', nights: { ...DEFAULT_FILM.nights, enabled: false }, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true, night: false } }),
+      film({ autoStops: false, nights: { ...DEFAULT_FILM.nights, enabled: false }, junctionDefault: { kind: 'fondu-noir', holdS: 1.5, card: true, night: false } }),
     )
   })
 

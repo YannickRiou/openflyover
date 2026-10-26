@@ -680,7 +680,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     ...stageCardsOf(clock, film, overlay),
     ...dayCardsOf(clock, film),
   ]
-  const withOwnStops = (f: Film) => materializeStops(f, { track, landmarks, pacing })
+  const withOwnStops = (f: Film) => materializeStops(f, { track, landmarks })
   const clockOf = (f: Film) => clockOfFilm(clockSource, input, f)
   /** one undo step; the texts and media attached to a stop follow it (as in `editFilm`) */
   const commit = (edited: Film) => {
@@ -1781,26 +1781,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               <div data-testid="timeline-lane" data-lane="param:speed" {...laneProps('param:speed', true)} role="group" aria-label={PARAM_LANE_LABELS.speed}>
-                {/* the slow-downs of « Ralentir aux temps forts » (Survol tab): shown, not edited here */}
-                {pacing.enabled &&
-                  pacing.slowFactor < 1 &&
-                  lengthM > 0 &&
-                  shownClock.highlights.map((h, i) => {
-                    const startS = shownClock.timeAtProgress(Math.max(0, h - pacing.windowM / lengthM))
-                    const endS = shownClock.timeAtProgress(Math.min(1, h + pacing.windowM / lengthM))
-                    return (
-                      <div
-                        key={`auto-slow-${i}`}
-                        data-testid="timeline-auto-slow"
-                        className={`${BLOCK} pointer-events-none border border-dotted border-glacier/60 bg-glacier/10 text-white/70`}
-                        style={{ left: xOf(startS), width: Math.max(0, (endS - startS) * pxPerS) }}
-                        role="img"
-                        aria-label={t('timeline.speed.auto', { label: formatSpeedFactor(pacing.slowFactor) })}
-                      >
-                        <span className={BLOCK_LABEL}>{t('timeline.speed.autoShort')}</span>
-                      </div>
-                    )
-                  })}
                 {shownClock.speeds.map((s) => {
                   const label = formatSpeedFactor(s.factor)
                   const speedKey = s.factor > 1 ? 'timeline.speed.fast' : s.factor < 1 ? 'timeline.speed.slow' : 'timeline.speed.normal'

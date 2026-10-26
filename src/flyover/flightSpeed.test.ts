@@ -240,7 +240,7 @@ describe('the two reports of 4.2.0 (16.5 km walked at 2 km/h, 24 h 33 in the fil
     expect(durationForKmh(lengthM, speedKmh(lengthM, durationS)!)).toBe(durationS)
   })
 
-  // the stop of the report, at 8 km, and a slow-down at 5 km
+  // the stop of the report, at 8 km, and a slow portion around 5 km
   const clockOf = (keepDuration: boolean, durationS = 25) => {
     const nights = flightNights(trackPathOf(outing), DEFAULT_NIGHTS, durationS)
     return {
@@ -251,9 +251,9 @@ describe('the two reports of 4.2.0 (16.5 km walked at 2 km/h, 24 h 33 in the fil
         stops: [{ id: 's', atM: 8000, durationS: 4.5, camera: 'fixe' }],
         nights,
         lengthM,
-        highlightsM: [5000],
+        speeds: [{ id: 'v', fromM: 4000, toM: 6000, factor: 0.5 }],
         durationS,
-        pacing: { ...DEFAULT_PACING, enabled: true, keepDuration },
+        pacing: { ...DEFAULT_PACING, keepDuration },
       }),
     }
   }
@@ -273,9 +273,9 @@ describe('the two reports of 4.2.0 (16.5 km walked at 2 km/h, 24 h 33 in the fil
       closing: { style: 'aucune', durationS: 6 },
       stops: [{ id: 's', atM: 8000, durationS: 4.5, camera: 'fixe' }],
       lengthM,
-      highlightsM: [5000],
+      speeds: [{ id: 'v', fromM: 4000, toM: 6000, factor: 0.5 }],
       durationS: 25,
-      pacing: { ...DEFAULT_PACING, enabled: true, keepDuration: true },
+      pacing: { ...DEFAULT_PACING, keepDuration: true },
     })
     expect(kept.flightS).toBeCloseTo(25, 6)
     expect(flightExtras({ flightS: kept.flightS, durationS: 25, keepDuration: true, stopsAddedS: kept.stops[0].addedS, nightsS: [] })).toBeUndefined()

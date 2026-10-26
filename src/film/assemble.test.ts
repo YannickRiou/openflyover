@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import type { Track } from '../core/types'
-import { DEFAULT_PACING } from '../flyover/pacing'
-import type { PacingSettings } from '../flyover/pacing'
 import { buildSequence, sequenceLandmarks } from '../flyover/sequence'
 import { buildTrack } from '../import/stats'
 import { recordLandmarks } from '../osm/landmarks'
@@ -20,7 +18,6 @@ import type { StopPlace } from './assemble'
 import { AUTO_STOP_S, DEFAULT_FILM, isValidFilm } from './model'
 import type { Film, FilmStop } from './model'
 
-const ON: PacingSettings = { ...DEFAULT_PACING, enabled: true }
 const M_PER_DEG_LAT = (6371008.8 * Math.PI) / 180
 
 /** 5 km heading north: flat, a 200 m climb from 1 km to 3 km, flat. */
@@ -55,7 +52,7 @@ describe('records of the outing', () => {
     ])
     // the other records stay labels
     expect(stopCandidates({ track, landmarks: [{ ...record, id: 'record:t:slowestKm', recordKind: 'slowestKm' }] })).toEqual([])
-    expect(autoStops({ track, landmarks: [record], pacing: DEFAULT_PACING }, 'temps-forts').map((s) => s.label)).toEqual(['Montée la plus raide · 18 % sur 400 m'])
+    expect(autoStops({ track, landmarks: [record] }).map((s) => s.label)).toEqual(['Montée la plus raide · 18 % sur 400 m'])
   })
 
   it('make at most four stops per stage of a film: the steepest climb, the highest point, the fastest descent, the best thermal', () => {
@@ -83,9 +80,9 @@ describe('records of the outing', () => {
 
   describe('alignRecordStops', () => {
     const own = (patch: Partial<Film['stops'][number]>): Film['stops'][number] => ({ id: 'stop-1', atM: 2000, durationS: 4, camera: 'orbite', label: 'À moi', source: { kind: 'manual' }, ...patch })
-    const written = (landmark: Landmark) => autoStops({ track, landmarks: [landmark], pacing: DEFAULT_PACING }, 'temps-forts')[0]
+    const written = (landmark: Landmark) => autoStops({ track, landmarks: [landmark] })[0]
     const film = (stops: Film['stops']): Film => ({ ...DEFAULT_FILM, autoStops: false, stops })
-    const input = (list: Landmark[]) => ({ track, landmarks: list, pacing: DEFAULT_PACING })
+    const input = (list: Landmark[]) => ({ track, landmarks: list })
 
     it('removes the stop of a record that is gone or moved, adds the stop of a record that has none, never touches the others', () => {
       const gone = { ...record, id: 'record:t:highest', recordKind: 'highest' as const, alongM: 4000 }
@@ -114,61 +111,16 @@ describe('records of the outing', () => {
       expect(alignRecordStops(aligned, input([record])).film).toBe(aligned)
       expect(alignRecordStops(DEFAULT_FILM, input([record])).film).toBe(DEFAULT_FILM)
     })
-
-    it('does not give records to a film saved before the timeline', () => {
-      const legacy = { ...film([]), autoMode: 'rythme' as const }
-      expect(alignRecordStops(legacy, input([record])).added).toEqual([])
-    })
-  })
-
-  it('do not add pauses to a film saved before the timeline', () => {
-    expect(autoStops({ track, landmarks: [record], pacing: ON }, 'rythme').map((s) => s.label?.slice(0, 8))).toEqual(['Montée 1'])
   })
 })
 
-describe('autoStops (rythme: films saved before the timeline)', () => {
-  it('none with the default pacing (off) or without pause', () => {
-    expect(autoStops({ track, landmarks, pacing: DEFAULT_PACING }, 'rythme')).toEqual([])
-    expect(autoStops({ track, landmarks, pacing: { ...ON, pauseS: 0 } }, 'rythme')).toEqual([])
-  })
-
-  it('one held stop per highlight: climb top and landmarks, with label, source and a stable id', () => {
-    const stops = autoStops({ track, landmarks, pacing: ON }, 'rythme')
-    expect(stops).toHaveLength(3)
-    const [pass, top, peak] = stops
-    expect(pass).toEqual({
-      id: autoStopId(1500),
-      atM: 1500,
-      durationS: ON.pauseS,
-      camera: 'film',
-      label: 'Col de Voza',
-      source: { kind: 'landmark', ref: 'node/1500' },
-    })
-    expect(top.atM).toBeGreaterThan(2800)
-    expect(top.atM).toBeLessThan(3100)
-    expect(top.source).toEqual({ kind: 'climb', ref: '0' })
-    expect(top.label).toMatch(/^Montée 1/)
-    expect(peak.label).toBe('Mont Lachat')
-    expect(autoStops({ track, landmarks, pacing: ON }, 'rythme')).toEqual(stops)
-  })
-
-  it('follow the highlight kinds and cluster close highlights like the pauses they replace', () => {
-    expect(autoStops({ track, landmarks, pacing: { ...ON, landmarks: false } }, 'rythme').map((s) => s.source?.kind)).toEqual(['climb'])
-    expect(autoStops({ track, landmarks, pacing: { ...ON, climbs: false } }, 'rythme').map((s) => s.label)).toEqual(['Col de Voza', 'Mont Lachat'])
-    // window of 1.5 km: the pass and the climb top (~1.45 km apart) form one cluster, paused once
-    expect(autoStops({ track, landmarks, pacing: { ...ON, windowM: 1500 } }, 'rythme')).toHaveLength(2)
-  })
-})
-
-describe('autoStops (temps-forts: new films)', () => {
-  it('a stop at every pass crossed and peak nearby whatever the pacing, orbiting, AUTO_STOP_S each; none at the climb tops', () => {
-    const stops = autoStops({ track, landmarks, pacing: DEFAULT_PACING }, 'temps-forts')
+describe('autoStops', () => {
+  it('a stop at every pass crossed and peak nearby, orbiting, AUTO_STOP_S each; none at the climb tops', () => {
+    const stops = autoStops({ track, landmarks })
     expect(stops.map((s) => s.label)).toEqual(['Col de Voza', 'Mont Lachat'])
     expect(stops.every((s) => s.camera === 'orbite' && s.durationS === AUTO_STOP_S)).toBe(true)
-    expect(autoStops({ track, landmarks, pacing: { ...DEFAULT_PACING, climbs: false } }, 'temps-forts')).toEqual(stops)
-    // the pacing's « Repères » and « Longueur du ralenti » no longer touch them; the grouping is the film's own
-    expect(autoStops({ track, landmarks, pacing: { ...DEFAULT_PACING, landmarks: false, windowM: 5000 } }, 'temps-forts')).toEqual(stops)
-    expect(autoStops({ track, landmarks, pacing: DEFAULT_PACING }, 'temps-forts', 5000)).toHaveLength(1)
+    // the grouping is the film's own
+    expect(autoStops({ track, landmarks }, 5000)).toHaveLength(1)
   })
 
   it('stopCandidates: the highlight landmarks by position, not clustered, never a climb top', () => {
@@ -177,7 +129,7 @@ describe('autoStops (temps-forts: new films)', () => {
       { kind: 'landmark', ref: 'node/1500' },
       { kind: 'landmark', ref: 'node/4500' },
     ])
-    expect(autoStops({ track, landmarks, pacing: DEFAULT_PACING }, 'temps-forts', 5000)).toHaveLength(1)
+    expect(autoStops({ track, landmarks }, 5000)).toHaveLength(1)
   })
 })
 
@@ -213,25 +165,17 @@ describe('stops of the rows of « Repères »', () => {
 
 describe('materializeStops on the default film', () => {
   it('default shots, generated stops written out, valid', () => {
-    const film = materializeStops(DEFAULT_FILM, { track, landmarks, pacing: ON })
+    const film = materializeStops(DEFAULT_FILM, { track, landmarks })
     expect(film.opening).toEqual(DEFAULT_FILM.opening)
     expect(film.closing).toEqual(DEFAULT_FILM.closing)
     expect(film.autoStops).toBe(false)
-    expect(film.stops).toEqual(autoStops({ track, landmarks, pacing: ON }, 'temps-forts'))
+    expect(film.stops).toEqual(autoStops({ track, landmarks }))
     expect(isValidFilm(film)).toBe(true)
   })
 
-  it('materializeStops: writes the generated stops of the film mode, keeps the rest; own stops untouched', () => {
-    const legacy: Film = { ...DEFAULT_FILM, autoMode: 'rythme', opening: { style: 'saut', durationS: 3 } }
-    const written = materializeStops(legacy, { track, landmarks, pacing: ON })
-    expect(written).toEqual({ ...legacy, autoStops: false, stops: autoStops({ track, landmarks, pacing: ON }, 'rythme') })
-    expect(materializeStops(written, { track, landmarks, pacing: DEFAULT_PACING })).toBe(written)
-  })
-
   it('filmStops: generated while autoStops is set, else the film own', () => {
-    expect(filmStops(DEFAULT_FILM, { track, landmarks, pacing: ON })).toHaveLength(2)
-    expect(filmStops({ ...DEFAULT_FILM, autoMode: 'rythme' }, { track, landmarks, pacing: DEFAULT_PACING })).toEqual([])
+    expect(filmStops(DEFAULT_FILM, { track, landmarks })).toHaveLength(2)
     const own = { ...DEFAULT_FILM, autoStops: false, stops: [{ id: 'stop-1', atM: 10, durationS: 1, camera: 'orbite' as const }] }
-    expect(filmStops(own, { track, landmarks, pacing: ON })).toBe(own.stops)
+    expect(filmStops(own, { track, landmarks })).toBe(own.stops)
   })
 })

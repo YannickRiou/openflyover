@@ -57,8 +57,6 @@ const messages: Messages['timeline'] = {
   'speed.fast': 'Tratto accelerato {label}, da {from} a {to}',
   'speed.slow': 'Tratto rallentato {label}, da {from} a {to}',
   'speed.normal': 'Tratto a velocità normale {label}, da {from} a {to}',
-  'speed.auto': 'Rallentamento automatico {label} (Sorvolo › Rallenta nei punti salienti)',
-  'speed.autoShort': 'auto',
   'hold.description': 'Sosta (camera: {camera}): {label}{auto}',
   'hold.auto': ' (automatica)',
   'card.description': 'Scheda: {label}',

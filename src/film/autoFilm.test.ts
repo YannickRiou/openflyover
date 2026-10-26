@@ -25,13 +25,13 @@ describe('autoFilmSettings', () => {
     const resume = autoFilmSettings(DEFAULT_SETTINGS, 'resume', single)
     expect(total(resume)).toBe(60)
     expect(platformPresetOf(resume.video)).toBe('youtube')
-    expect(resume.film).toMatchObject({ autoStops: true, autoMode: 'temps-forts' })
-    expect(resume.pacing.enabled).toBe(false)
+    expect(resume.film).toMatchObject({ autoStops: true })
+    expect(resume.pacing).toEqual({ ...DEFAULT_SETTINGS.pacing, keepDuration: true })
 
     const souvenir = autoFilmSettings(DEFAULT_SETTINGS, 'souvenir', single)
     expect(total(souvenir)).toBe(180)
     expect(findCameraPreset(souvenir.camera)?.id).toBe('cinema')
-    expect(souvenir.pacing).toMatchObject({ enabled: true, climbs: true, keepDuration: true })
+    expect(souvenir.pacing).toMatchObject({ keepDuration: true })
     expect(souvenir.overlay.counters.enabled).toBe(true)
   })
 
@@ -122,7 +122,7 @@ describe('autoFilmFacts', () => {
     expect(autoFilmFacts(AUTO_FILM_TEMPLATES.reel).map((f) => f.key)).toEqual(['titleEnd', 'noStops'])
     expect(autoFilmFacts(AUTO_FILM_TEMPLATES.reel)[0].values).toEqual({ figures: 3 })
     expect(autoFilmFacts(AUTO_FILM_TEMPLATES.resume).map((f) => f.key)).toEqual(['titleEnd', 'stops', 'countersCards'])
-    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.souvenir).map((f) => f.key)).toEqual(['titleEnd', 'stopsSlow', 'countersCards'])
+    expect(autoFilmFacts(AUTO_FILM_TEMPLATES.souvenir).map((f) => f.key)).toEqual(['titleEnd', 'stops', 'countersCards'])
   })
 
   it('has a string in the five languages for each fact', () => {

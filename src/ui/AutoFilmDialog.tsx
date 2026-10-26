@@ -42,8 +42,6 @@ const ACCENTS: Record<AutoFilmId, string> = { reel: 'var(--accent)', resume: 'va
 const FACT_ICONS: Record<AutoFilmFact, IconName> = {
   titleEnd: 'type',
   stops: 'map-pin',
-  stopsSlow: 'map-pin',
-  slow: 'gauge',
   noStops: 'route',
   cards: 'layers',
   counters: 'gauge',

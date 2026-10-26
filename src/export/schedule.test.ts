@@ -225,7 +225,6 @@ describe('buildFrameSchedule', () => {
       stops: [{ id: 'summit', atM: 4000, durationS: 4, camera: 'orbite' }],
       speeds: [{ id: 'fast', fromM: 6000, toM: 8000, factor: 2 }],
       lengthM: 10_000,
-      highlightsM: [],
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })

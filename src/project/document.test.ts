@@ -466,7 +466,7 @@ describe('parseProject errors', () => {
     ['not JSON', () => '{', /pas du JSON valide/],
     ['another JSON', () => ({ type: 'FeatureCollection' }), /pas un projet OpenFlyover/],
     ['an array', () => [], /pas un projet OpenFlyover/],
-    ['a future version', (d) => ({ ...d, version: 7 }), /format v7, plus récent .*\(v6\)/],
+    ['a future version', (d) => ({ ...d, version: 8 }), /format v8, plus récent .*\(v7\)/],
     ['a bad version', (d) => ({ ...d, version: '1' }), /version/],
     ['no tracks', (d) => ({ ...d, tracks: undefined }), /liste des traces/],
     ['a track without id', (d) => ({ ...d, tracks: [{ ...(d.tracks as object[])[0], id: '' }] }), /Trace n°1 : identifiant/],
@@ -572,6 +572,16 @@ describe('migrateProject', () => {
     // the high view of the nights « À la suite » becomes « Revoir l'étape finie »
     expect(v5({ dayCards: { view: true } }, { sequence: true }).junctionDefault).toEqual({ kind: 'fondu-noir', holdS: 1.5, card: true, night: true, recap: true })
     expect(v5({ dayCards: { view: true } })).not.toHaveProperty('junctionDefault')
+  })
+
+  it('v7: the films saved before the timeline lose the stops that were the pauses of « Ralentir aux temps forts »', () => {
+    const v6 = (film: Record<string, unknown>) => (migrateProject({ version: 6, settings: { film } }) as { settings: { film: Record<string, unknown> } }).settings.film
+    expect(v6({ autoMode: 'rythme', autoStops: true, stops: [{ id: 'x' }] })).toMatchObject({ autoStops: false, stops: [] })
+    expect(v6({ autoStops: true })).toMatchObject({ autoStops: false, stops: [] })
+    // the stops of the film's own stay, and a film of the timeline generates its stops as before
+    const own = { autoMode: 'rythme', autoStops: false, stops: [{ id: 'stop-1' }] }
+    expect(v6(own)).toEqual(own)
+    expect(v6({ autoMode: 'temps-forts', autoStops: true, stops: [] })).toMatchObject({ autoStops: true })
   })
 
   it('v4: a stage card keeps only what it changed, so it follows the common card', () => {

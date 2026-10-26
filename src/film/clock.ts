@@ -4,7 +4,7 @@
  * same frame for the same time.
  *
  *   [0, O)          opening: overview shot, progress 0
- *   [O, O + F)      flight: pacing slow-downs, speed portions and stops (`flightPacing`); 'stop' phase in a stop window
+ *   [O, O + F)      flight: speed portions and stops (`flightPacing`); 'stop' phase in a stop window
  *   [O + F, total]  closing: overview shot, progress 1
  *
  * The nights of a multi-day track are pauses of the flight too (`nights`, 'flight' phase), added to the film.
@@ -17,7 +17,7 @@ import type { BilanPlan } from '../flyover/bilan'
 import { flightNights, nightPauseS } from '../flyover/nights'
 import { localDate, trackDays } from './days'
 import type { FlightNight } from '../flyover/nights'
-import { flightPacing, pacingHighlights } from '../flyover/pacing'
+import { flightPacing } from '../flyover/pacing'
 import type { FlightStage, FlightStop, Pacing, PacingPosition, PacingSettings, SpeedCurve } from '../flyover/pacing'
 import { trackPathOf } from '../flyover/path'
 import type { Landmark } from '../osm/landmarks'
@@ -127,12 +127,10 @@ export interface FilmState {
 }
 
 /**
- * Same contract as a `Pacing` over the whole film (the panels read `totalTime` and `highlights`, the export
+ * Same contract as a `Pacing` over the whole film (the panels read `totalTime`, the export
  * `progressAtTime`), plus the phases.
  */
 export interface FilmClock {
-  /** pacing highlights as progress values, sorted */
-  highlights: readonly number[]
   opening: FilmShot
   closing: FilmShot
   openingS: number
@@ -198,8 +196,6 @@ export interface FilmClockInput {
   stages?: readonly FlightStage[]
   /** length of the first track (metres), 0 without track */
   lengthM: number
-  /** pacing highlights (metres along the track), slowed down when `pacing.enabled` */
-  highlightsM: readonly number[]
   /** `settings.flyoverDurationS` */
   durationS: number
   pacing: PacingSettings
@@ -252,7 +248,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
   const speedKeys = sortedParamKeys(input.paramKeys ?? [], 'speed')
   const curve: SpeedCurve | undefined =
     speedKeys.length > 0 ? { knotsM: speedKeys.map((k) => k.atM), at: (x) => valueAtKeys(speedKeys, 1, x, true) } : undefined
-  const flight: Pacing = flightPacing(input.lengthM, input.highlightsM, input.durationS, input.pacing, pauses, speeds, curve, input.stages)
+  const flight: Pacing = flightPacing(input.lengthM, input.durationS, input.pacing, pauses, speeds, curve, input.stages)
   const openingS = shotDurationS(input.opening)
   const closingS = shotDurationS(input.closing)
   const flightS = flight.totalTime()
@@ -347,7 +343,6 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
   }
 
   return {
-    highlights: flight.highlights,
     opening: input.opening,
     closing: input.closing,
     openingS,
@@ -413,13 +408,13 @@ export function dayInputsFor({ track, film, cutsM }: FilmClockFor): Pick<FilmClo
   return days.length < 2 ? {} : { days, utcOffsetMin: track.utcOffsetMin, dayView: film.dayCards.view }
 }
 
-/** Input of the clock of the film of `track`: highlights and generated stops from the pacing settings and the landmarks. */
+/** Input of the clock of the film of `track`: generated stops from the landmarks. */
 export function filmClockInputFor(source: FilmClockFor): FilmClockInput {
   const { track, film, durationS, pacing, landmarks = [], cutsM } = source
   return {
     opening: film.opening,
     closing: film.closing,
-    stops: track ? filmStops(film, { track, landmarks, pacing }) : [],
+    stops: track ? filmStops(film, { track, landmarks }) : [],
     speeds: track ? film.speeds : [],
     cameraKeys: track ? film.cameraKeys : [],
     paramKeys: track ? film.paramKeys : [],
@@ -428,7 +423,6 @@ export function filmClockInputFor(source: FilmClockFor): FilmClockInput {
     ...junctionInputsFor(source),
     ...dayInputsFor(source),
     lengthM: track?.stats.distanceM ?? 0,
-    highlightsM: track && pacing.enabled ? pacingHighlights(track, pacing, landmarks) : [],
     durationS,
     pacing,
   }

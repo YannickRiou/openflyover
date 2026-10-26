@@ -39,7 +39,6 @@ const clockOf = (opening: FilmShot, closing: FilmShot, stops: FilmStop[] = []) =
     closing,
     stops,
     lengthM: path.lengthM,
-    highlightsM: [],
     durationS: 60,
     pacing: { ...DEFAULT_PACING, keepDuration: false },
   })
@@ -261,7 +260,6 @@ describe('motionShares (the speed the lead room and the bank follow)', () => {
       stops: [],
       speeds: [{ id: 'v', fromM: 500, toM: 3500, factor: 0.5 }],
       lengthM: path.lengthM,
-      highlightsM: [],
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })

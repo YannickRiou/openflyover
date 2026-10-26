@@ -27,6 +27,7 @@ const messages: Messages['project'] = {
   'doc.tracksMissing': 'Ungültiges Projekt: Trackliste („tracks“) fehlt.',
   'doc.duplicateId': 'Ungültiges Projekt: Zwei Tracks haben die Kennung „{id}“.',
   'doc.settingsReplaced': 'Ungültige Einstellungen durch ihren Standardwert ersetzt: {list}.',
+  'doc.pacingRemoved': '„An Highlights verlangsamen“ gibt es nicht mehr: Fügen Sie Stopps oder Tempoabschnitte in der Zeitleiste hinzu.',
   'doc.speedInvalid': 'Ungültige Wiedergabegeschwindigkeit: Tempo ×1 verwendet.',
   'file.empty': 'Die Datei ist leer.',
   'file.notProject': 'Das ist kein OpenFlyover-Projekt (weder eine .opnflvr-Datei noch ein altes JSON-Projekt).',
