@@ -80,11 +80,15 @@ export const SHOT_DAYLIGHT_HOUR = 13
  * Sun date at film time `timeS`: `flightDate` (the sun of the flight) outside the opening and closing shots and with
  * « Heure du survol »; « Accéléré », the time lapse of `shotSunShiftMs`; « Plein jour », from `daylight` at the wide
  * view to `flightDate` where the shot meets the flight, with the same easing (no jump, the sun stands still at the
- * joint). Every shot style but 'aucune' (`shotSunOf`: the default of its style when the shot has no choice).
+ * joint). Every shot style but 'aucune' (`shotSunOf`: the default of its style when the shot has no choice). `daylight` is
+ * taken on the day of `flightDate` (whole days moved), so the closing shot of a multi-day track does not run back through its days.
  */
 export function shotSunDate(clock: Pick<FilmClock, 'stateAt' | 'opening' | 'closing'>, timeS: number, flightDate: Date, daylight: Date): Date {
   const away = shotSunAway(clock, timeS, 'jour')
-  if (away !== null) return new Date(flightDate.getTime() + away.weight * (daylight.getTime() - flightDate.getTime()))
+  if (away !== null) {
+    const days = Math.round((flightDate.getTime() - daylight.getTime()) / DAY_MS)
+    return new Date(flightDate.getTime() + away.weight * (daylight.getTime() + days * DAY_MS - flightDate.getTime()))
+  }
   return new Date(flightDate.getTime() + shotSunShiftMs(clock, timeS))
 }
 

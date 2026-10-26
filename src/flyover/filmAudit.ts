@@ -1,8 +1,8 @@
 /**
  * Audit of the film camera: the film is replayed frame by frame with `computeFilmView` and the moments a viewer would
- * notice are listed, with their time: a jolt of the camera or of its aim, the camera too close to the ground, the
- * marker out of the frame. Pure (no DOM, React or store): the terrain is the sampler it is given. `replayFilm` places
- * the camera, `auditPoses` reads the poses (testable on poses made by hand).
+ * notice are listed, with their time: a jolt of the camera or of its aim, a whip of the view direction, the camera too
+ * close to the ground, the marker out of the frame. Pure (no DOM, React or store): the terrain is the sampler it is
+ * given. `replayFilm` places the camera, `auditPoses` reads the poses (testable on poses made by hand).
  */
 import { PerspectiveCamera, Vector3 } from 'three'
 import type { LocalFrame } from '../core/types'
@@ -13,17 +13,19 @@ import { DEFAULT_FOCAL_MM, fovDegOf } from './cameraSettings'
 import { computeFilmView, lookAtView, type FilmViewOptions } from './filmCamera'
 import type { TrackPath } from './path'
 
-export const AUDIT_KINDS = ['jolt', 'low', 'marker-out'] as const
-/** jolt: the camera or its aim changes its motion abruptly; low: the camera is under its clearance above the terrain; marker-out: the marker leaves the frame */
+export const AUDIT_KINDS = ['jolt', 'whip', 'low', 'marker-out'] as const
+/** jolt: the camera or its aim changes its motion abruptly; whip: the view direction turns too fast; low: the camera is under its clearance above the terrain; marker-out: the marker leaves the frame */
 export type AuditKind = (typeof AUDIT_KINDS)[number]
 
-/** A stretch of the film (seconds) where `kind` happens, `worst` its largest measure (jolt: share of the distance, low: metres short, marker-out: NDC). */
+/** A stretch of the film (seconds) where `kind` happens, `worst` its largest measure (jolt: share of the distance, whip: degrees per second, low: metres short, marker-out: NDC). */
 export interface AuditIssue {
   kind: AuditKind
   startS: number
   endS: number
   worst: number
 }
+
+const DEG = Math.PI / 180
 
 /** Frames per second of the replay. */
 export const AUDIT_FPS = 30
@@ -34,6 +36,14 @@ export const AUDIT_FPS = 30
  * rapide ») reaches 0.025 to 0.06: it is the preset, and it shows when the film is read, not in the shots.
  */
 export const AUDIT_JOLT_LIMIT = 0.025
+/**
+ * A whip: the view direction turns faster than this (degrees per second), which the jolt under-reports (the positions
+ * barely move while the direction swings round). A calm flight stays under 90 (a 540 km raid in 60 s: 68); the lively
+ * presets (« Oiseau », « Drone rapide »), at ×4 or turning to a photo pin, reach 250 at most; camera keys whose heading
+ * was read on the track 6 km around, over hairpins flown at 10 km per second of film, swung the view round at 315 to
+ * 350 (110 once averaged over film time, `keyReferenceAt`, and 70 with the rest of the film).
+ */
+export const AUDIT_WHIP_LIMIT = 280
 /** The camera may be this much under its clearance above the actual terrain (metres) before it counts as low. */
 export const AUDIT_LOW_TOLERANCE_M = 1
 /** The marker is out of the frame beyond this normalised device coordinate (the frame edge is 1). */
@@ -93,6 +103,7 @@ export function auditPoses(
   const atJunction = (i: number) => [i - 2, i - 1, i + 1, i + 2].some((j) => poses[j] !== undefined && poses[j].state !== poses[i].state)
   const camera = new PerspectiveCamera(fovDegOf(settings?.focalMm ?? DEFAULT_FOCAL_MM), aspect)
   const scratch = new Vector3()
+  const sightOf = (p: AuditPose) => new Vector3().subVectors(p.target, p.position).normalize()
   const ndc = new Vector3()
   for (let i = 0; i < poses.length; i++) {
     const t = fromS + i / fps
@@ -106,6 +117,9 @@ export function auditPoses(
         const jolt = scratch.copy(after[k]).add(before[k]).addScaledVector(pose[k], -2).length() / distance
         if (jolt > AUDIT_JOLT_LIMIT) add('jolt', t, jolt)
       }
+      // turn rate of the view direction over the two frames around this one
+      const whip = (sightOf(before).angleTo(sightOf(after)) / DEG) * (fps / 2)
+      if (whip > AUDIT_WHIP_LIMIT) add('whip', t, whip)
     }
     if (sample) {
       const at = frame.toLonLat(pose.position)

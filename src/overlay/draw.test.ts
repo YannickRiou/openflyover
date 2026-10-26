@@ -1221,6 +1221,19 @@ describe('styles with a structure', () => {
       expect(sources.filter(inBottomBar)).toEqual([])
     })
 
+    it.each([SIZE, { width: 1080, height: 1920 }, { width: 1080, height: 1080 }])('keeps the sources at the end above the profile (%o)', (size) => {
+      const credits = ['Relief : © Mapterhorn, données ouvertes, contributeurs et licences associées', 'Imagerie : © Esri, Maxar, Earthstar Geographics et la communauté des utilisateurs SIG']
+      const result = fakeContext()
+      // no closing card (the default): the profile stays on screen under the sources
+      const settings = cinema({ end: { ...TITLED.end, enabled: false } })
+      drawOverlay(result.ctx, overlayFrameAt(track, 1), settings, size, {}, { credits })
+      const u = Math.min(size.width, size.height) / 100
+      const profileTop = size.height - 0.11 * size.height - 0.8 * u - Math.max(2 * u, settings.profile.height * size.height)
+      const sources = result.texts.filter((t) => t.text === 'SOURCES' || t.text.includes('©'))
+      expect(sources.length).toBeGreaterThan(1)
+      for (const t of sources) expect(t.y).toBeLessThan(profileTop)
+    })
+
     it('puts the counters on one line in the middle of the bottom bar, widely spaced and separated by dots, not in the corners', () => {
       const { texts } = render(cinema(), 0.5)
       const line = texts.filter(inBottomBar)

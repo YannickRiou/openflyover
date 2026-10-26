@@ -5,6 +5,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **The closing shot in « Plein jour » no longer flickers on a track of several days**: it aimed at the daylight of the first day, so during the zoom out the sun ran back through every day of the outing (a week-long raid showed seven nights in a few seconds). It now goes to the daylight of the arrival day, as the guide says. Single-day films do not change.
+- **The sources at the end of the film no longer cover the profile in « Cinéma »**: without a closing card, the « Sources » block sat on the profile strip above the bottom bar, in every format and most of all in vertical (9:16), where the sentences take more lines. It now stands just above the profile. The other styles already kept clear of it.
+- **Between two camera keys, the view no longer whips round on a track flown fast**: on a long raid flown in a minute, over hairpins, the camera turned at more than 300° a second around two close camera keys, like a spin; it now turns as calmly as the rest of the film. Each key keeps exactly the image it was taken with (nothing to redo), only the motion between and around keys changes; films without keys, and slower films, are untouched.
 - **The nights show on the timeline, and can be removed**: on a track recorded over several days, each night pause is now a green block on the « Arrêts » lane, next to the stops. Click it to select it, press Delete (or « Supprimer cette nuit ») to take that night out of the film (one undo step); « Rétablir les nuits » in « Lumière › Jours et nuits » brings the removed ones back.
 
 ## 4.5.0 (October 2026)
