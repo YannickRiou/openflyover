@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v46.nights.title': 'Nächte auf der Zeitleiste',
+  'v46.nights.text': 'Bei einem Track über mehrere Tage ist jede Nacht jetzt ein grüner Block auf der Spur „Stopps“ der Zeitleiste. Ein Klick zeigt sie, Entf nimmt sie aus dem Film (rückgängig möglich). „Nächte wiederherstellen“ (Licht › Tage und Nächte) holt sie alle zurück.',
   'v45.camera.title': 'Eine Kamera, die angenehmer anzusehen ist',
   'v45.camera.text': 'Zwei Einstellungen unter Überflug › Kamera. „Raum voraus“ setzt den Marker etwas hinter die Bildmitte und lässt Platz auf der Seite, in die er fährt. „Neigung in Kurven“ neigt den Horizont in Kurven sanft, wie eine Drohne, die sich in die Kurve legt. Beide sind standardmäßig leicht eingeschaltet: Ihre Filme wirken ruhiger.',
   'v45.marker.title': 'Ein lebendigerer Marker',

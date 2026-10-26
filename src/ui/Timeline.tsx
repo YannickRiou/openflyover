@@ -20,6 +20,7 @@ import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readA
 import { beatTicksPath } from '../film/beats'
 import { CARD_LABELS, TITLE_CARD_ID, cardShown, cardWindow, dragCard, isCardItem, shownCards } from '../film/cards'
 import { dayCardId, dayCardIndexOf, dayCardWindow, isDayCardItem } from '../film/days'
+import { isNightItem, nightItemId } from '../flyover/nights'
 import type { CardId } from '../film/cards'
 import { buildFilmClock, filmClockFor, filmClockInputFor, junctionInputsFor } from '../film/clock'
 import type { FilmClock, FilmClockFor, FilmClockInput } from '../film/clock'
@@ -139,6 +140,8 @@ const BLOCK_KINDS = {
   stop: 'cursor-grab bg-accent-light text-ink',
   /** generated stops: dashed until they are edited */
   stopAuto: 'cursor-grab border border-dashed border-ink bg-accent-light text-ink',
+  /** nights: the moss of a night junction; no grip (the track places them, « Jours et nuits » sets how long) */
+  night: 'cursor-pointer gap-1 border border-glacier bg-moss/60 text-white',
   /** speed portions: glacier frame, full for a faster portion, dashed for a slower one */
   speed: 'cursor-grab justify-center border border-glacier bg-glacier/20 text-white',
   slow: 'cursor-grab justify-center border border-dashed border-glacier bg-glacier/20 text-white',
@@ -499,7 +502,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // the selected block went away (undo, other track, generated stops moved): nothing selected
   const cardGone = isCardItem(selected) && !cardShown(overlay, selected)
   useEffect(() => {
-    if (selected !== null && (!track || (isCardItem(selected) ? cardGone : !hasFilmItem(film, clock.stops, selected, stageIds)))) setSelected(null)
+    if (selected !== null && (!track || (isCardItem(selected) ? cardGone : !hasFilmItem(film, clock.stops, selected, stageIds, clock.nights)))) setSelected(null)
   }, [selected, track, film, clock, cardGone, stageIds, setSelected])
   // a key of the group went away (undo, deleted elsewhere): the others stay selected
   useEffect(() => {
@@ -679,6 +682,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     ...shownCards(overlay).map((card) => ({ id: card, ...cardWindow(overlay, card, clock), label: CARD_LABELS[card] })),
     ...stageCardsOf(clock, film, overlay),
     ...dayCardsOf(clock, film),
+    ...clock.nights.map((n, k) => ({ id: nightItemId(n), startS: n.startS, endS: n.endS, label: t('timeline.night.label', { n: k + 1 }) })),
   ]
   const withOwnStops = (f: Film) => materializeStops(f, { track, landmarks, pacing })
   const clockOf = (f: Film) => clockOfFilm(clockSource, input, f)
@@ -915,6 +919,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     } else if (isDayCardItem(item)) {
       const day = clock.days[dayCardIndexOf(item)]
       if (day) seek(day.cardS)
+    } else if (isNightItem(item)) {
+      const night = clock.nights.find((n) => nightItemId(n) === item)
+      if (night) seek(night.startS)
     }
   }
   /** centred: a press that becomes a tap on release (no capture: a slide scrolls the lanes, the browser cancels it) */
@@ -1857,6 +1864,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               )}
 
               <div data-testid="timeline-lane" {...laneProps('holds')} role="group" aria-label={t('timeline.lane.holds')}>
+                {/* the nights of a multi-day track: no grip, the track places them and « Jours et nuits » sets how long */}
+                {shownClock.nights.map((n, k) => {
+                  const label = t('timeline.night.label', { n: k + 1 })
+                  return block(nightItemId(n), n.startS, n.endS, label, t('timeline.night.description', { label }), BLOCK_KINDS.night, [], undefined, 'moon')
+                })}
                 {shownClock.stops.map((s) => {
                   const label = s.label || t('film.snap.hold')
                   return block(

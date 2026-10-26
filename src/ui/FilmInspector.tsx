@@ -5,6 +5,7 @@ import { formatDate } from '../i18n/format'
 import { DUCK_DB, fitFilmToMusic, musicLengthS, snapFilmToMusic } from '../film/audio'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID, cardShown, cardWindow, isCardItem, withCardTimes } from '../film/cards'
 import { dayCardIndexOf, isDayCardItem } from '../film/days'
+import { isNightItem, nightItemId, nightPauseS } from '../flyover/nights'
 import { DEFAULT_JUNCTION, applyToAllJunctions, hasOwnCard, hasOwnTransition, withCommonCard, isJunctionItem, isStageCardItem, isStageItem, junctionCardOf, junctionOf, junctionTrackOf, resetJunction, stageCardAfterOf, stageCardId, stageCardWindow, stageFlightS, stageTrackOf, withJunction, withJunctionCard, withStageDuration } from '../film/junctions'
 import { useMediaStore } from '../film/media'
 import {
@@ -1182,6 +1183,11 @@ export function FilmInspector() {
           <p className={HINT}>{t('inspector.dayCard.hint')}</p>
         </>
       )
+    } else if (isNightItem(item) && clock.nights.some((n) => nightItemId(n) === item)) {
+      // the pause comes from the track and its length from Lumière › Jours et nuits: only removing it is set here
+      title = t('inspector.night.title', { n: clock.nights.findIndex((n) => nightItemId(n) === item) + 1 })
+      removeLabel = t('inspector.night.remove')
+      body = <p className={HINT}>{t('inspector.night.hint', { pause: formatSecondsShort(nightPauseS(film.nights)) })}</p>
     } else if (isStageCardItem(item) && stageIds && stageIds.length > 1) {
       const after = stageCardAfterOf(item)
       const k = after === null ? 0 : stageIds.indexOf(after) + 1

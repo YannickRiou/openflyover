@@ -22,6 +22,8 @@ const messages: Messages['light'] = {
   'nights.sequenceHint': 'In «In sequenza», ogni transizione sceglie se passare la notte o no (Traccia › Più tracce, o il suo blocco nella timeline); «Mostra le notti» vale solo per le notti all’interno di una tappa. Le durate qui sotto valgono per tutte le notti.',
   'nights.none': 'Nessuna notte di riposo su questa traccia.',
   'nights.hint': { one: '{count} notte: il film si ferma {pause} ogni volta.', other: '{count} notti: il film si ferma {pause} ogni volta.' },
+  'nights.removed': { one: '{count} notte rimossa dalla timeline.', other: '{count} notti rimosse dalla timeline.' },
+  'nights.restore': 'Ripristina le notti',
   'nights.instant': 'La notte passa in un istante tra due giorni.',
   'nights.show': 'Mostra le notti',
   'days.legend': 'Schede del giorno',

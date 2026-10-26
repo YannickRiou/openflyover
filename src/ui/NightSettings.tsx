@@ -11,7 +11,7 @@ import { isDayCard, trackDays, withoutDayCards } from '../film/days'
 import { useT } from '../i18n'
 import { DAY_CARD_DURATION_RANGE, DAY_CARD_FIELD_LABELS, DAY_CARD_FIELDS, DEFAULT_DAY_CARDS, NIGHT_PARTS, NIGHT_PART_RANGE } from '../film/model'
 import type { FilmDayCards, FilmNights } from '../film/model'
-import { nightPauseS } from '../flyover/nights'
+import { nightKey, nightPauseS, trackNights } from '../flyover/nights'
 import { trackPathOf } from '../flyover/path'
 import { mergeOverrides } from '../overlay/settings'
 import { editFilm, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
@@ -20,7 +20,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatSecondsShort } from './format'
 import { SizeField, StyleOverrides } from './OverlayPanel'
 import { PanelSection, RangeField, SettingRow } from './PanelSection'
-import { Chip, Switch, TextField } from './primitives'
+import { Button, Chip, Switch, TextField } from './primitives'
 
 export function NightSettings() {
   const tr = useT()
@@ -38,9 +38,14 @@ export function NightSettings() {
     editFilm((f) => ({ film: { ...(patch.enabled ? withoutDayCards(f) : f), dayCards: { ...(f.dayCards ?? DEFAULT_DAY_CARDS), ...patch } } }), { step })
   // « À la suite », the nights passed by « Nuit » junctions count too
   const shown = clock.nights.length + clock.junctions.filter((j) => j.kind === 'nuit').length
+  // the nights removed on the timeline (a key whose night is gone with a new track does not count)
+  const keys = useMemo(() => (track ? trackNights(trackPathOf(track)).map(nightKey) : []), [track])
+  const removed = (nights.skipped ?? []).filter((k) => keys.includes(k)).length
   const nightsHint =
     shown === 0
-      ? tr('light.nights.none')
+      ? removed > 0
+        ? ''
+        : tr('light.nights.none')
       : tr('light.nights.hint', { count: shown, pause: formatSecondsShort(nightPauseS(nights)) })
 
   return (
@@ -56,6 +61,12 @@ export function NightSettings() {
       <p id={`${id}-nights-hint`} className="type-hint">
         {nights.enabled ? nightsHint : tr('light.nights.instant')}
       </p>
+      {nights.enabled && removed > 0 && (
+        <>
+          <p className="type-hint">{tr('light.nights.removed', { count: removed })}</p>
+          <Button onClick={() => setNights({ skipped: undefined })}>{tr('light.nights.restore')}</Button>
+        </>
+      )}
       {sequence && <p className="type-hint">{tr('light.nights.sequenceHint')}</p>}
       {/* « À la suite », the « Nuit » transitions use these seconds whether the nights inside the stages show or not */}
       {(nights.enabled || sequence) &&

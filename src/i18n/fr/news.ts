@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v46.nights.title': 'Les nuits sur la timeline',
+  'v46.nights.text': 'Sur une trace de plusieurs jours, chaque nuit est maintenant un bloc vert sur la piste « Arrêts » de la timeline. Cliquez dessus pour la voir, Suppr pour la retirer du film (annulable). « Rétablir les nuits » (Lumière › Jours et nuits) les remet toutes.',
   'v45.camera.title': 'Une caméra plus agréable à regarder',
   'v45.camera.text': 'Deux réglages dans Survol › Caméra. « Espace devant » place le marqueur un peu en arrière du centre de l’image, pour laisser de la place du côté où il va. « Inclinaison dans les virages » incline doucement l’horizon dans les virages, comme un drone qui penche. Par défaut, un peu des deux : vos films en deviennent plus fluides.',
   'v45.marker.title': 'Un marqueur plus vivant',

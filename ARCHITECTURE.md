@@ -1059,7 +1059,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   instantly, except a night. **Nights** (`src/flyover/nights.ts`, `film.nights`): `trackNights` finds each night whose
   sunset and sunrise (`sunTimes` where the track is at noon that day) are both recorded, placed between the two timed
   points sharing most of it; `flightNights` keeps those the flight would cross, at base speed, faster than dusk + night +
-  dawn (a night spent riding is shown by the flight). Each is a pause of the flight (`FlightStop.extra`: added to the film
+  dawn (a night spent riding is shown by the flight) and not those in `film.nights.skipped` (optional list of `nightKey`s, the UTC date of the sunset; absent = none; every consumer, the junction plan included, goes through `flightNights`). On the timeline each night of `clock.nights` is a block of « Arrêts » (`nightItemId` = `night-<key>`, no grip): `removeFilmItem` appends its key to `skipped`, `hasFilmItem` takes the night from `clock.nights`, and « Rétablir les nuits » in `NightSettings` clears the list. Each is a pause of the flight (`FlightStop.extra`: added to the film
   whatever « Garder la durée », never shortened; `clock.nights`, phase 'flight', marker held). During it `nightSunDate` runs
   the sun date from the flight's sun to sunset + 1 h (dusk), to sunrise − 1 h (night), then to the flight's sun (dawn),
   linearly over parts proportional to their seconds: continuous, never backwards, a pure function of the film time. The

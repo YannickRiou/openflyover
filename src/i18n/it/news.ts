@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v46.nights.title': 'Le notti sulla timeline',
+  'v46.nights.text': 'Su una traccia di più giorni, ogni notte è ora un blocco verde sulla traccia «Soste» della timeline. Clicca per vederla, Canc per toglierla dal film (si può annullare). «Ripristina le notti» (Luce › Giorni e notti) le riporta tutte.',
   'v45.camera.title': 'Una camera più piacevole da guardare',
   'v45.camera.text': 'Due impostazioni in Sorvolo › Camera. «Spazio davanti» mette il marcatore un po’ dietro il centro dell’immagine, lasciando spazio dal lato verso cui avanza. «Inclinazione nelle curve» inclina dolcemente l’orizzonte nelle curve, come un drone che si piega. Per impostazione predefinita, un po’ di entrambe: i film risultano più fluidi.',
   'v45.marker.title': 'Un marcatore più vivo',
