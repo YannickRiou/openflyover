@@ -60,7 +60,7 @@ const messages: Messages['settings'] = {
   'preferences.preview.auto': 'Auto',
   'preferences.preview.light': 'Light',
   'preferences.preview.full': 'Full',
-  'preferences.preview.hint': 'Light: fewer pixels, coarser clouds, softer shadows and fewer distant trees in the preview. Auto picks it when the preview runs below 30 frames per second during playback. On a phone or tablet, playback is also held to 60 frames per second, 30 when light; Auto goes lighter still if the preview stays below 24, and back up once it runs comfortably. Exported films do not change.',
+  'preferences.preview.hint': 'Light: fewer pixels, coarser clouds, softer shadows and fewer distant trees in the preview. Auto picks it when the preview runs below 30 frames per second during playback. On a phone or tablet, playback is also held to 60 frames per second, 30 when light; Auto also redraws the shadows less often during playback if the preview stays below 24, and goes back once it runs comfortably. Exported films do not change.',
   'preferences.preview.measuredSlow': 'Measured on this device: the preview is light for this session.',
   'preferences.timeline.snap': 'The magnet snaps to',
   'preferences.timeline.snapHint': 'Alt inverts the magnet while dragging.',

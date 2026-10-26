@@ -180,7 +180,7 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
 
   return (
     <div className={className} style={style ? { ...wrapperStyle, ...style } : wrapperStyle}>
-      <Canvas gl={gl} camera={CAMERA} dpr={[Math.min(1, pixelRatio), pixelRatio]} frameloop="demand" flat shadows="percentage" style={canvasStyle} onCreated={watchContextLoss}>
+      <Canvas gl={gl} camera={CAMERA} dpr={[1, pixelRatio]} frameloop="demand" flat shadows="percentage" style={canvasStyle} onCreated={watchContextLoss}>
         {!atmosphere && (
           <>
             <hemisphereLight color={HEMISPHERE_SKY} groundColor={HEMISPHERE_GROUND} intensity={HEMISPHERE_INTENSITY} />

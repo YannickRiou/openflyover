@@ -3,7 +3,6 @@ import { DESKTOP_BUDGET } from '../core/deviceBudget'
 import {
   LIGHT_PREVIEW,
   RECOVER_WINDOWS,
-  RUNG2_MOVING_PIXEL_RATIO,
   SLOW_PREVIEW_WINDOW_MS,
   createFrameCap,
   createRungGovernor,
@@ -25,7 +24,7 @@ function play(governor: Governor, stepMs: number, durationMs: number, from = 0, 
 
 describe('previewBudget', () => {
   it('a computer keeps its preview, a light one draws a phone’s pixels and clouds, a 2048² shadow map and half the trees', () => {
-    expect(previewBudget(DESKTOP_BUDGET, 0)).toEqual({
+    expect(previewBudget(DESKTOP_BUDGET, false)).toEqual({
       maxPixelRatio: 2,
       movingPixelRatio: 2,
       cloudResolutionScale: 1,
@@ -33,27 +32,19 @@ describe('previewBudget', () => {
       shadowMapSize: 4096,
       maxTrees: 250_000,
     })
-    expect(previewBudget(DESKTOP_BUDGET, 1)).toEqual(LIGHT_PREVIEW)
+    expect(previewBudget(DESKTOP_BUDGET, true)).toEqual(LIGHT_PREVIEW)
     // a device already lower keeps its own
     const lower = { maxPixelRatio: 1.5, movingPixelRatio: 1, cloudResolutionScale: 0.25, cloudSettleFrames: 8, shadowMapSize: 1024, maxTrees: 30_000 }
-    expect(previewBudget(lower, 1)).toEqual(lower)
+    expect(previewBudget(lower, true)).toEqual(lower)
     expect(LIGHT_PREVIEW.shadowMapSize).toBe(2048)
     expect(LIGHT_PREVIEW.maxTrees).toBe(DESKTOP_BUDGET.maxTrees / 2)
   })
 
   it('an export, a poster or a capture takes the device’s shadow map and trees, whatever the preview', () => {
-    const light = previewBudget(DESKTOP_BUDGET, 1)
+    const light = previewBudget(DESKTOP_BUDGET, true)
     expect(sceneBudget(light, false, DESKTOP_BUDGET)).toEqual({ shadowMapSize: 2048, maxTrees: 125_000 })
     expect(sceneBudget(light, true, DESKTOP_BUDGET)).toEqual({ shadowMapSize: 4096, maxTrees: 250_000 })
-    expect(sceneBudget(previewBudget(DESKTOP_BUDGET, 0), false, DESKTOP_BUDGET)).toEqual({ shadowMapSize: 4096, maxTrees: 250_000 })
-  })
-
-  it('rung 2 only lowers the pixel ratio while moving (0.75); the ratio at rest and the rest of the budget are rung 1’s', () => {
-    expect(previewBudget(DESKTOP_BUDGET, 2)).toEqual({ ...LIGHT_PREVIEW, movingPixelRatio: RUNG2_MOVING_PIXEL_RATIO })
-    expect(RUNG2_MOVING_PIXEL_RATIO).toBeLessThan(1)
-    // a device already lower keeps its own
-    const lower = { maxPixelRatio: 1.5, movingPixelRatio: 0.5, cloudResolutionScale: 0.25, cloudSettleFrames: 8, shadowMapSize: 1024, maxTrees: 30_000 }
-    expect(previewBudget(lower, 2)).toEqual(lower)
+    expect(sceneBudget(previewBudget(DESKTOP_BUDGET, false), false, DESKTOP_BUDGET)).toEqual({ shadowMapSize: 4096, maxTrees: 250_000 })
   })
 
   it('« Auto » follows the measured rung, « Légère » is rung 1 and « Complète » rung 0 whatever the measure', () => {

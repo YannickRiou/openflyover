@@ -2,7 +2,7 @@
  * « Qualité de l'aperçu » (Réglages): a light preview draws fewer pixels, a coarser cloud pass, a smaller shadow map and
  * fewer trees. « Auto » judges the device by what it does, not by its name: the frame rate measured while the film
  * plays (`createRungGovernor`) takes the preview down a rung when it is too slow (1: light; 2, still below 24 frames per
- * second: fewer pixels while playing and the shadow map refreshed every second frame) and back up one rung when it
+ * second: the light preview, and while the film plays the shadow map refreshed every second frame) and back up one rung when it
  * stays comfortable for a few seconds; « Légère » is rung 1 and « Complète » rung 0. A phone or tablet also draws at most
  * 60 frames per second while the film plays, 30 once light (`frameIntervalMs`). Only the preview
  * changes: the export (video, poster, « Capturer cette image ») sets its own pixel ratio (1) and cloud pass and takes the
@@ -37,8 +37,6 @@ export const LIGHT_PREVIEW: PreviewBudget = {
   maxTrees: 125_000,
 }
 
-/** Pixel ratio while moving at rung 2 (below 1: the canvas is drawn smaller than its CSS size). */
-export const RUNG2_MOVING_PIXEL_RATIO = 0.75
 /** Below this frame rate while the film plays, « Auto » lightens the preview. */
 export const SLOW_PREVIEW_FPS = 30
 /** Below this one at rung 1, « Auto » goes to rung 2. */
@@ -55,13 +53,13 @@ export const SLOW_PREVIEW_WINDOW_MS = 2000
 /** A longer gap between two frames is a pause (hidden tab, stop): the count starts again. */
 const PAUSE_GAP_MS = 1000
 
-/** The preview limits of `budget`, lowered to `LIGHT_PREVIEW` from rung 1, and to a smaller pixel ratio while moving at rung 2. */
-export function previewBudget(budget: PreviewBudget, rung: PreviewRung): PreviewBudget {
+/** The preview limits of `budget`, lowered to `LIGHT_PREVIEW` when `light` (rung 1 and 2). */
+export function previewBudget(budget: PreviewBudget, light: boolean): PreviewBudget {
   const { maxPixelRatio, movingPixelRatio, cloudResolutionScale, cloudSettleFrames, shadowMapSize, maxTrees } = budget
-  if (rung === 0) return { maxPixelRatio, movingPixelRatio, cloudResolutionScale, cloudSettleFrames, shadowMapSize, maxTrees }
+  if (!light) return { maxPixelRatio, movingPixelRatio, cloudResolutionScale, cloudSettleFrames, shadowMapSize, maxTrees }
   return {
     maxPixelRatio: Math.min(maxPixelRatio, LIGHT_PREVIEW.maxPixelRatio),
-    movingPixelRatio: Math.min(movingPixelRatio, rung === 2 ? RUNG2_MOVING_PIXEL_RATIO : LIGHT_PREVIEW.movingPixelRatio),
+    movingPixelRatio: Math.min(movingPixelRatio, LIGHT_PREVIEW.movingPixelRatio),
     cloudResolutionScale: Math.min(cloudResolutionScale, LIGHT_PREVIEW.cloudResolutionScale),
     cloudSettleFrames: Math.min(cloudSettleFrames, LIGHT_PREVIEW.cloudSettleFrames),
     shadowMapSize: Math.min(shadowMapSize, LIGHT_PREVIEW.shadowMapSize),
@@ -187,12 +185,12 @@ export function currentPreviewRung(): PreviewRung {
 
 /** Preview limits now (the diagnostic report). */
 export function currentPreviewBudget(): PreviewBudget {
-  return previewBudget(deviceBudget(), currentPreviewRung())
+  return previewBudget(deviceBudget(), currentPreviewRung() !== 0)
 }
 
 /** Preview limits, again when the setting or the measure changes. */
 export function usePreviewBudget(): PreviewBudget {
   const quality = usePreferences((s) => s.previewQuality)
   const measured = usePreviewMeasure((s) => s.rung)
-  return useMemo(() => previewBudget(deviceBudget(), previewRung(quality, measured)), [quality, measured])
+  return useMemo(() => previewBudget(deviceBudget(), previewRung(quality, measured) !== 0), [quality, measured])
 }

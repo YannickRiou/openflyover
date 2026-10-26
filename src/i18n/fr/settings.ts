@@ -58,7 +58,7 @@ export default {
   'preferences.preview.auto': 'Auto',
   'preferences.preview.light': 'Légère',
   'preferences.preview.full': 'Complète',
-  'preferences.preview.hint': 'Légère : moins de pixels, des nuages plus grossiers, des ombres moins fines et moins d’arbres au loin dans l’aperçu. Auto la choisit quand l’aperçu tient moins de 30 images par seconde pendant la lecture. Sur téléphone ou tablette, la lecture est aussi limitée à 60 images par seconde, 30 en mode léger ; Auto va encore plus loin si l’aperçu reste sous 24, et revient en arrière dès qu’il tourne à l’aise. Les films exportés ne changent pas.',
+  'preferences.preview.hint': 'Légère : moins de pixels, des nuages plus grossiers, des ombres moins fines et moins d’arbres au loin dans l’aperçu. Auto la choisit quand l’aperçu tient moins de 30 images par seconde pendant la lecture. Sur téléphone ou tablette, la lecture est aussi limitée à 60 images par seconde, 30 en mode léger ; Auto redessine aussi les ombres moins souvent pendant la lecture si l’aperçu reste sous 24, et revient en arrière dès qu’il tourne à l’aise. Les films exportés ne changent pas.',
   'preferences.preview.measuredSlow': 'Mesuré sur cet appareil : l’aperçu est allégé pour cette session.',
   'preferences.timeline.snap': 'L’aimantation s’accroche à',
   'preferences.timeline.snapHint': 'Alt inverse l’aimantation pendant un glissement.',

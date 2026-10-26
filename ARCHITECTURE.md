@@ -180,8 +180,8 @@ cap can only follow in steps; a 60, 90 or 120 Hz display gives 60 in the tests),
 it sleeps again, and playing resumes, also with a drag while playing. « Auto » went 0, 1, 2 in about 4 s on that slow
 renderer (5-12 frames a second), the shadow map drawn once for every two frames at rung 2. Not measured: a real phone.
 Changing the pixel ratio while a software renderer is behind with its frames (unthrottled headless) blocks `setSize`
-for seconds (the same for « Complète » to « Légère » in the middle of a film, before this change); with the display's
-vsync, none.
+for seconds (the same for « Complète » to « Légère » in the middle of a film, before this change; a rung 2 that also
+lowered the pixel ratio hit it, so it does not); with the display's vsync, none.
 The export keeps `frameloop 'never'` and draws its own frames. Measured with software rendering: no more frame requests
 once the margin has elapsed (~30 s there, one frame per second; ~0.5 s on a real graphics card). The engine's delays
 (retry of a failed tile, unloading) are times, checked at the next frame.
@@ -4142,13 +4142,14 @@ and short side < 600 CSS px; tablet = touch screen, larger; computer = everythin
 « Qualité de l'aperçu » (Réglages, `scene/previewQuality.ts`, a device preference: `Preferences.previewQuality`) lowers
 the preview of any device, by what it does and not by its hardware: « Auto » (default) measures the frame times while
 the film plays (`createRungGovernor`: windows of 2 s of playback, a gap over 1 s restarts the count) and goes down a
-rung when the median is under 30 frames per second (rung 1, light) or, at rung 1, under 24 (rung 2: the pixel ratio
-while playing or touching falls to 0.75, and the shadow map is drawn every second frame while the film plays,
-`shadowRefresh`: `autoUpdate` false and `needsUpdate` on alternate frames, the map and its matrix staying in step);
+rung when the median is under 30 frames per second (rung 1, light) or, at rung 1, under 24 (rung 2: the light budget
+and, while the film plays, the shadow map drawn every second frame, `shadowRefresh`: `autoUpdate` false and
+`needsUpdate` on alternate frames, the map and its matrix staying in step; the pixel ratio is not lowered again, a
+`setSize` in the middle of a film being the costliest thing a struggling device can be asked for);
 it goes up one rung when the mean has been at 50 frames per second (90 % of the cap, on a phone or tablet whose
 playback is capped) for 3 windows in a row, the wait doubling at each step back so a device that cannot hold the heavier
-rung does not flip-flop. « Légère » is rung 1 for good, « Complète » rung 0. Rung 2 is only reached while playing:
-the pixel ratio at rest and everything else are rung 1's.
+rung does not flip-flop. « Légère » is rung 1 for good, « Complète » rung 0. Rung 2 only differs from rung 1 while the
+film plays, and only by the shadow refresh.
 Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
 0.5, 16 still frames, shadow map 2048² (~32 MB, not ~128 MB), at most 125,000 trees (far chunks thin first,
 `forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass, and `sceneBudget(preview, exporting)` gives
