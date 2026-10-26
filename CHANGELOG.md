@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## Unreleased
 
 - **The closing shot in « Plein jour » no longer flickers on a track of several days**: it aimed at the daylight of the first day, so during the zoom out the sun ran back through every day of the outing (a week-long raid showed seven nights in a few seconds). It now goes to the daylight of the arrival day, as the guide says. Single-day films do not change.
+- **The sources at the end of the film no longer cover the profile in « Cinéma »**: without a closing card, the « Sources » block sat on the profile strip above the bottom bar, in every format and most of all in vertical (9:16), where the sentences take more lines. It now stands just above the profile. The other styles already kept clear of it.
 
 ## 4.5.0 (October 2026)
 
