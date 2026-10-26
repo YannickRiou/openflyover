@@ -2532,7 +2532,9 @@ exports) gets it from the terrain source of the settings.
 - **Principle**: the overlay is not DOM. A pure, synchronous function, `drawOverlay(ctx, frame, settings, size, assets)`
   (`src/overlay/draw.ts`), draws it on a 2D context, on screen or off screen. The preview (`OverlayCanvas`, a 2D canvas above
   the 3D canvas, without mouse events) and the video export (`exportOverlay.ts` → `ExportController`) call
-  the same function: the film shows exactly the preview.
+  the same function: the film shows exactly the preview. The preview canvas takes the 3D view's pixel ratio at most
+  (`deviceBudget().maxPixelRatio`: 2; an iPhone's 3 would be 4× the pixels of its 3D view at 1.5, 2.25× those of the capped canvas).
+  The export and the still draw at the size of the video and do not depend on it.
 - **Styles** (`OVERLAY_STYLES`, `OVERLAY_THEMES`): `editorial`, `broadcast`, `app` and `neon` (« Néon nuit »: deep-blue glass,
   glowing cyan edge) place the widgets at the user's anchors and only differ by colours, fonts and panels. Three styles
   have a structure of their own (`src/overlay/structures.ts`, `styleStructure`, a pure function of the frame like the rest):
