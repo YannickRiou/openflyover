@@ -6,7 +6,8 @@
  * 2D canvas over the CSS sky (the 3D canvas is transparent without the atmosphere). Nothing in the scene changes:
  * no extra render pass, no buffer kept.
  */
-import { addAfterEffect, invalidate } from '@react-three/fiber'
+import { invalidate } from '@react-three/fiber'
+import { addFrameEffect } from './renderOnDemand'
 import { SKY_HORIZON_COLOR, SKY_TOP_COLOR } from './sceneLighting'
 
 /** Longest side of a thumbnail (px): twice its size in the list. */
@@ -29,7 +30,7 @@ export function captureThumbnail(
       resolve(picture)
     }
     const timer = setTimeout(() => done(null), CAPTURE_TIMEOUT_MS)
-    const stop = addAfterEffect(() => {
+    const stop = addFrameEffect(() => {
       try {
         done(copyView(canvas))
       } catch {

@@ -11,7 +11,7 @@
  * demand only (`renderOnDemand.ts`).
  */
 import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { Canvas, addAfterEffect, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import type { RootState } from '@react-three/fiber'
 import { canvasAntialias, deviceBudget } from '../core/deviceBudget'
 import { useAppStore } from '../state/store'
@@ -33,8 +33,8 @@ import { PhotoPins } from './PhotoPins'
 import { RaceMarkers } from './RaceMarkers'
 import { RegionHighlight } from './RegionHighlight'
 import { setPerfProbe } from './perfProbe'
-import { createSlowPreviewDetector, usePreviewBudget, usePreviewMeasure } from './previewQuality'
-import { useRenderOnDemand } from './renderOnDemand'
+import { createRungGovernor, usePreviewBudget, usePreviewMeasure } from './previewQuality'
+import { addFrameEffect, playbackFrameIntervalMs, useRenderOnDemand } from './renderOnDemand'
 import {
   HEMISPHERE_GROUND,
   HEMISPHERE_INTENSITY,
@@ -100,19 +100,15 @@ function TouchWatch({ onChange }: { onChange(touching: boolean): void }) {
   return null
 }
 
-/** « Qualité de l'aperçu » on « Auto »: the frames drawn while the film plays, until the preview is found too slow. */
+/** « Qualité de l'aperçu » on « Auto »: the frames drawn while the film plays set the rung of the preview (`createRungGovernor`). */
 function MeasurePreview() {
-  const playing = useAppStore((s) => s.playback.playing)
-  const exporting = useExportStore((s) => isExportBusy(s.phase))
-  const auto = usePreferences((s) => s.previewQuality === 'auto')
-  const slow = usePreviewMeasure((s) => s.slow)
-  useEffect(() => {
-    if (!playing || exporting || !auto || slow) return
-    const detector = createSlowPreviewDetector()
-    return addAfterEffect(() => {
-      if (detector.frame(performance.now())) usePreviewMeasure.setState({ slow: true })
-    })
-  }, [playing, exporting, auto, slow])
+  const governor = useMemo(() => createRungGovernor(), [])
+  useFrame(() => {
+    const interval = playbackFrameIntervalMs()
+    if (!useAppStore.getState().playback.playing || isExportBusy(useExportStore.getState().phase) || usePreferences.getState().previewQuality !== 'auto') return
+    const rung = governor.frame(performance.now(), interval > 0 ? 1000 / interval : Infinity)
+    if (rung !== usePreviewMeasure.getState().rung) usePreviewMeasure.setState({ rung })
+  })
   return null
 }
 
@@ -141,7 +137,7 @@ function watchContextLoss({ gl, invalidate }: RootState) {
     pending: useAppStore.getState().terrainStats.pendingTiles,
   }))
   // frame counter and renderer memory of the status bar's performance readout (ui/StatusBar.tsx)
-  setPerfProbe({ onFrame: (count) => addAfterEffect(count), memory: () => gl.info.memory })
+  setPerfProbe({ onFrame: (count) => addFrameEffect(count), memory: () => gl.info.memory })
   // GPU of the diagnostic report (export/diagnostic.ts)
   setGpuProbe(() => readGpuInfo(gl.getContext()))
   gl.domElement.addEventListener('webglcontextlost', (e) => {

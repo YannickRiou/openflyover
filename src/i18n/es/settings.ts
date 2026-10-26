@@ -60,7 +60,7 @@ const messages: Messages['settings'] = {
   'preferences.preview.auto': 'Auto',
   'preferences.preview.light': 'Ligera',
   'preferences.preview.full': 'Completa',
-  'preferences.preview.hint': 'Ligera: menos píxeles, nubes más toscas, sombras menos nítidas y menos árboles a lo lejos en la vista previa. Auto la elige cuando la vista previa va a menos de 30 fotogramas por segundo durante la reproducción. Las películas exportadas no cambian.',
+  'preferences.preview.hint': 'Ligera: menos píxeles, nubes más toscas, sombras menos nítidas y menos árboles a lo lejos en la vista previa. Auto la elige cuando la vista previa va a menos de 30 fotogramas por segundo durante la reproducción. En un móvil o una tableta, la reproducción también se limita a 60 fotogramas por segundo, 30 si es ligera; Auto también redibuja las sombras con menos frecuencia durante la reproducción si la vista previa sigue por debajo de 24, y vuelve atrás en cuanto va holgada. Las películas exportadas no cambian.',
   'preferences.preview.measuredSlow': 'Medido en este dispositivo: la vista previa es ligera durante esta sesión.',
   'preferences.timeline.snap': 'El imán se ajusta a',
   'preferences.timeline.snapHint': 'Alt invierte el imán al arrastrar.',

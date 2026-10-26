@@ -29,7 +29,7 @@ import { CLEAR_SCENE_WEATHER, hazeExtinction, sceneWeatherAt } from '../weather/
 import type { SceneWeather } from '../weather/sceneWeather'
 import type { WeatherSeries } from '../weather/series'
 import { useWeatherStore, weatherSeriesOf } from '../weather/store'
-import { usePreviewBudget, sceneBudget } from './previewQuality'
+import { currentPreviewRung, shadowRefresh, usePreviewBudget, sceneBudget } from './previewQuality'
 import { createCloudNoiseTexture } from './cloudNoise'
 import { patchCloudShadow } from './cloudShaders'
 import { CloudSeaSurface } from './CloudSeaSurface'
@@ -97,6 +97,8 @@ export function AtmosphereLayer() {
   /** strength of the cloud shadows on the terrain, a uniform of the aerial perspective (`patchCloudShadow`) */
   const cloudShadowRef = useRef(new Uniform(0))
   const nightFillRef = useRef<HemisphereLight>(null)
+  /** frames drawn at rung 2: one in two draws the shadow map */
+  const shadowFrame = useRef(0)
   const skyLightRef = useRef<SkyLightProbe>(null)
   const [sun, setSun] = useState<SunDirectionalLight | null>(null)
   /** day used when the track has no timestamps */
@@ -203,6 +205,9 @@ export function AtmosphereLayer() {
     if (sun) {
       sun.intensity = weather.sunScale
       sun.shadow.intensity = weather.shadowStrength
+      // rung 2 of the preview, film playing: the map of the relief is drawn every second frame (still there in between)
+      const halved = currentPreviewRung() === 2 && playback.playing && !isExportBusy(useExportStore.getState().phase)
+      Object.assign(sun.shadow, shadowRefresh(halved, shadowFrame.current++, sun.shadow.map !== null))
     }
     if (skyLightRef.current) skyLightRef.current.intensity = weather.skyScale
     // cloud shadows on the terrain (`cloudShadows` setting): as strong as the weather lets the shadows be

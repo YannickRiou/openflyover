@@ -164,6 +164,24 @@ texture from the three loaders (sky, clouds): the time for the temporal upsampli
 frames (16 on a phone or tablet, see "Device budget") (`previewCloudPass`, below). OrbitControls (drei) requests its own frames, damping included. The time step of a frame is
 capped at `MAX_FRAME_DELTA_S` = 0.25 s (`frameDelta`), and `wakeScene` resets the clock when the scene was asleep
 (`clock.getDelta()`): playback and reframing do not jump after a pause.
+On a phone or tablet the frames are capped while the film plays: 60 per second, 30 with a light preview
+(`playbackFrameIntervalMs`, `frameIntervalMs`): a 90 or 120 Hz screen no longer draws 90 or 120 frames of a film
+that is time-based (heat, throttling). The cap is on R3F's loop, not on the invalidations (the clouds and the
+controls ask for frames too): `holdBackFrame`, an `addEffect` run at the start of each tick, empties `internal.frames`
+on a tick that comes before the next frame is due (`createFrameCap`: each frame is due one interval after the previous
+one was due, so 90 Hz averages 60 rather than dropping to 45), the loop stops and a microtask asks for a frame again,
+drawn on the next tick. That tick still runs the after-effects: those that follow the frames (status bar counter,
+thumbnail) use `addFrameEffect`, and the rung measure counts from `useFrame`. Computers, a paused film and every
+export (`isExportBusy`) are not capped.
+Verified in headless Chromium (SwiftShader, touch emulation, dev server), the film playing: a phone at « Complète » draws
+about 50 frames a second where the same scene uncapped draws 65-90 (the ticks of that browser come every ~12 ms, which a 60
+cap can only follow in steps; a 60, 90 or 120 Hz display gives 60 in the tests), at « Légère » 28-30, the film advancing
+1.0 s per second; a computer is unchanged. Paused, the scene sleeps (no frame in 3 s); a one-finger drag draws frames, then
+it sleeps again, and playing resumes, also with a drag while playing. « Auto » went 0, 1, 2 in about 4 s on that slow
+renderer (5-12 frames a second), the shadow map drawn once for every two frames at rung 2. Not measured: a real phone.
+Changing the pixel ratio while a software renderer is behind with its frames (unthrottled headless) blocks `setSize`
+for seconds (the same for « Complète » to « Légère » in the middle of a film, before this change; a rung 2 that also
+lowered the pixel ratio hit it, so it does not); with the display's vsync, none.
 The export keeps `frameloop 'never'` and draws its own frames. Measured with software rendering: no more frame requests
 once the margin has elapsed (~30 s there, one frame per second; ~0.5 s on a real graphics card). The engine's delays
 (retry of a failed tile, unloading) are times, checked at the next frame.
@@ -4149,8 +4167,15 @@ and short side < 600 CSS px; tablet = touch screen, larger; computer = everythin
 
 « Qualité de l'aperçu » (Réglages, `scene/previewQuality.ts`, a device preference: `Preferences.previewQuality`) lowers
 the preview of any device, by what it does and not by its hardware: « Auto » (default) measures the frame times while
-the film plays (`createSlowPreviewDetector`: median over 2 s of playback, a gap over 1 s restarts the count) and, under
-30 frames per second, keeps the preview light for the session; « Légère » forces it, « Complète » never lightens.
+the film plays (`createRungGovernor`: windows of 2 s of playback, a gap over 1 s restarts the count) and goes down a
+rung when the median is under 30 frames per second (rung 1, light) or, at rung 1, under 24 (rung 2: the light budget
+and, while the film plays, the shadow map drawn every second frame, `shadowRefresh`: `autoUpdate` false and
+`needsUpdate` on alternate frames, the map and its matrix staying in step; the pixel ratio is not lowered again, a
+`setSize` in the middle of a film being the costliest thing a struggling device can be asked for);
+it goes up one rung when the mean has been at 50 frames per second (90 % of the cap, on a phone or tablet whose
+playback is capped) for 3 windows in a row, the wait doubling at each step back so a device that cannot hold the heavier
+rung does not flip-flop. « Légère » is rung 1 for good, « Complète » rung 0. Rung 2 only differs from rung 1 while the
+film plays, and only by the shadow refresh.
 Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
 0.5, 16 still frames, shadow map 2048² (~32 MB, not ~128 MB), at most 125,000 trees (far chunks thin first,
 `forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass, and `sceneBudget(preview, exporting)` gives
