@@ -4,17 +4,19 @@
  * film plays, tiles load or the camera fits; for WAKE_FRAMES frames after any change of the stores the scene reads
  * (`wakeScene`), long enough for the temporal upscaling of the clouds to fill (~16 frames); by the clouds until a still
  * view has averaged CLOUD_SETTLE_FRAMES frames; and by the orbit controls and R3F themselves.
- * The video export drives its frames itself (`frameloop` 'never', see ExportController).
+ * The video export drives its frames itself (`frameloop` 'never', see ExportController). While the film plays on a phone
+ * or tablet the preview is also capped at 60 frames per second, 30 with a light preview (`playbackFrameIntervalMs`).
  */
 import { useEffect } from 'react'
-import { invalidate, useFrame, useThree } from '@react-three/fiber'
+import { addAfterEffect, addEffect, invalidate, useFrame, useThree } from '@react-three/fiber'
 import { DefaultLoadingManager } from 'three'
 import { deviceBudget } from '../core/deviceBudget'
-import { useExportStore } from '../export/store'
+import { isExportBusy, useExportStore } from '../export/store'
 import { useRegionStore } from '../osm/region'
 import { useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
 import { useLabelSources } from './labelSources'
+import { createFrameCap, currentPreviewRung, frameIntervalMs } from './previewQuality'
 import { useTerrainContext } from './terrainContext'
 
 /** Frames drawn after a change (~0.5 s at 60 frames per second). */
@@ -41,6 +43,34 @@ export function wakeScene(frames = WAKE_FRAMES): void {
 /** Time step of a frame, bounded: the first frame after an idle period would otherwise span the whole pause. */
 export function frameDelta(delta: number): number {
   return Math.min(delta, MAX_FRAME_DELTA_S)
+}
+
+/** Shortest time (ms) between two frames now: the cap of a phone or tablet while the film plays, never during an export; 0 = none. */
+export function playbackFrameIntervalMs(): number {
+  if (!useAppStore.getState().playback.playing || isExportBusy(useExportStore.getState().phase)) return 0
+  return frameIntervalMs(deviceBudget().kind, currentPreviewRung())
+}
+
+/**
+ * Frame cap, at the start of each tick of R3F's loop: on a tick that comes too soon the frames asked for are dropped, so
+ * the loop stops without drawing, and asked again at once, which draws the next tick. Done to the loop, not to the
+ * invalidations: the clouds and the controls ask for frames too. True when the tick is held back.
+ */
+export function holdBackFrame(cap: ReturnType<typeof createFrameCap>, internal: { frames: number }, timestamp: number): boolean {
+  if (cap.allow(timestamp, playbackFrameIntervalMs())) return false
+  internal.frames = 0
+  queueMicrotask(() => invalidate())
+  return true
+}
+
+/** The loop's current tick drew nothing: the cap held it back (see `useRenderOnDemand`). */
+let skipped = false
+
+/** `addAfterEffect` for what follows the frames drawn (the loop also runs the tick the cap skips). */
+export function addFrameEffect(callback: (timestamp: number) => void): () => void {
+  return addAfterEffect((timestamp) => {
+    if (!skipped) callback(timestamp)
+  })
 }
 
 /** Still frames the preview clouds average before the scene may sleep (CloudsLayer): 32, 16 on a phone or tablet or with a light preview (`usePreviewBudget`). */
@@ -79,12 +109,24 @@ export function sceneChanged<T extends object>(state: T, previous: T): boolean {
 export function useRenderOnDemand(): void {
   const { engine } = useTerrainContext()
   const clock = useThree((s) => s.clock)
+  const internal = useThree((s) => s.internal)
   useEffect(() => {
     sceneClock = clock
     return () => {
       if (sceneClock === clock) sceneClock = null
     }
   }, [clock])
+
+  useEffect(() => {
+    const cap = createFrameCap()
+    const stop = addEffect((timestamp) => {
+      skipped = holdBackFrame(cap, internal, timestamp)
+    })
+    return () => {
+      stop()
+      skipped = false
+    }
+  }, [internal])
 
   useFrame(() => {
     const busy = useAppStore.getState().playback.playing || (engine?.stats.pendingTiles ?? 0) > 0

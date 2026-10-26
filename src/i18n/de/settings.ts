@@ -60,7 +60,7 @@ const messages: Messages['settings'] = {
   'preferences.preview.auto': 'Auto',
   'preferences.preview.light': 'Leicht',
   'preferences.preview.full': 'Voll',
-  'preferences.preview.hint': 'Leicht: weniger Pixel, gröbere Wolken, weichere Schatten und weniger Bäume in der Ferne in der Vorschau. Auto wählt sie, wenn die Vorschau bei der Wiedergabe unter 30 Bildern pro Sekunde bleibt. Exportierte Filme ändern sich nicht.',
+  'preferences.preview.hint': 'Leicht: weniger Pixel, gröbere Wolken, weichere Schatten und weniger Bäume in der Ferne in der Vorschau. Auto wählt sie, wenn die Vorschau bei der Wiedergabe unter 30 Bildern pro Sekunde bleibt. Auf Smartphone oder Tablet wird die Wiedergabe außerdem auf 60 Bilder pro Sekunde begrenzt, 30 im leichten Modus; Auto geht noch weiter, wenn die Vorschau unter 24 bleibt, und kehrt zurück, sobald sie flüssig läuft. Exportierte Filme ändern sich nicht.',
   'preferences.preview.measuredSlow': 'Auf diesem Gerät gemessen: Die Vorschau ist in dieser Sitzung leicht.',
   'preferences.timeline.snap': 'Der Magnet rastet ein bei',
   'preferences.timeline.snapHint': 'Alt kehrt den Magneten beim Ziehen um.',

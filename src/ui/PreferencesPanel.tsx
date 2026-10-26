@@ -133,7 +133,7 @@ function Chips<K extends string>({ legend, labels, keys, value, onChange }: {
 export function PreferencesPanel() {
   const t = useT()
   const prefs = usePreferences()
-  const measuredSlow = usePreviewMeasure((s) => s.slow)
+  const measuredSlow = usePreviewMeasure((s) => s.rung > 0)
   const desktop = getPlatform().capabilities.isDesktop
   // the memory of the JavaScript engine is only told by Chromium; the machine's load only by the desktop app
   const heap = 'memory' in performance
