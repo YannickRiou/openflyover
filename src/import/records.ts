@@ -207,23 +207,26 @@ function peak(flat: readonly TrackPoint[], key: 'hr' | 'power', lo: number, hi: 
 
 /**
  * The best climb rate held for `THERMAL_SPAN_S` seconds inside a flight (a window of recorded points with time and
- * elevation, a recording gap not bridged): its middle and its rate (m/s); none under `MIN_THERMAL_MS`.
+ * elevation, a recording gap not bridged, spikes of the elevation removed): its middle and its rate (m/s); none under
+ * `MIN_THERMAL_MS`.
  */
 function bestThermal(path: TrackPath, flights: readonly Flight[]): { alongM: number; value: number } | undefined {
   let best: { alongM: number; value: number } | undefined
+  // a point recorded too high at the end of a window would make a climb of it
+  const ele = despike(path.ele)
   for (const f of flights) {
     let j = 0
     for (let i = 0; i < path.count; i++) {
-      if (path.dist[i] < f.startM || Number.isNaN(path.ele[i]) || Number.isNaN(path.time[i])) continue
+      if (path.dist[i] < f.startM || Number.isNaN(ele[i]) || Number.isNaN(path.time[i])) continue
       if (path.dist[i] > f.endM) break
       // the first point `THERMAL_SPAN_S` later (the window only moves forward)
       j = Math.max(j, i)
-      while (j < path.count && !((path.time[j] - path.time[i]) / 1000 >= THERMAL_SPAN_S && !Number.isNaN(path.ele[j]))) j++
+      while (j < path.count && !((path.time[j] - path.time[i]) / 1000 >= THERMAL_SPAN_S && !Number.isNaN(ele[j]))) j++
       if (j >= path.count || path.dist[j] > f.endM) break
       const s = (path.time[j] - path.time[i]) / 1000
       // a gap in the recording is not a sustained climb
       if (s > THERMAL_SPAN_S * 2) continue
-      const value = (path.ele[j] - path.ele[i]) / s
+      const value = (ele[j] - ele[i]) / s
       if (value >= MIN_THERMAL_MS && (!best || value > best.value)) best = { alongM: (path.dist[i] + path.dist[j]) / 2, value }
     }
   }

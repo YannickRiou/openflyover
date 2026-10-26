@@ -232,6 +232,9 @@ describe('records of a track with flights', () => {
     const gust = (d: number) => (d < 2000 ? 1000 : d < 3000 ? 1000 - 0.1 * (d - 2000) : d < 3030 ? 900 + 0.6 * (d - 3000) : 918 - 0.1 * (d - 3030))
     const gusty = { ...make({ lengthM: 6000, ele: gust, speed: () => 10 }), flights: [{ startM: 1500, endM: 5500, offsetM: 0 }] }
     expect(get(gusty, 'bestThermal')).toBeUndefined()
+    // nor a single point of the flight recorded 60 m too high (an elevation spike, not a climb held)
+    const spike = (d: number) => gust(d) + (d === 3500 ? 60 : 0)
+    expect(get({ ...make({ lengthM: 6000, ele: spike, speed: () => 10 }), flights: gusty.flights }, 'bestThermal')).toBeUndefined()
     // nor does a track without flights, even climbing at 2.5 m/s
     expect(get({ ...flown(), flights: undefined }, 'bestThermal')).toBeUndefined()
   })
