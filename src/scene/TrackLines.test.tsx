@@ -637,7 +637,7 @@ describe('flights: curtain, ground shadow, width weights', () => {
     const [piece] = segment.flights
     const color = piece.curtain.geometry.getAttribute('color') as BufferAttribute
     expect(color.itemSize).toBe(4)
-    expect(Array.from(color.array.slice(0, 8))).toEqual([1, 1, 1, CURTAIN_TOP_ALPHA, 1, 1, 1, 0])
+    expect(Array.from(color.array.slice(0, 8))).toEqual([1, 1, 1, Math.fround(CURTAIN_TOP_ALPHA), 1, 1, 1, 0])
 
     drapeTrackLineSet(set, null, 1)
     applyTrackColors([set], 'elevation')
@@ -655,7 +655,7 @@ describe('flights: curtain, ground shadow, width weights', () => {
     applyExposure([set], 2)
     expect(set.curtainMaterial.color.toArray()).toEqual([0.5, 0.5, 0.5])
     applyTrackColors([set], 'none')
-    expect(Array.from(color.array.slice(0, 8))).toEqual([1, 1, 1, CURTAIN_TOP_ALPHA, 1, 1, 1, 0])
+    expect(Array.from(color.array.slice(0, 8))).toEqual([1, 1, 1, Math.fround(CURTAIN_TOP_ALPHA), 1, 1, 1, 0])
     applyExposure([set], 2)
     expect(set.curtainMaterial.color.r).toBeCloseTo(0.5, 6)
     expect(set.curtainMaterial.color.g).toBe(0)

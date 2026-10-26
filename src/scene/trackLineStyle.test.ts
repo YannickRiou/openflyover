@@ -88,7 +88,7 @@ describe('trail (« Traînée »)', () => {
     expect(shader.vertexShader).toContain('vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;')
     expect(shader.fragmentShader).toContain('if ( vTrackM < trailStartM ) discard;')
     // the oldest part thins out instead of ending on a sharp cut
-    expect(shader.vertexShader).toContain('offset *= linewidth * trailWidth;')
+    expect(shader.vertexShader).toContain('offset *= linewidth * trailWidth * flightWidth;')
     // the glow output is still patched
     expect(shader.fragmentShader).toContain('glowFade')
   })

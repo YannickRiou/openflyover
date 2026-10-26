@@ -107,9 +107,10 @@ describe('hasMetric', () => {
     expect(hasMetric(track, 'elevation')).toBe(true)
     expect(hasMetric(track, 'heartRate')).toBe(false)
     expect(hasMetric(track, 'power')).toBe(false)
-    expect(hasMetric(track, 'verticalSpeed')).toBe(false) // no time
-    const timed = buildTrack({ name: 'v', source: 'gpx', segments: [{ points: line(5, 2, (i) => ({ ele: 1000 + i })) }] })
-    expect(hasMetric(timed, 'verticalSpeed')).toBe(true)
+    expect(hasMetric(track, 'verticalSpeed')).toBe(true)
+    // untimed: a climb rate is not offered
+    const untimed = buildTrack({ name: 'u', source: 'gpx', segments: [{ points: points.map(({ time: _time, ...p }) => p) }] })
+    expect(hasMetric(untimed, 'verticalSpeed')).toBe(false)
     const noEle = buildTrack({ name: 'n', source: 'gpx', segments: [{ points: line(5, 2) }] })
     expect(hasMetric(noEle, 'verticalSpeed')).toBe(false)
     const bare = buildTrack({ name: 'b', source: 'gpx', segments: [{ points: [{ lon: 6, lat: 45, time: T0 }] }] })
