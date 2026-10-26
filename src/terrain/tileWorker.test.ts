@@ -5,7 +5,7 @@ import { tileCenter } from '../geo/mercator'
 import { cleanDem } from './demClean'
 import { decodeDemPixels } from './dem'
 import { buildTileGeometry } from './mesh'
-import { resultBuffers, runTileJob, type TileJob } from './tileJob'
+import { resultBuffers, runTileJob, type TileJob, type TileResult } from './tileJob'
 
 const KEY: TileKey = { z: 12, x: 2126, y: 1457 }
 const CENTER = tileCenter(KEY)
@@ -55,6 +55,7 @@ const job = (bitmap: ImageBitmap, partial: Partial<TileJob> = {}): TileJob => ({
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.doUnmock('./tileJob')
   vi.resetModules()
 })
 
@@ -117,12 +118,70 @@ describe('buildTileOffThread', () => {
     return { made, bitmap: new FakeBitmap() as unknown as ImageBitmap }
   }
 
+  const tile = (heights: number[], max = 5) => ({
+    grid: { width: heights.length, height: 1, data: Float32Array.from(heights) },
+    mesh: { minHeight: 0, maxHeight: max } as unknown as TileResult['mesh'],
+  })
+
+  /** What the page builds for the check (`runTileJob` of tileJob.ts, which needs a canvas). */
+  async function pageBuilds(own: TileResult | Error) {
+    const run = vi.fn(() => {
+      if (own instanceof Error) throw own
+      return own
+    })
+    vi.doMock('./tileJob', async (original) => ({ ...(await original<typeof import('./tileJob')>()), runTileJob: run }))
+    return run
+  }
+
   it('hands the tile to a worker and returns its result', async () => {
-    const result = { grid: { width: 1, height: 1, data: new Float32Array(1) }, mesh: {} }
+    const result = tile([1, NaN, 3])
     const { made, bitmap } = stubWorkers(({ id }) => ({ id, result }))
+    await pageBuilds(tile([1, NaN, 3]))
     const { buildTileOffThread } = await import('./tileWorker')
     expect(await buildTileOffThread(job(bitmap))).toBe(result)
     expect(made).toHaveLength(4) // at most four, whatever the machine
+  })
+
+  it('builds the first tile on the page too, once, and keeps the pool when they agree', async () => {
+    const { made, bitmap } = stubWorkers(({ id }) => ({ id, result: tile([1, NaN, 3]) }))
+    const run = await pageBuilds(tile([1, NaN, 3]))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { buildTileOffThread } = await import('./tileWorker')
+    await Promise.all([buildTileOffThread(job(bitmap)), buildTileOffThread(job(bitmap))])
+    await buildTileOffThread(job(bitmap))
+    expect(run).toHaveBeenCalledTimes(1)
+    expect(warn).not.toHaveBeenCalled()
+    expect(made.some((w) => w.terminated)).toBe(false)
+    warn.mockRestore()
+  })
+
+  it.each([
+    ['a height', tile([1, 2, 4])],
+    ['a nodata place', tile([1, 2, NaN])],
+    ['the highest point', tile([1, 2, 3], 6)],
+  ])('drops the pool and keeps the page tile when %s differs', async (_what, own) => {
+    const { made, bitmap } = stubWorkers(({ id }) => ({ id, result: tile([1, 2, 3]) }))
+    await pageBuilds(own)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { buildTileOffThread } = await import('./tileWorker')
+    // two tiles in flight: the first gets the page's tile, the other is left to the engine; later ones skip the workers
+    const [first, second] = await Promise.all([buildTileOffThread(job(bitmap)), buildTileOffThread(job(bitmap))])
+    expect(first).toBe(own)
+    expect(second).toBeUndefined()
+    expect(await buildTileOffThread(job(bitmap))).toBeUndefined()
+    expect(made.every((w) => w.terminated)).toBe(true)
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0][0])).toMatch(/^\[terrain\]/)
+    warn.mockRestore()
+  })
+
+  it('leaves the tile to the engine, and checks the next one, when the page cannot build it', async () => {
+    const { bitmap } = stubWorkers(({ id }) => ({ id, result: tile([1, 2, 3]) }))
+    const run = await pageBuilds(new Error('bad tile'))
+    const { buildTileOffThread } = await import('./tileWorker')
+    expect(await buildTileOffThread(job(bitmap))).toBeUndefined()
+    expect(await buildTileOffThread(job(bitmap))).toBeUndefined()
+    expect(run).toHaveBeenCalledTimes(2)
   })
 
   it('falls back (undefined) when a worker fails on a tile, and keeps the pool', async () => {

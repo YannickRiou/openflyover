@@ -124,6 +124,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), atmosphereAssets(), serviceWorker()],
   // src-tauri/target (Rust build of the desktop app) is not watched
   server: { port: 5173, proxy, watch: { ignored: ['**/src-tauri/**'] } },
+  // the terrain workers are module workers (`type: 'module'`, terrain/tileWorker.ts)
+  worker: { format: 'es' },
   build: {
     // the chunks above 500 kB are loaded on demand, one library each (three.js + fiber, Takram, mediabunny)
     chunkSizeWarningLimit: 800,

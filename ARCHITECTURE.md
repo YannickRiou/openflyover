@@ -224,6 +224,9 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    position, normal, uv and index arrays, transferred, not copied. The page keeps the grid (`sampleHeight`, height field)
    and only builds the `BufferGeometry` from the arrays (`geometryFromArrays`) and its bounds. A tile loaded before the
    exaggeration changed comes back with the old mesh: the page then builds it again (as it always did for loaded tiles).
+   **Self-check**: the first tile a worker builds in a session is also built by the page and the two are compared (every
+   height, `NaN` in the same places, min and max); a difference (a WebView that reads pixels back differently: WebKit was
+   never verified) drops the pool for good, keeps the page's tile and leaves one `[terrain]` `console.warn`; once, ~5 ms.
    The tile is « ready » when the worker's answer is attached, so the export's waits (`pendingVisibleTiles`) and its
    retries are unchanged. **Fallback**: where `Worker`, `OffscreenCanvas` or `ImageBitmap` are missing (jsdom, a test, an old
    WebView), where a bitmap is an `<img>` (`decodeWithImageElement`), where the worker cannot read pixels back

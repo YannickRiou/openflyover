@@ -4,9 +4,11 @@
  * `buildTileOffThread` resolves with undefined where a worker cannot do it (no Worker or OffscreenCanvas, a test, an
  * image that is not an ImageBitmap, a worker that fails): the caller then builds the tile on the main thread, so the
  * result is the same and the only difference is where the time is spent. A worker that dies is dropped for good.
+ * The first tile of the session is also built by the page and the two compared (`verify`): a WebView whose worker reads
+ * pixels back differently from the page (not every one was tried) would otherwise corrupt the relief unseen.
  */
 import { BITMAP_OPTIONS } from './fetch'
-import type { TileJob, TileResult } from './tileJob'
+import { runTileJob, type TileJob, type TileResult } from './tileJob'
 
 const MAX_WORKERS = 4
 
@@ -54,7 +56,42 @@ function start(): Slot[] | null {
   }
 }
 
+/** The first tile a worker built, checked against the page's own (`verify`): null when they agree, else the page's tile. */
+let firstTile: Promise<TileResult | null> | undefined
+
+const sameTile = (a: TileResult, b: TileResult) =>
+  a.grid.width === b.grid.width &&
+  a.grid.height === b.grid.height &&
+  a.grid.data.length === b.grid.data.length &&
+  a.grid.data.every((h, i) => Object.is(h, b.grid.data[i])) && // NaN (no data) in the same places
+  Object.is(a.mesh.minHeight, b.mesh.minHeight) &&
+  Object.is(a.mesh.maxHeight, b.mesh.maxHeight)
+
+/** A worker that does not give what the page gives is dropped for good: the page's tile stands, and so do the next ones. */
+async function verify(job: TileJob, fromWorker: TileResult): Promise<TileResult | null> {
+  const own = runTileJob(job)
+  if (sameTile(own, fromWorker)) return null
+  console.warn('[terrain] tuiles décodées en arrière-plan : le résultat diffère de celui du thread principal, travail en arrière-plan abandonné')
+  retire()
+  return own
+}
+
 export async function buildTileOffThread(job: TileJob): Promise<TileResult | undefined> {
+  const result = await viaWorker(job)
+  if (!result) return undefined
+  const first = firstTile === undefined
+  firstTile ??= verify(job, result)
+  try {
+    const own = await firstTile
+    return own === null ? result : first ? own : undefined
+  } catch {
+    // the page cannot build this tile itself: the next one is the check (and this one fails where the engine builds it)
+    firstTile = undefined
+    return undefined
+  }
+}
+
+async function viaWorker(job: TileJob): Promise<TileResult | undefined> {
   if (slots === undefined) slots = start()
   if (!slots || !(job.bitmap instanceof ImageBitmap)) return undefined
   try {
