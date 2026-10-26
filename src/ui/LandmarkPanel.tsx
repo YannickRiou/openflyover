@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import { filmStops, placeStop, withoutPlaceItems } from '../film/assemble'
+import { alignRecordStops, filmStops, placeStop, withoutPlaceItems } from '../film/assemble'
 import { t, useT } from '../i18n'
 import type { StopPlace } from '../film/assemble'
 import { POI_ICONS, POI_ICON_LABELS, STOP_DURATION_RANGE, nextFilmId } from '../film/model'
@@ -26,16 +26,17 @@ import {
 } from '../osm/landmarks'
 import type { Landmark, LandmarkMode, LandmarkSettings } from '../osm/landmarks'
 import { osmAttribution, OSM_KINDS } from '../osm/overpass'
-import { syncLandmarks, useLandmarkStore } from '../osm/store'
+import { refreshRecords, syncLandmarks, useLandmarkStore } from '../osm/store'
 import { playsBilan, sequenceLandmarks } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
-import { editFilm, followLandmarks, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { editFilm, followLandmarks, getFilmSource, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { LandmarkMap } from './LandmarkMap'
 import type { MapTool } from './LandmarkMap'
-import { PanelSection, SettingRow } from './PanelSection'
+import { InfoTip, PanelSection, SettingRow } from './PanelSection'
 import { formatDistance, formatNumber } from './format'
+import { showToast } from './toast'
 import { Button, Checkbox, Chip, NumberField, Radio, RadioGroup, Select, Slider, Switch, TextField, Tip } from './primitives'
 
 /** Type chips shown, in a few words: « Tous », « 7 sur 11 », « Aucun » (places count as their three sizes). */
@@ -95,6 +96,46 @@ function keepPinnedOnly(rows: readonly PlaceRow[]): void {
     const dismissed = rows.filter((r) => !r.hidden && !pinned.has(r.id))
     if (dismissed.length > 0) editFilm((film) => ({ film: withoutPlaceItems(film, dismissed) }))
     setSetting('landmarks', withPinnedOnly(useAppStore.getState().settings.landmarks, listed))
+  })
+}
+
+/** The records of the outing as the store lists them now (shown or not), by id and place: to tell what a recomputation changed. */
+function recordKeys(): Set<string> {
+  const state = useLandmarkStore.getState()
+  return new Set([...Object.values(state.landmarks), ...Object.values(state.hidden)].flatMap((list) => list.filter((l) => l.kind === 'record').map((l) => `${l.id}@${Math.round(l.alongM)}`)))
+}
+
+/**
+ * « Recalculer les records »: the records of the loaded tracks are read from their points again, and the stops the film
+ * wrote out for records are brought in line (`alignRecordStops`: the user's own stops stay) in one undo step; a message
+ * tells what changed, with « Annuler ». A film that generates its stops has nothing to bring in line.
+ */
+function recomputeRecords(): void {
+  const before = recordKeys()
+  refreshRecords()
+  const after = recordKeys()
+  const changed = { removed: new Set([...before].filter((k) => !after.has(k))), added: new Set([...after].filter((k) => !before.has(k))) }
+  const settings = useAppStore.getState().settings
+  editFilm((film) => {
+    const { track, landmarks, pacing } = getFilmSource()
+    if (!track) return { film }
+    const result = alignRecordStops(film, { track, landmarks, pacing })
+    const key = (s: FilmStop) => `${s.source?.ref}@${Math.round(s.atM)}`
+    result.removed.forEach((s) => changed.removed.add(key(s)))
+    result.added.forEach((s) => changed.added.add(key(s)))
+    return { film: result.film }
+  })
+  const history = getSettingsHistory()
+  const now = useAppStore.getState().settings
+  const parts = [
+    changed.removed.size > 0 && t('landmarks.records.removed', { count: changed.removed.size }),
+    changed.added.size > 0 && t('landmarks.records.added', { count: changed.added.size }),
+  ].filter(Boolean)
+  showToast({
+    kind: 'success',
+    text: parts.length > 0 ? parts.join(', ') : t('landmarks.records.unchanged'),
+    // only while nothing else has changed since: it never undoes a later step
+    ...(now.film !== settings.film ? { action: { label: t('common.undo'), run: () => { if (useAppStore.getState().settings === now) history.undo() } } } : {}),
   })
 }
 
@@ -459,6 +500,23 @@ export function LandmarkPanel() {
             <p className="type-hint">{t('landmarks.densityHint')}</p>
           </div>
         </SettingRow>
+      )}
+
+      {settings.enabled && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex items-center gap-1">
+            <Switch checked={settings.records} onChange={(on) => setSetting('landmarks', { ...settings, records: on })}>
+              {t('landmarks.records.enable')}
+            </Switch>
+            <InfoTip text={t('landmarks.records.tip')} />
+          </div>
+          <Tip text={t('landmarks.records.recomputeTip')}>
+            <Button size="sm" disabled={!settings.records} onClick={recomputeRecords}>
+              <Icon name="rotate-cw" size={16} />
+              {t('landmarks.records.recompute')}
+            </Button>
+          </Tip>
+        </div>
       )}
 
       <p className="type-hint" role="status" aria-live="polite">

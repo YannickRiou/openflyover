@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Track } from '../core/types'
 import { buildTrack } from '../import/stats'
 import { useLabelSources } from '../scene/labelSources'
+import { recordsOf } from '../import/records'
 import { DEFAULT_LANDMARK_SETTINGS } from './landmarks'
 import type { LandmarkSettings } from './landmarks'
 import { OverpassError } from './overpass'
@@ -20,7 +21,7 @@ import {
 } from './region'
 import type { AdminCandidate, AdminRegion, RegionAnswer } from './region'
 import type { OsmFeature } from './overpass'
-import { hasOsmLandmarks, resetLandmarkStore, syncLandmarks, useLandmarkStore } from './store'
+import { hasOsmLandmarks, refreshRecords, resetLandmarkStore, syncLandmarks, useLandmarkStore } from './store'
 
 /** Track going south along 6.78° E from 45.9° N, ≈ 1 km per point. */
 function makeTrack(id: string, lon = 6.78): Track {
@@ -117,6 +118,33 @@ describe('syncLandmarks', () => {
     calls[0].resolve(FEATURES)
     await flush()
     expect(hasOsmLandmarks(useLandmarkStore.getState().landmarks)).toBe(true)
+  })
+
+  it('« Records de la sortie » off hides the records and their labels, on shows them again; recomputing reads the points again', () => {
+    const { deps } = deferredFetcher()
+    const hilly = buildTrack({
+      name: 'hilly',
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 12 }, (_, i) => ({ lon: 6.78, lat: 45.9 - i * 0.009, ele: 1000 + (i > 3 && i < 8 ? (i - 3) * 100 : i >= 8 ? 400 : 0) })) }],
+    })
+    const track = { ...hilly, id: 'h' }
+    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps })
+    const ids = useLandmarkStore.getState().landmarks.h.map((l) => l.id)
+    expect(ids.length).toBeGreaterThan(0)
+    syncLandmarks([track], { ...DEFAULT_LANDMARK_SETTINGS, records: false }, { deps })
+    expect(useLandmarkStore.getState().landmarks.h ?? []).toEqual([])
+    expect(useLandmarkStore.getState().hidden.h ?? []).toEqual([])
+    expect(osmLabels()).toEqual([])
+    syncLandmarks([track], DEFAULT_LANDMARK_SETTINGS, { deps })
+    expect(useLandmarkStore.getState().landmarks.h.map((l) => l.id)).toEqual(ids)
+    expect(osmLabels()).not.toEqual([])
+
+    // recomputing reads the points again: the same records, found anew and published again
+    const known = recordsOf(track)
+    refreshRecords()
+    expect(recordsOf(track)).not.toBe(known)
+    expect(recordsOf(track)).toEqual(known)
+    expect(useLandmarkStore.getState().landmarks.h.map((l) => l.id)).toEqual(ids)
   })
 
   it('reports an error with a French message and retries on demand', async () => {

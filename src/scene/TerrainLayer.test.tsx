@@ -136,6 +136,7 @@ describe('engine options from settings', () => {
     poster: DEFAULT_POSTER,
     landmarks: {
       enabled: true,
+      records: true,
       kinds: { peak: true, pass: true, hut: true, lake: true, waterfall: false, place: false, viewpoint: false, glacier: false, waterPoint: false },
       places: { city: true, village: true, hamlet: true },
       maxDistanceM: 1500,

@@ -120,3 +120,35 @@ export function materializeStops(film: Film, input: AssembleInput): Film {
 export function filmStops(film: Film, input: AssembleInput): FilmStop[] {
   return film.autoStops ? autoStops(input, film.autoMode, film.autoStopGroupM) : film.stops
 }
+
+/** A stop `autoStops` wrote out for a record of the outing (`record:<track>:<kind>`), as opposed to one the user made. */
+function isRecordStop(stop: FilmStop): boolean {
+  return stop.id.startsWith('auto-') && stop.source?.kind === 'landmark' && stop.source.ref?.startsWith('record:') === true
+}
+
+/**
+ * `film` with the stops written out for records brought in line with the records shown now (`input.landmarks`): those
+ * whose record is gone, moved or no longer makes a stop are removed, the ones the rules give now (`autoStops`, records
+ * only) are added unless a stop is already there (within `Film.autoStopGroupM`). The other stops (the user's, the
+ * landmarks') are never touched, and a film that generates its stops follows the records by itself: it comes back as is.
+ */
+export function alignRecordStops(film: Film, input: AssembleInput): { film: Film; removed: FilmStop[]; added: FilmStop[] } {
+  if (film.autoStops) return { film, removed: [], added: [] }
+  const L = input.track.stats.distanceM
+  const shown = new Map((input.landmarks ?? []).filter((l) => l.recordKind !== undefined).map((l) => [l.id, l]))
+  const stale = (s: FilmStop) => {
+    const l = isRecordStop(s) ? shown.get(s.source!.ref!) : undefined
+    return isRecordStop(s) && !(l && AUTO_STOP_RECORDS.includes(l.recordKind!) && Math.abs(Math.min(L, Math.max(0, l.alongM)) - s.atM) < 1)
+  }
+  const kept = film.stops.filter((s) => !stale(s))
+  const groupM = film.autoStopGroupM ?? AUTO_STOP_GROUP_M
+  const added =
+    film.autoMode === 'temps-forts'
+      ? autoStops(input, film.autoMode, film.autoStopGroupM).filter(
+          (c) => c.source?.ref?.startsWith('record:') && !kept.some((s) => Math.abs(s.atM - c.atM) < groupM || s.id === c.id),
+        )
+      : []
+  const removed = film.stops.filter(stale)
+  if (removed.length === 0 && added.length === 0) return { film, removed, added }
+  return { film: { ...film, stops: [...kept, ...added].sort((a, b) => a.atM - b.atM) }, removed, added }
+}

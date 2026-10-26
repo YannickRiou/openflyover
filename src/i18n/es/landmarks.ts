@@ -140,7 +140,18 @@ const messages: Messages['landmarks'] = {
   'record.longestClimb': 'Subida más larga',
   'record.maxHeartRate': 'Frecuencia cardíaca máxima',
   'record.maxPower': 'Potencia máxima',
-  hintRecords: 'Los récords son las hazañas de la salida (subida más empinada, bajada más rápida, punto más alto…): se calculan a partir del propio track, y corregir las cifras a mano no los cambia. Solo la subida más empinada, el punto más alto y la bajada más rápida hacen una parada automática; los demás siguen siendo etiquetas.',
+  'record.bestThermal': 'Mejor térmica',
+  'record.highestAboveGround': 'Mayor altura sobre el suelo',
+  'record.thermal': '+{value} m/s',
+  // the switch and the recomputation of the records
+  'records.enable': 'Récords de la salida',
+  'records.tip': 'Las hazañas de la salida, calculadas a partir del track: una etiqueta 3D cada una y, en las principales, una parada automática. Desactivados, se ocultan sin borrar nada.',
+  'records.recompute': 'Recalcular los récords',
+  'records.recomputeTip': 'Vuelve a leer el track y ajusta las paradas automáticas de la película a los récords: tus propias paradas no se mueven.',
+  'records.removed': { one: '{count} récord quitado', other: '{count} récords quitados' },
+  'records.added': { one: '{count} récord añadido', other: '{count} récords añadidos' },
+  'records.unchanged': 'Nada ha cambiado',
+  hintRecords: 'Los récords son las hazañas de la salida (subida más empinada, bajada más rápida, punto más alto…): se calculan a partir del propio track, y corregir las cifras a mano no los cambia. Las subidas, bajadas y kilómetros ignoran los tramos en vuelo, que tienen su mejor térmica y su mayor altura sobre el suelo. Solo la subida más empinada, el punto más alto, la bajada más rápida y la mejor térmica hacen una parada automática; los demás siguen siendo etiquetas.',
   metaRecord: 'km {km}',
 }
 

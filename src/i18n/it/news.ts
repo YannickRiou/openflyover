@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Versione {version}',
   'v45.camera.title': 'Una camera più piacevole da guardare',
   'v45.camera.text': 'Due impostazioni in Sorvolo › Camera. «Spazio davanti» mette il marcatore un po’ dietro il centro dell’immagine, lasciando spazio dal lato verso cui avanza. «Inclinazione nelle curve» inclina dolcemente l’orizzonte nelle curve, come un drone che si piega. Per impostazione predefinita, un po’ di entrambe: i film risultano più fluidi.',
+  'v45.records.title': 'Record per i voli',
+  'v45.records.text': 'La miglior termica (la salita più sostenuta di un volo) e la massima altezza dal suolo sono due record in più per i voli in parapendio. In cambio, i record di salita, discesa e chilometri non contano più i tratti in volo: la pendenza lì non significa nulla. In Mappa › Riferimenti, un interruttore «Record dell’uscita» li mostra o li nasconde, e «Ricalcola i record» aggiorna le soste automatiche del film.',
   'v44.night.title': 'Notti meno nere',
   'v44.night.text': '« Luminosità della notte » (Luce › Atmosfera) illumina il rilievo e le nuvole di notte, come la luce della luna, senza cambiare nulla di giorno. L’esposizione ora sta con contrasto e saturazione in Colori.',
   'v332.landmarks.title': 'Nascondere riferimenti in pochi clic',

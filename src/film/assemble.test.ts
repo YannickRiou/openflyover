@@ -7,6 +7,7 @@ import { buildTrack } from '../import/stats'
 import { recordLandmarks } from '../osm/landmarks'
 import type { Landmark } from '../osm/landmarks'
 import {
+  alignRecordStops,
   autoStopId,
   autoStops,
   filmStops,
@@ -57,7 +58,7 @@ describe('records of the outing', () => {
     expect(autoStops({ track, landmarks: [record], pacing: DEFAULT_PACING }, 'temps-forts').map((s) => s.label)).toEqual(['Montée la plus raide · 18 % sur 400 m'])
   })
 
-  it('make at most three stops per stage of a film: the steepest climb, the highest point, the fastest descent', () => {
+  it('make at most four stops per stage of a film: the steepest climb, the highest point, the fastest descent, the best thermal', () => {
     const stage = (id: string): Track => {
       const points = []
       for (let d = 0; d <= 6000; d += 10) {
@@ -73,11 +74,51 @@ describe('records of the outing', () => {
     const sequence = buildSequence([a, b])
     const landmarks = sequenceLandmarks(sequence, { a: all[0], b: all[1] })!
     const stops = stopCandidates({ track: sequence.track, landmarks })
-    // …but only three per stage feed the automatic stops
-    expect(stops.length).toBeLessThanOrEqual(6)
+    // …but only these per stage feed the automatic stops
+    expect(stops.length).toBeLessThanOrEqual(8)
     expect(stops.length).toBeGreaterThan(2)
     const kinds = new Set(stops.map((s) => (s.source.ref ?? '').split(':')[2]))
-    expect([...kinds].every((k) => ['steepestClimb', 'highest', 'fastestDescent'].includes(k))).toBe(true)
+    expect([...kinds].every((k) => ['steepestClimb', 'highest', 'fastestDescent', 'bestThermal'].includes(k))).toBe(true)
+  })
+
+  describe('alignRecordStops', () => {
+    const own = (patch: Partial<Film['stops'][number]>): Film['stops'][number] => ({ id: 'stop-1', atM: 2000, durationS: 4, camera: 'orbite', label: 'À moi', source: { kind: 'manual' }, ...patch })
+    const written = (landmark: Landmark) => autoStops({ track, landmarks: [landmark], pacing: DEFAULT_PACING }, 'temps-forts')[0]
+    const film = (stops: Film['stops']): Film => ({ ...DEFAULT_FILM, autoStops: false, stops })
+    const input = (list: Landmark[]) => ({ track, landmarks: list, pacing: DEFAULT_PACING })
+
+    it('removes the stop of a record that is gone or moved, adds the stop of a record that has none, never touches the others', () => {
+      const gone = { ...record, id: 'record:t:highest', recordKind: 'highest' as const, alongM: 4000 }
+      const moved = written({ ...record, alongM: 1000 })
+      const byHand = own({ atM: 4500 })
+      const passStop = { id: 'stop-2', atM: 1500, durationS: 4, camera: 'orbite' as const, source: { kind: 'landmark' as const, ref: 'node/1500' } }
+      // saved with stops for a highest point that is gone and for a steepest climb that has moved since (now at 3200)
+      const result = alignRecordStops(film([moved, written(gone), byHand, passStop]), input([landmarks[0], { ...record, alongM: 3200 }]))
+      expect(result.removed.map((s) => s.source?.ref).sort()).toEqual(['record:t:highest', 'record:t:steepestClimb'])
+      expect(result.added.map((s) => s.atM)).toEqual([3200])
+      // the user's stops and the landmarks' stay, ordered along the track
+      expect(result.film.stops.map((s) => s.id)).toEqual(['stop-2', autoStopId(3200), 'stop-1'])
+      expect(result.film.stops).toContain(byHand)
+      expect(result.film.stops).toContain(passStop)
+    })
+
+    it('adds no stop beside one set by hand, and the other records stay labels', () => {
+      const result = alignRecordStops(film([own({ atM: 2100 })]), input([record, { ...record, id: 'record:t:slowestKm', recordKind: 'slowestKm', alongM: 4000 }]))
+      expect(result.added).toEqual([])
+      expect(result.removed).toEqual([])
+      expect(result.film.stops).toHaveLength(1)
+    })
+
+    it('is the same film when nothing changes, and leaves a film that generates its stops to itself', () => {
+      const aligned = film([written(record)])
+      expect(alignRecordStops(aligned, input([record])).film).toBe(aligned)
+      expect(alignRecordStops(DEFAULT_FILM, input([record])).film).toBe(DEFAULT_FILM)
+    })
+
+    it('does not give records to a film saved before the timeline', () => {
+      const legacy = { ...film([]), autoMode: 'rythme' as const }
+      expect(alignRecordStops(legacy, input([record])).added).toEqual([])
+    })
   })
 
   it('do not add pauses to a film saved before the timeline', () => {

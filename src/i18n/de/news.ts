@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Version {version}',
   'v45.camera.title': 'Eine Kamera, die angenehmer anzusehen ist',
   'v45.camera.text': 'Zwei Einstellungen unter Überflug › Kamera. „Raum voraus“ setzt den Marker etwas hinter die Bildmitte und lässt Platz auf der Seite, in die er fährt. „Neigung in Kurven“ neigt den Horizont in Kurven sanft, wie eine Drohne, die sich in die Kurve legt. Beide sind standardmäßig leicht eingeschaltet: Ihre Filme wirken ruhiger.',
+  'v45.records.title': 'Rekorde für Flüge',
+  'v45.records.text': 'Der beste Aufwind (der stetigste Anstieg eines Fluges) und die größte Höhe über Grund sind zwei weitere Rekorde für Gleitschirmflüge. Dafür zählen die Rekorde für Anstieg, Abfahrt und Kilometer die Flugabschnitte nicht mehr mit: Eine Steigung bedeutet dort nichts. Unter Karte › Landmarken blendet der Schalter „Rekorde der Tour“ sie ein oder aus, und „Rekorde neu berechnen“ aktualisiert die automatischen Stopps des Films.',
   'v44.night.title': 'Hellere Nächte',
   'v44.night.text': '« Helligkeit der Nacht » (Licht › Atmosphäre) beleuchtet Gelände und Wolken nachts wie Mondlicht und ändert tagsüber nichts. Die Belichtung steht jetzt bei Kontrast und Sättigung unter Farben.',
   'v332.landmarks.title': 'Landmarken mit wenigen Klicks ausblenden',

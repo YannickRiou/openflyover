@@ -1,16 +1,19 @@
 /**
  * « Records de la sortie »: the feats of an outing found in its points (steepest stretch, fastest descent, highest and
- * lowest points, fastest and slowest kilometre, longest climb, peak heart rate and power), each one a place along the
- * track with its value. Pure functions (no DOM, React or Three); the landmark list turns them into landmarks
+ * lowest points, fastest and slowest kilometre, longest climb, peak heart rate and power; on flights, the best thermal
+ * and the greatest height above the ground), each one a place along the track with its value. Pure functions (no DOM, React or Three); the landmark list turns them into landmarks
  * (`recordLandmarks`, `osm/landmarks.ts`). See ARCHITECTURE.md "Records".
  *
  * Computed from the points only, never from the figures corrected by hand: elevations are the despiked, smoothed ones of
  * the climbs (`resampleElevation`), times count the time spent moving (a pause is not a slow kilometre), and a stretch
- * that implies more than `MAX_SPEED_KMH` is a GPS jump, never a record.
+ * that implies more than `MAX_SPEED_KMH` is a GPS jump, never a record. The records of the ground (slopes, descent,
+ * kilometres, longest climb) never touch a stretch flown (`Track.flights`: a slope in the air means nothing); the flights
+ * have their own two, and the altitude, heart rate and power records stay whatever the stretch.
  */
-import type { Track, TrackPoint } from '../core/types'
+import type { Flight, Track, TrackPoint } from '../core/types'
 import { SMOOTHING_WINDOW_M, climbsOf, movingAverage, resampleElevation } from '../flyover/climbs'
 import { samplePath, trackPathOf } from '../flyover/path'
+import type { TrackPath } from '../flyover/path'
 import { formatNumber } from '../ui/format'
 import { t } from '../i18n'
 
@@ -24,11 +27,13 @@ export const RECORD_KINDS = [
   'longestClimb',
   'maxHeartRate',
   'maxPower',
+  'bestThermal',
+  'highestAboveGround',
 ] as const
 export type RecordKind = (typeof RECORD_KINDS)[number]
 
 /** The records that make an automatic stop (the others stay labels: a film of several stages would be all stops). */
-export const AUTO_STOP_RECORDS: readonly RecordKind[] = ['steepestClimb', 'fastestDescent', 'highest']
+export const AUTO_STOP_RECORDS: readonly RecordKind[] = ['steepestClimb', 'fastestDescent', 'highest', 'bestThermal']
 
 export interface TrackRecord {
   kind: RecordKind
@@ -36,7 +41,7 @@ export interface TrackRecord {
   alongM: number
   lon: number
   lat: number
-  /** gradient (%), speed (km/h), elevation (m), time of a kilometre (s), length of a climb (m), heart rate (bpm) or power (W) */
+  /** gradient (%), speed (km/h), elevation (m), time of a kilometre (s), length of a climb (m), heart rate (bpm), power (W), climb rate (m/s) or height above the ground (m) */
   value: number
   /** length of the stretch (metres): the steepest stretch and the longest climb */
   lengthM?: number
@@ -73,6 +78,10 @@ const END_MARGIN_M = 200
 /** Window of the heart rate and power peaks: seconds with times, points without. */
 const PEAK_SPAN_S = 30
 const PEAK_POINTS = 10
+/** A thermal is a climb rate held this long (seconds): GPS noise and a gust of a few seconds do not make one. */
+const THERMAL_SPAN_S = 25
+/** Under this the air only carries the glider (m/s): ridge lift or a bubble, not a thermal worth a record. */
+const MIN_THERMAL_MS = 1
 
 /** Median of five samples around each one (spikes of up to two samples vanish), the ends unchanged. */
 function despike(values: Float64Array): Float64Array {
@@ -95,9 +104,15 @@ interface Grid {
   seams: Int32Array
 }
 
-/** Prefix count of the cells within `SEAM_CELLS` of a segment join; the jump between two segments adds no distance. */
+/**
+ * Prefix count of the cells within `SEAM_CELLS` of a segment join (the jump between two segments adds no distance) or of
+ * a flight (`track.flights`: the records of the ground stay out of the air; the margin is where the smoothing blends both).
+ */
 function seamGrid(track: Track, dist: Float64Array, count: number): Int32Array {
   const near = new Uint8Array(count)
+  for (const f of track.flights ?? []) {
+    for (let c = Math.max(0, Math.floor(f.startM / STEP_M) - SEAM_CELLS); c <= Math.min(count - 1, Math.ceil(f.endM / STEP_M) + SEAM_CELLS); c++) near[c] = 1
+  }
   let index = 0
   track.segments.forEach((segment, k) => {
     if (k > 0 && segment.points.length > 0 && index > 0) {
@@ -111,9 +126,14 @@ function seamGrid(track: Track, dist: Float64Array, count: number): Int32Array {
   return prefix
 }
 
-/** Whether cells `from` to `to` include one near a segment join. */
+/** Whether cells `from` to `to` include one near a segment join or a flight. */
 function crossesSeam(grid: Grid, from: number, to: number): boolean {
   return grid.seams[to + 1] - grid.seams[from] > 0
+}
+
+/** Whether a flight overlaps the stretch from `fromM` to `toM` (metres along the track). */
+function onFlight(track: Track, fromM: number, toM: number): boolean {
+  return (track.flights ?? []).some((f) => f.endM > fromM && f.startM < toM)
 }
 
 /** Moving time and GPS jumps on the grid, from the timed points (bridged by distance over the points without time). */
@@ -183,6 +203,31 @@ function peak(flat: readonly TrackPoint[], key: 'hr' | 'power', lo: number, hi: 
     if (n > 0 && (!best || sum / n > best.value)) best = { index: i, value: sum / n }
   }
   return valid >= 10 ? best : undefined
+}
+
+/**
+ * The best climb rate held for `THERMAL_SPAN_S` seconds inside a flight (a window of recorded points with time and
+ * elevation, a recording gap not bridged): its middle and its rate (m/s); none under `MIN_THERMAL_MS`.
+ */
+function bestThermal(path: TrackPath, flights: readonly Flight[]): { alongM: number; value: number } | undefined {
+  let best: { alongM: number; value: number } | undefined
+  for (const f of flights) {
+    let j = 0
+    for (let i = 0; i < path.count; i++) {
+      if (path.dist[i] < f.startM || Number.isNaN(path.ele[i]) || Number.isNaN(path.time[i])) continue
+      if (path.dist[i] > f.endM) break
+      // the first point `THERMAL_SPAN_S` later (the window only moves forward)
+      j = Math.max(j, i)
+      while (j < path.count && !((path.time[j] - path.time[i]) / 1000 >= THERMAL_SPAN_S && !Number.isNaN(path.ele[j]))) j++
+      if (j >= path.count || path.dist[j] > f.endM) break
+      const s = (path.time[j] - path.time[i]) / 1000
+      // a gap in the recording is not a sustained climb
+      if (s > THERMAL_SPAN_S * 2) continue
+      const value = (path.ele[j] - path.ele[i]) / s
+      if (value >= MIN_THERMAL_MS && (!best || value > best.value)) best = { alongM: (path.dist[i] + path.dist[j]) / 2, value }
+    }
+  }
+  return best
 }
 
 /**
@@ -265,7 +310,7 @@ export function detectRecords(track: Track): TrackRecord[] {
     const w = KM_M / STEP_M
     const times: { km: number; s: number }[] = []
     for (let k = 0; (k + 1) * w < count && (k + 1) * KM_M <= path.lengthM; k++) {
-      const s = movingS(grid, k * w, (k + 1) * w)
+      const s = onFlight(track, k * KM_M, (k + 1) * KM_M) ? undefined : movingS(grid, k * w, (k + 1) * w)
       if (s !== undefined) times.push({ km: k, s })
     }
     if (times.length >= 2) {
@@ -282,11 +327,18 @@ export function detectRecords(track: Track): TrackRecord[] {
   }
 
   // the longest climb, when the track has several
-  const climbs = climbsOf(track)
+  const climbs = climbsOf(track).filter((c) => !onFlight(track, c.startDistM, c.endDistM))
   if (climbs.length >= 2) {
     const longest = climbs.reduce((a, b) => (b.lengthM > a.lengthM ? b : a))
     at(longest.endDistM, { kind: 'longestClimb', value: longest.lengthM, lengthM: longest.lengthM, gradientPct: longest.avgGradient * 100 })
   }
+
+  // best thermal and greatest height above the ground, on the flights alone
+  const thermal = bestThermal(path, track.flights ?? [])
+  if (thermal) at(thermal.alongM, { kind: 'bestThermal', value: thermal.value })
+  let top: Flight | undefined
+  for (const f of track.flights ?? []) if (f.maxHeightM !== undefined && f.maxHeightAtM !== undefined && f.maxHeightM > (top?.maxHeightM ?? 0)) top = f
+  if (top) at(top.maxHeightAtM!, { kind: 'highestAboveGround', value: top.maxHeightM! })
 
   // peak heart rate and power
   const heart = peak(flat, 'hr', 30, 250)
@@ -297,16 +349,21 @@ export function detectRecords(track: Track): TrackRecord[] {
 }
 
 /** keyed by the points, like `climbsOf` */
-const cache = new WeakMap<Track['segments'], TrackRecord[]>()
+const cache = new WeakMap<Track['segments'], { flights: Track['flights']; records: TrackRecord[] }>()
 
-/** `detectRecords`, cached per list of points (tracks are immutable in the store; a track only recoloured keeps its records). */
+/** `detectRecords`, cached per list of points and flights (tracks are immutable in the store; a track only recoloured keeps its records). */
 export function recordsOf(track: Track): TrackRecord[] {
-  let records = cache.get(track.segments)
-  if (!records) {
-    records = detectRecords(track)
-    cache.set(track.segments, records)
+  let hit = cache.get(track.segments)
+  if (!hit || hit.flights !== track.flights) {
+    hit = { flights: track.flights, records: detectRecords(track) }
+    cache.set(track.segments, hit)
   }
-  return records
+  return hit.records
+}
+
+/** Forget the records computed for `tracks`: the next `recordsOf` reads their points again (« Recalculer les records »). */
+export function forgetRecords(tracks: readonly Track[]): void {
+  for (const track of tracks) cache.delete(track.segments)
 }
 
 // ---------------------------------------------------------------------------
@@ -340,6 +397,10 @@ export function recordValueText(record: TrackRecord): string {
       return `${formatNumber(value)} bpm`
     case 'maxPower':
       return `${formatNumber(value)} W`
+    case 'bestThermal':
+      return t('landmarks.record.thermal', { value: formatNumber(value, 1) })
+    case 'highestAboveGround':
+      return `${formatNumber(value)} m`
   }
 }
 
