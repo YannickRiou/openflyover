@@ -29,6 +29,7 @@ import { CLEAR_SCENE_WEATHER, hazeExtinction, sceneWeatherAt } from '../weather/
 import type { SceneWeather } from '../weather/sceneWeather'
 import type { WeatherSeries } from '../weather/series'
 import { useWeatherStore, weatherSeriesOf } from '../weather/store'
+import { usePreviewBudget, sceneBudget } from './previewQuality'
 import { createCloudNoiseTexture } from './cloudNoise'
 import { patchCloudShadow } from './cloudShaders'
 import { CloudSeaSurface } from './CloudSeaSurface'
@@ -85,6 +86,9 @@ export interface MarkerTrack {
 export function AtmosphereLayer() {
   const { engine, frame } = useTerrainContext()
   const shadows = useAppStore((s) => s.settings.shadows)
+  // the preview's shadow map, the device's own for an export (video, poster, capture): the map is made again at its start and end
+  const exporting = useExportStore((s) => isExportBusy(s.phase))
+  const { shadowMapSize } = sceneBudget(usePreviewBudget(), exporting)
   const track = useAppStore((s) => s.tracks[0])
   const gl = useThree((s) => s.gl)
   const camera = useThree((s) => s.camera)
@@ -266,7 +270,7 @@ export function AtmosphereLayer() {
   useLayoutEffect(() => {
     if (!sun || !engine || !shadows) return
     const original = sun.shadow
-    const shadow = new TerrainShadow(engine.group, Math.min(deviceBudget().shadowMapSize, gl.capabilities.maxTextureSize))
+    const shadow = new TerrainShadow(engine.group, Math.min(shadowMapSize, gl.capabilities.maxTextureSize))
     sun.shadow = shadow
     sun.castShadow = true
     return () => {
@@ -274,7 +278,7 @@ export function AtmosphereLayer() {
       sun.shadow = original
       shadow.dispose()
     }
-  }, [sun, engine, shadows, gl])
+  }, [sun, engine, shadows, gl, shadowMapSize])
 
   if (!frame) return null
   return (
