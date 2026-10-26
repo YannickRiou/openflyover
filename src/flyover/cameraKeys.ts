@@ -58,18 +58,27 @@ export const keyFraming = (k: FilmCameraKey): KeyFraming => ({
   aimAheadM: k.aimAheadM ?? 0,
 })
 
+/** `a` → `b` at `k` (0..1), the angle (radians) the shorter way round. */
+const blendTurn = (a: number, b: number, k: number) => a + (Math.atan2(Math.sin(b - a), Math.cos(b - a))) * k
+
 /**
  * Keyframe pose at `atM` metres along the track (`keys` sorted by position), null without keys: between two keys,
  * from one to the next by smootherstep (as `keyedCamera`), `weight` 1; before the first and after the last, that
  * key's pose with `weight` easing from 0 (the film's camera) over `easeM`. `free` = how far from a key the pose is
- * (0 at a key, 1 halfway between two): the share of the ground clearance it gets.
+ * (0 at a key, 1 halfway between two): the share of the ground clearance it gets. `turn` (radians) = the key's
+ * `turnOf`, blended like its heading: how far the reference direction its pose is placed around is turned there.
  */
-export function keyPoseAt(keys: readonly FilmCameraKey[], atM: number, easeM: number): { framing: KeyFraming; weight: number; free: number } | null {
+export function keyPoseAt(
+  keys: readonly FilmCameraKey[],
+  atM: number,
+  easeM: number,
+  turnOf: (key: FilmCameraKey) => number = () => 0,
+): { framing: KeyFraming; weight: number; free: number; turn: number } | null {
   if (keys.length === 0) return null
   const next = keys.findIndex((k) => k.atM > atM)
-  if (next === 0) return { framing: keyFraming(keys[0]), weight: smootherstep(1 - (keys[0].atM - atM) / easeM), free: 0 }
+  if (next === 0) return { framing: keyFraming(keys[0]), weight: smootherstep(1 - (keys[0].atM - atM) / easeM), free: 0, turn: turnOf(keys[0]) }
   const last = keys[keys.length - 1]
-  if (next === -1) return { framing: keyFraming(last), weight: 1 - smootherstep((atM - last.atM) / easeM), free: 0 }
+  if (next === -1) return { framing: keyFraming(last), weight: 1 - smootherstep((atM - last.atM) / easeM), free: 0, turn: turnOf(last) }
   const a = keyFraming(keys[next - 1])
   const b = keyFraming(keys[next])
   const u = (atM - keys[next - 1].atM) / (keys[next].atM - keys[next - 1].atM)
@@ -79,7 +88,7 @@ export function keyPoseAt(keys: readonly FilmCameraKey[], atM: number, easeM: nu
     aimRightM: a.aimRightM + (b.aimRightM - a.aimRightM) * k,
     aimAheadM: a.aimAheadM + (b.aimAheadM - a.aimAheadM) * k,
   }
-  return { framing, weight: 1, free: 4 * u * (1 - u) }
+  return { framing, weight: 1, free: 4 * u * (1 - u), turn: blendTurn(turnOf(keys[next - 1]), turnOf(keys[next]), k) }
 }
 
 /** The 3D view as a keyframe at the marker, null when there is no flight to frame. */

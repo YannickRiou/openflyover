@@ -7,12 +7,12 @@ import { createLocalFrame } from '../geo/ellipsoid'
 import { centroid } from '../geo/lonLat'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { CAMERA_PRESETS, CAMERA_RANGES, DEFAULT_CAMERA, DEFAULT_FOCAL_MM, type CameraSettings } from './cameraSettings'
-import { AUDIT_JOLT_LIMIT, auditFilmCamera, auditPoses, type AuditPose } from './filmAudit'
-import { computeFilmView } from './filmCamera'
+import { AUDIT_JOLT_LIMIT, AUDIT_WHIP_LIMIT, auditFilmCamera, auditPoses, type AuditPose } from './filmAudit'
+import { computeFilmView, keyFramingAt } from './filmCamera'
 import { DEFAULT_PACING } from './pacing'
 import { samplePath, trackPathOf } from './path'
 import { hairpins, loops, steepSampler } from './__fixtures__/markerVisible'
-import { curvyOuting, gpxTrack, hillySampler } from './__fixtures__/smoothness'
+import { curvyOuting, gpxTrack, hairpinRoad, hillySampler } from './__fixtures__/smoothness'
 
 const frame = createLocalFrame(6.85, 45.9)
 const FPS = 30
@@ -38,6 +38,24 @@ describe('auditPoses', () => {
     expect(issues[0].kind).toBe('jolt')
     expect(issues[0].startS).toBeCloseTo(10 + 44 / FPS, 1)
     expect(issues[0].worst).toBeGreaterThan(AUDIT_JOLT_LIMIT)
+  })
+
+  it('a view that turns faster than a viewer can follow is a whip, a brisk turn is not', () => {
+    // the camera stands still and looks round, `degPerFrame` degrees a frame (30 i/s)
+    const whips = (degPerFrame: number) =>
+      auditPoses(
+        poses(90).map((p, i) => {
+          const a = (degPerFrame * i * Math.PI) / 180
+          return { ...p, position: new Vector3(0, 1000, 0), target: new Vector3(1000 * Math.sin(a), 1000, -1000 * Math.cos(a)) }
+        }),
+        frame,
+        null,
+        options,
+      ).filter((i) => i.kind === 'whip')
+    const fast = whips(12)
+    expect(fast).toHaveLength(1)
+    expect(fast[0].worst).toBeGreaterThan(AUDIT_WHIP_LIMIT)
+    expect(whips(8)).toEqual([])
   })
 
   it('a start or a stop of the marker is not a jolt: the camera follows it at once', () => {
@@ -259,6 +277,53 @@ describe('the whole film over the home page example, beyond the opening and the 
       const alone = view(t, (lon, lat) => hillySampler(lon, lat))
       expect(after.position.distanceTo(alone.position), `${t} s`).toBeLessThan(1e-6)
       expect(after.target.distanceTo(alone.target), `${t} s`).toBeLessThan(1e-6)
+    }
+  })
+})
+
+describe('camera keys on a long winding road flown fast', () => {
+  // 150 km of hairpins in a valley that winds ±270°, in 15 s: 10 km of track a second
+  const road = hairpinRoad()
+  const path = trackPathOf(road)
+  const where = createLocalFrame(centroid(road.bounds).lon, centroid(road.bounds).lat)
+  const opts = { exaggeration: 1, liftM: 3, camera: DEFAULT_CAMERA, durationS: 15, aspect: 16 / 9 }
+  const cameraKeys = [
+    { id: 'k1', atM: 60_000, distance: 2.5, pitchDeg: 27, headingOffsetDeg: 73 },
+    { id: 'k2', atM: 73_000, distance: 1.4, pitchDeg: 15, headingOffsetDeg: 41, aimRightM: -184, aimAheadM: -267 },
+  ]
+  const clockOf = (keys: typeof cameraKeys) => filmClockFor({ track: road, film: { ...DEFAULT_FILM, autoStops: false, cameraKeys: keys }, durationS: 15, pacing: DEFAULT_PACING, landmarks: [] })
+
+  it('a key keeps its pose from a direction that does not whip: the view turns calmly through both, no jolt', { timeout: 60_000 }, () => {
+    // the heading of a key was averaged over 6 km of track, which turned 50° a kilometre: the view swung round at 350 deg/s
+    // (the jolt of the positions only 0.03); averaged over the film time it takes (5 s), the film stays under 90 deg/s
+    const clock = clockOf(cameraKeys)
+    const issues = auditFilmCamera(path, clock, where, hillySampler, opts, { fromS: clock.openingS, toS: clock.openingS + clock.flightS })
+    expect(issues).toEqual([])
+    // without them the film is as calm: the keys add no whip
+    const plain = clockOf([])
+    expect(auditFilmCamera(path, plain, where, hillySampler, opts, { fromS: plain.openingS, toS: plain.openingS + plain.flightS })).toEqual([])
+  })
+
+  it('a view captured at a speed this high is the one the film shows at its key', () => {
+    const plain = clockOf([])
+    const t = plain.openingS + 6
+    const p = plain.progressAtTime(t)
+    const film = computeFilmView(path, plain, t, p, where, hillySampler, opts)
+    const position = film.target.clone().add(new Vector3(-700, 450, 300))
+    const lookAt = film.target.clone().add(new Vector3(30, 0, -20))
+    const clock = clockOf([{ id: 'k', atM: p * path.lengthM, ...keyFramingAt(path, plain, t, p, where, hillySampler, opts, position, lookAt) }] as typeof cameraKeys)
+    expect(computeFilmView(path, clock, clock.cameraKeys[0].timeS, p, where, hillySampler, opts).position.distanceTo(position)).toBeLessThan(0.01)
+  })
+
+  it('a saved key shows the image it was taken with at its own instant: its offsets are still read from the direction of travel of the track', () => {
+    // what the film shows at a key, read back as a pose (against the plain direction of travel, as a key is captured): the
+    // pose that was saved, so the keys of a project saved before keep their image
+    const clock = clockOf(cameraKeys)
+    for (const key of clock.cameraKeys) {
+      const p = clock.progressAtTime(key.timeS)
+      const view = computeFilmView(path, clock, key.timeS, p, where, hillySampler, opts)
+      const back = keyFramingAt(path, clock, key.timeS, p, where, hillySampler, opts, view.position, view.target)
+      for (const field of ['distance', 'pitchDeg', 'headingOffsetDeg', 'aimRightM', 'aimAheadM'] as const) expect(back[field], `${key.id} ${field}`).toBeCloseTo(key[field] ?? 0, 3)
     }
   })
 })

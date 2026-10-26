@@ -156,6 +156,34 @@ export function zigzagOuting(noiseM = 6, zigzagM = 12, seed = 3): Track {
   return buildTrack({ name: 'zigzag', source: 'gpx', segments: [{ points }] })
 }
 
+/**
+ * A mountain road of ≈ `lengthKm` made of hairpins only: legs of 250 m 80° each side of the direction of the valley
+ * (which winds ±270° with a period of 24 km), joined by U-turns of radius 20 m, a point every 5 m. Averaged over a few
+ * kilometres, its direction of travel still swings 50° a kilometre as the valley turns.
+ */
+export function hairpinRoad(lengthKm = 150): Track {
+  const points: TrackPoint[] = []
+  let x = 0
+  let y = 0
+  let travelledM = 0
+  const valley = () => 270 * DEG * Math.sin((2 * Math.PI * travelledM) / 24_000)
+  const step = (heading: number) => {
+    const at = toLonLat(x, y)
+    points.push({ lon: at.lon, lat: at.lat })
+    x += 5 * Math.sin(heading)
+    y += 5 * Math.cos(heading)
+    travelledM += 5
+  }
+  // a U-turn of 160° at radius 20 m, from one side of the valley's direction to the other
+  const turnSteps = Math.round((160 * DEG * 20) / 5)
+  for (let leg = 0; travelledM < lengthKm * 1000; leg++) {
+    const side = leg % 2 === 0 ? 1 : -1
+    for (let s = 0; s < 50; s++) step(valley() + side * 80 * DEG)
+    for (let s = 0; s < turnSteps; s++) step(valley() + side * 80 * DEG - (side * 160 * DEG * (s + 0.5)) / turnSteps)
+  }
+  return buildTrack({ name: 'hairpin road', source: 'gpx', segments: [{ points }] })
+}
+
 /** Track of a GPX text (trkpt with lat, lon, ele and time), without a DOM. */
 export function gpxTrack(text: string): Track {
   const points: TrackPoint[] = []
