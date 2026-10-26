@@ -1,7 +1,9 @@
 /**
  * Service worker of the website (not of the desktop app), emitted as `sw.js` by vite.config.ts, which fills the three
  * constants below. Rules (ARCHITECTURE.md "Installable web app"):
- * - the app shell and the build files are precached at install, in a cache named after the build;
+ * - the app shell and the build files are precached at install, in a cache named after the build; a file with a
+ *   fingerprint in its name (`assets/index-DJmkmaKt.js`) may come from the HTTP cache (the page has just loaded it),
+ *   the others (page, worker, public files) are always asked of the network so that an update arrives;
  * - the sky and cloud textures (~12 MB) are cached on first use, in a cache named after their content, kept across
  *   releases;
  * - cross-origin requests (tiles, weather, Overpass, Strava) are never touched: the app has its own tile cache;
@@ -20,6 +22,8 @@ const SKY_CACHE = `openflyover-sky-${SKY_VERSION}`
 const SHARE_CACHE = 'openflyover-share'
 const OWN_CACHES = /^openflyover-(shell|sky)-/
 const RUNTIME_PREFIXES = ['atmosphere/', 'clouds/']
+/** a file of `assets/` whose name carries its content hash (8 characters of Vite, `-` and `_` included) */
+const FINGERPRINTED = /^assets\/.+-[\w-]{8}\.[a-z0-9]+$/
 
 const scope = () => self.registration.scope
 const local = (url) => (url.startsWith(scope()) ? url.slice(scope().length) : null)
@@ -28,7 +32,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(SHELL_CACHE)
-      .then((cache) => cache.addAll(PRECACHE.map((path) => new Request(new URL(path, scope()), { cache: 'reload' })))),
+      .then((cache) =>
+        cache.addAll(PRECACHE.map((path) => new Request(new URL(path, scope()), FINGERPRINTED.test(path) ? undefined : { cache: 'reload' }))),
+      ),
   )
 })
 
