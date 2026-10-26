@@ -102,9 +102,8 @@ describe('speed keys in the clock', () => {
     closing: { style: 'aucune', durationS: 5 },
     stops: [],
     lengthM: 10_000,
-    highlightsM: [],
     durationS: 60,
-    pacing: { ...DEFAULT_PACING, enabled: false, keepDuration: false },
+    pacing: { ...DEFAULT_PACING, keepDuration: false },
   }
 
   it('without keys: the flight lasts the flyover duration', () => {

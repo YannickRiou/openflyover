@@ -232,16 +232,20 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
-    it('the « Vitesse » lane shows the automatic slow-downs of « Ralentir aux temps forts », not as blocks to edit', async () => {
+    it('the film options offer « Aussi aux lieux traversés » under « Arrêts automatiques », only while those are on', async () => {
       const { host, root } = await setup()
-      // a 6 km climb of 600 m then the same back down: one climb top
-      const points = Array.from({ length: 121 }, (_, i) => ({ lon: 6.8 + i * 0.001, lat: 45.9, ele: 1000 + 600 * (1 - Math.abs(i - 60) / 60) }))
-      await act(async () => useAppStore.setState({ tracks: [buildTrack({ name: 'Col', source: 'gpx', segments: [{ points }] })] }))
-      const bands = () => host.querySelectorAll('[data-lane="param:speed"] [data-testid="timeline-auto-slow"]')
-      expect(bands()).toHaveLength(0)
-      await act(async () => useAppStore.getState().setSetting('pacing', { ...useAppStore.getState().settings.pacing, enabled: true, landmarks: false }))
-      expect(bands().length).toBeGreaterThan(0)
-      expect(bands()[0].getAttribute('aria-label')).toContain('Ralentissement automatique ×0,35')
+      await act(async () => useAppStore.getState().setSetting('film', DEFAULT_FILM))
+      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Options du film"]')!.click())
+      const box = (label: string) => [...document.querySelectorAll('label')].find((l) => l.textContent?.trim() === label)!.querySelector('input')!
+      expect(box('Arrêts automatiques').checked).toBe(true)
+      expect(box('Aussi aux lieux traversés').checked).toBe(false)
+      expect(box('Aussi aux lieux traversés').disabled).toBe(false)
+      await act(async () => box('Aussi aux lieux traversés').click())
+      expect(useAppStore.getState().settings.film.autoStopsPlaces).toBe(true)
+      await act(async () => box('Aussi aux lieux traversés').click())
+      expect(useAppStore.getState().settings.film.autoStopsPlaces).toBeUndefined()
+      await act(async () => useAppStore.getState().setSetting('film', { ...DEFAULT_FILM, autoStops: false }))
+      expect(box('Aussi aux lieux traversés').disabled).toBe(true)
       act(() => root.unmount())
     })
 

@@ -22,7 +22,6 @@ describe('filmPins', () => {
       closing: { style: 'aucune', durationS: 0 },
       stops: [],
       lengthM: smoothedTrackPath(track, 0).lengthM,
-      highlightsM: [],
       durationS: 60,
       pacing: { ...DEFAULT_PACING, keepDuration: false },
     })

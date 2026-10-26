@@ -9,6 +9,8 @@ const messages: Messages['news'] = {
   'v46.nights.text': 'Su una traccia di più giorni, ogni notte è ora un blocco verde sulla traccia «Soste» della timeline. Clicca per vederla, Canc per toglierla dal film (si può annullare). «Ripristina le notti» (Luce › Giorni e notti) le riporta tutte.',
   'v46.stage.title': 'Due pulsanti sulla vista',
   'v46.stage.text': 'Sotto il mirino, “Cattura questa immagine” salva l’immagine che vedi, alla dimensione del formato di uscita e con la sovrapposizione (l’immagine del film in quell’istante, o la tua vista se l’hai ruotata). Quando hai ruotato la vista con il mouse a film in pausa, “Torna alla vista del film” rimette la telecamera dove la colloca il film.',
+  'v46.places.title': 'Soste nei luoghi attraversati',
+  'v46.places.text': 'Il modello «Ricordo 3 min» di «Film automatico» ora si ferma anche ai paesi, ai rifugi, ai laghi, alle cascate e ai punti panoramici accanto alla traccia, oltre ai passi e alle cime, senza appesantire il film. Nelle opzioni della timeline, «Anche nei luoghi attraversati» lo imposta per qualsiasi film. «Rallenta nei punti salienti» non esiste più: le soste e i tratti di velocità della timeline fanno questo lavoro.',
   'v45.camera.title': 'Una camera più piacevole da guardare',
   'v45.camera.text': 'Due impostazioni in Sorvolo › Camera. «Spazio davanti» mette il marcatore un po’ dietro il centro dell’immagine, lasciando spazio dal lato verso cui avanza. «Inclinazione nelle curve» inclina dolcemente l’orizzonte nelle curve, come un drone che si piega. Per impostazione predefinita, un po’ di entrambe: i film risultano più fluidi.',
   'v45.marker.title': 'Un marcatore più vivo',

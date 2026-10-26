@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { filmClockFor } from '../film/clock'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
 import { parseProject } from './document'
 
 // Files as the app wrote them at the time (format history in git), frozen: never regenerate them from today's code.
+
+const REMOVED_PACING_MESSAGE = '« Ralentir aux temps forts » n’existe plus : ajoutez des arrêts ou des vitesses sur la timeline.'
 
 /** v1, last format before the timeline: pacing on, no film. */
 const V1 = `{
@@ -121,9 +124,9 @@ const CHECKED = [
 ] as const
 
 describe('frozen old projects', () => {
-  it('v1: every saved setting kept, the automatic stops follow the pacing, the fields added since filled in', () => {
+  it('v1: every saved setting kept, « Ralentir aux temps forts » and its stops dropped with a message, the fields added since filled in', () => {
     const p = parseProject(V1)
-    expect(p.warnings).toEqual([])
+    expect(p.warnings).toEqual([REMOVED_PACING_MESSAGE])
     expect(p.name).toBe('Tour du Mont Blanc')
     expect(p.speed).toBe(2)
     expect(p.media).toEqual({})
@@ -149,12 +152,12 @@ describe('frozen old projects', () => {
       style: 'orbit', distance: 1.2, pitchDeg: 30, headingOffsetDeg: 0, smoothing: 1, northUp: false,
       turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3, focalMm: 26,
     })
-    expect(s.pacing).toEqual({ enabled: true, climbs: true, landmarks: false, slowFactor: 0.5, windowM: 800, pauseS: 3, keepDuration: false, transitionS: 1.5 })
+    expect(s.pacing).toEqual({ keepDuration: false, transitionS: 1.5 })
     expect(s.film).toEqual({
       opening: { style: 'descente', durationS: 6 },
       closing: { style: 'descente', durationS: 5 },
-      autoStops: true,
-      autoMode: 'rythme',
+      // v7: the pauses of the pacing were its automatic stops
+      autoStops: false,
       stops: [], speeds: [], cameraKeys: [], paramKeys: [], markerKeys: [], texts: [], media: [], audio: [],
       duckMusic: false, pois: [],
       nights: { enabled: false, duskS: 3, nightS: 2, dawnS: 3 },
@@ -215,7 +218,6 @@ describe('frozen old projects', () => {
       opening: { style: 'saut', durationS: 4 },
       closing: { style: 'aucune', durationS: 5 },
       autoStops: false,
-      autoMode: 'temps-forts',
       stops: [{ id: 'stop-1', atM: 120, durationS: 6, camera: 'orbite', label: 'Lac' }],
       speeds: [],
       cameraKeys: [],
@@ -278,6 +280,29 @@ describe('frozen old projects', () => {
       expect(settings.film).not.toHaveProperty('landmarkTitles')
       expect(settings.film.speeds.map((x) => x.id)).toEqual(['speed-1'])
       expect(settings.film.texts.map((x) => x.id)).toEqual(['text-1'])
+    })
+  })
+
+  describe('« Ralentir aux temps forts » (option removed)', () => {
+    it('on: the film plays at constant speed without the pauses it made, and a message says it is gone', () => {
+      const { settings, tracks, warnings } = parseProject(V1)
+      expect(warnings).toEqual([REMOVED_PACING_MESSAGE])
+      expect(settings.pacing).toEqual({ keepDuration: false, transitionS: 1.5 })
+      const clock = filmClockFor({ track: tracks[0], film: settings.film, durationS: settings.flyoverDurationS, pacing: settings.pacing, landmarks: [] })
+      expect(clock.stops).toEqual([])
+      expect(clock.flightS).toBe(settings.flyoverDurationS)
+      expect(clock.progressAtTime(clock.openingS + settings.flyoverDurationS / 2)).toBeCloseTo(0.5, 12)
+    })
+
+    it('on, in a film made with the timeline: its stops stay, the message still comes; off: no message', () => {
+      const doc = JSON.parse(V2)
+      doc.settings.pacing = { enabled: true, climbs: true, landmarks: true, slowFactor: 0.35, windowM: 1000, pauseS: 2, keepDuration: true, transitionS: 1.5 }
+      const on = parseProject(JSON.stringify(doc))
+      expect(on.warnings).toEqual([REMOVED_PACING_MESSAGE])
+      expect(on.settings.pacing).toEqual({ keepDuration: true, transitionS: 1.5 })
+      expect(on.settings.film.stops.map((x) => x.id)).toEqual(['stop-1'])
+      doc.settings.pacing.enabled = false
+      expect(parseProject(JSON.stringify(doc)).warnings).toEqual([])
     })
   })
 })

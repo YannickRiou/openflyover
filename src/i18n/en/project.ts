@@ -27,6 +27,7 @@ const messages: Messages['project'] = {
   'doc.tracksMissing': 'Invalid project: list of tracks (“tracks”) missing.',
   'doc.duplicateId': 'Invalid project: two tracks have the identifier “{id}”.',
   'doc.settingsReplaced': 'Invalid settings replaced by their default value: {list}.',
+  'doc.pacingRemoved': '“Slow down at highlights” no longer exists: add stops or speeds on the timeline.',
   'doc.speedInvalid': 'Invalid playback speed: speed ×1 used.',
   'file.empty': 'The file is empty.',
   'file.notProject': 'This is not an OpenFlyover project (neither a .opnflvr file nor an old JSON project).',

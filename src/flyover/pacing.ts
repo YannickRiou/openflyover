@@ -1,29 +1,15 @@
 /**
- * Variable pacing of the flyover: slow-downs and pauses at the highlights of the first track.
+ * Variable pacing of the flyover: stops, speed portions and night pauses of the film.
  * Progress stays the fraction of the track distance; only the film time -> progress mapping changes
- * (raised-cosine slow-downs, pauses, speed portions, `keepDuration`: ARCHITECTURE.md "Flyover", Pacing).
- * No highlight (or pacing disabled) gives the identity pacing. Pure functions (no DOM, React, Three or store).
+ * (raised-cosine transitions, pauses, speed portions, `keepDuration`: ARCHITECTURE.md "Flyover", Pacing).
+ * Nothing to do gives the identity pacing. Pure functions (no DOM, React, Three or store).
  */
-import { withDefaults } from '../core/guards'
+import { isRecord } from '../core/guards'
 import { clamp, lastIndexAtOrBelow } from '../core/math'
-import type { Track } from '../core/types'
 import { CROSSED_PASS_M, type Landmark } from '../osm/landmarks'
 import { advanceProgress } from './cameraSettings'
-import { climbsOf } from './climbs'
 
 export interface PacingSettings {
-  /** slow down (and pause) at the highlights; off = constant ground speed */
-  enabled: boolean
-  /** tops of the detected climbs are highlights */
-  climbs: boolean
-  /** passes crossed and peaks next to the track (OpenStreetMap landmarks) are highlights */
-  landmarks: boolean
-  /** relative speed at a highlight (0.35 = 35 % of the normal speed; 1 = no slow-down) */
-  slowFactor: number
-  /** half-width of the slow-down on each side of a highlight (metres) */
-  windowM: number
-  /** time added to the film by the pause at each highlight (seconds, 0 = no pause) */
-  pauseS: number
   /** keep the film at `flyoverDurationS` (the base speed rises) instead of lengthening it */
   keepDuration: boolean
   /**
@@ -34,21 +20,12 @@ export interface PacingSettings {
 }
 
 export const DEFAULT_PACING: PacingSettings = {
-  enabled: false,
-  climbs: true,
-  landmarks: true,
-  slowFactor: 0.35,
-  windowM: 1000,
-  pauseS: 2,
   keepDuration: true,
   transitionS: 1.5,
 }
 
 /** Slider ranges (also the validity ranges of a loaded project). */
 export const PACING_RANGES = {
-  slowFactor: { min: 0.1, max: 1, step: 0.05 },
-  windowM: { min: 100, max: 10000, step: 100 },
-  pauseS: { min: 0, max: 10, step: 0.5 },
   transitionS: { min: 0.5, max: 4, step: 0.25 },
 } as const satisfies Partial<Record<keyof PacingSettings, { min: number; max: number; step: number }>>
 
@@ -58,15 +35,20 @@ export const PEAK_NEAR_M = 300
 export const PAUSE_EASE_S = DEFAULT_PACING.transitionS
 /** With `keepDuration`, the pauses take at most this share of the flyover duration. */
 export const MAX_PAUSE_SHARE = 0.5
-/** Grid steps across the window (±windowM) of each highlight. */
-export const WINDOW_SAMPLES = 64
 /** Longest transition into and out of a speed portion by default (film seconds at the base speed, ×1, `transitionS`). */
 export const SPEED_EASE_S = DEFAULT_PACING.transitionS
 /** Grid steps across each transition of a speed portion. */
 export const SPEED_SAMPLES = 32
 
-/** Pacing of a project saved before a field was added: its default value. */
-export const withPacingDefaults = withDefaults(DEFAULT_PACING)
+/**
+ * Pacing of a project saved before a field was added: its default value. The fields of « Ralentir aux temps forts »
+ * (removed) are dropped: such a film plays without those slow-downs.
+ */
+export function withPacingDefaults(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw
+  const { enabled: _enabled, climbs: _climbs, landmarks: _landmarks, slowFactor: _slowFactor, windowM: _windowM, pauseS: _pauseS, ...saved } = raw
+  return { ...DEFAULT_PACING, ...saved }
+}
 
 /** Every number inside its slider range. */
 export function isValidPacing(pacing: PacingSettings): boolean {
@@ -83,29 +65,6 @@ export function isValidPacing(pacing: PacingSettings): boolean {
 /** A pass crossed by the track or a peak next to it. */
 export function isHighlightLandmark(l: Landmark): boolean {
   return (l.kind === 'pass' && l.distanceM <= CROSSED_PASS_M) || (l.kind === 'peak' && l.distanceM <= PEAK_NEAR_M)
-}
-
-/** Positions (metres along the track) of the landmarks that are highlights: passes crossed, peaks nearby. */
-export function landmarkHighlights(landmarks: readonly Landmark[]): number[] {
-  return landmarks.filter(isHighlightLandmark).map((l) => l.alongM)
-}
-
-/** Sorted highlight positions (metres along the track) selected by the settings. */
-export function pacingHighlights(track: Track, settings: PacingSettings, landmarks: readonly Landmark[] = []): number[] {
-  const out: number[] = []
-  if (settings.climbs) for (const climb of climbsOf(track)) out.push(climb.endDistM)
-  if (settings.landmarks) out.push(...landmarkHighlights(landmarks))
-  return out.sort((a, b) => a - b)
-}
-
-/** Relative speed r(x) at `x` metres (1 = normal speed), for sorted or unsorted highlights. */
-export function relativeSpeed(x: number, highlightsM: readonly number[], slowFactor: number, windowM: number): number {
-  let dip = 0
-  for (const h of highlightsM) {
-    const u = Math.abs(x - h) / windowM
-    if (u < 1) dip = Math.max(dip, (1 + Math.cos(Math.PI * u)) / 2)
-  }
-  return 1 - (1 - slowFactor) * dip
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +107,7 @@ export interface FlightSpeed {
 
 /**
  * Speed multiplier set by keys along the track (film `paramKeys` of the speed): `at(x)` at `x` metres, 1 = normal;
- * `knotsM` the key positions, sorted. Combined with the portions and the slow-downs.
+ * `knotsM` the key positions, sorted. Combined with the portions.
  */
 export interface SpeedCurve {
   knotsM: readonly number[]
@@ -188,8 +147,6 @@ function speedMultiplier(x: number, ramps: readonly SpeedRamp[]): number {
 export interface Pacing {
   /** false for the identity pacing (constant ground speed) */
   active: boolean
-  /** highlight positions as progress values, sorted */
-  highlights: readonly number[]
   pauses: readonly PacingPause[]
   /** film length at ×1 (seconds) */
   totalTime(): number
@@ -212,7 +169,6 @@ function identityPacing(durationS: number): Pacing {
   const timeAtProgress = (progress: number) => clamp(progress, 0, 1) * durationS
   return {
     active: false,
-    highlights: [],
     pauses: [],
     totalTime: () => durationS,
     progressAtTime,
@@ -272,30 +228,6 @@ export function pausePositions(sorted: readonly number[], gapM: number): number[
   return out
 }
 
-/**
- * Pacing of a track `lengthM` long with highlights at `highlightsM` (metres along it), for a flyover of
- * `durationS` at ×1, with the automatic pauses (one per cluster of highlights, `pauseS` each). The identity
- * pacing when disabled, without length or highlight, or with nothing to do.
- */
-export function pacingFromHighlights(
-  lengthM: number,
-  highlightsM: readonly number[],
-  durationS: number,
-  settings: PacingSettings,
-): Pacing {
-  if (!settings.enabled || !(lengthM > 0) || !(durationS > 0) || highlightsM.length === 0) {
-    return identityPacing(durationS > 0 ? durationS : 1)
-  }
-  const highlights = normalizeHighlights(highlightsM, lengthM)
-  const stops = settings.pauseS > 0 ? pausePositions(highlights, settings.windowM).map((atM) => ({ atM, durationS: settings.pauseS })) : []
-  return flightPacing(lengthM, highlights, durationS, settings, stops)
-}
-
-/** Highlights clamped to [0, lengthM], deduplicated and sorted. */
-function normalizeHighlights(highlightsM: readonly number[], lengthM: number): number[] {
-  return [...new Set(highlightsM.map((h) => clamp(h, 0, lengthM)))].sort((a, b) => a - b)
-}
-
 /** Speed portions clamped to the track, without the empty or neutral ones, with transitions of at most `easeM`. */
 function speedRamps(speeds: readonly FlightSpeed[], lengthM: number, easeM: number): SpeedRamp[] {
   return speeds.flatMap(({ fromM, toM, factor }) => {
@@ -306,19 +238,17 @@ function speedRamps(speeds: readonly FlightSpeed[], lengthM: number, easeM: numb
 }
 
 /**
- * Distance grid (sorted, distinct): track ends, highlights, pauses, regular steps across every speed transition
- * and, when slowing down, across every highlight window.
+ * Distance grid (sorted, distinct): track ends, pauses, stage edges and regular steps across every speed transition
+ * and speed key.
  */
 function distanceGrid(
   lengthM: number,
-  highlights: readonly number[],
   pauseAt: readonly number[],
   ramps: readonly SpeedRamp[],
-  slowWindowM: number | null,
   curve?: SpeedCurve,
   stageEdgesM: readonly number[] = [],
 ): number[] {
-  const nodes = [0, lengthM, ...highlights, ...pauseAt, ...stageEdgesM.map((x) => clamp(x, 0, lengthM))]
+  const nodes = [0, lengthM, ...pauseAt, ...stageEdgesM.map((x) => clamp(x, 0, lengthM))]
   const knots = curve?.knotsM ?? []
   for (let i = 0; i < knots.length; i++) {
     nodes.push(clamp(knots[i], 0, lengthM))
@@ -326,15 +256,6 @@ function distanceGrid(
   }
   for (const { fromM, toM, rampM } of ramps) {
     for (let j = 0; j <= SPEED_SAMPLES; j++) nodes.push(fromM + (j * rampM) / SPEED_SAMPLES, toM - (j * rampM) / SPEED_SAMPLES)
-  }
-  if (slowWindowM !== null) {
-    const half = WINDOW_SAMPLES / 2
-    for (const h of highlights) {
-      for (let j = -half; j <= half; j++) {
-        const x = h + (j * slowWindowM) / half
-        if (x > 0 && x < lengthM) nodes.push(x)
-      }
-    }
   }
   nodes.sort((a, b) => a - b)
   const xs: number[] = []
@@ -383,9 +304,8 @@ function stagedMovingTime(
 }
 
 /**
- * Pacing of the flight with the slow-downs at `highlightsM` (when `settings.enabled`), the given pauses
- * (`stops`, sorted by position), speed portions (`speeds`, not overlapping) and speed keys (`curve`); pauses, portions
- * and keys apply whatever `settings.enabled`. The identity pacing without length, or without slow-down, pause nor portion.
+ * Pacing of the flight with the given pauses (`stops`, sorted by position), speed portions (`speeds`, not overlapping)
+ * and speed keys (`curve`). The identity pacing without length, or without pause, portion nor key.
  *
  * `stages` with a `durationS` give those stages a duration of their own: each flies that long (with `keepDuration`, as the
  * others share `durationS` in proportion to their length), and the film grows or shrinks by the difference. Without one
@@ -393,7 +313,6 @@ function stagedMovingTime(
  */
 export function flightPacing(
   lengthM: number,
-  highlightsM: readonly number[],
   durationS: number,
   settings: PacingSettings,
   stops: readonly FlightStop[],
@@ -403,21 +322,18 @@ export function flightPacing(
 ): Pacing {
   const L = lengthM
   if (!(L > 0) || !(durationS > 0)) return identityPacing(durationS > 0 ? durationS : 1)
-  const highlights = settings.enabled ? normalizeHighlights(highlightsM, L) : []
-  const slows = highlights.length > 0 && settings.slowFactor < 1
   const ramps = speedRamps(speeds, L, (settings.transitionS * L) / durationS)
   const timed = stages.length > 0 && stages.some((s) => s.durationS !== undefined)
-  if (!slows && stops.length === 0 && ramps.length === 0 && !curve && !timed) return identityPacing(durationS)
-  const W = settings.windowM
+  if (stops.length === 0 && ramps.length === 0 && !curve && !timed) return identityPacing(durationS)
   const pauseAt = stops.map((s) => clamp(s.atM, 0, L))
-  const xs = distanceGrid(L, highlights, pauseAt, ramps, slows ? W : null, curve, timed ? stages.map((s) => s.fromM) : [])
+  const xs = distanceGrid(L, pauseAt, ramps, curve, timed ? stages.map((s) => s.fromM) : [])
 
   // moving time at ×1 before scaling: speed v0 · r · m (midpoint) on each step
   const n = xs.length
   const raw = new Float64Array(n)
   for (let i = 1; i < n; i++) {
     const mid = (xs[i - 1] + xs[i]) / 2
-    const r = (slows ? relativeSpeed(mid, highlights, settings.slowFactor, W) : 1) * speedMultiplier(mid, ramps) * (curve ? curve.at(mid) : 1)
+    const r = speedMultiplier(mid, ramps) * (curve ? curve.at(mid) : 1)
     raw[i] = raw[i - 1] + ((xs[i] - xs[i - 1]) * durationS) / (L * r)
   }
 
@@ -485,7 +401,6 @@ export function flightPacing(
 
   return {
     active: true,
-    highlights: highlights.map((h) => h / L),
     pauses: pauseAt.map((x, k) => ({
       progress: x / L,
       startS: startT[k],

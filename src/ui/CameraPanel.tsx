@@ -20,10 +20,10 @@ import { showToast } from './toast'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
-import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { PanelSection, RangeField, SettingRow } from './PanelSection'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
-import { Button, Checkbox, Radio, RadioGroup, Select, Switch } from './primitives'
+import { Button, Checkbox, Radio, RadioGroup, Select } from './primitives'
 import { AutoFilmSection } from './AutoFilmDialog'
 import { FlightDurationField } from './FlightDurationField'
 
@@ -152,35 +152,8 @@ const SLIDERS: Slider[] = [
   },
 ]
 
-interface PacingSlider {
-  key: keyof typeof PACING_RANGES
-  label: string
-  format(value: number): string
-  /** spoken value (aria-valuetext), when it differs from the displayed one */
-  spoken?(value: number): string
-  tip?: string
-}
-
 /** What a preset tile shows of a camera: its style and framing; the rest (smoothings, end, turns, north) goes with it unseen. */
 const FRAMING_KEYS: readonly (keyof CameraSettings)[] = ['style', 'distance', 'pitchDeg', 'headingOffsetDeg']
-
-const PACING_SLIDERS: PacingSlider[] = [
-  { key: 'slowFactor', get label() { return t('camera.pacing.slowFactor') }, get tip() { return t('camera.pacing.slowFactorTip') }, format: formatPercent },
-  {
-    key: 'windowM',
-    get label() { return t('camera.pacing.window') },
-    get tip() { return t('camera.pacing.windowTip') },
-    format: (v) => `±${formatDistance(v)}`,
-    spoken: (v) => t('camera.pacing.windowSpoken', { distance: formatDistance(v) }),
-  },
-  { key: 'pauseS', get label() { return t('camera.pacing.pause') }, format: (v) => (v === 0 ? t('camera.slider.noneFem') : `${formatNumber(v, 1)} s`) },
-]
-
-/** What « Ralentir aux temps forts » slows down on, in a few words. */
-function slowOnLabel(pacing: PacingSettings): string {
-  if (pacing.climbs && pacing.landmarks) return t('camera.pacing.slowOnBoth')
-  return pacing.climbs ? t('camera.pacing.slowOnClimbs') : pacing.landmarks ? t('camera.pacing.slowOnLandmarks') : t('camera.pacing.slowOnNothing')
-}
 
 /** One-line description of each style (hint under the preset tiles). */
 const STYLE_HINTS: Record<CameraStyle, string> = {
@@ -218,7 +191,7 @@ function ShotSummary() {
 
 /**
  * « Survol » tab: sections Caméra (preset tiles; style and fine parameters as rows), Durée et rythme (flyover duration,
- * situation shots of the opening and closing, slow-downs on/off; their details as rows). A row shows a setting's name
+ * situation shots of the opening and closing; their details as rows). A row shows a setting's name
  * and value, its control on demand. Stops are chosen on the timeline and in « Repères et points d'intérêt » (Carte).
  */
 export function CameraPanel() {
@@ -227,7 +200,6 @@ export function CameraPanel() {
   const pacing = useAppStore((s) => s.settings.pacing)
   const film = useFilmClock()
   const cameraKeyCount = film.cameraKeys.length
-  const filmSettings = useAppStore((s) => s.settings.film)
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
@@ -350,41 +322,12 @@ export function CameraPanel() {
       <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
         <FlightDurationField />
 
-        {/* it applies to every stop and speed portion, whether « Ralentir aux temps forts » is on or not */}
         <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']}>
           <Checkbox checked={pacing.keepDuration} onChange={(on) => updatePacing({ keepDuration: on })}>{t('camera.pacing.keep')}</Checkbox>
           <p className="type-hint">{t('camera.pacing.keepHint')}</p>
         </SettingRow>
 
         <ShotSummary />
-
-        <div className="flex items-center gap-1">
-          <Switch checked={pacing.enabled} onChange={(on) => updatePacing({ enabled: on })}>{t('camera.pacing.enable')}</Switch>
-          <InfoTip text={t('camera.pacing.enableTip')} />
-        </div>
-
-        {pacing.enabled && (
-          <>
-            <SettingRow label={t('camera.pacing.slowOn')} value={slowOnLabel(pacing)} paths={['pacing.climbs', 'pacing.landmarks']}>
-              <fieldset className="field min-w-0">
-                <legend className="type-label mb-1">{t('camera.pacing.slowOn')}</legend>
-                <Checkbox checked={pacing.climbs} onChange={(on) => updatePacing({ climbs: on })}>{t('camera.pacing.climbTops')}</Checkbox>
-                <Checkbox checked={pacing.landmarks} onChange={(on) => updatePacing({ landmarks: on })}>{t('camera.pacing.landmarks')}</Checkbox>
-              </fieldset>
-            </SettingRow>
-
-            {/* « Pause aux temps forts » makes the automatic stops of the films saved before the timeline only ('rythme'); a newer film's stops are set on the timeline */}
-            {PACING_SLIDERS.filter(({ key }) => key !== 'pauseS' || filmSettings.autoMode === 'rythme').map(({ key, label, tip, format, spoken = format }) => {
-              const range = PACING_RANGES[key]
-              return (
-                <SettingRow key={key} label={label} value={format(pacing[key])} paths={[`pacing.${key}`]}>
-                  <RangeField label={label} tip={tip} {...range} value={pacing[key]} format={format} spoken={spoken} onChange={(v) => updatePacing({ [key]: v })} />
-                </SettingRow>
-              )
-            })}
-
-          </>
-        )}
       </PanelSection>
     </>
   )

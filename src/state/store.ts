@@ -88,7 +88,7 @@ export interface Settings {
   camera: CameraSettings
   /** flyover duration at speed x1 (seconds), whatever the track length */
   flyoverDurationS: number
-  /** variable pacing of the flyover: slow-downs and pauses at the highlights of the first track */
+  /** variable pacing of the flyover: the transitions into stops and speed portions, and whether the duration is kept */
   pacing: PacingSettings
   /** the film arranged on the timeline: opening and closing shots, stops, texts, media (see film/model.ts) */
   film: Film

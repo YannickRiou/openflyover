@@ -140,7 +140,7 @@ const messages: Messages['inspector'] = {
   'paramKey.title': 'Chiave: {label}',
   'paramKey.value': 'Valore',
   'paramKey.hint': 'A {distance}, {time} nel film: {label} {value}. Il valore passa dolcemente da una chiave alla successiva e resta quello della prima chiave prima di essa e dell’ultima dopo, anche durante le soste. Appena esiste una chiave, il cursore di questa impostazione nei pannelli modifica la chiave al marcatore.',
-  'paramKey.speedExtra': ' Si combina con i tratti di velocità e i rallentamenti nei punti salienti.',
+  'paramKey.speedExtra': ' Si combina con i tratti di velocità.',
   'paramKey.sunExtra': ' Il sole segue i keyframe invece dell’ora registrata dell’uscita.',
   'paramKey.noAtmosphere': ' Senza atmosfera, questa impostazione non ha effetto.',
   'markerKey.imageFilter': 'Immagini',

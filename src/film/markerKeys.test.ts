@@ -170,9 +170,8 @@ describe('marker keys in the clock', () => {
       closing: { style: 'aucune', durationS: 5 },
       stops: [],
       lengthM: 10_000,
-      highlightsM: [],
       durationS: 60,
-      pacing: { ...DEFAULT_PACING, enabled: false, keepDuration: false },
+      pacing: { ...DEFAULT_PACING, keepDuration: false },
       markerKeys: [key('b', 5000, 'boule'), key('a', 0, 'figurine')],
     })
     expect(clock.markerKeys.map((k) => k.id)).toEqual(['a', 'b'])

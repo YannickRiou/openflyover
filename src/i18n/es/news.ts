@@ -9,6 +9,8 @@ const messages: Messages['news'] = {
   'v46.nights.text': 'En un track de varios días, cada noche es ahora un bloque verde en la pista «Paradas» de la línea de tiempo. Haz clic para verla, Supr para sacarla de la película (se puede deshacer). «Recuperar las noches» (Luz › Días y noches) las devuelve todas.',
   'v46.stage.title': 'Dos botones en la vista',
   'v46.stage.text': 'Bajo la mira, «Capturar esta imagen» guarda la imagen que ves, con el tamaño del formato de salida y con la superposición (la imagen de la película en ese instante, o tu propia vista si la has girado). Cuando has girado la vista con el ratón con la película en pausa, «Volver a la vista de la película» devuelve la cámara adonde la película la coloca.',
+  'v46.places.title': 'Paradas en los lugares atravesados',
+  'v46.places.text': 'La plantilla «Recuerdo 3 min» de «Película automática» ahora también se detiene en los pueblos, refugios, lagos, cascadas y miradores junto al track, además de los puertos y las cumbres, sin sobrecargar la película. En las opciones de la línea de tiempo, «También en los lugares atravesados» lo ajusta para cualquier película. «Ralentizar en los momentos destacados» ha desaparecido: las paradas y los tramos de velocidad de la línea de tiempo hacen ese trabajo.',
   'v45.camera.title': 'Una cámara más agradable de ver',
   'v45.camera.text': 'Dos ajustes en Vuelo › Cámara. «Espacio delante» coloca el marcador un poco por detrás del centro de la imagen, para dejar sitio del lado hacia el que avanza. «Inclinación en las curvas» inclina suavemente el horizonte en las curvas, como un dron que se ladea. Por defecto, un poco de cada uno: sus películas resultan más fluidas.',
   'v45.marker.title': 'Un marcador más vivo',

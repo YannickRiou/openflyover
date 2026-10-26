@@ -84,7 +84,7 @@ const messages: Messages['landmarks'] = {
   keepPinnedTip: 'Descarta todas las demás referencias, sin proponer otras nuevas',
   hint: 'Abra el mapa para elegir las referencias: un clic en una la ajusta (Auto, Siempre, Nunca) y le da una «Parada» (la película se detiene allí el tiempo indicado).',
   labelsWhere: 'Sus etiquetas 3D (tamaño, alcance, colores) se ajustan en Gráficos › Etiquetas 3D.',
-  hintAuto: 'Paradas automáticas (⋯ Opciones de la película, en la línea de tiempo): cada puerto cruzado y cumbre cercana mostrados aquí hacen una parada; cambiar los tipos, la densidad o la distancia las cambia, retocar una las fija.',
+  hintAuto: 'Paradas automáticas (⋯ Opciones de la película, en la línea de tiempo): los puertos cruzados y las cumbres cercanas mostrados aquí hacen algunas paradas, las más destacadas primero; cambiar los tipos, la densidad o la distancia las cambia, retocar una las fija.',
   'map.open': 'Elegir en el mapa y el perfil',
   'map.title': 'Referencias a lo largo del track',
   'map.profile': 'Perfil de altitud: haga clic para ir a un punto',

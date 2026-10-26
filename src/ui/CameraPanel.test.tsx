@@ -235,26 +235,16 @@ describe('CameraPanel: « Depuis la région » at the opening and the closing', 
   })
 })
 
-describe('CameraPanel: « Pause aux temps forts »', () => {
+describe('CameraPanel: « Durée et rythme »', () => {
   afterEach(() => {
     document.body.innerHTML = ''
   })
 
-  it('only for a film saved before the timeline, whose automatic stops it makes', async () => {
-    const pacing = { ...DEFAULT_SETTINGS.pacing, enabled: true }
-    const mountWith = async (autoMode: 'temps-forts' | 'rythme') => {
-      useAppStore.setState({ tracks: [timed], settings: { ...DEFAULT_SETTINGS, pacing, film: { ...DEFAULT_SETTINGS.film, autoMode } } })
-      const host = document.body.appendChild(document.createElement('div'))
-      const root = createRoot(host)
-      await act(async () => root.render(<CameraPanel />))
-      return { host, root }
-    }
-    const current = await mountWith('temps-forts')
-    expect(current.host.textContent).not.toContain('Pause aux temps forts')
-    act(() => current.root.unmount())
-    const older = await mountWith('rythme')
-    expect(older.host.textContent).toContain('Pause aux temps forts')
-    act(() => older.root.unmount())
+  it('no « Ralentir aux temps forts » (the stops and speeds of the timeline do that); « Garder la durée du survol » stays', async () => {
+    const { host, root } = await mount(timed, 60)
+    expect(host.textContent).not.toContain('Ralentir aux temps forts')
+    expect(host.textContent).toContain('Garder la durée du survol')
+    act(() => root.unmount())
   })
 })
 

@@ -284,17 +284,18 @@ describe('getSettingsHistory (app store)', () => {
       expect(useAppStore.getState().settings.flyoverDurationS).toBe(3 * DEFAULT_SETTINGS.flyoverDurationS)
     })
 
-    it('follow their stop when landmarks published later change the slow-downs, without an undo step', () => {
-      useAppStore.getState().setSetting('pacing', { ...DEFAULT_SETTINGS.pacing, enabled: true, climbs: false, keepDuration: false })
+    it('free texts keep their place on the route when landmarks published later change the generated stops, without an undo step', () => {
+      useAppStore.getState().setSetting('pacing', { ...DEFAULT_SETTINGS.pacing, keepDuration: false })
       const pass: Landmark = { id: 'node/1', kind: 'pass', name: 'Col', lon: 6.86, lat: 45.9045, distanceM: 0, alongM: 500, priority: 1, text: 'Col' }
       const landmarksOf = (landmarks: Landmark[] | undefined) => ({ landmarks: landmarks ? { [track.id]: landmarks } : {} })
       const publish = (landmarks: Landmark[] | undefined) => {
         useLandmarkStore.setState(landmarksOf(landmarks))
         followLandmarks()
       }
-      // the film placed with the pass loaded, then reopened: its landmarks come again after it
+      // a text after the stop the pass generates, saved with the pass loaded, then reopened: its landmarks come again after it
       useLandmarkStore.setState(landmarksOf([pass]))
-      setUp()
+      useAppStore.getState().addTracks([track])
+      useAppStore.getState().setSetting('film', { ...DEFAULT_FILM, texts: [{ id: 'text-1', startS: 40, durationS: 4, text: 'Fin', anchor: 'bottom-center', size: 1 }] })
       useLandmarkStore.setState(landmarksOf(undefined))
       getSettingsHistory().clear()
       const startS = textStartS()
@@ -302,15 +303,12 @@ describe('getSettingsHistory (app store)', () => {
       publish(undefined)
       publish([pass])
       expect(textStartS()).toBe(startS)
-      expect(textStartS() - holdStartS()).toBeCloseTo(1, 1)
-      // the pass hidden, then the landmarks turned off and on again: the slow-down goes and comes back
+      // the pass hidden, then the landmarks turned off and on again: its stop goes and comes back
       publish([])
       expect(textStartS()).toBeLessThan(startS - 1)
-      expect(textStartS() - holdStartS()).toBeCloseTo(1, 1)
       publish(undefined)
       publish([pass])
       expect(textStartS()).toBeCloseTo(startS, 1)
-      expect(textStartS() - holdStartS()).toBeCloseTo(1, 1)
       expect(getSettingsHistory().getState().canUndo).toBe(false)
     })
   })

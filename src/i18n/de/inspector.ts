@@ -140,7 +140,7 @@ const messages: Messages['inspector'] = {
   'paramKey.title': 'Schlüssel: {label}',
   'paramKey.value': 'Wert',
   'paramKey.hint': 'Bei {distance}, {time} im Film: {label} {value}. Der Wert geht sanft von einem Schlüssel zum nächsten über und bleibt vor dem ersten der des ersten, nach dem letzten der des letzten, auch während der Stopps. Sobald ein Schlüssel existiert, ändert der Regler dieser Einstellung in den Bereichen den Schlüssel am Marker.',
-  'paramKey.speedExtra': ' Wird mit den Tempoabschnitten und den Verlangsamungen an Highlights kombiniert.',
+  'paramKey.speedExtra': ' Wird mit den Tempoabschnitten kombiniert.',
   'paramKey.sunExtra': ' Die Sonne folgt den Keyframes statt der aufgezeichneten Uhrzeit der Tour.',
   'paramKey.noAtmosphere': ' Ohne Atmosphäre hat diese Einstellung keine Wirkung.',
   'markerKey.imageFilter': 'Bilder',

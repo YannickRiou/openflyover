@@ -83,7 +83,7 @@ import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type Elev
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
 import type { OverlaySettings } from '../overlay/settings'
-import { addKeyframe, addMarkerKeyHere, addParamKeyHere, disableCard, editFilm, getFilmSource, reorderTracks, setAutoStops, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
+import { addKeyframe, addMarkerKeyHere, addParamKeyHere, disableCard, editFilm, getFilmSource, reorderTracks, setAutoStops, setAutoStopsPlaces, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { PLAYBACK_SPEEDS, useAppStore } from '../state/store'
 import type { Playback } from '../state/store'
 import { formatClock, formatDistance, formatNumber, formatShort } from './format'
@@ -316,12 +316,14 @@ function BarButton({ icon, name, tip = name, onClick, disabled, on, className }:
  */
 function FilmOptions({
   autoStops,
+  autoStopsPlaces,
   onAutoStops,
   onAddMusic,
   reading,
   sheet,
 }: {
   autoStops: boolean
+  autoStopsPlaces: boolean
   onAutoStops(on: boolean): void
   onAddMusic(): void
   reading: boolean
@@ -370,6 +372,9 @@ function FilmOptions({
           </Checkbox>
           <Checkbox className={CHECKBOX_ON_DARK} checked={autoStops} onChange={onAutoStops}>
             {t('timeline.options.autoStops')}
+          </Checkbox>
+          <Checkbox className={`${CHECKBOX_ON_DARK} ml-6`} checked={autoStopsPlaces} disabled={!autoStops} onChange={setAutoStopsPlaces}>
+            {t('timeline.options.autoStopsPlaces')}
           </Checkbox>
           <p className="text-hint text-glacier">{t('timeline.options.autoStopsHint')}</p>
           <ModifiedMarker onDark keys={['film']} label={t('timeline.film')} />
@@ -684,7 +689,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     ...dayCardsOf(clock, film),
     ...clock.nights.map((n, k) => ({ id: nightItemId(n), startS: n.startS, endS: n.endS, label: t('timeline.night.label', { n: k + 1 }) })),
   ]
-  const withOwnStops = (f: Film) => materializeStops(f, { track, landmarks, pacing })
+  const withOwnStops = (f: Film) => materializeStops(f, { track, landmarks, durationS })
   const clockOf = (f: Film) => clockOfFilm(clockSource, input, f)
   /** one undo step; the texts and media attached to a stop follow it (as in `editFilm`) */
   const commit = (edited: Film) => {
@@ -1586,7 +1591,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             on={magnet}
             onClick={() => setPreferences({ timelineMagnet: !magnet })}
           />
-          <FilmOptions autoStops={film.autoStops} onAutoStops={switchAutoStops} onAddMusic={pickMusic} reading={reading} sheet={centred} />
+          <FilmOptions autoStops={film.autoStops} autoStopsPlaces={film.autoStopsPlaces === true} onAutoStops={switchAutoStops} onAddMusic={pickMusic} reading={reading} sheet={centred} />
         </div>
         <Tip text={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')} side="top" align="end">
           <Button
@@ -1788,26 +1793,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               </div>
 
               <div data-testid="timeline-lane" data-lane="param:speed" {...laneProps('param:speed', true)} role="group" aria-label={PARAM_LANE_LABELS.speed}>
-                {/* the slow-downs of « Ralentir aux temps forts » (Survol tab): shown, not edited here */}
-                {pacing.enabled &&
-                  pacing.slowFactor < 1 &&
-                  lengthM > 0 &&
-                  shownClock.highlights.map((h, i) => {
-                    const startS = shownClock.timeAtProgress(Math.max(0, h - pacing.windowM / lengthM))
-                    const endS = shownClock.timeAtProgress(Math.min(1, h + pacing.windowM / lengthM))
-                    return (
-                      <div
-                        key={`auto-slow-${i}`}
-                        data-testid="timeline-auto-slow"
-                        className={`${BLOCK} pointer-events-none border border-dotted border-glacier/60 bg-glacier/10 text-white/70`}
-                        style={{ left: xOf(startS), width: Math.max(0, (endS - startS) * pxPerS) }}
-                        role="img"
-                        aria-label={t('timeline.speed.auto', { label: formatSpeedFactor(pacing.slowFactor) })}
-                      >
-                        <span className={BLOCK_LABEL}>{t('timeline.speed.autoShort')}</span>
-                      </div>
-                    )
-                  })}
                 {shownClock.speeds.map((s) => {
                   const label = formatSpeedFactor(s.factor)
                   const speedKey = s.factor > 1 ? 'timeline.speed.fast' : s.factor < 1 ? 'timeline.speed.slow' : 'timeline.speed.normal'

@@ -82,7 +82,7 @@ export default {
   keepPinnedTip: 'Écarte tous les autres repères, sans en proposer de nouveaux',
   hint: "Ouvrez la carte pour choisir les repères : un clic sur un repère le règle (Auto, Toujours, Jamais) et lui donne un « Arrêt » (le film s'y arrête le temps indiqué).",
   labelsWhere: 'Leurs étiquettes en 3D (taille, portée, couleurs) se règlent dans Habillage › Étiquettes 3D.',
-  hintAuto: 'Arrêts automatiques (⋯ Options du film, sur la timeline) : chaque col franchi et sommet proche affiché ici fait un arrêt ; changer les types, la densité ou la distance les change, en retoucher un les fige.',
+  hintAuto: 'Arrêts automatiques (⋯ Options du film, sur la timeline) : les cols franchis et sommets proches affichés ici font quelques arrêts, les plus marquants d’abord ; changer les types, la densité ou la distance les change, en retoucher un les fige.',
   'map.open': 'Choisir sur la carte et le profil',
   'map.title': 'Repères le long de la trace',
   'map.profile': "Profil d'altitude : cliquez pour aller à un point",

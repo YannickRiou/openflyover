@@ -25,6 +25,7 @@ export default {
   'doc.tracksMissing': 'Projet invalide : liste des traces (« tracks ») manquante.',
   'doc.duplicateId': "Projet invalide : deux traces portent l'identifiant « {id} ».",
   'doc.settingsReplaced': 'Réglages invalides remplacés par leur valeur par défaut : {list}.',
+  'doc.pacingRemoved': '« Ralentir aux temps forts » n’existe plus : ajoutez des arrêts ou des vitesses sur la timeline.',
   'doc.speedInvalid': 'Vitesse de lecture invalide : vitesse ×1 utilisée.',
   'file.empty': 'Le fichier est vide.',
   'file.notProject': "Ce n'est pas un projet OpenFlyover (ni un fichier .opnflvr, ni un ancien projet JSON).",

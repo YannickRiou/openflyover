@@ -66,7 +66,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/scene/labelModel.ts` + `labelSources.ts` + `poiIcons.ts` | 3D labels | `POI_ICON_PATHS` (pictograms, also the flags of the poster flat map), `LandmarkLabel`, `LandmarkKind`, `LABEL_KIND_ACCENTS`, `waypointLabels`, `resolveOverlaps`…; `setLabelSource(id, labels)` (prefixed, unique ids), `useLabelSources` |
 | `src/film/paramKeys.ts` | parameter keys | `FILM_PARAMS`, `PARAM_LANE_LABELS`, `keysOfParam`, `paramLanes`, `PARAM_SPECS`, `paramAt`, `valueAtKeys`, `sortedParamKeys`, `gradingAt`, `hasGradingKeys`, `paramBase`, `clampParamValue`; `isValidParamKey` (`model.ts`) |
 | `src/film/markerKeys.ts` | marker keys (changes of look) | `FilmMarkerKey`, `markerAt`, `markerFadeM`, `junctionsM`, `markerKeysMoveWithTime`; `isValidMarkerKey` (`model.ts`) |
-| `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, highlightsM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pacingHighlights`, `pacingFromHighlights` (pauses at the highlights); `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `FlightStage` (a stage with its own flight time, the 8th argument `stages`), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing` |
+| `src/flyover/pacing.ts` | flyover pacing | `flightPacing(lengthM, durationS, settings, stops)` (pauses given by the film) → `totalTime`, `progressAtTime`, `timeAtProgress`, `positionAt`, `advance`; `pausePositions`, `isHighlightLandmark`, `FlightStop.extra` (a pause added whatever the duration), `SpeedCurve` (speed keys), `FlightStage` (a stage with its own flight time, the 8th argument `stages`), `DEFAULT_PACING`, `PACING_RANGES`, `isValidPacing`, `withPacingDefaults` |
 | `src/film/*` | film and timeline (pure) | `Film`, `DEFAULT_FILM`, `isValidFilm`, `withFilmDefaults`, `nextFilmId`, `shotDurationS`, `shotCuts`, `shotDipColor`, `transitionDipAt`, `dipAlpha`, `START_HEIGHTS`, `START_HEIGHT_LABELS`, `highlightsRegion`; `autoStops`, `stopCandidates`, `stopAt`, `placeStop`, `withoutPlaceItems`, `StopPlace`, `materializeStops`, `filmStops`, ; `buildFilmClock`, `filmClockInputFor`, `filmClockFor` → `FilmClock` (`junctions`, `nights`, `stateAt`, `totalTime`, `progressAtTime`, `timeAtProgress`, `advance`); `junctions.ts`: `junctionOf`, `junctionCardOf`, `withJunction`, `withJunctionCard`, `applyToAllJunctions`, `junctionPlan`, `junctionDipAt`, `stageCardWindow`, `fillTemplate`, `withStageSettingsMigrated`; `timeline.ts`: scale, ruler, snapping (`SnapTarget`, `snapTargets`, `snapTime`, `snapper`), `adjacentKey`, `dragFilm`, `pressedGrip`, `stopPositionAt`, additions / removals (`removeFilmItem` sets a shot to 'aucune'), `hasFilmItem`, `addMedia`, `updateMedia`, `attachToStop`, `followStops`, `edgeScrollSpeed`, `photoFilmTime`, `clipSyncOffsetS`, `syncClipPlacement`, `syncClip`, `recordedAtFilmTime`, `clipRateAt`; `model.ts`: `clipTimeS`, `clipHasSound`, `FilmPoi`, `isValidPoi`, `VIDEO_SOUND_DEFAULTS`, `MediaSync`, `SYNC_OFFSET_RANGE`; `audio.ts`: music and video sound (`clipSounds`, `duckEnvelope`, `duckGainAt`, `filmMixPlan`, `mixFilmAudio`); `beats.ts`: music beats (`detectBeats`, `filmBeats`, `beatNear`, `snapFilmToBeats`, `beatTicksPath`); `days.ts`: day cards (`trackDays`, `localDate`, `withDayCards`, `isDayCard`, `DAY_CARD_S`); `autoFilm.ts`: « Film automatique » (`AUTO_FILM_TEMPLATES`, `autoFilmSettings`, see "Automatic film"); `pois.ts`: points of interest (`addPoi`, `renamePoi`, `removePoi`, `defaultPoiName`, `poiStopAtM`); `exif.ts`: `parseExif`, `photoTimeMs`, `mp4CreationTimeMs`, `quickTimeDateMs`; `media.ts` and `video.ts` (the only non-pure modules in the folder): `MediaAsset`, `MediaTable`, `MAX_VIDEO_BYTES`, `sanitizeMediaTable`, `usedMedia`, `isVideoAsset`, `useMediaStore`, `readPhoto`, `createMediaBitmaps`, `getMediaBitmaps`, `mediaToLoad`; `readMedia`, `readVideo`, `isMediaFile`, `createClipReader`, `createExportVideos`, `decodeClipSound`, `joinSoundChunks`, `createPreviewVideos`, `getPreviewVideos` |
 | `src/flyover/filmCamera.ts` | film camera | `computeFilmView(path, clock, timeS, progress, frame, sampler, options)` (`options.follow`: `FollowedFlight`), `markerAt`, `framedGroup`, `overviewView`, `regionView`, `situationTarget`, `situationFramingOf`, `regionDistanceM`, `regionHighlightOpacity`, `blendViews`, `shotBlend`, `shotWeight`, `stopOrbitRad`, `filmViewMovesWithTime`; keyframes: `keyView`, `keyFramingFrom`, `keyFramingAt`, `keyReferenceAt` (`cameraKeys.ts`, no three.js: `keyPoseAt`, `keyedCamera`, `registerKeyCapture`, `captureKey`) |
 | `src/flyover/sun.ts` | sun date, sunrise / sunset | `shotSunDate(clock, timeS, flightDate, daylight)`, `shotSunShiftMs(clock, timeS)`, `SHOT_SUN_HOURS`, `SHOT_DAYLIGHT_HOUR`, `solarHourToDate(dayMs, lon, solarHour)`, `solarHourOf(dayMs, lon, date)`, `sunDateAt(path \| null, progress, { sunFromTrack, solarHour, lon, dayMs }): Date`, `sunTimes(lat, lon, date)` → `{ sunrise, sunset, solarNoon, polar }`, `solarDay`, `sunDayMs(sunDate, startTime, today)`, `isSunDate`, `SUN_CHIPS`, `sunChipHour(chip, day)`, `nightAt`, `nightSunDate`, `NIGHT_DARK_MARGIN_MS`, `junctionBlendAt`, `blendSunDates`, `junctionSunDate` (the light across a fade between two stages) |
@@ -645,7 +645,7 @@ pointer (`appearance.css`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
   `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »: switch, informations, titre, position, taille, couleurs et polices, durée, « Vue haute pendant la nuit »; `film.dayCards`),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
-  "Durée et rythme" (duration and pacing; duration with « − » / « + » buttons (one slider notch) around the slider and the acceleration over the recorded time (`formatSpeedUp`: elapsed time start to end, nights included, over the duration; hidden for an untimed track), film duration, slow-downs on / off, « Plan de situation » switches for the opening and the closing). Objectif: "Effets d'objectif" (`LensPanel`).
+  "Durée et rythme" (duration; duration with « − » / « + » buttons (one slider notch) around the slider and the acceleration over the recorded time (`formatSpeedUp`: elapsed time start to end, nights included, over the duration; hidden for an untimed track), film duration, « Garder la durée du survol », « Plan de situation » switches for the opening and the closing). Objectif: "Effets d'objectif" (`LensPanel`).
   The two or three essential settings of a section stay open; every other one is a `SettingRow`: one button row with
   its name and current value (iOS Settings style, `aria-expanded`), whose control stays hidden (mounted, `hidden`)
   until the row is pressed, then unfolds under it and takes the focus (the checked radio, else the first field); the
@@ -691,7 +691,7 @@ pointer (`appearance.css`).
   "Nuit" (night; solar midnight), grayed out when the moment does not exist (polar day or night). Each shortcut is one undo
   step (`transaction`); a slider drag is one too (see "History").
 - **Panel clarity**: `Switch` to turn on a whole feature (overlay and each of its elements, atmosphere, weather, landmarks, ghost
-  race, slow-downs, credits); checkable chips (`Chip`: check mark and tinted background once
+  race, credits); checkable chips (`Chip`: check mark and tinted background once
   selected, dotted if unavailable) for multiple choices (landmark types, counters); option text at weight 500,
   labels at 600. Météo: weather on two lines (outing; marker instant), tables collapsed under
   "Détails" (details); ghost race synchronization and ranking only once it is enabled. Habillage (`OverlayPanel`)
@@ -1014,20 +1014,23 @@ The interface and the texts drawn into the films and posters exist in **French**
   it over), one undo step, selected for the inspector (see "Film and timeline", "Keyframes"). It replaced « Garder ce
   cadrage ici », which stored the film's own framing at the marker (`keyedCamera` of the settings), never the 3D view:
   the camera snapped back to the film's view and the film showed nothing new.
-- **Pacing** (`src/flyover/pacing.ts`, pure; `settings.pacing`, "Caméra" section): progress remains the distance
-  fraction; only the film time → progress mapping changes. Highlights: climb summits (`climbsOf`) and, among the OSM
-  landmarks passed as an argument, passes crossed (≤ 150 m) and summits within ≤ 300 m. Relative speed
-  r(x) = 1 − (1 − slowFactor)·max c(|x − h| / windowM), c = raised cosine (deepest dip when they overlap).
-  Tabulated travel time (constant speed per step: exact inverse by bisection). Pauses: highlights less than
-  windowM apart are grouped, one pause per group, each adds exactly `pauseS` with raised-cosine entry and exit
-  (≤ 1.5 s). `keepDuration` (default) raises the base speed to keep `flyoverDurationS` (pauses ≤ 50% of the duration), otherwise
-  the film gets longer. Disabled or without highlights: identical to `advanceProgress`. `FlyoverRig` advances the film time
-  (`playback.timeS`; during a pacing pause the progress does not move) and restarts from `pacing.positionAt` after a slider
-  move or a pacing change; playback stops only at `pacing.totalTime()`, final pause included (progress 1
-  held with a film time, then 1 without a time). `timeAtProgress(1)` = end of the film. Pauses are now the film
-  stops (`flightPacing`, see "Film and timeline"); `pacingFromHighlights` derives them as before. `useFilmClock`
-  (`src/scene/usePacing.ts`) shares the computation with the panel. The export calls `pacing.progressAtTime(t)` over
-  `pacing.totalTime()`.
+- **Pacing** (`src/flyover/pacing.ts`, pure; `settings.pacing` = `keepDuration` and `transitionS`, "Survol" tab): progress
+  remains the distance fraction; only the film time → progress mapping changes. It is made of the film's stops (and the
+  nights and junction holds), the speed portions and the speed keys (see "Film and timeline"): each stop adds exactly
+  its duration with raised-cosine entry and exit (≤ `transitionS`, 1.5 s by default). Tabulated travel time (constant
+  speed per step: exact inverse by bisection). `keepDuration` (default) raises the base speed to keep `flyoverDurationS`
+  (stops ≤ 50% of the duration), otherwise the film gets longer. Without stop, portion or key: identical to
+  `advanceProgress`. `FlyoverRig` advances the film time (`playback.timeS`; during a pause the progress does not move) and
+  restarts from `pacing.positionAt` after a slider move or a pacing change; playback stops only at `pacing.totalTime()`,
+  final pause included (progress 1 held with a film time, then 1 without a time). `timeAtProgress(1)` = end of the film.
+  `useFilmClock` (`src/scene/usePacing.ts`) shares the computation with the panel. The export calls
+  `pacing.progressAtTime(t)` over `pacing.totalTime()`. **« Ralentir aux temps forts »** (`pacing.enabled` and its
+  `climbs`, `landmarks`, `slowFactor`, `windowM`, `pauseS`: slow-downs and pauses at the climb tops, passes and summits)
+  was removed: the stops and the speed portions of the timeline do that, and on a long track it made dozens of tiny
+  slow-downs. **Old projects**: `withPacingDefaults` (`SETTING_UPGRADES`, also for presets) drops these fields, so the
+  film plays without those slow-downs, and `parseProject` adds a message (`project.doc.pacingRemoved`) when the project
+  had it on; `MIGRATIONS[6]` (version 7) gives the films saved before the timeline (`autoMode` `'rythme'` or absent,
+  whose automatic stops were these pauses) `autoStops: false` and no stops, the stops of the film's own staying.
 - **`Timeline`** (`src/ui/Timeline.tsx`): film timeline below the view, in film time (see "Film and timeline") —
   play / pause, distance covered, elevation and recorded time at the marker, speed ×0.5 to ×4.
 - **Elevation profile** (flyover block of the "Plans" (shots) lane): **recorded** elevations of the track resampled at
@@ -1369,7 +1372,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   the view (lanes, drag to move / stretch, inspector; done); 3 text lane drawn in the overlay (done);
   4 media lane (photos and videos done, with their sound: see "Video sound").
 - **Model** (`src/film/model.ts`, `settings.film`: saved in the project document, undoable, validated by
-  `isValidFilm` in `SETTING_CHECKS`; an old project receives `DEFAULT_FILM`, and the v1 → v2 migration in `src/project/document.ts` gives a v1 project without a film `{ autoMode: 'rythme' }`):
+  `isValidFilm` in `SETTING_CHECKS`; an old project receives `DEFAULT_FILM`):
   `opening` / `closing` `{ style: 'aucune' | 'descente' | 'saut' | 'situation' | 'balayage', durationS, transition?, dipS?,
   startHeight?, highlight? }` (0.5–30 s; default descente 6 s / 5 s; a shot switched to `situation` while it still has its
   default duration gets `SITUATION_DURATION_S`, 9 s, for its long dive (`updateShot`; saved films keep theirs); `transition` `'enchaine'` by default, `'coupe'`,
@@ -1381,8 +1384,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `'accelere'`) for any shot but `aucune`, with `sunHours` (« Heures de soleil », 1–12 h, `SHOT_SUN_HOURS_RANGE`, absent = `SHOT_SUN_HOURS` = 4 h) for « Accéléré »; absent: « Plein jour » for `situation` (« Accéléré » with an old `moveSun`),
   « Heure du survol » for the other styles,
   see below);
-  `autoStops` (generated stops) and `autoMode`: `'temps-forts'` (default for new projects) or `'rythme'` (earlier
-  projects);
+  `autoStops` (generated stops) and `autoStopsPlaces?` (absent: no; the generated stops also come at places the track goes through, see "Automatic assembly");
   `stops[]` `{ id, atM, durationS (0.5–60 s), camera: 'film' | 'orbite' | 'large' | 'fixe', label?, source?: { kind, ref? } }`
   (`STOP_CAMERA_LABELS`: "Comme le film" (like the film), "Tour lent" (slow orbit), "Vue large" (wide view), "Fixe" (fixed));
   `markerKeys[]` `{ id, atM, kind, figure, imageId?, color?, figureColor?, size? }` (places along the film track where the marker changes its look:
@@ -1406,7 +1408,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   key, first key's value before it, last key's after it, smootherstep between keys (geometric for the speed). Readers:
   `AtmosphereLayer` (exposure; sun hour: sun keys replace `sunFromTrack`, linear, no wrap past midnight),
   `useGradingEffect` (grading per frame; composer mounted when a grading key exists), the clock (speed keys become a
-  `SpeedCurve` of `flightPacing`, multiplying the speed portions and slow-downs; with « Garder la durée » they only
+  `SpeedCurve` of `flightPacing`, multiplying the speed portions; with « Garder la durée » they only
   redistribute time; speed portions are not migrated). A function of the progress only, so the export stays
   deterministic and held frames need no change. Speed keys (◆) are on the « Vitesse » lane with a ◀ ◇ ▶ group in its
   header; every other parameter gets a lane of its own once keyed (`paramLanes`, labels `PARAM_LANE_LABELS`: « Exposition »,
@@ -1447,25 +1449,32 @@ The interface and the texts drawn into the films and posters exist in **French**
   junctions between the stages « À la suite » and their cards, and `stageDurations` (flight time in seconds, 5–600, by track id, of the stages that set one), see "Several tracks"; ids unique within the film
   (`stop-3`, `text-1`, `media-2`, `music-1`, `poi-2`, `nextFilmId`).
 - **Automatic assembly** (`src/film/assemble.ts`): as long as `autoStops` is true, stops are generated on every computation
-  (`autoStops`) at the highlights (`stopCandidates`: passes crossed and summits nearby among the landmarks shown, whatever the pacing; climb tops are no
-  longer offered: stops come from the landmarks, the points of interest and the timeline; `'rythme'` keeps the pauses of
-  the pacing, climb tops included (`climbCandidates`), so older films are unchanged; stops already written into a film,
-  climb tops included, stay ordinary stops; one per `film.autoStopGroupM` group (`AUTO_STOP_GROUP_M` = 1 km by default; `'rythme'`:
-  `pacing.windowM` and `pacing.landmarks`), like the pauses they replace), id `auto-<meters>`,
-  label ("Montée 1 · cat. 3 · 1 653 m", OSM name) and source; they follow OSM landmarks loaded afterwards.
-  `'temps-forts'`: one stop per highlight **even with pacing disabled**, `AUTO_STOP_S` (4 s), `orbite` camera (they are all
-  summits or passes). `'rythme'`: the pacing pauses from before the timeline (nothing if pacing is disabled,
-  `pauseS`, `film` camera, like those pauses before). `materializeStops` writes the generated stops into the film (`autoStops: false`) on the first
-  edit of a stop.
+  (`autoStops`) at the highlights (`stopCandidates`: passes crossed and summits nearby among the landmarks shown; climb tops are no
+  longer offered: stops come from the landmarks, the points of interest and the timeline; stops already written into a film,
+  climb tops included, stay ordinary stops), id `auto-<meters>`, label ("Montée 1 · cat. 3 · 1 653 m", OSM name) and source;
+  they follow OSM landmarks loaded afterwards: `AUTO_STOP_S` (4 s), `orbite` camera (they are all summits or passes).
+  **Few and spread out**: at most `max(1, floor(flyoverDurationS / AUTO_STOP_GAP_S))` stops (`AUTO_STOP_GAP_S` = 15: 4 a minute) and
+  no two closer than `max(film.autoStopGroupM ?? AUTO_STOP_GROUP_M (1 km), 15 s of film at the base speed = 15 × length /
+  flyoverDurationS)`. They are chosen greedily, the most notable first (`Landmark.priority`, i.e. `landmarkPriority` and the
+  user's « rank »; a record is 32, a crossed pass 40+): the `stopCandidates`, then the places of `autoStopsPlaces`. Hence
+  `AssembleInput.durationS` (every caller passes it; changing the duration changes the stops). The film's own stops are never
+  generated, counted nor capped. `alignRecordStops` (« Recalculer les records ») only adds the record stops `autoStops`
+  gives, so a record the cap dropped is not brought back; the record stops already written stay.
+  `materializeStops` writes the generated stops into the film (`autoStops: false`) on the first edit of a stop.
+  **`autoStopsPlaces`** (« Aussi aux lieux traversés », timeline « Options du film », under « Arrêts automatiques », disabled while
+  those are off; `setAutoStopsPlaces`; « Souvenir » sets it, the other gabarits clear it) also offers, among the landmarks shown
+  (so the kinds, place sizes, density and hidden ones of « Repères » apply), the places within 150 m and the huts, lakes,
+  waterfalls and viewpoints within 300 m (`PLACE_STOP_MAX_M`), after the first tier and under the same cap and spacing, so a
+  place never takes the slot of a pass, a summit or a record.
 - **No slow-down or title at landmarks.** A film does not slow down or add a title card at landmarks by itself: the only
   things it does at a landmark are its stop (« Arrêt », generated by `autoStops` or added by hand) and the 3D labels. The former
   option « Ralentir et titrer aux repères » (`film.landmarkTitles`) was removed as redundant with the stops. **Old projects**: a
   project saved with the option keeps loading without warning; `withFilmDefaults` drops the `landmarkTitles` flag (like
   `epochs`) and the `auto-speed-<OSM id>` / `auto-text-<OSM id>` items it had written stay as ordinary speed sections and texts,
   editable and deletable. A new film has none.
-- **Old projects**: a film saved without `autoMode` is completed by `withFilmDefaults` (`SETTING_UPGRADES`, also for
-  presets) with `'rythme'`; a v1 project without a film receives `{ autoMode: 'rythme' }` through the v1 → v2 migration
-  (`MIGRATIONS[1]`), completed the same way: their stops remain those of their pacing.
+- **Old projects**: `film.autoMode` (`'temps-forts'` or `'rythme'`, the pauses of the pacing) no longer exists:
+  `MIGRATIONS[6]` turns the generated stops of a film saved before the timeline into none (see "Pacing") and
+  `withFilmDefaults` drops the key, also for presets.
 - **Presets**: only the film's opening and closing shots are saved; `stops`, `speeds`, `texts`, `media`,
   `audio` (and `autoStops`) belong to the track and remain those of the current project when applied (`presetSettings`, including for
   a preset saved with the whole film).
@@ -1475,19 +1484,19 @@ The interface and the texts drawn into the films and posters exist in **French**
   for a stop, selection of the block returned by the edit): film time (s at ×1 from the first frame) →
   `stateAt(t)` = `{ phase: 'opening' | 'flight' | 'stop' | 'closing', progress, flightTimeS, stop, localS, lengthS }`.
   [0, O) opening (progress 0), [O, O + F) flight, [O + F, total] closing (progress 1). The flight is `flightPacing`:
-  pacing slow-downs at highlights, film speed sections, film stops inserted with raised-cosine entry and
+  film speed sections, film stops inserted with raised-cosine entry and
   exit (≤ 1.5 s), each with its own duration; `keepDuration` keeps F = `flyoverDurationS` (stops ≤ 50%, shortened
   proportionally; a sped-up section slows the rest down by as much; a stage « À la suite » with its own duration flies that long, see
   "Several tracks"). **Speed sections** (`flightPacing(…, speeds)`): the
-  local speed (slow-downs included) is multiplied by m(x) = factor^w(x) over [fromM, toM], w rising from 0 to 1 as a raised
+  local speed is multiplied by m(x) = factor^w(x) over [fromM, toM], w rising from 0 to 1 as a raised
   cosine over `pacing.transitionS` ("Transitions", 0.5–4 s, default `SPEED_EASE_S` = 1.5 s; the same length bounds the
   ease into and out of pauses and stops) at base speed, inside the section (at most half of it), and
   falling back the same way at its end: never a speed jump; 32 grid steps per transition, inverse always exact.
-  Applied whether pacing is active or not, combined with stops (a stop inside a section remains a stop). The clock
+  Combined with stops (a stop inside a section remains a stop). The clock
   places them in film time (`clock.speeds`: `startS` / `endS` = marker passing the edges). A stop's window
   (entry, hold, exit) is the `stop` phase. `timeAtProgress(0)` = start of the flight (after the opening), `timeAtProgress(1)` =
   end of the film; starting playback from the beginning or the end without a film time starts from the first frame (`setPlaying` sets
-  `timeS = 0`), opening included. Without opening or closing and without edits, the clock replays the old pacing exactly
+  `timeS = 0`), opening included. Without opening or closing and without edits, the clock replays the flight pacing with the generated stops exactly
   (equivalence tests).
 - **Camera** (`src/flyover/filmCamera.ts`, pure): overview = center of the track's box in the local frame at ground level,
   distance 1.6 × diagonal (terrain included, × height / width for a frame taller than wide: 9:16 keeps the whole
@@ -1697,7 +1706,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   the flyover duration and pacing (`setFlightTiming`: the setting and the film in one change, `clockBefore` = the clock
   before it; their "Par défaut": `followFlightTiming` inside the `resetSettings` step) and when the first track's
   landmarks are published again (`followLandmarks` from the `LandmarkPanel` effect, `clockBefore` = the clock with the
-  landmarks published before, since the pacing slows down at landmarks; not an undo step, landmarks are not an edit):
+  landmarks published before, since the stops generated at landmarks move the film time; not an undo step, landmarks are not an edit):
   an item the edit did not move itself keeps its offset to the start of the hold (an
   item fitted to the hold stays fitted, stretched with the stop) when the stop moves in film time (drag, position,
   duration, other stop, speed portions, shots); an item whose stop is no longer one of the film's own stops (deleted,
@@ -1714,7 +1723,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   (attaching to a generated stop writes the stops out first; one undo step); T with a stop selected adds the text
   attached to it (`addText(film, startS, stop)`, same undo step). Landmarks and stops: the generated stops
   follow the landmarks but carry nothing; written out, a stop keeps its meters and only its film time moves with the
-  slow-downs. Landmarks are not saved but fetched again: the first ones published for a track (project opened, track
+  stops and speed portions before it. Landmarks are not saved but fetched again: the first ones published for a track (project opened, track
   imported) move nothing, the film was saved with the times they gave.
 - **Selection**: `filmSelection` in the store (added at the end of the state, neither saved nor undoable), set by a press or
   focus on a block and by additions (`editFilm` selects the new block), cleared by Esc, closing
@@ -1875,7 +1884,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   resync immediately, `syncClip`; outside the outing, only `sync` is kept and a message says so). The placement is not
   redone automatically when the film changes (duration, stops): "Recaler". **Follow the flyover speed** (`sync.follow`): time
   in the file = instant recorded under the marker − (filming start + offset) (`clipTimeS(media, t,
-  recordedMs)`, bounded to `inS` / `outS`), a pure function of progress: slow-downs, speed sections and opening /
+  recordedMs)`, bounded to `inS` / `outS`), a pure function of progress: speed sections and opening /
   closing are followed; during a stop the progress does not move, **the frame stays frozen** (by choice: the frame always shows
   the marker's location); a pause recorded on the track (time passing without distance) is skipped. `recordedMs`
   comes from `recordedAtProgress(path, progress)` (`overlay/data.ts`, at the distance of `overlayFrameAt`), the same number for
@@ -1960,8 +1969,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   most browsers do not decode, nor PNG / WebP); a full-screen photo is cropped to cover the frame (a
   portrait photo loses its top and bottom).
   Other limits: the 3D preview only
-  follows a gesture on release; in `'temps-forts'` mode, the pacing's
-  "pause" slider does not set the duration of the generated stops (4 s, to adjust per stop); only the film's own stops
+  follows a gesture on release; the generated stops last 4 s (to adjust per stop); only the film's own stops
   (not the generated ones while "Arrêts automatiques" is checked) can carry items; landmarks loaded for the first time
   after an edit made without them (landmarks off since the import) do not move attached items.
 
@@ -2025,13 +2033,13 @@ The interface and the texts drawn into the films and posters exist in **French**
   (`src/film/autoFilm.ts`): total length and the length of the opening and closing shots (`settings.flyoverDurationS` = total −
   the two shots, so the length announced is the film's, before the nights and the passages between stages), the platform preset of
   « Vidéo » › « Format » (`withPlatformPreset`: `vertical` or `youtube`), a camera preset (`CAMERA_PRESETS` id), the overlay style,
-  counters, the closing card's figures (four at most: more crowds the card), stops, slow motion, cards. To judge a gabarit by eye,
+  counters, the closing card's figures (four at most: more crowds the card), stops, cards. To judge a gabarit by eye,
   `node e2e/gabarit-shots.mjs <dir> [reel,resume,souvenir]` loads the sample, applies each gabarit and saves frames spread over the
   film (headless Chromium, software GPU; `OPENFLYOVER_CHROME`).
 - **Pure**: `autoFilmSettings(settings, id, { days, stages })` returns the settings with the gabarit applied, no store, no new
   setting, nothing persisted: the project keeps only what it already stores, so old projects open unchanged and a film made this
-  way is an ordinary film. Slow motion: `pacing.enabled` with `climbs`, no `landmarks` (the stops cover them), `keepDuration` always on.
-  Stops: `autoStops` + `'temps-forts'`, or none (`autoStops: false`, `stops: []`), **unless the film has stops placed by hand**
+  way is an ordinary film. `keepDuration` always on.
+  Stops: `autoStops` (+ `autoStopsPlaces` for « Souvenir »), or none (`autoStops: false`, `stops: []`), **unless the film has stops placed by hand**
   (`autoStops` false and `stops` not empty): those are kept. Cards: the day cards (`film.dayCards.enabled`) on a track of two days
   or more, the stage cards (`withDefaultCard`) « À la suite »; a gabarit without cards switches them off. Overlay: `enabled`,
   the style (`withStyleLayout`), the opening title on with its date, the closing card on with its figures, the cards' `end` /
@@ -2103,7 +2111,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   out, `withExplicitNightJunctions`, see "Stages"; version 4: stage cards trimmed to what they change,
   `withStageCardsOverCommon`; version 5: the cards of an overlay that was off switched off and the automatic stops kept
   as the pacing made them, `withTitlesAndStopsOnTheirOwn`; version 6: the night and the high view of a junction on their
-  own, `withNightAndRecapOnTheirOwn`).
+  own, `withNightAndRecapOnTheirOwn`; version 7: the pauses of the removed « Ralentir aux temps forts » no longer make
+  the automatic stops of the films saved before the timeline, `withoutHighlightPauses`).
 - Settings **history** outside the store: subscribed to `useAppStore`, each step keeps only the changed keys; changes to the
   same keys less than 400 ms apart are merged (keyboard), a pointer slider drag = one step from press to release however
   slow it is (`beginGesture`, wired to every `input[type=range]` by `installSliderGestures`), a preset = one step, a timeline gesture = one step; the regional imagery picked on import
@@ -2326,8 +2335,7 @@ it, know at what time you will pass each point, where the sun will be and what t
   the window of the map like the others, with the badge « Record » and no distance to the track. Their 3D label is a
   `'poi'` label with the `trophee` pictogram (`POI_ICONS`); `stopCandidates` offers four of them as stops
   (`AUTO_STOP_RECORDS`: steepest climb, highest point, fastest descent, best thermal, so a film of N stages has at most 4 N more stops; the
-  others stay labels, and « Arrêt » on a row adds a stop to any), except for the pauses of the films saved with the former
-  pacing (`autoStops` 'rythme'), the stop's label being the record's text. A landmark is copied with `withLandmarkFields`
+  others stay labels, and « Arrêt » on a row adds a stop to any), the stop's label being the record's text. A landmark is copied with `withLandmarkFields`
   (ranking, stages), never by a spread, which would freeze the `name` / `text` getters in the language of the moment. A segment
   join (a gap, a chained track, a lift) is no slope: the steepest and fastest descent windows near one are skipped. `hasOsmLandmarks` (`osm/store.ts`) keeps the
   OpenStreetMap credit for real OSM landmarks: records alone do not need it. The hint under the list (`landmarks.hintRecords`)
@@ -2651,7 +2659,7 @@ exports) gets it from the terrain source of the settings.
   `frameloop 'never'`, renderer and camera at the video size with a pixel ratio of 1 (reapplied before each render;
   canvas shown letterboxed during the export), pointer disabled.
 - The schedule follows the film clock (see "Film and timeline"): the ramp lasts `clock.totalTime()` (opening and closing
-  included) and frame k shows `clock.progressAtTime(k / (n − 1) × duration)` at that film time (slow-downs and stops as in
+  included) and frame k shows `clock.progressAtTime(k / (n − 1) × duration)` at that film time (speed sections and stops as in
   the preview; held frames reuse the already composited image, except when the view moves with time: opening
   and closing shots, orbit stops, orbit and cinematic styles, or when the timed overlay changes (`overlayTimedState`:
   opacities of the cards, the texts, the photos and the videos of the timeline, plus the film time while a full-screen

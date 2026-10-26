@@ -140,7 +140,7 @@ const messages: Messages['inspector'] = {
   'paramKey.title': 'Key: {label}',
   'paramKey.value': 'Value',
   'paramKey.hint': 'At {distance}, {time} in the film: {label} {value}. The value glides from one key to the next and stays that of the first key before it and of the last one after it, stops included. Once a key exists, the slider of this setting in the panels edits the key at the marker.',
-  'paramKey.speedExtra': ' It combines with the speed sections and the slowdowns at highlights.',
+  'paramKey.speedExtra': ' It combines with the speed sections.',
   'paramKey.sunExtra': ' The sun follows the keyframes instead of the recorded time of the outing.',
   'paramKey.noAtmosphere': ' Without the atmosphere, this setting has no effect.',
   'markerKey.imageFilter': 'Images',

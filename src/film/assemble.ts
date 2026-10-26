@@ -3,25 +3,24 @@
  * per cluster, like the pauses it replaces), overview closing. The user retouches it on the timeline and in « Repères »
  * (Carte tab), where each landmark and point of interest has its « Arrêt ».
  *
- * New films ('temps-forts') stop at every pass crossed and peak nearby, camera orbiting; films saved before the
- * timeline ('rythme') keep the pauses of the pacing, climb tops included. Pure module.
+ * A few stops at the passes crossed, peaks nearby and records of the outing, camera orbiting; with `Film.autoStopsPlaces`
+ * also at the places the track goes through (villages, huts, lakes, waterfalls, viewpoints). Pure module.
  */
 import type { Track } from '../core/types'
-import { climbsOf } from '../flyover/climbs'
-import { DEFAULT_PACING, isHighlightLandmark, pausePositions } from '../flyover/pacing'
-import type { PacingSettings } from '../flyover/pacing'
+import { DEFAULT_FLYOVER_DURATION_S } from '../flyover/cameraSettings'
+import { isHighlightLandmark } from '../flyover/pacing'
 import { AUTO_STOP_RECORDS } from '../import/records'
 import type { Landmark } from '../osm/landmarks'
-import { climbLabelText } from '../scene/labelModel'
 import { AUTO_STOP_S } from './model'
-import type { AutoStopMode, Film, FilmStop } from './model'
+import type { Film, FilmStop } from './model'
 
 export interface AssembleInput {
   /** first track */
   track: Track
   /** OpenStreetMap landmarks of the track (from the landmark store) */
   landmarks?: readonly Landmark[]
-  pacing: PacingSettings
+  /** flyover duration at ×1 (seconds): limits the stops of `autoStopsPlaces`; absent: the default duration */
+  durationS?: number
 }
 
 /** Id of a generated stop: its rounded position, stable while the highlights do not move. */
@@ -31,17 +30,6 @@ export function autoStopId(atM: number): string {
 
 /** A highlight a stop can be made for. */
 export type StopCandidate = Required<Pick<FilmStop, 'atM' | 'label' | 'source'>>
-
-/** Climb tops of the track (`pacing.climbs`): only the pauses of the films saved before the timeline ('rythme') stop there. */
-function climbCandidates({ track, pacing }: AssembleInput): StopCandidate[] {
-  if (!pacing.climbs) return []
-  const L = track.stats.distanceM
-  return climbsOf(track).map((climb, i) => ({
-    atM: Math.min(L, Math.max(0, climb.endDistM)),
-    label: climbLabelText(climb, i),
-    source: { kind: 'climb', ref: String(i) },
-  }))
-}
 
 /**
  * Where the film offers a stop by itself, by position: the passes crossed, the peaks nearby and the records of the
@@ -87,38 +75,54 @@ export function withoutPlaceItems(film: Film, places: readonly StopPlace[]): Fil
   return stops.length === film.stops.length ? film : { ...film, stops }
 }
 
-/** Highlights closer than this make one automatic stop (metres; the default « Longueur du ralenti », which no longer sets it). */
-export const AUTO_STOP_GROUP_M = DEFAULT_PACING.windowM
+/** Highlights closer than this make one automatic stop (metres; `Film.autoStopGroupM` changes it). */
+export const AUTO_STOP_GROUP_M = 1000
+
+/** A landmark of these kinds this close to the track is a notable place (metres): `autoStopsPlaces`. */
+export const PLACE_STOP_MAX_M: Readonly<Partial<Record<Landmark['kind'], number>>> = { place: 150, hut: 300, lake: 300, waterfall: 300, viewpoint: 300 }
+/** The generated stops: at most one per this many seconds of flyover (4 a minute), and at least this far apart in film time at the base speed (seconds). */
+export const AUTO_STOP_GAP_S = 15
+
+/** The notable places `autoStopsPlaces` adds, among the landmarks shown: villages, huts, lakes, waterfalls and viewpoints close to the track. */
+function placeCandidates({ track, landmarks = [] }: AssembleInput): StopCandidate[] {
+  const L = track.stats.distanceM
+  return landmarks
+    .filter((l) => l.distanceM <= (PLACE_STOP_MAX_M[l.kind] ?? -1))
+    .map((l): StopCandidate => ({ atM: Math.min(L, Math.max(0, l.alongM)), label: l.name, source: { kind: 'landmark', ref: l.id } }))
+}
 
 /**
- * Stops at the highlights, one per cluster (like the pauses they replace): 'temps-forts' at the `stopCandidates`
- * (whatever the pacing), grouped within `groupM` (`Film.autoStopGroupM`), `AUTO_STOP_S` each, camera orbiting; 'rythme'
- * at the highlights of the pacing (climb tops included, landmarks with `pacing.landmarks`) only while it is on, grouped
- * within `pacing.windowM`, `pauseS` each, camera as in the film (as these pauses were; without the records, which did not exist).
+ * The generated stops, few and spread out: at most one per `AUTO_STOP_GAP_S` of flyover and no two closer than
+ * `max(groupM, AUTO_STOP_GAP_S of film at the base speed)` (`groupM`: `Film.autoStopGroupM`), `AUTO_STOP_S` each, camera
+ * orbiting. Chosen greedily, the most notable first (`Landmark.priority`): the `stopCandidates` (records, passes crossed,
+ * summits nearby), then, with `places` (`Film.autoStopsPlaces`), the notable places; so a place never takes the slot of a
+ * pass, a summit or a record. The stops of the film's own are not counted: they are not generated.
  */
-export function autoStops(input: AssembleInput, mode: AutoStopMode, groupM = AUTO_STOP_GROUP_M): FilmStop[] {
-  const { track, pacing } = input
-  const legacy = mode === 'rythme'
-  if (!(track.stats.distanceM > 0) || (legacy && (!pacing.enabled || !(pacing.pauseS > 0)))) return []
-  const candidates = legacy
-    ? [...climbCandidates(input), ...(pacing.landmarks ? stopCandidates(input, false) : [])].sort((a, b) => a.atM - b.atM)
-    : stopCandidates(input)
-  const positions = [...new Set(candidates.map((c) => c.atM))]
-  return pausePositions(positions, legacy ? pacing.windowM : groupM).map((atM) => {
-    const { label, source } = candidates.find((c) => c.atM === atM)!
-    const durationS = legacy ? pacing.pauseS : AUTO_STOP_S
-    return { id: autoStopId(atM), atM, durationS, camera: legacy ? 'film' : 'orbite', label, source }
-  })
+export function autoStops(input: AssembleInput, groupM = AUTO_STOP_GROUP_M, places = false): FilmStop[] {
+  const { track } = input
+  const L = track.stats.distanceM
+  if (!(L > 0)) return []
+  const durationS = input.durationS ?? DEFAULT_FLYOVER_DURATION_S
+  const gapM = Math.max(groupM, (AUTO_STOP_GAP_S * L) / durationS)
+  const max = Math.max(1, Math.floor(durationS / AUTO_STOP_GAP_S))
+  const priority = new Map((input.landmarks ?? []).map((l) => [l.id, l.priority]))
+  const byNotability = (a: StopCandidate, b: StopCandidate) => (priority.get(b.source.ref!) ?? 0) - (priority.get(a.source.ref!) ?? 0) || a.atM - b.atM
+  const kept: StopCandidate[] = []
+  for (const c of [...stopCandidates(input).sort(byNotability), ...(places ? placeCandidates(input).sort(byNotability) : [])]) {
+    if (kept.length >= max) break
+    if (kept.every((k) => Math.abs(k.atM - c.atM) >= gapM)) kept.push(c)
+  }
+  return kept.sort((a, b) => a.atM - b.atM).map(({ atM, label, source }): FilmStop => ({ id: autoStopId(atM), atM, durationS: AUTO_STOP_S, camera: 'orbite', label, source }))
 }
 
 /** `film` with its generated stops written out (`autoStops` cleared): the first edit of a stop on the timeline. */
 export function materializeStops(film: Film, input: AssembleInput): Film {
-  return film.autoStops ? { ...film, autoStops: false, stops: autoStops(input, film.autoMode, film.autoStopGroupM) } : film
+  return film.autoStops ? { ...film, autoStops: false, stops: autoStops(input, film.autoStopGroupM, film.autoStopsPlaces) } : film
 }
 
 /** Stops of `film`: generated while `autoStops` is set, else its own. */
 export function filmStops(film: Film, input: AssembleInput): FilmStop[] {
-  return film.autoStops ? autoStops(input, film.autoMode, film.autoStopGroupM) : film.stops
+  return film.autoStops ? autoStops(input, film.autoStopGroupM, film.autoStopsPlaces) : film.stops
 }
 
 /** A stop `autoStops` wrote out for a record of the outing (`record:<track>:<kind>`), as opposed to one the user made. */
@@ -142,12 +146,9 @@ export function alignRecordStops(film: Film, input: AssembleInput): { film: Film
   }
   const kept = film.stops.filter((s) => !stale(s))
   const groupM = film.autoStopGroupM ?? AUTO_STOP_GROUP_M
-  const added =
-    film.autoMode === 'temps-forts'
-      ? autoStops(input, film.autoMode, film.autoStopGroupM).filter(
-          (c) => c.source?.ref?.startsWith('record:') && !kept.some((s) => Math.abs(s.atM - c.atM) < groupM || s.id === c.id),
-        )
-      : []
+  const added = autoStops(input, film.autoStopGroupM).filter(
+    (c) => c.source?.ref?.startsWith('record:') && !kept.some((s) => Math.abs(s.atM - c.atM) < groupM || s.id === c.id),
+  )
   const removed = film.stops.filter(stale)
   if (removed.length === 0 && added.length === 0) return { film, removed, added }
   return { film: { ...film, stops: [...kept, ...added].sort((a, b) => a.atM - b.atM) }, removed, added }

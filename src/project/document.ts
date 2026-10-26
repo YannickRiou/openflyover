@@ -39,7 +39,7 @@ import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
 
 export const PROJECT_FORMAT = 'openflyover-project'
-export const PROJECT_VERSION = 6
+export const PROJECT_VERSION = 7
 /** Suffix of saved project files (`<name>.opnflvr`, see `file.ts`). */
 export const PROJECT_FILE_SUFFIX = `.${PROJECT_EXTENSION}`
 export const defaultProjectName = (): string => t('project.doc.defaultName')
@@ -364,6 +364,20 @@ export const MIGRATIONS: Readonly<Record<number, ProjectMigration>> = {
   4: withTitlesAndStopsOnTheirOwn,
   // v6: a junction's night and high view are choices of their own, next to its passage
   5: withNightAndRecapOnTheirOwn,
+  // v7: « Ralentir aux temps forts » is gone, and the pauses it made as the automatic stops of the films saved before the timeline
+  6: withoutHighlightPauses,
+}
+
+/**
+ * Before v7 a film saved before the timeline (`autoMode` 'rythme', or absent) made its automatic stops from the pauses
+ * of « Ralentir aux temps forts », which is gone (`withPacingDefaults` drops its settings, `parseProject` says so): that
+ * film starts without generated stops. The stops it has of its own stay.
+ */
+function withoutHighlightPauses(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(doc.settings) || !isRecord(doc.settings.film)) return doc
+  const film = doc.settings.film
+  if ((film.autoMode !== undefined && film.autoMode !== 'rythme') || film.autoStops === false) return doc
+  return { ...doc, settings: { ...doc.settings, film: { ...film, autoStops: false, stops: [] } } }
 }
 
 /**
@@ -628,6 +642,7 @@ export function parseProject(text: string): LoadedProject {
   }
 
   const warnings: string[] = []
+  if (isRecord(doc.settings) && isRecord(doc.settings.pacing) && doc.settings.pacing.enabled === true) warnings.push(t('project.doc.pacingRemoved'))
   const { settings, invalid } = sanitizeSettings(doc.settings)
   if (invalid.length > 0) {
     warnings.push(t('project.doc.settingsReplaced', { list: invalid.join(', ') }))
