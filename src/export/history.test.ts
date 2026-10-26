@@ -323,6 +323,24 @@ describe('where the time went', () => {
     expect(timingsSummary({ ...EMPTY_TIMINGS, renderMs: 1000, waitMs: 2000, encodeMs: 3000 })).toBe('rendu 1,0 s, tuiles 2,0 s, composition et encodage 3,0 s')
   })
 
+  it('tells the wait for the graphics card apart, only where it was measured', () => {
+    expect(timingsSummary({ ...split, gpuWaitMs: 4_000 })).toContain('tuiles 3,0 s, attente de la carte graphique 4,0 s, composition 6,0 s')
+    expect(timingsSummary({ ...split, gpuWaitMs: 0 })).not.toContain('carte graphique')
+  })
+
+  it('records the wait for the graphics card and the frame handover, and reads them back', () => {
+    const e = entryOf({ ...RECORD, timings: { ...split, gpuWaitMs: 4_000, handover: 'canvas' } })
+    expect(e).toMatchObject({ gpuWaitMs: 4000, handover: 'canvas' })
+    expect(parseHistory(serialiseHistory([e]))[0]).toEqual(e)
+    expect(Object.fromEntries(entryDetails(e).map((r) => [r.label, r.value]))['Image vidéo']).toBe('méthode canevas de la page')
+    // an entry stored before, or with a method this version does not know: nothing invented
+    const { gpuWaitMs: _w, handover: _h, ...older } = e
+    expect(parseHistory(serialiseHistory([older as HistoryEntry]))[0]).toMatchObject({ gpuWaitMs: 0 })
+    expect(parseHistory(serialiseHistory([older as HistoryEntry]))[0]).not.toHaveProperty('handover')
+    expect(parseHistory(serialiseHistory([{ ...e, handover: 'teleport' } as unknown as HistoryEntry]))[0]).not.toHaveProperty('handover')
+    expect(entryOf({ ...RECORD, timings: split })).not.toHaveProperty('handover')
+  })
+
   it('sums the shadow pass per render, and says nothing without one', () => {
     const shadows = { ...split, renders: 2, shadowTiles: 200, shadowOffscreenTiles: 60, shadowTriangles: 820_000, shadowOffscreenTriangles: 240_000 }
     expect(shadowSummary(shadows)).toBe('ombres : 100 tuiles (30 hors champ), 410\u00a0k triangles (120\u00a0k hors champ) par rendu')

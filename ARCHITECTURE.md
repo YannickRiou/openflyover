@@ -1161,6 +1161,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   intersected with the box of the visible tiles (`fitShadowFrustum`, pure and tested); near plane pushed toward the sun
   up to the top of that box; bounds rounded in steps of 2^(1/8) and snapped to whole texels (no shimmering);
   texel-based bias (normalBias 1.5 texel, depth 2 m). Texel ≈ 8–9 m in chase, 15–25 m in overview.
+  **Caster selection** (`selectCasters`, `mayShadowView`, after the fit): three only draws a mesh into the map when
+  `castShadow` is on and its box meets the shadow camera's frustum, so `TerrainShadow` switches `castShadow` per tile
+  each frame (the main pass ignores it; `dispose` puts it back to `true`). A tile casts only if its box, swept from its top
+  down along the sun ray to the lowest visible terrain (at most `far − near` of the shadow camera) and grown by
+  (PCF radius + normal bias + 2) texels, is not wholly outside one of the six planes of the **view** frustum (the
+  whole frustum, not the distance cut: strictly the same map for every receiver). Conservative (separating planes),
+  allocation-free; the test places a seeded cloud of receivers in the view and checks that every tile whose sun ray
+  reaches one still casts, and that a synthetic fixture goes from 141 to 45 tiles (54 k to 17 k triangles).
 - **Off-screen casters** (`engine.ts`): all tiles cast and receive; `frustumCulled` on. After the
   LOD selection, ready tiles that were visited but are outside the frustum and not covered by a drawn tile stay `visible`: a
   ridge behind the camera reaches the shadow map, and three drops them from the main pass. `stats.visibleTiles` only counts
@@ -2542,7 +2550,9 @@ exports) gets it from the terrain source of the settings.
 - **Principle**: the overlay is not DOM. A pure, synchronous function, `drawOverlay(ctx, frame, settings, size, assets)`
   (`src/overlay/draw.ts`), draws it on a 2D context, on screen or off screen. The preview (`OverlayCanvas`, a 2D canvas above
   the 3D canvas, without mouse events) and the video export (`exportOverlay.ts` → `ExportController`) call
-  the same function: the film shows exactly the preview.
+  the same function: the film shows exactly the preview. The preview canvas takes the 3D view's pixel ratio at most
+  (`deviceBudget().maxPixelRatio`: 2; an iPhone's 3 would be 4× the pixels of its 3D view at 1.5, 2.25× those of the capped canvas).
+  The export and the still draw at the size of the video and do not depend on it.
 - **Styles** (`OVERLAY_STYLES`, `OVERLAY_THEMES`): `editorial`, `broadcast`, `app` and `neon` (« Néon nuit »: deep-blue glass,
   glowing cyan edge) place the widgets at the user's anchors and only differ by colours, fonts and panels. Three styles
   have a structure of their own (`src/overlay/structures.ts`, `styleStructure`, a pure function of the frame like the rest):
@@ -2908,18 +2918,34 @@ exports) gets it from the terrain source of the settings.
   (`OverlayCanvas`) and the timeline are frozen while an export runs and redrawn at its end.
 - **Encoding pipeline**: the encoder takes the canvas synchronously in `addFrame` (`VideoSampleSource` +
   `new VideoSample(canvas)` before any await; ffmpeg path: `getImageData`), so frame i is encoded while frame i+1
-  settles and renders (one `addFrame` in flight). `pickCodec` asks `hardwareAcceleration: 'prefer-hardware'` first, else
-  `'no-preference'` (`CodecCandidate.hardware`). On the native path the compositor's 2D context is created with
+  settles and renders (one `addFrame` in flight). Right after the last render of an image the loop waits for the GPU
+  (`waitForGpu`: a 1×1 `readPixels` of the default framebuffer, synchronous everywhere, timed as `gpuWaitMs`), so that
+  `composeMs` and `frameMs` are not charged for the render (on WebKit the drawing of the WebGL canvas into a 2D canvas is
+  deferred, and the render was paid for when the `VideoFrame` was made).
+- **Frame handover** (`handover.ts`, WebCodecs sessions only: `session.acceptsSource`): three ways to get the composed
+  frame to the encoder, all with the same pixels (same `composeFrame`, sRGB, no alpha; checked in Chrome: byte-identical
+  `VideoFrame`s, same colour space): `offscreen` (OffscreenCanvas → `VideoSample(canvas)`, the reference), `canvas` (a
+  canvas of the page, not attached, accelerated in Safari → `VideoSample(canvas)`), `bitmap` (OffscreenCanvas →
+  `createImageBitmap` → `VideoSample(bitmap)`, closed once handed over). `createChooser` times each available method on
+  3 composed frames (composing + handing over, after one warm-up frame; holds are not timed) and keeps the one with the
+  lowest median for the rest of the export, the reference unless another is at least 10 % faster; a bitmap that cannot be
+  made drops that method. The choice is in `timings.handover`, the breadcrumb (« image vidéo <méthode> ; offscreen … ms »),
+  the history row and the diagnostic « Image vidéo ». The ffmpeg path, the PNG sequence and the overlay-only film keep
+  the OffscreenCanvas. `pickCodec` asks `hardwareAcceleration: 'prefer-hardware'` over all the candidates first (H.264,
+  HEVC, VP9, VP8: a hardware HEVC wins over a software H.264), then `'no-preference'` over them
+  (`CodecCandidate.hardware`). On the native path the compositor's 2D context is created with
   `willReadFrequently` (`compositorAttributes`).
 - **Timings** (`ExportTimings`): `rendered`, `renders` (advance calls), `renderMs` (main thread), `gpuMs` / `gpuRenders`
-  (GPU timer queries `EXT_disjoint_timer_query_webgl2`, `gpuTimer.ts`; 0 where unavailable, e.g. Safari / iOS: the
-  composition then holds the wait for the GPU), `waitMs`, `composeMs`, `frameMs` (VideoFrame / readback), `encodeWaitMs`
-  (back-pressure), `encodeMs` = the last three, `timeouts`, `givenUp`. `timingsSummary` writes them on one line for the
+  (GPU timer queries `EXT_disjoint_timer_query_webgl2`, `gpuTimer.ts`; 0 where unavailable, e.g. Safari / iOS: only
+  `gpuWaitMs` then tells the GPU's share), `waitMs`, `gpuWaitMs` (waiting for the GPU to finish the last render,
+  « attente de la carte graphique »; absent from the summary of older entries), `composeMs`, `frameMs` (VideoFrame /
+  readback), `encodeWaitMs` (back-pressure), `encodeMs` = the last four, `timeouts`, `givenUp`, and `handover` (the
+  method kept, a string; stored in the history entry as `handover`). `timingsSummary` writes them on one line for the
   console `[export]` line, the history « Répartition » and the diagnostic « Résultat » (added to the stored report when
   an export ends, shown in « Dernier export »).
 - **Shadow pass count** (#52): `shadowTiles`, `shadowTriangles` and their `shadowOffscreen…` share, summed over the renders. `TerrainShadow`
-  counts them after fitting its camera (`lastShadowPass`: the visible tiles three's shadow culling keeps, the off-screen
-  casters apart); `ExportController` adds them after each `advance`. `shadowSummary` writes « ombres : N tuiles (M hors
+  counts them after fitting its camera and selecting the casters (`lastShadowPass`: the tiles that cast and that three's
+  shadow culling keeps, the off-screen casters apart: those out of the view that can still shade it); `ExportController` adds them after each `advance`. `shadowSummary` writes « ombres : N tuiles (M hors
   champ), K triangles (… hors champ) par rendu » in the console `[export]` line and the diagnostic « Ombres » row (not in
   the history). Measure before changing which tiles cast.
 - Limits: without direct writing (Firefox, Safari), file kept in memory (~1× its size at the end); the tab must stay open, speed depends on the GPU (to be measured on a

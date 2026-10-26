@@ -14,8 +14,11 @@ export interface FrameAt {
   time: OverlayTime
 }
 
+/** The 2D context of a canvas of the page or of an OffscreenCanvas. */
+export type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
+
 /** 2D film overlay (titles, widgets, texts, credits) drawn over each frame, at the video resolution. */
-export type DrawOverlay = (ctx: OffscreenCanvasRenderingContext2D, at: FrameAt, width: number, height: number) => void
+export type DrawOverlay = (ctx: Context2D, at: FrameAt, width: number, height: number) => void
 
 export interface SettleOptions {
   /**
@@ -173,7 +176,7 @@ const SKY_GRADIENT: readonly [string, string] = ['#A9CCD9', '#F5F2EA']
 
 /** Fill a box with the sky gradient, top to bottom (behind a film frame, or the poster's placeholder view). */
 export function fillSky(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  ctx: Context2D,
   x: number,
   y: number,
   width: number,
@@ -188,7 +191,7 @@ export function fillSky(
 
 /** Encoder canvas content for one frame: sky gradient, WebGL image scaled to the video size, overlay. */
 export function composeFrame(
-  ctx: OffscreenCanvasRenderingContext2D,
+  ctx: Context2D,
   source: CanvasImageSource,
   at: FrameAt,
   width: number,
@@ -214,7 +217,7 @@ export function composeOverlayFrame(
 
 /** The overlay drawn without leaking its context state (transforms, styles) into the next frame. */
 function drawOverlayOn(
-  ctx: OffscreenCanvasRenderingContext2D,
+  ctx: Context2D,
   at: FrameAt,
   width: number,
   height: number,

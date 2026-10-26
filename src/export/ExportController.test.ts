@@ -25,7 +25,7 @@ const session = {
   bitrate: 1,
   mimeType: 'video/mp4',
   extension: '.mp4',
-  addFrame: vi.fn(async (_index: number) => undefined),
+  addFrame: vi.fn(async (_index: number, _source?: unknown) => undefined),
   finish: vi.fn(async () => ({ blob: null, sizeBytes: 123 })),
   cancel: vi.fn(async () => undefined),
 }
@@ -52,9 +52,12 @@ vi.stubGlobal(
   },
 )
 
+/** the WebGL context of the fake renderer: `readPixels` is the wait for the GPU */
+const readPixels = vi.fn()
+
 function fakeThree() {
   const three = {
-    gl: { domElement: { style: {}, parentElement: null } },
+    gl: { domElement: { style: {}, parentElement: null }, getContext: () => ({ readPixels }) },
     frameloop: 'demand',
     size: { width: 800, height: 450, top: 0, left: 0 },
     viewport: { dpr: 2 },
@@ -166,10 +169,44 @@ describe('runExport', () => {
     const { frameCount } = await exportFilm(destination())
     const { timings } = useExportStore.getState()
     expect(timings.rendered).toBeGreaterThan(0)
-    expect(timings.encodeMs).toBeCloseTo(timings.composeMs + timings.frameMs + timings.encodeWaitMs, 5)
+    expect(timings.encodeMs).toBeCloseTo(timings.gpuWaitMs + timings.composeMs + timings.frameMs + timings.encodeWaitMs, 5)
+    // each image waits once for the GPU, before it is composed; a held frame repeats the previous image
+    expect(readPixels).toHaveBeenCalledTimes(timings.rendered)
     // the first frame, then at most every 250 ms, and the last one (twice: the end of the loop and of the export)
     expect(reportFrame.mock.calls.length).toBeLessThan(frameCount)
     expect(reportFrame.mock.calls.at(-1)?.[0]).toBe(frameCount)
+  })
+
+  it('measures the ways to hand the frames to a WebCodecs encoder on the first ones, then keeps the fastest', async () => {
+    const closed = vi.fn()
+    class FakeBitmap {
+      close = closed
+    }
+    vi.stubGlobal('ImageBitmap', FakeBitmap)
+    vi.stubGlobal('createImageBitmap', async () => new FakeBitmap())
+    vi.stubGlobal('document', { createElement: () => ({ getContext: () => ({}) }) })
+    const map = new Map<string, string>()
+    vi.stubGlobal('sessionStorage', { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v), removeItem: (k: string) => void map.delete(k) })
+    try {
+      vi.mocked(createExportEncoder).mockResolvedValueOnce({ ...session, acceptsSource: true } as never)
+      const { frameCount } = await exportFilm(destination())
+      expect(session.addFrame).toHaveBeenCalledTimes(frameCount)
+      // every frame is handed over from a canvas or a bitmap, never from nothing
+      expect(session.addFrame.mock.calls.every(([, source]) => source !== undefined)).toBe(true)
+      const { timings } = useExportStore.getState()
+      expect(['offscreen', 'canvas', 'bitmap']).toContain(timings.handover)
+      expect(readBreadcrumbs(sessionStorage).map((c) => c.event).join('\n')).toMatch(/export : image vidéo \w+ ; offscreen [\d.]+ canvas [\d.]+ bitmap [\d.]+ ms/)
+      // the bitmaps were closed once handed over
+      expect(closed).toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+      vi.stubGlobal('OffscreenCanvas', class { getContext() { return {} } })
+    }
+  })
+
+  it('does not measure an encoder that reads only its own canvas', async () => {
+    await exportFilm(destination())
+    expect(useExportStore.getState().timings.handover).toBeUndefined()
   })
 
   it('counts the tiles of a phone in film frames for the whole export, then goes back to wall time', async () => {

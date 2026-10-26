@@ -103,3 +103,21 @@ export function createGpuTimer(gl: unknown): GpuTimer | null {
     },
   }
 }
+
+const pixel = new Uint8Array(4)
+
+/**
+ * Wait for the GPU to finish what was drawn on the default framebuffer: reading one pixel is synchronous in every
+ * browser (`finish()` may only be a hint), and the drawing buffer still holds the frame in the task of the last render.
+ * What takes time afterwards (drawing the image into the composition, the video frame) is then no wait for the render.
+ * Nothing where there is no context (a test) or the read fails.
+ */
+export function waitForGpu(gl: unknown): void {
+  const ctx = gl as Partial<WebGLRenderingContext> | null
+  if (!ctx || typeof ctx.readPixels !== 'function') return
+  try {
+    ctx.readPixels(0, 0, 1, 1, ctx.RGBA!, ctx.UNSIGNED_BYTE!, pixel)
+  } catch {
+    // a framebuffer that cannot be read: the wait then stays in the next step, which the other timings tell
+  }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { deviceBudget } from '../core/deviceBudget'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useMusicPreview } from '../film/audio'
 import { getMediaBitmaps, mediaToLoad } from '../film/media'
@@ -60,7 +61,8 @@ function OverlayPreview() {
       const overlay = settings.overlay
       const width = canvas.clientWidth
       const height = canvas.clientHeight
-      const dpr = window.devicePixelRatio || 1
+      // the 3D view's ratio at most: an iPhone's 3 would make 4× the pixels of its 3D view (1.5 while moving)
+      const dpr = Math.min(window.devicePixelRatio || 1, deviceBudget().maxPixelRatio)
       const pixelW = Math.max(1, Math.round(width * dpr))
       const pixelH = Math.max(1, Math.round(height * dpr))
       if (canvas.width !== pixelW || canvas.height !== pixelH) {

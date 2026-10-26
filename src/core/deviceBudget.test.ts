@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_VIDEO_SETTINGS, exportLodHeight, exportResolutionNote, videoSize } from '../export/schedule'
+import { DEFAULT_VIDEO_SETTINGS, exportDeviceNote, exportLodHeight, exportResolutionNote, videoSize } from '../export/schedule'
 import { CLOUD_SETTLE_FRAMES } from '../scene/renderOnDemand'
 import { DEFAULT_TUNING } from '../terrain/engine'
 import { DEFAULT_CLOUDS } from '../weather/sceneClouds'
@@ -135,5 +135,11 @@ describe('where the limits live (computer)', () => {
     expect(videoSize('16:9', '720p', 1080)).toEqual({ width: 1280, height: 720 })
     expect(exportResolutionNote('4k', 1080)).toMatch(/limité à 1080p/)
     expect(exportResolutionNote('1080p', 1080)).toBeNull()
+  })
+
+  it('a phone or tablet says its video saves memory; a computer says nothing', () => {
+    expect(exportDeviceNote('desktop')).toBeNull()
+    expect(exportDeviceNote('phone')).toMatch(/économise la mémoire/)
+    expect(exportDeviceNote('tablet')).toBe(exportDeviceNote('phone'))
   })
 })

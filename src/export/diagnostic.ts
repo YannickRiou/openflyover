@@ -19,7 +19,7 @@ import { isIdentityGrading } from '../scene/grading'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { deviceBitrateCap, targetBitrate } from './encoder'
-import { OUTCOME_LABELS, settingsDetails, shadowSummary, summariseSettings, timingsSummary } from './history'
+import { OUTCOME_LABELS, handoverLabel, settingsDetails, shadowSummary, summariseSettings, timingsSummary } from './history'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, videoEncoding, videoSize } from './schedule'
 import type { ExportRequest, ExportState } from './store'
@@ -272,8 +272,9 @@ function frenchResultSection(state: Pick<ExportState, 'phase' | 'error' | 'frame
   rows.push(['Répartition', timingsSummary(timings)])
   const shadows = shadowSummary(timings)
   if (shadows) rows.push(['Ombres', shadows])
-  if (timings.gpuRenders === 0) rows.push(['Temps GPU', 'non mesuré (pas de requêtes de minuterie WebGL ici) : la composition attend la fin du rendu'])
+  if (timings.gpuRenders === 0) rows.push(['Temps GPU', "non mesuré (pas de requêtes de minuterie WebGL ici) : voir l'attente de la carte graphique"])
   rows.push(['Tuiles', `${timings.timeouts} image(s) au délai, ${timings.givenUp} image(s) aux tuiles abandonnées`])
+  if (timings.handover) rows.push(['Image vidéo', handoverLabel(timings.handover)])
   if (result) rows.push(['Fichier', `${result.codec}${result.hardware ? ', encodeur matériel' : ''}`])
   return { title: RESULT_TITLE, rows }
 }
