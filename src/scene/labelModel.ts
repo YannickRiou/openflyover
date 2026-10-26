@@ -285,6 +285,35 @@ export function lineOfSightClearance(
   return min
 }
 
+/**
+ * The lines of sight of the labels (or pins) kept from one frame to the next: `begin(stamp)` forgets them unless every
+ * item of `stamp` (camera position, terrain, its version, exaggeration…) is the same as at the last frame, and
+ * `clearance(i, …)` recomputes the one of anchor `i` only when the anchor moved. The same view gives the same answer
+ * with or without it; it only spares the 24 or so relief samples per anchor when nothing moved (paused film, editing).
+ */
+export function createClearanceMemo() {
+  let stamp: readonly unknown[] = []
+  const anchors: number[] = []
+  const values: number[] = []
+  return {
+    begin(next: readonly unknown[]): void {
+      if (next.length === stamp.length && next.every((item, i) => item === stamp[i])) return
+      stamp = next
+      values.length = 0
+    },
+    clearance(i: number, from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }, clearanceAt: ClearanceAt): number {
+      const known = values[i]
+      if (known !== undefined && anchors[3 * i] === to.x && anchors[3 * i + 1] === to.y && anchors[3 * i + 2] === to.z) return known
+      const value = lineOfSightClearance(from, to, clearanceAt)
+      anchors[3 * i] = to.x
+      anchors[3 * i + 1] = to.y
+      anchors[3 * i + 2] = to.z
+      values[i] = value
+      return value
+    },
+  }
+}
+
 export interface ScreenRect {
   left: number
   top: number

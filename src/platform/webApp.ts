@@ -17,8 +17,8 @@ const IOS_HINT_DELAY_MS = 4000
 /** an open app looks for a new version this often, and when it is shown again (at most once per UPDATE_MIN_GAP_MS) */
 export const UPDATE_CHECK_MS = 60 * 60 * 1000
 export const UPDATE_MIN_GAP_MS = 10 * 60 * 1000
-
-
+/** the worker is registered once the page has loaded and the browser is idle, at the latest after this */
+export const REGISTER_IDLE_MS = 3000
 
 /** The service worker runs on the built website over HTTPS (or localhost), never inside Tauri nor in development. */
 export function shouldRegisterServiceWorker(scope: object, production: boolean): boolean {
@@ -76,6 +76,25 @@ export function watchForUpdates(
   }
 }
 
+/**
+ * Runs `run` once the page has loaded, then at the next idle moment (`requestIdleCallback`, or a timeout where it is
+ * missing: Safari): the worker downloads the whole build, which must not compete with the first screen.
+ */
+export function afterLoadAndIdle(
+  win: {
+    document: { readyState: string }
+    addEventListener(type: 'load', listener: () => void, options: { once: true }): void
+    requestIdleCallback?: (callback: () => void, options: { timeout: number }) => unknown
+    setTimeout(callback: () => void, ms: number): unknown
+  },
+  run: () => void,
+): void {
+  const idle = () =>
+    win.requestIdleCallback ? win.requestIdleCallback(run, { timeout: REGISTER_IDLE_MS }) : win.setTimeout(run, REGISTER_IDLE_MS)
+  if (win.document.readyState === 'complete') idle()
+  else win.addEventListener('load', idle, { once: true })
+}
+
 async function register(): Promise<void> {
   const base = import.meta.env.BASE_URL
   const registration = await navigator.serviceWorker.register(`${base}sw.js`, { scope: base })
@@ -126,7 +145,7 @@ async function takeSharedFiles(): Promise<File[]> {
  */
 export function installWebApp(openShared: (files: File[]) => void): void {
   if (!shouldRegisterServiceWorker(globalThis, import.meta.env.PROD)) return
-  register().catch((error: unknown) => console.warn('[app] service worker non installé :', error))
+  afterLoadAndIdle(window, () => register().catch((error: unknown) => console.warn('[app] service worker non installé :', error)))
   takeSharedFiles()
     .then((files) => files.length > 0 && openShared(files))
     .catch((error: unknown) => console.warn('[app] fichiers partagés illisibles :', error))

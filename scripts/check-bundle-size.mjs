@@ -11,8 +11,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-/** kB, gzipped (1 kB = 1000 bytes): 4.2.1 measured 756, the five languages and the stylesheet included. */
-const FIRST_SCREEN_GZIP_KB = 790
+/** kB, gzipped (1 kB = 1000 bytes): 4.5.0 measured 559, French and the stylesheet included (the other languages load on demand). */
+const FIRST_SCREEN_GZIP_KB = 580
 
 const dist = resolve(process.argv[2] ?? 'dist')
 const html = readFileSync(resolve(dist, 'index.html'), 'utf8')

@@ -1,5 +1,5 @@
 /**
- * Languages of the interface. Adding one: copy `fr/` to a new folder, translate, add it to `catalogs` in `index.ts`
+ * Languages of the interface. Adding one: copy `fr/` to a new folder, translate, add it to `loaders` in `index.ts`
  * and to this list (the compiler lists every key left to translate).
  */
 export const LANGUAGES = [

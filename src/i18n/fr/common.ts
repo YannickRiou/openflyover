@@ -5,6 +5,7 @@ export default {
   colorHex: 'Code couleur (hexadécimal)',
   undo: 'Annuler',
   retry: 'Réessayer',
+  languageLoadFailed: "Impossible de charger cette langue pour l'instant.",
   cancel: 'Annuler',
   'modified.srOnly': ' (modifié)',
   'modified.resetAria': 'Rétablir les réglages par défaut : {label}',

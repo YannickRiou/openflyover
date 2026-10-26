@@ -126,12 +126,13 @@ full customization through a single project document, WebCodecs video export, Ta
 ## Loading (bundle splitting)
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
-2.5 MB, 756 kB gzip over 21 files in 4.2.1, stylesheet included (the five languages 812 kB, the app 434 kB, `primitives`
-291 kB, React 219 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 790 kB
+1.9 MB, 559 kB gzip over 22 files in 4.5.0, stylesheet included (the app 441 kB, `primitives` 291 kB, React 219 kB,
+French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 580 kB
 gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it.
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
-`scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). The language catalogs (812 kB) make
-the build print a chunk-size warning; loading only the language in use is a known lead.
+`scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). Only French (the
+reference, the fallback of a missing message) is in the first screen; English, Spanish, Italian and German are one chunk each
+(~55 kB gzip), loaded by `loadLanguage` (see "Internationalisation").
 The rest arrives through dynamic `import()` calls, each in its own file:
 
 - right after the first paint: the 3D scene (`FlyoverCanvas`, three.js + fiber, `React.lazy` in `Stage`) and the
@@ -322,6 +323,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      that view goes to tiles out of the frustum, but they are the shadow casters).
    - Bounding sphere: from the geometry if loaded, otherwise from the tile bounds with heights [-500, 9000] m.
    - Material: `MeshStandardMaterial({ map, roughness: 1, metalness: 0 })`, `side: FrontSide`.
+   - `sampleHeight` allocates nothing (scratch tile fractions, no closures; the labels' lines of sight call it ~6000 times a frame) and keeps the tile coordinates at zoom 0 to derive those of every level exactly (`sampleTileMeshAt`).
    - `sampleHeight` = the terrain **as drawn**: the triangles of the tile drawn at the point (`sampleTileMesh`), else
      (off the view) the deepest loaded tile there, else the `HeightField` (tree rebuilt after a change of imagery).
      The track, the marker and the labels therefore lie on the visible mesh: never on a finer grid the mesh does not
@@ -566,6 +568,9 @@ pointer (`appearance.css`).
   wraps differently while the film plays, so the view never resizes. The recorded clock time only with the « Réglages »
   preference. Tool buttons are icons only (tooltip and `aria-label`), « Options » included. During an export the
   timeline keeps the playback it had (it does not follow the export's playhead, so it does not re-render per frame).
+  While a film plays the timeline does not render at each frame either: it selects only `playing` and `speed`; what
+  follows the playhead (readouts, playhead, flown part of the profile, ruler slider, ◀ ◇ ▶ of `KeyGroup`) selects the
+  playback itself, and the scrolling that follows the playhead runs from a store subscription.
 - **Status bar** (24 px, below the timeline): map state of the current view (`ui/mapStatus.ts`, pure): a ring and
   "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
   99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
@@ -749,9 +754,15 @@ The interface and the texts drawn into the films and posters exist in **French**
   - `useT()`: `t` for a component. It renders again when the language changes and returns a new function then, so a `useMemo`
     or `useEffect` that lists `t` among its dependencies follows the language (but a toast raised from an effect keyed on
     something else must not list `t`: it calls the module-level `t`, which reads the language at that moment).
+  - `loadLanguage(code)` fetches a catalog (French is bundled, the others are `import()`ed, one chunk each, in the service
+    worker's precache as every build file). `setLanguage(code)` applies at once when the catalog is in memory, otherwise once it is
+    fetched (the last language asked for wins); `main.tsx` waits for the language of the preferences before the first render, so no
+    text shows in the wrong language, and starts in French if the chunk cannot be fetched. Tests preload every catalog
+    (`i18n/testSetup.ts`).
   - `useLanguage()`, `getLanguage()`, `setLanguage()`, `subscribeLanguage()`, `currentLocale()` (for `Intl` and `localeCompare`);
     `template(key)` (the message with its placeholders unfilled); `withLanguage(code, fn)` words something in another language
-    without telling the components (the diagnostic report stays French); `tRich(key, { link: <a/> })` (`rich.tsx`) for a message
+    without telling the components (the diagnostic report stays French; `code` must be French, the current language or one
+    `loadLanguage` has fetched, otherwise the text is in French); `tRich(key, { link: <a/> })` (`rich.tsx`) for a message
     with React nodes in it.
   - Non-React code (film overlay, poster, export, import errors, film model) calls `t` directly: the current language lives in
     this module, set from the preferences.
@@ -2443,7 +2454,7 @@ exports) gets it from the terrain source of the settings.
   of interest (`poiLabels`, light orange pictogram instead of the stroke, `FilmPoi.icon` among 9 Lucide paths in
   `Labels.tsx`, priority 200: above everything) and any external source registered through
   `setLabelSource(id, LandmarkLabel[])` (e.g. `'osm'`). Height = terrain (or recorded elevation) × exaggeration, re-draped on
-  `engine.onChange` (same debounce as the track). Hidden when the line of sight goes below the terrain (24 samples, the 2 lowest dips within 60 m refined by a golden-section search between their neighbours, so the cut does not flicker as samples slide over a ridge) and
+  `engine.onChange` (same debounce as the track). Hidden when the line of sight goes below the terrain (24 samples, the 2 lowest dips within 60 m refined by a golden-section search between their neighbours, so the cut does not flicker as samples slide over a ridge; the result of each label is kept from one frame to the next by `createClearanceMemo` while the camera position, the engine, the frame, the exaggeration, the terrain version (`terrainVersion(engine)` of `scene/filmView.ts`, bumped by `engine.onChange`) and the label's own position are unchanged, so a paused film samples the relief 0 times, and a moving one gets the same opacity as without the memo, which the export relies on; `PhotoPins` does the same) and
   between half the range and the range (`labels.rangeKm`, 70 km by default: `distanceFade`); shared size
   `labels.size` (×0.6 to ×1.6); on overlap, the highest priority wins. Opacity is a function of the view alone (no
   temporal smoothing): each export frame is rendered in isolation. The opening and closing cards do not hide them (the cards are drawn over the 3D view, labels
@@ -4056,6 +4067,12 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
   - precached at install, in `openflyover-shell-<hash of the build>`: the page (`./`), every build file (JS, CSS) and
     every public file except `oauth-callback.html` (fonts, sample, icons, manifest): ~3.7 MB, 50-odd files. The whole
     app works offline, the 3D scene and the export included;
+  - registered once the page has loaded and the browser is idle (`afterLoadAndIdle` in `webApp.ts`: `load`, then
+    `requestIdleCallback`, 3 s at the latest, a timeout where it is missing), so the download of the build does not compete
+    with the first screen; a fingerprinted file (`assets/<name>-<8-character hash>.<ext>`, `FINGERPRINTED`) is fetched
+    with the default cache mode, so the files the page has just loaded come from the HTTP cache instead of being
+    downloaded again; the page, the worker and the public files (no fingerprint) keep `cache: 'reload'`, so an update
+    always reaches them. The list is generated at build time (`vite.config.ts`), whatever the chunk names;
   - cached on first use, in `openflyover-sky-<hash of their content>`: the sky and cloud textures (`atmosphere/`,
     `clouds/`, ~12 MB), downloaded only when the atmosphere is first shown, not at install over a mobile connection;
     the cache name follows their content, so it survives app updates (the textures change with the Takram packages
@@ -4109,7 +4126,14 @@ the preview of any device, by what it does and not by its hardware: « Auto » (
 the film plays (`createSlowPreviewDetector`: median over 2 s of playback, a gap over 1 s restarts the count) and, under
 30 frames per second, keeps the preview light for the session; « Légère » forces it, « Complète » never lightens.
 Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
-0.5, 16 still frames. The export sets its own pixel ratio (1) and cloud pass: films do not change. The pixel ratio goes
+0.5, 16 still frames, shadow map 2048² (~32 MB, not ~128 MB), at most 125,000 trees (far chunks thin first,
+`forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass, and `sceneBudget(preview, exporting)` gives
+`AtmosphereLayer` and `ForestLayer` the device's own shadow map and trees whenever `isExportBusy` (video, poster and
+« Capturer cette image » all run through `runExport`): films do not change. The shadow map and the trees are made again
+when the preview changes and at the start and end of an export (~0.3 s for 250,000 trees). Not lightened: imagery
+anisotropy (16, set when a tile's texture is created and the canvas freed after upload, so it cannot follow the preview)
+and the canvas's MSAA (fixed with the context; a computer that started with the atmosphere would lose the antialiasing of
+the exports made without it). The pixel ratio goes
 through the `dpr` of <Canvas> (`FlyoverCanvas`): R3F sets it back on each render of the canvas (`configure`, after the
 children's effects), so a `setDpr` from a child does not hold — that also fixed a phone that kept 1.5 while playing
 once a track arrived. The diagnostic report shows the preview values in use (`budget.*`). Verified in headless
@@ -4126,8 +4150,8 @@ Chromium (SwiftShader, DPR 2): « Complète » 2 while playing; « Légère » 1
 | preview clouds: resolution, still frames | `CloudsLayer`, `CLOUD_SETTLE_FRAMES` | 1, 32 | 0.5, 16 | 0.5, 16 | 0.5, 16 |
 | sea of clouds by default | `DEFAULT_CLOUDS.seaRender` | volume | « Nappe » | « Nappe » | « Nappe » |
 | export short side | `videoSize` | 2160 (4K) | 1440 | 1080 | as the device |
-| shadow map (texels per side) | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
-| trees of the forests (most placed) | `placeTrees` (`ForestLayer`) | 250,000 | 60,000 | 60,000 | 30,000 |
+| shadow map (texels per side), 2048 in a light preview | `AtmosphereLayer` | 4096 | 2048 | 2048 | 1024 |
+| trees of the forests (most placed), 125,000 in a light preview | `placeTrees` (`ForestLayer`) | 250,000 | 60,000 | 60,000 | 30,000 |
 | terrain LOD height during an export | `exportLodHeight` (`TerrainLayer`, `ExportController`) | the film's | the film's | min(film, 720) | as the device |
 | video bitrate ceiling, film kept in memory | `videoBitrate` / `deviceBitrateCap` | none | 12 Mbit/s | 8 Mbit/s | as the device |
 | « in memory » size warning | `warnsInMemory` | 1.5 GB | 250 MB | 250 MB | 250 MB |
