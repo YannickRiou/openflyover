@@ -29,7 +29,7 @@ import { errorMessage } from '../core/errors'
 import { BACKGROUND_PRIORITY, TileFetchError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
-import { buildTileGeometry, sampleTileMeshAt } from './mesh'
+import { buildTileGeometry, geometryFromArrays, sampleTileMeshAt } from './mesh'
 import {
   TileNode,
   countSelection,
@@ -45,6 +45,8 @@ import {
 } from './quadtree'
 import { applySnow } from './snowShader'
 import { buildTileUrl } from './sources'
+import type { TileJob, TileResult } from './tileJob'
+import { buildTileOffThread } from './tileWorker'
 import { t } from '../i18n'
 
 // ---------------------------------------------------------------------------
@@ -63,9 +65,21 @@ export interface HeightFieldLike {
   readonly size?: number
 }
 
+/** A decoded elevation tile: its grid and, when a worker built it, the mesh arrays with the options they were built for. */
+interface DecodedTile {
+  grid: HeightGrid
+  arrays?: TileResult['mesh']
+  geometry: BuildTileGeometryOptions
+}
+
 export interface EngineDeps {
   fetcher: TileFetcher
   decodeDem: (bitmap: ImageBitmap, encoding: DemEncoding, clean?: DemCleanOptions, tileWidthM?: number) => HeightGrid
+  /**
+   * Decodes and meshes a tile off the main thread (`tileWorker.ts`); resolves with undefined where it cannot, and the
+   * tile is then built here with `decodeDem`. Default: the workers, unless `decodeDem` is injected.
+   */
+  buildTile?: (job: TileJob) => Promise<TileResult | undefined>
   loadImageryTexture: LoadImageryTexture
   heightField: HeightFieldLike
   /** clock (ms) of the retry and unload delays; default `performance.now` */
@@ -211,6 +225,7 @@ export function createTerrainEngine(
   const io: EngineDeps = {
     fetcher: deps.fetcher ?? createTileFetcher(),
     decodeDem: deps.decodeDem ?? defaultDecodeDem,
+    buildTile: deps.buildTile ?? (deps.decodeDem ? undefined : buildTileOffThread),
     loadImageryTexture: deps.loadImageryTexture ?? defaultLoadImageryTexture,
     heightField: deps.heightField ?? new HeightField(),
   }
@@ -337,9 +352,13 @@ export function createTerrainEngine(
     node.state = 'loading'
     loadingCount++
 
-    const demPromise = io.fetcher
-      .fetchBitmap(buildTileUrl(terrain, node.key), { priority: rank, signal })
-      .then((bitmap) => io.decodeDem(bitmap, terrain.encoding, demClean, tileGroundSizeM(node.key)))
+    const demPromise = io.fetcher.fetchBitmap(buildTileUrl(terrain, node.key), { priority: rank, signal }).then(async (bitmap) => {
+      const tileWidthM = tileGroundSizeM(node.key)
+      const geometry = { segments: opts.segments, exaggeration: opts.exaggeration, skirtDepthM: skirtDepthFor(node) }
+      const origin = opts.frame.origin
+      const built = await io.buildTile?.({ bitmap, encoding: terrain.encoding, clean: demClean, tileWidthM, key: node.key, origin, geometry })
+      return { grid: built?.grid ?? io.decodeDem(bitmap, terrain.encoding, demClean, tileWidthM), arrays: built?.mesh, geometry }
+    })
 
     const wantsImagery = !imagery.coverage || boundsIntersect(imagery.coverage, node.bounds)
     // an imagery failure is a transient failure of the node too (below): the parent keeps its imagery meanwhile
@@ -360,7 +379,7 @@ export function createTerrainEngine(
       describeTileError(imageryError ?? new Error(t('terrain.cause.incompleteImagery')), buildTileUrl(imagery, node.key), t('terrain.layer.imagery'))
 
     Promise.all([demPromise, texturePromise]).then(
-      ([grid, texture]) => {
+      ([dem, texture]) => {
         if (node.loadToken !== token || disposed) {
           if (texture) disposeTexture(texture)
           return
@@ -375,7 +394,7 @@ export function createTerrainEngine(
         }
         try {
           // the last attempt keeps what arrived: grey where the imagery is missing, counted by the export
-          finishLoad(node, grid, texture)
+          finishLoad(node, dem, texture)
           node.imageryMissing = imageryFailed
           if (imageryFailed) node.failure = imageryFailure()
         } catch (error) {
@@ -403,8 +422,10 @@ export function createTerrainEngine(
   }
 
   /** Attach a decoded tile to the tree (geometry, material, mesh). Throws if the geometry cannot be built. */
-  function finishLoad(node: TileNode, grid: HeightGrid, texture: Texture | undefined): void {
-    const result = buildGeometryFor(node, grid)
+  function finishLoad(node: TileNode, { grid, arrays, geometry }: DecodedTile, texture: Texture | undefined): void {
+    // the mesh a worker built holds unless the exaggeration (or the grid size) changed while the tile was loading
+    const current = arrays && geometry.segments === opts.segments && geometry.exaggeration === opts.exaggeration && geometry.skirtDepthM === skirtDepthFor(node)
+    const result = current ? geometryFromArrays(arrays) : buildGeometryFor(node, grid)
     const mesh = new Mesh(result.geometry, createMaterial(texture))
     mesh.name = node.id
     // three culls too: the shadow casters outside the view (see update) must not cost a draw in the main pass

@@ -46,6 +46,17 @@ export function tileMeshLayout(segments: number): TileMeshLayout {
 /** Number of skirt runs (north, south, west, east). */
 const SIDE_COUNT = 4
 
+/** The buffers of a tile mesh: plain typed arrays, so a worker can build them and hand them over (`tileJob.ts`). */
+export interface TileMeshArrays {
+  positions: Float32Array
+  normals: Float32Array
+  uvs: Float32Array
+  index: Uint32Array
+  /** min / max of the (exaggerated) heights used, metres */
+  minHeight: number
+  maxHeight: number
+}
+
 /**
  * Build the geometry of one terrain tile in the local frame.
  * Heights come from `dem.sampleGrid` (the same bilinear, pixel-centre, NaN-safe sampler as the
@@ -59,6 +70,28 @@ export function buildTileGeometry(
   frame: LocalFrame,
   opts: BuildTileGeometryOptions,
 ): TileGeometryResult {
+  return geometryFromArrays(buildTileMesh(key, grid, frame, opts))
+}
+
+/** The `BufferGeometry` of mesh arrays (built here or in a worker), with its bounds. */
+export function geometryFromArrays({ positions, normals, uvs, index, minHeight, maxHeight }: TileMeshArrays): TileGeometryResult {
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(positions, 3))
+  geometry.setAttribute('normal', new BufferAttribute(normals, 3))
+  geometry.setAttribute('uv', new BufferAttribute(uvs, 2))
+  geometry.setIndex(new BufferAttribute(index, 1))
+  geometry.computeBoundingBox()
+  geometry.computeBoundingSphere()
+  return { geometry, minHeight, maxHeight }
+}
+
+/** The arrays of `buildTileGeometry`: pure typed-array code, so it runs in a worker too. */
+export function buildTileMesh(
+  key: TileKey,
+  grid: HeightGrid,
+  frame: LocalFrame,
+  opts: BuildTileGeometryOptions,
+): TileMeshArrays {
   const { segments, exaggeration, skirtDepthM } = opts
   if (!Number.isInteger(segments) || segments < 1) {
     throw new RangeError(`buildTileGeometry: segments must be a positive integer (got ${segments})`)
@@ -124,12 +157,11 @@ export function buildTileGeometry(
   }
 
   // --- normals from the grid only (the skirts must not bend the border normals) ---
-  const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(positions, 3))
-  geometry.setAttribute('uv', new BufferAttribute(uvs, 2))
-  geometry.setIndex(new BufferAttribute(index.subarray(0, gridIndexCount), 1))
-  geometry.computeVertexNormals()
-  const normals = geometry.getAttribute('normal').array as Float32Array
+  const gridGeometry = new BufferGeometry()
+  gridGeometry.setAttribute('position', new BufferAttribute(positions, 3))
+  gridGeometry.setIndex(new BufferAttribute(index.subarray(0, gridIndexCount), 1))
+  gridGeometry.computeVertexNormals()
+  const normals = gridGeometry.getAttribute('normal').array as Float32Array
 
   // --- skirts --------------------------------------------------------------
   for (let side = 0; side < SIDE_COUNT; side++) {
@@ -175,11 +207,7 @@ export function buildTileGeometry(
     }
   }
 
-  geometry.setIndex(new BufferAttribute(index, 1))
-  geometry.computeBoundingBox()
-  geometry.computeBoundingSphere()
-
-  return { geometry, minHeight, maxHeight }
+  return { positions, normals, uvs, index, minHeight, maxHeight }
 }
 
 /**

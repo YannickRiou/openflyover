@@ -29,6 +29,8 @@ import {
   type HeightFieldLike,
 } from './engine'
 import { TileFetchError } from './fetch'
+import { buildTileMesh } from './mesh'
+import type { TileJob, TileResult } from './tileJob'
 
 // The engine wires these as defaults; the tests inject every dependency, so keep them inert.
 // `./dem` is NOT mocked: mesh.ts needs its real `sampleGrid`, and `decodeDem` is always injected.
@@ -550,6 +552,80 @@ describe('createTerrainEngine', () => {
     expect(cb.mock.calls.length).toBeLessThanOrEqual(frames)
     // all geometries are rebuilt within the budget: 2 per frame
     expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
+  })
+
+  describe('tiles built by a worker', () => {
+    /** What `tileWorker` gives back: the same functions, run here. */
+    const inProcess = vi.fn(async (job: TileJob): Promise<TileResult> => {
+      const grid: HeightGrid = { width: 4, height: 4, data: new Float32Array(16).fill(321) }
+      return { grid, mesh: buildTileMesh(job.key, grid, createLocalFrame(job.origin.lon, job.origin.lat), job.geometry) }
+    })
+
+    it('uses the grid and the mesh it sends back, without decoding on the main thread', async () => {
+      const deps = createFakeDeps()
+      deps.buildTile = inProcess
+      const engine = engineWith(deps)
+      const camera = cameraAbove(600_000)
+      engine.update(camera, 1000)
+      await settle()
+      engine.update(camera, 1000)
+
+      expect(deps.decodeDem).not.toHaveBeenCalled()
+      expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
+      expect(deps.field.size).toBe(ROOT_KEYS.length)
+      expect(inProcess.mock.calls[0][0].origin).toEqual(FRAME.origin)
+      const mesh = meshesOf(engine)[0]
+      expect(mesh.geometry.getAttribute('normal').count).toBe(mesh.geometry.getAttribute('position').count)
+      expect(mesh.geometry.boundingSphere).not.toBeNull()
+    })
+
+    it('decodes on the main thread when the worker cannot', async () => {
+      const deps = createFakeDeps()
+      deps.buildTile = vi.fn(async () => undefined)
+      const engine = engineWith(deps)
+      const camera = cameraAbove(600_000)
+      engine.update(camera, 1000)
+      await settle()
+      engine.update(camera, 1000)
+
+      expect(deps.decodeDem).toHaveBeenCalledTimes(ROOT_KEYS.length)
+      expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
+    })
+
+    it('builds the mesh again when the exaggeration changed while the tile was in the worker', async () => {
+      const deps = createFakeDeps()
+      const jobs: TileJob[] = []
+      const answers: Array<() => void> = []
+      deps.buildTile = vi.fn(
+        (job) =>
+          new Promise<TileResult>((resolve) => {
+            jobs.push(job)
+            answers.push(() => resolve(inProcess(job)))
+          }),
+      )
+      const engine = engineWith(deps)
+      const camera = cameraAbove(600_000)
+      engine.update(camera, 1000)
+      await settle()
+      expect(jobs).toHaveLength(ROOT_KEYS.length)
+      engine.setOptions({ exaggeration: 3 })
+      answers.forEach((answer) => answer())
+      await settle()
+      engine.update(camera, 1000)
+
+      expect(jobs[0].geometry.exaggeration).toBe(1)
+      expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
+      // the same tiles as an engine that had 3 from the start
+      const direct = createFakeDeps()
+      vi.mocked(direct.decodeDem).mockImplementation(() => ({ width: 4, height: 4, data: new Float32Array(16).fill(321) }))
+      const reference = engineWith(direct, { exaggeration: 3 })
+      reference.update(camera, 1000)
+      await settle()
+      reference.update(camera, 1000)
+      const expected = new Map(meshesOf(reference).map((m) => [m.name, m.geometry.getAttribute('position').array]))
+      expect(expected.size).toBe(ROOT_KEYS.length)
+      for (const mesh of meshesOf(engine)) expect(mesh.geometry.getAttribute('position').array).toEqual(expected.get(mesh.name))
+    })
   })
 
   it('rebuilds everything from the new sources when the terrain source changes', async () => {
