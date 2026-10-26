@@ -127,3 +127,26 @@ export function timeSmoothing(
     timeS: easedEndTimeS(motionS, clock.flightS, easeS),
   }
 }
+
+/** Film time over which `motionShares` reads the speed (seconds): the lead room and the bank ease in and out over about this. */
+export const MOTION_WINDOW_S = 2
+
+/**
+ * How fast the marker and the camera's point of the track move around `timeS`, each as a share of the speed of a flight
+ * at constant pace (1 at speed x1 without pause; `durationS` = flyover duration at x1): the progress gained over the
+ * MOTION_WINDOW_S centred on `timeS`, so it eases to 0 into a stop, a pause or a shot (the clock holds the progress)
+ * instead of jumping, and the camera's one follows the smoothing in film time and « Fin en douceur ». « Espace devant »
+ * and « Inclinaison dans les virages » (camera.ts) scale with them, whatever the film does around.
+ */
+export function motionShares(
+  clock: Pick<FilmClock, 'progressAtTime' | 'openingS' | 'flightS'>,
+  timeS: number,
+  camera: Smoothing,
+  durationS: number,
+): { marker: number; camera: number } {
+  const marker = (t: number) => clock.progressAtTime(t)
+  const cameraAt = (t: number) => timeSmoothing(clock, t, t, camera).cameraProgress ?? marker(t)
+  const share = (progressAt: (t: number) => number) =>
+    Math.max(0, ((progressAt(timeS + MOTION_WINDOW_S / 2) - progressAt(timeS - MOTION_WINDOW_S / 2)) * durationS) / MOTION_WINDOW_S)
+  return { marker: share(marker), camera: share(cameraAt) }
+}

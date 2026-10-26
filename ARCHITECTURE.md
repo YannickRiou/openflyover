@@ -936,8 +936,29 @@ The interface and the texts drawn into the films and posters exist in **French**
   arrive (`terrainVersion`, counted by `filmView.ts` from `engine.onChange`), refreshes one instant computed on older
   terrain, so the height follows sharper tiles an instant at a time. On the sample outing over the 12 presets: change of
   vertical speed per frame (max) 16,000–155,000 → under 3,000 m/s², shake 8–110 → under 2.5 m, terrain reads +5 %.
+- **Lead room and banking** (« Espace devant » `leadRoomPct`, 15 % by default, 0–40; « Inclinaison dans les virages » `bankDeg`,
+  3° by default, 0–10°; `camera.ts`, `computeCameraView`): both are part of the view, a pure function of the film time like the
+  rest (no state from frame to frame), and both scale with how fast the marker (lead room) and the camera's point of the
+  track (bank) move, `motionShares` in `timeSmoothing.ts`: the progress gained over `MOTION_WINDOW_S` (2 s) centred on the
+  film time, as a share of a flight's constant pace, so they ease to 0 into a stop, a pause or a shot instead of jumping.
+  *Lead room* (`leadRoom`): the aim moves ahead along the smoothed heading, so the marker falls back from the middle of
+  the frame by `leadRoomPct` of half its height, whatever the distance, the tilt or the viewing angle (solved exactly
+  from the field of view, not a fixed distance; `LEAD_SCREEN_FLOOR` keeps it finite when the travel is along the line of
+  sight). At a low tilt (under `LEAD_PAN_PITCH_DEG`, 45°) only the aim moves, so the sight line to the marker and the clearance
+  rules are what they were; from `LEAD_MOVE_PITCH_DEG` (75°) the camera moves with it; in between, the two share it.
+  None in `orbit`. The view has three more fields: `aim` (the aim before the lead, what the camera keys are placed
+  around, so a key keeps its pose whatever the setting), `leadTarget(position)` (the aim for a camera that stands elsewhere:
+  `flightAt` calls it once the anticipated height has moved the camera) and `rollRad`. *Banking* (`bankRad`): roll about the
+  line of sight, `bankDeg` × tanh(turn rate / `BANK_TURN_RATE_RAD_S`) with the turn rate of the smoothed heading read over
+  `BANK_SPAN_SHARE` of the heading window; > 0 = banking right. None in `top` and `orbit`. The roll is carried by `FilmView.rollRad`,
+  and `lookAtView` (`filmCamera.ts`) applies it after `lookAt` (the one function the preview, the export, its
+  prefetch, the audit and the poster use). The shots, the high views and the camera keys take the view over, so they take the roll
+  away in proportion (`computeFlownView`). A camera key captured by hand never carries it (a key stores a position and a
+  target), and the hand taking the camera over (`start` of the orbit controls in `FlyoverRig.tsx`) or a fit
+  (`CameraRig.tsx`) puts `camera.up` back to level. The audit guard (`filmAudit.test.ts`, `markerVisible.test.ts`)
+  runs at the presets and with both at their maximum: no new jolt, the marker within 0.65 of the half-frame.
 - **Camera settings**: `settings.camera { style, distance, pitchDeg, headingOffsetDeg, smoothing, northUp, turnSmoothingM,
-  aimSmoothingS, cameraSmoothingS, endingS }` (a camera saved before the last four gets them from `DEFAULT_CAMERA`,
+  aimSmoothingS, cameraSmoothingS, endingS, orbitTurns, leadRoomPct, bankDeg }` (a camera saved before the last four gets them from `DEFAULT_CAMERA`,
   `withCameraDefaults` in `SETTING_UPGRADES`: « Auto » keeps its multiplier, so the turns look the same) and named
   presets (`CAMERA_PRESETS`, 13: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite, then Libre (style `free`, left out of `markerVisible.test.ts`: it does not follow the marker); `findCameraPreset`; « Préréglage » is a grid of tiles with distance and tilt, all twelve shown at once, plus a « Personnalisé » tile when the settings match no preset) in
   `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s in 1 s steps, 60 by default) = duration at ×1, the timeline

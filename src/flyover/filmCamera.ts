@@ -13,7 +13,7 @@
  * the other's. A shot that cuts ('coupe', dips to black or white) holds its wide view and cuts at the boundary with the
  * flight (`shotWeight`).
  */
-import { Vector3 } from 'three'
+import { Vector3, type PerspectiveCamera } from 'three'
 import { clamp, smootherstep } from '../core/math'
 import type { LocalFrame, LonLat } from '../core/types'
 import type { ClockDay, ClockStop, FilmClock, FilmState } from '../film/clock'
@@ -38,7 +38,7 @@ import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 import { nightAt } from './sun'
 import { cameraKeyEaseM, keyFraming, keyPoseAt, type KeyFraming } from './cameraKeys'
-import { ANTICIPATION_REACH_S, ANTICIPATION_STEP_S, anticipatedRaise, groundSpeedMps, smoothsInTime, timeSmoothing } from './timeSmoothing'
+import { ANTICIPATION_REACH_S, ANTICIPATION_STEP_S, anticipatedRaise, groundSpeedMps, motionShares, smoothsInTime, timeSmoothing } from './timeSmoothing'
 import { aimTowardsPins, type AimPin } from './pinAim'
 
 export { smootherstep }
@@ -659,6 +659,20 @@ export interface FilmViewOptions extends Omit<CameraViewOptions, 'timeS' | 'orbi
 export interface FilmView extends CameraView {
   /** marker position on the draped track (the target only during the flight) */
   marker: Vector3
+  /**
+   * roll of the camera about its line of sight (radians, > 0 = banking right; 0 when absent): the flight camera's, which the
+   * shots, the high views and the camera keys take away as they take the view over (`lookAtView` applies it)
+   */
+  rollRad?: number
+}
+
+const _sight = new Vector3()
+
+/** Point `camera` at the target of `view`, rolled by its `rollRad` about the line of sight (the horizon tilts in a bend). */
+export function lookAtView(camera: Pick<PerspectiveCamera, 'up' | 'lookAt'>, view: CameraView & Pick<FilmView, 'rollRad'>): void {
+  camera.up.set(0, 1, 0)
+  if (view.rollRad) camera.up.applyAxisAngle(_sight.subVectors(view.target, view.position).normalize(), view.rollRad)
+  camera.lookAt(view.target)
 }
 
 /**
@@ -793,13 +807,16 @@ function flightAt(
       return raiseM
     }
     flown.view.position.y += anticipatedRaise(raiseAt, timeS) - flown.view.raiseM
+    flown.view.target = flown.view.leadTarget(flown.view.position)
   }
   const view = flown.view
   const marker = followed?.markerOnFilm ? markerAt(path, progress, frame, sample, options.exaggeration, options.liftM) : view.marker
   const framed = followed?.group ? framedGroup(view, followed.group, frame, sample, options.exaggeration, options.aspect) : view
   const flight = followed ? { ...framed, marker } : view
   const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame)
-  return { flight, base: { target: flight.target, reference, autoDistanceM: autoDistanceM(flightPath), wide, orbitRad } }
+  // a key is placed around the aim before « Espace devant » moved it, so it keeps its pose whatever that setting
+  const target = framed === view ? view.aim : flight.target
+  return { flight, base: { target, reference, autoDistanceM: autoDistanceM(flightPath), wide, orbitRad } }
 }
 
 /** The flight camera of `computeCameraView` at a film state (stop cameras, time smoothing, followed track), with its own raise. */
@@ -833,6 +850,7 @@ function flownAt(
     camera,
     orbitRad,
     speedMps: groundSpeedMps(clock, state.timeS, path.lengthM),
+    motion: motionShares(clock, state.timeS, camera, options.durationS ?? DEFAULT_FLYOVER_DURATION_S),
     ...smoothing,
     aimProgress: along(smoothing.aimProgress),
     cameraProgress: along(smoothing.cameraProgress),
@@ -1027,14 +1045,16 @@ function computeFlownView(
     // blended without a clearance of its own: `keyClearance` gives it one that is none at the exact poses
     const blended = blendViews(filmFlight, pose, keyed.weight, frame, null, options.exaggeration)
     const edge = keyed.weight < 1 ? Math.min(keyed.weight, 1 - keyed.weight) : keyed.free
-    return { target: blended.target, position: keyClearance(blended.position, edge, frame, sample, options.exaggeration), marker: filmFlight.marker }
+    return { target: blended.target, position: keyClearance(blended.position, edge, frame, sample, options.exaggeration), marker: filmFlight.marker, rollRad: (filmFlight.rollRad ?? 0) * (1 - keyed.weight) }
   }
+  /** `view` with the flight's roll taken away as the flight leaves it: `share` of it (the shots and the high views are level) */
+  const withRoll = (view: CameraView, share: number): FilmView => ({ ...view, marker: flight.marker, rollRad: (flight.rollRad ?? 0) * share })
   if (state.phase !== 'opening' && state.phase !== 'closing') {
     const view = highViewAt(clock, timeS)
     if (!view) return flight
     // the night before a day (or after a stage): up to a high view of its route, held, and back down to the marker at dawn
     const high = overviewView(path, frame, sample, options.exaggeration, aspect, flight, { fromM: view.fromM, toM: view.toM })
-    return { ...liftedBlend(flight, high, view.k, flight, frame, sample, options.exaggeration), marker: flight.marker }
+    return withRoll(liftedBlend(flight, high, view.k, flight, frame, sample, options.exaggeration), 1 - view.k)
   }
 
   const phase = state.phase
@@ -1058,6 +1078,7 @@ function computeFlownView(
     return { k, from, to, blended: blendViews(from, to, k, frame, sample, options.exaggeration, true) }
   }
   const now = shotAt(state.localS)
-  if (!(now.k > 0 && now.k < 1)) return { ...now.blended, marker: flight.marker }
-  return { ...liftedBlend(now.from, now.to, now.k, flight, frame, sample, options.exaggeration), marker: flight.marker }
+  const flightShare = phase === 'opening' ? now.k : 1 - now.k
+  if (!(now.k > 0 && now.k < 1)) return withRoll(now.blended, flightShare)
+  return withRoll(liftedBlend(now.from, now.to, now.k, flight, frame, sample, options.exaggeration), flightShare)
 }

@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v45.camera.title': 'Une caméra plus agréable à regarder',
+  'v45.camera.text': 'Deux réglages dans Survol › Caméra. « Espace devant » place le marqueur un peu en arrière du centre de l’image, pour laisser de la place du côté où il va. « Inclinaison dans les virages » incline doucement l’horizon dans les virages, comme un drone qui penche. Par défaut, un peu des deux : vos films en deviennent plus fluides.',
   'v44.night.title': 'Des nuits moins noires',
   'v44.night.text': '« Clarté des nuits » (Lumière › Atmosphère) éclaire le relief et les nuages la nuit, comme un clair de lune, sans rien changer le jour. L’exposition rejoint le contraste et la saturation dans Couleurs.',
   'v332.landmarks.title': 'Masquer des repères en quelques clics',
