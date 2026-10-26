@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Version {version}',
   'v46.nights.title': 'Nights on the timeline',
   'v46.nights.text': 'On a track of several days, each night is now a green block on the “Holds” lane of the timeline. Click it to see it, press Delete to take it out of the film (you can undo). “Restore the nights” (Light › Days and nights) brings them all back.',
+  'v46.stage.title': 'Two buttons on the view',
+  'v46.stage.text': 'Under the crosshair, “Capture this image” saves the picture you see, at the size of the output format and with the overlay (the film’s image at this instant, or your own view if you moved it). Once you have turned the view with the mouse while the film is paused, “Back to the film’s view” puts the camera back where the film has it.',
   'v45.camera.title': 'A camera that is nicer to watch',
   'v45.camera.text': 'Two settings in Flyover › Camera. “Lead room” puts the marker a little behind the middle of the picture, leaving room on the side it is heading to. “Banking in bends” gently tilts the horizon in bends, like a drone leaning into the turn. Both are on a little by default: your films feel smoother.',
   'v45.marker.title': 'A livelier marker',

@@ -28,7 +28,8 @@ import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { filmFollow, filmViewAt, keyFramingOfView } from './filmView'
 import { useTerrainContext } from './terrainContext'
-import { frameDelta } from './renderOnDemand'
+import { useHandViewStore } from './handView'
+import { frameDelta, wakeScene } from './renderOnDemand'
 import { trackUnderMarker } from '../flyover/sequence'
 import {
   figureHeading,
@@ -58,6 +59,10 @@ interface DefaultControls {
   addEventListener?(type: 'start' | 'end' | 'change', listener: () => void): void
   removeEventListener?(type: 'start' | 'end' | 'change', listener: () => void): void
 }
+
+/** « Revenir à la vue du film » shows once the camera is this far from the film's: this share of its distance to its aim, at least HAND_MOVE_MIN_M. */
+const HAND_MOVE_SHARE = 0.05
+const HAND_MOVE_MIN_M = 5
 
 export function FlyoverRig() {
   const track = useFilmTrack()
@@ -93,6 +98,8 @@ export function FlyoverRig() {
     timed: filmViewMovesWithTime(clock.stateAt(mountTimeS), mountSettings.camera) || highViewAt(clock, mountTimeS) !== null,
   })
   const appliedSettingsRef = useRef(mountSettings)
+  /** requests of « Revenir à la vue du film » already answered */
+  const returnsRef = useRef(useHandViewStore.getState().returns)
   const appliedRegionRef = useRef(useRegionStore.getState().frame)
   const camera = useThree((s) => s.camera)
 
@@ -100,6 +107,9 @@ export function FlyoverRig() {
     const sprites = [markerRef.current, fadeRef.current]
     return () => sprites.forEach(releaseMarkerTexture)
   }, [])
+
+  // « Revenir à la vue du film »: the next frame places the camera again
+  useEffect(() => useHandViewStore.subscribe((s, previous) => s.returns !== previous.returns && wakeScene()), [])
 
   // « Capturer la vue actuelle »: the framing of this camera around the target of the region view
   useEffect(() => {
@@ -225,7 +235,10 @@ export function FlyoverRig() {
       highViewAt(clock, timeS) !== null ||
       pinsMoveWithTime(settings.labels, settings.film)
     const moved = progress !== placed.progress || ((timed || placed.timed) && timeS !== placed.timeS)
-    if (playing || moved || cameraChanged) {
+    const { returns } = useHandViewStore.getState()
+    const returning = returns !== returnsRef.current
+    returnsRef.current = returns
+    if (playing || moved || cameraChanged || returning) {
       appliedRef.current = { progress, timeS, timed }
       appliedSettingsRef.current = settings
       appliedRegionRef.current = region
@@ -233,6 +246,10 @@ export function FlyoverRig() {
       lookAtView(camera, view)
       orbitControls?.target.copy(view.target)
     }
+    // not the film's camera: moved away by the user (the button « Revenir à la vue du film » shows); a lift of the
+    // camera over sharper relief tiles (a few metres) is not a move
+    const off = camera.position.distanceTo(view.position)
+    useHandViewStore.getState().setAway(off > Math.max(HAND_MOVE_MIN_M, HAND_MOVE_SHARE * view.position.distanceTo(view.target)))
     // after the camera move: the figure faces the way the track runs in this very frame; the colour, figure and name
     // of the track under the marker (the stage « À la suite »)
     const under = trackUnderMarker(store.tracks, settings.race, progress)?.track ?? track
@@ -243,7 +260,7 @@ export function FlyoverRig() {
     // racers read it too); not while the camera is the user's (moved away from the film's by orbiting a paused film)
     const pastS = timeS - FIGURE_TURN_S
     const figure = settings.marker.kind === 'figurine' || blend.from.kind === 'figurine' || blend.to.kind === 'figurine'
-    const past = figure && camera.position.distanceToSquared(view.position) < 1 ? filmViewAt(path, clock, clock.progressAtTime(Math.max(0, pastS)), Math.max(0, pastS), frame, engine, aspect, follow) : null
+    const past = figure && off < 1 ? filmViewAt(path, clock, clock.progressAtTime(Math.max(0, pastS)), Math.max(0, pastS), frame, engine, aspect, follow) : null
     showPastView(pastS, past)
     const distanceAt = (t: number) => clock.progressAtTime(Math.max(0, t)) * path.lengthM
     const draw = (sprite: Sprite, look: MarkerSettings, weight: number) => {

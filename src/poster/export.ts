@@ -204,9 +204,9 @@ export async function startPoster(): Promise<boolean> {
 
 /**
  * « Image fixe »: the film's view at the playback position, at the size of the film (« Vidéo »), with its overlay, in
- * the image type of the poster. False without a track.
+ * the image type of the poster. False without a track. `camera`: the view as the user moved it, not the film's.
  */
-export function startStill(): boolean {
+export function startStill(camera = false): boolean {
   const { tracks, settings, playback } = useAppStore.getState()
   const track = tracks[0]
   if (!track) return false
@@ -219,7 +219,7 @@ export function startStill(): boolean {
     holdStartS: 0,
     holdEndS: 0,
     baseName: stillBaseName(track.name, playback.progress),
-    still: { progress: playback.progress, type: settings.poster.type },
+    still: { progress: playback.progress, type: settings.poster.type, ...(camera && { camera, marker: true }) },
   })
   return true
 }

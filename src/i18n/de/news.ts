@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Version {version}',
   'v46.nights.title': 'Nächte auf der Zeitleiste',
   'v46.nights.text': 'Bei einem Track über mehrere Tage ist jede Nacht jetzt ein grüner Block auf der Spur „Stopps“ der Zeitleiste. Ein Klick zeigt sie, Entf nimmt sie aus dem Film (rückgängig möglich). „Nächte wiederherstellen“ (Licht › Tage und Nächte) holt sie alle zurück.',
+  'v46.stage.title': 'Zwei Buttons auf der Ansicht',
+  'v46.stage.text': 'Unter dem Fadenkreuz speichert „Dieses Bild aufnehmen“ das Bild, das Sie sehen, in der Größe des Ausgabeformats und mit dem Overlay (das Bild des Films in diesem Moment oder Ihre eigene Ansicht, wenn Sie sie gedreht haben). Haben Sie die Ansicht bei angehaltenem Film mit der Maus gedreht, setzt „Zurück zur Filmansicht“ die Kamera dorthin zurück, wo der Film sie hat.',
   'v45.camera.title': 'Eine Kamera, die angenehmer anzusehen ist',
   'v45.camera.text': 'Zwei Einstellungen unter Überflug › Kamera. „Raum voraus“ setzt den Marker etwas hinter die Bildmitte und lässt Platz auf der Seite, in die er fährt. „Neigung in Kurven“ neigt den Horizont in Kurven sanft, wie eine Drohne, die sich in die Kurve legt. Beide sind standardmäßig leicht eingeschaltet: Ihre Filme wirken ruhiger.',
   'v45.marker.title': 'Ein lebendigerer Marker',
