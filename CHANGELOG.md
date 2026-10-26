@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **A camera key no longer whips the view round on a track flown fast**: on a long raid flown in a minute, over hairpins, the camera turned at more than 300° a second around two close camera keys, like a spin; it now turns as calmly as the rest of the film (existing films with keys on a fast track change there; films without keys, and slower films, do not).
+
 ## 4.5.0 (October 2026)
 
 - **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.4.1.

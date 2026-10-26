@@ -718,12 +718,21 @@ export interface KeyBase {
 }
 
 /**
- * Direction of travel a keyframe's heading is measured from at `d` metres: the default turn window averaged over four
- * of them, set by the track alone, so a keyframe keeps its pose when the camera settings change.
+ * A keyframe's reference direction is averaged over at least ± the track the flight covers in this much film time (at its
+ * average speed). At 10 km of track per film second over hairpins, the 6 km it is otherwise averaged over turned 50° a
+ * kilometre and swung the view round at 350 deg/s; with 5 s the film stays under 70 deg/s.
  */
-export function keyReferenceAt(path: TrackPath, d: number, frame: LocalFrame): Vector3 {
+export const KEY_REFERENCE_SMOOTHING_S = 5
+
+/**
+ * Direction of travel a keyframe's heading is measured from at `d` metres: the default turn window averaged over four
+ * of them, set by the track alone, so a keyframe keeps its pose when the camera settings change. Wider where the flight's
+ * average `speedMps` (metres per film second) asks (KEY_REFERENCE_SMOOTHING_S): a track flown fast does not whip the pose
+ * round, and a slower film keeps its reference.
+ */
+export function keyReferenceAt(path: TrackPath, d: number, frame: LocalFrame, speedMps = 0): Vector3 {
   const w = headingWindowM(path, DEFAULT_CAMERA)
-  return smoothHeadingAt(path, d, w, 4 * w, frame)
+  return smoothHeadingAt(path, d, w, Math.max(4 * w, speedMps * KEY_REFERENCE_SMOOTHING_S), frame)
 }
 
 /** Right of the horizontal direction `reference` (seen from above). */
@@ -843,7 +852,8 @@ function flightAt(
   const marker = followed?.markerOnFilm ? markerAt(path, progress, frame, sample, options.exaggeration, options.liftM) : view.marker
   const framed = followed?.group ? framedGroup(view, followed.group, frame, sample, options.exaggeration, options.aspect, focalOf(options)) : view
   const flight = followed ? { ...framed, marker } : view
-  const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame)
+  const speedMps = flightPath.lengthM / Math.max(1, options.durationS ?? DEFAULT_FLYOVER_DURATION_S)
+  const reference = keyReferenceAt(flightPath, (followed?.progress ?? progress) * flightPath.lengthM, frame, speedMps)
   // a key is placed around the aim before « Espace devant » moved it, so it keeps its pose whatever that setting
   const target = framed === view ? view.aim : flight.target
   return { flight, base: { target, reference, autoDistanceM: autoDistanceM(flightPath) * focalDolly(focalOf(options)), wide, orbitRad } }

@@ -866,15 +866,18 @@ The interface and the texts drawn into the films and posters exist in **French**
   **Audit of the film camera** (`src/flyover/filmAudit.ts`, pure): `replayFilm` places the camera of a film every frame
   (30 i/s) and `auditPoses` lists, with their time, the **jolts** (second difference of the camera's or the aim's
   position over the camera's distance, above `AUDIT_JOLT_LIMIT` = 0.025: a calm flight stays under 0.006, #186 / #213
-  reached 0.03–0.11), the camera **low** (under `MIN_TERRAIN_CLEARANCE_M` above the terrain) and the marker **out** of
-  the frame. The frames next to a change of shot or stop are not read (the marker starts or stops, the camera follows
+  reached 0.03–0.11), the **whips** (the view direction turning faster than `AUDIT_WHIP_LIMIT` = 280 deg/s, over the two
+  frames around: the jolt under-reports a view that swings round while the positions barely move; a calm flight stays
+  under 90, the lively presets at ×4 or turning to a photo pin reach 250, camera keys read on a 6 km heading at 10 km of
+  track per film second 315–350; the angular acceleration did not tell them apart, the lively presets reach 2,300 deg/s²),
+  the camera **low** (under `MIN_TERRAIN_CLEARANCE_M` above the terrain) and the marker **out** of the frame. The frames next to a change of shot or stop are not read (the marker starts or stops, the camera follows
   at once). `filmAudit.test.ts` holds the guard: the opening and closing of the 12 presets × 4 shot styles on the switchbacks,
   the loops (steep massif, slope 0.8) and a raid over hills: no jolt (but « Saut », a quick move of 0.6 s on purpose), never
   low, the marker never out of the frame. No in-app button yet: the audit reads the terrain it is given, and what the
   engine has loaded is not the terrain of the whole film.
   **The camera corrects itself** (no button, no setting: old projects get it too; every fix is a pure function of the film
   time, so the export still renders any frame alone). The audit replayed whole films (the home page example over hills,
-  the switchbacks over the steep massif) beyond the shots; five cases it flagged are fixed at their source, and
+  the switchbacks over the steep massif) beyond the shots; six cases it flagged are fixed at their source, and
   `filmAudit.test.ts` keeps them. (1) **« Lissage de la caméra » at 0 or 0.5 s**: the plain chord heading flips through the
   apex of a switchback and the camera whipped round by up to 1.5 × its distance in a few frames (0.07 at 0.5 s, none from
   1 s): the heading, the sway and the slope the swing reads (`placement`, `computeCameraView`) are averaged over at least
@@ -904,7 +907,16 @@ The interface and the texts drawn into the films and posters exist in **French**
   and the camera is exactly the one of the final terrain 2 s after the last tile. All at once (a flip), 0.131 → 0.042 and
   0.129 → 0.023; « Drone rapide » and « Oiseau » keep ~0.06–0.08 there (the aim's ground height follows the terrain 1:1, a
   step of a few tens of metres). Cost: a plain flight is unchanged but for two clock look-ups per frame (the speed) and,
-  while tiles arrive, a scan of 12 instants. **Left as is**: the aim of the lively presets at ×4 on the switchbacks, the
+  while tiles arrive, a scan of 12 instants.
+  (6) **Camera keys at speed** (`keyReferenceAt`): a key's heading is measured from the direction of travel averaged over ±6 km
+  of track; on a 540 km raid flown in 60 s (9 km of track per film second) over hairpins that direction turned 40–50° a
+  kilometre, so the view whipped round at 350 deg/s between two keys 13 km apart (1,750 deg/s²; 70 deg/s without the keys),
+  which the jolt measured at 0.035. The average is now at least ± `KEY_REFERENCE_SMOOTHING_S` = 5 s of film at the flight's
+  average speed (`speedMps`, wider than 6 km only above 1.2 km of track per film second: a film of an ordinary hike keeps its
+  reference). The same reference serves the capture and the replay (`flightAt`), so a view captured is the one shown at its
+  key; but a key of a film that was flown fast shows another direction than before (58° and 67° at the two keys of that raid:
+  the old one was taken from the whipping reference), and the film now stays under 70 deg/s. A film with no key does not change.
+  **Left as is**: the aim of the lively presets at ×4 on the switchbacks, the
   sideways swing of the lively presets in a hairpin of a steep slope (`swingAngle` turns twice as fast straight uphill:
   0.03–0.06 with « Drone rapide »), the stage end of « À la suite » with a lively preset (a heading wobble of 0.15 in the last
   third of a second before the cut, only when a stage ends in a switchback), the racers' positions of « En parallèle » /
@@ -1575,7 +1587,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   **Keyframes** (`keyPoseAt`, `keyView`, pure): a keyframe is the pose of the camera around the film's aim point at its
   place (`flight.target`: time smoothing of the aim included), not camera settings: distance × `autoDistanceM`, pitch
   above the horizon, heading from `keyReferenceAt` (the direction of travel over the default turn window, averaged over
-  four of them: the track alone sets it, so a key keeps its pose when the camera settings change), aim point shifted by
+  four of them, or over `KEY_REFERENCE_SMOOTHING_S` of film time at the flight's average speed when that is wider (a film
+  flown fast): the track and the duration set it, so a key keeps its pose when the camera settings change), aim point shifted by
   `aimRightM` / `aimAheadM` (a panned view). `keyView` places it with no style, time smoothing, pitch clamp or ground
   clearance, so the film shows the very view that was taken; a « Vue large » or « Tour lent » stop widens or turns it
   like the film's camera. Capture (`keyFramingAt` → `keyFramingFrom`, the inverse): the aim point is taken on the line
