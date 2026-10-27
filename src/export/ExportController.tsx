@@ -68,7 +68,6 @@ import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule
 import {
   EMPTY_TIMINGS,
   REPORT_INTERVAL_MS,
-  exportRenderScale,
   flushDrapes,
   throttledReporter,
   useExportStore,
@@ -500,7 +499,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     // the view waits for the retries of its failed tiles, longer and longer (engine.ts)
     deps.engine()?.setExporting?.(true)
     canvas.style.pointerEvents = 'none'
-    exportStore().setRenderScale(exportRenderScale(width, height))
     applyVideoSize()
     writeBreadcrumb(`export : taille ${width}×${height} appliquée`)
     marker?.layers.set(HIDDEN_LAYER)
@@ -748,7 +746,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const restoreWidth = box && box.width > 0 ? box.width : saved.size.width
     const restoreHeight = box && box.height > 0 ? box.height : saved.size.height
     const state = deps.get()
-    exportStore().setRenderScale(1)
     state.setDpr(saved.dpr)
     state.setSize(restoreWidth, restoreHeight, saved.size.top, saved.size.left)
     canvas.style.width = `${restoreWidth}px`

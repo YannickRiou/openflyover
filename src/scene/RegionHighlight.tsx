@@ -30,7 +30,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js'
 import type { TerrainEngine } from '../core/types'
-import { isExportBusy, registerDrapeFlush, useExportStore } from '../export/store'
+import { exportRenderScale, isExportBusy, registerDrapeFlush, useExportStore } from '../export/store'
 import { filmRegionId, highlightsRegion } from '../film/model'
 import { REGION_AREA_MARGIN_M, regionHighlightOpacity } from '../flyover/filmCamera'
 import { centroid } from '../geo/lonLat'
@@ -265,7 +265,9 @@ export function RegionHighlight() {
   useFrame(({ camera, gl, size }) => {
     const { group, dark, glow, line, dot, name } = partsRef.current
     const { playback } = useAppStore.getState()
-    const { phase, request, renderScale } = useExportStore.getState()
+    const { phase, request } = useExportStore.getState()
+    // the share of the image the video gives them (`exportRenderScale`): the preview shows them as the film will
+    const renderScale = exportRenderScale(size.width, size.height)
     const c = clockRef.current
     const poster = isExportBusy(phase) && request?.still?.overview === true
     const opacity = built && !poster ? regionHighlightOpacity(c, playback.timeS ?? c.timeAtProgress(playback.progress)) : 0

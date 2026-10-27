@@ -218,13 +218,12 @@ describe('straight to disk', () => {
 })
 
 describe('render scale and timings', () => {
-  it('scales pixel-sized elements by the short side of the video, 1 outside an export', () => {
-    expect(useExportStore.getState().renderScale).toBe(1)
+  it('scales pixel-sized elements by the short side of the image: the video\'s, and the preview\'s the same way', () => {
     expect(exportRenderScale(1920, 1080)).toBe(1)
     expect(exportRenderScale(2160, 3840)).toBe(2)
     expect(exportRenderScale(1280, 720)).toBeCloseTo(2 / 3)
-    useExportStore.getState().setRenderScale(2)
-    expect(useExportStore.getState().renderScale).toBe(2)
+    // a phone's 9:16 preview, 125 CSS pixels wide: what the 1080 × 1920 video shows at that size
+    expect(exportRenderScale(125, 222)).toBeCloseTo(125 / 1080)
   })
 
   it('reports a copy of the timings with the frames and clears them on begin', () => {
