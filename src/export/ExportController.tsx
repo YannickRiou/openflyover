@@ -85,6 +85,8 @@ export interface ExportControllerProps {
 
 /** Upcoming frames are prefetched (offsets in the device budget) every PREFETCH_EVERY rendered frames. */
 const PREFETCH_EVERY = 5
+/** The frame after the one just drawn, prefetched before the wait for the GPU. */
+const NEXT_FRAME = [1] as const
 /**
  * And at most this often (ms) while a frame waits for its tiles: the network is mostly idle then, and each prefetch
  * only reaches one level deeper (the children of a tile are selected once it is loaded).
@@ -415,15 +417,15 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     return Math.max(camera.position.distanceTo(view.position), offAxis)
   }
 
-  // Ask the engine for the tiles of upcoming frames, after the current view's (bounded by the engine).
+  // Ask the engine for the tiles of upcoming frames (`offsets` after frame `i`), after the current view's (bounded by the engine).
   const prefetchCamera = new PerspectiveCamera()
-  const prefetchAhead = (i: number) => {
+  const prefetchAhead = (i: number, offsets: readonly number[] = exportPrefetchAhead) => {
     const engine = deps.engine()
     const frame = deps.frame()
     const camera = deps.get().camera as PerspectiveCamera
     if (!engine?.prefetch || !path || path.count === 0 || !frame || !camera.isPerspectiveCamera) return
     prefetchCamera.copy(camera, false)
-    for (const ahead of exportPrefetchAhead) {
+    for (const ahead of offsets) {
       const j = i + ahead
       if (j >= schedule.length) break
       const view = filmViewAt(path, filmClock, schedule[j], times[j], frame, engine, width / height)
@@ -658,6 +660,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
           if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
         }
         frameTimeS = times[i]
+        // the next frame's tiles load while the GPU draws this one (the wait below blocks the page, not the network nor
+        // the tile workers): on a phone that wait is a fifth of a second per image
+        prefetchAhead(i, NEXT_FRAME)
         // same task as the last render: the drawing buffer still holds the frame; the render is waited for apart, so that
         // composing and the video frame are not charged for it
         const g0 = performance.now()
