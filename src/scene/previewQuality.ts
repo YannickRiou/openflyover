@@ -149,25 +149,35 @@ function createFrameWindow(): { frame(nowMs: number): { medianMs: number; meanMs
  * rate the frame cap allows, Infinity without one; returns the rung). Down one rung when a window's median is under
  * `SLOW_PREVIEW_FPS` (rung 0) or `SLOWER_PREVIEW_FPS` (rung 1); up one when its mean has been at `COMFORT_PREVIEW_FPS`
  * (90 % of the cap if lower, since a capped preview cannot go beyond it) for `RECOVER_WINDOWS` windows in a row, a wait
- * that doubles each time so a device that cannot hold the heavier rung does not flip-flop. The count starts again at a rung change.
+ * that doubles each time so a device that cannot hold the heavier rung does not flip-flop. A step back that falls again
+ * within `RECOVER_WINDOWS` windows is the last one of the session: under a cap, a comfortable rate says nothing of the
+ * heavier rung, and each change of rung costs the device (pixel ratio, trees placed again, shadow map). The count starts
+ * again at a rung change.
  */
 export function createRungGovernor(): { frame(nowMs: number, capFps?: number): PreviewRung } {
   const window = createFrameWindow()
   let rung: PreviewRung = 0
   let comfortable = 0
   let wait = RECOVER_WINDOWS
+  /** windows since the last step back, null when there was none or the rung fell since */
+  let sinceStepBack: number | null = null
   return {
     frame(nowMs, capFps = Infinity) {
       const found = window.frame(nowMs)
       if (!found) return rung
+      if (sinceStepBack !== null) sinceStepBack++
       if (rung < 2 && 1000 / found.medianMs < (rung === 0 ? SLOW_PREVIEW_FPS : SLOWER_PREVIEW_FPS)) {
         rung++
         comfortable = 0
+        // the heavier rung did not hold: no more tries
+        if (sinceStepBack !== null && sinceStepBack <= RECOVER_WINDOWS) wait = Infinity
+        sinceStepBack = null
       } else if (rung > 0 && 1000 / found.meanMs >= Math.min(COMFORT_PREVIEW_FPS, 0.9 * capFps)) {
         if (++comfortable >= wait) {
           rung--
           comfortable = 0
           wait *= 2
+          sinceStepBack = 0
         }
       } else comfortable = 0
       return rung
