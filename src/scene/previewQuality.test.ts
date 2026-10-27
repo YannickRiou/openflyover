@@ -198,8 +198,26 @@ describe('createRungGovernor', () => {
     }
     expect(run(50, window)).toBe(1)
     expect(run(16, window * RECOVER_WINDOWS)).toBe(0) // recovered after 3 windows
-    expect(run(50, window)).toBe(1) // too slow again
+    expect(run(16, window * (RECOVER_WINDOWS + 1))).toBe(0) // and held longer than 3 windows
+    expect(run(50, window)).toBe(1) // too slow again, later in the film
     expect(run(16, window * RECOVER_WINDOWS)).toBe(1) // 3 windows are no longer enough
     expect(run(16, window * RECOVER_WINDOWS * 2)).toBe(0) // 6 are
+  })
+
+  it('a step back that does not hold is the last one: a phone at its 30 fps cap tries rung 0 once, not every few seconds', () => {
+    const governor = createRungGovernor()
+    let t = 0
+    const run = (stepMs: number, durationMs: number, capFps?: number) => {
+      const rung = play(governor, stepMs, durationMs, t, capFps)
+      t += durationMs + stepMs + 5000
+      return rung
+    }
+    expect(run(50, window)).toBe(1)
+    // the cap is held at rung 1: comfortable, so rung 0 is tried
+    expect(run(33, window * (RECOVER_WINDOWS + 1), 30)).toBe(0)
+    // rung 0 falls at once
+    expect(run(50, window)).toBe(1)
+    // however long the cap is held now, rung 1 stays
+    expect(run(33, window * RECOVER_WINDOWS * 20, 30)).toBe(1)
   })
 })
