@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **« Film automatique » draws the line as the marker goes, with a light glow, over Esri imagery**: each gabarit now also switches on « Trace qui se dessine » and a light glow of the track's colour (intensity 40 %, 16 px), and sets the base map to Esri World Imagery; « Annuler » puts the previous look back with the rest, and everything stays editable in « Trace » and « Carte ».
+
 ## 4.6.0 (October 2026)
 
 - **The export starts loading the next image's terrain while the graphics card draws the current one**: once an image is drawn, the app waited for the graphics card (about a fifth of a second per image on an iPhone 12) before asking for the tiles of the next one. It now asks first, so the tiles load during that wait instead of after it: less « tuiles » in the export's « Répartition », the same pictures.
