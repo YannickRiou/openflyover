@@ -4172,7 +4172,8 @@ and, while the film plays, the shadow map drawn every second frame, `shadowRefre
 `setSize` in the middle of a film being the costliest thing a struggling device can be asked for);
 it goes up one rung when the mean has been at 50 frames per second (90 % of the cap, on a phone or tablet whose
 playback is capped) for 3 windows in a row, the wait doubling at each step back so a device that cannot hold the heavier
-rung does not flip-flop. « Légère » is rung 1 for good, « Complète » rung 0. Rung 2 only differs from rung 1 while the
+rung does not flip-flop; a step back that falls again within those 3 windows is the last of the session (under a cap the
+comfortable rate says nothing of the heavier rung, and each change re-places the trees and rebuilds the shadow map). « Légère » is rung 1 for good, « Complète » rung 0. Rung 2 only differs from rung 1 while the
 film plays, and only by the shadow refresh.
 Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
 0.5, 16 still frames, shadow map 2048² (~32 MB, not ~128 MB), at most 125,000 trees (far chunks thin first,
