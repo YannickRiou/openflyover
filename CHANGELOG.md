@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **In a vertical film the source credits run up the side edge**: in a 9:16 (or 2:3) film or poster they were squeezed across the bottom, small, over several lines. They now run up the side edge of their corner (right or left), read from the bottom like a photo credit, half as large again and on one line. Square, 4:5 and wide films keep them along the bottom. The preview shows them the same way.
 - **On a phone, nothing of the bars is out of reach any more**: the « i » button of the status bar (sources and « Nouveautés ») was pushed off the screen by the credits; the credits now shorten with « … » and the button always shows. The rows that scroll sideways (the tabs, the tools of the timeline) fade out on the side where more is hidden, so the controls past the edge are not taken for missing. The hint under Carte › Imagerie no longer says that IGN or swisstopo is chosen by itself (Esri is the default everywhere since 4.6.1).
 
 ## 4.6.2 (October 2026)
