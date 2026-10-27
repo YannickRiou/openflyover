@@ -1,7 +1,7 @@
 /**
  * Undo / redo of settings changes. `createHistory` is generic: it watches immutable snapshots (an object replaced on
  * every change, such as `settings`) through `subscribe`. Each step keeps only the keys it changed, so undo leaves alone
- * what changed outside the history (e.g. the imagery source picked automatically on import).
+ * what changed outside the history.
  *
  * Rapid changes of the same keys (a slider drag) are coalesced into one step; `transaction` groups several changes (a
  * preset); `beginGesture` keeps one step open however slow the changes. `getSettingsHistory` binds one instance to
@@ -197,7 +197,7 @@ export function getSettingsHistory(): History {
     apply: applySettings,
     subscribe: (listener) =>
       useAppStore.subscribe((state, previous) => {
-        // settings changed together with the tracks are a side effect of the import (regional imagery), not a step
+        // settings changed together with the tracks are a side effect of the import, not a step
         if (state.settings !== previous.settings && state.tracks === previous.tracks) {
           listener(state.settings, previous.settings)
         }

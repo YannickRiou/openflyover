@@ -200,16 +200,6 @@ describe('getSettingsHistory (app store)', () => {
     expect(useAppStore.getState().playback.speed).toBe(4)
   })
 
-  it('does not record the imagery picked automatically on import', () => {
-    const track = buildTrack({ name: 't', source: 'gpx', segments: [{ points: [{ lon: 6.86, lat: 45.92 }] }] })
-    useAppStore.getState().setSetting('exaggeration', 2)
-    useAppStore.getState().addTracks([track])
-    expect(useAppStore.getState().settings.imagerySourceId).toBe('ign-ortho')
-    getSettingsHistory().undo()
-    expect(useAppStore.getState().settings).toEqual({ ...DEFAULT_SETTINGS, imagerySourceId: 'ign-ortho' })
-    expect(getSettingsHistory().getState().canUndo).toBe(false)
-  })
-
   it('resets a group of settings to the defaults in one undo step, leaving the other keys alone', () => {
     const { setSetting } = useAppStore.getState()
     const camera = { ...DEFAULT_SETTINGS.camera, distance: 2 }

@@ -38,7 +38,6 @@ import { DEFAULT_GRADING } from '../scene/grading'
 import type { GradingSettings } from '../scene/grading'
 import { DEFAULT_LENS } from '../scene/lens'
 import type { LensSettings } from '../scene/lens'
-import { IMAGERY_SOURCES, sourceCovers } from '../terrain/sources'
 import { DEFAULT_CLOUDS } from '../weather/sceneClouds'
 import type { CloudSettings } from '../weather/sceneClouds'
 import { DEFAULT_WEATHER_SCENE } from '../weather/sceneWeather'
@@ -245,9 +244,6 @@ export const DEFAULT_PLAYBACK: Playback = { playing: false, progress: 0, timeS: 
 
 const EMPTY_STATS: TerrainStats = { visibleTiles: 0, loadedTiles: 0, pendingTiles: 0, failedTiles: 0 }
 
-/** Regional imagery sources preferred automatically when a trip lies entirely inside their coverage. */
-const AUTO_IMAGERY_IDS = ['ign-ortho', 'swisstopo'] as const
-
 // ---------------------------------------------------------------------------
 // Pure helpers (exported for tests)
 // ---------------------------------------------------------------------------
@@ -272,31 +268,9 @@ export function computeFrameOrigin(bounds: LonLatBounds): LonLat {
   return { lon: Math.round(c.lon * 100) / 100, lat: Math.round(c.lat * 100) / 100 }
 }
 
-/**
- * Id of the first regional imagery source (in AUTO_IMAGERY_IDS order) whose coverage fully
- * contains `bounds`, or null when none applies.
- *
- * Known limitation: the IGN box over-approximates France (see docs/sources.md), so a trip that
- * crosses into Italy or Switzerland still gets IGN and shows white tiles there; the user can switch
- * the imagery source by hand, which disables this automatic choice.
- */
-export function pickRegionalImagery(bounds: LonLatBounds): string | null {
-  for (const id of AUTO_IMAGERY_IDS) {
-    const source = IMAGERY_SOURCES.find((s) => s.id === id)
-    if (source?.coverage && sourceCovers(source, bounds)) return source.id
-  }
-  return null
-}
-
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
-
-/**
- * Set once the user picks an imagery source by hand: automatic regional selection then stops.
- * Kept outside the public state on purpose (implementation detail of addTracks / setSetting).
- */
-let imageryChosenByUser = false
 
 export const useAppStore = create<AppState>()((set, get) => ({
   tracks: [],
@@ -316,15 +290,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     const bounds = unionBounds(tracks)!
     const frameOrigin = state.frameOrigin ?? computeFrameOrigin(bounds)
 
-    let settings = state.settings
-    if (!imageryChosenByUser) {
-      const regional = pickRegionalImagery(bounds)
-      if (regional && regional !== settings.imagerySourceId) {
-        settings = { ...settings, imagerySourceId: regional }
-      }
-    }
-
-    set({ tracks, bounds, frameOrigin, settings, fitRequest: state.fitRequest + 1 })
+    set({ tracks, bounds, frameOrigin, fitRequest: state.fitRequest + 1 })
   },
 
   removeTrack(id) {
@@ -385,7 +351,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   setSetting(key, value) {
-    if (key === 'imagerySourceId') imageryChosenByUser = true
     set({ settings: { ...get().settings, [key]: value } })
   },
 
@@ -455,22 +420,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 }))
 
-/** A new project starts without an imagery choice: its first import picks the regional imagery again. */
-export function forgetImageryChoice(): void {
-  imageryChosenByUser = false
-}
-
-/** Whether the imagery source counts as chosen by the user, and its restoration (the render queue shows other projects meanwhile). */
-export function imageryChoiceKept(): boolean {
-  return imageryChosenByUser
-}
-export function keepImageryChoice(chosen: boolean): void {
-  imageryChosenByUser = chosen
-}
-
 /** Restore the initial state (tests). */
 export function resetAppStore(): void {
-  imageryChosenByUser = false
   useAppStore.setState({
     tracks: [],
     bounds: null,

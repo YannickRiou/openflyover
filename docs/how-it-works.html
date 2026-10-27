@@ -823,8 +823,8 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
       <span class="who">src/ui/importFlow.ts → src/import/index.ts (importFile) → src/import/gpx.ts (parseGpx)</span></span></li>
     <li><span><strong>A track is built.</strong> Its distance, elevation gain and loss (heights smoothed, 3 m threshold against GPS noise), duration and bounding box are computed, and a color is chosen that stays readable on aerial photos.
       <span class="who">src/import/stats.ts (buildTrack) · src/import/index.ts (assignColors)</span></span></li>
-    <li><span><strong>The store takes it.</strong> The track joins the list. The store computes the box around all tracks and the origin of the local frame. Because the sample lies entirely in France, the imagery switches to IGN aerial photos (unless you already chose a source). A message announces the import.
-      <span class="who">src/state/store.ts (addTracks, pickRegionalImagery) · src/ui/toast.ts</span></span></li>
+    <li><span><strong>The store takes it.</strong> The track joins the list. The store computes the box around all tracks and the origin of the local frame. The imagery stays the default Esri World Imagery (or the source you chose), wherever the track is. A message announces the import.
+      <span class="who">src/state/store.ts (addTracks) · src/ui/toast.ts</span></span></li>
     <li><span><strong>The terrain loads.</strong> The scene creates a terrain engine over the track's box widened by 25 km. It downloads elevation and photo tiles, coarse ones first, then finer ones near the camera. The camera frames the whole track.
       <span class="who">src/scene/TerrainLayer.tsx → src/terrain/engine.ts · src/scene/CameraRig.tsx</span></span></li>
     <li><span><strong>The track is draped.</strong> The red line is laid on the terrain at the height of the loaded tiles, and laid again each time finer tiles arrive.

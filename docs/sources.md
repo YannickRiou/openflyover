@@ -421,16 +421,13 @@ Visual check (headless Chromium, sample track Les Houches → Les Contamines): `
    at Chamonix the imagery exists but is less detailed than BD ORTHO.
 6. **IGN outside metropolitan France**: the overseas territories (DROM-COM) are not covered by the single `coverage` box; multi-box coverage would require a change to `TileSourceBase` (frozen types).
 7. **The IGN box over-approximates France**: `sourceCovers(ign, …)` returns `true` for Courmayeur, Champex, Geneva, Basel or Zermatt, whereas
-   the server returns a white tile (200) or a 404 there. Consequence for `store.ts` (`pickRegionalImagery`, which prefers IGN as soon as the track
-   is inside its box): a cross-border track (full Tour du Mont-Blanc, Genevois, Swiss Jura, Basel) was rendered with white areas; the white
-   tile is now replaced by the coarser z12 picture (blurry, not white) in `imagery.ts`, a 404 is still a gray patch.
-   Recommendation: when the track is inside the IGN box **and** inside the swisstopo box, prefer swisstopo (real tiles everywhere, less detailed)
-   or Esri (uniform) over IGN, unless the track is entirely west of ~5.9° E or north of ~47.6° N (so surely in France);
-   or let the user switch manually.
+   the server returns a white tile (200) or a 404 there: a cross-border track (full Tour du Mont-Blanc, Genevois, Swiss Jura, Basel) chosen
+   with IGN shows the coarser z12 picture there (`imagery.ts` replaces the white tile; blurry, not white), a 404 is still a gray patch. Since
+   2026-10-27 no source is picked automatically (Esri World Imagery stays the default everywhere): IGN is only ever chosen by hand.
 8. `sourceCovers(source, bounds | point)` (exported from `sources.ts`) lets the UI propose by default the most detailed imagery source
    that fully covers the track; `true` means "worth trying", `false` "pointless".
-9. **Maps are never chosen automatically**: `AUTO_IMAGERY_IDS` in `store.ts` lists only `ign-ortho` and `swisstopo`;
-   the maps share their coverage boxes, so this list must not be replaced by "any source with `coverage`".
+9. **No source is chosen automatically** (since 2026-10-27; IGN and swisstopo were before): the default, Esri World Imagery, stays
+   until the user picks another one.
 10. **`minZoom` > 0** (no source has one since the dated orthophotos were removed; `imagery.ts` still handles it): coarser terrain tiles stay gray (documented behavior of `imagery.ts`), invisible in practice during a flyover.
 11. **OpenTopoMap**: volunteer-run server; no bulk downloading. Offline packs allow it for personal use only, with a warning and a cap of 2,000 tiles per day (`src/offline/policy.ts`).
 12. **CC BY-SA (OpenTopoMap)**: a video exported with this basemap must carry the attribution and may be considered an adaptation (share-alike): to be flagged at export.
