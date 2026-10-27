@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 4.6.0 (October 2026)
 
 - **The export starts loading the next image's terrain while the graphics card draws the current one**: once an image is drawn, the app waited for the graphics card (about a fifth of a second per image on an iPhone 12) before asking for the tiles of the next one. It now asks first, so the tiles load during that wait instead of after it: less « tuiles » in the export's « Répartition », the same pictures.
 - **Esri World Imagery stays the imagery wherever the track is**: importing a track in France or in Switzerland no longer switches the aerial photos to IGN or swisstopo by itself. Esri, more detailed and nicer in most places, is the default everywhere; IGN, swisstopo and the other sources are still one click away in « Carte › Fond de carte ». Projects saved with a source keep it.
