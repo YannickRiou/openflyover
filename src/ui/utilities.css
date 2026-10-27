@@ -474,6 +474,21 @@
   @apply text-3xl leading-[1.15] font-semibold;
 }
 
+/* a row that scrolls sideways, scrollbar hidden: the sides where some of it is hidden fade out (`useScrollEdges`) */
+@utility scroll-fade-x {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  mask-image: linear-gradient(to right, transparent, black var(--fade-start), black calc(100% - var(--fade-end)), transparent);
+
+  &[data-more-start] {
+    --fade-start: 28px;
+  }
+
+  &[data-more-end] {
+    --fade-end: 28px;
+  }
+}
+
 @utility home-actions {
   @apply grid w-full grid-cols-2 gap-2 phone:grid-cols-1;
 }

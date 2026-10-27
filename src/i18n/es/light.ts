@@ -122,7 +122,7 @@ const messages: Messages['light'] = {
   'demClean.seaToZeroTip': 'Sube a 0 m todo lo que está bajo el nivel del mar. También aplana depresiones reales (mar Muerto, pólderes).',
   'map.background': 'Fondo de mapa',
   'map.imagery': 'Imágenes',
-  'map.imageryAuto': 'Al importar, se elige solo IGN (Francia) o swisstopo (Suiza) cuando el track está por completo en su zona, mientras no hayas elegido tú.',
+  'map.imageryAuto': 'Esri World Imagery es la fuente por defecto, en todas partes. En Francia y Suiza, el IGN y swisstopo son más detallados: elígelos aquí.',
   'map.imageryDate': 'Fecha de las fotos',
   'map.imageryDateLatest': 'Las más recientes',
   'map.imageryDateLatestOn': 'Las más recientes ({date})',

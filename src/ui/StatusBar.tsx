@@ -278,7 +278,7 @@ export function StatusBar() {
               {t('status.map', { value: formatPercent(map.progress) })}
             </span>
           ) : (
-            <span className="flex items-center gap-1.5" title={t('status.mapReadyTip')}>
+            <span className="flex items-center gap-1.5 @max-[560px]/status:text-[0px]" title={t('status.mapReadyTip')}>
               <span className="flex text-moss-light">
                 <Icon name="circle-check" size={12} />
               </span>
@@ -305,7 +305,8 @@ export function StatusBar() {
           {perfText}
         </p>
       )}
-      <div className="ml-auto shrink-0 grow text-right">
+      {/* the credits give way (cut with « … ») so the button after them always shows */}
+      <div className="ml-auto min-w-0 shrink grow truncate text-right">
         {short.map((item, i) => (
           <span key={item.text}>
             {i > 0 && ' · '}
@@ -322,7 +323,8 @@ export function StatusBar() {
                 {/* narrow status bar: the providers behind a button, above the bar when open */}
                 <details className="relative hidden @max-[560px]/status:inline-block">
                   <summary className="cursor-pointer list-none px-1 [&::-webkit-details-marker]:hidden" aria-label={t('status.creditSources', { name: item.text })}>…</summary>
-                  <span className="absolute right-0 bottom-[calc(100%+6px)] z-9 rounded-sm bg-chrome px-2 py-1 text-white shadow-pop">{item.more}</span>
+                  {/* fixed: the credits above clip what overflows them */}
+                  <span className="fixed right-2 bottom-[calc(var(--statusbar-h)+env(safe-area-inset-bottom)+6px)] z-9 rounded-sm bg-chrome px-2 py-1 whitespace-normal text-white shadow-pop">{item.more}</span>
                 </details>
               </>
             )}
