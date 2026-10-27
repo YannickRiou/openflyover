@@ -2732,8 +2732,11 @@ exports) gets it from the terrain source of the settings.
   going back or jumping more than 2 s: reopened at the keyframe; an unreadable video stops the export with a
   message; the frames held at the start and the end stay frozen at
   times 0 and duration).
-- For each progress value (`renderSettledFrame`, `src/export/capture.ts`), `advance` until the **view is final**:
-  `stats.pendingVisibleTiles === 0` right after an `engine.update` of the camera that will be captured, i.e. the selection
+- For each progress value (`renderSettledFrame`, `src/export/capture.ts`), the frame **settles** (`settle`) until the **view is final**,
+  then it is drawn once. A settle pass is an R3F `advance(false)` that draws nothing: the layers update (the flyover rig
+  places the camera, TerrainLayer selects the tiles for it) but neither the renderer nor the post-processing composers
+  render (`withoutDrawing`: `gl.render` and `EffectComposer.prototype.render` are no-ops for its duration). The view is
+  final when `stats.pendingVisibleTiles === 0` right after an `engine.update` of the camera that will be captured, i.e. the selection
   of that update asks for no tile that is loading (DEM and imagery together: a tile is `ready`, hence drawable, only with
   its texture), queued or waiting for its retry (export), and has no child left to request after its parent loaded (the
   update that finds a parent ready queues the children, so the count is not 0 until the finest level is in). Limit 5 min
@@ -2742,25 +2745,19 @@ exports) gets it from the terrain source of the settings.
   capture). Anything but complete **stops the export like a cancel** (file removed) with an error naming up to three
   tiles: host, z/x/y, layer, cause, attempts (`tileFailureMessage`); counted as `timeouts` or `givenUp` in the timings,
   the console line and the history, logged with `console.error` and a breadcrumb. The same applies to a 3D still and the
-  3D poster. When the previous (sub-)frame needed no wait and the clouds have slices (`finalFirst`), the final render is
-  made first; it is kept when it asks for no tile, runs no re-drape and leaves the camera within 1 m: the same image as
-  the usual two renders, one render instead of two. The final render selects once more: if that selection asks for tiles, the frame settles and renders
-  again. Everything cached: one `advance`, no wait. Then the
-  pending re-drapes of the track and labels run right away (`flushDrapes`, instead of their delay) and
-  the frame is rendered once more. While tiles load, nothing is rendered: every 16 ms only `engine.update` runs for the
-  camera of the last render (`updateTiles`; the other layers load their data per track, not per view), then the frame
-  is rendered again once the view has its tiles, or at the timeout. A (sub-)frame waiting for tiles costs 2 renders
-  (3 with a re-drape) instead of one every 16 ms + render time, each with the clouds' noise slices (e2e, SwiftShader,
-  tiles answered after 300 ms: 320 → 36 renders for 20 frames; clouds and shutter open, 219 → 58 for 5 frames). The
-  engine's delays are times, not numbers of updates, so these 16 ms updates do not hurry them (tile hosts unreachable:
-  20 frames in 45–50 s instead of 82–107 s).
-  With volumetric clouds (`exportHasClouds`: `CloudsLayer` registered with its slices) only the last render of a
-  (sub-)frame pays for them: `settle` renders without the clouds (`advance(false)` sets `setSkipClouds`, the wrapped
-  `update` returns at once and the clouds buffer keeps its previous content, never captured), then `flushDrapes` and
-  the camera correction, then `renderSettledFrame` makes one final render (`advance(true)`) with all the noise slices.
-  The captured pixels are those of the old last render (the slices start from scratch each time). Cost: one more
-  render without clouds in the best case (1 render with clouds before; 1 without and 1 with now). Without clouds the
-  renders are as before.
+  3D poster. While tiles load, nothing is drawn: every 16 ms only `engine.update` runs for the camera of the pass
+  (`updateTiles`; the other layers load their data per track, not per view). Once the view has its tiles the pending
+  re-drapes of the track and labels run right away (`flushDrapes`, instead of their delay), the camera is placed again if
+  the final terrain moved it, and the frame is **drawn once** (`advance(true)`, with the clouds' noise slices): a frame costs
+  one render whatever the tiles take. That render selects the tiles once more: if its selection asks for any (the view moved
+  since the last check), the frame settles again and is drawn again (rare). Why the passes need no draw: what a draw leaves
+  behind (matrices, uploads, the shadow fit, the effects' state) is recomputed by the next draw from the scene as the layers
+  left it, and the camera's matrices are refreshed by `engine.update` itself (`updateCameraState`), so the captured render
+  is the one the old intermediate renders led to. Before, a frame waiting for tiles cost 3 renders with clouds (one to
+  place the camera and select, one once the tiles came, the final one) and an iPhone 12 export averaged 2.33 renders per
+  image; an image whose previous one needed no wait tried its final render first (`finalFirst`), which wasted a whole
+  render, clouds included, whenever it asked for tiles. Now: 1 (« rendus par image » 1.00, plus the rare redraw), and a
+  pass costs a few milliseconds of main thread, no GPU time. `timings.renders` counts the draws only (the GPU timer too).
   The camera is repositioned (progress shifted by 1e-9) only if the final terrain moves it
   by more than 1 m, never after a timeout. Every 5 rendered frames, the tiles for frames +5 to +40 are
   requested ahead of time (`engine.prefetch`), and again at most every 100 ms while a frame waits for its tiles
@@ -3247,8 +3244,7 @@ exports) gets it from the terrain source of the settings.
   shadow map TAA; the effect's `update` is wrapped: 16 / 24 / 32 renders per frame (`EXPORT_SAMPLES`, low / medium /
   high; 2 / 4 / 6 before) with the frame counter set to k (noise slice) and `temporalAlpha` = 1/(k+1) — the first
   discards the history, the following ones average (still camera, zero velocity). An exported frame therefore never
-  depends on the previous ones, whatever the number of `settle` renders; only the final render of a (sub-)frame runs
-  them (see "Video export"). The export cost of the clouds grows in
+  depends on the previous ones; only the render of a (sub-)frame draws at all (see "Video export"). The export cost of the clouds grows in
   proportion (×6 for "Moyenne"). With the motion blur, the slices are shared among the sub-frames of the shutter
   (see "Lens").
 - Grain, measured with SwiftShader (sea of clouds at 1,800 m, noon, still view 681 × 383, no terrain; mean absolute

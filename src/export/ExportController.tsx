@@ -16,6 +16,8 @@ import { errorMessage } from '../core/errors'
 import { useEffect, useRef } from 'react'
 import { useThree, type RootState } from '@react-three/fiber'
 import { PerspectiveCamera, Vector3 } from 'three'
+import type { WebGLRenderer } from 'three'
+import { EffectComposer } from 'postprocessing'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { mixFilmAudio } from '../film/audio'
 import { normaliseLoudness } from '../film/loudness'
@@ -66,10 +68,8 @@ import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule
 import {
   EMPTY_TIMINGS,
   REPORT_INTERVAL_MS,
-  exportHasClouds,
   exportRenderScale,
   flushDrapes,
-  setSkipClouds,
   throttledReporter,
   useExportStore,
   videoFileName,
@@ -109,6 +109,26 @@ interface RunDeps {
   signal: AbortSignal
   /** memory budget of the device (default: this one) */
   budget?: Pick<DeviceBudget, 'exportTileKeepFrames' | 'exportPrefetchAhead'>
+}
+
+const noDraw = () => undefined
+
+/**
+ * `run` with nothing drawn: neither the renderer nor the post-processing composers (R3F draws through one or the other)
+ * render. The layers still update (useFrame), the camera included; the shadow map, the passes and the clouds wait for the
+ * render that is captured.
+ */
+function withoutDrawing(gl: WebGLRenderer, run: () => void): void {
+  const { render } = gl
+  const composerRender = EffectComposer.prototype.render
+  gl.render = noDraw
+  EffectComposer.prototype.render = noDraw
+  try {
+    run()
+  } finally {
+    gl.render = render
+    EffectComposer.prototype.render = composerRender
+  }
 }
 
 const direction = new Vector3()
@@ -336,7 +356,12 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     applyVideoSize()
     clock += 1 / fps
     if (fixedView) placeFixedView()
-    setSkipClouds(!final)
+    if (!final) {
+      // the layers update and the terrain selects its tiles; the frame is drawn once they are in (capture.ts)
+      withoutDrawing(deps.get().gl, () => deps.get().advance(clock))
+      timings.renderMs += performance.now() - t0
+      return
+    }
     readGpuTimer()
     gpuTimer?.begin()
     resetShadowPass()
@@ -344,7 +369,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       deps.get().advance(clock)
     } finally {
       gpuTimer?.end()
-      setSkipClouds(false)
     }
     timings.renders++
     timings.shadowTiles += lastShadowPass.tiles
@@ -354,8 +378,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     timings.renderMs += performance.now() - t0
   }
 
-  /** waits of the current export (a frame that waited for none lets the next one try its final render first) */
-  let waits = 0
   /** a still reports its tiles: the most pending seen, and how many of them came */
   let peakPending = 0
   let tilesReportedAt = -Infinity
@@ -364,7 +386,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   let prefetchedAt = -Infinity
   const timedWait = async (ms: number) => {
     const t0 = performance.now()
-    waits++
     if (t0 - prefetchedAt >= PREFETCH_WAIT_MS) {
       prefetchedAt = t0
       prefetchAhead(waitingFrame)
@@ -418,7 +439,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   let drapes = 0
   const frameDeps = {
     advance,
-    separateFinal: exportHasClouds,
     // what TerrainLayer does in a render (the only data requested per view), for the camera of the last render
     updateTiles: () => {
       const camera = deps.get().camera as PerspectiveCamera
@@ -581,8 +601,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     /** the view of the last rendered frame moved with time */
     let previousTimed = false
     let previousOverlay = ''
-    /** the last (sub-)frame rendered waited for no tile: the next one tries its final render first (capture.ts) */
-    let settledAtOnce = false
     // a phone: tiles are kept for a number of film frames, not seconds (the engine also caps them, deviceBudget.ts)
     const retention = {
       frame: 0,
@@ -636,9 +654,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         for (let j = 0; j < renders.length; j++) {
           setShutterSubFrame(j, renders.length)
           frameTimeS = renders[j].timeS
-          const waitsBefore = waits
-          const outcome = await renderSettledFrame(renders[j].progress, frameDeps, DEFAULT_SETTLE, settledAtOnce)
-          settledAtOnce = waits === waitsBefore
+          const outcome = await renderSettledFrame(renders[j].progress, frameDeps, DEFAULT_SETTLE)
           if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
         }
         frameTimeS = times[i]

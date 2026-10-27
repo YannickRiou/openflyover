@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RootState } from '@react-three/fiber'
 import { PerspectiveCamera } from 'three'
+import { EffectComposer } from 'postprocessing'
 import { DESKTOP_BUDGET, budgetFor } from '../core/deviceBudget'
 import { DEFAULT_FILM } from '../film/model'
 import { filmClockFor } from '../film/clock'
@@ -124,6 +125,39 @@ describe('runExport', () => {
     expect(three.setFrameloop).toHaveBeenLastCalledWith('demand')
     expect(three.setDpr).toHaveBeenLastCalledWith(2)
     expect(three.setSize).toHaveBeenLastCalledWith(800, 450, 0, 0)
+  })
+
+  it('draws only the render that is captured: a pass before it updates the layers and draws nothing', async () => {
+    const three = fakeThree()
+    const drawn = vi.fn()
+    const gl = three.gl as unknown as { render: () => void }
+    const glRender = (gl.render = drawn)
+    const composerRender = vi.spyOn(EffectComposer.prototype, 'render').mockImplementation(drawn)
+    const composerSpy = EffectComposer.prototype.render
+    // what R3F does in an advance: the layers update, then the renderer or the composer draws
+    const updated = vi.fn()
+    three.advance.mockImplementation(() => {
+      updated()
+      gl.render()
+      EffectComposer.prototype.render(0)
+    })
+    const seen: number[] = []
+    vi.mocked(renderSettledFrame).mockImplementationOnce(async (_progress: number, deps: RenderFrameDeps) => {
+      deps.advance(false)
+      seen.push(updated.mock.calls.length, drawn.mock.calls.length)
+      deps.advance(true)
+      seen.push(updated.mock.calls.length, drawn.mock.calls.length)
+      return 'complete'
+    })
+    try {
+      await exportFilm(destination(), { get: () => three as unknown as RootState })
+      // put back for the next draw
+      expect(gl.render).toBe(glRender)
+      expect(EffectComposer.prototype.render).toBe(composerSpy)
+    } finally {
+      composerRender.mockRestore()
+    }
+    expect(seen).toEqual([1, 0, 2, 2])
   })
 
   it('stops on cancel and deletes the file', async () => {

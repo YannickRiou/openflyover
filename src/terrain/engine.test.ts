@@ -1374,7 +1374,6 @@ describe('export: the view is final when the settle loop returns', () => {
             counts.renders++
             engine.update(camera, 1000)
           },
-          separateFinal: () => false,
           updateTiles: () => engine.update(camera, 1000),
           pendingTiles: () => engine.stats.pendingVisibleTiles ?? 0,
           flushDrapes: () => false,
