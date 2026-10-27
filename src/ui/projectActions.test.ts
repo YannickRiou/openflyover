@@ -76,6 +76,9 @@ beforeEach(() => {
   platform.openFiles.mockReset()
 })
 
+/** An import (lazy parser, elevations completed) can take more than the 1 s of `vi.waitFor` while the whole suite runs. */
+const IMPORTED = { timeout: 10_000 }
+
 describe('saveProject', () => {
   it('saves <name>.opnflvr as a compressed project, marks the project saved and says where', async () => {
     const file = await savedFile()
@@ -482,7 +485,7 @@ describe('openFiles with a project that holds tracks', () => {
     expect(names()).toEqual(['Rando'])
     choice()!.answer('add')
     await done
-    await vi.waitFor(() => expect(names()).toEqual(['Rando', 'a', 'b']))
+    await vi.waitFor(() => expect(names()).toEqual(['Rando', 'a', 'b']), IMPORTED)
   })
 
   it('« Annuler » changes nothing', async () => {
@@ -501,7 +504,7 @@ describe('openFiles with a project that holds tracks', () => {
     const done = openFiles([gpx('a')])
     choice()!.answer('new')
     await done
-    await vi.waitFor(() => expect(names()).toEqual(['a']))
+    await vi.waitFor(() => expect(names()).toEqual(['a']), IMPORTED)
     expect(useAppStore.getState().settings.exaggeration).toBe(DEFAULT_SETTINGS.exaggeration)
     // the first import of a project: the message offers « Film automatique »
     expect(useToastStore.getState().toasts.some((toast) => toast.action?.label === 'Film automatique…')).toBe(true)
@@ -559,7 +562,7 @@ describe('openFiles with a project that holds tracks', () => {
     expect(choice()?.names).toEqual(['a.gpx'])
     choice()!.answer('add')
     await done
-    await vi.waitFor(() => expect(names()).toEqual(['Rando', 'a']))
+    await vi.waitFor(() => expect(names()).toEqual(['Rando', 'a']), IMPORTED)
     expect(toasts().some((toast) => toast.kind === 'error' && toast.text.includes('notes.txt'))).toBe(true)
   })
 
@@ -604,7 +607,7 @@ describe('openFiles with a project that holds tracks', () => {
     const done = openFiles([gpx('a')])
     expect(choice()).toBeNull()
     await done
-    await vi.waitFor(() => expect(names()).toEqual(['a']))
+    await vi.waitFor(() => expect(names()).toEqual(['a']), IMPORTED)
   })
 
   it('a project file is opened without a question, even with tracks open', async () => {
