@@ -4119,12 +4119,18 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
     only);
   - never: another origin (tiles, Open-Meteo, Overpass, Strava: their requests are not even seen by the worker; tiles
     have their own cache, the offline packs, under their terms) nor the Strava callback page;
-  - navigation to the app: the precached page (any query), so it opens offline; the precache answers before the
-    network, `ignoreVary` (servers send `Vary: Origin`, module scripts carry an `Origin`);
+  - navigation to the app: the network first (`page`: `cache: 'no-cache'`, revalidating the HTTP cache, which GitHub Pages
+    sets to 10 min), so opening or reloading the app shows a new release at once (its files are new names the older
+    worker does not precache, so they come from the network); the precached page (any query) when offline, after
+    `PAGE_TIMEOUT_MS` (3 s), on an error or a redirect (a redirected response cannot answer a navigation). The build files
+    are answered by the precache before the network, `ignoreVary` (servers send `Vary: Origin`, module scripts carry an `Origin`);
   - update: a new build changes `sw.js` (its hash); the browser looks for it at each navigation, and an open app every
     hour and when shown again, at most once per 10 min, never while hidden (`watchForUpdates`, `registration.update()`:
-    an installed app may stay open for days); it installs it in the background, the app shows
-    « Nouvelle version disponible » › « Recharger » (`webApp.ts`: `SKIP_WAITING`, reload on `controllerchange`); on
+    an installed app may stay open for days); it installs it in the background. When it is installed, the page asks it
+    whether it precaches the page's own entry script (`HAS_FILE`, `entryPath`, `workerHas`): yes, the page was loaded from
+    the network and already runs that build, so the worker takes over at once, silently (`SKIP_WAITING`, no reload);
+    no (an app left open while a release came out), the app shows « Nouvelle version disponible » › « Recharger »
+    (`webApp.ts`: `SKIP_WAITING`, reload on `controllerchange`); on
     activation the worker deletes the older `openflyover-shell-` / `openflyover-sky-` caches only, never the offline
     packs (`openflyover-tiles-v1:`) nor « Mes projets » (`openflyover-projects-v1`).
   Verified in headless Chromium (Pixel 5 emulation, `vite preview` under `/openflyover/` and at `/`): manifest without
