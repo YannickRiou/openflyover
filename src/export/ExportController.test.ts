@@ -260,12 +260,19 @@ describe('runExport', () => {
     vi.mocked(renderSettledFrame)
       .mockResolvedValueOnce('complete')
       .mockImplementationOnce(async (_progress: number, deps: RenderFrameDeps) => {
-        // two polls within 100 ms: one round of prefetches
-        const before = prefetch.mock.calls.length
-        await deps.wait(16)
-        during.push(prefetch.mock.calls.length - before)
-        await deps.wait(16)
-        during.push(prefetch.mock.calls.length - before)
+        // two polls within 100 ms: one round of prefetches (the clock held, a loaded machine can take longer between them)
+        const now = performance.now()
+        const clock = vi.spyOn(performance, 'now').mockReturnValue(now)
+        try {
+          const before = prefetch.mock.calls.length
+          await deps.wait(16)
+          during.push(prefetch.mock.calls.length - before)
+          clock.mockReturnValue(now + 32)
+          await deps.wait(16)
+          during.push(prefetch.mock.calls.length - before)
+        } finally {
+          clock.mockRestore()
+        }
         return 'complete'
       })
     try {
