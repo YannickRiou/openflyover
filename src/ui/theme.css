@@ -208,6 +208,8 @@
   --panel-w: 320px;
   --dock-w: 300px;
   --statusbar-h: 24px;
+  /* room left above the top bar for the phone's status bar (`env(safe-area-inset-top)`, more on iOS below) */
+  --safe-top: env(safe-area-inset-top);
   --control-h: 32px;
   --control-h-lg: 40px;
   /* rim of a colour swatch, visible on the panel */
@@ -216,6 +218,16 @@
   --focus-ring: 2px solid var(--accent);
   /* on the ink chrome: 7.3:1 against --color-ink */
   --focus-ring-on-dark: 2px solid var(--accent-on-dark);
+}
+
+/*
+ * iOS 27 (beta), the app on the home screen, upright: a coloured shadow of the status bar spills about 16 px over the
+ * page. That much more room above the top bar, in its colour, covers it (`is-ios`: index.html).
+ */
+@media (display-mode: standalone) and (orientation: portrait) {
+  :root.is-ios {
+    --safe-top: calc(env(safe-area-inset-top) + 16px);
+  }
 }
 }
 

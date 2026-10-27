@@ -28,7 +28,7 @@ const CONTAINER = 'pointer-events-none flex max-h-full max-w-full phone-any:h-fu
 const DIALOG =
   'pointer-events-auto relative max-h-full w-[min(var(--modal-w,560px),calc(100vw_-_32px))] overflow-y-auto overscroll-contain rounded-md border border-edge bg-surface-panel px-5 pt-4 pb-5 text-body whitespace-normal text-text-1 shadow-pop outline-none ' +
   'phone-any:h-full phone-any:w-full phone-any:rounded-none phone-any:border-0 ' +
-  'phone-any:pt-[calc(12px_+_env(safe-area-inset-top))] phone-any:pr-[calc(16px_+_env(safe-area-inset-right))] ' +
+  'phone-any:pt-[calc(12px_+_var(--safe-top))] phone-any:pr-[calc(16px_+_env(safe-area-inset-right))] ' +
   'phone-any:pb-[calc(20px_+_env(safe-area-inset-bottom))] phone-any:pl-[calc(16px_+_env(safe-area-inset-left))]'
 
 /**

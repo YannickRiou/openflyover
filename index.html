@@ -12,6 +12,10 @@
   </head>
   <body>
     <script>
+      // iPhone or iPad (an iPad says Macintosh, with touch): the room left for the status bar (theme.css, --safe-top)
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)) {
+        document.documentElement.classList.add('is-ios')
+      }
       // theme of the stored preferences before the first paint (the app applies them all again at start-up)
       try {
         var a = JSON.parse(localStorage.getItem('openflyover.preferences.v1')).appearance

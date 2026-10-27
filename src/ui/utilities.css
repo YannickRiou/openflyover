@@ -186,7 +186,7 @@
 
   /* a phone, either way up: the notch and the home bar keep their room */
   @variant phone-any {
-    @apply h-dvh grid-rows-[calc(var(--topbar-h)+env(safe-area-inset-top))_minmax(0,1fr)_calc(var(--statusbar-h)+env(safe-area-inset-bottom))] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)];
+    @apply h-dvh grid-rows-[calc(var(--topbar-h)+var(--safe-top))_minmax(0,1fr)_calc(var(--statusbar-h)+env(safe-area-inset-bottom))] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)];
   }
 }
 

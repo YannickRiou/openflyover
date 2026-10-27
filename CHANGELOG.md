@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The app installed on an iPhone keeps its top bar clear of the status bar's shadow**: on iOS 27 a coloured shadow of the status bar spills over the top of an app opened from the home screen. Upright, the top bar now leaves 16 px more above it, in its own colour, so the shadow falls on that band and not on the project name and the buttons. A Safari tab, landscape and other phones are unchanged.
+
 ## 4.6.3 (October 2026)
 
 - **In a vertical film the source credits run up the side edge**: in a 9:16 (or 2:3) film or poster they were squeezed across the bottom, small, over several lines. They now run up the side edge of their corner (right or left), read from the bottom like a photo credit, half as large again and on one line. Square, 4:5 and wide films keep them along the bottom. The preview shows them the same way.
