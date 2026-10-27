@@ -4144,6 +4144,11 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
   served from the cache. Update while open (Pixel 5 emulation, `sw.js` changed on the server): no request
   when shown again within the gap, one past it (clock moved forward), then the toast and « Recharger » reloads on the
   new worker.
+- **Room for the status bar**: every top inset reads `--safe-top` (`theme.css`; the shell's first row, the top bar's
+  padding, a full-screen modal), `env(safe-area-inset-top)`. On iOS (`is-ios` on `<html>`, set by a script in `index.html`
+  before the first paint, the same test as `isAppleMobile`), installed (`display-mode: standalone`) and upright, it is
+  16 px more: iOS 27 (beta) spills a coloured shadow of the status bar about that far over the page, and the top bar's
+  own colour now covers it (the workaround of hunterirving/events, a fixed tint there).
 - **iOS install hint**: iOS has no install prompt; once per device, in a Safari tab (`navigator.standalone` false), a
   message says « Pour installer OpenFlyover : touchez Partager, puis « Sur l'écran d'accueil ». » (toast, « Compris »).
 - **Files in**: Android (installed app): `share_target` (POST, multipart, field `tracks`, `.gpx`, `.fit` and the MIME
