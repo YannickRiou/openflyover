@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { LonLatBounds, Track } from '../core/types'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
-import { computeFrameOrigin, pickRegionalImagery, resetAppStore, unionBounds, useAppStore } from './store'
+import { computeFrameOrigin, resetAppStore, unionBounds, useAppStore } from './store'
 
 function makeTrack(id: string, bounds: LonLatBounds): Track {
   return {
@@ -33,20 +33,6 @@ describe('helpers', () => {
   it('computeFrameOrigin rounds the centroid to 0.01°', () => {
     expect(computeFrameOrigin(FR.bounds)).toEqual({ lon: 6.88, lat: 45.94 })
   })
-
-  it('pickRegionalImagery follows catalogue order and requires full containment', () => {
-    expect(pickRegionalImagery(FR.bounds)).toBe('ign-ortho')
-    expect(pickRegionalImagery(CH.bounds)).toBe('swisstopo')
-    expect(pickRegionalImagery(CA.bounds)).toBeNull()
-    // straddling the boxes -> contained by none
-    expect(pickRegionalImagery({ west: -10, south: 45, east: 7, north: 46 })).toBeNull()
-  })
-
-  it('never picks a national aerial photo by itself (Austria, Japan, United States): only IGN and swisstopo are chosen', () => {
-    expect(pickRegionalImagery({ west: 12.6, south: 47.0, east: 12.8, north: 47.1 })).toBeNull() // Grossglockner
-    expect(pickRegionalImagery({ west: 138.7, south: 35.3, east: 138.8, north: 35.4 })).toBeNull() // Fuji
-    expect(pickRegionalImagery({ west: -119.6, south: 37.7, east: -119.5, north: 37.8 })).toBeNull() // Yosemite
-  })
 })
 
 describe('addTracks', () => {
@@ -74,23 +60,14 @@ describe('addTracks', () => {
     expect(useAppStore.getState().frameOrigin).toBeNull()
   })
 
-  it('switches imagery to the regional source when the trip is fully covered', () => {
+  it('keeps Esri World Imagery, the default, wherever the trip is: no national photo is picked by itself', () => {
     useAppStore.getState().addTracks([FR])
-    expect(useAppStore.getState().settings.imagerySourceId).toBe('ign-ortho')
-  })
-
-  it('keeps the default imagery when no regional source covers the trip', () => {
+    useAppStore.getState().addTracks([CH])
     useAppStore.getState().addTracks([CA])
     expect(useAppStore.getState().settings.imagerySourceId).toBe('arcgis-world-imagery')
   })
 
-  it('keeps the regional choice when a later track leaves the coverage', () => {
-    useAppStore.getState().addTracks([FR])
-    useAppStore.getState().addTracks([CA])
-    expect(useAppStore.getState().settings.imagerySourceId).toBe('ign-ortho')
-  })
-
-  it('never overrides an imagery source chosen by the user', () => {
+  it('keeps an imagery source chosen by the user', () => {
     useAppStore.getState().setSetting('imagerySourceId', 'opentopomap')
     useAppStore.getState().addTracks([FR])
     expect(useAppStore.getState().settings.imagerySourceId).toBe('opentopomap')

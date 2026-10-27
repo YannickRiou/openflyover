@@ -17,7 +17,7 @@ import { applyEmptyProject, applyProject } from '../project/apply'
 import { parseProject, projectFileName, serializeProject } from '../project/document'
 import { PROJECT_EXTENSION, decodeProjectFile, encodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
-import { imageryChoiceKept, keepImageryChoice, useAppStore } from '../state/store'
+import { useAppStore } from '../state/store'
 import { setAutoFilmOpen } from './autoFilmOpen'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
@@ -185,12 +185,10 @@ function keepProject(): () => void {
     workArea: s.workArea,
   }
   const media = useMediaStore.getState().table
-  const imageryChosen = imageryChoiceKept()
   const entry = useLibraryStore.getState().currentId
   return () => {
     // the settings coming back are not a step of the undo history
     const resume = getSettingsHistory().suspend()
-    keepImageryChoice(imageryChosen)
     useMediaStore.getState().replace(media)
     useAppStore.setState(kept)
     // the entry may have been deleted from « Mes projets » meanwhile

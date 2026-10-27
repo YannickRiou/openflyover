@@ -2,7 +2,7 @@
  * Bridge between project data and the app store, through the store's public actions only.
  */
 import { useMediaStore } from '../film/media'
-import { DEFAULT_PLAYBACK, DEFAULT_SETTINGS, forgetImageryChoice, useAppStore } from '../state/store'
+import { DEFAULT_PLAYBACK, DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import type { LoadedProject } from './document'
 
@@ -81,5 +81,4 @@ export function applyEmptyProject(): void {
   // the selected block belonged to the film being closed
   useAppStore.setState({ settings: { ...DEFAULT_SETTINGS }, filmSelection: null, filmKeys: [] })
   store.setSpeed(DEFAULT_PLAYBACK.speed)
-  forgetImageryChoice()
 }

@@ -22,7 +22,7 @@ import type { WritableFolder } from '../platform/folder'
 import { applyProject } from '../project/apply'
 import { parseProject, serializeProject } from '../project/document'
 import { getSettingsHistory } from '../project/history'
-import { imageryChoiceKept, keepImageryChoice, useAppStore } from '../state/store'
+import { useAppStore } from '../state/store'
 import { effectiveProjectName } from '../ui/shell'
 import { startPoster } from '../poster/export'
 import { showToast } from '../ui/toast'
@@ -334,10 +334,7 @@ function keepOpenProject(): () => void {
     workArea: s.workArea,
   }
   const media = useMediaStore.getState().table
-  // the queued projects set their imagery source through `setSetting`, which would count as the user's choice
-  const imageryChosen = imageryChoiceKept()
   return () => {
-    keepImageryChoice(imageryChosen)
     useMediaStore.getState().replace(media)
     useAppStore.setState(kept)
     useAppStore.getState().requestFit()

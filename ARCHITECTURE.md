@@ -194,9 +194,8 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
 
 1. **Sources** (`sources.ts`): Mapterhorn elevation `https://tiles.mapterhorn.com/{z}/{x}/{y}.webp` (Terrarium, webp),
    AWS Terrain Tiles `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png` (Terrarium, z ≤ 15).
-   Imagery: IGN BD ORTHO (Géoplateforme WMTS, PM), ArcGIS World Imagery (the default outside France and Switzerland), swisstopo SWISSIMAGE, and the national aerial photos `basemap-at` (Austria, CC BY 4.0, z1–19), `gsi-photo` (Japan, z2–18) and `usgs-imagery` (United States, z0–16), picked by hand only.
-   The catalog also holds non-photographic base maps, never picked automatically (`AUTO_IMAGERY_IDS` =
-   `ign-ortho`, `swisstopo`): topographic maps `ign-plan` (Plan IGN, France, z19), `swisstopo-carte` (Swiss national
+   Imagery: IGN BD ORTHO (Géoplateforme WMTS, PM), ArcGIS World Imagery (the default everywhere: no source is picked automatically), swisstopo SWISSIMAGE, and the national aerial photos `basemap-at` (Austria, CC BY 4.0, z1–19), `gsi-photo` (Japan, z2–18) and `usgs-imagery` (United States, z0–16), picked by hand only.
+   The catalog also holds non-photographic base maps: topographic maps `ign-plan` (Plan IGN, France, z19), `swisstopo-carte` (Swiss national
    map, z19; blank outside Switzerland beyond z15) and `opentopomap` (worldwide, z17, CC BY-SA, volunteer server: offline
    packs allowed for personal use only, capped at 2,000 tiles per day, see "Offline packs"). The EOX Sentinel-2 and the three
    dated IGN orthophotos were removed in 2.1.2 (`REMOVED_IMAGERY_SOURCES` of `project/document.ts` opens a saved project that used one
@@ -216,8 +215,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    The picker groups them (`groupImagerySources`): photos, then maps (`map: true`), the sources covering the centre of the first
    track first (regional before worldwide), then « Ne couvrent pas la trace ». Covering = inside the `coverage` box and, for IGN
    and swisstopo, inside their country's `outline` (`geo/outlines.ts`, Natural Earth 1:50m simplified to 1.5–2 km, 1.5 km of
-   margin): the boxes overlap (Chamonix is in swisstopo's, Geneva in IGN's). The automatic choice (`pickRegionalImagery`) still
-   uses the boxes.
+   margin): the boxes overlap (Chamonix is in swisstopo's, Geneva in IGN's).
    Exact URLs, max zooms, encoding and CORS support are checked empirically (`docs/sources.md`); `sources.ts` is the single source of truth.
    A source without CORS goes through the Vite proxy (`/tiles/<id>/...`, see `vite.config.ts`).
 2. **Fetch** (`fetch.ts`): `fetch()` + `createImageBitmap`, priority queue, concurrency ~12, deduplication of in-flight requests,
@@ -2173,8 +2171,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   the automatic stops of the films saved before the timeline, `withoutHighlightPauses`).
 - Settings **history** outside the store: subscribed to `useAppStore`, each step keeps only the changed keys; changes to the
   same keys less than 400 ms apart are merged (keyboard), a pointer slider drag = one step from press to release however
-  slow it is (`beginGesture`, wired to every `input[type=range]` by `installSliderGestures`), a preset = one step, a timeline gesture = one step; the regional imagery picked on import
-  is not recorded; nothing is recorded during "Un film par trace" (one film per track; `suspend`); opening a project clears the history. Shortcuts Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y (ignored in
+  slow it is (`beginGesture`, wired to every `input[type=range]` by `installSliderGestures`), a preset = one step, a timeline gesture = one step; settings changed
+  together with the tracks (an import) are not recorded; nothing is recorded during "Un film par trace" (one film per track; `suspend`); opening a project clears the history. Shortcuts Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y (ignored in
   text fields), installed once by `App`. The project name, save and open are in the top bar
   (with Ctrl/Cmd+S, Ctrl/Cmd+O); the "Projet" panel is the complete place for project actions: a « Projet » section
   (« Nouveau projet », « Ouvrir… », « Enregistrer », « Enregistrer sous… », « Fermer le projet »), then "Mes projets" and the presets.
@@ -2185,7 +2183,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   place in the section on both targets (« Fermer sans enregistrer ? », `unsavedChangesText`: « Enregistrer » / « Fermer
   sans enregistrer » / « Annuler ») and is cancelled when another project is opened or imported, or an export starts.
   Then `applyEmptyProject` (`project/apply.ts`: no track, no media, `DEFAULT_SETTINGS` set as a whole, default playback
-  speed, no block selected, imagery choice forgotten so the next import picks the regional imagery), history cleared,
+  speed, no block selected), history cleared,
   name emptied, marked saved, no open entry (`setOpenEntry(null)`, which forgets the remembered last project): the home
   screen appears by itself, the closed project among its « Récents ». « Nouveau projet » then opens the GPX / FIT
   picker. Disabled during an export; « Fermer le projet » also when nothing is open. Removing the last track (the ✕ of its

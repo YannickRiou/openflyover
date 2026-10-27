@@ -26,7 +26,7 @@ import { exportJob, useBatchStore } from './batch'
 import { useMediaStore } from '../film/media'
 import { IMAGERY_SOURCES } from '../terrain/sources'
 import { buildTrack } from '../import/stats'
-import { imageryChoiceKept, keepImageryChoice, useAppStore } from '../state/store'
+import { useAppStore } from '../state/store'
 
 // nothing renders in a test: a film is « made » at once, named after its job
 vi.mock('./batch', async (importOriginal) => ({
@@ -352,14 +352,13 @@ describe('runRenderQueue', () => {
     useAppStore.getState().setProjectName('Autre')
     expect(addOpenProject(selection(['16:9@720p']))).toBe('Autre')
     useQueueStore.getState().add(item('bad', { snapshot: 'not json' }))
-    // the project open before has a track, a picture, a work area and an imagery source the user did not choose
+    // the project open before has a track, a picture, a work area and its own imagery source
     const track = buildTrack({ name: 'Trace', source: 'gpx', segments: [{ points: [{ lon: 6.87, lat: 45.92, ele: 1000 }, { lon: 6.88, lat: 45.93, ele: 1100 }] }] })
     useAppStore.getState().addTracks([track])
     useAppStore.getState().setProjectName('Ouvert avant')
     useAppStore.getState().setWorkArea({ inS: 1, outS: 3 })
     useMediaStore.getState().replace({ 'photo-1': { data: 'data:image/jpeg;base64,AAAA' } })
     useAppStore.getState().setSetting('imagerySourceId', imagery)
-    keepImageryChoice(false)
     const { settings, tracks, workArea } = useAppStore.getState()
     const media = useMediaStore.getState().table
     const shown: string[] = []
@@ -383,8 +382,6 @@ describe('runRenderQueue', () => {
     expect(useAppStore.getState().tracks).toBe(tracks)
     expect(useAppStore.getState().workArea).toBe(workArea)
     expect(useMediaStore.getState().table).toEqual(media)
-    // a queued project that sets its imagery source does not count as the user's choice
-    expect(imageryChoiceKept()).toBe(false)
     expect(useBatchStore.getState().phase).toBe('idle')
     expect(useQueueStore.getState().running).toBe(false)
   })
