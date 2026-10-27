@@ -12,6 +12,7 @@
  * functions of `film/timeline.ts`; editing a stop writes the generated stops out first (`materializeStops`).
  */
 import { errorMessage } from '../core/errors'
+import { useScrollEdges } from './useScrollEdges'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode, UIEvent } from 'react'
@@ -523,6 +524,8 @@ function switchAutoStops(on: boolean): void {
 }
 
 export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { sheetOpen?: boolean; centred?: boolean; onUnfold?(): void }) {
+  /** the tools row of a centred timeline scrolls sideways: its hidden side fades */
+  const tools = useScrollEdges(centred)
   const t = useT()
   const { track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan } = useFilmSource()
   const sequence = useFilmSequence()
@@ -1603,10 +1606,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         <div
           className={
             centred
-              ? 'flex min-w-0 flex-auto items-center justify-start gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none]'
+              ? 'scroll-fade-x flex min-w-0 flex-auto items-center justify-start gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none]'
               : `contents${collapsed ? ' phone-any:hidden' : ''}`
           }
           data-testid="timeline-tools"
+          ref={tools}
         >
           {/* no lane headers on a centred timeline: the groups of the camera and speed keys lead the row */}
           {centred && (

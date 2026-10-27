@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { useBatchStore } from './export/batch'
 import { isExportBusy, useExportStore } from './export/store'
@@ -30,6 +30,7 @@ import { chooseFilesToOpen, openFiles, reopenLastProject, reportOpenFailure, sav
 import { ProjectPanel } from './ui/ProjectPanel'
 import { LightSettings, MapSettings, WeatherSettings } from './ui/SettingsPanel'
 import { useSafeZonesStore } from './ui/SafeZones'
+import { useScrollEdges } from './ui/useScrollEdges'
 import {
   BOTTOM_SHEET_QUERY,
   COMPACT_QUERY,
@@ -80,7 +81,7 @@ const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
 /** The tabs of the rail: a column on the side, a row that scrolls sideways in the phone bar (eight tabs do not fit; App keeps the open one in sight). */
 const TAB_LIST =
   'flex min-h-0 flex-col items-center gap-1 overflow-y-auto [scrollbar-width:none] ' +
-  'phone:flex-1 phone:flex-row phone:gap-0 phone:overflow-x-auto phone:overflow-y-hidden phone:overscroll-x-contain phone:px-1'
+  'phone:scroll-fade-x phone:flex-1 phone:flex-row phone:gap-0 phone:overflow-x-auto phone:overflow-y-hidden phone:overscroll-x-contain phone:px-1'
 
 const PREFS_KEY = 'openflyover.shell.v1'
 
@@ -275,6 +276,15 @@ export default function App() {
   const dockOpen = useRef(shell.dockOpen)
   const collapsedRef = useRef(shell.collapsed)
   const tabList = useRef<HTMLDivElement>(null)
+  // on a phone the rail is a row that scrolls sideways: its hidden side fades
+  const railFade = useScrollEdges(phone)
+  const railRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      tabList.current = el
+      railFade(el)
+    },
+    [railFade],
+  )
 
   // desktop: a batch asked on the command line runs once the app is up, then the app quits (export/cliRender.ts);
   // otherwise the project open when the app was last left comes back
@@ -567,7 +577,7 @@ export default function App() {
         >
           {/* portrait phone: a selected block's actions take the place of the tab bar */}
           <nav className="rail-frame chrome-focus justify-between" data-rail="" aria-label={t('shell.rail.aria')} hidden={phone && shell.inspecting}>
-            <TabList label={t('shell.rail.tablist')} className={TAB_LIST} ref={tabList}>
+            <TabList label={t('shell.rail.tablist')} className={TAB_LIST} ref={railRef}>
               {tabs.map((tab) => (
                 <Tab key={tab} id={tab} data-testid={`tab-${tab}`} className="rail-tab" disabled={exporting} tip={TAB_LABELS[tab].label} tipDisabled={phone}>
                   <Icon name={TAB_LABELS[tab].icon} />

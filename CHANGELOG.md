@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **On a phone, nothing of the bars is out of reach any more**: the « i » button of the status bar (sources and « Nouveautés ») was pushed off the screen by the credits; the credits now shorten with « … » and the button always shows. The rows that scroll sideways (the tabs, the tools of the timeline) fade out on the side where more is hidden, so the controls past the edge are not taken for missing. The hint under Carte › Imagerie no longer says that IGN or swisstopo is chosen by itself (Esri is the default everywhere since 4.6.1).
+
 ## 4.6.2 (October 2026)
 
 - **The preview shows the labels and the line as the video will**: the labels on the terrain, the width and glow of the line and the border of a « Situation » region kept a fixed size on the screen in the preview, so a phone's small 9:16 preview showed them several times larger than the film, labels cut at the edge. They now take the same share of the image in the preview as in the exported video (13 px of label text per 1080 px of the short side): what you see is what the film shows.
