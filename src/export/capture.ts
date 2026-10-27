@@ -22,8 +22,8 @@ export type DrawOverlay = (ctx: Context2D, at: FrameAt, width: number, height: n
 
 export interface SettleOptions {
   /**
-   * Renders per frame at least. One is enough: in a single `advance` the flyover rig places the camera before
-   * TerrainLayer selects the tiles for it (useFrame order), and the shadows and post-process follow the camera.
+   * Passes (`advance(false)`) per settle at least. One is enough: in a single `advance` the flyover rig places the camera
+   * before TerrainLayer selects the tiles for it (useFrame order).
    */
   minAdvances: number
   /** stop waiting for the terrain after this long (per frame): the export then fails (`tileFailureMessage`) */
@@ -45,10 +45,12 @@ export const REPLACE_EPSILON = 1e-9
 export const REPLACE_TOLERANCE_M = 1
 
 export interface SettleDeps {
-  /** render one frame (R3F `advance`); `final`: the frame that gets captured, the only one that pays for the clouds */
+  /**
+   * R3F `advance`: every layer updates for the current progress (the rig places the camera, the terrain selects its tiles).
+   * `final`: the frame that gets captured is drawn, with the clouds; otherwise nothing is drawn (the draw has no effect on
+   * what the next pass or the next draw reads, so one that is not captured would only cost GPU time).
+   */
   advance(final: boolean): void
-  /** the clouds have slices to compute: only the last render of a frame is made with them (`renderSettledFrame`) */
-  separateFinal(): boolean
   /** request the tiles of the current camera without rendering (`engine.update`) */
   updateTiles(): void
   /**
@@ -75,30 +77,25 @@ export interface RenderFrameDeps extends SettleDeps {
 }
 
 /**
- * Render until the view waits for no tile (at least `minAdvances` renders), then run the pending re-drapes
- * and render once more if one ran. While tiles load, only their requests follow (`updateTiles`, no render):
- * the next render comes once the view has them, or at the timeout. Resolves true when settled, false on
- * timeout; throws ExportCanceledError when canceled. With `separateFinal` these renders are all intermediate
- * (no clouds, no render after the re-drapes): `renderSettledFrame` makes the final one. Otherwise the last frame
- * is still in the WebGL drawing buffer when the promise settles: capture it right away, without awaiting
- * anything else first.
+ * Place the camera and select the tiles for it (a pass that draws nothing), until the view waits for no tile (at least
+ * `minAdvances` passes), then run the pending re-drapes. While tiles load, only their requests follow (`updateTiles`): the
+ * view is not drawn before it has them. Resolves true when settled, false on timeout; throws ExportCanceledError when
+ * canceled. `renderSettledFrame` draws the frame once it is.
  */
 export async function settle(deps: SettleDeps, options: SettleOptions = DEFAULT_SETTLE): Promise<boolean> {
   const start = deps.now()
   const timedOut = () => deps.now() - start >= options.timeoutMs
-  const deferred = deps.separateFinal()
   for (let n = 1; ; n++) {
-    deps.advance(!deferred)
-    const done = n >= options.minAdvances && deps.pendingTiles() === 0
-    if (done || timedOut()) {
-      if (deps.flushDrapes() && !deferred) deps.advance(true)
-      return done
-    }
-    do {
+    deps.advance(false)
+    while (deps.pendingTiles() > 0 && !timedOut()) {
       if (deps.isCanceled()) throw new ExportCanceledError()
-      await deps.wait(deps.pendingTiles() > 0 ? options.pollMs : 0)
+      await deps.wait(options.pollMs)
       deps.updateTiles()
-    } while (deps.pendingTiles() > 0 && !timedOut())
+    }
+    if (n >= options.minAdvances || timedOut()) {
+      deps.flushDrapes()
+      return deps.pendingTiles() === 0
+    }
   }
 }
 
@@ -109,40 +106,32 @@ export type FrameOutcome = 'complete' | 'timeout' | 'missing'
  * Show `progress` and wait for its terrain. The camera is placed once per progress change with the heights
  * loaded at that moment: when the final terrain moves that placement by more than REPLACE_TOLERANCE_M, it is
  * placed once more (at a progress REPLACE_EPSILON away, invisible) so the ground clearance uses the final
- * terrain. Not after a timeout: the terrain would not settle any better the second time. Then, when the clouds
- * have slices to compute (`separateFinal`), the one final render that is captured: they run once per frame
- * whatever the number of settle renders. That render selects the tiles once more: if its selection asks for any
- * (the view moved since the last check), the frame settles again and is rendered again. One timeout covers all of it.
- * `finalFirst` (the previous frame needed no wait): with the clouds, the final render comes first; when it asks for
- * no tile, runs no re-drape and leaves the camera in place, it is the very image the usual way would capture (same
- * camera, tiles and drapes: the extra render without the clouds changed nothing), so the frame costs one render
- * instead of two. Otherwise the frame goes the usual way (that render was an intermediate one).
+ * terrain. Not after a timeout: the terrain would not settle any better the second time. Nothing is drawn while the
+ * frame settles (`settle`): then the one render that is captured, with the clouds, so a frame costs one render
+ * whatever the tiles take. That render selects the tiles once more: if its selection asks for any (the view moved since
+ * the last check), the frame settles again and is rendered again. One timeout covers all of it.
  * Resolves 'timeout' or 'missing' (tiles given up on, `missingTiles`) when the view was not final at the capture.
+ * The last frame is still in the WebGL drawing buffer when the promise settles: capture it right away, without
+ * awaiting anything else first.
  */
 export async function renderSettledFrame(
   progress: number,
   deps: RenderFrameDeps,
   options: SettleOptions = DEFAULT_SETTLE,
-  finalFirst = false,
 ): Promise<FrameOutcome> {
   const start = deps.now()
   const left = (): SettleOptions => ({ ...options, timeoutMs: Math.max(0, options.timeoutMs - (deps.now() - start)) })
   const outcome = (complete: boolean): FrameOutcome => (!complete ? 'timeout' : (deps.missingTiles?.() ?? 0) > 0 ? 'missing' : 'complete')
-  const deferred = deps.separateFinal()
   deps.setProgress(progress)
-  if (deferred && finalFirst && options.minAdvances <= 1) {
-    deps.advance(true)
-    if (deps.pendingTiles() === 0 && !deps.flushDrapes() && deps.cameraDrift() <= REPLACE_TOLERANCE_M) return outcome(true)
-  }
   let complete = await settle(deps, options)
   if (complete && deps.cameraDrift() > REPLACE_TOLERANCE_M) {
     deps.setProgress(progress < 1 ? progress + REPLACE_EPSILON : progress - REPLACE_EPSILON)
     complete = await settle(deps, left())
   }
-  if (deferred) deps.advance(true)
+  deps.advance(true)
   while (complete && deps.pendingTiles() > 0) {
     complete = await settle(deps, left())
-    if (deferred) deps.advance(true)
+    deps.advance(true)
   }
   return outcome(complete)
 }

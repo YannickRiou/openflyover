@@ -4,10 +4,6 @@ import {
   EMPTY_TIMINGS,
   MEMORY_WARN_BYTES,
   chooseVideoDestination,
-  cloudsSkipped,
-  exportHasClouds,
-  registerExportClouds,
-  setSkipClouds,
   warnsInMemory,
   estimateRemainingS,
   exportRenderScale,
@@ -324,23 +320,5 @@ describe('drape flushes', () => {
     offB()
     expect(flushDrapes()).toBe(false)
     expect(a).toHaveBeenCalledTimes(2)
-  })
-})
-
-describe('clouds in the export', () => {
-  it('tells while a clouds layer computes slices for the export', () => {
-    expect(exportHasClouds()).toBe(false)
-    const off = registerExportClouds()
-    expect(exportHasClouds()).toBe(true)
-    off()
-    expect(exportHasClouds()).toBe(false)
-  })
-
-  it('skips the slices only between setSkipClouds(true) and (false)', () => {
-    expect(cloudsSkipped()).toBe(false)
-    setSkipClouds(true)
-    expect(cloudsSkipped()).toBe(true)
-    setSkipClouds(false)
-    expect(cloudsSkipped()).toBe(false)
   })
 })

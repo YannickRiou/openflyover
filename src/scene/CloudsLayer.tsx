@@ -31,7 +31,7 @@ import {
 import { CloudLayers, type CloudsEffect } from '@takram/three-clouds'
 import { Clouds, type CloudsProps } from '@takram/three-clouds/r3f'
 import { effectiveRender } from '../export/qualityTier'
-import { cloudsSkipped, isExportBusy, registerExportClouds, useExportStore } from '../export/store'
+import { isExportBusy, useExportStore } from '../export/store'
 import { samplePath } from '../flyover/path'
 import { geoidUndulation } from '../geo/geoid'
 import { useAppStore } from '../state/store'
@@ -220,10 +220,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     if (!exporting) return
     const update = effect.update
     const samples = EXPORT_SAMPLES[quality]
-    const unregister = registerExportClouds()
     effect.update = function (renderer, inputBuffer) {
-      // a render that is not captured (tiles still loading): the previous buffer stays, the final render recomputes it
-      if (cloudsSkipped()) return
       const alpha = this.cloudsPass.resolveMaterial.uniforms.temporalAlpha
       const previous = alpha.value
       // motion blur: this sub-frame's share of the slices, the other sub-frames average the rest
@@ -237,7 +234,6 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
       alpha.value = previous
     }
     return () => {
-      unregister()
       effect.update = update
     }
   }, [exporting, quality, cloudResolutionScale])

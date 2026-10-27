@@ -16,21 +16,20 @@ import {
 import { ExportCanceledError } from './encoder'
 
 /**
- * Fake scene on a virtual clock: each render takes 10 ms, `wait` advances the clock, the view's tiles are
+ * Fake scene on a virtual clock: each pass takes 10 ms, `wait` advances the clock, the view's tiles are
  * ready from `1000 + loadedAt` (which leaves a re-drape pending), the camera placement drifts by `drift` m.
+ * `finals` holds the `final` flag of each pass: the renders are the true ones.
  */
 function fakeScene({
   loadedAt = 0,
   canceled = (): boolean => false,
   drift = 0,
-  clouds = false,
   missing = 0,
   lateRequest = false,
 } = {}) {
   let clock = 1000
-  let drapePending = false
   const renders: number[] = []
-  /** `final` flag of each render */
+  /** `final` flag of each pass */
   const finals: boolean[] = []
   const progress: number[] = []
   const flushes: boolean[] = []
@@ -41,19 +40,17 @@ function fakeScene({
     advance: (final) => {
       finals.push(final)
       clock += 10
-      if (loadedAt > 0 && renders.length > 0 && clock >= loadedAt + 1000 && renders.at(-1)! < loadedAt + 1000) drapePending = true
       renders.push(clock)
       if (lateRequest && final && lateUntil === 0) lateUntil = clock + 100
     },
-    separateFinal: () => clouds,
     updateTiles: () => {
       tileUpdates++
     },
     pendingTiles: () => (clock < loadedAt + 1000 || clock < lateUntil ? 2 : 0),
     missingTiles: () => missing,
     flushDrapes: () => {
-      const ran = drapePending
-      drapePending = false
+      // the tiles that came leave a re-drape to run, once
+      const ran = loadedAt > 0 && clock >= loadedAt + 1000 && !flushes.includes(true)
       flushes.push(ran)
       return ran
     },
@@ -65,36 +62,36 @@ function fakeScene({
     setProgress: (p) => progress.push(p),
     cameraDrift: () => drift,
   }
-  return { deps, renders, finals, progress, flushes, tileUpdates: () => tileUpdates }
+  const drawn = () => finals.filter(Boolean).length
+  return { deps, renders, finals, progress, flushes, drawn, tileUpdates: () => tileUpdates }
 }
 
 describe('settle', () => {
-  it('renders once when the terrain is already complete', async () => {
-    const { deps, renders, flushes } = fakeScene()
+  it('makes one pass, drawing nothing, when the terrain is already complete', async () => {
+    const { deps, finals, flushes } = fakeScene()
     expect(await settle(deps)).toBe(true)
-    expect(renders).toHaveLength(1)
+    expect(finals).toEqual([false])
     expect(flushes).toEqual([false])
   })
 
-  it('polls until the view has its tiles, then re-drapes and renders once more', async () => {
-    const { deps, renders, flushes } = fakeScene({ loadedAt: 200 })
+  it('polls until the view has its tiles, then re-drapes, without drawing again', async () => {
+    const { deps, finals, flushes } = fakeScene({ loadedAt: 200 })
     expect(await settle(deps)).toBe(true)
     expect(deps.now()).toBeGreaterThanOrEqual(1200)
     expect(deps.now()).toBeLessThan(1200 + 60)
     expect(flushes).toEqual([true])
-    // the last render follows the flush
-    expect(renders.length).toBeGreaterThan(2)
+    expect(finals).toEqual([false])
   })
 
-  it('only requests tiles while they load: renders the first frame, the settled one and the re-drape', async () => {
+  it('only requests tiles while they load: one pass, then the requests alone', async () => {
     const { deps, renders, tileUpdates } = fakeScene({ loadedAt: 1000 })
     expect(await settle(deps)).toBe(true)
-    expect(renders).toHaveLength(3)
-    expect(renders[1]).toBeGreaterThanOrEqual(2000)
+    expect(renders).toHaveLength(1)
+    expect(deps.now()).toBeGreaterThanOrEqual(2000)
     expect(tileUpdates()).toBeGreaterThan(50)
   })
 
-  it('honours a minimum number of renders', async () => {
+  it('honours a minimum number of passes', async () => {
     const { deps, renders } = fakeScene()
     await settle(deps, { ...DEFAULT_SETTLE, minAdvances: 3 })
     expect(renders).toHaveLength(3)
@@ -105,9 +102,7 @@ describe('settle', () => {
     expect(await settle(deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })).toBe(false)
     expect(deps.now()).toBeLessThan(1000 + 600)
     expect(flushes).toHaveLength(1)
-    // the captured frame is rendered at the timeout, with the tiles there by then
-    expect(renders).toHaveLength(2)
-    expect(renders[1]).toBeGreaterThanOrEqual(1000 + 500)
+    expect(renders).toHaveLength(1)
   })
 
   it('throws when canceled', async () => {
@@ -142,42 +137,30 @@ describe('renderSettledFrame', () => {
   })
 })
 
-describe('renderSettledFrame with clouds', () => {
-  const withClouds = { ...DEFAULT_SETTLE }
-
-  it('renders once without clouds, then once with them, when the terrain is already complete', async () => {
-    const { deps, finals } = fakeScene({ clouds: true })
-    expect(await renderSettledFrame(0.25, deps, withClouds)).toBe('complete')
+describe('renderSettledFrame draws once', () => {
+  it('draws nothing, then once, when the terrain is already complete', async () => {
+    const { deps, finals } = fakeScene()
+    expect(await renderSettledFrame(0.25, deps)).toBe('complete')
     expect(finals).toEqual([false, true])
   })
 
-  it('computes the clouds once however many renders the tiles and the re-drape take', async () => {
-    const { deps, finals, flushes } = fakeScene({ clouds: true, loadedAt: 1000, drift: 5 })
-    expect(await renderSettledFrame(0.25, deps, withClouds)).toBe('complete')
-    expect(finals.filter(Boolean)).toHaveLength(1)
-    // the final render is the last one, after the re-drapes
-    expect(finals.at(-1)).toBe(true)
-    expect(finals.length).toBeGreaterThan(3)
-    expect(flushes.at(-1)).toBe(false)
+  it('draws once however many polls, passes and re-drapes the tiles and the camera take', async () => {
+    const { deps, finals, flushes } = fakeScene({ loadedAt: 1000, drift: 5 })
+    expect(await renderSettledFrame(0.25, deps)).toBe('complete')
+    expect(finals).toEqual([false, false, true])
+    // the render follows the re-drape
+    expect(flushes).toEqual([true, false])
   })
 
-  it('renders the final frame at the timeout too', async () => {
-    const { deps, finals } = fakeScene({ clouds: true, loadedAt: 60_000, drift: 5 })
+  it('draws the frame at the timeout too', async () => {
+    const { deps, finals } = fakeScene({ loadedAt: 60_000, drift: 5 })
     expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })).toBe('timeout')
-    expect(finals.at(-1)).toBe(true)
-    expect(finals.filter(Boolean)).toHaveLength(1)
+    expect(finals).toEqual([false, true])
   })
 
-  it('leaves the renders as they were without clouds: every render is a final one', async () => {
-    const { deps, finals, renders } = fakeScene({ loadedAt: 1000 })
+  it('places the camera again before the render', async () => {
+    const { deps, finals, progress } = fakeScene({ loadedAt: 100, drift: 5 })
     await renderSettledFrame(0.25, deps)
-    expect(renders).toHaveLength(3)
-    expect(finals.every(Boolean)).toBe(true)
-  })
-
-  it('places the camera again before the final render', async () => {
-    const { deps, finals, progress } = fakeScene({ clouds: true, loadedAt: 100, drift: 5 })
-    await renderSettledFrame(0.25, deps, withClouds)
     expect(progress).toEqual([0.25, 0.25 + REPLACE_EPSILON])
     expect(finals.slice(0, -1).every((f) => !f)).toBe(true)
   })
@@ -196,8 +179,8 @@ describe('renderSettledFrame, the view is final at the capture', () => {
     expect(await renderSettledFrame(0.25, deps)).toBe('missing')
   })
 
-  it('settles and renders again when the final render selected tiles nobody waited for', async () => {
-    const { deps, finals } = fakeScene({ clouds: true, lateRequest: true })
+  it('settles and renders again when the render selected tiles nobody waited for', async () => {
+    const { deps, finals } = fakeScene({ lateRequest: true })
     expect(await renderSettledFrame(0.25, deps)).toBe('complete')
     // the captured render is the last one and follows the end of the wait
     expect(finals.filter(Boolean)).toHaveLength(2)
@@ -208,40 +191,96 @@ describe('renderSettledFrame, the view is final at the capture', () => {
   it('spends one timeout on a frame, not one per settle', async () => {
     const { deps } = fakeScene({ loadedAt: 400, drift: 5 })
     expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500, minAdvances: 1 })).toBe('complete')
-    const slow = fakeScene({ loadedAt: 450, drift: 5, lateRequest: true, clouds: true })
+    const slow = fakeScene({ loadedAt: 450, drift: 5, lateRequest: true })
     const start = slow.deps.now()
     await renderSettledFrame(0.25, slow.deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })
     expect(slow.deps.now() - start).toBeLessThan(500 + 100)
   })
 })
 
-describe('renderSettledFrame, final render first (the previous frame needed no wait)', () => {
-  it('renders once, with the clouds, when the view has its tiles', async () => {
-    const { deps, finals } = fakeScene({ clouds: true })
-    expect(await renderSettledFrame(0.25, deps, DEFAULT_SETTLE, true)).toBe('complete')
-    expect(finals).toEqual([true])
-  })
+/**
+ * A film over a relief of overlapping tiles: frame f shows the tiles f..f+2, each asked for at the first update that sees
+ * it and answered `latencyMs` later, one frame placing the camera at the height of the tiles loaded at that moment
+ * (so a frame whose tiles came afterwards is placed again). `draws` records what each render shows.
+ */
+function filmScene(latencyMs: number) {
+  let clock = 0
+  let progress = 0
+  let placedFor = NaN
+  let camera = { frame: 0, ground: 0 }
+  const loaded = new Set<number>()
+  const asked = new Map<number, number>()
+  const tilesOf = (f: number) => [f, f + 1, f + 2]
+  const arrive = () => {
+    for (const [tile, at] of asked)
+      if (at <= clock) {
+        asked.delete(tile)
+        loaded.add(tile)
+      }
+  }
+  const ground = (f: number) => tilesOf(f).filter((t) => loaded.has(t)).length * 10
+  const pending = () => {
+    arrive()
+    return tilesOf(camera.frame).filter((t) => !loaded.has(t)).length
+  }
+  const update = () => {
+    arrive()
+    for (const t of tilesOf(camera.frame)) if (!loaded.has(t) && !asked.has(t)) asked.set(t, clock + latencyMs)
+  }
+  const draws: { frame: number; ground: number; tiles: number[]; pending: number }[] = []
+  let passes = 0
+  let waited = 0
+  const deps: RenderFrameDeps = {
+    advance: (final) => {
+      arrive()
+      // the rig places the camera when the progress changes, the nudge of a placement again included
+      if (placedFor !== progress) {
+        placedFor = progress
+        camera = { frame: Math.round(progress), ground: ground(Math.round(progress)) }
+      }
+      update()
+      clock += 10
+      if (!final) {
+        passes++
+        return
+      }
+      draws.push({ frame: camera.frame, ground: camera.ground, tiles: tilesOf(camera.frame).filter((t) => loaded.has(t)), pending: pending() })
+    },
+    updateTiles: update,
+    pendingTiles: pending,
+    flushDrapes: () => false,
+    now: () => clock,
+    wait: async (ms) => {
+      waited++
+      clock += ms
+    },
+    isCanceled: () => false,
+    setProgress: (p) => {
+      progress = p
+    },
+    cameraDrift: () => Math.abs(ground(camera.frame) - camera.ground),
+  }
+  return { deps, draws, passes: () => passes, waited: () => waited }
+}
 
-  it('goes the usual way, ending on a final render, when that render asks for tiles', async () => {
-    const { deps, finals } = fakeScene({ clouds: true, loadedAt: 100 })
-    expect(await renderSettledFrame(0.25, deps, DEFAULT_SETTLE, true)).toBe('complete')
-    expect(finals[0]).toBe(true)
-    expect(finals.at(-1)).toBe(true)
-    expect(finals.slice(1, -1).every((f) => !f)).toBe(true)
-  })
-
-  it('goes the usual way when the camera must be placed again', async () => {
-    const { deps, finals, progress } = fakeScene({ clouds: true, drift: 5 })
-    await renderSettledFrame(0.25, deps, DEFAULT_SETTLE, true)
-    expect(progress).toEqual([0.25, 0.25 + REPLACE_EPSILON])
-    expect(finals.at(-1)).toBe(true)
-  })
-
-  it('changes nothing without clouds', async () => {
-    const { deps, finals } = fakeScene()
-    await renderSettledFrame(0.25, deps, DEFAULT_SETTLE, true)
-    expect(finals).toEqual([true])
-  })
+describe('renderSettledFrame over a film with tile latency', () => {
+  for (const latencyMs of [0, 40, 400]) {
+    it(`draws each frame once, with all its tiles and the camera placed on them (${latencyMs} ms per tile)`, async () => {
+      const { deps, draws, passes, waited } = filmScene(latencyMs)
+      for (let f = 0; f < 20; f++) expect(await renderSettledFrame(f, deps)).toBe('complete')
+      // one render per frame: what was drawn is what the view settled on, nothing before it was
+      expect(draws.map((d) => d.frame)).toEqual([...Array(20).keys()])
+      for (const d of draws) {
+        expect(d.tiles).toEqual([d.frame, d.frame + 1, d.frame + 2])
+        expect(d.pending).toBe(0)
+        expect(d.ground).toBe(30)
+      }
+      // the passes only select tiles and place the camera, once, or twice when the tiles moved it
+      expect(passes()).toBeGreaterThanOrEqual(20)
+      expect(passes()).toBeLessThanOrEqual(40)
+      expect(waited() > 0).toBe(latencyMs > 0)
+    })
+  }
 })
 
 describe('tileFailureMessage', () => {
