@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The preview shows the labels and the line as the video will**: the labels on the terrain, the width and glow of the line and the border of a « Situation » region kept a fixed size on the screen in the preview, so a phone's small 9:16 preview showed them several times larger than the film, labels cut at the edge. They now take the same share of the image in the preview as in the exported video (13 px of label text per 1080 px of the short side): what you see is what the film shows.
+
 ## 4.6.1 (October 2026)
 
 - **Opening the website shows a new version at once**: the page used to come from the copy the browser kept for offline use, so a new version showed only after its whole download and a « Nouvelle version disponible » › « Recharger » that came long after opening, and a plain reload kept the old version. The page is now asked of the network first (the saved copy still opens offline or when the network is slow, after 3 s at most): opening or reloading the site shows the latest version, with no message; the message stays for an app left open while a version comes out.

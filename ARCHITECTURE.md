@@ -1356,7 +1356,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   (4 px, solid, white ball). Checked by `SETTING_CHECKS`, completed by `SETTING_UPGRADES` (keys added later).
   `image`: 128 px square PNG as a data URL (`fileToAvatarDataUrl`, platform picker), 300,000 characters at most.
   « Trace » and « Marqueur » sections of the Trace tab (`src/ui/TrackMarkerSection.tsx`).
-- **Width**: pixels of a 1080 px image, times `renderScale` in the export (as before). **Glow** (« Halo de la trace »):
+- **Width**: pixels of a 1080 px image, times `exportRenderScale` of the canvas (short side / 1080) in the export and in
+  the preview alike, so the preview shows the line as the film will (a phone's small 9:16 preview: a thin line). **Glow** (« Halo de la trace »):
   a second `Line2` on the same geometry, `glowWidth` px wide (6–64, default 24), `LineMaterial` material whose fragment
   shader is replaced (`onBeforeCompile`, own program key): colour × `glowStrength` × gaussian radial fade (`vUv`,
   exp(−4x²) shifted to reach 0 at the edge) from the edge of the line (`glowInner` = width / glowWidth) outwards,
@@ -2059,7 +2060,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   (the foot, the post, the framed thumbnail drawn on a canvas from the table's 160 px thumbnail; lit: chartreuse frame and glow, ×1.25), drawn like the labels (`AlwaysDepth` with a depth write, so the atmosphere does not haze them as sky).
   Size: a share of the height of the frame (`PIN_REFERENCE_HEIGHT_PX` = 720, or the height of a 16:9 frame of the same width in
   a tall frame), not CSS pixels, so the preview and every export resolution show the same pin (the 3D labels, in pixels, use
-  `renderScale`); down to 50 % from 1 to 10 km. Hidden behind the relief and faded with « Portée » like the labels
+  `exportRenderScale` of the canvas); down to 50 % from 1 to 10 km. Hidden behind the relief and faded with « Portée » like the labels
   (`occlusionFade`, `distanceFade`). Not drawn when the export request is a poster (`still.compose`): the poster of the 3D view
   has no pins; the still image of « Image fixe » has them like the film.
 - **Decluttering** (`scene/pinLayout.ts`, pure, tested): `layoutPins(boxes, labelRects)` places the lit pins first (over
@@ -2472,7 +2473,9 @@ exports) gets it from the terrain source of the settings.
 - **UTC offset**: `Track.utcOffsetMin?` (optional addition to the contract, minutes by which the local clock is ahead of UTC) comes
   from the `localTimestamp` of a FIT `activity` message (to the quarter hour, `readUtcOffset`) or from the first `<time>` of a GPX
   written with an offset (`gpxUtcOffset`; "Z" and "+00:00" say nothing); the project document saves it.
-- **`Labels`** (in `TerrainLayer`): WebGL sprites with a canvas texture (constant screen size, ink panel, white text,
+- **`Labels`** (in `TerrainLayer`): WebGL sprites with a canvas texture (a constant share of the image: 13 px of text per
+  1080 px of the short side, `exportRenderScale` of the canvas, in the export and in the preview alike, so a small preview shows
+  them as small as the film will; ink panel, white text,
   accent stroke per type) for the summit of each climb, the waypoints, the kilometer markers (`kmLabels`, one every
   `labels.kmStep` km of the first track, counter distances, priority 20: below everything else), the points
   of interest (`poiLabels`, light orange pictogram instead of the stroke, `FilmPoi.icon` among 9 Lucide paths in

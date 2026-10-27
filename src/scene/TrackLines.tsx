@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Group, Vector3 } from 'three'
 import type { TerrainEngine } from '../core/types'
-import { registerDrapeFlush, useExportStore } from '../export/store'
+import { exportRenderScale, registerDrapeFlush } from '../export/store'
 import { filmSequenceOf, orderedTracks } from '../flyover/sequence'
 import { useAppStore } from '../state/store'
 import type { TrackStyle } from './markerSettings'
@@ -146,7 +146,8 @@ export function TrackLines() {
   }, [tracks, frame, colorBy, smoothingM])
 
   useFrame(({ gl, camera, size: canvas }) => {
-    const { renderScale } = useExportStore.getState()
+    // the share of the image the video gives them (`exportRenderScale`): the preview shows them as the film will
+    const renderScale = exportRenderScale(canvas.width, canvas.height)
     const style = useAppStore.getState().settings.trackStyle
     const pixelSize = style.dash === 'plein' ? 0 : quantizedPixelSize(viewDistance(camera, controls?.target ?? null), camera, canvas.height)
     const applied = styleRef.current

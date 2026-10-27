@@ -169,8 +169,6 @@ export interface ExportState {
   result: ExportResult | null
   error: string | null
   timings: ExportTimings
-  /** multiplier of pixel-sized scene elements: `exportRenderScale` during an export, 1 otherwise */
-  renderScale: number
   /** seconds per frame and per megapixel of the last film exported (time hint of a batch), kept by `start` and `reset` */
   secondsPerMegapixel: number | null
   /** tiles of a still's view loaded / to load (flat map: requests; 3D: the most pending seen so far), null otherwise */
@@ -187,7 +185,6 @@ export interface ExportState {
   begin(id: number, frameCount: number, now: number): boolean
   reportFrame(frame: number, now: number, timings?: ExportTimings): void
   reportTiles(done: number, total: number): void
-  setRenderScale(scale: number): void
   finalizing(): void
   complete(result: ExportResult): void
   fail(message: string): void
@@ -238,7 +235,6 @@ const IDLE = {
   result: null,
   error: null,
   timings: EMPTY_TIMINGS,
-  renderScale: 1,
   tiles: null,
 }
 
@@ -332,10 +328,6 @@ export const useExportStore = create<ExportState>()((set, get) => ({
   reportTiles(done, total) {
     const { tiles } = get()
     if (tiles?.done !== done || tiles.total !== total) set({ tiles: { done, total } })
-  },
-
-  setRenderScale(renderScale) {
-    if (renderScale !== get().renderScale) set({ renderScale })
   },
 
   finalizing() {

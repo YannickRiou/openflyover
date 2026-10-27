@@ -213,7 +213,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const projectName = useAppStore((s) => s.projectName)
   const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
   const setSetting = useAppStore((s) => s.setSetting)
-  // only what the panel draws: `cancelRequested`, `request`, `renderScale`… changing does not redraw it
+  // only what the panel draws: `cancelRequested`, `request`… changing does not redraw it
   const { phase, frame, frameCount, etaS, result, error, timings } = useExportStore(
     useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, timings: s.timings })),
   )

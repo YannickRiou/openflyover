@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { AlwaysDepth, CanvasTexture, Group, type Camera, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
-import { registerDrapeFlush, useExportStore } from '../export/store'
+import { exportRenderScale, registerDrapeFlush } from '../export/store'
 import { useMediaStore } from '../film/media'
 import { paramAt } from '../film/paramKeys'
 import { trackPathOf } from '../flyover/path'
@@ -224,8 +224,8 @@ const projected = new Vector3()
 
 /**
  * Per-frame visibility: distance fade, occlusion cut, screen culling, de-cluttering by priority, fade under the
- * constant screen size (times `renderScale`, > 1 for a video larger than the
- * preview), and colour divided by the renderer exposure (unlit sprites, like the track).
+ * share of the image (`renderScale`: `exportRenderScale` of the canvas, the preview's as the video's), and colour divided by the
+ * renderer exposure (unlit sprites, like the track).
  */
 function updateLabelSet(
   set: LabelSet,
@@ -445,7 +445,8 @@ export function Labels() {
       return
     }
     const { playback, settings, tracks } = useAppStore.getState()
-    const { renderScale } = useExportStore.getState()
+    // the share of the image the video gives them (`exportRenderScale`): the preview shows them as the film will
+    const renderScale = exportRenderScale(size.width, size.height)
     // the « Étiquettes » keys are anchored in metres along the film track, like the other parameter keys
     const flown = filmTrackOf(tracks, settings.race)
     const keyOpacity = paramAt(settings.film, 1, 'labels', playback.progress * (flown ? trackPathOf(flown).lengthM : 0))
