@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 4.6.1 (October 2026)
 
 - **Opening the website shows a new version at once**: the page used to come from the copy the browser kept for offline use, so a new version showed only after its whole download and a « Nouvelle version disponible » › « Recharger » that came long after opening, and a plain reload kept the old version. The page is now asked of the network first (the saved copy still opens offline or when the network is slow, after 3 s at most): opening or reloading the site shows the latest version, with no message; the message stays for an app left open while a version comes out.
 - **« Film automatique » draws the line as the marker goes, with a light glow, over Esri imagery**: each gabarit now also switches on « Trace qui se dessine » and a light glow of the track's colour (intensity 40 %, 16 px), and sets the base map to Esri World Imagery; « Annuler » puts the previous look back with the rest, and everything stays editable in « Trace » and « Carte ».
