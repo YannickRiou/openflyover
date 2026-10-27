@@ -43,6 +43,19 @@ describe('autoFilmSettings', () => {
     expect(souvenir.overlay.counters.enabled).toBe(true)
   })
 
+  it('draws the line as the marker goes, with a light glow of its colour, over Esri World Imagery', () => {
+    const own = {
+      ...DEFAULT_SETTINGS,
+      imagerySourceId: 'ign-ortho',
+      trackStyle: { ...DEFAULT_SETTINGS.trackStyle, drawOn: false, glow: false, glowIntensity: 1, glowWidth: 40, glowColor: '#00ff00', width: 6 },
+    }
+    for (const id of AUTO_FILM_IDS) {
+      const s = autoFilmSettings(own, id, single)
+      expect(s.trackStyle).toEqual({ ...own.trackStyle, drawOn: true, glow: true, glowIntensity: 0.4, glowWidth: 16 })
+      expect(s.imagerySourceId).toBe(DEFAULT_SETTINGS.imagerySourceId)
+    }
+  })
+
   it('keeps the cards fully readable a few seconds past the shots, whatever the length', () => {
     for (const id of AUTO_FILM_IDS) {
       const s = autoFilmSettings(DEFAULT_SETTINGS, id, single)

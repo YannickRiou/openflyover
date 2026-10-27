@@ -18,6 +18,11 @@ import { DEFAULT_DAY_CARDS } from './model'
 import type { Film } from './model'
 
 export const AUTO_FILM_IDS = ['reel', 'resume', 'souvenir'] as const
+
+/** The line of a « Film automatique »: it draws itself as the marker goes, with a light glow of its own colour. */
+export const AUTO_FILM_TRACK = { drawOn: true, glow: true, glowIntensity: 0.4, glowWidth: 16 } as const
+/** Esri World Imagery, the default source (`DEFAULT_SETTINGS.imagerySourceId`): detailed and even everywhere. */
+export const AUTO_FILM_IMAGERY = 'arcgis-world-imagery'
 export type AutoFilmId = (typeof AUTO_FILM_IDS)[number]
 
 export interface AutoFilmTemplate {
@@ -111,5 +116,15 @@ export function autoFilmSettings(settings: Settings, id: AutoFilmId, context: Au
     counters: { ...styled.counters, enabled: tpl.counters },
   }
 
-  return { ...settings, flyoverDurationS: durationS, camera: { ...camera }, pacing, film, overlay, video: withPlatformPreset(settings.video, tpl.platform) }
+  return {
+    ...settings,
+    flyoverDurationS: durationS,
+    camera: { ...camera },
+    pacing,
+    film,
+    overlay,
+    video: withPlatformPreset(settings.video, tpl.platform),
+    trackStyle: { ...settings.trackStyle, ...AUTO_FILM_TRACK },
+    imagerySourceId: AUTO_FILM_IMAGERY,
+  }
 }
