@@ -280,6 +280,37 @@ describe('runExport', () => {
     expect(setRetention.mock.calls).toEqual([[null]])
   })
 
+  it('asks for the next frame\'s tiles right after a frame is drawn, before waiting for the GPU', async () => {
+    const track = buildTrack({
+      name: 'test',
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 12 }, (_, i) => ({ lon: 6.78, lat: 45.9 - i * 0.009, ele: 1000 })) }],
+    })
+    const tracks = useAppStore.getState().tracks
+    useAppStore.setState({ tracks: [track] })
+    const events: string[] = []
+    const prefetch = vi.fn(() => {
+      events.push('prefetch')
+      return 0
+    })
+    readPixels.mockImplementation(() => events.push('gpu'))
+    const engine = { prefetch, update: vi.fn(), sampleHeight: () => 0, onChange: () => () => {}, stats: { pendingTiles: 0, pendingVisibleTiles: 0 } }
+    try {
+      await exportFilm(destination(), {
+        engine: () => engine as unknown as TerrainEngine,
+        frame: () => createLocalFrame(6.78, 45.85),
+        budget: DESKTOP_BUDGET,
+      })
+    } finally {
+      useAppStore.setState({ tracks })
+      readPixels.mockReset()
+    }
+    // every wait for the GPU but the last one's (no frame after it) comes after a prefetch since the previous wait
+    const waits = events.flatMap((e, k) => (e === 'gpu' ? [k] : []))
+    expect(waits.length).toBeGreaterThan(2)
+    for (let w = 0; w < waits.length - 1; w++) expect(events.slice(w === 0 ? 0 : waits[w - 1] + 1, waits[w])).toContain('prefetch')
+  })
+
   it('prefetches the upcoming frames while a frame waits for its tiles, at most every 100 ms', async () => {
     const track = buildTrack({
       name: 'test',

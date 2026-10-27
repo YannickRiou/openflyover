@@ -2759,7 +2759,9 @@ exports) gets it from the terrain source of the settings.
   The camera is repositioned (progress shifted by 1e-9) only if the final terrain moves it
   by more than 1 m, never after a timeout. Every 5 rendered frames, the tiles for frames +5 to +40 are
   requested ahead of time (`engine.prefetch`), and again at most every 100 ms while a frame waits for its tiles
-  (`PREFETCH_WAIT_MS`): the network is mostly idle during those waits (one load in flight out of 24 was typical), and
+  (`PREFETCH_WAIT_MS`), and those of the next frame (+1, `NEXT_FRAME`) right after each frame is drawn, before the
+  wait for the GPU (`waitForGpu` reads a pixel, which blocks the page but not the network nor the tile workers: about
+  0.2 s per image on an iPhone 12, during which the next frame's tiles now load): the network is mostly idle during those waits (one load in flight out of 24 was typical), and
   a prefetch only reaches one level deeper per call (children are selected once their parent is loaded). Prefetches (and the preview's retries) are fetched at a low network priority (`priority: 'low'`, Priority Hints, `BACKGROUND_PRIORITY` in `terrain/fetch.ts`; ignored where unsupported): the browser serves the tiles the frame waits for first.
 - The WebGL image is composited in the same task as the render onto an `OffscreenCanvas` (sky gradient, image, then overlay
   `DrawOverlay(ctx, { progress, time }, w, h)` after loading its fonts, `time` = `overlayTime(clock, progress,
