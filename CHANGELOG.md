@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 4.6.4 (October 2026)
 
 - **The app installed on an iPhone keeps its top bar clear of the status bar's shadow**: on iOS 27 a coloured shadow of the status bar spills over the top of an app opened from the home screen. Upright, the top bar now leaves 16 px more above it, in its own colour, so the shadow falls on that band and not on the project name and the buttons. A Safari tab, landscape and other phones are unchanged.
 

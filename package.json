@@ -2,7 +2,7 @@
   "name": "openflyover",
   "private": true,
   "license": "MIT",
-  "version": "4.6.3",
+  "version": "4.6.4",
   "type": "module",
   "engines": {
     "node": ">=24"
