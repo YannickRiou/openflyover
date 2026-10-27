@@ -1592,6 +1592,40 @@ function drawShortCredits(p: Painter, items: readonly string[], position: Credit
   ctx.restore()
 }
 
+/** A frame at least this much taller than wide (9:16, 2:3) writes its source credits up the side edge. */
+export const VERTICAL_CREDITS_RATIO = 1.5
+/** ... and writes them this much larger: the long side has room for it, and a phone shows them small. */
+export const VERTICAL_CREDITS_SCALE = 1.5
+
+/**
+ * `draw` the corner credits: as they are, or in a tall frame up the side edge of `position` (from its bottom or its top
+ * corner), read from the bottom like a photo credit, so the long side gives them one line instead of several squeezed
+ * across the width, and room to be `VERTICAL_CREDITS_SCALE` larger. The frame is turned a quarter left: what `draw`
+ * lays out at its bottom lies along the right edge.
+ */
+function drawCornerCredits(
+  p: Painter,
+  position: CreditsPosition,
+  area: Rect | undefined,
+  draw: (q: Painter, position: CreditsPosition, area?: Rect) => void,
+): void {
+  const { width: W, height: H } = p.size
+  if (H < VERTICAL_CREDITS_RATIO * W) {
+    draw(p, position, area)
+    return
+  }
+  const right = position.endsWith('right')
+  const bottom = position.startsWith('bottom')
+  // in the turned frame the right edge is the bottom, the left edge the top; the bottom corner is the left end
+  const turned = `${right ? 'bottom' : 'top'}-${bottom ? 'left' : 'right'}` as CreditsPosition
+  const turnedArea = area && { x: H - (area.y + area.h), y: area.x, w: area.h, h: area.w }
+  p.ctx.save()
+  p.ctx.translate(0, H)
+  p.ctx.rotate(-Math.PI / 2)
+  draw({ ...p, u: p.u * VERTICAL_CREDITS_SCALE, size: { width: H, height: W } }, turned, turnedArea)
+  p.ctx.restore()
+}
+
 /** "Ciel dégagé · 8 à 17 °C · vent jusqu'à 25 km/h"; '' without weather. */
 export function weatherSummaryLine(summary: WeatherSummary | undefined): string {
   if (!summary) return ''
@@ -2002,8 +2036,9 @@ export function drawOverlay(
   if (credits.length > 0 && sourcesCover < 0.999) {
     ctx.save()
     ctx.globalAlpha = 1 - sourcesCover
-    if (mode === 'full') drawCredits(p, credits, settings.credits.position, structure?.area)
-    else drawShortCredits(p, credits, settings.credits.position, structure?.area)
+    drawCornerCredits(p, settings.credits.position, structure?.area, (q, position, area) =>
+      mode === 'full' ? drawCredits(q, credits, position, area) : drawShortCredits(q, credits, position, area),
+    )
     ctx.restore()
   }
   if (endSources > 0.001) {

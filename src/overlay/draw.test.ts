@@ -807,6 +807,23 @@ describe('source credits', () => {
     expect(calls).not.toContain('fill')
   })
 
+  it('run up the side edge of a tall frame, on one line, and stay along the bottom of a wide or nearly square one', () => {
+    // long enough to take two lines across a 9:16 frame
+    const many = Array.from({ length: 6 }, (_, i) => `© Source numéro ${i + 1} des données`)
+    const at = (size: { width: number; height: number }) => {
+      const { ctx, texts, calls } = fakeContext()
+      drawOverlay(ctx, overlayFrameAt(track, 0.5), TITLED, size, {}, { credits: many, shortCredits: many })
+      const px = Number(/(\d+(?:\.\d+)?)px/.exec(texts[0]?.font ?? '')?.[1])
+      return { lines: texts.length, turned: calls.includes('rotate(1)'), px }
+    }
+    expect(at({ width: 1080, height: 1920 })).toEqual({ lines: 1, turned: true, px: expect.any(Number) })
+    expect(at({ width: 1920, height: 1080 })).toMatchObject({ lines: 1, turned: false })
+    // half as large again as across the bottom of a frame of the same short side
+    expect(at({ width: 1080, height: 1920 }).px).toBeCloseTo(1.5 * at({ width: 1920, height: 1080 }).px, 6)
+    expect(at({ width: 1080, height: 1350 }).turned).toBe(false)
+    expect(at({ width: 1080, height: 1350 }).lines).toBeGreaterThan(1)
+  })
+
   it('give the whole sentence in the corner with the full mode', () => {
     const full = { ...TITLED, credits: { ...TITLED.credits, mode: 'full' as const } }
     expect(render(full, { credits, shortCredits: short }).texts.map((t) => t.text)).toEqual(['Relief : © Mapterhorn · Imagerie : © IGN'])
