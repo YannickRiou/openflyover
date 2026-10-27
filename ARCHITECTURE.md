@@ -2695,7 +2695,10 @@ exports) gets it from the terrain source of the settings.
   by `overlayExtras` (`exportOverlay.ts`, through `currentCreditSources`) for the preview as for the export. Drawn even with the overlay disabled
   (`OverlayCanvas` is mounted whenever there is a track). **During the film**, by `mode`: « short » (« Discrets ») is `drawShortCredits`
   (small capitals, 70 % opacity, white with a shadow, no box, the overlay style's font, along the corner); « full » is `drawCredits` (the whole
-  sentence on the style's discreet background, `theme.credits`, wrapped to the safe width); « end » draws only the credits that must stay on
+  sentence on the style's discreet background, `theme.credits`, wrapped to the safe width). In a frame at least
+  `VERTICAL_CREDITS_RATIO` (1.5) times taller than wide, both go through `drawCornerCredits`: drawn in the frame turned a quarter
+  left, up the side edge of their position from its corner, read from the bottom, `VERTICAL_CREDITS_SCALE` (1.5) larger,
+  usually on one line; « end » draws only the credits that must stay on
   screen, in the short form: Open-Meteo while the weather is shown (its licence asks for the credit next to the data) and the sources flagged in
   `PERMANENT_CREDIT` (`data.ts`, `overlayPermanentCredits`, `extras.permanentCredits`: Esri, whose terms ask for the credit always visible with
   the map). **At the end, always**, whatever the mode: the full sentences (`extras.credits`) close the roll of the closing card (`drawCreditsRoll`:
