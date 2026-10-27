@@ -37,9 +37,35 @@ export function wantsIosInstallHint(nav: { userAgent: string; maxTouchPoints?: n
   return isAppleMobile(nav) && nav.standalone !== true
 }
 
-function offerUpdate(registration: ServiceWorkerRegistration): void {
+/** Path of the page's entry script within `scope` (`assets/index-<hash>.js` in a build), null when it has none there. */
+export function entryPath(doc: Pick<Document, 'querySelector'>, scope: string): string | null {
+  const src = (doc.querySelector('script[type="module"][src]') as HTMLScriptElement | null)?.src
+  return src?.startsWith(scope) ? src.slice(scope.length) : null
+}
+
+/** Whether `worker` precaches `path` (`HAS_FILE`, serviceWorker.js): false without an answer within `timeoutMs`. */
+export function workerHas(worker: Pick<ServiceWorker, 'postMessage'>, path: string, timeoutMs = 1000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel()
+    const timer = setTimeout(() => resolve(false), timeoutMs)
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer)
+      channel.port1.close()
+      resolve(event.data === true)
+    }
+    worker.postMessage({ type: 'HAS_FILE', path }, [channel.port2])
+  })
+}
+
+async function offerUpdate(registration: ServiceWorkerRegistration): Promise<void> {
   const waiting = registration.waiting
   if (!waiting || !navigator.serviceWorker.controller) return
+  // the page was loaded from the network and already runs this build: the worker takes over, nothing to reload
+  const path = entryPath(document, registration.scope)
+  if (path && (await workerHas(waiting, path))) {
+    waiting.postMessage({ type: 'SKIP_WAITING' })
+    return
+  }
   showToast({
     kind: 'info',
     text: t('platform.app.updateAvailable'),
@@ -98,11 +124,11 @@ export function afterLoadAndIdle(
 async function register(): Promise<void> {
   const base = import.meta.env.BASE_URL
   const registration = await navigator.serviceWorker.register(`${base}sw.js`, { scope: base })
-  offerUpdate(registration)
+  void offerUpdate(registration)
   registration.addEventListener('updatefound', () => {
     const worker = registration.installing
     worker?.addEventListener('statechange', () => {
-      if (worker.state === 'installed') offerUpdate(registration)
+      if (worker.state === 'installed') void offerUpdate(registration)
     })
   })
   watchForUpdates(registration, document)

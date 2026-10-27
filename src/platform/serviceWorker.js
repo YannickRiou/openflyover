@@ -22,6 +22,8 @@ const SKY_CACHE = `openflyover-sky-${SKY_VERSION}`
 const SHARE_CACHE = 'openflyover-share'
 const OWN_CACHES = /^openflyover-(shell|sky)-/
 const RUNTIME_PREFIXES = ['atmosphere/', 'clouds/']
+/** the page is asked of the network first, so that a reload shows a new release; offline or past this, the precached one */
+const PAGE_TIMEOUT_MS = 3000
 /** a file of `assets/` whose name carries its content hash (8 characters of Vite, `-` and `_` included) */
 const FINGERPRINTED = /^assets\/.+-[\w-]{8}\.[a-z0-9]+$/
 
@@ -47,9 +49,10 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// the page accepted « Nouvelle version disponible »
+// the page accepted « Nouvelle version disponible », or asks whether this worker is the build it runs (`HAS_FILE`)
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
+  else if (event.data?.type === 'HAS_FILE') event.ports?.[0]?.postMessage(PRECACHE.includes(event.data.path))
 })
 
 /** Shared files kept for the page (`takeSharedFiles` in webApp.ts), then the app opened. */
@@ -64,6 +67,24 @@ async function receiveShare(request) {
     ),
   )
   return Response.redirect(new URL('./?partage', scope()).href, 303)
+}
+
+/**
+ * The page: the network first (revalidating the HTTP cache), so a reload shows a new release at once, its files being
+ * new names that the network serves; the precached page when offline, slow (`PAGE_TIMEOUT_MS`) or not served as is.
+ */
+async function page(request) {
+  try {
+    const response = await Promise.race([
+      fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' }),
+      new Promise((resolve) => setTimeout(resolve, PAGE_TIMEOUT_MS)),
+    ])
+    // a redirected response cannot answer a navigation
+    if (response?.ok && !response.redirected) return response
+  } catch {
+    // offline
+  }
+  return (await caches.match(new URL('./', scope()).href, { cacheName: SHELL_CACHE })) ?? fetch(request)
 }
 
 async function fromCache(cacheName, request) {
@@ -85,7 +106,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return
   const name = path.split(/[?#]/)[0]
   if (request.mode === 'navigate' && (name === '' || name === 'index.html')) {
-    event.respondWith(caches.match(new URL('./', scope()).href, { cacheName: SHELL_CACHE }).then((hit) => hit ?? fetch(request)))
+    event.respondWith(page(request))
   } else if (PRECACHE.includes(name)) {
     event.respondWith(fromCache(SHELL_CACHE, request))
   } else if (RUNTIME_PREFIXES.some((prefix) => name.startsWith(prefix))) {

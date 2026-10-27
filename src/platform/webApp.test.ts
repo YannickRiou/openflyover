@@ -4,6 +4,7 @@ import workerSource from './serviceWorker.js?raw'
 import { pickerAccept } from './platform'
 import {
   afterLoadAndIdle,
+  entryPath,
   REGISTER_IDLE_MS,
   sharedFileName,
   shouldRegisterServiceWorker,
@@ -11,6 +12,7 @@ import {
   UPDATE_MIN_GAP_MS,
   wantsIosInstallHint,
   watchForUpdates,
+  workerHas,
 } from './webApp'
 
 /** files of public/, as `icons/icon-192.png` */
@@ -192,11 +194,29 @@ describe('afterLoadAndIdle', () => {
   })
 })
 
+describe('entryPath / workerHas', () => {
+  const scope = 'https://example.org/openflyover/'
+  const doc = (src: string | null) => ({ querySelector: () => (src === null ? null : { src }) }) as unknown as Pick<Document, 'querySelector'>
+
+  it('finds the entry script of the page within the scope', () => {
+    expect(entryPath(doc(`${scope}assets/index-DJmkmaKt.js`), scope)).toBe('assets/index-DJmkmaKt.js')
+    expect(entryPath(doc('https://other.org/assets/index-DJmkmaKt.js'), scope)).toBeNull()
+    expect(entryPath(doc(null), scope)).toBeNull()
+  })
+
+  it('asks a worker whether it precaches a file, false without an answer', async () => {
+    const answering = { postMessage: (data: { path: string }, ports: MessagePort[]) => ports[0].postMessage(data.path === 'a.js') }
+    expect(await workerHas(answering as unknown as ServiceWorker, 'a.js')).toBe(true)
+    expect(await workerHas(answering as unknown as ServiceWorker, 'b.js')).toBe(false)
+    expect(await workerHas({ postMessage: () => undefined } as unknown as ServiceWorker, 'a.js', 20)).toBe(false)
+  })
+})
+
 describe('service worker', () => {
   const PRECACHE = ['./', 'assets/index-DJmkmaKt.js', 'assets/events-e51d7528.esm-GVOHBRHr.js', 'assets/ExportPanel-BWYKVeN-.js', 'assets/index-jTAbkCA5.css', 'favicon.svg', 'fonts/fraunces-variable-latin.woff2', 'manifest.webmanifest']
 
   /** the worker evaluated against a fake `self`, with the caches it holds and the listeners it registers */
-  function load(cacheNames: string[] = []) {
+  function load(cacheNames: string[] = [], fetch: (url: string, init?: RequestInit) => Promise<unknown> = () => Promise.reject(new TypeError('offline'))) {
     const listeners: Record<string, (event: unknown) => void> = {}
     const added: Request[] = []
     const deleted: string[] = []
@@ -207,19 +227,55 @@ describe('service worker', () => {
       clients: { claim: vi.fn(() => Promise.resolve()) },
     }
     const caches = {
+      match: (url: string) => Promise.resolve(url === 'https://example.org/openflyover/' ? 'cached page' : undefined),
       open: () => Promise.resolve({ addAll: (requests: Request[]) => Promise.resolve(void added.push(...requests)) }),
       keys: () => Promise.resolve(cacheNames),
       delete: (name: string) => Promise.resolve(void deleted.push(name)),
     }
     const source = workerSource.replace('/* PRECACHE */ []', JSON.stringify(PRECACHE)).replace("/* VERSION */ 'dev'", "'v2'")
-    new Function('self', 'caches', source)(self, caches)
+    new Function('self', 'caches', 'fetch', source)(self, caches, fetch)
     const run = async (type: string, data?: unknown) => {
       let pending: Promise<unknown> = Promise.resolve()
       listeners[type]({ data, waitUntil: (p: Promise<unknown>) => void (pending = p) })
       await pending
     }
-    return { self, added, deleted, run }
+    /** the answer of the worker to a navigation to `url` */
+    const navigate = (url: string) =>
+      new Promise((resolve) => listeners.fetch({ request: { url, method: 'GET', mode: 'navigate' }, respondWith: (p: Promise<unknown>) => resolve(p) }))
+    return { self, added, deleted, run, listeners, navigate }
   }
+
+  it('asks the network for the page first, revalidating the HTTP cache, so a reload shows a new release', async () => {
+    const fresh = { ok: true, redirected: false, body: 'new page' }
+    const fetch = vi.fn(() => Promise.resolve(fresh))
+    const { navigate } = load([], fetch)
+    expect(await navigate('https://example.org/openflyover/')).toBe(fresh)
+    expect(fetch).toHaveBeenCalledWith('https://example.org/openflyover/', { cache: 'no-cache', credentials: 'same-origin' })
+  })
+
+  it('opens the precached page offline, after a redirect or an error, and when the network is slow', async () => {
+    expect(await load().navigate('https://example.org/openflyover/')).toBe('cached page')
+    for (const answer of [{ ok: true, redirected: true }, { ok: false, redirected: false }]) {
+      expect(await load([], () => Promise.resolve(answer)).navigate('https://example.org/openflyover/index.html')).toBe('cached page')
+    }
+    vi.useFakeTimers()
+    try {
+      const answer = load([], () => new Promise(() => undefined)).navigate('https://example.org/openflyover/')
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(await answer).toBe('cached page')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('tells the page whether it precaches a file (the page then knows it runs this build)', async () => {
+    const { listeners } = load()
+    const answers: unknown[] = []
+    const port = { postMessage: (v: unknown) => answers.push(v) }
+    listeners.message({ data: { type: 'HAS_FILE', path: 'assets/index-DJmkmaKt.js' }, ports: [port] })
+    listeners.message({ data: { type: 'HAS_FILE', path: 'assets/index-OLDHASH0.js' }, ports: [port] })
+    expect(answers).toEqual([true, false])
+  })
 
   it('precaches every file, a fingerprinted one from the HTTP cache, the others always from the network', async () => {
     const { added, run } = load()
