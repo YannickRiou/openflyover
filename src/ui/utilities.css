@@ -373,6 +373,23 @@
   }
 }
 
+/* A section that the settings search just opened: an outline in the accent that fades out (not animated when motion is reduced). */
+@keyframes section-found {
+  to {
+    outline-color: transparent;
+  }
+}
+
+@utility section-found {
+  outline: 2px solid var(--color-brand);
+  outline-offset: -2px;
+  animation: section-found 1.6s ease-out forwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* A turn per second (spinner) or in 2.4 s (progress ring); still when motion is reduced. */
 @keyframes ui-turn {
   to {

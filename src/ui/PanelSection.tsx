@@ -54,7 +54,7 @@ export function PanelSection({
   // read once: the element then keeps its own state
   const [open] = useState(() => loadFolds()[title] ?? true)
   return (
-    <details className="group" open={open} hidden={hidden} onToggle={(e) => saveFold(title, e.currentTarget.open)}>
+    <details className="group" data-panel-section={title} open={open} hidden={hidden} onToggle={(e) => saveFold(title, e.currentTarget.open)}>
       <summary className="panel-head cursor-pointer list-none [&::-webkit-details-marker]:hidden">
         <h2 className="panel-title flex-1">{title}</h2>
         {/* the marker's button must not fold the section; its box is in the flow here, not at the corner of a card */}

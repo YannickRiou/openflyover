@@ -72,6 +72,14 @@ describe('matchShortcut', () => {
     expect(matchShortcut(key('e', { ctrlKey: true }), 'other')).toBe('export')
   })
 
+  it('maps Ctrl or Cmd + K to the settings search, while K alone still plays', () => {
+    expect(matchShortcut(key('k', { ctrlKey: true }), 'other')).toBe('search')
+    expect(matchShortcut(key('K', { metaKey: true }), 'arrows')).toBe('search')
+    expect(matchShortcut(key('k', { ctrlKey: true }), 'text')).toBeNull()
+    expect(matchShortcut(key('k', { ctrlKey: true, shiftKey: true }), 'other')).toBeNull()
+    expect(matchShortcut(key('k'), 'other')).toBe('play-pause')
+  })
+
   it('maps Ctrl or Cmd + Shift + S to save as, and no other Shift combination', () => {
     expect(matchShortcut(key('S', { ctrlKey: true, shiftKey: true }), 'other')).toBe('save-as')
     expect(matchShortcut(key('s', { metaKey: true, shiftKey: true }), 'other')).toBe('save-as')
