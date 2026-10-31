@@ -68,6 +68,6 @@ describe('model3d setting', () => {
   it('is off by default and validated', () => {
     expect(DEFAULT_MARKER.model3d).toBe(false)
     expect(isValidMarker({ ...DEFAULT_MARKER, model3d: true })).toBe(true)
-    expect(isValidMarker({ ...DEFAULT_MARKER, model3d: 'yes' })).toBe(false)
+    expect(isValidMarker({ ...DEFAULT_MARKER, model3d: 'yes' as unknown as boolean })).toBe(false)
   })
 })
