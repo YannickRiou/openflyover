@@ -29,6 +29,7 @@ import { FlyoverRig } from './FlyoverRig'
 import { isIdentityGrading } from './grading'
 import { lensActive } from './lens'
 import { Labels } from './Labels'
+import { PanoramaSummits } from './PanoramaSummits'
 import { PhotoPins } from './PhotoPins'
 import { RaceMarkers } from './RaceMarkers'
 import { RegionHighlight } from './RegionHighlight'
@@ -202,6 +203,7 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
             <RaceMarkers />
             <CameraRig />
             <Labels />
+            <PanoramaSummits />
             <PhotoPins />
             <TrackPicker />
             {atmosphere && (
