@@ -71,11 +71,12 @@ const direction = new Vector3()
 const middle = new Vector3()
 const turn = new Quaternion()
 
-export function rod(build: Build, radius: number): Rod {
+export function rod(build: Build, radius: number, capped = false): Rod {
+  // open at both ends unless `capped`: a flat end would stick out of a bend and show as a line across the joint, the balls at the ends close the rod
   const mesh = solid(
     build,
-    new CylinderGeometry(radius, radius, 1, SEGMENT_SEGMENTS, 1),
-    new CylinderGeometry(radius + OUTLINE, radius + OUTLINE, 1, SEGMENT_SEGMENTS, 1),
+    new CylinderGeometry(radius, radius, 1, SEGMENT_SEGMENTS, 1, !capped),
+    new CylinderGeometry(radius + OUTLINE, radius + OUTLINE, 1, SEGMENT_SEGMENTS, 1, !capped),
   )
   return {
     mesh,
@@ -206,8 +207,8 @@ export function extrusion(build: Build, profile: [number, number][], width: numb
 export function limb(build: Build, radiusA: number, radiusB: number): Rod {
   const mesh = solid(
     build,
-    new CylinderGeometry(radiusB, radiusA, 1, SEGMENT_SEGMENTS, 1),
-    new CylinderGeometry(radiusB + OUTLINE, radiusA + OUTLINE, 1, SEGMENT_SEGMENTS, 1),
+    new CylinderGeometry(radiusB, radiusA, 1, SEGMENT_SEGMENTS, 1, true),
+    new CylinderGeometry(radiusB + OUTLINE, radiusA + OUTLINE, 1, SEGMENT_SEGMENTS, 1, true),
   )
   // a ball at each end closes the outline where the limb stops, and rounds the joints where two limbs meet
   const ends = [ball(build, radiusA), ball(build, radiusB)]

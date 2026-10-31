@@ -194,8 +194,8 @@ function createMountaineer(): MarkerModel {
     extras(build, s) {
       const place = pack(v(0.15, 0.26, 0.11), 0.6, 0.17)(build, s)
       // the ice axe: a shaft with a crossbar, in the right hand
-      const shaft = rod(build, 0.018)
-      const head = rod(build, 0.016)
+      const shaft = rod(build, 0.018, true)
+      const head = rod(build, 0.016, true)
       return (st) => {
         place(st)
         const hand = st.hand[1]
@@ -217,8 +217,8 @@ function createTrailRunner(): MarkerModel {
 /** A pair of skis under the feet, and poles from the hands to the ground. */
 function skis(length: number, behind: number, poles: boolean) {
   return (build: Build): ((s: State) => void) => {
-    const planks = SIDES.map(() => ({ plank: rod(build, 0.024), tip: ball(build, 0.024) }))
-    const sticks = poles ? SIDES.map(() => ({ stick: rod(build, 0.014), basket: ball(build, 0.035) })) : []
+    const planks = SIDES.map(() => ({ plank: rod(build, 0.024, true), tip: ball(build, 0.024) }))
+    const sticks = poles ? SIDES.map(() => ({ stick: rod(build, 0.014, true), basket: ball(build, 0.035) })) : []
     return (s) => {
       planks.forEach(({ plank, tip }, i) => {
         const f = s.foot[i]
@@ -313,7 +313,7 @@ function createKayaker(): MarkerModel {
     },
     extras(build) {
       ellipsoid(build, 0.3, 0.17, 1.5, v(0, 0.13, 0.1))
-      const shaft = rod(build, 0.018)
+      const shaft = rod(build, 0.018, true)
       const blades = SIDES.map(() => ellipsoid(build, 0.17, 0.07, 0.025))
       return (st) => {
         const { tilt, centre, along } = paddleAt(st.phase)
@@ -488,7 +488,7 @@ function createPlane(): MarkerModel {
     }
     drum(build, 0.08, 0.05, v(0, 0.09, 0.7))
     bar(build, 0.014, v(0, 0.4, 0.7), v(0, 0.09, 0.7))
-    const blade = rod(build, 0.028)
+    const blade = rod(build, 0.028, true)
     const hub = v(0, 0.55, 1.1)
     return (phase) => {
       const a = phase * 3
