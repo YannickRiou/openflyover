@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
 import { getPlatform } from '../platform'
-import { TOUR_KEY, TOUR_STEPS, placeBubble, startTour, stopTour, tourSeen, useTour } from './tour'
+import { TOUR_KEY, TOUR_STEPS, placeBubble, startTour, stopTour, tourSeen, useTour } from './tourSteps'
 
 const view = { width: 1200, height: 800 }
 const size = { width: 320, height: 160 }

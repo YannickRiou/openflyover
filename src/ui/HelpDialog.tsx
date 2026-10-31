@@ -1,7 +1,7 @@
 import { useT } from '../i18n'
 import { SHORTCUTS, SHORTCUT_GROUPS, keyLabel } from './shortcuts'
 import { Button, Modal } from './primitives'
-import { startTour } from './tour'
+import { startTour } from './tourSteps'
 
 /** A key: a small cap with a thicker foot. */
 const KEY =

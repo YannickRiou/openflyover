@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useT } from '../i18n'
 import { Button, isModalOpen } from './primitives'
-import { placeBubble, startTour, stopTour, tourSeen, useTour } from './tour'
-import type { Box, TourStep } from './tour'
+import { placeBubble, startTour, stopTour, tourSeen, useTour } from './tourSteps'
+import type { Box, TourStep } from './tourSteps'
 
 /** The bubble's width (px): it shrinks on a narrow window. */
 const BUBBLE_WIDTH = 320
