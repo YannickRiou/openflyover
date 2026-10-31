@@ -76,6 +76,7 @@ export default {
   'section.style': 'Style',
   'section.figurine': 'Figurine',
   'section.animate': 'Animer la figurine (pas et balancement)',
+  'section.model3d': 'Modèle 3D (face à la trace, il pédale)',
   'section.color': 'Couleur',
   'section.figureColor': 'Couleur de la figurine',
   'section.discColor': 'Couleur du disque',

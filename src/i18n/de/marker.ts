@@ -78,6 +78,7 @@ const messages: Messages['marker'] = {
   'section.style': 'Stil',
   'section.figurine': 'Figur',
   'section.animate': 'Figur animieren (Schritte und Schwingen)',
+  'section.model3d': '3D-Modell (in Fahrtrichtung, tritt in die Pedale)',
   'section.color': 'Farbe',
   'section.figureColor': 'Farbe der Figur',
   'section.discColor': 'Farbe der Scheibe',

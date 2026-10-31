@@ -78,6 +78,7 @@ const messages: Messages['marker'] = {
   'section.style': 'Style',
   'section.figurine': 'Figurine',
   'section.animate': 'Animate the figurine (steps and sway)',
+  'section.model3d': '3D model (faces along the track, pedals)',
   'section.color': 'Colour',
   'section.figureColor': 'Figurine colour',
   'section.discColor': 'Disc colour',

@@ -13,7 +13,7 @@
  */
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Vector3, type PerspectiveCamera, type Sprite, type SpriteMaterial } from 'three'
+import { Color, Vector3, type Group, type PerspectiveCamera, type Sprite, type SpriteMaterial } from 'three'
 import { markerAt, markerFadeM } from '../film/markerKeys'
 import { pinsMoveWithTime } from '../film/photoPins'
 import { useMediaStore } from '../film/media'
@@ -34,16 +34,22 @@ import { trackUnderMarker } from '../flyover/sequence'
 import {
   figureHeading,
   leadMarkerColors,
+  litColor,
   markerLook,
+  MARKER_DEPTH_PULL_M,
+  markerRadius,
   pullMarkerForward,
   placeMarker,
   releaseMarkerTexture,
   showPastView,
+  trackDirection,
   useMarkerImages,
   useMarkerLabelFont,
 } from './markerSprite'
-import { FIGURE_TURN_S, figureMotion } from './markerSettings'
-import type { MarkerSettings } from './markerSettings'
+import { DEFAULT_MARKER, FIGURE_TURN_S, figureMotion, figureStride } from './markerSettings'
+import type { MarkerFigure, MarkerSettings } from './markerSettings'
+import { createMarkerModel, disposeMarkerModel, hasMarkerModel, standModel } from './markerModels'
+import type { MarkerModel } from './markerModels'
 import { editFilm, useFilmClock, useFilmTrack } from './usePacing'
 import type { HeightSampler } from './trackLineSet'
 
@@ -59,6 +65,14 @@ interface DefaultControls {
   addEventListener?(type: 'start' | 'end' | 'change', listener: () => void): void
   removeEventListener?(type: 'start' | 'end' | 'change', listener: () => void): void
 }
+
+/** Height of a 3D model of a marker, in radii of the marker's ball (a figure badge is 4.4: a model is larger, to be read as a figure). */
+const MODEL_BALLS = 7
+/** Pose of a 3D model that is not animated: a quarter turn of the pedals. */
+const MODEL_REST_PHASE = 0.6
+const modelFill = new Color()
+const modelAhead = new Vector3()
+const modelAt = new Vector3()
 
 /** « Revenir à la vue du film » shows once the camera is this far from the film's: this share of its distance to its aim, at least HAND_MOVE_MIN_M. */
 const HAND_MOVE_SHARE = 0.05
@@ -82,6 +96,9 @@ export function FlyoverRig() {
   const markerRef = useRef<Sprite>(null)
   /** the look the marker leaves while it cross-fades into the next one (marker keys) */
   const fadeRef = useRef<Sprite>(null)
+  /** the 3D models of the figures shown so far (`MarkerSettings.model3d`), made when first asked for, one visible at a time */
+  const modelGroupRef = useRef<Group>(null)
+  const modelsRef = useRef(new Map<MarkerFigure, MarkerModel>())
   const baseImage = useAppStore((s) => s.settings.marker.image)
   const markerKeys = useAppStore((s) => s.settings.film.markerKeys)
   const pictures = useMediaStore((s) => s.table)
@@ -105,7 +122,12 @@ export function FlyoverRig() {
 
   useEffect(() => {
     const sprites = [markerRef.current, fadeRef.current]
-    return () => sprites.forEach(releaseMarkerTexture)
+    const models = modelsRef.current
+    return () => {
+      sprites.forEach(releaseMarkerTexture)
+      models.forEach(disposeMarkerModel)
+      models.clear()
+    }
   }, [])
 
   // « Revenir à la vue du film »: the next frame places the camera again
@@ -274,12 +296,48 @@ export function FlyoverRig() {
     // a change of look: the new one fades in over the old, which stays opaque until it is settled
     leaving.visible = blend.mix < 1
     if (leaving.visible) draw(leaving, blend.from, 1)
-    draw(marker, blend.to, blend.mix)
+    // a figurine with a 3D model (`model3d`) is that model, standing on its point and facing along the track, in place of its sprite
+    const models = modelsRef.current
+    for (const model of models.values()) model.root.visible = false
+    const wanted = markerLook(blend.to, under, true)
+    const group = modelGroupRef.current
+    let modelShown = false
+    if (group && blend.to.kind === 'figurine' && blend.to.model3d && hasMarkerModel(wanted.figure)) {
+      let model = models.get(wanted.figure)
+      if (!model) {
+        model = createMarkerModel(wanted.figure) ?? undefined
+        if (model) {
+          models.set(wanted.figure, model)
+          group.add(model.root)
+        }
+      }
+      if (model) {
+        modelShown = true
+        // the colour of the track, unless the disc colour was changed from the ink of the badges (a model has no disc)
+        const own = blend.to.figureColor === DEFAULT_MARKER.figureColor ? '' : blend.to.figureColor
+        const colors = leadMarkerColors({ ...blend.to, figureColor: own }, under?.color ?? '#FFFFFF')
+        const fill = litColor(colors.badgeFill, exposureGain, modelFill)
+        model.setColor(fill.r, fill.g, fill.b)
+        model.pose(wanted.animated ? figureStride(clock, timeS) : MODEL_REST_PHASE)
+        trackDirection(path, distanceAt(timeS), view.marker, frame, settings.exaggeration, modelAhead)
+        // the same place and size on screen as the sprite, pulled towards the camera so the slope under it never sinks it
+        const height = MODEL_BALLS * markerRadius(camera, view.marker, blend.to.size)
+        const distance = camera.position.distanceTo(view.marker)
+        const pull = distance > 0 ? 1 - Math.min(MARKER_DEPTH_PULL_M, distance / 2) / distance : 1
+        modelAt.copy(view.marker).sub(camera.position).multiplyScalar(pull).add(camera.position)
+        standModel(model, modelAt, modelAhead, height * pull)
+        model.root.visible = true
+      }
+    }
+    // the sprite stays hidden while the model stands in for it
+    marker.visible = !modelShown
+    if (!modelShown) draw(marker, blend.to, blend.mix)
   })
 
   // unlit and drawn over the terrain (cut by the relief in front of it): readable on the track colour and on dark forest alike
   return (
     <>
+      <group ref={modelGroupRef} name="flyover-marker-model" />
       <sprite ref={fadeRef} name="flyover-marker-from" visible={false} renderOrder={2}>
         <spriteMaterial depthWrite={false} />
       </sprite>
