@@ -25,6 +25,7 @@ const messages: Messages['film'] = {
   'stopCamera.orbite': 'Langsame Drehung',
   'stopCamera.large': 'Weite Ansicht',
   'stopCamera.fixe': 'Fest',
+  'stopCamera.panorama': '360°-Panorama',
   'junctionKind.coupe': 'Schnitt',
   'junctionKind.fondu-noir': 'Schwarzblende',
   'junctionKind.fondu-blanc': 'Weißblende',

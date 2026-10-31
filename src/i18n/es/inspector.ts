@@ -87,6 +87,7 @@ const messages: Messages['inspector'] = {
   'holdCamera.orbite': 'La cámara gira lentamente alrededor del punto y luego vuelve.',
   'holdCamera.large': 'La cámara retrocede y sube para una vista amplia, y luego vuelve.',
   'holdCamera.fixe': 'El encuadre permanece inmóvil durante la parada.',
+  'holdCamera.panorama': 'La cámara da una vuelta completa alrededor del punto, con los nombres de las cumbres a la vista. Prevé 10 s o más.',
   'layout.plein-ecran': 'Pantalla completa',
   'layout.carte': 'Tarjeta',
   'field.start': 'Inicio (s)',

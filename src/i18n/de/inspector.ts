@@ -87,6 +87,7 @@ const messages: Messages['inspector'] = {
   'holdCamera.orbite': 'Die Kamera kreist langsam um den Punkt und kehrt dann zurück.',
   'holdCamera.large': 'Die Kamera weicht zurück und steigt für eine weite Ansicht, dann kehrt sie zurück.',
   'holdCamera.fixe': 'Der Bildausschnitt bleibt während des Stopps unverändert.',
+  'holdCamera.panorama': 'Die Kamera dreht sich einmal um den Punkt, mit den Namen der Gipfel in Sicht. 10 s oder mehr einplanen.',
   'layout.plein-ecran': 'Vollbild',
   'layout.carte': 'Karte',
   'field.start': 'Beginn (s)',
