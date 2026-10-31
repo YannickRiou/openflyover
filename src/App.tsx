@@ -18,6 +18,7 @@ import { OpenChoiceDialog } from './ui/OpenChoiceDialog'
 import { EmptyState } from './ui/EmptyState'
 import { GradingPanel } from './ui/GradingPanel'
 import { HelpDialog } from './ui/HelpDialog'
+import { Tour } from './ui/Tour'
 import { SettingsSearch } from './ui/SettingsSearch'
 import { revealSection } from './ui/settingsSearch'
 import { Icon } from './ui/icons'
@@ -640,6 +641,7 @@ export default function App() {
 
       <StatusBar />
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <Tour />
       <SettingsSearch
         open={searchOpen}
         tabs={tabs}

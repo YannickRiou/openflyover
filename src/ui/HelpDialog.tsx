@@ -1,6 +1,7 @@
 import { useT } from '../i18n'
 import { SHORTCUTS, SHORTCUT_GROUPS, keyLabel } from './shortcuts'
-import { Modal } from './primitives'
+import { Button, Modal } from './primitives'
+import { startTour } from './tour'
 
 /** A key: a small cap with a thicker foot. */
 const KEY =
@@ -12,6 +13,17 @@ export function HelpDialog({ open, onClose }: { open: boolean; onClose(): void }
   return (
     <Modal open={open} onClose={onClose} title={t('shortcuts.title')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')} width={680}>
       <p className="type-hint mb-4">{t('shortcuts.drop')}</p>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="mb-4"
+        onClick={() => {
+          onClose()
+          startTour()
+        }}
+      >
+        {t('shell.tour.restart')}
+      </Button>
       <div className="grid grid-cols-2 gap-x-5 gap-y-4 max-[599px]:grid-cols-1">
         {SHORTCUT_GROUPS.map((group) => (
           <section key={group} aria-labelledby={`help-${group}`}>
