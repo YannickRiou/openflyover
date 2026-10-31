@@ -2,7 +2,7 @@ import { Box3, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { MARKER_FIGURES, DEFAULT_MARKER, figureStride, isValidMarker } from './markerSettings'
 import type { FigureClock } from './markerSettings'
-import { MODEL_HEIGHT, createMarkerModel, disposeMarkerModel, hasMarkerModel, joint, standModel } from './markerModels'
+import { createMarkerModel, disposeMarkerModel, hasMarkerModel, joint, standModel } from './markerModels'
 
 const clock = { totalTime: () => 10, progressAtTime: (t: number) => Math.min(Math.max(t / 10, 0), 1) } as FigureClock
 
@@ -18,15 +18,16 @@ describe('joint', () => {
 })
 
 describe('markerModels', () => {
-  it('builds a model of about MODEL_HEIGHT for each figure that has one', () => {
+  it('builds a model for each figure that has one', () => {
     const owners = MARKER_FIGURES.filter(hasMarkerModel)
-    expect(owners).toContain('cycliste')
+    expect(owners).toHaveLength(MARKER_FIGURES.length)
     for (const figure of owners) {
       const model = createMarkerModel(figure)!
       model.root.updateMatrixWorld(true)
       const size = new Box3().setFromObject(model.root).getSize(new Vector3())
-      expect(size.y).toBeGreaterThan(MODEL_HEIGHT * 0.8)
-      expect(size.y).toBeLessThan(MODEL_HEIGHT * 1.15)
+      // every model is of the size of a person, a bicycle, a horse or a plane: between 0.8 and 3 units in its longest side
+      expect(Math.max(size.x, size.y, size.z)).toBeGreaterThan(0.8)
+      expect(Math.max(size.x, size.y, size.z)).toBeLessThan(3)
       disposeMarkerModel(model)
     }
   })

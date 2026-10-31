@@ -1,126 +1,24 @@
 /**
  * 3D models of the « figurine » markers (`MarkerSettings.model3d`): small figures built from three.js primitives, drawn
  * flat in one colour with a dark outline (a back-face shell, like a cel-shaded cartoon), no texture and no file. A model
- * stands on its track point, faces +Z (the marker turns it along the track) and is about `MODEL_HEIGHT` tall; `pose`
- * moves its limbs for a phase of the walk or the pedalling (`figureStride`), with no memory between calls, so any frame
- * of the film renders the same in isolation. `markerModelOf` says which figures have a model; the others keep their
- * pictogram.
+ * stands on its track point, faces +Z (the marker turns it along the track); `pose` moves its limbs for a phase of the
+ * walk or the pedalling (`figureStride`), with no memory between calls, so any frame of the film renders the same in
+ * isolation. `hasMarkerModel` says which figures have a model; the others keep their pictogram.
  */
-import { BackSide, CylinderGeometry, Group, Matrix4, Mesh, MeshBasicMaterial, Quaternion, SphereGeometry, TorusGeometry, Vector3 } from 'three'
+import { Matrix4, Mesh, MeshBasicMaterial, Vector3 } from 'three'
 import type { BufferGeometry } from 'three'
 import type { MarkerFigure } from './markerSettings'
+import { MODEL_HEIGHT, UP, ball, begin, joint, rod, ring } from './markerModelKit'
+import type { MarkerModel } from './markerModelKit'
+import { FIGURE_MODELS } from './markerFigureModels'
 
-/** Height of a model in its own units (the rider on the bike, head included). */
-export const MODEL_HEIGHT = 1.7
-/** Thickness of the outline, in model units. */
-const OUTLINE = 0.015
-/** Dark of the outline, as the ink of the badges (`BADGE_INK`). */
-const OUTLINE_COLOR = '#1C2A33'
-
-/** A model: its group, the call that poses it, and the call that colours it. */
-export interface MarkerModel {
-  root: Group
-  /** Pose for `phase` (radians: a full turn of the pedals); the phase stands still while the marker does (`figureStride`). */
-  pose(phase: number): void
-  /** Colour of the flat fill, already scaled by the exposure and the light of the scene. */
-  setColor(r: number, g: number, b: number): void
-}
-
-const UP = new Vector3(0, 1, 0)
-const SEGMENT_SEGMENTS = 18
-
-interface Build {
-  root: Group
-  fill: MeshBasicMaterial
-  outline: MeshBasicMaterial
-}
-
-function begin(): Build {
-  return {
-    root: new Group(),
-    fill: new MeshBasicMaterial({ color: '#ffffff' }),
-    outline: new MeshBasicMaterial({ color: OUTLINE_COLOR, side: BackSide }),
-  }
-}
-
-/** A mesh with its outline shell as a child, so the outline follows the mesh's scale and pose. */
-function solid(build: Build, geometry: BufferGeometry, shell: BufferGeometry): Mesh {
-  const mesh = new Mesh(geometry, build.fill)
-  mesh.add(new Mesh(shell, build.outline))
-  build.root.add(mesh)
-  return mesh
-}
-
-/** A sphere of `radius` at `at` (a head, a joint, a hand). */
-function ball(build: Build, radius: number, at: Vector3 = new Vector3()): Mesh {
-  const mesh = solid(build, new SphereGeometry(radius, 20, 14), new SphereGeometry(radius + OUTLINE, 20, 14))
-  mesh.position.copy(at)
-  return mesh
-}
-
-/** A rod of `radius` between two points, set again with `link`. Its outline is a wider rod: the joints at its ends cover the rest. */
-interface Rod {
-  mesh: Mesh
-  link(a: Vector3, b: Vector3): void
-}
-
-const direction = new Vector3()
-const middle = new Vector3()
-const turn = new Quaternion()
-
-function rod(build: Build, radius: number): Rod {
-  const mesh = solid(
-    build,
-    new CylinderGeometry(radius, radius, 1, SEGMENT_SEGMENTS, 1),
-    new CylinderGeometry(radius + OUTLINE, radius + OUTLINE, 1, SEGMENT_SEGMENTS, 1),
-  )
-  return {
-    mesh,
-    link(a, b) {
-      direction.subVectors(b, a)
-      const length = direction.length()
-      middle.addVectors(a, b).multiplyScalar(0.5)
-      mesh.position.copy(middle)
-      if (length > 1e-6) mesh.quaternion.copy(turn.setFromUnitVectors(UP, direction.divideScalar(length)))
-      // the length is the rod's own; the radius stays what it was built with
-      mesh.scale.set(1, Math.max(length, 1e-4), 1)
-    },
-  }
-}
-
-/** A ring in the YZ plane (a wheel). */
-function ring(build: Build, radius: number, tube: number): Mesh {
-  const mesh = solid(build, new TorusGeometry(radius, tube, 10, 48), new TorusGeometry(radius, tube + OUTLINE, 10, 48))
-  mesh.rotation.y = Math.PI / 2
-  return mesh
-}
-
-const along = new Vector3()
-const pole = new Vector3()
-const knee = new Vector3()
-
-/**
- * The middle joint (knee, elbow) of a limb of two bones `upper` and `lower` long from `root` to `end`, bent towards
- * `bend` (a direction the joint is pushed to). A reach too long is stretched straight, one too short is folded.
- */
-export function joint(root: Vector3, end: Vector3, upper: number, lower: number, bend: Vector3, target = knee): Vector3 {
-  along.subVectors(end, root)
-  const reach = Math.min(Math.max(along.length(), Math.abs(upper - lower) + 1e-3), upper + lower - 1e-3)
-  along.normalize()
-  // distance along the line to the foot of the joint's height, and that height
-  const a = (upper * upper - lower * lower + reach * reach) / (2 * reach)
-  const h = Math.sqrt(Math.max(0, upper * upper - a * a))
-  // the part of `bend` across the line gives the side the joint goes to
-  pole.copy(bend).addScaledVector(along, -bend.dot(along))
-  if (pole.lengthSq() < 1e-9) pole.set(1, 0, 0).addScaledVector(along, -along.x)
-  pole.normalize()
-  return target.copy(root).addScaledVector(along, a).addScaledVector(pole, h)
-}
+export { MODEL_HEIGHT, joint }
+export type { MarkerModel }
 
 const FORWARD = new Vector3(0, 0, 1)
 
 /** The rider and the bike seen from behind and the side: a road or mountain bike with its rider crouched on it. */
-export function createCyclist(): MarkerModel {
+export function createCyclist(options: { bags?: boolean; battery?: boolean; fat?: boolean } = {}): MarkerModel {
   const build = begin()
   const wheelRadius = 0.34
   const bottomBracket = new Vector3(0, 0.3, 0)
@@ -132,7 +30,7 @@ export function createCyclist(): MarkerModel {
   const stem = new Vector3(0, 0.92, 0.45)
 
   for (const z of [rearAxle.z, frontAxle.z]) {
-    const wheel = ring(build, wheelRadius - 0.025, 0.022)
+    const wheel = ring(build, wheelRadius - 0.025, options.fat ? 0.034 : 0.022)
     wheel.position.set(0, wheelRadius, z)
   }
   // a ball at each end hides the seam where two bars meet
@@ -150,6 +48,13 @@ export function createCyclist(): MarkerModel {
   frame(0.014, headTop, frontAxle)
   frame(0.014, new Vector3(-0.21, 0.93, 0.45), new Vector3(0.21, 0.93, 0.45))
   frame(0.014, headTop, stem)
+
+  if (options.bags) {
+    // bikepacking: a saddle bag and a roll on the handlebar
+    ball(build, 0.1, new Vector3(0, 0.84, -0.5)).scale.set(0.95, 0.9, 1.9)
+    ball(build, 0.075, new Vector3(0, 0.98, 0.5)).scale.set(2, 1, 1.1)
+  }
+  if (options.battery) ball(build, 0.06, new Vector3(0, 0.52, 0.2)).scale.set(0.9, 2.2, 0.9)
 
   // the rider: hips on the saddle, back leaning forward, head up
   const hip = new Vector3(0, 0.95, -0.2)
@@ -225,12 +130,13 @@ export function createCyclist(): MarkerModel {
   return model
 }
 
-/** The figures that have a 3D model, and what builds it. The bikes share the cyclist until each has its own. */
+/** The figures that have a 3D model, and what builds it. */
 const BUILDERS: Partial<Record<MarkerFigure, () => MarkerModel>> = {
   cycliste: createCyclist,
-  vtt: createCyclist,
-  vae: createCyclist,
-  bikepacking: createCyclist,
+  vtt: () => createCyclist({ fat: true }),
+  vae: () => createCyclist({ battery: true }),
+  bikepacking: () => createCyclist({ bags: true }),
+  ...FIGURE_MODELS,
 }
 
 /** True when `figure` has a 3D model. */
