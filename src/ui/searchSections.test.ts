@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SHELL_TABS } from './shell'
-import { foldText, revealSection, searchSections } from './settingsSearch'
+import { foldText, revealSection, searchSections } from './searchSections'
 
 describe('foldText', () => {
   it('drops the accents and the case', () => {

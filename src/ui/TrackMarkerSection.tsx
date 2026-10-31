@@ -8,7 +8,6 @@ import { OVERLAY_ANCHOR_LABELS } from '../overlay/settings'
 import { getPlatform } from '../platform'
 import { fileToAvatarDataUrl } from '../scene/markerBadge'
 import { FIGURE_GRID, MARKER_FIGURE_PATHS } from '../scene/markerFigures'
-import { hasMarkerModel } from '../scene/markerModels'
 import {
   figureOfActivity,
   MARKER_BALL_STYLE_LABELS,
@@ -409,8 +408,8 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       {figurine && (
         <Checkbox checked={marker.animated} onChange={(on) => updateMarker({ animated: on })}>{t('marker.section.animate')}</Checkbox>
       )}
-      {/* the figures that have a 3D model: it faces along the track and pedals, and is animated from the start */}
-      {figurine && hasMarkerModel(marker.figure === 'auto' ? activityFigure : marker.figure) && (
+      {/* every figure has a 3D model: it faces along the track and moves with the film, and is animated from the start */}
+      {figurine && (
         <Checkbox checked={marker.model3d} onChange={(on) => updateMarker(on ? { model3d: true, animated: true } : { model3d: false })}>
           {t('marker.section.model3d')}
         </Checkbox>

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useT } from '../i18n'
-import { searchSections } from './settingsSearch'
-import type { SectionMatch } from './settingsSearch'
+import { searchSections } from './searchSections'
+import type { SectionMatch } from './searchSections'
 import type { ShellTab } from './shell'
 import { Modal, TextField } from './primitives'
 
