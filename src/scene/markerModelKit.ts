@@ -6,13 +6,14 @@
  * of the film renders the same in isolation. `markerModelOf` says which figures have a model; the others keep their
  * pictogram.
  */
-import { BackSide, BoxGeometry, CylinderGeometry, Group, Mesh, MeshBasicMaterial, Quaternion, SphereGeometry, TorusGeometry, Vector3 } from 'three'
+import { BackSide, BoxGeometry, CylinderGeometry, ExtrudeGeometry, Group, Mesh, MeshBasicMaterial, Quaternion, Shape, ShapeGeometry, SphereGeometry, TorusGeometry, Vector3 } from 'three'
 import type { BufferGeometry } from 'three'
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 
 /** Height of a model in its own units (the rider on the bike, head included). */
 export const MODEL_HEIGHT = 1.7
 /** Thickness of the outline, in model units. */
-export const OUTLINE = 0.015
+export const OUTLINE = 0.022
 /** Dark of the outline, as the ink of the badges (`BADGE_INK`). */
 const OUTLINE_COLOR = '#1C2A33'
 
@@ -32,6 +33,8 @@ export interface Build {
   root: Group
   fill: MeshBasicMaterial
   outline: MeshBasicMaterial
+  /** the dark of the outline, as a flat colour of its own (windows, tyres, lines) */
+  ink: MeshBasicMaterial
 }
 
 export function begin(): Build {
@@ -39,6 +42,7 @@ export function begin(): Build {
     root: new Group(),
     fill: new MeshBasicMaterial({ color: '#ffffff' }),
     outline: new MeshBasicMaterial({ color: OUTLINE_COLOR, side: BackSide }),
+    ink: new MeshBasicMaterial({ color: OUTLINE_COLOR }),
   }
 }
 
@@ -153,4 +157,90 @@ export function bar(build: Build, radius: number, a: Vector3, b: Vector3): void 
   rod(build, radius).link(a, b)
   ball(build, radius, a)
   ball(build, radius, b)
+}
+
+/** A thin dark line between `a` and `b` (a rope, a ski pole): no fill and no outline, so it stays fine. */
+export function stroke(build: Build, radius: number, a: Vector3, b: Vector3): void {
+  const mesh = new Mesh(new CylinderGeometry(radius, radius, 1, 6, 1), build.ink)
+  direction.subVectors(b, a)
+  const length = direction.length()
+  mesh.position.addVectors(a, b).multiplyScalar(0.5)
+  mesh.quaternion.copy(turn.setFromUnitVectors(UP, direction.divideScalar(Math.max(length, 1e-6))))
+  mesh.scale.set(1, Math.max(length, 1e-4), 1)
+  build.root.add(mesh)
+}
+
+/** A flat dark shape (a window) in the plane facing `side` (+1: towards +X, -1: towards -X), `x` away from the axis; points are (z, y). */
+export function pane(build: Build, points: [number, number][], x: number, side: 1 | -1): Mesh {
+  const shape = new Shape()
+  points.forEach(([z, y], i) => (i === 0 ? shape.moveTo(z, y) : shape.lineTo(z, y)))
+  const mesh = new Mesh(new ShapeGeometry(shape), build.ink)
+  // the shape's x becomes the model's z, so that its front faces `side`
+  mesh.rotation.y = side * (Math.PI / 2)
+  mesh.position.x = x * side
+  build.root.add(mesh)
+  return mesh
+}
+
+/** A solid whose side view is the polygon `profile` (z, y), `width` across, with rounded edges and an outline of even thickness. */
+export function extrusion(build: Build, profile: [number, number][], width: number, round = 0.03): Mesh {
+  const shape = new Shape()
+  profile.forEach(([z, y], i) => (i === 0 ? shape.moveTo(z, y) : shape.lineTo(z, y)))
+  const geometry = new ExtrudeGeometry(shape, { depth: width - round * 2, bevelEnabled: true, bevelSize: round, bevelThickness: round, bevelSegments: 3, curveSegments: 4 })
+  // the profile's x is the model's z, the extrusion goes along -X; centre it on the axis
+  geometry.rotateY(-Math.PI / 2)
+  geometry.translate(width / 2 - round, 0, 0)
+  // one smooth outline: the vertices are welded and pushed out along their averaged normals
+  const bare = geometry.clone()
+  bare.deleteAttribute('normal')
+  bare.deleteAttribute('uv')
+  const welded = mergeVertices(bare, 1e-4)
+  welded.computeVertexNormals()
+  const position = welded.getAttribute('position')
+  const normal = welded.getAttribute('normal')
+  for (let i = 0; i < position.count; i++) position.setXYZ(i, position.getX(i) + normal.getX(i) * OUTLINE, position.getY(i) + normal.getY(i) * OUTLINE, position.getZ(i) + normal.getZ(i) * OUTLINE)
+  return solid(build, geometry, welded)
+}
+
+/** A limb that narrows from `radiusA` at the first point of `link` to `radiusB` at the second; its outline narrows with it. */
+export function limb(build: Build, radiusA: number, radiusB: number): Rod {
+  const mesh = solid(
+    build,
+    new CylinderGeometry(radiusB, radiusA, 1, SEGMENT_SEGMENTS, 1),
+    new CylinderGeometry(radiusB + OUTLINE, radiusA + OUTLINE, 1, SEGMENT_SEGMENTS, 1),
+  )
+  // a ball at each end closes the outline where the limb stops, and rounds the joints where two limbs meet
+  const ends = [ball(build, radiusA), ball(build, radiusB)]
+  return {
+    mesh,
+    link(a, b) {
+      direction.subVectors(b, a)
+      const length = direction.length()
+      mesh.position.addVectors(a, b).multiplyScalar(0.5)
+      if (length > 1e-6) mesh.quaternion.copy(turn.setFromUnitVectors(UP, direction.divideScalar(length)))
+      mesh.scale.set(1, Math.max(length, 1e-4), 1)
+      ends[0].position.copy(a)
+      ends[1].position.copy(b)
+    },
+  }
+}
+
+/** A flat dark ellipsoid (a visor, a saddle, a sole): no fill and no outline. */
+export function inkBall(build: Build, rx: number, ry: number, rz: number, at: Vector3 = new Vector3()): Mesh {
+  const mesh = new Mesh(new SphereGeometry(1, 18, 12).scale(rx, ry, rz), build.ink)
+  mesh.position.copy(at)
+  build.root.add(mesh)
+  return mesh
+}
+
+/** A tyre: a dark ring of `radius` and `tube` in the YZ plane, with a rim in the colour of the figure inside it. */
+export function tyre(build: Build, radius: number, tube: number): Group {
+  const dark = new Mesh(new TorusGeometry(radius, tube, 10, 48), build.ink)
+  dark.rotation.y = Math.PI / 2
+  build.root.add(dark)
+  const rim = ring(build, radius - tube * 1.5, tube * 0.38)
+  const group = new Group()
+  group.add(dark, rim)
+  build.root.add(group)
+  return group
 }

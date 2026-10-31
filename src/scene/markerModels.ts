@@ -8,7 +8,7 @@
 import { Matrix4, Mesh, MeshBasicMaterial, Vector3 } from 'three'
 import type { BufferGeometry } from 'three'
 import type { MarkerFigure } from './markerSettings'
-import { MODEL_HEIGHT, UP, ball, begin, joint, rod, ring } from './markerModelKit'
+import { MODEL_HEIGHT, UP, ball, begin, inkBall, joint, limb, rod, tyre } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
 import { FIGURE_MODELS } from './markerFigureModels'
 
@@ -30,8 +30,7 @@ export function createCyclist(options: { bags?: boolean; battery?: boolean; fat?
   const stem = new Vector3(0, 0.92, 0.45)
 
   for (const z of [rearAxle.z, frontAxle.z]) {
-    const wheel = ring(build, wheelRadius - 0.025, options.fat ? 0.034 : 0.022)
-    wheel.position.set(0, wheelRadius, z)
+    tyre(build, wheelRadius - 0.03, options.fat ? 0.04 : 0.027).position.set(0, wheelRadius, z)
   }
   // a ball at each end hides the seam where two bars meet
   const frame = (radius: number, a: Vector3, b: Vector3) => {
@@ -60,8 +59,8 @@ export function createCyclist(options: { bags?: boolean; battery?: boolean; fat?
   const hip = new Vector3(0, 0.95, -0.2)
   const shoulder = new Vector3(0, 1.36, 0.06)
   const head = new Vector3(0, 1.55, 0.16)
-  rod(build, 0.095).link(hip, shoulder)
-  ball(build, 0.095, hip)
+  limb(build, 0.088, 0.108).link(hip, shoulder)
+  ball(build, 0.088, hip)
   // shoulders and pelvis: a bar across, so that the arms and legs are fixed to the trunk
   const shoulderBar = 0.17
   frame(0.062, new Vector3(-shoulderBar, shoulder.y - 0.02, shoulder.z), new Vector3(shoulderBar, shoulder.y - 0.02, shoulder.z))
@@ -70,6 +69,7 @@ export function createCyclist(options: { bags?: boolean; battery?: boolean; fat?
   frame(0.045, new Vector3(0, shoulder.y, shoulder.z), new Vector3(0, 1.5, 0.14))
   // the head, and over it a helmet: a long dome with a short peak
   ball(build, 0.088, head)
+  inkBall(build, 0.082, 0.026, 0.03, new Vector3(head.x, head.y + 0.014, head.z + 0.068))
   const helmet = ball(build, 0.115, new Vector3(head.x, head.y + 0.04, head.z - 0.02))
   helmet.scale.set(1, 0.78, 1.28)
   const peak = ball(build, 0.08, new Vector3(head.x, head.y + 0.03, head.z + 0.13))
@@ -77,10 +77,10 @@ export function createCyclist(options: { bags?: boolean; battery?: boolean; fat?
 
   const sides = [-1, 1] as const
   const arms = sides.map((side) => {
-    const upper = rod(build, 0.04)
-    const lower = rod(build, 0.035)
-    const elbow = ball(build, 0.042)
-    const hand = ball(build, 0.042, new Vector3(0.2 * side, 0.93, 0.45))
+    const upper = limb(build, 0.052, 0.04)
+    const lower = limb(build, 0.04, 0.032)
+    const elbow = ball(build, 0.04)
+    const hand = ball(build, 0.038, new Vector3(0.2 * side, 0.93, 0.45))
     return { side, upper, lower, elbow, hand }
   })
   const armJoint = new Vector3()
@@ -96,11 +96,14 @@ export function createCyclist(options: { bags?: boolean; battery?: boolean; fat?
 
   const legs = sides.map((side) => ({
     side,
-    thigh: rod(build, 0.062),
-    shin: rod(build, 0.048),
-    knee: ball(build, 0.058),
+    thigh: limb(build, 0.07, 0.052),
+    shin: limb(build, 0.052, 0.038),
+    knee: ball(build, 0.052),
     foot: ball(build, 0.05),
   }))
+  ball(build, 0.07, new Vector3(-0.09, hip.y, hip.z))
+  ball(build, 0.07, new Vector3(0.09, hip.y, hip.z))
+  inkBall(build, 0.045, 0.028, 0.13, new Vector3(0, 0.9, -0.17))
   const legRoot = new Vector3()
   const legFoot = new Vector3()
   const legJoint = new Vector3()
